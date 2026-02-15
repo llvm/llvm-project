@@ -47,7 +47,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
-#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -3624,9 +3623,6 @@ static bool parseOrderOptions(const opt::InputArgList &Args,
 }
 
 int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
-  BumpPtrAllocator Alloc;
-  StringSaver Saver(Alloc);
-
   ProgramName = sys::path::stem(argv[0]).str();
 
   ProfdataOptTable Tbl;
@@ -3636,15 +3632,6 @@ int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
            << " --help for usage.\n";
     return 1;
   }
-
-  bool HadParseError = false;
-  opt::InputArgList Args =
-      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
-        WithColor::error(errs(), ProgramName) << Msg << "\n";
-        HadParseError = true;
-      });
-  if (HadParseError)
-    return 1;
 
   bool HadSubcommandError = false;
   SmallVector<StringRef, 4> OtherPositionals;
@@ -3659,32 +3646,16 @@ int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
     OtherPositionals.append(Positionals.begin(), Positionals.end());
   };
 
-  auto IsKnownSubcommand = [&](StringRef Name) {
-    return llvm::any_of(
-        Tbl.getSubCommands(),
-        [&](const opt::OptTable::SubCommand &SC) { return Name == SC.Name; });
-  };
-
-  StringRef RawFirstArg = argc > 1 ? StringRef(argv[1]) : StringRef();
-  StringRef RawSubcommand =
-      IsKnownSubcommand(RawFirstArg) ? RawFirstArg : StringRef();
+  unsigned MissingArgIndex = 0;
+  unsigned MissingArgCount = 0;
+  ArrayRef<const char *> ArgsArr = ArrayRef(argv + 1, argc - 1);
+  opt::InputArgList Args =
+      Tbl.ParseArgs(ArgsArr, MissingArgIndex, MissingArgCount);
 
   StringRef Subcommand = Args.getSubCommand(
       Tbl.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
   if (HadSubcommandError)
     return 1;
-
-  if (Subcommand.empty() && !OtherPositionals.empty() &&
-      IsKnownSubcommand(OtherPositionals.front())) {
-    Subcommand = OtherPositionals.front();
-    OtherPositionals.erase(OtherPositionals.begin());
-  }
-  if (Subcommand.empty() && !RawSubcommand.empty()) {
-    Subcommand = RawSubcommand;
-    auto It = llvm::find(OtherPositionals, Subcommand);
-    if (It != OtherPositionals.end())
-      OtherPositionals.erase(It);
-  }
 
   if (Args.hasArg(OPT_help)) {
     std::string Usage = ProgramName + " [subcommand] [options]";
@@ -3693,6 +3664,26 @@ int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
                   Subcommand);
     return 0;
   }
+
+  bool HadParseError = false;
+  if (MissingArgCount) {
+    WithColor::error(errs(), ProgramName)
+        << Args.getArgString(MissingArgIndex) << ": missing argument\n";
+    HadParseError = true;
+  }
+
+  bool HasUnknownOptions = false;
+  for (const opt::Arg *A : Args.filtered(OPT_UNKNOWN)) {
+    HasUnknownOptions = true;
+    errs() << ProgramName << ": Unknown option `" << A->getAsString(Args)
+           << "'\n";
+  }
+  if (HasUnknownOptions) {
+    errs() << "See `" << ProgramName << " --help`.\n";
+    HadParseError = true;
+  }
+  if (HadParseError)
+    return 1;
 
   if (Args.hasArg(OPT_version)) {
     outs() << ProgramName << '\n';
