@@ -86,6 +86,11 @@ struct AMDGPUUseNativeCallsPass : PassInfoMixin<AMDGPUUseNativeCallsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
+struct AMDGPUUnusedLibFuncCleanupPass
+    : PassInfoMixin<AMDGPUUnusedLibFuncCleanupPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 class SILowerI1CopiesPass : public PassInfoMixin<SILowerI1CopiesPass> {
 public:
   SILowerI1CopiesPass() = default;
