@@ -68,6 +68,7 @@ static void ForEachScriptedTarget(Callback &&callback) {
 
 std::optional<ModuleSpec> SymbolLocatorScripted::LocateExecutableObjectFile(
     const ModuleSpec &module_spec) {
+  Log *log = GetLog(LLDBLog::Symbols);
   std::optional<ModuleSpec> result;
   ForEachScriptedTarget(
       [&](Target &target,
@@ -76,7 +77,6 @@ std::optional<ModuleSpec> SymbolLocatorScripted::LocateExecutableObjectFile(
         auto located =
             interface_sp->LocateExecutableObjectFile(module_spec, error);
         if (!error.Success()) {
-          Log *log = GetLog(LLDBLog::Symbols);
           LLDB_LOG(log,
                    "SymbolLocatorScripted: locate_executable_object_file "
                    "failed: {0}",
@@ -93,6 +93,7 @@ std::optional<ModuleSpec> SymbolLocatorScripted::LocateExecutableObjectFile(
 
 std::optional<FileSpec> SymbolLocatorScripted::LocateExecutableSymbolFile(
     const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
+  Log *log = GetLog(LLDBLog::Symbols);
   std::optional<FileSpec> result;
   ForEachScriptedTarget(
       [&](Target &target,
@@ -101,7 +102,6 @@ std::optional<FileSpec> SymbolLocatorScripted::LocateExecutableSymbolFile(
         auto located = interface_sp->LocateExecutableSymbolFile(
             module_spec, default_search_paths, error);
         if (!error.Success()) {
-          Log *log = GetLog(LLDBLog::Symbols);
           LLDB_LOG(log,
                    "SymbolLocatorScripted: locate_executable_symbol_file "
                    "failed: {0}",
@@ -141,61 +141,37 @@ SymbolLocatorScripted::LocateSourceFile(const lldb::ModuleSP &module_sp,
   if (!module_sp)
     return {};
 
-  // Find the target that owns this module.
-  Target *owning_target = nullptr;
-  for (size_t di = 0; di < Debugger::GetNumDebuggers(); di++) {
-    DebuggerSP debugger_sp = Debugger::GetDebuggerAtIndex(di);
-    if (!debugger_sp)
-      continue;
-    TargetList &target_list = debugger_sp->GetTargetList();
-    for (size_t ti = 0; ti < target_list.GetNumTargets(); ti++) {
-      TargetSP target_sp = target_list.GetTargetAtIndex(ti);
-      if (!target_sp)
-        continue;
-      ModuleSP found_module =
-          target_sp->GetImages().FindModule(module_sp.get());
-      if (found_module) {
-        owning_target = target_sp.get();
-        break;
-      }
-    }
-    if (owning_target)
-      break;
-  }
-
-  if (!owning_target)
-    return {};
-
-  auto interface_sp = owning_target->GetScriptedSymbolLocatorInterface();
-  if (!interface_sp)
-    return {};
-
-  // Cache resolved source files to avoid repeated Python calls for the same
-  // (module, source_file) pair.
+  Log *log = GetLog(LLDBLog::Symbols);
+  std::optional<FileSpec> result;
   std::string cache_key =
       module_sp->GetUUID().GetAsString() + ":" + original_source_file.GetPath();
 
-  std::optional<FileSpec> cached;
-  if (owning_target->LookupScriptedSourceFileCache(cache_key, cached))
-    return cached;
+  ForEachScriptedTarget(
+      [&](Target &target,
+          ScriptedSymbolLocatorInterfaceSP &interface_sp) -> bool {
+        // Check the per-target cache first.
+        std::optional<FileSpec> cached;
+        if (target.LookupScriptedSourceFileCache(cache_key, cached)) {
+          result = cached;
+          return result.has_value();
+        }
 
-  Status error;
-  auto located =
-      interface_sp->LocateSourceFile(module_sp, original_source_file, error);
+        Status error;
+        auto located = interface_sp->LocateSourceFile(
+            module_sp, original_source_file, error);
 
-  Log *log = GetLog(LLDBLog::Symbols);
-  if (!error.Success()) {
-    LLDB_LOG(log, "SymbolLocatorScripted: locate_source_file failed: {0}",
-             error);
-  }
+        if (!error.Success()) {
+          LLDB_LOG(log, "SymbolLocatorScripted: locate_source_file failed: {0}",
+                   error);
+        }
 
-  owning_target->InsertScriptedSourceFileCache(cache_key, located);
+        target.InsertScriptedSourceFileCache(cache_key, located);
 
-  if (located) {
-    LLDB_LOGF(log,
-              "SymbolLocatorScripted::%s: resolved source file '%s' to '%s'",
-              __FUNCTION__, original_source_file.GetPath().c_str(),
-              located->GetPath().c_str());
-  }
-  return located;
+        if (located) {
+          result = located;
+          return true;
+        }
+        return false;
+      });
+  return result;
 }
