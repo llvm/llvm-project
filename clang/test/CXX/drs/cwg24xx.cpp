@@ -199,13 +199,13 @@ struct S {
 struct T : S {
     virtual void f() &;
     // expected-error@-1 {{cannot overload a member function with ref-qualifier '&' with a member function without a ref-qualifier}}
-    // expected-note@#cwg2496-f {{previous declaration is here}}
+    //   expected-note@#cwg2496-f {{previous declaration is here}}
     virtual void g();
     // expected-error@-1 {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&'}}
-    // expected-note@#cwg2496-g {{previous declaration is here}}
+    //   expected-note@#cwg2496-g {{previous declaration is here}}
     virtual void h() &&;
     // expected-error@-1 {{cannot overload a member function with ref-qualifier '&&' with a member function without a ref-qualifier}}
-    // expected-note@#cwg2496-h {{previous declaration is here}}
+    //   expected-note@#cwg2496-h {{previous declaration is here}}
     virtual void i();
     virtual void j() &;
     virtual void k() &;
