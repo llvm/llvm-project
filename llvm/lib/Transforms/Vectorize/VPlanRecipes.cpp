@@ -3570,7 +3570,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
           VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
           /*Insert=*/false, /*Extract=*/true, Ctx.CostKind);
 
-      if (Ctx.useEmulatedMaskMemRefHack(UI, VF)) {
+      if (Ctx.useEmulatedMaskMemRefHack(this, VF)) {
         // Artificially setting to a high enough value to practically disable
         // vectorization with such operations.
         return 3000000;

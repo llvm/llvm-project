@@ -975,16 +975,14 @@ public:
     return false;
   }
 
-  void populateUnwindResumeBlock(bool isCleanup, cir::TryOp tryOp);
-  void populateEHCatchRegions(EHScopeStack::stable_iterator scope,
-                              cir::TryOp tryOp);
+  void addCatchHandlerAttr(const CXXCatchStmt *catchStmt,
+                           SmallVector<mlir::Attribute> &handlerAttrs);
 
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
 
   bool isCatchOrCleanupRequired();
-  void populateCatchHandlersIfRequired(cir::TryOp tryOp);
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
@@ -1590,13 +1588,6 @@ public:
 
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
 
-  mlir::LogicalResult emitCXXTryStmtUnderScope(const clang::CXXTryStmt &s);
-
-  void enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
-                       bool isFnTryBlock = false);
-
-  void exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock = false);
-
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
 
@@ -1749,8 +1740,6 @@ public:
 
   void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
   void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
-
-  void populateCatchHandlers(cir::TryOp tryOp);
 
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
