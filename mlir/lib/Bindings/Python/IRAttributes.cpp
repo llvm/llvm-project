@@ -1294,7 +1294,7 @@ nb::object denseArrayAttributeCaster(PyAttribute &pyAttribute) {
   throw nb::type_error(msg.c_str());
 }
 
-nb::object denseIntOrFPElementsAttributeCaster(PyAttribute &pyAttribute) {
+nb::object denseElementsAttributeCaster(PyAttribute &pyAttribute) {
   if (PyDenseFPElementsAttribute::isaFunction(pyAttribute))
     return nb::cast(PyDenseFPElementsAttribute(pyAttribute));
   if (PyDenseIntElementsAttribute::isaFunction(pyAttribute))
@@ -1399,8 +1399,7 @@ void populateIRAttributes(nb::module_ &m) {
   PyDenseIntElementsAttribute::bind(m);
   PyGlobals::get().registerTypeCaster(
       mlirDenseElementsAttrGetTypeID(),
-      nb::cast<nb::callable>(
-          nb::cpp_function(denseIntOrFPElementsAttributeCaster)));
+      nb::cast<nb::callable>(nb::cpp_function(denseElementsAttributeCaster)));
   PyDenseResourceElementsAttribute::bind(m);
 
   PyDictAttribute::bind(m);

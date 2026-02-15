@@ -235,7 +235,7 @@ def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array",
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseElementsAttr : Builtin_Attr<
-    "DenseElements", "dense_int_or_fp_elements", [ElementsAttrInterface]
+    "DenseElements", "dense_elements", [ElementsAttrInterface]
   > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
                 "values";
@@ -256,9 +256,6 @@ def Builtin_DenseElementsAttr : Builtin_Attr<
     Storage format: Given an element bitwidth "w", element "i" starts at byte
     offset "i * ceildiv(w, 8)". In other words, each element starts at a full
     byte offset.
-
-    TODO: The name `DenseIntOrFPElements` is no longer accurate. The attribute
-    will be renamed in the future.
 
     Examples:
 
