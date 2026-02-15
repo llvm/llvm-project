@@ -102,5 +102,5 @@ References
 ----------
 
 * `CERT C++ MEM56-CPP <https://wiki.sei.cmu.edu/confluence/display/cplusplus/MEM56-CPP.+Do+not+store+an+already-owned+pointer+value+in+an+unrelated+smart+pointer>`_
-* `C++ Core Guidelines R.3: A raw pointer (a T*) is non-owning <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rr-ptr>`_
-* `C++ Core Guidelines R.20: Use unique_ptr or shared_ptr to represent ownership <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rr-owner>`_
+* `C++ Core Guidelines R.3: A raw pointer (a T*) is non-owning <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#r20-use-unique_ptr-or-shared_ptr-to-represent-ownership>`_
+* `C++ Core Guidelines R.20: Use unique_ptr or shared_ptr to represent ownership <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#r20-use-unique_ptr-or-shared_ptr-to-represent-ownership>`_
