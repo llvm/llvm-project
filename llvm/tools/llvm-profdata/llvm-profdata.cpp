@@ -10,10 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -42,6 +40,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -682,8 +681,6 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
                               SymbolRemapper *Remapper,
                               int MaxDbgCorrelationWarnings,
                               const StringRef ProfiledBinary) {
-  const uint64_t TraceReservoirSize = TemporalProfTraceReservoirSize;
-  const uint64_t MaxTraceLength = TemporalProfMaxTraceLength;
   if (OutputFormat == PF_Compact_Binary)
     exitWithError("Compact Binary is deprecated");
   if (OutputFormat != PF_Binary && OutputFormat != PF_Ext_Binary &&
@@ -751,8 +748,8 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   SmallVector<std::unique_ptr<WriterContext>, 4> Contexts;
   for (unsigned I = 0; I < NumThreads; ++I)
     Contexts.emplace_back(std::make_unique<WriterContext>(
-        OutputSparse, ErrorLock, WriterErrorCodes, TraceReservoirSize,
-        MaxTraceLength));
+        OutputSparse, ErrorLock, WriterErrorCodes,
+        TemporalProfTraceReservoirSize, TemporalProfMaxTraceLength));
 
   if (NumThreads == 1) {
     for (const auto &Input : Inputs)
@@ -3121,8 +3118,8 @@ static int order_main() {
   ArrayRef Traces = Reader->getTemporalProfTraces();
   if (NumTestTraces && NumTestTraces >= Traces.size())
     exitWithError(
-        "--num-test-traces"
-        " must be smaller than the total number of traces: expected: < " +
+        "--num-test-traces must be smaller than the total number of traces: "
+        "expected: < " +
         Twine(Traces.size()) + ", actual: " + Twine(NumTestTraces));
   ArrayRef TestTraces = Traces.take_back(NumTestTraces);
   Traces = Traces.drop_back(NumTestTraces);
@@ -3295,23 +3292,17 @@ static bool parseFSDiscriminatorPassArg(const opt::InputArgList &Args) {
   if (!A)
     return true;
 
-  StringRef Value = A->getValue();
+  std::string Value = StringRef(A->getValue()).lower();
   auto Parsed = StringSwitch<std::optional<FSDiscriminatorPass>>(Value)
-                    .Case("Base", FSDiscriminatorPass::Base)
                     .Case("base", FSDiscriminatorPass::Base)
-                    .Case("Pass1", FSDiscriminatorPass::Pass1)
                     .Case("pass1", FSDiscriminatorPass::Pass1)
-                    .Case("Pass2", FSDiscriminatorPass::Pass2)
                     .Case("pass2", FSDiscriminatorPass::Pass2)
-                    .Case("Pass3", FSDiscriminatorPass::Pass3)
                     .Case("pass3", FSDiscriminatorPass::Pass3)
-                    .Case("PassLast", FSDiscriminatorPass::PassLast)
-                    .Case("pass-last", FSDiscriminatorPass::PassLast)
                     .Case("passlast", FSDiscriminatorPass::PassLast)
                     .Default(std::nullopt);
   if (!Parsed) {
-    reportCmdLineError(Twine("invalid argument '") + Value + "' for option '" +
-                       A->getSpelling() + "'");
+    reportCmdLineError(Twine("invalid argument '") + A->getValue() +
+                       "' for option '" + A->getSpelling() + "'");
     return false;
   }
   FSDiscriminatorPassOption = *Parsed;
@@ -3324,9 +3315,6 @@ static bool validateSubcommandOptions(const opt::InputArgList &Args,
   for (const opt::Arg *A : Args) {
     if (A->getOption().matches(OPT_UNKNOWN) ||
         A->getOption().matches(OPT_INPUT))
-      continue;
-    // Options without an explicit subcommand are available everywhere.
-    if (A->getOption().matches(OPT_help) || A->getOption().matches(OPT_version))
       continue;
     if (A->getOption().isRegisteredSC(Subcommand))
       continue;
@@ -3697,28 +3685,26 @@ int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
     return 1;
   }
 
-  ArrayRef<StringRef> Positionals = OtherPositionals;
-
   if (!validateSubcommandOptions(Args, Subcommand))
     return 1;
 
   if (Subcommand == "merge") {
-    if (!parseMergeOptions(Args, Positionals))
+    if (!parseMergeOptions(Args, OtherPositionals))
       return 1;
     return merge_main(ProgramName);
   }
   if (Subcommand == "show") {
-    if (!parseShowOptions(Args, Positionals))
+    if (!parseShowOptions(Args, OtherPositionals))
       return 1;
     return show_main(ProgramName);
   }
   if (Subcommand == "overlap") {
-    if (!parseOverlapOptions(Args, Positionals))
+    if (!parseOverlapOptions(Args, OtherPositionals))
       return 1;
     return overlap_main();
   }
   if (Subcommand == "order") {
-    if (!parseOrderOptions(Args, Positionals))
+    if (!parseOrderOptions(Args, OtherPositionals))
       return 1;
     return order_main();
   }
@@ -3726,4 +3712,9 @@ int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
   errs() << ProgramName << ": Unknown command. Run " << ProgramName
          << " --help for usage.\n";
   return 1;
+}
+
+int main(int argc, char **argv) {
+  InitLLVM X(argc, argv);
+  return llvm_profdata_main(argc, argv, {argv[0], nullptr, false});
 }

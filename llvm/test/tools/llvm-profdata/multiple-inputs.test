@@ -54,7 +54,7 @@ DISJOINT: Maximum internal block count: 3
 
 RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
 RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
-RUN:                     -num-threads 2 -o %t
+RUN:                     --num-threads 2 -o %t
 RUN: llvm-profdata show %t --all-functions --counts | FileCheck %s --check-prefix=FOO4
 RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
 RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \

@@ -360,8 +360,7 @@ def num_test_traces
       MetaVarName<"<n>">;
 
 def fs_discriminator_pass
-    : JoinedOrSeparate<["--"], "fs-discriminator-pass",
-                       [Show, Overlap, Merge]>,
+    : Joined<["--"], "fs-discriminator-pass=", [Show, Overlap, Merge]>,
+      Values<"base,pass1,pass2,pass3,passlast">,
       HelpText<"Zero out the discriminator bits for the FS discriminator "
-               "pass beyond this value.">,
-      MetaVarName<"<pass>">;
+               "pass beyond this value.">;
