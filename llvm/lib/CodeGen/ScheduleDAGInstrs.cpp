@@ -1163,6 +1163,26 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
         Register Reg = MO.getReg();
         if (!Reg)
           continue;
+        // Skip implicit defs of super-registers when a sub-register is
+        // also defined by this instruction. The implicit def indicates a
+        // partial modification of the super-register, not a full
+        // redefinition. Removing the super-register from the live set
+        // would incorrectly clear the liveness of sibling sub-registers
+        // that may still be live, causing toggleKills to set wrong kill
+        // flags on their uses.
+        if (MO.isImplicit()) {
+          bool HasSubRegDef = false;
+          for (ConstMIBundleOperands O2(MI); O2.isValid(); ++O2) {
+            if (!O2->isReg() || !O2->isDef() || !O2->getReg())
+              continue;
+            if (O2->getReg() != Reg && TRI->isSubRegister(Reg, O2->getReg())) {
+              HasSubRegDef = true;
+              break;
+            }
+          }
+          if (HasSubRegDef)
+            continue;
+        }
         LiveRegs.removeReg(Reg);
       } else if (MO.isRegMask()) {
         LiveRegs.removeRegsNotPreserved(MO.getRegMask());

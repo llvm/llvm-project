@@ -1,0 +1,36 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv60 -run-pass post-RA-sched \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s
+
+# The fixupKills() function in ScheduleDAGInstrs walks backward through
+# instructions, maintaining a LiveRegUnits bitvector. When an instruction
+# defines a sub-register ($r1) and has an implicit-def of a super-register
+# ($d0), the def processing calls removeReg($d0), which clears the register
+# units of all sub-registers of $d0 — including $r0. If $r0 is live (used
+# by a subsequent instruction), its liveness is incorrectly cleared, causing
+# available($r0) to return true and a wrong kill flag to be set.
+#
+# In this test, A2_abs defines $r1 with an implicit-def of $d0. The
+# subsequent A2_add uses both $r0 and $r1, so $r0 must not be killed
+# on the A2_abs instruction.
+
+# CHECK-LABEL: name: test_kill_superreg_def
+# CHECK: $r1 = A2_abs $r0, implicit-def $d0
+# CHECK-NEXT: $r0 = A2_add killed $r0, killed $r1
+
+--- |
+  define void @test_kill_superreg_def() {
+    ret void
+  }
+...
+
+---
+name: test_kill_superreg_def
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0
+
+    $r1 = A2_abs $r0, implicit-def $d0
+    $r0 = A2_add $r0, $r1
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+...
