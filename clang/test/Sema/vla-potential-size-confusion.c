@@ -48,10 +48,13 @@ void quuble(int vla[y], int y); // no diagnostic expected
 #ifdef __cplusplus
 struct S {
   static int v; // #mem-var
-  
+  constexpr static int y = 12;
+
   void member_function(int vla[v], int v);  // expected-warning {{variable length array size expression refers to declaration from an outer scope}} \
                                                expected-note {{does not refer to this declaration}} \
                                                expected-note@#mem-var {{refers to this declaration instead}}
+
+  void member_function_with_const_arr(int cla[y], int y); // no diagnostic expected
 };
 #endif
 
