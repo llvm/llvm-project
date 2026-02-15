@@ -21,6 +21,37 @@ Context::Context(Module &M)
 
 Context::~Context() = default;
 
+bool Context::initGlobalValues() {
+  // Register all function and block targets that may be used by indirect calls
+  // and branches.
+  for (Function &F : M) {
+    if (F.hasAddressTaken()) {
+      // TODO: Use precise alignment for function pointers if it is necessary.
+      auto FuncObj = allocate(0, F.getPointerAlignment(DL).value(), F.getName(),
+                              DL.getProgramAddressSpace(), MemInitKind::Zeroed);
+      if (!FuncObj)
+        return false;
+      ValidFuncTargets.try_emplace(FuncObj->getAddress(),
+                                   std::make_pair(&F, FuncObj));
+      FuncAddrMap.try_emplace(&F, deriveFromMemoryObject(FuncObj));
+    }
+
+    for (BasicBlock &BB : F) {
+      if (!BB.hasAddressTaken())
+        continue;
+      auto BlockObj = allocate(0, 1, BB.getName(), DL.getProgramAddressSpace(),
+                               MemInitKind::Zeroed);
+      if (!BlockObj)
+        return false;
+      ValidBlockTargets.try_emplace(BlockObj->getAddress(),
+                                    std::make_pair(&BB, BlockObj));
+      BlockAddrMap.try_emplace(&BB, deriveFromMemoryObject(BlockObj));
+    }
+  }
+  // TODO: initialize global variables.
+  return true;
+}
+
 AnyValue Context::getConstantValueImpl(Constant *C) {
   if (isa<PoisonValue>(C))
     return AnyValue::getPoisonValue(*this, C->getType());
@@ -50,6 +81,12 @@ AnyValue Context::getConstantValueImpl(Constant *C) {
       Elts.push_back(getConstantValue(CA->getOperand(I)));
     return std::move(Elts);
   }
+
+  if (auto *BA = dyn_cast<BlockAddress>(C))
+    return BlockAddrMap.at(BA->getBasicBlock());
+
+  if (auto *F = dyn_cast<Function>(C))
+    return FuncAddrMap.at(F);
 
   llvm_unreachable("Unrecognized constant");
 }
@@ -85,14 +122,17 @@ IntrusiveRefCntPtr<MemoryObject> Context::allocate(uint64_t Size,
                                                    uint64_t Align,
                                                    StringRef Name, unsigned AS,
                                                    MemInitKind InitKind) {
-  if (MaxMem != 0 && SaturatingAdd(UsedMem, Size) >= MaxMem)
+  // Even if the memory object is zero-sized, it still occupies a byte to obtain
+  // a unique address.
+  uint64_t AllocateSize = std::max(Size, (uint64_t)1);
+  if (MaxMem != 0 && SaturatingAdd(UsedMem, AllocateSize) >= MaxMem)
     return nullptr;
   uint64_t AlignedAddr = alignTo(AllocationBase, Align);
   auto MemObj =
       makeIntrusiveRefCnt<MemoryObject>(AlignedAddr, Size, Name, AS, InitKind);
   MemoryObjects[AlignedAddr] = MemObj;
-  AllocationBase = AlignedAddr + Size;
-  UsedMem += Size;
+  AllocationBase = AlignedAddr + AllocateSize;
+  UsedMem += AllocateSize;
   return MemObj;
 }
 
@@ -100,7 +140,7 @@ bool Context::free(uint64_t Address) {
   auto It = MemoryObjects.find(Address);
   if (It == MemoryObjects.end())
     return false;
-  UsedMem -= It->second->getSize();
+  UsedMem -= std::max(It->second->getSize(), (uint64_t)1);
   It->second->markAsFreed();
   MemoryObjects.erase(It);
   return true;
@@ -112,6 +152,25 @@ Pointer Context::deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj) {
       Obj,
       APInt(DL.getPointerSizeInBits(Obj->getAddressSpace()), Obj->getAddress()),
       /*Offset=*/0);
+}
+
+Function *Context::getTargetFunction(const Pointer &Ptr) {
+  if (Ptr.address().getActiveBits() > 64)
+    return nullptr;
+  auto It = ValidFuncTargets.find(Ptr.address().getZExtValue());
+  if (It == ValidFuncTargets.end())
+    return nullptr;
+  // TODO: check the provenance of pointer.
+  return It->second.first;
+}
+BasicBlock *Context::getTargetBlock(const Pointer &Ptr) {
+  if (Ptr.address().getActiveBits() > 64)
+    return nullptr;
+  auto It = ValidBlockTargets.find(Ptr.address().getZExtValue());
+  if (It == ValidBlockTargets.end())
+    return nullptr;
+  // TODO: check the provenance of pointer.
+  return It->second.first;
 }
 
 void MemoryObject::markAsFreed() {

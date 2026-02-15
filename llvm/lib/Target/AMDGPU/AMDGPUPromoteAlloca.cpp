@@ -618,7 +618,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     Type *AccessTy = Inst->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
     if (Constant *CI = dyn_cast<Constant>(Index)) {
-      if (CI->isZeroValue() && AccessSize == VecStoreSize) {
+      if (CI->isNullValue() && AccessSize == VecStoreSize) {
         Inst->replaceAllUsesWith(
             Builder.CreateBitPreservingCastChain(DL, CurVal, AccessTy));
         return nullptr;
@@ -696,7 +696,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     Type *AccessTy = Val->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
     if (Constant *CI = dyn_cast<Constant>(Index))
-      if (CI->isZeroValue() && AccessSize == VecStoreSize)
+      if (CI->isNullValue() && AccessSize == VecStoreSize)
         return Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
 
     // Storing a subvector.
