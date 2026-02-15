@@ -15357,6 +15357,89 @@ TEST_F(FormatTest, NeverMergeShortRecords) {
                Style);
 }
 
+TEST_F(FormatTest, AllowShortRecordOnASingleLine) {
+  auto Style = getLLVMStyle();
+  EXPECT_EQ(Style.AllowShortRecordOnASingleLine,
+            FormatStyle::SRS_EmptyIfAttached);
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
+  verifyFormat("class foo {\n"
+               "};\n"
+               "class bar {\n"
+               "  int i;\n"
+               "};",
+               Style);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = true;
+  verifyFormat("class foo\n"
+               "{\n"
+               "};\n"
+               "class bar\n"
+               "{\n"
+               "  int i;\n"
+               "};",
+               Style);
+  Style.BraceWrapping.SplitEmptyRecord = false;
+  verifyFormat("class foo\n"
+               "{};",
+               Style);
+
+  Style = getLLVMStyle();
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
+  verifyFormat("class foo {};\n"
+               "class bar {\n"
+               "  int i;\n"
+               "};",
+               Style);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = true;
+  verifyFormat("class foo\n"
+               "{\n"
+               "};\n"
+               "class bar\n"
+               "{\n"
+               "  int i;\n"
+               "};",
+               Style);
+  Style.BraceWrapping.SplitEmptyRecord = false;
+  verifyFormat("class foo {};", Style);
+
+  Style = getLLVMStyle();
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
+  verifyFormat("class foo {};\n"
+               "class bar { int i; };",
+               Style);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = true;
+  verifyFormat("class foo\n"
+               "{\n"
+               "};\n"
+               "class bar { int i; };",
+               Style);
+  Style.BraceWrapping.SplitEmptyRecord = false;
+  verifyFormat("class foo {};", Style);
+
+  Style = getLLVMStyle();
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterClass = true;
+
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
+  verifyFormat("class foo\n"
+               "{ int i; };",
+               Style);
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
+  verifyFormat("class foo\n"
+               "{ int i; };",
+               Style);
+  Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
+  verifyFormat("class foo\n"
+               "{\n"
+               "};\n"
+               "class foo { int i; };",
+               Style);
+}
+
 TEST_F(FormatTest, UnderstandContextOfRecordTypeKeywords) {
   // Elaborate type variable declarations.
   verifyFormat("struct foo a = {bar};\nint n;");

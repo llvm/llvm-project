@@ -2085,6 +2085,42 @@ the configuration (without a prefix: ``Auto``).
 **AllowShortNamespacesOnASingleLine** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <AllowShortNamespacesOnASingleLine>`
   If ``true``, ``namespace a { class b; }`` can be put on a single line.
 
+.. _AllowShortRecordOnASingleLine:
+
+**AllowShortRecordOnASingleLine** (``ShortRecordStyle``) :versionbadge:`clang-format 22` :ref:`¶ <AllowShortRecordOnASingleLine>`
+  Dependent on the value, ``struct bar { int i; };`` can be put on a single
+  line.
+
+  Possible values:
+
+  * ``SRS_Never`` (in configuration: ``Never``)
+    Never merge records into a single line.
+
+  * ``SRS_EmptyIfAttached`` (in configuration: ``EmptyIfAttached``)
+    Only merge empty records if the opening brace was not wrapped,
+    i.e. the corresponding ``BraceWrapping.After...`` option was not set.
+
+  * ``SRS_Empty`` (in configuration: ``Empty``)
+    Only merge empty records.
+
+    .. code-block:: c++
+
+      struct foo {};
+      struct bar
+      {
+        int i;
+      };
+
+  * ``SRS_Always`` (in configuration: ``Always``)
+    Merge all records that fit on a single line.
+
+    .. code-block:: c++
+
+      struct foo {};
+      struct bar { int i; };
+
+
+
 .. _AlwaysBreakAfterDefinitionReturnType:
 
 **AlwaysBreakAfterDefinitionReturnType** (``DefinitionReturnTypeBreakingStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <AlwaysBreakAfterDefinitionReturnType>`

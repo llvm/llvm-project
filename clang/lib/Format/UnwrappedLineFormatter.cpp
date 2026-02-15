@@ -10,6 +10,7 @@
 #include "FormatToken.h"
 #include "NamespaceEndCommentsFixer.h"
 #include "WhitespaceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
 
@@ -266,15 +267,22 @@ private:
       }
     }
 
+    // Try merging record blocks that have had their left brace wrapped into
+    // a single line.
+    if (NextLine.First->isOneOf(TT_ClassLBrace, TT_StructLBrace,
+                                TT_UnionLBrace)) {
+      if (unsigned MergedLines = tryMergeRecord(I, E, Limit))
+        return MergedLines;
+    }
+
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
-    // Handle empty record blocks where the brace has already been wrapped.
+
+    // Handle blocks where the brace has already been wrapped.
     if (PreviousLine && TheLine->Last->is(tok::l_brace) &&
         TheLine->First == TheLine->Last) {
-      bool EmptyBlock = NextLine.First->is(tok::r_brace);
+      const bool EmptyBlock = NextLine.First->is(tok::r_brace);
 
-      const FormatToken *Tok = PreviousLine->First;
-      if (Tok && Tok->is(tok::comment))
-        Tok = Tok->getNextNonComment();
+      const FormatToken *Tok = PreviousLine->getFirstNonComment();
 
       if (Tok && Tok->getNamespaceToken()) {
         return !Style.BraceWrapping.SplitEmptyNamespace && EmptyBlock
@@ -284,9 +292,11 @@ private:
 
       if (Tok && Tok->is(tok::kw_typedef))
         Tok = Tok->getNextNonComment();
-      if (Tok && Tok->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union,
-                              tok::kw_extern, Keywords.kw_interface,
-                              Keywords.kw_record)) {
+
+      if (Tok && Tok->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union))
+        return tryMergeRecord(I, E, Limit);
+
+      if (Tok && Tok->isOneOf(tok::kw_extern, Keywords.kw_interface)) {
         return !Style.BraceWrapping.SplitEmptyRecord && EmptyBlock
                    ? tryMergeSimpleBlock(I, E, Limit)
                    : 0;
@@ -500,7 +510,9 @@ private:
       } else if (TheLine->Last->is(TT_CompoundRequirementLBrace)) {
         ShouldMerge = Style.AllowShortCompoundRequirementOnASingleLine;
       } else if (TheLine->Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
-                                        TT_RecordLBrace)) {
+                                        TT_UnionLBrace)) {
+        return tryMergeRecord(I, E, Limit);
+      } else if (TheLine->Last->is(TT_RecordLBrace)) {
         // NOTE: We use AfterClass (whereas AfterStruct exists) for both classes
         // and structs, but it seems that wrapping is still handled correctly
         // elsewhere.
@@ -573,6 +585,74 @@ private:
         (TheLine->First->HasUnescapedNewline || TheLine->First->IsFirst)) {
       return tryMergeSimplePPDirective(I, E, Limit);
     }
+    return 0;
+  }
+
+  unsigned tryMergeRecord(ArrayRef<AnnotatedLine *>::const_iterator I,
+                          ArrayRef<AnnotatedLine *>::const_iterator E,
+                          unsigned Limit) {
+    const auto *Line = I[0];
+    const auto *NextLine = I[1];
+
+    // Current line begins both record and block, brace was not wrapped.
+    if (Line->Last->isOneOf(TT_StructLBrace, TT_ClassLBrace, TT_UnionLBrace)) {
+      auto ShouldWrapLBrace = [&](TokenType LBraceType) {
+        switch (LBraceType) {
+        case TT_StructLBrace:
+          return Style.BraceWrapping.AfterStruct;
+        case TT_ClassLBrace:
+          return Style.BraceWrapping.AfterClass;
+        case TT_UnionLBrace:
+          return Style.BraceWrapping.AfterUnion;
+        default:
+          return false;
+        }
+      };
+
+      auto TryMergeShortRecord = [&] {
+        switch (Style.AllowShortRecordOnASingleLine) {
+        case FormatStyle::SRS_Never:
+          return false;
+        case FormatStyle::SRS_Always:
+          return true;
+        case FormatStyle::SRS_EmptyIfAttached:
+        case FormatStyle::SRS_Empty:
+          return NextLine->First->is(tok::r_brace);
+        }
+      };
+
+      if (Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Never &&
+          (!ShouldWrapLBrace(Line->Last->getType()) ||
+           (!Style.BraceWrapping.SplitEmptyRecord && TryMergeShortRecord()))) {
+        return tryMergeSimpleBlock(I, E, Limit);
+      }
+    }
+
+    // Cases where the l_brace was wrapped.
+    // Current line begins record, next line block.
+    if (NextLine->First->isOneOf(TT_ClassLBrace, TT_StructLBrace,
+                                 TT_UnionLBrace)) {
+      if (I + 2 == E || I[2]->First->is(tok::r_brace) ||
+          Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Always) {
+        return 0;
+      }
+
+      return tryMergeSimpleBlock(I, E, Limit);
+    }
+
+    // Previous line begins record, current line block.
+    if (I != AnnotatedLines.begin() &&
+        I[-1]->First->isOneOf(tok::kw_struct, tok::kw_class, tok::kw_union)) {
+      const bool IsEmptyBlock =
+          Line->Last->is(tok::l_brace) && NextLine->First->is(tok::r_brace);
+
+      if ((IsEmptyBlock && !Style.BraceWrapping.SplitEmptyRecord) ||
+          (!IsEmptyBlock &&
+           Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Always)) {
+        return tryMergeSimpleBlock(I, E, Limit);
+      }
+    }
+
     return 0;
   }
 
@@ -883,9 +963,16 @@ private:
         return 1;
       } else if (Limit != 0 && !Line.startsWithNamespace() &&
                  !startsExternCBlock(Line)) {
-        // We don't merge short records.
-        if (isRecordLBrace(*Line.Last))
+        // Merge short records only when requested.
+        if (Line.Last->isOneOf(TT_EnumLBrace, TT_RecordLBrace))
           return 0;
+
+        if (Line.Last->isOneOf(TT_ClassLBrace, TT_StructLBrace,
+                               TT_UnionLBrace) &&
+            Line.Last != Line.First &&
+            Style.AllowShortRecordOnASingleLine != FormatStyle::SRS_Always) {
+          return 0;
+        }
 
         // Check that we still have three lines and they fit into the limit.
         if (I + 2 == E || I[2]->Type == LT_Invalid)
@@ -938,9 +1025,17 @@ private:
         return 0;
       Limit -= 2;
       unsigned MergedLines = 0;
-      if (Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never ||
-          (I[1]->First == I[1]->Last && I + 2 != E &&
-           I[2]->First->is(tok::r_brace))) {
+
+      auto TryMergeBlock = [&] {
+        if (Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never ||
+            Style.AllowShortRecordOnASingleLine == FormatStyle::SRS_Always) {
+          return true;
+        }
+        return I[1]->First == I[1]->Last && I + 2 != E &&
+               I[2]->First->is(tok::r_brace);
+      };
+
+      if (TryMergeBlock()) {
         MergedLines = tryMergeSimpleBlock(I + 1, E, Limit);
         // If we managed to merge the block, count the statement header, which
         // is on a separate line.

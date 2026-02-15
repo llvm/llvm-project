@@ -987,6 +987,36 @@ struct FormatStyle {
   /// \version 20
   bool AllowShortNamespacesOnASingleLine;
 
+  /// Different styles for merging short records (``class``,``struct``, and
+  /// ``union``).
+  enum ShortRecordStyle : int8_t {
+    /// Never merge records into a single line.
+    SRS_Never,
+    /// Only merge empty records if the opening brace was not wrapped,
+    /// i.e. the corresponding ``BraceWrapping.After...`` option was not set.
+    SRS_EmptyIfAttached,
+    /// Only merge empty records.
+    /// \code
+    ///   struct foo {};
+    ///   struct bar
+    ///   {
+    ///     int i;
+    ///   };
+    /// \endcode
+    SRS_Empty,
+    /// Merge all records that fit on a single line.
+    /// \code
+    ///   struct foo {};
+    ///   struct bar { int i; };
+    /// \endcode
+    SRS_Always
+  };
+
+  /// Dependent on the value, ``struct bar { int i; };`` can be put on a single
+  /// line.
+  /// \version 23
+  ShortRecordStyle AllowShortRecordOnASingleLine;
+
   /// Different ways to break after the function definition return type.
   /// This option is **deprecated** and is retained for backwards compatibility.
   enum DefinitionReturnTypeBreakingStyle : int8_t {
@@ -5689,6 +5719,7 @@ struct FormatStyle {
            AllowShortLoopsOnASingleLine == R.AllowShortLoopsOnASingleLine &&
            AllowShortNamespacesOnASingleLine ==
                R.AllowShortNamespacesOnASingleLine &&
+           AllowShortRecordOnASingleLine == R.AllowShortRecordOnASingleLine &&
            AlwaysBreakBeforeMultilineStrings ==
                R.AlwaysBreakBeforeMultilineStrings &&
            AttributeMacros == R.AttributeMacros &&
