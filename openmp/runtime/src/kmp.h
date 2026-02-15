@@ -1762,8 +1762,6 @@ typedef int kmp_itt_mark_t;
 #define KMP_ITT_DEBUG 0
 #endif /* USE_ITT_BUILD */
 
-typedef kmp_int32 kmp_critical_name[8];
-
 /*!
 @ingroup PARALLEL
 The type for a microtask which gets passed to @ref __kmpc_fork_call().
@@ -3515,6 +3513,8 @@ extern int __kmp_abort_delay;
 extern int __kmp_need_register_atfork_specified;
 extern int __kmp_need_register_atfork; /* At initialization, call pthread_atfork
                                           to install fork handler */
+extern int __kmp_already_registered_atfork; /* Do not register atfork twice */
+extern int __kmp_in_atexit; /*Denote that we are in the atexit handler*/
 extern int __kmp_gtid_mode; /* Method of getting gtid, values:
                                0 - not set, will be set at runtime
                                1 - using stack search
@@ -4566,6 +4566,7 @@ static inline void __kmp_resume_if_hard_paused() {
     __kmp_pause_status = kmp_not_paused;
   }
 }
+extern void __kmp_hard_pause_reinitialize(const bool in_child_atfork_andler);
 
 extern void __kmp_omp_display_env(int verbose);
 

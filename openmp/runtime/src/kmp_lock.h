@@ -38,6 +38,9 @@ extern "C" {
 struct ident;
 typedef struct ident ident_t;
 
+// moved the typedef kmp_critical_name from kmp.h to here.
+typedef kmp_int32 kmp_critical_name[8];
+
 // End of copied code.
 // ----------------------------------------------------------------------------
 
@@ -1126,6 +1129,14 @@ typedef enum {
 typedef struct {
   kmp_user_lock_p lock;
   kmp_indirect_locktag_t type;
+  // NOTE: when a `#pragma omp critical` lock gets created, the corresponding
+  // critical section global locks needs to point to a lock when we reset the
+  // locks (via omp_pause_resource_all(omp_pause_hard)), these critical section
+  // global lock pointers need to also be reset back to NULL (in
+  // __kmp_cleanup_indirect_user_locks()) however, we will not reset the
+  // `rev_ptr_critSec` lock during the atexit() cleanup handler, since the
+  // memory of `rev_ptr_critSec` is/could be freed already
+  kmp_critical_name *rev_ptr_critSec;
 } kmp_indirect_lock_t;
 
 // Function tables for direct locks. Set/unset/test differentiate functions

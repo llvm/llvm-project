@@ -6139,6 +6139,7 @@ void __kmp_internal_end_atexit(void) {
      Windows dynamic, there is DllMain(THREAD_DETACH). For Windows static, there
      is nothing.  Thus, the workaround is applicable only for Windows static
      stat library. */
+  __kmp_in_atexit = TRUE;
   __kmp_internal_end_library(-1);
 #if KMP_OS_WINDOWS
   __kmp_close_console();
@@ -6952,9 +6953,9 @@ void __kmp_unregister_library(void) {
   value = __kmp_env_get(name);
 #endif
 
-  KMP_DEBUG_ASSERT(__kmp_registration_flag != 0);
-  KMP_DEBUG_ASSERT(__kmp_registration_str != NULL);
-  if (value != NULL && strcmp(value, __kmp_registration_str) == 0) {
+  // if omp is not initialized and we exit, then we don't need to free anything
+  if (__kmp_registration_flag != 0 && __kmp_registration_str != NULL) {
+    if (value != NULL && strcmp(value, __kmp_registration_str) == 0) {
 //  Ok, this is our variable. Delete it.
 #if defined(KMP_USE_SHM)
     if (__kmp_shm_available) {
@@ -6967,7 +6968,7 @@ void __kmp_unregister_library(void) {
 #else
     __kmp_env_unset(name);
 #endif
-  }
+    }
 
 #if defined(KMP_USE_SHM)
   if (shm_name)
@@ -6975,8 +6976,9 @@ void __kmp_unregister_library(void) {
   if (temp_reg_status_file_name)
     KMP_INTERNAL_FREE(temp_reg_status_file_name);
 #endif
-
   KMP_INTERNAL_FREE(__kmp_registration_str);
+  }
+
   KMP_INTERNAL_FREE(value);
   KMP_INTERNAL_FREE(name);
 
@@ -9055,6 +9057,9 @@ void __kmp_soft_pause() { __kmp_pause_status = kmp_soft_paused; }
 void __kmp_hard_pause() {
   __kmp_pause_status = kmp_hard_paused;
   __kmp_internal_end_thread(-1);
+  // TODO: we'll do the same thing as child atfork handler, since we need to
+  // serially initialize the runtime library after __kmp_hard_pause()
+  __kmp_hard_pause_reinitialize(false);
 }
 
 // Soft resume sets __kmp_pause_status, and wakes up all threads.
@@ -9359,6 +9364,97 @@ void __kmp_set_nesting_mode_threads() {
   }
   if (__kmp_nesting_mode == 1) // turn on nesting for this case only
     set__max_active_levels(thread, __kmp_nesting_mode_nlevels);
+}
+
+void __kmp_hard_pause_reinitialize(const bool in_child_atfork_andler) {
+#if KMP_AFFINITY_SUPPORTED
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_DRAGONFLY ||     \
+    KMP_OS_AIX
+  // reset the affinity in the child to the initial thread
+  // affinity in the parent
+  kmp_set_thread_affinity_mask_initial();
+#endif
+  // Set default not to bind threads tightly in the child (we're expecting
+  // over-subscription after the fork and this can improve things for
+  // scripting languages that use OpenMP inside process-parallel code).
+  if (__kmp_nested_proc_bind.bind_types != NULL) {
+    __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
+  }
+  for (kmp_affinity_t *affinity : __kmp_affinities)
+    *affinity = KMP_AFFINITY_INIT(affinity->env_var);
+  __kmp_affin_fullMask = nullptr;
+  __kmp_affin_origMask = nullptr;
+  __kmp_topology = nullptr;
+#endif // KMP_AFFINITY_SUPPORTED
+
+  // TODO: resetting these global variables might be not needed if we are not in
+  // child handler as `__kmp_cleanup()` would have most likely reset them
+  // already
+
+#if KMP_USE_MONITOR
+  __kmp_init_monitor = 0;
+#endif
+  __kmp_init_parallel = FALSE;
+  __kmp_init_middle = FALSE;
+  __kmp_init_serial = FALSE;
+  TCW_4(__kmp_init_gtid, FALSE);
+  __kmp_init_common = FALSE;
+
+  TCW_4(__kmp_init_user_locks, FALSE);
+#if !KMP_USE_DYNAMIC_LOCK
+  __kmp_user_lock_table.used = 1;
+  __kmp_user_lock_table.allocated = 0;
+  __kmp_user_lock_table.table = NULL;
+  __kmp_lock_blocks = NULL;
+#endif
+
+  __kmp_all_nth = 0;
+  TCW_4(__kmp_nth, 0);
+
+  __kmp_thread_pool = NULL;
+  __kmp_thread_pool_insert_pt = NULL;
+  __kmp_team_pool = NULL;
+
+  // The threadprivate cache will be cleared in `__kmp_cleanup()`
+  if (in_child_atfork_andler) {
+    /* Must actually zero all the *cache arguments passed to
+       __kmpc_threadprivate here so threadprivate doesn't use stale data */
+    KA_TRACE(10, ("__kmp_atfork_child: checking cache address list %p\n",
+                  __kmp_threadpriv_cache_list));
+
+    while (__kmp_threadpriv_cache_list != NULL) {
+
+      if (*__kmp_threadpriv_cache_list->addr != NULL) {
+        KC_TRACE(50, ("__kmp_atfork_child: zeroing cache at address %p\n",
+                      &(*__kmp_threadpriv_cache_list->addr)));
+
+        *__kmp_threadpriv_cache_list->addr = NULL;
+      }
+      __kmp_threadpriv_cache_list = __kmp_threadpriv_cache_list->next;
+    }
+
+    /* reset statically initialized locks */
+    __kmp_init_bootstrap_lock(&__kmp_initz_lock);
+    __kmp_init_bootstrap_lock(&__kmp_stdio_lock);
+    __kmp_init_bootstrap_lock(&__kmp_console_lock);
+    __kmp_init_bootstrap_lock(&__kmp_task_team_lock);
+  }
+
+#if USE_ITT_BUILD
+  __kmp_itt_reset(); // reset ITT's global state
+#endif /* USE_ITT_BUILD */
+
+  {
+    // Child process often get terminated without any use of OpenMP. That might
+    // cause mapped shared memory file to be left unattended. Thus we postpone
+    // library registration till middle initialization in the child process.
+
+    // After we do a `__kmpc_pause_resource()`, the omp runtime must also be in
+    // serially initialized state in order to not break the assumptions of
+    // compiler+runtime implementation
+    __kmp_need_register_serial = FALSE;
+    __kmp_serial_initialize();
+  }
 }
 
 #if ENABLE_LIBOMPTARGET
