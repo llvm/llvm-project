@@ -527,7 +527,7 @@ public:
         return true;
       if (FnDecl->isVirtualAsWritten())
         return false;
-      for (auto* Param : FnDecl->parameters()) {
+      for (auto *Param : FnDecl->parameters()) {
         if (!HasTrivialDestructor(Param))
           return false;
       }
@@ -545,7 +545,7 @@ public:
       return Visit(Body);
     });
   }
-  
+
   bool HasTrivialDestructor(const VarDecl *VD) {
     auto QT = VD->getType();
     if (QT.isPODType(VD->getASTContext()))
@@ -556,7 +556,7 @@ public:
     const CXXRecordDecl *R = Type->getAsCXXRecordDecl();
     if (!R) {
       if (isa<LValueReferenceType>(Type))
-          return true; // T& does not run its destructor.
+        return true; // T& does not run its destructor.
       if (auto *RT = dyn_cast<RValueReferenceType>(Type)) {
         // For T&&, we evaluate the destructor of T.
         QT = RT->getPointeeType();
@@ -572,8 +572,8 @@ public:
         Type = QT.getTypePtrOrNull();
         if (!Type)
           return false;
-        if (isa<PointerType>(Type)) // An array of pointer does not have a destructor.
-          return true;
+        if (isa<PointerType>(Type))
+          return true; // An array of pointers doesn't run a destructor.
         R = Type->getAsCXXRecordDecl();
       }
     }
@@ -623,7 +623,7 @@ public:
   }
 
   bool VisitDeclStmt(const DeclStmt *DS) {
-    for (auto& Decl : DS->decls()) {
+    for (auto &Decl : DS->decls()) {
       if (auto *VD = dyn_cast<VarDecl>(Decl)) {
         if (!HasTrivialDestructor(VD))
           return false;
@@ -782,7 +782,7 @@ public:
     return true;
   }
 
-  bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr* E) {
+  bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
     return Visit(E->getExpr());
   }
 
@@ -912,8 +912,8 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
   return V.IsStatementTrivial(S);
 }
 
-bool TrivialFunctionAnalysis::hasTrivialDtorImpl(
-    const VarDecl *VD, CacheTy &Cache) {
+bool TrivialFunctionAnalysis::hasTrivialDtorImpl(const VarDecl *VD,
+                                                 CacheTy &Cache) {
   TrivialFunctionAnalysisVisitor V(Cache);
   return V.HasTrivialDestructor(VD);
 }

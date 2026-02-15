@@ -96,7 +96,7 @@ public:
       return;
 
     bool ParamHaveTrivialDtors = true;
-    for (auto* Param : FD->parameters()) {
+    for (auto *Param : FD->parameters()) {
       if (!TFA.hasTrivialDtor(Param)) {
         ParamHaveTrivialDtors = false;
         break;

@@ -170,7 +170,7 @@ public:
   /// \returns true if \p D is a "trivial" function.
   bool isTrivial(const Decl *D) const { return isTrivialImpl(D, TheCache); }
   bool isTrivial(const Stmt *S) const { return isTrivialImpl(S, TheCache); }
-  bool hasTrivialDtor(const VarDecl* VD) const {
+  bool hasTrivialDtor(const VarDecl *VD) const {
     return hasTrivialDtorImpl(VD, TheCache);
   }
 
