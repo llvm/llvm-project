@@ -348,3 +348,17 @@ entry:
 
   ret <vscale x 2 x i64> %3
 }
+
+; TODO: We can reduce vlseg2e8.v's vl to a1.
+define void @vlseg2(ptr %p, iXLen %vl) {
+; CHECK-LABEL: vlseg2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vlseg2e32.v v8, (a0)
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; CHECK-NEXT:    vsseg2e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %x = call target("riscv.vector.tuple", <vscale x 16 x i8>, 2) @llvm.riscv.vlseg2(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) poison, ptr %p, iXLen -1, iXLen 5)
+  call void @llvm.riscv.vsseg2(target("riscv.vector.tuple", <vscale x 16 x i8>, 2) %x, ptr %p, iXLen %vl, iXLen 5)
+  ret void
+}
