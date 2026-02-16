@@ -1504,6 +1504,14 @@ add_header_library(
 )
 
 add_header_library(
+  logbl
+  HDRS
+    logbl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_header_library(
   log_range_reduction
   HDRS
     log_range_reduction.h
