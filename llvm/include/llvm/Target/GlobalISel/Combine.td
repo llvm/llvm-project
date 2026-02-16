@@ -1947,7 +1947,7 @@ def APlusBMinusCPlusA : GICombineRule<
           (G_ADD $root, $A, $sub1)),
    (apply (G_SUB $root, $B, $C))>;
    
-// fold (not (add X, -1)) -> (neg X)
+// fold (not (add X, -1)) -> (sub 0, X)
 def NotAPlusNegOne: GICombineRule<
    (defs root:$root),
    (match (G_ADD $add, $A, -1),
