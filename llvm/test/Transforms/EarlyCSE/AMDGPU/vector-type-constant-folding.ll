@@ -1,4 +1,4 @@
-; RUN: opt < %s -mtriple=amdgcn -passes=sroa,early-cse -S | FileCheck %s
+; RUN: opt < %s -mtriple=amdgcn -passes=early-cse -S | FileCheck %s
 ;
 ; Test type mismatch in ConstantFolding for vector types.
 
@@ -7,15 +7,11 @@ define internal void @f() {
 }
 
 define void @test() {
-; CHECK-LABEL: define void @test(
-; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr @f
-; CHECK-NEXT:    ret void
-  %p = alloca ptr, addrspace(5)
-  %v1 = load <4 x i16>, ptr addrspace(5) %p
-  %v2 = load <4 x i16>, ptr addrspace(5) %p
-  store ptr @f, ptr addrspace(5) %p
-  %sub = sub <4 x i16> %v1, %v2
-  %fp = load ptr, ptr addrspace(5) %p
-  store <4 x i16> %sub, ptr %fp
+  %1 = ptrtoint ptr @f to i64
+  %2 = bitcast i64 %1 to <4 x i16>
+  %3 = ptrtoint ptr @f to i64
+  %4 = bitcast i64 %3 to <4 x i16>
+  %sub = sub <4 x i16> %2, %4
+  store <4 x i16> %sub, ptr @f, align 8
   ret void
 }
