@@ -47,7 +47,7 @@ program main
    deallocate(x,y)
 end program main
 
-! CHECK:  "PluginInterface" device {{[0-9]+}} info: Launching kernel {{.*}}
+! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}}
 ! CHECK:  plausibility check:
 ! CHECK:  y(1) 4.0
 ! CHECK:  y(n) 4.0

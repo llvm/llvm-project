@@ -826,6 +826,18 @@ define nofpclass(nan) half @ret_no_nan_result__known_pzero__fdiv__not_inf(half n
   ret half %div
 }
 
+define nofpclass(nan) half @ret_no_nan_result__known_pzero__fdiv__not_inf__insert_point(half nofpclass(inf sub norm nzero) %pzero.or.nan, half nofpclass(inf nan) %not.inf.or.nan) {
+; CHECK-LABEL: define nofpclass(nan) half @ret_no_nan_result__known_pzero__fdiv__not_inf__insert_point(
+; CHECK-SAME: half nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]], half nofpclass(nan inf) [[NOT_INF_OR_NAN:%.*]]) {
+; CHECK-NEXT:    [[DIV:%.*]] = call half @llvm.copysign.f16(half 0xH0000, half [[NOT_INF_OR_NAN]])
+; CHECK-NEXT:    [[BARRIER:%.*]] = call half @llvm.arithmetic.fence.f16(half [[DIV]])
+; CHECK-NEXT:    ret half [[BARRIER]]
+;
+  %div = fdiv half %pzero.or.nan, %not.inf.or.nan
+  %barrier = call half @llvm.arithmetic.fence.f16(half %div)
+  ret half %barrier
+}
+
 ; Should be able to fold to copysign, helped by the lack of nan results.
 define nofpclass(nan) half @ret_no_nan_result__not_inf_or_nan__fdiv__known_pzero_or_nan(half nofpclass(inf) %not.inf.or.nan, half nofpclass(inf sub norm nzero) %pzero.or.nan) {
 ; CHECK-LABEL: define nofpclass(nan) half @ret_no_nan_result__not_inf_or_nan__fdiv__known_pzero_or_nan(
@@ -835,6 +847,18 @@ define nofpclass(nan) half @ret_no_nan_result__not_inf_or_nan__fdiv__known_pzero
 ;
   %div = fdiv half %not.inf.or.nan, %pzero.or.nan
   ret half %div
+}
+
+define nofpclass(nan) half @ret_no_nan_result__not_inf_or_nan__fdiv__known_pzero_or_nan__insert_pt(half nofpclass(inf) %not.inf.or.nan, half nofpclass(inf sub norm nzero) %pzero.or.nan) {
+; CHECK-LABEL: define nofpclass(nan) half @ret_no_nan_result__not_inf_or_nan__fdiv__known_pzero_or_nan__insert_pt(
+; CHECK-SAME: half nofpclass(inf) [[NOT_INF_OR_NAN:%.*]], half nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]]) {
+; CHECK-NEXT:    [[DIV:%.*]] = call half @llvm.copysign.f16(half 0xH7C00, half [[NOT_INF_OR_NAN]])
+; CHECK-NEXT:    [[BARRIER:%.*]] = call half @llvm.arithmetic.fence.f16(half [[DIV]])
+; CHECK-NEXT:    ret half [[BARRIER]]
+;
+  %div = fdiv half %not.inf.or.nan, %pzero.or.nan
+  %barrier = call half @llvm.arithmetic.fence.f16(half %div)
+  ret half %barrier
 }
 
 ; -> fneg, with help of no nan results
@@ -2322,6 +2346,25 @@ define nofpclass(snan) half @qnan_result_demands_snan_src_rhs(i1 %cond, half %un
   %select = select i1 %cond, half %snan, half %unknown0
   %div = fdiv half %unknown1, %select
   ret half %div
+}
+
+; Make sure the replacement for fdiv is inserted at the fdiv, and not
+; the use fmul
+define float @fdiv_replacement_insert_point_regression(i1 %cmp, float %x, float noundef %y, float noundef %z) {
+; CHECK-LABEL: define float @fdiv_replacement_insert_point_regression(
+; CHECK-SAME: i1 [[CMP:%.*]], float [[X:%.*]], float noundef [[Y:%.*]], float noundef [[Z:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.is.fpclass.f32(float [[Y]], i32 615)
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], float 0x7FF8000000000000, float 1.000000e+00
+; CHECK-NEXT:    [[SCALE_0:%.*]] = select i1 [[CMP]], float [[TMP1]], float [[Y]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SCALE_0]], [[X]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+entry:
+  %div = fdiv float %y, %y
+  %scale.0 = select i1 %cmp, float %div, float %y
+  %mul = fmul float %scale.0, %x
+  ret float %mul
 }
 
 attributes #0 = { denormal_fpenv(preservesign) }

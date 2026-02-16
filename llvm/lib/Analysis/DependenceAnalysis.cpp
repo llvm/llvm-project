@@ -1122,26 +1122,6 @@ void DependenceInfo::unifySubscriptType(ArrayRef<Subscript *> Pairs) {
   }
 }
 
-// removeMatchingExtensions - Examines a subscript pair.
-// If the source and destination are identically sign (or zero)
-// extended, it strips off the extension in an effect to simplify
-// the actual analysis.
-void DependenceInfo::removeMatchingExtensions(Subscript *Pair) {
-  const SCEV *Src = Pair->Src;
-  const SCEV *Dst = Pair->Dst;
-  if ((isa<SCEVZeroExtendExpr>(Src) && isa<SCEVZeroExtendExpr>(Dst)) ||
-      (isa<SCEVSignExtendExpr>(Src) && isa<SCEVSignExtendExpr>(Dst))) {
-    const SCEVIntegralCastExpr *SrcCast = cast<SCEVIntegralCastExpr>(Src);
-    const SCEVIntegralCastExpr *DstCast = cast<SCEVIntegralCastExpr>(Dst);
-    const SCEV *SrcCastOp = SrcCast->getOperand();
-    const SCEV *DstCastOp = DstCast->getOperand();
-    if (SrcCastOp->getType() == DstCastOp->getType()) {
-      Pair->Src = SrcCastOp;
-      Pair->Dst = DstCastOp;
-    }
-  }
-}
-
 // Examine the scev and return true iff it's affine.
 // Collect any loops mentioned in the set of "Loops".
 bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
@@ -3608,7 +3588,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     Pair[P].Loops.resize(MaxLevels + 1);
     Pair[P].GroupLoops.resize(MaxLevels + 1);
     Pair[P].Group.resize(Pairs);
-    removeMatchingExtensions(&Pair[P]);
     Pair[P].Classification =
         classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()), Pair[P].Dst,
                      LI->getLoopFor(Dst->getParent()), Pair[P].Loops);

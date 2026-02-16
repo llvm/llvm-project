@@ -5459,7 +5459,7 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
       genMapInfoCB, varType, mapperFuncName, customMapperCB);
   if (!newFn)
     return newFn.takeError();
-  if (llvm::Function *mappedFunc =
+  if ([[maybe_unused]] llvm::Function *mappedFunc =
           moduleTranslation.lookupFunction(mapperFuncName)) {
     assert(mappedFunc == *newFn &&
            "mapper function mapping disagrees with emitted function");
@@ -6443,6 +6443,7 @@ static LogicalResult
 convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
   auto targetOp = cast<omp::TargetOp>(opInst);
+
   // The current debug location already has the DISubprogram for the outlined
   // function that will be created for the target op. We save it here so that
   // we can set it on the outlined function.

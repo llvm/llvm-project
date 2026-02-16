@@ -18,13 +18,12 @@ namespace clang::ssaf {
 
 class MockSerializationFormat final : public SerializationFormat {
 public:
-  explicit MockSerializationFormat(
-      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+  MockSerializationFormat();
 
-  TUSummary readTUSummary(llvm::StringRef Path) override;
+  llvm::Expected<TUSummary> readTUSummary(llvm::StringRef Path) override;
 
-  void writeTUSummary(const TUSummary &Summary,
-                      llvm::StringRef OutputDir) override;
+  llvm::Error writeTUSummary(const TUSummary &Summary,
+                             llvm::StringRef Path) override;
 
   struct SpecialFileRepresentation {
     std::string MockRepresentation;
@@ -37,6 +36,8 @@ public:
 
   using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
   std::map<SummaryName, FormatInfo> FormatInfos;
+
+  static char ID;
 };
 
 } // namespace clang::ssaf

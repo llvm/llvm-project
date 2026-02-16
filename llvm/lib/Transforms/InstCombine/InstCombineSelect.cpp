@@ -3765,67 +3765,9 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   }
 
   if (match(TrueVal, m_One())) {
-    Value *C;
-
-    // (C && A) || (!C && B) --> sel C, A, B
-    // (A && C) || (!C && B) --> sel C, A, B
-    // (C && A) || (B && !C) --> sel C, A, B
-    // (A && C) || (B && !C) --> sel C, A, B (may require freeze)
-    if (match(FalseVal, m_c_LogicalAnd(m_Not(m_Value(C)), m_Value(B))) &&
-        match(CondVal, m_c_LogicalAnd(m_Specific(C), m_Value(A)))) {
-      auto *SelCond = dyn_cast<SelectInst>(CondVal);
-      auto *SelFVal = dyn_cast<SelectInst>(FalseVal);
-      bool MayNeedFreeze = SelCond && SelFVal &&
-                           match(SelFVal->getTrueValue(),
-                                 m_Not(m_Specific(SelCond->getTrueValue())));
-      if (MayNeedFreeze)
-        C = Builder.CreateFreeze(C);
-      if (!ProfcheckDisableMetadataFixes) {
-        Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
-        if (match(CondVal, m_LogicalAnd(m_Specific(C), m_Value(A2))) &&
-            SelCond) {
-          return SelectInst::Create(C, A, B, "", nullptr, SelCond);
-        } else if (match(FalseVal,
-                         m_LogicalAnd(m_Not(m_Value(C2)), m_Value(B2))) &&
-                   SelFVal) {
-          SelectInst *NewSI = SelectInst::Create(C, A, B, "", nullptr, SelFVal);
-          NewSI->swapProfMetadata();
-          return NewSI;
-        } else {
-          return createSelectInstWithUnknownProfile(C, A, B);
-        }
-      }
-      return SelectInst::Create(C, A, B);
-    }
-
-    // (!C && A) || (C && B) --> sel C, B, A
-    // (A && !C) || (C && B) --> sel C, B, A
-    // (!C && A) || (B && C) --> sel C, B, A
-    // (A && !C) || (B && C) --> sel C, B, A (may require freeze)
-    if (match(CondVal, m_c_LogicalAnd(m_Not(m_Value(C)), m_Value(A))) &&
-        match(FalseVal, m_c_LogicalAnd(m_Specific(C), m_Value(B)))) {
-      auto *SelCond = dyn_cast<SelectInst>(CondVal);
-      auto *SelFVal = dyn_cast<SelectInst>(FalseVal);
-      bool MayNeedFreeze = SelCond && SelFVal &&
-                           match(SelCond->getTrueValue(),
-                                 m_Not(m_Specific(SelFVal->getTrueValue())));
-      if (MayNeedFreeze)
-        C = Builder.CreateFreeze(C);
-      if (!ProfcheckDisableMetadataFixes) {
-        Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
-        if (match(CondVal, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(A2))) &&
-            SelCond) {
-          SelectInst *NewSI = SelectInst::Create(C, B, A, "", nullptr, SelCond);
-          NewSI->swapProfMetadata();
-          return NewSI;
-        } else if (match(FalseVal, m_LogicalAnd(m_Specific(C), m_Value(B2))) &&
-                   SelFVal) {
-          return SelectInst::Create(C, B, A, "", nullptr, SelFVal);
-        } else {
-          return createSelectInstWithUnknownProfile(C, B, A);
-        }
-      }
-      return SelectInst::Create(C, B, A);
+    // (C && A) || (!C && B) --> select C, A, B (and similar cases)
+    if (auto *V = FoldOrOfLogicalAnds(CondVal, FalseVal)) {
+      return V;
     }
   }
 

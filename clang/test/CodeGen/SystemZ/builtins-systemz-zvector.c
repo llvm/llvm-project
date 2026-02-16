@@ -4812,19 +4812,19 @@ void test_float(void) {
   // (emulated)
   vd = vec_ctd(vsl, 1);
   // CHECK: [[VAL:%[^ ]+]] = sitofp <2 x i64> %{{.*}} to <2 x double>
-  // CHECK: fmul <2 x double> [[VAL]], splat (double 5.000000e-01)
+  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double 5.000000e-01)
   // (emulated)
   vd = vec_ctd(vul, 1);
   // CHECK: [[VAL:%[^ ]+]] = uitofp <2 x i64> %{{.*}} to <2 x double>
-  // CHECK: fmul <2 x double> [[VAL]], splat (double 5.000000e-01)
+  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double 5.000000e-01)
   // (emulated)
   vd = vec_ctd(vsl, 31);
   // CHECK: [[VAL:%[^ ]+]] = sitofp <2 x i64> %{{.*}} to <2 x double>
-  // CHECK: fmul <2 x double> [[VAL]], splat (double 0x3E00000000000000)
+  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double 0x3E00000000000000)
   // (emulated)
   vd = vec_ctd(vul, 31);
   // CHECK: [[VAL:%[^ ]+]] = uitofp <2 x i64> %{{.*}} to <2 x double>
-  // CHECK: fmul <2 x double> [[VAL]], splat (double 0x3E00000000000000)
+  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double 0x3E00000000000000)
   // (emulated)
 
   vsl = vec_ctsl(vd, 0);
