@@ -359,8 +359,8 @@ public:
           ++LM1;
         LM1.Pointer->Next = Pos.Pointer->Next;
       }
-      Pos.Pointer->Next = X.before_begin()->Next;
-      X.before_begin()->Next = nullptr;
+      Pos.Pointer->Next = X.BeforeBegin.Next;
+      X.BeforeBegin.Next = nullptr;
     }
   }
 

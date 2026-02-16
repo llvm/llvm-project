@@ -116,11 +116,15 @@ AST_POLYMORPHIC_MATCHER_P(
     matchMemberName,
     AST_POLYMORPHIC_SUPPORTED_TYPES(MemberExpr, CXXDependentScopeMemberExpr),
     std::string, MemberName) {
-  if (const auto *E = dyn_cast<MemberExpr>(&Node))
-    return E->getMemberDecl()->getName() == MemberName;
+  if (const auto *E = dyn_cast<MemberExpr>(&Node)) {
+    const IdentifierInfo *II = E->getMemberDecl()->getIdentifier();
+    return II && II->getName() == MemberName;
+  }
 
-  if (const auto *E = dyn_cast<CXXDependentScopeMemberExpr>(&Node))
-    return E->getMember().getAsString() == MemberName;
+  if (const auto *E = dyn_cast<CXXDependentScopeMemberExpr>(&Node)) {
+    const IdentifierInfo *II = E->getMember().getAsIdentifierInfo();
+    return II && II->getName() == MemberName;
+  }
 
   return false;
 }
