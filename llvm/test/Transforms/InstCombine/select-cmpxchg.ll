@@ -43,11 +43,9 @@ define double @cmpxchg_fp(ptr %ptr, double %compare, i64 %new_value) {
 ; CHECK-LABEL: @cmpxchg_fp(
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast double [[COMPARE:%.*]] to i64
 ; CHECK-NEXT:    [[T0:%.*]] = cmpxchg ptr [[PTR:%.*]], i64 [[BC]], i64 [[NEW_VALUE:%.*]] acq_rel monotonic, align 8
-; CHECK-NEXT:    [[T1:%.*]] = extractvalue { i64, i1 } [[T0]], 1
 ; CHECK-NEXT:    [[T2:%.*]] = extractvalue { i64, i1 } [[T0]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = bitcast i64 [[T2]] to double
-; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1]], double [[COMPARE]], double [[T3]]
-; CHECK-NEXT:    ret double [[T4]]
+; CHECK-NEXT:    ret double [[T3]]
 ;
   %bc = bitcast double %compare to i64
   %t0 = cmpxchg ptr %ptr, i64 %bc, i64 %new_value acq_rel monotonic
@@ -61,11 +59,9 @@ define double @cmpxchg_fp(ptr %ptr, double %compare, i64 %new_value) {
 define double @cmpxchg_fp_const(ptr %ptr, i64 %new_value) {
 ; CHECK-LABEL: @cmpxchg_fp_const(
 ; CHECK-NEXT:    [[T0:%.*]] = cmpxchg ptr [[PTR:%.*]], i64 0, i64 [[NEW_VALUE:%.*]] acq_rel monotonic, align 8
-; CHECK-NEXT:    [[T1:%.*]] = extractvalue { i64, i1 } [[T0]], 1
 ; CHECK-NEXT:    [[T2:%.*]] = extractvalue { i64, i1 } [[T0]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = bitcast i64 [[T2]] to double
-; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1]], double 0.000000e+00, double [[T3]]
-; CHECK-NEXT:    ret double [[T4]]
+; CHECK-NEXT:    ret double [[T3]]
 ;
   %t0 = cmpxchg ptr %ptr, i64 0, i64 %new_value acq_rel monotonic
   %t1 = extractvalue { i64, i1 } %t0, 1
@@ -79,11 +75,9 @@ define <2 x i32> @cmpxchg_v2i32(ptr %ptr, <2 x i32> %compare, i64 %new_value) {
 ; CHECK-LABEL: @cmpxchg_v2i32(
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i32> [[COMPARE:%.*]] to i64
 ; CHECK-NEXT:    [[T0:%.*]] = cmpxchg ptr [[PTR:%.*]], i64 [[BC]], i64 [[NEW_VALUE:%.*]] acq_rel monotonic, align 8
-; CHECK-NEXT:    [[T1:%.*]] = extractvalue { i64, i1 } [[T0]], 1
 ; CHECK-NEXT:    [[T2:%.*]] = extractvalue { i64, i1 } [[T0]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = bitcast i64 [[T2]] to <2 x i32>
-; CHECK-NEXT:    [[T4:%.*]] = select i1 [[T1]], <2 x i32> [[COMPARE]], <2 x i32> [[T3]]
-; CHECK-NEXT:    ret <2 x i32> [[T4]]
+; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
   %bc = bitcast <2 x i32> %compare to i64
   %t0 = cmpxchg ptr %ptr, i64 %bc, i64 %new_value acq_rel monotonic
