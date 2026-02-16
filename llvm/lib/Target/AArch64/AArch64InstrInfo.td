@@ -219,8 +219,6 @@ def HasLSUI          : Predicate<"Subtarget->hasLSUI()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSUI), "lsui">;
 def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
                                  AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
-def HasCMH           : Predicate<"Subtarget->hasCMH()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureCMH), "cmh">;
 def HasLSCP          : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
 def HasSVE2p2        : Predicate<"Subtarget->hasSVE2p2()">,
@@ -11797,10 +11795,8 @@ let Uses = [FPMR, FPCR] in
 // Contention Management Hints (FEAT_CMH)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasCMH] in {
-  defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
-  def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
-}
+defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
+def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
 
 //===----------------------------------------------------------------------===//
 // Permission Overlays Extension 2 (FEAT_S1POE2)
