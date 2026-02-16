@@ -87,8 +87,8 @@
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:     RISC-V Promote Constants
 ; CHECK-NEXT:     A No-Op Barrier Pass
+; CHECK-NEXT:     Merge internal globals
 ; CHECK-NEXT:     FunctionPass Manager
-; CHECK-NEXT:       Merge internal globals
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
