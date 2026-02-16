@@ -20,6 +20,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
@@ -319,7 +320,7 @@ public:
         // Leave these relocations alone as they are used for EH.
         return false;
     }
-    return false;
+    return Target.getSpecifier();
   }
 
   /// getFixupKindNumBytes - The number of bytes the fixup may change.
