@@ -83,7 +83,7 @@ bool DDGDotGraphTraits::isNodeHidden(const DDGNode *Node,
 }
 
 std::string DDGDotGraphTraits::getNodeAttributes(const DDGNode *Node,
-                                                const DataDependenceGraph *) {
+                                                 const DataDependenceGraph *) {
   if (isa<PiBlockDDGNode>(Node))
     return "shape=box, style=\"rounded,filled\", fillcolor=lightyellow, "
            "color=darkorange, penwidth=3";
@@ -137,21 +137,24 @@ DDGDotGraphTraits::getVerboseNodeLabel(const DDGNode *Node,
   return OS.str();
 }
 
+// EdgeKind to DOT color mapping:
+// - MemoryDependence: red
+// - RegisterDefUse: blue
+// - Rooted/Unknown=default (no attribute).
+static void writeEdgeKindColorAttr(raw_ostream &OS, DDGEdge::EdgeKind Kind) {
+  if (Kind == DDGEdge::EdgeKind::MemoryDependence)
+    OS << ", color=red";
+  else if (Kind == DDGEdge::EdgeKind::RegisterDefUse)
+    OS << ", color=blue";
+}
+
 std::string DDGDotGraphTraits::getSimpleEdgeAttributes(
     const DDGNode *Src, const DDGEdge *Edge, const DataDependenceGraph *G) {
   std::string Str;
   raw_string_ostream OS(Str);
   DDGEdge::EdgeKind Kind = Edge->getKind();
   OS << "label=\"[" << Kind << "]\"";
-  // EdgeKind to color mapping:
-  // - MemoryDependence: red
-  // - RegisterDefUse: blue
-  // - Rooted: black
-  // - Unknown: black
-  if (Kind == DDGEdge::EdgeKind::MemoryDependence)
-    OS << ", color=red";
-  else if (Kind == DDGEdge::EdgeKind::RegisterDefUse)
-    OS << ", color=blue";
+  writeEdgeKindColorAttr(OS, Kind);
   return OS.str();
 }
 
@@ -166,14 +169,6 @@ std::string DDGDotGraphTraits::getVerboseEdgeAttributes(
   else
     OS << Kind;
   OS << "]\"";
-  // EdgeKind to color mapping:
-  // - MemoryDependence: red
-  // - RegisterDefUse: blue
-  // - Rooted: black
-  // - Unknown: black
-  if (Kind == DDGEdge::EdgeKind::MemoryDependence)
-    OS << ", color=red";
-  else if (Kind == DDGEdge::EdgeKind::RegisterDefUse)
-    OS << ", color=blue";
+  writeEdgeKindColorAttr(OS, Kind);
   return OS.str();
 }
