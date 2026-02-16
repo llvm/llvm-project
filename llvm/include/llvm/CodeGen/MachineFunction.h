@@ -528,7 +528,7 @@ public:
 
     /// 'call_target' metadata for the DISubprogram. It is the declaration
     /// or definition of the target function and might be indirect.
-    MDNode *MD = nullptr;
+    MDNode *CallTarget = nullptr;
 
     CallSiteInfo() = default;
 

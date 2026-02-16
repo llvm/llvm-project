@@ -4985,11 +4985,6 @@ void CGDebugInfo::addCallTarget(const FunctionDecl *FD, llvm::CallBase *CI) {
   if (!FD)
     return;
 
-  // Ignore method types that never can be indirect calls.
-  if (isa<CXXConstructorDecl>(FD) || isa<CXXDestructorDecl>(FD) ||
-      FD->hasAttr<CUDAGlobalAttr>())
-    return;
-
   // Record only indirect calls.
   assert(CI && "Invalid Call Instruction.");
   if (!CI->isIndirectCall())
