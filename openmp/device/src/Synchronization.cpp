@@ -167,17 +167,6 @@ void namedBarrier() {
 void syncThreadsAligned(atomic::OrderingTy Ordering) { __syncthreads(); }
 
 constexpr uint32_t OMP_SPIN = 1000;
-constexpr uint32_t UNSET = 0;
-constexpr uint32_t SET = 1;
-
-void unsetLock(omp_lock_t *Lock) {
-  [[maybe_unused]] uint32_t before = atomicExchange(
-      reinterpret_cast<uint32_t *>(Lock), UNSET, atomic::seq_cst);
-}
-
-int testLock(omp_lock_t *Lock) {
-  return atomic::add(reinterpret_cast<uint32_t *>(Lock), 0u, atomic::seq_cst);
-}
 
 void initLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
