@@ -73,7 +73,7 @@ define zeroext i1 @f4(i32 %dummy, i32 %a, ptr %res) {
 ; and must use a register.
 define zeroext i1 @f5(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f5:
-; CHECK: llilh [[REG1:%r[0-5]]], 32768
+; CHECK: iilf [[REG1:%r[0-5]]], 2147483648
 ; CHECK: sr %r3, [[REG1]]
 ; CHECK-DAG: st %r3, 0(%r4)
 ; CHECK-DAG: ipm [[REG:%r[0-5]]]
@@ -171,7 +171,7 @@ define zeroext i1 @f10(i32 %dummy, i32 %a, ptr %res) {
 ; Check the next value down, which must use a register.
 define zeroext i1 @f11(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f11:
-; CHECK: llilh [[REG1:%r[0-5]]], 32768
+; CHECK: iilf [[REG1:%r[0-5]]], 2147483648
 ; CHECK: sr %r3, [[REG1]]
 ; CHECK-DAG: st %r3, 0(%r4)
 ; CHECK-DAG: ipm [[REG:%r[0-5]]]
