@@ -14011,6 +14011,16 @@ cc_library(
 )
 
 gentbl_cc_library(
+    name = "DialectReductionPatternInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Reducer/DialectReductionPatternInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Reducer/DialectReductionPatternInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
     name = "ReducerIncGen",
     tbl_outs = {"include/mlir/Reducer/Passes.h.inc": [
         "-gen-pass-decls",
@@ -14030,6 +14040,7 @@ cc_library(
     hdrs = glob(["include/mlir/Reducer/*.h"]),
     includes = ["include"],
     deps = [
+        ":DialectReductionPatternInterfaceIncGen",
         ":IR",
         ":Pass",
         ":ReducerIncGen",

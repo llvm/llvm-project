@@ -7231,6 +7231,10 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
         if (!SC)
           continue;
         Offset = SC->getAPInt().getSExtValue();
+        if (Offset >= std::numeric_limits<int64_t>::max() - 1) {
+          Offset = 0;
+          continue;
+        }
         break;
       }
     }
