@@ -1477,8 +1477,10 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                    RecurKind RdxKind) {
   auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
   auto getIdentity = [&]() {
+    Function *Fn = Builder.GetInsertBlock()->getParent();
     return getRecurrenceIdentity(RdxKind, SrcVecEltTy,
-                                 Builder.getFastMathFlags());
+                                 Builder.getFastMathFlags() |
+                                     Fn->getFMFFromFnAttribute());
   };
   switch (RdxKind) {
   case RecurKind::AddChainWithSubs:
@@ -1521,7 +1523,9 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   assert(VPReductionIntrinsic::isVPReduction(VPID) &&
          "No VPIntrinsic for this reduction");
   auto *EltTy = cast<VectorType>(Src->getType())->getElementType();
-  Value *Iden = getRecurrenceIdentity(Kind, EltTy, Builder.getFastMathFlags());
+  Function *Fn = Builder.GetInsertBlock()->getParent();
+  Value *Iden = getRecurrenceIdentity(
+      Kind, EltTy, Builder.getFastMathFlags() | Fn->getFMFFromFnAttribute());
   Value *Ops[] = {Iden, Src, Mask, EVL};
   return Builder.CreateIntrinsic(EltTy, VPID, Ops);
 }
