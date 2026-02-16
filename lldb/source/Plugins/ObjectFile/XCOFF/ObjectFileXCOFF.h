@@ -151,4 +151,4 @@ private:
   std::map<std::string, std::vector<std::string>> m_deps_base_members;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILE_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H

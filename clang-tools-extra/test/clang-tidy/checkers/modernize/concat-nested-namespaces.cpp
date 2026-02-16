@@ -1,14 +1,7 @@
-// RUN: mkdir -p %t.dir
-// RUN: cp %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h %t.dir/modernize-concat-nested-namespaces.h
-// RUN: %check_clang_tidy -std=c++17 -check-suffix=NORMAL %s modernize-concat-nested-namespaces %t.dir/code -- -header-filter=".*" -- -I %t.dir
-// RUN: FileCheck -input-file=%t.dir/modernize-concat-nested-namespaces.h %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h -check-prefix=CHECK-FIXES
-// Restore header file and re-run with c++20:
-// RUN: cp %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h %t.dir/modernize-concat-nested-namespaces.h
-// RUN: %check_clang_tidy -std=c++20 -check-suffixes=NORMAL,CPP20 %s modernize-concat-nested-namespaces %t.dir/code -- -header-filter=".*" -- -I %t.dir
-// RUN: FileCheck -input-file=%t.dir/modernize-concat-nested-namespaces.h %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h -check-prefix=CHECK-FIXES
+// RUN: %check_clang_tidy -std=c++17 -check-suffix=NORMAL -check-header %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h %s modernize-concat-nested-namespaces %t
+// RUN: %check_clang_tidy -std=c++20 -check-suffixes=NORMAL,CPP20 -check-header %S/Inputs/concat-nested-namespaces/modernize-concat-nested-namespaces.h %s modernize-concat-nested-namespaces %t
 
 #include "modernize-concat-nested-namespaces.h"
-// CHECK-MESSAGES-NORMAL-DAG: modernize-concat-nested-namespaces.h:1:1: warning: nested namespaces can be concatenated [modernize-concat-nested-namespaces]
 
 namespace n1 {}
 
