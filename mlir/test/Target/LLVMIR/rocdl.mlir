@@ -391,6 +391,20 @@ llvm.func @rocdl.s.wait.tensorcnt() {
   llvm.return
 }
 
+llvm.func @rocdl.asyncmark() {
+  // CHECK-LABEL: rocdl.asyncmark
+  // CHECK-NEXT: call void @llvm.amdgcn.asyncmark()
+  rocdl.asyncmark
+  llvm.return
+}
+
+llvm.func @rocdl.wait.asyncmark() {
+  // CHECK-LABEL: rocdl.wait.asyncmark
+  // CHECK-NEXT: call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  rocdl.wait.asyncmark 0
+  llvm.return
+}
+
 llvm.func @rocdl.setprio() {
   // CHECK: call void @llvm.amdgcn.s.setprio(i16 0)
   rocdl.s.setprio 0

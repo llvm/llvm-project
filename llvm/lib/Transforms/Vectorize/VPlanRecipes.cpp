@@ -468,6 +468,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ExitingIVValue:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
+  case VPInstruction::LogicalOr:
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
@@ -626,7 +627,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateVectorSpliceRight(V1, V2, 1, Name);
   }
   case VPInstruction::CalculateTripCountMinusVF: {
-    unsigned UF = getParent()->getPlan()->getUF();
+    unsigned UF = getParent()->getPlan()->getConcreteUF();
     Value *ScalarTC = State.get(getOperand(0), VPLane(0));
     Value *Step = createStepForVF(Builder, ScalarTC->getType(), State.VF, UF);
     Value *Sub = Builder.CreateSub(ScalarTC, Step);
@@ -812,6 +813,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *A = State.get(getOperand(0));
     Value *B = State.get(getOperand(1));
     return Builder.CreateLogicalAnd(A, B, Name);
+  }
+  case VPInstruction::LogicalOr: {
+    Value *A = State.get(getOperand(0));
+    Value *B = State.get(getOperand(1));
+    return Builder.CreateLogicalOr(A, B, Name);
   }
   case VPInstruction::PtrAdd: {
     assert((State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
@@ -1064,8 +1070,9 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
 
     VPValue *Op0, *Op1;
     bool IsLogicalAnd =
-        match(this, m_LogicalAnd(m_VPValue(Op0), m_VPValue(Op1)));
-    bool IsLogicalOr = match(this, m_LogicalOr(m_VPValue(Op0), m_VPValue(Op1)));
+        match(this, m_c_LogicalAnd(m_VPValue(Op0), m_VPValue(Op1)));
+    bool IsLogicalOr =
+        match(this, m_c_LogicalOr(m_VPValue(Op0), m_VPValue(Op1)));
     // Also match the inverted forms:
     // select x, false, y --> !x & y (still AND)
     // select x, y, true --> !x | y (still OR)
@@ -1338,6 +1345,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLastActive:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
+  case VPInstruction::LogicalOr:
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
   case VPInstruction::WideIVStep:
@@ -1504,6 +1512,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::LogicalAnd:
     O << "logical-and";
+    break;
+  case VPInstruction::LogicalOr:
+    O << "logical-or";
     break;
   case VPInstruction::PtrAdd:
     O << "ptradd";
@@ -1702,6 +1713,14 @@ void VPPhiAccessors::removeIncomingValueFor(VPBlockBase *IncomingBlock) const {
          "Number of phi operands must match number of predecessors");
   unsigned Position = R->getParent()->getIndexForPredecessor(IncomingBlock);
   R->removeOperand(Position);
+}
+
+VPValue *
+VPPhiAccessors::getIncomingValueForBlock(const VPBasicBlock *VPBB) const {
+  for (unsigned Idx = 0; Idx != getNumIncoming(); ++Idx)
+    if (getIncomingBlock(Idx) == VPBB)
+      return getIncomingValue(Idx);
+  llvm_unreachable("VPBB is not an incoming block");
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2667,31 +2686,44 @@ void VPWidenGEPRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPVectorEndPointerRecipe::materializeOffset(unsigned Part) {
+  assert(!getOffset() && "Unexpected offset operand");
+  VPBuilder Builder(this);
+  VPlan &Plan = *getParent()->getPlan();
+  VPValue *VFVal = getVFValue();
+  VPTypeAnalysis TypeInfo(Plan);
+  const DataLayout &DL =
+      Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
+  Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(getPointer()));
+  VPValue *Stride =
+      Plan.getConstantInt(IndexTy, getStride(), /*IsSigned=*/true);
+  Type *VFTy = TypeInfo.inferScalarType(VFVal);
+  VPValue *VF = Builder.createScalarZExtOrTrunc(VFVal, IndexTy, VFTy,
+                                                DebugLoc::getUnknown());
+
+  // Offset for Part0 = Offset0 = Stride * (VF - 1).
+  VPInstruction *VFMinusOne =
+      Builder.createSub(VF, Plan.getConstantInt(IndexTy, 1u),
+                        DebugLoc::getUnknown(), "", {true, true});
+  VPInstruction *Offset0 =
+      Builder.createOverflowingOp(Instruction::Mul, {VFMinusOne, Stride});
+
+  // Offset for PartN = Offset0 + Part * Stride * VF.
+  VPValue *PartxStride =
+      Plan.getConstantInt(IndexTy, Part * getStride(), /*IsSigned=*/true);
+  VPValue *Offset = Builder.createAdd(
+      Offset0,
+      Builder.createOverflowingOp(Instruction::Mul, {PartxStride, VF}));
+  addOperand(Offset);
+}
+
 void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
-  unsigned CurrentPart = getUnrollPart(*this);
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  Type *IndexTy = DL.getIndexType(State.TypeAnalysis.inferScalarType(this));
-
-  // The wide store needs to start at the last vector element.
-  Value *RunTimeVF = State.get(getVFValue(), VPLane(0));
-  if (IndexTy != RunTimeVF->getType())
-    RunTimeVF = Builder.CreateZExtOrTrunc(RunTimeVF, IndexTy);
-  // NumElt = Stride * CurrentPart * RunTimeVF
-  Value *NumElt = Builder.CreateMul(
-      ConstantInt::getSigned(IndexTy, Stride * (int64_t)CurrentPart),
-      RunTimeVF);
-  // LastLane = Stride * (RunTimeVF - 1)
-  Value *LastLane = Builder.CreateSub(RunTimeVF, ConstantInt::get(IndexTy, 1));
-  if (Stride != 1)
-    LastLane =
-        Builder.CreateMul(ConstantInt::getSigned(IndexTy, Stride), LastLane);
-  Value *Ptr = State.get(getOperand(0), VPLane(0));
-  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, NumElt, "",
+  assert(getOffset() && "Expected prior materialization of offset");
+  Value *Ptr = State.get(getPointer(), true);
+  Value *Offset = State.get(getOffset(), true);
+  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Offset, "",
                                        getGEPNoWrapFlags());
-  ResultPtr = Builder.CreateGEP(getSourceElementType(), ResultPtr, LastLane, "",
-                                getGEPNoWrapFlags());
-
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
 
@@ -3551,7 +3583,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
           VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
           /*Insert=*/false, /*Extract=*/true, Ctx.CostKind);
 
-      if (Ctx.useEmulatedMaskMemRefHack(UI, VF)) {
+      if (Ctx.useEmulatedMaskMemRefHack(this, VF)) {
         // Artificially setting to a high enough value to practically disable
         // vectorization with such operations.
         return 3000000;

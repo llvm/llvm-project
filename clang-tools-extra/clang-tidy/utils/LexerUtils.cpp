@@ -10,6 +10,7 @@
 #include "clang/Basic/SourceManager.h"
 #include <optional>
 #include <utility>
+#include <vector>
 
 namespace clang::tidy::utils::lexer {
 
@@ -97,6 +98,66 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
   }
 
   return false;
+}
+
+std::vector<CommentToken>
+getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
+                           const LangOptions &LangOpts) {
+  std::vector<CommentToken> Comments;
+  if (Range.isInvalid())
+    return Comments;
+
+  const CharSourceRange FileRange =
+      Lexer::makeFileCharRange(Range, SM, LangOpts);
+  if (FileRange.isInvalid())
+    return Comments;
+
+  const std::pair<FileID, unsigned> BeginLoc =
+      SM.getDecomposedLoc(FileRange.getBegin());
+  const std::pair<FileID, unsigned> EndLoc =
+      SM.getDecomposedLoc(FileRange.getEnd());
+
+  if (BeginLoc.first != EndLoc.first)
+    return Comments;
+
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(BeginLoc.first, &Invalid);
+  if (Invalid)
+    return Comments;
+
+  const char *StrData = Buffer.data() + BeginLoc.second;
+
+  Lexer TheLexer(SM.getLocForStartOfFile(BeginLoc.first), LangOpts,
+                 Buffer.begin(), StrData, Buffer.end());
+  // Use raw lexing with comment retention so we can see comment tokens without
+  // preprocessing or macro expansion effects.
+  TheLexer.SetCommentRetentionState(true);
+
+  while (true) {
+    Token Tok;
+    if (TheLexer.LexFromRawLexer(Tok))
+      break;
+    if (Tok.is(tok::eof) || Tok.getLocation() == FileRange.getEnd() ||
+        SM.isBeforeInTranslationUnit(FileRange.getEnd(), Tok.getLocation()))
+      break;
+
+    if (Tok.is(tok::comment)) {
+      const std::pair<FileID, unsigned> CommentLoc =
+          SM.getDecomposedLoc(Tok.getLocation());
+      assert(CommentLoc.first == BeginLoc.first);
+      Comments.emplace_back(CommentToken{
+          Tok.getLocation(),
+          StringRef(Buffer.begin() + CommentLoc.second, Tok.getLength()),
+      });
+    } else {
+      // Clear comments found before the different token, e.g. comma. Callers
+      // use this to retrieve only the contiguous comment block that directly
+      // precedes a token of interest.
+      Comments.clear();
+    }
+  }
+
+  return Comments;
 }
 
 std::optional<Token> getQualifyingToken(tok::TokenKind TK,
