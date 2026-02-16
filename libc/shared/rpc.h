@@ -297,7 +297,7 @@ template <bool T> struct Port {
                  uint32_t index, uint32_t out)
       : process(process), lane_mask(lane_mask), lane_size(lane_size),
         index(index), out(out), receive(false), owns_buffer(true) {}
-  RPC_ATTRS ~Port() = default;
+  RPC_ATTRS ~Port() { close(); }
 
 private:
   RPC_ATTRS Port(const Port &) = delete;
@@ -332,6 +332,7 @@ public:
     return lane_mask;
   }
 
+private:
   RPC_ATTRS void close() {
     // Wait for all lanes to finish using the port.
     rpc::sync_lane(lane_mask);
@@ -343,7 +344,6 @@ public:
     process.unlock(lane_mask, index);
   }
 
-private:
   Process<T> &process;
   uint64_t lane_mask;
   uint32_t lane_size;
