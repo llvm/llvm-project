@@ -13,9 +13,7 @@
 //     noexcept(noexcept(ranges::iter_move(i.current)))
 //     requires input_iterator<I>;
 
-#include <cassert>
 #include <iterator>
-#include <utility>
 
 #include "test_macros.h"
 #include "test_iterators.h"

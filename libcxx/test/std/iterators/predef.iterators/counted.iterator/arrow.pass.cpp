@@ -11,7 +11,6 @@
 // constexpr auto operator->() const noexcept
 //   requires contiguous_iterator<I>;
 
-#include <cassert>
 #include <iterator>
 
 #include "test_macros.h"

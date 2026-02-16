@@ -10,7 +10,6 @@
 
 // constexpr explicit adjacent_view(View)
 
-#include <cassert>
 #include <ranges>
 #include <tuple>
 

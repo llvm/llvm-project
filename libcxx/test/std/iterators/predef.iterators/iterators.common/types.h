@@ -9,8 +9,6 @@
 #ifndef TEST_STD_RANGES_ITERATORS_PREDEF_ITERATORS_ITERATORS_COMMON_TYPES_H
 #define TEST_STD_RANGES_ITERATORS_PREDEF_ITERATORS_ITERATORS_COMMON_TYPES_H
 
-#include <utility>
-
 #include "test_macros.h"
 #include "test_iterators.h"
 

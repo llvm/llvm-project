@@ -10,9 +10,8 @@
 
 // constexpr common_iterator() requires default_initializable<I> = default;
 
-#include <cassert>
 #include <iterator>
-#include <type_traits>
+#include <cassert>
 
 #include "test_iterators.h"
 

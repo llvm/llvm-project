@@ -10,7 +10,6 @@
 
 // drop_view() requires default_initializable<V> = default;
 
-#include <cassert>
 #include <ranges>
 
 #include "test_macros.h"

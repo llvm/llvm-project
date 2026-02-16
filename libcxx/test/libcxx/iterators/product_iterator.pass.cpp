@@ -10,7 +10,6 @@
 // gcc 15 does not seem to recognize the __product_iterator_traits specializations
 // UNSUPPORTED: gcc
 
-#include <cassert>
 #include <flat_map>
 #include <ranges>
 #include <type_traits>

@@ -15,7 +15,6 @@
 #include <string>
 #include <iterator>
 #include <cassert>
-#include <cstdint>
 
 #include "test_macros.h"
 #include "min_allocator.h"

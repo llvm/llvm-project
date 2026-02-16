@@ -10,7 +10,6 @@
 
 // iterator() requires default_initializable<iterator_t<Base>> = default;
 
-#include <cassert>
 #include <ranges>
 #include <tuple>
 

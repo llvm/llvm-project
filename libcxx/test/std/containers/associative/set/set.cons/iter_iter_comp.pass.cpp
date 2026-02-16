@@ -13,9 +13,8 @@
 // template <class InputIterator>
 //     set(InputIterator first, InputIterator last, const value_compare& comp);
 
-#include <cassert>
-#include <iterator>
 #include <set>
+#include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"

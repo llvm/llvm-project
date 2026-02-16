@@ -17,7 +17,6 @@
 #include <ranges>
 
 #include "test_iterators.h"
-#include "type_algorithms.h"
 
 struct SimpleView : std::ranges::view_base {
   int* begin() const;

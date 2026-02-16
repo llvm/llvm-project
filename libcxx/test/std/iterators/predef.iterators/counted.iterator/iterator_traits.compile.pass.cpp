@@ -15,7 +15,6 @@
 //                                 add_pointer_t<iter_reference_t<I>>, void>;
 // };
 
-#include <cstddef>
 #include <iterator>
 
 #include "test_macros.h"

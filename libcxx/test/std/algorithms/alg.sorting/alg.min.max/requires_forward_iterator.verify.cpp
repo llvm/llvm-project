@@ -13,7 +13,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 
 #include "test_iterators.h"
 

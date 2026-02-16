@@ -17,8 +17,6 @@
 #include <numeric>
 #include <cassert>
 #include <functional>
-#include <initializer_list>
-#include <iterator>
 
 #include "test_macros.h"
 #include "test_iterators.h"

@@ -19,7 +19,6 @@
 #include <functional>
 
 #include "test_iterators.h"
-#include "test_macros.h"
 
 struct NonCommonRange : std::ranges::view_base {
   using Iterator = forward_iterator<int*>;

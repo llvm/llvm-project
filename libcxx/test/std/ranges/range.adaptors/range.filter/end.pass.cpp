@@ -15,9 +15,7 @@
 #include <cassert>
 #include <concepts>
 #include <type_traits>
-
 #include "test_iterators.h"
-#include "test_macros.h"
 
 struct Range : std::ranges::view_base {
   using Iterator = forward_iterator<int*>;

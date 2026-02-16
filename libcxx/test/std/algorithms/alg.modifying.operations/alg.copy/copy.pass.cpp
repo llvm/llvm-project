@@ -14,7 +14,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <vector>
 
 #include "sized_allocator.h"

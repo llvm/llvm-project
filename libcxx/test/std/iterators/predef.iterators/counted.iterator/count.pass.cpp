@@ -10,7 +10,6 @@
 
 // constexpr iter_difference_t<I> count() const noexcept;
 
-#include <cassert>
 #include <iterator>
 
 #include "test_macros.h"

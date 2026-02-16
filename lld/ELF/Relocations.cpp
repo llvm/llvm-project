@@ -1292,7 +1292,6 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
 
   if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, RE_AARCH64_GOT_PAGE_PC,
             RE_LOONGARCH_GOT_PAGE_PC, R_GOT_OFF, R_TLSIE_HINT>(expr)) {
-    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
     // Initial-Exec relocs can be optimized to Local-Exec if the symbol is
     // locally defined.  This is not supported on SystemZ.
     if (execOptimize && isLocalInExecutable && ctx.arg.emachine != EM_S390) {
@@ -1313,7 +1312,6 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
   // NEEDS_TLSIE shouldn't set. So we check independently.
   if (ctx.arg.emachine == EM_LOONGARCH && expr == RE_LOONGARCH_GOT &&
       execOptimize && isLocalInExecutable) {
-    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
     sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     return 1;
   }
@@ -1506,6 +1504,7 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
 }
 
 void elf::postScanRelocations(Ctx &ctx) {
+  bool needsTlsIe = false;
   auto fn = [&](Symbol &sym) {
     auto flags = sym.flags.load(std::memory_order_relaxed);
     if (handleNonPreemptibleIfunc(ctx, sym, flags))
@@ -1605,8 +1604,10 @@ void elf::postScanRelocations(Ctx &ctx) {
           {R_ABS, ctx.target->tlsOffsetRel, sym.getGotOffset(ctx), 0, &sym});
     }
 
-    if (flags & NEEDS_TLSIE)
+    if (flags & NEEDS_TLSIE) {
+      needsTlsIe = true;
       addTpOffsetGotEntry(ctx, sym);
+    }
   };
 
   GotSection *got = ctx.in.got.get();
@@ -1628,6 +1629,9 @@ void elf::postScanRelocations(Ctx &ctx) {
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       fn(*sym);
+
+  if (needsTlsIe)
+    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
 
   if (ctx.arg.branchToBranch)
     ctx.target->applyBranchToBranchOpt();

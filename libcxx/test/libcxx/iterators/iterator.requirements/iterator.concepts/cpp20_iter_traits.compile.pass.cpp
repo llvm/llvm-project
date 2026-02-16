@@ -15,7 +15,6 @@
 // ITER_TRAITS(I) denotes iterator_traits<I>.
 
 #include <__iterator/concepts.h>
-#include <iterator>
 #include <type_traits>
 
 #include "test_iterators.h"

@@ -18,10 +18,8 @@
 #include <iterator>
 
 #include <cassert>
-#include <cstddef>
 #include <type_traits>
 #include <utility>
-
 #include "test_iterators.h"
 #include "test_macros.h"
 

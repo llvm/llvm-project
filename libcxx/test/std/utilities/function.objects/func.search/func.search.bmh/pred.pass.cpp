@@ -31,9 +31,8 @@
 // };
 
 #include <algorithm>
-#include <cassert>
 #include <functional>
-#include <iterator>
+#include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"
