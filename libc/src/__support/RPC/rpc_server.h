@@ -41,6 +41,7 @@
 #define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 
 #include "shared/rpc.h"
+#include "shared/rpc_dispatch.h"
 #include "shared/rpc_opcodes.h"
 
 #include "src/__support/arg_list.h"
@@ -352,35 +353,20 @@ LIBC_INLINE static rpc::Status handle_port_impl(rpc::Server::Port &port) {
     break;
   }
   case LIBC_READ_FGETS: {
-    uint64_t sizes[num_lanes] = {0};
-    void *data[num_lanes] = {nullptr};
-    port.recv([&](rpc::Buffer *buffer, uint32_t id) {
-      data[id] = temp_storage.alloc(buffer->data[0]);
-      const char *str = ::fgets(reinterpret_cast<char *>(data[id]),
-                                static_cast<int>(buffer->data[0]),
-                                to_stream(buffer->data[1]));
-      sizes[id] = !str ? 0 : __builtin_strlen(str) + 1;
-    });
-    port.send_n(data, sizes);
+    rpc::invoke<num_lanes>(
+        port, [](char *str, int count, void *stream) -> char * {
+          return ::fgets(str, count,
+                         to_stream(reinterpret_cast<uintptr_t>(stream)));
+        });
     break;
   }
   case LIBC_OPEN_FILE: {
-    uint64_t sizes[num_lanes] = {0};
-    void *paths[num_lanes] = {nullptr};
-    port.recv_n(paths, sizes,
-                [&](uint64_t size) { return temp_storage.alloc(size); });
-    port.recv_and_send([&](rpc::Buffer *buffer, uint32_t id) {
-      FILE *file = fopen(reinterpret_cast<char *>(paths[id]),
-                         reinterpret_cast<char *>(buffer->data));
-      buffer->data[0] = reinterpret_cast<uintptr_t>(file);
-    });
+    rpc::invoke<num_lanes>(port, fopen);
     break;
   }
   case LIBC_CLOSE_FILE: {
-    port.recv_and_send([&](rpc::Buffer *buffer, uint32_t) {
-      FILE *file = reinterpret_cast<FILE *>(buffer->data[0]);
-      buffer->data[0] = ::fclose(file);
-    });
+    rpc::invoke<num_lanes>(
+        port, [](void *f) -> int { return ::fclose(static_cast<FILE *>(f)); });
     break;
   }
   case LIBC_EXIT: {
@@ -419,47 +405,46 @@ LIBC_INLINE static rpc::Status handle_port_impl(rpc::Server::Port &port) {
     break;
   }
   case LIBC_FEOF: {
-    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = feof(to_stream(buffer->data[0]));
+    rpc::invoke<num_lanes>(port, [](void *stream) -> int {
+      return feof(to_stream(reinterpret_cast<uintptr_t>(stream)));
     });
     break;
   }
   case LIBC_FERROR: {
-    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = ferror(to_stream(buffer->data[0]));
+    rpc::invoke<num_lanes>(port, [](void *stream) -> int {
+      return ferror(to_stream(reinterpret_cast<uintptr_t>(stream)));
     });
     break;
   }
   case LIBC_CLEARERR: {
-    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      clearerr(to_stream(buffer->data[0]));
+    rpc::invoke<num_lanes>(port, [](void *stream) {
+      clearerr(to_stream(reinterpret_cast<uintptr_t>(stream)));
     });
     break;
   }
   case LIBC_FSEEK: {
-    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] =
-          fseek(to_stream(buffer->data[0]), static_cast<long>(buffer->data[1]),
-                static_cast<int>(buffer->data[2]));
-    });
+    rpc::invoke<num_lanes>(
+        port, [](void *stream, long offset, int whence) -> int {
+          return fseek(to_stream(reinterpret_cast<uintptr_t>(stream)), offset,
+                       whence);
+        });
     break;
   }
   case LIBC_FTELL: {
-    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = ftell(to_stream(buffer->data[0]));
+    rpc::invoke<num_lanes>(port, [](void *stream) -> long {
+      return ftell(to_stream(reinterpret_cast<uintptr_t>(stream)));
     });
     break;
   }
   case LIBC_FFLUSH: {
-    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] = fflush(to_stream(buffer->data[0]));
+    rpc::invoke<num_lanes>(port, [](void *stream) -> int {
+      return fflush(to_stream(reinterpret_cast<uintptr_t>(stream)));
     });
     break;
   }
   case LIBC_UNGETC: {
-    port.recv_and_send([](rpc::Buffer *buffer, uint32_t) {
-      buffer->data[0] =
-          ungetc(static_cast<int>(buffer->data[0]), to_stream(buffer->data[1]));
+    rpc::invoke<num_lanes>(port, [](int c, void *stream) -> int {
+      return ungetc(c, to_stream(reinterpret_cast<uintptr_t>(stream)));
     });
     break;
   }
@@ -476,41 +461,15 @@ LIBC_INLINE static rpc::Status handle_port_impl(rpc::Server::Port &port) {
     break;
   }
   case LIBC_REMOVE: {
-    uint64_t sizes[num_lanes] = {0};
-    void *args[num_lanes] = {nullptr};
-    port.recv_n(args, sizes,
-                [&](uint64_t size) { return temp_storage.alloc(size); });
-    port.send([&](rpc::Buffer *buffer, uint32_t id) {
-      buffer->data[0] = static_cast<uint64_t>(
-          remove(reinterpret_cast<const char *>(args[id])));
-    });
+    rpc::invoke<num_lanes>(port, remove);
     break;
   }
   case LIBC_RENAME: {
-    uint64_t oldsizes[num_lanes] = {0};
-    uint64_t newsizes[num_lanes] = {0};
-    void *oldpath[num_lanes] = {nullptr};
-    void *newpath[num_lanes] = {nullptr};
-    port.recv_n(oldpath, oldsizes,
-                [&](uint64_t size) { return temp_storage.alloc(size); });
-    port.recv_n(newpath, newsizes,
-                [&](uint64_t size) { return temp_storage.alloc(size); });
-    port.send([&](rpc::Buffer *buffer, uint32_t id) {
-      buffer->data[0] = static_cast<uint64_t>(
-          rename(reinterpret_cast<const char *>(oldpath[id]),
-                 reinterpret_cast<const char *>(newpath[id])));
-    });
+    rpc::invoke<num_lanes>(port, rename);
     break;
   }
   case LIBC_SYSTEM: {
-    uint64_t sizes[num_lanes] = {0};
-    void *args[num_lanes] = {nullptr};
-    port.recv_n(args, sizes,
-                [&](uint64_t size) { return temp_storage.alloc(size); });
-    port.send([&](rpc::Buffer *buffer, uint32_t id) {
-      buffer->data[0] = static_cast<uint64_t>(
-          system(reinterpret_cast<const char *>(args[id])));
-    });
+    rpc::invoke<num_lanes>(port, system);
     break;
   }
   case LIBC_TEST_INCREMENT: {

@@ -15,17 +15,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long, ftell, (::FILE * stream)) {
-  long ret;
-  rpc::Client::Port port = rpc::client.open<LIBC_FSEEK>();
-  port.send_and_recv(
-      [=](rpc::Buffer *buffer, uint32_t) {
-        buffer->data[0] = file::from_stream(stream);
-      },
-      [&](rpc::Buffer *buffer, uint32_t) {
-        ret = static_cast<long>(buffer->data[0]);
-      });
-  port.close();
-  return ret;
+  return rpc::dispatch<LIBC_FTELL>(
+      rpc::client, ftell, reinterpret_cast<FILE *>(file::from_stream(stream)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
