@@ -172,13 +172,25 @@ Scalar Instruction Builtins
      - Invalidates the scalar data L0 cache.
    * - ``void __builtin_amdgcn_buffer_wbinvl1()``
      - Writes back and invalidates the shader L1 cache.
+
+Compiler Utility Builtins
+-------------------------
+
+These builtins do not correspond to specific hardware instructions. They are
+resolved by the compiler at compile time or translated into metadata queries.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Builtin
+     - Description
    * - ``unsigned int __builtin_amdgcn_groupstaticsize()``
-     - Returns the size of static LDS allocation in the current workgroup.
+     - Returns the size (in bytes) of static LDS allocation in the current
+       workgroup. Resolved at compile time from the kernel's LDS usage.
    * - ``unsigned int __builtin_amdgcn_wavefrontsize()``
-     - Returns the wavefront size (32 or 64).
-   * - ``void __builtin_amdgcn_wave_barrier()``
-     - Acts as a scheduling barrier within a wave, preventing the compiler from
-       moving memory operations across this point.
+     - Returns the wavefront size (32 or 64). This is a compile-time constant
+       determined by the target.
 
 Division and Math Builtins
 --------------------------
@@ -299,7 +311,7 @@ The ``h``-suffixed variants operate on half-precision and require
      -
      - ``__builtin_amdgcn_logf``
      -
-   * - Log clamp
+   * - Log2 clamp
      -
      - ``__builtin_amdgcn_log_clampf``
      -
@@ -1368,8 +1380,21 @@ to specific memory types (e.g., only global or only LDS).
 Scheduling / Wait Builtins
 ==========================
 
-Scheduling Barriers
--------------------
+Scheduling Hints
+----------------
+
+These builtins influence the compiler's instruction scheduler but do not emit
+any machine code.
+
+``__builtin_amdgcn_wave_barrier``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c
+
+   void __builtin_amdgcn_wave_barrier();
+
+Prevents the compiler from moving memory operations across this point within a
+wave.
 
 ``__builtin_amdgcn_sched_barrier``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1534,7 +1559,7 @@ Prefetch Builtins
 ``s_buffer_prefetch_data`` prefetches data from a buffer resource into the
 scalar data cache.
 
-GFX12+ Transport Loads
+GFX12+ Transpose Loads
 ----------------------
 
 .. code-block:: c
@@ -1545,7 +1570,7 @@ GFX12+ Transport Loads
    int    __builtin_amdgcn_global_load_tr_b64_i32(int __global *ptr);       // gfx12-insts,wavefrontsize64
    short4 __builtin_amdgcn_global_load_tr_b128_v4i16(short4 __global *ptr); // gfx12-insts,wavefrontsize64
 
-Transport loads for matrix operands. Loads data from global memory and
+Transpose loads for matrix operands. Loads data from global memory and
 transposes it between row-major and column-major layout, which is useful for
 preparing matrix data for WMMA/MFMA operations. The pointer must be in global
 address space.
