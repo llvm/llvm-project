@@ -256,7 +256,7 @@ public:
   LIBC_INLINE void set(T rhs) { val = rhs; }
 };
 
-template <typename T> struct AtomicRef {
+template <typename T> struct LIBC_GSL_POINTER AtomicRef {
   static_assert(is_trivially_copyable_v<T> && is_copy_constructible_v<T> &&
                     is_move_constructible_v<T> && is_copy_assignable_v<T> &&
                     is_move_assignable_v<T>,
