@@ -7,13 +7,9 @@
 #include <omp.h>
 #include <stdio.h>
 
-int main() {
+void test_1_update_from_multiple() {
   int n1 = 10, n2 = 10;
   double arr1[n1], arr2[n2];
-
-  // ====================================================================
-  // TEST 1: Update FROM - Multiple arrays in single update clause
-  // ====================================================================
 
 #pragma omp target map(tofrom : n1, n2, arr1[0 : n1], arr2[0 : n2])
   {
@@ -52,10 +48,11 @@ int main() {
   printf("\nfrom target arr2 results:\n");
   for (int i = 0; i < n2; i++)
     printf("%f\n", arr2[i]);
+}
 
-  // ====================================================================
-  // TEST 2: Update TO - Multiple arrays in single update clause
-  // ====================================================================
+void test_2_update_to_multiple() {
+  int n1 = 10, n2 = 10;
+  double arr1[n1], arr2[n2];
 
   for (int i = 0; i < n1; i++) {
     arr1[i] = i;
@@ -106,7 +103,11 @@ int main() {
   printf("\ndevice arr2 values after update to:\n");
   for (int i = 0; i < n2; i++)
     printf("%f\n", arr2[i]);
+}
 
+int main() {
+  test_1_update_from_multiple();
+  test_2_update_to_multiple();
   return 0;
 }
 

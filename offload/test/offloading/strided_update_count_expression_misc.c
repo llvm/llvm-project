@@ -6,20 +6,14 @@
 #include <omp.h>
 #include <stdio.h>
 
-int main() {
-  // ====================================================================
-  // TEST 1: Modulo operation in count expression
-  // ====================================================================
-
+void test_1_modulo_count() {
   int len1 = 10;
   int divisor = 5;
   double data1[len1];
 
-#pragma omp target map(tofrom : len1, divisor, data1[0 : len1])
-  {
-    for (int i = 0; i < len1; i++) {
-      data1[i] = i;
-    }
+  // Initialize data on host
+  for (int i = 0; i < len1; i++) {
+    data1[i] = i;
   }
 
 #pragma omp target data map(to : len1, divisor, data1[0 : len1])
@@ -38,20 +32,16 @@ int main() {
   printf("Test 1: Modulo count expression\n");
   for (int i = 0; i < len1; i++)
     printf("%f\n", data1[i]);
+}
 
-  // ====================================================================
-  // TEST 2: Large stride with computed count for boundary coverage
-  // ====================================================================
-
+void test_2_large_stride_count() {
   int len2 = 10;
   int stride = 5;
   double data2[len2];
 
-#pragma omp target map(tofrom : len2, stride, data2[0 : len2])
-  {
-    for (int i = 0; i < len2; i++) {
-      data2[i] = i;
-    }
+  // Initialize data on host
+  for (int i = 0; i < len2; i++) {
+    data2[i] = i;
   }
 
 #pragma omp target data map(to : len2, stride, data2[0 : len2])
@@ -70,7 +60,11 @@ int main() {
   printf("\nTest 2: Large stride count expression\n");
   for (int i = 0; i < len2; i++)
     printf("%f\n", data2[i]);
+}
 
+int main() {
+  test_1_modulo_count();
+  test_2_large_stride_count();
   return 0;
 }
 

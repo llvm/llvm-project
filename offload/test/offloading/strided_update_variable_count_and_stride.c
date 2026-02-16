@@ -5,20 +5,14 @@
 #include <omp.h>
 #include <stdio.h>
 
-int main() {
+void test_1_update_from() {
   int len = 10;
   int stride = 2;
   double data[len];
 
-  // ====================================================================
-  // TEST 1: Update FROM - Variable count and stride
-  // ====================================================================
-
-#pragma omp target map(tofrom : len, stride, data[0 : len])
-  {
-    for (int i = 0; i < len; i++) {
-      data[i] = i;
-    }
+  // Initialize data on host
+  for (int i = 0; i < len; i++) {
+    data[i] = i;
   }
 
   printf("Test 1: Update FROM - Variable count and stride\n");
@@ -41,10 +35,12 @@ int main() {
   printf("from target results:\n");
   for (int i = 0; i < len; i++)
     printf("%f\n", data[i]);
+}
 
-  // ====================================================================
-  // TEST 2: Update TO - Variable count and stride
-  // ====================================================================
+void test_2_update_to() {
+  int len = 10;
+  int stride = 2;
+  double data[len];
 
   for (int i = 0; i < len; i++) {
     data[i] = i;
@@ -81,7 +77,11 @@ int main() {
   printf("device values after update to:\n");
   for (int i = 0; i < len; i++)
     printf("%f\n", data[i]);
+}
 
+int main() {
+  test_1_update_from();
+  test_2_update_to();
   return 0;
 }
 

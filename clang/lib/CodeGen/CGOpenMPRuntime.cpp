@@ -8060,13 +8060,9 @@ private:
           assert(StrideExpr->getType()->isIntegerType() &&
                  "Stride expression must be of integer type");
 
-          // If the stride is a variable (not a constant), it's non-contiguous.
+          // If the stride involves member access or array subscript, it's
+          // non-contiguous.
           const Expr *S = StrideExpr->IgnoreParenImpCasts();
-          if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
-            if (isa<VarDecl>(DRE->getDecl()) ||
-                isa<ParmVarDecl>(DRE->getDecl()))
-              return true;
-          }
           if (isa<MemberExpr>(S) || isa<ArraySubscriptExpr>(S))
             return true;
 
@@ -8075,7 +8071,7 @@ private:
           const auto Constant =
               StrideExpr->getIntegerConstantExpr(CGF.getContext());
           if (!Constant)
-            return false;
+            return true;
 
           // Treat non-unitary strides as non-contiguous.
           return !Constant->isOne();

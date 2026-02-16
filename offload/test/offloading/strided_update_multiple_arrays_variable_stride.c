@@ -5,21 +5,15 @@
 #include <omp.h>
 #include <stdio.h>
 
-int main() {
+void test_1_update_from_multiple() {
   int stride1 = 2;
   int stride2 = 2;
   double data1[10], data2[10];
 
-  // ====================================================================
-  // TEST 1: Update FROM - Multiple arrays with variable strides
-  // ====================================================================
-
-#pragma omp target map(tofrom : stride1, stride2, data1[0 : 10], data2[0 : 10])
-  {
-    for (int i = 0; i < 10; i++) {
-      data1[i] = i;
-      data2[i] = i * 10;
-    }
+  // Initialize data on host
+  for (int i = 0; i < 10; i++) {
+    data1[i] = i;
+    data2[i] = i * 10;
   }
 
   printf("Test 1: Update FROM - Multiple arrays\n");
@@ -44,10 +38,12 @@ int main() {
   printf("\nfrom target data2:\n");
   for (int i = 0; i < 10; i++)
     printf("%f\n", data2[i]);
+}
 
-  // ====================================================================
-  // TEST 2: Update TO - Multiple arrays with variable strides
-  // ====================================================================
+void test_2_update_to_multiple() {
+  int stride1 = 2;
+  int stride2 = 2;
+  double data1[10], data2[10];
 
   for (int i = 0; i < 10; i++) {
     data1[i] = i;
@@ -90,7 +86,11 @@ int main() {
   printf("\ndevice data2 after update to:\n");
   for (int i = 0; i < 10; i++)
     printf("%f\n", data2[i]);
+}
 
+int main() {
+  test_1_update_from_multiple();
+  test_2_update_to_multiple();
   return 0;
 }
 

@@ -11,10 +11,8 @@ struct Data {
   double arr[20];
 };
 
-int main() {
+void test_1_complex_count_expressions() {
   struct Data s1, s2;
-
-  // Test 1: Multiple arrays with different count expressions
   s1.len = 10;
   s2.len = 10;
 
@@ -56,15 +54,12 @@ int main() {
   for (int i = 0; i < s2.len; i++)
     printf("%f\n", s2.arr[i]);
 
-  // Reset for TO test
-#pragma omp target map(tofrom : s1, s2)
-  {
-    for (int i = 0; i < s1.len; i++) {
-      s1.arr[i] = i * 2;
-    }
-    for (int i = 0; i < s2.len; i++) {
-      s2.arr[i] = i * 20;
-    }
+  // Reset for TO test - initialize on host
+  for (int i = 0; i < s1.len; i++) {
+    s1.arr[i] = i * 2;
+  }
+  for (int i = 0; i < s2.len; i++) {
+    s2.arr[i] = i * 20;
   }
 
   // Modify host data
@@ -100,8 +95,10 @@ int main() {
   printf("s2 results:\n");
   for (int i = 0; i < s2.len; i++)
     printf("%f\n", s2.arr[i]);
+}
 
-  // Test 2: Complex count with non-zero offset
+void test_2_complex_count_with_offset() {
+  struct Data s1, s2;
   s1.offset = 2;
   s1.len = 10;
   s2.offset = 1;
@@ -146,15 +143,12 @@ int main() {
   for (int i = 0; i < s2.len; i++)
     printf("%f\n", s2.arr[i]);
 
-  // Reset for TO test
-#pragma omp target map(tofrom : s1, s2)
-  {
-    for (int i = 0; i < s1.len; i++) {
-      s1.arr[i] = i * 2;
-    }
-    for (int i = 0; i < s2.len; i++) {
-      s2.arr[i] = i * 20;
-    }
+  // Reset for TO test - initialize on host
+  for (int i = 0; i < s1.len; i++) {
+    s1.arr[i] = i * 2;
+  }
+  for (int i = 0; i < s2.len; i++) {
+    s2.arr[i] = i * 20;
   }
 
   // Modify host data
@@ -191,8 +185,6 @@ int main() {
   printf("s2 results:\n");
   for (int i = 0; i < s2.len; i++)
     printf("%f\n", s2.arr[i]);
-
-  return 0;
 }
 
 // CHECK: Test 1 - complex count expressions (from):
@@ -287,3 +279,9 @@ int main() {
 // CHECK-NEXT: 53.000000
 // CHECK-NEXT: 160.000000
 // CHECK-NEXT: 180.000000
+
+int main() {
+  test_1_complex_count_expressions();
+  test_2_complex_count_with_offset();
+  return 0;
+}
