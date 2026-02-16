@@ -104,6 +104,7 @@ enum MachineTypes : unsigned {
   IMAGE_FILE_MACHINE_EBC = 0xEBC,
   IMAGE_FILE_MACHINE_I386 = 0x14C,
   IMAGE_FILE_MACHINE_IA64 = 0x200,
+  IMAGE_FILE_MACHINE_LOONGARCH64 = 0x6264,
   IMAGE_FILE_MACHINE_M32R = 0x9041,
   IMAGE_FILE_MACHINE_MIPS16 = 0x266,
   IMAGE_FILE_MACHINE_MIPSFPU = 0x366,
@@ -132,7 +133,8 @@ template <typename T> bool isAnyArm64(T Machine) {
 }
 
 template <typename T> bool is64Bit(T Machine) {
-  return Machine == IMAGE_FILE_MACHINE_AMD64 || isAnyArm64(Machine);
+  return Machine == IMAGE_FILE_MACHINE_AMD64 || isAnyArm64(Machine) ||
+         Machine == IMAGE_FILE_MACHINE_LOONGARCH64;
 }
 
 enum Characteristics : unsigned {
