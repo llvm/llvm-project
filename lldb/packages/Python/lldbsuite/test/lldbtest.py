@@ -758,7 +758,7 @@ class Base(unittest.TestCase):
         return os.path.join(configuration.test_src_root, self.mydir)
 
     def getBuildDirBasename(self):
-        if self.__class__.SHARED_BUILD_TESTCASE:
+        if self.SHARED_BUILD_TESTCASE:
             return self.__class__.__module__
         else:
             return self.__class__.__module__ + "." + self.testMethodName
@@ -770,10 +770,10 @@ class Base(unittest.TestCase):
         )
 
     def makeBuildDir(self):
-        """Create the test-specific working directory, deleting any previous
-        contents."""
+        """Create the test-specific working directory, optionally deleting any
+        previous contents."""
         bdir = self.getBuildDir()
-        if os.path.isdir(bdir):
+        if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
             shutil.rmtree(bdir)
         lldbutil.mkdir_p(bdir)
 
