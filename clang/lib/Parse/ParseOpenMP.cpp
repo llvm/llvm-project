@@ -3214,6 +3214,13 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
 
+    if (CKind == OMPC_transparent && PP.LookAhead(0).isNot(tok::l_paren)) {
+      SourceLocation Loc = ConsumeToken();
+      SourceLocation LLoc = Tok.getLocation();
+      Clause = Actions.OpenMP().ActOnOpenMPTransparentClause(nullptr, LLoc,
+                                                             LLoc, Loc);
+      break;
+    }
     if ((CKind == OMPC_ordered || CKind == OMPC_partial) &&
         PP.LookAhead(/*N=*/0).isNot(tok::l_paren))
       Clause = ParseOpenMPClause(CKind, WrongDirective);

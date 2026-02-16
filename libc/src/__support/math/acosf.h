@@ -26,26 +26,27 @@ namespace acosf_internal {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-static constexpr size_t N_EXCEPTS = 4;
+LIBC_INLINE_VAR constexpr size_t N_EXCEPTS = 4;
 
 // Exceptional values when |x| <= 0.5
-static constexpr fputil::ExceptValues<float, N_EXCEPTS> ACOSF_EXCEPTS = {{
-    // (inputs, RZ output, RU offset, RD offset, RN offset)
-    // x = 0x1.110b46p-26, acosf(x) = 0x1.921fb4p0 (RZ)
-    {0x328885a3, 0x3fc90fda, 1, 0, 1},
-    // x = -0x1.110b46p-26, acosf(x) = 0x1.921fb4p0 (RZ)
-    {0xb28885a3, 0x3fc90fda, 1, 0, 1},
-    // x = 0x1.04c444p-12, acosf(x) = 0x1.920f68p0 (RZ)
-    {0x39826222, 0x3fc907b4, 1, 0, 1},
-    // x = -0x1.04c444p-12, acosf(x) = 0x1.923p0 (RZ)
-    {0xb9826222, 0x3fc91800, 1, 0, 1},
-}};
+LIBC_INLINE_VAR constexpr fputil::ExceptValues<float, N_EXCEPTS> ACOSF_EXCEPTS =
+    {{
+        // (inputs, RZ output, RU offset, RD offset, RN offset)
+        // x = 0x1.110b46p-26, acosf(x) = 0x1.921fb4p0 (RZ)
+        {0x328885a3, 0x3fc90fda, 1, 0, 1},
+        // x = -0x1.110b46p-26, acosf(x) = 0x1.921fb4p0 (RZ)
+        {0xb28885a3, 0x3fc90fda, 1, 0, 1},
+        // x = 0x1.04c444p-12, acosf(x) = 0x1.920f68p0 (RZ)
+        {0x39826222, 0x3fc907b4, 1, 0, 1},
+        // x = -0x1.04c444p-12, acosf(x) = 0x1.923p0 (RZ)
+        {0xb9826222, 0x3fc91800, 1, 0, 1},
+    }};
 
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 } // namespace acosf_internal
 
-LIBC_INLINE static constexpr float acosf(float x) {
+LIBC_INLINE constexpr float acosf(float x) {
   using namespace acosf_internal;
   using namespace inv_trigf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;

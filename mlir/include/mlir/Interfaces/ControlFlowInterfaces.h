@@ -314,11 +314,6 @@ Region *getEnclosingRepetitiveRegion(Operation *op);
 /// exists.
 Region *getEnclosingRepetitiveRegion(Value value);
 
-/// Return "true" if the given region branch op is guaranteed to loop
-/// infinitely. Every path starting from "parent" enters the region, but the
-/// "parent" is not reachable from there.
-bool isGuaranteedToLoopInfinitely(RegionBranchOpInterface op);
-
 /// Populate canonicalization patterns that simplify successor operands/inputs
 /// of region branch operations. Only operations with the given name are
 /// matched.
@@ -363,13 +358,6 @@ void populateRegionBranchOpInterfaceInliningPattern(
         detail::defaultReplBuilderFn,
     PatternMatcherFn matcherFn = detail::defaultMatcherFn,
     PatternBenefit benefit = 1);
-
-/// Return all successor regions when branching from the given region branch
-/// point. This helper functions extracts all constant operand values and
-/// passes them to the `RegionBranchOpInterface`.
-SmallVector<RegionSuccessor>
-getSuccessorRegionsWithAttrs(RegionBranchOpInterface op,
-                             RegionBranchPoint point);
 
 //===----------------------------------------------------------------------===//
 // ControlFlow Traits

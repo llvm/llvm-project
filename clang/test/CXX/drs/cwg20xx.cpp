@@ -25,70 +25,7 @@ int b = __builtin_addressof(b2)->foo;
 } // namespace cwg2007
 
 // cwg2009: na
-
-namespace cwg2026 { // cwg2026: 11
-  template<int> struct X {};
-
-  const int a = a + 1; // #cwg2026-a
-  // expected-warning@-1 {{variable 'a' is uninitialized when used within its own initialization}}
-  X<a> xa; // #cwg2026-xa
-  // cxx98-error@-1 {{non-type template argument of type 'int' is not an integral constant expression}}
-  //   cxx98-note@-2 {{initializer of 'a' is not a constant expression}}
-  //   cxx98-note@#cwg2026-a {{declared here}}
-  // since-cxx11-error@#cwg2026-xa {{non-type template argument is not a constant expression}}
-  //   since-cxx11-note@#cwg2026-xa {{initializer of 'a' is not a constant expression}}
-  //   since-cxx11-note@#cwg2026-a {{declared here}}
-
-#if __cplusplus >= 201103L
-  constexpr int b = b;
-  // since-cxx11-error@-1 {{constexpr variable 'b' must be initialized by a constant expression}}
-  //   since-cxx11-note@-2 {{read of object outside its lifetime is not allowed in a constant expression}}
-  [[clang::require_constant_initialization]] int c = c;
-  // since-cxx11-error@-1 {{variable does not have a constant initializer}}
-  //   since-cxx11-note@-2 {{required by 'require_constant_initialization' attribute here}}
-  //   cxx11-note@-3 {{read of non-const variable 'c' is not allowed in a constant expression}}
-  //   cxx11-note@-4 {{declared here}}
-  //   since-cxx14-note@-5 {{read of object outside its lifetime is not allowed in a constant expression}}
-#endif
-
-#if __cplusplus >= 202002L
-  constinit int d = d;
-  // since-cxx20-error@-1 {{variable does not have a constant initializer}}
-  //   since-cxx20-note@-2 {{required by 'constinit' specifier here}}
-  //   since-cxx20-note@-3 {{read of object outside its lifetime is not allowed in a constant expression}}
-#endif
-
-  void f() {
-    static const int e = e + 1; // #cwg2026-e
-    // expected-warning@-1 {{static variable 'e' is suspiciously used within its own initialization}}
-    X<e> xe; // #cwg2026-xe
-    // cxx98-error@-1 {{non-type template argument of type 'int' is not an integral constant expression}}
-    //   cxx98-note@-2 {{initializer of 'e' is not a constant expression}}
-    //   cxx98-note@#cwg2026-e {{declared here}}
-    // since-cxx11-error@#cwg2026-xe {{non-type template argument is not a constant expression}}
-    //   since-cxx11-note@#cwg2026-xe {{initializer of 'e' is not a constant expression}}
-    //   since-cxx11-note@#cwg2026-e {{declared here}}
-
-#if __cplusplus >= 201103L
-    static constexpr int f = f;
-    // since-cxx11-error@-1 {{constexpr variable 'f' must be initialized by a constant expression}}
-    //   since-cxx11-note@-2 {{read of object outside its lifetime is not allowed in a constant expression}}
-    [[clang::require_constant_initialization]] static int g = g;
-    // since-cxx11-error@-1 {{variable does not have a constant initializer}}
-    //   since-cxx11-note@-2 {{required by 'require_constant_initialization' attribute here}}
-    //   cxx11-note@-3 {{read of non-const variable 'g' is not allowed in a constant expression}}
-    //   cxx11-note@-4 {{declared here}}
-    //   since-cxx14-note@-5 {{read of object outside its lifetime is not allowed in a constant expression}}
-#endif
-
-#if __cplusplus >= 202002L
-    static constinit int h = h;
-    // since-cxx20-error@-1 {{variable does not have a constant initializer}}
-    //   since-cxx20-note@-2 {{required by 'constinit' specifier here}}
-    //   since-cxx20-note@-3 {{read of object outside its lifetime is not allowed in a constant expression}}
-#endif
-  }
-} // namespace cwg2026
+// cwg2026 is in cwg2026.cpp
 
 namespace cwg2049 { // cwg2049: 18
 #if __cplusplus >= 202302L
@@ -160,16 +97,16 @@ namespace cwg2076 { // cwg2076: 13
     foo({arg});
     foo({{arg}});
     foo({{{arg}}});
-    // since-cxx11-error@-1 {{no matching function}}
-    //   since-cxx11-note@#cwg2076-foo  {{cannot convert initializer list}}
+    // since-cxx11-error@-1 {{no matching function for call to 'foo'}}
+    //   since-cxx11-note@#cwg2076-foo {{candidate function not viable: cannot convert initializer list argument to 'const string'}}
     bar(arg);
     bar({arg});
     bar({{arg}});
-    // since-cxx11-error@-1 {{no matching function}}
-    //   since-cxx11-note@#cwg2076-bar {{cannot convert initializer list}}
+    // since-cxx11-error@-1 {{no matching function for call to 'bar'}}
+    //   since-cxx11-note@#cwg2076-bar {{candidate function not viable: cannot convert initializer list argument to 'string_view'}}
     bar({{{arg}}});
-    // since-cxx11-error@-1 {{no matching function}}
-    //   since-cxx11-note@#cwg2076-bar {{cannot convert initializer list}}
+    // since-cxx11-error@-1 {{no matching function for call to 'bar'}}
+    //   since-cxx11-note@#cwg2076-bar {{candidate function not viable: cannot convert initializer list argument to 'string_view'}}
   }
 #endif
 } // namespace cwg2076
@@ -315,39 +252,33 @@ namespace cwg2083 { // cwg2083: partial
       void f() {
         // FIXME: We emit more errors than we should be. They are explicitly
         // marked below.
-        a.x;
-        // expected-warning@-1 {{expression result unused}}
-        // expected-error@-2 {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}} FIXME
+        (void)a.x;
+        // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}} FIXME
         //   expected-note@#cwg2083-a-3 {{'a' declared here}}
-        a.*&A::x;
-        // expected-warning@-1 {{expression result unused}}
-        // expected-error@-2 {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}} FIXME
+        (void)(a.*&A::x);
+        // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}} FIXME
         //   expected-note@#cwg2083-a-3 {{'a' declared here}}
-        true ? a.x : a.y; // #cwg2083-ternary
-        // expected-warning@-1 {{expression result unused}}
-        // expected-error@#cwg2083-ternary {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}} FIXME
+        (void)(true ? a.x : a.y);
+        // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}} FIXME
         //   expected-note@#cwg2083-a-3 {{'a' declared here}}
-        // expected-error@#cwg2083-ternary {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}} FIXME
+        // expected-error@-3 {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}} FIXME
         //   expected-note@#cwg2083-a-3 {{'a' declared here}}
         (void)a.x;
         // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}} FIXME
         //   expected-note@#cwg2083-a-3 {{'a' declared here}}
-        a.x, discarded_lval();
-        // expected-warning@-1 {{left operand of comma operator has no effect}}
-        // expected-error@-2 {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}} FIXME
+        (void)a.x, discarded_lval();
+        // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}} FIXME
         //   expected-note@#cwg2083-a-3 {{'a' declared here}}
 
         // 'volatile' qualifier triggers an lvalue-to-rvalue conversion.
-        a.z;
-        // cxx98-warning@-1 {{expression result unused; assign into a variable to force a volatile load}}
-        // expected-error@-2 {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}}
+        int i = a.z;
+        // expected-error@-1 {{reference to local variable 'a' declared in enclosing function 'cwg2083::discarded_lval'}}
         //   expected-note@#cwg2083-a-3 {{'a' declared here}}
 
         // References always get "loaded" to determine what they reference,
         // even if the result is discarded.
-        r;
-        // expected-warning@-1 {{expression result unused}}
-        // expected-error@-2 {{reference to local variable 'r' declared in enclosing function 'cwg2083::discarded_lval'}}
+        (void)r;
+        // expected-error@-1 {{reference to local variable 'r' declared in enclosing function 'cwg2083::discarded_lval'}}
         //   expected-note@#cwg2083-r {{'r' declared here}}
       }
     };
