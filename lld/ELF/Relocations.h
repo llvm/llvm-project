@@ -71,7 +71,6 @@ enum RelExpr {
   R_RELAX_TLS_GD_TO_LE_NEG,
   R_RELAX_TLS_IE_TO_LE,
   R_RELAX_TLS_LD_TO_LE,
-  R_RELAX_TLS_LD_TO_LE_ABS,
   R_SIZE,
   R_TPREL,
   R_TPREL_NEG,
@@ -119,9 +118,7 @@ enum RelExpr {
   RE_PPC32_PLTREL,
   RE_PPC64_CALL,
   RE_PPC64_CALL_PLT,
-  RE_PPC64_RELAX_TOC,
   RE_PPC64_TOCBASE,
-  RE_PPC64_RELAX_GOT_PC,
   RE_RISCV_ADD,
   RE_RISCV_LEB128,
   RE_RISCV_PC_INDIRECT,
@@ -133,6 +130,7 @@ enum RelExpr {
   // also reused for TLS, making the semantics differ from other architectures.
   RE_LOONGARCH_GOT,
   RE_LOONGARCH_GOT_PAGE_PC,
+  RE_LOONGARCH_PC_INDIRECT,
   RE_LOONGARCH_TLSGD_PAGE_PC,
   RE_LOONGARCH_TLSDESC_PAGE_PC,
   RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC,
@@ -311,7 +309,7 @@ template <bool is64> struct RelocsCrel {
         step();
       return *this;
     }
-    // For RelocationScanner::scanOne.
+    // For RelocScan::scan when TLS relocations consume multiple entries.
     void operator+=(size_t n) {
       for (; n; --n)
         operator++();

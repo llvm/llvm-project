@@ -27,15 +27,14 @@ namespace llvm {
 
 class R600Subtarget final : public R600GenSubtargetInfo,
                             public AMDGPUSubtarget {
+
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  bool ATTRIBUTE = DEFAULT;
+#include "R600GenSubtargetInfo.inc"
+
 private:
   R600InstrInfo InstrInfo;
   R600FrameLowering FrameLowering;
-  bool FMA = false;
-  bool CaymanISA = false;
-  bool CFALUBug = false;
-  bool HasVertexCache = false;
-  bool R600ALUInst = false;
-  bool FP64 = false;
   short TexVTXClauseSize = 0;
   Generation Gen = R600;
   R600TargetLowering TLInfo;
@@ -102,9 +101,7 @@ public:
     return (getGeneration() >= EVERGREEN);
   }
 
-  bool hasCaymanISA() const {
-    return CaymanISA;
-  }
+  bool hasCaymanISA() const { return HasCaymanISA; }
 
   bool hasFFBL() const {
     return (getGeneration() >= EVERGREEN);
@@ -114,9 +111,15 @@ public:
     return (getGeneration() >= EVERGREEN);
   }
 
-  bool hasFMA() const { return FMA; }
+  bool hasFMA() const override { return HasFMA; }
 
-  bool hasCFAluBug() const { return CFALUBug; }
+  bool hasMadMacF32Insts() const override { return HasMadMacF32Insts; }
+
+  bool enablePromoteAlloca() const override { return EnablePromoteAlloca; }
+
+  bool hasFP64() const override { return HasFP64; }
+
+  bool hasCFALUBug() const { return HasCFALUBug; }
 
   bool hasVertexCache() const { return HasVertexCache; }
 

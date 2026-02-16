@@ -2908,7 +2908,7 @@ declare <2 x i1> @llvm.is.fpclass.v2f32(<2 x float>, i32)
 declare <4 x i1> @llvm.is.fpclass.v4f32(<4 x float>, i32)
 
 ; Assume DAZ
-attributes #0 = { "denormal-fp-math"="ieee,preserve-sign" }
+attributes #0 = { denormal_fpenv(ieee|preservesign) }
 
 ; Maybe daz
-attributes #1 = { "denormal-fp-math"="ieee,dynamic" }
+attributes #1 = { denormal_fpenv(ieee|dynamic) }

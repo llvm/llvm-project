@@ -28,6 +28,10 @@ void RTNAME(PauseStatementText)(const char *, size_t);
 NORETURN void RTNAME(FailImageStatement)(NO_ARGUMENTS);
 NORETURN void RTNAME(ProgramEndStatement)(NO_ARGUMENTS);
 
+void RTNAME(RegisterImagesNormalEndCallback)(void (*)(int));
+void RTNAME(RegisterImagesErrorCallback)(void (*)(int));
+void RTNAME(RegisterFailImageCallback)(void (*)(void));
+
 // Extensions
 NORETURN void RTNAME(Exit)(int status DEFAULT_VALUE(EXIT_SUCCESS));
 RT_OFFLOAD_API_GROUP_BEGIN

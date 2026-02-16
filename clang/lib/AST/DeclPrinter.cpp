@@ -257,7 +257,7 @@ static DeclPrinter::AttrPosAsWritten getPosAsWritten(const Attr *A,
 std::optional<std::string>
 DeclPrinter::prettyPrintAttributes(const Decl *D,
                                    AttrPosAsWritten Pos /*=Default*/) {
-  if (!D->hasAttrs())
+  if (Policy.SuppressDeclAttributes || !D->hasAttrs())
     return std::nullopt;
 
   std::string AttrStr;

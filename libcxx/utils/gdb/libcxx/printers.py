@@ -199,6 +199,8 @@ class StdStringPrinter(object):
             size = long_field["__size_"]
         else:
             data = short_field["__data_"]
+            ptr_type = data.type.target().pointer()
+            data = data.cast(ptr_type)
             size = short_field["__size_"]
         return data.lazy_string(length=size)
 

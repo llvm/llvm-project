@@ -642,3 +642,33 @@ s_buffer_load_u16 s5, s[4:7], s0 offset:-1
 
 s_buffer_prefetch_data s[20:23], -1, s10, 7
 // GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: expected a 23-bit unsigned offset for buffer ops
+
+s_wait_event NOT_EVENT
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected structured immediate or an absolute expression
+
+s_wait_event DONT_WAIT_EXPORT_READY
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected structured immediate or an absolute expression
+
+s_wait_event { export_ready: 2 }
+// GFX12-ERR: :[[@LINE-1]]:30: error: invalid bit value: only 1-bit values are legal
+
+s_wait_event { export_ready: -1 }
+// GFX12-ERR: :[[@LINE-1]]:30: error: invalid bit value: only 1-bit values are legal
+
+s_wait_event { export_ready 1 }
+// GFX12-ERR: :[[@LINE-1]]:29: error: colon expected
+
+s_wait_event { export_ready=1 }
+// GFX12-ERR: :[[@LINE-1]]:28: error: colon expected
+
+s_wait_event {0}
+// GFX12-ERR: :[[@LINE-1]]:15: error: field name expected
+
+s_wait_event {1}
+// GFX12-ERR: :[[@LINE-1]]:15: error: field name expected
+
+s_wait_event { dont_wait_export_ready: 1 }
+// GFX12-ERR: :[[@LINE-1]]:16: error: unknown field
+
+s_wait_event { dont_wait_export_ready: 0 }
+// GFX12-ERR: :[[@LINE-1]]:16: error: unknown field

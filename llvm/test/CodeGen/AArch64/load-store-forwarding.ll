@@ -106,3 +106,25 @@ entry:
   store i8 %tr, ptr %q, align 1
   ret i32 0
 }
+
+define i32 @load_i16_store_i8_freeze(ptr %p, ptr %q) {
+; CHECK-LE-LABEL: load_i16_store_i8_freeze:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    ldrh w8, [x0]
+; CHECK-LE-NEXT:    mov w0, wzr
+; CHECK-LE-NEXT:    strb w8, [x1]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: load_i16_store_i8_freeze:
+; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    ldrh w8, [x0]
+; CHECK-BE-NEXT:    mov w0, wzr
+; CHECK-BE-NEXT:    strb w8, [x1]
+; CHECK-BE-NEXT:    ret
+entry:
+  %l = load i16, ptr %p, align 4
+  %fr = freeze i16 %l
+  %tr = trunc i16 %fr to i8
+  store i8 %tr, ptr %q, align 1
+  ret i32 0
+}

@@ -125,6 +125,42 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
   case LoongArchII::MO_LE_LO_R:
     Kind = ELF::R_LARCH_TLS_LE_LO12_R;
     break;
+  case LoongArchII::MO_PCADD_HI:
+    Kind = ELF::R_LARCH_PCADD_HI20;
+    break;
+  case LoongArchII::MO_PCADD_LO:
+    Kind = ELF::R_LARCH_PCADD_LO12;
+    break;
+  case LoongArchII::MO_GOT_PCADD_HI:
+    Kind = ELF::R_LARCH_GOT_PCADD_HI20;
+    break;
+  case LoongArchII::MO_GOT_PCADD_LO:
+    Kind = ELF::R_LARCH_GOT_PCADD_LO12;
+    break;
+  case LoongArchII::MO_IE_PCADD_HI:
+    Kind = ELF::R_LARCH_TLS_IE_PCADD_HI20;
+    break;
+  case LoongArchII::MO_IE_PCADD_LO:
+    Kind = ELF::R_LARCH_TLS_IE_PCADD_LO12;
+    break;
+  case LoongArchII::MO_LD_PCADD_HI:
+    Kind = ELF::R_LARCH_TLS_LD_PCADD_HI20;
+    break;
+  case LoongArchII::MO_LD_PCADD_LO:
+    Kind = ELF::R_LARCH_TLS_LD_PCADD_LO12;
+    break;
+  case LoongArchII::MO_GD_PCADD_HI:
+    Kind = ELF::R_LARCH_TLS_GD_PCADD_HI20;
+    break;
+  case LoongArchII::MO_GD_PCADD_LO:
+    Kind = ELF::R_LARCH_TLS_GD_PCADD_LO12;
+    break;
+  case LoongArchII::MO_DESC_PCADD_HI:
+    Kind = ELF::R_LARCH_TLS_DESC_PCADD_HI20;
+    break;
+  case LoongArchII::MO_DESC_PCADD_LO:
+    Kind = ELF::R_LARCH_TLS_DESC_PCADD_LO12;
+    break;
     // TODO: Handle more target-flags.
   }
 
@@ -177,6 +213,9 @@ bool llvm::lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
     break;
   case MachineOperand::MO_JumpTableIndex:
     MCOp = lowerSymbolOperand(MO, AP.GetJTISymbol(MO.getIndex()), AP);
+    break;
+  case MachineOperand::MO_MCSymbol:
+    MCOp = lowerSymbolOperand(MO, MO.getMCSymbol(), AP);
     break;
   }
   return true;

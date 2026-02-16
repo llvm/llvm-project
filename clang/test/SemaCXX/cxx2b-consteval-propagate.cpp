@@ -629,6 +629,20 @@ void fn() {
 
 }
 
+namespace GH176045 {
+
+template <int NumArgs> struct MessageFormat {
+  template <int N> consteval MessageFormat(const char (&)[N]) {}
+};
+template <typename... Ts> void format(MessageFormat<sizeof...(Ts)>, Ts ...args);
+
+auto message = [] {
+   format("");
+   format("");
+};
+
+}
+
 
 namespace GH109096 {
 consteval void undefined();

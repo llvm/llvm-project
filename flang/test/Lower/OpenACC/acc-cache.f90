@@ -560,3 +560,210 @@ subroutine test_cache_in_nested_do()
 ! CHECK: fir.do_loop
 ! CHECK: hlfir.designate %[[B_VAR]]#0
 end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_derived_type()
+subroutine test_cache_derived_type()
+  type :: dt
+    real :: array(100)
+  end type
+
+  integer, parameter :: n = 100
+  type(dt) :: data
+  real :: a(n)
+  integer :: i
+
+  !$acc loop
+  do i = 5, n - 4
+    !$acc cache(data%array(i-4:i+4))
+    a(i) = data%array(i)
+  end do
+
+! CHECK: acc.loop
+! CHECK: %[[ARRAY_COORD:.*]] = hlfir.designate %{{.*}}{"array"} shape %{{.*}} : (!fir.ref<!fir.type<_QFtest_cache_derived_typeTdt{array:!fir.array<100xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {name = "data%array(i-4_4:i+4_4)", structured = false}
+! CHECK: acc.yield
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_derived_type_readonly()
+subroutine test_cache_derived_type_readonly()
+  type :: dt
+    real :: array(100)
+  end type
+
+  integer, parameter :: n = 100
+  type(dt) :: data
+  real :: a(n)
+  integer :: i
+
+  !$acc loop
+  do i = 5, n - 4
+    !$acc cache(readonly: data%array(i-4:i+4))
+    a(i) = data%array(i)
+  end do
+
+! CHECK: acc.loop
+! CHECK: %[[ARRAY_COORD:.*]] = hlfir.designate %{{.*}}{"array"} shape %{{.*}} : (!fir.ref<!fir.type<_QFtest_cache_derived_type_readonlyTdt{array:!fir.array<100xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<100xf32>>
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARRAY_COORD]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {modifiers = #acc<data_clause_modifier readonly>, name = "data%array(i-4_4:i+4_4)", structured = false}
+! CHECK: acc.yield
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_cache_nested_derived_type()
+subroutine test_cache_nested_derived_type()
+  type :: inner
+    real :: arr(50)
+  end type
+
+  type :: outer
+    type(inner) :: in
+  end type
+
+  integer, parameter :: n = 50
+  type(outer) :: obj
+  real :: a(n)
+  integer :: i
+
+  !$acc loop
+  do i = 1, n
+    !$acc cache(obj%in%arr(i))
+    a(i) = obj%in%arr(i)
+  end do
+
+! CHECK: acc.loop
+! CHECK: %[[IN_COORD:.*]] = hlfir.designate %{{.*}}{"in"} : (!fir.ref<!fir.type<_QFtest_cache_nested_derived_typeTouter{in:!fir.type<_QFtest_cache_nested_derived_typeTinner{arr:!fir.array<50xf32>}>}>>) -> !fir.ref<!fir.type<_QFtest_cache_nested_derived_typeTinner{arr:!fir.array<50xf32>}>>
+! CHECK: %[[ARR_COORD:.*]] = hlfir.designate %[[IN_COORD]]{"arr"} shape %{{.*}} : (!fir.ref<!fir.type<_QFtest_cache_nested_derived_typeTinner{arr:!fir.array<50xf32>}>>, !fir.shape<1>) -> !fir.ref<!fir.array<50xf32>>
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%[[ARR_COORD]] : !fir.ref<!fir.array<50xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<50xf32>> {name = "obj%in%arr(i)", structured = false}
+! CHECK: acc.yield
+end subroutine
+
+! Test cache with allocatable component in combined construct
+! CHECK-LABEL: func.func @_QPtest_cache_combined_allocatable(
+subroutine test_cache_combined_allocatable(data, C, M)
+  type :: dt
+    real, dimension(:), allocatable :: A
+  end type
+
+  type(dt), intent(inout) :: data
+  real, dimension(:), intent(out) :: C
+  integer, intent(in) :: M
+  integer :: i
+
+  !$acc parallel loop gang vector copyin(data, data%A(-3:M+4)) copyout(C(1:M))
+  do i = 1, M
+    !$acc cache(data%A(i-4:i+4))
+    C(i) = data%A(i)
+  end do
+
+! CHECK: acc.parallel {{.*}} {
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "data%a(i-4_4:i+4_4)", structured = false}
+! CHECK: hlfir.declare %{{.*}} {{{.*}}uniq_name = "data%a(i-4_4:i+4_4)"}
+! CHECK: acc.yield
+end subroutine
+
+! Test cache with copy of whole struct (not explicit component copyin)
+! CHECK-LABEL: func.func @_QPtest_cache_parallel_copy_struct(
+subroutine test_cache_parallel_copy_struct(data, M)
+  type :: dt
+    real, dimension(:), allocatable :: A
+  end type
+
+  type(dt), intent(inout) :: data
+  integer, intent(in) :: M
+  real :: r
+  integer :: i
+
+  !$acc parallel loop copy(data)
+  do i = 1, M
+    !$acc cache(data%A(i))
+    r = data%A(i)
+  end do
+
+! CHECK: acc.parallel {{.*}} {
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "data%a(i)", structured = false}
+! CHECK: hlfir.declare %{{.*}} {{{.*}}uniq_name = "data%a(i)"}
+! CHECK: acc.yield
+end subroutine
+
+! Test cache with nested derived type in parallel loop with copyin
+! CHECK-LABEL: func.func @_QPtest_cache_nested_parallel(
+subroutine test_cache_nested_parallel(obj, N)
+  type :: inner
+    real, dimension(:), allocatable :: arr
+  end type
+
+  type :: outer
+    type(inner) :: in
+  end type
+
+  type(outer), intent(inout) :: obj
+  integer, intent(in) :: N
+  real :: r
+  integer :: i
+
+  !$acc parallel loop copyin(obj%in%arr(1:N))
+  do i = 1, N
+    !$acc cache(obj%in%arr(i))
+    r = obj%in%arr(i)
+  end do
+
+! CHECK: acc.parallel {{.*}} {
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "obj%in%arr(i)", structured = false}
+! CHECK: hlfir.declare %{{.*}} {{{.*}}uniq_name = "obj%in%arr(i)"}
+! CHECK: acc.yield
+end subroutine
+
+! Test cache with explicit shape component in parallel loop with copyin
+! CHECK-LABEL: func.func @_QPtest_cache_explicit_shape_comp(
+subroutine test_cache_explicit_shape_comp(data, C, M)
+  type :: dt
+    real, dimension(10) :: A
+  end type
+
+  type(dt), intent(inout) :: data
+  real, dimension(:), intent(out) :: C
+  integer, intent(in) :: M
+  integer :: i
+
+  !$acc parallel loop gang vector copyin(data, data%A(1:M)) copyout(C(1:M))
+  do i = 1, M
+    !$acc cache(data%A(i:i+4))
+    C(i) = data%A(i)
+  end do
+
+! CHECK: acc.parallel {{.*}} {
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "data%a(i:i+4_4)", structured = false}
+! CHECK: hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "data%a(i:i+4_4)"}
+! CHECK: acc.yield
+end subroutine
+
+! Test cache with temporary in designator bounds - verifies local statement context
+! doesn't cause issues with temporary cleanup
+! CHECK-LABEL: func.func @_QPtest_cache_temp_in_designator(
+subroutine test_cache_temp_in_designator(data, a)
+  integer, parameter :: n = 100
+  real :: data(n)
+  real :: a(n)
+  integer :: i
+
+  !$acc loop
+  do i = 5, n - 4
+    !$acc cache(readonly: data(1:maxloc(a+a, dim=1)))
+    a(i) = data(i)
+  end do
+
+! CHECK: acc.loop
+! CHECK: %[[ELEMENTAL:.*]] = hlfir.elemental
+! CHECK: %[[MAXLOC:.*]] = hlfir.maxloc %[[ELEMENTAL]]
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound({{.*}}) upperbound({{.*}})
+! CHECK: %[[CACHE:.*]] = acc.cache varPtr(%{{.*}}) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {modifiers = #acc<data_clause_modifier readonly>, name = "data(1:maxloc(a+a,dim=1_4))", structured = false}
+! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[CACHE]]
+! CHECK: hlfir.destroy %[[ELEMENTAL]]
+! CHECK: hlfir.designate %[[DECL]]#0
+! CHECK: acc.yield
+end subroutine

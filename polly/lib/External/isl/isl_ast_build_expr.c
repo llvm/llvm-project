@@ -497,6 +497,9 @@ error:
  * "div" is the argument of the div, with the denominator removed
  * "d" is the original denominator of the argument of the div
  *
+ * If set, then "partial" is the (positively weighted) sum
+ * of the affine expressions of one or more previously considered constraints
+ * that could still be complemented to an expression equal to "div".
  * "nonneg" is an affine expression that is non-negative over "build"
  * and that can be used to extract a modulo expression from "div".
  * In particular, if "sign" is 1, then the coefficients of "nonneg"
@@ -518,6 +521,7 @@ struct isl_extract_mod_data {
 	isl_val *d;
 	isl_aff *div;
 
+	isl_aff *partial;
 	isl_aff *nonneg;
 	int sign;
 };
@@ -689,10 +693,27 @@ error:
 	return isl_stat_error;
 }
 
-/* Is the affine expression of constraint "c" "simpler" than data->nonneg
+/* Does "c" have a constant term that is "too large"?
+ * Here, "too large" is fairly arbitrarily set to 1 << 15.
+ */
+static isl_bool has_large_constant_term(__isl_keep isl_constraint *c)
+{
+	isl_val *v;
+	int sign;
+
+	v = isl_val_abs(isl_constraint_get_constant_val(c));
+	if (!v)
+		return isl_bool_error;
+	sign = isl_val_cmp_si(v, 1 << 15);
+	isl_val_free(v);
+	return isl_bool_ok(sign > 0);
+}
+
+/* Is the affine expression with constant term returned by "get_constant"
+ * "simpler" than data->nonneg
  * for use in extracting a modulo expression?
  *
- * We currently only consider the constant term of the affine expression.
+ * Currently, only this constant term is considered.
  * In particular, we prefer the affine expression with the smallest constant
  * term.
  * This means that if there are two constraints, say x >= 0 and -x + 10 >= 0,
@@ -700,16 +721,17 @@ error:
  *
  * More detailed heuristics could be used if it turns out that there is a need.
  */
-static int mod_constraint_is_simpler(struct isl_extract_mod_data *data,
-	__isl_keep isl_constraint *c)
+static isl_bool is_simpler(struct isl_extract_mod_data *data,
+	__isl_give isl_val *get_constant(struct isl_extract_mod_data *data,
+		void *user), void *user)
 {
 	isl_val *v1, *v2;
-	int simpler;
+	isl_bool simpler;
 
 	if (!data->nonneg)
-		return 1;
+		return isl_bool_true;
 
-	v1 = isl_val_abs(isl_constraint_get_constant_val(c));
+	v1 = isl_val_abs(get_constant(data, user));
 	v2 = isl_val_abs(isl_aff_get_constant_val(data->nonneg));
 	simpler = isl_val_lt(v1, v2);
 	isl_val_free(v1);
@@ -718,103 +740,396 @@ static int mod_constraint_is_simpler(struct isl_extract_mod_data *data,
 	return simpler;
 }
 
+/* Return the constant term of "c".
+ */
+static __isl_give isl_val *get_constraint_constant(
+	struct isl_extract_mod_data *data, void *user)
+{
+	isl_constraint *c = user;
+
+	return isl_constraint_get_constant_val(c);
+}
+
+/* Is the affine expression of constraint "c" "simpler" than data->nonneg
+ * for use in extracting a modulo expression?
+ *
+ * The test is based on the constant term of "c".
+ */
+static isl_bool mod_constraint_is_simpler(struct isl_extract_mod_data *data,
+       __isl_keep isl_constraint *c)
+{
+	return is_simpler(data, &get_constraint_constant, c);
+}
+
+/* Replace data->nonneg by the affine expression "aff" and
+ * set data->sign to "sign".
+ */
+static isl_stat replace_nonneg(struct isl_extract_mod_data *data,
+	__isl_take isl_aff *aff, int sign)
+{
+	isl_aff_free(data->nonneg);
+	data->nonneg = aff;
+	data->sign = sign;
+
+	return isl_stat_non_null(data->nonneg);
+}
+
+/* If "c" is "simpler" than data->nonneg,
+ * then replace data->nonneg by the affine expression of "c" and
+ * set data->sign to "sign".
+ */
+static isl_stat replace_if_simpler(struct isl_extract_mod_data *data,
+	__isl_keep isl_constraint *c, int sign)
+{
+	isl_bool simpler;
+
+	simpler = mod_constraint_is_simpler(data, c);
+	if (simpler < 0 || !simpler)
+		return isl_stat_non_error_bool(simpler);
+
+	return replace_nonneg(data, isl_constraint_get_aff(c), sign);
+}
+
+/* Internal data structure used inside check_parallel_or_opposite.
+ *
+ * "data" is the information passed down from the caller.
+ * "c" is the constraint being inspected.
+ *
+ * "n" contains the number of parameters and the number of input dimensions and
+ * is set by the first call to parallel_or_opposite_scan.
+ * "parallel" is set as long as the coefficients of "c" are still potentially
+ * equal to those of data->div modulo data->d.
+ * "opposite" is set as long as the coefficients of "c" are still potentially
+ * opposite to those of data->div modulo data->d.
+ * "partial" is set if the coefficients of "c" are still potentially
+ * a subset of those of data->div.
+ * "final" is set is the coefficients in data->partial together with those
+ * of "c" still cover the coefficients of data->div.
+ *
+ * If "f" is set, then it is the factor with which the coefficients
+ * of "c" need to be multiplied to match those of data->div.
+ */
+struct isl_parallel_stat {
+	struct isl_extract_mod_data *data;
+	isl_constraint *c;
+
+	isl_size n[2];
+	isl_bool parallel;
+	isl_bool opposite;
+	isl_bool partial;
+	int final;
+
+	isl_val *f;
+};
+
+/* Should the scan of coefficients be continued?
+ * That is, are the coefficients still (potentially) (partially) equal or
+ * opposite?
+ */
+static isl_bool parallel_or_opposite_continue(struct isl_parallel_stat *stat)
+{
+	if (stat->parallel < 0 || stat->opposite < 0 || stat->partial < 0)
+		return isl_bool_error;
+
+	return isl_bool_ok(stat->parallel || stat->opposite || stat->partial);
+}
+
+/* Is coefficient "i" of type "c_type" of stat->c potentially equal or
+ * opposite to coefficient "i" of type "a_type" of stat->data->div
+ * modulo stat->data->div?
+ * In particular, are they both zero or both non-zero?
+ *
+ * Note that while the coefficients of stat->data->div can be reasonably
+ * expected not to involve any coefficients that are multiples of stat->data->d,
+ * "c" may very well involve such coefficients.
+ * This means that some cases of equal or opposite constraints can be missed
+ * this way.
+ *
+ * If the coefficient of stat->data->div is zero, but that of "c" is not,
+ * then the coefficients of "c" cannot form a subset of those
+ * of stat->data->div.
+ * If the coefficient of stat->data->div is not zero,
+ * then check that it does not appear in both "c" and stat->data->partial.
+ * If it does not appear in either, then it must appear in some later constraint
+ * and "c" can therefore not be the last in the sequence of constraints
+ * that sum up to stat->data->div.
+ */
+static isl_bool parallel_or_opposite_feasible(struct isl_parallel_stat *stat,
+	enum isl_dim_type c_type, enum isl_dim_type a_type, int i)
+{
+	isl_bool a, b;
+
+	a = isl_constraint_involves_dims(stat->c, c_type, i, 1);
+	b = isl_aff_involves_dims(stat->data->div, a_type, i, 1);
+	if (a < 0 || b < 0)
+		return isl_bool_error;
+	if (a != b)
+		stat->parallel = stat->opposite = isl_bool_false;
+	if (!stat->partial)
+		return parallel_or_opposite_continue(stat);
+	if (!b && a)
+		stat->partial = isl_bool_false;
+	if (b && (a || stat->final) && stat->data->partial) {
+		isl_bool c;
+
+		c = isl_aff_involves_dims(stat->data->partial, a_type, i, 1);
+		if (c < 0)
+			return isl_bool_error;
+		if (a && c)
+			stat->partial = isl_bool_false;
+		if (!a && !c)
+			stat->final = 0;
+	}
+
+	return parallel_or_opposite_continue(stat);
+}
+
+/* Update stat->partial based on the coefficient "v1" of stat->c and
+ * "v2" of stat->data->div, where "v2" is known not to be zero.
+ * "v1" may be modified by this function and the modified value is returned.
+ * This function may also set stat->f.
+ *
+ * If "v1" is zero, then no update needs to be performed.
+ * Otherwise, stat->partial can only remain set if "c" is part
+ * of some positively weighted sum that is equal to stat->data->div.
+ * This means that v2 divided by v1 needs to be a positive integer.
+ * This quotient is stored in stat->f.  If this quotient has already
+ * been set for a previous coefficient, then it needs to be the same.
+ */
+static __isl_give isl_val *update_is_partial(struct isl_parallel_stat *stat,
+	__isl_take isl_val *v1, __isl_keep isl_val *v2)
+{
+	if (!stat->partial)
+		return v1;
+	if (isl_val_is_zero(v1))
+		return v1;
+
+	stat->partial = isl_val_is_divisible_by(v2, v1);
+	if (stat->partial < 0 || !stat->partial)
+		return v1;
+
+	v1 = isl_val_div(isl_val_copy(v2), v1);
+	stat->partial = isl_val_is_pos(v1);
+	if (stat->partial < 0 || !stat->partial)
+		return v1;
+	if (!stat->f)
+		stat->f = isl_val_copy(v1);
+	stat->partial = isl_val_eq(v1, stat->f);
+	return v1;
+}
+
+/* Is coefficient "i" of type "c_type" of stat->c equal or
+ * opposite to coefficient "i" of type "a_type" of stat->data->div
+ * modulo stat->data->div, or
+ * could stat->c be part of a positively weighted sum equal to stat->data->div?
+ * This function may set stat->f (at most once).
+ *
+ * If the coefficient of stat->data->div is zero,
+ * then parallel_or_opposite_feasible has already checked
+ * that the coefficient of stat->c is zero as well,
+ * so no further checks are needed.
+ */
+static isl_bool is_parallel_or_opposite(struct isl_parallel_stat *stat,
+	enum isl_dim_type c_type, enum isl_dim_type a_type, int i)
+{
+	isl_val *v1, *v2;
+	isl_bool b;
+
+	b = isl_aff_involves_dims(stat->data->div, a_type, i, 1);
+	if (b < 0 || !b)
+		return isl_bool_not(b);
+
+	v1 = isl_constraint_get_coefficient_val(stat->c, c_type, i);
+	v2 = isl_aff_get_coefficient_val(stat->data->div, a_type, i);
+	if (stat->parallel) {
+		v1 = isl_val_sub(v1, isl_val_copy(v2));
+		stat->parallel = isl_val_is_divisible_by(v1, stat->data->d);
+		v1 = isl_val_add(v1, isl_val_copy(v2));
+	}
+	if (stat->opposite) {
+		v1 = isl_val_add(v1, isl_val_copy(v2));
+		stat->opposite = isl_val_is_divisible_by(v1, stat->data->d);
+	}
+	v1 = update_is_partial(stat, v1, v2);
+	isl_val_free(v1);
+	isl_val_free(v2);
+
+	return parallel_or_opposite_continue(stat);
+}
+
+/* Scan the coefficients of stat->c to see if they are (potentially)
+ * equal or opposite to those of stat->data->div modulo stat->data->d,
+ * calling "fn" on each coefficient.
+ * IF "init" is set, then this is the first call to this function and
+ * then stat->n is initialized.
+ */
+static isl_bool parallel_or_opposite_scan(struct isl_parallel_stat *stat,
+	isl_bool (*fn)(struct isl_parallel_stat *stat,
+		enum isl_dim_type c_type, enum isl_dim_type a_type, int i),
+	int init)
+{
+	enum isl_dim_type c_type[2] = { isl_dim_param, isl_dim_set };
+	enum isl_dim_type a_type[2] = { isl_dim_param, isl_dim_in };
+	int i, t;
+
+	for (t = 0; t < 2; ++t) {
+		if (init) {
+			stat->n[t] = isl_constraint_dim(stat->c, c_type[t]);
+			if (stat->n[t] < 0)
+				return isl_bool_error;
+		}
+		for (i = 0; i < stat->n[t]; ++i) {
+			isl_bool ok;
+
+			ok = fn(stat, c_type[t], a_type[t], i);
+			if (ok < 0 || !ok)
+				return ok;
+		}
+	}
+
+	return isl_bool_true;
+}
+
+/* Update stat->data->partial with stat->c.
+ *
+ * In particular, if stat->c with weight stat->f turns out
+ * to potentially be a part of a weighted sum equal to stat->data->div
+ * (i.e., stat->partial is set), then add this scaled version of stat->c
+ * to stat->data->partial or initialize stat->data->partial if it has not
+ * been set yet.
+ */
+static isl_stat update_partial(struct isl_parallel_stat *stat)
+{
+	isl_aff *aff;
+
+	if (!stat->partial)
+		return isl_stat_ok;
+
+	aff = isl_constraint_get_aff(stat->c);
+	aff = isl_aff_scale_val(aff, isl_val_copy(stat->f));
+	if (!stat->data->partial)
+		stat->data->partial = aff;
+	else
+		stat->data->partial = isl_aff_add(stat->data->partial, aff);
+
+	return isl_stat_non_null(stat->data->partial);
+}
+
+/* Return the constant term of data->partial.
+ */
+static __isl_give isl_val *get_partial_constant(
+	struct isl_extract_mod_data *data, void *user)
+{
+	return isl_aff_get_constant_val(data->partial);
+}
+
+/* Is the affine expression data->partial "simpler" than data->nonneg
+ * for use in extracting a modulo expression?
+ *
+ * The test is based on the constant term of data->partial.
+ */
+static isl_bool partial_is_simpler(struct isl_extract_mod_data *data)
+{
+	return is_simpler(data, &get_partial_constant, NULL);
+}
+
+/* If stat->data->partial is complete and is "simpler" than data->nonneg,
+ * then replace stat->data->nonneg by stat->data->partial.
+ */
+static isl_stat replace_by_partial_if_simpler(struct isl_parallel_stat *stat)
+{
+	isl_bool simpler;
+	isl_aff *partial;
+
+	if (!stat->final)
+		return isl_stat_ok;
+
+	simpler = partial_is_simpler(stat->data);
+	if (simpler < 0 || !simpler)
+		return isl_stat_non_error_bool(simpler);
+
+	partial = stat->data->partial;
+	stat->data->partial = NULL;
+
+	return replace_nonneg(stat->data, partial, 1);
+}
+
 /* Check if the coefficients of "c" are either equal or opposite to those
  * of data->div modulo data->d.  If so, and if "c" is "simpler" than
  * data->nonneg, then replace data->nonneg by the affine expression of "c"
  * and set data->sign accordingly.
+ * Also check if "c" is part of a positively weighted sum of constraints
+ * that is equal to data->div, where each constraint has distinct non-zero
+ * coefficients.  If "c" is the last constraint in this sum
+ * (and the sum is "simpler" than data->nonneg)
+ * then also replace data->nonneg by this sum.
+ * If "c" is equal or opposite to data->div, then it is not considered
+ * to be part of a sum.
  *
  * Both "c" and data->div are assumed not to involve any integer divisions.
  *
  * Before we start the actual comparison, we first quickly check if
  * "c" and data->div have the same non-zero coefficients.
  * If not, then we assume that "c" is not of the desired form.
- * Note that while the coefficients of data->div can be reasonably expected
- * not to involve any coefficients that are multiples of d, "c" may
- * very well involve such coefficients.  This means that we may actually
- * miss some cases.
  *
- * If the constant term is "too large", then the constraint is rejected,
- * where "too large" is fairly arbitrarily set to 1 << 15.
+ * If the constant term is "too large", then the constraint is rejected.
  * We do this to avoid picking up constraints that bound a variable
  * by a very large number, say the largest or smallest possible
  * variable in the representation of some integer type.
  */
-static isl_stat check_parallel_or_opposite(__isl_take isl_constraint *c,
+static isl_stat check_parallel_or_opposite(struct isl_extract_mod_data *data,
+	__isl_keep isl_constraint *c)
+{
+	struct isl_parallel_stat stat = {
+		.data = data,
+		.c = c,
+		.parallel = isl_bool_true,
+		.opposite = isl_bool_true,
+		.partial = isl_bool_true,
+		.final = data->partial != NULL,
+		.f = NULL,
+	};
+	isl_bool skip, ok;
+
+	ok = parallel_or_opposite_scan(&stat,
+					&parallel_or_opposite_feasible, 1);
+	if (ok < 0 || !ok)
+		return isl_stat_non_error_bool(ok);
+
+	skip = has_large_constant_term(c);
+	if (skip < 0 || skip)
+		return isl_stat_non_error_bool(skip);
+
+	if (stat.parallel || stat.opposite)
+		stat.partial = isl_bool_false;
+
+	ok = parallel_or_opposite_scan(&stat, &is_parallel_or_opposite, 0);
+	if (ok >= 0 && ok)
+		if (update_partial(&stat) < 0)
+			ok = isl_bool_error;
+	isl_val_free(stat.f);
+	if (ok < 0 || !ok)
+		return isl_stat_non_error_bool(ok);
+
+	if (stat.partial)
+		return replace_by_partial_if_simpler(&stat);
+
+	return replace_if_simpler(data, c, stat.parallel ? 1 : -1);
+}
+
+/* Wrapper around check_parallel_or_opposite for use
+ * as a isl_basic_set_foreach_constraint callback.
+ */
+static isl_stat check_parallel_or_opposite_wrap(__isl_take isl_constraint *c,
 	void *user)
 {
 	struct isl_extract_mod_data *data = user;
-	enum isl_dim_type c_type[2] = { isl_dim_param, isl_dim_set };
-	enum isl_dim_type a_type[2] = { isl_dim_param, isl_dim_in };
-	int i, t;
-	isl_size n[2];
-	isl_bool parallel = isl_bool_true, opposite = isl_bool_true;
+	isl_stat res;
 
-	for (t = 0; t < 2; ++t) {
-		n[t] = isl_constraint_dim(c, c_type[t]);
-		if (n[t] < 0)
-			goto error;
-		for (i = 0; i < n[t]; ++i) {
-			isl_bool a, b;
-
-			a = isl_constraint_involves_dims(c, c_type[t], i, 1);
-			b = isl_aff_involves_dims(data->div, a_type[t], i, 1);
-			if (a < 0 || b < 0)
-				goto error;
-			if (a != b)
-				parallel = opposite = isl_bool_false;
-		}
-	}
-
-	if (parallel || opposite) {
-		isl_val *v;
-
-		v = isl_val_abs(isl_constraint_get_constant_val(c));
-		if (isl_val_cmp_si(v, 1 << 15) > 0)
-			parallel = opposite = isl_bool_false;
-		isl_val_free(v);
-	}
-
-	for (t = 0; t < 2; ++t) {
-		for (i = 0; i < n[t]; ++i) {
-			isl_val *v1, *v2;
-
-			if (!parallel && !opposite)
-				break;
-			v1 = isl_constraint_get_coefficient_val(c,
-								c_type[t], i);
-			v2 = isl_aff_get_coefficient_val(data->div,
-								a_type[t], i);
-			if (parallel) {
-				v1 = isl_val_sub(v1, isl_val_copy(v2));
-				parallel = isl_val_is_divisible_by(v1, data->d);
-				v1 = isl_val_add(v1, isl_val_copy(v2));
-			}
-			if (opposite) {
-				v1 = isl_val_add(v1, isl_val_copy(v2));
-				opposite = isl_val_is_divisible_by(v1, data->d);
-			}
-			isl_val_free(v1);
-			isl_val_free(v2);
-			if (parallel < 0 || opposite < 0)
-				goto error;
-		}
-	}
-
-	if ((parallel || opposite) && mod_constraint_is_simpler(data, c)) {
-		isl_aff_free(data->nonneg);
-		data->nonneg = isl_constraint_get_aff(c);
-		data->sign = parallel ? 1 : -1;
-	}
-
+	res = check_parallel_or_opposite(data, c);
 	isl_constraint_free(c);
 
-	if (data->sign != 0 && data->nonneg == NULL)
-		return isl_stat_error;
-
-	return isl_stat_ok;
-error:
-	isl_constraint_free(c);
-	return isl_stat_error;
+	return res;
 }
 
 /* Given that data->v * div_i in data->aff is of the form
@@ -849,6 +1164,10 @@ error:
  * guaranteed to be non-negative on data->build), where we remove
  * any integer divisions from the constraints and skip this step
  * if "div" itself involves any integer divisions.
+ * The following cases are considered for div':
+ * - individual constraints, or
+ * - a sum of constraints that involve disjoint sets of variables and
+ *   where the sum is exactly equal to div (i.e., e = 0).
  * If we cannot find an appropriate expression this way, then
  * we pass control to extract_nonneg_mod where check
  * if div or "-div + d -1" themselves happen to be
@@ -875,8 +1194,7 @@ error:
  *
  * Note that the above is only a very simple heuristic for finding an
  * appropriate expression.  We could try a bit harder by also considering
- * sums of constraints that involve disjoint sets of variables or
- * we could consider arbitrary linear combinations of constraints,
+ * arbitrary linear combinations of constraints,
  * although that could potentially be much more expensive as it involves
  * the solution of an LP problem.
  *
@@ -917,8 +1235,10 @@ static isl_stat try_extract_mod(struct isl_extract_mod_data *data)
 	hull = isl_basic_set_remove_divs(hull);
 	data->sign = 0;
 	data->nonneg = NULL;
-	r = isl_basic_set_foreach_constraint(hull, &check_parallel_or_opposite,
-					data);
+	data->partial = NULL;
+	r = isl_basic_set_foreach_constraint(hull,
+					&check_parallel_or_opposite_wrap, data);
+	isl_aff_free(data->partial);
 	isl_basic_set_free(hull);
 
 	if (!data->sign || r < 0) {

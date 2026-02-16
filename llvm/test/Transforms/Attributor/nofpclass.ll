@@ -356,12 +356,12 @@ bb1:
 
 ; Should be able to infer nofpclass on both %arg uses
 define float @fcmp_ord_assume_callsite_arg_return(float %arg) {
-; CHECK-LABEL: define float @fcmp_ord_assume_callsite_arg_return
-; CHECK-SAME: (float returned [[ARG:%.*]]) {
+; CHECK-LABEL: define nofpclass(nan) float @fcmp_ord_assume_callsite_arg_return
+; CHECK-SAME: (float returned nofpclass(nan) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IS_NOT_NAN:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_NOT_NAN]]) #[[ATTR22:[0-9]+]]
-; CHECK-NEXT:    call void @extern.use(float [[ARG]])
+; CHECK-NEXT:    call void @extern.use(float nofpclass(nan) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
 entry:
@@ -481,12 +481,12 @@ define float @call_noinf_return_1(float %arg) {
 }
 
 define float @fcmp_olt_assume_one_0_callsite_arg_return(float %arg) {
-; CHECK-LABEL: define float @fcmp_olt_assume_one_0_callsite_arg_return
-; CHECK-SAME: (float returned [[ARG:%.*]]) {
+; CHECK-LABEL: define nofpclass(nan zero) float @fcmp_olt_assume_one_0_callsite_arg_return
+; CHECK-SAME: (float returned nofpclass(nan zero) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IS_NOT_ZERO_OR_NAN:%.*]] = fcmp one float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_NOT_ZERO_OR_NAN]]) #[[ATTR22]]
-; CHECK-NEXT:    call void @extern.use(float [[ARG]])
+; CHECK-NEXT:    call void @extern.use(float nofpclass(nan zero) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
 entry:
@@ -497,12 +497,12 @@ entry:
 }
 
 define float @fcmp_olt_assume_une_0_callsite_arg_return(float %arg) {
-; CHECK-LABEL: define float @fcmp_olt_assume_une_0_callsite_arg_return
-; CHECK-SAME: (float returned [[ARG:%.*]]) {
+; CHECK-LABEL: define nofpclass(zero) float @fcmp_olt_assume_une_0_callsite_arg_return
+; CHECK-SAME: (float returned nofpclass(zero) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IS_NOT_ZERO_OR_NAN:%.*]] = fcmp une float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_NOT_ZERO_OR_NAN]]) #[[ATTR22]]
-; CHECK-NEXT:    call void @extern.use(float [[ARG]])
+; CHECK-NEXT:    call void @extern.use(float nofpclass(zero) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
 entry:
@@ -513,13 +513,13 @@ entry:
 }
 
 define half @fcmp_assume_issubnormal_callsite_arg_return(half %arg) {
-; CHECK-LABEL: define half @fcmp_assume_issubnormal_callsite_arg_return
-; CHECK-SAME: (half returned [[ARG:%.*]]) {
+; CHECK-LABEL: define nofpclass(nan inf norm) half @fcmp_assume_issubnormal_callsite_arg_return
+; CHECK-SAME: (half returned nofpclass(nan inf norm) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) half @llvm.fabs.f16(half [[ARG]]) #[[ATTR24:[0-9]+]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) half @llvm.fabs.f16(half nofpclass(nan inf norm) [[ARG]]) #[[ATTR24:[0-9]+]]
 ; CHECK-NEXT:    [[IS_SUBNORMAL:%.*]] = fcmp olt half [[FABS]], 0xH0400
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_SUBNORMAL]]) #[[ATTR22]]
-; CHECK-NEXT:    call void @extern.use.f16(half [[ARG]])
+; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan inf norm) [[ARG]])
 ; CHECK-NEXT:    ret half [[ARG]]
 ;
 entry:
@@ -549,15 +549,15 @@ entry:
 
 ; Assume not subnormal or zero, and not infinity
 define half @fcmp_assume2_callsite_arg_return(half %arg) {
-; CHECK-LABEL: define nofpclass(nan pinf) half @fcmp_assume2_callsite_arg_return
-; CHECK-SAME: (half returned nofpclass(nan pinf) [[ARG:%.*]]) {
+; CHECK-LABEL: define nofpclass(nan pinf zero sub) half @fcmp_assume2_callsite_arg_return
+; CHECK-SAME: (half returned nofpclass(nan pinf zero sub) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) half @llvm.fabs.f16(half nofpclass(nan pinf) [[ARG]]) #[[ATTR24]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) half @llvm.fabs.f16(half nofpclass(nan pinf zero sub) [[ARG]]) #[[ATTR24]]
 ; CHECK-NEXT:    [[NOT_SUBNORMAL_OR_ZERO:%.*]] = fcmp oge half [[FABS]], 0xH0400
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[NOT_SUBNORMAL_OR_ZERO]]) #[[ATTR22]]
 ; CHECK-NEXT:    [[NOT_INF:%.*]] = fcmp one half [[ARG]], 0xH7C00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[NOT_INF]]) #[[ATTR22]]
-; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan pinf) [[ARG]])
+; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan pinf zero sub) [[ARG]])
 ; CHECK-NEXT:    ret half [[ARG]]
 ;
 entry:
@@ -573,12 +573,12 @@ entry:
 }
 
 define float @is_fpclass_assume_arg_return(float %arg) {
-; CHECK-LABEL: define float @is_fpclass_assume_arg_return
-; CHECK-SAME: (float returned [[ARG:%.*]]) {
+; CHECK-LABEL: define nofpclass(nan pinf pzero sub nnorm) float @is_fpclass_assume_arg_return
+; CHECK-SAME: (float returned nofpclass(nan pinf pzero sub nnorm) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CLASS_TEST:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG]], i32 noundef 292) #[[ATTR24]]
+; CHECK-NEXT:    [[CLASS_TEST:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan pinf pzero sub nnorm) [[ARG]], i32 noundef 292) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[CLASS_TEST]]) #[[ATTR22]]
-; CHECK-NEXT:    call void @extern.use(float [[ARG]])
+; CHECK-NEXT:    call void @extern.use(float nofpclass(nan pinf pzero sub nnorm) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
 entry:
@@ -594,13 +594,13 @@ define half @assume_fcmp_fabs_with_other_fabs_assume(half %arg) {
 ; CHECK-LABEL: define nofpclass(nan inf zero norm) half @assume_fcmp_fabs_with_other_fabs_assume
 ; CHECK-SAME: (half returned nofpclass(nan inf zero norm) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) half @llvm.fabs.f16(half nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR24]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(nan inf zero nsub norm) half @llvm.fabs.f16(half nofpclass(nan inf zero norm) [[ARG]]) #[[ATTR24]]
 ; CHECK-NEXT:    [[UNRELATED_FABS:%.*]] = fcmp one half [[FABS]], 0xH0000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UNRELATED_FABS]]) #[[ATTR22]]
 ; CHECK-NEXT:    [[IS_SUBNORMAL:%.*]] = fcmp olt half [[FABS]], 0xH0400
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_SUBNORMAL]]) #[[ATTR22]]
 ; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan inf zero norm) [[ARG]])
-; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(ninf nzero nsub nnorm) [[FABS]])
+; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan inf zero nsub norm) [[FABS]])
 ; CHECK-NEXT:    ret half [[ARG]]
 ;
 entry:
@@ -621,13 +621,13 @@ define half @assume_fcmp_fabs_with_other_fabs_assume_fallback(half %arg) {
 ; CHECK-LABEL: define nofpclass(nan inf sub norm) half @assume_fcmp_fabs_with_other_fabs_assume_fallback
 ; CHECK-SAME: (half returned nofpclass(nan inf sub norm) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) half @llvm.fabs.f16(half nofpclass(nan inf sub norm) [[ARG]]) #[[ATTR24]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(nan inf nzero sub norm) half @llvm.fabs.f16(half nofpclass(nan inf sub norm) [[ARG]]) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR22]]
 ; CHECK-NEXT:    [[UNRELATED_FABS:%.*]] = fcmp oeq half [[FABS]], 0xH0000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UNRELATED_FABS]]) #[[ATTR22]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR22]]
 ; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan inf sub norm) [[ARG]])
-; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(ninf nzero nsub nnorm) [[FABS]])
+; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan inf nzero sub norm) [[FABS]])
 ; CHECK-NEXT:    ret half [[ARG]]
 ;
 entry:
@@ -1382,14 +1382,14 @@ define <2 x half> @sitofp_v2i17_to_v2i17(<2 x i17> %arg) {
 }
 
 define float @assume_intersection_not_zero_and_not_nan(float %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @assume_intersection_not_zero_and_not_nan
-; CHECK-SAME: (float returned nofpclass(nan) [[ARG:%.*]]) {
+; CHECK-LABEL: define nofpclass(nan zero) float @assume_intersection_not_zero_and_not_nan
+; CHECK-SAME: (float returned nofpclass(nan zero) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IS_NOT_ZERO_OR_NAN:%.*]] = fcmp une float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_NOT_ZERO_OR_NAN]]) #[[ATTR22]]
 ; CHECK-NEXT:    [[IS_ORD:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_ORD]]) #[[ATTR22]]
-; CHECK-NEXT:    call void @extern.use(float nofpclass(nan) [[ARG]])
+; CHECK-NEXT:    call void @extern.use(float nofpclass(nan zero) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
 entry:
@@ -1402,14 +1402,14 @@ entry:
 }
 
 define float @assume_intersection_class(float %arg) {
-; CHECK-LABEL: define nofpclass(nan inf zero sub) float @assume_intersection_class
-; CHECK-SAME: (float returned nofpclass(nan inf zero sub) [[ARG:%.*]]) {
+; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @assume_intersection_class
+; CHECK-SAME: (float returned nofpclass(nan inf zero sub nnorm) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[POS_NORMAL_OR_POS_SUBNORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan inf zero sub) [[ARG]], i32 noundef 384) #[[ATTR24]]
+; CHECK-NEXT:    [[POS_NORMAL_OR_POS_SUBNORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan inf zero sub nnorm) [[ARG]], i32 noundef 384) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[POS_NORMAL_OR_POS_SUBNORMAL]]) #[[ATTR22]]
-; CHECK-NEXT:    [[IS_NORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan inf zero sub) [[ARG]], i32 noundef 264) #[[ATTR24]]
+; CHECK-NEXT:    [[IS_NORMAL:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(nan inf zero sub nnorm) [[ARG]], i32 noundef 264) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_NORMAL]]) #[[ATTR22]]
-; CHECK-NEXT:    call void @extern.use(float nofpclass(nan inf zero sub) [[ARG]])
+; CHECK-NEXT:    call void @extern.use(float nofpclass(nan inf zero sub nnorm) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
 entry:
@@ -1423,14 +1423,14 @@ entry:
 }
 
 define float @assume_intersection_none(float %arg) {
-; CHECK-LABEL: define nofpclass(qnan pinf nzero psub nnorm) float @assume_intersection_none
-; CHECK-SAME: (float returned nofpclass(qnan pinf nzero psub nnorm) [[ARG:%.*]]) {
+; CHECK-LABEL: define nofpclass(all) float @assume_intersection_none
+; CHECK-SAME: (float returned nofpclass(all) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(qnan pinf nzero psub nnorm) [[ARG]], i32 noundef 682) #[[ATTR24]]
+; CHECK-NEXT:    [[CLASS1:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(all) [[ARG]], i32 noundef 682) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[CLASS1]]) #[[ATTR22]]
-; CHECK-NEXT:    [[CLASS2:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(qnan pinf nzero psub nnorm) [[ARG]], i32 noundef 341) #[[ATTR24]]
+; CHECK-NEXT:    [[CLASS2:%.*]] = call i1 @llvm.is.fpclass.f32(float nofpclass(all) [[ARG]], i32 noundef 341) #[[ATTR24]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[CLASS2]]) #[[ATTR22]]
-; CHECK-NEXT:    call void @extern.use(float nofpclass(qnan pinf nzero psub nnorm) [[ARG]])
+; CHECK-NEXT:    call void @extern.use(float nofpclass(all) [[ARG]])
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
 entry:
@@ -1856,7 +1856,7 @@ define i32 @fptosi(float nofpclass(inf nan) %arg) {
 
 define float @fptrunc(double noundef nofpclass(inf nan) %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define noundef nofpclass(ninf nzero nsub nnorm) float @fptrunc
+; CHECK-LABEL: define noundef nofpclass(nan ninf nzero nsub nnorm) float @fptrunc
 ; CHECK-SAME: (double noundef nofpclass(nan inf) [[ARG:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[CAST:%.*]] = fptrunc double [[ARG]] to float
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CAST]], [[CAST]]
@@ -2025,7 +2025,7 @@ define float @fsub_n0_commute(float %arg0) {
 }
 
 define float @fadd_p0_ftz_daz(float %arg0) #3 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(positivezero) memory(none)
 ; CHECK-LABEL: define nofpclass(nzero) float @fadd_p0_ftz_daz
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], 0.000000e+00
@@ -2036,7 +2036,7 @@ define float @fadd_p0_ftz_daz(float %arg0) #3 {
 }
 
 define float @fadd_n0_ftz_daz(float %arg0) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define float @fadd_n0_ftz_daz
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR10:[0-9]+]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], -0.000000e+00
@@ -2047,7 +2047,7 @@ define float @fadd_n0_ftz_daz(float %arg0) #0 {
 }
 
 define float @fsub_p0_ftz_daz(float %arg0) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define float @fsub_p0_ftz_daz
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[ARG0]], 0.000000e+00
@@ -2058,7 +2058,7 @@ define float @fsub_p0_ftz_daz(float %arg0) #0 {
 }
 
 define float @fsub_n0_ftz_daz(float %arg0) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define float @fsub_n0_ftz_daz
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[ARG0]], -0.000000e+00
@@ -2069,7 +2069,7 @@ define float @fsub_n0_ftz_daz(float %arg0) #0 {
 }
 
 define float @fsub_p0_commute_ftz_daz(float %arg0) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define float @fsub_p0_commute_ftz_daz
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float 0.000000e+00, [[ARG0]]
@@ -2080,7 +2080,7 @@ define float @fsub_p0_commute_ftz_daz(float %arg0) #0 {
 }
 
 define float @fsub_n0_commute_ftz_daz(float %arg0) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define float @fsub_n0_commute_ftz_daz
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float -0.000000e+00, [[ARG0]]
@@ -2091,7 +2091,6 @@ define float @fsub_n0_commute_ftz_daz(float %arg0) #0 {
 }
 
 define float @fadd_p0_ieee_daz(float %arg0) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nzero) float @fadd_p0_ieee_daz
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR11:[0-9]+]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], 0.000000e+00
@@ -2102,7 +2101,6 @@ define float @fadd_p0_ieee_daz(float %arg0) #2 {
 }
 
 define float @fadd_p0_dapz_ieee(float %arg0) #4 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nzero) float @fadd_p0_dapz_ieee
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR12:[0-9]+]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], 0.000000e+00
@@ -2113,7 +2111,6 @@ define float @fadd_p0_dapz_ieee(float %arg0) #4 {
 }
 
 define float @fadd_n0_ieee_daz(float %arg0) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define float @fadd_n0_ieee_daz
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], -0.000000e+00
@@ -2124,7 +2121,6 @@ define float @fadd_n0_ieee_daz(float %arg0) #2 {
 }
 
 define float @fsub_p0_ieee_daz(float %arg0) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define float @fsub_p0_ieee_daz
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[ARG0]], 0.000000e+00
@@ -2135,7 +2131,6 @@ define float @fsub_p0_ieee_daz(float %arg0) #2 {
 }
 
 define float @fsub_n0_ieee_daz(float %arg0) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nzero) float @fsub_n0_ieee_daz
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[ARG0]], -0.000000e+00
@@ -2146,7 +2141,6 @@ define float @fsub_n0_ieee_daz(float %arg0) #2 {
 }
 
 define float @fsub_p0_commute_ieee_daz(float %arg0) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nzero) float @fsub_p0_commute_ieee_daz
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float 0.000000e+00, [[ARG0]]
@@ -2157,7 +2151,6 @@ define float @fsub_p0_commute_ieee_daz(float %arg0) #2 {
 }
 
 define float @fsub_n0_commute_ieee_daz(float %arg0) #1 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define float @fsub_n0_commute_ieee_daz
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR13:[0-9]+]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float -0.000000e+00, [[ARG0]]
@@ -2179,7 +2172,7 @@ define float @fadd_never_negzero_or_negsub(float nofpclass(nzero nsub) %a, float
 }
 
 define float @fadd_never_negzero_or_ftz_daz(float nofpclass(nzero nsub) %a, float nofpclass(nzero nsub) %b) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define float @fadd_never_negzero_or_ftz_daz
 ; CHECK-SAME: (float nofpclass(nzero nsub) [[A:%.*]], float nofpclass(nzero nsub) [[B:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[A]], [[B]]
@@ -2190,7 +2183,6 @@ define float @fadd_never_negzero_or_ftz_daz(float nofpclass(nzero nsub) %a, floa
 }
 
 define float @fadd_never_negzero_or_negsub_daz(float nofpclass(nzero nsub) %a, float nofpclass(nzero nsub) %b) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nzero) float @fadd_never_negzero_or_negsub_daz
 ; CHECK-SAME: (float nofpclass(nzero nsub) [[A:%.*]], float nofpclass(nzero nsub) [[B:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[A]], [[B]]
@@ -2201,7 +2193,6 @@ define float @fadd_never_negzero_or_negsub_daz(float nofpclass(nzero nsub) %a, f
 }
 
 define float @fadd_never_negzero_or_negsub_dapz(float nofpclass(nzero nsub) %a, float nofpclass(nzero nsub) %b) #5 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nzero) float @fadd_never_negzero_or_negsub_dapz
 ; CHECK-SAME: (float nofpclass(nzero nsub) [[A:%.*]], float nofpclass(nzero nsub) [[B:%.*]]) #[[ATTR14:[0-9]+]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[A]], [[B]]
@@ -2223,7 +2214,6 @@ define float @fadd_never_negzero_or_possub(float nofpclass(nzero psub) %a, float
 }
 
 define float @fadd_never_negzero_or_possub_daz(float nofpclass(nzero psub) %a, float nofpclass(nzero psub) %b) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define float @fadd_never_negzero_or_possub_daz
 ; CHECK-SAME: (float nofpclass(nzero psub) [[A:%.*]], float nofpclass(nzero psub) [[B:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[A]], [[B]]
@@ -2234,7 +2224,6 @@ define float @fadd_never_negzero_or_possub_daz(float nofpclass(nzero psub) %a, f
 }
 
 define float @fadd_never_negzero_or_possub_dapz(float nofpclass(nzero psub) %a, float nofpclass(nzero psub) %b) #5 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nzero) float @fadd_never_negzero_or_possub_dapz
 ; CHECK-SAME: (float nofpclass(nzero psub) [[A:%.*]], float nofpclass(nzero psub) [[B:%.*]]) #[[ATTR14]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[A]], [[B]]
@@ -2245,7 +2234,6 @@ define float @fadd_never_negzero_or_possub_dapz(float nofpclass(nzero psub) %a, 
 }
 
 define float @fadd_never_negzero_or_sub_daz(float nofpclass(nzero sub) %a, float nofpclass(nzero sub) %b) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nzero) float @fadd_never_negzero_or_sub_daz
 ; CHECK-SAME: (float nofpclass(nzero sub) [[A:%.*]], float nofpclass(nzero sub) [[B:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[A]], [[B]]
@@ -2256,7 +2244,6 @@ define float @fadd_never_negzero_or_sub_daz(float nofpclass(nzero sub) %a, float
 }
 
 define float @fadd_never_negzero_or_sub_dapz(float nofpclass(nzero sub) %a, float nofpclass(nzero sub) %b) #5 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(nzero) float @fadd_never_negzero_or_sub_dapz
 ; CHECK-SAME: (float nofpclass(nzero sub) [[A:%.*]], float nofpclass(nzero sub) [[B:%.*]]) #[[ATTR14]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[A]], [[B]]
@@ -2300,7 +2287,7 @@ define float @fadd_known_positive(float nofpclass(ninf nsub nnorm) %arg0, float 
 }
 
 define float @fadd_known_positive_daz(float nofpclass(ninf nsub nnorm) %arg0, float nofpclass(ninf nsub nnorm) %arg1) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @fadd_known_positive_daz
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], float nofpclass(ninf nsub nnorm) [[ARG1:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -2344,7 +2331,7 @@ define float @fadd_known_positive_nzero(float nofpclass(ninf nsub nnorm nzero) %
 }
 
 define float @fadd_known_positive_nzero_ftz_daz(float nofpclass(ninf nsub nnorm nzero) %arg0, float nofpclass(ninf nsub nnorm nzero) %arg1) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @fadd_known_positive_nzero_ftz_daz
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], float nofpclass(ninf nzero nsub nnorm) [[ARG1:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -2355,7 +2342,6 @@ define float @fadd_known_positive_nzero_ftz_daz(float nofpclass(ninf nsub nnorm 
 }
 
 define float @fadd_known_positive_nzero_ftz(float nofpclass(ninf nsub nnorm nzero) %arg0, float nofpclass(ninf nsub nnorm nzero) %arg1) #1 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(ninf nsub nnorm) float @fadd_known_positive_nzero_ftz
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], float nofpclass(ninf nzero nsub nnorm) [[ARG1:%.*]]) #[[ATTR13]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -2366,7 +2352,6 @@ define float @fadd_known_positive_nzero_ftz(float nofpclass(ninf nsub nnorm nzer
 }
 
 define float @fadd_known_positive_nzero_daz(float nofpclass(ninf nsub nnorm nzero) %arg0, float nofpclass(ninf nsub nnorm nzero) %arg1) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @fadd_known_positive_nzero_daz
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], float nofpclass(ninf nzero nsub nnorm) [[ARG1:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -2388,7 +2373,7 @@ define float @fadd_known_positive_normal(float nofpclass(ninf nnorm nzero) %arg0
 }
 
 define float @fadd_known_positive_normal_daz(float nofpclass(ninf nnorm nzero) %arg0, float nofpclass(ninf nnorm nzero) %arg1) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define float @fadd_known_positive_normal_daz
 ; CHECK-SAME: (float nofpclass(ninf nzero nnorm) [[ARG0:%.*]], float nofpclass(ninf nzero nnorm) [[ARG1:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -2399,7 +2384,7 @@ define float @fadd_known_positive_normal_daz(float nofpclass(ninf nnorm nzero) %
 }
 
 define float @fadd_known_positive_normal_except0_daz(float nofpclass(ninf nnorm) %arg0, float nofpclass(ninf nnorm) %arg1) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define float @fadd_known_positive_normal_except0_daz
 ; CHECK-SAME: (float nofpclass(ninf nnorm) [[ARG0:%.*]], float nofpclass(ninf nnorm) [[ARG1:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -2410,7 +2395,7 @@ define float @fadd_known_positive_normal_except0_daz(float nofpclass(ninf nnorm)
 }
 
 define float @fadd_known_positive_normal_dapz(float nofpclass(ninf nnorm nzero) %arg0, float nofpclass(ninf nnorm nzero) %arg1) #3 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(positivezero) memory(none)
 ; CHECK-LABEL: define nofpclass(nzero) float @fadd_known_positive_normal_dapz
 ; CHECK-SAME: (float nofpclass(ninf nzero nnorm) [[ARG0:%.*]], float nofpclass(ninf nzero nnorm) [[ARG1:%.*]]) #[[ATTR9]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -3196,7 +3181,6 @@ define float @fadd_double_no_nonsub_nzero(float noundef nofpclass(nsub nzero) %a
 }
 
 define float @fadd_double_no_nopsub_pzero__ieee_daz(float noundef nofpclass(psub pzero) %arg) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef nofpclass(pzero) float @fadd_double_no_nopsub_pzero__ieee_daz
 ; CHECK-SAME: (float noundef nofpclass(pzero psub) [[ARG:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3207,7 +3191,7 @@ define float @fadd_double_no_nopsub_pzero__ieee_daz(float noundef nofpclass(psub
 }
 
 define float @fadd_double_no_nopsub_pzero__ftz_daz(float noundef nofpclass(psub pzero) %arg) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define noundef nofpclass(pzero) float @fadd_double_no_nopsub_pzero__ftz_daz
 ; CHECK-SAME: (float noundef nofpclass(pzero psub) [[ARG:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3218,7 +3202,6 @@ define float @fadd_double_no_nopsub_pzero__ftz_daz(float noundef nofpclass(psub 
 }
 
 define float @fadd_double_no_nonsub_nzero__ieee_daz(float noundef nofpclass(nsub nzero) %arg) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_double_no_nonsub_nzero__ieee_daz
 ; CHECK-SAME: (float noundef nofpclass(nzero nsub) [[ARG:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3229,7 +3212,7 @@ define float @fadd_double_no_nonsub_nzero__ieee_daz(float noundef nofpclass(nsub
 }
 
 define float @fadd_double_no_nonsub_nzero__ftz_daz(float noundef nofpclass(nsub nzero) %arg) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define noundef float @fadd_double_no_nonsub_nzero__ftz_daz
 ; CHECK-SAME: (float noundef nofpclass(nzero nsub) [[ARG:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3240,7 +3223,6 @@ define float @fadd_double_no_nonsub_nzero__ftz_daz(float noundef nofpclass(nsub 
 }
 
 define float @fadd_double_no_nopsub_pzero__ieee_dynamic(float noundef nofpclass(psub pzero) %arg) #9 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef float @fadd_double_no_nopsub_pzero__ieee_dynamic
 ; CHECK-SAME: (float noundef nofpclass(pzero psub) [[ARG:%.*]]) #[[ATTR17:[0-9]+]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3251,7 +3233,6 @@ define float @fadd_double_no_nopsub_pzero__ieee_dynamic(float noundef nofpclass(
 }
 
 define float @fadd_double_no_nonsub_nzero__ieee_dynamic(float noundef nofpclass(nsub nzero) %arg) #9 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_double_no_nonsub_nzero__ieee_dynamic
 ; CHECK-SAME: (float noundef nofpclass(nzero nsub) [[ARG:%.*]]) #[[ATTR17]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3273,7 +3254,6 @@ define float @fadd_double_known_positive_nonsub_ieee(float noundef nofpclass(nin
 }
 
 define float @fadd_double_known_positive_nonsub__ieee_daz(float noundef nofpclass(ninf nnorm sub zero) %arg) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef nofpclass(ninf zero nsub nnorm) float @fadd_double_known_positive_nonsub__ieee_daz
 ; CHECK-SAME: (float noundef nofpclass(ninf zero sub nnorm) [[ARG:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3284,8 +3264,8 @@ define float @fadd_double_known_positive_nonsub__ieee_daz(float noundef nofpclas
 }
 
 define float @fadd_double_known_positive_nonsub__ftz_daz(float noundef nofpclass(ninf nnorm sub zero) %arg) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define noundef nofpclass(ninf pzero nsub nnorm) float @fadd_double_known_positive_nonsub__ftz_daz
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
+; CHECK-LABEL: define noundef nofpclass(ninf zero nsub nnorm) float @fadd_double_known_positive_nonsub__ftz_daz
 ; CHECK-SAME: (float noundef nofpclass(ninf zero sub nnorm) [[ARG:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -3295,7 +3275,6 @@ define float @fadd_double_known_positive_nonsub__ftz_daz(float noundef nofpclass
 }
 
 define float @fadd_double_known_positive_nonsub__ieee_dynamic(float noundef nofpclass(ninf nnorm sub zero) %arg) #9 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef nofpclass(ninf zero nsub nnorm) float @fadd_double_known_positive_nonsub__ieee_dynamic
 ; CHECK-SAME: (float noundef nofpclass(ninf zero sub nnorm) [[ARG:%.*]]) #[[ATTR17]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3317,7 +3296,6 @@ define float @fadd_double_known_negative_nonsub_ieee(float noundef nofpclass(pin
 }
 
 define float @fadd_double_known_negative_nonsub__ieee_daz(float noundef nofpclass(pinf pnorm sub zero) %arg) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef nofpclass(pinf zero psub pnorm) float @fadd_double_known_negative_nonsub__ieee_daz
 ; CHECK-SAME: (float noundef nofpclass(pinf zero sub pnorm) [[ARG:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3328,8 +3306,8 @@ define float @fadd_double_known_negative_nonsub__ieee_daz(float noundef nofpclas
 }
 
 define float @fadd_double_known_negative_nonsub__ftz_daz(float noundef nofpclass(pinf pnorm sub zero) %arg) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define noundef nofpclass(pinf pzero psub pnorm) float @fadd_double_known_negative_nonsub__ftz_daz
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
+; CHECK-LABEL: define noundef nofpclass(pinf zero psub pnorm) float @fadd_double_known_negative_nonsub__ftz_daz
 ; CHECK-SAME: (float noundef nofpclass(pinf zero sub pnorm) [[ARG:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -3339,7 +3317,6 @@ define float @fadd_double_known_negative_nonsub__ftz_daz(float noundef nofpclass
 }
 
 define float @fadd_double_known_negative_nonsub_dynamic(float noundef nofpclass(pinf pnorm sub zero) %arg) #9 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef nofpclass(pinf zero psub pnorm) float @fadd_double_known_negative_nonsub_dynamic
 ; CHECK-SAME: (float noundef nofpclass(pinf zero sub pnorm) [[ARG:%.*]]) #[[ATTR17]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3416,7 +3393,6 @@ define float @fadd_known_negative(float nofpclass(pinf psub pnorm) %arg0, float 
 }
 
 define float @fadd_known_negative_daz(float nofpclass(pinf psub pnorm) %arg0, float nofpclass(pinf psub pnorm) %arg1) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @fadd_known_negative_daz
 ; CHECK-SAME: (float nofpclass(pinf psub pnorm) [[ARG0:%.*]], float nofpclass(pinf psub pnorm) [[ARG1:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -3460,7 +3436,7 @@ define float @fadd_known_negative_pzero(float nofpclass(pinf psub pnorm pzero) %
 }
 
 define float @fadd_known_negative_pzero_ftz_daz(float nofpclass(pinf psub pnorm pzero) %arg0, float nofpclass(pinf psub pnorm pzero) %arg1) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @fadd_known_negative_pzero_ftz_daz
 ; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]], float nofpclass(pinf pzero psub pnorm) [[ARG1:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -3471,7 +3447,6 @@ define float @fadd_known_negative_pzero_ftz_daz(float nofpclass(pinf psub pnorm 
 }
 
 define float @fadd_known_negative_pzero_ftz(float nofpclass(pinf psub pnorm pzero) %arg0, float nofpclass(pinf psub pnorm pzero) %arg1) #1 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @fadd_known_negative_pzero_ftz
 ; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]], float nofpclass(pinf pzero psub pnorm) [[ARG1:%.*]]) #[[ATTR13]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -3482,7 +3457,6 @@ define float @fadd_known_negative_pzero_ftz(float nofpclass(pinf psub pnorm pzer
 }
 
 define float @fadd_known_negative_pzero_daz(float nofpclass(pinf psub pnorm pzero) %arg0, float nofpclass(pinf psub pnorm pzero) %arg1) #2 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @fadd_known_negative_pzero_daz
 ; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]], float nofpclass(pinf pzero psub pnorm) [[ARG1:%.*]]) #[[ATTR11]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -3504,7 +3478,7 @@ define float @fadd_known_negative_normal(float nofpclass(pinf pnorm pzero) %arg0
 }
 
 define float @fadd_known_negative_normal_daz(float nofpclass(pinf pnorm pzero) %arg0, float nofpclass(pinf pnorm pzero) %arg1) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define float @fadd_known_negative_normal_daz
 ; CHECK-SAME: (float nofpclass(pinf pzero pnorm) [[ARG0:%.*]], float nofpclass(pinf pzero pnorm) [[ARG1:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -3515,7 +3489,7 @@ define float @fadd_known_negative_normal_daz(float nofpclass(pinf pnorm pzero) %
 }
 
 define float @fadd_known_negative_normal_except0_daz(float nofpclass(pinf pnorm) %arg0, float nofpclass(pinf pnorm) %arg1) #0 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(preservesign) memory(none)
 ; CHECK-LABEL: define float @fadd_known_negative_normal_except0_daz
 ; CHECK-SAME: (float nofpclass(pinf pnorm) [[ARG0:%.*]], float nofpclass(pinf pnorm) [[ARG1:%.*]]) #[[ATTR10]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -3526,7 +3500,7 @@ define float @fadd_known_negative_normal_except0_daz(float nofpclass(pinf pnorm)
 }
 
 define float @fadd_known_negative_normal_dapz(float nofpclass(pinf pnorm pzero) %arg0, float nofpclass(pinf pnorm pzero) %arg1) #3 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn denormal_fpenv(positivezero) memory(none)
 ; CHECK-LABEL: define float @fadd_known_negative_normal_dapz
 ; CHECK-SAME: (float nofpclass(pinf pzero pnorm) [[ARG0:%.*]], float nofpclass(pinf pzero pnorm) [[ARG1:%.*]]) #[[ATTR9]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
@@ -3571,7 +3545,6 @@ define float @fadd_double_no_nzero_dapz_dapz(float noundef nofpclass(nzero) %arg
 }
 
 define float @fadd_double_no_nzero_dapz_ieee(float noundef nofpclass(nzero) %arg) #4 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_double_no_nzero_dapz_ieee
 ; CHECK-SAME: (float noundef nofpclass(nzero) [[ARG:%.*]]) #[[ATTR12]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3606,7 +3579,6 @@ define float @fadd_double_no_pzero_maybe_undef(float nofpclass(pzero) %arg) {
 ; The input is not logical 0 since it's IEEE, but the output could
 ; still be flushed.
 define float @fadd_double_no_zero__output_only_is_ftz(float noundef nofpclass(zero) %arg) #7 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef float @fadd_double_no_zero__output_only_is_ftz
 ; CHECK-SAME: (float noundef nofpclass(zero) [[ARG:%.*]]) #[[ATTR13]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3619,7 +3591,6 @@ define float @fadd_double_no_zero__output_only_is_ftz(float noundef nofpclass(ze
 ; The input is not logical 0 since it's IEEE, but the output could
 ; still be flushed.
 define float @fadd_double_no_zero__output_only_is_dynamic(float noundef nofpclass(zero) %arg) #8 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef float @fadd_double_no_zero__output_only_is_dynamic
 ; CHECK-SAME: (float noundef nofpclass(zero) [[ARG:%.*]]) #[[ATTR18:[0-9]+]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3690,8 +3661,49 @@ define float @assume_returned_arg(float noundef %arg) {
   ret float %arg
 }
 
-define float @fadd_double_no_zero__output_only_is_ftpz(float noundef nofpclass(zero) %arg) #4 {
+define double @wrong_context_function_issue178954(i1 %cond) {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define noundef nofpclass(nan inf nzero sub norm) double @wrong_context_function_issue178954
+; TUNIT-SAME: (i1 [[COND:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    ret double 0.000000e+00
+;
+; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define noundef nofpclass(nan inf nzero sub norm) double @wrong_context_function_issue178954
+; CGSCC-SAME: (i1 [[COND:%.*]]) #[[ATTR4]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[FMA:%.*]] = tail call nofpclass(nan inf sub norm) double @llvm.fma.f64(double noundef nofpclass(nan inf zero sub nnorm) 1.000000e+00, double noundef nofpclass(nan inf nzero sub norm) 0.000000e+00, double noundef nofpclass(nan inf nzero sub norm) 0.000000e+00) #[[ATTR23]]
+; CGSCC-NEXT:    [[COND_I:%.*]] = select i1 [[COND]], double 0.000000e+00, double [[FMA]]
+; CGSCC-NEXT:    [[ADD_I46_I:%.*]] = fadd double [[COND_I]], 0.000000e+00
+; CGSCC-NEXT:    [[ADD_I_I33:%.*]] = fadd double 0.000000e+00, [[ADD_I46_I]]
+; CGSCC-NEXT:    [[ADD_I_I_I39:%.*]] = fadd double [[ADD_I_I33]], 0.000000e+00
+; CGSCC-NEXT:    [[VECINIT1_I_I_I_I43:%.*]] = insertelement <2 x double> zeroinitializer, double [[ADD_I_I_I39]], i64 0
+; CGSCC-NEXT:    [[CALL7:%.*]] = call noundef nofpclass(nan inf nzero sub norm) double @issue178954_callee(<2 x double> nofpclass(nan inf nzero sub norm) [[VECINIT1_I_I_I_I43]]) #[[ATTR23]]
+; CGSCC-NEXT:    ret double [[CALL7]]
+;
+entry:
+  %fma = tail call double @llvm.fma.f64(double 1.0, double 0.0, double 0.0)
+  %cond.i = select i1 %cond, double 0.000000e+00, double %fma
+  %add.i46.i = fadd double %cond.i, 0.000000e+00
+  %add.i.i33 = fadd double 0.000000e+00, %add.i46.i
+  %add.i.i.i39 = fadd double %add.i.i33, 0.000000e+00
+  %vecinit1.i.i.i.i43 = insertelement <2 x double> zeroinitializer, double %add.i.i.i39, i64 0
+  %call7 = call double @issue178954_callee(<2 x double> %vecinit1.i.i.i.i43)
+  ret double %call7
+}
+
+define double @issue178954_callee(<2 x double> %a) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define noundef nofpclass(nan inf nzero sub norm) double @issue178954_callee
+; CHECK-SAME: (<2 x double> [[A:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret double 0.000000e+00
+;
+entry:
+  ret double 0.000000e+00
+}
+
+define float @fadd_double_no_zero__output_only_is_ftpz(float noundef nofpclass(zero) %arg) #4 {
 ; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_double_no_zero__output_only_is_ftpz
 ; CHECK-SAME: (float noundef nofpclass(zero) [[ARG:%.*]]) #[[ATTR12]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3702,7 +3714,6 @@ define float @fadd_double_no_zero__output_only_is_ftpz(float noundef nofpclass(z
 }
 
 define float @fadd_double_no_zero_or_nsub__output_only_is_ftpz(float noundef nofpclass(zero nsub) %arg) #4 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_double_no_zero_or_nsub__output_only_is_ftpz
 ; CHECK-SAME: (float noundef nofpclass(zero nsub) [[ARG:%.*]]) #[[ATTR12]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3713,7 +3724,6 @@ define float @fadd_double_no_zero_or_nsub__output_only_is_ftpz(float noundef nof
 }
 
 define float @fadd_double_no_zero_or_psub__output_only_is_ftpz(float noundef nofpclass(zero psub) %arg) #4 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_double_no_zero_or_psub__output_only_is_ftpz
 ; CHECK-SAME: (float noundef nofpclass(zero psub) [[ARG:%.*]]) #[[ATTR12]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3724,7 +3734,6 @@ define float @fadd_double_no_zero_or_psub__output_only_is_ftpz(float noundef nof
 }
 
 define float @fadd_double_no_zero_or_sub__output_only_is_ftpz(float noundef nofpclass(zero sub) %arg) #4 {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define noundef nofpclass(zero) float @fadd_double_no_zero_or_sub__output_only_is_ftpz
 ; CHECK-SAME: (float noundef nofpclass(zero sub) [[ARG:%.*]]) #[[ATTR12]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[ARG]]
@@ -3734,20 +3743,126 @@ define float @fadd_double_no_zero_or_sub__output_only_is_ftpz(float noundef nofp
   ret float %add
 }
 
+; Know there cannot be underflow, infer nofpclass(zero)
+define half @known_positive_or_nan__fadd__known_positive_normal_or_inf(half nofpclass(ninf nnorm nsub nzero) %known.positive.or.nan, half nofpclass(ninf nnorm sub zero) %known.pnorm.or.pinf.or.nan) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(ninf zero nsub nnorm) half @known_positive_or_nan__fadd__known_positive_normal_or_inf
+; CHECK-SAME: (half nofpclass(ninf nzero nsub nnorm) [[KNOWN_POSITIVE_OR_NAN:%.*]], half nofpclass(ninf zero sub nnorm) [[KNOWN_PNORM_OR_PINF_OR_NAN:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[KNOWN_POSITIVE_OR_NAN]], [[KNOWN_PNORM_OR_PINF_OR_NAN]]
+; CHECK-NEXT:    ret half [[ADD]]
+;
+  %add = fadd half %known.positive.or.nan, %known.pnorm.or.pinf.or.nan
+  ret half %add
+}
+
+; Know there cannot be underflow, infer nofpclass(zero)
+define half @known_positive_normal_or_inf__fadd__known_positive_or_nan(half nofpclass(ninf nnorm sub zero) %known.pnorm.or.pinf.or.nan, half nofpclass(ninf nnorm nsub nzero) %known.positive.or.nan) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(ninf zero nsub nnorm) half @known_positive_normal_or_inf__fadd__known_positive_or_nan
+; CHECK-SAME: (half nofpclass(ninf zero sub nnorm) [[KNOWN_PNORM_OR_PINF_OR_NAN:%.*]], half nofpclass(ninf nzero nsub nnorm) [[KNOWN_POSITIVE_OR_NAN:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[KNOWN_PNORM_OR_PINF_OR_NAN]], [[KNOWN_POSITIVE_OR_NAN]]
+; CHECK-NEXT:    ret half [[ADD]]
+;
+  %add = fadd half %known.pnorm.or.pinf.or.nan, %known.positive.or.nan
+  ret half %add
+}
+
+; Know there cannot be underflow, infer nofpclass(zero)
+define half @known_negative_or_nan__fadd__known_negative_normal_or_inf(half nofpclass(pinf pnorm psub pzero) %known.negative.or.nan, half nofpclass(pinf pnorm sub zero) %known.nnorm.or.ninf.or.nan) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(pinf zero psub pnorm) half @known_negative_or_nan__fadd__known_negative_normal_or_inf
+; CHECK-SAME: (half nofpclass(pinf pzero psub pnorm) [[KNOWN_NEGATIVE_OR_NAN:%.*]], half nofpclass(pinf zero sub pnorm) [[KNOWN_NNORM_OR_NINF_OR_NAN:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[KNOWN_NEGATIVE_OR_NAN]], [[KNOWN_NNORM_OR_NINF_OR_NAN]]
+; CHECK-NEXT:    ret half [[ADD]]
+;
+  %add = fadd half %known.negative.or.nan, %known.nnorm.or.ninf.or.nan
+  ret half %add
+}
+
+; Know there cannot be underflow, infer nofpclass(zero)
+define half @known_negative_normal_or_inf__fadd__known_negative_or_nan(half nofpclass(pinf pnorm sub zero) %known.nnorm.or.ninf.or.nan, half nofpclass(pinf pnorm psub pzero) %known.negative.or.nan) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define nofpclass(pinf zero psub pnorm) half @known_negative_normal_or_inf__fadd__known_negative_or_nan
+; CHECK-SAME: (half nofpclass(pinf zero sub pnorm) [[KNOWN_NNORM_OR_NINF_OR_NAN:%.*]], half nofpclass(pinf pzero psub pnorm) [[KNOWN_NEGATIVE_OR_NAN:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[KNOWN_NNORM_OR_NINF_OR_NAN]], [[KNOWN_NEGATIVE_OR_NAN]]
+; CHECK-NEXT:    ret half [[ADD]]
+;
+  %add = fadd half %known.nnorm.or.ninf.or.nan, %known.negative.or.nan
+  ret half %add
+}
+
+define float @infer_return_from_load_nofpclass_md_f32_0(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK-LABEL: define nofpclass(nan) float @infer_return_from_load_nofpclass_md_f32_0
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[PTR:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[PTR]], align 4, !nofpclass [[META1:![0-9]+]]
+; CHECK-NEXT:    ret float [[LOAD]]
+;
+  %load = load float, ptr %ptr, !nofpclass !1
+  ret float %load
+}
+
+define float @infer_return_from_load_nofpclass_md_f32_1(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK-LABEL: define nofpclass(pinf) float @infer_return_from_load_nofpclass_md_f32_1
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[PTR:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[PTR]], align 4, !nofpclass [[META2:![0-9]+]]
+; CHECK-NEXT:    ret float [[LOAD]]
+;
+  %load = load float, ptr %ptr, !nofpclass !2
+  ret float %load
+}
+
+define <2 x float> @infer_return_from_load_nofpclass_md_v2f32(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK-LABEL: define nofpclass(nan) <2 x float> @infer_return_from_load_nofpclass_md_v2f32
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[PTR:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x float>, ptr [[PTR]], align 8, !nofpclass [[META1]]
+; CHECK-NEXT:    ret <2 x float> [[LOAD]]
+;
+  %load = load <2 x float>, ptr %ptr, !nofpclass !1
+  ret <2 x float> %load
+}
+
+; TODO: Misses this case
+define { float, float } @infer_return_from_load_nofpclass_md_struct(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK-LABEL: define { float, float } @infer_return_from_load_nofpclass_md_struct
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(8) [[PTR:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[LOAD:%.*]] = load { float, float }, ptr [[PTR]], align 4, !nofpclass [[META1]]
+; CHECK-NEXT:    ret { float, float } [[LOAD]]
+;
+  %load = load { float, float }, ptr %ptr, !nofpclass !1
+  ret { float, float } %load
+}
+
+define [4 x float] @infer_return_from_load_nofpclass_md_array(ptr %ptr) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
+; CHECK-LABEL: define nofpclass(nan) [4 x float] @infer_return_from_load_nofpclass_md_array
+; CHECK-SAME: (ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(16) [[PTR:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[LOAD:%.*]] = load [4 x float], ptr [[PTR]], align 4, !nofpclass [[META1]]
+; CHECK-NEXT:    ret [4 x float] [[LOAD]]
+;
+  %load = load [4 x float], ptr %ptr, !nofpclass !1
+  ret [4 x float] %load
+}
+
 declare i64 @_Z13get_global_idj(i32 noundef)
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="preserve-sign,ieee" }
-attributes #2 = { "denormal-fp-math"="ieee,preserve-sign" }
-attributes #3 = { "denormal-fp-math"="positive-zero,positive-zero" }
-attributes #4 = { "denormal-fp-math"="positive-zero,ieee" }
-attributes #5 = { "denormal-fp-math"="ieee,positive-zero" }
-attributes #6 = { "denormal-fp-math"="dynamic,dynamic" }
-attributes #7 = { "denormal-fp-math"="preserve-sign,ieee" }
-attributes #8 = { "denormal-fp-math"="dynamic,ieee" }
-attributes #9 = { "denormal-fp-math"="ieee,dynamic" }
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(preservesign|ieee) }
+attributes #2 = { denormal_fpenv(ieee|preservesign) }
+attributes #3 = { denormal_fpenv(positivezero|positivezero) }
+attributes #4 = { denormal_fpenv(positivezero|ieee) }
+attributes #5 = { denormal_fpenv(ieee|positivezero) }
+attributes #6 = { denormal_fpenv(dynamic) }
+attributes #7 = { denormal_fpenv(preservesign|ieee) }
+attributes #8 = { denormal_fpenv(dynamic|ieee) }
+attributes #9 = { denormal_fpenv(ieee|dynamic) }
 
 !0 = !{}
+!1 = !{i32 3}
+!2 = !{i32 512}
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CGSCC-CI: {{.*}}

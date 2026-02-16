@@ -175,8 +175,8 @@ Each platform has one binary release package. The file name starts with either `
 Except for Windows. Where `LLVM-*.exe` is an installer intended for using LLVM as a toolchain and the archive `clang+llvm-` contains the contents of the installer, plus libraries and tools not normally used in a toolchain. You most likely want the `LLVM-` installer, unless you are developing software which itself uses LLVM, in which case choose `clang+llvm-`.
 
 In addition, source archives are available:
-* `<sub-project>-{release}.src.tar.xz` are archives of the sources of specific sub-projects of `llvm-project` (except for `test-suite` which is an archive of the [LLVM Test Suite](https://github.com/llvm/llvm-test-suite)).
 * To get all the `llvm-project` source code for this release, choose `llvm-project-{release}.src.tar.xz`.
+* `test-suite-{release}.src.tar.xz` is an archive of the [LLVM Test Suite](https://github.com/llvm/llvm-test-suite)) for this release.
 
 ## Verifying Packages
 
@@ -280,7 +280,7 @@ parser.add_argument("--files", nargs="+", type=str)
 
 args = parser.parse_args()
 
-gh = github.Github(args.token)
+gh = github.Github(auth=github.Auth.Token(args.token))
 llvm_org = gh.get_organization("llvm")
 llvm_repo = llvm_org.get_repo("llvm-project")
 
@@ -291,7 +291,7 @@ if args.user:
     # Validate that this user is allowed to modify releases.
     user = gh.get_user(args.user)
     team = (
-        github.Github(args.user_token)
+        github.Github(auth=github.Auth.Token(args.user_token))
         .get_organization("llvm")
         .get_team_by_slug("llvm-release-managers")
     )

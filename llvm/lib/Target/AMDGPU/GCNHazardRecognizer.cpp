@@ -16,6 +16,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -1336,8 +1337,8 @@ bool GCNHazardRecognizer::fixVcmpxPermlaneHazards(MachineInstr *MI) {
   bool IsUndef = Src0->isUndef();
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII->get(AMDGPU::V_MOV_B32_e32))
-    .addReg(Reg, RegState::Define | (IsUndef ? RegState::Dead : 0))
-    .addReg(Reg, IsUndef ? RegState::Undef : RegState::Kill);
+      .addReg(Reg, RegState::Define | getDeadRegState(IsUndef))
+      .addReg(Reg, IsUndef ? RegState::Undef : RegState::Kill);
 
   return true;
 }
@@ -1931,7 +1932,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
 }
 
 bool GCNHazardRecognizer::fixVALUTransCoexecutionHazards(MachineInstr *MI) {
-  if (!AMDGPU::isGFX1250(ST) || // Coexecution disabled.
+  if (!ST.hasGFX1250Insts() || // Coexecution disabled.
       !SIInstrInfo::isVALU(*MI) || SIInstrInfo::isTRANS(*MI))
     return false;
 
@@ -2076,7 +2077,7 @@ static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
 }
 
 int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) {
-  if (!AMDGPU::isGFX1250(ST))
+  if (!ST.hasGFX1250Insts())
     return 0;
 
   const SIInstrInfo *TII = ST.getInstrInfo();

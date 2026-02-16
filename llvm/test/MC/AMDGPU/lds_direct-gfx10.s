@@ -6,10 +6,10 @@ v_readfirstlane_b32 s0, lds_direct
 // GFX10: v_readfirstlane_b32 s0, src_lds_direct  ; encoding: [0xfe,0x04,0x00,0x7e]
 
 v_readlane_b32 s0, lds_direct, s0
-// GFX10: v_readlane_b32 s0, src_lds_direct, s0   ; encoding: [0x00,0x00,0x60,0xd7,0xfe,0x00,0x00,0x00]
+// GFX10: v_readlane_b32 s0, src_lds_direct, s0   ; encoding: [0x00,0x00,0x60,0xd7,0xfe,0x00,0x00,0x02]
 
 v_writelane_b32 v0, lds_direct, s0
-// GFX10: v_writelane_b32 v0, src_lds_direct, s0  ; encoding: [0x00,0x00,0x61,0xd7,0xfe,0x00,0x00,0x00]
+// GFX10: v_writelane_b32 v0, src_lds_direct, s0  ; encoding: [0x00,0x00,0x61,0xd7,0xfe,0x00,0x00,0x02]
 
 v_permlane16_b32 v0, lds_direct, s0, s0
 // NOGFX10: :[[@LINE-1]]:22: error: invalid operand for instruction

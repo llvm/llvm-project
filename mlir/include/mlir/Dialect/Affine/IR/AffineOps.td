@@ -128,7 +128,7 @@ def AffineForOp : Affine_Op<"for",
       "getLoopUpperBounds", "getYieldedValuesMutable",
       "replaceWithAdditionalYields"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
-     ["getEntrySuccessorOperands"]>]> {
+     ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
   let summary = "for operation";
   let description = [{
     Syntax:
@@ -340,7 +340,8 @@ def AffineForOp : Affine_Op<"for",
 def AffineIfOp : Affine_Op<"if",
                            [ImplicitAffineTerminator, RecursivelySpeculatable,
                             RecursiveMemoryEffects, NoRegionArguments,
-                            DeclareOpInterfaceMethods<RegionBranchOpInterface>
+                            DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                ["getSuccessorInputs"]>
                            ]> {
   let summary = "if-then-else operation";
   let description = [{

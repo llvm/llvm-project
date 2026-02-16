@@ -88,6 +88,7 @@ protected:
   std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
+  bool EnableSRLTSubregToRegMitigation;
   unsigned VScaleForTuning = 1;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
 
@@ -128,7 +129,8 @@ public:
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
-                   bool HasMinSize = false);
+                   bool HasMinSize = false,
+                   bool EnableSRLTSubregToRegMitigation = false);
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -466,6 +468,10 @@ public:
   /// Returns true to use the addvl/inc/dec instructions, as opposed to separate
   /// add + cnt instructions.
   bool useScalarIncVL() const;
+
+  bool enableSRLTSubregToRegMitigation() const {
+    return EnableSRLTSubregToRegMitigation;
+  }
 
   /// Choose a method of checking LR before performing a tail call.
   AArch64PAuth::AuthCheckMethod
