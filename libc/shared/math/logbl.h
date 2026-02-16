@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_LIBC_SHARED_MATH_LOGBL_H
 #define LLVM_LIBC_SHARED_MATH_LOGBL_H
 
