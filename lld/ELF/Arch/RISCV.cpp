@@ -417,7 +417,6 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       break;
     case R_RISCV_TLS_GOT_HI20:
       // There is no IE to LE optimization.
-      ctx.hasTlsIe.store(true, std::memory_order_relaxed);
       sym.setFlags(NEEDS_TLSIE);
       sec.addReloc({R_GOT_PC, type, offset, addend, &sym});
       continue;

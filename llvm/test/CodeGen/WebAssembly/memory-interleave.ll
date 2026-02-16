@@ -2003,7 +2003,9 @@ for.body:                                         ; preds = %entry, %for.body
 
 ; CHECK-LABEL: four_floats_same_op:
 ; CHECK: loop
-; CHECK-NOT: v128.load
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: v128.store
 define hidden void @four_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp45.not = icmp eq i32 %N, 0
