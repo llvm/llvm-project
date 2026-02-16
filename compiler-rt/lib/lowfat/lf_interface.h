@@ -23,11 +23,6 @@ extern "C" {
 // Initialize the LowFat Sanitizer runtime. Called early during program startup.
 SANITIZER_INTERFACE_ATTRIBUTE void __lf_init();
 
-// Perform a bounds check on a pointer access.
-// ptr: The pointer being accessed
-// size: The size of the access in bytes
-SANITIZER_INTERFACE_ATTRIBUTE void __lf_check_bounds(uptr ptr, uptr size);
-
 // Report an out-of-bounds error.
 // ptr: The pointer that caused the violation
 // base: The base address of the allocation

@@ -200,26 +200,6 @@ void __lf_init() {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __lf_check_bounds(uptr ptr, uptr size) {
-  // Printf("LowFat: check_bounds(ptr=0x%zx, size=%zu)", ptr, size);
-  if (!__lowfat::IsLowFatPointer(ptr)) {
-    // Printf(" → not LowFat, skipping\n");
-    return;
-  }
-  
-  uptr base = __lowfat::GetBase(ptr);
-  uptr alloc_size = __lowfat::GetSize(ptr);
-  bool in_bounds = __lowfat::CheckBounds(ptr, size);
-  // Printf(" → base=0x%zx, alloc=%zu, end=0x%zx, %s\n",
-  //        base, alloc_size, base + alloc_size,
-  //        in_bounds ? "OK" : "OOB!");
-
-  if (!in_bounds) {
-    __lowfat::PrintErrorAndDie(ptr, base, alloc_size);
-  }
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
 void __lf_report_oob(uptr ptr, uptr base, uptr bound) {
   __lowfat::PrintErrorAndDie(ptr, base, bound);
 }
