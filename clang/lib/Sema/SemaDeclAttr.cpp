@@ -5140,6 +5140,8 @@ static void handleConstantAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
     return;
   }
+  if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_constant))
+    return;
   // constexpr variable may already get an implicit constant attr, which should
   // be replaced by the explicit constant attr.
   if (auto *A = D->getAttr<CUDAConstantAttr>()) {
@@ -5159,6 +5161,8 @@ static void handleSharedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(AL.getLoc(), diag::err_cuda_extern_shared) << VD;
     return;
   }
+  if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_shared))
+    return;
   if (S.getLangOpts().CUDA && VD->hasLocalStorage() &&
       S.CUDA().DiagIfHostCode(AL.getLoc(), diag::err_cuda_host_shared)
           << S.CUDA().CurrentTarget())
@@ -5208,6 +5212,8 @@ static void handleDeviceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
       return;
     }
+    if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_device))
+      return;
   }
 
   if (auto *A = D->getAttr<CUDADeviceAttr>()) {
@@ -5224,6 +5230,8 @@ static void handleManagedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
       return;
     }
+    if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_device))
+      return;
   }
   if (!D->hasAttr<HIPManagedAttr>())
     D->addAttr(::new (S.Context) HIPManagedAttr(S.Context, AL));
@@ -6387,6 +6395,8 @@ static void handleInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     break;
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     S.RISCV().handleInterruptAttr(D, AL);
     break;
   default:

@@ -77,6 +77,18 @@ endfunction(_get_compile_options_from_flags)
 function(_get_compile_options_from_config output_var)
   set(config_options "")
 
+  if(LIBC_CONF_STRTOFLOAT_DISABLE_EISEL_LEMIRE)
+    list(APPEND config_options "-DLIBC_COPT_STRTOFLOAT_DISABLE_EISEL_LEMIRE")
+  endif()
+
+  if(LIBC_CONF_STRTOFLOAT_DISABLE_SIMPLE_DECIMAL_CONVERSION)
+    list(APPEND config_options "-DLIBC_COPT_STRTOFLOAT_DISABLE_SIMPLE_DECIMAL_CONVERSION")
+  endif()
+
+  if(LIBC_CONF_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH)
+    list(APPEND config_options "-DLIBC_COPT_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH")
+  endif()
+
   if(LIBC_CONF_QSORT_IMPL)
     list(APPEND config_options "-DLIBC_QSORT_IMPL=${LIBC_CONF_QSORT_IMPL}")
   endif()
@@ -137,6 +149,10 @@ function(_get_compile_options_from_config output_var)
 
   if(LIBC_CONF_PRINTF_DISABLE_WIDE)
     list(APPEND config_options "-DLIBC_COPT_PRINTF_DISABLE_WIDE")
+  endif()
+
+  if(LIBC_COPT_PRINTF_DISABLE_BITINT)
+    list(APPEND config_options "-DLIBC_COPT_PRINTF_DISABLE_BITINT")
   endif()
 
   set(${output_var} ${config_options} PARENT_SCOPE)

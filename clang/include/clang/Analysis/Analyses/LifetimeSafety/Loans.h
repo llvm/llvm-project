@@ -30,8 +30,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
 /// Represents the storage location being borrowed, e.g., a specific stack
 /// variable.
 /// TODO: Model access paths of other types, e.g., s.field, heap and globals.
-struct AccessPath {
-private:
+class AccessPath {
   // An access path can be:
   // - ValueDecl * , to represent the storage location corresponding to the
   //   variable declared in ValueDecl.
@@ -52,6 +51,8 @@ public:
   const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
     return P.dyn_cast<const clang::MaterializeTemporaryExpr *>();
   }
+
+  bool operator==(const AccessPath &RHS) const { return P == RHS.P; }
 };
 
 /// An abstract base class for a single "Loan" which represents lending a

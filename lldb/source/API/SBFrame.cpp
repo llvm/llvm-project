@@ -363,7 +363,8 @@ void SBFrame::Clear() {
   m_opaque_sp->Clear();
 }
 
-lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path) {
+lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
+                                               lldb::DILMode mode) {
   LLDB_INSTRUMENT_VA(this, var_path);
 
   SBValue sb_value;
@@ -377,13 +378,14 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path) {
   if (StackFrame *frame = exe_ctx->GetFramePtr()) {
     lldb::DynamicValueType use_dynamic =
         frame->CalculateTarget()->GetPreferDynamicValue();
-    sb_value = GetValueForVariablePath(var_path, use_dynamic);
+    sb_value = GetValueForVariablePath(var_path, use_dynamic, mode);
   }
   return sb_value;
 }
 
 lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
-                                               DynamicValueType use_dynamic) {
+                                               DynamicValueType use_dynamic,
+                                               lldb::DILMode mode) {
   LLDB_INSTRUMENT_VA(this, var_path, use_dynamic);
 
   SBValue sb_value;
@@ -405,7 +407,7 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
         var_path, eNoDynamicValues,
         StackFrame::eExpressionPathOptionCheckPtrVsMember |
             StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
-        var_sp, error));
+        var_sp, error, mode));
     sb_value.SetSP(value_sp, use_dynamic);
   }
   return sb_value;

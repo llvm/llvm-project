@@ -436,5 +436,5 @@ define double @test_sqrt64_refined_ftz_ninf(double %a) #1 #2 {
   ret double %ret
 }
 
-attributes #1 = { "denormal-fp-math-f32" = "preserve-sign,preserve-sign" }
+attributes #1 = { denormal_fpenv(float: preservesign) }
 attributes #2 = { "reciprocal-estimates" = "rsqrtf:1,rsqrtd:1,sqrtf:1,sqrtd:1" }

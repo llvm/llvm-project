@@ -862,6 +862,18 @@ with ``__noinline__`` defined as a macro as ``__attribute__((noinline))``.
   }];
 }
 
+def NoOutlineDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This function attribute suppresses outlining from the annotated function.
+
+Outlining is the process where common parts of separate functions are extracted
+into a separate function (or assembly snippet), and calls to that function or
+snippet are inserted in the original functions. In this way, it can be seen as
+the opposite of inlining. It can help to reduce code size.
+  }];
+}
+
 def MustTailDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{
@@ -6698,6 +6710,13 @@ Not all targets support this attribute:
   with an indirect call. The function pointer is initialized by a constructor
   that calls the resolver.
 - Baremetal target supports it on AVR.
+- AIX/XCOFF supports it via a compiler-only solution. An ifunc appears as a
+  regular function (has an entry point ``.foo[PR]`` and a function descriptor
+  ``foo[DS]``). The entry point is a stub that branches to the function address
+  in the descriptor, and the descriptor is initialized via a constructor
+  function (``__init_ifuncs``) that is linked into every shared object and
+  executable. ``__init_ifuncs`` calls the resolver of each ifunc and stores the
+  result in the corresponding descriptor.
 - Other targets currently do not support this attribute.
   }];
 }

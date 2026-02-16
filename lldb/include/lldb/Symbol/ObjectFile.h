@@ -177,10 +177,10 @@ public:
   static size_t
   GetModuleSpecifications(const FileSpec &file, lldb::offset_t file_offset,
                           lldb::offset_t file_size, ModuleSpecList &specs,
-                          lldb::DataBufferSP data_sp = lldb::DataBufferSP());
+                          lldb::DataExtractorSP = lldb::DataExtractorSP());
 
   static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
+                                        lldb::DataExtractorSP &extractor_sp,
                                         lldb::offset_t data_offset,
                                         lldb::offset_t file_offset,
                                         lldb::offset_t file_size,
@@ -659,7 +659,7 @@ public:
   // This function returns raw file contents. Do not use it if you want
   // transparent decompression of section contents.
   size_t GetData(lldb::offset_t offset, size_t length,
-                 DataExtractor &data) const;
+                 lldb::DataExtractorSP &data_sp) const;
 
   // This function returns raw file contents. Do not use it if you want
   // transparent decompression of section contents.

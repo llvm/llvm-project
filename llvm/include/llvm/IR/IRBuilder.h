@@ -528,8 +528,7 @@ public:
     return ConstantInt::get(getInt64Ty(), C);
   }
 
-  /// Get a constant N-bit value, zero extended or truncated from
-  /// a 64-bit value.
+  /// Get a constant N-bit value, zero extended from a 64-bit value.
   ConstantInt *getIntN(unsigned N, uint64_t C) {
     return ConstantInt::get(getIntNTy(N), C);
   }
@@ -2294,6 +2293,13 @@ public:
   /// must be castable using a bitcast or ptrcast, because signedness is
   /// not specified.
   LLVM_ABI Value *CreateAggregateCast(Value *V, Type *DestTy);
+
+  /// Create a chain of casts to convert V to NewTy, preserving the bit pattern
+  /// of V. This may involve multiple casts (e.g., ptr -> i64 -> <2 x i32>).
+  /// The created cast instructions are inserted into the current basic block.
+  /// If no casts are needed, V is returned.
+  LLVM_ABI Value *CreateBitPreservingCastChain(const DataLayout &DL, Value *V,
+                                               Type *NewTy);
 
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Compare Instructions

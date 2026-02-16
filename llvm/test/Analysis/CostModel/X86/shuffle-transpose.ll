@@ -25,13 +25,13 @@ define void @test_vXf64(<2 x double> %a128, <2 x double> %b128, <4 x double> %a2
 ;
 ; AVX-LABEL: 'test_vXf64'
 ; AVX-NEXT:  Cost Model: Found costs of 1 for: %V128 = shufflevector <2 x double> %a128, <2 x double> %b128, <2 x i32> <i32 0, i32 2>
-; AVX-NEXT:  Cost Model: Found costs of 2 for: %V256 = shufflevector <4 x double> %a256, <4 x double> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-; AVX-NEXT:  Cost Model: Found costs of 4 for: %V512 = shufflevector <8 x double> %a512, <8 x double> %b512, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+; AVX-NEXT:  Cost Model: Found costs of 1 for: %V256 = shufflevector <4 x double> %a256, <4 x double> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; AVX-NEXT:  Cost Model: Found costs of 2 for: %V512 = shufflevector <8 x double> %a512, <8 x double> %b512, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
 ; AVX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512-LABEL: 'test_vXf64'
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V128 = shufflevector <2 x double> %a128, <2 x double> %b128, <2 x i32> <i32 0, i32 2>
-; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V256 = shufflevector <4 x double> %a256, <4 x double> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V256 = shufflevector <4 x double> %a256, <4 x double> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V512 = shufflevector <8 x double> %a512, <8 x double> %b512, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -50,13 +50,13 @@ define void @test_vXi64(<2 x i64> %a128, <2 x i64> %b128, <4 x i64> %a256, <4 x 
 ;
 ; AVX-LABEL: 'test_vXi64'
 ; AVX-NEXT:  Cost Model: Found costs of 1 for: %V128 = shufflevector <2 x i64> %a128, <2 x i64> %b128, <2 x i32> <i32 0, i32 2>
-; AVX-NEXT:  Cost Model: Found costs of 2 for: %V256 = shufflevector <4 x i64> %a256, <4 x i64> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-; AVX-NEXT:  Cost Model: Found costs of 4 for: %V512 = shufflevector <8 x i64> %a512, <8 x i64> %b512, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
+; AVX-NEXT:  Cost Model: Found costs of 1 for: %V256 = shufflevector <4 x i64> %a256, <4 x i64> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; AVX-NEXT:  Cost Model: Found costs of 2 for: %V512 = shufflevector <8 x i64> %a512, <8 x i64> %b512, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
 ; AVX-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512-LABEL: 'test_vXi64'
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V128 = shufflevector <2 x i64> %a128, <2 x i64> %b128, <2 x i32> <i32 0, i32 2>
-; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V256 = shufflevector <4 x i64> %a256, <4 x i64> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V256 = shufflevector <4 x i64> %a256, <4 x i64> %b256, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:1 for: %V512 = shufflevector <8 x i64> %a512, <8 x i64> %b512, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;

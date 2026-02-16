@@ -1104,10 +1104,15 @@ MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
   LiveRange &LR =
       LIS->getRegUnit(*TRI->regunits(MCRegister::from(AMDGPU::SCC)).begin());
   auto MBBE = MBB.end();
-  SlotIndex FirstIdx = First != MBBE ? LIS->getInstructionIndex(*First)
-                                     : LIS->getMBBEndIdx(&MBB);
-  SlotIndex LastIdx =
-      Last != MBBE ? LIS->getInstructionIndex(*Last) : LIS->getMBBEndIdx(&MBB);
+  // Skip debug instructions when getting slot indices, as they don't have
+  // entries in the slot index map.
+  auto FirstNonDbg = skipDebugInstructionsForward(First, MBBE);
+  auto LastNonDbg = skipDebugInstructionsForward(Last, MBBE);
+  SlotIndex FirstIdx = FirstNonDbg != MBBE
+                           ? LIS->getInstructionIndex(*FirstNonDbg)
+                           : LIS->getMBBEndIdx(&MBB);
+  SlotIndex LastIdx = LastNonDbg != MBBE ? LIS->getInstructionIndex(*LastNonDbg)
+                                         : LIS->getMBBEndIdx(&MBB);
   SlotIndex Idx = PreferLast ? LastIdx : FirstIdx;
   const LiveRange::Segment *S;
 
@@ -1124,8 +1129,8 @@ MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
     } else {
       MachineInstr *EndMI = LIS->getInstructionFromIndex(S->end.getBaseIndex());
       assert(EndMI && "Segment does not end on valid instruction");
-      auto NextI = std::next(EndMI->getIterator());
-      if (NextI == MBB.end())
+      auto NextI = next_nodbg(EndMI->getIterator(), MBB.instr_end());
+      if (NextI == MBB.instr_end())
         break;
       SlotIndex Next = LIS->getInstructionIndex(*NextI);
       if (Next > LastIdx)

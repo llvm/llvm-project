@@ -342,7 +342,7 @@ static bool shouldConvertImpl(const Constant *Cst) {
   // instances of Cst.
   // Ideally, we could promote this into a global and rematerialize the constant
   // when it was a bad idea.
-  if (Cst->isZeroValue())
+  if (Cst->isNullValue())
     return false;
 
   // Globals cannot be or contain scalable vectors.

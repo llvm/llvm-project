@@ -211,21 +211,41 @@ public:
         VPRecipeWithIRFlags::DisjointFlagsTy(false), {}, DL, Name));
   }
 
+  VPInstruction *
+  createAdd(VPValue *LHS, VPValue *RHS, DebugLoc DL = DebugLoc::getUnknown(),
+            const Twine &Name = "",
+            VPRecipeWithIRFlags::WrapFlagsTy WrapFlags = {false, false}) {
+    return createOverflowingOp(Instruction::Add, {LHS, RHS}, WrapFlags, DL,
+                               Name);
+  }
+
+  VPInstruction *
+  createSub(VPValue *LHS, VPValue *RHS, DebugLoc DL = DebugLoc::getUnknown(),
+            const Twine &Name = "",
+            VPRecipeWithIRFlags::WrapFlagsTy WrapFlags = {false, false}) {
+    return createOverflowingOp(Instruction::Sub, {LHS, RHS}, WrapFlags, DL,
+                               Name);
+  }
+
   VPInstruction *createLogicalAnd(VPValue *LHS, VPValue *RHS,
                                   DebugLoc DL = DebugLoc::getUnknown(),
                                   const Twine &Name = "") {
     return createNaryOp(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name);
   }
 
-  VPInstruction *
-  createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
-               DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "",
-               std::optional<FastMathFlags> FMFs = std::nullopt) {
-    if (!FMFs)
-      return createNaryOp(Instruction::Select, {Cond, TrueVal, FalseVal}, DL,
-                          Name);
+  VPInstruction *createLogicalOr(VPValue *LHS, VPValue *RHS,
+                                 DebugLoc DL = DebugLoc::getUnknown(),
+                                 const Twine &Name = "") {
+    return createNaryOp(VPInstruction::LogicalOr, {LHS, RHS}, DL, Name);
+  }
+
+  VPInstruction *createSelect(VPValue *Cond, VPValue *TrueVal,
+                              VPValue *FalseVal,
+                              DebugLoc DL = DebugLoc::getUnknown(),
+                              const Twine &Name = "",
+                              const VPIRFlags &Flags = {}) {
     return tryInsertInstruction(new VPInstruction(
-        Instruction::Select, {Cond, TrueVal, FalseVal}, *FMFs, {}, DL, Name));
+        Instruction::Select, {Cond, TrueVal, FalseVal}, Flags, {}, DL, Name));
   }
 
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A
@@ -247,7 +267,8 @@ public:
     assert(Pred >= CmpInst::FIRST_FCMP_PREDICATE &&
            Pred <= CmpInst::LAST_FCMP_PREDICATE && "invalid predicate");
     return tryInsertInstruction(
-        new VPInstruction(Instruction::FCmp, {A, B}, Pred, {}, DL, Name));
+        new VPInstruction(Instruction::FCmp, {A, B},
+                          VPIRFlags(Pred, FastMathFlags()), {}, DL, Name));
   }
 
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
@@ -274,9 +295,10 @@ public:
                           GEPNoWrapFlags::none(), {}, DL, Name));
   }
 
-  VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues, DebugLoc DL,
-                         const Twine &Name = "") {
-    return tryInsertInstruction(new VPPhi(IncomingValues, DL, Name));
+  VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
+                         DebugLoc DL = DebugLoc::getUnknown(),
+                         const Twine &Name = "", const VPIRFlags &Flags = {}) {
+    return tryInsertInstruction(new VPPhi(IncomingValues, Flags, DL, Name));
   }
 
   VPValue *createElementCount(Type *Ty, ElementCount EC) {
@@ -305,7 +327,15 @@ public:
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL,
-                                  const VPIRFlags &Flags = {},
+                                  const VPIRMetadata &Metadata = {}) {
+    return tryInsertInstruction(new VPInstructionWithType(
+        Opcode, Op, ResultTy, VPIRFlags::getDefaultFlags(Opcode), Metadata,
+        DL));
+  }
+
+  VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
+                                  Type *ResultTy, DebugLoc DL,
+                                  const VPIRFlags &Flags,
                                   const VPIRMetadata &Metadata = {}) {
     return tryInsertInstruction(
         new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
@@ -335,13 +365,8 @@ public:
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
-    VPIRFlags Flags;
-    if (Opcode == Instruction::Trunc)
-      Flags = VPIRFlags::TruncFlagsTy(false, false);
-    else if (Opcode == Instruction::ZExt)
-      Flags = VPIRFlags::NonNegFlagsTy(false);
-    return tryInsertInstruction(
-        new VPWidenCastRecipe(Opcode, Op, ResultTy, nullptr, Flags));
+    return tryInsertInstruction(new VPWidenCastRecipe(
+        Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
   }
 
   VPScalarIVStepsRecipe *
@@ -631,8 +656,8 @@ private:
   /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
   void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
 
-  /// Add recipes to compute the final reduction result (ComputeFindIVResult,
-  /// ComputeAnyOfResult, ComputeReductionResult depending on the reduction) in
+  /// Add recipes to compute the final reduction result (ComputeAnyOfResult,
+  /// ComputeReductionResult depending on the reduction) in
   /// the middle block. Selects are introduced for reductions between the phi
   /// and users outside the vector region when folding the tail.
   void addReductionResultComputation(VPlanPtr &Plan,
