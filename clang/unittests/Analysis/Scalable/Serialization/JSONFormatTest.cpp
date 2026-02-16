@@ -399,6 +399,10 @@ TEST_F(JSONFormatTest, NotJsonExtension) {
 }
 
 TEST_F(JSONFormatTest, BrokenSymlink) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Symlink model differs on Windows";
+#endif
+
   // Create a symlink pointing to a non-existent file
   auto ExpectedSymlinkPath =
       makeSymlink("nonexistent_target.json", "broken_symlink.json");
