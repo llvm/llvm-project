@@ -10,6 +10,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestCase(TestBase):
+    SHARED_BUILD_TESTCASE = True
+
     def _run_cmd(self, cmd: str) -> str:
         """Run the given lldb command and return its output."""
         result = lldb.SBCommandReturnObject()
