@@ -102,6 +102,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-assignment-in-selection-statement
+  <clang-tidy/checks/bugprone/assignment-in-selection-statement>` check.
+
+  Finds assignments within selection statements.
+
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
 
