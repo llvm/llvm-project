@@ -1943,7 +1943,8 @@ def APlusBMinusAplusC : GICombineRule<
 def AMinusBMinusC : GICombineRule<
    (defs root:$root),
    (match (G_SUB $sub1, $B, $C),
-          (G_SUB $root, $A, $sub1)),
+          (G_SUB $root, $A, $sub1), 
+          [{ return MRI.hasOneNonDBGUse(${sub1}.getReg()); }]),
    (apply (G_SUB $add, $C, $B), 
           (G_ADD $root, $A, $add))>;
 
