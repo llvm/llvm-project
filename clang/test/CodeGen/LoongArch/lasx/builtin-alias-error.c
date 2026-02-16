@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple loongarch64 -target-feature +lasx -verify %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple loongarch64 -target-feature +lasx -verify %s
 
 #include <lasxintrin.h>
 

@@ -1,5 +1,5 @@
 // REQUIRES: mips-registered-target
-// RUN: %clang_cc1 -triple mips-unknown-linux-gnu -fsyntax-only %s \
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple mips-unknown-linux-gnu -fsyntax-only %s \
 // RUN:            -target-feature +msa -target-feature +fp64 \
 // RUN:            -verify -mfloat-abi hard -o - 2>&1
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi -target-feature +mve.fp -verify -fsyntax-only %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple thumbv8.1m.main-none-none-eabi -target-feature +mve.fp -verify -fsyntax-only %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

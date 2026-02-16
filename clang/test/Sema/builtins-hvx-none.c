@@ -1,7 +1,7 @@
 // REQUIRES: hexagon-registered-target
-// RUN: %clang_cc1 -triple hexagon %s -target-cpu hexagonv60 -DTEST_HVXV60 -verify -S -o -
-// RUN: %clang_cc1 -triple hexagon %s -target-cpu hexagonv60 -DTEST_HVXV62 -verify -S -o -
-// RUN: %clang_cc1 -triple hexagon %s -target-cpu hexagonv60 -DTEST_HVXV65 -verify -S -o -
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple hexagon %s -target-cpu hexagonv60 -DTEST_HVXV60 -verify -S -o -
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple hexagon %s -target-cpu hexagonv60 -DTEST_HVXV62 -verify -S -o -
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple hexagon %s -target-cpu hexagonv60 -DTEST_HVXV65 -verify -S -o -
 
 typedef long Vect1024 __attribute__((__vector_size__(128)))
     __attribute__((aligned(128)));

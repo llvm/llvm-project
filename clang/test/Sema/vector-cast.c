@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only %s -verify -Wvector-conversion
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -fsyntax-only %s -verify -Wvector-conversion
 
 typedef long long t1 __attribute__ ((vector_size (8)));
 typedef char t2 __attribute__ ((vector_size (16)));

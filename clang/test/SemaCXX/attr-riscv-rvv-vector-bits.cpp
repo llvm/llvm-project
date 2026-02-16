@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +zve64x -ffreestanding -fsyntax-only -verify -std=c++11 -mvscale-min=4 -mvscale-max=4 -Wconversion %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple riscv64-none-linux-gnu -target-feature +zve64x -ffreestanding -fsyntax-only -verify -std=c++11 -mvscale-min=4 -mvscale-max=4 -Wconversion %s
 // expected-no-diagnostics
 
 #include <stdint.h>

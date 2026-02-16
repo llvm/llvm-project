@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only -Wvector-conversion -triple x86_64-apple-darwin10
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all %s -verify -fsyntax-only -Wvector-conversion -triple x86_64-apple-darwin10
 
 typedef unsigned int v2u __attribute__ ((ext_vector_type(2)));
 typedef int v2s __attribute__ ((ext_vector_type(2)));

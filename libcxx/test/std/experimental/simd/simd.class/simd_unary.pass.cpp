@@ -28,8 +28,15 @@
 // simd operator+() const noexcept;
 // simd operator-() const noexcept;
 
+#include "test_macros.h"
+
+TEST_DIAGNOSTIC_PUSH
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecate-lax-vec-conv-all")
+
 #include "../test_utils.h"
 #include <experimental/simd>
+
+TEST_DIAGNOSTIC_POP
 
 namespace ex = std::experimental::parallelism_v2;
 
