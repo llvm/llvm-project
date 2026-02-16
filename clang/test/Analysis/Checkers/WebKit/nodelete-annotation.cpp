@@ -87,7 +87,6 @@ public:
   }
 
   void [[clang::annotate_type("webkit.nodelete")]] swapObj(RefPtr<RefCountable>&& obj) {
-    // expected-warning@-1{{A function 'swapObj' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
     m_obj.swap(obj);
   }
 
@@ -97,11 +96,9 @@ public:
   }
 
   void [[clang::annotate_type("webkit.nodelete")]] deposeArg(WeakRefCountable&& unused) {
-    // expected-warning@-1{{A function 'deposeArg' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   }
 
   void [[clang::annotate_type("webkit.nodelete")]] deposeArgPtr(RefPtr<RefCountable>&& unused) {
-    // expected-warning@-1{{A function 'deposeArgPtr' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   }
 
   enum class E : unsigned char { V1, V2 };
@@ -160,3 +157,29 @@ class Derived : public Base<Type> {
 public:
   virtual unsigned foo() const { return 0; }
 };
+
+struct Data {
+  static Ref<Data> create() {
+    return adoptRef(*new Data);
+  }
+
+  void ref() {
+    ++refCount;
+  }
+
+  void deref() {
+    --refCount;
+    if (!refCount)
+      delete this;
+  }
+
+  int a[3] { 0 };
+  
+private:
+  unsigned refCount { 0 };
+};
+
+void [[clang::annotate_type("webkit.nodelete")]] makeData() {
+  RefPtr<Data> constantData[2] = { Data::create() };
+  RefPtr<Data> data[] = { Data::create() };
+}

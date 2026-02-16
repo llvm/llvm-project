@@ -516,7 +516,10 @@ class TrivialFunctionAnalysisVisitor
     return Result;
   }
 
-  bool CanTriviallyDestruct(const Type *T) {
+  bool CanTriviallyDestruct(const clang::QualType QT) {
+    auto *T = QT.getTypePtrOrNull();
+    if (!T)
+      return false;
     if (T->isIntegralOrEnumerationType())
       return true;
     if (isa<PointerType>(T) || T->isNullPtrType())
@@ -566,18 +569,11 @@ public:
       auto *Type = QT.getTypePtrOrNull();
       if (!Type)
         return false;
-      if (isa<LValueReferenceType>(Type))
-        return true; // T& does not run its destructor.
-      if (auto *RT = dyn_cast<RValueReferenceType>(Type)) {
-        // For T&&, we evaluate the destructor of T.
-        auto *T = RT->getPointeeType().getTypePtrOrNull();
-        return T && CanTriviallyDestruct(T);
-      }
-      if (auto *AT = dyn_cast<ConstantArrayType>(Type)) {
-        auto *T = AT->getElementType().getTypePtrOrNull();
-        return T && CanTriviallyDestruct(T);
-      }
-      return CanTriviallyDestruct(Type);
+      if (isa<ReferenceType>(Type))
+        return true; // T& or T&& does not run its destructor.
+      if (auto *AT = dyn_cast<ArrayType>(Type))
+        return CanTriviallyDestruct(AT->getElementType());
+      return CanTriviallyDestruct(QT);
     });
   }
 
@@ -801,8 +797,7 @@ public:
   }
 
   bool VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
-    auto *Type = DE->getDestroyedType().getTypePtrOrNull();
-    return Type && CanTriviallyDestruct(Type);
+    return CanTriviallyDestruct(DE->getDestroyedType());
   }
 
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E) {
