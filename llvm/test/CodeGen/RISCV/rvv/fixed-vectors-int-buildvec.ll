@@ -1532,7 +1532,7 @@ define <16 x i8> @buildvec_v16i8_loads_contigous(ptr %p) {
 ; RVA22U64-NEXT:    slli a4, a4, 24
 ; RVA22U64-NEXT:    slli a5, a5, 32
 ; RVA22U64-NEXT:    slli a1, a1, 40
-; RVA22U64-NEXT:    or a6, a6, a2
+; RVA22U64-NEXT:    add a6, a6, a2
 ; RVA22U64-NEXT:    or t2, a4, a3
 ; RVA22U64-NEXT:    or t1, a1, a5
 ; RVA22U64-NEXT:    lbu a4, 8(a0)
@@ -1907,7 +1907,7 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RVA22U64-NEXT:    slli a4, a4, 24
 ; RVA22U64-NEXT:    slli a5, a5, 32
 ; RVA22U64-NEXT:    slli a1, a1, 40
-; RVA22U64-NEXT:    or a7, a7, a2
+; RVA22U64-NEXT:    add a7, a7, a2
 ; RVA22U64-NEXT:    or t3, a4, a3
 ; RVA22U64-NEXT:    or t2, a1, a5
 ; RVA22U64-NEXT:    lbu a4, 93(a0)
@@ -1918,13 +1918,13 @@ define <16 x i8> @buildvec_v16i8_loads_gather(ptr %p) {
 ; RVA22U64-NEXT:    slli t0, t0, 56
 ; RVA22U64-NEXT:    slli a4, a4, 8
 ; RVA22U64-NEXT:    or a3, t0, a6
-; RVA22U64-NEXT:    or a4, t1, a4
+; RVA22U64-NEXT:    add a4, a4, t1
 ; RVA22U64-NEXT:    lbu a5, 161(a0)
 ; RVA22U64-NEXT:    lbu a1, 154(a0)
 ; RVA22U64-NEXT:    lbu a0, 163(a0)
 ; RVA22U64-NEXT:    slli t4, t4, 16
 ; RVA22U64-NEXT:    slli a5, a5, 24
-; RVA22U64-NEXT:    or a5, a5, t4
+; RVA22U64-NEXT:    add a5, a5, t4
 ; RVA22U64-NEXT:    slli a2, a2, 32
 ; RVA22U64-NEXT:    slli a0, a0, 40
 ; RVA22U64-NEXT:    or a0, a0, a2
@@ -3083,7 +3083,7 @@ define <8 x i8> @buildvec_v8i8_pack(i8 %e1, i8 %e2, i8 %e3, i8 %e4, i8 %e5, i8 %
 ; RVA22U64-NEXT:    slli a2, a2, 16
 ; RVA22U64-NEXT:    slli a3, a3, 24
 ; RVA22U64-NEXT:    slli a1, a1, 8
-; RVA22U64-NEXT:    or a5, a5, t0
+; RVA22U64-NEXT:    add a5, a5, t0
 ; RVA22U64-NEXT:    or a4, a7, a4
 ; RVA22U64-NEXT:    or a2, a2, a3
 ; RVA22U64-NEXT:    or a0, a0, a1
