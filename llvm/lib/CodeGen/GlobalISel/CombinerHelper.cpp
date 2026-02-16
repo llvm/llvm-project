@@ -3215,12 +3215,12 @@ bool CombinerHelper::matchBinopWithNeg(MachineInstr &MI,
     // Check if either operand is ~b
     if (mi_match(InnerLHS, MRI, m_Not(m_Reg(NotSrc)))) {
       if (!MRI.hasOneNonDBGUse(InnerLHS))
-      return false;
+        return false;
       B = NotSrc;
       C = InnerRHS;
     } else if (mi_match(InnerRHS, MRI, m_Not(m_Reg(NotSrc)))) {
       if (!MRI.hasOneNonDBGUse(InnerRHS))
-      return false;
+        return false;
       B = NotSrc;
       C = InnerLHS;
     } else {
