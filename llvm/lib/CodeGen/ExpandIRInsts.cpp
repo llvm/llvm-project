@@ -101,17 +101,30 @@ static Value *addSignedBias(IRBuilder<> &Builder, Value *X, unsigned BitWidth,
   return Builder.CreateAdd(X, Bias, "adjusted");
 }
 
-/// Expand division by a power-of-2 constant.
-/// udiv X, 2^C  ->  lshr X, C
-/// sdiv X, 2^C  ->  ashr (add X, Bias), C  (Bias corrects rounding)
-/// sdiv exact X, 2^C  ->  ashr exact X, C  (no bias needed)
-/// For negative power-of-2 divisors, the result is negated.
-static void expandPow2Division(BinaryOperator *Div) {
-  bool IsSigned = isSigned(Div->getOpcode());
-  bool IsExact = Div->isExact();
-  Value *X = Div->getOperand(0);
-  auto *C = cast<ConstantInt>(Div->getOperand(1));
-  Type *Ty = Div->getType();
+/// Expand division or remainder by a power-of-2 constant.
+/// Division (let C = log2(|divisor|)):
+///   udiv X, 2^C  ->  lshr X, C
+///   sdiv X, 2^C  ->  ashr (add X, Bias), C  (Bias corrects rounding)
+///   sdiv exact X, 2^C  ->  ashr exact X, C  (no bias needed)
+///   For negative power-of-2 divisors, the division result is negated.
+/// Remainder (let C = log2(|divisor|)):
+///   urem X, 2^C  ->  and X, (2^C - 1)
+///   srem X, 2^C  ->  sub X, (shl (ashr (add X, Bias), C), C)
+static void expandPow2DivRem(BinaryOperator *BO) {
+  LLVM_DEBUG(dbgs() << "Expanding instruction: " << *BO << '\n');
+
+  unsigned Opcode = BO->getOpcode();
+  bool IsDiv = (Opcode == Instruction::UDiv || Opcode == Instruction::SDiv);
+  bool IsSigned = isSigned(Opcode);
+  // isExact() is only valid for div.
+  bool IsExact = IsDiv && BO->isExact();
+
+  assert(isConstantPowerOfTwo(BO->getOperand(1), IsSigned) &&
+         "Expected power-of-2 constant divisor");
+
+  Value *X = BO->getOperand(0);
+  auto *C = cast<ConstantInt>(BO->getOperand(1));
+  Type *Ty = BO->getType();
   unsigned BitWidth = Ty->getIntegerBitWidth();
 
   APInt DivisorVal = C->getValue();
@@ -121,82 +134,52 @@ static void expandPow2Division(BinaryOperator *Div) {
   // INT_MIN, without needing to negate the value first.
   unsigned ShiftAmt = DivisorVal.countr_zero();
 
-  IRBuilder<> Builder(Div);
+  IRBuilder<> Builder(BO);
   Value *Result;
 
   if (ShiftAmt == 0) {
-    // Division by 1 or -1.
-    // X / 1 = X, X / -1 = -X.
-    Result = IsNegativeDivisor ? Builder.CreateNeg(X) : X;
+    // Div by 1/-1: X / 1 = X, X / -1 = -X.
+    // Rem by 1/-1: always 0.
+    if (IsDiv)
+      Result = IsNegativeDivisor ? Builder.CreateNeg(X) : X;
+    else
+      Result = ConstantInt::get(Ty, 0);
   } else if (IsSigned) {
-    // The signed expansion uses X multiple times (in the bias computation and
-    // the shift). Freeze X to ensure consistent behavior if it is undef/poison,
-    // matching the approach in IntegerDivision.cpp and expandFPToI.
+    // The signed expansion uses X multiple times (bias computation, shift,
+    // and sub for remainder). Freeze X to ensure consistent behavior if it is
+    // undef/poison. For exact division, no bias is needed and X is used only
+    // once, so freeze is unnecessary.
     if (!IsExact && !isGuaranteedNotToBeUndefOrPoison(X))
       X = Builder.CreateFreeze(X, X->getName() + ".fr");
     // For exact division, no bias is needed since there's no rounding.
     Value *Dividend =
         IsExact ? X : addSignedBias(Builder, X, BitWidth, ShiftAmt);
-    Result = Builder.CreateAShr(Dividend, ShiftAmt,
-                                IsNegativeDivisor ? "pre.neg" : "", IsExact);
-    if (IsNegativeDivisor)
-      Result = Builder.CreateNeg(Result);
+    Value *Quotient = Builder.CreateAShr(
+        Dividend, ShiftAmt, IsDiv && IsNegativeDivisor ? "pre.neg" : "shifted",
+        IsExact);
+    if (IsDiv) {
+      Result = IsNegativeDivisor ? Builder.CreateNeg(Quotient) : Quotient;
+    } else {
+      // Rem = X - (Quotient << ShiftAmt):
+      // clear lower ShiftAmt bits via round-trip shift, then subtract.
+      Value *Truncated = Builder.CreateShl(Quotient, ShiftAmt, "truncated");
+      Result = Builder.CreateSub(X, Truncated);
+    }
   } else {
-    Result = Builder.CreateLShr(X, ShiftAmt, "", IsExact);
+    if (IsDiv) {
+      Result = Builder.CreateLShr(X, ShiftAmt, "", IsExact);
+    } else {
+      APInt Mask = APInt::getLowBitsSet(BitWidth, ShiftAmt);
+      Result = Builder.CreateAnd(X, ConstantInt::get(Ty, Mask));
+    }
   }
 
-  Div->replaceAllUsesWith(Result);
-  // Transfer the name of the original instruction to its replacement,
-  // unless the result is the original dividend itself (div by 1).
+  BO->replaceAllUsesWith(Result);
   if (Result != X)
     if (auto *RI = dyn_cast<Instruction>(Result))
-      RI->takeName(Div);
-  Div->dropAllReferences();
-  Div->eraseFromParent();
-}
-
-/// Expand remainder by a power-of-2 constant (let C = log2(|divisor|)).
-/// urem X, 2^C  ->  and X, (2^C - 1)
-/// srem X, 2^C  ->  sub X, (shl (ashr (add X, Bias), C), C)
-static void expandPow2Remainder(BinaryOperator *Rem) {
-  bool IsSigned = isSigned(Rem->getOpcode());
-  Value *X = Rem->getOperand(0);
-  auto *C = cast<ConstantInt>(Rem->getOperand(1));
-  Type *Ty = Rem->getType();
-  unsigned BitWidth = Ty->getIntegerBitWidth();
-
-  // Use countr_zero() to get the shift amount directly from the bit pattern.
-  // This works for both positive and negative powers of 2, including INT_MIN.
-  unsigned ShiftAmt = C->getValue().countr_zero();
-
-  IRBuilder<> Builder(Rem);
-  Value *Result;
-
-  if (ShiftAmt == 0) {
-    // Remainder by 1 or -1 is always 0.
-    Result = ConstantInt::get(Ty, 0);
-  } else if (IsSigned) {
-    // The signed expansion uses X multiple times (bias computation, shift, and
-    // final sub). Freeze X to ensure consistent behavior if it is undef/poison.
-    if (!isGuaranteedNotToBeUndefOrPoison(X))
-      X = Builder.CreateFreeze(X, X->getName() + ".fr");
-    Value *Adjusted = addSignedBias(Builder, X, BitWidth, ShiftAmt);
-    // Clear lower ShiftAmt bits via round-trip shift:
-    //   Truncated = (Adjusted >> ShiftAmt) << ShiftAmt
-    Value *Shifted = Builder.CreateAShr(Adjusted, ShiftAmt, "shifted");
-    Value *Truncated = Builder.CreateShl(Shifted, ShiftAmt, "truncated");
-    Result = Builder.CreateSub(X, Truncated);
-  } else {
-    APInt Mask = APInt::getLowBitsSet(BitWidth, ShiftAmt);
-    Value *MaskVal = ConstantInt::get(Ty, Mask);
-    Result = Builder.CreateAnd(X, MaskVal);
-  }
-
-  Rem->replaceAllUsesWith(Result);
-  if (auto *RI = dyn_cast<Instruction>(Result))
-    RI->takeName(Rem);
-  Rem->dropAllReferences();
-  Rem->eraseFromParent();
+      RI->takeName(BO);
+  BO->dropAllReferences();
+  BO->eraseFromParent();
 }
 
 /// This class implements a precise expansion of the frem instruction.
@@ -1285,21 +1268,19 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       break;
 
     case Instruction::UDiv:
-    case Instruction::SDiv: {
-      auto *BO = cast<BinaryOperator>(I);
-      if (isConstantPowerOfTwo(BO->getOperand(1), isSigned(BO->getOpcode())))
-        expandPow2Division(BO);
-      else
-        expandDivision(BO);
-      break;
-    }
+    case Instruction::SDiv:
     case Instruction::URem:
     case Instruction::SRem: {
       auto *BO = cast<BinaryOperator>(I);
-      if (isConstantPowerOfTwo(BO->getOperand(1), isSigned(BO->getOpcode())))
-        expandPow2Remainder(BO);
-      else
-        expandRemainder(BO);
+      if (isConstantPowerOfTwo(BO->getOperand(1), isSigned(BO->getOpcode()))) {
+        expandPow2DivRem(BO);
+      } else {
+        unsigned Opc = BO->getOpcode();
+        if (Opc == Instruction::UDiv || Opc == Instruction::SDiv)
+          expandDivision(BO);
+        else
+          expandRemainder(BO);
+      }
       break;
     }
     case Instruction::Call: {
