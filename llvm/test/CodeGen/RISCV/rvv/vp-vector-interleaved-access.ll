@@ -416,9 +416,9 @@ define i32 @masked_load_store_factor2_v2_shared_mask_extract(<vscale x 2 x i1> %
 ; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vslideup.vx v10, v9, a2
 ; RV64-NEXT:    slli a2, a1, 33
-; RV64-NEXT:    vmsne.vi v0, v10, 0
 ; RV64-NEXT:    srli a2, a2, 32
-; RV64-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
+; RV64-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
+; RV64-NEXT:    vmsne.vi v0, v10, 0
 ; RV64-NEXT:    vle32.v v10, (a0), v0.t
 ; RV64-NEXT:    li a2, 32
 ; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
@@ -550,6 +550,7 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @not_same_mask(<vscale x 2 x i1>
 ; RV64-NEXT:    vwaddu.vv v12, v9, v11
 ; RV64-NEXT:    vwmaccu.vx v12, a2, v11
 ; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    slli a1, a1, 33
 ; RV64-NEXT:    srli a2, a2, 2
 ; RV64-NEXT:    vmsne.vi v0, v12, 0
 ; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
@@ -557,13 +558,12 @@ define {<vscale x 2 x i32>, <vscale x 2 x i32>} @not_same_mask(<vscale x 2 x i1>
 ; RV64-NEXT:    vmerge.vim v10, v10, 1, v0
 ; RV64-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v9, 0
-; RV64-NEXT:    slli a1, a1, 33
+; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vslideup.vx v10, v8, a2
+; RV64-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; RV64-NEXT:    vmsne.vi v0, v10, 0
-; RV64-NEXT:    srli a1, a1, 32
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v10, (a0), v0.t
 ; RV64-NEXT:    li a0, 32
 ; RV64-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
