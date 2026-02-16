@@ -152,6 +152,28 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0x0p+0f, canonicalizef_cx);
 }
 
+// Add this AFTER the AllFloat test block
+TEST(LlvmLibcSharedMathTest, Hypot) {
+  // 1. Basic Pythagorean triples (Runtime check)
+  // We use EXPECT_FP_EQ for safe floating-point comparison
+  EXPECT_FP_EQ(5.0, LIBC_NAMESPACE::math::hypot(3.0, 4.0));
+  EXPECT_FP_EQ(13.0, LIBC_NAMESPACE::math::hypot(5.0, 12.0));
+
+  // 2. Compile-time check (Constexpr)
+  // This verifies your "header-only" logic works at compile time
+  constexpr double result = LIBC_NAMESPACE::math::hypot(3.0, 4.0);
+  static_assert(result == 5.0, "Constexpr hypot failed");
+
+  // 3. Special values (Inf/NaN)
+  constexpr double inf = __builtin_inf();
+  constexpr double nan = __builtin_nan("");
+
+  // Use EXPECT_NE(..., 0) because __builtin functions return int, not bool
+  EXPECT_NE(__builtin_isinf(LIBC_NAMESPACE::math::hypot(inf, 1.0)), 0);
+  EXPECT_NE(__builtin_isinf(LIBC_NAMESPACE::math::hypot(1.0, inf)), 0);
+  EXPECT_NE(__builtin_isnan(LIBC_NAMESPACE::math::hypot(nan, 1.0)), 0);
+}
+
 TEST(LlvmLibcSharedMathTest, AllDouble) {
   double sin, cos;
   LIBC_NAMESPACE::shared::sincos(0.0, &sin, &cos);
