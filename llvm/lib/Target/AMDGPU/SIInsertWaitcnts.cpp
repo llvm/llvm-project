@@ -194,16 +194,6 @@ template <> struct enum_iteration_traits<WaitEventType> {
 
 namespace {
 
-bool isExpertMode(const MachineFunction &MF, const GCNSubtarget &ST) {
-  return ST.hasExpertSchedulingMode() &&
-                   (ExpertSchedulingModeFlag.getNumOccurrences()
-                        ? ExpertSchedulingModeFlag
-                        : MF.getFunction()
-                              .getFnAttribute("amdgpu-expert-scheduling-mode")
-                              .getValueAsBool());
-
-}
-
 InstCounterType getMaxCounter(const GCNSubtarget &ST, bool IsExpertMode) {
   if (ST.hasExtendedWaitCounts())
     return IsExpertMode ? NUM_EXPERT_INST_CNTS : NUM_EXTENDED_INST_CNTS;
@@ -370,23 +360,24 @@ protected:
   const GCNSubtarget &ST;
   const SIInstrInfo &TII;
   AMDGPU::IsaVersion IV;
+  // TODO: Shouldn't this be a reference, because IsExpertMode can change per MF
+  bool IsExpertMode;
   bool OptNone;
   bool ExpandWaitcntProfiling = false;
   const AMDGPU::HardwareLimits *Limits = nullptr;
-  bool IsExpertMode = false;
 
 public:
   WaitcntGenerator() = delete;
   WaitcntGenerator(const WaitcntGenerator &) = delete;
-  WaitcntGenerator(const MachineFunction &MF,
+  WaitcntGenerator(const MachineFunction &MF, const bool &IsExpertMode,
                    const AMDGPU::HardwareLimits *Limits)
       : ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()),
-        IV(AMDGPU::getIsaVersion(ST.getCPU())),
+        IV(AMDGPU::getIsaVersion(ST.getCPU())), IsExpertMode(IsExpertMode),
         OptNone(MF.getFunction().hasOptNone() ||
                 MF.getTarget().getOptLevel() == CodeGenOptLevel::None),
         ExpandWaitcntProfiling(
             MF.getFunction().hasFnAttribute("amdgpu-expand-waitcnt-profiling")),
-        Limits(Limits), IsExpertMode(isExpertMode(MF, ST)) {}
+        Limits(Limits) {}
 
   // Return true if the current function should be compiled with no
   // optimization.
@@ -457,9 +448,9 @@ class WaitcntGeneratorPreGFX12 final : public WaitcntGenerator {
           WaitEventSet()};
 
 public:
-  WaitcntGeneratorPreGFX12(MachineFunction *MF,
+  WaitcntGeneratorPreGFX12(MachineFunction *MF, const bool &IsExpertMode,
                            const AMDGPU::HardwareLimits *Limits)
-      : WaitcntGenerator(*MF, Limits) {}
+      : WaitcntGenerator(*MF, IsExpertMode, Limits) {}
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
                           MachineInstr &OldWaitcntInstr, AMDGPU::Waitcnt &Wait,
@@ -496,9 +487,9 @@ protected:
 
 public:
   WaitcntGeneratorGFX12Plus() = delete;
-  WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
+  WaitcntGeneratorGFX12Plus(const MachineFunction &MF, const bool &IsExpertMode,
                             const AMDGPU::HardwareLimits *Limits)
-      : WaitcntGenerator(MF, Limits) {}
+      : WaitcntGenerator(MF, IsExpertMode, Limits) {}
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -3576,7 +3567,6 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  IsExpertMode = isExpertMode(MF, *ST);
 
   AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
 
@@ -3584,11 +3574,19 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   Limits = AMDGPU::HardwareLimits(IV);
 
   if (ST->hasExtendedWaitCounts()) {
+    IsExpertMode = ST->hasExpertSchedulingMode() &&
+                   (ExpertSchedulingModeFlag.getNumOccurrences()
+                        ? ExpertSchedulingModeFlag
+                        : MF.getFunction()
+                              .getFnAttribute("amdgpu-expert-scheduling-mode")
+                              .getValueAsBool());
     if (!WCG)
-      WCG = std::make_unique<WaitcntGeneratorGFX12Plus>(MF, &Limits);
+      WCG = std::make_unique<WaitcntGeneratorGFX12Plus>(MF, IsExpertMode,
+                                                        &Limits);
   } else {
     if (!WCG)
-      WCG = std::make_unique<WaitcntGeneratorPreGFX12>(&MF, &Limits);
+      WCG = std::make_unique<WaitcntGeneratorPreGFX12>(&MF, IsExpertMode,
+                                                       &Limits);
   }
 
   for (auto T : inst_counter_types())
