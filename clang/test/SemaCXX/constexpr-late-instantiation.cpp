@@ -91,6 +91,28 @@ constexpr int x = X().f( 1 );
 
 #if __cplusplus > 202002L
 
+namespace instantiation_context_lookup {
+
+static constexpr int i = 42;
+static constexpr int v = 8;
+
+
+constexpr int f(auto);
+
+constexpr int g(int v = 42) {
+    static constexpr int i = 1;
+    return f(1);
+    return 0;
+}
+
+constexpr int f(auto) {
+    return i + v;
+}
+
+static_assert(g() == 50);
+
+}
+
 namespace GH35052 {
 
 template <typename F>
