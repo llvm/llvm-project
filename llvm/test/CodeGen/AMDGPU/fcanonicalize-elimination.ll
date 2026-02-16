@@ -948,4 +948,4 @@ declare float @llvm.amdgcn.exp2.f32(float) #0
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { "no-nans-fp-math"="true" }
-attributes #2 = { "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" }
+attributes #2 = { denormal_fpenv(preservesign, float: ieee) }

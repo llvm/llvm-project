@@ -7,11 +7,11 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void @uitofp() {
 ; CHECK-NONEON-LABEL: 'uitofp'
-; CHECK-NONEON-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:1 Lat:1 SizeLat:1 for: %conv = uitofp <16 x i64> poison to <16 x float>
+; CHECK-NONEON-NEXT:  Cost Model: Found costs of RThru:48 CodeSize:32 Lat:48 SizeLat:48 for: %conv = uitofp <16 x i64> poison to <16 x float>
 ; CHECK-NONEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-WITHSVE-LABEL: 'uitofp'
-; CHECK-WITHSVE-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:1 SizeLat:1 for: %conv = uitofp <16 x i64> poison to <16 x float>
+; CHECK-WITHSVE-NEXT:  Cost Model: Found costs of 16 for: %conv = uitofp <16 x i64> poison to <16 x float>
 ; CHECK-WITHSVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %conv = uitofp <16 x i64> poison to <16 x float>

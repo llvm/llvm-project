@@ -26,14 +26,6 @@
 // it anyway.
 #include "llvm/Support/LogicalResult.h"
 
-// Workaround for clang-5 (PR41549)
-#if defined(__clang_major__)
-#if __clang_major__ <= 5
-#include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/SmallVector.h"
-#endif
-#endif
-
 // Forward declarations.
 namespace llvm {
 // String types

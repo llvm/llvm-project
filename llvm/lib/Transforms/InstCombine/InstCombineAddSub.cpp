@@ -2987,9 +2987,13 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
       return BinaryOperator::CreateFMulFMF(X, NegC, FMF);
     }
   // -(X / C) --> X / (-C)
-  if (match(FNegOp, m_FDiv(m_Value(X), m_Constant(C))))
-    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
-      return BinaryOperator::CreateFDivFMF(X, NegC, &I);
+  if (match(FNegOp, m_FDiv(m_Value(X), m_Constant(C)))) {
+    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)) {
+      Instruction *FDiv = BinaryOperator::CreateFDivFMF(X, NegC, &I);
+      FDiv->copyMetadata(*FNegOp);
+      return FDiv;
+    }
+  }
   // -(C / X) --> (-C) / X
   if (match(FNegOp, m_FDiv(m_Constant(C), m_Value(X))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)) {
@@ -3002,6 +3006,7 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
       FastMathFlags OpFMF = FNegOp->getFastMathFlags();
       FDiv->setHasNoSignedZeros(FMF.noSignedZeros() && OpFMF.noSignedZeros());
       FDiv->setHasNoInfs(FMF.noInfs() && OpFMF.noInfs());
+      FDiv->copyMetadata(*FNegOp);
       return FDiv;
     }
   // With NSZ [ counter-example with -0.0: -(-0.0 + 0.0) != 0.0 + -0.0 ]:
@@ -3024,8 +3029,10 @@ Instruction *InstCombinerImpl::hoistFNegAboveFMulFDiv(Value *FNegOp,
   }
 
   if (match(FNegOp, m_FDiv(m_Value(X), m_Value(Y)))) {
-    return cast<Instruction>(Builder.CreateFDivFMF(
+    auto *FDiv = cast<Instruction>(Builder.CreateFDivFMF(
         Builder.CreateFNegFMF(X, &FMFSource), Y, &FMFSource));
+    FDiv->copyMetadata(*cast<Instruction>(FNegOp));
+    return FDiv;
   }
 
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(FNegOp)) {

@@ -969,7 +969,7 @@ APInt APInt::truncUSat(unsigned width) const {
   return APInt::getMaxValue(width);
 }
 
-// Truncate to new width with signed saturation.
+// Truncate to new width with signed saturation to signed result.
 APInt APInt::truncSSat(unsigned width) const {
   assert(width <= BitWidth && "Invalid APInt Truncate request");
 
@@ -979,6 +979,17 @@ APInt APInt::truncSSat(unsigned width) const {
   // If not, then just return the new limits.
   return isNegative() ? APInt::getSignedMinValue(width)
                       : APInt::getSignedMaxValue(width);
+}
+
+// Truncate to new width with signed saturation to unsigned result.
+APInt APInt::truncSSatU(unsigned width) const {
+  assert(width <= BitWidth && "Invalid APInt Truncate request");
+
+  // Can we just losslessly truncate it?
+  if (isIntN(width))
+    return trunc(width);
+  // If not, then just return the new limits.
+  return isNegative() ? APInt::getZero(width) : APInt::getMaxValue(width);
 }
 
 // Sign extend to a new width.
@@ -3189,12 +3200,12 @@ APInt llvm::APIntOps::fshr(const APInt &Hi, const APInt &Lo,
 }
 
 APInt llvm::APIntOps::clmul(const APInt &LHS, const APInt &RHS) {
-  assert(LHS.getBitWidth() == RHS.getBitWidth());
   unsigned BW = LHS.getBitWidth();
+  assert(BW == RHS.getBitWidth() && "Operand mismatch");
   APInt Result(BW, 0);
-  for (unsigned I : seq<unsigned>(BW))
+  for (unsigned I : seq(std::min(RHS.getActiveBits(), BW - LHS.countr_zero())))
     if (RHS[I])
-      Result ^= LHS.shl(I);
+      Result ^= LHS << I;
   return Result;
 }
 

@@ -274,6 +274,26 @@ llvm::LogicalResult cuf::KernelOp::verify() {
   return checkStreamType(*this);
 }
 
+bool cuf::KernelOp::canMoveFromDescendant(mlir::Operation *descendant,
+                                          mlir::Operation *candidate) {
+  // Moving operations out of loops inside cuf.kernel is always legal.
+  return true;
+}
+
+bool cuf::KernelOp::canMoveOutOf(mlir::Operation *candidate) {
+  // In general, some movement of operations out of cuf.kernel is allowed.
+  if (!candidate)
+    return true;
+
+  // Operations that have !fir.ref operands cannot be moved
+  // out of cuf.kernel, because this may break implicit data mapping
+  // passes that may run after LICM.
+  return !llvm::any_of(candidate->getOperands(),
+                       [&](mlir::Value candidateOperand) {
+                         return fir::isa_ref_type(candidateOperand.getType());
+                       });
+}
+
 //===----------------------------------------------------------------------===//
 // RegisterKernelOp
 //===----------------------------------------------------------------------===//

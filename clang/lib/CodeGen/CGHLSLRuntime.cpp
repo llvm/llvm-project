@@ -20,7 +20,7 @@
 #include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Attrs.inc"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/HLSLResource.h"
@@ -1113,9 +1113,7 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
       /*ReturnType=*/HandleTy, IntrID, Args, nullptr,
       Twine(GV->getName()).concat("_h"));
 
-  llvm::Value *HandleRef = Builder.CreateStructGEP(GV->getValueType(), GV, 0);
-  Builder.CreateAlignedStore(CreateHandle, HandleRef,
-                             HandleRef->getPointerAlignment(DL));
+  Builder.CreateAlignedStore(CreateHandle, GV, GV->getPointerAlignment(DL));
   Builder.CreateRetVoid();
 
   CGM.AddCXXGlobalInit(InitResFunc);
@@ -1558,10 +1556,7 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
   auto *Field = dyn_cast<FieldDecl>(E->getMemberDecl());
   assert(Field && "Unexpected access into HLSL buffer");
 
-  // Get the field index for the struct.
   const RecordDecl *Rec = Field->getParent();
-  unsigned FieldIdx =
-      CGM.getTypes().getCGRecordLayout(Rec).getLLVMFieldNo(Field);
 
   // Work out the buffer layout type to index into.
   QualType RecType = CGM.getContext().getCanonicalTagType(Rec);
@@ -1572,6 +1567,22 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
   CGHLSLOffsetInfo EmptyOffsets;
   llvm::StructType *LayoutTy = HLSLBufferLayoutBuilder(CGM).layOutStruct(
       RecType->getAsCanonical<RecordType>(), EmptyOffsets);
+
+  // Get the field index for the layout struct, accounting for padding.
+  unsigned FieldIdx =
+      CGM.getTypes().getCGRecordLayout(Rec).getLLVMFieldNo(Field);
+  assert(FieldIdx < LayoutTy->getNumElements() &&
+         "Layout struct is smaller than member struct");
+  unsigned Skipped = 0;
+  for (unsigned I = 0; I <= FieldIdx;) {
+    llvm::Type *ElementTy = LayoutTy->getElementType(I + Skipped);
+    if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(ElementTy))
+      ++Skipped;
+    else
+      ++I;
+  }
+  FieldIdx += Skipped;
+  assert(FieldIdx < LayoutTy->getNumElements() && "Access out of bounds");
 
   // Now index into the struct, making sure that the type we return is the
   // buffer layout type rather than the original type in the AST.

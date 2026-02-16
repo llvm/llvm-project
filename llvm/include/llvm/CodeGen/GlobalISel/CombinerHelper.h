@@ -518,9 +518,6 @@ public:
   /// Optimize (x op x) -> x
   bool matchBinOpSameVal(MachineInstr &MI) const;
 
-  /// Check if operand \p OpIdx is zero.
-  bool matchOperandIsZero(MachineInstr &MI, unsigned OpIdx) const;
-
   /// Check if operand \p OpIdx is undef.
   bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
 
@@ -1045,6 +1042,10 @@ public:
   // (sext_inreg (sext_inreg x, K0), K1)
   bool matchRedundantSextInReg(MachineInstr &Root, MachineInstr &Other,
                                BuildFnTy &MatchInfo) const;
+
+  // (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1) or
+  // (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
+  bool matchCtls(MachineInstr &CtlzMI, BuildFnTy &MatchInfo) const;
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

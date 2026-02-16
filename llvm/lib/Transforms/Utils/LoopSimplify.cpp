@@ -669,10 +669,8 @@ ReprocessLoop:
       LI->removeBlock(ExitingBlock);
 
       DomTreeNode *Node = DT->getNode(ExitingBlock);
-      while (!Node->isLeaf()) {
-        DomTreeNode *Child = Node->back();
-        DT->changeImmediateDominator(Child, Node->getIDom());
-      }
+      while (!Node->isLeaf())
+        DT->changeImmediateDominator(*Node->begin(), Node->getIDom());
       DT->eraseNode(ExitingBlock);
       if (MSSAU) {
         SmallSetVector<BasicBlock *, 8> ExitBlockSet;

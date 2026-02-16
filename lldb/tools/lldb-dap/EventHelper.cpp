@@ -20,14 +20,20 @@
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "ProtocolUtils.h"
+#include "SBAPIExtras.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBThread.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/raw_ostream.h"
 #include <mutex>
 #include <utility>
 
@@ -172,8 +178,81 @@ void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
-// Send a thread stopped event for all threads as long as the process
-// is stopped.
+static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
+                             bool all_threads_stopped, bool preserve_focus) {
+  protocol::StoppedEventBody body;
+  body.reason = protocol::eStoppedReasonPause;
+  if (on_entry) {
+    body.reason = protocol::eStoppedReasonEntry;
+  } else if (thread.IsValid()) {
+    switch (thread.GetStopReason()) {
+    case lldb::eStopReasonTrace:
+    case lldb::eStopReasonPlanComplete:
+    case lldb::eStopReasonProcessorTrace:
+    case lldb::eStopReasonHistoryBoundary:
+      body.reason = protocol::eStoppedReasonStep;
+      break;
+    case lldb::eStopReasonBreakpoint: {
+      ExceptionBreakpoint *exc_bp = dap.GetExceptionBPFromStopReason(thread);
+      if (exc_bp) {
+        body.reason = protocol::eStoppedReasonException;
+        body.text = exc_bp->GetLabel();
+      } else {
+        InstructionBreakpoint *inst_bp =
+            dap.GetInstructionBPFromStopReason(thread);
+        body.reason = inst_bp ? protocol::eStoppedReasonInstructionBreakpoint
+                              : protocol::eStoppedReasonBreakpoint;
+
+        llvm::raw_string_ostream OS(body.text);
+        OS << "breakpoint";
+        for (size_t idx = 0; idx < thread.GetStopReasonDataCount(); idx += 2) {
+          lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(idx);
+          lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(idx + 1);
+          body.hitBreakpointIds.push_back(bp_id);
+          OS << " " << bp_id << "." << bp_loc_id;
+        }
+      }
+    } break;
+    case lldb::eStopReasonWatchpoint: {
+      body.reason = protocol::eStoppedReasonDataBreakpoint;
+      lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
+      body.hitBreakpointIds.push_back(bp_id);
+      body.text = llvm::formatv("data breakpoint {0}", bp_id).str();
+    } break;
+    case lldb::eStopReasonSignal:
+    case lldb::eStopReasonException:
+    case lldb::eStopReasonInstrumentation:
+      body.reason = protocol::eStoppedReasonException;
+      break;
+    case lldb::eStopReasonExec:
+    case lldb::eStopReasonFork:
+    case lldb::eStopReasonVFork:
+    case lldb::eStopReasonVForkDone:
+      body.reason = protocol::eStoppedReasonEntry;
+      break;
+    case lldb::eStopReasonInterrupt:
+      body.reason = protocol::eStoppedReasonPause;
+      break;
+    case lldb::eStopReasonThreadExiting:
+    case lldb::eStopReasonInvalid:
+    case lldb::eStopReasonNone:
+      break;
+    }
+
+    lldb::SBStream description;
+    thread.GetStopDescription(description);
+    body.description = {description.GetData(), description.GetSize()};
+  }
+  lldb::tid_t tid = thread.GetThreadID();
+  body.threadId = tid;
+  body.allThreadsStopped = all_threads_stopped;
+  body.preserveFocusHint = preserve_focus;
+
+  dap.Send(protocol::Event{"stopped", std::move(body)});
+}
+
+// Send a thread stopped event for the first stopped thread as the process is
+// stopped.
 llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
   lldb::SBMutex lock = dap.GetAPIMutex();
   std::lock_guard<lldb::SBMutex> guard(lock);
@@ -188,69 +267,50 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
 
   llvm::DenseSet<lldb::tid_t> old_thread_ids;
   old_thread_ids.swap(dap.thread_ids);
-  uint32_t stop_id = on_entry ? 0 : process.GetStopID();
-  const uint32_t num_threads = process.GetNumThreads();
 
-  // First make a pass through the threads to see if the focused thread
-  // has a stop reason. In case the focus thread doesn't have a stop
-  // reason, remember the first thread that has a stop reason so we can
-  // set it as the focus thread if below if needed.
-  lldb::tid_t first_tid_with_reason = LLDB_INVALID_THREAD_ID;
-  uint32_t num_threads_with_reason = 0;
-  bool focus_thread_exists = false;
-  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-    lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-    const lldb::tid_t tid = thread.GetThreadID();
-    const bool has_reason = ThreadHasStopReason(thread);
-    // If the focus thread doesn't have a stop reason, clear the thread ID
-    if (tid == dap.focus_tid) {
-      focus_thread_exists = true;
-      if (!has_reason)
-        dap.focus_tid = LLDB_INVALID_THREAD_ID;
-    }
-    if (has_reason) {
-      ++num_threads_with_reason;
-      if (first_tid_with_reason == LLDB_INVALID_THREAD_ID)
-        first_tid_with_reason = tid;
-    }
+  lldb::SBThread focused_thread;
+  std::vector<lldb::SBThread> stopped_threads;
+  for (auto thread : process) {
+    // Collect all known thread ids for sending thread events.
+    dap.thread_ids.insert(thread.GetThreadID());
+
+    if (!ThreadHasStopReason(thread))
+      continue;
+
+    // Focus on the first stopped thread
+    if (!focused_thread.IsValid())
+      focused_thread = thread;
+    else
+      stopped_threads.push_back(thread);
   }
 
-  // We will have cleared dap.focus_tid if the focus thread doesn't have
-  // a stop reason, so if it was cleared, or wasn't set, or doesn't exist,
-  // then set the focus thread to the first thread with a stop reason.
-  if (!focus_thread_exists || dap.focus_tid == LLDB_INVALID_THREAD_ID)
-    dap.focus_tid = first_tid_with_reason;
+  // If no stopped threads were detected, fallback to the selected thread.
+  if (!focused_thread)
+    focused_thread = process.GetSelectedThread();
 
-  // If no threads stopped with a reason, then report the first one so
-  // we at least let the UI know we stopped.
-  if (num_threads_with_reason == 0) {
-    lldb::SBThread thread = process.GetThreadAtIndex(0);
-    dap.focus_tid = thread.GetThreadID();
-    dap.SendJSON(CreateThreadStopped(dap, thread, stop_id));
-  } else {
-    for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-      lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-      dap.thread_ids.insert(thread.GetThreadID());
-      if (ThreadHasStopReason(thread)) {
-        dap.SendJSON(CreateThreadStopped(dap, thread, stop_id));
-      }
-    }
-  }
+  if (!focused_thread)
+    return make_error<DAPError>("no stopped threads");
 
-  for (const auto &tid : old_thread_ids) {
-    auto end = dap.thread_ids.end();
-    auto pos = dap.thread_ids.find(tid);
-    if (pos == end)
+  // Send stopped events for each thread thats stopped.
+  for (auto thread : stopped_threads)
+    SendStoppedEvent(dap, thread, on_entry, /*all_threads_stopped=*/false,
+                     /*preserve_focus=*/true);
+
+  // Notify the focused thread last to ensure the UI is focused correctly.
+  SendStoppedEvent(dap, focused_thread, on_entry, /*all_threads_stopped=*/true,
+                   /*preserve_focus=*/false);
+
+  // Update focused thread.
+  dap.focus_tid = focused_thread.GetThreadID();
+
+  for (const auto &tid : old_thread_ids)
+    if (!dap.thread_ids.contains(tid))
       SendThreadExitedEvent(dap, tid);
-  }
 
   dap.RunStopCommands();
+
   return Error::success();
 }
-
-// Send a "terminated" event to indicate the process is done being
-// debugged.
-void SendTerminatedEvent(DAP &dap) { dap.SendTerminatedEvent(); }
 
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
@@ -466,10 +526,11 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
     // FindTargetByGloballyUniqueID.
     llvm::json::Object configuration;
     configuration.try_emplace("type", "lldb");
-    configuration.try_emplace("debuggerId",
-                              created_target.GetDebugger().GetID());
-    configuration.try_emplace("targetId", created_target.GetGloballyUniqueID());
     configuration.try_emplace("name", created_target.GetTargetSessionName());
+
+    json::Object session{{"targetId", created_target.GetGloballyUniqueID()},
+                         {"debuggerId", created_target.GetDebugger().GetID()}};
+    configuration.try_emplace("session", std::move(session));
 
     llvm::json::Object request;
     request.try_emplace("request", "attach");

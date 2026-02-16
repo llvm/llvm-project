@@ -338,7 +338,7 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
     // constant 0.
     Value *Operand = Inst.getOperand(0);
     if (Constant *C = dyn_cast<Constant>(Operand)) {
-      if (!C->isZeroValue()) {
+      if (!C->isNullValue()) {
         ShuffleItems = {0, 1};
       }
     }

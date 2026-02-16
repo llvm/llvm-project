@@ -1826,6 +1826,12 @@ void StmtPrinter::VisitExtVectorElementExpr(ExtVectorElementExpr *Node) {
   OS << Node->getAccessor().getName();
 }
 
+void StmtPrinter::VisitMatrixElementExpr(MatrixElementExpr *Node) {
+  PrintExpr(Node->getBase());
+  OS << ".";
+  OS << Node->getAccessor().getName();
+}
+
 void StmtPrinter::VisitCStyleCastExpr(CStyleCastExpr *Node) {
   OS << '(';
   Node->getTypeAsWritten().print(OS, Policy);
@@ -2577,6 +2583,11 @@ void StmtPrinter::VisitCXXUnresolvedConstructExpr(
   }
   if (!Node->isListInitialization())
     OS << ')';
+}
+
+void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
+  // TODO(Reflection): Implement this.
+  assert(false && "not implemented yet");
 }
 
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(

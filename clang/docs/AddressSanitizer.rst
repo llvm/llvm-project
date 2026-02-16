@@ -248,43 +248,61 @@ compilers, so we suggest to use it together with
 The same attribute used on a global variable prevents AddressSanitizer
 from adding redzones around it and detecting out of bounds accesses.
 
-
 AddressSanitizer also supports
 ``__attribute__((disable_sanitizer_instrumentation))``. This attribute
 works similarly to ``__attribute__((no_sanitize("address")))``, but it also
 prevents instrumentation performed by other sanitizers.
 
-Conditional Sanitizer Checks with ``__builtin_allow_sanitize_check``
---------------------------------------------------------------------
+Interaction of Inlining with Disabling Sanitizer Instrumentation
+-----------------------------------------------------------------
+
+* A `no_sanitize` function will not be inlined heuristically by the compiler into a sanitized function.
+* An `always_inline` function will adopt the instrumentation status of the function it is inlined into.
+* Forcibly combining `no_sanitize` and ``__attribute__((always_inline))`` is not supported, and will often lead to unexpected results. To avoid mixing these attributes, use:
+
+.. code-block:: c
+
+    // Note, __has_feature test for sanitizers is deprecated, and Clang will support __SANITIZE_<sanitizer>__ similar to GCC.
+    #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__) || ... <other sanitizers>
+    #define ALWAYS_INLINE_IF_UNINSTRUMENTED
+    #else
+    #define ALWAYS_INLINE_IF_UNINSTRUMENTED __attribute__((always_inline))
+    #endif
+
+Explicit Sanitizer Checks with ``__builtin_allow_sanitize_check``
+-----------------------------------------------------------------
 
 The ``__builtin_allow_sanitize_check("address")`` builtin can be used to
-conditionally execute code only when AddressSanitizer is active for the current
-function (after inlining). This is particularly useful for inserting explicit,
-sanitizer-specific checks around operations like syscalls or inline assembly,
-which might otherwise be unchecked by the sanitizer.
+conditionally execute code depending on whether AddressSanitizer checks are
+enabled and permitted by the current policy (after inlining). This is
+particularly useful for inserting explicit, sanitizer-specific checks around
+operations like syscalls or inline assembly, which might otherwise be unchecked
+by the sanitizer.
 
 Example:
 
 .. code-block:: c
 
+    void __asan_load8(void *);
+
     inline __attribute__((always_inline))
-    void copy_to_device(void *addr, size_t size) {
-      if (__builtin_allow_sanitize_check("address")) {
-        // Custom checks that address range is valid.
-      }
-      // ... actual device memory copy logic, potentially a syscall ...
+    void my_helper(void *addr) {
+      if (__builtin_allow_sanitize_check("address"))
+        __asan_load8(addr);
+      // ... actual logic, e.g. inline assembly ...
+      asm volatile ("..." : : "r" (addr) : "memory");
     }
 
     void instrumented_function() {
       ...
-      copy_to_device(buf, sizeof(buf)); // checks are active
+      my_helper(buf); // checks are active
       ...
     }
 
     __attribute__((no_sanitize("address")))
     void uninstrumented_function() {
       ...
-      copy_to_device(buf, sizeof(buf)); // checks are skipped
+      my_helper(buf); // checks are skipped
       ...
     }
 

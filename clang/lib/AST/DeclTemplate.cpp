@@ -369,12 +369,6 @@ bool RedeclarableTemplateDecl::loadLazySpecializationsImpl(
   if (!ExternalSource)
     return false;
 
-  // If TPL is not null, it implies that we're loading specializations for
-  // partial templates. We need to load all specializations in such cases.
-  if (TPL)
-    return ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
-                                                       /*OnlyPartial=*/false);
-
   return ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
                                                      Args);
 }

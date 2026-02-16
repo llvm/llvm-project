@@ -1495,6 +1495,12 @@ void Sema::ActOnEndOfTranslationUnit() {
     Consumer.CompleteExternalDeclaration(D);
   }
 
+  // Visit all pending #pragma export.
+  for (const PendingPragmaInfo &Exported : PendingExportedNames.values()) {
+    if (!Exported.Used)
+      Diag(Exported.NameLoc, diag::warn_failed_to_resolve_pragma) << "export";
+  }
+
   if (LangOpts.HLSL)
     HLSL().ActOnEndOfTranslationUnit(getASTContext().getTranslationUnitDecl());
   if (LangOpts.OpenACC)
@@ -1663,8 +1669,8 @@ ObjCMethodDecl *Sema::getCurMethodDecl() {
   return dyn_cast<ObjCMethodDecl>(DC);
 }
 
-NamedDecl *Sema::getCurFunctionOrMethodDecl(bool AllowLambda) const {
-  DeclContext *DC = getFunctionLevelDeclContext(AllowLambda);
+NamedDecl *Sema::getCurFunctionOrMethodDecl() const {
+  DeclContext *DC = getFunctionLevelDeclContext();
   if (isa<ObjCMethodDecl>(DC) || isa<FunctionDecl>(DC))
     return cast<NamedDecl>(DC);
   return nullptr;

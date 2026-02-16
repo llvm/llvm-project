@@ -37,6 +37,29 @@
 # Uncomment line below for debugging shell commands
 # SHELL = /bin/sh -x
 
+# Cross platform shell commands
+ifeq "$(OS)" "Windows_NT"
+	MKDIR_P = md $(subst /,\,$(1)) > nul 2>&1 || (exit 0)
+	CP = copy $(subst /,\,$(1)) $(subst /,\,$(2))
+	CP_R = xcopy $(subst /,\,$(1)) $(subst /,\,$(2)) /s /e /y
+	RM = del $(subst /,\,$(1)) > nul 2>&1 || (exit 0)
+	RM_F = del /f /q $(subst /,\,$(1))
+	RM_RF = rd /s /q $(subst /,\,$(1))
+	LN_SF = mklink /D "$(subst /,\,$(2))" "$(subst /,\,$(1))"
+	ECHO = echo $(1)
+	ECHO_TO_FILE = echo $(1) > $(subst /,\,$(2))
+else
+	MKDIR_P = mkdir -p $(1)
+	CP = cp $(1) $(2)
+	CP_R = cp -r $(1) $(2)
+	RM = rm $(1) > /dev/null 2>&1 || true
+	RM_F = rm -f $(1)
+	RM_RF = rm -rf $(1)
+	LN_SF = ln -sf $(1) $(2)
+	ECHO = echo "$(1)"
+	ECHO_TO_FILE = echo $(1) > $(2)
+endif
+
 # Suppress built-in suffix rules. We explicitly define rules for %.o.
 .SUFFIXES:
 
@@ -180,21 +203,27 @@ else
 	# amd64, x86_64, x64 -> 64
 	ifeq "$(ARCH)" "amd64"
 		override ARCH := $(subst amd64,64,$(ARCH))
+		IS_X86 := 1
 	endif
 	ifeq "$(ARCH)" "x86_64"
 		override ARCH := $(subst x86_64,64,$(ARCH))
+		IS_X86 := 1
 	endif
 	ifeq "$(ARCH)" "x64"
 		override ARCH := $(subst x64,64,$(ARCH))
+		IS_X86 := 1
 	endif
 	ifeq "$(ARCH)" "x86"
 		override ARCH := $(subst x86,32,$(ARCH))
+		IS_X86 := 1
 	endif
 	ifeq "$(ARCH)" "i386"
 		override ARCH := $(subst i386,32,$(ARCH))
+		IS_X86 := 1
 	endif
 	ifeq "$(ARCH)" "i686"
 		override ARCH := $(subst i686,32,$(ARCH))
+		IS_X86 := 1
 	endif
 	ifeq "$(ARCH)" "powerpc"
 		override ARCH := $(subst powerpc,32,$(ARCH))
@@ -318,6 +347,15 @@ endif
 ifeq "$(MAKE_GMODULES)" "YES"
 	CFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
 	CXXFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
+endif
+
+# Our files use x86 AT&T assembly throughout.
+# Enable it explicitly so any local Clang preference for Intel syntax gets overriden.
+ifeq ($(CC_TYPE), clang)
+	ifeq ($(IS_X86), 1)
+		CFLAGS += -mllvm -x86-asm-syntax=att
+		CXXFLAGS += -mllvm -x86-asm-syntax=att
+	endif
 endif
 
 CFLAGS += $(CFLAGS_EXTRAS)
@@ -692,7 +730,7 @@ clean::
 ifeq "$(findstring lldb-test-build.noindex, $(BUILDDIR))" ""
 	$(error Trying to invoke the clean rule, but not using the default build tree layout)
 else
-	$(RM) -r $(wildcard $(BUILDDIR)/*)
+	$(call RM_RF,$(wildcard $(BUILDDIR)/*))
 endif
 
 #----------------------------------------------------------------------

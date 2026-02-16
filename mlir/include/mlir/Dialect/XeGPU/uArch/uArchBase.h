@@ -38,7 +38,11 @@ enum class InstructionKind {
                              // matrix multiply-add operation
   Subgroup2DBlockStore,      // Subgroup-level 2D block write instruction
   Subgroup2DBlockLoad,       // Subgroup-level 2D block load instruction
-  Subgroup2DBlockPrefetch    // Subgroup-level 2D block prefetch instruction
+  Subgroup2DBlockPrefetch,   // Subgroup-level 2D block prefetch instruction
+  StoreScatter,              // Lane-level store (scalar, vector)
+  LoadGather,                // Lane-level load (scalar, vector)
+  StoreMatrix,               // Lane-level matrix store to slm
+  LoadMatrix                 // Lane-level matrix load to slm
   // @TODO: Add more instructions as needed
 };
 
@@ -65,6 +69,14 @@ struct Instruction {
       return "load_nd";
     case InstructionKind::Subgroup2DBlockPrefetch:
       return "prefetch_nd";
+    case InstructionKind::StoreScatter:
+      return "store";
+    case InstructionKind::LoadGather:
+      return "load";
+    case InstructionKind::StoreMatrix:
+      return "store_matrix";
+    case InstructionKind::LoadMatrix:
+      return "load_matrix";
     }
     llvm_unreachable("Unknown InstructionKind");
   }
@@ -242,6 +254,54 @@ struct MMAInstructionInterface {
   virtual llvm::SmallVector<uint32_t, 8> getSupportedN(Type type) const = 0;
 
   virtual ~MMAInstructionInterface() = default;
+};
+
+//===----------------------------------------------------------------------===//
+// Common instructions (shared across architectures)
+//===----------------------------------------------------------------------===//
+
+struct LoadGatherInstructionInterface : public Instruction {
+  LoadGatherInstructionInterface()
+      : Instruction(InstructionKind::LoadGather, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::LoadGather;
+  }
+
+  virtual int32_t getMaxLaneLoadSize(int32_t bitWidth) const = 0;
+  virtual ~LoadGatherInstructionInterface() = default;
+};
+
+struct StoreScatterInstructionInterface : public Instruction {
+  StoreScatterInstructionInterface()
+      : Instruction(InstructionKind::StoreScatter, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::StoreScatter;
+  }
+
+  virtual int32_t getMaxLaneStoreSize(int32_t bitWidth) const = 0;
+  virtual ~StoreScatterInstructionInterface() = default;
+};
+
+struct LoadMatrixInstructionInterface : public Instruction {
+  LoadMatrixInstructionInterface()
+      : Instruction(InstructionKind::LoadMatrix, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::LoadMatrix;
+  }
+
+  virtual int32_t getMaxLaneLoadSize(int32_t bitWidth) const = 0;
+  virtual ~LoadMatrixInstructionInterface() = default;
+};
+
+struct StoreMatrixInstructionInterface : public Instruction {
+  StoreMatrixInstructionInterface()
+      : Instruction(InstructionKind::StoreMatrix, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::StoreMatrix;
+  }
+
+  virtual int32_t getMaxLaneStoreSize(int32_t bitWidth) const = 0;
+  virtual ~StoreMatrixInstructionInterface() = default;
 };
 
 } // namespace uArch

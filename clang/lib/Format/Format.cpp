@@ -1245,6 +1245,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.ObjCBreakBeforeNestedBlockParam);
     IO.mapOptional("ObjCPropertyAttributeOrder",
                    Style.ObjCPropertyAttributeOrder);
+    IO.mapOptional("ObjCSpaceAfterMethodDeclarationPrefix",
+                   Style.ObjCSpaceAfterMethodDeclarationPrefix);
     IO.mapOptional("ObjCSpaceAfterProperty", Style.ObjCSpaceAfterProperty);
     IO.mapOptional("ObjCSpaceBeforeProtocolList",
                    Style.ObjCSpaceBeforeProtocolList);
@@ -1787,6 +1789,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   LLVMStyle.ObjCBlockIndentWidth = 2;
   LLVMStyle.ObjCBreakBeforeNestedBlockParam = true;
+  LLVMStyle.ObjCSpaceAfterMethodDeclarationPrefix = true;
   LLVMStyle.ObjCSpaceAfterProperty = false;
   LLVMStyle.ObjCSpaceBeforeProtocolList = true;
   LLVMStyle.PackConstructorInitializers = FormatStyle::PCIS_BinPack;

@@ -54,6 +54,34 @@
 # OMAGIC:     Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
 # OMAGIC-NEXT:LOAD           0x0000b0 0x00000000002000b0 0x00000000002000b0 0x000004 0x000404 RWE 0x4
 
+## Test that gaps between sections within an executable segment are filled with traps.
+# RUN: llvm-mc -filetype=obj -triple=x86_64 gap.s -o gap.o
+# RUN: ld.lld gap.o -z separate-code -z max-page-size=0x1000 -o gap.out
+## .text is at offset 0x1000, .text2 is aligned to 16 bytes at 0x1010.
+## The gap between them should be filled with 0xcc.
+# RUN: od -Ax -t x1 -v -N32 -j0x1000 gap.out | FileCheck %s --check-prefix=GAP
+# GAP:      001000 90 cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc
+# GAP-NEXT: 001010 90 cc
+
+## Test multiple gaps with various alignments.
+## Sections: .text (1 byte) -> .text2 (align 8) -> .text3 (align 32) -> .text4 (align 128)
+# RUN: llvm-mc -filetype=obj -triple=x86_64 multi-gap.s -o multi-gap.o
+# RUN: ld.lld multi-gap.o -z separate-code -z max-page-size=0x1000 -o multi-gap.out
+# RUN: od -Ax -t x1 -v -N144 -j0x1000 multi-gap.out | FileCheck %s --check-prefix=MGAP
+## .text at 0x1000, .text2 at 0x1008 (aligned to 8)
+# MGAP:      001000 90 cc cc cc cc cc cc cc 90 cc cc cc cc cc cc cc
+## gap from 0x1009 to 0x1020, .text3 at 0x1020 (aligned to 32)
+# MGAP-NEXT: 001010 cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc
+# MGAP-NEXT: 001020 90 cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc
+## gap from 0x1021 to 0x1080
+# MGAP-NEXT: 001030 cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc
+# MGAP-NEXT: 001040 cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc
+# MGAP-NEXT: 001050 cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc
+# MGAP-NEXT: 001060 cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc
+# MGAP-NEXT: 001070 cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc cc
+## .text4 at 0x1080 (aligned to 128)
+# MGAP-NEXT: 001080 90 cc
+
 #--- a.s
 .globl _start
 _start:
@@ -62,6 +90,34 @@ _start:
 #--- bss.s
 .bss
 .space 1024
+
+#--- gap.s
+.globl _start
+.section .text,"ax"
+_start:
+  nop
+
+.section .text2,"ax"
+.p2align 4
+  nop
+
+#--- multi-gap.s
+.globl _start
+.section .text,"ax"
+_start:
+  nop
+
+.section .text2,"ax"
+.p2align 3
+  nop
+
+.section .text3,"ax"
+.p2align 5
+  nop
+
+.section .text4,"ax"
+.p2align 7
+  nop
 
 #--- rwx.lds
 PHDRS { all PT_LOAD; }

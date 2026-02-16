@@ -38,7 +38,6 @@ subnormal_config.cl
 ../generic/math/expm1.cl
 ../generic/math/exp2.cl
 ../generic/math/exp10.cl
-math/fma.cl
 ../generic/math/fmod.cl
 ../generic/math/fract.cl
 ../generic/math/frexp.cl

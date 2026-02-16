@@ -87,10 +87,6 @@ void FunctionAttrPass::runOnOperation() {
     func->setAttr(mlir::LLVM::LLVMFuncOp::getInstrumentFunctionExitAttrName(
                       llvmFuncOpName),
                   mlir::StringAttr::get(context, instrumentFunctionExit));
-  if (noInfsFPMath)
-    func->setAttr(
-        mlir::LLVM::LLVMFuncOp::getNoInfsFpMathAttrName(llvmFuncOpName),
-        mlir::BoolAttr::get(context, true));
   if (noNaNsFPMath)
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getNoNansFpMathAttrName(llvmFuncOpName),

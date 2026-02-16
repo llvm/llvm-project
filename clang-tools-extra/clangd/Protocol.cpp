@@ -964,6 +964,8 @@ llvm::json::Value toJSON(const DocumentSymbol &S) {
     Result["children"] = S.children;
   if (S.deprecated)
     Result["deprecated"] = true;
+  if (!S.tags.empty())
+    Result["tags"] = S.tags;
   // FIXME: workaround for older gcc/clang
   return std::move(Result);
 }
@@ -1509,7 +1511,7 @@ bool fromJSON(const llvm::json::Value &Params, CallHierarchyItem &I,
 bool fromJSON(const llvm::json::Value &Params,
               CallHierarchyIncomingCallsParams &C, llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O.map("item", C.item);
+  return O && O.map("item", C.item);
 }
 
 llvm::json::Value toJSON(const CallHierarchyIncomingCall &C) {
@@ -1519,7 +1521,7 @@ llvm::json::Value toJSON(const CallHierarchyIncomingCall &C) {
 bool fromJSON(const llvm::json::Value &Params,
               CallHierarchyOutgoingCallsParams &C, llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O.map("item", C.item);
+  return O && O.map("item", C.item);
 }
 
 llvm::json::Value toJSON(const CallHierarchyOutgoingCall &C) {

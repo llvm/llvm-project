@@ -20,17 +20,10 @@
 #include "InterpFrame.h"
 #include "InterpStack.h"
 #include "State.h"
-#include "clang/AST/APValue.h"
-#include "clang/AST/ASTDiagnostic.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/OptionalDiagnostic.h"
 
 namespace clang {
 namespace interp {
 class Context;
-class Function;
-class InterpStack;
-class InterpFrame;
 class SourceMapper;
 
 struct StdAllocatorCaller {
@@ -42,9 +35,9 @@ struct StdAllocatorCaller {
 /// Interpreter context.
 class InterpState final : public State, public SourceMapper {
 public:
-  InterpState(State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
+  InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               SourceMapper *M = nullptr);
-  InterpState(State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
+  InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               const Function *Func);
 
   ~InterpState();
@@ -57,41 +50,14 @@ public:
   bool diagnosing() const { return getEvalStatus().Diag != nullptr; }
 
   // Stack frame accessors.
-  Frame *getCurrentFrame() override;
+  const Frame *getCurrentFrame() override;
   unsigned getCallStackDepth() override {
     return Current ? (Current->getDepth() + 1) : 1;
   }
   const Frame *getBottomFrame() const override { return &BottomFrame; }
 
-  // Access objects from the walker context.
-  Expr::EvalStatus &getEvalStatus() const override {
-    return Parent.getEvalStatus();
-  }
-  ASTContext &getASTContext() const override { return Ctx.getASTContext(); }
-  const LangOptions &getLangOpts() const {
-    return Ctx.getASTContext().getLangOpts();
-  }
-
-  // Forward status checks and updates to the walker.
-  bool keepEvaluatingAfterFailure() const override {
-    return Parent.keepEvaluatingAfterFailure();
-  }
-  bool keepEvaluatingAfterSideEffect() const override {
-    return Parent.keepEvaluatingAfterSideEffect();
-  }
-  bool noteUndefinedBehavior() override {
-    return Parent.noteUndefinedBehavior();
-  }
+  bool stepsLeft() const override { return true; }
   bool inConstantContext() const;
-  bool hasActiveDiagnostic() override { return Parent.hasActiveDiagnostic(); }
-  void setActiveDiagnostic(bool Flag) override {
-    Parent.setActiveDiagnostic(Flag);
-  }
-  void setFoldFailureDiagnostic(bool Flag) override {
-    Parent.setFoldFailureDiagnostic(Flag);
-  }
-  bool hasPriorDiagnostic() override { return Parent.hasPriorDiagnostic(); }
-  bool noteSideEffect() override { return Parent.noteSideEffect(); }
 
   /// Deallocates a pointer.
   void deallocate(Block *B);
@@ -152,18 +118,26 @@ public:
     // std::memset(Mem, 0, NumWords * sizeof(uint64_t)); // Debug
     return Floating(Mem, llvm::APFloatBase::SemanticsToEnum(Sem));
   }
+  const CXXRecordDecl **allocMemberPointerPath(unsigned Length) {
+    return reinterpret_cast<const CXXRecordDecl **>(
+        this->allocate(Length * sizeof(CXXRecordDecl *)));
+  }
+
+  /// Note that a step has been executed. If there are no more steps remaining,
+  /// diagnoses and returns \c false.
+  bool noteStep(CodePtr OpPC);
 
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
-  /// AST Walker state.
-  State &Parent;
   /// Dead block chain.
   DeadBlock *DeadBlocks = nullptr;
   /// Reference to the offset-source mapping.
   SourceMapper *M;
   /// Allocator used for dynamic allocations performed via the program.
   std::unique_ptr<DynamicAllocator> Alloc;
+  /// Allocator for everything else, e.g. floating-point values.
+  mutable std::optional<llvm::BumpPtrAllocator> Allocator;
 
 public:
   /// Reference to the module containing all bytecode.
@@ -180,6 +154,12 @@ public:
   SourceLocation EvalLocation;
   /// Declaration we're initializing/evaluting, if any.
   const VarDecl *EvaluatingDecl = nullptr;
+  /// Steps left during evaluation.
+  unsigned StepsLeft = 1;
+  /// Whether infinite evaluation steps have been requested. If this is false,
+  /// we use the StepsLeft value above.
+  const bool InfiniteSteps = false;
+
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
   unsigned SpeculationDepth = 0;
@@ -192,8 +172,6 @@ public:
   /// List of blocks we're currently running either constructors or destructors
   /// for.
   llvm::SmallVector<const Block *> InitializingBlocks;
-
-  mutable std::optional<llvm::BumpPtrAllocator> Allocator;
 };
 
 class InterpStateCCOverride final {

@@ -9,7 +9,8 @@ define i64 @narrow_add(i64 %a, i64 %b) {
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
 ; CHECK-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v2
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v0, v0, v1
+; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %zext0 = and i64 %a, 2147483647
   %zext1 = and i64 %b, 2147483647
@@ -40,7 +41,8 @@ define <2 x i64> @narrow_add_vec(<2 x i64> %a, <2 x i64> %b) #0 {
 ; CHECK-NEXT:    v_and_b32_e32 v3, 0x7ffffffe, v6
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v2
-; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_add_nc_u32 v2, v1, v3
+; CHECK-NEXT:    v_add_nc_u32_e32 v2, v1, v3
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %zext0 = and <2 x i64> %a, <i64 2147483647, i64 30>

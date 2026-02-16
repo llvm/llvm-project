@@ -20,7 +20,6 @@ def all : FF<"all", "Equivalent to setting: --file-header, --program-headers, --
 def arch_specific : FF<"arch-specific", "Display architecture-specific information">;
 def bb_addr_map : FF<"bb-addr-map", "Display the BB address map section">;
 def pretty_pgo_analysis_map : FF<"pretty-pgo-analysis-map", "Display PGO analysis values with formatting rather than raw numbers">;
-def call_graph_info : FF<"call-graph-info", "Display call graph information">;
 def cg_profile : FF<"cg-profile", "Display call graph profile section">;
 def decompress : FF<"decompress", "Dump decompressed section content when used with -x or -p">;
 defm demangle : BB<"demangle", "Demangle symbol names", "Do not demangle symbol names (default)">;

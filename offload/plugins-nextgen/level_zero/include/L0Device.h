@@ -556,9 +556,10 @@ public:
                             TargetAllocTy Kind) override;
   Error free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;
 
+  /// This plugin does nothing to lock buffers. Do not return an error, just
+  /// return the same pointer as the device pointer.
   Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) override {
-    return Plugin::error(error::ErrorCode::UNKNOWN,
-                         "dataLockImpl not supported");
+    return HstPtr;
   }
   Error dataUnlockImpl(void *HstPtr) override { return Plugin::success(); }
 
@@ -575,7 +576,8 @@ public:
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,
                         bool ReleaseQueue) override;
-  Error queryAsyncImpl(__tgt_async_info &AsyncInfo) override;
+  Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
+                       bool *IsQueueWorkCompleted) override;
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,

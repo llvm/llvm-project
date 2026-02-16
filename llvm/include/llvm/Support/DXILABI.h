@@ -31,6 +31,14 @@ enum class ResourceClass : uint8_t {
   LastEntry = Sampler,
 };
 
+enum class ResourceDimension : uint8_t {
+  Unknown = 0,
+  Dim1D,
+  Dim2D,
+  Dim3D,
+  Cube,
+};
+
 /// The kind of resource for an SRV or UAV resource. Sometimes referred to as
 /// "Shape" in the DXIL docs.
 enum class ResourceKind : uint32_t {

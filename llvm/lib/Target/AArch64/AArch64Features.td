@@ -599,7 +599,7 @@ def FeatureMPAMv2: ExtensionWithMArch<"mpamv2", "MPAMv2", "FEAT_MPAMv2",
   "Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions">;
 
 def FeatureMTETC: ExtensionWithMArch<"mtetc", "MTETC", "FEAT_MTETC",
-  "Enable Virtual Memory Tagging Extension">;
+  "Enable Virtual Memory Tagging Extension", [FeatureMTE]>;
 
 def FeatureGCIE: ExtensionWithMArch<"gcie", "GCIE", "FEAT_GCIE",
   "Enable GICv5 (Generic Interrupt Controller) CPU Interface Extension">;
@@ -627,7 +627,7 @@ def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM"
 //===----------------------------------------------------------------------===//
 
 def FeatureMOPS_GO: ExtensionWithMArch<"mops-go", "MOPS_GO", "FEAT_MOPS_GO",
-  "Enable memset acceleration granule only">;
+  "Enable memset acceleration granule only", [FeatureMOPS, FeatureMTE]>;
 
 def FeatureBTIE: ExtensionWithMArch<"btie", "BTIE", "FEAT_BTIE",
   "Enable Enhanced Branch Target Identification extension">;
@@ -852,6 +852,10 @@ def FeatureAddrLSLSlow14 : SubtargetFeature<
 def FeatureALULSLFast : SubtargetFeature<
     "alu-lsl-fast", "HasALULSLFast", "true",
     "Add/Sub operations with lsl shift <= 4 are cheap">;
+
+def FeatureFastLD1Single : SubtargetFeature<
+    "fast-ld1-single", "HasFastLD1Single", "true",
+    "Single-element LD1 to vector lane has same performance as regular load">;
 
 def FeatureAggressiveFMA :
   SubtargetFeature<"aggressive-fma",

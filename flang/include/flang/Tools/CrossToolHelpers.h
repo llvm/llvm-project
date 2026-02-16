@@ -123,7 +123,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       llvm::FramePointerKind::None; ///< Add frame pointer to functions.
   unsigned VScaleMin = 0; ///< SVE vector range minimum.
   unsigned VScaleMax = 0; ///< SVE vector range maximum.
-  bool NoInfsFPMath = false; ///< Set no-infs-fp-math attribute for functions.
+  bool NoInfsFPMath = false; ///< Set ninf flag for instructions.
   bool NoNaNsFPMath = false; ///< Set no-nans-fp-math attribute for functions.
   bool ApproxFuncFPMath = false; ///< Set afn flag for instructions.
   bool NoSignedZerosFPMath =

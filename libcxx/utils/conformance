@@ -1,0 +1,650 @@
+#!/usr/bin/env python3
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+from typing import List, Dict, Tuple, IO, Optional
+import copy
+import csv
+import json
+import logging
+import re
+import subprocess
+
+import click
+
+# Number of the 'Libc++ Standards Conformance' project on Github
+LIBCXX_CONFORMANCE_PROJECT = '31'
+
+# Project ID for 'Libc++ Standards Conformance'
+LIBCXX_CONFORMANCE_PROJECT_ID = 'PVT_kwDOAQWwKc4AlOgt'
+
+# Field ID for the 'Meeting Voted' field of the 'Libc++ Standards Conformance' project.
+LIBCXX_CONFORMANCE_MEETING_VOTED_ID = 'PVTF_lADOAQWwKc4AlOgtzgdUEXI'
+
+# Field ID for the 'Status' field of the 'Libc++ Standards Conformance' project.
+LIBCXX_CONFORMANCE_STATUS_ID = 'PVTSSF_lADOAQWwKc4AlOgtzgdUBak'
+
+def extract_between_markers(text: str, begin_marker: str, end_marker: str) -> Optional[str]:
+    """
+    Given a string containing special markers, extract everything located beetwen these markers.
+
+    If the beginning marker is not found, None is returned. If the beginning marker is found but
+    there is no end marker, it is an error (this is done to avoid silently accepting inputs that
+    are erroneous by mistake).
+    """
+    start = text.find(begin_marker)
+    if start == -1:
+        return None
+
+    start += len(begin_marker) # skip the marker itself
+    end = text.find(end_marker, start)
+    if end == -1:
+        raise ArgumentError(f"Could not find end marker {end_marker} in: {text[start:]}")
+
+    return text[start:end]
+
+def rst_to_markdown(text: str) -> str:
+    """Best effort conversion from RST to Markdown assuming a single line of text."""
+    return text.replace('``', '`').replace('\\', '')
+
+def markdown_to_rst(text: str) -> str:
+    """Best effort conversion from Markdown to RST assuming a single line of text."""
+    return re.sub(r'(?<!`)`(?!`)', '``', text)
+
+class PaperStatus:
+    TODO = 1
+    IN_PROGRESS = 2
+    PARTIAL = 3
+    DONE = 4
+    NOTHING_TO_DO = 5
+
+    _status: int
+
+    _original: Optional[str]
+    """
+    Optional string from which the paper status was created. This is used to carry additional
+    information from CSV rows, like any notes associated to the status.
+    """
+
+    def __init__(self, status: int, original: Optional[str] = None):
+        self._status = status
+        self._original = original
+
+    def __eq__(self, other) -> bool:
+        return self._status == other._status
+
+    def __lt__(self, other) -> bool:
+        relative_order = {
+            PaperStatus.TODO: 0,
+            PaperStatus.IN_PROGRESS: 1,
+            PaperStatus.PARTIAL: 2,
+            PaperStatus.DONE: 3,
+            PaperStatus.NOTHING_TO_DO: 3,
+        }
+        return relative_order[self._status] < relative_order[other._status]
+
+    @staticmethod
+    def from_csv_entry(entry: str):
+        """
+        Parse a paper status out of a CSV row entry. Entries can look like:
+        - '' (an empty string, which means the paper is not done yet)
+        - '|In Progress|'
+        - '|Partial|'
+        - '|Complete|'
+        - '|Nothing To Do|'
+        """
+        if entry == '':
+            return PaperStatus(PaperStatus.TODO, entry)
+        elif entry == '|In Progress|':
+            return PaperStatus(PaperStatus.IN_PROGRESS, entry)
+        elif entry == '|Partial|':
+            return PaperStatus(PaperStatus.PARTIAL, entry)
+        elif entry == '|Complete|':
+            return PaperStatus(PaperStatus.DONE, entry)
+        elif entry == '|Nothing To Do|':
+            return PaperStatus(PaperStatus.NOTHING_TO_DO, entry)
+        else:
+            raise RuntimeError(f'Unexpected CSV entry for status: {entry}')
+
+    @staticmethod
+    def from_github_issue(issue: Dict):
+        """
+        Parse a paper status out of a Github issue obtained from querying a Github project.
+        """
+        if 'status' not in issue:
+            return PaperStatus(PaperStatus.TODO)
+        elif issue['status'] == 'Todo':
+            return PaperStatus(PaperStatus.TODO)
+        elif issue['status'] == 'In Progress':
+            return PaperStatus(PaperStatus.IN_PROGRESS)
+        elif issue['status'] == 'Partial':
+            return PaperStatus(PaperStatus.PARTIAL)
+        elif issue['status'] == 'Done':
+            return PaperStatus(PaperStatus.DONE)
+        elif issue['status'] == 'Nothing To Do':
+            return PaperStatus(PaperStatus.NOTHING_TO_DO)
+        else:
+            raise RuntimeError(f"Received unrecognizable Github issue status: {issue['status']}")
+
+    def to_csv_entry(self) -> str:
+        """
+        Return the issue state formatted for a CSV entry. The status is formatted as '|Complete|',
+        '|In Progress|', etc.
+        """
+        mapping = {
+            PaperStatus.TODO: '',
+            PaperStatus.IN_PROGRESS: '|In Progress|',
+            PaperStatus.PARTIAL: '|Partial|',
+            PaperStatus.DONE: '|Complete|',
+            PaperStatus.NOTHING_TO_DO: '|Nothing To Do|',
+        }
+        return self._original if self._original is not None else mapping[self._status]
+
+    def to_project_single_select_option(self) -> str:
+        """
+        Maps this Status to a single-select option in the libc++ Standards Conformance Github project.
+        """
+        # Values for the various options of the 'Status' field in the libc++ Standards Conformance project.
+        mapping = {
+            PaperStatus.TODO: 'f75ad846',
+            PaperStatus.IN_PROGRESS: '47fc9ee4',
+            PaperStatus.PARTIAL: '44a9df65',
+            PaperStatus.DONE: '98236657',
+            PaperStatus.NOTHING_TO_DO: '18422253',
+        }
+        return mapping[self._status]
+
+class PaperInfo:
+    paper_number: str
+    """
+    Identifier for the paper or the LWG issue. This must be something like 'PnnnnRx', 'Nxxxxx' or 'LWGxxxxx'.
+    """
+
+    paper_name: str
+    """
+    Plain text string representing the name of the paper.
+    """
+
+    status: PaperStatus
+    """
+    Status of the paper/issue. This can be complete, in progress, partial, or done.
+    """
+
+    meeting: Optional[str]
+    """
+    Plain text string representing the meeting at which the paper/issue was voted.
+    """
+
+    first_released_version: Optional[str]
+    """
+    First version of LLVM in which this paper/issue was resolved.
+    """
+
+    github_issue: Optional[str]
+    """
+    Optional number of the Github issue tracking the implementation status of this paper.
+    This is used to cross-reference rows in the status pages with Github issues.
+    """
+
+    notes: Optional[str]
+    """
+    Optional plain text string representing notes to associate to the paper.
+    This is used to populate the "Notes" column in the CSV status pages.
+    """
+
+    original: Optional[object]
+    """
+    Object from which this PaperInfo originated. This is used to track the CSV row or Github issue that
+    was used to generate this PaperInfo and is useful for error reporting purposes.
+    """
+
+    def __init__(self, paper_number: str, paper_name: str,
+                       status: PaperStatus,
+                       meeting: Optional[str] = None,
+                       first_released_version: Optional[str] = None,
+                       github_issue: Optional[str] = None,
+                       notes: Optional[str] = None,
+                       original: Optional[object] = None):
+        self.paper_number = paper_number
+        self.paper_name = paper_name
+        self.status = status
+        self.meeting = meeting
+        self.first_released_version = first_released_version
+        self.github_issue = github_issue
+        self.notes = notes
+        self.original = original
+
+    def for_printing(self) -> Tuple[str, str, str, str, str, str, str]:
+        return (
+            f'`{self.paper_number} <https://wg21.link/{self.paper_number}>`__',
+            markdown_to_rst(self.paper_name),
+            self.meeting if self.meeting is not None else '',
+            self.status.to_csv_entry(),
+            self.first_released_version if self.first_released_version is not None else '',
+            f'`#{self.github_issue} <https://github.com/llvm/llvm-project/issues/{self.github_issue}>`__' if self.github_issue is not None else '',
+            self.notes if self.notes is not None else '',
+        )
+
+    def __repr__(self) -> str:
+        return repr(self.original) if self.original is not None else repr(self.for_printing())
+
+    @staticmethod
+    def from_csv_row(row: Tuple[str, str, str, str, str, str]):# -> PaperInfo:
+        """
+        Given a row from one of our status-tracking CSV files, create a PaperInfo object representing that row.
+        """
+        # Extract the paper number from the first column
+        match = re.search(r"((P[0-9R]+)|(LWG[0-9]+)|(N[0-9]+))\s+", row[0])
+        if match is None:
+            raise RuntimeError(f"Can't parse paper/issue number out of row: {row}")
+
+        # Match the issue number if present
+        github_issue = re.search(r'#([0-9]+)', row[5])
+        if github_issue:
+            github_issue = github_issue.group(1)
+
+        try:
+            status = PaperStatus.from_csv_entry(row[3])
+        except:
+            logging.error(f'Could not extract a status from the provided CSV row: {row}')
+            raise
+
+        return PaperInfo(
+            paper_number=match.group(1),
+            paper_name=row[1],
+            status=status,
+            meeting=row[2] or None,
+            first_released_version=row[4] or None,
+            github_issue=github_issue,
+            notes=row[6] or None,
+            original=row,
+        )
+
+    @staticmethod
+    def from_github_issue(issue: Dict):# -> PaperInfo:
+        """
+        Create a PaperInfo object from the Github issue information obtained from querying a Github Project.
+        """
+        # Extract the paper number from the issue title
+        match = re.search(r"((P[0-9R]+)|(LWG[0-9]+)|(N[0-9]+)):", issue['title'])
+        if match is None:
+            raise RuntimeError(f"Issue doesn't have a title that we know how to parse: {issue}")
+        paper = match.group(1)
+
+        # Extract any notes from the Github issue and populate the RST notes with them
+        issue_description = issue['content']['body']
+        notes = extract_between_markers(issue_description, 'BEGIN-RST-NOTES', 'END-RST-NOTES')
+        notes = notes.strip() if notes is not None else notes
+
+        return PaperInfo(
+            paper_number=paper,
+            paper_name=issue['title'].removeprefix(paper + ': '),
+            status=PaperStatus.from_github_issue(issue),
+            meeting=issue.get('meeting Voted', None),
+            first_released_version=None, # TODO
+            github_issue=str(issue['content']['number']),
+            notes=notes,
+            original=issue,
+        )
+
+def merge(paper: PaperInfo, gh: PaperInfo) -> PaperInfo:
+    """
+    Merge a paper coming from a CSV row with a corresponding Github-tracked paper.
+
+    If the CSV row has a status that is "less advanced" than the Github issue, simply update the CSV
+    row with the newer status. Otherwise, report an error if they have a different status because
+    something must be wrong.
+
+    We don't update issues from 'To Do' to 'In Progress', since that only creates churn and the
+    status files aim to document user-facing functionality in releases, for which 'In Progress'
+    is not useful.
+
+    In case we don't update the CSV row's status, we still take any updated notes coming
+    from the Github issue and we add a link to the Github issue if it was previously missing.
+    """
+    took_gh_in_full = False # Whether we updated the entire PaperInfo from the Github version
+    if paper.status == PaperStatus(PaperStatus.TODO) and gh.status == PaperStatus(PaperStatus.IN_PROGRESS):
+        result = copy.deepcopy(paper)
+    elif paper.status < gh.status:
+        result = copy.deepcopy(gh)
+        took_gh_in_full = True
+    elif paper.status == gh.status:
+        result = copy.deepcopy(paper)
+    else:
+        logging.info(f"We found a CSV row and a Github issue with different statuses:\nrow: {paper}\nGithub issue: {gh}")
+        result = copy.deepcopy(paper)
+
+    # If we didn't take the Github issue in full, make sure to update the notes, the link and anything else.
+    if not took_gh_in_full:
+        result.github_issue = gh.github_issue
+        result.notes = gh.notes
+    return result
+
+def load_csv(file: IO) -> List[Tuple]:
+    rows = []
+    reader = csv.reader(file, delimiter=',')
+    for row in reader:
+        rows.append(row)
+    return rows
+
+def write_csv(output: IO, rows: List[Tuple]):
+    writer = csv.writer(output, quoting=csv.QUOTE_ALL, lineterminator='\n')
+    for row in rows:
+        writer.writerow(row)
+
+def link_github_issue(issue: str, meeting_voted: Optional[str], status: Optional[PaperStatus]) -> None:
+    """
+    Link an existing Github issue to the libc++ Conformance project.
+    """
+    # Figure out the URL of the issue
+    url = subprocess.check_output(['gh', 'issue', 'view', issue, '--json', 'url', '--jq', '.url']).decode().strip()
+
+    # Add the issue to the Conformance project
+    cli = ['gh', 'project', 'item-add', LIBCXX_CONFORMANCE_PROJECT, '--owner', 'llvm', '--url', url, '--format', 'json', '--jq', '.id']
+    id = subprocess.check_output(cli).decode().strip()
+
+    # Adjust the 'Meeting Voted' field of the item
+    if meeting_voted is not None:
+        cli = ['gh', 'project', 'item-edit', '--id', id,
+                                '--project-id', LIBCXX_CONFORMANCE_PROJECT_ID,
+                                '--field-id', LIBCXX_CONFORMANCE_MEETING_VOTED_ID, '--text', meeting_voted]
+        subprocess.check_call(cli)
+
+    # Adjust the 'Status' field of the item
+    if status is not None:
+        option_id = status.to_project_single_select_option()
+        cli = ['gh', 'project', 'item-edit', '--id', id,
+                                '--project-id', LIBCXX_CONFORMANCE_PROJECT_ID,
+                                '--field-id', LIBCXX_CONFORMANCE_STATUS_ID,
+                                '--single-select-option-id', option_id]
+        subprocess.check_call(cli)
+
+def sync_csv(rows: List[Tuple], from_github: List[PaperInfo]) -> List[Tuple]:
+    """
+    Given a list of CSV rows representing an existing status file and a list of PaperInfos representing
+    up-to-date (but potentially incomplete) tracking information from Github, this function returns the
+    new CSV rows synchronized with the up-to-date information.
+
+    Note that this only tracks changes from 'not implemented' issues to 'implemented'. If an up-to-date
+    PaperInfo reports that a paper is not implemented but the existing CSV rows report it as implemented,
+    it is an error (i.e. the result is not a CSV row where the paper is *not* implemented).
+    """
+    results = [rows[0]] # Start with the header
+    for row in rows[1:]: # Skip the header
+        # If the row contains empty entries, this is a "separator row" between meetings.
+        # Preserve it as-is.
+        if row[0] == "":
+            results.append(row)
+            continue
+
+        paper = PaperInfo.from_csv_row(row)
+
+        # Find any Github issues tracking this paper. Each row must have one and exactly one Github
+        # issue tracking it, which we validate below.
+        tracking = [gh for gh in from_github if paper.paper_number == gh.paper_number]
+
+        # If there's more than one tracking issue, something is weird.
+        if len(tracking) > 1:
+            logging.warning(f"Found a row with more than one tracking issue: {row}")
+            for t in tracking:
+                logging.warning(f'  tracked by: {t}')
+            results.append(row)
+            continue
+
+        # Validate the Github issue associated to the CSV row, if any
+        if paper.github_issue is not None:
+            if len(tracking) == 0:
+                logging.warning(f"Found row claiming to have a tracking issue, but failed to find a tracking issue on Github: {row}")
+                results.append(row)
+                continue
+            if len(tracking) == 1 and paper.github_issue != tracking[0].github_issue:
+                logging.warning(f"Found row with incorrect tracking issue: {row}\ntracked by: {tracking[0]}")
+                results.append(row)
+                continue
+
+        # If there is no tracking issue for that row, log that we're missing an issue.
+        if len(tracking) == 0:
+            logging.warning(f"Can't find any Github issue for CSV row: {row}")
+            results.append(row)
+            continue
+
+        results.append(merge(paper, tracking[0]).for_printing())
+
+    return results
+
+class ConformanceProject:
+    def __init__(self, _json):
+        self._json = _json
+
+    @staticmethod
+    def query(): # -> ConformanceProject
+        cli = ['gh', 'project', 'item-list', LIBCXX_CONFORMANCE_PROJECT, '--owner', 'llvm', '--format', 'json', '--limit', '9999999']
+        js = json.loads(subprocess.check_output(cli))
+        return ConformanceProject(js)
+
+    @staticmethod
+    def load_from(f: IO): # -> ConformanceProject
+        js = json.load(f)
+        return ConformanceProject(js)
+
+    def save(self, output: IO) -> None:
+        json.dump(self._json, output)
+
+    def papers(self) -> List[PaperInfo]:
+        """
+        Return the list of papers tracked by the conformance project.
+        """
+        return [PaperInfo.from_github_issue(issue) for issue in self._json['items']]
+
+    def tracks(self, paper_number: str) -> bool:
+        """
+        Return whether the conformance project is tracking the given paper number.
+        """
+        for paper in self.papers():
+            if paper.paper_number == paper_number:
+                return True
+        return False
+
+
+@click.group()
+def main():
+    """Manipulate libc++'s various source of truth for tracking conformance."""
+    pass
+
+
+@main.group('github')
+def github_cmd():
+    """Perform actions on Github issues that track libc++ conformance."""
+    pass
+
+
+@github_cmd.command('find-unlinked')
+@click.option('--labels', multiple=True, default=('lwg-issue', 'wg21-paper'),
+    help='The label(s) to search for. This can be lwg-issue or wg21-paper. '
+         'Passing this flag multiple times will OR the provided labels.')
+def github_find_unlinked(labels):
+    """Find issues not linked to the Conformance project."""
+    query = f'is:issue -project:llvm/{LIBCXX_CONFORMANCE_PROJECT} label:libc++ label:{",".join(labels)}'
+    cli = ['gh', 'issue', 'list', '--search', query, '--limit', '1000']
+    subprocess.check_call(cli)
+
+
+@github_cmd.command('link')
+@click.argument('issues', nargs=-1)
+@click.option('--meeting-voted', required=False,
+    help='The optional meeting at which these issues have been voted. If provided, this is used to set the '
+         'Meeting Voted field in the Conformance project.')
+@click.option('--status', required=False, type=click.Choice(['todo', 'inprogress', 'partial', 'done', 'nothingtodo'],
+                                                            case_sensitive=False),
+    help='The optional status to set the issue to in the Conformance project.')
+def github_link(issues, meeting_voted, status):
+    """Link issues to the Conformance project.
+
+        ISSUES are the issues to link to the Conformance project. This can be anything that the gh
+        command-line tool understands, such as an issue number or a URL.
+    """
+    mapping = {'todo': PaperStatus.TODO, 'inprogress': PaperStatus.IN_PROGRESS, 'partial': PaperStatus.PARTIAL,
+               'done': PaperStatus.DONE, 'nothingtodo': PaperStatus.NOTHING_TO_DO}
+    if status is not None:
+        status = PaperStatus(mapping[status.lower()])
+    for issue in issues:
+        link_github_issue(issue, meeting_voted, status)
+
+@github_cmd.command('create')
+@click.argument('csvfiles', nargs=-1, type=click.File('r'))
+@click.option('--load-github-from', type=click.File('r'), required=False,
+    help='Optionally load the Github Conformance tracking data from the given file. Useful to avoid '
+         'running into API call limits when testing locally. See `conformance github download`.')
+@click.option('--labels', type=str, multiple=True,
+    help='Optional labels to add to the issue being created. Either lwg-issue or wg21-paper must be provided, '
+         'but both are mutually exclusive.')
+def github_create(csvfiles, load_github_from, labels):
+    """Create Github issues tracking libc++ conformance from CSV status files."""
+    if 'lwg-issue' not in labels and 'wg21-paper' not in labels:
+        raise click.BadParameter('Either lwg-issue or wg21-paper label should be provided', param_hint='--labels')
+
+    if load_github_from is None:
+        logging.info("Loading conformance information from Github")
+        project = ConformanceProject.query()
+    else:
+        logging.info(f"Loading conformance information from {load_github_from.name}")
+        project = ConformanceProject.load_from(load_github_from)
+
+    def all_csv_rows():
+        for file in csvfiles:
+            csv = load_csv(file)
+            for row in csv[1:]: # Skip the header
+                # If the row contains empty entries, this is a "separator row" between meetings.
+                if row[0] == "":
+                    continue
+                yield row
+
+    for row in all_csv_rows():
+        paper = PaperInfo.from_csv_row(row)
+
+        # Only consider creating a Github issue for papers that are not already tracked.
+        if project.tracks(paper.paper_number):
+            continue
+
+        # If the row pretends to be tracked by a Github issue but we can't find it, something is weird.
+        if paper.github_issue is not None:
+            logging.warning(f"Found row claiming to have a tracking issue, but failed to find a tracking issue on Github: {row}")
+            continue
+
+        # Create the actual Github issue
+        cli = ['gh', 'issue', 'create', '--repo', 'llvm/llvm-project',
+                    '--title', f'{paper.paper_number}: {rst_to_markdown(paper.paper_name)}',
+                    '--body', f'**Link:** https://wg21.link/{paper.paper_number}',
+                    '--project', 'libc++ Standards Conformance',
+                    '--label', 'libc++']
+
+        for label in labels:
+            cli += ['--label', label]
+
+        print("Do you want to create the following issue?")
+        print(cli)
+        answer = input("y/n: ")
+        if answer == 'n':
+            print("Not creating issue")
+            continue
+        elif answer != 'y':
+            print(f"Invalid answer {answer}, skipping")
+            continue
+
+        logging.info("Creating issue")
+        issue_link = subprocess.check_output(cli).decode().strip()
+        logging.info(f"Created tracking issue for {paper.paper_number}: {issue_link}")
+
+        logging.info(f"Linking {issue_link} to the libc++ Standards Conformance project")
+        link_github_issue(issue_link, paper.meeting, paper.status)
+
+
+@github_cmd.command('download')
+@click.option('--output', '-o', type=click.File('w'), default='-',
+    help='Save the data to the provided file. Default is stdout.')
+def github_download(output):
+    """Download libc++ conformance tracking data from Github issues and save it locally."""
+    project = ConformanceProject.query()
+    project.save(output)
+
+
+@main.group('csv')
+def csv_cmd():
+    """Perform actions on the CSV files that track libc++ conformance."""
+    pass
+
+
+@csv_cmd.command('validate')
+@click.argument('files', nargs=-1, type=click.File('r'))
+def csv_validate(files):
+    """Validate the format of the provided CSV files."""
+    for file in files:
+        csv = load_csv(file)
+        for row in csv[1:]: # Skip the header
+            if row[0] != "": # Skip separator rows
+                PaperInfo.from_csv_row(row)
+
+
+@csv_cmd.command('synchronize')
+@click.argument('files', nargs=-1, type=click.File('r'))
+@click.option('--output', '-o', type=click.File('w'), default='-',
+    help='Write the generated CSV to the specified file. Defaults to stdout.')
+@click.option('--load-github-from', type=click.File('r'), required=False,
+    help='Optionally load the Github Conformance tracking data from the given file. Useful to avoid '
+         'running into API call limits when testing locally. See `conformance github download`.')
+def csv_synchronize(files, output, load_github_from):
+    """Synchronize existing CSV status files based on existing Github issues."""
+    if load_github_from is None:
+        logging.info("Loading conformance information from Github")
+        project = ConformanceProject.query()
+    else:
+        logging.info(f"Loading conformance information from {load_github_from.name}")
+        project = ConformanceProject.load_from(load_github_from)
+
+    for file in files:
+        logging.info(f"Synchronizing {file.name} with Github issues")
+        csv = load_csv(file)
+        synced = sync_csv(csv, project.papers())
+        write_csv(output, synced)
+
+
+@csv_cmd.command('create')
+@click.argument('issues', nargs=-1)
+@click.option('--output', '-o', type=click.File('w'), default='-',
+    help='Write the generated CSV to the specified file. Defaults to stdout.')
+@click.option('--load-github-from', type=click.File('r'), required=False,
+    help='Optionally load the Github Conformance tracking data from the given file. Useful to avoid '
+         'running into API call limits when testing locally. See `conformance github download`.')
+def csv_create(issues, output, load_github_from):
+    """Produce CSV entries corresponding to the given Github issues."""
+    if load_github_from is None:
+        logging.info("Loading conformance information from Github")
+        project = ConformanceProject.query()
+    else:
+        logging.info(f"Loading conformance information from {load_github_from.name}")
+        project = ConformanceProject.load_from(load_github_from)
+
+    rows = []
+    for issue in issues:
+        # Figure out the issue number
+        number = subprocess.check_output(['gh', 'issue', 'view', issue, '--json', 'number', '--jq', '.number']).decode().strip()
+
+        # Find the PaperInfo corresponding to that issue. If there is none, the issue provided by the user is invalid.
+        for paper in project.papers():
+            if paper.github_issue == number:
+                rows.append(paper.for_printing())
+                break
+        else:
+            raise RuntimeError(f'Issue {issue} does not have a corresponding tracking issue in Github, aborting')
+
+    rows.sort()
+    write_csv(output, rows)
+
+
+if __name__ == '__main__':
+    main()

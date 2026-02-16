@@ -62,6 +62,19 @@ func.func @loop_for_single_index_argument(%arg0: index) {
   // expected-error@+1 {{expected induction variable to be same type as bounds}}
   "scf.for"(%arg0, %arg0, %arg0) (
     {
+    ^bb0(%i0 : i32):
+      scf.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @loop_for_invalid_ind_type(%arg0: index) {
+  // expected-error@+1 {{0-th induction variable has invalid type: 'f32'}}
+  "scf.for"(%arg0, %arg0, %arg0) (
+    {
     ^bb0(%i0 : f32):
       scf.yield
     }

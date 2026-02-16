@@ -363,4 +363,49 @@ def OffloadLiveInValueCanonicalization : Pass<"offload-livein-value-canonicaliza
   let dependentDialects = ["mlir::acc::OpenACCDialect"];
 }
 
+def OffloadTargetVerifier : Pass<"offload-target-verifier", "mlir::func::FuncOp"> {
+  let summary = "Verify values and symbols live into offload regions for legality";
+  let description = [{
+    This pass verifies that values and symbols used within OpenACC compute
+    constructs and other offload regions are legal for the target execution
+    model.
+
+    The pass performs two main checks:
+
+    1. **Live-in Value Verification**: Checks that all values that are live
+       into an offload region are valid for use in that region. This includes
+       checking that pointer-like and mappable types have appropriate data
+       clauses or device attributes.
+
+    2. **Symbol Use Verification**: Checks that all symbol references within
+       an offload region are valid for that region. This includes checking for
+       acc.routine declarations and acc.declare attributes.
+
+    The device_type option notes the target execution model:
+    - `none`, `nvidia`, `radeon`: Device execution (GPU offload)
+    - `host`, `multicore`: Host execution
+
+    When soft_check is enabled, the pass only emits debug messages for illegal
+    values/symbols instead of failing compilation. This is useful for
+    diagnostic purposes.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+  let options = [
+    Option<"deviceType", "device-type", "mlir::acc::DeviceType",
+           "mlir::acc::DeviceType::None",
+           "Target device type for verification. Host/multicore uses host "
+           "region checking, all others use device region checking.",
+           [{::llvm::cl::values(
+              clEnumValN(mlir::acc::DeviceType::None, "none", "none"),
+              clEnumValN(mlir::acc::DeviceType::Host, "host", "host"),
+              clEnumValN(mlir::acc::DeviceType::Multicore, "multicore", "multicore"),
+              clEnumValN(mlir::acc::DeviceType::Nvidia, "nvidia", "nvidia"),
+              clEnumValN(mlir::acc::DeviceType::Radeon, "radeon", "radeon"))
+           }]>,
+    Option<"softCheck", "soft-check", "bool", "false",
+           "When true, illegal values are printed via LLVM_DEBUG instead of "
+           "failing compilation. Useful for diagnostic purposes.">
+  ];
+}
+
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

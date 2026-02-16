@@ -70,13 +70,6 @@ static void createSharedMemoryGlobal(fir::FirOpBuilder &builder,
                                   cuf::DataAttribute::Shared)));
 
   mlir::DenseElementsAttr init = {};
-  mlir::Type i8Ty = builder.getI8Type();
-  if (size > 0) {
-    auto vecTy = mlir::VectorType::get(
-        static_cast<fir::SequenceType::Extent>(size), i8Ty);
-    mlir::Attribute zero = mlir::IntegerAttr::get(i8Ty, 0);
-    init = mlir::DenseElementsAttr::get(vecTy, llvm::ArrayRef(zero));
-  }
   auto sharedMem =
       fir::GlobalOp::create(builder, loc, sharedMemGlobalName, false, false,
                             sharedMemType, init, linkage, attrs);

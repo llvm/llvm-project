@@ -30,8 +30,8 @@ using namespace lld::macho;
 // Verify ConcatInputSection's size on 64-bit builds. The size of std::vector
 // can differ based on STL debug levels (e.g. iterator debugging on MSVC's STL),
 // so account for that.
-static_assert(sizeof(void *) != 8 ||
-                  sizeof(ConcatInputSection) == sizeof(std::vector<Reloc>) + 88,
+static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) ==
+                                         sizeof(std::vector<Relocation>) + 88,
               "Try to minimize ConcatInputSection's size, we create many "
               "instances of it");
 
@@ -89,15 +89,25 @@ uint64_t InputSection::getVA(uint64_t off) const {
   return parent->addr + getOffset(off);
 }
 
-static uint64_t resolveSymbolVA(const Symbol *sym, uint8_t type) {
+static uint64_t resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
+                                      int64_t offset) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(type);
-  if (relocAttrs.hasAttr(RelocAttrBits::BRANCH))
-    return sym->resolveBranchVA();
-  if (relocAttrs.hasAttr(RelocAttrBits::GOT))
-    return sym->resolveGotVA();
-  if (relocAttrs.hasAttr(RelocAttrBits::TLV))
-    return sym->resolveTlvVA();
-  return sym->getVA();
+  uint64_t symVA;
+  if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
+    // For branch relocations with non-zero offsets, use the actual function
+    // address rather than the stub address. Branching to an interior point
+    // of a function (e.g., _func+16) implies reliance on the original
+    // function's layout, which an interposed replacement wouldn't preserve.
+    // There's no meaningful way to "interpose" an interior offset.
+    symVA = (offset != 0) ? sym->getVA() : sym->resolveBranchVA();
+  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
+    symVA = sym->resolveGotVA();
+  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
+    symVA = sym->resolveTlvVA();
+  } else {
+    symVA = sym->getVA();
+  }
+  return symVA + offset;
 }
 
 const Defined *InputSection::getContainingSymbol(uint64_t off) const {
@@ -177,9 +187,9 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
   return {};
 }
 
-const Reloc *InputSection::getRelocAt(uint32_t off) const {
-  auto it = llvm::find_if(
-      relocs, [=](const macho::Reloc &r) { return r.offset == off; });
+const Relocation *InputSection::getRelocAt(uint32_t off) const {
+  auto it = llvm::find_if(relocs,
+                          [=](const Relocation &r) { return r.offset == off; });
   if (it == relocs.end())
     return nullptr;
   return &*it;
@@ -215,7 +225,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
   memcpy(buf, data.data(), data.size());
 
   for (size_t i = 0; i < relocs.size(); i++) {
-    const Reloc &r = relocs[i];
+    const Relocation &r = relocs[i];
     uint8_t *loc = buf + r.offset;
     uint64_t referentVA = 0;
 
@@ -223,7 +233,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
                             target->hasAttr(r.type, RelocAttrBits::UNSIGNED);
     if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
       const Symbol *fromSym = cast<Symbol *>(r.referent);
-      const Reloc &minuend = relocs[++i];
+      const Relocation &minuend = relocs[++i];
       uint64_t minuendVA;
       if (const Symbol *toSym = minuend.referent.dyn_cast<Symbol *>())
         minuendVA = toSym->getVA() + minuend.addend;
@@ -243,7 +253,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         target->handleDtraceReloc(referentSym, r, loc);
         continue;
       }
-      referentVA = resolveSymbolVA(referentSym, r.type) + r.addend;
+      referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.addend);
 
       if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym)) {
         // References from thread-local variable sections are treated as offsets

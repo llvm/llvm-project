@@ -39,6 +39,7 @@
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/MathToFuncs/MathToFuncs.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
@@ -817,13 +818,58 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
     auto fromFirTy = convert.getValue().getType();
     auto toFirTy = convert.getRes().getType();
 
-    // Let more specialized conversions (e.g. FIR to memref
-    // converters) handle fir.convert when either side is a memref. This
-    // avoids interfering with descriptor-based flows such as fir.box /
-    // fir.box_addr and keeps this pattern focused on value conversions.
-    if (mlir::isa<mlir::MemRefType>(fromFirTy) ||
-        mlir::isa<mlir::MemRefType>(toFirTy))
-      return mlir::failure();
+    // Handle conversions between pointer-like values and memref descriptors.
+    // These are produced by FIR-to-MemRef lowering and represent descriptor
+    // conversion rather than pure value conversions.
+    if (auto memRefTy = mlir::dyn_cast<mlir::MemRefType>(toFirTy)) {
+      mlir::Location loc = convert.getLoc();
+      mlir::Value basePtr = adaptor.getValue();
+      assert(basePtr && "null base pointer");
+
+      auto [strides, offset] = memRefTy.getStridesAndOffset();
+      bool hasStaticLayout =
+          mlir::ShapedType::isStatic(offset) &&
+          llvm::none_of(strides, mlir::ShapedType::isDynamic);
+
+      auto *firConv =
+          static_cast<const fir::LLVMTypeConverter *>(this->getTypeConverter());
+      assert(firConv && "expected non-null LLVMTypeConverter");
+
+      if (memRefTy.hasStaticShape() && hasStaticLayout) {
+        // Static shape and layout: build a fully-populated descriptor.
+        mlir::Value memrefDesc = mlir::MemRefDescriptor::fromStaticShape(
+            rewriter, loc, *firConv, memRefTy, basePtr);
+        rewriter.replaceOp(convert, memrefDesc);
+        return mlir::success();
+      }
+
+      // Dynamic shape or layout: create an LLVM memref descriptor and insert
+      // the base pointer field, letting the rest of the fields be populated
+      // by subsequent lowering.
+      mlir::Type llvmMemRefTy = firConv->convertType(memRefTy);
+      auto undef = mlir::LLVM::UndefOp::create(rewriter, loc, llvmMemRefTy);
+      auto insert =
+          mlir::LLVM::InsertValueOp::create(rewriter, loc, undef, basePtr, 1);
+      rewriter.replaceOp(convert, insert);
+      return mlir::success();
+    }
+
+    if (auto memRefTy = mlir::dyn_cast<mlir::MemRefType>(fromFirTy)) {
+      // Legalize conversions *from* memref descriptors to pointer-like values
+      // by extracting the underlying buffer pointer from the descriptor.
+      mlir::Location loc = convert.getLoc();
+      mlir::Value base = adaptor.getValue();
+      auto alignedPtr =
+          mlir::LLVM::ExtractValueOp::create(rewriter, loc, base, 1);
+      auto offset = mlir::LLVM::ExtractValueOp::create(rewriter, loc, base, 2);
+      mlir::Type elementType =
+          this->getTypeConverter()->convertType(memRefTy.getElementType());
+      auto gepOp = mlir::LLVM::GEPOp::create(rewriter, loc,
+                                             alignedPtr.getType(), elementType,
+                                             alignedPtr, offset.getResult());
+      rewriter.replaceOp(convert, gepOp);
+      return mlir::success();
+    }
 
     auto fromTy = convertType(fromFirTy);
     auto toTy = convertType(toFirTy);
@@ -3566,6 +3612,11 @@ struct SelectCaseOpConversion : public fir::FIROpConversion<fir::SelectCaseOp> {
       mlir::Block *dest = caseOp.getSuccessor(t);
       std::optional<mlir::ValueRange> destOps =
           caseOp.getSuccessorOperands(adaptor.getOperands(), t);
+      // Convert block signature if needed
+      if (destOps && !destOps->empty())
+        if (auto conversion = getTypeConverter()->convertBlockSignature(dest))
+          dest = rewriter.applySignatureConversion(dest, *conversion,
+                                                   getTypeConverter());
       std::optional<mlir::ValueRange> cmpOps =
           *caseOp.getCompareOperands(adaptor.getOperands(), t);
       mlir::Attribute attr = cases[t];

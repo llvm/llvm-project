@@ -259,8 +259,6 @@ void HIPAMDToolChain::addClangTargetOptions(
     CC1Args.push_back(DriverArgs.MakeArgStringRef(ArgStr));
   }
 
-  CC1Args.push_back("-fcuda-allow-variadic-functions");
-
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
@@ -378,8 +376,11 @@ llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
                                Action::OffloadKind DeviceOffloadingKind) const {
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
+  const llvm::Triple &TT = getEffectiveTriple();
+
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true) ||
+      TT.getEnvironment() == llvm::Triple::LLVM ||
       getGPUArch(DriverArgs) == "amdgcnspirv")
     return {};
   ArgStringList LibraryPaths;

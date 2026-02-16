@@ -851,7 +851,7 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     }
 
     GlobalInits.push_back(GV->getInitializer());
-    uint64_t InitSize = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t InitSize = GV->getGlobalSize(DL);
     CurOffset = GVOffset + InitSize;
 
     // Compute the amount of padding that we'd like for the next element.
@@ -1456,8 +1456,7 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   // Can not RAUW F with an expression that uses F. Replace with a temporary
   // placeholder first.
   Function *PlaceholderFn =
-      Function::Create(cast<FunctionType>(F->getValueType()),
-                       GlobalValue::ExternalWeakLinkage,
+      Function::Create(F->getFunctionType(), GlobalValue::ExternalWeakLinkage,
                        F->getAddressSpace(), "", &M);
   replaceCfiUses(F, PlaceholderFn, IsJumpTableCanonical);
 

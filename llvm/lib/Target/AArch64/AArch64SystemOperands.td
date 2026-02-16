@@ -435,6 +435,7 @@ let Requires = [{ {AArch64::FeaturePRFM_SLC} }] in {
 def : PRFM<"pst", 0b10, "slc", 0b11, "keep", 0b0>;
 def : PRFM<"pst", 0b10, "slc", 0b11, "strm", 0b1>;
 }
+def : PRFM<"ir",  0b11, "",    0b00, "",     0b0>;
 
 //===----------------------------------------------------------------------===//
 // SVE Prefetch instruction options.
@@ -2370,6 +2371,10 @@ def : RWSysReg<"MPAMCTL_EL3",   0b11, 0b110, 0b1010, 0b0101, 0b010>;
 def : RWSysReg<"MPAMVIDCR_EL2", 0b11, 0b100, 0b1010, 0b0111, 0b000>;
 def : RWSysReg<"MPAMVIDSR_EL2", 0b11, 0b100, 0b1010, 0b0111, 0b001>;
 def : RWSysReg<"MPAMVIDSR_EL3", 0b11, 0b110, 0b1010, 0b0111, 0b001>;
+
+// v9.7a General Improvements
+//                                        Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"SCR2_EL3",                0b11, 0b110, 0b0001, 0b0010, 0b010>;
 
 //===----------------------------------------------------------------------===//
 // FEAT_SRMASK v9.6a registers

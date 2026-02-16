@@ -1,0 +1,11 @@
+executable("llubi") {
+  deps = [
+    "lib",
+    "//llvm/lib/Analysis",
+    "//llvm/lib/IR",
+    "//llvm/lib/IRPrinter",
+    "//llvm/lib/IRReader",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "llubi.cpp" ]
+}

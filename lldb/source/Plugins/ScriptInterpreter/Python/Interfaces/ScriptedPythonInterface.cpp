@@ -17,7 +17,11 @@
 
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 #include <optional>
 
 using namespace lldb;
@@ -271,6 +275,117 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
   }
 
   return m_interpreter.GetOpaqueTypeFromSBFrameList(*sb_frame_list);
+}
+
+template <>
+lldb::ValueObjectSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBValue *sb_value = reinterpret_cast<lldb::SBValue *>(
+      python::LLDBSWIGPython_CastPyObjectToSBValue(p.get()));
+  if (!sb_value) {
+    error = Status::FromErrorStringWithFormat(
+        "couldn't cast lldb::SBValue to lldb::ValueObjectSP");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBValue(*sb_value);
+}
+
+template <>
+lldb::ValueObjectListSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBValueList *sb_value_list = reinterpret_cast<lldb::SBValueList *>(
+      python::LLDBSWIGPython_CastPyObjectToSBValueList(p.get()));
+
+  if (!sb_value_list) {
+    error = Status::FromErrorStringWithFormat(
+        "couldn't cast lldb::SBValueList to lldb::ValueObjectListSP");
+    return {};
+  }
+
+  lldb::ValueObjectListSP out = std::make_shared<ValueObjectList>();
+  for (uint32_t i = 0, e = sb_value_list->GetSize(); i < e; ++i) {
+    SBValue value = sb_value_list->GetValueAtIndex(i);
+    out->Append(m_interpreter.GetOpaqueTypeFromSBValue(value));
+  }
+
+  return out;
+}
+
+template <>
+FileSpec ScriptedPythonInterface::ExtractValueFromPythonObject<FileSpec>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBFileSpec *sb_file_spec = reinterpret_cast<lldb::SBFileSpec *>(
+          python::LLDBSWIGPython_CastPyObjectToSBFileSpec(p.get()))) {
+    if (auto file_spec =
+            m_interpreter.GetOpaqueTypeFromSBFileSpec(*sb_file_spec))
+      return *file_spec;
+  }
+  error = Status::FromErrorString(
+      "couldn't cast lldb::SBFileSpec to lldb_private::FileSpec.");
+
+  return {};
+}
+
+template <>
+ModuleSpec ScriptedPythonInterface::ExtractValueFromPythonObject<ModuleSpec>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBModuleSpec *sb_module_spec =
+          reinterpret_cast<lldb::SBModuleSpec *>(
+              python::LLDBSWIGPython_CastPyObjectToSBModuleSpec(p.get()))) {
+    if (auto module_spec =
+            m_interpreter.GetOpaqueTypeFromSBModuleSpec(*sb_module_spec))
+      return *module_spec;
+  }
+  error = Status::FromErrorString(
+      "couldn't cast lldb::SBModuleSpec to lldb_private::ModuleSpec.");
+
+  return {};
+}
+
+template <>
+FileSpecList
+ScriptedPythonInterface::ExtractValueFromPythonObject<FileSpecList>(
+    python::PythonObject &p, Status &error) {
+  FileSpecList result;
+  if (lldb::SBFileSpecList *sb_list = reinterpret_cast<lldb::SBFileSpecList *>(
+          python::LLDBSWIGPython_CastPyObjectToSBFileSpecList(p.get()))) {
+    for (uint32_t i = 0; i < sb_list->GetSize(); i++) {
+      lldb::SBFileSpec sb_file_spec = sb_list->GetFileSpecAtIndex(i);
+      if (auto file_spec =
+              m_interpreter.GetOpaqueTypeFromSBFileSpec(sb_file_spec))
+        result.Append(*file_spec);
+    }
+    return result;
+  }
+  error = Status::FromErrorString(
+      "couldn't cast Python object to lldb::SBFileSpecList.");
+  return result;
+}
+
+template <>
+lldb::ModuleSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ModuleSP>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBModule *sb_module = reinterpret_cast<lldb::SBModule *>(
+          python::LLDBSWIGPython_CastPyObjectToSBModule(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBModule(*sb_module);
+  error = Status::FromErrorString(
+      "couldn't cast lldb::SBModule to lldb::ModuleSP.");
+
+  return {};
+}
+
+// MakeSBModuleSpec is defined here rather than in ScriptInterpreter.cpp
+// because it constructs an SBModuleSpec, whose symbols live in liblldb.
+// ScriptInterpreter.cpp is part of lldbInterpreter which is also linked
+// into lldb-server, which does not link the API library.
+std::unique_ptr<lldb::SBModuleSpec>
+ScriptInterpreter::MakeSBModuleSpec(const ModuleSpec &module_spec) const {
+  return std::unique_ptr<lldb::SBModuleSpec>(
+      new lldb::SBModuleSpec(module_spec));
 }
 
 #endif

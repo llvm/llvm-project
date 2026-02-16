@@ -476,16 +476,12 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   if (Step->getAPInt().abs() != AllocSize)
     return false;
 
-  IntegerType *IntTy =
-      IntegerType::get(Src->PointerValue->getContext(),
-                       DL.getPointerSizeInBits(CGI.AddressSpace));
-
   // When counting down, the dependence distance needs to be swapped.
   if (Step->getValue()->isNegative())
     std::swap(SinkStart, SrcStart);
 
-  const SCEV *SinkStartInt = SE->getPtrToIntExpr(SinkStart, IntTy);
-  const SCEV *SrcStartInt = SE->getPtrToIntExpr(SrcStart, IntTy);
+  const SCEV *SinkStartInt = SE->getPtrToAddrExpr(SinkStart);
+  const SCEV *SrcStartInt = SE->getPtrToAddrExpr(SrcStart);
   if (isa<SCEVCouldNotCompute>(SinkStartInt) ||
       isa<SCEVCouldNotCompute>(SrcStartInt))
     return false;
@@ -1042,6 +1038,8 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
           if (getLoadStorePointerOperand(U) != GEP)
             return false;
           BasicBlock *UserBB = cast<Instruction>(U)->getParent();
+          if (!L->contains(UserBB))
+            return false;
           return !LoopAccessInfo::blockNeedsPredication(UserBB, L, &DT);
         }))
       return true;

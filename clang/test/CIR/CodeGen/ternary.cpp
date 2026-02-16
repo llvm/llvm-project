@@ -10,7 +10,7 @@ int x(int y) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z1xi(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> !s32i{{.*}}{
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) {
 // CIR: [[Y:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
 // CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR: cir.store %[[ARG0]], [[Y]] : !s32i, !cir.ptr<!s32i>
@@ -52,7 +52,7 @@ int foo(int a, int b) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3fooii(
-// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> !s32i{{.*}}{
+// CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) {
 // CIR: [[A:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
 // CIR: [[B:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
 // CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
@@ -71,8 +71,7 @@ int foo(int a, int b) {
 // CIR: }) : (!cir.bool) -> !s32i
 // CIR: [[CAST:%.+]] = cir.cast int_to_bool [[TERNARY_RES]] : !s32i -> !cir.bool
 // CIR: cir.if [[CAST]] {
-// CIR: [[ONE:%.+]] = cir.const #cir.int<1> : !s32i
-// CIR: [[MINUS_ONE:%.+]] = cir.unary(minus, [[ONE]]) nsw : !s32i, !s32i
+// CIR: [[MINUS_ONE:%.+]] = cir.const #cir.int<-1> : !s32i
 // CIR: cir.store [[MINUS_ONE]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR: [[RETVAL_VAL:%.+]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return [[RETVAL_VAL]] : !s32i

@@ -1,4 +1,4 @@
-; RUN: not opt -disable-output -mtriple=nvptx64-- -mcpu=sm_90 -passes=safe-stack %s 2>&1 | FileCheck %s
+; RUN: not opt -disable-output -mtriple=nvptx64-- -mcpu=sm_90 -passes='require<libcall-lowering-info>,safe-stack' %s 2>&1 | FileCheck %s
 
 ; CHECK: error: no libcall available for stackprotector check fail
 define void @foo(i32 %t) #0 {

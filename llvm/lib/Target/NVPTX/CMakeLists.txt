@@ -19,6 +19,7 @@ set(NVPTXCodeGen_sources
   NVPTXAtomicLower.cpp
   NVPTXCtorDtorLowering.cpp
   NVPTXIRPeephole.cpp
+  NVPTXDwarfDebug.cpp
   NVPTXForwardParams.cpp
   NVPTXFrameLowering.cpp
   NVPTXGenericToNVVM.cpp

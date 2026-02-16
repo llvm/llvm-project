@@ -1,4 +1,0 @@
-module Mod1 {
-  header "Mod1.h"
-  config_macros CONFIG1,CONFIG2
-}

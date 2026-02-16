@@ -135,8 +135,8 @@ CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
   if (!table_sp)
     return {};
 
-  auto [node_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      *table_sp, /*anon_struct_idx=*/1, "__first_node_", "__p1_");
+  auto [node_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*table_sp, "__first_node_", "__p1_");
   if (is_compressed_pair)
     node_sp = GetFirstValueOfLibCXXCompressedPair(*node_sp);
 
@@ -218,8 +218,8 @@ lldb::ValueObjectSP lldb_private::formatters::
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     CalculateNumChildrenImpl(ValueObject &table) {
-  auto [size_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      table, /*anon_struct_idx=*/2, "__size_", "__p2_");
+  auto [size_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(table, "__size_", "__p2_");
   if (!is_compressed_pair && size_sp)
     return size_sp->GetValueAsUnsigned(0);
 
@@ -237,8 +237,8 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
 }
 
 static ValueObjectSP GetTreePointer(ValueObject &table) {
-  auto [tree_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      table, /*anon_struct_idx=*/1, "__first_node_", "__p1_");
+  auto [tree_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(table, "__first_node_", "__p1_");
   if (is_compressed_pair)
     tree_sp = GetFirstValueOfLibCXXCompressedPair(*tree_sp);
 

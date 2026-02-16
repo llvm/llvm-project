@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ACOSH_FLOAT_CONSTANTS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ACOSH_FLOAT_CONSTANTS_H
 
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -16,7 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace acoshf_internal {
 
 // Lookup table for (1/f) where f = 1 + n*2^(-7), n = 0..127.
-static constexpr double ONE_OVER_F[128] = {
+LIBC_INLINE_VAR constexpr double ONE_OVER_F[128] = {
     0x1.0000000000000p+0, 0x1.fc07f01fc07f0p-1, 0x1.f81f81f81f820p-1,
     0x1.f44659e4a4271p-1, 0x1.f07c1f07c1f08p-1, 0x1.ecc07b301ecc0p-1,
     0x1.e9131abf0b767p-1, 0x1.e573ac901e574p-1, 0x1.e1e1e1e1e1e1ep-1,
@@ -62,7 +63,7 @@ static constexpr double ONE_OVER_F[128] = {
     0x1.0204081020408p-1, 0x1.0101010101010p-1};
 
 // Lookup table for log(f) = log(1 + n*2^(-7)) where n = 0..127.
-static constexpr double LOG_F[128] = {
+LIBC_INLINE_VAR constexpr double LOG_F[128] = {
     0x0.0000000000000p+0, 0x1.fe02a6b106788p-8, 0x1.fc0a8b0fc03e3p-7,
     0x1.7b91b07d5b11ap-6, 0x1.f829b0e783300p-6, 0x1.39e87b9febd5fp-5,
     0x1.77458f632dcfcp-5, 0x1.b42dd711971bep-5, 0x1.f0a30c01162a6p-5,

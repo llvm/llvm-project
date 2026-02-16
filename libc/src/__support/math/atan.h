@@ -52,7 +52,7 @@ namespace math {
 //      So we can return:
 //        atan(x) = sign(x) * (pi/2 - epsilon)
 
-LIBC_INLINE static constexpr double atan(double x) {
+LIBC_INLINE constexpr double atan(double x) {
 
   using namespace atan_internal;
   using FPBits = fputil::FPBits<double>;

@@ -63,6 +63,7 @@ add_llvm_target(SPIRVCodeGen
   Demangle
   GlobalISel
   FrontendHLSL
+  IPO
   MC
   SPIRVAnalysis
   SPIRVDesc
