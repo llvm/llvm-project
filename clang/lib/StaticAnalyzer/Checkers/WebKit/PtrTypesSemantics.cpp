@@ -516,6 +516,18 @@ class TrivialFunctionAnalysisVisitor
     return Result;
   }
 
+  bool CanTriviallyDestruct(const Type* T) {
+    if (T->isIntegralOrEnumerationType())
+      return true;
+    if (isa<PointerType>(T) || T->isNullPtrType())
+      return true;
+    auto *R = T->getAsCXXRecordDecl();
+    if (!R)
+      return false;
+    auto *Dtor = R->getDestructor();
+    return !Dtor || Dtor->isTrivial() || IsFunctionTrivial(Dtor);
+  }
+
 public:
   using CacheTy = TrivialFunctionAnalysis::CacheTy;
 
@@ -554,38 +566,18 @@ public:
       auto *Type = QT.getTypePtrOrNull();
       if (!Type)
         return false;
-      const CXXRecordDecl *R = Type->getAsCXXRecordDecl();
-      if (!R) {
-        if (isa<LValueReferenceType>(Type))
-          return true; // T& does not run its destructor.
-        if (auto *RT = dyn_cast<RValueReferenceType>(Type)) {
-          // For T&&, we evaluate the destructor of T.
-          QT = RT->getPointeeType();
-          Type = QT.getTypePtrOrNull();
-          if (!Type)
-            return false;
-          R = Type->getAsCXXRecordDecl();
-        }
+      if (isa<LValueReferenceType>(Type))
+        return true; // T& does not run its destructor.
+      if (auto *RT = dyn_cast<RValueReferenceType>(Type)) {
+        // For T&&, we evaluate the destructor of T.
+        auto *T = RT->getPointeeType().getTypePtrOrNull();
+        return T && CanTriviallyDestruct(T);
       }
-      if (!R) {
-        if (auto *AT = dyn_cast<ConstantArrayType>(Type)) {
-          QT = AT->getElementType();
-          Type = QT.getTypePtrOrNull();
-          if (!Type)
-            return false;
-          if (isa<PointerType>(Type))
-            return true; // An array of pointers doesn't run a destructor.
-          R = Type->getAsCXXRecordDecl();
-        }
+      if (auto *AT = dyn_cast<ConstantArrayType>(Type)) {
+        auto *T = AT->getElementType().getTypePtrOrNull();
+        return T && CanTriviallyDestruct(T);
       }
-      if (Type->isIntegralOrEnumerationType() || Type->isNullPtrType())
-        return true;
-      if (!R)
-        return false;
-      auto *Dtor = R->getDestructor();
-      if (!Dtor || Dtor->isTrivial())
-        return true;
-      return IsFunctionTrivial(Dtor);
+      return CanTriviallyDestruct(Type);
     });
   }
 
@@ -809,15 +801,8 @@ public:
   }
 
   bool VisitCXXDeleteExpr(const CXXDeleteExpr* DE) {
-    auto QT = DE->getDestroyedType();
-    auto *Type = QT.getTypePtrOrNull();
-    if (!Type)
-      return false;
-    const CXXRecordDecl *R = Type->getAsCXXRecordDecl();
-    if (!R)
-      return false;
-    auto *Dtor = R->getDestructor();
-    return !Dtor || Dtor->isTrivial();
+    auto *Type = DE->getDestroyedType().getTypePtrOrNull();
+    return Type && CanTriviallyDestruct(Type);
   }
 
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E) {

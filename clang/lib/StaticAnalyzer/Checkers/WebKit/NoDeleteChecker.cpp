@@ -95,15 +95,8 @@ public:
     if (!Body)
       return;
 
-    bool ParamHaveTrivialDtors = true;
-    for (auto *Param : FD->parameters()) {
-      if (!TFA.hasTrivialDtor(Param)) {
-        ParamHaveTrivialDtors = false;
-        break;
-      }
-    }
-
-    if (ParamHaveTrivialDtors && TFA.isTrivial(Body))
+    auto hasTrivialDtor = [&](VarDecl *D) { return TFA.hasTrivialDtor(D); };
+    if (llvm::all_of(FD->parameters(), hasTrivialDtor) && TFA.isTrivial(Body))
       return;
 
     SmallString<100> Buf;
