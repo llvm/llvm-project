@@ -97,13 +97,15 @@ void addDebugInfoPass(mlir::PassManager &pm,
                       llvm::codegenoptions::DebugInfoKind debugLevel,
                       llvm::OptimizationLevel optLevel,
                       llvm::StringRef inputFilename, int32_t dwarfVersion,
-                      llvm::StringRef splitDwarfFile) {
+                      llvm::StringRef splitDwarfFile,
+                      llvm::StringRef dwarfDebugFlags) {
   fir::AddDebugInfoOptions options;
   options.debugLevel = getEmissionKind(debugLevel);
   options.isOptimized = optLevel != llvm::OptimizationLevel::O0;
   options.inputFilename = inputFilename;
   options.dwarfVersion = dwarfVersion;
   options.splitDwarfFile = splitDwarfFile;
+  options.dwarfDebugFlags = dwarfDebugFlags;
   addPassConditionally(pm, disableDebugInfo,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }
@@ -362,10 +364,11 @@ void createDebugPasses(mlir::PassManager &pm,
                        llvm::codegenoptions::DebugInfoKind debugLevel,
                        llvm::OptimizationLevel OptLevel,
                        llvm::StringRef inputFilename, int32_t dwarfVersion,
-                       llvm::StringRef splitDwarfFile) {
+                       llvm::StringRef splitDwarfFile,
+                       llvm::StringRef dwarfDebugFlags) {
   if (debugLevel != llvm::codegenoptions::NoDebugInfo)
     addDebugInfoPass(pm, debugLevel, OptLevel, inputFilename, dwarfVersion,
-                     splitDwarfFile);
+                     splitDwarfFile, dwarfDebugFlags);
 }
 
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
@@ -384,7 +387,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);
   fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename,
-                         config.DwarfVersion, config.SplitDwarfFile);
+                         config.DwarfVersion, config.SplitDwarfFile,
+                         config.DwarfDebugFlags);
   fir::addTargetRewritePass(pm);
   fir::addCompilerGeneratedNamesConversionPass(pm);
 
