@@ -327,7 +327,6 @@ namespace llvm {
     template <typename C,
               typename = std::enable_if_t<
                   std::conjunction_v<
-                      std::negation<std::is_const<C>>,
                       std::is_convertible<
                           decltype(std::declval<C &>().data()) *, T *const *>,
                       std::is_integral<decltype(std::declval<C &>().size())>>,
