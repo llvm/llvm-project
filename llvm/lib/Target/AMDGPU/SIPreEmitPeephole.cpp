@@ -130,14 +130,16 @@ void SIPreEmitPeephole::updateMLIBeforeRemovingEdge(
       BackEdgeCount++;
   }
 
-  if (BackEdgeCount <= 1) {
-    MachineLoop *ParentLoop = Loop->getParentLoop();
+  if (BackEdgeCount > 1)
+    return;
 
-    // Re-map blocks directly owned by this loop to the parent.
-    for (MachineBasicBlock *BB : Loop->blocks()) {
-      if (MLI->getLoopFor(BB) == Loop)
-        MLI->changeLoopFor(BB, ParentLoop);
-    }
+  MachineLoop *ParentLoop = Loop->getParentLoop();
+
+  // Re-map blocks directly owned by this loop to the parent.
+  for (MachineBasicBlock *BB : Loop->blocks()) {
+    if (MLI->getLoopFor(BB) == Loop)
+      MLI->changeLoopFor(BB, ParentLoop);
+  }
 
     // Reparent all child loops.
     while (!Loop->isInnermost()) {
@@ -154,7 +156,6 @@ void SIPreEmitPeephole::updateMLIBeforeRemovingEdge(
       MLI->removeLoop(llvm::find(*MLI, Loop));
 
     MLI->destroy(Loop);
-  }
 }
 
 bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
