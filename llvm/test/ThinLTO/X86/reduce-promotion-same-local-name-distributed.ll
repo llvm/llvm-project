@@ -9,6 +9,7 @@
 ; RUN: llvm-lto2 run %t/a.bc %t/b.bc \
 ; RUN:   -thinlto-distributed-indexes \
 ; RUN:  --whole-program-visibility-enabled-in-lto=true \
+; RUN:  -force-import-all \
 ; RUN:  -save-temps -o %t/lto-out \
 ; RUN:  -r %t/a.bc,m1,px \
 ; RUN:  -r %t/b.bc,m2,p \
@@ -19,7 +20,8 @@
 ; RUN: llvm-dis %t/a.bc.out -o - | FileCheck %s --check-prefix=CHECK-A
 ; RUN: llvm-dis %t/b.bc.out -o - | FileCheck %s --check-prefix=CHECK-B
 
-; CHECK-A: declare hidden fastcc range(i32 -2147483647, -2147483648) i32 @foo.llvm.
+; CHECK-A: define hidden fastcc range(i32 -2147483647, -2147483648) i32 @foo.llvm.
+; CHECK-A: define available_externally hidden fastcc range(i32 -2147483647, -2147483648) i32 @foo(
 ; CHECK-B: define hidden fastcc range(i32 -2147483647, -2147483648) i32 @foo(
 
 ;--- a.ll
