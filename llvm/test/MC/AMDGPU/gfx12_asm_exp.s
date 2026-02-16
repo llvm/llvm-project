@@ -138,5 +138,10 @@ export prim v0, v0, v0, v0 nodone norow_en
 export prim v0, v0, v0, v0 norow_en
 // GFX12: export prim, v0, v0, v0, v0             ; encoding: [0x4f,0x01,0x00,0xf8,0x00,0x00,0x00,0x00]
 
+// Check format without comma between target export and first data
 export prim v0, v0, v0, v0 row_en
+// GFX12: export prim, v0, v0, v0, v0 row_en      ; encoding: [0x4f,0x21,0x00,0xf8,0x00,0x00,0x00,0x00]
+
+// Check format with comma between target export and first data
+export prim, v0, v0, v0, v0 row_en
 // GFX12: export prim, v0, v0, v0, v0 row_en      ; encoding: [0x4f,0x21,0x00,0xf8,0x00,0x00,0x00,0x00]
