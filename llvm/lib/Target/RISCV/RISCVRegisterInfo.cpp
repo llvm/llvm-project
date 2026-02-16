@@ -509,8 +509,11 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   assert(SPAdj == 0 && "Unexpected non-zero SPAdj value");
 
   MachineInstr &MI = *II;
-  MachineFunction &MF = *MI.getParent()->getParent();
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
+  const TargetInstrInfo *TII = ST.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
@@ -566,8 +569,36 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 
   if (Offset.getScalable() || Offset.getFixed()) {
-    Register DestReg;
-    if (MI.getOpcode() == RISCV::ADDI)
+    bool ScavengingFailed =
+        RS && RS->getRegsAvailable(&RISCV::GPRRegClass).none();
+    const TargetRegisterClass *FPR32 = &RISCV::FPR32RegClass;
+    const TargetRegisterClass *FPR64 = &RISCV::FPR64RegClass;
+    bool CanDoFPR64Move = ST.is64Bit() && ST.hasStdExtD() && RS &&
+                          RS->getRegsAvailable(FPR64).any();
+    bool CanDoFPR32Move = !ST.is64Bit() && ST.hasStdExtF() && RS &&
+                          RS->getRegsAvailable(FPR32).any();
+    bool Is64LoadStore =
+        (MI.getOpcode() == RISCV::LD || MI.getOpcode() == RISCV::SD);
+    bool Is32LoadStore =
+        (MI.getOpcode() == RISCV::LW || MI.getOpcode() == RISCV::SW);
+    bool DoFPR64Move = ScavengingFailed && CanDoFPR64Move && Is64LoadStore;
+    bool DoFPR32Move = ScavengingFailed && CanDoFPR32Move && Is32LoadStore;
+    Register DestReg, FPRReg;
+
+    // The register scavenger is unable to get a GPR but can get a FPR. We
+    // need to stash a GPR into a FPR so that we can free one up.
+    if (DoFPR64Move) {
+      // Pick a0 unless we are currently spilling/restoring it, if so pick a1
+      DestReg = MI.getOperand(0).getReg() == (RISCV::X10) ? (RISCV::X11)
+                                                          : (RISCV::X10);
+      FPRReg = MRI.createVirtualRegister(FPR64);
+      BuildMI(MBB, II, DL, TII->get(RISCV::FMV_D_X), FPRReg).addReg(DestReg);
+    } else if (DoFPR32Move) {
+      DestReg = MI.getOperand(0).getReg() == (RISCV::X10) ? (RISCV::X11)
+                                                          : (RISCV::X10);
+      FPRReg = MRI.createVirtualRegister(FPR32);
+      BuildMI(MBB, II, DL, TII->get(RISCV::FMV_W_X), FPRReg).addReg(DestReg);
+    } else if (MI.getOpcode() == RISCV::ADDI)
       DestReg = MI.getOperand(0).getReg();
     else
       DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
@@ -576,6 +607,17 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     MI.getOperand(FIOperandNum).ChangeToRegister(DestReg, /*IsDef*/false,
                                                  /*IsImp*/false,
                                                  /*IsKill*/true);
+    if (DoFPR64Move) {
+      MachineBasicBlock::iterator NextII = II;
+      ++NextII;
+      BuildMI(MBB, NextII, DL, TII->get(RISCV::FMV_X_D), DestReg)
+          .addReg(FPRReg);
+    } else if (DoFPR32Move) {
+      MachineBasicBlock::iterator NextII = II;
+      ++NextII;
+      BuildMI(MBB, NextII, DL, TII->get(RISCV::FMV_X_W), DestReg)
+          .addReg(FPRReg);
+    }
   } else {
     MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, /*IsDef*/false,
                                                  /*IsImp*/false,
