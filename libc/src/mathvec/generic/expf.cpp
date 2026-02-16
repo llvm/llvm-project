@@ -11,7 +11,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(cpp::simd<float>, expf, (cpp::simd<float> x)) {
+cpp::simd<float> expf (cpp::simd<float> x) {
   return mathvec::expf(x);
 }
 
