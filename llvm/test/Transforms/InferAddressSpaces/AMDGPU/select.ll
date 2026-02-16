@@ -55,7 +55,7 @@ define amdgpu_kernel void @store_select_mismatch_group_private_flat(i1 %c, ptr a
 @lds1 = internal addrspace(3) global i32 456, align 4
 
 ; CHECK-LABEL: @store_select_group_flat_null(
-; CHECK: %select = select i1 %c, ptr addrspace(3) %group.ptr.0, ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3))
+; CHECK: %select = select i1 %c, ptr addrspace(3) %group.ptr.0, ptr addrspace(3) null
 ; CHECK: store i32 -1, ptr addrspace(3) %select
 define amdgpu_kernel void @store_select_group_flat_null(i1 %c, ptr addrspace(3) %group.ptr.0) #0 {
   %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
@@ -65,7 +65,7 @@ define amdgpu_kernel void @store_select_group_flat_null(i1 %c, ptr addrspace(3) 
 }
 
 ; CHECK-LABEL: @store_select_group_flat_null_swap(
-; CHECK: %select = select i1 %c, ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), ptr addrspace(3) %group.ptr.0
+; CHECK: %select = select i1 %c, ptr addrspace(3) null, ptr addrspace(3) %group.ptr.0
 ; CHECK: store i32 -1, ptr addrspace(3) %select
 define amdgpu_kernel void @store_select_group_flat_null_swap(i1 %c, ptr addrspace(3) %group.ptr.0) #0 {
   %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
@@ -95,7 +95,7 @@ define amdgpu_kernel void @store_select_group_flat_poison_swap(i1 %c, ptr addrsp
 }
 
 ; CHECK-LABEL: @store_select_gep_group_flat_null(
-; CHECK: %select = select i1 %c, ptr addrspace(3) %group.ptr.0, ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3))
+; CHECK: %select = select i1 %c, ptr addrspace(3) %group.ptr.0, ptr addrspace(3) null
 ; CHECK: %gep = getelementptr i32, ptr addrspace(3) %select, i64 16
 ; CHECK: store i32 -1, ptr addrspace(3) %gep
 define amdgpu_kernel void @store_select_gep_group_flat_null(i1 %c, ptr addrspace(3) %group.ptr.0) #0 {
@@ -161,7 +161,7 @@ define amdgpu_kernel void @store_select_group_global_mismatch_flat_constexpr_swa
 }
 
 ; CHECK-LABEL: @store_select_group_global_mismatch_null_null(
-; CHECK: %select = select i1 %c, ptr addrspacecast (ptr addrspace(3) null to ptr), ptr addrspacecast (ptr addrspace(1) null to ptr)
+; CHECK: %select = select i1 %c, ptr null, ptr null
 ; CHECK: store i32 7, ptr %select
 define amdgpu_kernel void @store_select_group_global_mismatch_null_null(i1 %c) #0 {
   %select = select i1 %c, ptr addrspacecast (ptr addrspace(3) zeroinitializer to ptr), ptr addrspacecast (ptr addrspace(1) null to ptr)

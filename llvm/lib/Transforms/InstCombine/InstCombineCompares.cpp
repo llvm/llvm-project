@@ -6532,7 +6532,11 @@ Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
       if (PtrSrc->getType() == Op0Src->getType())
         NewOp1 = PtrToIntOp1->getOperand(0);
     } else if (auto *RHSC = dyn_cast<Constant>(ICmp.getOperand(1))) {
-      NewOp1 = ConstantExpr::getIntToPtr(RHSC, SrcTy);
+      // Use DL-aware folding so inttoptr(0) folds to ConstantPointerNull
+      // immediately (when null is zero for the AS), avoiding fixpoint issues.
+      NewOp1 = ConstantFoldCastOperand(Instruction::IntToPtr, RHSC, SrcTy, DL);
+      if (!NewOp1)
+        NewOp1 = ConstantExpr::getIntToPtr(RHSC, SrcTy);
     }
 
     if (NewOp1)

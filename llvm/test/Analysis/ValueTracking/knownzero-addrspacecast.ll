@@ -15,8 +15,8 @@ define i64 @test_shift(ptr %p) {
 }
 
 ; CHECK-LABEL: @test_null
-; A null pointer casted to another addr space may no longer have null value.
-; CHECK-NOT: ret i32 0
+; addrspacecast of semantic null is semantic null; ptrtoint(null) is 0 when DL says so.
+; CHECK: ret i32 0
 define i32 @test_null() {
   %g = addrspacecast ptr null to ptr addrspace(3)
   %i = ptrtoint ptr addrspace(3) %g to i32

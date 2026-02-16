@@ -1813,6 +1813,15 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
   }
 
   if (const auto *CE = dyn_cast<ConstantExpr>(CV)) {
+    // Print inttoptr(zero to ptr) as zeroinitializer for scalar pointers.
+    // This is the canonical representation for an all-zero-bits pointer,
+    // distinct from ConstantPointerNull (null) which is the semantic null.
+    if (CE->getOpcode() == Instruction::IntToPtr &&
+        CE->getOperand(0)->isNullValue()) {
+      Out << "zeroinitializer";
+      return;
+    }
+
     // Use the same shorthand for splat vector (i.e. "splat(Ty val)") as is
     // permitted on IR input to reduce the output changes when enabling
     // UseConstant{Int,FP}ForScalableSplat.

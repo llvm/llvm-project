@@ -1592,6 +1592,13 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
                              : DestTy->getPointerAddressSpace();
       if (DL.isNullPointerAllZeroes(AS))
         return Constant::getNullValue(DestTy, &DL);
+      // Non-zero null: ptrtoint(ConstantPointerNull) folds to the actual
+      // null integer value for this address space.
+      if (isa<ConstantPointerNull>(C)) {
+        const APInt &NullVal = DL.getNullPtrValue(AS);
+        return ConstantInt::get(
+            DestTy, NullVal.zextOrTrunc(DestTy->getIntegerBitWidth()));
+      }
     }
   }
 

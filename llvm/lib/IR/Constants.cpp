@@ -392,7 +392,65 @@ bool Constant::containsConstantExpression() const {
   return false;
 }
 
+/// Check whether this type (recursively) contains any pointer sub-types.
+static bool containsPointerType(Type *Ty) {
+  if (Ty->isPointerTy())
+    return true;
+  if (auto *STy = dyn_cast<StructType>(Ty))
+    return llvm::any_of(STy->elements(), containsPointerType);
+  if (auto *ATy = dyn_cast<ArrayType>(Ty))
+    return containsPointerType(ATy->getElementType());
+  if (auto *VTy = dyn_cast<VectorType>(Ty))
+    return containsPointerType(VTy->getElementType());
+  return false;
+}
+
+/// Check whether all pointer sub-types in this type have an all-zero-bits null
+/// representation, meaning getZeroValue and getNullValue are equivalent.
+static bool hasAllZeroNullPointers(Type *Ty, const DataLayout &DL) {
+  if (Ty->isPointerTy())
+    return DL.isNullPointerAllZeroes(Ty->getPointerAddressSpace());
+  if (auto *STy = dyn_cast<StructType>(Ty))
+    return llvm::all_of(STy->elements(),
+                        [&](Type *E) { return hasAllZeroNullPointers(E, DL); });
+  if (auto *ATy = dyn_cast<ArrayType>(Ty))
+    return hasAllZeroNullPointers(ATy->getElementType(), DL);
+  if (auto *VTy = dyn_cast<VectorType>(Ty))
+    return hasAllZeroNullPointers(VTy->getElementType(), DL);
+  return true;
+}
+
 Constant *Constant::getNullValue(Type *Ty, const DataLayout *DL) {
+  // For pointer types, always return the semantic null pointer.
+  if (Ty->isPointerTy())
+    return ConstantPointerNull::get(cast<PointerType>(Ty));
+
+  // For aggregates/vectors containing pointers, we must ensure pointer elements
+  // get the semantic null (ConstantPointerNull). When DL is available and all
+  // pointer elements have all-zero-bits null, getZeroValue (CAZ) is equivalent
+  // and more efficient. Otherwise, construct element-by-element.
+  if (containsPointerType(Ty)) {
+    if (DL && hasAllZeroNullPointers(Ty, *DL))
+      return getZeroValue(Ty);
+
+    if (auto *STy = dyn_cast<StructType>(Ty)) {
+      SmallVector<Constant *, 8> Elts;
+      for (Type *ElemTy : STy->elements())
+        Elts.push_back(getNullValue(ElemTy, DL));
+      return ConstantStruct::get(STy, Elts);
+    }
+    if (auto *ATy = dyn_cast<ArrayType>(Ty)) {
+      SmallVector<Constant *> Elts(ATy->getNumElements(),
+                                   getNullValue(ATy->getElementType(), DL));
+      return ConstantArray::get(ATy, Elts);
+    }
+    if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+      return ConstantVector::getSplat(
+          VTy->getElementCount(), getNullValue(VTy->getElementType(), DL), DL);
+    }
+  }
+
+  // For types without pointers, null == zero.
   return getZeroValue(Ty);
 }
 
@@ -409,8 +467,10 @@ Constant *Constant::getZeroValue(Type *Ty) {
   case Type::PPC_FP128TyID:
     return ConstantFP::get(Ty->getContext(),
                            APFloat::getZero(Ty->getFltSemantics()));
-  case Type::PointerTyID:
-    return ConstantPointerNull::get(cast<PointerType>(Ty));
+  case Type::PointerTyID: {
+    auto *Zero = ConstantInt::get(Type::getInt8Ty(Ty->getContext()), 0);
+    return ConstantExpr::getIntToPtr(Zero, Ty);
+  }
   case Type::StructTyID:
   case Type::ArrayTyID:
   case Type::FixedVectorTyID:
@@ -1540,6 +1600,10 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V,
 
   Type *VTy = VectorType::get(V->getType(), EC);
 
+  // Only map to CAZ when the value is known to be all-zero-bits. Do NOT use
+  // isNullValue() here: ConstantPointerNull may have non-zero bit pattern on
+  // some targets, and mapping it to CAZ would lose the semantic null meaning
+  // (CAZ elements extract via getZeroValue, not getNullValue).
   if (V->isZeroValue(DL))
     return ConstantAggregateZero::get(VTy);
   if (isa<PoisonValue>(V))

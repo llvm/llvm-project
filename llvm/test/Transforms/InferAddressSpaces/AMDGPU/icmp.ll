@@ -62,7 +62,7 @@ define i1 @icmp_flat_to_group_cmp(ptr %flat.ptr.0, ptr %flat.ptr.1) #0 {
 ; constant cast if this is OK to change if 0 is a valid pointer.
 
 ; CHECK-LABEL: @icmp_group_flat_cmp_null(
-; CHECK: %cmp = icmp eq ptr addrspace(3) %group.ptr.0, addrspacecast (ptr null to ptr addrspace(3))
+; CHECK: %cmp = icmp eq ptr addrspace(3) %group.ptr.0, null
 define i1 @icmp_group_flat_cmp_null(ptr addrspace(3) %group.ptr.0) #0 {
   %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
   %cmp = icmp eq ptr %cast0, null
@@ -78,8 +78,7 @@ define i1 @icmp_group_flat_cmp_constant_inttoptr(ptr addrspace(3) %group.ptr.0) 
 }
 
 ; CHECK-LABEL: @icmp_mismatch_flat_group_private_cmp_null(
-; CHECK: %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
-; CHECK: %cmp = icmp eq ptr %cast0, addrspacecast (ptr addrspace(5) null to ptr)
+; CHECK: %cmp = icmp eq ptr addrspace(3) %group.ptr.0, null
 define i1 @icmp_mismatch_flat_group_private_cmp_null(ptr addrspace(3) %group.ptr.0) #0 {
   %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
   %cmp = icmp eq ptr %cast0, addrspacecast (ptr addrspace(5) zeroinitializer to ptr)
@@ -131,8 +130,7 @@ define i1 @icmp_group_flat_cmp_poison(ptr addrspace(3) %group.ptr.0) #0 {
 
 ; Test non-canonical orders
 ; CHECK-LABEL: @icmp_mismatch_flat_group_private_cmp_null_swap(
-; CHECK: %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
-; CHECK: %cmp = icmp eq ptr addrspacecast (ptr addrspace(5) null to ptr), %cast0
+; CHECK: %cmp = icmp eq ptr addrspace(3) null, %group.ptr.0
 define i1 @icmp_mismatch_flat_group_private_cmp_null_swap(ptr addrspace(3) %group.ptr.0) #0 {
   %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
   %cmp = icmp eq ptr addrspacecast (ptr addrspace(5) zeroinitializer to ptr), %cast0

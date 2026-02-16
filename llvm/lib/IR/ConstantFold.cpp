@@ -146,19 +146,37 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     return UndefValue::get(DestTy);
   }
 
-  if (V->isNullValue() && !DestTy->isX86_AMXTy() &&
-      opc != Instruction::AddrSpaceCast) {
-    // If the source or destination involves pointers and DL tells us that
-    // null is not zero for the relevant address space, we cannot fold here.
-    // Defer to the DL-aware folding in Analysis/ConstantFolding.cpp.
-    if (DL) {
-      bool SrcIsPtr = V->getType()->isPtrOrPtrVectorTy();
-      bool DstIsPtr = DestTy->isPtrOrPtrVectorTy();
-      if (SrcIsPtr || DstIsPtr) {
-        unsigned AS = SrcIsPtr ? V->getType()->getPointerAddressSpace()
-                               : DestTy->getPointerAddressSpace();
-        if (!DL->isNullPointerAllZeroes(AS))
+  if (V->isNullValue() && !DestTy->isX86_AMXTy()) {
+    bool SrcIsPtr = V->getType()->isPtrOrPtrVectorTy();
+    bool DstIsPtr = DestTy->isPtrOrPtrVectorTy();
+    if (SrcIsPtr || DstIsPtr) {
+      // addrspacecast of semantic null -> semantic null in target AS.
+      // This is always valid regardless of bit patterns.
+      if (opc == Instruction::AddrSpaceCast)
+        return Constant::getNullValue(DestTy);
+      // For other pointer casts (inttoptr, ptrtoint), the bit representation
+      // of null matters. Without DataLayout we cannot determine whether null
+      // is zero for this address space. Defer to the DL-aware fold in
+      // ConstantFoldCastOperand.
+      if (!DL)
+        return nullptr;
+      unsigned AS = SrcIsPtr ? V->getType()->getPointerAddressSpace()
+                             : DestTy->getPointerAddressSpace();
+      if (!DL->isNullPointerAllZeroes(AS)) {
+        // ptrtoint(ConstantPointerNull): fold to the null pointer's actual
+        // integer bit pattern (non-zero for this AS).
+        if (isa<ConstantPointerNull>(V)) {
+          const APInt &NullVal = DL->getNullPtrValue(AS);
+          return ConstantInt::get(
+              DestTy, NullVal.zextOrTrunc(DestTy->getIntegerBitWidth()));
+        }
+        // inttoptr of a zero-bits value (e.g., ConstantInt(0) or CAZ) to a
+        // non-zero-null AS: the all-zero bit pattern is not the null pointer,
+        // so we cannot return ConstantPointerNull. Defer.
+        if (DstIsPtr)
           return nullptr;
+        // ptrtoint of a zero-bits value (e.g., CAZ of a pointer vector):
+        // all-zero bits map to integer zero. Fall through to getNullValue.
       }
     }
     return Constant::getNullValue(DestTy, DL);
@@ -482,8 +500,13 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
         ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, 0));
 
     // For scalable vectors, make sure this doesn't fold back into a
-    // shufflevector.
-    if (!MaskEltCount.isScalable() || Elt->isNullValue() || isa<UndefValue>(Elt))
+    // shufflevector. ConstantPointerNull is excluded because getSplat may
+    // not be able to represent it as CAZ (null may have non-zero bits),
+    // which would cause infinite recursion: getSplat -> getShuffleVector
+    // -> ConstantFoldShuffleVectorInstruction -> getSplat.
+    if (!MaskEltCount.isScalable() ||
+        (Elt->isNullValue() && !isa<ConstantPointerNull>(Elt)) ||
+        isa<UndefValue>(Elt))
       return ConstantVector::getSplat(MaskEltCount, Elt);
   }
 
