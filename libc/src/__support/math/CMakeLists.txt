@@ -1935,7 +1935,7 @@ add_header_library(
     libc.hdr.fenv_macros
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.except_value_utils.h
+    libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add

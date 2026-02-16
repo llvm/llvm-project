@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_TANPIF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_TANPIF16_H
+
 #include "include/llvm-libc-macros/float16-macros.h"
+
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
 #include "hdr/errno_macros.h"
@@ -24,12 +26,23 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-namespace tanpif16_internal {
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE_VAR constexpr size_t N_EXCEPTS = 21;
+LIBC_INLINE float16 tanpif16(float16 x) {
+  using namespace sincosf16_internal;
+  using FPBits = typename fputil::FPBits<float16>;
+  FPBits xbits(x);
 
-LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_EXCEPTS>
-    TANPIF16_EXCEPTS{{
+  uint16_t x_u = xbits.uintval();
+  uint16_t x_abs = x_u & 0x7fff;
+
+  // Handle exceptional values
+  if (LIBC_UNLIKELY(x_abs <= 0x4335)) {
+    if (LIBC_UNLIKELY(x_abs == 0U))
+      return x;
+
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+    constexpr size_t N_EXCEPTS = 21;
+
+    constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANPIF16_EXCEPTS{{
         // (input, RZ output, RU offset, RD offset, RN offset)
         {0x07f2, 0x0e3d, 1, 0, 0}, {0x086a, 0x0eee, 1, 0, 1},
         {0x08db, 0x0fa0, 1, 0, 0}, {0x094c, 0x1029, 1, 0, 0},
@@ -43,24 +56,7 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_EXCEPTS>
         {0x4135, 0xc1ee, 0, 1, 0}, {0x42cb, 0x41ee, 1, 0, 0},
         {0x4335, 0xc1ee, 0, 1, 0},
     }};
-#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-} // namespace tanpif16_internal
 
-LIBC_INLINE constexpr float16 tanpif16(float16 x) {
-  using namespace sincosf16_internal;
-  using namespace tanpif16_internal;
-  using FPBits = typename fputil::FPBits<float16>;
-  FPBits xbits(x);
-
-  uint16_t x_u = xbits.uintval();
-  uint16_t x_abs = x_u & 0x7fff;
-
-  // Handle exceptional values
-  if (LIBC_UNLIKELY(x_abs <= 0x4335)) {
-    if (LIBC_UNLIKELY(x_abs == 0U))
-      return x;
-
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     bool x_sign = x_u >> 15;
 
     if (auto r = TANPIF16_EXCEPTS.lookup_odd(x_abs, x_sign);
