@@ -1,0 +1,111 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --sframe=.sframe_eof_address --sframe %t 2>&1 | \
+# RUN:   FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2MSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .sframe
+    Type:  SHT_GNU_SFRAME
+    Flags: [ SHF_ALLOC ]
+    ContentArray: [
+      0xde, 0xe2, 0x02, 0x05,  # Preamble (magic, version, flags)
+      # Header:
+      0x04, 0x00, 0x00, 0x00,  # ABI, Fixed FP offset, Fixed RA Offset, AUX header length
+      0x00, 0x00, 0x00, 0x01,  # Number of FDEs
+      0x00, 0x00, 0x00, 0x04,  # Number of FREs
+      0x00, 0x00, 0x00, 0x00,  # FRE length
+      0x00, 0x00, 0x00, 0x00,  # FDE offset
+      0x00, 0x00, 0x00, 0x00,  # FRE offset
+
+      # FDE:
+      0x00, 0xde, 0x00, 0x00,  # Start Address
+      0x00, 0x00, 0x00, 0xbe,  # Size
+      0x00, 0x00, 0x00, 0x00,  # Start FRE Offset
+      0x00, 0x00, 0x00, 0x05,  # Number of FREs
+      0x02, 0x00, 0x00, 0x00,  # Info, RepSize, Padding2
+
+      # FRE[0]: Zero offsets
+      0x00, 0x00, 0x00, 0x00,  # Start Address
+      0x00,                    # Info
+
+      # FRE[1]: One offset
+      0x00, 0x00, 0x00, 0x01,  # Start Address
+      0x02, 0x10,              # Info, Offset[0]
+
+      # FRE[2]: Two offsets
+      0x00, 0x00, 0x00, 0x02,  # Start Address
+      0x04, 0x10, 0x21,        # Info, Offset[0-1]
+
+      # FRE[3]: Three offsets, second offset empty
+      0x00, 0x00, 0x00, 0x03,  # Start Address
+      0x07, 0x10, 0x00, 0x30,  # Info, Offset[0-2]
+
+      # FRE[4]: Four offsets
+      0x00, 0x00, 0x00, 0x04,  # Start Address
+      0x08,                    # Info
+      0x10, 0x20, 0x31, 0x40,  # Offset[0-3]
+
+    ]
+# CHECK-LABEL:SFrame section '.sframe' {
+#       CHECK:    ABI: S390xEndianBig (0x4)
+#       CHECK:    FuncDescEntry [0] {
+#  CHECK-NEXT:      PC: 0xDE001C
+#       CHECK:      Info {
+#  CHECK-NEXT:        FRE Type: Addr4 (0x2)
+#  CHECK-NEXT:        FDE Type: PCInc (0x0)
+#       CHECK:      FREs [
+#  CHECK-NEXT:        Frame Row Entry {
+#  CHECK-NEXT:          Start Address: 0xDE001C
+#  CHECK-NEXT:          Return Address Signed: No
+#  CHECK-NEXT:          Offset Size: B1 (0x0)
+#  CHECK-NEXT:          Base Register: FP (0x0)
+#  CHECK-NEXT:        }
+#  CHECK-NEXT:        Frame Row Entry {
+#  CHECK-NEXT:          Start Address: 0xDE001D
+#  CHECK-NEXT:          Return Address Signed: No
+#  CHECK-NEXT:          Offset Size: B1 (0x0)
+#  CHECK-NEXT:          Base Register: FP (0x0)
+#  CHECK-NEXT:          CFA Offset: 288
+#  CHECK-NEXT:        }
+#  CHECK-NEXT:        Frame Row Entry {
+#  CHECK-NEXT:          Start Address: 0xDE001E
+#  CHECK-NEXT:          Return Address Signed: No
+#  CHECK-NEXT:          Offset Size: B1 (0x0)
+#  CHECK-NEXT:          Base Register: FP (0x0)
+#  CHECK-NEXT:          CFA Offset: 288
+#  CHECK-NEXT:          RA Offset {
+#  CHECK-NEXT:            Kind: Register
+#  CHECK-NEXT:            Value: 16
+#  CHECK-NEXT:          }
+#  CHECK-NEXT:        }
+#  CHECK-NEXT:        Frame Row Entry {
+#  CHECK-NEXT:          Start Address: 0xDE001F
+#  CHECK-NEXT:          Return Address Signed: No
+#  CHECK-NEXT:          Offset Size: B1 (0x0)
+#  CHECK-NEXT:          Base Register: SP (0x1)
+#  CHECK-NEXT:          CFA Offset: 288
+#  CHECK-NEXT:          FP Offset {
+#  CHECK-NEXT:            Kind: Stack Slot
+#  CHECK-NEXT:            Value: 48
+#  CHECK-NEXT:          }
+#  CHECK-NEXT:        }
+#  CHECK-NEXT:        Frame Row Entry {
+#  CHECK-NEXT:          Start Address: 0xDE0020
+#  CHECK-NEXT:          Return Address Signed: No
+#  CHECK-NEXT:          Offset Size: B1 (0x0)
+#  CHECK-NEXT:          Base Register: FP (0x0)
+#  CHECK-NEXT:          CFA Offset: 288
+#  CHECK-NEXT:          RA Offset {
+#  CHECK-NEXT:            Kind: Stack Slot
+#  CHECK-NEXT:            Value: 32
+#  CHECK-NEXT:          }
+#  CHECK-NEXT:          FP Offset {
+#  CHECK-NEXT:            Kind: Register
+#  CHECK-NEXT:            Value: 24
+#  CHECK-NEXT:          }
+#  CHECK-NEXT:          Extra Offsets: [64]
+#  CHECK-NEXT:        }
