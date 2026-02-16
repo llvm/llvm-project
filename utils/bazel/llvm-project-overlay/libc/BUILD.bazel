@@ -3956,6 +3956,63 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_nextup",
+    hdrs = ["src/__support/math/nextup.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextupbf16",
+    hdrs = ["src/__support/math/nextupbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextupf",
+    hdrs = ["src/__support/math/nextupf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextupf128",
+    hdrs = ["src/__support/math/nextupf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextupf16",
+    hdrs = ["src/__support/math/nextupf16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextupl",
+    hdrs = ["src/__support/math/nextupl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ldexpf128",
     hdrs = ["src/__support/math/ldexpf128.h"],
     deps = [
@@ -6854,18 +6911,46 @@ libc_math_function(
 
 libc_math_function(name = "nexttowardl")
 
-libc_math_function(name = "nextup")
+libc_math_function(
+    name = "nextup",
+    additional_deps = [
+        ":__support_math_nextup",
+    ],
+)
 
-libc_math_function(name = "nextupf")
+libc_math_function(
+    name = "nextupf",
+    additional_deps = [
+        ":__support_math_nextupf",
+    ],
+)
 
-libc_math_function(name = "nextupl")
+libc_math_function(
+    name = "nextupl",
+    additional_deps = [
+        ":__support_math_nextupl",
+    ],
+)
 
 libc_math_function(
     name = "nextupf128",
+    additional_deps = [
+        ":__support_math_nextupf128",
+    ],
 )
 
 libc_math_function(
     name = "nextupf16",
+    additional_deps = [
+        ":__support_math_nextupf16",
+    ],
+)
+
+libc_math_function(
+    name = "nextupbf16",
+    additional_deps = [
+        ":__support_math_nextupbf16",
+    ],
 )
 
 libc_math_function(
