@@ -1211,6 +1211,7 @@ public:
     // during unrolling.
     ExtractPenultimateElement,
     LogicalAnd, // Non-poison propagating logical And.
+    LogicalOr,  // Non-poison propagating logical Or.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
@@ -1519,6 +1520,9 @@ public:
 
   /// Returns the incoming block with index \p Idx.
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
+
+  /// Returns the incoming value for \p VPBB. \p VPBB must be an incoming block.
+  VPValue *getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
 
   /// Returns the number of incoming values, also number of incoming blocks.
   virtual unsigned getNumIncoming() const {
@@ -2064,9 +2068,10 @@ protected:
 
 /// A recipe to compute a pointer to the last element of each part of a widened
 /// memory access for widened memory accesses of SourceElementTy. Used for
-/// VPWidenMemoryRecipes or VPInterleaveRecipes that are reversed.
-class VPVectorEndPointerRecipe : public VPRecipeWithIRFlags,
-                                 public VPUnrollPartAccessor<2> {
+/// VPWidenMemoryRecipes or VPInterleaveRecipes that are reversed. An extra
+/// Offset operand is added by convertToConcreteRecipes when UF = 1, and by the
+/// unroller otherwise.
+class VPVectorEndPointerRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
   /// The constant stride of the pointer computed by this recipe, expressed in
@@ -2085,8 +2090,16 @@ public:
   VP_CLASSOF_IMPL(VPRecipeBase::VPVectorEndPointerSC)
 
   Type *getSourceElementType() const { return SourceElementTy; }
-  VPValue *getVFValue() { return getOperand(1); }
-  const VPValue *getVFValue() const { return getOperand(1); }
+  int64_t getStride() const { return Stride; }
+  VPValue *getPointer() const { return getOperand(0); }
+  VPValue *getVFValue() const { return getOperand(1); }
+  VPValue *getOffset() const {
+    return getNumOperands() == 3 ? getOperand(2) : nullptr;
+  }
+
+  /// Adds the offset operand to the recipe.
+  /// Offset = Stride * (VF - 1) + Part * Stride * VF.
+  void materializeOffset(unsigned Part = 0);
 
   void execute(VPTransformState &State) override;
 
@@ -2112,9 +2125,12 @@ public:
   }
 
   VPVectorEndPointerRecipe *clone() override {
-    return new VPVectorEndPointerRecipe(getOperand(0), getVFValue(),
-                                        getSourceElementType(), Stride,
-                                        getGEPNoWrapFlags(), getDebugLoc());
+    auto *VEPR = new VPVectorEndPointerRecipe(
+        getPointer(), getVFValue(), getSourceElementType(), getStride(),
+        getGEPNoWrapFlags(), getDebugLoc());
+    if (auto *Offset = getOffset())
+      VEPR->addOperand(Offset);
+    return VEPR;
   }
 
 protected:
@@ -4515,6 +4531,9 @@ class VPlan {
   /// Represents the vectorization factor of the loop.
   VPSymbolicValue VF;
 
+  /// Represents the unroll factor of the loop.
+  VPSymbolicValue UF;
+
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPSymbolicValue VFxUF;
 
@@ -4654,6 +4673,9 @@ public:
   VPValue &getVF() { return VF; };
   const VPValue &getVF() const { return VF; };
 
+  /// Returns the UF of the vector loop region.
+  VPValue &getUF() { return UF; };
+
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
 
@@ -4667,6 +4689,12 @@ public:
     assert(hasVF(VF) && "Cannot set VF not already in plan");
     VFs.clear();
     VFs.insert(VF);
+  }
+
+  /// Remove \p VF from the plan.
+  void removeVF(ElementCount VF) {
+    assert(hasVF(VF) && "tried to remove VF not present in plan");
+    VFs.remove(VF);
   }
 
   bool hasVF(ElementCount VF) const { return VFs.count(VF); }
@@ -4689,7 +4717,8 @@ public:
 
   bool hasUF(unsigned UF) const { return UFs.empty() || UFs.contains(UF); }
 
-  unsigned getUF() const {
+  /// Returns the concrete UF of the plan, after unrolling.
+  unsigned getConcreteUF() const {
     assert(UFs.size() == 1 && "Expected a single UF");
     return UFs[0];
   }

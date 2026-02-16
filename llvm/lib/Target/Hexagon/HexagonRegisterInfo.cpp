@@ -52,7 +52,6 @@ HexagonRegisterInfo::HexagonRegisterInfo(unsigned HwMode)
     : HexagonGenRegisterInfo(Hexagon::R31, 0/*DwarfFlavor*/, 0/*EHFlavor*/,
                              0/*PC*/, HwMode) {}
 
-
 bool HexagonRegisterInfo::isEHReturnCalleeSaveReg(Register R) const {
   return R == Hexagon::R0 || R == Hexagon::R1 || R == Hexagon::R2 ||
          R == Hexagon::R3 || R == Hexagon::D0 || R == Hexagon::D1;

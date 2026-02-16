@@ -531,6 +531,7 @@ mlir_c_api_cc_library(
         ":config",
         ":FuncTransformsPassIncGen",
         ":Rewrite",
+        ":SideEffectInterfaces",
         "//llvm:Support",
     ],
     includes = ["include"],
@@ -854,11 +855,20 @@ mlir_c_api_cc_library(
 mlir_c_api_cc_library(
     name = "CAPITransformDialect",
     srcs = ["lib/CAPI/Dialect/Transform.cpp"],
-    hdrs = ["include/mlir-c/Dialect/Transform.h"],
+    hdrs = [
+        "include/mlir-c/Dialect/Transform.h",
+        "include/mlir/CAPI/Dialect/Transform.h",
+    ],
     capi_deps = [":CAPIIR"],
-    header_deps = [":TransformDialectTransformsIncGen"],
+    header_deps = [
+        ":TransformDialectInterfaces",
+        ":TransformDialectTransformsIncGen",
+    ],
     includes = ["include"],
-    deps = [":TransformDialect"],
+    deps = [
+        ":TransformDialect",
+        "//llvm:Support",
+    ],
 )
 
 mlir_c_api_cc_library(
@@ -1115,6 +1125,15 @@ filegroup(
     srcs = glob([
         "lib/Bindings/Python/*.h",
     ]),
+)
+
+cc_library(
+    name = "MLIRBindingsPythonLibHeaders",
+    includes = ["lib/Bindings/Python"],
+    textual_hdrs = [":MLIRBindingsPythonCoreHeaders"],
+    deps = [
+        ":MLIRBindingsPythonNanobindHeaders",
+    ],
 )
 
 cc_library(
@@ -4533,7 +4552,6 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DataLayoutInterfacesIncGen",
-        ":DialectFoldInterfaceIncGen",
         ":IR",
         "//llvm:Support",
     ],
@@ -7897,6 +7915,7 @@ gentbl_cc_library(
     tbl_outs = {
         "include/mlir/Interfaces/DataLayoutAttrInterface.h.inc": ["-gen-attr-interface-decls"],
         "include/mlir/Interfaces/DataLayoutAttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
+        "include/mlir/Interfaces/DataLayoutDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
         "include/mlir/Interfaces/DataLayoutOpInterface.h.inc": ["-gen-op-interface-decls"],
         "include/mlir/Interfaces/DataLayoutOpInterface.cpp.inc": ["-gen-op-interface-defs"],
         "include/mlir/Interfaces/DataLayoutTypeInterface.h.inc": ["-gen-type-interface-decls"],
@@ -12183,6 +12202,7 @@ cc_library(
     name = "TransformDialectInterfaces",
     srcs = glob(["lib/Dialect/Transform/Interfaces/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/Interfaces/*.h"]),
+    includes = ["include"],
     deps = [
         ":CastInterfaces",
         ":IR",
@@ -12202,6 +12222,7 @@ cc_library(
     name = "TransformDialect",
     srcs = glob(["lib/Dialect/Transform/IR/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/IR/*.h"]),
+    includes = ["include"],
     deps = [
         ":Analysis",
         ":BytecodeOpInterface",
