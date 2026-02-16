@@ -161,7 +161,7 @@ void FactsGenerator::VisitDeclRefExpr(const DeclRefExpr *DRE) {
   // GLValues (like EnumConstants).
   if (DRE->getFoundDecl()->isFunctionOrFunctionTemplate() || !DRE->isGLValue())
     return;
-  handleUse(DRE);
+  // handleUse(DRE);
   // For all declarations with storage (non-references), we issue a loan
   // representing the borrow of the variable's storage itself.
   //
@@ -253,14 +253,15 @@ void FactsGenerator::VisitCXXNullPtrLiteralExpr(
 
 void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
   OriginList *Dest = getOriginsList(*ICE);
-  if (!Dest)
-    return;
+  // if (!Dest)
+  //   return;
   const Expr *SubExpr = ICE->getSubExpr();
   OriginList *Src = getOriginsList(*SubExpr);
 
   switch (ICE->getCastKind()) {
   case CK_LValueToRValue:
     // TODO: Decide what to do for x-values here.
+    handleUse(SubExpr);
     if (!SubExpr->isLValue())
       return;
 
@@ -688,9 +689,9 @@ void FactsGenerator::handleUse(const Expr *E) {
   // For DeclRefExpr: Remove the outer layer of origin which borrows from the
   // decl directly (e.g., when this is not a reference). This is a use of the
   // underlying decl.
-  if (auto *DRE = dyn_cast<DeclRefExpr>(E);
-      DRE && !DRE->getDecl()->getType()->isReferenceType())
-    List = getRValueOrigins(DRE, List);
+  // if (auto *DRE = dyn_cast<DeclRefExpr>(E);
+  //     DRE && !DRE->getDecl()->getType()->isReferenceType())
+  //   List = getRValueOrigins(DRE, List);
   // Skip if there is no inner origin (e.g., when it is not a pointer type).
   if (!List)
     return;

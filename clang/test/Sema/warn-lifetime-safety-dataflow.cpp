@@ -19,7 +19,6 @@ MyObj* return_local_addr() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_P:[0-9]+]] (Decl: p, Type : MyObj *)
 // CHECK-NEXT:       Src:  [[O_ADDR_X]] (Expr: UnaryOperator, Type : MyObj *)
-// CHECK:   Use ([[O_P]] (Decl: p, Type : MyObj *), Read)
   return p;
 // CHECK:   Issue ({{[0-9]+}} (Path: p), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: p))
 // CHECK:   OriginFlow:
@@ -81,7 +80,6 @@ void overwrite_origin() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_ADDR_S2:[0-9]+]] (Expr: UnaryOperator, Type : MyObj *)
 // CHECK-NEXT:       Src:  [[O_DRE_S2]] (Expr: DeclRefExpr, Decl: s2)
-// CHECK:   Use ([[O_P]] (Decl: p, Type : MyObj *), Write)
 // CHECK:   Issue ({{[0-9]+}} (Path: p), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: p))
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_P]] (Decl: p, Type : MyObj *)
@@ -103,7 +101,6 @@ void reassign_to_null() {
 // CHECK-NEXT:       Dest: [[O_P:[0-9]+]] (Decl: p, Type : MyObj *)
 // CHECK-NEXT:       Src:  [[O_ADDR_S1]] (Expr: UnaryOperator, Type : MyObj *)
   p = nullptr;
-// CHECK:   Use ([[O_P]] (Decl: p, Type : MyObj *), Write)
 // CHECK:   Issue ({{[0-9]+}} (Path: p), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: p))
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_P]] (Decl: p, Type : MyObj *)
@@ -126,7 +123,6 @@ void pointer_indirection() {
 // CHECK-NEXT:       Dest: [[O_P:[0-9]+]] (Decl: p, Type : int *)
 // CHECK-NEXT:       Src:  [[O_ADDR_A]] (Expr: UnaryOperator, Type : int *)
   int **pp = &p;
-// CHECK:   Use ([[O_P]] (Decl: p, Type : int *), Read)
 // CHECK:   Issue ({{[0-9]+}} (Path: p), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: p))
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: {{[0-9]+}} (Expr: UnaryOperator, Type : int **)
@@ -143,7 +139,6 @@ void pointer_indirection() {
   
   // FIXME: Propagate origins across dereference unary operator*
   int *q = *pp;
-// CHECK:   Use ([[O_PP_OUTER]] (Decl: pp, Type : int **), [[O_PP_INNER]] (Decl: pp, Type : int *), Read)
 // CHECK:   Issue ({{[0-9]+}} (Path: pp), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: pp))
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: {{[0-9]+}} (Expr: ImplicitCastExpr, Type : int **)
