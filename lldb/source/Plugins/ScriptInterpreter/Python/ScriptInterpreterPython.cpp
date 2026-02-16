@@ -91,7 +91,7 @@ namespace {
 // save off initial state at the beginning, and restore it at the end
 struct InitializePythonRAII {
 public:
-  InitializePythonRAII() {
+  void DoInitialize() {
     // The table of built-in modules can only be extended before Python is
     // initialized.
     if (!Py_IsInitialized()) {
@@ -3039,6 +3039,7 @@ void ScriptInterpreterPythonImpl::Initialize() {
   // restoring various other pieces of state that can get mucked with during
   // initialization.
   InitializePythonRAII initialize_guard;
+  initialize_guard.DoInitialize();
 
   LLDBSwigPyInit();
 
