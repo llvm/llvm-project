@@ -24,7 +24,7 @@ class DeclContext;
 
 /// Mapped value in the address map is the offset to apply to the
 /// linked address.
-using RangesTy = AddressRangesMap;
+using RangesTy = AddressRangesMap<int64_t>;
 
 // This structure keeps patch for the attribute and, optionally,
 // the value of relocation which should be applied. Currently,

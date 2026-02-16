@@ -172,7 +172,7 @@ TEST(AddressRangeTest, TestRangesRandom) {
 }
 
 TEST(AddressRangeTest, TestRangesMap) {
-  AddressRangesMap Ranges;
+  AddressRangesMap<int64_t> Ranges;
 
   EXPECT_EQ(Ranges.size(), 0u);
   EXPECT_TRUE(Ranges.empty());
@@ -389,7 +389,7 @@ TEST(AddressRangeTest, TestRangesMap) {
 }
 
 TEST(AddressRangeTest, TestRangesMapRandom) {
-  AddressRangesMap Ranges;
+  AddressRangesMap<int64_t> Ranges;
   size_t NumElements = 100;
 
   std::srand(std::time(nullptr));
