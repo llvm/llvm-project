@@ -353,7 +353,7 @@ public:
   void splice_after(iterator Pos, MatcherList &X) {
     assert(Size == 0 && "Should not modify list once size is set");
     if (!X.empty()) {
-      if (Pos->Next != nullptr) {
+      if (Pos.Pointer->Next != nullptr) {
         auto LM1 = X.before_begin();
         while (LM1.Pointer->Next != nullptr)
           ++LM1;
