@@ -26,12 +26,6 @@ tablegen(LLVM X86GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
 add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
-  GISel/X86CallLowering.cpp
-  GISel/X86InstructionSelector.cpp
-  GISel/X86LegalizerInfo.cpp
-  GISel/X86PostLegalizerCombiner.cpp
-  GISel/X86PreLegalizerCombiner.cpp
-  GISel/X86RegisterBankInfo.cpp
   X86ArgumentStackSlotRebase.cpp
   X86AsmPrinter.cpp
   X86AvoidStoreForwardingBlocks.cpp
@@ -95,6 +89,12 @@ set(sources
   X86TileConfig.cpp
   X86WinEHState.cpp
   X86WinEHUnwindV2.cpp
+  GISel/X86CallLowering.cpp
+  GISel/X86InstructionSelector.cpp
+  GISel/X86LegalizerInfo.cpp
+  GISel/X86PostLegalizerCombiner.cpp
+  GISel/X86PreLegalizerCombiner.cpp
+  GISel/X86RegisterBankInfo.cpp
   )
 
 add_llvm_target(X86CodeGen ${sources}
