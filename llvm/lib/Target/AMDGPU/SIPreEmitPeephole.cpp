@@ -282,7 +282,6 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   }
 
   bool IsVCCZ = MI.getOpcode() == AMDGPU::S_CBRANCH_VCCZ;
-
   if (SReg == ExecReg) {
     // EXEC is updated directly
     if (IsVCCZ) {
