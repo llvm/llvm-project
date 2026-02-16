@@ -3185,6 +3185,68 @@ void CombinerHelper::applySimplifyAddToSub(
   MI.eraseFromParent();
 }
 
+bool CombinerHelper::matchBinopWithNeg(MachineInstr &MI,
+                                       BuildFnTy &MatchInfo) const {
+  // Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
+  // Root MI is one of G_AND, G_OR, G_XOR.
+  // We also look for commuted forms of operations.
+
+  unsigned RootOpc = MI.getOpcode();
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+
+  auto TryMatch = [&](Register MaybeInner, Register Other) -> bool {
+    MachineInstr *InnerDef = MRI.getVRegDef(MaybeInner);
+    if (!InnerDef)
+      return false;
+
+    unsigned InnerOpc = InnerDef->getOpcode();
+    if (InnerOpc != TargetOpcode::G_ADD && InnerOpc != TargetOpcode::G_SUB)
+      return false;
+
+    if (!MRI.hasOneNonDBGUse(MaybeInner))
+      return false;
+
+    Register InnerLHS = InnerDef->getOperand(1).getReg();
+    Register InnerRHS = InnerDef->getOperand(2).getReg();
+    Register NotSrc;
+    Register B, C;
+
+    // Check if either operand is ~b
+    if (mi_match(InnerLHS, MRI, m_Not(m_Reg(NotSrc)))) {
+      if (!MRI.hasOneNonDBGUse(InnerLHS))
+      return false;
+      B = NotSrc;
+      C = InnerRHS;
+    } else if (mi_match(InnerRHS, MRI, m_Not(m_Reg(NotSrc)))) {
+      if (!MRI.hasOneNonDBGUse(InnerRHS))
+      return false;
+      B = NotSrc;
+      C = InnerLHS;
+    } else {
+      return false;
+    }
+
+    // Flip add/sub
+    unsigned FlippedOpc = (InnerOpc == TargetOpcode::G_ADD)
+                              ? TargetOpcode::G_SUB
+                              : TargetOpcode::G_ADD;
+
+    Register A = Other;
+    MatchInfo = [=](MachineIRBuilder &Builder) {
+      auto NewInner = Builder.buildInstr(FlippedOpc, {Ty}, {B, C});
+      auto NewNot = Builder.buildNot(Ty, NewInner);
+      Builder.buildInstr(RootOpc, {Dst}, {A, NewNot});
+    };
+    return true;
+  };
+
+  Register LHS = MI.getOperand(1).getReg();
+  Register RHS = MI.getOperand(2).getReg();
+  // Check the commuted and uncommuted forms of the operation.
+  return TryMatch(LHS, RHS) || TryMatch(RHS, LHS);
+}
+
 bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
     MachineInstr &MI, InstructionStepsMatchInfo &MatchInfo) const {
   // Matches: logic (hand x, ...), (hand y, ...) -> hand (logic x, y), ...

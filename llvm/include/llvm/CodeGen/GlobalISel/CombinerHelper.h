@@ -534,6 +534,9 @@ public:
   void applySimplifyAddToSub(MachineInstr &MI,
                              std::tuple<Register, Register> &MatchInfo) const;
 
+  /// Fold `a bitwiseop (~b +/- c)` -> `a bitwiseop ~(b -/+ c)`
+  bool matchBinopWithNeg(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
   /// Match (logic_op (op x...), (op y...)) -> (op (logic_op x, y))
   bool matchHoistLogicOpWithSameOpcodeHands(
       MachineInstr &MI, InstructionStepsMatchInfo &MatchInfo) const;
