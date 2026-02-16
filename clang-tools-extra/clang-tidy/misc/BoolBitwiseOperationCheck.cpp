@@ -15,7 +15,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Lex/Lexer.h"
 #include <array>
-#include <type_traits>
 #include <utility>
 
 using namespace clang::ast_matchers;
@@ -31,9 +30,6 @@ static constexpr std::array<std::pair<StringRef, StringRef>, 8U>
                              {"and_eq", "and"},
                              {"bitor", "or"},
                              {"or_eq", "or"}}};
-
-static constexpr std::integral_constant<bool, true> RespectStrictMode{};
-static constexpr std::integral_constant<bool, false> IgnoreStrictMode{};
 
 static StringRef translate(StringRef Value) {
   for (const auto &[Bitwise, Logical] : OperatorsTransformation)
@@ -258,21 +254,12 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(BaseMatcher.bind("binOp"), this);
 }
 
-template <bool RespectStrictMode>
-std::conditional_t<RespectStrictMode, void, DiagnosticBuilder>
-BoolBitwiseOperationCheck::createDiagBuilder(
-    std::integral_constant<bool, RespectStrictMode>,
-    const BinaryOperator *BinOp) {
-  if constexpr (RespectStrictMode) {
-    if (StrictMode)
-      createDiagBuilder(IgnoreStrictMode, BinOp);
-    return;
-  } else {
-    return diag(BinOp->getOperatorLoc(),
-                "use logical operator '%0' for boolean semantics instead of "
-                "bitwise operator '%1'")
-           << translate(BinOp->getOpcodeStr()) << BinOp->getOpcodeStr();
-  }
+DiagnosticBuilder
+BoolBitwiseOperationCheck::createDiagBuilder(const BinaryOperator *BinOp) {
+  return diag(BinOp->getOperatorLoc(),
+              "use logical operator '%0' for boolean semantics instead of "
+              "bitwise operator '%1'")
+         << translate(BinOp->getOpcodeStr()) << BinOp->getOpcodeStr();
 }
 
 void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
@@ -282,7 +269,8 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     bool CanApplyFixIt) {
   // Early exit: the matcher proved that no fix-it possible
   if (!CanApplyFixIt) {
-    createDiagBuilder(RespectStrictMode, BinOp);
+    if (StrictMode)
+      createDiagBuilder(BinOp);
     return;
   }
 
@@ -359,10 +347,10 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
 
   // Emit diagnostic with or without fix-its
   if (CanBuildFixIts)
-    createDiagBuilder(IgnoreStrictMode, BinOp)
+    createDiagBuilder(BinOp)
         << InsertEqual << ReplaceOperator << InsertBrace1 << InsertBrace2;
-  else if (!IgnoreMacros)
-    createDiagBuilder(RespectStrictMode, BinOp);
+  else if (!IgnoreMacros && StrictMode)
+    createDiagBuilder(BinOp);
 }
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {

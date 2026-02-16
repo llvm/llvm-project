@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_BOOLBITWISEOPERATIONCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include <type_traits>
 
 namespace clang::tidy::misc {
 
@@ -40,10 +39,7 @@ public:
       bool CanApplyFixIt);
 
 private:
-  template <bool RespectStrictMode>
-  std::conditional_t<RespectStrictMode, void, DiagnosticBuilder>
-  createDiagBuilder(std::integral_constant<bool, RespectStrictMode>,
-                    const BinaryOperator *BinOp);
+  DiagnosticBuilder createDiagBuilder(const BinaryOperator *BinOp);
 
   bool UnsafeMode;
   bool IgnoreMacros;
