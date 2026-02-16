@@ -2544,6 +2544,16 @@ void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
 void AMDGPUCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIShrinkInstructionsPass(), PMW);
+
+  if (EnableAMDGPUMachineLevelInliner) {
+    flushFPMsToMPM(PMW);
+    addModulePass(AMDGPUMachineLevelInlinerPass(), PMW);
+    // Enable NoRerun for subsequent CGSCC passes after the machine level
+    // inliner. This is important for skipping processing (and
+    // ultimately printing) functions that have been fully inlined.
+    setNoRerunForCGSCC(PMW, true);
+  }
+
   addMachineFunctionPass(SIPostRABundlerPass(), PMW);
 }
 

@@ -14,8 +14,10 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -24,6 +26,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LegacyPassManagers.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -141,11 +144,57 @@ bool AMDGPUMachineLevelInlinerLegacy::runOnMachineFunction(
     return false;
   }
 
-  return Inliner.run(MF, MMI);
+  return Inliner.run(
+      MF, [&MMI](const Function &F) { return MMI.getMachineFunction(F); });
 }
 
-bool AMDGPUMachineLevelInliner::run(MachineFunction &MF,
-                                    MachineModuleInfo &MMI) {
+PreservedAnalyses
+AMDGPUMachineLevelInlinerPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  auto &AMMI = MAM.getResult<MachineModuleAnalysis>(M)
+                   .getMMI()
+                   .getObjFileInfo<AMDGPUMachineModuleInfo>();
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  bool Changed = false;
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    if (Inliner.mayInlineCallsTo(F)) {
+      AMMI.addMachineInliningCandidate(F);
+      continue;
+    }
+
+    const auto &GetMF = [&FAM](const Function &F) {
+      return &FAM.getResult<MachineFunctionAnalysis>(const_cast<Function &>(F))
+                  .getMF();
+    };
+    Changed |= Inliner.run(*GetMF(F), GetMF);
+  }
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  // Clean up the MachineFunctions for fully inlined functions.
+  PreservedAnalyses InlinedPA;
+  InlinedPA.abandon<MachineFunctionAnalysis>();
+
+  for (Function *F : AMMI.getMachineInliningCandidates()) {
+    FAM.invalidate(*F, InlinedPA);
+
+    // Mark this function to be skipped by future (Machine)Function passes.
+    FAM.getResult<ShouldNotRunFunctionPassesAnalysis>(*F);
+  }
+
+  // Preserve only the Function passes for the remaining functions.
+  PreservedAnalyses PA;
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  return PA;
+}
+
+bool AMDGPUMachineLevelInliner::run(
+    MachineFunction &MF, GetMachineFunctionCallback GetMachineFunction) {
   bool Changed = false;
   Function &F = MF.getFunction();
 
@@ -191,7 +240,7 @@ bool AMDGPUMachineLevelInliner::run(MachineFunction &MF,
            isa<Function>(CalleeOp->getGlobal()));
     auto *Callee = cast<Function>(CalleeOp->getGlobal());
 
-    MachineFunction *CalleeMF = MMI.getMachineFunction(*Callee);
+    MachineFunction *CalleeMF = GetMachineFunction(*Callee);
     assert(CalleeMF && "Couldn't get MachineFunction for callee");
     assert(!CalleeMF->empty() && "Machine function body is empty");
 

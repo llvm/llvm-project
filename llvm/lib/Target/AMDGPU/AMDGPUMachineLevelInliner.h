@@ -24,6 +24,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
+#include <functional>
 
 namespace llvm {
 
@@ -32,7 +33,10 @@ class SIInstrInfo;
 
 class AMDGPUMachineLevelInliner {
 public:
-  bool run(MachineFunction &MF, MachineModuleInfo &MMI);
+  using GetMachineFunctionCallback =
+      std::function<MachineFunction *(const Function &)>;
+
+  bool run(MachineFunction &MF, GetMachineFunctionCallback GetMachineFunction);
 
   bool mayInlineCallsTo(const Function &Callee) const {
     return Callee.getCallingConv() == CallingConv::AMDGPU_Gfx_WholeWave;
@@ -46,6 +50,14 @@ private:
                             const SIInstrInfo *TII) const;
 };
 
+class AMDGPUMachineLevelInlinerPass
+    : public PassInfoMixin<AMDGPUMachineLevelInlinerPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+
+private:
+  AMDGPUMachineLevelInliner Inliner;
+};
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUMACHINELEVELINLINER_H

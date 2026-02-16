@@ -268,7 +268,9 @@ protected:
       PMW.FPM.addPass(FreeMachineFunctionPass());
     if (AddInCGSCCOrder) {
       PMW.MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
-          createCGSCCToFunctionPassAdaptor(std::move(PMW.FPM))));
+          createCGSCCToFunctionPassAdaptor(std::move(PMW.FPM),
+                                           /*EagerlyInvalidate=*/false,
+                                           /*NoRerun=*/NoRerunForCGSCC)));
     } else {
       PMW.MPM.addPass(createModuleToFunctionPassAdaptor(std::move(PMW.FPM)));
     }
@@ -289,6 +291,13 @@ protected:
            "Stopping CGSCC ordering requires flushing the current function "
            "pipelines to the MPM.");
     AddInCGSCCOrder = false;
+  }
+
+  void setNoRerunForCGSCC(PassManagerWrapper &PMW, bool NoRerun = true) const {
+    assert(PMW.FPM.isEmpty() && PMW.MFPM.isEmpty() &&
+           "Setting NoRerun requires flushing the current function "
+           "pipelines to the MPM.");
+    NoRerunForCGSCC = NoRerun;
   }
 
   TargetMachineT &TM;
@@ -557,6 +566,7 @@ private:
   mutable bool Started = true;
   mutable bool Stopped = true;
   mutable bool AddInCGSCCOrder = false;
+  mutable bool NoRerunForCGSCC = false;
 };
 
 template <typename Derived, typename TargetMachineT>
