@@ -113,8 +113,18 @@ void f9() {
   if (null_check_ptr == NULL) {}
 }
 
-// Function pointers
-static void (*sandboxing_callback)();
-void SetSandboxingCallback(void (*f)()) {
-  sandboxing_callback = f;
+// Function pointers (unused)
+static void (*unused_func_ptr)(); // expected-warning {{variable 'unused_func_ptr' set but not used}}
+void SetUnusedCallback(void (*f)()) {
+  unused_func_ptr = f;
+}
+
+// Function pointers (used)
+static void (*used_func_ptr)();
+void SetUsedCallback(void (*f)()) {
+  used_func_ptr = f;
+}
+void CallUsedCallback() {
+  if (used_func_ptr)
+    used_func_ptr();
 }

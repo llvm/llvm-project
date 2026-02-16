@@ -20257,9 +20257,11 @@ static void DoMarkVarDeclReferenced(
   bool UsableInConstantExpr =
       Var->mightBeUsableInConstantExpressions(SemaRef.Context);
 
-  bool ShouldTrackForUnusedButSet = Var->isStaticFileVar() &&
-                                    !Var->isStaticDataMember() &&
-                                    !Var->getType()->isFunctionPointerType();
+  // We skip static data members because they have external linkage.
+  // TODO: static data members in anonymous namespaces have internal linkage and
+  // should be diagnosed.
+  bool ShouldTrackForUnusedButSet =
+      Var->isStaticFileVar() && !Var->isStaticDataMember();
   if ((Var->isLocalVarDeclOrParm() || ShouldTrackForUnusedButSet) &&
       !Var->hasExternalStorage()) {
     RefsMinusAssignments.insert({Var, 0}).first->getSecond()++;
