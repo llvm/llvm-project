@@ -77,9 +77,7 @@ MlirType mlirSMTTypeGetInt(MlirContext ctx) {
 
 MlirStringRef mlirSMTIntTypeGetName(void) { return wrap(IntType::name); }
 
-MlirTypeID mlirSMTIntTypeGetTypeID(void) {
-  return wrap(IntType::getTypeID());
-}
+MlirTypeID mlirSMTIntTypeGetTypeID(void) { return wrap(IntType::getTypeID()); }
 
 bool mlirSMTTypeIsASMTFunc(MlirType type) {
   return isa<SMTFuncType>(unwrap(type));
