@@ -948,7 +948,10 @@ module std [system] {
       header "__charconv/to_chars_integral.h"
       export std.charconv.to_chars_result
     }
-    module to_chars_result            { header "__charconv/to_chars_result.h" }
+    module to_chars_result            {
+      header "__charconv/to_chars_result.h"
+      export std.system_error.errc
+    }
     module traits                     { header "__charconv/traits.h" }
 
     header "charconv"
