@@ -20,6 +20,7 @@
 #include <cassert>
 #include <deque>
 #include <iterator>
+#include <ranges>
 #include <vector>
 #include <type_traits>
 

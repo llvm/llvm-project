@@ -821,7 +821,7 @@ public:
 
   InstructionListType createInstrumentedIndirectCall(MCInst &&CallInst,
                                                      MCSymbol *HandlerFuncAddr,
-                                                     int CallSiteID,
+                                                     size_t CallSiteID,
                                                      MCContext *Ctx) override {
     // Code sequence used to enter indirect call instrumentation helper:
     //   addi  sp, sp, -0x10
