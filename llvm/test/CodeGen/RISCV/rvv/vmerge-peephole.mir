@@ -249,8 +249,8 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: sink_past_false
     ; CHECK: %mask:vmv0 = COPY $v0
-    ; CHECK-NEXT: %z:vrnov0 = PseudoVADD_VV_M1_MASK %y, $noreg, $noreg, %mask, -1 /* vl=VLMAX */, 5 /* e32 */, 1 /* ta, mu */
     ; CHECK-NEXT: %y:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: %z:vrnov0 = PseudoVADD_VV_M1_MASK %y, $noreg, $noreg, %mask, -1 /* vl=VLMAX */, 5 /* e32 */, 1 /* ta, mu */
     %mask:vmv0 = COPY $v0
     %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5, 3
     %y:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5, 3

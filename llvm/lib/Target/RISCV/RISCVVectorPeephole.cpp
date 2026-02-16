@@ -73,6 +73,7 @@ private:
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
   std::optional<unsigned> getConstant(const MachineOperand &VL) const;
   bool ensureDominates(const MachineOperand &Use, MachineInstr &Src) const;
+  bool ensureDominates(MachineInstr *Def, MachineInstr &Src) const;
   Register
   lookThruCopies(Register Reg, bool OneUseOnly = false,
                  SmallVectorImpl<MachineInstr *> *Copies = nullptr) const;
@@ -558,20 +559,34 @@ static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To) {
   return From.isSafeToMove(SawStore);
 }
 
-/// Given A and B are in the same MBB, returns true if A comes before B.
-static bool dominates(MachineBasicBlock::const_iterator A,
-                      MachineBasicBlock::const_iterator B) {
+/// Given \p A and \p B are in the same block, returns the instruction that
+/// comes first.
+static MachineBasicBlock::iterator first(MachineBasicBlock::iterator A,
+                                         MachineBasicBlock::iterator B) {
   assert(A->getParent() == B->getParent());
-  const MachineBasicBlock *MBB = A->getParent();
+  MachineBasicBlock::iterator I = A->getParent()->begin();
+  for (; &*I != A && &*I != B; ++I)
+    ;
+  return I;
+}
+
+/// Given \p A and \p B are in the same block, returns the instruction that
+/// comes last.
+static MachineBasicBlock::iterator last(MachineBasicBlock::iterator A,
+                                        MachineBasicBlock::iterator B) {
+  return first(A, B) == A ? B : A;
+}
+
+/// Given A and B are in the same MBB, returns true if A comes before B.
+static bool dominates(MachineBasicBlock::iterator A,
+                      MachineBasicBlock::iterator B) {
+  assert(A->getParent() == B->getParent());
+  MachineBasicBlock *MBB = A->getParent();
   auto MBBEnd = MBB->end();
   if (B == MBBEnd)
     return true;
 
-  MachineBasicBlock::const_iterator I = MBB->begin();
-  for (; &*I != A && &*I != B; ++I)
-    ;
-
-  return &*I == A;
+  return first(A, B) == A;
 }
 
 /// If the register in \p MO doesn't dominate \p Src, try to move \p Src so it
@@ -583,7 +598,11 @@ bool RISCVVectorPeephole::ensureDominates(const MachineOperand &MO,
   if (!MO.isReg() || !MO.getReg().isValid())
     return true;
 
-  MachineInstr *Def = MRI->getVRegDef(MO.getReg());
+  return ensureDominates(MRI->getVRegDef(MO.getReg()), Src);
+}
+
+bool RISCVVectorPeephole::ensureDominates(MachineInstr *Def,
+                                          MachineInstr &Src) const {
   if (Def->getParent() == Src.getParent() && !dominates(Def, Src)) {
     if (!isSafeToMove(Src, *Def->getNextNode()))
       return false;
@@ -832,10 +851,14 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   assert(RISCVII::hasVecPolicyOp(True.getDesc().TSFlags) &&
          "Foldable unmasked pseudo should have a policy op already");
 
-  // Make sure the mask dominates True and its copies, otherwise move down True
-  // so it does. VL will always dominate since if it's a register they need to
-  // be the same.
-  if (!ensureDominates(MaskOp, True))
+  // Make sure both mask and false dominate True and its copies, otherwise move
+  // down True so it does. VL will always dominate since if it's a register they
+  // need to be the same.
+  MachineInstr *False = MRI->getUniqueVRegDef(FalseReg);
+  MachineInstr *LastDef = Mask;
+  if (False && False->getParent() == Mask->getParent())
+    LastDef = &*last(LastDef, False);
+  if (!ensureDominates(LastDef, True))
     return false;
 
   if (NeedsCommute) {
