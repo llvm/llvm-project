@@ -37,7 +37,7 @@ _start:
 // R_AARCH64_PREL16
  .hword target - .
 // R_AARCH64_PLT32
- .word target@PLT - .
+ .word %pltpcrel(target)
 
 bl_undefweak2:
  bl undefweak2

@@ -125,7 +125,7 @@ _g9:
 // ERR: :[[#@LINE+1]]:21: error: expected ')'
 .quad sym@AUTH(ia,42(
 
-// ERR: :[[#@LINE+1]]:14: error: unexpected token
+// ERR: :[[#@LINE+1]]:11: error: invalid relocation specifier
 .quad sym@PLT@AUTH(ia,42)
 
 // ERR: :[[#@LINE+1]]:15: error: expected '('
