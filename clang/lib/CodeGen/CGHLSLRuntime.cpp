@@ -880,6 +880,7 @@ CGHLSLRuntime::handleStructSemanticStore(
     llvm::Value *Extract = B.CreateExtractValue(Source, I);
     AttrBegin =
         handleSemanticStore(B, FD, Extract, *FieldDecl, AttrBegin, AttrEnd);
+    ++FieldDecl;
   }
 
   return AttrBegin;
