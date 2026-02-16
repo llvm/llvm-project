@@ -1418,6 +1418,19 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_global_atomic_ordered_add_b64})
       .Any({{DivS64}, {{Vgpr64}, {IntrId, VgprP1, Vgpr64}}});
 
+  addRulesForIOpcs({amdgcn_raw_buffer_load_lds})
+      .Any({{_}, {{}, {IntrId, SgprV4S32, SgprP3, Imm, Vgpr32, Sgpr32}}});
+
+  addRulesForIOpcs({amdgcn_struct_buffer_load_lds})
+      .Any({{_},
+            {{}, {IntrId, SgprV4S32, SgprP3, Imm, Vgpr32, Vgpr32, Sgpr32}}});
+
+  addRulesForIOpcs({amdgcn_raw_ptr_buffer_load_lds})
+      .Any({{_}, {{}, {IntrId, SgprP8, SgprP3, Imm, Vgpr32, Sgpr32}}});
+
+  addRulesForIOpcs({amdgcn_struct_ptr_buffer_load_lds})
+      .Any({{_}, {{}, {IntrId, SgprP8, SgprP3, Imm, Vgpr32, Vgpr32, Sgpr32}}});
+
   addRulesForIOpcs({amdgcn_wwm, amdgcn_strict_wwm}, StandardB)
       .Div(B32, {{VgprB32}, {IntrId, VgprB32}})
       .Uni(B32, {{SgprB32}, {IntrId, SgprB32}})

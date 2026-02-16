@@ -10,17 +10,14 @@
 #define LLVM_CLANG_ANALYSIS_SCALABLE_TUSUMMARY_ENTITYSUMMARY_H
 
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
-#include "llvm/Support/ExtensibleRTTI.h"
 
 namespace clang::ssaf {
 
 /// Base class for analysis-specific summary data.
-class EntitySummary : public llvm::RTTIExtends<EntitySummary, llvm::RTTIRoot> {
+class EntitySummary {
 public:
   virtual ~EntitySummary() = default;
   virtual SummaryName getSummaryName() const = 0;
-
-  static char ID; // For RTTIExtends.
 };
 
 } // namespace clang::ssaf

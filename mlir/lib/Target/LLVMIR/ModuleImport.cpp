@@ -1221,6 +1221,9 @@ static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
                                          llvm::Constant *constScalar) {
   MLIRContext *context = builder.getContext();
 
+  if (constScalar->getType()->isVectorTy())
+    return {};
+
   // Convert scalar integers.
   if (auto *constInt = dyn_cast<llvm::ConstantInt>(constScalar)) {
     return builder.getIntegerAttr(
@@ -1269,6 +1272,17 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
     return llvm::dyn_cast_if_present<ShapedType>(
         getBuiltinTypeForAttr(convertType(type)));
   };
+
+  // Convert constant vector splat values.
+  if (isa<llvm::ConstantInt, llvm::ConstantFP>(constant)) {
+    assert(constant->getType()->isVectorTy() && "expected a vector splat");
+    auto shape = getConstantShape(constant->getType());
+    if (!shape)
+      return {};
+    Attribute splatAttr =
+        getScalarConstantAsAttr(builder, constant->getSplatValue());
+    return SplatElementsAttr::get(shape, splatAttr);
+  }
 
   // Convert one-dimensional constant arrays or vectors that store 1/2/4/8-byte
   // integer or half/bfloat/float/double values.

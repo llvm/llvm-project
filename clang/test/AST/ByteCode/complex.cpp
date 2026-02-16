@@ -162,6 +162,7 @@ static_assert(__real(Doubles[3]) == 0.0, "");
 static_assert(__imag(Doubles[3]) == 0.0, "");
 
 static_assert(~(0.5 + 1.5j) == (0.5 + -1.5j), "");
+int array[~(1i) == 2000.0];
 
 void func(void) {
   __complex__ int arr;

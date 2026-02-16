@@ -346,12 +346,10 @@ loop.end:
 }
 
 
-; Multiple uncountable early exits pass legality but are not yet supported
-; in VPlan transformations.
+; Multiple uncountable early exits are now supported.
 define i64 @multiple_uncountable_exits() {
 ; CHECK-LABEL: LV: Checking a loop in 'multiple_uncountable_exits'
 ; CHECK:       LV: We can vectorize this loop!
-; CHECK:       LV: Not vectorizing: Auto-vectorization of loops with multiple uncountable early exits is not yet supported.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]

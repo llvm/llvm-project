@@ -36,6 +36,7 @@ on:
 jobs:
   release-documentation:
     name: Build and Upload Release Documentation
+    environment: release
     runs-on: ubuntu-24.04
     env:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
