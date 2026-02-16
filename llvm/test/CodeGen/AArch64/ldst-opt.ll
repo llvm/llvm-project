@@ -1697,3 +1697,17 @@ define void @trunc_splat(ptr %ptr) {
   store <2 x i16> <i16 42, i16 42>, ptr %ptr, align 4
   ret void
 }
+
+; CHECK-LABEL: pair_monotonic
+; CHECK: ldp x{{[0-9]+}}, x{{[0-9]+}}, [x{{[0-9]+}}]
+; CHECK: stp x{{[0-9]+}}, x{{[0-9]+}}, [x{{[0-9]+}}]
+define void @pair_monotonic(ptr %i, ptr %o) {
+entry:
+  %0 = load atomic i64, ptr %i monotonic, align 8
+  %hi = getelementptr inbounds nuw i8, ptr %i, i64 8
+  %1 = load atomic i64, ptr %hi monotonic, align 8
+  store atomic i64 %0, ptr %o monotonic, align 8
+  %hi5 = getelementptr inbounds nuw i8, ptr %o, i64 8
+  store atomic i64 %1, ptr %hi5 monotonic, align 8
+  ret void
+}
