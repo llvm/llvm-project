@@ -7,7 +7,7 @@ add_entrypoint_object(
   HDRS
     ../canonicalize.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.canonicalize
 )
 
 add_entrypoint_object(
@@ -17,7 +17,7 @@ add_entrypoint_object(
   HDRS
     ../canonicalizef.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.canonicalizef
 )
 
 add_entrypoint_object(
@@ -27,8 +27,7 @@ add_entrypoint_object(
   HDRS
     ../canonicalizef16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.canonicalizef16
 )
 
 add_entrypoint_object(
@@ -38,8 +37,7 @@ add_entrypoint_object(
   HDRS
     ../canonicalizef128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.canonicalizef128
 )
 
 add_entrypoint_object(
@@ -49,7 +47,7 @@ add_entrypoint_object(
   HDRS
     ../canonicalizel.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.canonicalizel
 )
 
 add_entrypoint_object(
@@ -59,11 +57,7 @@ add_entrypoint_object(
   HDRS
     ../canonicalizebf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.math.canonicalizebf16
 )
 
 add_entrypoint_object(
@@ -436,14 +430,7 @@ add_entrypoint_object(
   HDRS
     ../sinpif16.h
   DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.sincosf16_utils
+    libc.src.__support.math.sinpif16
 )
 
 add_entrypoint_object(
