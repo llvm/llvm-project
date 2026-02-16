@@ -131,7 +131,7 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X64-NEXT:    movswl %si, %ecx
 ; X64-NEXT:    addl %edi, %edi
 ; X64-NEXT:    shrl $4, %ecx
-; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    movw %di, %ax
 ; X64-NEXT:    cwtd
 ; X64-NEXT:    idivw %cx
 ; X64-NEXT:    # kill: def $ax killed $ax def $rax
@@ -161,7 +161,7 @@ define i16 @func3(i15 %x, i8 %y) nounwind {
 ; X86-NEXT:    movswl %ax, %esi
 ; X86-NEXT:    addl %ecx, %ecx
 ; X86-NEXT:    shrl $4, %esi
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movw %cx, %ax
 ; X86-NEXT:    cwtd
 ; X86-NEXT:    idivw %si
 ; X86-NEXT:    # kill: def $ax killed $ax def $eax
