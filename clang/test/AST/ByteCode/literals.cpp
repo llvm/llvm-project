@@ -866,7 +866,62 @@ namespace IncDec {
                             // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
   }
 
-};
+  namespace Const {
+    constexpr int test1(const int a) {
+      ((int&)a)++; // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test1(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+    constexpr int test2(const int a) {
+      ++((int&)a); // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test2(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+    constexpr int test3(const int a) {
+      ((int&)a)--; // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test3(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+    constexpr int test4(const int a) {
+      --((int&)a); // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test4(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+    constexpr int test5(const int a) {
+      int b = ((int&)a)++; // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test5(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+    constexpr int test6(const int a) {
+      int b = ++((int&)a); // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test6(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+    constexpr int test7(const int a) {
+      int b = ((int&)a)--; // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test7(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+    constexpr int test8(const int a) {
+      int b = --((int&)a); // both-note {{modification of object of const-qualified type 'const int'}}
+      return a;
+    }
+    static_assert(test8(12) == 10); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+  }
+}
 #endif
 
 namespace CompoundLiterals {

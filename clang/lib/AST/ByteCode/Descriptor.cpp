@@ -52,7 +52,7 @@ static void dtorTy(Block *, std::byte *Ptr, const Descriptor *) {
 template <typename T>
 static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
                         const Descriptor *D) {
-  new (Ptr) InitMapPtr(std::nullopt);
+  new (Ptr) InitMapPtr();
 
   if constexpr (needsCtor<T>()) {
     Ptr += sizeof(InitMapPtr);
@@ -65,9 +65,7 @@ static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
 template <typename T>
 static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
   InitMapPtr &IMP = *reinterpret_cast<InitMapPtr *>(Ptr);
-
-  if (IMP)
-    IMP = std::nullopt;
+  IMP.deleteInitMap();
 
   if constexpr (needsCtor<T>()) {
     Ptr += sizeof(InitMapPtr);
@@ -390,6 +388,8 @@ QualType Descriptor::getType() const {
 QualType Descriptor::getElemQualType() const {
   assert(isArray());
   QualType T = getType();
+  if (const auto *AT = T->getAs<AtomicType>())
+    T = AT->getValueType();
   if (T->isPointerOrReferenceType())
     T = T->getPointeeType();
 
@@ -435,6 +435,22 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
   return getType();
 }
 
+QualType Descriptor::getDataElemType() const {
+  if (const auto *E = asExpr()) {
+    if (isa<CXXNewExpr>(E))
+      return E->getType()->getPointeeType();
+
+    // std::allocator.allocate() call.
+    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+        ME && ME->getRecordDecl()->getName() == "allocator" &&
+        ME->getMethodDecl()->getName() == "allocate")
+      return E->getType()->getPointeeType();
+    return E->getType();
+  }
+
+  return getType();
+}
+
 SourceLocation Descriptor::getLocation() const {
   if (auto *D = dyn_cast<const Decl *>(Source))
     return D->getLocation();
@@ -467,21 +483,3 @@ bool Descriptor::hasTrivialDtor() const {
 }
 
 bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }
-
-InitMap::InitMap(unsigned N)
-    : UninitFields(N), Data(std::make_unique<T[]>(numFields(N))) {}
-
-bool InitMap::initializeElement(unsigned I) {
-  unsigned Bucket = I / PER_FIELD;
-  T Mask = T(1) << (I % PER_FIELD);
-  if (!(data()[Bucket] & Mask)) {
-    data()[Bucket] |= Mask;
-    UninitFields -= 1;
-  }
-  return UninitFields == 0;
-}
-
-bool InitMap::isElementInitialized(unsigned I) const {
-  unsigned Bucket = I / PER_FIELD;
-  return data()[Bucket] & (T(1) << (I % PER_FIELD));
-}

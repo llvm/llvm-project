@@ -174,7 +174,7 @@ def get_pdl_pattern_fold():
 
     def is_zero(value):
         op = value.owner
-        if isinstance(op, Operation):
+        if isinstance(op, OpView):
             return op.name == "myint.constant" and op.attributes["value"].value == 0
         return False
 

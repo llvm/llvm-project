@@ -110,5 +110,16 @@ LogicalResult detail::verifyLoopLikeOpInterface(Operation *op) {
     ++i;
   }
 
+  // Verify that all induction variables have valid types.
+  auto inductionVars = loopLikeOp.getLoopInductionVars();
+  if (inductionVars.has_value()) {
+    for (auto [index, inductionVar] : llvm::enumerate(*inductionVars)) {
+      if (!loopLikeOp.isValidInductionVarType(inductionVar.getType()))
+        return op->emitOpError(std::to_string(index))
+               << "-th induction variable has invalid type: "
+               << inductionVar.getType();
+    }
+  }
+
   return success();
 }

@@ -31,8 +31,8 @@ constexpr void test() {
   {
     using C  = test_less<int>;
     using A1 = test_allocator<int>;
-    using A2 = test_allocator<char>;
-    using M  = std::flat_multimap<int, char, C, KeyContainer<int, A1>, ValueContainer<char, A2>>;
+    using A2 = test_allocator<long>;
+    using M  = std::flat_multimap<int, long, C, KeyContainer<int, A1>, ValueContainer<long, A2>>;
     M mo     = M({{1, 1}, {1, 3}, {3, 2}}, C(5), A1(7));
     M m      = M({}, C(3), A1(7));
     m        = std::move(mo);
@@ -46,8 +46,8 @@ constexpr void test() {
   {
     using C  = test_less<int>;
     using A1 = other_allocator<int>;
-    using A2 = other_allocator<char>;
-    using M  = std::flat_multimap<int, char, C, KeyContainer<int, A1>, ValueContainer<char, A2>>;
+    using A2 = other_allocator<long>;
+    using M  = std::flat_multimap<int, long, C, KeyContainer<int, A1>, ValueContainer<long, A2>>;
     M mo     = M({{4, 5}, {4, 4}}, C(5), A1(7));
     M m      = M({{1, 1}, {2, 2}, {3, 3}, {4, 4}}, C(3), A1(7));
     m        = std::move(mo);

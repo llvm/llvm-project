@@ -76,6 +76,8 @@ bool IsTypeParamInquiry(const Symbol &sym);
 bool IsStructureComponent(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
+bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
+
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
 
@@ -97,6 +99,8 @@ const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
 bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
+
+MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 } // namespace omp
 } // namespace Fortran::semantics
 

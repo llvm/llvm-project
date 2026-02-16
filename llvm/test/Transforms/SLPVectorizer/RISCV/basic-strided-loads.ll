@@ -710,25 +710,11 @@ define void @rt_stride_widen_no_reordering(ptr %pl, i64 %stride, ptr %ps) {
 ; CHECK-LABEL: define void @rt_stride_widen_no_reordering(
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = mul nsw i64 [[STRIDE]], 0
-; CHECK-NEXT:    [[OFFSET4:%.*]] = mul nsw i64 [[STRIDE]], 1
-; CHECK-NEXT:    [[OFFSET8:%.*]] = mul nsw i64 [[STRIDE]], 2
-; CHECK-NEXT:    [[OFFSET12:%.*]] = mul nsw i64 [[STRIDE]], 3
 ; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET0]]
-; CHECK-NEXT:    [[GEP_L4:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET4]]
-; CHECK-NEXT:    [[GEP_L8:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET8]]
-; CHECK-NEXT:    [[GEP_L12:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 [[OFFSET12]]
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[GEP_L0]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[GEP_L4]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i8>, ptr [[GEP_L8]], align 1
-; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[GEP_L12]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i8> [[TMP2]], <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i8> [[TMP7]], <16 x i8> [[TMP11]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i8> [[TMP4]], <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i8> [[TMP9]], <16 x i8> [[TMP10]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[STRIDE]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr align 1 [[GEP_L0]], i64 [[TMP1]], <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i32> [[TMP2]] to <16 x i8>
 ; CHECK-NEXT:    store <16 x i8> [[TMP8]], ptr [[GEP_S0]], align 1
 ; CHECK-NEXT:    ret void
 ;

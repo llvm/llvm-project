@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -548,7 +549,13 @@ public:
     // Move the block back to its original position.
     Region::iterator before =
         insertBeforeBlock ? Region::iterator(insertBeforeBlock) : region->end();
-    region->getBlocks().splice(before, block->getParent()->getBlocks(), block);
+    if (Region *currentParent = block->getParent()) {
+      // Block is still in a region, use cheap splice to move it back.
+      region->getBlocks().splice(before, currentParent->getBlocks(), block);
+      return;
+    }
+    // Block was orphaned by a prior rollback, can't splice.
+    region->getBlocks().insert(before, block);
   }
 
 private:
@@ -1590,7 +1597,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   // A block cannot be converted multiple times.
   if (hasRewrite<BlockTypeConversionRewrite>(rewrites, block))
-    llvm::report_fatal_error("block was already converted");
+    llvm::reportFatalInternalError("block was already converted");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
   OpBuilder::InsertionGuard g(rewriter);
@@ -2021,7 +2028,7 @@ void ConversionPatternRewriterImpl::replaceValueUses(
 #endif // NDEBUG
 
   if (functor)
-    llvm::report_fatal_error(
+    llvm::reportFatalInternalError(
         "conditional value replacement is not supported in rollback mode");
   mapping.map(from, to);
   appendRewrite<ReplaceValueRewrite>(from, converter);
@@ -2254,37 +2261,6 @@ ConversionPatternRewriter::getRemappedValues(ValueRange keys,
     assert(values.size() == 1 && "1:N conversion not supported");
     results.push_back(values.front());
   }
-  return success();
-}
-
-LogicalResult ConversionPatternRewriter::legalize(Region *r) {
-  // Fast path: If the region is empty, there is nothing to legalize.
-  if (r->empty())
-    return success();
-
-  // Gather a list of all operations to legalize. This is done before
-  // converting the entry block signature because unrealized_conversion_cast
-  // ops should not be included.
-  SmallVector<Operation *> ops;
-  for (Block &b : *r)
-    for (Operation &op : b)
-      ops.push_back(&op);
-
-  // If the current pattern runs with a type converter, convert the entry block
-  // signature.
-  if (const TypeConverter *converter = impl->currentTypeConverter) {
-    std::optional<TypeConverter::SignatureConversion> conversion =
-        converter->convertBlockSignature(&r->front());
-    if (!conversion)
-      return failure();
-    applySignatureConversion(&r->front(), *conversion, converter);
-  }
-
-  // Legalize all operations in the region.
-  for (Operation *op : ops)
-    if (failed(legalize(op)))
-      return failure();
-
   return success();
 }
 
@@ -2675,7 +2651,7 @@ LogicalResult OperationLegalizer::legalizeWithFold(Operation *op) {
 
   // Clear pattern state, so that the next pattern application starts with a
   // clean slate. (The op/block sets are populated by listener notifications.)
-  auto cleanup = llvm::make_scope_exit([&]() {
+  llvm::scope_exit cleanup([&]() {
     rewriterImpl.patternNewOps.clear();
     rewriterImpl.patternModifiedOps.clear();
   });
@@ -2712,7 +2688,7 @@ LogicalResult OperationLegalizer::legalizeWithFold(Operation *op) {
                             newOp->getName()));
       if (!rewriter.getConfig().allowPatternRollback) {
         // Rolling back a folder is like rolling back a pattern.
-        llvm::report_fatal_error(
+        llvm::reportFatalInternalError(
             "op '" + opName +
             "' folder rollback of IR modifications requested");
       }
@@ -2736,11 +2712,11 @@ reportNewIrLegalizationFatalError(const Pattern &pattern,
       newOps, [](Operation *op) { return op->getName().getStringRef(); });
   auto modifiedOpNames = llvm::map_range(
       modifiedOps, [](Operation *op) { return op->getName().getStringRef(); });
-  llvm::report_fatal_error("pattern '" + pattern.getDebugName() +
-                           "' produced IR that could not be legalized. " +
-                           "new ops: {" + llvm::join(newOpNames, ", ") + "}, " +
-                           "modified ops: {" +
-                           llvm::join(modifiedOpNames, ", ") + "}");
+  llvm::reportFatalInternalError("pattern '" + pattern.getDebugName() +
+                                 "' produced IR that could not be legalized. " +
+                                 "new ops: {" + llvm::join(newOpNames, ", ") +
+                                 "}, " + "modified ops: {" +
+                                 llvm::join(modifiedOpNames, ", ") + "}");
 }
 
 LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
@@ -2797,8 +2773,9 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
       if (checkOp && topLevelFingerPrint) {
         OperationFingerPrint fingerPrintAfterPattern(checkOp);
         if (fingerPrintAfterPattern != *topLevelFingerPrint)
-          llvm::report_fatal_error("pattern '" + pattern.getDebugName() +
-                                   "' returned failure but IR did change");
+          llvm::reportFatalInternalError(
+              "pattern '" + pattern.getDebugName() +
+              "' returned failure but IR did change");
       }
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
     }
@@ -2895,8 +2872,9 @@ LogicalResult OperationLegalizer::legalizePatternResult(
       return hasRewrite<ModifyOperationRewrite>(newRewrites, op);
     };
     if (!replacedRoot() && !updatedRootInPlace())
-      llvm::report_fatal_error("expected pattern to replace the root operation "
-                               "or modify it in place");
+      llvm::reportFatalInternalError(
+          "expected pattern to replace the root operation "
+          "or modify it in place");
   }
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
@@ -3287,8 +3265,20 @@ struct OperationConverter {
       : rewriter(ctx, config, *this), opLegalizer(rewriter, target, patterns),
         mode(mode) {}
 
-  /// Converts the given operations to the conversion target.
-  LogicalResult convertOperations(ArrayRef<Operation *> ops);
+  /// Applies the conversion to the given operations (and their nested
+  /// operations).
+  LogicalResult applyConversion(ArrayRef<Operation *> ops);
+
+  /// Legalizes the given operations (and their nested operations) to the
+  /// conversion target.
+  template <typename Fn>
+  LogicalResult legalizeOperations(ArrayRef<Operation *> ops, Fn onFailure,
+                                   bool isRecursiveLegalization = false);
+  LogicalResult legalizeOperations(ArrayRef<Operation *> ops,
+                                   bool isRecursiveLegalization = false) {
+    return legalizeOperations(
+        ops, /*onFailure=*/[&]() {}, isRecursiveLegalization);
+  }
 
   /// Converts a single operation. If `isRecursiveLegalization` is "true", the
   /// conversion is a recursive legalization request, triggered from within a
@@ -3296,6 +3286,8 @@ struct OperationConverter {
   /// attempt at legalizing the operation later (via the regular pre-order
   /// legalization mechanism).
   LogicalResult convert(Operation *op, bool isRecursiveLegalization = false);
+
+  const ConversionTarget &getTarget() { return opLegalizer.getTarget(); }
 
 private:
   /// The rewriter to use when converting operations.
@@ -3308,10 +3300,6 @@ private:
   OpConversionMode mode;
 };
 } // namespace mlir
-
-LogicalResult ConversionPatternRewriter::legalize(Operation *op) {
-  return impl->opConverter.convert(op, /*isRecursiveLegalization=*/true);
-}
 
 LogicalResult OperationConverter::convert(Operation *op,
                                           bool isRecursiveLegalization) {
@@ -3398,12 +3386,15 @@ legalizeUnresolvedMaterialization(RewriterBase &rewriter,
   return failure();
 }
 
-LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
+template <typename Fn>
+LogicalResult
+OperationConverter::legalizeOperations(ArrayRef<Operation *> ops, Fn onFailure,
+                                       bool isRecursiveLegalization) {
   const ConversionTarget &target = opLegalizer.getTarget();
 
   // Compute the set of operations and blocks to convert.
   SmallVector<Operation *> toConvert;
-  for (auto *op : ops) {
+  for (Operation *op : ops) {
     op->walk<WalkOrder::PreOrder, ForwardDominanceIterator<>>(
         [&](Operation *op) {
           toConvert.push_back(op);
@@ -3415,24 +3406,66 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
           return WalkResult::advance();
         });
   }
-
-  // Convert each operation and discard rewrites on failure.
-  ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
-
-  for (auto *op : toConvert) {
-    if (failed(convert(op))) {
-      // Dialect conversion failed.
-      if (rewriterImpl.config.allowPatternRollback) {
-        // Rollback is allowed: restore the original IR.
-        rewriterImpl.undoRewrites();
-      } else {
-        // Rollback is not allowed: apply all modifications that have been
-        // performed so far.
-        rewriterImpl.applyRewrites();
-      }
+  for (Operation *op : toConvert) {
+    if (failed(convert(op, isRecursiveLegalization))) {
+      // Failed to convert an operation.
+      onFailure();
       return failure();
     }
   }
+  return success();
+}
+
+LogicalResult ConversionPatternRewriter::legalize(Operation *op) {
+  return impl->opConverter.legalizeOperations(op,
+                                              /*isRecursiveLegalization=*/true);
+}
+
+LogicalResult ConversionPatternRewriter::legalize(Region *r) {
+  // Fast path: If the region is empty, there is nothing to legalize.
+  if (r->empty())
+    return success();
+
+  // Gather a list of all operations to legalize. This is done before
+  // converting the entry block signature because unrealized_conversion_cast
+  // ops should not be included.
+  SmallVector<Operation *> ops;
+  for (Block &b : *r)
+    for (Operation &op : b)
+      ops.push_back(&op);
+
+  // If the current pattern runs with a type converter, convert the entry block
+  // signature.
+  if (const TypeConverter *converter = impl->currentTypeConverter) {
+    std::optional<TypeConverter::SignatureConversion> conversion =
+        converter->convertBlockSignature(&r->front());
+    if (!conversion)
+      return failure();
+    applySignatureConversion(&r->front(), *conversion, converter);
+  }
+
+  // Legalize all operations in the region. This includes all nested
+  // operations.
+  return impl->opConverter.legalizeOperations(ops,
+                                              /*isRecursiveLegalization=*/true);
+}
+
+LogicalResult OperationConverter::applyConversion(ArrayRef<Operation *> ops) {
+  // Convert each operation and discard rewrites on failure.
+  ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
+  LogicalResult status = legalizeOperations(ops, /*onFailure=*/[&]() {
+    // Dialect conversion failed.
+    if (rewriterImpl.config.allowPatternRollback) {
+      // Rollback is allowed: restore the original IR.
+      rewriterImpl.undoRewrites();
+    } else {
+      // Rollback is not allowed: apply all modifications that have been
+      // performed so far.
+      rewriterImpl.applyRewrites();
+    }
+  });
+  if (failed(status))
+    return failure();
 
   // After a successful conversion, apply rewrites.
   rewriterImpl.applyRewrites();
@@ -4143,7 +4176,7 @@ static LogicalResult applyConversion(ArrayRef<Operation *> ops,
       [&] {
         OperationConverter opConverter(ops.front()->getContext(), target,
                                        patterns, config, mode);
-        status = opConverter.convertOperations(ops);
+        status = opConverter.applyConversion(ops);
       },
       irUnits);
   return status;

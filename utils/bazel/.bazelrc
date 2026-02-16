@@ -219,6 +219,11 @@ build:ci --test_output=errors
 # Only show failing tests to reduce output
 build:ci --test_summary=terse
 
+# Ignore warnings from parse headers actions about "-c" being unnecessary when
+# using "-fsyntax-only".
+# TODO: remove when https://github.com/bazelbuild/rules_cc/pull/573 merges
+build:ci --copt=-Wno-unused-command-line-argument
+
 # Attempt to work around intermittent issue while trying to fetch remote blob.
 # See e.g. https://github.com/bazelbuild/bazel/issues/18694.
 build:ci --remote_default_exec_properties=cache-silo-key=CleverPeafowl

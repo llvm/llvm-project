@@ -32,6 +32,7 @@
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -230,13 +231,9 @@ public:
 
   Printable printEntries(const ContextT &Ctx) const {
     return Printable([this, &Ctx](raw_ostream &Out) {
-      bool First = true;
-      for (auto *Entry : Entries) {
-        if (!First)
-          Out << ' ';
-        First = false;
-        Out << Ctx.print(Entry);
-      }
+      ListSeparator LS(" ");
+      for (auto *Entry : Entries)
+        Out << LS << Ctx.print(Entry);
     });
   }
 

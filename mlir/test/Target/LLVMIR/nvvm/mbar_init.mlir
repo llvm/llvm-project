@@ -54,23 +54,3 @@ llvm.func @mbarrier_inval_shared(%barrier: !llvm.ptr<3>) {
   nvvm.mbarrier.inval %barrier : !llvm.ptr<3>
   llvm.return
 }
-
-llvm.func @mbarrier_test_wait(%barrier: !llvm.ptr, %token : i64) -> i1 {
-  // CHECK-LABEL: define i1 @mbarrier_test_wait(ptr %0, i64 %1) {
-  // CHECK-NEXT: %3 = call i1 @llvm.nvvm.mbarrier.test.wait(ptr %0, i64 %1)
-  // CHECK-NEXT: ret i1 %3
-  // CHECK-NEXT: }
-  %isComplete = nvvm.mbarrier.test.wait %barrier, %token : !llvm.ptr, i64 -> i1
-  llvm.return %isComplete : i1
-}
-
-llvm.func @mbarrier_test_wait_shared(%barrier: !llvm.ptr<3>, %token : i64) {
-  // CHECK-LABEL: define void @mbarrier_test_wait_shared(ptr addrspace(3) %0, i64 %1) {
-  // CHECK-NEXT: %3 = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-  // CHECK-NEXT: %4 = call i1 @llvm.nvvm.mbarrier.test.wait.shared(ptr addrspace(3) %0, i64 %1)
-  // CHECK-NEXT: ret void
-  // CHECK-NEXT: }
-  %count = nvvm.read.ptx.sreg.ntid.x : i32
-  %isComplete = nvvm.mbarrier.test.wait %barrier, %token : !llvm.ptr<3>, i64 -> i1
-  llvm.return
-}

@@ -137,6 +137,11 @@ lldb_private::python::LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data) {
 }
 
 void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBThread(PyObject *data) {
+  return nullptr;
+}
+
+void *
 lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrame(PyObject *data) {
   return nullptr;
 }
@@ -163,6 +168,26 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(
 
 void *
 lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data) {
+  return nullptr;
+}
+
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFileSpec(PyObject *data) {
+  return nullptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBModuleSpec(
+    PyObject *data) {
+  return nullptr;
+}
+
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBModule(PyObject *data) {
+  return nullptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFileSpecList(
+    PyObject *data) {
   return nullptr;
 }
 

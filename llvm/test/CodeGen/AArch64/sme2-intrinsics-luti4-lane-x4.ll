@@ -54,10 +54,10 @@ define void @test_multiple_luti4_zt_i8(ptr %ptrA, ptr %ptrB, <vscale x 16 x i8> 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr zt0, [x0]
 ; CHECK-NEXT:    luti4 { z4.s - z7.s }, zt0, z0[1]
-; CHECK-NEXT:    // fake_use: $z4 $z4_z5_z6_z7
+; CHECK-NEXT:    // fake_use: $z4
 ; CHECK-NEXT:    ldr zt0, [x1]
 ; CHECK-NEXT:    luti4 { z0.s - z3.s }, zt0, z0[1]
-; CHECK-NEXT:    // fake_use: $z0 $z0_z1_z2_z3
+; CHECK-NEXT:    // fake_use: $z0
 ; CHECK-NEXT:    ret
   tail call void @llvm.aarch64.sme.ldr.zt(i32 0, ptr %ptrA)
   %res1 = call {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sme.luti4.lane.zt.x4.nxv4f32(i32 0, <vscale x 16 x i8> %x, i32 1)

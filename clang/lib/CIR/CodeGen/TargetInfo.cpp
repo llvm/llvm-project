@@ -56,6 +56,25 @@ public:
 
 } // namespace
 
+namespace {
+
+class NVPTXABIInfo : public ABIInfo {
+public:
+  NVPTXABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+};
+
+class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
+};
+} // namespace
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<NVPTXTargetCIRGenInfo>(cgt);
+}
+
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createX8664TargetCIRGenInfo(CIRGenTypes &cgt) {
   return std::make_unique<X8664TargetCIRGenInfo>(cgt);
@@ -70,15 +89,4 @@ bool TargetCIRGenInfo::isNoProtoCallVariadic(
   //   MIPS
   // For everything else, we just prefer false unless we opt out.
   return false;
-}
-
-mlir::Value TargetCIRGenInfo::performAddrSpaceCast(
-    CIRGenFunction &cgf, mlir::Value v, cir::TargetAddressSpaceAttr srcAddr,
-    mlir::Type destTy, bool isNonNull) const {
-  // Since target may map different address spaces in AST to the same address
-  // space, an address space conversion may end up as a bitcast.
-  if (cir::GlobalOp globalOp = v.getDefiningOp<cir::GlobalOp>())
-    cgf.cgm.errorNYI("Global op addrspace cast");
-  // Try to preserve the source's name to make IR more readable.
-  return cgf.getBuilder().createAddrSpaceCast(v, destTy);
 }

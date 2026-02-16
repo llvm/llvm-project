@@ -59,17 +59,17 @@ __global__ void i_am_kernel(void* src, __amdgpu_buffer_rsrc_t rsrc, __shared__ v
 }
 
 __device__ void i_am_wrong(void* src, __amdgpu_buffer_rsrc_t rsrc, __shared__ void* dst, int vindex, int voffset, int soffset) {
-    __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, dst, 1, voffset, soffset, 0, 0, 4);
-    __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, dst, 2, voffset, soffset, 0, 0, 4);
-    __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, dst, 4, voffset, soffset, 0, 0, 4);
-    __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, dst, 12, voffset, soffset, 0, 0, 4);
-    __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, dst, 16, voffset, soffset, 0, 0, 4);
+    __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, dst, 1, voffset, soffset, 0, 0, 4); // expected-error{{too many arguments to function call}}
+    __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, dst, 2, voffset, soffset, 0, 0, 4); // expected-error{{too many arguments to function call}}
+    __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, dst, 4, voffset, soffset, 0, 0, 4); // expected-error{{too many arguments to function call}}
+    __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, dst, 12, voffset, soffset, 0, 0, 4); // expected-error{{too many arguments to function call}}
+    __builtin_amdgcn_raw_ptr_buffer_load_lds(rsrc, dst, 16, voffset, soffset, 0, 0, 4); // expected-error{{too many arguments to function call}}
 
-    __builtin_amdgcn_struct_ptr_buffer_load_lds(rsrc, dst, 1, vindex, voffset, soffset, 0, 0, 4);
-    __builtin_amdgcn_struct_ptr_buffer_load_lds(rsrc, dst, 2, vindex, voffset, soffset, 0, 0, 4);
-    __builtin_amdgcn_struct_ptr_buffer_load_lds(rsrc, dst, 4, vindex, voffset, soffset, 0, 0, 4);
-    __builtin_amdgcn_struct_ptr_buffer_load_lds(rsrc, dst, 12, vindex, voffset, soffset, 0, 0, 4);
-    __builtin_amdgcn_struct_ptr_buffer_load_lds(rsrc, dst, 16, vindex, voffset, soffset, 0, 0, 4);
+    __builtin_amdgcn_struct_ptr_buffer_load_lds(rsrc, dst, 1, vindex, voffset, soffset, 0, 0, 4); // expected-error{{too many arguments to function call}}
+    __builtin_amdgcn_struct_ptr_buffer_load_lds(rsrc, dst, 2, vindex, voffset, soffset, 0, 0, 4); // expected-error{{too many arguments to function call}}
+    __builtin_amdgcn_struct_ptr_buffer_load_lds(rsrc, dst, 4, vindex, voffset, soffset, 0, 0, 4); // expected-error{{too many arguments to function call}}
+    __builtin_amdgcn_struct_ptr_buffer_load_lds(rsrc, dst, 12, vindex, voffset, soffset, 0, 0, 4); // expected-error{{too many arguments to function call}}
+    __builtin_amdgcn_struct_ptr_buffer_load_lds(rsrc, dst, 16, vindex, voffset, soffset, 0, 0, 4); // expected-error{{too many arguments to function call}}
 
     __builtin_amdgcn_load_to_lds(src, dst, 1, 0, 0, 4); // expected-error{{too many arguments to function call}}
     __builtin_amdgcn_load_to_lds(src, dst, 2, 0, 0, 4); // expected-error{{too many arguments to function call}}
@@ -77,9 +77,9 @@ __device__ void i_am_wrong(void* src, __amdgpu_buffer_rsrc_t rsrc, __shared__ vo
     __builtin_amdgcn_load_to_lds(src, dst, 12, 0, 0, 4); // expected-error{{too many arguments to function call}}
     __builtin_amdgcn_load_to_lds(src, dst, 16, 0, 0, 4); // expected-error{{too many arguments to function call}}
 
-    __builtin_amdgcn_global_load_lds(src, dst, 1, 0 , 0, 4);
-    __builtin_amdgcn_global_load_lds(src, dst, 2, 0 , 0, 4);
-    __builtin_amdgcn_global_load_lds(src, dst, 4, 0 , 0, 4);
-    __builtin_amdgcn_global_load_lds(src, dst, 12, 0 , 0, 4);
-    __builtin_amdgcn_global_load_lds(src, dst, 16, 0 , 0, 4);
+    __builtin_amdgcn_global_load_lds(src, dst, 1, 0 , 0, 4); // expected-error{{too many arguments to function call}}
+    __builtin_amdgcn_global_load_lds(src, dst, 2, 0 , 0, 4); // expected-error{{too many arguments to function call}}
+    __builtin_amdgcn_global_load_lds(src, dst, 4, 0 , 0, 4); // expected-error{{too many arguments to function call}}
+    __builtin_amdgcn_global_load_lds(src, dst, 12, 0 , 0, 4); // expected-error{{too many arguments to function call}}
+    __builtin_amdgcn_global_load_lds(src, dst, 16, 0 , 0, 4); // expected-error{{too many arguments to function call}}
 }

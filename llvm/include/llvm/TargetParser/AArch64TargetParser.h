@@ -41,6 +41,8 @@ struct CpuInfo;
 static_assert(FEAT_MAX < 62,
               "Number of features in CPUFeatures are limited to 62 entries");
 
+static_assert(PRIOR_MAX < 120, "FeatPriorities is limited to 120 entries");
+
 // Each ArchExtKind correponds directly to a possible -target-feature.
 #define EMIT_ARCHEXTKIND_ENUM
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
@@ -71,11 +73,12 @@ struct ExtensionInfo {
 
 struct FMVInfo {
   StringRef Name;                // The target_version/target_clones spelling.
-  CPUFeatures FeatureBit;        // Index of the bit in the FMV feature bitset.
+  std::optional<CPUFeatures>
+      FeatureBit;                // Index of the bit in the FMV feature bitset.
   FeatPriorities PriorityBit;    // Index of the bit in the FMV priority bitset.
   std::optional<ArchExtKind> ID; // The architecture extension to enable.
-  FMVInfo(StringRef Name, CPUFeatures FeatureBit, FeatPriorities PriorityBit,
-          std::optional<ArchExtKind> ID)
+  FMVInfo(StringRef Name, std::optional<CPUFeatures> FeatureBit,
+          FeatPriorities PriorityBit, std::optional<ArchExtKind> ID)
       : Name(Name), FeatureBit(FeatureBit), PriorityBit(PriorityBit), ID(ID) {};
 };
 

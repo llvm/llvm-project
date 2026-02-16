@@ -27,7 +27,7 @@
 // RUN: env Z3_SOLVER_RESULTS="UNDEF,UNDEF,SAT"   %{mocked_clang} %{attempts}=3 -verify=accepted
 
 
-// REQUIRES: z3, z3-mock, asserts, shell, system-linux
+// REQUIRES: z3, z3-mock, asserts, system-linux
 
 // refuted-no-diagnostics
 

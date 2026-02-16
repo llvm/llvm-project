@@ -106,8 +106,8 @@ RecoveryReproducerContext::~RecoveryReproducerContext() {
 
 static void appendReproducer(std::string &description, Operation *op,
                              const ReproducerStreamFactory &factory,
-                             const std::string &pipelineElements,
-                             bool disableThreads, bool verifyPasses) {
+                             const std::string &pipeline, bool disableThreads,
+                             bool verifyPasses) {
   llvm::raw_string_ostream descOS(description);
 
   // Try to create a new output stream for this crash reproducer.
@@ -119,8 +119,6 @@ static void appendReproducer(std::string &description, Operation *op,
   }
   descOS << "reproducer generated at `" << stream->description() << "`";
 
-  std::string pipeline =
-      (op->getName().getStringRef() + "(" + pipelineElements + ")").str();
   AsmState state(op);
   state.attachResourcePrinter(
       "mlir_reproducer", [&](Operation *op, AsmResourceBuilder &builder) {
@@ -134,8 +132,11 @@ static void appendReproducer(std::string &description, Operation *op,
 }
 
 void RecoveryReproducerContext::generate(std::string &description) {
-  appendReproducer(description, preCrashOperation, streamFactory,
-                   pipelineElements, disableThreads, verifyPasses);
+  std::string pipeline = (preCrashOperation->getName().getStringRef() + "(" +
+                          pipelineElements + ")")
+                             .str();
+  appendReproducer(description, preCrashOperation, streamFactory, pipeline,
+                   disableThreads, verifyPasses);
 }
 
 void RecoveryReproducerContext::disable() {

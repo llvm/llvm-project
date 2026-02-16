@@ -360,6 +360,16 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
   TypeSystemClang::CompleteTagDeclarationDefinition(record_type);
 }
 
+TEST_F(TestTypeSystemClang, TestGetBuiltinTypeByName_BitInt) {
+  auto holder =
+      std::make_unique<clang_utils::TypeSystemClangHolder>("bitint_ast");
+  auto &ast = *holder->GetAST();
+
+  EXPECT_TRUE(ast.GetBuiltinTypeByName(ConstString("_BitInt(26)")).IsSigned());
+  EXPECT_FALSE(
+      ast.GetBuiltinTypeByName(ConstString("unsigned _BitInt(26)")).IsSigned());
+}
+
 TEST_F(TestTypeSystemClang, TestDisplayName) {
   TypeSystemClang ast("some name", llvm::Triple());
   EXPECT_EQ("some name", ast.getDisplayName());
@@ -418,6 +428,108 @@ TEST_F(TestTypeSystemClang, TestEnumerationValueSign) {
   auto *enum_decl = m_ast->AddEnumerationValueToEnumerationType(
       enum_type, Declaration(), "minus_one", -1, 8);
   EXPECT_TRUE(enum_decl->getInitVal().isSigned());
+}
+
+TEST_F(TestTypeSystemClang, TestIsEnumerationType) {
+  auto holder =
+      std::make_unique<clang_utils::TypeSystemClangHolder>("enum_ast");
+  auto &ast = *holder->GetAST();
+
+  // Scoped signed enum
+  {
+    CompilerType enum_type = ast.CreateEnumerationType(
+        "scoped_signed_enum", ast.GetTranslationUnitDecl(),
+        OptionalClangModuleID(), Declaration(),
+        ast.GetBasicType(eBasicTypeLong), /*is_scoped=*/true);
+    ASSERT_TRUE(enum_type);
+
+    bool is_signed;
+    EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
+    EXPECT_TRUE(is_signed);
+    EXPECT_FALSE(enum_type.IsIntegerType(is_signed));
+  }
+
+  // Scoped unsigned enum
+  {
+    CompilerType enum_type = ast.CreateEnumerationType(
+        "scoped_unsigned_enum", ast.GetTranslationUnitDecl(),
+        OptionalClangModuleID(), Declaration(),
+        ast.GetBasicType(eBasicTypeUnsignedInt), /*is_scoped=*/true);
+    ASSERT_TRUE(enum_type);
+
+    bool is_signed;
+    EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
+    EXPECT_FALSE(is_signed);
+    EXPECT_FALSE(enum_type.IsIntegerType(is_signed));
+  }
+
+  // Unscoped signed enum
+  {
+    CompilerType enum_type = ast.CreateEnumerationType(
+        "unscoped_signed_enum", ast.GetTranslationUnitDecl(),
+        OptionalClangModuleID(), Declaration(),
+        ast.GetBasicType(eBasicTypeLong), /*is_scoped=*/false);
+    ASSERT_TRUE(enum_type);
+
+    bool is_signed;
+    EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
+    EXPECT_TRUE(is_signed);
+    EXPECT_FALSE(enum_type.IsIntegerType(is_signed));
+  }
+
+  // Unscoped unsigned enum
+  {
+    CompilerType enum_type = ast.CreateEnumerationType(
+        "unscoped_unsigned_enum", ast.GetTranslationUnitDecl(),
+        OptionalClangModuleID(), Declaration(),
+        ast.GetBasicType(eBasicTypeUnsignedInt), /*is_scoped=*/false);
+    ASSERT_TRUE(enum_type);
+
+    bool is_signed;
+    EXPECT_TRUE(enum_type.IsEnumerationType(is_signed));
+    EXPECT_FALSE(is_signed);
+    EXPECT_FALSE(enum_type.IsIntegerType(is_signed));
+  }
+}
+
+TEST_F(TestTypeSystemClang, TestIsIntegerType_BitInt) {
+  auto holder =
+      std::make_unique<clang_utils::TypeSystemClangHolder>("bitint_ast");
+  auto &ast = *holder->GetAST();
+
+  // Signed _BitInt
+  {
+    CompilerType bitint_type = ast.GetType(
+        ast.getASTContext().getBitIntType(/*Unsigned=*/false, /*NumBits=*/37));
+    ASSERT_TRUE(bitint_type);
+
+    EXPECT_TRUE(bitint_type.IsInteger());
+    EXPECT_TRUE(bitint_type.IsSigned());
+
+    bool is_signed;
+    EXPECT_TRUE(bitint_type.IsIntegerType(is_signed));
+    EXPECT_TRUE(is_signed);
+
+    EXPECT_TRUE(bitint_type.IsIntegerOrEnumerationType(is_signed));
+    EXPECT_TRUE(is_signed);
+  }
+
+  // Unsigned _BitInt
+  {
+    CompilerType bitint_type = ast.GetType(
+        ast.getASTContext().getBitIntType(/*Unsigned=*/true, /*NumBits=*/122));
+    ASSERT_TRUE(bitint_type);
+
+    EXPECT_TRUE(bitint_type.IsInteger());
+    EXPECT_FALSE(bitint_type.IsSigned());
+
+    bool is_signed;
+    EXPECT_TRUE(bitint_type.IsIntegerType(is_signed));
+    EXPECT_FALSE(is_signed);
+
+    EXPECT_TRUE(bitint_type.IsIntegerOrEnumerationType(is_signed));
+    EXPECT_FALSE(is_signed);
+  }
 }
 
 TEST_F(TestTypeSystemClang, TestOwningModule) {
@@ -1236,6 +1348,71 @@ TEST_F(TestTypeSystemClang, TestGetTypeInfo) {
       m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic));
   EXPECT_EQ(vector_of_float.GetTypeInfo(),
             (eTypeIsFloat | eTypeIsVector | eTypeHasChildren));
+}
+
+TEST_F(TestTypeSystemClang, TestIsRealFloatingPointType) {
+  // Tests CompilerType::IsRealFloatingPointType
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  EXPECT_FALSE(m_ast->GetType(ast.getComplexType(ast.FloatTy))
+                   .IsRealFloatingPointType());
+  EXPECT_FALSE(
+      m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic))
+          .IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.HalfTy).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.FloatTy).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.DoubleTy).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.LongDoubleTy).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.Float128Ty).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.BFloat16Ty).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.Ibm128Ty).IsRealFloatingPointType());
+}
+
+TEST_F(TestTypeSystemClang, TestIsFloatingPointType) {
+  // Tests CompilerType::IsFloatingPointType
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  // Vectors of floats
+  EXPECT_FALSE(
+      m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic))
+          .IsFloatingPointType());
+  EXPECT_FALSE(
+      m_ast->GetType(ast.getVectorType(ast.DoubleTy, 1, VectorKind::Generic))
+          .IsFloatingPointType());
+
+  // Complex floats
+  EXPECT_TRUE(
+      m_ast->GetType(ast.getComplexType(ast.FloatTy)).IsFloatingPointType());
+  EXPECT_TRUE(
+      m_ast->GetType(ast.getComplexType(ast.DoubleTy)).IsFloatingPointType());
+  EXPECT_FALSE(
+      m_ast->GetType(ast.getComplexType(ast.IntTy)).IsFloatingPointType());
+
+  // Builtin floats
+  EXPECT_TRUE(m_ast->GetType(ast.HalfTy).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.FloatTy).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.DoubleTy).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.LongDoubleTy).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.Float128Ty).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.BFloat16Ty).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.Ibm128Ty).IsFloatingPointType());
+}
+
+TEST_F(TestTypeSystemClang, TestGetIsComplexType) {
+  // Tests CompilerType::IsComplexType
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  EXPECT_TRUE(m_ast->GetType(ast.getComplexType(ast.IntTy)).IsComplexType());
+  EXPECT_TRUE(m_ast->GetType(ast.getComplexType(ast.FloatTy)).IsComplexType());
+  EXPECT_TRUE(m_ast->GetType(ast.getComplexType(ast.VoidTy)).IsComplexType());
+  EXPECT_FALSE(m_ast
+                   ->GetType(ast.getIncompleteArrayType(
+                       ast.getComplexType(ast.FloatTy), /*ASM=*/{},
+                       /*IndexTypeQuals=*/{}))
+                   .IsComplexType());
 }
 
 TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {

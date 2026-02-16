@@ -64,7 +64,7 @@ private:
                               lldb_private::EmulateInstruction *inst_emulator)
       : UnwindAssembly(arch), m_inst_emulator_up(inst_emulator),
         m_range_ptr(nullptr), m_unwind_plan_ptr(nullptr),
-        m_curr_row_modified(false), m_forward_branch_offset(0) {
+        m_curr_row_modified(false) {
     if (m_inst_emulator_up) {
       m_inst_emulator_up->SetBaton(this);
       m_inst_emulator_up->SetCallbacks(ReadMemory, WriteMemory, ReadRegister,
@@ -152,7 +152,7 @@ private:
   bool m_curr_row_modified;
   // The instruction is branching forward with the given offset. 0 value means
   // no branching.
-  uint32_t m_forward_branch_offset;
+  int64_t m_branch_offset = 0;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_INSTEMULATION_UNWINDASSEMBLYINSTEMULATION_H

@@ -1,6 +1,9 @@
 // RUN: mlir-opt -transform-interpreter -cse -mlir-print-local-scope -split-input-file -verify-diagnostics %s | FileCheck %s
 
-// Check tile+ fuse works with partial reduction outer parallel strategy.
+// Check tile + fuse works with partial reduction outer parallel strategy.
+// This also tests that the fusion logic correctly skips producers that are
+// already inside the innermost loop (e.g., the rank-reducing slice of the
+// fused fill), avoiding infinite loops in the fusion worklist.
 
 module{
   func.func @tile_and_fuse_with_partial_reduction_outer_parallel(

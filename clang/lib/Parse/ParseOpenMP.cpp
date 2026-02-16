@@ -3179,6 +3179,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_message:
   case OMPC_ompx_dyn_cgroup_mem:
   case OMPC_dyn_groupprivate:
+  case OMPC_transparent:
     // OpenMP [2.5, Restrictions]
     //  At most one num_threads clause can appear on the directive.
     // OpenMP [2.8.1, simd construct, Restrictions]
@@ -3213,6 +3214,13 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
 
+    if (CKind == OMPC_transparent && PP.LookAhead(0).isNot(tok::l_paren)) {
+      SourceLocation Loc = ConsumeToken();
+      SourceLocation LLoc = Tok.getLocation();
+      Clause = Actions.OpenMP().ActOnOpenMPTransparentClause(nullptr, LLoc,
+                                                             LLoc, Loc);
+      break;
+    }
     if ((CKind == OMPC_ordered || CKind == OMPC_partial) &&
         PP.LookAhead(/*N=*/0).isNot(tok::l_paren))
       Clause = ParseOpenMPClause(CKind, WrongDirective);
@@ -4925,19 +4933,28 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         break;
       Data.MotionModifiers.push_back(Modifier);
       Data.MotionModifiersLoc.push_back(Tok.getLocation());
-      ConsumeToken();
-      if (Modifier == OMPC_MOTION_MODIFIER_mapper) {
-        IsInvalidMapperModifier = parseMapperModifier(Data);
-        if (IsInvalidMapperModifier)
-          break;
-      }
-      // OpenMP < 5.1 doesn't permit a ',' or additional modifiers.
-      if (getLangOpts().OpenMP < 51)
-        break;
-      // OpenMP 5.1 accepts an optional ',' even if the next character is ':'.
-      // TODO: Is that intentional?
-      if (Tok.is(tok::comma))
+      if (PP.getSpelling(Tok) == "iterator" && getLangOpts().OpenMP >= 51) {
+        ExprResult Tail;
+        Tail = ParseOpenMPIteratorsExpr();
+        Tail = Actions.ActOnFinishFullExpr(Tail.get(), T.getOpenLocation(),
+                                           /*DiscardedValue=*/false);
+        if (Tail.isUsable())
+          Data.IteratorExpr = Tail.get();
+      } else {
         ConsumeToken();
+        if (Modifier == OMPC_MOTION_MODIFIER_mapper) {
+          IsInvalidMapperModifier = parseMapperModifier(Data);
+          if (IsInvalidMapperModifier)
+            break;
+        }
+        // OpenMP < 5.1 doesn't permit a ',' or additional modifiers.
+        if (getLangOpts().OpenMP < 51)
+          break;
+        // OpenMP 5.1 accepts an optional ',' even if the next character is ':'.
+        // TODO: Is that intentional?
+        if (Tok.is(tok::comma))
+          ConsumeToken();
+      }
     }
     if (!Data.MotionModifiers.empty() && Tok.isNot(tok::colon)) {
       if (!IsInvalidMapperModifier) {
@@ -5038,11 +5055,30 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
                         StopBeforeMatch);
               return false;
             }
+          } else {
+            Data.NeedDevicePtrModifier = OMPC_NEED_DEVICE_PTR_unknown;
           }
         }
       }
       ExpectAndConsume(tok::colon, diag::warn_pragma_expected_colon,
                        "adjust-op");
+    }
+  } else if (Kind == OMPC_use_device_ptr) {
+    // Handle optional fallback modifier for use_device_ptr clause.
+    // use_device_ptr([fb_preserve | fb_nullify :] list)
+    Data.ExtraModifier = OMPC_USE_DEVICE_PTR_FALLBACK_unknown;
+    if (getLangOpts().OpenMP >= 61 && Tok.is(tok::identifier)) {
+      auto FallbackModifier = static_cast<OpenMPUseDevicePtrFallbackModifier>(
+          getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok), getLangOpts()));
+      if (FallbackModifier != OMPC_USE_DEVICE_PTR_FALLBACK_unknown) {
+        Data.ExtraModifier = FallbackModifier;
+        Data.ExtraModifierLoc = Tok.getLocation();
+        ConsumeToken();
+        if (Tok.is(tok::colon))
+          Data.ColonLoc = ConsumeToken();
+        else
+          Diag(Tok, diag::err_modifier_expected_colon) << "fallback";
+      }
     }
   }
 

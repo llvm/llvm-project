@@ -24,6 +24,8 @@
 #include "thread_annotations.h"
 #include "tracing.h"
 
+#include <inttypes.h>
+
 namespace scudo {
 
 // SizeClassAllocator64 is an allocator tuned for 64-bit address space.
@@ -1150,13 +1152,30 @@ void SizeClassAllocator64<Config>::getStats(ScopedString *Str, uptr ClassId,
       "%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
       "inuse: %6zu total: %6zu releases attempted: %6zu last "
       "released: %6zuK latest pushed bytes: %6zuK region: 0x%zx "
-      "(0x%zx)\n",
+      "(0x%zx)",
       Region->Exhausted ? "E" : " ", ClassId, getSizeByClassId(ClassId),
       Region->MemMapInfo.MappedUser >> 10, Region->FreeListInfo.PoppedBlocks,
       Region->FreeListInfo.PushedBlocks, InUseBlocks, TotalChunks,
       Region->ReleaseInfo.NumReleasesAttempted,
       Region->ReleaseInfo.LastReleasedBytes >> 10, RegionPushedBytesDelta >> 10,
       Region->RegionBeg, getRegionBaseByClassId(ClassId));
+  const u64 CurTimeNs = getMonotonicTimeFast();
+  const u64 LastReleaseAtNs = Region->ReleaseInfo.LastReleaseAtNs;
+  if (LastReleaseAtNs != 0 && CurTimeNs != LastReleaseAtNs) {
+    const u64 DiffSinceLastReleaseNs =
+        CurTimeNs - Region->ReleaseInfo.LastReleaseAtNs;
+    const u64 LastReleaseSecAgo = DiffSinceLastReleaseNs / 1000000000;
+    const u64 LastReleaseMsAgo =
+        (DiffSinceLastReleaseNs % 1000000000) / 1000000;
+    Str->append(" Latest release: %6" PRIu64 ":%" PRIu64 " seconds ago",
+                LastReleaseSecAgo, LastReleaseMsAgo);
+  }
+#if SCUDO_LINUX
+  const uptr MapBase = Region->MemMapInfo.MemMap.getBase();
+  Str->append(" Resident Pages: %6" PRIu64,
+              getResidentPages(MapBase, RegionSize));
+#endif
+  Str->append("\n");
 }
 
 template <typename Config>
@@ -1315,8 +1334,17 @@ uptr SizeClassAllocator64<Config>::releaseToOS(ReleaseToOS ReleaseType) {
     if (I == SizeClassMap::BatchClassId)
       continue;
     RegionInfo *Region = getRegionInfo(I);
-    ScopedLock L(Region->MMLock);
-    TotalReleasedBytes += releaseToOSMaybe(Region, I, ReleaseType);
+    if (ReleaseType == ReleaseToOS::ForceFast) {
+      // Never wait for the lock, always move on if there is already
+      // a release operation in progress.
+      if (Region->MMLock.tryLock()) {
+        TotalReleasedBytes += releaseToOSMaybe(Region, I, ReleaseType);
+        Region->MMLock.unlock();
+      }
+    } else {
+      ScopedLock L(Region->MMLock);
+      TotalReleasedBytes += releaseToOSMaybe(Region, I, ReleaseType);
+    }
   }
   return TotalReleasedBytes;
 }
@@ -1670,7 +1698,7 @@ SizeClassAllocator64<Config>::collectGroupsToRelease(
 
       if (!HighDensity) {
         DCHECK_LE(BytesInBG, ReleaseThreshold);
-        // The following is the usage of a memroy group,
+        // The following is the usage of a memory group,
         //
         //     BytesInBG             ReleaseThreshold
         //  /             \                 v

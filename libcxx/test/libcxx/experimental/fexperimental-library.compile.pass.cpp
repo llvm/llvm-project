@@ -16,6 +16,10 @@
 
 #include <version>
 
+#if !_LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+#  error "-fexperimental-library should enable optional::iterator"
+#endif
+
 #if !_LIBCPP_HAS_EXPERIMENTAL_PSTL
 #  error "-fexperimental-library should enable the PSTL"
 #endif

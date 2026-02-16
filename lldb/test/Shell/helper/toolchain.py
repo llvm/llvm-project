@@ -226,7 +226,7 @@ def use_support_substitutions(config):
         except OSError:
             res = -1
         if res == 0 and out:
-            sdk_path = lit.util.to_string(out)
+            sdk_path = out.decode("utf-8")
             llvm_config.lit_config.note("using SDKROOT: %r" % sdk_path)
             host_flags += ["-isysroot", sdk_path]
     elif sys.platform != "win32":
@@ -241,6 +241,11 @@ def use_support_substitutions(config):
 
     # The clang module cache is used for building inferiors.
     host_flags += ["-fmodules-cache-path={}".format(config.clang_module_cache)]
+
+    # Our files use x86 AT&T assembly throughout.
+    # Enable it explicitly so any local Clang preference for Intel syntax gets overriden.
+    if "x86-registered-target" in config.available_features:
+        host_flags += ["-mllvm", "-x86-asm-syntax=att"]
 
     if config.cmake_sysroot:
         host_flags += ["--sysroot={}".format(config.cmake_sysroot)]

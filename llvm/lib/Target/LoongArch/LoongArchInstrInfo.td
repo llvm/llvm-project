@@ -474,6 +474,10 @@ def simm20_lu32id : SImm20Operand {
   let ParserMatchClass = SImmAsmOperand<20, "lu32id">;
 }
 
+def simm20_pcaddu12i : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "pcaddu12i">;
+}
+
 def simm20_pcaddu18i : SImm20Operand {
   let ParserMatchClass = SImmAsmOperand<20, "pcaddu18i">;
 }
@@ -511,7 +515,7 @@ def SImm26OperandBL: AsmOperandClass {
   let ParserMethod = "parseSImm26Operand";
 }
 
-// A symbol or an imm used in BL/PseudoCALL/PseudoTAIL.
+// A symbol or an imm used in BL/PseudoCALL_SMALL/PseudoTAIL_SMALL.
 def simm26_symbol : Operand<GRLenVT> {
   let ParserMatchClass = SImm26OperandBL;
   let EncoderMethod = "getImmOpValueAsr<2>";
@@ -800,6 +804,10 @@ class AM_3R<bits<32> op>
   let Constraints = "@earlyclobber $rd";
 }
 
+class AU_3R<bits<32> op> : AM_3R<op> {
+  let DecoderMethod = "DecodeAMOrUDInstruction";
+}
+
 class AMCAS_3R<bits<32> op>
     : Fmt3R<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rk, GPRMemAtomic:$rj),
             "$rd, $rk, $rj"> {
@@ -851,7 +859,7 @@ def SLT  : ALU_3R<0x00120000>;
 def SLTU : ALU_3R<0x00128000>;
 def SLTI  : ALU_2RI12<0x02000000, simm12>;
 def SLTUI : ALU_2RI12<0x02400000, simm12>;
-def PCADDU12I : ALU_1RI20<0x1c000000, simm20>;
+def PCADDU12I : ALU_1RI20<0x1c000000, simm20_pcaddu12i>;
 def AND  : ALU_3R<0x00148000>;
 def OR   : ALU_3R<0x00150000>;
 def NOR  : ALU_3R<0x00140000>;
@@ -922,6 +930,9 @@ def SYSCALL : MISC_I15<0x002b0000>;
 def BREAK   : MISC_I15<0x002a0000>;
 def RDTIMEL_W : RDTIME_2R<0x00006000>;
 def RDTIMEH_W : RDTIME_2R<0x00006400>;
+
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
+def UD : FmtUD<(outs), (ins uimm5:$imm5), "$imm5">;
 
 // The CPUCFG instruction offers a reliable way to probing CPU features.
 // Although support is not guaranteed on LA32R, having compiler support
@@ -1087,7 +1098,7 @@ def STLE_D : STORE_3R<0x387f8000>;
 // Atomic Memory Access Instructions for 64-bits
 def AMSWAP_B     : AM_3R<0x385c0000>;
 def AMSWAP_H     : AM_3R<0x385c8000>;
-def AMSWAP_W     : AM_3R<0x38600000>;
+def AMSWAP_W     : AU_3R<0x38600000>;
 def AMSWAP_D     : AM_3R<0x38608000>;
 def AMADD_B      : AM_3R<0x385d0000>;
 def AMADD_H      : AM_3R<0x385d8000>;
@@ -1410,12 +1421,8 @@ def : Pat<(and GPR:$rj, BstrinsImm:$imm),
 
 /// Traps
 
-// We lower `trap` to `amswap.w rd:$r0, rk:$r1, rj:$r0`, as this is guaranteed
-// to trap with an INE (non-existent on LA32, explicitly documented to INE on
-// LA64). And the resulting signal is different from `debugtrap` like on some
-// other existing ports so programs/porters might have an easier time.
-def PseudoUNIMP : Pseudo<(outs), (ins), [(trap)]>,
-                  PseudoInstExpansion<(AMSWAP_W R0, R1, R0)>;
+// We lower `trap` to `ud 0`, which is an alias for `amswap.w $r0, $r1, $r0`.
+def PseudoUNIMP : Pseudo<(outs), (ins), [(trap)]>, PseudoInstExpansion<(UD 0)>;
 
 // We lower `debugtrap` to `break 0`, as this is guaranteed to exist and work,
 // even for LA32 Primary. Also, because so far the ISA does not provide a
@@ -1618,21 +1625,21 @@ def : Pat<(brind (add GPRJR:$rj, simm16_lsl2:$imm16)),
 
 // Function call with 'Small' code model.
 let isCall = 1, Defs = [R1] in
-def PseudoCALL : Pseudo<(outs), (ins bare_symbol:$func)>;
+def PseudoCALL_SMALL : Pseudo<(outs), (ins bare_symbol:$func)>;
 
-def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
-def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
+def : Pat<(loongarch_call tglobaladdr:$func),
+          (PseudoCALL_SMALL tglobaladdr:$func)>;
+def : Pat<(loongarch_call texternalsym:$func),
+          (PseudoCALL_SMALL texternalsym:$func)>;
 
 // Function call with 'Medium' code model.
 let isCall = 1, Defs = [R1, R20], Size = 8 in
 def PseudoCALL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$func)>;
 
-let Predicates = [IsLA64] in {
 def : Pat<(loongarch_call_medium tglobaladdr:$func),
           (PseudoCALL_MEDIUM tglobaladdr:$func)>;
 def : Pat<(loongarch_call_medium texternalsym:$func),
           (PseudoCALL_MEDIUM texternalsym:$func)>;
-} // Predicates = [IsLA64]
 
 // Function call with 'Large' code model.
 let isCall = 1, Defs = [R1] in
@@ -1649,10 +1656,9 @@ let isCall = 1, Defs = [R1] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rj),
                                 [(loongarch_call GPR:$rj)]>,
                          PseudoInstExpansion<(JIRL R1, GPR:$rj, 0)>;
-let Predicates = [IsLA64] in {
 def : Pat<(loongarch_call_medium GPR:$rj), (PseudoCALLIndirect GPR:$rj)>;
+let Predicates = [IsLA64] in
 def : Pat<(loongarch_call_large GPR:$rj), (PseudoCALLIndirect GPR:$rj)>;
-}
 
 let isCall = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0, Defs = [R1] in
 def PseudoJIRL_CALL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
@@ -1665,24 +1671,22 @@ def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
 
 // Tail call with 'Small' code model.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
-def PseudoTAIL : Pseudo<(outs), (ins bare_symbol:$dst)>;
+def PseudoTAIL_SMALL : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
 def : Pat<(loongarch_tail (iPTR tglobaladdr:$dst)),
-          (PseudoTAIL tglobaladdr:$dst)>;
+          (PseudoTAIL_SMALL tglobaladdr:$dst)>;
 def : Pat<(loongarch_tail (iPTR texternalsym:$dst)),
-          (PseudoTAIL texternalsym:$dst)>;
+          (PseudoTAIL_SMALL texternalsym:$dst)>;
 
 // Tail call with 'Medium' code model.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     Uses = [R3], Defs = [R20], Size = 8 in
 def PseudoTAIL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
-let Predicates = [IsLA64] in {
 def : Pat<(loongarch_tail_medium (iPTR tglobaladdr:$dst)),
           (PseudoTAIL_MEDIUM tglobaladdr:$dst)>;
 def : Pat<(loongarch_tail_medium (iPTR texternalsym:$dst)),
           (PseudoTAIL_MEDIUM texternalsym:$dst)>;
-} // Predicates = [IsLA64]
 
 // Tail call with 'Large' code model.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
@@ -1699,10 +1703,9 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
 def PseudoTAILIndirect : Pseudo<(outs), (ins GPRT:$rj),
                                 [(loongarch_tail GPRT:$rj)]>,
                          PseudoInstExpansion<(JIRL R0, GPR:$rj, 0)>;
-let Predicates = [IsLA64] in {
 def : Pat<(loongarch_tail_medium GPR:$rj), (PseudoTAILIndirect GPR:$rj)>;
+let Predicates = [IsLA64] in
 def : Pat<(loongarch_tail_large GPR:$rj), (PseudoTAILIndirect GPR:$rj)>;
-}
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     hasSideEffects = 0, mayStore = 0, mayLoad = 0, Uses = [R3] in
@@ -1714,6 +1717,26 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
 def PseudoJIRL_TAIL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
                       PseudoInstExpansion<(JIRL R0, GPR:$rj,
                                            simm16_lsl2:$imm16)>;
+
+/// call/tail macro instructions
+let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, isAsmParserOnly = 1,
+    Defs = [R1], hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
+def PseudoCALL : Pseudo<(outs), (ins bare_symbol:$dst), [], "call", "$dst">;
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3],
+    isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoTAIL : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
+                        "tail", "$tmp, $dst">;
+
+/// call30/tail30 macro instructions
+let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, isAsmParserOnly = 1,
+    Defs = [R1], hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
+def PseudoCALL30 : Pseudo<(outs), (ins bare_symbol:$dst), [], "call30", "$dst">;
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3],
+    isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoTAIL30 : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
+                          "tail30", "$tmp, $dst">;
 
 /// call36/taill36 macro instructions
 let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, isAsmParserOnly = 1,

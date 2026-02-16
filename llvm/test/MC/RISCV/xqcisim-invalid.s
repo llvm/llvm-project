@@ -1,7 +1,7 @@
 # Xqcisim - Simulaton Hint Instructions
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqcisim < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+xqcisim < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcisim < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=-xqcisim < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+1]]:14: error: immediate must be an integer in the range [0, 1023]

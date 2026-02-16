@@ -208,6 +208,11 @@ public:
     return createRealConstant(loc, realType, 0u);
   }
 
+  /// Create a real constant of type \p realType with value one.
+  mlir::Value createRealOneConstant(mlir::Location loc, mlir::Type realType) {
+    return createRealConstant(loc, realType, 1u);
+  }
+
   /// Create a slot for a local on the stack. Besides the variable's type and
   /// shape, it may be given name, pinned, or target attributes.
   mlir::Value allocateLocal(mlir::Location loc, mlir::Type ty,
@@ -571,7 +576,7 @@ public:
   /// Fortran 2018 9.5.3.3.2 section for more details.
   mlir::Value genExtentFromTriplet(mlir::Location loc, mlir::Value lb,
                                    mlir::Value ub, mlir::Value step,
-                                   mlir::Type type);
+                                   mlir::Type type, bool fold = false);
 
   /// Create an AbsentOp of \p argTy type and handle special cases, such as
   /// Character Procedure Tuple arguments.
@@ -855,6 +860,11 @@ mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
 /// for logical types).
 mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Type type);
+
+/// Create a one value of a given numerical or logical \p type (`true`
+/// for logical types).
+mlir::Value createOneValue(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Type type);
 
 /// Get the integer constants of triplet and compute the extent.
 std::optional<std::int64_t> getExtentFromTriplet(mlir::Value lb, mlir::Value ub,

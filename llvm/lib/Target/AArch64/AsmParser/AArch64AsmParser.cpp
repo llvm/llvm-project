@@ -3934,7 +3934,6 @@ static const struct Extension {
     {"sve-f16f32mm", {AArch64::FeatureSVE_F16F32MM}},
     {"lsui", {AArch64::FeatureLSUI}},
     {"occmo", {AArch64::FeatureOCCMO}},
-    {"pcdphint", {AArch64::FeaturePCDPHINT}},
     {"ssve-bitperm", {AArch64::FeatureSSVE_BitPerm}},
     {"sme-mop4", {AArch64::FeatureSME_MOP4}},
     {"sme-tmop", {AArch64::FeatureSME_TMOP}},
@@ -3954,6 +3953,14 @@ static const struct Extension {
     {"poe2", {AArch64::FeatureS1POE2}},
     {"tev", {AArch64::FeatureTEV}},
     {"btie", {AArch64::FeatureBTIE}},
+    {"dit", {AArch64::FeatureDIT}},
+    {"brbe", {AArch64::FeatureBRBE}},
+    {"bti", {AArch64::FeatureBranchTargetId}},
+    {"fcma", {AArch64::FeatureComplxNum}},
+    {"jscvt", {AArch64::FeatureJS}},
+    {"pauth-lr", {AArch64::FeaturePAuthLR}},
+    {"ssve-fexpa", {AArch64::FeatureSSVE_FEXPA}},
+    {"wfxt", {AArch64::FeatureWFxT}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {

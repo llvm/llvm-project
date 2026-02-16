@@ -33,7 +33,6 @@
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/Host/MainLoop.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -88,7 +87,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// Path to the lldb-dap binary itself.
   static llvm::StringRef debug_adapter_path;
 
-  Log *log;
+  Log &log;
   DAPTransport &transport;
   lldb::SBFile in;
   OutputRedirector out;
@@ -147,13 +146,13 @@ struct DAP final : public DAPTransport::MessageHandler {
   ReplMode repl_mode;
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
+  llvm::unique_function<void()> on_configuration_done;
 
   /// This is used to allow request_evaluate to handle empty expressions
   /// (ie the user pressed 'return' and expects the previous expression to
-  /// repeat). If the previous expression was a command, this string will be
-  /// empty; if the previous expression was a variable expression, this string
-  /// will contain that expression.
-  std::string last_nonempty_var_expression;
+  /// repeat). If the previous expression was a command, it will be empty.
+  /// Else it will contain the last valid variable expression.
+  std::string last_valid_variable_expression;
 
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
@@ -194,12 +193,12 @@ struct DAP final : public DAPTransport::MessageHandler {
   ///     Transport for this debug session.
   /// \param[in] loop
   ///     Main loop associated with this instance.
-  DAP(Log *log, const ReplMode default_repl_mode,
+  DAP(Log &log, const ReplMode default_repl_mode,
       std::vector<std::string> pre_init_commands, bool no_lldbinit,
       llvm::StringRef client_name, DAPTransport &transport,
       lldb_private::MainLoop &loop);
 
-  ~DAP();
+  ~DAP() override = default;
 
   /// DAP is not copyable.
   /// @{
@@ -256,6 +255,8 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   void PopulateExceptionBreakpoints();
 
+  bool ProcessIsNotStopped();
+
   /// Attempt to determine if an expression is a variable expression or
   /// lldb command using a heuristic based on the first term of the
   /// expression.
@@ -272,7 +273,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   ///     either an expression or a statement, depending on the rest of
   ///     the expression.
   /// \return the expression mode
-  ReplMode DetectReplMode(lldb::SBFrame frame, std::string &expression,
+  ReplMode DetectReplMode(lldb::SBFrame &frame, std::string &expression,
                           bool partial_expression);
 
   /// Create a `protocol::Source` object as described in the debug adapter
@@ -432,12 +433,9 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// Perform complete DAP initialization by reusing an existing debugger and
   /// target.
   ///
-  /// \param[in] debugger_id
-  ///     The ID of the existing debugger to reuse.
-  ///
-  /// \param[in] target_id
-  ///     The globally unique ID of the existing target to reuse.
-  llvm::Error InitializeDebugger(int debugger_id, lldb::user_id_t target_id);
+  /// \param[in] session
+  ///     A session consisting of an existing debugger and target.
+  llvm::Error InitializeDebugger(const protocol::DAPSession &session);
 
   /// Start event handling threads based on client capabilities.
   void StartEventThreads();

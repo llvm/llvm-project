@@ -37,5 +37,6 @@ end subroutine
 !FUSE-NEXT: run 1 evaluate: where/region_assign2
 !FUSE-LABEL: ------------ scheduling where in _QPunfusable ------------
 !FUSE-NEXT: run 1 evaluate: where/region_assign1
-!FUSE-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 1
+!FUSE-NEXT: conflict (aligned): R/W: <block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 1
+!FUSE-NEXT: conflicting arrays:{{.*}} and {{.*}}
 !FUSE-NEXT: run 2 evaluate: where/region_assign2

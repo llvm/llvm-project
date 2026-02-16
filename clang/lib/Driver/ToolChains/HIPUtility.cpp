@@ -241,28 +241,34 @@ private:
 
       bool isUndefined =
           FlagOrErr.get() & llvm::object::SymbolRef::SF_Undefined;
+      bool isHidden = FlagOrErr.get() & llvm::object::SymbolRef::SF_Hidden;
       bool isFatBinSymbol = Name.starts_with(FatBinPrefix);
       bool isGPUBinHandleSymbol = Name.starts_with(GPUBinHandlePrefix);
 
-      // Handling for defined symbols
-      if (!isUndefined) {
-        if (isFatBinSymbol) {
-          DefinedFatBinSymbols.insert(Name.str());
-          FatBinSymbols.erase(Name.str());
-        } else if (isGPUBinHandleSymbol) {
-          DefinedGPUBinHandleSymbols.insert(Name.str());
-          GPUBinHandleSymbols.erase(Name.str());
-        }
+      // Add undefined symbols if they are not in the defined sets
+      if (isUndefined) {
+        if (isFatBinSymbol &&
+            DefinedFatBinSymbols.find(Name) == DefinedFatBinSymbols.end())
+          FatBinSymbols.insert(Name.str());
+        else if (isGPUBinHandleSymbol &&
+                 DefinedGPUBinHandleSymbols.find(Name) ==
+                     DefinedGPUBinHandleSymbols.end())
+          GPUBinHandleSymbols.insert(Name.str());
         continue;
       }
 
-      // Add undefined symbols if they are not in the defined sets
-      if (isFatBinSymbol &&
-          DefinedFatBinSymbols.find(Name) == DefinedFatBinSymbols.end())
-        FatBinSymbols.insert(Name.str());
-      else if (isGPUBinHandleSymbol && DefinedGPUBinHandleSymbols.find(Name) ==
-                                           DefinedGPUBinHandleSymbols.end())
-        GPUBinHandleSymbols.insert(Name.str());
+      // Ignore hidden defined symbols
+      if (isHidden)
+        continue;
+
+      // Handling for non-hidden defined symbols
+      if (isFatBinSymbol) {
+        DefinedFatBinSymbols.insert(Name.str());
+        FatBinSymbols.erase(Name.str());
+      } else if (isGPUBinHandleSymbol) {
+        DefinedGPUBinHandleSymbols.insert(Name.str());
+        GPUBinHandleSymbols.erase(Name.str());
+      }
     }
   }
 

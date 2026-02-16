@@ -637,7 +637,7 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
         KernelHandles[I.Kernel->getName()],
         KernelName,
         KernelName,
-        llvm::ConstantInt::get(IntTy, -1),
+        llvm::ConstantInt::getAllOnesValue(IntTy),
         NullPtr,
         NullPtr,
         NullPtr,

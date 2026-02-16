@@ -1,0 +1,5 @@
+static_library("Plugins") {
+  output_name = "LLVMPlugins"
+  deps = [ "//llvm/lib/Support" ]
+  sources = [ "PassPlugin.cpp" ]
+}

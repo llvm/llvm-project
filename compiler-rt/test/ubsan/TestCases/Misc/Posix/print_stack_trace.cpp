@@ -4,6 +4,9 @@
 // This test is temporarily disabled due to broken unwinding on ARM.
 // UNSUPPORTED: target={{.*-linux-.*}}
 
+// Temporarily unsupporting on TySan until interfaces are implemented
+// UNSUPPORTED: ubsan-tysan
+
 // The test doesn't pass on Darwin in UBSan-TSan configuration, because TSan is
 // using the slow unwinder which is not supported on Darwin. The test should
 // be universal after landing of https://reviews.llvm.org/D32806.

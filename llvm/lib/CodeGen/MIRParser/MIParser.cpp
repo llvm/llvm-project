@@ -452,7 +452,7 @@ public:
   bool parseVirtualRegister(VRegInfo *&Info);
   bool parseNamedVirtualRegister(VRegInfo *&Info);
   bool parseRegister(Register &Reg, VRegInfo *&VRegInfo);
-  bool parseRegisterFlag(unsigned &Flags);
+  bool parseRegisterFlag(RegState &Flags);
   bool parseRegisterClassOrBank(VRegInfo &RegInfo);
   bool parseSubRegisterIndex(unsigned &SubReg);
   bool parseRegisterTiedDefIndex(unsigned &TiedDefIdx);
@@ -496,6 +496,7 @@ public:
   bool parseTargetIndexOperand(MachineOperand &Dest);
   bool parseDbgInstrRefOperand(MachineOperand &Dest);
   bool parseCustomRegisterMaskOperand(MachineOperand &Dest);
+  bool parseLaneMaskOperand(MachineOperand &Dest);
   bool parseLiveoutRegisterMaskOperand(MachineOperand &Dest);
   bool parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
                            MachineOperand &Dest,
@@ -522,6 +523,7 @@ public:
   bool parsePreOrPostInstrSymbol(MCSymbol *&Symbol);
   bool parseHeapAllocMarker(MDNode *&Node);
   bool parsePCSections(MDNode *&Node);
+  bool parseMMRA(MDNode *&Node);
 
   bool parseTargetImmMnemonic(const unsigned OpCode, const unsigned OpIdx,
                               MachineOperand &Dest, const MIRFormatter &MF);
@@ -718,6 +720,7 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsLandingPad = false;
   bool IsInlineAsmBrIndirectTarget = false;
   bool IsEHFuncletEntry = false;
+  bool IsEHScopeEntry = false;
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
   std::optional<UniqueBBID> BBID;
@@ -745,6 +748,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_ehfunclet_entry:
         IsEHFuncletEntry = true;
+        lex();
+        break;
+      case MIToken::kw_ehscope_entry:
+        IsEHScopeEntry = true;
         lex();
         break;
       case MIToken::kw_align:
@@ -803,6 +810,7 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsEHPad(IsLandingPad);
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
+  MBB->setIsEHScopeEntry(IsEHScopeEntry);
   if (SectionID) {
     MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
@@ -1070,7 +1078,7 @@ bool MIParser::parse(MachineInstr *&MI) {
   while (!Token.isNewlineOrEOF() && Token.isNot(MIToken::kw_pre_instr_symbol) &&
          Token.isNot(MIToken::kw_post_instr_symbol) &&
          Token.isNot(MIToken::kw_heap_alloc_marker) &&
-         Token.isNot(MIToken::kw_pcsections) &&
+         Token.isNot(MIToken::kw_pcsections) && Token.isNot(MIToken::kw_mmra) &&
          Token.isNot(MIToken::kw_cfi_type) &&
          Token.isNot(MIToken::kw_deactivation_symbol) &&
          Token.isNot(MIToken::kw_debug_location) &&
@@ -1106,7 +1114,9 @@ bool MIParser::parse(MachineInstr *&MI) {
   if (Token.is(MIToken::kw_pcsections))
     if (parsePCSections(PCSections))
       return true;
-
+  MDNode *MMRA = nullptr;
+  if (Token.is(MIToken::kw_mmra) && parseMMRA(MMRA))
+    return true;
   unsigned CFIType = 0;
   if (Token.is(MIToken::kw_cfi_type)) {
     lex();
@@ -1203,6 +1213,8 @@ bool MIParser::parse(MachineInstr *&MI) {
     MI->setHeapAllocMarker(MF, HeapAllocMarker);
   if (PCSections)
     MI->setPCSections(MF, PCSections);
+  if (MMRA)
+    MI->setMMRAMetadata(MF, MMRA);
   if (CFIType)
     MI->setCFIType(MF, CFIType);
   if (DS)
@@ -1651,8 +1663,8 @@ bool MIParser::parseRegisterClassOrBank(VRegInfo &RegInfo) {
   llvm_unreachable("Unexpected register kind");
 }
 
-bool MIParser::parseRegisterFlag(unsigned &Flags) {
-  const unsigned OldFlags = Flags;
+bool MIParser::parseRegisterFlag(RegState &Flags) {
+  const RegState OldFlags = Flags;
   switch (Token.kind()) {
   case MIToken::kw_implicit:
     Flags |= RegState::Implicit;
@@ -1761,7 +1773,7 @@ bool MIParser::assignRegisterTies(MachineInstr &MI,
 bool MIParser::parseRegisterOperand(MachineOperand &Dest,
                                     std::optional<unsigned> &TiedDefIdx,
                                     bool IsDef) {
-  unsigned Flags = IsDef ? RegState::Define : 0;
+  RegState Flags = getDefRegState(IsDef);
   while (Token.isRegisterFlag()) {
     if (parseRegisterFlag(Flags))
       return true;
@@ -1788,7 +1800,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
         return true;
   }
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  if ((Flags & RegState::Define) == 0) {
+  if (!hasRegState(Flags, RegState::Define)) {
     if (consumeIfPresent(MIToken::lparen)) {
       unsigned Idx;
       if (!parseRegisterTiedDefIndex(Idx))
@@ -1836,19 +1848,23 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       return error("generic virtual registers must have a type");
   }
 
-  if (Flags & RegState::Define) {
-    if (Flags & RegState::Kill)
+  if (hasRegState(Flags, RegState::Define)) {
+    if (hasRegState(Flags, RegState::Kill))
       return error("cannot have a killed def operand");
   } else {
-    if (Flags & RegState::Dead)
+    if (hasRegState(Flags, RegState::Dead))
       return error("cannot have a dead use operand");
   }
 
-  Dest = MachineOperand::CreateReg(
-      Reg, Flags & RegState::Define, Flags & RegState::Implicit,
-      Flags & RegState::Kill, Flags & RegState::Dead, Flags & RegState::Undef,
-      Flags & RegState::EarlyClobber, SubReg, Flags & RegState::Debug,
-      Flags & RegState::InternalRead, Flags & RegState::Renamable);
+  Dest = MachineOperand::CreateReg(Reg, hasRegState(Flags, RegState::Define),
+                                   hasRegState(Flags, RegState::Implicit),
+                                   hasRegState(Flags, RegState::Kill),
+                                   hasRegState(Flags, RegState::Dead),
+                                   hasRegState(Flags, RegState::Undef),
+                                   hasRegState(Flags, RegState::EarlyClobber),
+                                   SubReg, hasRegState(Flags, RegState::Debug),
+                                   hasRegState(Flags, RegState::InternalRead),
+                                   hasRegState(Flags, RegState::Renamable));
 
   return false;
 }
@@ -2886,6 +2902,31 @@ bool MIParser::parseCustomRegisterMaskOperand(MachineOperand &Dest) {
   return false;
 }
 
+bool MIParser::parseLaneMaskOperand(MachineOperand &Dest) {
+  assert(Token.is(MIToken::kw_lanemask));
+
+  lex();
+  if (expectAndConsume(MIToken::lparen))
+    return true;
+
+  // Parse lanemask.
+  if (Token.isNot(MIToken::IntegerLiteral) && Token.isNot(MIToken::HexLiteral))
+    return error("expected a valid lane mask value");
+  static_assert(sizeof(LaneBitmask::Type) == sizeof(uint64_t),
+                "Use correct get-function for lane mask.");
+  LaneBitmask::Type V;
+  if (getUint64(V))
+    return true;
+  LaneBitmask LaneMask(V);
+  lex();
+
+  if (expectAndConsume(MIToken::rparen))
+    return true;
+
+  Dest = MachineOperand::CreateLaneMask(LaneMask);
+  return false;
+}
+
 bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
   assert(Token.is(MIToken::kw_liveout));
   uint32_t *Mask = MF.allocateRegMask();
@@ -2986,6 +3027,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
     return parseIntrinsicOperand(Dest);
   case MIToken::kw_target_index:
     return parseTargetIndexOperand(Dest);
+  case MIToken::kw_lanemask:
+    return parseLaneMaskOperand(Dest);
   case MIToken::kw_liveout:
     return parseLiveoutRegisterMaskOperand(Dest);
   case MIToken::kw_floatpred:
@@ -3567,6 +3610,20 @@ bool MIParser::parsePCSections(MDNode *&Node) {
     return true;
   if (!Node)
     return error("expected a MDNode after 'pcsections'");
+  if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
+      Token.is(MIToken::lbrace))
+    return false;
+  if (Token.isNot(MIToken::comma))
+    return error("expected ',' before the next machine operand");
+  lex();
+  return false;
+}
+
+bool MIParser::parseMMRA(MDNode *&Node) {
+  assert(Token.is(MIToken::kw_mmra) && "Invalid token for MMRA!");
+  lex();
+  if (parseMDNode(Node))
+    return true;
   if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
       Token.is(MIToken::lbrace))
     return false;

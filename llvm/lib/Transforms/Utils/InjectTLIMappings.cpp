@@ -17,6 +17,8 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/VFABIDemangler.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -55,6 +57,16 @@ static void addVariantDeclaration(CallInst &CI, const ElementCount &VF,
   Function *VecFunc =
       Function::Create(VectorFTy, Function::ExternalLinkage, VFName, M);
   VecFunc->copyAttributesFrom(CI.getCalledFunction());
+
+  // When mapping scalar functions to vector functions, some attributes
+  // (e.g. signext) are not valid on vector types. Remove attributes that are
+  // incompatible with the vectorized return type and arguments.
+  VecFunc->removeRetAttrs(AttributeFuncs::typeIncompatible(
+      VecFunc->getReturnType(), VecFunc->getAttributes().getRetAttrs()));
+  for (auto &Arg : VecFunc->args())
+    Arg.removeAttrs(
+        AttributeFuncs::typeIncompatible(Arg.getType(), Arg.getAttributes()));
+
   if (auto CC = VD->getCallingConv())
     VecFunc->setCallingConv(*CC);
   ++NumVFDeclAdded;

@@ -128,13 +128,17 @@ struct LineEntry {
   ///
   /// \param[in] target_sp
   ///     Shared pointer to the target this LineEntry belongs to.
-  void ApplyFileMappings(lldb::TargetSP target_sp);
+  void ApplyFileMappings(lldb::TargetSP target_sp, const Address &address);
 
   /// Helper to access the file.
   const FileSpec &GetFile() const { return file_sp->GetSpecOnly(); }
 
   /// The section offset address range for this line entry.
   AddressRange range;
+
+  /// This gets set for LineEntries created without a valid address range.
+  /// When set, `LineEntry::IsValid` doesn't check the `range` validity.
+  bool synthetic = false;
 
   /// The source file, possibly mapped by the target.source-map setting.
   SupportFileNSP file_sp;

@@ -15,6 +15,7 @@
 
 #include "Descriptor.h"
 #include "FunctionPointer.h"
+#include "InitMap.h"
 #include "InterpBlock.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/Decl.h"
@@ -354,7 +355,8 @@ public:
       if (const auto *CT = getFieldDesc()->getType()->getAs<VectorType>())
         return CT->getElementType();
     }
-    return getFieldDesc()->getType();
+
+    return getFieldDesc()->getDataElemType();
   }
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
@@ -664,6 +666,15 @@ public:
     return false;
   }
 
+  /// Checks whether the pointer can be dereferenced to the given PrimType.
+  bool canDeref(PrimType T) const {
+    if (const Descriptor *FieldDesc = getFieldDesc()) {
+      return (FieldDesc->isPrimitive() || FieldDesc->isPrimitiveArray()) &&
+             FieldDesc->getPrimType() == T;
+    }
+    return false;
+  }
+
   /// Dereferences the pointer, if it's live.
   template <typename T> T &deref() const {
     assert(isLive() && "Invalid pointer");
@@ -721,6 +732,9 @@ public:
   /// Like isInitialized(), but for primitive arrays.
   bool isElementInitialized(unsigned Index) const;
   bool allElementsInitialized() const;
+  bool allElementsAlive() const;
+  bool isElementAlive(unsigned Index) const;
+
   /// Activats a field.
   void activate() const;
   /// Deactivates an entire strurcutre.
@@ -731,23 +745,41 @@ public:
       return Lifetime::Started;
     if (BS.Base < sizeof(InlineDescriptor))
       return Lifetime::Started;
+
+    if (inArray() && !isArrayRoot()) {
+      InitMapPtr &IM = getInitMap();
+
+      if (!IM.hasInitMap()) {
+        if (IM.allInitialized())
+          return Lifetime::Started;
+        return getArray().getLifetime();
+      }
+
+      return IM->isElementAlive(getIndex()) ? Lifetime::Started
+                                            : Lifetime::Ended;
+    }
+
     return getInlineDesc()->LifeState;
   }
 
-  void endLifetime() const {
-    if (!isBlockPointer())
-      return;
-    if (BS.Base < sizeof(InlineDescriptor))
-      return;
-    getInlineDesc()->LifeState = Lifetime::Ended;
-  }
+  /// Start the lifetime of this pointer. This works for pointer with an
+  /// InlineDescriptor as well as primitive array elements. Pointers are usually
+  /// alive by default, unless the underlying object has been allocated with
+  /// std::allocator. This function is used by std::construct_at.
+  void startLifetime() const;
+  /// Ends the lifetime of the pointer. This works for pointer with an
+  /// InlineDescriptor as well as primitive array elements. This function is
+  /// used by std::destroy_at.
+  void endLifetime() const;
 
-  void startLifetime() const {
-    if (!isBlockPointer())
-      return;
-    if (BS.Base < sizeof(InlineDescriptor))
-      return;
-    getInlineDesc()->LifeState = Lifetime::Started;
+  /// Strip base casts from this Pointer.
+  /// The result is either a root pointer or something
+  /// that isn't a base class anymore.
+  [[nodiscard]] Pointer stripBaseCasts() const {
+    Pointer P = *this;
+    while (P.isBaseClass())
+      P = P.getBase();
+    return P;
   }
 
   /// Compare two pointers.
@@ -784,14 +816,13 @@ public:
   /// Compute an integer that can be used to compare this pointer to
   /// another one. This is usually NOT the same as the pointer offset
   /// regarding the AST record layout.
-  size_t computeOffsetForComparison() const;
+  size_t computeOffsetForComparison(const ASTContext &ASTCtx) const;
 
 private:
   friend class Block;
   friend class DeadBlock;
   friend class MemberPointer;
   friend class InterpState;
-  friend struct InitMap;
   friend class DynamicAllocator;
   friend class Program;
 
@@ -838,6 +869,12 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   OS << ' ';
   if (const Descriptor *D = P.getFieldDesc())
     D->dump(OS);
+  if (P.isArrayElement()) {
+    if (P.isOnePastEnd())
+      OS << " one-past-the-end";
+    else
+      OS << " index " << P.getIndex();
+  }
   return OS;
 }
 

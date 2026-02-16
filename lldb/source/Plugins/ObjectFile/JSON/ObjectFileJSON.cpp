@@ -36,32 +36,37 @@ void ObjectFileJSON::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-ObjectFile *
-ObjectFileJSON::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
-                               offset_t data_offset, const FileSpec *file,
-                               offset_t file_offset, offset_t length) {
-  if (!data_sp) {
-    data_sp = MapFileData(*file, length, file_offset);
+ObjectFile *ObjectFileJSON::CreateInstance(const ModuleSP &module_sp,
+                                           DataExtractorSP extractor_sp,
+                                           offset_t data_offset,
+                                           const FileSpec *file,
+                                           offset_t file_offset,
+                                           offset_t length) {
+  if (!extractor_sp || !extractor_sp->HasData()) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
     data_offset = 0;
   }
+  if (!extractor_sp->HasData())
+    return nullptr;
 
-  if (!MagicBytesMatch(data_sp, 0, data_sp->GetByteSize()))
+  if (!MagicBytesMatch(extractor_sp->GetSubsetExtractorSP(data_offset)))
     return nullptr;
 
   // Update the data to contain the entire file if it doesn't already.
-  if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (extractor_sp->GetByteSize() < length) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
+    extractor_sp->SetData(data_sp);
     data_offset = 0;
   }
 
   Log *log = GetLog(LLDBLog::Symbols);
 
-  auto text =
-      llvm::StringRef(reinterpret_cast<const char *>(data_sp->GetBytes()));
+  auto text = llvm::StringRef((const char *)extractor_sp->GetData().data());
 
   Expected<json::Value> json = json::parse(text);
   if (!json) {
@@ -90,9 +95,10 @@ ObjectFileJSON::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
     return nullptr;
   }
 
-  return new ObjectFileJSON(module_sp, data_sp, data_offset, file, file_offset,
-                            length, std::move(arch), std::move(uuid), type,
-                            std::move(body.symbols), std::move(body.sections));
+  return new ObjectFileJSON(module_sp, extractor_sp, data_offset, file,
+                            file_offset, length, std::move(arch),
+                            std::move(uuid), type, std::move(body.symbols),
+                            std::move(body.sections));
 }
 
 ObjectFile *ObjectFileJSON::CreateMemoryInstance(const ModuleSP &module_sp,
@@ -103,23 +109,24 @@ ObjectFile *ObjectFileJSON::CreateMemoryInstance(const ModuleSP &module_sp,
 }
 
 size_t ObjectFileJSON::GetModuleSpecifications(
-    const FileSpec &file, DataBufferSP &data_sp, offset_t data_offset,
+    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
     offset_t file_offset, offset_t length, ModuleSpecList &specs) {
-  if (!MagicBytesMatch(data_sp, data_offset, data_sp->GetByteSize()))
+  if (!extractor_sp ||
+      !MagicBytesMatch(extractor_sp->GetSubsetExtractorSP(data_offset)))
     return 0;
 
   // Update the data to contain the entire file if it doesn't already.
-  if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(file, length, file_offset);
-    if (!data_sp)
+  if (extractor_sp->GetByteSize() < length) {
+    if (DataBufferSP file_data_sp = MapFileData(file, length, file_offset))
+      extractor_sp->SetData(file_data_sp);
+    if (!extractor_sp->HasData())
       return 0;
     data_offset = 0;
   }
 
   Log *log = GetLog(LLDBLog::Symbols);
 
-  auto text =
-      llvm::StringRef(reinterpret_cast<const char *>(data_sp->GetBytes()));
+  auto text = llvm::StringRef((const char *)extractor_sp->GetData().data());
 
   Expected<json::Value> json = json::parse(text);
   if (!json) {
@@ -146,13 +153,14 @@ size_t ObjectFileJSON::GetModuleSpecifications(
   return 1;
 }
 
-ObjectFileJSON::ObjectFileJSON(const ModuleSP &module_sp, DataBufferSP &data_sp,
+ObjectFileJSON::ObjectFileJSON(const ModuleSP &module_sp,
+                               DataExtractorSP extractor_sp,
                                offset_t data_offset, const FileSpec *file,
                                offset_t offset, offset_t length, ArchSpec arch,
                                UUID uuid, Type type,
                                std::vector<JSONSymbol> symbols,
                                std::vector<JSONSection> sections)
-    : ObjectFile(module_sp, file, offset, length, data_sp, data_offset),
+    : ObjectFile(module_sp, file, offset, length, extractor_sp, data_offset),
       m_arch(std::move(arch)), m_uuid(std::move(uuid)), m_type(type),
       m_symbols(std::move(symbols)), m_sections(std::move(sections)) {}
 
@@ -268,13 +276,9 @@ bool ObjectFileJSON::SetLoadAddress(Target &target, lldb::addr_t value,
   return true;
 }
 
-bool ObjectFileJSON::MagicBytesMatch(DataBufferSP data_sp,
-                                     lldb::addr_t data_offset,
-                                     lldb::addr_t data_length) {
-  DataExtractor data;
-  data.SetData(data_sp, data_offset, data_length);
+bool ObjectFileJSON::MagicBytesMatch(DataExtractorSP extractor_sp) {
   lldb::offset_t offset = 0;
-  uint32_t magic = data.GetU8(&offset);
+  char magic = extractor_sp->GetU8(&offset);
   return magic == '{';
 }
 

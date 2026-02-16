@@ -13,8 +13,8 @@ contains
   subroutine set_cray_pointer
     ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf64>>>
     ! CHECK: %[[IVAR_ADDR:.*]] = fir.address_of(@_QMtest_host_assoc_cray_pointerEivar) : !fir.ref<i64>
-    ! CHECK: %[[IVAR_DECL:.*]]:2 = hlfir.declare %[[IVAR_ADDR]] {uniq_name = "_QMtest_host_assoc_cray_pointerEivar"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-    ! CHECK: %[[VAR_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMtest_host_assoc_cray_pointerEvar"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
+    ! CHECK: %[[IVAR_DECL:.*]]:2 = hlfir.declare %[[IVAR_ADDR]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QMtest_host_assoc_cray_pointerEivar"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+    ! CHECK: %[[VAR_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QMtest_host_assoc_cray_pointerEvar"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
     real*8 pointee(2)
     pointee(1) = 42.0
 
@@ -36,16 +36,16 @@ program test_cray_pointers_01
   real*8 :: var(*)
   ! CHECK: %[[BOX_ALLOCA:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf64>>>
   ! CHECK: %[[IVAR_ALLOCA:.*]] = fir.alloca i64 {bindc_name = "ivar", uniq_name = "_QFEivar"}
-  ! CHECK: %[[IVAR_DECL_01:.*]]:2 = hlfir.declare %[[IVAR_ALLOCA]] {uniq_name = "_QFEivar"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+  ! CHECK: %[[IVAR_DECL_01:.*]]:2 = hlfir.declare %[[IVAR_ALLOCA]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFEivar"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
   pointer(ivar,var)
-  ! CHECK: %[[VAR_DECL_02:.*]]:2 = hlfir.declare %[[BOX_ALLOCA]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEvar"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
+  ! CHECK: %[[VAR_DECL_02:.*]]:2 = hlfir.declare %[[BOX_ALLOCA]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFEvar"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>)
 
   real*8 pointee(2)
   pointee(1) = 42.0
 
   !$omp parallel default(none) private(ivar) shared(pointee)
     ! CHECK: omp.parallel private({{.*}} %[[IVAR_DECL_01]]#0 -> %[[ARG0:.*]] : !fir.ref<i64>) {
-    ! CHECK:   %[[IVAR_DECL_02:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFEivar"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+    ! CHECK:   %[[IVAR_DECL_02:.*]]:2 = hlfir.declare %[[ARG0]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFEivar"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
     ! CHECK:   hlfir.assign %{{.*}} to %[[IVAR_DECL_02]]#0 : i64, !fir.ref<i64>
     ivar = loc(pointee)
     ! CHECK:   fir.call @_FortranAPointerAssociateScalar({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()

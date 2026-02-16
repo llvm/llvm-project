@@ -122,9 +122,11 @@ struct MIToken {
     kw_constant_pool,
     kw_call_entry,
     kw_custom,
+    kw_lanemask,
     kw_liveout,
     kw_landing_pad,
     kw_inlineasm_br_indirect_target,
+    kw_ehscope_entry,
     kw_ehfunclet_entry,
     kw_liveins,
     kw_successors,
@@ -145,6 +147,7 @@ struct MIToken {
     kw_machine_block_address_taken,
     kw_call_frame_size,
     kw_noconvergent,
+    kw_mmra,
 
     // Metadata types.
     kw_distinct,

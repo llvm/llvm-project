@@ -8,75 +8,36 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
+#include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
+#include "lldb/Host/PosixApi.h" // IWYU pragma: keep
 
-namespace lldb_dap {
+using namespace lldb_dap;
+using namespace lldb_dap::protocol;
 
-// "compileUnitsRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Compile Unit request; value of command field is
-//                     'compileUnits'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "compileUnits" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/compileUnitRequestArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments" ]
-//   }]
-// },
-// "compileUnitsRequestArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'compileUnits' request.",
-//   "properties": {
-//     "moduleId": {
-//       "type": "string",
-//       "description": "The ID of the module."
-//     }
-//   },
-//   "required": [ "moduleId" ]
-// },
-// "compileUnitsResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'compileUnits' request.",
-//     "properties": {
-//       "body": {
-//         "description": "Response to 'compileUnits' request. Array of
-//                         paths of compile units."
-//       }
-//     }
-//   }]
-// }
-void CompileUnitsRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body;
-  llvm::json::Array units;
-  const auto *arguments = request.getObject("arguments");
-  const std::string module_id =
-      GetString(arguments, "moduleId").value_or("").str();
+static CompileUnit CreateCompileUnit(lldb::SBCompileUnit &unit) {
+  char unit_path_arr[PATH_MAX];
+  unit.GetFileSpec().GetPath(unit_path_arr, sizeof(unit_path_arr));
+  std::string unit_path(unit_path_arr);
+  return {std::move(unit_path)};
+}
+
+/// The `compileUnits` request returns an array of path of compile units for
+/// given module specified by `moduleId`.
+llvm::Expected<CompileUnitsResponseBody> CompileUnitsRequestHandler::Run(
+    const std::optional<CompileUnitsArguments> &args) const {
+  std::vector<CompileUnit> units;
   int num_modules = dap.target.GetNumModules();
   for (int i = 0; i < num_modules; i++) {
     auto curr_module = dap.target.GetModuleAtIndex(i);
-    if (module_id == curr_module.GetUUIDString()) {
+    if (args->moduleId == llvm::StringRef(curr_module.GetUUIDString())) {
       int num_units = curr_module.GetNumCompileUnits();
       for (int j = 0; j < num_units; j++) {
         auto curr_unit = curr_module.GetCompileUnitAtIndex(j);
         units.emplace_back(CreateCompileUnit(curr_unit));
       }
-      body.try_emplace("compileUnits", std::move(units));
       break;
     }
   }
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+  return CompileUnitsResponseBody{std::move(units)};
 }
-
-} // namespace lldb_dap

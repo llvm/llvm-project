@@ -23,7 +23,7 @@ llvm::Expected<InitializeResponse> InitializeRequestHandler::Run(
     const InitializeRequestArguments &arguments) const {
   // Store initialization arguments for later use in Launch/Attach.
   dap.clientFeatures = arguments.supportedFeatures;
-  dap.sourceInitFile = arguments.lldbExtSourceInitFile.value_or(true);
+  dap.sourceInitFile = arguments.lldbExtSourceInitFile;
 
   return dap.GetCapabilities();
 }

@@ -14,18 +14,11 @@ define i1 @PR166744(ptr %v, i64 %idx, i1 zeroext %b) {
 ; POSTRA-NEXT:    btrl %esi, %ecx
 ; POSTRA-NEXT:    orl %ecx, %edx
 ; POSTRA-NEXT:    movl %edx, (%rdi,%rax,4)
-; POSTRA-NEXT:    movq 16(%rdi), %rax
-; POSTRA-NEXT:    movq (%rdi), %rcx
-; POSTRA-NEXT:    movq 24(%rdi), %rdx
-; POSTRA-NEXT:    movq 8(%rdi), %rsi
-; POSTRA-NEXT:    orq 56(%rdi), %rdx
-; POSTRA-NEXT:    orq 40(%rdi), %rsi
-; POSTRA-NEXT:    orq 48(%rdi), %rax
-; POSTRA-NEXT:    orq 32(%rdi), %rcx
-; POSTRA-NEXT:    orq %rdx, %rsi
-; POSTRA-NEXT:    orq %rax, %rcx
-; POSTRA-NEXT:    orq %rsi, %rcx
+; POSTRA-NEXT:    vmovdqu (%rdi), %ymm0
+; POSTRA-NEXT:    vpor 32(%rdi), %ymm0, %ymm0
+; POSTRA-NEXT:    vptest %ymm0, %ymm0
 ; POSTRA-NEXT:    setne %al
+; POSTRA-NEXT:    vzeroupper
 ; POSTRA-NEXT:    retq
 ;
 ; NOPOSTRA-LABEL: PR166744:
@@ -38,18 +31,11 @@ define i1 @PR166744(ptr %v, i64 %idx, i1 zeroext %b) {
 ; NOPOSTRA-NEXT:    shlxl %eax, %edx, %eax
 ; NOPOSTRA-NEXT:    orl %ecx, %eax
 ; NOPOSTRA-NEXT:    movl %eax, (%rdi,%rsi)
-; NOPOSTRA-NEXT:    movq 16(%rdi), %rax
-; NOPOSTRA-NEXT:    movq (%rdi), %rcx
-; NOPOSTRA-NEXT:    movq 8(%rdi), %rdx
-; NOPOSTRA-NEXT:    movq 24(%rdi), %rsi
-; NOPOSTRA-NEXT:    orq 56(%rdi), %rsi
-; NOPOSTRA-NEXT:    orq 40(%rdi), %rdx
-; NOPOSTRA-NEXT:    orq 48(%rdi), %rax
-; NOPOSTRA-NEXT:    orq 32(%rdi), %rcx
-; NOPOSTRA-NEXT:    orq %rsi, %rdx
-; NOPOSTRA-NEXT:    orq %rax, %rcx
-; NOPOSTRA-NEXT:    orq %rdx, %rcx
+; NOPOSTRA-NEXT:    vmovdqu (%rdi), %ymm0
+; NOPOSTRA-NEXT:    vpor 32(%rdi), %ymm0, %ymm0
+; NOPOSTRA-NEXT:    vptest %ymm0, %ymm0
 ; NOPOSTRA-NEXT:    setne %al
+; NOPOSTRA-NEXT:    vzeroupper
 ; NOPOSTRA-NEXT:    retq
   %rem = and i64 %idx, 511
   %sh_prom = zext nneg i64 %rem to i512

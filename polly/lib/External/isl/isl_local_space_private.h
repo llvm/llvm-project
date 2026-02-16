@@ -38,6 +38,8 @@ isl_size isl_local_space_var_offset(__isl_keep isl_local_space *ls,
 	enum isl_dim_type type);
 unsigned isl_local_space_offset(__isl_keep isl_local_space *ls,
 	enum isl_dim_type type);
+isl_bool isl_local_space_involves_dims(__isl_keep isl_local_space *ls,
+	enum isl_dim_type type, unsigned first, unsigned n);
 
 __isl_give isl_local_space *isl_local_space_replace_divs(
 	__isl_take isl_local_space *ls, __isl_take isl_mat *div);
@@ -85,6 +87,8 @@ __isl_give isl_local_space *isl_local_space_lift(
 __isl_give isl_local_space *isl_local_space_preimage_multi_aff(
 	__isl_take isl_local_space *ls, __isl_take isl_multi_aff *ma);
 
+__isl_give isl_local_space *isl_local_space_wrapped_reverse(
+	__isl_take isl_local_space *ls);
 __isl_give isl_local_space *isl_local_space_move_dims(
 	__isl_take isl_local_space *ls,
 	enum isl_dim_type dst_type, unsigned dst_pos,

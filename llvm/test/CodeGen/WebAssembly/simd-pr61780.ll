@@ -7,7 +7,7 @@ define void @f(ptr %0, ptr %pr) {
 ; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0: # %BB
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    v128.const 0, 0, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    v128.load64_zero 0
@@ -18,9 +18,6 @@ define void @f(ptr %0, ptr %pr) {
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    local.tee 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.mul
 ; CHECK-NEXT:    i8x16.replace_lane 0
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    local.get 2
@@ -28,10 +25,12 @@ define void @f(ptr %0, ptr %pr) {
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i32.shr_u
-; CHECK-NEXT:    local.tee 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.mul
 ; CHECK-NEXT:    i8x16.replace_lane 1
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_u
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i8x16.shuffle 0, 2, 4, 6, 8, 10, 12, 14, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK-NEXT:    v128.store16_lane 0, 0
 ; CHECK-NEXT:    # fallthrough-return
 BB:

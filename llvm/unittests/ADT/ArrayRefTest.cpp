@@ -307,13 +307,6 @@ TEST(ArrayRefTest, ArrayRef) {
   EXPECT_TRUE(AR2.equals(AR2Ref));
 }
 
-TEST(ArrayRefTest, OwningArrayRef) {
-  static const int A1[] = {0, 1};
-  OwningArrayRef<int> A{ArrayRef(A1)};
-  OwningArrayRef<int> B(std::move(A));
-  EXPECT_EQ(A.data(), nullptr);
-}
-
 TEST(ArrayRefTest, ArrayRefFromStdArray) {
   std::array<int, 5> A1{{42, -5, 0, 1000000, -1000000}};
   ArrayRef<int> A2 = ArrayRef(A1);
@@ -474,6 +467,10 @@ TEST(ArrayRefTest, MutableArrayRefDeductionGuides) {
     EXPECT_EQ(aref.size(), 4u);
   }
 }
+
+static_assert(
+    !std::is_constructible_v<MutableArrayRef<int>, const SmallVector<int>>,
+    "cannot construct MutableArrayRef from const std::SmallVector<int>");
 
 #ifdef __cpp_lib_span
 static_assert(std::is_constructible_v<ArrayRef<int>, std::span<const int>>,

@@ -238,8 +238,8 @@ def SPIRV_FRemOp : SPIRV_ArithmeticBinaryOp<"FRem", SPIRV_Float, []> {
     #### Example:
 
     ```mlir
-    %4 = spirv.FRemOp %0, %1 : f32
-    %5 = spirv.FRemOp %2, %3 : vector<4xf32>
+    %4 = spirv.FRem %0, %1 : f32
+    %5 = spirv.FRem %2, %3 : vector<4xf32>
     ```
   }];
 }
@@ -260,8 +260,8 @@ def SPIRV_FSubOp : SPIRV_ArithmeticBinaryOpWithCoopMatrix<"FSub", SPIRV_Float, [
     #### Example:
 
     ```mlir
-    %4 = spirv.FRemOp %0, %1 : f32
-    %5 = spirv.FRemOp %2, %3 : vector<4xf32>
+    %4 = spirv.FSub %0, %1 : f32
+    %5 = spirv.FSub %2, %3 : vector<4xf32>
     ```
   }];
 }

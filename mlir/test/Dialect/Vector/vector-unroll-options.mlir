@@ -497,6 +497,78 @@ func.func @elementwise_4D_to_2D(%v1: vector<2x2x2x2xf32>, %v2: vector<2x2x2x2xf3
 // CHECK-NOT: arith.addf
 // CHECK: return
 
+func.func @vector_create_mask(%size1: index, %size2: index) -> vector<16x16xi1> {
+  %0 = vector.create_mask %size1, %size2 : vector<16x16xi1>
+  return %0 : vector<16x16xi1>
+}
+
+// CHECK-LABEL: func @vector_create_mask
+// CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) -> vector<16x16xi1>
+//       CHECK:   %[[CST:.*]] = arith.constant dense<false> : vector<16x16xi1>
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[C8:.*]] = arith.constant 8 : index
+//       CHECK:   %[[MAX0:.*]] = arith.maxsi %[[ARG0]], %[[C0]] : index
+//       CHECK:   %[[MIN0:.*]] = arith.minsi %[[MAX0]], %[[C8]] : index
+//       CHECK:   %[[MAX1:.*]] = arith.maxsi %[[ARG1]], %[[C0]] : index
+//       CHECK:   %[[MIN1:.*]] = arith.minsi %[[MAX1]], %[[C8]] : index
+//       CHECK:   %[[MASK00:.*]] = vector.create_mask %[[MIN0]], %[[MIN1]] : vector<8x8xi1>
+//       CHECK:   %[[INS00:.*]] = vector.insert_strided_slice %[[MASK00]], %[[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[MAX0_2:.*]] = arith.maxsi %[[ARG0]], %[[C0]] : index
+//       CHECK:   %[[MIN0_2:.*]] = arith.minsi %[[MAX0_2]], %[[C8]] : index
+//       CHECK:   %[[SUB1:.*]] = arith.subi %[[ARG1]], %[[C8]] : index
+//       CHECK:   %[[MAX1_2:.*]] = arith.maxsi %[[SUB1]], %[[C0]] : index
+//       CHECK:   %[[MIN1_2:.*]] = arith.minsi %[[MAX1_2]], %[[C8]] : index
+//       CHECK:   %[[MASK01:.*]] = vector.create_mask %[[MIN0_2]], %[[MIN1_2]] : vector<8x8xi1>
+//       CHECK:   %[[INS01:.*]] = vector.insert_strided_slice %[[MASK01]], %[[INS00]] {offsets = [0, 8], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[SUB0:.*]] = arith.subi %[[ARG0]], %[[C8]] : index
+//       CHECK:   %[[MAX0_3:.*]] = arith.maxsi %[[SUB0]], %[[C0]] : index
+//       CHECK:   %[[MIN0_3:.*]] = arith.minsi %[[MAX0_3]], %[[C8]] : index
+//       CHECK:   %[[MAX1_3:.*]] = arith.maxsi %[[ARG1]], %[[C0]] : index
+//       CHECK:   %[[MIN1_3:.*]] = arith.minsi %[[MAX1_3]], %[[C8]] : index
+//       CHECK:   %[[MASK10:.*]] = vector.create_mask %[[MIN0_3]], %[[MIN1_3]] : vector<8x8xi1>
+//       CHECK:   %[[INS10:.*]] = vector.insert_strided_slice %[[MASK10]], %[[INS01]] {offsets = [8, 0], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[SUB0_2:.*]] = arith.subi %[[ARG0]], %[[C8]] : index
+//       CHECK:   %[[MAX0_4:.*]] = arith.maxsi %[[SUB0_2]], %[[C0]] : index
+//       CHECK:   %[[MIN0_4:.*]] = arith.minsi %[[MAX0_4]], %[[C8]] : index
+//       CHECK:   %[[SUB1_2:.*]] = arith.subi %[[ARG1]], %[[C8]] : index
+//       CHECK:   %[[MAX1_4:.*]] = arith.maxsi %[[SUB1_2]], %[[C0]] : index
+//       CHECK:   %[[MIN1_4:.*]] = arith.minsi %[[MAX1_4]], %[[C8]] : index
+//       CHECK:   %[[MASK11:.*]] = vector.create_mask %[[MIN0_4]], %[[MIN1_4]] : vector<8x8xi1>
+//       CHECK:   %[[INS11:.*]] = vector.insert_strided_slice %[[MASK11]], %[[INS10]] {offsets = [8, 8], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   return %[[INS11]] : vector<16x16xi1>
+
+func.func @vector_create_mask_constant_dim_sizes() -> vector<16x16xi1> {
+  %cst16 = arith.constant 16 : index
+  %0 = vector.create_mask %cst16, %cst16 : vector<16x16xi1>
+  return %0 : vector<16x16xi1>
+}
+
+// CHECK-LABEL: func @vector_create_mask_constant_dim_sizes() -> vector<16x16xi1> {
+// CHECK:   %[[CST:.*]] = arith.constant dense<false> : vector<16x16xi1>
+// CHECK:   %[[CST_0:.*]] = arith.constant dense<true> : vector<8x8xi1>
+// CHECK:   %[[S0:.*]] = vector.insert_strided_slice %[[CST_0]], %[[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
+// CHECK:   %[[S1:.*]] = vector.insert_strided_slice %[[CST_0]], %[[S0]] {offsets = [0, 8], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
+// CHECK:   %[[S2:.*]] = vector.insert_strided_slice %[[CST_0]], %[[S1]] {offsets = [8, 0], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
+// CHECK:   %[[S3:.*]] = vector.insert_strided_slice %[[CST_0]], %[[S2]] {offsets = [8, 8], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
+// CHECK:   return %[[S3]] : vector<16x16xi1>
+
+func.func @vector_constant_mask() -> vector<16x16xi1> {
+  %0 = vector.constant_mask [12, 10] : vector<16x16xi1>
+  return %0 : vector<16x16xi1>
+}
+
+// CHECK-LABEL: func @vector_constant_mask
+// CHECK-SAME: () -> vector<16x16xi1>
+//       CHECK:   %[[CST:.*]] = arith.constant dense<false> : vector<16x16xi1>
+//       CHECK:   %[[CST_TRUE:.*]] = arith.constant dense<true> : vector<8x8xi1>
+//       CHECK:   %[[INS00:.*]] = vector.insert_strided_slice %[[CST_TRUE]], %[[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[MASK01:.*]] = vector.constant_mask [8, 2] : vector<8x8xi1>
+//       CHECK:   %[[INS01:.*]] = vector.insert_strided_slice %[[MASK01]], %[[INS00]] {offsets = [0, 8], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[MASK10:.*]] = vector.constant_mask [4, 8] : vector<8x8xi1>
+//       CHECK:   %[[INS10:.*]] = vector.insert_strided_slice %[[MASK10]], %[[INS01]] {offsets = [8, 0], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   %[[MASK11:.*]] = vector.constant_mask [4, 2] : vector<8x8xi1>
+//       CHECK:   %[[INS11:.*]] = vector.insert_strided_slice %[[MASK11]], %[[INS10]] {offsets = [8, 8], strides = [1, 1]} : vector<8x8xi1> into vector<16x16xi1>
+//       CHECK:   return %[[INS11]] : vector<16x16xi1>
 
 func.func @shape_cast_1D(%v: vector<16xf32>) -> vector<2x2x4xf32> {
   %0 = vector.shape_cast %v : vector<16xf32> to vector<2x2x4xf32>

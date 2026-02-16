@@ -59,7 +59,7 @@ void UseTransparentFunctorsCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-static const StringRef Message = "prefer transparent functors '%0<>'";
+static constexpr StringRef Message = "prefer transparent functors '%0<>'";
 
 template <typename T> static T getInnerTypeLocAs(TypeLoc Loc) {
   T Result;

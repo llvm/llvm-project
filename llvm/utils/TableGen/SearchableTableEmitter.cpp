@@ -430,10 +430,9 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
     std::string LastRepr = primaryRepresentation(
         Index.Loc, Field, IndexRows.back()->getValueInit(Field.Name));
     std::string TS =
-        '(' + searchableFieldType(Table, Index, Field, TypeInStaticStruct) +
-        ')';
-    OS << "  if (" << TS << Field.Name << " != std::clamp(" << TS << Field.Name
-       << ", " << TS << FirstRepr << ", " << TS << LastRepr << "))\n";
+        searchableFieldType(Table, Index, Field, TypeInStaticStruct);
+    OS << "  if ((" << TS << ")" << Field.Name << " != std::clamp<" << TS
+       << ">(" << Field.Name << ", " << FirstRepr << ", " << LastRepr << "))\n";
     OS << "    return nullptr;\n\n";
 
     if (IsContiguous && !Index.EarlyOut) {

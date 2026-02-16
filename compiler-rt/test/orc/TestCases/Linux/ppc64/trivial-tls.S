@@ -1,6 +1,9 @@
 // RUN: %clang -c -o %t %s
 // RUN: %llvm_jitlink %t
-//
+
+// REQUIRES: disabled
+//// https://github.com/llvm/llvm-project/issues/175094
+
 // Test that basic ELF TLS work by adding together TLSs with values
 // 0, 1, and -1, and returning the result (0 for success). This setup
 // tests both zero-initialized (.tbss) and non-zero-initialized

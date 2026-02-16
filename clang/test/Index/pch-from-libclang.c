@@ -4,7 +4,7 @@
 // XFAIL: target=arm64-apple-{{.*}}
 
 // This test doesn't use -fdisable-module-hash and hence requires that
-// CompilerInvocation::getModuleHash() computes exactly the same hash
+// CompilerInvocation::computeContextHash() computes exactly the same hash
 // for c-index-test and clang, which in turn requires that the both use
 // exactly the same resource-dir, even without calling realpath() on it:
 // - a/../b/ and b/ are not considered the same

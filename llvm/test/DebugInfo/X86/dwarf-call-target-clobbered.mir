@@ -1,0 +1,96 @@
+# RUN: llc %s --start-after=livedebugvalues -o - --filetype=obj | llvm-dwarfdump -  | FileCheck %s
+
+## Check that DW_AT_call_target_clobbered is used for a location expression
+## using a volatile register, otherwise DW_AT_call_target is used.
+
+## Generated from this C++ with llc -stop-after=livedebugvalues -simplify-mir:
+## __attribute__((disable_tail_calls)) void call_mem(void (**f)()) {
+##   (*f)();
+##   (*f)();
+## }
+
+## Which disassembles to -
+## 0000000000000000 <_Z8call_memPPFvvE>:
+##        0: 53                            pushq   %rbx
+##        1: 48 89 fb                      movq    %rdi, %rbx
+##        4: ff 17                         callq   *(%rdi)
+##        6: ff 13                         callq   *(%rbx)
+##        8: 5b                            popq    %rbx
+##        9: c3                            retq
+
+# CHECK: DW_TAG_call_site
+# CHECK-NEXT: DW_AT_call_target_clobbered (DW_OP_breg5 RDI+0)
+# CHECK: DW_TAG_call_site
+# CHECK-NEXT: DW_AT_call_target (DW_OP_breg3 RBX+0)
+
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+
+  define dso_local void @_Z8call_memPPFvvE(ptr noundef readonly captures(none) %f) local_unnamed_addr !dbg !5 {
+  entry:
+    %0 = load ptr, ptr %f, align 8, !dbg !13
+    call void %0(), !dbg !13
+    %1 = load ptr, ptr %f, align 8, !dbg !14
+    call void %1(), !dbg !14
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3}
+  !llvm.ident = !{!4}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 22.0.0git", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "test.cpp", directory: "/")
+  !2 = !{i32 7, !"Dwarf Version", i32 5}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !{!"clang version 22.0.0git"}
+  !5 = distinct !DISubprogram(name: "call_mem", linkageName: "_Z8call_memPPFvvE", scope: !1, file: !1, line: 1, type: !6, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !12)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{null, !8}
+  !8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !9, size: 64)
+  !9 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !10, size: 64)
+  !10 = !DISubroutineType(types: !11)
+  !11 = !{null}
+  !12 = !{}
+  !13 = !DILocation(line: 2, scope: !5)
+  !14 = !DILocation(line: 3, scope: !5)
+...
+---
+name:            _Z8call_memPPFvvE
+alignment:       16
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+debugInstrRef:   true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$rdi' }
+frameInfo:
+  stackSize:       8
+  offsetAdjustment: -8
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 8
+  isCalleeSavedInfoValid: true
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, callee-saved-register: '$rbx' }
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rbx
+
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbx, -16
+    $rbx = MOV64rr $rdi
+    CALL64m $rdi, 1, $noreg, 0, $noreg, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !13 :: (load (s64) from %ir.f)
+    CALL64m killed renamable $rbx, 1, $noreg, 0, $noreg, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, debug-location !14 :: (load (s64) from %ir.f)
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    frame-destroy CFI_INSTRUCTION def_cfa_offset 8
+    RET64
+...

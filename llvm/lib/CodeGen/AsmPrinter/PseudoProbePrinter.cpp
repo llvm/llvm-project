@@ -17,6 +17,7 @@
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/ProfileData/SampleProf.h"
 
 #ifndef NDEBUG
 #include "llvm/IR/Module.h"
@@ -24,6 +25,16 @@
 #endif
 
 using namespace llvm;
+
+#ifndef NDEBUG
+// Deprecated with ThinLTO. For some modules compiled with ThinLTO, certain
+// pseudo probe descriptors may not be imported, resulting in false positive
+// warning.
+static cl::opt<bool> VerifyGuidExistence(
+    "pseudo-probe-verify-guid-existence-in-desc",
+    cl::desc("Verify whether GUID exists in the .pseudo_probe_desc."),
+    cl::Hidden, cl::init(false));
+#endif
 
 void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
                                          uint64_t Type, uint64_t Attr,
@@ -36,12 +47,16 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   auto *InlinedAt = DebugLoc ? DebugLoc->getInlinedAt() : nullptr;
   while (InlinedAt) {
     auto Name = InlinedAt->getSubprogramLinkageName();
+    // Strip Coroutine suffixes from CoroSplit Pass, since pseudo probes are
+    // generated in an earlier stage.
+    Name = FunctionSamples::getCanonicalCoroFnName(Name);
     // Use caching to avoid redundant md5 computation for build speed.
     uint64_t &CallerGuid = NameGuidMap[Name];
     if (!CallerGuid)
       CallerGuid = Function::getGUIDAssumingExternalLinkage(Name);
 #ifndef NDEBUG
-    verifyGuidExistenceInDesc(CallerGuid, Name);
+    if (VerifyGuidExistence)
+      verifyGuidExistenceInDesc(CallerGuid, Name);
 #endif
     uint64_t CallerProbeId = PseudoProbeDwarfDiscriminator::extractProbeIndex(
         InlinedAt->getDiscriminator());
@@ -60,8 +75,9 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   Asm->OutStreamer->emitPseudoProbe(Guid, Index, Type, Attr, Discriminator,
                                     InlineStack, Asm->CurrentFnSym);
 #ifndef NDEBUG
-  verifyGuidExistenceInDesc(
-      Guid, DebugLoc ? DebugLoc->getSubprogramLinkageName() : "");
+  if (VerifyGuidExistence)
+    verifyGuidExistenceInDesc(
+        Guid, DebugLoc ? DebugLoc->getSubprogramLinkageName() : "");
 #endif
 }
 

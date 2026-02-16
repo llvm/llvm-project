@@ -350,6 +350,8 @@ def err_address_of_label_outside_fn : Error<
   "use of address-of-label extension outside of a function body">;
 def err_asm_operand_wide_string_literal : Error<
   "cannot use %select{unicode|wide}0 string literal in 'asm'">;
+def err_defer_ts_labeled_stmt : Error<
+  "substatement of defer must not be a label">;
 
 def err_asm_expected_string : Error<
   "expected string literal %select{or parenthesized constant expression |}0in 'asm'">;
@@ -1077,23 +1079,11 @@ def ext_ms_abstract_keyword : ExtWarn<
   "'abstract' keyword is a Microsoft extension">,
   InGroup<MicrosoftAbstract>;
 
-def ext_relocatable_keyword : ExtWarn<
-  "'%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0' "
-  "keyword is a C++2c extension">,
-  InGroup<CXX26>;
-def warn_relocatable_keyword  : Warning<
-  "'%select{trivially_relocatable|replaceable}0_if_eligible' "
-  "keyword is incompatible with standards before C++2c">,
-  DefaultIgnore, InGroup<CXXPre26Compat>;
-
 def err_access_specifier_interface : Error<
   "interface types cannot specify '%select{private|protected}0' access">;
 
 def err_duplicate_class_virt_specifier : Error<
   "class already marked '%0'">;
-
-def err_duplicate_class_relocation_specifier : Error<
-  "class already marked '%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0'">;
 
 def err_duplicate_virt_specifier : Error<
   "class member already marked '%0'">;
@@ -1727,7 +1717,7 @@ def err_omp_expected_modifier : Error<"expected modifier in '%0' clause">;
 def err_omp_unknown_need_device_ptr_kind
     : Error<
         "invalid argument for 'need_device_ptr' kind in 'adjust_args' clause; "
-        "expected 'fp_nullify' or 'fb_preserve'">;
+        "expected 'fb_nullify' or 'fb_preserve'">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
@@ -1789,10 +1779,8 @@ def ext_bit_int : Extension<
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {
-def err_unexpected_module_decl : Error<
-  "module declaration can only appear at the top level">;
-def err_module_expected_ident : Error<
-  "expected a module name after '%select{module|import}0'">;
+def err_unexpected_module_or_import_decl : Error<
+  "%select{module|import}0 declaration can only appear at the top level">;
 def err_attribute_not_module_attr : Error<
   "%0 attribute cannot be applied to a module">;
 def err_keyword_not_module_attr : Error<
@@ -1803,6 +1791,10 @@ def err_keyword_not_import_attr : Error<
   "%0 cannot be applied to a module import">;
 def err_module_expected_semi : Error<
   "expected ';' after module name">;
+def err_expected_semi_after_module_or_import
+  : Error<"%0 directive must end with a ';'">;
+def note_module_declared_here : Note<
+  "%select{module|import}0 directive defined here">;
 def err_global_module_introducer_not_at_start : Error<
   "'module;' introducing a global module fragment can appear only "
   "at the start of the translation unit">;
@@ -1853,6 +1845,11 @@ def err_concept_legacy_bool_keyword : Error<
   "ISO C++ does not permit the 'bool' keyword after 'concept'">;
 def err_placeholder_expected_auto_or_decltype_auto : Error<
   "expected 'auto' or 'decltype(auto)' after concept name">;
+}
+
+let CategoryName = "Reflection Diagnostics" in {
+def err_cannot_reflect_operand : Error<
+  "unknown or unimplemented reflectable entity">;
 }
 
 def warn_max_tokens : Warning<

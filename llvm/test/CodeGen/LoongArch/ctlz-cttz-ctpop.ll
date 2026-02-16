@@ -810,8 +810,9 @@ define i32 @test_cttz_i32(i32 %a) nounwind {
 ; LA32R-NEXT:    ori $a1, $a1, 1329
 ; LA32R-NEXT:    mul.w $a0, $a0, $a1
 ; LA32R-NEXT:    srli.w $a0, $a0, 27
-; LA32R-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI14_0)
-; LA32R-NEXT:    addi.w $a1, $a1, %pc_lo12(.LCPI14_0)
+; LA32R-NEXT:  .Lpcadd_hi0:
+; LA32R-NEXT:    pcaddu12i $a1, %pcadd_hi20(.LCPI14_0)
+; LA32R-NEXT:    addi.w $a1, $a1, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32R-NEXT:    add.w $a0, $a1, $a0
 ; LA32R-NEXT:    ld.bu $a0, $a0, 0
 ; LA32R-NEXT:    ret
@@ -834,8 +835,9 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    lu12i.w $a2, 30667
 ; LA32R-NEXT:    ori $a2, $a2, 1329
-; LA32R-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI15_0)
-; LA32R-NEXT:    addi.w $a3, $a3, %pc_lo12(.LCPI15_0)
+; LA32R-NEXT:  .Lpcadd_hi1:
+; LA32R-NEXT:    pcaddu12i $a3, %pcadd_hi20(.LCPI15_0)
+; LA32R-NEXT:    addi.w $a3, $a3, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32R-NEXT:    bne $a1, $zero, .LBB15_3
 ; LA32R-NEXT:  # %bb.1:
 ; LA32R-NEXT:    ori $a1, $zero, 32
@@ -974,8 +976,9 @@ define i32 @test_not_cttz_i32(i32 %a) nounwind {
 ; LA32R-NEXT:    ori $a1, $a1, 1329
 ; LA32R-NEXT:    mul.w $a0, $a0, $a1
 ; LA32R-NEXT:    srli.w $a0, $a0, 27
-; LA32R-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI18_0)
-; LA32R-NEXT:    addi.w $a1, $a1, %pc_lo12(.LCPI18_0)
+; LA32R-NEXT:  .Lpcadd_hi2:
+; LA32R-NEXT:    pcaddu12i $a1, %pcadd_hi20(.LCPI18_0)
+; LA32R-NEXT:    addi.w $a1, $a1, %pcadd_lo12(.Lpcadd_hi2)
 ; LA32R-NEXT:    add.w $a0, $a1, $a0
 ; LA32R-NEXT:    ld.bu $a0, $a0, 0
 ; LA32R-NEXT:    ret
@@ -1001,8 +1004,9 @@ define i64 @test_not_cttz_i64(i64 %a) nounwind {
 ; LA32R-NEXT:    nor $a2, $a0, $zero
 ; LA32R-NEXT:    lu12i.w $a3, 30667
 ; LA32R-NEXT:    ori $a3, $a3, 1329
-; LA32R-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI19_0)
-; LA32R-NEXT:    addi.w $a4, $a4, %pc_lo12(.LCPI19_0)
+; LA32R-NEXT:  .Lpcadd_hi3:
+; LA32R-NEXT:    pcaddu12i $a4, %pcadd_hi20(.LCPI19_0)
+; LA32R-NEXT:    addi.w $a4, $a4, %pcadd_lo12(.Lpcadd_hi3)
 ; LA32R-NEXT:    bne $a5, $zero, .LBB19_3
 ; LA32R-NEXT:  # %bb.1:
 ; LA32R-NEXT:    ori $a1, $zero, 32

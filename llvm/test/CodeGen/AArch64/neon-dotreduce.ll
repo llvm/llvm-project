@@ -445,8 +445,9 @@ entry:
 define i32 @test_udot_v5i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-SD-LABEL: test_udot_v5i8_nomla:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    ldr x8, [x0]
 ; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-SD-NEXT:    ushll2 v2.4s, v0.8h, #0
 ; CHECK-SD-NEXT:    mov v1.s[0], v2.s[0]
@@ -1375,11 +1376,9 @@ define i32 @test_usdot_v8i8_double(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c, <8 x i
 ; CHECK-SD-LABEL: test_usdot_v8i8_double:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-SD-NEXT:    usdot v5.2s, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    usdot v4.2s, v2.8b, v3.8b
-; CHECK-SD-NEXT:    add v0.2s, v5.2s, v4.2s
-; CHECK-SD-NEXT:    addp v0.2s, v0.2s, v0.2s
+; CHECK-SD-NEXT:    usdot v4.2s, v0.8b, v1.8b
+; CHECK-SD-NEXT:    addp v0.2s, v4.2s, v4.2s
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1416,11 +1415,9 @@ define i32 @test_usdot_swapped_operands_v8i8_double(<8 x i8> %a, <8 x i8> %b, <8
 ; CHECK-SD-LABEL: test_usdot_swapped_operands_v8i8_double:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-SD-NEXT:    usdot v5.2s, v1.8b, v0.8b
 ; CHECK-SD-NEXT:    usdot v4.2s, v3.8b, v2.8b
-; CHECK-SD-NEXT:    add v0.2s, v5.2s, v4.2s
-; CHECK-SD-NEXT:    addp v0.2s, v0.2s, v0.2s
+; CHECK-SD-NEXT:    usdot v4.2s, v1.8b, v0.8b
+; CHECK-SD-NEXT:    addp v0.2s, v4.2s, v4.2s
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1457,11 +1454,9 @@ define i32 @test_usdot_v16i8_double(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c, <1
 ; CHECK-SD-LABEL: test_usdot_v16i8_double:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-SD-NEXT:    usdot v5.4s, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    usdot v4.4s, v2.16b, v3.16b
-; CHECK-SD-NEXT:    add v0.4s, v5.4s, v4.4s
-; CHECK-SD-NEXT:    addv s0, v0.4s
+; CHECK-SD-NEXT:    usdot v4.4s, v0.16b, v1.16b
+; CHECK-SD-NEXT:    addv s0, v4.4s
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1509,11 +1504,9 @@ define i32 @test_usdot_swapped_operands_v16i8_double(<16 x i8> %a, <16 x i8> %b,
 ; CHECK-SD-LABEL: test_usdot_swapped_operands_v16i8_double:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-SD-NEXT:    usdot v5.4s, v1.16b, v0.16b
 ; CHECK-SD-NEXT:    usdot v4.4s, v3.16b, v2.16b
-; CHECK-SD-NEXT:    add v0.4s, v5.4s, v4.4s
-; CHECK-SD-NEXT:    addv s0, v0.4s
+; CHECK-SD-NEXT:    usdot v4.4s, v1.16b, v0.16b
+; CHECK-SD-NEXT:    addv s0, v4.4s
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -2689,8 +2682,8 @@ define i32 @test_udot_v25i8_nomla(ptr nocapture readonly %a1) {
 ; CHECK-SD-NEXT:    ldp q2, q1, [x0]
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    ushll2 v3.8h, v1.16b, #0
-; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-SD-NEXT:    ushll v4.8h, v2.8b, #0
+; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
 ; CHECK-SD-NEXT:    ushll2 v2.8h, v2.16b, #0
 ; CHECK-SD-NEXT:    ushll v3.4s, v3.4h, #0
 ; CHECK-SD-NEXT:    uaddl2 v5.4s, v4.8h, v1.8h
@@ -4384,12 +4377,10 @@ define i32 @test_usdot_v32i8(ptr nocapture readonly %a, ptr nocapture readonly %
 ; CHECK-SD-LABEL: test_usdot_v32i8:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    ldp q2, q3, [x0]
-; CHECK-SD-NEXT:    ldp q4, q5, [x1]
-; CHECK-SD-NEXT:    usdot v1.4s, v3.16b, v5.16b
-; CHECK-SD-NEXT:    usdot v0.4s, v2.16b, v4.16b
-; CHECK-SD-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    ldp q1, q3, [x0]
+; CHECK-SD-NEXT:    ldp q2, q4, [x1]
+; CHECK-SD-NEXT:    usdot v0.4s, v3.16b, v4.16b
+; CHECK-SD-NEXT:    usdot v0.4s, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    addv s0, v0.4s
 ; CHECK-SD-NEXT:    fmov w8, s0
 ; CHECK-SD-NEXT:    add w0, w8, w2
@@ -4438,15 +4429,11 @@ define i32 @test_usdot_v32i8_double(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c, <3
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v16.2d, #0000000000000000
 ; CHECK-SD-NEXT:    movi v17.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v18.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v19.2d, #0000000000000000
-; CHECK-SD-NEXT:    usdot v16.4s, v1.16b, v3.16b
-; CHECK-SD-NEXT:    usdot v18.4s, v0.16b, v2.16b
-; CHECK-SD-NEXT:    usdot v17.4s, v4.16b, v6.16b
-; CHECK-SD-NEXT:    usdot v19.4s, v5.16b, v7.16b
-; CHECK-SD-NEXT:    add v0.4s, v18.4s, v16.4s
-; CHECK-SD-NEXT:    add v1.4s, v17.4s, v19.4s
-; CHECK-SD-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    usdot v17.4s, v1.16b, v3.16b
+; CHECK-SD-NEXT:    usdot v16.4s, v5.16b, v7.16b
+; CHECK-SD-NEXT:    usdot v17.4s, v0.16b, v2.16b
+; CHECK-SD-NEXT:    usdot v16.4s, v4.16b, v6.16b
+; CHECK-SD-NEXT:    add v0.4s, v17.4s, v16.4s
 ; CHECK-SD-NEXT:    addv s0, v0.4s
 ; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
@@ -8781,20 +8768,16 @@ define i32 @test_usdot_v64i8(ptr nocapture readonly %a, ptr nocapture readonly %
 ; CHECK-SD-LABEL: test_usdot_v64i8:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-SD-NEXT:    ldp q1, q2, [x0, #32]
-; CHECK-SD-NEXT:    ldp q6, q7, [x1, #32]
-; CHECK-SD-NEXT:    ldp q16, q17, [x0]
-; CHECK-SD-NEXT:    ldp q18, q19, [x1]
-; CHECK-SD-NEXT:    usdot v0.4s, v2.16b, v7.16b
-; CHECK-SD-NEXT:    usdot v5.4s, v1.16b, v6.16b
-; CHECK-SD-NEXT:    usdot v4.4s, v17.16b, v19.16b
-; CHECK-SD-NEXT:    usdot v3.4s, v16.16b, v18.16b
-; CHECK-SD-NEXT:    add v0.4s, v4.4s, v0.4s
-; CHECK-SD-NEXT:    add v1.4s, v3.4s, v5.4s
-; CHECK-SD-NEXT:    add v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-SD-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-SD-NEXT:    ldp q4, q5, [x1, #32]
+; CHECK-SD-NEXT:    usdot v1.4s, v3.16b, v5.16b
+; CHECK-SD-NEXT:    usdot v0.4s, v2.16b, v4.16b
+; CHECK-SD-NEXT:    ldp q2, q3, [x0]
+; CHECK-SD-NEXT:    ldp q4, q5, [x1]
+; CHECK-SD-NEXT:    usdot v1.4s, v3.16b, v5.16b
+; CHECK-SD-NEXT:    usdot v0.4s, v2.16b, v4.16b
+; CHECK-SD-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    addv s0, v0.4s
 ; CHECK-SD-NEXT:    fmov w8, s0
 ; CHECK-SD-NEXT:    add w0, w8, w2
@@ -8863,32 +8846,24 @@ entry:
 define i32 @test_usdot_v64i8_double(<64 x i8> %a, <64 x i8> %b, <64 x i8> %c, <64 x i8> %d) {
 ; CHECK-SD-LABEL: test_usdot_v64i8_double:
 ; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi v16.2d, #0000000000000000
+; CHECK-SD-NEXT:    movi v17.2d, #0000000000000000
 ; CHECK-SD-NEXT:    movi v18.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v21.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v22.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v23.2d, #0000000000000000
-; CHECK-SD-NEXT:    ldp q16, q17, [sp, #64]
-; CHECK-SD-NEXT:    movi v24.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v25.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v26.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v27.2d, #0000000000000000
-; CHECK-SD-NEXT:    ldp q19, q20, [sp, #96]
-; CHECK-SD-NEXT:    usdot v18.4s, v3.16b, v7.16b
-; CHECK-SD-NEXT:    ldp q3, q7, [sp, #32]
-; CHECK-SD-NEXT:    usdot v21.4s, v1.16b, v5.16b
-; CHECK-SD-NEXT:    ldp q1, q5, [sp]
-; CHECK-SD-NEXT:    usdot v22.4s, v2.16b, v6.16b
-; CHECK-SD-NEXT:    usdot v23.4s, v0.16b, v4.16b
-; CHECK-SD-NEXT:    usdot v24.4s, v7.16b, v20.16b
-; CHECK-SD-NEXT:    usdot v27.4s, v3.16b, v19.16b
-; CHECK-SD-NEXT:    usdot v26.4s, v5.16b, v17.16b
-; CHECK-SD-NEXT:    usdot v25.4s, v1.16b, v16.16b
-; CHECK-SD-NEXT:    add v0.4s, v21.4s, v18.4s
-; CHECK-SD-NEXT:    add v1.4s, v23.4s, v22.4s
-; CHECK-SD-NEXT:    add v2.4s, v26.4s, v24.4s
-; CHECK-SD-NEXT:    add v3.4s, v25.4s, v27.4s
-; CHECK-SD-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    add v1.4s, v3.4s, v2.4s
+; CHECK-SD-NEXT:    movi v19.2d, #0000000000000000
+; CHECK-SD-NEXT:    ldp q20, q21, [sp, #96]
+; CHECK-SD-NEXT:    ldp q22, q23, [sp, #32]
+; CHECK-SD-NEXT:    usdot v16.4s, v3.16b, v7.16b
+; CHECK-SD-NEXT:    usdot v18.4s, v2.16b, v6.16b
+; CHECK-SD-NEXT:    usdot v19.4s, v23.16b, v21.16b
+; CHECK-SD-NEXT:    usdot v17.4s, v22.16b, v20.16b
+; CHECK-SD-NEXT:    ldp q2, q3, [sp, #64]
+; CHECK-SD-NEXT:    ldp q6, q7, [sp]
+; CHECK-SD-NEXT:    usdot v16.4s, v1.16b, v5.16b
+; CHECK-SD-NEXT:    usdot v18.4s, v0.16b, v4.16b
+; CHECK-SD-NEXT:    usdot v19.4s, v7.16b, v3.16b
+; CHECK-SD-NEXT:    usdot v17.4s, v6.16b, v2.16b
+; CHECK-SD-NEXT:    add v0.4s, v18.4s, v16.4s
+; CHECK-SD-NEXT:    add v1.4s, v17.4s, v19.4s
 ; CHECK-SD-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    addv s0, v0.4s
 ; CHECK-SD-NEXT:    fmov w0, s0

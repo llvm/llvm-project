@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/LineEntry.h"
+#include "lldb/Core/Address.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -14,7 +17,7 @@
 using namespace lldb_private;
 
 LineEntry::LineEntry()
-    : range(), file_sp(std::make_shared<SupportFile>()),
+    : range(), synthetic(false), file_sp(std::make_shared<SupportFile>()),
       original_file_sp(std::make_shared<SupportFile>()),
       is_start_of_statement(0), is_start_of_basic_block(0), is_prologue_end(0),
       is_epilogue_begin(0), is_terminal_entry(0) {}
@@ -33,7 +36,8 @@ void LineEntry::Clear() {
 }
 
 bool LineEntry::IsValid() const {
-  return range.GetBaseAddress().IsValid() && line != LLDB_INVALID_LINE_NUMBER;
+  return (range.GetBaseAddress().IsValid() || synthetic) &&
+         line != LLDB_INVALID_LINE_NUMBER;
 }
 
 bool LineEntry::DumpStopContext(Stream *s, bool show_fullpaths) const {
@@ -241,8 +245,25 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
   return complete_line_range;
 }
 
-void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp) {
+void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp,
+                                  const Address &address) {
   if (target_sp) {
+    // Try to resolve the source file via SymbolLocator plugins (e.g.,
+    // ScriptedSymbolLocator). This allows users to fetch source files
+    // by build ID from remote servers.
+    // Use Address::GetModule() directly to avoid re-entering
+    // ResolveSymbolContextForAddress which would cause infinite recursion.
+    lldb::ModuleSP module_sp = address.GetModule();
+    if (module_sp) {
+      FileSpec resolved = PluginManager::LocateSourceFile(
+          module_sp, original_file_sp->GetSpecOnly());
+      if (resolved) {
+        original_file_sp = std::make_shared<SupportFile>(resolved);
+        file_sp = std::make_shared<SupportFile>(resolved);
+        return;
+      }
+    }
+
     // Apply any file remappings to our file.
     if (auto new_file_spec = target_sp->GetSourcePathMap().FindFile(
             original_file_sp->GetSpecOnly())) {

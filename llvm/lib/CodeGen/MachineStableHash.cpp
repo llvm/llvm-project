@@ -165,6 +165,10 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
                                stable_hash_name(SymbolName));
   }
+  case MachineOperand::MO_LaneMask: {
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
+                               MO.getLaneMask().getAsInteger());
+  }
   case MachineOperand::MO_CFIIndex:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
                                MO.getCFIIndex());

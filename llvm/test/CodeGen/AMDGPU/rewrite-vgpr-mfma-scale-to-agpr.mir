@@ -1,7 +1,9 @@
-# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=greedy,amdgpu-rewrite-agpr-copy-mfma -verify-machineinstrs -o - %s 2>&1 | FileCheck %s
-# CHECK: Illegal virtual register for instruction
-# CHECK: Expected a VGPR_32 register, but got a AGPR_32 register
- 
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=greedy,amdgpu-rewrite-agpr-copy-mfma -verify-machineinstrs -o - %s | FileCheck %s
+# CHECK: bb.1:
+# CHECK: dead %{{[0-9]+}}:vreg_128_align2 = V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 4, 4, %{{[0-9]+}}, %[[REG:[0-9]+]], 4, 0, implicit $mode, implicit $exec
+# CHECK: %{{[0-9]+}}:agpr_32 = IMPLICIT_DEF
+# CHECK: %[[REG]]:vgpr_32 = COPY %{{[0-9]+}}
+
 # Test for issue in amdgpu-rewrite-agpr-copy-mfma, which reassigns scale operand
 # in vgpr_32 register to agpr_32, not permitted by instruction format.
 ---

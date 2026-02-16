@@ -1729,16 +1729,16 @@ def pooling_ndhwc_min(
 
 
 @linalg_structured_op
-def fill(value=ScalarDef(T1), O=TensorDef(U, output=True)):
+def fill(value=ScalarDef(T), O=TensorDef(T, output=True)):
     """Fills the output tensor with the given value.
 
     Works for arbitrary ranked output tensors since the operation performs scalar
-    accesses only and is thus rank polymorphic. Numeric casting is performed on
-    the value operand, promoting it to the same data type as the output.
+    accesses only and is thus rank polymorphic. The value type must match the
+    element type of the output tensor or memref.
     """
     implements(FillOpInterface)
     defines(Canonicalizer)
-    O[None] = TypeFn.cast_signed(U, value)
+    O[None] = value
 
 
 @linalg_structured_op

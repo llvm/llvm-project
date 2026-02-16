@@ -290,6 +290,7 @@ function(create_libc_unittest fq_target_name)
   )
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_BUILD_DIR})
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
   target_link_options(${fq_build_target_name} PRIVATE ${link_options})
 
@@ -343,6 +344,10 @@ function(create_libc_unittest fq_target_name)
     )
   endif()
   add_dependencies(libc-unit-tests ${fq_target_name})
+  # Also add dependency to build-only target for lit
+  if(TARGET libc-unit-tests-build)
+    add_dependencies(libc-unit-tests-build ${fq_build_target_name})
+  endif()
 endfunction(create_libc_unittest)
 
 function(add_libc_unittest target_name)
@@ -882,6 +887,10 @@ function(add_libc_hermetic test_name)
     # If it is a benchmark, it will already have been added to the
     # gpu-benchmark target
     add_dependencies(libc-hermetic-tests ${fq_target_name})
+    # Also add dependency to build-only target for lit
+    if(TARGET libc-hermetic-tests-build)
+      add_dependencies(libc-hermetic-tests-build ${fq_build_target_name})
+    endif()
   endif()
 endfunction(add_libc_hermetic)
 

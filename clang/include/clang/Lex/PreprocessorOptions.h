@@ -152,6 +152,13 @@ public:
   /// that the client can get the maximum amount of information from the parser.
   bool SingleFileParseMode = false;
 
+  /// When enabled, preprocessor is in a mode for parsing a single module only.
+  ///
+  /// Disables imports of other modules and if there are any unresolved
+  /// identifiers in preprocessor directive conditions it causes all blocks to
+  /// be skipped so that the client can get a strict subset of the contents.
+  bool SingleModuleParseMode = false;
+
   /// When enabled, the preprocessor will construct editor placeholder tokens.
   bool LexEditorPlaceholders = true;
 

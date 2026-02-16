@@ -143,26 +143,24 @@ bool delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
 
 /// Check that each subscript in \p Subscripts is within the corresponding size
 /// in \p Sizes. For the outermost dimension, the subscript being negative is
-/// allowed. If \p Ptr is not nullptr, it may be used to get information from
-/// the IR pointer value, which may help in the validation.
+/// allowed.
 bool validateDelinearizationResult(ScalarEvolution &SE,
                                    ArrayRef<const SCEV *> Sizes,
-                                   ArrayRef<const SCEV *> Subscripts,
-                                   const Value *Ptr = nullptr);
+                                   ArrayRef<const SCEV *> Subscripts);
 
 /// Gathers the individual index expressions from a GEP instruction.
 ///
 /// This function optimistically assumes the GEP references into a fixed size
 /// array. If this is actually true, this function returns a list of array
-/// subscript expressions in \p Subscripts and a list of integers describing
-/// the size of the individual array dimensions in \p Sizes. Both lists have
-/// either equal length or the size list is one element shorter in case there
-/// is no known size available for the outermost array dimension. Returns true
-/// if successful and false otherwise.
+/// subscript expressions in \p Subscripts and a list of SCEV expressions
+/// describing the size of the individual array dimensions in \p Sizes. Both
+/// lists have either equal length or the size list is one element shorter in
+/// case there is no known size available for the outermost array dimension.
+/// Returns true if successful and false otherwise.
 bool getIndexExpressionsFromGEP(ScalarEvolution &SE,
                                 const GetElementPtrInst *GEP,
                                 SmallVectorImpl<const SCEV *> &Subscripts,
-                                SmallVectorImpl<int> &Sizes);
+                                SmallVectorImpl<const SCEV *> &Sizes);
 
 struct DelinearizationPrinterPass
     : public PassInfoMixin<DelinearizationPrinterPass> {

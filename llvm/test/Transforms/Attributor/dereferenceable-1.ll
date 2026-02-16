@@ -555,10 +555,12 @@ cont2:
 ;        *ptr = 4;
 ;    }
 ;  }
+;
+; FIXME: %ptr should be dereferenceable(4)
 define dso_local void @rec-branch-1(i32 %a, i32 %b, i32 %c, ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@rec-branch-1
-; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], ptr nofree nonnull writeonly align 4 captures(none) dereferenceable(4) [[PTR:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], ptr nofree writeonly captures(none) [[PTR:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_ELSE3:%.*]], label [[IF_THEN:%.*]]
@@ -628,10 +630,11 @@ if.end8:                                          ; preds = %if.then5, %if.else6
 ;        rec-branch-2(1, 1, 1, ptr);
 ;    }
 ;  }
+; FIXME: %ptr should be dereferenceable(4)
 define dso_local void @rec-branch-2(i32 %a, i32 %b, i32 %c, ptr %ptr) {
 ; CHECK: Function Attrs: nofree nosync nounwind memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@rec-branch-2
-; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], ptr nofree nonnull writeonly align 4 captures(none) dereferenceable(4) [[PTR:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], ptr nofree writeonly captures(none) [[PTR:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_ELSE3:%.*]], label [[IF_THEN:%.*]]
@@ -651,7 +654,7 @@ define dso_local void @rec-branch-2(i32 %a, i32 %b, i32 %c, ptr %ptr) {
 ; CHECK-NEXT:    store i32 3, ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[IF_END8]]
 ; CHECK:       if.else6:
-; CHECK-NEXT:    tail call void @rec-branch-2(i32 noundef 1, i32 noundef 1, i32 noundef 1, ptr nofree nonnull writeonly align 4 captures(none) dereferenceable(4) [[PTR]]) #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    tail call void @rec-branch-2(i32 noundef 1, i32 noundef 1, i32 noundef 1, ptr nofree writeonly captures(none) [[PTR]]) #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    br label [[IF_END8]]
 ; CHECK:       if.end8:
 ; CHECK-NEXT:    ret void

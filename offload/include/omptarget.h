@@ -80,6 +80,10 @@ enum tgt_map_type {
   // Attach pointer and pointee, after processing all other maps.
   // Applicable to map-entering directives. Does not change ref-count.
   OMP_TGT_MAPTYPE_ATTACH = 0x4000,
+  // When a lookup fails, fall back to using null as the translated pointer,
+  // instead of preserving the original pointer's value. Currently only
+  // useful in conjunction with RETURN_PARAM.
+  OMP_TGT_MAPTYPE_FB_NULLIFY = 0x8000,
   // descriptor for non-contiguous target-update
   OMP_TGT_MAPTYPE_NON_CONTIG = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1
@@ -103,6 +107,7 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_HOST,
   TARGET_ALLOC_SHARED,
   TARGET_ALLOC_DEFAULT,
+  TARGET_ALLOC_LAST = TARGET_ALLOC_DEFAULT
 };
 
 struct DeviceTy;
@@ -272,6 +277,8 @@ extern "C" {
 void ompx_dump_mapping_tables(void);
 int omp_get_num_devices(void);
 int omp_get_device_num(void);
+int omp_get_device_from_uid(const char *DeviceUid);
+const char *omp_get_uid_from_device(int DeviceNum);
 int omp_get_initial_device(void);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);
@@ -421,6 +428,11 @@ int __tgt_print_device_info(int64_t DeviceId);
 int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                  void *VAddr, bool IsRecord, bool SaveOutput,
                                  uint64_t &ReqPtrArgOffset);
+
+// Registers a callback for the RPC server. Expects this function type.
+// unsigned callback(rpc::Server::Port *Port, unsigned NumLanes). See the RPC
+// code for details.
+void __tgt_register_rpc_callback(unsigned (*Callback)(void *, unsigned));
 
 #ifdef __cplusplus
 }

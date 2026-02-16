@@ -8,7 +8,7 @@
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_dword [[RESULT]]
 define amdgpu_kernel void @test_fmin_f32_ieee_mode_on(ptr addrspace(1) %out, float %a, float %b) #0 {
-  %val = call float @llvm.minnum.f32(float %a, float %b) #1
+  %val = call float @llvm.minnum.f32(float %a, float %b)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -18,7 +18,7 @@ define amdgpu_kernel void @test_fmin_f32_ieee_mode_on(ptr addrspace(1) %out, flo
 ; GCN-NEXT: v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT: s_setpc_b64
 define float @test_fmin_nnan_f32_ieee_mode_on(float %a, float %b) #0 {
-  %val = call nnan float @llvm.minnum.f32(float %a, float %b) #1
+  %val = call nnan float @llvm.minnum.f32(float %a, float %b)
   ret float %val
 }
 
@@ -28,7 +28,7 @@ define float @test_fmin_nnan_f32_ieee_mode_on(float %a, float %b) #0 {
 ; GCN: v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT: ; return
 define amdgpu_ps float @test_fmin_nnan_f32_ieee_mode_off(float %a, float %b) #0 {
-  %val = call nnan float @llvm.minnum.f32(float %a, float %b) #1
+  %val = call nnan float @llvm.minnum.f32(float %a, float %b)
   ret float %val
 }
 
@@ -36,7 +36,7 @@ define amdgpu_ps float @test_fmin_nnan_f32_ieee_mode_off(float %a, float %b) #0 
 ; GCN: v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT: ; return
 define amdgpu_ps float @test_fmin_f32_ieee_mode_off(float %a, float %b) #0 {
-  %val = call float @llvm.minnum.f32(float %a, float %b) #1
+  %val = call float @llvm.minnum.f32(float %a, float %b)
   ret float %val
 }
 
@@ -181,14 +181,14 @@ define amdgpu_kernel void @constant_fold_fmin_f32_n0_n0(ptr addrspace(1) %out) #
 ; GCN-LABEL: {{^}}fmin_var_immediate_f32_no_ieee:
 ; GCN: v_min_f32_e32 v0, 2.0, v0
 define amdgpu_ps float @fmin_var_immediate_f32_no_ieee(float %a) #0 {
-  %val = call float @llvm.minnum.f32(float %a, float 2.0) #1
+  %val = call float @llvm.minnum.f32(float %a, float 2.0)
   ret float %val
 }
 
 ; GCN-LABEL: {{^}}fmin_immediate_var_f32_no_ieee:
 ; GCN: v_min_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, 2.0
 define amdgpu_ps float @fmin_immediate_var_f32_no_ieee(float inreg %a) #0 {
-  %val = call float @llvm.minnum.f32(float 2.0, float %a) #1
+  %val = call float @llvm.minnum.f32(float 2.0, float %a)
   ret float %val
 }
 
@@ -196,7 +196,7 @@ define amdgpu_ps float @fmin_immediate_var_f32_no_ieee(float inreg %a) #0 {
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x42c60000
 ; GCN: v_min_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, [[REG]]
 define amdgpu_ps float @fmin_var_literal_f32_no_ieee(float inreg %a) #0 {
-  %val = call float @llvm.minnum.f32(float %a, float 99.0) #1
+  %val = call float @llvm.minnum.f32(float %a, float 99.0)
   ret float %val
 }
 
@@ -204,7 +204,7 @@ define amdgpu_ps float @fmin_var_literal_f32_no_ieee(float inreg %a) #0 {
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x42c60000
 ; GCN: v_min_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, [[REG]]
 define amdgpu_ps float @fmin_literal_var_f32_no_ieee(float inreg %a) #0 {
-  %val = call float @llvm.minnum.f32(float 99.0, float %a) #1
+  %val = call float @llvm.minnum.f32(float 99.0, float %a)
   ret float %val
 }
 
@@ -214,7 +214,7 @@ define amdgpu_ps float @fmin_literal_var_f32_no_ieee(float inreg %a) #0 {
 ; GCN: v_min_f32_e32
 ; GCN-NOT: v_min_f32
 define <3 x float> @test_func_fmin_v3f32(<3 x float> %a, <3 x float> %b) nounwind {
-  %val = call <3 x float> @llvm.minnum.v3f32(<3 x float> %a, <3 x float> %b) #0
+  %val = call <3 x float> @llvm.minnum.v3f32(<3 x float> %a, <3 x float> %b)
   ret <3 x float> %val
 }
 
@@ -225,5 +225,5 @@ declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>) #1
 declare <8 x float> @llvm.minnum.v8f32(<8 x float>, <8 x float>) #1
 declare <16 x float> @llvm.minnum.v16f32(<16 x float>, <16 x float>) #1
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone }

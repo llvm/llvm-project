@@ -51,8 +51,8 @@ public:
   const Type *getType() const { return T; }
   explicit operator bool() const { return T; }
 
-  void *getOpaqueValue() { return const_cast<Type*>(T); }
-  static TypeInfoLValue getFromOpaqueValue(void *Value) {
+  const void *getOpaqueValue() const { return T; }
+  static TypeInfoLValue getFromOpaqueValue(const void *Value) {
     TypeInfoLValue V;
     V.T = reinterpret_cast<const Type*>(Value);
     return V;
@@ -72,11 +72,11 @@ public:
 
   explicit operator bool() const { return Index != 0; }
 
-  void *getOpaqueValue() {
-    return reinterpret_cast<void *>(static_cast<uintptr_t>(Index)
-                                    << NumLowBitsAvailable);
+  const void *getOpaqueValue() const {
+    return reinterpret_cast<const void *>(static_cast<uintptr_t>(Index)
+                                          << NumLowBitsAvailable);
   }
-  static DynamicAllocLValue getFromOpaqueValue(void *Value) {
+  static DynamicAllocLValue getFromOpaqueValue(const void *Value) {
     DynamicAllocLValue V;
     V.Index = reinterpret_cast<uintptr_t>(Value) >> NumLowBitsAvailable;
     return V;
@@ -92,10 +92,10 @@ public:
 
 namespace llvm {
 template<> struct PointerLikeTypeTraits<clang::TypeInfoLValue> {
-  static void *getAsVoidPointer(clang::TypeInfoLValue V) {
+  static const void *getAsVoidPointer(clang::TypeInfoLValue V) {
     return V.getOpaqueValue();
   }
-  static clang::TypeInfoLValue getFromVoidPointer(void *P) {
+  static clang::TypeInfoLValue getFromVoidPointer(const void *P) {
     return clang::TypeInfoLValue::getFromOpaqueValue(P);
   }
   // Validated by static_assert in APValue.cpp; hardcoded to avoid needing
@@ -104,10 +104,10 @@ template<> struct PointerLikeTypeTraits<clang::TypeInfoLValue> {
 };
 
 template<> struct PointerLikeTypeTraits<clang::DynamicAllocLValue> {
-  static void *getAsVoidPointer(clang::DynamicAllocLValue V) {
+  static const void *getAsVoidPointer(clang::DynamicAllocLValue V) {
     return V.getOpaqueValue();
   }
-  static clang::DynamicAllocLValue getFromVoidPointer(void *P) {
+  static clang::DynamicAllocLValue getFromVoidPointer(const void *P) {
     return clang::DynamicAllocLValue::getFromOpaqueValue(P);
   }
   static constexpr int NumLowBitsAvailable =

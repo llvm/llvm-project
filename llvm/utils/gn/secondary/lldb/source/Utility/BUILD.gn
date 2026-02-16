@@ -46,7 +46,6 @@ static_library("Utility") {
     "StreamString.cpp",
     "StringExtractor.cpp",
     "StringExtractorGDBRemote.cpp",
-    "StringLexer.cpp",
     "StringList.cpp",
     "StructuredData.cpp",
     "TildeExpressionResolver.cpp",
@@ -60,6 +59,7 @@ static_library("Utility") {
     "UserIDResolver.cpp",
     "VASprintf.cpp",
     "VMRange.cpp",
+    "VirtualDataExtractor.cpp",
     "XcodeSDK.cpp",
     "ZipFile.cpp",
   ]

@@ -51,6 +51,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
@@ -307,7 +308,7 @@ protected:
         return;
       }
 
-      auto on_error = llvm::make_scope_exit(
+      llvm::scope_exit on_error(
           [&target_list = debugger.GetTargetList(), &target_sp]() {
             target_list.DeleteTarget(target_sp);
           });
@@ -1588,7 +1589,7 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
         name, interpreter.GetDebugger().GetRegexMatchAnsiPrefix(),
         interpreter.GetDebugger().GetRegexMatchAnsiSuffix());
     for (uint32_t i = 0; i < num_matches; ++i) {
-      Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
+      const Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
       if (symbol) {
         if (symbol->ValueIsAddress()) {
           DumpAddress(
@@ -4690,6 +4691,133 @@ protected:
   OptionGroupBoolean m_current_stack_option;
 };
 
+#pragma mark CommandObjectTargetSymbolsScriptedRegister
+
+class CommandObjectTargetSymbolsScriptedRegister : public CommandObjectParsed {
+public:
+  CommandObjectTargetSymbolsScriptedRegister(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target symbols scripted register",
+            "Register a scripted symbol locator for the current target.",
+            "target symbols scripted register -C <script-class> "
+            "[-k <key> -v <value> ...]"),
+        m_python_class_options("scripted symbol locator", true, 'C', 'k', 'v',
+                               OptionGroupPythonClassWithDict::eScriptClass) {
+    m_all_options.Append(&m_python_class_options,
+                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_1);
+    m_all_options.Finalize();
+  }
+
+  ~CommandObjectTargetSymbolsScriptedRegister() override = default;
+
+  Options *GetOptions() override { return &m_all_options; }
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target = GetTarget();
+
+    llvm::StringRef class_name = m_python_class_options.GetName();
+    if (class_name.empty()) {
+      result.AppendError("must specify a script class with -C");
+      return;
+    }
+
+    StructuredData::DictionarySP args_sp;
+    StructuredData::ObjectSP extra = m_python_class_options.GetStructuredData();
+    if (extra && extra->GetType() == lldb::eStructuredDataTypeDictionary)
+      args_sp = std::static_pointer_cast<StructuredData::Dictionary>(extra);
+
+    Status error = target.RegisterScriptedSymbolLocator(class_name, args_sp);
+    if (error.Fail()) {
+      result.AppendErrorWithFormat(
+          "failed to register scripted symbol locator: %s\n",
+          error.AsCString());
+      return;
+    }
+
+    result.AppendMessageWithFormat(
+        "Registered scripted symbol locator '%s' for target.\n",
+        class_name.str().c_str());
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+
+  OptionGroupPythonClassWithDict m_python_class_options;
+  OptionGroupOptions m_all_options;
+};
+
+#pragma mark CommandObjectTargetSymbolsScriptedClear
+
+class CommandObjectTargetSymbolsScriptedClear : public CommandObjectParsed {
+public:
+  CommandObjectTargetSymbolsScriptedClear(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target symbols scripted clear",
+            "Clear the scripted symbol locator for the current target.",
+            "target symbols scripted clear") {}
+
+  ~CommandObjectTargetSymbolsScriptedClear() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target = GetTarget();
+    target.ClearScriptedSymbolLocator();
+    result.AppendMessageWithFormat(
+        "Cleared scripted symbol locator for target.\n");
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+#pragma mark CommandObjectTargetSymbolsScriptedInfo
+
+class CommandObjectTargetSymbolsScriptedInfo : public CommandObjectParsed {
+public:
+  CommandObjectTargetSymbolsScriptedInfo(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target symbols scripted info",
+            "Show the current scripted symbol locator for the target.",
+            "target symbols scripted info") {}
+
+  ~CommandObjectTargetSymbolsScriptedInfo() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target = GetTarget();
+    llvm::StringRef class_name = target.GetScriptedSymbolLocatorClassName();
+    if (class_name.empty()) {
+      result.AppendMessageWithFormat(
+          "No scripted symbol locator registered for this target.\n");
+    } else {
+      result.AppendMessageWithFormat("Scripted symbol locator: %s\n",
+                                     class_name.str().c_str());
+    }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+#pragma mark CommandObjectTargetSymbolsScripted
+
+class CommandObjectTargetSymbolsScripted : public CommandObjectMultiword {
+public:
+  CommandObjectTargetSymbolsScripted(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "target symbols scripted",
+            "Commands for managing scripted symbol locators.",
+            "target symbols scripted <sub-command> ...") {
+    LoadSubCommand(
+        "register",
+        CommandObjectSP(
+            new CommandObjectTargetSymbolsScriptedRegister(interpreter)));
+    LoadSubCommand(
+        "clear", CommandObjectSP(
+                     new CommandObjectTargetSymbolsScriptedClear(interpreter)));
+    LoadSubCommand(
+        "info", CommandObjectSP(
+                    new CommandObjectTargetSymbolsScriptedInfo(interpreter)));
+  }
+
+  ~CommandObjectTargetSymbolsScripted() override = default;
+};
+
 #pragma mark CommandObjectTargetSymbols
 
 // CommandObjectTargetSymbols
@@ -4704,6 +4832,9 @@ public:
             "target symbols <sub-command> ...") {
     LoadSubCommand(
         "add", CommandObjectSP(new CommandObjectTargetSymbolsAdd(interpreter)));
+    LoadSubCommand(
+        "scripted",
+        CommandObjectSP(new CommandObjectTargetSymbolsScripted(interpreter)));
   }
 
   ~CommandObjectTargetSymbols() override = default;
@@ -5402,6 +5533,200 @@ public:
   ~CommandObjectTargetDump() override = default;
 };
 
+#pragma mark CommandObjectTargetFrameProvider
+
+#define LLDB_OPTIONS_target_frame_provider_register
+#include "CommandOptions.inc"
+
+class CommandObjectTargetFrameProviderRegister : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderRegister(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider register",
+            "Register frame provider for all threads in this target.", nullptr,
+            eCommandRequiresTarget),
+
+        m_class_options("target frame-provider", true, 'C', 'k', 'v', 0) {
+    m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                         LLDB_OPT_SET_ALL);
+    m_all_options.Finalize();
+  }
+
+  ~CommandObjectTargetFrameProviderRegister() override = default;
+
+  Options *GetOptions() override { return &m_all_options; }
+
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
+    return std::string("");
+  }
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
+        m_class_options.GetName(), m_class_options.GetStructuredData());
+
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target)
+      target = &GetDebugger().GetDummyTarget();
+
+    // Create the interface for calling static methods.
+    ScriptedFrameProviderInterfaceSP interface_sp =
+        GetDebugger()
+            .GetScriptInterpreter()
+            ->CreateScriptedFrameProviderInterface();
+
+    // Create a descriptor from the metadata (applies to all threads by
+    // default).
+    ScriptedFrameProviderDescriptor descriptor(metadata_sp);
+    descriptor.interface_sp = interface_sp;
+
+    auto id_or_err = target->AddScriptedFrameProviderDescriptor(descriptor);
+    if (!id_or_err) {
+      result.SetError(id_or_err.takeError());
+      return;
+    }
+
+    result.AppendMessageWithFormat(
+        "successfully registered scripted frame provider '%s' for target\n",
+        m_class_options.GetName().c_str());
+  }
+
+  OptionGroupPythonClassWithDict m_class_options;
+  OptionGroupOptions m_all_options;
+};
+
+class CommandObjectTargetFrameProviderClear : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderClear(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider clear",
+            "Clear all registered frame providers from this target.", nullptr,
+            eCommandRequiresTarget) {}
+
+  ~CommandObjectTargetFrameProviderClear() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target) {
+      result.AppendError("invalid target");
+      return;
+    }
+
+    target->ClearScriptedFrameProviderDescriptors();
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+class CommandObjectTargetFrameProviderList : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderList(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider list",
+            "List all registered frame providers for the target.", nullptr,
+            eCommandRequiresTarget) {}
+
+  ~CommandObjectTargetFrameProviderList() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target)
+      target = &GetDebugger().GetDummyTarget();
+
+    const auto &descriptors = target->GetScriptedFrameProviderDescriptors();
+    if (descriptors.empty()) {
+      result.AppendMessage("no frame providers registered for this target.");
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return;
+    }
+
+    result.AppendMessageWithFormat("%u frame provider(s) registered:\n\n",
+                                   descriptors.size());
+
+    for (const auto &entry : descriptors) {
+      const ScriptedFrameProviderDescriptor &descriptor = entry.second;
+      descriptor.Dump(&result.GetOutputStream());
+      result.GetOutputStream().PutChar('\n');
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+class CommandObjectTargetFrameProviderRemove : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderRemove(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider remove",
+            "Remove a registered frame provider from the target by id.",
+            "target frame-provider remove <provider-id>",
+            eCommandRequiresTarget) {
+    AddSimpleArgumentList(eArgTypeUnsignedInteger, eArgRepeatPlus);
+  }
+
+  ~CommandObjectTargetFrameProviderRemove() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target)
+      target = &GetDebugger().GetDummyTarget();
+
+    std::vector<uint32_t> removed_provider_ids;
+    for (size_t i = 0; i < command.GetArgumentCount(); i++) {
+      uint32_t provider_id = 0;
+      if (!llvm::to_integer(command[i].ref(), provider_id)) {
+        result.AppendError("target frame-provider remove requires integer "
+                           "provider id argument");
+        return;
+      }
+
+      if (!target->RemoveScriptedFrameProviderDescriptor(provider_id)) {
+        result.AppendErrorWithFormat(
+            "no frame provider named '%u' found in target\n", provider_id);
+        return;
+      }
+      removed_provider_ids.push_back(provider_id);
+    }
+
+    if (size_t num_removed_providers = removed_provider_ids.size()) {
+      result.AppendMessageWithFormat(
+          "Successfully removed %zu frame-providers.\n", num_removed_providers);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    } else {
+      result.AppendError("0 frame providers removed.\n");
+    }
+  }
+};
+
+class CommandObjectTargetFrameProvider : public CommandObjectMultiword {
+public:
+  CommandObjectTargetFrameProvider(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "target frame-provider",
+            "Commands for registering and viewing frame providers for the "
+            "target.",
+            "target frame-provider [<sub-command-options>] ") {
+    LoadSubCommand("register",
+                   CommandObjectSP(new CommandObjectTargetFrameProviderRegister(
+                       interpreter)));
+    LoadSubCommand("clear",
+                   CommandObjectSP(
+                       new CommandObjectTargetFrameProviderClear(interpreter)));
+    LoadSubCommand(
+        "list",
+        CommandObjectSP(new CommandObjectTargetFrameProviderList(interpreter)));
+    LoadSubCommand(
+        "remove", CommandObjectSP(
+                      new CommandObjectTargetFrameProviderRemove(interpreter)));
+  }
+
+  ~CommandObjectTargetFrameProvider() override = default;
+};
+
 #pragma mark CommandObjectMultiwordTarget
 
 // CommandObjectMultiwordTarget
@@ -5417,6 +5742,9 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(
                  CommandObjectSP(new CommandObjectTargetDelete(interpreter)));
   LoadSubCommand("dump",
                  CommandObjectSP(new CommandObjectTargetDump(interpreter)));
+  LoadSubCommand(
+      "frame-provider",
+      CommandObjectSP(new CommandObjectTargetFrameProvider(interpreter)));
   LoadSubCommand("list",
                  CommandObjectSP(new CommandObjectTargetList(interpreter)));
   LoadSubCommand("select",

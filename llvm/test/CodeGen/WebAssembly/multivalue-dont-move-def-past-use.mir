@@ -19,7 +19,7 @@
     ret i32 %b
   }
 
-  attributes #0 = { "target-features"="+multivalue,+mutable-globals,+sign-ext," }
+  attributes #0 = { "target-features"="+multivalue,+mutable-globals,+sign-ext" }
 
   !llvm.module.flags = !{!0, !1, !2}
 

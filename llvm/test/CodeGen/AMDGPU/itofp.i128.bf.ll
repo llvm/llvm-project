@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,SDAG %s
 ; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s 2>&1 | FileCheck -check-prefix=GISEL %s
 
-; FIXME: GISEL can't handle the "fptrunc float to bfloat" that expand-fp emits.
+; FIXME: GISEL can't handle the "fptrunc float to bfloat" that expand-ir-insts emits.
 
 ; GISEL: unable to translate instruction: fptrunc
 
@@ -21,8 +21,7 @@ define bfloat @sitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    v_subb_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN-NEXT:    v_subb_co_u32_e32 v6, vcc, 0, v2, vcc
 ; GCN-NEXT:    v_subb_co_u32_e32 v7, vcc, 0, v3, vcc
-; GCN-NEXT:    v_cmp_gt_i64_e32 vcc, 0, v[2:3]
-; GCN-NEXT:    ; implicit-def: $vgpr8
+; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v3
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
@@ -40,6 +39,7 @@ define bfloat @sitofp_i128_to_bf16(i128 %x) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v7, v6, v2, vcc
 ; GCN-NEXT:    v_sub_u32_e32 v2, 0x80, v7
 ; GCN-NEXT:    v_cmp_gt_i32_e32 vcc, 25, v2
+; GCN-NEXT:    ; implicit-def: $vgpr8
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:  ; %bb.2: ; %itofp-if-else

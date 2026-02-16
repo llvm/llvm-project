@@ -674,10 +674,21 @@ entry:
   ret void
 }
 
+; Test that amdgcn.device.init correctly references amdgpu.max_num_named_barrier
+; GCN-LABEL: {{^}}amdgcn.device.init:
+; GCN: .set amdgcn.device.init.num_named_barrier, max(0, amdgpu.max_num_named_barrier)
+
+@llvm.global_ctors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @ctor_func, ptr null }]
+
+define internal void @ctor_func() {
+  ret void
+}
+
 ; Added at the of the .s are the module level maximums
 ; GCN:	.set amdgpu.max_num_vgpr, 50
 ; GCN:	.set amdgpu.max_num_agpr, 0
 ; GCN:	.set amdgpu.max_num_sgpr, 80
+; GCN:	.set amdgpu.max_num_named_barrier, 0
 
 attributes #0 = { nounwind noinline norecurse }
 attributes #1 = { nounwind noinline norecurse }

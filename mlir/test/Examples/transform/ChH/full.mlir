@@ -275,7 +275,7 @@ module attributes { transform.with_named_sequence } {
 
     // Vectorize the remaining non-unit dimensions in structured operations.
     // This essentially rewrites operations on `tensor<5x64xf32>` into
-    // opreations on `vector<5x64xf32>`. Further lowering in MLIR and LLVM will
+    // operations on `vector<5x64xf32>`. Further lowering in MLIR and LLVM will
     // decompose this into a sequence of operations on single-dimensional
     // vectors of the platform-relevant size, e.g., `vector<16xf32>` for AVX512.
     // High-level vector primitives, such as `vector.transpose` and
