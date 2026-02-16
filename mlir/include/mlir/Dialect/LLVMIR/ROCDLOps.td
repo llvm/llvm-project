@@ -604,6 +604,11 @@ def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0>,
 
       See `rocdl.wait.asyncmark`'s documentation for a usage example.
 
+      Example:
+      ```mlir
+      rocdl.asyncmark
+      ```
+
       Available on gfx9 and later.
   }];
   let results = (outs);
@@ -627,6 +632,11 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       Available on gfx9 and later.
 
       Example:
+      ```mlir
+      rocdl.wait.asyncmark 1
+      ```
+
+      Usage example:
       ```mlir
       rocdl.tensor.load.to.lds ...
       rocdl.global.async.load.to.lds ...
