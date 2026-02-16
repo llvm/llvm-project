@@ -170,8 +170,9 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
     Type = mdconst::extract<ConstantInt>(MD->getOperand(0));
 
   // If we don't have a type to emit, just emit padding if needed to maintain
-  // the same alignment for all functions.
-  if (!Type) {
+  // the same alignment for all functions. Also skip `nocf_check` functions as
+  // they are not indirectly callable due to a missing ENDBR.
+  if (!Type || F.doesNoCfCheck()) {
     EmitKCFITypePadding(MF, /*HasType=*/false);
     return;
   }
