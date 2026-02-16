@@ -8,18 +8,11 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for mla_nxv8i16
 
 define i64 @smlsl_i64(i64 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
-; CHECK-SD-LABEL: smlsl_i64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    smsubl x8, w4, w3, x0
-; CHECK-SD-NEXT:    smsubl x0, w2, w1, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: smlsl_i64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smull x8, w2, w1
-; CHECK-GI-NEXT:    smaddl x8, w4, w3, x8
-; CHECK-GI-NEXT:    sub x0, x0, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: smlsl_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smsubl x8, w4, w3, x0
+; CHECK-NEXT:    smsubl x0, w2, w1, x8
+; CHECK-NEXT:    ret
   %be = sext i32 %b to i64
   %ce = sext i32 %c to i64
   %de = sext i32 %d to i64
@@ -32,18 +25,11 @@ define i64 @smlsl_i64(i64 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 }
 
 define i64 @umlsl_i64(i64 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
-; CHECK-SD-LABEL: umlsl_i64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    umsubl x8, w4, w3, x0
-; CHECK-SD-NEXT:    umsubl x0, w2, w1, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: umlsl_i64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umull x8, w2, w1
-; CHECK-GI-NEXT:    umaddl x8, w4, w3, x8
-; CHECK-GI-NEXT:    sub x0, x0, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: umlsl_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umsubl x8, w4, w3, x0
+; CHECK-NEXT:    umsubl x0, w2, w1, x8
+; CHECK-NEXT:    ret
   %be = zext i32 %b to i64
   %ce = zext i32 %c to i64
   %de = zext i32 %d to i64
@@ -56,18 +42,11 @@ define i64 @umlsl_i64(i64 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
 }
 
 define i64 @mls_i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
-; CHECK-SD-LABEL: mls_i64:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    msub x8, x4, x3, x0
-; CHECK-SD-NEXT:    msub x0, x2, x1, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: mls_i64:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mul x8, x2, x1
-; CHECK-GI-NEXT:    madd x8, x4, x3, x8
-; CHECK-GI-NEXT:    sub x0, x0, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: mls_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    msub x8, x4, x3, x0
+; CHECK-NEXT:    msub x0, x2, x1, x8
+; CHECK-NEXT:    ret
   %m1.neg = mul i64 %c, %b
   %m2.neg = mul i64 %e, %d
   %reass.add = add i64 %m2.neg, %m1.neg
@@ -76,18 +55,11 @@ define i64 @mls_i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 }
 
 define i16 @mls_i16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e) {
-; CHECK-SD-LABEL: mls_i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    msub w8, w4, w3, w0
-; CHECK-SD-NEXT:    msub w0, w2, w1, w8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: mls_i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mul w8, w2, w1
-; CHECK-GI-NEXT:    madd w8, w4, w3, w8
-; CHECK-GI-NEXT:    sub w0, w0, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: mls_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    msub w8, w4, w3, w0
+; CHECK-NEXT:    msub w0, w2, w1, w8
+; CHECK-NEXT:    ret
   %m1.neg = mul i16 %c, %b
   %m2.neg = mul i16 %e, %d
   %reass.add = add i16 %m2.neg, %m1.neg
@@ -125,20 +97,12 @@ define i64 @mls_i64_C(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 }
 
 define i64 @umlsl_i64_muls(i64 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
-; CHECK-SD-LABEL: umlsl_i64_muls:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    umull x8, w2, w3
-; CHECK-SD-NEXT:    umsubl x8, w4, w3, x8
-; CHECK-SD-NEXT:    umsubl x0, w2, w1, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: umlsl_i64_muls:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umull x8, w2, w1
-; CHECK-GI-NEXT:    umull x9, w2, w3
-; CHECK-GI-NEXT:    umaddl x8, w4, w3, x8
-; CHECK-GI-NEXT:    sub x0, x9, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: umlsl_i64_muls:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull x8, w2, w3
+; CHECK-NEXT:    umsubl x8, w4, w3, x8
+; CHECK-NEXT:    umsubl x0, w2, w1, x8
+; CHECK-NEXT:    ret
   %be = zext i32 %b to i64
   %ce = zext i32 %c to i64
   %de = zext i32 %d to i64
@@ -225,18 +189,11 @@ define i64 @mla_i64_mul(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) {
 
 
 define <8 x i16> @smlsl_v8i16(<8 x i16> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d, <8 x i8> %e) {
-; CHECK-SD-LABEL: smlsl_v8i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    smlsl v0.8h, v4.8b, v3.8b
-; CHECK-SD-NEXT:    smlsl v0.8h, v2.8b, v1.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: smlsl_v8i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smull v1.8h, v2.8b, v1.8b
-; CHECK-GI-NEXT:    smlal v1.8h, v4.8b, v3.8b
-; CHECK-GI-NEXT:    sub v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: smlsl_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smlsl v0.8h, v4.8b, v3.8b
+; CHECK-NEXT:    smlsl v0.8h, v2.8b, v1.8b
+; CHECK-NEXT:    ret
   %be = sext <8 x i8> %b to <8 x i16>
   %ce = sext <8 x i8> %c to <8 x i16>
   %de = sext <8 x i8> %d to <8 x i16>
@@ -249,18 +206,11 @@ define <8 x i16> @smlsl_v8i16(<8 x i16> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %
 }
 
 define <8 x i16> @umlsl_v8i16(<8 x i16> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %d, <8 x i8> %e) {
-; CHECK-SD-LABEL: umlsl_v8i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    umlsl v0.8h, v4.8b, v3.8b
-; CHECK-SD-NEXT:    umlsl v0.8h, v2.8b, v1.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: umlsl_v8i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umull v1.8h, v2.8b, v1.8b
-; CHECK-GI-NEXT:    umlal v1.8h, v4.8b, v3.8b
-; CHECK-GI-NEXT:    sub v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: umlsl_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umlsl v0.8h, v4.8b, v3.8b
+; CHECK-NEXT:    umlsl v0.8h, v2.8b, v1.8b
+; CHECK-NEXT:    ret
   %be = zext <8 x i8> %b to <8 x i16>
   %ce = zext <8 x i8> %c to <8 x i16>
   %de = zext <8 x i8> %d to <8 x i16>
@@ -273,18 +223,11 @@ define <8 x i16> @umlsl_v8i16(<8 x i16> %a, <8 x i8> %b, <8 x i8> %c, <8 x i8> %
 }
 
 define <8 x i16> @mls_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d, <8 x i16> %e) {
-; CHECK-SD-LABEL: mls_v8i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mls v0.8h, v4.8h, v3.8h
-; CHECK-SD-NEXT:    mls v0.8h, v2.8h, v1.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: mls_v8i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mul v1.8h, v2.8h, v1.8h
-; CHECK-GI-NEXT:    mla v1.8h, v4.8h, v3.8h
-; CHECK-GI-NEXT:    sub v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: mls_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mls v0.8h, v4.8h, v3.8h
+; CHECK-NEXT:    mls v0.8h, v2.8h, v1.8h
+; CHECK-NEXT:    ret
   %m1.neg = mul <8 x i16> %c, %b
   %m2.neg = mul <8 x i16> %e, %d
   %reass.add = add <8 x i16> %m2.neg, %m1.neg
@@ -307,20 +250,12 @@ define <8 x i16> @mla_v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> 
 }
 
 define <8 x i16> @mls_v8i16_C(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16> %d, <8 x i16> %e) {
-; CHECK-SD-LABEL: mls_v8i16_C:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    movi v0.8h, #10
-; CHECK-SD-NEXT:    mls v0.8h, v4.8h, v3.8h
-; CHECK-SD-NEXT:    mls v0.8h, v2.8h, v1.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: mls_v8i16_C:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mul v0.8h, v2.8h, v1.8h
-; CHECK-GI-NEXT:    movi v1.8h, #10
-; CHECK-GI-NEXT:    mla v0.8h, v4.8h, v3.8h
-; CHECK-GI-NEXT:    sub v0.8h, v1.8h, v0.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: mls_v8i16_C:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.8h, #10
+; CHECK-NEXT:    mls v0.8h, v4.8h, v3.8h
+; CHECK-NEXT:    mls v0.8h, v2.8h, v1.8h
+; CHECK-NEXT:    ret
   %m1.neg = mul <8 x i16> %c, %b
   %m2.neg = mul <8 x i16> %e, %d
   %reass.add = add <8 x i16> %m2.neg, %m1.neg
