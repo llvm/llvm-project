@@ -9,6 +9,7 @@
 #include <cassert>
 #include <string>
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -332,10 +333,17 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
                                       const Expr *RHSExpr) {
   LHSExpr = LHSExpr->IgnoreParenImpCasts();
   OriginList *LHSList = nullptr;
+  const VarDecl *GlobalLHS = nullptr;
 
   if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
     LHSList = getOriginsList(*DRE_LHS);
     assert(LHSList && "LHS is a DRE and should have an origin list");
+    // Check if we are assigning to a global variable
+    if (const VarDecl *VarD = dyn_cast<VarDecl>(DRE_LHS->getDecl())) {
+      if (VarD->hasGlobalStorage()) {
+        GlobalLHS = VarD;
+      };
+    };
   }
   // Handle assignment to member fields (e.g., `this->view = s` or `view = s`).
   // This enables detection of dangling fields when local values escape to
@@ -343,6 +351,12 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   if (const auto *ME_LHS = dyn_cast<MemberExpr>(LHSExpr)) {
     LHSList = getOriginsList(*ME_LHS);
     assert(LHSList && "LHS is a MemberExpr and should have an origin list");
+    // Check if we are assigning to a static data member
+    if (const VarDecl *VarD = dyn_cast<VarDecl>(ME_LHS->getMemberDecl())) {
+      if (VarD->hasGlobalStorage()) {
+        GlobalLHS = VarD;
+      };
+    };
   }
   if (!LHSList)
     return;
@@ -354,6 +368,13 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   // assigned.
   RHSList = getRValueOrigins(RHSExpr, RHSList);
 
+  if (GlobalLHS) {
+    for (OriginList *L = RHSList; L != nullptr; L = L->peelOuterOrigin()) {
+      EscapesInCurrentBlock.push_back(FactMgr.createFact<GlobalEscapeFact>(
+            L->getOuterOriginID(), GlobalLHS));
+    }
+  };
+  
   if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr))
     markUseAsWrite(DRE_LHS);
   // Kill the old loans of the destination origin and flow the new loans
