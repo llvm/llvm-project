@@ -1201,7 +1201,7 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::armeb:
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb:
-    if (Triple.isOSDarwin() || Triple.isOSWindows())
+    if (Triple.isOSDarwin() || Triple.isOSWindows() || Triple.isUEFI())
       return true;
     return false;
 
@@ -7136,7 +7136,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasFlag(
           options::OPT_fuse_cxa_atexit, options::OPT_fno_use_cxa_atexit,
           !RawTriple.isOSAIX() &&
-              (!RawTriple.isOSWindows() ||
+              ((!RawTriple.isOSWindows() && !RawTriple.isUEFI()) ||
                RawTriple.isWindowsCygwinEnvironment()) &&
               ((RawTriple.getVendor() != llvm::Triple::MipsTechnologies) ||
                RawTriple.hasEnvironment())) ||
@@ -7171,16 +7171,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fkeep-system-includes");
   }
 
-  // -fms-extensions=0 is default.
-  if (Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
-                   IsWindowsMSVC || IsUEFI))
-    CmdArgs.push_back("-fms-extensions");
-
   // -fms-compatibility=0 is default.
   bool IsMSVCCompat = Args.hasFlag(
       options::OPT_fms_compatibility, options::OPT_fno_ms_compatibility,
-      (IsWindowsMSVC && Args.hasFlag(options::OPT_fms_extensions,
-                                     options::OPT_fno_ms_extensions, true)));
+      ((IsWindowsMSVC || IsUEFI) &&
+       Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
+                    true)));
   if (IsMSVCCompat) {
     CmdArgs.push_back("-fms-compatibility");
     if (!types::isCXX(Input.getType()) &&
