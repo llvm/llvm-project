@@ -123,14 +123,17 @@ public:
       PyStatus status =
           PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
       if (PyStatus_Exception(status))
-        llvm::report_fatal_error(llvm::Twine("failed to set the Python config: '") + status.err_msg + "'");
+        llvm::report_fatal_error(
+            llvm::Twine("failed to set the Python config: '") + status.err_msg +
+            "'");
     }
 
     config.install_signal_handlers = 0;
     PyStatus status = Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
     if (PyStatus_Exception(status))
-      llvm::report_fatal_error(llvm::Twine("Python failed to initialize: '") + status.err_msg + "'");
+      llvm::report_fatal_error(llvm::Twine("Python failed to initialize: '") +
+                               status.err_msg + "'");
 #else
     Py_InitializeEx(/*install_sigs=*/0);
     if (!Py_IsInitialized())
