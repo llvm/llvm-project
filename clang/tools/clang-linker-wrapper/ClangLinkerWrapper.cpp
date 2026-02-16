@@ -585,9 +585,9 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
     CmdArgs.append({"-Xlinker", Args.MakeArgString("-arch=" + Arch)});
   }
 
-  for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
+  for (StringRef Arg : Args.getAllArgValues(OPT_device_linker_args_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
-  for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
+  for (StringRef Arg : Args.getAllArgValues(OPT_device_compiler_args_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
 
   if (Error Err = executeCommands(*ClangPath, CmdArgs))
@@ -873,8 +873,11 @@ bundleLinkedOutput(ArrayRef<OffloadingImage> Images, const ArgList &Args,
 DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
                              const InputArgList &Args) {
   DerivedArgList DAL = DerivedArgList(DerivedArgList(Args));
-  for (Arg *A : Args)
-    DAL.append(A);
+  for (Arg *A : Args) {
+    if (!A->getOption().matches(OPT_device_linker_args_EQ) &&
+        !A->getOption().matches(OPT_device_compiler_args_EQ))
+        DAL.append(A);
+  }
 
   // Set the subarchitecture and target triple for this compilation.
   const OptTable &Tbl = getOptTable();
@@ -898,13 +901,13 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
     llvm::Triple TT(Triple);
     // If this isn't a recognized triple then it's an `arg=value` option.
     if (TT.getArch() == Triple::ArchType::UnknownArch)
-      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_device_linker_args_EQ),
                        Args.MakeArgString(Arg));
     else if (Value.empty())
-      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_device_linker_args_EQ),
                        Args.MakeArgString(Triple));
     else if (Triple == DAL.getLastArgValue(OPT_triple_EQ))
-      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_device_linker_args_EQ),
                        Args.MakeArgString(Value));
   }
 
@@ -914,13 +917,13 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
     llvm::Triple TT(Triple);
     // If this isn't a recognized triple then it's an `arg=value` option.
     if (TT.getArch() == Triple::ArchType::UnknownArch)
-      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_compiler_arg_EQ),
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_device_compiler_args_EQ),
                        Args.MakeArgString(Arg));
     else if (Value.empty())
-      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_compiler_arg_EQ),
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_device_compiler_args_EQ),
                        Args.MakeArgString(Triple));
     else if (Triple == DAL.getLastArgValue(OPT_triple_EQ))
-      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_compiler_arg_EQ),
+      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_device_compiler_args_EQ),
                        Args.MakeArgString(Value));
   }
 
