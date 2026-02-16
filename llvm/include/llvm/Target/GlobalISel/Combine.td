@@ -582,7 +582,8 @@ def right_identity_one_int: GICombineRule<
 def sub_one_from_sub: GICombineRule<
   (defs root:$dst),
   (match (G_SUB $sub1, $a, $b),
-         (G_SUB $dst, $sub1, 1)),
+         (G_SUB $dst, $sub1, 1),
+         [{ return MRI.hasOneNonDBGUse(${sub1}.getReg()); }]),
   (apply (G_XOR $xor1, $b, -1),
          (G_ADD $dst, $xor1, $a))>;
 
