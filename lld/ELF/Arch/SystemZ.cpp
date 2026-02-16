@@ -305,7 +305,6 @@ void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_390_TLS_IE32:
     case R_390_TLS_IE64:
       // There is no IE to LE optimization.
-      ctx.hasTlsIe.store(true, std::memory_order_relaxed);
       sym.setFlags(NEEDS_TLSIE);
       // R_GOT (absolute GOT address) needs a RELATIVE dynamic relocation
       // in PIC.
@@ -319,12 +318,10 @@ void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_390_TLS_GOTIE20:
     case R_390_TLS_GOTIE32:
     case R_390_TLS_GOTIE64:
-      ctx.hasTlsIe.store(true, std::memory_order_relaxed);
       sym.setFlags(NEEDS_TLSIE);
       sec.addReloc({R_GOT_OFF, type, offset, addend, &sym});
       continue;
     case R_390_TLS_IEENT:
-      ctx.hasTlsIe.store(true, std::memory_order_relaxed);
       sym.setFlags(NEEDS_TLSIE);
       sec.addReloc({R_GOT_PC, type, offset, addend, &sym});
       continue;
