@@ -5476,35 +5476,35 @@ libc_math_function(name = "nextafterf16")
 libc_math_function(
     name = "nextdown",
     additional_deps = [
-        ":__support_math_nextdown"
+        ":__support_math_nextdown",
     ],
 )
 
 libc_math_function(
     name = "nextdownf",
     additional_deps = [
-        ":__support_math_nextdownf"
+        ":__support_math_nextdownf",
     ],
 )
 
 libc_math_function(
     name = "nextdownl",
     additional_deps = [
-        ":__support_math_nextdownl"
+        ":__support_math_nextdownl",
     ],
 )
 
 libc_math_function(
     name = "nextdownf128",
     additional_deps = [
-        ":__support_math_nextdownf128"
+        ":__support_math_nextdownf128",
     ],
 )
 
 libc_math_function(
     name = "nextdownf16",
     additional_deps = [
-        ":__support_math_nextdownf16"
+        ":__support_math_nextdownf16",
     ],
 )
 
