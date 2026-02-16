@@ -5969,7 +5969,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       return Cost;
     // Floating-point types aren't promoted, so expanding the partial reduction
     // is more expensive.
-    return Cost + 20;
+    return Cost * 8;
   }
 
   // Add additional cost for the extends that would need to be inserted.

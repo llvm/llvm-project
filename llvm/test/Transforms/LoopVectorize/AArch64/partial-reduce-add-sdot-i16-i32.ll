@@ -26,6 +26,10 @@
 ; CHECK-FIXED: Cost of 1 for VF 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.add (ir<%load> zext to i32)
 ; CHECK-SCALABLE: Cost of 1 for VF vscale x 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.add (ir<%load> zext to i32)
 
+; LV: Checking a loop in 'fpext_reduction_half_to_float'
+; CHECK-FIXED-BASE: Cost of 2 for VF 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.fadd (ir<%load> reassoc contract fpext to float)
+; CHECK-FIXED: Cost of 2 for VF 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.fadd (ir<%load> reassoc contract fpext to float)
+; CHECK-SCALABLE: Cost of 2 for VF vscale x 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.fadd (ir<%load> reassoc contract fpext to float)
 target triple = "aarch64"
 
 define i32 @sext_reduction_i16_to_i32(ptr %arr, i32 %n) vscale_range(1,16) {
@@ -64,4 +68,23 @@ loop:
 
 exit:
   ret i32 %add
+}
+
+define float @fpext_reduction_half_to_float(ptr %arr, i32 %n) vscale_range(1,16) {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc = phi float [ 0.0, %entry ], [ %add, %loop ]
+  %gep = getelementptr inbounds half, ptr %arr, i32 %iv
+  %load = load half, ptr %gep
+  %zext = fpext half %load to float
+  %add = fadd reassoc contract float %acc, %zext
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp ult i32 %iv.next, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret float %add
 }
