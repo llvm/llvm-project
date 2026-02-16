@@ -2014,22 +2014,14 @@ Register SPIRVGlobalRegistry::getOrCreateUndef(MachineInstr &I,
   CurMF->getRegInfo().setRegClass(Res, &SPIRV::iIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
 
-  MachineInstr *DepMI =
-      const_cast<MachineInstr *>(static_cast<const MachineInstr *>(SpvType));
-  MachineIRBuilder MIRBuilder(*DepMI->getParent(), DepMI->getIterator());
-  const MachineInstr *NewMI =
-      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        auto MIB = BuildMI(MIRBuilder.getMBB(), *MIRBuilder.getInsertPt(),
-                           MIRBuilder.getDL(), TII.get(SPIRV::OpUndef))
-                       .addDef(Res)
-                       .addUse(getSPIRVTypeID(SpvType));
-        const auto &ST = CurMF->getSubtarget();
-        constrainSelectedInstRegOperands(*MIB, *ST.getInstrInfo(),
-                                         *ST.getRegisterInfo(),
-                                         *ST.getRegBankInfo());
-        return MIB;
-      });
-  add(UV, NewMI);
+  MachineIRBuilder MIRBuilder(CurMF->front(), CurMF->front().begin());
+  auto MIB = MIRBuilder.buildInstr(SPIRV::OpUndef)
+                 .addDef(Res)
+                 .addUse(getSPIRVTypeID(SpvType));
+  const auto &ST = CurMF->getSubtarget();
+  MIB.constrainAllUses(*ST.getInstrInfo(), *ST.getRegisterInfo(),
+                       *ST.getRegBankInfo());
+  add(UV, MIB.getInstr());
   return Res;
 }
 
