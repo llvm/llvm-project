@@ -82,6 +82,17 @@ bool DDGDotGraphTraits::isNodeHidden(const DDGNode *Node,
   return Graph->getPiBlock(*Node) != nullptr;
 }
 
+std::string DDGDotGraphTraits::getNodeAttributes(const DDGNode *Node,
+                                                const DataDependenceGraph *) {
+  if (isa<PiBlockDDGNode>(Node))
+    return "shape=box, style=\"rounded,filled\", fillcolor=lightyellow, "
+           "color=darkorange, penwidth=3";
+  if (isa<SimpleDDGNode>(Node) &&
+      Node->getKind() == DDGNode::NodeKind::MultiInstruction)
+    return "style=filled, fillcolor=lightcyan";
+  return "";
+}
+
 std::string
 DDGDotGraphTraits::getSimpleNodeLabel(const DDGNode *Node,
                                       const DataDependenceGraph *G) {
@@ -132,6 +143,15 @@ std::string DDGDotGraphTraits::getSimpleEdgeAttributes(
   raw_string_ostream OS(Str);
   DDGEdge::EdgeKind Kind = Edge->getKind();
   OS << "label=\"[" << Kind << "]\"";
+  // EdgeKind to color mapping:
+  // - MemoryDependence: red
+  // - RegisterDefUse: blue
+  // - Rooted: black
+  // - Unknown: black
+  if (Kind == DDGEdge::EdgeKind::MemoryDependence)
+    OS << ", color=red";
+  else if (Kind == DDGEdge::EdgeKind::RegisterDefUse)
+    OS << ", color=blue";
   return OS.str();
 }
 
@@ -146,5 +166,14 @@ std::string DDGDotGraphTraits::getVerboseEdgeAttributes(
   else
     OS << Kind;
   OS << "]\"";
+  // EdgeKind to color mapping:
+  // - MemoryDependence: red
+  // - RegisterDefUse: blue
+  // - Rooted: black
+  // - Unknown: black
+  if (Kind == DDGEdge::EdgeKind::MemoryDependence)
+    OS << ", color=red";
+  else if (Kind == DDGEdge::EdgeKind::RegisterDefUse)
+    OS << ", color=blue";
   return OS.str();
 }
