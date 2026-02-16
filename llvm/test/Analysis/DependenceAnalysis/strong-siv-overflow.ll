@@ -27,7 +27,7 @@ define void @strongsiv_const_ovfl(ptr %A) {
 ; CHECK-STRONG-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-STRONG-SIV-NEXT:    da analyze - none!
 ; CHECK-STRONG-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-STRONG-SIV-NEXT:    da analyze - consistent output [1]!
+; CHECK-STRONG-SIV-NEXT:    da analyze - output [1]!
 ; CHECK-STRONG-SIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-STRONG-SIV-NEXT:    da analyze - none!
 ;

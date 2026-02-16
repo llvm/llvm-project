@@ -545,7 +545,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 define double @test_sizes(i16 %h, i16 %N, ptr nocapture %array) {
 ; CHECK-LABEL: 'test_sizes'
 ; CHECK-NEXT:  Src: %2 = load i16, ptr %arrayidx, align 4 --> Dst: %2 = load i16, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - consistent input [0 S]!
+; CHECK-NEXT:    da analyze - input [0 S]!
 ; CHECK-NEXT:  Src: %2 = load i16, ptr %arrayidx, align 4 --> Dst: store i16 %add6, ptr %arrayidx8, align 4
 ; CHECK-NEXT:    da analyze - anti [* *|<]!
 ; CHECK-NEXT:  Src: store i16 %add6, ptr %arrayidx8, align 4 --> Dst: store i16 %add6, ptr %arrayidx8, align 4
@@ -646,13 +646,13 @@ exit:
 define void @coeff_may_negative(ptr %a, i32 %k) {
 ; CHECK-LABEL: 'coeff_may_negative'
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.0, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    da analyze - output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: %k ne) 0
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    da analyze - output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: %k ne) 0
 ;
@@ -689,13 +689,13 @@ exit:
 define void @coeff_positive(ptr %a, i32 %k) {
 ; CHECK-LABEL: 'coeff_positive'
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.0, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    da analyze - output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: %k ne) 0
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.0, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
 ; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store i8 42, ptr %idx.1, align 1 --> Dst: store i8 42, ptr %idx.1, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    da analyze - output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: %k ne) 0
 ;
