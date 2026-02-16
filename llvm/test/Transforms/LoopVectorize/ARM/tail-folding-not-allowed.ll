@@ -254,8 +254,7 @@ define void @strides_different_direction(ptr noalias nocapture %A, ptr noalias n
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i32 [[N:%.*]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i32 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 -3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 -3
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD1]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[REVERSE]], [[WIDE_LOAD]]

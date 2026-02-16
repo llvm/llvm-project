@@ -1306,6 +1306,16 @@ public:
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);
 
+  /// Create a getelementptr i8, ptr, offset constant expression.
+  static Constant *
+  getPtrAdd(Constant *Ptr, Constant *Offset,
+            GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
+            std::optional<ConstantRange> InRange = std::nullopt,
+            Type *OnlyIfReduced = nullptr) {
+    return getGetElementPtr(Type::getInt8Ty(Ptr->getContext()), Ptr, Offset, NW,
+                            InRange, OnlyIfReduced);
+  }
+
   /// Create an "inbounds" getelementptr. See the documentation for the
   /// "inbounds" flag in LangRef.html for details.
   static Constant *getInBoundsGetElementPtr(Type *Ty, Constant *C,

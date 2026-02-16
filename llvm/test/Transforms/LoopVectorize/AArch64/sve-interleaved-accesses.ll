@@ -383,9 +383,7 @@ define void @test_reversed_load2_store2(ptr noalias nocapture readonly %A, ptr n
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw <vscale x 4 x i32> [[REVERSE]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub nsw <vscale x 4 x i32> [[REVERSE1]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[STRUCT_ST2]], ptr [[B:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP15:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP18:%.*]] = sub nsw i64 2, [[TMP15]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i64 [[TMP18]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP14]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[REVERSE2:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP12]])
 ; CHECK-NEXT:    [[REVERSE3:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP13]])
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> [[REVERSE2]], <vscale x 4 x i32> [[REVERSE3]])
@@ -1580,9 +1578,7 @@ define void @interleave_deinterleave_reverse(ptr noalias nocapture readonly %A, 
 ; CHECK-NEXT:    [[TMP19:%.*]] = mul nsw <vscale x 4 x i32> [[REVERSE4]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl nuw nsw <vscale x 4 x i32> [[REVERSE5]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_XYZT]], ptr [[B:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP22:%.*]] = shl nuw nsw i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP25:%.*]] = sub nsw i64 4, [[TMP22]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[TMP21]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[TMP21]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[REVERSE6:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP17]])
 ; CHECK-NEXT:    [[REVERSE7:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP18]])
 ; CHECK-NEXT:    [[REVERSE8:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[TMP19]])

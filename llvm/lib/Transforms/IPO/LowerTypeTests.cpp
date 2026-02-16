@@ -1195,8 +1195,8 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
 
     uint64_t GlobalOffset =
         BSI.ByteOffset + ((BSI.BitSize - 1) << BSI.AlignLog2);
-    TIL.OffsetedGlobal = ConstantExpr::getGetElementPtr(
-        Int8Ty, CombinedGlobalAddr, ConstantInt::get(IntPtrTy, GlobalOffset)),
+    TIL.OffsetedGlobal = ConstantExpr::getPtrAdd(
+        CombinedGlobalAddr, ConstantInt::get(IntPtrTy, GlobalOffset)),
     TIL.AlignLog2 = ConstantInt::get(IntPtrTy, BSI.AlignLog2);
     TIL.SizeM1 = ConstantInt::get(IntPtrTy, BSI.BitSize - 1);
     if (BSI.isAllOnes()) {

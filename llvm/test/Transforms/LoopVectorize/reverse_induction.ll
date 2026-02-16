@@ -20,10 +20,8 @@ define i32 @reverse_induction_i64(i64 %startval, ptr %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[STARTVAL]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 -3
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 -4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 -3
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 -3
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 -7
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -74,10 +72,8 @@ define i32 @reverse_induction_i128(i128 %startval, ptr %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i128 [[STARTVAL]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i128 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i128 [[TMP3]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i64 -3
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 -4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 -3
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 -3
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 -7
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -134,10 +130,8 @@ define i32 @reverse_induction_i16(i16 %startval, ptr %ptr) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 [[STARTVAL]], [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i16 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[TMP7]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i64 -3
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 -4
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 -3
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 -3
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 -7
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -221,10 +215,8 @@ define void @reverse_forward_induction_i64_i8() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1024 x i32], ptr @a, i64 0, i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 -3
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 -4
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 -3
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 -3
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 -7
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i32> [[REVERSE]], ptr [[TMP9]], align 4
@@ -274,10 +266,8 @@ define void @reverse_forward_induction_i64_i8_signed() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i8> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i8> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [1024 x i32], ptr @a, i64 0, i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 -3
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 -4
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i64 -3
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 -3
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 -7
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[REVERSE2:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i32> [[REVERSE]], ptr [[TMP9]], align 4
