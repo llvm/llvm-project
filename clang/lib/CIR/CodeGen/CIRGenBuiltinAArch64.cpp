@@ -1355,10 +1355,41 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   // Find out if any arguments are required to be integer constant
   // expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());
+  unsigned iceArguments = 0;
+  ASTContext::GetBuiltinTypeError error;
+  getContext().GetBuiltinType(builtinID, error, &iceArguments);
+  assert(error == ASTContext::GE_None && "Should not codegen an error");
+  llvm::SmallVector<mlir::Value> ops;
+  for (auto [idx, arg] : llvm::enumerate(expr->arguments())) {
+    if (idx == 0) {
+      switch (builtinID) {
+      case NEON::BI__builtin_neon_vld1_v:
+      case NEON::BI__builtin_neon_vld1q_v:
+      case NEON::BI__builtin_neon_vld1_dup_v:
+      case NEON::BI__builtin_neon_vld1q_dup_v:
+      case NEON::BI__builtin_neon_vld1_lane_v:
+      case NEON::BI__builtin_neon_vld1q_lane_v:
+      case NEON::BI__builtin_neon_vst1_v:
+      case NEON::BI__builtin_neon_vst1q_v:
+      case NEON::BI__builtin_neon_vst1_lane_v:
+      case NEON::BI__builtin_neon_vst1q_lane_v:
+      case NEON::BI__builtin_neon_vldap1_lane_s64:
+      case NEON::BI__builtin_neon_vldap1q_lane_s64:
+      case NEON::BI__builtin_neon_vstl1_lane_s64:
+      case NEON::BI__builtin_neon_vstl1q_lane_s64:
+        // Get the alignment for the argument in addition to the value;
+        // we'll use it later.
+        cgm.errorNYI(
+            expr->getSourceRange(),
+            std::string("unimplemented AArch64 builtin argument handling ") +
+                getContext().BuiltinInfo.getName(builtinID));
+      }
+    }
+    ops.push_back(emitScalarOrConstFoldImmArg(iceArguments, idx, arg));
+  }
 
   assert(!cir::MissingFeatures::neonSISDIntrinsics());
 
-  llvm::SmallVector<mlir::Value> ops;
   mlir::Location loc = getLoc(expr->getExprLoc());
 
   // Handle non-overloaded intrinsics first.
@@ -1366,7 +1397,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   default:
     break;
   case NEON::BI__builtin_neon_vabsh_f16: {
-    ops.push_back(emitScalarExpr(expr->getArg(0)));
     return cir::FAbsOp::create(builder, loc, ops);
   }
   case NEON::BI__builtin_neon_vaddq_p128:
@@ -1408,7 +1438,6 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   case NEON::BI__builtin_neon_vceqzd_s64:
-    ops.push_back(emitScalarExpr(expr->getArg(0)));
     return emitAArch64CompareBuiltinExpr(
         *this, builder, loc, ops[0],
         convertType(expr->getCallReturnType(getContext())), cir::CmpOpKind::eq);
@@ -1462,11 +1491,9 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   case NEON::BI__builtin_neon_vnegd_s64: {
-    ops.push_back(emitScalarExpr(expr->getArg(0)));
     return builder.createNeg(ops[0]);
   }
   case NEON::BI__builtin_neon_vnegh_f16: {
-    ops.push_back(emitScalarExpr(expr->getArg(0)));
     return builder.createFNeg(ops[0]);
   }
   case NEON::BI__builtin_neon_vtstd_s64:
@@ -1524,16 +1551,15 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   case NEON::BI__builtin_neon_vfmah_f16:
-    ops.push_back(emitScalarExpr(expr->getArg(1)));
-    ops.push_back(emitScalarExpr(expr->getArg(2)));
-    ops.push_back(emitScalarExpr(expr->getArg(0)));
+    // NEON intrinsic puts accumulator first, unlike the LLVM fma.
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
     return emitCallMaybeConstrainedBuiltin(builder, loc, "fma",
                                            convertType(expr->getType()), ops);
     break;
   case NEON::BI__builtin_neon_vfmsh_f16:
-    ops.push_back(builder.createFNeg(emitScalarExpr(expr->getArg(1))));
-    ops.push_back(emitScalarExpr(expr->getArg(2)));
-    ops.push_back(emitScalarExpr(expr->getArg(0)));
+    // NEON intrinsic puts accumulator first, unlike the LLVM fma.
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    ops[0] = builder.createFNeg(ops[0]);
     return emitCallMaybeConstrainedBuiltin(builder, loc, "fma",
                                            convertType(expr->getType()), ops);
   case NEON::BI__builtin_neon_vaddd_s64:
