@@ -138,8 +138,8 @@ func.func @fold_add_splat_ui8_overflow() -> tensor<10xui8> {
 
 // CHECK-LABEL: @no_fold_add_unknown_broadcast_zero_lhs
 func.func @no_fold_add_unknown_broadcast_zero_lhs(%arg0: tensor<1x4xi32>) -> tensor<2x4xi32> {
-  %one = "tosa.const"() {values = dense<0> : tensor<2x1xi32>} : () -> tensor<2x1xi32>
-  %div = tosa.add %one, %arg0 : (tensor<2x1xi32>, tensor<1x4xi32>) -> tensor<2x4xi32>
+  %zero = "tosa.const"() {values = dense<0> : tensor<2x1xi32>} : () -> tensor<2x1xi32>
+  %div = tosa.add %zero, %arg0 : (tensor<2x1xi32>, tensor<1x4xi32>) -> tensor<2x4xi32>
   // CHECK: tosa.add
   return %div : tensor<2x4xi32>
 }
@@ -148,8 +148,8 @@ func.func @no_fold_add_unknown_broadcast_zero_lhs(%arg0: tensor<1x4xi32>) -> ten
 
 // CHECK-LABEL: @no_fold_dynamic_add_unknown_broadcast_zero_lhs
 func.func @no_fold_dynamic_add_unknown_broadcast_zero_lhs(%arg0: tensor<?x4xi32>) -> tensor<?x4xi32> {
-  %one = "tosa.const"() {values = dense<0> : tensor<2x1xi32>} : () -> tensor<2x1xi32>
-  %div = tosa.add %one, %arg0 : (tensor<2x1xi32>, tensor<?x4xi32>) -> tensor<?x4xi32>
+  %zero = "tosa.const"() {values = dense<0> : tensor<2x1xi32>} : () -> tensor<2x1xi32>
+  %div = tosa.add %zero, %arg0 : (tensor<2x1xi32>, tensor<?x4xi32>) -> tensor<?x4xi32>
   // CHECK: tosa.add
   return %div : tensor<?x4xi32>
 }
@@ -158,8 +158,8 @@ func.func @no_fold_dynamic_add_unknown_broadcast_zero_lhs(%arg0: tensor<?x4xi32>
 
 // CHECK-LABEL: @fold_dynamic_add_broadcast_zero_lhs
 func.func @fold_dynamic_add_broadcast_zero_lhs(%arg0: tensor<?x17xi32>) -> tensor<?x17xi32> {
-  %one = "tosa.const"() {values = dense<0> : tensor<1x1xi32>} : () -> tensor<1x1xi32>
-  %div = tosa.add %one, %arg0 : (tensor<1x1xi32>, tensor<?x17xi32>) -> tensor<?x17xi32>
+  %zero = "tosa.const"() {values = dense<0> : tensor<1x1xi32>} : () -> tensor<1x1xi32>
+  %div = tosa.add %zero, %arg0 : (tensor<1x1xi32>, tensor<?x17xi32>) -> tensor<?x17xi32>
   // CHECK: return %arg0
   return %div : tensor<?x17xi32>
 }
@@ -168,8 +168,8 @@ func.func @fold_dynamic_add_broadcast_zero_lhs(%arg0: tensor<?x17xi32>) -> tenso
 
 // CHECK-LABEL: @no_fold_dynamic_add_unknown_broadcast_zero_rhs
 func.func @no_fold_dynamic_add_unknown_broadcast_zero_rhs(%arg0: tensor<?x4xi32>) -> tensor<?x4xi32> {
-  %one = "tosa.const"() {values = dense<0> : tensor<2x1xi32>} : () -> tensor<2x1xi32>
-  %div = tosa.add %arg0, %one : (tensor<?x4xi32>, tensor<2x1xi32>) -> tensor<?x4xi32>
+  %zero = "tosa.const"() {values = dense<0> : tensor<2x1xi32>} : () -> tensor<2x1xi32>
+  %div = tosa.add %arg0, %zero : (tensor<?x4xi32>, tensor<2x1xi32>) -> tensor<?x4xi32>
   // CHECK: tosa.add
   return %div : tensor<?x4xi32>
 }
@@ -178,8 +178,8 @@ func.func @no_fold_dynamic_add_unknown_broadcast_zero_rhs(%arg0: tensor<?x4xi32>
 
 // CHECK-LABEL: @fold_dynamic_add_broadcast_zero_rhs
 func.func @fold_dynamic_add_broadcast_zero_rhs(%arg0: tensor<?x17xi32>) -> tensor<?x17xi32> {
-  %one = "tosa.const"() {values = dense<0> : tensor<1x17xi32>} : () -> tensor<1x17xi32>
-  %div = tosa.add %arg0, %one : (tensor<?x17xi32>, tensor<1x17xi32>) -> tensor<?x17xi32>
+  %zero = "tosa.const"() {values = dense<0> : tensor<1x17xi32>} : () -> tensor<1x17xi32>
+  %div = tosa.add %arg0, %zero : (tensor<?x17xi32>, tensor<1x17xi32>) -> tensor<?x17xi32>
   // CHECK: return %arg0
   return %div : tensor<?x17xi32>
 }
@@ -547,8 +547,8 @@ func.func @fold_sub_zero_rhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
 
 // CHECK-LABEL: @no_fold_sub_unknown_broadcast_zero_rhs
 func.func @no_fold_sub_unknown_broadcast_zero_rhs(%arg0: tensor<1x4xi32>) -> tensor<2x4xi32> {
-  %one = "tosa.const"() {values = dense<0> : tensor<2x1xi32>} : () -> tensor<2x1xi32>
-  %div = tosa.sub %arg0, %one : (tensor<1x4xi32>, tensor<2x1xi32>) -> tensor<2x4xi32>
+  %zero = "tosa.const"() {values = dense<0> : tensor<2x1xi32>} : () -> tensor<2x1xi32>
+  %div = tosa.sub %arg0, %zero : (tensor<1x4xi32>, tensor<2x1xi32>) -> tensor<2x4xi32>
   // CHECK: tosa.sub
   return %div : tensor<2x4xi32>
 }
@@ -557,8 +557,8 @@ func.func @no_fold_sub_unknown_broadcast_zero_rhs(%arg0: tensor<1x4xi32>) -> ten
 
 // CHECK-LABEL: @no_fold_dynamic_sub_unknown_broadcast_zero_rhs
 func.func @no_fold_dynamic_sub_unknown_broadcast_zero_rhs(%arg0: tensor<?x4xi32>) -> tensor<?x4xi32> {
-  %one = "tosa.const"() {values = dense<0> : tensor<2x1xi32>} : () -> tensor<2x1xi32>
-  %div = tosa.sub %arg0, %one : (tensor<?x4xi32>, tensor<2x1xi32>) -> tensor<?x4xi32>
+  %zero = "tosa.const"() {values = dense<0> : tensor<2x1xi32>} : () -> tensor<2x1xi32>
+  %div = tosa.sub %arg0, %zero : (tensor<?x4xi32>, tensor<2x1xi32>) -> tensor<?x4xi32>
   // CHECK: tosa.sub
   return %div : tensor<?x4xi32>
 }
@@ -567,8 +567,8 @@ func.func @no_fold_dynamic_sub_unknown_broadcast_zero_rhs(%arg0: tensor<?x4xi32>
 
 // CHECK-LABEL: @fold_dynamic_sub_broadcast_zero_rhs
 func.func @fold_dynamic_sub_broadcast_zero_rhs(%arg0: tensor<?x17xi32>) -> tensor<?x17xi32> {
-  %one = "tosa.const"() {values = dense<0> : tensor<1x17xi32>} : () -> tensor<1x17xi32>
-  %div = tosa.sub %arg0, %one : (tensor<?x17xi32>, tensor<1x17xi32>) -> tensor<?x17xi32>
+  %zero = "tosa.const"() {values = dense<0> : tensor<1x17xi32>} : () -> tensor<1x17xi32>
+  %div = tosa.sub %arg0, %zero : (tensor<?x17xi32>, tensor<1x17xi32>) -> tensor<?x17xi32>
   // CHECK: return %arg0
   return %div : tensor<?x17xi32>
 }
