@@ -900,12 +900,13 @@ body:             |
 # CHECK-NEXT:   bb.2.entry (align 2):
 # CHECK-NEXT:   liveins: $s26, $s27, $r10, $r9, $r8, $d13, $s24, $s25,
 # CHECK-SAME:            $d12, $d15, $s30, $s31, $d14, $s28, $s29, $lr,
-# CHECK-SAME:            $d21, $q10, $r7, $r0, $d20, $d17, $r2, $q12,
-# CHECK-SAME:            $q11, $d22, $d23, $r1, $q8, $d16, $d30, $q14,
-# CHECK-SAME:            $d28, $d29, $d19, $s17, $r4, $d8, $r6, $r3,
-# CHECK-SAME:            $s16, $d25, $q9, $d18, $s0, $d31, $s3, $q15,
-# CHECK-SAME:            $r12, $d0, $s1, $d24, $d1, $s2, $q0, $s5, $d2,
-# CHECK-SAME:            $q1, $s4, $s7, $d3, $s6, $d9, $s18, $s19, $q4
+# CHECK-SAME:            $q1, $d22, $q10, $d16, $d4, $d20, $r3, $d21,
+# CHECK-SAME:            $d19, $d29, $r0, $d17, $r2, $s9, $q11, $d23,
+# CHECK-SAME:            $s1, $q8, $d31, $q14, $d28, $d18, $s16, $d24,
+# CHECK-SAME:            $r6, $d8, $s4, $q9, $r1, $s0, $d25, $d2,
+# CHECK-SAME:            $q15, $q4, $r12, $d0, $q12, $d30, $q0, $s6,
+# CHECK-SAME:            $d3, $s5, $s3, $s7, $d1, $s2, $s17, $s8,
+# CHECK-SAME:            $r7, $d9, $s18, $s19, $r4
 # CHECK-NEXT: {{^  $}}
 # CHECK-NEXT:     $r5 = t2MOVi16 target-flags(arm-lo16) @.str.84, 14 /* CC::al */, $noreg
 # CHECK-NEXT:     $r5 = t2MOVTi16 $r5, target-flags(arm-hi16) @.str.84, 14 /* CC::al */, $noreg
