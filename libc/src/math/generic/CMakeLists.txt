@@ -3425,7 +3425,7 @@ add_entrypoint_object(
   HDRS
     ../nexttoward.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nexttoward
 )
 
 add_entrypoint_object(
@@ -3435,7 +3435,7 @@ add_entrypoint_object(
   HDRS
     ../nexttowardf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nexttowardf
 )
 
 add_entrypoint_object(
@@ -3445,7 +3445,7 @@ add_entrypoint_object(
   HDRS
     ../nexttowardl.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nexttowardl
 )
 
 add_entrypoint_object(
@@ -3455,8 +3455,7 @@ add_entrypoint_object(
   HDRS
     ../nexttowardf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nexttowardf16
 )
 
 add_entrypoint_object(
@@ -3466,11 +3465,7 @@ add_entrypoint_object(
   HDRS
     ../nexttowardbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.manipulation_functions
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.nexttowardbf16
 )
 
 add_entrypoint_object(

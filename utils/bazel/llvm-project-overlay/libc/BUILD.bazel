@@ -3956,6 +3956,53 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_nexttoward",
+    hdrs = ["src/__support/math/nexttoward.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nexttowardbf16",
+    hdrs = ["src/__support/math/nexttowardbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nexttowardf",
+    hdrs = ["src/__support/math/nexttowardf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nexttowardf16",
+    hdrs = ["src/__support/math/nexttowardf16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nexttowardl",
+    hdrs = ["src/__support/math/nexttowardl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_nextup",
     hdrs = ["src/__support/math/nextup.h"],
     deps = [
@@ -6874,6 +6921,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "nextdownbf16",
+    additional_deps = [
+        ":__support_math_nextdownbf16",
+    ],
+)
+
+libc_math_function(
     name = "nextdownf",
     additional_deps = [
         ":__support_math_nextdownf",
@@ -6901,15 +6955,40 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "nexttoward")
+libc_math_function(
+    name = "nexttoward",
+    additional_deps = [
+        ":__support_math_nexttoward",
+    ],
+)
 
-libc_math_function(name = "nexttowardf")
+libc_math_function(
+    name = "nexttowardbf16",
+    additional_deps = [
+        ":__support_math_nexttowardbf16",
+    ],
+)
+
+libc_math_function(
+    name = "nexttowardf",
+    additional_deps = [
+        ":__support_math_nexttowardf",
+    ],
+)
 
 libc_math_function(
     name = "nexttowardf16",
+    additional_deps = [
+        ":__support_math_nexttowardf16",
+    ],
 )
 
-libc_math_function(name = "nexttowardl")
+libc_math_function(
+    name = "nexttowardl",
+    additional_deps = [
+        ":__support_math_nexttowardl",
+    ],
+)
 
 libc_math_function(
     name = "nextup",
