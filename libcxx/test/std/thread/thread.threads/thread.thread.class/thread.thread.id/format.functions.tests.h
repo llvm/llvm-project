@@ -22,7 +22,6 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   std::thread::id input{};
 
   /***** Test the type specific part *****/
-#if !defined(__APPLE__) && !defined(__FreeBSD__)
   check(SV("0"), SV("{}"), input);
   check(SV("0^42"), SV("{}^42"), input);
   check(SV("0^42"), SV("{:}^42"), input);
@@ -37,22 +36,6 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check(SV("0****"), SV("{:*<{}}"), input, 5);
   check(SV("__0__"), SV("{:_^{}}"), input, 5);
   check(SV("####0"), SV("{:#>{}}"), input, 5);
-#else  // !defined(__APPLE__) && !defined(__FreeBSD__)
-  check(SV("0x0"), SV("{}"), input);
-  check(SV("0x0^42"), SV("{}^42"), input);
-  check(SV("0x0^42"), SV("{:}^42"), input);
-
-  // *** align-fill & width ***
-  check(SV("    0x0"), SV("{:7}"), input);
-  check(SV("0x0****"), SV("{:*<7}"), input);
-  check(SV("__0x0__"), SV("{:_^7}"), input);
-  check(SV("::::0x0"), SV("{::>7}"), input); // This is not a range, so : is allowed as fill character.
-
-  check(SV("    0x0"), SV("{:{}}"), input, 7);
-  check(SV("0x0****"), SV("{:*<{}}"), input, 7);
-  check(SV("__0x0__"), SV("{:_^{}}"), input, 7);
-  check(SV("####0x0"), SV("{:#>{}}"), input, 7);
-#endif // !defined(__APPLE__) && !defined(__FreeBSD__)
 
   /***** Test the type generic part *****/
   check_exception("The format string contains an invalid escape sequence", SV("{:}<}"), input);
