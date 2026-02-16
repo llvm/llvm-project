@@ -8,11 +8,11 @@ int getConst(int a, int b) { return 0xaa55; }
 
 void foo() {
   // clang-format off
-  __asm__ __volatile("stp x29, x30 [sp, #-16]!\n"
+  __asm__ __volatile("stp x29, x30, [sp, #-16]!\n"
                      "adrp x0, getConst\n"
                      "add x0, x0, :lo12:getConst\n"
                      "blr x0\n"
-                     "ldp x29, x30 [sp], #16\n"
+                     "ldp x29, x30, [sp], #16\n"
                      :::);
   // clang-format on
   return;

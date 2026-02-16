@@ -1,4 +1,4 @@
-//===-- Implementation of canonicalize function----------------------------===//
+//===-- Shared canonicalize function ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/canonicalize.h"
+#ifndef LLVM_LIBC_SHARED_MATH_CANONICALIZE_H
+#define LLVM_LIBC_SHARED_MATH_CANONICALIZE_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/canonicalize.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(int, canonicalize, (double *cx, const double *x)) {
-  return math::canonicalize(cx, x);
-}
+using math::canonicalize;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_CANONICALIZE_H

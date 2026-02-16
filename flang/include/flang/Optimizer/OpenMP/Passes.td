@@ -41,6 +41,18 @@ def MarkDeclareTargetPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
+def DeleteUnreachableTargetsPass
+    : Pass<"omp-delete-unreachable-targets", "mlir::ModuleOp"> {
+  let summary = "Deletes OpenMP target operations in unreachable code";
+  let description = [{
+    Identifies and removes OpenMP target operations that reside in unreachable
+    code (e.g., inside if(.false.) blocks). This ensures consistency between
+    host and device compilation by preventing unreachable targets from being
+    processed on the device side.
+  }];
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
 def FunctionFilteringPass : Pass<"omp-function-filtering"> {
   let summary = "Filters out functions intended for the host when compiling "
                 "for the target device.";
