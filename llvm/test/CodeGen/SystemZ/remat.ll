@@ -9,66 +9,64 @@ define void @remat_load(
 ; CHECK-LABEL: remat_load:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stmg %r6, %r15, 48(%r15)
-; CHECK-NEXT:    aghi %r15, -232
-; CHECK-NEXT:    std %f8, 224(%r15) # 8-byte Spill
-; CHECK-NEXT:    std %f9, 216(%r15) # 8-byte Spill
-; CHECK-NEXT:    std %f10, 208(%r15) # 8-byte Spill
-; CHECK-NEXT:    std %f11, 200(%r15) # 8-byte Spill
-; CHECK-NEXT:    std %f12, 192(%r15) # 8-byte Spill
-; CHECK-NEXT:    std %f13, 184(%r15) # 8-byte Spill
-; CHECK-NEXT:    std %f14, 176(%r15) # 8-byte Spill
-; CHECK-NEXT:    std %f15, 168(%r15) # 8-byte Spill
-; CHECK-NEXT:    ld %f0, 448(%r15)
-; CHECK-NEXT:    le %f1, 444(%r15)
-; CHECK-NEXT:    le %f2, 436(%r15)
-; CHECK-NEXT:    le %f3, 428(%r15)
-; CHECK-NEXT:    lg %r14, 456(%r15)
-; CHECK-NEXT:    lb %r3, 399(%r15)
-; CHECK-NEXT:    st %r3, 160(%r15) # 4-byte Spill
-; CHECK-NEXT:    lh %r2, 406(%r15)
-; CHECK-NEXT:    st %r2, 164(%r15) # 4-byte Spill
-; CHECK-NEXT:    l %r1, 412(%r15)
-; CHECK-NEXT:    lg %r0, 416(%r15)
-; CHECK-NEXT:    stc %r3, 0(%r14)
-; CHECK-NEXT:    sth %r2, 0(%r14)
-; CHECK-NEXT:    st %r1, 0(%r14)
-; CHECK-NEXT:    stg %r0, 0(%r14)
+; CHECK-NEXT:    aghi %r15, -64
+; CHECK-NEXT:    std %f8, 56(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 48(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f10, 40(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f11, 32(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f12, 24(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f13, 16(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f14, 8(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f15, 0(%r15) # 8-byte Spill
+; CHECK-NEXT:    lg %r0, 232(%r15)
+; CHECK-NEXT:    lg %r1, 224(%r15)
+; CHECK-NEXT:    ld %f0, 280(%r15)
+; CHECK-NEXT:    le %f1, 276(%r15)
+; CHECK-NEXT:    le %f2, 268(%r15)
+; CHECK-NEXT:    lg %r14, 288(%r15)
+; CHECK-NEXT:    le %f3, 260(%r15)
+; CHECK-NEXT:    l %r3, 244(%r15)
+; CHECK-NEXT:    lg %r2, 248(%r15)
+; CHECK-NEXT:    stc %r1, 0(%r14)
+; CHECK-NEXT:    sth %r0, 0(%r14)
+; CHECK-NEXT:    st %r3, 0(%r14)
+; CHECK-NEXT:    stg %r2, 0(%r14)
 ; CHECK-NEXT:    ste %f3, 0(%r14)
 ; CHECK-NEXT:    ste %f2, 0(%r14)
 ; CHECK-NEXT:    ste %f1, 0(%r14)
 ; CHECK-NEXT:    std %f0, 0(%r14)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    l %r0, 160(%r15) # 4-byte Reload
+; CHECK-NEXT:    lg %r0, 224(%r15)
 ; CHECK-NEXT:    stc %r0, 0(%r14)
-; CHECK-NEXT:    l %r0, 164(%r15) # 4-byte Reload
+; CHECK-NEXT:    lg %r0, 232(%r15)
 ; CHECK-NEXT:    sth %r0, 0(%r14)
-; CHECK-NEXT:    l %r0, 412(%r15)
+; CHECK-NEXT:    l %r0, 244(%r15)
 ; CHECK-NEXT:    st %r0, 0(%r14)
-; CHECK-NEXT:    lg %r0, 416(%r15)
+; CHECK-NEXT:    lg %r0, 248(%r15)
 ; CHECK-NEXT:    stg %r0, 0(%r14)
-; CHECK-NEXT:    le %f0, 428(%r15)
+; CHECK-NEXT:    le %f0, 260(%r15)
 ; CHECK-NEXT:    ste %f0, 0(%r14)
-; CHECK-NEXT:    le %f0, 436(%r15)
+; CHECK-NEXT:    le %f0, 268(%r15)
 ; CHECK-NEXT:    ste %f0, 0(%r14)
-; CHECK-NEXT:    le %f0, 444(%r15)
+; CHECK-NEXT:    le %f0, 276(%r15)
 ; CHECK-NEXT:    ste %f0, 0(%r14)
-; CHECK-NEXT:    ld %f0, 448(%r15)
+; CHECK-NEXT:    ld %f0, 280(%r15)
 ; CHECK-NEXT:    std %f0, 0(%r14)
-; CHECK-NEXT:    ld %f8, 224(%r15) # 8-byte Reload
-; CHECK-NEXT:    ld %f9, 216(%r15) # 8-byte Reload
-; CHECK-NEXT:    ld %f10, 208(%r15) # 8-byte Reload
-; CHECK-NEXT:    ld %f11, 200(%r15) # 8-byte Reload
-; CHECK-NEXT:    ld %f12, 192(%r15) # 8-byte Reload
-; CHECK-NEXT:    ld %f13, 184(%r15) # 8-byte Reload
-; CHECK-NEXT:    ld %f14, 176(%r15) # 8-byte Reload
-; CHECK-NEXT:    ld %f15, 168(%r15) # 8-byte Reload
-; CHECK-NEXT:    lmg %r6, %r15, 280(%r15)
+; CHECK-NEXT:    ld %f8, 56(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 48(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f10, 40(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f11, 32(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f12, 24(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f13, 16(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f14, 8(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f15, 0(%r15) # 8-byte Reload
+; CHECK-NEXT:    lmg %r6, %r15, 112(%r15)
 ; CHECK-NEXT:    br %r14
     i64 %i0, i64 %i1, i64 %i2, i64 %i3, i64 %i4, ; r2-r6
     double %f0, double %f1, double %f2, double %f3, ; f0, f2, f4, f6
-    i8 %stackarg0,
-    i16 %stackarg1,
+    i8 signext %stackarg0,
+    i16 zeroext %stackarg1,
     i32 %stackarg2,
     i64 %stackarg3,
     float %stackarg4,
