@@ -9,7 +9,7 @@
 // RUN:   | FileCheck --check-prefixes=NOTSUPPORTED,FAIL %s
 
 // Memory, Leak, UndefinedBehaviour and Thread Sanitizer are not supported on AMDGPU.
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address -fsanitize=leak -fgpu-sanitize --rocm-path=%S/Inputs/rocm -nogpuinc  %s 2>&1 \
+// RUN:   not %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address -fsanitize=leak -fgpu-sanitize --rocm-path=%S/Inputs/rocm -nogpuinc  %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOTSUPPORTED %s
 
 // GPU ASan Enabled Test Cases
@@ -58,18 +58,18 @@
 // implicitly turns on LLVMs SanitizerCoverage, which the driver then forwards
 // to the device cc1. SanitizerCoverage is not supported on amdgcn.)
 
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address,fuzzer --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   not %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=address,fuzzer --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSANCOMBINATION,INVALIDCOMBINATION1 %s
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=fuzzer,address --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   not %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ -fsanitize=fuzzer,address --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSANCOMBINATION,INVALIDCOMBINATION2 %s
 
 // Do the same for multiple -fsanitize arguments and multi-arch scenarios.
 
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ --offload-arch=gfx900:xnack- -fsanitize=address,fuzzer --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   not %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+ --offload-arch=gfx900:xnack- -fsanitize=address,fuzzer --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSANCOMBINATION,INVALIDCOMBINATION1 %s
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+,gfx900:xnack- -fsanitize=address,fuzzer --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   not %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+,gfx900:xnack- -fsanitize=address,fuzzer --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSANCOMBINATION,INVALIDCOMBINATION1 %s
-// RUN:   %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+,gfx900:xnack- -fsanitize=fuzzer,address -fsanitize=leak --rocm-path=%S/Inputs/rocm %s 2>&1 \
+// RUN:   not %clang -no-canonical-prefixes -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=gfx908:xnack+,gfx900:xnack- -fsanitize=fuzzer,address -fsanitize=leak --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=HOSTSANCOMBINATION2,NOTSUPPORTED-DAG,INVALIDCOMBINATION2 %s
 
 // Check for -fsanitize-coverage options
