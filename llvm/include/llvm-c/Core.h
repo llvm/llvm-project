@@ -2528,6 +2528,7 @@ LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
 /**
  * Returns true if the specified constant is an array of i8.
  *
+ * @pre LLVMIsAConstantDataSequential(c) != 0
  * @see ConstantDataSequential::getAsString()
  */
 LLVM_C_ABI LLVMBool LLVMIsConstantString(LLVMValueRef c);
