@@ -122,28 +122,19 @@ public:
     if (!g_python_home.empty()) {
       PyStatus status =
           PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
-      if (PyStatus_Exception(status)) {
-        PyConfig_Clear(&config);
-        llvm::WithColor::error()
-            << "Failed to set the Python config: '" << status.err_msg << "'.\n";
-        return;
-      }
+      if (PyStatus_Exception(status))
+        llvm::report_fatal_error(llvm::Twine("Failed to set the Python config: '") + status.err_msg + "'.");
     }
 
     config.install_signal_handlers = 0;
     PyStatus status = Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
-    if (PyStatus_Exception(status)) {
-      llvm::WithColor::error()
-          << "Python failed to initialize: '" << status.err_msg << "'.\n";
-      return;
-    }
+    if (PyStatus_Exception(status))
+      llvm::report_fatal_error(llvm::Twine("Python failed to initialize: '") + status.err_msg + "'.");
 #else
     Py_InitializeEx(/*install_sigs=*/0);
-    if (!Py_IsInitialized()) {
-      llvm::WithColor::error() << "Python failed to initialize.\n";
-      return;
-    }
+    if (!Py_IsInitialized())
+      llvm::report_fatal_error("Python failed to initialize.");
 #endif
 
     // The only case we should go further and acquire the GIL: it is unlocked.
