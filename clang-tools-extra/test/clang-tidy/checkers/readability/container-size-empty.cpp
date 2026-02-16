@@ -985,3 +985,18 @@ public:
     }
   }
 };
+
+namespace GH181552 {
+struct DestructorContainer {
+  unsigned long size() const;
+  bool empty() const;
+  ~DestructorContainer();
+};
+
+struct DestructorUser {
+  DestructorContainer Indexes;
+  ~DestructorUser() {
+    Indexes.~DestructorContainer();
+  }
+};
+}

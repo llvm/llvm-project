@@ -222,6 +222,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
   positives on trivially copyable types with a non-public copy constructor.
 
+- Improved :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability/container-size-empty>` check by fixing a crash
+  when a member expression has a non-identifier name.
+
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
