@@ -1590,6 +1590,13 @@ private:
   void ParseLineTable(ModuleFile &F, const RecordData &Record);
   llvm::Error ReadSourceManagerBlock(ModuleFile &F);
   SourceLocation getImportLocation(ModuleFile *F);
+
+  /// If a relocation check happened, the optional holds a pointer to the
+  /// discovered Module. The second element determines whether to emit related
+  /// validation errors.
+  using RelocationCheckResult = std::pair<std::optional<Module *>, bool>;
+  RelocationCheckResult checkIfModuleRelocated(ModuleFile &F,
+                                               bool DirectoryCheck = false);
   ASTReadResult ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);
