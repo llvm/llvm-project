@@ -141,6 +141,9 @@ private:
   // Asan runtime library
   SmallString<0> AsanRTL;
 
+  // OpenMP ASan runtime library
+  SmallString<0> OpenMPASanRTLPath;
+
   // Libraries swapped based on compile flags.
   ConditionalLibrary WavefrontSize64;
   ConditionalLibrary FiniteOnly;
@@ -174,8 +177,8 @@ private:
 public:
   RocmInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,
                            const llvm::opt::ArgList &Args,
-                           bool DetectHIPRuntime = true);
-
+                           bool DetectHIPRuntime = true,
+                           bool DetectOpenMPRuntime = true);
   /// Get file paths of default bitcode libraries common to AMDGPU based
   /// toolchains.
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
@@ -236,6 +239,8 @@ public:
   /// Returns empty string of Asan runtime library is not available.
   StringRef getAsanRTLPath() const { return AsanRTL; }
 
+  StringRef getOpenMPASanRTLPath() const { return OpenMPASanRTLPath; }
+
   StringRef getWavefrontSize64Path(bool Enabled) const {
     return WavefrontSize64.get(Enabled);
   }
@@ -268,6 +273,7 @@ public:
 
   void detectDeviceLibrary();
   void detectHIPRuntime();
+  void detectOpenMPRuntime();
 
   /// Get the values for --rocm-device-lib-path arguments
   ArrayRef<std::string> getRocmDeviceLibPathArg() const {
