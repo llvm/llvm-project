@@ -639,7 +639,6 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                  Args.getLastArgValue(options::OPT_mcpu_EQ))));
   }
   addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
-
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
