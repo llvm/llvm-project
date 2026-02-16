@@ -822,7 +822,8 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
       sc.module_sp->FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
                                                sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
-        return *load_addr;
+        if (!symbol_was_missing_weak)
+          return *load_addr;
     }
 
     {
@@ -830,7 +831,8 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
       m_preferred_modules.FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
                                                      sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
-        return *load_addr;
+        if (!symbol_was_missing_weak)
+          return *load_addr;
     }
 
     {
@@ -838,7 +840,8 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
       non_local_images.FindSymbolsWithNameAndType(name, lldb::eSymbolTypeAny,
                                                   sc_list);
       if (auto load_addr = resolver.Resolve(sc_list))
-        return *load_addr;
+        if (!symbol_was_missing_weak)
+          return *load_addr;
     }
 
     lldb::addr_t best_internal_load_address =
