@@ -821,6 +821,9 @@ public:
     return hasAndNotCompare(X);
   }
 
+  /// Return true if the target has a bitwise or-not operation:
+  virtual bool hasOrNot(SDValue X) const { return false; }
+
   /// Return true if the target has a bit-test instruction:
   ///   (X & (1 << Y)) ==/!= 0
   /// This knowledge can be used to prevent breaking the pattern,
