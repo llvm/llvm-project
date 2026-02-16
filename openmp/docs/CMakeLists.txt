@@ -1,4 +1,8 @@
 
+if (OPENMP_STANDALONE_BUILD)
+  include(HandleDoxygen)
+endif()
+
 if (DOXYGEN_FOUND)
 if (LLVM_ENABLE_DOXYGEN)
   set(abs_srcdir ${CMAKE_CURRENT_SOURCE_DIR})
