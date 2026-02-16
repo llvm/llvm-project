@@ -103,6 +103,8 @@ What's New in Clang |release|?
 C++ Language Changes
 --------------------
 
+- ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -390,6 +392,9 @@ libclang
 
 Code Completion
 ---------------
+
+- Fixed a crash in code completion when using a C-Style cast with a parenthesized
+  operand in Objective-C++ mode. (#GH180125)
 
 Static Analyzer
 ---------------
