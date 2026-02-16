@@ -14,8 +14,9 @@
 //   is_heap_until(Iter first, Iter last, Compare comp);
 
 #include <algorithm>
-#include <functional>
 #include <cassert>
+#include <functional>
+#include <iterator>
 
 #include "test_macros.h"
 #include "test_iterators.h"

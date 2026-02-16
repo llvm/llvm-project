@@ -3734,6 +3734,14 @@ static void changeVectorFPCCToAArch64CC(ISD::CondCode CC,
     CondCode = AArch64CC::MI;
     CondCode2 = AArch64CC::GE;
     break;
+  case ISD::SETLE:
+    CondCode = AArch64CC::LS;
+    CondCode2 = AArch64CC::AL;
+    break;
+  case ISD::SETLT:
+    CondCode = AArch64CC::MI;
+    CondCode2 = AArch64CC::AL;
+    break;
   case ISD::SETUEQ:
   case ISD::SETULT:
   case ISD::SETULE:
@@ -6058,7 +6066,8 @@ static SDValue optimizeBrk(SDNode *N, SelectionDAG &DAG) {
   // We're looking for an upper bound based on CTTZ_ELTS; this would be selected
   // as a cntp(brk(Pg, Mask)), but if we're just going to make a whilelo based
   // on that then we just need the brk.
-  if (Upper.getOpcode() != AArch64ISD::CTTZ_ELTS || !VT.isScalableVector())
+  if (Upper.getOpcode() != AArch64ISD::CTTZ_ELTS || !VT.isScalableVector() ||
+      Upper.getOperand(0).getValueType() != VT)
     return SDValue();
 
   SDValue Pg = Upper->getOperand(0);
