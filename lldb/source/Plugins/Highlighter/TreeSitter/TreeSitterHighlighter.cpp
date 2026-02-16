@@ -89,7 +89,7 @@ TreeSitterHighlighter::GetStyleForCapture(llvm::StringRef capture_name,
 
 void TreeSitterHighlighter::HighlightRange(
     const HighlightStyle &options, llvm::StringRef text, uint32_t start_byte,
-    uint32_t end_byte, const HighlightStyle::ColorStyle *style,
+    uint32_t end_byte, const HighlightStyle::ColorStyle &style,
     std::optional<size_t> cursor_pos, bool &highlighted_cursor,
     Stream &s) const {
 
@@ -102,7 +102,7 @@ void TreeSitterHighlighter::HighlightRange(
 
   auto print = [&](llvm::StringRef str) {
     if (style)
-      style->Apply(s, str);
+      style.Apply(s, str);
     else
       s << str;
   };
@@ -126,7 +126,7 @@ void TreeSitterHighlighter::HighlightRange(
       StreamString cursor_str;
       llvm::StringRef cursor_char = range.substr(cursor_in_range, 1);
       if (style)
-        style->Apply(cursor_str, cursor_char);
+        style.Apply(cursor_str, cursor_char);
       else
         cursor_str << cursor_char;
       options.selected.Apply(s, cursor_str.GetString());
@@ -212,8 +212,8 @@ void TreeSitterHighlighter::Highlight(const HighlightStyle &options,
 
     // Output any unhighlighted text before this highlight.
     if (current_pos < h.start_byte) {
-      HighlightRange(options, line, current_pos, h.start_byte, nullptr,
-                     cursor_pos, highlighted_cursor, s);
+      HighlightRange(options, line, current_pos, h.start_byte, {}, cursor_pos,
+                     highlighted_cursor, s);
       current_pos = h.start_byte;
     }
 
@@ -226,7 +226,7 @@ void TreeSitterHighlighter::Highlight(const HighlightStyle &options,
   // Output any remaining unhighlighted text.
   if (current_pos < line.size()) {
     HighlightRange(options, line, current_pos,
-                   static_cast<uint32_t>(line.size()), nullptr, cursor_pos,
+                   static_cast<uint32_t>(line.size()), {}, cursor_pos,
                    highlighted_cursor, s);
   }
 }
