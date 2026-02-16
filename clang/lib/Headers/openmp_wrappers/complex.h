@@ -31,7 +31,7 @@
 
 #ifdef __SPIRV__
 #define __OPENMP_SPIRV__
-#include <__clang_spirv_complex_builtins.h>
+#include <__clang_cuda_complex_builtins.h>
 #undef __OPENMP_SPIRV__
 #endif // __SPIRV__
 
