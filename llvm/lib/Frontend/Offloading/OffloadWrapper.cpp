@@ -538,18 +538,8 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
   Builder.SetInsertPoint(IfEndBB);
   auto *NewEntry = Builder.CreateInBoundsGEP(
       offloading::getEntryTy(M), Entry, ConstantInt::get(getSizeTTy(M), 1));
-  auto *Cmp = Builder.CreateICmpEQ(
-      NewEntry,
-      ConstantExpr::getInBoundsGetElementPtr(
-          ArrayType::get(offloading::getEntryTy(M), 0), EntriesE,
-          ArrayRef<Constant *>({ConstantInt::get(getSizeTTy(M), 0),
-                                ConstantInt::get(getSizeTTy(M), 0)})));
-  Entry->addIncoming(
-      ConstantExpr::getInBoundsGetElementPtr(
-          ArrayType::get(offloading::getEntryTy(M), 0), EntriesB,
-          ArrayRef<Constant *>({ConstantInt::get(getSizeTTy(M), 0),
-                                ConstantInt::get(getSizeTTy(M), 0)})),
-      &RegGlobalsFn->getEntryBlock());
+  auto *Cmp = Builder.CreateICmpEQ(NewEntry, EntriesE);
+  Entry->addIncoming(EntriesB, &RegGlobalsFn->getEntryBlock());
   Entry->addIncoming(NewEntry, IfEndBB);
   Builder.CreateCondBr(Cmp, ExitBB, EntryBB);
   Builder.SetInsertPoint(ExitBB);

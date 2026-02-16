@@ -38,6 +38,7 @@ Error dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
         Abbrv.Tag = AbbrvDecl.getTag();
         Abbrv.Children = AbbrvDecl.hasChildren() ? dwarf::DW_CHILDREN_yes
                                                  : dwarf::DW_CHILDREN_no;
+        Abbrv.Attributes.reserve(AbbrvDecl.getNumAttributes());
         for (auto Attribute : AbbrvDecl.attributes()) {
           DWARFYAML::AttributeAbbrev AttAbrv;
           AttAbrv.Attribute = Attribute.Attr;
@@ -46,7 +47,7 @@ Error dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
             AttAbrv.Value = Attribute.getImplicitConstValue();
           Abbrv.Attributes.push_back(AttAbrv);
         }
-        Y.DebugAbbrev.back().Table.push_back(Abbrv);
+        Y.DebugAbbrev.back().Table.push_back(std::move(Abbrv));
       }
     }
   }
@@ -67,6 +68,8 @@ Error dumpDebugAddr(DWARFContext &DCtx, DWARFYAML::Data &Y) {
                                         consumeError))
       return Err;
     AddrTables.emplace_back();
+    AddrTables.back().SegAddrPairs.reserve(
+        AddrTable.getAddressEntries().size());
     for (uint64_t Addr : AddrTable.getAddressEntries()) {
       // Currently, the parser doesn't support parsing an address table with non
       // linear addresses (segment_selector_size != 0). The segment selectors
@@ -97,7 +100,7 @@ Error dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     DebugStr.push_back(CStr);
   }
 
-  Y.DebugStrings = DebugStr;
+  Y.DebugStrings = std::move(DebugStr);
   return Err;
 }
 
@@ -123,16 +126,19 @@ Error dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     Range.CuOffset = Set.getHeader().CuOffset;
     Range.AddrSize = Set.getHeader().AddrSize;
     Range.SegSize = Set.getHeader().SegSize;
+
+    Range.Descriptors.reserve(Set.descriptors().end() -
+                              Set.descriptors().begin());
     for (auto Descriptor : Set.descriptors()) {
       DWARFYAML::ARangeDescriptor Desc;
       Desc.Address = Descriptor.Address;
       Desc.Length = Descriptor.Length;
       Range.Descriptors.push_back(Desc);
     }
-    DebugAranges.push_back(Range);
+    DebugAranges.push_back(std::move(Range));
   }
 
-  Y.DebugAranges = DebugAranges;
+  Y.DebugAranges = std::move(DebugAranges);
   return ErrorSuccess();
 }
 
@@ -161,12 +167,13 @@ Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     YamlRanges.AddrSize = AddrSize;
     if (Error E = DwarfRanges.extract(Data, &Offset))
       return E;
+    YamlRanges.Entries.reserve(DwarfRanges.getEntries().size());
     for (const auto &RLE : DwarfRanges.getEntries())
       YamlRanges.Entries.push_back({RLE.StartAddress, RLE.EndAddress});
     DebugRanges.push_back(std::move(YamlRanges));
   }
 
-  Y.DebugRanges = DebugRanges;
+  Y.DebugRanges = std::move(DebugRanges);
   return ErrorSuccess();
 }
 
@@ -192,6 +199,7 @@ dumpPubSection(const DWARFContext &DCtx, const DWARFSection &Section,
   Y.UnitOffset = Sets[0].Offset;
   Y.UnitSize = Sets[0].Size;
 
+  Y.Entries.reserve(Sets[0].Entries.size());
   for (const DWARFDebugPubTable::Entry &E : Sets[0].Entries)
     Y.Entries.push_back(DWARFYAML::PubEntry{(uint32_t)E.SecOffset,
                                             E.Descriptor.toBits(), E.Name});
@@ -215,6 +223,7 @@ void dumpDebugPubSections(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 }
 
 void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
+  Y.Units.reserve(DCtx.getNumCompileUnits());
   for (const auto &CU : DCtx.compile_units()) {
     DWARFYAML::Unit NewUnit;
     NewUnit.Format = CU->getFormat();
@@ -238,6 +247,7 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
             }));
     NewUnit.AbbrOffset = CU->getAbbreviations()->getOffset();
     NewUnit.AddrSize = CU->getAddressByteSize();
+    NewUnit.Entries.reserve(CU->getNumDIEs());
     for (auto DIE : CU->dies()) {
       DWARFYAML::Entry NewEntry;
       DataExtractor EntryData = CU->getDebugInfoExtractor();
@@ -251,6 +261,11 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 
       auto AbbrevDecl = DIE.getAbbreviationDeclarationPtr();
       if (AbbrevDecl) {
+        // This reserve doesn't account for DW_FORM_indirect values, which would
+        // result in more entries in NewEntry.Values than getNumAttributes()
+        // implies. Not all binaries have these, and it'll reduce the number of
+        // allocations in any case.
+        NewEntry.Values.reserve(AbbrevDecl->getNumAttributes());
         for (const auto &AttrSpec : AbbrevDecl->attributes()) {
           DWARFYAML::FormValue NewValue;
           NewValue.Value = 0xDEADBEEFDEADBEEF;
@@ -332,13 +347,13 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
               break;
             }
           } while (indirect);
-          NewEntry.Values.push_back(NewValue);
+          NewEntry.Values.push_back(std::move(NewValue));
         }
       }
 
-      NewUnit.Entries.push_back(NewEntry);
+      NewUnit.Entries.push_back(std::move(NewEntry));
     }
-    Y.Units.push_back(NewUnit);
+    Y.Units.push_back(std::move(NewUnit));
   }
 }
 
@@ -465,9 +480,9 @@ void dumpDebugLines(DWARFContext &DCtx, DWARFYAML::Data &Y) {
               NewOp.StandardOpcodeData.push_back(LineData.getULEB128(&Offset));
           }
         }
-        DebugLines.Opcodes.push_back(NewOp);
+        DebugLines.Opcodes.push_back(std::move(NewOp));
       }
-      Y.DebugLines.push_back(DebugLines);
+      Y.DebugLines.push_back(std::move(DebugLines));
     }
   }
 }

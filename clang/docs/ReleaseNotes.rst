@@ -103,6 +103,8 @@ What's New in Clang |release|?
 C++ Language Changes
 --------------------
 
+- ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
