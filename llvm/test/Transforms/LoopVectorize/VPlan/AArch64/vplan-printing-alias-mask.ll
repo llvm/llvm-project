@@ -1,4 +1,3 @@
-; REQUIRES: asserts
 ; RUN: opt -S -mtriple=aarch64-unknown-linux-gnu -debug-only=loop-vectorize -mattr=+sve2 -passes=loop-vectorize -force-partial-aliasing-vectorization -disable-output %s 2>&1 | FileCheck %s
 ; RUN: opt -S -mtriple=aarch64-unknown-linux-gnu -debug-only=loop-vectorize -mattr=+sve2 -passes=loop-vectorize -force-partial-aliasing-vectorization -prefer-predicate-over-epilogue=predicate-dont-vectorize -disable-output %s 2>&1 | FileCheck %s --check-prefix=CHECK-TF
 

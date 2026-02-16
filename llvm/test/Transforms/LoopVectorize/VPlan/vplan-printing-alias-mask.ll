@@ -1,4 +1,3 @@
-; REQUIRES: asserts
 ; RUN: opt -S -debug-only=loop-vectorize -force-vector-width=4 -passes=loop-vectorize -force-partial-aliasing-vectorization -disable-output %s 2>&1 | FileCheck %s
 
 define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i32 %n) {

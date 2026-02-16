@@ -1400,8 +1400,11 @@ public:
   void checkIfPartialAliasMaskingIsEnabled() {
     assert(!IsPartialAliasMaskingEnabled &&
            "Partial alias masking already checked!");
-    if (!ForcePartialAliasingVectorization || !Legal->canMaskLoop()) {
+    if (!ForcePartialAliasingVectorization || !Legal->canMaskLoop() ||
+        !Legal->getFixedOrderRecurrences().empty()) {
       // Option not enabled (or loop cannot be masked).
+      // Note: FixedOrderRecurrences are not supported yet as we cannot handle
+      // the required `splice.right` with the alias-mask.
       IsPartialAliasMaskingEnabled = false;
       return;
     }
