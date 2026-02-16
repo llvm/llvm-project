@@ -12,9 +12,11 @@ int main() {
   int len = 11;
   double *data = (double *)calloc(len, sizeof(double));
 
-  // Initialize data on host
-  for (int i = 0; i < len; i++)
-    data[i] = i;
+#pragma omp target map(tofrom : data[0 : len])
+  {
+    for (int i = 0; i < len; i++)
+      data[i] = i;
+  }
 
   // Initial values
   printf("original host array values:\n");

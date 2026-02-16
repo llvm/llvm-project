@@ -13,10 +13,13 @@ int main() {
   double *data1 = (double *)calloc(len, sizeof(double));
   double *data2 = (double *)calloc(len, sizeof(double));
 
-  // Initialize data on host
-  for (int i = 0; i < len; i++) {
-    data1[i] = i;
-    data2[i] = i * 10;
+// Initial values
+#pragma omp target map(tofrom : data1[0 : len], data2[0 : len])
+  {
+    for (int i = 0; i < len; i++) {
+      data1[i] = i;
+      data2[i] = i * 10;
+    }
   }
 
   printf("original host array values:\n");
