@@ -3331,7 +3331,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // C++23 [expr.const]p8 If we have a reference type allow unknown references
   // and pointers.
   bool AllowConstexprUnknown =
-      Info.getLangOpts().CPlusPlus23 && VD->getType()->isReferenceType();
+      Info.getLangOpts().CPlusPlus11 && VD->getType()->isReferenceType();
 
   APValue::LValueBase Base(VD, Frame ? Frame->Index : 0, Version);
 

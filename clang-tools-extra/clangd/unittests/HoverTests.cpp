@@ -477,6 +477,7 @@ class Foo final {})cpp";
              {{"int"}, std::string("T"), std::nullopt},
              {{"bool"}, std::string("B"), std::nullopt},
          };
+         HI.Value = "false";
          return HI;
        }},
       // Lambda parameter with decltype
