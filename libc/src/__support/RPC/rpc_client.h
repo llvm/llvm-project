@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_CLIENT_H
 
 #include "shared/rpc.h"
+#include "shared/rpc_dispatch.h"
 #include "shared/rpc_opcodes.h"
 
 #include "src/__support/CPP/type_traits.h"
@@ -18,8 +19,10 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
 
+using ::rpc::array_ref;
 using ::rpc::Buffer;
 using ::rpc::Client;
+using ::rpc::dispatch;
 using ::rpc::Port;
 using ::rpc::Process;
 using ::rpc::Server;

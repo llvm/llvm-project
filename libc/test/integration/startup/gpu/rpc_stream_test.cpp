@@ -15,7 +15,7 @@
 #include "src/string/string_utils.h"
 #include "test/IntegrationTest/test.h"
 
-extern "C" void *malloc(uint64_t);
+extern "C" void *malloc(size_t);
 extern "C" void free(void *);
 
 using namespace LIBC_NAMESPACE;

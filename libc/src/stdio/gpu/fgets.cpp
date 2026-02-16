@@ -22,21 +22,11 @@ LLVM_LIBC_FUNCTION(char *, fgets,
   if (count < 1)
     return nullptr;
 
-  uint64_t recv_size;
-  void *buf = nullptr;
-  rpc::Client::Port port = rpc::client.open<LIBC_READ_FGETS>();
-  port.send([=](rpc::Buffer *buffer, uint32_t) {
-    buffer->data[0] = count;
-    buffer->data[1] = file::from_stream(stream);
-  });
-  port.recv_n(&buf, &recv_size,
-              [&](uint64_t) { return reinterpret_cast<void *>(str); });
-  port.close();
+  char *ret = rpc::dispatch<LIBC_READ_FGETS>(
+      rpc::client, fgets, rpc::array_ref<char>{str, uint64_t(count)}, count,
+      reinterpret_cast<FILE *>(file::from_stream(stream)));
 
-  if (recv_size == 0)
-    return nullptr;
-
-  return str;
+  return ret ? str : nullptr;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
