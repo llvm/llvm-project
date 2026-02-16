@@ -123,7 +123,7 @@ public:
       PyStatus status =
           PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
       if (PyStatus_Exception(status))
-        llvm::report_fatal_error(llvm::Twine("Failed to set the Python config: '") + status.err_msg + "'.");
+        llvm::report_fatal_error(llvm::Twine("failed to set the Python config: '") + status.err_msg + "'");
     }
 
     config.install_signal_handlers = 0;
