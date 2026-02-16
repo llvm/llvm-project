@@ -40,6 +40,8 @@ public:
         View(const MyObj&);
         View();
       };
+
+      template <typename T> void use(T t);
     )";
     FullCode += Code.str();
 
@@ -1384,7 +1386,7 @@ TEST_F(LifetimeAnalysisTest, LivenessInLoopAndIf) {
           p = a;
         }
         POINT(p4);
-        (void)p;
+        use(p);
         POINT(p5);
       }
     }
@@ -1485,7 +1487,7 @@ TEST_F(LifetimeAnalysisTest, TrivialClassDestructorsUAF) {
           ptr = &s;
       }
       POINT(p1);
-      (void)ptr;
+      use(ptr);
     }
   )");
   EXPECT_THAT(Origin("ptr"), HasLoansTo({"s"}, "p1"));

@@ -19,7 +19,6 @@ MyObj* return_local_addr() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_P:[0-9]+]] (Decl: p, Type : MyObj *)
 // CHECK-NEXT:       Src:  [[O_ADDR_X]] (Expr: UnaryOperator, Type : MyObj *)
-// CHECK:   Use ([[O_P]] (Decl: p, Type : MyObj *), Read)
   return p;
 // CHECK:   Issue ({{[0-9]+}} (Path: p), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: p))
 // CHECK:   OriginFlow:
@@ -81,7 +80,6 @@ void overwrite_origin() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_ADDR_S2:[0-9]+]] (Expr: UnaryOperator, Type : MyObj *) has loans to { s2 }
 // CHECK-NEXT:       Src:  [[O_DRE_S2]] (Expr: DeclRefExpr, Decl: s2)
-// CHECK:   Use ([[O_P]] (Decl: p, Type : MyObj *), Write)
 // CHECK:   Issue ({{[0-9]+}} (Path: p), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: p))
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_P]] (Decl: p, Type : MyObj *) has loans to { s2 }
@@ -103,7 +101,6 @@ void reassign_to_null() {
 // CHECK-NEXT:       Dest: [[O_P:[0-9]+]] (Decl: p, Type : MyObj *)
 // CHECK-NEXT:       Src:  [[O_ADDR_S1]] (Expr: UnaryOperator, Type : MyObj *)
   p = nullptr;
-// CHECK:   Use ([[O_P]] (Decl: p, Type : MyObj *), Write)
 // CHECK:   Issue ({{[0-9]+}} (Path: p), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: p))
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_P]] (Decl: p, Type : MyObj *) has no loans
@@ -126,7 +123,6 @@ void pointer_indirection() {
 // CHECK-NEXT:       Dest: [[O_P:[0-9]+]] (Decl: p, Type : int *) has loans to { a }
 // CHECK-NEXT:       Src:  [[O_ADDR_A]] (Expr: UnaryOperator, Type : int *)
   int **pp = &p;
-// CHECK:   Use ([[O_P]] (Decl: p, Type : int *), Read)
 // CHECK:   Issue ({{[0-9]+}} (Path: p), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: p))
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: {{[0-9]+}} (Expr: UnaryOperator, Type : int **) has loans to { p }
@@ -143,7 +139,6 @@ void pointer_indirection() {
   
   // FIXME: Propagate origins across dereference unary operator*
   int *q = *pp;
-// CHECK:   Use ([[O_PP_OUTER]] (Decl: pp, Type : int **), [[O_PP_INNER]] (Decl: pp, Type : int *), Read)
 // CHECK:   Issue ({{[0-9]+}} (Path: pp), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: pp))
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: {{[0-9]+}} (Expr: ImplicitCastExpr, Type : int **) has loans to { p }
@@ -186,13 +181,13 @@ void test_use_lifetimebound_call() {
 // CHECK-NEXT:       Dest: [[O_Q:[0-9]+]] (Decl: q, Type : MyObj *) has loans to { y }
 // CHECK-NEXT:       Src:  [[O_ADDR_Y]] (Expr: UnaryOperator, Type : MyObj *)
   MyObj* r = LifetimeBoundCall(p, q);
-// CHECK:   Use ([[O_P]] (Decl: p, Type : MyObj *), Read)
 // CHECK:   Issue ({{[0-9]+}} (Path: p), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: p))
+// CHECK:   Use ({{[0-9]+}} (Expr: DeclRefExpr, Decl: p), [[O_P]] (Decl: p, Type : MyObj *), Read)
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_P_RVAL:[0-9]+]] (Expr: ImplicitCastExpr, Type : MyObj *) has loans to { x }
 // CHECK-NEXT:       Src:  [[O_P]] (Decl: p, Type : MyObj *)
-// CHECK:   Use ([[O_Q]] (Decl: q, Type : MyObj *), Read)
 // CHECK:   Issue ({{[0-9]+}} (Path: q), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: q))
+// CHECK:   Use ({{[0-9]+}} (Expr: DeclRefExpr, Decl: q), [[O_Q]] (Decl: q, Type : MyObj *), Read)
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_Q_RVAL:[0-9]+]] (Expr: ImplicitCastExpr, Type : MyObj *) has loans to { y }
 // CHECK-NEXT:       Src:  [[O_Q]] (Decl: q, Type : MyObj *)
@@ -230,7 +225,6 @@ void test_reference_variable() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: {{[0-9]+}} (Expr: UnaryOperator, Type : const MyObj *) has loans to { x }
 // CHECK-NEXT:       Src:  [[O_Z]] (Decl: z, Type : const MyObj &)
-// CHECK:   Use ({{[0-9]+}} (Decl: p, Type : const MyObj *), Write)
 // CHECK:   Issue ({{[0-9]+}} (Path: p), ToOrigin: {{[0-9]+}} (Expr: DeclRefExpr, Decl: p))
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: {{[0-9]+}} (Decl: p, Type : const MyObj *) has loans to { x }

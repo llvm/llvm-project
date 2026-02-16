@@ -162,7 +162,7 @@ void FactsGenerator::VisitDeclRefExpr(const DeclRefExpr *DRE) {
   // GLValues (like EnumConstants).
   if (DRE->getFoundDecl()->isFunctionOrFunctionTemplate() || !DRE->isGLValue())
     return;
-  handleUse(DRE);
+  // handleUse(DRE);
   // For all declarations with storage (non-references), we issue a loan
   // representing the borrow of the variable's storage itself.
   //
@@ -254,14 +254,15 @@ void FactsGenerator::VisitCXXNullPtrLiteralExpr(
 
 void FactsGenerator::VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
   OriginList *Dest = getOriginsList(*ICE);
-  if (!Dest)
-    return;
+  // if (!Dest)
+  //   return;
   const Expr *SubExpr = ICE->getSubExpr();
   OriginList *Src = getOriginsList(*SubExpr);
 
   switch (ICE->getCastKind()) {
   case CK_LValueToRValue:
     // TODO: Decide what to do for x-values here.
+    handleUse(SubExpr);
     if (!SubExpr->isLValue())
       return;
 
@@ -333,6 +334,9 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
                                       const Expr *RHSExpr) {
   LHSExpr = LHSExpr->IgnoreParenImpCasts();
   OriginList *LHSList = nullptr;
+  // llvm::errs() << "LHS: \n";
+  // LHSExpr->dumpColor();
+  markUseAsWrite(LHSExpr);
 
   if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
     LHSList = getOriginsList(*DRE_LHS);
@@ -355,8 +359,6 @@ void FactsGenerator::handleAssignment(const Expr *LHSExpr,
   // assigned.
   RHSList = getRValueOrigins(RHSExpr, RHSList);
 
-  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr))
-    markUseAsWrite(DRE_LHS);
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
@@ -385,12 +387,11 @@ void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
 void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
   // Assignment operators have special "kill-then-propagate" semantics
   // and are handled separately.
+  VisitCallExpr(OCE);
   if (OCE->getOperator() == OO_Equal && OCE->getNumArgs() == 2 &&
       hasOrigins(OCE->getArg(0)->getType())) {
     handleAssignment(OCE->getArg(0), OCE->getArg(1));
-    return;
   }
-  VisitCallExpr(OCE);
 }
 
 void FactsGenerator::VisitCXXFunctionalCastExpr(
@@ -675,9 +676,9 @@ void FactsGenerator::handleUse(const Expr *E) {
   // For DeclRefExpr: Remove the outer layer of origin which borrows from the
   // decl directly (e.g., when this is not a reference). This is a use of the
   // underlying decl.
-  if (auto *DRE = dyn_cast<DeclRefExpr>(E);
-      DRE && !DRE->getDecl()->getType()->isReferenceType())
-    List = getRValueOrigins(DRE, List);
+  // if (auto *DRE = dyn_cast<DeclRefExpr>(E);
+  //     DRE && !DRE->getDecl()->getType()->isReferenceType())
+  //   List = getRValueOrigins(DRE, List);
   // Skip if there is no inner origin (e.g., when it is not a pointer type).
   if (!List)
     return;
@@ -688,9 +689,9 @@ void FactsGenerator::handleUse(const Expr *E) {
   }
 }
 
-void FactsGenerator::markUseAsWrite(const DeclRefExpr *DRE) {
-  if (UseFacts.contains(DRE))
-    UseFacts[DRE]->markAsWritten();
+void FactsGenerator::markUseAsWrite(const Expr *E) {
+  if (UseFacts.contains(E))
+    UseFacts[E]->markAsWritten();
 }
 
 // Creates an IssueFact for a new placeholder loan for each pointer or reference
