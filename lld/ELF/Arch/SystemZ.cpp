@@ -79,8 +79,7 @@ SystemZ::SystemZ(Ctx &ctx) : TargetInfo(ctx) {
   defaultImageBase = 0x1000000;
 }
 
-// Only handles relocations used by relocateNonAlloc and scanEhSection.
-// Allocatable sections are handled by scanSectionImpl.
+// Only handles relocations used by relocateNonAlloc and preprocessRelocs.
 RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
                             const uint8_t *loc) const {
   switch (type) {
@@ -305,14 +304,7 @@ void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_390_TLS_IE32:
     case R_390_TLS_IE64:
       // There is no IE to LE optimization.
-      sym.setFlags(NEEDS_TLSIE);
-      // R_GOT (absolute GOT address) needs a RELATIVE dynamic relocation
-      // in PIC.
-      if (ctx.arg.isPic)
-        sec.getPartition(ctx).relaDyn->addRelativeReloc(
-            ctx.target->relativeRel, sec, offset, sym, addend, type, R_GOT);
-      else
-        sec.addReloc({R_GOT, type, offset, addend, &sym});
+      rs.handleTlsIe<false>(R_GOT, type, offset, addend, sym);
       continue;
     case R_390_TLS_GOTIE12:
     case R_390_TLS_GOTIE20:
