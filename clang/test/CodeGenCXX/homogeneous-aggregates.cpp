@@ -126,7 +126,7 @@ struct NotPod {
   NotCXX14Aggregate x;
 };
 struct Empty {};
-// A class with a base is returned using the sret calling convetion by MSVC.
+// A class with a base is returned using the sret calling convention by MSVC.
 struct HasEmptyBase : public Empty {
   double b[2];
 };
