@@ -431,8 +431,16 @@ struct VectorContractBF16ToFMA
         return rewriter.notifyMatchFailure(
             contractOp, "Accumulator read is not by transfer_read or load");
 
-      rewriter.setInsertionPoint(contractOp);
+      // Shuffle the output of contract operations before its use.
+      LogicalResult writeShuffle = shuffleBeforeWriteLikeOp(
+          rewriter, resultWriteOp0, resultWriteOp1, nonUnitDim, accTy);
 
+      if (failed(writeShuffle))
+        return rewriter.notifyMatchFailure(
+            contractOp,
+            "Write to accumulator is not by transfer_write or store");
+
+      rewriter.setInsertionPoint(contractOp);
       castAcc = vector::ShapeCastOp::create(
           rewriter, loc,
           VectorType::get(nonUnitDimAcc.front(), accTy.getElementType()),
@@ -468,15 +476,6 @@ struct VectorContractBF16ToFMA
       auto castOddFma = vector::ShapeCastOp::create(rewriter, pairContOpLoc,
                                                     accTyPairCont, oddIdxFMA);
       rewriter.replaceOp(pairContractOp, castOddFma);
-
-      // Shuffle the output of contract operations before its use.
-      LogicalResult writeShuffle = shuffleBeforeWriteLikeOp(
-          rewriter, resultWriteOp0, resultWriteOp1, nonUnitDim, accTy);
-
-      if (failed(writeShuffle))
-        return rewriter.notifyMatchFailure(
-            contractOp,
-            "Write to accumulator is not by transfer_write or store");
 
       return success();
     }
