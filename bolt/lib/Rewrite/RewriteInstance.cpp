@@ -4601,8 +4601,7 @@ void RewriteInstance::patchELFPHDRTable() {
       // Mark segment as executable if it contains BOLTReserved space.
       const uint64_t SegStart = Phdr.p_vaddr;
       const uint64_t SegEnd = Phdr.p_vaddr + Phdr.p_memsz;
-      if (!BC->BOLTReserved.empty() &&
-          SegStart <= BC->BOLTReserved.start() &&
+      if (!BC->BOLTReserved.empty() && SegStart <= BC->BOLTReserved.start() &&
           SegEnd >= BC->BOLTReserved.end())
         NewPhdr.p_flags |= ELF::PF_X;
       break;
