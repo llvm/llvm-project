@@ -524,8 +524,7 @@ def SPIRV_TosaMaxPool2DOp : SPIRV_TosaOpWithResult<"MaxPool2D", 7, [Pure,
   let description = [{
     Performs a max pooling over the given input tensor. A sliding window of
     size given by <kernel size> is passed over the input tensor, with the
-    maximum value being placed in the
-    output tensor.
+    maximum value being placed in the output tensor.
 
     References:
       * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_max_pool2d
@@ -574,7 +573,7 @@ def SPIRV_TosaRFFT2DOp : SPIRV_TosaOpWithComplexResult<"RFFT2D", 8, [Pure]> {
     Performs a batched 2D real-valued Fast Fourier Transform over the input where
     the input tensor consists of real values producing complex valued output. The
     complex output values will be split into the output_real and output_imag
-    tensor arguments. RFFT2D takes advantage of Hermitian symmetry to only
+    tensor arguments. This operator takes advantage of Hermitian symmetry to only
     calculate the first half of the final output axis. Implementations may choose
     to skip calculation of the imaginary values at (0,0), (0,W/2), (H/2,0), and
     (H/2, W/2). If the calculation is skipped, the result at that location must be
@@ -689,6 +688,176 @@ def SPIRV_TosaTransposeConv2DOp : SPIRV_TosaOpWithResult<"TransposeConv2D", 9, [
     }
     ::mlir::spirv::TensorArmType getBiasType() {
       return cast<::mlir::spirv::TensorArmType>(getBias().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaClampOp : SPIRV_TosaOpWithResult<"Clamp", 10, [Pure,
+  AllTypesMatch<["input", "output"]>,
+  AllElementTypesMatch<["input", "output", "min_val", "max_val"]>]> {
+  let summary = "Computes Clamp(min, max).";
+
+  let description = [{
+    Clamp to an arbitrary minimum and maximum value.
+    Maximum and minimum values are specified as values in the range of the
+    input type.
+    No zero point subtraction is done to the values, thus to clamp to the zero
+    point value, the zero point itself should be supplied as the minimum value.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_clamp
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_clamp
+
+    #### Example:
+    ```mlir
+    %3 = spirv.Tosa.Clamp min_val = -102 : i8, max_val = -100 : i8, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<27x44x55xi8> -> !spirv.arm.tensor<27x44x55xi8>
+    %3 = spirv.Tosa.Clamp min_val = -1.19339396E+38 : f32, max_val = 2.38255944E+38 : f32, nan_mode = <Ignore>, %arg0 : !spirv.arm.tensor<18x5x17x6xf32> -> !spirv.arm.tensor<18x5x17x6xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaNumericalAttr: $min_val,
+    SPIRV_TosaNumericalAttr: $max_val,
+    SPIRV_TosaExtNaNPropagationModeAttr: $nan_mode,
+    SPIRV_TosaNumerical_TensorArm: $input
+  );
+
+  let results = (outs
+    SPIRV_TosaNumerical_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    `min_val` `=` $min_val `,`
+    `max_val` `=` $max_val `,`
+    `nan_mode` `=` $nan_mode `,`
+    $input
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaErfOp : SPIRV_TosaOpWithResult<"Erf", 11, [Pure,
+  AllTypesMatch<["input", "output"]>]> {
+  let summary = "Gauss Error Function.";
+
+  let description = [{
+    Gauss Error Function: $ erf(x) = \frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^2} dt $
+    For quantized integer data types, the `spirv.Tosa.Table` operator should be used instead.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_erf
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_erf
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Erf %arg0 : !spirv.arm.tensor<47x38x51xf32> -> !spirv.arm.tensor<47x38x51xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaFloat_TensorArm: $input
+  );
+
+  let results = (outs
+    SPIRV_TosaFloat_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaSigmoidOp : SPIRV_TosaOpWithResult<"Sigmoid", 12, [Pure,
+  AllTypesMatch<["input", "output"]>]> {
+  let summary = "Sigmoid operator.";
+
+  let description = [{
+    Applies the sigmoid logistic function to each element of the input tensor:
+    $ sigmoid(x) = \frac{1}{1 + e^{-x}} $.
+
+    For quantized integer data types, the `spirv.Tosa.Table` operator should be used instead.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_sigmoid
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_sigmoid
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Sigmoid %arg0 : !spirv.arm.tensor<28x43x45xf32> -> !spirv.arm.tensor<28x43x45xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaFloat_TensorArm: $input
+  );
+
+  let results = (outs
+    SPIRV_TosaFloat_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
+    }
+  }];
+}
+
+
+def SPIRV_TosaTanhOp : SPIRV_TosaOpWithResult<"Tanh", 13, [Pure,
+  AllTypesMatch<["input", "output"]>]> {
+  let summary = "Hyperbolic Tangent operator.";
+
+  let description = [{
+    Elementwise Parameterized Hyperbolic Tangent: $ tanh(x) = \frac{1 - e^{-2x}}{1 + e^{-2x}} $.
+
+    For quantized integer data types, the `spirv.Tosa.Table` operator should be used instead.
+
+    References:
+      * https://github.khronos.org/SPIRV-Registry/extended/TOSA.001000.1.html#_tanh
+      * https://www.mlplatform.org/tosa/tosa_spec_1_0_1.html#_tanh
+
+    #### Example:
+    ```mlir
+    %0 = spirv.Tosa.Tanh %arg0 : !spirv.arm.tensor<46x50x36xf16> -> !spirv.arm.tensor<46x50x36xf16>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_TosaFloat_TensorArm: $input
+  );
+
+  let results = (outs
+    SPIRV_TosaFloat_TensorArm: $output
+  );
+
+  let assemblyFormat = [{
+    $input
+    attr-dict `:` type(operands) `->` type(results)
+  }];
+
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
+    ::mlir::spirv::TensorArmType getInputType() {
+      return cast<::mlir::spirv::TensorArmType>(getInput().getType());
     }
   }];
 }

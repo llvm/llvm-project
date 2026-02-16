@@ -4667,7 +4667,7 @@ public:
   /// Look for a locally scoped extern "C" declaration by the given name.
   NamedDecl *findLocallyScopedExternCDecl(DeclarationName Name);
 
-  void deduceOpenCLAddressSpace(ValueDecl *decl);
+  void deduceOpenCLAddressSpace(VarDecl *decl);
   void deduceHLSLAddressSpace(VarDecl *decl);
 
   /// Adjust the \c DeclContext for a function or variable that might be a
@@ -14839,6 +14839,12 @@ public:
   ///@{
 
 public:
+  ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc, TypeSourceInfo *TSI);
+
+  ExprResult BuildCXXReflectExpr(SourceLocation OperatorLoc,
+                                 TypeSourceInfo *TSI);
+
+public:
   void PushSatisfactionStackEntry(const NamedDecl *D,
                                   const llvm::FoldingSetNodeID &ID) {
     const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());
@@ -15343,6 +15349,17 @@ public:
                                              SourceLocation DiagLoc,
                                              bool AllowArrayTypes,
                                              bool OverrideExisting);
+
+  /// Check whether the given variable declaration has a size that fits within
+  /// the address space it is declared in. This issues a diagnostic if not.
+  ///
+  /// \param VD The variable declaration to check the size of.
+  ///
+  /// \param AS The address space to check the size of \p VD against.
+  ///
+  /// \returns true if the variable's size fits within the address space, false
+  /// otherwise.
+  bool CheckVarDeclSizeAddressSpace(const VarDecl *VD, LangAS AS);
 
   /// Get the type of expression E, triggering instantiation to complete the
   /// type if necessary -- that is, if the expression refers to a templated

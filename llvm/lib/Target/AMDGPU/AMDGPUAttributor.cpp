@@ -201,16 +201,6 @@ public:
   /// Get code object version.
   unsigned getCodeObjectVersion() const { return CodeObjectVersion; }
 
-  /// Get the effective value of "amdgpu-waves-per-eu" for the function,
-  /// accounting for the interaction with the passed value to use for
-  /// "amdgpu-flat-work-group-size".
-  std::pair<unsigned, unsigned>
-  getWavesPerEU(const Function &F,
-                std::pair<unsigned, unsigned> FlatWorkGroupSize) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getWavesPerEU(FlatWorkGroupSize, getLDSSize(F), F);
-  }
-
   std::optional<std::pair<unsigned, unsigned>>
   getWavesPerEUAttr(const Function &F) {
     auto Val = AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu",
@@ -248,14 +238,6 @@ private:
     }
 
     return Status;
-  }
-
-  /// Returns the minimum amount of LDS space used by a workgroup running
-  /// function \p F.
-  static unsigned getLDSSize(const Function &F) {
-    return AMDGPU::getIntegerPairAttribute(F, "amdgpu-lds-size",
-                                           {0, UINT32_MAX}, true)
-        .first;
   }
 
   /// Get the constant access bitmap for \p C.
