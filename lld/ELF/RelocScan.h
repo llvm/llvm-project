@@ -103,9 +103,10 @@ public:
   }
 
   // Handle TLS Initial-Exec relocation.
+  template <bool enableIeToLe = true>
   void handleTlsIe(RelExpr ieExpr, RelType type, uint64_t offset,
                    int64_t addend, Symbol &sym) {
-    if (!ctx.arg.shared && !sym.isPreemptible) {
+    if (enableIeToLe && !ctx.arg.shared && !sym.isPreemptible) {
       // Optimize to Local Exec.
       sec->addReloc({R_TPREL, type, offset, addend, &sym});
     } else {

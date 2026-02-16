@@ -604,6 +604,11 @@ def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0>,
 
       See `rocdl.wait.asyncmark`'s documentation for a usage example.
 
+      Example:
+      ```mlir
+      rocdl.asyncmark
+      ```
+
       Available on gfx9 and later.
   }];
   let results = (outs);
@@ -627,6 +632,11 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
       Available on gfx9 and later.
 
       Example:
+      ```mlir
+      rocdl.wait.asyncmark 1
+      ```
+
+      Usage example:
       ```mlir
       rocdl.tensor.load.to.lds ...
       rocdl.global.async.load.to.lds ...
@@ -1102,6 +1112,49 @@ def ROCDL_LoadToLDSOp :
   }];
 }
 
+def ROCDL_LoadAsyncToLDSOp :
+  ROCDL_IntrOp<"load.async.to.lds", [], [0], [], 0, 0, 1, 0, [2, 3, 4], ["size", "offset", "aux"]> {
+  dag args = (ins Arg<LLVM_AnyPointer, "", [MemRead]>:$globalPtr,
+                 Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                 I32Attr:$size,
+                 I32Attr:$offset,
+                 I32Attr:$aux);
+  let arguments = !con(args, baseArgs);
+  let assemblyFormat = [{
+    $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,` $aux
+    attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
+  }];
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getGlobalPtr(), getLdsPtr()};
+    }
+  }];
+
+  let summary = "Gathering load to LDS that requires explicit async memory tracking";
+  let description = [{
+    Load `size` bytes (the valid sizes vary by architecture) from the global memory
+    pointed to by `globalPtr` and put them at `ldsPtr`, concantenating (and applying
+    padding for sizes less than 4 bytes, along with padding out 12-byte reads
+    to 16-byte writes). The value of `globalPtr` can vary between lanes, while
+    `sharedPtr` must be subgroup-uniform (the values from each lane are concatentated
+    before being written to LDS with appropriate padding applied.)
+
+    `offset` is a constant offset applied to **both** pointers, and `aux` sets the cache
+    policy. Unlike `rocdl.load.to.lds`, the compiler will not automatically inserts waits
+    for this load to complete at the point it thinks you're using a region of LDS you've
+    stored values to - you need to use the `rocdl.asyncmark` and `rocdl.wait.asyncmark`
+    operations to explicitly group these operations and wait for their completion.
+
+    Available on gfx10 and earlier with varying suppported values of `size`.
+
+    Example:
+    ```mlir
+    rocdl.load.async.to.lds %global, %shared, 4, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+    rocdl.load.async.to.lds %fatBuffer, %shared, 4, 0, 0 : !llvm.ptr<7>, !llvm.ptr<3>
+    ```
+  }];
+}
+
 def ROCDL_GlobalLoadLDSOp :
   ROCDL_IntrOp<"global.load.lds", [], [], [], 0, 0, 1, 0, [2, 3, 4], ["size", "offset", "aux"]> {
   dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
@@ -1118,6 +1171,40 @@ def ROCDL_GlobalLoadLDSOp :
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getGlobalPtr(), getLdsPtr()};
     }
+  }];
+}
+
+def ROCDL_GlobalLoadAsyncLDSOp :
+  ROCDL_IntrOp<"global.load.async.lds", [], [], [], 0, 0, 1, 0, [2, 3, 4], ["size", "offset", "aux"]> {
+  dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
+                 Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                 I32Attr:$size,
+                 I32Attr:$offset,
+                 I32Attr:$aux);
+  let arguments = !con(args, baseArgs);
+  let assemblyFormat = [{
+    $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,` $aux
+    attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
+  }];
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getGlobalPtr(), getLdsPtr()};
+    }
+  }];
+
+  let summary = "Version of rocdl.load.async.to.lds specialized to global pointers";
+  let description = [{
+    This operation works identically to `rocdl.load.async.to.lds` except that the
+    global pointer argument is limited to pointers in address space 1 (pure global
+    pointers) instead of also allowing fat buffer pointers.
+
+    Available on gfx9 and gfx10.
+
+    For the operation introduced in gfx1250, see `rocdl.global.load.async.to.lds.bN`.
+    Example:
+    ```mlir
+    rocdl.load.async.to.lds %global, %shared, 4, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+    ```
   }];
 }
 
@@ -1290,6 +1377,34 @@ def ROCDL_RawPtrBufferLoadLdsOp :
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getRsrc(), getLdsPtr()};
     }
+  }];
+}
+
+def ROCDL_RawPtrBufferLoadAsyncLdsOp :
+  ROCDL_IntrOp<"raw.ptr.buffer.load.async.lds", [], [], [], 0, 0, 1> {
+  dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
+                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
+                  I32:$size,
+                  I32:$voffset,
+                  I32:$soffset,
+                  I32:$offset,
+                  I32:$aux);
+  let arguments = !con(args, baseArgs);
+  let assemblyFormat = "operands attr-dict";
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc(), getLdsPtr()};
+    }
+  }];
+  let summary = "Async variant of raw.ptr.buffer.load.lds";
+  let description = [{
+    Load from a buffer resource `rsrc` to `ldsPtr`, which must be uniform.
+
+    See `rocdl.load.async.to.lds` for overall semantics of such loads, noting that
+    here `voffset` can be lane-varying and that `rsrc` (which holds the base addres)
+    must, as always, be uniform.
+
+    Available on gfx9 and gfx10.
   }];
 }
 

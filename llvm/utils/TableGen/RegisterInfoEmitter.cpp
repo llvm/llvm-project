@@ -1885,6 +1885,11 @@ template <typename InfoTy, typename FnTy>
 Printable RegisterInfoEmitter::printByHwMode(const InfoByHwMode<InfoTy> &Info,
                                              FnTy Func) {
   return Printable([&](raw_ostream &OS) {
+    if (Info.isSimple()) {
+      OS << Func(Info.getSimple());
+      return;
+    }
+
     const CodeGenHwModes &CGH = Target.getHwModes();
 
     OS << "{";
