@@ -213,7 +213,7 @@ class WatchpointCommandsTestCase(TestBase):
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # Expect to find a hit_count of 2 as well.
-        self.expect("watchpoint list -v", substrs=["hit_count = 2", "ignore_count = 2"])
+        self.expect("watchpoint list -v", substrs=["hit_count = 2", "ignore_count = 0"])
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])

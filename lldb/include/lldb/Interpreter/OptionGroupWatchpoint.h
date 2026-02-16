@@ -44,6 +44,7 @@ public:
   WatchType watch_type;
   OptionValueUInt64 watch_size;
   bool watch_type_specified;
+  lldb::WatchpointMode watch_mode;
   lldb::LanguageType language_type;
 
 private:

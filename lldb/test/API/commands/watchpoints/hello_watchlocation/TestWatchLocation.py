@@ -74,7 +74,8 @@ class HelloWatchLocationTestCase(TestBase):
         # Get a hold of the watchpoint id just created, it is used later on to
         # match the watchpoint id which is expected to be fired.
         match = re.match(
-            "Watchpoint created: Watchpoint (.*):", self.res.GetOutput().splitlines()[0]
+            "Watchpoint created: Hardware Watchpoint (.*):",
+            self.res.GetOutput().splitlines()[0],
         )
         if match:
             expected_wp_id = int(match.group(1), 0)
