@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Error.h"
+#include <memory>
 
 #define DEBUG_TYPE "cseinfo"
 
@@ -449,12 +450,11 @@ GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt,
 AnalysisKey GISelCSEAnalysis::Key;
 
 GISelCSEAnalysis::Result
-GISelCSEAnalysis::run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
-  auto Info = std::make_unique<GISelCSEInfo>();
-
+GISelCSEAnalysis::run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM) {
+  std::unique_ptr<GISelCSEInfo> Info = std::make_unique<GISelCSEInfo>();
   Info->setCSEConfig(getStandardCSEConfigForOpt(TM->getOptLevel()));
   Info->analyze(MF);
-
   return Info;
 }
 
