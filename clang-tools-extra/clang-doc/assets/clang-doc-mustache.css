@@ -180,7 +180,7 @@ header {
     justify-self:center
 }
 
-#theme-toggle {
+#themeToggle {
     grid-column: 3;
     justify-self: end;
     color: var(--text1);
