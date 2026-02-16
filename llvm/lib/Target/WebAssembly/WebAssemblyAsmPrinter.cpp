@@ -198,13 +198,12 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     SmallVector<MVT, 1> VTs;
     Type *GlobalVT = GV->getValueType();
     if (!Subtarget) {
-      // Subtarget is only set when a function is defined, because
-      // each function can declare a different subtarget. For example,
-      // on ARM a compilation unit might have a function on ARM and
-      // another on Thumb. Therefore only if Subtarget is non-null we
-      // can actually calculate the legal VTs. Therefore, if Subtarget
-      // is null, we retrieve the default subtarget from TargetMachine
-      // to calculate the legal VTs.
+      // Subtarget is typically set when a function is processed. In modules
+      // with only global variables (no functions), Subtarget remains null.
+      // Unlike architectures that support per-function subtargets (e.g., ARM
+      // vs Thumb), WebAssembly features are coalesced module-wide before ISel.
+      // Therefore, if Subtarget is null, it is safe to retrieve the default
+      // Subtarget from TargetMachine to calculate legal VTs.
       auto &WasmTM = static_cast<const WebAssemblyTargetMachine &>(TM);
       Subtarget = WasmTM.getSubtargetImpl();
     }
