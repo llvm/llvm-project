@@ -412,4 +412,3 @@ body:             |
     %add:_(s64) = G_ADD %sub, %c2
     $x0 = COPY %add
     RET_ReallyLR implicit $x0
-

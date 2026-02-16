@@ -514,3 +514,25 @@ body: |
     $x0 = COPY %mul
     RET_ReallyLR implicit $x0
 ...
+
+---
+name:            NotAPlusNegOne
+body: |
+  bb.0:
+    liveins: $x0
+
+    ; CHECK-LABEL: name: NotAPlusNegOne
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %xor:_(s64) = G_SUB [[C]], %x
+    ; CHECK-NEXT: $x0 = COPY %xor(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %x:_(s64) = COPY $x0
+    %neg_one:_(s64) = G_CONSTANT i64 -1
+    %add:_(s64) = G_ADD %x, %neg_one
+    %xor:_(s64) = G_XOR %add, %neg_one
+    $x0 = COPY %xor
+    RET_ReallyLR implicit $x0
+...

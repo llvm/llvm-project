@@ -2120,7 +2120,7 @@ public:
                                 std::optional<unsigned> Flags = std::nullopt) {
     return buildInstr(TargetOpcode::G_FNEG, {Dst}, {Src0}, Flags);
   }
-
+  
   /// Build and insert \p Res = G_FABS \p Op0
   MachineInstrBuilder buildFAbs(const DstOp &Dst, const SrcOp &Src0,
                                 std::optional<unsigned> Flags = std::nullopt) {
