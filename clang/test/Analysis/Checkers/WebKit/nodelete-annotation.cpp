@@ -173,13 +173,34 @@ struct Data {
       delete this;
   }
 
+  virtual void doSomething() { }
+
   int a[3] { 0 };
   
+protected:
+  Data() = default;
+
 private:
   unsigned refCount { 0 };
+};
+
+struct SubData : Data {
+  static Ref<SubData> create() {
+    return adoptRef(*new SubData);
+  }
+
+  void doSomething() override { }
+
+private:
+  SubData() = default;
 };
 
 void [[clang::annotate_type("webkit.nodelete")]] makeData() {
   RefPtr<Data> constantData[2] = { Data::create() };
   RefPtr<Data> data[] = { Data::create() };
+}
+
+void [[clang::annotate_type("webkit.nodelete")]] makeSubData() {
+  // expected-warning@-1{{A function 'makeSubData' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
+  SubData::create()->doSomething();
 }

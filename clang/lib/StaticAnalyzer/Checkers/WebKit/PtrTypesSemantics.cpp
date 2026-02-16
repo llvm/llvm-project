@@ -541,7 +541,7 @@ public:
       if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
         if (isNoDeleteFunction(FnDecl))
           return true;
-        if (FnDecl->isVirtualAsWritten())
+        if (auto *MD = dyn_cast<CXXMethodDecl>(D); MD && MD->isVirtual())
           return false;
         for (auto *Param : FnDecl->parameters()) {
           if (!HasTrivialDestructor(Param))
