@@ -552,7 +552,7 @@ static SDValue addBitcastHints(SelectionDAG &DAG, SDNode &N) {
     return DAG.getBitcast(getFloatVT(Val.getValueType()), Val);
   };
   SmallVector<SDValue, 2> NewOps;
-  NewOps.reserve(N.getNumOperands() - 1);
+  NewOps.reserve(N.getNumOperands());
 
   for (unsigned I = 0, E = N.getNumOperands(); I < E; ++I)
     NewOps.push_back(bitcastToFloat(N.getOperand(I)));
