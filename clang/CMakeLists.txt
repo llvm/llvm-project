@@ -479,7 +479,9 @@ option(CLANG_ENABLE_HLSL "Include HLSL build products" Off)
 # While HLSL support is experimental this should stay hidden.
 mark_as_advanced(CLANG_ENABLE_HLSL)
 
-add_subdirectory(utils/TableGen)
+if (NOT DEFINED CLANG_TABLEGEN_EXE OR CLANG_INCLUDE_TESTS)
+  add_subdirectory(utils/TableGen)
+endif()
 
 # Export CLANG_TABLEGEN_EXE for use by flang docs.
 set(CLANG_TABLEGEN_EXE "${CLANG_TABLEGEN_EXE}" CACHE INTERNAL "")
