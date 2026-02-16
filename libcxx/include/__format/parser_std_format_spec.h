@@ -26,6 +26,7 @@
 #include <__format/format_error.h>
 #include <__format/format_parse_context.h>
 #include <__format/format_string.h>
+#include <__format/parser_std_format_spec_data.h>
 #include <__format/unicode.h>
 #include <__format/width_estimation_table.h>
 #include <__iterator/concepts.h>
@@ -174,50 +175,6 @@ inline constexpr __fields __fields_range{.__use_range_fill_ = true, .__clear_bra
 inline constexpr __fields __fields_fill_align_width{};
 #  endif
 
-enum class __alignment : uint8_t {
-  /// No alignment is set in the format string.
-  __default,
-  __left,
-  __center,
-  __right,
-  __zero_padding
-};
-
-enum class __sign : uint8_t {
-  /// No sign is set in the format string.
-  ///
-  /// The sign isn't allowed for certain format-types. By using this value
-  /// it's possible to detect whether or not the user explicitly set the sign
-  /// flag. For formatting purposes it behaves the same as \ref __minus.
-  __default,
-  __minus,
-  __plus,
-  __space
-};
-
-enum class __type : uint8_t {
-  __default = 0,
-  __string,
-  __binary_lower_case,
-  __binary_upper_case,
-  __octal,
-  __decimal,
-  __hexadecimal_lower_case,
-  __hexadecimal_upper_case,
-  __pointer_lower_case,
-  __pointer_upper_case,
-  __char,
-  __hexfloat_lower_case,
-  __hexfloat_upper_case,
-  __scientific_lower_case,
-  __scientific_upper_case,
-  __fixed_lower_case,
-  __fixed_upper_case,
-  __general_lower_case,
-  __general_upper_case,
-  __debug
-};
-
 _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __create_type_mask(__type __t) {
   uint32_t __shift = static_cast<uint32_t>(__t);
   if (__shift == 0)
@@ -255,25 +212,6 @@ struct __chrono {
   bool __week_of_year_         : 1;
   bool __month_name_           : 1;
 };
-
-// The fill UCS scalar value.
-//
-// This is always an array, with 1, 2, or 4 elements.
-// The size of the data structure is always 32-bits.
-template <class _CharT>
-struct __code_point;
-
-template <>
-struct __code_point<char> {
-  char __data[4] = {' '};
-};
-
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
-template <>
-struct __code_point<wchar_t> {
-  wchar_t __data[4 / sizeof(wchar_t)] = {L' '};
-};
-#  endif
 
 /// Contains the parsed formatting specifications.
 ///
@@ -335,8 +273,31 @@ static_assert(is_trivially_copyable_v<__parsed_specifications<wchar_t>>);
 /// set to zero. That way they can be repurposed if a future revision of the
 /// Standards adds new fields to std-format-spec.
 template <class _CharT>
-class __parser {
+class __parser : public __parser_data<_CharT> {
 public:
+  using __base _LIBCPP_NODEBUG = __parser_data<_CharT>;
+
+  using __base::__alignment_;
+  using __base::__alternate_form_;
+  using __base::__clear_brackets_;
+  using __base::__day_of_year_;
+  using __base::__fill_;
+  using __base::__hour_;
+  using __base::__locale_specific_form_;
+  using __base::__month_name_;
+  using __base::__precision_;
+  using __base::__precision_as_arg_;
+  using __base::__sign_;
+  using __base::__type_;
+  using __base::__week_of_year_;
+  using __base::__weekday_;
+  using __base::__weekday_name_;
+  using __base::__width_;
+  using __base::__width_as_arg_;
+
+  __parser() = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr __parser(__parser_data<_CharT> __data) : __parser_data<_CharT>(__data) {}
+
   // Parses the format specification.
   //
   // Depending on whether the parsing is done compile-time or run-time
@@ -484,7 +445,7 @@ public:
         __format_spec::__throw_invalid_option_format_error(__id, "locale-specific form");
     }
 
-    if ((__create_type_mask(__type_) & __type_mask) == 0) {
+    if ((__format_spec::__create_type_mask(__type_) & __type_mask) == 0) {
       if (std::is_constant_evaluated())
         std::__throw_format_error("The format specifier uses an invalid value for the type option");
       else
@@ -520,40 +481,6 @@ public:
         .__precision_{__get_precision(__ctx)},
         .__fill_{__fill_}};
   }
-
-  __alignment __alignment_     : 3 {__alignment::__default};
-  __sign __sign_               : 2 {__sign::__default};
-  bool __alternate_form_       : 1 {false};
-  bool __locale_specific_form_ : 1 {false};
-  bool __clear_brackets_       : 1 {false};
-  __type __type_{__type::__default};
-
-  // These flags are only used for formatting chrono. Since the struct has
-  // padding space left it's added to this structure.
-  bool __hour_ : 1 {false};
-
-  bool __weekday_name_ : 1 {false};
-  bool __weekday_      : 1 {false};
-
-  bool __day_of_year_  : 1 {false};
-  bool __week_of_year_ : 1 {false};
-
-  bool __month_name_ : 1 {false};
-
-  uint8_t __reserved_0_ : 2 {0};
-  uint8_t __reserved_1_ : 6 {0};
-  // These two flags are only used internally and not part of the
-  // __parsed_specifications. Therefore put them at the end.
-  bool __width_as_arg_     : 1 {false};
-  bool __precision_as_arg_ : 1 {false};
-
-  /// The requested width, either the value or the arg-id.
-  int32_t __width_{0};
-
-  /// The requested precision, either the value or the arg-id.
-  int32_t __precision_{-1};
-
-  __code_point<_CharT> __fill_{};
 
 private:
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_alignment(_CharT __c) {

@@ -354,6 +354,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #    include <clocale>
 #    include <cstddef>
 #    include <cstdlib>
+#    include <string>
 #    include <typeinfo>
 #  endif
 
@@ -368,7 +369,6 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #      include <locale>
 #    endif
 #    include <optional>
-#    include <string>
 #    include <string_view>
 #    include <tuple>
 #    include <type_traits>

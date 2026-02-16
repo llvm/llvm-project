@@ -126,7 +126,7 @@ struct __formatter_tuple {
     return std::ranges::copy(__closing_bracket_, __ctx.out()).out;
   }
 
-  __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__left};
+  __format_spec::__parser<_CharT> __parser_ = {{.__alignment_ = __format_spec::__alignment::__left}};
 
 private:
   tuple<formatter<remove_cvref_t<_Args>, _CharT>...> __underlying_;

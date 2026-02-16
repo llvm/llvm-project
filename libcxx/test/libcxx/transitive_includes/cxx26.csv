@@ -731,7 +731,6 @@ queue initializer_list
 queue iosfwd
 queue limits
 queue stdexcept
-queue string
 queue string_view
 queue tuple
 queue vector
@@ -1094,7 +1093,6 @@ vector initializer_list
 vector iosfwd
 vector limits
 vector stdexcept
-vector string
 vector string_view
 vector tuple
 vector version

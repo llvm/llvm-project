@@ -420,6 +420,7 @@ set(files
   __format/formatter_tuple.h
   __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
+  __format/parser_std_format_spec_data.h
   __format/range_default_formatter.h
   __format/range_format.h
   __format/range_formatter.h
