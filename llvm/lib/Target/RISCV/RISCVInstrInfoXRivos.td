@@ -116,7 +116,8 @@ defm : RIVPatBinaryVL_VV<ri_vunzip2b_vl, "PseudoRI_VUNZIP2B">;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXRivosVisni], DecoderNamespace = "XRivos",
-  mayLoad = false, mayStore = false, hasSideEffects = false in {
+  mayLoad = false, mayStore = false, hasSideEffects = false,
+  ElementsDependOn = EltDepsNone in {
 
 let vm = 0, vs2=0, Inst<6-0> = OPC_CUSTOM_2.Value,
     isReMaterializable = 1, isAsCheapAsAMove = 1 in
