@@ -608,6 +608,7 @@ public:
   Value *VisitConvertVectorExpr(ConvertVectorExpr *E);
   Value *VisitMemberExpr(MemberExpr *E);
   Value *VisitExtVectorElementExpr(Expr *E) { return EmitLoadOfLValue(E); }
+  Value *VisitMatrixElementExpr(Expr *E) { return EmitLoadOfLValue(E); }
   Value *VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
     // Strictly speaking, we shouldn't be calling EmitLoadOfLValue, which
     // transitively calls EmitCompoundLiteralLValue, here in C++ since compound
@@ -4035,9 +4036,14 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
   if (LHSLV.isBitField()) {
     Previous = Result;
     Result = EmitScalarConversion(Result, PromotionTypeCR, LHSTy, Loc);
-  } else
+  } else if (const auto *atomicTy = LHSTy->getAs<AtomicType>()) {
+    Result =
+        EmitScalarConversion(Result, PromotionTypeCR, atomicTy->getValueType(),
+                             Loc, ScalarConversionOpts(CGF.SanOpts));
+  } else {
     Result = EmitScalarConversion(Result, PromotionTypeCR, LHSTy, Loc,
                                   ScalarConversionOpts(CGF.SanOpts));
+  }
 
   if (atomicPHI) {
     llvm::BasicBlock *curBlock = Builder.GetInsertBlock();

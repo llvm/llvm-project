@@ -1176,7 +1176,7 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
 
 void InstrLowerer::lowerTimestamp(
     InstrProfTimestampInst *TimestampInstruction) {
-  assert(TimestampInstruction->getIndex()->isZeroValue() &&
+  assert(TimestampInstruction->getIndex()->isNullValue() &&
          "timestamp probes are always the first probe for a function");
   auto &Ctx = M.getContext();
   auto *TimestampAddr = getCounterAddress(TimestampInstruction);
@@ -1194,7 +1194,7 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
 
   IRBuilder<> Builder(Inc);
   if (Options.Atomic || AtomicCounterUpdateAll ||
-      (Inc->getIndex()->isZeroValue() && AtomicFirstCounter)) {
+      (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
                             MaybeAlign(), AtomicOrdering::Monotonic);
   } else {

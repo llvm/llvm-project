@@ -110,13 +110,6 @@ public:
   /// size, register usage, and/or lds usage.
   std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const;
 
-  /// Overload which uses the specified values for the flat work group sizes,
-  /// rather than querying the function itself. \p FlatWorkGroupSizes Should
-  /// correspond to the function's value for getFlatWorkGroupSizes.
-  std::pair<unsigned, unsigned>
-  getWavesPerEU(const Function &F,
-                std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
-
   /// Overload which uses the specified values for the flat workgroup sizes and
   /// LDS space rather than querying the function itself. \p FlatWorkGroupSizes
   /// should correspond to the function's value for getFlatWorkGroupSizes and \p

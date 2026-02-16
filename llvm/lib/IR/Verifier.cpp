@@ -955,6 +955,15 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
         "Global @" + GV.getName() + " has illegal target extension type",
         GVType);
 
+  // Check that the the address space can hold all bits of the type, recognized
+  // by an access in the address space being able to reach all bytes of the
+  // type.
+  Check(!GVType->isSized() ||
+            isUIntN(DL.getAddressSizeInBits(GV.getAddressSpace()),
+                    GV.getGlobalSize(DL)),
+        "Global variable is too large to fit into the address space", &GV,
+        GVType);
+
   if (!GV.hasInitializer()) {
     visitGlobalValue(GV);
     return;
@@ -7909,14 +7918,9 @@ struct VerifierLegacyPass : public FunctionPass {
   std::unique_ptr<Verifier> V;
   bool FatalErrors = true;
 
-  VerifierLegacyPass() : FunctionPass(ID) {
-    initializeVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  VerifierLegacyPass() : FunctionPass(ID) {}
   explicit VerifierLegacyPass(bool FatalErrors)
-      : FunctionPass(ID),
-        FatalErrors(FatalErrors) {
-    initializeVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+      : FunctionPass(ID), FatalErrors(FatalErrors) {}
 
   bool doInitialization(Module &M) override {
     V = std::make_unique<Verifier>(

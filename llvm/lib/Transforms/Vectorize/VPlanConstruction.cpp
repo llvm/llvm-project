@@ -221,7 +221,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // Phi node's operands may not have been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewR = VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi");
+      NewR =
+          VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi", *Phi);
       NewR->setUnderlyingValue(Phi);
       if (isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent()))) {
         // Header phis need to be fixed after the VPBB for the latch has been
@@ -457,8 +458,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                   VPBasicBlock *LatchVPBB, Type *IdxTy,
                                   DebugLoc DL) {
-  Value *StartIdx = ConstantInt::get(IdxTy, 0);
-  auto *StartV = Plan.getOrAddLiveIn(StartIdx);
+  auto *StartV = Plan.getConstantInt(IdxTy, 0);
 
   // Add a VPCanonicalIVPHIRecipe starting at 0 to the header.
   auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DL);
@@ -735,8 +735,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
 }
 
 void VPlanTransforms::createInLoopReductionRecipes(
-    VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
-    const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+    VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
     ElementCount MinVF) {
   VPTypeAnalysis TypeInfo(Plan);
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
@@ -858,17 +857,18 @@ void VPlanTransforms::createInLoopReductionRecipes(
                 ? IndexOfFirstOperand + 1
                 : IndexOfFirstOperand;
         VecOp = CurrentLink->getOperand(VecOpId);
-        assert(VecOp != PreviousLink &&
-               CurrentLink->getOperand(CurrentLink->getNumOperands() - 1 -
-                                       (VecOpId - IndexOfFirstOperand)) ==
-                   PreviousLink &&
-               "PreviousLink must be the operand other than VecOp");
+        assert(
+            VecOp != PreviousLink &&
+            CurrentLink->getOperand(
+                cast<VPInstruction>(CurrentLink)->getNumOperandsWithoutMask() -
+                1 - (VecOpId - IndexOfFirstOperand)) == PreviousLink &&
+            "PreviousLink must be the operand other than VecOp");
       }
 
-      // Get block mask from BlockMaskCache if the block needs predication.
+      // Get block mask from CurrentLink, if it needs predication.
       VPValue *CondOp = nullptr;
       if (BlocksNeedingPredication.contains(CurrentLinkI->getParent()))
-        CondOp = BlockMaskCache.lookup(LinkVPBB);
+        CondOp = cast<VPInstruction>(CurrentLink)->getMask();
 
       assert(PhiR->getVFScaleFactor() == 1 &&
              "inloop reductions must be unscaled");
@@ -902,33 +902,27 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
   VPBlockBase *HeaderVPB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
 
-  // Disconnect all early exits from the loop leaving it with a single exit from
-  // the latch. Early exits that are countable are left for a scalar epilog. The
-  // condition of uncountable early exits (currently at most one is supported)
-  // is fused into the latch exit, and used to branch from middle block to the
-  // early exit destination.
-  [[maybe_unused]] bool HandledUncountableEarlyExit = false;
+  if (HasUncountableEarlyExit) {
+    handleUncountableEarlyExits(Plan, cast<VPBasicBlock>(HeaderVPB), LatchVPBB,
+                                MiddleVPBB);
+    return;
+  }
+
+  // Disconnect countable early exits from the loop, leaving it with a single
+  // exit from the latch. Countable early exits are left for a scalar epilog.
   for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
     for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
       if (Pred == MiddleVPBB)
         continue;
-      if (HasUncountableEarlyExit) {
-        assert(!HandledUncountableEarlyExit &&
-               "can handle exactly one uncountable early exit");
-        handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
-                                   cast<VPBasicBlock>(HeaderVPB), LatchVPBB);
-        HandledUncountableEarlyExit = true;
-      } else {
-        for (VPRecipeBase &R : EB->phis())
-          cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
-      }
-      cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
+
+      // Remove phi operands for the early exiting block.
+      for (VPRecipeBase &R : EB->phis())
+        cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
+      auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
+      EarlyExitingVPBB->getTerminator()->eraseFromParent();
       VPBlockUtils::disconnectBlocks(Pred, EB);
     }
   }
-
-  assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
-         "missed an uncountable exit that must be handled");
 }
 
 void VPlanTransforms::addMiddleCheck(VPlan &Plan,

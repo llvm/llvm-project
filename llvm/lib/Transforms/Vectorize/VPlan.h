@@ -1046,7 +1046,8 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
       : VPSingleDefRecipe(SC, Operands, DL), VPIRFlags(Flags) {}
 
   static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPRecipeID() == VPRecipeBase::VPInstructionSC ||
+    return R->getVPRecipeID() == VPRecipeBase::VPBlendSC ||
+           R->getVPRecipeID() == VPRecipeBase::VPInstructionSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenCallSC ||
@@ -1147,7 +1148,9 @@ public:
 /// This is a concrete Recipe that models a single VPlan-level instruction.
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
-/// the VPInstruction is also a single def-use vertex.
+/// the VPInstruction is also a single def-use vertex. Most VPInstruction
+/// opcodes can take an optional mask. Masks may be assigned during
+/// predication.
 class LLVM_ABI_FOR_TEST VPInstruction : public VPRecipeWithIRFlags,
                                         public VPIRMetadata,
                                         public VPUnrollPartAccessor<1> {
@@ -1208,6 +1211,7 @@ public:
     // during unrolling.
     ExtractPenultimateElement,
     LogicalAnd, // Non-poison propagating logical And.
+    LogicalOr,  // Non-poison propagating logical Or.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
@@ -1279,9 +1283,9 @@ public:
   bool doesGeneratePerAllLanes() const;
 
   /// Return the number of operands determined by the opcode of the
-  /// VPInstruction. Returns -1u if the number of operands cannot be determined
-  /// directly by the opcode.
-  static unsigned getNumOperandsForOpcode(unsigned Opcode);
+  /// VPInstruction, excluding mask. Returns -1u if the number of operands
+  /// cannot be determined directly by the opcode.
+  unsigned getNumOperandsForOpcode() const;
 
 private:
   typedef unsigned char OpcodeTy;
@@ -1298,6 +1302,16 @@ private:
   /// the modeled instruction. \returns the generated value. . In some cases an
   /// existing value is returned rather than a generated one.
   Value *generate(VPTransformState &State);
+
+  /// Returns true if the VPInstruction does not need masking.
+  bool alwaysUnmasked() const {
+    // For now only VPInstructions with underlying values use masks.
+    // TODO: provide masks to VPInstructions w/o underlying values.
+    if (!getUnderlyingValue())
+      return true;
+
+    return Opcode == Instruction::PHI || Opcode == Instruction::GetElementPtr;
+  }
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
@@ -1351,6 +1365,44 @@ public:
     default:
       return true;
     }
+  }
+
+  /// Returns true if the VPInstruction has a mask operand.
+  bool isMasked() const {
+    unsigned NumOpsForOpcode = getNumOperandsForOpcode();
+    // VPInstructions without a fixed number of operands cannot be masked.
+    if (NumOpsForOpcode == -1u)
+      return false;
+    return NumOpsForOpcode + 1 == getNumOperands();
+  }
+
+  /// Returns the number of operands, excluding the mask if the VPInstruction is
+  /// masked.
+  unsigned getNumOperandsWithoutMask() const {
+    return getNumOperands() - isMasked();
+  }
+
+  /// Add mask \p Mask to an unmasked VPInstruction, if it needs masking.
+  void addMask(VPValue *Mask) {
+    assert(!isMasked() && "recipe is already masked");
+    if (alwaysUnmasked())
+      return;
+    addOperand(Mask);
+  }
+
+  /// Returns the mask for the VPInstruction. Returns nullptr for unmasked
+  /// VPInstructions.
+  VPValue *getMask() const {
+    return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
+  }
+
+  /// Returns an iterator range over the operands excluding the mask operand
+  /// if present.
+  iterator_range<operand_iterator> operandsWithoutMask() {
+    return make_range(op_begin(), op_begin() + getNumOperandsWithoutMask());
+  }
+  iterator_range<const_operand_iterator> operandsWithoutMask() const {
+    return make_range(op_begin(), op_begin() + getNumOperandsWithoutMask());
   }
 
   /// Returns true if the underlying opcode may read from or write to memory.
@@ -1469,6 +1521,9 @@ public:
   /// Returns the incoming block with index \p Idx.
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
+  /// Returns the incoming value for \p VPBB. \p VPBB must be an incoming block.
+  VPValue *getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
+
   /// Returns the number of incoming values, also number of incoming blocks.
   virtual unsigned getNumIncoming() const {
     return getAsRecipe()->getNumOperands();
@@ -1510,8 +1565,9 @@ public:
 };
 
 struct LLVM_ABI_FOR_TEST VPPhi : public VPInstruction, public VPPhiAccessors {
-  VPPhi(ArrayRef<VPValue *> Operands, DebugLoc DL, const Twine &Name = "")
-      : VPInstruction(Instruction::PHI, Operands, {}, {}, DL, Name) {}
+  VPPhi(ArrayRef<VPValue *> Operands, const VPIRFlags &Flags, DebugLoc DL,
+        const Twine &Name = "")
+      : VPInstruction(Instruction::PHI, Operands, Flags, {}, DL, Name) {}
 
   static inline bool classof(const VPUser *U) {
     auto *VPI = dyn_cast<VPInstruction>(U);
@@ -1529,7 +1585,7 @@ struct LLVM_ABI_FOR_TEST VPPhi : public VPInstruction, public VPPhiAccessors {
   }
 
   VPPhi *clone() override {
-    auto *PhiR = new VPPhi(operands(), getDebugLoc(), getName());
+    auto *PhiR = new VPPhi(operands(), *this, getDebugLoc(), getName());
     PhiR->setUnderlyingValue(getUnderlyingValue());
     return PhiR;
   }
@@ -2546,8 +2602,7 @@ inline ReductionStyle getReductionStyle(bool InLoop, bool Ordered,
 /// A recipe for handling reduction phis. The start value is the first operand
 /// of the recipe and the incoming value from the backedge is the second
 /// operand.
-class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
-                             public VPUnrollPartAccessor<2> {
+class VPReductionPHIRecipe : public VPHeaderPHIRecipe {
   /// The recurrence kind of the reduction.
   const RecurKind Kind;
 
@@ -2640,20 +2695,22 @@ protected:
 
 /// A recipe for vectorizing a phi-node as a sequence of mask-based select
 /// instructions.
-class LLVM_ABI_FOR_TEST VPBlendRecipe : public VPSingleDefRecipe {
+class LLVM_ABI_FOR_TEST VPBlendRecipe : public VPRecipeWithIRFlags {
 public:
   /// The blend operation is a User of the incoming values and of their
   /// respective masks, ordered [I0, M0, I1, M1, I2, M2, ...]. Note that M0 can
   /// be omitted (implied by passing an odd number of operands) in which case
   /// all other incoming values are merged into it.
-  VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands, DebugLoc DL)
-      : VPSingleDefRecipe(VPRecipeBase::VPBlendSC, Operands, Phi, DL) {
+  VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands,
+                const VPIRFlags &Flags, DebugLoc DL)
+      : VPRecipeWithIRFlags(VPRecipeBase::VPBlendSC, Operands, Flags, DL) {
     assert(Operands.size() >= 2 && "Expected at least two operands!");
+    setUnderlyingValue(Phi);
   }
 
   VPBlendRecipe *clone() override {
     return new VPBlendRecipe(cast_or_null<PHINode>(getUnderlyingValue()),
-                             operands(), getDebugLoc());
+                             operands(), *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPBlendSC)
@@ -4462,6 +4519,9 @@ class VPlan {
   /// Represents the vectorization factor of the loop.
   VPSymbolicValue VF;
 
+  /// Represents the unroll factor of the loop.
+  VPSymbolicValue UF;
+
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPSymbolicValue VFxUF;
 
@@ -4601,6 +4661,9 @@ public:
   VPValue &getVF() { return VF; };
   const VPValue &getVF() const { return VF; };
 
+  /// Returns the UF of the vector loop region.
+  VPValue &getUF() { return UF; };
+
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
 
@@ -4614,6 +4677,12 @@ public:
     assert(hasVF(VF) && "Cannot set VF not already in plan");
     VFs.clear();
     VFs.insert(VF);
+  }
+
+  /// Remove \p VF from the plan.
+  void removeVF(ElementCount VF) {
+    assert(hasVF(VF) && "tried to remove VF not present in plan");
+    VFs.remove(VF);
   }
 
   bool hasVF(ElementCount VF) const { return VFs.count(VF); }
@@ -4636,7 +4705,8 @@ public:
 
   bool hasUF(unsigned UF) const { return UFs.empty() || UFs.contains(UF); }
 
-  unsigned getUF() const {
+  /// Returns the concrete UF of the plan, after unrolling.
+  unsigned getConcreteUF() const {
     assert(UFs.size() == 1 && "Expected a single UF");
     return UFs[0];
   }
