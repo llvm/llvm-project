@@ -3600,7 +3600,7 @@ add_entrypoint_object(
   HDRS
     ../nextup.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nextup
 )
 
 add_entrypoint_object(
@@ -3610,7 +3610,7 @@ add_entrypoint_object(
   HDRS
     ../nextupl.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nextupl
 )
 
 add_entrypoint_object(
@@ -3620,7 +3620,7 @@ add_entrypoint_object(
   HDRS
     ../nextupf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nextupf
 )
 
 add_entrypoint_object(
@@ -3630,8 +3630,7 @@ add_entrypoint_object(
   HDRS
     ../nextupf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nextupf16
 )
 
 add_entrypoint_object(
@@ -3641,8 +3640,7 @@ add_entrypoint_object(
   HDRS
     ../nextupf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nextupf128
 )
 
 add_entrypoint_object(
@@ -3652,11 +3650,7 @@ add_entrypoint_object(
   HDRS
     ../nextupbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.manipulation_functions
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.nextupbf16
 )
 
 add_entrypoint_object(
