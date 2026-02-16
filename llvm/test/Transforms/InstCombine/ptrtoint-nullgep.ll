@@ -333,8 +333,8 @@ define i64 @fold_ptrtoint_nullgep_i32_variable(i64 %val) {
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_i32_variable
 ; INSTCOMBINE-SAME: (i64 [[VAL:%.*]]) {
-; INSTCOMBINE-NEXT:    [[PTR_IDX:%.*]] = shl i64 [[VAL]], 2
-; INSTCOMBINE-NEXT:    ret i64 [[PTR_IDX]]
+; INSTCOMBINE-NEXT:    [[TMP1:%.*]] = shl i64 [[VAL]], 2
+; INSTCOMBINE-NEXT:    ret i64 [[TMP1]]
 ;
   %ptr = getelementptr i32, ptr addrspace(1) null, i64 %val
   %ret = ptrtoint ptr addrspace(1) %ptr to i64
@@ -500,8 +500,8 @@ define i64 @fold_ptrtoint_nullgep_array_one_var_1(i64 %x) {
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_array_one_var_1
 ; INSTCOMBINE-SAME: (i64 [[X:%.*]]) {
-; INSTCOMBINE-NEXT:    [[PTR_SPLIT_IDX:%.*]] = shl i64 [[X]], 2
-; INSTCOMBINE-NEXT:    [[RET:%.*]] = add i64 [[PTR_SPLIT_IDX]], 6
+; INSTCOMBINE-NEXT:    [[TMP1:%.*]] = shl i64 [[X]], 2
+; INSTCOMBINE-NEXT:    [[RET:%.*]] = add i64 [[TMP1]], 6
 ; INSTCOMBINE-NEXT:    ret i64 [[RET]]
 ;
   %ptr = getelementptr [2 x i16], ptr addrspace(1) null, i64 %x, i64 3
@@ -524,8 +524,8 @@ define i64 @fold_ptrtoint_nullgep_array_one_var_2(i64 %x) {
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nullgep_array_one_var_2
 ; INSTCOMBINE-SAME: (i64 [[X:%.*]]) {
-; INSTCOMBINE-NEXT:    [[PTR_IDX:%.*]] = shl i64 [[X]], 1
-; INSTCOMBINE-NEXT:    [[RET:%.*]] = add i64 [[PTR_IDX]], 28
+; INSTCOMBINE-NEXT:    [[TMP1:%.*]] = shl i64 [[X]], 1
+; INSTCOMBINE-NEXT:    [[RET:%.*]] = add i64 [[TMP1]], 28
 ; INSTCOMBINE-NEXT:    ret i64 [[RET]]
 ;
   %ptr = getelementptr [2 x i16], ptr addrspace(1) null, i64 7, i64 %x
@@ -548,9 +548,9 @@ define i64 @fold_ptrtoint_nested_array_two_vars(i64 %x, i64 %y) {
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_array_two_vars
 ; INSTCOMBINE-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; INSTCOMBINE-NEXT:    [[PTR_SPLIT_IDX:%.*]] = shl i64 [[X]], 2
-; INSTCOMBINE-NEXT:    [[PTR_IDX:%.*]] = shl i64 [[Y]], 1
-; INSTCOMBINE-NEXT:    [[RET:%.*]] = add i64 [[PTR_SPLIT_IDX]], [[PTR_IDX]]
+; INSTCOMBINE-NEXT:    [[TMP1:%.*]] = shl i64 [[X]], 2
+; INSTCOMBINE-NEXT:    [[TMP2:%.*]] = shl i64 [[Y]], 1
+; INSTCOMBINE-NEXT:    [[RET:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; INSTCOMBINE-NEXT:    ret i64 [[RET]]
 ;
 
@@ -574,9 +574,9 @@ define i64 @fold_ptrtoint_nested_array_two_vars_plus_zero(i64 %x, i64 %y) {
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_array_two_vars_plus_zero
 ; INSTCOMBINE-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; INSTCOMBINE-NEXT:    [[PTR_SPLIT_IDX:%.*]] = shl i64 [[X]], 3
-; INSTCOMBINE-NEXT:    [[PTR_IDX:%.*]] = shl i64 [[Y]], 2
-; INSTCOMBINE-NEXT:    [[RET:%.*]] = add i64 [[PTR_SPLIT_IDX]], [[PTR_IDX]]
+; INSTCOMBINE-NEXT:    [[TMP1:%.*]] = shl i64 [[X]], 3
+; INSTCOMBINE-NEXT:    [[TMP2:%.*]] = shl i64 [[Y]], 2
+; INSTCOMBINE-NEXT:    [[RET:%.*]] = add i64 [[TMP1]], [[TMP2]]
 ; INSTCOMBINE-NEXT:    ret i64 [[RET]]
 ;
   %ptr = getelementptr [2 x [2 x i16]], ptr addrspace(1) null, i64 %x, i64 %y, i64 0
@@ -599,10 +599,10 @@ define i64 @fold_ptrtoint_nested_array_two_vars_plus_const(i64 %x, i64 %y) {
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_array_two_vars_plus_const
 ; INSTCOMBINE-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; INSTCOMBINE-NEXT:    [[PTR_SPLIT_IDX:%.*]] = shl i64 [[X]], 3
-; INSTCOMBINE-NEXT:    [[PTR_SPLIT1_IDX:%.*]] = shl i64 [[Y]], 2
-; INSTCOMBINE-NEXT:    [[TMP1:%.*]] = add i64 [[PTR_SPLIT_IDX]], [[PTR_SPLIT1_IDX]]
-; INSTCOMBINE-NEXT:    [[RET:%.*]] = or disjoint i64 [[TMP1]], 2
+; INSTCOMBINE-NEXT:    [[TMP1:%.*]] = shl i64 [[X]], 3
+; INSTCOMBINE-NEXT:    [[TMP2:%.*]] = shl i64 [[Y]], 2
+; INSTCOMBINE-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], [[TMP2]]
+; INSTCOMBINE-NEXT:    [[RET:%.*]] = or disjoint i64 [[TMP3]], 2
 ; INSTCOMBINE-NEXT:    ret i64 [[RET]]
 ;
   %ptr = getelementptr [2 x [2 x i16]], ptr addrspace(1) null, i64 %x, i64 %y, i64 1
@@ -628,8 +628,10 @@ define i64 @fold_ptrtoint_nested_nullgep_array_variable_multiple_uses(i64 %x, i6
 ;
 ; INSTCOMBINE-LABEL: define {{[^@]+}}@fold_ptrtoint_nested_nullgep_array_variable_multiple_uses
 ; INSTCOMBINE-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; INSTCOMBINE-NEXT:    [[PTR_SPLIT:%.*]] = getelementptr [2 x i16], ptr addrspace(1) null, i64 [[X]]
-; INSTCOMBINE-NEXT:    [[PTR:%.*]] = getelementptr i16, ptr addrspace(1) [[PTR_SPLIT]], i64 [[Y]]
+; INSTCOMBINE-NEXT:    [[TMP1:%.*]] = shl i64 [[X]], 2
+; INSTCOMBINE-NEXT:    [[PTR_SPLIT:%.*]] = getelementptr i8, ptr addrspace(1) null, i64 [[TMP1]]
+; INSTCOMBINE-NEXT:    [[TMP2:%.*]] = shl i64 [[Y]], 1
+; INSTCOMBINE-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(1) [[PTR_SPLIT]], i64 [[TMP2]]
 ; INSTCOMBINE-NEXT:    call void @use_ptr(ptr addrspace(1) [[PTR]])
 ; INSTCOMBINE-NEXT:    [[RET:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
 ; INSTCOMBINE-NEXT:    ret i64 [[RET]]

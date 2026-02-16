@@ -8,25 +8,29 @@ define float @test1(i32 %hash, float %x, float %y, float %z, float %w) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[HASH:%.*]], 2
 ; CHECK-NEXT:    [[T5:%.*]] = and i32 [[T3]], 124
-; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[T5]] to i64
-; CHECK-NEXT:    [[T753:%.*]] = getelementptr float, ptr @C.0.1248, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i32 [[T5]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[T753:%.*]] = getelementptr i8, ptr @C.0.1248, i64 [[TMP1]]
 ; CHECK-NEXT:    [[T9:%.*]] = load float, ptr [[T753]], align 4
 ; CHECK-NEXT:    [[T11:%.*]] = fmul float [[T9]], [[X:%.*]]
 ; CHECK-NEXT:    [[T13:%.*]] = fadd float [[T11]], 0.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[T5]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr @C.0.1248, i64 [[TMP1]]
+; CHECK-NEXT:    [[T17_SUM52:%.*]] = shl nuw nsw i32 [[T5]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[T17_SUM52]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr @C.0.1248, i64 [[TMP3]]
 ; CHECK-NEXT:    [[T1851:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
 ; CHECK-NEXT:    [[T19:%.*]] = load float, ptr [[T1851]], align 4
 ; CHECK-NEXT:    [[T21:%.*]] = fmul float [[T19]], [[Y:%.*]]
 ; CHECK-NEXT:    [[T23:%.*]] = fadd float [[T21]], [[T13]]
-; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[T5]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr @C.0.1248, i64 [[TMP3]]
+; CHECK-NEXT:    [[T27_SUM50:%.*]] = shl nuw nsw i32 [[T5]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[T27_SUM50]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr @C.0.1248, i64 [[TMP5]]
 ; CHECK-NEXT:    [[T2849:%.*]] = getelementptr i8, ptr [[TMP4]], i64 8
 ; CHECK-NEXT:    [[T29:%.*]] = load float, ptr [[T2849]], align 4
 ; CHECK-NEXT:    [[T31:%.*]] = fmul float [[T29]], [[Z:%.*]]
 ; CHECK-NEXT:    [[T33:%.*]] = fadd float [[T31]], [[T23]]
-; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[T5]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr float, ptr @C.0.1248, i64 [[TMP5]]
+; CHECK-NEXT:    [[T37_SUM48:%.*]] = shl nuw nsw i32 [[T5]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = zext nneg i32 [[T37_SUM48]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr @C.0.1248, i64 [[TMP7]]
 ; CHECK-NEXT:    [[T3847:%.*]] = getelementptr i8, ptr [[TMP6]], i64 12
 ; CHECK-NEXT:    [[T39:%.*]] = load float, ptr [[T3847]], align 4
 ; CHECK-NEXT:    [[T41:%.*]] = fmul float [[T39]], [[W:%.*]]
@@ -337,7 +341,8 @@ define float @test11_volatile(i64 %i) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [4 x float], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr align 4 [[A]], ptr addrspace(1) align 4 @I, i64 16, i1 true)
-; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[I:%.*]], 2
+; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[G]], align 4
 ; CHECK-NEXT:    ret float [[R]]
 ;

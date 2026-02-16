@@ -73,8 +73,10 @@ define void @test_evaluate_gep_as_ptrs_array(ptr addrspace(2) %B) {
 
 define ptr @test4(ptr %I, i32 %C, i32 %D) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[A:%.*]] = getelementptr i32, ptr [[I:%.*]], i32 [[C:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A]], i32 [[D:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[C:%.*]], 2
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr [[I:%.*]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[D:%.*]], 2
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[B]]
 ;
   %A = getelementptr i32, ptr %I, i32 %C
@@ -137,7 +139,8 @@ define ptr @test7(i16 %Idx) {
 @Array = external global [40 x i32]
 define ptr @test8(i32 %X) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[A:%.*]] = getelementptr i32, ptr @Array, i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr @Array, i32 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[A]]
 ;
   %A = getelementptr i32, ptr @Array, i32 %X
@@ -147,7 +150,8 @@ define ptr @test8(i32 %X) {
 define ptr @test9(ptr %base, i8 %ind) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[IND:%.*]] to i32
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i32 [[TMP1]], 2
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i32 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %res = getelementptr i32, ptr %base, i8 %ind

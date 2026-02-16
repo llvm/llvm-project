@@ -20,9 +20,11 @@ define void @phi_two_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i1> [[TMP4]] to <2 x i32>
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = add <2 x i32> [[WIDE_LOAD]], [[TMP5]]
@@ -38,17 +40,19 @@ define void @phi_two_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[IF_END:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[IF_THEN:.*]], label %[[IF_END]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shl nsw i64 [[I]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nsw i64 [[I]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[IF_THEN:.*]], label %[[IF_END]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = add nuw i32 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i32 [[TMP1]], 1
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi i32 [ [[TMP2]], %[[FOR_BODY]] ], [ [[TMP5]], %[[IF_THEN]] ]
-; CHECK-NEXT:    store i32 [[TMP6]], ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[TMP1]], %[[FOR_BODY]] ], [ [[TMP3]], %[[IF_THEN]] ]
+; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -97,9 +101,11 @@ define void @phi_three_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <2 x i32> [[WIDE_LOAD]], splat (i32 19)
@@ -119,22 +125,24 @@ define void @phi_three_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[IF_END:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt i32 [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[IF_THEN:.*]], label %[[IF_END]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shl nsw i64 [[I]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = shl nsw i64 [[I]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP1]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[IF_THEN:.*]], label %[[IF_END]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[TMP3]], 19
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[IF_END]], label %[[IF_ELSE:.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP1]], 19
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[IF_END]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i32 [[TMP5]], 4
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 4, i32 5
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i32 [[TMP12]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 4, i32 5
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi i32 [ 9, %[[FOR_BODY]] ], [ 3, %[[IF_THEN]] ], [ [[TMP9]], %[[IF_ELSE]] ]
-; CHECK-NEXT:    store i32 [[TMP10]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ 9, %[[FOR_BODY]] ], [ 3, %[[IF_THEN]] ], [ [[TMP7]], %[[IF_ELSE]] ]
+; CHECK-NEXT:    store i32 [[TMP8]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[I]], [[N]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]

@@ -28,7 +28,8 @@ define internal void @child(ptr %p, ptr %n, ptr %c) noinline {
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_END:.*]], label %[[FOR_INC]]
 ; CHECK:       [[FOR_INC]]:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[I_0]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[IDXPROM]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[TMP0]], 5
 ; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4

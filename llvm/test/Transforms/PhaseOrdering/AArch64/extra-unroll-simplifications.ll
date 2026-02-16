@@ -21,15 +21,17 @@ define void @partial_unroll_forced(i32 %N, ptr %src, ptr noalias %dst) {
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER_NEW]] ], [ [[INDVARS_IV_NEXT_1:%.*]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[LOOP_LATCH]] ]
-; CHECK-NEXT:    [[SRC_IDX:%.*]] = getelementptr <8 x half>, ptr [[SRC]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 4
+; CHECK-NEXT:    [[SRC_IDX:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[L:%.*]] = load <8 x half>, ptr [[SRC_IDX]], align 16
-; CHECK-NEXT:    [[DST_IDX:%.*]] = getelementptr <8 x half>, ptr [[DST]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[DST_IDX:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd <8 x half> [[L]], [[L]]
 ; CHECK-NEXT:    store <8 x half> [[ADD]], ptr [[DST_IDX]], align 16
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[SRC_IDX_1:%.*]] = getelementptr <8 x half>, ptr [[SRC]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = shl i64 [[INDVARS_IV]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[INDVARS_IV_NEXT]], 16
+; CHECK-NEXT:    [[SRC_IDX_1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[L_1:%.*]] = load <8 x half>, ptr [[SRC_IDX_1]], align 16
-; CHECK-NEXT:    [[DST_IDX_1:%.*]] = getelementptr <8 x half>, ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[DST_IDX_1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[ADD_1:%.*]] = fadd <8 x half> [[L_1]], [[L_1]]
 ; CHECK-NEXT:    store <8 x half> [[ADD_1]], ptr [[DST_IDX_1]], align 16
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_1]] = add nuw nsw i64 [[INDVARS_IV]], 2
@@ -43,9 +45,10 @@ define void @partial_unroll_forced(i32 %N, ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER]] ], [ [[INDVARS_IV_NEXT_1]], [[EXIT_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[LCMP_MOD4:%.*]] = trunc i32 [[N]] to i1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[LCMP_MOD4]])
-; CHECK-NEXT:    [[SRC_IDX_EPIL:%.*]] = getelementptr <8 x half>, ptr [[SRC]], i64 [[INDVARS_IV_UNR]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[INDVARS_IV_UNR]], 4
+; CHECK-NEXT:    [[SRC_IDX_EPIL:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[L_EPIL:%.*]] = load <8 x half>, ptr [[SRC_IDX_EPIL]], align 16
-; CHECK-NEXT:    [[DST_IDX_EPIL:%.*]] = getelementptr <8 x half>, ptr [[DST]], i64 [[INDVARS_IV_UNR]]
+; CHECK-NEXT:    [[DST_IDX_EPIL:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[ADD_EPIL:%.*]] = fadd <8 x half> [[L_EPIL]], [[L_EPIL]]
 ; CHECK-NEXT:    store <8 x half> [[ADD_EPIL]], ptr [[DST_IDX_EPIL]], align 16
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -93,18 +96,20 @@ define void @cse_matching_load_from_previous_unrolled_iteration(i32 %N, ptr %src
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER_NEW]] ], [ [[INDVARS_IV_NEXT_1:%.*]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER_NEW]] ], [ [[NITER_NEXT_1:%.*]], [[LOOP_LATCH]] ]
-; CHECK-NEXT:    [[GEP_SRC_12:%.*]] = getelementptr <2 x i32>, ptr [[SRC_12]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[GEP_SRC_12:%.*]] = getelementptr i8, ptr [[SRC_12]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[L_12:%.*]] = load <2 x i32>, ptr [[GEP_SRC_12]], align 8
-; CHECK-NEXT:    [[GEP_SRC_4:%.*]] = getelementptr <2 x i32>, ptr [[SRC_4]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[GEP_SRC_4:%.*]] = getelementptr i8, ptr [[SRC_4]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[L_4:%.*]] = load <2 x i32>, ptr [[GEP_SRC_4]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = mul <2 x i32> [[L_4]], [[L_12]]
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr <2 x i32>, ptr [[DST]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
 ; CHECK-NEXT:    store <2 x i32> [[MUL]], ptr [[GEP_DST]], align 8
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = or disjoint i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[GEP_SRC_12_1:%.*]] = getelementptr <2 x i32>, ptr [[SRC_12]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = shl i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[INDVARS_IV_NEXT]], 8
+; CHECK-NEXT:    [[GEP_SRC_12_1:%.*]] = getelementptr i8, ptr [[SRC_12]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[L_12_1:%.*]] = load <2 x i32>, ptr [[GEP_SRC_12_1]], align 8
 ; CHECK-NEXT:    [[MUL_1:%.*]] = mul <2 x i32> [[L_12]], [[L_12_1]]
-; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr <2 x i32>, ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
 ; CHECK-NEXT:    store <2 x i32> [[MUL_1]], ptr [[GEP_DST_1]], align 8
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_1]] = add nuw nsw i64 [[INDVARS_IV]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
@@ -117,12 +122,13 @@ define void @cse_matching_load_from_previous_unrolled_iteration(i32 %N, ptr %src
 ; CHECK-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[LOOP_LATCH_PREHEADER]] ], [ [[INDVARS_IV_NEXT_1]], [[EXIT_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[LCMP_MOD4:%.*]] = trunc i32 [[N]] to i1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[LCMP_MOD4]])
-; CHECK-NEXT:    [[GEP_SRC_12_EPIL:%.*]] = getelementptr <2 x i32>, ptr [[SRC_12]], i64 [[INDVARS_IV_UNR]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[INDVARS_IV_UNR]], 3
+; CHECK-NEXT:    [[GEP_SRC_12_EPIL:%.*]] = getelementptr i8, ptr [[SRC_12]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[L_12_EPIL:%.*]] = load <2 x i32>, ptr [[GEP_SRC_12_EPIL]], align 8
-; CHECK-NEXT:    [[GEP_SRC_4_EPIL:%.*]] = getelementptr <2 x i32>, ptr [[SRC_4]], i64 [[INDVARS_IV_UNR]]
+; CHECK-NEXT:    [[GEP_SRC_4_EPIL:%.*]] = getelementptr i8, ptr [[SRC_4]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[L_4_EPIL:%.*]] = load <2 x i32>, ptr [[GEP_SRC_4_EPIL]], align 8
 ; CHECK-NEXT:    [[MUL_EPIL:%.*]] = mul <2 x i32> [[L_4_EPIL]], [[L_12_EPIL]]
-; CHECK-NEXT:    [[GEP_DST_EPIL:%.*]] = getelementptr <2 x i32>, ptr [[DST]], i64 [[INDVARS_IV_UNR]]
+; CHECK-NEXT:    [[GEP_DST_EPIL:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    store <2 x i32> [[MUL_EPIL]], ptr [[GEP_DST_EPIL]], align 8
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:

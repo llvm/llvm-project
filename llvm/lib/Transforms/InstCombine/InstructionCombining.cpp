@@ -3580,6 +3580,22 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       }
     }
   }
+
+  if (!GEPEltType->isIntegerTy(8) && Indices.size() == 1) {
+    TypeSize Scale = DL.getTypeAllocSize(GEPEltType);
+    if (!Scale.isScalable()) {
+      Value *NewIndex = Builder.CreateMul(
+          Indices[0],
+          ConstantInt::getSigned(Indices[0]->getType(), Scale.getFixedValue(),
+                                 /*ImplicitTrunc=*/true),
+          "",
+          /*NUW=*/GEP.hasNoUnsignedWrap(),
+          /*NSW=*/GEP.hasNoUnsignedSignedWrap());
+      return GetElementPtrInst::Create(Type::getInt8Ty(GEP.getContext()), PtrOp,
+                                       NewIndex, GEP.getNoWrapFlags());
+    }
+  }
+
   // We do not handle pointer-vector geps here.
   if (GEPType->isVectorTy())
     return nullptr;

@@ -14,7 +14,8 @@ define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP0]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[WIDE_MASKED_LOAD]])
 ; CHECK-NEXT:    [[TMP2]] = add i32 [[VEC_PHI]], [[TMP1]]
@@ -55,9 +56,11 @@ define i32 @reduction_sum(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP10]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP0]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i32 [[TMP11]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP1]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> [[VEC_IND]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP2]])
@@ -107,9 +110,11 @@ define i32 @reduction_prod(ptr noalias nocapture %A, ptr noalias nocapture %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 1), [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP0]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP1]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[VEC_PHI]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP2]], [[WIDE_MASKED_LOAD1]]
@@ -154,9 +159,11 @@ define i32 @reduction_and(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 -1), [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP0]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP1]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_LOAD1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> [[TMP2]], <4 x i32> splat (i32 -1)
@@ -201,9 +208,11 @@ define i32 @reduction_or(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP0]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP1]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD1]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> [[TMP2]], <4 x i32> zeroinitializer
@@ -248,9 +257,11 @@ define i32 @reduction_xor(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP0]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP1]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD1]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> [[TMP2]], <4 x i32> zeroinitializer
@@ -295,9 +306,11 @@ define float @reduction_fadd(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP0]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP1]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd fast <4 x float> [[TMP2]], [[WIDE_MASKED_LOAD1]]
@@ -342,9 +355,11 @@ define float @reduction_fmul(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ <float 0.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 257)
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP0]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> poison)
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[TMP1]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x float> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[VEC_PHI]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[TMP2]], [[WIDE_MASKED_LOAD1]]
@@ -388,7 +403,8 @@ define i32 @reduction_min(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 1000), [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -402,7 +418,8 @@ define i32 @reduction_min(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 256, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[RESULT_08:%.*]] = phi i32 [ [[V0:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nsw i32 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP5]]
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[V0]] = call i32 @llvm.smin.i32(i32 [[RESULT_08]], i32 [[L0]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i32 [[INDVARS_IV]], 1
@@ -439,7 +456,8 @@ define i32 @reduction_max(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 1000), [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -453,7 +471,8 @@ define i32 @reduction_max(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 256, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[RESULT_08:%.*]] = phi i32 [ [[V0:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nsw i32 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[TMP5]]
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[V0]] = call i32 @llvm.umax.i32(i32 [[RESULT_08]], i32 [[L0]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i32 [[INDVARS_IV]], 1
@@ -488,7 +507,8 @@ define float @reduction_fmax(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[RESULT_08:%.*]] = phi float [ [[V0:%.*]], [[FOR_BODY]] ], [ 1.000000e+03, [[ENTRY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i32 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i32 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    [[L0:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[C0:%.*]] = fcmp ogt float [[RESULT_08]], [[L0]]
 ; CHECK-NEXT:    [[V0]] = select i1 [[C0]], float [[RESULT_08]], float [[L0]]

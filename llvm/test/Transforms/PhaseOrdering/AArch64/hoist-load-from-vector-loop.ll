@@ -34,14 +34,18 @@ define void @hoist_invariant_load(ptr %invariant_ptr, i64 %num_elements, ptr %ar
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[I2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw %"class.dealii::VectorizedArray", ptr [[ARRAY]], i64 [[I2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr %"class.dealii::VectorizedArray", ptr [[ARRAY]], i64 [[I2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nsw i64 [[I2]], 5
+; CHECK-NEXT:    [[TMP21:%.*]] = shl i64 [[I2]], 5
+; CHECK-NEXT:    [[TMP22:%.*]] = shl i64 [[I2]], 5
+; CHECK-NEXT:    [[TMP23:%.*]] = shl i64 [[I2]], 5
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr nusw i8, ptr [[ARRAY]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 [[TMP21]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i64 32
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr %"class.dealii::VectorizedArray", ptr [[ARRAY]], i64 [[I2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 64
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr %"class.dealii::VectorizedArray", ptr [[ARRAY]], i64 [[I2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[ARRAY]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP10]], i64 96
-; CHECK-NEXT:    [[TMP12:%.*]] = load <5 x double>, ptr [[GEP]], align 8, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load <5 x double>, ptr [[TMP24]], align 8, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <5 x double> [[TMP12]], <5 x double> poison, <2 x i32> <i32 0, i32 4>
 ; CHECK-NEXT:    [[TMP13:%.*]] = load <5 x double>, ptr [[TMP9]], align 8, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <5 x double> [[TMP13]], <5 x double> poison, <2 x i32> <i32 0, i32 4>
@@ -51,7 +55,7 @@ define void @hoist_invariant_load(ptr %invariant_ptr, i64 %num_elements, ptr %ar
 ; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x double> [[BROADCAST_SPLAT]], [[STRIDED_VEC5]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x double> [[TMP17]], i64 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x double> [[TMP17]], i64 1
-; CHECK-NEXT:    store double [[TMP15]], ptr [[GEP]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    store double [[TMP15]], ptr [[TMP24]], align 8, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    store double [[TMP16]], ptr [[TMP7]], align 8, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    store double [[TMP18]], ptr [[TMP9]], align 8, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP11]], align 8, !alias.scope [[META3]], !noalias [[META0]]
@@ -63,7 +67,8 @@ define void @hoist_invariant_load(ptr %invariant_ptr, i64 %num_elements, ptr %ar
 ; CHECK-NEXT:    br label %[[LOOP_LATCH:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[I3:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP_LATCH]] ], [ [[I2_PH]], %[[LOOP_LATCH_PREHEADER6]] ]
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw %"class.dealii::VectorizedArray", ptr [[ARRAY]], i64 [[I3]]
+; CHECK-NEXT:    [[TMP25:%.*]] = shl nsw i64 [[I3]], 5
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nusw i8, ptr [[ARRAY]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[INVARIANT_VAL:%.*]] = load double, ptr [[INVARIANT_PTR]], align 8
 ; CHECK-NEXT:    [[ARRAY_VAL:%.*]] = load double, ptr [[GEP1]], align 8
 ; CHECK-NEXT:    [[SUM:%.*]] = fadd double [[INVARIANT_VAL]], [[ARRAY_VAL]]

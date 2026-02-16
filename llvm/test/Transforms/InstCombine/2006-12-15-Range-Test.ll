@@ -16,7 +16,8 @@ define i1 @print_pgm_cond_true(i32 %tmp12.reload, ptr %tmp16.out) {
 ; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP16_OUT]], align 4
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       cond_true:
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr @r, i32 [[TMP12_RELOAD:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP12_RELOAD:%.*]], 2
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr @r, i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP16]] = load i32, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[TMP16]], -32
 ; CHECK-NEXT:    [[BOTHCOND:%.*]] = icmp ult i32 [[TMP0]], -63
@@ -53,7 +54,8 @@ define i1 @print_pgm_cond_true_logical(i32 %tmp12.reload, ptr %tmp16.out) {
 ; CHECK-NEXT:    store i32 [[TMP16]], ptr [[TMP16_OUT]], align 4
 ; CHECK-NEXT:    ret i1 false
 ; CHECK:       cond_true:
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr @r, i32 [[TMP12_RELOAD:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP12_RELOAD:%.*]], 2
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr @r, i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP16]] = load i32, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[TMP16]], -32
 ; CHECK-NEXT:    [[BOTHCOND:%.*]] = icmp ult i32 [[TMP0]], -63

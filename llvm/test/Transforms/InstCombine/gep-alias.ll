@@ -10,7 +10,8 @@ define i32 @f(i64 %i) {
 ; CHECK-LABEL: define i32 @f(
 ; CHECK-SAME: i64 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr @x, i64 [[I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[I]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr @x, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;

@@ -12,16 +12,18 @@ define i32 @test1(ptr %dm, i1 %c, i64 %idx1, i64 %idx2) {
 ; CHECK-NEXT:    [[INST1:%.*]] = load ptr, ptr [[DM:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[INST10:%.*]] = getelementptr inbounds [[STRUCT2:%.*]], ptr [[INST1]], i64 [[IDX1:%.*]]
+; CHECK-NEXT:    [[IDX1:%.*]] = shl nsw i64 [[IDX3:%.*]], 3
+; CHECK-NEXT:    [[INST10:%.*]] = getelementptr inbounds i8, ptr [[INST1]], i64 [[IDX1]]
 ; CHECK-NEXT:    store i32 0, ptr [[INST10]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[INST20:%.*]] = getelementptr inbounds [[STRUCT2]], ptr [[INST1]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[IDX2:%.*]] = shl nsw i64 [[IDX4:%.*]], 3
+; CHECK-NEXT:    [[INST20:%.*]] = getelementptr inbounds i8, ptr [[INST1]], i64 [[IDX2]]
 ; CHECK-NEXT:    store i32 0, ptr [[INST20]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ [[IDX1]], [[BB1]] ], [ [[IDX2]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT2]], ptr [[INST1]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[INST1]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[INST24:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 4
 ; CHECK-NEXT:    [[INST25:%.*]] = load i32, ptr [[INST24]], align 4
 ; CHECK-NEXT:    ret i32 [[INST25]]
@@ -51,9 +53,11 @@ define i32 @test2(ptr %dm, i64 %idx1, i64 %idx2) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[INST1:%.*]] = load ptr, ptr [[DM:%.*]], align 8
-; CHECK-NEXT:    [[INST10:%.*]] = getelementptr inbounds [[STRUCT2:%.*]], ptr [[INST1]], i64 [[IDX1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[IDX1:%.*]], 3
+; CHECK-NEXT:    [[INST10:%.*]] = getelementptr inbounds i8, ptr [[INST1]], i64 [[TMP0]]
 ; CHECK-NEXT:    store i32 0, ptr [[INST10]], align 4
-; CHECK-NEXT:    [[INST20:%.*]] = getelementptr inbounds [[STRUCT2]], ptr [[INST1]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[IDX2:%.*]], 3
+; CHECK-NEXT:    [[INST20:%.*]] = getelementptr inbounds i8, ptr [[INST1]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i32 0, ptr [[INST20]], align 4
 ; CHECK-NEXT:    [[INST24:%.*]] = getelementptr inbounds nuw i8, ptr [[INST10]], i64 4
 ; CHECK-NEXT:    [[INST25:%.*]] = load i32, ptr [[INST24]], align 4
@@ -77,12 +81,14 @@ define i32 @test3(ptr %dm, i1 %c, i64 %idx1, i64 %idx2, i64 %idx3) personality p
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[INST1_SPLIT:%.*]] = getelementptr inbounds [[STRUCT3:%.*]], ptr [[DM:%.*]], i64 [[IDX1:%.*]]
+; CHECK-NEXT:    [[IDX1:%.*]] = mul nsw i64 [[IDX4:%.*]], 36
+; CHECK-NEXT:    [[INST1_SPLIT:%.*]] = getelementptr inbounds i8, ptr [[DM:%.*]], i64 [[IDX1]]
 ; CHECK-NEXT:    [[INST1:%.*]] = getelementptr inbounds nuw i8, ptr [[INST1_SPLIT]], i64 4
 ; CHECK-NEXT:    store i32 0, ptr [[INST1]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[INST2_SPLIT:%.*]] = getelementptr inbounds [[STRUCT3]], ptr [[DM]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[IDX2:%.*]] = mul nsw i64 [[IDX5:%.*]], 36
+; CHECK-NEXT:    [[INST2_SPLIT:%.*]] = getelementptr inbounds i8, ptr [[DM]], i64 [[IDX2]]
 ; CHECK-NEXT:    [[INST12:%.*]] = getelementptr inbounds nuw i8, ptr [[INST2_SPLIT]], i64 8
 ; CHECK-NEXT:    store i32 0, ptr [[INST12]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
@@ -95,8 +101,9 @@ define i32 @test3(ptr %dm, i1 %c, i64 %idx1, i64 %idx2, i64 %idx3) personality p
 ; CHECK:       bb5:
 ; CHECK-NEXT:    [[INST27:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            catch ptr @_ZTIi
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT3]], ptr [[DM]], i64 [[TMP0]]
-; CHECK-NEXT:    [[INST34_SPLIT:%.*]] = getelementptr [[STRUCT4:%.*]], ptr [[TMP1]], i64 [[IDX3:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[DM]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[IDX3:%.*]], 4
+; CHECK-NEXT:    [[INST34_SPLIT:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[INST35:%.*]] = getelementptr i8, ptr [[INST34_SPLIT]], i64 16
 ; CHECK-NEXT:    [[INST25:%.*]] = load i32, ptr [[INST35]], align 4
 ; CHECK-NEXT:    ret i32 [[INST25]]
@@ -215,7 +222,8 @@ define void @test5(ptr %idx, ptr %in) #0 {
 ; CHECK:       while.cond.57:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[INCDEC_PTR34]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i64
-; CHECK-NEXT:    [[ARRAYIDX61:%.*]] = getelementptr inbounds nuw i16, ptr [[IDX:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[TMP4]], 1
+; CHECK-NEXT:    [[ARRAYIDX61:%.*]] = getelementptr inbounds nuw i8, ptr [[IDX:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX61]], align 2
 ; CHECK-NEXT:    [[AND63:%.*]] = and i16 [[TMP5]], 2048
 ; CHECK-NEXT:    [[TOBOOL64:%.*]] = icmp eq i16 [[AND63]], 0

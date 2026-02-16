@@ -110,7 +110,9 @@ define i64 @test_simplify9(i1 %x) {
 define i64 @test_simplify10(i32 %x) {
 ; CHECK-LABEL: @test_simplify10(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[HELLO_L:%.*]] = sub nsw i64 5, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i8, ptr @hello, i64 [[TMP2]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %hello_p = getelementptr inbounds [6 x i32], ptr @hello, i32 0, i32 %x
@@ -120,7 +122,9 @@ define i64 @test_simplify10(i32 %x) {
 
 define i64 @test_simplify10_gepi32(i64 %x) {
 ; CHECK-LABEL: @test_simplify10_gepi32(
-; CHECK-NEXT:    [[HELLO_L:%.*]] = sub i64 5, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[X:%.*]], 2
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i8, ptr @hello, i64 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %hello_p = getelementptr inbounds i32, ptr @hello, i64 %x
@@ -131,7 +135,8 @@ define i64 @test_simplify10_gepi32(i64 %x) {
 define i64 @test_simplify10_gepi64(i32 %x) {
 ; CHECK-LABEL: @test_simplify10_gepi64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i64, ptr @hello, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 3
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i8, ptr @hello, i64 [[TMP2]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
@@ -142,7 +147,8 @@ define i64 @test_simplify10_gepi64(i32 %x) {
 
 define i64 @test_simplify10_gepi16(i64 %x) {
 ; CHECK-LABEL: @test_simplify10_gepi16(
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i16, ptr @hello, i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i8, ptr @hello, i64 [[TMP1]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
@@ -179,10 +185,12 @@ define i64 @test_simplify10_gepi8mul4(i64 %x) {
 
 define i64 @test_simplify11(i32 %x) {
 ; CHECK-LABEL: @test_simplify11(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw nsw i32 9, [[AND]]
+; CHECK-NEXT:    [[AND:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[NARROW:%.*]] = and i32 [[AND]], 28
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = zext nneg i32 [[NARROW]] to i64
-; CHECK-NEXT:    ret i64 [[HELLO_L]]
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds nuw i8, ptr @null_hello_mid, i64 [[HELLO_L]]
+; CHECK-NEXT:    [[HELLO_L1:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
+; CHECK-NEXT:    ret i64 [[HELLO_L1]]
 ;
   %and = and i32 %x, 7
   %hello_p = getelementptr inbounds [13 x i32], ptr @null_hello_mid, i32 0, i32 %and
@@ -192,10 +200,12 @@ define i64 @test_simplify11(i32 %x) {
 
 define i64 @test_simplify11_gepi32(i32 %x) {
 ; CHECK-LABEL: @test_simplify11_gepi32(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 7
-; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw nsw i32 9, [[AND]]
+; CHECK-NEXT:    [[AND:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[NARROW:%.*]] = and i32 [[AND]], 28
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = zext nneg i32 [[NARROW]] to i64
-; CHECK-NEXT:    ret i64 [[HELLO_L]]
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds nuw i8, ptr @null_hello_mid, i64 [[HELLO_L]]
+; CHECK-NEXT:    [[HELLO_L1:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
+; CHECK-NEXT:    ret i64 [[HELLO_L1]]
 ;
   %and = and i32 %x, 7
   %hello_p = getelementptr inbounds i32, ptr @null_hello_mid, i32 %and
@@ -233,7 +243,8 @@ define i64 @test_no_simplify1() {
 define i64 @test_no_simplify2(i32 %x) {
 ; CHECK-LABEL: @test_no_simplify2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i32, ptr @null_hello, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i8, ptr @null_hello, i64 [[TMP2]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
@@ -245,7 +256,8 @@ define i64 @test_no_simplify2(i32 %x) {
 define i64 @test_no_simplify2_no_null_opt(i32 %x) #0 {
 ; CHECK-LABEL: @test_no_simplify2_no_null_opt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i32, ptr @null_hello, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i8, ptr @null_hello, i64 [[TMP2]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
@@ -258,9 +270,10 @@ define i64 @test_no_simplify2_no_null_opt(i32 %x) #0 {
 
 define i64 @test_no_simplify3(i32 %x) {
 ; CHECK-LABEL: @test_no_simplify3(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[AND1:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[AND1]], 60
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[AND]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds nuw i32, ptr @null_hello_mid, i64 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds nuw i8, ptr @null_hello_mid, i64 [[TMP1]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
@@ -272,9 +285,10 @@ define i64 @test_no_simplify3(i32 %x) {
 
 define i64 @test_no_simplify3_no_null_opt(i32 %x) #0 {
 ; CHECK-LABEL: @test_no_simplify3_no_null_opt(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[AND1:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[AND1]], 60
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[AND]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds nuw i32, ptr @null_hello_mid, i64 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds nuw i8, ptr @null_hello_mid, i64 [[TMP1]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;

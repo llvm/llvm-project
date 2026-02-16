@@ -18,7 +18,8 @@ define arm_aapcs_vfpcc i32 @minmaxval4(ptr nocapture readonly %x, ptr nocapture 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 2147483647), [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ splat (i32 -2147483648), [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shl nsw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[X:%.*]], i32 [[TMP8]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI1]])
 ; CHECK-NEXT:    [[TMP2]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]])
@@ -44,7 +45,8 @@ define arm_aapcs_vfpcc i32 @minmaxval4(ptr nocapture readonly %x, ptr nocapture 
 ; CHECK-NEXT:    [[I_029:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[MIN_028:%.*]] = phi i32 [ [[COND9]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[MAX_027:%.*]] = phi i32 [ [[COND]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX2]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[I_029]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i32 [[I_029]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[X]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[COND]] = call i32 @llvm.smax.i32(i32 [[TMP6]], i32 [[MAX_027]])
 ; CHECK-NEXT:    [[COND9]] = call i32 @llvm.smin.i32(i32 [[TMP6]], i32 [[MIN_028]])

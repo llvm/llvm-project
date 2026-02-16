@@ -24,10 +24,11 @@ define void @vdiv(ptr %a, float %b) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4, !tbaa [[FLOAT_TBAA3:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4, !tbaa [[FLOAT_TBAA3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[WIDE_LOAD]], [[TMP0]]
-; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP1]], align 4, !tbaa [[FLOAT_TBAA3]]
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP2]], align 4, !tbaa [[FLOAT_TBAA3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[FOR_COND_CLEANUP:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]

@@ -14,8 +14,9 @@ define range(i32 0, 2) i32 @f(i32 noundef %x) local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X]], 8
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[SWITCH_LOOKUP:.*]], label %[[SW_EPILOG:.*]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[X]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds nuw i32, ptr @switch.table.g, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i32 [[X]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds nuw i8, ptr @switch.table.g, i64 [[TMP2]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label %[[SW_EPILOG]]
 ; CHECK:       [[SW_EPILOG]]:

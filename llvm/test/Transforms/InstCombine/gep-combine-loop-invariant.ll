@@ -30,7 +30,8 @@ define i32 @foo(ptr nocapture readnone %match, i32 %cur_match, i32 %best_len, i3
 ; CHECK-NEXT:    [[CHAIN_LENGTH_ADDR_08:%.*]] = phi i32 [ [[CHAIN_LENGTH:%.*]], [[IF_THEN_LR_PH]] ], [ [[DEC:%.*]], [[DO_BODY]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CUR_MATCH_ADDR_09]], [[WMASK:%.*]]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[AND]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[PREV:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[IDXPROM]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PREV:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[I4]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp ugt i32 [[I4]], [[LIMIT:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP4]], label [[LAND_LHS_TRUE:%.*]], label [[DO_END]]
@@ -93,9 +94,8 @@ define void @PR37005(ptr %base, ptr %in) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[E1:%.*]] = getelementptr inbounds ptr, ptr [[IN:%.*]], i64 undef
-; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds nuw i8, ptr [[E1]], i64 48
-; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds ptr, ptr [[E2]], <2 x i64> <i64 0, i64 1>
+; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds nuw i8, ptr [[E1:%.*]], i64 48
+; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds i8, ptr [[E2]], <2 x i64> <i64 0, i64 8>
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x ptr> [[E4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], splat (i64 14)
 ; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], splat (i64 1125899906842496)
@@ -125,8 +125,7 @@ define void @PR37005_2(ptr %base, ptr %in) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[E1:%.*]] = getelementptr inbounds ptr, ptr [[IN:%.*]], i64 undef
-; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds nuw i8, ptr [[E1]], i64 48
+; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds nuw i8, ptr [[E1:%.*]], i64 48
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint ptr [[E2]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i64 [[PI1]], 14
 ; CHECK-NEXT:    [[SL1:%.*]] = and i64 [[TMP0]], 1125899906842496
@@ -155,9 +154,8 @@ define void @PR37005_3(<2 x ptr> %base, ptr %in) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[E1:%.*]] = getelementptr inbounds ptr, ptr [[IN:%.*]], i64 undef
-; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds nuw i8, ptr [[E1]], i64 48
-; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds ptr, ptr [[E2]], <2 x i64> <i64 0, i64 1>
+; CHECK-NEXT:    [[E2:%.*]] = getelementptr inbounds nuw i8, ptr [[E1:%.*]], i64 48
+; CHECK-NEXT:    [[E4:%.*]] = getelementptr inbounds i8, ptr [[E2]], <2 x i64> <i64 0, i64 8>
 ; CHECK-NEXT:    [[PI1:%.*]] = ptrtoint <2 x ptr> [[E4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr <2 x i64> [[PI1]], splat (i64 14)
 ; CHECK-NEXT:    [[SL1:%.*]] = and <2 x i64> [[TMP0]], splat (i64 1125899906842496)
@@ -212,7 +210,8 @@ define float @gep_cross_loop(ptr %_arg_, ptr %_arg_3, float %_arg_8) {
 ; CHECK-LABEL: @gep_cross_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = load i64, ptr [[_ARG_:%.*]], align 8
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, ptr [[_ARG_3:%.*]], i64 [[I]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[I]], 2
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[_ARG_3:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_COND_I:%.*]]
 ; CHECK:       for.cond.i:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD11_I:%.*]], [[FOR_BODY_I:%.*]] ]
@@ -222,7 +221,8 @@ define float @gep_cross_loop(ptr %_arg_, ptr %_arg_3, float %_arg_8) {
 ; CHECK:       for.cond.i.i.i.preheader:
 ; CHECK-NEXT:    ret float [[SUM]]
 ; CHECK:       for.body.i:
-; CHECK-NEXT:    [[ARRAYIDX_I84_I:%.*]] = getelementptr inbounds nuw float, ptr [[ADD_PTR]], i64 [[IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[IDX]], 2
+; CHECK-NEXT:    [[ARRAYIDX_I84_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ADD_PTR]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[I1:%.*]] = load float, ptr [[ARRAYIDX_I84_I]], align 4
 ; CHECK-NEXT:    [[ADD_I]] = fadd fast float [[SUM]], [[I1]]
 ; CHECK-NEXT:    [[ADD11_I]] = add nuw nsw i64 [[IDX]], 1

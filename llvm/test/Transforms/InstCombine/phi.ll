@@ -1750,7 +1750,8 @@ for.end:
 define i1 @pr57488_icmp_of_phi(ptr %ptr.base, i64 %len) {
 ; CHECK-LABEL: @pr57488_icmp_of_phi(
 ; CHECK-NEXT:  start:
-; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds i64, ptr [[PTR_BASE:%.*]], i64 [[LEN:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[LEN:%.*]], 3
+; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds i8, ptr [[PTR_BASE:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[LEN_ZERO:%.*]] = icmp eq i64 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_ZERO]], label [[EXIT:%.*]], label [[LOOP:%.*]]
 ; CHECK:       loop:

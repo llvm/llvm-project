@@ -179,7 +179,11 @@ define void @PR40816() #1 {
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr @b, align 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr @a, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP3]], 0
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[TMP0]], 1
 ; CHECK-NEXT:    br i1 [[CMP2]], label %[[RETURN:.*]], label %[[FOR_BODY]]
 ; CHECK:       [[RETURN]]:

@@ -501,8 +501,9 @@ define <3 x float> @shuf_frem_const_op1(<3 x float> %x) {
 
 define ptr @gep_vbase_w_s_idx(<2 x ptr> %base, i64 %index) {
 ; CHECK-LABEL: @gep_vbase_w_s_idx(
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[INDEX:%.*]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[BASE:%.*]], i64 1
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[TMP1]], i64 [[INDEX:%.*]]
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i8, ptr [[TMP1]], i64 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %gep = getelementptr i32, <2 x ptr> %base, i64 %index
@@ -538,7 +539,8 @@ define ptr @gep_splat_base_w_cv_idx(ptr %base) {
 define ptr @gep_splat_base_w_vidx(ptr %base, <2 x i64> %idxvec) {
 ; CHECK-LABEL: @gep_splat_base_w_vidx(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[IDXVEC:%.*]], i64 1
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %basevec1 = insertelement <2 x ptr> poison, ptr %base, i32 0
@@ -553,7 +555,8 @@ define ptr @gep_splat_base_w_vidx(ptr %base, <2 x i64> %idxvec) {
 
 define ptr @gep_cvbase_w_s_idx(<2 x ptr> %base, i64 %raw_addr) {
 ; CHECK-LABEL: @gep_cvbase_w_s_idx(
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr @GLOBAL, i64 [[RAW_ADDR:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[RAW_ADDR:%.*]], 2
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i8, ptr @GLOBAL, i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %gep = getelementptr i32, <2 x ptr> <ptr @GLOBAL, ptr @GLOBAL>, i64 %raw_addr
@@ -583,7 +586,8 @@ define ptr @gep_sbase_w_cv_idx(ptr %base) {
 
 define ptr @gep_sbase_w_splat_idx(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @gep_sbase_w_splat_idx(
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[IDX:%.*]], 2
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %idxvec1 = insertelement <2 x i64> poison, i64 %idx, i32 0
@@ -594,7 +598,8 @@ define ptr @gep_sbase_w_splat_idx(ptr %base, i64 %idx) {
 }
 define ptr @gep_splat_both(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @gep_splat_both(
-; CHECK-NEXT:    [[EE:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[IDX:%.*]], 2
+; CHECK-NEXT:    [[EE:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[EE]]
 ;
   %basevec1 = insertelement <2 x ptr> poison, ptr %base, i32 0
@@ -610,7 +615,8 @@ define <2 x ptr> @gep_all_lanes_undef(ptr %base, i64 %idx) {;
 ; CHECK-LABEL: @gep_all_lanes_undef(
 ; CHECK-NEXT:    [[BASEVEC:%.*]] = insertelement <2 x ptr> poison, ptr [[BASE:%.*]], i64 0
 ; CHECK-NEXT:    [[IDXVEC:%.*]] = insertelement <2 x i64> poison, i64 [[IDX:%.*]], i64 1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <2 x ptr> [[BASEVEC]], <2 x i64> [[IDXVEC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[IDXVEC]], splat (i64 2)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, <2 x ptr> [[BASEVEC]], <2 x i64> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x ptr> [[GEP]]
 ;
   %basevec = insertelement <2 x ptr> poison, ptr %base, i32 0
@@ -652,7 +658,8 @@ define ptr @zero_sized_type_extract(<4 x i64> %arg, i64 %arg1) {
 ; CHECK-LABEL: @zero_sized_type_extract(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i64> [[ARG:%.*]], i64 0
-; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds i32, ptr @global, i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr inbounds i8, ptr @global, i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[T2]]
 ;
 bb:

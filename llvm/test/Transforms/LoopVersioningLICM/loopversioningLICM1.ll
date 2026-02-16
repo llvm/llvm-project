@@ -30,7 +30,8 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK:       for.body3.lver.check:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[I_015]], [[ITR]]
 ; CHECK-NEXT:    [[IDXPROM6:%.*]] = zext i32 [[I_015]] to i64
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i32, ptr [[VAR3]], i64 [[IDXPROM6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw nsw i64 [[IDXPROM6]], 2
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i8, ptr [[VAR3]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[J_016]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[VAR1]], i64 [[TMP4]]
@@ -48,7 +49,8 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK:       for.body3.lver.orig:
 ; CHECK-NEXT:    [[J_113_LVER_ORIG:%.*]] = phi i32 [ [[J_016]], [[FOR_BODY3_PH_LVER_ORIG]] ], [ [[INC_LVER_ORIG:%.*]], [[FOR_BODY3_LVER_ORIG]] ]
 ; CHECK-NEXT:    [[IDXPROM_LVER_ORIG:%.*]] = zext i32 [[J_113_LVER_ORIG]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_LVER_ORIG:%.*]] = getelementptr inbounds nuw i32, ptr [[VAR1]], i64 [[IDXPROM_LVER_ORIG]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw nsw i64 [[IDXPROM_LVER_ORIG]], 2
+; CHECK-NEXT:    [[ARRAYIDX_LVER_ORIG:%.*]] = getelementptr inbounds nuw i8, ptr [[VAR1]], i64 [[TMP10]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX_LVER_ORIG]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
 ; CHECK-NEXT:    [[ADD8_LVER_ORIG:%.*]] = add nsw i32 [[TMP9]], [[ADD]]
@@ -63,7 +65,8 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    [[ADD86:%.*]] = phi i32 [ [[ARRAYIDX7_PROMOTED]], [[FOR_BODY3_PH]] ], [ [[ADD8:%.*]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    [[J_113:%.*]] = phi i32 [ [[J_016]], [[FOR_BODY3_PH]] ], [ [[INC:%.*]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[J_113]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[VAR1]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[IDXPROM]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[VAR1]], i64 [[TMP13]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4, !alias.scope [[META5:![0-9]+]], !noalias [[META2]]
 ; CHECK-NEXT:    [[ADD8]] = add nsw i32 [[ADD86]], [[ADD]]
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[J_113]], 1

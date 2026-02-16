@@ -11,7 +11,8 @@ define void @f(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-NEXT:    [[END:%.*]] = icmp ult i32 [[TMP1]], [[LIMIT:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 10
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5]] = add i32 [[TMP1]], 16
 ; CHECK-NEXT:    br i1 [[END]], label [[LOOP]], label [[RET:%.*]]
@@ -50,7 +51,8 @@ define void @copy(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-NEXT:    [[END:%.*]] = icmp ult i32 [[TMP1]], [[LIMIT:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 10
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 [[TMP6]]
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5]] = add i32 [[TMP1]], 16
 ; CHECK-NEXT:    br i1 [[END]], label [[LOOP]], label [[RET:%.*]]
@@ -95,7 +97,8 @@ define void @nocopy(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-NEXT:    [[END:%.*]] = icmp ult i32 [[ELT]], [[LIMIT:%.*]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[ELTCOPY]], 10
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[ELT]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shl nsw i64 [[TMP6]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 [[TMP8]]
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INC]] = add <16 x i32> [[TMP4]], splat (i32 16)
 ; CHECK-NEXT:    br i1 [[END]], label [[LOOP]], label [[RET:%.*]]

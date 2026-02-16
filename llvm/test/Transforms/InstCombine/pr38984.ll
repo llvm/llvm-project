@@ -9,7 +9,12 @@ target datalayout = "p:16:16"
 define <4 x i1> @PR38984_1() {
 ; CHECK-LABEL: @PR38984_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @offsets, align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> <i16 undef, i16 undef, i16 undef, i16 poison>, i16 [[TMP0]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i16> [[TMP1]], splat (i16 2)
+; CHECK-NEXT:    [[TMP3:%.*]] = shl <4 x i16> [[TMP1]], splat (i16 2)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret <4 x i1> [[TMP4]]
 ;
 entry:
   %0 = load i16, ptr @offsets, align 1
@@ -26,8 +31,10 @@ define <4 x i1> @PR38984_2() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @offsets, align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> <i16 undef, i16 undef, i16 undef, i16 poison>, i16 [[TMP0]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr getelementptr inbounds nuw (i8, ptr @a, i16 42), <4 x i16> [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr null, <4 x i16> [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shl <4 x i16> [[TMP1]], splat (i16 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr getelementptr inbounds nuw (i8, ptr @a, i16 42), <4 x i16> [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl <4 x i16> [[TMP1]], splat (i16 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr null, <4 x i16> [[TMP6]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x ptr> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret <4 x i1> [[TMP4]]
 ;

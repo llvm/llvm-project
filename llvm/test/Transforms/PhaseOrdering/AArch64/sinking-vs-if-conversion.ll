@@ -25,7 +25,8 @@ define void @test_find_min(ptr noundef nonnull align 8 dereferenceable(24) %this
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[COND_END7:%.*]] ]
 ; CHECK-NEXT:    [[MIN_010:%.*]] = phi ptr [ [[TMP1]], [[FOR_BODY_LR_PH]] ], [ [[COND8:%.*]], [[COND_END7]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw ptr, ptr [[TMP2]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq ptr [[MIN_010]], null
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[COND_END7]], label [[COND_FALSE:%.*]]
@@ -143,17 +144,18 @@ define void @cond_select_loop(ptr noalias nocapture noundef readonly %a, ptr noa
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_07:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[COND_END:%.*]] ]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[I_07]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[I_07]], 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp ogt float [[TMP0]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[COND_END]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.false:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[I_07]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[COND:%.*]] = phi float [ [[TMP1]], [[COND_FALSE]] ], [ [[TMP0]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[I_07]]
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[TMP2]]
 ; CHECK-NEXT:    store float [[COND]], ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_07]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 1000

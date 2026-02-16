@@ -128,9 +128,11 @@ define void @test_load_cast_combine_loop(ptr %src, ptr %dst, i32 %n) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[SRC_GEP:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[SRC_GEP:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[SRC_GEP]], align 4, !llvm.access.group [[ACC_GRP9:![0-9]+]]
 ; CHECK-NEXT:    store i32 [[L1]], ptr [[DST_GEP]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1

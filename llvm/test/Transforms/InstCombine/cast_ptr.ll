@@ -435,9 +435,9 @@ define i32 @ptr_add_in_int_extra_use2(i32 %x) {
 
 define i32 @ptrtoint_of_inttoptr_multiple_gep(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @ptrtoint_of_inttoptr_multiple_gep(
-; CHECK-NEXT:    [[PTR2_IDX:%.*]] = shl nuw i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[X:%.*]], [[PTR2_IDX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[Y:%.*]], 1
 ; CHECK-NEXT:    [[PTR3_IDX:%.*]] = shl i32 [[Z:%.*]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[X:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], [[PTR3_IDX]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -451,9 +451,11 @@ define i32 @ptrtoint_of_inttoptr_multiple_gep(i32 %x, i32 %y, i32 %z) {
 define i32 @ptrtoint_of_inttoptr_multiple_gep_extra_use(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @ptrtoint_of_inttoptr_multiple_gep_extra_use(
 ; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i16, ptr [[PTR]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP1]]
 ; CHECK-NEXT:    call void @use_ptr(ptr [[PTR2]])
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i32, ptr [[PTR2]], i32 [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[Z:%.*]], 2
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i8, ptr [[PTR2]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[PTR3]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -468,7 +470,8 @@ define i32 @ptrtoint_of_inttoptr_multiple_gep_extra_use(i32 %x, i32 %y, i32 %z) 
 define i32 @ptrtoint_of_inttoptr_index_type(i32 %x, i16 %y) {
 ; CHECK-LABEL: @ptrtoint_of_inttoptr_index_type(
 ; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr addrspace(3)
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i16, ptr addrspace(3) [[PTR]], i16 [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i16 [[Y:%.*]], 1
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr addrspace(3) [[PTR]], i16 [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr addrspace(3) [[PTR2]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -481,9 +484,9 @@ define i32 @ptrtoint_of_inttoptr_index_type(i32 %x, i16 %y) {
 define i32 @ptrtoint_of_null_multiple_gep(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @ptrtoint_of_null_multiple_gep(
 ; CHECK-NEXT:    [[PTR2_IDX:%.*]] = shl i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[PTR3_IDX:%.*]] = shl nuw i32 [[Y:%.*]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[PTR2_IDX]], [[PTR3_IDX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[Y:%.*]], 2
 ; CHECK-NEXT:    [[PTR4_IDX:%.*]] = shl i32 [[Z:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[PTR2_IDX]], [[TMP2]]
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], [[PTR4_IDX]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -496,10 +499,13 @@ define i32 @ptrtoint_of_null_multiple_gep(i32 %x, i32 %y, i32 %z) {
 
 define i32 @ptrtoint_of_null_multiple_gep_extra_use(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @ptrtoint_of_null_multiple_gep_extra_use(
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i16, ptr null, i32 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr null, i32 [[TMP1]]
 ; CHECK-NEXT:    call void @use_ptr(ptr [[PTR2]])
-; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr nuw i32, ptr [[PTR2]], i32 [[Y:%.*]]
-; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr i64, ptr [[PTR3]], i32 [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[Y:%.*]], 2
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr nuw i8, ptr [[PTR2]], i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[Z:%.*]], 3
+; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr i8, ptr [[PTR3]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[PTR4]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -524,7 +530,8 @@ define i32 @ptrtoint_of_null_index_type(i16 %x) {
 
 define <2 x i32> @ptrtoint_of_null_splat(<2 x i16> %x) {
 ; CHECK-LABEL: @ptrtoint_of_null_splat(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i16, ptr addrspace(3) null, <2 x i16> [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i16> [[X:%.*]], splat (i16 1)
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr addrspace(3) null, <2 x i16> [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = ptrtoint <2 x ptr addrspace(3)> [[PTR]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;

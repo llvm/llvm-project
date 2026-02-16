@@ -17,8 +17,10 @@ define <vscale x 1 x i32> @select_opt(<vscale x 1 x i32> %b, <vscale x 1 x i1> %
 define <vscale x 2 x i64> @load_scalable_of_selected_ptrs(ptr %p0, ptr %p1, i64 %idx) {
 ; CHECK-LABEL: @load_scalable_of_selected_ptrs(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i32, ptr [[P0:%.*]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[P1:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[IDX:%.*]], 2
+; CHECK-NEXT:    [[ARRAYIDX0:%.*]] = getelementptr inbounds i8, ptr [[P0:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[IDX]], 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P1:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[ARRAYIDX0]], align 4
 ; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[L0]], [[L1]]

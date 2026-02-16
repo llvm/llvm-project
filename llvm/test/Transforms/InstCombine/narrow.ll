@@ -109,7 +109,8 @@ define i1 @searchArray1(i32 %needle, ptr %haystack) {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[FOUND:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[OR:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[INDVAR]] to i64
-; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i32, ptr [[HAYSTACK:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i8, ptr [[HAYSTACK:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[IDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[LD]], [[NEEDLE:%.*]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP1]] to i8
@@ -152,7 +153,8 @@ define i1 @searchArray2(i32 %hay, ptr %haystack) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[FOUND:%.*]] = phi i8 [ 1, [[ENTRY]] ], [ [[AND:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i32, ptr [[HAYSTACK:%.*]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INDVAR]], 2
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i8, ptr [[HAYSTACK:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[IDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[LD]], [[HAY:%.*]]
 ; CHECK-NEXT:    [[AND]] = select i1 [[CMP1]], i8 [[FOUND]], i8 0

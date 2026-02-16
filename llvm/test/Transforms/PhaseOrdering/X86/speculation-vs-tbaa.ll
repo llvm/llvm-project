@@ -19,7 +19,8 @@ define void @licm(ptr align 8 dereferenceable(8) %_M_start.i, i64 %numElem) {
 ; O1-NEXT:    br label %[[FOR_BODY:.*]]
 ; O1:       [[FOR_BODY]]:
 ; O1-NEXT:    [[K_02:%.*]] = phi i64 [ 0, %[[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; O1-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 [[K_02]]
+; O1-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[K_02]], 3
+; O1-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[TMP1]]
 ; O1-NEXT:    store double 2.000000e+00, ptr [[ADD_PTR_I]], align 8, !tbaa [[DOUBLE_TBAA8:![0-9]+]]
 ; O1-NEXT:    [[INC]] = add nuw i64 [[K_02]], 1
 ; O1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[NUMELEM]]
@@ -41,7 +42,8 @@ define void @licm(ptr align 8 dereferenceable(8) %_M_start.i, i64 %numElem) {
 ; O23-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; O23:       [[VECTOR_BODY]]:
 ; O23-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; O23-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 [[INDEX]]
+; O23-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[INDEX]], 3
+; O23-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[TMP4]]
 ; O23-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 ; O23-NEXT:    store <2 x double> splat (double 2.000000e+00), ptr [[TMP1]], align 8, !tbaa [[DOUBLE_TBAA8:![0-9]+]]
 ; O23-NEXT:    store <2 x double> splat (double 2.000000e+00), ptr [[TMP2]], align 8, !tbaa [[DOUBLE_TBAA8]]
@@ -56,7 +58,8 @@ define void @licm(ptr align 8 dereferenceable(8) %_M_start.i, i64 %numElem) {
 ; O23-NEXT:    br label %[[FOR_BODY:.*]]
 ; O23:       [[FOR_BODY]]:
 ; O23-NEXT:    [[K_02:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_BODY]] ], [ [[K_02_PH]], %[[FOR_BODY_PREHEADER]] ]
-; O23-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 [[K_02]]
+; O23-NEXT:    [[TMP5:%.*]] = shl nsw i64 [[K_02]], 3
+; O23-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[TMP5]]
 ; O23-NEXT:    store double 2.000000e+00, ptr [[ADD_PTR_I]], align 8, !tbaa [[DOUBLE_TBAA8]]
 ; O23-NEXT:    [[INC]] = add nuw i64 [[K_02]], 1
 ; O23-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[NUMELEM]]

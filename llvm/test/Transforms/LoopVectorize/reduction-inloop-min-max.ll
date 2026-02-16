@@ -11,13 +11,14 @@ define i32 @reduction_smin(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 1000, [[VECTOR_PH]] ], [ [[RDX_MINMAX:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[RDX_MINMAX]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 [[VEC_PHI]])
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[RDX_MINMAX]] = call i32 @llvm.smin.i32(i32 [[TMP2]], i32 [[VEC_PHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:
@@ -53,13 +54,14 @@ define i32 @reduction_smin_select_ops_flipped(ptr nocapture %A, ptr nocapture %B
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 1000, [[VECTOR_PH]] ], [ [[RDX_MINMAX:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[RDX_MINMAX]] = call i32 @llvm.smax.i32(i32 [[TMP1]], i32 [[VEC_PHI]])
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[RDX_MINMAX]] = call i32 @llvm.smax.i32(i32 [[TMP2]], i32 [[VEC_PHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:
@@ -94,18 +96,19 @@ define i32 @reduction_smin_intrinsic(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 1000), [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 1000), [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[TMP1]])
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[TMP2]])
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
 entry:
   br label %for.body
@@ -138,13 +141,14 @@ define i32 @reduction_umax(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 1000, [[VECTOR_PH]] ], [ [[RDX_MINMAX:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[RDX_MINMAX]] = call i32 @llvm.umax.i32(i32 [[TMP1]], i32 [[VEC_PHI]])
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[RDX_MINMAX]] = call i32 @llvm.umax.i32(i32 [[TMP2]], i32 [[VEC_PHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:
@@ -180,13 +184,14 @@ define i32 @reduction_umax_select_ops_flipped(ptr nocapture %A, ptr nocapture %B
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ 1000, [[VECTOR_PH]] ], [ [[RDX_MINMAX:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[RDX_MINMAX]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 [[VEC_PHI]])
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[RDX_MINMAX]] = call i32 @llvm.umin.i32(i32 [[TMP2]], i32 [[VEC_PHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:
@@ -221,18 +226,19 @@ define i32 @reduction_umax_intrinsic(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 1000), [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 1000), [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP1]])
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP2]])
+; CHECK-NEXT:    ret i32 [[TMP4]]
 ;
 entry:
   br label %for.body

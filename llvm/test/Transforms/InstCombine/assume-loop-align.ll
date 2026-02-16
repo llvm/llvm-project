@@ -15,10 +15,12 @@ define void @foo(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 1
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32

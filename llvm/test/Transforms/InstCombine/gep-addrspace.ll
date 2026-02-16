@@ -24,8 +24,10 @@ define void @func(ptr addrspace(1) nocapture %p) nounwind {
 
 define void @keep_necessary_addrspacecast(i64 %i, ptr %out0, ptr %out1) {
 ; CHECK-LABEL: @keep_necessary_addrspacecast(
-; CHECK-NEXT:    [[T1:%.*]] = getelementptr float, ptr addrspacecast (ptr addrspace(3) @array to ptr), i64 [[I:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = getelementptr float, ptr addrspacecast (ptr addrspace(3) @scalar to ptr), i64 [[I]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[I:%.*]], 2
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr i8, ptr addrspacecast (ptr addrspace(3) @array to ptr), i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[I]], 2
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr i8, ptr addrspacecast (ptr addrspace(3) @scalar to ptr), i64 [[TMP2]]
 ; CHECK-NEXT:    store ptr [[T1]], ptr [[OUT1:%.*]], align 4
 ; CHECK-NEXT:    store ptr [[T2]], ptr [[OUT2:%.*]], align 4
 ; CHECK-NEXT:    ret void
