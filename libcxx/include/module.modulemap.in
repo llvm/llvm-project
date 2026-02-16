@@ -2229,6 +2229,7 @@ module std [system] {
 
       export std.format.formatter
     }
+    module layout                { header "__vector/layout.h" }
     module pmr                   {
       header "__vector/pmr.h"
 

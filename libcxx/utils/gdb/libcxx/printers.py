@@ -353,17 +353,36 @@ class StdVectorPrinter(object):
         """Set val, length, capacity, and iterator for bool and normal vectors."""
         self.val = val
         self.typename = _remove_generics(_prettify_typename(val.type))
-        begin = self.val["__begin_"]
         if self.val.type.template_argument(0).code == gdb.TYPE_CODE_BOOL:
             self.typename += "<bool>"
+            begin = self.val["__begin_"]
             self.length = self.val["__size_"]
             bits_per_word = self.val["__bits_per_word"]
             self.capacity = self.val["__cap_"] * bits_per_word
             self.iterator = self._VectorBoolIterator(begin, self.length, bits_per_word)
         else:
-            end = self.val["__end_"]
-            self.length = end - begin
-            self.capacity = self.val["__cap_"] - begin
+            layout = self.val["__layout_"]
+            if layout:
+                begin = layout["__begin_"]
+                boundary = layout["__boundary_"]
+                capacity = layout["__capacity_"]
+            else:
+                begin = self.val["__begin_"]
+                boundary = self.val["__end_"]
+                capacity = self.val["__cap_"]
+
+            # We test for integers because `vector<T>::size_type` is required to
+            # be an unsigned integer, whereas `vector<T>::pointer` can be any
+            # type that satisfies the Cpp17NullablePointer requirements.
+            if boundary.type.strip_typedefs().code == gdb.TYPE_CODE_INT:
+                self.length = boundary
+                self.capacity = capacity
+                end = begin + boundary
+            else:
+                end = boundary
+                self.length = end - begin
+                self.capacity = capacity - begin
+
             self.iterator = self._VectorIterator(begin, end)
 
     def to_string(self):
