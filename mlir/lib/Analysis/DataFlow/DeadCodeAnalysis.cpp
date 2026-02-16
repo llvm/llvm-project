@@ -187,6 +187,16 @@ void DeadCodeAnalysis::initializeSymbolCallables(Operation *top) {
       if (!symbol)
         continue;
 
+      // Treat GPU kernels as externally callable entry points.
+      Operation *op = callable.getOperation();
+      if (op->getName().getStringRef() == "gpu.func" &&
+          op->hasAttr("gpu.kernel")) {
+        auto *state =
+            getOrCreate<PredecessorState>(getProgramPointAfter(callable));
+        propagateIfChanged(state, state->setHasUnknownPredecessors());
+        continue;
+      }
+
       // Public symbol callables or those for which we can't see all uses have
       // potentially unknown callsites.
       if (symbol.isPublic() || (!allUsesVisible && symbol.isNested())) {
