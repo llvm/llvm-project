@@ -364,6 +364,7 @@ void OmpStructureChecker::CheckNestedConstruct(
 
   // Check constructs contained in the body of the loop construct.
   auto &body{std::get<parser::Block>(x.t)};
+  using BlockRange = parser::omp::BlockRange;
   for (auto &stmt : BlockRange(body, BlockRange::Step::Over)) {
     if (auto *dir{parser::Unwrap<parser::CompilerDirective>(stmt)}) {
       context_.Say(dir->source,
