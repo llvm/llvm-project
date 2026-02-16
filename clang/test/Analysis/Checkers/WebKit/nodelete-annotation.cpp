@@ -103,6 +103,12 @@ public:
     // expected-warning@-1{{A function 'deposeArgPtr' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   }
 
+  enum class E : unsigned char { V1, V2 };
+  bool [[clang::annotate_type("webkit.nodelete")]] deposeArgEnum() {
+    E&& e = E::V1;
+    return e != E::V2;
+  }
+
   void [[clang::annotate_type("webkit.nodelete")]] deposeLocal() {
     // expected-warning@-1{{A function 'deposeLocal' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
     RefPtr<RefCountable> obj = std::move(m_obj);

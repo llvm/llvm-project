@@ -522,17 +522,17 @@ public:
   TrivialFunctionAnalysisVisitor(CacheTy &Cache) : Cache(Cache) {}
 
   bool IsFunctionTrivial(const Decl *D) {
-    if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
-      if (isNoDeleteFunction(FnDecl))
-        return true;
-      if (FnDecl->isVirtualAsWritten())
-        return false;
-      for (auto *Param : FnDecl->parameters()) {
-        if (!HasTrivialDestructor(Param))
-          return false;
-      }
-    }
     return WithCachedResult(D, [&]() {
+      if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
+        if (isNoDeleteFunction(FnDecl))
+          return true;
+        if (FnDecl->isVirtualAsWritten())
+          return false;
+        for (auto *Param : FnDecl->parameters()) {
+          if (!HasTrivialDestructor(Param))
+            return false;
+        }
+      }
       if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
         for (auto *CtorInit : CtorDecl->inits()) {
           if (!Visit(CtorInit->getInit()))
@@ -547,42 +547,46 @@ public:
   }
 
   bool HasTrivialDestructor(const VarDecl *VD) {
-    auto QT = VD->getType();
-    if (QT.isPODType(VD->getASTContext()))
-      return true;
-    auto *Type = QT.getTypePtrOrNull();
-    if (!Type)
-      return false;
-    const CXXRecordDecl *R = Type->getAsCXXRecordDecl();
-    if (!R) {
-      if (isa<LValueReferenceType>(Type))
-        return true; // T& does not run its destructor.
-      if (auto *RT = dyn_cast<RValueReferenceType>(Type)) {
-        // For T&&, we evaluate the destructor of T.
-        QT = RT->getPointeeType();
-        Type = QT.getTypePtrOrNull();
-        if (!Type)
-          return false;
-        R = Type->getAsCXXRecordDecl();
+    return WithCachedResult(VD, [&]() {
+      auto QT = VD->getType();
+      if (QT.isPODType(VD->getASTContext()))
+        return true;
+      auto *Type = QT.getTypePtrOrNull();
+      if (!Type)
+        return false;
+      const CXXRecordDecl *R = Type->getAsCXXRecordDecl();
+      if (!R) {
+        if (isa<LValueReferenceType>(Type))
+          return true; // T& does not run its destructor.
+        if (auto *RT = dyn_cast<RValueReferenceType>(Type)) {
+          // For T&&, we evaluate the destructor of T.
+          QT = RT->getPointeeType();
+          Type = QT.getTypePtrOrNull();
+          if (!Type)
+            return false;
+          R = Type->getAsCXXRecordDecl();
+        }
       }
-    }
-    if (!R) {
-      if (auto *AT = dyn_cast<ConstantArrayType>(Type)) {
-        QT = AT->getElementType();
-        Type = QT.getTypePtrOrNull();
-        if (!Type)
-          return false;
-        if (isa<PointerType>(Type))
-          return true; // An array of pointers doesn't run a destructor.
-        R = Type->getAsCXXRecordDecl();
+      if (!R) {
+        if (auto *AT = dyn_cast<ConstantArrayType>(Type)) {
+          QT = AT->getElementType();
+          Type = QT.getTypePtrOrNull();
+          if (!Type)
+            return false;
+          if (isa<PointerType>(Type))
+            return true; // An array of pointers doesn't run a destructor.
+          R = Type->getAsCXXRecordDecl();
+        }
       }
-    }
-    if (!R)
-      return false;
-    auto *Dtor = R->getDestructor();
-    if (!Dtor || Dtor->isTrivial())
-      return true;
-    return IsFunctionTrivial(Dtor);
+      if (Type->isIntegralOrEnumerationType())
+        return true;
+      if (!R)
+        return false;
+      auto *Dtor = R->getDestructor();
+      if (!Dtor || Dtor->isTrivial())
+        return true;
+      return IsFunctionTrivial(Dtor);
+    });
   }
 
   bool IsStatementTrivial(const Stmt *S) {
