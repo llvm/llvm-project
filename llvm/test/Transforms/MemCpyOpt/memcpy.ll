@@ -929,8 +929,9 @@ define void @test(ptr noalias writable dereferenceable(4) %p) {
 ; it will be removed by subsequent passes.
 define void @prevent_memsetting_a_undef_store(ptr %result) {
 ; CHECK-LABEL: @prevent_memsetting_a_undef_store(
-; CHECK-NEXT:    [[RESULT_4000:%.*]] = getelementptr inbounds nuw i8, ptr [[RESULT:%.*]], i64 4000
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[RESULT]], i8 0, i64 4008, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[RESULT:%.*]], i8 undef, i64 4000, i1 false)
+; CHECK-NEXT:    [[RESULT_4000:%.*]] = getelementptr inbounds nuw i8, ptr [[RESULT]], i64 4000
+; CHECK-NEXT:    store i64 0, ptr [[RESULT_4000]], align 8
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %result, ptr @undef, i64 4000, i1 false)
