@@ -10,8 +10,7 @@ define i32 @test(i64 %arg1) {
 ; LE-NEXT:    sbcs r0, r1, #0
 ; LE-NEXT:    vldr s0, .LCPI0_0
 ; LE-NEXT:    movwhs r2, #1
-; LE-NEXT:    cmp r2, #0
-; LE-NEXT:    mvnne r2, #0
+; LE-NEXT:    mvnhs r2, #0
 ; LE-NEXT:    vmov s1, r2
 ; LE-NEXT:    vmovn.i32 d16, q0
 ; LE-NEXT:    vmovn.i16 d16, q8
@@ -30,8 +29,7 @@ define i32 @test(i64 %arg1) {
 ; BE-NEXT:    sbcs r0, r0, #0
 ; BE-NEXT:    vldr s0, .LCPI0_0
 ; BE-NEXT:    movwhs r2, #1
-; BE-NEXT:    cmp r2, #0
-; BE-NEXT:    mvnne r2, #0
+; BE-NEXT:    mvnhs r2, #0
 ; BE-NEXT:    vmov s1, r2
 ; BE-NEXT:    vmovn.i32 d16, q0
 ; BE-NEXT:    vmovn.i16 d16, q8
