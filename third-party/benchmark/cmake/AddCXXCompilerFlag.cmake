@@ -27,20 +27,45 @@ function(mangle_compiler_flag FLAG OUTPUT)
   set(${OUTPUT} "${SANITIZED_FLAG}" PARENT_SCOPE)
 endfunction(mangle_compiler_flag)
 
+set(BENCHMARK_GCC_COMPATIBLE_FLAGS
+  -fno-exceptions
+  -fstrict-aliasing
+  -pedantic
+  -pedantic-errors
+  -Wall
+  -Werror
+  -Wextra
+  -Wfloat-equal
+  -Wno-deprecated
+  -Wno-deprecated-declarations
+  -Wold-style-cast
+  -Wshadow
+  -Wstrict-aliasing
+  -Wsuggest-override
+  )
+
+macro(_benchmark_populate_cxx_compiler_flag)
+  if(ARGC GREATER 1)
+    set(VARIANT ${ARGV1})
+    string(TOUPPER "_${VARIANT}" VARIANT)
+  else()
+    set(VARIANT "")
+  endif()
+  set(CMAKE_CXX_FLAGS${VARIANT} "${CMAKE_CXX_FLAGS${VARIANT}} ${BENCHMARK_CXX_FLAGS${VARIANT}} ${FLAG}" PARENT_SCOPE)
+endmacro()
+
 function(add_cxx_compiler_flag FLAG)
   mangle_compiler_flag("${FLAG}" MANGLED_FLAG)
+  if(LLVM_COMPILER_IS_GCC_COMPATIBLE AND "${FLAG}" IN_LIST BENCHMARK_GCC_COMPATIBLE_FLAGS)
+    _benchmark_populate_cxx_compiler_flag(${FLAG} ${VARIANT})
+    return()
+  endif()
   set(OLD_CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${FLAG}")
   check_cxx_compiler_flag("${FLAG}" ${MANGLED_FLAG})
   set(CMAKE_REQUIRED_FLAGS "${OLD_CMAKE_REQUIRED_FLAGS}")
   if(${MANGLED_FLAG})
-    if(ARGC GREATER 1)
-      set(VARIANT ${ARGV1})
-      string(TOUPPER "_${VARIANT}" VARIANT)
-    else()
-      set(VARIANT "")
-    endif()
-    set(CMAKE_CXX_FLAGS${VARIANT} "${CMAKE_CXX_FLAGS${VARIANT}} ${BENCHMARK_CXX_FLAGS${VARIANT}} ${FLAG}" PARENT_SCOPE)
+    _benchmark_populate_cxx_compiler_flag(${FLAG} ${VARIANT})
   endif()
 endfunction()
 
