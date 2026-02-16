@@ -27,26 +27,18 @@
 
 namespace llvm {
 
+class MachineModuleInfo;
 class SIInstrInfo;
 
-class AMDGPUMachineLevelInliner : public MachineFunctionPass {
+class AMDGPUMachineLevelInliner {
 public:
-  static char ID; // Pass identification
+  bool run(MachineFunction &MF, MachineModuleInfo &MMI);
 
-  AMDGPUMachineLevelInliner();
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  StringRef getPassName() const override {
-    return "AMDGPU Machine Level Inliner";
-  }
-
-private:
-  bool mayInlineCallsTo(const Function &Callee) {
+  bool mayInlineCallsTo(const Function &Callee) const {
     return Callee.getCallingConv() == CallingConv::AMDGPU_Gfx_WholeWave;
   }
 
+private:
   void inlineMachineFunction(MachineFunction *CallerMF, MachineInstr *CallMI,
                              MachineFunction *CalleeMF, const SIInstrInfo *TII);
 

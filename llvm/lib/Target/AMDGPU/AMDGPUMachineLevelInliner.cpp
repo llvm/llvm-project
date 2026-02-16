@@ -73,21 +73,38 @@ public:
   void preparePassManager(PMStack &Stack) override;
 };
 
+class AMDGPUMachineLevelInlinerLegacy : public MachineFunctionPass {
+public:
+  static char ID; // Pass identification
+
+  AMDGPUMachineLevelInlinerLegacy();
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  StringRef getPassName() const override {
+    return "AMDGPU Machine Level Inliner";
+  }
+
+private:
+  AMDGPUMachineLevelInliner Inliner;
+};
 } // end anonymous namespace.
 
 // Pass identification
-char AMDGPUMachineLevelInliner::ID = 0;
+char AMDGPUMachineLevelInlinerLegacy::ID = 0;
 char AMDGPUInliningPassManager::ID = 0;
 char AMDGPUInliningAnchor::ID = 0;
 
-char &llvm::AMDGPUMachineLevelInlinerID = AMDGPUMachineLevelInliner::ID;
+char &llvm::AMDGPUMachineLevelInlinerLegacyID =
+    AMDGPUMachineLevelInlinerLegacy::ID;
 char &llvm::AMDGPUInliningAnchorID = AMDGPUInliningAnchor::ID;
 
-INITIALIZE_PASS_BEGIN(AMDGPUMachineLevelInliner, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(AMDGPUMachineLevelInlinerLegacy, DEBUG_TYPE,
                       "AMDGPU Machine Level Inliner", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineModuleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUInliningAnchor)
-INITIALIZE_PASS_END(AMDGPUMachineLevelInliner, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPUMachineLevelInlinerLegacy, DEBUG_TYPE,
                     "AMDGPU Machine Level Inliner", false, false)
 
 INITIALIZE_PASS_BEGIN(AMDGPUInliningAnchor, "amdgpu-inlining-anchor",
@@ -96,23 +113,26 @@ INITIALIZE_PASS_DEPENDENCY(MachineModuleInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUInliningAnchor, "amdgpu-inlining-anchor",
                     "AMDGPU Inlining Anchor", false, true)
 
-AMDGPUMachineLevelInliner::AMDGPUMachineLevelInliner()
+AMDGPUMachineLevelInlinerLegacy::AMDGPUMachineLevelInlinerLegacy()
     : MachineFunctionPass(ID) {
-  initializeAMDGPUMachineLevelInlinerPass(*PassRegistry::getPassRegistry());
+  initializeAMDGPUMachineLevelInlinerLegacyPass(
+      *PassRegistry::getPassRegistry());
 }
 
-void AMDGPUMachineLevelInliner::getAnalysisUsage(AnalysisUsage &AU) const {
+void AMDGPUMachineLevelInlinerLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.addRequired<MachineModuleInfoWrapperPass>();
   AU.addRequired<AMDGPUInliningAnchor>();
   AU.addPreserved<MachineModuleInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool AMDGPUMachineLevelInliner::runOnMachineFunction(MachineFunction &MF) {
+bool AMDGPUMachineLevelInlinerLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
   MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
   Function &F = MF.getFunction();
-  if (mayInlineCallsTo(F)) {
+  if (Inliner.mayInlineCallsTo(F)) {
     // Mark the function as machine-inlined in AMDGPUMachineModuleInfo. This
     // tells the inlining pass manager to stop processing it.
     auto &AMMMI = MMI.getObjFileInfo<AMDGPUMachineModuleInfo>();
@@ -121,7 +141,13 @@ bool AMDGPUMachineLevelInliner::runOnMachineFunction(MachineFunction &MF) {
     return false;
   }
 
+  return Inliner.run(MF, MMI);
+}
+
+bool AMDGPUMachineLevelInliner::run(MachineFunction &MF,
+                                    MachineModuleInfo &MMI) {
   bool Changed = false;
+  Function &F = MF.getFunction();
 
   // Can't inline anything if there aren't any calls.
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -296,8 +322,8 @@ void AMDGPUMachineLevelInliner::cleanupAfterInlining(
     MI->eraseFromParent();
 }
 
-FunctionPass *llvm::createAMDGPUMachineLevelInlinerPass() {
-  return new AMDGPUMachineLevelInliner();
+FunctionPass *llvm::createAMDGPUMachineLevelInlinerLegacyPass() {
+  return new AMDGPUMachineLevelInlinerLegacy();
 }
 
 // The implementation here follows FPPassManager::runOnFunction but with some

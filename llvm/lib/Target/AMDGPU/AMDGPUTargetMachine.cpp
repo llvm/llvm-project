@@ -699,7 +699,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
   initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
   initializeAMDGPUUniformIntrinsicCombineLegacyPass(*PR);
-  initializeAMDGPUMachineLevelInlinerPass(*PR);
+  initializeAMDGPUMachineLevelInlinerLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -1846,7 +1846,7 @@ void GCNPassConfig::addPreSched2() {
     addPass(createSIShrinkInstructionsLegacyPass());
 
   if (EnableAMDGPUMachineLevelInliner)
-    addPass(createAMDGPUMachineLevelInlinerPass());
+    addPass(createAMDGPUMachineLevelInlinerLegacyPass());
 
   addPass(&SIPostRABundlerLegacyID);
 }
