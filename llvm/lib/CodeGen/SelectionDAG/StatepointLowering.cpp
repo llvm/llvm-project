@@ -337,13 +337,17 @@ static std::pair<SDValue, SDNode *> lowerCallFromStatepointLoweringInfo(
   //
   // get_return_value can either be a sequence of CopyFromReg instructions
   // to grab the return value from the return register(s), or it can be a LOAD
-  // to load a value returned by reference via a stack slot.
+  // to load a value returned by reference via a stack slot, or it can be a
+  // struct returned by value through stack.
 
   if (CallEnd->getOpcode() == ISD::EH_LABEL)
     CallEnd = CallEnd->getOperand(0).getNode();
 
-  bool HasDef = !SI.CLI.RetTy->isVoidTy();
+  bool HasDef = !SI.CLI.RetTy->isVoidTy() || !SI.CLI.OutVals.empty();
   if (HasDef) {
+    if (CallEnd->getOpcode() == ISD::TokenFactor)
+      CallEnd = CallEnd->getOperand(0).getNode();
+
     if (CallEnd->getOpcode() == ISD::LOAD)
       CallEnd = CallEnd->getOperand(0).getNode();
     else
