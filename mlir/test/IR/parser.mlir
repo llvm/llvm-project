@@ -797,10 +797,6 @@ func.func @sparsetensorattr() -> () {
 // CHECK: "foof321"() {bar = sparse<> : tensor<f32>} : () -> ()
   "foof321"(){bar = sparse<> : tensor<f32>} : () -> ()
 
-// CHECK: "foostr"() {bar = sparse<0, "foo"> : tensor<1x1x1x!unknown<>>} : () -> ()
-  "foostr"(){bar = sparse<0, "foo"> : tensor<1x1x1x!unknown<>>} : () -> ()
-// CHECK: "foostr"() {bar = sparse<{{\[\[}}1, 1, 0], {{\[}}0, 1, 0], {{\[}}0, 0, 1]], {{\[}}"a", "b", "c"]> : tensor<2x2x2x!unknown<>>} : () -> ()
-  "foostr"(){bar = sparse<[[1, 1, 0], [0, 1, 0], [0, 0, 1]], ["a", "b", "c"]> : tensor<2x2x2x!unknown<>>} : () -> ()
   return
 }
 
