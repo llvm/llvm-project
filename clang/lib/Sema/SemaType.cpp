@@ -5439,7 +5439,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       AreDeclaratorChunksValid = false;
     }
 
-    // TODO: Check the nested level for bounds attributes inside.
     // See if there are any attributes on this declarator chunk.
     processTypeAttrs(state, T, TAL_DeclChunk, DeclType.getAttrs(),
                      S.CUDA().IdentifyTarget(D.getAttributes()));

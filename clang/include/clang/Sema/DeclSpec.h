@@ -161,17 +161,9 @@ namespace clang {
 
     bool lateAttrParseTypeAttrOnly() { return LateAttrParseTypeAttrOnly; }
 
-    void takeTypeAttrsAppendingFrom(LateParsedAttrList &Other) {
-      auto it = std::remove_if(
-          Other.begin(), Other.end(), [&](LateParsedAttribute *LA) {
-            if (auto *LTA = dyn_cast<LateParsedTypeAttribute>(LA)) {
-              push_back(LTA);
-              return true;
-            }
-            return false;
-          });
-      Other.erase(it, Other.end());
-    }
+    /// Moves all LateParsedTypeAttribute pointers from \p Other to this list,
+    /// removing them from \p Other. Non-type attributes remain in \p Other.
+    void takeTypeAttrsAppendingFrom(LateParsedAttrList &Other);
 
   private:
     bool ParseSoon; // Are we planning to parse these shortly after creation?

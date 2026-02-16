@@ -1484,6 +1484,18 @@ bool DeclSpec::isMissingDeclaratorOk() {
     StorageClassSpec != DeclSpec::SCS_typedef;
 }
 
+void LateParsedAttrList::takeTypeAttrsAppendingFrom(LateParsedAttrList &Other) {
+  auto it =
+      std::remove_if(Other.begin(), Other.end(), [&](LateParsedAttribute *LA) {
+        if (auto *LTA = dyn_cast<LateParsedTypeAttribute>(LA)) {
+          push_back(LTA);
+          return true;
+        }
+        return false;
+      });
+  Other.erase(it, Other.end());
+}
+
 void UnqualifiedId::setOperatorFunctionId(SourceLocation OperatorLoc,
                                           OverloadedOperatorKind Op,
                                           SourceLocation SymbolLocations[3]) {
