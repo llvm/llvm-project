@@ -1359,7 +1359,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
     cir::PointerType voidPtrTy = builder.getVoidPtrTy();
     cir::PointerType ppTy = builder.getPointerTo(voidPtrTy);
-    Adddress castBuf = buf.withElementType(voidPtrTy);
+    Address castBuf = buf.withElementType(builder, voidPtrTy);
 
     assert(!cir::MissingFeatures::emitCheckedInBoundsGEP());
     if (getTarget().getTriple().isSystemZ()) {
@@ -1379,10 +1379,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
             .getResult();
     cir::PtrStrideOp stackSaveSlot = cir::PtrStrideOp::create(
         builder, loc, ppTy, castBuf.getPointer(), builder.getSInt32(2, loc));
-    CharUnits slotAlign = castBuf.getAlignment().alignmentAtOffset(2*cgm.getDataLayout().getTypeAllocSize(voidPtrTy));
+    CharUnits slotAlign = castBuf.getAlignment().alignmentAtOffset(
+        2 * cgm.getDataLayout().getTypeAllocSize(voidPtrTy));
     Address slotAddr = Address(castBuf.getPointer(), voidPtrTy, slotAlign);
     builder.createStore(loc, stacksave, slotAddr);
-    auto op = cir::EhSetjmpOp::create(builder, loc, castBuf);
+    auto op = cir::EhSetjmpOp::create(builder, loc, castBuf.getPointer());
     return RValue::get(op);
   }
   case Builtin::BI__builtin_longjmp: {
