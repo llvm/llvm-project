@@ -496,7 +496,7 @@ static void thinLTOInternalizeAndPromoteGUID(
     ValueInfo VI, function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    DenseSet<StringRef> *ExternallyVisibleSymbolNames) {
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr) {
   // Before performing index-based internalization and promotion for this GUID,
   // the local flag should be consistent with the summary list linkage types.
   VI.verifyLocal();
@@ -515,9 +515,9 @@ static void thinLTOInternalizeAndPromoteGUID(
         // need renaming. In rare cases if there exist more than one summaries
         // in the list, the rest of them must have renaming (through promotion)
         // to avoid conflict.
-        if (ExternallyVisibleSymbolNames && !NameRecorded) {
+        if (ExternallyVisibleSymbolNamesPtr && !NameRecorded) {
           NameRecorded = true;
-          if (ExternallyVisibleSymbolNames->insert(VI.name()).second)
+          if (ExternallyVisibleSymbolNamesPtr->insert(VI.name()).second)
             S->setNotRenameOnPromotion(true);
         }
 
