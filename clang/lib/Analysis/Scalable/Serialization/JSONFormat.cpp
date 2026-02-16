@@ -16,7 +16,7 @@ using Object = llvm::json::Object;
 using Value = llvm::json::Value;
 
 //----------------------------------------------------------------------------
-// ErrorBuilder - Fluent API for constructing contextual errors
+// ErrorBuilder - Fluent API for constructing contextual errors.
 //----------------------------------------------------------------------------
 
 namespace {
@@ -26,10 +26,10 @@ private:
   std::error_code Code;
   std::vector<std::string> ContextStack;
 
-  // Private constructor - only accessible via static factories
+  // Private constructor - only accessible via static factories.
   explicit ErrorBuilder(std::error_code EC) : Code(EC) {}
 
-  // Helper: Format message and add to context stack
+  // Helper: Format message and add to context stack.
   template <typename... Args>
   void addFormattedContext(const char *Fmt, Args &&...ArgVals) {
     std::string Message =
@@ -38,7 +38,7 @@ private:
   }
 
 public:
-  // Static factory: Create new error from error code and formatted message
+  // Static factory: Create new error from error code and formatted message.
   template <typename... Args>
   static ErrorBuilder create(std::error_code EC, const char *Fmt,
                              Args &&...ArgVals) {
@@ -47,56 +47,63 @@ public:
     return Builder;
   }
 
-  // Convenience overload for std::errc
+  // Convenience overload for std::errc.
   template <typename... Args>
   static ErrorBuilder create(std::errc EC, const char *Fmt, Args &&...ArgVals) {
     return create(std::make_error_code(EC), Fmt,
                   std::forward<Args>(ArgVals)...);
   }
 
-  // Static factory: Wrap existing error and optionally add context
+  // Static factory: Wrap existing error and optionally add context.
   static ErrorBuilder wrap(llvm::Error E) {
     if (!E) {
       llvm::consumeError(std::move(E));
-      // Return builder with generic error code for success case
+      // Return builder with generic error code for success case.
       return ErrorBuilder(std::make_error_code(std::errc::invalid_argument));
     }
 
     std::error_code EC;
-    std::string ErrorMsg;
+    bool FirstError = true;
+    ErrorBuilder Builder(std::make_error_code(std::errc::invalid_argument));
 
     llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
-      EC = EI.convertToErrorCode();
-      ErrorMsg = EI.message();
+      // Capture error code from the first error only.
+      if (FirstError) {
+        EC = EI.convertToErrorCode();
+        Builder.Code = EC;
+        FirstError = false;
+      }
+
+      // Collect messages from all errors.
+      std::string ErrorMsg = EI.message();
+      if (!ErrorMsg.empty()) {
+        Builder.ContextStack.push_back(std::move(ErrorMsg));
+      }
     });
 
-    ErrorBuilder Builder(EC);
-    if (!ErrorMsg.empty()) {
-      Builder.ContextStack.push_back(std::move(ErrorMsg));
-    }
     return Builder;
   }
 
-  // Add context (plain string)
+  // Add context (plain string).
   ErrorBuilder &context(const char *Msg) {
     ContextStack.push_back(Msg);
     return *this;
   }
 
-  // Add context (formatted string)
+  // Add context (formatted string).
   template <typename... Args>
   ErrorBuilder &context(const char *Fmt, Args &&...ArgVals) {
     addFormattedContext(Fmt, std::forward<Args>(ArgVals)...);
     return *this;
   }
 
-  // Build the final error
+  // Build the final error.
   llvm::Error build() {
     if (ContextStack.empty())
       return llvm::Error::success();
 
     // Reverse the context stack so that the most recent context appears first
-    // and the wrapped error (if any) appears last
+    // and the wrapped error (if any) appears last.
     return llvm::createStringError(
         llvm::join(llvm::reverse(ContextStack), "\n"), Code);
   }
@@ -251,10 +258,11 @@ llvm::Error writeJSON(Value &&Value, llvm::StringRef Path) {
 } // namespace
 
 //----------------------------------------------------------------------------
-// JSONFormat Constructor
+// JSONFormat Static Methods
 //----------------------------------------------------------------------------
 
-JSONFormat::JSONFormat() : SerializationFormat() {
+std::map<SummaryName, JSONFormat::FormatInfo> JSONFormat::initFormatInfos() {
+  std::map<SummaryName, FormatInfo> FormatInfos;
   for (const auto &FormatInfoEntry : llvm::Registry<FormatInfo>::entries()) {
     std::unique_ptr<FormatInfo> Info = FormatInfoEntry.instantiate();
     bool Inserted = FormatInfos.try_emplace(Info->ForSummary, *Info).second;
@@ -264,6 +272,7 @@ JSONFormat::JSONFormat() : SerializationFormat() {
           Info->ForSummary.str());
     }
   }
+  return FormatInfos;
 }
 
 //----------------------------------------------------------------------------
@@ -480,7 +489,8 @@ JSONFormat::entityIdTableEntryFromJSON(
   if (!EntityIdIntValue) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "EntityId", "id", "(unsigned 64-bit)")
+                                "EntityId", "id",
+                                "number (unsigned 64-bit integer)")
         .build();
   }
 
@@ -489,7 +499,8 @@ JSONFormat::entityIdTableEntryFromJSON(
   if (!OptEntityIdInt) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "EntityId", "id", "integer (unsigned 64-bit)")
+                                "EntityId", "id",
+                                "number (unsigned 64-bit integer)")
         .build();
   }
 
@@ -616,7 +627,8 @@ JSONFormat::entityDataMapEntryFromJSON(const Object &EntityDataMapEntryObject,
   if (!EntityIdIntValue) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "EntityId", "entity_id", "integer")
+                                "EntityId", "entity_id",
+                                "number (unsigned 64-bit integer)")
         .build();
   }
 
@@ -847,7 +859,7 @@ llvm::Expected<Array> JSONFormat::summaryDataMapToJSON(
         summaryDataMapEntryToJSON(SummaryName, DataMap);
     if (!ExpectedSummaryDataMapObject) {
       return ErrorBuilder::wrap(ExpectedSummaryDataMapObject.takeError())
-          .context(ErrorMessages::ReadingFromIndex, "SummaryData entry", Index)
+          .context(ErrorMessages::WritingToIndex, "SummaryData entry", Index)
           .build();
     }
 

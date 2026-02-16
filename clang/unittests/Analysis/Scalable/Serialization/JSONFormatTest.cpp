@@ -35,7 +35,7 @@ using ::testing::HasSubstr;
 namespace {
 
 // ============================================================================
-// Test Analysis - Simple analysis for testing JSON serialization
+// Test Analysis - Simple analysis for testing JSON serialization.
 // ============================================================================
 
 struct PairsEntitySummaryForJSONFormatTest final : EntitySummary {
@@ -201,7 +201,7 @@ protected:
     PathString FilePath = makePath(FileName);
 
     std::error_code EC;
-    raw_fd_ostream OS(FilePath, EC);
+    llvm::raw_fd_ostream OS(FilePath, EC);
     if (EC) {
       return createStringError(EC, "Failed to create file '%s': %s",
                                FilePath.c_str(), EC.message().c_str());
@@ -241,7 +241,7 @@ protected:
     return JSONFormat().writeTUSummary(Summary, FilePath);
   }
 
-  // Normalize TUSummary JSON by sorting id_table by id field
+  // Normalize TUSummary JSON by sorting id_table by id field.
   static Expected<json::Value> normalizeTUSummaryJSON(json::Value Val) {
     auto *Obj = Val.getAsObject();
     if (!Obj) {
@@ -257,27 +257,51 @@ protected:
                                "field is either missing or has the wrong type");
     }
 
+    // Validate all id_table entries before sorting.
+    for (const auto &[Index, Entry] : llvm::enumerate(*IDTable)) {
+      const auto *EntryObj = Entry.getAsObject();
+      if (!EntryObj) {
+        return createStringError(
+            inconvertibleErrorCode(),
+            "Cannot normalize TUSummary JSON: id_table entry at index %zu is "
+            "not an object",
+            Index);
+      }
+
+      const auto *IDValue = EntryObj->get("id");
+      if (!IDValue) {
+        return createStringError(
+            inconvertibleErrorCode(),
+            "Cannot normalize TUSummary JSON: id_table entry at index %zu does "
+            "not contain an 'id' field",
+            Index);
+      }
+
+      auto EntryID = IDValue->getAsUINT64();
+      if (!EntryID) {
+        return createStringError(
+            inconvertibleErrorCode(),
+            "Cannot normalize TUSummary JSON: id_table entry at index %zu does "
+            "not contain a valid 'id' uint64_t field",
+            Index);
+      }
+    }
+
     // Sort id_table entries by the "id" field to ensure deterministic ordering
-    // for comparison
-    std::sort(IDTable->begin(), IDTable->end(),
-              [](const json::Value &A, const json::Value &B) {
-                const auto *AObj = A.getAsObject();
-                const auto *BObj = B.getAsObject();
-                if (!AObj || !BObj)
-                  return false;
-
-                auto AID = AObj->getInteger("id");
-                auto BID = BObj->getInteger("id");
-                if (!AID || !BID)
-                  return false;
-
-                return *AID < *BID;
-              });
+    // for comparison. Use projection-based comparison for strict-weak-ordering.
+    llvm::sort(*IDTable, [](const json::Value &A, const json::Value &B) {
+      // Safe to assume these succeed because we validated above.
+      const auto *AObj = A.getAsObject();
+      const auto *BObj = B.getAsObject();
+      uint64_t AID = *AObj->get("id")->getAsUINT64();
+      uint64_t BID = *BObj->get("id")->getAsUINT64();
+      return AID < BID;
+    });
 
     return Val;
   }
 
-  // Compare two TUSummary JSON values with normalization
+  // Compare two TUSummary JSON values with normalization.
   static Expected<bool> compareTUSummaryJSON(json::Value A, json::Value B) {
     auto ExpectedNormalizedA = normalizeTUSummaryJSON(std::move(A));
     if (!ExpectedNormalizedA)
@@ -759,12 +783,13 @@ TEST_F(JSONFormatTest, IDTableEntryMissingID) {
   })");
 
   EXPECT_THAT_EXPECTED(
-      Result, FailedWithMessage(
-                  AllOf(HasSubstr("reading TUSummary from file"),
-                        HasSubstr("reading IdTable from field 'id_table'"),
-                        HasSubstr("reading EntityIdTable entry from index '0'"),
-                        HasSubstr("failed to read EntityId from field 'id'"),
-                        HasSubstr("expected JSON (unsigned 64-bit)"))));
+      Result,
+      FailedWithMessage(
+          AllOf(HasSubstr("reading TUSummary from file"),
+                HasSubstr("reading IdTable from field 'id_table'"),
+                HasSubstr("reading EntityIdTable entry from index '0'"),
+                HasSubstr("failed to read EntityId from field 'id'"),
+                HasSubstr("expected JSON number (unsigned 64-bit integer)"))));
 }
 
 TEST_F(JSONFormatTest, IDTableEntryMissingName) {
@@ -810,12 +835,13 @@ TEST_F(JSONFormatTest, IDTableEntryIDNotUInt64) {
   })");
 
   EXPECT_THAT_EXPECTED(
-      Result, FailedWithMessage(
-                  AllOf(HasSubstr("reading TUSummary from file"),
-                        HasSubstr("reading IdTable from field 'id_table'"),
-                        HasSubstr("reading EntityIdTable entry from index '0'"),
-                        HasSubstr("failed to read EntityId from field 'id'"),
-                        HasSubstr("expected JSON integer (unsigned 64-bit)"))));
+      Result,
+      FailedWithMessage(
+          AllOf(HasSubstr("reading TUSummary from file"),
+                HasSubstr("reading IdTable from field 'id_table'"),
+                HasSubstr("reading EntityIdTable entry from index '0'"),
+                HasSubstr("failed to read EntityId from field 'id'"),
+                HasSubstr("expected JSON number (unsigned 64-bit integer)"))));
 }
 
 // ============================================================================
@@ -1234,7 +1260,7 @@ TEST_F(JSONFormatTest, EntityDataMissingEntityID) {
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
           HasSubstr("reading EntitySummary entry from index '0'"),
           HasSubstr("failed to read EntityId from field 'entity_id'"),
-          HasSubstr("expected JSON integer"))));
+          HasSubstr("expected JSON number (unsigned 64-bit integer)"))));
 }
 
 TEST_F(JSONFormatTest, EntityDataMissingEntitySummary) {

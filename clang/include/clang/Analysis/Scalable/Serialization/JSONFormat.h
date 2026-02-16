@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// JSON serialization format implementation
+// JSON serialization format implementation.
 //
 //===----------------------------------------------------------------------===//
 
@@ -28,8 +28,8 @@ class JSONFormat final : public SerializationFormat {
   using Object = llvm::json::Object;
 
 public:
-  // Helper class to provide limited access to EntityId conversion methods
-  // Only exposes EntityId serialization/deserialization to format handlers
+  // Helper class to provide limited access to EntityId conversion methods.
+  // Only exposes EntityId serialization/deserialization to format handlers.
   class EntityIdConverter {
   public:
     EntityId fromJSON(uint64_t EntityIdIndex) const {
@@ -43,10 +43,6 @@ public:
     EntityIdConverter(const JSONFormat &Format) : Format(Format) {}
     const JSONFormat &Format;
   };
-
-  JSONFormat();
-
-  ~JSONFormat() = default;
 
   llvm::Expected<TUSummary> readTUSummary(llvm::StringRef Path) override;
 
@@ -62,7 +58,8 @@ public:
   using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
 
 private:
-  std::map<SummaryName, FormatInfo> FormatInfos;
+  static std::map<SummaryName, FormatInfo> initFormatInfos();
+  const std::map<SummaryName, FormatInfo> FormatInfos = initFormatInfos();
 
   EntityId entityIdFromJSON(const uint64_t EntityIdIndex) const;
   uint64_t entityIdToJSON(EntityId EI) const;
