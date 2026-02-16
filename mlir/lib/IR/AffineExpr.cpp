@@ -16,6 +16,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include <numeric>
 #include <optional>
@@ -652,9 +653,9 @@ AffineExpr mlir::getAffineConstantExpr(int64_t constant, MLIRContext *context) {
 SmallVector<AffineExpr>
 mlir::getAffineConstantExprs(ArrayRef<int64_t> constants,
                              MLIRContext *context) {
-  return llvm::to_vector(llvm::map_range(constants, [&](int64_t constant) {
+  return llvm::map_to_vector(constants, [&](int64_t constant) {
     return getAffineConstantExpr(constant, context);
-  }));
+  });
 }
 
 /// Simplify add expression. Return nullptr if it can't be simplified.
@@ -737,7 +738,7 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   // and readable form.
 
   // Process '(expr floordiv c) * (-c)'.
-  if (!rBinOpExpr)
+  if (!rBinOpExpr || rBinOpExpr.getKind() != AffineExprKind::Mul)
     return nullptr;
 
   auto lrhs = rBinOpExpr.getLHS();
@@ -745,10 +746,10 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
 
   AffineExpr llrhs, rlrhs;
 
-  // Check if lrhsBinOpExpr is of the form (expr floordiv q) * q, where q is a
-  // symbolic expression.
+  // Check if lrhsBinOpExpr is of the form (expr floordiv q) * q,
+  // where q is a symbolic expression.
   auto lrhsBinOpExpr = dyn_cast<AffineBinaryOpExpr>(lrhs);
-  // Check rrhsConstOpExpr = -1.
+  // Check rrhsConstOpExpr = -1 as part of ((expr floordiv q) * q)) * (-1).
   auto rrhsConstOpExpr = dyn_cast<AffineConstantExpr>(rrhs);
   if (rrhsConstOpExpr && rrhsConstOpExpr.getValue() == -1 && lrhsBinOpExpr &&
       lrhsBinOpExpr.getKind() == AffineExprKind::Mul) {

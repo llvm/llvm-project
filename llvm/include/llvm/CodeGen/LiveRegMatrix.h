@@ -133,7 +133,14 @@ public:
   /// Unassign VirtReg from its PhysReg.
   /// Assuming that VirtReg was previously assigned to a PhysReg, this undoes
   /// the assignment and updates VirtRegMap accordingly.
-  void unassign(const LiveInterval &VirtReg);
+  /// ClearAllReferencingSegments changes the way segments are removed from
+  /// the matrix:
+  ///   - If false (default), only segments that exactly match VirtReg's live
+  ///     range are removed.
+  ///   - If true, all segments that reference VirtReg are removed. This is
+  ///     useful when VirtReg's live range(s) is already empty.
+  void unassign(const LiveInterval &VirtReg,
+                bool ClearAllReferencingSegments = false);
 
   /// Returns true if the given \p PhysReg has any live intervals assigned.
   bool isPhysRegUsed(MCRegister PhysReg) const;
@@ -170,6 +177,12 @@ public:
   }
 
   Register getOneVReg(unsigned PhysReg) const;
+
+#ifndef NDEBUG
+  /// This checks that each LiveInterval referenced in LiveIntervalUnion
+  /// actually exists in LiveIntervals and is not a dangling pointer.
+  bool isValid() const;
+#endif
 };
 
 class LiveRegMatrixWrapperLegacy : public MachineFunctionPass {

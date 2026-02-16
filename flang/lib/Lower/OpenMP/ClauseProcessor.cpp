@@ -394,16 +394,42 @@ bool ClauseProcessor::processInitializer(
 
       for (const Object &object :
            std::get<StylizedInstance::Variables>(inst.t)) {
-        mlir::Value addr = builder.createTemporary(loc, ompOrig.getType());
-        fir::StoreOp::create(builder, loc, ompOrig, addr);
+        mlir::Value addr;
+        mlir::Type ompOrigType = ompOrig.getType();
+        // Check for unsupported dynamic-length character reductions
+        mlir::Type unwrappedType = fir::unwrapRefType(ompOrigType);
+        if (mlir::isa<fir::BoxCharType>(unwrappedType)) {
+          TODO(loc, "OpenMP reduction allocation for dynamic length character");
+        }
+        if (auto charTy = mlir::dyn_cast<fir::CharacterType>(unwrappedType)) {
+          if (!charTy.hasConstantLen()) {
+            TODO(loc,
+                 "OpenMP reduction allocation for dynamic length character");
+          }
+        }
+        // If ompOrig is already a reference, we can use it directly
+        if (fir::isa_ref_type(ompOrigType)) {
+          addr = ompOrig;
+        } else {
+          addr = builder.createTemporary(loc, ompOrigType);
+          fir::StoreOp::create(builder, loc, ompOrig, addr);
+        }
         fir::FortranVariableFlagsEnum extraFlags = {};
         fir::FortranVariableFlagsAttr attributes =
             Fortran::lower::translateSymbolAttributes(
                 builder.getContext(), *object.sym(), extraFlags);
         std::string name = object.sym()->name().ToString();
-        auto declareOp =
-            hlfir::DeclareOp::create(builder, loc, addr, name, nullptr, {},
-                                     nullptr, nullptr, 0, attributes);
+        // Get length parameters for types that need them (e.g., characters).
+        // Note: DeclareOp requires exactly one type parameter for non-boxed
+        // characters, unlike EmboxOp which doesn't allow them for constant-len.
+        llvm::SmallVector<mlir::Value> typeParams;
+        if (hlfir::isFortranEntity(addr)) {
+          hlfir::genLengthParameters(loc, builder, hlfir::Entity{addr},
+                                     typeParams);
+        }
+        auto declareOp = hlfir::DeclareOp::create(builder, loc, addr, name,
+                                                  nullptr, typeParams, nullptr,
+                                                  nullptr, 0, attributes);
         if (name == "omp_priv")
           ompPrivVar = declareOp.getResult(0);
         symMap.addVariableDefinition(*object.sym(), declareOp);
@@ -495,17 +521,27 @@ bool ClauseProcessor::processSizes(StatementContext &stmtCtx,
 bool ClauseProcessor::processNumTeams(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTeamsClauseOps &result) const {
-  // TODO Get lower and upper bounds for num_teams when parser is updated to
-  // accept both.
   if (auto *clause = findUniqueClause<omp::clause::NumTeams>()) {
-    // The num_teams directive accepts a list of team lower/upper bounds.
-    // This is an extension to support grid specification for ompx_bare.
-    // Here, only expect a single element in the list.
-    assert(clause->v.size() == 1);
-    // auto lowerBound = std::get<std::optional<ExprTy>>(clause->v[0]->t);
-    auto &upperBound = std::get<ExprTy>(clause->v[0].t);
-    result.numTeamsUpper =
-        fir::getBase(converter.genExprValue(upperBound, stmtCtx));
+    // Structure: {LB?, [UB]} - single optional lower bound, list of upper
+    // bounds
+    auto &lowerBound = std::get<std::optional<ExprTy>>(clause->t);
+    auto &upperBounds =
+        std::get<omp::clause::NumTeams::UpperBoundList>(clause->t);
+    assert(!upperBounds.empty());
+
+    // Extract optional lower bound
+    if (lowerBound) {
+      result.numTeamsLower =
+          fir::getBase(converter.genExprValue(*lowerBound, stmtCtx));
+    }
+
+    // Extract all upper bounds
+    result.numTeamsUpperVars.reserve(upperBounds.size());
+    for (const auto &ub : upperBounds) {
+      result.numTeamsUpperVars.push_back(
+          fir::getBase(converter.genExprValue(ub, stmtCtx)));
+    }
+
     return true;
   }
   return false;
@@ -515,9 +551,11 @@ bool ClauseProcessor::processNumThreads(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumThreadsClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::NumThreads>()) {
-    // OMPIRBuilder expects `NUM_THREADS` clause as a `Value`.
-    result.numThreads =
-        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    // OMPIRBuilder expects `NUM_THREADS` clause as a list of Values.
+    for (const ExprTy &expr : clause->v) {
+      result.numThreadsVars.push_back(
+          fir::getBase(converter.genExprValue(expr, stmtCtx)));
+    }
     return true;
   }
   return false;
@@ -668,8 +706,10 @@ bool ClauseProcessor::processThreadLimit(
     lower::StatementContext &stmtCtx,
     mlir::omp::ThreadLimitClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::ThreadLimit>()) {
-    result.threadLimit =
-        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.threadLimitVars.reserve(clause->v.size());
+    for (const ExprTy &vv : clause->v)
+      result.threadLimitVars.push_back(
+          fir::getBase(converter.genExprValue(vv, stmtCtx)));
     return true;
   }
   return false;
@@ -694,6 +734,23 @@ static llvm::StringMap<bool> getTargetFeatures(mlir::ModuleOp module) {
     }
   }
   return featuresMap;
+}
+
+bool ClauseProcessor::processAffinity(
+    mlir::omp::AffinityClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Affinity>(
+      [&](const omp::clause::Affinity &clause, const parser::CharBlock &) {
+        if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
+          TODO(converter.getCurrentLocation(),
+               "Support for iterator modifiers is not implemented yet");
+        }
+
+        const auto &objects = std::get<omp::ObjectList>(clause.t);
+        if (!objects.empty())
+          genObjectList(objects, converter, result.affinityVars);
+
+        return true;
+      });
 }
 
 static void

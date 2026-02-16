@@ -13,13 +13,57 @@ func.func @fold_wait_op_test1() {
 
 // -----
 
-// Erase duplicate barriers.
 // CHECK-LABEL: func @erase_barriers
-//       CHECK-NEXT: gpu.barrier
+//       CHECK-NEXT: gpu.barrier{{$}}
 //       CHECK-NEXT: return
 func.func @erase_barriers() {
   gpu.barrier
   gpu.barrier
+  return
+}
+
+// CHECK-LABEL: func @erase_barriers_first_full_fence
+//       CHECK-NEXT: gpu.barrier{{$}}
+//       CHECK-NEXT: return
+func.func @erase_barriers_first_full_fence() {
+  gpu.barrier
+  gpu.barrier memfence [#gpu.address_space<workgroup>]
+  return
+}
+
+// CHECK-LABEL: func @erase_barriers_second_full_fence
+//       CHECK-NEXT: gpu.barrier{{$}}
+//       CHECK-NEXT: return
+func.func @erase_barriers_second_full_fence() {
+  gpu.barrier memfence [#gpu.address_space<workgroup>]
+  gpu.barrier
+  return
+}
+
+// CHECK-LABEL: func @erase_barriers_merge_memfence
+//       CHECK-NEXT: gpu.barrier memfence [#gpu.address_space<workgroup>, #gpu.address_space<global>]
+//       CHECK-NEXT: return
+func.func @erase_barriers_merge_memfence() {
+  gpu.barrier memfence [#gpu.address_space<workgroup>]
+  gpu.barrier memfence [#gpu.address_space<global>]
+  return
+}
+
+// CHECK-LABEL: func @erase_barriers_merge_memfence_same
+//       CHECK-NEXT: gpu.barrier memfence [#gpu.address_space<workgroup>]
+//       CHECK-NEXT: return
+func.func @erase_barriers_merge_memfence_same() {
+  gpu.barrier memfence [#gpu.address_space<workgroup>]
+  gpu.barrier memfence [#gpu.address_space<workgroup>]
+  return
+}
+
+// CHECK-LABEL: func @erase_barriers_empty_memfence
+//       CHECK-NEXT: gpu.barrier memfence []
+//       CHECK-NEXT: return
+func.func @erase_barriers_empty_memfence() {
+  gpu.barrier memfence []
+  gpu.barrier memfence []
   return
 }
 

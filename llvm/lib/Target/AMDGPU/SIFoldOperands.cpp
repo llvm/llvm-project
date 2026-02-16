@@ -242,7 +242,6 @@ public:
                    SmallVectorImpl<FoldCandidate> &FoldList,
                    SmallVectorImpl<MachineInstr *> &CopiesToReplace) const;
 
-  std::optional<int64_t> getImmOrMaterializedImm(MachineOperand &Op) const;
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
   bool tryFoldZeroHighBits(MachineInstr &MI) const;
@@ -1446,6 +1445,7 @@ void SIFoldOperandsImpl::foldOperand(
           return;
 
         UseMI->setDesc(TII->get(AMDGPU::S_MOV_B32));
+        UseMI->clearFlag(MachineInstr::NoConvergent);
 
         if (OpToFold.isImm()) {
           UseMI->getOperand(1).ChangeToImmediate(
@@ -1477,6 +1477,7 @@ void SIFoldOperandsImpl::foldOperand(
         UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
         UseMI->getOperand(1).setIsKill(false);
         UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
+        UseMI->clearFlag(MachineInstr::NoConvergent);
         return;
       }
     }
@@ -1567,24 +1568,6 @@ static unsigned getMovOpc(bool IsScalar) {
   return IsScalar ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
 }
 
-std::optional<int64_t>
-SIFoldOperandsImpl::getImmOrMaterializedImm(MachineOperand &Op) const {
-  if (Op.isImm())
-    return Op.getImm();
-
-  if (!Op.isReg() || !Op.getReg().isVirtual())
-    return std::nullopt;
-
-  const MachineInstr *Def = MRI->getVRegDef(Op.getReg());
-  if (Def && Def->isMoveImmediate()) {
-    const MachineOperand &ImmSrc = Def->getOperand(1);
-    if (ImmSrc.isImm())
-      return TII->extractSubregFromImm(ImmSrc.getImm(), Op.getSubReg());
-  }
-
-  return std::nullopt;
-}
-
 // Try to simplify operations with a constant that may appear after instruction
 // selection.
 // TODO: See if a frame index with a fixed offset can fold.
@@ -1599,7 +1582,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     return false;
 
   MachineOperand *Src0 = &MI->getOperand(Src0Idx);
-  std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(*Src0);
+  std::optional<int64_t> Src0Imm = TII->getImmOrMaterializedImm(*Src0);
 
   if ((Opc == AMDGPU::V_NOT_B32_e64 || Opc == AMDGPU::V_NOT_B32_e32 ||
        Opc == AMDGPU::S_NOT_B32) &&
@@ -1615,7 +1598,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     return false;
 
   MachineOperand *Src1 = &MI->getOperand(Src1Idx);
-  std::optional<int64_t> Src1Imm = getImmOrMaterializedImm(*Src1);
+  std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*Src1);
 
   if (!Src0Imm && !Src1Imm)
     return false;
@@ -1706,11 +1689,11 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
   MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
   if (!Src1->isIdenticalTo(*Src0)) {
-    std::optional<int64_t> Src1Imm = getImmOrMaterializedImm(*Src1);
+    std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*Src1);
     if (!Src1Imm)
       return false;
 
-    std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(*Src0);
+    std::optional<int64_t> Src0Imm = TII->getImmOrMaterializedImm(*Src0);
     if (!Src0Imm || *Src0Imm != *Src1Imm)
       return false;
   }
@@ -1744,7 +1727,8 @@ bool SIFoldOperandsImpl::tryFoldZeroHighBits(MachineInstr &MI) const {
       MI.getOpcode() != AMDGPU::V_AND_B32_e32)
     return false;
 
-  std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(MI.getOperand(1));
+  std::optional<int64_t> Src0Imm =
+      TII->getImmOrMaterializedImm(MI.getOperand(1));
   if (!Src0Imm || *Src0Imm != 0xffff || !MI.getOperand(2).isReg())
     return false;
 
@@ -2791,7 +2775,6 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
   //
   // FIXME: Also need to check strictfp
   bool IsIEEEMode = MFI->getMode().IEEE;
-  bool HasNSZ = MFI->hasNoSignedZerosFPMath();
 
   bool Changed = false;
   for (MachineBasicBlock *MBB : depth_first(&MF)) {
@@ -2830,8 +2813,7 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
 
       // TODO: Omod might be OK if there is NSZ only on the source
       // instruction, and not the omod multiply.
-      if (IsIEEEMode || (!HasNSZ && !MI.getFlag(MachineInstr::FmNsz)) ||
-          !tryFoldOMod(MI))
+      if (IsIEEEMode || !MI.getFlag(MachineInstr::FmNsz) || !tryFoldOMod(MI))
         Changed |= tryFoldClamp(MI);
     }
 

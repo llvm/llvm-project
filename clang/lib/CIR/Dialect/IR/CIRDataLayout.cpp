@@ -20,6 +20,13 @@ void CIRDataLayout::reset(mlir::DataLayoutSpecInterface spec) {
     if (mlir::DataLayoutEntryInterface entry = spec.getSpecForIdentifier(key))
       if (auto str = llvm::dyn_cast<mlir::StringAttr>(entry.getValue()))
         bigEndian = str == mlir::DLTIDialect::kDataLayoutEndiannessBig;
+
+    mlir::StringAttr addrSpKey = mlir::StringAttr::get(
+        spec.getContext(), mlir::DLTIDialect::kDataLayoutProgramMemorySpaceKey);
+    if (mlir::DataLayoutEntryInterface entry =
+            spec.getSpecForIdentifier(addrSpKey))
+      if (auto val = llvm::dyn_cast<mlir::IntegerAttr>(entry.getValue()))
+        programAddrSpace = val.getInt();
   }
 }
 

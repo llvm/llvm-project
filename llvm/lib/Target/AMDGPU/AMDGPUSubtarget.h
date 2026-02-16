@@ -42,6 +42,7 @@ public:
     GFX10 = 9,
     GFX11 = 10,
     GFX12 = 11,
+    GFX13 = 12,
   };
 
 private:
@@ -108,13 +109,6 @@ public:
   /// compatible with minimum/maximum number of waves limited by flat work group
   /// size, register usage, and/or lds usage.
   std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const;
-
-  /// Overload which uses the specified values for the flat work group sizes,
-  /// rather than querying the function itself. \p FlatWorkGroupSizes Should
-  /// correspond to the function's value for getFlatWorkGroupSizes.
-  std::pair<unsigned, unsigned>
-  getWavesPerEU(const Function &F,
-                std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
 
   /// Overload which uses the specified values for the flat workgroup sizes and
   /// LDS space rather than querying the function itself. \p FlatWorkGroupSizes

@@ -1603,6 +1603,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= part.relrAuthDyn->updateAllocSize(ctx);
       if (part.memtagGlobalDescriptors)
         changed |= part.memtagGlobalDescriptors->updateAllocSize(ctx);
+      if (part.ehFrameHdr && part.ehFrameHdr->isNeeded())
+        changed |= part.ehFrameHdr->updateAllocSize(ctx);
     }
 
     std::pair<const OutputSection *, const Defined *> changes =
@@ -1627,6 +1629,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       // Spilling can change relative section order.
       finalizeOrderDependentContent();
     }
+    // If updateAllocSize reported errors (e.g. "unknown FDE size encoding" for
+    // part.ehFrameHdr), break to avoid duplicate diagnostics from the loop.
+    if (errCount(ctx))
+      break;
   }
   if (!ctx.arg.relocatable)
     ctx.target->finalizeRelax(pass);
@@ -1736,7 +1742,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
     for (size_t i = 0, e = sections.size(); i != e; ++i) {
       InputSection *next = i + 1 < sections.size() ? sections[i + 1] : nullptr;
       InputSection &sec = *sections[i];
-      numDeleted += ctx.target->deleteFallThruJmpInsn(sec, sec.file, next);
+      numDeleted += ctx.target->deleteFallThruJmpInsn(sec, next);
     }
     if (numDeleted > 0) {
       ctx.script->assignAddresses();
@@ -2449,8 +2455,7 @@ Writer<ELFT>::createPhdrs(Partition &part) {
     ret.push_back(std::move(relRo));
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
-  if (part.ehFrame->isNeeded() && part.ehFrameHdr &&
-      part.ehFrame->getParent() && part.ehFrameHdr->getParent())
+  if (part.ehFrameHdr && part.ehFrameHdr->isNeeded())
     addHdr(PT_GNU_EH_FRAME, part.ehFrameHdr->getParent()->getPhdrFlags())
         ->add(part.ehFrameHdr->getParent());
 
@@ -2960,14 +2965,25 @@ static void fillTrap(std::array<uint8_t, 4> trapInstr, uint8_t *i,
     memcpy(i, trapInstr.data(), 4);
 }
 
-// Fill the last page of executable segments with trap instructions
-// instead of leaving them as zero. Even though it is not required by any
-// standard, it is in general a good thing to do for security reasons.
-//
-// We'll leave other pages in segments as-is because the rest will be
-// overwritten by output sections.
+// Fill executable segments with trap instructions. This includes both the
+// gaps between sections (due to alignment) and the tail padding to the page
+// boundary. Even though it is not required by any standard, it is in general
+// a good thing to do for security reasons.
 template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
   for (Partition &part : ctx.partitions) {
+    // Fill gaps between consecutive sections in the same executable segment.
+    OutputSection *prev = nullptr;
+    for (OutputSection *sec : ctx.outputSections) {
+      PhdrEntry *p = sec->ptLoad;
+      if (!p || !(p->p_flags & PF_X))
+        continue;
+      if (prev && prev->ptLoad == p)
+        fillTrap(ctx.target->trapInstr,
+                 ctx.bufferStart + alignDown(prev->offset + prev->size, 4),
+                 ctx.bufferStart + sec->offset);
+      prev = sec;
+    }
+
     // Fill the last page.
     for (std::unique_ptr<PhdrEntry> &p : part.phdrs)
       if (p->p_type == PT_LOAD && (p->p_flags & PF_X))

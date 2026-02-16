@@ -45,33 +45,35 @@ body:             |
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:vreg_512 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF5:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF6:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF5:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF6:%[0-9]+]]:vreg_512 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF9:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_NOP 0, implicit-def %12
   ; CHECK-NEXT:   S_NOP 0, implicit-def %13
-  ; CHECK-NEXT:   [[DEF8:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   SCHED_BARRIER 0
-  ; CHECK-NEXT:   [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   dead [[DEF12:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   dead [[DEF13:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   dead undef [[V_ADD_U32_e32_:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF10]].sub1, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF12:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF13:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead [[DEF14:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead [[DEF15:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead undef [[V_ADD_U32_e32_:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF12]].sub1, [[DEF11]], implicit $exec
   ; CHECK-NEXT:   $scc = IMPLICIT_DEF
   ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF10]].sub0, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF12]].sub0, [[DEF11]], implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF10]].sub1, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF12]].sub1, [[DEF11]], implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -83,10 +85,10 @@ body:             |
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF14:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF15:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF16:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF14]], [[DEF15]], [[V_ADD_U32_e32_1]], 4, 4, [[DEF16]].sub0, [[DEF9]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[DEF16:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF17:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF18:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF13:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF16]], [[DEF17]], [[V_ADD_U32_e32_1]], 4, 4, [[DEF18]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.7(0x40000000), %bb.6(0x40000000)
@@ -97,8 +99,8 @@ body:             |
   ; CHECK-NEXT: bb.6:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_2:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub1, [[DEF9]], implicit $exec
-  ; CHECK-NEXT:   dead undef [[V_ADD_U32_e32_2:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub0, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_2:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF13]].sub1, [[DEF11]], implicit $exec
+  ; CHECK-NEXT:   dead undef [[V_ADD_U32_e32_2:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF13]].sub0, [[DEF11]], implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7:
@@ -110,23 +112,21 @@ body:             |
   ; CHECK-NEXT: bb.8:
   ; CHECK-NEXT:   successors: %bb.9(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_3:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub0, [[DEF9]], implicit $exec
-  ; CHECK-NEXT:   dead undef [[V_ADD_U32_e32_3:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub1, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_3:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF13]].sub0, [[DEF11]], implicit $exec
+  ; CHECK-NEXT:   dead undef [[V_ADD_U32_e32_3:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF13]].sub1, [[DEF11]], implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.9:
   ; CHECK-NEXT:   successors: %bb.10(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_4:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub1, [[DEF11]].sub0, implicit $exec
-  ; CHECK-NEXT:   [[V_ADD_U32_e32_4:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub2, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_4:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF13]].sub1, [[DEF13]].sub0, implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_4:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF13]].sub2, [[DEF11]], implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.10:
-  ; CHECK-NEXT:   [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF10]].sub1, [[DEF11]].sub0, implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF12]].sub1, [[DEF13]].sub0, implicit $exec
   ; CHECK-NEXT:   SCHED_BARRIER 0
-  ; CHECK-NEXT:   [[DEF17:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF18:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF19:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF20:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   KILL [[DEF18]], [[DEF19]], [[DEF20]], [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF4]], [[DEF5]], [[DEF6]], [[DEF7]], [[DEF8]], [[DEF17]], [[DEF10]], [[DEF11]], [[V_ADD_U32_e32_4]], [[V_ADD_U32_e32_5]]
+  ; CHECK-NEXT:   [[DEF20:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   KILL [[DEF19]], [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF4]], [[DEF5]], [[DEF6]], [[DEF7]], [[DEF8]], [[DEF9]], [[DEF10]], [[DEF20]], [[DEF12]], [[DEF13]], [[V_ADD_U32_e32_4]], [[V_ADD_U32_e32_5]]
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
@@ -229,33 +229,35 @@ body:             |
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:vreg_512 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF5:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF6:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF5:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF6:%[0-9]+]]:vreg_512 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF9:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_NOP 0, implicit-def %12
   ; CHECK-NEXT:   S_NOP 0, implicit-def %13
-  ; CHECK-NEXT:   [[DEF8:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   SCHED_BARRIER 0
-  ; CHECK-NEXT:   [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   dead [[DEF12:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   dead [[DEF13:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   dead undef [[V_ADD_U32_e32_:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF10]].sub1, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF12:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF13:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead [[DEF14:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead [[DEF15:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead undef [[V_ADD_U32_e32_:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF12]].sub1, [[DEF11]], implicit $exec
   ; CHECK-NEXT:   $scc = IMPLICIT_DEF
   ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF10]].sub0, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF12]].sub0, [[DEF11]], implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF10]].sub1, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF12]].sub1, [[DEF11]], implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -267,10 +269,10 @@ body:             |
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF14:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF15:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF16:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF14]], [[DEF15]], [[V_ADD_U32_e32_1]], 4, 4, [[DEF16]].sub0, [[DEF9]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[DEF16:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF17:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF18:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF13:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF16]], [[DEF17]], [[V_ADD_U32_e32_1]], 4, 4, [[DEF18]].sub0, [[DEF11]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.7(0x40000000), %bb.6(0x40000000)
@@ -281,24 +283,22 @@ body:             |
   ; CHECK-NEXT: bb.6:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_2:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub1, [[DEF9]], implicit $exec
-  ; CHECK-NEXT:   [[V_ADD_U32_e32_2:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub0, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_2:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF13]].sub1, [[DEF11]], implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_2:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF13]].sub0, [[DEF11]], implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_2:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub0, [[DEF9]], implicit $exec
-  ; CHECK-NEXT:   [[V_ADD_U32_e32_2:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub1, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_2:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF13]].sub0, [[DEF11]], implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_2:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF13]].sub1, [[DEF11]], implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8:
-  ; CHECK-NEXT:   [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF10]].sub1, [[V_ADD_U32_e32_1]].sub0, implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF12]].sub1, [[V_ADD_U32_e32_1]].sub0, implicit $exec
   ; CHECK-NEXT:   SCHED_BARRIER 0
-  ; CHECK-NEXT:   [[DEF17:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF18:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF19:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF20:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   KILL [[DEF18]], [[DEF19]], [[DEF20]], [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF4]], [[DEF5]], [[DEF6]], [[DEF7]], [[DEF8]], [[DEF17]], [[DEF10]], [[DEF11]], [[V_ADD_U32_e32_2]], [[V_ADD_U32_e32_3]]
+  ; CHECK-NEXT:   [[DEF20:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   KILL [[DEF19]], [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF4]], [[DEF5]], [[DEF6]], [[DEF7]], [[DEF8]], [[DEF9]], [[DEF10]], [[DEF20]], [[DEF12]], [[DEF13]], [[V_ADD_U32_e32_2]], [[V_ADD_U32_e32_3]]
   ; CHECK-NEXT:   S_NOP 0, implicit %12, implicit %13
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
@@ -388,37 +388,37 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_512 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_NOP 0, implicit-def %5
   ; CHECK-NEXT:   S_NOP 0, implicit-def %6
-  ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:vreg_512 = IMPLICIT_DEF
   ; CHECK-NEXT:   SCHED_BARRIER 0
-  ; CHECK-NEXT:   [[DEF5:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF6:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF5:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF6:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   dead [[DEF8:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   dead [[DEF9:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   dead undef [[V_ADD_U32_e32_:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF6]].sub1, [[DEF5]], implicit $exec
+  ; CHECK-NEXT:   [[DEF8:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead [[DEF12:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead [[DEF13:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   dead undef [[V_ADD_U32_e32_:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF10]].sub1, [[DEF9]], implicit $exec
   ; CHECK-NEXT:   $scc = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF12:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF13:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF6]].sub0, [[DEF5]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF10]].sub0, [[DEF9]], implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF6]].sub1, [[DEF5]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF10]].sub1, [[DEF9]], implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -430,7 +430,7 @@ body:             |
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF10]], [[DEF11]], [[V_ADD_U32_e32_1]], 4, 4, [[DEF13]].sub0, [[DEF5]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vreg_128_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF5]], [[DEF6]], [[V_ADD_U32_e32_1]], 4, 4, [[DEF8]].sub0, [[DEF9]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.7(0x40000000), %bb.6(0x40000000)
@@ -441,20 +441,20 @@ body:             |
   ; CHECK-NEXT: bb.6:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_2:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF7]].sub1, [[DEF5]], implicit $exec
-  ; CHECK-NEXT:   [[V_ADD_U32_e32_2:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF7]].sub0, [[DEF5]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_2:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub1, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_2:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub0, [[DEF9]], implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.7:
   ; CHECK-NEXT:   successors: %bb.8(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_2:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF7]].sub0, [[DEF5]], implicit $exec
-  ; CHECK-NEXT:   [[V_ADD_U32_e32_2:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF7]].sub1, [[DEF5]], implicit $exec
+  ; CHECK-NEXT:   undef [[V_ADD_U32_e32_2:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub0, [[DEF9]], implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_2:%[0-9]+]].sub1:vreg_128_align2 = V_ADD_U32_e32 [[DEF11]].sub1, [[DEF9]], implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8:
-  ; CHECK-NEXT:   [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF6]].sub1, [[V_ADD_U32_e32_1]].sub0, implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF10]].sub1, [[V_ADD_U32_e32_1]].sub0, implicit $exec
   ; CHECK-NEXT:   SCHED_BARRIER 0
-  ; CHECK-NEXT:   KILL [[DEF4]], [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF12]], [[DEF6]], [[DEF7]], [[V_ADD_U32_e32_2]], [[V_ADD_U32_e32_3]]
+  ; CHECK-NEXT:   KILL [[DEF]], [[DEF1]], [[DEF2]], [[DEF3]], [[DEF4]], [[DEF7]], [[DEF10]], [[DEF11]], [[V_ADD_U32_e32_2]], [[V_ADD_U32_e32_3]]
   ; CHECK-NEXT:   S_NOP 0, implicit %5, implicit %6
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:

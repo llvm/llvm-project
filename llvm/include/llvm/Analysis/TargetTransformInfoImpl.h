@@ -500,13 +500,16 @@ public:
   virtual InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
       TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
-      ArrayRef<Value *> VL = {}) const {
+      ArrayRef<Value *> VL = {},
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
+    // Default implementation returns 0.
+    // BasicTTIImpl provides the actual implementation.
     return 0;
   }
 
-  virtual InstructionCost
-  getOperandsScalarizationOverhead(ArrayRef<Type *> Tys,
-                                   TTI::TargetCostKind CostKind) const {
+  virtual InstructionCost getOperandsScalarizationOverhead(
+      ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 0;
   }
 
@@ -701,7 +704,7 @@ public:
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-      TTI::TargetCostKind CostKind) const {
+      TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
     return InstructionCost::getInvalid();
   }
 
@@ -830,10 +833,10 @@ public:
     return 1;
   }
 
-  virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                             TTI::TargetCostKind CostKind,
-                                             unsigned Index, const Value *Op0,
-                                             const Value *Op1) const {
+  virtual InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      const Value *Op0, const Value *Op1,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 1;
   }
 
@@ -844,13 +847,15 @@ public:
   virtual InstructionCost getVectorInstrCost(
       unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
       Value *Scalar,
-      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 1;
   }
 
-  virtual InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
-                                             TTI::TargetCostKind CostKind,
-                                             unsigned Index) const {
+  virtual InstructionCost getVectorInstrCost(
+      const Instruction &I, Type *Val, TTI::TargetCostKind CostKind,
+      unsigned Index,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const {
     return 1;
   }
 
@@ -1058,6 +1063,13 @@ public:
   virtual unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                         unsigned DefaultCallPenalty) const {
     return DefaultCallPenalty;
+  }
+
+  virtual bool
+  shouldCopyAttributeWhenOutliningFrom(const Function *Caller,
+                                       const Attribute &Attr) const {
+    // Copy attributes by default
+    return true;
   }
 
   virtual bool areTypesABICompatible(const Function *Caller,
@@ -1574,7 +1586,8 @@ public:
       if (auto *CI = dyn_cast<ConstantInt>(Operands[2]))
         if (CI->getValue().getActiveBits() <= 32)
           Idx = CI->getZExtValue();
-      return TargetTTI->getVectorInstrCost(*IE, Ty, CostKind, Idx);
+      return TargetTTI->getVectorInstrCost(*IE, Ty, CostKind, Idx,
+                                           TTI::getVectorInstrContextHint(IE));
     }
     case Instruction::ShuffleVector: {
       auto *Shuffle = dyn_cast<ShuffleVectorInst>(U);

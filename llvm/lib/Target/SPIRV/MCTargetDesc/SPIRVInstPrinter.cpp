@@ -155,7 +155,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           break;
         case SPIRV::OpExecutionMode:
         case SPIRV::OpExecutionModeId:
-        case SPIRV::OpLoopMerge: {
+        case SPIRV::OpLoopMerge:
+        case SPIRV::OpLoopControlINTEL: {
           // Print any literals after the OPERAND_UNKNOWN argument normally.
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;

@@ -1757,19 +1757,23 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
   }
 
   // Get the inlined function name.
-  CVType inlinee_cvt = m_index->ipi().getType(inline_site.Inlinee);
   std::string inlinee_name;
-  if (inlinee_cvt.kind() == LF_MFUNC_ID) {
+  llvm::Expected<CVType> inlinee_cvt =
+      m_index->ipi().typeCollection().getTypeOrError(inline_site.Inlinee);
+  if (!inlinee_cvt) {
+    inlinee_name = "[error reading function name: " +
+                   llvm::toString(inlinee_cvt.takeError()) + "]";
+  } else if (inlinee_cvt->kind() == LF_MFUNC_ID) {
     MemberFuncIdRecord mfr;
     cantFail(
-        TypeDeserializer::deserializeAs<MemberFuncIdRecord>(inlinee_cvt, mfr));
+        TypeDeserializer::deserializeAs<MemberFuncIdRecord>(*inlinee_cvt, mfr));
     LazyRandomTypeCollection &types = m_index->tpi().typeCollection();
     inlinee_name.append(std::string(types.getTypeName(mfr.ClassType)));
     inlinee_name.append("::");
     inlinee_name.append(mfr.getName().str());
-  } else if (inlinee_cvt.kind() == LF_FUNC_ID) {
+  } else if (inlinee_cvt->kind() == LF_FUNC_ID) {
     FuncIdRecord fir;
-    cantFail(TypeDeserializer::deserializeAs<FuncIdRecord>(inlinee_cvt, fir));
+    cantFail(TypeDeserializer::deserializeAs<FuncIdRecord>(*inlinee_cvt, fir));
     TypeIndex parent_idx = fir.getParentScope();
     if (!parent_idx.isNoneType()) {
       LazyRandomTypeCollection &ids = m_index->ipi().typeCollection();
@@ -2192,32 +2196,54 @@ SymbolFileNativePDB::ParseVariablesForCompileUnit(CompileUnit &comp_unit,
 
 VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
                                                     PdbCompilandSymId var_id,
-                                                    bool is_param) {
+                                                    bool is_param,
+                                                    bool is_constant) {
   ModuleSP module = GetObjectFile()->GetModule();
   Block *block = GetOrCreateBlock(scope_id);
   if (!block)
     return nullptr;
 
-  // Get function block.
-  Block *func_block = block;
-  while (func_block->GetParent()) {
-    func_block = func_block->GetParent();
+  CompilandIndexItem *cii = m_index->compilands().GetCompiland(var_id.modi);
+  if (!cii)
+    return nullptr;
+  CompUnitSP comp_unit_sp = GetOrCreateCompileUnit(*cii);
+
+  VariableInfo var_info;
+  bool location_is_constant_data = is_constant;
+
+  if (is_constant) {
+    CVSymbol sym = cii->m_debug_stream.readSymbolAtOffset(var_id.offset);
+    assert(sym.kind() == S_CONSTANT);
+    ConstantSym constant(sym.kind());
+    cantFail(SymbolDeserializer::deserializeAs<ConstantSym>(sym, constant));
+
+    var_info.name = constant.Name;
+    var_info.type = constant.Type;
+    var_info.location = DWARFExpressionList(
+        module,
+        MakeConstantLocationExpression(constant.Type, m_index->tpi(),
+                                       constant.Value, module),
+        nullptr);
+  } else {
+    // Get function block.
+    Block *func_block = block;
+    while (func_block->GetParent())
+      func_block = func_block->GetParent();
+
+    Address addr;
+    func_block->GetStartAddress(addr);
+    var_info = GetVariableLocationInfo(*m_index, var_id, *func_block, module);
+    Function *func = func_block->CalculateSymbolContextFunction();
+    if (!func)
+      return nullptr;
+    // Use empty dwarf expr if optimized away so that it won't be filtered out
+    // when lookuping local variables in this scope.
+    if (!var_info.location.IsValid())
+      var_info.location =
+          DWARFExpressionList(module, DWARFExpression(), nullptr);
+    var_info.location.SetFuncFileAddress(func->GetAddress().GetFileAddress());
   }
 
-  Address addr;
-  func_block->GetStartAddress(addr);
-  VariableInfo var_info =
-      GetVariableLocationInfo(*m_index, var_id, *func_block, module);
-  Function *func = func_block->CalculateSymbolContextFunction();
-  if (!func)
-    return nullptr;
-  // Use empty dwarf expr if optimized away so that it won't be filtered out
-  // when lookuping local variables in this scope.
-  if (!var_info.location.IsValid())
-    var_info.location = DWARFExpressionList(module, DWARFExpression(), nullptr);
-  var_info.location.SetFuncFileAddress(func->GetAddress().GetFileAddress());
-  CompilandIndexItem *cii = m_index->compilands().GetCompiland(var_id.modi);
-  CompUnitSP comp_unit_sp = GetOrCreateCompileUnit(*cii);
   TypeSP type_sp = GetOrCreateType(var_info.type);
   if (!type_sp)
     return nullptr;
@@ -2231,7 +2257,6 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
       is_param ? eValueTypeVariableArgument : eValueTypeVariableLocal;
   bool external = false;
   bool artificial = false;
-  bool location_is_constant_data = false;
   bool static_member = false;
   Variable::RangeList scope_ranges;
   VariableSP var_sp = std::make_shared<Variable>(
@@ -2252,13 +2277,15 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
   return var_sp;
 }
 
-VariableSP SymbolFileNativePDB::GetOrCreateLocalVariable(
-    PdbCompilandSymId scope_id, PdbCompilandSymId var_id, bool is_param) {
+VariableSP
+SymbolFileNativePDB::GetOrCreateLocalVariable(PdbCompilandSymId scope_id,
+                                              PdbCompilandSymId var_id,
+                                              bool is_param, bool is_constant) {
   auto iter = m_local_variables.find(toOpaqueUid(var_id));
   if (iter != m_local_variables.end())
     return iter->second;
 
-  return CreateLocalVariable(scope_id, var_id, is_param);
+  return CreateLocalVariable(scope_id, var_id, is_param, is_constant);
 }
 
 TypeSP SymbolFileNativePDB::CreateTypedef(PdbGlobalSymId id) {
@@ -2383,6 +2410,13 @@ size_t SymbolFileNativePDB::ParseVariablesForBlock(PdbCompilandSymId block_id) {
       variable = GetOrCreateLocalVariable(block_id, child_sym_id, is_param);
       if (is_param)
         --params_remaining;
+      if (variable)
+        variables->AddVariableIfUnique(variable);
+      break;
+    case S_CONSTANT:
+      variable = GetOrCreateLocalVariable(block_id, child_sym_id,
+                                          /*is_param=*/false,
+                                          /*is_constant=*/true);
       if (variable)
         variables->AddVariableIfUnique(variable);
       break;

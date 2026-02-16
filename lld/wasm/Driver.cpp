@@ -915,13 +915,13 @@ static InputGlobal *createGlobal(StringRef name, bool isMutable) {
   return make<InputGlobal>(wasmGlobal, nullptr);
 }
 
-static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable,
-                                          uint32_t flags = 0) {
+static DefinedGlobal *createGlobalVariable(StringRef name, bool isMutable,
+                                           uint32_t flags = 0) {
   InputGlobal *g = createGlobal(name, isMutable);
   return symtab->addSyntheticGlobal(name, flags, g);
 }
 
-static GlobalSymbol *createOptionalGlobal(StringRef name, bool isMutable) {
+static DefinedGlobal *createOptionalGlobal(StringRef name, bool isMutable) {
   InputGlobal *g = createGlobal(name, isMutable);
   return symtab->addOptionalGlobalSymbol(name, g);
 }
@@ -988,8 +988,11 @@ static void createOptionalSymbols() {
 
   ctx.sym.dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
 
-  if (!ctx.arg.shared)
+  if (!ctx.arg.shared) {
     ctx.sym.dataEnd = symtab->addOptionalDataSymbol("__data_end");
+    ctx.sym.rodataStart = symtab->addOptionalDataSymbol("__rodata_start");
+    ctx.sym.rodataEnd = symtab->addOptionalDataSymbol("__rodata_end");
+  }
 
   if (!ctx.isPic) {
     ctx.sym.stackLow = symtab->addOptionalDataSymbol("__stack_low");
@@ -997,8 +1000,8 @@ static void createOptionalSymbols() {
     ctx.sym.globalBase = symtab->addOptionalDataSymbol("__global_base");
     ctx.sym.heapBase = symtab->addOptionalDataSymbol("__heap_base");
     ctx.sym.heapEnd = symtab->addOptionalDataSymbol("__heap_end");
-    ctx.sym.definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
-    ctx.sym.definedTableBase = symtab->addOptionalDataSymbol("__table_base");
+    ctx.sym.memoryBase = createOptionalGlobal("__memory_base", false);
+    ctx.sym.tableBase = createOptionalGlobal("__table_base", false);
   }
 
   ctx.sym.firstPageEnd = symtab->addOptionalDataSymbol("__wasm_first_page_end");

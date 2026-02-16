@@ -270,7 +270,7 @@ def fir_AllocMemOp : fir_Op<"allocmem", [AttrSizedOperandSegments]> {
   }];
 }
 
-def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
+def fir_FreeMemOp : fir_Op<"freemem", []> {
   let summary = "free a heap object";
 
   let description = [{
@@ -1902,7 +1902,7 @@ def fir_ArrayCoorOp
 }
 
 def fir_CoordinateOp
-    : fir_Op<"coordinate_of", [NoMemoryEffect,
+    : fir_Op<"coordinate_of", [NoMemoryEffect, ConditionallySpeculatable,
                                fir_FortranObjectViewOpInterface]> {
 
   let summary = "Finds the coordinate (location) of a value in memory";
@@ -1959,6 +1959,9 @@ def fir_CoordinateOp
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getRef(); }
     std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+
+    // Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -1992,7 +1995,7 @@ def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoMemoryEffect]> {
   }];
 }
 
-def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoMemoryEffect]> {
+def fir_FieldIndexOp : fir_OneResultOp<"field_index", [Pure]> {
   let summary = "create a field index value from a field identifier";
 
   let description = [{
