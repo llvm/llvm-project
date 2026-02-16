@@ -2308,6 +2308,18 @@ ASTReader::getGlobalPreprocessedEntityID(ModuleFile &M,
   return (static_cast<PreprocessedEntityID>(MF->Index + 1) << 32) | LocalID;
 }
 
+void HeaderFileInfoTrait::data_type_builder::merge(data_type D) const {
+  Data.merge(D);
+}
+
+ModuleFile *HeaderFileInfoTrait::ReadFileRef(const unsigned char *&d) {
+  using namespace llvm::support;
+
+  uint32_t ModuleFileID =
+      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
+  return Reader.getLocalModuleFile(M, ModuleFileID);
+}
+
 OptionalFileEntryRef
 HeaderFileInfoTrait::getFile(const internal_key_type &Key) {
   FileManager &FileMgr = Reader.getFileManager();
@@ -2332,6 +2344,11 @@ HeaderFileInfoTrait::GetInternalKey(external_key_type ekey) {
                             M.HasTimestamps ? ekey.getModificationTime() : 0,
                             ekey.getName(), /*Imported*/ false};
   return ikey;
+}
+
+OptionalFileEntryRef
+HeaderFileInfoTrait::TryGetExternalKey(internal_key_ref ikey) {
+  return getFile(ikey);
 }
 
 bool HeaderFileInfoTrait::EqualKey(internal_key_ref a, internal_key_ref b) {
@@ -2365,9 +2382,9 @@ HeaderFileInfoTrait::ReadKey(const unsigned char *d, unsigned) {
   return ikey;
 }
 
-HeaderFileInfoTrait::data_type
-HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
-                              unsigned DataLen) {
+void HeaderFileInfoTrait::ReadDataInto(internal_key_ref key,
+                                       const unsigned char *d, unsigned DataLen,
+                                       data_type_builder &Val) {
   using namespace llvm::support;
 
   const unsigned char *End = d + DataLen;
@@ -2382,9 +2399,8 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
       // deserialize this header file info again.
       Reader.getPreprocessor().getIncludedFiles().insert(*FE);
 
-  // FIXME: Refactor with mergeHeaderFileInfo in HeaderSearch.cpp.
-  HFI.isImport |= (Flags >> 5) & 0x01;
-  HFI.isPragmaOnce |= (Flags >> 4) & 0x01;
+  HFI.isImport = (Flags >> 5) & 0x01;
+  HFI.isPragmaOnce = (Flags >> 4) & 0x01;
   HFI.DirInfo = (Flags >> 1) & 0x07;
   HFI.LazyControllingMacro = Reader.getGlobalIdentifierID(
       M, endian::readNext<IdentifierID, llvm::endianness::little>(d));
@@ -2415,7 +2431,12 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   // This HeaderFileInfo was externally loaded.
   HFI.External = true;
   HFI.IsValid = true;
-  return HFI;
+  Val.merge(HFI);
+}
+
+void HeaderFileInfoTrait::MergeDataInto(const data_type &From,
+                                        data_type_builder &To) {
+  To.merge(From);
 }
 
 void ASTReader::addPendingMacro(IdentifierInfo *II, ModuleFile *M,
@@ -4276,13 +4297,16 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case HEADER_SEARCH_TABLE:
-      F.HeaderFileInfoTableData = Blob.data();
+      F.HeaderFileInfoTableData = (const unsigned char *)Blob.data();
       F.LocalNumHeaderFileInfos = Record[1];
       if (Record[0]) {
-        F.HeaderFileInfoTable = HeaderFileInfoLookupTable::Create(
-            (const unsigned char *)F.HeaderFileInfoTableData + Record[0],
-            (const unsigned char *)F.HeaderFileInfoTableData,
-            HeaderFileInfoTrait(*this, F));
+        if (!HeaderFileInfoLookup) {
+          HeaderFileInfoLookup = std::make_unique<HeaderFileInfoLookupTable>();
+        }
+        HeaderFileInfoLookup->Table.add(
+            &F, F.HeaderFileInfoTableData + Record[0],
+            F.HeaderFileInfoTableData + sizeof(uint32_t),
+            F.HeaderFileInfoTableData, HeaderFileInfoTrait(*this, F));
 
         PP.getHeaderSearchInfo().SetExternalSource(this);
         if (!PP.getHeaderSearchInfo().getExternalLookup())
@@ -7015,43 +7039,8 @@ std::optional<bool> ASTReader::isPreprocessedEntityInFileID(unsigned Index,
     return false;
 }
 
-namespace {
-
-  /// Visitor used to search for information about a header file.
-  class HeaderFileInfoVisitor {
-  FileEntryRef FE;
-    std::optional<HeaderFileInfo> HFI;
-
-  public:
-    explicit HeaderFileInfoVisitor(FileEntryRef FE) : FE(FE) {}
-
-    bool operator()(ModuleFile &M) {
-      HeaderFileInfoLookupTable *Table
-        = static_cast<HeaderFileInfoLookupTable *>(M.HeaderFileInfoTable);
-      if (!Table)
-        return false;
-
-      // Look in the on-disk hash table for an entry for this file name.
-      HeaderFileInfoLookupTable::iterator Pos = Table->find(FE);
-      if (Pos == Table->end())
-        return false;
-
-      HFI = *Pos;
-      return true;
-    }
-
-    std::optional<HeaderFileInfo> getHeaderFileInfo() const { return HFI; }
-  };
-
-} // namespace
-
 HeaderFileInfo ASTReader::GetHeaderFileInfo(FileEntryRef FE) {
-  HeaderFileInfoVisitor Visitor(FE);
-  ModuleMgr.visit(Visitor);
-  if (std::optional<HeaderFileInfo> HFI = Visitor.getHeaderFileInfo())
-      return *HFI;
-
-  return HeaderFileInfo();
+  return HeaderFileInfoLookup->Table.find(FE);
 }
 
 void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
