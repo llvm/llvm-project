@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangTidyLLVMModule STATIC
+  AvoidPassingMlirOpAsRefCheck.cpp
   HeaderGuardCheck.cpp
   IncludeOrderCheck.cpp
   LLVMTidyModule.cpp

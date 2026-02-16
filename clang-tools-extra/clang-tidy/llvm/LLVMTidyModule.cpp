@@ -11,6 +11,7 @@
 #include "../readability/ElseAfterReturnCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
 #include "../readability/QualifiedAutoCheck.h"
+#include "AvoidPassingMlirOpAsRefCheck.h"
 #include "HeaderGuardCheck.h"
 #include "IncludeOrderCheck.h"
 #include "PreferIsaOrDynCastInConditionalsCheck.h"
@@ -48,6 +49,8 @@ public:
         "llvm-type-switch-case-types");
     CheckFactories.registerCheck<UseNewMlirOpBuilderCheck>(
         "llvm-use-new-mlir-op-builder");
+    CheckFactories.registerCheck<AvoidPassingMlirOpAsRefCheck>(
+        "llvm-avoid-passing-mlir-op-as-ref");
     CheckFactories.registerCheck<UseRangesCheck>("llvm-use-ranges");
     CheckFactories.registerCheck<UseVectorUtilsCheck>("llvm-use-vector-utils");
   }

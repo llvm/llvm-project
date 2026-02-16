@@ -1548,7 +1548,7 @@ verifyCopyprivateVarList(Operation *op, OperandRange copyprivateVars,
       funcOp = llvmFuncOp;
 
     auto getNumArguments = [&] {
-      return std::visit([](auto &f) { return f.getNumArguments(); }, *funcOp);
+      return std::visit([](auto f) { return f.getNumArguments(); }, *funcOp);
     };
 
     auto getArgumentType = [&](unsigned i) {
@@ -2526,7 +2526,7 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
 }
 
 template <typename OpType>
-static LogicalResult verifyPrivateVarList(OpType &op) {
+static LogicalResult verifyPrivateVarList(OpType op) {
   auto privateVars = op.getPrivateVars();
   auto privateSyms = op.getPrivateSymsAttr();
 

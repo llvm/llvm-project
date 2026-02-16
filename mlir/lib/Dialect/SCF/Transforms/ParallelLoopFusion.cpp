@@ -163,7 +163,7 @@ static bool isFusionLegal(ParallelOp firstPloop, ParallelOp secondPloop,
 
 /// Prepends operations of firstPloop's body into secondPloop's body.
 /// Updates secondPloop with new loop.
-static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
+static void fuseIfLegal(ParallelOp firstPloop, ParallelOp secondPloop,
                         OpBuilder builder,
                         llvm::function_ref<bool(Value, Value)> mayAlias) {
   Block *block1 = firstPloop.getBody();

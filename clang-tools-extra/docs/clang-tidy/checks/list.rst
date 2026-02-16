@@ -245,6 +245,7 @@ Clang-Tidy Checks
    :doc:`hicpp-no-assembler <hicpp/no-assembler>`,
    :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`,
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
+   :doc:`llvm-avoid-passing-mlir-op-as-ref <llvm/avoid-passing-mlir-op-as-ref>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
    :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
