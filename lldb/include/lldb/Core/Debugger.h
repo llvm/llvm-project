@@ -347,6 +347,8 @@ public:
 
   bool SetUseSourceCache(bool use_source_cache);
 
+  bool GetMarkHiddenFrames() const;
+
   bool GetHighlightSource() const;
 
   lldb::StopShowColumn GetStopShowColumn() const;
