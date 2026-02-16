@@ -1728,9 +1728,7 @@ bool MIParser::parseRegisterTiedDefIndex(unsigned &TiedDefIdx) {
   if (getUnsigned(TiedDefIdx))
     return true;
   lex();
-  if (expectAndConsume(MIToken::rparen))
-    return true;
-  return false;
+  return expectAndConsume(MIToken::rparen);
 }
 
 bool MIParser::assignRegisterTies(MachineInstr &MI,
@@ -1799,50 +1797,37 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     if (parseRegisterClassOrBank(*RegInfo))
         return true;
   }
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (!hasRegState(Flags, RegState::Define)) {
-    if (consumeIfPresent(MIToken::lparen)) {
-      unsigned Idx;
-      if (!parseRegisterTiedDefIndex(Idx))
-        TiedDefIdx = Idx;
-      else {
-        // Try a redundant low-level type.
-        LLT Ty;
-        if (parseLowLevelType(Token.location(), Ty))
-          return error("expected tied-def or low-level type after '('");
 
-        if (expectAndConsume(MIToken::rparen))
-          return true;
+  if (consumeIfPresent(MIToken::lparen)) {
+    // For a def, we only expect a type. For use we expect either a type or a
+    // tied-def.
+    unsigned Idx;
+    if (!IsDef && !parseRegisterTiedDefIndex(Idx)) {
+      TiedDefIdx = Idx;
+    } else {
+      LLT Ty;
+      auto TyLoc = Token.location();
+      // If type parsing fails, forwad the parse error for defs.
+      if (parseLowLevelType(TyLoc, Ty))
+        return IsDef ? true
+                     : error("expected tied-def or low-level type after '('");
 
-        if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
-          return error("inconsistent type for generic virtual register");
+      if (expectAndConsume(MIToken::rparen))
+        return true;
 
-        MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
-        MRI.setType(Reg, Ty);
-        MRI.noteNewVirtualRegister(Reg);
-      }
+      if (!Reg.isVirtual())
+        return error(TyLoc, "unexpected type on physical register");
+
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
+        return error("inconsistent type for generic virtual register");
+
+      MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
+      MRI.setType(Reg, Ty);
+      MRI.noteNewVirtualRegister(Reg);
     }
-  } else if (consumeIfPresent(MIToken::lparen)) {
-    // Virtual registers may have a tpe with GlobalISel.
-    if (!Reg.isVirtual())
-      return error("unexpected type on physical register");
-
-    LLT Ty;
-    if (parseLowLevelType(Token.location(), Ty))
-      return true;
-
-    if (expectAndConsume(MIToken::rparen))
-      return true;
-
-    if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
-      return error("inconsistent type for generic virtual register");
-
-    MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
-    MRI.setType(Reg, Ty);
-  } else if (Reg.isVirtual()) {
-    // Generic virtual registers must have a type.
-    // If we end up here this means the type hasn't been specified and
-    // this is bad!
+  } else if (IsDef && Reg.isVirtual()) {
+    // Generic virtual registers defs must have a type.
     if (RegInfo->Kind == VRegInfo::GENERIC ||
         RegInfo->Kind == VRegInfo::REGBANK)
       return error("generic virtual registers must have a type");
