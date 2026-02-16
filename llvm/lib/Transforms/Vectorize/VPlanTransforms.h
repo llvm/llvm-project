@@ -59,7 +59,10 @@ struct VPlanTransforms {
            any_of(VPlanPrintAfterPasses, [PassName](StringRef Entry) {
              return Regex(Entry).match(PassName);
            }))) {
-        dbgs() << "VPlan after " << PassName << '\n';
+        dbgs()
+            << "VPlan for loop in '"
+            << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
+            << "' after " << PassName << '\n';
         dbgs() << Plan << '\n';
       }
 #endif
@@ -308,14 +311,13 @@ struct VPlanTransforms {
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
-  /// Update \p Plan to account for the uncountable early exit from \p
-  /// EarlyExitingVPBB to \p EarlyExitVPBB by introducing a BranchOnTwoConds
-  /// terminator in the latch that handles the early exit and the latch exit
-  /// condition.
-  static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
-                                         VPBasicBlock *EarlyExitVPBB,
-                                         VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                         VPBasicBlock *LatchVPBB);
+  /// Update \p Plan to account for uncountable early exits by introducing
+  /// appropriate branching logic in the latch that handles early exits and the
+  /// latch exit condition. Multiple exits are handled with a dispatch block
+  /// that determines which exit to take based on lane-by-lane semantics.
+  static void handleUncountableEarlyExits(VPlan &Plan, VPBasicBlock *HeaderVPBB,
+                                          VPBasicBlock *LatchVPBB,
+                                          VPBasicBlock *MiddleVPBB);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)
@@ -411,9 +413,10 @@ struct VPlanTransforms {
   /// needed.
   static void materializePacksAndUnpacks(VPlan &Plan);
 
-  /// Materialize VF and VFxUF to be computed explicitly using VPInstructions.
-  static void materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
-                                    ElementCount VF);
+  /// Materialize UF, VF and VFxUF to be computed explicitly using
+  /// VPInstructions.
+  static void materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
+                                 ElementCount VF);
 
   /// Expand VPExpandSCEVRecipes in \p Plan's entry block. Each
   /// VPExpandSCEVRecipe is replaced with a live-in wrapping the expanded IR
@@ -422,14 +425,20 @@ struct VPlanTransforms {
   static DenseMap<const SCEV *, Value *> expandSCEVs(VPlan &Plan,
                                                      ScalarEvolution &SE);
 
-  /// Try to convert a plan with interleave groups with VF elements to a plan
-  /// with the interleave groups replaced by wide loads and stores processing VF
-  /// elements, if all transformed interleave groups access the full vector
-  /// width (checked via \o VectorRegWidth). This effectively is a very simple
-  /// form of loop-aware SLP, where we use interleave groups to identify
-  /// candidates.
-  static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
-                                     TypeSize VectorRegWidth);
+  /// Try to find a single VF among \p Plan's VFs for which all interleave
+  /// groups (with known minimum VF elements) can be replaced by wide loads and
+  /// stores processing VF elements, if all transformed interleave groups access
+  /// the full vector width (checked via the maximum vector register width). If
+  /// the transformation can be applied, the original \p Plan will be split in
+  /// 2:
+  ///  1. The original Plan with the single VF containing the optimized recipes
+  ///  using wide loads instead of interleave groups.
+  ///  2. A new clone which contains all VFs of Plan except the optimized VF.
+  ///
+  /// This effectively is a very simple form of loop-aware SLP, where we use
+  /// interleave groups to identify candidates.
+  static std::unique_ptr<VPlan>
+  narrowInterleaveGroups(VPlan &Plan, const TargetTransformInfo &TTI);
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
