@@ -11,13 +11,20 @@
 #include "IntegralAP.h"
 #include "Interp.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 
 using namespace clang;
 using namespace clang::interp;
 
+// FIXME: Get rid of this constructor.
 EvalEmitter::EvalEmitter(Context &Ctx, Program &P, State &Parent,
                          InterpStack &Stk)
-    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(&Ctx) {}
+    : Ctx(Ctx), P(P), S(Parent, P, Stk, Ctx, this), EvalResult(Ctx) {}
+
+EvalEmitter::EvalEmitter(Context &Ctx, Program &P, const EvalSettings &Settings,
+                         InterpStack &Stk)
+    : Ctx(Ctx), P(P), S(Settings, P, Stk, Ctx, this), EvalResult(Ctx),
+      ConstexprKind(Settings.ConstexprKind) {}
 
 EvalEmitter::~EvalEmitter() {
   for (auto &V : Locals) {
@@ -188,6 +195,18 @@ template <PrimType OpType> bool EvalEmitter::emitRet(SourceInfo Info) {
   return true;
 }
 
+template <> bool EvalEmitter::emitRet<PT_MemberPtr>(SourceInfo Info) {
+  if (!isActive())
+    return true;
+
+  const MemberPointer &MP = S.Stk.pop<MemberPointer>();
+  if (!EvalResult.checkMemberPointer(S, MP, Info, ConstexprKind))
+    return false;
+
+  EvalResult.takeValue(MP.toAPValue(Ctx.getASTContext()));
+  return true;
+}
+
 template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   if (!isActive())
     return true;
@@ -195,15 +214,19 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   // If we're returning a raw pointer, call our callback.
   if (this->PtrCB)
-    return (*this->PtrCB)(Ptr);
+    return (*this->PtrCB)(S, Ptr);
 
-  if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
     return false;
+
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
 
   // Function pointers are always returned as lvalues.
   if (Ptr.isFunctionPointer()) {
+    if (!EvalResult.checkFunctionPointer(S, Ptr, Info, ConstexprKind))
+      return false;
+
     EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
     return true;
   }
@@ -225,6 +248,9 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
         Ptr.block()->getEvalID() != Ctx.getEvalID())
       return false;
 
+    if (!EvalResult.checkLValueFields(S, Ptr, Info, ConstexprKind))
+      return false;
+
     if (std::optional<APValue> V =
             Ptr.toRValue(Ctx, EvalResult.getSourceType())) {
       EvalResult.takeValue(std::move(*V));
@@ -232,13 +258,8 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
       return false;
     }
   } else {
-    // If this is pointing to a local variable, just return
-    // the result, even if the pointer is dead.
-    // This will later be diagnosed by CheckLValueConstantExpression.
-    if (Ptr.isBlockPointer() && !Ptr.block()->isStatic()) {
-      EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
-      return true;
-    }
+    if (!EvalResult.checkLValue(S, Ptr, Info, ConstexprKind))
+      return false;
 
     if (!Ptr.isLive() && !Ptr.isTemporary())
       return false;
@@ -257,9 +278,11 @@ bool EvalEmitter::emitRetVoid(SourceInfo Info) {
 bool EvalEmitter::emitRetValue(SourceInfo Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
 
-  if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
+    return false;
+  if (!EvalResult.checkLValueFields(S, Ptr, Info, ConstexprKind))
     return false;
 
   if (std::optional<APValue> APV =

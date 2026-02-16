@@ -2985,6 +2985,9 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
   // the temporary is explicitly static, create a global variable.
   OptPrimType SubExprT = classify(SubExpr);
   if (E->getStorageDuration() == SD_Static) {
+    if (this->constantFolding())
+      return false;
+
     UnsignedOrNone GlobalIndex = P.createGlobal(E);
     if (!GlobalIndex)
       return false;
@@ -4823,6 +4826,9 @@ const Function *Compiler<Emitter>::getFunction(const FunctionDecl *FD) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitExpr(const Expr *E, bool DestroyToplevelScope) {
+  if (E->getType().isNull())
+    return false;
+
   LocalScope<Emitter> RootScope(this, ScopeKind::FullExpression);
 
   // If we won't destroy the toplevel scope, check for memory leaks first.
@@ -7250,10 +7256,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   }
 
   // In case we need to re-visit a declaration.
-  auto revisit = [&](const VarDecl *VD) -> bool {
+  auto revisit = [&](const VarDecl *VD, bool ConstexprUnknown = true) -> bool {
     if (!this->emitPushCC(VD->hasConstantInitialization(), E))
       return false;
-    auto VarState = this->visitDecl(VD, /*IsConstexprUnknown=*/true);
+    auto VarState = this->visitDecl(VD, ConstexprUnknown);
 
     if (!this->emitPopCC(E))
       return false;
@@ -7299,7 +7305,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   if (!Ctx.getLangOpts().CPlusPlus) {
     if (VD->getAnyInitializer() && DeclType.isConstant(Ctx.getASTContext()) &&
         !VD->isWeak())
-      return revisit(VD);
+      return revisit(VD, DeclType->isPointerType());
     return this->emitDummyPtr(D, E);
   }
 
@@ -7333,10 +7339,12 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   if (VD->isLocalVarDecl() && typeShouldBeVisited(DeclType) && VD->getInit() &&
       !VD->getInit()->isValueDependent()) {
     if (VD->evaluateValue()) {
+      bool ConstexprUnknown = !DeclType.isConstant(Ctx.getASTContext()) &&
+                              !DeclType->isReferenceType();
       // Revisit the variable declaration, but make sure it's associated with a
       // different evaluation, so e.g. mutable reads don't work on it.
       EvalIDScope _(Ctx);
-      return revisit(VD);
+      return revisit(VD, ConstexprUnknown);
     }
 
     if (IsReference)

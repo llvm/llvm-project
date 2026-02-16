@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -fcxx-exceptions -o - %s                                                  | FileCheck %s --check-prefix=CHECK
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -fcxx-exceptions -o - %s -fexperimental-new-constant-interpreter -DINTERP | FileCheck %s --check-prefix=CHECK,INTERP
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -fcxx-exceptions -o - %s                                                  | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -fcxx-exceptions -o - %s -fexperimental-new-constant-interpreter -DINTERP | FileCheck %s
 
 /// CodeGenFunction::ConstantFoldsToSimpleInteger() for the if condition
 /// needs to succeed and return true.
@@ -7,8 +7,6 @@
 /// variable to the topmost scope, otherwise we will pick the call scope
 /// of to_address and de-allocate the local variable at the end of the
 /// to_address call.
-/// FIXME: This is not currently correct since we still mark p as
-/// constexpr-unknown and then reject it when comparing.
 extern void abort2();
 constexpr const int* to_address(const int *a) {
   return a;
@@ -23,7 +21,7 @@ void rightscope() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %p = alloca i32
 // CHECK-NEXT: store i32 0, ptr %p
-// INTERP-NEXT: call noundef ptr @_Z10to_addressPKi(ptr noundef %p)
+// CHECK-NEXT: ret void
 
 
 /// In the if expression below, the read from s.i should fail.

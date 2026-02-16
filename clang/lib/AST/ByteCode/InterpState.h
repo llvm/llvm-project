@@ -15,6 +15,7 @@
 
 #include "Context.h"
 #include "DynamicAllocator.h"
+#include "EvalSettings.h"
 #include "Floating.h"
 #include "Function.h"
 #include "InterpFrame.h"
@@ -35,10 +36,14 @@ struct StdAllocatorCaller {
 /// Interpreter context.
 class InterpState final : public State, public SourceMapper {
 public:
+  // FIXME: Get rid of this constructor as well.
   InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               SourceMapper *M = nullptr);
-  InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
-              const Function *Func);
+
+  InterpState(const EvalSettings &Settings, Program &P, InterpStack &Stk,
+              Context &Ctx, SourceMapper *M = nullptr);
+  InterpState(const EvalSettings &Settings, Program &P, InterpStack &Stk,
+              Context &Ctx, const Function *Func);
 
   ~InterpState();
 

@@ -30,18 +30,31 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
   EvalMode = Parent.EvalMode;
 }
 
-InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
-                         Context &Ctx, const Function *Func)
-    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr), P(P),
+InterpState::InterpState(const EvalSettings &Settings, Program &P,
+                         InterpStack &Stk, Context &Ctx, SourceMapper *M)
+    : State(Ctx.getASTContext(), Settings.EvalStatus), M(M), P(P), Stk(Stk),
+      Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
+      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
+  InConstantContext = Settings.InConstantContext;
+  CheckingPotentialConstantExpression =
+      Settings.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Settings.CheckingForUndefinedBehavior;
+  EvalMode = Settings.EvalMode;
+}
+
+InterpState::InterpState(const EvalSettings &Settings, Program &P,
+                         InterpStack &Stk, Context &Ctx, const Function *Func)
+    : State(Ctx.getASTContext(), Settings.EvalStatus), M(nullptr), P(P),
       Stk(Stk), Ctx(Ctx),
       BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
       Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
-  InConstantContext = Parent.InConstantContext;
+  InConstantContext = Settings.InConstantContext;
   CheckingPotentialConstantExpression =
-      Parent.CheckingPotentialConstantExpression;
-  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
-  EvalMode = Parent.EvalMode;
+      Settings.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Settings.CheckingForUndefinedBehavior;
+  EvalMode = Settings.EvalMode;
 }
 
 bool InterpState::inConstantContext() const {

@@ -30,6 +30,7 @@ namespace interp {
 class Function;
 class Program;
 class State;
+struct EvalSettings;
 enum PrimType : uint8_t;
 
 struct ParamOffset {
@@ -48,33 +49,40 @@ public:
   ~Context();
 
   /// Checks if a function is a potential constant expression.
-  bool isPotentialConstantExpr(State &Parent, const FunctionDecl *FD);
-  void isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
+  bool isPotentialConstantExpr(const EvalSettings &Settings,
+                               const FunctionDecl *FD);
+  void isPotentialConstantExprUnevaluated(const EvalSettings &Settings,
+                                          const Expr *E,
                                           const FunctionDecl *FD);
 
-  /// Evaluates a toplevel expression as an rvalue.
+  // FIXME: Get rid of this version and switch to the one taking
+  // EvalSettings always.
   bool evaluateAsRValue(State &Parent, const Expr *E, APValue &Result);
+  /// Evaluates a toplevel expression as an rvalue.
+  bool evaluateAsRValue(const EvalSettings &Settings, const Expr *E,
+                        APValue &Result);
 
   /// Like evaluateAsRvalue(), but does no implicit lvalue-to-rvalue conversion.
-  bool evaluate(State &Parent, const Expr *E, APValue &Result,
-                ConstantExprKind Kind);
+  bool evaluate(const EvalSettings &Settings, const Expr *E, APValue &Result);
 
   /// Evaluates a toplevel initializer.
-  bool evaluateAsInitializer(State &Parent, const VarDecl *VD, const Expr *Init,
-                             APValue &Result);
+  bool evaluateAsInitializer(const EvalSettings &Settings, const VarDecl *VD,
+                             const Expr *Init, APValue &Result);
 
-  bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
+  bool evaluateCharRange(const EvalSettings &Settings, const Expr *SizeExpr,
                          const Expr *PtrExpr, APValue &Result);
-  bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
+  bool evaluateCharRange(const EvalSettings &Settings, const Expr *SizeExpr,
                          const Expr *PtrExpr, std::string &Result);
 
   /// Evaluate \param E and if it can be evaluated to a null-terminated string,
   /// copy the result into \param Result.
-  bool evaluateString(State &Parent, const Expr *E, std::string &Result);
+  bool evaluateString(const EvalSettings &Settings, const Expr *E,
+                      std::string &Result);
 
   /// Evalute \param E and if it can be evaluated to a string literal,
   /// run strlen() on it.
-  std::optional<uint64_t> evaluateStrlen(State &Parent, const Expr *E);
+  std::optional<uint64_t> evaluateStrlen(const EvalSettings &Settings,
+                                         const Expr *E);
 
   /// If \param E evaluates to a pointer the number of accessible bytes
   /// past the pointer is estimated in \param Result as if evaluated by
@@ -86,8 +94,8 @@ public:
   /// as the one referred to by E are considered, when Kind & 1 == 0
   /// bytes belonging to the same storage (stack, heap allocation,
   /// global variable) are considered.
-  std::optional<uint64_t> tryEvaluateObjectSize(State &Parent, const Expr *E,
-                                                unsigned Kind);
+  std::optional<uint64_t> tryEvaluateObjectSize(const EvalSettings &Settings,
+                                                const Expr *E, unsigned Kind);
 
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
@@ -170,10 +178,10 @@ public:
 private:
   friend class EvalIDScope;
   /// Runs a function.
-  bool Run(State &Parent, const Function *Func);
+  bool Run(const EvalSettings &Settings, const Function *Func);
 
   template <typename ResultT>
-  bool evaluateStringRepr(State &Parent, const Expr *SizeExpr,
+  bool evaluateStringRepr(const EvalSettings &Settings, const Expr *SizeExpr,
                           const Expr *PtrExpr, ResultT &Result);
 
   /// Current compilation context.

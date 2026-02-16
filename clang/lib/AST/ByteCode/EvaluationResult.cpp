@@ -7,15 +7,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "EvaluationResult.h"
+#include "../ExprConstShared.h"
 #include "InterpState.h"
 #include "Pointer.h"
 #include "Record.h"
+#include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprObjC.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <iterator>
 
 namespace clang {
 namespace interp {
+
+QualType EvaluationResult::getStorageType() const {
+  if (const auto *E = Source.dyn_cast<const Expr *>()) {
+    if (E->isPRValue())
+      return E->getType();
+
+    return Ctx.getASTContext().getLValueReferenceType(E->getType());
+  }
+
+  if (const auto *D =
+          dyn_cast_if_present<ValueDecl>(Source.dyn_cast<const Decl *>()))
+    return D->getType();
+  return QualType();
+}
 
 static void DiagnoseUninitializedSubobject(InterpState &S, SourceLocation Loc,
                                            const FieldDecl *SubObjDecl) {
@@ -210,9 +230,10 @@ static void collectBlocks(const Pointer &Ptr,
   }
 }
 
-bool EvaluationResult::checkReturnValue(InterpState &S, const Context &Ctx,
-                                        const Pointer &Ptr,
-                                        const SourceInfo &Info) {
+bool EvaluationResult::checkDynamicAllocations(InterpState &S,
+                                               const Context &Ctx,
+                                               const Pointer &Ptr,
+                                               SourceInfo Info) {
   // Collect all blocks that this pointer (transitively) points to and
   // return false if any of them is a dynamic block.
   llvm::SetVector<const Block *> Blocks;
@@ -234,6 +255,339 @@ bool EvaluationResult::checkReturnValue(InterpState &S, const Context &Ctx,
   }
 
   return true;
+}
+
+static bool isGlobalLValue(const Pointer &Ptr) {
+  if (Ptr.isBlockPointer() && Ptr.block()->isDynamic())
+    return true;
+  if (Ptr.isTypeidPointer())
+    return true;
+
+  const Descriptor *Desc = Ptr.getDeclDesc();
+  return ::isGlobalLValue(Desc->asValueDecl(), Desc->asExpr());
+}
+
+/// Check if the given function pointer can be returned from an evaluation.
+static bool checkFunctionPtr(InterpState &S, const Pointer &Ptr,
+                             QualType PtrType, SourceInfo Info,
+                             ConstantExprKind ConstexprKind) {
+  assert(Ptr.isFunctionPointer());
+  const FunctionPointer &FuncPtr = Ptr.asFunctionPointer();
+  const FunctionDecl *FD = FuncPtr.getFunction()->getDecl();
+  // E.g. ObjC block pointers.
+  if (!FD)
+    return true;
+  if (FD->isImmediateFunction()) {
+    S.FFDiag(Info, diag::note_consteval_address_accessible)
+        << !PtrType->isAnyPointerType();
+    S.Note(FD->getLocation(), diag::note_declared_at);
+    return false;
+  }
+
+  // __declspec(dllimport) must be handled very carefully:
+  // We must never initialize an expression with the thunk in C++.
+  // Doing otherwise would allow the same id-expression to yield
+  // different addresses for the same function in different translation
+  // units.  However, this means that we must dynamically initialize the
+  // expression with the contents of the import address table at runtime.
+  //
+  // The C language has no notion of ODR; furthermore, it has no notion of
+  // dynamic initialization.  This means that we are permitted to
+  // perform initialization with the address of the thunk.
+  if (S.getLangOpts().CPlusPlus && !isForManglingOnly(ConstexprKind) &&
+      FD->hasAttr<DLLImportAttr>())
+    // FIXME: Diagnostic!
+    return false;
+  return true;
+}
+
+static bool lvalFields(InterpState &S, const ASTContext &Ctx,
+                       const Pointer &Ptr, QualType PtrType, SourceInfo Info,
+                       ConstantExprKind ConstexprKind,
+                       llvm::SmallPtrSet<const Block *, 4> &CheckedBlocks);
+static bool lval(InterpState &S, const ASTContext &Ctx, const Pointer &Ptr,
+                 QualType PtrType, SourceInfo Info,
+                 ConstantExprKind ConstexprKind,
+                 llvm::SmallPtrSet<const Block *, 4> &CheckedBlocks) {
+  if (Ptr.isFunctionPointer())
+    return checkFunctionPtr(S, Ptr, PtrType, Info, ConstexprKind);
+
+  if (!Ptr.isBlockPointer())
+    return true;
+
+  const Descriptor *DeclDesc = Ptr.block()->getDescriptor();
+  const Expr *BaseE = DeclDesc->asExpr();
+  const ValueDecl *BaseVD = DeclDesc->asValueDecl();
+  assert(BaseE || BaseVD);
+  bool IsReferenceType = PtrType->isReferenceType();
+  bool IsSubObj = !Ptr.isRoot() || (Ptr.inArray() && !Ptr.isArrayRoot());
+
+  if (!isGlobalLValue(Ptr)) {
+    if (S.getLangOpts().CPlusPlus11) {
+      S.FFDiag(Info, diag::note_constexpr_non_global, 1)
+          << IsReferenceType << IsSubObj
+          << !!DeclDesc->asValueDecl() // DeclDesc->IsTemporary
+          << DeclDesc->asValueDecl();
+      const VarDecl *VarD = DeclDesc->asVarDecl();
+      if (VarD && VarD->isConstexpr()) {
+        // Non-static local constexpr variables have unintuitive semantics:
+        //   constexpr int a = 1;
+        //   constexpr const int *p = &a;
+        // ... is invalid because the address of 'a' is not constant. Suggest
+        // adding a 'static' in this case.
+        S.Note(VarD->getLocation(), diag::note_constexpr_not_static)
+            << VarD
+            << FixItHint::CreateInsertion(VarD->getBeginLoc(), "static ");
+      } else {
+        if (const ValueDecl *VD = DeclDesc->asValueDecl())
+          S.Note(VD->getLocation(), diag::note_declared_at);
+        else if (const Expr *E = DeclDesc->asExpr())
+          S.Note(E->getExprLoc(), diag::note_constexpr_temporary_here);
+      }
+    } else {
+      S.FFDiag(Info);
+    }
+    return false;
+  }
+
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(BaseVD)) {
+    // Check if this is a thread-local variable.
+    if (VD->getTLSKind()) {
+      // FIXME: Diagnostic!
+      return false;
+    }
+
+    // A dllimport variable never acts like a constant, unless we're
+    // evaluating a value for use only in name mangling, and unless it's a
+    // static local. For the latter case, we'd still need to evaluate the
+    // constant expression in case we're inside a (inlined) function.
+    if (!isForManglingOnly(ConstexprKind) && VD->hasAttr<DLLImportAttr>() &&
+        !VD->isStaticLocal())
+      return false;
+
+    // In CUDA/HIP device compilation, only device side variables have
+    // constant addresses.
+    if (S.getLangOpts().CUDA && S.getLangOpts().CUDAIsDevice &&
+        Ctx.CUDAConstantEvalCtx.NoWrongSidedVars) {
+      if ((!VD->hasAttr<CUDADeviceAttr>() && !VD->hasAttr<CUDAConstantAttr>() &&
+           !VD->getType()->isCUDADeviceBuiltinSurfaceType() &&
+           !VD->getType()->isCUDADeviceBuiltinTextureType()) ||
+          VD->hasAttr<HIPManagedAttr>())
+        return false;
+    }
+
+    return true;
+  }
+
+  if (const auto *MTE = dyn_cast_if_present<MaterializeTemporaryExpr>(BaseE)) {
+    QualType TempType = Ptr.getType();
+
+    if (TempType.isDestructedType()) {
+      S.FFDiag(MTE->getExprLoc(),
+               diag::note_constexpr_unsupported_temporary_nontrivial_dtor)
+          << TempType;
+      return false;
+    }
+
+    if (Ptr.getFieldDesc()->isPrimitive() &&
+        Ptr.getFieldDesc()->getPrimType() == PT_Ptr) {
+      // Recurse!
+      Pointer Pointee = Ptr.deref<Pointer>();
+      if (CheckedBlocks.insert(Pointee.block()).second) {
+        if (!lval(S, Ctx, Pointee, Pointee.getType(),
+                  Ptr.getDeclDesc()->getLoc(), ConstexprKind, CheckedBlocks))
+          return false;
+      }
+    } else if (Ptr.getRecord()) {
+      return lvalFields(S, Ctx, Ptr, Ptr.getType(), Info,
+                        ConstantExprKind::Normal, CheckedBlocks);
+    }
+  }
+
+  return true;
+}
+
+static bool lvalFields(InterpState &S, const ASTContext &Ctx,
+                       const Pointer &Ptr, QualType PtrType, SourceInfo Info,
+                       ConstantExprKind ConstexprKind,
+                       llvm::SmallPtrSet<const Block *, 4> &CheckedBlocks) {
+  if (!Ptr.isBlockPointer())
+    return true;
+
+  const Descriptor *FieldDesc = Ptr.getFieldDesc();
+  if (const Record *R = Ptr.getRecord()) {
+    if (!R->hasPtrField())
+      return true;
+    for (const Record::Field &F : R->fields()) {
+      if (F.Desc->isPrimitive() && F.Desc->getPrimType() == PT_Ptr) {
+        QualType FieldType = F.Decl->getType();
+        if (!Ptr.atField(F.Offset).isLive())
+          return false;
+
+        Pointer Pointee = Ptr.atField(F.Offset).deref<Pointer>();
+        if (CheckedBlocks.insert(Pointee.block()).second) {
+          if (!lval(S, Ctx, Pointee, FieldType, Info, ConstexprKind,
+                    CheckedBlocks))
+            return false;
+        }
+      } else {
+        Pointer FieldPtr = Ptr.atField(F.Offset);
+        if (!lvalFields(S, Ctx, FieldPtr, F.Decl->getType(), Info,
+                        ConstexprKind, CheckedBlocks))
+          return false;
+      }
+    }
+
+    for (const Record::Base &B : R->bases()) {
+      Pointer BasePtr = Ptr.atField(B.Offset);
+      if (!lvalFields(S, Ctx, BasePtr, B.Desc->getType(), Info, ConstexprKind,
+                      CheckedBlocks))
+        return false;
+    }
+    for (const Record::Base &B : R->virtual_bases()) {
+      Pointer BasePtr = Ptr.atField(B.Offset);
+      if (!lvalFields(S, Ctx, BasePtr, B.Desc->getType(), Info, ConstexprKind,
+                      CheckedBlocks))
+        return false;
+    }
+
+    return true;
+  }
+  if (FieldDesc->isPrimitiveArray()) {
+    if (FieldDesc->getPrimType() == PT_Ptr) {
+      for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
+        if (!Ptr.isLive())
+          return false;
+        Pointer Pointee = Ptr.elem<Pointer>(I);
+        if (CheckedBlocks.insert(Pointee.block()).second) {
+          if (!lval(S, Ctx, Pointee, FieldDesc->getElemQualType(), Info,
+                    ConstexprKind, CheckedBlocks))
+            return false;
+        }
+      }
+    }
+    return true;
+  }
+  if (FieldDesc->isCompositeArray()) {
+    if (FieldDesc->ElemRecord && !FieldDesc->ElemRecord->hasPtrField())
+      return true;
+
+    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
+      Pointer Elem = Ptr.atIndex(I).narrow();
+      if (!lvalFields(S, Ctx, Elem, FieldDesc->getElemQualType(), Info,
+                      ConstexprKind, CheckedBlocks))
+        return false;
+    }
+    return true;
+  }
+  if (FieldDesc->isPrimitive() && FieldDesc->getPrimType() == PT_MemberPtr) {
+    MemberPointer MP = Ptr.deref<MemberPointer>();
+    if (!EvaluationResult::checkMemberPointer(S, MP, Info, ConstexprKind))
+      return false;
+  }
+
+  return true;
+}
+
+/// Toplevel accessor to check all lvalue fields.
+bool EvaluationResult::checkLValueFields(InterpState &S, const Pointer &Ptr,
+                                         SourceInfo Info,
+                                         ConstantExprKind ConstexprKind) {
+  QualType SourceType = getStorageType();
+  llvm::SmallPtrSet<const Block *, 4> CheckedBlocks;
+
+  return lvalFields(S, Ctx.getASTContext(), Ptr, SourceType, Info,
+                    ConstexprKind, CheckedBlocks);
+}
+
+bool EvaluationResult::checkLValue(InterpState &S, const Pointer &Ptr,
+                                   SourceInfo Info,
+                                   ConstantExprKind ConstexprKind) {
+  if (Ptr.isZero())
+    return true;
+
+  QualType SourceType = getStorageType();
+  if (Ptr.isFunctionPointer())
+    return checkFunctionPtr(S, Ptr, SourceType, Info, ConstexprKind);
+
+  bool IsReferenceType = SourceType->isReferenceType();
+  if (Ptr.isTypeidPointer()) {
+    if (isTemplateArgument(ConstexprKind)) {
+      S.FFDiag(Info, diag::note_constexpr_invalid_template_arg)
+          << IsReferenceType << /*IsSubObj=*/false << /*InvalidBaseKind=*/0;
+      return false;
+    }
+    return true;
+  }
+
+  if (!Ptr.isBlockPointer())
+    return true;
+
+  const Descriptor *DeclDesc = Ptr.getDeclDesc();
+  const Expr *BaseE = DeclDesc->asExpr();
+  const ValueDecl *BaseVD = DeclDesc->asValueDecl();
+  assert(BaseE || BaseVD);
+  bool IsSubObj = !Ptr.isRoot() || (Ptr.inArray() && !Ptr.isArrayRoot());
+
+  // Additional restrictions apply in a template argument. We only enforce the
+  // C++20 restrictions here; additional syntactic and semantic restrictions
+  // are applied elsewhere.
+  if (isTemplateArgument(ConstexprKind)) {
+    int InvalidBaseKind = -1;
+    StringRef Ident;
+    if (isa_and_nonnull<StringLiteral>(BaseE))
+      InvalidBaseKind = 1;
+    else if (isa_and_nonnull<MaterializeTemporaryExpr>(BaseE) ||
+             isa_and_nonnull<LifetimeExtendedTemporaryDecl>(BaseVD))
+      InvalidBaseKind = 2;
+    else if (const auto *PE = dyn_cast_if_present<PredefinedExpr>(BaseE)) {
+      InvalidBaseKind = 3;
+      Ident = PE->getIdentKindName();
+      IsSubObj = true;
+    }
+
+    if (InvalidBaseKind != -1) {
+      S.FFDiag(Info, diag::note_constexpr_invalid_template_arg)
+          << IsReferenceType << IsSubObj << InvalidBaseKind << Ident;
+      return false;
+    }
+  }
+
+  llvm::SmallPtrSet<const Block *, 4> CheckedBlocks;
+  if (!lval(S, Ctx.getASTContext(), Ptr, SourceType, Info, ConstexprKind,
+            CheckedBlocks)) {
+    return false;
+  }
+
+  return true;
+}
+
+bool EvaluationResult::checkMemberPointer(InterpState &S,
+                                          const MemberPointer &MemberPtr,
+                                          SourceInfo Info,
+                                          ConstantExprKind ConstexprKind) {
+  const CXXMethodDecl *MD = MemberPtr.getMemberFunction();
+  if (!MD)
+    return true;
+
+  if (MD->isImmediateFunction()) {
+    S.FFDiag(Info, diag::note_consteval_address_accessible)
+        << /*pointer=*/false;
+    S.Note(MD->getLocation(), diag::note_declared_at);
+    return false;
+  }
+
+  if (isForManglingOnly(ConstexprKind) || MD->isVirtual() ||
+      !MD->hasAttr<DLLImportAttr>()) {
+    return true;
+  }
+  return false;
+}
+
+bool EvaluationResult::checkFunctionPointer(InterpState &S, const Pointer &Ptr,
+                                            SourceInfo Info,
+                                            ConstantExprKind ConstexprKind) {
+  return checkFunctionPtr(S, Ptr, getStorageType(), Info, ConstexprKind);
 }
 
 } // namespace interp
