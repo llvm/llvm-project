@@ -1,2 +1,5 @@
+if (LLDB_ENABLE_TREESITTER)
+  add_subdirectory(TreeSitter)
+endif()
 add_subdirectory(Clang)
 add_subdirectory(Default)

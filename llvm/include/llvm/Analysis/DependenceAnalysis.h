@@ -478,12 +478,6 @@ private:
   /// array subscripts are signed.
   void unifySubscriptType(ArrayRef<Subscript *> Pairs);
 
-  /// removeMatchingExtensions - Examines a subscript pair.
-  /// If the source and destination are identically sign (or zero)
-  /// extended, it strips off the extension in an effort to
-  /// simplify the actual analysis.
-  void removeMatchingExtensions(Subscript *Pair);
-
   /// collectCommonLoops - Finds the set of loops from the LoopNest that
   /// have a level <= CommonLevels and are referred to by the SCEV Expression.
   void collectCommonLoops(const SCEV *Expression, const Loop *LoopNest,
