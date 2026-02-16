@@ -7,9 +7,49 @@ define void @clmul_loop(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-LABEL: define void @clmul_loop(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[C1]], [[A2]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[C1]], [[B3]]
+; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP1]], 32
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP2]], i64 2
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <2 x i64>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <2 x i64>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> [[WIDE_LOAD]], <2 x i64> [[WIDE_LOAD6]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> [[WIDE_LOAD5]], <2 x i64> [[WIDE_LOAD7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP4]], i64 2
+; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[PA:%.*]] = getelementptr i64, ptr [[A]], i64 [[I]]
 ; CHECK-NEXT:    [[PB:%.*]] = getelementptr i64, ptr [[B]], i64 [[I]]
 ; CHECK-NEXT:    [[PC:%.*]] = getelementptr i64, ptr [[C]], i64 [[I]]
@@ -19,7 +59,7 @@ define void @clmul_loop(ptr %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-NEXT:    store i64 [[R]], ptr [[PC]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_EXIT:.*]], label %[[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[FOR_EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -48,3 +88,9 @@ for.exit:
   ret void
 
 }
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+;.

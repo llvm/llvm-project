@@ -8,9 +8,9 @@ define void @clmul_loop(ptr %a, ptr %b, ptr %c, i64 %n){
 ; WITH-PCLMUL-LABEL: define void @clmul_loop(
 ; WITH-PCLMUL-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) #[[ATTR1:[0-9]+]] {
 ; WITH-PCLMUL-NEXT:  [[ENTRY:.*]]:
-; WITH-PCLMUL-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
-; WITH-PCLMUL-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; WITH-PCLMUL-NEXT:    [[C1:%.*]] = ptrtoint ptr [[C]] to i64
+; WITH-PCLMUL-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; WITH-PCLMUL-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; WITH-PCLMUL-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
 ; WITH-PCLMUL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; WITH-PCLMUL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; WITH-PCLMUL:       [[VECTOR_MEMCHECK]]:
