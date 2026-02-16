@@ -7,6 +7,9 @@ define internal void @f() {
 }
 
 define void @test() {
+; CHECK-LABEL: define void @test(
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr @f
+; CHECK-NEXT:    ret void
   %1 = ptrtoint ptr @f to i64
   %2 = bitcast i64 %1 to <4 x i16>
   %3 = ptrtoint ptr @f to i64
