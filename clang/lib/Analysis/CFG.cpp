@@ -656,6 +656,7 @@ private:
                   bool ExternallyDestructed = false);
   CFGBlock *VisitStmt(Stmt *S, AddStmtChoice asc);
   CFGBlock *VisitChildren(Stmt *S);
+  CFGBlock *VisitCallExprChildren(CallExpr *C);
   CFGBlock *VisitNoRecurse(Expr *E, AddStmtChoice asc);
   CFGBlock *VisitOMPExecutableDirective(OMPExecutableDirective *D,
                                         AddStmtChoice asc);
@@ -731,6 +732,8 @@ private:
   CFGBlock *VisitBinaryOperatorForTemporaryDtors(BinaryOperator *E,
                                                  bool ExternallyDestructed,
                                                  TempDtorContext &Context);
+  CFGBlock *VisitCXXOperatorCallExprForTemporaryDtors(CXXOperatorCallExpr *E,
+                                                      TempDtorContext &Context);
   CFGBlock *VisitCXXBindTemporaryExprForTemporaryDtors(
       CXXBindTemporaryExpr *E, bool ExternallyDestructed, TempDtorContext &Context);
   CFGBlock *VisitConditionalOperatorForTemporaryDtors(
@@ -2542,6 +2545,19 @@ CFGBlock *CFGBuilder::VisitChildren(Stmt *S) {
   return B;
 }
 
+CFGBlock *CFGBuilder::VisitCallExprChildren(CallExpr *C) {
+  // For overloaded assignment operators, visit arguments in reverse order (LHS
+  // then RHS) so that RHS is sequenced before LHS in the CFG, matching C++17
+  // sequencing rules.
+  if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(C);
+      OCE && OCE->isAssignmentOp()) {
+    Visit(OCE->getArg(0));
+    Visit(OCE->getArg(1));
+    return Visit(OCE->getCallee());
+  }
+  return VisitChildren(C);
+}
+
 CFGBlock *CFGBuilder::VisitInitListExpr(InitListExpr *ILE, AddStmtChoice asc) {
   if (asc.alwaysAdd(*this, ILE)) {
     autoCreateBlock();
@@ -2879,7 +2895,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     autoCreateBlock();
     appendCall(Block, C);
 
-    return VisitChildren(C);
+    return VisitCallExprChildren(C);
   }
 
   if (Block) {
@@ -2903,7 +2919,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
       addSuccessor(Block, &cfg->getExit());
   }
 
-  return VisitChildren(C);
+  return VisitCallExprChildren(C);
 }
 
 CFGBlock *CFGBuilder::VisitChooseExpr(ChooseExpr *C,
@@ -4748,11 +4764,19 @@ CFGBlock *CFGBuilder::VisitCXXTryStmt(CXXTryStmt *Terminator) {
 
   // Save the current "try" context.
   SaveAndRestore SaveTry(TryTerminatedBlock, NewTryTerminatedBlock);
-  cfg->addTryDispatchBlock(TryTerminatedBlock);
+  cfg->addTryDispatchBlock(NewTryTerminatedBlock);
 
   assert(Terminator->getTryBlock() && "try must contain a non-NULL body");
   Block = nullptr;
-  return addStmt(Terminator->getTryBlock());
+
+  if (CFGBlock *TryBodyEntry = addStmt(Terminator->getTryBlock())) {
+    addSuccessor(NewTryTerminatedBlock, TryBodyEntry);
+  } else {
+    CFGBlock *EmptyTryBody = createBlock(/*add_successor=*/false);
+    addSuccessor(NewTryTerminatedBlock, EmptyTryBody);
+    addSuccessor(EmptyTryBody, TrySuccessor);
+  }
+  return NewTryTerminatedBlock;
 }
 
 CFGBlock *CFGBuilder::VisitCXXCatchStmt(CXXCatchStmt *CS) {
@@ -5095,6 +5119,10 @@ tryAgain:
                                                   ExternallyDestructed,
                                                   Context);
 
+    case Stmt::CXXOperatorCallExprClass:
+      return VisitCXXOperatorCallExprForTemporaryDtors(
+          cast<CXXOperatorCallExpr>(E), Context);
+
     case Stmt::CXXBindTemporaryExprClass:
       return VisitCXXBindTemporaryExprForTemporaryDtors(
           cast<CXXBindTemporaryExpr>(E), ExternallyDestructed, Context);
@@ -5233,6 +5261,18 @@ CFGBlock *CFGBuilder::VisitBinaryOperatorForTemporaryDtors(
 
   // Any other operator is visited normally.
   return VisitChildrenForTemporaryDtors(E, ExternallyDestructed, Context);
+}
+
+CFGBlock *CFGBuilder::VisitCXXOperatorCallExprForTemporaryDtors(
+    CXXOperatorCallExpr *E, TempDtorContext &Context) {
+  if (E->isAssignmentOp()) {
+    // For assignment operators, the RHS expression is evaluated before the LHS
+    // expression, so prepend temporary destructors for the RHS first.
+    CFGBlock *RHSBlock = VisitForTemporaryDtors(E->getArg(1), false, Context);
+    CFGBlock *LHSBlock = VisitForTemporaryDtors(E->getArg(0), false, Context);
+    return LHSBlock ? LHSBlock : RHSBlock;
+  }
+  return VisitChildrenForTemporaryDtors(E, false, Context);
 }
 
 CFGBlock *CFGBuilder::VisitCXXBindTemporaryExprForTemporaryDtors(
