@@ -176,7 +176,11 @@ jobs:
             test_runs_on=$build_runs_on
             ;;
           windows-11-arm)
-            build_runs_on="windows-11-arm-16core"
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ] || [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+              build_runs_on="${{ inputs.runs-on }}"
+            else
+              build_runs_on="windows-11-arm-16core"
+            fi
             test_runs_on=$build_runs_on
             ;;
           macos-14)
@@ -352,6 +356,7 @@ jobs:
       - name: Upload Artifacts
         uses: ./.github/workflows/upload-release-artifact
         with:
+          release-version: ${{ needs.prepare.outputs.release-version }}
           artifact-id: ${{ needs.build-release-package.outputs.artifact-id }}
           attestation-name: ${{ needs.prepare.outputs.attestation-name }}
           digest: ${{ needs.build-release-package.outputs.digest }}

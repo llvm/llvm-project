@@ -837,23 +837,12 @@ CleanupAndPrepareModules(BugDriver &BD, std::unique_ptr<Module> Test,
 
       // Don't forward functions which are external in the test module too.
       if (TestFn && !TestFn->isDeclaration()) {
-        // 1. Add a string constant with its name to the global file
+        // Add a string constant with its name to the global file
         Constant *InitArray =
             ConstantDataArray::getString(F->getContext(), F->getName());
         GlobalVariable *funcName = new GlobalVariable(
             *Safe, InitArray->getType(), true /*isConstant*/,
             GlobalValue::InternalLinkage, InitArray, F->getName() + "_name");
-
-        // 2. Use `GetElementPtr *funcName, 0, 0' to convert the string to an
-        // sbyte* so it matches the signature of the resolver function.
-
-        // GetElementPtr *funcName, ulong 0, ulong 0
-        std::vector<Constant *> GEPargs(
-            2, Constant::getNullValue(Type::getInt32Ty(F->getContext())));
-        Value *GEP = ConstantExpr::getGetElementPtr(InitArray->getType(),
-                                                    funcName, GEPargs);
-        std::vector<Value *> ResolverArgs;
-        ResolverArgs.push_back(GEP);
 
         // Rewrite uses of F in global initializers, etc. to uses of a wrapper
         // function that dynamically resolves the calls to F via our JIT API
@@ -885,8 +874,8 @@ CleanupAndPrepareModules(BugDriver &BD, std::unique_ptr<Module> Test,
 
           // Resolve the call to function F via the JIT API:
           //
-          // call resolver(GetElementPtr...)
-          CallInst *Resolver = CallInst::Create(resolverFunc, ResolverArgs,
+          // call resolver(funcName...)
+          CallInst *Resolver = CallInst::Create(resolverFunc, {funcName},
                                                 "resolver", LookupBB);
 
           // Save the value in our cache.

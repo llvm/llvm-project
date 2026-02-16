@@ -211,7 +211,7 @@ func.func @memref_alloca_scope() {
 }
 
 // CHECK-LABEL: func @memref_cast(%arg0
-func.func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64x16x4xf32, strided<[64, 4, 1], offset: 0>>) {
+func.func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memref<64x16x4xf32, strided<[64, 4, 1], offset: 0>>, %arg3 : memref<4x1x8xf32, strided<[32, 16, 1]>>, %arg4 : memref<4x?x8xf32, strided<[32, 8, 1]>>) {
   // CHECK: memref.cast %{{.*}} : memref<4xf32> to memref<?xf32>
   %0 = memref.cast %arg0 : memref<4xf32> to memref<?xf32>
 
@@ -229,6 +229,12 @@ func.func @memref_cast(%arg0: memref<4xf32>, %arg1 : memref<?xf32>, %arg2 : memr
 
   // CHECK: memref.cast %{{.*}} : memref<*xf32> to memref<4xf32>
   %5 = memref.cast %4 : memref<*xf32> to memref<4xf32>
+
+  // CHECK: memref.cast %{{.*}} : memref<4x1x8xf32, strided<[32, 16, 1]>> to memref<4x?x8xf32, strided<[32, 8, 1]>>
+  %6 = memref.cast %arg3 : memref<4x1x8xf32, strided<[32, 16, 1]>> to memref<4x?x8xf32, strided<[32, 8, 1]>>
+
+  // CHECK: memref.cast %{{.*}} : memref<4x?x8xf32, strided<[32, 8, 1]>> to memref<4x1x8xf32, strided<[32, 16, 1]>>
+  %7 = memref.cast %arg4 : memref<4x?x8xf32, strided<[32, 8, 1]>> to memref<4x1x8xf32, strided<[32, 16, 1]>>
   return
 }
 

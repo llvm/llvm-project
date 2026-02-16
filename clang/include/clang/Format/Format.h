@@ -2477,7 +2477,13 @@ struct FormatStyle {
     ///        initializer1(),
     ///        initializer2()
     /// \endcode
-    BCIS_AfterColon
+    BCIS_AfterColon,
+    /// Break constructor initializers only after the commas.
+    /// \code
+    ///    Constructor() : initializer1(),
+    ///                    initializer2()
+    /// \endcode
+    BCIS_AfterComma
   };
 
   /// The break constructor initializers style to use.
@@ -3520,7 +3526,8 @@ struct FormatStyle {
   /// Keep the form feed character if it's immediately preceded and followed by
   /// a newline. Multiple form feeds and newlines within a whitespace range are
   /// replaced with a single newline and form feed followed by the remaining
-  /// newlines.
+  /// newlines. (See
+  /// www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed.)
   /// \version 20
   bool KeepFormFeed;
 

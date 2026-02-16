@@ -10,6 +10,7 @@
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ELEMENTS_TYPES_H
 
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <ranges>
 #include <tuple>

@@ -10,7 +10,6 @@ static_library("ObjC") {
     "//lldb/source/DataFormatters",
     "//lldb/source/Expression",
     "//lldb/source/Host",
-    "//lldb/source/Plugins/Language/ClangCommon",
     "//lldb/source/Plugins/LanguageRuntime/ObjC/AppleObjCRuntime",
     "//lldb/source/Symbol",
     "//lldb/source/Target",

@@ -885,13 +885,12 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
-static void printCallCommon(mlir::Operation *op,
-                            mlir::FlatSymbolRefAttr calleeSym,
-                            mlir::Value indirectCallee,
-                            mlir::OpAsmPrinter &printer, bool isNothrow,
-                            cir::SideEffect sideEffect,
-                            mlir::Block *normalDest = nullptr,
-                            mlir::Block *unwindDest = nullptr) {
+static void
+printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
+                mlir::Value indirectCallee, mlir::OpAsmPrinter &printer,
+                bool isNothrow, cir::SideEffect sideEffect, ArrayAttr argAttrs,
+                ArrayAttr resAttrs, mlir::Block *normalDest = nullptr,
+                mlir::Block *unwindDest = nullptr) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
@@ -927,13 +926,17 @@ static void printCallCommon(mlir::Operation *op,
   }
 
   llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
-      CIRDialect::getCalleeAttrName(), CIRDialect::getNoThrowAttrName(),
+      CIRDialect::getCalleeAttrName(),
+      CIRDialect::getNoThrowAttrName(),
       CIRDialect::getSideEffectAttrName(),
-      CIRDialect::getOperandSegmentSizesAttrName()};
+      CIRDialect::getOperandSegmentSizesAttrName(),
+      llvm::StringRef("res_attrs"),
+      llvm::StringRef("arg_attrs")};
   printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   printer << " : ";
-  printer.printFunctionalType(op->getOperands().getTypes(),
-                              op->getResultTypes());
+  call_interface_impl::printFunctionSignature(
+      printer, op->getOperands().getTypes(), argAttrs,
+      /*isVariadic=*/false, op->getResultTypes(), resAttrs);
 }
 
 mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
@@ -945,7 +948,7 @@ void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect);
+                  sideEffect, getArgAttrsAttr(), getResAttrsAttr());
 }
 
 static LogicalResult
@@ -1061,7 +1064,8 @@ void cir::TryCallOp::print(::mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect, getNormalDest(), getUnwindDest());
+                  sideEffect, getArgAttrsAttr(), getResAttrsAttr(),
+                  getNormalDest(), getUnwindDest());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1854,6 +1858,15 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     // be marked with tls bits.
     if (getTls() && !g.getTlsModel())
       return emitOpError("access to global not marked thread local");
+
+    // Verify that the static_local attribute on GetGlobalOp matches the
+    // static_local_guard attribute on GlobalOp. GetGlobalOp uses a UnitAttr,
+    // GlobalOp uses StaticLocalGuardAttr. Both should be present, or neither.
+    bool getGlobalIsStaticLocal = getStaticLocal();
+    bool globalIsStaticLocal = g.getStaticLocalGuard().has_value();
+    if (getGlobalIsStaticLocal != globalIsStaticLocal &&
+        !getOperation()->getParentOfType<cir::GlobalOp>())
+      return emitOpError("static_local attribute mismatch");
   } else if (auto f = dyn_cast<FuncOp>(op)) {
     symTy = f.getFunctionType();
   } else {
