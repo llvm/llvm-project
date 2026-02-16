@@ -8229,7 +8229,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   }
 
   if (CM.foldTailByMasking())
-    VPlanTransforms::foldTailByMasking(*Plan);
+    RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::foldTailByMasking, *Plan);
 
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
