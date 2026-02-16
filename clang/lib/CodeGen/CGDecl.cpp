@@ -1076,7 +1076,7 @@ static llvm::Constant *constStructWithPadding(CodeGenModule &CGM,
       Values.push_back(patternOrZeroFor(CGM, isPattern, PadTy));
     }
     llvm::Constant *CurOp;
-    if (constant->isZeroValue())
+    if (constant->isNullValue())
       CurOp = llvm::Constant::getNullValue(STy->getElementType(i));
     else
       CurOp = cast<llvm::Constant>(constant->getAggregateElement(i));
@@ -2042,7 +2042,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
       D.mightBeUsableInConstantExpressions(getContext())) {
     assert(!capturedByInit && "constant init contains a capturing block?");
     constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
-    if (constant && !constant->isZeroValue() &&
+    if (constant && !constant->isNullValue() &&
         (trivialAutoVarInit !=
          LangOptions::TrivialAutoVarInitKind::Uninitialized)) {
       IsPattern isPattern =

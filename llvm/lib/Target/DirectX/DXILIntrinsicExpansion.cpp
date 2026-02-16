@@ -277,7 +277,7 @@ static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   // Handle the initial start value for floating-point addition.
   if (IsFAdd) {
     Constant *StartValue = dyn_cast<Constant>(Orig->getOperand(0));
-    if (StartValue && !StartValue->isZeroValue())
+    if (StartValue && !StartValue->isNullValue())
       Sum = Builder.CreateFAdd(Sum, StartValue);
   }
 
