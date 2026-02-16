@@ -5688,6 +5688,31 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
            });
   }
 
+  case ISD::BITCAST: {
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    EVT TgtVT = Op.getValueType();
+
+    // Case 1: Scalar -> Vector, or Scalar -> Scalar
+    if (!SrcVT.isVector()) {
+      APInt DemandedSrcElts(1, 1);
+      return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, PoisonOnly,
+                                              Depth + 1);
+    }
+
+    // Case 2: Vector -> Scalar, or Scalable Vector -> Scalable Vector
+    if ((SrcVT.isVector() && !TgtVT.isVector()) ||
+        (SrcVT.isScalableVT() && TgtVT.isScalableVT()))
+      return isGuaranteedNotToBeUndefOrPoison(Src, PoisonOnly, Depth + 1);
+
+    // Case 3: Vector -> Vector
+    unsigned NumSrcElts = SrcVT.getVectorNumElements();
+    APInt ScaledDemandedElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+
+    return isGuaranteedNotToBeUndefOrPoison(Src, ScaledDemandedElts, PoisonOnly,
+                                            Depth + 1);
+  }
+
     // TODO: Search for noundef attributes from library functions.
 
     // TODO: Pointers dereferenced by ISD::LOAD/STORE ops are noundef.
