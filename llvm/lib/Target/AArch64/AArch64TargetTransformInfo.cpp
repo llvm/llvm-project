@@ -5915,7 +5915,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   // The sub/negation cannot be folded into the operands of
   // ISD::PARTIAL_REDUCE_*MLA, so make the cost more expensive.
   if (Opcode == Instruction::Sub)
-    Cost += 8;
+    Cost *= 4;
 
   // Prefer using full types by costing half-full input types as more expensive.
   if (TypeSize::isKnownLT(InputVectorType->getPrimitiveSizeInBits(),
