@@ -8442,6 +8442,11 @@ void SemaCodeCompletion::CodeCompleteObjCInstanceMessage(
   // If necessary, apply function/array conversion to the receiver.
   // C99 6.7.5.3p[7,8].
   if (RecExpr) {
+    // If the receiver expression has no type (e.g., a parenthesized C-style
+    // cast that hasn't been resolved), bail out to avoid dereferencing a null
+    // type.
+    if (RecExpr->getType().isNull())
+      return;
     ExprResult Conv = SemaRef.DefaultFunctionArrayLvalueConversion(RecExpr);
     if (Conv.isInvalid()) // conversion failed. bail.
       return;
