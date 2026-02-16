@@ -22,12 +22,12 @@ typedef half half4 __attribute__((ext_vector_type(4)));
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP3]], align 32
-// CHECK-NEXT:    call void @llvm.amdgcn.image.store.2d.f32.i32.v8i32(float [[TMP0]], i32 1, i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 106, i32 103)
+// CHECK-NEXT:    call void @llvm.amdgcn.image.store.2d.f32.i32.v8i32(float [[TMP0]], i32 12, i32 [[TMP1]], i32 [[TMP2]], <8 x i32> [[TEX_RSRC_VAL]], i32 106, i32 103)
 // CHECK-NEXT:    ret void
 //
 void test_builtin_image_store_2d(float f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_2d_f32_i32(f32, i32, i32, tex, 106, 103);
+   __builtin_amdgcn_image_store_2d_f32_i32(f32, 12, i32, i32, tex, 106, 103);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_2d_1(
@@ -52,7 +52,7 @@ void test_builtin_image_store_2d(float f32, int i32, __amdgpu_texture_t tex) {
 //
 void test_builtin_image_store_2d_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_2d_v4f32_i32(v4f32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_2d_v4f32_i32(v4f32, 15, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_2d_2(
@@ -77,7 +77,7 @@ void test_builtin_image_store_2d_1(float4 v4f32, int i32, __amdgpu_texture_t tex
 //
 void test_builtin_image_store_2d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_2d_v4f16_i32(v4f16, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_2d_v4f16_i32(v4f16, 15, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_2darray(
@@ -98,12 +98,12 @@ void test_builtin_image_store_2d_2(half4 v4f16, int i32, __amdgpu_texture_t tex)
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP4]], align 32
-// CHECK-NEXT:    call void @llvm.amdgcn.image.store.2darray.f32.i32.v8i32(float [[TMP0]], i32 1, i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    call void @llvm.amdgcn.image.store.2darray.f32.i32.v8i32(float [[TMP0]], i32 15, i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret void
 //
 void test_builtin_image_store_2darray(float f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_2darray_f32_i32(f32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_2darray_f32_i32(f32, 15, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_2darray_1(
@@ -129,7 +129,7 @@ void test_builtin_image_store_2darray(float f32, int i32, __amdgpu_texture_t tex
 //
 void test_builtin_image_store_2darray_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_2darray_v4f32_i32(v4f32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_2darray_v4f32_i32(v4f32, 15, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_2darray_2(
@@ -155,7 +155,7 @@ void test_builtin_image_store_2darray_1(float4 v4f32, int i32, __amdgpu_texture_
 //
 void test_builtin_image_store_2darray_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-  __builtin_amdgcn_image_store_2darray_v4f16_i32(v4f16, i32, i32, i32, tex, 120, 110);
+  __builtin_amdgcn_image_store_2darray_v4f16_i32(v4f16, 15, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_1d_1(
@@ -179,7 +179,7 @@ void test_builtin_image_store_2darray_2(half4 v4f16, int i32, __amdgpu_texture_t
 //
 void test_builtin_image_store_1d_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_1d_v4f32_i32(v4f32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_1d_v4f32_i32(v4f32, 15, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_1d_2(
@@ -203,7 +203,7 @@ void test_builtin_image_store_1d_1(float4 v4f32, int i32, __amdgpu_texture_t tex
 //
 void test_builtin_image_store_1d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_1d_v4f16_i32(v4f16, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_1d_v4f16_i32(v4f16, 15, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_1darray_1(
@@ -228,7 +228,7 @@ void test_builtin_image_store_1d_2(half4 v4f16, int i32, __amdgpu_texture_t tex)
 //
 void test_builtin_image_store_1darray_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_1darray_v4f32_i32(v4f32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_1darray_v4f32_i32(v4f32, 15, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_1darray_2(
@@ -253,7 +253,7 @@ void test_builtin_image_store_1darray_1(float4 v4f32, int i32, __amdgpu_texture_
 //
 void test_builtin_image_store_1darray_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_1darray_v4f16_i32(v4f16, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_1darray_v4f16_i32(v4f16, 15, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_3d_1(
@@ -279,7 +279,7 @@ void test_builtin_image_store_1darray_2(half4 v4f16, int i32, __amdgpu_texture_t
 //
 void test_builtin_image_store_3d_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_3d_v4f32_i32(v4f32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_3d_v4f32_i32(v4f32, 15, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_3d_2(
@@ -305,7 +305,7 @@ void test_builtin_image_store_3d_1(float4 v4f32, int i32, __amdgpu_texture_t tex
 //
 void test_builtin_image_store_3d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_3d_v4f16_i32(v4f16, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_3d_v4f16_i32(v4f16, 15, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_cube_1(
@@ -331,7 +331,7 @@ void test_builtin_image_store_3d_2(half4 v4f16, int i32, __amdgpu_texture_t tex)
 //
 void test_builtin_image_store_cube_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_cube_v4f32_i32(v4f32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_cube_v4f32_i32(v4f32, 15, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_cube_2(
@@ -357,7 +357,7 @@ void test_builtin_image_store_cube_1(float4 v4f32, int i32, __amdgpu_texture_t t
 //
 void test_builtin_image_store_cube_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_cube_v4f16_i32(v4f16, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_cube_v4f16_i32(v4f16, 15, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_1d_1(
@@ -382,7 +382,7 @@ void test_builtin_image_store_cube_2(half4 v4f16, int i32, __amdgpu_texture_t te
 //
 void test_builtin_image_store_mip_1d_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_1d_v4f32_i32(v4f32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_1d_v4f32_i32(v4f32, 15, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_1d_2(
@@ -407,7 +407,7 @@ void test_builtin_image_store_mip_1d_1(float4 v4f32, int i32, __amdgpu_texture_t
 //
 void test_builtin_image_store_mip_1d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_1d_v4f16_i32(v4f16, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_1d_v4f16_i32(v4f16, 15, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_1darray_1(
@@ -433,7 +433,7 @@ void test_builtin_image_store_mip_1d_2(half4 v4f16, int i32, __amdgpu_texture_t 
 //
 void test_builtin_image_store_mip_1darray_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_1darray_v4f32_i32(v4f32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_1darray_v4f32_i32(v4f32, 15, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_1darray_2(
@@ -459,7 +459,7 @@ void test_builtin_image_store_mip_1darray_1(float4 v4f32, int i32, __amdgpu_text
 //
 void test_builtin_image_store_mip_1darray_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_1darray_v4f16_i32(v4f16, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_1darray_v4f16_i32(v4f16, 15, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_2d(
@@ -480,12 +480,12 @@ void test_builtin_image_store_mip_1darray_2(half4 v4f16, int i32, __amdgpu_textu
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP4]], align 32
-// CHECK-NEXT:    call void @llvm.amdgcn.image.store.mip.2d.f32.i32.v8i32(float [[TMP0]], i32 1, i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    call void @llvm.amdgcn.image.store.mip.2d.f32.i32.v8i32(float [[TMP0]], i32 15, i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret void
 //
 void test_builtin_image_store_mip_2d(float f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_2d_f32_i32(f32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_2d_f32_i32(f32, 15, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_2d_1(
@@ -511,7 +511,7 @@ void test_builtin_image_store_mip_2d(float f32, int i32, __amdgpu_texture_t tex)
 //
 void test_builtin_image_store_mip_2d_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_2d_v4f32_i32(v4f32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_2d_v4f32_i32(v4f32, 15, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_2d_2(
@@ -537,7 +537,7 @@ void test_builtin_image_store_mip_2d_1(float4 v4f32, int i32, __amdgpu_texture_t
 //
 void test_builtin_image_store_mip_2d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_2d_v4f16_i32(v4f16, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_2d_v4f16_i32(v4f16, 15, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_2darray(
@@ -559,12 +559,12 @@ void test_builtin_image_store_mip_2d_2(half4 v4f16, int i32, __amdgpu_texture_t 
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I32_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TEX_ADDR_ASCAST]], align 32
 // CHECK-NEXT:    [[TEX_RSRC_VAL:%.*]] = load <8 x i32>, ptr [[TMP5]], align 32
-// CHECK-NEXT:    call void @llvm.amdgcn.image.store.mip.2darray.f32.i32.v8i32(float [[TMP0]], i32 1, i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], i32 [[TMP4]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
+// CHECK-NEXT:    call void @llvm.amdgcn.image.store.mip.2darray.f32.i32.v8i32(float [[TMP0]], i32 15, i32 [[TMP1]], i32 [[TMP2]], i32 [[TMP3]], i32 [[TMP4]], <8 x i32> [[TEX_RSRC_VAL]], i32 120, i32 110)
 // CHECK-NEXT:    ret void
 //
 void test_builtin_image_store_mip_2darray(float f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_2darray_f32_i32(f32, i32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_2darray_f32_i32(f32, 15, i32, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_2darray_1(
@@ -591,7 +591,7 @@ void test_builtin_image_store_mip_2darray(float f32, int i32, __amdgpu_texture_t
 //
 void test_builtin_image_store_mip_2darray_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_2darray_v4f32_i32(v4f32, i32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_2darray_v4f32_i32(v4f32, 15, i32, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_2darray_2(
@@ -618,7 +618,7 @@ void test_builtin_image_store_mip_2darray_1(float4 v4f32, int i32, __amdgpu_text
 //
 void test_builtin_image_store_mip_2darray_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_2darray_v4f16_i32(v4f16, i32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_2darray_v4f16_i32(v4f16, 15, i32, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_3d_1(
@@ -645,7 +645,7 @@ void test_builtin_image_store_mip_2darray_2(half4 v4f16, int i32, __amdgpu_textu
 //
 void test_builtin_image_store_mip_3d_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_3d_v4f32_i32(v4f32, i32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_3d_v4f32_i32(v4f32, 15, i32, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_3d_2(
@@ -672,7 +672,7 @@ void test_builtin_image_store_mip_3d_1(float4 v4f32, int i32, __amdgpu_texture_t
 //
 void test_builtin_image_store_mip_3d_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_3d_v4f16_i32(v4f16, i32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_3d_v4f16_i32(v4f16, 15, i32, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_cube_1(
@@ -699,7 +699,7 @@ void test_builtin_image_store_mip_3d_2(half4 v4f16, int i32, __amdgpu_texture_t 
 //
 void test_builtin_image_store_mip_cube_1(float4 v4f32, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_cube_v4f32_i32(v4f32, i32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_cube_v4f32_i32(v4f32, 15, i32, i32, i32, i32, tex, 120, 110);
  }
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_mip_cube_2(
@@ -726,5 +726,5 @@ void test_builtin_image_store_mip_cube_1(float4 v4f32, int i32, __amdgpu_texture
 //
 void test_builtin_image_store_mip_cube_2(half4 v4f16, int i32, __amdgpu_texture_t tex) {
 
-   __builtin_amdgcn_image_store_mip_cube_v4f16_i32(v4f16, i32, i32, i32, i32, tex, 120, 110);
+   __builtin_amdgcn_image_store_mip_cube_v4f16_i32(v4f16, 15, i32, i32, i32, i32, tex, 120, 110);
  }
