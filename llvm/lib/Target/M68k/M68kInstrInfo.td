@@ -573,6 +573,18 @@ def Mxloadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   return false;
 }]>;
 
+def Mxstoreloadi8_safe : PatFrag<(ops node:$dst, node:$src),
+                                 (store (i8 (unindexedload node:$src)),
+                                        node:$dst), [{ return isSafeStoreLoad(N); }]>;
+
+def Mxstoreloadi16_safe : PatFrag<(ops node:$dst, node:$src),
+                                  (store (i16 (unindexedload node:$src)),
+                                         node:$dst), [{ return isSafeStoreLoad(N); }]>;
+
+def Mxstoreloadi32_safe : PatFrag<(ops node:$dst, node:$src),
+                                  (store (i32 (unindexedload node:$src)),
+                                         node:$dst),[{ return isSafeStoreLoad(N); }]>;
+
 def Mxloadi8         : PatFrag<(ops node:$ptr), (i8  (load node:$ptr))>;
 
 def MxSExtLoadi16i8  : PatFrag<(ops node:$ptr), (i16 (sextloadi8 node:$ptr))>;

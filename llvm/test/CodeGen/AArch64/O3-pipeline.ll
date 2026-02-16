@@ -134,11 +134,7 @@
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       InstructionSelect
 ; CHECK-NEXT:       ResetMachineFunction
-; CHECK-NEXT:       Post-Dominator Tree Construction
-; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Assignment Tracking Analysis
-; CHECK-NEXT:       Lazy Branch Probability Analysis
-; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       AArch64 Instruction Selection
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       AArch64 Local Dynamic TLS Access Clean-up

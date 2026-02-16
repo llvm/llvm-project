@@ -749,14 +749,14 @@ let Predicates = [HasINVPCID, NoEGPR] in {
   // type),/ so it doesn't hurt us that one can't supply a 64 bit value here.
   def : Pat<(int_x86_invpcid GR32:$src1, addr:$src2),
             (INVPCID64
-              (SUBREG_TO_REG (i64 0), (MOV32rr GR32:$src1), sub_32bit),
+              (SUBREG_TO_REG (MOV32rr GR32:$src1), sub_32bit),
               addr:$src2)>;
 }
 
 let Predicates = [HasINVPCID, HasEGPR] in {
   def : Pat<(int_x86_invpcid GR32:$src1, addr:$src2),
             (INVPCID64_EVEX
-              (SUBREG_TO_REG (i64 0), (MOV32rr GR32:$src1), sub_32bit),
+              (SUBREG_TO_REG (MOV32rr GR32:$src1), sub_32bit),
               addr:$src2)>;
 }
 

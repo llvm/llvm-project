@@ -2,14 +2,6 @@
 // RUN:   -debug-info-kind=standalone -std=c++26 %s -o - | FileCheck %s
 
 
-// CHECK: ![[PACK1:[0-9]+]] = distinct !DISubprogram(name: "capture_pack<int>"
-// CHECK: ![[PACK2:[0-9]+]] = distinct !DISubprogram(name: "capture_pack<int, int>"
-// CHECK: ![[PACK3:[0-9]+]] = distinct !DISubprogram(name: "capture_pack_and_locals<int>"
-// CHECK: ![[PACK4:[0-9]+]] = distinct !DISubprogram(name: "capture_pack_and_locals<int, int>"
-// CHECK: ![[PACK5:[0-9]+]] = distinct !DISubprogram(name: "capture_pack_and_this<int>"
-// CHECK: ![[PACK6:[0-9]+]] = distinct !DISubprogram(name: "capture_pack_and_this<int, int>"
-// CHECK: ![[PACK7:[0-9]+]] = distinct !DISubprogram(name: "capture_binding_and_param_pack<int, int>"
-
 template<typename... Args>
 auto capture_pack(Args... args) {
   return [args..., ...params = args] {
@@ -17,6 +9,7 @@ auto capture_pack(Args... args) {
   }();
 }
 
+// CHECK: ![[PACK1:[0-9]+]] = distinct !DISubprogram(name: "capture_pack<int>"
 // CHECK:      distinct !DICompositeType(tag: DW_TAG_class_type, scope: ![[PACK1]]
 // CHECK-SAME:                           elements: ![[PACK1_ELEMS:[0-9]+]]
 // CHECK-DAG:  ![[PACK1_ELEMS]] = !{![[PACK1_ARGS:[0-9]+]], ![[PACK1_PARAMS:[0-9]+]]}
@@ -24,6 +17,7 @@ auto capture_pack(Args... args) {
 // CHECK-DAG:  ![[PACK1_PARAMS]] = !DIDerivedType(tag: DW_TAG_member, name: "params"
 // CHECK-NOT:  DW_TAG_member
 
+// CHECK: ![[PACK2:[0-9]+]] = distinct !DISubprogram(name: "capture_pack<int, int>"
 // CHECK:      distinct !DICompositeType(tag: DW_TAG_class_type, scope: ![[PACK2]]
 // CHECK-SAME:                           elements: ![[PACK2_ELEMS:[0-9]+]]
 // CHECK:      ![[PACK2_ELEMS]] = !{![[PACK2_ARGS:[0-9]+]]
@@ -42,6 +36,7 @@ auto capture_pack_and_locals(int x, Args... args) {
   }();
 }
 
+// CHECK: ![[PACK3:[0-9]+]] = distinct !DISubprogram(name: "capture_pack_and_locals<int>"
 // CHECK:      distinct !DICompositeType(tag: DW_TAG_class_type, scope: ![[PACK3]]
 // CHECK-SAME:                           elements: ![[PACK3_ELEMS:[0-9]+]]
 // CHECK:      ![[PACK3_ELEMS]] = !{![[PACK3_ARGS:[0-9]+]]
@@ -55,6 +50,7 @@ auto capture_pack_and_locals(int x, Args... args) {
 // CHECK-DAG:  ![[PACK3_W]] = !DIDerivedType(tag: DW_TAG_member, name: "w"
 // CHECK-NOT:  DW_TAG_member
 
+// CHECK: ![[PACK4:[0-9]+]] = distinct !DISubprogram(name: "capture_pack_and_locals<int, int>"
 // CHECK:      distinct !DICompositeType(tag: DW_TAG_class_type, scope: ![[PACK4]]
 // CHECK-SAME:                           elements: ![[PACK4_ELEMS:[0-9]+]]
 // CHECK:      ![[PACK4_ELEMS]] = !{![[PACK4_ARGS:[0-9]+]]
@@ -90,6 +86,7 @@ struct Foo {
   int w = 10;
 } f;
 
+// CHECK: ![[PACK5:[0-9]+]] = distinct !DISubprogram(name: "capture_pack_and_this<int>"
 // CHECK:      distinct !DICompositeType(tag: DW_TAG_class_type, scope: ![[PACK5]]
 // CHECK-SAME:                           elements: ![[PACK5a_ELEMS:[0-9]+]]
 // CHECK:      ![[PACK5a_ELEMS]] = !{![[PACK5a_THIS:[0-9]+]]
@@ -120,6 +117,7 @@ struct Foo {
 // CHECK-DAG:  ![[PACK5c_THIS]] = !DIDerivedType(tag: DW_TAG_member, name: "this"
 // CHECK-NOT:  DW_TAG_member
 
+// CHECK: ![[PACK6:[0-9]+]] = distinct !DISubprogram(name: "capture_pack_and_this<int, int>"
 // CHECK:      distinct !DICompositeType(tag: DW_TAG_class_type, scope: ![[PACK6]]
 // CHECK-SAME:                           elements: ![[PACK6a_ELEMS:[0-9]+]]
 // CHECK:      ![[PACK6a_ELEMS]] = !{![[PACK6a_THIS:[0-9]+]]
@@ -168,6 +166,7 @@ auto capture_binding_and_param_pack(Args... args) {
   }();
 }
 
+// CHECK: ![[PACK7:[0-9]+]] = distinct !DISubprogram(name: "capture_binding_and_param_pack<int, int>"
 // CHECK: distinct !DICompositeType(tag: DW_TAG_structure_type, name: "C"
 // CHECK:      distinct !DICompositeType(tag: DW_TAG_class_type, scope: ![[PACK7]]
 // CHECK-SAME:                           elements: ![[PACK7_ELEMS:[0-9]+]]

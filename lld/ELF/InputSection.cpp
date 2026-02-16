@@ -806,7 +806,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   switch (r.expr) {
   case R_ABS:
   case R_DTPREL:
-  case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
   case RE_AARCH64_AUTH:
   case RE_RISCV_ADD:
@@ -837,7 +836,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_GOTPLTONLY_PC:
     return ctx.in.gotPlt->getVA() + a - p;
   case R_GOTREL:
-  case RE_PPC64_RELAX_TOC:
     return r.sym->getVA(ctx, a) - ctx.in.got->getVA();
   case R_GOTPLTREL:
     return r.sym->getVA(ctx, a) - ctx.in.gotPlt->getVA();
@@ -994,7 +992,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case RE_PPC64_TOCBASE:
     return getPPC64TocBase(ctx) + a;
   case R_RELAX_GOT_PC:
-  case RE_PPC64_RELAX_GOT_PC:
     return r.sym->getVA(ctx, a) - p;
   case R_RELAX_TLS_GD_TO_LE:
   case R_RELAX_TLS_IE_TO_LE:

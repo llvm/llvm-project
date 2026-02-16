@@ -20,7 +20,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE static double dfmaf128(float128 x, float128 y, float128 z) {
+LIBC_INLINE double dfmaf128(float128 x, float128 y, float128 z) {
   return fputil::fma<double>(x, y, z);
 }
 

@@ -100,8 +100,7 @@ define i1 @n2(i64 %y, i32 %len) {
 ; New shift amount would be 16, %y has 47 leading zeros - can fold.
 define i1 @t3(i32 %x, i32 %len) {
 ; CHECK-LABEL: @t3(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[T5:%.*]] = trunc i32 [[X:%.*]] to i1
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
@@ -117,8 +116,7 @@ define i1 @t3(i32 %x, i32 %len) {
 ; Note that we indeed look at leading zeros!
 define i1 @t3_singlebit(i32 %x, i32 %len) {
 ; CHECK-LABEL: @t3_singlebit(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[T5:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[T5:%.*]] = trunc i32 [[X:%.*]] to i1
 ; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len

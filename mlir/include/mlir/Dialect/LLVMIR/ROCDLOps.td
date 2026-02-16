@@ -351,6 +351,10 @@ def ROCDL_ClusterIdXOp : ROCDL_SpecialIdRegisterOp<"cluster.id.x">;
 def ROCDL_ClusterIdYOp : ROCDL_SpecialIdRegisterOp<"cluster.id.y">;
 def ROCDL_ClusterIdZOp : ROCDL_SpecialIdRegisterOp<"cluster.id.z">;
 
+def ROCDL_ClusterWorkgroupIdXOp : ROCDL_SpecialIdRegisterOp<"cluster.workgroup.id.x">;
+def ROCDL_ClusterWorkgroupIdYOp : ROCDL_SpecialIdRegisterOp<"cluster.workgroup.id.y">;
+def ROCDL_ClusterWorkgroupIdZOp : ROCDL_SpecialIdRegisterOp<"cluster.workgroup.id.z">;
+
 def ROCDL_WaveId : ROCDL_SpecialIdRegisterOp<"wave.id">;
 def ROCDL_WavefrontSizeOp : ROCDL_SpecialIdRegisterOp<"wavefrontsize">;
 
@@ -581,6 +585,61 @@ def ROCDL_WaitTensorcntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.tensorcnt", [], 0,
       before continuing.
 
       Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$count attr-dict";
+}
+
+def ROCDL_AsyncmarkOp : ROCDL_ConcreteNonMemIntrOp<"asyncmark", [], 0>,
+    Arguments<(ins)> {
+  let summary = "Mark the end of a group of asynchronous operations";
+  let description = [{
+      This operation, in conjunction with `rocdl.wait.asyncmark`, forms the
+      compiler-provided framework for tracking explicitly asynchronous
+      memory operations, such as copies to LDS that use async intrinsics
+      and gfx1250's tensor loads.
+
+      Details of its behavior can be found in
+      [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
+
+      See `rocdl.wait.asyncmark`'s documentation for a usage example.
+
+      Available on gfx9 and later.
+  }];
+  let results = (outs);
+  let assemblyFormat = "attr-dict";
+}
+
+def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [0], ["count"]>,
+    Arguments<(ins I16Attr:$count)> {
+  let summary = "Wait until N or fewer async operation groups are unexecuted";
+  let description = [{
+      This operation, along with `rocdl.asyncmark`, forms the compiler-provided
+      framework for explicitly tracking asynchronous operations.
+
+      At the point where a wait.asyncmark operation is executed, all async operations
+      that were parts of any async group (established by asyncmark in program order)
+      other than the `count` previously-added ones will have finished executing.
+
+      For more detail, including on how this mechanism composes with function calls,
+      see [the LLVM documentation on async tracking](/llvm/docs/AMDGPUAsyncOperations.rst).
+
+      Available on gfx9 and later.
+
+      Example:
+      ```mlir
+      rocdl.tensor.load.to.lds ...
+      rocdl.global.async.load.to.lds ...
+
+      rocdl.asyncmark
+
+      rocdl.tensor.load.to.lds ...
+      rocdl.global.async.load.to.lds ...
+
+      rocdl.asyncmark
+
+      rocdl.wait.asyncmark 1 // First group of loads completes after this
+      ```
   }];
   let results = (outs);
   let assemblyFormat = "$count attr-dict";
