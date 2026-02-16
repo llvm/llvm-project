@@ -324,6 +324,8 @@ public:
 
   bool hasFlatScrRegister() const { return hasFlatAddressSpace(); }
 
+  bool isFwdProgressEnabled() const { return EnableFwdProgress; }
+
   // Check if target supports ST addressing mode with FLAT scratch instructions.
   // The ST addressing mode means no registers are used, either VGPR or SGPR,
   // but only immediate offset is swizzled and added to the FLAT scratch base.

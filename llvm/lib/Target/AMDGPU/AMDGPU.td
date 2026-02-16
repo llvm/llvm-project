@@ -1081,6 +1081,12 @@ defm SWakeupBarrier : AMDGPUSubtargetFeature<"s-wakeup-barrier-inst",
   "Has s_wakeup_barrier instruction."
 >;
 
+def FeatureFwdProgress : SubtargetFeature<"fwdprogress",
+  "EnableFwdProgress",
+  "true",
+  "Enable Fwd Progress Mode"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1722,7 +1728,8 @@ def FeatureISAVersion10_Common : FeatureSet<
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureNSAEncoding,
-   FeatureBackOffBarrier]>;
+   FeatureBackOffBarrier,
+   FeatureFwdProgress]>;
 
 def FeatureISAVersion10_1_Common : FeatureSet<
   !listconcat(FeatureISAVersion10_Common.Features,
@@ -1818,6 +1825,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureRealTrue16Insts,
    FeatureD16Writes32BitVgpr,
+   FeatureFwdProgress,
 ]>;
 
 // There are few workarounds that need to be
@@ -1935,7 +1943,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts
+   FeatureCvtPkNormVOP3Insts,
+   FeatureFwdProgress
    ]>;
 
 def FeatureISAVersion12_50_Common : FeatureSet<
@@ -2024,7 +2033,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureQsadInsts,
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts])>;
+   FeatureCvtPkNormVOP3Insts,
+   FeatureFwdProgress])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
@@ -2100,6 +2110,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureFwdProgress,
 ]>;
 
 //===----------------------------------------------------------------------===//
