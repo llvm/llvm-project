@@ -1254,35 +1254,6 @@ struct FormatStyle {
   /// \version 3.7
   BinPackParametersStyle BinPackParameters;
 
-  /// The maximum amount of parameters that may appear on a single line in a
-  /// function declaration. This option can be used with \c BPPS_OnePerLine to
-  /// put every parameter on its own line if the function has more than
-  /// \c MaxParametersOnLine parameters. If this option is 0, there is no maximum.
-  /// \code
-  ///   MaxParametersOnLine: 3
-  ///   BinPackParameters: BPPS_BinPack
-  ///
-  ///   void foo(int a, int b, int c);
-  ///
-  ///   void foo(int a, int b, int c,
-  ///            int d);
-  ///
-  ///   void foo(int a, int b, int c,
-  ///            int d, int e, int f,
-  ///            int g, int h, int i);
-  ///
-  ///   BinPackParameters: BPPS_OnePerLine
-  ///
-  ///   void foo(int a, int b, int c);
-  ///
-  ///   void foo(int a,
-  ///            int b,
-  ///            int c,
-  ///            int d);
-  /// \endcode
-  /// \version 23
-  unsigned MaxParametersOnLine;
-
   /// Styles for adding spacing around ``:`` in bitfield definitions.
   enum BitFieldColonSpacingStyle : int8_t {
     /// Add one space on each side of the ``:``
@@ -2637,6 +2608,35 @@ struct FormatStyle {
   /// The inheritance list style to use.
   /// \version 7
   BreakInheritanceListStyle BreakInheritanceList;
+
+  /// If set to a value greater than 0, any parenthesized parameter or argument
+  /// list with more parameters than the specified number will be formatted with
+  /// one parameter per line. This applies to all parameter-like lists enclosed
+  /// in parentheses, including function declarations, function definitions,
+  /// function calls, and comma expressions.
+  /// \code
+  ///    BreakParametersAfter: 3
+  ///
+  ///    void foo(int a);
+  ///
+  ///    void bar(int a, int b, int c);
+  ///
+  ///    void baz(int a,
+  ///             int b,
+  ///             int c,
+  ///             int d);
+  ///
+  ///    foo(1);
+  ///
+  ///    bar(1, 2, 3);
+  ///
+  ///    baz(1,
+  ///        2,
+  ///        3,
+  ///        4);
+  /// \endcode
+  /// \version 23
+  unsigned BreakParametersAfter;
 
   /// The template declaration breaking style to use.
   /// \version 19
@@ -5723,7 +5723,6 @@ struct FormatStyle {
            BinPackArguments == R.BinPackArguments &&
            BinPackLongBracedList == R.BinPackLongBracedList &&
            BinPackParameters == R.BinPackParameters &&
-           MaxParametersOnLine == R.MaxParametersOnLine &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
            BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&
@@ -5755,6 +5754,7 @@ struct FormatStyle {
            BreakFunctionDefinitionParameters ==
                R.BreakFunctionDefinitionParameters &&
            BreakInheritanceList == R.BreakInheritanceList &&
+           BreakParametersAfter == R.BreakParametersAfter &&
            BreakStringLiterals == R.BreakStringLiterals &&
            BreakTemplateDeclarations == R.BreakTemplateDeclarations &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&

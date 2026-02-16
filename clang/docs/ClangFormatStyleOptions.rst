@@ -3752,6 +3752,37 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakParametersAfter:
+
+**BreakParametersAfter** (``Unsigned``) :versionbadge:`clang-format 23` :ref:`¶ <BreakParametersAfter>`
+  If set to a value greater than 0, any parenthesized parameter or argument
+  list with more parameters than the specified number will be formatted with
+  one parameter per line. This applies to all parameter-like lists enclosed
+  in parentheses, including function declarations, function definitions,
+  function calls, and comma expressions.
+
+  .. code-block:: c++
+
+     BreakParametersAfter: 3
+
+     void foo(int a);
+
+     void bar(int a, int b, int c);
+
+     void baz(int a,
+              int b,
+              int c,
+              int d);
+
+     foo(1);
+
+     bar(1, 2, 3);
+
+     baz(1,
+         2,
+         3,
+         4);
+
 .. _BreakStringLiterals:
 
 **BreakStringLiterals** (``Boolean``) :versionbadge:`clang-format 3.9` :ref:`¶ <BreakStringLiterals>`
@@ -5251,37 +5282,6 @@ the configuration (without a prefix: ``Auto``).
                                             }
        return i;
      }
-
-.. _MaxParametersOnLine:
-
-**MaxParametersOnLine** (``Unsigned``) :versionbadge:`clang-format 23` :ref:`¶ <MaxParametersOnLine>`
-  The maximum amount of parameters that may appear on a single line in a
-  function declaration. This option can be used with ``BPPS_OnePerLine`` to
-  put every parameter on its own line if the function has more than
-  ``MaxParametersOnLine`` parameters. If this option is 0, there is no maximum.
-
-  .. code-block:: c++
-
-    MaxParametersOnLine: 3
-    BinPackParameters: BPPS_BinPack
-
-    void foo(int a, int b, int c);
-
-    void foo(int a, int b, int c,
-             int d);
-
-    void foo(int a, int b, int c,
-             int d, int e, int f,
-             int g, int h, int i);
-
-    BinPackParameters: BPPS_OnePerLine
-
-    void foo(int a, int b, int c);
-
-    void foo(int a,
-             int b,
-             int c,
-             int d);
 
 .. _NamespaceIndentation:
 

@@ -4246,11 +4246,10 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
                              ChildSize + Current->SpacesRequiredBefore;
     }
 
-    if (Style.MaxParametersOnLine > 0 &&
+    if (Style.BreakParametersAfter > 0 &&
         Current->is(tok::l_paren) &&
-        Current->ParameterCount > Style.MaxParametersOnLine) {
+        Current->ParameterCount > Style.BreakParametersAfter) {
       const auto *RParen = Current->MatchingParen;
-      unsigned CurrentParamNum = 0;
       for (auto *ParamTok = Current->Next; ParamTok && ParamTok != RParen;
            ParamTok = ParamTok->Next) {
         if (ParamTok->opensScope()) {
@@ -4258,8 +4257,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           continue;
         }
 
-        if (startsNextParameter(*ParamTok, Style) &&
-            (++CurrentParamNum % Style.MaxParametersOnLine) == 0) {
+        if (startsNextParameter(*ParamTok, Style)) {
           ParamTok->MustBreakBefore = true;
           ParamTok->CanBreakBefore = true;
         }
