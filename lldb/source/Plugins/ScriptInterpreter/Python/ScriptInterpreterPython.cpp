@@ -130,11 +130,11 @@ public:
     PyStatus status = Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
     if (PyStatus_Exception(status))
-      llvm::report_fatal_error(llvm::Twine("Python failed to initialize: '") + status.err_msg + "'.");
+      llvm::report_fatal_error(llvm::Twine("Python failed to initialize: '") + status.err_msg + "'");
 #else
     Py_InitializeEx(/*install_sigs=*/0);
     if (!Py_IsInitialized())
-      llvm::report_fatal_error("Python failed to initialize.");
+      llvm::report_fatal_error("python failed to initialize");
 #endif
 
     // The only case we should go further and acquire the GIL: it is unlocked.
