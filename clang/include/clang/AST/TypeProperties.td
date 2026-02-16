@@ -46,9 +46,7 @@ let Class = CountAttributedType in {
 
 let Class = LateParsedAttrType in {
   // Note: LateParsedAttrType is a transient placeholder type that should
-  // normally be replaced before serialization. If serialized, we just
-  // serialize the wrapped type, losing the late-parsed attribute pointer
-  // (which wouldn't be valid after deserialization anyway).
+  // normally be replaced before serialization. So this won't be serialized.
   def : Creator<[{ (void)ctx; llvm_unreachable("unreachable for serialization"); }]>;
 }
 

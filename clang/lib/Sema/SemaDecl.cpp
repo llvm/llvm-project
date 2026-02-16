@@ -19727,8 +19727,7 @@ static QualType handleCountedByAttrField(Sema &S, QualType T, Decl *D,
   if (!AL.diagnoseLangOpts(S))
     return QualType();
 
-  auto *FD = dyn_cast<FieldDecl>(D);
-  assert(FD);
+  assert(isa<FieldDecl>(D));
 
   auto *CountExpr = AL.getArgAsExpr(0);
   if (!CountExpr)
