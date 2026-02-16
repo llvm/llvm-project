@@ -73,3 +73,44 @@ loop:
 exit:
   ret void
 }
+
+; Test that SCEV expander reuses existing ptrtoint instructions when expanding
+; ptrtoaddr expressions for trip count calculation.
+define void @test_scev_expansion_reuses_ptrtoint(ptr %base, i64 %n) {
+; CHECK-LABEL: define void @test_scev_expansion_reuses_ptrtoint(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[BASE_INT:%.*]] = ptrtoint ptr [[BASE]] to i64
+; CHECK-NEXT:    [[DUMMY:%.*]] = add i64 [[BASE_INT]], 1
+; CHECK-NEXT:    call void @use(i64 [[DUMMY]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[N]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_PH:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PH]]:
+; Verify that the existing ptrtoint (%base.int) is reused in trip count computation.
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], [[BASE_INT]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[BASE_INT]], i64 [[TMP0]])
+; CHECK-NOT:     ptrtoaddr
+entry:
+  %base.int = ptrtoint ptr %base to i64
+  %dummy = add i64 %base.int, 1
+  call void @use(i64 %dummy)
+  %cmp = icmp ugt i64 %n, 0
+  br i1 %cmp, label %loop.ph, label %exit
+
+loop.ph:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %loop.ph ], [ %iv.next, %loop ]
+  %ptr = getelementptr inbounds i8, ptr %base, i64 %iv
+  store i8 0, ptr %ptr, align 1
+  %iv.next = add nuw i64 %iv, 1
+  %end = getelementptr inbounds i8, ptr %base, i64 %n
+  %cmp.loop = icmp ult ptr %ptr, %end
+  br i1 %cmp.loop, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+declare void @use(i64)

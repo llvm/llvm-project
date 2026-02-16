@@ -5853,6 +5853,21 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
   // the back-edge.
   const SCEV *BEValue = getSCEV(BEValueV);
 
+  // If the backedge value is an SCEVUnknown from a ptrtoint, try to use
+  // ptrtoaddr to get a usable SCEV expression. This allows recognizing
+  // integer induction variables derived from pointer inductions.
+  if (isa<SCEVUnknown>(BEValue))
+    if (auto *PTI = dyn_cast<PtrToIntInst>(BEValueV)) {
+      const SCEV *PtrAddr = getPtrToAddrExpr(getSCEV(PTI->getOperand(0)));
+      if (!isa<SCEVCouldNotCompute>(PtrAddr)) {
+        // Adjust type to match the ptrtoint result type if needed.
+        Type *DestTy = PTI->getType();
+        if (PtrAddr->getType() != DestTy)
+          PtrAddr = getTruncateOrZeroExtend(PtrAddr, DestTy);
+        BEValue = PtrAddr;
+      }
+    }
+
   // NOTE: If BEValue is loop invariant, we know that the PHI node just
   // has a special value for the first iteration of the loop.
 
@@ -8165,15 +8180,10 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
   }
 
   case Instruction::PtrToInt: {
-    // Pointer to integer cast is straight-forward, so do model it.
-    const SCEV *Op = getSCEV(U->getOperand(0));
-    Type *DstIntTy = U->getType();
-    // But only if effective SCEV (integer) type is wide enough to represent
-    // all possible pointer values.
-    const SCEV *IntOp = getPtrToIntExpr(Op, DstIntTy);
-    if (isa<SCEVCouldNotCompute>(IntOp))
-      return getUnknown(V);
-    return IntOp;
+    // IMPORTANT: Do NOT use getPtrToAddrExpr here! Using SCEVPtrToAddr for
+    // PtrToInt is NOT safe because the expander may replace IR ptrtoint with
+    // ptrtoaddr, which changes semantics. We must keep ptrtoint as SCEVUnknown.
+    return getUnknown(V);
   }
   case Instruction::IntToPtr:
     // Just don't deal with inttoptr casts.
