@@ -31,7 +31,6 @@
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
-#include "lldb/Host/aix/Ptrace.h"
 //#include "lldb/Host/linux/Host.h"
 //#include "lldb/Host/linux/Uio.h"
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
@@ -74,10 +73,7 @@
 #define HWCAP2_MTE (1 << 18)
 #endif
 
-#define GPR GPR_PPC64
-#define FPR FPR_PPC64
-#define VMX VMX_PPC64
-#define VSX VSX_PPC64
+#define DEBUG_PTRACE_MAXBYTES 20
 
 using namespace lldb;
 using namespace lldb_private;
@@ -164,44 +160,37 @@ static void PtraceDisplayBytes(int &req, void *data, size_t data_size) {
   StreamString buf;
 
   switch (req) {
-  case PTRACE_POKETEXT: {
+  case PTT_READ_GPRS: {
     DisplayBytes(buf, &data, 8);
-    LLDB_LOGV(log, "PTRACE_POKETEXT {0}", buf.GetData());
+    LLDB_LOGV(log, "PTT_READ_GPRS {0}", buf.GetData());
     break;
   }
-  case PTRACE_POKEDATA: {
+  case PTT_WRITE_GPRS: {
     DisplayBytes(buf, &data, 8);
-    LLDB_LOGV(log, "PTRACE_POKEDATA {0}", buf.GetData());
+    LLDB_LOGV(log, "PTT_WRITE_GPRS {0}", buf.GetData());
     break;
   }
-  case PTRACE_POKEUSER: {
-    DisplayBytes(buf, &data, 8);
-    LLDB_LOGV(log, "PTRACE_POKEUSER {0}", buf.GetData());
+  case PT_READ_BLOCK: {
+    DisplayBytes(buf, &data, data_size);
+    LLDB_LOGV(log, "PT_READ_BLOCK {0}", buf.GetData());
     break;
   }
-  case PTRACE_SETREGS: {
+  case PT_WRITE_BLOCK: {
     DisplayBytes(buf, data, data_size);
-    LLDB_LOGV(log, "PTRACE_SETREGS {0}", buf.GetData());
+    LLDB_LOGV(log, "PT_WRITE_BLOCK {0}", buf.GetData());
     break;
   }
-  case PTRACE_SETFPREGS: {
-    DisplayBytes(buf, data, data_size);
-    LLDB_LOGV(log, "PTRACE_SETFPREGS {0}", buf.GetData());
+  case PTT_READ_FPRS: {
+    DisplayBytes(buf, data, 8);
+    LLDB_LOGV(log, "PTT_READ_FPRS: {0}", buf.GetData());
     break;
   }
-#if 0
-  case PTRACE_SETSIGINFO: {
-    DisplayBytes(buf, data, sizeof(siginfo_t));
-    LLDB_LOGV(log, "PTRACE_SETSIGINFO {0}", buf.GetData());
+  case PTT_WRITE_FPRS: {
+    DisplayBytes(buf, data, 8);
+    LLDB_LOGV(log, " PTT_WRITE_FPRS: {0}", buf.GetData());
     break;
   }
-#endif
-  case PTRACE_SETREGSET: {
-    // Extract iov_base from data, which is a pointer to the struct iovec
-    DisplayBytes(buf, *(void **)data, data_size);
-    LLDB_LOGV(log, "PTRACE_SETREGSET {0}", buf.GetData());
-    break;
-  }
+
   default: {}
   }
 }
@@ -1729,38 +1718,32 @@ void NativeProcessAIX::ThreadWasCreated(NativeThreadAIX &thread) {
 #include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
-static void GetRegister(lldb::pid_t pid, long long addr, void *buf) {
-  uint64_t val = 0;
-  uint32_t ret = 0;
-  ret = ptrace64(PT_READ_GPR, pid, addr, 0, (int *)&val);
-  // For 32bit application, ptrace64() return the value and val parameter
-  // of no use 
-  if(val == 0)
-      val = ret;
-  *(uint64_t *)buf = val;
+static void GetSPRs(int req, lldb::tid_t tid, void *gpr_t) {
+    GPR_PPC64 *gpr = static_cast<GPR_PPC64 *>(gpr_t);
+    struct ptxsprs sprs;
+
+    ptrace64(req, tid, (long long)&sprs, 0, 0);
+
+    gpr->cr = sprs.pt_cr;
+    gpr->msr = sprs.pt_msr;
+    gpr->xer = sprs.pt_xer;
+    gpr->lr = sprs.pt_lr;
+    gpr->ctr = sprs.pt_ctr;
+    gpr->pc = sprs.pt_iar;
 }
 
-static void SetRegister(lldb::pid_t pid, long long addr, void *buf) {
-  uint64_t val = (*(uint64_t *)buf);
-  // For 32bit, ptrace64() expects the value as the 4th arg(data)
-  // For 64bit, ptrace64() expects the value as the 5th arg(pointer to the buffer)
-  ptrace64(PT_WRITE_GPR, pid, addr, val, (int *)&val);
-}
+static void SetSPRs(int req, lldb::tid_t tid, void *gpr_t) {
+    GPR_PPC64 *gpr = static_cast<GPR_PPC64 *>(gpr_t);
+    struct ptxsprs sprs;
 
-static void GetFPRegister(lldb::pid_t pid, long long addr, void *buf) {
-  uint64_t val = 0;
-  ptrace64(PT_READ_FPR, pid, addr, 0, (int *)&val);
-  *(uint64_t *)buf = val;
-}
+    sprs.pt_cr = gpr->cr;
+    sprs.pt_msr = gpr->msr;
+    sprs.pt_xer = gpr->xer;
+    sprs.pt_lr = gpr->lr;
+    sprs.pt_ctr = gpr->ctr;
+    sprs.pt_iar = gpr->pc;
 
-static void GetVMRegister(lldb::tid_t tid, long long addr, void *buf) {
-  uint64_t val = 0;
-  ptrace64(PTT_READ_VEC, tid, addr, 0, (int *)&val);
-}
-
-static void GetVSRegister(lldb::tid_t tid, long long addr, void *buf) {
-  uint64_t val = 0;
-  ptrace64(PTT_READ_VSX, tid, addr, 0, (int *)&val);
+    ptrace64(req, tid, (long long)&sprs, 0, 0);
 }
 
 // Wrapper for ptrace to catch errors and log calls. Note that ptrace sets
@@ -1796,254 +1779,42 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
     closedir(dirproc);
   }
 
-  if (req == PTRACE_GETREGS) {
-    GetRegister(pid, GPR0, &(((GPR *)data)->r0));
-    GetRegister(pid, GPR1, &(((GPR *)data)->r1));
-    GetRegister(pid, GPR2, &(((GPR *)data)->r2));
-    GetRegister(pid, GPR3, &(((GPR *)data)->r3));
-    GetRegister(pid, GPR4, &(((GPR *)data)->r4));
-    GetRegister(pid, GPR5, &(((GPR *)data)->r5));
-    GetRegister(pid, GPR6, &(((GPR *)data)->r6));
-    GetRegister(pid, GPR7, &(((GPR *)data)->r7));
-    GetRegister(pid, GPR8, &(((GPR *)data)->r8));
-    GetRegister(pid, GPR9, &(((GPR *)data)->r9));
-    GetRegister(pid, GPR10, &(((GPR *)data)->r10));
-    GetRegister(pid, GPR11, &(((GPR *)data)->r11));
-    GetRegister(pid, GPR12, &(((GPR *)data)->r12));
-    GetRegister(pid, GPR13, &(((GPR *)data)->r13));
-    GetRegister(pid, GPR14, &(((GPR *)data)->r14));
-    GetRegister(pid, GPR15, &(((GPR *)data)->r15));
-    GetRegister(pid, GPR16, &(((GPR *)data)->r16));
-    GetRegister(pid, GPR17, &(((GPR *)data)->r17));
-    GetRegister(pid, GPR18, &(((GPR *)data)->r18));
-    GetRegister(pid, GPR19, &(((GPR *)data)->r19));
-    GetRegister(pid, GPR20, &(((GPR *)data)->r20));
-    GetRegister(pid, GPR21, &(((GPR *)data)->r21));
-    GetRegister(pid, GPR22, &(((GPR *)data)->r22));
-    GetRegister(pid, GPR23, &(((GPR *)data)->r23));
-    GetRegister(pid, GPR24, &(((GPR *)data)->r24));
-    GetRegister(pid, GPR25, &(((GPR *)data)->r25));
-    GetRegister(pid, GPR26, &(((GPR *)data)->r26));
-    GetRegister(pid, GPR27, &(((GPR *)data)->r27));
-    GetRegister(pid, GPR28, &(((GPR *)data)->r28));
-    GetRegister(pid, GPR29, &(((GPR *)data)->r29));
-    GetRegister(pid, GPR30, &(((GPR *)data)->r30));
-    GetRegister(pid, GPR31, &(((GPR *)data)->r31));
-    GetRegister(pid, CR, &(((GPR *)data)->cr));
-    GetRegister(pid, MSR, &(((GPR *)data)->msr));
-    GetRegister(pid, XER, &(((GPR *)data)->xer));
-    //FIXME: origr3/softe/trap on AIX?
-    GetRegister(pid, LR, &(((GPR *)data)->lr));
-    GetRegister(pid, CTR, &(((GPR *)data)->ctr));
-    GetRegister(pid, IAR, &(((GPR *)data)->pc));
-  } else if (req == PTRACE_SETREGS) {
-    SetRegister(pid, GPR0, &(((GPR *)data)->r0));
-    SetRegister(pid, GPR1, &(((GPR *)data)->r1));
-    SetRegister(pid, GPR2, &(((GPR *)data)->r2));
-    SetRegister(pid, GPR3, &(((GPR *)data)->r3));
-    SetRegister(pid, GPR4, &(((GPR *)data)->r4));
-    SetRegister(pid, GPR5, &(((GPR *)data)->r5));
-    SetRegister(pid, GPR6, &(((GPR *)data)->r6));
-    SetRegister(pid, GPR7, &(((GPR *)data)->r7));
-    SetRegister(pid, GPR8, &(((GPR *)data)->r8));
-    SetRegister(pid, GPR9, &(((GPR *)data)->r9));
-    SetRegister(pid, GPR10, &(((GPR *)data)->r10));
-    SetRegister(pid, GPR11, &(((GPR *)data)->r11));
-    SetRegister(pid, GPR12, &(((GPR *)data)->r12));
-    SetRegister(pid, GPR13, &(((GPR *)data)->r13));
-    SetRegister(pid, GPR14, &(((GPR *)data)->r14));
-    SetRegister(pid, GPR15, &(((GPR *)data)->r15));
-    SetRegister(pid, GPR16, &(((GPR *)data)->r16));
-    SetRegister(pid, GPR17, &(((GPR *)data)->r17));
-    SetRegister(pid, GPR18, &(((GPR *)data)->r18));
-    SetRegister(pid, GPR19, &(((GPR *)data)->r19));
-    SetRegister(pid, GPR20, &(((GPR *)data)->r20));
-    SetRegister(pid, GPR21, &(((GPR *)data)->r21));
-    SetRegister(pid, GPR22, &(((GPR *)data)->r22));
-    SetRegister(pid, GPR23, &(((GPR *)data)->r23));
-    SetRegister(pid, GPR24, &(((GPR *)data)->r24));
-    SetRegister(pid, GPR25, &(((GPR *)data)->r25));
-    SetRegister(pid, GPR26, &(((GPR *)data)->r26));
-    SetRegister(pid, GPR27, &(((GPR *)data)->r27));
-    SetRegister(pid, GPR28, &(((GPR *)data)->r28));
-    SetRegister(pid, GPR29, &(((GPR *)data)->r29));
-    SetRegister(pid, GPR30, &(((GPR *)data)->r30));
-    SetRegister(pid, GPR31, &(((GPR *)data)->r31));
-    SetRegister(pid, CR, &(((GPR *)data)->cr));
-    SetRegister(pid, MSR, &(((GPR *)data)->msr));
-    SetRegister(pid, XER, &(((GPR *)data)->xer));
-    //FIXME: origr3/softe/trap on AIX?
-    SetRegister(pid, LR, &(((GPR *)data)->lr));
-    SetRegister(pid, CTR, &(((GPR *)data)->ctr));
-    SetRegister(pid, IAR, &(((GPR *)data)->pc));
-  } else if (req == PTRACE_GETFPREGS) {
-    GetFPRegister(pid, FPR0, &(((FPR *)data)->f0));
-    GetFPRegister(pid, FPR1, &(((FPR *)data)->f1));
-    GetFPRegister(pid, FPR2, &(((FPR *)data)->f2));
-    GetFPRegister(pid, FPR3, &(((FPR *)data)->f3));
-    GetFPRegister(pid, FPR4, &(((FPR *)data)->f4));
-    GetFPRegister(pid, FPR5, &(((FPR *)data)->f5));
-    GetFPRegister(pid, FPR6, &(((FPR *)data)->f6));
-    GetFPRegister(pid, FPR7, &(((FPR *)data)->f7));
-    GetFPRegister(pid, FPR8, &(((FPR *)data)->f8));
-    GetFPRegister(pid, FPR9, &(((FPR *)data)->f9));
-    GetFPRegister(pid, FPR10, &(((FPR *)data)->f10));
-    GetFPRegister(pid, FPR11, &(((FPR *)data)->f11));
-    GetFPRegister(pid, FPR12, &(((FPR *)data)->f12));
-    GetFPRegister(pid, FPR13, &(((FPR *)data)->f13));
-    GetFPRegister(pid, FPR14, &(((FPR *)data)->f14));
-    GetFPRegister(pid, FPR15, &(((FPR *)data)->f15));
-    GetFPRegister(pid, FPR16, &(((FPR *)data)->f16));
-    GetFPRegister(pid, FPR17, &(((FPR *)data)->f17));
-    GetFPRegister(pid, FPR18, &(((FPR *)data)->f18));
-    GetFPRegister(pid, FPR19, &(((FPR *)data)->f19));
-    GetFPRegister(pid, FPR20, &(((FPR *)data)->f20));
-    GetFPRegister(pid, FPR21, &(((FPR *)data)->f21));
-    GetFPRegister(pid, FPR22, &(((FPR *)data)->f22));
-    GetFPRegister(pid, FPR23, &(((FPR *)data)->f23));
-    GetFPRegister(pid, FPR24, &(((FPR *)data)->f24));
-    GetFPRegister(pid, FPR25, &(((FPR *)data)->f25));
-    GetFPRegister(pid, FPR26, &(((FPR *)data)->f26));
-    GetFPRegister(pid, FPR27, &(((FPR *)data)->f27));
-    GetFPRegister(pid, FPR28, &(((FPR *)data)->f28));
-    GetFPRegister(pid, FPR29, &(((FPR *)data)->f29));
-    GetFPRegister(pid, FPR30, &(((FPR *)data)->f30));
-    GetFPRegister(pid, FPR31, &(((FPR *)data)->f31));
-    GetFPRegister(pid, FPSCR, &(((FPR *)data)->fpscr));
-  } else if (req == PTRACE_GETVRREGS && tid) {
-    GetVMRegister(tid, VR0, &(((VMX *)data)->vr0[0]));
-    GetVMRegister(tid, VR1, &(((VMX *)data)->vr1[0]));
-    GetVMRegister(tid, VR2, &(((VMX *)data)->vr2[0]));
-    GetVMRegister(tid, VR3, &(((VMX *)data)->vr3[0]));
-    GetVMRegister(tid, VR4, &(((VMX *)data)->vr4[0]));
-    GetVMRegister(tid, VR5, &(((VMX *)data)->vr5[0]));
-    GetVMRegister(tid, VR6, &(((VMX *)data)->vr6[0]));
-    GetVMRegister(tid, VR7, &(((VMX *)data)->vr7[0]));
-    GetVMRegister(tid, VR8, &(((VMX *)data)->vr8[0]));
-    GetVMRegister(tid, VR9, &(((VMX *)data)->vr9[0]));
-    GetVMRegister(tid, VR10, &(((VMX *)data)->vr10[0]));
-    GetVMRegister(tid, VR11, &(((VMX *)data)->vr11[0]));
-    GetVMRegister(tid, VR12, &(((VMX *)data)->vr12[0]));
-    GetVMRegister(tid, VR13, &(((VMX *)data)->vr13[0]));
-    GetVMRegister(tid, VR14, &(((VMX *)data)->vr14[0]));
-    GetVMRegister(tid, VR15, &(((VMX *)data)->vr15[0]));
-    GetVMRegister(tid, VR16, &(((VMX *)data)->vr16[0]));
-    GetVMRegister(tid, VR17, &(((VMX *)data)->vr17[0]));
-    GetVMRegister(tid, VR18, &(((VMX *)data)->vr18[0]));
-    GetVMRegister(tid, VR19, &(((VMX *)data)->vr19[0]));
-    GetVMRegister(tid, VR20, &(((VMX *)data)->vr20[0]));
-    GetVMRegister(tid, VR21, &(((VMX *)data)->vr21[0]));
-    GetVMRegister(tid, VR22, &(((VMX *)data)->vr22[0]));
-    GetVMRegister(tid, VR23, &(((VMX *)data)->vr23[0]));
-    GetVMRegister(tid, VR24, &(((VMX *)data)->vr24[0]));
-    GetVMRegister(tid, VR25, &(((VMX *)data)->vr25[0]));
-    GetVMRegister(tid, VR26, &(((VMX *)data)->vr26[0]));
-    GetVMRegister(tid, VR27, &(((VMX *)data)->vr27[0]));
-    GetVMRegister(tid, VR28, &(((VMX *)data)->vr28[0]));
-    GetVMRegister(tid, VR29, &(((VMX *)data)->vr29[0]));
-    GetVMRegister(tid, VR30, &(((VMX *)data)->vr30[0]));
-    GetVMRegister(tid, VR31, &(((VMX *)data)->vr31[0]));
-    GetVMRegister(tid, VSCR, &(((VMX *)data)->vscr[0]));
-    GetVMRegister(tid, VRSAVE, &(((VMX *)data)->vrsave));
-  } else if (req == PTRACE_GETVSRREGS && tid) {
-    GetVSRegister(tid, VSR0, &(((VSX *)data)->vs0[0]));
-    GetVSRegister(tid, VSR1, &(((VSX *)data)->vs1[0]));
-    GetVSRegister(tid, VSR2, &(((VSX *)data)->vs2[0]));
-    GetVSRegister(tid, VSR3, &(((VSX *)data)->vs3[0]));
-    GetVSRegister(tid, VSR4, &(((VSX *)data)->vs4[0]));
-    GetVSRegister(tid, VSR5, &(((VSX *)data)->vs5[0]));
-    GetVSRegister(tid, VSR6, &(((VSX *)data)->vs6[0]));
-    GetVSRegister(tid, VSR7, &(((VSX *)data)->vs7[0]));
-    GetVSRegister(tid, VSR8, &(((VSX *)data)->vs8[0]));
-    GetVSRegister(tid, VSR9, &(((VSX *)data)->vs9[0]));
-    GetVSRegister(tid, VSR10, &(((VSX *)data)->vs10[0]));
-    GetVSRegister(tid, VSR11, &(((VSX *)data)->vs11[0]));
-    GetVSRegister(tid, VSR12, &(((VSX *)data)->vs12[0]));
-    GetVSRegister(tid, VSR13, &(((VSX *)data)->vs13[0]));
-    GetVSRegister(tid, VSR14, &(((VSX *)data)->vs14[0]));
-    GetVSRegister(tid, VSR15, &(((VSX *)data)->vs15[0]));
-    GetVSRegister(tid, VSR16, &(((VSX *)data)->vs16[0]));
-    GetVSRegister(tid, VSR17, &(((VSX *)data)->vs17[0]));
-    GetVSRegister(tid, VSR18, &(((VSX *)data)->vs18[0]));
-    GetVSRegister(tid, VSR19, &(((VSX *)data)->vs19[0]));
-    GetVSRegister(tid, VSR20, &(((VSX *)data)->vs20[0]));
-    GetVSRegister(tid, VSR21, &(((VSX *)data)->vs21[0]));
-    GetVSRegister(tid, VSR22, &(((VSX *)data)->vs22[0]));
-    GetVSRegister(tid, VSR23, &(((VSX *)data)->vs23[0]));
-    GetVSRegister(tid, VSR24, &(((VSX *)data)->vs24[0]));
-    GetVSRegister(tid, VSR25, &(((VSX *)data)->vs25[0]));
-    GetVSRegister(tid, VSR26, &(((VSX *)data)->vs26[0]));
-    GetVSRegister(tid, VSR27, &(((VSX *)data)->vs27[0]));
-    GetVSRegister(tid, VSR28, &(((VSX *)data)->vs28[0]));
-    GetVSRegister(tid, VSR29, &(((VSX *)data)->vs29[0]));
-    GetVSRegister(tid, VSR30, &(((VSX *)data)->vs30[0]));
-    GetVSRegister(tid, VSR31, &(((VSX *)data)->vs31[0]));
-    GetVSRegister(tid, VSR32, &(((VSX *)data)->vs32[0]));
-    GetVSRegister(tid, VSR33, &(((VSX *)data)->vs33[0]));
-    GetVSRegister(tid, VSR34, &(((VSX *)data)->vs34[0]));
-    GetVSRegister(tid, VSR35, &(((VSX *)data)->vs35[0]));
-    GetVSRegister(tid, VSR36, &(((VSX *)data)->vs36[0]));
-    GetVSRegister(tid, VSR37, &(((VSX *)data)->vs37[0]));
-    GetVSRegister(tid, VSR38, &(((VSX *)data)->vs38[0]));
-    GetVSRegister(tid, VSR39, &(((VSX *)data)->vs39[0]));
-    GetVSRegister(tid, VSR40, &(((VSX *)data)->vs40[0]));
-    GetVSRegister(tid, VSR41, &(((VSX *)data)->vs41[0]));
-    GetVSRegister(tid, VSR42, &(((VSX *)data)->vs42[0]));
-    GetVSRegister(tid, VSR43, &(((VSX *)data)->vs43[0]));
-    GetVSRegister(tid, VSR44, &(((VSX *)data)->vs44[0]));
-    GetVSRegister(tid, VSR45, &(((VSX *)data)->vs45[0]));
-    GetVSRegister(tid, VSR46, &(((VSX *)data)->vs46[0]));
-    GetVSRegister(tid, VSR47, &(((VSX *)data)->vs47[0]));
-    GetVSRegister(tid, VSR48, &(((VSX *)data)->vs48[0]));
-    GetVSRegister(tid, VSR49, &(((VSX *)data)->vs49[0]));
-    GetVSRegister(tid, VSR50, &(((VSX *)data)->vs50[0]));
-    GetVSRegister(tid, VSR51, &(((VSX *)data)->vs51[0]));
-    GetVSRegister(tid, VSR52, &(((VSX *)data)->vs52[0]));
-    GetVSRegister(tid, VSR53, &(((VSX *)data)->vs53[0]));
-    GetVSRegister(tid, VSR54, &(((VSX *)data)->vs54[0]));
-    GetVSRegister(tid, VSR55, &(((VSX *)data)->vs55[0]));
-    GetVSRegister(tid, VSR56, &(((VSX *)data)->vs56[0]));
-    GetVSRegister(tid, VSR57, &(((VSX *)data)->vs57[0]));
-    GetVSRegister(tid, VSR58, &(((VSX *)data)->vs58[0]));
-    GetVSRegister(tid, VSR59, &(((VSX *)data)->vs59[0]));
-    GetVSRegister(tid, VSR60, &(((VSX *)data)->vs60[0]));
-    GetVSRegister(tid, VSR61, &(((VSX *)data)->vs61[0]));
-    GetVSRegister(tid, VSR62, &(((VSX *)data)->vs62[0]));
-    GetVSRegister(tid, VSR63, &(((VSX *)data)->vs63[0]));
-  } else if (req < PT_COMMAND_MAX) {
-    if (req == PT_CONTINUE) {
-#if 0
-      // Use PTT_CONTINUE
-      const char procdir[] = "/proc/";
-      const char lwpdir[] = "/lwp/";
-      std::string process_task_dir = procdir + std::to_string(pid) + lwpdir;
-      DIR *dirproc = opendir(process_task_dir.c_str());
+  switch (req) {
+    case PTT_READ_GPRS:
+      ptrace64(req, tid, (long long)data, 0, 0);
+      GetSPRs(PTT_READ_SPRS, tid, data);
+      break;
 
-      struct ptthreads64 pts;
-      int idx = 0;
-      lldb::tid_t tid = 0;
-      if (dirproc) {
-	struct dirent *direntry = nullptr;
-	while ((direntry = readdir(dirproc)) != nullptr) {
-          if (strcmp(direntry->d_name, ".") == 0 || strcmp(direntry->d_name, "..") == 0) {
-            continue;
-          }
-          tid = atoi(direntry->d_name);
-          pts.th[idx++] = tid;
-	}
-	closedir(dirproc);
-      }
-      pts.th[idx] = 0;
-      ret = ptrace64(PTT_CONTINUE, tid, (long long)1, (int)(size_t)data, (int *)&pts);
-#else
-      int buf;
-      ptrace64(req, pid, 1, (int)(size_t)data, &buf);
-#endif
-    } else if (req == PT_READ_BLOCK) {
-      ptrace64(req, pid, (long long)addr, (int)data_size, (int *)result);
-    } else if (req == PT_WRITE_BLOCK) {
-      ptrace64(req, pid, (long long)addr, (int)data_size, (int *)result);
-    } else if (req == PT_ATTACH) {
+    case PTT_WRITE_GPRS:
+      ptrace64(req, tid, (long long)data, 0, 0);
+      SetSPRs(PTT_WRITE_SPRS, tid, data);
+      break;
+
+    case PTT_READ_FPRS:
+      ptrace64(req, tid, (long long)data, 0, 0);
+      ptrace64(PT_READ_GPR, pid, FPSCR, 0, (int *)&(((FPR_PPC64 *)data)->fpscr));
+      break;
+
+    case PTT_WRITE_FPRS:
+      ptrace64(req, tid, (long long)data, 0, 0);
+      ptrace64(PT_WRITE_GPR, pid, FPSCR, 0, (int *)&(((FPR_PPC64 *)data)->fpscr));
+      break;
+
+    case PTT_READ_VEC:
+    case PTT_READ_VSX:
+      ptrace64(req, tid, (long long)data, 0, 0);
+      break;
+
+    case PT_READ_BLOCK:
+    case PT_WRITE_BLOCK:
+      ptrace64(req, pid, (long long)addr, (int)data_size, reinterpret_cast<int *>(result));
+      break;
+
+    case PT_CONTINUE:
+      ptrace64(req, pid, 1, (int)(size_t)data, nullptr);
+      break;
+
+    case PT_ATTACH: {
       // Block SIGCHLD signal during attach to the process, 
       // to prevent interruptions.
       // The ptrace operation may send SIGCHLD signals in certain cases 
@@ -2059,15 +1830,19 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
       //Unblocking the SIGCHLD after attach work. 
       if(!pthread_sigmask( SIG_UNBLOCK, &signal_set, NULL )) 
         LLDB_LOG(log,"NativeProcessAIX::pthread_sigmask(SIG_UNBLOCK) Failed");
-    } else if (req == PT_WATCH) {
-      ptrace64(req, pid, (long long)addr, (int)data_size, nullptr);
-    } else if (req == PT_DETACH || req == PT_KILL) {
-      ptrace64(req, pid, 0, 0, nullptr);
-    } else {
-      assert(0 && "Not supported yet.");
+      break;
     }
-  } else {
-    assert(0 && "Not supported yet.");
+
+    case PT_DETACH:
+    case PT_KILL:
+    case PT_CLEAR:
+      ptrace64(req, pid, 0, 0, nullptr);
+      break;
+
+    default:
+      LLDB_LOG(log, "Not Supported ptrace({0}, {1}, {2}, {3}, {4})={5:x}", req, pid, addr, data,data_size, ret);
+      assert(false && "ptrace request not supported");
+
   }
 
   if (errno) {

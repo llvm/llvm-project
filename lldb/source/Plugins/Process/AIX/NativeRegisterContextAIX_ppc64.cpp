@@ -18,7 +18,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Host/aix/Ptrace.h"
 
 #include "Plugins/Process/AIX/NativeProcessAIX.h"
 #include "Plugins/Process/Linux/Procfs.h"
@@ -464,7 +463,7 @@ uint32_t NativeRegisterContextAIX_ppc64::CalculateVsxOffset(
 }
 
 Status NativeRegisterContextAIX_ppc64::ReadVMX() {
-  return NativeProcessAIX::PtraceWrapper(PTRACE_GETVRREGS, m_thread.GetID(),
+  return NativeProcessAIX::PtraceWrapper(PTT_READ_VEC, m_thread.GetID(),
                                            nullptr, &m_vmx_ppc64,
                                            sizeof(m_vmx_ppc64));
 }
@@ -478,7 +477,7 @@ Status NativeRegisterContextAIX_ppc64::WriteVMX() {
 }
 
 Status NativeRegisterContextAIX_ppc64::ReadVSX() {
-  return NativeProcessAIX::PtraceWrapper(PTRACE_GETVSRREGS, m_thread.GetID(),
+  return NativeProcessAIX::PtraceWrapper(PTT_READ_VSX, m_thread.GetID(),
                                            nullptr, &m_vsx_ppc64,
                                            sizeof(m_vsx_ppc64));
 }

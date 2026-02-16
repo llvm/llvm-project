@@ -14,7 +14,6 @@
 
 #include "Plugins/Process/AIX/NativeProcessAIX.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "lldb/Host/aix/Ptrace.h"
 
 using namespace lldb_private;
 using namespace lldb_private::process_aix;
@@ -92,36 +91,36 @@ NativeRegisterContextAIX::WriteRegisterRaw(uint32_t reg_index,
 
 Status NativeRegisterContextAIX::ReadGPR() {
   return NativeProcessAIX::PtraceWrapper(
-      PTRACE_GETREGS, m_thread.GetID(), nullptr, GetGPRBuffer(), GetGPRSize());
+      PTT_READ_GPRS, m_thread.GetID(), nullptr, GetGPRBuffer(), GetGPRSize());
 }
 
 Status NativeRegisterContextAIX::WriteGPR() {
   return NativeProcessAIX::PtraceWrapper(
-      PTRACE_SETREGS, m_thread.GetID(), nullptr, GetGPRBuffer(), GetGPRSize());
+      PTT_WRITE_GPRS, m_thread.GetID(), nullptr, GetGPRBuffer(), GetGPRSize());
 }
 
 Status NativeRegisterContextAIX::ReadFPR() {
-  return NativeProcessAIX::PtraceWrapper(PTRACE_GETFPREGS, m_thread.GetID(),
+  return NativeProcessAIX::PtraceWrapper(PTT_READ_FPRS, m_thread.GetID(),
                                            nullptr, GetFPRBuffer(),
                                            GetFPRSize());
 }
 
 Status NativeRegisterContextAIX::WriteFPR() {
-  return NativeProcessAIX::PtraceWrapper(PTRACE_SETFPREGS, m_thread.GetID(),
+  return NativeProcessAIX::PtraceWrapper(PTT_WRITE_FPRS, m_thread.GetID(),
                                            nullptr, GetFPRBuffer(),
                                            GetFPRSize());
 }
 
 Status NativeRegisterContextAIX::ReadRegisterSet(void *buf, size_t buf_size,
                                                    unsigned int regset) {
-  return NativeProcessAIX::PtraceWrapper(PTRACE_GETREGSET, m_thread.GetID(),
+  return NativeProcessAIX::PtraceWrapper(PTT_READ_GPRS, m_thread.GetID(),
                                            static_cast<void *>(&regset), buf,
                                            buf_size);
 }
 
 Status NativeRegisterContextAIX::WriteRegisterSet(void *buf, size_t buf_size,
                                                     unsigned int regset) {
-  return NativeProcessAIX::PtraceWrapper(PTRACE_SETREGSET, m_thread.GetID(),
+  return NativeProcessAIX::PtraceWrapper(PTT_WRITE_GPRS, m_thread.GetID(),
                                            static_cast<void *>(&regset), buf,
                                            buf_size);
 }
