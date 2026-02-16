@@ -1293,8 +1293,8 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
   if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, RE_AARCH64_GOT_PAGE_PC,
             RE_LOONGARCH_GOT_PAGE_PC, R_GOT_OFF, R_TLSIE_HINT>(expr)) {
     // Initial-Exec relocs can be optimized to Local-Exec if the symbol is
-    // locally defined.  This is not supported on SystemZ.
-    if (execOptimize && isLocalInExecutable && ctx.arg.emachine != EM_S390) {
+    // locally defined.
+    if (execOptimize && isLocalInExecutable) {
       sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     } else if (expr != R_TLSIE_HINT) {
       sym.setFlags(NEEDS_TLSIE);
@@ -1324,12 +1324,6 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   RelocScan rs(ctx, &sec);
   // Many relocations end up in sec.relocations.
   sec.relocations.reserve(rels.size());
-
-  // On SystemZ, all sections need to be sorted by r_offset, to allow TLS
-  // relaxation to be handled correctly - see SystemZ::getTlsGdRelaxSkip.
-  SmallVector<RelTy, 0> storage;
-  if (ctx.arg.emachine == EM_S390)
-    rels = sortRels(rels, storage);
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     auto type = it->getType(false);
