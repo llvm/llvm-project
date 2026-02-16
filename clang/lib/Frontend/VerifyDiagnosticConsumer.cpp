@@ -1172,20 +1172,22 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
   std::vector<const Directive *> OrderedRemarks = sortDirectives(ED.Remarks);
 
   std::vector<const Directive *> OrderedDirectives = [&] {
-    std::vector<const Directive *> OrderedER(OrderedErrors.size() +
-                                             OrderedRemarks.size());
+    std::vector<const Directive *> OrderedEW(OrderedErrors.size() +
+                                             OrderedWarns.size());
     std::merge(OrderedErrors.cbegin(), OrderedErrors.cend(),
-               OrderedRemarks.cbegin(), OrderedRemarks.cend(),
-               OrderedER.begin(), directiveComparator);
-    std::vector<const Directive *> OrderedWN(OrderedWarns.size() +
-                                             OrderedNotes.size());
-    std::merge(OrderedWarns.cbegin(), OrderedWarns.cend(),
-               OrderedNotes.cbegin(), OrderedNotes.cend(), OrderedWN.begin(),
+               OrderedWarns.cbegin(), OrderedWarns.cend(),
+               OrderedEW.begin(), directiveComparator);
+
+    std::vector<const Directive *> OrderedNR(OrderedNotes.size() +
+                                             OrderedRemarks.size());
+    std::merge(OrderedNotes.cbegin(), OrderedNotes.cend(),
+               OrderedRemarks.cbegin(), OrderedRemarks.cend(), OrderedNR.begin(),
                directiveComparator);
-    std::vector<const Directive *> OrderedDirectives(OrderedER.size() +
-                                                     OrderedWN.size());
-    std::merge(OrderedER.cbegin(), OrderedER.cend(), OrderedWN.cbegin(),
-               OrderedWN.cend(), OrderedDirectives.begin(),
+
+    std::vector<const Directive *> OrderedDirectives(OrderedEW.size() +
+                                                     OrderedNR.size());
+    std::merge(OrderedEW.cbegin(), OrderedEW.cend(), OrderedNR.cbegin(),
+               OrderedNR.cend(), OrderedDirectives.begin(),
                directiveComparator);
     return OrderedDirectives;
   }();
