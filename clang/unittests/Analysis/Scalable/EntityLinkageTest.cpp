@@ -9,40 +9,42 @@
 #include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "gtest/gtest.h"
 
-namespace clang::ssaf {
+using clang::ssaf::EntityLinkage;
 
 namespace {
 
+constexpr inline auto None = EntityLinkage::LinkageType::None;
+constexpr inline auto Internal = EntityLinkage::LinkageType::Internal;
+constexpr inline auto External = EntityLinkage::LinkageType::External;
+
 TEST(EntityLinkageTest, GetLinkageReturnsCorrectValue) {
   EntityLinkage Linkage;
-  EntityLinkage NoneLinkage(EntityLinkage::LinkageType::None);
-  EntityLinkage InternalLinkage(EntityLinkage::LinkageType::Internal);
-  EntityLinkage ExternalLinkage(EntityLinkage::LinkageType::External);
+  EntityLinkage NoneLinkage(None);
+  EntityLinkage InternalLinkage(Internal);
+  EntityLinkage ExternalLinkage(External);
 
-  EXPECT_EQ(Linkage.getLinkage(), EntityLinkage::LinkageType::None);
-  EXPECT_EQ(NoneLinkage.getLinkage(), EntityLinkage::LinkageType::None);
-  EXPECT_EQ(InternalLinkage.getLinkage(), EntityLinkage::LinkageType::Internal);
-  EXPECT_EQ(ExternalLinkage.getLinkage(), EntityLinkage::LinkageType::External);
+  EXPECT_EQ(Linkage.getLinkage(), None);
+  EXPECT_EQ(NoneLinkage.getLinkage(), None);
+  EXPECT_EQ(InternalLinkage.getLinkage(), Internal);
+  EXPECT_EQ(ExternalLinkage.getLinkage(), External);
 }
 
 TEST(EntityLinkageTest, CopyConstructor) {
-  EntityLinkage Original(EntityLinkage::LinkageType::External);
+  EntityLinkage Original(External);
   EntityLinkage Copy = Original;
 
-  EXPECT_EQ(Copy.getLinkage(), EntityLinkage::LinkageType::External);
+  EXPECT_EQ(Copy.getLinkage(), External);
   EXPECT_EQ(Copy.getLinkage(), Original.getLinkage());
 }
 
 TEST(EntityLinkageTest, AssignmentOperator) {
-  EntityLinkage Linkage1(EntityLinkage::LinkageType::None);
-  EntityLinkage Linkage2(EntityLinkage::LinkageType::External);
+  EntityLinkage Linkage1(None);
+  EntityLinkage Linkage2(External);
 
   Linkage1 = Linkage2;
 
-  EXPECT_EQ(Linkage1.getLinkage(), EntityLinkage::LinkageType::External);
+  EXPECT_EQ(Linkage1.getLinkage(), External);
   EXPECT_EQ(Linkage1.getLinkage(), Linkage2.getLinkage());
 }
 
 } // namespace
-
-} // namespace clang::ssaf

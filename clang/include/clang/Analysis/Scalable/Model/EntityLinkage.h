@@ -22,14 +22,10 @@ class EntityLinkage {
 public:
   /// Specifies the type of linkage an entity has.
   enum class LinkageType {
-    None,     ///< No linkage (e.g., local variables, function parameters)
-    Internal, ///< Internal linkage (static functions/variables, anonymous
-              ///< namespace)
-    External  ///< External linkage (globally visible across translation units)
+    None,     ///< local variables, function parameters
+    Internal, ///< static functions/variables, anonymous namespace
+    External  ///< globally visible across translation units
   };
-
-  /// Constructs an EntityLinkage with no linkage (default).
-  EntityLinkage() : Linkage(LinkageType::None) {}
 
   /// Constructs an EntityLinkage with the specified linkage type.
   ///
@@ -42,7 +38,7 @@ public:
   LinkageType getLinkage() const { return Linkage; }
 
 private:
-  LinkageType Linkage;
+  LinkageType Linkage = LinkageType::None;
 };
 
 } // namespace clang::ssaf
