@@ -1000,8 +1000,8 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
     // Copy the filename into the const string pool to
     // ensure lifetime.
     ConstString installname(dyld_image_get_installname(image));
-    m_file_infos[m_host_uuid].push_back(SharedCacheImageInfo(
-        SharedCacheImageInfo{UUID(uuid, 16), extractor_sp}));
+    m_file_infos[m_host_uuid].push_back(
+        SharedCacheImageInfo(installname, UUID(uuid, 16), extractor_sp));
   });
 
   // std::vector of SharedCacheImageInfos has been fully populated, we can
