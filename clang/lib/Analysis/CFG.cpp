@@ -5343,7 +5343,7 @@ CFGBlock *CFGBuilder::VisitCXXBindTemporaryExprForTemporaryDtors(
       Context.setDecisionPoint(Succ, E);
     }
     appendTemporaryDtor(Block, E);
-    return B;
+    B = Block;
   }
   return B;
 }
