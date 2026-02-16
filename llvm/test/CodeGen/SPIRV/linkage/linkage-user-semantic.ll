@@ -14,7 +14,6 @@
 ; CHECK-ON-DAG: OpName %[[#WEAK_ODR:]] "weak_odr_var"
 ; CHECK-ON-DAG: OpName %[[#LINKONCE:]] "linkonce_var"
 ; CHECK-ON-DAG: OpName %[[#COMMON:]] "common_var"
-; CHECK-ON-DAG: OpName %[[#AE:]] "ae_var"
 ; CHECK-ON-DAG: OpName %[[#EW:]] "ew_func"
 
 ; CHECK-ON-DAG: OpDecorate %[[#WEAK_FN]] UserSemantic "linkage:weak"
@@ -22,7 +21,6 @@
 ; CHECK-ON-DAG: OpDecorate %[[#WEAK_ODR]] UserSemantic "linkage:weak_odr"
 ; CHECK-ON-DAG: OpDecorate %[[#LINKONCE]] UserSemantic "linkage:linkonce"
 ; CHECK-ON-DAG: OpDecorate %[[#COMMON]] UserSemantic "linkage:common"
-; CHECK-ON-DAG: OpDecorate %[[#AE]] UserSemantic "linkage:available_externally"
 ; CHECK-ON-DAG: OpDecorate %[[#EW]] UserSemantic "linkage:extern_weak"
 
 ; CHECK-OFF-NOT: UserSemantic "linkage:
@@ -31,7 +29,6 @@
 @weak_odr_var = weak_odr addrspace(1) global i32 0, align 4
 @linkonce_var = linkonce addrspace(1) global i32 0, align 4
 @common_var = common addrspace(1) global i32 0, align 4
-@ae_var = available_externally addrspace(1) global i32 79, align 4
 
 declare extern_weak spir_func void @ew_func()
 

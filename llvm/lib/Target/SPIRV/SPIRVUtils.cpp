@@ -1220,9 +1220,6 @@ void emitLinkageAsUserSemantic(Register Reg, const GlobalValue &GV,
   case GlobalValue::LinkOnceAnyLinkage:
     LinkageName = "linkonce";
     break;
-  case GlobalValue::AvailableExternallyLinkage:
-    LinkageName = "available_externally";
-    break;
   case GlobalValue::CommonLinkage:
     LinkageName = "common";
     break;
