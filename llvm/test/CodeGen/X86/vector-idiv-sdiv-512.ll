@@ -9,73 +9,31 @@
 define <8 x i64> @test_div7_8i64(<8 x i64> %a) nounwind {
 ; AVX-LABEL: test_div7_8i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
-; AVX-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX-NEXT:    movabsq $5270498306774157605, %rcx # imm = 0x4924924924924925
-; AVX-NEXT:    imulq %rcx
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm2
-; AVX-NEXT:    vmovq %xmm1, %rax
-; AVX-NEXT:    imulq %rcx
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm1
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; AVX-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
-; AVX-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX-NEXT:    imulq %rcx
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm3
-; AVX-NEXT:    vmovq %xmm2, %rax
-; AVX-NEXT:    imulq %rcx
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm2
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX-NEXT:    imulq %rcx
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm3
-; AVX-NEXT:    vmovq %xmm2, %rax
-; AVX-NEXT:    imulq %rcx
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm2
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX-NEXT:    imulq %rcx
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm3
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    imulq %rcx
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm0
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; AVX-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX-NEXT:    vpsraq $32, %zmm0, %zmm1
+; AVX-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [613566757,613566757,613566757,613566757,613566757,613566757,613566757,613566757]
+; AVX-NEXT:    vpmuludq %zmm2, %zmm1, %zmm3
+; AVX-NEXT:    vpsrlq $32, %zmm1, %zmm4
+; AVX-NEXT:    vpmuludq %zmm2, %zmm4, %zmm5
+; AVX-NEXT:    vpsllq $32, %zmm5, %zmm5
+; AVX-NEXT:    vpaddq %zmm5, %zmm3, %zmm3
+; AVX-NEXT:    vpmuludq %zmm2, %zmm0, %zmm2
+; AVX-NEXT:    vpsrlq $32, %zmm2, %zmm2
+; AVX-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
+; AVX-NEXT:    vpsraq $32, %zmm2, %zmm3
+; AVX-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %zmm2
+; AVX-NEXT:    vpbroadcastq {{.*#+}} zmm5 = [1227133513,1227133513,1227133513,1227133513,1227133513,1227133513,1227133513,1227133513]
+; AVX-NEXT:    vpmuludq %zmm5, %zmm0, %zmm0
+; AVX-NEXT:    vpaddq %zmm2, %zmm0, %zmm0
+; AVX-NEXT:    vpsraq $32, %zmm0, %zmm0
+; AVX-NEXT:    vpaddq %zmm0, %zmm3, %zmm0
+; AVX-NEXT:    vpmuludq %zmm5, %zmm1, %zmm1
+; AVX-NEXT:    vpmuludq %zmm5, %zmm4, %zmm2
+; AVX-NEXT:    vpsllq $32, %zmm2, %zmm2
+; AVX-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
+; AVX-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
+; AVX-NEXT:    vpsrlq $63, %zmm0, %zmm1
+; AVX-NEXT:    vpsraq $1, %zmm0, %zmm0
+; AVX-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; AVX-NEXT:    retq
   %res = sdiv <8 x i64> %a, <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>
   ret <8 x i64> %res
@@ -277,105 +235,34 @@ define <64 x i8> @test_divconstant_64i8(<64 x i8> %a) nounwind {
 define <8 x i64> @test_rem7_8i64(<8 x i64> %a) nounwind {
 ; AVX-LABEL: test_rem7_8i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
-; AVX-NEXT:    vpextrq $1, %xmm1, %rcx
-; AVX-NEXT:    movabsq $5270498306774157605, %rsi # imm = 0x4924924924924925
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    imulq %rsi
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    leaq (,%rdx,8), %rax
-; AVX-NEXT:    subq %rax, %rdx
-; AVX-NEXT:    addq %rcx, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm2
-; AVX-NEXT:    vmovq %xmm1, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    imulq %rsi
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    leaq (,%rdx,8), %rax
-; AVX-NEXT:    subq %rax, %rdx
-; AVX-NEXT:    addq %rcx, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm1
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; AVX-NEXT:    vextracti32x4 $2, %zmm0, %xmm2
-; AVX-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    imulq %rsi
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    leaq (,%rdx,8), %rax
-; AVX-NEXT:    subq %rax, %rdx
-; AVX-NEXT:    addq %rcx, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm3
-; AVX-NEXT:    vmovq %xmm2, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    imulq %rsi
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    leaq (,%rdx,8), %rax
-; AVX-NEXT:    subq %rax, %rdx
-; AVX-NEXT:    addq %rcx, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm2
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    imulq %rsi
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    leaq (,%rdx,8), %rax
-; AVX-NEXT:    subq %rax, %rdx
-; AVX-NEXT:    addq %rcx, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm3
-; AVX-NEXT:    vmovq %xmm2, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    imulq %rsi
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    leaq (,%rdx,8), %rax
-; AVX-NEXT:    subq %rax, %rdx
-; AVX-NEXT:    addq %rcx, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm2
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; AVX-NEXT:    vpextrq $1, %xmm0, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    imulq %rsi
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    leaq (,%rdx,8), %rax
-; AVX-NEXT:    subq %rax, %rdx
-; AVX-NEXT:    addq %rcx, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm3
-; AVX-NEXT:    vmovq %xmm0, %rcx
-; AVX-NEXT:    movq %rcx, %rax
-; AVX-NEXT:    imulq %rsi
-; AVX-NEXT:    movq %rdx, %rax
-; AVX-NEXT:    shrq $63, %rax
-; AVX-NEXT:    sarq %rdx
-; AVX-NEXT:    addq %rax, %rdx
-; AVX-NEXT:    leaq (,%rdx,8), %rax
-; AVX-NEXT:    subq %rax, %rdx
-; AVX-NEXT:    addq %rcx, %rdx
-; AVX-NEXT:    vmovq %rdx, %xmm0
-; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; AVX-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX-NEXT:    vpsraq $32, %zmm0, %zmm1
+; AVX-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [613566757,613566757,613566757,613566757,613566757,613566757,613566757,613566757]
+; AVX-NEXT:    vpmuludq %zmm2, %zmm1, %zmm3
+; AVX-NEXT:    vpsrlq $32, %zmm1, %zmm4
+; AVX-NEXT:    vpmuludq %zmm2, %zmm4, %zmm5
+; AVX-NEXT:    vpsllq $32, %zmm5, %zmm5
+; AVX-NEXT:    vpaddq %zmm5, %zmm3, %zmm3
+; AVX-NEXT:    vpmuludq %zmm2, %zmm0, %zmm2
+; AVX-NEXT:    vpsrlq $32, %zmm2, %zmm2
+; AVX-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
+; AVX-NEXT:    vpsraq $32, %zmm2, %zmm3
+; AVX-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm2, %zmm2
+; AVX-NEXT:    vpbroadcastq {{.*#+}} zmm5 = [1227133513,1227133513,1227133513,1227133513,1227133513,1227133513,1227133513,1227133513]
+; AVX-NEXT:    vpmuludq %zmm5, %zmm0, %zmm6
+; AVX-NEXT:    vpaddq %zmm2, %zmm6, %zmm2
+; AVX-NEXT:    vpsraq $32, %zmm2, %zmm2
+; AVX-NEXT:    vpaddq %zmm2, %zmm3, %zmm2
+; AVX-NEXT:    vpmuludq %zmm5, %zmm1, %zmm1
+; AVX-NEXT:    vpmuludq %zmm5, %zmm4, %zmm3
+; AVX-NEXT:    vpsllq $32, %zmm3, %zmm3
+; AVX-NEXT:    vpaddq %zmm3, %zmm1, %zmm1
+; AVX-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
+; AVX-NEXT:    vpsrlq $63, %zmm1, %zmm2
+; AVX-NEXT:    vpsraq $1, %zmm1, %zmm1
+; AVX-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
+; AVX-NEXT:    vpsllq $3, %zmm1, %zmm2
+; AVX-NEXT:    vpsubq %zmm2, %zmm1, %zmm1
+; AVX-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; AVX-NEXT:    retq
   %res = srem <8 x i64> %a, <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>
   ret <8 x i64> %res

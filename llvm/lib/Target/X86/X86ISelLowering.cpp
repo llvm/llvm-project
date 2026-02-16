@@ -1729,6 +1729,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     if (HasInt256) {
+      setOperationAction(ISD::MULHS,   MVT::v4i64, Custom);
+      setOperationAction(ISD::MULHU,   MVT::v4i64, Custom);
       setOperationAction(ISD::VSELECT, MVT::v32i8, Legal);
 
       // Custom legalize 2x32 to get a little better code.
@@ -1994,6 +1996,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v32i16, HasBWI ? Legal : Custom);
     setOperationAction(ISD::MUL, MVT::v64i8,  Custom);
 
+    setOperationAction(ISD::MULHS, MVT::v8i64,  Custom);
+    setOperationAction(ISD::MULHU, MVT::v8i64,  Custom);
     setOperationAction(ISD::MULHU, MVT::v16i32, Custom);
     setOperationAction(ISD::MULHS, MVT::v16i32, Custom);
     setOperationAction(ISD::MULHS, MVT::v32i16, HasBWI ? Legal : Custom);
@@ -30239,6 +30243,13 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
 
   if ((VT == MVT::v32i16 || VT == MVT::v64i8) && !Subtarget.hasBWI())
     return splitVectorIntBinary(Op, DAG, dl);
+
+  if (VT.isVector() && VT.getVectorElementType() == MVT::i64) {
+    SDValue Lo, Hi;
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    TLI.forceExpandMultiply(DAG, dl, IsSigned, Lo, Hi, A, B);
+    return Hi;
+  }
 
   if (VT == MVT::v4i32 || VT == MVT::v8i32 || VT == MVT::v16i32) {
     assert((VT == MVT::v4i32 && Subtarget.hasSSE2()) ||
