@@ -1960,7 +1960,7 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   // because the Call/CallVirt below might access the instance pointer
   // but the Function's information about them is wrong.
   if (!F->isFullyCompiled())
-    compileFunction(S, F);
+    compileFunction(S, F, OpPC);
 
   if (!CheckCallable(S, OpPC, F))
     return false;
