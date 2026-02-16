@@ -48010,7 +48010,7 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     if (!IsPartialReduction) {
       // Replace also ExtractEltOperand.
       // This is safe to do, because N resulted directly from a full reduction,
-      // whch means all the elements are undefined except for the 0th element.
+      // which means all the elements are undefined except for the 0th element.
       SDValue V =
           DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(BinOpReduction),
                       ExtractEltOperand->getValueType(0), BinOpReduction);
