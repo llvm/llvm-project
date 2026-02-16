@@ -1175,14 +1175,14 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
     std::vector<const Directive *> OrderedEW(OrderedErrors.size() +
                                              OrderedWarns.size());
     std::merge(OrderedErrors.cbegin(), OrderedErrors.cend(),
-               OrderedWarns.cbegin(), OrderedWarns.cend(),
-               OrderedEW.begin(), directiveComparator);
+               OrderedWarns.cbegin(), OrderedWarns.cend(), OrderedEW.begin(),
+               directiveComparator);
 
     std::vector<const Directive *> OrderedNR(OrderedNotes.size() +
                                              OrderedRemarks.size());
     std::merge(OrderedNotes.cbegin(), OrderedNotes.cend(),
-               OrderedRemarks.cbegin(), OrderedRemarks.cend(), OrderedNR.begin(),
-               directiveComparator);
+               OrderedRemarks.cbegin(), OrderedRemarks.cend(),
+               OrderedNR.begin(), directiveComparator);
 
     std::vector<const Directive *> OrderedDirectives(OrderedEW.size() +
                                                      OrderedNR.size());
