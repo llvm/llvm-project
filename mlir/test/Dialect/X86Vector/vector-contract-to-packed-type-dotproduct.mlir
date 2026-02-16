@@ -434,30 +434,44 @@ func.func @brmatmul_bf16dp_flat_layout_loop(%arg0: memref<16x64x32xbf16>, %arg1:
   %c2 = arith.constant 2 : index
   scf.for %arg3 = %c0 to %c64 step %c1 {
     scf.for %arg4 = %c0 to %c64 step %c32 {
-      %subview = memref.subview %arg2[%arg3, %arg4] [1, 32] [1, 1] : memref<64x64xf32> to !memrefC
-      %2 = vector.transfer_read %subview[%c0, %c0], %0 {in_bounds = [true, true]} : !memrefC, !vecC
-      %3 = vector.transfer_read %subview[%c0, %c16], %0 {in_bounds = [true, true]} : !memrefC, !vecC
+      %subview = memref.subview %arg2[%arg3, %arg4] [1, 32] [1, 1] 
+			: memref<64x64xf32> to !memrefC
+      %2 = vector.transfer_read %subview[%c0, %c0], %0 {in_bounds = [true, true]} 
+			: !memrefC, !vecC
+      %3 = vector.transfer_read %subview[%c0, %c16], %0 {in_bounds = [true, true]} 
+			: !memrefC, !vecC
 
       %4:2 = scf.for %arg5 = %c0 to %c16 step %c1 iter_args(%arg6 = %2, %arg7 = %3) -> (!vecC, !vecC) {
         %5:2 = scf.for %arg8 = %c0 to %c32 step %c2 iter_args(%arg9 = %arg6, %arg10 = %arg7) -> (!vecC, !vecC) {
 
-          %subview_0 = memref.subview %arg0[%arg5, %arg3, %arg8] [1, 1, 2] [1, 1, 1] : memref<16x64x32xbf16> to !memrefA
-          %subview_1 = memref.subview %arg1[%arg5, %arg8, %arg4] [1, 2, 32] [1, 1, 1] : memref<16x32x64xbf16> to !memrefB
+          %subview_0 = memref.subview %arg0[%arg5, %arg3, %arg8] [1, 1, 2] [1, 1, 1] 
+			: memref<16x64x32xbf16> to !memrefA
+          %subview_1 = memref.subview %arg1[%arg5, %arg8, %arg4] [1, 2, 32] [1, 1, 1] 
+			: memref<16x32x64xbf16> to !memrefB
 
-          %6 = vector.transfer_read %subview_0[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} : !memrefA, !vecA
-          %7 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} : !memrefB, !vecB
-          %8 = vector.transfer_read %subview_1[%c0, %c0, %c16], %1 {in_bounds = [true, true, true]} : !memrefB, !vecB
+          %6 = vector.transfer_read %subview_0[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} 
+			: !memrefA, !vecA
+          %7 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} 
+			: !memrefB, !vecB
+          %8 = vector.transfer_read %subview_1[%c0, %c0, %c16], %1 {in_bounds = [true, true, true]} 
+			: !memrefB, !vecB
 
-          %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %6, %7, %arg9 {unroll_shape = array<i64: 1, 1, 16, 2>} : !vecA, !vecB into !vecC
-          %10 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %6, %8, %arg10 {unroll_shape = array<i64: 1, 1, 16, 2>} : !vecA, !vecB into !vecC
+          %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = 
+			["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %6, %7, %arg9 
+			{unroll_shape = array<i64: 1, 1, 16, 2>} : !vecA, !vecB into !vecC
+          %10 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = 
+			["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %6, %8, %arg10 
+			{unroll_shape = array<i64: 1, 1, 16, 2>} : !vecA, !vecB into !vecC
 
           scf.yield %9, %10 : !vecC, !vecC
         }
         scf.yield %5#0, %5#1 : !vecC, !vecC
       }
 
-      vector.transfer_write %4#1, %subview[%c0, %c16] {in_bounds = [true, true]} : !vecC, !memrefC
-      vector.transfer_write %4#0, %subview[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+      vector.transfer_write %4#1, %subview[%c0, %c16] {in_bounds = [true, true]} 
+			: !vecC, !memrefC
+      vector.transfer_write %4#0, %subview[%c0, %c0] {in_bounds = [true, true]} 
+			: !vecC, !memrefC
     }
   }
 

@@ -150,14 +150,6 @@ Operation *traceToVectorReadLikeParentOperation(Value v) {
       if (isa<vector::TransferReadOp, vector::LoadOp>(defOp))
         return defOp;
 
-      if (isa<vector::ShapeCastOp, vector::ShuffleOp>(defOp))
-        return nullptr;
-
-      if (defOp->getNumOperands() == 1) {
-        v = defOp->getOperand(0);
-        return defOp;
-      }
-
       return nullptr;
     }
 
@@ -189,8 +181,13 @@ Operation *traceToVectorReadLikeParentOperation(Value v) {
 // or `vector.store`). It transparently follows values across `scf.for`
 // and `scf.yield` boundaries while stopping if layout-altering ops such
 // as `shape_cast` or `shuffle` are encountered. The traversal returns
-// the first matching write-like user or `nullptr` if none is found.
+// the  matching write-like user. Returns `nullptr` if none is found or
+// the value has multiple users.
 Operation *traceToVectorWriteLikeUserOperation(Value v) {
+
+  if (v.getNumUses() > 1)
+    return nullptr;
+
   for (OpOperand &use : v.getUses()) {
     Operation *user = use.getOwner();
 
@@ -235,20 +232,20 @@ Operation *traceToVectorWriteLikeUserOperation(Value v) {
 // TODO: replace all use with the packed value along with contration
 // and for op.
 LogicalResult shuffleAfterReadLikeOp(PatternRewriter &rewriter, Operation *opA,
-                                     mlir::Operation *opB,
+                                     Operation *opB,
                                      vector::ContractionOp contractA,
                                      vector::ContractionOp contractB,
                                      int64_t nonUnitDimAcc, VectorType accTy) {
 
-  if (!isa<mlir::vector::TransferReadOp, vector::LoadOp>(opA) ||
-      !isa<mlir::vector::TransferReadOp, vector::LoadOp>(opB)) {
+  if (!isa<vector::TransferReadOp, vector::LoadOp>(opA) ||
+      !isa<vector::TransferReadOp, vector::LoadOp>(opB)) {
     return failure();
   }
 
-  mlir::Operation *insertAfter = opA->isBeforeInBlock(opB) ? opB : opA;
+  Operation *insertAfter = opA->isBeforeInBlock(opB) ? opB : opA;
 
   rewriter.setInsertionPointAfter(insertAfter);
-  mlir::Location loc = insertAfter->getLoc();
+  Location loc = insertAfter->getLoc();
 
   auto elemTy = accTy.getElementType();
   auto flatTy = VectorType::get(nonUnitDimAcc, elemTy);
@@ -288,10 +285,10 @@ LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
                                        int64_t nonUnitDimAcc,
                                        VectorType accTy) {
   // Helper to extract vector operand from write-like ops
-  auto getWrittenVector = [](Operation *op) -> mlir::Value {
-    if (auto write = mlir::dyn_cast<vector::TransferWriteOp>(op))
+  auto getWrittenVector = [](Operation *op) -> Value {
+    if (auto write = dyn_cast<vector::TransferWriteOp>(op))
       return write.getVector();
-    if (auto store = mlir::dyn_cast<vector::StoreOp>(op))
+    if (auto store = dyn_cast<vector::StoreOp>(op))
       return store.getValueToStore();
     return nullptr;
   };
@@ -309,7 +306,7 @@ LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
   Location loc = insertBefore->getLoc();
 
   auto elemTy = accTy.getElementType();
-  auto flatTy = mlir::VectorType::get(nonUnitDimAcc, elemTy);
+  auto flatTy = VectorType::get(nonUnitDimAcc, elemTy);
 
   // Flatten vectors
   auto castA = vector::ShapeCastOp::create(rewriter, loc, flatTy, vecA);

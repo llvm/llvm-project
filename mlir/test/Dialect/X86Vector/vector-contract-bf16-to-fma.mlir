@@ -399,30 +399,44 @@ func.func @matmul_to_fma_flat_layout_loop(%arg0: memref<16x64x32xbf16>, %arg1: m
   %c1 = arith.constant 1 : index
   scf.for %arg3 = %c0 to %c64 step %c1 {
     scf.for %arg4 = %c0 to %c64 step %c16 {
-      %subview = memref.subview %arg2[%arg3, %arg4] [1, 16] [1, 1] : memref<64x64xf32> to !memrefC
-      %2 = vector.transfer_read %subview[%c0, %c0], %0 {in_bounds = [true, true]} : !memrefC, !vecC
-      %3 = vector.transfer_read %subview[%c0, %c8], %0 {in_bounds = [true, true]} : !memrefC, !vecC
+      %subview = memref.subview %arg2[%arg3, %arg4] [1, 16] [1, 1] : 
+				memref<64x64xf32> to !memrefC
+      %2 = vector.transfer_read %subview[%c0, %c0], %0 {in_bounds = [true, true]} : 
+				!memrefC, !vecC
+      %3 = vector.transfer_read %subview[%c0, %c8], %0 {in_bounds = [true, true]} : 
+				!memrefC, !vecC
 
       %4:2 = scf.for %arg5 = %c0 to %c16 step %c1 iter_args(%arg6 = %2, %arg7 = %3) -> (!vecC, !vecC) {
         %5:2 = scf.for %arg8 = %c0 to %c32 step %c1 iter_args(%arg9 = %arg6, %arg10 = %arg7) -> (!vecC, !vecC) {
 
-          %subview_0 = memref.subview %arg0[%arg5, %arg3, %arg8] [1, 1, 1] [1, 1, 1] : memref<16x64x32xbf16> to !memrefA
-          %subview_1 = memref.subview %arg1[%arg5, %arg8, %arg4] [1, 1, 16] [1, 1, 1] : memref<16x32x64xbf16> to !memrefB
+          %subview_0 = memref.subview %arg0[%arg5, %arg3, %arg8] [1, 1, 1] [1, 1, 1] : 
+				memref<16x64x32xbf16> to !memrefA
+          %subview_1 = memref.subview %arg1[%arg5, %arg8, %arg4] [1, 1, 16] [1, 1, 1] : 
+				memref<16x32x64xbf16> to !memrefB
 
-          %6 = vector.transfer_read %subview_0[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} : !memrefA, !vecA
-          %7 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 {in_bounds = [true, true, true]} : !memrefB, !vecB
-          %8 = vector.transfer_read %subview_1[%c0, %c0, %c8], %1 {in_bounds = [true, true, true]} : !memrefB, !vecB
+          %6 = vector.transfer_read %subview_0[%c0, %c0, %c0], %1 
+				{in_bounds = [true, true, true]} : !memrefA, !vecA
+          %7 = vector.transfer_read %subview_1[%c0, %c0, %c0], %1 
+				{in_bounds = [true, true, true]} : !memrefB, !vecB
+          %8 = vector.transfer_read %subview_1[%c0, %c0, %c8], %1 
+				{in_bounds = [true, true, true]} : !memrefB, !vecB
 
-          %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %6, %7, %arg9 {unroll_shape = array<i64: 1, 1, 8, 1>} : !vecA, !vecB into !vecC
-          %10 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = ["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} %6, %8, %arg10 {unroll_shape = array<i64: 1, 1, 8, 1>} : !vecA, !vecB into !vecC
+          %9 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = 
+				["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} 
+				%6, %7, %arg9 {unroll_shape = array<i64: 1, 1, 8, 1>} : !vecA, !vecB into !vecC
+          %10 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types = 
+				["reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>} 
+				%6, %8, %arg10 {unroll_shape = array<i64: 1, 1, 8, 1>} : !vecA, !vecB into !vecC
 
           scf.yield %9, %10 : !vecC, !vecC
         }
         scf.yield %5#0, %5#1 : !vecC, !vecC
       }
 
-      vector.transfer_write %4#1, %subview[%c0, %c8] {in_bounds = [true, true]} : !vecC, !memrefC
-      vector.transfer_write %4#0, %subview[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+      vector.transfer_write %4#1, %subview[%c0, %c8] {in_bounds = [true, true]} : 
+				!vecC, !memrefC
+      vector.transfer_write %4#0, %subview[%c0, %c0] {in_bounds = [true, true]} : 
+				!vecC, !memrefC
     }
   }
 
@@ -656,6 +670,75 @@ func.func @many_dimensions(
 // CHECK: x86vector.avx.bcst_to_f32.packed
 // CHECK: x86vector.avx.cvt.packed.even.indexed_to_f32
 // CHECK: vector.fma
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86vector.vector_contract_bf16_to_fma
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1xbf16>
+!vecB = vector<1x8xbf16>
+!vecC = vector<1x8xf32>
+!memrefA = memref<4x1xbf16>
+!memrefB = memref<1x32xbf16>
+!memrefC = memref<2x32xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @negative_multiple_vc_users_flat(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %c16 = arith.constant 16 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+  %1 = vector.load %arg0[%c0, %c0] :
+        !memrefA, !vecA
+  %2 = vector.load %arg1[%c0, %c0] :
+        !memrefB, !vecB
+  %3 = vector.load %arg1[%c0, %c8] :
+        !memrefB, !vecB
+  %4 = vector.load %arg2[%c0, %c0] :
+        !memrefC, !vecC
+  %5 = vector.load %arg2[%c0, %c8] :
+        !memrefC, !vecC
+
+  %6 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %4
+    : !vecA, !vecB into !vecC
+
+  %7 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %3, %5
+    : !vecA, !vecB into !vecC
+
+  vector.store %6, %arg2[%c0, %c0] : !memrefC, !vecC
+  vector.store %7, %arg2[%c0, %c8] : !memrefC, !vecC
+
+  %8 = arith.addf %6, %7 : !vecC
+  vector.store %8, %arg2[%c0, %c16] : !memrefC, !vecC
+
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @negative_multiple_vc_users_flat
+// CHECK-NOT: vector.shuffle
+// CHECK-NOT: vector.fma
+// CHECK-NOT: vector.shuffle
+// CHECK: vector.contract
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {

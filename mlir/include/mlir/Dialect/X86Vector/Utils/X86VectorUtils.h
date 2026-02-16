@@ -44,7 +44,8 @@ Operation *traceToVectorReadLikeParentOperation(Value v);
 
 // Recursively traces a value to find a downstream vector write-like op
 // (vector.transfer_write or vector.store), crossing scf.for/yield but
-// stopping at layout-altering ops; returns the first match or nullptr.
+// stopping at layout-altering ops. Returns nullptr if no vector writer/store
+// ops or there are multiple users.
 Operation *traceToVectorWriteLikeUserOperation(Value v);
 
 // Packs the accumulators of two flat BF16 vector.contraction ops into a

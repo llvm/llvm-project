@@ -253,6 +253,64 @@ struct VectorContractToPackedTypeDotProduct
         return rewriter.notifyMatchFailure(contractOp,
                                            "Could not find a contract pair");
 
+      // Validate and shuffle the accumulator
+      if (accRead) {
+        // Trace back to the load or transfer_read operations of the contract
+        // accumulators.
+        Operation *accReadOp0 =
+            traceToVectorReadLikeParentOperation(contractOp.getAcc());
+        Operation *accReadOp1 =
+            traceToVectorReadLikeParentOperation(pairContractOp.getAcc());
+
+        // Iterate down to find the users of contact operations until it is
+        // store or transfer_write.
+        Operation *resultWriteOp0 =
+            traceToVectorWriteLikeUserOperation(contractOp.getResult());
+        Operation *resultWriteOp1 =
+            traceToVectorWriteLikeUserOperation(pairContractOp.getResult());
+
+        if (!accReadOp0 || !accReadOp1)
+          return rewriter.notifyMatchFailure(
+              contractOp,
+              "Operands doesn't have load or transfer_read as it's parent op");
+
+        if (!resultWriteOp0 || !resultWriteOp1)
+          return rewriter.notifyMatchFailure(
+              contractOp,
+              "The use of contract operations are neither vector.store "
+              "or transfer_write or has multiple users.");
+
+        if (contractOp->getBlock() == accReadOp1->getBlock() &&
+            contractOp->isBeforeInBlock(accReadOp1))
+          return rewriter.notifyMatchFailure(
+              contractOp,
+              "The load/read operation of pair contract operation is "
+              "after the contractOp");
+
+        if (pairContractOp->getBlock() == resultWriteOp0->getBlock() &&
+            resultWriteOp0->isBeforeInBlock(pairContractOp))
+          return rewriter.notifyMatchFailure(
+              contractOp, "The store/write operation of contract operation is "
+                          "before the pair contract operation");
+        // Shuffle the accumulators of the contract operations.
+        LogicalResult readShuffle =
+            shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
+                                   pairContractOp, nonUnitDimValue, accTy);
+
+        if (failed(readShuffle))
+          return rewriter.notifyMatchFailure(
+              contractOp, "Accumulator read is not by transfer_read or load");
+
+        // Shuffle the output of contract operations before it's use.
+        LogicalResult writeShuffle = shuffleBeforeWriteLikeOp(
+            rewriter, resultWriteOp0, resultWriteOp1, nonUnitDimValue, accTy);
+
+        if (failed(writeShuffle))
+          return rewriter.notifyMatchFailure(
+              contractOp,
+              "Write to accumulator is not by transfer_write or store");
+      }
+
       if (!isNonUnitDimOperandShuffled(nonUnitDimOperand)) {
         Value nonUnitDimOperandPairContract = rhsHasMultipleNonUnitDims
                                                   ? pairContractOp.getRhs()
@@ -287,64 +345,6 @@ struct VectorContractToPackedTypeDotProduct
 
         nonUnitDimOperand = rhsHasMultipleNonUnitDims ? contractOp.getRhs()
                                                       : contractOp.getLhs();
-      }
-
-      // Validate and shuffle the accumulator
-      if (accRead) {
-        // Trace back to the load or transfer_read operations of the contract
-        // accumulators.
-        Operation *accReadOp0 =
-            traceToVectorReadLikeParentOperation(contractOp.getAcc());
-        Operation *accReadOp1 =
-            traceToVectorReadLikeParentOperation(pairContractOp.getAcc());
-
-        // Iterate down to find the users of contact operations until it is
-        // store or transfer_write.
-        Operation *resultWriteOp0 =
-            traceToVectorWriteLikeUserOperation(contractOp.getResult());
-        Operation *resultWriteOp1 =
-            traceToVectorWriteLikeUserOperation(pairContractOp.getResult());
-
-        if (!accReadOp0 || !accReadOp1)
-          return rewriter.notifyMatchFailure(
-              contractOp,
-              "Operands doesn't have load or transfer_read as it's parent op");
-
-        if (!resultWriteOp0 || !resultWriteOp1)
-          return rewriter.notifyMatchFailure(
-              contractOp,
-              "The use of contract operations are neither vector.store "
-              "or transfer_write");
-
-        if (contractOp->getBlock() == accReadOp1->getBlock() &&
-            contractOp->isBeforeInBlock(accReadOp1))
-          return rewriter.notifyMatchFailure(
-              contractOp,
-              "The load/read operation of pair contract operation is "
-              "after the contractOp");
-
-        if (pairContractOp->getBlock() == resultWriteOp0->getBlock() &&
-            resultWriteOp0->isBeforeInBlock(pairContractOp))
-          return rewriter.notifyMatchFailure(
-              contractOp, "The store/write operation of contract operation is "
-                          "before the pair contract operation");
-        // Shuffle the accumulators of the contract operations.
-        LogicalResult readShuffle =
-            shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
-                                   pairContractOp, nonUnitDimValue, accTy);
-
-        if (failed(readShuffle))
-          return rewriter.notifyMatchFailure(
-              contractOp, "Accumulator read is not by transfer_read or load");
-
-        // Shuffle the output of contract operations before it's use.
-        LogicalResult writeShuffle = shuffleBeforeWriteLikeOp(
-            rewriter, resultWriteOp0, resultWriteOp1, nonUnitDimValue, accTy);
-
-        if (failed(writeShuffle))
-          return rewriter.notifyMatchFailure(
-              contractOp,
-              "Write to accumulator is not by transfer_write or store");
       }
     }
 

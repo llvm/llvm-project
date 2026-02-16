@@ -355,6 +355,42 @@ struct VectorContractBF16ToFMA
 
       if (!pairContractOp)
         return failure();
+
+      Operation *accReadOp0 =
+          traceToVectorReadLikeParentOperation(contractOp.getAcc());
+      Operation *accReadOp1 =
+          traceToVectorReadLikeParentOperation(pairContractOp.getAcc());
+
+      // Iterate down to find the users of contact operations until it is store
+      // or transfer_write.
+      Operation *resultWriteOp0 =
+          traceToVectorWriteLikeUserOperation(contractOp.getResult());
+      Operation *resultWriteOp1 =
+          traceToVectorWriteLikeUserOperation(pairContractOp.getResult());
+
+      if (!accReadOp0 || !accReadOp1)
+        return rewriter.notifyMatchFailure(
+            contractOp,
+            "Operand doesn't have load or transfer_read as its parent op");
+
+      if (!resultWriteOp0 || !resultWriteOp1)
+        return rewriter.notifyMatchFailure(
+            contractOp,
+            "The use of contract operations are neither vector.store "
+            "or transfer_write or has multiple users");
+
+      if (contractOp->getBlock() == accReadOp1->getBlock() &&
+          contractOp->isBeforeInBlock(accReadOp1))
+        return rewriter.notifyMatchFailure(
+            contractOp, "The load/read operation of pair contract operation is "
+                        "after the contractOp");
+
+      if (pairContractOp->getBlock() == resultWriteOp0->getBlock() &&
+          resultWriteOp0->isBeforeInBlock(pairContractOp)) {
+        return rewriter.notifyMatchFailure(
+            contractOp, "The store/write operation of contract operation is "
+                        "before the pair contract operation");
+      }
     }
 
     // Build subviews.
@@ -385,30 +421,6 @@ struct VectorContractBF16ToFMA
           traceToVectorWriteLikeUserOperation(contractOp.getResult());
       Operation *resultWriteOp1 =
           traceToVectorWriteLikeUserOperation(pairContractOp.getResult());
-
-      if (!accReadOp0 || !accReadOp1)
-        return rewriter.notifyMatchFailure(
-            contractOp,
-            "Operand doesn't have load or transfer_read as its parent op");
-
-      if (!resultWriteOp0 || !resultWriteOp1)
-        return rewriter.notifyMatchFailure(
-            contractOp,
-            "The use of contract operations are neither vector.store "
-            "or transfer_write");
-
-      if (contractOp->getBlock() == accReadOp1->getBlock() &&
-          contractOp->isBeforeInBlock(accReadOp1))
-        return rewriter.notifyMatchFailure(
-            contractOp, "The load/read operation of pair contract operation is "
-                        "after the contractOp");
-
-      if (pairContractOp->getBlock() == resultWriteOp0->getBlock() &&
-          resultWriteOp0->isBeforeInBlock(pairContractOp)) {
-        return rewriter.notifyMatchFailure(
-            contractOp, "The store/write operation of contract operation is "
-                        "before the pair contract operation");
-      }
 
       // Shuffle the accumulators of the contract operations.
       LogicalResult readShuffle =
