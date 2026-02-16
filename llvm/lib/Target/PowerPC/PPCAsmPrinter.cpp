@@ -431,11 +431,26 @@ bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                           const char *ExtraCode,
                                           raw_ostream &O) {
+  auto reportAsmMemError = [&](StringRef errMsg) {
+    const char *AsmStr = MI->getOperand(0).getSymbolName();
+    const MDNode *LocMD = MI->getLocCookieMD();
+    uint64_t LocCookie =
+        LocMD ? mdconst::extract<ConstantInt>(LocMD->getOperand(0))
+                    ->getZExtValue()
+              : 0;
+    const Function &Fn = MI->getMF()->getFunction();
+    Fn.getContext().diagnose(
+        DiagnosticInfoInlineAsm(LocCookie, errMsg + Twine(AsmStr) + "'"));
+    return true;
+  };
   if (ExtraCode && ExtraCode[0]) {
-    if (ExtraCode[1] != 0) return true; // Unknown modifier.
+    if (ExtraCode[1] != 0)
+      return reportAsmMemError("Unknown modifier in inline asm:");
 
     switch (ExtraCode[0]) {
-    default: return true;  // Unknown modifier.
+    default: {
+      return reportAsmMemError("Unknown modifier in inline asm:");
+    }
     case 'L': // A memory reference to the upper word of a double word op.
       O << getDataLayout().getPointerSize() << "(";
       printOperand(MI, OpNo, O);
@@ -443,6 +458,9 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
       return false;
     case 'y': // A memory reference for an X-form instruction
       O << "0, ";
+      printOperand(MI, OpNo, O);
+      return false;
+    case 'P': // A memory reference for an single inout to an X-form instr.
       printOperand(MI, OpNo, O);
       return false;
     case 'I':
