@@ -502,7 +502,8 @@ void DwarfDebug::addSubprogramNames(
   // well into the name table. Only do that if we are going to actually emit
   // that name.
   if (LinkageName != "" && SP->getName() != LinkageName &&
-      (useAllLinkageNames() || InfoHolder.getAbstractScopeDIEs().lookup(SP)))
+      (useAllLinkageNames() ||
+       InfoHolder.getDIEs().getAbstractScopeDIEs().lookup(SP)))
     addAccelName(Unit, NameTableKind, LinkageName, Die);
 
   // If this is an Objective-C selector name add it to the ObjC accelerator
