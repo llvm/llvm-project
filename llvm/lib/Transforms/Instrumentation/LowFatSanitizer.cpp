@@ -24,6 +24,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
 
@@ -45,8 +46,8 @@ public:
   bool run();
 
 private:
-  /// Get or create the declaration for __lf_check_bounds.
-  FunctionCallee getCheckBoundsFn();
+  /// Get or create the declaration for __lf_report_oob.
+  FunctionCallee getReportOobFn();
 
   /// Instrument a single function.
   bool instrumentFunction(Function &F);
@@ -56,20 +57,27 @@ private:
   bool instrumentMemoryAccess(Instruction *I, Value *Ptr, Type *AccessTy);
 
   Module &M;
-  const LowFatSanitizerOptions &Options;
+  const LowFatSanitizerOptions &Options; // TODO: impelement options
   const DataLayout &DL;
   Type *IntptrTy;
-  FunctionCallee CheckBoundsFn;
+  FunctionCallee ReportOobFn;
 };
 
-FunctionCallee LowFatSanitizer::getCheckBoundsFn() {
-  if (!CheckBoundsFn) {
-    // void __lf_check_bounds(uptr ptr, uptr size)
+// LowFat Constants (must match lf_config.h)
+static const uint64_t RegionBase = 0x100000000000ULL;
+static const uint64_t RegionSizeLog = 32;
+static const uint64_t MinSizeLog = 4;
+static const uint64_t NumSizeClasses = 27;
+
+FunctionCallee LowFatSanitizer::getReportOobFn() {
+  if (!ReportOobFn) {
+    // void __lf_report_oob(uptr ptr, uptr base, uptr size)
     Type *VoidTy = Type::getVoidTy(M.getContext());
-    CheckBoundsFn = M.getOrInsertFunction(
-        "__lf_check_bounds", FunctionType::get(VoidTy, {IntptrTy, IntptrTy}, false));
+    ReportOobFn = M.getOrInsertFunction(
+        "__lf_report_oob",
+        FunctionType::get(VoidTy, {IntptrTy, IntptrTy, IntptrTy}, false));
   }
-  return CheckBoundsFn;
+  return ReportOobFn;
 }
 
 bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
@@ -86,13 +94,50 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
   // Convert pointer to integer
   Value *PtrInt = IRB.CreatePtrToInt(Ptr, IntptrTy);
 
-  // Create size constant
-  Value *SizeVal = ConstantInt::get(IntptrTy, AccessSize.getFixedValue());
+  // 1. Get region index: (Ptr - RegionBase) >> RegionSizeLog
+  Value *RegionBaseVal = ConstantInt::get(IntptrTy, RegionBase);
+  Value *RegionOffset = IRB.CreateSub(PtrInt, RegionBaseVal);
+  Value *RegionIndex = IRB.CreateLShr(RegionOffset, RegionSizeLog);
 
-  // Insert call to __lf_check_bounds(ptr, size)
-  IRB.CreateCall(getCheckBoundsFn(), {PtrInt, SizeVal});
+  // 2. Check if LowFat pointer: Region < NumSizeClasses
+  Value *MaxRegion = ConstantInt::get(IntptrTy, NumSizeClasses);
+  Value *IsLowFat = IRB.CreateICmpULT(RegionIndex, MaxRegion);
 
-  LLVM_DEBUG(dbgs() << "[LowFat] Instrumented: " << *I << "\n");
+  // Split block for the slow path (if LowFat)
+  Instruction *ThenTerm = SplitBlockAndInsertIfThen(IsLowFat, I, false);
+  IRBuilder<> ThenIRB(ThenTerm);
+
+  // 3. Compute bounds inside the 'then' block
+  // Size = 1 << (Region + MinSizeLog)
+  Value *MinSizeLogVal = ConstantInt::get(IntptrTy, MinSizeLog);
+  Value *ShiftAmount = ThenIRB.CreateAdd(RegionIndex, MinSizeLogVal);
+  Value *SizeOne = ConstantInt::get(IntptrTy, 1);
+  Value *AllocSize = ThenIRB.CreateShl(SizeOne, ShiftAmount);
+
+  // Mask = ~(AllocSize - 1)
+  Value *SizeMinusOne = ThenIRB.CreateSub(AllocSize, SizeOne);
+  Value *Mask = ThenIRB.CreateNot(SizeMinusOne);
+
+  // Base = Ptr & Mask
+  Value *Base = ThenIRB.CreateAnd(PtrInt, Mask);
+
+  // End = Base + AllocSize
+  Value *End = ThenIRB.CreateAdd(Base, AllocSize);
+
+  // 4. Check access: Ptr + AccessSize <= End
+  // Equivalent OOB check: (Ptr + AccessSize) > End
+  Value *AccessSizeVal = ConstantInt::get(IntptrTy, AccessSize.getFixedValue());
+  Value *AccessEnd = ThenIRB.CreateAdd(PtrInt, AccessSizeVal);
+  Value *IsOOB = ThenIRB.CreateICmpUGT(AccessEnd, End);
+
+  // Split again for OOB reporting
+  Instruction *OobTerm = SplitBlockAndInsertIfThen(IsOOB, ThenTerm, false);
+  IRBuilder<> OobIRB(OobTerm);
+  
+  // 5. Report error (slow path)
+  OobIRB.CreateCall(getReportOobFn(), {PtrInt, Base, AllocSize});
+
+  LLVM_DEBUG(dbgs() << "[LowFat] Instrumented (inline): " << *I << "\n");
   return true;
 }
 
