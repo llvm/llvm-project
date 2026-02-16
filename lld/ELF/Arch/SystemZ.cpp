@@ -214,7 +214,6 @@ void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
     int64_t addend = rs.getAddend<ELFT>(*it, type);
-
     RelExpr expr;
     // Relocation types that only need a RelExpr set `expr` and break out of
     // the switch to reach rs.process(). Types that need special handling
