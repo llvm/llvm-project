@@ -1114,8 +1114,7 @@ define i64 @waddau_zext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
 define i64 @wsubau_zext(i64 %acc, i32 %a) nounwind {
 ; CHECK-LABEL: wsubau_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    subd a0, a0, a2
+; CHECK-NEXT:    wsubau a0, zero, a2
 ; CHECK-NEXT:    ret
   %ext_a = zext i32 %a to i64
   %sub = sub i64 %acc, %ext_a
@@ -1126,10 +1125,7 @@ define i64 @wsubau_zext(i64 %acc, i32 %a) nounwind {
 define i64 @wsubau_zext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: wsubau_zext_chain:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:    waddau a0, a2, zero
-; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    subd a0, a0, a4
+; CHECK-NEXT:    wsubau a0, a2, a3
 ; CHECK-NEXT:    ret
   %ext_a = zext i32 %a to i64
   %ext_b = zext i32 %b to i64
@@ -1142,10 +1138,7 @@ define i64 @wsubau_zext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
 define i64 @wsubau_zext_chain_rev(i64 %acc, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: wsubau_zext_chain_rev:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    subd a0, a0, a2
-; CHECK-NEXT:    waddau a0, a4, zero
+; CHECK-NEXT:    wsubau a0, a3, a2
 ; CHECK-NEXT:    ret
   %ext_a = zext i32 %a to i64
   %ext_b = zext i32 %b to i64
