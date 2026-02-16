@@ -7970,6 +7970,13 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, X.getOperand(0));
   }
 
+  // (X +/- Y) & Y --> ~X & Y when Y is a power of 2 (or zero).
+  if (sd_match(N, m_And(m_Value(Y),
+                        m_OneUse(m_AnyOf(m_Add(m_Value(X), m_Deferred(Y)),
+                                         m_Sub(m_Value(X), m_Deferred(Y)))))) &&
+      DAG.isKnownToBeAPowerOfTwo(Y, /*OrZero=*/true))
+    return DAG.getNode(ISD::AND, DL, VT, DAG.getNOT(DL, X, VT), Y);
+
   // fold (and (sign_extend_inreg x, i16 to i32), 1) -> (and x, 1)
   // fold (and (sra)) -> (and (srl)) when possible.
   if (SimplifyDemandedBits(SDValue(N, 0)))
