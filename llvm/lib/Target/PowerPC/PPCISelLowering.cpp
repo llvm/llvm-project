@@ -18151,6 +18151,9 @@ PPCTargetLowering::getConstraintType(StringRef Constraint) const {
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     default: break;
+    case 'a':
+      // 'a' constraints inputs to address operands.
+      return C_Address;
     case 'b':
     case 'r':
     case 'f':
