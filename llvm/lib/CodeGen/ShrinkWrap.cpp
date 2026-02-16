@@ -786,7 +786,7 @@ void ShrinkWrapImpl::updateSaveRestorePoints(MachineBasicBlock &MBB,
         for (auto *PBB : Save->predecessors())
           if (MDT->isReachableFromEntry(PBB))
             Preds.push_back(PBB);
-        Save = FindIDom<>(*Save, Preds, *MDT);
+        Save = FindIDom<>(*Save, std::move(Preds), *MDT);
         if (!Save)
           break;
       } else {
