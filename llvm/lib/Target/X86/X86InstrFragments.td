@@ -288,6 +288,15 @@ def X86xor_flag  : SDNode<"X86ISD::XOR",  SDTBinaryArithWithFlags,
 def X86and_flag  : SDNode<"X86ISD::AND",  SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 
+def SDTX86ShiftWithFlags : SDTypeProfile<2, 1, [
+  SDTCisSameAs<0, 2>,
+  SDTCisVT<1, i32>,
+]>;
+
+def X86shl : SDNode<"X86ISD::SHL", SDTX86ShiftWithFlags, [SDNPInGlue]>;
+def X86srl : SDNode<"X86ISD::SRL", SDTX86ShiftWithFlags, [SDNPInGlue]>;
+def X86sra : SDNode<"X86ISD::SRA", SDTX86ShiftWithFlags, [SDNPInGlue]>;
+
 def X86lock_add  : SDNode<"X86ISD::LADD",  SDTLockBinaryArithWithFlags,
                           [SDNPHasChain, SDNPMayStore, SDNPMayLoad,
                            SDNPMemOperand]>;

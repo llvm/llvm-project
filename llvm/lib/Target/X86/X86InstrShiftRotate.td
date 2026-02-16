@@ -689,3 +689,43 @@ let Predicates = [HasBMI2, HasEGPR] in {
   defm SHRX : ShiftX_Pats<srl, "_EVEX">;
   defm SHLX : ShiftX_Pats<shl, "_EVEX">;
 }
+
+let Predicates = [NoNDD] in {
+  // SHL
+  def : Pat<(X86shl GR8:$src1),  (SHL8rCL  GR8:$src1)>;
+  def : Pat<(X86shl GR16:$src1), (SHL16rCL GR16:$src1)>;
+  def : Pat<(X86shl GR32:$src1), (SHL32rCL GR32:$src1)>;
+  def : Pat<(X86shl GR64:$src1), (SHL64rCL GR64:$src1)>;
+
+  // SHR
+  def : Pat<(X86srl GR8:$src1),  (SHR8rCL  GR8:$src1)>;
+  def : Pat<(X86srl GR16:$src1), (SHR16rCL GR16:$src1)>;
+  def : Pat<(X86srl GR32:$src1), (SHR32rCL GR32:$src1)>;
+  def : Pat<(X86srl GR64:$src1), (SHR64rCL GR64:$src1)>;
+
+  // SAR
+  def : Pat<(X86sra GR8:$src1),  (SAR8rCL  GR8:$src1)>;
+  def : Pat<(X86sra GR16:$src1), (SAR16rCL GR16:$src1)>;
+  def : Pat<(X86sra GR32:$src1), (SAR32rCL GR32:$src1)>;
+  def : Pat<(X86sra GR64:$src1), (SAR64rCL GR64:$src1)>;
+}
+
+let Predicates = [HasNDD, In64BitMode] in {
+  // SHL
+  def : Pat<(X86shl GR8:$src1),  (SHL8rCL_ND  GR8:$src1)>;
+  def : Pat<(X86shl GR16:$src1), (SHL16rCL_ND GR16:$src1)>;
+  def : Pat<(X86shl GR32:$src1), (SHL32rCL_ND GR32:$src1)>;
+  def : Pat<(X86shl GR64:$src1), (SHL64rCL_ND GR64:$src1)>;
+
+  // SHR
+  def : Pat<(X86srl GR8:$src1),  (SHR8rCL_ND  GR8:$src1)>;
+  def : Pat<(X86srl GR16:$src1), (SHR16rCL_ND GR16:$src1)>;
+  def : Pat<(X86srl GR32:$src1), (SHR32rCL_ND GR32:$src1)>;
+  def : Pat<(X86srl GR64:$src1), (SHR64rCL_ND GR64:$src1)>;
+
+  // SAR
+  def : Pat<(X86sra GR8:$src1),  (SAR8rCL_ND  GR8:$src1)>;
+  def : Pat<(X86sra GR16:$src1), (SAR16rCL_ND GR16:$src1)>;
+  def : Pat<(X86sra GR32:$src1), (SAR32rCL_ND GR32:$src1)>;
+  def : Pat<(X86sra GR64:$src1), (SAR64rCL_ND GR64:$src1)>;
+}
