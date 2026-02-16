@@ -340,8 +340,8 @@ struct MatmulTransposeHelper {
     RUNTIME_CHECK(terminator, xCatKind.has_value() && yCatKind.has_value());
     RUNTIME_CHECK(terminator, xCatKind->first == XCAT);
     RUNTIME_CHECK(terminator, yCatKind->first == YCAT);
-    if constexpr (constexpr ResultTy resultType{
-                      GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
+    constexpr ResultTy resultType{GetResultType(XCAT, XKIND, YCAT, YKIND)};
+    if constexpr (resultType) {
       return DoMatmulTranspose<IS_ALLOCATING, resultType->first,
           resultType->second, CppTypeFor<XCAT, XKIND>, CppTypeFor<YCAT, YKIND>>(
           result, x, y, terminator);

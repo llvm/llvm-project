@@ -440,8 +440,8 @@ struct MatmulHelper {
                      xCatKind->first == TypeCategory::Unsigned) &&
                     (yCatKind->first == TypeCategory::Integer ||
                         yCatKind->first == TypeCategory::Unsigned))));
-    if constexpr (constexpr ResultTy resultType{
-                      GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
+    constexpr ResultTy resultType{GetResultType(XCAT, XKIND, YCAT, YKIND)};
+    if constexpr (resultType) {
       return DoMatmul<IS_ALLOCATING, resultType->first, resultType->second,
           CppTypeFor<XCAT, XKIND>, CppTypeFor<YCAT, YKIND>>(
           result, x, y, terminator);
