@@ -287,7 +287,6 @@ public:
 
   /// isAtPhysicalStartOfLine - Return true if this token is at the start of a
   /// physical line.
-  ///
   bool isAtPhysicalStartOfLine() const { return getFlag(PhysicalStartOfLine); }
 
   /// Return true if this token has whitespace before it.

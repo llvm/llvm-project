@@ -4518,8 +4518,8 @@ LexStart:
   return true;
 
 HandleDirective:
-  // We parsed a # character and it's the start of a preprocessing directive.
 
+  // We parsed a # character and it's the start of a preprocessing directive.
   FormTokenWithChars(Result, CurPtr, tok::hash);
   PP->HandleDirective(Result);
 

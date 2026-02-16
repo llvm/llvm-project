@@ -878,7 +878,7 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   if (II.isExtensionToken() && !DisableMacroExpansion)
     Diag(Identifier, diag::ext_token_used);
 
-  // Handle module contextual keyword.
+  // Handle module contextual keywords.
   if (getLangOpts().CPlusPlusModules && CurLexer &&
       !CurLexer->isLexingRawMode() && !CurLexer->isPragmaLexer() &&
       !CurLexer->ParsingPreprocessorDirective &&
