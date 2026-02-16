@@ -181,9 +181,9 @@ typedef enum {
   __asan_address_info_dest = 2,
   // Address being deallocated (lifetime is terminated).
   __asan_address_info_dealloc = 3,
-  // First non-dereferenced operand (e.g. pointer comparison, ODR definition).
+  // First non-dereferenced operand (e.g. pointer comparison, ODR violation).
   __asan_address_info_first = 4,
-  // Second non-dereferenced operand (e.g. pointer comparison, ODR definition).
+  // Second non-dereferenced operand (e.g. pointer comparison, ODR violation).
   __asan_address_info_second = 5,
 } __asan_address_info_type;
 
