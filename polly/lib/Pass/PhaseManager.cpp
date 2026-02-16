@@ -128,6 +128,10 @@ public:
     if (Opts.isPhaseEnabled(PassPhase::ViewScopsOnly))
       ViewScops("scopsonly", true);
 
+    // Can't do anything after this without ScopInfo.
+    if (!Opts.isPhaseEnabled(PassPhase::ScopInfo))
+      return false;
+
     // Phase: scops
     AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
     const DataLayout &DL = F.getParent()->getDataLayout();

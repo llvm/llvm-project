@@ -58,7 +58,6 @@
 // CHECK-NEXT:     occmo               FEAT_OCCMO                                             Enable Armv9.6-A Outer cacheable cache maintenance operations
 // CHECK-NEXT:     pauth               FEAT_PAuth                                             Enable Armv8.3-A Pointer Authentication extension
 // CHECK-NEXT:     pauth-lr            FEAT_PAuth_LR                                          Enable Armv9.5-A PAC enhancements
-// CHECK-NEXT:     pcdphint            FEAT_PCDPHINT                                          Enable Armv9.6-A Producer Consumer Data Placement hints
 // CHECK-NEXT:     pmuv3               FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
 // CHECK-NEXT:     poe2                FEAT_S1POE2                                            Enable Stage 1 Permission Overlays Extension 2 instructions
 // CHECK-NEXT:     pops                FEAT_PoPS                                              Enable Armv9.6-A Point Of Physical Storage (PoPS) DC instructions

@@ -2888,10 +2888,21 @@ static bool generateConvertInst(const StringRef DemangledCall,
   if (Builtin->IsSaturated)
     buildOpDecorate(Call->ReturnRegister, MIRBuilder,
                     SPIRV::Decoration::SaturatedConversion, {});
-  if (Builtin->IsRounded)
-    buildOpDecorate(Call->ReturnRegister, MIRBuilder,
-                    SPIRV::Decoration::FPRoundingMode,
-                    {(unsigned)Builtin->RoundingMode});
+
+  if (Builtin->IsRounded) {
+    bool AnyTypeIsFloat =
+        GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeFloat) ||
+        GR->isScalarOrVectorOfType(Call->Arguments[0], SPIRV::OpTypeFloat);
+
+    // Rounding mode decorations are only valid for floating point types.
+    // Conversion builtins from integer to integer are equivalent to their
+    // non-rounded counterparts.
+    if (AnyTypeIsFloat) {
+      buildOpDecorate(Call->ReturnRegister, MIRBuilder,
+                      SPIRV::Decoration::FPRoundingMode,
+                      {(unsigned)Builtin->RoundingMode});
+    }
+  }
 
   std::string NeedExtMsg;              // no errors if empty
   bool IsRightComponentsNumber = true; // check if input/output accepts vectors
