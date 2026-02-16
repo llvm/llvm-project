@@ -736,8 +736,8 @@ private:
   CFGBlock *VisitChildrenForTemporaries(Stmt *E, bool ExternallyDestructed,
                                         TempDtorContext &Context);
   CFGBlock *VisitBinaryOperatorForTemporaries(BinaryOperator *E,
-                                                 bool ExternallyDestructed,
-                                                 TempDtorContext &Context);
+                                              bool ExternallyDestructed,
+                                              TempDtorContext &Context);
   CFGBlock *VisitCXXOperatorCallExprForTemporaryDtors(CXXOperatorCallExpr *E,
                                                       TempDtorContext &Context);
   CFGBlock *VisitCXXBindTemporaryExprForTemporaryDtors(
@@ -5305,11 +5305,11 @@ CFGBlock *CFGBuilder::VisitCXXOperatorCallExprForTemporaryDtors(
   if (E->isAssignmentOp()) {
     // For assignment operators, the RHS expression is evaluated before the LHS
     // expression, so prepend temporary destructors for the RHS first.
-    CFGBlock *RHSBlock = VisitForTemporaryDtors(E->getArg(1), false, Context);
-    CFGBlock *LHSBlock = VisitForTemporaryDtors(E->getArg(0), false, Context);
+    CFGBlock *RHSBlock = VisitForTemporaries(E->getArg(1), false, Context);
+    CFGBlock *LHSBlock = VisitForTemporaries(E->getArg(0), false, Context);
     return LHSBlock ? LHSBlock : RHSBlock;
   }
-  return VisitChildrenForTemporaryDtors(E, false, Context);
+  return VisitChildrenForTemporaries(E, false, Context);
 }
 
 CFGBlock *CFGBuilder::VisitCXXBindTemporaryExprForTemporaryDtors(
