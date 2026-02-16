@@ -4247,7 +4247,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     }
 
     if (Style.MaxParametersOnLine > 0 &&
-        Current->is(TT_FunctionDeclarationLParen) &&
+        Current->is(tok::l_paren) &&
         Current->ParameterCount > Style.MaxParametersOnLine) {
       const auto *RParen = Current->MatchingParen;
       unsigned CurrentParamNum = 0;
