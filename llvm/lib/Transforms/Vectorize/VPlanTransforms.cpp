@@ -3945,6 +3945,14 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         ToRemove.push_back(Blend);
       }
 
+      if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(&R)) {
+        if (!VEPR->getOffset()) {
+          assert(Plan.getConcreteUF() == 1 &&
+                 "Expected unroller to have materialized offset for UF != 1");
+          VEPR->materializeOffset();
+        }
+      }
+
       if (auto *Expr = dyn_cast<VPExpressionRecipe>(&R)) {
         Expr->decompose();
         ToRemove.push_back(Expr);
