@@ -18,39 +18,39 @@ define void @test() "hlsl.export" {
   ; RWBuffer<float> Buf : register(u0, space0)
   %buf0 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
-           i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+           i32 0, i32 0, i32 1, i32 0, ptr null)
   ; RWBuffer<float> Buf : register(u1, space0)
   %buf1 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
-           i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+           i32 0, i32 1, i32 1, i32 0, ptr null)
   ; RWBuffer<float> Buf : register(u2, space0)
   %buf2 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
-           i32 0, i32 2, i32 1, i32 0, i1 false, ptr null)
+           i32 0, i32 2, i32 1, i32 0, ptr null)
   ; RWBuffer<float> Buf : register(u3, space0)
   %buf3 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
-           i32 0, i32 3, i32 1, i32 0, i1 false, ptr null)
+           i32 0, i32 3, i32 1, i32 0, ptr null)
   ; RWBuffer<float> Buf : register(u4, space0)
   %buf4 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
-           i32 0, i32 4, i32 1, i32 0, i1 false, ptr null)
+           i32 0, i32 4, i32 1, i32 0, ptr null)
   ; RWBuffer<float> Buf : register(u5, space0)
   %buf5 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
-           i32 0, i32 5, i32 1, i32 0, i1 false, ptr null)
+           i32 0, i32 5, i32 1, i32 0, ptr null)
   ; RWBuffer<float> Buf : register(u6, space0)
   %buf6 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
-           i32 0, i32 6, i32 1, i32 0, i1 false, ptr null)
+           i32 0, i32 6, i32 1, i32 0, ptr null)
   ; RWBuffer<float> Buf : register(u7, space0)
   %buf7 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
-           i32 0, i32 7, i32 1, i32 0, i1 false, ptr null)
+           i32 0, i32 7, i32 1, i32 0, ptr null)
   ; RWBuffer<float> Buf : register(u8, space0)
   %buf8 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
-           i32 0, i32 8, i32 1, i32 0, i1 false, ptr null)
+           i32 0, i32 8, i32 1, i32 0, ptr null)
   ret void
 }
 

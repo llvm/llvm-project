@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=amdgcn-- -run-pass=dot-machine-cfg  -mcfg-dot-filename-prefix=%t -o -  %s 2>&1 > /dev/null
+# RUN: llc -mtriple=amdgcn-- -run-pass=dot-machine-cfg  -mcfg-dot-filename-prefix=%t -o -  %s -filetype=null 2>&1
 # RUN: FileCheck %s -input-file=%t.irreducible.dot --check-prefix=MCFG
-# RUN: llc -mtriple=amdgcn-- -run-pass=dot-machine-cfg  -mcfg-dot-filename-prefix=%t -dot-mcfg-only -o -  %s 2>&1 > /dev/null
+# RUN: llc -mtriple=amdgcn-- -run-pass=dot-machine-cfg  -mcfg-dot-filename-prefix=%t -dot-mcfg-only -o -  %s -filetype=null 2>&1
 # RUN: FileCheck %s -input-file=%t.irreducible.dot --check-prefix=MCFG-ONLY
 
 # MCFG: digraph "Machine CFG for 'irreducible' function"

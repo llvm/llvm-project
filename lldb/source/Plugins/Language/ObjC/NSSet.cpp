@@ -419,8 +419,6 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::Update() {
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
     return lldb::ChildCacheState::eRefetch;
-  if (!valobj_sp)
-    return lldb::ChildCacheState::eRefetch;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
   lldb::ProcessSP process_sp(valobj_sp->GetProcessSP());
   if (!process_sp)

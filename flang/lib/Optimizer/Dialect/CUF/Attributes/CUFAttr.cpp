@@ -30,19 +30,40 @@ void CUFDialect::registerAttributes() {
                 LaunchBoundsAttr, ProcAttributeAttr>();
 }
 
-bool hasDataAttr(mlir::Operation *op, cuf::DataAttribute value) {
+cuf::DataAttributeAttr getDataAttr(mlir::Operation *op) {
   if (!op)
-    return false;
+    return {};
 
-  cuf::DataAttributeAttr dataAttr =
-      op->getAttrOfType<cuf::DataAttributeAttr>(cuf::getDataAttrName());
+  if (auto dataAttr =
+          op->getAttrOfType<cuf::DataAttributeAttr>(cuf::getDataAttrName()))
+    return dataAttr;
+
   // When the attribute is declared on the operation, it doesn't have a prefix.
-  if (!dataAttr)
-    dataAttr = op->getAttrOfType<cuf::DataAttributeAttr>(cuf::dataAttrName);
-  if (!dataAttr)
-    return false;
+  if (auto dataAttr =
+          op->getAttrOfType<cuf::DataAttributeAttr>(cuf::dataAttrName))
+    return dataAttr;
 
-  return dataAttr.getValue() == value;
+  return {};
+}
+
+bool hasDataAttr(mlir::Operation *op, cuf::DataAttribute value) {
+  if (auto dataAttr = getDataAttr(op))
+    return dataAttr.getValue() == value;
+  return false;
+}
+
+bool isDeviceDataAttribute(cuf::DataAttribute attr) {
+  return attr == cuf::DataAttribute::Device ||
+         attr == cuf::DataAttribute::Managed ||
+         attr == cuf::DataAttribute::Constant ||
+         attr == cuf::DataAttribute::Shared ||
+         attr == cuf::DataAttribute::Unified;
+}
+
+bool hasDeviceDataAttr(mlir::Operation *op) {
+  if (auto dataAttr = getDataAttr(op))
+    return isDeviceDataAttribute(dataAttr.getValue());
+  return false;
 }
 
 } // namespace cuf

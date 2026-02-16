@@ -189,12 +189,13 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl exp10f
+; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vmov s17, r0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    bl exp10f
 ; CHECK-NEXT:    vmov s16, r0
+; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    vmov s18, r6
-; CHECK-NEXT:    vmov r0, r1, d8
 ; CHECK-NEXT:    vmov r2, r3, d9
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
@@ -207,7 +208,6 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    sub sp, #4
-; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    mov r4, r3
@@ -216,17 +216,15 @@ define <4 x float> @exp10_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    mov r7, r0
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl exp10f
-; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    bl exp10f
-; CHECK-NEXT:    vmov s18, r0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r0, r6
-; CHECK-NEXT:    vmov s17, r7
 ; CHECK-NEXT:    bl exp10f
-; CHECK-NEXT:    vmov s16, r0
-; CHECK-NEXT:    vmov r2, r3, d9
-; CHECK-NEXT:    vmov r0, r1, d8
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    mov r1, r7
+; CHECK-NEXT:    mov r2, r5
+; CHECK-NEXT:    mov r3, r4
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
   %r = call <4 x float> @llvm.exp10.v4f32(<4 x float> %x)

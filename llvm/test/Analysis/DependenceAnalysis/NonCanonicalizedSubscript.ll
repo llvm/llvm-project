@@ -47,17 +47,19 @@ for.end:
 ;    }
 ;  }
 ;  Extends the previous example to coupled MIV subscripts.
+;
+; FIXME: Currently delinearization does not work as expected.
 
 
 @a = global [10004 x [10004 x i32]] zeroinitializer, align 16
 
 ; Function Attrs: nounwind uwtable
-define void @coupled_miv_type_mismatch(i32 %n) #0 {
+define void @coupled_miv_type_mismatch(i32 %n) {
 ; CHECK-LABEL: 'coupled_miv_type_mismatch'
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx5, align 4 --> Dst: %2 = load i32, ptr %arrayidx5, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx5, align 4 --> Dst: store i32 %add6, ptr %arrayidx10, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1 -2]!
+; CHECK-NEXT:    da analyze - anti [< >]!
 ; CHECK-NEXT:  Src: store i32 %add6, ptr %arrayidx10, align 4 --> Dst: store i32 %add6, ptr %arrayidx10, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;
@@ -100,8 +102,6 @@ for.inc11:                                        ; preds = %for.cond1
 for.end13:                                        ; preds = %for.cond
   ret void
 }
-
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

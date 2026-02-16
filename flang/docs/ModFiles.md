@@ -1,9 +1,9 @@
-<!--===- docs/ModFiles.md 
-  
+<!--===- docs/ModFiles.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Module Files
@@ -36,7 +36,7 @@ but this one doesn't.
 The disadvantage of using the same name as other compilers is that it is not
 clear which compiler created a `.mod` file and files from multiple compilers
 cannot be in the same directory. This can be solved by adding something
-between the module name and extension, e.g. `<modulename>-f18.mod`.  When
+between the module name and extension, e.g. `<modulename>-flang.mod`.  When
 this is needed, Flang accepts the option `-module-suffix` to alter the suffix.
 
 ## Format

@@ -60,7 +60,7 @@ struct CGRect {
 
 // CHECK-LABEL: define{{.*}} i32 @main
 // CHECK: call void @_ZN1SC1ERKS_(ptr {{[^,]*}} [[AGGTMP:%[a-zA-Z0-9\.]+]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) {{%[a-zA-Z0-9\.]+}})
-// CHECK: call void @objc_msgSend(ptr noundef {{%[a-zA-Z0-9\.]+}}, ptr noundef {{%[a-zA-Z0-9\.]+}}, ptr dead_on_return noundef [[AGGTMP]])
+// CHECK: call void @objc_msgSend(ptr noundef {{%[a-zA-Z0-9\.]+}}, ptr noundef {{%[a-zA-Z0-9\.]+}}, ptr noundef dead_on_return [[AGGTMP]])
 // CHECK-NEXT: ret i32 0
 int main() {
   I *i;

@@ -145,7 +145,6 @@ defvar DefaultReturns = [Return<PREFIX#"_RESULT_SUCCESS">,
                          Return<PREFIX#"_ERRC_DEVICE_LOST">];
 
 class APIObject {
-  string name;
   string desc;
 }
 

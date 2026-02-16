@@ -5,7 +5,7 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 ; CHECK-LABEL: define void @storef32_struct
 define void @storef32_struct(i32 %index, float %data) {
   %buffer = call target("dx.RawBuffer", float, 1, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
@@ -20,13 +20,13 @@ define void @storef32_struct(i32 %index, float %data) {
 ; CHECK-LABEL: define void @storef32_byte
 define void @storef32_byte(i32 %offset, float %data) {
   %buffer = call target("dx.RawBuffer", i8, 1, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
       target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset)
 
-  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.f32(target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset, i32 0, float %data)
+  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.f32(target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset, i32 poison, float %data)
   store float %data, ptr %ptr
 
   ret void
@@ -35,7 +35,7 @@ define void @storef32_byte(i32 %offset, float %data) {
 ; CHECK-LABEL: define void @storev4f32_struct
 define void @storev4f32_struct(i32 %index, <4 x float> %data) {
   %buffer = call target("dx.RawBuffer", <4 x float>, 1, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
@@ -50,13 +50,13 @@ define void @storev4f32_struct(i32 %index, <4 x float> %data) {
 ; CHECK-LABEL: define void @storev4f32_byte
 define void @storev4f32_byte(i32 %offset, <4 x float> %data) {
   %buffer = call target("dx.RawBuffer", i8, 1, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
       target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset)
 
-  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f32(target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset, i32 0, <4 x float> %data)
+  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f32(target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset, i32 poison, <4 x float> %data)
   store <4 x float> %data, ptr %ptr
 
   ret void
@@ -65,7 +65,7 @@ define void @storev4f32_byte(i32 %offset, <4 x float> %data) {
 ; CHECK-LABEL: define void @storeelements
 define void @storeelements(i32 %index, <4 x float> %dataf32, <4 x i32> %datai32) {
   %buffer = call target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 1, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
@@ -86,7 +86,7 @@ define void @storeelements(i32 %index, <4 x float> %dataf32, <4 x i32> %datai32)
 define void @storenested(i32 %index, i32 %datai32, <4 x float> %dataf32, <3 x half> %dataf16) {
   %buffer = call
       target("dx.RawBuffer", {i32, {<4 x float>, <3 x half>}}, 1, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
@@ -111,13 +111,13 @@ define void @storenested(i32 %index, i32 %datai32, <4 x float> %dataf32, <3 x ha
 ; CHECK-LABEL: define void @storev4f64_byte
 define void @storev4f64_byte(i32 %offset, <4 x double> %data) {
   %buffer = call target("dx.RawBuffer", i8, 1, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
       target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset)
 
-  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f64(target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset, i32 0, <4 x double> %data)
+  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f64(target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset, i32 poison, <4 x double> %data)
   store <4 x double> %data, ptr %ptr
 
   ret void

@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Function {
-    let name = "olCreateProgram";
+def olCreateProgram : Function {
     let desc = "Create a program for the device from the binary image pointed to by `ProgData`.";
     let details = [
         "The provided `ProgData` will be copied and need not outlive the returned handle",
@@ -25,8 +24,19 @@ def : Function {
     let returns = [];
 }
 
-def : Function {
-    let name = "olDestroyProgram";
+def olIsValidBinary : Function {
+    let desc = "Validate if the binary image pointed to by `ProgData` is compatible with the device.";
+    let details = ["The provided `ProgData` will not be loaded onto the device"];
+    let params = [
+        Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
+        Param<"const void*", "ProgData", "pointer to the program binary data", PARAM_IN>,
+        Param<"size_t", "ProgDataSize", "size of the program binary in bytes", PARAM_IN>,
+        Param<"bool*", "Valid", "output is true if the image is compatible", PARAM_OUT>
+    ];
+    let returns = [];
+}
+
+def olDestroyProgram : Function {
     let desc = "Destroy the program and free all underlying resources.";
     let details = [];
     let params = [

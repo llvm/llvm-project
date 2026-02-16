@@ -79,6 +79,15 @@ multiple file formats.
  Enable deterministic mode when copying archives, i.e. use 0 for archive member
  header UIDs, GIDs and timestamp fields. On by default.
 
+.. option:: --extract-section <section>=<file>
+
+ Extract the specified section ``<section>`` into the file ``<file>`` as a
+ seperate object. Can be specified multiple times to extract multiple sections.
+ ``<file>`` is unrelated to the input and output files provided to
+ :program:`llvm-objcopy` and as such the normal copying and editing
+ operations will still be performed. No operations are performed on the sections
+ prior to dumping them.
+
 .. option:: --globalize-symbol <symbol>
 
  Mark any defined symbols named ``<symbol>`` as global symbols in the output.
@@ -241,6 +250,9 @@ multiple file formats.
 
  For COFF and Mach-O objects, remove all symbols, debug sections, and
  relocations from the output.
+
+ For WebAssembly objects, remove all custom sections except for those named
+ metadata.code.*.
 
 .. option:: --strip-debug, -g
 

@@ -256,7 +256,7 @@ endif:                                            ; preds = %else, %if
 define amdgpu_kernel void @copy1(ptr addrspace(1) %out, ptr addrspace(1) %in0) {
 entry:
   %tmp = load float, ptr addrspace(1) %in0
-  %tmp1 = fcmp oeq float %tmp, 0.000000e+00
+  %tmp1 = fcmp one float %tmp, 0.000000e+00
   br i1 %tmp1, label %if0, label %endif
 
 if0:                                              ; preds = %entry

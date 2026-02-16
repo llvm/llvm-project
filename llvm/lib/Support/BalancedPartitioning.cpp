@@ -114,7 +114,7 @@ void BalancedPartitioning::bisect(const FunctionNodeRange Nodes,
                                   unsigned RecDepth, unsigned RootBucket,
                                   unsigned Offset,
                                   std::optional<BPThreadPool> &TP) const {
-  unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
+  unsigned NumNodes = llvm::size(Nodes);
   if (NumNodes <= 1 || RecDepth >= Config.SplitDepth) {
     // We've reach the lowest level of the recursion tree. Fall back to the
     // original order and assign to buckets.
@@ -168,7 +168,7 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
                                          unsigned LeftBucket,
                                          unsigned RightBucket,
                                          std::mt19937 &RNG) const {
-  unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
+  unsigned NumNodes = llvm::size(Nodes);
   DenseMap<BPFunctionNode::UtilityNodeT, unsigned> UtilityNodeIndex;
   for (auto &N : Nodes)
     for (auto &UN : N.UtilityNodes)
@@ -231,7 +231,7 @@ unsigned BalancedPartitioning::runIteration(const FunctionNodeRange Nodes,
   }
 
   // Compute move gains
-  typedef std::pair<float, BPFunctionNode *> GainPair;
+  using GainPair = std::pair<float, BPFunctionNode *>;
   std::vector<GainPair> Gains;
   for (auto &N : Nodes) {
     bool FromLeftToRight = (N.Bucket == LeftBucket);
@@ -303,7 +303,7 @@ bool BalancedPartitioning::moveFunctionNode(BPFunctionNode &N,
 
 void BalancedPartitioning::split(const FunctionNodeRange Nodes,
                                  unsigned StartBucket) const {
-  unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
+  unsigned NumNodes = llvm::size(Nodes);
   auto NodesMid = Nodes.begin() + (NumNodes + 1) / 2;
 
   llvm::sort(Nodes, [](auto &L, auto &R) {

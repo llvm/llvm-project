@@ -6,10 +6,7 @@
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20 -fexceptions -fcxx-exceptions -pedantic-errors
 
-// FIXME: diagnostic above is emitted only on Windows platforms
-// PR13819 -- __SIZE_TYPE__ is incompatible.
-typedef __SIZE_TYPE__ size_t;
-// cxx98-error@-1 0-1 {{'long long' is a C++11 extension}}
+typedef __decltype(sizeof(0)) size_t;
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -229,6 +226,38 @@ namespace cwg211 { // cwg211: 2.7
     }
   };
 } // namespace cwg211
+
+namespace cwg212 { // cwg212: 2.7
+  template<typename T> struct Base;
+  template<typename T> struct Derived;
+
+  int *overload(void*);
+  float *overload(Base<int>*);
+  double *overload(Base<long>*);
+
+  void f(Derived<int> *p) {
+    // OK, calls void* overload.
+    int *a = overload(p);
+
+    Base<int> *q = p;
+    // expected-error@-1 {{cannot initialize a variable of type 'Base<int> *' with an lvalue of type 'Derived<int> *'}}
+  }
+
+  template<typename T> struct Base {};
+  template<typename T> struct Derived : Base<T> {};
+
+  void g(Derived<long> *p) {
+    // OK, instantiates and calls Base<long>* overlod.
+    double *b = overload(p);
+    (void)b;
+  }
+
+  void h(Derived<float> *p) {
+    // OK, instantiates and converts.
+    Base<float> *q = p;
+    (void)q;
+  }
+}
 
 namespace cwg213 { // cwg213: 2.7
   template <class T> struct A : T {
@@ -592,6 +621,9 @@ namespace cwg231 { // cwg231: 2.7
     //   expected-note@#cwg231-i {{'inner::i' declared here}}
   }
 } // namespace cwg231
+
+// 232 is NAD; the desired behavior is described in 2823.
+// cwg232: dup 2823
 
 // cwg234: na
 // cwg235: na

@@ -1,0 +1,100 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x200040
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .eh_frame
+    LastSec:         .eh_frame
+    VAddr:           0x200000
+    Align:           0x1000
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .text
+    VAddr:           0x201160
+    Align:           0x1000
+    Offset:          0x160
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x0
+    Offset:          0x0
+Sections:
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x200120
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C0708900100001C0000001C000000201000001600000000410E108602430D06510C070800000000000000
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x201160
+    AddressAlign:    0x10
+    Content:         554889E5C745FC00000000897DF8488975F031C05DC3
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         014A00101772171B25B442197625111B12067317000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         24000000050004080000000099E97383BBC6980B0100000000080000000001001600000008000000
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         0C000000050000000000000002000000
+  - Name:            .debug_gnu_pubnames
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         18000000020000000000280000001A000000306D61696E0000000000
+  - Name:            .debug_gnu_pubtypes
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         '21000000020000000000280000004000000090696E74005300000090636861720000000000'
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         004170706C6520636C616E672076657273696F6E2031372E302E302028636C616E672D313730302E342E342E3129004C696E6B65723A204C4C442032322E302E30202868747470733A2F2F6769746875622E636F6D2F636C6179626F72672F6C6C766D2D70726F6A6563742E67697420613234333130363863303837656463303938393330303934343864343162356138336361303363392900
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         5A0000000500080037000000010101FB0E0D00010101010000000100000101011F010000000003011F020F051E0102000000004E0649A10A56ED4D381C49A3DB4F6825040000090260112000000000000105030A0821060B2E0202000101
+  - Name:            .debug_line_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         2E006D61696E2E6D696E696D616C2E63707000
+Symbols:
+  - Name:            main.minimal.cpp
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x201160
+    Size:            0x16
+DWARF:
+  debug_str:
+    - .
+    - main.minimal.dwo
+  debug_addr:
+    - Length:          0xC
+      Version:         0x5
+      AddressSize:     0x8
+      Entries:
+        - Address:         0x201160
+...

@@ -25,17 +25,17 @@ define void @fusion(ptr noalias nocapture align 256 dereferenceable(19267584) %a
 ; NOVECTOR-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
 ; NOVECTOR-NEXT:    [[TMP10:%.*]] = or disjoint i64 [[TMP4]], 1
 ; NOVECTOR-NEXT:    [[TMP5:%.*]] = getelementptr inbounds half, ptr [[ARG1:%.*]], i64 [[TMP4]]
-; NOVECTOR-NEXT:    [[TMP7:%.*]] = load half, ptr [[TMP5]], align 8
-; NOVECTOR-NEXT:    [[TMP8:%.*]] = fmul fast half [[TMP7]], 0xH5380
-; NOVECTOR-NEXT:    [[TMP9:%.*]] = fadd fast half [[TMP8]], 0xH57F0
 ; NOVECTOR-NEXT:    [[TMP6:%.*]] = getelementptr inbounds half, ptr [[ARG:%.*]], i64 [[TMP4]]
-; NOVECTOR-NEXT:    store half [[TMP9]], ptr [[TMP6]], align 8
 ; NOVECTOR-NEXT:    [[TMP11:%.*]] = getelementptr inbounds half, ptr [[ARG1]], i64 [[TMP10]]
 ; NOVECTOR-NEXT:    [[TMP12:%.*]] = load half, ptr [[TMP11]], align 2
+; NOVECTOR-NEXT:    [[TMP17:%.*]] = load half, ptr [[TMP5]], align 8
 ; NOVECTOR-NEXT:    [[TMP13:%.*]] = fmul fast half [[TMP12]], 0xH5380
+; NOVECTOR-NEXT:    [[TMP18:%.*]] = fmul fast half [[TMP17]], 0xH5380
 ; NOVECTOR-NEXT:    [[TMP14:%.*]] = fadd fast half [[TMP13]], 0xH57F0
-; NOVECTOR-NEXT:    [[TMP15:%.*]] = getelementptr inbounds half, ptr [[ARG]], i64 [[TMP10]]
-; NOVECTOR-NEXT:    store half [[TMP14]], ptr [[TMP15]], align 2
+; NOVECTOR-NEXT:    [[TMP19:%.*]] = fadd fast half [[TMP18]], 0xH57F0
+; NOVECTOR-NEXT:    [[TMP15:%.*]] = insertelement <2 x half> poison, half [[TMP19]], i32 0
+; NOVECTOR-NEXT:    [[TMP16:%.*]] = insertelement <2 x half> [[TMP15]], half [[TMP14]], i32 1
+; NOVECTOR-NEXT:    store <2 x half> [[TMP16]], ptr [[TMP6]], align 8
 ; NOVECTOR-NEXT:    ret void
 ;
   %1 = shl nuw nsw i32 %arg2, 6

@@ -223,7 +223,8 @@ define ptr @geps_combinable_different_elem_type5(ptr %a) {
 
 define ptr @geps_combinable_different_elem_type6(ptr %a, i64 %idx) {
 ; CHECK-LABEL: @geps_combinable_different_elem_type6(
-; CHECK-NEXT:    [[A3:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[IDX:%.*]], i32 1
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A2]], i64 4
 ; CHECK-NEXT:    ret ptr [[A3]]
 ;
   %a2 = getelementptr { i32, i32 }, ptr %a, i64 %idx
@@ -233,8 +234,8 @@ define ptr @geps_combinable_different_elem_type6(ptr %a, i64 %idx) {
 
 define ptr @geps_combinable_different_elem_type7(ptr %a, i64 %idx) {
 ; CHECK-LABEL: @geps_combinable_different_elem_type7(
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[IDX:%.*]], i32 1
-; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A2]], i64 4
+; CHECK-NEXT:    [[A2_SPLIT:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr i8, ptr [[A2_SPLIT]], i64 8
 ; CHECK-NEXT:    ret ptr [[A3]]
 ;
   %a2 = getelementptr { i32, i32 }, ptr %a, i64 %idx, i32 1
@@ -244,8 +245,8 @@ define ptr @geps_combinable_different_elem_type7(ptr %a, i64 %idx) {
 
 define ptr @geps_combinable_different_elem_type8(ptr %a, i64 %idx) {
 ; CHECK-LABEL: @geps_combinable_different_elem_type8(
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds { { i32, i32 } }, ptr [[A:%.*]], i64 [[IDX:%.*]], i32 0, i32 1
-; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw i8, ptr [[A2]], i64 4
+; CHECK-NEXT:    [[A2_SPLIT:%.*]] = getelementptr inbounds { { i32, i32 } }, ptr [[A:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw i8, ptr [[A2_SPLIT]], i64 8
 ; CHECK-NEXT:    ret ptr [[A3]]
 ;
   %a2 = getelementptr inbounds { { i32, i32 } }, ptr %a, i64 %idx, i32 0, i32 1
@@ -530,7 +531,7 @@ define i1 @cmp_load_gep_global(i64 %idx) {
 
 define i1 @cmp_load_gep_global_different_load_type(i64 %idx) {
 ; CHECK-LABEL: @cmp_load_gep_global_different_load_type(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr @ary, i64 0, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr @ary, i64 [[IDX:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 3
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -543,10 +544,7 @@ define i1 @cmp_load_gep_global_different_load_type(i64 %idx) {
 
 define i1 @cmp_load_gep_global_different_gep_type(i64 %idx) {
 ; CHECK-LABEL: @cmp_load_gep_global_different_gep_type(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i16], ptr @ary, i64 0, i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[LOAD]], 3
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %gep = getelementptr [4 x i16], ptr @ary, i64 0, i64 %idx
   %load = load i16, ptr %gep

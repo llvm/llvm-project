@@ -1,5 +1,4 @@
-//===--- ReferenceToConstructedTemporaryCheck.cpp - clang-tidy
-//--------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,7 +37,7 @@ struct NotExtendedByDeclBoundToPredicate {
 
 AST_MATCHER_P(MaterializeTemporaryExpr, isExtendedByDeclBoundTo, StringRef,
               ID) {
-  NotExtendedByDeclBoundToPredicate Predicate{
+  const NotExtendedByDeclBoundToPredicate Predicate{
       ID, ::clang::DynTypedNode::create(Node)};
   return Builder->removeBindings(Predicate);
 }

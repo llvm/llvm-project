@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 %s -Wno-c++23-extensions -verify
 // RUN: %clang_cc1 -std=c++23 %s -verify
 
-
 template <auto> struct Nothing {};
 Nothing<[]() { return 0; }()> nothing;
 
@@ -282,3 +281,10 @@ static_assert(__is_same_as(int, helper<int>));
 
 
 } // namespace GH138018
+
+namespace GH172814 {
+auto t() {
+  int x = 0;
+  return [](auto w = [&] { return x; }) { }; // expected-error {{lambda expression in default argument cannot capture any entity}}
+};
+}

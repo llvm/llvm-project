@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s | FileCheck %s
 
 module {
-  wasmssa.import_global "from_js" from "env" as @global_0 nested : i32
+  wasmssa.import_global "from_js" from "env" as @global_0 : i32
 
   wasmssa.global @global_1 i32 : {
     %0 = wasmssa.const 10 : i32
@@ -21,7 +21,7 @@ module {
   }
 }
 
-// CHECK-LABEL:   wasmssa.import_global "from_js" from "env" as @global_0 nested : i32
+// CHECK-LABEL:   wasmssa.import_global "from_js" from "env" as @global_0 : i32
 
 // CHECK-LABEL:   wasmssa.global @global_1 i32 : {
 // CHECK:           %[[VAL_0:.*]] = wasmssa.const 10 : i32

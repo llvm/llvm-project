@@ -66,7 +66,8 @@ struct ErasurePredicate {
 };
 
 int main(int, char**) {
-  const std::pair<int, int> expected[] = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}, {7, 7}, {8, 8}};
+  [[maybe_unused]] const std::pair<int, int> expected[] = {
+      {1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}, {7, 7}, {8, 8}};
   {
     using M = std::flat_map<ThrowingAssignment, int, ThrowingComparator>;
     for (int first_throw = 1; first_throw < 99; ++first_throw) {

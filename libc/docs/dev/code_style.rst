@@ -159,6 +159,7 @@ this:
 .. code-block:: c++
 
    #include "src/__support/CPP/new.h"
+   #include "src/__support/alloc-checker.h"
 
    ...
 

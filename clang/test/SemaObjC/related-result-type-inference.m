@@ -66,7 +66,7 @@ void test_inference(void) {
 
   
   NSArray *arr = [[NSMutableArray alloc] init];
-  NSMutableArray *marr = [arr retain]; // expected-warning{{incompatible pointer types initializing 'NSMutableArray *' with an expression of type 'NSArray *'}}
+  NSMutableArray *marr = [arr retain]; // expected-error{{incompatible pointer types initializing 'NSMutableArray *' with an expression of type 'NSArray *'}}
 }
 
 @implementation NSBlah
@@ -192,6 +192,6 @@ void test_inference(void) {
 + (UIViewController<PMFilterManager> *)newFilterViewControllerForType // expected-note {{compiler has implicitly changed method 'newFilterViewControllerForType' return type}}
 {
         UIViewController<PMFilterManager> *filterVC;
-        return filterVC; // expected-warning {{incompatible pointer types casting 'UIViewController *' to type 'UIViewController<PMFilterManager> *'}}
+        return filterVC; // expected-error {{incompatible pointer types casting 'UIViewController *' to type 'UIViewController<PMFilterManager> *'}}
 }
 @end

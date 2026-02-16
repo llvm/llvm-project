@@ -1,7 +1,16 @@
-// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,TZCNT
-// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT | FileCheck %s --check-prefix=TZCNT
-// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,TZCNT
-// RUN: %clang_cc1 -x c++ -std=c++11 -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT | FileCheck %s --check-prefix=TZCNT
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64,TZCNT,TZCNT64
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=i386-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,TZCNT
+// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT | FileCheck %s --check-prefixes=TZCNT,TZCNT64
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,X64,TZCNT,TZCNT64
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,TZCNT
+// RUN: %clang_cc1 -x c++ -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT | FileCheck %s --check-prefixes=TZCNT,TZCNT64
+
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64,TZCNT,TZCNT64
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=i386-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,TZCNT
+// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=TZCNT,TZCNT64
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,X64,TZCNT,TZCNT64
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=CHECK,TZCNT
+// RUN: %clang_cc1 -x c++ -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT -fexperimental-new-constant-interpreter | FileCheck %s --check-prefixes=TZCNT,TZCNT64
 
 
 #include <immintrin.h>
@@ -48,20 +57,20 @@ unsigned int test_tzcnt_u32(unsigned int __X) {
 
 #ifdef __x86_64__
 unsigned long long test__tzcnt_u64(unsigned long long __X) {
-// TZCNT-LABEL: test__tzcnt_u64
-// TZCNT: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// TZCNT64-LABEL: test__tzcnt_u64
+// TZCNT64: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
   return __tzcnt_u64(__X);
 }
 
 long long test_mm_tzcnt_64(unsigned long long __X) {
-// TZCNT-LABEL: test_mm_tzcnt_64
-// TZCNT: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// TZCNT64-LABEL: test_mm_tzcnt_64
+// TZCNT64: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
   return _mm_tzcnt_64(__X);
 }
 
 unsigned long long test_tzcnt_u64(unsigned long long __X) {
-// TZCNT-LABEL: test_tzcnt_u64
-// TZCNT: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
+// TZCNT64-LABEL: test_tzcnt_u64
+// TZCNT64: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
   return _tzcnt_u64(__X);
 }
 #endif
@@ -103,36 +112,36 @@ unsigned int test__blsr_u32(unsigned int __X) {
 
 #ifdef __x86_64__
 unsigned long long test__andn_u64(unsigned long __X, unsigned long __Y) {
-// CHECK-LABEL: test__andn_u64
-// CHECK: xor i64 %{{.*}}, -1
-// CHECK: and i64 %{{.*}}, %{{.*}}
+// X64-LABEL: test__andn_u64
+// X64: xor i64 %{{.*}}, -1
+// X64: and i64 %{{.*}}, %{{.*}}
   return __andn_u64(__X, __Y);
 }
 
 unsigned long long test__bextr_u64(unsigned long __X, unsigned long __Y) {
-// CHECK-LABEL: test__bextr_u64
-// CHECK: i64 @llvm.x86.bmi.bextr.64(i64 %{{.*}}, i64 %{{.*}})
+// X64-LABEL: test__bextr_u64
+// X64: i64 @llvm.x86.bmi.bextr.64(i64 %{{.*}}, i64 %{{.*}})
   return __bextr_u64(__X, __Y);
 }
 
 unsigned long long test__blsi_u64(unsigned long long __X) {
-// CHECK-LABEL: test__blsi_u64
-// CHECK: sub i64 0, %{{.*}}
-// CHECK: and i64 %{{.*}}, %{{.*}}
+// X64-LABEL: test__blsi_u64
+// X64: sub i64 0, %{{.*}}
+// X64: and i64 %{{.*}}, %{{.*}}
   return __blsi_u64(__X);
 }
 
 unsigned long long test__blsmsk_u64(unsigned long long __X) {
-// CHECK-LABEL: test__blsmsk_u64
-// CHECK: sub i64 %{{.*}}, 1
-// CHECK: xor i64 %{{.*}}, %{{.*}}
+// X64-LABEL: test__blsmsk_u64
+// X64: sub i64 %{{.*}}, 1
+// X64: xor i64 %{{.*}}, %{{.*}}
   return __blsmsk_u64(__X);
 }
 
 unsigned long long test__blsr_u64(unsigned long long __X) {
-// CHECK-LABEL: test__blsr_u64
-// CHECK: sub i64 %{{.*}}, 1
-// CHECK: and i64 %{{.*}}, %{{.*}}
+// X64-LABEL: test__blsr_u64
+// X64: sub i64 %{{.*}}, 1
+// X64: and i64 %{{.*}}, %{{.*}}
   return __blsr_u64(__X);
 }
 #endif
@@ -186,49 +195,49 @@ unsigned int test_blsr_u32(unsigned int __X) {
 
 #ifdef __x86_64__
 unsigned long long test_andn_u64(unsigned long __X, unsigned long __Y) {
-// CHECK-LABEL: test_andn_u64
-// CHECK: xor i64 %{{.*}}, -1
-// CHECK: and i64 %{{.*}}, %{{.*}}
+// X64-LABEL: test_andn_u64
+// X64: xor i64 %{{.*}}, -1
+// X64: and i64 %{{.*}}, %{{.*}}
   return _andn_u64(__X, __Y);
 }
 
 unsigned long long test_bextr_u64(unsigned long __X, unsigned int __Y,
                                   unsigned int __Z) {
-// CHECK-LABEL: test_bextr_u64
-// CHECK: and i32 %{{.*}}, 255
-// CHECK: and i32 %{{.*}}, 255
-// CHECK: shl i32 %{{.*}}, 8
-// CHECK: or i32 %{{.*}}, %{{.*}}
-// CHECK: zext i32 %{{.*}} to i64
-// CHECK: i64 @llvm.x86.bmi.bextr.64(i64 %{{.*}}, i64 %{{.*}})
+// X64-LABEL: test_bextr_u64
+// X64: and i32 %{{.*}}, 255
+// X64: and i32 %{{.*}}, 255
+// X64: shl i32 %{{.*}}, 8
+// X64: or i32 %{{.*}}, %{{.*}}
+// X64: zext i32 %{{.*}} to i64
+// X64: i64 @llvm.x86.bmi.bextr.64(i64 %{{.*}}, i64 %{{.*}})
   return _bextr_u64(__X, __Y, __Z);
 }
 
 unsigned long long test_bextr2_u64(unsigned long long __X,
                                    unsigned long long __Y) {
-// CHECK-LABEL: test_bextr2_u64
-// CHECK: i64 @llvm.x86.bmi.bextr.64(i64 %{{.*}}, i64 %{{.*}})
+// X64-LABEL: test_bextr2_u64
+// X64: i64 @llvm.x86.bmi.bextr.64(i64 %{{.*}}, i64 %{{.*}})
   return _bextr2_u64(__X, __Y);
 }
 
 unsigned long long test_blsi_u64(unsigned long long __X) {
-// CHECK-LABEL: test_blsi_u64
-// CHECK: sub i64 0, %{{.*}}
-// CHECK: and i64 %{{.*}}, %{{.*}}
+// X64-LABEL: test_blsi_u64
+// X64: sub i64 0, %{{.*}}
+// X64: and i64 %{{.*}}, %{{.*}}
   return _blsi_u64(__X);
 }
 
 unsigned long long test_blsmsk_u64(unsigned long long __X) {
-// CHECK-LABEL: test_blsmsk_u64
-// CHECK: sub i64 %{{.*}}, 1
-// CHECK: xor i64 %{{.*}}, %{{.*}}
+// X64-LABEL: test_blsmsk_u64
+// X64: sub i64 %{{.*}}, 1
+// X64: xor i64 %{{.*}}, %{{.*}}
   return _blsmsk_u64(__X);
 }
 
 unsigned long long test_blsr_u64(unsigned long long __X) {
-// CHECK-LABEL: test_blsr_u64
-// CHECK: sub i64 %{{.*}}, 1
-// CHECK: and i64 %{{.*}}, %{{.*}}
+// X64-LABEL: test_blsr_u64
+// X64: sub i64 %{{.*}}, 1
+// X64: and i64 %{{.*}}, %{{.*}}
   return _blsr_u64(__X);
 }
 #endif

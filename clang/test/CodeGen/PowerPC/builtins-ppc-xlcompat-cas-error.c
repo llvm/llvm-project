@@ -6,7 +6,7 @@ void test_builtin_ppc_compare_and_swap() {
   volatile int a = 0;
   long b = 0, c = 0;
 
-  __compare_and_swap(&a, &b, c); // expected-warning {{incompatible pointer types passing 'long *' to parameter of type 'int *'}}
+  __compare_and_swap(&a, &b, c); // expected-error {{incompatible pointer types passing 'long *' to parameter of type 'int *'}}
 
 }
 
@@ -14,6 +14,6 @@ void test_builtin_ppc_compare_and_swaplp() {
   volatile long a = 0;
   int b = 0, c = 0;
 
-  __compare_and_swaplp(&a, &b, c);// expected-warning {{incompatible pointer types passing 'int *' to parameter of type 'long *'}}
+  __compare_and_swaplp(&a, &b, c);// expected-error {{incompatible pointer types passing 'int *' to parameter of type 'long *'}}
 
 }

@@ -1,4 +1,4 @@
-FROM debian:10
+FROM docker.io/debian:10
 
 # Installing dependencies.
 RUN dpkg --add-architecture i386

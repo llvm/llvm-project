@@ -51,7 +51,7 @@ class raw_ostream;
 /// when walking backward/forward through a basic block.
 class LivePhysRegs {
   const TargetRegisterInfo *TRI = nullptr;
-  using RegisterSet = SparseSet<MCPhysReg, identity<MCPhysReg>>;
+  using RegisterSet = SparseSet<MCPhysReg, MCPhysReg>;
   RegisterSet LiveRegs;
 
 public:
@@ -83,6 +83,9 @@ public:
   void addReg(MCRegister Reg) {
     assert(TRI && "LivePhysRegs is not initialized.");
     assert(Reg < TRI->getNumRegs() && "Expected a physical register.");
+    // Constant registers are never considered live.
+    if (TRI->isConstantPhysReg(Reg))
+      return;
     for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg))
       LiveRegs.insert(SubReg);
   }
@@ -165,9 +168,16 @@ public:
   void dump() const;
 
 private:
+  /// Adds a register, taking the lane mask into consideration.
+  void addRegMaskPair(const MachineBasicBlock::RegisterMaskPair &Pair);
+
   /// Adds live-in registers from basic block \p MBB, taking associated
   /// lane masks into consideration.
   void addBlockLiveIns(const MachineBasicBlock &MBB);
+
+  /// Adds live-out registers from basic block \p MBB, taking associated
+  /// lane masks into consideration.
+  void addBlockLiveOuts(const MachineBasicBlock &MBB);
 
   /// Adds pristine registers. Pristine registers are callee saved registers
   /// that are unused in the function.
@@ -216,18 +226,13 @@ static inline bool recomputeLiveIns(MachineBasicBlock &MBB) {
 /// Convenience function for recomputing live-in's for a set of MBBs until the
 /// computation converges.
 inline void fullyRecomputeLiveIns(ArrayRef<MachineBasicBlock *> MBBs) {
-  MachineBasicBlock *const *Data = MBBs.data();
-  const size_t Len = MBBs.size();
-  while (true) {
-    bool AnyChange = false;
-    for (size_t I = 0; I < Len; ++I)
-      if (recomputeLiveIns(*Data[I]))
-        AnyChange = true;
-    if (!AnyChange)
-      return;
-  }
+  bool Change = false;
+  do {
+    Change = false;
+    for (MachineBasicBlock *MBB : MBBs)
+      Change |= recomputeLiveIns(*MBB);
+  } while (Change);
 }
-
 
 } // end namespace llvm
 

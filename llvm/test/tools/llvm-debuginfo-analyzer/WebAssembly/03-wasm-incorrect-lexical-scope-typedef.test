@@ -55,7 +55,6 @@
 ; ONE-NEXT: [003]     -           {Line}
 ; ONE-NEXT: [003]     1           {Line}
 ; ONE-NEXT: [003]     1           {Line}
-; ONE-NEXT: [003]     1           {Line}
 ; ONE-NEXT: [002]     3         {Function} extern not_inlined 'foo' -> 'unsigned int'
 ; ONE-NEXT: [003]                 {Block}
 ; ONE-NEXT: [004]     9             {Variable} 'Added' -> 'FLOAT'
@@ -67,7 +66,6 @@
 ; ONE-NEXT: [004]    10             {Line}
 ; ONE-NEXT: [004]    10             {Line}
 ; ONE-NEXT: [004]    10             {Line}
-; ONE-NEXT: [004]    13             {Line}
 ; ONE-NEXT: [003]     3           {Parameter} 'Param' -> 'char'
 ; ONE-NEXT: [003]     7           {TypeAlias} 'FLOAT' -> 'float'
 ; ONE-NEXT: [003]     4           {TypeAlias} 'INT' -> 'int'
@@ -79,6 +77,8 @@
 ; ONE-NEXT: [003]    13           {Line}
 ; ONE-NEXT: [003]    13           {Line}
 ; ONE-NEXT: [003]    13           {Line}
+; ONE-NEXT: [002]     1         {Line}
+; ONE-NEXT: [002]    13         {Line}
 ; ONE-EMPTY:
 ; ONE-NEXT: Logical View:
 ; ONE-NEXT: [000]           {File} 'pr-44884-dwarf-gcc.o' -> elf64-x86-64
@@ -99,7 +99,6 @@
 ; ONE-NEXT: [005]     9               {Line}
 ; ONE-NEXT: [005]     9               {Line}
 ; ONE-NEXT: [005]    10               {Line}
-; ONE-NEXT: [005]    13               {Line}
 ; ONE-NEXT: [004]     7             {TypeAlias} 'FLOAT' -> 'float'
 ; ONE-NEXT: [003]     3           {Parameter} 'Param' -> 'char'
 ; ONE-NEXT: [003]     4           {TypeAlias} 'INT' -> 'int'
@@ -107,8 +106,9 @@
 ; ONE-NEXT: [003]     3           {Line}
 ; ONE-NEXT: [003]     5           {Line}
 ; ONE-NEXT: [003]    13           {Line}
+; ONE-NEXT: [003]    13           {Line}
 ; ONE-NEXT: [003]    14           {Line}
-; ONE-NEXT: [003]    14           {Line}
+; ONE-NEXT: [002]    14         {Line}
 
 ; Using the selection facilities, we can produce a simple tabular
 ; output showing just the logical types that are 'Typedef'.

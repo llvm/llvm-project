@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clcfunc.h>
-#include <clc/clctypes.h>
 #include <clc/utils.h>
 
 #define __CLC_AS_GENTYPE __CLC_XCONCAT(__clc_as_, __CLC_GENTYPE)
@@ -23,6 +22,7 @@
 // to keep this file manageable.
 #define __CLC_GENSIZE 8
 #define __CLC_SCALAR_GENTYPE char
+#define __CLC_GEN_S
 
 #define __CLC_GENTYPE char
 #define __CLC_U_GENTYPE uchar
@@ -93,6 +93,8 @@
 
 #undef __CLC_SCALAR_GENTYPE
 #define __CLC_SCALAR_GENTYPE uchar
+#undef __CLC_GEN_S
+#define __CLC_GEN_U
 
 #define __CLC_GENTYPE uchar
 #define __CLC_U_GENTYPE uchar
@@ -165,6 +167,8 @@
 #define __CLC_GENSIZE 16
 #undef __CLC_SCALAR_GENTYPE
 #define __CLC_SCALAR_GENTYPE short
+#undef __CLC_GEN_U
+#define __CLC_GEN_S
 
 #define __CLC_GENTYPE short
 #define __CLC_U_GENTYPE ushort
@@ -235,6 +239,8 @@
 
 #undef __CLC_SCALAR_GENTYPE
 #define __CLC_SCALAR_GENTYPE ushort
+#undef __CLC_GEN_S
+#define __CLC_GEN_U
 
 #define __CLC_GENTYPE ushort
 #define __CLC_U_GENTYPE ushort
@@ -307,6 +313,8 @@
 #define __CLC_GENSIZE 32
 #undef __CLC_SCALAR_GENTYPE
 #define __CLC_SCALAR_GENTYPE int
+#undef __CLC_GEN_U
+#define __CLC_GEN_S
 
 #define __CLC_GENTYPE int
 #define __CLC_U_GENTYPE uint
@@ -377,6 +385,8 @@
 
 #undef __CLC_SCALAR_GENTYPE
 #define __CLC_SCALAR_GENTYPE uint
+#undef __CLC_GEN_S
+#define __CLC_GEN_U
 
 #define __CLC_GENTYPE uint
 #define __CLC_U_GENTYPE uint
@@ -449,6 +459,8 @@
 #define __CLC_GENSIZE 64
 #undef __CLC_SCALAR_GENTYPE
 #define __CLC_SCALAR_GENTYPE long
+#undef __CLC_GEN_U
+#define __CLC_GEN_S
 
 #define __CLC_GENTYPE long
 #define __CLC_U_GENTYPE ulong
@@ -519,6 +531,8 @@
 
 #undef __CLC_SCALAR_GENTYPE
 #define __CLC_SCALAR_GENTYPE ulong
+#undef __CLC_GEN_S
+#define __CLC_GEN_U
 
 #define __CLC_GENTYPE ulong
 #define __CLC_U_GENTYPE ulong
@@ -587,6 +601,8 @@
 #undef __CLC_U_GENTYPE
 #undef __CLC_S_GENTYPE
 #undef __CLC_VECSIZE_OR_1
+
+#undef __CLC_GEN_U
 
 #undef __CLC_GENSIZE
 #undef __CLC_SCALAR_GENTYPE

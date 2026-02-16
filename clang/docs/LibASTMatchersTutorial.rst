@@ -209,7 +209,7 @@ and traversal matchers to get from one kind of AST node to another. For
 a complete list of AST matchers, take a look at the `AST Matcher
 References <LibASTMatchersReference.html>`_
 
-All matcher that are nouns describe entities in the AST and can be
+All matchers that are nouns describe entities in the AST and can be
 bound, so that they can be referred to whenever a match is found. To do
 so, simply call the method ``bind`` on these matchers, e.g.:
 

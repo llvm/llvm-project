@@ -17,22 +17,38 @@
 using namespace clang;
 using namespace clang::interp;
 
-InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
+InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
-    : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
-      Current(&BottomFrame) {}
+    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(M), P(P), Stk(Stk),
+      Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
+      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0) {
+  InConstantContext = Parent.InConstantContext;
+  CheckingPotentialConstantExpression =
+      Parent.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
+  EvalMode = Parent.EvalMode;
+}
 
-InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
+InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, const Function *Func)
-    : Parent(Parent), M(nullptr), P(P), Stk(Stk), Ctx(Ctx),
+    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr), P(P),
+      Stk(Stk), Ctx(Ctx),
       BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
-      Current(&BottomFrame) {}
+      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      InfiniteSteps(StepsLeft == 0) {
+  InConstantContext = Parent.InConstantContext;
+  CheckingPotentialConstantExpression =
+      Parent.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
+  EvalMode = Parent.EvalMode;
+}
 
 bool InterpState::inConstantContext() const {
   if (ConstantContextOverride)
     return *ConstantContextOverride;
 
-  return Parent.InConstantContext;
+  return InConstantContext;
 }
 
 InterpState::~InterpState() {
@@ -59,20 +75,11 @@ InterpState::~InterpState() {
 void InterpState::cleanup() {
   // As a last resort, make sure all pointers still pointing to a dead block
   // don't point to it anymore.
-  Alloc.cleanup();
+  if (Alloc)
+    Alloc->cleanup();
 }
 
-Frame *InterpState::getCurrentFrame() {
-  if (Current && Current->Caller)
-    return Current;
-  return Parent.getCurrentFrame();
-}
-
-bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {
-  QualType Type = E->getType();
-  CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
-  return noteUndefinedBehavior();
-}
+const Frame *InterpState::getCurrentFrame() { return Current; }
 
 void InterpState::deallocate(Block *B) {
   assert(B);
@@ -103,10 +110,13 @@ void InterpState::deallocate(Block *B) {
 }
 
 bool InterpState::maybeDiagnoseDanglingAllocations() {
-  bool NoAllocationsLeft = !Alloc.hasAllocations();
+  if (!Alloc)
+    return true;
+
+  bool NoAllocationsLeft = !Alloc->hasAllocations();
 
   if (!checkingPotentialConstantExpression()) {
-    for (const auto &[Source, Site] : Alloc.allocation_sites()) {
+    for (const auto &[Source, Site] : Alloc->allocation_sites()) {
       assert(!Site.empty());
 
       CCEDiag(Source->getExprLoc(), diag::note_constexpr_memory_leak)
@@ -146,4 +156,16 @@ StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {
   }
 
   return {};
+}
+
+bool InterpState::noteStep(CodePtr OpPC) {
+  if (InfiniteSteps)
+    return true;
+
+  --StepsLeft;
+  if (StepsLeft != 0)
+    return true;
+
+  FFDiag(Current->getSource(OpPC), diag::note_constexpr_step_limit_exceeded);
+  return false;
 }

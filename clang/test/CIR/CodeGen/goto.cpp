@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
@@ -10,7 +12,7 @@ int shouldNotGenBranchRet(int x) {
 err:
   return -1;
 }
-// CIR:  cir.func dso_local @_Z21shouldNotGenBranchReti
+// CIR:  cir.func {{.*}} @_Z21shouldNotGenBranchReti
 // CIR:    cir.if {{.*}} {
 // CIR:      cir.goto "err"
 // CIR:    }
@@ -22,10 +24,27 @@ err:
 // CIR:    cir.return [[RET]] : !s32i
 // CIR:  ^bb2:
 // CIR:    cir.label "err"
-// CIR:    [[ONE:%.*]] = cir.const #cir.int<1> : !s32i
-// CIR:    [[MINUS:%.*]] = cir.unary(minus, [[ONE]]) nsw : !s32i, !s32i
-// CIR:    cir.store [[MINUS]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
+// CIR:    [[MINUS_ONE:%.*]] = cir.const #cir.int<-1> : !s32i
+// CIR:    cir.store [[MINUS_ONE]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR:    cir.br ^bb1
+
+// LLVM: define dso_local noundef i32 @_Z21shouldNotGenBranchReti
+// LLVM:   [[COND:%.*]] = load i32, ptr {{.*}}, align 4
+// LLVM:   [[CMP:%.*]] = icmp sgt i32 [[COND]], 5
+// LLVM:   br i1 [[CMP]], label %[[IFTHEN:.*]], label %[[IFEND:.*]]
+// LLVM: [[IFTHEN]]:
+// LLVM:   br label %[[ERR:.*]]
+// LLVM: [[IFEND]]:
+// LLVM:   br label %[[BB9:.*]]
+// LLVM: [[BB9]]:
+// LLVM:   store i32 0, ptr %[[RETVAL:.*]], align 4
+// LLVM:   br label %[[BBRET:.*]]
+// LLVM: [[BBRET]]:
+// LLVM:   [[RET:%.*]] = load i32, ptr %[[RETVAL]], align 4
+// LLVM:   ret i32 [[RET]]
+// LLVM: [[ERR]]:
+// LLVM:   store i32 -1, ptr %[[RETVAL]], align 4
+// LLVM:   br label %10
 
 // OGCG: define dso_local noundef i32 @_Z21shouldNotGenBranchReti
 // OGCG: if.then:
@@ -43,13 +62,24 @@ int shouldGenBranch(int x) {
 err:
   return -1;
 }
-// CIR:  cir.func dso_local @_Z15shouldGenBranchi
+// CIR:  cir.func {{.*}} @_Z15shouldGenBranchi
 // CIR:    cir.if {{.*}} {
 // CIR:      cir.goto "err"
 // CIR:    }
 // CIR:    cir.br ^bb1
 // CIR:  ^bb1:
 // CIR:    cir.label "err"
+
+// LLVM: define dso_local noundef i32 @_Z15shouldGenBranchi
+// LLVM:   br i1 [[CMP:%.*]], label %[[IFTHEN:.*]], label %[[IFEND:.*]]
+// LLVM: [[IFTHEN]]:
+// LLVM:   br label %[[ERR:.*]]
+// LLVM: [[IFEND]]:
+// LLVM:   br label %[[BB9:.*]]
+// LLVM: [[BB9]]:
+// LLVM:   br label %[[ERR]]
+// LLVM: [[ERR]]:
+// LLVM:   ret i32 [[RET:%.*]]
 
 // OGCG: define dso_local noundef i32 @_Z15shouldGenBranchi
 // OGCG: if.then:
@@ -68,7 +98,7 @@ end1:
 end2:
   b = b + 2;
 }
-// CIR:  cir.func dso_local @_Z19severalLabelsInARowi
+// CIR:  cir.func {{.*}} @_Z19severalLabelsInARowi
 // CIR:    cir.goto "end1"
 // CIR:  ^bb[[#BLK1:]]
 // CIR:    cir.goto "end2"
@@ -77,6 +107,15 @@ end2:
 // CIR:    cir.br ^bb[[#BLK3:]]
 // CIR:  ^bb[[#BLK3]]:
 // CIR:    cir.label "end2"
+
+// LLVM: define dso_local void @_Z19severalLabelsInARowi
+// LLVM:   br label %[[END1:.*]]
+// LLVM: [[UNRE:.*]]:                                                ; No predecessors!
+// LLVM:   br label %[[END2:.*]]
+// LLVM: [[END1]]:
+// LLVM:   br label %[[END2]]
+// LLVM: [[END2]]:
+// LLVM:   ret
 
 // OGCG: define dso_local void @_Z19severalLabelsInARowi
 // OGCG:   br label %end1
@@ -92,12 +131,19 @@ void severalGotosInARow(int a) {
 end:
   b = b + 2;
 }
-// CIR:  cir.func dso_local @_Z18severalGotosInARowi
+// CIR:  cir.func {{.*}} @_Z18severalGotosInARowi
 // CIR:    cir.goto "end"
 // CIR:  ^bb[[#BLK1:]]:
 // CIR:    cir.goto "end"
 // CIR:  ^bb[[#BLK2:]]:
 // CIR:    cir.label "end"
+
+// LLVM: define dso_local void @_Z18severalGotosInARowi
+// LLVM:   br label %[[END:.*]]
+// LLVM: [[UNRE:.*]]:                                                ; No predecessors!
+// LLVM:   br label %[[END]]
+// LLVM: [[END]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @_Z18severalGotosInARowi(i32 noundef %a) #0 {
 // OGCG:   br label %end
@@ -116,7 +162,7 @@ extern "C" void multiple_non_case(int v) {
   }
 }
 
-// CIR: cir.func dso_local @multiple_non_case
+// CIR: cir.func {{.*}} @multiple_non_case
 // CIR: cir.switch
 // CIR: cir.case(default, []) {
 // CIR: cir.call @action1()
@@ -125,6 +171,14 @@ extern "C" void multiple_non_case(int v) {
 // CIR: cir.label
 // CIR: cir.call @action2()
 // CIR: cir.break
+
+// LLVM: define dso_local void @multiple_non_case
+// LLVM: [[SWDEFAULT:.*]]:
+// LLVM:   call void @action1()
+// LLVM:   br label %[[L2:.*]]
+// LLVM: [[L2]]:
+// LLVM:   call void @action2()
+// LLVM:   br label %[[BREAK:.*]]
 
 // OGCG: define dso_local void @multiple_non_case
 // OGCG: sw.default:
@@ -147,9 +201,11 @@ extern "C" void case_follow_label(int v) {
   }
 }
 
-// CIR: cir.func dso_local @case_follow_label
+// CIR: cir.func {{.*}} @case_follow_label
 // CIR: cir.switch
 // CIR: cir.case(equal, [#cir.int<1> : !s32i]) {
+// CIR:   cir.br ^bb1
+// CIR: ^bb1:
 // CIR:   cir.label "label"
 // CIR: cir.case(equal, [#cir.int<2> : !s32i]) {
 // CIR:   cir.call @action1()
@@ -157,6 +213,28 @@ extern "C" void case_follow_label(int v) {
 // CIR: cir.case(default, []) {
 // CIR:   cir.call @action2()
 // CIR:   cir.goto "label"
+
+// LLVM: define dso_local void @case_follow_label
+// LLVM:  switch i32 {{.*}}, label %[[SWDEFAULT:.*]] [
+// LLVM:    i32 1, label %[[CASE1:.*]]
+// LLVM:    i32 2, label %[[CASE2:.*]]
+// LLVM:  ]
+// LLVM: [[CASE1]]:
+// LLVM:   br label %[[LABEL:.*]]
+// LLVM: [[LABEL]]:
+// LLVM:   br label %[[CASE2]]
+// LLVM: [[CASE2]]:
+// LLVM:   call void @action1()
+// LLVM:   br label %[[BREAK:.*]]
+// LLVM: [[BREAK]]:
+// LLVM:   br label %[[END:.*]]
+// LLVM: [[SWDEFAULT]]:
+// LLVM:   call void @action2()
+// LLVM:   br label %[[LABEL]]
+// LLVM: [[END]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @case_follow_label
 // OGCG: sw.bb:
@@ -185,7 +263,7 @@ extern "C" void default_follow_label(int v) {
   }
 }
 
-// CIR: cir.func dso_local @default_follow_label
+// CIR: cir.func {{.*}} @default_follow_label
 // CIR: cir.switch
 // CIR: cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR:   cir.yield
@@ -196,6 +274,26 @@ extern "C" void default_follow_label(int v) {
 // CIR: cir.case(default, []) {
 // CIR:   cir.call @action2()
 // CIR:   cir.goto "label"
+
+// LLVM: define dso_local void @default_follow_label
+// LLVM: [[CASE1:.*]]:
+// LLVM:   br label %[[BB8:.*]]
+// LLVM: [[BB8]]:
+// LLVM:   br label %[[CASE2:.*]]
+// LLVM: [[CASE2]]:
+// LLVM:   call void @action1()
+// LLVM:   br label %[[BREAK:.*]]
+// LLVM: [[LABEL:.*]]:
+// LLVM:   br label %[[SWDEFAULT:.*]]
+// LLVM: [[SWDEFAULT]]:
+// LLVM:   call void @action2()
+// LLVM:   br label %[[BB9:.*]]
+// LLVM: [[BB9]]:
+// LLVM:   br label %[[LABEL]]
+// LLVM: [[BREAK]]:
+// LLVM:   br label %[[RET:.*]]
+// LLVM: [[RET]]:
+// LLVM:   ret void
 
 // OGCG: define dso_local void @default_follow_label
 // OGCG: sw.bb:
@@ -208,3 +306,24 @@ extern "C" void default_follow_label(int v) {
 // OGCG:   br label %label
 // OGCG: sw.epilog:
 // OGCG:   ret void
+
+void g3() {
+label:
+  goto label;
+}
+
+// CIR:  cir.func {{.*}} @_Z2g3v
+// CIR:    cir.br ^bb1
+// CIR:  ^bb1:
+// CIR:    cir.label "label"
+// CIR:    cir.goto "label"
+
+// LLVM: define dso_local void @_Z2g3v()
+// LLVM:   br label %1
+// LLVM: 1:
+// LLVM:   br label %1
+
+// OGCG: define dso_local void @_Z2g3v()
+// OGCG:   br label %label
+// OGCG: label:
+// OGCG:   br label %label

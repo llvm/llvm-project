@@ -6,9 +6,8 @@ define void @cftx020(ptr nocapture %a) {
 ; CHECK-LABEL: cftx020:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; CHECK-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; CHECK-NEXT:    vpermilpd {{.*#+}} xmm1 = mem[1,0]
 ; CHECK-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovupd (%rdi), %xmm1
 ; CHECK-NEXT:    vmovupd %xmm0, (%rdi)

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -DTEST_FOR_WARNING -Wno-error=incompatible-ms-struct -verify -triple i686-apple-darwin9 -std=c++11 %s
 // RUN: %clang_cc1 -fsyntax-only -DTEST_FOR_WARNING -Wno-error=incompatible-ms-struct -verify -triple armv7-apple-darwin9 -std=c++11 %s
 // RUN: %clang_cc1 -fsyntax-only -DTEST_FOR_ERROR -verify -triple armv7-apple-darwin9 -std=c++11 %s
-// RUN: %clang_cc1 -fsyntax-only -DNO_PRAGMA -mms-bitfields -verify -triple armv7-apple-darwin9 -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -DNO_PRAGMA -fms-layout-compatibility=microsoft -verify -triple armv7-apple-darwin9 -std=c++11 %s
 
 #ifndef NO_PRAGMA
 #pragma ms_struct on

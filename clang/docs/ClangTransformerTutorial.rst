@@ -78,7 +78,7 @@ can express this a Transformer rewrite rule:
 arguments: the pattern, the edit, and (optionally) an explanatory note. In our
 example, the pattern (``functionDecl(...)``) identifies the declaration of the
 function ``MkX``. Since we're just diagnosing the problem, but not suggesting a
-fix, our edit is an no-op. But, it contains an *anchor* for the diagnostic
+fix, our edit is a no-op. But, it contains an *anchor* for the diagnostic
 message: ``node("fun")`` says to associate the message with the source range of
 the AST node bound to "fun"; in this case, the ill-named function declaration.
 Finally, we use ``cat`` to build a message that explains the change. Regarding the

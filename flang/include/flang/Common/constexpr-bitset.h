@@ -21,7 +21,7 @@
 #include <type_traits>
 
 namespace Fortran::common {
-
+RT_OFFLOAD_VAR_GROUP_BEGIN
 template <int BITS> class BitSet {
   static_assert(BITS > 0 && BITS <= 128);
   using Word = HostUnsignedIntType<(BITS <= 32 ? 32 : BITS)>;
@@ -143,5 +143,6 @@ public:
 private:
   Word bits_{0};
 };
+RT_OFFLOAD_VAR_GROUP_END
 } // namespace Fortran::common
 #endif // FORTRAN_COMMON_CONSTEXPR_BITSET_H_

@@ -39,7 +39,7 @@ void f() {
 // CIR: #bfi_y = #cir.bitfield_info<name = "y", storage_type = !u8i, size = 4, offset = 0, is_signed = true>
 // CIR: #bfi_z = #cir.bitfield_info<name = "z", storage_type = !u8i, size = 8, offset = 0, is_signed = true>
 
-// CIR:   cir.func no_proto dso_local @f
+// CIR:   cir.func {{.*}} @f
 // CIR:    [[ALLOC:%.*]] = cir.alloca !rec_demo, !cir.ptr<!rec_demo>, ["d"] {alignment = 4 : i64}
 // CIR:    [[ONE:%.*]] = cir.const #cir.int<1> : !s32i
 // CIR:    [[X:%.*]] = cir.get_member [[ALLOC]][0] {name = "x"} : !cir.ptr<!rec_demo> -> !cir.ptr<!s32i>

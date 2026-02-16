@@ -4,9 +4,10 @@
     {
       "artifacts": [
         {
-          "length": 1071,
+          "length": -1,
           "location": {
             "index": 0,
+            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
           },
           "mimeType": "text/plain",
           "roles": [
@@ -31,6 +32,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 6,
@@ -50,6 +52,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 18,
@@ -65,12 +68,14 @@
               ]
             }
           ],
+          "hostedViewerUri": "file:///[...]/report-5c9648.html",
           "level": "warning",
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
                   "index": 0,
+                  "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                 },
                 "region": {
                   "endColumn": 18,
@@ -83,6 +88,9 @@
           ],
           "message": {
             "text": "tainted"
+          },
+          "partialFingerprints": {
+            "clang/issueHash/v1": "5c964815b8d6db3989bacdd308e657d0"
           },
           "ruleId": "debug.TaintTest",
           "ruleIndex": 0
@@ -102,6 +110,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 6,
@@ -121,6 +130,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 12,
@@ -140,6 +150,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 9,
@@ -155,12 +166,14 @@
               ]
             }
           ],
+          "hostedViewerUri": "file:///[...]/report-256f65.html",
           "level": "warning",
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
                   "index": 0,
+                  "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                 },
                 "region": {
                   "endColumn": 9,
@@ -173,6 +186,9 @@
           ],
           "message": {
             "text": "Called function pointer is an uninitialized pointer value"
+          },
+          "partialFingerprints": {
+            "clang/issueHash/v1": "256f6502719de88bece09a676d4102c6"
           },
           "ruleId": "core.CallAndMessage",
           "ruleIndex": 1
@@ -192,6 +208,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 13,
@@ -211,6 +228,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 3,
@@ -229,6 +247,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 14,
@@ -243,12 +262,14 @@
               ]
             }
           ],
+          "hostedViewerUri": "file:///[...]/report-91023b.html",
           "level": "warning",
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
                   "index": 0,
+                  "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                 },
                 "region": {
                   "endColumn": 14,
@@ -260,6 +281,9 @@
           ],
           "message": {
             "text": "Division by zero"
+          },
+          "partialFingerprints": {
+            "clang/issueHash/v1": "91023b85b7e0ff79f11ab603e63cfa58"
           },
           "ruleId": "core.DivideZero",
           "ruleIndex": 2
@@ -279,6 +303,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 24,
@@ -298,6 +323,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 12,
@@ -317,6 +343,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 3,
@@ -335,6 +362,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 12,
@@ -349,12 +377,14 @@
               ]
             }
           ],
+          "hostedViewerUri": "file:///[...]/report-b18daa.html",
           "level": "warning",
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
                   "index": 0,
+                  "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                 },
                 "region": {
                   "endColumn": 12,
@@ -366,6 +396,9 @@
           ],
           "message": {
             "text": "Potential leak of memory pointed to by 'mem'"
+          },
+          "partialFingerprints": {
+            "clang/issueHash/v1": "b18daabce2816b9efb6afffaa64ca9f9"
           },
           "ruleId": "unix.Malloc",
           "ruleIndex": 3
@@ -385,6 +418,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 12,
@@ -404,6 +438,7 @@
                         "physicalLocation": {
                           "artifactLocation": {
                             "index": 0,
+                            "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 20,
@@ -418,12 +453,14 @@
               ]
             }
           ],
+          "hostedViewerUri": "file:///[...]/report-4e5361.html",
           "level": "warning",
           "locations": [
             {
               "physicalLocation": {
                 "artifactLocation": {
                   "index": 0,
+                  "uri": "file:///[...]/sarif-multi-diagnostic-test.c"
                 },
                 "region": {
                   "endColumn": 20,
@@ -435,6 +472,9 @@
           ],
           "message": {
             "text": "Division by zero"
+          },
+          "partialFingerprints": {
+            "clang/issueHash/v1": "4e53611783411e0dae06a4084b00281c"
           },
           "ruleId": "core.DivideZero",
           "ruleIndex": 2
@@ -499,8 +539,10 @@
               "name": "unix.Malloc"
             }
           ],
+          "version": "[clang version]"
         }
       }
     }
   ],
+  "version": "[SARIF version]"
 }

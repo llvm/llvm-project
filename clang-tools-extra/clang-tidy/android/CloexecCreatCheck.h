@@ -1,4 +1,4 @@
-//===--- CloexecCreatCheck.h - clang-tidy------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_CREAT_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_CREAT_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECCREATCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECCREATCHECK_H
 
 #include "CloexecCheck.h"
 
@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// creat() is better to be replaced by open().
 /// Find the usage of creat() and redirect user to use open().
 
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-creat.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-creat.html
 class CloexecCreatCheck : public CloexecCheck {
 public:
   CloexecCreatCheck(StringRef Name, ClangTidyContext *Context)
@@ -27,4 +27,4 @@ public:
 
 } // namespace clang::tidy::android
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_CREAT_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECCREATCHECK_H

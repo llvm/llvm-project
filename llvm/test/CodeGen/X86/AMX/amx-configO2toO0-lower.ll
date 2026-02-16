@@ -1,4 +1,5 @@
-; RUN: opt < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-int8 -mattr=+avx512f -lower-amx-type -S | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-int8 -mattr=+avx512f -x86-lower-amx-type -S | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-unknown-unknown -mattr=+amx-int8 -mattr=+avx512f -passes=x86-lower-amx-type -S | FileCheck %s
 
 @buf = dso_local global [1024 x i8] zeroinitializer, align 16
 @buf2 = dso_local global [1024 x i8] zeroinitializer, align 16

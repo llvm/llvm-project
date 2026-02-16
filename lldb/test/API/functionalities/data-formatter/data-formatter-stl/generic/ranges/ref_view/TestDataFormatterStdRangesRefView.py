@@ -29,7 +29,6 @@ class StdRangesRefViewDataFormatterTestCase(TestBase):
 
     def do_test(self):
         """Test that std::ranges::ref_view is formatted correctly when printed."""
-        self.build()
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Break here", lldb.SBFileSpec("main.cpp", False)
         )

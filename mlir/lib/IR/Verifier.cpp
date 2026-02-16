@@ -364,7 +364,7 @@ static void diagnoseInvalidOperandDominance(Operation &op, unsigned operandNo) {
   }
   if (block1 == block2)
     llvm::report_fatal_error("Internal error in dominance verification");
-  int index = std::distance(region2->begin(), block2->getIterator());
+  unsigned index = block2->computeBlockNumber();
   note << "operand defined as a block argument (block #" << index;
   if (region1 == region2)
     note << " in the same region)";

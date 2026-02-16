@@ -356,6 +356,24 @@ public:
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                   Debugger &debugger);
 
+  // SyntheticFrameProvider
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 SyntheticFrameProviderCreateInstance create_native_callback,
+                 ScriptedFrameProviderCreateInstance create_scripted_callback);
+
+  static bool
+  UnregisterPlugin(SyntheticFrameProviderCreateInstance create_callback);
+
+  static bool
+  UnregisterPlugin(ScriptedFrameProviderCreateInstance create_callback);
+
+  static SyntheticFrameProviderCreateInstance
+  GetSyntheticFrameProviderCreateCallbackForPluginName(llvm::StringRef name);
+
+  static ScriptedFrameProviderCreateInstance
+  GetScriptedFrameProviderCreateCallbackAtIndex(uint32_t idx);
+
   // StructuredDataPlugin
 
   /// Register a StructuredDataPlugin class along with optional
@@ -437,6 +455,7 @@ public:
       SymbolLocatorDownloadObjectAndSymbolFile download_object_symbol_file =
           nullptr,
       SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle = nullptr,
+      SymbolLocatorLocateSourceFile locate_source_file = nullptr,
       DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(SymbolLocatorCreateInstance create_callback);
@@ -460,6 +479,9 @@ public:
   static FileSpec FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
                                          const UUID *uuid,
                                          const ArchSpec *arch);
+
+  static FileSpec LocateSourceFile(const lldb::ModuleSP &module_sp,
+                                   const FileSpec &original_source_file);
 
   // Trace
   static bool RegisterPlugin(
@@ -601,6 +623,15 @@ public:
   static LanguageSet GetREPLSupportedLanguagesAtIndex(uint32_t idx);
 
   static LanguageSet GetREPLAllTypeSystemSupportedLanguages();
+
+  // Higlhighter
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             HighlighterCreateInstance create_callback);
+
+  static bool UnregisterPlugin(HighlighterCreateInstance create_callback);
+
+  static HighlighterCreateInstance
+  GetHighlighterCreateCallbackAtIndex(uint32_t idx);
 
   // Some plug-ins might register a DebuggerInitializeCallback callback when
   // registering the plug-in. After a new Debugger instance is created, this

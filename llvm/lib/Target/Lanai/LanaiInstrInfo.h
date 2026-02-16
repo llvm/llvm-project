@@ -22,11 +22,13 @@
 
 namespace llvm {
 
+class LanaiSubtarget;
+
 class LanaiInstrInfo : public LanaiGenInstrInfo {
   const LanaiRegisterInfo RegisterInfo;
 
 public:
-  LanaiInstrInfo();
+  LanaiInstrInfo(const LanaiSubtarget &STI);
 
   // getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   // such, whenever a client has an instance of instruction info, it should
@@ -56,15 +58,14 @@ public:
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
       Register SourceRegister, bool IsKill, int FrameIndex,
-      const TargetRegisterClass *RegisterClass,
-      const TargetRegisterInfo *RegisterInfo, Register VReg,
+      const TargetRegisterClass *RegisterClass, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
       Register DestinationRegister, int FrameIndex,
-      const TargetRegisterClass *RegisterClass,
-      const TargetRegisterInfo *RegisterInfo, Register VReg,
+      const TargetRegisterClass *RegisterClass, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
@@ -107,20 +108,6 @@ public:
   bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                             Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
-
-  // Analyze the given select instruction, returning true if it cannot be
-  // understood. It is assumed that MI->isSelect() is true.
-  //
-  // When successful, return the controlling condition and the operands that
-  // determine the true and false result values.
-  //
-  //   Result = SELECT Cond, TrueOp, FalseOp
-  //
-  // Lanai can optimize certain select instructions, for example by predicating
-  // the instruction defining one of the operands and sets Optimizable to true.
-  bool analyzeSelect(const MachineInstr &MI,
-                     SmallVectorImpl<MachineOperand> &Cond, unsigned &TrueOp,
-                     unsigned &FalseOp, bool &Optimizable) const override;
 
   // Given a select instruction that was understood by analyzeSelect and
   // returned Optimizable = true, attempt to optimize MI by merging it with one

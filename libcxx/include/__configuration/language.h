@@ -18,6 +18,9 @@
 
 // NOLINTBEGIN(libcpp-cpp-version-check)
 #ifdef __cplusplus
+#  if __cplusplus < 201103L
+#    define _LIBCPP_CXX03_LANG
+#  endif
 #  if __cplusplus <= 201103L
 #    define _LIBCPP_STD_VER 11
 #  elif __cplusplus <= 201402L
@@ -45,6 +48,12 @@
 #  define _LIBCPP_HAS_EXCEPTIONS 1
 #else
 #  define _LIBCPP_HAS_EXCEPTIONS 0
+#endif
+
+#if _LIBCPP_STD_VER <= 17 || !defined(__cpp_char8_t)
+#  define _LIBCPP_HAS_CHAR8_T 0
+#else
+#  define _LIBCPP_HAS_CHAR8_T 1
 #endif
 
 #endif // _LIBCPP___CONFIGURATION_LANGUAGE_H

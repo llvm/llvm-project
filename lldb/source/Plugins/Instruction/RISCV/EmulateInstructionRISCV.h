@@ -61,6 +61,7 @@ public:
     case eInstructionTypePCModifying:
       return true;
     case eInstructionTypePrologueEpilogue:
+      return true;
     case eInstructionTypeAll:
       return false;
     }
@@ -85,6 +86,7 @@ public:
     return SupportsThisInstructionType(inst_type);
   }
 
+  bool CreateFunctionEntryUnwind(UnwindPlan &unwind_plan) override;
   bool SetTargetTriple(const ArchSpec &arch) override;
   bool ReadInstruction() override;
   std::optional<uint32_t> GetLastInstrSize() override { return m_last_size; }
@@ -94,6 +96,8 @@ public:
   std::optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,
                                               uint32_t reg_num) override;
 
+  bool SetInstruction(const Opcode &opcode, const Address &inst_addr,
+                      Target *target) override;
   std::optional<DecodeResult> ReadInstructionAt(lldb::addr_t addr);
   std::optional<DecodeResult> Decode(uint32_t inst);
   bool Execute(DecodeResult inst, bool ignore_cond);

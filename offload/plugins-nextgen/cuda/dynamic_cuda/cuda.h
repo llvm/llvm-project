@@ -33,6 +33,9 @@ typedef struct CUfunc_st *CUfunction;
 typedef void (*CUhostFn)(void *userData);
 typedef struct CUstream_st *CUstream;
 typedef struct CUevent_st *CUevent;
+typedef struct CUuuid_st {
+  char bytes[16];
+} CUuuid;
 
 #define CU_DEVICE_INVALID ((CUdevice)(-2))
 
@@ -301,6 +304,7 @@ CUresult cuFuncSetAttribute(CUfunction, CUfunction_attribute, int);
 
 // Device info
 CUresult cuDeviceGetName(char *, int, CUdevice);
+CUresult cuDeviceGetUuid(CUuuid *, CUdevice);
 CUresult cuDeviceTotalMem(size_t *, CUdevice);
 CUresult cuDriverGetVersion(int *);
 
@@ -321,6 +325,16 @@ CUresult cuMemcpyDtoH(void *, CUdeviceptr, size_t);
 CUresult cuMemcpyDtoHAsync(void *, CUdeviceptr, size_t, CUstream);
 CUresult cuMemcpyHtoD(CUdeviceptr, const void *, size_t);
 CUresult cuMemcpyHtoDAsync(CUdeviceptr, const void *, size_t, CUstream);
+
+CUresult cuMemsetD8Async(CUdeviceptr, unsigned int, size_t, CUstream);
+CUresult cuMemsetD16Async(CUdeviceptr, unsigned int, size_t, CUstream);
+CUresult cuMemsetD32Async(CUdeviceptr, unsigned int, size_t, CUstream);
+CUresult cuMemsetD2D8Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
+                           CUstream);
+CUresult cuMemsetD2D16Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
+                            CUstream);
+CUresult cuMemsetD2D32Async(CUdeviceptr, size_t, unsigned int, size_t, size_t,
+                            CUstream);
 
 CUresult cuMemFree(CUdeviceptr);
 CUresult cuMemFreeHost(void *);
@@ -353,6 +367,7 @@ CUresult cuCtxSetLimit(CUlimit, size_t);
 
 CUresult cuEventCreate(CUevent *, unsigned int);
 CUresult cuEventRecord(CUevent, CUstream);
+CUresult cuEventQuery(CUevent);
 CUresult cuStreamWaitEvent(CUstream, CUevent, unsigned int);
 CUresult cuEventSynchronize(CUevent);
 CUresult cuEventDestroy(CUevent);
@@ -375,5 +390,6 @@ CUresult cuMemGetAllocationGranularity(size_t *granularity,
                                        CUmemAllocationGranularity_flags option);
 CUresult cuOccupancyMaxPotentialBlockSize(int *, int *, CUfunction,
                                           CUoccupancyB2DSize, size_t, int);
+CUresult cuFuncGetParamInfo(CUfunction, size_t, size_t *, size_t *);
 
 #endif

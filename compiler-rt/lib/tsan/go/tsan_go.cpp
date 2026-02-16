@@ -49,30 +49,50 @@ struct SymbolizeCodeContext {
   uptr res;
 };
 
-SymbolizedStack *SymbolizeCode(uptr addr) {
-  SymbolizedStack *first = SymbolizedStack::New(addr);
-  SymbolizedStack *s = first;
+SymbolizedStack* SymbolizeCode(uptr addr, bool leaf) {
+  // addr is a single physical pc, and we return a set of
+  // virtual frames corresponding to that pc.
+  // Multiple virtual frames are possible because of inlining.
+  // Returned frames are ordered from newest to oldest.
+  //
+  // Note: stack walk order is weird here. Tsan calls this on physical
+  // frames from root to leaf (oldest to youngest frame).
+  // The loop within this function iterates through multiple virtual
+  // frames for a given physical frame. The loop iterates in the
+  // opposite direction, from youngest virtual frame to oldest
+  // virtual frame for the given single physical frame.
+  SymbolizedStack* first = nullptr;
+  SymbolizedStack* s = nullptr;
   for (;;) {
     SymbolizeCodeContext cbctx;
     internal_memset(&cbctx, 0, sizeof(cbctx));
     cbctx.pc = addr;
     go_runtime_cb(CallbackSymbolizeCode, &cbctx);
-    if (cbctx.res == 0)
+    if (cbctx.res == 0)  // error of some sort
       break;
-    AddressInfo &info = s->info;
-    info.module_offset = cbctx.off;
-    info.function = internal_strdup(cbctx.func ? cbctx.func : "??");
-    info.file = internal_strdup(cbctx.file ? cbctx.file : "-");
-    info.line = cbctx.line;
-    info.column = 0;
-
+    if (cbctx.res != 2 || leaf) {
+      // res == 2 means it is a wrapper function we don't want to
+      // display (unless it is the leaf frame).
+      if (first == nullptr) {
+        first = SymbolizedStack::New(addr);
+        s = first;
+      } else {
+        // Allocate a stack entry for the parent of the inlined function.
+        SymbolizedStack* s2 = SymbolizedStack::New(addr);
+        s->next = s2;
+        s = s2;
+      }
+      AddressInfo& info = s->info;
+      info.module_offset = cbctx.off;
+      info.function = internal_strdup(cbctx.func ? cbctx.func : "??");
+      info.file = internal_strdup(cbctx.file ? cbctx.file : "-");
+      info.line = cbctx.line;
+      info.column = 0;
+    }
     if (cbctx.pc == addr) // outermost (non-inlined) function
       break;
     addr = cbctx.pc;
-    // Allocate a stack entry for the parent of the inlined function.
-    SymbolizedStack *s2 = SymbolizedStack::New(addr);
-    s->next = s2;
-    s = s2;
+    leaf = false;
   }
   return first;
 }

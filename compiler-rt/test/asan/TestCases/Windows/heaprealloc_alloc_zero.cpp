@@ -1,15 +1,20 @@
 // RUN: %clang_cl_asan %Od %MT -o %t %s
 // RUN: %env_asan_opts=windows_hook_rtl_allocators=true %run %t 2>&1 | FileCheck %s
-// UNSUPPORTED: asan-64-bits
 #include <cassert>
 #include <iostream>
+#include <sanitizer/allocator_interface.h>
 #include <windows.h>
 
 int main() {
   void *ptr = malloc(0);
   if (ptr)
     std::cerr << "allocated!\n";
-  ((char *)ptr)[0] = '\xff'; //check this 'allocate 1 instead of 0' hack hasn't changed
+
+  // Check the 'allocate 1 instead of 0' hack hasn't changed
+  // Note that as of b3452d90b043a398639e62b0ab01aa339cc649de, dereferencing
+  // the pointer will be detected as a heap-buffer-overflow.
+  if (__sanitizer_get_allocated_size(ptr) != 1)
+    return 1;
 
   free(ptr);
 
@@ -35,8 +40,9 @@ int main() {
   if (!ptr2)
     return 1;
   size_t heapsize = HeapSize(GetProcessHeap(), 0, ptr2);
-  if (heapsize != 1) { // will be 0 without ASAN turned on
-    std::cerr << "HeapAlloc size failure! " << heapsize << " != 1\n";
+  // HeapSize will retrieve the user-defined size, not the ASan-allocated size of 1
+  if (heapsize != 0) {
+    std::cerr << "HeapAlloc size failure! " << heapsize << " != 0\n";
     return 1;
   }
   void *ptr3 = HeapReAlloc(GetProcessHeap(), 0, ptr2, 3);

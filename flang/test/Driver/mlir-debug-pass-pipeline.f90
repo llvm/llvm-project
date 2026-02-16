@@ -28,10 +28,12 @@ end program
 ! ALL: Pass statistics report
 
 ! ALL: Fortran::lower::VerifierPass
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT: 'fir.global' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT: 'func.func' Pipeline
+! ALL-NEXT:   InlineElementals
+! ALL-NEXT: 'omp.declare_mapper' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT: 'omp.declare_reduction' Pipeline
 ! ALL-NEXT:   InlineElementals
@@ -49,11 +51,13 @@ end program
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT: 'fir.global' Pipeline
 ! ALL-NEXT:   CharacterConversion
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   ArrayValueCopy
+! ALL-NEXT:   CharacterConversion
+! ALL-NEXT: 'omp.declare_mapper' Pipeline
 ! ALL-NEXT:   CharacterConversion
 ! ALL-NEXT: 'omp.declare_reduction' Pipeline
 ! ALL-NEXT:   CharacterConversion
@@ -80,11 +84,14 @@ end program
 ! ALL-NEXT: LowerRepackArraysPass
 ! ALL-NEXT: SimplifyFIROperations
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
 ! ALL-NEXT:     StackReclaim
 ! ALL-NEXT:     CFGConversion
 ! ALL-NEXT:   'func.func' Pipeline
+! ALL-NEXT:     StackReclaim
+! ALL-NEXT:     CFGConversion
+! ALL-NEXT:   'omp.declare_mapper' Pipeline
 ! ALL-NEXT:     StackReclaim
 ! ALL-NEXT:     CFGConversion
 ! ALL-NEXT:   'omp.declare_reduction' Pipeline
@@ -96,22 +103,26 @@ end program
 ! ALL-NEXT: SCFToControlFlow
 ! ALL-NEXT: Canonicalizer
 ! ALL-NEXT: SimplifyRegionLite
+! ALL-NEXT: ConvertComplexPow
 ! ALL-NEXT: CSE
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
+! ALL-NEXT: MIFOpConversion
 ! ALL-NEXT: BoxedProcedurePass
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT:   'fir.global' Pipeline
 ! ALL-NEXT:     AbstractResultOpt
 ! ALL-NEXT:   'func.func' Pipeline
 ! ALL-NEXT:     AbstractResultOpt
 ! ALL-NEXT:   'gpu.module' Pipeline
-! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func'] 
-! ALL-NEXT:   'func.func' Pipeline 
+! ALL-NEXT:   Pipeline Collection : ['func.func', 'gpu.func']
+! ALL-NEXT:   'func.func' Pipeline
 ! ALL-NEXT:   AbstractResultOpt
-! ALL-NEXT:   'gpu.func' Pipeline 
+! ALL-NEXT:   'gpu.func' Pipeline
 ! ALL-NEXT:   AbstractResultOpt
+! ALL-NEXT:   'omp.declare_mapper' Pipeline
+! ALL-NEXT:     AbstractResultOpt
 ! ALL-NEXT:   'omp.declare_reduction' Pipeline
 ! ALL-NEXT:     AbstractResultOpt
 ! ALL-NEXT:   'omp.private' Pipeline

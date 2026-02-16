@@ -118,7 +118,7 @@ require exclusive access, while read operations require only shared access.
 At any given moment during program execution, a thread holds a specific set of
 capabilities (e.g. the set of mutexes that it has locked.)  These act like keys
 or tokens that allow the thread to access a given resource.  Just like physical
-security keys, a thread cannot make copy of a capability, nor can it destroy
+security keys, a thread cannot make a copy of a capability, nor can it destroy
 one.  A thread can only release a capability to another thread, or acquire one
 from another thread.  The annotations are deliberately agnostic about the
 exact mechanism used to acquire and release capabilities; it assumes that the
@@ -131,7 +131,7 @@ by calculating an approximation of that set, called the *capability
 environment*.  The capability environment is calculated for every program point,
 and describes the set of capabilities that are statically known to be held, or
 not held, at that particular point.  This environment is a conservative
-approximation of the full set of capabilities that will actually held by a
+approximation of the full set of capabilities that will actually be held by a
 thread at run-time.
 
 
@@ -369,7 +369,7 @@ thread-safe, but too complicated for the analysis to understand.  Reasons for
     void unsafeIncrement() NO_THREAD_SAFETY_ANALYSIS { a++; }
   };
 
-Unlike the other attributes, NO_THREAD_SAFETY_ANALYSIS is not part of the
+Unlike the other attributes, ``NO_THREAD_SAFETY_ANALYSIS`` is not part of the
 interface of a function, and should thus be placed on the function definition
 (in the ``.cc`` or ``.cpp`` file) rather than on the function declaration
 (in the header).
@@ -509,7 +509,7 @@ ASSERT_CAPABILITY(...) and ASSERT_SHARED_CAPABILITY(...)
 *Previously:*  ``ASSERT_EXCLUSIVE_LOCK``, ``ASSERT_SHARED_LOCK``
 
 These are attributes on a function or method which asserts the calling thread
-already holds the given capability, for example by performing a run-time test
+already holds the given capability, for example, by performing a run-time test
 and terminating if the capability is not held.  Presence of this annotation
 causes the analysis to assume the capability is held after calls to the
 annotated function.  See :ref:`mutexheader`, below, for example uses.
@@ -554,19 +554,19 @@ Negative Capabilities
 =====================
 
 Thread Safety Analysis is designed to prevent both race conditions and
-deadlock.  The GUARDED_BY and REQUIRES attributes prevent race conditions, by
+deadlock.  The ``GUARDED_BY`` and ``REQUIRES`` attributes prevent race conditions, by
 ensuring that a capability is held before reading or writing to guarded data,
-and the EXCLUDES attribute prevents deadlock, by making sure that a mutex is
+and the ``EXCLUDES`` attribute prevents deadlock, by making sure that a mutex is
 *not* held.
 
-However, EXCLUDES is an optional attribute, and does not provide the same
-safety guarantee as REQUIRES.  In particular:
+However, ``EXCLUDES`` is an optional attribute, and does not provide the same
+safety guarantee as ``REQUIRES``.  In particular:
 
   * A function which acquires a capability does not have to exclude it.
   * A function which calls a function that excludes a capability does not
-    have transitively exclude that capability.
+    have to transitively exclude that capability.
 
-As a result, EXCLUDES can easily produce false negatives:
+As a result, ``EXCLUDES`` can easily produce false negatives:
 
 .. code-block:: c++
 
@@ -594,8 +594,8 @@ As a result, EXCLUDES can easily produce false negatives:
   };
 
 
-Negative requirements are an alternative EXCLUDES that provide
-a stronger safety guarantee.  A negative requirement uses the  REQUIRES
+Negative requirements are an alternative to ``EXCLUDES`` that provide
+a stronger safety guarantee.  A negative requirement uses the  ``REQUIRES``
 attribute, in conjunction with the ``!`` operator, to indicate that a capability
 should *not* be held.
 
@@ -642,7 +642,7 @@ Frequently Asked Questions
 
 (A) Attributes are part of the formal interface of a function, and should
 always go in the header, where they are visible to anything that includes
-the header.  Attributes in the .cpp file are not visible outside of the
+the header.  Attributes in the ``.cpp`` file are not visible outside of the
 immediate translation unit, which leads to false negatives and false positives.
 
 
@@ -684,7 +684,7 @@ Private Mutexes
 ---------------
 
 Good software engineering practice dictates that mutexes should be private
-members, because the locking mechanism used by a thread-safe class is part of
+members because the locking mechanism used by a thread-safe class is part of
 its internal implementation.  However, private mutexes can sometimes leak into
 the public interface of a class.
 Thread safety attributes follow normal C++ access restrictions, so if ``mu``
@@ -823,13 +823,6 @@ The MutexUnlocker class is intended to be the dual of the MutexLocker class,
 defined in :ref:`mutexheader`.  However, it doesn't work because the analysis
 doesn't know that munl.mu == mutex.  The SCOPED_CAPABILITY attribute handles
 aliasing for MutexLocker, but does so only for that particular pattern.
-
-
-ACQUIRED_BEFORE(...) and ACQUIRED_AFTER(...) support is still experimental.
----------------------------------------------------------------------------
-
-ACQUIRED_BEFORE(...) and ACQUIRED_AFTER(...) are currently being developed under
-the ``-Wthread-safety-beta`` flag.
 
 
 .. _mutexheader:

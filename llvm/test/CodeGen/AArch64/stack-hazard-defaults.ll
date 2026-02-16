@@ -33,8 +33,8 @@ define i32 @spill_fpr_with_gpr_stack_object(i64 %d) "aarch64_pstate_sm_compatibl
 ; CHECK1024-LABEL: spill_fpr_with_gpr_stack_object:
 ; CHECK1024:       // %bb.0: // %entry
 ; CHECK1024-NEXT:    sub sp, sp, #1040
-; CHECK1024-NEXT:    str d8, [sp] // 8-byte Folded Spill
-; CHECK1024-NEXT:    str x29, [sp, #1032] // 8-byte Folded Spill
+; CHECK1024-NEXT:    str d8, [sp] // 8-byte Spill
+; CHECK1024-NEXT:    str x29, [sp, #1032] // 8-byte Spill
 ; CHECK1024-NEXT:    sub sp, sp, #1040
 ; CHECK1024-NEXT:    .cfi_def_cfa_offset 2080
 ; CHECK1024-NEXT:    .cfi_offset w29, -8
@@ -45,8 +45,8 @@ define i32 @spill_fpr_with_gpr_stack_object(i64 %d) "aarch64_pstate_sm_compatibl
 ; CHECK1024-NEXT:    //NO_APP
 ; CHECK1024-NEXT:    str x8, [sp, #8]
 ; CHECK1024-NEXT:    add sp, sp, #1040
-; CHECK1024-NEXT:    ldr x29, [sp, #1032] // 8-byte Folded Reload
-; CHECK1024-NEXT:    ldr d8, [sp] // 8-byte Folded Reload
+; CHECK1024-NEXT:    ldr x29, [sp, #1032] // 8-byte Reload
+; CHECK1024-NEXT:    ldr d8, [sp] // 8-byte Reload
 ; CHECK1024-NEXT:    add sp, sp, #1040
 ; CHECK1024-NEXT:    ret
 entry:

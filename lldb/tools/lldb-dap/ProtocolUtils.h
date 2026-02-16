@@ -53,7 +53,8 @@ std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file);
 /// Checks if the given source is for assembly code.
 bool IsAssemblySource(const protocol::Source &source);
 
-bool DisplayAssemblySource(lldb::SBDebugger &debugger, lldb::SBAddress address);
+bool DisplayAssemblySource(lldb::SBDebugger &debugger,
+                           lldb::SBLineEntry line_entry);
 
 /// Get the address as a 16-digit hex string, e.g. "0x0000000000012345"
 std::string GetLoadAddressString(const lldb::addr_t addr);
@@ -142,11 +143,11 @@ std::string ConvertDebugInfoSizeToString(uint64_t debug_size);
 ///
 /// \return
 ///     A Variable representing the given value.
-protocol::Variable CreateVariable(lldb::SBValue v, int64_t var_ref,
-                                  bool format_hex, bool auto_variable_summaries,
-                                  bool synthetic_child_debugging,
-                                  bool is_name_duplicated,
-                                  std::optional<std::string> custom_name = {});
+protocol::Variable
+CreateVariable(lldb::SBValue v, int64_t var_ref, bool format_hex,
+               bool auto_variable_summaries, bool synthetic_child_debugging,
+               bool is_name_duplicated,
+               std::optional<llvm::StringRef> custom_name = {});
 
 } // namespace lldb_dap
 

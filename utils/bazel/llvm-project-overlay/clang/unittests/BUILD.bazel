@@ -116,6 +116,13 @@ cc_library(
 )
 
 cc_library(
+    name = "dataflow_mock_headers",
+    testonly = 1,
+    srcs = ["Analysis/FlowSensitive/MockHeaders.cpp"],
+    hdrs = ["Analysis/FlowSensitive/MockHeaders.h"],
+)
+
+cc_library(
     name = "dataflow_solver_test",
     testonly = 1,
     hdrs = ["Analysis/FlowSensitive/SolverTest.h"],
@@ -148,9 +155,32 @@ cc_test(
         "//clang:testing",
         "//clang:tooling",
         "//llvm:Support",
+        "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "unchecked_statusor_access_model_test_fixture",
+    testonly = 1,
+    srcs = ["Analysis/FlowSensitive/UncheckedStatusOrAccessModelTestFixture.cpp"],
+    hdrs = ["Analysis/FlowSensitive/UncheckedStatusOrAccessModelTestFixture.h"],
+    deps = [
+        ":dataflow_mock_headers",
+        ":dataflow_testing_support",
+        "//clang:analysis",
+        "//clang:ast",
+        "//clang:ast_matchers",
+        "//clang:basic",
+        "//clang:tooling",
+        "//llvm:Support",
+        "//llvm:TestingADT",
+        "//llvm:TestingAnnotations",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
     ],
 )
 
@@ -266,6 +296,7 @@ cc_test(
         "//clang:ast",
         "//clang:basic",
         "//clang:codegen",
+        "//clang:driver",
         "//clang:driver_options_inc_gen",
         "//clang:frontend",
         "//clang:frontend_tool",
@@ -336,6 +367,8 @@ cc_test(
         ":ast_matchers_tests_hdrs",
         "//clang:ast",
         "//clang:ast_matchers",
+        "//clang:basic",
+        "//clang:driver",
         "//clang:frontend",
         "//clang:lex",
         "//clang:parse",
@@ -429,6 +462,7 @@ cc_test(
         "//clang:ast",
         "//clang:ast_matchers",
         "//clang:basic",
+        "//clang:dependency_scanning",
         "//clang:driver",
         "//clang:format",
         "//clang:frontend",
@@ -437,7 +471,6 @@ cc_test(
         "//clang:testing",
         "//clang:tooling",
         "//clang:tooling_core",
-        "//clang:tooling_dependency_scanning",
         "//clang:tooling_inclusions",
         "//clang:tooling_refactoring",
         "//clang:transformer",
@@ -514,6 +547,7 @@ cc_test(
     deps = [
         "//clang:ast",
         "//clang:basic",
+        "//clang:driver",
         "//clang:frontend",
         "//clang:lex",
         "//clang:testing",
@@ -682,7 +716,7 @@ cc_test(
     args = [
         # TODO: some tests fail with: "JIT session error: Symbols not found:
         # [ _ZnwmPv26__clang_Interpreter_NewTag, __clang_Interpreter_SetValueWithAlloc ]
-        "--gtest_filter=-InterpreterTest.*:InterpreterTestBase.*",
+        "--gtest_filter=-InterpreterTest.*:OutOfProcessInterpreterTest.*",
     ],
     deps = [
         "//clang:ast",
@@ -718,6 +752,7 @@ cc_test(
     deps = [
         "//clang:ast_matchers",
         "//clang:basic",
+        "//clang:driver",
         "//clang:frontend",
         "//clang:lex",
         "//clang:parse",

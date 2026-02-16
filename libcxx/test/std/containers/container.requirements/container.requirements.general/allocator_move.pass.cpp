@@ -13,6 +13,7 @@
 //   belonging to the container being moved. Such move construction of the
 //   allocator shall not exit via an exception.
 
+#include <cassert>
 #include <vector>
 #include <deque>
 #include <list>

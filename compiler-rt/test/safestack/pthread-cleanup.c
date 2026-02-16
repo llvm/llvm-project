@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 
   if (pthread_create(&t1, NULL, start, NULL))
     abort();
-  if (pthread_join(t1, &t1_buffer))
+  if (pthread_join(t1, (void **)&t1_buffer))
     abort();
 
   // Stack has not yet been deallocated

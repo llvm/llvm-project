@@ -592,6 +592,36 @@ The result value is never zero and always within range for both the
 
 This can be used in constant expressions.
 
+``ptrauth_type_discriminator``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c
+
+  ptrauth_type_discriminator(type)
+
+Compute the constant discriminator derived from the given type, as is computed
+for automatically type diversified schemas.
+
+``type`` must be a type. The result has the type ``ptrauth_extra_data_t``.
+
+This can be used in constant expressions.
+
+``ptrauth_function_pointer_type_discriminator``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: c
+
+  ptrauth_function_pointer_type_discriminator(function_type)
+
+Compute the constant discriminator derived from the provided function type, for
+use in contexts where the default function authentication schema. If function
+pointer type diversity is enabled, this is equivalent to
+`ptrauth_type_discriminator(function_type)`, if it is not enabled this is `0`.
+
+``function_type`` must be a function type. The result has the type ``ptrauth_extra_data_t``.
+
+This can be used in constant expressions.
+
 ``ptrauth_strip``
 ^^^^^^^^^^^^^^^^^
 
@@ -654,7 +684,7 @@ a null pointer that the language implementation would.
 The code sequence produced for this operation must not be directly attackable.
 However, if the discriminator values are not constant integers, their
 computations may still be attackable.  In the future, Clang should be enhanced
-to guaranteed non-attackability if these expressions are
+to guarantee non-attackability if these expressions are
 :ref:`safely-derived<Safe derivation>`.
 
 ``ptrauth_auth_function``
@@ -1542,7 +1572,7 @@ type, they contain an ``isa`` pointer signed as described
 :ref:`below<Objc isa and super>`.
 
 The invocation pointer in a block is signed with the ``IA`` key using address
-diversity and a constant dicriminator of 0.  Using a uniform discriminator is
+diversity and a constant discriminator of 0.  Using a uniform discriminator is
 seen as a weakness to be potentially improved, but this is tricky due to the
 subtype polymorphism directly permitted for blocks.
 
@@ -1621,7 +1651,7 @@ declaration, which can cause type errors if the address of the ivar is taken:
   }
   @end
 
-To fix such an mismatch the schema macro from `<ptrauth.h>`:
+To fix such a mismatch the schema macro from `<ptrauth.h>`:
 
 .. code-block:: ObjC
 
@@ -1630,7 +1660,7 @@ To fix such an mismatch the schema macro from `<ptrauth.h>`:
   void f(SEL __ptrauth_objc_sel*);
 
 or less safely, and introducing the possibility of an
-:ref:`signing or authentication oracle<Signing oracles>`, an unauthencaticated
+:ref:`signing or authentication oracle<Signing oracles>`, an unauthenticated
 temporary may be used as intermediate storage.
 
 Alternative implementations

@@ -109,7 +109,10 @@ void MCObjectStreamer::addSpecialFragment(MCFragment *Frag) {
 void MCObjectStreamer::appendContents(ArrayRef<char> Contents) {
   ensureHeadroom(Contents.size());
   assert(FragSpace >= Contents.size());
-  llvm::copy(Contents, getCurFragEnd());
+  // As this is performance-sensitive code, explicitly use std::memcpy.
+  // Optimization of std::copy to memmove is unreliable.
+  if (!Contents.empty())
+    std::memcpy(getCurFragEnd(), Contents.begin(), Contents.size());
   CurFrag->FixedSize += Contents.size();
   FragSpace -= Contents.size();
 }
@@ -178,15 +181,21 @@ void MCObjectStreamer::reset() {
   MCStreamer::reset();
 }
 
-void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
+void MCObjectStreamer::generateCompactUnwindEncodings() {
+  auto &Backend = getAssembler().getBackend();
+  for (auto &FI : DwarfFrameInfos)
+    FI.CompactUnwindEncoding =
+        Backend.generateCompactUnwindEncoding(&FI, &getContext());
+}
+
+void MCObjectStreamer::emitFrames() {
   if (!getNumFrameInfos())
     return;
 
   if (EmitEHFrame)
-    MCDwarfFrameEmitter::Emit(*this, MAB, true);
-
+    MCDwarfFrameEmitter::emit(*this, true);
   if (EmitDebugFrame)
-    MCDwarfFrameEmitter::Emit(*this, MAB, false);
+    MCDwarfFrameEmitter::emit(*this, false);
 
   if (EmitSFrame || (getContext().getTargetOptions() &&
                      getContext().getTargetOptions()->EmitSFrameUnwind))
@@ -583,6 +592,19 @@ void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
   newFragment();
 }
 
+void MCObjectStreamer::emitSFrameCalculateFuncOffset(const MCSymbol *FuncBase,
+                                                     const MCSymbol *FREBegin,
+                                                     MCFragment *FDEFrag,
+                                                     SMLoc Loc) {
+  assert(FuncBase && "No function base address");
+  assert(FREBegin && "FRE doesn't describe a location");
+  auto *F = getCurrentFragment();
+  F->Kind = MCFragment::FT_SFrame;
+  F->setSFrameAddrDelta(buildSymbolDiff(*this, FREBegin, FuncBase, Loc));
+  F->setSFrameFDE(FDEFrag);
+  newFragment();
+}
+
 void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                           unsigned Line, unsigned Column,
                                           bool PrologueEnd, bool IsStmt,
@@ -662,6 +684,10 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   F->u.align.EmitNops = true;
   F->STI = STI;
+}
+
+void MCObjectStreamer::emitPrefAlign(Align Alignment) {
+  getCurrentSectionOnly()->ensurePreferredAlignment(Alignment);
 }
 
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,

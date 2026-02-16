@@ -15,6 +15,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -85,7 +86,7 @@ TEST(DxcModeTest, TargetProfileValidation) {
                         InMemoryFileSystem, Diags);
   validateTargetProfile("-Tcs_6_8", "dxilv1.8--shadermodel6.8-compute",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tlib_6_x", "dxilv1.8--shadermodel6.15-library",
+  validateTargetProfile("-Tlib_6_x", "dxilv1.9--shadermodel6.15-library",
                         InMemoryFileSystem, Diags);
 
   // Invalid tests.
@@ -131,8 +132,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
       TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None)};
   EXPECT_NE(TranslatedArgs, nullptr);
   if (TranslatedArgs) {
-    auto *A = TranslatedArgs->getLastArg(
-        clang::driver::options::OPT_dxil_validator_version);
+    auto *A =
+        TranslatedArgs->getLastArg(clang::options::OPT_dxil_validator_version);
     EXPECT_NE(A, nullptr);
     if (A) {
       EXPECT_STREQ(A->getValue(), "1.1");

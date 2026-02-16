@@ -30,6 +30,7 @@
 
 .section .text
 .file "hwasan_setjmp_x86_64.S"
+.att_syntax
 
 .global ASM_WRAPPER_NAME(setjmp)
 ASM_TYPE_FUNCTION(ASM_WRAPPER_NAME(setjmp))

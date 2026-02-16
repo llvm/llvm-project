@@ -205,6 +205,15 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
+  /// Check for post-frame ptr elimination stack locations as well.  This uses a
+  /// heuristic so it isn't reliable for correctness.
+  Register isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                    int &FrameIndex) const override;
+  /// Check for post-frame ptr elimination stack locations as well.  This uses a
+  /// heuristic so it isn't reliable for correctness.
+  Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                     int &FrameIndex) const override;
+
   /// Does this instruction set its full destination register to zero?
   static bool isGPRZero(const MachineInstr &MI);
 
@@ -353,14 +362,13 @@ public:
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // This tells target independent code that it is okay to pass instructions
@@ -646,8 +654,10 @@ bool isNZCVTouchedInInstructionRange(const MachineInstr &DefMI,
 MCCFIInstruction createDefCFA(const TargetRegisterInfo &TRI, unsigned FrameReg,
                               unsigned Reg, const StackOffset &Offset,
                               bool LastAdjustmentWasScalable = true);
-MCCFIInstruction createCFAOffset(const TargetRegisterInfo &MRI, unsigned Reg,
-                                 const StackOffset &OffsetFromDefCFA);
+MCCFIInstruction
+createCFAOffset(const TargetRegisterInfo &MRI, unsigned Reg,
+                const StackOffset &OffsetFromDefCFA,
+                std::optional<int64_t> IncomingVGOffsetFromDefCFA);
 
 /// emitFrameOffset - Emit instructions as needed to set DestReg to SrcReg
 /// plus Offset.  This is intended to be used from within the prolog/epilog
@@ -695,6 +705,8 @@ int isAArch64FrameOffsetLegal(const MachineInstr &MI, StackOffset &Offset,
                               unsigned *OutUnscaledOp = nullptr,
                               int64_t *EmittableOffset = nullptr);
 
+bool optimizeTerminators(MachineBasicBlock *MBB, const TargetInstrInfo &TII);
+
 static inline bool isUncondBranchOpcode(int Opc) { return Opc == AArch64::B; }
 
 static inline bool isCondBranchOpcode(int Opc) {
@@ -710,6 +722,8 @@ static inline bool isCondBranchOpcode(int Opc) {
   case AArch64::TBNZX:
   case AArch64::CBWPri:
   case AArch64::CBXPri:
+  case AArch64::CBBAssertExt:
+  case AArch64::CBHAssertExt:
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     return true;
@@ -794,6 +808,27 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
+/// Return B(L)RA opcode to be used for an authenticated branch or call using
+/// the given key, or its B(L)RA*Z variant that doesn't take a discriminator
+/// operand, using zero instead.
+static inline unsigned getBranchOpcodeForKey(bool IsCall, AArch64PACKey::ID K,
+                                             bool Zero) {
+  using namespace AArch64PACKey;
+  static const unsigned BranchOpcode[2][2] = {
+      {AArch64::BRAA, AArch64::BRAAZ},
+      {AArch64::BRAB, AArch64::BRABZ},
+  };
+  static const unsigned CallOpcode[2][2] = {
+      {AArch64::BLRAA, AArch64::BLRAAZ},
+      {AArch64::BLRAB, AArch64::BLRABZ},
+  };
+
+  assert((K == IA || K == IB) && "B(L)RA* instructions require IA or IB key");
+  if (IsCall)
+    return CallOpcode[K == IB][Zero];
+  return BranchOpcode[K == IB][Zero];
+}
+
 // struct TSFlags {
 #define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)        // 3-bits
 #define TSFLAG_DESTRUCTIVE_INST_TYPE(X) ((X) << 3)  // 4-bits
@@ -855,11 +890,11 @@ enum SMEMatrixType {
 #undef TSFLAG_INSTR_FLAGS
 #undef TSFLAG_SME_MATRIX_TYPE
 
-int getSVEPseudoMap(uint16_t Opcode);
-int getSVERevInstr(uint16_t Opcode);
-int getSVENonRevInstr(uint16_t Opcode);
+int64_t getSVEPseudoMap(uint32_t Opcode);
+int64_t getSVERevInstr(uint32_t Opcode);
+int64_t getSVENonRevInstr(uint32_t Opcode);
 
-int getSMEPseudoMap(uint16_t Opcode);
+int64_t getSMEPseudoMap(uint32_t Opcode);
 }
 
 } // end namespace llvm

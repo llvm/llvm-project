@@ -1,4 +1,4 @@
-//===--- OverloadedOperatorCheck.cpp - clang-tidy--------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,7 +34,7 @@ void OverloadedOperatorCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *D = Result.Nodes.getNodeAs<FunctionDecl>("decl");
   assert(D && "No FunctionDecl captured!");
 
-  SourceLocation Loc = D->getBeginLoc();
+  const SourceLocation Loc = D->getBeginLoc();
   if (Loc.isValid())
     diag(Loc, "overloading %0 is disallowed") << D;
 }

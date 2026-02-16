@@ -23,6 +23,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Dialect/Func/IR/FuncOpsDialect.cpp.inc"
 
@@ -221,10 +222,10 @@ void FuncOp::cloneInto(FuncOp dest, IRMapping &mapper) {
   for (const auto &attr : (*this)->getAttrs())
     newAttrMap.insert({attr.getName(), attr.getValue()});
 
-  auto newAttrs = llvm::to_vector(llvm::map_range(
+  auto newAttrs = llvm::map_to_vector(
       newAttrMap, [](std::pair<StringAttr, Attribute> attrPair) {
         return NamedAttribute(attrPair.first, attrPair.second);
-      }));
+      });
   dest->setAttrs(DictionaryAttr::get(getContext(), newAttrs));
 
   // Clone the body.

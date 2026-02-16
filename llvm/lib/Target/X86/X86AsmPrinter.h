@@ -36,6 +36,7 @@ private:
   bool ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags = false;
   bool IndCSPrefix = false;
   bool EnableImportCallOptimization = false;
+  bool SplitChainedAtEndOfBlock = false;
 
   enum ImportCallKind : unsigned {
     IMAGE_RETPOLINE_AMD64_IMPORT_BR = 0x02,
@@ -171,6 +172,10 @@ public:
   void emitEndOfAsmFile(Module &M) override;
 
   void emitInstruction(const MachineInstr *MI) override;
+
+  void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
+                        const MCSubtargetInfo *EndInfo,
+                        const MachineInstr *MI) override;
 
   void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
 

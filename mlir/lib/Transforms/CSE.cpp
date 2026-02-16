@@ -177,11 +177,10 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
 bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
                                                  Operation *toOp) {
   assert(fromOp->getBlock() == toOp->getBlock());
-  assert(
-      isa<MemoryEffectOpInterface>(fromOp) &&
-      cast<MemoryEffectOpInterface>(fromOp).hasEffect<MemoryEffects::Read>() &&
-      isa<MemoryEffectOpInterface>(toOp) &&
-      cast<MemoryEffectOpInterface>(toOp).hasEffect<MemoryEffects::Read>());
+  assert(hasEffect<MemoryEffects::Read>(fromOp) &&
+         "expected read effect on fromOp");
+  assert(hasEffect<MemoryEffects::Read>(toOp) &&
+         "expected read effect on toOp");
   Operation *nextOp = fromOp->getNextNode();
   auto result =
       memEffectsCache.try_emplace(fromOp, std::make_pair(fromOp, nullptr));
@@ -245,11 +244,10 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   // Some simple use case of operation with memory side-effect are dealt with
   // here. Operations with no side-effect are done after.
   if (!isMemoryEffectFree(op)) {
-    auto memEffects = dyn_cast<MemoryEffectOpInterface>(op);
     // TODO: Only basic use case for operations with MemoryEffects::Read can be
     // eleminated now. More work needs to be done for more complicated patterns
     // and other side-effects.
-    if (!memEffects || !memEffects.onlyHasEffect<MemoryEffects::Read>())
+    if (!hasSingleEffect<MemoryEffects::Read>(op))
       return failure();
 
     // Look for an existing definition for the operation.

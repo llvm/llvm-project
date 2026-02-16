@@ -8,7 +8,7 @@
 
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
-#include "clang/Driver/Driver.h"
+#include "clang/Options/OptionUtils.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
 #include "TestingSupport/SubsystemRAII.h"
@@ -43,7 +43,7 @@ TEST_F(ClangHostTest, ComputeClangResourceDirectory) {
   std::string path_to_liblldb = "C:\\foo\\bar\\lib\\";
 #endif
   std::string path_to_clang_dir =
-      clang::driver::Driver::GetResourcesPath(path_to_liblldb + "liblldb");
+      clang::GetResourcesPath(path_to_liblldb + "liblldb");
   llvm::SmallString<256> path_to_clang_lib_dir_real;
   llvm::sys::fs::real_path(path_to_clang_dir, path_to_clang_lib_dir_real);
 

@@ -36,13 +36,17 @@ def FIRvolatile     : I32BitEnumAttrCaseBit<"fortran_volatile", 12, "volatile">;
 def FIRHostAssoc    : I32BitEnumAttrCaseBit<"host_assoc", 13>;
 // Used inside parent procedure to flag variables host associated in internal procedure.
 def FIRInternalAssoc    : I32BitEnumAttrCaseBit<"internal_assoc", 14>;
+// Used by alias analysis
+def FIRcray_pointer : I32BitEnumAttrCaseBit<"cray_pointer", 15>;
+def FIRcray_pointee : I32BitEnumAttrCaseBit<"cray_pointee", 16>;
 
 def fir_FortranVariableFlagsEnum : I32BitEnumAttr<
     "FortranVariableFlagsEnum",
     "Fortran variable attributes",
     [FIRnoAttributes, FIRallocatable, FIRasynchronous, FIRbind_c, FIRcontiguous,
      FIRintent_in, FIRintent_inout, FIRintent_out, FIRoptional, FIRparameter,
-     FIRpointer, FIRtarget, FIRvalue, FIRvolatile, FIRHostAssoc, FIRInternalAssoc]> {
+     FIRpointer, FIRtarget, FIRvalue, FIRvolatile, FIRHostAssoc, FIRInternalAssoc,
+     FIRcray_pointer, FIRcray_pointee]> {
   let separator = ", ";
   let cppNamespace = "::fir";
   let printBitEnumPrimaryGroups = 1;
@@ -217,6 +221,43 @@ def LocalitySpecifierType : I32EnumAttr<
 def LocalitySpecifierTypeAttr : EnumAttr<FIROpsDialect, LocalitySpecifierType,
                                                 "locality_specifier_type"> {
   let assemblyFormat = "`{` `type` `=` $value `}`";
+}
+
+/// Fortran inline attribute
+def FIRinlineNone : I32BitEnumAttrCaseNone<"none">;
+def FIRinlineNo : I32BitEnumAttrCaseBit<"no_inline", 0>;
+def FIRinlineAlways : I32BitEnumAttrCaseBit<"always_inline", 1>;
+def FIRinlineHint : I32BitEnumAttrCaseBit<"inline_hint", 2>;
+
+def fir_FortranInlineEnum
+    : I32BitEnumAttr<"FortranInlineEnum", "Fortran inline attributes",
+                     [FIRinlineNone, FIRinlineNo, FIRinlineAlways,
+                      FIRinlineHint]> {
+  let separator = ", ";
+  let cppNamespace = "::fir";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def fir_FortranInlineAttr
+    : EnumAttr<FIROpsDialect, fir_FortranInlineEnum, "inline_attrs"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+// USE statement rename mapping: local_name => use_name
+def fir_UseRenameAttr : fir_Attr<"UseRename"> {
+  let mnemonic = "use_rename";
+  let summary = "Represents a rename in a Fortran USE statement";
+  let description = [{
+    This attribute stores the mapping for a renamed symbol in a USE statement.
+    For example, in "USE mod, local_var => module_var", this stores the
+    local name and a symbol reference to the module variable.
+  }];
+
+  let parameters = (ins "mlir::StringAttr":$local_name,
+      "mlir::FlatSymbolRefAttr":$symbol);
+
+  let assemblyFormat = "`<` $local_name `,` $symbol `>`";
 }
 
 #endif // FIR_DIALECT_FIR_ATTRS

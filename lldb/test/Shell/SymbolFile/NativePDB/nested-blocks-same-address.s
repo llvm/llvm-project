@@ -30,6 +30,7 @@
 # CHECK-NEXT:            id = {{.*}}, range = [0x140001025-0x140001046)
 # CHECK-NEXT:            id = {{.*}}, range = [0x140001025-0x140001046)
 # CHECK-NEXT: LineEntry: [0x0000000140001035-0x0000000140001046): /tmp/test.cpp:10
+# CHECK-NEXT:    Symbol: id = {{.*}}, range = [0x0000000140001020-0x000000014000104d), name="main"
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "path", type = "volatile char[10]", valid ranges = <block>, location = [0x0000000140001025, 0x0000000140001046) -> DW_OP_breg7 RSP+40, decl =
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "kMfDLL", type = "const char *", valid ranges = <block>, location = [0x000000014000103c, 0x0000000140001046) -> DW_OP_reg2 RCX, decl =
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "__range1", type = "const char *const (&)[1]", valid ranges = <block>, location = <empty>, decl =

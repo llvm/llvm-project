@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Lex/Preprocessor.h"
@@ -90,7 +91,8 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
 
   // Build the template-id.
   QualType CoroTrait = S.CheckTemplateIdType(
-      ElaboratedTypeKeyword::None, TemplateName(CoroTraits), KwLoc, Args);
+      ElaboratedTypeKeyword::None, TemplateName(CoroTraits), KwLoc, Args,
+      /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
   if (CoroTrait.isNull())
     return QualType();
   if (S.RequireCompleteType(KwLoc, CoroTrait,
@@ -163,7 +165,8 @@ static QualType lookupCoroutineHandleType(Sema &S, QualType PromiseType,
 
   // Build the template-id.
   QualType CoroHandleType = S.CheckTemplateIdType(
-      ElaboratedTypeKeyword::None, TemplateName(CoroHandle), Loc, Args);
+      ElaboratedTypeKeyword::None, TemplateName(CoroHandle), Loc, Args,
+      /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
   if (CoroHandleType.isNull())
     return QualType();
   if (S.RequireCompleteType(Loc, CoroHandleType,
@@ -638,10 +641,9 @@ static void checkNoThrow(Sema &S, const Stmt *E,
         QualType::DestructionKind::DK_cxx_destructor) {
       const auto *T =
           cast<RecordType>(ReturnType.getCanonicalType().getTypePtr());
-      checkDeclNoexcept(cast<CXXRecordDecl>(T->getOriginalDecl())
-                            ->getDefinition()
-                            ->getDestructor(),
-                        /*IsDtor=*/true);
+      checkDeclNoexcept(
+          cast<CXXRecordDecl>(T->getDecl())->getDefinition()->getDestructor(),
+          /*IsDtor=*/true);
     }
   } else
     for (const auto *Child : E->children()) {
@@ -840,7 +842,11 @@ static bool isAttributedCoroAwaitElidable(const QualType &QT) {
 }
 
 static void applySafeElideContext(Expr *Operand) {
-  auto *Call = dyn_cast<CallExpr>(Operand->IgnoreImplicit());
+  // Strip both implicit nodes and parentheses to find the underlying CallExpr.
+  // The AST may have these in either order, so we apply both transformations
+  // iteratively until reaching a fixed point.
+  auto *Call = dyn_cast<CallExpr>(IgnoreExprNodes(
+      Operand, IgnoreImplicitSingleStep, IgnoreParensSingleStep));
   if (!Call || !Call->isPRValue())
     return;
 

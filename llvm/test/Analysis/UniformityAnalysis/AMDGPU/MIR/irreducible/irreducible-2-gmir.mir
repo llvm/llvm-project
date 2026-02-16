@@ -7,7 +7,7 @@
 #              |
 #             bb3
 # CHECK-LABEL: MachineUniformityInfo for function:  @cycle_diverge_enter
-# CHECK-NEXT: CYCLES ASSSUMED DIVERGENT:
+# CHECK-NEXT: CYCLES ASSUMED DIVERGENT:
 # CHECK-NEXT: depth=1: entries(bb.2 bb.1)
 # CHECK-NEXT: CYCLES WITH DIVERGENT EXIT:
 # CHECK-NEXT: depth=1: entries(bb.2 bb.1)

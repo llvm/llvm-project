@@ -95,7 +95,7 @@ constexpr bool test_all() {
   test<std::string>();
   test<const std::string>();
 
-  // Regression test for https://github.com/llvm/llvm-project/issues/104496
+  // Regression test for https://llvm.org/PR104496
   {
     struct Incomplete;
     std::span<Incomplete> x;

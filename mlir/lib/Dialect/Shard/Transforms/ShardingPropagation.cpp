@@ -128,13 +128,13 @@ getOrderedPossibleShardingAttrs(ArrayRef<Sharding> mustShardings,
       curShardingAttrs.push_back(optionalShardings[i]);
       dfsCreateShardingAttrs(i + 1);
       curShardingAttrs.pop_back();
-      curShardingAttrs.push_back({});
+      curShardingAttrs.emplace_back();
       dfsCreateShardingAttrs(i + 1);
       curShardingAttrs.pop_back();
       return;
     }
 
-    curShardingAttrs.push_back({});
+    curShardingAttrs.emplace_back();
     dfsCreateShardingAttrs(i + 1);
     curShardingAttrs.pop_back();
   };
@@ -184,7 +184,7 @@ ReshardingRquirementKind getReshardingRquirementKind(
 
   for (auto [result, sharding] :
        llvm::zip_equal(op->getResults(), resultShardings)) {
-    for (auto user : result.getUsers()) {
+    for (auto *user : result.getUsers()) {
       ShardOp shardOp = llvm::dyn_cast<ShardOp>(user);
       if (!shardOp) {
         continue;

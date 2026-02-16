@@ -71,6 +71,10 @@ static constexpr inline bool isPrivatizingClause(Clause C) {
 static constexpr unsigned FallbackVersion = 52;
 LLVM_ABI ArrayRef<unsigned> getOpenMPVersions();
 
+/// Can directive D, under some circumstances, create a private copy
+/// of a variable in given OpenMP version?
+bool isPrivatizingConstruct(Directive D, unsigned Version);
+
 /// Create a nicer version of a function name for humans to look at.
 LLVM_ABI std::string prettifyFunctionName(StringRef FunctionName);
 

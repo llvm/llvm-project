@@ -81,8 +81,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare i64 @llvm.vscale.i64()
-
 define void @sink_splat_add_scalable(ptr nocapture %a, i32 signext %x) {
 ; NO-SINK-LABEL: sink_splat_add_scalable:
 ; NO-SINK:       # %bb.0: # %entry
@@ -260,8 +258,6 @@ for.body:                                         ; preds = %for.body.preheader,
   %cmp.not = icmp eq i64 %indvars.iv.next, 1024
   br i1 %cmp.not, label %for.cond.cleanup, label %for.body
 }
-
-declare <4 x i32> @llvm.vp.add.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 
 define void @sink_splat_vp_add(ptr nocapture %a, i32 signext %x, <4 x i1> %m, i32 zeroext %vl) {
 ; NO-SINK-LABEL: sink_splat_vp_add:
@@ -577,8 +573,6 @@ for.body:                                         ; preds = %for.body.preheader,
   %cmp.not = icmp eq i64 %indvars.iv.next, 1024
   br i1 %cmp.not, label %for.cond.cleanup, label %for.body
 }
-
-declare <4 x float> @llvm.vp.fadd.v4i32(<4 x float>, <4 x float>, <4 x i1>, i32)
 
 define void @sink_splat_vp_fadd(ptr nocapture %a, float %x, <4 x i1> %m, i32 zeroext %vl) {
 ; NO-SINK-LABEL: sink_splat_vp_fadd:

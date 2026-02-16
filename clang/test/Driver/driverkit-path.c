@@ -26,6 +26,10 @@ int main() { return 0; }
 
 // RUN: %clang %s -target x86_64-apple-driverkit19.0 -isysroot %S/Inputs/DriverKit19.0.sdk -x c++ -### 2>&1 \
 // RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit19.0.sdk --check-prefix=INC
+// RUN: %clang %s -target x86_64-apple-driverkit21.0.1 -isysroot %S/Inputs/DriverKit21.0.1.sdk -x c++ -### 2>&1 \
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit21.0.1.sdk --check-prefix=INC
+// RUN: %clang %s -target x86_64-apple-driverkit23.0 -isysroot %S/Inputs/DriverKit23.0.sdk -x c++ -### 2>&1 \
+// RUN: | FileCheck %s -DSDKROOT=%S/Inputs/DriverKit23.0.sdk --check-prefix=INC
 //
 // INC: "-isysroot" "[[SDKROOT]]"
 // INC: "-internal-isystem" "[[SDKROOT]]/System/DriverKit/usr/local/include"

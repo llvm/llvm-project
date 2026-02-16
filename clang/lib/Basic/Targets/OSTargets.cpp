@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OSTargets.h"
+#include "AArch64.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "llvm/ADT/StringRef.h"
 

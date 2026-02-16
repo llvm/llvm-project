@@ -84,24 +84,26 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
     break;
   }
 
-  StringRef NameRef;
+  StringRef Name = DIE.getShortName();
+  StringRef NameForUniquing;
   StringRef FileRef;
 
   if (const char *LinkageName = DIE.getLinkageName())
-    NameRef = StringPool.internString(LinkageName);
-  else if (const char *ShortName = DIE.getShortName())
-    NameRef = StringPool.internString(ShortName);
+    NameForUniquing = StringPool.internString(LinkageName);
+  else if (!Name.empty())
+    NameForUniquing = StringPool.internString(Name);
 
-  bool IsAnonymousNamespace = NameRef.empty() && Tag == dwarf::DW_TAG_namespace;
+  bool IsAnonymousNamespace =
+      NameForUniquing.empty() && Tag == dwarf::DW_TAG_namespace;
   if (IsAnonymousNamespace) {
     // FIXME: For dsymutil-classic compatibility. I think uniquing within
     // anonymous namespaces is wrong. There is no ODR guarantee there.
-    NameRef = "(anonymous namespace)";
+    NameForUniquing = "(anonymous namespace)";
   }
 
   if (Tag != dwarf::DW_TAG_class_type && Tag != dwarf::DW_TAG_structure_type &&
       Tag != dwarf::DW_TAG_union_type &&
-      Tag != dwarf::DW_TAG_enumeration_type && NameRef.empty())
+      Tag != dwarf::DW_TAG_enumeration_type && NameForUniquing.empty())
     return PointerIntPair<DeclContext *, 1>(nullptr);
 
   unsigned Line = 0;
@@ -140,10 +142,10 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
     }
   }
 
-  if (!Line && NameRef.empty())
+  if (!Line && NameForUniquing.empty())
     return PointerIntPair<DeclContext *, 1>(nullptr);
 
-  // We hash NameRef, which is the mangled name, in order to get most
+  // We hash NameForUniquing, which is the mangled name, in order to get most
   // overloaded functions resolve correctly.
   //
   // Strictly speaking, hashing the Tag is only necessary for a
@@ -153,7 +155,8 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
   // FIXME: dsymutil-classic won't unique the same type presented
   // once as a struct and once as a class. Using the Tag in the fully
   // qualified name hash to get the same effect.
-  unsigned Hash = hash_combine(Context.getQualifiedNameHash(), Tag, NameRef);
+  unsigned Hash =
+      hash_combine(Context.getQualifiedNameHash(), Tag, NameForUniquing);
 
   // FIXME: dsymutil-classic compatibility: when we don't have a name,
   // use the filename.
@@ -161,15 +164,16 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
     Hash = hash_combine(Hash, FileRef);
 
   // Now look if this context already exists.
-  DeclContext Key(Hash, Line, ByteSize, Tag, NameRef, FileRef, Context);
+  DeclContext Key(Hash, Line, ByteSize, Tag, Name, NameForUniquing, FileRef,
+                  Context);
   auto ContextIter = Contexts.find(&Key);
 
   if (ContextIter == Contexts.end()) {
     // The context wasn't found.
     bool Inserted;
-    DeclContext *NewContext =
-        new (Allocator) DeclContext(Hash, Line, ByteSize, Tag, NameRef, FileRef,
-                                    Context, DIE, U.getUniqueID());
+    DeclContext *NewContext = new (Allocator)
+        DeclContext(Hash, Line, ByteSize, Tag, Name, NameForUniquing, FileRef,
+                    Context, DIE, U.getUniqueID());
     std::tie(ContextIter, Inserted) = Contexts.insert(NewContext);
     assert(Inserted && "Failed to insert DeclContext");
     (void)Inserted;

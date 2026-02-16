@@ -68,21 +68,19 @@ void ObjectContainerBSDArchive::Object::Dump() const {
 ObjectContainerBSDArchive::Archive::Archive(const lldb_private::ArchSpec &arch,
                                             const llvm::sys::TimePoint<> &time,
                                             lldb::offset_t file_offset,
-                                            lldb_private::DataExtractor &data,
+                                            lldb::DataExtractorSP extractor_sp,
                                             ArchiveType archive_type)
     : m_arch(arch), m_modification_time(time), m_file_offset(file_offset),
-      m_objects(), m_data(data), m_archive_type(archive_type) {}
+      m_objects(), m_extractor_sp(extractor_sp), m_archive_type(archive_type) {}
 
 Log *l = GetLog(LLDBLog::Object);
 ObjectContainerBSDArchive::Archive::~Archive() = default;
 
 size_t ObjectContainerBSDArchive::Archive::ParseObjects() {
-  DataExtractor &data = m_data;
-
   std::unique_ptr<llvm::MemoryBuffer> mem_buffer =
       llvm::MemoryBuffer::getMemBuffer(
-          llvm::StringRef((const char *)data.GetDataStart(),
-                          data.GetByteSize()),
+          llvm::StringRef((const char *)m_extractor_sp->GetDataStart(),
+                          m_extractor_sp->GetByteSize()),
           llvm::StringRef(),
           /*RequiresNullTerminator=*/false);
 
@@ -221,9 +219,9 @@ ObjectContainerBSDArchive::Archive::shared_ptr
 ObjectContainerBSDArchive::Archive::ParseAndCacheArchiveForFile(
     const FileSpec &file, const ArchSpec &arch,
     const llvm::sys::TimePoint<> &time, lldb::offset_t file_offset,
-    DataExtractor &data, ArchiveType archive_type) {
+    DataExtractorSP extractor_sp, ArchiveType archive_type) {
   shared_ptr archive_sp(
-      new Archive(arch, time, file_offset, data, archive_type));
+      new Archive(arch, time, file_offset, extractor_sp, archive_type));
   if (archive_sp) {
     const size_t num_objects = archive_sp->ParseObjects();
     if (num_objects > 0) {
@@ -368,16 +366,17 @@ ObjectContainerBSDArchive::~ObjectContainerBSDArchive() = default;
 
 bool ObjectContainerBSDArchive::ParseHeader() {
   if (m_archive_sp.get() == nullptr) {
-    if (m_data.GetByteSize() > 0) {
+    if (m_extractor_sp->GetByteSize() > 0) {
       ModuleSP module_sp(GetModule());
       if (module_sp) {
         m_archive_sp = Archive::ParseAndCacheArchiveForFile(
             m_file, module_sp->GetArchitecture(),
-            module_sp->GetModificationTime(), m_offset, m_data, m_archive_type);
+            module_sp->GetModificationTime(), m_offset, m_extractor_sp,
+            m_archive_type);
       }
-      // Clear the m_data that contains the entire archive data and let our
-      // m_archive_sp hold onto the data.
-      m_data.Clear();
+      // Clear the m_extractor_sp that contains the entire archive data and let
+      // our m_archive_sp hold onto the data.
+      m_extractor_sp = std::make_shared<DataExtractor>();
     }
   }
   return m_archive_sp.get() != nullptr;
@@ -416,14 +415,18 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
               child_data_sp->GetByteSize() != object->file_size)
             return ObjectFileSP();
           lldb::offset_t data_offset = 0;
-          return ObjectFile::FindPlugin(
+          DataExtractorSP extractor_sp =
+              std::make_shared<DataExtractor>(child_data_sp);
+          return lldb_private::ObjectFile::FindPlugin(
               module_sp, &child, m_offset + object->file_offset,
-              object->file_size, child_data_sp, data_offset);
+              object->file_size, extractor_sp, data_offset);
         }
         lldb::offset_t data_offset = object->file_offset;
-        return ObjectFile::FindPlugin(
+        DataExtractorSP extractor_sp =
+            std::make_shared<DataExtractor>(m_archive_sp->GetData());
+        return lldb_private::ObjectFile::FindPlugin(
             module_sp, file, m_offset + object->file_offset, object->file_size,
-            m_archive_sp->GetData().GetSharedDataBuffer(), data_offset);
+            extractor_sp, data_offset);
       }
     }
   }
@@ -431,17 +434,21 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
 }
 
 size_t ObjectContainerBSDArchive::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
 
+  if (!file || !extractor_sp)
+    return 0;
+
+  DataExtractorSP data_extractor_sp =
+      extractor_sp->GetSubsetExtractorSP(data_offset);
   // We have data, which means this is the first 512 bytes of the file Check to
   // see if the magic bytes match and if they do, read the entire table of
   // contents for the archive and cache it
-  DataExtractor data;
-  data.SetData(data_sp, data_offset, data_sp->GetByteSize());
-  ArchiveType archive_type = ObjectContainerBSDArchive::MagicBytesMatch(data);
-  if (!file || !data_sp || archive_type == ArchiveType::Invalid)
+  ArchiveType archive_type =
+      ObjectContainerBSDArchive::MagicBytesMatch(*data_extractor_sp.get());
+  if (archive_type == ArchiveType::Invalid)
     return 0;
 
   const size_t initial_count = specs.GetSize();
@@ -452,12 +459,13 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
   bool set_archive_arch = false;
   if (!archive_sp) {
     set_archive_arch = true;
-    data_sp =
+    DataBufferSP data_sp =
         FileSystem::Instance().CreateDataBuffer(file, file_size, file_offset);
     if (data_sp) {
-      data.SetData(data_sp, 0, data_sp->GetByteSize());
+      extractor_sp->SetData(data_sp);
       archive_sp = Archive::ParseAndCacheArchiveForFile(
-          file, ArchSpec(), file_mod_time, file_offset, data, archive_type);
+          file, ArchSpec(), file_mod_time, file_offset, extractor_sp,
+          archive_type);
     }
   }
 
@@ -471,8 +479,8 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
             continue;
           FileSpec child = GetChildFileSpecificationsFromThin(
               object->ar_name.GetStringRef(), file);
-          if (ObjectFile::GetModuleSpecifications(child, 0, object->file_size,
-                                                  specs)) {
+          if (lldb_private::ObjectFile::GetModuleSpecifications(
+                  child, 0, object->file_size, specs)) {
             ModuleSpec &spec =
                 specs.GetModuleSpecRefAtIndex(specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
@@ -487,7 +495,7 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
         const lldb::offset_t object_file_offset =
             file_offset + object->file_offset;
         if (object->file_offset < file_size && file_size > object_file_offset) {
-          if (ObjectFile::GetModuleSpecifications(
+          if (lldb_private::ObjectFile::GetModuleSpecifications(
                   file, object_file_offset, file_size - object_file_offset,
                   specs)) {
             ModuleSpec &spec =

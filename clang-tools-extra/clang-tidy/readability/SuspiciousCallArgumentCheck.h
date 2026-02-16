@@ -1,4 +1,4 @@
-//===--- SuspiciousCallArgumentCheck.h - clang-tidy -------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ namespace clang::tidy::readability {
 /// of the function.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/suspicious-call-argument.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/suspicious-call-argument.html
 class SuspiciousCallArgumentCheck : public ClangTidyCheck {
   enum class Heuristic {
     Equality,

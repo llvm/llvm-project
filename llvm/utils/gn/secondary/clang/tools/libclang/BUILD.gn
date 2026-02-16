@@ -86,8 +86,8 @@ shared_library("libclang") {
     "FatalErrorHandler.cpp",
     "Index_Internal.h",
     "Indexing.cpp",
-    "Rewrite.cpp",
     "Obsolete.cpp",
+    "Rewrite.cpp",
   ]
   if (host_os == "mac") {
     ldflags = [

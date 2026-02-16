@@ -1,14 +1,16 @@
 ! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=50 %s | FileCheck %s
 program main
 !CHECK-LABEL:  MainProgram scope: MAIN
+  type ty
+    real(4) :: x
+  end type ty
+  !$omp declare mapper(xx : ty :: v) map(v)
   integer, parameter :: n = 256
-  real(8) :: a(256)
+  type(ty) :: a(256)
   !$omp target map(mapper(xx), from:a)
   do i=1,n
-     a(i) = 4.2
+     a(i)%x = 4.2
   end do
   !$omp end target
-!CHECK:    OtherConstruct scope: size=0 alignment=1 sourceRange=74 bytes
-!CHECK:    OtherClause scope: size=0 alignment=1 sourceRange=0 bytes
-!CHECK:    xx: Misc ConstructName
+!CHECK:    xx: MapperDetails
 end program main

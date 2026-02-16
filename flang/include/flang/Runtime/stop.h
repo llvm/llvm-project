@@ -28,9 +28,15 @@ void RTNAME(PauseStatementText)(const char *, size_t);
 NORETURN void RTNAME(FailImageStatement)(NO_ARGUMENTS);
 NORETURN void RTNAME(ProgramEndStatement)(NO_ARGUMENTS);
 
+void RTNAME(RegisterImagesNormalEndCallback)(void (*)(int));
+void RTNAME(RegisterImagesErrorCallback)(void (*)(int));
+void RTNAME(RegisterFailImageCallback)(void (*)(void));
+
 // Extensions
 NORETURN void RTNAME(Exit)(int status DEFAULT_VALUE(EXIT_SUCCESS));
+RT_OFFLOAD_API_GROUP_BEGIN
 NORETURN void RTNAME(Abort)(NO_ARGUMENTS);
+RT_OFFLOAD_API_GROUP_END
 void FORTRAN_PROCEDURE_NAME(backtrace)(NO_ARGUMENTS);
 
 // Crash with an error message when the program dynamically violates a Fortran

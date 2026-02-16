@@ -22,8 +22,11 @@ endif()
 add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces PLUGIN
   OperatingSystemPythonInterface.cpp
   ScriptInterpreterPythonInterfaces.cpp
+  ScriptedFramePythonInterface.cpp
+  ScriptedFrameProviderPythonInterface.cpp
   ScriptedPlatformPythonInterface.cpp
   ScriptedProcessPythonInterface.cpp
+  ScriptedSymbolLocatorPythonInterface.cpp
   ScriptedPythonInterface.cpp
   ScriptedStopHookPythonInterface.cpp
   ScriptedBreakpointPythonInterface.cpp
@@ -40,5 +43,3 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces PLUGIN
     ${Python3_LIBRARIES}
     ${LLDB_LIBEDIT_LIBS}
   )
-
-

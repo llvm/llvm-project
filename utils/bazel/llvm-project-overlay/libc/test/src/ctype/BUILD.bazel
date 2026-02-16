@@ -1,0 +1,147 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc ctype.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "isalnum_test",
+    srcs = ["isalnum_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc:isalnum",
+    ],
+)
+
+libc_test(
+    name = "islpha_test",
+    srcs = ["isalpha_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc:isalpha",
+    ],
+)
+
+libc_test(
+    name = "isascii_test",
+    srcs = ["isascii_test.cpp"],
+    deps = [
+        "//libc:isascii",
+    ],
+)
+
+libc_test(
+    name = "isblank_test",
+    srcs = ["isblank_test.cpp"],
+    deps = [
+        "//libc:isblank",
+    ],
+)
+
+libc_test(
+    name = "iscntrl_test",
+    srcs = ["iscntrl_test.cpp"],
+    deps = [
+        "//libc:iscntrl",
+    ],
+)
+
+libc_test(
+    name = "isdigit_test",
+    srcs = ["isdigit_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc:isdigit",
+    ],
+)
+
+libc_test(
+    name = "isgraph_test",
+    srcs = ["isgraph_test.cpp"],
+    deps = [
+        "//libc:isgraph",
+    ],
+)
+
+libc_test(
+    name = "islower_test",
+    srcs = ["islower_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc:islower",
+    ],
+)
+
+libc_test(
+    name = "isprint_test",
+    srcs = ["isprint_test.cpp"],
+    deps = [
+        "//libc:isprint",
+    ],
+)
+
+libc_test(
+    name = "ispunct_test",
+    srcs = ["ispunct_test.cpp"],
+    deps = [
+        "//libc:ispunct",
+    ],
+)
+
+libc_test(
+    name = "isspace_test",
+    srcs = ["isspace_test.cpp"],
+    deps = [
+        "//libc:isspace",
+    ],
+)
+
+libc_test(
+    name = "isupper_test",
+    srcs = ["isupper_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc:isupper",
+    ],
+)
+
+libc_test(
+    name = "isxdigit_test",
+    srcs = ["isxdigit_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc:isxdigit",
+    ],
+)
+
+libc_test(
+    name = "toascii_test",
+    srcs = ["toascii_test.cpp"],
+    deps = [
+        "//libc:toascii",
+    ],
+)
+
+libc_test(
+    name = "tolower_test",
+    srcs = ["tolower_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc:tolower",
+    ],
+)
+
+libc_test(
+    name = "toupper_test",
+    srcs = ["toupper_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_span",
+        "//libc:toupper",
+    ],
+)

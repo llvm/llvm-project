@@ -136,7 +136,7 @@ subroutine vec_sel_testu8(arg1, arg2, arg3)
   vector(unsigned(8)) :: arg1, arg2, r
   vector(unsigned(8)) :: arg3
   r = vec_sel(arg1, arg2, arg3)
-  
+
 
 ! LLVMIR: %[[arg1:.*]] = load <2 x i64>, ptr %{{.*}}, align 16
 ! LLVMIR: %[[arg2:.*]] = load <2 x i64>, ptr %{{.*}}, align 16

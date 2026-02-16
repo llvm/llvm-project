@@ -23,7 +23,6 @@
 #include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -52,7 +51,6 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <utility>
 #include <vector>
 
 using namespace llvm;

@@ -185,12 +185,12 @@ define double @test7(double %a, double %b) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    fmov d2, #-2.00000000
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-NEXT:    fmul d1, d1, d2
 ; CHECK-NEXT:    fadd d8, d0, d1
 ; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
 ; CHECK-NEXT:    fmov d0, d8
 ; CHECK-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -497,29 +497,17 @@ declare void @use(double)
 
 
 define float @faddvf32_zero_nsz(float %a) {
-; CHECK-SD-LABEL: faddvf32_zero_nsz:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: faddvf32_zero_nsz:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
-; CHECK-GI-NEXT:    fadd s0, s0, s1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: faddvf32_zero_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
   %b = fadd nsz float %a, 0.0
   ret float %b
 }
 
 define <2 x double> @faddv2f64_zero_nsz(<2 x double> %a) {
-; CHECK-SD-LABEL: faddv2f64_zero_nsz:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: faddv2f64_zero_nsz:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-GI-NEXT:    fadd v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: faddv2f64_zero_nsz:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
   %b = fadd nsz  <2 x double> %a, zeroinitializer
   ret <2 x double> %b
 }

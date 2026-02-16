@@ -195,13 +195,13 @@
 ##      - ULEB-encoded value: 0x01
 
 # LLVM-OK:      Memtag Global Descriptors: [
-# LLVM-OK-NEXT:    0xDEAD0000: 0x10
-# LLVM-OK-NEXT:    0xDEAD0010: 0x20
-# LLVM-OK-NEXT:    0xDEAD0100: 0x40
-# LLVM-OK-NEXT:    0xDEADF000: 0x1000
-# LLVM-OK-NEXT:    0xDEAE0000: 0x10
-# LLVM-OK-NEXT:    0xDEAE0010: 0x10
-# LLVM-OK-NEXT:    0xDEAE0020: 0x10
+# LLVM-OK-NEXT:    0xdead0000: 0x10
+# LLVM-OK-NEXT:    0xdead0010: 0x20
+# LLVM-OK-NEXT:    0xdead0100: 0x40
+# LLVM-OK-NEXT:    0xdeadf000: 0x1000
+# LLVM-OK-NEXT:    0xdeae0000: 0x10
+# LLVM-OK-NEXT:    0xdeae0010: 0x10
+# LLVM-OK-NEXT:    0xdeae0020: 0x10
 # LLVM-OK-NEXT: ]
 # GNU-OK:       Memtag Global Descriptors:
 # GNU-OK-NEXT:     0xdead0000: 0x10

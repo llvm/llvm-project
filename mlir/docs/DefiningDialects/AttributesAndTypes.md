@@ -565,6 +565,11 @@ For Attributes, these methods will have the form:
 
 - `void MyAttr::print(AsmPrinter &p) const`
 
+It is possible to use newlines and indents in custom `print` methods.
+However, multiline Types or Attributes are not recommended nor allowed in the upstream MLIR dialects.
+They can be used in custom dialects to improve flexibility and readability, e.g. in cases of
+multiple nested Types and Attributes.
+
 #### Using `assemblyFormat`
 
 Attributes and types defined in ODS with a mnemonic can define an

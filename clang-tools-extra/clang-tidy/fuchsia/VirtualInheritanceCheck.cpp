@@ -1,4 +1,4 @@
-//===--- VirtualInheritanceCheck.cpp - clang-tidy--------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,10 +20,9 @@ AST_MATCHER(CXXRecordDecl, hasDirectVirtualBaseClass) {
     return false;
   if (!Node.getNumVBases())
     return false;
-  for (const CXXBaseSpecifier &Base : Node.bases())
-    if (Base.isVirtual())
-      return true;
-  return false;
+  return llvm::any_of(Node.bases(), [](const CXXBaseSpecifier &Base) {
+    return Base.isVirtual();
+  });
 }
 } // namespace
 

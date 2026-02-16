@@ -9,8 +9,6 @@
 // <__type_traits/container_traits.h>
 //
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <__type_traits/container_traits.h>
 
 #include <deque>

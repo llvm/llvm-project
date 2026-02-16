@@ -490,3 +490,15 @@ define void @vst4(ptr %p) {
 
   ret void
 }
+
+define void @identity_shuffle_costs() #0 {
+bb:
+  ; CHECK-LABEL: 'identity_shuffle_costs'
+  ; CHECK: Cost Model: Found costs of 0 for: %shufflevector142 = shufflevector <16 x i8> zeroinitializer, <16 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ; CHECK: Cost Model: Found costs of 0 for:   %shufflevector84 = shufflevector <16 x i8> zeroinitializer, <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %shufflevector142 = shufflevector <16 x i8> zeroinitializer, <16 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %shufflevector84 = shufflevector <16 x i8> zeroinitializer, <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  ret void
+}
+
+attributes #0 = { "target-features"="+sve,+neon" }

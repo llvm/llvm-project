@@ -73,7 +73,7 @@ TEST_CONSTEXPR_CXX23 void test_char_pointer_ctor()
         assert(v[i] == false);
   }
   // Verify that this constructor doesn't read over the given bound.
-  // See https://github.com/llvm/llvm-project/issues/143684
+  // See https://llvm.org/PR143684
   {
     const char not_null_terminated[] = {'1', '0', '1', '0', '1', '0', '1', '0', '1', '0'};
     std::bitset<N> v(not_null_terminated, 10);

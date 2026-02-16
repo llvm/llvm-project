@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "CPPLanguageRuntime.h"
+#include "VerboseTrapFrameRecognizer.h"
 
 #include "llvm/ADT/StringRef.h"
 
@@ -107,12 +108,15 @@ public:
 
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     : LanguageRuntime(process) {
-  if (process)
+  if (process) {
     process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
         StackFrameRecognizerSP(new LibCXXFrameRecognizer()), {},
         std::make_shared<RegularExpression>("^std::__[^:]*::"),
         /*mangling_preference=*/Mangled::ePreferDemangledWithoutArguments,
         /*first_instruction_only=*/false);
+
+    RegisterVerboseTrapFrameRecognizer(*process);
+  }
 }
 
 bool CPPLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {

@@ -769,7 +769,7 @@ static inline uint64_t decodeAdvSIMDModImmType12(uint8_t Imm) {
   if (Imm & 0x04) EncVal |= 0x0004000000000000ULL;
   if (Imm & 0x02) EncVal |= 0x0002000000000000ULL;
   if (Imm & 0x01) EncVal |= 0x0001000000000000ULL;
-  return (EncVal << 32) | EncVal;
+  return EncVal;
 }
 
 /// Returns true if Imm is the concatenation of a repeating pattern of type T.
@@ -869,6 +869,64 @@ inline static bool isAnyMOVWMovAlias(uint64_t Value, int RegWidth) {
     Value &= 0xffffffffULL;
 
   return isAnyMOVZMovAlias(Value, RegWidth);
+}
+
+static inline bool isSVECpyDupImm(int SizeInBits, int64_t Val, int32_t &Imm,
+                                  int32_t &Shift) {
+  switch (SizeInBits) {
+  case 8:
+    // All immediates are supported.
+    Shift = 0;
+    Imm = Val & 0xFF;
+    return true;
+  case 16:
+  case 32:
+  case 64:
+    // Support 8bit signed immediates.
+    if (Val >= -128 && Val <= 127) {
+      Shift = 0;
+      Imm = Val & 0xFF;
+      return true;
+    }
+    // Support 16bit signed immediates that are a multiple of 256.
+    if (Val >= -32768 && Val <= 32512 && Val % 256 == 0) {
+      Shift = 8;
+      Imm = (Val >> 8) & 0xFF;
+      return true;
+    }
+    break;
+  default:
+    break;
+  }
+  return false;
+}
+
+static inline bool isSVELogicalImm(unsigned SizeInBits, uint64_t ImmVal,
+                                   uint64_t &Encoding) {
+  // Shift mask depending on type size.
+  switch (SizeInBits) {
+  case 8:
+    ImmVal &= 0xFF;
+    ImmVal |= ImmVal << 8;
+    ImmVal |= ImmVal << 16;
+    ImmVal |= ImmVal << 32;
+    break;
+  case 16:
+    ImmVal &= 0xFFFF;
+    ImmVal |= ImmVal << 16;
+    ImmVal |= ImmVal << 32;
+    break;
+  case 32:
+    ImmVal &= 0xFFFFFFFF;
+    ImmVal |= ImmVal << 32;
+    break;
+  case 64:
+    break;
+  default:
+    llvm_unreachable("Unexpected size");
+  }
+
+  return processLogicalImmediate(ImmVal, 64, Encoding);
 }
 
 } // end namespace AArch64_AM

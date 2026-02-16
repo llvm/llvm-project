@@ -9,6 +9,8 @@
 #include <fstream>
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateASTUnitFromArgs.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -98,7 +100,8 @@ TEST_F(ASTUnitTest, SaveLoadPreservesLangOptionsInPrintingPolicy) {
 
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
       ASTFileName, PCHContainerOps->getRawReader(), ASTUnit::LoadEverything,
-      DiagOpts, Diags, FileSystemOptions(), HSOpts);
+      llvm::vfs::getRealFileSystem(), DiagOpts, Diags, FileSystemOptions(),
+      HSOpts);
 
   if (!AU)
     FAIL() << "failed to load ASTUnit";
@@ -172,7 +175,7 @@ TEST_F(ASTUnitTest, LoadFromCommandLineEarlyError) {
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
-  std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCommandLine(
+  std::unique_ptr<ASTUnit> AST = CreateASTUnitFromCommandLine(
       &Args[0], &Args[4], PCHContainerOps, DiagOpts, Diags, "", false, "",
       false, CaptureDiagsKind::All, {}, true, 0, TU_Complete, false, false,
       false, SkipFunctionBodiesScope::None, false, true, false, false,
@@ -200,7 +203,7 @@ TEST_F(ASTUnitTest, LoadFromCommandLineWorkingDirectory) {
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
-  std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCommandLine(
+  std::unique_ptr<ASTUnit> AST = CreateASTUnitFromCommandLine(
       &Args[0], &Args[4], PCHContainerOps, DiagOpts, Diags, "", false, "",
       false, CaptureDiagsKind::All, {}, true, 0, TU_Complete, false, false,
       false, SkipFunctionBodiesScope::None, false, true, false, false,

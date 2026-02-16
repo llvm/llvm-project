@@ -8,7 +8,6 @@
 
 #include "PPCCallingConv.h"
 #include "PPCSubtarget.h"
-#include "PPCCCState.h"
 using namespace llvm;
 
 inline bool CC_PPC_AnyReg_Error(unsigned &, MVT &, MVT &,

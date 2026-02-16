@@ -9,7 +9,7 @@ define void @storefloats(<4 x float> %data, i32 %index) {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; The temporary casts should all have been cleaned up
   ; CHECK-NOT: %dx.resource.casthandle
@@ -33,7 +33,7 @@ define void @storeonefloat(float %data, i32 %index) {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", float, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; The temporary casts should all have been cleaned up
   ; CHECK-NOT: %dx.resource.casthandle
@@ -53,7 +53,7 @@ define void @storetwofloat(<2 x float> %data, i32 %index) {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <2 x float>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f32_1_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; The temporary casts should all have been cleaned up
   ; CHECK-NOT: %dx.resource.casthandle
@@ -75,7 +75,7 @@ define void @storeint(<4 x i32> %data, i32 %index) {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x i32>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4i32_1_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK: [[DATA0_0:%.*]] = extractelement <4 x i32> %data, i32 0
   ; CHECK: [[DATA0_1:%.*]] = extractelement <4 x i32> %data, i32 1
@@ -96,7 +96,7 @@ define void @storehalf(<4 x half> %data, i32 %index) {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x half>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f16_1_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; The temporary casts should all have been cleaned up
   ; CHECK-NOT: %dx.resource.casthandle
@@ -120,7 +120,7 @@ define void @storei16(<4 x i16> %data, i32 %index) {
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x i16>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4i16_1_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; The temporary casts should all have been cleaned up
   ; CHECK-NOT: %dx.resource.casthandle
@@ -144,7 +144,7 @@ define void @store_scalarized_floats(float %data0, float %data1, float %data2, f
   ; CHECK: [[HANDLE:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[BIND]]
   %buffer = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; We shouldn't end up with any inserts/extracts.
   ; CHECK-NOT: insertelement
@@ -168,7 +168,7 @@ define void @storef64(<2 x i32> %0) {
   
   %buffer = tail call target("dx.TypedBuffer", double, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; The temporary casts should all have been cleaned up
   ; CHECK-NOT: %dx.resource.casthandle
@@ -187,7 +187,7 @@ define void @storev2f64(<4 x i32> %0) {
   
   %buffer = tail call target("dx.TypedBuffer", <2 x double>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f64_1_0_0t(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; The temporary casts should all have been cleaned up
   ; CHECK-NOT: %dx.resource.casthandle

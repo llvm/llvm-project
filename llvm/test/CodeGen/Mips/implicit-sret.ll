@@ -19,9 +19,7 @@ define internal void @test() unnamed_addr nounwind {
 ; CHECK-NEXT:    ld $6, 24($sp)
 ; CHECK-NEXT:    ld $5, 16($sp)
 ; CHECK-NEXT:    ld $7, 32($sp)
-; CHECK-NEXT:    lw $1, 0($sp)
-; CHECK-NEXT:    # implicit-def: $a0_64
-; CHECK-NEXT:    move $4, $1
+; CHECK-NEXT:    lw $4, 0($sp)
 ; CHECK-NEXT:    jal use_sret
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld $ra, 56($sp) # 8-byte Folded Reload
@@ -64,15 +62,9 @@ define internal void @test2() unnamed_addr nounwind {
 ; CHECK-NEXT:    daddiu $4, $sp, 0
 ; CHECK-NEXT:    jal implicit_sret_decl2
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    lw $1, 20($sp)
-; CHECK-NEXT:    lw $2, 12($sp)
-; CHECK-NEXT:    lw $3, 4($sp)
-; CHECK-NEXT:    # implicit-def: $a0_64
-; CHECK-NEXT:    move $4, $3
-; CHECK-NEXT:    # implicit-def: $a1_64
-; CHECK-NEXT:    move $5, $2
-; CHECK-NEXT:    # implicit-def: $a2_64
-; CHECK-NEXT:    move $6, $1
+; CHECK-NEXT:    lw $6, 20($sp)
+; CHECK-NEXT:    lw $5, 12($sp)
+; CHECK-NEXT:    lw $4, 4($sp)
 ; CHECK-NEXT:    jal use_sret2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload

@@ -39,10 +39,10 @@ void GpuModuleToBinaryPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   auto targetFormat =
       llvm::StringSwitch<std::optional<CompilationTarget>>(compilationTarget)
-          .Cases("offloading", "llvm", CompilationTarget::Offload)
-          .Cases("assembly", "isa", CompilationTarget::Assembly)
-          .Cases("binary", "bin", CompilationTarget::Binary)
-          .Cases("fatbinary", "fatbin", CompilationTarget::Fatbin)
+          .Cases({"offloading", "llvm"}, CompilationTarget::Offload)
+          .Cases({"assembly", "isa"}, CompilationTarget::Assembly)
+          .Cases({"binary", "bin"}, CompilationTarget::Binary)
+          .Cases({"fatbinary", "fatbin"}, CompilationTarget::Fatbin)
           .Default(std::nullopt);
   if (!targetFormat)
     getOperation()->emitError() << "Invalid format specified.";
@@ -87,7 +87,7 @@ LogicalResult moduleSerializer(GPUModuleOp op,
     auto target = dyn_cast<gpu::TargetAttrInterface>(targetAttr);
     assert(target &&
            "Target attribute doesn't implements `TargetAttrInterface`.");
-    std::optional<SmallVector<char, 0>> serializedModule =
+    std::optional<SerializedObject> serializedModule =
         target.serializeToObject(op, targetOptions);
     if (!serializedModule) {
       op.emitError("An error happened while serializing the module.");

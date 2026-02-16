@@ -27,3 +27,28 @@ namespace E {
     int v1 __attribute__((cleanup(c3))); // expected-error {{'c3' is not a single function}}
   }
 }
+
+namespace F {
+  int open() { return 0; }
+  void close(decltype(open()) *) {}
+
+  void test1() {
+    auto fd [[gnu::cleanup(close)]] = open();
+  }
+
+  template <typename Ty>
+  void test2() {
+    Ty fd [[gnu::cleanup(close)]] = open();
+  }
+
+  template <typename Ty>
+  void test3() {
+    Ty fd [[gnu::cleanup(close)]] = open(); // #TEST3_CLEANUP
+  }
+
+  int main() {
+    test2<int>();
+    test3<float>(); // expected-error@#TEST3_CLEANUP {{'cleanup' function 'close' parameter has type 'decltype(open()) *' (aka 'int *') which is incompatible with type 'float *'}} \
+                       expected-note {{in instantiation of function template specialization 'F::test3<float>' requested here}}
+  }
+}

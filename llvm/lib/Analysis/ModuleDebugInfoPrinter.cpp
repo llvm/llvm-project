@@ -43,11 +43,19 @@ static void printModuleDebugInfo(raw_ostream &O, const Module *M,
   // filenames), so just print a few useful things.
   for (DICompileUnit *CU : Finder.compile_units()) {
     O << "Compile unit: ";
-    auto Lang = dwarf::LanguageString(CU->getSourceLanguage());
-    if (!Lang.empty())
-      O << Lang;
+
+    DISourceLanguageName Lang = CU->getSourceLanguage();
+    auto LangStr =
+        Lang.hasVersionedName()
+            ? dwarf::SourceLanguageNameString(
+                  static_cast<llvm::dwarf::SourceLanguageName>(Lang.getName()))
+            : dwarf::LanguageString(Lang.getName());
+
+    if (!LangStr.empty())
+      O << LangStr;
     else
-      O << "unknown-language(" << CU->getSourceLanguage() << ")";
+      O << "unknown-language(" << CU->getSourceLanguage().getName() << ")";
+
     printFile(O, CU->getFilename(), CU->getDirectory());
     O << '\n';
   }
@@ -92,6 +100,31 @@ static void printModuleDebugInfo(raw_ostream &O, const Module *M,
     if (auto *CT = dyn_cast<DICompositeType>(T)) {
       if (auto *S = CT->getRawIdentifier())
         O << " (identifier: '" << S->getString() << "')";
+    }
+    O << '\n';
+  }
+
+  for (const auto &MacroEntry : Finder.macros()) {
+    const DIMacro *Macro = MacroEntry.first;
+    const DIMacroFile *MacroFile = MacroEntry.second;
+
+    O << "Macro: ";
+    auto MacroType = dwarf::MacinfoString(Macro->getMacinfoType());
+    if (!MacroType.empty())
+      O << MacroType;
+    else
+      O << "unknown-macinfo(" << Macro->getMacinfoType() << ")";
+
+    O << " '" << Macro->getName() << "'";
+    if (!Macro->getValue().empty())
+      O << " = '" << Macro->getValue() << "'";
+
+    if (MacroFile && MacroFile->getFile()) {
+      const DIFile *File = MacroFile->getFile();
+      printFile(O, File->getFilename(), File->getDirectory(),
+                MacroFile->getLine());
+    } else {
+      O << " at line " << Macro->getLine();
     }
     O << '\n';
   }

@@ -3232,10 +3232,8 @@ static bool tryMatchRecordTypes(ASTContext &Context,
   assert(lt && rt && lt != rt);
 
   if (!isa<RecordType>(lt) || !isa<RecordType>(rt)) return false;
-  RecordDecl *left =
-      cast<RecordType>(lt)->getOriginalDecl()->getDefinitionOrSelf();
-  RecordDecl *right =
-      cast<RecordType>(rt)->getOriginalDecl()->getDefinitionOrSelf();
+  RecordDecl *left = cast<RecordType>(lt)->getDecl()->getDefinitionOrSelf();
+  RecordDecl *right = cast<RecordType>(rt)->getDecl()->getDefinitionOrSelf();
 
   // Require union-hood to match.
   if (left->isUnion() != right->isUnion()) return false;
@@ -3848,10 +3846,8 @@ SemaObjC::ObjCContainerKind SemaObjC::getObjCContainerKind() const {
 static bool IsVariableSizedType(QualType T) {
   if (T->isIncompleteArrayType())
     return true;
-  const auto *RecordTy = T->getAs<RecordType>();
-  return (RecordTy && RecordTy->getOriginalDecl()
-                          ->getDefinitionOrSelf()
-                          ->hasFlexibleArrayMember());
+  const auto *RD = T->getAsRecordDecl();
+  return RD && RD->hasFlexibleArrayMember();
 }
 
 static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
@@ -3896,15 +3892,11 @@ static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
           << ivar->getDeclName() << IvarTy
           << TagTypeKind::Class; // Use "class" for Obj-C.
       IsInvalidIvar = true;
-    } else if (const RecordType *RecordTy = IvarTy->getAs<RecordType>()) {
-      if (RecordTy->getOriginalDecl()
-              ->getDefinitionOrSelf()
-              ->hasFlexibleArrayMember()) {
-        S.Diag(ivar->getLocation(),
-               diag::err_objc_variable_sized_type_not_at_end)
-            << ivar->getDeclName() << IvarTy;
-        IsInvalidIvar = true;
-      }
+    } else if (const auto *RD = IvarTy->getAsRecordDecl();
+               RD && RD->hasFlexibleArrayMember()) {
+      S.Diag(ivar->getLocation(), diag::err_objc_variable_sized_type_not_at_end)
+          << ivar->getDeclName() << IvarTy;
+      IsInvalidIvar = true;
     }
     if (IsInvalidIvar) {
       S.Diag(ivar->getNextIvar()->getLocation(),
@@ -4738,13 +4730,13 @@ ParmVarDecl *SemaObjC::ActOnMethodParmDeclaration(Scope *S,
                                                   bool MethodDefinition) {
   ASTContext &Context = getASTContext();
   QualType ArgType;
-  TypeSourceInfo *DI;
+  TypeSourceInfo *TSI;
 
   if (!ArgInfo.Type) {
     ArgType = Context.getObjCIdType();
-    DI = nullptr;
+    TSI = nullptr;
   } else {
-    ArgType = SemaRef.GetTypeFromParser(ArgInfo.Type, &DI);
+    ArgType = SemaRef.GetTypeFromParser(ArgInfo.Type, &TSI);
   }
   LookupResult R(SemaRef, ArgInfo.Name, ArgInfo.NameLoc,
                  Sema::LookupOrdinaryName,
@@ -4761,14 +4753,14 @@ ParmVarDecl *SemaObjC::ActOnMethodParmDeclaration(Scope *S,
     }
   }
   SourceLocation StartLoc =
-      DI ? DI->getTypeLoc().getBeginLoc() : ArgInfo.NameLoc;
+      TSI ? TSI->getTypeLoc().getBeginLoc() : ArgInfo.NameLoc;
 
   // Temporarily put parameter variables in the translation unit. This is what
   // ActOnParamDeclarator does in the case of C arguments to the Objective-C
   // method too.
   ParmVarDecl *Param = SemaRef.CheckParameter(
       Context.getTranslationUnitDecl(), StartLoc, ArgInfo.NameLoc, ArgInfo.Name,
-      ArgType, DI, SC_None);
+      ArgType, TSI, SC_None);
   Param->setObjCMethodScopeInfo(ParamIndex);
   Param->setObjCDeclQualifier(
       CvtQTToAstBitMask(ArgInfo.DeclSpec.getObjCDeclQualifier()));
@@ -5541,11 +5533,8 @@ void SemaObjC::SetIvarInitializers(ObjCImplementationDecl *ObjCImplementation) {
       AllToInit.push_back(Member);
 
       // Be sure that the destructor is accessible and is marked as referenced.
-      if (const RecordType *RecordTy =
-              Context.getBaseElementType(Field->getType())
-                  ->getAs<RecordType>()) {
-        CXXRecordDecl *RD = cast<CXXRecordDecl>(RecordTy->getOriginalDecl())
-                                ->getDefinitionOrSelf();
+      if (auto *RD = Context.getBaseElementType(Field->getType())
+                         ->getAsCXXRecordDecl()) {
         if (CXXDestructorDecl *Destructor = SemaRef.LookupDestructor(RD)) {
           SemaRef.MarkFunctionReferenced(Field->getLocation(), Destructor);
           SemaRef.CheckDestructorAccess(

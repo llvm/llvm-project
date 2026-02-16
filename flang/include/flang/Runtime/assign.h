@@ -44,11 +44,10 @@ enum AssignFlags {
 
 #ifdef RT_DEVICE_COMPILATION
 RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
-    Terminator &terminator, int flags, MemmoveFct memmoveFct = &MemmoveWrapper);
+    Terminator &terminator, int flags, MemmoveFct = &MemmoveWrapper);
 #else
 RT_API_ATTRS void Assign(Descriptor &to, const Descriptor &from,
-    Terminator &terminator, int flags,
-    MemmoveFct memmoveFct = &Fortran::runtime::memmove);
+    Terminator &terminator, int flags, MemmoveFct = &runtime::memmove);
 #endif
 
 extern "C" {

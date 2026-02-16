@@ -608,9 +608,9 @@ inline bool isLocalTee(unsigned Opc) {
 static const unsigned UnusedReg = -1u;
 
 // For a given stackified WAReg, return the id number to print with push/pop.
-unsigned inline getWARegStackId(unsigned Reg) {
-  assert(Reg & INT32_MIN);
-  return Reg & INT32_MAX;
+unsigned inline getWARegStackId(MCRegister Reg) {
+  assert(Reg.id() & INT32_MIN);
+  return Reg.id() & INT32_MAX;
 }
 
 } // end namespace WebAssembly

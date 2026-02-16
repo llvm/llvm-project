@@ -28,7 +28,6 @@ _TOOLS = {
     "llvm-nm": "//llvm:llvm-nm-lib",
     "llvm-objcopy": "//llvm:llvm-objcopy-lib",
     "llvm-objdump": "//llvm:llvm-objdump-lib",
-    "llvm-profdata": "//llvm:llvm-profdata-lib",
     "llvm-rc": "//llvm:llvm-rc-lib",
     "llvm-readobj": "//llvm:llvm-readobj-lib",
     "llvm-size": "//llvm:llvm-size-lib",
@@ -127,9 +126,12 @@ def _generate_driver_tools_def_impl(ctx):
     # This is consistent with how tools/llvm-driver/CMakeLists.txt does it,
     # and this makes sure that more specific tools are checked first.
     # For example, "clang-scan-deps" should not match "clang".
-    tools = [label_to_name[tool.label.name] for tool in ctx.attr.driver_tools]
+    tools = sorted(
+        [label_to_name[tool.label.name] for tool in ctx.attr.driver_tools],
+        reverse = True,
+    )
     tool_alias_pairs = []
-    for tool_name in reversed(tools):
+    for tool_name in tools:
         tool_alias_pairs.append((tool_name, tool_name))
         for extra_alias in _EXTRA_ALIASES.get(tool_name, []):
             tool_alias_pairs.append((tool_name, extra_alias))

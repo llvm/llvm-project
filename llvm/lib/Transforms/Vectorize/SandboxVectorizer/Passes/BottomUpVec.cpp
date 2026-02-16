@@ -25,14 +25,14 @@ static cl::opt<bool>
                           "emit new instructions (*very* expensive)."));
 #endif // NDEBUG
 
-static constexpr const unsigned long StopAtDisabled =
+static constexpr unsigned long StopAtDisabled =
     std::numeric_limits<unsigned long>::max();
 static cl::opt<unsigned long>
     StopAt("sbvec-stop-at", cl::init(StopAtDisabled), cl::Hidden,
            cl::desc("Vectorize if the invocation count is < than this. 0 "
                     "disables vectorization."));
 
-static constexpr const unsigned long StopBundleDisabled =
+static constexpr unsigned long StopBundleDisabled =
     std::numeric_limits<unsigned long>::max();
 static cl::opt<unsigned long>
     StopBundle("sbvec-stop-bndl", cl::init(StopBundleDisabled), cl::Hidden,

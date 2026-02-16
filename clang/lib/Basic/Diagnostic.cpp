@@ -517,12 +517,6 @@ public:
                         const SourceManager &SM) const;
 
 private:
-  // Find the longest glob pattern that matches FilePath amongst
-  // CategoriesToMatchers, return true iff the match exists and belongs to a
-  // positive category.
-  bool globsMatches(const llvm::StringMap<Matcher> &CategoriesToMatchers,
-                    StringRef FilePath) const;
-
   llvm::DenseMap<diag::kind, const Section *> DiagToSection;
 };
 } // namespace
@@ -537,33 +531,16 @@ WarningsSpecialCaseList::create(const llvm::MemoryBuffer &Input,
 }
 
 void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
-  // Drop the default section introduced by special case list, we only support
-  // exact diagnostic group names.
-  // FIXME: We should make this configurable in the parser instead.
-  // FIXME: C++20 can use std::erase_if(Sections, [](Section &sec) { return
-  // sec.SectionStr == "*"; });
-  llvm::erase_if(Sections, [](Section &sec) { return sec.SectionStr == "*"; });
-  // Make sure we iterate sections by their line numbers.
-  std::vector<std::pair<unsigned, const Section *>> LineAndSectionEntry;
-  LineAndSectionEntry.reserve(Sections.size());
-  for (const auto &Entry : Sections) {
-    StringRef DiagName = Entry.SectionStr;
-    // Each section has a matcher with that section's name, attached to that
-    // line.
-    const auto &DiagSectionMatcher = Entry.SectionMatcher;
-    unsigned DiagLine = 0;
-    for (const auto &Glob : DiagSectionMatcher->Globs)
-      if (Glob->Name == DiagName) {
-        DiagLine = Glob->LineNo;
-        break;
-      }
-    LineAndSectionEntry.emplace_back(DiagLine, &Entry);
-  }
-  llvm::sort(LineAndSectionEntry);
   static constexpr auto WarningFlavor = clang::diag::Flavor::WarningOrError;
-  for (const auto &[_, SectionEntry] : LineAndSectionEntry) {
+  for (const auto &SectionEntry : sections()) {
+    StringRef DiagGroup = SectionEntry.name();
+    if (DiagGroup == "*") {
+      // Drop the default section introduced by special case list, we only
+      // support exact diagnostic group names.
+      // FIXME: We should make this configurable in the parser instead.
+      continue;
+    }
     SmallVector<diag::kind> GroupDiags;
-    StringRef DiagGroup = SectionEntry->SectionStr;
     if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
             WarningFlavor, DiagGroup, GroupDiags)) {
       StringRef Suggestion =
@@ -576,7 +553,7 @@ void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
     for (diag::kind Diag : GroupDiags)
       // We're intentionally overwriting any previous mappings here to make sure
       // latest one takes precedence.
-      DiagToSection[Diag] = SectionEntry;
+      DiagToSection[Diag] = &SectionEntry;
   }
 }
 
@@ -601,43 +578,21 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
 bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
                                                SourceLocation DiagLoc,
                                                const SourceManager &SM) const {
+  PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc);
+  if (!PLoc.isValid())
+    return false;
   const Section *DiagSection = DiagToSection.lookup(DiagId);
   if (!DiagSection)
     return false;
-  const SectionEntries &EntityTypeToCategories = DiagSection->Entries;
-  auto SrcEntriesIt = EntityTypeToCategories.find("src");
-  if (SrcEntriesIt == EntityTypeToCategories.end())
-    return false;
-  const llvm::StringMap<llvm::SpecialCaseList::Matcher> &CategoriesToMatchers =
-      SrcEntriesIt->getValue();
-  // We also use presumed locations here to improve reproducibility for
-  // preprocessed inputs.
-  if (PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc); PLoc.isValid())
-    return globsMatches(
-        CategoriesToMatchers,
-        llvm::sys::path::remove_leading_dotslash(PLoc.getFilename()));
-  return false;
-}
 
-bool WarningsSpecialCaseList::globsMatches(
-    const llvm::StringMap<Matcher> &CategoriesToMatchers,
-    StringRef FilePath) const {
-  StringRef LongestMatch;
-  bool LongestIsPositive = false;
-  for (const auto &Entry : CategoriesToMatchers) {
-    StringRef Category = Entry.getKey();
-    const llvm::SpecialCaseList::Matcher &Matcher = Entry.getValue();
-    bool IsPositive = Category != "emit";
-    for (const auto &Glob : Matcher.Globs) {
-      if (Glob->Name.size() < LongestMatch.size())
-        continue;
-      if (!Glob->Pattern.match(FilePath))
-        continue;
-      LongestMatch = Glob->Name;
-      LongestIsPositive = IsPositive;
-    }
-  }
-  return LongestIsPositive;
+  StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());
+
+  unsigned LastSup = DiagSection->getLastMatch("src", F, "");
+  if (LastSup == 0)
+    return false;
+
+  unsigned LastEmit = DiagSection->getLastMatch("src", F, "emit");
+  return LastSup > LastEmit;
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,
@@ -664,6 +619,8 @@ void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
 
 void DiagnosticsEngine::Report(Level DiagLevel, const Diagnostic &Info) {
   assert(DiagLevel != Ignored && "Cannot emit ignored diagnostics!");
+  assert(!getDiagnosticIDs()->isTrapDiag(Info.getID()) &&
+         "Trap diagnostics should not be consumed by the DiagnosticsEngine");
   Client->HandleDiagnostic(DiagLevel, Info);
   if (Client->IncludeInDiagnosticCounts()) {
     if (DiagLevel == Warning)

@@ -6,19 +6,19 @@
 // RUN: %clang_cc1 -fblocks -include-pch %t -fsyntax-only -verify %s 
 
 // Expressions
-int *A1 = (objc_string)0;   // expected-warning {{aka 'NSString *'}}
+int *A1 = (objc_string)0;   // expected-error {{aka 'NSString *'}}
 
 char A2 = (objc_encode){};  // expected-error {{not a compile-time constant}} \
                                expected-error {{char[2]}}
 
-int *A3 = (objc_protocol)0; // expected-warning {{aka 'Protocol *'}}
+int *A3 = (objc_protocol)0; // expected-error {{aka 'Protocol *'}}
 
 
 // Types.
-int *T0 = (objc_id_protocol_ty)0; // expected-warning {{aka 'id<foo>'}}
+int *T0 = (objc_id_protocol_ty)0; // expected-error {{aka 'id<foo>'}}
 
-int *T1 = (objc_interface_ty)0; // expected-warning {{aka 'itf *'}}
-int *T2 = (objc_qual_interface_ty)0; // expected-warning {{aka 'itf<foo> *'}}
+int *T1 = (objc_interface_ty)0; // expected-error {{aka 'itf *'}}
+int *T2 = (objc_qual_interface_ty)0; // expected-error {{aka 'itf<foo> *'}}
 
 objc_selector_noArgs s1;
 objc_selector_oneArg s2;

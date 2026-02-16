@@ -15,6 +15,8 @@
 #ifndef LLVM_SUPPORT_AMDGPUADDRSPACE_H
 #define LLVM_SUPPORT_AMDGPUADDRSPACE_H
 
+#include <cstdint>
+
 namespace llvm {
 /// OpenCL uses address spaces to differentiate between
 /// various memory regions on the hardware. On the CPU
@@ -118,6 +120,64 @@ inline bool isConstantAddressSpace(unsigned AS) {
     return true;
   default:
     return false;
+  }
+}
+
+namespace DWARFAS {
+enum : unsigned {
+  GLOBAL = 0,
+  GENERIC = 1,
+  REGION = 2,
+  LOCAL = 3,
+  PRIVATE_LANE = 5,
+  PRIVATE_WAVE = 6,
+  DEFAULT = GLOBAL,
+};
+} // namespace DWARFAS
+
+namespace impl {
+// TODO: Move this into mapToDWARFAddrSpace when we switch to C++23
+// (see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2647r1.html)
+static constexpr unsigned LLVMToDWARFAddrSpaceMapping[] = {
+    DWARFAS::GENERIC,     //< AMDGPUAS::FLAT_ADDRESS
+    DWARFAS::GLOBAL,      //< AMDGPUAS::GLOBAL_ADDRESS
+    DWARFAS::REGION,      //< AMDGPUAS::REGION_ADDRESS
+    DWARFAS::LOCAL,       //< AMDGPUAS::LOCAL_ADDRESS
+    DWARFAS::GLOBAL,      //< AMDGPUAS::CONSTANT_ADDRESS
+    DWARFAS::PRIVATE_LANE //< AMDGPUAS::PRIVATE_ADDRESS
+};
+} // end namespace impl
+
+/// If @p LLVMAddressSpace has a corresponding DWARF encoding,
+/// return it; otherwise return the sentinel value -1 to indicate
+/// no such mapping exists.
+///
+/// This maps private/scratch to the focused lane view.
+///
+/// These mappings must be kept in sync with llvm/docs/AMDGPUUsage.rst
+/// table "AMDGPU DWARF Address Space Mapping".
+///
+/// Note: This could return std::optional<int> but that would require
+/// an extra #include.
+constexpr int mapToDWARFAddrSpace(unsigned LLVMAddrSpace) {
+  constexpr unsigned SizeOfLLVMToDWARFAddrSpaceMapping =
+      sizeof(impl::LLVMToDWARFAddrSpaceMapping) /
+      sizeof(impl::LLVMToDWARFAddrSpaceMapping[0]);
+  if (LLVMAddrSpace < SizeOfLLVMToDWARFAddrSpaceMapping)
+    return impl::LLVMToDWARFAddrSpaceMapping[LLVMAddrSpace];
+  return -1;
+}
+
+/// Get the null pointer value for the given address space.
+constexpr int64_t getNullPointerValue(unsigned AS) {
+  switch (AS) {
+    using namespace AMDGPUAS;
+  case PRIVATE_ADDRESS:
+  case LOCAL_ADDRESS:
+  case REGION_ADDRESS:
+    return -1;
+  default:
+    return 0;
   }
 }
 } // end namespace AMDGPU

@@ -6,8 +6,6 @@
 ; RUN: llc -mtriple=riscv32-unknown-linux-musl < %s | FileCheck --check-prefix=RV32-LINUX %s
 ; RUN: llc -mtriple=riscv64-unknown-linux-musl < %s | FileCheck --check-prefix=RV64-LINUX %s
 
-declare void @llvm.clear_cache(ptr, ptr)
-
 define void @foo(ptr %a, ptr %b) nounwind {
 ; RV32-LABEL: foo:
 ; RV32:       # %bb.0:

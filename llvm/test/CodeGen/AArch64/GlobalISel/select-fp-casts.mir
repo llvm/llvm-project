@@ -358,31 +358,6 @@ body:             |
 ...
 
 ---
-name:            sitofp_s64_s32_fpr_both
-legalized:       true
-regBankSelected: true
-
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-
-body:             |
-  bb.0:
-    liveins: $s0
-
-    ; CHECK-LABEL: name: sitofp_s64_s32_fpr_both
-    ; CHECK: liveins: $s0
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-    ; CHECK-NEXT: [[SCVTFUWDri:%[0-9]+]]:fpr64 = nofpexcept SCVTFUWDri [[COPY1]]
-    ; CHECK-NEXT: $d0 = COPY [[SCVTFUWDri]]
-    %0(s32) = COPY $s0
-    %1(s64) = G_SITOFP %0
-    $d0 = COPY %1(s64)
-...
-
----
 name:            sitofp_s64_s64_fpr
 legalized:       true
 regBankSelected: true

@@ -11,6 +11,7 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 using namespace mlir;
 
@@ -90,7 +91,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
   //
   // Rename private symbols in both ops in order to resolve conflicts that can
   // be resolved that way.
-  LLVM_DEBUG(DBGS() << "renaming private symbols to resolve conflicts:\n");
+  LDBG() << "renaming private symbols to resolve conflicts:";
   // TODO: Do we *actually* need to test in both directions?
   for (auto &&[symbolTable, otherSymbolTable] : llvm::zip(
            SmallVector<SymbolTable *, 2>{&targetSymbolTable, &otherSymbolTable},
@@ -102,7 +103,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
       if (!symbolOp)
         continue;
       StringAttr name = symbolOp.getNameAttr();
-      LLVM_DEBUG(DBGS() << "  found @" << name.getValue() << "\n");
+      LDBG() << "  found @" << name.getValue();
 
       // Check if there is a colliding op in the other module.
       auto collidingOp =
@@ -110,7 +111,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
       if (!collidingOp)
         continue;
 
-      LLVM_DEBUG(DBGS() << "    collision found for @" << name.getValue());
+      LDBG() << "    collision found for @" << name.getValue();
 
       // Collisions are fine if both opt are functions and can be merged.
       if (auto funcOp = dyn_cast<FunctionOpInterface>(op),
@@ -119,13 +120,12 @@ transform::detail::mergeSymbolsInto(Operation *target,
           funcOp && collidingFuncOp) {
         if (canMergeInto(funcOp, collidingFuncOp) ||
             canMergeInto(collidingFuncOp, funcOp)) {
-          LLVM_DEBUG(llvm::dbgs() << " but both ops are functions and "
-                                     "will be merged\n");
+          LDBG() << " but both ops are functions and will be merged";
           continue;
         }
 
         // If they can't be merged, proceed like any other collision.
-        LLVM_DEBUG(llvm::dbgs() << " and both ops are function definitions");
+        LDBG() << " and both ops are function definitions";
       }
 
       // Collision can be resolved by renaming if one of the ops is private.
@@ -133,7 +133,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
           [&](SymbolOpInterface op, SymbolOpInterface otherOp,
               SymbolTable &symbolTable,
               SymbolTable &otherSymbolTable) -> InFlightDiagnostic {
-        LLVM_DEBUG(llvm::dbgs() << ", renaming\n");
+        LDBG() << ", renaming";
         FailureOr<StringAttr> maybeNewName =
             symbolTable.renameToUnique(op, {&otherSymbolTable});
         if (failed(maybeNewName)) {
@@ -142,8 +142,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
               << "attempted renaming due to collision with this op";
           return diag;
         }
-        LLVM_DEBUG(DBGS() << "      renamed to @" << maybeNewName->getValue()
-                          << "\n");
+        LDBG() << "      renamed to @" << maybeNewName->getValue();
         return InFlightDiagnostic();
       };
 
@@ -161,7 +160,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
           return diag;
         continue;
       }
-      LLVM_DEBUG(llvm::dbgs() << ", emitting error\n");
+      LDBG() << ", emitting error";
       InFlightDiagnostic diag = symbolOp.emitError()
                                 << "doubly defined symbol @" << name.getValue();
       diag.attachNote(collidingOp->getLoc()) << "previously defined here";
@@ -179,7 +178,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
   // Step 2:
   //
   // Move all ops from `other` into target and merge public symbols.
-  LLVM_DEBUG(DBGS() << "moving all symbols into target\n");
+  LDBG() << "moving all symbols into target";
   {
     SmallVector<SymbolOpInterface> opsToMove;
     for (Operation &op : other->getRegion(0).front()) {
@@ -193,13 +192,13 @@ transform::detail::mergeSymbolsInto(Operation *target,
           targetSymbolTable.lookup(op.getNameAttr()));
 
       // Move op even if we get a collision.
-      LLVM_DEBUG(DBGS() << "  moving @" << op.getName());
+      LDBG() << "  moving @" << op.getName();
       op->moveBefore(&target->getRegion(0).front(),
                      target->getRegion(0).front().end());
 
       // If there is no collision, we are done.
       if (!collidingOp) {
-        LLVM_DEBUG(llvm::dbgs() << " without collision\n");
+        LDBG() << " without collision";
         continue;
       }
 
@@ -217,9 +216,9 @@ transform::detail::mergeSymbolsInto(Operation *target,
       }
       assert(canMergeInto(funcOp, collidingFuncOp));
 
-      LLVM_DEBUG(llvm::dbgs() << " with collision, trying to keep op at "
-                              << collidingFuncOp.getLoc() << ":\n"
-                              << collidingFuncOp << "\n");
+      LDBG() << " with collision, trying to keep op at "
+             << collidingFuncOp.getLoc() << ":\n"
+             << collidingFuncOp;
 
       // Update symbol table. This works with or without the previous `swap`.
       targetSymbolTable.remove(funcOp);
@@ -239,6 +238,6 @@ transform::detail::mergeSymbolsInto(Operation *target,
     return target->emitError()
            << "failed to verify target op after merging symbols";
 
-  LLVM_DEBUG(DBGS() << "done merging ops\n");
+  LDBG() << "done merging ops";
   return InFlightDiagnostic();
 }

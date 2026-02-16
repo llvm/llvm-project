@@ -9,7 +9,7 @@ define void @test() {
 ; CHECK-NEXT:    [[COND_IN_V:%.*]] = select i1 false, ptr null, ptr null
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <13 x i64> @llvm.masked.load.v13i64.p0(ptr [[COND_IN_V]], i32 8, <13 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true>, <13 x i64> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <13 x i64> @llvm.masked.load.v13i64.p0(ptr align 8 [[COND_IN_V]], <13 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true>, <13 x i64> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <13 x i64> [[TMP0]], <13 x i64> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret void
@@ -20,7 +20,7 @@ define void @test() {
 ; CHECK-SLP-THRESHOLD-NEXT:    [[COND_IN_V:%.*]] = select i1 false, ptr null, ptr null
 ; CHECK-SLP-THRESHOLD-NEXT:    br label [[BB:%.*]]
 ; CHECK-SLP-THRESHOLD:       bb:
-; CHECK-SLP-THRESHOLD-NEXT:    [[TMP0:%.*]] = call <13 x i64> @llvm.masked.load.v13i64.p0(ptr [[COND_IN_V]], i32 8, <13 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true>, <13 x i64> poison)
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP0:%.*]] = call <13 x i64> @llvm.masked.load.v13i64.p0(ptr align 8 [[COND_IN_V]], <13 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true>, <13 x i64> poison)
 ; CHECK-SLP-THRESHOLD-NEXT:    [[TMP1:%.*]] = shufflevector <13 x i64> [[TMP0]], <13 x i64> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; CHECK-SLP-THRESHOLD-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[TMP1]], zeroinitializer
 ; CHECK-SLP-THRESHOLD-NEXT:    ret void

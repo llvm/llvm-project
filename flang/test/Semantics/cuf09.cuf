@@ -36,6 +36,12 @@ module m
     if (i .le. N) a(i) = m(i)
   end subroutine
 
+  attributes(device) function devfct(r1, r2) result(res)
+    real(4), intent(in) :: r1(3), r2(3)
+    real(4) :: res(3)
+    res = r1 - r2 ! Do not error on function result
+  end function
+
   attributes(global) subroutine hostparameter(a)
     integer :: a(*)
     i = threadIdx%x

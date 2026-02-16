@@ -17,7 +17,11 @@
 
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 #include <optional>
 
 using namespace lldb;
@@ -81,6 +85,32 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StreamSP>(
 }
 
 template <>
+lldb::StackFrameSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameSP>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBFrame *sb_frame = reinterpret_cast<lldb::SBFrame *>(
+          python::LLDBSWIGPython_CastPyObjectToSBFrame(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBFrame(*sb_frame);
+  error = Status::FromErrorString(
+      "Couldn't cast lldb::SBFrame to lldb_private::StackFrame.");
+
+  return nullptr;
+}
+
+template <>
+lldb::ThreadSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ThreadSP>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBThread *sb_thread = reinterpret_cast<lldb::SBThread *>(
+          python::LLDBSWIGPython_CastPyObjectToSBThread(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBThread(*sb_thread);
+  error = Status::FromErrorString(
+      "Couldn't cast lldb::SBThread to lldb_private::Thread.");
+
+  return nullptr;
+}
+
+template <>
 SymbolContext
 ScriptedPythonInterface::ExtractValueFromPythonObject<SymbolContext>(
     python::PythonObject &p, Status &error) {
@@ -127,6 +157,24 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
 }
 
 template <>
+lldb::BreakpointLocationSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::BreakpointLocationSP>(python::PythonObject &p, Status &error) {
+  lldb::SBBreakpointLocation *sb_break_loc =
+      reinterpret_cast<lldb::SBBreakpointLocation *>(
+          python::LLDBSWIGPython_CastPyObjectToSBBreakpointLocation(p.get()));
+
+  if (!sb_break_loc) {
+    error = Status::FromErrorStringWithFormat(
+        "Couldn't cast lldb::SBBreakpointLocation to "
+        "lldb::BreakpointLocationSP.");
+    return nullptr;
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBBreakpointLocation(*sb_break_loc);
+}
+
+template <>
 lldb::ProcessAttachInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
     lldb::ProcessAttachInfoSP>(python::PythonObject &p, Status &error) {
   lldb::SBAttachInfo *sb_attach_info = reinterpret_cast<lldb::SBAttachInfo *>(
@@ -167,7 +215,8 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 
   if (!sb_mem_reg_info) {
     error = Status::FromErrorStringWithFormat(
-        "Couldn't cast lldb::SBMemoryRegionInfo to lldb::MemoryRegionInfoSP.");
+        "Couldn't cast lldb::SBMemoryRegionInfo to "
+        "lldb_private::MemoryRegionInfo.");
     return {};
   }
 
@@ -191,6 +240,152 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
   }
 
   return m_interpreter.GetOpaqueTypeFromSBExecutionContext(*sb_exe_ctx);
+}
+
+template <>
+lldb::DescriptionLevel
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DescriptionLevel>(
+    python::PythonObject &p, Status &error) {
+  lldb::DescriptionLevel ret_val = lldb::eDescriptionLevelBrief;
+  llvm::Expected<unsigned long long> unsigned_or_err = p.AsUnsignedLongLong();
+  if (!unsigned_or_err) {
+    error = (Status::FromError(unsigned_or_err.takeError()));
+    return ret_val;
+  }
+  unsigned long long unsigned_val = *unsigned_or_err;
+  if (unsigned_val >= lldb::DescriptionLevel::kNumDescriptionLevels) {
+    error = Status("value too large for lldb::DescriptionLevel.");
+    return ret_val;
+  }
+  return static_cast<lldb::DescriptionLevel>(unsigned_val);
+}
+
+template <>
+lldb::StackFrameListSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
+    python::PythonObject &p, Status &error) {
+
+  lldb::SBFrameList *sb_frame_list = reinterpret_cast<lldb::SBFrameList *>(
+      python::LLDBSWIGPython_CastPyObjectToSBFrameList(p.get()));
+
+  if (!sb_frame_list) {
+    error = Status::FromErrorStringWithFormat(
+        "couldn't cast lldb::SBFrameList to lldb::StackFrameListSP.");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBFrameList(*sb_frame_list);
+}
+
+template <>
+lldb::ValueObjectSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBValue *sb_value = reinterpret_cast<lldb::SBValue *>(
+      python::LLDBSWIGPython_CastPyObjectToSBValue(p.get()));
+  if (!sb_value) {
+    error = Status::FromErrorStringWithFormat(
+        "couldn't cast lldb::SBValue to lldb::ValueObjectSP");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBValue(*sb_value);
+}
+
+template <>
+lldb::ValueObjectListSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBValueList *sb_value_list = reinterpret_cast<lldb::SBValueList *>(
+      python::LLDBSWIGPython_CastPyObjectToSBValueList(p.get()));
+
+  if (!sb_value_list) {
+    error = Status::FromErrorStringWithFormat(
+        "couldn't cast lldb::SBValueList to lldb::ValueObjectListSP");
+    return {};
+  }
+
+  lldb::ValueObjectListSP out = std::make_shared<ValueObjectList>();
+  for (uint32_t i = 0, e = sb_value_list->GetSize(); i < e; ++i) {
+    SBValue value = sb_value_list->GetValueAtIndex(i);
+    out->Append(m_interpreter.GetOpaqueTypeFromSBValue(value));
+  }
+
+  return out;
+}
+
+template <>
+FileSpec ScriptedPythonInterface::ExtractValueFromPythonObject<FileSpec>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBFileSpec *sb_file_spec = reinterpret_cast<lldb::SBFileSpec *>(
+          python::LLDBSWIGPython_CastPyObjectToSBFileSpec(p.get()))) {
+    if (auto file_spec =
+            m_interpreter.GetOpaqueTypeFromSBFileSpec(*sb_file_spec))
+      return *file_spec;
+  }
+  error = Status::FromErrorString(
+      "couldn't cast lldb::SBFileSpec to lldb_private::FileSpec.");
+
+  return {};
+}
+
+template <>
+ModuleSpec ScriptedPythonInterface::ExtractValueFromPythonObject<ModuleSpec>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBModuleSpec *sb_module_spec =
+          reinterpret_cast<lldb::SBModuleSpec *>(
+              python::LLDBSWIGPython_CastPyObjectToSBModuleSpec(p.get()))) {
+    if (auto module_spec =
+            m_interpreter.GetOpaqueTypeFromSBModuleSpec(*sb_module_spec))
+      return *module_spec;
+  }
+  error = Status::FromErrorString(
+      "couldn't cast lldb::SBModuleSpec to lldb_private::ModuleSpec.");
+
+  return {};
+}
+
+template <>
+FileSpecList
+ScriptedPythonInterface::ExtractValueFromPythonObject<FileSpecList>(
+    python::PythonObject &p, Status &error) {
+  FileSpecList result;
+  if (lldb::SBFileSpecList *sb_list = reinterpret_cast<lldb::SBFileSpecList *>(
+          python::LLDBSWIGPython_CastPyObjectToSBFileSpecList(p.get()))) {
+    for (uint32_t i = 0; i < sb_list->GetSize(); i++) {
+      lldb::SBFileSpec sb_file_spec = sb_list->GetFileSpecAtIndex(i);
+      if (auto file_spec =
+              m_interpreter.GetOpaqueTypeFromSBFileSpec(sb_file_spec))
+        result.Append(*file_spec);
+    }
+    return result;
+  }
+  error = Status::FromErrorString(
+      "couldn't cast Python object to lldb::SBFileSpecList.");
+  return result;
+}
+
+template <>
+lldb::ModuleSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ModuleSP>(
+    python::PythonObject &p, Status &error) {
+  if (lldb::SBModule *sb_module = reinterpret_cast<lldb::SBModule *>(
+          python::LLDBSWIGPython_CastPyObjectToSBModule(p.get())))
+    return m_interpreter.GetOpaqueTypeFromSBModule(*sb_module);
+  error = Status::FromErrorString(
+      "couldn't cast lldb::SBModule to lldb::ModuleSP.");
+
+  return {};
+}
+
+// MakeSBModuleSpec is defined here rather than in ScriptInterpreter.cpp
+// because it constructs an SBModuleSpec, whose symbols live in liblldb.
+// ScriptInterpreter.cpp is part of lldbInterpreter which is also linked
+// into lldb-server, which does not link the API library.
+std::unique_ptr<lldb::SBModuleSpec>
+ScriptInterpreter::MakeSBModuleSpec(const ModuleSpec &module_spec) const {
+  return std::unique_ptr<lldb::SBModuleSpec>(
+      new lldb::SBModuleSpec(module_spec));
 }
 
 #endif

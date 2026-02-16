@@ -17,7 +17,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/ScopInfo.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopBuilder.h"
 #include "polly/ScopDetection.h"
@@ -54,10 +53,8 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -2544,19 +2541,6 @@ raw_ostream &polly::operator<<(raw_ostream &OS, const Scop &scop) {
   return OS;
 }
 
-//===----------------------------------------------------------------------===//
-void ScopInfoRegionPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfoWrapperPass>();
-  AU.addRequired<RegionInfoPass>();
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
-  AU.addRequiredTransitive<ScopDetectionWrapperPass>();
-  AU.addRequired<AAResultsWrapperPass>();
-  AU.addRequired<AssumptionCacheTracker>();
-  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  AU.setPreservesAll();
-}
-
 void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
                               Scop::ScopStatistics ScopStats) {
   assert(Stats.NumLoops == ScopStats.NumAffineLoops + ScopStats.NumBoxedLoops);
@@ -2591,112 +2575,6 @@ void updateLoopCountStatistic(ScopDetection::LoopStats Stats,
   NumSingletonWrites += ScopStats.NumSingletonWrites;
   NumSingletonWritesInLoops += ScopStats.NumSingletonWritesInLoops;
 }
-
-bool ScopInfoRegionPass::runOnRegion(Region *R, RGPassManager &RGM) {
-  auto &SD = getAnalysis<ScopDetectionWrapperPass>().getSD();
-
-  if (!SD.isMaxRegionInScop(*R))
-    return false;
-
-  Function *F = R->getEntry()->getParent();
-  auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto const &DL = F->getParent()->getDataLayout();
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(*F);
-  auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-
-  ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE, ORE);
-  S = SB.getScop(); // take ownership of scop object
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
-  if (S) {
-    ScopDetection::LoopStats Stats =
-        ScopDetection::countBeneficialLoops(&S->getRegion(), SE, LI, 0);
-    updateLoopCountStatistic(Stats, S->getStatistics());
-  }
-#endif
-
-  return false;
-}
-
-void ScopInfoRegionPass::print(raw_ostream &OS, const Module *) const {
-  if (S)
-    S->print(OS, PollyPrintInstructions);
-  else
-    OS << "Invalid Scop!\n";
-}
-
-char ScopInfoRegionPass::ID = 0;
-
-Pass *polly::createScopInfoRegionPassPass() { return new ScopInfoRegionPass(); }
-
-INITIALIZE_PASS_BEGIN(ScopInfoRegionPass, "polly-scops",
-                      "Polly - Create polyhedral description of Scops", false,
-                      false);
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker);
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(RegionInfoPass);
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(ScopDetectionWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
-INITIALIZE_PASS_END(ScopInfoRegionPass, "polly-scops",
-                    "Polly - Create polyhedral description of Scops", false,
-                    false)
-
-//===----------------------------------------------------------------------===//
-
-namespace {
-
-/// Print result from ScopInfoRegionPass.
-class ScopInfoPrinterLegacyRegionPass final : public RegionPass {
-public:
-  static char ID;
-
-  ScopInfoPrinterLegacyRegionPass() : ScopInfoPrinterLegacyRegionPass(outs()) {}
-
-  explicit ScopInfoPrinterLegacyRegionPass(llvm::raw_ostream &OS)
-      : RegionPass(ID), OS(OS) {}
-
-  bool runOnRegion(Region *R, RGPassManager &RGM) override {
-    ScopInfoRegionPass &P = getAnalysis<ScopInfoRegionPass>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
-       << R->getNameStr() << "' in function '"
-       << R->getEntry()->getParent()->getName() << "':\n";
-    P.print(OS);
-
-    return false;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    RegionPass::getAnalysisUsage(AU);
-    AU.addRequired<ScopInfoRegionPass>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char ScopInfoPrinterLegacyRegionPass::ID = 0;
-} // namespace
-
-Pass *polly::createScopInfoPrinterLegacyRegionPass(raw_ostream &OS) {
-  return new ScopInfoPrinterLegacyRegionPass(OS);
-}
-
-INITIALIZE_PASS_BEGIN(ScopInfoPrinterLegacyRegionPass, "polly-print-scops",
-                      "Polly - Print polyhedral description of Scops", false,
-                      false);
-INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
-INITIALIZE_PASS_END(ScopInfoPrinterLegacyRegionPass, "polly-print-scops",
-                    "Polly - Print polyhedral description of Scops", false,
-                    false)
-
-//===----------------------------------------------------------------------===//
 
 ScopInfo::ScopInfo(const DataLayout &DL, ScopDetection &SD, ScalarEvolution &SE,
                    LoopInfo &LI, AliasAnalysis &AA, DominatorTree &DT,
@@ -2771,110 +2649,3 @@ PreservedAnalyses ScopInfoPrinterPass::run(Function &F,
   }
   return PreservedAnalyses::all();
 }
-
-void ScopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfoWrapperPass>();
-  AU.addRequired<RegionInfoPass>();
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
-  AU.addRequiredTransitive<ScopDetectionWrapperPass>();
-  AU.addRequired<AAResultsWrapperPass>();
-  AU.addRequired<AssumptionCacheTracker>();
-  AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  AU.setPreservesAll();
-}
-
-bool ScopInfoWrapperPass::runOnFunction(Function &F) {
-  auto &SD = getAnalysis<ScopDetectionWrapperPass>().getSD();
-  auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto const &DL = F.getParent()->getDataLayout();
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-
-  Result.reset(new ScopInfo{DL, SD, SE, LI, AA, DT, AC, ORE});
-  return false;
-}
-
-void ScopInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
-  for (auto &It : *Result) {
-    if (It.second)
-      It.second->print(OS, PollyPrintInstructions);
-    else
-      OS << "Invalid Scop!\n";
-  }
-}
-
-char ScopInfoWrapperPass::ID = 0;
-
-Pass *polly::createScopInfoWrapperPassPass() {
-  return new ScopInfoWrapperPass();
-}
-
-INITIALIZE_PASS_BEGIN(
-    ScopInfoWrapperPass, "polly-function-scops",
-    "Polly - Create polyhedral description of all Scops of a function", false,
-    false);
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker);
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(RegionInfoPass);
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(ScopDetectionWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
-INITIALIZE_PASS_END(
-    ScopInfoWrapperPass, "polly-function-scops",
-    "Polly - Create polyhedral description of all Scops of a function", false,
-    false)
-
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Print result from ScopInfoWrapperPass.
-class ScopInfoPrinterLegacyFunctionPass final : public FunctionPass {
-public:
-  static char ID;
-
-  ScopInfoPrinterLegacyFunctionPass()
-      : ScopInfoPrinterLegacyFunctionPass(outs()) {}
-  explicit ScopInfoPrinterLegacyFunctionPass(llvm::raw_ostream &OS)
-      : FunctionPass(ID), OS(OS) {}
-
-  bool runOnFunction(Function &F) override {
-    ScopInfoWrapperPass &P = getAnalysis<ScopInfoWrapperPass>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for function '"
-       << F.getName() << "':\n";
-    P.print(OS);
-
-    return false;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    FunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<ScopInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char ScopInfoPrinterLegacyFunctionPass::ID = 0;
-} // namespace
-
-Pass *polly::createScopInfoPrinterLegacyFunctionPass(raw_ostream &OS) {
-  return new ScopInfoPrinterLegacyFunctionPass(OS);
-}
-
-INITIALIZE_PASS_BEGIN(
-    ScopInfoPrinterLegacyFunctionPass, "polly-print-function-scops",
-    "Polly - Print polyhedral description of all Scops of a function", false,
-    false);
-INITIALIZE_PASS_DEPENDENCY(ScopInfoWrapperPass);
-INITIALIZE_PASS_END(
-    ScopInfoPrinterLegacyFunctionPass, "polly-print-function-scops",
-    "Polly - Print polyhedral description of all Scops of a function", false,
-    false)

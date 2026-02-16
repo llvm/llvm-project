@@ -47,16 +47,16 @@ grab_liba:
 # "greetings" section
 # CHECK: - Type:            DATA
 # CHECK:   Segments:
-# CHECK:     - SectionOffset:   7
+# CHECK:     - SectionOffset:   8
 # CHECK:       InitFlags:       0
 # CHECK:       Offset:
 # CHECK:         Opcode:          I32_CONST
-# CHECK:         Value:           1024
+# CHECK:         Value:           65536
 # CHECK:       Content:         68656C6C6F00776F726C6400
 # "weahters" section.
-# CHECK: - SectionOffset:   25
+# CHECK: - SectionOffset:   27
 # CHECK:   InitFlags:       0
 # CHECK:   Offset:
 # CHECK:     Opcode:          I32_CONST
-# CHECK:     Value:           1036
+# CHECK:     Value:           65548
 # CHECK:   Content:         636C6F75647900

@@ -64,8 +64,8 @@ define i32 @merge0(i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK-LABEL: define i32 @merge0
 ; CHECK-SAME: (i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]]) {
 ; CHECK-NEXT:  j2:
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[C2]], i32 0, i32 1
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C3]], i32 2, i32 3
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[C2]], i32 0, i32 1
 ; CHECK-NEXT:    [[PHI2:%.*]] = select i1 [[C1]], i32 [[DOT]], i32 [[SPEC_SELECT]]
 ; CHECK-NEXT:    ret i32 [[PHI2]]
 ;
@@ -111,7 +111,7 @@ define i8 @merge1(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK:       case2:
 ; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       Succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 2, [[CASE2]] ], [ 1, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[CASE0]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[SPEC_SELECT]], [[CASE0]] ], [ 1, [[ENTRY:%.*]] ], [ 2, [[CASE2]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 entry:
@@ -167,7 +167,7 @@ define i8 @merge1_unfoldable_one_block(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK:       case2:
 ; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       Succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 2, [[CASE2]] ], [ 1, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[CASE0]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[SPEC_SELECT]], [[CASE0]] ], [ 1, [[ENTRY:%.*]] ], [ 2, [[CASE2]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 entry:
@@ -225,7 +225,7 @@ define i8 @merge1_unfoldable_two_block(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       Succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 1, [[CASE1]] ], [ 2, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[CASE0]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[SPEC_SELECT]], [[CASE0]] ], [ 1, [[CASE1]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 entry:
@@ -286,7 +286,7 @@ define i8 @merge1_unfoldable_all_block(i8 noundef %arg, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C2]], i8 4, i8 3
 ; CHECK-NEXT:    br label [[SUCC]]
 ; CHECK:       Succ:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 0, [[CASE0]] ], [ 1, [[CASE1]] ], [ 2, [[CASE2]] ], [ [[SPEC_SELECT]], [[COMMONPRED]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[SPEC_SELECT]], [[COMMONPRED]] ], [ 0, [[CASE0]] ], [ 1, [[CASE1]] ], [ 2, [[CASE2]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 entry:

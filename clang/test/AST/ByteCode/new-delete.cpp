@@ -14,6 +14,20 @@ constexpr int *Global = new int(12); // both-error {{must be initialized by a co
 static_assert(*(new int(12)) == 12); // both-error {{not an integral constant expression}} \
                                      // both-note {{allocation performed here was not deallocated}}
 
+static_assert((delete[] (new int[3] + 1), true)); // both-error {{not an integral constant expression}} \
+                                                  // both-note {{delete of pointer to subobject '&{*new int[3]#0}[1]'}}
+
+struct S {
+  int a;
+  int b;
+
+  static constexpr S *create(int a, int b) {
+    return new S(a, b);
+  }
+};
+
+static_assert(((delete[] (new int[true])), true));
+static_assert(((delete[] (new S[true])), true));
 
 constexpr int a() {
   new int(12); // both-note {{allocation performed here was not deallocated}}
@@ -28,16 +42,6 @@ constexpr int b() {
   return m;
 }
 static_assert(b() == 12, "");
-
-
-struct S {
-  int a;
-  int b;
-
-  static constexpr S *create(int a, int b) {
-    return new S(a, b);
-  }
-};
 
 constexpr int c() {
   S *s = new S(12, 13);
@@ -113,6 +117,12 @@ constexpr int AutoArray() {
 }
 
 static_assert(AutoArray() == 3);
+
+namespace ThisPtrInRunRecordDestructor {
+  struct S {
+    constexpr ~S() { delete new S; };
+  };
+}
 
 #if 0
 consteval int largeArray1(bool b) {
@@ -523,7 +533,6 @@ namespace DeleteRunsDtors {
   static_assert(abc2() == 1);
 }
 
-/// FIXME: There is a slight difference in diagnostics here.
 namespace FaultyDtorCalledByDelete {
   struct InnerFoo {
     int *mem;
@@ -764,7 +773,7 @@ namespace Limits {
     return n;
   }
   static_assert(dynarray<char>(5, 0) == 'f');
-
+  static_assert(dynarray<char>(5, 4) == 0);
 
 #if __LP64__
   template <typename T>
@@ -1067,6 +1076,63 @@ namespace BaseCompare {
 
   }
   static_assert(foo());
+}
+
+
+namespace NegativeArraySize { 
+  constexpr void f() { // both-error {{constexpr function never produces a constant expression}}
+    int x = -1;
+    int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}} 
+  }
+} // namespace NegativeArraySize
+
+namespace NewNegSizeNothrow {
+  constexpr int get_neg_size() {
+    return -1;
+  }
+
+  constexpr bool test_nothrow_neg_size() {
+    int x = get_neg_size();
+    int* p = new (std::nothrow) int[x]; 
+    return p == nullptr;
+  }
+
+  static_assert(test_nothrow_neg_size(), "expected nullptr");
+} // namespace NewNegSizeNothrow
+
+#if __SIZEOF_SIZE_T == 8
+/// We can't allocate the array here as it is too big.
+/// Make sure we're not crashing by assuming an non-null
+/// Descriptor.
+namespace HugeAllocation {
+  void *p;
+  void foo ()
+  {
+    p = new char [256][256][256][256][256];
+  }
+}
+#endif
+
+namespace ZeroSizeArray {
+  constexpr int foo() {
+    int *A = new int[0];
+    int diff = A - (&A[0]);
+    delete[] A;
+    return diff;
+  }
+  static_assert(foo() == 0);
+}
+
+namespace NonLiteralType {
+  /// This used to crash.
+  constexpr void foo() {
+    struct O {};
+
+    struct S {
+      O *s;
+      constexpr S() : s{std::allocator<O>{}.allocate(1)} {}
+    };
+  }
 }
 
 #else

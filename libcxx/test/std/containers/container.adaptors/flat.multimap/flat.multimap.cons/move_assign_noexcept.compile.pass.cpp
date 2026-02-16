@@ -51,7 +51,7 @@ struct MoveThrowsComp {
 
 void test() {
   {
-    using C = std::flat_multimap<int, int>;
+    using C [[maybe_unused]] = std::flat_multimap<int, int>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
   }
   {
@@ -73,7 +73,7 @@ void test() {
     static_assert(!std::is_nothrow_move_assignable_v<C>);
   }
   {
-    using C =
+    using C [[maybe_unused]] =
         std::flat_multimap<MoveOnly,
                            int,
                            std::less<MoveOnly>,
@@ -82,7 +82,7 @@ void test() {
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
   }
   {
-    using C =
+    using C [[maybe_unused]] =
         std::flat_multimap<int,
                            MoveOnly,
                            std::less<int>,
@@ -92,7 +92,7 @@ void test() {
   }
   {
     // Test with a comparator that throws on move-assignment.
-    using C = std::flat_multimap<int, int, MoveThrowsComp>;
+    using C [[maybe_unused]] = std::flat_multimap<int, int, MoveThrowsComp>;
     LIBCPP_STATIC_ASSERT(!std::is_nothrow_move_assignable_v<C>);
   }
   {

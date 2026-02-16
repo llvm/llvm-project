@@ -147,7 +147,7 @@ module m2
     procedure proc
   end type child
 contains
-  subroutine proc 
+  subroutine proc
   end subroutine
 end module m2
 

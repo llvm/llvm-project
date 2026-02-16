@@ -88,6 +88,11 @@ void transform::ApplyDropUnitDimWithShapeCastPatternsOp::populatePatterns(
   vector::populateDropUnitDimWithShapeCastPatterns(patterns);
 }
 
+void transform::ApplyDropInnerMostUnitDimsFromXferOpsPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  vector::populateDropInnerMostUnitDimsXferOpPatterns(patterns);
+}
+
 void transform::ApplyLowerBitCastPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorBitCastLoweringPatterns(patterns);
@@ -125,7 +130,11 @@ void transform::ApplyLowerMultiReductionPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::VectorTransformsOptions vectorTransformOptions;
   vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
-  vector::populateVectorMultiReductionLoweringPatterns(
+  vector::populateVectorMultiReductionTransformationPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
+  vector::populateVectorMultiReductionFlatteningPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
+  vector::populateVectorMultiReductionUnrollingPatterns(
       patterns, vectorTransformOptions.vectorMultiReductionLowering);
 }
 
@@ -141,7 +150,12 @@ void transform::ApplyLowerGatherPatternsOp::populatePatterns(
 
 void transform::ApplyUnrollFromElementsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  vector::populateVectorFromElementsLoweringPatterns(patterns);
+  vector::populateVectorFromElementsUnrollPatterns(patterns);
+}
+
+void transform::ApplyUnrollToElementsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorToElementsUnrollPatterns(patterns);
 }
 
 void transform::ApplyLowerScanPatternsOp::populatePatterns(
@@ -215,6 +229,12 @@ void transform::ApplySinkVectorPatternsOp::populatePatterns(
 void transform::ApplySinkVectorMemPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateSinkVectorMemOpsPatterns(patterns);
+}
+
+void transform::ApplyFlattenVectorTransferOpsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateFlattenVectorTransferPatterns(patterns,
+                                                getTargetVectorBitwidth());
 }
 
 //===----------------------------------------------------------------------===//

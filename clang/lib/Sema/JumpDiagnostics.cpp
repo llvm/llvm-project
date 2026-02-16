@@ -179,8 +179,10 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
       }
     }
 
+    // An earlier diag::note_protected_by_vla is more severe, so don't overwrite
+    // it here.
     if (const Expr *Init = VD->getInit();
-        VD->hasLocalStorage() && Init && !Init->containsErrors()) {
+        !InDiag && VD->hasLocalStorage() && Init && !Init->containsErrors()) {
       // C++11 [stmt.dcl]p3:
       //   A program that jumps from a point where a variable with automatic
       //   storage duration is not in scope to a point where it is in scope
@@ -590,6 +592,27 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     break;
   }
 
+  case Stmt::DeferStmtClass: {
+    auto *D = cast<DeferStmt>(S);
+
+    {
+      // Disallow jumps over defer statements.
+      unsigned NewParentScope = Scopes.size();
+      Scopes.emplace_back(ParentScope, diag::note_protected_by_defer_stmt, 0,
+                          D->getDeferLoc());
+      origParentScope = NewParentScope;
+    }
+
+    // Disallow jumps into or out of defer statements.
+    {
+      unsigned NewParentScope = Scopes.size();
+      Scopes.emplace_back(ParentScope, diag::note_enters_defer_stmt,
+                          diag::note_exits_defer_stmt, D->getDeferLoc());
+      BuildScopeInformation(D->getBody(), NewParentScope);
+    }
+    return;
+  }
+
   case Stmt::CaseStmtClass:
   case Stmt::DefaultStmtClass:
   case Stmt::LabelStmtClass:
@@ -972,7 +995,7 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
   // Common case: exactly the same scope, which is fine.
   if (FromScope == ToScope) return;
 
-  // Warn on gotos out of __finally blocks.
+  // Warn on gotos out of __finally blocks and defer statements.
   if (isa<GotoStmt>(From) || isa<IndirectGotoStmt>(From)) {
     // If FromScope > ToScope, FromScope is more nested and the jump goes to a
     // less nested scope.  Check if it crosses a __finally along the way.
@@ -989,6 +1012,10 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
                  diag::note_acc_branch_into_compute_construct) {
         S.Diag(From->getBeginLoc(), diag::err_goto_into_protected_scope);
         S.Diag(Scopes[I].Loc, diag::note_acc_branch_out_of_compute_construct);
+        return;
+      } else if (Scopes[I].OutDiag == diag::note_exits_defer_stmt) {
+        S.Diag(From->getBeginLoc(), diag::err_goto_into_protected_scope);
+        S.Diag(Scopes[I].Loc, diag::note_exits_defer_stmt);
         return;
       }
     }

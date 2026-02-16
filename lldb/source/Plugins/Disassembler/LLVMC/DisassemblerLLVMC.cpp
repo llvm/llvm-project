@@ -70,6 +70,7 @@ public:
   bool HasDelaySlot(llvm::MCInst &mc_inst) const;
   bool IsCall(llvm::MCInst &mc_inst) const;
   bool IsLoad(llvm::MCInst &mc_inst) const;
+  bool IsBarrier(llvm::MCInst &mc_inst) const;
   bool IsAuthenticated(llvm::MCInst &mc_inst) const;
 
 private:
@@ -436,6 +437,11 @@ public:
     return m_is_load;
   }
 
+  bool IsBarrier() override {
+    VisitInstruction();
+    return m_is_barrier;
+  }
+
   bool IsAuthenticated() override {
     VisitInstruction();
     return m_is_authenticated;
@@ -559,7 +565,7 @@ public:
   lldb::InstructionControlFlowKind
   GetControlFlowKind(const lldb_private::ExecutionContext *exe_ctx) override {
     DisassemblerScope disasm(*this, exe_ctx);
-    if (disasm){
+    if (disasm) {
       if (disasm->GetArchitecture().GetMachine() == llvm::Triple::x86)
         return x86::GetControlFlowKind(/*is_64b=*/false, m_opcode);
       else if (disasm->GetArchitecture().GetMachine() == llvm::Triple::x86_64)
@@ -1195,6 +1201,7 @@ protected:
   bool m_is_call = false;
   bool m_is_load = false;
   bool m_is_authenticated = false;
+  bool m_is_barrier = false;
 
   void VisitInstruction() {
     if (m_has_visited_instruction)
@@ -1227,6 +1234,7 @@ protected:
     m_is_call = mc_disasm_ptr->IsCall(inst);
     m_is_load = mc_disasm_ptr->IsLoad(inst);
     m_is_authenticated = mc_disasm_ptr->IsAuthenticated(inst);
+    m_is_barrier = mc_disasm_ptr->IsBarrier(inst);
   }
 
 private:
@@ -1249,11 +1257,14 @@ private:
 };
 
 std::unique_ptr<DisassemblerLLVMC::MCDisasmInstance>
-DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple, const char *cpu,
+DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple_name,
+                                            const char *cpu,
                                             const char *features_str,
                                             unsigned flavor,
                                             DisassemblerLLVMC &owner) {
   using Instance = std::unique_ptr<DisassemblerLLVMC::MCDisasmInstance>;
+
+  llvm::Triple triple(triple_name);
 
   std::string Status;
   const llvm::Target *curr_target =
@@ -1427,6 +1438,11 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsCall(llvm::MCInst &mc_inst) const {
 
 bool DisassemblerLLVMC::MCDisasmInstance::IsLoad(llvm::MCInst &mc_inst) const {
   return m_instr_info_up->get(mc_inst.getOpcode()).mayLoad();
+}
+
+bool DisassemblerLLVMC::MCDisasmInstance::IsBarrier(
+    llvm::MCInst &mc_inst) const {
+  return m_instr_info_up->get(mc_inst.getOpcode()).isBarrier();
 }
 
 bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
@@ -1605,9 +1621,8 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   // thumb instruction disassembler.
   if (llvm_arch == llvm::Triple::arm) {
     std::string thumb_triple(thumb_arch.GetTriple().getTriple());
-    m_alternate_disasm_up =
-        MCDisasmInstance::Create(thumb_triple.c_str(), "", features_str.c_str(),
-                                 flavor, *this);
+    m_alternate_disasm_up = MCDisasmInstance::Create(
+        thumb_triple.c_str(), "", features_str.c_str(), flavor, *this);
     if (!m_alternate_disasm_up)
       m_disasm_up.reset();
 

@@ -11,6 +11,7 @@ executable("llvm-split") {
     "//llvm/lib/Target:AllTargetsCodeGens",
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/Transforms/IPO",
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [ "llvm-split.cpp" ]

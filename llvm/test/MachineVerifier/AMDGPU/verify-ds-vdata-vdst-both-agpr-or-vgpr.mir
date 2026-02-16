@@ -1,0 +1,92 @@
+# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -run-pass=none -filetype=null %s 2>&1 | FileCheck -implicit-check-not=Bad %s
+
+---
+name: invalid_mixed_agpr_vgpr_ops_ds_atomic
+tracksRegLiveness: true
+body:             |
+  bb.0:
+
+  %addr:vgpr_32 = IMPLICIT_DEF
+  %vgpr:vgpr_32 = IMPLICIT_DEF
+  %agpr:agpr_32 = IMPLICIT_DEF
+  %a_or_v:av_32 = IMPLICIT_DEF
+
+  ; CHECK: Bad machine code: Invalid register class: vdata and vdst should be both VGPR or AGPR
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  %4:agpr_32 = DS_CMPST_RTN_B32_gfx9 %addr, %vgpr, %vgpr, 0, 0, implicit $exec :: (load store seq_cst monotonic (s32), addrspace 3)
+
+  ; CHECK: Bad machine code: Invalid register class: vdata and vdst should be both VGPR or AGPR
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  %5:vgpr_32 = DS_CMPST_RTN_B32_gfx9 %addr, %agpr, %vgpr, 0, 0, implicit $exec :: (load store seq_cst monotonic (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Invalid register class: both data operands should be VGPR or AGPR ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  %6:vgpr_32 = DS_CMPST_RTN_B32_gfx9 %addr, %vgpr, %agpr, 0, 0, implicit $exec :: (load store seq_cst monotonic (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  %7:av_32 = DS_CMPST_RTN_B32_gfx9 %addr, %vgpr, %vgpr, 0, 0, implicit $exec :: (load store seq_cst monotonic (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  %8:vgpr_32 = DS_CMPST_RTN_B32_gfx9 %vgpr, %a_or_v, %vgpr, 0, 0, implicit $exec :: (load store seq_cst monotonic (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  %9:vgpr_32 = DS_CMPST_RTN_B32_gfx9 %vgpr, %vgpr, %a_or_v, 0, 0, implicit $exec :: (load store seq_cst monotonic (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Invalid register class: vdata and vdst should be both VGPR or AGPR ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  %10:av_32 = DS_CMPST_RTN_B32_gfx9 %addr, %agpr, %agpr, 0, 0, implicit $exec :: (load store seq_cst monotonic (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Invalid register class: vdata and vdst should be both VGPR or AGPR ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  %11:agpr_32 = DS_CMPST_RTN_B32_gfx9 %addr, %a_or_v, %agpr, 0, 0, implicit $exec :: (load store seq_cst monotonic (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Invalid register class: both data operands should be VGPR or AGPR ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  %12:agpr_32 = DS_CMPST_RTN_B32_gfx9 %addr, %agpr, %a_or_v, 0, 0, implicit $exec :: (load store seq_cst monotonic (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Invalid register class: vdata and vdst should be both VGPR or AGPR ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  %13:agpr_32 = DS_CMPST_RTN_B32_gfx9 %addr, %a_or_v, %a_or_v, 0, 0, implicit $exec :: (load store seq_cst monotonic (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  %14:av_32 = DS_CMPST_RTN_B32_gfx9 %addr, %a_or_v, %a_or_v, 0, 0, implicit $exec :: (load store seq_cst monotonic (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  DS_WRITE2_B32_gfx9 %addr, %a_or_v, %a_or_v, 10, 24, 0, implicit $exec :: (store (s32), addrspace 3), (store (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Invalid register class: both data operands should be VGPR or AGPR ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  DS_WRITE2_B32_gfx9 %addr, %agpr, %vgpr, 10, 24, 0, implicit $exec :: (store (s32), addrspace 3), (store (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Invalid register class: both data operands should be VGPR or AGPR ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  DS_WRITE2_B32_gfx9 %addr, %vgpr, %agpr, 10, 24, 0, implicit $exec :: (store (s32), addrspace 3), (store (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  DS_WRITE2_B32_gfx9 %addr, %vgpr, %a_or_v, 10, 24, 0, implicit $exec :: (store (s32), addrspace 3), (store (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  DS_WRITE2_B32_gfx9 %addr, %a_or_v, %vgpr, 10, 24, 0, implicit $exec :: (store (s32), addrspace 3), (store (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Invalid register class: both data operands should be VGPR or AGPR ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  DS_WRITE2_B32_gfx9 %addr, %agpr, %a_or_v, 10, 24, 0, implicit $exec :: (store (s32), addrspace 3), (store (s32), addrspace 3)
+
+  ; CHECK: *** Bad machine code: Invalid register class: both data operands should be VGPR or AGPR ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  ; CHECK: *** Bad machine code: Illegal virtual register for instruction ***
+  DS_WRITE2_B32_gfx9 %addr, %a_or_v, %agpr, 10, 24, 0, implicit $exec :: (store (s32), addrspace 3), (store (s32), addrspace 3)
+
+...

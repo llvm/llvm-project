@@ -10,6 +10,7 @@
 #define LLDB_PROTOCOL_MCP_TOOL_H
 
 #include "lldb/Protocol/MCP/Protocol.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include <string>
 
@@ -20,7 +21,7 @@ public:
   Tool(std::string name, std::string description);
   virtual ~Tool() = default;
 
-  virtual llvm::Expected<lldb_protocol::mcp::TextResult>
+  virtual llvm::Expected<lldb_protocol::mcp::CallToolResult>
   Call(const lldb_protocol::mcp::ToolArguments &args) = 0;
 
   virtual std::optional<llvm::json::Value> GetSchema() const {

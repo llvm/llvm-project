@@ -12,6 +12,8 @@
 # <list>, <map>, <regex>, <set>, <span>, <string>, <string_view>, <unordered_map>,
 # <unordered_set>, <vector>.
 
+# UNSUPPORTED: c++03
+
 # RUN: %{python} %s %{libcxx-dir}/utils
 # END.
 
@@ -53,7 +55,6 @@ for header in headers:
 //--- {header}.pass.cpp
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
-// UNSUPPORTED: c++03
 
 #include <{header}>
 #include <cassert>

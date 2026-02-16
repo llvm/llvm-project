@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=60 -ferror-limit 100 %s -Wuninitialized
 
+// Test outside of an executable context.
+#pragma omp error severity(warning) message("msg") at(compilation) // expected-warning {{msg}}
+
 template <class T>
 T tmain(T argc) {
   if (argc)
@@ -112,8 +115,12 @@ if (1)
 // expected-error@+1 {{GPU compiler is needed.}}
 #pragma omp error message("GPU compiler is needed.") message("GPU compiler is needed.") // expected-error {{directive '#pragma omp error' cannot contain more than one 'message' clause}}
   int a;
-// expected-warning@+1 {{expected string literal in 'clause message' - ignoring}}
+// expected-warning@+1 {{expected string in 'clause message' - ignoring}}
 #pragma omp error message(a) // expected-error {{ERROR}}
+  char str[] = "msg";
+// expected-warning@+1 {{expected string literal in 'clause message' - ignoring}}
+#pragma omp error message(str) // expected-error {{ERROR}}
+#pragma omp error at(execution) message(str) // no error
 // expected-error@+1 {{ERROR}}
 #pragma omp error message() // expected-error {{expected expression}}
   return T();

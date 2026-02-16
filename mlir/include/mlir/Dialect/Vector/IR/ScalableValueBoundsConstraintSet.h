@@ -72,7 +72,7 @@ struct ScalableValueBoundsConstraintSet
   computeScalableBound(Value value, std::optional<int64_t> dim,
                        unsigned vscaleMin, unsigned vscaleMax,
                        presburger::BoundType boundType, bool closedUB = true,
-                       StopConditionFn stopCondition = nullptr);
+                       const StopConditionFn &stopCondition = nullptr);
 
   /// Get the value of vscale. Returns `nullptr` vscale as not been encountered.
   Value getVscaleValue() const { return vscale; }

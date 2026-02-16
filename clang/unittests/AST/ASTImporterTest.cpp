@@ -29,7 +29,7 @@ using internal::Matcher;
 
 static const RecordDecl *getRecordDeclOfFriend(FriendDecl *FD) {
   QualType Ty = FD->getFriendType()->getType().getCanonicalType();
-  return cast<RecordType>(Ty)->getOriginalDecl();
+  return cast<RecordType>(Ty)->getDecl();
 }
 
 struct ImportExpr : TestImportBase {};
@@ -774,8 +774,8 @@ TEST_P(ImportType, ImportDependentTemplateSpecialization) {
              "  typename A<T>::template B<T> a;"
              "};",
              Lang_CXX03, "", Lang_CXX03, Verifier,
-             classTemplateDecl(has(cxxRecordDecl(has(
-                 fieldDecl(hasType(dependentTemplateSpecializationType())))))));
+             classTemplateDecl(has(cxxRecordDecl(
+                 has(fieldDecl(hasType(templateSpecializationType())))))));
 }
 
 TEST_P(ImportType, ImportDeducedTemplateSpecialization) {
@@ -3204,6 +3204,57 @@ TEST_P(ImportExpr, UnresolvedMemberExpr) {
                  compoundStmt(has(callExpr(has(unresolvedMemberExpr())))))))));
 }
 
+TEST_P(ImportDecl, CycleInAutoTemplateSpec) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+  template <class _CharT>
+  struct basic_string {
+    using value_type = _CharT;
+  };
+
+  template<typename T>
+  struct basic_string_view {
+    using value_type = T;
+  };
+
+  using string_view = basic_string_view<char>;
+  using string = basic_string<char>;
+
+  template<typename T>
+  struct span {
+  };
+
+  template <typename StringT>
+  auto StrCatT(span<const StringT> pieces) {
+    basic_string<typename StringT::value_type> result;
+    return result;
+  }
+
+  string StrCat(span<const string_view> pieces) {
+      return StrCatT(pieces);
+  }
+
+  string StrCat(span<const string> pieces) {
+      return StrCatT(pieces);
+  }
+
+  template <typename T>
+  auto declToImport(T pieces) {
+    return StrCat(pieces);
+  }
+
+  void test() {
+    span<const string> pieces;
+    auto result = declToImport(pieces);
+  }
+)";
+  // This test reproduces the StrCatT recursion pattern with concepts and span
+  // that may cause infinite recursion during AST import due to circular
+  // dependencies
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             functionTemplateDecl(hasName("declToImport")));
+}
+
 TEST_P(ImportExpr, ConceptNoRequirement) {
   MatchVerifier<Decl> Verifier;
   const char *Code = R"(
@@ -3298,6 +3349,72 @@ TEST_P(ImportExpr, ConceptNestedNonInstantiationDependentRequirement) {
   )";
   testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
              conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
+}
+
+TEST_P(ImportExpr, ImportSubstNonTypeTemplateParmPackExpr) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+    template<auto ...> struct X {};
+    template<typename ...> struct Z {};
+
+    template<int ...N> struct E {
+      template<int ...M> using B = Z<X<N, M>...>;
+      template<int M1, int M2> E(B<M1, M2>);
+    };
+    using declToImport = E<1, 3>;
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             typedefNameDecl(hasName("declToImport")));
+}
+
+TEST_P(ImportExpr, ImportCXXParenListInitExpr) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+    struct Node {
+      int val;
+      double d;
+    };
+    Node* declToImport() { return new Node(2, 3.14); }
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             functionDecl(hasName("declToImport")));
+}
+
+TEST_P(ImportExpr, ImportPseudoObjectExpr) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+  namespace std {
+    struct strong_ordering {
+      int n;
+      constexpr operator int() const { return n; }
+      static const strong_ordering less, equal, greater;
+    };
+    constexpr strong_ordering strong_ordering::less{-1},
+        strong_ordering::equal{0}, strong_ordering::greater{1};
+  }
+
+  struct A {
+    std::strong_ordering operator<=>(const A&) const;
+  };
+  struct B {
+    bool operator==(const B&) const;
+    bool operator<(const B&) const;
+  };
+
+  template<typename T> struct Cmp : T {
+    std::strong_ordering operator<=>(const Cmp&) const = default;
+  };
+
+  void use(...);
+  void declToImport() {
+    use(
+      Cmp<A>() <=> Cmp<A>(),
+      Cmp<B>() <=> Cmp<B>()
+    );
+  }
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             functionDecl(hasName("declToImport")));
 }
 
 class ImportImplicitMethods : public ASTImporterOptionSpecificTestBase {
@@ -4614,7 +4731,7 @@ TEST_P(ImportFriendClasses, ImportOfClassDefinitionAndFwdFriendShouldBeLinked) {
   auto *Friend = FirstDeclMatcher<FriendDecl>().match(FromTU0, friendDecl());
   QualType FT = Friend->getFriendType()->getType();
   FT = FromTU0->getASTContext().getCanonicalType(FT);
-  auto *Fwd = cast<TagType>(FT)->getOriginalDecl();
+  auto *Fwd = cast<TagType>(FT)->getDecl();
   auto *ImportedFwd = Import(Fwd, Lang_CXX03);
   Decl *FromTU1 = getTuDecl(
       R"(
@@ -9189,7 +9306,7 @@ protected:
                          .getTypePtr();
     ASSERT_TRUE(Ty);
     EXPECT_FALSE(Ty->isCanonicalUnqualified());
-    const auto *InjTy = Ty->castAs<InjectedClassNameType>();
+    const auto *InjTy = dyn_cast<InjectedClassNameType>(Ty);
     EXPECT_TRUE(InjTy);
     for (const Decl *ReD : D->redecls()) {
       if (ReD == D)
@@ -9204,8 +9321,6 @@ protected:
       EXPECT_FALSE(ReTy->isCanonicalUnqualified());
       EXPECT_NE(ReTy, Ty);
       EXPECT_TRUE(Ctx.hasSameType(ReTy, Ty));
-      const auto *ReInjTy = Ty->castAs<InjectedClassNameType>();
-      EXPECT_TRUE(ReInjTy);
     }
   }
 
@@ -10027,7 +10142,8 @@ protected:
       EXPECT_EQ(ToD->getPreviousDecl(), ToDInherited);
     } else {
       EXPECT_EQ(FromD, FromDInherited->getPreviousDecl());
-      EXPECT_EQ(ToD, ToDInherited->getPreviousDecl());
+      // The order is reversed by the import process.
+      EXPECT_EQ(ToD->getPreviousDecl(), ToDInherited);
     }
   }
 

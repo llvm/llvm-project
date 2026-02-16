@@ -1,4 +1,4 @@
-//===--- MagicNumbersCheck.h - clang-tidy-----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ namespace clang::tidy::readability {
 /// Detects magic numbers, integer and floating point literals embedded in code.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/magic-numbers.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/magic-numbers.html
 class MagicNumbersCheck : public ClangTidyCheck {
 public:
   MagicNumbersCheck(StringRef Name, ClangTidyContext *Context);

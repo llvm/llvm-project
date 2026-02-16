@@ -107,10 +107,10 @@ public:
 
   /// Saves a snapshot of the current state. If there was any previous snapshot,
   /// it will be replaced with the new one.
-  void save();
+  LLVM_ABI_FOR_TEST void save();
 
   /// Checks current state against saved state, crashes if different.
-  void expectNoDiff();
+  LLVM_ABI_FOR_TEST void expectNoDiff();
 };
 
 #endif // NDEBUG

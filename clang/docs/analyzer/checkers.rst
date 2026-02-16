@@ -83,7 +83,49 @@ Ensure the shift operands are in proper range before shifting.
 
 core.CallAndMessage (C, C++, ObjC)
 """"""""""""""""""""""""""""""""""
- Check for logical errors for function calls and Objective-C message expressions (e.g., uninitialized arguments, null function pointers).
+Check for logical errors for function calls and Objective-C message expressions
+(e.g., uninitialized arguments, null function pointers).
+
+This checker is a collection of related checks that are controlled by checker
+options. The following checks are all enabled by default, but can be turned off
+by setting their option to ``false``:
+
+* **FunctionPointer** Check for null or undefined function pointer at function
+  call.
+* **CXXThisMethodCall** Check for null or undefined ``this`` pointer at method
+  call.
+* **CXXDeallocationArg** Check for null or undefined argument of
+  ``operator delete``.
+* **ArgInitializedness** Check for undefined pass-by-value function arguments.
+* **ParameterCount** Check for correct number of passed arguments to functions
+  or ObjC blocks. This will warn if the actual argument count is less (but not
+  if more) than the required count (by the declaration).
+* **NilReceiver** Check whether the receiver in a message expression is
+  ``nil``.
+* **UndefReceiver** Check whether the receiver in a message expression is
+  undefined.
+
+The following check is disabled by default (because it is more likely to
+produce false positives), this can be turned on by set the option to ``true``:
+
+* **ArgPointeeInitializedness** Check for undefined pass-by-reference (pointer
+  to constant value or constant reference) function arguments. In special cases
+  non-constant arguments are checked. This happens for C library functions
+  where it is required to initialize (at least partially) a passed structure
+  which is used for both input and output (for example last argument of
+  ``mktime`` or ``mbrlen``).
+
+**Additional options**
+
+* **ArgPointeeInitializednessComplete** Controls when to emit the warning at
+  the **ArgPointeeInitializedness** check. If this option is ``false`` (the
+  default), a ``struct`` is considered to be "initialized" when at least one
+  member is initialized. When this option is set to ``true``, structures are
+  only accepted as initialized when all members are initialized. (Arguments of
+  C library functions which require initialization are always checked as if the
+  option would be ``false``.)
+
+**Some examples**
 
 .. literalinclude:: checkers/callandmessage_example.c
     :language: objc
@@ -198,12 +240,56 @@ as error. Specifically on x86/x86-64 target if the pointer address space is
 dereference is not defined as error. See `X86/X86-64 Language Extensions
 <https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
 for reference.
-	
+
 If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
 to true (the default value), then this checker never reports dereference of
 pointers with a specified address space. If the option is set to false, then
 reports from the specific x86 address spaces 256, 257 and 258 are still
 suppressed, but null dereferences from other address spaces are reported.
+
+.. _core-NullPointerArithm:
+
+core.NullPointerArithm (C, C++)
+"""""""""""""""""""""""""""""""
+Check for undefined arithmetic operations with null pointers.
+
+The checker can detect the following cases:
+
+  - ``p + x`` and ``x + p`` where ``p`` is a null pointer and ``x`` is a nonzero
+    integer value.
+  - ``p - x`` where ``p`` is a null pointer and ``x`` is a nonzero integer
+    value.
+  - ``p1 - p2`` where one of ``p1`` and ``p2`` is null and the other a
+    non-null pointer.
+
+Result of these operations is undefined according to the standard.
+In the above listed cases, the checker will warn even if the expression
+described to be "nonzero" or "non-null" has unknown value, because it is likely
+that it can have non-zero value during the program execution.
+
+.. code-block:: c
+
+ void test1(int *p, int offset) {
+   if (p)
+     return;
+
+   int *p1 = p + offset; // warn: 'p' is null, 'offset' is unknown but likely non-zero
+ }
+
+ void test2(int *p, int offset) {
+   if (p) { } // this indicates that it is possible for 'p' to be null
+   if (offset == 0)
+     return;
+
+   int *p1 = p - offset; // warn: 'p' is null, 'offset' is known to be non-zero
+ }
+
+ void test3(char *p1, char *p2) {
+   if (p1)
+     return;
+
+   int a = p1 - p2; // warn: 'p1' is null, 'p2' can be likely non-null
+ }
 
 .. _core-StackAddressEscape:
 
@@ -1327,8 +1413,12 @@ For a more detailed description of configuration options, please see the
 
 **Configuration**
 
-* `Config`  Specifies the name of the YAML configuration file. The user can
-  define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:Config``  Specifies the name of the YAML
+  configuration file. The user can define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:EnableDefaultConfig`` If set to false,
+   the default source, sink and propagation rules are not loaded. This way,
+   advanced users can fully customize their taint configuration model.
+   Default: ``true``.
 
 **Related Guidelines**
 
@@ -1620,6 +1710,23 @@ Warn on uses of the 'bzero' function.
    bzero(ptr, n); // warn
  }
 
+.. _security-insecureAPI-decodeValueOfObjCType:
+
+security.insecureAPI.decodeValueOfObjCType (C)
+""""""""""""""""""""""""""""""""""""""""""""""
+Warn on uses of the Objective-C method ``-decodeValueOfObjCType:at:``.
+
+.. code-block:: objc
+
+  void test(NSCoder *decoder) {
+    unsigned int x;
+    [decoder decodeValueOfObjCType:"I" at:&x]; // warn
+  }
+
+This diagnostic is emitted only on Apple platforms where the safer
+``-decodeValueOfObjCType:at:size:`` alternative is available
+(iOS 11+, macOS 10.13+, tvOS 11+, watchOS 4.0+).
+
 .. _security-insecureAPI-getpw:
 
 security.insecureAPI.getpw (C)
@@ -1723,6 +1830,19 @@ security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
    char buf [5];
    strncpy(buf, "a", 1); // warn
  }
+
+The ``ReportMode`` option controls when warnings are reported:
+
+* ``all``: Reports all unsafe functions regardless of C standard or Annex K availability. Useful for security auditing and vulnerability scanning.
+
+* ``actionable``: Only reports when Annex K is available (C11 with ``__STDC_LIB_EXT1__`` and ``__STDC_WANT_LIB_EXT1__=1``).
+
+* ``c11-only``: Reports when C11 standard is enabled (does not take Annex K availability into account).
+
+To set this option, use:
+``-analyzer-config security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode=all``
+
+By default, this option is set to *c11-only*.
 
 .. _security-MmapWriteExec:
 
@@ -1859,6 +1979,27 @@ this) and always check the return value of these calls.
 
 This check corresponds to SEI CERT Rule `POS36-C <https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges>`_.
 
+.. _security-VAList:
+
+security.VAList (C, C++)
+""""""""""""""""""""""""
+Reports use of uninitialized (or already released) ``va_list`` objects and
+situations where a ``va_start`` call is not followed by ``va_end``.
+
+.. code-block:: c
+
+ int test_use_after_release(int x, ...) {
+   va_list va;
+   va_start(va, x);
+   va_end(va);
+   return va_arg(va, int); // warn: va is uninitialized
+ }
+
+ void test_leak(int x, ...) {
+   va_list va;
+   va_start(va, x);
+ } // warn: va is leaked
+
 .. _unix-checkers:
 
 unix
@@ -1881,7 +2022,7 @@ unix.BlockInCriticalSection (C, C++)
 Check for calls to blocking functions inside a critical section.
 Blocking functions detected by this checker: ``sleep, getc, fgets, read, recv``.
 Critical section handling functions modeled by this checker:
-``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock``.
+``lock, unlock, pthread_mutex_lock, pthread_mutex_trylock, pthread_mutex_unlock, mtx_lock, mtx_timedlock, mtx_trylock, mtx_unlock, lock_guard, unique_lock, scoped_lock``.
 
 .. code-block:: c
 
@@ -2932,18 +3073,6 @@ the locking/unlocking of ``mtx_t`` mutexes.
    mtx_lock(&mtx1); // warn: This lock has already been acquired
  }
 
-.. _alpha-core-CastSize:
-
-alpha.core.CastSize (C)
-"""""""""""""""""""""""
-Check when casting a malloc'ed type ``T``, whether the size is a multiple of the size of ``T``.
-
-.. code-block:: c
-
- void test() {
-   int *x = (int *) malloc(11); // warn
- }
-
 .. _alpha-core-CastToStruct:
 
 alpha.core.CastToStruct (C, C++)
@@ -3412,12 +3541,6 @@ Check for an out-of-bound pointer being returned to callers.
    return x; // warn: undefined or garbage returned
  }
 
-
-alpha.security.cert
-^^^^^^^^^^^^^^^^^^^
-
-SEI CERT checkers which tries to find errors based on their `C coding rules <https://wiki.sei.cmu.edu/confluence/display/c/2+Rules>`_.
-
 alpha.unix
 ^^^^^^^^^^
 
@@ -3603,6 +3726,23 @@ This applies to:
 
 For types like this, instead of using built in casts, the programmer will use helper functions that internally perform the appropriate type check and disable static analysis.
 
+alpha.webkit.NoDeleteChecker
+"""""""""""""""""""""""""""""""
+Check that ``[[clang::annotate_type("webkit.nodelete")]]`` annotation does not appear on a function which could delete an object.
+
+.. code-block:: cpp
+
+ void [[clang::annotate_type("webkit.nodelete")]] someFunction(RefCountable* obj) { // warn
+   delete obj;
+ };
+
+ Foo [[clang::annotate_type("webkit.nodelete")]] trivialFunction(RefCountable* obj) {
+   return obj->anotherTrivialFunction();
+ };
+ 
+``[[clang::annotate_type("webkit.nodelete")]]`` annotation makes the function ignored for the purpose of other WebKit smart pointer checkers.
+For example, ``alpha.webkit.UncountedCallArgsChecker`` will ignore a function call with this annotation.
+
 alpha.webkit.NoUncheckedPtrMemberChecker
 """"""""""""""""""""""""""""""""""""""""
 Raw pointers and references to an object which supports CheckedPtr or CheckedRef can't be used as class members. Only CheckedPtr, CheckedRef, RefPtr, or Ref are allowed.
@@ -3624,12 +3764,13 @@ See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebK
 
 alpha.webkit.NoUnretainedMemberChecker
 """"""""""""""""""""""""""""""""""""""""
-Raw pointers and references to a NS or CF object can't be used as class members or ivars. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled. Only RetainPtr is allowed for NS types when ARC is disabled.
+Raw pointers and references to a NS or CF object can't be used as class members or ivars. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled. Only RetainPtr or OSObjectPtr is allowed for NS types when ARC is disabled.
 
 .. code-block:: cpp
 
  struct Foo {
    NSObject *ptr; // warn
+   dispatch_queue_t queue; // warn
    // ...
  };
 
@@ -3637,13 +3778,14 @@ See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebK
 
 alpha.webkit.UnretainedLambdaCapturesChecker
 """"""""""""""""""""""""""""""""""""""""""""
-Raw pointers and references to NS or CF types can't be captured in lambdas. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled, and only RetainPtr is allowed for NS types when ARC is disabled.
+Raw pointers and references to NS or CF types can't be captured in lambdas. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled, and only RetainPtr or OSObjectPtr is allowed for NS types when ARC is disabled.
 
 .. code-block:: cpp
 
- void foo(NSObject *a, NSObject *b) {
+ void foo(NSObject *a, NSObject *b, dispatch_queue_t c) {
    [&, a](){ // warn about 'a'
      do_something(b); // warn about 'b'
+     dispatch_queue_get_specific(c, "some"); // warn about 'c'
    };
  };
 
@@ -3746,7 +3888,7 @@ alpha.webkit.UnretainedCallArgsChecker
 """"""""""""""""""""""""""""""""""""""
 The goal of this rule is to make sure that lifetime of any dynamically allocated NS or CF objects passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. NS or CF objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unretained types.
 
-The rules of when to use and not to use RetainPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+The rules of when to use and not to use RetainPtr or OSObjectPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
 
 alpha.webkit.UncountedLocalVarsChecker
 """"""""""""""""""""""""""""""""""""""
@@ -3836,9 +3978,9 @@ Here are some examples of situations that we warn about as they *might* be poten
 
 alpha.webkit.UnretainedLocalVarsChecker
 """""""""""""""""""""""""""""""""""""""
-The goal of this rule is to make sure that any NS or CF local variable is backed by a RetainPtr with lifetime that is strictly larger than the scope of the unretained local variable. To be on the safe side we require the scope of an unretained variable to be embedded in the scope of Retainptr object that backs it.
+The goal of this rule is to make sure that any NS or CF local variable is backed by a RetainPtr or OSObjectPtr with lifetime that is strictly larger than the scope of the unretained local variable. To be on the safe side we require the scope of an unretained variable to be embedded in the scope of RetainPtr or OSObjectPtr object that backs it.
 
-The rules of when to use and not to use RetainPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+The rules of when to use and not to use RetainPtr or OSObjectPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
 
 These are examples of cases that we consider safe:
 
@@ -3881,8 +4023,8 @@ Here are some examples of situations that we warn about as they *might* be poten
 
 webkit.RetainPtrCtorAdoptChecker
 """"""""""""""""""""""""""""""""
-The goal of this rule is to make sure the constructor of RetainPtr as well as adoptNS and adoptCF are used correctly.
-When creating a RetainPtr with +1 semantics, adoptNS or adoptCF should be used, and in +0 semantics, RetainPtr constructor should be used.
+The goal of this rule is to make sure the constructors of RetainPtr and OSObjectPtr as well as adoptNS, adoptCF, and adoptOSObject are used correctly.
+When creating a RetainPtr or OSObjectPtr with +1 semantics, adoptNS, adoptCF, or adoptOSObject should be used, and in +0 semantics, RetainPtr or OSObjectPtr constructor should be used.
 Warn otherwise.
 
 These are examples of cases that we consider correct:
@@ -3891,6 +4033,7 @@ These are examples of cases that we consider correct:
 
     RetainPtr ptr = adoptNS([[NSObject alloc] init]); // ok
     RetainPtr ptr = CGImageGetColorSpace(image); // ok
+    OSObjectPtr ptr = adoptOSObject(dispatch_queue_create("some queue", nullptr)); // ok
 
 Here are some examples of cases that we consider incorrect use of RetainPtr constructor and adoptCF
 
@@ -3898,6 +4041,7 @@ Here are some examples of cases that we consider incorrect use of RetainPtr cons
 
     RetainPtr ptr = [[NSObject alloc] init]; // warn
     auto ptr = adoptCF(CGImageGetColorSpace(image)); // warn
+    OSObjectPtr ptr = dispatch_queue_create("some queue", nullptr); // warn
 
 Debug Checkers
 ---------------

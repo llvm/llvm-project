@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -193,7 +194,6 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   errs() << ": " << Buf << "\n";
 }
 
@@ -212,7 +212,6 @@ static void error(llvm::Error E, StringRef FileName,
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
-  OS.flush();
   errs() << ": " << Buf << "\n";
 }
 
@@ -1403,7 +1402,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       error(std::move(Err), MachO.getFileName());
     // Set the symbol names and indirect names for the added symbols.
     if (ExportsAdded) {
-      EOS.flush();
       const char *Q = ExportsNameBuffer.c_str();
       for (unsigned K = 0; K < ExportsAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1456,7 +1454,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       error(std::move(BErr), MachO.getFileName());
     // Set the symbol names and indirect names for the added symbols.
     if (BindsAdded) {
-      BOS.flush();
       const char *Q = BindsNameBuffer.c_str();
       for (unsigned K = 0; K < BindsAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1515,7 +1512,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       error(std::move(LErr), MachO.getFileName());
     // Set the symbol names and indirect names for the added symbols.
     if (LazysAdded) {
-      LOS.flush();
       const char *Q = LazysNameBuffer.c_str();
       for (unsigned K = 0; K < LazysAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1583,7 +1579,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       error(std::move(WErr), MachO.getFileName());
     // Set the symbol names and indirect names for the added symbols.
     if (WeaksAdded) {
-      WOS.flush();
       const char *Q = WeaksNameBuffer.c_str();
       for (unsigned K = 0; K < WeaksAdded; K++) {
         SymbolList[I].Name = Q;
@@ -1615,15 +1610,18 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
     }
     // See if these addresses are already in the symbol table.
     unsigned FunctionStartsAdded = 0;
+    // The addresses from FoundFns come from LC_FUNCTION_STARTS. Its contents
+    // are delta encoded addresses from the start of __TEXT, ending when zero
+    // is found. Because of this, the addresses should be unique, and even if
+    // we create fake entries on SymbolList in the second loop, SymbolAddresses
+    // should not need to be updated there.
+    SmallSet<uint64_t, 32> SymbolAddresses;
+    for (const auto &S : SymbolList)
+      SymbolAddresses.insert(S.Address);
     for (uint64_t f = 0; f < FoundFns.size(); f++) {
-      bool found = false;
-      for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
-        if (SymbolList[J].Address == FoundFns[f] + BaseSegmentAddress)
-          found = true;
-      }
-      // See this address is not already in the symbol table fake up an
-      // nlist for it.
-      if (!found) {
+      // See if this address is already in the symbol table, otherwise fake up
+      // an nlist for it.
+      if (!SymbolAddresses.contains(FoundFns[f] + BaseSegmentAddress)) {
         NMSymbol F = {};
         F.Name = "<redacted function X>";
         F.Address = FoundFns[f] + BaseSegmentAddress;
@@ -1671,7 +1669,6 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
       }
     }
     if (FunctionStartsAdded) {
-      FOS.flush();
       const char *Q = FunctionStartsNameBuffer.c_str();
       for (unsigned K = 0; K < FunctionStartsAdded; K++) {
         SymbolList[I].Name = Q;

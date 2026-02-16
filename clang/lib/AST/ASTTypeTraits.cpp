@@ -249,10 +249,6 @@ SourceRange DynTypedNode::getSourceRange(bool IncludeQualifier) const {
       auto T = TL->castAs<TemplateSpecializationTypeLoc>();
       return SourceRange(T.getTemplateNameLoc(), T.getEndLoc());
     }
-    case TypeLoc::DependentTemplateSpecialization: {
-      auto T = TL->castAs<DependentTemplateSpecializationTypeLoc>();
-      return SourceRange(T.getTemplateNameLoc(), T.getEndLoc());
-    }
     case TypeLoc::Enum:
     case TypeLoc::Record:
     case TypeLoc::InjectedClassName:

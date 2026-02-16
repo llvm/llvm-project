@@ -9,6 +9,22 @@ The analyzer contains a number of checkers which can aid in debugging. Enable
 them by using the "-analyzer-checker=" flag, followed by the name of the
 checker.
 
+These checkers are especially useful when analyzing a specific function, using
+the `-analyze-function` flag. The flag accepts the function name for C code,
+like `-analyze-function=myfunction`.
+For C++ code, due to overloading, the function name must include the
+parameter list, like `-analyze-function="myfunction(int, _Bool)"`.
+
+Note that `bool` must be spelled as `_Bool` in the parameter list.
+Refer to the output of `-analyzer-display-progress` to find the fully qualified
+function name.
+
+There are cases when this name can still collide. For example with template
+function instances with non-deducible (aka. explicit) template parameters.
+In such cases, prefer passing a USR instead of a function name can resolve this
+ambiguity, like this: `-analyze-function="c:@S@Window@F@overloaded#I#"`.
+
+Use the `clang-extdef-mapping` tool to find the USR for different functions.
 
 General Analysis Dumpers
 ========================

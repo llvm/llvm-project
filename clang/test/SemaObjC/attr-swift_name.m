@@ -58,6 +58,8 @@ __attribute__((__swift_name__("IClass")))
 // expected-warning@-1 {{'__swift_name__' attribute argument must be a string literal specifying a Swift function name}}
 + (instancetype)trailingColon SWIFT_NAME("foo:");
 // expected-warning@-1 {{'__swift_name__' attribute argument must be a string literal specifying a Swift function name}}
++ (instancetype)emptyString SWIFT_NAME("");
+// expected-warning@-1 {{'__swift_name__' attribute argument must be a string literal specifying a Swift function name}}
 + (instancetype)initialIgnore:(int)value SWIFT_NAME("_(value:)");
 // expected-warning@-1 {{'__swift_name__' attribute has invalid identifier for the base name}}
 + (instancetype)middleOmitted:(int)value SWIFT_NAME("i(:)");

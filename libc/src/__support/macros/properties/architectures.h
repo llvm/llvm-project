@@ -41,6 +41,10 @@
 #define LIBC_TARGET_ARCH_IS_ARM
 #endif
 
+#if defined(__wasm__)
+#define LIBC_TARGET_ARCH_IS_WASM
+#endif
+
 #if defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
 #define LIBC_TARGET_ARCH_IS_AARCH64
 #endif

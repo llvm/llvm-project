@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ComplexToROCDLLibraryCalls/ComplexToROCDLLibraryCalls.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
@@ -56,10 +58,58 @@ struct ComplexOpToROCDLLibraryCalls : public OpRewritePattern<Op> {
 private:
   std::string funcName;
 };
+
+// Rewrite complex.pow(z, w) -> complex.exp(w * complex.log(z))
+struct PowOpToROCDLLibraryCalls : public OpRewritePattern<complex::PowOp> {
+  using OpRewritePattern<complex::PowOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(complex::PowOp op,
+                                PatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    auto fastmath = op.getFastmathAttr();
+    Value logBase =
+        complex::LogOp::create(rewriter, loc, op.getLhs(), fastmath);
+    Value mul =
+        complex::MulOp::create(rewriter, loc, op.getRhs(), logBase, fastmath);
+    Value exp = complex::ExpOp::create(rewriter, loc, mul, fastmath);
+    rewriter.replaceOp(op, exp);
+    return success();
+  }
+};
+
+// Rewrite complex.powi(z, n) -> complex.pow(z, complex(float(n), 0))
+struct PowiOpToROCDLLibraryCalls : public OpRewritePattern<complex::PowiOp> {
+  using OpRewritePattern<complex::PowiOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(complex::PowiOp op,
+                                PatternRewriter &rewriter) const final {
+    auto complexType = cast<ComplexType>(getElementTypeOrSelf(op.getType()));
+    Type elementType = complexType.getElementType();
+
+    Type exponentType = op.getRhs().getType();
+    Type exponentFloatType = elementType;
+    if (auto shapedType = dyn_cast<ShapedType>(exponentType))
+      exponentFloatType = shapedType.cloneWith(std::nullopt, elementType);
+
+    Location loc = op.getLoc();
+    Value exponentReal =
+        arith::SIToFPOp::create(rewriter, loc, exponentFloatType, op.getRhs());
+    Value zeroImag = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getZeroAttr(exponentFloatType));
+    Value exponent = complex::CreateOp::create(
+        rewriter, loc, op.getLhs().getType(), exponentReal, zeroImag);
+
+    rewriter.replaceOpWithNewOp<complex::PowOp>(op, op.getType(), op.getLhs(),
+                                                exponent, op.getFastmathAttr());
+    return success();
+  }
+};
 } // namespace
 
 void mlir::populateComplexToROCDLLibraryCallsConversionPatterns(
     RewritePatternSet &patterns) {
+  patterns.add<PowiOpToROCDLLibraryCalls>(patterns.getContext());
+  patterns.add<PowOpToROCDLLibraryCalls>(patterns.getContext());
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::AbsOp, Float32Type>>(
       patterns.getContext(), "__ocml_cabs_f32");
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::AbsOp, Float64Type>>(
@@ -109,10 +159,12 @@ void ConvertComplexToROCDLLibraryCallsPass::runOnOperation() {
   populateComplexToROCDLLibraryCallsConversionPatterns(patterns);
 
   ConversionTarget target(getContext());
-  target.addLegalDialect<func::FuncDialect>();
+  target.addLegalDialect<arith::ArithDialect, func::FuncDialect>();
+  target.addLegalOp<complex::CreateOp, complex::MulOp>();
   target.addIllegalOp<complex::AbsOp, complex::CosOp, complex::ExpOp,
-                      complex::LogOp, complex::SinOp, complex::SqrtOp,
-                      complex::TanOp, complex::TanhOp>();
+                      complex::LogOp, complex::PowOp, complex::PowiOp,
+                      complex::SinOp, complex::SqrtOp, complex::TanOp,
+                      complex::TanhOp>();
   if (failed(applyPartialConversion(op, target, std::move(patterns))))
     signalPassFailure();
 }

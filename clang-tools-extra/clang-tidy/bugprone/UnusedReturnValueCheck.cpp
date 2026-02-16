@@ -1,4 +1,4 @@
-//===--- UnusedReturnValueCheck.cpp - clang-tidy---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,7 +25,8 @@ namespace {
 // member function are matched directly with InnerMatcher.
 AST_MATCHER_P(FunctionDecl, isInstantiatedFrom, Matcher<FunctionDecl>,
               InnerMatcher) {
-  FunctionDecl *InstantiatedFrom = Node.getInstantiatedFromMemberFunction();
+  const FunctionDecl *InstantiatedFrom =
+      Node.getInstantiatedFromMemberFunction();
   return InnerMatcher.matches(InstantiatedFrom ? *InstantiatedFrom : Node,
                               Finder, Builder);
 }
@@ -170,18 +171,18 @@ void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
-  auto MatchedDirectCallExpr =
-      expr(callExpr(callee(functionDecl(
-                        // Don't match copy or move assignment operator.
-                        unless(isAssignmentOverloadedOperator()),
-                        // Don't match void overloads of checked functions.
-                        unless(returns(voidType())),
-                        anyOf(isInstantiatedFrom(matchers::matchesAnyListedName(
-                                  CheckedFunctions)),
-                              returns(hasCanonicalType(hasDeclaration(
-                                  namedDecl(matchers::matchesAnyListedName(
-                                      CheckedReturnTypes)))))))))
-               .bind("match"));
+  auto MatchedDirectCallExpr = expr(
+      callExpr(callee(functionDecl(
+                   // Don't match copy or move assignment operator.
+                   unless(isAssignmentOverloadedOperator()),
+                   // Don't match void overloads of checked functions.
+                   unless(returns(voidType())),
+                   anyOf(isInstantiatedFrom(matchers::matchesAnyListedRegexName(
+                             CheckedFunctions)),
+                         returns(hasCanonicalType(hasDeclaration(
+                             namedDecl(matchers::matchesAnyListedRegexName(
+                                 CheckedReturnTypes)))))))))
+          .bind("match"));
 
   auto CheckCastToVoid =
       AllowCastToVoid ? castExpr(unless(hasCastKind(CK_ToVoid))) : castExpr();

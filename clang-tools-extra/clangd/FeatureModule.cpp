@@ -22,6 +22,10 @@ FeatureModule::Facilities &FeatureModule::facilities() {
   return *Fac;
 }
 
+void FeatureModuleSet::add(std::unique_ptr<FeatureModule> M) {
+  Modules.push_back(std::move(M));
+}
+
 bool FeatureModuleSet::addImpl(void *Key, std::unique_ptr<FeatureModule> M,
                                const char *Source) {
   if (!Map.try_emplace(Key, M.get()).second) {
@@ -33,5 +37,16 @@ bool FeatureModuleSet::addImpl(void *Key, std::unique_ptr<FeatureModule> M,
   return true;
 }
 
+FeatureModuleSet FeatureModuleSet::fromRegistry() {
+  FeatureModuleSet ModuleSet;
+  for (FeatureModuleRegistry::entry E : FeatureModuleRegistry::entries()) {
+    vlog("Adding feature module '{0}' ({1})", E.getName(), E.getDesc());
+    ModuleSet.add(E.instantiate());
+  }
+  return ModuleSet;
+}
+
 } // namespace clangd
 } // namespace clang
+
+LLVM_INSTANTIATE_REGISTRY(clang::clangd::FeatureModuleRegistry)

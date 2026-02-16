@@ -244,12 +244,9 @@ static void writeParallelSnippetHtml(raw_ostream &OS,
 static void writeLatencySnippetHtml(raw_ostream &OS,
                                     const std::vector<MCInst> &Instructions,
                                     const MCInstrInfo &InstrInfo) {
-  bool First = true;
+  ListSeparator LS(" &rarr; ");
   for (const MCInst &Instr : Instructions) {
-    if (First)
-      First = false;
-    else
-      OS << " &rarr; ";
+    OS << LS;
     writeEscaped<kEscapeHtml>(OS, InstrInfo.getName(Instr.getOpcode()));
   }
 }
@@ -446,7 +443,7 @@ void Analysis::printClusterRawHtml(const BenchmarkClustering::ClusterId &Id,
 
 } // namespace exegesis
 
-static constexpr const char kHtmlHead[] = R"(
+static constexpr char kHtmlHead[] = R"(
 <head>
 <title>llvm-exegesis Analysis Results</title>
 <style>

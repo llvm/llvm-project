@@ -60,13 +60,11 @@ char &llvm::MachineFunctionPrinterPassID = MachineFunctionPrinterPass::ID;
 INITIALIZE_PASS(MachineFunctionPrinterPass, "machineinstr-printer",
                 "Machine Function Printer", false, false)
 
-namespace llvm {
 /// Returns a newly-created MachineFunction Printer pass. The
 /// default banner is empty.
 ///
-MachineFunctionPass *createMachineFunctionPrinterPass(raw_ostream &OS,
-                                                      const std::string &Banner){
+MachineFunctionPass *
+llvm::createMachineFunctionPrinterPass(raw_ostream &OS,
+                                       const std::string &Banner) {
   return new MachineFunctionPrinterPass(OS, Banner);
-}
-
 }

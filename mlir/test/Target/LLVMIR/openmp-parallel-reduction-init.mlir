@@ -36,12 +36,12 @@ llvm.func @use_reduction() attributes {fir.bindc_name = "test"} {
 
 // CHECK: omp.par.entry:
 // CHECK:   %[[RED_REGION_ALLOC:.*]] = alloca { ptr }, i64 1, align 8
+// CHECK:   %[[PAR_REG_VAL:.*]] = alloca { ptr }, i64 1, align 8
 
 // CHECK: omp.par.region:
 // CHECK:   br label %omp.par.region1
 
 // CHECK: omp.par.region1:
-// CHECK:   %[[PAR_REG_VAL:.*]] = alloca { ptr }, i64 1, align 8
 // CHECK:   br label %omp.reduction.init
 
 // CHECK: omp.reduction.init:

@@ -418,7 +418,7 @@ protected:
       if ((pos != std::string::npos) && (pos > 0))
         raw_command_string = raw_command_string.substr(pos);
     } else {
-      result.AppendError("Error parsing command string.  No alias created.");
+      result.AppendError("error parsing command string.  No alias created");
       return;
     }
 
@@ -2037,7 +2037,8 @@ public:
     // option_element_vector:
 
     Options *options = GetOptions();
-    auto defs = options->GetDefinitions();
+    auto defs = options ? options->GetDefinitions()
+                        : llvm::ArrayRef<OptionDefinition>();
 
     std::unordered_set<size_t> option_slots;
     for (const auto &elem : option_vec) {
@@ -2888,7 +2889,7 @@ protected:
     size_t num_args = command.GetArgumentCount();
 
     if (num_args == 0) {
-      result.AppendError("No command was specified.");
+      result.AppendError("no command was specified");
       return;
     }
 

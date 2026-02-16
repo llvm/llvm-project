@@ -92,7 +92,7 @@ public:
   PGOCtxProfileWriter(raw_ostream &Out,
                       std::optional<unsigned> VersionOverride = std::nullopt,
                       bool IncludeEmpty = false);
-  ~PGOCtxProfileWriter() { Writer.ExitBlock(); }
+  ~PGOCtxProfileWriter() override { Writer.ExitBlock(); }
 
   void startContextSection() override;
   void writeContextual(const ctx_profile::ContextNode &RootNode,

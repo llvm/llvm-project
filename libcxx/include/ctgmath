@@ -28,17 +28,8 @@
 #    pragma GCC system_header
 #  endif
 
-#  if _LIBCPP_STD_VER >= 20
-
-using __standard_header_ctgmath
-    _LIBCPP_DEPRECATED_("removed in C++20. Include <cmath> and <complex> instead.") _LIBCPP_NODEBUG = void;
-using __use_standard_header_ctgmath _LIBCPP_NODEBUG = __standard_header_ctgmath;
-
-#  elif _LIBCPP_STD_VER >= 17
-
-using __standard_header_ctgmath _LIBCPP_DEPRECATED_("Include <cmath> and <complex> instead.") _LIBCPP_NODEBUG = void;
-using __use_standard_header_ctgmath _LIBCPP_NODEBUG = __standard_header_ctgmath;
-
+#  if _LIBCPP_STD_VER >= 17 && !__building_module(std) && _LIBCPP_DIAGNOSE_DEPRECATED_HEADERS
+#    warning <ctgmath> is deprecated in C++17 and removed in C++20. Include <cmath> and <complex> instead.
 #  endif
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

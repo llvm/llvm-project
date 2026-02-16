@@ -17,7 +17,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <set>
-#include <utility>
 
 using namespace llvm;
 

@@ -34,6 +34,8 @@ private:
   const SIInstrInfo &TII;
   MachineRegisterInfo &MRI;
 
+  bool isAV64Imm(const MachineOperand &MO) const;
+
 public:
   AMDGPUPrepareAGPRAllocImpl(const GCNSubtarget &ST, MachineRegisterInfo &MRI)
       : TII(*ST.getInstrInfo()), MRI(MRI) {}
@@ -44,10 +46,7 @@ class AMDGPUPrepareAGPRAllocLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPUPrepareAGPRAllocLegacy() : MachineFunctionPass(ID) {
-    initializeAMDGPUPrepareAGPRAllocLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPUPrepareAGPRAllocLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -60,10 +59,8 @@ public:
 };
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(AMDGPUPrepareAGPRAllocLegacy, DEBUG_TYPE,
-                      "AMDGPU Prepare AGPR Alloc", false, false)
-INITIALIZE_PASS_END(AMDGPUPrepareAGPRAllocLegacy, DEBUG_TYPE,
-                    "AMDGPU Prepare AGPR Alloc", false, false)
+INITIALIZE_PASS(AMDGPUPrepareAGPRAllocLegacy, DEBUG_TYPE,
+                "AMDGPU Prepare AGPR Alloc", false, false)
 
 char AMDGPUPrepareAGPRAllocLegacy::ID = 0;
 
@@ -85,11 +82,16 @@ AMDGPUPrepareAGPRAllocPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
+bool AMDGPUPrepareAGPRAllocImpl::isAV64Imm(const MachineOperand &MO) const {
+  return MO.isImm() && TII.isLegalAV64PseudoImm(MO.getImm());
+}
+
 bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
   if (MRI.isReserved(AMDGPU::AGPR0))
     return false;
 
-  const MCInstrDesc &AVImmPseudo = TII.get(AMDGPU::AV_MOV_B32_IMM_PSEUDO);
+  const MCInstrDesc &AVImmPseudo32 = TII.get(AMDGPU::AV_MOV_B32_IMM_PSEUDO);
+  const MCInstrDesc &AVImmPseudo64 = TII.get(AMDGPU::AV_MOV_B64_IMM_PSEUDO);
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
@@ -98,8 +100,19 @@ bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
            TII.isInlineConstant(MI, 1)) ||
           (MI.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
            MI.getOperand(1).isImm())) {
-        MI.setDesc(AVImmPseudo);
+        MI.setDesc(AVImmPseudo32);
         Changed = true;
+        continue;
+      }
+
+      // TODO: If only half of the value is rewritable, is it worth splitting it
+      // up?
+      if ((MI.getOpcode() == AMDGPU::V_MOV_B64_e64 ||
+           MI.getOpcode() == AMDGPU::V_MOV_B64_PSEUDO) &&
+          isAV64Imm(MI.getOperand(1))) {
+        MI.setDesc(AVImmPseudo64);
+        Changed = true;
+        continue;
       }
     }
   }

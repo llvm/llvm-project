@@ -81,12 +81,15 @@ Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, Register Reg,
 bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
                                         const LiveIntervals &LIS,
                                         const VirtRegMap &VRM,
+                                        const MachineRegisterInfo &MRI,
                                         const TargetInstrInfo &TII) {
   Register Reg = LI.reg();
   Register Original = VRM.getOriginal(Reg);
+  SmallDenseMap<unsigned, MachineInstr *> VNIDefs;
   for (LiveInterval::const_vni_iterator I = LI.vni_begin(), E = LI.vni_end();
        I != E; ++I) {
     const VNInfo *VNI = *I;
+    const VNInfo *OrigVNI = VNI;
     if (VNI->isUnused())
       continue;
     if (VNI->isPHIDef())
@@ -122,8 +125,77 @@ bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
       assert(MI && "Dead valno in interval");
     }
 
-    if (!TII.isTriviallyReMaterializable(*MI))
+    if (!TII.isReMaterializable(*MI))
       return false;
+
+    VNIDefs[OrigVNI->id] = MI;
+  }
+
+  // If MI has register uses, it will only be rematerializable if its uses are
+  // also live at the indices it will be rematerialized at.
+  for (MachineOperand &MO : MRI.reg_nodbg_operands(LI.reg())) {
+    if (!MO.readsReg())
+      continue;
+    SlotIndex UseIdx = LIS.getInstructionIndex(*MO.getParent());
+    MachineInstr *Def = VNIDefs[LI.getVNInfoAt(UseIdx)->id];
+    assert(Def && "Use with no def");
+    if (!allUsesAvailableAt(Def, UseIdx, LIS, MRI, TII))
+      return false;
+  }
+
+  return true;
+}
+
+bool VirtRegAuxInfo::allUsesAvailableAt(const MachineInstr *MI,
+                                        SlotIndex UseIdx,
+                                        const LiveIntervals &LIS,
+                                        const MachineRegisterInfo &MRI,
+                                        const TargetInstrInfo &TII) {
+  SlotIndex OrigIdx = LIS.getInstructionIndex(*MI).getRegSlot(true);
+  UseIdx = std::max(UseIdx, UseIdx.getRegSlot(true));
+  for (const MachineOperand &MO : MI->operands()) {
+    if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
+      continue;
+
+    // We can't remat physreg uses, unless it is a constant or target wants
+    // to ignore this use.
+    if (MO.getReg().isPhysical()) {
+      if (MRI.isConstantPhysReg(MO.getReg()) || TII.isIgnorableUse(MO))
+        continue;
+      return false;
+    }
+
+    const LiveInterval &li = LIS.getInterval(MO.getReg());
+    const VNInfo *OVNI = li.getVNInfoAt(OrigIdx);
+    if (!OVNI)
+      continue;
+
+    // Don't allow rematerialization immediately after the original def.
+    // It would be incorrect if OrigMI redefines the register.
+    // See PR14098.
+    if (SlotIndex::isSameInstr(OrigIdx, UseIdx))
+      return false;
+
+    if (OVNI != li.getVNInfoAt(UseIdx))
+      return false;
+
+    // Check that subrange is live at UseIdx.
+    if (li.hasSubRanges()) {
+      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+      unsigned SubReg = MO.getSubReg();
+      LaneBitmask LM = SubReg ? TRI->getSubRegIndexLaneMask(SubReg)
+                              : MRI.getMaxLaneMaskForVReg(MO.getReg());
+      for (const LiveInterval::SubRange &SR : li.subranges()) {
+        if ((SR.LaneMask & LM).none())
+          continue;
+        if (!SR.liveAt(UseIdx))
+          return false;
+        // Early exit if all used lanes are checked. No need to continue.
+        LM &= ~SR.LaneMask;
+        if (LM.none())
+          break;
+      }
+    }
   }
   return true;
 }
@@ -157,8 +229,7 @@ static bool canMemFoldInlineAsm(LiveInterval &LI,
   return false;
 }
 
-float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
-                                       SlotIndex *End) {
+float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -182,29 +253,6 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
 
   // Don't recompute spill weight for an unspillable register.
   bool IsSpillable = LI.isSpillable();
-
-  bool IsLocalSplitArtifact = Start && End;
-
-  // Do not update future local split artifacts.
-  bool ShouldUpdateLI = !IsLocalSplitArtifact;
-
-  if (IsLocalSplitArtifact) {
-    MachineBasicBlock *LocalMBB = LIS.getMBBFromIndex(*End);
-    assert(LocalMBB == LIS.getMBBFromIndex(*Start) &&
-           "start and end are expected to be in the same basic block");
-
-    // Local split artifact will have 2 additional copy instructions and they
-    // will be in the same BB.
-    // localLI = COPY other
-    // ...
-    // other   = COPY localLI
-    TotalWeight +=
-        LiveIntervals::getSpillWeight(true, false, &MBFI, LocalMBB, PSI);
-    TotalWeight +=
-        LiveIntervals::getSpillWeight(false, true, &MBFI, LocalMBB, PSI);
-
-    NumInstr += 2;
-  }
 
   // CopyHint is a sortable hint derived from a COPY instruction.
   struct CopyHint {
@@ -233,12 +281,6 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
            E = MRI.reg_instr_nodbg_end();
        I != E;) {
     MachineInstr *MI = &*(I++);
-
-    // For local split artifacts, we are interested only in instructions between
-    // the expected start and end of the range.
-    SlotIndex SI = LIS.getInstructionIndex(*MI);
-    if (IsLocalSplitArtifact && ((SI < *Start) || (SI > *End)))
-      continue;
 
     NumInstr++;
     bool identityCopy = false;
@@ -294,7 +336,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   }
 
   // Pass all the sorted copy hints to mri.
-  if (ShouldUpdateLI && Hint.size()) {
+  if (Hint.size()) {
     // Remove a generic hint if previously added by target.
     if (TargetHint.first == 0 && TargetHint.second)
       MRI.clearSimpleHint(LI.reg());
@@ -328,7 +370,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   // At the same time STATEPOINT instruction is perfectly fine to have this
   // operand on stack, so spilling such interval and folding its load from stack
   // into instruction itself makes perfect sense.
-  if (ShouldUpdateLI && LI.isZeroLength(LIS.getSlotIndexes()) &&
+  if (LI.isZeroLength(LIS.getSlotIndexes()) &&
       !LI.isLiveAtIndexes(LIS.getRegMaskSlots()) &&
       !isLiveAtStatepointVarArg(LI) && !canMemFoldInlineAsm(LI, MRI)) {
     LI.markNotSpillable();
@@ -339,14 +381,12 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   // it is a preferred candidate for spilling.
   // FIXME: this gets much more complicated once we support non-trivial
   // re-materialization.
-  if (isRematerializable(LI, LIS, VRM, *MF.getSubtarget().getInstrInfo()))
+  if (isRematerializable(LI, LIS, VRM, MRI, *MF.getSubtarget().getInstrInfo()))
     TotalWeight *= 0.5F;
 
   // Finally, we scale the weight by the scale factor of register class.
   const TargetRegisterClass *RC = MRI.getRegClass(LI.reg());
   TotalWeight *= TRI.getSpillWeightScaleFactor(RC);
 
-  if (IsLocalSplitArtifact)
-    return normalize(TotalWeight, Start->distance(*End), NumInstr);
   return normalize(TotalWeight, LI.getSize(), NumInstr);
 }

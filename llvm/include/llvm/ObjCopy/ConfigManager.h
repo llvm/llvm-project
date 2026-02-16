@@ -11,6 +11,7 @@
 
 #include "llvm/ObjCopy/COFF/COFFConfig.h"
 #include "llvm/ObjCopy/CommonConfig.h"
+#include "llvm/ObjCopy/DXContainer/DXContainerConfig.h"
 #include "llvm/ObjCopy/ELF/ELFConfig.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/ObjCopy/MultiFormatConfig.h"
@@ -22,11 +23,11 @@ namespace llvm {
 namespace objcopy {
 
 struct LLVM_ABI ConfigManager : public MultiFormatConfig {
-  virtual ~ConfigManager() {}
+  ~ConfigManager() override = default;
 
   const CommonConfig &getCommonConfig() const override { return Common; }
 
-  Expected<const ELFConfig &> getELFConfig() const override { return ELF; }
+  Expected<const ELFConfig &> getELFConfig() const override;
 
   Expected<const COFFConfig &> getCOFFConfig() const override;
 
@@ -36,6 +37,8 @@ struct LLVM_ABI ConfigManager : public MultiFormatConfig {
 
   Expected<const XCOFFConfig &> getXCOFFConfig() const override;
 
+  Expected<const DXContainerConfig &> getDXContainerConfig() const override;
+
   // All configs.
   CommonConfig Common;
   ELFConfig ELF;
@@ -43,6 +46,7 @@ struct LLVM_ABI ConfigManager : public MultiFormatConfig {
   MachOConfig MachO;
   WasmConfig Wasm;
   XCOFFConfig XCOFF;
+  DXContainerConfig DXContainer;
 };
 
 } // namespace objcopy

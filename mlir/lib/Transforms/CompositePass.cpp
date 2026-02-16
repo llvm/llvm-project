@@ -66,7 +66,7 @@ struct CompositeFixedPointPass final
   }
 
   void runOnOperation() override {
-    auto op = getOperation();
+    auto *op = getOperation();
     OperationFingerPrint fp(op);
 
     int currentIter = 0;

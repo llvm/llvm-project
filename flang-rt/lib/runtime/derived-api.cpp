@@ -118,14 +118,26 @@ bool RTDEF(SameTypeAs)(const Descriptor &a, const Descriptor &b) {
 }
 
 bool RTDEF(ExtendsTypeOf)(const Descriptor &a, const Descriptor &mold) {
+  // The wording of the standard indicates null or unallocated checks take
+  // precedence over the extension checks which take precedence over any
+  // compiler specific behavior.
+  // F'23 16.9.86 p 5
+  // If MOLD is unlimited polymorphic and is either a disassociated pointer or
+  // unallocated allocatable variable, the result is true;
   auto aType{a.raw().type};
   auto moldType{mold.raw().type};
   if ((aType != CFI_type_struct && aType != CFI_type_other) ||
       (moldType != CFI_type_struct && moldType != CFI_type_other)) {
-    // If either type is intrinsic, they must match.
-    return aType == moldType;
-  } else if (const typeInfo::DerivedType *
-      derivedTypeMold{GetDerivedType(mold)}) {
+    if (!mold.IsAllocated()) {
+      return true;
+    } else if (!a.IsAllocated()) {
+      return false;
+    } else {
+      // If either type is intrinsic and not a pointer or allocatable
+      // then they must match.
+      return aType == moldType;
+    }
+  } else if (const auto *derivedTypeMold{GetDerivedType(mold)}) {
     // If A is unlimited polymorphic and is either a disassociated pointer or
     // unallocated allocatable, the result is false.
     // Otherwise if the dynamic type of A or MOLD is extensible, the result is

@@ -40,12 +40,13 @@ STATISTIC(NumFunctionsMitigated, "Number of functions for which mitigations "
 
 namespace {
 
-class X86LoadValueInjectionRetHardeningPass : public MachineFunctionPass {
+constexpr StringRef X86LVIRetPassName =
+    "X86 Load Value Injection (LVI) Ret-Hardening";
+
+class X86LoadValueInjectionRetHardeningLegacy : public MachineFunctionPass {
 public:
-  X86LoadValueInjectionRetHardeningPass() : MachineFunctionPass(ID) {}
-  StringRef getPassName() const override {
-    return "X86 Load Value Injection (LVI) Ret-Hardening";
-  }
+  X86LoadValueInjectionRetHardeningLegacy() : MachineFunctionPass(ID) {}
+  StringRef getPassName() const override { return X86LVIRetPassName; }
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   static char ID;
@@ -53,20 +54,14 @@ public:
 
 } // end anonymous namespace
 
-char X86LoadValueInjectionRetHardeningPass::ID = 0;
+char X86LoadValueInjectionRetHardeningLegacy::ID = 0;
 
-bool X86LoadValueInjectionRetHardeningPass::runOnMachineFunction(
-    MachineFunction &MF) {
+static bool runX86LoadValueInjectionRetHardening(MachineFunction &MF) {
   const X86Subtarget *Subtarget = &MF.getSubtarget<X86Subtarget>();
   if (!Subtarget->useLVIControlFlowIntegrity() || !Subtarget->is64Bit())
     return false; // FIXME: support 32-bit
 
-  // Don't skip functions with the "optnone" attr but participate in opt-bisect.
-  const Function &F = MF.getFunction();
-  if (!F.hasOptNone() && skipFunction(F))
-    return false;
-
-  LLVM_DEBUG(dbgs() << "***** " << getPassName() << " : " << MF.getName()
+  LLVM_DEBUG(dbgs() << "***** " << X86LVIRetPassName << " : " << MF.getName()
                     << " *****\n");
   ++NumFunctionsConsidered;
   const X86RegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -111,9 +106,28 @@ bool X86LoadValueInjectionRetHardeningPass::runOnMachineFunction(
   return Modified;
 }
 
-INITIALIZE_PASS(X86LoadValueInjectionRetHardeningPass, PASS_KEY,
+bool X86LoadValueInjectionRetHardeningLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  // Don't skip functions with the "optnone" attr but participate in opt-bisect.
+  // Note: NewPM implements this behavior by default.
+  const Function &F = MF.getFunction();
+  if (!F.hasOptNone() && skipFunction(F))
+    return false;
+
+  return runX86LoadValueInjectionRetHardening(MF);
+}
+
+PreservedAnalyses X86LoadValueInjectionRetHardeningPass::run(
+    MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  return runX86LoadValueInjectionRetHardening(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
+}
+
+INITIALIZE_PASS(X86LoadValueInjectionRetHardeningLegacy, PASS_KEY,
                 "X86 LVI ret hardener", false, false)
 
-FunctionPass *llvm::createX86LoadValueInjectionRetHardeningPass() {
-  return new X86LoadValueInjectionRetHardeningPass();
+FunctionPass *llvm::createX86LoadValueInjectionRetHardeningLegacyPass() {
+  return new X86LoadValueInjectionRetHardeningLegacy();
 }

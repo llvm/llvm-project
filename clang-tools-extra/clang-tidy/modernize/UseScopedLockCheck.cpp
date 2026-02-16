@@ -1,4 +1,4 @@
-//===--- UseScopedLockCheck.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,8 +28,8 @@ static bool isLockGuardDecl(const NamedDecl *Decl) {
 }
 
 static bool isLockGuard(const QualType &Type) {
-  if (const auto *Record = Type->getAs<RecordType>())
-    if (const RecordDecl *Decl = Record->getOriginalDecl())
+  if (const auto *Record = Type->getAsCanonical<RecordType>())
+    if (const RecordDecl *Decl = Record->getDecl())
       return isLockGuardDecl(Decl);
 
   if (const auto *TemplateSpecType = Type->getAs<TemplateSpecializationType>())
@@ -74,7 +74,8 @@ findLocksInCompoundStmt(const CompoundStmt *Block,
 
   for (const Stmt *Stmt : Block->body()) {
     if (const auto *DS = dyn_cast<DeclStmt>(Stmt)) {
-      llvm::SmallVector<const VarDecl *> LockGuards = getLockGuardsFromDecl(DS);
+      const llvm::SmallVector<const VarDecl *> LockGuards =
+          getLockGuardsFromDecl(DS);
 
       if (!LockGuards.empty()) {
         CurrentLockGuardGroup.append(LockGuards);
@@ -98,7 +99,7 @@ static SourceRange getLockGuardRange(const TypeSourceInfo *SourceInfo) {
 
 // Find the exact source range of the 'lock_guard' name token
 static SourceRange getLockGuardNameRange(const TypeSourceInfo *SourceInfo) {
-  const TemplateSpecializationTypeLoc TemplateLoc =
+  const auto TemplateLoc =
       SourceInfo->getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
   if (!TemplateLoc)
     return {};
@@ -176,7 +177,7 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseScopedLockCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *DS = Result.Nodes.getNodeAs<DeclStmt>("lock-decl-single")) {
-    llvm::SmallVector<const VarDecl *> Decls = getLockGuardsFromDecl(DS);
+    const llvm::SmallVector<const VarDecl *> Decls = getLockGuardsFromDecl(DS);
     diagOnMultipleLocks({Decls}, Result);
     return;
   }
@@ -217,7 +218,8 @@ void UseScopedLockCheck::diagOnSingleLock(
 
   // Create Fix-its only if we can find the constructor call to properly handle
   // 'std::lock_guard l(m, std::adopt_lock)' case.
-  const auto *CtorCall = dyn_cast<CXXConstructExpr>(LockGuard->getInit());
+  const auto *CtorCall =
+      dyn_cast_if_present<CXXConstructExpr>(LockGuard->getInit());
   if (!CtorCall)
     return;
 
