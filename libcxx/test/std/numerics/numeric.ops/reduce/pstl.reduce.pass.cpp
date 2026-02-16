@@ -21,6 +21,8 @@
 //            ForwardIterator first, ForwardIterator last, T init,
 //            BinaryOperation binary_op);
 
+#include <cassert>
+#include <iterator>
 #include <numeric>
 #include <vector>
 
@@ -28,6 +30,7 @@
 #include "test_execution_policies.h"
 #include "test_iterators.h"
 #include "test_macros.h"
+#include "type_algorithms.h"
 
 template <class Iter, class ValueT>
 struct Test {
