@@ -33,6 +33,7 @@ if(TARGET omp)
   set(OMP_DEPEND omp)
 endif()
 
+if(OPENMP_ENABLED)
 string(REGEX MATCHALL "([^\ ]+\ |[^\ ]+$)" SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS}")
 foreach(CURRENT_TARGET IN LISTS SYSTEM_TARGETS)
   string(STRIP "${CURRENT_TARGET}" CURRENT_TARGET)
@@ -63,6 +64,7 @@ add_offload_testsuite(check-offload
   EXCLUDE_FROM_CHECK_ALL
   DEPENDS llvm-offload-device-info omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
+endif()
 
 # Add liboffload unit tests - the test binary will run on all available devices
 configure_lit_site_cfg(

@@ -13,4 +13,7 @@ macro(add_openmp_tool_symlink name)
 endmacro()
 
 add_subdirectory(deviceinfo)
+
+if(OPENMP_ENABLED)
 add_subdirectory(kernelreplay)
+endif()
