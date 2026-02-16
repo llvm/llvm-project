@@ -20,6 +20,7 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "test_consteval_iterators.h"
 #include "MoveOnly.h"
 
 const int LargeN = 128;
@@ -113,6 +114,37 @@ int main(int, char**)
     static_assert(test_pointers<17, int, int**>());
     static_assert(test_pointers<17, int, random_access_iterator<int**>>());
     static_assert(test_pointers<17, int, contiguous_iterator<int**>>());
+
+    // Test consteval-only operations
+    (void)test<7, int, consteval_random_access_iterator<int*>>();
+    (void)test<7, int, consteval_contiguous_iterator<int*>>();
+    (void)test<LargeN, int, consteval_random_access_iterator<int*>>();
+    (void)test<LargeN, int, consteval_contiguous_iterator<int*>>();
+    (void)test<7, MoveOnly, consteval_random_access_iterator<MoveOnly*>>();
+    (void)test<7, MoveOnly, consteval_contiguous_iterator<MoveOnly*>>();
+    (void)test<LargeN, MoveOnly, consteval_random_access_iterator<MoveOnly*>>();
+    (void)test<LargeN, MoveOnly, consteval_contiguous_iterator<MoveOnly*>>();
+    (void)test_pointers<17, char, consteval_random_access_iterator<char**>>();
+    (void)test_pointers<17, char, consteval_contiguous_iterator<char**>>();
+    (void)test_pointers<17, const char, consteval_random_access_iterator<const char**>>();
+    (void)test_pointers<17, const char, consteval_contiguous_iterator<const char**>>();
+    (void)test_pointers<17, int, consteval_random_access_iterator<int**>>();
+    (void)test_pointers<17, int, consteval_contiguous_iterator<int**>>();
+
+    static_assert(test<7, int, consteval_random_access_iterator<int*>>());
+    static_assert(test<7, int, consteval_contiguous_iterator<int*>>());
+    static_assert(test<LargeN, int, consteval_random_access_iterator<int*>>());
+    static_assert(test<LargeN, int, consteval_contiguous_iterator<int*>>());
+    static_assert(test<7, MoveOnly, consteval_random_access_iterator<MoveOnly*>>());
+    static_assert(test<7, MoveOnly, consteval_contiguous_iterator<MoveOnly*>>());
+    static_assert(test<LargeN, MoveOnly, consteval_random_access_iterator<MoveOnly*>>());
+    static_assert(test<LargeN, MoveOnly, consteval_contiguous_iterator<MoveOnly*>>());
+    static_assert(test_pointers<17, char, consteval_random_access_iterator<char**>>());
+    static_assert(test_pointers<17, char, consteval_contiguous_iterator<char**>>());
+    static_assert(test_pointers<17, const char, consteval_random_access_iterator<const char**>>());
+    static_assert(test_pointers<17, const char, consteval_contiguous_iterator<const char**>>());
+    static_assert(test_pointers<17, int, consteval_random_access_iterator<int**>>());
+    static_assert(test_pointers<17, int, consteval_contiguous_iterator<int**>>());
 #endif
 
     return 0;

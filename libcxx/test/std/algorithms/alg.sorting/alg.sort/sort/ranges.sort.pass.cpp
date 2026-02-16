@@ -29,6 +29,7 @@
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "test_consteval_iterators.h"
 
 // SFINAE tests.
 
@@ -115,6 +116,8 @@ constexpr void test_iterators() {
   test_iterators_1<random_access_iterator<int*>>();
   test_iterators_1<contiguous_iterator<int*>>();
   test_iterators_1<int*>();
+  test_iterators_1<consteval_random_access_iterator<int*>>();
+  test_iterators_1<consteval_contiguous_iterator<int*>>();
 }
 
 constexpr bool test() {
@@ -187,8 +190,6 @@ constexpr bool test() {
     [[maybe_unused]] std::same_as<std::ranges::dangling> decltype(auto) result = std::ranges::sort(std::array{1, 2, 3});
   }
 
-  // TODO: Enable the tests once the implementation switched to use iter_move/iter_swap
-  /*
   { // ProxyIterator
     {
       std::array in = {2, 1, 3};
@@ -205,7 +206,6 @@ constexpr bool test() {
       assert((in == std::array{1, 2, 3}));
     }
   }
-  */
 
   return true;
 }
