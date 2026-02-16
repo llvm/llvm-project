@@ -473,7 +473,7 @@ Expected<uintptr_t> XCOFFObjectFile::getSectionFileOffsetToRawData(
       ECASE(STYP_TEXT, "text");
       ECASE(STYP_DATA, "data");
       ECASE(STYP_BSS, "bss");
-      ECASE(STYP_EXCEPT, "expect");
+      ECASE(STYP_EXCEPT, "except");
       ECASE(STYP_INFO, "info");
       ECASE(STYP_TDATA, "tdata");
       ECASE(STYP_TBSS, "tbss");
