@@ -28,3 +28,4 @@ The following tutorials and documentation demonstrate various Python capabilitie
    tutorials/implementing-standalone-scripts
    tutorials/custom-frame-recognizers
    tutorials/extending-target-stop-hooks
+   tutorials/custom-symbol-resolution

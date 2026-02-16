@@ -12,14 +12,11 @@
 
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/DataTypes.h"
 
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <typeinfo>
 #include <variant>
@@ -340,7 +337,7 @@ protected:
   /// Returns a new instance of the pseudo-container restricted to the given
   /// slice. Returns a nullptr object on failure.
   nanobind::object getItemSlice(PyObject *slice) {
-    ssize_t start, stop, extraStep, sliceLength;
+    Py_ssize_t start, stop, extraStep, sliceLength;
     if (PySlice_GetIndicesEx(slice, length, &start, &stop, &extraStep,
                              &sliceLength) != 0) {
       PyErr_SetString(PyExc_IndexError, "index out of range");

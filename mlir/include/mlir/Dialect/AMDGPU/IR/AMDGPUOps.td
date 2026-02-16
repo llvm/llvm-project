@@ -33,6 +33,17 @@ def AnyIntegerOrFloat : AnyTypeOf<[AnySignlessInteger, AnyFloat], "Integer or Fl
 def AnyIntegerOrFloatOr1DVector :
   AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
 
+// Types with element width up to 64 bits, used to keep dpp operands legal.
+def AMDGPU_IntOrFloatWidthLeq64 : Type<
+  CPred<"$_self.isIntOrFloat() && $_self.getIntOrFloatBitWidth() <= 64">,
+  "integer or float with element bitwidth <= 64">;
+
+def AMDGPU_IntOrFloatOr1DVectorWidthLeq64 :
+  AnyTypeOf<[
+    AMDGPU_IntOrFloatWidthLeq64,
+    FixedVectorOfRankAndType<[1], [AMDGPU_IntOrFloatWidthLeq64]>
+  ]>;
+
 //===----------------------------------------------------------------------===//
 // AMDGPU Op definitions
 //===----------------------------------------------------------------------===//
@@ -643,8 +654,8 @@ def AMDGPU_RawBufferAtomicUminOp :
 
 def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     [Pure, SameTypeOperands, AllTypesMatch<["result", "old", "src"]>]>,
-  Arguments<(ins AnyType:$old,
-                 AnyType:$src,
+  Arguments<(ins AMDGPU_IntOrFloatOr1DVectorWidthLeq64:$old,
+                 AMDGPU_IntOrFloatOr1DVectorWidthLeq64:$src,
                  AMDGPU_DPPPermAttr:$kind,
                  OptionalAttr<AnyAttrOf<[I32Attr, ArrayAttr, UnitAttr]>>:$permArgument,
                  DefaultValuedAttr<I32Attr, "0xf">:$row_mask,
@@ -1068,7 +1079,8 @@ def AMDGPU_GatherToLDSOp :
                    Variadic<Index>:$srcIndices,
                    Arg<AnyMemRef, "buffer to write to", [MemWrite]>:$dst,
                    Variadic<Index>:$dstIndices,
-                   TypeAttr:$transferType
+                   TypeAttr:$transferType,
+                   UnitAttr:$async
                    )>,
     Results<(outs)> {
   let summary = "MLIR wrapper for CDNA Gather to LDS instructions";
@@ -1088,6 +1100,13 @@ def AMDGPU_GatherToLDSOp :
     * `$transferType`: type of the data to be transferred by each thread. This is used to determine
       the size of the data to be transferred and the number of threads in the subgroup.
       The transfer type must be a scalar type or a vector type with a single element type.
+    * If `$async` is set, the compiler will not attempt to infer the
+      memory waits needed to ensure that the DMA operation has succeeded
+      before a load that might access the stored-to LDS is performed.
+      Instead, the `rocdl.asyncmark` and `rocdl.wait.asyncmark N`
+      operations must be used to explicitly indicate the desired completion
+      behavior. This enables more precise calculation of these waits at the
+      cost of requiring user management of asynchrony.
 
     The `$dst`, along with its indices, points to the memory location the subgroup of this thread
     will write to.
@@ -1095,7 +1114,7 @@ def AMDGPU_GatherToLDSOp :
     Note: only supported on gfx9 and gfx10.
   }];
   let assemblyFormat = [{
-    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` $transferType `,` type($src) `,` type($dst)
+    (`async` $async^)? $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` $transferType `,` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
@@ -1379,7 +1398,7 @@ class AMDGPU_MakeDescriptorOp<string mnemonic> :
     Optional<I1>: $early_timeout,
     Optional<I32>: $pad_amount,
     Optional<I32>: $pad_interval,
-    Optional<AnyMemRef>: $atomic_barrier_address,
+    Optional<MemRefOf<[AMDGPU_DsBarrierStateType]>>: $atomic_barrier_address,
     Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
     Optional<I32>: $lds_increment,
@@ -1466,7 +1485,8 @@ def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> 
      $pad_interval must be a power of two contained in [2, 256].
      $pad_amount must be a value contained in [1, 128].
 
-     $atomic_barrier_address must be aligned to 8 bytes.
+     If an atomic barrier is provided, it will be arrived at **once** after
+     each load/store using this descriptor is completed.
 
      2D and 3D tensors may be iterated over by setting $global_increment, $lds_increment, and $iteration_count.
      $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.

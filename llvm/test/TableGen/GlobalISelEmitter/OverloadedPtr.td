@@ -20,7 +20,7 @@ let TargetPrefix = "mytarget" in {
 // CHECK-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/0,
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPRRegClassID),
 // CHECK-NEXT: // (ld:{ *:[i32] } GPR:{ *:[iPTR] }:$src1)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (ANYLOAD:{ *:[i32] } GPR:{ *:[iPTR] }:$src1)
-// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::ANYLOAD),
+// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::ANYLOAD),
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT: // GIR_Coverage, 0,
 // CHECK-NEXT: GIR_Done,
@@ -41,7 +41,7 @@ let hasSideEffects = 1 in {
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/2, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_frag_anyptr),
 // CHECK-NEXT: // (intrinsic_w_chain:{ *:[i32] } {{[0-9]+}}:{ *:[iPTR] }, GPR32:{ *:[i32] }:$src)<<P:Predicate_frag_anyptr>>  =>  (ANYLOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src)
-// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(MyTarget::ANYLOAD),
+// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::ANYLOAD),
 
 def frag_anyptr : PatFrag<(ops node:$src),
                    (int_mytarget_anyptr node:$src),

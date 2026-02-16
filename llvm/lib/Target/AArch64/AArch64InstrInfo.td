@@ -215,14 +215,10 @@ def HasSVEBFSCALE    : Predicate<"Subtarget->isNonStreamingSVEorSME2Available() 
                                  AssemblerPredicateWithAll<(all_of FeatureSVEBFSCALE), "sve-bfscale">;
 def HasSVE_F16F32MM  : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_F16F32MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_F16F32MM), "sve-f16f32mm">;
-def HasPCDPHINT      : Predicate<"Subtarget->hasPCDPHINT()">,
-                                 AssemblerPredicateWithAll<(all_of FeaturePCDPHINT), "pcdphint">;
 def HasLSUI          : Predicate<"Subtarget->hasLSUI()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSUI), "lsui">;
 def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
                                  AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
-def HasCMH           : Predicate<"Subtarget->hasCMH()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureCMH), "cmh">;
 def HasLSCP          : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
 def HasSVE2p2        : Predicate<"Subtarget->hasSVE2p2()">,
@@ -1579,9 +1575,7 @@ def NOP : SystemNoOperands<0b000, "hint\t#0">;
 
 def : InstAlias<"nop", (NOP)>;
 
-let Predicates = [HasPCDPHINT] in {
-    def STSHH: STSHHI;
-}
+def STSHH: STSHHI;
 
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Identification mnemonics, even with BTI disabled.
@@ -5360,7 +5354,7 @@ defm FCVTZU : FPToIntegerUnscaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 defm FCVTZS : FPToIntegerScaled<0b11, 0b000, "fcvtzs", any_fp_to_sint>;
 defm FCVTZU : FPToIntegerScaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 
-let Predicates = [HasNEON, HasFPRCVT] in{
+let Predicates = [HasFPRCVT] in{
   defm FCVTAS : FPToIntegerSIMDScalar<0b11, 0b010, "fcvtas", int_aarch64_neon_fcvtas>;
   defm FCVTAU : FPToIntegerSIMDScalar<0b11, 0b011, "fcvtau", int_aarch64_neon_fcvtau>;
   defm FCVTMS : FPToIntegerSIMDScalar<0b10, 0b100, "fcvtms", int_aarch64_neon_fcvtms>;
@@ -5403,7 +5397,7 @@ def : Pat<(i64 (any_llround f64:$Rn)),
 defm SCVTF : IntegerToFP<0b00, 0b010, "scvtf", any_sint_to_fp>;
 defm UCVTF : IntegerToFP<0b00, 0b011, "ucvtf", any_uint_to_fp>;
 
-let Predicates = [HasNEON, HasFPRCVT] in {
+let Predicates = [HasFPRCVT] in {
   defm SCVTF : IntegerToFPSIMDScalar<0b11, 0b100, "scvtf", any_sint_to_fp>;
   defm UCVTF : IntegerToFPSIMDScalar<0b11, 0b101, "ucvtf", any_uint_to_fp>;
 
@@ -7901,6 +7895,19 @@ def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract (v8i16 V128:$Rn),
           (SUBREG_TO_REG (i32 (UMOVvi16 V128:$Rn, VectorIndexH:$idx)), sub_32)>;
 
 defm INS : SIMDIns;
+
+// Patterns for v2i64/v1i64 clmul->pmull
+let Predicates = [HasAES] in {
+  def : Pat<(clmul v1i64:$Rn, v1i64:$Rm),
+            (v1i64 (EXTRACT_SUBREG (v2i64 (PMULLv1i64 $Rn, $Rm)),
+                                           dsub))>;
+  def : Pat<(clmul v2i64:$Rn, v2i64:$Rm),
+            (v2i64 (INSvi64lane (v2i64 (PMULLv1i64 (v1i64 (EXTRACT_SUBREG $Rn, dsub)),
+                                                   (v1i64 (EXTRACT_SUBREG $Rm, dsub)))),
+                                (i64 1),
+                                (v2i64 (PMULLv2i64 $Rn, $Rm)),
+                                (i64 0)))>;
+}
 
 def : Pat<(v16i8 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
@@ -10903,8 +10910,8 @@ def : Pat<(i64 (int_aarch64_neon_urshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
 //
 // Currently we only support NT stores lowering for little-endian targets.
 //
-// Coordinated with STNP constraints in `AArch64TargetLowering::LowerNTStore`
-// and `AArch64TTIImpl::isLegalNTStore`.
+// Coordinated with STNP constraints in `LowerNTStore`
+// and `isLegalNTStore` from `AArch64ISelLowering.cpp`.
 //
 // Currently, STNP lowering can only either keep or increase code size, thus
 // we predicate it to not apply when optimizing for code size.
@@ -11788,10 +11795,8 @@ let Uses = [FPMR, FPCR] in
 // Contention Management Hints (FEAT_CMH)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasCMH] in {
-  defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
-  def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
-}
+defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
+def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
 
 //===----------------------------------------------------------------------===//
 // Permission Overlays Extension 2 (FEAT_S1POE2)

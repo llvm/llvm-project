@@ -2289,7 +2289,7 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
           << MatchTable::Comment("RecycleInsnID")
           << MatchTable::ULEB128Value(RecycleInsnID)
           << MatchTable::Comment("Opcode")
-          << MatchTable::NamedValue(4, I->Namespace, I->getName())
+          << MatchTable::NamedValue(2, I->Namespace, I->getName())
           << MatchTable::LineBreak;
 
     if (!I->ImplicitDefs.empty() || !I->ImplicitUses.empty()) {
@@ -2337,7 +2337,7 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
   }
 
   Table << MatchTable::Comment("Opcode")
-        << MatchTable::NamedValue(4, I->Namespace, I->getName())
+        << MatchTable::NamedValue(2, I->Namespace, I->getName())
         << MatchTable::LineBreak;
 
   for (const auto &Renderer : OperandRenderers)

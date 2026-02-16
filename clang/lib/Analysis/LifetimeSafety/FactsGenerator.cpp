@@ -523,9 +523,20 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
 void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
                                            ArrayRef<const Expr *> Args) {
   unsigned IsInstance = 0;
-  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
-      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD))
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+      MD && MD->isInstance() && !isa<CXXConstructorDecl>(FD)) {
     IsInstance = 1;
+    // std::unique_ptr::release() transfers ownership.
+    // Treat it as a move to prevent false-positive warnings when the unique_ptr
+    // destructor runs after ownership has been transferred.
+    if (isUniquePtrRelease(*MD)) {
+      const Expr *UniquePtrExpr = Args[0];
+      OriginList *MovedOrigins = getOriginsList(*UniquePtrExpr);
+      if (MovedOrigins)
+        CurrentBlockFacts.push_back(FactMgr.createFact<MovedOriginFact>(
+            UniquePtrExpr, MovedOrigins->getOuterOriginID()));
+    }
+  }
 
   // Skip 'this' arg as it cannot be moved.
   for (unsigned I = IsInstance;
@@ -547,7 +558,10 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
                                             const FunctionDecl *FD,
                                             ArrayRef<const Expr *> Args) {
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-  if (!MD || !MD->isInstance() || !isContainerInvalidationMethod(*MD))
+  if (!MD || !MD->isInstance())
+    return;
+
+  if (!isContainerInvalidationMethod(*MD))
     return;
   // Heuristics to turn-down false positives.
   auto *DRE = dyn_cast<DeclRefExpr>(Args[0]);

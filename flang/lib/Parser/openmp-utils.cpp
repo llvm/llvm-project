@@ -211,53 +211,54 @@ OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x) {
   return info;
 }
 
-template <bool IsConst> LoopRange<IsConst>::LoopRange(QualReference x) {
-  if (auto *doLoop{Unwrap<DoConstruct>(x)}) {
-    Initialize(std::get<Block>(doLoop->t));
-  } else if (auto *omp{Unwrap<OpenMPLoopConstruct>(x)}) {
-    Initialize(std::get<Block>(omp->t));
+void ExecutionPartIterator::step() {
+  // Advance the iterator to the next legal position. If the current
+  // position is a DO-loop or a loop construct, step into it.
+  if (valid()) {
+    IteratorType where{at()};
+    if (auto *loop{GetOmpLoop(*where)}) {
+      stack_.emplace_back(std::get<Block>(loop->t), &*where);
+    } else if (auto *loop{GetDoConstruct(*where)}) {
+      stack_.emplace_back(std::get<Block>(loop->t), &*where);
+    } else {
+      stack_.back().range =
+          IteratorRange(std::next(where), stack_.back().range.end());
+    }
+    adjust();
   }
 }
 
-template <bool IsConst> void LoopRange<IsConst>::Initialize(QualBlock &body) {
-  using QualIterator = decltype(std::declval<QualBlock>().begin());
-  auto makeRange{[](auto &container) {
-    return llvm::make_range(container.begin(), container.end());
-  }};
+void ExecutionPartIterator::next() {
+  // Advance the iterator to the next legal position. If the current
+  // position is a DO-loop or a loop construct, step over it.
+  if (valid()) {
+    stack_.back().range =
+        IteratorRange(std::next(at()), stack_.back().range.end());
+    adjust();
+  }
+}
 
-  std::vector<llvm::iterator_range<QualIterator>> nest{makeRange(body)};
-  do {
-    auto at{nest.back().begin()};
-    auto end{nest.back().end()};
-    nest.pop_back();
-    while (at != end) {
-      if (auto *block{Unwrap<BlockConstruct>(*at)}) {
-        nest.push_back(llvm::make_range(std::next(at), end));
-        nest.push_back(makeRange(std::get<Block>(block->t)));
-        break;
-      } else if (Unwrap<DoConstruct>(*at) || Unwrap<OpenMPLoopConstruct>(*at)) {
-        items.push_back(&*at);
+void ExecutionPartIterator::adjust() {
+  // If the iterator is not at a legal location, keep advancing it until
+  // it lands at a legal location or becomes invalid.
+  while (valid()) {
+    if (stack_.back().range.empty()) {
+      stack_.pop_back();
+      if (valid()) {
+        stack_.back().range =
+            IteratorRange(std::next(at()), stack_.back().range.end());
       }
-      ++at;
+    } else if (auto *block{GetFortranBlockConstruct(*at())}) {
+      stack_.emplace_back(std::get<Block>(block->t), &*at());
+    } else {
+      break;
     }
-  } while (!nest.empty());
+  }
 }
 
-template <bool IsConst>
-auto LoopRange<IsConst>::iterator::operator++(int) -> iterator {
-  auto old = *this;
-  ++*this;
-  return old;
+bool LoopNestIterator::isLoop(const ExecutionPartConstruct &c) {
+  return Unwrap<OpenMPLoopConstruct>(c) != nullptr ||
+      Unwrap<DoConstruct>(c) != nullptr;
 }
-
-template <bool IsConst>
-auto LoopRange<IsConst>::iterator::operator--(int) -> iterator {
-  auto old = *this;
-  --*this;
-  return old;
-}
-
-template struct LoopRange<false>;
-template struct LoopRange<true>;
 
 } // namespace Fortran::parser::omp

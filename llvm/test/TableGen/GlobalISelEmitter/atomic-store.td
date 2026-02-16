@@ -13,7 +13,7 @@ def ST_ATOM_B32 : I<(outs), (ins GPR32Op:$val, GPR32Op:$ptr), []>;
 // GISEL-NEXT: // MIs[0] ptr
 // GISEL-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/0,
 // GISEL-NEXT: // (atomic_store i32:{ *:[i32] }:$val, iPTR:{ *:[iPTR] }:$ptr)<<P:Predicate_atomic_store_8>>  =>  (ST_ATOM_B32 GPR32Op:{ *:[i32] }:$val, GPR32Op:{ *:[i32] }:$ptr)
-// GISEL-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::ST_ATOM_B32),
+// GISEL-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::ST_ATOM_B32),
 def : Pat<
 //  (atomic_store_8 iPTR:$ptr, i32:$val),
   (atomic_store_8 i32:$val, iPTR:$ptr),

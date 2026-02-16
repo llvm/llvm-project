@@ -251,13 +251,13 @@ define void @add_unique_indf32(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul float [[DOTCAST]], 2.000000e+00
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul nnan float [[DOTCAST]], 2.000000e+00
 ; CHECK-NEXT:    [[IND_END:%.*]] = fadd float [[TMP4]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; CHECK-NEXT:    [[TMP8:%.*]] = uitofp <vscale x 4 x i32> [[TMP7]] to <vscale x 4 x float>
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul <vscale x 4 x float> [[TMP8]], splat (float 2.000000e+00)
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul nnan <vscale x 4 x float> [[TMP8]], splat (float 2.000000e+00)
 ; CHECK-NEXT:    [[TMP12:%.*]] = uitofp i64 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP13:%.*]] = fmul float [[TMP12]], 2.000000e+00
+; CHECK-NEXT:    [[TMP13:%.*]] = fmul nnan float [[TMP12]], 2.000000e+00
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[TMP13]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x float> [[DOTSPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
