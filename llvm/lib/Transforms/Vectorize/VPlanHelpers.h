@@ -383,6 +383,11 @@ struct VPCostContext {
       Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
       TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None,
       bool AlwaysIncludeReplicatingR = false);
+
+  /// Returns true if an artificially high cost for emulated masked memrefs
+  /// should be used. Forwards to
+  /// LoopVectorizationCostModel::useEmulatedMaskMemRefHack.
+  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without

@@ -184,7 +184,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
       return StrReg;
     };
 
-    const SPIRVType *VoidTy =
+    const SPIRVTypeInst VoidTy =
         GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder,
                                  SPIRV::AccessQualifier::ReadWrite, false);
 
@@ -209,7 +209,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
           return InstReg;
         };
 
-    const SPIRVType *I32Ty =
+    const SPIRVTypeInst I32Ty =
         GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder,
                                  SPIRV::AccessQualifier::ReadWrite, false);
 

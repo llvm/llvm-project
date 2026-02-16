@@ -221,7 +221,6 @@ class LLVM_ABI MCStreamer {
   MCContext &Context;
   std::unique_ptr<MCTargetStreamer> TargetStreamer;
 
-  std::vector<MCDwarfFrameInfo> DwarfFrameInfos;
   // This is a pair of index into DwarfFrameInfos and the MCSection associated
   // with the frame. Note, we use an index instead of an iterator because they
   // can be invalidated in std::vector.
@@ -265,6 +264,8 @@ protected:
   WinEH::FrameInfo::Epilog *CurrentWinEpilog = nullptr;
 
   MCFragment *CurFrag = nullptr;
+
+  SmallVector<MCDwarfFrameInfo, 0> DwarfFrameInfos;
 
   MCStreamer(MCContext &Ctx);
 
@@ -353,8 +354,6 @@ public:
   }
 
   bool isInEpilogCFI() const { return CurrentWinEpilog; }
-
-  void generateCompactUnwindEncodings(MCAsmBackend *MAB);
 
   /// \name Assembly File Formatting.
   /// @{

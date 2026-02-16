@@ -888,9 +888,7 @@ class SILowerI1CopiesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SILowerI1CopiesLegacy() : MachineFunctionPass(ID) {
-    initializeSILowerI1CopiesLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SILowerI1CopiesLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

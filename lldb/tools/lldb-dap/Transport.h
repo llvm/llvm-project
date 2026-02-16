@@ -35,8 +35,8 @@ class Transport final
     : public lldb_private::transport::HTTPDelimitedJSONTransport<
           ProtocolDescriptor> {
 public:
-  Transport(lldb_dap::Log &log, lldb::IOObjectSP input,
-            lldb::IOObjectSP output);
+  Transport(lldb_dap::Log &log, lldb_private::MainLoop &loop,
+            lldb::IOObjectSP input, lldb::IOObjectSP output);
   virtual ~Transport() = default;
 
   void Log(llvm::StringRef message) override;

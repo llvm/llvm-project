@@ -83,6 +83,6 @@ program main
 
 end program main
 
-! CHECK:  "PluginInterface" device {{[0-9]+}} info: Launching kernel {{.*}}
+! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}}
 ! CHECK:  PASSED
 

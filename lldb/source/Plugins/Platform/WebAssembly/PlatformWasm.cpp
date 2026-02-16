@@ -41,7 +41,7 @@ public:
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(
         PlatformWasm::GetPluginNameStatic());
-    m_collection_sp->Initialize(g_platformwasm_properties);
+    m_collection_sp->Initialize(g_platformwasm_properties_def);
   }
 
   FileSpec GetRuntimePath() const {

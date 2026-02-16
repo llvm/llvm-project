@@ -1183,7 +1183,9 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_initialize(self, sourceInitFile=False):
+    def request_initialize(
+        self, client_features: Optional[dict[str, bool]] = None, sourceInitFile=False
+    ):
         command_dict = {
             "command": "initialize",
             "type": "request",
@@ -1204,6 +1206,13 @@ class DebugCommunication(object):
                 "$__lldb_sourceInitFile": sourceInitFile,
             },
         }
+
+        if client_features is not None:
+            arguments = command_dict["arguments"]
+            # replace the default client features.
+            for key, value in client_features.items():
+                arguments[key] = value
+
         response = self._send_recv(command_dict)
         if response:
             if "body" in response:
@@ -1866,7 +1875,7 @@ def attach_options_specified(opts):
 
 
 def run_adapter(dbg: DebugCommunication, opts: argparse.Namespace) -> None:
-    dbg.request_initialize(opts.source_init_file)
+    dbg.request_initialize(sourceInitFile=opts.source_init_file)
 
     source_to_lines: Dict[str, List[int]] = {}
     for sbp in cast(List[str], opts.source_bp):

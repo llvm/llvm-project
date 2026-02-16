@@ -2776,7 +2776,6 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
   const bool IsLog10 = Op.getOpcode() == ISD::FLOG10;
   assert(IsLog10 || Op.getOpcode() == ISD::FLOG);
 
-  const auto &Options = getTargetMachine().Options;
   if (VT == MVT::f16 || Flags.hasApproximateFuncs()) {
 
     if (VT == MVT::f16 && !isTypeLegal(MVT::f16)) {
@@ -2845,8 +2844,7 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
     R = getMad(DAG, DL, VT, YH, CH, Mad1);
   }
 
-  const bool IsFiniteOnly =
-      (Flags.hasNoNaNs() || Options.NoNaNsFPMath) && Flags.hasNoInfs();
+  const bool IsFiniteOnly = Flags.hasNoNaNs() && Flags.hasNoInfs();
 
   // TODO: Check if known finite from source value.
   if (!IsFiniteOnly) {

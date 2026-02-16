@@ -12,6 +12,7 @@
 #ifndef LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
 #define LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
@@ -77,7 +78,7 @@ public:
 protected:
   struct Context {
     LLVM_ABI static llvm::Expected<std::unique_ptr<Context>>
-    get(std::unique_ptr<MemoryBuffer> Buffer, const object::ObjectFile &Obj,
+    get(std::unique_ptr<MemoryBuffer> Buffer, object::ObjectFile &Obj,
         ProfCorrelatorKind FileKind);
     std::unique_ptr<MemoryBuffer> Buffer;
     /// The address range of the __llvm_prf_cnts section.
@@ -89,6 +90,10 @@ protected:
     const char *DataEnd;
     const char *NameStart;
     size_t NameSize;
+    /// Resolved values for Mach-O linker fixup chains when FileKind is Binary.
+    /// The mapping is from an address relative to the start of __llvm_covdata,
+    /// to the resolved pointer value at that address.
+    llvm::DenseMap<uint64_t, uint64_t> MachOFixups;
     /// True if target and host have different endian orders.
     bool ShouldSwapBytes;
   };

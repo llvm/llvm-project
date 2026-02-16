@@ -1887,14 +1887,13 @@ static void genWsloopClauses(
     mlir::Location loc, mlir::omp::WsloopOperands &clauseOps,
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAllocate(clauseOps);
   cp.processNowait(clauseOps);
   cp.processOrder(clauseOps);
   cp.processOrdered(clauseOps);
   cp.processReduction(loc, clauseOps, reductionSyms);
   cp.processSchedule(stmtCtx, clauseOps);
   cp.processLinear(clauseOps);
-
-  cp.processTODO<clause::Allocate>(loc, llvm::omp::Directive::OMPD_do);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3766,9 +3765,15 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
       fir::FortranVariableFlagsAttr attributes =
           Fortran::lower::translateSymbolAttributes(builder.getContext(),
                                                     *object.sym(), extraFlags);
+      // For character types, we need to provide the length parameter
+      llvm::SmallVector<mlir::Value> typeParams;
+      if (hlfir::isFortranEntity(addr)) {
+        hlfir::genLengthParameters(loc, builder, hlfir::Entity{addr},
+                                   typeParams);
+      }
       auto declareOp =
-          hlfir::DeclareOp::create(builder, loc, addr, name, nullptr, {},
-                                   nullptr, nullptr, 0, attributes);
+          hlfir::DeclareOp::create(builder, loc, addr, name, nullptr,
+                                   typeParams, nullptr, nullptr, 0, attributes);
       if (name == "omp_out")
         ompOutVar = declareOp.getResult(0);
       symTable.addVariableDefinition(*object.sym(), declareOp);
@@ -3788,10 +3793,13 @@ static ReductionProcessor::GenCombinerCBTy processReductionCombiner(
                   loc, converter, evalExpr, symTable, stmtCtx));
               // Optional load may be generated if we get a reference to the
               // reduction type.
-              if (auto refType =
-                      llvm::dyn_cast<fir::ReferenceType>(exprResult.getType()))
-                if (lhs.getType() == refType.getElementType())
+              if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
+                      exprResult.getType())) {
+                mlir::Type expectedType =
+                    isByRef ? fir::unwrapRefType(lhs.getType()) : lhs.getType();
+                if (expectedType == refType.getElementType())
                   exprResult = fir::LoadOp::create(builder, loc, exprResult);
+              }
               return exprResult;
             }},
         evalExpr.u);

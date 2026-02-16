@@ -1,6 +1,6 @@
-=====================
+===========================
 SYCL runtime implementation
-=====================
+===========================
 
 .. contents::
    :local:
@@ -8,7 +8,7 @@ SYCL runtime implementation
 .. _index:
 
 Current Status
-========
+==============
 
 The implementation is in the very early stages of upstreaming. The first
 milestone is to get
@@ -59,7 +59,7 @@ libsycl side:
   from the multi-architectural binaries
 
 Build steps
-========
+===========
 
 To build LLVM with libsycl runtime enabled the following script can be used.
 
@@ -87,7 +87,22 @@ To build LLVM with libsycl runtime enabled the following script can be used.
 
 
 Limitations
-========
+===========
 
 Libsycl is not currently supported on Windows because it depends on liboffload
 which doesn't currently support Windows.
+
+TODO for added SYCL classes
+===========================
+
+* ``exception``: methods with context are not implemented, to add once context is ready
+* ``platform``: deprecated info descriptor is not implemented (info::platform::extensions), to implement on RT level with ``device::get_info<info::device::aspects>()``
+* ``device``:
+
+  * ``get_info``: to find an efficient way to map descriptors to liboffload types, add other descriptors, add cache of info data
+  * ``has(aspect)``: same as get_info
+  * ``create_sub_devices``: partitioning is not supported by liboffload now, blocked
+  * ``has_extension``: deprecated API, to implement on RT level with ``device::has``
+
+* device selection: to add compatibility with old SYCL 1.2.1 device selectors, still part of SYCL 2020 specification
+

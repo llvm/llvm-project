@@ -62,7 +62,7 @@ template <class EmitterC> class OptClass : Opt {
     std::string S;
     raw_string_ostream OS(S);
     EmitterC(RK).run(OS);
-    return {S, {}};
+    return {std::move(S), {}};
   }
 
 public:

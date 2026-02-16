@@ -39,5 +39,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -target-cpu znver3 -verify %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -target-cpu znver4 -verify %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -target-cpu znver5 -verify %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -target-cpu znver6 -verify %s
 //
 // expected-no-diagnostics

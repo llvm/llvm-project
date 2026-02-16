@@ -10,6 +10,7 @@
 #include <string>
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
@@ -542,6 +543,36 @@ void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
   }
 }
 
+void FactsGenerator::handleInvalidatingCall(const Expr *Call,
+                                            const FunctionDecl *FD,
+                                            ArrayRef<const Expr *> Args) {
+  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  if (!MD || !MD->isInstance())
+    return;
+  // std::unique_ptr::release() transfers ownership.
+  // Treat it as a move to prevent false-positive warnings when the unique_ptr
+  // destructor runs after ownership has been transferred.
+  if (isUniquePtrRelease(*MD)) {
+    const Expr *UniquePtrExpr = Args[0];
+    OriginList *MovedOrigins = getOriginsList(*UniquePtrExpr);
+    if (MovedOrigins)
+      CurrentBlockFacts.push_back(FactMgr.createFact<MovedOriginFact>(
+          UniquePtrExpr, MovedOrigins->getOuterOriginID()));
+  }
+
+  if (!isContainerInvalidationMethod(*MD))
+    return;
+  // Heuristics to turn-down false positives.
+  auto *DRE = dyn_cast<DeclRefExpr>(Args[0]);
+  if (!DRE || DRE->getDecl()->getType()->isReferenceType())
+    return;
+
+  OriginList *ThisList = getOriginsList(*Args[0]);
+  if (ThisList)
+    CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+        ThisList->getOuterOriginID(), Call));
+}
+
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         const FunctionDecl *FD,
                                         ArrayRef<const Expr *> Args,
@@ -551,6 +582,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   if (!FD)
     return;
+
+  handleInvalidatingCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
   if (!CallList)
     return;

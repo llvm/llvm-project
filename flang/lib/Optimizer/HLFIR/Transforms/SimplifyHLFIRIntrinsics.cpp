@@ -1419,15 +1419,12 @@ private:
   }
 
   /// The indices computations for the array shifts are done using I64 type.
-  /// For CSHIFT, all computations do not overflow signed and unsigned I64.
-  /// For EOSHIFT, some computations may involve negative shift values,
-  /// so using no-unsigned wrap flag would be incorrect.
+  /// For CSHIFT, and EOSHIFT all computations do not overflow signed I64.
+  /// While no-unsigned wrap could be set on some operation generated for
+  /// CSHIFT, it is in general unsafe to mix with computations involving
+  /// user defined bounds that may be negative.
   static void setArithOverflowFlags(Op op, fir::FirOpBuilder &builder) {
-    if constexpr (std::is_same_v<Op, hlfir::EOShiftOp>)
-      builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
-    else
-      builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw |
-                                      mlir::arith::IntegerOverflowFlags::nuw);
+    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
   }
 
   /// Return the element type of the EOSHIFT boundary that may be omitted
@@ -1889,11 +1886,9 @@ private:
       hlfir::Entity srcArray = array;
       if (exposeContiguity && mlir::isa<fir::BaseBoxType>(srcArray.getType())) {
         assert(dimVal == 1 && "can expose contiguity only for dim 1");
-        llvm::SmallVector<mlir::Value, maxRank> arrayLbounds =
-            hlfir::genLowerbounds(loc, builder, arrayShape, array.getRank());
         hlfir::Entity section =
-            hlfir::gen1DSection(loc, builder, srcArray, dimVal, arrayLbounds,
-                                arrayExtents, oneBasedIndices, typeParams);
+            hlfir::gen1DSection(loc, builder, srcArray, dimVal, arrayExtents,
+                                oneBasedIndices, typeParams);
         mlir::Value addr = hlfir::genVariableRawAddress(loc, builder, section);
         mlir::Value shape = hlfir::genShape(loc, builder, section);
         mlir::Type boxType = fir::wrapInClassOrBoxType(

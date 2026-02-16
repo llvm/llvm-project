@@ -2817,14 +2817,19 @@ multiclass VPseudoVFRDIV_VF_RM {
   }
 }
 
-multiclass VPseudoVALU_VV_VX {
- foreach m = MxList in {
-    defm "" : VPseudoBinaryV_VV<m>,
-            SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
-                        forcePassthruRead=true>;
+multiclass VPseudoVALU_VV<bit Commutable = 0> {
+  foreach m = MxList in {
+    defm "" : VPseudoBinaryV_VV<m, Commutable=Commutable>,
+              SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
+                          forcePassthruRead=true>;
+  }
+}
+
+multiclass VPseudoVALU_VV_VX<bit Commutable = 0> : VPseudoVALU_VV<Commutable> {
+  foreach m = MxList in {
     defm "" : VPseudoBinaryV_VX<m>,
-            SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", m.MX,
-                        forcePassthruRead=true>;
+              SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", m.MX,
+                          forcePassthruRead=true>;
   }
 }
 

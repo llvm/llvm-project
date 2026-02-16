@@ -644,39 +644,45 @@ gpu.module @test_module_29 {
 
 gpu.module @test_module_30 {
   // CHECK-LABEL: func @subgroup_reduce_add
-  gpu.func @subgroup_reduce_add(%arg0 : i32) {
+  gpu.func @subgroup_reduce_add(%arg0 : i32, %buf : memref<i32>) {
     // CHECK: nvvm.redux.sync add {{.*}}
     %result = gpu.subgroup_reduce add %arg0 uniform {} : (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
     gpu.return
   }
   // CHECK-LABEL: @subgroup_reduce_minsi
-  gpu.func @subgroup_reduce_minsi(%arg0 : i32) {
+  gpu.func @subgroup_reduce_minsi(%arg0 : i32, %buf : memref<i32>) {
     // CHECK: nvvm.redux.sync min {{.*}}
     %result = gpu.subgroup_reduce minsi %arg0 uniform {} : (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
     gpu.return
   }
   // CHECK-LABEL:  @subgroup_reduce_maxsi
-  gpu.func @subgroup_reduce_maxsi(%arg0 : i32) {
+  gpu.func @subgroup_reduce_maxsi(%arg0 : i32, %buf : memref<i32>) {
     // CHECK: nvvm.redux.sync max {{.*}}
     %result = gpu.subgroup_reduce maxsi %arg0 uniform {} : (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
     gpu.return
   }
   // CHECK-LABEL: func @subgroup_reduce_and
-  gpu.func @subgroup_reduce_and(%arg0 : i32) {
+  gpu.func @subgroup_reduce_and(%arg0 : i32, %buf : memref<i32>) {
     // CHECK: nvvm.redux.sync and {{.*}}
     %result = gpu.subgroup_reduce and %arg0 uniform {} : (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
     gpu.return
   }
   // CHECK-LABEL:  @subgroup_reduce_or
-  gpu.func @subgroup_reduce_or(%arg0 : i32) {
+  gpu.func @subgroup_reduce_or(%arg0 : i32, %buf : memref<i32>) {
     // CHECK: nvvm.redux.sync or {{.*}}
     %result = gpu.subgroup_reduce or %arg0 uniform {} : (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
     gpu.return
   }
   // CHECK-LABEL: @subgroup_reduce_xor
-  gpu.func @subgroup_reduce_xor(%arg0 : i32) {
+  gpu.func @subgroup_reduce_xor(%arg0 : i32, %buf : memref<i32>) {
     // CHECK: nvvm.redux.sync xor {{.*}}
     %result = gpu.subgroup_reduce xor %arg0 uniform {} : (i32) -> (i32)
+    memref.store %result, %buf[] : memref<i32>
     gpu.return
   }
 }

@@ -1,0 +1,49 @@
+# RUN: split-file %s %t
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -run-pass=none -filetype=null %t/expected-id.mir 2>&1 | FileCheck -check-prefix=ERR0 %s
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -run-pass=none -filetype=null %t/undefined-id.mir 2>&1 | FileCheck -check-prefix=ERR1 %s
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -run-pass=none -filetype=null  %t/missing-comma.mir 2>&1 | FileCheck -check-prefix=ERR2 %s
+
+;--- expected-id.mir
+# ERR0: expected metadata id after '!'
+--- |
+  define void @test_expected_id() { unreachable }
+  !0 = !{!"amdgpu-synchronize-as", !"local"}
+...
+---
+name:            test_expected_id
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ATOMIC_FENCE 5, 2, mmra ! _
+    S_ENDPGM 0
+...
+
+;--- undefined-id.mir
+# ERR1: use of undefined metadata '!1'
+--- |
+  define void @test_undefined_id() { unreachable }
+  !0 = !{!"amdgpu-synchronize-as", !"local"}
+...
+---
+name:            test_undefined_id
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ATOMIC_FENCE 5, 2, mmra !1
+    S_ENDPGM 0
+...
+
+;--- missing-comma.mir
+# ERR2: expected ',' before the next machine operand
+--- |
+  define void @test_missing_comma() { unreachable }
+  !0 = !{!"amdgpu-synchronize-as", !"local"}
+...
+---
+name:            test_missing_comma
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ATOMIC_FENCE 5, 2, mmra !0 implicit $exec
+    S_ENDPGM 0
+...

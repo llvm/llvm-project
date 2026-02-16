@@ -2925,6 +2925,28 @@ public:
         << DanglingField->getEndLoc();
   }
 
+  void reportUseAfterInvalidation(const Expr *IssueExpr, const Expr *UseExpr,
+                                  const Expr *InvalidationExpr) override {
+    S.Diag(IssueExpr->getExprLoc(), diag::warn_lifetime_safety_invalidation)
+        << false << IssueExpr->getSourceRange();
+    S.Diag(InvalidationExpr->getExprLoc(),
+           diag::note_lifetime_safety_invalidated_here)
+        << InvalidationExpr->getSourceRange();
+    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
+        << UseExpr->getSourceRange();
+  }
+  void reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
+                                  const Expr *InvalidationExpr) override {
+    S.Diag(PVD->getSourceRange().getBegin(),
+           diag::warn_lifetime_safety_invalidation)
+        << true << PVD->getSourceRange();
+    S.Diag(InvalidationExpr->getExprLoc(),
+           diag::note_lifetime_safety_invalidated_here)
+        << InvalidationExpr->getSourceRange();
+    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
+        << UseExpr->getSourceRange();
+  }
+
   void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
                                      const Expr *EscapeExpr) override {
@@ -3138,6 +3160,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       !Diags.isIgnored(
           diag::warn_lifetime_safety_return_stack_addr_moved_strict,
           D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_lifetime_safety_invalidation,
+                       D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_lifetime_safety_noescape_escapes,
                        D->getBeginLoc());
   bool EnableLifetimeSafetyAnalysis =

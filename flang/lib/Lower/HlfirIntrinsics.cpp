@@ -220,6 +220,14 @@ protected:
             mlir::Type stmtResultType) override;
 };
 
+struct HlfirLenLowering : public HlfirTransformationalIntrinsic {
+  using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
+  mlir::Value
+  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
+            const fir::IntrinsicArgumentLoweringRules *argLowering,
+            mlir::Type stmtResultType) override;
+};
+
 } // namespace
 
 mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
@@ -558,6 +566,19 @@ mlir::Value HlfirIndexLowering::lowerImpl(
   return result;
 }
 
+mlir::Value HlfirLenLowering::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  // LEN (STRING [, KIND])
+  assert((loweredActuals.size() == 1 || loweredActuals.size() == 2) &&
+         loweredActuals[0].has_value());
+  Fortran::lower::PreparedActualArgument &strArg =
+      const_cast<Fortran::lower::PreparedActualArgument &>(*loweredActuals[0]);
+  return builder.createConvert(loc, stmtResultType,
+                               strArg.genCharLength(loc, builder));
+}
+
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
     fir::FirOpBuilder &builder, mlir::Location loc, const std::string &name,
     const Fortran::lower::PreparedActualArguments &loweredActuals,
@@ -615,6 +636,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "index")
     return HlfirIndexLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                   stmtResultType);
+  if (name == "len")
+    return HlfirLenLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                stmtResultType);
 
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")

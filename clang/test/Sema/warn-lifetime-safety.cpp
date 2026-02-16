@@ -1456,6 +1456,18 @@ void wrong_use_of_move_is_permissive() {
   }         // expected-note {{destroyed here}}
   (void)p;  // expected-note {{later used here}}
 }
+
+void take(int*);
+void test_release_no_uaf() {
+  int* r;
+  // Calling release() marks p as moved from, so its destruction doesn't invalidate r.
+  {
+    std::unique_ptr<int> p;
+    r = p.get();        // expected-warning-re {{object whose reference {{.*}} may have been moved}}
+    take(p.release());  // expected-note {{potentially moved here}}
+  }                     // expected-note {{destroyed here}}
+  (void)*r;             // expected-note {{later used here}}
+}
 } // namespace strict_warn_on_move
 
 // Implicit this annotations with redecls.

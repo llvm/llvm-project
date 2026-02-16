@@ -433,8 +433,10 @@ let SubtargetPredicate = isGFX11Plus in {
 } // End SubtargetPredicate = isGFX11Plus
 
 let SubtargetPredicate = isGFX12Plus in {
-  let hasSideEffects = 1, Defs = [SCC] in {
-    def S_ALLOC_VGPR : SOP1_0_32 <"s_alloc_vgpr">;
+  let hasSideEffects = 1, isConvergent = 1, Defs = [SCC] in {
+    def S_ALLOC_VGPR : SOP1_0_32 <"s_alloc_vgpr",
+      [(set SCC, (int_amdgcn_s_alloc_vgpr SSrc_b32:$src0))]
+    >;
   }
 } // End SubtargetPredicate = isGFX12Plus
 
@@ -1710,9 +1712,19 @@ let SubtargetPredicate = HasWaitXcnt in {
 
 // Represents the point at which a wave must wait for all outstanding direct loads to LDS.
 // Typically inserted by the memory legalizer and consumed by SIInsertWaitcnts.
-
 def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
    let hasSideEffects = 0;
+}
+
+let SubtargetPredicate = HasVMemToLDSLoad in {
+def ASYNCMARK : SPseudoInstSI<(outs), (ins),
+  [(int_amdgcn_asyncmark)]> {
+   let maybeAtomic = 0;
+}
+def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16), "$simm16",
+    [(int_amdgcn_wait_asyncmark timm:$simm16)]> {
+    let maybeAtomic = 0;
+}
 }
 
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
@@ -1834,8 +1846,8 @@ let SubtargetPredicate = isGFX10Plus in {
 
 let SubtargetPredicate = isGFX11Plus in {
 let OtherPredicates = [HasExportInsts] in
-  def S_WAIT_EVENT : SOPP_Pseudo<"s_wait_event", (ins s16imm:$simm16),
-                                 "$simm16"> {
+  def S_WAIT_EVENT : SOPP_Pseudo<"s_wait_event", (ins WaitEvent:$simm16),
+                                 "$simm16", [(int_amdgcn_s_wait_event timm:$simm16)]> {
                                    let hasSideEffects = 1;
                                  }
   def S_DELAY_ALU : SOPP_Pseudo<"s_delay_alu", (ins SDelayALU:$simm16),
@@ -1958,9 +1970,7 @@ def : GCNPat<
   (S_SEXT_I32_I16 $src)
 >;
 
-let SubtargetPredicate = isNotGFX12Plus in
-  def : GCNPat <(int_amdgcn_s_wait_event_export_ready), (S_WAIT_EVENT (i16 0))>;
-let SubtargetPredicate = isGFX12Plus in
+let SubtargetPredicate = isGFX11Plus in
   def : GCNPat <(int_amdgcn_s_wait_event_export_ready), (S_WAIT_EVENT (i16 2))>;
 
 // The first 10 bits of the mode register are the core FP mode on all

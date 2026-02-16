@@ -79,7 +79,7 @@ private:
                                "no register info for target %s",
                                TripleName.c_str());
 
-    MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+    MCOptions = mc::InitMCTargetOptionsFromFlags();
     MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
     if (!MAI)
       return createStringError(std::errc::invalid_argument,
@@ -419,6 +419,7 @@ private:
   Triple TheTriple;
   DwarfUnit &U;
 
+  MCTargetOptions MCOptions;
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<MCContext> MC;

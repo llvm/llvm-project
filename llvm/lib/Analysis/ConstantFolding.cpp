@@ -4748,6 +4748,17 @@ Constant *llvm::getLosslessInvCast(Constant *C, Type *InvCastTo,
     }
     return InvC;
   }
+  case Instruction::FPExt: {
+    Constant *InvC =
+        ConstantFoldCastOperand(Instruction::FPTrunc, C, InvCastTo, DL);
+    if (InvC) {
+      Constant *CastInvC =
+          ConstantFoldCastOperand(CastOp, InvC, C->getType(), DL);
+      if (CastInvC == C)
+        return InvC;
+    }
+    return nullptr;
+  }
   default:
     return nullptr;
   }
