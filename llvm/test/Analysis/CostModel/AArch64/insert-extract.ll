@@ -5,6 +5,12 @@
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=neoverse-v1 | FileCheck --check-prefixes=CHECK,GENERIC %s
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=neoverse-v2 | FileCheck --check-prefixes=CHECK,GENERIC %s
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=kryo | FileCheck --check-prefixes=CHECK,GENERIC %s
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=apple-m1 | FileCheck --check-prefixes=CHECK,FAST-LD1 %s
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=apple-m2 | FileCheck --check-prefixes=CHECK,FAST-LD1 %s
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=apple-m3 | FileCheck --check-prefixes=CHECK,FAST-LD1 %s
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=apple-m4 | FileCheck --check-prefixes=CHECK,FAST-LD1 %s
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=apple-m5 | FileCheck --check-prefixes=CHECK,FAST-LD1 %s
+; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mcpu=apple-latest | FileCheck --check-prefixes=CHECK,FAST-LD1 %s
 ; RUN: opt < %s -passes="print<cost-model>" -cost-kind=all 2>&1 -disable-output -mattr=+fast-ld1-single | FileCheck --check-prefixes=CHECK,FAST-LD1 %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
@@ -155,17 +161,11 @@ entry:
 ;; Multi-use tests: Check that Load context is only applied when load has one use
 
 define <8 x i8> @LD1_multi_use_load(<8 x i8> %vec, ptr noundef %i, ptr noundef %out) {
-; GENERIC-LABEL: 'LD1_multi_use_load'
-; GENERIC-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v1 = load i8, ptr %i, align 1
-; GENERIC-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2 = insertelement <8 x i8> %vec, i8 %v1, i32 1
-; GENERIC-NEXT:  Cost Model: Found costs of 1 for: store i8 %v1, ptr %out, align 1
-; GENERIC-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %v2
-;
-; FAST-LD1-LABEL: 'LD1_multi_use_load'
-; FAST-LD1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v1 = load i8, ptr %i, align 1
-; FAST-LD1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2 = insertelement <8 x i8> %vec, i8 %v1, i32 1
-; FAST-LD1-NEXT:  Cost Model: Found costs of 1 for: store i8 %v1, ptr %out, align 1
-; FAST-LD1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %v2
+; CHECK-LABEL: 'LD1_multi_use_load'
+; CHECK-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v1 = load i8, ptr %i, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %v2 = insertelement <8 x i8> %vec, i8 %v1, i32 1
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: store i8 %v1, ptr %out, align 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %v2
 ;
 entry:
   %v1 = load i8, ptr %i, align 1

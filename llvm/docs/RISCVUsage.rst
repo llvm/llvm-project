@@ -356,6 +356,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-smpmpmt``
   LLVM implements the `0.6 draft specification <https://github.com/riscv/riscv-isa-manual/blob/smpmpmt/src/smpmpmt.adoc>`__.
 
+``experimental-zvabd``
+  LLVM implements the `0.7 draft specification <https://github.com/riscv/integer-vector-absolute-difference/releases/tag/v0.7>`__.
+
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
 Vendor Extensions
@@ -632,3 +635,43 @@ Sanitizers
   Some intrinsics will be handled correctly anyway, if the RISC-V intrinsic is auto-upgraded into cross-platform LLVM intrinsics. Some others will be "heuristically" handled (possibly incorrectly). The rest will default to the "strict" handler, which checks that all the parameters are fully initialized.
 
   MSan intrinsics support is only required if code (including dependencies) manually calls the intrinsic.
+
+Processor-Specific Tuning Feature String
+========================================
+Due to RISC-V's highly configurable nature, it is often desirable to share a single scheduling model across multiple similar RISC-V processors that only differ in a small number of (uArch) tuning features. An example of such tuning feature could be whether the latency of vector operations depend on VL or not. This could be extended to tuning features that are not directly connected to scheduling model but other parts of the RISC-V backend, like the cost of ``vrgather.vv`` instruction.
+
+To that end, RISC-V LLVM supports a tuning feature string format that helps users to build a performance model by "configuring" an existing tune CPU, along with its scheduling model. For example, this string
+
+::
+    "sifive-x280:single-element-vec-fp64"
+
+takes ``sifive-x280`` as the "base" tune CPU and configured it with ``single-element-vec-fp64``. This gives us a performance model that looks exactly like that of ``sifive-x280``, except some of the 64-bit vector floating point instructions now produce only a single element per cycle due to ``single-element-vec-fp64``. This string could eventually be used in places like ``-mtune`` at the frontend.
+
+More formally speaking, each tuning feature string has the following format:
+
+::
+    <tune-cpu>[":"<tune-features>]?
+
+where
+
+::
+    tune-cpu      ::= 'tuning CPU name in lower case'
+    directive     ::= "[a-zA-Z0-9\_-]+"
+    tune-features ::= directive ["," directive]*
+
+A *directive* can and can only _enable_ or _disable_ a certain tuning feature from the tuning CPU. A **positive directive**, like the ``single-element-vec-fp64`` we just saw, enables an additional tuning feature in the associated tuning model. A **negative directive**, on the other hand, removes a certain tuning feature. For example, ``sifive-x390`` already has the ``single-element-vec-fp64`` feature, and we can use
+
+::
+    "sifive-x390:full-vec-fp64"
+
+to create a new performance model that looks nearly the same as ``sifive-x390`` except ``single-element-vec-fp64`` being cut out. In this case, ``full-vec-fp64`` is a negative directive.
+
+There are some rules for the list of directives, though:
+
+1. The same directive cannot appear more than once.
+
+2. The positive and negative directives that belong to the same feature cannot appear at the same time.
+
+3. If a feature implies other features -- for example, ``short-forward-branch-imul`` implies ``short-forward-branch-ialu`` -- then the _implied_ features are subject to the previous two rules, too. For example, we cannot write _"short-forward-branch-imul,no-short-forward-branch-ialu"_, because the feature implied by ``short-forward-branch-imul`` violates rule 2.
+
+In addition to the rules listed above, right now, this string only accepts directives that are explicitly supported by the tune CPU. For example, _"sifive-x280:prefer-w-inst"_ is not a valid string as ``prefer-w-inst`` is not supported by ``sifive-x280`` at this moment. Vendors of these processors are expected to maintain the compatibility of their supported directives across different versions. There have been lots of discussions on having "generic" features that are universally supported by all RISC-V CPUs, yet many concerns -- including the difficulty to maintain compatibility across _all_ CPU targets and versions -- make us decide to table this issue until we find a reliable process to select such features.

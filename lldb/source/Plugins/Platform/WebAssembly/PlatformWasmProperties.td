@@ -1,6 +1,6 @@
 include "../../../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "platformwasm" in {
+let Definition = "platformwasm", Path = "platform.plugin.wasm" in {
   def RuntimePath : Property<"runtime-path", "FileSpec">,
                     Global,
                     DefaultStringValue<"">,

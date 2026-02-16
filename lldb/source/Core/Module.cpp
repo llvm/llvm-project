@@ -360,16 +360,6 @@ const lldb_private::UUID &Module::GetUUID() {
   return m_uuid;
 }
 
-void Module::SetUUID(const lldb_private::UUID &uuid) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (!m_did_set_uuid) {
-    m_uuid = uuid;
-    m_did_set_uuid = true;
-  } else {
-    lldbassert(0 && "Attempting to overwrite the existing module UUID");
-  }
-}
-
 llvm::Expected<TypeSystemSP>
 Module::GetTypeSystemForLanguage(LanguageType language) {
   return m_type_system_map.GetTypeSystemForLanguage(language, this, true);
@@ -486,7 +476,7 @@ uint32_t Module::ResolveSymbolContextForAddress(
           symfile->ResolveSymbolContext(so_addr, resolve_scope, sc);
 
       if ((resolve_scope & eSymbolContextLineEntry) && sc.line_entry.IsValid())
-        sc.line_entry.ApplyFileMappings(sc.target_sp);
+        sc.line_entry.ApplyFileMappings(sc.target_sp, so_addr);
     }
 
     // Resolve the symbol if requested, but don't re-look it up if we've

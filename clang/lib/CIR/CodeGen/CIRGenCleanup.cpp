@@ -147,11 +147,23 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
 
   assert(!cir::MissingFeatures::innermostEHScope());
 
-  EHCleanupScope *scope = new (buffer) EHCleanupScope(
-      size, branchFixups.size(), innermostNormalCleanup, innermostEHScope);
+  // Per C++ [except.terminate], it is implementation-defined whether none,
+  // some, or all cleanups are called before std::terminate. Thus, when
+  // terminate is the current EH scope, we may skip adding any EH cleanup
+  // scopes.
+  if (innermostEHScope != stable_end() &&
+      find(innermostEHScope)->getKind() == EHScope::Terminate)
+    isEHCleanup = false;
+
+  EHCleanupScope *scope = new (buffer)
+      EHCleanupScope(isNormalCleanup, isEHCleanup, size, branchFixups.size(),
+                     innermostNormalCleanup, innermostEHScope);
 
   if (isNormalCleanup)
     innermostNormalCleanup = stable_begin();
+
+  if (isEHCleanup)
+    innermostEHScope = stable_begin();
 
   if (isLifetimeMarker)
     cgf->cgm.errorNYI("push lifetime marker cleanup");
@@ -200,14 +212,6 @@ bool EHScopeStack::requiresCatchOrCleanup() const {
     return true;
   }
   return false;
-}
-
-EHCatchScope *EHScopeStack::pushCatch(unsigned numHandlers) {
-  char *buffer = allocate(EHCatchScope::getSizeForNumHandlers(numHandlers));
-  EHCatchScope *scope =
-      new (buffer) EHCatchScope(numHandlers, innermostEHScope);
-  innermostEHScope = stable_begin();
-  return scope;
 }
 
 static void emitCleanup(CIRGenFunction &cgf, EHScopeStack::Cleanup *cleanup,

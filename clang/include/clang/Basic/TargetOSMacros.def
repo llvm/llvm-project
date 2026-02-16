@@ -56,4 +56,7 @@ TARGET_OS(TARGET_OS_UIKITFORMAC, Triple.isMacCatalystEnvironment())
 // UEFI target.
 TARGET_OS(TARGET_OS_UEFI, Triple.isUEFI())
 
+// General targets.
+TARGET_OS(TARGET_OS_FIRMWARE, Triple.isOSFirmware())
+
 #undef TARGET_OS

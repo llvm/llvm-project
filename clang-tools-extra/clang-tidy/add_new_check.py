@@ -452,6 +452,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
             "FixItHint",
             "ReplacementText",
             "fixit",
+            "FixIt",
             "TransformerClangTidyCheck",
         ]:
             if needle in code:

@@ -74,3 +74,26 @@ def olGetPlatformInfoSize : Function {
     Return<"OL_ERRC_INVALID_PLATFORM">
   ];
 }
+
+def ol_platform_rpc_cb_t : FptrTypedef {
+  let desc = "User-provided RPC server callback for a platform.";
+  let params = [Param<"void*", "Port", "opaque pointer to the RPC server port",
+                      PARAM_IN>,
+                Param<"unsigned", "NumLanes",
+                      "number of lanes handled in a single call", PARAM_IN>];
+  let return = "unsigned";
+}
+
+def olPlatformRegisterRPCCallback : Function {
+  let desc = "Registers a platform-wide RPC server callback.";
+  let details =
+      ["The registered callback is invoked before the default RPC opcode "
+       "handling.",
+       "If the callback returns a value other than RPC_UNHANDLED_OPCODE,",
+       "the default handling is skipped."];
+  let params = [Param<"ol_platform_handle_t", "Platform",
+                      "handle of the platform", PARAM_IN>,
+                Param<"ol_platform_rpc_cb_t", "Callback",
+                      "RPC callback function pointer", PARAM_IN>];
+  let returns = [Return<"OL_ERRC_INVALID_PLATFORM">, Return<"OL_ERRC_SUCCESS">];
+}

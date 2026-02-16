@@ -528,7 +528,11 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
   for (const StringRef Abbreviation : optutils::parseStringList(
            Options.get("Abbreviations", DefaultAbbreviations))) {
     const auto [Key, Value] = Abbreviation.split("=");
-    assert(!Key.empty() && !Value.empty());
+    if (Key.empty() || Value.empty()) {
+      configurationDiag("Invalid abbreviation configuration '%0', ignoring.")
+          << Abbreviation;
+      continue;
+    }
     AbbreviationDictionary.try_emplace(Key, Value.str());
   }
 }

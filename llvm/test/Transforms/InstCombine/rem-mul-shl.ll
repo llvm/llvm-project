@@ -903,8 +903,8 @@ define i64 @urem_shl_vscale_overlap() vscale_range(1,16) {
 ; CHECK-LABEL: @urem_shl_vscale_overlap(
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shl nuw nsw i64 [[VSCALE]], 10
-; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[SHIFT]], 2047
-; CHECK-NEXT:    [[REM:%.*]] = and i64 [[TMP1]], 1024
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[SHIFT]], 1024
+; CHECK-NEXT:    [[REM:%.*]] = xor i64 [[TMP1]], 1024
 ; CHECK-NEXT:    ret i64 [[REM]]
 ;
   %vscale = call i64 @llvm.vscale.i64()
@@ -930,7 +930,7 @@ define i64 @and_add_shl_vscale_not_power2() vscale_range(1,16) {
 ; CHECK-LABEL: @and_add_shl_vscale_not_power2(
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shl nuw nsw i64 [[VSCALE]], 6
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[SHIFT]], 4095
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[SHIFT]], 4032
 ; CHECK-NEXT:    [[REM:%.*]] = and i64 [[ADD]], 3072
 ; CHECK-NEXT:    ret i64 [[REM]]
 ;

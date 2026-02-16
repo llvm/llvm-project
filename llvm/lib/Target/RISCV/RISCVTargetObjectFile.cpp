@@ -10,6 +10,7 @@
 #include "MCTargetDesc/RISCVMCObjectFileInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -178,4 +179,12 @@ MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
                                                             Alignment);
+}
+
+void RISCVMachOTargetObjectFile::getNameWithPrefix(
+    SmallVectorImpl<char> &OutName, const GlobalValue *GV,
+    const TargetMachine &TM) const {
+  // RISC-V does not use section-relative relocations so any global symbol must
+  // be accessed via at least a linker-private symbol.
+  getMangler().getNameWithPrefix(OutName, GV, /*CannotUsePrivateLabel=*/true);
 }

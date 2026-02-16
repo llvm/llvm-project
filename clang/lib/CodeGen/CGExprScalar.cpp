@@ -608,6 +608,7 @@ public:
   Value *VisitConvertVectorExpr(ConvertVectorExpr *E);
   Value *VisitMemberExpr(MemberExpr *E);
   Value *VisitExtVectorElementExpr(Expr *E) { return EmitLoadOfLValue(E); }
+  Value *VisitMatrixElementExpr(Expr *E) { return EmitLoadOfLValue(E); }
   Value *VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
     // Strictly speaking, we shouldn't be calling EmitLoadOfLValue, which
     // transitively calls EmitCompoundLiteralLValue, here in C++ since compound
@@ -2459,8 +2460,8 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
     assert(LoadList.size() >= VecTy->getNumElements() &&
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
-    llvm::Value *V =
-        CGF.Builder.CreateLoad(CGF.CreateIRTemp(DestTy, "flatcast.tmp"));
+    llvm::Value *V = CGF.Builder.CreateLoad(
+        CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
     // write to V.
     for (unsigned I = 0, E = VecTy->getNumElements(); I < E; I++) {
       RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
@@ -2478,8 +2479,8 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
-    llvm::Value *V =
-        CGF.Builder.CreateLoad(CGF.CreateIRTemp(DestTy, "flatcast.tmp"));
+    llvm::Value *V = CGF.Builder.CreateLoad(
+        CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
     // V is an allocated temporary to build the truncated matrix into.
     for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
       unsigned ColMajorIndex =
@@ -2564,8 +2565,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // detail, and doing an AS cast here still retains the semantics the user
     // expects. It is desirable to remove this iff a better solution is found.
     if (auto A = dyn_cast<llvm::Argument>(Src); A && A->hasStructRetAttr())
-      return CGF.CGM.getTargetCodeGenInfo().performAddrSpaceCast(
-          CGF, Src, E->getType().getAddressSpace(), DstTy);
+      return CGF.performAddrSpaceCast(Src, DstTy);
 
     assert(
         (!SrcTy->isPtrOrPtrVectorTy() || !DstTy->isPtrOrPtrVectorTy() ||
@@ -2709,9 +2709,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     }
     // Since target may map different address spaces in AST to the same address
     // space, an address space conversion may end up as a bitcast.
-    return CGF.CGM.getTargetCodeGenInfo().performAddrSpaceCast(
-        CGF, Visit(E), E->getType()->getPointeeType().getAddressSpace(),
-        ConvertType(DestTy));
+    return CGF.performAddrSpaceCast(Visit(E), ConvertType(DestTy));
   }
   case CK_AtomicToNonAtomic:
   case CK_NonAtomicToAtomic:
@@ -4038,9 +4036,14 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
   if (LHSLV.isBitField()) {
     Previous = Result;
     Result = EmitScalarConversion(Result, PromotionTypeCR, LHSTy, Loc);
-  } else
+  } else if (const auto *atomicTy = LHSTy->getAs<AtomicType>()) {
+    Result =
+        EmitScalarConversion(Result, PromotionTypeCR, atomicTy->getValueType(),
+                             Loc, ScalarConversionOpts(CGF.SanOpts));
+  } else {
     Result = EmitScalarConversion(Result, PromotionTypeCR, LHSTy, Loc,
                                   ScalarConversionOpts(CGF.SanOpts));
+  }
 
   if (atomicPHI) {
     llvm::BasicBlock *curBlock = Builder.GetInsertBlock();
