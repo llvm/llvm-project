@@ -272,7 +272,8 @@ static bool IsLoopTransforming(llvm::omp::Directive dir) {
 
 void OmpStructureChecker::CheckNestedBlock(
     const parser::OpenMPLoopConstruct &x, const parser::Block &body) {
-  for (auto &stmt : body) {
+  using BlockRange = parser::omp::BlockRange;
+  for (auto &stmt : BlockRange(body, BlockRange::Step::Over)) {
     if (auto *dir{parser::Unwrap<parser::CompilerDirective>(stmt)}) {
       context_.Say(dir->source,
           "Compiler directives are not allowed inside OpenMP loop constructs"_warn_en_US);
@@ -281,8 +282,6 @@ void OmpStructureChecker::CheckNestedBlock(
         context_.Say(omp->source,
             "Only loop-transforming OpenMP constructs are allowed inside OpenMP loop constructs"_err_en_US);
       }
-    } else if (auto *block{parser::Unwrap<parser::BlockConstruct>(stmt)}) {
-      CheckNestedBlock(x, std::get<parser::Block>(block->t));
     } else if (!parser::Unwrap<parser::DoConstruct>(stmt)) {
       parser::CharBlock source{parser::GetSource(stmt).value_or(x.source)};
       context_.Say(source,
@@ -348,8 +347,9 @@ static std::optional<size_t> CountGeneratedNests(const parser::Block &block) {
   // messages about a potentially incorrect loop count.
   // In such cases reset the count to nullopt. Once it becomes nullopt,
   // keep it that way.
+  using LoopRange = parser::omp::LoopRange;
   std::optional<size_t> numLoops{0};
-  for (auto &epc : parser::omp::LoopRange(block)) {
+  for (auto &epc : LoopRange(block, LoopRange::Step::Over)) {
     if (auto genCount{CountGeneratedNests(epc)}) {
       *numLoops += *genCount;
     } else {

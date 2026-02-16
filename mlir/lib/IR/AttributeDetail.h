@@ -16,6 +16,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/AttributeSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
@@ -32,12 +33,9 @@ namespace detail {
 
 /// Return the bit width which DenseElementsAttr should use for this type.
 inline size_t getDenseElementBitWidth(Type eltType) {
-  // Align the width for complex to 8 to make storage and interpretation easier.
-  if (ComplexType comp = llvm::dyn_cast<ComplexType>(eltType))
-    return llvm::alignTo<8>(getDenseElementBitWidth(comp.getElementType())) * 2;
-  if (eltType.isIndex())
-    return IndexType::kInternalStorageBitWidth;
-  return eltType.getIntOrFloatBitWidth();
+  if (auto denseEltType = llvm::dyn_cast<DenseElementType>(eltType))
+    return denseEltType.getDenseElementBitSize();
+  llvm_unreachable("unsupported element type");
 }
 
 /// An attribute representing a reference to a dense vector or tensor object.

@@ -16,9 +16,11 @@
 #include "flang/Common/indirection.h"
 #include "flang/Common/template.h"
 #include "flang/Parser/parse-tree.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
 #include <cassert>
+#include <iterator>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -237,82 +239,188 @@ struct OmpAllocateInfo {
 
 OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x);
 
-namespace detail {
-template <bool IsConst, typename T> struct ConstIf {
-  using type = std::conditional_t<IsConst, std::add_const_t<T>, T>;
-};
+// Iterate over a range of parser::Block::const_iterator's. When the end
+// of the range is reached, the iterator becomes invalid.
+// Treat BLOCK constructs as if they were transparent, i.e. as if the
+// BLOCK/ENDBLOCK statements, and the specification part contained within
+// were removed. The stepping determines whether the iterator steps "into"
+// DO loops and OpenMP loop constructs, or steps "over" them.
+//
+// Example: consecutive locations of the iterator:
+//
+//    Step::Into                  Step::Over
+//          block                       block
+//    1 =>    stmt1               1 =>    stmt1
+//            block                       block
+//              integer :: x                integer :: x
+//    2 =>      stmt2             2 =>      stmt2
+//              block                       block
+//              end block                   end block
+//            end block                   end block
+//    3 =>    do i = 1, n         3 =>    do i = 1, n
+//    4 =>      continue                    continue
+//            end do                      end do
+//    5 =>    stmt3               4 =>    stmt3
+//          end block                   end block
+//
+//    6 =>  <invalid>             5 =>  <invalid>
+//
+// The iterator is in a legal state (position) if it's at an
+// ExecutionPartConstruct that is not a BlockConstruct, or is invalid.
+struct ExecutionPartIterator {
+  enum class Step {
+    Into,
+    Over,
+    Default = Into,
+  };
 
-template <bool IsConst, typename T>
-using ConstIfT = typename ConstIf<IsConst, T>::type;
-} // namespace detail
+  using IteratorType = Block::const_iterator;
+  using IteratorRange = llvm::iterator_range<IteratorType>;
 
-template <bool IsConst> struct LoopRange {
-  using QualBlock = detail::ConstIfT<IsConst, Block>;
-  using QualReference = decltype(std::declval<QualBlock>().front());
-  using QualPointer = std::remove_reference_t<QualReference> *;
+  struct Construct {
+    Construct(IteratorType b, IteratorType e, const ExecutionPartConstruct *c)
+        : range(b, e), owner(c) {}
+    template <typename R>
+    Construct(const R &r, const ExecutionPartConstruct *c)
+        : range(r), owner(c) {}
+    Construct(const Construct &c) = default;
+    IteratorRange range;
+    const ExecutionPartConstruct *owner;
+  };
 
-  LoopRange(QualBlock &x) { Initialize(x); }
-  LoopRange(QualReference x);
+  ExecutionPartIterator() = default;
 
-  LoopRange(detail::ConstIfT<IsConst, OpenMPLoopConstruct> &x)
-      : LoopRange(std::get<Block>(x.t)) {}
-  LoopRange(detail::ConstIfT<IsConst, DoConstruct> &x)
-      : LoopRange(std::get<Block>(x.t)) {}
+  ExecutionPartIterator(IteratorType b, IteratorType e, Step s = Step::Default,
+      const ExecutionPartConstruct *c = nullptr)
+      : stepping_(s) {
+    stack_.emplace_back(b, e, c);
+    adjust();
+  }
+  template <typename R, //
+      typename = decltype(std::declval<R>().begin()),
+      typename = decltype(std::declval<R>().end())>
+  ExecutionPartIterator(const R &range, Step stepping = Step::Default,
+      const ExecutionPartConstruct *construct = nullptr)
+      : ExecutionPartIterator(range.begin(), range.end(), stepping, construct) {
+  }
 
-  size_t size() const { return items.size(); }
-  bool empty() const { return items.size() == 0; }
+  // Advance the iterator to the next legal position. If the current position
+  // is a DO-loop or a loop construct, step into the contained Block.
+  void step();
 
-  struct iterator;
+  // Advance the iterator to the next legal position. If the current position
+  // is a DO-loop or a loop construct, step to the next legal position following
+  // the DO-loop or loop construct.
+  void next();
 
-  iterator begin();
-  iterator end();
+  bool valid() const { return !stack_.empty(); }
 
-private:
-  void Initialize(QualBlock &body);
+  decltype(auto) operator*() const { return *at(); }
+  bool operator==(const ExecutionPartIterator &other) const {
+    if (valid() != other.valid()) {
+      return false;
+    }
+    // Invalid iterators are considered equal.
+    return !valid() ||
+        stack_.back().range.begin() == other.stack_.back().range.begin();
+  }
+  bool operator!=(const ExecutionPartIterator &other) const {
+    return !(*this == other);
+  }
 
-  std::vector<QualPointer> items;
-};
-
-template <typename T> LoopRange(T &x) -> LoopRange<std::is_const_v<T>>;
-
-template <bool IsConst> struct LoopRange<IsConst>::iterator {
-  QualReference operator*() { return **at; }
-
-  bool operator==(const iterator &other) const { return at == other.at; }
-  bool operator!=(const iterator &other) const { return at != other.at; }
-
-  iterator &operator++() {
-    ++at;
+  ExecutionPartIterator &operator++() {
+    if (stepping_ == Step::Into) {
+      step();
+    } else {
+      assert(stepping_ == Step::Over && "Unexpected stepping");
+      next();
+    }
     return *this;
   }
-  iterator &operator--() {
-    --at;
-    return *this;
+
+  ExecutionPartIterator operator++(int) {
+    ExecutionPartIterator copy{*this};
+    operator++();
+    return copy;
   }
-  iterator operator++(int);
-  iterator operator--(int);
+
+  using difference_type = IteratorType::difference_type;
+  using value_type = IteratorType::value_type;
+  using reference = IteratorType::reference;
+  using pointer = IteratorType::pointer;
+  using iterator_category = std::forward_iterator_tag;
 
 private:
-  friend struct LoopRange;
-  typename decltype(LoopRange::items)::iterator at;
+  IteratorType at() const { return stack_.back().range.begin(); };
+
+  // If the iterator is not at a legal location, keep advancing it until
+  // it lands at a legal location or becomes invalid.
+  void adjust();
+
+  const Step stepping_ = Step::Default;
+  std::vector<Construct> stack_;
 };
 
-template <bool IsConst> inline auto LoopRange<IsConst>::begin() -> iterator {
-  iterator x;
-  x.at = items.begin();
-  return x;
-}
+template <typename Iterator = ExecutionPartIterator> struct ExecutionPartRange {
+  using Step = typename Iterator::Step;
 
-template <bool IsConst> inline auto LoopRange<IsConst>::end() -> iterator {
-  iterator x;
-  x.at = items.end();
-  return x;
-}
+  ExecutionPartRange(Block::const_iterator begin, Block::const_iterator end,
+      Step stepping = Step::Default,
+      const ExecutionPartConstruct *owner = nullptr)
+      : begin_(begin, end, stepping, owner), end_() {}
+  template <typename R, //
+      typename = decltype(std::declval<R>().begin()),
+      typename = decltype(std::declval<R>().end())>
+  ExecutionPartRange(const R &range, Step stepping = Step::Default,
+      const ExecutionPartConstruct *owner = nullptr)
+      : ExecutionPartRange(range.begin(), range.end(), stepping, owner) {}
 
-using ConstLoopRange = LoopRange<true>;
+  Iterator begin() const { return begin_; }
+  Iterator end() const { return end_; }
 
-extern template struct LoopRange<true>;
-extern template struct LoopRange<false>;
+private:
+  Iterator begin_, end_;
+};
+
+struct LoopNestIterator : public ExecutionPartIterator {
+  LoopNestIterator() = default;
+
+  LoopNestIterator(IteratorType b, IteratorType e, Step s = Step::Default,
+      const ExecutionPartConstruct *c = nullptr)
+      : ExecutionPartIterator(b, e, s, c) {
+    adjust();
+  }
+  template <typename R, //
+      typename = decltype(std::declval<R>().begin()),
+      typename = decltype(std::declval<R>().end())>
+  LoopNestIterator(const R &range, Step stepping = Step::Default,
+      const ExecutionPartConstruct *construct = nullptr)
+      : LoopNestIterator(range.begin(), range.end(), stepping, construct) {}
+
+  LoopNestIterator &operator++() {
+    ExecutionPartIterator::operator++();
+    adjust();
+    return *this;
+  }
+
+  LoopNestIterator operator++(int) {
+    LoopNestIterator copy{*this};
+    operator++();
+    return copy;
+  }
+
+private:
+  static bool isLoop(const ExecutionPartConstruct &c);
+
+  void adjust() {
+    while (valid() && !isLoop(**this)) {
+      ExecutionPartIterator::operator++();
+    }
+  }
+};
+
+using BlockRange = ExecutionPartRange<ExecutionPartIterator>;
+using LoopRange = ExecutionPartRange<LoopNestIterator>;
 
 } // namespace Fortran::parser::omp
 
