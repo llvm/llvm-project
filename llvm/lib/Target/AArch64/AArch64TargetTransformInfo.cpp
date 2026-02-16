@@ -5944,6 +5944,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       // the extends in the IR are still counted. This can be fixed
       // after https://github.com/llvm/llvm-project/pull/147302 has landed.
       return Cost;
+    // For a ratio of 2, we can use 2 [u|s|f|bf]mlalb/t instructions.
+    if (Ratio == 2 &&
+        llvm::is_contained({MVT::i16, MVT::i32, MVT::f16, MVT::bf16},
+                           InputLT.second.getScalarType().SimpleTy))
+      return Cost * 2;
   }
 
   // i8 -> i32 is natively supported for udot/sdot/usdot, both for NEON and SVE.
