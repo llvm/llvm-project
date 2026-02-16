@@ -75,11 +75,6 @@ function(get_arch_and_system_from_triple triple arch_var sys_var)
     set(target_sys "gpu")
   endif()
 
-  if (target_arch MATCHES "^spirv")
-    list(APPEND
-         LIBC_COMPILE_OPTIONS_DEFAULT "-emit-llvm")
-  endif()
-  
   set(${sys_var} ${target_sys} PARENT_SCOPE)
 endfunction(get_arch_and_system_from_triple)
 
