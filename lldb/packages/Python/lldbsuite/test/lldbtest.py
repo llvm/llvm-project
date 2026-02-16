@@ -569,6 +569,8 @@ class Base(unittest.TestCase):
     # Can be overridden by the LLDB_TIME_WAIT_NEXT_LAUNCH environment variable.
     timeWaitNextLaunch = 1.0
 
+    # Subclasses can set this to True to avoid repeated building of the test
+    # source (by default, a separate build happens for each test function).
     SHARED_BUILD_TESTCASE = False
 
     @staticmethod
