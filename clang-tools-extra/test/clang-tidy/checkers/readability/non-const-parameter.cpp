@@ -360,6 +360,15 @@ public:
 };
 
 void gh176623() {
+    // CHECK-MESSAGES-NOT: warning:
     auto const V1 = []<bool tc>(char* p) { auto X = A<tc>(p); };
+    // CHECK-MESSAGES-NOT: warning:
     auto const V2 = []<bool tc>(char* p) { auto Y = B(p); };
+}
+
+void testGenericLambdaIssue177354() {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
+  auto genericLambda = []<typename T>(int *p) {
+    T x(*p);
+  };
 }
