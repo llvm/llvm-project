@@ -3937,7 +3937,6 @@ static const struct Extension {
     {"ssve-bitperm", {AArch64::FeatureSSVE_BitPerm}},
     {"sme-mop4", {AArch64::FeatureSME_MOP4}},
     {"sme-tmop", {AArch64::FeatureSME_TMOP}},
-    {"cmh", {AArch64::FeatureCMH}},
     {"lscp", {AArch64::FeatureLSCP}},
     {"tlbid", {AArch64::FeatureTLBID}},
     {"mpamv2", {AArch64::FeatureMPAMv2}},

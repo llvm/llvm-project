@@ -1817,11 +1817,19 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
         getStridedElementPtr(rewriter, loc, dstMemRefType, adaptor.getDst(),
                              (adaptor.getDstIndices()));
 
-    rewriter.replaceOpWithNewOp<ROCDL::LoadToLDSOp>(
-        op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
-        /*offset=*/rewriter.getI32IntegerAttr(0),
-        /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
-        ArrayAttr{});
+    if (op.getAsync()) {
+      rewriter.replaceOpWithNewOp<ROCDL::LoadAsyncToLDSOp>(
+          op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
+          /*offset=*/rewriter.getI32IntegerAttr(0),
+          /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+    } else {
+      rewriter.replaceOpWithNewOp<ROCDL::LoadToLDSOp>(
+          op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
+          /*offset=*/rewriter.getI32IntegerAttr(0),
+          /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+    }
 
     return success();
   }

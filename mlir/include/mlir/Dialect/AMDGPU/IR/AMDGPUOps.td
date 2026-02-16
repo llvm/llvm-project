@@ -1079,7 +1079,8 @@ def AMDGPU_GatherToLDSOp :
                    Variadic<Index>:$srcIndices,
                    Arg<AnyMemRef, "buffer to write to", [MemWrite]>:$dst,
                    Variadic<Index>:$dstIndices,
-                   TypeAttr:$transferType
+                   TypeAttr:$transferType,
+                   UnitAttr:$async
                    )>,
     Results<(outs)> {
   let summary = "MLIR wrapper for CDNA Gather to LDS instructions";
@@ -1099,6 +1100,13 @@ def AMDGPU_GatherToLDSOp :
     * `$transferType`: type of the data to be transferred by each thread. This is used to determine
       the size of the data to be transferred and the number of threads in the subgroup.
       The transfer type must be a scalar type or a vector type with a single element type.
+    * If `$async` is set, the compiler will not attempt to infer the
+      memory waits needed to ensure that the DMA operation has succeeded
+      before a load that might access the stored-to LDS is performed.
+      Instead, the `rocdl.asyncmark` and `rocdl.wait.asyncmark N`
+      operations must be used to explicitly indicate the desired completion
+      behavior. This enables more precise calculation of these waits at the
+      cost of requiring user management of asynchrony.
 
     The `$dst`, along with its indices, points to the memory location the subgroup of this thread
     will write to.
@@ -1106,7 +1114,7 @@ def AMDGPU_GatherToLDSOp :
     Note: only supported on gfx9 and gfx10.
   }];
   let assemblyFormat = [{
-    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` $transferType `,` type($src) `,` type($dst)
+    (`async` $async^)? $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` $transferType `,` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
   let hasCanonicalizer = 1;

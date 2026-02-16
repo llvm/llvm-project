@@ -208,7 +208,6 @@ dispatch(rpc::Client &client, FnTy, CallArgs... args) {
   using BufferTy = rpc::conditional_t<rpc::is_void_v<RetTy>, uint8_t, RetTy>;
   BufferTy ret{};
   port.recv_n(&ret);
-  port.close();
 
   if constexpr (!rpc::is_void_v<RetTy>)
     return ret;
