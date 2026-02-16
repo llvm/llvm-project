@@ -3038,6 +3038,11 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly)
           K->setMetadata(Kind, JMD);
         break;
+      case LLVMContext::MD_mem_cache_hint:
+        // Preserve !mem.cache_hint if it is present on both instructions.
+        if (!AAOnly)
+          K->setMetadata(Kind, JMD);
+        break;
       case LLVMContext::MD_noalias_addrspace:
         if (DoesKMove)
           K->setMetadata(Kind,
@@ -3148,6 +3153,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_alias_scope:
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_nontemporal:
+    case LLVMContext::MD_mem_cache_hint:
     case LLVMContext::MD_mem_parallel_loop_access:
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_noundef:
