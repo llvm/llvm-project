@@ -171,7 +171,7 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
         },
         /*cleanupBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          cir::YieldOp::create(b, loc);
+          // Terminations will be handled after emiting cleanup
         });
 
     builder.setInsertionPointToEnd(&cleanupScope.getBodyRegion().back());

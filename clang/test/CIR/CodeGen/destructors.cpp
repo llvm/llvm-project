@@ -5,8 +5,6 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -mno-constructor-aliases -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
-// XFAIL: *
-
 void some_function() noexcept;
 
 struct out_of_line_destructor {
@@ -100,6 +98,7 @@ void test_array_destructor() {
 // CIR:   }
 
 // LLVM: define{{.*}} void @_Z21test_array_destructorv()
+// LLVM:   %[[ARR_CUR:.*]] = alloca ptr, i64 1
 // LLVM:   %[[ARR:.*]] = alloca [5 x %struct.array_element]
 // LLVM:   %[[TMP:.*]] = alloca ptr
 // LLVM:   %[[ARR_PTR:.*]] = getelementptr %struct.array_element, ptr %[[ARR]], i32 0
@@ -118,7 +117,6 @@ void test_array_destructor() {
 // LLVM: [[INIT_LOOP_END]]:
 // LLVM:   %[[ARR_BEGIN:.*]] = getelementptr %struct.array_element, ptr %[[ARR]], i32 0
 // LLVM:   %[[ARR_END:.*]] = getelementptr %struct.array_element, ptr %[[ARR_BEGIN]], i64 4
-// LLVM:   %[[ARR_CUR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARR_END]], ptr %[[ARR_CUR]]
 // LLVM:   br label %[[DESTROY_LOOP_BODY:.*]]
 // LLVM: [[DESTROY_LOOP_NEXT:.*]]:
