@@ -5278,46 +5278,40 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     const Expr *Arg0 = E->getArg(0);
     Value *StoreAddr = EmitScalarExpr(Arg0);
     Value *StoreValue = EmitScalarExpr(E->getArg(1));
+    Value *Order = EmitScalarExpr(E->getArg(2));
+    Value *Policy = EmitScalarExpr(E->getArg(3));
 
-    llvm::APSInt OrderVal = E->getArg(2)->EvaluateKnownConstInt(getContext());
-    llvm::APSInt RetentionPolicy = E->getArg(3)->EvaluateKnownConstInt(getContext());
+    auto *OrderC = dyn_cast<llvm::ConstantInt>(Order);
+    auto *PolicyC = dyn_cast<llvm::ConstantInt>(Policy);
 
-    llvm::AtomicOrdering Ordering;
-    switch (OrderVal.getZExtValue()) {
+    assert(OrderC && PolicyC &&
+           "order/policy must be constant for __arm_atomic_store_with_stshh");
+
+    // Validate ordering argument; bail out if invalid
+    switch (OrderC->getZExtValue()) {
     case 0: // __ATOMIC_RELAXED
-      Ordering = llvm::AtomicOrdering::Monotonic;
-      break;
     case 3: // __ATOMIC_RELEASE
-      Ordering = llvm::AtomicOrdering::Release;
-      break;
     case 5: // __ATOMIC_SEQ_CST
-      Ordering = llvm::AtomicOrdering::SequentiallyConsistent;
       break;
     default:
       llvm_unreachable(
           "unexpected memory order for __arm_atomic_store_with_stshh");
     }
 
-    QualType ValQT = Arg0->IgnoreParenImpCasts()
-                         ->getType()
-                         ->castAs<PointerType>()
-                         ->getPointeeType();
-    llvm::Type *ValTy = ConvertType(ValQT);
+    llvm::Value *OrderArg =
+        llvm::ConstantInt::get(Int32Ty, OrderC->getZExtValue());
+    llvm::Value *PolicyArg =
+        llvm::ConstantInt::get(Int32Ty, PolicyC->getZExtValue());
 
-    CharUnits ValAlign = getContext().getTypeAlignInChars(ValQT);
-    Address Addr = Address(StoreAddr, ValTy, ValAlign);
-    LValue LVal = MakeAddrLValue(Addr, ValQT);
+    llvm::Type *PtrTy = StoreAddr->getType();
+    llvm::Type *ValTy = StoreValue->getType();
 
-    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_stshh);
-    llvm::Value *Arg =
-        llvm::ConstantInt::get(Int64Ty, RetentionPolicy.getZExtValue());
-    // Execute hint before store to provide cache prefetch guidance.
-    CallInst *HintCall = Builder.CreateCall(F, Arg);
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::aarch64_stshh_atomic_store, {PtrTy, ValTy});
 
-    EmitAtomicStore(RValue::get(StoreValue), LVal, Ordering,
-                    /* isVolatile= */ LVal.isVolatile(),
-                    /* isInit= */ false);
-    return HintCall;
+    // Emit a single intrinsic so backend can expand to STSHH followed by
+    // atomic store, to guarantee STSHH immediately precedes store insn.
+    return Builder.CreateCall(F, {StoreAddr, StoreValue, OrderArg, PolicyArg});
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||

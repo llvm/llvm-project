@@ -6369,6 +6369,88 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                        Op.getOperand(0),                        // Chain
                        DAG.getTargetConstant(24, DL, MVT::i32), // Rt
                        Op.getOperand(2));                       // Addr
+  case Intrinsic::aarch64_stshh: {
+    SDValue Chain = Op.getOperand(0);
+    auto *PolicyC = cast<ConstantSDNode>(Op.getOperand(2));
+    SDValue Policy =
+        DAG.getTargetConstant(PolicyC->getZExtValue(), DL, MVT::i32);
+    SDValue Ops[] = {Policy, Chain};
+    MachineSDNode *N = DAG.getMachineNode(AArch64::STSHH, DL, MVT::Other, Ops);
+    return SDValue(N, 0);
+  }
+  case Intrinsic::aarch64_stshh_atomic_store: {
+    SDValue Chain = Op.getOperand(0);
+    SDValue Ptr = Op.getOperand(2);
+    SDValue Val = Op.getOperand(3);
+    auto *OrderC = cast<ConstantSDNode>(Op.getOperand(4));
+    auto *PolicyC = cast<ConstantSDNode>(Op.getOperand(5));
+    uint64_t OrderVal = OrderC->getZExtValue();
+
+    unsigned SizeBits = Val.getValueType().getSizeInBits();
+    if (SizeBits < 8)
+      SizeBits = 8;
+    unsigned PseudoOpc = 0;
+    // Select pseudo opcode based on value size.
+    switch (SizeBits) {
+    case 8:
+      PseudoOpc = AArch64::STSHH_ATOMIC_STORE_B;
+      break;
+    case 16:
+      PseudoOpc = AArch64::STSHH_ATOMIC_STORE_H;
+      break;
+    case 32:
+      PseudoOpc = AArch64::STSHH_ATOMIC_STORE_W;
+      break;
+    case 64:
+      PseudoOpc = AArch64::STSHH_ATOMIC_STORE_X;
+      break;
+    default:
+      llvm_unreachable("Unexpected STSHH atomic store size");
+    }
+
+    // Extend or truncate value to expected store width
+    if (SizeBits <= 32)
+      Val = DAG.getAnyExtOrTrunc(Val, DL, MVT::i32);
+    else
+      Val = DAG.getAnyExtOrTrunc(Val, DL, MVT::i64);
+
+    SDValue Order = DAG.getTargetConstant(OrderVal, DL, MVT::i32);
+    SDValue Policy =
+        DAG.getTargetConstant(PolicyC->getZExtValue(), DL, MVT::i32);
+
+    // Build pseudo which expands to STSHH + atomic store.
+    SDValue Ops[] = {Val, Ptr, Order, Policy, Chain};
+    MachineSDNode *N = DAG.getMachineNode(PseudoOpc, DL, MVT::Other, Ops);
+
+    // Select correct memory ordering for the store
+    AtomicOrdering Ordering;
+    switch (OrderVal) {
+    case 0: // __ATOMIC_RELAXED
+      Ordering = AtomicOrdering::Monotonic;
+      break;
+    case 3: // __ATOMIC_RELEASE
+      Ordering = AtomicOrdering::Release;
+      break;
+    case 5: // __ATOMIC_SEQ_CST
+      Ordering = AtomicOrdering::SequentiallyConsistent;
+      break;
+    default:
+      llvm_unreachable("Unexpected memory order for STSHH atomic store");
+    }
+
+    LLVMContext &Ctx = *DAG.getContext();
+    EVT MemVT = EVT::getIntegerVT(Ctx, SizeBits);
+    Type *MemTy = MemVT.getTypeForEVT(Ctx);
+    Align Alignment = DAG.getDataLayout().getABITypeAlign(MemTy);
+    uint64_t Size = MemVT.getStoreSize();
+
+    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+        MachinePointerInfo(), MachineMemOperand::MOStore, Size, Alignment,
+        AAMDNodes(), nullptr, SyncScope::System, Ordering);
+
+    DAG.setNodeMemRefs(N, {MMO});
+    return SDValue(N, 0);
+  }
   case Intrinsic::aarch64_sme_str:
   case Intrinsic::aarch64_sme_ldr: {
     return LowerSMELdrStr(Op, DAG, IntNo == Intrinsic::aarch64_sme_ldr);

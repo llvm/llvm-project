@@ -1183,6 +1183,11 @@ def imm0_7 : Operand<i64>, ImmLeaf<i64, [{
   let ParserMatchClass = Imm0_7Operand;
 }
 
+// imm0_7_i32 predicate - True if the immediate is in the range [0,7]
+def imm0_7_i32 : Operand<i32>, ImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 8;
+}]>;
+
 // imm0_3 predicate - True if the immediate is in the range [0,3]
 def imm0_3 : Operand<i64>, ImmLeaf<i64, [{
   return ((uint64_t)Imm) < 4;
@@ -1864,17 +1869,17 @@ def PHintInstOperand : AsmOperandClass {
     let ParserMethod = "tryParsePHintInstOperand";
 }
 
-def phint_op : Operand<i64> {
+def phint_op : Operand<i32> {
     let ParserMatchClass = PHintInstOperand;
     let PrintMethod = "printPHintOp";
     let OperandType = "OPERAND_IMMEDIATE";
-    let MIOperandInfo = (ops i64imm);
+    let MIOperandInfo = (ops i32imm);
     let DecoderMethod = "DecodeUImm<3>";
 }
 
 class STSHHI
     : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy",
-                    [(int_aarch64_stshh (i64 imm0_7:$policy))]>,
+                    [(int_aarch64_stshh (i32 imm0_7_i32:$policy))]>,
       Sched<[WriteHint]> {
   bits<3> policy;
   // NOTE: ideally, this would have mayLoad = 0, mayStore = 0, but we cannot
