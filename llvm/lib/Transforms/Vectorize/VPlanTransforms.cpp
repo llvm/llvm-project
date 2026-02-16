@@ -1607,27 +1607,29 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
 }
 
 /// Reassociate (headermask && x) && y -> headermask && (x && y) to allow the
-/// header mask to be simplified further, e.g. in optimizeEVLMasks.
+/// header mask to be simplified further when tail folding, e.g. in
+/// optimizeEVLMasks.
 static void reassociateHeaderMask(VPlan &Plan) {
   VPValue *HeaderMask = vputils::findHeaderMask(Plan);
   if (!HeaderMask)
     return;
-  SmallVector<VPUser *> Worklist(HeaderMask->users());
+
+  SmallVector<VPUser *> Worklist;
+  for (VPUser *U : HeaderMask->users())
+    if (match(U, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue())))
+      append_range(Worklist, cast<VPSingleDefRecipe>(U)->users());
+
+  VPValue *X, *Y;
   while (!Worklist.empty()) {
     auto *R = dyn_cast<VPSingleDefRecipe>(Worklist.pop_back_val());
-    if (!R)
+    if (!R || !match(R, m_LogicalAnd(
+                            m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
+                            m_VPValue(Y))))
       continue;
-    VPValue *X, *Y;
-    if (match(R, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue())))
-      Worklist.append(R->user_begin(), R->user_end());
-    else if (match(R, m_LogicalAnd(
-                          m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
-                          m_VPValue(Y)))) {
-      VPBuilder Builder(R);
-      Worklist.append(R->user_begin(), R->user_end());
-      R->replaceAllUsesWith(
-          Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
-    }
+    append_range(Worklist, R->users());
+    VPBuilder Builder(R);
+    R->replaceAllUsesWith(
+        Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
   }
 }
 
