@@ -10816,13 +10816,20 @@ def : Pat<(v8i8  (add (trunc (v8i16 (bitconvert FPR128:$Rn))),
 def : Pat<(v2f64 (fadd (AArch64zip1 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)),
                        (AArch64zip2 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)))),
           (v2f64 (FADDPv2f64 $Rn, $Rm))>;
+def : Pat<(v2f32 (fadd (AArch64zip1 (v2f32 FPR64:$Rn), (v2f32 FPR64:$Rm)),
+                       (AArch64zip2 (v2f32 FPR64:$Rn), (v2f32 FPR64:$Rm)))),
+          (v2f32 (FADDPv2f32 $Rn, $Rm))>;
 def : Pat<(v4f32 (fadd (AArch64uzp1 (v4f32 FPR128:$Rn), (v4f32 FPR128:$Rm)),
                        (AArch64uzp2 (v4f32 FPR128:$Rn), (v4f32 FPR128:$Rm)))),
           (v4f32 (FADDPv4f32 $Rn, $Rm))>;
-let Predicates = [HasFullFP16] in
+let Predicates = [HasFullFP16] in {
+def : Pat<(v4f16 (fadd (AArch64uzp1 (v4f16 FPR64:$Rn), (v4f16 FPR64:$Rm)),
+                       (AArch64uzp2 (v4f16 FPR64:$Rn), (v4f16 FPR64:$Rm)))),
+          (v4f16 (FADDPv4f16 $Rn, $Rm))>;
 def : Pat<(v8f16 (fadd (AArch64uzp1 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)),
                        (AArch64uzp2 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)))),
           (v8f16 (FADDPv8f16 $Rn, $Rm))>;
+}
 
 // Scalar 64-bit shifts in FPR64 registers.
 def : Pat<(i64 (int_aarch64_neon_sshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),

@@ -292,3 +292,41 @@ start:
   %2 = add <2 x i64> %0, %1
   ret <2 x i64> %2
 }
+
+define <8 x half> @manual_faddp_v8f16(<8 x half> %a, <8 x half> %b) {
+; CHECK-NOFP16-LABEL: manual_faddp_v8f16:
+; CHECK-NOFP16:       // %bb.0: // %start
+; CHECK-NOFP16-NEXT:    uzp1 v2.8h, v0.8h, v1.8h
+; CHECK-NOFP16-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
+; CHECK-NOFP16-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-NOFP16-NEXT:    fcvtl v3.4s, v2.4h
+; CHECK-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-NOFP16-NEXT:    fcvtl2 v2.4s, v2.8h
+; CHECK-NOFP16-NEXT:    fadd v1.4s, v3.4s, v1.4s
+; CHECK-NOFP16-NEXT:    fadd v2.4s, v2.4s, v0.4s
+; CHECK-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
+; CHECK-NOFP16-NEXT:    fcvtn2 v0.8h, v2.4s
+; CHECK-NOFP16-NEXT:    ret
+;
+; CHECK-FP16-LABEL: manual_faddp_v8f16:
+; CHECK-FP16:       // %bb.0: // %start
+; CHECK-FP16-NEXT:    faddp v0.8h, v0.8h, v1.8h
+; CHECK-FP16-NEXT:    ret
+start:
+  %0 = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %1 = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %2 = fadd <8 x half> %0, %1
+  ret <8 x half> %2
+}
+
+define <2 x float> @manual_faddp_v2f32(<2 x float> %a, <2 x float> %b) {
+; CHECK-LABEL: manual_faddp_v2f32:
+; CHECK:       // %bb.0: // %start
+; CHECK-NEXT:    faddp v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ret
+start:
+  %0 = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 0, i32 2>
+  %1 = shufflevector <2 x float> %a, <2 x float> %b, <2 x i32> <i32 1, i32 3>
+  %2 = fadd <2 x float> %0, %1
+  ret <2 x float> %2
+}
