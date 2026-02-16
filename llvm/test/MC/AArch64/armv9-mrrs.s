@@ -3,7 +3,7 @@
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+the,+el2vmsa,+vh < %s \
 // RUN:        | llvm-objdump -d --mattr=+the,+el2vmsa,+vh - | FileCheck %s --check-prefix=CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+the,+el2vmsa,+vh < %s \
-// RUN:   | llvm-objdump -d --mattr=-d128,+the,+el2vmsa,+vh - | FileCheck %s --check-prefix=CHECK-INST
+// RUN:   | llvm-objdump -d --mattr=+the,+el2vmsa,+vh - | FileCheck %s --check-prefix=CHECK-INST
 // Disassemble encoding and check the re-encoding (-show-encoding) matches.
 // RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+the,+el2vmsa,+vh < %s \
 // RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
