@@ -311,3 +311,39 @@ llvm.func @teams_if_with_num_teams(%condition: i1, %numTeamsLower: i32, %numTeam
     llvm.call @afterTeams() : () -> ()
     llvm.return
 }
+
+// -----
+
+llvm.func @duringTeams()
+
+// CHECK-LABEL: @omp_teams_thread_limit_2d
+// CHECK-SAME: (i32 [[LIMIT_X:.+]], i32 [[LIMIT_Y:.+]])
+llvm.func @omp_teams_thread_limit_2d(%limitX: i32, %limitY: i32) {
+    // Multi-dimensional thread_limit: all dimensions are passed
+    // CHECK: [[THREAD_NUM:%.+]] = call i32 @__kmpc_global_thread_num
+    // CHECK-NEXT: call void @__kmpc_push_num_teams_51({{.+}}, i32 [[THREAD_NUM]], i32 0, i32 0, i32 [[LIMIT_X]])
+    // CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @{{[0-9]+}}, i32 0, ptr [[OUTLINED_FN:.+]])
+    omp.teams thread_limit(%limitX, %limitY : i32, i32) {
+        llvm.call @duringTeams() : () -> ()
+        omp.terminator
+    }
+    llvm.return
+}
+
+// -----
+
+llvm.func @duringTeams()
+
+// CHECK-LABEL: @omp_teams_thread_limit_3d
+// CHECK-SAME: (i32 [[LIMIT_X:.+]], i64 [[LIMIT_Y:.+]], i16 [[LIMIT_Z:.+]])
+llvm.func @omp_teams_thread_limit_3d(%limitX: i32, %limitY: i64, %limitZ: i16) {
+    // Multi-dimensional thread_limit with mixed types: all dimensions are passed
+    // CHECK: [[THREAD_NUM:%.+]] = call i32 @__kmpc_global_thread_num
+    // CHECK-NEXT: call void @__kmpc_push_num_teams_51({{.+}}, i32 [[THREAD_NUM]], i32 0, i32 0, i32 [[LIMIT_X]])
+    // CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @{{[0-9]+}}, i32 0, ptr [[OUTLINED_FN:.+]])
+    omp.teams thread_limit(%limitX, %limitY, %limitZ : i32, i64, i16) {
+        llvm.call @duringTeams() : () -> ()
+        omp.terminator
+    }
+    llvm.return
+}
