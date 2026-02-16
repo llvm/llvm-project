@@ -26,6 +26,7 @@ void foo_ref() {
 void foo_ref_trivial() {
   RefCountable automatic;
   RefCountable &bar = automatic;
+  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
 }
 
 void bar_ref(RefCountable &) {}

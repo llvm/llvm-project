@@ -233,6 +233,7 @@ struct RefCountable {
     if (!--m_refCount)
       delete this;
   }
+  ~RefCountable();
   void method();
   void constMethod() const;
   int trivial() { return 123; }
@@ -358,8 +359,8 @@ public:
 
 private:
   template <typename T>
-  WeakPtrImpl(T* t)
-    : ptr(static_cast<void*>(t))
+  WeakPtrImpl(T& t)
+    : ptr(static_cast<void*>(&t))
   { }
 };
 
@@ -371,9 +372,9 @@ private:
   template <typename U> friend class CanMakeWeakPtr;
   template <typename U> friend class WeakPtr;
 
-  Ref<WeakPtrImpl> createWeakPtrImpl() {
+  WeakPtrImpl& createWeakPtrImpl() {
     if (!impl)
-      impl = WeakPtrImpl::create(static_cast<T>(*this));
+      impl = WeakPtrImpl::create(static_cast<T&>(*this));
     return *impl;
   }
 
@@ -392,21 +393,26 @@ private:
   RefPtr<WeakPtrImpl> impl;
 
 public:
-  WeakPtr(T& t) {
-    *this = t;
+  WeakPtr(T& t)
+    : impl(t.createWeakPtrImpl()) {
   }
-  WeakPtr(T* t) {
-    *this = t;
+  WeakPtr(T* t)
+    : impl(t ? &t->createWeakPtrImpl() : nullptr) {
   }
 
   template <typename U>
   WeakPtr<T> operator=(U& obj) {
     impl = obj.createWeakPtrImpl();
+    return *this;
   }
 
   template <typename U>
   WeakPtr<T> operator=(U* obj) {
-    impl = obj ? obj->createWeakPtrImpl() : nullptr;
+    if (obj)
+      impl = obj->createWeakPtrImpl();
+    else
+      impl = nullptr;
+    return *this;
   }
 
   T* get() {

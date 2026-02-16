@@ -578,7 +578,7 @@ public:
           R = Type->getAsCXXRecordDecl();
         }
       }
-      if (Type->isIntegralOrEnumerationType())
+      if (Type->isIntegralOrEnumerationType() || Type->isNullPtrType())
         return true;
       if (!R)
         return false;
@@ -806,6 +806,18 @@ public:
 
     // Recursively descend into the callee to confirm that it's trivial.
     return IsFunctionTrivial(CE->getConstructor());
+  }
+
+  bool VisitCXXDeleteExpr(const CXXDeleteExpr* DE) {
+    auto QT = DE->getDestroyedType();
+    auto *Type = QT.getTypePtrOrNull();
+    if (!Type)
+      return false;
+    const CXXRecordDecl *R = Type->getAsCXXRecordDecl();
+    if (!R)
+      return false;
+    auto *Dtor = R->getDestructor();
+    return !Dtor || Dtor->isTrivial();
   }
 
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E) {

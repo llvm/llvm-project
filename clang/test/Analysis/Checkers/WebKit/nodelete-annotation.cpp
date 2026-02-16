@@ -51,6 +51,7 @@ private:
 
 class SomeClass {
 public:
+
   void [[clang::annotate_type("webkit.nodelete")]] someMethod();
   void [[clang::annotate_type("webkit.nodelete")]] unsafeMethod() {
     // expected-warning@-1{{A function 'unsafeMethod' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
@@ -124,6 +125,11 @@ public:
 
   RefPtr<WeakRefCountable> [[clang::annotate_type("webkit.nodelete")]] getWeakPtr() {
     return m_weakObj.get();
+  }
+
+  WeakRefCountable* [[clang::annotate_type("webkit.nodelete")]] useWeakPtr() {
+    WeakPtr localWeak = m_weakObj.get();
+    return localWeak.get();
   }
 
 private:
