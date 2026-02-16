@@ -142,25 +142,10 @@ void SCEVDivision::visitAddRecExpr(const SCEVAddRecExpr *Numerator) {
       Ty != StepQ->getType() || Ty != StepR->getType())
     return cannotDivide(Numerator);
 
-  // Infer no-wrap flags for Remainder.
-  // TODO: Catch more cases.
-  SCEV::NoWrapFlags NumFlags = Numerator->getNoWrapFlags();
-  SCEV::NoWrapFlags RemFlags = SCEV::NoWrapFlags::FlagAnyWrap;
-  const SCEV *StepNumAbs =
-      SE.getAbsExpr(Numerator->getStepRecurrence(SE), /*IsNSW=*/false);
-  const SCEV *StepRAbs = SE.getAbsExpr(StepR, /*IsNSW=*/false);
-  const Loop *L = Numerator->getLoop();
-
-  // If abs(StepR) <=u abs(StepNumAbs) and both are loop invariant, propagate
-  // the <NW> from Numerator to Remainder.
-  if (ScalarEvolution::hasFlags(NumFlags, SCEV::NoWrapFlags::FlagNW) &&
-      SE.isLoopInvariant(StepNumAbs, L) && SE.isLoopInvariant(StepRAbs, L) &&
-      SE.isKnownPredicate(ICmpInst::ICMP_ULE, StepRAbs, StepNumAbs))
-    RemFlags = ScalarEvolution::setFlags(RemFlags, SCEV::NoWrapFlags::FlagNW);
-
   Quotient = SE.getAddRecExpr(StartQ, StepQ, Numerator->getLoop(),
                               SCEV::NoWrapFlags::FlagAnyWrap);
-  Remainder = SE.getAddRecExpr(StartR, StepR, Numerator->getLoop(), RemFlags);
+  Remainder = SE.getAddRecExpr(StartR, StepR, Numerator->getLoop(),
+                               SCEV::NoWrapFlags::FlagAnyWrap);
 }
 
 void SCEVDivision::visitAddExpr(const SCEVAddExpr *Numerator) {
