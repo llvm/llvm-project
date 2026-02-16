@@ -1127,10 +1127,12 @@ enum class SymbolTag {
   Declaration = 18,
   Definition = 19,
   ReadOnly = 20,
+  Overrides = 21,
+  Implements = 22,
 
   // Update as needed
   FirstTag = Deprecated,
-  LastTag = ReadOnly
+  LastTag = Implements
 };
 llvm::json::Value toJSON(SymbolTag);
 /// Represents programming constructs like variables, classes, interfaces etc.
