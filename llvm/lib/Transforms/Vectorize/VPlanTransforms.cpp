@@ -2015,9 +2015,13 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                   m_VPValue(), m_Mul(m_VPValue(), m_ConstantInt(Part)))))
       Phis[Part] = Phi;
-    else
+    else {
       // Anything other than a CanonicalIVIncrementForPart is part 0
+      assert(!match(
+          Index,
+          m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()));
       Phis[0] = Phi;
+    }
   }
 
   assert(all_of(Phis, [](VPActiveLaneMaskPHIRecipe *Phi) { return Phi; }) &&
