@@ -141,21 +141,21 @@ void SIPreEmitPeephole::updateMLIBeforeRemovingEdge(
       MLI->changeLoopFor(BB, ParentLoop);
   }
 
-    // Reparent all child loops.
-    while (!Loop->isInnermost()) {
-      MachineLoop *Child = Loop->removeChildLoop(std::prev(Loop->end()));
-      if (ParentLoop)
-        ParentLoop->addChildLoop(Child);
-      else
-        MLI->addTopLevelLoop(Child);
-    }
-
+  // Reparent all child loops.
+  while (!Loop->isInnermost()) {
+    MachineLoop *Child = Loop->removeChildLoop(std::prev(Loop->end()));
     if (ParentLoop)
-      ParentLoop->removeChildLoop(Loop);
+      ParentLoop->addChildLoop(Child);
     else
-      MLI->removeLoop(llvm::find(*MLI, Loop));
+      MLI->addTopLevelLoop(Child);
+  }
 
-    MLI->destroy(Loop);
+  if (ParentLoop)
+    ParentLoop->removeChildLoop(Loop);
+  else
+    MLI->removeLoop(llvm::find(*MLI, Loop));
+
+  MLI->destroy(Loop);
 }
 
 bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
