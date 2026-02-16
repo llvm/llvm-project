@@ -414,9 +414,38 @@ bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   // Check block's condition bit.
   if (VPBB && !isa<VPIRBasicBlock>(VPB)) {
-    if (VPB->getNumSuccessors() > 1 ||
-        (VPBB->getParent() && VPBB->isExiting() &&
-         !VPBB->getParent()->isReplicator())) {
+    // For plain CFG VPlans, verify header and latch block structure.
+    if (!VPBB->getParent()) {
+      if (VPBlockUtils::isHeader(VPBB, VPDT)) {
+        if (VPB->getNumPredecessors() != 2) {
+          errs()
+              << "Header block in plain CFG VPlan must have 2 predecessors!\n";
+          return false;
+        }
+        // Predecessor 0 is preheader, predecessor 1 is latch.
+        if (!VPBlockUtils::isLatch(VPB->getPredecessors()[1], VPDT)) {
+          errs() << "Header's second predecessor must be the latch!\n";
+          return false;
+        }
+      }
+
+      if (VPBlockUtils::isLatch(VPBB, VPDT)) {
+        auto BranchTerminator =
+            m_CombineOr(m_BranchOnCond(),
+                        m_CombineOr(m_BranchOnCount(), m_BranchOnTwoConds()));
+        if (!match(VPBB->getTerminator(), BranchTerminator)) {
+          errs() << "Latch block must have a branch terminator!\n";
+          return false;
+        }
+        // Successor 0 is middle block, successor 1 is header.
+        if (VPBlockUtils::isHeader(VPB->getSuccessors()[0], VPDT)) {
+          errs() << "Latch's first successor must not be the header (must be "
+                    "middle block)!\n";
+          return false;
+        }
+      }
+    } else if (VPB->getNumSuccessors() > 1 ||
+               (VPBB->isExiting() && !VPBB->getParent()->isReplicator())) {
       if (!VPBB->getTerminator()) {
         errs() << "Block has multiple successors but doesn't "
                   "have a proper branch recipe!\n";
