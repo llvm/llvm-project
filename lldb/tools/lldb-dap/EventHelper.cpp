@@ -326,15 +326,11 @@ void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
 // Send a "continued" event to indicate the process is in the running state.
 void SendContinuedEvent(DAP &dap) {
   lldb::SBProcess process = dap.target.GetProcess();
-  if (!process.IsValid()) {
-    return;
-  }
-
   // If the focus thread is not set then we haven't reported any thread status
   // to the client, so nothing to report.
-  if (!dap.configuration_done || dap.focus_tid == LLDB_INVALID_THREAD_ID) {
+  if (!process.IsValid() || !dap.configuration_done ||
+      dap.focus_tid == LLDB_INVALID_THREAD_ID)
     return;
-  }
 
   llvm::json::Object event(CreateEventObject("continued"));
   llvm::json::Object body;

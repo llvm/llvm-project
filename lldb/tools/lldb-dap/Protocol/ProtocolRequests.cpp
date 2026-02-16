@@ -146,8 +146,8 @@ namespace lldb_dap::protocol {
 
 bool fromJSON(const json::Value &Params, CancelArguments &CA, json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.map("requestId", CA.requestId) &&
-         O.map("progressId", CA.progressId);
+  return O && O.mapOptional("requestId", CA.requestId) &&
+         O.mapOptional("progressId", CA.progressId);
 }
 
 bool fromJSON(const json::Value &Params, DisconnectArguments &DA,

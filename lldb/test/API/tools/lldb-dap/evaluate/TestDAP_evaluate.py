@@ -138,11 +138,12 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.assertEvaluate("var1", "20", want_type="int")
         # Empty expression should equate to the previous expression.
         if context == "repl":
-            self.assertEvaluate("", "20")
+            self.assertEvaluate("", r"\(lldb\) ", want_memref=False)
         else:
             self.assertEvaluateFailure("")
         self.assertEvaluate("var2", "21", want_type="int")
         if context == "repl":
+            self.assertEvaluate("e var2", "21", want_memref=False)
             self.assertEvaluate("", "21", want_type="int")
             self.assertEvaluate("", "21", want_type="int")
         self.assertEvaluate("static_int", "0x0000002a", want_type="int", is_hex=True)
@@ -210,15 +211,14 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
                 "struct3", "0x.*0", want_varref=True, want_type="my_struct *"
             )
 
-        if context == "repl" or context is None:
-            # In repl or unknown context expressions may be interpreted as lldb
-            # commands since no variables have the same name as the command.
+        if context == "repl":
+            # In repl context expressions may be interpreted as lldb commands
+            # since no variables have the same name as the command.
             self.assertEvaluate("list", r".*", want_memref=False)
             # Changing the frame index should not make a difference
             self.assertEvaluate(
                 "version", r".*lldb.+", want_memref=False, frame_index=1
             )
-
         else:
             self.assertEvaluateFailure("list")  # local variable of a_function
 

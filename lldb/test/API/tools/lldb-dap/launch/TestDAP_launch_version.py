@@ -30,7 +30,12 @@ class TestDAP_launch_version(lldbdap_testcase.DAPTestCaseBase):
         version_eval_response = self.dap_server.request_evaluate(
             "`version", context="repl"
         )
-        version_eval_output = version_eval_response["body"]["result"]
+        version_eval_output = (
+            version_eval_response["body"]["result"]
+            .removeprefix("(lldb) ")
+            .removesuffix("(lldb) ")
+        )
+        # Strip the prompt which may show up in the repl output.
 
         version_string = self.dap_server.get_capability("$__lldb_version")
         self.assertEqual(

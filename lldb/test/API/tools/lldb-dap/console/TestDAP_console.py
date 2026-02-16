@@ -164,8 +164,12 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
     def test_diagnositcs(self):
+        source = "main.cpp"
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
+        breakpoint1_line = line_number(source, "// breakpoint 1")
+        breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
+        self.continue_to_breakpoints(breakpoint_ids)
 
         core = self.getBuildArtifact("minidump.core")
         self.yaml2obj("minidump.yaml", core)
