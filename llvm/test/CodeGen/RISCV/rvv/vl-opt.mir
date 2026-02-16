@@ -840,3 +840,92 @@ body: |
     %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
     $v8 = COPY %y
 ...
+---
+name: vl_doesnt_dominate_sink
+body: |
+  bb.0:
+    liveins: $x1
+    ; CHECK-LABEL: name: vl_doesnt_dominate_sink
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %vl:gprnox0 = COPY $x1
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0
+    %vl:gprnox0 = COPY $x1
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl, 5 /* e32 */, 0
+    $v8 = COPY %y
+...
+---
+name: vl_doesnt_dominate_sink_load
+body: |
+  bb.0:
+    liveins: $x1
+    ; CHECK-LABEL: name: vl_doesnt_dominate_sink_load
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVLE32_V_M1 $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size, align 1)
+    ; CHECK-NEXT: %vl:gprnox0 = COPY $x1
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %x:vr = PseudoVLE32_V_M1 $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size)
+    %vl:gprnox0 = COPY $x1
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl, 5 /* e32 */, 0
+    $v8 = COPY %y
+...
+---
+name: vl_doesnt_dominate_cant_sink_load
+body: |
+  bb.0:
+    liveins: $x1
+    ; CHECK-LABEL: name: vl_doesnt_dominate_cant_sink_load
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVLE32_V_M1 $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size, align 1)
+    ; CHECK-NEXT: PseudoVSE32_V_M1 $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */
+    ; CHECK-NEXT: %vl:gprnox0 = COPY $x1
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %x:vr = PseudoVLE32_V_M1 $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */ :: (load unknown-size)
+    PseudoVSE32_V_M1 $noreg, $noreg, -1, 5 /* e32 */
+    %vl:gprnox0 = COPY $x1
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl, 5 /* e32 */, 0
+    $v8 = COPY %y
+...
+---
+name: vl_doesnt_dominate_can_sink_vxsat
+body: |
+  bb.0:
+    liveins: $x1
+    ; CHECK-LABEL: name: vl_doesnt_dominate_can_sink_vxsat
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVSADDU_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */, implicit-def dead $vxsat
+    ; CHECK-NEXT: %vl:gprnox0 = COPY $x1
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %x:vr = PseudoVSADDU_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */, implicit-def dead $vxsat
+    %vl:gprnox0 = COPY $x1
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl, 5 /* e32 */, 0
+    $v8 = COPY %y
+...
+---
+name: vl_doesnt_dominate_cant_sink_vxsat
+body: |
+  bb.0:
+    liveins: $x1
+    ; CHECK-LABEL: name: vl_doesnt_dominate_cant_sink_vxsat
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVSADDU_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */, implicit-def dead $vxsat
+    ; CHECK-NEXT: $x2 = COPY $vxsat
+    ; CHECK-NEXT: %vl:gprnox0 = COPY $x1
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %x:vr = PseudoVSADDU_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */, implicit-def dead $vxsat
+    $x2 = COPY $vxsat
+    %vl:gprnox0 = COPY $x1
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl, 5 /* e32 */, 0
+    $v8 = COPY %y
+...
