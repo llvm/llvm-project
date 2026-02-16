@@ -455,24 +455,6 @@ static void serializeArray(const Container &Records, Object &Obj,
     ItemObj["End"] = (Index == Records.size() - 1);
     RecordsArrayRef.push_back(ItemVal);
   }
-  if (Key == "Params") {
-    size_t TotalLength = 0;
-    for (const auto &Val : RecordsArrayRef) {
-      if (const auto *ItemObj = Val.getAsObject()) {
-        if (const auto *Type = ItemObj->get("Type"))
-          if(const auto *TypeObj = Type->getAsObject())
-            if(auto Name = TypeObj->getString("QualName"))
-              TotalLength += Name->size();
-        if (auto Name = ItemObj->getString("Name"))
-          TotalLength += Name->size();
-        TotalLength += 2; // For ', '
-      }
-    }
-    size_t ParamLen;
-    if(auto Length = Obj.getInteger("ParamLength"))
-      ParamLen = *Length;
-    Obj["IsLong"] = (TotalLength + ParamLen > 80);
-  }
   Obj[Key] = RecordsArray;
 }
 
@@ -560,12 +542,11 @@ static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
   ParamLen += F.ReturnType.Type.Name.size();
   ParamLen += 2;
   Obj["ParamLength"] = ParamLen;
+  if(ParamLen >= 40)
+    Obj["ParamLength"] = 35;
 
   if (!F.Params.empty())
     serializeArray(F.Params, Obj, "Params", SerializeInfoLambda);
-
-  if(ParamLen >= 40)
-    Obj["ParamLength"] = 35;
 
   if (F.Template)
     serializeInfo(F.Template.value(), Obj);
