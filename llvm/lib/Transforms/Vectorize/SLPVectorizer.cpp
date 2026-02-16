@@ -26779,7 +26779,9 @@ private:
     switch (RdxKind) {
     case RecurKind::Add: {
       // res = mul vv, n
-      Value *Scale = ConstantInt::get(VectorizedValue->getType(), Cnt);
+      Value *Scale =
+          ConstantInt::get(VectorizedValue->getType(), Cnt,
+                           /*IsSigned=*/false, /*ImplicitTrunc=*/true);
       LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Cnt << "of "
                         << VectorizedValue << ". (HorRdx)\n");
       return Builder.CreateMul(VectorizedValue, Scale);
