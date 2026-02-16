@@ -1800,7 +1800,8 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       // suppress tag in name
       Copy.SuppressTagKeyword = true;
       Copy.SuppressTagKeywordInAnonNames = false;
-      Copy.AnonymousTagLocations = false;
+      Copy.AnonymousTagNameStyle =
+          llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
       RD->printName(OS, Copy);
     } else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
       const FunctionProtoType *FT = nullptr;
@@ -4994,7 +4995,9 @@ void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
   if (!SuppressTagKeywordInName)
     OS << ' ' << getKindName();
 
-  if (Policy.AnonymousTagLocations) {
+  if (Policy.AnonymousTagNameStyle ==
+          llvm::to_underlying(
+              PrintingPolicy::AnonymousTagMode::SourceLocation)) {
     PresumedLoc PLoc =
         getASTContext().getSourceManager().getPresumedLoc(getLocation());
     if (PLoc.isValid()) {

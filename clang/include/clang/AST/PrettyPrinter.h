@@ -58,6 +58,16 @@ public:
 struct PrintingPolicy {
   enum class SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
 
+  /// Dictates how anonymous/unnamed entities are printed.
+  enum class AnonymousTagMode : uint8_t {
+    /// E.g., (anonymous enum)/(unnamed struct)/etc.
+    Plain,
+
+    /// When printing an anonymous tag name, also print the location of that
+    /// entity (e.g., "enum <anonymous at t.h:10:5>").
+    SourceLocation
+  };
+
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
@@ -67,8 +77,9 @@ struct PrintingPolicy {
         SuppressInlineNamespace(
             llvm::to_underlying(SuppressInlineNamespaceMode::Redundant)),
         SuppressInitializers(false), ConstantArraySizeAsWritten(false),
-        AnonymousTagLocations(true), SuppressStrongLifetime(false),
-        SuppressLifetimeQualifiers(false),
+        AnonymousTagNameStyle(
+            llvm::to_underlying(AnonymousTagMode::SourceLocation)),
+        SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
         SuppressTemplateArgsInCXXConstructors(false),
         SuppressDefaultTemplateArgs(true), Bool(LO.Bool),
         Nullptr(LO.CPlusPlus11 || LO.C23), NullptrTypeInNamespace(LO.CPlusPlus),
@@ -196,11 +207,8 @@ struct PrintingPolicy {
   LLVM_PREFERRED_TYPE(bool)
   unsigned ConstantArraySizeAsWritten : 1;
 
-  /// When printing an anonymous tag name, also print the location of that
-  /// entity (e.g., "enum <anonymous at t.h:10:5>"). Otherwise, just prints
-  /// "(anonymous)" for the name.
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned AnonymousTagLocations : 1;
+  LLVM_PREFERRED_TYPE(AnonymousTagMode)
+  unsigned AnonymousTagNameStyle : 1;
 
   /// When true, suppress printing of the __strong lifetime qualifier in ARC.
   LLVM_PREFERRED_TYPE(bool)
