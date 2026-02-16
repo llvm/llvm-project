@@ -23,12 +23,6 @@ namespace test {
     int x = set_and_used;
     (void)x;
   }
-
-  // Function pointer in namespace.
-  static void (*sandboxing_callback)();
-  void SetSandboxingCallback(void (*f)()) {
-    sandboxing_callback = f;
-  }
 }
 
 namespace outer {
@@ -38,4 +32,56 @@ void f2() {
   nested_unused = 5;
 }
 }
+}
+
+// Anonymous namespace
+namespace {
+  static int anon_ns_static_unused; // expected-warning {{variable 'anon_ns_static_unused' set but not used}}
+
+  // Should not warn on static data members in current implementation.
+  class AnonClass {
+  public:
+    static int unused_member;
+  };
+
+  int AnonClass::unused_member = 0;
+
+  void f3() {
+    anon_ns_static_unused = 1;
+    AnonClass::unused_member = 2;
+  }
+}
+
+// Function pointers at file scope (unused)
+static void (*unused_func_ptr)(); // expected-warning {{variable 'unused_func_ptr' set but not used}}
+void SetUnusedCallback(void (*f)()) {
+  unused_func_ptr = f;
+}
+
+// Function pointers at file scope (used)
+static void (*used_func_ptr)();
+void SetUsedCallback(void (*f)()) {
+  used_func_ptr = f;
+}
+void CallUsedCallback() {
+  if (used_func_ptr)
+    used_func_ptr();
+}
+
+// Static data members (have external linkage so should not warn).
+class MyClass {
+public:
+  static int unused_static_member;
+  static int used_static_member;
+};
+
+int MyClass::unused_static_member = 0;
+int MyClass::used_static_member = 0;
+
+void f4() {
+  MyClass::unused_static_member = 10;
+
+  MyClass::used_static_member = 20;
+  int x = MyClass::used_static_member;
+  (void)x;
 }
