@@ -876,7 +876,7 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   for (Arg *A : Args) {
     if (!A->getOption().matches(OPT_device_linker_args_EQ) &&
         !A->getOption().matches(OPT_device_compiler_args_EQ))
-        DAL.append(A);
+      DAL.append(A);
   }
 
   // Set the subarchitecture and target triple for this compilation.
