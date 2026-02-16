@@ -6,104 +6,23 @@ target triple = "x86_64"
 define void @pr141968(i1 %cond, i8 %v, ptr %p) {
 ; CHECK-LABEL: define void @pr141968(
 ; CHECK-SAME: i1 [[COND:%.*]], i8 [[V:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[ZEXT_TRUE:%.*]] = zext i1 true to i16
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[V]] to i16
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[COND]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <16 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    br label %[[COND_FALSE:.*]]
-; CHECK:       [[COND_FALSE]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[LOOP_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE30:.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <16 x i1> [[TMP0]], i32 0
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_SDIV_IF:.*]], label %[[LOOP_LATCH:.*]]
-; CHECK:       [[PRED_SDIV_IF]]:
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i1> [[TMP0]], i32 1
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[EXIT:.*]], label %[[PRED_SDIV_CONTINUE2:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
-; CHECK:       [[PRED_SDIV_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <16 x i1> [[TMP0]], i32 2
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_SDIV_IF3:.*]], label %[[PRED_SDIV_CONTINUE4:.*]]
-; CHECK:       [[PRED_SDIV_IF3]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE4]]
-; CHECK:       [[PRED_SDIV_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <16 x i1> [[TMP0]], i32 3
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_SDIV_IF5:.*]], label %[[PRED_SDIV_CONTINUE6:.*]]
-; CHECK:       [[PRED_SDIV_IF5]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE6]]
-; CHECK:       [[PRED_SDIV_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <16 x i1> [[TMP0]], i32 4
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_SDIV_IF7:.*]], label %[[PRED_SDIV_CONTINUE8:.*]]
-; CHECK:       [[PRED_SDIV_IF7]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE8]]
-; CHECK:       [[PRED_SDIV_CONTINUE8]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <16 x i1> [[TMP0]], i32 5
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_SDIV_IF9:.*]], label %[[PRED_SDIV_CONTINUE10:.*]]
-; CHECK:       [[PRED_SDIV_IF9]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE10]]
-; CHECK:       [[PRED_SDIV_CONTINUE10]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <16 x i1> [[TMP0]], i32 6
-; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_SDIV_IF11:.*]], label %[[PRED_SDIV_CONTINUE12:.*]]
-; CHECK:       [[PRED_SDIV_IF11]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE12]]
-; CHECK:       [[PRED_SDIV_CONTINUE12]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <16 x i1> [[TMP0]], i32 7
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_SDIV_IF13:.*]], label %[[PRED_SDIV_CONTINUE14:.*]]
-; CHECK:       [[PRED_SDIV_IF13]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE14]]
-; CHECK:       [[PRED_SDIV_CONTINUE14]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <16 x i1> [[TMP0]], i32 8
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_SDIV_IF15:.*]], label %[[PRED_SDIV_CONTINUE16:.*]]
-; CHECK:       [[PRED_SDIV_IF15]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE16]]
-; CHECK:       [[PRED_SDIV_CONTINUE16]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <16 x i1> [[TMP0]], i32 9
-; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_SDIV_IF17:.*]], label %[[PRED_SDIV_CONTINUE18:.*]]
-; CHECK:       [[PRED_SDIV_IF17]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE18]]
-; CHECK:       [[PRED_SDIV_CONTINUE18]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x i1> [[TMP0]], i32 10
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_SDIV_IF19:.*]], label %[[PRED_SDIV_CONTINUE20:.*]]
-; CHECK:       [[PRED_SDIV_IF19]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE20]]
-; CHECK:       [[PRED_SDIV_CONTINUE20]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <16 x i1> [[TMP0]], i32 11
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_SDIV_IF21:.*]], label %[[PRED_SDIV_CONTINUE22:.*]]
-; CHECK:       [[PRED_SDIV_IF21]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE22]]
-; CHECK:       [[PRED_SDIV_CONTINUE22]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <16 x i1> [[TMP0]], i32 12
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[PRED_SDIV_IF23:.*]], label %[[PRED_SDIV_CONTINUE24:.*]]
-; CHECK:       [[PRED_SDIV_IF23]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE24]]
-; CHECK:       [[PRED_SDIV_CONTINUE24]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <16 x i1> [[TMP0]], i32 13
-; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_SDIV_IF25:.*]], label %[[PRED_SDIV_CONTINUE26:.*]]
-; CHECK:       [[PRED_SDIV_IF25]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE26]]
-; CHECK:       [[PRED_SDIV_CONTINUE26]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <16 x i1> [[TMP0]], i32 14
-; CHECK-NEXT:    br i1 [[TMP15]], label %[[PRED_SDIV_IF27:.*]], label %[[PRED_SDIV_CONTINUE28:.*]]
-; CHECK:       [[PRED_SDIV_IF27]]:
-; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE28]]
+; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE28:.*]]
 ; CHECK:       [[PRED_SDIV_CONTINUE28]]:
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <16 x i1> [[TMP0]], i32 15
-; CHECK-NEXT:    br i1 [[TMP16]], label %[[PRED_SDIV_IF29:.*]], label %[[PRED_SDIV_CONTINUE30]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[PRED_SDIV_CONTINUE30:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[COND]], label %[[PRED_SDIV_CONTINUE30]], label %[[PRED_SDIV_IF29:.*]]
 ; CHECK:       [[PRED_SDIV_IF29]]:
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i16 [[SEXT]], [[ZEXT_TRUE]]
+; CHECK-NEXT:    [[SDIV_TRUNC:%.*]] = trunc i16 [[SDIV]] to i8
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE30]]
 ; CHECK:       [[PRED_SDIV_CONTINUE30]]:
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[COND]], i8 0, i8 [[V]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = phi i8 [ [[SDIV_TRUNC]], %[[PRED_SDIV_IF29]] ], [ 0, %[[PRED_SDIV_CONTINUE28]] ]
 ; CHECK-NEXT:    store i8 [[PREDPHI]], ptr [[P]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[COND_FALSE]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i8 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT1:.*]], label %[[PRED_SDIV_CONTINUE28]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;

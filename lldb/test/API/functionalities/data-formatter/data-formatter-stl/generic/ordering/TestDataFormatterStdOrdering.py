@@ -47,7 +47,7 @@ class StdOrderingTestCase(TestBase):
         self.assertEqual(frame.FindVariable("so_greater").summary, "greater")
 
     @add_test_categories(["libc++"])
-    def test_libstdcxx(self):
+    def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
 

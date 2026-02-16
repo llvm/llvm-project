@@ -43,6 +43,7 @@ private:
                 MachineBasicBlock::iterator &NextMBBI);
   bool expandMovImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandMovAddr(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
+  bool expandMERGE(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
 };
 
 char RISCVPostRAExpandPseudo::ID = 0;
@@ -76,6 +77,8 @@ bool RISCVPostRAExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return expandMovImm(MBB, MBBI);
   case RISCV::PseudoMovAddr:
     return expandMovAddr(MBB, MBBI);
+  case RISCV::PseudoMERGE:
+    return expandMERGE(MBB, MBBI);
   default:
     return false;
   }
@@ -115,6 +118,73 @@ bool RISCVPostRAExpandPseudo::expandMovAddr(MachineBasicBlock &MBB,
       .addReg(DstReg, RegState::Kill | getRenamableRegState(Renamable))
       .add(MBBI->getOperand(2));
   MBBI->eraseFromParent();
+  return true;
+}
+
+/// Transfer implicit operands on the pseudo instruction to the
+/// instructions created from the expansion.
+static void transferImpOps(MachineInstr &OldMI, MachineInstrBuilder &MI) {
+  const MCInstrDesc &Desc = OldMI.getDesc();
+  for (const MachineOperand &MO :
+       llvm::drop_begin(OldMI.operands(), Desc.getNumOperands())) {
+    assert(MO.isReg() && MO.getReg());
+    MI.add(MO);
+  }
+}
+
+// Expand PseudoMERGE to MERGE, MVM, or MVMN.
+bool RISCVPostRAExpandPseudo::expandMERGE(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator MBBI) {
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  if (DstReg == MI.getOperand(3).getReg()) {
+    // Expand to MVMN
+    auto I = BuildMI(MBB, MBBI, DL, TII->get(RISCV::MVMN))
+                 .add(MI.getOperand(0))
+                 .add(MI.getOperand(3))
+                 .add(MI.getOperand(2))
+                 .add(MI.getOperand(1));
+    transferImpOps(*MBBI, I);
+  } else if (DstReg == MBBI->getOperand(2).getReg()) {
+    // Expand to MVM
+    auto I = BuildMI(MBB, MBBI, DL, TII->get(RISCV::MVM))
+                 .add(MI.getOperand(0))
+                 .add(MI.getOperand(2))
+                 .add(MI.getOperand(3))
+                 .add(MI.getOperand(1));
+    transferImpOps(*MBBI, I);
+  } else if (DstReg == MI.getOperand(1).getReg()) {
+    // Expand to MERGE
+    auto I = BuildMI(MBB, MBBI, DL, TII->get(RISCV::MERGE))
+                 .add(MI.getOperand(0))
+                 .add(MI.getOperand(1))
+                 .add(MI.getOperand(2))
+                 .add(MI.getOperand(3));
+    transferImpOps(*MBBI, I);
+  } else {
+    // Use an additional move.
+    RegState RegState =
+        getRenamableRegState(MI.getOperand(1).isRenamable()) |
+        getKillRegState(MI.getOperand(1).isKill() &&
+                        MI.getOperand(1).getReg() !=
+                            MI.getOperand(2).getReg() &&
+                        MI.getOperand(1).getReg() != MI.getOperand(3).getReg());
+    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(RISCV::ADDI))
+        .addDef(DstReg, getRenamableRegState(MI.getOperand(0).isRenamable()))
+        .addReg(MI.getOperand(1).getReg(), RegState)
+        .addImm(0);
+    auto I = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(RISCV::MERGE))
+                 .add(MI.getOperand(0))
+                 .addReg(DstReg,
+                         RegState::Kill | getRenamableRegState(
+                                              MI.getOperand(0).isRenamable()))
+                 .add(MI.getOperand(2))
+                 .add(MI.getOperand(3));
+    transferImpOps(*MBBI, I);
+  }
+  MI.eraseFromParent();
   return true;
 }
 

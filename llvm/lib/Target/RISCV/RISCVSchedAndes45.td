@@ -761,27 +761,37 @@ foreach mx = SchedMxListW in {
 
 // 12. Vector Fixed-Point Arithmetic Instructions
 foreach mx = SchedMxList in {
+  defvar Cycles = Andes45GetCyclesDefault<mx>.c;
   defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVSALUV", [Andes45VALU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSALUX", [Andes45VALU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSALUI", [Andes45VALU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVAALUV", [Andes45VALU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVAALUX", [Andes45VALU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSMulV", [Andes45VMAC], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSMulX", [Andes45VMAC], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftV", [Andes45VALU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftX", [Andes45VALU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftI", [Andes45VALU], mx, IsWorstCase>;
+  let Latency = 2, ReleaseAtCycles = [Cycles] in {
+    defm "" : LMULWriteResMX<"WriteVSALUV", [Andes45VALU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSALUX", [Andes45VALU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSALUI", [Andes45VALU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAALUV", [Andes45VALU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAALUX", [Andes45VALU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftV", [Andes45VALU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftX", [Andes45VALU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftI", [Andes45VALU], mx, IsWorstCase>;
+  }
+
+  let Latency = 4, ReleaseAtCycles = [Cycles] in {
+    defm "" : LMULWriteResMX<"WriteVSMulV", [Andes45VMAC], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSMulX", [Andes45VMAC], mx, IsWorstCase>;
+  }
 }
 
 // Narrowing
 foreach mx = SchedMxListW in {
+  defvar Latency = Andes45GetLatencyNarrowing<mx>.c;
+  defvar Cycles = Andes45GetCyclesNarrowing<mx>.c;
   defvar IsWorstCase = Andes45IsWorstCaseMX<mx, SchedMxListW>.c;
 
-  defm "" : LMULWriteResMX<"WriteVNClipV", [Andes45VALU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVNClipX", [Andes45VALU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVNClipI", [Andes45VALU], mx, IsWorstCase>;
+  let Latency = Latency, ReleaseAtCycles = [Cycles] in {
+    defm "" : LMULWriteResMX<"WriteVNClipV", [Andes45VALU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNClipX", [Andes45VALU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVNClipI", [Andes45VALU], mx, IsWorstCase>;
+  }
 }
 
 // 13. Vector Floating-Point Instructions
