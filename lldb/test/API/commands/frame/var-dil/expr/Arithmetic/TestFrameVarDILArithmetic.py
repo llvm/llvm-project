@@ -59,6 +59,9 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("2. + .5", value="2.5", type="double")
         self.expect_var_path("2.f + .5f", value="2.5", type="float")
         self.expect_var_path("f + d", value="3.5", type="double")
+        self.expect_var_path("1 + s + (x + l)", value="18", type="long")
+        self.expect_var_path("+2 + (-1)", value="1", type="int")
+        self.expect_var_path("-2 + (+1)", value="-1", type="int")
 
         # Check limits and overflows
         frame = thread.GetFrameAtIndex(0)
