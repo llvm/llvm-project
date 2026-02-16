@@ -1175,9 +1175,9 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   // Check if value is an integer type.
   Expr *ValArg = ValRes.get();
   if (!ValArg->getType()->isIntegerType()) {
-    SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_value_type)
-        << Bits << Context.getTypeSize(ValArg->getType())
-        << ValArg->getSourceRange();
+    SemaRef.Diag(Loc,
+                 diag::err_arm_atomic_store_with_stshh_bad_value_must_be_integer)
+        << ValArg->getType() << ValArg->getSourceRange();
     return true;
   }
 

@@ -5292,15 +5292,11 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_atomic_store_with_stshh) {
     const Expr *Arg0 = E->getArg(0);
-    const Expr *Arg1 = E->getArg(1);
-    const Expr *Arg2 = E->getArg(2);
-    const Expr *Arg3 = E->getArg(3);
-
     Value *StoreAddr = EmitScalarExpr(Arg0);
-    Value *StoreValue = EmitScalarExpr(Arg1);
+    Value *StoreValue = EmitScalarExpr(E->getArg(1));
 
-    llvm::APSInt OrderVal = Arg2->EvaluateKnownConstInt(getContext());
-    llvm::APSInt RetentionPolicy = Arg3->EvaluateKnownConstInt(getContext());
+    llvm::APSInt OrderVal = E->getArg(2)->EvaluateKnownConstInt(getContext());
+    llvm::APSInt RetentionPolicy = E->getArg(3)->EvaluateKnownConstInt(getContext());
 
     llvm::AtomicOrdering Ordering;
     switch (OrderVal.getZExtValue()) {

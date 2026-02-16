@@ -35,3 +35,8 @@ void test_value_size_mismatch(int *p, short v) {
   __arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
   // expected-error@-1 {{value argument to '__arm_atomic_store_with_stshh' must be an integer of the same size as the pointed-to type; expected 32 bits, got 16 bits}}
 }
+
+void test_non_integer_value(int *p, float v) {
+  __arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
+  // expected-error@-1 {{value argument to '__arm_atomic_store_with_stshh' must be an integer type ('float' invalid)}}
+}

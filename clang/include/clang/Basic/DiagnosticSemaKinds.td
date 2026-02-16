@@ -9556,6 +9556,9 @@ def err_arm_atomic_store_with_stshh_bad_type : Error<
 def err_arm_atomic_store_with_stshh_bad_value_type : Error<
   "value argument to '__arm_atomic_store_with_stshh' must be an integer of the "
   "same size as the pointed-to type; expected %0 bits, got %1 bits">;
+def err_arm_atomic_store_with_stshh_bad_value_must_be_integer : Error<
+  "value argument to '__arm_atomic_store_with_stshh' must be an integer type "
+  "(%0 invalid)">;
 def err_arm_atomic_store_with_stshh_bad_order : Error<
   "memory order argument to '__arm_atomic_store_with_stshh' must be one of "
   "__ATOMIC_RELAXED, __ATOMIC_RELEASE, or __ATOMIC_SEQ_CST">;
