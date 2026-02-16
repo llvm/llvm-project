@@ -16,7 +16,6 @@
 #include <compare>
 #include <ranges>
 #include <tuple>
-#include <utility>
 
 #include "../../range_adaptor_types.h"
 #include "test_iterators.h"

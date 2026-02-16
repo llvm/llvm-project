@@ -28,7 +28,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <concepts>
 
 #include "almost_satisfies_types.h"

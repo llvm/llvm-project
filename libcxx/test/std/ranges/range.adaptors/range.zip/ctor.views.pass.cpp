@@ -10,7 +10,6 @@
 
 // constexpr explicit zip_view(Views...)
 
-#include <cassert>
 #include <ranges>
 #include <tuple>
 

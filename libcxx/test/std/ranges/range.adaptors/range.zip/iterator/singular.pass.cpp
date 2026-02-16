@@ -14,7 +14,6 @@
 
 #include <ranges>
 
-#include <cassert>
 #include <tuple>
 
 #include "../../range_adaptor_types.h"

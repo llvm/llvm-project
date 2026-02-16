@@ -25,14 +25,12 @@
 #include <array>
 #include <atomic>
 #include <cassert>
-#include <iterator>
 #include <vector>
 
-#include "MoveOnly.h"
-#include "test_execution_policies.h"
 #include "test_macros.h"
+#include "test_execution_policies.h"
 #include "test_iterators.h"
-#include "type_algorithms.h"
+#include "MoveOnly.h"
 
 EXECUTION_POLICY_SFINAE_TEST(stable_sort);
 

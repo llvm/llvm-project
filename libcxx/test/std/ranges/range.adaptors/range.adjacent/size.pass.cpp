@@ -11,9 +11,7 @@
 // constexpr auto size() requires sized_range<View>
 // constexpr auto size() const requires sized_range<const View>
 
-#include <cassert>
 #include <ranges>
-#include <utility>
 
 #include "test_macros.h"
 #include "../range_adaptor_types.h"

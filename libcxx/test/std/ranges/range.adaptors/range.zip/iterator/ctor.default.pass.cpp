@@ -10,7 +10,6 @@
 
 // iterator() = default;
 
-#include <cassert>
 #include <ranges>
 #include <tuple>
 

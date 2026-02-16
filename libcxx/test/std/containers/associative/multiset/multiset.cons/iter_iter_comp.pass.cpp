@@ -13,9 +13,8 @@
 // template <class InputIterator>
 //     multiset(InputIterator first, InputIterator last, const value_compare& comp);
 
-#include <cassert>
 #include <set>
-#include <iterator>
+#include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"

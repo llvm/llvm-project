@@ -33,7 +33,6 @@
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
 #include "test_macros.h"
-#include "type_algorithms.h"
 
 template <class T>
 concept HasMaxR = requires { std::ranges::max(std::declval<T>()); };

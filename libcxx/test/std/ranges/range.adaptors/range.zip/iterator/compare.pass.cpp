@@ -13,9 +13,8 @@
 // friend constexpr auto operator<=>(const iterator& x, const iterator& y)
 //   requires all-random-access<Const, Views...>;
 
-#include <cassert>
-#include <compare>
 #include <ranges>
+#include <compare>
 
 #include "test_iterators.h"
 #include "test_range.h"

@@ -10,7 +10,6 @@
 
 // transform_view::<iterator>::operator{<,>,<=,>=,==,!=,<=>}
 
-#include <cassert>
 #include <ranges>
 #include <compare>
 

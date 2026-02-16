@@ -13,8 +13,6 @@
 #include <ranges>
 
 #include <cassert>
-#include <type_traits>
-
 #include "test_macros.h"
 #include "test_iterators.h"
 

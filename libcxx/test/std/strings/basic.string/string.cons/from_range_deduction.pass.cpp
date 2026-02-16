@@ -22,7 +22,6 @@
 // is a type that does not qualify as an allocator (in addition to the `input_range` concept being satisfied by `R`).
 
 #include <array>
-#include <cassert>
 #include <string>
 
 #include "deduction_guides_sfinae_checks.h"

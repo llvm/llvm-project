@@ -12,7 +12,6 @@
 // constexpr auto size() const requires sized_range<const InnerView>
 
 #include <ranges>
-#include <utility>
 
 #include <cassert>
 

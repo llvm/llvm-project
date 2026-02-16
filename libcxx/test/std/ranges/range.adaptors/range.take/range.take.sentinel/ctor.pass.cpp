@@ -13,9 +13,8 @@
 // constexpr sentinel(sentinel<!Const> s)
 //   requires Const && convertible_to<sentinel_t<V>, sentinel_t<Base>>;
 
-#include <cassert>
 #include <ranges>
-#include <utility>
+#include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"

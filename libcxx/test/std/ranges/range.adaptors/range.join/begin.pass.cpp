@@ -18,7 +18,6 @@
 #include <cassert>
 #include <ranges>
 #include <string_view>
-#include <utility>
 
 #include "types.h"
 

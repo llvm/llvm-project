@@ -21,7 +21,6 @@
 //   requires random_access_range<Base> &&
 //            three_way_comparable<iterator_t<Base>>;
 
-#include <cassert>
 #include <ranges>
 #include <compare>
 

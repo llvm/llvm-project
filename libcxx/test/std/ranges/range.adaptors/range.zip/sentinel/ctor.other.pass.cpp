@@ -12,7 +12,6 @@
 
 #include <cassert>
 #include <ranges>
-#include <utility>
 
 #include "../../range_adaptor_types.h"
 

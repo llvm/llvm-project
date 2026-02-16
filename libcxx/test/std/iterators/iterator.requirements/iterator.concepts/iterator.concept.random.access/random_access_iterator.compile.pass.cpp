@@ -11,7 +11,6 @@
 // template<class T>
 // concept random_access_iterator;
 
-#include <cstddef>
 #include <iterator>
 
 #include "test_iterators.h"

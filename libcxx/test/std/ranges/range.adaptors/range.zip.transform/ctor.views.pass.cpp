@@ -11,7 +11,6 @@
 // constexpr explicit zip_transform_view(F, Views...)
 
 #include <algorithm>
-#include <cassert>
 #include <ranges>
 #include <vector>
 

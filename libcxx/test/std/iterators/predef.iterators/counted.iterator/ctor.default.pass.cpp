@@ -10,7 +10,6 @@
 
 // constexpr counted_iterator() requires default_initializable<I> = default;
 
-#include <cassert>
 #include <iterator>
 
 #include "test_macros.h"

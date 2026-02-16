@@ -8,7 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <cstddef>
 #include <iterator>
 
 #include "test_iterators.h"

@@ -17,12 +17,10 @@
 //                       UniformRandomNumberGenerator &&g);
 
 #include <algorithm>
-#include <cassert>
-#include <cstddef>
-#include <iterator>
 #include <random>
 #include <type_traits>
-#include <utility>
+#include <cassert>
+#include <cstddef>
 
 #include "test_iterators.h"
 #include "test_macros.h"

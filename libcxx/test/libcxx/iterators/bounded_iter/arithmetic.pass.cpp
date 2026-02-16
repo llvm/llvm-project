@@ -12,7 +12,6 @@
 // Arithmetic operators
 
 #include <__iterator/bounded_iter.h>
-#include <cassert>
 #include <cstddef>
 
 #include "test_iterators.h"

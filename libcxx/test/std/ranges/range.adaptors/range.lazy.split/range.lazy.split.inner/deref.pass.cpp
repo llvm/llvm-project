@@ -10,7 +10,6 @@
 
 // constexpr decltype(auto) inner-iterator::operator*() const;
 
-#include <cassert>
 #include <ranges>
 
 #include "../types.h"

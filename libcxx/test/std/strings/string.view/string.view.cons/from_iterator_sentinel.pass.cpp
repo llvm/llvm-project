@@ -15,7 +15,6 @@
 #include <string_view>
 #include <cassert>
 #include <iterator>
-#include <type_traits>
 
 #include "make_string.h"
 #include "test_iterators.h"

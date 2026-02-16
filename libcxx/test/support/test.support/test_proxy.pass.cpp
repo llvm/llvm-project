@@ -12,8 +12,6 @@
 #include "test_iterators.h"
 
 #include <cassert>
-#include <iterator>
-#include <ranges>
 
 constexpr void testProxy() {
   // constructor value
