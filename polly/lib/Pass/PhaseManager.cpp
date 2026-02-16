@@ -152,18 +152,18 @@ public:
       }
     }
 
-    SmallPriorityWorklist<Region *, 4> Worklist;
-    for (auto &[R, S] : Info)
-      if (S)
-        Worklist.insert(R);
+    SmallPriorityWorklist<const Region *, 4> Worklist;
+    for (const Region *R : SD)
+      Worklist.insert(R);
 
     TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
     while (!Worklist.empty()) {
-      Region *R = Worklist.pop_back_val();
+      const Region *R = Worklist.pop_back_val();
       Scop *S = Info.getScop(R);
       if (!S) {
-        // This can happen if codegenning of a previous SCoP made this region
-        // not-a-SCoP anymore.
+        // This can happen if the region is not maximal, is not determined a
+        // valid SCoP by ScopBuilder, or codegenning of a previous SCoP made
+        // this region not-a-SCoP anymore.
         POLLY_DEBUG(dbgs() << "SCoP in Region '" << *R << "' disappeared");
         continue;
       }
@@ -249,10 +249,10 @@ public:
       if (ModifiedByCodeGen) {
         ModifiedIR = true;
 
-        // For all regions, create new polly::Scop objects because the old ones
-        // refere to invalidated LLVM-IR.
-        // FIXME: Adds all SCoPs again to statistics
-        Info.recompute();
+        // Discard old polly::Scop objects because they may refer to invalidated
+        // LLVM-IR instructions and SCEV expressions. ScopInfo will recreate
+        // them on demand.
+        Info.invalidate();
       }
     }
 
