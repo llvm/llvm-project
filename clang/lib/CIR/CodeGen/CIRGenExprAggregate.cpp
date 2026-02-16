@@ -347,6 +347,9 @@ public:
     if (e->getType()->isAnyComplexType())
       cgf.cgm.errorNYI(e->getBeginLoc(), "VisitBinCmp: complex type");
 
+    if (e->getType()->isAggregateType())
+      cgf.cgm.errorNYI(e->getBeginLoc(), "VisitBinCmp: aggregate type");
+
     mlir::Value lhs = cgf.emitAnyExpr(e->getLHS()).getValue();
     mlir::Value rhs = cgf.emitAnyExpr(e->getRHS()).getValue();
 

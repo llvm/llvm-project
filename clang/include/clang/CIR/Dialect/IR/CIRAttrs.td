@@ -592,7 +592,9 @@ def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmp3way_info"> {
     comparison operation `cir.cmp3way`.
 
     The `ordering` parameter gives the ordering kind of the three-way comparison
-    operation: strong ordering, weak ordering, or partial ordering.
+    operation: strong ordering, weak ordering, or partial ordering. Strong and
+    weak orderings are both total orderings (i.e. every two elements are comparable),
+    while partial orderings can have incomparable elements.
 
     Given the two input operands of the three-way comparison operation `lhs` and
     `rhs`, the `lt`, `eq`, `gt`, and `unordered` parameters gives the result
