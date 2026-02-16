@@ -516,7 +516,7 @@ class TrivialFunctionAnalysisVisitor
     return Result;
   }
 
-  bool CanTriviallyDestruct(const Type* T) {
+  bool CanTriviallyDestruct(const Type *T) {
     if (T->isIntegralOrEnumerationType())
       return true;
     if (isa<PointerType>(T) || T->isNullPtrType())
@@ -800,7 +800,7 @@ public:
     return IsFunctionTrivial(CE->getConstructor());
   }
 
-  bool VisitCXXDeleteExpr(const CXXDeleteExpr* DE) {
+  bool VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
     auto *Type = DE->getDestroyedType().getTypePtrOrNull();
     return Type && CanTriviallyDestruct(Type);
   }
