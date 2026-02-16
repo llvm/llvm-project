@@ -253,7 +253,7 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // of VL (e.g. vslide1down.vx), and others may depend on the VL and mask
   // (e.g. vredsum.vs, viota.m). Mark these instructions so that peepholes avoid
   // changing their VL and/or mask.
-  EltDeps ElementsDependOn = EltDepsNone;
+  EltDeps ElementsDependOn = EltDepsVLMask;
   let TSFlags{22} = ElementsDependOn.VL;
   let TSFlags{23} = ElementsDependOn.Mask;
 

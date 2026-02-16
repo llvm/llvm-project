@@ -58,7 +58,8 @@ class CustomRivosXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
 
 let Predicates = [HasVendorXRivosVizip], DecoderNamespace = "XRivos",
   Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather,
-  Inst<6-0> = OPC_CUSTOM_2.Value, ReadsPastVL = 1 in  {
+  Inst<6-0> = OPC_CUSTOM_2.Value, ReadsPastVL = 1,
+  ElementsDependOn = EltDepsNone in  {
 defm RI_VZIPEVEN_V : VALU_IV_V<"ri.vzipeven", 0b001100>;
 defm RI_VZIPODD_V : VALU_IV_V<"ri.vzipodd", 0b011100>;
 defm RI_VZIP2A_V : VALU_IV_V<"ri.vzip2a", 0b000100>;

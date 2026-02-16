@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 // Instruction Definitions
 //===----------------------------------------------------------------------===//
-let Predicates = [HasStdExtZvabd] in {
+let Predicates = [HasStdExtZvabd], ElementsDependOn = EltDepsNone in {
   def VABS_V : VALUVs2<0b010010, 0b10000, OPMVV, "vabs.v">;
 
   def VABD_VV  : VALUVV<0b010001, OPMVV, "vabd.vv">;
@@ -24,7 +24,7 @@ let Predicates = [HasStdExtZvabd] in {
     def VWABDA_VV  : VALUVV<0b010101, OPMVV, "vwabda.vv">;
     def VWABDAU_VV : VALUVV<0b010110, OPMVV, "vwabdau.vv">;
   } // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV
-} // Predicates = [HasStdExtZvabd]
+} // Predicates = [HasStdExtZvabd], ElementsDependOn = EltDepsNone
 
 //===----------------------------------------------------------------------===//
 // Pseudos
