@@ -4650,10 +4650,10 @@ struct AAPrivatizablePtr
   /// See AbstractAttribute::requiresCallersForArgOrFunction
   static bool requiresCallersForArgOrFunction() { return true; }
 
-  /// Return the type we can choose for a private copy of the underlying
-  /// value. std::nullopt means it is not clear yet, nullptr means there is
+  /// Return the size we can choose for a private copy of the underlying
+  /// value. std::nullopt means it is not clear yet, zero means there is
   /// none.
-  virtual std::optional<Type *> getPrivatizableType() const = 0;
+  virtual std::optional<TypeSize> getPrivatizableSize() const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   LLVM_ABI static AAPrivatizablePtr &createForPosition(const IRPosition &IRP,
