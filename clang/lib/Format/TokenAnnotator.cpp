@@ -4258,10 +4258,10 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
           continue;
         }
 
-        if (ParamTok->is(tok::comma) && ParamTok->Next &&
+        if (startsNextParameter(*ParamTok, Style) &&
             (++CurrentParamNum % Style.MaxParametersOnLine) == 0) {
-          ParamTok->Next->MustBreakBefore = true;
-          ParamTok->Next->CanBreakBefore = true;
+          ParamTok->MustBreakBefore = true;
+          ParamTok->CanBreakBefore = true;
         }
       }
     }
