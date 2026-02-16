@@ -186,6 +186,19 @@ void test_pldx_range() {
 
 #endif
 
+#if defined(__ARM_64BIT_STATE)
+
+// AArch64-LABEL: @test_pldir(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call void @llvm.aarch64.prefetch.ir(ptr null)
+// AArch64-NEXT:    ret void
+//
+void test_pldir() {
+  __pldir(0);
+}
+
+#endif
+
 // AArch32-LABEL: @test_pldx(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    call void @llvm.prefetch.p0(ptr null, i32 1, i32 3, i32 1)

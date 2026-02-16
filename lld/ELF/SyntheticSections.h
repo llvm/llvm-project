@@ -53,7 +53,7 @@ public:
   EhFrameSection(Ctx &);
   void writeTo(uint8_t *buf) override;
   void finalizeContents() override;
-  bool isNeeded() const override { return !sections.empty(); }
+  bool isNeeded() const override { return isLive() && !sections.empty(); }
   size_t getSize() const override { return size; }
 
   static bool classof(const SectionBase *d) {
