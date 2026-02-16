@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_FACTS_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_FACTS_H
 
+#include "clang/AST/Decl.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
@@ -151,7 +152,7 @@ public:
   enum class EscapeKind : uint8_t {
     Return, /// Escapes via return statement.
     Field,  /// Escapes via assignment to a field.
-    // FIXME: Add support for escape to global (dangling global ptr).
+    Global,  /// Escapes via assignment to global storage.
   } EscKind;
 
   static bool classof(const Fact *F) {
@@ -198,6 +199,23 @@ public:
                EscapeKind::Field;
   }
   const FieldDecl *getFieldDecl() const { return FDecl; };
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
+class GlobalEscapeFact : public OriginEscapesFact {
+  const VarDecl *VDecl;
+
+public:
+  GlobalEscapeFact(OriginID OID, const VarDecl *VDecl)
+        : OriginEscapesFact(OID, EscapeKind::Global), VDecl(VDecl) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Global;
+  }
+  const VarDecl *getVarDecl() const { return VDecl; };
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };
