@@ -44,3 +44,14 @@ def olDestroyProgram : Function {
     ];
     let returns = [];
 }
+
+def olGetProgramDeviceImage : Function {
+    let desc = "Obtain the image loaded on the device for a program.";
+    let details = [];
+    let params = [
+        Param<"ol_program_handle_t", "Program", "handle of the program", PARAM_IN>,
+        Param<"const char **", "Image", "output buffer with the image", PARAM_OUT>,
+        Param<"size_t *", "ImageSize",  "size of the image", PARAM_OUT>
+    ];
+    let returns = [];
+}

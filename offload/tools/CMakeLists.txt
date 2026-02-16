@@ -12,5 +12,6 @@ macro(add_openmp_tool_symlink name)
   llvm_add_tool_symlink(OPENMP ${ARGV})
 endmacro()
 
+add_subdirectory(bintool)
 add_subdirectory(deviceinfo)
 add_subdirectory(kernelreplay)
