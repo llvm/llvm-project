@@ -17,13 +17,11 @@ constexpr inline auto None = EntityLinkage::LinkageType::None;
 constexpr inline auto Internal = EntityLinkage::LinkageType::Internal;
 constexpr inline auto External = EntityLinkage::LinkageType::External;
 
-TEST(EntityLinkageTest, GetLinkageReturnsCorrectValue) {
-  EntityLinkage Linkage;
+TEST(EntityLinkageTest, Constructor) {
   EntityLinkage NoneLinkage(None);
   EntityLinkage InternalLinkage(Internal);
   EntityLinkage ExternalLinkage(External);
 
-  EXPECT_EQ(Linkage.getLinkage(), None);
   EXPECT_EQ(NoneLinkage.getLinkage(), None);
   EXPECT_EQ(InternalLinkage.getLinkage(), Internal);
   EXPECT_EQ(ExternalLinkage.getLinkage(), External);

@@ -20,25 +20,18 @@ class EntityLinkage {
   friend class SerializationFormat;
 
 public:
-  /// Specifies the type of linkage an entity has.
   enum class LinkageType {
     None,     ///< local variables, function parameters
     Internal, ///< static functions/variables, anonymous namespace
     External  ///< globally visible across translation units
   };
 
-  /// Constructs an EntityLinkage with the specified linkage type.
-  ///
-  /// \param L The linkage type to assign to this entity.
   explicit EntityLinkage(LinkageType L) : Linkage(L) {}
 
-  /// Returns the linkage type of this entity.
-  ///
-  /// \return The LinkageType indicating the entity's linkage.
   LinkageType getLinkage() const { return Linkage; }
 
 private:
-  LinkageType Linkage = LinkageType::None;
+  LinkageType Linkage;
 };
 
 } // namespace clang::ssaf
