@@ -1,4 +1,4 @@
-; RUN: opt < %s -mtriple=amdgcn -passes='default<O2>' -S | FileCheck %s
+; RUN: opt < %s -mtriple=amdgcn -passes=sroa,early-cse -S | FileCheck %s
 ;
 ; Test type mismatch in ConstantFolding for vector types.
 
