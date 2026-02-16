@@ -178,18 +178,18 @@ typedef unsigned long long kmp_uint64;
 #define KMP_UINT64_SPEC "llu"
 #endif /* KMP_OS_UNIX */
 
-#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_WASM ||          \
+#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_WASM32 ||        \
     KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC32
 #define KMP_SIZE_T_SPEC KMP_UINT32_SPEC
 #elif KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                 \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
-    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_SPARC64
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_SPARC64 || KMP_ARCH_WASM64
 #define KMP_SIZE_T_SPEC KMP_UINT64_SPEC
 #else
 #error "Can't determine size_t printf format specifier."
 #endif
 
-#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_WASM || KMP_ARCH_PPC
+#if KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_WASM32 || KMP_ARCH_PPC
 #define KMP_SIZE_T_MAX (0xFFFFFFFF)
 #else
 #define KMP_SIZE_T_MAX (0xFFFFFFFFFFFFFFFF)
@@ -218,7 +218,8 @@ typedef kmp_uint32 kmp_uint;
 #define KMP_INT_MIN ((kmp_int32)0x80000000)
 
 // stdarg handling
-#if (KMP_ARCH_ARM || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_WASM) &&  \
+#if (KMP_ARCH_ARM || KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_WASM32 || \
+     KMP_ARCH_WASM64) &&                                                       \
     (KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD || KMP_OS_DRAGONFLY ||  \
      KMP_OS_LINUX || KMP_OS_WASI)
 typedef va_list *kmp_va_list;
@@ -1153,7 +1154,7 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
   KMP_COMPARE_AND_STORE_REL64((volatile kmp_int64 *)(volatile void *)&(a),     \
                               (kmp_int64)(b), (kmp_int64)(c))
 
-#if KMP_ARCH_X86 || KMP_ARCH_MIPS || KMP_ARCH_WASM || KMP_ARCH_PPC
+#if KMP_ARCH_X86 || KMP_ARCH_MIPS || KMP_ARCH_WASM32 || KMP_ARCH_PPC
 // What about ARM?
 #define TCR_PTR(a) ((void *)TCR_4(a))
 #define TCW_PTR(a, b) TCW_4((a), (b))

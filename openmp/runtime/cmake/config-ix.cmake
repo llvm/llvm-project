@@ -154,7 +154,7 @@ endif()
 # with either the Emscripten or wasi-threads flavor ends up using the pthreads
 # interface in a WebAssembly-compiled libc; CMake does not yet know how to
 # detect this.
-if (NOT WASM)
+if (NOT WASM32 AND NOT WASM64)
   find_package(Threads REQUIRED)
   if(WIN32)
     if(NOT CMAKE_USE_WIN32_THREADS_INIT)

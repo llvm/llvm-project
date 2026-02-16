@@ -9285,7 +9285,7 @@ GlobalVariable *OpenMPIRBuilder::getOrCreateInternalVariable(
                                : M.getTargetTriple().isAMDGPU()
                                    ? 0
                                    : DL.getDefaultGlobalsAddressSpace();
-    auto Linkage = this->M.getTargetTriple().getArch() == Triple::wasm32
+    auto Linkage = this->M.getTargetTriple().isWasm()
                        ? GlobalValue::InternalLinkage
                        : GlobalValue::CommonLinkage;
     auto *GV = new GlobalVariable(M, Ty, /*IsConstant=*/false, Linkage,
