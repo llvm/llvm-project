@@ -19,7 +19,7 @@ define i1 @not_fold_select(ptr addrspace(1) noundef %x) {
   %asc.flat = addrspacecast ptr addrspace(1) %x to ptr
   %is.shared = tail call i1 @llvm.amdgcn.is.shared(ptr %asc.flat)
   %asc.shared = addrspacecast ptr %asc.flat to ptr addrspace(3)
-  %shared.addr = select i1 %is.shared, ptr addrspace(3) %asc.shared, ptr addrspace(3) null
+  %shared.addr = select i1 %is.shared, ptr addrspace(3) %asc.shared, ptr addrspace(3) zeroinitializer
   %result = icmp eq ptr addrspace(3) %shared.addr, null
   ret i1 %result
 }
