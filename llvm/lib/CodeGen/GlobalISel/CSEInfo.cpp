@@ -12,7 +12,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Error.h"
-#include <memory>
 
 #define DEBUG_TYPE "cseinfo"
 
