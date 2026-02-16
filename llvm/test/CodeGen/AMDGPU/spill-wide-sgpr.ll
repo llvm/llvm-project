@@ -5,14 +5,14 @@
 
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 0
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 1
-; VGPR: s_cbranch_scc1
+; VGPR: s_cbranch_vccnz
 
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 0
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 1
 
 
 ; VMEM: buffer_store_dword
-; VMEM: s_cbranch_scc1
+; VMEM: s_cbranch_vccnz
 
 ; VMEM: buffer_load_dword
 define amdgpu_kernel void @spill_sgpr_x2(ptr addrspace(1) %out, i32 %in) #0 {
@@ -33,7 +33,7 @@ ret:
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 0
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 1
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 2
-; VGPR: s_cbranch_scc1
+; VGPR: s_cbranch_vccnz
 
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 0
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 1
@@ -41,7 +41,7 @@ ret:
 
 
 ; VMEM: buffer_store_dword
-; VMEM: s_cbranch_scc1
+; VMEM: s_cbranch_vccnz
 
 ; VMEM: buffer_load_dword
 define amdgpu_kernel void @spill_sgpr_x3(ptr addrspace(1) %out, i32 %in) #0 {
@@ -63,7 +63,7 @@ ret:
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 1
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 2
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 3
-; VGPR: s_cbranch_scc1
+; VGPR: s_cbranch_vccnz
 
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 0
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 1
@@ -72,7 +72,7 @@ ret:
 
 
 ; VMEM: buffer_store_dword
-; VMEM: s_cbranch_scc1
+; VMEM: s_cbranch_vccnz
 
 ; VMEM: buffer_load_dword
 define amdgpu_kernel void @spill_sgpr_x4(ptr addrspace(1) %out, i32 %in) #0 {
@@ -95,7 +95,7 @@ ret:
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 2
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 3
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 4
-; VGPR: s_cbranch_scc1
+; VGPR: s_cbranch_vccnz
 
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 0
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 1
@@ -105,7 +105,7 @@ ret:
 
 
 ; VMEM: buffer_store_dword
-; VMEM: s_cbranch_scc1
+; VMEM: s_cbranch_vccnz
 
 ; VMEM: buffer_load_dword
 define amdgpu_kernel void @spill_sgpr_x5(ptr addrspace(1) %out, i32 %in) #0 {
@@ -131,7 +131,7 @@ ret:
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 5
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 6
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 7
-; VGPR: s_cbranch_scc1
+; VGPR: s_cbranch_vccnz
 
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 0
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 1
@@ -143,7 +143,7 @@ ret:
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 7
 
 ; VMEM: buffer_store_dword
-; VMEM: s_cbranch_scc1
+; VMEM: s_cbranch_vccnz
 
 ; VMEM: buffer_load_dword
 define amdgpu_kernel void @spill_sgpr_x8(ptr addrspace(1) %out, i32 %in) #0 {
@@ -177,7 +177,7 @@ ret:
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 13
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 14
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 15
-; VGPR: s_cbranch_scc1
+; VGPR: s_cbranch_vccnz
 
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 0
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 1
@@ -197,7 +197,7 @@ ret:
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 15
 
 ; VMEM: buffer_store_dword
-; VMEM: s_cbranch_scc1
+; VMEM: s_cbranch_vccnz
 
 ; VMEM: buffer_load_dword
 define amdgpu_kernel void @spill_sgpr_x16(ptr addrspace(1) %out, i32 %in) #0 {
@@ -247,7 +247,7 @@ ret:
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 29
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 30
 ; VGPR: v_writelane_b32 v{{[0-9]+}}, s{{[0-9]+}}, 31
-; VGPR: s_cbranch_scc1
+; VGPR: s_cbranch_vccnz
 
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 0
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 1
@@ -283,7 +283,7 @@ ret:
 ; VGPR: v_readlane_b32 s{{[0-9]+}}, v{{[0-9]+}}, 31
 
 ; VMEM: buffer_store_dword
-; VMEM: s_cbranch_scc1
+; VMEM: s_cbranch_vccnz
 
 ; VMEM: buffer_load_dword
 define amdgpu_kernel void @spill_sgpr_x32(ptr addrspace(1) %out, i32 %in) #0 {

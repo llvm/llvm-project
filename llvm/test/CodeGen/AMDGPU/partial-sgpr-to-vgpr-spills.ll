@@ -17,6 +17,10 @@ define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, 
 ; GCN-NEXT:    s_mov_b32 s95, 0xe8f000
 ; GCN-NEXT:    s_add_u32 s92, s92, s11
 ; GCN-NEXT:    s_addc_u32 s93, s93, 0
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:11]
@@ -219,8 +223,12 @@ define amdgpu_kernel void @spill_sgprs_to_multiple_vgprs(ptr addrspace(1) %out, 
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_lg_u32 s0, s1
-; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
+; GCN-NEXT:    s_cmp_eq_u32 s0, s1
+; GCN-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GCN-NEXT:    s_mov_b64 s[2:3], -1
+; GCN-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GCN-NEXT:    s_cbranch_vccnz .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[92:95], 0 offset:4 ; 4-byte Folded Reload
@@ -478,6 +486,10 @@ define amdgpu_kernel void @split_sgpr_spill_2_vgprs(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    s_mov_b32 s55, 0xe8f000
 ; GCN-NEXT:    s_add_u32 s52, s52, s11
 ; GCN-NEXT:    s_addc_u32 s53, s53, 0
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s[4:19]
@@ -581,8 +593,12 @@ define amdgpu_kernel void @split_sgpr_spill_2_vgprs(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    s_mov_b64 exec, s[28:29]
 ; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_lg_u32 s0, s1
-; GCN-NEXT:    s_cbranch_scc1 .LBB1_2
+; GCN-NEXT:    s_cmp_eq_u32 s0, s1
+; GCN-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GCN-NEXT:    s_mov_b64 s[2:3], -1
+; GCN-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GCN-NEXT:    s_cbranch_vccnz .LBB1_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_or_saveexec_b64 s[28:29], -1
 ; GCN-NEXT:    buffer_load_dword v0, off, s[52:55], 0 ; 4-byte Folded Reload
@@ -721,6 +737,10 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    s_mov_b32 s55, 0xe8f000
 ; GCN-NEXT:    s_add_u32 s52, s52, s11
 ; GCN-NEXT:    s_addc_u32 s53, s53, 0
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0xb
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
@@ -825,8 +845,12 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_lg_u32 s0, s1
-; GCN-NEXT:    s_cbranch_scc1 .LBB2_2
+; GCN-NEXT:    s_cmp_eq_u32 s0, s1
+; GCN-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GCN-NEXT:    s_mov_b64 s[2:3], -1
+; GCN-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GCN-NEXT:    s_cbranch_vccnz .LBB2_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; GCN-NEXT:    buffer_load_dword v31, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload
@@ -958,6 +982,8 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
 ; GCN-NEXT:    s_add_u32 s52, s52, s11
 ; GCN-NEXT:    s_addc_u32 s53, s53, 0
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x9
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    ;;#ASMSTART
@@ -1061,8 +1087,12 @@ define amdgpu_kernel void @no_vgprs_last_sgpr_spill_live_v0(i32 %in) #1 {
 ; GCN-NEXT:    s_mov_b64 exec, s[34:35]
 ; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_lg_u32 s0, s1
-; GCN-NEXT:    s_cbranch_scc1 .LBB3_2
+; GCN-NEXT:    s_cmp_eq_u32 s0, s1
+; GCN-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GCN-NEXT:    s_mov_b64 s[2:3], -1
+; GCN-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GCN-NEXT:    s_cbranch_vccnz .LBB3_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
 ; GCN-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; GCN-NEXT:    buffer_load_dword v31, off, s[52:55], 0 offset:4 ; 4-byte Folded Reload

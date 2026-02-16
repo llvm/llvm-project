@@ -6,7 +6,9 @@ define amdgpu_kernel void @single_atomic_rmw(ptr addrspace(1) %ptr) {
 ; GFX1250-LABEL: single_atomic_rmw:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -31,7 +33,9 @@ define amdgpu_kernel void @atomic_rmw_back_to_back(ptr addrspace(1) %ptr) {
 ; GFX1250-LABEL: atomic_rmw_back_to_back:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -80,10 +84,16 @@ define amdgpu_kernel void @atomic_rmw_with_alu(ptr addrspace(1) %ptr, i32 %a, i3
 ; GFX1250-LABEL: atomic_rmw_with_alu:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0xc nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0xc
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8 nv
+; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0xc nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -135,9 +145,13 @@ define amdgpu_kernel void @atomic_rmw_broken_by_global_load(ptr addrspace(1) %pt
 ; GFX1250-LABEL: atomic_rmw_broken_by_global_load:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -187,9 +201,13 @@ define amdgpu_kernel void @atomic_rmw_broken_by_global_store(ptr addrspace(1) %p
 ; GFX1250-LABEL: atomic_rmw_broken_by_global_store:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -242,9 +260,13 @@ define amdgpu_kernel void @atomic_rmw_broken_by_flat_load(ptr addrspace(1) %ptr,
 ; GFX1250-LABEL: atomic_rmw_broken_by_flat_load:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -293,9 +315,13 @@ define amdgpu_kernel void @atomic_rmw_broken_by_flat_store(ptr addrspace(1) %ptr
 ; GFX1250-LABEL: atomic_rmw_broken_by_flat_store:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -347,9 +373,13 @@ define amdgpu_kernel void @atomic_rmw_broken_by_smem_load(ptr addrspace(1) %ptr,
 ; GFX1250-LABEL: atomic_rmw_broken_by_smem_load:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -401,9 +431,13 @@ define amdgpu_kernel void @atomic_rmw_broken_by_atomic_store(ptr addrspace(1) %p
 ; GFX1250-LABEL: atomic_rmw_broken_by_atomic_store:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -462,9 +496,13 @@ define amdgpu_kernel void @atomic_rmw_with_lds_load(ptr addrspace(1) %ptr, ptr a
 ; GFX1250-LABEL: atomic_rmw_with_lds_load:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -514,9 +552,13 @@ define amdgpu_kernel void @atomic_rmw_with_lds_store(ptr addrspace(1) %ptr, ptr 
 ; GFX1250-LABEL: atomic_rmw_with_lds_store:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -568,9 +610,13 @@ define amdgpu_kernel void @atomic_rmw_with_flat_lds_load(ptr addrspace(1) %ptr, 
 ; GFX1250-LABEL: atomic_rmw_with_flat_lds_load:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -593,14 +639,17 @@ define amdgpu_kernel void @atomic_rmw_with_flat_lds_load(ptr addrspace(1) %ptr, 
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 s3, -1
+; GFX1250-NEXT:    s_cmp_lg_u32 s2, s3
+; GFX1250-NEXT:    s_cselect_b32 s5, -1, 0
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], 0
 ; GFX1250-NEXT:    s_mov_b32 s4, s7
 ; GFX1250-NEXT:    s_mov_b64 s[8:9], src_shared_base
 ; GFX1250-NEXT:    s_mov_b32 s3, s9
-; GFX1250-NEXT:    s_mov_b32 s5, -1
-; GFX1250-NEXT:    s_cmp_lg_u32 s2, s5
+; GFX1250-NEXT:    s_and_b32 s8, s5, exec_lo
 ; GFX1250-NEXT:    s_cselect_b32 s4, s3, s4
 ; GFX1250-NEXT:    s_mov_b32 s3, s6
+; GFX1250-NEXT:    s_and_b32 s5, s5, exec_lo
 ; GFX1250-NEXT:    s_cselect_b32 s2, s2, s3
 ; GFX1250-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -631,9 +680,13 @@ define amdgpu_kernel void @atomic_rmw_with_flat_lds_store(ptr addrspace(1) %ptr,
 ; GFX1250-LABEL: atomic_rmw_with_flat_lds_store:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -656,14 +709,17 @@ define amdgpu_kernel void @atomic_rmw_with_flat_lds_store(ptr addrspace(1) %ptr,
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 s3, -1
+; GFX1250-NEXT:    s_cmp_lg_u32 s2, s3
+; GFX1250-NEXT:    s_cselect_b32 s5, -1, 0
 ; GFX1250-NEXT:    s_mov_b64 s[6:7], 0
 ; GFX1250-NEXT:    s_mov_b32 s4, s7
 ; GFX1250-NEXT:    s_mov_b64 s[8:9], src_shared_base
 ; GFX1250-NEXT:    s_mov_b32 s3, s9
-; GFX1250-NEXT:    s_mov_b32 s5, -1
-; GFX1250-NEXT:    s_cmp_lg_u32 s2, s5
+; GFX1250-NEXT:    s_and_b32 s8, s5, exec_lo
 ; GFX1250-NEXT:    s_cselect_b32 s4, s3, s4
 ; GFX1250-NEXT:    s_mov_b32 s3, s6
+; GFX1250-NEXT:    s_and_b32 s5, s5, exec_lo
 ; GFX1250-NEXT:    s_cselect_b32 s2, s2, s3
 ; GFX1250-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
@@ -698,11 +754,17 @@ define amdgpu_kernel void @atomic_rmw_borken_by_async_lds_copy(ptr addrspace(1) 
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_mov_b64 s[2:3], s[4:5]
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[2:3], 0x8 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[2:3], 0x10 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0
-; GFX1250-NEXT:    s_load_b64 s[4:5], s[2:3], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[2:3], 0x0 nv
+; GFX1250-NEXT:    s_load_b64 s[4:5], s[2:3], 0x8 nv
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_load_b32 s2, s[2:3], 0x10
+; GFX1250-NEXT:    s_load_b32 s2, s[2:3], 0x10 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -758,9 +820,13 @@ define amdgpu_kernel void @multiple_atomic_rmw_blocks(ptr addrspace(1) %ptr1, pt
 ; GFX1250-LABEL: multiple_atomic_rmw_blocks:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -822,7 +888,9 @@ define amdgpu_kernel void @different_atomic_ops(ptr addrspace(1) %ptr) {
 ; GFX1250-LABEL: different_atomic_ops:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -883,9 +951,13 @@ define amdgpu_kernel void @atomic_rmw_across_basic_blocks(ptr addrspace(1) %ptr,
 ; GFX1250-LABEL: atomic_rmw_across_basic_blocks:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8 nv
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8 nv
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
 ; GFX1250-NEXT:    v_writelane_b32 v2, s4, 0
@@ -917,8 +989,13 @@ define amdgpu_kernel void @atomic_rmw_across_basic_blocks(ptr addrspace(1) %ptr,
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s1, 0
-; GFX1250-NEXT:    s_cmp_lg_u32 s0, s1
-; GFX1250-NEXT:    s_cbranch_scc1 .LBB16_2
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_cmp_eq_u32 s0, s1
+; GFX1250-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX1250-NEXT:    s_mov_b32 s1, -1
+; GFX1250-NEXT:    s_xor_b32 s0, s0, s1
+; GFX1250-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
+; GFX1250-NEXT:    s_cbranch_vccnz .LBB16_2
 ; GFX1250-NEXT:  ; %bb.1: ; %then
 ; GFX1250-NEXT:    s_or_saveexec_b32 s6, -1
 ; GFX1250-NEXT:    scratch_load_b32 v2, off, off nv ; 4-byte Folded Reload
@@ -963,8 +1040,11 @@ define amdgpu_kernel void @atomic_rmw_in_loop(ptr addrspace(1) %ptr, i32 %n) {
 ; GFX1250-LABEL: atomic_rmw_in_loop:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8 nv
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8 nv
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_writelane_b32 v2, s2, 0
@@ -1011,14 +1091,17 @@ define amdgpu_kernel void @atomic_rmw_in_loop(ptr addrspace(1) %ptr, i32 %n) {
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 s2, 1
 ; GFX1250-NEXT:    s_add_co_i32 s0, s0, s2
-; GFX1250-NEXT:    s_cmp_lt_u32 s0, s1
+; GFX1250-NEXT:    s_cmp_ge_u32 s0, s1
+; GFX1250-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX1250-NEXT:    s_mov_b32 s2, -1
+; GFX1250-NEXT:    s_xor_b32 s1, s1, s2
+; GFX1250-NEXT:    s_and_b32 vcc_lo, exec_lo, s1
 ; GFX1250-NEXT:    v_writelane_b32 v2, s0, 3
-; GFX1250-NEXT:    s_mov_b32 s6, exec_lo
-; GFX1250-NEXT:    s_mov_b32 exec_lo, -1
+; GFX1250-NEXT:    s_or_saveexec_b32 s6, -1
 ; GFX1250-NEXT:    scratch_store_b32 off, v2, off nv ; 4-byte Folded Spill
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s6
-; GFX1250-NEXT:    s_cbranch_scc1 .LBB17_1
+; GFX1250-NEXT:    s_cbranch_vccnz .LBB17_1
 ; GFX1250-NEXT:  ; %bb.2: ; %exit
 ; GFX1250-NEXT:    s_endpgm
 entry:
@@ -1043,8 +1126,11 @@ define amdgpu_kernel void @atomic_rmw_with_branch(ptr addrspace(1) %ptr, i32 %co
 ; GFX1250-LABEL: atomic_rmw_with_branch:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x8 nv
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_load_b32 s1, s[4:5], 0x8 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane
@@ -1089,9 +1175,8 @@ define amdgpu_kernel void @atomic_rmw_with_branch(ptr addrspace(1) %ptr, i32 %co
 ; GFX1250-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_readlane_b32 s0, v2, 2
-; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX1250-NEXT:    s_mov_b32 s0, 1
-; GFX1250-NEXT:    v_cmp_ne_u32_e64 s0, v0, s0
+; GFX1250-NEXT:    s_mov_b32 s1, -1
+; GFX1250-NEXT:    s_xor_b32 s0, s0, s1
 ; GFX1250-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_vccnz .LBB18_4
 ; GFX1250-NEXT:  ; %bb.2: ; %bb1
@@ -1192,7 +1277,9 @@ define amdgpu_kernel void @atomic_rmw_fallthrough(ptr addrspace(1) %ptr) {
 ; GFX1250-LABEL: atomic_rmw_fallthrough:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_mov_b64 s[2:3], s[0:1]
 ; GFX1250-NEXT:    ; implicit-def: $vgpr2 : SGPR spill to VGPR lane

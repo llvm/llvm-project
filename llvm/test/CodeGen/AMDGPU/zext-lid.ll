@@ -2,7 +2,7 @@
 ; RUN: llc -O0 -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}zext_grp_size_128:
-; GCN-NOT: and_b32
+; O2-NOT: and_b32
 define amdgpu_kernel void @zext_grp_size_128(ptr addrspace(1) nocapture %arg) #0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -20,7 +20,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}zext_grp_size_32x4x1:
-; GCN-NOT: and_b32
+; O2-NOT: and_b32
 define amdgpu_kernel void @zext_grp_size_32x4x1(ptr addrspace(1) nocapture %arg) #0 !reqd_work_group_size !0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -38,7 +38,7 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}zext_grp_size_1x1x1:
-; GCN-NOT: and_b32
+; O2-NOT: and_b32
 
 ; When EarlyCSE is not run this call produces a range max with 0 active bits,
 ; which is a special case as an AssertZext from width 0 is invalid.
@@ -50,7 +50,7 @@ define amdgpu_kernel void @zext_grp_size_1x1x1(ptr addrspace(1) nocapture %arg) 
 }
 
 ; GCN-LABEL: {{^}}zext_grp_size_512:
-; GCN-NOT: and_b32
+; O2-NOT: and_b32
 define amdgpu_kernel void @zext_grp_size_512(ptr addrspace(1) nocapture %arg) #1 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
