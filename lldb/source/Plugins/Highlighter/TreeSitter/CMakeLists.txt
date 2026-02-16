@@ -29,6 +29,9 @@ function(add_tree_sitter_grammar name source_dir binary_dir)
   target_compile_options(${name} PRIVATE
       "-Wno-everything"
   )
+  target_include_directories(${name} PRIVATE
+    ${binary_dir}/src
+  )
 
   file(READ ${TreeSitter_SOURCE_DIR}/highlights.scm HIGHLIGHT_QUERY)
   configure_file(
