@@ -165,6 +165,11 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
             args.getLastArg(clang::options::OPT_split_dwarf_output))
       opts.SplitDwarfOutput = a->getValue();
   }
+
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_dwarf_debug_flags))
+    opts.DwarfDebugFlags = arg->getValue();
+
   return true;
 }
 

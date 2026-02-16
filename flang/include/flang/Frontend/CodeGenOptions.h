@@ -73,6 +73,9 @@ public:
   /// The string containing the commandline for the llvm.commandline metadata.
   std::optional<std::string> RecordCommandLine;
 
+  /// The string to append to DWARF producer as debug flags.
+  std::string DwarfDebugFlags;
+
   /// The name of the file to which the backend should save YAML optimization
   /// records.
   std::string OptRecordFile;
