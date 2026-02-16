@@ -53,7 +53,7 @@ define i16 @reduction_or_trunc(ptr noalias nocapture %ptr) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i16> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x i8], ptr [[PTR:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP2]] = or <8 x i16> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -95,7 +95,7 @@ define i16 @reduction_xor_trunc(ptr noalias nocapture %ptr) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i16> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x i8], ptr [[PTR:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP2]] = xor <8 x i16> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -218,7 +218,7 @@ define i16 @reduction_smax_trunc(ptr noalias nocapture %ptr) {
 ; CHECK-NEXT:    [[SUM_02P:%.*]] = phi i32 [ [[MIN:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[SUM_02:%.*]] = and i32 [[SUM_02P]], 65535
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[IV]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i8], ptr [[PTR:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[EXT:%.*]] = sext i16 [[LOAD]] to i32
 ; CHECK-NEXT:    [[MIN]] = call i32 @llvm.smax.i32(i32 [[SUM_02]], i32 [[EXT]])
@@ -259,7 +259,7 @@ define i16 @reduction_umax_trunc(ptr noalias nocapture %ptr) {
 ; CHECK-NEXT:    [[SUM_02P:%.*]] = phi i32 [ [[MIN:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[SUM_02:%.*]] = and i32 [[SUM_02P]], 65535
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[IV]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x i8], ptr [[PTR:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i16, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i16 [[LOAD]] to i32
 ; CHECK-NEXT:    [[MIN]] = call i32 @llvm.umax.i32(i32 [[SUM_02]], i32 [[EXT]])
@@ -302,7 +302,7 @@ define i32 @reduction_and_or(i16 %a, i32 %b, ptr %src) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ <i32 10, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[INDEX]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[SRC:%.*]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2]] = or <8 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -317,7 +317,7 @@ define i32 @reduction_and_or(i16 %a, i32 %b, ptr %src) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 992, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OR67:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[OR:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[IV]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[TMP5]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[OR]] = or i32 [[OR67]], [[L]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1

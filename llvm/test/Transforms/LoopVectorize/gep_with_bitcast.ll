@@ -13,7 +13,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; CHECK-LABEL: @foo
 ; CHECK: vector.body
 ; CHECK:  %[[IV:.+]] = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:  %[[v0:.+]] = getelementptr inbounds ptr, ptr %in, i64 %[[IV]]
+; CHECK:  %[[v0:.+]] = getelementptr inbounds [8 x i8], ptr %in, i64 %[[IV]]
 ; CHECK:  %wide.load = load <4 x i64>, ptr %[[v0]], align 8
 ; CHECK:  icmp eq <4 x i64> %wide.load, zeroinitializer
 ; CHECK:  br i1

@@ -3487,6 +3487,24 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         BackIndices, GEP.getNoWrapFlags());
   }
 
+  // Canonicalize gep %T to gep [sizeof(%T) x i8]:
+  auto IsCanonicalType = [](Type *Ty) {
+    if (auto *AT = dyn_cast<ArrayType>(Ty))
+      Ty = AT->getElementType();
+    return Ty->isIntegerTy(8);
+  };
+  if (Indices.size() == 1 && !IsCanonicalType(GEPEltType)) {
+    TypeSize Scale = DL.getTypeAllocSize(GEPEltType);
+    assert(!Scale.isScalable() && "Should have been handled earlier");
+    Type *NewElemTy = Builder.getInt8Ty();
+    if (Scale.getFixedValue() != 1)
+      NewElemTy = ArrayType::get(NewElemTy, Scale.getFixedValue());
+    GEP.setSourceElementType(NewElemTy);
+    GEP.setResultElementType(NewElemTy);
+    // Don't bother revisiting the GEP after this change.
+    MadeIRChange = true;
+  }
+
   // Check to see if the inputs to the PHI node are getelementptr instructions.
   if (auto *PN = dyn_cast<PHINode>(PtrOp)) {
     if (Value *NewPtrOp = foldGEPOfPhi(GEP, PN, Builder))
