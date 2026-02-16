@@ -29,6 +29,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
@@ -85,6 +86,9 @@ public:
 
   // run - Output the register file description.
   TableGenOutputFiles run(StringRef FilenamePrefix);
+
+  template <typename InfoTy, typename FnTy>
+  Printable printByHwMode(const InfoByHwMode<InfoTy> &Info, FnTy Func);
 
   void debugDump(raw_ostream &OS);
 
@@ -1877,24 +1881,32 @@ TableGenOutputFiles RegisterInfoEmitter::run(StringRef FilenamePrefix) {
            {"TargetDesc.inc", TargetDesc}}};
 }
 
-void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
-  const CodeGenHwModes &CGH = Target.getHwModes();
-  unsigned NumModes = CGH.getNumModeIds();
-  auto getModeName = [CGH](unsigned M) -> StringRef {
-    if (M == 0)
-      return "Default";
-    return CGH.getMode(M).Name;
-  };
+template <typename InfoTy, typename FnTy>
+Printable RegisterInfoEmitter::printByHwMode(const InfoByHwMode<InfoTy> &Info,
+                                             FnTy Func) {
+  return Printable([&](raw_ostream &OS) {
+    const CodeGenHwModes &CGH = Target.getHwModes();
 
+    OS << "{";
+    for (unsigned M = 0, E = CGH.getNumModeIds(); M != E; ++M)
+      OS << ' ' << (M ? CGH.getModeName(M, true) : "Default") << ':'
+         << Func(Info.get(M));
+    OS << " }";
+  });
+}
+
+void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
   for (const CodeGenRegisterClass &RC : RegBank.getRegClasses()) {
     OS << "RegisterClass " << RC.getName() << ":\n";
-    OS << "\tSpillSize: {";
-    for (unsigned M = 0; M != NumModes; ++M)
-      OS << ' ' << getModeName(M) << ':' << RC.RSI.get(M).SpillSize;
-    OS << " }\n\tSpillAlignment: {";
-    for (unsigned M = 0; M != NumModes; ++M)
-      OS << ' ' << getModeName(M) << ':' << RC.RSI.get(M).SpillAlignment;
-    OS << " }\n\tNumRegs: " << RC.getMembers().size() << '\n';
+    OS << "\tSpillSize: " << printByHwMode(RC.RSI, [](const RegSizeInfo &Info) {
+      return Info.SpillSize;
+    }) << '\n';
+    OS << "\tSpillAlignment: "
+       << printByHwMode(
+              RC.RSI,
+              [](const RegSizeInfo &Info) { return Info.SpillAlignment; })
+       << '\n';
+    OS << "\tNumRegs: " << RC.getMembers().size() << '\n';
     OS << "\tLaneMask: " << PrintLaneMask(RC.LaneMask) << '\n';
     OS << "\tHasDisjunctSubRegs: " << RC.HasDisjunctSubRegs << '\n';
     OS << "\tCoveredBySubRegs: " << RC.CoveredBySubRegs << '\n';
@@ -1925,13 +1937,12 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     OS << "SubRegIndex " << SRI.getName() << ":\n";
     OS << "\tLaneMask: " << PrintLaneMask(SRI.LaneMask) << '\n';
     OS << "\tAllSuperRegsCovered: " << SRI.AllSuperRegsCovered << '\n';
-    OS << "\tOffset: {";
-    for (unsigned M = 0; M != NumModes; ++M)
-      OS << ' ' << getModeName(M) << ':' << SRI.Range.get(M).Offset;
-    OS << " }\n\tSize: {";
-    for (unsigned M = 0; M != NumModes; ++M)
-      OS << ' ' << getModeName(M) << ':' << SRI.Range.get(M).Size;
-    OS << " }\n";
+    OS << "\tOffset: " << printByHwMode(SRI.Range, [](const SubRegRange &Info) {
+      return Info.Offset;
+    }) << '\n';
+    OS << "\tSize: " << printByHwMode(SRI.Range, [](const SubRegRange &Info) {
+      return Info.Size;
+    }) << '\n';
   }
 
   for (const CodeGenRegister &R : RegBank.getRegisters()) {

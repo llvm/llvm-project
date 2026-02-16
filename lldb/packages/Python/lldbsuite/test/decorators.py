@@ -446,7 +446,7 @@ def unicode_test(func):
     """Decorate the item as a test which requires Unicode to be enabled.
 
     lldb checks the value of the `LANG` environment variable for the substring "utf-8"
-    to determine if the terminal supports Unicode (except on Windows, were we assume
+    to determine if the terminal supports Unicode (except on Windows, where we assume
     it's always supported).
     This decorator sets LANG to `utf-8` before running the test and resets it to its
     previous value afterwards.

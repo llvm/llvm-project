@@ -22,9 +22,9 @@ def NoDefaultMethod : DialectInterface<"NoDefaultMethod"> {
 
 // DECL:   class NoDefaultMethod : public {{.*}}DialectInterface::Base<NoDefaultMethod>
 // DECL:   public:
-// DECL:   NoDefaultMethod(::mlir::Dialect *dialect) : Base(dialect) {}
 // DECL:   virtual bool isExampleDialect() const {}
 // DECL:   virtual unsigned supportSecondMethod(::mlir::Type type) const {}
+// DECL:   NoDefaultMethod(::mlir::Dialect *dialect) : Base(dialect) {}
 
 def WithDefaultMethodInterface : DialectInterface<"WithDefaultMethodInterface"> {
   let description = [{
@@ -73,3 +73,24 @@ def OnlyDeclarationInterfaceWithExtraDecls : DialectInterface<"OnlyDeclarationIn
 // DECL:   class OnlyDeclarationInterfaceWithExtraDecls : public {{.*}}DialectInterface::Base<OnlyDeclarationInterfaceWithExtraDecls>
 // DECL:   virtual void exampleMethodDeclaration(::mlir::Type type) const;
 // DECL:   using DeclType = int;
+
+def PureVirtualInterface : DialectInterface<"PureVirtualInterface"> {
+  let description = [{
+    This is an example dialect interface with pure virtual methods.
+  }];
+
+  let cppNamespace = "::mlir::example";
+
+  let methods = [
+      PureVirtualInterfaceMethod<
+        "Check if it's an example dialect", "bool", "isExampleDialect",
+        (ins)
+      >
+  ];
+}
+
+// DECL:   class PureVirtualInterface : public {{.*}}DialectInterface::Base<PureVirtualInterface>
+// DECL:   public:
+// DECL:   virtual bool isExampleDialect() const = 0;
+// DECL:   protected:
+// DECL-NEXT:   PureVirtualInterface(::mlir::Dialect *dialect) : Base(dialect) {}
