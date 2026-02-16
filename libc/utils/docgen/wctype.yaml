@@ -1,36 +1,91 @@
 functions:
   iswalnum:
     c-definition: 7.32.2.1.1
+    in-latest-posix: ''
+  iswalnum_l:
+    in-latest-posix: ''
   iswalpha:
     c-definition: 7.32.2.1.2
+    in-latest-posix: ''
+  iswalpha_l:
+    in-latest-posix: ''
   iswblank:
+    c-definition: 7.32.2.1.3
+    in-latest-posix: ''
+  iswblank_l:
+    in-latest-posix: ''
+  iswcntrl:
     c-definition: 7.32.2.1.4
+    in-latest-posix: ''
+  iswcntrl_l:
+    in-latest-posix: ''
   iswctype:
     c-definition: 7.32.2.2.1
+    in-latest-posix: ''
+  iswctype_l:
+    in-latest-posix: ''
   iswdigit:
     c-definition: 7.32.2.1.5
+    in-latest-posix: ''
+  iswdigit_l:
+    in-latest-posix: ''
   iswgraph:
     c-definition: 7.32.2.1.6
+    in-latest-posix: ''
+  iswgraph_l:
+    in-latest-posix: ''
   iswlower:
     c-definition: 7.32.2.1.7
+    in-latest-posix: ''
+  iswlower_l:
+    in-latest-posix: ''
   iswprint:
     c-definition: 7.32.2.1.8
+    in-latest-posix: ''
+  iswprint_l:
+    in-latest-posix: ''
   iswpunct:
     c-definition: 7.32.2.1.9
+    in-latest-posix: ''
+  iswpunct_l:
+    in-latest-posix: ''
   iswspace:
     c-definition: 7.32.2.1.10
+    in-latest-posix: ''
+  iswspace_l:
+    in-latest-posix: ''
   iswupper:
     c-definition: 7.32.2.1.11
+    in-latest-posix: ''
+  iswupper_l:
+    in-latest-posix: ''
   iswxdigit:
     c-definition: 7.32.2.1.12
+    in-latest-posix: ''
+  iswxdigit_l:
+    in-latest-posix: ''
   towctrans:
     c-definition: 7.32.3.2.1
+    in-latest-posix: ''
+  towctrans_l:
+    in-latest-posix: ''
   towlower:
     c-definition: 7.32.3.1.1
+    in-latest-posix: ''
+  towlower_l:
+    in-latest-posix: ''
   towupper:
     c-definition: 7.32.3.1.2
+    in-latest-posix: ''
+  towupper_l:
+    in-latest-posix: ''
   wctrans:
     c-definition: 7.32.3.2.2
+    in-latest-posix: ''
+  wctrans_l:
+    in-latest-posix: ''
   wctype:
     c-definition: 7.32.2.2.2
-
+    in-latest-posix: ''
+  wctype_l:
+    in-latest-posix: ''
