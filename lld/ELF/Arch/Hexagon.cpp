@@ -219,6 +219,7 @@ void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_HEX_IE_16_X:
     case R_HEX_IE_HI16:
     case R_HEX_IE_LO16:
+      // There is no IE to LE optimization.
       rs.handleTlsIe<false>(R_GOT, type, offset, addend, sym);
       continue;
     case R_HEX_IE_GOT_11_X:
