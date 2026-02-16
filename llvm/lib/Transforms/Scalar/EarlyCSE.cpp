@@ -16,6 +16,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -31,6 +32,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -1588,6 +1590,67 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         if (InVal.IsLoad)
           if (auto *I = dyn_cast<Instruction>(Op))
             combineMetadataForCSE(I, &Inst, false);
+
+        // If the load has align and noundef metadata, preserve it via an
+        // alignment assumption. Note that this doesn't use salavageKnowledge,
+        // as we need to create the assumption for the value we replaced the
+        // load with.
+        if (auto *AlignMD = Inst.getMetadata(LLVMContext::MD_align)) {
+          if (Inst.hasMetadata(LLVMContext::MD_noundef) ||
+              programUndefinedIfPoison(&Inst)) {
+            Inst.setMetadata(LLVMContext::MD_align, nullptr);
+            auto *B = mdconst::extract<ConstantInt>(AlignMD->getOperand(0));
+            auto KB = computeKnownBits(Op, SQ.DL);
+            unsigned AlignFromKB = 1 << KB.countMinTrailingZeros();
+            if (AlignFromKB < B->getZExtValue()) {
+              SetVector<const Value *> WorkList;
+              bool AlignNeeded = false;
+              for (const User *U : Inst.users())
+                if (auto *I = dyn_cast<Instruction>(U))
+                  WorkList.insert(I);
+
+              for (unsigned I = 0; I != WorkList.size(); ++I) {
+                auto *Curr = WorkList[I];
+                if (auto *LI = dyn_cast<LoadInst>(Curr)) {
+                  if (LI->getAlign().value() < B->getZExtValue()) {
+                    AlignNeeded = true;
+                    break;
+                  }
+                  continue;
+                }
+                if (auto *SI = dyn_cast<StoreInst>(Curr)) {
+                  if (SI->getAlign().value() < B->getZExtValue()) {
+                    AlignNeeded = true;
+                    break;
+                  }
+                  continue;
+                }
+                if (isa<ReturnInst>(Curr)) {
+                  AlignNeeded = true;
+                  break;
+                }
+                if (isa<ICmpInst>(Curr) &&
+                    !isa<Constant>(cast<Instruction>(Curr)->getOperand(0)) &&
+                    !isa<Constant>(cast<Instruction>(Curr)->getOperand(1))) {
+                  AlignNeeded = true;
+                  break;
+                }
+                if (WorkList.size() > 16) {
+                  AlignNeeded = true;
+                  break;
+                }
+
+                for (const User *U : Curr->users())
+                  WorkList.insert(cast<Instruction>(U));
+              }
+              if (AlignNeeded) {
+                IRBuilder Builder(&Inst);
+                Builder.CreateAlignmentAssumption(SQ.DL, Op, B);
+              }
+            }
+          }
+        }
+
         if (!Inst.use_empty())
           Inst.replaceAllUsesWith(Op);
         salvageKnowledge(&Inst, &AC);
