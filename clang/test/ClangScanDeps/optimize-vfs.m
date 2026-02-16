@@ -74,22 +74,22 @@
 [
 {
   "directory": "DIR",
-  "command": "clang -c DIR/0.m -Imodules/A -Imodules/B -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps -ivfsoverlay build/unused-vfs.yaml -ivfsoverlay build/unused2-vfs.yaml -ivfsoverlay build/vfs.yaml",
+  "command": "clang -c DIR/0.m -IDIR/modules/A -IDIR/modules/B -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps -ivfsoverlay build/unused-vfs.yaml -ivfsoverlay build/unused2-vfs.yaml -ivfsoverlay build/vfs.yaml",
   "file": "DIR/0.m"
 },
 {
   "directory": "DIR",
-  "command": "clang -c DIR/A.m -Imodules/A -Imodules/B -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps -ivfsoverlay build/vfs.yaml -ivfsoverlay build/unused-vfs.yaml",
+  "command": "clang -c DIR/A.m -IDIR/modules/A -IDIR/modules/B -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps -ivfsoverlay build/vfs.yaml -ivfsoverlay build/unused-vfs.yaml",
   "file": "DIR/A.m"
 },
 {
   "directory": "DIR",
-  "command": "clang -c DIR/B.m -Imodules/B -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps -ivfsoverlay build/unused-vfs.yaml -ivfsoverlay build/vfs.yaml",
+  "command": "clang -c DIR/B.m -IDIR/modules/B -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps -ivfsoverlay build/unused-vfs.yaml -ivfsoverlay build/vfs.yaml",
   "file": "DIR/B.m"
 },
 {
   "directory": "DIR",
-  "command": "clang -c DIR/C.m -Imodules/A -Imodules/B -Imodules/C -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps -ivfsoverlay build/vfs.yaml -ivfsoverlay build/unused-vfs.yaml",
+  "command": "clang -c DIR/C.m -IDIR/modules/A -IDIR/modules/B -IDIR/modules/C -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps -ivfsoverlay build/vfs.yaml -ivfsoverlay build/unused-vfs.yaml",
   "file": "DIR/C.m"
 }
 ]
