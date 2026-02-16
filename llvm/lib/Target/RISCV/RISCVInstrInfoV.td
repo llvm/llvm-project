@@ -1827,6 +1827,7 @@ foreach n = [1, 2, 4, 8] in {
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVInstructions]
 
+let ElementsDependOn = EltDepsNone in {
 let Predicates = [HasVInstructions] in {
   foreach nfields=2-8 in {
     foreach eew = [8, 16, 32] in {
@@ -1917,6 +1918,7 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
           VSXSEGSchedMC<nfields, 64, isOrdered=1>;
   }
 } // Predicates = [HasVInstructionsI64, IsRV64]
+} // ElementsDependOn = EltDepsNone
 
 include "RISCVInstrInfoVPseudos.td"
 include "RISCVInstrInfoZvfbf.td"
