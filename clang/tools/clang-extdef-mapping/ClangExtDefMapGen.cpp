@@ -17,15 +17,14 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/WithColor.h"
 #include <optional>
-#include <sstream>
 #include <string>
 
 using namespace llvm;
@@ -34,7 +33,7 @@ using namespace clang::cross_tu;
 using namespace clang::tooling;
 
 static cl::OptionCategory
-    ClangExtDefMapGenCategory("clang-extdefmapgen options");
+    ClangExtDefMapGenCategory("clang-extdef-mapping options");
 
 class MapExtDefNamesConsumer : public ASTConsumer {
 public:
@@ -123,7 +122,7 @@ static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
 static IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
 
-IntrusiveRefCntPtr<DiagnosticsEngine>
+static IntrusiveRefCntPtr<DiagnosticsEngine>
 GetDiagnosticsEngine(DiagnosticOptions &DiagOpts) {
   if (Diags) {
     // Call reset to make sure we don't mix errors
@@ -133,7 +132,7 @@ GetDiagnosticsEngine(DiagnosticOptions &DiagOpts) {
 
   TextDiagnosticPrinter *DiagClient =
       new TextDiagnosticPrinter(llvm::errs(), DiagOpts);
-  DiagClient->setPrefix("clang-extdef-mappping");
+  DiagClient->setPrefix("clang-extdef-mapping");
 
   auto DiagEngine = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
       DiagnosticIDs::create(), DiagOpts, DiagClient);
@@ -211,9 +210,9 @@ int main(int argc, const char **argv) {
                          "with compile database or .ast files that are "
                          "created from clang's -emit-ast option.\n";
   auto ExpectedParser = CommonOptionsParser::create(
-      argc, argv, ClangExtDefMapGenCategory, cl::ZeroOrMore, Overview);
+      argc, argv, ClangExtDefMapGenCategory, cl::OneOrMore, Overview);
   if (!ExpectedParser) {
-    llvm::errs() << ExpectedParser.takeError();
+    llvm::WithColor::error() << llvm::toString(ExpectedParser.takeError());
     return 1;
   }
   CommonOptionsParser &OptionsParser = ExpectedParser.get();

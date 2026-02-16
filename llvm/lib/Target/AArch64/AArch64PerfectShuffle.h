@@ -6631,43 +6631,44 @@ inline bool isZIPMask(ArrayRef<int> M, unsigned NumElts,
   if (NumElts % 2 != 0)
     return false;
 
-  // "Variant" refers to the distinction bwetween zip1 and zip2, while
-  // "Order" refers to sequence of input registers (matching vs flipped).
-  bool Variant0Order0 = true; // WhichResultOut = 0, OperandOrderOut = 0
-  bool Variant1Order0 = true; // WhichResultOut = 1, OperandOrderOut = 0
-  bool Variant0Order1 = true; // WhichResultOut = 0, OperandOrderOut = 1
-  bool Variant1Order1 = true; // WhichResultOut = 1, OperandOrderOut = 1
+  // "Result" corresponds to "WhichResultOut", selecting between zip1 and zip2.
+  // "Order" corresponds to "OperandOrderOut", selecting the order of operands
+  // for the instruction (flipped or not).
+  bool Result0Order0 = true; // WhichResultOut = 0, OperandOrderOut = 0
+  bool Result1Order0 = true; // WhichResultOut = 1, OperandOrderOut = 0
+  bool Result0Order1 = true; // WhichResultOut = 0, OperandOrderOut = 1
+  bool Result1Order1 = true; // WhichResultOut = 1, OperandOrderOut = 1
   // Check all elements match.
   for (unsigned i = 0; i != NumElts; i += 2) {
     if (M[i] >= 0) {
       unsigned EvenElt = (unsigned)M[i];
       if (EvenElt != i / 2)
-        Variant0Order0 = false;
+        Result0Order0 = false;
       if (EvenElt != NumElts / 2 + i / 2)
-        Variant1Order0 = false;
+        Result1Order0 = false;
       if (EvenElt != NumElts + i / 2)
-        Variant0Order1 = false;
+        Result0Order1 = false;
       if (EvenElt != NumElts + NumElts / 2 + i / 2)
-        Variant1Order1 = false;
+        Result1Order1 = false;
     }
     if (M[i + 1] >= 0) {
       unsigned OddElt = (unsigned)M[i + 1];
       if (OddElt != NumElts + i / 2)
-        Variant0Order0 = false;
+        Result0Order0 = false;
       if (OddElt != NumElts + NumElts / 2 + i / 2)
-        Variant1Order0 = false;
+        Result1Order0 = false;
       if (OddElt != i / 2)
-        Variant0Order1 = false;
+        Result0Order1 = false;
       if (OddElt != NumElts / 2 + i / 2)
-        Variant1Order1 = false;
+        Result1Order1 = false;
     }
   }
 
-  if (Variant0Order0 + Variant1Order0 + Variant0Order1 + Variant1Order1 != 1)
+  if (Result0Order0 + Result1Order0 + Result0Order1 + Result1Order1 != 1)
     return false;
 
-  WhichResultOut = (Variant0Order0 || Variant0Order1) ? 0 : 1;
-  OperandOrderOut = (Variant0Order0 || Variant1Order0) ? 0 : 1;
+  WhichResultOut = (Result0Order0 || Result0Order1) ? 0 : 1;
+  OperandOrderOut = (Result0Order0 || Result1Order0) ? 0 : 1;
   return true;
 }
 

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Library to parse JUnit XML files and return a markdown report."""
 
-from typing import TypedDict, Optional
+from typing import TypedDict
 import platform
 
 from junitparser import JUnitXml, Failure
@@ -11,12 +11,10 @@ from junitparser import JUnitXml, Failure
 
 # This data structure should match the definition in llvm-zorg in
 # premerge/advisor/advisor_lib.py
-# TODO(boomanaiden154): Drop the Optional here and switch to str | None when
-# we require Python 3.10.
 class FailureExplanation(TypedDict):
     name: str
     explained: bool
-    reason: Optional[str]
+    reason: str | None
 
 
 SEE_BUILD_FILE_STR = "Download the build's log file to see the details."
@@ -158,6 +156,17 @@ def get_failures(junit_objects) -> dict[str, list[tuple[str, str]]]:
     return failures
 
 
+def are_all_failures_explained(
+    failures: list[tuple[str, str]], failure_explanations: dict[str, FailureExplanation]
+) -> bool:
+    for failed_action, _ in failures:
+        if failed_action not in failure_explanations:
+            return False
+        else:
+            assert failure_explanations[failed_action]["explained"]
+    return True
+
+
 # Set size_limit to limit the byte size of the report. The default is 1MB as this
 # is the most that can be put into an annotation. If the generated report exceeds
 # this limit and failures are listed, it will be generated again without failures
@@ -172,7 +181,7 @@ def generate_report(
     size_limit=1024 * 1024,
     list_failures=True,
     failure_explanations_list: list[FailureExplanation] = [],
-):
+) -> tuple[str, bool]:
     failures = get_failures(junit_objects)
     tests_run = 0
     tests_skipped = 0
@@ -183,6 +192,12 @@ def generate_report(
         if not failure_explanation["explained"]:
             continue
         failure_explanations[failure_explanation["name"]] = failure_explanation
+    all_failures_explained = True
+    if failures:
+        for _, failures_list in failures.items():
+            all_failures_explained &= are_all_failures_explained(
+                failures_list, failure_explanations
+            )
 
     for results in junit_objects:
         for testsuite in results:
@@ -202,7 +217,11 @@ def generate_report(
             )
         else:
             ninja_failures = find_failure_in_ninja_logs(ninja_logs)
+            all_failures_explained &= are_all_failures_explained(
+                ninja_failures, failure_explanations
+            )
             if not ninja_failures:
+                all_failures_explained = False
                 report.extend(
                     [
                         "The build failed before running any tests. Detailed "
@@ -229,7 +248,7 @@ def generate_report(
                         UNRELATED_FAILURES_STR,
                     ]
                 )
-        return "\n".join(report)
+        return ("\n".join(report), all_failures_explained)
 
     tests_passed = tests_run - tests_skipped - tests_failed
 
@@ -264,6 +283,7 @@ def generate_report(
         # attention.
         ninja_failures = find_failure_in_ninja_logs(ninja_logs)
         if not ninja_failures:
+            all_failures_explained = False
             report.extend(
                 [
                     "",
@@ -275,6 +295,9 @@ def generate_report(
                 ]
             )
         else:
+            all_failures_explained &= are_all_failures_explained(
+                ninja_failures, failure_explanations
+            )
             report.extend(
                 [
                     "",
@@ -298,11 +321,12 @@ def generate_report(
             title,
             return_code,
             junit_objects,
+            ninja_logs,
             size_limit,
             list_failures=False,
         )
 
-    return report
+    return (report, all_failures_explained)
 
 
 def load_info_from_files(build_log_files):

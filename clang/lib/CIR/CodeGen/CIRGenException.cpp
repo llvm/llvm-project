@@ -13,7 +13,6 @@
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 
-#include "clang/AST/StmtVisitor.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -185,6 +184,18 @@ const EHPersonality &EHPersonality::get(CIRGenFunction &cgf) {
   return get(cgf.cgm, dyn_cast_or_null<FunctionDecl>(fg));
 }
 
+static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
+                                        const EHPersonality &personality) {
+  // Create the personality function type: i32 (...)
+  mlir::Type i32Ty = cgm.getBuilder().getI32Type();
+  auto funcTy = cir::FuncType::get({}, i32Ty, /*isVarArg=*/true);
+
+  cir::FuncOp personalityFn = cgm.createRuntimeFunction(
+      funcTy, personality.personalityFn, mlir::ArrayAttr(), /*isLocal=*/true);
+
+  return personalityFn.getSymName();
+}
+
 void CIRGenFunction::emitCXXThrowExpr(const CXXThrowExpr *e) {
   const llvm::Triple &triple = getTarget().getTriple();
   if (cgm.getLangOpts().OpenMPIsTargetDevice &&
@@ -232,6 +243,34 @@ void CIRGenFunction::emitAnyExprToExn(const Expr *e, Address addr) {
   assert(!cir::MissingFeatures::ehCleanupScope());
 }
 
+void CIRGenFunction::addCatchHandlerAttr(
+    const CXXCatchStmt *catchStmt, SmallVector<mlir::Attribute> &handlerAttrs) {
+  mlir::Location catchLoc = getLoc(catchStmt->getBeginLoc());
+
+  if (catchStmt->getExceptionDecl()) {
+    // FIXME: Dropping the reference type on the type into makes it
+    // impossible to correctly implement catch-by-reference
+    // semantics for pointers.  Unfortunately, this is what all
+    // existing compilers do, and it's not clear that the standard
+    // personality routine is capable of doing this right.  See C++ DR 388:
+    //   http://www.open-std.org/jtc1/sc22/wg21/docs/cwg_active.html#388
+    Qualifiers caughtTypeQuals;
+    QualType caughtType = cgm.getASTContext().getUnqualifiedArrayType(
+        catchStmt->getCaughtType().getNonReferenceType(), caughtTypeQuals);
+    if (caughtType->isObjCObjectPointerType()) {
+      cgm.errorNYI("addCatchHandlerAttr: caughtType ObjCObjectPointerType");
+      return;
+    }
+
+    CatchTypeInfo typeInfo = cgm.getCXXABI().getAddrOfCXXCatchHandlerType(
+        catchLoc, caughtType, catchStmt->getCaughtType());
+    handlerAttrs.push_back(typeInfo.rtti);
+  } else {
+    // No exception decl indicates '...', a catch-all.
+    handlerAttrs.push_back(cir::CatchAllAttr::get(&getMLIRContext()));
+  }
+}
+
 mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
   if (s.getTryBlock()->body_empty())
     return mlir::LogicalResult::success();
@@ -246,179 +285,92 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
         scopeIP = builder.saveInsertionPoint();
       });
 
+  // Set personality function if not already set
+  auto funcOp = mlir::cast<cir::FuncOp>(curFn);
+  if (!funcOp.getPersonality())
+    funcOp.setPersonality(getPersonalityFn(cgm, EHPersonality::get(*this)));
+
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.restoreInsertionPoint(scopeIP);
-  mlir::LogicalResult result = emitCXXTryStmtUnderScope(s);
-  cir::YieldOp::create(builder, loc);
-  return result;
-}
 
-mlir::LogicalResult
-CIRGenFunction::emitCXXTryStmtUnderScope(const CXXTryStmt &s) {
   const llvm::Triple &t = getTarget().getTriple();
   // If we encounter a try statement on in an OpenMP target region offloaded to
   // a GPU, we treat it as a basic block.
   const bool isTargetDevice =
       (cgm.getLangOpts().OpenMPIsTargetDevice && (t.isNVPTX() || t.isAMDGCN()));
   if (isTargetDevice) {
-    cgm.errorNYI(
-        "emitCXXTryStmtUnderScope: OpenMP target region offloaded to GPU");
+    cgm.errorNYI("emitCXXTryStmt: OpenMP target region offloaded to GPU");
     return mlir::success();
   }
 
-  unsigned numHandlers = s.getNumHandlers();
   mlir::Location tryLoc = getLoc(s.getBeginLoc());
-  mlir::OpBuilder::InsertPoint beginInsertTryBody;
+  SmallVector<mlir::Attribute> handlerAttrs;
 
-  bool hasCatchAll = false;
-  for (unsigned i = 0; i != numHandlers; ++i) {
-    hasCatchAll |= s.getHandler(i)->getExceptionDecl() == nullptr;
-    if (hasCatchAll)
-      break;
+  CIRGenFunction::LexicalScope tryBodyScope{*this, tryLoc,
+                                            builder.getInsertionBlock()};
+
+  if (getLangOpts().EHAsynch) {
+    cgm.errorNYI("enterCXXTryStmt: EHAsynch");
+    return mlir::failure();
   }
 
-  // Create the scope to represent only the C/C++ `try {}` part. However,
-  // don't populate right away. Create regions for the catch handlers,
-  // but don't emit the handler bodies yet. For now, only make sure the
-  // scope returns the exception information.
+  // Create the try operation.
+  mlir::LogicalResult tryRes = mlir::success();
   auto tryOp = cir::TryOp::create(
       builder, tryLoc,
       /*tryBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        beginInsertTryBody = builder.saveInsertionPoint();
+        if (emitStmt(s.getTryBlock(), /*useCurrentScope=*/true).failed())
+          tryRes = mlir::failure();
+        cir::YieldOp::create(builder, loc);
       },
       /*handlersBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc,
           mlir::OperationState &result) {
         mlir::OpBuilder::InsertionGuard guard(b);
-
-        // We create an extra region for an unwind catch handler in case the
-        // catch-all handler doesn't exists
-        unsigned numRegionsToCreate =
-            hasCatchAll ? numHandlers : numHandlers + 1;
-
-        for (unsigned i = 0; i != numRegionsToCreate; ++i) {
+        bool hasCatchAll = false;
+        unsigned numHandlers = s.getNumHandlers();
+        for (unsigned i = 0; i != numHandlers; ++i) {
+          const CXXCatchStmt *catchStmt = s.getHandler(i);
+          if (!catchStmt->getExceptionDecl())
+            hasCatchAll = true;
           mlir::Region *region = result.addRegion();
           builder.createBlock(region);
+          addCatchHandlerAttr(catchStmt, handlerAttrs);
+        }
+        if (!hasCatchAll) {
+          // Create unwind region.
+          mlir::Region *region = result.addRegion();
+          builder.createBlock(region);
+          cir::ResumeOp::create(builder, loc);
+          handlerAttrs.push_back(cir::UnwindAttr::get(&getMLIRContext()));
         }
       });
 
-  // Finally emit the body for try/catch.
-  {
-    mlir::Location loc = tryOp.getLoc();
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.restoreInsertionPoint(beginInsertTryBody);
-    CIRGenFunction::LexicalScope tryScope{*this, loc,
-                                          builder.getInsertionBlock()};
+  if (tryRes.failed())
+    return mlir::failure();
 
-    tryScope.setAsTry(tryOp);
+  // Add final array of clauses into TryOp.
+  tryOp.setHandlerTypesAttr(
+      mlir::ArrayAttr::get(&getMLIRContext(), handlerAttrs));
 
-    // Attach the basic blocks for the catch regions.
-    enterCXXTryStmt(s, tryOp);
-
-    // Emit the body for the `try {}` part.
-    {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      CIRGenFunction::LexicalScope tryBodyScope{*this, loc,
-                                                builder.getInsertionBlock()};
-      if (emitStmt(s.getTryBlock(), /*useCurrentScope=*/true).failed())
-        return mlir::failure();
-    }
-
-    // Emit catch clauses.
-    exitCXXTryStmt(s);
-  }
-
-  return mlir::success();
-}
-
-void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
-                                     bool isFnTryBlock) {
+  // Emit the catch handler bodies. This has to be done after the try op is
+  // created and in place so that we can find the insertion point for the
+  // catch parameter alloca.
   unsigned numHandlers = s.getNumHandlers();
-  EHCatchScope *catchScope = ehStack.pushCatch(numHandlers);
   for (unsigned i = 0; i != numHandlers; ++i) {
     const CXXCatchStmt *catchStmt = s.getHandler(i);
-    if (catchStmt->getExceptionDecl()) {
-      cgm.errorNYI("enterCXXTryStmt: CatchStmt with ExceptionDecl");
-      return;
-    }
-
-    // No exception decl indicates '...', a catch-all.
     mlir::Region *handler = &tryOp.getHandlerRegions()[i];
-    catchScope->setHandler(i, cgm.getCXXABI().getCatchAllTypeInfo(), handler,
-                           s.getHandler(i));
-
-    // Under async exceptions, catch(...) needs to catch HW exception too
-    // Mark scope with SehTryBegin as a SEH __try scope
-    if (getLangOpts().EHAsynch) {
-      cgm.errorNYI("enterCXXTryStmt: EHAsynch");
-      return;
-    }
-  }
-}
-
-void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
-  unsigned numHandlers = s.getNumHandlers();
-  EHCatchScope &catchScope = cast<EHCatchScope>(*ehStack.begin());
-  assert(catchScope.getNumHandlers() == numHandlers);
-  cir::TryOp tryOp = curLexScope->getTry();
-
-  // If the catch was not required, bail out now.
-  if (!catchScope.mayThrow()) {
-    catchScope.clearHandlerBlocks();
-    ehStack.popCatch();
-
-    // Drop all basic block from all catch regions.
-    SmallVector<mlir::Block *> eraseBlocks;
-    for (mlir::Region &handlerRegion : tryOp.getHandlerRegions()) {
-      if (handlerRegion.empty())
-        continue;
-
-      for (mlir::Block &b : handlerRegion.getBlocks())
-        eraseBlocks.push_back(&b);
-    }
-
-    for (mlir::Block *b : eraseBlocks)
-      b->erase();
-
-    tryOp.setHandlerTypesAttr({});
-    return;
-  }
-
-  // Copy the handler blocks off before we pop the EH stack.  Emitting
-  // the handlers might scribble on this memory.
-  SmallVector<EHCatchScope::Handler> handlers(catchScope.begin(),
-                                              catchScope.begin() + numHandlers);
-
-  ehStack.popCatch();
-
-  // Determine if we need an implicit rethrow for all these catch handlers;
-  // see the comment below.
-  bool doImplicitRethrow =
-      isFnTryBlock && isa<CXXDestructorDecl, CXXConstructorDecl>(curCodeDecl);
-
-  // Wasm uses Windows-style EH instructions, but merges all catch clauses into
-  // one big catchpad. So we save the old funclet pad here before we traverse
-  // each catch handler.
-  if (EHPersonality::get(*this).isWasmPersonality()) {
-    cgm.errorNYI("exitCXXTryStmt: WASM personality");
-    return;
-  }
-
-  bool hasCatchAll = false;
-  for (auto &handler : llvm::reverse(handlers)) {
-    hasCatchAll |= handler.isCatchAll();
-    mlir::Region *catchRegion = handler.region;
-    const CXXCatchStmt *catchStmt = handler.stmt;
 
     mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(&catchRegion->front());
+    builder.setInsertionPointToStart(&handler->front());
 
     // Enter a cleanup scope, including the catch variable and the
     // end-catch.
-    RunCleanupsScope catchScope(*this);
+    RunCleanupsScope handlerScope(*this);
 
-    // Initialize the catch variable and set up the cleanups.
+    // Initialize the catch variable.
+    // TODO(cir): Move this out of CXXABI.
     assert(!cir::MissingFeatures::currentFuncletPad());
     cgm.getCXXABI().emitBeginCatch(*this, catchStmt);
 
@@ -430,184 +382,18 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
         emitStmt(catchStmt->getHandlerBlock(), /*useCurrentScope=*/true);
     assert(emitResult.succeeded() && "failed to emit catch handler block");
 
-    assert(!cir::MissingFeatures::catchParamOp());
-    cir::YieldOp::create(builder, tryOp->getLoc());
-
     // [except.handle]p11:
     //   The currently handled exception is rethrown if control
     //   reaches the end of a handler of the function-try-block of a
     //   constructor or destructor.
 
-    // It is important that we only do this on fallthrough and not on
-    // return.  Note that it's illegal to put a return in a
-    // constructor function-try-block's catch handler (p14), so this
-    // really only applies to destructors.
-    if (doImplicitRethrow) {
-      cgm.errorNYI("exitCXXTryStmt: doImplicitRethrow");
-      return;
-    }
+    // TODO(cir): Handle implicit rethrow?
 
     // Fall out through the catch cleanups.
-    catchScope.forceCleanup();
+    handlerScope.forceCleanup();
   }
 
-  // Because in wasm we merge all catch clauses into one big catchpad, in case
-  // none of the types in catch handlers matches after we test against each of
-  // them, we should unwind to the next EH enclosing scope. We generate a call
-  // to rethrow function here to do that.
-  if (EHPersonality::get(*this).isWasmPersonality() && !hasCatchAll) {
-    cgm.errorNYI("exitCXXTryStmt: WASM personality without catch all");
-  }
-
-  assert(!cir::MissingFeatures::incrementProfileCounter());
-}
-
-void CIRGenFunction::populateCatchHandlers(cir::TryOp tryOp) {
-  assert(ehStack.requiresCatchOrCleanup());
-  assert(!cgm.getLangOpts().IgnoreExceptions &&
-         "LandingPad should not be emitted when -fignore-exceptions are in "
-         "effect.");
-
-  EHScope &innermostEHScope = *ehStack.find(ehStack.getInnermostEHScope());
-  switch (innermostEHScope.getKind()) {
-  case EHScope::Terminate:
-    cgm.errorNYI("populateCatchHandlers: terminate");
-    return;
-
-  case EHScope::Catch:
-  case EHScope::Cleanup:
-  case EHScope::Filter:
-    // CIR does not cache landing pads.
-    break;
-  }
-
-  // If there's an existing TryOp, it means we got a `cir.try` scope
-  // that leads to this "landing pad" creation site. Otherwise, exceptions
-  // are enabled but a throwing function is called anyways (common pattern
-  // with function local static initializers).
-  mlir::ArrayAttr handlerTypesAttr = tryOp.getHandlerTypesAttr();
-  if (!handlerTypesAttr || handlerTypesAttr.empty()) {
-    // Accumulate all the handlers in scope.
-    bool hasCatchAll = false;
-    llvm::SmallVector<mlir::Attribute, 4> handlerAttrs;
-    for (EHScopeStack::iterator i = ehStack.begin(), e = ehStack.end(); i != e;
-         ++i) {
-      switch (i->getKind()) {
-      case EHScope::Cleanup:
-        cgm.errorNYI("emitLandingPad: Cleanup");
-        return;
-
-      case EHScope::Filter:
-        cgm.errorNYI("emitLandingPad: Filter");
-        return;
-
-      case EHScope::Terminate:
-        cgm.errorNYI("emitLandingPad: Terminate");
-        return;
-
-      case EHScope::Catch:
-        break;
-      } // end switch
-
-      EHCatchScope &catchScope = cast<EHCatchScope>(*i);
-      for (const EHCatchScope::Handler &handler :
-           llvm::make_range(catchScope.begin(), catchScope.end())) {
-        assert(handler.type.flags == 0 &&
-               "landingpads do not support catch handler flags");
-
-        // If this is a catch-all, register that and abort.
-        if (handler.isCatchAll()) {
-          assert(!hasCatchAll);
-          hasCatchAll = true;
-          break;
-        }
-
-        cgm.errorNYI("emitLandingPad: non catch-all");
-        return;
-      }
-
-      if (hasCatchAll)
-        break;
-    }
-
-    if (hasCatchAll) {
-      handlerAttrs.push_back(cir::CatchAllAttr::get(&getMLIRContext()));
-    } else {
-      cgm.errorNYI("emitLandingPad: non catch-all");
-      return;
-    }
-
-    // Add final array of clauses into TryOp.
-    tryOp.setHandlerTypesAttr(
-        mlir::ArrayAttr::get(&getMLIRContext(), handlerAttrs));
-  }
-
-  // In traditional LLVM codegen. this tells the backend how to generate the
-  // landing pad by generating a branch to the dispatch block. In CIR,
-  // this is used to populate blocks for later filing during
-  // cleanup handling.
-  populateEHCatchRegions(ehStack.getInnermostEHScope(), tryOp);
-}
-
-// Differently from LLVM traditional codegen, there are no dispatch blocks
-// to look at given cir.try_call does not jump to blocks like invoke does.
-// However.
-void CIRGenFunction::populateEHCatchRegions(EHScopeStack::stable_iterator scope,
-                                            cir::TryOp tryOp) {
-  if (EHPersonality::get(*this).usesFuncletPads()) {
-    cgm.errorNYI("getEHDispatchBlock: usesFuncletPads");
-    return;
-  }
-
-  // Otherwise, we should look at the actual scope.
-  EHScope &ehScope = *ehStack.find(scope);
-  bool mayThrow = ehScope.mayThrow();
-
-  mlir::Block *originalBlock = nullptr;
-  if (mayThrow && tryOp) {
-    // If the dispatch is cached but comes from a different tryOp, make sure:
-    // - Populate current `tryOp` with a new dispatch block regardless.
-    // - Update the map to enqueue new dispatchBlock to also get a cleanup. See
-    // code at the end of the function.
-    cgm.errorNYI("getEHDispatchBlock: mayThrow & tryOp");
-    return;
-  }
-
-  if (!mayThrow) {
-    switch (ehScope.getKind()) {
-    case EHScope::Catch: {
-      // LLVM does some optimization with branches here, CIR just keep track of
-      // the corresponding calls.
-      EHCatchScope &catchScope = cast<EHCatchScope>(ehScope);
-      if (catchScope.getNumHandlers() == 1 &&
-          catchScope.getHandler(0).isCatchAll()) {
-        mayThrow = true;
-        break;
-      }
-      cgm.errorNYI("getEHDispatchBlock: mayThrow non-catch all");
-      return;
-    }
-    case EHScope::Cleanup: {
-      cgm.errorNYI("getEHDispatchBlock: mayThrow & cleanup");
-      return;
-    }
-    case EHScope::Filter: {
-      cgm.errorNYI("getEHDispatchBlock: mayThrow & Filter");
-      return;
-    }
-    case EHScope::Terminate: {
-      cgm.errorNYI("getEHDispatchBlock: mayThrow & Terminate");
-      return;
-    }
-    }
-  }
-
-  if (originalBlock) {
-    cgm.errorNYI("getEHDispatchBlock: originalBlock");
-    return;
-  }
-
-  ehScope.setMayThrow(mayThrow);
+  return mlir::success();
 }
 
 // in classic codegen this function is mapping to `isInvokeDest` previously and
@@ -632,22 +418,4 @@ bool CIRGenFunction::isCatchOrCleanupRequired() {
     return false;
 
   return ehStack.requiresCatchOrCleanup();
-}
-
-// In classic codegen this function is equivalent to `getInvokeDestImpl`, in
-// ClangIR we don't need to return to return any landing pad, we just need to
-// populate the catch handlers if they are required
-void CIRGenFunction::populateCatchHandlersIfRequired(cir::TryOp tryOp) {
-  assert(ehStack.requiresCatchOrCleanup());
-  assert(!ehStack.empty());
-
-  assert(!cir::MissingFeatures::setFunctionPersonality());
-
-  // CIR does not cache landing pads.
-  const EHPersonality &personality = EHPersonality::get(*this);
-  if (personality.usesFuncletPads()) {
-    cgm.errorNYI("getInvokeDestImpl: usesFuncletPads");
-  } else {
-    populateCatchHandlers(tryOp);
-  }
 }

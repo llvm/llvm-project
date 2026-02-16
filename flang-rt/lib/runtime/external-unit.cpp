@@ -47,13 +47,13 @@ void FlushOutputOnCrash(const Terminator &terminator) {
   }
 }
 
-ExternalFileUnit *ExternalFileUnit::LookUp(int unit) {
-  return GetUnitMap().LookUp(unit);
+ExternalFileUnit *ExternalFileUnit::LookUp(int unit, Terminator &terminator) {
+  return GetUnitMap(terminator).LookUp(unit);
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
     int unit, const Terminator &terminator, bool &wasExtant) {
-  return GetUnitMap().LookUpOrCreate(unit, terminator, wasExtant);
+  return GetUnitMap(terminator).LookUpOrCreate(unit, terminator, wasExtant);
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
@@ -63,7 +63,8 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
   // not just created in the unitMap.
   CriticalSection critical{createOpenLock};
   bool exists{false};
-  ExternalFileUnit *result{GetUnitMap().LookUpOrCreate(unit, handler, exists)};
+  ExternalFileUnit *result{
+      GetUnitMap(handler).LookUpOrCreate(unit, handler, exists)};
   if (result && !exists) {
     common::optional<Action> action;
     if (dir == Direction::Output) {
@@ -73,8 +74,9 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
             dir == Direction::Input ? OpenStatus::Unknown : OpenStatus::Replace,
             action, Position::Rewind, Convert::Unknown, handler)) {
       // fort.N isn't a writable file
-      if (ExternalFileUnit * closed{LookUpForClose(result->unitNumber())}) {
-        closed->DestroyClosed();
+      if (ExternalFileUnit *
+          closed{LookUpForClose(result->unitNumber(), handler)}) {
+        closed->DestroyClosed(handler);
       }
       result = nullptr;
     } else {
@@ -85,26 +87,27 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUp(
-    const char *path, std::size_t pathLen) {
-  return GetUnitMap().LookUp(path, pathLen);
+    const char *path, std::size_t pathLen, Terminator &terminator) {
+  return GetUnitMap(terminator).LookUp(path, pathLen);
 }
 
 ExternalFileUnit &ExternalFileUnit::CreateNew(
     int unit, const Terminator &terminator) {
   bool wasExtant{false};
   ExternalFileUnit *result{
-      GetUnitMap().LookUpOrCreate(unit, terminator, wasExtant)};
+      GetUnitMap(terminator).LookUpOrCreate(unit, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, result && !wasExtant);
   return *result;
 }
 
-ExternalFileUnit *ExternalFileUnit::LookUpForClose(int unit) {
-  return GetUnitMap().LookUpForClose(unit);
+ExternalFileUnit *ExternalFileUnit::LookUpForClose(
+    int unit, Terminator &terminator) {
+  return GetUnitMap(terminator).LookUpForClose(unit);
 }
 
 ExternalFileUnit &ExternalFileUnit::NewUnit(
     const Terminator &terminator, bool forChildIo) {
-  ExternalFileUnit &unit{GetUnitMap().NewUnit(terminator)};
+  ExternalFileUnit &unit{GetUnitMap(terminator).NewUnit(terminator)};
   unit.createdForInternalChildIo_ = forChildIo;
   return unit;
 }
@@ -143,7 +146,7 @@ bool ExternalFileUnit::OpenUnit(common::optional<OpenStatus> status,
   }
   if (newPath.get() && newPathLength > 0) {
     if (const auto *already{
-            GetUnitMap().LookUp(newPath.get(), newPathLength)}) {
+            GetUnitMap(handler).LookUp(newPath.get(), newPathLength)}) {
       handler.SignalError(IostatOpenAlreadyConnected,
           "OPEN(UNIT=%d,FILE='%.*s'): file is already connected to unit %d",
           unitNumber_, static_cast<int>(newPathLength), newPath.get(),
@@ -201,9 +204,9 @@ bool ExternalFileUnit::OpenAnonymousUnit(common::optional<OpenStatus> status,
   // I/O to an unconnected unit reads/creates a local file, e.g. fort.7
   std::size_t pathMaxLen{32};
   auto path{SizedNew<char>{handler}(pathMaxLen)};
-  std::snprintf(path.get(), pathMaxLen, "fort.%d", unitNumber_);
+  int len = std::snprintf(path.get(), pathMaxLen, "fort.%d", unitNumber_);
   OpenUnit(status, action, position, std::move(path),
-      runtime::strlen(path.get()), convert, handler);
+      len >= 0 ? static_cast<std::size_t>(len) : 0, convert, handler);
   return IsConnected();
 }
 
@@ -213,8 +216,8 @@ void ExternalFileUnit::CloseUnit(CloseStatus status, IoErrorHandler &handler) {
   Close(status, handler);
 }
 
-void ExternalFileUnit::DestroyClosed() {
-  GetUnitMap().DestroyClosed(*this); // destroys *this
+void ExternalFileUnit::DestroyClosed(Terminator &terminator) {
+  GetUnitMap(terminator).DestroyClosed(*this); // destroys *this
 }
 
 Iostat ExternalFileUnit::SetDirection(Direction direction) {
@@ -242,8 +245,7 @@ Iostat ExternalFileUnit::SetDirection(Direction direction) {
   }
 }
 
-UnitMap &ExternalFileUnit::CreateUnitMap() {
-  Terminator terminator{__FILE__, __LINE__};
+UnitMap &ExternalFileUnit::CreateUnitMap(const Terminator &terminator) {
   IoErrorHandler handler{terminator};
   UnitMap &newUnitMap{*New<UnitMap>{terminator}().release()};
 
@@ -285,7 +287,7 @@ static void CloseAllExternalUnits() {
   ExternalFileUnit::CloseAll(handler);
 }
 
-UnitMap &ExternalFileUnit::GetUnitMap() {
+UnitMap &ExternalFileUnit::GetUnitMap(const Terminator &terminator) {
   if (unitMap) {
     return *unitMap;
   }
@@ -294,7 +296,7 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
     if (unitMap) {
       return *unitMap;
     }
-    unitMap = &CreateUnitMap();
+    unitMap = &CreateUnitMap(terminator);
   }
   std::atexit(CloseAllExternalUnits);
   return *unitMap;

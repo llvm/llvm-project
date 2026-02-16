@@ -115,6 +115,10 @@ ExprDependence clang::computeDependence(ArraySubscriptExpr *E) {
   return E->getLHS()->getDependence() | E->getRHS()->getDependence();
 }
 
+ExprDependence clang::computeDependence(MatrixSingleSubscriptExpr *E) {
+  return E->getBase()->getDependence() | E->getRowIdx()->getDependence();
+}
+
 ExprDependence clang::computeDependence(MatrixSubscriptExpr *E) {
   return E->getBase()->getDependence() | E->getRowIdx()->getDependence() |
          (E->getColumnIdx() ? E->getColumnIdx()->getDependence()
@@ -249,6 +253,10 @@ ExprDependence clang::computeDependence(ImplicitValueInitExpr *E) {
 }
 
 ExprDependence clang::computeDependence(ExtVectorElementExpr *E) {
+  return E->getBase()->getDependence();
+}
+
+ExprDependence clang::computeDependence(MatrixElementExpr *E) {
   return E->getBase()->getDependence();
 }
 

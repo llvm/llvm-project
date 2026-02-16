@@ -17,6 +17,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
 class DiagnosticConsumer;
@@ -88,28 +89,11 @@ struct TextDiagnosticsPrinterWithOutput {
         DiagPrinter(DiagnosticsOS, *DiagOpts) {}
 };
 
-std::pair<std::unique_ptr<driver::Driver>, std::unique_ptr<driver::Compilation>>
-buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
-                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                 llvm::BumpPtrAllocator &Alloc);
-
 std::unique_ptr<CompilerInvocation>
 createCompilerInvocation(ArrayRef<std::string> CommandLine,
                          DiagnosticsEngine &Diags);
 
-std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>, std::vector<std::string>>
-initVFSForTUBufferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                           ArrayRef<std::string> CommandLine,
-                           StringRef WorkingDirectory,
-                           llvm::MemoryBufferRef TUBuffer);
-
-std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
-          std::vector<std::string>>
-initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                         ArrayRef<std::string> CommandLine,
-                         StringRef WorkingDirectory, StringRef ModuleName);
-
-bool initializeScanCompilerInstance(
+void initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
@@ -121,9 +105,6 @@ getInitialStableDirs(const CompilerInstance &ScanInstance);
 std::optional<PrebuiltModulesAttrsMap>
 computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
                              SmallVector<StringRef> &StableDirs);
-
-std::unique_ptr<DependencyOutputOptions>
-takeAndUpdateDependencyOutputOptionsFrom(CompilerInstance &ScanInstance);
 
 /// Create the dependency collector that will collect the produced
 /// dependencies. May return the created ModuleDepCollector depending
@@ -143,22 +124,11 @@ class CompilerInstanceWithContext {
   llvm::StringRef CWD;
   std::vector<std::string> CommandLine;
 
-  // Context - file systems
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS;
-
   // Context - Diagnostics engine.
-  std::unique_ptr<TextDiagnosticsPrinterWithOutput> DiagPrinterWithOS;
-  // DiagConsumer may points to DiagPrinterWithOS->DiagPrinter, or a custom
-  // DiagnosticConsumer passed in from initialize.
   DiagnosticConsumer *DiagConsumer = nullptr;
   std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts;
 
   // Context - compiler invocation
-  // Compilation's command's arguments may be owned by Alloc when expanded from
-  // response files, so we need to keep Alloc alive in the context.
-  llvm::BumpPtrAllocator Alloc;
-  std::unique_ptr<clang::driver::Driver> Driver;
-  std::unique_ptr<clang::driver::Compilation> Compilation;
   std::unique_ptr<CompilerInvocation> OriginalInvocation;
 
   // Context - output options
@@ -180,15 +150,13 @@ public:
       : Worker(Worker), CWD(CWD), CommandLine(CMD) {};
 
   // The three methods below returns false when they fail, with the detail
-  // accumulated in DiagConsumer.
-  bool initialize(DiagnosticConsumer *DC);
+  // accumulated in \c DiagEngineWithDiagOpts's diagnostic consumer.
+  bool initialize(
+      std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
+      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
   bool computeDependencies(StringRef ModuleName, DependencyConsumer &Consumer,
                            DependencyActionController &Controller);
   bool finalize();
-
-  // The method below turns the return status from the above methods
-  // into an llvm::Error using a default DiagnosticConsumer.
-  llvm::Error handleReturnStatus(bool Success);
 };
 } // namespace dependencies
 } // namespace clang

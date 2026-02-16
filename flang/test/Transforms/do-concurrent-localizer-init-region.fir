@@ -58,7 +58,6 @@ func.func @_QPlocalizer_with_init_region() {
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant 42 : i32
 // CHECK:           %[[VAL_3:.*]] = fir.alloca i32 {bindc_name = "i"}
-// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_3]] {uniq_name = "_QFlocalizer_with_init_regionEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "n", uniq_name = "_QFlocalizer_with_init_regionEn"}
 // CHECK:           %[[VAL_7:.*]] = fir.declare %[[VAL_6]] {uniq_name = "_QFlocalizer_with_init_regionEn"} : (!fir.ref<i32>) -> !fir.ref<i32>
@@ -70,6 +69,7 @@ func.func @_QPlocalizer_with_init_region() {
 // CHECK:           %[[VAL_12:.*]] = fir.declare %[[VAL_8]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFlocalizer_with_init_regionEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 // CHECK:           %[[VAL_13:.*]] = fir.load %[[VAL_7]] : !fir.ref<i32>
 // CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i32) -> index
+// CHECK:           %[[VAL_4:.*]] = fir.declare %[[VAL_3]] {uniq_name = "_QFlocalizer_with_init_regionEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:           fir.do_loop %[[VAL_15:.*]] = %[[VAL_1]] to %[[VAL_14]] step %[[VAL_1]] unordered {
 
 // Local allocation

@@ -1938,7 +1938,7 @@ static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!AL.checkAtLeastNumArgs(S, 1))
     return;
 
-  SmallVector<IdentifierInfo *, 8> CPUs;
+  SmallVector<const IdentifierInfo *, 8> CPUs;
   for (unsigned ArgNo = 0; ArgNo < getNumAttributeArgs(AL); ++ArgNo) {
     if (!AL.isArgIdent(ArgNo)) {
       S.Diag(AL.getLoc(), diag::err_attribute_argument_type)
@@ -2042,7 +2042,7 @@ static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
   return false;
 }
 
-void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
+void clang::inferNoReturnAttr(Sema &S, Decl *D) {
   auto *FD = dyn_cast<FunctionDecl>(D);
   if (!FD)
     return;
@@ -2054,7 +2054,6 @@ void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
   if (FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
     return;
 
-  auto *NonConstFD = const_cast<FunctionDecl *>(FD);
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.isIgnored(diag::warn_falloff_nonvoid, FD->getLocation()) &&
       Diags.isIgnored(diag::warn_suggest_noreturn_function, FD->getLocation()))
@@ -2062,7 +2061,7 @@ void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
 
   if (!FD->isNoReturn() && !FD->hasAttr<InferredNoReturnAttr>() &&
       isKnownToAlwaysThrow(FD)) {
-    NonConstFD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
+    FD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
 
     // [[noreturn]] can only be added to lambdas since C++23
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
@@ -2292,7 +2291,7 @@ static void handleAttrWithMessage(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static bool checkAvailabilityAttr(Sema &S, SourceRange Range,
-                                  IdentifierInfo *Platform,
+                                  const IdentifierInfo *Platform,
                                   VersionTuple Introduced,
                                   VersionTuple Deprecated,
                                   VersionTuple Obsoleted) {
@@ -2349,11 +2348,11 @@ static bool versionsMatch(const VersionTuple &X, const VersionTuple &Y,
 }
 
 AvailabilityAttr *Sema::mergeAvailabilityAttr(
-    NamedDecl *D, const AttributeCommonInfo &CI, IdentifierInfo *Platform,
+    NamedDecl *D, const AttributeCommonInfo &CI, const IdentifierInfo *Platform,
     bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
     VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
     bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
-    int Priority, IdentifierInfo *Environment) {
+    int Priority, const IdentifierInfo *Environment) {
   VersionTuple MergedIntroduced = Introduced;
   VersionTuple MergedDeprecated = Deprecated;
   VersionTuple MergedObsoleted = Obsoleted;
@@ -2381,13 +2380,13 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
         continue;
       }
 
-      IdentifierInfo *OldPlatform = OldAA->getPlatform();
+      const IdentifierInfo *OldPlatform = OldAA->getPlatform();
       if (OldPlatform != Platform) {
         ++i;
         continue;
       }
 
-      IdentifierInfo *OldEnvironment = OldAA->getEnvironment();
+      const IdentifierInfo *OldEnvironment = OldAA->getEnvironment();
       if (OldEnvironment != Environment) {
         ++i;
         continue;
@@ -2519,6 +2518,80 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
   return nullptr;
 }
 
+/// Returns true if the given availability attribute should be inferred, and
+/// adjusts the value of the attribute as necessary to facilitate that.
+static bool shouldInferAvailabilityAttribute(const ParsedAttr &AL,
+                                             IdentifierInfo *&II,
+                                             bool &IsUnavailable,
+                                             VersionTuple &Introduced,
+                                             VersionTuple &Deprecated,
+                                             VersionTuple &Obsolete, Sema &S) {
+  const llvm::Triple &TT = S.Context.getTargetInfo().getTriple();
+  const ASTContext &Context = S.Context;
+  if (TT.getOS() != llvm::Triple::XROS)
+    return false;
+  IdentifierInfo *NewII = nullptr;
+  if (II->getName() == "ios")
+    NewII = &Context.Idents.get("xros");
+  else if (II->getName() == "ios_app_extension")
+    NewII = &Context.Idents.get("xros_app_extension");
+  if (!NewII)
+    return false;
+  II = NewII;
+
+  auto MakeUnavailable = [&]() {
+    IsUnavailable = true;
+    // Reset introduced, deprecated, obsoleted.
+    Introduced = VersionTuple();
+    Deprecated = VersionTuple();
+    Obsolete = VersionTuple();
+  };
+
+  const DarwinSDKInfo *SDKInfo = S.getDarwinSDKInfoForAvailabilityChecking(
+      AL.getRange().getBegin(), "ios");
+
+  if (!SDKInfo) {
+    MakeUnavailable();
+    return true;
+  }
+  // Map from the fallback platform availability to the current platform
+  // availability.
+  const auto *Mapping = SDKInfo->getVersionMapping(DarwinSDKInfo::OSEnvPair(
+      llvm::Triple::IOS, llvm::Triple::UnknownEnvironment, llvm::Triple::XROS,
+      llvm::Triple::UnknownEnvironment));
+  if (!Mapping) {
+    MakeUnavailable();
+    return true;
+  }
+
+  if (!Introduced.empty()) {
+    auto NewIntroduced = Mapping->mapIntroducedAvailabilityVersion(Introduced);
+    if (!NewIntroduced) {
+      MakeUnavailable();
+      return true;
+    }
+    Introduced = *NewIntroduced;
+  }
+
+  if (!Obsolete.empty()) {
+    auto NewObsolete =
+        Mapping->mapDeprecatedObsoletedAvailabilityVersion(Obsolete);
+    if (!NewObsolete) {
+      MakeUnavailable();
+      return true;
+    }
+    Obsolete = *NewObsolete;
+  }
+
+  if (!Deprecated.empty()) {
+    auto NewDeprecated =
+        Mapping->mapDeprecatedObsoletedAvailabilityVersion(Deprecated);
+    Deprecated = NewDeprecated ? *NewDeprecated : VersionTuple();
+  }
+
+  return true;
+}
+
 static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (isa<UsingDecl, UnresolvedUsingTypenameDecl, UnresolvedUsingValueDecl>(
           D)) {
@@ -2630,6 +2703,25 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       AvailabilityMergeKind::None, PriorityModifier, IIEnvironment);
   if (NewAttr)
     D->addAttr(NewAttr);
+
+  if (S.Context.getTargetInfo().getTriple().getOS() == llvm::Triple::XROS) {
+    IdentifierInfo *NewII = II;
+    bool NewIsUnavailable = IsUnavailable;
+    VersionTuple NewIntroduced = Introduced.Version;
+    VersionTuple NewDeprecated = Deprecated.Version;
+    VersionTuple NewObsoleted = Obsoleted.Version;
+    if (shouldInferAvailabilityAttribute(AL, NewII, NewIsUnavailable,
+                                         NewIntroduced, NewDeprecated,
+                                         NewObsoleted, S)) {
+      AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
+          ND, AL, NewII, true /*Implicit*/, NewIntroduced, NewDeprecated,
+          NewObsoleted, NewIsUnavailable, Str, IsStrict, Replacement,
+          AvailabilityMergeKind::None,
+          PriorityModifier + Sema::AP_InferredFromOtherPlatform, IIEnvironment);
+      if (NewAttr)
+        D->addAttr(NewAttr);
+    }
+  }
 
   // Transcribe "ios" to "watchos" (and add a new attribute) if the versioning
   // matches before the start of the watchOS platform.
@@ -2836,6 +2928,15 @@ static void handleExternalSourceSymbolAttr(Sema &S, Decl *D,
       S.Context, AL, Language, DefinedIn, IsGeneratedDeclaration, USR));
 }
 
+void Sema::mergeVisibilityType(Decl *D, SourceLocation Loc,
+                               VisibilityAttr::VisibilityType Value) {
+  if (VisibilityAttr *Attr = D->getAttr<VisibilityAttr>()) {
+    if (Attr->getVisibility() != Value)
+      Diag(Loc, diag::err_mismatched_visibility);
+  } else
+    D->addAttr(VisibilityAttr::CreateImplicit(Context, Value));
+}
+
 template <class T>
 static T *mergeVisibilityAttr(Sema &S, Decl *D, const AttributeCommonInfo &CI,
                               typename T::VisibilityType value) {
@@ -2980,6 +3081,10 @@ static void handleSentinelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                                    : Ty->castAs<BlockPointerType>()
                                          ->getPointeeType()
                                          ->castAs<FunctionType>();
+      if (isa<FunctionNoProtoType>(FT)) {
+        S.Diag(AL.getLoc(), diag::warn_attribute_sentinel_named_arguments);
+        return;
+      }
       if (!cast<FunctionProtoType>(FT)->isVariadic()) {
         int m = Ty->isFunctionPointerType() ? 0 : 1;
         S.Diag(AL.getLoc(), diag::warn_attribute_sentinel_not_variadic) << m;
@@ -3511,10 +3616,12 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (S.ARM().checkTargetClonesAttr(Params, Locations, NewParams))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isRISCV()) {
-    if (S.RISCV().checkTargetClonesAttr(Params, Locations, NewParams))
+    if (S.RISCV().checkTargetClonesAttr(Params, Locations, NewParams,
+                                        AL.getLoc()))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isX86()) {
-    if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams))
+    if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams,
+                                      AL.getLoc()))
       return;
   }
   Params.clear();
@@ -3784,7 +3891,7 @@ ErrorAttr *Sema::mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
 }
 
 FormatAttr *Sema::mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
-                                  IdentifierInfo *Format, int FormatIdx,
+                                  const IdentifierInfo *Format, int FormatIdx,
                                   int FirstArg) {
   // Check whether we already have an equivalent format attribute.
   for (auto *F : D->specific_attrs<FormatAttr>()) {
@@ -3804,7 +3911,7 @@ FormatAttr *Sema::mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
 
 FormatMatchesAttr *Sema::mergeFormatMatchesAttr(Decl *D,
                                                 const AttributeCommonInfo &CI,
-                                                IdentifierInfo *Format,
+                                                const IdentifierInfo *Format,
                                                 int FormatIdx,
                                                 StringLiteral *FormatStr) {
   // Check whether we already have an equivalent FormatMatches attribute.
@@ -4758,7 +4865,7 @@ static void handleModeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
-                       IdentifierInfo *Name, bool InInstantiation) {
+                       const IdentifierInfo *Name, bool InInstantiation) {
   StringRef Str = Name->getName();
   normalizeName(Str);
   SourceLocation AttrLoc = CI.getLoc();
@@ -5033,6 +5140,8 @@ static void handleConstantAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
     return;
   }
+  if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_constant))
+    return;
   // constexpr variable may already get an implicit constant attr, which should
   // be replaced by the explicit constant attr.
   if (auto *A = D->getAttr<CUDAConstantAttr>()) {
@@ -5052,6 +5161,8 @@ static void handleSharedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(AL.getLoc(), diag::err_cuda_extern_shared) << VD;
     return;
   }
+  if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_shared))
+    return;
   if (S.getLangOpts().CUDA && VD->hasLocalStorage() &&
       S.CUDA().DiagIfHostCode(AL.getLoc(), diag::err_cuda_host_shared)
           << S.CUDA().CurrentTarget())
@@ -5101,6 +5212,8 @@ static void handleDeviceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
       return;
     }
+    if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_device))
+      return;
   }
 
   if (auto *A = D->getAttr<CUDADeviceAttr>()) {
@@ -5117,6 +5230,8 @@ static void handleManagedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
       return;
     }
+    if (!S.CheckVarDeclSizeAddressSpace(VD, LangAS::cuda_device))
+      return;
   }
   if (!D->hasAttr<HIPManagedAttr>())
     D->addAttr(::new (S.Context) HIPManagedAttr(S.Context, AL));
@@ -6173,6 +6288,36 @@ static void handleMSConstexprAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) MSConstexprAttr(S.Context, AL));
 }
 
+static void handleMSStructAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (const auto *First = D->getAttr<GCCStructAttr>()) {
+    S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+        << AL << First << 0;
+    S.Diag(First->getLocation(), diag::note_conflicting_attribute);
+    return;
+  }
+  if (const auto *Preexisting = D->getAttr<MSStructAttr>()) {
+    if (Preexisting->isImplicit())
+      D->dropAttr<MSStructAttr>();
+  }
+
+  D->addAttr(::new (S.Context) MSStructAttr(S.Context, AL));
+}
+
+static void handleGCCStructAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (const auto *First = D->getAttr<MSStructAttr>()) {
+    if (First->isImplicit()) {
+      D->dropAttr<MSStructAttr>();
+    } else {
+      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+          << AL << First << 0;
+      S.Diag(First->getLocation(), diag::note_conflicting_attribute);
+      return;
+    }
+  }
+
+  D->addAttr(::new (S.Context) GCCStructAttr(S.Context, AL));
+}
+
 static void handleAbiTagAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   SmallVector<StringRef, 4> Tags;
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
@@ -6250,6 +6395,8 @@ static void handleInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     break;
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     S.RISCV().handleInterruptAttr(D, AL);
     break;
   default:
@@ -6975,7 +7122,7 @@ static void handleVTablePointerAuthentication(Sema &S, Decl *D,
 }
 
 static bool modularFormatAttrsEquiv(const ModularFormatAttr *Existing,
-                                    IdentifierInfo *ModularImplFn,
+                                    const IdentifierInfo *ModularImplFn,
                                     StringRef ImplName,
                                     ArrayRef<StringRef> Aspects) {
   return Existing->getModularImplFn() == ModularImplFn &&
@@ -6984,10 +7131,9 @@ static bool modularFormatAttrsEquiv(const ModularFormatAttr *Existing,
          llvm::equal(Existing->aspects(), Aspects);
 }
 
-ModularFormatAttr *
-Sema::mergeModularFormatAttr(Decl *D, const AttributeCommonInfo &CI,
-                             IdentifierInfo *ModularImplFn, StringRef ImplName,
-                             MutableArrayRef<StringRef> Aspects) {
+ModularFormatAttr *Sema::mergeModularFormatAttr(
+    Decl *D, const AttributeCommonInfo &CI, const IdentifierInfo *ModularImplFn,
+    StringRef ImplName, MutableArrayRef<StringRef> Aspects) {
   if (const auto *Existing = D->getAttr<ModularFormatAttr>()) {
     if (!modularFormatAttrsEquiv(Existing, ModularImplFn, ImplName, Aspects)) {
       Diag(Existing->getLocation(), diag::err_duplicate_attribute) << *Existing;
@@ -7001,6 +7147,11 @@ Sema::mergeModularFormatAttr(Decl *D, const AttributeCommonInfo &CI,
 
 static void handleModularFormat(Sema &S, Decl *D, const ParsedAttr &AL) {
   bool Valid = true;
+  if (!AL.isArgIdent(0)) {
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
+        << AL << 1 << AANT_ArgumentIdentifier;
+    Valid = false;
+  }
   StringRef ImplName;
   if (!S.checkStringLiteralArgumentAttr(AL, 1, ImplName))
     Valid = false;
@@ -7745,6 +7896,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLVkExtBuiltinInput:
     S.HLSL().handleVkExtBuiltinInputAttr(D, AL);
     break;
+  case ParsedAttr::AT_HLSLVkPushConstant:
+    S.HLSL().handleVkPushConstantAttr(D, AL);
+    break;
   case ParsedAttr::AT_HLSLVkConstantId:
     S.HLSL().handleVkConstantIdAttr(D, AL);
     break;
@@ -7982,6 +8136,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_ModularFormat:
     handleModularFormat(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_MSStruct:
+    handleMSStructAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_GCCStruct:
+    handleGCCStructAttr(S, D, AL);
     break;
   }
 }

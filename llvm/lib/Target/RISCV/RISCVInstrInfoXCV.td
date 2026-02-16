@@ -24,6 +24,7 @@ def CVrr : Operand<i32>,
    let ParserMatchClass = CVrrAsmOperand;
    let PrintMethod = "printRegReg";
    let MIOperandInfo = (ops GPR:$base, GPR:$offset);
+   let OperandType = "OPERAND_MEMORY";
 }
 
 def cv_tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
@@ -805,10 +806,10 @@ let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
   defm CC_SImm5_CV : SelectCC_GPR_riirr<GPR, simm5>;
 
   class Selectbi<CondCode Cond>
-      : Pat<(riscv_selectcc_frag:$cc (i32 GPR:$lhs), simm5:$Constant, Cond,
-                                     (i32 GPR:$truev), GPR:$falsev),
+      : Pat<(riscv_selectcc (i32 GPR:$lhs), simm5:$Constant, Cond:$cc,
+                            (i32 GPR:$truev), GPR:$falsev),
             (Select_GPR_Using_CC_SImm5_CV GPR:$lhs, simm5:$Constant,
-             (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+             (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
   def : Selectbi<SETEQ>;
   def : Selectbi<SETNE>;

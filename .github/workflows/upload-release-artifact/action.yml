@@ -19,7 +19,7 @@ inputs:
       Token with premissions to read llvm teams that is used to ensure that
       the person who triggred the action has permission to upload artifacts.
       This is required if upload is true.
-    requred: false
+    required: false
   attestation-name:
     description: >-
       This will be used for the artifact name that is attached to the workflow and
@@ -40,7 +40,7 @@ runs:
   using: "composite"
   steps:
     - name: Download Artifact
-      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
       id: download-artifact
       with:
         artifact-ids: ${{ inputs.artifact-id }}
@@ -62,23 +62,25 @@ runs:
 
     - name: Attest Build Provenance
       id: provenance
-      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+      uses: actions/attest-build-provenance@00014ed6ed5efc5b1ab7f7f34a39eb55d41aa4f8 # v3.1.0
       with:
         subject-path: ${{ steps.download-artifact.outputs.download-path }}/*
 
+    # Generate an attestation copy for each file to make it easier for users to verify
+    # the files.
     - name: Rename attestation file
       shell: bash
-      env:
-        INPUTS_ATTESTATION_NAME: ${{ inputs.attestation-name }}
       run: |
-        mv ${{ steps.provenance.outputs.bundle-path }} "$INPUTS_ATTESTATION_NAME".jsonl
+        for f in ${{ steps.download-artifact.outputs.download-path }}/*; do
+          cp ${{ steps.provenance.outputs.bundle-path }} $(basename $f).jsonl
+        done
 
     - name: Upload Build Provenance
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ${{ inputs.attestation-name }}
         path: |
-          ${{ inputs.attestation-name }}.jsonl
+          *.jsonl
 
     - name: Install Python Requirements
       if: inputs.upload == 'true'
@@ -102,4 +104,4 @@ runs:
         --token ${{ github.token }} \
         --release ${{ inputs.release-version }} \
         upload \
-        --files ${{ steps.download-artifact.outputs.download-path }}/* ${{ steps.vars.outputs.attestation-name}}.jsonl
+        --files ${{ steps.download-artifact.outputs.download-path }}/* *.jsonl

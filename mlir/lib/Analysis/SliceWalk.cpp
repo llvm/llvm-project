@@ -32,52 +32,6 @@ WalkContinuation mlir::walkSlice(ValueRange rootValues,
   return WalkContinuation::skip();
 }
 
-/// Returns the operands from all predecessor regions that match `operandNumber`
-/// for the `successor` region within `regionOp`.
-static SmallVector<Value>
-getRegionPredecessorOperands(RegionBranchOpInterface regionOp,
-                             RegionSuccessor successor,
-                             unsigned operandNumber) {
-  SmallVector<Value> predecessorOperands;
-
-  // Returns true if `successors` contains `successor`.
-  auto isContained = [](ArrayRef<RegionSuccessor> successors,
-                        RegionSuccessor successor) {
-    auto *it = llvm::find_if(successors, [&successor](RegionSuccessor curr) {
-      return curr.getSuccessor() == successor.getSuccessor();
-    });
-    return it != successors.end();
-  };
-
-  // Search the operand ranges on the region operation itself.
-  SmallVector<Attribute> operandAttributes(regionOp->getNumOperands());
-  SmallVector<RegionSuccessor> successors;
-  regionOp.getEntrySuccessorRegions(operandAttributes, successors);
-  if (isContained(successors, successor)) {
-    OperandRange operands = regionOp.getEntrySuccessorOperands(successor);
-    predecessorOperands.push_back(operands[operandNumber]);
-  }
-
-  // Search the operand ranges on region terminators.
-  for (Region &region : regionOp->getRegions()) {
-    for (Block &block : region) {
-      auto terminatorOp =
-          dyn_cast<RegionBranchTerminatorOpInterface>(block.getTerminator());
-      if (!terminatorOp)
-        continue;
-      SmallVector<Attribute> operandAttributes(terminatorOp->getNumOperands());
-      SmallVector<RegionSuccessor> successors;
-      terminatorOp.getSuccessorRegions(operandAttributes, successors);
-      if (isContained(successors, successor)) {
-        OperandRange operands = terminatorOp.getSuccessorOperands(successor);
-        predecessorOperands.push_back(operands[operandNumber]);
-      }
-    }
-  }
-
-  return predecessorOperands;
-}
-
 /// Returns the predecessor branch operands that match `blockArg`, or nullopt if
 /// some of the predecessor terminators do not implement the BranchOpInterface.
 static std::optional<SmallVector<Value>>
@@ -114,9 +68,12 @@ mlir::getControlFlowPredecessors(Value value) {
     if (!regionOp)
       return std::nullopt;
     // Add the control flow predecessor operands to the work list.
-    RegionSuccessor region(regionOp, regionOp->getResults());
-    SmallVector<Value> predecessorOperands = getRegionPredecessorOperands(
-        regionOp, region, opResult.getResultNumber());
+    RegionSuccessor region = RegionSuccessor::parent();
+    SmallVector<Value> predecessorOperands;
+    // TODO (#175168): This assumes that there are no non-successor-inputs
+    // in front of the op result.
+    regionOp.getPredecessorValues(region, opResult.getResultNumber(),
+                                  predecessorOperands);
     return predecessorOperands;
   }
 
@@ -127,8 +84,11 @@ mlir::getControlFlowPredecessors(Value value) {
     if (auto regionBranchOp =
             dyn_cast<RegionBranchOpInterface>(block->getParentOp())) {
       RegionSuccessor region(blockArg.getParentRegion());
-      SmallVector<Value> predecessorOperands = getRegionPredecessorOperands(
-          regionBranchOp, region, blockArg.getArgNumber());
+      SmallVector<Value> predecessorOperands;
+      // TODO (#175168): This assumes that there are no non-successor-inputs
+      // in front of the block argument.
+      regionBranchOp.getPredecessorValues(region, blockArg.getArgNumber(),
+                                          predecessorOperands);
       return predecessorOperands;
     }
     // If the interface is not implemented, there are no control flow

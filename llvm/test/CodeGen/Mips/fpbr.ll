@@ -117,7 +117,7 @@ entry:
 ; GPR:           mfc1     $[[GPRCC:[0-9]+]], $[[FGRCC:f[0-9]+]]
 ; FIXME: We ought to be able to transform not+bnez -> beqz
 ; GPR:           not      $[[GPRCC]], $[[GPRCC]]
-; 32-GPR:        bnez     $[[GPRCC]], $BB3_2
+; 32-GPR:        bnezc    $[[GPRCC]], $BB3_2
 ; 64-GPR:        bnezc    $[[GPRCC]], .LBB3_2
 
   %cmp = fcmp oeq double %f2, %f3
@@ -148,7 +148,7 @@ entry:
 ; 64-GPR:        cmp.ule.d $[[FGRCC:f[0-9]+]], $f13, $f12
 ; GPR:           mfc1     $[[GPRCC:[0-9]+]], $[[FGRCC:f[0-9]+]]
 ; GPR-NOT:       not      $[[GPRCC]], $[[GPRCC]]
-; 32-GPR:        bnez     $[[GPRCC]], $BB4_2
+; 32-GPR:        bnezc    $[[GPRCC]], $BB4_2
 ; 64-GPR:        bnezc    $[[GPRCC]], .LBB4_2
 
   %cmp = fcmp olt double %f2, %f3
@@ -179,7 +179,7 @@ entry:
 ; 64-GPR:        cmp.ult.d $[[FGRCC:f[0-9]+]], $f13, $f12
 ; GPR:           mfc1     $[[GPRCC:[0-9]+]], $[[FGRCC:f[0-9]+]]
 ; GPR-NOT:       not      $[[GPRCC]], $[[GPRCC]]
-; 32-GPR:        beqz     $[[GPRCC]], $BB5_2
+; 32-GPR:        beqzc    $[[GPRCC]], $BB5_2
 ; 64-GPR:        beqzc    $[[GPRCC]], .LBB5_2
 
   %cmp = fcmp ugt double %f2, %f3

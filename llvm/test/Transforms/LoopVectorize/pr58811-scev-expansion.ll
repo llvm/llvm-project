@@ -28,14 +28,13 @@ define void @test1_pr58811(ptr %dst) {
 ; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[INDUCTION_IV]], i64 0
 ; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    [[TMP3:%.*]] = mul <2 x i32> <i32 0, i32 1>, [[BROADCAST_SPLAT]]
-; VF2-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> zeroinitializer, [[TMP3]]
-; VF2-NEXT:    [[TMP4:%.*]] = mul i32 [[INDUCTION_IV]], 2
+; VF2-NEXT:    [[TMP4:%.*]] = shl i32 [[INDUCTION_IV]], 1
 ; VF2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[TMP4]], i64 0
 ; VF2-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; VF2-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP5]], align 4
@@ -91,14 +90,13 @@ define void @test1_pr58811(ptr %dst) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[INDUCTION_IV]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> zeroinitializer, [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[INDUCTION_IV]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[INDUCTION_IV]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP5]], align 4
@@ -200,14 +198,13 @@ define void @test2_pr58811(ptr %dst) {
 ; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[INDUCTION_IV_LCSSA]], i64 0
 ; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    [[TMP3:%.*]] = mul <2 x i32> <i32 0, i32 1>, [[BROADCAST_SPLAT]]
-; VF2-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> zeroinitializer, [[TMP3]]
-; VF2-NEXT:    [[TMP4:%.*]] = mul i32 [[INDUCTION_IV_LCSSA]], 2
+; VF2-NEXT:    [[TMP4:%.*]] = shl i32 [[INDUCTION_IV_LCSSA]], 1
 ; VF2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[TMP4]], i64 0
 ; VF2-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; VF2-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP5]], align 4
@@ -265,14 +262,13 @@ define void @test2_pr58811(ptr %dst) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[INDUCTION_IV_LCSSA]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> zeroinitializer, [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[INDUCTION_IV_LCSSA]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[INDUCTION_IV_LCSSA]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[TMP3]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP5]], align 4
@@ -356,14 +352,13 @@ define void @test3_pr58811(ptr %dst) {
 ; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
 ; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    [[TMP5:%.*]] = mul <2 x i32> <i32 0, i32 1>, [[BROADCAST_SPLAT]]
-; VF2-NEXT:    [[INDUCTION:%.*]] = add <2 x i32> zeroinitializer, [[TMP5]]
-; VF2-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP3]], 2
+; VF2-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP3]], 1
 ; VF2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[TMP6]], i64 0
 ; VF2-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ [[TMP5]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
 ; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; VF2-NEXT:    store <2 x i32> [[VEC_IND]], ptr [[TMP7]], align 4
@@ -418,14 +413,13 @@ define void @test3_pr58811(ptr %dst) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> zeroinitializer, [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP3]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[TMP6]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ [[TMP5]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[DST]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store <4 x i32> [[VEC_IND]], ptr [[TMP7]], align 4
@@ -504,11 +498,10 @@ define void @iv_start_from_shl_of_previous_iv(ptr %dst) {
 ; VF2-NEXT:    [[IV_1_SHL:%.*]] = shl i64 1, 1
 ; VF2-NEXT:    br label %[[VECTOR_PH1:.*]]
 ; VF2:       [[VECTOR_PH1]]:
-; VF2-NEXT:    [[TMP0:%.*]] = add i64 [[IV_1_SHL]], 98
 ; VF2-NEXT:    br label %[[VECTOR_BODY2:.*]]
 ; VF2:       [[VECTOR_BODY2]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY2]] ]
-; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_1_SHL]], [[INDEX]]
+; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 2, [[INDEX]]
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET_IDX]]
 ; VF2-NEXT:    store <2 x i8> splat (i8 1), ptr [[TMP1]], align 1
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -519,7 +512,7 @@ define void @iv_start_from_shl_of_previous_iv(ptr %dst) {
 ; VF2:       [[SCALAR_PH]]:
 ; VF2-NEXT:    br label %[[LOOP_2:.*]]
 ; VF2:       [[LOOP_2]]:
-; VF2-NEXT:    [[IV_2:%.*]] = phi i64 [ [[TMP0]], %[[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP_2]] ]
+; VF2-NEXT:    [[IV_2:%.*]] = phi i64 [ 100, %[[SCALAR_PH]] ], [ [[IV_2_NEXT:%.*]], %[[LOOP_2]] ]
 ; VF2-NEXT:    [[GEP_2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV_2]]
 ; VF2-NEXT:    store i8 1, ptr [[GEP_2]], align 1
 ; VF2-NEXT:    [[IV_2_NEXT]] = add i64 [[IV_2]], 1

@@ -152,6 +152,11 @@ public:
     /// FIXME: If not set, should use the current working directory.
     std::optional<std::string> WorkspaceRoot;
 
+    /// Sets an alternate mode of operation. Current effects are:
+    /// - Using the current working directory as the working directory for
+    ///   fallback commands
+    bool StrongWorkspaceMode = false;
+
     /// The resource directory is used to find internal headers, overriding
     /// defaults and -resource-dir compiler flag).
     /// If std::nullopt, ClangdServer calls

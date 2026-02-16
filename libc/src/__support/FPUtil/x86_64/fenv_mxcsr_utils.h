@@ -61,14 +61,14 @@ LIBC_INLINE static uint32_t get_mxcsr() { return _mm_getcsr(); }
 LIBC_INLINE static void write_mxcsr(uint32_t w) { _mm_setcsr(w); }
 
 LIBC_INLINE static void clear_except(uint16_t excepts) {
-  uint32_t mxcsr = _MM_GET_EXCEPTION_STATE();
+  uint32_t mxcsr = get_mxcsr();
   mxcsr &= ~static_cast<uint32_t>(excepts);
-  _MM_SET_EXCEPTION_STATE(mxcsr);
+  write_mxcsr(mxcsr);
 }
 
 LIBC_INLINE static uint16_t test_except(uint16_t excepts) {
   uint32_t mxcsr = get_mxcsr();
-  return static_cast<uint16_t>(excepts & mxcsr);
+  return static_cast<uint16_t>(excepts & ExceptionFlags::ALL_F & mxcsr);
 }
 
 LIBC_INLINE static uint16_t get_except() {
@@ -83,9 +83,9 @@ LIBC_INLINE static void set_except(uint16_t excepts) {
 }
 
 LIBC_INLINE static void raise_except(uint16_t excepts) {
-  uint32_t mxcsr = _MM_GET_EXCEPTION_STATE();
-  mxcsr |= excepts;
-  _MM_SET_EXCEPTION_STATE(mxcsr);
+  uint32_t mxcsr = get_mxcsr();
+  mxcsr |= excepts & ExceptionFlags::ALL_F;
+  write_mxcsr(mxcsr);
 #ifdef LIBC_TRAP_ON_RAISE_FP_EXCEPT
   // We will try to trigger the SIGFPE if floating point exceptions are not
   // masked.  Since we already set all the floating point exception flags, we

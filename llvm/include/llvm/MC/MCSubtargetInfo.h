@@ -137,23 +137,23 @@ public:
 
   /// Toggle a feature and return the re-computed feature bits.
   /// This version does not change the implied bits.
-  FeatureBitset ToggleFeature(uint64_t FB);
+  const FeatureBitset &ToggleFeature(uint64_t FB);
 
   /// Toggle a feature and return the re-computed feature bits.
   /// This version does not change the implied bits.
-  FeatureBitset ToggleFeature(const FeatureBitset& FB);
+  const FeatureBitset &ToggleFeature(const FeatureBitset &FB);
 
   /// Toggle a set of features and return the re-computed feature bits.
   /// This version will also change all implied bits.
-  FeatureBitset ToggleFeature(StringRef FS);
+  const FeatureBitset &ToggleFeature(StringRef FS);
 
   /// Apply a feature flag and return the re-computed feature bits, including
   /// all feature bits implied by the flag.
-  FeatureBitset ApplyFeatureFlag(StringRef FS);
+  const FeatureBitset &ApplyFeatureFlag(StringRef FS);
 
   /// Set/clear additional feature bits, including all other bits they imply.
-  FeatureBitset SetFeatureBitsTransitively(const FeatureBitset& FB);
-  FeatureBitset ClearFeatureBitsTransitively(const FeatureBitset &FB);
+  const FeatureBitset &SetFeatureBitsTransitively(const FeatureBitset &FB);
+  const FeatureBitset &ClearFeatureBitsTransitively(const FeatureBitset &FB);
 
   /// Check whether the subtarget features are enabled/disabled as per
   /// the provided string, ignoring all other features.

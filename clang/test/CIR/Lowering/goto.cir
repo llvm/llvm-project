@@ -24,14 +24,13 @@ module {
     cir.return %3 : !s32i
   ^bb2:
     cir.label "err"
-    %4 = cir.const #cir.int<1> : !s32i
-    %5 = cir.unary(minus, %4) : !s32i, !s32i
-    cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
+    %4 = cir.const #cir.int<-1> : !s32i
+    cir.store %4, %1 : !s32i, !cir.ptr<!s32i>
     cir.br ^bb1
   }
 
 // MLIR:  llvm.func @gotoFromIf
-// MLIR:    %[[#One:]] = llvm.mlir.constant(1 : i32) : i32
+// MLIR:    %[[#Minus_one:]] = llvm.mlir.constant(-1 : i32) : i32
 // MLIR:    %[[#Zero:]] = llvm.mlir.constant(0 : i32) : i32
 // MLIR:    llvm.cond_br {{.*}}, ^bb[[#COND_YES:]], ^bb[[#COND_NO:]]
 // MLIR:  ^bb[[#COND_YES]]:
@@ -45,8 +44,7 @@ module {
 // MLIR:    %[[#Ret_val:]] = llvm.load %[[#Ret_val_addr]] {alignment = 4 : i64} : !llvm.ptr -> i32
 // MLIR:    llvm.return %[[#Ret_val]] : i32
 // MLIR:  ^bb[[#GOTO_BLK]]:
-// MLIR:    %[[#Neg_one:]] = llvm.sub %[[#Zero]], %[[#One]]  : i32
-// MLIR:    llvm.store %[[#Neg_one]], %[[#Ret_val_addr]] {{.*}}: i32, !llvm.ptr
+// MLIR:    llvm.store %[[#Minus_one]], %[[#Ret_val_addr]] {{.*}}: i32, !llvm.ptr
 // MLIR:    llvm.br ^bb[[#RETURN]]
 // MLIR: }
 }

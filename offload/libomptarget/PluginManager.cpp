@@ -22,6 +22,7 @@
 
 using namespace llvm;
 using namespace llvm::sys;
+using namespace llvm::omp::target::debug;
 
 PluginManager *PM = nullptr;
 
@@ -32,11 +33,11 @@ PluginManager *PM = nullptr;
 void PluginManager::init() {
   TIMESCOPE();
   if (OffloadPolicy::isOffloadDisabled()) {
-    DP("Offload is disabled. Skipping plugin initialization\n");
+    ODBG(ODT_Init) << "Offload is disabled. Skipping plugin initialization";
     return;
   }
 
-  ODBG("Init") << "Loading RTLs";
+  ODBG(ODT_Init) << "Loading RTLs";
 
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
@@ -46,25 +47,25 @@ void PluginManager::init() {
   } while (false);
 #include "Shared/Targets.def"
 
-  DP("RTLs loaded!\n");
+  ODBG(ODT_Init) << "RTLs loaded!";
 }
 
 void PluginManager::deinit() {
   TIMESCOPE();
-  DP("Unloading RTLs...\n");
+  ODBG(ODT_Deinit) << "Unloading RTLs...";
 
   for (auto &Plugin : Plugins) {
     if (!Plugin->is_initialized())
       continue;
 
     if (auto Err = Plugin->deinit()) {
-      [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
-      DP("Failed to deinit plugin: %s\n", InfoMsg.c_str());
+      std::string InfoMsg = toString(std::move(Err));
+      ODBG(ODT_Deinit) << "Failed to deinit plugin: " << InfoMsg;
     }
     Plugin.release();
   }
 
-  DP("RTLs unloaded!\n");
+  ODBG(ODT_Deinit) << "RTLs unloaded!";
 }
 
 bool PluginManager::initializePlugin(GenericPluginTy &Plugin) {
@@ -72,13 +73,14 @@ bool PluginManager::initializePlugin(GenericPluginTy &Plugin) {
     return true;
 
   if (auto Err = Plugin.init()) {
-    [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
-    DP("Failed to init plugin: %s\n", InfoMsg.c_str());
+    std::string InfoMsg = toString(std::move(Err));
+    ODBG(ODT_Init) << "Failed to init plugin: " << InfoMsg;
     return false;
   }
 
-  DP("Registered plugin %s with %d visible device(s)\n", Plugin.getName(),
-     Plugin.number_of_devices());
+  ODBG(ODT_Init) << "Registered plugin " << Plugin.getName() << " with "
+                 << Plugin.number_of_devices() << " visible device(s)";
+
   return true;
 }
 
@@ -104,8 +106,8 @@ bool PluginManager::initializeDevice(GenericPluginTy &Plugin,
 
   auto Device = std::make_unique<DeviceTy>(&Plugin, UserId, DeviceId);
   if (auto Err = Device->init()) {
-    [[maybe_unused]] std::string InfoMsg = toString(std::move(Err));
-    DP("Failed to init device %d: %s\n", DeviceId, InfoMsg.c_str());
+    std::string InfoMsg = toString(std::move(Err));
+    ODBG(ODT_Init) << "Failed to init device " << DeviceId << ": " << InfoMsg;
     return false;
   }
 
@@ -229,7 +231,8 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
         continue;
 
       if (!R.number_of_devices()) {
-        DP("Skipping plugin %s with no visible devices\n", R.getName());
+        ODBG(ODT_Init) << "Skipping plugin " << R.getName()
+                       << " with no visible devices";
         continue;
       }
 
@@ -239,17 +242,18 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
         // registered for the same device in the case that they are mutually
         // compatible, such as sm_80 and sm_89.
         if (UsedDevices[&R].contains(DeviceId)) {
-          DP("Image " DPxMOD
-             " is a duplicate, not loaded on RTL %s device %d!\n",
-             DPxPTR(Img->ImageStart), R.getName(), DeviceId);
+          ODBG(ODT_Init) << "Image " << Img->ImageStart
+                         << " is a duplicate, not loaded on RTL " << R.getName()
+                         << " device " << DeviceId;
           continue;
         }
 
         if (!R.isDeviceCompatible(DeviceId, Buffer))
           continue;
 
-        DP("Image " DPxMOD " is compatible with RTL %s device %d!\n",
-           DPxPTR(Img->ImageStart), R.getName(), DeviceId);
+        ODBG(ODT_Init) << "Image " << Img->ImageStart
+                       << " is compatible with RTL " << R.getName()
+                       << " device " << DeviceId;
 
         if (!initializeDevice(R, DeviceId))
           continue;
@@ -269,8 +273,8 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
         TranslationTable &TT =
             (PM->HostEntriesBeginToTransTable)[Desc->HostEntriesBegin];
 
-        DP("Registering image " DPxMOD " with RTL %s!\n",
-           DPxPTR(Img->ImageStart), R.getName());
+        ODBG(ODT_Init) << "Registering image " << Img->ImageStart
+                       << " with RTL " << R.getName();
 
         auto UserId = PM->DeviceIds[std::make_pair(&R, DeviceId)];
         if (TT.TargetsTable.size() < static_cast<size_t>(UserId + 1)) {
@@ -292,7 +296,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
       }
     }
     if (!FoundRTL)
-      DP("No RTL found for image " DPxMOD "!\n", DPxPTR(Img->ImageStart));
+      ODBG(ODT_Init) << "No RTL found for image " << Img->ImageStart << "!";
   }
   PM->RTLsMtx.unlock();
 
@@ -309,7 +313,7 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   if (UseAutoZeroCopy)
     addRequirements(OMPX_REQ_AUTO_ZERO_COPY);
 
-  DP("Done registering entries!\n");
+  ODBG(ODT_Init) << "Done registering entries!";
 }
 
 // Temporary forward declaration, old style CTor/DTor handling is going away.
@@ -317,7 +321,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
            KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
 
 void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
-  DP("Unloading target library!\n");
+  ODBG(ODT_Deinit) << "Unloading target library!";
 
   Desc = upgradeLegacyEntries(Desc);
 
@@ -341,19 +345,20 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
 
       FoundRTL = &R;
 
-      DP("Unregistered image " DPxMOD " from RTL\n", DPxPTR(Img->ImageStart));
+      ODBG(ODT_Deinit) << "Unregistered image " << Img->ImageStart
+                       << " from RTL";
 
       break;
     }
 
     // if no RTL was found proceed to unregister the next image
     if (!FoundRTL) {
-      DP("No RTLs in use support the image " DPxMOD "!\n",
-         DPxPTR(Img->ImageStart));
+      ODBG(ODT_Deinit) << "No RTLs in use support the image "
+                       << Img->ImageStart;
     }
   }
   PM->RTLsMtx.unlock();
-  DP("Done unregistering images!\n");
+  ODBG(ODT_Deinit) << "Done unregistering images!";
 
   // Remove entries from PM->HostPtrToTableMap
   PM->TblMapMtx.lock();
@@ -367,18 +372,18 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   auto TransTable =
       PM->HostEntriesBeginToTransTable.find(Desc->HostEntriesBegin);
   if (TransTable != PM->HostEntriesBeginToTransTable.end()) {
-    DP("Removing translation table for descriptor " DPxMOD "\n",
-       DPxPTR(Desc->HostEntriesBegin));
+    ODBG(ODT_Deinit) << "Removing translation table for descriptor "
+                     << Desc->HostEntriesBegin;
     PM->HostEntriesBeginToTransTable.erase(TransTable);
   } else {
-    DP("Translation table for descriptor " DPxMOD " cannot be found, probably "
-       "it has been already removed.\n",
-       DPxPTR(Desc->HostEntriesBegin));
+    ODBG(ODT_Deinit) << "Translation table for descriptor "
+                     << Desc->HostEntriesBegin << " cannot be found, probably "
+                     << "it has been already removed.";
   }
 
   PM->TblMapMtx.unlock();
 
-  DP("Done unregistering library!\n");
+  ODBG(ODT_Deinit) << "Done unregistering library!";
 }
 
 /// Map global data and execute pending ctors
@@ -393,8 +398,8 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
     for (auto *HostEntriesBegin : PM->HostEntriesBeginRegistrationOrder) {
       TranslationTable *TransTable =
           &PM->HostEntriesBeginToTransTable[HostEntriesBegin];
-      DP("Trans table %p : %p\n", TransTable->HostTable.EntriesBegin,
-         TransTable->HostTable.EntriesEnd);
+      ODBG(ODT_Init) << "Trans table " << TransTable->HostTable.EntriesBegin
+                     << " : " << TransTable->HostTable.EntriesEnd;
       if (TransTable->HostTable.EntriesBegin ==
           TransTable->HostTable.EntriesEnd) {
         // No host entry so no need to proceed
@@ -411,7 +416,7 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
              "Not expecting a device ID outside the table's bounds!");
       __tgt_device_image *Img = TransTable->TargetsImages[DeviceId];
       if (!Img) {
-        REPORT("No image loaded for device id %d.\n", DeviceId);
+        REPORT() << "No image loaded for device id " << DeviceId << ".";
         Rc = OFFLOAD_FAIL;
         break;
       }
@@ -419,8 +424,7 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
       // 2) Load the image onto the given device.
       auto BinaryOrErr = Device.loadBinary(Img);
       if (llvm::Error Err = BinaryOrErr.takeError()) {
-        REPORT("Failed to load image %s\n",
-               llvm::toString(std::move(Err)).c_str());
+        REPORT() << "Failed to load image " << llvm::toString(std::move(Err));
         Rc = OFFLOAD_FAIL;
         break;
       }
@@ -440,7 +444,7 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
           if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE))
             if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName,
                                        &DeviceEntry.Address) != OFFLOAD_SUCCESS)
-              REPORT("Failed to load symbol %s\n", Entry.SymbolName);
+              REPORT() << "Failed to load symbol " << Entry.SymbolName;
 
           // If unified memory is active, the corresponding global is a device
           // reference to the host global. We need to initialize the pointer on
@@ -452,15 +456,16 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
             if (Device.RTL->data_submit(DeviceId, DeviceEntry.Address,
                                         Entry.Address,
                                         Entry.Size) != OFFLOAD_SUCCESS)
-              REPORT("Failed to write symbol for USM %s\n", Entry.SymbolName);
+              REPORT() << "Failed to write symbol for USM " << Entry.SymbolName;
         } else if (Entry.Address) {
           if (Device.RTL->get_function(Binary, Entry.SymbolName,
                                        &DeviceEntry.Address) != OFFLOAD_SUCCESS)
-            REPORT("Failed to load kernel %s\n", Entry.SymbolName);
+            REPORT() << "Failed to load kernel " << Entry.SymbolName;
         }
-        DP("Entry point " DPxMOD " maps to%s %s (" DPxMOD ")\n",
-           DPxPTR(Entry.Address), (Entry.Size) ? " global" : "",
-           Entry.SymbolName, DPxPTR(DeviceEntry.Address));
+        ODBG(ODT_Mapping) << "Entry point " << Entry.Address << " maps to"
+                          << (Entry.Size ? " global" : "") << " "
+                          << Entry.SymbolName << " (" << DeviceEntry.Address
+                          << ")";
 
         DeviceEntries.emplace_back(DeviceEntry);
       }
@@ -511,10 +516,10 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
           CurrDeviceEntryAddr = DevPtr;
         }
 
-        DP("Add mapping from host " DPxMOD " to device " DPxMOD " with size %zu"
-           ", name \"%s\"\n",
-           DPxPTR(CurrHostEntry->Address), DPxPTR(CurrDeviceEntry->Address),
-           CurrDeviceEntry->Size, CurrDeviceEntry->SymbolName);
+        ODBG(ODT_Mapping) << "Add mapping from host " << CurrHostEntry->Address
+                          << " to device " << CurrDeviceEntry->Address
+                          << " with size " << CurrDeviceEntry->Size
+                          << ", name \"" << CurrDeviceEntry->SymbolName << "\"";
         HDTTMap->emplace(new HostDataToTargetTy(
             (uintptr_t)CurrHostEntry->Address /*HstPtrBase*/,
             (uintptr_t)CurrHostEntry->Address /*HstPtrBegin*/,

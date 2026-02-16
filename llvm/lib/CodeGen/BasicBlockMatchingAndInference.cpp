@@ -85,10 +85,7 @@ INITIALIZE_PASS_END(BasicBlockMatchingAndInference, "machine-block-match-infer",
 char BasicBlockMatchingAndInference::ID = 0;
 
 BasicBlockMatchingAndInference::BasicBlockMatchingAndInference()
-    : MachineFunctionPass(ID) {
-  initializeBasicBlockMatchingAndInferencePass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 void BasicBlockMatchingAndInference::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineBlockHashInfo>();
@@ -119,24 +116,23 @@ BasicBlockMatchingAndInference::initWeightInfoByMatching(MachineFunction &MF) {
   StaleMatcher Matcher;
   Matcher.init(Blocks, Hashes);
   BasicBlockMatchingAndInference::WeightInfo MatchWeight;
-  auto [IsValid, PathAndClusterInfo] =
-      BSPR->getFunctionPathAndClusterInfo(MF.getName());
-  if (!IsValid)
+  const CFGProfile *CFG = BSPR->getFunctionCFGProfile(MF.getName());
+  if (CFG == nullptr)
     return MatchWeight;
-  for (auto &BlockCount : PathAndClusterInfo.NodeCounts) {
-    if (PathAndClusterInfo.BBHashes.count(BlockCount.first.BaseID)) {
-      auto Hash = PathAndClusterInfo.BBHashes[BlockCount.first.BaseID];
+  for (auto &BlockCount : CFG->NodeCounts) {
+    if (CFG->BBHashes.count(BlockCount.first.BaseID)) {
+      auto Hash = CFG->BBHashes.lookup(BlockCount.first.BaseID);
       MachineBasicBlock *Block = Matcher.matchBlock(BlendedBlockHash(Hash));
       // When a basic block has clone copies, sum their counts.
       if (Block != nullptr)
         MatchWeight.BlockWeights[Block] += BlockCount.second;
     }
   }
-  for (auto &PredItem : PathAndClusterInfo.EdgeCounts) {
+  for (auto &PredItem : CFG->EdgeCounts) {
     auto PredID = PredItem.first.BaseID;
-    if (!PathAndClusterInfo.BBHashes.count(PredID))
+    if (!CFG->BBHashes.count(PredID))
       continue;
-    auto PredHash = PathAndClusterInfo.BBHashes[PredID];
+    auto PredHash = CFG->BBHashes.lookup(PredID);
     MachineBasicBlock *PredBlock =
         Matcher.matchBlock(BlendedBlockHash(PredHash));
     if (PredBlock == nullptr)
@@ -144,8 +140,8 @@ BasicBlockMatchingAndInference::initWeightInfoByMatching(MachineFunction &MF) {
     for (auto &SuccItem : PredItem.second) {
       auto SuccID = SuccItem.first.BaseID;
       auto EdgeWeight = SuccItem.second;
-      if (PathAndClusterInfo.BBHashes.count(SuccID)) {
-        auto SuccHash = PathAndClusterInfo.BBHashes[SuccID];
+      if (CFG->BBHashes.count(SuccID)) {
+        auto SuccHash = CFG->BBHashes.lookup(SuccID);
         MachineBasicBlock *SuccBlock =
             Matcher.matchBlock(BlendedBlockHash(SuccHash));
         // When an edge has clone copies, sum their counts.

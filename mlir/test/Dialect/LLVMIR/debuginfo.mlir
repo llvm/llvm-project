@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s
-// RUN: mlir-opt -emit-bytecode %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s --verify-roundtrip | mlir-opt | FileCheck %s
 
 // CHECK-DAG: #[[FILE:.*]] = #llvm.di_file<"debuginfo.mlir" in "/test/">
 #file = #llvm.di_file<"debuginfo.mlir" in "/test/">
@@ -43,6 +42,16 @@
   tag = DW_TAG_pointer_type, baseType = #int0,
   sizeInBits = 64, alignInBits = 32, offsetInBits = 4,
   dwarfAddressSpace = 3, extraData = #int1
+>
+
+// CHECK-DAG: #[[PTR3:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, flags = "Artificial|ObjectPointer">
+#ptr3 = #llvm.di_derived_type<
+  tag = DW_TAG_pointer_type, flags = "Artificial|ObjectPointer"
+>
+
+// CHECK-DAG: #[[PTR4:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type>
+#ptr4 = #llvm.di_derived_type<
+  tag = DW_TAG_pointer_type, flags = "Zero"
 >
 
 // CHECK-DAG: #[[COMP0:.*]] = #llvm.di_composite_type<tag = DW_TAG_array_type, name = "array0", line = 10, sizeInBits = 128, alignInBits = 32>
@@ -90,9 +99,9 @@
  name = "expr_elements2", baseType = #int0, elements =
  #llvm.di_generic_subrange<count = #exp1, lowerBound = #exp2, stride = #exp3>>
 
-// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[PTR2]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]], #[[COMP3:.*]]>
+// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[PTR2]], #[[PTR3]], #[[PTR4]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]], #[[COMP3:.*]]>
 #spType0 = #llvm.di_subroutine_type<
-  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #ptr2, #comp0, #comp1, #comp2, #comp3
+  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #ptr2, #ptr3, #ptr4, #comp0, #comp1, #comp2, #comp3
 >
 
 // CHECK-DAG: #[[SPTYPE1:.*]] = #llvm.di_subroutine_type<types = #[[INT1]], #[[INT1]]>

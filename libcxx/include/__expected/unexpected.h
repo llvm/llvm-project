@@ -89,10 +89,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr unexpected& operator=(const unexpected&) = default;
   _LIBCPP_HIDE_FROM_ABI constexpr unexpected& operator=(unexpected&&)      = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Err& error() const& noexcept { return __unex_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Err& error() & noexcept { return __unex_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Err&& error() const&& noexcept { return std::move(__unex_); }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Err&& error() && noexcept { return std::move(__unex_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Err& error() const& noexcept { return __unex_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err& error() & noexcept { return __unex_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Err&& error() const&& noexcept { return std::move(__unex_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err&& error() && noexcept { return std::move(__unex_); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr void swap(unexpected& __other) noexcept(is_nothrow_swappable_v<_Err>) {
     static_assert(is_swappable_v<_Err>, "unexpected::swap requires is_swappable_v<E> to be true");

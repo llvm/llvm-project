@@ -324,6 +324,28 @@ define <vscale x 4 x i32> @replace_sdiv_intrinsic_i32(<vscale x 4 x i32> %a, <vs
   ret <vscale x 4 x i32> %r
 }
 
+declare <vscale x 4 x i32> @llvm.aarch64.sve.shsub.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+define <vscale x 4 x i32> @replace_shsub_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: define <vscale x 4 x i32> @replace_shsub_intrinsic_i32
+; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.shsub.u.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+;
+  %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.shsub.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %r
+}
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.shsubr.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+define <vscale x 4 x i32> @replace_shsubr_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: define <vscale x 4 x i32> @replace_shsubr_intrinsic_i32
+; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.shsubr.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+;
+  %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.shsubr.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %r
+}
+
 declare <vscale x 4 x i32> @llvm.aarch64.sve.smax.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 define <vscale x 4 x i32> @replace_smax_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @replace_smax_intrinsic_i32
@@ -428,6 +450,28 @@ define <vscale x 4 x i32> @replace_udiv_intrinsic_i32(<vscale x 4 x i32> %a, <vs
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.udiv.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %r
+}
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.uhsub.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+define <vscale x 4 x i32> @replace_uhsub_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: define <vscale x 4 x i32> @replace_uhsub_intrinsic_i32
+; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uhsub.u.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+;
+  %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uhsub.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
+  ret <vscale x 4 x i32> %r
+}
+
+declare <vscale x 4 x i32> @llvm.aarch64.sve.uhsubr.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
+define <vscale x 4 x i32> @replace_uhsubr_intrinsic_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
+; CHECK-LABEL: define <vscale x 4 x i32> @replace_uhsubr_intrinsic_i32
+; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[R:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uhsubr.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+;
+  %r = tail call <vscale x 4 x i32> @llvm.aarch64.sve.uhsubr.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %r
 }
 

@@ -8,10 +8,6 @@ import platform
 import sys
 import json
 
-# TODO(boomanaiden154): Remove the optional call once we can require Python
-# 3.10.
-from typing import Optional
-
 import requests
 import github
 import github.PullRequest
@@ -24,7 +20,7 @@ PREMERGE_ADVISOR_URL = (
 COMMENT_TAG = "<!--PREMERGE ADVISOR COMMENT: {platform}-->"
 
 
-def get_comment_id(platform: str, pr: github.PullRequest.PullRequest) -> Optional[int]:
+def get_comment_id(platform: str, pr: github.PullRequest.PullRequest) -> int | None:
     platform_comment_tag = COMMENT_TAG.format(platform=platform)
     for comment in pr.as_issue().get_comments():
         if platform_comment_tag in comment.body:
@@ -37,7 +33,9 @@ def get_comment(
     pr_number: int,
     body: str,
 ) -> dict[str, str]:
-    repo = github.Github(github_token).get_repo("llvm/llvm-project")
+    repo = github.Github(auth=github.Auth.Token(github_token)).get_repo(
+        "llvm/llvm-project"
+    )
     pr = repo.get_issue(pr_number).as_pull_request()
     body = COMMENT_TAG.format(platform=platform.system()) + "\n" + body
     comment = {"body": body}
@@ -53,7 +51,7 @@ def main(
     github_token: str,
     pr_number: int,
     return_code: int,
-):
+) -> bool:
     """The main entrypoint for the script.
 
     This function parses failures from files, requests information from the
@@ -112,19 +110,14 @@ def main(
             advisor_explanations = advisor_response.json()
         else:
             print(advisor_response.reason)
-    comments.append(
-        get_comment(
-            github_token,
-            pr_number,
-            generate_test_report_lib.generate_report(
-                generate_test_report_lib.compute_platform_title(),
-                return_code,
-                junit_objects,
-                ninja_logs,
-                failure_explanations_list=advisor_explanations,
-            ),
-        )
+    report, failures_explained = generate_test_report_lib.generate_report(
+        generate_test_report_lib.compute_platform_title(),
+        return_code,
+        junit_objects,
+        ninja_logs,
+        failure_explanations_list=advisor_explanations,
     )
+    comments.append(get_comment(github_token, pr_number, report))
     if return_code == 0 and "id" not in comments[0]:
         # If the job succeeds and there is not an existing comment, we
         # should not write one to reduce noise.
@@ -133,6 +126,7 @@ def main(
     with open(comments_file_name, "w") as comment_file_handle:
         json.dump(comments, comment_file_handle)
     print(f"Wrote comments to {comments_file_name}")
+    return failures_explained
 
 
 if __name__ == "__main__":
@@ -151,10 +145,15 @@ if __name__ == "__main__":
     if platform.machine() == "arm64" or platform.machine() == "aarch64":
         sys.exit(0)
 
-    main(
+    failures_explained = main(
         args.commit_sha,
         args.build_log_files,
         args.github_token,
         args.pr_number,
         args.return_code,
     )
+
+    if failures_explained:
+        sys.exit(0)
+
+    sys.exit(args.return_code)

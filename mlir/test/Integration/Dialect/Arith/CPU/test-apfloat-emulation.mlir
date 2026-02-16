@@ -1,4 +1,4 @@
-// REQUIRES: system-linux
+// REQUIRES: system-linux || system-darwin
 // TODO: Run only on Linux until we figure out how to build
 // mlir_apfloat_wrappers in a platform-independent way.
 

@@ -438,7 +438,7 @@ class StackColoring {
 
 public:
   StackColoring(SlotIndexes *Indexes) : Indexes(Indexes) {}
-  bool run(MachineFunction &Func);
+  bool run(MachineFunction &Func, bool OnlyRemoveMarkers = false);
 
 private:
   /// Used in collectMarkers
@@ -1190,11 +1190,8 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
 }
 
 bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
   StackColoring SC(&getAnalysis<SlotIndexesWrapperPass>().getSI());
-  return SC.run(MF);
+  return SC.run(MF, skipFunction(MF.getFunction()));
 }
 
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
@@ -1205,7 +1202,7 @@ PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-bool StackColoring::run(MachineFunction &Func) {
+bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   LLVM_DEBUG(dbgs() << "********** Stack Coloring **********\n"
                     << "********** Function: " << Func.getName() << '\n');
   MF = &Func;
@@ -1245,8 +1242,10 @@ bool StackColoring::run(MachineFunction &Func) {
   LLVM_DEBUG(dbgs() << "Total Stack size: " << TotalSize << " bytes\n\n");
 
   // Don't continue because there are not enough lifetime markers, or the
-  // stack is too small, or we are told not to optimize the slots.
-  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring) {
+  // stack is too small, or we are told not to optimize the slots, or
+  // opt-bisect-limit is skipping this pass.
+  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring ||
+      OnlyRemoveMarkers) {
     LLVM_DEBUG(dbgs() << "Will not try to merge slots.\n");
     return removeAllMarkers();
   }

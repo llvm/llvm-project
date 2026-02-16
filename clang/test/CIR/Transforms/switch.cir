@@ -258,12 +258,11 @@ module {
 // CHECK-NEXT:    cir.store
 // CHECK-NEXT:    cir.br ^[[EPILOG]]
 // CHECK-NEXT:  ^[[JUDGE_RANGE]]:
-// CHECK-NEXT:     %[[RANGE:[0-9]+]] = cir.const #cir.int<99>
 // CHECK-NEXT:     %[[LOWER_BOUND:[0-9]+]] = cir.const #cir.int<1>
 // CHECK-NEXT:     %[[DIFF:[0-9]+]] = cir.binop(sub, %[[X]], %[[LOWER_BOUND]])
 // CHECK-NEXT:     %[[U_DIFF:[0-9]+]] = cir.cast integral %[[DIFF]] : !s32i -> !u32i
-// CHECK-NEXT:     %[[U_RANGE:[0-9]+]] = cir.cast integral %[[RANGE]] : !s32i -> !u32i
-// CHECK-NEXT:     %[[CMP_RESULT:[0-9]+]] = cir.cmp(le, %[[U_DIFF]], %[[U_RANGE]])
+// CHECK-NEXT:     %[[RANGE:[0-9]+]] = cir.const #cir.int<99>
+// CHECK-NEXT:     %[[CMP_RESULT:[0-9]+]] = cir.cmp(le, %[[U_DIFF]], %[[RANGE]])
 // CHECK-NEXT:     cir.brcond %[[CMP_RESULT]] ^[[CASE_RANGE]], ^[[CASE_DEFAULT:bb[0-9]+]]
 // CHECK-NEXT:  ^[[CASE_DEFAULT]]:
 // CHECK-NEXT:    cir.int<3>
@@ -301,13 +300,12 @@ module {
 // CHECK:  ^bb[[#DEFAULT_BB]]:  // 2 preds: ^bb[[#NO_PRED_BB]], ^bb[[#RANGE_BR]]
 // CHECK:    cir.br ^bb[[#EXIT:]]
 // CHECK:  ^bb[[#RANGE_BR]]:  // pred: ^bb[[#BB2:]]
-// CHECK:    %[[CONST97:.*]] = cir.const #cir.int<97> : !s32i
 // CHECK:    %[[CONST3:.*]] = cir.const #cir.int<3> : !s32i
 // CHECK:    %[[SUB:.*]] = cir.binop(sub, %[[COND]], %[[CONST3]]) : !s32i
 // CHECK:    %[[CAST1:.*]] = cir.cast integral %[[SUB]] : !s32i -> !u32i
-// CHECK:    %[[CAST2:.*]] = cir.cast integral %[[CONST97]] : !s32i -> !u32i
-// CHECK:    %[[CMP:.*]] = cir.cmp(le, %[[CAST1]], %[[CAST2]]) : !u32i, !cir.bool
-// CHECK:    cir.brcond %7 ^bb[[#DEFAULT_BB]], ^bb[[#RANGE_BB:]]
+// CHECK:    %[[CONST97:.*]] = cir.const #cir.int<97> : !u32i
+// CHECK:    %[[CMP:.*]] = cir.cmp(le, %[[CAST1]], %[[CONST97]]) : !u32i, !cir.bool
+// CHECK:    cir.brcond %[[CMP]] ^bb[[#DEFAULT_BB]], ^bb[[#RANGE_BB:]]
 // CHECK:  ^bb[[#RANGE_BB]]:  // pred: ^bb[[#RANGE_BR]]
 // CHECK:    cir.br ^bb[[#EXIT]]
 // CHECK:  ^bb[[#EXIT]]:  // 2 preds: ^bb[[#DEFAULT_BB]], ^bb[[#RANGE_BB]]

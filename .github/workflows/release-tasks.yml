@@ -54,9 +54,6 @@ jobs:
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
       upload: true
-    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
-    secrets:
-      WWW_RELEASES_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
 
   release-doxygen:
     name: Build and Upload Release Doxygen
@@ -73,15 +70,64 @@ jobs:
     secrets:
       RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
 
+  # The pypi trusted publishing does not support called workflows, so we
+  # can't use them here.
   release-lit:
     name: Release Lit
-    needs: validate-tag
-    uses: ./.github/workflows/release-lit.yml
-    with:
-      release-version: ${{ needs.validate-tag.outputs.release-version }}
-    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
-    secrets:
-      RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write # Requred for pypi publishing
+    needs:
+      - validate-tag
+    environment: pypi
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          ref: "llvmorg-${{ needs.validate-tag.outputs.release-version }}"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-build python3-psutil python3-github
+
+      - name: Check Permissions
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+        run: |
+          ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user ${{ github.actor }} --user-token "$USER_TOKEN" check-permissions
+
+      - name: Test lit
+        run: |
+          mkdir build && cd build
+          export FILECHECK_OPTS='-dump-input-filter=all -vv -color'
+          cmake ../llvm -DCMAKE_BUILD_TYPE=Release -G Ninja
+          ninja -v -j $(nproc) check-lit
+
+      - name: Package lit
+        run: |
+          cd llvm/utils/lit
+          # Remove 'dev' suffix from lit version.
+          sed -i 's/ + "dev"//g' lit/__init__.py
+          python3 -m build
+
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: lit-${{ inputs.release-version }}-release-binary
+          path: |
+            llvm/utils/lit/dist
+
+      - name: Upload lit to test.pypi.org
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: llvm/utils/lit/dist/
+
+      - name: Upload lit to pypi.org
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+        with:
+          packages-dir: llvm/utils/lit/dist/
 
   release-binaries:
     name: Build Release Binaries
@@ -120,9 +166,9 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write # For updating the release message.
+    if: '!cancelled()'
     needs:
       - validate-tag
-      - release-create
       - release-binaries
 
     steps:

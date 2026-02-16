@@ -24,6 +24,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <utility>
 
 namespace mlir {
@@ -280,12 +281,12 @@ static ParallelComputeFunction createParallelComputeFunction(
 
   // Materialize known constants as constant operation in the function body.
   auto values = [&](ArrayRef<BlockArgument> args, ArrayRef<IntegerAttr> attrs) {
-    return llvm::to_vector(
-        llvm::map_range(llvm::zip(args, attrs), [&](auto tuple) -> Value {
-          if (IntegerAttr attr = std::get<1>(tuple))
-            return arith::ConstantOp::create(b, attr);
-          return std::get<0>(tuple);
-        }));
+    return llvm::map_to_vector(llvm::zip(args, attrs),
+                               [&](auto tuple) -> Value {
+                                 if (IntegerAttr attr = std::get<1>(tuple))
+                                   return arith::ConstantOp::create(b, attr);
+                                 return std::get<0>(tuple);
+                               });
   };
 
   // Multi-dimensional parallel iteration space defined by the loop trip counts.

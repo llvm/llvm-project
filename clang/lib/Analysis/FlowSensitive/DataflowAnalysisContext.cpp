@@ -18,6 +18,8 @@
 #include "clang/Analysis/FlowSensitive/Logger.h"
 #include "clang/Analysis/FlowSensitive/SimplifyConstraints.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
@@ -27,6 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
+#include <stack>
 #include <string>
 #include <utility>
 #include <vector>
@@ -261,23 +264,33 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
 
 static void getReferencedAtoms(const Formula &F,
                                llvm::DenseSet<dataflow::Atom> &Refs) {
-  switch (F.kind()) {
-  case Formula::AtomRef:
-    Refs.insert(F.getAtom());
-    break;
-  case Formula::Literal:
-    break;
-  case Formula::Not:
-    getReferencedAtoms(*F.operands()[0], Refs);
-    break;
-  case Formula::And:
-  case Formula::Or:
-  case Formula::Implies:
-  case Formula::Equal:
-    ArrayRef<const Formula *> Operands = F.operands();
-    getReferencedAtoms(*Operands[0], Refs);
-    getReferencedAtoms(*Operands[1], Refs);
-    break;
+  // Avoid recursion to avoid stack overflows from very large formulas.
+  // The shape of the tree structure for very large formulas is such that there
+  // are at most 2 children from any node, but there may be many generations.
+  std::stack<const Formula *> WorkList;
+  WorkList.push(&F);
+
+  while (!WorkList.empty()) {
+    const Formula *Current = WorkList.top();
+    WorkList.pop();
+    switch (Current->kind()) {
+    case Formula::AtomRef:
+      Refs.insert(Current->getAtom());
+      break;
+    case Formula::Literal:
+      break;
+    case Formula::Not:
+      WorkList.push(Current->operands()[0]);
+      break;
+    case Formula::And:
+    case Formula::Or:
+    case Formula::Implies:
+    case Formula::Equal:
+      ArrayRef<const Formula *> Operands = Current->operands();
+      WorkList.push(Operands[0]);
+      WorkList.push(Operands[1]);
+      break;
+    }
   }
 }
 

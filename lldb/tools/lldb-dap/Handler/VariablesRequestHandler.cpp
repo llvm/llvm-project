@@ -11,6 +11,7 @@
 #include "Handler/RequestHandler.h"
 #include "JSONUtils.h"
 #include "ProtocolUtils.h"
+#include "Variables.h"
 
 using namespace llvm;
 using namespace lldb_dap::protocol;
@@ -26,26 +27,26 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
   const uint64_t var_ref = arguments.variablesReference;
   const uint64_t count = arguments.count;
   const uint64_t start = arguments.start;
-  bool hex = false;
-  if (arguments.format)
-    hex = arguments.format->hex;
+  const bool hex = arguments.format ? arguments.format->hex : false;
 
   std::vector<Variable> variables;
 
-  if (lldb::SBValueList *top_scope = dap.variables.GetTopLevelScope(var_ref)) {
+  std::optional<ScopeData> scope_data = dap.variables.GetTopLevelScope(var_ref);
+  if (scope_data) {
     // variablesReference is one of our scopes, not an actual variable it is
     // asking for the list of args, locals or globals.
     int64_t start_idx = 0;
     int64_t num_children = 0;
 
-    if (var_ref == VARREF_REGS) {
+    if (scope_data->kind == eScopeKindRegisters) {
+
       // Change the default format of any pointer sized registers in the first
       // register set to be the lldb::eFormatAddressInfo so we show the pointer
       // and resolve what the pointer resolves to. Only change the format if the
       // format was set to the default format or if it was hex as some registers
       // have formats set for them.
       const uint32_t addr_size = dap.target.GetProcess().GetAddressByteSize();
-      lldb::SBValue reg_set = dap.variables.registers.GetValueAtIndex(0);
+      lldb::SBValue reg_set = scope_data->scope.GetValueAtIndex(0);
       const uint32_t num_regs = reg_set.GetNumChildren();
       for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
         lldb::SBValue reg = reg_set.GetChildAtIndex(reg_idx);
@@ -57,15 +58,15 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
       }
     }
 
-    num_children = top_scope->GetSize();
-    if (num_children == 0 && var_ref == VARREF_LOCALS) {
+    num_children = scope_data->scope.GetSize();
+    if (num_children == 0 && scope_data->kind == eScopeKindLocals) {
       // Check for an error in the SBValueList that might explain why we don't
       // have locals. If we have an error display it as the sole value in the
       // the locals.
 
       // "error" owns the error string so we must keep it alive as long as we
       // want to use the returns "const char *"
-      lldb::SBError error = top_scope->GetError();
+      lldb::SBError error = scope_data->scope.GetError();
       const char *var_err = error.GetCString();
       if (var_err) {
         // Create a fake variable named "error" to explain why variables were
@@ -85,16 +86,16 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     const int64_t end_idx = start_idx + ((count == 0) ? num_children : count);
 
     // We first find out which variable names are duplicated
-    std::map<std::string, int> variable_name_counts;
+    std::map<llvm::StringRef, int> variable_name_counts;
     for (auto i = start_idx; i < end_idx; ++i) {
-      lldb::SBValue variable = top_scope->GetValueAtIndex(i);
+      lldb::SBValue variable = scope_data->scope.GetValueAtIndex(i);
       if (!variable.IsValid())
         break;
       variable_name_counts[GetNonNullVariableName(variable)]++;
     }
 
     // Show return value if there is any ( in the local top frame )
-    if (var_ref == VARREF_LOCALS) {
+    if (scope_data && scope_data->kind == eScopeKindLocals) {
       auto process = dap.target.GetProcess();
       auto selected_thread = process.GetSelectedThread();
       lldb::SBValue stop_return_value = selected_thread.GetStopReturnValue();
@@ -118,7 +119,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
 
     // Now we construct the result with unique display variable names
     for (auto i = start_idx; i < end_idx; ++i) {
-      lldb::SBValue variable = top_scope->GetValueAtIndex(i);
+      lldb::SBValue variable = scope_data->scope.GetValueAtIndex(i);
 
       if (!variable.IsValid())
         break;
@@ -139,7 +140,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
       const bool is_permanent =
           dap.variables.IsPermanentVariableReference(var_ref);
       auto addChild = [&](lldb::SBValue child,
-                          std::optional<std::string> custom_name = {}) {
+                          std::optional<llvm::StringRef> custom_name = {}) {
         if (!child.IsValid())
           return;
         const int64_t child_var_ref =
@@ -166,7 +167,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     }
   }
 
-  return VariablesResponseBody{variables};
+  return VariablesResponseBody{std::move(variables)};
 }
 
 } // namespace lldb_dap

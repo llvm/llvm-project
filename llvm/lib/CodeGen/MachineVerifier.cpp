@@ -366,9 +366,7 @@ struct MachineVerifierLegacyPass : public MachineFunctionPass {
   const std::string Banner;
 
   MachineVerifierLegacyPass(std::string banner = std::string())
-      : MachineFunctionPass(ID), Banner(std::move(banner)) {
-    initializeMachineVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+      : MachineFunctionPass(ID), Banner(std::move(banner)) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addUsedIfAvailable<LiveStacksWrapperLegacy>();
@@ -955,8 +953,8 @@ void MachineVerifier::verifyInlineAsm(const MachineInstr *MI) {
     report("Asm flags must be an immediate", MI);
   // Allowed flags are Extra_HasSideEffects = 1, Extra_IsAlignStack = 2,
   // Extra_AsmDialect = 4, Extra_MayLoad = 8, and Extra_MayStore = 16,
-  // and Extra_IsConvergent = 32.
-  if (!isUInt<6>(MI->getOperand(1).getImm()))
+  // and Extra_IsConvergent = 32, Extra_MayUnwind = 64.
+  if (!isUInt<7>(MI->getOperand(1).getImm()))
     report("Unknown asm flags", &MI->getOperand(1), 1);
 
   static_assert(InlineAsm::MIOp_FirstOperand == 2, "Asm format changed");
@@ -2274,6 +2272,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     const MachineOperand &AddrOp = MI->getOperand(1);
     if (!AddrOp.isReg() || !MRI->getType(AddrOp.getReg()).isPointer())
       report("addr operand must be a pointer", &AddrOp, 1);
+    break;
+  }
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UMAX: {
+    const LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    if (DstTy.isPointerOrPointerVector())
+      report("Generic smin/smax/umin/umax does not support pointer operands",
+             MI);
     break;
   }
   default:

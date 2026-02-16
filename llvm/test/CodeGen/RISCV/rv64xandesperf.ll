@@ -465,3 +465,50 @@ define i64 @sexti32_i64_2(i32 signext %a) {
   %1 = sext i32 %a to i64
   ret i64 %1
 }
+
+; NDS.FFB/NDS.FFZMISM/NDS.FFMISM/NDS.FLMISM
+
+declare i64 @llvm.riscv.nds.ffb.i64(i64, i64)
+declare i64 @llvm.riscv.nds.ffzmism.i64(i64, i64)
+declare i64 @llvm.riscv.nds.ffmism.i64(i64, i64)
+declare i64 @llvm.riscv.nds.flmism.i64(i64, i64)
+
+define i64 @ffb(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: ffb:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    nds.ffb a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.riscv.nds.ffb.i64(i64 %a, i64 %b)
+  ret i64 %0
+}
+
+define i64 @ffzmism(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: ffzmism:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    nds.ffzmism a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.riscv.nds.ffzmism.i64(i64 %a, i64 %b)
+  ret i64 %0
+}
+
+define i64 @ffmism(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: ffmism:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    nds.ffmism a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.riscv.nds.ffmism.i64(i64 %a, i64 %b)
+  ret i64 %0
+}
+
+define i64 @flmism(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: flmism:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    nds.flmism a0, a0, a1
+; CHECK-NEXT:    ret
+entry:
+  %0 = call i64 @llvm.riscv.nds.flmism.i64(i64 %a, i64 %b)
+  ret i64 %0
+}

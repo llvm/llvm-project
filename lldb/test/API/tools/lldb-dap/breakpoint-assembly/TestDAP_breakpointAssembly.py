@@ -94,9 +94,10 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
         try:
             self.dap_server.request_initialize()
             self.dap_server.request_launch(program)
+            self.dap_server.wait_for_event(["initialized"])
 
-            assmebly_func_breakpoints = self.set_function_breakpoints(["assembly_func"])
-            self.continue_to_breakpoints(assmebly_func_breakpoints)
+            assembly_func_breakpoints = self.set_function_breakpoints(["assembly_func"])
+            self.continue_to_breakpoints(assembly_func_breakpoints)
 
             assembly_func_frame = self.get_stackFrames()[0]
             source_reference = assembly_func_frame["source"]["sourceReference"]
@@ -137,6 +138,8 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
         try:
             self.dap_server.request_initialize()
             self.dap_server.request_launch(program)
+            self.dap_server.wait_for_event(["initialized"])
+
             new_session_breakpoints_ids = self.set_source_breakpoints_from_source(
                 Source(persistent_breakpoint_source),
                 [persistent_breakpoint_line],

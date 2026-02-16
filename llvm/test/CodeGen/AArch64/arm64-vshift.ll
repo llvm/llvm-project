@@ -2,69 +2,6 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=0 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -global-isel=1 -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:    warning: Instruction selection used fallback path for sqshlu8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu2d
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu1d_constant
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu_i64_constant
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu_i32_constant
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrn4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshrun4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrn4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqrshrun4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqrshrn4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn1s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for uqshrn4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli8b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli4h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli2s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli1d
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli1d_imm0
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli16b
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli8h
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli4s
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sli2d
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for sqshlu_zero_shift_amount
-
 define <8 x i8> @sqshl8b(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: sqshl8b:
 ; CHECK:       // %bb.0:
@@ -1496,23 +1433,38 @@ define <2 x i64> @sqshlu2d(ptr %A) nounwind {
 }
 
 define <1 x i64> @sqshlu1d_constant(ptr %A) nounwind {
-; CHECK-LABEL: sqshlu1d_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    sqshlu d0, d0, #1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqshlu1d_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    sqshlu d0, d0, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqshlu1d_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr x8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    sqshlu d0, d0, #1
+; CHECK-GI-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp3 = call <1 x i64> @llvm.aarch64.neon.sqshlu.v1i64(<1 x i64> %tmp1, <1 x i64> <i64 1>)
   ret <1 x i64> %tmp3
 }
 
 define i64 @sqshlu_i64_constant(ptr %A) nounwind {
-; CHECK-LABEL: sqshlu_i64_constant:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    sqshlu d0, d0, #1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: sqshlu_i64_constant:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    sqshlu d0, d0, #1
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sqshlu_i64_constant:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr x8, [x0]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    sqshlu d0, d0, #1
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    ret
   %tmp1 = load i64, ptr %A
   %tmp3 = call i64 @llvm.aarch64.neon.sqshlu.i64(i64 %tmp1, i64 1)
   ret i64 %tmp3
@@ -4326,6 +4278,110 @@ declare <8 x i16> @llvm.aarch64.neon.vsli.v8i16(<8 x i16>, <8 x i16>, i32) nounw
 declare <4 x i32> @llvm.aarch64.neon.vsli.v4i32(<4 x i32>, <4 x i32>, i32) nounwind readnone
 declare <2 x i64> @llvm.aarch64.neon.vsli.v2i64(<2 x i64>, <2 x i64>, i32) nounwind readnone
 
+define <8 x i8> @sri8b(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri8b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    sri v0.8b, v1.8b, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <8 x i8>, ptr %A
+  %tmp2 = load <8 x i8>, ptr %B
+  %tmp3 = call <8 x i8> @llvm.aarch64.neon.vsri.v8i8(<8 x i8> %tmp1, <8 x i8> %tmp2, i32 1)
+  ret <8 x i8> %tmp3
+}
+
+define <4 x i16> @sri4h(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri4h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    sri v0.4h, v1.4h, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <4 x i16>, ptr %A
+  %tmp2 = load <4 x i16>, ptr %B
+  %tmp3 = call <4 x i16> @llvm.aarch64.neon.vsri.v4i16(<4 x i16> %tmp1, <4 x i16> %tmp2, i32 1)
+  ret <4 x i16> %tmp3
+}
+
+define <2 x i32> @sri2s(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri2s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    sri v0.2s, v1.2s, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <2 x i32>, ptr %A
+  %tmp2 = load <2 x i32>, ptr %B
+  %tmp3 = call <2 x i32> @llvm.aarch64.neon.vsri.v2i32(<2 x i32> %tmp1, <2 x i32> %tmp2, i32 1)
+  ret <2 x i32> %tmp3
+}
+
+define <1 x i64> @sri1d(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri1d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    sri d0, d1, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <1 x i64>, ptr %A
+  %tmp2 = load <1 x i64>, ptr %B
+  %tmp3 = call <1 x i64> @llvm.aarch64.neon.vsri.v1i64(<1 x i64> %tmp1, <1 x i64> %tmp2, i32 1)
+  ret <1 x i64> %tmp3
+}
+
+define <16 x i8> @sri16b(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri16b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    sri v0.16b, v1.16b, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <16 x i8>, ptr %A
+  %tmp2 = load <16 x i8>, ptr %B
+  %tmp3 = call <16 x i8> @llvm.aarch64.neon.vsri.v16i8(<16 x i8> %tmp1, <16 x i8> %tmp2, i32 1)
+  ret <16 x i8> %tmp3
+}
+
+define <8 x i16> @sri8h(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    sri v0.8h, v1.8h, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <8 x i16>, ptr %A
+  %tmp2 = load <8 x i16>, ptr %B
+  %tmp3 = call <8 x i16> @llvm.aarch64.neon.vsri.v8i16(<8 x i16> %tmp1, <8 x i16> %tmp2, i32 1)
+  ret <8 x i16> %tmp3
+}
+
+define <4 x i32> @sri4s(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    sri v0.4s, v1.4s, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <4 x i32>, ptr %A
+  %tmp2 = load <4 x i32>, ptr %B
+  %tmp3 = call <4 x i32> @llvm.aarch64.neon.vsri.v4i32(<4 x i32> %tmp1, <4 x i32> %tmp2, i32 1)
+  ret <4 x i32> %tmp3
+}
+
+define <2 x i64> @sri2d(ptr %A, ptr %B) nounwind {
+; CHECK-LABEL: sri2d:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ldr q1, [x1]
+; CHECK-NEXT:    sri v0.2d, v1.2d, #1
+; CHECK-NEXT:    ret
+  %tmp1 = load <2 x i64>, ptr %A
+  %tmp2 = load <2 x i64>, ptr %B
+  %tmp3 = call <2 x i64> @llvm.aarch64.neon.vsri.v2i64(<2 x i64> %tmp1, <2 x i64> %tmp2, i32 1)
+  ret <2 x i64> %tmp3
+}
+
 define <1 x i64> @ashr_v1i64(<1 x i64> %a, <1 x i64> %b) {
 ; CHECK-SD-LABEL: ashr_v1i64:
 ; CHECK-SD:       // %bb.0:
@@ -4570,9 +4626,9 @@ define <4 x i16> @lshr_trunc_v4i64_v4i16(<4 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: lshr_trunc_v4i64_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI270_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI278_0
 ; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI270_0]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI278_0]
 ; CHECK-GI-NEXT:    uzp1 v2.4s, v2.4s, v2.4s
 ; CHECK-GI-NEXT:    neg v1.4s, v2.4s
 ; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v1.4s
@@ -4611,9 +4667,9 @@ define <4 x i16> @ashr_trunc_v4i64_v4i16(<4 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: ashr_trunc_v4i64_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI272_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI280_0
 ; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI272_0]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI280_0]
 ; CHECK-GI-NEXT:    uzp1 v2.4s, v2.4s, v2.4s
 ; CHECK-GI-NEXT:    neg v1.4s, v2.4s
 ; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
@@ -4651,9 +4707,9 @@ define <4 x i16> @shl_trunc_v4i64_v4i16(<4 x i64> %a) {
 ;
 ; CHECK-GI-LABEL: shl_trunc_v4i64_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI274_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI282_0
 ; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI274_0]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI282_0]
 ; CHECK-GI-NEXT:    uzp1 v1.4s, v2.4s, v2.4s
 ; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-GI-NEXT:    xtn v1.4h, v1.4s

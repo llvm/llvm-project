@@ -3,8 +3,8 @@
 # RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK1
 #            (lldb) expression a+b
 # CHECK1:{{^                  (\^|˄) (\^|˄)}}
-# CHECK1: {{^                  (\||│) error: use of undeclared identifier 'b'}}
-# CHECK1: {{^                  error: use of undeclared identifier 'a'}}
+# CHECK1: {{^                  (\||│) (╰─ )?error: use of undeclared identifier 'b'}}
+# CHECK1: {{^                  (╰─ )?error: use of undeclared identifier 'a'}}
 
 # RUN: echo quit | %lldb -o "expr a" \
 # RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK2
@@ -15,7 +15,7 @@
 # RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK3
 #            (lldb) expr -i 0 -o 0 -- a
 # CHECK3:{{^                         (\^|˄)}}
-# CHECK3: {{^                         error: use of undeclared identifier 'a'}}
+# CHECK3: {{^                         (╰─ )?error: use of undeclared identifier 'a'}}
 
 # RUN: echo "int main(){return 0;}">%t.c
 # RUN: %clang_host %t.c -o %t.exe
@@ -24,7 +24,7 @@
 # RUN: "expression -- FOO(\"\")" 2>&1 | FileCheck %s --check-prefix=CHECK4
 #            (lldb) expression -- FOO("")
 # CHECK4:{{^                     (\^|˄)}}
-# CHECK4: {{^                     note: in instantiation of function template}}
+# CHECK4: {{^                     (╰─ )?note: in instantiation of function template}}
 # CHECK4: error: <user expression
 
 # RUN: echo expression --\na\n+\nb

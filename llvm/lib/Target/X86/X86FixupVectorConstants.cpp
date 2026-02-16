@@ -29,38 +29,45 @@ using namespace llvm;
 STATISTIC(NumInstChanges, "Number of instructions changes");
 
 namespace {
-class X86FixupVectorConstantsPass : public MachineFunctionPass {
+class X86FixupVectorConstantsImpl {
+public:
+  bool runOnMachineFunction(MachineFunction &MF);
+
+private:
+  bool processInstruction(MachineFunction &MF, MachineBasicBlock &MBB,
+                          MachineInstr &MI);
+
+  const X86InstrInfo *TII = nullptr;
+  const X86Subtarget *ST = nullptr;
+  const MCSchedModel *SM = nullptr;
+};
+
+class X86FixupVectorConstantsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86FixupVectorConstantsPass() : MachineFunctionPass(ID) {}
+  X86FixupVectorConstantsLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "X86 Fixup Vector Constants";
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-  bool processInstruction(MachineFunction &MF, MachineBasicBlock &MBB,
-                          MachineInstr &MI);
 
   // This pass runs after regalloc and doesn't support VReg operands.
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
   }
-
-private:
-  const X86InstrInfo *TII = nullptr;
-  const X86Subtarget *ST = nullptr;
-  const MCSchedModel *SM = nullptr;
 };
 } // end anonymous namespace
 
-char X86FixupVectorConstantsPass::ID = 0;
+char X86FixupVectorConstantsLegacy::ID = 0;
 
-INITIALIZE_PASS(X86FixupVectorConstantsPass, DEBUG_TYPE, DEBUG_TYPE, false, false)
+INITIALIZE_PASS(X86FixupVectorConstantsLegacy, DEBUG_TYPE, DEBUG_TYPE, false,
+                false)
 
-FunctionPass *llvm::createX86FixupVectorConstants() {
-  return new X86FixupVectorConstantsPass();
+FunctionPass *llvm::createX86FixupVectorConstantsLegacyPass() {
+  return new X86FixupVectorConstantsLegacy();
 }
 
 /// Normally, we only allow poison in vector splats. However, as this is part
@@ -335,7 +342,7 @@ static Constant *rebuildZExtCst(const Constant *C, unsigned NumBits,
   return rebuildExtCst(C, false, NumBits, NumElts, SrcEltBitWidth);
 }
 
-bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
+bool X86FixupVectorConstantsImpl::processInstruction(MachineFunction &MF,
                                                      MachineBasicBlock &MBB,
                                                      MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
@@ -775,7 +782,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   return false;
 }
 
-bool X86FixupVectorConstantsPass::runOnMachineFunction(MachineFunction &MF) {
+bool X86FixupVectorConstantsImpl::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Start X86FixupVectorConstants\n";);
   bool Changed = false;
   ST = &MF.getSubtarget<X86Subtarget>();
@@ -792,4 +799,19 @@ bool X86FixupVectorConstantsPass::runOnMachineFunction(MachineFunction &MF) {
   }
   LLVM_DEBUG(dbgs() << "End X86FixupVectorConstants\n";);
   return Changed;
+}
+
+bool X86FixupVectorConstantsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  X86FixupVectorConstantsImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86FixupVectorConstantsPass::run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM) {
+  X86FixupVectorConstantsImpl Impl;
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

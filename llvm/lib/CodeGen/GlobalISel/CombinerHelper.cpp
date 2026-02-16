@@ -33,6 +33,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1680,6 +1681,26 @@ static APFloat constantFoldFpUnary(const MachineInstr &MI,
     Result.clearSign();
     return Result;
   }
+  case TargetOpcode::G_FCEIL:
+    Result.roundToIntegral(APFloat::rmTowardPositive);
+    return Result;
+  case TargetOpcode::G_FFLOOR:
+    Result.roundToIntegral(APFloat::rmTowardNegative);
+    return Result;
+  case TargetOpcode::G_INTRINSIC_TRUNC:
+    Result.roundToIntegral(APFloat::rmTowardZero);
+    return Result;
+  case TargetOpcode::G_INTRINSIC_ROUND:
+    Result.roundToIntegral(APFloat::rmNearestTiesToAway);
+    return Result;
+  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    Result.roundToIntegral(APFloat::rmNearestTiesToEven);
+    return Result;
+  case TargetOpcode::G_FRINT:
+  case TargetOpcode::G_FNEARBYINT:
+    // Use default rounding mode (round to nearest, ties to even)
+    Result.roundToIntegral(APFloat::rmNearestTiesToEven);
+    return Result;
   case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC: {
     bool Unused;
@@ -3022,13 +3043,6 @@ bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) const {
 bool CombinerHelper::matchBinOpSameVal(MachineInstr &MI) const {
   return matchEqualDefs(MI.getOperand(1), MI.getOperand(2)) &&
          canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(1).getReg(),
-                       MRI);
-}
-
-bool CombinerHelper::matchOperandIsZero(MachineInstr &MI,
-                                        unsigned OpIdx) const {
-  return matchConstantOp(MI.getOperand(OpIdx), 0) &&
-         canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(OpIdx).getReg(),
                        MRI);
 }
 
@@ -7556,7 +7570,7 @@ bool CombinerHelper::matchSelectIMinMax(const MachineOperand &MO,
   Register False = Select->getFalseReg();
   LLT DstTy = MRI.getType(DstReg);
 
-  if (DstTy.isPointer())
+  if (DstTy.isPointerOrPointerVector())
     return false;
 
   // We want to fold the icmp and replace the select.
@@ -8511,4 +8525,70 @@ bool CombinerHelper::matchSuboCarryOut(const MachineInstr &MI,
   }
 
   return false;
+}
+
+// Fold (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1).
+// Fold (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
+bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
+                               BuildFnTy &MatchInfo) const {
+  assert((CtlzMI.getOpcode() == TargetOpcode::G_CTLZ ||
+          CtlzMI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) &&
+         "Expected G_CTLZ variant");
+
+  const Register Dst = CtlzMI.getOperand(0).getReg();
+  Register Src = CtlzMI.getOperand(1).getReg();
+
+  LLT Ty = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (!(Ty.isValid() && Ty.isScalar()))
+    return false;
+
+  if (!LI)
+    return false;
+
+  SmallVector<LLT, 2> QueryTypes = {Ty, SrcTy};
+  LegalityQuery Query(TargetOpcode::G_CTLS, QueryTypes);
+
+  switch (LI->getAction(Query).Action) {
+  default:
+    return false;
+  case LegalizeActions::Legal:
+  case LegalizeActions::Custom:
+  case LegalizeActions::WidenScalar:
+    break;
+  }
+
+  //  Src = or(shl(V, 1), 1) -> Src=V; NeedAdd = False
+  Register V;
+  bool NeedAdd = true;
+  if (mi_match(Src, MRI,
+               m_OneUse(m_GOr(m_OneUse(m_GShl(m_Reg(V), m_SpecificICst(1))),
+                              m_SpecificICst(1))))) {
+    NeedAdd = false;
+    Src = V;
+  }
+
+  unsigned BitWidth = Ty.getScalarSizeInBits();
+
+  Register X;
+  if (!mi_match(Src, MRI,
+                m_OneUse(m_GXor(m_Reg(X), m_OneUse(m_GAShr(
+                                              m_DeferredReg(X),
+                                              m_SpecificICst(BitWidth - 1)))))))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    if (!NeedAdd) {
+      B.buildCTLS(Dst, X);
+      return;
+    }
+
+    auto Ctls = B.buildCTLS(Ty, X);
+    auto One = B.buildConstant(Ty, 1);
+
+    B.buildAdd(Dst, Ctls, One);
+  };
+
+  return true;
 }

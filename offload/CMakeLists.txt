@@ -16,6 +16,10 @@ endif()
 if(APPLE OR WIN32 OR WASM)
   message(WARNING "libomptarget cannot be built on Windows and MacOS X!")
   return()
+elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^(amdgcn|nvptx|spirv)" OR
+       "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^(amdgcn|nvptx|spirv)")
+  message(WARNING "offload cannot be built on GPU targets yet.")
+  return()
 elseif(NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
   message(WARNING "Host compiler must support C++17 to build libomptarget!")
   return()
@@ -150,19 +154,20 @@ if(DEFINED LIBOMPTARGET_BUILD_CUDA_PLUGIN OR
   message(WARNING "Option removed, use 'LIBOMPTARGET_PLUGINS_TO_BUILD' instead")
 endif()
 
-set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda host)
+set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda)
 set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
-    "Semicolon-separated list of plugins to use: cuda, amdgpu, host or \"all\".")
+    "Semicolon-separated list of plugins to use: cuda, amdgpu, level_zero, or \"all\".")
 
 if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
   set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
 endif()
 
-if(NOT CMAKE_SYSTEM_NAME MATCHES "Linux" AND
-   "host" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
-  message(STATUS "Not building host plugin: only Linux systems are supported")
-  list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "host")
+# Add host if not already in LIBOMPTARGET_PLUGINS_TO_BUILD
+list(FIND LIBOMPTARGET_PLUGINS_TO_BUILD "host" FOUND_HOST)
+if(FOUND_HOST EQUAL -1)
+  list(APPEND LIBOMPTARGET_PLUGINS_TO_BUILD "host")
 endif()
+
 if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
         AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
   if("amdgpu" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
@@ -175,6 +180,18 @@ if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
                    "Linux x86_64, ppc64le, or aarch64 hosts")
     list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "cuda")
   endif()
+endif()
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(AMD64)$" AND
+        CMAKE_SYSTEM_NAME MATCHES "Linux|Windows"))
+  if("level_zero" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+    message(STATUS "Not building Level Zero plugin: it is only supported on "
+                   "Linux/Windows x86_64 or ppc64le hosts")
+    list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "level_zero")
+  endif()
+endif()
+if("level_zero" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD AND
+   NOT LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND)
+  list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "level_zero")
 endif()
 message(STATUS "Building the offload library with support for "
                "the \"${LIBOMPTARGET_PLUGINS_TO_BUILD}\" plugins")
@@ -214,6 +231,7 @@ set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} riscv64-unknown-linux
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} riscv64-unknown-linux-gnu-LTO")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} loongarch64-unknown-linux-gnu")
 set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} loongarch64-unknown-linux-gnu-LTO")
+set (LIBOMPTARGET_ALL_TARGETS "${LIBOMPTARGET_ALL_TARGETS} spirv64-intel")
 
 # Once the plugins for the different targets are validated, they will be added to
 # the list of supported targets in the current system.

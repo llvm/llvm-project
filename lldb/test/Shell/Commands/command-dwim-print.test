@@ -2,7 +2,7 @@
 # RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK1
 #            (lldb) dwim-print a 
 # CHECK1:{{^                  (\^|˄)}}
-# CHECK1: {{^                  error: use of undeclared identifier 'a'}}
+# CHECK1: {{^                  (╰─ )?error: use of undeclared identifier 'a'}}
 # RUN: echo quit | %lldb -o "p a" \
 # RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK2
 #            (lldb) p a 

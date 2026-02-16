@@ -338,7 +338,7 @@ public:
   /// \return
   ///     A lldb::SBModule object that represents the found module, or an
   ///     invalid SBModule object if no module was found.
-  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec);
+  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec) const;
 
   /// Find compile units related to *this target and passed source
   /// file.
@@ -359,7 +359,7 @@ public:
 
   const char *GetTriple();
 
-  const char *GetArchName();
+  const char *GetArchName() const;
 
   const char *GetABIName();
 
@@ -1001,6 +1001,22 @@ public:
   /// \param[out] error
   ///     An error if a Trace already exists or the trace couldn't be created.
   lldb::SBTrace CreateTrace(SBError &error);
+
+  /// Register a scripted symbol locator for this target.
+  ///
+  /// \param[in] class_name
+  ///     The Python class implementing the symbol locator.
+  ///
+  /// \param[in] args
+  ///     Optional structured data arguments passed to the locator.
+  ///
+  /// \return
+  ///     An SBError indicating success or failure.
+  lldb::SBError RegisterScriptedSymbolLocator(const char *class_name,
+                                              lldb::SBStructuredData &args);
+
+  /// Clear the scripted symbol locator for this target.
+  void ClearScriptedSymbolLocator();
 
   lldb::SBMutex GetAPIMutex() const;
 

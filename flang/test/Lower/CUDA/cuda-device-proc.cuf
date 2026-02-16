@@ -513,6 +513,8 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_barrier_try_wait()
 ! CHECK: scf.while
+! CHECK: %[[COND:.*]] = arith.cmpi eq
+! CHECK: scf.condition(%[[COND]])
 ! CHECK: %{{.*}} = nvvm.inline_ptx "{\0A  .reg .pred p;\0A  mbarrier.try_wait.shared.b64 p, [%{{.*}}], %{{.*}}, %{{.*}};\0A  selp.b32 %{{.*}}, 1, 0, p;\0A}" ro(%{{.*}}, %{{.*}}, %{{.*}} : !llvm.ptr, i64, i32) -> i32
 
 attributes(global) subroutine test_barrier_try_wait_sleep()

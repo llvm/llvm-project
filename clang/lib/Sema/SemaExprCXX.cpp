@@ -644,8 +644,10 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
   }
 
   // Find the std::type_info type.
-  if (!getStdNamespace())
-    return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));
+  if (!getStdNamespace()) {
+    return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid)
+                     << (getLangOpts().CPlusPlus20 ? 1 : 0));
+  }
 
   if (!CXXTypeInfoDecl) {
     IdentifierInfo *TypeInfoII = &PP.getIdentifierTable().get("type_info");
@@ -659,7 +661,8 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
       CXXTypeInfoDecl = R.getAsSingle<RecordDecl>();
     }
     if (!CXXTypeInfoDecl)
-      return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));
+      return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid)
+                       << (getLangOpts().CPlusPlus20 ? 1 : 0));
   }
 
   if (!getLangOpts().RTTI) {
@@ -2631,6 +2634,19 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     MarkFunctionReferenced(StartLoc, OperatorDelete);
   }
 
+  // For MSVC vector deleting destructors support we record that for the class
+  // new[] was called. We try to optimize the code size and only emit vector
+  // deleting destructors when they are required. Vector deleting destructors
+  // are required for delete[] call but MSVC triggers emission of them
+  // whenever new[] is called for an object of the class and we do the same
+  // for compatibility.
+  if (const CXXConstructExpr *CCE =
+          dyn_cast_or_null<CXXConstructExpr>(Initializer);
+      CCE && ArraySize) {
+    Context.setClassNeedsVectorDeletingDestructor(
+        CCE->getConstructor()->getParent());
+  }
+
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
                             IAP, UsualArrayDeleteWantsSize, PlacementArgs,
                             TypeIdParens, ArraySize, InitStyle, Initializer,
@@ -2660,8 +2676,9 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   else if (AllocType.getAddressSpace() != LangAS::Default &&
            !getLangOpts().OpenCLCPlusPlus)
     return Diag(Loc, diag::err_address_space_qualified_new)
-      << AllocType.getUnqualifiedType()
-      << AllocType.getQualifiers().getAddressSpaceAttributePrintValue();
+           << AllocType.getUnqualifiedType()
+           << Qualifiers::getAddrSpaceAsString(AllocType.getAddressSpace());
+
   else if (getLangOpts().ObjCAutoRefCount) {
     if (const ArrayType *AT = Context.getAsArrayType(AllocType)) {
       QualType BaseAllocType = Context.getBaseElementType(AT);
@@ -3612,11 +3629,9 @@ Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   return Result.FD;
 }
 
-FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
-                                                          CXXRecordDecl *RD,
-                                                          bool Diagnose,
-                                                          bool LookForGlobal) {
-  DeclarationName Name = Context.DeclarationNames.getCXXOperatorName(OO_Delete);
+FunctionDecl *Sema::FindDeallocationFunctionForDestructor(
+    SourceLocation Loc, CXXRecordDecl *RD, bool Diagnose, bool LookForGlobal,
+    DeclarationName Name) {
 
   FunctionDecl *OperatorDelete = nullptr;
   CanQualType DeallocType = Context.getCanonicalTagType(RD);
@@ -3649,8 +3664,11 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
   // Try to find operator delete/operator delete[] in class scope.
   LookupQualifiedName(Found, RD);
 
-  if (Found.isAmbiguous())
+  if (Found.isAmbiguous()) {
+    if (!Diagnose)
+      Found.suppressDiagnostics();
     return true;
+  }
 
   Found.suppressDiagnostics();
 
@@ -4052,7 +4070,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       return Diag(Ex.get()->getBeginLoc(),
                   diag::err_address_space_qualified_delete)
              << Pointee.getUnqualifiedType()
-             << Pointee.getQualifiers().getAddressSpaceAttributePrintValue();
+             << Qualifiers::getAddrSpaceAsString(Pointee.getAddressSpace());
 
     CXXRecordDecl *PointeeRD = nullptr;
     if (Pointee->isVoidType() && !isSFINAEContext()) {
@@ -5198,6 +5216,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_HLSL_Vector_Truncation:
   case ICK_HLSL_Matrix_Truncation:
   case ICK_HLSL_Vector_Splat:
+  case ICK_HLSL_Matrix_Splat:
     llvm_unreachable("Improper second standard conversion");
   }
 
@@ -5215,6 +5234,15 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       From = ImpCastExprToType(Elem, ToType, CK_VectorSplat, VK_PRValue,
                                /*BasePath=*/nullptr, CCK)
                  .get();
+      break;
+    }
+    case ICK_HLSL_Matrix_Splat: {
+      // Matrix splat from any arithmetic type to a matrix.
+      Expr *Elem = prepareMatrixSplat(ToType, From).get();
+      From =
+          ImpCastExprToType(Elem, ToType, CK_HLSLAggregateSplatCast, VK_PRValue,
+                            /*BasePath=*/nullptr, CCK)
+              .get();
       break;
     }
     case ICK_HLSL_Vector_Truncation: {
@@ -7941,7 +7969,9 @@ concepts::Requirement *Sema::ActOnNestedRequirement(Expr *Constraint) {
 concepts::NestedRequirement *
 Sema::BuildNestedRequirement(Expr *Constraint) {
   ConstraintSatisfaction Satisfaction;
+  LocalInstantiationScope Scope(*this);
   if (!Constraint->isInstantiationDependent() &&
+      !Constraint->isValueDependent() &&
       CheckConstraintSatisfaction(nullptr, AssociatedConstraint(Constraint),
                                   /*TemplateArgs=*/{},
                                   Constraint->getSourceRange(), Satisfaction))

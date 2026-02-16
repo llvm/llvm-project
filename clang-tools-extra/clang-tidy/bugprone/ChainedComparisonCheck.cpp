@@ -112,6 +112,15 @@ void ChainedComparisonData::extract(const Expr *Op) {
   }
 }
 
+ChainedComparisonCheck::ChainedComparisonCheck(StringRef Name,
+                                               ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
+
+void ChainedComparisonCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+}
+
 void ChainedComparisonCheck::registerMatchers(MatchFinder *Finder) {
   const auto OperatorMatcher = expr(anyOf(
       binaryOperator(isComparisonOperator(),
@@ -127,6 +136,9 @@ void ChainedComparisonCheck::registerMatchers(MatchFinder *Finder) {
 
 void ChainedComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedOperator = Result.Nodes.getNodeAs<Expr>("op");
+
+  if (IgnoreMacros && MatchedOperator->getBeginLoc().isMacroID())
+    return;
 
   ChainedComparisonData Data(MatchedOperator);
   if (Data.Operands.empty())

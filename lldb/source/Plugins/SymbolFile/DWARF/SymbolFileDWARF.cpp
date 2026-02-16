@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
@@ -131,7 +132,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_symbolfiledwarf_properties);
+    m_collection_sp->Initialize(g_symbolfiledwarf_properties_def);
   }
 
   bool IgnoreFileIndexes() const {
@@ -518,12 +519,7 @@ SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
   if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
     return debug_map_symfile->GetTypeSystemForLanguage(language);
 
-  auto type_system_or_err =
-      m_objfile_sp->GetModule()->GetTypeSystemForLanguage(language);
-  if (type_system_or_err)
-    if (auto ts = *type_system_or_err)
-      ts->SetSymbolFile(this);
-  return type_system_or_err;
+  return SymbolFileCommon::GetTypeSystemForLanguage(language);
 }
 
 void SymbolFileDWARF::InitializeObject() {
@@ -1934,11 +1930,11 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   }
 
   const lldb::offset_t file_offset = 0;
-  DataBufferSP dwo_file_data_sp;
+  DataExtractorSP dwo_file_extractor_sp;
   lldb::offset_t dwo_file_data_offset = 0;
   ObjectFileSP dwo_obj_file = ObjectFile::FindPlugin(
       GetObjectFile()->GetModule(), &dwo_file, file_offset,
-      FileSystem::Instance().GetByteSize(dwo_file), dwo_file_data_sp,
+      FileSystem::Instance().GetByteSize(dwo_file), dwo_file_extractor_sp,
       dwo_file_data_offset);
   if (dwo_obj_file == nullptr) {
     unit.SetDwoError(Status::FromErrorStringWithFormatv(
@@ -2515,6 +2511,7 @@ static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
   case clang::CXXDtorType::Dtor_Unified:
     return "D4";
   case clang::CXXDtorType::Dtor_Comdat:
+  case clang::CXXDtorType::Dtor_VectorDeleting:
     llvm_unreachable("Unexpected destructor kind.");
   }
   llvm_unreachable("Fully covered switch above");
@@ -2618,24 +2615,23 @@ SymbolFileDWARF::ResolveFunctionCallLabel(FunctionCallLabel &label) {
         label.lookup_name, from, variant);
     if (!subst_or_err)
       return llvm::joinErrors(
-          llvm::createStringError(llvm::formatv(
+          llvm::createStringErrorV(
               "failed to substitute {0} for {1} in mangled name {2}:", from,
-              variant, label.lookup_name)),
+              variant, label.lookup_name),
           subst_or_err.takeError());
 
     if (!*subst_or_err)
-      return llvm::createStringError(
-          llvm::formatv("got invalid substituted mangled named (substituted "
-                        "{0} for {1} in mangled name {2})",
-                        from, variant, label.lookup_name));
+      return llvm::createStringErrorV(
+          "got invalid substituted mangled named (substituted "
+          "{0} for {1} in mangled name {2})",
+          from, variant, label.lookup_name);
 
     label.lookup_name = subst_or_err->GetStringRef();
   }
 
   DWARFDIE die = GetDIE(label.symbol_id);
   if (!die.IsValid())
-    return llvm::createStringError(
-        llvm::formatv("invalid DIE ID in {0}", label));
+    return llvm::createStringErrorV("invalid DIE ID in {0}", label);
 
   // Label was created using a declaration DIE. Need to fetch the definition
   // to resolve the function call.
@@ -2736,8 +2732,8 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
     if (it != llvm::StringRef::npos) {
       const llvm::StringRef name_no_template_params = name_ref.slice(0, it);
 
-      Module::LookupInfo no_tp_lookup_info(lookup_info);
-      no_tp_lookup_info.SetLookupName(ConstString(name_no_template_params));
+      Module::LookupInfo no_tp_lookup_info(
+          lookup_info, ConstString(name_no_template_params));
       m_index->GetFunctions(no_tp_lookup_info, *this, parent_decl_ctx,
                             [&](DWARFDIE die) {
                               if (resolved_dies.insert(die.GetDIE()).second)
@@ -3578,6 +3574,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   DWARFFormValue type_die_form;
   bool is_external = false;
   bool is_artificial = false;
+  std::optional<uint64_t> tag_offset = std::nullopt;
   DWARFFormValue const_value_form, location_form;
   Variable::RangeList scope_ranges;
 
@@ -3588,6 +3585,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     if (!attributes.ExtractFormValueAtIndex(i, form_value))
       continue;
     switch (attr) {
+    case DW_AT_LLVM_tag_offset:
+      tag_offset = form_value.Unsigned();
+      break;
     case DW_AT_decl_file:
       decl.SetFile(
           attributes.CompileUnitAtIndex(i)->GetFile(form_value.Unsigned()));
@@ -3828,7 +3828,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   return std::make_shared<Variable>(
       die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
       scope_ranges, &decl, location_list, is_external, is_artificial,
-      location_is_const_value_data, is_static_member);
+      location_is_const_value_data, is_static_member, tag_offset);
 }
 
 DWARFDIE
@@ -4474,12 +4474,12 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
     }
     if (FileSystem::Instance().Exists(dwp_filespec)) {
       LLDB_LOG(log, "Found DWP file: \"{0}\"", dwp_filespec);
-      DataBufferSP dwp_file_data_sp;
+      DataExtractorSP dwp_file_extractor_sp;
       lldb::offset_t dwp_file_data_offset = 0;
       ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
           GetObjectFile()->GetModule(), &dwp_filespec, 0,
-          FileSystem::Instance().GetByteSize(dwp_filespec), dwp_file_data_sp,
-          dwp_file_data_offset);
+          FileSystem::Instance().GetByteSize(dwp_filespec),
+          dwp_file_extractor_sp, dwp_file_data_offset);
       if (dwp_obj_file) {
         m_dwp_symfile = std::make_shared<SymbolFileDWARFDwo>(
             *this, dwp_obj_file, DIERef::k_file_index_mask);

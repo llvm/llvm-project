@@ -454,8 +454,13 @@ func.func @test_working_1to1_pattern(%arg0: f16) {
 // The region of "test.post_order_legalization" is converted before the op.
 
 // CHECK: notifyBlockInserted into test.post_order_legalization: was unlinked
+// CHECK: notifyOperationInserted: test.remaining_consumer
+// CHECK: notifyOperationInserted: test.legal_op
 // CHECK: notifyOperationInserted: test.invalid
 // CHECK: notifyBlockErased
+// CHECK: notifyOperationInserted: test.valid, was unlinked
+// CHECK: notifyOperationReplaced: test.invalid
+// CHECK: notifyOperationErased: test.invalid
 // CHECK: notifyOperationInserted: test.valid, was unlinked
 // CHECK: notifyOperationReplaced: test.invalid
 // CHECK: notifyOperationErased: test.invalid
@@ -475,6 +480,9 @@ func.func @test_preorder_legalization() {
   ^bb0(%arg0: i64):
     // expected-remark @+1 {{'test.remaining_consumer' is not legalizable}}
     "test.remaining_consumer"(%arg0) : (i64) -> ()
+    "test.legal_op"() ({
+      "test.invalid"(%arg0) : (i64) -> ()
+    }) : () -> ()
     "test.invalid"(%arg0) : (i64) -> ()
   }) : () -> ()
   // expected-remark @+1 {{'func.return' is not legalizable}}

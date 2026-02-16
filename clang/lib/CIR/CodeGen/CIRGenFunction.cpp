@@ -355,11 +355,13 @@ void CIRGenFunction::LexicalScope::cleanup() {
 cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
-  // If we are on a coroutine, add the coro_end builtin call.
-  assert(!cir::MissingFeatures::coroEndBuiltinCall());
-
   auto fn = dyn_cast<cir::FuncOp>(cgf.curFn);
   assert(fn && "emitReturn from non-function");
+
+  // If we are on a coroutine, add the coro_end builtin call.
+  if (fn.getCoroutine())
+    cgf.emitCoroEndBuiltinCall(loc,
+                               builder.getNullPtr(builder.getVoidPtrTy(), loc));
   if (!fn.getFunctionType().hasVoidReturn()) {
     // Load the value from `__retval` and return it via the `cir.return` op.
     auto value = cir::LoadOp::create(
@@ -746,7 +748,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       emitConstructorBody(args);
     } else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
                funcDecl->hasAttr<CUDAGlobalAttr>()) {
-      getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
+      cgm.getCUDARuntime().emitDeviceStub(*this, fn, args);
     } else if (isa<CXXMethodDecl>(funcDecl) &&
                cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker()) {
       // The lambda static invoker function is special, because it forwards or
@@ -847,7 +849,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // outside of the function-try-block, which means it's always
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
-  if (dtorType == Dtor_Deleting) {
+  if (dtorType == Dtor_Deleting || dtorType == Dtor_VectorDeleting) {
+    if (cxxStructorImplicitParamValue && dtorType == Dtor_VectorDeleting)
+      cgm.errorNYI(dtor->getSourceRange(), "emitConditionalArrayDtorCall");
     RunCleanupsScope dtorEpilogue(*this);
     enterDtorCleanups(dtor, Dtor_Deleting);
     if (haveInsertPoint()) {
@@ -880,6 +884,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   case Dtor_Deleting:
+  case Dtor_VectorDeleting:
     llvm_unreachable("already handled deleting case");
 
   case Dtor_Complete:

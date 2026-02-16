@@ -148,6 +148,7 @@ def UnsupportedFPOpt : DiagGroup<"unsupported-floating-point-opt">;
 def UnsupportedCB : DiagGroup<"unsupported-cb">;
 def UnsupportedGPOpt : DiagGroup<"unsupported-gpopt">;
 def UnsupportedTargetOpt : DiagGroup<"unsupported-target-opt">;
+def RISCVBEExperimental : DiagGroup<"riscv-be-experimental">;
 def NonLiteralNullConversion : DiagGroup<"non-literal-null-conversion">;
 def NullConversion : DiagGroup<"null-conversion">;
 def ImplicitConversionFloatingPointToBool :
@@ -533,19 +534,63 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
 
-def LifetimeSafetyPermissive : DiagGroup<"experimental-lifetime-safety-permissive">;
-def LifetimeSafetyStrict : DiagGroup<"experimental-lifetime-safety-strict">;
-def LifetimeSafety : DiagGroup<"experimental-lifetime-safety",
-                               [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
+def LifetimeSafetyDanglingField : DiagGroup<"lifetime-safety-dangling-field"> {
   code Documentation = [{
-    Experimental warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
+    Warning to detect dangling field references.
   }];
 }
+
+def LifetimeSafetyDanglingFieldStrict : DiagGroup<"lifetime-safety-dangling-field-strict"> {
+  code Documentation = [{
+    Warning to detect dangling field references.
+    This may contain false-positives, e.g. when the borrowed storage is potentially moved and is not destroyed at function exit.
+  }];
+}
+
+
+def LifetimeSafetyInvalidation : DiagGroup<"lifetime-safety-invalidation"> {
+  code Documentation = [{
+    Warning to detect invalidation of references.
+  }];
+}
+
+def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
+                                         [LifetimeSafetyDanglingField]>;
+def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
+                                    [LifetimeSafetyDanglingFieldStrict,
+                                    LifetimeSafetyInvalidation]>;
+
+def LifetimeSafety : DiagGroup<"lifetime-safety",
+                               [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
+  code Documentation = [{
+    Warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
+  }];
+}
+
+def LifetimeSafetyCrossTUSuggestions
+    : DiagGroup<"lifetime-safety-cross-tu-suggestions">;
+def LifetimeSafetyIntraTUSuggestions
+    : DiagGroup<"lifetime-safety-intra-tu-suggestions">;
 def LifetimeSafetySuggestions
-    : DiagGroup<"experimental-lifetime-safety-suggestions">;
+    : DiagGroup<"lifetime-safety-suggestions",
+                [LifetimeSafetyCrossTUSuggestions,
+                 LifetimeSafetyIntraTUSuggestions]> {
+  code Documentation = [{
+    Lifetime annotation suggestions for function parameters that should be marked [[clang::lifetimebound]] based on lifetime analysis.
+  }];
+}
+def LifetimeSafetyNoescape
+    : DiagGroup<"lifetime-safety-noescape"> {
+  code Documentation = [{
+    Detects misuse of [[clang::noescape]] annotation where the parameter escapes (for example, through return).
+  }];
+}
 
 def DistributedObjectModifiers : DiagGroup<"distributed-object-modifiers">;
 def DllexportExplicitInstantiationDecl : DiagGroup<"dllexport-explicit-instantiation-decl">;
+def DllexportExplicitInstantiation :
+  DiagGroup<"dllexport-explicit-instantiation",
+            [DllexportExplicitInstantiationDecl]>;
 def ExcessInitializers : DiagGroup<"excess-initializers">;
 def ExpansionToDefined : DiagGroup<"expansion-to-defined">;
 def FlagEnum : DiagGroup<"flag-enum">;
@@ -637,7 +682,6 @@ def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
 def ModuleMap : DiagGroup<"module-map">;
-def ModulesDriver : DiagGroup<"modules-driver">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
@@ -990,7 +1034,8 @@ def NSReturnsMismatch : DiagGroup<"nsreturns-mismatch">;
 
 def IndependentClassAttribute : DiagGroup<"IndependentClass-attribute">;
 def UnknownAttributes : DiagGroup<"unknown-attributes">;
-def IgnoredAttributes : DiagGroup<"ignored-attributes">;
+def IgnoredAttributes : DiagGroup<"ignored-attributes",
+                                  [DllexportExplicitInstantiation]>;
 def Attributes : DiagGroup<"attributes", [UnknownAttributes,
                                           IgnoredAttributes]>;
 def UnknownSanitizers : DiagGroup<"unknown-sanitizers">;
@@ -1761,7 +1806,9 @@ def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
 def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
 def UnsafeBufferUsageInUniquePtrArrayAccess : DiagGroup<"unsafe-buffer-usage-in-unique-ptr-array-access">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess]>;
+def UnsafeBufferUsageInStaticSizedArray : DiagGroup<"unsafe-buffer-usage-in-static-sized-array">;
+def UnsafeBufferUsageInFormatAttrCall : DiagGroup<"unsafe-buffer-usage-in-format-attr-call">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall]>;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
@@ -1775,6 +1822,15 @@ def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.
 def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;
+
+// Warnings related to the simdlen intrinsic
+def SIMDLen : DiagGroup<"simdlen">;
+
+// Warnings related to PGO coverage limitations
+def PGOCoverage : DiagGroup<"pgo-coverage">;
+
+// Warnings related to -ftrivial-auto-var-init
+def TrivialAutoVarInit : DiagGroup<"trivial-auto-var-init">;
 
 // A warning for options that enable a feature that is not yet complete
 def ExperimentalOption : DiagGroup<"experimental-option">;

@@ -287,37 +287,6 @@ bool RetainTypeChecker::isUnretained(const QualType QT, bool ignoreARC) {
   return RecordlessTypes.contains(QT.getTypePtr());
 }
 
-std::optional<bool> isUnretained(const QualType T, bool IsARCEnabled) {
-  if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(T)) {
-    if (auto *Decl = Subst->getAssociatedDecl()) {
-      if (isRetainPtrOrOSPtr(safeGetName(Decl)))
-        return false;
-    }
-  }
-  if ((ento::cocoa::isCocoaObjectRef(T) && !IsARCEnabled) ||
-      ento::coreFoundation::isCFObjectRef(T))
-    return true;
-
-  // RetainPtr strips typedef for CF*Ref. Manually check for struct __CF* types.
-  auto CanonicalType = T.getCanonicalType();
-  auto *Type = CanonicalType.getTypePtrOrNull();
-  if (!Type)
-    return false;
-  auto Pointee = Type->getPointeeType();
-  auto *PointeeType = Pointee.getTypePtrOrNull();
-  if (!PointeeType)
-    return false;
-  auto *Record = PointeeType->getAsStructureType();
-  if (!Record)
-    return false;
-  auto *Decl = Record->getDecl();
-  if (!Decl)
-    return false;
-  auto TypeName = Decl->getName();
-  return TypeName.starts_with("__CF") || TypeName.starts_with("__CG") ||
-         TypeName.starts_with("__CM");
-}
-
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)
 {
   // Keep isRefCounted first as it's cheaper.
@@ -349,25 +318,6 @@ std::optional<bool> isUncheckedPtr(const QualType T) {
   if (T->isPointerType() || T->isReferenceType()) {
     if (auto *CXXRD = T->getPointeeCXXRecordDecl())
       return isUnchecked(CXXRD);
-  }
-  return false;
-}
-
-std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled) {
-  if (T->isPointerType() || T->isReferenceType()) {
-    if (auto *CXXRD = T->getPointeeCXXRecordDecl()) {
-      auto isUncountedPtr = isUncounted(CXXRD);
-      auto isUncheckedPtr = isUnchecked(CXXRD);
-      auto isUnretainedPtr = isUnretained(T, IsArcEnabled);
-      std::optional<bool> result;
-      if (isUncountedPtr)
-        result = *isUncountedPtr;
-      if (isUncheckedPtr)
-        result = result ? *result || *isUncheckedPtr : *isUncheckedPtr;
-      if (isUnretainedPtr)
-        result = result ? *result || *isUnretainedPtr : *isUnretainedPtr;
-      return result;
-    }
   }
   return false;
 }
@@ -456,6 +406,28 @@ bool isSmartPtr(const CXXRecordDecl *R) {
   return false;
 }
 
+enum class WebKitAnnotation : uint8_t {
+  None,
+  PointerConversion,
+  NoDelete,
+};
+
+static WebKitAnnotation typeAnnotationForReturnType(const FunctionDecl *FD) {
+  auto RetType = FD->getReturnType();
+  auto *Attr = dyn_cast_or_null<AttributedType>(RetType.getTypePtrOrNull());
+  if (!Attr)
+    return WebKitAnnotation::None;
+  auto *AnnotateType = dyn_cast_or_null<AnnotateTypeAttr>(Attr->getAttr());
+  if (!AnnotateType)
+    return WebKitAnnotation::None;
+  auto Annotation = AnnotateType->getAnnotation();
+  if (Annotation == "webkit.pointerconversion")
+    return WebKitAnnotation::PointerConversion;
+  if (Annotation == "webkit.nodelete")
+    return WebKitAnnotation::NoDelete;
+  return WebKitAnnotation::None;
+}
+
 bool isPtrConversion(const FunctionDecl *F) {
   assert(F);
   if (isCtorOfRefCounted(F))
@@ -473,19 +445,14 @@ bool isPtrConversion(const FunctionDecl *F) {
       FunctionName == "checked_objc_cast")
     return true;
 
-  auto ReturnType = F->getReturnType();
-  if (auto *Type = ReturnType.getTypePtrOrNull()) {
-    if (auto *AttrType = dyn_cast<AttributedType>(Type)) {
-      if (auto *Attr = AttrType->getAttr()) {
-        if (auto *AnnotateType = dyn_cast<AnnotateTypeAttr>(Attr)) {
-          if (AnnotateType->getAnnotation() == "webkit.pointerconversion")
-            return true;
-        }
-      }
-    }
-  }
+  if (typeAnnotationForReturnType(F) == WebKitAnnotation::PointerConversion)
+    return true;
 
   return false;
+}
+
+bool isNoDeleteFunction(const FunctionDecl *F) {
+  return typeAnnotationForReturnType(F) == WebKitAnnotation::NoDelete;
 }
 
 bool isTrivialBuiltinFunction(const FunctionDecl *F) {
@@ -556,6 +523,8 @@ public:
 
   bool IsFunctionTrivial(const Decl *D) {
     if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
+      if (isNoDeleteFunction(FnDecl))
+        return true;
       if (FnDecl->isVirtualAsWritten())
         return false;
     }
@@ -571,6 +540,15 @@ public:
         return false;
       return Visit(Body);
     });
+  }
+
+  bool IsStatementTrivial(const Stmt *S) {
+    auto CacheIt = Cache.find(S);
+    if (CacheIt != Cache.end())
+      return CacheIt->second;
+    bool Result = Visit(S);
+    Cache[S] = Result;
+    return Result;
   }
 
   bool VisitStmt(const Stmt *S) {
@@ -876,9 +854,7 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
 bool TrivialFunctionAnalysis::isTrivialImpl(
     const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache) {
   TrivialFunctionAnalysisVisitor V(Cache);
-  bool Result = V.Visit(S);
-  assert(Cache.contains(S) && "Top-level statement not properly cached!");
-  return Result;
+  return V.IsStatementTrivial(S);
 }
 
 } // namespace clang

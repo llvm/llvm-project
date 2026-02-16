@@ -1581,7 +1581,7 @@ SBModule SBTarget::FindModule(const SBFileSpec &sb_file_spec) {
   return sb_module;
 }
 
-SBModule SBTarget::FindModule(const SBModuleSpec &sb_module_spec) {
+SBModule SBTarget::FindModule(const SBModuleSpec &sb_module_spec) const {
   LLDB_INSTRUMENT_VA(this, sb_module_spec);
 
   SBModule sb_module;
@@ -1624,7 +1624,7 @@ const char *SBTarget::GetTriple() {
   return nullptr;
 }
 
-const char *SBTarget::GetArchName() {
+const char *SBTarget::GetArchName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP()) {
@@ -2430,6 +2430,36 @@ lldb::SBTrace SBTarget::CreateTrace(lldb::SBError &error) {
     error.SetErrorString("missing target");
   }
   return SBTrace();
+}
+
+lldb::SBError
+SBTarget::RegisterScriptedSymbolLocator(const char *class_name,
+                                        lldb::SBStructuredData &args) {
+  LLDB_INSTRUMENT_VA(this, class_name, args);
+
+  lldb::SBError sb_error;
+  TargetSP target_sp = GetSP();
+  if (!target_sp) {
+    sb_error.SetErrorString("invalid target");
+    return sb_error;
+  }
+
+  StructuredData::DictionarySP args_sp;
+  StructuredData::ObjectSP obj_sp = args.m_impl_up->GetObjectSP();
+  if (obj_sp && obj_sp->GetType() == lldb::eStructuredDataTypeDictionary)
+    args_sp = std::static_pointer_cast<StructuredData::Dictionary>(obj_sp);
+
+  Status error = target_sp->RegisterScriptedSymbolLocator(class_name, args_sp);
+  if (error.Fail())
+    sb_error.SetErrorString(error.AsCString());
+  return sb_error;
+}
+
+void SBTarget::ClearScriptedSymbolLocator() {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP())
+    target_sp->ClearScriptedSymbolLocator();
 }
 
 lldb::SBMutex SBTarget::GetAPIMutex() const {

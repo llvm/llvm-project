@@ -19,8 +19,10 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
+#include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
@@ -283,12 +285,18 @@ static cl::opt<bool> EnableConstraintElimination(
 static cl::opt<AttributorRunOption> AttributorRun(
     "attributor-enable", cl::Hidden, cl::init(AttributorRunOption::NONE),
     cl::desc("Enable the attributor inter-procedural deduction pass"),
-    cl::values(clEnumValN(AttributorRunOption::ALL, "all",
-                          "enable all attributor runs"),
+    cl::values(clEnumValN(AttributorRunOption::FULL, "full",
+                          "enable all full attributor runs"),
+               clEnumValN(AttributorRunOption::LIGHT, "light",
+                          "enable all attributor-light runs"),
                clEnumValN(AttributorRunOption::MODULE, "module",
                           "enable module-wide attributor runs"),
+               clEnumValN(AttributorRunOption::MODULE_LIGHT, "module-light",
+                          "enable module-wide attributor-light runs"),
                clEnumValN(AttributorRunOption::CGSCC, "cgscc",
                           "enable call graph SCC attributor runs"),
+               clEnumValN(AttributorRunOption::CGSCC_LIGHT, "cgscc-light",
+                          "enable call graph SCC attributor-light runs"),
                clEnumValN(AttributorRunOption::NONE, "none",
                           "disable attributor runs")));
 
@@ -411,6 +419,12 @@ void PassBuilder::invokePipelineEarlySimplificationEPCallbacks(
 // Helper to add AnnotationRemarksPass.
 static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
+  // Count the stats for InstCount and FunctionPropertiesAnalysis
+  if (AreStatisticsEnabled()) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
+    MPM.addPass(
+        createModuleToFunctionPassAdaptor(FunctionPropertiesStatisticsPass()));
+  }
 }
 
 // Helper to check if the current compilation phase is preparing for LTO
@@ -498,8 +512,8 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                         /*AllowSpeculation=*/false));
 
-  LPM1.addPass(LoopRotatePass(/* Disable header duplication */ true,
-                              isLTOPreLink(Phase)));
+  LPM1.addPass(
+      LoopRotatePass(/*EnableHeaderDuplication=*/true, isLTOPreLink(Phase)));
   // TODO: Investigate promotion cap for O1.
   LPM1.addPass(LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
                         /*AllowSpeculation=*/true));
@@ -976,6 +990,8 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
 
   if (AttributorRun & AttributorRunOption::CGSCC)
     MainCGPipeline.addPass(AttributorCGSCCPass());
+  else if (AttributorRun & AttributorRunOption::CGSCC_LIGHT)
+    MainCGPipeline.addPass(AttributorLightCGSCCPass());
 
   // Deduce function attributes. We do another run of this after the function
   // simplification pipeline, so this only needs to run when it could affect the
@@ -1163,6 +1179,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   if (AttributorRun & AttributorRunOption::MODULE)
     MPM.addPass(AttributorPass());
+  else if (AttributorRun & AttributorRunOption::MODULE_LIGHT)
+    MPM.addPass(AttributorLightPass());
 
   // Lower type metadata and the type.test intrinsic in the ThinLTO
   // post link pipeline after ICP. This is to enable usage of the type
@@ -2339,7 +2357,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
     // pipeline.
     MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
                                         PGOOpt->ProfileRemappingFile,
-                                        ThinOrFullLTOPhase::None, nullptr,
+                                        ThinOrFullLTOPhase::None, FS,
                                         /*DisableSampleProfileInlining=*/true,
                                         /*UseFlattenedProfile=*/true));
     // Cache ProfileSummaryAnalysis once to avoid the potential need to insert
@@ -2420,7 +2438,8 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
 
-  MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
+  // Emit annotation remarks.
+  addAnnotationRemarksPass(MPM);
 
   return MPM;
 }

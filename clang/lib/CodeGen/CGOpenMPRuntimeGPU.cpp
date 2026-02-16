@@ -1287,7 +1287,7 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
       IfCondVal = llvm::ConstantInt::get(CGF.Int32Ty, 1);
 
     if (!NumThreadsVal)
-      NumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, -1);
+      NumThreadsVal = llvm::ConstantInt::getAllOnesValue(CGF.Int32Ty);
     else
       NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty);
 
@@ -1301,7 +1301,7 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
         getThreadID(CGF, Loc),
         IfCondVal,
         NumThreadsVal,
-        llvm::ConstantInt::get(CGF.Int32Ty, -1),
+        llvm::ConstantInt::getAllOnesValue(CGF.Int32Ty),
         FnPtr,
         ID,
         Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
@@ -2373,11 +2373,13 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX1151:
       case OffloadArch::GFX1152:
       case OffloadArch::GFX1153:
+      case OffloadArch::GFX1170:
       case OffloadArch::GFX12_GENERIC:
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
       case OffloadArch::GFX1250:
       case OffloadArch::GFX1251:
+      case OffloadArch::GFX1310:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
       case OffloadArch::GRANITERAPIDS:

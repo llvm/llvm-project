@@ -477,10 +477,7 @@ public:
 
   LLVM_ABI void print(llvm::raw_ostream &OS) const;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const {
-    print(llvm::dbgs());
-    llvm::dbgs() << '\n';
-  }
+  LLVM_DUMP_METHOD void dump() const;
 #endif // !NDEBUG || LLVM_ENABLE_DUMP
 
 private:
@@ -811,7 +808,7 @@ bool fromJSON(const Value &E, std::optional<T> &Out, Path P) {
     Out = std::nullopt;
     return true;
   }
-  T Result = {};
+  T Result{};
   if (!fromJSON(E, Result, P))
     return false;
   Out = std::move(Result);

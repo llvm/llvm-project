@@ -10,6 +10,7 @@
 
 #include "ClangExpressionUtil.h"
 
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
@@ -149,9 +150,8 @@ static void AddMacros(const DebugMacros *dm, CompileUnit *comp_unit,
   stream << "#pragma clang diagnostic push\n";
   stream << "#pragma clang diagnostic ignored \"-Wmacro-redefined\"\n";
   stream << "#pragma clang diagnostic ignored \"-Wbuiltin-macro-redefined\"\n";
-  auto pop_warning = llvm::make_scope_exit([&stream](){
-    stream << "#pragma clang diagnostic pop\n";
-  });
+  llvm::scope_exit pop_warning(
+      [&stream]() { stream << "#pragma clang diagnostic pop\n"; });
 
   for (size_t i = 0; i < dm->GetNumMacroEntries(); i++) {
     const DebugMacroEntry &entry = dm->GetMacroEntryAtIndex(i);
@@ -188,6 +188,28 @@ static void AddMacros(const DebugMacros *dm, CompileUnit *comp_unit,
       break;
     }
   }
+}
+
+/// Return qualifers of the current C++ method.
+static clang::Qualifiers GetFrameCVQualifiers(StackFrame *frame) {
+  if (!frame)
+    return {};
+
+  auto this_sp = frame->FindVariable(ConstString("this"));
+  if (!this_sp)
+    return {};
+
+  // Lambdas that capture 'this' have a member variable called 'this'. The class
+  // context of __lldb_expr for a lambda is the class type of the 'this' capture
+  // (not the anonymous lambda structure). So use the qualifiers of the captured
+  // 'this'.
+  if (auto this_this_sp = this_sp->GetChildMemberWithName("this"))
+    return clang::Qualifiers::fromCVRMask(
+        this_this_sp->GetCompilerType().GetPointeeType().GetTypeQualifiers());
+
+  // Not in a lambda. Return 'this' qualifiers.
+  return clang::Qualifiers::fromCVRMask(
+      this_sp->GetCompilerType().GetPointeeType().GetTypeQualifiers());
 }
 
 lldb_private::ClangExpressionSourceCode::ClangExpressionSourceCode(
@@ -341,9 +363,12 @@ void ClangExpressionSourceCode::AddLocalVariableDecls(StreamString &stream,
   }
 }
 
-bool ClangExpressionSourceCode::GetText(
-    std::string &text, ExecutionContext &exe_ctx, bool add_locals,
-    bool force_add_all_locals, llvm::ArrayRef<std::string> modules) const {
+bool ClangExpressionSourceCode::GetText(std::string &text,
+                                        ExecutionContext &exe_ctx,
+                                        bool add_locals,
+                                        bool force_add_all_locals,
+                                        llvm::ArrayRef<std::string> modules,
+                                        bool ignore_context_qualifiers) const {
   const char *target_specific_defines = "typedef signed char BOOL;\n";
   std::string module_macros;
   llvm::raw_string_ostream module_macros_stream(module_macros);
@@ -465,13 +490,18 @@ bool ClangExpressionSourceCode::GetText(
       break;
     case WrapKind::CppMemberFunction:
       wrap_stream.Printf("%s"
-                         "void                                   \n"
-                         "$__lldb_class::%s(void *$__lldb_arg)   \n"
-                         "{                                      \n"
-                         "    %s;                                \n"
+                         "void                                    \n"
+                         "$__lldb_class::%s(void *$__lldb_arg) %s \n"
+                         "{                                       \n"
+                         "    %s;                                 \n"
                          "%s"
-                         "}                                      \n",
+                         "}                                       \n",
                          module_imports.c_str(), m_name.c_str(),
+                         ignore_context_qualifiers
+                             ? ""
+                             : GetFrameCVQualifiers(exe_ctx.GetFramePtr())
+                                   .getAsString()
+                                   .c_str(),
                          lldb_local_var_decls.GetData(), tagged_body.c_str());
       break;
     case WrapKind::ObjCInstanceMethod:

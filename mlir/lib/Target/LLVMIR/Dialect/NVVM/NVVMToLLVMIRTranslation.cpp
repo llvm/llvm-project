@@ -34,31 +34,31 @@ using mlir::LLVM::detail::createIntrinsicCall;
   hasAbs ? REDUX_F32_ID_IMPL(op, _abs, hasNaN) : REDUX_F32_ID_IMPL(op, , hasNaN)
 
 static llvm::Intrinsic::ID getReduxIntrinsicId(llvm::Type *resultType,
-                                               NVVM::ReduxKind kind,
+                                               NVVM::ReductionKind kind,
                                                bool hasAbs, bool hasNaN) {
   switch (kind) {
-  case NVVM::ReduxKind::ADD:
+  case NVVM::ReductionKind::ADD:
     return llvm::Intrinsic::nvvm_redux_sync_add;
-  case NVVM::ReduxKind::UMAX:
+  case NVVM::ReductionKind::UMAX:
     return llvm::Intrinsic::nvvm_redux_sync_umax;
-  case NVVM::ReduxKind::UMIN:
+  case NVVM::ReductionKind::UMIN:
     return llvm::Intrinsic::nvvm_redux_sync_umin;
-  case NVVM::ReduxKind::AND:
+  case NVVM::ReductionKind::AND:
     return llvm::Intrinsic::nvvm_redux_sync_and;
-  case NVVM::ReduxKind::OR:
+  case NVVM::ReductionKind::OR:
     return llvm::Intrinsic::nvvm_redux_sync_or;
-  case NVVM::ReduxKind::XOR:
+  case NVVM::ReductionKind::XOR:
     return llvm::Intrinsic::nvvm_redux_sync_xor;
-  case NVVM::ReduxKind::MAX:
+  case NVVM::ReductionKind::MAX:
     return llvm::Intrinsic::nvvm_redux_sync_max;
-  case NVVM::ReduxKind::MIN:
+  case NVVM::ReductionKind::MIN:
     return llvm::Intrinsic::nvvm_redux_sync_min;
-  case NVVM::ReduxKind::FMIN:
+  case NVVM::ReductionKind::FMIN:
     return GET_REDUX_F32_ID(min, hasAbs, hasNaN);
-  case NVVM::ReduxKind::FMAX:
+  case NVVM::ReductionKind::FMAX:
     return GET_REDUX_F32_ID(max, hasAbs, hasNaN);
   }
-  llvm_unreachable("unknown redux kind");
+  llvm_unreachable("unknown reduction kind");
 }
 
 static llvm::Intrinsic::ID getShflIntrinsicId(llvm::Type *resultType,

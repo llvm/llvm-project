@@ -122,8 +122,8 @@ entry:
 define <vscale x 8 x i64> @intrinsic_vclmul_mask_vv_nxv8i64_nxv8i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, <vscale x 8 x i64> %2, <vscale x 8 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vclmul_mask_vv_nxv8i64_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vclmul.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
 entry:

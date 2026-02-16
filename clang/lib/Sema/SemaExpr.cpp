@@ -18,7 +18,7 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
-#include "clang/AST/Attrs.inc"
+#include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -30,6 +30,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -2937,7 +2938,7 @@ ExprResult Sema::BuildQualifiedDeclarationNameExpr(
     // members were likely supposed to be inherited.
     DeclContext *DC = computeDeclContext(SS);
     if (const auto *CD = dyn_cast<CXXRecordDecl>(DC))
-      if (CD->isInvalidDecl())
+      if (CD->isInvalidDecl() || CD->isBeingDefined())
         return ExprError();
     Diag(NameInfo.getLoc(), diag::err_no_member)
       << NameInfo.getName() << DC << SS.getRange();
@@ -4224,24 +4225,25 @@ static bool CheckExtensionTraitOperandType(Sema &S, QualType T,
     return true;
 
   // C99 6.5.3.4p1:
-  if (T->isFunctionType() &&
-      (TraitKind == UETT_SizeOf || TraitKind == UETT_AlignOf ||
-       TraitKind == UETT_PreferredAlignOf)) {
+  if (TraitKind == UETT_SizeOf || TraitKind == UETT_AlignOf ||
+      TraitKind == UETT_PreferredAlignOf) {
+
     // sizeof(function)/alignof(function) is allowed as an extension.
-    S.Diag(Loc, diag::ext_sizeof_alignof_function_type)
-        << getTraitSpelling(TraitKind) << ArgRange;
-    return false;
-  }
+    if (T->isFunctionType()) {
+      S.Diag(Loc, diag::ext_sizeof_alignof_function_type)
+          << getTraitSpelling(TraitKind) << ArgRange;
+      return false;
+    }
 
-  // Allow sizeof(void)/alignof(void) as an extension, unless in OpenCL where
-  // this is an error (OpenCL v1.1 s6.3.k)
-  if (T->isVoidType()) {
-    unsigned DiagID = S.LangOpts.OpenCL ? diag::err_opencl_sizeof_alignof_type
-                                        : diag::ext_sizeof_alignof_void_type;
-    S.Diag(Loc, DiagID) << getTraitSpelling(TraitKind) << ArgRange;
-    return false;
+    // Allow sizeof(void)/alignof(void) as an extension, unless in OpenCL where
+    // this is an error (OpenCL v1.1 s6.3.k)
+    if (T->isVoidType()) {
+      unsigned DiagID = S.LangOpts.OpenCL ? diag::err_opencl_sizeof_alignof_type
+                                          : diag::ext_sizeof_alignof_void_type;
+      S.Diag(Loc, DiagID) << getTraitSpelling(TraitKind) << ArgRange;
+      return false;
+    }
   }
-
   return true;
 }
 
@@ -5088,6 +5090,62 @@ ExprResult Sema::tryConvertExprToType(Expr *E, QualType Ty) {
       InitializationKind::CreateCopy(E->getBeginLoc(), SourceLocation());
   InitializationSequence InitSeq(*this, Entity, Kind, E);
   return InitSeq.Perform(*this, Entity, Kind, E);
+}
+
+ExprResult Sema::CreateBuiltinMatrixSingleSubscriptExpr(Expr *Base,
+                                                        Expr *RowIdx,
+                                                        SourceLocation RBLoc) {
+  ExprResult BaseR = CheckPlaceholderExpr(Base);
+  if (BaseR.isInvalid())
+    return BaseR;
+  Base = BaseR.get();
+
+  ExprResult RowR = CheckPlaceholderExpr(RowIdx);
+  if (RowR.isInvalid())
+    return RowR;
+  RowIdx = RowR.get();
+
+  // Build an unanalyzed expression if any of the operands is type-dependent.
+  if (Base->isTypeDependent() || RowIdx->isTypeDependent())
+    return new (Context)
+        MatrixSingleSubscriptExpr(Base, RowIdx, Context.DependentTy, RBLoc);
+
+  // Check that IndexExpr is an integer expression. If it is a constant
+  // expression, check that it is less than Dim (= the number of elements in the
+  // corresponding dimension).
+  auto IsIndexValid = [&](Expr *IndexExpr, unsigned Dim,
+                          bool IsColumnIdx) -> Expr * {
+    if (!IndexExpr->getType()->isIntegerType() &&
+        !IndexExpr->isTypeDependent()) {
+      Diag(IndexExpr->getBeginLoc(), diag::err_matrix_index_not_integer)
+          << IsColumnIdx;
+      return nullptr;
+    }
+
+    if (std::optional<llvm::APSInt> Idx =
+            IndexExpr->getIntegerConstantExpr(Context)) {
+      if ((*Idx < 0 || *Idx >= Dim)) {
+        Diag(IndexExpr->getBeginLoc(), diag::err_matrix_index_outside_range)
+            << IsColumnIdx << Dim;
+        return nullptr;
+      }
+    }
+
+    ExprResult ConvExpr = IndexExpr;
+    assert(!ConvExpr.isInvalid() &&
+           "should be able to convert any integer type to size type");
+    return ConvExpr.get();
+  };
+
+  auto *MTy = Base->getType()->getAs<ConstantMatrixType>();
+  RowIdx = IsIndexValid(RowIdx, MTy->getNumRows(), false);
+  if (!RowIdx)
+    return ExprError();
+
+  QualType RowVecQT =
+      Context.getExtVectorType(MTy->getElementType(), MTy->getNumColumns());
+
+  return new (Context) MatrixSingleSubscriptExpr(Base, RowIdx, RowVecQT, RBLoc);
 }
 
 ExprResult Sema::CreateBuiltinMatrixSubscriptExpr(Expr *Base, Expr *RowIdx,
@@ -6766,9 +6824,10 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
         // First, ensure that the Arg is an RValue.
         if (ArgExprs[Idx]->isGLValue()) {
-          ArgExprs[Idx] = ImplicitCastExpr::Create(
-              Context, ArgExprs[Idx]->getType(), CK_NoOp, ArgExprs[Idx],
-              nullptr, VK_PRValue, FPOptionsOverride());
+          ExprResult Res = DefaultLvalueConversion(ArgExprs[Idx]);
+          if (Res.isInvalid())
+            return ExprError();
+          ArgExprs[Idx] = Res.get();
         }
 
         // Construct a new arg type with address space of Param
@@ -6859,6 +6918,34 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
                                        bool IsExecConfig, ADLCallKind UsesADL) {
   FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(NDecl);
   unsigned BuiltinID = (FDecl ? FDecl->getBuiltinID() : 0);
+
+  auto IsSJLJ = [&] {
+    switch (BuiltinID) {
+    case Builtin::BI__builtin_longjmp:
+    case Builtin::BI__builtin_setjmp:
+    case Builtin::BI__sigsetjmp:
+    case Builtin::BI_longjmp:
+    case Builtin::BI_setjmp:
+    case Builtin::BIlongjmp:
+    case Builtin::BIsetjmp:
+    case Builtin::BIsiglongjmp:
+    case Builtin::BIsigsetjmp:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  // Forbid any call to setjmp/longjmp and friends inside a '_Defer' statement.
+  if (!CurrentDefer.empty() && IsSJLJ()) {
+    // Note: If we ever start supporting '_Defer' in C++ we'll have to check
+    // for more than just blocks (e.g. lambdas, nested classes...).
+    Scope *DeferParent = CurrentDefer.back().first;
+    Scope *Block = CurScope->getBlockParent();
+    if (DeferParent->Contains(*CurScope) &&
+        (!Block || !DeferParent->Contains(*Block)))
+      Diag(Fn->getExprLoc(), diag::err_defer_invalid_sjlj) << FDecl;
+  }
 
   // Functions with 'interrupt' attribute cannot be called directly.
   if (FDecl) {
@@ -7806,6 +7893,24 @@ ExprResult Sema::prepareVectorSplat(QualType VectorTy, Expr *SplattedExpr) {
   return ImpCastExprToType(SplattedExpr, DestElemTy, CK);
 }
 
+ExprResult Sema::prepareMatrixSplat(QualType MatrixTy, Expr *SplattedExpr) {
+  QualType DestElemTy = MatrixTy->castAs<MatrixType>()->getElementType();
+
+  if (DestElemTy == SplattedExpr->getType())
+    return SplattedExpr;
+
+  assert(DestElemTy->isFloatingType() ||
+         DestElemTy->isIntegralOrEnumerationType());
+
+  ExprResult CastExprRes = SplattedExpr;
+  CastKind CK = PrepareScalarCast(CastExprRes, DestElemTy);
+  if (CastExprRes.isInvalid())
+    return ExprError();
+  SplattedExpr = CastExprRes.get();
+
+  return ImpCastExprToType(SplattedExpr, DestElemTy, CK);
+}
+
 ExprResult Sema::CheckExtVectorCast(SourceRange R, QualType DestTy,
                                     Expr *CastExpr, CastKind &Kind) {
   assert(DestTy->isExtVectorType() && "Not an extended vector type!");
@@ -8009,6 +8114,13 @@ ExprResult Sema::BuildVectorLiteral(SourceLocation LParenLoc,
     // it will be replicated to all components of the vector.
     if (getLangOpts().OpenCL && VTy->getVectorKind() == VectorKind::Generic &&
         numExprs == 1) {
+      QualType SrcTy = exprs[0]->getType();
+      if (!SrcTy->isArithmeticType()) {
+        Diag(exprs[0]->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+            << Ty << SrcTy << AssignmentAction::Initializing << /*elidable=*/0
+            << /*c_style=*/0 << /*cast_kind=*/"" << exprs[0]->getSourceRange();
+        return ExprError();
+      }
       QualType ElemTy = VTy->getElementType();
       ExprResult Literal = DefaultLvalueConversion(exprs[0]);
       if (Literal.isInvalid())
@@ -10172,7 +10284,8 @@ static ExprResult convertVector(Expr *E, QualType ElementType, Sema &S) {
 /// IntTy without losing precision.
 static bool canConvertIntToOtherIntTy(Sema &S, ExprResult *Int,
                                       QualType OtherIntTy) {
-  if (Int->get()->containsErrors())
+  Expr *E = Int->get();
+  if (E->containsErrors() || E->isInstantiationDependent())
     return false;
 
   QualType IntTy = Int->get()->getType().getUnqualifiedType();
@@ -13341,6 +13454,25 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   return GetSignedVectorType(LHS.get()->getType());
 }
 
+QualType Sema::CheckMatrixLogicalOperands(ExprResult &LHS, ExprResult &RHS,
+                                          SourceLocation Loc,
+                                          BinaryOperatorKind Opc) {
+
+  if (!getLangOpts().HLSL) {
+    assert(false && "Logical operands are not supported in C\\C++");
+    return QualType();
+  }
+
+  if (getLangOpts().getHLSLVersion() >= LangOptionsBase::HLSL_2021) {
+    (void)InvalidOperands(Loc, LHS, RHS);
+    HLSL().emitLogicalOperatorFixIt(LHS.get(), RHS.get(), Opc);
+    return QualType();
+  }
+  SemaRef.Diag(LHS.get()->getBeginLoc(), diag::err_hlsl_langstd_unimplemented)
+      << getLangOpts().getHLSLVersion();
+  return QualType();
+}
+
 QualType Sema::CheckMatrixElementwiseOperands(ExprResult &LHS, ExprResult &RHS,
                                               SourceLocation Loc,
                                               bool IsCompAssign) {
@@ -13512,6 +13644,10 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType())
     return CheckVectorLogicalOperands(LHS, RHS, Loc, Opc);
+
+  if (LHS.get()->getType()->isConstantMatrixType() ||
+      RHS.get()->getType()->isConstantMatrixType())
+    return CheckMatrixLogicalOperands(LHS, RHS, Loc, Opc);
 
   bool EnumConstantInBoolContext = false;
   for (const ExprResult &HS : {LHS, RHS}) {
@@ -13702,9 +13838,8 @@ enum {
   ConstFunction,
   ConstVariable,
   ConstMember,
-  ConstMethod,
   NestedConstMember,
-  ConstUnknown,  // Keep as last element
+  ConstUnknown, // Keep as last element
 };
 
 /// Emit the "read-only variable not assignable" error and print notes to give
@@ -13812,12 +13947,12 @@ static void DiagnoseConstAssignment(Sema &S, const Expr *E,
       if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(DC)) {
         if (MD->isConst()) {
           if (!DiagnosticEmitted) {
-            S.Diag(Loc, diag::err_typecheck_assign_const) << ExprRange
-                                                          << ConstMethod << MD;
+            S.Diag(Loc, diag::err_typecheck_assign_const_method)
+                << ExprRange << MD;
             DiagnosticEmitted = true;
           }
-          S.Diag(MD->getLocation(), diag::note_typecheck_assign_const)
-              << ConstMethod << MD << MD->getSourceRange();
+          S.Diag(MD->getLocation(), diag::note_typecheck_assign_const_method)
+              << MD << MD->getSourceRange();
         }
       }
     }
@@ -14009,6 +14144,9 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
              diag::err_typecheck_incomplete_type_not_modifiable_lvalue, E);
   case Expr::MLV_DuplicateVectorComponents:
     DiagID = diag::err_typecheck_duplicate_vector_components_not_mlvalue;
+    break;
+  case Expr::MLV_DuplicateMatrixComponents:
+    DiagID = diag::err_typecheck_duplicate_matrix_components_not_mlvalue;
     break;
   case Expr::MLV_NoSetterProperty:
     llvm_unreachable("readonly properties should be processed differently");
@@ -17795,6 +17933,16 @@ void Sema::PushExpressionEvaluationContextForFunction(
   }
 }
 
+ExprResult Sema::ActOnCXXReflectExpr(SourceLocation CaretCaretLoc,
+                                     TypeSourceInfo *TSI) {
+  return BuildCXXReflectExpr(CaretCaretLoc, TSI);
+}
+
+ExprResult Sema::BuildCXXReflectExpr(SourceLocation CaretCaretLoc,
+                                     TypeSourceInfo *TSI) {
+  return CXXReflectExpr::Create(Context, CaretCaretLoc, TSI);
+}
+
 namespace {
 
 const DeclRefExpr *CheckPossibleDeref(Sema &S, const Expr *PossibleDeref) {
@@ -21534,12 +21682,17 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     return ExprError();
   }
 
-  case BuiltinType::IncompleteMatrixIdx:
-    Diag(cast<MatrixSubscriptExpr>(E->IgnoreParens())
-             ->getRowIdx()
-             ->getBeginLoc(),
-         diag::err_matrix_incomplete_index);
+  case BuiltinType::IncompleteMatrixIdx: {
+    auto *MS = cast<MatrixSubscriptExpr>(E->IgnoreParens());
+    // At this point, we know there was no second [] to complete the operator.
+    // In HLSL, treat "m[row]" as selecting a row lane of column sized vector.
+    if (getLangOpts().HLSL) {
+      return CreateBuiltinMatrixSingleSubscriptExpr(
+          MS->getBase(), MS->getRowIdx(), E->getExprLoc());
+    }
+    Diag(MS->getRowIdx()->getBeginLoc(), diag::err_matrix_incomplete_index);
     return ExprError();
+  }
 
   // Expressions of unknown type.
   case BuiltinType::ArraySection:

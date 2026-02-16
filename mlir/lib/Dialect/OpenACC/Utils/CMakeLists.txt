@@ -1,6 +1,9 @@
 add_mlir_dialect_library(MLIROpenACCUtils
-  OpenACCUtilsTiling.cpp
   OpenACCUtils.cpp
+  OpenACCUtilsCG.cpp
+  OpenACCUtilsGPU.cpp
+  OpenACCUtilsLoop.cpp
+  OpenACCUtilsTiling.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/OpenACC
@@ -17,8 +20,12 @@ add_mlir_dialect_library(MLIROpenACCUtils
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRArithUtils
+  MLIRDataLayoutInterfaces
+  MLIRGPUDialect
   MLIROpenACCDialect
   MLIRIR
+  MLIRSCFDialect
+  MLIRSCFUtils
   MLIRSupport
   MLIRTransformUtils
 )

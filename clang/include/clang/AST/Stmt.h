@@ -32,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -317,6 +318,16 @@ protected:
     SourceLocation KeywordLoc;
   };
 
+  class DeferStmtBitfields {
+    friend class DeferStmt;
+
+    LLVM_PREFERRED_TYPE(StmtBitfields)
+    unsigned : NumStmtBits;
+
+    /// The location of the "defer".
+    SourceLocation DeferLoc;
+  };
+
   //===--- Expression bitfields classes ---===//
 
   class ExprBitfields {
@@ -530,6 +541,7 @@ protected:
   class ArrayOrMatrixSubscriptExprBitfields {
     friend class ArraySubscriptExpr;
     friend class MatrixSubscriptExpr;
+    friend class MatrixSingleSubscriptExpr;
 
     LLVM_PREFERRED_TYPE(ExprBitfields)
     unsigned : NumExprBits;
@@ -1318,6 +1330,7 @@ protected:
     LoopControlStmtBitfields LoopControlStmtBits;
     ReturnStmtBitfields ReturnStmtBits;
     SwitchCaseBitfields SwitchCaseBits;
+    DeferStmtBitfields DeferStmtBits;
 
     // Expressions
     ExprBitfields ExprBits;
@@ -3211,6 +3224,47 @@ public:
   }
 };
 
+/// DeferStmt - This represents a deferred statement.
+class DeferStmt : public Stmt {
+  friend class ASTStmtReader;
+
+  /// The deferred statement.
+  Stmt *Body;
+
+  DeferStmt(EmptyShell Empty);
+  DeferStmt(SourceLocation DeferLoc, Stmt *Body);
+
+public:
+  static DeferStmt *CreateEmpty(ASTContext &Context, EmptyShell Empty);
+  static DeferStmt *Create(ASTContext &Context, SourceLocation DeferLoc,
+                           Stmt *Body);
+
+  SourceLocation getDeferLoc() const { return DeferStmtBits.DeferLoc; }
+  void setDeferLoc(SourceLocation DeferLoc) {
+    DeferStmtBits.DeferLoc = DeferLoc;
+  }
+
+  Stmt *getBody() { return Body; }
+  const Stmt *getBody() const { return Body; }
+  void setBody(Stmt *S) {
+    assert(S && "defer body must not be null");
+    Body = S;
+  }
+
+  SourceLocation getBeginLoc() const { return getDeferLoc(); }
+  SourceLocation getEndLoc() const { return Body->getEndLoc(); }
+
+  child_range children() { return child_range(&Body, &Body + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Body, &Body + 1);
+  }
+
+  static bool classof(const Stmt *S) {
+    return S->getStmtClass() == DeferStmtClass;
+  }
+};
+
 /// AsmStmt is the base class for GCCAsmStmt and MSAsmStmt.
 class AsmStmt : public Stmt {
 protected:
@@ -3258,6 +3312,16 @@ public:
 
   /// Assemble final IR asm string.
   std::string generateAsmString(const ASTContext &C) const;
+
+  using UnsupportedConstraintCallbackTy =
+      llvm::function_ref<void(const Stmt *, StringRef)>;
+  /// Look at AsmExpr and if it is a variable declared as using a particular
+  /// register add that as a constraint that will be used in this asm stmt.
+  std::string
+  addVariableConstraints(StringRef Constraint, const Expr &AsmExpr,
+                         const TargetInfo &Target, bool EarlyClobber,
+                         UnsupportedConstraintCallbackTy UnsupportedCB,
+                         std::string *GCCReg = nullptr) const;
 
   //===--- Output operands ---===//
 

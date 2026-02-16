@@ -15,7 +15,7 @@ endmacro()
 set(LIBUNWIND_TESTING_INSTALL_PREFIX "${LIBUNWIND_BINARY_DIR}/test-suite-install")
 set(libunwind_test_suite_install_targets unwind-headers unwind)
 if ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES)
-  list(APPEND libunwind_test_suite_install_targets cxx-headers cxx cxx_experimental cxx-modules cxxabi-headers cxxabi)
+  list(APPEND libunwind_test_suite_install_targets cxx-headers cxx cxx-modules cxxabi-headers cxxabi)
 endif()
 foreach(target IN LISTS libunwind_test_suite_install_targets)
   add_custom_target(libunwind-test-suite-install-${target} DEPENDS "${target}"

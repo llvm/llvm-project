@@ -787,7 +787,7 @@ static Function *createBPFUnreachable(Module *M) {
     return NewF;
 
   DIBuilder DBuilder(*M);
-  DITypeRefArray ParamTypes =
+  DITypeArray ParamTypes =
       DBuilder.getOrCreateTypeArray({nullptr /*void return*/});
   DISubroutineType *FuncType = DBuilder.createSubroutineType(ParamTypes);
   DICompileUnit *CU = *M->debug_compile_units_begin();
@@ -812,7 +812,7 @@ SDValue BPFTargetLowering::LowerTRAP(SDValue Op, SelectionDAG &DAG) const {
   CLI.IsTailCall = false;
   CLI.CallConv = CallingConv::C;
   CLI.IsVarArg = false;
-  CLI.DL = DL;
+  CLI.DL = std::move(DL);
   CLI.NoMerge = false;
   CLI.DoesNotReturn = true;
   return LowerCall(CLI, InVals);
@@ -962,7 +962,7 @@ MachineBasicBlock *BPFTargetLowering::EmitInstrWithCustomInserterLDimm64(
   MachineOperand &MO = MI.getOperand(1);
   assert(MO.isBlockAddress() || MO.isGlobal());
 
-  MCRegister ResultReg = MI.getOperand(0).getReg();
+  Register ResultReg = MI.getOperand(0).getReg();
   Register TmpReg = RegInfo.createVirtualRegister(RC);
 
   std::vector<MachineBasicBlock *> Targets;

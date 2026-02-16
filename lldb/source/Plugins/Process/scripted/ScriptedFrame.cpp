@@ -13,21 +13,23 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
-#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/DynamicRegisterInfo.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/Process.h"
-#include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -264,4 +266,67 @@ lldb::RegisterContextSP ScriptedFrame::GetRegisterContext() {
   }
 
   return m_reg_context_sp;
+}
+
+VariableList *ScriptedFrame::GetVariableList(bool get_file_globals,
+                                             Status *error_ptr) {
+  PopulateVariableListFromInterface();
+  return m_variable_list_sp.get();
+}
+
+lldb::VariableListSP
+ScriptedFrame::GetInScopeVariableList(bool get_file_globals,
+                                      bool must_have_valid_location) {
+  PopulateVariableListFromInterface();
+  return m_variable_list_sp;
+}
+
+void ScriptedFrame::PopulateVariableListFromInterface() {
+  // Fetch values from the interface.
+  ValueObjectListSP value_list_sp = GetInterface()->GetVariables();
+  if (!value_list_sp)
+    return;
+
+  // Convert what we can into a variable.
+  m_variable_list_sp = std::make_shared<VariableList>();
+  for (uint32_t i = 0, e = value_list_sp->GetSize(); i < e; ++i) {
+    ValueObjectSP v = value_list_sp->GetValueObjectAtIndex(i);
+    if (!v)
+      continue;
+
+    VariableSP var = v->GetVariable();
+    // TODO: We could in theory ask the scripted frame to *produce* a
+    //       variable for this value object.
+    if (!var)
+      continue;
+
+    m_variable_list_sp->AddVariable(var);
+  }
+}
+
+lldb::ValueObjectSP ScriptedFrame::GetValueObjectForFrameVariable(
+    const lldb::VariableSP &variable_sp, lldb::DynamicValueType use_dynamic) {
+  // Fetch values from the interface.
+  ValueObjectListSP values = m_scripted_frame_interface_sp->GetVariables();
+  if (!values)
+    return {};
+
+  return values->FindValueObjectByValueName(variable_sp->GetName().AsCString());
+}
+
+lldb::ValueObjectSP ScriptedFrame::GetValueForVariableExpressionPath(
+    llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+    uint32_t options, lldb::VariableSP &var_sp, Status &error,
+    lldb::DILMode mode) {
+  // Unless the frame implementation knows how to create variables (which it
+  // doesn't), we can't construct anything for the variable. This may seem
+  // somewhat out of place, but it's basically because of how this API is used -
+  // the print command uses this API to fill in var_sp; and this implementation
+  // can't do that!
+  // FIXME: We should make it possible for the frame implementation to create
+  //        Variable objects.
+  (void)var_sp;
+  // Otherwise, delegate to the scripted frame interface pointer.
+  return m_scripted_frame_interface_sp->GetValueObjectForVariableExpression(
+      var_expr, options, error);
 }

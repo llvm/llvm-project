@@ -289,6 +289,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDepinfoModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"depinfo-modifier",
+      /*props=*/
+      {
+          {60, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {60, {Clause::OMPC_init}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDimsModifier>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"dims-modifier",
@@ -372,28 +388,13 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpFallbackModifier>() {
 }
 
 template <>
-const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpInteropPreference>() {
-  static const OmpModifierDescriptor desc{
-      /*name=*/"interop-preference",
-      /*props=*/
-      {
-          {52, {OmpProperty::Unique}},
-      },
-      /*clauses=*/
-      {
-          {52, {Clause::OMPC_init}},
-      },
-  };
-  return desc;
-}
-
-template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpInteropType>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"interop-type",
       /*props=*/
       {
           {52, {OmpProperty::Required}},
+          {60, {}},
       },
       /*clauses=*/
       {
@@ -554,6 +555,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderingModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpPreferType>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"prefer-type",
+      /*props=*/
+      {
+          {52, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {52, {Clause::OMPC_init}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpPrescriptiveness>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"prescriptiveness",
@@ -676,7 +693,8 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpStepSimpleModifier>() {
       /*name=*/"step-simple-modifier",
       /*props=*/
       {
-          {45, {OmpProperty::Unique, OmpProperty::Exclusive}},
+          {45, {OmpProperty::Unique}},
+          {52, {OmpProperty::Unique, OmpProperty::Exclusive}},
       },
       /*clauses=*/
       {

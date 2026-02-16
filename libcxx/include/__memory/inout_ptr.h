@@ -11,10 +11,9 @@
 #define _LIBCPP___INOUT_PTR_H
 
 #include <__config>
+#include <__fwd/memory.h>
 #include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
-#include <__memory/shared_ptr.h>
-#include <__memory/unique_ptr.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_specialization.h>

@@ -180,12 +180,10 @@ define double @one(fp128 %a, fp128 %b, double %d, double %e) {
 ; CHECK-SD-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    bl __eqtf2
 ; CHECK-SD-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
-; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    cset w19, ne
+; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    bl __unordtf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    cset w8, eq
-; CHECK-SD-NEXT:    tst w8, w19
+; CHECK-SD-NEXT:    ccmp w19, #0, #4, eq
 ; CHECK-SD-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    fcsel d0, d9, d8, ne
 ; CHECK-SD-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload

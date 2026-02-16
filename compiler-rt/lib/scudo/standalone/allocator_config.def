@@ -61,6 +61,13 @@ BASE_OPTIONAL(const bool, QuarantineDisabled, false)
 // If set to false, return the total available size in the allocation.
 BASE_OPTIONAL(const bool, ExactUsableSize, true)
 
+#if SCUDO_FUCHSIA
+// Writes zeros to the memory slot when a allocation is returned to
+// the allocator. This decommits memory on operating systems that
+// detects pages full of zero."
+BASE_OPTIONAL(const bool, EnableZeroOnDealloc, false)
+#endif
+
 // PRIMARY_REQUIRED_TYPE(NAME)
 //
 // SizeClassMap to use with the Primary.

@@ -31,6 +31,8 @@ public:
 
   RTLIB::RuntimeLibcallsInfo run(const Module &M, ModuleAnalysisManager &);
 
+  operator bool() const { return LibcallsInfo.has_value(); }
+
 private:
   friend AnalysisInfoMixin<RuntimeLibraryAnalysis>;
   static AnalysisKey Key;

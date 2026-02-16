@@ -599,17 +599,21 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
   if (pi)
     pi->runBeforePass(pass, op);
 
-  bool passFailed = false;
-  op->getContext()->executeAction<PassExecutionAction>(
-      [&]() {
-        // Invoke the virtual runOnOperation method.
-        if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass))
-          adaptor->runOnOperation(verifyPasses);
-        else
-          pass->runOnOperation();
-        passFailed = pass->passState->irAndPassFailed.getInt();
-      },
-      {op}, *pass);
+  // Pass instrumentation can use pass failure to flag unmet invariants
+  // (preconditions) of the pass. Skip running pass if in failure state.
+  bool passFailed = pass->passState->irAndPassFailed.getInt();
+  if (!passFailed) {
+    op->getContext()->executeAction<PassExecutionAction>(
+        [&]() {
+          // Invoke the virtual runOnOperation method.
+          if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(pass))
+            adaptor->runOnOperation(verifyPasses);
+          else
+            pass->runOnOperation();
+          passFailed = pass->passState->irAndPassFailed.getInt();
+        },
+        {op}, *pass);
+  }
 
   // Invalidate any non preserved analyses.
   am.invalidate(pass->passState->preservedAnalyses);
@@ -640,10 +644,12 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
 
   // Instrument after the pass has run.
   if (pi) {
-    if (passFailed)
+    if (passFailed) {
       pi->runAfterPassFailed(pass, op);
-    else
+    } else {
       pi->runAfterPass(pass, op);
+      passFailed = passFailed || pass->passState->irAndPassFailed.getInt();
+    }
   }
 
   // Return if the pass signaled a failure.
@@ -664,7 +670,7 @@ LogicalResult OpToOpPassAdaptor::runPipeline(
   });
   assert((!instrumentor || parentInfo) &&
          "expected parent info if instrumentor is provided");
-  auto scopeExit = llvm::make_scope_exit([&] {
+  llvm::scope_exit scopeExit([&] {
     // Clear out any computed operation analyses. These analyses won't be used
     // any more in this pipeline, and this helps reduce the current working set
     // of memory. If preserving these analyses becomes important in the future
@@ -1197,6 +1203,10 @@ void PassInstrumentation::runBeforePipeline(
 
 void PassInstrumentation::runAfterPipeline(
     std::optional<OperationName> name, const PipelineParentInfo &parentInfo) {}
+
+void PassInstrumentation::signalPassFailure(Pass *pass) {
+  pass->signalPassFailure();
+}
 
 //===----------------------------------------------------------------------===//
 // PassInstrumentor

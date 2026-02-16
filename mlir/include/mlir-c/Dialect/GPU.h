@@ -27,6 +27,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAGPUAsyncTokenType(MlirType type);
 
 MLIR_CAPI_EXPORTED MlirType mlirGPUAsyncTokenTypeGet(MlirContext ctx);
 
+MLIR_CAPI_EXPORTED MlirStringRef mlirGPUAsyncTokenTypeGetName(void);
+
 //===---------------------------------------------------------------------===//
 // ObjectAttr
 //===---------------------------------------------------------------------===//
@@ -36,6 +38,8 @@ MLIR_CAPI_EXPORTED bool mlirAttributeIsAGPUObjectAttr(MlirAttribute attr);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirGPUObjectAttrGet(MlirContext mlirCtx, MlirAttribute target, uint32_t format,
                      MlirStringRef objectStrRef, MlirAttribute mlirObjectProps);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirGPUObjectAttrGetName(void);
 
 MLIR_CAPI_EXPORTED MlirAttribute mlirGPUObjectAttrGetWithKernels(
     MlirContext mlirCtx, MlirAttribute target, uint32_t format,

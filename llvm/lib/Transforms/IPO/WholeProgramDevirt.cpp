@@ -1318,8 +1318,7 @@ static bool addCalls(VTableSlotInfo &SlotInfo, const ValueInfo &Callee) {
   // to better ensure we have the opportunity to inline them.
   bool IsExported = false;
   auto &S = Callee.getSummaryList()[0];
-  CalleeInfo CI(CalleeInfo::HotnessType::Hot, /* HasTailCall = */ false,
-                /* RelBF = */ 0);
+  CalleeInfo CI(CalleeInfo::HotnessType::Hot, /* HasTailCall = */ false);
   auto AddCalls = [&](CallSiteInfo &CSInfo) {
     for (auto *FS : CSInfo.SummaryTypeCheckedLoadUsers) {
       FS->addCall({Callee, CI});
@@ -1776,10 +1775,12 @@ Constant *DevirtModule::importConstant(VTableSlot Slot, ArrayRef<uint64_t> Args,
                     MDNode::get(M.getContext(), {MinC, MaxC}));
   };
   unsigned AbsWidth = IntTy->getBitWidth();
-  if (AbsWidth == IntPtrTy->getBitWidth())
-    SetAbsRange(~0ull, ~0ull); // Full set.
-  else
+  if (AbsWidth == IntPtrTy->getBitWidth()) {
+    uint64_t AllOnes = IntTy->getBitMask();
+    SetAbsRange(AllOnes, AllOnes); // Full set.
+  } else {
     SetAbsRange(0, 1ull << AbsWidth);
+  }
   return C;
 }
 
@@ -1802,8 +1803,8 @@ void DevirtModule::applyUniqueRetValOpt(CallSiteInfo &CSInfo, StringRef FnName,
 }
 
 Constant *DevirtModule::getMemberAddr(const TypeMemberInfo *M) {
-  return ConstantExpr::getGetElementPtr(Int8Ty, M->Bits->GV,
-                                        ConstantInt::get(Int64Ty, M->Offset));
+  return ConstantExpr::getPtrAdd(M->Bits->GV,
+                                 ConstantInt::get(Int64Ty, M->Offset));
 }
 
 bool DevirtModule::tryUniqueRetValOpt(
@@ -2017,7 +2018,7 @@ bool DevirtModule::tryVirtualConstProp(
     }
 
     // Rewrite each call to a load from OffsetByte/OffsetBit.
-    Constant *ByteConst = ConstantInt::get(Int32Ty, OffsetByte);
+    Constant *ByteConst = ConstantInt::getSigned(Int32Ty, OffsetByte);
     Constant *BitConst = ConstantInt::get(Int8Ty, 1ULL << OffsetBit);
     applyVirtualConstProp(CSByConstantArg.second,
                           TargetsForSlot[0].Fn->getName(), ByteConst, BitConst);

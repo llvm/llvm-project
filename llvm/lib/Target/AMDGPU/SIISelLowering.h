@@ -79,6 +79,8 @@ private:
 
   SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                              SelectionDAG &DAG) const override;
+  SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue lowerImplicitZextParam(SelectionDAG &DAG, SDValue Op,
                                  MVT VT, unsigned Offset) const;
   SDValue lowerImage(SDValue Op, const AMDGPU::ImageDimIntrinsicInfo *Intr,
@@ -130,6 +132,7 @@ private:
   SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue adjustLoadValueType(unsigned Opcode, MemSDNode *M,
                               SelectionDAG &DAG, ArrayRef<SDValue> Ops,
                               bool IsIntrinsic = false) const;
@@ -207,7 +210,7 @@ private:
   SDValue performAndCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performOrCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performXorCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performZeroExtendCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performZeroOrAnyExtendCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSignExtendInRegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performClassCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue getCanonicalConstantFP(SelectionDAG &DAG, const SDLoc &SL, EVT VT,
@@ -334,7 +337,7 @@ public:
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &, const CallBase &,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &, const CallBase &,
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
 
@@ -557,7 +560,7 @@ public:
                            Register N1) const override;
 
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
-                       unsigned MaxDepth = 5) const;
+                       SDNodeFlags UserFlags = {}, unsigned MaxDepth = 5) const;
   bool isCanonicalized(Register Reg, const MachineFunction &MF,
                        unsigned MaxDepth = 5) const;
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
@@ -566,11 +569,12 @@ public:
   bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
                                     const SelectionDAG &DAG, bool SNaN = false,
                                     unsigned Depth = 0) const override;
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
   AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
   AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
   void emitExpandAtomicAddrSpacePredicate(Instruction *AI) const;
   void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;

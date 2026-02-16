@@ -9,159 +9,45 @@
 #ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBASTBUILDER_H
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_PDBASTBUILDER_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "lldb/Symbol/CompilerDecl.h"
+#include "lldb/Symbol/CompilerDeclContext.h"
+#include "lldb/Symbol/CompilerType.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Threading.h"
 
-#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
-
-#include "PdbIndex.h"
 #include "PdbSymUid.h"
-#include <optional>
-
-namespace clang {
-class TagDecl;
-class DeclContext;
-class Decl;
-class QualType;
-class FunctionDecl;
-class NamespaceDecl;
-} // namespace clang
-
-namespace llvm {
-namespace codeview {
-class ProcSym;
-}
-} // namespace llvm
 
 namespace lldb_private {
-class ClangASTImporter;
-class ObjectFile;
+class Stream;
 
 namespace npdb {
-class PdbIndex;
-struct VariableInfo;
-
-struct DeclStatus {
-  DeclStatus() = default;
-  DeclStatus(lldb::user_id_t uid, bool resolved)
-      : uid(uid), resolved(resolved) {}
-  lldb::user_id_t uid = 0;
-  bool resolved = false;
-};
 
 class PdbAstBuilder {
 public:
-  // Constructors and Destructors
-  PdbAstBuilder(TypeSystemClang &clang);
+  virtual ~PdbAstBuilder() = default;
 
-  lldb_private::CompilerDeclContext GetTranslationUnitDecl();
+  virtual CompilerDecl GetOrCreateDeclForUid(PdbSymUid uid) = 0;
+  virtual CompilerDeclContext GetOrCreateDeclContextForUid(PdbSymUid uid) = 0;
+  virtual CompilerDeclContext GetParentDeclContext(PdbSymUid uid) = 0;
 
-  std::optional<lldb_private::CompilerDecl>
-  GetOrCreateDeclForUid(PdbSymUid uid);
-  clang::DeclContext *GetOrCreateDeclContextForUid(PdbSymUid uid);
-  clang::DeclContext *GetParentDeclContext(PdbSymUid uid);
+  virtual void EnsureFunction(PdbCompilandSymId func_id) = 0;
+  virtual void EnsureInlinedFunction(PdbCompilandSymId inlinesite_id) = 0;
+  virtual void EnsureBlock(PdbCompilandSymId block_id) = 0;
+  virtual void EnsureVariable(PdbCompilandSymId scope_id,
+                              PdbCompilandSymId var_id) = 0;
+  virtual void EnsureVariable(PdbGlobalSymId var_id) = 0;
 
-  clang::FunctionDecl *GetOrCreateFunctionDecl(PdbCompilandSymId func_id);
-  clang::FunctionDecl *
-  GetOrCreateInlinedFunctionDecl(PdbCompilandSymId inlinesite_id);
-  clang::BlockDecl *GetOrCreateBlockDecl(PdbCompilandSymId block_id);
-  clang::VarDecl *GetOrCreateVariableDecl(PdbCompilandSymId scope_id,
-                                          PdbCompilandSymId var_id);
-  clang::VarDecl *GetOrCreateVariableDecl(PdbGlobalSymId var_id);
-  clang::TypedefNameDecl *GetOrCreateTypedefDecl(PdbGlobalSymId id);
-  void ParseDeclsForContext(clang::DeclContext &context);
+  virtual CompilerType GetOrCreateType(PdbTypeSymId type) = 0;
+  virtual CompilerType GetOrCreateTypedefType(PdbGlobalSymId id) = 0;
+  virtual bool CompleteType(CompilerType ct) = 0;
 
-  clang::QualType GetBasicType(lldb::BasicType type);
-  clang::QualType GetOrCreateType(PdbTypeSymId type);
+  virtual void ParseDeclsForContext(CompilerDeclContext context) = 0;
 
-  bool CompleteTagDecl(clang::TagDecl &tag);
-  bool CompleteType(clang::QualType qt);
+  virtual CompilerDeclContext FindNamespaceDecl(CompilerDeclContext parent_ctx,
+                                                llvm::StringRef name) = 0;
 
-  CompilerDecl ToCompilerDecl(clang::Decl &decl);
-  CompilerType ToCompilerType(clang::QualType qt);
-  CompilerDeclContext ToCompilerDeclContext(clang::DeclContext &context);
-  clang::Decl *FromCompilerDecl(CompilerDecl decl);
-  clang::DeclContext *FromCompilerDeclContext(CompilerDeclContext context);
-
-  TypeSystemClang &clang() { return m_clang; }
-  ClangASTImporter &GetClangASTImporter() { return m_importer; }
-
-  void Dump(Stream &stream, llvm::StringRef filter, bool show_color);
-
-  clang::NamespaceDecl *FindNamespaceDecl(const clang::DeclContext *parent,
-                                          llvm::StringRef name);
-
-private:
-  clang::Decl *TryGetDecl(PdbSymUid uid) const;
-
-  using TypeIndex = llvm::codeview::TypeIndex;
-
-  clang::QualType
-  CreatePointerType(const llvm::codeview::PointerRecord &pointer);
-  clang::QualType
-  CreateModifierType(const llvm::codeview::ModifierRecord &modifier);
-  clang::QualType CreateArrayType(const llvm::codeview::ArrayRecord &array);
-  clang::QualType CreateRecordType(PdbTypeSymId id,
-                                   const llvm::codeview::TagRecord &record);
-  clang::QualType CreateEnumType(PdbTypeSymId id,
-                                 const llvm::codeview::EnumRecord &record);
-  clang::QualType
-  CreateFunctionType(TypeIndex args_type_idx, TypeIndex return_type_idx,
-                     llvm::codeview::CallingConvention calling_convention);
-  clang::QualType CreateType(PdbTypeSymId type);
-
-  void CreateFunctionParameters(PdbCompilandSymId func_id,
-                                clang::FunctionDecl &function_decl,
-                                uint32_t param_count);
-  clang::Decl *GetOrCreateSymbolForId(PdbCompilandSymId id);
-  clang::VarDecl *CreateVariableDecl(PdbSymUid uid,
-                                     llvm::codeview::CVSymbol sym,
-                                     clang::DeclContext &scope);
-  clang::NamespaceDecl *GetOrCreateNamespaceDecl(const char *name,
-                                                 clang::DeclContext &context);
-  clang::FunctionDecl *CreateFunctionDeclFromId(PdbTypeSymId func_tid,
-                                                PdbCompilandSymId func_sid);
-  clang::FunctionDecl *
-  CreateFunctionDecl(PdbCompilandSymId func_id, llvm::StringRef func_name,
-                     TypeIndex func_ti, CompilerType func_ct,
-                     uint32_t param_count, clang::StorageClass func_storage,
-                     bool is_inline, clang::DeclContext *parent);
-  void ParseNamespace(clang::DeclContext &parent);
-  void ParseAllTypes();
-  void ParseAllFunctionsAndNonLocalVars();
-  void ParseDeclsForSimpleContext(clang::DeclContext &context);
-  void ParseBlockChildren(PdbCompilandSymId block_id);
-
-  std::pair<clang::DeclContext *, std::string>
-  CreateDeclInfoForType(const llvm::codeview::TagRecord &record, TypeIndex ti);
-  std::pair<clang::DeclContext *, std::string>
-  CreateDeclInfoForUndecoratedName(llvm::StringRef uname);
-  clang::QualType CreateSimpleType(TypeIndex ti);
-
-  TypeSystemClang &m_clang;
-
-  ClangASTImporter m_importer;
-  llvm::once_flag m_parse_functions_and_non_local_vars;
-  llvm::once_flag m_parse_all_types;
-  llvm::DenseMap<clang::Decl *, DeclStatus> m_decl_to_status;
-  llvm::DenseMap<lldb::user_id_t, clang::Decl *> m_uid_to_decl;
-  llvm::DenseMap<lldb::user_id_t, clang::QualType> m_uid_to_type;
-
-  // From class/struct's opaque_compiler_type_t to a set containing the pairs of
-  // method's name and CompilerType.
-  llvm::DenseMap<lldb::opaque_compiler_type_t,
-                 llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
-      m_cxx_record_map;
-
-  using NamespaceSet = llvm::DenseSet<clang::NamespaceDecl *>;
-
-  // These namespaces are fully parsed
-  NamespaceSet m_parsed_namespaces;
-
-  // We know about these namespaces, but they might not be completely parsed yet
-  NamespaceSet m_known_namespaces;
-  llvm::DenseMap<clang::DeclContext *, NamespaceSet> m_parent_to_namespaces;
+  virtual void Dump(Stream &stream, llvm::StringRef filter,
+                    bool show_color) = 0;
 };
 
 } // namespace npdb

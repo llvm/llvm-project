@@ -173,13 +173,19 @@ bool IsStrictlyStructuredBlock(const Block &block) {
   }
 }
 
-const OmpCombinerExpression *GetCombinerExpr(
-    const OmpReductionSpecifier &rspec) {
-  return addr_if(std::get<std::optional<OmpCombinerExpression>>(rspec.t));
+const OmpCombinerExpression *GetCombinerExpr(const OmpReductionSpecifier &x) {
+  return addr_if(std::get<std::optional<OmpCombinerExpression>>(x.t));
 }
 
-const OmpInitializerExpression *GetInitializerExpr(const OmpClause &init) {
-  if (auto *wrapped{std::get_if<OmpClause::Initializer>(&init.u)}) {
+const OmpCombinerExpression *GetCombinerExpr(const OmpClause &x) {
+  if (auto *wrapped{std::get_if<OmpClause::Combiner>(&x.u)}) {
+    return &wrapped->v.v;
+  }
+  return nullptr;
+}
+
+const OmpInitializerExpression *GetInitializerExpr(const OmpClause &x) {
+  if (auto *wrapped{std::get_if<OmpClause::Initializer>(&x.u)}) {
     return &wrapped->v.v;
   }
   return nullptr;
@@ -203,6 +209,56 @@ OmpAllocateInfo SplitOmpAllocate(const OmpAllocateDirective &x) {
   OmpAllocateInfo info;
   SplitOmpAllocateHelper(info, x);
   return info;
+}
+
+void ExecutionPartIterator::step() {
+  // Advance the iterator to the next legal position. If the current
+  // position is a DO-loop or a loop construct, step into it.
+  if (valid()) {
+    IteratorType where{at()};
+    if (auto *loop{GetOmpLoop(*where)}) {
+      stack_.emplace_back(std::get<Block>(loop->t), &*where);
+    } else if (auto *loop{GetDoConstruct(*where)}) {
+      stack_.emplace_back(std::get<Block>(loop->t), &*where);
+    } else {
+      stack_.back().range =
+          IteratorRange(std::next(where), stack_.back().range.end());
+    }
+    adjust();
+  }
+}
+
+void ExecutionPartIterator::next() {
+  // Advance the iterator to the next legal position. If the current
+  // position is a DO-loop or a loop construct, step over it.
+  if (valid()) {
+    stack_.back().range =
+        IteratorRange(std::next(at()), stack_.back().range.end());
+    adjust();
+  }
+}
+
+void ExecutionPartIterator::adjust() {
+  // If the iterator is not at a legal location, keep advancing it until
+  // it lands at a legal location or becomes invalid.
+  while (valid()) {
+    if (stack_.back().range.empty()) {
+      stack_.pop_back();
+      if (valid()) {
+        stack_.back().range =
+            IteratorRange(std::next(at()), stack_.back().range.end());
+      }
+    } else if (auto *block{GetFortranBlockConstruct(*at())}) {
+      stack_.emplace_back(std::get<Block>(block->t), &*at());
+    } else {
+      break;
+    }
+  }
+}
+
+bool LoopNestIterator::isLoop(const ExecutionPartConstruct &c) {
+  return Unwrap<OpenMPLoopConstruct>(c) != nullptr ||
+      Unwrap<DoConstruct>(c) != nullptr;
 }
 
 } // namespace Fortran::parser::omp

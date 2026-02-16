@@ -272,16 +272,11 @@ define i256 @load_i256(ptr %ptr) {
 ; CHECK-O0-NEXT:    callq __atomic_load@PLT
 ; CHECK-O0-NEXT:    movq (%rsp), %rdi # 8-byte Reload
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %r8
-; CHECK-O0-NEXT:    movq %r8, 24(%rdi)
-; CHECK-O0-NEXT:    movq %rsi, 16(%rdi)
-; CHECK-O0-NEXT:    movq %rdx, 8(%rdi)
-; CHECK-O0-NEXT:    movq %rcx, (%rdi)
+; CHECK-O0-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0
+; CHECK-O0-NEXT:    vmovups %ymm0, (%rdi)
 ; CHECK-O0-NEXT:    addq $56, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-O0-NEXT:    vzeroupper
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-LABEL: load_i256:

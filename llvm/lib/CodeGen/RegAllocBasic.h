@@ -20,12 +20,16 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Spiller.h"
 #include <queue>
+#include <tuple>
 
 namespace llvm {
 
 struct CompSpillWeight {
   bool operator()(const LiveInterval *A, const LiveInterval *B) const {
-    return A->weight() < B->weight();
+    // Compare by weight first, then use register number as a stable tie-breaker
+    // to ensure deterministic ordering when the weights are equal.
+    return std::tuple(A->weight(), A->reg()) <
+           std::tuple(B->weight(), B->reg());
   }
 };
 

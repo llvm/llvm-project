@@ -59,17 +59,15 @@ Configuration example for [Claude Code](https://modelcontextprotocol.io/quicksta
 }
 ```
 
-Configuration example for [Visual Studio Code](https://code.visualstudio.com/docs/copilot/chat/mcp-servers):
+Configuration example (`mcp.json`) for [Visual Studio Code](https://code.visualstudio.com/docs/copilot/chat/mcp-servers):
 
 ```json
 {
-  "mcp": {
-    "servers": {
-      "lldb": {
-        "type": "stdio",
-        "command": "/usr/bin/nc",
-        "args": ["localhost", "59999"]
-      }
+  "servers": {
+    "lldb": {
+      "type": "stdio",
+      "command": "/usr/bin/nc",
+      "args": ["localhost", "59999"]
     }
   }
 }

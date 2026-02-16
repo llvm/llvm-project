@@ -287,17 +287,15 @@ void MacroToEnumCallbacks::checkName(const Token &MacroNameTok) {
 void MacroToEnumCallbacks::rememberExpressionName(const Token &Tok) {
   const std::string Id = getTokenName(Tok).str();
   auto Pos = llvm::lower_bound(ExpressionNames, Id);
-  if (Pos == ExpressionNames.end() || *Pos != Id) {
+  if (Pos == ExpressionNames.end() || *Pos != Id)
     ExpressionNames.insert(Pos, Id);
-  }
 }
 
 void MacroToEnumCallbacks::rememberExpressionTokens(
     ArrayRef<Token> MacroTokens) {
-  for (const Token Tok : MacroTokens) {
+  for (const Token Tok : MacroTokens)
     if (Tok.isAnyIdentifier())
       rememberExpressionName(Tok);
-  }
 }
 
 void MacroToEnumCallbacks::FileChanged(SourceLocation Loc,

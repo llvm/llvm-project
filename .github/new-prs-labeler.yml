@@ -66,6 +66,11 @@ flang:frontend:
       - flang/Evaluate/**/*
       - flang/Semantics/**/*
 
+flang-rt:
+  - changed-files:
+    - any-glob-to-any-file:
+      - flang-rt/**/*
+
 libclc:
   - changed-files:
     - any-glob-to-any-file:
@@ -179,7 +184,10 @@ compiler-rt:msan:
 compiler-rt:sanitizer:
   - changed-files:
     - any-glob-to-any-file:
+      - llvm/include/llvm/Transforms/Utils/MemoryTaggingSupport.h
+      - llvm/lib/Target/AArch64/AArch64StackTagging.cpp
       - llvm/lib/Transforms/Instrumentation/*Sanitizer*
+      - llvm/lib/Transforms/Utils/MemoryTaggingSupport.cpp
       - compiler-rt/lib/interception/**
       - compiler-rt/lib/*san*/**
       - compiler-rt/include/sanitizer/**
@@ -475,6 +483,9 @@ mlir:python:
   - changed-files:
     - any-glob-to-any-file:
       - mlir/python/**/*
+      - mlir/include/mlir/Bindings/Python/**
+      - mlir/lib/Bindings/Python/**
+      - mlir/tools/mlir-tblgen/*Python*
 
 mlir:vectorops:
   - changed-files:
@@ -677,6 +688,14 @@ clang:analysis:
     - any-glob-to-any-file:
       - clang/include/clang/Analysis/**
       - clang/lib/Analysis/**
+
+clang:ssaf:
+  - changed-files:
+    - any-glob-to-any-file:
+      - clang/include/clang/Analysis/Scalable/**
+      - clang/lib/Analysis/Scalable/**
+      - clang/unittests/Analysis/Scalable/**
+      - clang/docs/ScalableStaticAnalysisFramework/**
 
 clang:static analyzer:
   - changed-files:

@@ -12,8 +12,7 @@ define amdgpu_kernel void @negative_index_byte(ptr %out, i64 %offset) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> [[TMP2]], i8 2, i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i8> [[TMP3]], i8 3, i32 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[OFFSET:%.*]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[OFFSET]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP8]], -1
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP5]], -1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i8> [[TMP4]], i32 [[TMP7]]
 ; CHECK-NEXT:    store i8 [[TMP6]], ptr [[OUT:%.*]], align 1
 ; CHECK-NEXT:    ret void
@@ -42,8 +41,7 @@ define amdgpu_kernel void @negative_index_word(ptr %out, i64 %offset) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 2, i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 3, i32 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[OFFSET:%.*]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[OFFSET]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP8]], -1
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP5]], -1
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP4]], i32 [[TMP7]]
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
