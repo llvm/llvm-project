@@ -475,9 +475,10 @@ define <vscale x 16 x i64> @test_vp_splice_nxv16i64(<vscale x 16 x i64> %va, <vs
 ; CHECK-NEXT:    addi a7, a7, -1
 ; CHECK-NEXT:    add a5, a0, a1
 ; CHECK-NEXT:    mv a6, a2
+; CHECK-NEXT:    mv t0, a2
 ; CHECK-NEXT:    bltu a2, a7, .LBB22_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a6, a7
+; CHECK-NEXT:    mv t0, a7
 ; CHECK-NEXT:  .LBB22_2:
 ; CHECK-NEXT:    addi sp, sp, -80
 ; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
@@ -488,31 +489,30 @@ define <vscale x 16 x i64> @test_vp_splice_nxv16i64(<vscale x 16 x i64> %va, <vs
 ; CHECK-NEXT:    sub sp, sp, a7
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    vl8re64.v v24, (a5)
-; CHECK-NEXT:    slli a5, a6, 3
-; CHECK-NEXT:    addi a6, sp, 64
-; CHECK-NEXT:    add a5, a6, a5
-; CHECK-NEXT:    mv a7, a2
-; CHECK-NEXT:    bltu a2, a4, .LBB22_4
+; CHECK-NEXT:    slli a5, t0, 3
+; CHECK-NEXT:    addi a7, sp, 64
+; CHECK-NEXT:    add a5, a7, a5
+; CHECK-NEXT:    bltu a6, a4, .LBB22_4
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    mv a7, a4
+; CHECK-NEXT:    mv a6, a4
 ; CHECK-NEXT:  .LBB22_4:
 ; CHECK-NEXT:    vl8re64.v v0, (a0)
-; CHECK-NEXT:    vsetvli zero, a7, e64, m8, ta, ma
-; CHECK-NEXT:    vse64.v v8, (a6)
+; CHECK-NEXT:    vsetvli zero, a6, e64, m8, ta, ma
+; CHECK-NEXT:    vse64.v v8, (a7)
 ; CHECK-NEXT:    sub a0, a2, a4
-; CHECK-NEXT:    add a6, a6, a1
-; CHECK-NEXT:    sub a7, a3, a4
+; CHECK-NEXT:    add a7, a7, a1
+; CHECK-NEXT:    sub a6, a3, a4
 ; CHECK-NEXT:    sltu a2, a2, a0
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a2, a2, a0
-; CHECK-NEXT:    sltu a0, a3, a7
+; CHECK-NEXT:    sltu a0, a3, a6
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, a7
-; CHECK-NEXT:    add a7, a5, a1
+; CHECK-NEXT:    and a0, a0, a6
+; CHECK-NEXT:    add a6, a5, a1
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; CHECK-NEXT:    vse64.v v16, (a6)
+; CHECK-NEXT:    vse64.v v16, (a7)
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vse64.v v24, (a7)
+; CHECK-NEXT:    vse64.v v24, (a6)
 ; CHECK-NEXT:    bltu a3, a4, .LBB22_6
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    mv a3, a4
@@ -539,48 +539,48 @@ define <vscale x 16 x i64> @test_vp_splice_nxv16i64_negative_offset(<vscale x 16
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a4, vlenb
 ; CHECK-NEXT:    slli a1, a4, 3
-; CHECK-NEXT:    slli a7, a4, 1
-; CHECK-NEXT:    addi a7, a7, -1
+; CHECK-NEXT:    slli a6, a4, 1
+; CHECK-NEXT:    addi a6, a6, -1
 ; CHECK-NEXT:    add a5, a0, a1
-; CHECK-NEXT:    mv a6, a2
-; CHECK-NEXT:    bltu a2, a7, .LBB23_2
+; CHECK-NEXT:    mv a7, a2
+; CHECK-NEXT:    mv t0, a2
+; CHECK-NEXT:    bltu a2, a6, .LBB23_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a6, a7
+; CHECK-NEXT:    mv t0, a6
 ; CHECK-NEXT:  .LBB23_2:
 ; CHECK-NEXT:    addi sp, sp, -80
 ; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi s0, sp, 80
-; CHECK-NEXT:    csrr a7, vlenb
-; CHECK-NEXT:    slli a7, a7, 5
-; CHECK-NEXT:    sub sp, sp, a7
+; CHECK-NEXT:    csrr a6, vlenb
+; CHECK-NEXT:    slli a6, a6, 5
+; CHECK-NEXT:    sub sp, sp, a6
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    vl8re64.v v24, (a5)
-; CHECK-NEXT:    slli a5, a6, 3
-; CHECK-NEXT:    addi a7, sp, 64
-; CHECK-NEXT:    add a6, a7, a5
-; CHECK-NEXT:    mv t0, a2
-; CHECK-NEXT:    bltu a2, a4, .LBB23_4
+; CHECK-NEXT:    slli a5, t0, 3
+; CHECK-NEXT:    addi t0, sp, 64
+; CHECK-NEXT:    add a6, t0, a5
+; CHECK-NEXT:    bltu a7, a4, .LBB23_4
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    mv t0, a4
+; CHECK-NEXT:    mv a7, a4
 ; CHECK-NEXT:  .LBB23_4:
 ; CHECK-NEXT:    vl8re64.v v0, (a0)
-; CHECK-NEXT:    vsetvli zero, t0, e64, m8, ta, ma
-; CHECK-NEXT:    vse64.v v8, (a7)
+; CHECK-NEXT:    vsetvli zero, a7, e64, m8, ta, ma
+; CHECK-NEXT:    vse64.v v8, (t0)
 ; CHECK-NEXT:    sub a0, a2, a4
-; CHECK-NEXT:    add a7, a7, a1
-; CHECK-NEXT:    sub t0, a3, a4
+; CHECK-NEXT:    add t0, t0, a1
+; CHECK-NEXT:    sub a7, a3, a4
 ; CHECK-NEXT:    sltu a2, a2, a0
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    and a2, a2, a0
-; CHECK-NEXT:    sltu a0, a3, t0
+; CHECK-NEXT:    sltu a0, a3, a7
 ; CHECK-NEXT:    addi a0, a0, -1
-; CHECK-NEXT:    and a0, a0, t0
-; CHECK-NEXT:    add t0, a6, a1
+; CHECK-NEXT:    and a0, a0, a7
+; CHECK-NEXT:    add a7, a6, a1
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; CHECK-NEXT:    vse64.v v16, (a7)
+; CHECK-NEXT:    vse64.v v16, (t0)
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vse64.v v24, (t0)
+; CHECK-NEXT:    vse64.v v24, (a7)
 ; CHECK-NEXT:    bltu a3, a4, .LBB23_6
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    mv a3, a4
