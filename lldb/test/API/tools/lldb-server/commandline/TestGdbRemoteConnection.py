@@ -6,7 +6,6 @@ from lldbsuite.test.lldbtest import *
 from lldbgdbserverutils import Server
 import lldbsuite.test.lldbplatformutil
 from lldbgdbserverutils import Pipe
-import lldb
 
 
 class TestGdbRemoteConnection(gdbremote_testcase.GdbRemoteTestCaseBase):

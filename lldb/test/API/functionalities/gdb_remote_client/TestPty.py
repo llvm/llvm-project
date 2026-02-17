@@ -3,7 +3,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 from lldbsuite.test.gdbclientutils import *
 from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
-import os
 
 
 @skipIf(hostoslist=["windows"])

@@ -3,7 +3,6 @@ from intelpt_testcase import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
-import os
 
 
 @skipIfNoIntelPT
