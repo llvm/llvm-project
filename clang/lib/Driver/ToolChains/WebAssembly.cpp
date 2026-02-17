@@ -30,8 +30,8 @@ using namespace llvm::opt;
 std::string WebAssembly::getMultiarchTriple(const Driver &D,
                                             const llvm::Triple &TargetTriple,
                                             StringRef SysRoot) const {
-  return (TargetTriple.getArchName() + "-" +
-          TargetTriple.getOSAndEnvironmentName()).str();
+    return (TargetTriple.getArchName() + "-" +
+            TargetTriple.getOSAndEnvironmentName()).str();
 }
 
 std::string wasm::Linker::getLinkerPath(const ArgList &Args) const {
