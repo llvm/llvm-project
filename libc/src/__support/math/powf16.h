@@ -22,7 +22,6 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/sqrt.h"
-#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/types.h"
@@ -35,7 +34,7 @@ namespace math {
 
 namespace powf16_impl {
 // TODO: mark as constexpr when nearest_integer issue is resolved
-LIBC_INLINE static double exp2_range_reduced(double x) {
+LIBC_INLINE double exp2_range_reduced(double x) {
   // k = round(x * 32)  => (hi + mid) * 2^5
   double kf = fputil::nearest_integer(x * 32.0);
   int k = static_cast<int>(kf);
@@ -103,7 +102,7 @@ LIBC_INLINE constexpr bool is_integer(float16 x) {
 
 } // namespace powf16_impl
 
-LIBC_INLINE static constexpr float16 powf16(float16 x, float16 y) {
+LIBC_INLINE constexpr float16 powf16(float16 x, float16 y) {
   using namespace powf16_impl;
   using namespace common_constants_internal;
   using FPBits = fputil::FPBits<float16>;
