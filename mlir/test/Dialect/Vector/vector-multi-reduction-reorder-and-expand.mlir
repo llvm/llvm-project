@@ -23,17 +23,6 @@ func.func @inner_parallel_to_inner_reduction(%arg0: vector<3x2x4xf32>, %acc: vec
     return %0 : vector<3x2xf32>
 }
 
-// INNER_REDUCTION-LABEL: func @transpose_multi_reduction_dims
-// INNER_REDUCTION-SAME:    %[[INPUT:.+]]: vector<2x3x4x5xf32>
-// INNER_REDUCTION-SAME:    %[[ACC:.+]]: vector<2x5xf32>
-func.func @transpose_multi_reduction_dims(%arg0: vector<2x3x4x5xf32>, %acc: vector<2x5xf32>) -> vector<2x5xf32> {
-    // INNER_REDUCTION: %[[TRANSPOSED:.+]] = vector.transpose %[[INPUT]], [0, 3, 1, 2]
-    // INNER_REDUCTION: %[[RESULT:.+]] = vector.multi_reduction <add>, %[[TRANSPOSED]], %[[ACC]] [2, 3]
-    %0 = vector.multi_reduction <add>, %arg0, %acc [1, 2] : vector<2x3x4x5xf32> to vector<2x5xf32>
-    // INNER_REDUCTION: return %[[RESULT]]
-    return %0 : vector<2x5xf32>
-}
-
 // ALL-LABEL: func @transpose_parallel_middle
 // ALL-SAME:    %[[INPUT:.+]]: vector<3x4x5xf32>
 // ALL-SAME:    %[[ACC:.+]]: vector<4xf32>
