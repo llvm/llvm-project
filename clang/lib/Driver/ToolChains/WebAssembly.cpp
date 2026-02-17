@@ -94,13 +94,10 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
 
   CmdArgs.push_back("-m");
-  std::string arch;
   if (ToolChain.getTriple().isArch64Bit())
-    arch = "wasm64";
+    CmdArgs.push_back("wasm64");
   else
-    arch = "wasm32";
-
-  CmdArgs.push_back(Args.MakeArgString(arch));
+    CmdArgs.push_back("wasm32");
 
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("--strip-all");
