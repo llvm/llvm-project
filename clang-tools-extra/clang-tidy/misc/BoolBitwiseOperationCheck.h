@@ -32,20 +32,19 @@ public:
     return TK_IgnoreUnlessSpelledInSource;
   }
 
+private:
   void emitWarningAndChangeOperatorsIfPossible(
       const BinaryOperator *BinOp, const BinaryOperator *ParensExpr,
       const BinaryOperator *ParensExprOpt, const Expr *LhsOfCompound,
       const clang::SourceManager &SM, clang::ASTContext &Ctx,
       bool CanApplyFixIt);
 
-private:
   DiagnosticBuilder createDiagBuilder(const BinaryOperator *BinOp);
 
   bool UnsafeMode;
   bool IgnoreMacros;
   bool StrictMode;
   bool ParenCompounds;
-  bool IgnoreWarningsWithFixIt;
 };
 
 } // namespace clang::tidy::misc

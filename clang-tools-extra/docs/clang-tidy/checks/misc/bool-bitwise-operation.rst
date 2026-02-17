@@ -14,31 +14,19 @@ expected and idiomatic way to work with Boolean values.
 
 .. code-block:: c++
 
+  // Before:
   bool invalid = false;
-  invalid |= x > limit.x; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
-                          //   400 |     invalid |= x > limit.x;
-                          //       |             ^~~~~~~~~~~~~~
-                          //       |             = invalid || (x > limit.x)
-  invalid |= y > limit.y; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
-                          //   401 |     invalid |= y > limit.y;
-                          //       |             ^~~~~~~~~~~~~~
-                          //       |             = invalid || (y > limit.y)
-  invalid |= z > limit.z; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
-                          //   402 |     invalid |= z > limit.z;
-                          //       |             ^~~~~~~~~~~~~~
-                          //       |             = invalid || (z > limit.z)
+  invalid |= x > limit.x;
+  invalid |= y > limit.y;
+  invalid |= z > limit.z;
   if (invalid) {
     // error handling
   }
 
-These 3 warnings suggest assigning the result of a logical ``||`` operation
-instead of using the ``|=`` operator:
-
-.. code-block:: c++
-
+  // After:
   bool invalid = false;
   invalid = invalid || (x > limit.x);
-  invalid = invalid || (y > limit.x);
+  invalid = invalid || (y > limit.y);
   invalid = invalid || (z > limit.z);
   if (invalid) {
     // error handling
@@ -50,7 +38,7 @@ without fix-it to preserve the semantics.
 .. code-block:: c++
 
   volatile bool invalid = false;
-  invalid |= x > limit.x; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
+  invalid |= x > limit.x;
 
 Limitations
 -----------
