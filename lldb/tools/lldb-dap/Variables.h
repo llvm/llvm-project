@@ -58,7 +58,7 @@ public:
 
   // Not copyable.
   VariableStore(const VariableStore &) = delete;
-  VariableStore operator=(const VariableStore &) = delete;
+  VariableStore &operator=(const VariableStore &) = delete;
   VariableStore(VariableStore &&) = default;
   VariableStore &operator=(VariableStore &&) = default;
 };
