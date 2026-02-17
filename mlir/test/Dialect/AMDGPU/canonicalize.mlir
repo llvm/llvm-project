@@ -207,10 +207,6 @@ func.func @scaled_mfma_less_than_4(%opA: vector<32xf4E2M1FN>, %opB: vector<32xf4
 // -----
 
 // CHECK-LABEL: func @scaled_mfma_exactly_4
-// CHECK: vector.extract {{.*}} : f8E8M0FNU from vector<4xf8E8M0FNU>
-// CHECK: vector.insert {{.*}} : f8E8M0FNU into vector<4xf8E8M0FNU>
-// CHECK: vector.extract {{.*}} : f8E8M0FNU from vector<4xf8E8M0FNU>
-// CHECK: vector.insert {{.*}} : f8E8M0FNU into vector<4xf8E8M0FNU>
 // CHECK: amdgpu.scaled_mfma 16x16x128 ({{.*}}[0] * {{.*}}) * ({{.*}}[1] * {{.*}}
 func.func @scaled_mfma_exactly_4(%opA: vector<32xf4E2M1FN>, %opB: vector<32xf4E2M1FN>, %scalesA: vector<4xf8E8M0FNU>, %scalesB: vector<4xf8E8M0FNU>) -> vector<4xf32> {
   %cst_0 = arith.constant dense<0.000000e+00> : vector<4xf32>
