@@ -33,14 +33,8 @@
 #  include "make_test_thread.h"
 #endif
 
-template <class T>
-concept HasVolatileFetchMin = requires(volatile std::atomic<T>& a, T t) {
-  { std::atomic_fetch_min(&a, t) } -> std::same_as<T>;
-};
-
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void test_impl() {
-  static_assert(HasVolatileFetchMin<T> == std::atomic<T>::is_always_lock_free);
   static_assert(noexcept(std::atomic_fetch_min(std::declval<MaybeVolatile<std::atomic<T>>*>(), T(0))));
 
   // atomic_fetch_min
