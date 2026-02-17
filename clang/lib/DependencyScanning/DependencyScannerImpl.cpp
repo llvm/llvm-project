@@ -21,6 +21,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
+#include <mutex>
 #include <thread>
 
 using namespace clang;
