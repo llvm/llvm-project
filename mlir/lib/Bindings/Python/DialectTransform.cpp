@@ -8,12 +8,12 @@
 
 #include <string>
 
-#include "IRInterfaces.h"
 #include "Rewrite.h"
 #include "mlir-c/Dialect/Transform.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/IRCore.h"
+#include "mlir/Bindings/Python/IRInterfaces.h"
 #include "nanobind/nanobind.h"
 #include <nanobind/trampoline.h>
 
