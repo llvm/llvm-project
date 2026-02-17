@@ -284,3 +284,9 @@ Since `__m128` is not a class type in clang any overloads after a template defin
 With MSVC ``foo(__m128)`` will be selected but with clang ``foo<__m128>()`` will be selected since on clang `__m128` is a builtin type.
 
 In general the takeaway is `__m128` is a builtin type on clang while a class type on MSVC.
+
+Warnings
+========
+
+* ``-Wms-bitfield-padding``
+  When generating code compatible with MSVC, clang applies the bit-field padding ABI used by MSVC. The padding behavior of sequential bit-fields in a record's layout is dependent on whether the underlying storage type of those bit-fields are the same. To help diagnose unexpected padding the ``-Wms-bitfield-padding`` warning can be used to diagnose cases where the MSVC ABI will not pad bit-fields (even if not targeting relevant platforms).
