@@ -199,6 +199,7 @@ Changes to LLDB
 
 #### Kernel Debugging
 
+* Support for libfbsdvmcore has been removed. As a result, `FreeBSDKernel` plugin only works on FreeBSD hosts.
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
 
