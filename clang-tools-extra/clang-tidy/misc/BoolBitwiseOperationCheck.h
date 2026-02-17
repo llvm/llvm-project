@@ -44,7 +44,7 @@ private:
   bool UnsafeMode;
   bool IgnoreMacros;
   bool StrictMode;
-  bool BraceCompound;
+  bool ParenCompounds;
   bool IgnoreWarningsWithFixIt;
 };
 

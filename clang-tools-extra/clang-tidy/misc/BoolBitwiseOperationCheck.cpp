@@ -157,7 +157,7 @@ BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
       UnsafeMode(Options.get("UnsafeMode", false)),
       IgnoreMacros(Options.get("IgnoreMacros", false)),
       StrictMode(Options.get("StrictMode", true)),
-      BraceCompound(Options.get("BraceCompound", true)),
+      ParenCompounds(Options.get("ParenCompounds", true)),
       // Undocumented option for debugging purposes
       IgnoreWarningsWithFixIt(Options.get("IgnoreWarningsWithFixIt", false)) {}
 
@@ -166,7 +166,7 @@ void BoolBitwiseOperationCheck::storeOptions(
   Options.store(Opts, "UnsafeMode", UnsafeMode);
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
   Options.store(Opts, "StrictMode", StrictMode);
-  Options.store(Opts, "BraceCompound", BraceCompound);
+  Options.store(Opts, "ParenCompounds", ParenCompounds);
   Options.store(Opts, "IgnoreWarningsWithFixIt", IgnoreWarningsWithFixIt);
 }
 
@@ -236,7 +236,7 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
       hasRHS(allOf(binaryOperator(hasOperatorName("||")).bind("parensExpr"),
                    NotAlreadyInParenExpr)));
 
-  // Case 4: `BraceCompound` option enabled and two different operators
+  // Case 4: `ParenCompounds` option enabled and two different operators
   auto ParensCaseOpt = allOf(
       CompoundOperator,
       hasRHS(allOf(
@@ -318,7 +318,7 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
   }
 
   // Handle the case which might lead to -WParens warning
-  if (CanBuildFixIts && ParensExprOpt && !ParensExpr && BraceCompound) {
+  if (CanBuildFixIts && ParensExprOpt && !ParensExpr && ParenCompounds) {
     const StringRef RHSOpStr = ParensExprOpt->getOpcodeStr();
     const StringRef CompoundOpStr = BinOp->getOpcodeStr();
     const StringRef RHSLogicalOpStr = translate(RHSOpStr);

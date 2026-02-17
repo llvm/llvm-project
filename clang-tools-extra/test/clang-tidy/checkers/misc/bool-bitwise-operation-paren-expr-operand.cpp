@@ -374,7 +374,7 @@ void bad_with_priors_compound() {
     (a) &= (b) && (c);
     // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: (a) = (a) && (b) && (c);
-    // Braces added because `BraceCompound` enabled by default
+    // Braces added because `ParenCompounds` enabled by default
     (a) |= (b) && (c);
     // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: (a) = (a) || ((b) && (c));

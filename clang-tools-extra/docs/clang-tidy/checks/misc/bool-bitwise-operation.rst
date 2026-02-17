@@ -107,7 +107,7 @@ Options
     disabled, only show warnings when fix-it hints are available. Default
     value is `true`.
 
-.. option:: BraceCompound
+.. option:: ParenCompounds
 
     When enabled, add parentheses around the right-hand side (RHS) of compound
     operators (``&=``, ``|=``) when transforming them to logical operators,
@@ -119,8 +119,8 @@ Options
 .. code-block:: c++
 
   bool a, b, c;
-  a &= b | c;  // With BraceCompound=true:  a = a && (b || c);
-                // With BraceCompound=false: a = a && b || c;
+  a &= b | c;  // With ParenCompounds=true:  a = a && (b || c);
+                // With ParenCompounds=false: a = a && b || c;
 
   a &= b && c; // Always: a = a && b && c; (no parentheses needed)
 
