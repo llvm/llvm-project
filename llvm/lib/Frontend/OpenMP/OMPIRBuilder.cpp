@@ -787,6 +787,13 @@ static void hoistNonEntryAllocasToEntryBlock(llvm::BasicBlock &Block) {
     AllocaInst->moveBefore(InsertPoint);
 }
 
+static void hoistNonEntryAllocasToEntryBlock(llvm::Function *Func) {
+  PostDominatorTree PostDomTree(*Func);
+  for (llvm::BasicBlock &BB : *Func)
+    if (PostDomTree.properlyDominates(&BB, &Func->getEntryBlock()))
+      hoistNonEntryAllocasToEntryBlock(BB);
+}
+
 void OpenMPIRBuilder::finalize(Function *Fn) {
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
@@ -893,12 +900,8 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
     if (OI.PostOutlineCB)
       OI.PostOutlineCB(*OutlinedFn);
 
-    if (OI.FixUpNonEntryAllocas) {
-      PostDominatorTree PostDomTree(*OutlinedFn);
-      for (llvm::BasicBlock &BB : *OutlinedFn)
-        if (PostDomTree.properlyDominates(&BB, &OutlinedFn->getEntryBlock()))
-          hoistNonEntryAllocasToEntryBlock(BB);
-    }
+    if (OI.FixUpNonEntryAllocas)
+      hoistNonEntryAllocasToEntryBlock(OutlinedFn);
   }
 
   // Remove work items that have been completed.
@@ -4234,11 +4237,12 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
     }
 
   Builder.CreateRetVoid();
-
-  PostDominatorTree PostDomTree(*ReductionFunc);
-  for (llvm::BasicBlock &BB : *ReductionFunc)
-    if (PostDomTree.properlyDominates(&BB, &ReductionFunc->getEntryBlock()))
-      hoistNonEntryAllocasToEntryBlock(BB);
+  // Compiling with `-O0`, `alloca`s emitted in non-entry blocks are not hoisted
+  // to the entry block (this is dones for higher opt levels by later passes in
+  // the pipeline). This has caused issues because non-entry `alloca`s force the
+  // function to use dynamic stack allocations and we might run out of scratch
+  // memory.
+  hoistNonEntryAllocasToEntryBlock(ReductionFunc);
 
   return ReductionFunc;
 }
