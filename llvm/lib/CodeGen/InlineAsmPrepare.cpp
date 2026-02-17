@@ -100,7 +100,9 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(InlineAsmPrepare, "inline-asm-prepare",
                     "Prepare inline asm insts", false, false)
 
-FunctionPass *llvm::createInlineAsmPass() { return new InlineAsmPrepare(); }
+FunctionPass *llvm::createInlineAsmPreparePass() {
+  return new InlineAsmPrepare();
+}
 
 void InlineAsmPrepare::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<DominatorTreeWrapperPass>();
