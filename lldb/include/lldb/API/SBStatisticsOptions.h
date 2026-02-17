@@ -23,8 +23,8 @@ public:
   const SBStatisticsOptions &operator=(const lldb::SBStatisticsOptions &rhs);
 
   /// If true, dump only high-level summary statistics. Exclude details like
-  /// targets, modules, breakpoints, etc. This turns off ``IncludeTargets``,
-  /// ``IncludeModules`` and ``IncludeTranscript`` by default.
+  /// targets, modules, breakpoints, etc. This turns off `IncludeTargets`,
+  /// `IncludeModules` and `IncludeTranscript` by default.
   ///
   /// Defaults to false.
   void SetSummaryOnly(bool b);
@@ -33,10 +33,10 @@ public:
   /// If true, dump statistics for the targets, including breakpoints,
   /// expression evaluations, frame variables, etc.
   ///
-  /// Defaults to true, unless the ``SummaryOnly`` mode is enabled, in which
+  /// Defaults to true, unless the `SummaryOnly` mode is enabled, in which
   /// case this is turned off unless specified.
   ///
-  /// If both ``IncludeTargets`` and ``IncludeModules`` are true, a list of
+  /// If both `IncludeTargets` and `IncludeModules` are true, a list of
   /// module identifiers will be added to the "targets" section.
   void SetIncludeTargets(bool b);
   bool GetIncludeTargets() const;
@@ -45,15 +45,15 @@ public:
   /// various aspects of the module and debug information, type system, path,
   /// etc.
   ///
-  /// Defaults to true, unless the ``SummaryOnly`` mode is enabled, in which
+  /// Defaults to true, unless the `SummaryOnly` mode is enabled, in which
   /// case this is turned off unless specified.
   ///
-  /// If both ``IncludeTargets` and ``IncludeModules`` are true, a list of
+  /// If both `IncludeTargets` and `IncludeModules` are true, a list of
   /// module identifiers will be added to the "targets" section.
   void SetIncludeModules(bool b);
   bool GetIncludeModules() const;
 
-  /// If true and the setting ``interpreter.save-transcript`` is enabled,
+  /// If true and the setting `interpreter.save-transcript` is enabled,
   /// include a JSON array with all commands the user and/or scripts executed
   /// during a debug session.
   ///

@@ -329,7 +329,7 @@ public:
   /// - "timestampInEpochSeconds" (int): The timestamp when the command is
   ///   executed.
   ///
-  /// Turn on settings ``interpreter.save-transcript`` for LLDB to populate
+  /// Turn on settings `interpreter.save-transcript` for LLDB to populate
   /// this list. Otherwise this list is empty.
   SBStructuredData GetTranscript();
 

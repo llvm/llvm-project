@@ -183,7 +183,7 @@ public:
   /// By default a process have no shadow event listener.
   /// Calling this function allows public process events to be broadcasted to an
   /// additional listener on top of the default process event listener.
-  /// If the ``listener`` argument is invalid (SBListener::IsValid() will
+  /// If the `listener` argument is invalid (SBListener::IsValid() will
   /// return false), this will clear the shadow listener.
   void SetShadowListener(SBListener &listener);
 
