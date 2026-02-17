@@ -27,23 +27,14 @@ public:
   /// If the entity already exists, returns the existing ID (idempotent).
   EntityId addEntity(const EntityName &E);
 
-  /// Associate the \p Data EntitySummary with the \p Entity.
+  /// Associate the \p Data \c EntitySummary with the \p Entity.
   /// This consumes the \p Data only if \p Entity wasn't associated yet with the
-  /// same kind of EntitySummary.
-  /// \returns a pointer to the EntitySummary and whether it inserted or not.
+  /// same kind of \c EntitySummary.
+  /// \returns a pointer to the \c EntitySummary and whether it inserted or not.
   template <typename ConcreteEntitySummary,
             DerivesFromEntitySummary<ConcreteEntitySummary> * = nullptr>
   std::pair<EntitySummary *, bool>
-  addSummary(EntityId Entity, std::unique_ptr<ConcreteEntitySummary> &&Data) {
-    std::unique_ptr<EntitySummary> TypeErasedData = std::move(Data);
-    auto [It, Inserted] = addSummaryImpl(Entity, std::move(TypeErasedData));
-    // Move it back on failue to keep the `Data` unconsumed.
-    if (!Inserted) {
-      Data = std::unique_ptr<ConcreteEntitySummary>(
-          static_cast<ConcreteEntitySummary *>(TypeErasedData.release()));
-    }
-    return {It, Inserted};
-  }
+  addSummary(EntityId Entity, std::unique_ptr<ConcreteEntitySummary> &&Data);
 
 private:
   TUSummary &Summary;
@@ -51,6 +42,21 @@ private:
   std::pair<EntitySummary *, bool>
   addSummaryImpl(EntityId Entity, std::unique_ptr<EntitySummary> &&Data);
 };
+
+template <typename ConcreteEntitySummary,
+          DerivesFromEntitySummary<ConcreteEntitySummary> *>
+std::pair<EntitySummary *, bool>
+TUSummaryBuilder::addSummary(EntityId Entity,
+                             std::unique_ptr<ConcreteEntitySummary> &&Data) {
+  std::unique_ptr<EntitySummary> TypeErasedData = std::move(Data);
+  auto [It, Inserted] = addSummaryImpl(Entity, std::move(TypeErasedData));
+  // Move it back on failue to keep the `Data` unconsumed.
+  if (!Inserted) {
+    Data = std::unique_ptr<ConcreteEntitySummary>(
+        static_cast<ConcreteEntitySummary *>(TypeErasedData.release()));
+  }
+  return {It, Inserted};
+}
 
 } // namespace clang::ssaf
 
