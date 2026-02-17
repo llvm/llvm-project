@@ -38,6 +38,8 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/RealpathPrefixes.h"
+#include "lldb/Utility/ScriptedMetadata.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 #include "llvm/ADT/StringRef.h"
@@ -307,6 +309,8 @@ private:
 
 class EvaluateExpressionOptions {
 public:
+  EvaluateExpressionOptions();
+
 // MSVC has a bug here that reports C4268: 'const' static/global data
 // initialized with compiler generated default constructor fills the object
 // with zeros. Confirmed that MSVC is *not* zero-initializing, it's just a
@@ -322,8 +326,6 @@ public:
 
   static constexpr ExecutionPolicy default_execution_policy =
       eExecutionPolicyOnlyWhenNeeded;
-
-  EvaluateExpressionOptions() = default;
 
   ExecutionPolicy GetExecutionPolicy() const { return m_execution_policy; }
 
@@ -481,7 +483,26 @@ public:
 
   void SetIsForUtilityExpr(bool b) { m_running_utility_expression = b; }
 
+  /// Set language-plugin specific option called \c option_name to
+  /// the specified boolean \c value.
+  llvm::Error SetBooleanLanguageOption(llvm::StringRef option_name, bool value);
+
+  /// Get the language-plugin specific boolean option called \c option_name.
+  ///
+  /// If the option doesn't exist or is not a boolean option, returns false.
+  /// Otherwise returns the boolean value of the option.
+  llvm::Expected<bool>
+  GetBooleanLanguageOption(llvm::StringRef option_name) const;
+
+  void SetCppIgnoreContextQualifiers(bool value);
+
+  bool GetCppIgnoreContextQualifiers() const;
+
 private:
+  const StructuredData::Dictionary &GetLanguageOptions() const;
+
+  StructuredData::Dictionary &GetLanguageOptions();
+
   ExecutionPolicy m_execution_policy = default_execution_policy;
   SourceLanguage m_language;
   std::string m_prefix;
@@ -513,6 +534,10 @@ private:
   // originates
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
+
+  /// Dictionary mapping names of language-plugin specific options
+  /// to values.
+  StructuredData::DictionarySP m_language_options_sp = nullptr;
 
   /// During expression evaluation, any SymbolContext in this list will be
   /// used for symbol/function lookup before any other context (except for
@@ -776,6 +801,12 @@ public:
   const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
   GetScriptedFrameProviderDescriptors() const;
 
+protected:
+  /// Invalidate all potentially cached frame providers for all threads
+  /// and trigger a stack changed event for all threads.
+  void InvalidateThreadFrameProviders();
+
+public:
   // This part handles the breakpoints.
 
   BreakpointList &GetBreakpointList(bool internal = false);
@@ -1675,6 +1706,20 @@ public:
 
   void SaveScriptedLaunchInfo(lldb_private::ProcessInfo &process_info);
 
+  // Scripted symbol locator per-target registration.
+  Status RegisterScriptedSymbolLocator(llvm::StringRef class_name,
+                                       StructuredData::DictionarySP args_sp);
+  void ClearScriptedSymbolLocator();
+  lldb::ScriptedSymbolLocatorInterfaceSP GetScriptedSymbolLocatorInterface();
+  llvm::StringRef GetScriptedSymbolLocatorClassName() const;
+
+  /// Look up a previously cached source file resolution result.
+  /// Returns true if a cached entry exists (even if the result is nullopt).
+  bool LookupScriptedSourceFileCache(llvm::StringRef key,
+                                     std::optional<FileSpec> &result) const;
+  void InsertScriptedSourceFileCache(llvm::StringRef key,
+                                     const std::optional<FileSpec> &result);
+
   /// Add a signal for the target.  This will get copied over to the process
   /// if the signal exists on that target.  Only the values with Yes and No are
   /// set, Calculate values will be ignored.
@@ -1812,6 +1857,13 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
+
+  /// Per-target scripted symbol locator.
+  /// @{
+  lldb::ScriptedMetadataSP m_scripted_symbol_locator_metadata_sp;
+  lldb::ScriptedSymbolLocatorInterfaceSP m_scripted_symbol_locator_interface_sp;
+  llvm::StringMap<std::optional<FileSpec>> m_scripted_source_file_cache;
+  /// @}
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);

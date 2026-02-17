@@ -1,14 +1,13 @@
 // REQUIRES: comgr-has-spirv
-// UNSUPPORTED: true
 // COM: Generate a SPIRV file from a HIP kernel
-// RUN: clang -x hip --offload-arch=amdgcnspirv -nogpulib -nogpuinc \
+// RUN: %clang -x hip --offload-arch=amdgcnspirv -nogpulib -nogpuinc \
 // RUN:    --no-gpu-bundle-output --offload-device-only -O3 %s -o %t.spv
 
 // COM: Run Comgr Translator to covert SPIRV back to LLVM IR
 // RUN: spirv-translator %t.spv -o %t.translated.bc
 
 // COM: Dissasemble LLVM IR bitcode to LLVM IR text
-// RUN: llvm-dis %t.translated.bc -o - | FileCheck %s
+// RUN: %llvm-dis %t.translated.bc -o - | %FileCheck %s
 
 // COM: Verify LLVM IR text
 // CHECK: target triple = "amdgcn-amd-amdhsa"

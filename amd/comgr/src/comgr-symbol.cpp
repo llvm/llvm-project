@@ -61,12 +61,12 @@ SymbolHelper::mapToComgrSymbolType(uint8_t ELFSymbolType) {
 // SymbolHelper version of createBinary, contrary to the one in Binary.cpp,
 // in_text is textual input, not a filename.
 Expected<OwningBinary<Binary>> SymbolHelper::createBinary(StringRef InText) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+  std::unique_ptr<MemoryBuffer> Buffer =
       MemoryBuffer::getMemBuffer(InText);
-  if (std::error_code EC = BufOrErr.getError()) {
-    return errorCodeToError(EC);
+  if (!Buffer) {
+    return createStringError(std::errc::invalid_argument,
+                              "Failed to create memory buffer");
   }
-  std::unique_ptr<MemoryBuffer> &Buffer = BufOrErr.get();
 
   Expected<std::unique_ptr<Binary>> BinOrErr =
       llvm::object::createBinary(Buffer->getMemBufferRef());

@@ -3,12 +3,10 @@
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-linux-android %s
 
-#include <limits.h>
 #include <stdarg.h>
 #include <stddef.h>
 #define __need_wint_t
 #include <stddef.h> // For wint_t and wchar_t
-#include <stdint.h>
 
 typedef struct _FILE FILE;
 int fprintf(FILE *, const char *restrict, ...);
@@ -988,14 +986,11 @@ void test_promotion(void) {
 
 void test_bool(_Bool b, _Bool* bp)
 {
-#if SIZE_MAX != UINT_MAX
+#ifndef __arm__
   printf("%zu", b); // expected-warning-re{{format specifies type 'size_t' (aka '{{.+}}') but the argument has type '_Bool'}}
-#else
-  printf("%zu", b); // no-warning
-#endif
-#if PTRDIFF_MAX != INT_MAX
   printf("%td", b); // expected-warning-re{{format specifies type 'ptrdiff_t' (aka '{{.+}}') but the argument has type '_Bool'}}
 #else
+  printf("%zu", b); // no-warning
   printf("%td", b); // no-warning
 #endif
   printf("%jd", b); // expected-warning-re{{format specifies type 'intmax_t' (aka '{{.+}}') but the argument has type '_Bool'}}

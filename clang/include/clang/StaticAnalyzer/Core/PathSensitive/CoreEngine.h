@@ -48,8 +48,6 @@ class ExprEngine;
 /// CoreEngine - Implements the core logic of the graph-reachability analysis.
 /// It traverses the CFG and generates the ExplodedGraph.
 class CoreEngine {
-  friend class CommonNodeBuilder;
-  friend class EndOfFunctionNodeBuilder;
   friend class ExprEngine;
   friend class IndirectGotoNodeBuilder;
   friend class NodeBuilder;
@@ -238,25 +236,14 @@ public:
 /// added to the builder (either as the input node set or as the newly
 /// constructed nodes) but did not have any outgoing transitions added.
 class NodeBuilder {
-  virtual void anchor();
-
 protected:
   const NodeBuilderContext &C;
-
-  /// Specifies if the builder results have been finalized. For example, if it
-  /// is set to false, autotransitions are yet to be generated.
-  bool Finalized;
 
   bool HasGeneratedNodes = false;
 
   /// The frontier set - a set of nodes which need to be propagated after
   /// the builder dies.
   ExplodedNodeSet &Frontier;
-
-  /// Checks if the results are ready.
-  virtual bool checkResults() {
-    return Finalized;
-  }
 
   bool hasNoSinksInFrontier() {
     for (const auto  I : Frontier)
@@ -265,9 +252,6 @@ protected:
     return true;
   }
 
-  /// Allow subclasses to finalize results before result_begin() is executed.
-  virtual void finalizeResults() {}
-
   ExplodedNode *generateNodeImpl(const ProgramPoint &PP,
                                  ProgramStateRef State,
                                  ExplodedNode *Pred,
@@ -275,19 +259,17 @@ protected:
 
 public:
   NodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-              const NodeBuilderContext &Ctx, bool F = true)
-      : C(Ctx), Finalized(F), Frontier(DstSet) {
+              const NodeBuilderContext &Ctx)
+      : C(Ctx), Frontier(DstSet) {
     Frontier.Add(SrcNode);
   }
 
   NodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
-              const NodeBuilderContext &Ctx, bool F = true)
-      : C(Ctx), Finalized(F), Frontier(DstSet) {
+              const NodeBuilderContext &Ctx)
+      : C(Ctx), Frontier(DstSet) {
     Frontier.insert(SrcSet);
     assert(hasNoSinksInFrontier());
   }
-
-  virtual ~NodeBuilder() = default;
 
   /// Generates a node in the ExplodedGraph.
   ExplodedNode *generateNode(const ProgramPoint &PP,
@@ -309,25 +291,7 @@ public:
     return generateNodeImpl(PP, State, Pred, true);
   }
 
-  const ExplodedNodeSet &getResults() {
-    finalizeResults();
-    assert(checkResults());
-    return Frontier;
-  }
-
-  using iterator = ExplodedNodeSet::iterator;
-
-  /// Iterators through the results frontier.
-  iterator begin() {
-    finalizeResults();
-    assert(checkResults());
-    return Frontier.begin();
-  }
-
-  iterator end() {
-    finalizeResults();
-    return Frontier.end();
-  }
+  const ExplodedNodeSet &getResults() { return Frontier; }
 
   const NodeBuilderContext &getContext() { return C; }
   bool hasGeneratedNodes() { return HasGeneratedNodes; }
@@ -342,70 +306,20 @@ public:
   void addNodes(ExplodedNode *N) { Frontier.Add(N); }
 };
 
-/// \class NodeBuilderWithSinks
-/// This node builder keeps track of the generated sink nodes.
-class NodeBuilderWithSinks: public NodeBuilder {
-  void anchor() override;
-
-protected:
-  SmallVector<ExplodedNode*, 2> sinksGenerated;
-  ProgramPoint &Location;
-
-public:
-  NodeBuilderWithSinks(ExplodedNode *Pred, ExplodedNodeSet &DstSet,
-                       const NodeBuilderContext &Ctx, ProgramPoint &L)
-      : NodeBuilder(Pred, DstSet, Ctx), Location(L) {}
-
-  ExplodedNode *generateNode(ProgramStateRef State,
-                             ExplodedNode *Pred,
-                             const ProgramPointTag *Tag = nullptr) {
-    const ProgramPoint &LocalLoc = (Tag ? Location.withTag(Tag) : Location);
-    return NodeBuilder::generateNode(LocalLoc, State, Pred);
-  }
-
-  ExplodedNode *generateSink(ProgramStateRef State, ExplodedNode *Pred,
-                             const ProgramPointTag *Tag = nullptr) {
-    const ProgramPoint &LocalLoc = (Tag ? Location.withTag(Tag) : Location);
-    ExplodedNode *N = NodeBuilder::generateSink(LocalLoc, State, Pred);
-    if (N && N->isSink())
-      sinksGenerated.push_back(N);
-    return N;
-  }
-
-  const SmallVectorImpl<ExplodedNode*> &getSinks() const {
-    return sinksGenerated;
-  }
-};
-
 /// \class StmtNodeBuilder
 /// This builder class is useful for generating nodes that resulted from
 /// visiting a statement. The main difference from its parent NodeBuilder is
 /// that it creates a statement specific ProgramPoint.
-class StmtNodeBuilder: public NodeBuilder {
-  NodeBuilder *EnclosingBldr;
-
+/// FIXME: This class is not meaningfully different from plain NodeBuilder.
+class StmtNodeBuilder : public NodeBuilder {
 public:
-  /// Constructs a StmtNodeBuilder. If the builder is going to process
-  /// nodes currently owned by another builder(with larger scope), use
-  /// Enclosing builder to transfer ownership.
   StmtNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-                  const NodeBuilderContext &Ctx,
-                  NodeBuilder *Enclosing = nullptr)
-      : NodeBuilder(SrcNode, DstSet, Ctx), EnclosingBldr(Enclosing) {
-    if (EnclosingBldr)
-      EnclosingBldr->takeNodes(SrcNode);
-  }
+                  const NodeBuilderContext &Ctx)
+      : NodeBuilder(SrcNode, DstSet, Ctx) {}
 
   StmtNodeBuilder(ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
-                  const NodeBuilderContext &Ctx,
-                  NodeBuilder *Enclosing = nullptr)
-      : NodeBuilder(SrcSet, DstSet, Ctx), EnclosingBldr(Enclosing) {
-    if (EnclosingBldr)
-      for (const auto I : SrcSet)
-        EnclosingBldr->takeNodes(I);
-  }
-
-  ~StmtNodeBuilder() override;
+                  const NodeBuilderContext &Ctx)
+      : NodeBuilder(SrcSet, DstSet, Ctx) {}
 
   using NodeBuilder::generateNode;
   using NodeBuilder::generateSink;
@@ -433,11 +347,9 @@ public:
 
 /// BranchNodeBuilder is responsible for constructing the nodes
 /// corresponding to the two branches of the if statement - true and false.
-class BranchNodeBuilder: public NodeBuilder {
+class BranchNodeBuilder : public NodeBuilder {
   const CFGBlock *DstT;
   const CFGBlock *DstF;
-
-  void anchor() override;
 
 public:
   BranchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
@@ -460,78 +372,56 @@ public:
                              ExplodedNode *Pred);
 };
 
-class IndirectGotoNodeBuilder {
-  CoreEngine& Eng;
-  const CFGBlock *Src;
+class IndirectGotoNodeBuilder : public NodeBuilder {
   const CFGBlock &DispatchBlock;
-  const Expr *E;
-  ExplodedNode *Pred;
+  const Expr *Target;
 
 public:
-  IndirectGotoNodeBuilder(ExplodedNode *pred, const CFGBlock *src,
-                    const Expr *e, const CFGBlock *dispatch, CoreEngine* eng)
-      : Eng(*eng), Src(src), DispatchBlock(*dispatch), E(e), Pred(pred) {}
+  IndirectGotoNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
+                          NodeBuilderContext &Ctx, const Expr *Tgt,
+                          const CFGBlock *Dispatch)
+      : NodeBuilder(SrcNode, DstSet, Ctx), DispatchBlock(*Dispatch),
+        Target(Tgt) {
+    // The indirect goto node builder does not generate autotransitions.
+    takeNodes(SrcNode);
+  }
 
-  class iterator {
-    friend class IndirectGotoNodeBuilder;
+  using iterator = CFGBlock::const_succ_iterator;
 
-    CFGBlock::const_succ_iterator I;
+  iterator begin() { return DispatchBlock.succ_begin(); }
+  iterator end() { return DispatchBlock.succ_end(); }
 
-    iterator(CFGBlock::const_succ_iterator i) : I(i) {}
+  using NodeBuilder::generateNode;
 
-  public:
-    // This isn't really a conventional iterator.
-    // We just implement the deref as a no-op for now to make range-based for
-    // loops work.
-    const iterator &operator*() const { return *this; }
+  ExplodedNode *generateNode(const CFGBlock *Block, ProgramStateRef State,
+                             ExplodedNode *Pred);
 
-    iterator &operator++() { ++I; return *this; }
-    bool operator!=(const iterator &X) const { return I != X.I; }
-
-    const LabelDecl *getLabel() const {
-      return cast<LabelStmt>((*I)->getLabel())->getDecl();
-    }
-
-    const CFGBlock *getBlock() const {
-      return *I;
-    }
-  };
-
-  iterator begin() { return iterator(DispatchBlock.succ_begin()); }
-  iterator end() { return iterator(DispatchBlock.succ_end()); }
-
-  ExplodedNode *generateNode(const iterator &I,
-                             ProgramStateRef State,
-                             bool isSink = false);
-
-  const Expr *getTarget() const { return E; }
-
-  ProgramStateRef getState() const { return Pred->State; }
+  const Expr *getTarget() const { return Target; }
 
   const LocationContext *getLocationContext() const {
-    return Pred->getLocationContext();
+    return C.getLocationContext();
   }
 };
 
-class SwitchNodeBuilder {
-  const CoreEngine &Eng;
-  const CFGBlock *Src;
-  ExplodedNode *Pred;
-
+class SwitchNodeBuilder : public NodeBuilder {
 public:
-  SwitchNodeBuilder(ExplodedNode *P, const CFGBlock *S, CoreEngine &E)
-      : Eng(E), Src(S), Pred(P) {}
+  SwitchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
+                    const NodeBuilderContext &Ctx)
+      : NodeBuilder(SrcNode, DstSet, Ctx) {
+    // The switch node builder does not generate autotransitions.
+    takeNodes(SrcNode);
+  }
 
   using iterator = CFGBlock::const_succ_reverse_iterator;
 
-  iterator begin() { return Src->succ_rbegin() + 1; }
-  iterator end() { return Src->succ_rend(); }
+  iterator begin() { return C.getBlock()->succ_rbegin() + 1; }
+  iterator end() { return C.getBlock()->succ_rend(); }
 
   ExplodedNode *generateCaseStmtNode(const CFGBlock *Block,
-                                     ProgramStateRef State);
+                                     ProgramStateRef State, ExplodedNode *Pred);
 
   ExplodedNode *generateDefaultCaseNode(ProgramStateRef State,
-                                        bool IsSink = false);
+                                        ExplodedNode *Pred);
 };
 
 } // namespace ento

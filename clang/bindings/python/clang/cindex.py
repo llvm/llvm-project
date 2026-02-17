@@ -93,6 +93,7 @@ from typing import (
     Generic,
     Iterator,
     Literal,
+    NoReturn,
     Optional,
     Sequence,
     Type as TType,
@@ -212,12 +213,12 @@ class TranslationUnitSaveError(Exception):
         if enumeration < 1 or enumeration > 3:
             raise Exception(
                 "Encountered undefined TranslationUnit save error "
-                "constant: %d. Please file a bug to have this "
-                "value supported." % enumeration
+                "constant: {}. Please file a bug to have this "
+                "value supported.".format(enumeration)
             )
 
         self.save_error = enumeration
-        Exception.__init__(self, "Error %d: %s" % (enumeration, message))
+        Exception.__init__(self, "Error {}: {}".format(enumeration, message))
 
 
 ### Structures and Utility Classes ###
@@ -246,7 +247,9 @@ class CachedProperty(Generic[TInstance, TResult]):
             property_name = self.wrapped.__name__
             class_name = instance_type.__name__
             raise TypeError(
-                f"'{property_name}' is not a static attribute of '{class_name}'"
+                "'{}' is not a static attribute of '{}'".format(
+                    property_name, class_name
+                )
             )
 
         value = self.wrapped(instance)
@@ -278,23 +281,25 @@ class SourceLocation(Structure):
     """
 
     _fields_ = [("ptr_data", c_void_p * 2), ("int_data", c_uint)]
-    _data = None
+    _data: tuple[File | None, int, int, int] | None = None
 
-    def _get_instantiation(self):
+    def _get_instantiation(self) -> tuple[File | None, int, int, int]:
         if self._data is None:
             f, l, c, o = c_object_p(), c_uint(), c_uint(), c_uint()
             conf.lib.clang_getInstantiationLocation(
                 self, byref(f), byref(l), byref(c), byref(o)
             )
             if f:
-                f = File(f)
+                file = File(f)
             else:
-                f = None
-            self._data = (f, int(l.value), int(c.value), int(o.value))
+                file = None
+            self._data = (file, int(l.value), int(c.value), int(o.value))
         return self._data
 
     @staticmethod
-    def from_position(tu, file, line, column):
+    def from_position(
+        tu: TranslationUnit, file: File, line: int, column: int
+    ) -> SourceLocation:
         """
         Retrieve the source location associated with a given file/line/column in
         a particular translation unit.
@@ -302,7 +307,7 @@ class SourceLocation(Structure):
         return conf.lib.clang_getLocation(tu, file, line, column)  # type: ignore [no-any-return]
 
     @staticmethod
-    def from_offset(tu, file, offset):
+    def from_offset(tu: TranslationUnit, file: File, offset: int) -> SourceLocation:
         """Retrieve a SourceLocation from a given character offset.
 
         tu -- TranslationUnit file belongs to
@@ -312,36 +317,36 @@ class SourceLocation(Structure):
         return conf.lib.clang_getLocationForOffset(tu, file, offset)  # type: ignore [no-any-return]
 
     @property
-    def file(self):
+    def file(self) -> File | None:
         """Get the file represented by this source location."""
         return self._get_instantiation()[0]
 
     @property
-    def line(self):
+    def line(self) -> int:
         """Get the line represented by this source location."""
         return self._get_instantiation()[1]
 
     @property
-    def column(self):
+    def column(self) -> int:
         """Get the column represented by this source location."""
         return self._get_instantiation()[2]
 
     @property
-    def offset(self):
+    def offset(self) -> int:
         """Get the file offset represented by this source location."""
         return self._get_instantiation()[3]
 
     @property
-    def is_in_system_header(self):
+    def is_in_system_header(self) -> bool:
         """Returns true if the given source location is in a system header."""
         return bool(conf.lib.clang_Location_isInSystemHeader(self))
 
-    def __eq__(self, other):
-        return isinstance(other, SourceLocation) and bool(
-            conf.lib.clang_equalLocations(self, other)
-        )
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SourceLocation):
+            return NotImplemented
+        return bool(conf.lib.clang_equalLocations(self, other))
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
     def __lt__(self, other: SourceLocation) -> bool:
@@ -350,15 +355,13 @@ class SourceLocation(Structure):
     def __le__(self, other: SourceLocation) -> bool:
         return self < other or self == other
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.file:
             filename = self.file.name
         else:
             filename = None
-        return "<SourceLocation file %r, line %r, column %r>" % (
-            filename,
-            self.line,
-            self.column,
+        return "<SourceLocation file {}, line {}, column {}>".format(
+            repr(filename), repr(self.line), repr(self.column)
         )
 
 
@@ -377,11 +380,11 @@ class SourceRange(Structure):
     # FIXME: Eliminate this and make normal constructor? Requires hiding ctypes
     # object.
     @staticmethod
-    def from_locations(start, end):
+    def from_locations(start: SourceLocation, end: SourceLocation) -> SourceRange:
         return conf.lib.clang_getRange(start, end)  # type: ignore [no-any-return]
 
     @property
-    def start(self):
+    def start(self) -> SourceLocation:
         """
         Return a SourceLocation representing the first character within a
         source range.
@@ -389,28 +392,28 @@ class SourceRange(Structure):
         return conf.lib.clang_getRangeStart(self)  # type: ignore [no-any-return]
 
     @property
-    def end(self):
+    def end(self) -> SourceLocation:
         """
         Return a SourceLocation representing the last character within a
         source range.
         """
         return conf.lib.clang_getRangeEnd(self)  # type: ignore [no-any-return]
 
-    def __eq__(self, other):
-        return isinstance(other, SourceRange) and bool(
-            conf.lib.clang_equalRanges(self, other)
-        )
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, SourceRange):
+            return NotImplemented
+        return bool(conf.lib.clang_equalRanges(self, other))
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
-    def __contains__(self, other):
+    def __contains__(self, other: object) -> bool:
         """Useful to detect the Token/Lexer bug"""
         if not isinstance(other, SourceLocation):
             return False
         return self.start <= other <= self.end
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<SourceRange start %r, end %r>" % (self.start, self.end)
 
 
@@ -543,10 +546,8 @@ class Diagnostic:
         return _CXString.from_result(conf.lib.clang_formatDiagnostic(self, options))
 
     def __repr__(self):
-        return "<Diagnostic severity %r, location %r, spelling %r>" % (
-            self.severity,
-            self.location,
-            self.spelling,
+        return "<Diagnostic severity {}, location {}, spelling {}>".format(
+            repr(self.severity), repr(self.location), repr(self.spelling)
         )
 
     def __str__(self):
@@ -568,7 +569,7 @@ class FixIt:
         self.value = value
 
     def __repr__(self):
-        return "<FixIt range %r, value %r>" % (self.range, self.value)
+        return "<FixIt range {}, value {}>".format(repr(self.range), repr(self.value))
 
 
 class TokenGroup:
@@ -642,10 +643,7 @@ class BaseEnumeration(Enum):
         return cls(id)
 
     def __repr__(self):
-        return "%s.%s" % (
-            self.__class__.__name__,
-            self.name,
-        )
+        return "{}.{}".format(self.__class__.__name__, self.name)
 
 
 class TokenKind(BaseEnumeration):
@@ -2727,8 +2725,9 @@ class Type(Structure):
 
                 if key >= len(self):
                     raise IndexError(
-                        "Index greater than container length: "
-                        "%d > %d" % (key, len(self))
+                        "Index greater than container length: {} > {}".format(
+                            key, len(self)
+                        )
                     )
 
                 result = Type.from_result(
@@ -3089,14 +3088,14 @@ class CompletionChunk:
             "will be removed in a future release."
         )
 
-        def __getattr__(self, _):
+        def __getattr__(self, _: Any) -> NoReturn:
             raise AttributeError(self.deprecation_message)
 
-        def __getitem__(self, value: int):
+        def __getitem__(self, value: int) -> str:
             warnings.warn(self.deprecation_message, DeprecationWarning)
             return CompletionChunk.SPELLING_CACHE[CompletionChunkKind.from_id(value)]
 
-        def __contains__(self, value: int):
+        def __contains__(self, value: int) -> bool:
             warnings.warn(self.deprecation_message, DeprecationWarning)
             return CompletionChunkKind.from_id(value) in CompletionChunk.SPELLING_CACHE
 
@@ -3132,7 +3131,7 @@ class CompletionChunk:
         self.key = key
 
     def __repr__(self) -> str:
-        return "{'" + self.spelling + "', " + str(self.kind) + "}"
+        return "{{'{}', {}}}".format(self.spelling, self.kind)
 
     @CachedProperty
     def spelling(self) -> str:
@@ -3292,14 +3291,11 @@ class CompletionString(ClangObject):
         return _CXString.from_result(conf.lib.clang_getCompletionBriefComment(self.obj))
 
     def __repr__(self) -> str:
-        return (
-            " | ".join([str(a) for a in self])
-            + " || Priority: "
-            + str(self.priority)
-            + " || Availability: "
-            + str(self.availability)
-            + " || Brief comment: "
-            + str(self.briefComment)
+        return "{chunks} || Priority: {priority} || Availability: {availability} || Brief comment: {comment}".format(
+            chunks=" | ".join(str(a) for a in self),
+            priority=self.priority,
+            availability=self.availability,
+            comment=self.briefComment,
         )
 
 
@@ -3720,7 +3716,7 @@ class TranslationUnit(ClangObject):
             )
         )
         if result != 0:
-            msg = "Error reparsing translation unit. Error code: " + str(result)
+            msg = "Error reparsing translation unit. Error code: {}".format(result)
             raise TranslationUnitLoadError(msg)
 
     def save(self, filename):
@@ -3838,7 +3834,7 @@ class File(ClangObject):
         return self.name
 
     def __repr__(self):
-        return "<File: %s>" % (self.name)
+        return "<File: {}>".format(self.name)
 
     def __eq__(self, other) -> bool:
         return isinstance(other, File) and bool(
@@ -3898,13 +3894,12 @@ class CompilationDatabaseError(Exception):
 
         if enumeration > 1:
             raise Exception(
-                "Encountered undefined CompilationDatabase error "
-                "constant: %d. Please file a bug to have this "
-                "value supported." % enumeration
+                "Encountered undefined CompilationDatabase error constant: {}."
+                "Please file a bug to have this value supported.".format(enumeration)
             )
 
         self.cdb_error = enumeration
-        Exception.__init__(self, "Error %d: %s" % (enumeration, message))
+        Exception.__init__(self, "Error {}: {}".format(enumeration, message))
 
 
 class CompileCommand:

@@ -60,7 +60,7 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: "ROCm/TheRock"
-          ref: '5a23b542e1d03fbb515e014a7d9635c8884b12e6'
+          ref: 'c3d5aeef808e099b9de06fc901af2de24d0b143d'
           sparse-checkout: build_tools
           path: "prejob"
 
@@ -75,7 +75,7 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: "ROCm/TheRock"
-          ref: '5a23b542e1d03fbb515e014a7d9635c8884b12e6'
+          ref: 'c3d5aeef808e099b9de06fc901af2de24d0b143d'
 
       - name: Setting up Python
         uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
@@ -89,7 +89,7 @@ jobs:
           AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
           TEST_TYPE: ${{ inputs.test_type }}
           TEST_LABELS: ${{ inputs.test_labels }}
-          project_to_test: 'rocblas,rocroller,hipblas,hipblaslt,hipsolver,rocsolver,rocprim,hipcub,rocthrust,hipsparse,rocsparse,rocrand,hiprand,rocfft,hipfft,rocwmma'
+          PROJECTS_TO_TEST: 'rocblas,rocroller,hipblas,hipblaslt,hipsolver,rocsolver,rocprim,hipcub,rocthrust,hipsparse,rocsparse,rocrand,hiprand,rocfft,hipfft,rocwmma'
         run: python ./build_tools/github_actions/fetch_test_configurations.py
 
   test_sanity_check:

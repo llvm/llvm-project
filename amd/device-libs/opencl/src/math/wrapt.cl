@@ -96,6 +96,25 @@ F(T##2 a, T##2 b, T##2 c) \
     WRAP2T(F,half)
 #endif
 
-WRAP(fma)
 WRAP(mad)
 
+#define WRAP_ELEMENTWISE_TYPE(F, T, N, B)                                      \
+    ATTR T##N F(T##N x, T##N y, T##N z) { return B(x, y, z); }
+
+#define WRAP_ELEMENTWISE_SCALAR(F, T, B)                                       \
+    ATTR T F(T x, T y, T z) { return B(x, y, z); }
+
+#define WRAP_ELEMENTWISE_VECSIZES(F, T, B)                                     \
+    WRAP_ELEMENTWISE_TYPE(F, T, 16, B)                                         \
+    WRAP_ELEMENTWISE_TYPE(F, T, 8, B)                                          \
+    WRAP_ELEMENTWISE_TYPE(F, T, 4, B)                                          \
+    WRAP_ELEMENTWISE_TYPE(F, T, 3, B)                                          \
+    WRAP_ELEMENTWISE_TYPE(F, T, 2, B)                                          \
+    WRAP_ELEMENTWISE_SCALAR(F, T, B)
+
+#define WRAP_ELEMENTWISE(F, B)                                                 \
+    WRAP_ELEMENTWISE_VECSIZES(F, half, B)                                      \
+    WRAP_ELEMENTWISE_VECSIZES(F, float, B)                                     \
+    WRAP_ELEMENTWISE_VECSIZES(F, double, B)
+
+WRAP_ELEMENTWISE(fma, __builtin_elementwise_fma)

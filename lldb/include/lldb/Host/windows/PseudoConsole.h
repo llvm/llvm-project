@@ -61,6 +61,16 @@ public:
   ///     invalid.
   HANDLE GetSTDINHandle() const { return m_conpty_input; };
 
+  /// Drains initialization sequences from the ConPTY output pipe.
+  ///
+  /// When a process first attaches to a ConPTY, Windows emits VT100/ANSI escape
+  /// sequences (ESC[2J for clear screen, ESC[H for cursor home and more) as
+  /// part of the PseudoConsole initialization. To prevent these sequences from
+  /// appearing in the debugger output (and flushing lldb's shell for instance)
+  /// we launch a short-lived dummy process that triggers the initialization,
+  /// then drain all output before launching the actual debuggee.
+  llvm::Error DrainInitSequences();
+
 protected:
   HANDLE m_conpty_handle = ((HANDLE)(long long)-1);
   HANDLE m_conpty_output = ((HANDLE)(long long)-1);

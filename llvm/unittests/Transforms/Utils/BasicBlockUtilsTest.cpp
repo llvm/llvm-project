@@ -354,6 +354,37 @@ bb3:
 }
 #endif
 
+TEST(BasicBlockUtils, splitBlockBefore2) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define void @split-block-before-test(i1 %flag) {
+entry:
+  br label %loop
+
+loop:
+  br i1 %flag, label %loop, label %exit
+
+exit:
+  ret void
+}
+)IR");
+  Function *F = M->getFunction("split-block-before-test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  auto *LoopBB = getBasicBlockByName(*F, "loop");
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  auto *New = splitBlockBefore(LoopBB, LoopBB->getFirstInsertionPt(), &DTU, &LI,
+                               /* MemorySSAUpdater */ nullptr,
+                               LoopBB->getName() + ".split");
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  EXPECT_EQ(LI.getLoopFor(New)->getHeader(), New);
+}
+
 TEST(BasicBlockUtils, NoUnreachableBlocksToEliminate) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(

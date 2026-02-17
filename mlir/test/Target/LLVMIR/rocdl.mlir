@@ -20,36 +20,44 @@ llvm.func @rocdl_special_regs() -> i32 {
   %8 = rocdl.cluster.id.y : i32
   // CHECK: call i32 @llvm.amdgcn.cluster.id.z()
   %9 = rocdl.cluster.id.z : i32
+  // CHECK: call range(i32 0, 16) i32 @llvm.amdgcn.cluster.workgroup.id.x()
+  %10 = rocdl.cluster.workgroup.id.x range <i32, 0, 16> : i32
+  // CHECK: call range(i32 0, 16) i32 @llvm.amdgcn.cluster.workgroup.id.y()
+  %11 = rocdl.cluster.workgroup.id.y range <i32, 0, 16> : i32
+  // CHECK: call range(i32 0, 16) i32 @llvm.amdgcn.cluster.workgroup.id.z()
+  %12 = rocdl.cluster.workgroup.id.z range <i32, 0, 16> : i32
+
   // CHECK: call i64 @__ockl_get_local_size(i32 0)
-  %10 = rocdl.workgroup.dim.x : i64
+  %13 = rocdl.workgroup.dim.x : i64
   // CHECK: call i64 @__ockl_get_local_size(i32 1)
-  %11 = rocdl.workgroup.dim.y : i64
+  %14 = rocdl.workgroup.dim.y : i64
   // CHECK: call i64 @__ockl_get_local_size(i32 2)
-  %12 = rocdl.workgroup.dim.z : i64
+  %15 = rocdl.workgroup.dim.z : i64
+
   // CHECK: call i64 @__ockl_get_num_groups(i32 0)
-  %13 = rocdl.grid.dim.x : i64
+  %16 = rocdl.grid.dim.x : i64
   // CHECK: call i64 @__ockl_get_num_groups(i32 1)
-  %14 = rocdl.grid.dim.y : i64
+  %17 = rocdl.grid.dim.y : i64
   // CHECK: call i64 @__ockl_get_num_groups(i32 2)
-  %15 = rocdl.grid.dim.z : i64
+  %18 = rocdl.grid.dim.z : i64
 
   // CHECK: call range(i32 0, 64) i32 @llvm.amdgcn.workitem.id.x()
-  %16 = rocdl.workitem.id.x range <i32, 0, 64> : i32
+  %19 = rocdl.workitem.id.x range <i32, 0, 64> : i32
 
   // CHECK: call range(i64 1, 65) i64 @__ockl_get_local_size(i32 0)
-  %17 = rocdl.workgroup.dim.x range <i32, 1, 65> : i64
+  %20 = rocdl.workgroup.dim.x range <i32, 1, 65> : i64
 
   // CHECK: call i32 @llvm.amdgcn.wave.id()
-  %18 = rocdl.wave.id : i32
+  %21 = rocdl.wave.id : i32
 
   // CHECK: call range(i32 32, 65) i32 @llvm.amdgcn.wave.id()
-  %19 = rocdl.wave.id range <i32, 32, 65> : i32
+  %22 = rocdl.wave.id range <i32, 32, 65> : i32
 
   // CHECK: call i32 @llvm.amdgcn.wavefrontsize()
-  %20 = rocdl.wavefrontsize : i32
+  %23 = rocdl.wavefrontsize : i32
 
   // CHECK: call range(i32 32, 65) i32 @llvm.amdgcn.wavefrontsize()
-  %21 = rocdl.wavefrontsize range <i32, 32, 65> : i32
+  %24 = rocdl.wavefrontsize range <i32, 32, 65> : i32
 
   llvm.return %1 : i32
 }
@@ -380,6 +388,20 @@ llvm.func @rocdl.s.wait.tensorcnt() {
   // CHECK-LABEL: rocdl.s.wait.tensorcnt
   // CHECK-NEXT: call void @llvm.amdgcn.s.wait.tensorcnt(i16 0)
   rocdl.s.wait.tensorcnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.asyncmark() {
+  // CHECK-LABEL: rocdl.asyncmark
+  // CHECK-NEXT: call void @llvm.amdgcn.asyncmark()
+  rocdl.asyncmark
+  llvm.return
+}
+
+llvm.func @rocdl.wait.asyncmark() {
+  // CHECK-LABEL: rocdl.wait.asyncmark
+  // CHECK-NEXT: call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  rocdl.wait.asyncmark 0
   llvm.return
 }
 
@@ -1202,9 +1224,21 @@ llvm.func @rocdl.load.to.lds(%src : !llvm.ptr<7>, %dst: !llvm.ptr<3>) {
   llvm.return
 }
 
+llvm.func @rocdl.load.async.to.lds(%src : !llvm.ptr<7>, %dst: !llvm.ptr<3>) {
+  //CHECK: call void @llvm.amdgcn.load.async.to.lds.p7
+  rocdl.load.async.to.lds %src, %dst, 4, 0, 0 : !llvm.ptr<7>, !llvm.ptr<3>
+  llvm.return
+}
+
 llvm.func @rocdl.global.load.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
   //CHECK: call void @llvm.amdgcn.global.load.lds
   rocdl.global.load.lds %src, %dst, 4, 0, 0
+  llvm.return
+}
+
+llvm.func @rocdl.global.load.async.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+  //CHECK: call void @llvm.amdgcn.global.load.async.lds
+  rocdl.global.load.async.lds %src, %dst, 4, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
   llvm.return
 }
 
@@ -1364,6 +1398,18 @@ llvm.func @rocdl.raw.ptr.buffer.load.lds(%rsrc : !llvm.ptr<8>, %dstLds : !llvm.p
   // CHECK-LABEL: rocdl.raw.ptr.buffer.load.lds
   // CHECK: call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) %{{.*}}, ptr addrspace(3) %{{.*}}, i32 4, i32 %{{.*}}, i32 %{{.*}}, i32 128, i32 1
   rocdl.raw.ptr.buffer.load.lds %rsrc, %dstLds, %size, %voffset, %soffset, %offset, %aux
+
+  llvm.return
+}
+
+llvm.func @rocdl.raw.ptr.buffer.load.async.lds(%rsrc : !llvm.ptr<8>, %dstLds : !llvm.ptr<3>,
+                        %voffset : i32, %soffset : i32) {
+  %size = llvm.mlir.constant(4 : i32) : i32
+  %offset = llvm.mlir.constant(128 : i32) : i32
+  %aux = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-LABEL: rocdl.raw.ptr.buffer.load.async.lds
+  // CHECK: call void @llvm.amdgcn.raw.ptr.buffer.load.async.lds(ptr addrspace(8) %{{.*}}, ptr addrspace(3) %{{.*}}, i32 4, i32 %{{.*}}, i32 %{{.*}}, i32 128, i32 1
+  rocdl.raw.ptr.buffer.load.async.lds %rsrc, %dstLds, %size, %voffset, %soffset, %offset, %aux
 
   llvm.return
 }

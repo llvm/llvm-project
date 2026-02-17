@@ -30,7 +30,7 @@ DependencyScanningWorker::DependencyScanningWorker(
   // The scanner itself writes only raw ast files.
   PCHContainerOps->registerWriter(std::make_unique<RawPCHContainerWriter>());
 
-  if (Service.shouldTraceVFS())
+  if (Service.getOpts().TraceVFS)
     BaseFS = llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(
         std::move(BaseFS));
 

@@ -14,5 +14,5 @@ program target_teams_loop
     print *, x
 end program target_teams_loop
 
-! CHECK: "PluginInterface" device {{[0-9]+}} info: Launching kernel {{.*}}
+! CHECK: PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}}
 ! CHECK: 2 4 6 8 10 12 14 16 18 20

@@ -71,7 +71,7 @@ endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginCommon PRIVATE
-  TARGET_NAME="PluginInterface"
+  TARGET_NAME=PluginInterface
   DEBUG_PREFIX="PluginInterface"
 )
 

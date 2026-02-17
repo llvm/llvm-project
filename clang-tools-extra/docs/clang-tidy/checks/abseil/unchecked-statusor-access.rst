@@ -24,7 +24,7 @@ ok (e.g. by passing a value to its constructor).
 Below we list some examples of safe and unsafe ``StatusOr<T>`` access
 patterns.
 
-Note: If the check isn’t behaving as you would have expected on a code
+Note: If the check isn't behaving as you would have expected on a code
 snippet, please `report it <http://github.com/llvm/llvm-project/issues/new>`__.
 
 False negatives
@@ -382,3 +382,21 @@ accessed:
        }
      }
    }
+
+Reasoning about integers
+------------------------
+
+Because it uses a simple SAT solver, the check cannot reason about integer
+inequalities. For instance, the following will result in a false positive:
+
+.. code:: cpp
+
+   void f(int n, absl::StatusOr<int> x) {
+      if (n > 0)
+        CHECK_OK(x);
+      if (n > 1)
+        return *x;  // false positive
+      return 0;
+   }
+
+In fact, currently this is also the case if the two conditions are identical.

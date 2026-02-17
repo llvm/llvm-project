@@ -454,7 +454,7 @@ int main()
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
 // CHECK-NEXT:    [[CONV5:%.*]] = uitofp i16 [[TMP12]] to double
-// CHECK-NEXT:    [[TMP13:%.*]] = call double @llvm.minnum.f64(double [[CONV4]], double [[CONV5]])
+// CHECK-NEXT:    [[TMP13:%.*]] = call nsz double @llvm.minnum.f64(double [[CONV4]], double [[CONV5]])
 // CHECK-NEXT:    [[CONV6:%.*]] = fptoui double [[TMP13]] to i16
 // CHECK-NEXT:    store i16 [[CONV6]], ptr [[MIN_T2_ASCAST]], align 2
 // CHECK-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -1083,7 +1083,7 @@ int main()
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[TMP10]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
 // CHECK-NEXT:    [[CONV5:%.*]] = uitofp i16 [[TMP12]] to double
-// CHECK-NEXT:    [[TMP13:%.*]] = call double @llvm.maxnum.f64(double [[CONV4]], double [[CONV5]])
+// CHECK-NEXT:    [[TMP13:%.*]] = call nsz double @llvm.maxnum.f64(double [[CONV4]], double [[CONV5]])
 // CHECK-NEXT:    [[CONV6:%.*]] = fptoui double [[TMP13]] to i16
 // CHECK-NEXT:    store i16 [[CONV6]], ptr [[MAX_T2_ASCAST]], align 2
 // CHECK-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -1880,7 +1880,7 @@ int main()
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    [[CONV5:%.*]] = uitofp i32 [[TMP12]] to double
-// CHECK-NEXT:    [[TMP13:%.*]] = call double @llvm.minnum.f64(double [[CONV4]], double [[CONV5]])
+// CHECK-NEXT:    [[TMP13:%.*]] = call nsz double @llvm.minnum.f64(double [[CONV4]], double [[CONV5]])
 // CHECK-NEXT:    [[CONV6:%.*]] = fptoui double [[TMP13]] to i32
 // CHECK-NEXT:    store i32 [[CONV6]], ptr [[MIN_T2_ASCAST]], align 4
 // CHECK-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -2501,7 +2501,7 @@ int main()
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP10]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    [[CONV5:%.*]] = uitofp i32 [[TMP12]] to double
-// CHECK-NEXT:    [[TMP13:%.*]] = call double @llvm.maxnum.f64(double [[CONV4]], double [[CONV5]])
+// CHECK-NEXT:    [[TMP13:%.*]] = call nsz double @llvm.maxnum.f64(double [[CONV4]], double [[CONV5]])
 // CHECK-NEXT:    [[CONV6:%.*]] = fptoui double [[TMP13]] to i32
 // CHECK-NEXT:    store i32 [[CONV6]], ptr [[MAX_T2_ASCAST]], align 4
 // CHECK-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -3292,7 +3292,7 @@ int main()
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 // CHECK-NEXT:    [[CONV5:%.*]] = uitofp i64 [[TMP12]] to double
-// CHECK-NEXT:    [[TMP13:%.*]] = call double @llvm.minnum.f64(double [[CONV4]], double [[CONV5]])
+// CHECK-NEXT:    [[TMP13:%.*]] = call nsz double @llvm.minnum.f64(double [[CONV4]], double [[CONV5]])
 // CHECK-NEXT:    [[CONV6:%.*]] = fptoui double [[TMP13]] to i64
 // CHECK-NEXT:    store i64 [[CONV6]], ptr [[MIN_T2_ASCAST]], align 8
 // CHECK-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
@@ -3943,7 +3943,7 @@ int main()
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 // CHECK-NEXT:    [[CONV5:%.*]] = uitofp i64 [[TMP12]] to double
-// CHECK-NEXT:    [[TMP13:%.*]] = call double @llvm.maxnum.f64(double [[CONV4]], double [[CONV5]])
+// CHECK-NEXT:    [[TMP13:%.*]] = call nsz double @llvm.maxnum.f64(double [[CONV4]], double [[CONV5]])
 // CHECK-NEXT:    [[CONV6:%.*]] = fptoui double [[TMP13]] to i64
 // CHECK-NEXT:    store i64 [[CONV6]], ptr [[MAX_T2_ASCAST]], align 8
 // CHECK-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]

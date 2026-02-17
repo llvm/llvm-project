@@ -3,7 +3,7 @@
 // RUN: source-to-bc-with-dev-libs %s -o %t-with-dev-libs.bc
 
 // COM: Dissasemble LLVM IR bitcode to LLVM IR text
-// RUN: llvm-dis %t-with-dev-libs.bc -o - | FileCheck %s
+// RUN: %llvm-dis %t-with-dev-libs.bc -o - | %FileCheck %s
 
 // COM: Verify LLVM IR text file
 // CHECK: target triple = "amdgcn-amd-amdhsa"

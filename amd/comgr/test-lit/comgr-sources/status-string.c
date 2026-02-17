@@ -13,7 +13,7 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-  const char *StatusString = malloc(sizeof(char) * 100);
+  const char *StatusString;
   amd_comgr_(status_string(AMD_COMGR_STATUS_SUCCESS, &StatusString));
   if (strcmp(StatusString, "SUCCESS"))
     fail("incorrect status: expected 'SUCCESS', saw '%s'", StatusString);

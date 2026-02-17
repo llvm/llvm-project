@@ -18,7 +18,7 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
-#include "clang/AST/Attrs.inc"
+#include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -2939,7 +2939,7 @@ ExprResult Sema::BuildQualifiedDeclarationNameExpr(
     // members were likely supposed to be inherited.
     DeclContext *DC = computeDeclContext(SS);
     if (const auto *CD = dyn_cast<CXXRecordDecl>(DC))
-      if (CD->isInvalidDecl())
+      if (CD->isInvalidDecl() || CD->isBeingDefined())
         return ExprError();
     Diag(NameInfo.getLoc(), diag::err_no_member)
       << NameInfo.getName() << DC << SS.getRange();
@@ -4226,24 +4226,25 @@ static bool CheckExtensionTraitOperandType(Sema &S, QualType T,
     return true;
 
   // C99 6.5.3.4p1:
-  if (T->isFunctionType() &&
-      (TraitKind == UETT_SizeOf || TraitKind == UETT_AlignOf ||
-       TraitKind == UETT_PreferredAlignOf)) {
+  if (TraitKind == UETT_SizeOf || TraitKind == UETT_AlignOf ||
+      TraitKind == UETT_PreferredAlignOf) {
+
     // sizeof(function)/alignof(function) is allowed as an extension.
-    S.Diag(Loc, diag::ext_sizeof_alignof_function_type)
-        << getTraitSpelling(TraitKind) << ArgRange;
-    return false;
-  }
+    if (T->isFunctionType()) {
+      S.Diag(Loc, diag::ext_sizeof_alignof_function_type)
+          << getTraitSpelling(TraitKind) << ArgRange;
+      return false;
+    }
 
-  // Allow sizeof(void)/alignof(void) as an extension, unless in OpenCL where
-  // this is an error (OpenCL v1.1 s6.3.k)
-  if (T->isVoidType()) {
-    unsigned DiagID = S.LangOpts.OpenCL ? diag::err_opencl_sizeof_alignof_type
-                                        : diag::ext_sizeof_alignof_void_type;
-    S.Diag(Loc, DiagID) << getTraitSpelling(TraitKind) << ArgRange;
-    return false;
+    // Allow sizeof(void)/alignof(void) as an extension, unless in OpenCL where
+    // this is an error (OpenCL v1.1 s6.3.k)
+    if (T->isVoidType()) {
+      unsigned DiagID = S.LangOpts.OpenCL ? diag::err_opencl_sizeof_alignof_type
+                                          : diag::ext_sizeof_alignof_void_type;
+      S.Diag(Loc, DiagID) << getTraitSpelling(TraitKind) << ArgRange;
+      return false;
+    }
   }
-
   return true;
 }
 
@@ -6840,9 +6841,10 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
         // First, ensure that the Arg is an RValue.
         if (ArgExprs[Idx]->isGLValue()) {
-          ArgExprs[Idx] = ImplicitCastExpr::Create(
-              Context, ArgExprs[Idx]->getType(), CK_NoOp, ArgExprs[Idx],
-              nullptr, VK_PRValue, FPOptionsOverride());
+          ExprResult Res = DefaultLvalueConversion(ArgExprs[Idx]);
+          if (Res.isInvalid())
+            return ExprError();
+          ArgExprs[Idx] = Res.get();
         }
 
         // Construct a new arg type with address space of Param
@@ -8129,6 +8131,13 @@ ExprResult Sema::BuildVectorLiteral(SourceLocation LParenLoc,
     // it will be replicated to all components of the vector.
     if (getLangOpts().OpenCL && VTy->getVectorKind() == VectorKind::Generic &&
         numExprs == 1) {
+      QualType SrcTy = exprs[0]->getType();
+      if (!SrcTy->isArithmeticType()) {
+        Diag(exprs[0]->getBeginLoc(), diag::err_typecheck_convert_incompatible)
+            << Ty << SrcTy << AssignmentAction::Initializing << /*elidable=*/0
+            << /*c_style=*/0 << /*cast_kind=*/"" << exprs[0]->getSourceRange();
+        return ExprError();
+      }
       QualType ElemTy = VTy->getElementType();
       ExprResult Literal = DefaultLvalueConversion(exprs[0]);
       if (Literal.isInvalid())
@@ -13863,9 +13872,8 @@ enum {
   ConstFunction,
   ConstVariable,
   ConstMember,
-  ConstMethod,
   NestedConstMember,
-  ConstUnknown,  // Keep as last element
+  ConstUnknown, // Keep as last element
 };
 
 /// Emit the "read-only variable not assignable" error and print notes to give
@@ -13973,12 +13981,12 @@ static void DiagnoseConstAssignment(Sema &S, const Expr *E,
       if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(DC)) {
         if (MD->isConst()) {
           if (!DiagnosticEmitted) {
-            S.Diag(Loc, diag::err_typecheck_assign_const) << ExprRange
-                                                          << ConstMethod << MD;
+            S.Diag(Loc, diag::err_typecheck_assign_const_method)
+                << ExprRange << MD;
             DiagnosticEmitted = true;
           }
-          S.Diag(MD->getLocation(), diag::note_typecheck_assign_const)
-              << ConstMethod << MD << MD->getSourceRange();
+          S.Diag(MD->getLocation(), diag::note_typecheck_assign_const_method)
+              << MD << MD->getSourceRange();
         }
       }
     }
@@ -14170,6 +14178,9 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
              diag::err_typecheck_incomplete_type_not_modifiable_lvalue, E);
   case Expr::MLV_DuplicateVectorComponents:
     DiagID = diag::err_typecheck_duplicate_vector_components_not_mlvalue;
+    break;
+  case Expr::MLV_DuplicateMatrixComponents:
+    DiagID = diag::err_typecheck_duplicate_matrix_components_not_mlvalue;
     break;
   case Expr::MLV_NoSetterProperty:
     llvm_unreachable("readonly properties should be processed differently");
@@ -15963,38 +15974,6 @@ static bool isOverflowingIntegerType(ASTContext &Ctx, QualType T) {
     return true;
 
   return Ctx.getIntWidth(T) >= Ctx.getIntWidth(Ctx.IntTy);
-}
-
-static Expr *ExpandAMDGPUPredicateBI(ASTContext &Ctx, CallExpr *CE) {
-  if (!CE->getBuiltinCallee())
-    return CXXBoolLiteralExpr::Create(Ctx, false, Ctx.BoolTy, CE->getExprLoc());
-
-  if (Ctx.getTargetInfo().getTriple().isSPIRV()) {
-    CE->setType(Ctx.getLogicalOperationType());
-    return CE;
-  }
-
-  bool P = false;
-  auto &TI = Ctx.getTargetInfo();
-
-  if (CE->getDirectCallee()->getName() == "__builtin_amdgcn_processor_is") {
-    auto *GFX = dyn_cast<StringLiteral>(CE->getArg(0)->IgnoreParenCasts());
-    auto TID = TI.getTargetID();
-    if (GFX && TID) {
-      auto N = GFX->getString();
-      P = TI.isValidCPUName(GFX->getString()) && TID->find(N) == 0;
-    }
-  } else {
-    auto *FD = cast<FunctionDecl>(CE->getArg(0)->getReferencedDeclOfCallee());
-
-    StringRef RF = Ctx.BuiltinInfo.getRequiredFeatures(FD->getBuiltinID());
-    llvm::StringMap<bool> CF;
-    Ctx.getFunctionFeatureMap(CF, FD);
-
-    P = Builtin::evaluateRequiredTargetFeatures(RF, CF);
-  }
-
-  return CXXBoolLiteralExpr::Create(Ctx, P, Ctx.BoolTy, CE->getExprLoc());
 }
 
 ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
@@ -17990,6 +17969,16 @@ void Sema::PushExpressionEvaluationContextForFunction(
     else
       Current.InImmediateFunctionContext = FD->isConsteval();
   }
+}
+
+ExprResult Sema::ActOnCXXReflectExpr(SourceLocation CaretCaretLoc,
+                                     TypeSourceInfo *TSI) {
+  return BuildCXXReflectExpr(CaretCaretLoc, TSI);
+}
+
+ExprResult Sema::BuildCXXReflectExpr(SourceLocation CaretCaretLoc,
+                                     TypeSourceInfo *TSI) {
+  return CXXReflectExpr::Create(Context, CaretCaretLoc, TSI);
 }
 
 namespace {
@@ -20988,88 +20977,6 @@ void Sema::DiagnoseEqualityWithExtraParens(ParenExpr *ParenE) {
       Diag(Loc, diag::note_equality_comparison_to_assign)
         << FixItHint::CreateReplacement(Loc, "=");
     }
-}
-
-static bool ValidateAMDGPUPredicateBI(Sema &Sema, CallExpr *CE) {
-  if (CE->getDirectCallee()->getName() == "__builtin_amdgcn_processor_is") {
-    auto *GFX = dyn_cast<StringLiteral>(CE->getArg(0)->IgnoreParenCasts());
-    if (!GFX) {
-      Sema.Diag(CE->getExprLoc(),
-                diag::err_amdgcn_processor_is_arg_not_literal);
-      return false;
-    }
-    auto N = GFX->getString();
-    if (!Sema.getASTContext().getTargetInfo().isValidCPUName(N) &&
-        (!Sema.getASTContext().getAuxTargetInfo() ||
-         !Sema.getASTContext().getAuxTargetInfo()->isValidCPUName(N))) {
-      Sema.Diag(CE->getExprLoc(),
-                diag::err_amdgcn_processor_is_arg_invalid_value)
-          << N;
-      return false;
-    }
-  } else {
-    auto *Arg = CE->getArg(0);
-    if (!Arg || Arg->getType() != Sema.getASTContext().BuiltinFnTy) {
-      Sema.Diag(CE->getExprLoc(),
-                diag::err_amdgcn_is_invocable_arg_invalid_value)
-          << Arg;
-      return false;
-    }
-  }
-
-  return true;
-}
-
-static Expr *MaybeHandleAMDGPUPredicateBI(Sema &Sema, Expr *E, bool &Invalid) {
-  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
-    auto *SE = dyn_cast<CallExpr>(UO->getSubExpr());
-    if (IsAMDGPUPredicateBI(SE)) {
-      assert(UO->getOpcode() == UnaryOperator::Opcode::UO_LNot &&
-             "__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable "
-             "can only be used as operands of logical ops!");
-
-      if (!ValidateAMDGPUPredicateBI(Sema, SE)) {
-        Invalid = true;
-        return nullptr;
-      }
-
-      UO->setSubExpr(ExpandAMDGPUPredicateBI(Sema.getASTContext(), SE));
-      UO->setType(Sema.getASTContext().getLogicalOperationType());
-
-      return UO;
-    }
-  }
-  if (auto *BO = dyn_cast<BinaryOperator>(E)) {
-    auto *LHS = dyn_cast<CallExpr>(BO->getLHS());
-    auto *RHS = dyn_cast<CallExpr>(BO->getRHS());
-    if (IsAMDGPUPredicateBI(LHS) && IsAMDGPUPredicateBI(RHS)) {
-      assert(BO->isLogicalOp() &&
-             "__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable "
-             "can only be used as operands of logical ops!");
-
-      if (!ValidateAMDGPUPredicateBI(Sema, LHS) ||
-          !ValidateAMDGPUPredicateBI(Sema, RHS)) {
-        Invalid = true;
-        return nullptr;
-      }
-
-      BO->setLHS(ExpandAMDGPUPredicateBI(Sema.getASTContext(), LHS));
-      BO->setRHS(ExpandAMDGPUPredicateBI(Sema.getASTContext(), RHS));
-      BO->setType(Sema.getASTContext().getLogicalOperationType());
-
-      return BO;
-    }
-  }
-  if (auto *CE = dyn_cast<CallExpr>(E))
-    if (IsAMDGPUPredicateBI(CE)) {
-      if (!ValidateAMDGPUPredicateBI(Sema, CE)) {
-        Invalid = true;
-        return nullptr;
-      }
-      return ExpandAMDGPUPredicateBI(Sema.getASTContext(), CE);
-    }
-
-  return nullptr;
 }
 
 ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,

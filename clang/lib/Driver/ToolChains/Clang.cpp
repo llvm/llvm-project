@@ -1258,6 +1258,8 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:
   case llvm::Triple::xtensa:
@@ -1604,6 +1606,8 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     AddRISCVTargetArgs(Args, CmdArgs);
     break;
 
@@ -4078,7 +4082,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
 
     if (Args.hasArg(options::OPT_fmodule_output_EQ))
       Args.AddLastArg(CmdArgs, options::OPT_fmodule_output_EQ);
-    else if (!Args.hasArg(options::OPT__precompile) ||
+    else if (!(Args.hasArg(options::OPT__precompile) ||
+               Args.hasArg(options::OPT__precompile_reduced_bmi)) ||
              Args.hasArg(options::OPT_fmodule_output))
       // If --precompile is specified, we will always generate a module file if
       // we're compiling an importable module unit. This is fine even if the
@@ -5047,13 +5052,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           CmdArgs.push_back(Args.MakeArgString(
               Twine("-target-sdk-version=") +
               CudaVersionToString(CTC->CudaInstallation.version())));
-        // Unsized function arguments used for variadics were introduced in
-        // CUDA-9.0. We still do not support generating code that actually uses
-        // variadic arguments yet, but we do need to allow parsing them as
-        // recent CUDA headers rely on that.
-        // https://github.com/llvm/llvm-project/issues/58410
-        if (CTC->CudaInstallation.version() >= CudaVersion::CUDA_90)
-          CmdArgs.push_back("-fcuda-allow-variadic-functions");
       }
     }
     CmdArgs.push_back("-aux-triple");
@@ -5225,9 +5223,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   } else if (isa<PrecompileJobAction>(JA)) {
     if (JA.getType() == types::TY_Nothing)
       CmdArgs.push_back("-fsyntax-only");
-    else if (JA.getType() == types::TY_ModuleFile)
-      CmdArgs.push_back("-emit-module-interface");
-    else if (JA.getType() == types::TY_HeaderUnit)
+    else if (JA.getType() == types::TY_ModuleFile) {
+      if (Args.hasArg(options::OPT__precompile_reduced_bmi))
+        CmdArgs.push_back("-emit-reduced-module-interface");
+      else
+        CmdArgs.push_back("-emit-module-interface");
+    } else if (JA.getType() == types::TY_HeaderUnit)
       CmdArgs.push_back("-emit-header-unit");
     else if (!Args.hasArg(options::OPT_ignore_pch))
       CmdArgs.push_back("-emit-pch");
@@ -5750,8 +5751,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << Name << Triple.getArchName();
     } else if (Name == "SLEEF" || Name == "ArmPL") {
       if (Triple.getArch() != llvm::Triple::aarch64 &&
-          Triple.getArch() != llvm::Triple::aarch64_be &&
-          Triple.getArch() != llvm::Triple::riscv64)
+          Triple.getArch() != llvm::Triple::aarch64_be && !Triple.isRISCV64())
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
     }
@@ -5764,6 +5764,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addOptOutFlag(CmdArgs, options::OPT_fdelete_null_pointer_checks,
                      options::OPT_fno_delete_null_pointer_checks);
+
+  Args.addOptOutFlag(CmdArgs, options::OPT_flifetime_dse,
+                     options::OPT_fno_lifetime_dse);
 
   // LLVM Code Generator Options.
 
@@ -6763,6 +6766,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_offload_via_llvm, false) &&
       (JA.isDeviceOffloading(Action::OFK_None) ||
        JA.isDeviceOffloading(Action::OFK_OpenMP))) {
+
+    // Determine if target-fast optimizations should be enabled
+    bool TargetFastUsed =
+        Args.hasFlag(options::OPT_fopenmp_target_fast,
+                     options::OPT_fno_openmp_target_fast, OFastEnabled);
     switch (D.getOpenMPRuntime(Args)) {
     case Driver::OMPRT_OMP:
     case Driver::OMPRT_IOMP5:
@@ -6879,19 +6887,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        /*Default=*/false))
         CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
 
+      // Handle -fopenmp-assume-no-thread-state (implied by target-fast)
       if (Args.hasFlag(options::OPT_fopenmp_assume_no_thread_state,
                        options::OPT_fno_openmp_assume_no_thread_state,
-                       isTargetFastUsed(Args)))
+                       /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-no-thread-state");
-      else
-        CmdArgs.push_back("-fno-openmp-assume-no-thread-state");
 
+      // Handle -fopenmp-assume-no-nested-parallelism (implied by target-fast)
       if (Args.hasFlag(options::OPT_fopenmp_assume_no_nested_parallelism,
                        options::OPT_fno_openmp_assume_no_nested_parallelism,
-                       isTargetFastUsed(Args)))
+                       /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
-      else
-        CmdArgs.push_back("-fno-openmp-assume-no-nested-parallelism");
 
       if (Args.hasArg(options::OPT_fopenmp_offload_mandatory))
         CmdArgs.push_back("-fopenmp-offload-mandatory");
@@ -9045,6 +9051,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     AddRISCVTargetArgs(Args, CmdArgs);
     break;
 
@@ -9404,6 +9412,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_v,
       OPT_cuda_path_EQ,
       OPT_rocm_path_EQ,
+      OPT_hip_path_EQ,
       OPT_O_Group,
       OPT_g_Group,
       OPT_g_flags_Group,
@@ -9603,16 +9612,17 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             "--device-linker=" + TC.getTripleString() + "=" + "-lm"));
       }
       auto HasCompilerRT = getToolChain().getVFS().exists(
-          TC.getCompilerRT(Args, "builtins", ToolChain::FT_Static));
+          TC.getCompilerRT(Args, "builtins", ToolChain::FT_Static,
+                           /*IsFortran=*/false));
       if (HasCompilerRT)
         CmdArgs.push_back(
             Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
                                "-lclang_rt.builtins"));
-      bool HasFlangRT = HasCompilerRT && C.getDriver().IsFlangMode();
-      bool UseFlangRT = Args.hasFlag(options::OPT_fgpu_flang_rt,
-                                     options::OPT_fno_gpu_flang_rt,
-                                     !isTargetFastUsed(Args));
-      if (HasFlangRT && UseFlangRT)
+
+      bool HasFlangRT = getToolChain().getVFS().exists(
+          TC.getCompilerRT(Args, "runtime", ToolChain::FT_Static,
+                           /*IsFortran=*/true));
+      if (HasFlangRT && C.getDriver().IsFlangMode())
         CmdArgs.push_back(
             Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
                                "-lflang_rt.runtime"));

@@ -135,8 +135,7 @@ Error OffloadBundleFatBin::readEntries(StringRef Buffer,
       return Err;
 
     auto Entry = std::make_unique<OffloadBundleEntry>(
-        EntryOffset + SectionOffset, EntrySize, EntryIDSize,
-        std::move(EntryID.str()));
+        EntryOffset + SectionOffset, EntrySize, EntryIDSize, EntryID.str());
 
     Entries.push_back(*Entry);
   }

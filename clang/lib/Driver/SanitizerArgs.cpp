@@ -431,6 +431,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                    options::OPT_fno_sanitize_handler_preserve_all_regs,
                    HandlerPreserveAllRegs) &&
       MinimalRuntime && (Triple.isAArch64() || Triple.isX86_64());
+  TrapLoop = Args.hasFlag(options::OPT_fsanitize_trap_loop,
+                          options::OPT_fno_sanitize_trap_loop, false);
 
   // The object size sanitizer should not be enabled at -O0.
   Arg *OptLevel = Args.getLastArg(options::OPT_O_Group);
@@ -1493,6 +1495,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (MinimalRuntime)
     CmdArgs.push_back("-fsanitize-minimal-runtime");
+
+  if (TrapLoop)
+    CmdArgs.push_back("-fsanitize-trap-loop");
 
   if (HandlerPreserveAllRegs)
     CmdArgs.push_back("-fsanitize-handler-preserve-all-regs");

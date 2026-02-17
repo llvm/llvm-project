@@ -1726,6 +1726,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
   switch (S->getStmtClass()) {
     // C++, OpenMP and ARC stuff we don't support yet.
     case Stmt::CXXDependentScopeMemberExprClass:
+    case Stmt::CXXReflectExprClass:
     case Stmt::CXXTryStmtClass:
     case Stmt::CXXTypeidExprClass:
     case Stmt::CXXUuidofExprClass:
@@ -1930,6 +1931,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::DesignatedInitUpdateExprClass:
     case Stmt::ArrayInitIndexExprClass:
     case Stmt::ExtVectorElementExprClass:
+    case Stmt::MatrixElementExprClass:
     case Stmt::ImaginaryLiteralClass:
     case Stmt::ObjCAtCatchStmtClass:
     case Stmt::ObjCAtFinallyStmtClass:
@@ -2557,19 +2559,23 @@ static const LocationContext *getInlinedLocationContext(ExplodedNode *Node,
 }
 
 /// Block entrance.  (Update counters).
+/// FIXME: `BlockEdge &L` is only used for debug statistics, consider removing
+/// it and using `BlockEntrance &BE` (where `BlockEntrance` is a subtype of
+/// `ProgramPoint`) for statistical purposes.
 void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
-                                         NodeBuilderWithSinks &nodeBuilder,
+                                         const BlockEntrance &BE,
+                                         NodeBuilder &Builder,
                                          ExplodedNode *Pred) {
   // If we reach a loop which has a known bound (and meets
   // other constraints) then consider completely unrolling it.
   if(AMgr.options.ShouldUnrollLoops) {
     unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
-    const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminatorStmt();
+    const Stmt *Term = Builder.getContext().getBlock()->getTerminatorStmt();
     if (Term) {
       ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
                                                  Pred, maxBlockVisitOnPath);
       if (NewState != Pred->getState()) {
-        ExplodedNode *UpdatedNode = nodeBuilder.generateNode(NewState, Pred);
+        ExplodedNode *UpdatedNode = Builder.generateNode(BE, NewState, Pred);
         if (!UpdatedNode)
           return;
         Pred = UpdatedNode;
@@ -2582,10 +2588,10 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
 
   // If this block is terminated by a loop and it has already been visited the
   // maximum number of times, widen the loop.
-  unsigned int BlockCount = nodeBuilder.getContext().blockCount();
+  unsigned int BlockCount = Builder.getContext().blockCount();
   if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
       AMgr.options.ShouldWidenLoops) {
-    const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminatorStmt();
+    const Stmt *Term = Builder.getContext().getBlock()->getTerminatorStmt();
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return;
 
@@ -2600,16 +2606,17 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     // Here we just pass the the first CFG element in the block.
     ProgramStateRef WidenedState =
         getWidenedLoopState(Pred->getState(), LCtx, BlockCount,
-                            *nodeBuilder.getContext().getBlock()->ref_begin());
-    nodeBuilder.generateNode(WidenedState, Pred);
+                            *Builder.getContext().getBlock()->ref_begin());
+    Builder.generateNode(BE, WidenedState, Pred);
     return;
   }
 
   // FIXME: Refactor this into a checker.
   if (BlockCount >= AMgr.options.maxBlockVisitOnPath) {
-    static SimpleProgramPointTag tag(TagProviderName, "Block count exceeded");
+    static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
+    const ProgramPoint TaggedLoc = BE.withTag(&Tag);
     const ExplodedNode *Sink =
-                   nodeBuilder.generateSink(Pred->getState(), Pred, &tag);
+        Builder.generateSink(TaggedLoc, Pred->getState(), Pred);
 
     if (const LocationContext *LC = getInlinedLocationContext(Pred, G)) {
       // FIXME: This will unconditionally prevent inlining this function (even
@@ -2985,25 +2992,18 @@ void ExprEngine::processStaticInitializer(
 
 /// processIndirectGoto - Called by CoreEngine.  Used to generate successor
 ///  nodes by processing the 'effects' of a computed goto jump.
-void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &builder) {
-  ProgramStateRef state = builder.getState();
-  SVal V = state->getSVal(builder.getTarget(), builder.getLocationContext());
+void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &Builder,
+                                     ExplodedNode *Pred) {
+  ProgramStateRef State = Pred->getState();
+  SVal V = State->getSVal(Builder.getTarget(), Builder.getLocationContext());
 
-  // Three possibilities:
-  //
-  //   (1) We know the computed label.
-  //   (2) The label is NULL (or some other constant), or Undefined.
-  //   (3) We have no clue about the label.  Dispatch to all targets.
-  //
-
-  using iterator = IndirectGotoNodeBuilder::iterator;
-
+  // Case 1: We know the computed label.
   if (std::optional<loc::GotoLabel> LV = V.getAs<loc::GotoLabel>()) {
     const LabelDecl *L = LV->getLabel();
 
-    for (iterator Succ : builder) {
-      if (Succ.getLabel() == L) {
-        builder.generateNode(Succ, state);
+    for (const CFGBlock *Succ : Builder) {
+      if (cast<LabelStmt>(Succ->getLabel())->getDecl() == L) {
+        Builder.generateNode(Succ, State, Pred);
         return;
       }
     }
@@ -3011,19 +3011,16 @@ void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &builder) {
     llvm_unreachable("No block with label.");
   }
 
+  // Case 2: The label is NULL (or some other constant), or Undefined.
   if (isa<UndefinedVal, loc::ConcreteInt>(V)) {
-    // Dispatch to the first target and mark it as a sink.
-    //ExplodedNode* N = builder.generateNode(builder.begin(), state, true);
-    // FIXME: add checker visit.
-    //    UndefBranches.insert(N);
+    // FIXME: Emit warnings when the jump target is undefined or numerical.
     return;
   }
 
-  // This is really a catch-all.  We don't support symbolics yet.
+  // Case 3: We have no clue about the label.  Dispatch to all targets.
   // FIXME: Implement dispatch for symbolic pointers.
-
-  for (iterator Succ : builder)
-    builder.generateNode(Succ, state);
+  for (const CFGBlock *Succ : Builder)
+    Builder.generateNode(Succ, State, Pred);
 }
 
 void ExprEngine::processBeginOfFunction(NodeBuilderContext &BC,
@@ -3107,19 +3104,17 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
 
 /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
 ///  nodes by processing the 'effects' of a switch statement.
-void ExprEngine::processSwitch(const SwitchStmt *Switch, CoreEngine &CoreEng,
-                               const CFGBlock *B, ExplodedNode *Pred) {
+void ExprEngine::processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
+                               ExplodedNode *Pred, ExplodedNodeSet &Dst) {
   const Expr *Condition = Switch->getCond();
 
-  SwitchNodeBuilder Builder(Pred, B, CoreEng);
+  SwitchNodeBuilder Builder(Pred, Dst, BC);
 
   ProgramStateRef State = Pred->getState();
   SVal CondV = State->getSVal(Condition, Pred->getLocationContext());
 
   if (CondV.isUndef()) {
-    // ExplodedNode* N = builder.generateDefaultCaseNode(state, true);
-    //  FIXME: add checker
-    // UndefBranches.insert(N);
+    // FIXME: Emit warnings when the switch condition is undefined.
     return;
   }
 
@@ -3155,7 +3150,7 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, CoreEngine &CoreEng,
     }
 
     if (StateMatching)
-      Builder.generateCaseStmtNode(Block, StateMatching);
+      Builder.generateCaseStmtNode(Block, StateMatching, Pred);
 
     // If _not_ entering the current case is infeasible, we are done with
     // processing this branch.
@@ -3174,7 +3169,7 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, CoreEngine &CoreEng,
       return;
   }
 
-  Builder.generateDefaultCaseNode(State);
+  Builder.generateDefaultCaseNode(State, Pred);
 }
 
 //===----------------------------------------------------------------------===//

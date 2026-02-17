@@ -60,8 +60,10 @@ int main(int argc, char *argv[]) {
   dumpData(DataSpirvBc, argv[3]);
 
   amd_comgr_(release_data(DataSpirv));
+  amd_comgr_(release_data(DataSpirvBc));
   amd_comgr_(destroy_data_set(DataSetSpirv));
   amd_comgr_(destroy_data_set(DataSetBc));
   amd_comgr_(destroy_action_info(DataAction));
   free(BufSpirv);
+  return 0;
 }

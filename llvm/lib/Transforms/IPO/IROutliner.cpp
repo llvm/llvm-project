@@ -311,7 +311,7 @@ void OutlinableRegion::splitCandidate() {
 
     if (NumPredsOutsideRegion > 1)
       return;
-    
+
     It++;
   }
 
@@ -319,7 +319,7 @@ void OutlinableRegion::splitCandidate() {
   // the BasicBlock, we ignore this region for now.
   if (isa<PHINode>(StartInst) && StartInst != &*StartBB->begin())
     return;
-  
+
   // If the region ends with a PHINode, but does not contain all of the phi node
   // instructions of the region, we ignore it for now.
   if (isa<PHINode>(BackInst) &&
@@ -739,9 +739,6 @@ static void moveFunctionData(Function &Old, Function &New,
         updateLoopMetadataDebugLocations(Val, updateLoopInfoLoc);
         continue;
       }
-
-      // From this point we are only handling call instructions.
-      CallInst *CI = cast<CallInst>(&Val);
 
       // Edit the scope of called functions inside of outlined functions.
       if (DISubprogram *SP = New.getSubprogram()) {
@@ -1592,7 +1589,7 @@ static Value *
 getPassedArgumentAndAdjustArgumentLocation(const Argument *A,
                                            const OutlinableRegion &Region) {
   unsigned ArgNum = A->getArgNo();
-  
+
   // If it is a constant, we can look at our mapping from when we created
   // the outputs to figure out what the constant value is.
   if (auto It = Region.AggArgToConstant.find(ArgNum);
@@ -1664,8 +1661,8 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
                        const DenseMap<Value *, Value *> &OutputMappings,
                        DenseSet<PHINode *> &UsedPHIs) {
   OutlinableGroup &Group = *Region.Parent;
-  
-  
+
+
   // A list of the canonical numbering assigned to each incoming value, paired
   // with the incoming block for the PHINode passed into this function.
   SmallVector<std::pair<unsigned, BasicBlock *>> PNCanonNums;
@@ -1757,7 +1754,7 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
       NewPN->setIncomingValue(Idx, Val);
       continue;
     }
-    
+
     // Find the corresponding value in the overall function.
     IncomingVal = findOutputMapping(OutputMappings, IncomingVal);
     Value *Val = Region.findCorrespondingValueIn(*FirstRegion, IncomingVal);
@@ -2009,7 +2006,7 @@ analyzeAndPruneOutputBlocks(DenseMap<Value *, BasicBlock *> &BlocksToPrune,
   for (std::pair<Value *, BasicBlock *> &VtoBB : BlocksToPrune) {
     RetValueForBB = VtoBB.first;
     NewBB = VtoBB.second;
-  
+
     // If there are no instructions, we remove it from the module, and also
     // mark the value for removal from the return value to output block mapping.
     if (NewBB->size() == 0) {
@@ -2017,7 +2014,7 @@ analyzeAndPruneOutputBlocks(DenseMap<Value *, BasicBlock *> &BlocksToPrune,
       ToRemove.push_back(RetValueForBB);
       continue;
     }
-    
+
     // Mark that we could not remove all the blocks since they were not all
     // empty.
     AllRemoved = false;
@@ -2030,7 +2027,7 @@ analyzeAndPruneOutputBlocks(DenseMap<Value *, BasicBlock *> &BlocksToPrune,
   // Mark the region as having the no output scheme.
   if (AllRemoved)
     Region.OutputBlockNum = -1;
-  
+
   return AllRemoved;
 }
 
@@ -2106,7 +2103,7 @@ static void createAndInsertBasicBlocks(DenseMap<Value *, BasicBlock *> &OldMap,
                                        Function *ParentFunc, Twine BaseName) {
   unsigned Idx = 0;
   std::vector<Value *> SortedKeys;
-  
+
   getSortedConstantKeys(SortedKeys, OldMap);
 
   for (Value *RetVal : SortedKeys) {
@@ -2206,25 +2203,13 @@ void createSwitchStatement(
   }
 }
 
-/// Fill the new function that will serve as the replacement function for all of
-/// the extracted regions of a certain structure from the first region in the
-/// list of regions.  Replace this first region's extracted function with the
-/// new overall function.
-///
-/// \param [in] M - The module we are outlining from.
-/// \param [in] CurrentGroup - The group of regions to be outlined.
-/// \param [in,out] OutputStoreBBs - The output blocks for each different
-/// set of stores needed for the different functions.
-/// \param [in,out] FuncsToRemove - Extracted functions to erase from module
-/// once outlining is complete.
-/// \param [in] OutputMappings - Extracted functions to erase from module
-/// once outlining is complete.
-static void fillOverallFunction(
+void IROutliner::fillOverallFunction(
     Module &M, OutlinableGroup &CurrentGroup,
     std::vector<DenseMap<Value *, BasicBlock *>> &OutputStoreBBs,
-    std::vector<Function *> &FuncsToRemove,
-    const DenseMap<Value *, Value *> &OutputMappings) {
+    std::vector<Function *> &FuncsToRemove) {
   OutlinableRegion *CurrentOS = CurrentGroup.Regions[0];
+
+  TargetTransformInfo &TTI = getTTI(*CurrentOS->StartBB->getParent());
 
   // Move first extracted function's instructions into new function.
   LLVM_DEBUG(dbgs() << "Move instructions from "
@@ -2234,8 +2219,14 @@ static void fillOverallFunction(
                    *CurrentGroup.OutlinedFunction, CurrentGroup.EndBBs);
 
   // Transfer the attributes from the function to the new function.
-  for (Attribute A : CurrentOS->ExtractedFunction->getAttributes().getFnAttrs())
+  for (Attribute A :
+       CurrentOS->ExtractedFunction->getAttributes().getFnAttrs()) {
+    if (!TTI.shouldCopyAttributeWhenOutliningFrom(CurrentOS->ExtractedFunction,
+                                                  A))
+      continue;
+
     CurrentGroup.OutlinedFunction->addFnAttr(A);
+  }
 
   // Create a new set of output blocks for the first extracted function.
   DenseMap<Value *, BasicBlock *> NewBBs;
@@ -2277,8 +2268,7 @@ void IROutliner::deduplicateExtractedSections(
 
   OutlinableRegion *CurrentOS;
 
-  fillOverallFunction(M, CurrentGroup, OutputStoreBBs, FuncsToRemove,
-                      OutputMappings);
+  fillOverallFunction(M, CurrentGroup, OutputStoreBBs, FuncsToRemove);
 
   for (unsigned Idx = 1; Idx < CurrentGroup.Regions.size(); Idx++) {
     CurrentOS = CurrentGroup.Regions[Idx];
@@ -2421,7 +2411,7 @@ void IROutliner::pruneIncompatibleRegions(
     if (FnForCurrCand.hasOptNone())
       continue;
 
-    if (FnForCurrCand.hasFnAttribute("nooutline")) {
+    if (FnForCurrCand.hasFnAttribute(Attribute::NoOutline)) {
       LLVM_DEBUG({
         dbgs() << "... Skipping function with nooutline attribute: "
                << FnForCurrCand.getName() << "\n";

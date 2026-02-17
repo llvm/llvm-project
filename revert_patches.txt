@@ -8,3 +8,7 @@ Revert "Revert "Revert "Reland "Revert "[clang][CGRecordLayout] Remove dependenc
 breaks build of aqlprofiler
 [AMDGPU][AsmParser] Forbid Fake16 instructions in Real16 mode (#176934)
 ---
+fails 2 JSON tests in merge
+1c6aa67a343 [clang][ssaf] Add EntityLinkage data structure (#181718)
+7c3c9c45f85d [clang][ssaf] Implement JSONFormat (#180021)
+---

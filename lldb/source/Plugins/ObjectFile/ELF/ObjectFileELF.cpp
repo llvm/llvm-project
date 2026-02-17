@@ -481,7 +481,7 @@ ObjectFile *ObjectFileELF::CreateMemoryInstance(
   return nullptr;
 }
 
-bool ObjectFileELF::MagicBytesMatch(DataBufferSP &data_sp,
+bool ObjectFileELF::MagicBytesMatch(DataBufferSP data_sp,
                                     lldb::addr_t data_offset,
                                     lldb::addr_t data_length) {
   if (data_sp &&
@@ -2241,6 +2241,12 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
         // function will be resolved if it is referenced.
         symbol_type = eSymbolTypeResolver;
         break;
+
+      case STT_TLS:
+        // The symbol is associated with a thread-local data object, such as
+        // a thread-local variable.
+        symbol_type = eSymbolTypeData;
+        break;
       }
     }
 
@@ -2768,7 +2774,7 @@ static void ApplyELF64ABS64Relocation(Symtab *symtab, ELFRelocation &rel,
       symtab->FindSymbolByID(ELFRelocation::RelocSymbol64(rel));
   if (symbol) {
     addr_t value = symbol->GetAddressRef().GetFileAddress();
-    DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+    DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
@@ -2795,7 +2801,7 @@ static void ApplyELF64ABS32Relocation(Symtab *symtab, ELFRelocation &rel,
       return;
     }
     uint32_t truncated_addr = (value & 0xFFFFFFFF);
-    DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+    DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
@@ -2819,7 +2825,7 @@ static void ApplyELF32ABS32RelRelocation(Symtab *symtab, ELFRelocation &rel,
       return;
     }
     assert(llvm::isUInt<32>(value) && "Valid addresses are 32-bit");
-    DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+    DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
@@ -2896,7 +2902,7 @@ unsigned ObjectFileELF::ApplyRelocations(
           if (symbol) {
             addr_t f_offset =
                 rel_section->GetFileOffset() + ELFRelocation::RelocOffset32(rel);
-            DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+            DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
             // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
             WritableDataBuffer *data_buffer =
                 llvm::cast<WritableDataBuffer>(data_buffer_sp.get());

@@ -1618,6 +1618,20 @@ public:
   bool Pre(const parser::OmpStylizedInstance &);
   void Post(const parser::OmpStylizedInstance &);
 
+  void Post(const parser::OmpObjectList &x) {
+    // The objects from OMP clauses should have already been resolved,
+    // except common blocks (the ResolveNamesVisitor does not visit
+    // parser::Name, those are dealt with as members of other structures).
+    // Iterate over elements of x, and resolve any common blocks that
+    // are still unresolved.
+    for (const parser::OmpObject &obj : x.v) {
+      auto *name{std::get_if<parser::Name>(&obj.u)};
+      if (name && !name->symbol) {
+        Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
+      }
+    }
+  }
+
   bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
@@ -10225,16 +10239,18 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
   }
   if (const auto *tkr{
           std::get_if<std::list<parser::CompilerDirective::IgnoreTKR>>(&x.u)}) {
-    if (currScope().IsTopLevel() ||
-        GetProgramUnitContaining(currScope()).kind() !=
-            Scope::Kind::Subprogram) {
+    if (currScope().IsTopLevel()) {
       Say(x.source,
-          "!DIR$ IGNORE_TKR directive must appear in a subroutine or function"_err_en_US);
+          "!DIR$ IGNORE_TKR directive must appear in a program unit"_err_en_US);
       return;
-    }
-    if (!inSpecificationPart_) {
-      Say(x.source,
-          "!DIR$ IGNORE_TKR directive must appear in the specification part"_err_en_US);
+    } else if (GetProgramUnitContaining(currScope()).kind() !=
+        Scope::Kind::Subprogram) {
+      context().Warn(common::UsageWarning::MisplacedIgnoreTKR, x.source,
+          "!DIR$ IGNORE_TKR directive should appear in a subroutine or function"_warn_en_US);
+      return;
+    } else if (!inSpecificationPart_) {
+      context().Warn(common::UsageWarning::MisplacedIgnoreTKR, x.source,
+          "!DIR$ IGNORE_TKR directive should appear in the specification part"_warn_en_US);
       return;
     }
     if (tkr->empty()) {

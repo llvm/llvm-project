@@ -25,12 +25,6 @@ using namespace target;
 #include "Emissary.h"
 #endif
 
-// List of user generated callbacks for the RPC server.
-static llvm::SmallVector<RPCServerTy::RPCServerCallbackTy> &getRPCCallbacks() {
-  static llvm::SmallVector<RPCServerTy::RPCServerCallbackTy> Callbacks;
-  return Callbacks;
-}
-
 template <uint32_t NumLanes>
 rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
                                  rpc::Server::Port &Port) {
@@ -150,8 +144,10 @@ static rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
     return rpc::RPC_ERROR;
 }
 
-static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer,
-                             bool &ClientInUse) {
+static rpc::Status
+runServer(plugin::GenericDeviceTy &Device, void *Buffer,
+          llvm::SmallSetVector<RPCServerTy::RPCServerCallbackTy, 0> &Callbacks,
+          bool &ClientInUse) {
   const uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
   rpc::Server Server(NumPorts, Buffer);
@@ -164,7 +160,7 @@ static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer,
   rpc::Status Status = rpc::RPC_UNHANDLED_OPCODE;
   const uint32_t NumLanes = Device.getWarpSize();
 
-  for (RPCServerTy::RPCServerCallbackTy Callback : getRPCCallbacks()) {
+  for (RPCServerTy::RPCServerCallbackTy Callback : Callbacks) {
     Status = static_cast<rpc::Status>(Callback(&*Port, NumLanes));
     if (Status != rpc::RPC_UNHANDLED_OPCODE)
       break;
@@ -176,7 +172,6 @@ static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer,
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
     Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port, NumLanes);
 
-  Port->close();
   return Status;
 }
 
@@ -230,7 +225,8 @@ void RPCServerTy::ServerThread::run() {
           continue;
 
         // If running the server failed, print a message but keep running.
-        if (runServer(*Device, Buffer, ClientInUse) != rpc::RPC_SUCCESS)
+        if (runServer(*Device, Buffer, Callbacks, ClientInUse) !=
+            rpc::RPC_SUCCESS)
           FAILURE_MESSAGE("Unhandled or invalid RPC opcode!");
       }
     }
@@ -243,7 +239,8 @@ RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)
       Devices(std::make_unique<plugin::GenericDeviceTy *[]>(
           Plugin.getNumDevices())),
       Thread(new ServerThread(Buffers.get(), Devices.get(),
-                              Plugin.getNumDevices(), BufferMutex)) {}
+                              Plugin.getNumDevices(), BufferMutex, Callbacks)) {
+}
 
 llvm::Error RPCServerTy::startThread() {
   Thread->startThread();
@@ -307,5 +304,5 @@ Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
 
 void RPCServerTy::registerCallback(RPCServerCallbackTy FnPtr) {
   std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
-  getRPCCallbacks().push_back(FnPtr);
+  Callbacks.insert(FnPtr);
 }

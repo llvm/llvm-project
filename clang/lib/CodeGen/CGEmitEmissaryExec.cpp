@@ -106,7 +106,9 @@ static llvm::Function *GetEmissaryAllocDeclaration(CodeGenModule &CGM) {
   llvm::Type *ArgTypes[] = {CGM.Int32Ty};
   llvm::Function *FN;
   llvm::FunctionType *VargsFnAllocFuncType = llvm::FunctionType::get(
-      llvm::PointerType::getUnqual(CGM.Int8Ty), ArgTypes, false);
+      CGM.getTypes().ConvertType(
+          CGM.getContext().getPointerType(CGM.getContext().VoidTy)),
+      ArgTypes, false);
 
   if (!(FN = M.getFunction(_executeName)))
     FN = llvm::Function::Create(VargsFnAllocFuncType,
@@ -120,8 +122,7 @@ static llvm::Function *GetEmissaryAllocDeclaration(CodeGenModule &CGM) {
 static llvm::Function *GetEmissaryExecDeclaration(CodeGenModule &CGM) {
   const char *_executeName = "__llvm_omp_emissary_rpc";
   auto &M = CGM.getModule();
-  llvm::Type *ArgTypes[] = {CGM.Int64Ty,
-	  llvm::PointerType::getUnqual(CGM.Int8Ty)};
+  llvm::Type *ArgTypes[] = {CGM.Int64Ty, CGM.VoidPtrTy};
   llvm::Function *FN;
   llvm::FunctionType *VarfnFuncType =
       llvm::FunctionType::get(CGM.Int64Ty, ArgTypes, false);
@@ -267,7 +268,7 @@ RValue CodeGenFunction::EmitEmissaryExec(const CallExpr *E) {
       llvm::StructType::create(ArgTypes, "varfn_args_store");
   unsigned AS = getContext().getTargetAddressSpace(LangAS::cuda_device);
   llvm::Value *BufferPtr = Builder.CreatePointerCast(
-      DataStructPtr, llvm::PointerType::get(DataStructTy, AS),
+      DataStructPtr, llvm::PointerType::get(CGM.getLLVMContext(), AS),
       "varfn_args_store_casted");
 
   // ---  Header of struct contains length and NumArgs ---
@@ -308,7 +309,7 @@ RValue CodeGenFunction::EmitEmissaryExec(const CallExpr *E) {
   unsigned structIndex = 2 + NumArgs;
   structOffset = 4 * structIndex;
   for (unsigned I = 0; I < NumArgs; I++) {
-    llvm::Value *Arg;
+    llvm::Value *Arg = nullptr;
     if (I == 0) {
       Arg = Args[I].getKnownRValue().getScalarVal();
     } else {
@@ -344,9 +345,12 @@ RValue CodeGenFunction::EmitEmissaryExec(const CallExpr *E) {
 
   // ---  4th Pass: memcpy all strings after the data values ---
   // bitcast the struct in device global memory as a char buffer
-  Address BufferPtrByteAddr = Address(
-      Builder.CreatePointerCast(BufferPtr, llvm::PointerType::get(Int8Ty, AS)),
-      Int8Ty, CharUnits::fromQuantity(1));
+  Address BufferPtrByteAddr =
+      Address(Builder.CreatePointerCast(
+                  BufferPtr, llvm::PointerType::get(CGM.getLLVMContext(), AS),
+                  "_casted"),
+              Int8Ty, CharUnits::fromQuantity(1));
+
   // BufferPtrByteAddr is a pointer to where we want to write the next string
   BufferPtrByteAddr = Builder.CreateConstInBoundsByteGEP(
       BufferPtrByteAddr, CharUnits::fromQuantity(DataLen_CT));

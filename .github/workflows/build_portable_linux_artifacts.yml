@@ -82,7 +82,7 @@ jobs:
         with:
           repository: "ROCm/TheRock"
           ref: 'compiler/amd-staging'
-          
+
       - name: Update Submodule Pointer to the PR
         if: ${{ github.event_name == 'pull_request' }}
         run: |
@@ -97,8 +97,68 @@ jobs:
           # Verify the pointer update
           git submodule status
           git submodule
-    
 
+      - name: Download LLVM, SPIRV and HIPIFY PR's stored in file
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: multiple-pr-build-params
+          path: .
+
+      - name: Source the multiple PR's of params
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          set -a
+          source ./${{ github.run_id }}_PR_params.env
+          set +a
+          echo "LLVM_PR_URL=$LLVM_PR_URL" >> "$GITHUB_ENV"
+          echo "SPIRV_PR_URL=$SPIRV_PR_URL" >> "$GITHUB_ENV"
+          echo "HIPIFY_PR_URL=$HIPIFY_PR_URL" >> "$GITHUB_ENV"
+
+      - name: Update submodule pointers from provided parameter PR values
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          # Function to get SHA with git-ls
+          get_pr_sha() {
+             local pr_url="$1"
+             local base_repo_url=$(echo "$pr_url" | sed 's|/pull/.*||')
+             local pr_num=$(echo "$pr_url" | sed 's|.*/pull/||')
+             git ls-remote "${base_repo_url}.git" "refs/pull/${pr_num}/head" | awk '{print $1}'
+          }
+        
+          # LLVM PR
+          LLVM_SHA="$(get_pr_sha "$LLVM_PR_URL")"
+          echo "LLVM head SHA: $LLVM_SHA"
+          git update-index --cacheinfo 160000,"$LLVM_SHA","compiler/amd-llvm"
+        
+          # SPIRV PR
+          if [[ -n "$SPIRV_PR_URL" ]]; then
+              SPIRV_SHA="$(get_pr_sha "$SPIRV_PR_URL")"
+              echo "SPIRV head SHA: $SPIRV_SHA"
+              git update-index --cacheinfo 160000,"$SPIRV_SHA","compiler/spirv-llvm-translator"
+          else
+              SPIRV_SHA="$(git ls-remote https://github.com/ROCm/SPIRV-LLVM-Translator.git refs/heads/amd-staging | awk '{print $1}')"
+              echo "SPIRV PR NOT Passed, defaulting to the amd-staging tip : $SPIRV_SHA"
+              git update-index --cacheinfo 160000,"$SPIRV_SHA","compiler/spirv-llvm-translator"
+          fi
+
+          # HIPIFY PR
+          if [[ -n "$HIPIFY_PR_URL" ]]; then
+              HIPIFY_SHA="$(get_pr_sha "$HIPIFY_PR_URL")"
+              echo "HIPIFY head SHA: $HIPIFY_SHA"
+              git update-index --cacheinfo 160000,"$HIPIFY_SHA","compiler/hipify"
+          else
+              HIPIFY_SHA="$(git ls-remote https://github.com/ROCm/HIPIFY.git refs/heads/amd-staging | awk '{print $1}')"
+              echo "HIPIFY PR NOT Passed, defaulting to the amd-staging tip : $HIPIFY_SHA"
+              git update-index --cacheinfo 160000,"$HIPIFY_SHA","compiler/hipify"
+          fi
+          git config --global user.email "z1-cciauto@amd.com"
+          git config --global user.name "Z1 cciauto"
+          git commit -m "Update submodule references from PR URLs"
+          git submodule status
+          git submodule
+ 
       - name: Install python deps
         run: |
           pip install -r requirements.txt
@@ -135,36 +195,8 @@ jobs:
         run: |
           ./build_tools/fetch_sources.py --jobs 12
 
-      - name: "Checking out repository for spriv-llvm-translator"
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          repository: "ROCm/spirv-llvm-translator"
-          path: compiler/spirv-llvm-translator
-          ref: amd-staging
-
-      - name: "Checking out repository for hipify"
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          repository: "ROCm/hipify"
-          path: compiler/hipify
-          ref: amd-staging
-
-      - name: Apply patches
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-             cp -v patches/amd-mainline/llvm-project/*.patch compiler/amd-llvm
-             cd compiler/amd-llvm
-             git log -10
-             git config --global --add safe.directory $PWD
-             find . -type f -name '*.patch' -exec git apply --check {} \;
-             find . -type f -name '*.patch' -exec git apply {} \;
-             git log -15
-             cd -
-
       - name: TheRock and llvm SHA
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
         run: |
              git config --global --add safe.directory $PWD
              git log --oneline -1
@@ -175,7 +207,7 @@ jobs:
              cd -
 
       - name: Configure PR Projects
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
         env:
           cmake_preset: ${{ inputs.build_variant_cmake_preset }}
           amdgpu_families: ${{ inputs.amdgpu_families }}
@@ -186,7 +218,7 @@ jobs:
           python3 build_tools/github_actions/build_configure.py --manylinux
 
       - name: Configure All Projects
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch' }}
         env:
           cmake_preset: ${{ inputs.build_variant_cmake_preset }}
           amdgpu_families: ${{ inputs.amdgpu_families }}

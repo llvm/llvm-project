@@ -3,7 +3,7 @@
 // RUN: compile-opencl-minimal %s %t.bin 1.2
 
 // COM: Dissasemble
-// RUN: llvm-objdump -d %t.bin | FileCheck %s
+// RUN: %llvm-objdump -d %t.bin | %FileCheck %s
 // CHECK: <add>:
 // CHECK: s_endpgm
 

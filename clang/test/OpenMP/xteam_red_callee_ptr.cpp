@@ -419,11 +419,9 @@ int main()
 // CHECK-LABEL: define {{[^@]+}}@_Z15compute_sum_resiPdS_
 // CHECK-SAME: (i32 noundef [[J:%.*]], ptr noundef [[RESULT:%.*]], ptr noundef [[A:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[J_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[RESULT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[J_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J_ADDR]] to ptr
 // CHECK-NEXT:    [[RESULT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RESULT_ADDR]] to ptr
 // CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
@@ -1903,11 +1901,9 @@ int main()
 // CHECK-LABEL: define {{[^@]+}}@_Z16compute_sum_rvalidPd
 // CHECK-SAME: (i32 noundef [[J:%.*]], double noundef [[RVAL:%.*]], ptr noundef [[A:%.*]]) #[[ATTR3]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca double, align 8, addrspace(5)
 // CHECK-NEXT:    [[J_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[RVAL_ADDR:%.*]] = alloca double, align 8, addrspace(5)
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[J_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J_ADDR]] to ptr
 // CHECK-NEXT:    [[RVAL_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RVAL_ADDR]] to ptr
 // CHECK-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
@@ -2644,9 +2640,7 @@ int main()
 // CHECK-LABEL: define {{[^@]+}}@_Z3fooi
 // CHECK-SAME: (i32 noundef [[I:%.*]]) #[[ATTR3]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // CHECK-NEXT:    store i32 [[I]], ptr [[I_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I_ADDR_ASCAST]], align 4

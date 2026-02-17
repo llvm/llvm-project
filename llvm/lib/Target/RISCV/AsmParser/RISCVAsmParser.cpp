@@ -246,8 +246,12 @@ class RISCVAsmParser : public MCTargetAsmParser {
   void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
     if (!(getSTI().hasFeature(Feature))) {
       MCSubtargetInfo &STI = copySTI();
-      setAvailableFeatures(
-          ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
+      STI.ToggleFeature(FeatureString);
+
+      // Update the C and Zce implications.
+      RISCV::updateCZceFeatureImplications(STI);
+
+      setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
     }
   }
 
@@ -2407,6 +2411,7 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 
 bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
   if (STI->hasFeature(RISCV::FeatureStdExtZvfbfa) ||
+      STI->hasFeature(RISCV::FeatureStdExtZvfofp8min) ||
       STI->hasFeature(RISCV::FeatureVendorXSfvfbfexp16e))
     return Error(
         ErrorLoc,

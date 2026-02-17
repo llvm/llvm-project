@@ -91,6 +91,25 @@ F(T##2 x) \
     WRAP2T(F,half)
 #endif
 
+#define WRAP_ELEMENTWISE_TYPE(F, T, N, B)                                      \
+    ATTR T##N F(T##N x) { return B(x); }
+
+#define WRAP_ELEMENTWISE_SCALAR(F, T, B)                                       \
+    ATTR T F(T x) { return B(x); }
+
+#define WRAP_ELEMENTWISE_VECSIZES(F, T, B)                                     \
+    WRAP_ELEMENTWISE_TYPE(F, T, 16, B)                                         \
+    WRAP_ELEMENTWISE_TYPE(F, T, 8, B)                                          \
+    WRAP_ELEMENTWISE_TYPE(F, T, 4, B)                                          \
+    WRAP_ELEMENTWISE_TYPE(F, T, 3, B)                                          \
+    WRAP_ELEMENTWISE_TYPE(F, T, 2, B)                                          \
+    WRAP_ELEMENTWISE_SCALAR(F, T, B)
+
+#define WRAP_ELEMENTWISE(F, B)                                                 \
+    WRAP_ELEMENTWISE_VECSIZES(F, half, B)                                      \
+    WRAP_ELEMENTWISE_VECSIZES(F, float, B)                                     \
+    WRAP_ELEMENTWISE_VECSIZES(F, double, B)
+
 WRAP(acos)
 WRAP(acosh)
 WRAP(acospi)
@@ -101,7 +120,6 @@ WRAP(atan)
 WRAP(atanh)
 WRAP(atanpi)
 WRAP(cbrt)
-WRAP(ceil)
 WRAP(cos)
 WRAP(cosh)
 WRAP(cospi)
@@ -111,24 +129,25 @@ WRAP(exp)
 WRAP(exp2)
 WRAP(exp10)
 WRAP(expm1)
-WRAP(fabs)
-WRAP(floor)
 WRAP(lgamma)
 WRAP(log)
 WRAP(log2)
 WRAP(log10)
 WRAP(log1p)
 WRAP(logb)
-WRAP(rint)
-WRAP(round)
 WRAP(rsqrt)
 WRAP(sin)
 WRAP(sinh)
 WRAP(sinpi)
-WRAP(sqrt)
 WRAP(tan)
 WRAP(tanh)
 WRAP(tanpi)
 WRAP(tgamma)
-WRAP(trunc)
 
+WRAP_ELEMENTWISE(ceil, __builtin_elementwise_ceil)
+WRAP_ELEMENTWISE(fabs, __builtin_elementwise_abs)
+WRAP_ELEMENTWISE(floor, __builtin_elementwise_floor)
+WRAP_ELEMENTWISE(rint, __builtin_elementwise_rint)
+WRAP_ELEMENTWISE(round, __builtin_elementwise_round)
+WRAP_ELEMENTWISE(trunc, __builtin_elementwise_trunc)
+WRAP_ELEMENTWISE(sqrt, __builtin_elementwise_sqrt)

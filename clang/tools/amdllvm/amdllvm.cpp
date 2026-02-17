@@ -15,8 +15,9 @@ int main(int argc, char *argv[]) {
     Exit(createStringError("binary '" + Alias + "' not prefixed by 'amd'."));
   }
 
-  void *MainAddr = reinterpret_cast<void *>(main);
-  std::string AMDLlvmPath = fs::getMainExecutable(argv[0], MainAddr);
+  static int StaticForMainAddr = 0;
+  std::string AMDLlvmPath =
+      fs::getMainExecutable(argv[0], (void *)&StaticForMainAddr);
   if (AMDLlvmPath.empty()) {
     Exit(createStringError(
         "couldn't figure out path to LLVM install bin/ directory."));

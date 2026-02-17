@@ -374,6 +374,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cir::VectorType::get(builder.getDoubleTy(), 2,
                                         /*is_scalable=*/true);
       break;
+    case BuiltinType::SveBool:
+      resultType = cir::VectorType::get(builder.getUIntNTy(1), 16,
+                                        /*is_scalable=*/true);
+      break;
 
     // Unsigned integral types.
     case BuiltinType::Char8:
@@ -737,4 +741,14 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
   // If necessary, provide the full definition of a type only used with a
   // declaration so far.
   assert(!cir::MissingFeatures::generateDebugInfo());
+}
+
+unsigned CIRGenTypes::getTargetAddressSpace(QualType ty) const {
+  // Return the address space for the type. If the type is a
+  // function type without an address space qualifier, the
+  // program address space is used. Otherwise, the target picks
+  // the best address space based on the type information
+  return ty->isFunctionType() && !ty.hasAddressSpace()
+             ? cgm.getDataLayout().getProgramAddressSpace()
+             : getASTContext().getTargetAddressSpace(ty.getAddressSpace());
 }

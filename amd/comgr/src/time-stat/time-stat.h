@@ -35,11 +35,9 @@ public:
   PerfStats() {}
   bool Init(std::string LogFile) {
     std::error_code EC;
-    std::unique_ptr<llvm::raw_fd_ostream,
-                    std::function<void(llvm::raw_fd_ostream *)>>
-        LogF(new (std::nothrow)
-                 llvm::raw_fd_ostream(LogFile, EC, llvm::sys::fs::OF_Text),
-             [](llvm::raw_fd_ostream *fp) { fp->close(); });
+    std::unique_ptr<llvm::raw_fd_ostream> LogF(
+        new (std::nothrow)
+            llvm::raw_fd_ostream(LogFile, EC, llvm::sys::fs::OF_Text));
     if (EC) {
       std::cerr << "Failed to open log file " << LogFile << "for perf stats "
                 << EC.message() << "\n ";

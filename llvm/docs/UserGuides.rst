@@ -305,6 +305,7 @@ intermediate LLVM representation.
    AdvancedBuilds
    AliasAnalysis
    AMDGPUUsage
+   AMDGPUAsyncOperations
    Benchmarking
    BigEndianNEON
    BuildingADistribution
@@ -573,6 +574,9 @@ Additional Topics
 
 :doc:`AMDGPUUsage`
    This document describes using the AMDGPU backend to compile GPU kernels.
+
+:doc:`AMDGPUAsyncOperations`
+   Builtins for invoking asynchronous data transfer operations in AMD GPUs.
 
 :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`
    This document describes DWARF extensions to support heterogeneous debugging

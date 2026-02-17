@@ -741,6 +741,8 @@ void OmptTracingBufferMgr::flushAndShutdownHelperThreads() {
   // Flush buffers for all devices.
   if (OMPX_FlushOnShutdown)
     flushAllBuffers(MAX_NUM_DEVICES);
+  else
+    waitForFlushCompletion(); // Dont initiate but wait for outstanding flushes.
   shutdownHelperThreads();
 }
 

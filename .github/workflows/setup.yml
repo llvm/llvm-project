@@ -40,7 +40,7 @@ jobs:
   setup:
     runs-on: ubuntu-24.04
     env:
-      BASE_REF: '5a23b542e1d03fbb515e014a7d9635c8884b12e6'
+      BASE_REF: 'c3d5aeef808e099b9de06fc901af2de24d0b143d'
     outputs:
       enable_build_jobs: true
       linux_variants: >
@@ -56,7 +56,7 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: "ROCm/TheRock"
-          ref: '5a23b542e1d03fbb515e014a7d9635c8884b12e6'
+          ref: 'c3d5aeef808e099b9de06fc901af2de24d0b143d'
       - name: SHA of TheRock
         run: |
              git rev-parse HEAD

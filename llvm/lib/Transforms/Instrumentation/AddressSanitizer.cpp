@@ -2676,12 +2676,8 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
     // Attach "SanitizedPaddedGlobal" attribute to the new global.
     NewGlobal->addAttribute(Attribute::SanitizedPaddedGlobal);
 
-    Value *Indices2[2];
-    Indices2[0] = IRB.getInt32(0);
-    Indices2[1] = IRB.getInt32(0);
 
-    G->replaceAllUsesWith(
-        ConstantExpr::getGetElementPtr(NewTy, NewGlobal, Indices2, true));
+    G->replaceAllUsesWith(NewGlobal);
     NewGlobal->takeName(G);
     G->eraseFromParent();
     NewGlobals[i] = NewGlobal;

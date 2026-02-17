@@ -24,6 +24,11 @@ file(GLOB cl_sources
 
 file(GLOB sources ${cl_sources})
 
+set_source_files_properties(
+  ${cl_sources}
+  PROPERTIES COMPILE_FLAGS -cl-fp32-correctly-rounded-divide-sqrt)
+
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/integer)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/workgroup)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../ocml/inc)

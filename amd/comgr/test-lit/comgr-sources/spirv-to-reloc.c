@@ -58,8 +58,10 @@ int main(int argc, char *argv[]) {
   dumpData(DataReloc, argv[2]);
 
   amd_comgr_(release_data(DataSpv));
+  amd_comgr_(release_data(DataReloc));
   amd_comgr_(destroy_data_set(DataSetSpv));
   amd_comgr_(destroy_data_set(DataSetReloc));
   amd_comgr_(destroy_action_info(DataAction));
   free(BufSpv);
+  return 0;
 }

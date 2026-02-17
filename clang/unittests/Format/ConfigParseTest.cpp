@@ -466,6 +466,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeComma);
   CHECK_PARSE("BreakConstructorInitializers: AfterColon",
               BreakConstructorInitializers, FormatStyle::BCIS_AfterColon);
+  CHECK_PARSE("BreakConstructorInitializers: AfterComma",
+              BreakConstructorInitializers, FormatStyle::BCIS_AfterComma);
   CHECK_PARSE("BreakConstructorInitializers: BeforeColon",
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeColon);
   // For backward compatibility:

@@ -96,7 +96,79 @@ jobs:
           git submodule status
           git submodule
 
+      - name: Download LLVM, SPIRV and HIPIFY PR's stored in file
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: multiple-pr-build-params
+          path: .
 
+      - name: Source the multiple PR's of params
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          set -a
+          source ./${{ github.run_id }}_PR_params.env
+          set +a
+          echo "LLVM_PR_URL=$LLVM_PR_URL" >> "$GITHUB_ENV"
+          echo "SPIRV_PR_URL=$SPIRV_PR_URL" >> "$GITHUB_ENV"
+          echo "HIPIFY_PR_URL=$HIPIFY_PR_URL" >> "$GITHUB_ENV"
+
+      - name: Update submodule pointers from provided parameter PR values
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          git config --global --add safe.directory "$PWD"
+          # Function to get SHA with git-ls
+          get_pr_sha() {
+             local pr_url="$1"
+             local base_repo_url=$(echo "$pr_url" | sed 's|/pull/.*||')
+             local pr_num=$(echo "$pr_url" | sed 's|.*/pull/||')
+             git ls-remote "${base_repo_url}.git" "refs/pull/${pr_num}/head" | awk '{print $1}'
+          }
+
+          # LLVM PR
+          LLVM_SHA="$(get_pr_sha "$LLVM_PR_URL")"
+          echo "LLVM head SHA: $LLVM_SHA"
+          git update-index --cacheinfo 160000,"$LLVM_SHA","compiler/amd-llvm"
+
+          # SPIRV PR
+          if [[ -n "$SPIRV_PR_URL" ]]; then
+              SPIRV_SHA="$(get_pr_sha "$SPIRV_PR_URL")"
+              echo "SPIRV head SHA: $SPIRV_SHA"
+              git update-index --cacheinfo 160000,"$SPIRV_SHA","compiler/spirv-llvm-translator"
+          else
+              SPIRV_SHA="$(git ls-remote https://github.com/ROCm/SPIRV-LLVM-Translator.git refs/heads/amd-staging | awk '{print $1}')"
+              echo "SPIRV PR NOT Passed, defaulting to the amd-staging tip : $SPIRV_SHA"
+              git update-index --cacheinfo 160000,"$SPIRV_SHA","compiler/spirv-llvm-translator"
+          fi
+
+          # HIPIFY PR
+          if [[ -n "$HIPIFY_PR_URL" ]]; then
+              HIPIFY_SHA="$(get_pr_sha "$HIPIFY_PR_URL")"
+              echo "HIPIFY head SHA: $HIPIFY_SHA"
+              git update-index --cacheinfo 160000,"$HIPIFY_SHA","compiler/hipify"
+          else
+              HIPIFY_SHA="$(git ls-remote https://github.com/ROCm/HIPIFY.git refs/heads/amd-staging | awk '{print $1}')"
+              echo "HIPIFY PR NOT Passed, defaulting to the amd-staging tip : $HIPIFY_SHA"
+              git update-index --cacheinfo 160000,"$HIPIFY_SHA","compiler/hipify"
+          fi
+          git config --global user.email "z1-cciauto@amd.com"
+          git config --global user.name "Z1 cciauto"
+          git commit -m "Update submodule references from PR URLs"
+          git submodule status
+          git submodule
+
+      - name: "Map Current Directory to L Drive"
+        id: subst
+        shell: cmd
+        run: |
+          REM Get the current working directory
+          set currentDir=%cd%
+          REM Substitute the current directory with L: drive
+          subst L: %currentDir%
+          cd L:
+          dir L:
+          wmic logicaldisk get name
+          
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: 3.12
@@ -146,41 +218,14 @@ jobs:
       - name: Fetch sources
         timeout-minutes: 30
         run: |
+          cd L:
           git config fetch.parallel 10
           git config --global core.symlinks true
           git config --global core.longpaths true
           python ./build_tools/fetch_sources.py --jobs 12
 
-      - name: "Checking out repository for spriv-llvm-translator"
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          repository: "ROCm/spirv-llvm-translator"
-          path: compiler/spirv-llvm-translator
-          ref: amd-staging
-
-      - name: "Checking out repository for hipify"
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          repository: "ROCm/hipify"
-          path: compiler/hipify
-          ref: amd-staging
-
-      - name: Apply patches
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-             cp -v patches/amd-mainline/llvm-project/*.patch compiler/amd-llvm
-             cd compiler/amd-llvm
-             git log -10
-             git config --global --add safe.directory $PWD
-             find . -type f -name '*.patch' -exec git apply --check {} \;
-             find . -type f -name '*.patch' -exec git apply {} \;
-             git log -15
-             cd -
-
       - name: TheRock and llvm SHA
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
         run: |
              git config --global --add safe.directory $PWD
              git log --oneline -1
@@ -191,6 +236,7 @@ jobs:
              cd -
 
       - name: Configure PR Projects
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
         env:
           cmake_preset: ${{ inputs.build_variant_cmake_preset }}
           amdgpu_families: ${{ inputs.amdgpu_families }}
@@ -198,12 +244,28 @@ jobs:
           #extra_cmake_options: ${{ inputs.extra_cmake_options }}
           extra_cmake_options: "-DTHEROCK_ENABLE_ALL=OFF -DTHEROCK_ENABLE_COMPILER=ON -DTHEROCK_ENABLE_HIP_RUNTIME=ON -DTHEROCK_ENABLE_PRIM=ON -DTHEROCK_ENABLE_BLAS=ON -DTHEROCK_ENABLE_RAND=ON -DTHEROCK_ENABLE_SOLVER=ON -DTHEROCK_ENABLE_SPARSE=ON -DTHEROCK_ENABLE_SYSDEPS=OFF  -DTHEROCK_ENABLE_COMPOSABLE_KERNEL=OFF -DTHEROCK_ENABLE_OCL_RUNTIME=ON  -DTHEROCK_ENABLE_MATH_LIBS=ON -DLLVM_SMREV_REPO='' -DLLVM_SMREV_REVISION=''"
         run: |
+          cd L:
           # clear cache before build and after download
           ccache -z
           python3 build_tools/github_actions/build_configure.py
 
+      - name: Configure All Projects
+        if: ${{ github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch'  }}
+        env:
+          cmake_preset: ${{ inputs.build_variant_cmake_preset }}
+          amdgpu_families: ${{ inputs.amdgpu_families }}
+          package_version: ${{ inputs.package_version }}
+          extra_cmake_options: ${{ inputs.extra_cmake_options }}
+        run: |
+          # clear cache before build and after download
+          cd L:
+          ccache -z
+          cmake -B 'B:\build' -GNinja -S 'L:\' --preset windows-release -DTHEROCK_AMDGPU_FAMILIES=gfx1151 '-DCMAKE_C_COMPILER=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\/bin/Hostx64/x64/cl.exe' '-DCMAKE_CXX_COMPILER=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\/bin/Hostx64/x64/cl.exe' '-DCMAKE_LINKER=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\/bin/Hostx64/x64/link.exe' -DTHEROCK_BACKGROUND_BUILD_JOBS=4
+
       - name: Build therock-archives and therock-dist
-        run: cmake --build "${{ env.BUILD_DIR }}" --target therock-archives therock-dist -- -j32
+        run: |
+          cd L:
+          cmake --build "${{ env.BUILD_DIR }}" --target therock-archives therock-dist -- -j32
 
       - name: Report
         if: ${{ !cancelled() }}
@@ -254,3 +316,9 @@ jobs:
             --build-dir ${{ env.BUILD_DIR }} \
             --upload
 
+      - name: Remove Drive Substitution
+        if: always() && steps.subst.outcome == 'success'
+        shell: cmd
+        run: |
+          REM Remove the drive mapping
+          subst L: /D

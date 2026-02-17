@@ -1284,6 +1284,25 @@ func.func @test_concat_shape_rank_mismatch() -> !tosa.shape<4> {
 
 // -----
 
+func.func @test_concat_shape_no_inputs() -> !tosa.shape<0> {
+  // expected-error@+1 {{'tosa.concat_shape' op requires at least one input shape}}
+  %0 = tosa.concat_shape {} : () -> !tosa.shape<0>
+  return %0 : !tosa.shape<0>
+}
+
+// -----
+
+func.func @test_concat_shape_rank_0() -> !tosa.shape<0> {
+  %0 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
+  %1 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
+  %2 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
+  // expected-error@+1 {{'tosa.concat_shape' op requires all inputs shapes have a rank greater than 0}}
+  %3 = tosa.concat_shape %0, %1, %2 : (!tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>) -> !tosa.shape<0>
+  return %3 : !tosa.shape<0>
+}
+
+// -----
+
 func.func @test_slice_shape_negative_start() -> !tosa.shape<3> {
   %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
   %1 = "tosa.const"() {values = dense<-1> : tensor<1xi32>} : () -> tensor<1xi32>

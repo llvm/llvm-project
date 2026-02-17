@@ -45,7 +45,6 @@ set(supported_sources
   internal-unit.cpp
   io-api.cpp
   io-api-minimal.cpp
-  io-error.cpp
   io-stmt.cpp
   iostat.cpp
   matmul-transpose.cpp
@@ -83,6 +82,7 @@ set(host_sources
   exceptions.cpp
   execute.cpp
   extensions.cpp
+  io-error.cpp
   main.cpp
   random.cpp
   reduce.cpp
@@ -115,7 +115,6 @@ set(gpu_sources
   format.cpp
   inquiry.cpp
   internal-unit.cpp
-  io-error.cpp
   iostat.cpp
   matmul-transpose.cpp
   matmul.cpp

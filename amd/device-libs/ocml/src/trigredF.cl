@@ -11,9 +11,11 @@
 CONSTATTR struct redret
 MATH_PRIVATE(trigred)(float x)
 {
-    if (x < SMALL_BOUND)
-        return MATH_PRIVATE(trigredsmall)(x);
-    else
+    // Prefer nans use the small path. The large path has elidable nan checks
+    // implied by the condition and the small does not.
+    if (x >= SMALL_BOUND)
         return MATH_PRIVATE(trigredlarge)(x);
+    else
+        return MATH_PRIVATE(trigredsmall)(x);
 }
 

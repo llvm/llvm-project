@@ -15,16 +15,9 @@ namespace clang::ssaf {
 
 /// Base class for analysis-specific summary data.
 class EntitySummary {
-private:
-  SummaryName Summary;
-
-protected:
-  EntitySummary(SummaryName Summary) : Summary(std::move(Summary)) {}
-
 public:
-  SummaryName getSummaryName() const { return Summary; }
-
   virtual ~EntitySummary() = default;
+  virtual SummaryName getSummaryName() const = 0;
 };
 
 } // namespace clang::ssaf

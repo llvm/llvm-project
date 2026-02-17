@@ -2041,6 +2041,16 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
           verifyReshapeLikeTypes(op, expandedType, collapsedType, isExpansion)))
     return failure();
 
+  // Reshape must preserve the number of elements when statically known.
+  if (expandedType.hasStaticShape() && collapsedType.hasStaticShape()) {
+    int64_t expandedNumElements = expandedType.getNumElements();
+    int64_t collapsedNumElements = collapsedType.getNumElements();
+    if (expandedNumElements != collapsedNumElements) {
+      return op.emitOpError("number of elements must be preserved: ")
+             << expandedNumElements << " != " << collapsedNumElements;
+    }
+  }
+
   auto maps = op.getReassociationMaps();
   RankedTensorType expectedType =
       CollapseShapeOp::inferCollapsedType(expandedType, maps);

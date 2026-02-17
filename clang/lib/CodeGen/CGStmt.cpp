@@ -2679,6 +2679,11 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
 
+  if (FinalBodyBB) {
+    // Key Instructions: We want the for closing brace to be step-able on to
+    // match existing behaviour.
+    addInstToNewSourceAtom(FinalBodyBB->getTerminator(), nullptr);
+  }
 }
 
 void CodeGenFunction::EmitForStmt(const ForStmt &S,

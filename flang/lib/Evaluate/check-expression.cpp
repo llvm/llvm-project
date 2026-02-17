@@ -1665,4 +1665,121 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
   return std::nullopt;
 }
 
+// CollectUsedSymbolValues()
+
+class CollectUsedSymbolValuesHelper
+    : public SetTraverse<CollectUsedSymbolValuesHelper,
+          semantics::UnorderedSymbolSet> {
+public:
+  using Result = semantics::UnorderedSymbolSet;
+  using Base = SetTraverse<CollectUsedSymbolValuesHelper, Result>;
+  explicit CollectUsedSymbolValuesHelper(
+      semantics::SemanticsContext &c, bool isDefinition = false)
+      : Base{*this}, context_{c}, isDefinition_{isDefinition} {}
+  using Base::operator();
+
+  Result operator()(const semantics::Symbol &symbol) const {
+    Result result;
+    if (!isDefinition_) {
+      const Symbol &root{semantics::GetAssociationRoot(symbol)};
+      switch (root.owner().kind()) {
+      case semantics::Scope::Kind::Subprogram:
+      case semantics::Scope::Kind::MainProgram:
+      case semantics::Scope::Kind::BlockConstruct:
+        if ((root.has<semantics::ObjectEntityDetails>() ||
+                IsProcedurePointer(root))) {
+          result.insert(root);
+          if (root.test(semantics::Symbol::Flag::CrayPointee)) {
+            result.insert(semantics::GetCrayPointer(root));
+          }
+        }
+        break;
+      default:
+        break;
+      }
+    }
+    return result;
+  }
+
+  Result operator()(const Subscript &subscript) {
+    auto restorer{common::ScopedSet(isDefinition_, false)};
+    return (*this)(subscript.u);
+  }
+
+  template <typename T> Result operator()(const FunctionRef<T> &fRef) {
+    return (*this)(static_cast<ProcedureRef>(fRef));
+  }
+  Result operator()(const ProcedureRef &call) {
+    auto restorer{common::ScopedSet(isDefinition_, false)};
+    Result result{(*this)(call.proc())};
+    int skipLeading{0};
+    if (const auto *intrinsic{call.proc().GetSpecificIntrinsic()}) {
+      if (context_.intrinsics().GetIntrinsicClass(intrinsic->name) ==
+          IntrinsicClass::inquiryFunction) {
+        skipLeading = 1; // first argument to inquiry doesn't count as a use
+      }
+    }
+    for (const auto &maybeArg : call.arguments()) {
+      if (skipLeading) {
+        --skipLeading;
+      } else if (maybeArg) {
+        if (const auto *expr{maybeArg->UnwrapExpr()}) {
+          if (IsBindingUsedAsProcedure(*expr)) {
+            // Ignore procedure bindings being used as actual procedures
+            // (a local extension).
+          } else {
+            result = Combine(std::move(result), (*this)(*expr));
+          }
+        }
+      }
+    }
+    return result;
+  }
+
+  Result operator()(const Assignment &assignment) {
+    auto restorer{common::ScopedSet(isDefinition_, true)};
+    Result result{(*this)(assignment.lhs)};
+    if (IsBindingUsedAsProcedure(assignment.rhs)) {
+      // Don't look at the RHS, we're just using its binding (extension).
+    } else {
+      auto restorer{common::ScopedSet(isDefinition_, false)};
+      result = Combine(std::move(result), (*this)(assignment.rhs));
+    }
+    return result;
+  }
+
+  Result operator()(const TypeParamInquiry &) const {
+    return {}; // doesn't count as a use
+  }
+  Result operator()(const DescriptorInquiry &) const {
+    return {}; // doesn't count as a use
+  }
+
+private:
+  static bool IsBindingUsedAsProcedure(const Expr<SomeType> &expr) {
+    if (const auto *pd{std::get_if<ProcedureDesignator>(&expr.u)}) {
+      if (const Symbol *symbol{pd->GetSymbol()}) {
+        return symbol->has<semantics::ProcBindingDetails>();
+      }
+    }
+    return false;
+  }
+
+  semantics::SemanticsContext &context_;
+  bool isDefinition_{false};
+};
+
+semantics::UnorderedSymbolSet CollectUsedSymbolValues(
+    semantics::SemanticsContext &context, const Expr<SomeType> &expr,
+    bool isDefinition) {
+  return CollectUsedSymbolValuesHelper{context, isDefinition}(expr);
+}
+semantics::UnorderedSymbolSet CollectUsedSymbolValues(
+    semantics::SemanticsContext &context, const ProcedureRef &call) {
+  return CollectUsedSymbolValuesHelper{context}(call);
+}
+semantics::UnorderedSymbolSet CollectUsedSymbolValues(
+    semantics::SemanticsContext &context, const Assignment &assignment) {
+  return CollectUsedSymbolValuesHelper{context}(assignment);
+}
 } // namespace Fortran::evaluate

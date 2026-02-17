@@ -703,21 +703,6 @@ static bool collectObjectSources(ObjectFile &Obj, DWARFContext &DICtx,
   return Result;
 }
 
-static std::unique_ptr<MCRegisterInfo>
-createRegInfo(const object::ObjectFile &Obj) {
-  std::unique_ptr<MCRegisterInfo> MCRegInfo;
-  Triple TT;
-  TT.setArch(Triple::ArchType(Obj.getArch()));
-  TT.setVendor(Triple::UnknownVendor);
-  TT.setOS(Triple::UnknownOS);
-  std::string TargetLookupError;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TT, TargetLookupError);
-  if (!TargetLookupError.empty())
-    return nullptr;
-  MCRegInfo.reset(TheTarget->createMCRegInfo(TT));
-  return MCRegInfo;
-}
-
 static TargetCallbacks getCallbacks(ObjectFile &Obj, const Twine &Filename) {
   Triple TT = Obj.makeTriple();
 

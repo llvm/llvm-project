@@ -1,4 +1,4 @@
-; RUN: llc -emit-gnuas-syntax-on-zos=false < %s -mtriple=s390x-ibm-zos | \
+; RUN: llc < %s -mtriple=s390x-ibm-zos | \
 ; RUN: FileCheck --check-prefixes=CHECK %s
 
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 22, ptr @cfuncctor, ptr null }]

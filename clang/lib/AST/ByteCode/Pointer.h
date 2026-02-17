@@ -666,6 +666,15 @@ public:
     return false;
   }
 
+  /// Checks whether the pointer can be dereferenced to the given PrimType.
+  bool canDeref(PrimType T) const {
+    if (const Descriptor *FieldDesc = getFieldDesc()) {
+      return (FieldDesc->isPrimitive() || FieldDesc->isPrimitiveArray()) &&
+             FieldDesc->getPrimType() == T;
+    }
+    return false;
+  }
+
   /// Dereferences the pointer, if it's live.
   template <typename T> T &deref() const {
     assert(isLive() && "Invalid pointer");
@@ -860,8 +869,12 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   OS << ' ';
   if (const Descriptor *D = P.getFieldDesc())
     D->dump(OS);
-  if (P.isArrayElement())
-    OS << " index " << P.getIndex();
+  if (P.isArrayElement()) {
+    if (P.isOnePastEnd())
+      OS << " one-past-the-end";
+    else
+      OS << " index " << P.getIndex();
+  }
   return OS;
 }
 
