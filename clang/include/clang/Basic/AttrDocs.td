@@ -193,6 +193,40 @@ TLS models are mutually exclusive.
   }];
 }
 
+def AddressSpaceDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "address_space";
+  let Content = [{
+.. Note:: This attribute is mainly intended to be used by target headers
+  provided by the toolchain. End users should prefer the documented annotations
+  for their platform, such as the `OpenCL address spaces`_, ``__global__``,
+  ``__local__``, or something else.
+
+The ``address_space`` attribute allows you to specify the address space for a
+pointer or reference type. It takes a single, non-negative integer constant
+expression identifying the address space. For example:
+
+.. code-block:: c
+
+  int * __attribute__((address_space(1))) ptr;
+
+  void foo(__attribute__((address_space(2))) float *buf);
+
+The meaning of each value is defined by the target; multiple address spaces are
+used in environments such as OpenCL, CUDA, HIP, and other GPU programming
+models to distinguish global, local, constant, and private memory. See for
+example the address spaces defined in the `NVPTX Usage Guide`_ and the `AMDGPU
+Usage Guide`_
+
+.. _`NVPTX Usage Guide`: https://llvm.org/docs/NVPTXUsage.html#address-spaces
+.. _`AMDGPU Usage Guide`: https://llvm.org/docs/AMDGPUUsage.html#address-spaces
+
+Only one address space qualifier may be applied to a given pointer or reference
+type. Where address spaces are allowed (e.g., variables, parameters, return
+types) and what values are valid depends on the target and language mode.
+  }];
+}
+
 def DLLExportDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
