@@ -3353,6 +3353,19 @@ static TemplateDeductionResult FinishTemplateArgumentDeduction(
 
   return TemplateDeductionResult::Success;
 }
+
+static TemplateDeductionResult FinishTemplateArgumentDeductionImpl(
+    Sema &S, NamedDecl *Entity, TemplateParameterList *EntityTPL,
+    TemplateDecl *Template, bool PartialOrdering,
+    ArrayRef<TemplateArgumentLoc> Ps, ArrayRef<TemplateArgument> As,
+    SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+    TemplateDeductionInfo &Info, bool CopyDeducedArgs) {
+  return FinishTemplateArgumentDeduction(
+      S, Entity, EntityTPL, Template,
+      PartialOrdering, Ps, As, Deduced, Info, CopyDeducedArgs);
+}
+
+
 static TemplateDeductionResult FinishTemplateArgumentDeduction(
     Sema &S, NamedDecl *Entity, TemplateParameterList *EntityTPL,
     TemplateDecl *Template, bool PartialOrdering, ArrayRef<TemplateArgument> Ps,
