@@ -31516,12 +31516,10 @@ bool AArch64TargetLowering::shouldLowerReductionToSVE(
   // NEON does not natively support reductions on v2i64. Lower v2i32 to pairwise
   // SVE2 operations when UseSVE is true, as the pairwise ops are likely to be
   // cheaper than a full reduction.
-  if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
-    if (SrcVT == MVT::v2i64 || (UseSVE && SrcVT == MVT::v2i32)) {
-      PairwiseOpIID = getPairwiseOpForReduction(RdxOp.getOpcode());
-      UseSVE |= PairwiseOpIID.has_value();
-    }
-  }
+  if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())
+    if (SrcVT == MVT::v2i64 || (UseSVE && SrcVT == MVT::v2i32))
+      if ((PairwiseOpIID = getPairwiseOpForReduction(RdxOp.getOpcode())))
+        UseSVE = true;
 
   return UseSVE;
 }
