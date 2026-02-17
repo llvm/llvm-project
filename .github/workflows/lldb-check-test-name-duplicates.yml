@@ -26,16 +26,18 @@ jobs:
       cancel-in-progress: true
     steps:
       - name: Fetch LLVM sources
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           fetch-depth: 2
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+
+      - name: Setup python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: '3.14'
 
       - name: Install dependencies
         run: |
-          pip install --break-system-packages --require-hashes -r ./llvm/utils/git/requirements_pylint.txt
+          python3.14 -m pip install --break-system-packages --require-hashes -r ./llvm/utils/git/requirements_pylint.txt
       
       - name: Get changed files
         id: changed-files
@@ -57,4 +59,4 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          pylint --fail-on=E0102 --fail-under=0 "$CHANGED_FILES"
+          echo "$CHANGED_FILES" | grep "\.py" | pylint --fail-on=E0102 --fail-under=0
