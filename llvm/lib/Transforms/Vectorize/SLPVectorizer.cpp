@@ -14048,7 +14048,7 @@ void BoUpSLP::transformNodes() {
         }
         OperandsToTreeEntry.emplace_or_assign(std::make_pair(&E, 1), Op1TE);
         OperandsToTreeEntry.emplace_or_assign(std::make_pair(&E, 2), Op2TE);
-        //NB: Fallback to check if select can be converted to cmp bitcast.
+        // NB: Fallback to check if select can be converted to cmp bitcast.
       }
       if (matchesSelectOfBits(E)) {
         // This node is a (reduced or) cmp bitcast node.
