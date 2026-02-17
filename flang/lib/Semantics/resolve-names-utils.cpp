@@ -197,12 +197,14 @@ private:
   ArraySpec arraySpec_;
 
   template <typename T> void Analyze(const std::list<T> &list) {
+    printf("Calling Analyze for each item in list\n");
     for (const auto &elem : list) {
       Analyze(elem);
     }
   }
   void Analyze(const parser::AssumedShapeSpec &);
   void Analyze(const parser::ExplicitShapeSpec &);
+  void Analyze(const parser::ExplicitShapeBoundsSpec &);
   void Analyze(const parser::AssumedImpliedSpec &);
   void Analyze(const parser::DeferredShapeSpecList &);
   void Analyze(const parser::AssumedRankSpec &);
@@ -237,15 +239,54 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ComponentArraySpec &x) {
   CHECK(!arraySpec_.empty());
   return arraySpec_;
 }
+
+static bool checkAndRewriteExplicitShapeSpecListToExplicitBounds(const parser::ArraySpec &x) {
+  printf("called checkAndRewriteExplicitShapeSpecListToExplicitBounds\n");
+  if (!std::getenv("FLANG_DEBUG_BOUNDS")) return false;
+
+  // Cast away const to get mutable access to the parse tree
+  parser::ArraySpec &mutableArraySpec{const_cast<parser::ArraySpec&>(x)};
+  auto &explicitShapeSpecList{std::get<std::list<parser::ExplicitShapeSpec>>(mutableArraySpec.u)};
+  auto &explicitShapeSpec{explicitShapeSpecList.front()};
+  auto &upperSpecificationExpr{std::get<1>(explicitShapeSpec.t)};
+  auto &upperIntExpr{upperSpecificationExpr.v.thing};
+
+  std::optional<parser::ExplicitBoundsExpr> lowerExplicitBoundsExpr;
+  parser::ExplicitBoundsExpr upperExplicitBoundsExpr{std::move(upperIntExpr)};
+  
+  parser::ExplicitShapeBoundsSpec boundsSpec{
+    std::make_tuple(
+      std::move(lowerExplicitBoundsExpr),
+      std::move(upperExplicitBoundsExpr)
+    )
+  };
+
+  // Now update the parse tree with the new bounds spec
+  mutableArraySpec.u = std::move(boundsSpec);
+  return true;
+}
+
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
+  printf("Called ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x)\n");
+  if(std::get_if<std::list<parser::ExplicitShapeSpec>>(&x.u) && 
+     checkAndRewriteExplicitShapeSpecListToExplicitBounds(x)) {
+    printf("TODO: return value\n");
+    return arraySpec_;
+  }
   common::visit(common::visitors{
                     [&](const parser::AssumedSizeSpec &y) {
+                      printf("in ArraySpec, called lambda for AssumedSizeSpec &y\n");
                       Analyze(
                           std::get<std::list<parser::ExplicitShapeSpec>>(y.t));
                       Analyze(std::get<parser::AssumedImpliedSpec>(y.t));
                     },
-                    [&](const parser::ImpliedShapeSpec &y) { Analyze(y.v); },
-                    [&](const auto &y) { Analyze(y); },
+                    [&](const parser::ImpliedShapeSpec &y) { 
+                      printf("in ArraySpec, called lambda for ImpliedShapeSpec &y\n");
+                      Analyze(y.v); },
+                    [&](const auto &y) { 
+                      printf("in ArraySpec, called lambda for auto &y\n");  
+                      Analyze(y); 
+                    },
                 },
       x.u);
   CHECK(!arraySpec_.empty());
@@ -276,8 +317,12 @@ void ArraySpecAnalyzer::Analyze(const parser::AssumedShapeSpec &x) {
   arraySpec_.push_back(ShapeSpec::MakeAssumedShape(GetBound(x.v)));
 }
 void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
+  printf("called ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x)\n");
   MakeExplicit(std::get<std::optional<parser::SpecificationExpr>>(x.t),
       std::get<parser::SpecificationExpr>(x.t));
+}
+void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
+  
 }
 void ArraySpecAnalyzer::Analyze(const parser::AssumedImpliedSpec &x) {
   MakeImplied(x.v);
