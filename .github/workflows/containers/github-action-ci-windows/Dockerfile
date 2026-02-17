@@ -2,6 +2,8 @@
 # .net 4.8 is required by chocolately package manager.
 FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2022
 
+# FORCE BUILD 1/23/26
+
 # Restore the default Windows shell for correct batch processing.
 SHELL ["cmd", "/S", "/C"]
 

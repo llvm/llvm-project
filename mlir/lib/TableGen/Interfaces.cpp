@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::tblgen;
@@ -49,6 +50,16 @@ StringRef InterfaceMethod::getUniqueName() const { return uniqueName; }
 // Return if this method is static.
 bool InterfaceMethod::isStatic() const {
   return def->isSubClassOf("StaticInterfaceMethod");
+}
+
+// Return if the method is a pure virtual one.
+bool InterfaceMethod::isPureVirtual() const {
+  return def->isSubClassOf("PureVirtualInterfaceMethod");
+}
+
+// Return if the method is only a declaration.
+bool InterfaceMethod::isDeclaration() const {
+  return def->isSubClassOf("InterfaceMethodDeclaration");
 }
 
 // Return the body for this method if it has one.

@@ -45,6 +45,8 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
     fir::LLVMPointerType::attachInterface<
         OpenACCPointerLikeModel<fir::LLVMPointerType>>(*ctx);
 
+    fir::LogicalType::attachInterface<OpenACCReducibleLogicalModel>(*ctx);
+
     fir::ArrayCoorOp::attachInterface<
         PartialEntityAccessModel<fir::ArrayCoorOp>>(*ctx);
     fir::CoordinateOp::attachInterface<

@@ -108,6 +108,13 @@ struct OpenACCMappableModel
   bool isDeviceData(mlir::Type type, mlir::Value var) const;
 };
 
+struct OpenACCReducibleLogicalModel
+    : public mlir::acc::ReducibleType::ExternalModel<
+          OpenACCReducibleLogicalModel, fir::LogicalType> {
+  std::optional<mlir::arith::AtomicRMWKind>
+  getAtomicRMWKind(mlir::Type type, mlir::acc::ReductionOperator redOp) const;
+};
+
 } // namespace fir::acc
 
 #endif // FLANG_OPTIMIZER_OPENACC_FIROPENACCTYPEINTERFACES_H_

@@ -110,6 +110,16 @@ class TypeAndTypeListTestCase(TestBase):
             )
         # a second Task make be scared up by the Objective-C runtime
         self.assertGreaterEqual(len(type_list), 1)
+        self.assertEqual(
+            type_list[0].GetName(),
+            type_list.GetTypeAtIndex(0).GetName(),
+            "subscript [0] matches GetTypeAtIndex(0)",
+        )
+        self.assertEqual(
+            type_list[-1].GetName(),
+            type_list.GetTypeAtIndex(type_list.GetSize() - 1).GetName(),
+            "subscript [-1] matches last item",
+        )
         for type in type_list:
             self.assertTrue(type)
             self.DebugSBType(type)

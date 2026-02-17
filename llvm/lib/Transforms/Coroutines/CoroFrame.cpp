@@ -25,6 +25,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -1056,6 +1057,37 @@ static Value *createGEPToFramePointer(const FrameDataInfo &FrameData,
   return GEP;
 }
 
+/// Find dbg.declare or dbg.declare_value records referencing `Def`. If none are
+/// found, walk up the load chain to find one.
+template <DbgVariableRecord::LocationType record_type>
+static TinyPtrVector<DbgVariableRecord *>
+findDbgRecordsThroughLoads(Function &F, Value *Def) {
+  static_assert(record_type == DbgVariableRecord::LocationType::Declare ||
+                record_type == DbgVariableRecord::LocationType::DeclareValue);
+  constexpr auto FindFunc =
+      record_type == DbgVariableRecord::LocationType::Declare
+          ? findDVRDeclares
+          : findDVRDeclareValues;
+
+  TinyPtrVector<DbgVariableRecord *> Records = FindFunc(Def);
+
+  if (!F.getSubprogram())
+    return Records;
+
+  Value *CurDef = Def;
+  while (Records.empty() && isa<LoadInst>(CurDef)) {
+    auto *LdInst = cast<LoadInst>(CurDef);
+    if (!LdInst->getType()->isPointerTy())
+      break;
+    CurDef = LdInst->getPointerOperand();
+    if (!isa<AllocaInst, LoadInst>(CurDef))
+      break;
+    Records = FindFunc(CurDef);
+  }
+
+  return Records;
+}
+
 // Replace all alloca and SSA values that are accessed across suspend points
 // with GetElementPointer from coroutine frame + loads and stores. Create an
 // AllocaSpillBB that will become the new entry block for the resume parts of
@@ -1085,6 +1117,20 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   DominatorTree DT(*F);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
+  MDBuilder MDB(C);
+  // Create a TBAA tag for accesses to certain coroutine frame slots, so that
+  // subsequent alias analysis will understand they do not intersect with
+  // user memory.
+  // We do this only if a suitable TBAA root already exists in the module.
+  MDNode *TBAATag = nullptr;
+  if (auto *CppTBAAStr = MDString::getIfExists(C, "Simple C++ TBAA")) {
+    auto *TBAARoot = MDNode::getIfExists(C, CppTBAAStr);
+    // Create a "fake" scalar type; all other types defined in the source
+    // language will be assumed non-aliasing with this type.
+    MDNode *Scalar = MDB.createTBAAScalarTypeNode(
+        (F->getName() + ".Frame Slot").str(), TBAARoot);
+    TBAATag = MDB.createTBAAStructTagNode(Scalar, Scalar, 0);
+  }
   for (auto const &E : FrameData.Spills) {
     Value *Def = E.first;
     Type *ByValTy = extractByvalIfArgument(Def);
@@ -1105,32 +1151,20 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
         auto *GEP = createGEPToFramePointer(FrameData, Builder, Shape, E.first);
         GEP->setName(E.first->getName() + Twine(".reload.addr"));
-        if (ByValTy)
+        if (ByValTy) {
           CurrentReload = GEP;
-        else {
+        } else {
           auto SpillAlignment = Align(FrameData.getAlign(Def));
-          CurrentReload = Builder.CreateAlignedLoad(
+          auto *LI = Builder.CreateAlignedLoad(
               FrameTy->getElementType(FrameData.getFieldIndex(E.first)), GEP,
               SpillAlignment, E.first->getName() + Twine(".reload"));
+          if (TBAATag)
+            LI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
+          CurrentReload = LI;
         }
 
-        TinyPtrVector<DbgVariableRecord *> DVRs = findDVRDeclares(Def);
-        // Try best to find dbg.declare. If the spill is a temp, there may not
-        // be a direct dbg.declare. Walk up the load chain to find one from an
-        // alias.
-        if (F->getSubprogram()) {
-          auto *CurDef = Def;
-          while (DVRs.empty() && isa<LoadInst>(CurDef)) {
-            auto *LdInst = cast<LoadInst>(CurDef);
-            // Only consider ptr to ptr same type load.
-            if (LdInst->getPointerOperandType() != LdInst->getType())
-              break;
-            CurDef = LdInst->getPointerOperand();
-            if (!isa<AllocaInst, LoadInst>(CurDef))
-              break;
-            DVRs = findDVRDeclares(CurDef);
-          }
-        }
+        TinyPtrVector<DbgVariableRecord *> DVRs = findDbgRecordsThroughLoads<
+            DbgVariableRecord::LocationType::Declare>(*F, Def);
 
         auto SalvageOne = [&](DbgVariableRecord *DDI) {
           // This dbg.declare is preserved for all coro-split function
@@ -1150,23 +1184,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       }
 
       TinyPtrVector<DbgVariableRecord *> DVRDeclareValues =
-          findDVRDeclareValues(Def);
-      // Try best to find dbg.declare_value. If the spill is a temp, there may
-      // not be a direct dbg.declare_value. Walk up the load chain to find one
-      // from an alias.
-      if (F->getSubprogram()) {
-        auto *CurDef = Def;
-        while (DVRDeclareValues.empty() && isa<LoadInst>(CurDef)) {
-          auto *LdInst = cast<LoadInst>(CurDef);
-          // Only consider ptr to ptr same type load.
-          if (LdInst->getPointerOperandType() != LdInst->getType())
-            break;
-          CurDef = LdInst->getPointerOperand();
-          if (!isa<AllocaInst, LoadInst>(CurDef))
-            break;
-          DVRDeclareValues = findDVRDeclareValues(CurDef);
-        }
-      }
+          findDbgRecordsThroughLoads<
+              DbgVariableRecord::LocationType::DeclareValue>(*F, Def);
 
       auto SalvageOneCoro = [&](auto *DDI) {
         // This dbg.declare_value is preserved for all coro-split function

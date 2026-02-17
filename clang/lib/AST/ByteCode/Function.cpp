@@ -16,19 +16,21 @@ using namespace clang;
 using namespace clang::interp;
 
 Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
-                   llvm::SmallVectorImpl<PrimType> &&ParamTypes,
-                   llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
-                   llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
+                   llvm::SmallVectorImpl<ParamDescriptor> &&ParamDescriptors,
                    bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker)
     : P(P), Kind(FunctionKind::Normal), Source(Source), ArgSize(ArgSize),
-      ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
-      ParamOffsets(std::move(ParamOffsets)), IsValid(false),
+      ParamDescriptors(std::move(ParamDescriptors)), IsValid(false),
       IsFullyCompiled(false), HasThisPointer(HasThisPointer), HasRVO(HasRVO),
       HasBody(false), Defined(false) {
+  for (ParamDescriptor PD : this->ParamDescriptors) {
+    Params.insert({PD.Offset, PD});
+  }
+  assert(Params.size() == this->ParamDescriptors.size());
+
   if (const auto *F = dyn_cast<const FunctionDecl *>(Source)) {
     Variadic = F->isVariadic();
     Immediate = F->isImmediateFunction();
-    Constexpr = F->isConstexpr() || F->hasAttr<MSConstexprAttr>();
+    Constexpr = F->isConstexpr();
     if (const auto *CD = dyn_cast<CXXConstructorDecl>(F)) {
       Virtual = CD->isVirtual();
       Kind = FunctionKind::Ctor;

@@ -9,7 +9,7 @@ target triple = "aarch64-unknown-linux-android29"
 
 ; REQUIRES: aarch64-registered-target
 
-; COLOR: sub	sp, sp, #240
+; COLOR: sub	sp, sp, #256
 ; NOCOLOR: sub	sp, sp, #384
 
 define i32 @myCall_w2(i32 %in) sanitize_hwaddress {

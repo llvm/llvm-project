@@ -22,6 +22,7 @@
 #include "Protocol/ProtocolTypes.h"
 #include "ProtocolUtils.h"
 #include "Transport.h"
+#include "Variables.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBEvent.h"
@@ -125,7 +126,8 @@ llvm::StringRef DAP::debug_adapter_path = "";
 DAP::DAP(Log &log, const ReplMode default_repl_mode,
          std::vector<std::string> pre_init_commands, bool no_lldbinit,
          llvm::StringRef client_name, DAPTransport &transport, MainLoop &loop)
-    : log(log), transport(transport), broadcaster("lldb-dap"),
+    : log(log), transport(transport), reference_storage(log),
+      broadcaster("lldb-dap"),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
       repl_mode(default_repl_mode), no_lldbinit(no_lldbinit),
@@ -206,6 +208,11 @@ void DAP::PopulateExceptionBreakpoints() {
           eExceptionKindCatch);
     }
   }
+}
+
+bool DAP::ProcessIsNotStopped() {
+  const lldb::StateType process_state = target.GetProcess().GetState();
+  return !lldb::SBDebugger::StateIsStoppedState(process_state);
 }
 
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(llvm::StringRef filter) {
@@ -605,6 +612,11 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame &frame, std::string &expression,
 
   if (repl_mode != ReplMode::Auto)
     return repl_mode;
+
+  // We cannot check if expression is a variable without a frame.
+  if (!frame)
+    return ReplMode::Command;
+
   // To determine if the expression is a command or not, check if the first
   // term is a variable or command. If it's a variable in scope we will prefer
   // that behavior and give a warning to the user if they meant to invoke the
@@ -841,13 +853,11 @@ bool DAP::HandleObject(const Message &M) {
                    llvm::Twine("request_command:", req->command).str());
     if (handler_pos != request_handlers.end()) {
       handler_pos->second->Run(*req);
-      return true; // Success
+    } else {
+      UnknownRequestHandler handler(*this);
+      handler.BaseRequestHandler::Run(*req);
     }
-
-    dispatcher.Set("error",
-                   llvm::Twine("unhandled-command:" + req->command).str());
-    DAP_LOG(log, "error: unhandled command '{0}'", req->command);
-    return false; // Fail
+    return true; // Success
   }
 
   if (const auto *resp = std::get_if<Response>(&M)) {
@@ -1041,9 +1051,8 @@ void DAP::TransportHandler() {
     m_queue_cv.notify_all();
   });
 
-  auto handle = transport.RegisterMessageHandler(m_loop, *this);
-  if (!handle) {
-    DAP_LOG_ERROR(log, handle.takeError(),
+  if (llvm::Error err = transport.RegisterMessageHandler(*this)) {
+    DAP_LOG_ERROR(log, std::move(err),
                   "registering message handler failed: {0}");
     std::lock_guard<std::mutex> guard(m_queue_mutex);
     m_error_occurred = true;
@@ -1065,7 +1074,7 @@ llvm::Error DAP::Loop() {
     m_disconnecting = false;
   }
 
-  auto thread = std::thread(std::bind(&DAP::TransportHandler, this));
+  auto thread = std::thread([this] { TransportHandler(); });
 
   llvm::scope_exit cleanup([this]() {
     // FIXME: Merge these into the MainLoop handler.
@@ -1312,21 +1321,23 @@ void DAP::StartEventThreads() {
 
 llvm::Error DAP::InitializeDebugger(const DAPSession &session) {
   // Find the existing debugger by ID
-  debugger = lldb::SBDebugger::FindDebuggerWithID(session.debuggerId);
-  if (!debugger.IsValid()) {
+  lldb::SBDebugger found_debugger =
+      lldb::SBDebugger::FindDebuggerWithID(session.debuggerId);
+  if (!found_debugger.IsValid()) {
     return llvm::createStringError(
         "Unable to find existing debugger for debugger ID");
   }
 
   // Find the target within the debugger by its globally unique ID
   lldb::SBTarget target =
-      debugger.FindTargetByGloballyUniqueID(session.targetId);
+      found_debugger.FindTargetByGloballyUniqueID(session.targetId);
   if (!target.IsValid()) {
     return llvm::createStringError(
         "Unable to find existing target for target ID");
   }
 
-  // Set the target for this DAP session.
+  // Set the target and debugger for this DAP session.
+  debugger = found_debugger;
   SetTarget(target);
   StartEventThreads();
   return llvm::Error::success();

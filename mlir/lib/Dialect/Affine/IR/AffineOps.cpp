@@ -3494,9 +3494,9 @@ OpFoldResult AffineLoadOp::fold(FoldAdaptor adaptor) {
   // Otherwise, we can fold only if we know the indices.
   if (!getAffineMap().isConstant())
     return {};
-  auto indices = llvm::to_vector<4>(
-      llvm::map_range(getAffineMap().getConstantResults(),
-                      [](int64_t v) -> uint64_t { return v; }));
+  auto indices =
+      llvm::map_to_vector<4>(getAffineMap().getConstantResults(),
+                             [](int64_t v) -> uint64_t { return v; });
   return cstAttr.getValues<Attribute>()[indices];
 }
 
@@ -4055,9 +4055,9 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
                              ArrayRef<arith::AtomicRMWKind> reductions,
                              ArrayRef<int64_t> ranges) {
   SmallVector<AffineMap> lbs(ranges.size(), builder.getConstantAffineMap(0));
-  auto ubs = llvm::to_vector<4>(llvm::map_range(ranges, [&](int64_t value) {
+  auto ubs = llvm::map_to_vector<4>(ranges, [&](int64_t value) {
     return builder.getConstantAffineMap(value);
-  }));
+  });
   SmallVector<int64_t> steps(ranges.size(), 1);
   build(builder, result, resultTypes, reductions, lbs, /*lbArgs=*/{}, ubs,
         /*ubArgs=*/{}, steps);

@@ -83,7 +83,49 @@ Ensure the shift operands are in proper range before shifting.
 
 core.CallAndMessage (C, C++, ObjC)
 """"""""""""""""""""""""""""""""""
- Check for logical errors for function calls and Objective-C message expressions (e.g., uninitialized arguments, null function pointers).
+Check for logical errors for function calls and Objective-C message expressions
+(e.g., uninitialized arguments, null function pointers).
+
+This checker is a collection of related checks that are controlled by checker
+options. The following checks are all enabled by default, but can be turned off
+by setting their option to ``false``:
+
+* **FunctionPointer** Check for null or undefined function pointer at function
+  call.
+* **CXXThisMethodCall** Check for null or undefined ``this`` pointer at method
+  call.
+* **CXXDeallocationArg** Check for null or undefined argument of
+  ``operator delete``.
+* **ArgInitializedness** Check for undefined pass-by-value function arguments.
+* **ParameterCount** Check for correct number of passed arguments to functions
+  or ObjC blocks. This will warn if the actual argument count is less (but not
+  if more) than the required count (by the declaration).
+* **NilReceiver** Check whether the receiver in a message expression is
+  ``nil``.
+* **UndefReceiver** Check whether the receiver in a message expression is
+  undefined.
+
+The following check is disabled by default (because it is more likely to
+produce false positives), this can be turned on by set the option to ``true``:
+
+* **ArgPointeeInitializedness** Check for undefined pass-by-reference (pointer
+  to constant value or constant reference) function arguments. In special cases
+  non-constant arguments are checked. This happens for C library functions
+  where it is required to initialize (at least partially) a passed structure
+  which is used for both input and output (for example last argument of
+  ``mktime`` or ``mbrlen``).
+
+**Additional options**
+
+* **ArgPointeeInitializednessComplete** Controls when to emit the warning at
+  the **ArgPointeeInitializedness** check. If this option is ``false`` (the
+  default), a ``struct`` is considered to be "initialized" when at least one
+  member is initialized. When this option is set to ``true``, structures are
+  only accepted as initialized when all members are initialized. (Arguments of
+  C library functions which require initialization are always checked as if the
+  option would be ``false``.)
+
+**Some examples**
 
 .. literalinclude:: checkers/callandmessage_example.c
     :language: objc
@@ -124,6 +166,20 @@ numerical value.
    p_function = (int (*)(char, char))0x04080;
    int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
  }
+
+ void volatile_pointee() {
+   *(volatile int *)0x404 = 1; // no warning: constant non-null "volatile" pointee, you must know what you are doing
+ }
+
+ void deref_volatile_nullptr() {
+   *(volatile int *)0 = 1; // core.NullDereference still warns about this
+ }
+
+If your project is low-level (e.g., firmware), or deals with hardware interop with a lot of genuine constant addresses, then consider disabling this checker.
+The checker automatically suppresses issues if the type of the pointee of the address is ``volatile``.
+You probably already need this to be ``volatile`` for legitimate access, so the checker suppresses such issues to avoid false-positives.
+Note that null pointers will still be reported by :ref:`core.NullDereference <core-NullDereference>`
+regardless if the pointee is ``volatile`` or not.
 
 If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
 to true (the default value), then this checker never reports dereference of
@@ -1371,8 +1427,12 @@ For a more detailed description of configuration options, please see the
 
 **Configuration**
 
-* `Config`  Specifies the name of the YAML configuration file. The user can
-  define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:Config``  Specifies the name of the YAML
+  configuration file. The user can define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:EnableDefaultConfig`` If set to false,
+   the default source, sink and propagation rules are not loaded. This way,
+   advanced users can fully customize their taint configuration model.
+   Default: ``true``.
 
 **Related Guidelines**
 
@@ -3679,6 +3739,23 @@ This applies to:
 - Inside template instantiations and macro expansions that are visible to the compiler.
 
 For types like this, instead of using built in casts, the programmer will use helper functions that internally perform the appropriate type check and disable static analysis.
+
+alpha.webkit.NoDeleteChecker
+"""""""""""""""""""""""""""""""
+Check that ``[[clang::annotate_type("webkit.nodelete")]]`` annotation does not appear on a function which could delete an object.
+
+.. code-block:: cpp
+
+ void [[clang::annotate_type("webkit.nodelete")]] someFunction(RefCountable* obj) { // warn
+   delete obj;
+ };
+
+ Foo [[clang::annotate_type("webkit.nodelete")]] trivialFunction(RefCountable* obj) {
+   return obj->anotherTrivialFunction();
+ };
+ 
+``[[clang::annotate_type("webkit.nodelete")]]`` annotation makes the function ignored for the purpose of other WebKit smart pointer checkers.
+For example, ``alpha.webkit.UncountedCallArgsChecker`` will ignore a function call with this annotation.
 
 alpha.webkit.NoUncheckedPtrMemberChecker
 """"""""""""""""""""""""""""""""""""""""

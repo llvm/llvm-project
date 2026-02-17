@@ -77,8 +77,7 @@ LIBC_INLINE bool CharacterConverter::isValidState() {
 }
 
 LIBC_INLINE int CharacterConverter::push(char8_t utf8_byte) {
-  uint8_t num_ones =
-      static_cast<uint8_t>(cpp::countl_one(static_cast<uint8_t>(utf8_byte)));
+  uint8_t num_ones = static_cast<uint8_t>(cpp::countl_one(utf8_byte));
   // Checking the first byte if first push
   if (isEmpty()) {
     // UTF-8 char has 1 byte total
