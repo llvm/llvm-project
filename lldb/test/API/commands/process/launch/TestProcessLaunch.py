@@ -9,7 +9,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from pathlib import Path
-import re
 
 
 class ProcessLaunchTestCase(TestBase):
