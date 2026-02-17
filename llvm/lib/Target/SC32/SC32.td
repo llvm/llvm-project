@@ -101,6 +101,7 @@ let Namespace = "SC32" in {
     let OutOperandList = (outs GP:$op1);
     let InOperandList = (ins GP:$op2, GP:$op3);
     let Constraints = "$op1 = $op2";
+    let Pattern = [(set i32:$op1, (add i32:$op2, i32:$op3))];
     let AsmString = "ADD $op2, $op3";
   }
 

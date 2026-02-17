@@ -20,13 +20,18 @@ SDValue SC32TargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineRegisterInfo &RI = MF.getRegInfo();
+
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
   CCInfo.AnalyzeFormalArguments(Ins, CC_SC32);
 
   for (size_t I = 0; I < ArgLocs.size(); I++) {
-    InVals.push_back(DAG.getRegister(ArgLocs[I].getLocReg(), MVT::i32));
+    Register VReg = RI.createVirtualRegister(&SC32::GPRegClass);
+    RI.addLiveIn(ArgLocs[I].getLocReg(), VReg);
+    InVals.push_back(DAG.getCopyFromReg(Chain, DL, VReg, MVT::i32));
   }
 
   return Chain;
