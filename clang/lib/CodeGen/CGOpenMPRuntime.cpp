@@ -8060,12 +8060,6 @@ private:
           assert(StrideExpr->getType()->isIntegerType() &&
                  "Stride expression must be of integer type");
 
-          // If the stride involves member access or array subscript, it's
-          // non-contiguous.
-          const Expr *S = StrideExpr->IgnoreParenImpCasts();
-          if (isa<MemberExpr>(S) || isa<ArraySubscriptExpr>(S))
-            return true;
-
           // If stride is not evaluatable as a constant, treat as
           // non-contiguous.
           const auto Constant =
