@@ -12581,6 +12581,21 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   if (LegalOperations && !hasOperation(ABDOpc, VT))
     return SDValue();
 
+  // (setcc 0, b set???) --> (setcc b, 0, set???)
+  if (isZeroOrZeroSplat(LHS)) {
+    std::swap(LHS, RHS);
+    CC = ISD::getSetCCSwappedOperands(CC);
+  }
+
+  // (setcc (add nsw A, Const), 0, sets??) --> (setcc A, -Const, sets??)
+  SDValue A, B;
+  if (ISD::isSignedIntSetCC(CC) && LHS->getFlags().hasNoSignedWrap() &&
+      isZeroOrZeroSplat(RHS) && sd_match(LHS, m_Add(m_Value(A), m_Value(B))) &&
+      DAG.isConstantIntBuildVectorOrConstantInt(B)) {
+    RHS = DAG.getNegative(B, LHS, B.getValueType());
+    LHS = A;
+  }
+
   switch (CC) {
   case ISD::SETGT:
   case ISD::SETGE:
@@ -16667,16 +16682,17 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // Attempt to pre-truncate BUILD_VECTOR sources.
   if (N0.getOpcode() == ISD::BUILD_VECTOR && !LegalOperations &&
       N0.hasOneUse() &&
-      TLI.isTruncateFree(SrcVT.getScalarType(), VT.getScalarType()) &&
       // Avoid creating illegal types if running after type legalizer.
       (!LegalTypes || TLI.isTypeLegal(VT.getScalarType()))) {
-    EVT SVT = VT.getScalarType();
-    SmallVector<SDValue, 8> TruncOps;
-    for (const SDValue &Op : N0->op_values()) {
-      SDValue TruncOp = DAG.getNode(ISD::TRUNCATE, DL, SVT, Op);
-      TruncOps.push_back(TruncOp);
+    if (TLI.isTruncateFree(SrcVT.getScalarType(), VT.getScalarType()))
+      return DAG.UnrollVectorOp(N);
+
+    // trunc(build_vector(ext(x), ext(x)) -> build_vector(x,x)
+    if (SDValue SplatVal = DAG.getSplatValue(N0)) {
+      if (ISD::isExtOpcode(SplatVal.getOpcode()) &&
+          SrcVT.getScalarType() == SplatVal.getValueType())
+        return DAG.UnrollVectorOp(N);
     }
-    return DAG.getBuildVector(VT, DL, TruncOps);
   }
 
   // trunc (splat_vector x) -> splat_vector (trunc x)
@@ -20831,7 +20847,8 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
 
         EVT InterVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
                                        StMemSize.divideCoefficientBy(EltSize));
-        if (!TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, LDMemType))
+        if (!TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, LDMemType) ||
+            !TLI.isTypeLegal(InterVT))
           break;
 
         // In case of big-endian the offset is normalized to zero, denoting

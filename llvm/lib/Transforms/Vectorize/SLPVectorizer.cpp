@@ -954,6 +954,8 @@ class BinOpSameOpcodeHelper {
   constexpr static std::initializer_list<unsigned> SupportedOp = {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
       Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
+  static_assert(llvm::is_sorted_constexpr(SupportedOp) &&
+                "SupportedOp is not sorted.");
   enum : MaskType {
     ShlBIT = 0b1,
     AShrBIT = 0b10,
@@ -1158,9 +1160,7 @@ class BinOpSameOpcodeHelper {
 public:
   BinOpSameOpcodeHelper(const Instruction *MainOp,
                         const Instruction *AltOp = nullptr)
-      : MainOp(MainOp), AltOp(AltOp) {
-    assert(is_sorted(SupportedOp) && "SupportedOp is not sorted.");
-  }
+      : MainOp(MainOp), AltOp(AltOp) {}
   bool add(const Instruction *I) {
     assert(isa<BinaryOperator>(I) &&
            "BinOpSameOpcodeHelper only accepts BinaryOperator.");
@@ -3951,15 +3951,21 @@ private:
     SmallVector<int> getSplitMask() const {
       assert(State == TreeEntry::SplitVectorize && !ReorderIndices.empty() &&
              "Expected only split vectorize node.");
-      SmallVector<int> Mask(getVectorFactor(), PoisonMaskElem);
       unsigned CommonVF = std::max<unsigned>(
           CombinedEntriesWithIndices.back().second,
           Scalars.size() - CombinedEntriesWithIndices.back().second);
-      for (auto [Idx, I] : enumerate(ReorderIndices))
-        Mask[I] =
-            Idx + (Idx >= CombinedEntriesWithIndices.back().second
-                       ? CommonVF - CombinedEntriesWithIndices.back().second
-                       : 0);
+      const unsigned Scale = getNumElements(Scalars.front()->getType());
+      CommonVF *= Scale;
+      SmallVector<int> Mask(getVectorFactor() * Scale, PoisonMaskElem);
+      for (auto [Idx, I] : enumerate(ReorderIndices)) {
+        for (unsigned K : seq<unsigned>(Scale)) {
+          Mask[Scale * I + K] =
+              Scale * Idx + K +
+              (Idx >= CombinedEntriesWithIndices.back().second
+                   ? CommonVF - CombinedEntriesWithIndices.back().second * Scale
+                   : 0);
+        }
+      }
       return Mask;
     }
 
@@ -7231,6 +7237,10 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
         if (!SC)
           continue;
         Offset = SC->getAPInt().getSExtValue();
+        if (Offset >= std::numeric_limits<int64_t>::max() - 1) {
+          Offset = 0;
+          continue;
+        }
         break;
       }
     }
@@ -20391,16 +20401,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     unsigned CommonVF =
         std::max(OpTE1.getVectorFactor(), OpTE2.getVectorFactor());
+    const unsigned Scale = getNumElements(ScalarTy);
+    CommonVF *= Scale;
     if (getNumElements(Op1->getType()) != CommonVF) {
       SmallVector<int> Mask(CommonVF, PoisonMaskElem);
-      std::iota(Mask.begin(), std::next(Mask.begin(), OpTE1.getVectorFactor()),
-                0);
+      copy(createReplicatedMask(Scale, OpTE1.getVectorFactor() * Scale),
+           Mask.begin());
       Op1 = Builder.CreateShuffleVector(Op1, Mask);
     }
     if (getNumElements(Op2->getType()) != CommonVF) {
       SmallVector<int> Mask(CommonVF, PoisonMaskElem);
-      std::iota(Mask.begin(), std::next(Mask.begin(), OpTE2.getVectorFactor()),
-                0);
+      copy(createReplicatedMask(Scale, OpTE2.getVectorFactor() * Scale),
+           Mask.begin());
       Op2 = Builder.CreateShuffleVector(Op2, Mask);
     }
     Value *Vec = Builder.CreateShuffleVector(Op1, Op2, E->getSplitMask());
@@ -26779,7 +26791,9 @@ private:
     switch (RdxKind) {
     case RecurKind::Add: {
       // res = mul vv, n
-      Value *Scale = ConstantInt::get(VectorizedValue->getType(), Cnt);
+      Value *Scale =
+          ConstantInt::get(VectorizedValue->getType(), Cnt,
+                           /*IsSigned=*/false, /*ImplicitTrunc=*/true);
       LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Cnt << "of "
                         << VectorizedValue << ". (HorRdx)\n");
       return Builder.CreateMul(VectorizedValue, Scale);
