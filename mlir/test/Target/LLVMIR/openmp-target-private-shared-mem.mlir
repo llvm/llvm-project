@@ -41,8 +41,8 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
     // CHECK: %[[GEP1:.*]] = getelementptr inbounds [1 x ptr], ptr %[[PAR_ARGS0:.*]], i64 0, i64 0
     // CHECK: store ptr %[[ALLOC_ARGS0]], ptr %[[GEP1]], align 8
     // CHECK: call void @__kmpc_parallel_60(ptr {{.*}}, i32 {{.*}}, i32 {{.*}}, i32 {{.*}}, i32 {{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr %[[PAR_ARGS0]], i64 1, i32 0)
-    // CHECK: call void @__kmpc_free_shared(ptr %[[ALLOC1]], i64 4)
     // CHECK: call void @__kmpc_free_shared(ptr %[[ALLOC_ARGS0]], i64 8)
+    // CHECK: call void @__kmpc_free_shared(ptr %[[ALLOC1]], i64 4)
     // CHECK: call void @__kmpc_target_deinit
     omp.target private(@simple_var.privatizer %2 -> %arg0 : !llvm.ptr) {
       omp.parallel reduction(@simple_var.reducer %arg0 -> %arg1 : !llvm.ptr) {
@@ -61,8 +61,8 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
     // CHECK: %[[GEP3:.*]] = getelementptr inbounds [1 x ptr], ptr %[[PAR_ARGS1:.*]], i64 0, i64 0
     // CHECK: store ptr %[[ALLOC_ARGS1]], ptr %[[GEP3]], align 8
     // CHECK: call void @__kmpc_parallel_60(ptr {{.*}}, i32 {{.*}}, i32 {{.*}}, i32 {{.*}}, i32 {{.*}}, ptr @{{.*}}, ptr @{{.*}}, ptr %[[PAR_ARGS1]], i64 1, i32 0)
-    // CHECK: call void @__kmpc_free_shared(ptr %[[ALLOC2]], i64 4)
     // CHECK: call void @__kmpc_free_shared(ptr %[[ALLOC_ARGS1]], i64 8)
+    // CHECK: call void @__kmpc_free_shared(ptr %[[ALLOC2]], i64 4)
     // CHECK: call void @__kmpc_target_deinit
     omp.target private(@simple_var.privatizer %2 -> %arg0 : !llvm.ptr) {
       omp.parallel {
