@@ -144,6 +144,7 @@ Clang-Tidy Checks
    :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,
    :doc:`bugprone-sizeof-container <bugprone/sizeof-container>`,
    :doc:`bugprone-sizeof-expression <bugprone/sizeof-expression>`,
+   :doc:`bugprone-smart-ptr-initialization <bugprone/smart-ptr-initialization>`,
    :doc:`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>`,
    :doc:`bugprone-standalone-empty <bugprone/standalone-empty>`, "Yes"
    :doc:`bugprone-std-namespace-modification <bugprone/std-namespace-modification>`,

@@ -102,6 +102,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-smart-ptr-initialization
+  <clang-tidy/checks/bugprone/smart-ptr-initialization>` check.
+
+  Detects dangerous initialization of smart pointers with raw pointers that are
+  already owned elsewhere, which can lead to double deletion.
+
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
 
@@ -141,6 +147,11 @@ New checks
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
+
+- New alias :doc:`cert-mem56-cpp <clang-tidy/checks/cert/mem56-cpp>` to
+  :doc:`bugprone-smart-ptr-initialization
+  <clang-tidy/checks/bugprone/smart-ptr-initialization>`
+  was added.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
