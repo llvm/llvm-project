@@ -1041,14 +1041,12 @@ static void scalarizeMaskedFirstFaultingLoad(const DataLayout &DL, CallInst *CI,
   // input mask bit is active), then mark all other lanes as inactive in the
   // output mask and embed the first lane into a vector of poison.
   Value *Ptr = CI->getArgOperand(0);
-  Value *Align = CI->getArgOperand(1);
-  Value *Mask = CI->getArgOperand(2);
+  MaybeAlign AlignVal = CI->getParamAlign(0);
+  Value *Mask = CI->getArgOperand(1);
   StructType *RetTy = cast<StructType>(CI->getType());
   VectorType *DataTy = cast<VectorType>(RetTy->getElementType(0));
   VectorType *MaskTy = cast<VectorType>(RetTy->getElementType(1));
   Type *ScalarTy = DataTy->getScalarType();
-
-  MaybeAlign AlignVal = cast<ConstantInt>(Align)->getMaybeAlignValue();
 
   IRBuilder<> Builder(CI->getContext());
   BasicBlock *IfBlock = CI->getParent();

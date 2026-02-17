@@ -27689,10 +27689,10 @@ floating-point or pointer data type.
 
 ::
 
-      declare { <16 x float>, <16 x i1> } @llvm.masked.load.ff.v16f32.p0(ptr <ptr>, i32 <alignment>, <16 x i1> <mask>)
-      declare { <2 x double>, <2 x i1> } @llvm.masked.load.ff.v2f64.p0(ptr <ptr>, i32 <alignment>, <2 x i1> <mask>)
+      declare { <16 x float>, <16 x i1> } @llvm.masked.load.ff.v16f32.p0(ptr <ptr>, <16 x i1> <mask>)
+      declare { <2 x double>, <2 x i1> } @llvm.masked.load.ff.v2f64.p0(ptr <ptr>, <2 x i1> <mask>)
       ;; The data is a vector of pointers
-      declare { <8 x ptr>, <8 x i1> } @llvm.masked.load.ff.v8p0.p0(ptr <ptr>, i32 <alignment>, <8 x i1> <mask>)
+      declare { <8 x ptr>, <8 x i1> } @llvm.masked.load.ff.v8p0.p0(ptr align 8 <ptr>, <8 x i1> <mask>)
 
 Overview:
 """""""""
@@ -27709,10 +27709,12 @@ values.
 Arguments:
 """"""""""
 
-The first argument is the base pointer for the load. The second argument is the
-alignment of the source location. It must be a power of two constant integer
-value. The third argument, mask, is a vector of boolean values with the same
-number of elements as the return type.
+The first argument is the base pointer for the load. The second argument, mask,
+is a vector of boolean values with the same number of elements as the return
+type.
+
+The :ref:`align <attr_align>` parameter attribute can be provided for the first
+argument.
 
 Semantics:
 """"""""""

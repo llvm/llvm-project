@@ -53,7 +53,7 @@ define { <4 x i32>, <4 x i1> } @load_ff_v4i32(ptr %p, <4 x i1> %mask) {
 ; SME_STREAMING-NEXT:    adrp x8, .LCPI0_0
 ; SME_STREAMING-NEXT:    ldr q0, [x8, :lo12:.LCPI0_0]
 ; SME_STREAMING-NEXT:    ret
-  %res = call { <4 x i32>, <4 x i1> } @llvm.masked.load.ff(ptr %p, i32 16, <4 x i1> %mask)
+  %res = call { <4 x i32>, <4 x i1> } @llvm.masked.load.ff(ptr align 16 %p, <4 x i1> %mask)
   ret { <4 x i32>, <4 x i1> } %res
 }
 
@@ -78,7 +78,7 @@ define { <2 x double>, <2 x i1> } @load_ff_v2f64_all_true_fully_aligned(ptr %p) 
 ; SME_STREAMING-NEXT:    index z1.s, #1, #-1
 ; SME_STREAMING-NEXT:    ld1rd { z0.d }, p0/z, [x0]
 ; SME_STREAMING-NEXT:    ret
-  %res = call { <2 x double>, <2 x i1> } @llvm.masked.load.ff(ptr %p, i32 16, <2 x i1> <i1 true, i1 true>)
+  %res = call { <2 x double>, <2 x i1> } @llvm.masked.load.ff(ptr align 16 %p, <2 x i1> <i1 true, i1 true>)
   ret { <2 x double>, <2 x i1> } %res
 }
 
@@ -103,6 +103,6 @@ define { <2 x double>, <2 x i1> } @load_ff_v2f64_all_true_partially_aligned(ptr 
 ; SME_STREAMING-NEXT:    index z1.s, #1, #-1
 ; SME_STREAMING-NEXT:    ld1rd { z0.d }, p0/z, [x0]
 ; SME_STREAMING-NEXT:    ret
-  %res = call { <2 x double>, <2 x i1> } @llvm.masked.load.ff(ptr %p, i32 8, <2 x i1> <i1 true, i1 true>)
+  %res = call { <2 x double>, <2 x i1> } @llvm.masked.load.ff(ptr align 8 %p, <2 x i1> <i1 true, i1 true>)
   ret { <2 x double>, <2 x i1> } %res
 }
