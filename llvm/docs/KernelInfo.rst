@@ -61,3 +61,56 @@ behavior so you can position ``kernel-info`` explicitly:
   $ opt -disable-output test-openmp-nvptx64-nvidia-cuda-sm_70.bc \
       -pass-remarks=kernel-info -no-kernel-info-end-lto \
       -passes='module(kernel-info),lto<O2>'
+
+PGO
+===
+
+Using LLVM's PGO implementation for GPUs, profile data can augment the info
+reported by kernel-info.  In particular, kernel-info can estimate the number of
+floating point operations executed or bytes moved.
+
+For example, the following computes 2\ :sup:`4`\ , so we expect 4 fmul
+instructions to execute at run time, and we expect a load and store for ``x``:
+
+.. code-block:: shell
+
+  $ cat test.c
+  #include <stdio.h>
+  #include <stdlib.h>
+  __attribute__((noinline))
+  double test(double x, int n) {
+    double res = 1;
+    for (int i = 0; i < n; ++i)
+      res *= x;
+    return res;
+  }
+  int main(int argc, char *argv[]) {
+    double x = atof(argv[1]);
+    unsigned n = atoi(argv[2]);
+    #pragma omp target map(tofrom:x)
+    x = test(x, n);
+    printf("%f\n", x);
+    return 0;
+  }
+
+  $ clang -O1 -g -fopenmp --offload-arch=native test.c -o test \
+        -fprofile-generate -fprofile-update=atomic
+
+  $ LLVM_PROFILE_FILE=test.profraw ./test 2 4
+  16.000000
+
+  $ llvm-profdata merge -output=test.profdata *.profraw
+
+  $ clang -O1 -g -fopenmp --offload-arch=native test.c -foffload-lto \
+        -Rpass=kernel-info -fprofile-use=test.profdata | \
+      grep "test.c:.*Floating\|double"
+  test.c:14:14: in artificial function '__omp_offloading_34_1c64d55_main_l13', double 'load' ('%11') moved 8 fp bytes
+  test.c:14:7: in artificial function '__omp_offloading_34_1c64d55_main_l13', double 'store' moved 8 fp bytes
+  test.c:13:0: in artificial function '__omp_offloading_34_1c64d55_main_l13', ProfileFloatingPointOpCount = 0
+  test.c:13:0: in artificial function '__omp_offloading_34_1c64d55_main_l13', ProfileFloatingPointBytesMoved = 16
+  test.c:7:11: in function 'test', double 'fmul' ('%9') executed 4 flops
+  test.c:4:0: in function 'test', ProfileFloatingPointOpCount = 4
+  test.c:4:0: in function 'test', ProfileFloatingPointBytesMoved = 0
+
+While ``-fprofile-update=atomic`` is not required for the simple example above,
+it can be critical while profiling parallel code.

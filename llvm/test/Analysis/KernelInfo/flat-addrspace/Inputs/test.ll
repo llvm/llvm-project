@@ -1,35 +1,35 @@
 define void @f() !dbg !3 {
 entry:
   ; load: check remarks for both unnamed and named values.
-  ; CHECK: remark: test.c:3:11: in function 'f', 'load' instruction ('%0') accesses memory in flat address space
+  ; CHECK: remark: test.c:3:11: in function 'f', 'load' ('%0') accesses memory in flat address space
   %0 = load i32, ptr null, align 4, !dbg !6
-  ; CHECK: remark: test.c:3:11: in function 'f', 'load' instruction ('%load') accesses memory in flat address space
+  ; CHECK: remark: test.c:3:11: in function 'f', 'load' ('%load') accesses memory in flat address space
   %load = load i32, ptr null, align 4, !dbg !6
-  ; CHECK: remark: test.c:3:11: in function 'f', 'load' instruction ('%load0') accesses memory in flat address space
+  ; CHECK: remark: test.c:3:11: in function 'f', 'load' ('%load0') accesses memory in flat address space
   %load0 = load i32, ptr addrspace(0) null, align 4, !dbg !6
   %load1 = load i32, ptr addrspace(1) null, align 4, !dbg !6
   %load2 = load i32, ptr addrspace(2) null, align 4, !dbg !6
 
   ; store
-  ; CHECK: remark: test.c:4:6: in function 'f', 'store' instruction accesses memory in flat address space
+  ; CHECK: remark: test.c:4:6: in function 'f', 'store' accesses memory in flat address space
   store i32 0, ptr null, align 4, !dbg !7
-  ; CHECK: remark: test.c:4:6: in function 'f', 'store' instruction accesses memory in flat address space
+  ; CHECK: remark: test.c:4:6: in function 'f', 'store' accesses memory in flat address space
   store i32 0, ptr addrspace(0) null, align 4, !dbg !7
   store i32 0, ptr addrspace(1) null, align 4, !dbg !7
   store i32 0, ptr addrspace(8) null, align 4, !dbg !7
 
   ; atomicrmw
-  ; CHECK: remark: test.c:5:1: in function 'f', 'atomicrmw' instruction ('%[[#]]') accesses memory in flat address space
+  ; CHECK: remark: test.c:5:1: in function 'f', 'atomicrmw' ('%[[#]]') accesses memory in flat address space
   atomicrmw xchg ptr null, i32 10 seq_cst, !dbg !8
-  ; CHECK: remark: test.c:5:1: in function 'f', 'atomicrmw' instruction ('%[[#]]') accesses memory in flat address space
+  ; CHECK: remark: test.c:5:1: in function 'f', 'atomicrmw' ('%[[#]]') accesses memory in flat address space
   atomicrmw add ptr addrspace(0) null, i32 10 seq_cst, !dbg !8
   atomicrmw xchg ptr addrspace(1) null, i32 10 seq_cst, !dbg !8
   atomicrmw add ptr addrspace(37) null, i32 10 seq_cst, !dbg !8
 
   ; cmpxchg
-  ; CHECK: remark: test.c:6:2: in function 'f', 'cmpxchg' instruction ('%[[#]]') accesses memory in flat address space
+  ; CHECK: remark: test.c:6:2: in function 'f', 'cmpxchg' ('%[[#]]') accesses memory in flat address space
   cmpxchg ptr null, i32 0, i32 1 acq_rel monotonic, !dbg !9
-  ; CHECK: remark: test.c:6:2: in function 'f', 'cmpxchg' instruction ('%[[#]]') accesses memory in flat address space
+  ; CHECK: remark: test.c:6:2: in function 'f', 'cmpxchg' ('%[[#]]') accesses memory in flat address space
   cmpxchg ptr addrspace(0) null, i32 0, i32 1 acq_rel monotonic, !dbg !9
   cmpxchg ptr addrspace(1) null, i32 0, i32 1 acq_rel monotonic, !dbg !9
   cmpxchg ptr addrspace(934) null, i32 0, i32 1 acq_rel monotonic, !dbg !9
