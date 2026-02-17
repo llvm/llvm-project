@@ -122,7 +122,7 @@ public:
   void setIsFPConstrained(bool isCon) { isFPConstrained = isCon; }
 
   /// Query for the use of constrained floating point math
-  bool getIsFPConstrained() { return isFPConstrained; }
+  const bool getIsFPConstrained() { return isFPConstrained; }
 
   /// Set the exception handling to be used with constrained floating point
   void setDefaultConstrainedExcept(llvm::fp::ExceptionBehavior newExcept) {
@@ -131,16 +131,16 @@ public:
     defaultConstrainedExcept = newExcept;
   }
 
+  /// Get the exception handling used with constrained floating point
+  const llvm::fp::ExceptionBehavior getDefaultConstrainedExcept() {
+    return defaultConstrainedExcept;
+  }
+
   /// Set the rounding mode handling to be used with constrained floating point
   void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
     assert(llvm::convertRoundingModeToStr(NewRounding) &&
            "Garbage strict rounding mode!");
     defaultConstrainedRounding = NewRounding;
-  }
-
-  /// Get the exception handling used with constrained floating point
-  const llvm::fp::ExceptionBehavior getDefaultConstrainedExcept() {
-    return defaultConstrainedExcept;
   }
 
   /// Get the rounding mode handling used with constrained floating point
