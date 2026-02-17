@@ -13,7 +13,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointList.h"

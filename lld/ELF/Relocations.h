@@ -351,27 +351,6 @@ static inline int64_t getAddend(const typename ELFT::Crel &rel) {
   return rel.r_addend;
 }
 
-template <typename RelTy>
-inline Relocs<RelTy> sortRels(Relocs<RelTy> rels,
-                              SmallVector<RelTy, 0> &storage) {
-  auto cmp = [](const RelTy &a, const RelTy &b) {
-    return a.r_offset < b.r_offset;
-  };
-  if (!llvm::is_sorted(rels, cmp)) {
-    storage.assign(rels.begin(), rels.end());
-    llvm::stable_sort(storage, cmp);
-    rels = Relocs<RelTy>(storage);
-  }
-  return rels;
-}
-
-template <bool is64>
-inline Relocs<llvm::object::Elf_Crel_Impl<is64>>
-sortRels(Relocs<llvm::object::Elf_Crel_Impl<is64>> rels,
-         SmallVector<llvm::object::Elf_Crel_Impl<is64>, 0> &storage) {
-  return {};
-}
-
 RelocationBaseSection &getIRelativeSection(Ctx &ctx);
 
 // Returns true if Expr refers a GOT entry. Note that this function returns

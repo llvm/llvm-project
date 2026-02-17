@@ -131,7 +131,6 @@ unsigned long long __llvm_omp_host_call(void *fn, void *data, size_t size) {
   Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
     Ret = static_cast<unsigned long long>(Buffer->data[0]);
   });
-  Port.close();
   return Ret;
 }
 
@@ -145,7 +144,6 @@ __attribute__((noinline)) void *__alt_libc_malloc(size_t sz) {
       [&](rpc::Buffer *buffer, uint32_t) {
         ptr = reinterpret_cast<void *>(buffer->data[0]);
       });
-  Port.close();
   return ptr;
 }
 __attribute__((noinline)) void __alt_libc_free(void *ptr) {
@@ -154,7 +152,6 @@ __attribute__((noinline)) void __alt_libc_free(void *ptr) {
   Port.send([=](rpc::Buffer *buffer, uint32_t) {
     buffer->data[0] = (uint64_t)ptr;
   });
-  Port.close();
   return;
 }
 // Calls to __llvm_omp_emissary_rpc and __llvm_omp_emissary_premalloc are
@@ -168,7 +165,6 @@ __attribute__((noinline)) void *__llvm_omp_emissary_premalloc64(size_t sz) {
       [&](rpc::Buffer *buffer, uint32_t) {
         ptr = reinterpret_cast<void *>(buffer->data[0]);
       });
-  Port.close();
   return ptr;
 }
 void *__llvm_omp_emissary_premalloc(uint32_t sz32) {
@@ -180,7 +176,6 @@ __attribute__((noinline)) void __llvm_omp_emissary_free(void *ptr) {
   Port.send([=](rpc::Buffer *buffer, uint32_t) {
     buffer->data[0] = (uint64_t)ptr;
   });
-  Port.close();
   return;
 }
 __attribute__((noinline)) unsigned long long
@@ -193,7 +188,6 @@ __llvm_omp_emissary_rpc(void* fn, void *data) {
   Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
     Ret = static_cast<unsigned long long>(Buffer->data[0]);
   });
-  Port.close();
   return Ret;
 }
 }
