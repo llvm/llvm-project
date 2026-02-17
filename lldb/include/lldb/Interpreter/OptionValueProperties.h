@@ -165,6 +165,9 @@ public:
     return false;
   }
 
+  auto begin() const { return m_properties.begin(); }
+  auto end() const { return m_properties.end(); }
+
 protected:
   Property *ProtectedGetPropertyAtIndex(size_t idx) {
     assert(idx < m_properties.size() && "invalid property index");
