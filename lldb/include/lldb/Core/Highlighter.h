@@ -46,6 +46,10 @@ struct HighlightStyle {
 
     /// Sets the prefix and suffix strings.
     void Set(llvm::StringRef prefix, llvm::StringRef suffix);
+
+    explicit operator bool() const {
+      return !m_prefix.empty() && !m_suffix.empty();
+    }
   };
 
   /// The style for the token which is below the cursor of the user. Note that
