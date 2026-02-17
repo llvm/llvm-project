@@ -1,0 +1,57 @@
+//===- LUSummaryEncoding.h --------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the LUSummaryEncoding class, which represents a link unit
+// summary in its serialized, format-specific encoding.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_ENTITYLINKER_LUSUMMARYENCODING_H
+#define LLVM_CLANG_ANALYSIS_SCALABLE_ENTITYLINKER_LUSUMMARYENCODING_H
+
+#include "clang/Analysis/Scalable/EntityLinker/EntitySummaryEncoding.h"
+#include "clang/Analysis/Scalable/Model/BuildNamespace.h"
+#include "clang/Analysis/Scalable/Model/EntityId.h"
+#include "clang/Analysis/Scalable/Model/EntityIdTable.h"
+#include "clang/Analysis/Scalable/Model/EntityLinkage.h"
+#include "clang/Analysis/Scalable/Model/SummaryName.h"
+#include <map>
+#include <memory>
+
+namespace clang::ssaf {
+
+class EntityLinker;
+class SerializationFormat;
+
+/// Represents a link unit summary in its serialized encoding.
+///
+/// LUSummaryEncoding holds the combined entity summary data from multiple
+/// translation units in a format-specific encoding. It is produced by the
+/// entity linker and contains deduplicated and patched entity summaries.
+class LUSummaryEncoding {
+  NestedBuildNamespace LUNamespace;
+
+  EntityIdTable IdTable;
+
+  std::map<EntityId, EntityLinkage> LinkageTable;
+
+  std::map<SummaryName,
+           std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
+      Data;
+
+public:
+  LUSummaryEncoding(NestedBuildNamespace LUNamespace)
+      : LUNamespace(std::move(LUNamespace)) {}
+
+  friend class EntityLinker;
+  friend class SerializationFormat;
+};
+
+} // namespace clang::ssaf
+
+#endif // LLVM_CLANG_ANALYSIS_SCALABLE_ENTITYLINKER_LUSUMMARYENCODING_H

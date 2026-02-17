@@ -47,6 +47,7 @@ public:
   /// \param Namespace The namespace steps to append to this entity's namespace.
   EntityName makeQualified(NestedBuildNamespace Namespace) const;
 
+  friend class EntityLinker;
   friend class LinkUnitResolution;
   friend class SerializationFormat;
 };
