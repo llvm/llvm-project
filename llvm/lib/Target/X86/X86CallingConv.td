@@ -1134,6 +1134,23 @@ def CSR_Win64_NoSSE : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12, R13, R14, R1
 def CSR_Win64 : CalleeSavedRegs<(add CSR_Win64_NoSSE,
                                      (sequence "XMM%u", 6, 15))>;
 
+def CSR_Win64_EGPR1 : CalleeSavedRegs<(add CSR_Win64, R31)>;
+def CSR_Win64_EGPR2 : CalleeSavedRegs<(add CSR_Win64_EGPR1, R30)>;
+def CSR_Win64_EGPR3 : CalleeSavedRegs<(add CSR_Win64_EGPR2, R29)>;
+def CSR_Win64_EGPR4 : CalleeSavedRegs<(add CSR_Win64_EGPR3, R28)>;
+def CSR_Win64_EGPR5 : CalleeSavedRegs<(add CSR_Win64_EGPR4, R27)>;
+def CSR_Win64_EGPR6 : CalleeSavedRegs<(add CSR_Win64_EGPR5, R26)>;
+def CSR_Win64_EGPR7 : CalleeSavedRegs<(add CSR_Win64_EGPR6, R25)>;
+def CSR_Win64_EGPR8 : CalleeSavedRegs<(add CSR_Win64_EGPR7, R24)>;
+def CSR_Win64_EGPR9 : CalleeSavedRegs<(add CSR_Win64_EGPR8, R23)>;
+def CSR_Win64_EGPR10 : CalleeSavedRegs<(add CSR_Win64_EGPR9, R22)>;
+def CSR_Win64_EGPR11 : CalleeSavedRegs<(add CSR_Win64_EGPR10, R21)>;
+def CSR_Win64_EGPR12 : CalleeSavedRegs<(add CSR_Win64_EGPR11, R20)>;
+def CSR_Win64_EGPR13 : CalleeSavedRegs<(add CSR_Win64_EGPR12, R19)>;
+def CSR_Win64_EGPR14 : CalleeSavedRegs<(add CSR_Win64_EGPR13, R18)>;
+def CSR_Win64_EGPR15 : CalleeSavedRegs<(add CSR_Win64_EGPR14, R17)>;
+def CSR_Win64_EGPR16 : CalleeSavedRegs<(add CSR_Win64_EGPR15, R16)>;
+
 def CSR_Win64_SwiftError : CalleeSavedRegs<(sub CSR_Win64, R12)>;
 def CSR_Win64_SwiftTail : CalleeSavedRegs<(sub CSR_Win64, R13, R14)>;
 
