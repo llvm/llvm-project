@@ -132,7 +132,7 @@ public:
   }
 
   /// Set the rounding mode handling to be used with constrained floating point
-  void setDefaultConstrainedRounding(llvm::RoundingMode NewRounding) {
+  void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
     assert(llvm::convertRoundingModeToStr(NewRounding) &&
            "Garbage strict rounding mode!");
     defaultConstrainedRounding = NewRounding;
