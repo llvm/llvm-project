@@ -5,6 +5,7 @@ define void @test(ptr %0, ptr %1, double %2) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[TMP0:%.*]], ptr [[TMP1:%.*]], double [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> <double poison, double -0.000000e+00>, double [[TMP2]], i32 0
 ; CHECK-NEXT:    br label %[[DOTLR_PH383_US_US_US_US:.*]]
 ; CHECK:       [[_LR_PH383_US_US_US_US:.*:]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x double> [ [[TMP26:%.*]], %[[DOT_CRIT_EDGE384_US_US_US_US:.*]] ], [ zeroinitializer, %[[ITER_CHECK]] ]
@@ -13,24 +14,21 @@ define void @test(ptr %0, ptr %1, double %2) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul double [[TMP5]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP7:%.*]] = load double, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP8]], double [[TMP7]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP6]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd double [[TMP2]], 0.000000e+00
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd double [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd double [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = load double, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> poison, double [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x double> [[TMP14]], double [[TMP13]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x double> poison, double [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x double> [[TMP16]], double [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> poison, double [[TMP13]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x double> [[TMP14]], double [[TMP5]], i32 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = fadd <2 x double> [[TMP15]], [[TMP17]]
 ; CHECK-NEXT:    br label %[[BB19:.*]]
 ; CHECK:       [[BB19]]:
 ; CHECK-NEXT:    br label %[[BB20:.*]]
 ; CHECK:       [[BB20]]:
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x double> poison, double [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <2 x double> [[TMP18]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <4 x double> [[TMP21]], <4 x double> [[TMP22]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x double> [[TMP19]], <4 x double> [[TMP21]], <4 x i32> <i32 0, i32 4, i32 5, i32 poison>
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x double> [[TMP20]], double [[TMP9]], i32 3
 ; CHECK-NEXT:    [[TMP24:%.*]] = fmul <4 x double> [[TMP23]], <double 0.000000e+00, double 1.000000e+00, double 1.000000e+00, double 0.000000e+00>
 ; CHECK-NEXT:    [[TMP25:%.*]] = fadd <4 x double> [[TMP24]], [[TMP3]]
 ; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE384_US_US_US_US]]
