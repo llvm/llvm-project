@@ -48,9 +48,9 @@ llvm.func @_QPtest() {
 // CHECK:         %[[VAL_15:.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %[[VAL_14]], i32 1, i64 40, i64 24, ptr @_QPtest..omp_par)
 // CHECK:         %[[VAL_16:.*]] = load ptr, ptr %[[VAL_15]], align 8
 // CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[VAL_16]], ptr align 1 %[[STRUCTARG]], i64 24, i1 false)
-// CHECK:         %[[VAL_17:.*]] = getelementptr { i64, i64, i64 }, ptr %[[VAL_16]], i32 0, i32 0
-// CHECK:         %[[VAL_18:.*]] = getelementptr { i64, i64, i64 }, ptr %[[VAL_16]], i32 0, i32 1
-// CHECK:         %[[VAL_19:.*]] = getelementptr { i64, i64, i64 }, ptr %[[VAL_16]], i32 0, i32 2
+// CHECK:         %[[VAL_17:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_16]], i32 0, i32 0
+// CHECK:         %[[VAL_18:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_16]], i32 0, i32 1
+// CHECK:         %[[VAL_19:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_16]], i32 0, i32 2
 // CHECK:         %[[VAL_20:.*]] = load i64, ptr %[[VAL_19]], align 4
 // CHECK:         call void @__kmpc_taskloop(ptr @1, i32 %[[VAL_14]], ptr %[[VAL_15]], i32 1, ptr %[[VAL_17]], ptr %[[VAL_18]], i64 %[[VAL_20]], i32 1, i32 0, i64 0, ptr null)
 // CHECK:         call void @__kmpc_end_taskgroup(ptr @1, i32 %[[VAL_14]])
