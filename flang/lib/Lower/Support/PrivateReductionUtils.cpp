@@ -89,12 +89,14 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     mlir::Value arg = builder.loadIfRef(loc, block->getArgument(0));
     assert(mlir::isa<fir::BaseBoxType>(arg.getType()));
 
-    // Deallocate box
-    // The FIR type system doesn't nesecarrily know that this is a mutable box
-    // if we allocated the thread local array on the heap to avoid looped stack
-    // allocations.
+    // Extract address from the box for deallocation.
+    // The FIR type system doesn't necessarily know that this is a mutable
+    // box if we allocated the thread local array on the heap to avoid looped
+    // stack allocations.
     mlir::Value addr =
         hlfir::genVariableRawAddress(loc, builder, hlfir::Entity{arg});
+
+    // Deallocate if allocated
     mlir::Value isAllocated = builder.genIsNotNullAddr(loc, addr);
     fir::IfOp ifOp =
         fir::IfOp::create(builder, loc, isAllocated, /*withElseRegion=*/false);
@@ -112,6 +114,10 @@ static void createCleanupRegion(Fortran::lower::AbstractConverter &converter,
     return;
   }
 
+  // Handle !fir.boxchar (passed by VALUE for runtime-length characters).
+  // Note: This is distinct from !fir.box<!fir.char<>> which is handled above.
+  // BoxChar is a special tuple type (addr, len) used when character length
+  // is only known at runtime.
   if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(argType)) {
     auto [addr, len] =
         fir::factory::CharacterExprHelper{builder, loc}.createUnboxChar(
@@ -620,7 +626,9 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
     assert(sym && "Symbol information is required to privatize derived types");
     assert(!scalarInitValue && "ScalarInitvalue is unused for privatization");
   }
-  if (hlfir::Entity{moldArg}.isAssumedRank())
+  // Only check for assumed rank if moldArg is a valid Fortran entity.
+  // Boxed types (like allocatable characters) may not be valid entities yet.
+  if (hlfir::isFortranEntity(moldArg) && hlfir::Entity{moldArg}.isAssumedRank())
     TODO(loc, "Privatization of assumed rank variable");
   mlir::Type valTy = fir::unwrapRefType(argType);
 
@@ -649,8 +657,10 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
     bool isChar = fir::isa_char(innerTy);
     if (fir::isa_trivial(innerTy) || isDerived || isChar) {
       // boxed non-sequence value e.g. !fir.box<!fir.heap<i32>>
-      if ((isDerived || isChar) && (isReduction(kind) || scalarInitValue))
-        TODO(loc, "Reduction of an unsupported boxed type");
+      // Character types in reductions are supported, but derived types are not
+      // yet.
+      if (isDerived && (isReduction(kind) || scalarInitValue))
+        TODO(loc, "Reduction of an unsupported boxed derived type");
       initAndCleanupBoxedScalar(boxTy, needsInitialization);
       return;
     }
@@ -663,8 +673,17 @@ void PopulateInitAndCleanupRegionsHelper::populateByRefInitAndCleanupRegions() {
   }
 
   // Unboxed types:
-  if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(argType)) {
+  if (auto boxCharTy = mlir::dyn_cast<fir::BoxCharType>(valTy)) {
     initAndCleanupBoxchar(boxCharTy);
+    return;
+  }
+  // Handle unboxed character types (e.g., !fir.char<1,1>).
+  // For fixed-length character types, we just need to initialize the value.
+  if (fir::isa_char(valTy)) {
+    builder.setInsertionPointToEnd(initBlock);
+    if (scalarInitValue)
+      builder.createStoreWithConvert(loc, scalarInitValue, allocatedPrivVarArg);
+    createYield(allocatedPrivVarArg);
     return;
   }
   if (fir::isa_derived(valType)) {

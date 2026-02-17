@@ -690,6 +690,17 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+  case TargetOpcode::G_CTTZ:
+  case TargetOpcode::G_CTTZ_ZERO_UNDEF: {
+    KnownBits SrcOpKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
+                         Depth + 1);
+    // If we have a known 1, its position is our upper bound
+    unsigned PossibleTZ = SrcOpKnown.countMaxTrailingZeros();
+    unsigned LowBits = llvm::bit_width(PossibleTZ);
+    Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
     KnownBits SrcOpKnown;
@@ -699,6 +710,18 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     unsigned PossibleLZ = SrcOpKnown.countMaxLeadingZeros();
     unsigned LowBits = llvm::bit_width(PossibleLZ);
     Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
+  case TargetOpcode::G_CTLS: {
+    Register Reg = MI.getOperand(1).getReg();
+    unsigned MinRedundantSignBits = computeNumSignBits(Reg, Depth + 1) - 1;
+
+    unsigned MaxUpperRedundantSignBits = MRI.getType(Reg).getScalarSizeInBits();
+
+    ConstantRange Range(APInt(BitWidth, MinRedundantSignBits),
+                        APInt(BitWidth, MaxUpperRedundantSignBits));
+
+    Known = Range.toKnownBits();
     break;
   }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
