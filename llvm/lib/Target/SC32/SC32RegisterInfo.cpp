@@ -47,22 +47,26 @@ bool SC32RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   StackOffset Offset = FL.getFrameIndexReference(MF, MO.getIndex(), FrameReg);
   int FixedOffset = Offset.getFixed() / 4;
 
-  if (FixedOffset > 0xFFFF) {
-    BuildMI(MBB, MI, DL, II.get(SC32::LUI), SC32::GP1)
-        .addImm(FixedOffset >> 16);
-    BuildMI(MBB, MI, DL, II.get(SC32::ORI), SC32::GP1)
+  if (FixedOffset > 0) {
+    if (FixedOffset > 0xFFFF) {
+      BuildMI(MBB, MI, DL, II.get(SC32::LUI), SC32::GP1)
+          .addImm(FixedOffset >> 16);
+      BuildMI(MBB, MI, DL, II.get(SC32::ORI), SC32::GP1)
+          .addReg(SC32::GP1)
+          .addImm(FixedOffset & 0xFFFF);
+    } else {
+      BuildMI(MBB, MI, DL, II.get(SC32::LLI), SC32::GP1)
+          .addImm(FixedOffset & 0xFFFF);
+    }
+
+    BuildMI(MBB, MI, DL, II.get(SC32::ADD), SC32::GP1)
         .addReg(SC32::GP1)
-        .addImm(FixedOffset & 0xFFFF);
+        .addReg(FrameReg);
+
+    MO.ChangeToRegister(SC32::GP1, false);
   } else {
-    BuildMI(MBB, MI, DL, II.get(SC32::LLI), SC32::GP1)
-        .addImm(FixedOffset & 0xFFFF);
+    MO.ChangeToRegister(SC32::GP0, false);
   }
-
-  BuildMI(MBB, MI, DL, II.get(SC32::ADD), SC32::GP1)
-      .addReg(SC32::GP1)
-      .addReg(FrameReg);
-
-  MO.ChangeToRegister(SC32::GP1, false);
 
   return false;
 }

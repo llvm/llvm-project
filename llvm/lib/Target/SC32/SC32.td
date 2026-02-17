@@ -37,7 +37,9 @@ let Namespace = "SC32" in {
 
 def GP : RegisterClass<"SC32", [i32], 32, (sequence "GP%u", 0, 31)>;
 
-def RetCC_SC32 : CallingConv<[CCIfType<[i32], CCAssignToReg<[GP28]>>]>;
+def CC_SC32 : CallingConv<[CCAssignToReg<[GP23, GP24, GP25, GP26]>]>;
+
+def RetCC_SC32 : CallingConv<[CCAssignToReg<[GP28]>]>;
 
 def CSR : CalleeSavedRegs<(add)>;
 
@@ -67,6 +69,13 @@ let Namespace = "SC32" in {
     let InOperandList = (ins GP:$op1, GP:$op2);
     let Pattern = [(store i32:$op1, i32:$op2)];
     let AsmString = "ST $op1, $op2, #0";
+  }
+
+  def LD : Instruction {
+    let OutOperandList = (outs GP:$op1);
+    let InOperandList = (ins GP:$op2);
+    let Pattern = [(set i32:$op1, (load i32:$op2))];
+    let AsmString = "LD $op1, $op2, #0";
   }
 
   def LUI : Instruction {
