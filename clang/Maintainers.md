@@ -59,9 +59,6 @@ henrich.lau@gmail.com (email), henrich.lauko (Discord), [xlauko](https://github.
 Yitzhak Mandelbaum \
 yitzhakm@google.com (email), ymandel (Phabricator), [ymand](https://github.com/ymand) (GitHub)
 
-Stanislav Gatev \
-sgatev@google.com (email), sgatev (Phabricator), [sgatev](https://github.com/sgatev) (GitHub)
-
 ### Sema
 
 Sirraide \
@@ -354,4 +351,5 @@ Manuel Klimek (klimek@google.com (email), klimek (Phabricator), [r4nt](https://g
 Dmitri Gribenko (gribozavr@gmail.com (email), gribozavr (Phabricator), [gribozavr](https://github.com/gribozavr) (GitHub)) \-- Analysis & CFG \
 Tom Honermann (tom@honermann.net (email), tahonermann (Phabricator), [tahonermann](https://github.com/tahonermann) (GitHub)) \-- Text Encodings \
 John McCall (rjmccall@apple.com (email), rjmccall (Phabricator), [rjmccall](https://github.com/rjmccall) (GitHub)) \-- Clang LLVM IR generation, Objective-C/C++ conformance, Itanium ABI \
-John Ericson (git@johnericson.me (email), Ericson2314 (Phabricator), [Ericson2314](https://github.com/Ericson2314) (GitHub)) \-- CMake Integration
+John Ericson (git@johnericson.me (email), Ericson2314 (Phabricator), [Ericson2314](https://github.com/Ericson2314) (GitHub)) \-- CMake Integration \
+Stanislav Gatev (sgatev@google.com (email), sgatev (Phabricator), [sgatev](https://github.com/sgatev) (GitHub)) -- Analysis & CFG

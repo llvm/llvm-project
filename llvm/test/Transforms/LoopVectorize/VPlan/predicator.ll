@@ -2,7 +2,7 @@
 ; RUN: opt -disable-output < %s -p loop-vectorize -vplan-print-after=introduceMasksAndLinearize -vplan-print-vector-region-scope 2>&1 | FileCheck %s
 
 define void @diamond_phi(ptr %a) {
-; CHECK-LABEL: 'diamond_phi'
+; CHECK-LABEL: VPlan for loop in 'diamond_phi'
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
@@ -67,7 +67,7 @@ exit:
 }
 
 define void @mask_reuse(ptr %a) {
-; CHECK-LABEL: 'mask_reuse'
+; CHECK-LABEL: VPlan for loop in 'mask_reuse'
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
@@ -98,7 +98,7 @@ define void @mask_reuse(ptr %a) {
 ; CHECK-NEXT:    bb4:
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = not ir<%c0>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = or vp<[[VP7]]>, vp<[[VP8]]>
-; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add3>/vp<[[VP7]]> ir<%add0>/vp<[[VP8]]>
+; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add3>/vp<[[VP7]]> ir<%iv>/vp<[[VP8]]>
 ; CHECK-NEXT:      EMIT store ir<%phi4>, ir<%gep>, vp<[[VP9]]>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>, vp<[[VP9]]>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>, vp<[[VP9]]>
@@ -154,7 +154,7 @@ exit:
 }
 
 define void @optimized_mask(ptr %a) {
-; CHECK-LABEL: 'optimized_mask'
+; CHECK-LABEL: VPlan for loop in 'optimized_mask'
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
@@ -280,7 +280,7 @@ exit:
 }
 
 define void @switch(ptr %a) {
-; CHECK-LABEL: 'switch'
+; CHECK-LABEL: VPlan for loop in 'switch'
 ; CHECK-NEXT:  <x1> vector loop: {
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
