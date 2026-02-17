@@ -181,3 +181,20 @@ TEST_F(ElfCoreTest, PopulatePrStatusTest) {
   ASSERT_EQ(prstatus_opt->pr_pgrp, static_cast<uint32_t>(getpgrp()));
   ASSERT_EQ(prstatus_opt->pr_sid, static_cast<uint32_t>(getsid(gettid())));
 }
+
+TEST_F(ElfCoreTest, NoStopReasonWhenNoPrStatus) {
+  ArchSpec arch{HostInfo::GetTargetTriple()};
+  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  lldb::TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  lldb::ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  lldb::ProcessSP process_sp =
+      std::make_shared<DummyProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+  lldb::ThreadSP thread_sp = CreateThread(process_sp);
+  ASSERT_TRUE(thread_sp);
+  ASSERT_FALSE(thread_sp->ThreadStoppedForAReason());
+}

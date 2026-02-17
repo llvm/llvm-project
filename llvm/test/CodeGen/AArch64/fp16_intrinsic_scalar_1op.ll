@@ -196,6 +196,17 @@ entry:
   ret i64 %0
 }
 
+define i16 @fcvtzu_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtzu_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzu h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtzu.i16.f16(half %a)
+  ret i16 %fcvt
+}
+
 define i32 @fcvtzu_intrinsic_i32(half %a) {
 ; CHECK-LABEL: fcvtzu_intrinsic_i32:
 ; CHECK:       // %bb.0: // %entry
@@ -216,6 +227,17 @@ entry:
   ret i64 %fcvt
 }
 
+define i16 @fcvtzs_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtzs_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtzs.i16.f16(half %a)
+  ret i16 %fcvt
+}
+
 define i32 @fcvtzs_intrinsic_i32(half %a) {
 ; CHECK-LABEL: fcvtzs_intrinsic_i32:
 ; CHECK:       // %bb.0: // %entry
@@ -234,6 +256,17 @@ define i64 @fcvtzs_intrinsic_i64(half %a) {
 entry:
   %fcvt = tail call i64 @llvm.aarch64.neon.fcvtzs.i64.f16(half %a)
   ret i64 %fcvt
+}
+
+define i16 @fcvtas_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtas_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtas h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtas.i16.f16(half %a)
+  ret i16 %fcvt
 }
 
 define dso_local i16 @t19(half %a) {
@@ -257,6 +290,17 @@ entry:
   ret i64 %vcvtah_s64_f16
 }
 
+define i16 @fcvtau_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtau_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtau h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtau.i16.f16(half %a)
+  ret i16 %fcvt
+}
+
 define dso_local i16 @t22(half %a) {
 ; CHECK-LABEL: t22:
 ; CHECK:       // %bb.0: // %entry
@@ -276,6 +320,17 @@ define dso_local i64 @t24(half %a) {
 entry:
   %vcvtah_u64_f16 = tail call i64 @llvm.aarch64.neon.fcvtau.i64.f16(half %a)
   ret i64 %vcvtah_u64_f16
+}
+
+define i16 @fcvtms_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtms_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtms h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtms.i16.f16(half %a)
+  ret i16 %fcvt
 }
 
 define dso_local i16 @t25(half %a) {
@@ -299,6 +354,17 @@ entry:
   ret i64 %vcvtmh_s64_f16
 }
 
+define i16 @fcvtmu_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtmu_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtmu h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtmu.i16.f16(half %a)
+  ret i16 %fcvt
+}
+
 define dso_local i16 @t28(half %a) {
 ; CHECK-LABEL: t28:
 ; CHECK:       // %bb.0: // %entry
@@ -318,6 +384,17 @@ define dso_local i64 @t30(half %a) {
 entry:
   %vcvtmh_u64_f16 = tail call i64 @llvm.aarch64.neon.fcvtmu.i64.f16(half %a)
   ret i64 %vcvtmh_u64_f16
+}
+
+define i16 @fcvtns_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtns_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtns h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtns.i16.f16(half %a)
+  ret i16 %fcvt
 }
 
 define dso_local i16 @t31(half %a) {
@@ -341,6 +418,17 @@ entry:
   ret i64 %vcvtnh_s64_f16
 }
 
+define i16 @fcvtnu_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtnu_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtnu h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtnu.i16.f16(half %a)
+  ret i16 %fcvt
+}
+
 define dso_local i16 @t34(half %a) {
 ; CHECK-LABEL: t34:
 ; CHECK:       // %bb.0: // %entry
@@ -362,6 +450,17 @@ entry:
   ret i64 %vcvtnh_u64_f16
 }
 
+define i16 @fcvtps_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtps_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtps h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtps.i16.f16(half %a)
+  ret i16 %fcvt
+}
+
 define dso_local i16 @t37(half %a) {
 ; CHECK-LABEL: t37:
 ; CHECK:       // %bb.0: // %entry
@@ -381,6 +480,17 @@ define dso_local i64 @t39(half %a) {
 entry:
   %vcvtph_s64_f16 = tail call i64 @llvm.aarch64.neon.fcvtps.i64.f16(half %a)
   ret i64 %vcvtph_s64_f16
+}
+
+define i16 @fcvtpu_intrinsic_i16(half %a) {
+; CHECK-LABEL: fcvtpu_intrinsic_i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtpu h0, h0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %fcvt = tail call i16 @llvm.aarch64.neon.fcvtpu.i16.f16(half %a)
+  ret i16 %fcvt
 }
 
 define dso_local i16 @t40(half %a) {

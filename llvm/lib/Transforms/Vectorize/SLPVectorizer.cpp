@@ -3932,6 +3932,12 @@ private:
   bool matchesShlZExt(const TreeEntry &TE, OrdersType &Order, bool &IsBSwap,
                       bool &ForLoads) const;
 
+  /// Checks if the \p SelectTE matches zext+selects, which can be inversed for
+  /// better codegen in case like zext (icmp ne), select (icmp eq), ....
+  bool matchesInversedZExtSelect(
+      const TreeEntry &SelectTE,
+      SmallVectorImpl<unsigned> &InversedCmpsIndices) const;
+
   class TreeEntry {
   public:
     using VecTreeTy = SmallVector<std::unique_ptr<TreeEntry>, 8>;
@@ -13501,6 +13507,56 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   return BitcastCost < VecCost;
 }
 
+bool BoUpSLP::matchesInversedZExtSelect(
+    const TreeEntry &SelectTE,
+    SmallVectorImpl<unsigned> &InversedCmpsIndices) const {
+  assert(SelectTE.hasState() && SelectTE.getOpcode() == Instruction::Select &&
+         "Expected select node.");
+  SmallVector<std::pair<Instruction *, unsigned>> ZExts;
+  for (auto [Idx, V] : enumerate(SelectTE.Scalars)) {
+    auto *Inst = dyn_cast<Instruction>(V);
+    if (!Inst || Inst->getOpcode() != Instruction::ZExt)
+      continue;
+    ZExts.emplace_back(Inst, Idx);
+  }
+  if (ZExts.empty())
+    return false;
+  const auto *CmpTE = getOperandEntry(&SelectTE, 0);
+  const auto *Op1TE = getOperandEntry(&SelectTE, 1);
+  const auto *Op2TE = getOperandEntry(&SelectTE, 2);
+  // Compares must be alternate vectorized, and other operands must be gathers
+  // or copyables.
+  if (CmpTE->State != TreeEntry::Vectorize || !CmpTE->isAltShuffle() ||
+      (CmpTE->getOpcode() != Instruction::ICmp &&
+       CmpTE->getOpcode() != Instruction::FCmp) ||
+      !Op1TE->ReorderIndices.empty() || !Op1TE->ReuseShuffleIndices.empty() ||
+      !Op2TE->ReorderIndices.empty() || !Op2TE->ReuseShuffleIndices.empty())
+    return false;
+  // The operands must be buildvectors/copyables.
+  if (!Op1TE->isGather() || !Op2TE->isGather())
+    return false;
+  // TODO: investigate opportunity for the vector nodes with copyables.
+  auto *Cmp = CmpTE->getMainOp();
+  CmpPredicate Pred;
+  auto MatchCmp = m_Cmp(Pred, m_Value(), m_Value());
+  if (!match(Cmp, MatchCmp))
+    return false;
+  CmpPredicate MainPred = Pred;
+  CmpPredicate InversedPred(CmpInst::getInversePredicate(Pred),
+                            Pred.hasSameSign());
+  for (const auto [Idx, V] : enumerate(CmpTE->Scalars)) {
+    if (!match(V, MatchCmp))
+      continue;
+    if (CmpPredicate::getMatching(MainPred, Pred))
+      continue;
+    if (!CmpPredicate::getMatching(InversedPred, Pred))
+      return false;
+    InversedCmpsIndices.push_back(Idx);
+  }
+
+  return !InversedCmpsIndices.empty();
+}
+
 void BoUpSLP::transformNodes() {
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   BaseGraphSize = VectorizableTree.size();
@@ -13874,15 +13930,53 @@ void BoUpSLP::transformNodes() {
       if (E.State != TreeEntry::Vectorize)
         break;
       auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(E.Scalars);
-      if (MinMaxID == Intrinsic::not_intrinsic)
+      if (MinMaxID != Intrinsic::not_intrinsic) {
+        // This node is a minmax node.
+        E.CombinedOp = TreeEntry::MinMax;
+        TreeEntry *CondEntry = getOperandEntry(&E, 0);
+        if (SelectOnly && CondEntry->UserTreeIndex &&
+            CondEntry->State == TreeEntry::Vectorize) {
+          // The condition node is part of the combined minmax node.
+          CondEntry->State = TreeEntry::CombinedVectorize;
+        }
         break;
-      // This node is a minmax node.
-      E.CombinedOp = TreeEntry::MinMax;
-      TreeEntry *CondEntry = getOperandEntry(&E, 0);
-      if (SelectOnly && CondEntry->UserTreeIndex &&
-          CondEntry->State == TreeEntry::Vectorize) {
-        // The condition node is part of the combined minmax node.
-        CondEntry->State = TreeEntry::CombinedVectorize;
+      }
+      // Check for zext + selects, which can be reorered.
+      SmallVector<unsigned> InversedCmpsIndices;
+      if (matchesInversedZExtSelect(E, InversedCmpsIndices)) {
+        auto *CmpTE = getOperandEntry(&E, 0);
+        auto *Op1TE = getOperandEntry(&E, 1);
+        auto *Op2TE = getOperandEntry(&E, 2);
+        // State now is uniform, not alternate opcode.
+        CmpTE->setOperations(
+            InstructionsState(CmpTE->getMainOp(), CmpTE->getMainOp()));
+        // Update mapping between the swapped values and their internal matching
+        // nodes.
+        auto UpdateGatherEntry = [&](TreeEntry *OldTE, TreeEntry *NewTE,
+                                     Value *V) {
+          if (isConstant(V))
+            return;
+          auto It = ValueToGatherNodes.find(V);
+          assert(It != ValueToGatherNodes.end() &&
+                 "Expected to find the value in the map.");
+          auto &C = It->getSecond();
+          if (!is_contained(OldTE->Scalars, V))
+            C.remove(OldTE);
+          C.insert(NewTE);
+        };
+        ValueList &Op1 = E.getOperand(1);
+        ValueList &Op2 = E.getOperand(2);
+        for (const unsigned Idx : InversedCmpsIndices) {
+          Value *V1 = Op1TE->Scalars[Idx];
+          Value *V2 = Op2TE->Scalars[Idx];
+          std::swap(Op1TE->Scalars[Idx], Op2TE->Scalars[Idx]);
+          std::swap(Op1[Idx], Op2[Idx]);
+          UpdateGatherEntry(Op1TE, Op2TE, V1);
+          UpdateGatherEntry(Op2TE, Op1TE, V2);
+        }
+        OperandsToTreeEntry.emplace_or_assign(std::make_pair(&E, 1), Op1TE);
+        OperandsToTreeEntry.emplace_or_assign(std::make_pair(&E, 2), Op2TE);
+        break;
       }
       break;
     }
@@ -17846,8 +17940,13 @@ BoUpSLP::tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
   for (unsigned Part : seq<unsigned>(NumParts)) {
     // Scan list of gathered scalars for extractelements that can be represented
     // as shuffles.
-    MutableArrayRef<Value *> SubVL = MutableArrayRef(VL).slice(
-        Part * SliceSize, getNumElems(VL.size(), SliceSize, Part));
+    const unsigned PartOffset = Part * SliceSize;
+    const unsigned PartSize = getNumElems(VL.size(), SliceSize, Part);
+    // It may happen in case of revec, need to check no access out of bounds.
+    if (PartOffset + PartSize > VL.size())
+      break;
+    MutableArrayRef<Value *> SubVL =
+        MutableArrayRef(VL).slice(PartOffset, PartSize);
     SmallVector<int> SubMask;
     std::optional<TTI::ShuffleKind> Res =
         tryToGatherSingleRegisterExtractElements(SubVL, SubMask);
