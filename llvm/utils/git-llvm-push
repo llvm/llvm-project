@@ -172,6 +172,17 @@ class GitHubAPI:
             # operation was successful but there is no body.
             self._log_unexpected_status([204], response.status)
 
+    def _request_graphql(self, query: str, variables: dict):
+        output = self._request_and_parse_json(
+            "POST", "/graphql", {"query": query, "variables": variables}
+        )
+        if "errors" in output:
+            error_str = f"Error: GraphQL API returned errors: {', '.join([str(error) for error in output['errors']])}"
+            self.runner.print(
+                error_str,
+                file=sys.stderr,
+            )
+
     def _log_unexpected_status(
         self, expected_statuses: List[int], actual_status: int
     ) -> None:
@@ -280,21 +291,28 @@ class GitHubAPI:
 
         raise LlvmPrError(f"PR was not mergeable after {MERGE_MAX_RETRIES} attempts.")
 
+    def _get_node_id(self, pr_number: int) -> str:
+        pr_data = self._request_and_parse_json(
+            "GET", f"/repos/{LLVM_REPO}/pulls/{pr_number}"
+        )
+        return pr_data["node_id"]
+
     def enable_auto_merge(self, pr_number: int) -> None:
         if self.runner.dry_run:
             self.runner.print(f"[Dry Run] Would enable auto-merge for #{pr_number}")
             return
 
         self.runner.print(f"Enabling auto-merge for #{pr_number}...")
-        data = {
-            "enabled": True,
-            "merge_method": "squash",
+        node_id = self._get_node_id(pr_number)
+        graphql_mutation = """
+        mutation EnableAutomergeMutation($pr_id: ID!) {
+            enablePullRequestAutoMerge(input: {pullRequestId: $pr_id, mergeMethod: SQUASH}) {
+                clientMutationId
+            }
         }
-        self._request_no_content(
-            "PUT",
-            f"/repos/{LLVM_REPO}/pulls/{pr_number}/auto-merge",
-            json_payload=data,
-        )
+        """
+        graphql_variables = {"pr_id": node_id}
+        self._request_graphql(graphql_mutation, graphql_variables)
         self.runner.print("Auto-merge enabled.")
 
     def delete_branch(
