@@ -13,6 +13,9 @@ SC32TargetLowering::SC32TargetLowering(const TargetMachine &TM,
     : TargetLowering(TM, STI) {
   addRegisterClass(MVT::i32, &SC32::GPRegClass);
 
+  setOperationAction(ISD::UREM, MVT::i32, Expand);
+  setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
+
   computeRegisterProperties(STI.getRegisterInfo());
 }
 
@@ -48,15 +51,17 @@ SC32TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                  *DAG.getContext());
   CCInfo.AnalyzeReturn(Outs, RetCC_SC32);
 
+  SmallVector<SDValue, 2> RetOps = {SDValue()};
   SDValue Glue;
 
   for (size_t I = 0; I < RVLocs.size(); I++) {
-    Chain =
-        DAG.getCopyToReg(Chain, DL, RVLocs[I].getLocReg(), OutVals[I], Glue);
+    Register Reg = RVLocs[I].getLocReg();
+    Chain = DAG.getCopyToReg(Chain, DL, Reg, OutVals[I], Glue);
     Glue = Chain.getValue(1);
+    RetOps.push_back(DAG.getRegister(Reg, MVT::i32));
   }
 
-  SmallVector<SDValue, 2> RetOps = {Chain};
+  RetOps[0] = Chain;
 
   if (Glue.getNode())
     RetOps.push_back(Glue);

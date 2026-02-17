@@ -24,7 +24,6 @@ BitVector SC32RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   Reserved.set(SC32::GP0);
   Reserved.set(SC32::GP1);
   Reserved.set(SC32::GP27);
-  Reserved.set(SC32::GP28);
   Reserved.set(SC32::GP29);
   Reserved.set(SC32::GP30);
   Reserved.set(SC32::GP31);

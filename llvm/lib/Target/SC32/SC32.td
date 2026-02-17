@@ -45,7 +45,7 @@ def CSR : CalleeSavedRegs<(add)>;
 
 defm : RemapAllTargetPseudoPointerOperands<GP>;
 
-def retglue : SDNode<"SC32ISD::RET_GLUE", SDTNone, [SDNPHasChain, SDNPOptInGlue]>;
+def retglue : SDNode<"SC32ISD::RET_GLUE", SDTNone, [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def LO16 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() & 0xFFFF, SDLoc(N), MVT::i32);
