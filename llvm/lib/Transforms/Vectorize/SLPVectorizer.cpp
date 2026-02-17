@@ -1096,8 +1096,18 @@ class BinOpSameOpcodeHelper {
       Constant *RHS;
       switch (FromOpcode) {
       case Instruction::Shl:
+        if (ToOpcode == Instruction::Mul) {
+          RHS = ConstantInt::get(
+              RHSType, APInt::getOneBitSet(FromCIValueBitWidth,
+                                           FromCIValue.getZExtValue()));
+        } else {
+          assert(FromCIValue.isZero() && "Cannot convert the instruction.");
+          RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
+                                               /*AllowRHSConstant=*/true);
+        }
+        break;
       case Instruction::LShr:
-        if (ToOpcode == Instruction::Mul || ToOpcode == Instruction::UDiv) {
+        if (ToOpcode == Instruction::UDiv) {
           RHS = ConstantInt::get(
               RHSType, APInt::getOneBitSet(FromCIValueBitWidth,
                                            FromCIValue.getZExtValue()));
@@ -1108,9 +1118,19 @@ class BinOpSameOpcodeHelper {
         }
         break;
       case Instruction::Mul:
+        assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
+        if (ToOpcode == Instruction::Shl) {
+          RHS = ConstantInt::get(
+              RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
+        } else {
+          assert(FromCIValue.isOne() && "Cannot convert the instruction.");
+          RHS = ConstantExpr::getBinOpIdentity(ToOpcode, RHSType,
+                                               /*AllowRHSConstant=*/true);
+        }
+        break;
       case Instruction::UDiv:
         assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
-        if (ToOpcode == Instruction::Shl || ToOpcode == Instruction::LShr) {
+        if (ToOpcode == Instruction::LShr) {
           RHS = ConstantInt::get(
               RHSType, APInt(FromCIValueBitWidth, FromCIValue.logBase2()));
         } else {
