@@ -5130,9 +5130,9 @@ LogicalResult acc::WaitOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// CombineOp
+// ReductionCombineOp
 //===----------------------------------------------------------------------===//
-void acc::CombineOp::getEffects(
+void acc::ReductionCombineOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {

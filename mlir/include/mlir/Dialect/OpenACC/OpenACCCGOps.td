@@ -24,7 +24,7 @@
 // acc.combine
 //===----------------------------------------------------------------------===//
 
-def OpenACC_CombineOp: OpenACC_Op<"combine", [SameTypeOperands, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine", [SameTypeOperands, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Combine a reduction partial sum with its original value";
   let description = [{
     This operation is a composite to do a typical update of a reduction
@@ -32,7 +32,7 @@ def OpenACC_CombineOp: OpenACC_Op<"combine", [SameTypeOperands, DeclareOpInterfa
     decisions (such as generate an atomic update). E.g.
 
     ```
-      lro.combine %src into %dest <addi> : memref<i32>
+      acc.reduction_combine %src into %dest <addi> : memref<i32>
     ```
 
     Might lower to something similar to
@@ -52,8 +52,8 @@ def OpenACC_CombineOp: OpenACC_Op<"combine", [SameTypeOperands, DeclareOpInterfa
     accumulate the two values.
   }];
 
-  let arguments = (ins AnyType:$destMemref,
-                       AnyType:$srcMemref,
+  let arguments = (ins OpenACC_AnyPointerOrMappableType:$destMemref,
+                       OpenACC_AnyPointerOrMappableType:$srcMemref,
                        OpenACC_ReductionOperatorAttr:$reductionOperator);
   
   let assemblyFormat = [{

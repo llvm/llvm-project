@@ -2497,10 +2497,10 @@ func.func @test_kernel_environment_with_async(%arg0: memref<1024xf32>) {
 
 // -----
 
-func.func @test_acc_combine(%arg0 : memref<i32>, %arg1 : memref<i32>) {
-  acc.combine %arg0 into %arg1 <add> : memref<i32>
+func.func @test_acc_reduction_combine(%arg0 : memref<i32>, %arg1 : memref<i32>) {
+  acc.reduction_combine %arg0 into %arg1 <add> : memref<i32>
   return
 }
 
-// CHECK-LABEL: func @test_acc_combine
-// CHECK:       acc.combine %arg0 into %arg1 <add> : memref<i32>
+// CHECK-LABEL: func @test_acc_reduction_combine
+// CHECK:       acc.reduction_combine %arg0 into %arg1 <add> : memref<i32>
