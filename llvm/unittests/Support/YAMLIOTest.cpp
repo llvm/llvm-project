@@ -2889,6 +2889,85 @@ TEST(YAMLIO, TestEmptySequenceWrite) {
   }
 }
 
+TEST(YAMLIO, TestScalarAlias) {
+  FooBar doc;
+  {
+    Input yin("---\nfoo: &three 3\nbar: *three\n...\n");
+    yin >> doc;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(doc.foo, 3);
+    EXPECT_EQ(doc.bar, 3);
+  }
+
+  {
+    auto testDiagnostic = [](const llvm::SMDiagnostic &Error, void *) {
+      EXPECT_EQ(Error.getMessage(), "undefined alias 'unknown'");
+    };
+    Input yin("---\nfoo: &anchor 3\nbar: *unknown\n...\n", nullptr,
+              testDiagnostic);
+    yin >> doc;
+    EXPECT_TRUE(!!yin.error());
+  }
+}
+
+TEST(YAMLIO, TestMapAlias) {
+  {
+    FooBarContainer cont;
+
+    Input yin(R"(---
+      fbs:
+        - foo: 13
+          bar: &anchor 42
+        - &seq_elmt
+          foo: &anchor 19
+          bar: *anchor
+        - *seq_elmt
+    ...
+    )");
+    yin >> cont;
+    EXPECT_FALSE(yin.error());
+
+    auto &fbs = cont.fbs;
+    EXPECT_EQ(fbs.size(), 3ul);
+    EXPECT_EQ(fbs[0].foo, 13);
+    EXPECT_EQ(fbs[0].bar, 42);
+    EXPECT_EQ(fbs[1].foo, 19);
+    EXPECT_EQ(fbs[1].bar, 19);
+    EXPECT_EQ(fbs[2].foo, fbs[1].foo);
+    EXPECT_EQ(fbs[2].bar, fbs[1].bar);
+  }
+
+  {
+    FooBarMapMap cont;
+    Input yin(R"(---
+      fbm:
+        one: &forty_two
+          foo: 42
+          bar: 42
+        forty_two: *forty_two
+        precedence: &forty_two
+          foo: 13
+          bar: 42
+        not_forty_two: *forty_two
+    ...
+    )");
+    auto &fbm = cont.fbm;
+    yin >> cont;
+    EXPECT_FALSE(yin.error());
+
+    EXPECT_EQ(fbm.size(), 4ul);
+    EXPECT_EQ(fbm["one"].foo, 42);
+    EXPECT_EQ(fbm["one"].bar, 42);
+    EXPECT_EQ(fbm["forty_two"].foo, 42);
+    EXPECT_EQ(fbm["forty_two"].bar, 42);
+    EXPECT_EQ(fbm["precedence"].foo, 13);
+    EXPECT_EQ(fbm["precedence"].bar, 42);
+    EXPECT_EQ(fbm["not_forty_two"].foo, 13);
+    EXPECT_EQ(fbm["not_forty_two"].bar, 42);
+  }
+}
+
 static void TestEscaped(llvm::StringRef Input, llvm::StringRef Expected) {
   std::string out;
   llvm::raw_string_ostream ostr(out);
