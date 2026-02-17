@@ -8,10 +8,12 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   commit-access-review:
     if: github.repository_owner == 'llvm'
+    environment: main-branch-only
     runs-on: ubuntu-24.04
     steps:
       - name: Fetch LLVM sources
@@ -20,10 +22,19 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+
+      - id: app-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf  #v2.2.1
+        with:
+          app-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-members: read
+          permission-contents: read
       
       - name: Run Script
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           python3 .github/workflows/commit-access-review.py $GITHUB_TOKEN
 
@@ -32,3 +43,11 @@ jobs:
         with:
           name: triagers
           path: triagers.log
+
+      - name: Create the issue
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          # There is a limit to the number of mentions you can have in one comment, so
+          # we need to limit the number of users we mention.
+          cat triagers.log | head -n 25 | python3 .github/workflows/commit-create-issue.py $GITHUB_TOKEN

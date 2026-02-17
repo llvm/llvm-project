@@ -65,7 +65,7 @@ A simple launch configuration may look like
 See the [Configuration Settings Reference](#configuration-settings-reference)
 for more information.
 
-# Supported Features
+## Supported Features
 
 `lldb-dap` supports the following capabilities:
 
@@ -117,7 +117,7 @@ for more information.
 For more information, see
 [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/).
 
-## Debug Console
+### Debug Console
 
 The Debug Console allows printing variables / expressions and executing lldb
 commands. By default, `lldb-dap` tries to auto-detect whether a provided command
@@ -129,7 +129,7 @@ The auto-detection mode can be adjusted using the `lldb-dap repl-mode` command
 in the Debug Console or by adjusting the `--repl-mode [mode]` argument to
 `lldb-dap`. The supported modes are `variable`, `command` and `auto`.
 
-# Configuration Settings Reference
+## Configuration Settings Reference
 
 In order for `lldb-dap` to know how to start a debug session a launch or attach
 configuration may be specified. Different IDEs may have different mechanisms in
@@ -137,7 +137,7 @@ place for configuring the launch configuration.
 
 For Visual Studio Code, see [Visual Studio Code's Debugging User Documentation](https://code.visualstudio.com/docs/debugtest/debugging).
 
-## Common configurations
+### Common configurations
 
 For both launch and attach configurations, lldb-dap accepts the following
 `lldb-dap` specific key/value pairs:
@@ -172,7 +172,7 @@ are executed. Commands can be prefixed with `?` or `!` to modify their behavior:
   with `!` fails, subsequent commands will not be run. This is useful if one of
   the commands depends on another, as it will stop the chain of commands.
 
-## Launch configurations
+### Launch configurations
 
 _NOTE:_ Either `program` or `launchCommands` must be specified.
 
@@ -191,7 +191,7 @@ additionally contain the following key/value pairs:
 | **stdio**                      | [string]               |     | The stdio property specifies the redirection targets for the debuggee's stdio streams. A null value redirects a stream to the default debug terminal. String can be a path to file, named pipe or TTY device. If less than three values are provided, the list will be padded with the last value. Specifying more than three values will create additional file descriptors (4, 5, etc.). Supported from lldb-dap 22.0 version. |
 | **launchCommands**             | [string]               |     | LLDB commands executed to launch the program.                                                                                                                                                                                                                                                                                                                                                                                    |
 
-## Attach configurations
+### Attach configurations
 
 _NOTE:_ Either `pid`, `program`, `coreFile`, `attachCommands`
 or`gdb-remote-port` must be specified.

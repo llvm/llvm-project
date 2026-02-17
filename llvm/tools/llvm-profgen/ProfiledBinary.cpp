@@ -11,6 +11,9 @@
 #include "MissingFrameInferrer.h"
 #include "Options.h"
 #include "ProfileGenerator.h"
+#include "llvm/DebugInfo/PDB/IPDBSession.h"
+#include "llvm/DebugInfo/PDB/PDB.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -39,10 +42,8 @@ cl::opt<bool> ShowSourceLocations("show-source-locations",
 
 cl::opt<bool> LoadFunctionFromSymbol(
     "load-function-from-symbol", cl::init(true),
-    cl::desc(
-        "Gather additional binary function info from symbols (e.g. .symtab) in "
-        "case dwarf info is incomplete. Only support binaries in ELF format "
-        "with pseudo probe, for other formats, this flag will be a no-op."),
+    cl::desc("Gather additional binary function info from symbols (e.g. "
+             "symtab) in case dwarf info is incomplete."),
     cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
@@ -248,24 +249,31 @@ void ProfiledBinary::load() {
   // Load debug info of subprograms from DWARF section.
   // If path of debug info binary is specified, use the debug info from it,
   // otherwise use the debug info from the executable binary.
+  OwningBinary<Binary> DebugBinary;
+  ObjectFile *PseudoProbeObj = nullptr;
   if (!DebugBinaryPath.empty()) {
-    OwningBinary<Binary> DebugPath =
-        unwrapOrError(createBinary(DebugBinaryPath), DebugBinaryPath);
-    loadSymbolsFromDWARF(*cast<ObjectFile>(DebugPath.getBinary()));
+    DebugBinary = unwrapOrError(createBinary(DebugBinaryPath), DebugBinaryPath);
+    ObjectFile *DebugObj = cast<ObjectFile>(DebugBinary.getBinary());
+    loadSymbolsFromDWARF(*DebugObj);
+    if (checkPseudoProbe(DebugObj, DebugBinaryPath))
+      PseudoProbeObj = DebugObj;
   } else {
-    loadSymbolsFromDWARF(*cast<ObjectFile>(&ExeBinary));
+    loadSymbolsFromDWARF(*Obj);
   }
+
+  // Prefer loading pseudo probe from binary.
+  if (checkPseudoProbe(Obj, Path))
+    PseudoProbeObj = Obj;
 
   DisassembleFunctionSet.insert_range(DisassembleFunctions);
 
-  checkPseudoProbe(Obj);
-  if (UsePseudoProbes)
+  if (usePseudoProbes())
     populateSymbolAddressList(Obj);
 
-  if (ShowDisassemblyOnly)
-    decodePseudoProbe(Obj);
+  if (ShowDisassemblyOnly && PseudoProbeObj)
+    decodePseudoProbe(PseudoProbeObj);
 
-  if (LoadFunctionFromSymbol && UsePseudoProbes)
+  if (LoadFunctionFromSymbol && usePseudoProbes())
     loadSymbolsFromSymtab(Obj);
 
   // Disassemble the text sections.
@@ -426,9 +434,10 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ObjectFile *Obj) {
     llvm_unreachable("invalid object format");
 }
 
-void ProfiledBinary::checkPseudoProbe(const ObjectFile *Obj) {
+bool ProfiledBinary::checkPseudoProbe(const ObjectFile *Obj,
+                                      StringRef ObjPath) {
   if (UseDwarfCorrelation)
-    return;
+    return false;
 
   bool HasProbeDescSection = false;
   bool HasPseudoProbeSection = false;
@@ -445,13 +454,20 @@ void ProfiledBinary::checkPseudoProbe(const ObjectFile *Obj) {
     }
   }
 
-  // set UsePseudoProbes flag, used for PerfReader
-  UsePseudoProbes = HasProbeDescSection && HasPseudoProbeSection;
+  if (HasProbeDescSection && HasPseudoProbeSection) {
+    PseudoProbeBinPath = ObjPath;
+    return true;
+  }
+
+  return false;
 }
 
 void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
-  if (!UsePseudoProbes)
+  if (!usePseudoProbes())
     return;
+
+  LLVM_DEBUG(dbgs() << "Decoding pseudo probe in " << Obj->getFileName()
+                    << "\n");
 
   MCPseudoProbeDecoder::Uint64Set GuidFilter;
   MCPseudoProbeDecoder::Uint64Map FuncStartAddresses;
@@ -525,9 +541,9 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
 }
 
 void ProfiledBinary::decodePseudoProbe() {
-  OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
-  Binary &ExeBinary = *OBinary.getBinary();
-  auto *Obj = cast<ObjectFile>(&ExeBinary);
+  OwningBinary<Binary> OBinary =
+      unwrapOrError(createBinary(PseudoProbeBinPath), PseudoProbeBinPath);
+  auto *Obj = cast<ObjectFile>(OBinary.getBinary());
   decodePseudoProbe(Obj);
 }
 
@@ -852,19 +868,43 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
        // Compiler/LTO internal
        ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."});
   StringRef FileName = Obj->getFileName();
-  // Only apply this to ELF binary. e.g. COFF file format doesn't have `size`
-  // field in the symbol table.
-  bool IsELFObject = isa<ELFObjectFileBase>(Obj);
-  if (!IsELFObject)
-    return;
+
+  // COFF symtab does not have size field. Try to load size from PDB instead.
+  std::unique_ptr<pdb::IPDBSession> PDBSession;
+  if (auto *COFFObj = dyn_cast<COFFObjectFile>(Obj)) {
+    if (auto E = pdb::loadDataForEXE(pdb::PDB_ReaderType::Native, FileName,
+                                     PDBSession)) {
+      StringRef PdbPath;
+      const codeview::DebugInfo *PdbInfo;
+      if (auto Err = COFFObj->getDebugPDBInfo(PdbInfo, PdbPath))
+        consumeError(std::move(Err));
+
+      auto Style = PdbPath.starts_with("/") ? sys::path::Style::posix
+                                            : sys::path::Style::windows;
+      WithColor::warning() << "Cannot load PDB file "
+                           << sys::path::filename(PdbPath, Style) << " for "
+                           << FileName << ": " << E << "\n";
+      consumeError(std::move(E));
+    } else {
+      PDBSession->setLoadAddress(FirstLoadableAddress);
+    }
+  }
+
   for (const SymbolRef &Symbol : Obj->symbols()) {
     const SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName);
     const uint64_t StartAddr = unwrapOrError(Symbol.getAddress(), FileName);
     const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
     uint64_t Size = 0;
-    if (LLVM_LIKELY(IsELFObject)) {
+    if (isa<ELFObjectFileBase>(Obj)) {
       ELFSymbolRef ElfSymbol(Symbol);
       Size = ElfSymbol.getSize();
+    } else if (PDBSession) {
+      if (std::unique_ptr<pdb::PDBSymbol> Sym = PDBSession->findSymbolByAddress(
+              StartAddr, pdb::PDB_SymType::Function)) {
+        auto FuncSym = cast<pdb::PDBSymbolFunc>(std::move(Sym));
+        if (StartAddr == FuncSym->getVirtualAddress())
+          Size = FuncSym->getLength();
+      }
     }
 
     if (Size == 0 || Type != SymbolRef::ST_Function)
@@ -900,15 +940,15 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
       FRange.EndAddress = EndAddr;
 
     } else if (SymName != Range->getFuncName()) {
-      // Function range already found from DWARF, but the symbol name from
-      // symbol table is inconsistent with debug info. Log this discrepancy and
-      // the alternative function GUID.
+      // Function range already found from DWARF or symtab, but the symbol name
+      // from symbol table is inconsistent with the existing name associated
+      // with the range. Log this discrepancy and the alternative function GUID.
       if (ShowDetailedWarning)
         WithColor::warning()
             << "Conflicting name for symbol " << Name << " with range ("
             << format("%8" PRIx64, StartAddr) << ", "
             << format("%8" PRIx64, EndAddr) << ")"
-            << ", but the DWARF symbol " << Range->getFuncName()
+            << ", but the existing symbol " << Range->getFuncName()
             << " indicates an overlapping range ("
             << format("%8" PRIx64, Range->StartAddress) << ", "
             << format("%8" PRIx64, Range->EndAddress) << ")\n";
@@ -922,12 +962,13 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
 
     } else if (StartAddr != Range->StartAddress &&
                EndAddr != Range->EndAddress) {
-      // Function already found in DWARF, but the address range from symbol
-      // table conflicts/overlaps with the debug info.
+      // Function already found in DWARF or symtab, but the address range from
+      // symbol table conflicts/overlaps with the existing one.
       WithColor::warning() << "Conflicting range for symbol " << Name
                            << " with range (" << format("%8" PRIx64, StartAddr)
                            << ", " << format("%8" PRIx64, EndAddr) << ")"
-                           << ", but the DWARF symbol " << Range->getFuncName()
+                           << ", but the existing symbol "
+                           << Range->getFuncName()
                            << " indicates another range ("
                            << format("%8" PRIx64, Range->StartAddress) << ", "
                            << format("%8" PRIx64, Range->EndAddress) << ")\n";
@@ -1122,7 +1163,7 @@ void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,
 
   do {
     const SampleContextFrameVector SymbolizedCallStack =
-        getFrameLocationStack(IP.Address, UsePseudoProbes);
+        getFrameLocationStack(IP.Address, usePseudoProbes());
     uint64_t Size = AddressToInstSizeMap[IP.Address];
     // Record instruction size for the corresponding context
     FuncSizeTracker.addInstructionForContext(SymbolizedCallStack, Size);
@@ -1150,7 +1191,7 @@ void ProfiledBinary::computeInlinedContextSizeForFunc(
 }
 
 void ProfiledBinary::loadSymbolsFromPseudoProbe() {
-  if (!UsePseudoProbes)
+  if (!usePseudoProbes())
     return;
 
   const AddressProbesMap &Address2ProbesMap = getAddress2ProbesMap();

@@ -15,6 +15,7 @@
 #define LLVM_CLANG_INTERPRETER_INTERPRETER_H
 
 #include "clang/AST/GlobalDecl.h"
+#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Interpreter/Value.h"
 
@@ -29,8 +30,6 @@
 
 namespace llvm {
 namespace orc {
-class LLJIT;
-class LLJITBuilder;
 class ThreadSafeContext;
 } // namespace orc
 } // namespace llvm
@@ -44,7 +43,6 @@ class Compilation;
 class CompilerInstance;
 class CXXRecordDecl;
 class Decl;
-class IncrementalExecutor;
 class IncrementalParser;
 class IncrementalCUDADeviceParser;
 
@@ -93,42 +91,6 @@ private:
   std::optional<std::function<DriverCompilationFn>> CompilationCB;
 };
 
-// FIXME: Consider deriving from the LLJITBuilder into a common interpreter
-// creation configuraion class.
-class IncrementalExecutorBuilder {
-public:
-  /// Indicates whether out-of-process JIT execution is enabled.
-  bool IsOutOfProcess = false;
-  /// Path to the out-of-process JIT executor.
-  std::string OOPExecutor = "";
-  std::string OOPExecutorConnect = "";
-  /// Indicates whether to use shared memory for communication.
-  bool UseSharedMemory = false;
-  /// Representing the slab allocation size for memory management in kb.
-  unsigned SlabAllocateSize = 0;
-  /// Path to the ORC runtime library.
-  std::string OrcRuntimePath = "";
-  /// PID of the out-of-process JIT executor.
-  uint32_t ExecutorPID = 0;
-  /// Custom lambda to be executed inside child process/executor
-  std::function<void()> CustomizeFork = nullptr;
-  /// An optional code model to provide to the JITTargetMachineBuilder
-  std::optional<llvm::CodeModel::Model> CM = std::nullopt;
-  std::function<llvm::Error(const driver::Compilation &)>
-      UpdateOrcRuntimePathCB = [this](const driver::Compilation &C) {
-        return UpdateOrcRuntimePath(C);
-      };
-
-  ~IncrementalExecutorBuilder();
-
-  llvm::Expected<std::unique_ptr<IncrementalExecutor>>
-  create(llvm::orc::ThreadSafeContext &TSC,
-         llvm::orc::LLJITBuilder &JITBuilder);
-
-private:
-  llvm::Error UpdateOrcRuntimePath(const driver::Compilation &C);
-};
-
 class IncrementalAction;
 class InProcessPrintingASTConsumer;
 
@@ -168,9 +130,8 @@ class Interpreter {
 protected:
   // Derived classes can use an extended interface of the Interpreter.
   Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
-              std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr,
-              std::unique_ptr<clang::ASTConsumer> Consumer = nullptr,
-              std::unique_ptr<IncrementalExecutorBuilder> IEB = nullptr);
+              std::unique_ptr<IncrementalExecutorBuilder> IEB = nullptr,
+              std::unique_ptr<clang::ASTConsumer> Consumer = nullptr);
 
   // Create the internal IncrementalExecutor, or re-create it after calling
   // ResetExecutor().
@@ -178,7 +139,7 @@ protected:
 
   // Delete the internal IncrementalExecutor. This causes a hard shutdown of the
   // JIT engine. In particular, it doesn't run cleanup or destructors.
-  void ResetExecutor();
+  void ResetExecutor() { IncrExecutor.reset(); }
 
 public:
   virtual ~Interpreter();
@@ -188,15 +149,12 @@ public:
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);
-  static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
-  createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
-                     llvm::StringRef OrcRuntimePath);
 
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
   CompilerInstance *getCompilerInstance();
-  llvm::Expected<llvm::orc::LLJIT &> getExecutionEngine();
+  llvm::Expected<IncrementalExecutor &> getExecutionEngine();
 
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);
@@ -222,7 +180,9 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
-  uint32_t getOutOfProcessExecutorPID() const;
+  const IncrementalExecutorBuilder &getIncrementalExecutorBuilder() const {
+    return *IncrExecutorBuilder;
+  }
 
 private:
   size_t getEffectivePTUSize() const;
@@ -233,8 +193,6 @@ private:
   mutable llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
   std::array<Expr *, 4> ValuePrintingInfo = {0};
-
-  std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
 
   std::unique_ptr<IncrementalExecutorBuilder> IncrExecutorBuilder;
 

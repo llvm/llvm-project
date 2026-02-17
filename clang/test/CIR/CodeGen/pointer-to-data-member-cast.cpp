@@ -133,3 +133,58 @@ auto derived_to_base_zero_offset(int Derived::*ptr) -> int Base1::* {
 // OGCG-NEXT:   store i64 %{{.*}}, ptr %[[PTR_ADDR]]
 // OGCG-NEXT:   %[[RET:.*]] = load i64, ptr %[[PTR_ADDR]]
 // OGCG-NEXT:   ret i64 %[[RET]]
+
+struct Foo {
+  int a;
+};
+
+struct Bar {
+  int a;
+};
+
+bool to_bool(int Foo::*x) {
+  return x;
+}
+
+// CIR-BEFORE: cir.func {{.*}} @_Z7to_boolM3Fooi
+// CIR-BEFORE:   %[[X:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Foo>>, !cir.data_member<!s32i in !rec_Foo>
+// CIR-BEFORE:   %{{.*}} = cir.cast member_ptr_to_bool %[[X]] : !cir.data_member<!s32i in !rec_Foo> -> !cir.bool
+
+// CIR-AFTER: cir.func {{.*}} @_Z7to_boolM3Fooi
+// CIR-AFTER:   %[[NULL_VAL:.*]] = cir.const #cir.int<-1> : !s64i
+// CIR-AFTER:   %[[BOOL_VAL:.*]] = cir.cmp(ne, %{{.*}}, %[[NULL_VAL]]) : !s64i, !cir.bool
+
+// LLVM: define {{.*}} i1 @_Z7to_boolM3Fooi
+// LLVM:   %[[X:.*]] = load i64, ptr %{{.*}}
+// LLVM:   %[[IS_NULL:.*]] = icmp ne i64 %[[X]], -1
+
+// OGCG: define {{.*}} i1 @_Z7to_boolM3Fooi
+// OGCG:   %[[X:.*]] = load i64, ptr %{{.*}}
+// OGCG:   %[[IS_NULL:.*]] = icmp ne i64 %[[X]], -1
+
+auto bitcast(int Foo::*x) {
+  return reinterpret_cast<int Bar::*>(x);
+}
+
+// CIR-BEFORE: cir.func {{.*}} @_Z7bitcastM3Fooi
+// CIR-BEFORE:   %[[X:.*]] = cir.load{{.*}} %{{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Foo>>, !cir.data_member<!s32i in !rec_Foo>
+// CIR-BEFORE:   %{{.*}} = cir.cast bitcast %[[X]] : !cir.data_member<!s32i in !rec_Foo> -> !cir.data_member<!s32i in !rec_Bar>
+
+// CIR-AFTER: cir.func {{.*}} @_Z7bitcastM3Fooi(%[[ARG0:.*]]: !s64i
+// CIR-AFTER:   %[[X_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["x", init] {alignment = 8 : i64}
+// CIR-AFTER:   %[[RET_ADDR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["__retval"] {alignment = 8 : i64}
+// CIR-AFTER:   cir.store %[[ARG0]], %[[X_ADDR]]
+// CIR-AFTER:   %[[X:.*]] = cir.load{{.*}} %[[X_ADDR]]
+// CIR-AFTER:   cir.store %[[X]], %[[RET_ADDR]]
+// CIR-AFTER:   %[[RET:.*]] = cir.load %[[RET_ADDR]]
+// CIR-AFTER:   cir.return %[[RET]] : !s64i
+
+// LLVM: define {{.*}} i64 @_Z7bitcastM3Fooi
+// LLVM:   %[[X:.*]] = load i64, ptr %{{.*}}
+// LLVM:   store i64 %[[X]], ptr %[[RET_ADDR:.*]]
+// LLVM:   %[[RET:.*]] = load i64, ptr %[[RET_ADDR:.*]]
+// LLVM:   ret i64 %[[RET]]
+
+// OGCG: define {{.*}} i64 @_Z7bitcastM3Fooi
+// OGCG:   %[[X:.*]] = load i64, ptr %{{.*}}
+// OGCG:   ret i64 %[[X]]

@@ -4534,6 +4534,10 @@ void Parser::ParseDeclarationSpecifiers(
       HandlePragmaMSPointersToMembers();
       continue;
 
+    case tok::annot_pragma_export:
+      HandlePragmaExport();
+      continue;
+
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
 #include "clang/Basic/TransformTypeTraits.def"
       // HACK: libstdc++ already uses '__remove_cv' as an alias template so we

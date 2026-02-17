@@ -418,7 +418,7 @@ PlatformRemoteGDBServer::DebugProcess(ProcessLaunchInfo &launch_info,
       } else {
         // By default, we always use the GDB remote debugger plug-in.
         // Even when debugging locally, we are debugging remotely.
-        llvm::StringRef process_plugin = "gdb-remote";
+        llvm::StringRef process_plugin = GetDefaultProcessPluginName();
 
         // However, if a process plugin is specified by the attach info, we
         // should honor it.
@@ -514,7 +514,7 @@ lldb::ProcessSP PlatformRemoteGDBServer::Attach(
         if (target && error.Success()) {
           // By default, we always use the GDB remote debugger plug-in.
           // Even when debugging locally, we are debugging remotely.
-          llvm::StringRef process_plugin = "gdb-remote";
+          llvm::StringRef process_plugin = GetDefaultProcessPluginName();
 
           // However, if a process plugin is specified by the attach info, we
           // should honor it.
@@ -831,7 +831,8 @@ size_t PlatformRemoteGDBServer::ConnectToWaitingProcesses(Debugger &debugger,
   GetPendingGdbServerList(connection_urls);
 
   for (size_t i = 0; i < connection_urls.size(); ++i) {
-    ConnectProcess(connection_urls[i].c_str(), "gdb-remote", debugger, nullptr, error);
+    ConnectProcess(connection_urls[i].c_str(), GetDefaultProcessPluginName(),
+                   debugger, nullptr, error);
     if (error.Fail())
       return i; // We already connected to i process successfully
   }

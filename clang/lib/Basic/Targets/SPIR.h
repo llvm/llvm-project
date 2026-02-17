@@ -320,12 +320,13 @@ public:
 
   virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
     // The generic space AS(4) is a superset of all the other address
-    // spaces used by the backend target.
+    // spaces used by the backend target except constant address space.
     return A == B || ((A == LangAS::Default ||
                        (isTargetAddressSpace(A) &&
                         toTargetAddressSpace(A) == /*Generic=*/4)) &&
                       isTargetAddressSpace(B) &&
-                      toTargetAddressSpace(B) <= /*Generic=*/4);
+                      (toTargetAddressSpace(B) <= /*Generic=*/4 &&
+                       toTargetAddressSpace(B) != /*Constant=*/2));
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -361,8 +362,9 @@ public:
       : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv32 &&
            "Invalid architecture for 32-bit SPIR-V.");
-    assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
-           "32-bit SPIR-V target must use unknown OS");
+    assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
+            getTriple().getOS() == llvm::Triple::ChipStar) &&
+           "32-bit SPIR-V target must use unknown or chipstar OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "32-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 32;
@@ -384,8 +386,9 @@ public:
       : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv64 &&
            "Invalid architecture for 64-bit SPIR-V.");
-    assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
-           "64-bit SPIR-V target must use unknown OS");
+    assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
+            getTriple().getOS() == llvm::Triple::ChipStar) &&
+           "64-bit SPIR-V target must use unknown or chipstar OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "64-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 64;

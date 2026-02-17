@@ -29,15 +29,15 @@ long double TestLD(long double x) {
   return x * x;
 }
 // GNU32: define dso_local x86_fp80 @TestLD(x86_fp80 noundef %x)
-// GNU64: define dso_local void @TestLD(ptr dead_on_unwind noalias writable sret(x86_fp80) align 16 %agg.result, ptr dead_on_return noundef %0)
+// GNU64: define dso_local void @TestLD(ptr dead_on_unwind noalias writable sret(x86_fp80) align 16 %agg.result, ptr noundef dead_on_return %0)
 // MSC64: define dso_local double @TestLD(double noundef %x)
 
 long double _Complex TestLDC(long double _Complex x) {
   return x * x;
 }
 // GNU32: define dso_local void @TestLDC(ptr dead_on_unwind noalias writable sret({ x86_fp80, x86_fp80 }) align 4 %agg.result, ptr noundef byval({ x86_fp80, x86_fp80 }) align 4 %x)
-// GNU64: define dso_local void @TestLDC(ptr dead_on_unwind noalias writable sret({ x86_fp80, x86_fp80 }) align 16 %agg.result, ptr dead_on_return noundef %x)
-// MSC64: define dso_local void @TestLDC(ptr dead_on_unwind noalias writable sret({ double, double }) align 8 %agg.result, ptr dead_on_return noundef %x)
+// GNU64: define dso_local void @TestLDC(ptr dead_on_unwind noalias writable sret({ x86_fp80, x86_fp80 }) align 16 %agg.result, ptr noundef dead_on_return %x)
+// MSC64: define dso_local void @TestLDC(ptr dead_on_unwind noalias writable sret({ double, double }) align 8 %agg.result, ptr noundef dead_on_return %x)
 
 // GNU32: declare dso_local void @__mulxc3
 // GNU64: declare dso_local void @__mulxc3

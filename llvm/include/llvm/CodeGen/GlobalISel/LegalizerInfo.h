@@ -765,6 +765,8 @@ public:
   LegalizeRuleSet &lowerFor(std::initializer_list<std::pair<LLT, LLT>> Types) {
     return actionFor(LegalizeAction::Lower, Types);
   }
+  /// The instruction is lowered when type indexes 0 and 1 is any type pair in
+  /// the given list, provided Predicate pred is true.
   LegalizeRuleSet &lowerFor(bool Pred,
                             std::initializer_list<std::pair<LLT, LLT>> Types) {
     if (!Pred)

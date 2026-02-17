@@ -150,6 +150,7 @@ enum class TentativeCXXTypeIdContext {
   AsTemplateArgument,
   InTrailingReturnType,
   AsGenericSelectionArgument,
+  AsReflectionOperand
 };
 
 /// The kind of attribute specifier we have found.
@@ -565,10 +566,6 @@ private:
 
   /// Contextual keywords for Microsoft extensions.
   IdentifierInfo *Ident__except;
-
-  // C++2a contextual keywords.
-  mutable IdentifierInfo *Ident_import;
-  mutable IdentifierInfo *Ident_module;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -1081,6 +1078,9 @@ private:
   bool ParseModuleName(SourceLocation UseLoc,
                        SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
 
+  void DiagnoseInvalidCXXModuleDecl(const Sema::ModuleImportState &ImportState);
+  void DiagnoseInvalidCXXModuleImport();
+
   //===--------------------------------------------------------------------===//
   // Preprocessor code-completion pass-through
   void CodeCompleteDirective(bool InConditional) override;
@@ -1091,6 +1091,8 @@ private:
                                  unsigned ArgumentIndex) override;
   void CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled) override;
   void CodeCompleteNaturalLanguage() override;
+  void CodeCompleteModuleImport(SourceLocation ImportLoc,
+                                ModuleIdPath Path) override;
 
   ///@}
 
@@ -5151,6 +5153,15 @@ private:
 
   ///@}
 
+  //===--------------------------------------------------------------------===//
+  // Reflection parsing
+
+  /// ParseCXXReflectExpression - parses the operand of reflection operator.
+  ///
+  /// \returns on success, an expression holding the constructed CXXReflectExpr;
+  ///          on failure, an ExprError.
+  ExprResult ParseCXXReflectExpression();
+
   //
   //
   // -------------------------------------------------------------------------
@@ -7040,6 +7051,7 @@ private:
   std::unique_ptr<PragmaHandler> AttributePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensHerePragmaHandler;
   std::unique_ptr<PragmaHandler> MaxTokensTotalPragmaHandler;
+  std::unique_ptr<PragmaHandler> ExportHandler;
   std::unique_ptr<PragmaHandler> RISCVPragmaHandler;
 
   /// Initialize all pragma handlers.
@@ -7160,6 +7172,12 @@ private:
       SourceLocation &AnyLoc, SourceLocation &LastMatchRuleEndLoc);
 
   void HandlePragmaAttribute();
+
+  void zOSHandlePragmaHelper(tok::TokenKind);
+
+  /// Handle the annotation token produced for
+  /// #pragma export ...
+  void HandlePragmaExport();
 
   ///@}
 

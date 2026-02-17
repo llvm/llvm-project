@@ -10,9 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_REDUNDANTVOIDARGCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "clang/Lex/Token.h"
-
-#include <string>
 
 namespace clang::tidy::modernize {
 
@@ -38,37 +35,6 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
 
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-
-private:
-  void processFunctionDecl(const ast_matchers::MatchFinder::MatchResult &Result,
-                           const FunctionDecl *Function);
-
-  void
-  processTypedefNameDecl(const ast_matchers::MatchFinder::MatchResult &Result,
-                         const TypedefNameDecl *Typedef);
-
-  void processFieldDecl(const ast_matchers::MatchFinder::MatchResult &Result,
-                        const FieldDecl *Member);
-
-  void processVarDecl(const ast_matchers::MatchFinder::MatchResult &Result,
-                      const VarDecl *Var);
-
-  void
-  processNamedCastExpr(const ast_matchers::MatchFinder::MatchResult &Result,
-                       const CXXNamedCastExpr *NamedCast);
-
-  void
-  processExplicitCastExpr(const ast_matchers::MatchFinder::MatchResult &Result,
-                          const ExplicitCastExpr *ExplicitCast);
-
-  void processLambdaExpr(const ast_matchers::MatchFinder::MatchResult &Result,
-                         const LambdaExpr *Lambda);
-
-  void
-  removeVoidArgumentTokens(const ast_matchers::MatchFinder::MatchResult &Result,
-                           SourceRange Range, StringRef GrammarLocation);
-
-  void removeVoidToken(Token VoidToken, StringRef Diagnostic);
 };
 
 } // namespace clang::tidy::modernize

@@ -214,6 +214,12 @@ def G_CTTZ_ZERO_UNDEF : GenericInstruction {
   let hasSideEffects = false;
 }
 
+def G_CTLS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src);
+  let hasSideEffects = false;
+}
+
 def G_CTPOP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);

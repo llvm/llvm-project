@@ -81,7 +81,7 @@ function(add_gen_header target_name)
     ${ARGN}
   )
   get_fq_target_name(${target_name} fq_target_name)
-  if(NOT LLVM_LIBC_FULL_BUILD)
+  if(NOT LLVM_LIBC_FULL_BUILD AND NOT ADD_GEN_HDR_PROXY)
     add_library(${fq_target_name} INTERFACE)
     return()
   endif()

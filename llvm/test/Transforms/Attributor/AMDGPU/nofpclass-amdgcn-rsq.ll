@@ -286,5 +286,5 @@ define double @ret_rsq_f64_known_not_inf(double nofpclass(inf) %arg) {
   ret double %call
 }
 
-attributes #0 = { "denormal-fp-math-f32"="ieee,dynamic" }
-attributes #1 = { "denormal-fp-math"="ieee,dynamic" }
+attributes #0 = { denormal_fpenv(float: ieee|dynamic) }
+attributes #1 = { denormal_fpenv(ieee|dynamic) }

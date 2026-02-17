@@ -13,7 +13,8 @@ HTML-SHAPE:     <meta charset="utf-8"/>
 HTML-SHAPE:     <title>Shape</title>
 HTML-SHAPE:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
 HTML-SHAPE:         <script src="../mustache-index.js"></script>
-HTML-SHAPE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+HTML-SHAPE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" media="(prefers-color-scheme: light)">
+HTML-SHAPE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dark.min.css" media="(prefers-color-scheme: dark)">
 HTML-SHAPE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 HTML-SHAPE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
 HTML-SHAPE: </head>
@@ -42,7 +43,7 @@ HTML-SHAPE:             <ul>
 HTML-SHAPE:                 <li>
 HTML-SHAPE:                     <details open>
 HTML-SHAPE:                         <summary class="sidebar-section">
-HTML-SHAPE:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-SHAPE:                             <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
 HTML-SHAPE:                         </summary>
 HTML-SHAPE:                         <ul>
 HTML-SHAPE:                             <li class="sidebar-item-container">
@@ -123,7 +124,8 @@ HTML-CALC:     <meta charset="utf-8"/>
 HTML-CALC:     <title>Calculator</title>
 HTML-CALC:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
 HTML-CALC:         <script src="../mustache-index.js"></script>
-HTML-CALC:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+HTML-CALC:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" media="(prefers-color-scheme: light)">
+HTML-CALC:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dark.min.css" media="(prefers-color-scheme: dark)">
 HTML-CALC:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 HTML-CALC:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
 HTML-CALC: </head>
@@ -167,7 +169,7 @@ HTML-CALC:                 </li>
 HTML-CALC:                 <li>
 HTML-CALC:                     <details open>
 HTML-CALC:                         <summary class="sidebar-section">
-HTML-CALC:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-CALC:                             <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
 HTML-CALC:                         </summary>
 HTML-CALC:                         <ul>
 HTML-CALC:                             <li class="sidebar-item-container">
@@ -337,7 +339,8 @@ HTML-RECTANGLE:     <meta charset="utf-8"/>
 HTML-RECTANGLE:     <title>Rectangle</title>
 HTML-RECTANGLE:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
 HTML-RECTANGLE:         <script src="../mustache-index.js"></script>
-HTML-RECTANGLE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+HTML-RECTANGLE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" media="(prefers-color-scheme: light)">
+HTML-RECTANGLE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dark.min.css" media="(prefers-color-scheme: dark)">
 HTML-RECTANGLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 HTML-RECTANGLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
 HTML-RECTANGLE: </head>
@@ -366,7 +369,7 @@ HTML-RECTANGLE:             <ul>
 HTML-RECTANGLE:                 <li>
 HTML-RECTANGLE:                     <details open>
 HTML-RECTANGLE:                         <summary class="sidebar-section">
-HTML-RECTANGLE:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-RECTANGLE:                             <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
 HTML-RECTANGLE:                         </summary>
 HTML-RECTANGLE:                         <ul>
 HTML-RECTANGLE:                             <li class="sidebar-item-container">
@@ -451,7 +454,8 @@ HTML-CIRCLE:     <meta charset="utf-8"/>
 HTML-CIRCLE:     <title>Circle</title>
 HTML-CIRCLE:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
 HTML-CIRCLE:         <script src="../mustache-index.js"></script>
-HTML-CIRCLE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+HTML-CIRCLE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" media="(prefers-color-scheme: light)">
+HTML-CIRCLE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dark.min.css" media="(prefers-color-scheme: dark)">
 HTML-CIRCLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 HTML-CIRCLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
 HTML-CIRCLE: </head>
@@ -480,7 +484,7 @@ HTML-CIRCLE:             <ul>
 HTML-CIRCLE:                 <li>
 HTML-CIRCLE:                     <details open>
 HTML-CIRCLE:                         <summary class="sidebar-section">
-HTML-CIRCLE:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-CIRCLE:                             <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
 HTML-CIRCLE:                         </summary>
 HTML-CIRCLE:                         <ul>
 HTML-CIRCLE:                             <li class="sidebar-item-container">

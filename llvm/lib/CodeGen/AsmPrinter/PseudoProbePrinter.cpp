@@ -26,6 +26,16 @@
 
 using namespace llvm;
 
+#ifndef NDEBUG
+// Deprecated with ThinLTO. For some modules compiled with ThinLTO, certain
+// pseudo probe descriptors may not be imported, resulting in false positive
+// warning.
+static cl::opt<bool> VerifyGuidExistence(
+    "pseudo-probe-verify-guid-existence-in-desc",
+    cl::desc("Verify whether GUID exists in the .pseudo_probe_desc."),
+    cl::Hidden, cl::init(false));
+#endif
+
 void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
                                          uint64_t Type, uint64_t Attr,
                                          const DILocation *DebugLoc) {
@@ -45,7 +55,8 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
     if (!CallerGuid)
       CallerGuid = Function::getGUIDAssumingExternalLinkage(Name);
 #ifndef NDEBUG
-    verifyGuidExistenceInDesc(CallerGuid, Name);
+    if (VerifyGuidExistence)
+      verifyGuidExistenceInDesc(CallerGuid, Name);
 #endif
     uint64_t CallerProbeId = PseudoProbeDwarfDiscriminator::extractProbeIndex(
         InlinedAt->getDiscriminator());
@@ -64,8 +75,9 @@ void PseudoProbeHandler::emitPseudoProbe(uint64_t Guid, uint64_t Index,
   Asm->OutStreamer->emitPseudoProbe(Guid, Index, Type, Attr, Discriminator,
                                     InlineStack, Asm->CurrentFnSym);
 #ifndef NDEBUG
-  verifyGuidExistenceInDesc(
-      Guid, DebugLoc ? DebugLoc->getSubprogramLinkageName() : "");
+  if (VerifyGuidExistence)
+    verifyGuidExistenceInDesc(
+        Guid, DebugLoc ? DebugLoc->getSubprogramLinkageName() : "");
 #endif
 }
 

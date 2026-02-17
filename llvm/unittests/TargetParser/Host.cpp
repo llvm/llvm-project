@@ -178,6 +178,9 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
                                               "CPU part        : 0xac5"),
             "ampere1b");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
+                                              "CPU part        : 0xac7"),
+            "ampere1c");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0x001"),
             "oryon-1");
@@ -601,6 +604,11 @@ TEST(HostTest, AIXTargetVersionDetect) {
   llvm::Triple ConfiguredTargetTriple(LLVM_DEFAULT_TARGET_TRIPLE);
   if (ConfiguredTargetTriple.getOSMajorVersion())
     GTEST_SKIP(); // The version was configured explicitly; skip.
+
+#ifdef LLVM_TARGET_TRIPLE_ENV
+  if (std::getenv(LLVM_TARGET_TRIPLE_ENV))
+    GTEST_SKIP(); // The target was configured by env; skip.
+#endif
 
   VersionTuple SystemVersion;
   getAIXSystemVersion(SystemVersion);

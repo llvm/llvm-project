@@ -345,7 +345,7 @@ shouldTrackFirstArgumentForConstructor(const CXXConstructExpr *Ctor) {
   // patterns.
   auto RHSArgType = Ctor->getArg(0)->getType();
   const auto *RHSRD = RHSArgType->getAsRecordDecl();
-  // LHS is constructed from an intializer_list.
+  // LHS is constructed from an initializer_list.
   //
   // std::initializer_list is a proxy object that provides access to the backing
   // array. We perform analysis on it to determine if there are any dangling
@@ -482,7 +482,8 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       VisitLifetimeBoundArg(Callee, ObjectArg);
     else if (EnableGSLAnalysis) {
       if (auto *CME = dyn_cast<CXXMethodDecl>(Callee);
-          CME && lifetimes::shouldTrackImplicitObjectArg(CME))
+          CME && lifetimes::shouldTrackImplicitObjectArg(
+                     CME, /*RunningUnderLifetimeSafety=*/false))
         VisitGSLPointerArg(Callee, ObjectArg);
     }
   }
@@ -1464,7 +1465,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
   else
     visitLocalsRetainedByInitializer(
         Path, Init, TemporaryVisitor,
-        // Don't revisit the sub inits for the intialization case.
+        // Don't revisit the sub inits for the initialization case.
         /*RevisitSubinits=*/!InitEntity);
 }
 

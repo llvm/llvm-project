@@ -1746,7 +1746,12 @@ static LogicalResult verifyNumBlockArgs(T *op, Region &region,
       return op->emitError() << regionName << " region argument " << (i + 1)
                              << " type mismatch";
   }
-  Operation *term = region.front().getTerminator();
+  Block &block = region.front();
+  if (!block.mightHaveTerminator())
+    return op->emitError() << regionName
+                           << " region must end with a terminator";
+
+  Operation *term = block.getTerminator();
   YieldOp yield = dyn_cast<YieldOp>(term);
   if (!yield)
     return op->emitError() << regionName
@@ -2605,9 +2610,14 @@ void IterateOp::getSuccessorRegions(RegionBranchPoint point,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // Both the operation itself and the region may be branching into the body
   // or back into the operation itself.
-  regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
+  regions.push_back(RegionSuccessor(&getRegion()));
   // It is possible for loop not to enter the body.
-  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange IterateOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults())
+                              : ValueRange(getRegionIterArgs());
 }
 
 void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,

@@ -559,7 +559,7 @@ void native(SmallVectorImpl<char> &Path, Style style) {
       SmallString<128> PathHome;
       home_directory(PathHome);
       PathHome.append(Path.begin() + 1, Path.end());
-      Path = PathHome;
+      Path = std::move(PathHome);
     }
   } else {
     llvm::replace(Path, '\\', '/');

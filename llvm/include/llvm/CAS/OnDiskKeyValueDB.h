@@ -69,13 +69,11 @@ public:
   LLVM_ABI_FOR_TEST static Expected<std::unique_ptr<OnDiskKeyValueDB>>
   open(StringRef Path, StringRef HashName, unsigned KeySize,
        StringRef ValueName, size_t ValueSize,
-       UnifiedOnDiskCache *UnifiedCache = nullptr);
+       UnifiedOnDiskCache *UnifiedCache = nullptr,
+       std::shared_ptr<OnDiskCASLogger> Logger = nullptr);
 
-  using CheckValueT =
-      function_ref<Error(FileOffset Offset, ArrayRef<char> Data)>;
-  /// Validate the storage with a callback \p CheckValue to check the stored
-  /// value.
-  LLVM_ABI_FOR_TEST Error validate(CheckValueT CheckValue) const;
+  /// Validate the storage.
+  LLVM_ABI_FOR_TEST Error validate() const;
 
 private:
   OnDiskKeyValueDB(size_t ValueSize, OnDiskTrieRawHashMap Cache,

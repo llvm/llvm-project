@@ -2076,6 +2076,11 @@ public:
     return buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, {Dst}, {Src0});
   }
 
+  /// Build and insert \p Res = G_CTLS \p Op0, \p Src0
+  MachineInstrBuilder buildCTLS(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTLS, {Dst}, {Src0});
+  }
+
   /// Build and insert \p Dst = G_BSWAP \p Src0
   MachineInstrBuilder buildBSwap(const DstOp &Dst, const SrcOp &Src0) {
     return buildInstr(TargetOpcode::G_BSWAP, {Dst}, {Src0});
@@ -2210,9 +2215,10 @@ public:
   }
 
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1
-  MachineInstrBuilder buildFCopysign(const DstOp &Dst, const SrcOp &Src0,
-                                     const SrcOp &Src1) {
-    return buildInstr(TargetOpcode::G_FCOPYSIGN, {Dst}, {Src0, Src1});
+  MachineInstrBuilder
+  buildFCopysign(const DstOp &Dst, const SrcOp &Src0, const SrcOp &Src1,
+                 std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FCOPYSIGN, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_UITOFP \p Src0

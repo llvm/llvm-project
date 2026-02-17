@@ -120,10 +120,10 @@ typedef int (*unw_find_dynamic_unwind_sections)(
 extern int __unw_add_find_dynamic_unwind_sections(
     unw_find_dynamic_unwind_sections find_dynamic_unwind_sections);
 
-// Deregister a dynacim unwind-info lookup callback.
+// Deregister a dynamic unwind-info lookup callback.
 //
 // Returns UNW_ESUCCESS for successful deregistrations. If the given callback
-// has already been registered then UNW_EINVAL will be returned.
+// is not present then UNW_EINVAL will be returned.
 extern int __unw_remove_find_dynamic_unwind_sections(
     unw_find_dynamic_unwind_sections find_dynamic_unwind_sections);
 

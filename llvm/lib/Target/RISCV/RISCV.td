@@ -61,10 +61,11 @@ include "RISCVSchedSiFiveP500.td"
 include "RISCVSchedSiFiveP600.td"
 include "RISCVSchedSiFiveP800.td"
 include "RISCVSchedSpacemitX60.td"
+include "RISCVSchedSpacemitX100.td"
 include "RISCVSchedSyntacoreSCR1.td"
 include "RISCVSchedSyntacoreSCR345.td"
 include "RISCVSchedSyntacoreSCR7.td"
-include "RISCVSchedTTAscalonD8.td"
+include "RISCVSchedTTAscalonX.td"
 include "RISCVSchedXiangShanNanHu.td"
 
 //===----------------------------------------------------------------------===//

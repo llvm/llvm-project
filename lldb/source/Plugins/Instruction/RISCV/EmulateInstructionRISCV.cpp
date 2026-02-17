@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "EmulateInstructionRISCV.h"
+#include "Plugins/Process/Utility/RegisterInfoInterface.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv32.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
 #include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 #include "RISCVCInstructions.h"
@@ -1837,10 +1839,23 @@ EmulateInstructionRISCV::GetRegisterInfo(RegisterKind reg_kind,
     }
   }
 
-  RegisterInfoPOSIX_riscv64 reg_info(m_arch,
-                                     RegisterInfoPOSIX_riscv64::eRegsetMaskAll);
-  const RegisterInfo *array = reg_info.GetRegisterInfo();
-  const uint32_t length = reg_info.GetRegisterCount();
+  std::unique_ptr<RegisterInfoInterface> reg_info;
+  switch (m_arch.GetTriple().getArch()) {
+  case llvm::Triple::riscv32:
+    reg_info = std::make_unique<RegisterInfoPOSIX_riscv32>(
+        m_arch, RegisterInfoPOSIX_riscv32::eRegsetMaskAll);
+    break;
+  case llvm::Triple::riscv64:
+    reg_info = std::make_unique<RegisterInfoPOSIX_riscv64>(
+        m_arch, RegisterInfoPOSIX_riscv64::eRegsetMaskAll);
+    break;
+  default:
+    assert(false && "unsupported triple");
+    return {};
+  }
+
+  const RegisterInfo *array = reg_info->GetRegisterInfo();
+  const uint32_t length = reg_info->GetRegisterCount();
 
   if (reg_index >= length || reg_kind != eRegisterKindLLDB)
     return {};
