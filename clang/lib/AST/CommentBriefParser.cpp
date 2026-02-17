@@ -9,6 +9,7 @@
 #include "clang/AST/CommentBriefParser.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/Basic/CharInfo.h"
+#include "llvm/ADT/SmallString.h"
 
 namespace clang {
 namespace comments {
@@ -17,12 +18,11 @@ namespace {
 
 /// Convert all whitespace into spaces, remove leading and trailing spaces,
 /// compress multiple spaces into one.
-void cleanupBrief(std::string &S) {
+void cleanupBrief(llvm::SmallVectorImpl<char> &S) {
   bool PrevWasSpace = true;
-  std::string::iterator O = S.begin();
-  for (std::string::iterator I = S.begin(), E = S.end();
-       I != E; ++I) {
-    const char C = *I;
+  auto O = S.begin();
+  for (auto I = S.begin(), E = S.end(); I != E; ++I) {
+    char C = *I;
     if (clang::isWhitespace(C)) {
       if (!PrevWasSpace) {
         *O++ = ' ';
@@ -35,8 +35,7 @@ void cleanupBrief(std::string &S) {
   }
   if (O != S.begin() && *(O - 1) == ' ')
     --O;
-
-  S.resize(O - S.begin());
+  S.truncate(O - S.begin());
 }
 
 bool isWhitespace(StringRef Text) {
@@ -44,15 +43,15 @@ bool isWhitespace(StringRef Text) {
 }
 } // unnamed namespace
 
-BriefParser::BriefParser(Lexer &L, const CommandTraits &Traits) :
-    L(L), Traits(Traits) {
+BriefParser::BriefParser(Lexer &L, const CommandTraits &Traits)
+    : L(L), Traits(Traits) {
   // Get lookahead token.
   ConsumeToken();
 }
 
 std::string BriefParser::Parse() {
-  std::string FirstParagraphOrBrief;
-  std::string ReturnsParagraph;
+  llvm::SmallString<128> FirstParagraphOrBrief;
+  llvm::SmallString<64> ReturnsParagraph;
   bool InFirstParagraph = true;
   bool InBrief = false;
   bool InReturns = false;
@@ -60,9 +59,9 @@ std::string BriefParser::Parse() {
   while (Tok.isNot(tok::eof)) {
     if (Tok.is(tok::text)) {
       if (InFirstParagraph || InBrief)
-        FirstParagraphOrBrief += Tok.getText();
+        FirstParagraphOrBrief.append(Tok.getText());
       else if (InReturns)
-        ReturnsParagraph += Tok.getText();
+        ReturnsParagraph.append(Tok.getText());
       ConsumeToken();
       continue;
     }
@@ -79,7 +78,7 @@ std::string BriefParser::Parse() {
         InReturns = true;
         InBrief = false;
         InFirstParagraph = false;
-        ReturnsParagraph += "Returns ";
+        ReturnsParagraph.append("Returns ");
         ConsumeToken();
         continue;
       }
@@ -94,9 +93,9 @@ std::string BriefParser::Parse() {
 
     if (Tok.is(tok::newline)) {
       if (InFirstParagraph || InBrief)
-        FirstParagraphOrBrief += ' ';
+        FirstParagraphOrBrief.push_back(' ');
       else if (InReturns)
-        ReturnsParagraph += ' ';
+        ReturnsParagraph.push_back(' ');
       ConsumeToken();
 
       // If the next token is a whitespace only text, ignore it.  Thus we allow
@@ -132,13 +131,12 @@ std::string BriefParser::Parse() {
 
   cleanupBrief(FirstParagraphOrBrief);
   if (!FirstParagraphOrBrief.empty())
-    return FirstParagraphOrBrief;
+    return std::string(FirstParagraphOrBrief.begin(),
+                       FirstParagraphOrBrief.end());
 
   cleanupBrief(ReturnsParagraph);
-  return ReturnsParagraph;
+  return std::string(ReturnsParagraph.begin(), ReturnsParagraph.end());
 }
 
 } // end namespace comments
 } // end namespace clang
-
-
