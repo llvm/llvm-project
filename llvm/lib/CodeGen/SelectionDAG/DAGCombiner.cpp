@@ -9542,6 +9542,35 @@ static std::optional<bool> isBigEndian(ArrayRef<int64_t> ByteOffsets,
   return BigEndian;
 }
 
+// Determines if multiple bytes loaded into a register
+// corresponds to loading a single, contiguous block of bytes from memory and
+// then perform a bitwise right rotation. Returns the rotation amount or
+// std::nullopt if we can't match the pattern.
+static std::optional<unsigned> getRotationAmount(ArrayRef<int64_t> ByteOffsets,
+                                                 int64_t FirstOffset) {
+  unsigned ByteWidth = ByteOffsets.size();
+  if (ByteWidth == 0)
+    return std::nullopt;
+
+  int64_t FirstByteActualOffset = ByteOffsets[0];
+  int64_t RotateAmtInBytes = FirstByteActualOffset - FirstOffset;
+
+  // Check the rotation amount is valid
+  if (RotateAmtInBytes < 0 || RotateAmtInBytes >= ByteWidth)
+    return std::nullopt;
+
+  // Make sure each of the following loads follow the same rotational pattern.
+  for (unsigned I = 0; I < ByteWidth; ++I) {
+    int64_t ExpectedOffset = FirstOffset + ((I + RotateAmtInBytes) % ByteWidth);
+    if (ByteOffsets[I] != ExpectedOffset) {
+      return std::nullopt;
+    }
+  }
+
+  // Return the rotation amount in bits.
+  return RotateAmtInBytes * 8;
+}
+
 // Look through one layer of truncate or extend.
 static SDValue stripTruncAndExt(SDValue Value) {
   switch (Value.getOpcode()) {
@@ -9920,65 +9949,99 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // little endian value load
   std::optional<bool> IsBigEndian = isBigEndian(
       ArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes), FirstOffset);
-  if (!IsBigEndian)
-    return SDValue();
 
-  assert(FirstByteProvider && "must be set");
+  // Handle the standard load combine.
+  if (IsBigEndian) {
+    bool NeedsBswap = IsBigEndianTarget != *IsBigEndian;
 
-  // Ensure that the first byte is loaded from zero offset of the first load.
-  // So the combined value can be loaded from the first load address.
-  if (MemoryByteOffset(*FirstByteProvider) != 0)
-    return SDValue();
-  auto *FirstLoad = cast<LoadSDNode>(FirstByteProvider->Src.value());
+    // Before legalize we can introduce illegal bswaps which will be later
+    // converted to an explicit bswap sequence. This way we end up with a single
+    // load and byte shuffling instead of several loads and byte shuffling.
+    // We do not introduce illegal bswaps when zero-extending as this tends to
+    // introduce too many arithmetic instructions.
+    if (NeedsBswap && (LegalOperations || NeedsZext) &&
+        !TLI.isOperationLegal(ISD::BSWAP, VT))
+      return SDValue();
 
-  // The node we are looking at matches with the pattern, check if we can
-  // replace it with a single (possibly zero-extended) load and bswap + shift if
-  // needed.
+    // If we need to bswap and zero extend, we have to insert a shift. Check
+    // thatunsigned Fast = 0; it is legal.
+    if (NeedsBswap && NeedsZext && LegalOperations &&
+        !TLI.isOperationLegal(ISD::SHL, VT))
+      return SDValue();
 
-  // If the load needs byte swap check if the target supports it
-  bool NeedsBswap = IsBigEndianTarget != *IsBigEndian;
+    auto *FirstLoad = cast<LoadSDNode>(FirstByteProvider->Src.value());
+    if (MemoryByteOffset(*FirstByteProvider) != 0)
+      return SDValue();
 
-  // Before legalize we can introduce illegal bswaps which will be later
-  // converted to an explicit bswap sequence. This way we end up with a single
-  // load and byte shuffling instead of several loads and byte shuffling.
-  // We do not introduce illegal bswaps when zero-extending as this tends to
-  // introduce too many arithmetic instructions.
-  if (NeedsBswap && (LegalOperations || NeedsZext) &&
-      !TLI.isOperationLegal(ISD::BSWAP, VT))
-    return SDValue();
+    // Check that a load of the wide type is both allowed and fast on the target
+    unsigned Fast = 0;
+    if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
+                                *FirstLoad->getMemOperand(), &Fast) ||
+        !Fast)
+      return SDValue();
 
-  // If we need to bswap and zero extend, we have to insert a shift. Check that
-  // it is legal.
-  if (NeedsBswap && NeedsZext && LegalOperations &&
-      !TLI.isOperationLegal(ISD::SHL, VT))
-    return SDValue();
+    SDValue NewLoad = DAG.getExtLoad(
+        NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, SDLoc(N), VT, Chain,
+        FirstLoad->getBasePtr(), FirstLoad->getPointerInfo(), MemVT,
+        FirstLoad->getAlign());
 
-  // Check that a load of the wide type is both allowed and fast on the target
-  unsigned Fast = 0;
-  bool Allowed =
-      TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
-                             *FirstLoad->getMemOperand(), &Fast);
-  if (!Allowed || !Fast)
-    return SDValue();
+    for (LoadSDNode *L : Loads)
+      DAG.makeEquivalentMemoryOrdering(L, NewLoad);
 
-  SDValue NewLoad =
-      DAG.getExtLoad(NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, SDLoc(N), VT,
-                     Chain, FirstLoad->getBasePtr(),
-                     FirstLoad->getPointerInfo(), MemVT, FirstLoad->getAlign());
+    // It is a simple combine.
+    if (!NeedsBswap)
+      return NewLoad;
 
-  // Transfer chain users from old loads to the new load.
-  for (LoadSDNode *L : Loads)
-    DAG.makeEquivalentMemoryOrdering(L, NewLoad);
+    // It is a BSWAP combine.
+    SDValue ShiftedLoad =
+        NeedsZext ? DAG.getNode(ISD::SHL, SDLoc(N), VT, NewLoad,
+                                DAG.getShiftAmountConstant(
+                                    ZeroExtendedBytes * 8, VT, SDLoc(N)))
+                  : NewLoad;
+    return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, ShiftedLoad);
+  }
 
-  if (!NeedsBswap)
-    return NewLoad;
+  // Handle the rotated load combine.
+  if (auto RotateAmt = getRotationAmount(
+          ArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes), FirstOffset)) {
 
-  SDValue ShiftedLoad =
-      NeedsZext ? DAG.getNode(ISD::SHL, SDLoc(N), VT, NewLoad,
-                              DAG.getShiftAmountConstant(ZeroExtendedBytes * 8,
-                                                         VT, SDLoc(N)))
-                : NewLoad;
-  return DAG.getNode(ISD::BSWAP, SDLoc(N), VT, ShiftedLoad);
+    // Make sure we can rotate
+    if (LegalOperations && !TLI.isOperationLegal(ISD::ROTR, VT))
+      return SDValue();
+
+    auto *FirstLoad = cast<LoadSDNode>(FirstByteProvider->Src.value());
+    if (MemoryByteOffset(*FirstByteProvider) != 0)
+      return SDValue();
+
+    // Make sure the operation is legal and fast.
+    unsigned Fast = 0;
+    if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
+                                *FirstLoad->getMemOperand(), &Fast) ||
+        !Fast)
+      return SDValue();
+
+    // Create the new load, rotate and then zero extend after if we need to.
+    SDValue NewLoad =
+        DAG.getLoad(MemVT, SDLoc(N), Chain, FirstLoad->getBasePtr(),
+                    FirstLoad->getPointerInfo());
+
+    for (LoadSDNode *L : Loads)
+      DAG.makeEquivalentMemoryOrdering(L, NewLoad);
+
+    EVT ShiftAmountTy =
+        TLI.getShiftAmountTy(NewLoad.getValueType(), DAG.getDataLayout());
+    SDValue Rotated =
+        DAG.getNode(ISD::ROTR, SDLoc(N), MemVT, NewLoad,
+                    DAG.getConstant(*RotateAmt, SDLoc(N), ShiftAmountTy));
+
+    if (NeedsZext)
+      return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, Rotated);
+
+    return Rotated;
+  }
+
+  // No pattern matched.
+  return SDValue();
 }
 
 // If the target has andn, bsl, or a similar bit-select instruction,
