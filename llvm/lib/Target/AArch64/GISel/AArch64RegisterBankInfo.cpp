@@ -15,6 +15,7 @@
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -25,6 +26,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
@@ -372,11 +374,10 @@ static bool isLegalFPImm(const MachineInstr &MI, const MachineRegisterInfo &MRI,
     return false;
 
   EVT VT = EVT::getFloatingPointVT(Bits);
-  bool OptForSize = MI.getMF()->getFunction().hasOptSize() ||
-                    MI.getMF()->getFunction().hasMinSize();
   const AArch64TargetLowering *TLI = STI.getTargetLowering();
-  return TLI->isFPImmLegal(MI.getOperand(1).getFPImm()->getValueAPF(), VT,
-                           OptForSize);
+  return TLI->isFPImmLegal(
+      MI.getOperand(1).getFPImm()->getValueAPF(), VT,
+      shouldOptimizeForSize(&MI.getMF()->getFunction(), nullptr, nullptr));
 }
 
 void AArch64RegisterBankInfo::applyMappingImpl(
@@ -395,7 +396,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     Register ExtReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
     Builder.buildTrunc(Dst, ExtReg);
 
-    auto Val = MI.getOperand(1).getCImm()->getValue().zext(32);
+    APInt Val = MI.getOperand(1).getCImm()->getValue().zext(32);
     LLVMContext &Ctx = Builder.getMF().getFunction().getContext();
     MI.getOperand(1).setCImm(ConstantInt::get(Ctx, Val));
     MI.getOperand(0).setReg(ExtReg);
