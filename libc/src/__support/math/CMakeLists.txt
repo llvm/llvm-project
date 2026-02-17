@@ -351,6 +351,63 @@ add_header_library(
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
 )
+add_header_library(
+  canonicalize
+  HDRS
+    canonicalize.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  canonicalizebf16
+  HDRS
+    canonicalizebf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  canonicalizef
+  HDRS
+    canonicalizef.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  canonicalizef128
+  HDRS
+    canonicalizef128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  canonicalizef16
+  HDRS
+    canonicalizef16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  canonicalizel
+  HDRS
+    canonicalizel.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
 
 add_header_library(
   cbrt
