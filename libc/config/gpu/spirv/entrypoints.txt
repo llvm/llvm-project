@@ -1,7 +1,4 @@
 set(TARGET_LIBC_ENTRYPOINTS
-    # assert.h entrypoints
-    libc.src.assert.__assert_fail
-
     # ctype.h entrypoints
     libc.src.ctype.isalnum
     libc.src.ctype.isalnum_l
