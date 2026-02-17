@@ -592,7 +592,6 @@ genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 /// and \p typeParams of the array.
 Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
                     Entity array, int64_t dim,
-                    mlir::ArrayRef<mlir::Value> lbounds,
                     mlir::ArrayRef<mlir::Value> extents,
                     mlir::ValueRange oneBasedIndices,
                     mlir::ArrayRef<mlir::Value> typeParams);

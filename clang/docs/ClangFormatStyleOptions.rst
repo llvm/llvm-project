@@ -3686,6 +3686,14 @@ the configuration (without a prefix: ``Auto``).
            initializer1(),
            initializer2()
 
+  * ``BCIS_AfterComma`` (in configuration: ``AfterComma``)
+    Break constructor initializers only after the commas.
+
+    .. code-block:: c++
+
+       Constructor() : initializer1(),
+                       initializer2()
+
 
 
 .. _BreakFunctionDefinitionParameters:
@@ -5015,7 +5023,8 @@ the configuration (without a prefix: ``Auto``).
   Keep the form feed character if it's immediately preceded and followed by
   a newline. Multiple form feeds and newlines within a whitespace range are
   replaced with a single newline and form feed followed by the remaining
-  newlines.
+  newlines. (See
+  www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed.)
 
 .. _LambdaBodyIndentation:
 

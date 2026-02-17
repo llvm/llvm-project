@@ -654,7 +654,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
           llvm::ElementCount::get(numElements, /*Scalable=*/isScalable), child);
     if (llvmType->isArrayTy()) {
       auto *arrayType = llvm::ArrayType::get(elementType, numElements);
-      if (child->isZeroValue() && !elementType->isFPOrFPVectorTy()) {
+      if (child->isNullValue() && !elementType->isFPOrFPVectorTy()) {
         return llvm::ConstantAggregateZero::get(arrayType);
       }
       if (llvm::ConstantDataSequential::isElementTypeCompatible(elementType)) {
@@ -1568,9 +1568,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
-
-  if (auto noInfsFpMath = func.getNoInfsFpMath())
-    llvmFunc->addFnAttr("no-infs-fp-math", llvm::toStringRef(*noInfsFpMath));
 
   if (auto noNansFpMath = func.getNoNansFpMath())
     llvmFunc->addFnAttr("no-nans-fp-math", llvm::toStringRef(*noNansFpMath));

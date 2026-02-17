@@ -2766,7 +2766,7 @@ For example:
     to signify an unbounded maximum. The syntax `vscale_range(<val>)` can be
     used to set both `min` and `max` to the same value. Functions that don't
     include this attribute make no assumptions about the value of `vscale`.
-``"nooutline"``
+``nooutline``
     This attribute indicates that outlining passes should not modify the
     function.
 ``nocreateundeforpoison``
@@ -16385,10 +16385,10 @@ support all bit widths however.
 
 ::
 
-      declare void @llvm.memset.inline.p0.p0i8.i32(ptr <dest>, i8 <val>,
-                                                   i32 <len>, i1 <isvolatile>)
-      declare void @llvm.memset.inline.p0.p0.i64(ptr <dest>, i8 <val>,
-                                                 i64 <len>, i1 <isvolatile>)
+      declare void @llvm.memset.inline.p0.i32(ptr <dest>, i8 <val>,
+                                              i32 <len>, i1 <isvolatile>)
+      declare void @llvm.memset.inline.p0.i64(ptr <dest>, i8 <val>,
+                                              i64 <len>, i1 <isvolatile>)
 
 Overview:
 """""""""
@@ -32246,3 +32246,73 @@ intrinsics that this intrinsic is lowered into. The intent is that the
 deactivation symbol represents a field identifier.
 
 This intrinsic is used to implement structure protection.
+
+'``llvm.cond.loop``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.cond.loop(i1 pred)
+
+Overview:
+"""""""""
+
+The '``llvm.cond.loop``' intrinsic spins in an infinite loop if the
+given predicate ``pred`` is true, otherwise it does nothing.
+
+Arguments:
+""""""""""
+
+``pred`` is the predicate.
+
+Semantics:
+""""""""""
+
+This intrinsic is semantically equivalent to a conditional branch
+conditioned on ``pred`` to a basic block consisting only of an
+unconditional branch to itself.
+
+Unlike such a branch, certain backends guarantee that this intrinsic
+will use specific instructions. This allows an interrupt handler or
+other introspection mechanism to straightforwardly detect whether
+the program is currently spinning in the infinite loop and possibly
+terminate the program if so. The intent is that this intrinsic may
+be used as a more efficient alternative to a conditional branch to
+a call to ``llvm.trap`` in circumstances where the loop detection
+is guaranteed to be present. This construct has been experimentally
+determined to be executed more efficiently (when the branch is not taken)
+than a conditional branch to a trap instruction on AMD and older Intel
+microarchitectures, and is also more code size efficient by avoiding the
+need to emit a trap instruction and possibly a long branch instruction.
+
+With the X86 backend, the infinite loop is guaranteed to
+consist of a short conditional branch instruction that branches to
+itself. Specifically, the first byte of the instruction will be between
+0x70 and 0x7F, and the second byte will be 0xFE.
+
+There are currently no guarantees about instructions used by other backends.
+
+'``llvm.looptrap``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.looptrap() cold noreturn nounwind
+
+Overview:
+"""""""""
+
+The '``llvm.looptrap``' intrinsic is equivalent to
+``llvm.cond.loop(true)``, but is also considered to be ``noreturn``,
+which enables certain optimizations by allowing the optimizer to
+assume that a branch leading to a call to this intrinsic was not
+taken. A late optimization pass will convert this intrinsic to either
+``llvm.cond.loop(true)`` or ``llvm.cond.loop(pred)``, where ``pred``
+is a predicate for a conditional branch leading to the intrinsic call,
+if possible.
