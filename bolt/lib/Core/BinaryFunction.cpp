@@ -1908,7 +1908,7 @@ bool BinaryFunction::scanExternalRefs() {
 }
 
 bool BinaryFunction::validateInternalBranches() {
-  if (!isSimple() || TrapsOnEntry)
+  if (!hasInstructions() || !isSimple() || TrapsOnEntry)
     return true;
 
   for (const auto &KV : Labels) {
