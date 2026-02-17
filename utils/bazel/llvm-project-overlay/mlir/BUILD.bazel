@@ -10474,6 +10474,7 @@ cc_library(
         ":ArithDialect",
         ":FuncDialect",
         ":FunctionInterfaces",
+        ":GPUDialect",
         ":IR",
         ":LoopLikeInterface",
         ":MemRefDialect",
