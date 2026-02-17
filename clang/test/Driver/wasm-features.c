@@ -112,3 +112,10 @@
 
 // COMPACT-IMPORTS: "-target-feature" "+compact-imports"
 // NO-COMPACT-IMPORTS: "-target-feature" "-compact-imports"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mcomponent-model-thread-context 2>&1 | FileCheck %s -check-prefix=COMPONENT-MODEL-THREAD-CONTEXT
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-component-model-thread-context 2>&1 | FileCheck %s -check-prefix=NO-COMPONENT-MODEL-THREAD-CONTEXT
+
+// COMPONENT-MODEL-THREAD-CONTEXT: "-target-feature" "+component-model-thread-context"
+// NO-COMPONENT-MODEL-THREAD-CONTEXT: "-target-feature" "-component-model-thread-context"
+
