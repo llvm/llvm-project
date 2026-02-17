@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "RPCCommon.h"
+#include "client/RPCLibraryHeaderEmitter.h"
+#include "client/RPCLibrarySourceEmitter.h"
 #include "server/RPCServerHeaderEmitter.h"
 #include "server/RPCServerSourceEmitter.h"
 
@@ -46,6 +48,12 @@ static std::string GetServerOutputDirectory() {
   return std::string(Path);
 }
 
+static std::string GetLibraryOutputDirectory() {
+  llvm::SmallString<256> Path(OutputDir.getValue());
+  llvm::sys::path::append(Path, "lib");
+  return std::string(Path);
+}
+
 static std::unique_ptr<llvm::ToolOutputFile>
 CreateOutputFile(llvm::StringRef OutputDir, llvm::StringRef Filename) {
   llvm::SmallString<256> Path(OutputDir);
@@ -79,11 +87,14 @@ public:
   SBVisitor(GeneratedByproducts &Byproducts, SourceManager &Manager,
             ASTContext &Context,
             std::unique_ptr<llvm::ToolOutputFile> &&ServerMethodOutputFile,
-            std::unique_ptr<llvm::ToolOutputFile> &&ServerHeaderOutputFile)
+            std::unique_ptr<llvm::ToolOutputFile> &&ServerHeaderOutputFile,
+            std::unique_ptr<llvm::ToolOutputFile> &&LibrarySourceOutputFile,
+            std::unique_ptr<llvm::ToolOutputFile> &&LibraryHeaderOutputFile)
       : Byproducts(Byproducts), Manager(Manager), Context(Context),
         ServerSourceEmitter(std::move(ServerMethodOutputFile)),
-        ServerHeaderEmitter(std::move(ServerHeaderOutputFile)) {}
-
+        ServerHeaderEmitter(std::move(ServerHeaderOutputFile)),
+        LibrarySourceEmitter(std::move(LibrarySourceOutputFile)),
+        LibraryHeaderEmitter(std::move(LibraryHeaderOutputFile)) {}
   ~SBVisitor() {}
 
   bool VisitCXXRecordDecl(CXXRecordDecl *RDecl) {
@@ -97,6 +108,12 @@ public:
     PrintingPolicy Policy(Context.getLangOpts());
     Policy.Bool = true;
 
+    LibraryHeaderEmitter.StartClass(ClassName);
+    LibrarySourceEmitter.StartClass(ClassName);
+    for (Decl *D : RDecl->decls())
+      if (auto *E = dyn_cast_or_null<EnumDecl>(D))
+        LibraryHeaderEmitter.EmitEnum(E);
+
     for (CXXMethodDecl *MDecl : RDecl->methods()) {
       const std::string MangledName =
           lldb_rpc_gen::GetMangledName(Context, MDecl);
@@ -107,10 +124,14 @@ public:
         const lldb_rpc_gen::Method Method(MDecl, Policy, Context);
         ServerSourceEmitter.EmitMethod(Method);
         ServerHeaderEmitter.EmitMethod(Method);
+        LibrarySourceEmitter.EmitMethod(Method);
+        LibraryHeaderEmitter.EmitMethod(Method);
         Byproducts.MangledMethodNames.insert(MangledName);
       } else if (MethodSupportLevel == eUnimplemented)
         Byproducts.SkippedMethodNames.insert(MangledName);
     }
+    LibraryHeaderEmitter.EndClass();
+    LibrarySourceEmitter.EndClass();
     return true;
   }
 
@@ -209,6 +230,8 @@ private:
   ASTContext &Context;
   lldb_rpc_gen::RPCServerSourceEmitter ServerSourceEmitter;
   lldb_rpc_gen::RPCServerHeaderEmitter ServerHeaderEmitter;
+  lldb_rpc_gen::RPCLibrarySourceEmitter LibrarySourceEmitter;
+  lldb_rpc_gen::RPCLibraryHeaderEmitter LibraryHeaderEmitter;
 };
 
 class SBConsumer : public ASTConsumer {
@@ -216,9 +239,13 @@ public:
   SBConsumer(GeneratedByproducts &Byproducts, SourceManager &Manager,
              ASTContext &Context,
              std::unique_ptr<llvm::ToolOutputFile> &&ServerMethodOutputFile,
-             std::unique_ptr<llvm::ToolOutputFile> &&ServerHeaderOutputFile)
+             std::unique_ptr<llvm::ToolOutputFile> &&ServerHeaderOutputFile,
+             std::unique_ptr<llvm::ToolOutputFile> &&LibrarySourceOutputFile,
+             std::unique_ptr<llvm::ToolOutputFile> &&LibraryHeaderOutputFile)
       : Visitor(Byproducts, Manager, Context, std::move(ServerMethodOutputFile),
-                std::move(ServerHeaderOutputFile)) {}
+                std::move(ServerHeaderOutputFile),
+                std::move(LibrarySourceOutputFile),
+                std::move(LibraryHeaderOutputFile)) {}
   bool HandleTopLevelDecl(DeclGroupRef DR) override {
     for (Decl *D : DR)
       Visitor.TraverseDecl(D);
@@ -253,11 +280,26 @@ public:
     if (!ServerHeaderOutputFile)
       return nullptr;
 
+    const std::string LibrarySourceFilename = FilenameNoExt.str() + ".cpp";
+    std::unique_ptr<llvm::ToolOutputFile> LibrarySourceOutputFile =
+        CreateOutputFile(GetLibraryOutputDirectory(), LibrarySourceFilename);
+    if (!LibrarySourceOutputFile)
+      return nullptr;
+
+    const std::string LibraryHeaderFilename = FilenameNoExt.str() + ".h";
+    std::unique_ptr<llvm::ToolOutputFile> LibraryHeaderOutputFile =
+        CreateOutputFile(GetLibraryOutputDirectory(), LibraryHeaderFilename);
+    if (!LibraryHeaderOutputFile)
+      return nullptr;
+
     ServerMethodOutputFile->keep();
     ServerHeaderOutputFile->keep();
+    LibrarySourceOutputFile->keep();
+    LibraryHeaderOutputFile->keep();
     return std::make_unique<SBConsumer>(
         Byproducts, CI.getSourceManager(), CI.getASTContext(),
-        std::move(ServerMethodOutputFile), std::move(ServerHeaderOutputFile));
+        std::move(ServerMethodOutputFile), std::move(ServerHeaderOutputFile),
+        std::move(LibrarySourceOutputFile), std::move(LibraryHeaderOutputFile));
   }
 
 private:
@@ -276,6 +318,8 @@ private:
   GeneratedByproducts &Byproducts;
 };
 
+// The amalgamated headers contain includes and RPC specific include guards for
+// the server and client side files. This is similar in usage to LLDB.h.
 bool EmitAmalgamatedServerHeader(const std::vector<std::string> &Files) {
   // Create the file
   static constexpr llvm::StringLiteral AmalgamatedServerHeaderName = "SBAPI.h";
@@ -302,6 +346,28 @@ bool EmitAmalgamatedServerHeader(const std::vector<std::string> &Files) {
   AmalgamatedServerHeader->os()
       << "#endif // GENERATED_LLDB_RPC_SERVER_SBAPI_H\n";
   AmalgamatedServerHeader->keep();
+  return true;
+}
+
+bool EmitAmalgamatedLibraryHeader(const std::vector<std::string> &Files) {
+  static constexpr llvm::StringLiteral AmalgamatedLibraryHeaderName =
+      "LLDBRPC.h";
+  std::unique_ptr<llvm::ToolOutputFile> AmalgamatedLibraryHeader =
+      CreateOutputFile(GetLibraryOutputDirectory(),
+                       AmalgamatedLibraryHeaderName);
+  if (!AmalgamatedLibraryHeader)
+    return false;
+
+  AmalgamatedLibraryHeader->os() << "#ifndef LLDBRPC_H\n";
+  AmalgamatedLibraryHeader->os() << "#define LLDBRPC_H\n";
+  AmalgamatedLibraryHeader->os() << "#include \"SBLanguages.h\"\n";
+  for (const auto &File : Files) {
+    llvm::StringRef Filename = llvm::sys::path::filename(File);
+    AmalgamatedLibraryHeader->os() << "#include \"" << Filename << "\"\n";
+  }
+
+  AmalgamatedLibraryHeader->os() << "#endif // LLDBRPC_H\n";
+  AmalgamatedLibraryHeader->keep();
   return true;
 }
 
@@ -386,6 +452,11 @@ int main(int argc, const char *argv[]) {
   if (!llvm::sys::fs::exists(GetServerOutputDirectory())) {
     llvm::sys::fs::create_directory(GetServerOutputDirectory());
   }
+
+  if (!llvm::sys::fs::exists(GetLibraryOutputDirectory())) {
+    llvm::sys::fs::create_directory(GetLibraryOutputDirectory());
+  }
+
   CommonOptionsParser &OP = ExpectedParser.get();
   auto PCHOpts = std::make_shared<PCHContainerOperations>();
   PCHOpts->registerWriter(std::make_unique<ObjectFilePCHContainerWriter>());
@@ -395,6 +466,10 @@ int main(int argc, const char *argv[]) {
 
   if (!EmitAmalgamatedServerHeader(OP.getSourcePathList())) {
     llvm::errs() << "Failed to create amalgamated server header\n";
+    return 1;
+  }
+  if (!EmitAmalgamatedLibraryHeader(OP.getSourcePathList())) {
+    llvm::errs() << "Failed to create amalgamated library header\n";
     return 1;
   }
 
