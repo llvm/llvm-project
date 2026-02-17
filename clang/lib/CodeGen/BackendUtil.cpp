@@ -1352,7 +1352,8 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   assert(OptLevelOrNone && "Invalid optimization level!");
   Conf.CGOptLevel = *OptLevelOrNone;
   Conf.OptLevel = CGOpts.OptimizationLevel;
-  Conf.InitTargetOptions = [&](llvm::Triple TheTriple) -> llvm::TargetOptions {
+  Conf.InitTargetOptions =
+      [&](const llvm::Triple &TheTriple) -> llvm::TargetOptions {
     llvm::TargetOptions TargetOpts =
         llvm::codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
     initTargetOptions(CI, Diags, TargetOpts);
