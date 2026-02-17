@@ -1368,15 +1368,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     }
 
     mlir::Value frameAddress =
-        cir::FrameAddrOp::create(builder, loc, builder.getVoidPtrTy(),
+        cir::FrameAddrOp::create(builder, loc, voidPtrTy,
                                  mlir::ValueRange{builder.getUInt32(0, loc)})
             .getResult();
 
     builder.createStore(loc, frameAddress, castBuf);
 
     mlir::Value stacksave =
-        cir::StackSaveOp::create(builder, loc, builder.getVoidPtrTy())
-            .getResult();
+        cir::StackSaveOp::create(builder, loc, voidPtrTy).getResult();
     cir::PtrStrideOp stackSaveSlot = cir::PtrStrideOp::create(
         builder, loc, ppTy, castBuf.getPointer(), builder.getSInt32(2, loc));
     CharUnits slotAlign =
