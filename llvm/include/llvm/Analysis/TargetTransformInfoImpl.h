@@ -345,7 +345,7 @@ public:
     return false;
   }
 
-  virtual bool useSizeAwareStackSlotColoring() const { return false; }
+  virtual float getStackSlotColoringSizeWeightScale() const { return 0.0f; }
 
   virtual TTI::AddressingModeKind
   getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const {

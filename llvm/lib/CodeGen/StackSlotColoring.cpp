@@ -36,12 +36,12 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -143,8 +143,8 @@ class StackSlotColoring {
   // Assignments - Color to intervals mapping.
   SmallVector<ColorAssignmentInfo, 16> Assignments;
 
-  // When true, use size-aware ordering and best-fit color selection (TTI hook).
-  bool UseSizeAwareStackSlotColoring;
+  // Scale to add (scale * slot size) to weight; when > 0, also use best-fit.
+  float SizeWeightScale;
 
 public:
   StackSlotColoring(MachineFunction &MF, LiveStacks *LS,
@@ -287,7 +287,7 @@ void StackSlotColoring::InitializeSlots() {
 
     SSIntervals.push_back(&li);
     OrigAlignments[FI] = MFI->getObjectAlign(FI);
-    OrigSizes[FI]      = MFI->getObjectSize(FI);
+    OrigSizes[FI] = MFI->getObjectSize(FI);
 
     auto StackID = MFI->getStackID(FI);
     if (StackID != 0) {
@@ -303,54 +303,16 @@ void StackSlotColoring::InitializeSlots() {
   }
   LLVM_DEBUG(dbgs() << '\n');
 
-  // Sort by weight (heaviest first). When TTI requests size-aware coloring,
-  // also use size when weights are similar (within 10%) to pack large slots first.
-  if (UseSizeAwareStackSlotColoring) {
-    llvm::stable_sort(SSIntervals, [this](LiveInterval *LHS, LiveInterval *RHS) {
-      float LHS_Weight = LHS->weight();
-      float RHS_Weight = RHS->weight();
-
-      // Primary: weight (heaviest first)
-      // But if weights are similar (within 10%), use size as primary factor
-      float WeightDiff = (LHS_Weight > RHS_Weight)
-                             ? (LHS_Weight - RHS_Weight)
-                             : (RHS_Weight - LHS_Weight);
-      float AvgWeight = (LHS_Weight + RHS_Weight) / 2.0f;
-      bool WeightsSimilar =
-          (AvgWeight > 0.0f && WeightDiff / AvgWeight < 0.1f) ||
-          (AvgWeight == 0.0f && WeightDiff < 0.1f);
-
-      int LHS_FI = LHS->reg().stackSlotIndex();
-      int RHS_FI = RHS->reg().stackSlotIndex();
-      int LHS_Size = OrigSizes[LHS_FI];
-      int RHS_Size = OrigSizes[RHS_FI];
-
-      if (WeightsSimilar) {
-        // When weights are similar, prioritize size (largest first)
-        if (LHS_Size != RHS_Size) {
-          LLVM_DEBUG(dbgs() << "  Size-aware ordering (similar weights): fi#"
-                            << LHS_FI << " (size=" << LHS_Size << ", weight="
-                            << LHS_Weight << ") vs fi#" << RHS_FI
-                            << " (size=" << RHS_Size << ", weight=" << RHS_Weight
-                            << ")\n");
-          return LHS_Size > RHS_Size;
-        }
-        return LHS_Weight > RHS_Weight;
-      }
-
-      if (LHS_Weight != RHS_Weight)
-        return LHS_Weight > RHS_Weight;
-
-      LLVM_DEBUG(if (LHS_Size != RHS_Size) {
-        dbgs() << "  Size-aware ordering (equal weights): fi#" << LHS_FI
-               << " (size=" << LHS_Size << ") vs fi#" << RHS_FI
-               << " (size=" << RHS_Size << ")\n";
-      });
-      return LHS_Size > RHS_Size;
-    });
-  } else {
-    llvm::stable_sort(SSIntervals, IntervalSorter());
-  }
+  // Sort by weight (heaviest first). When TTI provides a scale, use weight +
+  // scale*size as the sort key so larger slots are ordered earlier when weights
+  // are similar.
+  llvm::stable_sort(SSIntervals, [this](LiveInterval *LHS, LiveInterval *RHS) {
+    float L = LHS->weight() +
+              SizeWeightScale * OrigSizes[LHS->reg().stackSlotIndex()];
+    float R = RHS->weight() +
+              SizeWeightScale * OrigSizes[RHS->reg().stackSlotIndex()];
+    return L > R;
+  });
 
   NextColors.resize(AllColors.size());
 
@@ -369,7 +331,7 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
   if (!DisableSharing) {
     int64_t RequiredSize = OrigSizes[FI];
 
-    if (UseSizeAwareStackSlotColoring) {
+    if (SizeWeightScale > 0.0f) {
       // Best-fit: choose the color that minimizes final size after sharing.
       int BestColor = -1;
       int64_t BestFinalSize = std::numeric_limits<int64_t>::max();
@@ -391,9 +353,9 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
         Color = BestColor;
         Share = true;
         ++NumEliminated;
-        LLVM_DEBUG(dbgs() << "  Best-fit: fi#" << FI << " (size=" << RequiredSize
-                          << ") -> fi#" << Color << " (final=" << BestFinalSize
-                          << ")\n");
+        LLVM_DEBUG(dbgs() << "  Best-fit: fi#" << FI
+                          << " (size=" << RequiredSize << ") -> fi#" << Color
+                          << " (final=" << BestFinalSize << ")\n");
       }
     } else {
       // First-fit: use the first non-overlapping color.
@@ -622,9 +584,9 @@ bool StackSlotColoring::run(MachineFunction &MF) {
   if (MF.exposesReturnsTwice())
     return false;
 
-  UseSizeAwareStackSlotColoring =
-      MF.getTarget().getTargetTransformInfo(MF.getFunction())
-          .useSizeAwareStackSlotColoring();
+  SizeWeightScale = MF.getTarget()
+                        .getTargetTransformInfo(MF.getFunction())
+                        .getStackSlotColoringSizeWeightScale();
 
   // Gather spill slot references
   ScanForSpillSlotRefs(MF);

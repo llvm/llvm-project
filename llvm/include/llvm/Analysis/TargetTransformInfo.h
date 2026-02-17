@@ -873,9 +873,10 @@ public:
                            LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                            TargetLibraryInfo *LibInfo) const;
 
-  /// Return true if the target wants size-aware stack slot coloring (e.g. sort
-  /// by size when weights are similar, and use best-fit color selection).
-  LLVM_ABI bool useSizeAwareStackSlotColoring() const;
+  /// Return a positive scale to incorporate stack slot size into coloring
+  /// weight (weight += scale * size). When 0, only use-based weight is used;
+  /// when positive, the target also uses best-fit allocation.
+  LLVM_ABI float getStackSlotColoringSizeWeightScale() const;
 
   /// Which addressing mode Loop Strength Reduction will try to generate.
   enum AddressingModeKind {
