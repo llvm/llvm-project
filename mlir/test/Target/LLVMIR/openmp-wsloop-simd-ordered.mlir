@@ -98,4 +98,5 @@ module {
     } {omp.composite}
     llvm.return
   }
+  // CHECK: !{!"llvm.loop.vectorize.enable", i1 true}
 }
