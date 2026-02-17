@@ -1,4 +1,15 @@
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: opt -S -mtriple=s390x-linux-gnu -passes='require<libcall-lowering-info>,stack-protector' < %s | FileCheck -check-prefix=IR %s
+; RUN: opt -S -mtriple=s390x-ibm-zos -passes='require<libcall-lowering-info>,stack-protector' < %s | FileCheck -check-prefix=IR %s
+; RUN: llc -mtriple=s390x-linux-gnu < %s  | FileCheck %s
+
+; FIXME: Codegen error with zos
+
+; IR-NOT: __stack_chk_guard
+; IR-NOT: @
+
+; IR: define i32 @test_stack_guard
+
+; IR-NOT: __stack_chk_guard
 
 ; CHECK-LABEL: @test_stack_guard
 ; CHECK: ear [[REG1:%r[1-9][0-9]?]], %a0
