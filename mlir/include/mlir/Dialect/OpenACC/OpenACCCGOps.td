@@ -21,7 +21,7 @@
 // types and definitions from that file.
 
 //===----------------------------------------------------------------------===//
-// acc.combine
+// acc.reduction_combine
 //===----------------------------------------------------------------------===//
 
 def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine", 
