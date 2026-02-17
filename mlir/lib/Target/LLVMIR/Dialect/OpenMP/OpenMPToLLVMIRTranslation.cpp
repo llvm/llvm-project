@@ -3794,6 +3794,51 @@ static LogicalResult applyTile(omp::TileOp op, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Apply a `#pragma omp fuse` / `!$omp fuse` transformation using the
+/// OpenMPIRBuilder.
+static LogicalResult applyFuse(omp::FuseOp op, llvm::IRBuilderBase &builder,
+                               LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::LocationDescription loc(builder);
+
+  // Select what CLIs are going to be fused
+  SmallVector<llvm::CanonicalLoopInfo *> beforeFuse, toFuse, afterFuse;
+  for (size_t i = 0; i < op.getApplyees().size(); i++) {
+    Value applyee = op.getApplyees()[i];
+    llvm::CanonicalLoopInfo *consBuilderCLI =
+        moduleTranslation.lookupOMPLoop(applyee);
+    assert(applyee && "Canonical loop must already been translated");
+    if (op.getFirst().has_value() && i < op.getFirst().value() - 1)
+      beforeFuse.push_back(consBuilderCLI);
+    else if (op.getCount().has_value() &&
+             i >= op.getFirst().value() + op.getCount().value() - 1)
+      afterFuse.push_back(consBuilderCLI);
+    else
+      toFuse.push_back(consBuilderCLI);
+  }
+  assert(
+      (op.getGeneratees().empty() ||
+       beforeFuse.size() + afterFuse.size() + 1 == op.getGeneratees().size()) &&
+      "Wrong number of generatees");
+
+  // do the fuse
+  auto generatedLoop = ompBuilder->fuseLoops(loc.DL, toFuse);
+  if (!op.getGeneratees().empty()) {
+    size_t i = 0;
+    for (; i < beforeFuse.size(); i++)
+      moduleTranslation.mapOmpLoop(op.getGeneratees()[i], beforeFuse[i]);
+    moduleTranslation.mapOmpLoop(op.getGeneratees()[i++], generatedLoop);
+    for (; i < afterFuse.size(); i++)
+      moduleTranslation.mapOmpLoop(op.getGeneratees()[i], afterFuse[i]);
+  }
+
+  // CLIs can only be consumed once
+  for (Value applyee : op.getApplyees())
+    moduleTranslation.invalidateOmpLoop(applyee);
+
+  return success();
+}
+
 /// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
 static llvm::AtomicOrdering
 convertAtomicOrdering(std::optional<omp::ClauseMemoryOrderKind> ao) {
@@ -7270,6 +7315,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::TileOp op) {
             return applyTile(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::FuseOp op) {
+            return applyFuse(op, builder, moduleTranslation);
           })
           .Case([&](omp::TargetAllocMemOp) {
             return convertTargetAllocMemOp(*op, builder, moduleTranslation);

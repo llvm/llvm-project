@@ -11,7 +11,9 @@
 
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/Serialization/SerializationFormat.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Registry.h"
 #include <string>
 
 namespace clang::ssaf {
@@ -41,5 +43,10 @@ public:
 };
 
 } // namespace clang::ssaf
+
+namespace llvm {
+extern template class CLANG_TEMPLATE_ABI
+    Registry<clang::ssaf::MockSerializationFormat::FormatInfo>;
+} // namespace llvm
 
 #endif // LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_REGISTRIES_MOCKSERIALIZATIONFORMAT_H

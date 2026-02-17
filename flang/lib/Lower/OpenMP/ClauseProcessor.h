@@ -68,6 +68,9 @@ public:
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
   bool processSizes(StatementContext &stmtCtx,
                     mlir::omp::SizesClauseOps &result) const;
+  bool processLooprange(StatementContext &stmtCtx,
+                        mlir::omp::LooprangeClauseOps &result,
+                        int64_t &count) const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;

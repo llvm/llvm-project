@@ -6,12 +6,11 @@
 ; to combine opcodes
 
 define void @sub_mul(ptr %p, ptr %s) {
-; CHECK-LABEL: define void @sub_mul(
-; CHECK-SAME: ptr [[P:%.*]], ptr [[S:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 2
+; CHECK-LABEL: @sub_mul(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i16> [[TMP0]], <i16 1, i16 5, i16 2, i16 3>
-; CHECK-NEXT:    store <4 x i16> [[TMP1]], ptr [[S]], align 2
+; CHECK-NEXT:    store <4 x i16> [[TMP1]], ptr [[S:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -41,12 +40,11 @@ entry:
 }
 
 define void @add_mul(ptr %p, ptr %s) {
-; CHECK-LABEL: define void @add_mul(
-; CHECK-SAME: ptr [[P:%.*]], ptr [[S:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 2
+; CHECK-LABEL: @add_mul(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i16> [[TMP0]], <i16 1, i16 5, i16 2, i16 3>
-; CHECK-NEXT:    store <4 x i16> [[TMP1]], ptr [[S]], align 2
+; CHECK-NEXT:    store <4 x i16> [[TMP1]], ptr [[S:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -76,12 +74,11 @@ entry:
 }
 
 define void @sub_and(ptr %p, ptr %s) {
-; CHECK-LABEL: define void @sub_and(
-; CHECK-SAME: ptr [[P:%.*]], ptr [[S:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 2
+; CHECK-LABEL: @sub_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i16> [[TMP0]], <i16 -1, i16 5, i16 2, i16 3>
-; CHECK-NEXT:    store <4 x i16> [[TMP1]], ptr [[S]], align 2
+; CHECK-NEXT:    store <4 x i16> [[TMP1]], ptr [[S:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:

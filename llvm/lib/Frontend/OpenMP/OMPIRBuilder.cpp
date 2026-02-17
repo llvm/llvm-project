@@ -6636,6 +6636,116 @@ static void addAccessGroupMetadata(BasicBlock *Block, MDNode *AccessGroup,
   }
 }
 
+CanonicalLoopInfo *
+OpenMPIRBuilder::fuseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops) {
+  CanonicalLoopInfo *firstLoop = Loops.front();
+  CanonicalLoopInfo *lastLoop = Loops.back();
+  Function *F = firstLoop->getPreheader()->getParent();
+
+  // Loop control blocks that will become orphaned later
+  SmallVector<BasicBlock *> oldControlBBs;
+  for (CanonicalLoopInfo *Loop : Loops)
+    Loop->collectControlBlocks(oldControlBBs);
+
+  // Collect original trip counts
+  SmallVector<Value *> origTripCounts;
+  for (CanonicalLoopInfo *L : Loops) {
+    assert(L->isValid() && "All input loops must be valid canonical loops");
+    origTripCounts.push_back(L->getTripCount());
+  }
+
+  Builder.SetCurrentDebugLocation(DL);
+
+  // Compute max trip count.
+  // The fused loop will be from 0 to max(origTripCounts)
+  BasicBlock *TCBlock = BasicBlock::Create(F->getContext(), "omp.fuse.comp.tc",
+                                           F, firstLoop->getHeader());
+  Builder.SetInsertPoint(TCBlock);
+  Value *fusedTripCount = nullptr;
+  for (CanonicalLoopInfo *L : Loops) {
+    assert(L->isValid() && "All loops to fuse must be valid canonical loops");
+    Value *origTripCount = L->getTripCount();
+    if (!fusedTripCount) {
+      fusedTripCount = origTripCount;
+      continue;
+    }
+    Value *condTP = Builder.CreateICmpSGT(fusedTripCount, origTripCount);
+    fusedTripCount = Builder.CreateSelect(condTP, fusedTripCount, origTripCount,
+                                          ".omp.fuse.tc");
+  }
+
+  // Generate new loop
+  CanonicalLoopInfo *fused =
+      createLoopSkeleton(DL, fusedTripCount, F, firstLoop->getBody(),
+                         lastLoop->getLatch(), "fused");
+
+  // Replace original loops with the fused loop
+  // Preheader and After are not considered inside the CLI.
+  // These are used to compute the individual TCs of the loops
+  // so they have to be put before the resulting fused loop.
+  // Moving them up for readability.
+  for (size_t i = 0; i < Loops.size() - 1; ++i) {
+    Loops[i]->getPreheader()->moveBefore(TCBlock);
+    Loops[i]->getAfter()->moveBefore(TCBlock);
+  }
+  lastLoop->getPreheader()->moveBefore(TCBlock);
+
+  for (size_t i = 0; i < Loops.size() - 1; ++i) {
+    redirectTo(Loops[i]->getPreheader(), Loops[i]->getAfter(), DL);
+    redirectTo(Loops[i]->getAfter(), Loops[i + 1]->getPreheader(), DL);
+  }
+  redirectTo(lastLoop->getPreheader(), TCBlock, DL);
+  redirectTo(TCBlock, fused->getPreheader(), DL);
+  redirectTo(fused->getAfter(), lastLoop->getAfter(), DL);
+
+  // Build the fused body
+  // Create new Blocks with conditions that jump to the original loop bodies
+  SmallVector<BasicBlock *> condBBs;
+  SmallVector<Value *> condValues;
+  for (size_t i = 0; i < Loops.size(); ++i) {
+    BasicBlock *condBlock = BasicBlock::Create(
+        F->getContext(), "omp.fused.inner.cond", F, Loops[i]->getBody());
+    Builder.SetInsertPoint(condBlock);
+    Value *condValue =
+        Builder.CreateICmpSLT(fused->getIndVar(), origTripCounts[i]);
+    condBBs.push_back(condBlock);
+    condValues.push_back(condValue);
+  }
+  // Join the condition blocks with the bodies of the original loops
+  redirectTo(fused->getBody(), condBBs[0], DL);
+  for (size_t i = 0; i < Loops.size() - 1; ++i) {
+    Builder.SetInsertPoint(condBBs[i]);
+    Builder.CreateCondBr(condValues[i], Loops[i]->getBody(), condBBs[i + 1]);
+    redirectAllPredecessorsTo(Loops[i]->getLatch(), condBBs[i + 1], DL);
+    // Replace the IV with the fused IV
+    Loops[i]->getIndVar()->replaceAllUsesWith(fused->getIndVar());
+  }
+  // Last body jumps to the created end body block
+  Builder.SetInsertPoint(condBBs.back());
+  Builder.CreateCondBr(condValues.back(), lastLoop->getBody(),
+                       fused->getLatch());
+  redirectAllPredecessorsTo(lastLoop->getLatch(), fused->getLatch(), DL);
+  // Replace the IV with the fused IV
+  lastLoop->getIndVar()->replaceAllUsesWith(fused->getIndVar());
+
+  // The loop latch must have only one predecessor. Currently it is branched to
+  // from both the last condition block and the last loop body
+  fused->getLatch()->splitBasicBlockBefore(fused->getLatch()->begin(),
+                                           "omp.fused.pre_latch");
+
+  // Remove unused parts
+  removeUnusedBlocksFromParent(oldControlBBs);
+
+  // Invalidate old CLIs
+  for (CanonicalLoopInfo *L : Loops)
+    L->invalidate();
+
+#ifndef NDEBUG
+  fused->assertOK();
+#endif
+  return fused;
+}
+
 void OpenMPIRBuilder::unrollLoopFull(DebugLoc, CanonicalLoopInfo *Loop) {
   LLVMContext &Ctx = Builder.getContext();
   addLoopMetadata(
