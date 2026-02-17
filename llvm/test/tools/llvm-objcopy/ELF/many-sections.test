@@ -6,8 +6,8 @@ RUN: llvm-readobj --file-headers --sections --symbols %t2 | FileCheck %s
 RUN: llvm-readelf --symbols %t2 | FileCheck --check-prefix=SYMS %s
 
 ## The ELF header should have e_shnum == 0 and e_shstrndx == SHN_XINDEX.
-# CHECK:        SectionHeaderCount: 0
-# CHECK-NEXT:   StringTableSectionIndex: 65535
+# CHECK:        SectionHeaderCount: 0 (65540)
+# CHECK-NEXT:   StringTableSectionIndex: 65535 (65539)
 
 ## The first section header should store the real section header count and
 ## shstrndx in its fields.
