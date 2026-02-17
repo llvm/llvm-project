@@ -129,7 +129,7 @@ cl::opt<bool> ReadPerfTextData(
 
 cl::opt<bool> GeneratePerfTextProfile(
     "generate-perf-text-data",
-    cl::desc("Dump perf-script jobs' output into output file"), cl::Hidden,
+    cl::desc("Dump perf-script jobs' output into a file"), cl::Hidden,
     cl::cat(AggregatorCategory));
 
 static cl::opt<bool>
@@ -323,7 +323,6 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
   };
 
-  // Extract buildid information from the input profile in the start() function.
   if (prepareToParse("buildid", BuildIDProcessInfo, WarningCallback))
     return;
 
