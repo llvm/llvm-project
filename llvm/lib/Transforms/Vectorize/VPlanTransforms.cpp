@@ -1619,9 +1619,9 @@ static void reassociateHeaderMask(VPlan &Plan) {
     if (match(U, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue())))
       append_range(Worklist, cast<VPSingleDefRecipe>(U)->users());
 
-  VPValue *X, *Y;
   while (!Worklist.empty()) {
     auto *R = dyn_cast<VPSingleDefRecipe>(Worklist.pop_back_val());
+    VPValue *X, *Y;
     if (!R || !match(R, m_LogicalAnd(
                             m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
                             m_VPValue(Y))))
