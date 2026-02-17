@@ -1950,7 +1950,7 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   IntrinsicCostAttributes CostAttrs(
-				    ID, RetTy, Arguments, ParamTys, R.getFastMathFlags(),
+      ID, RetTy, Arguments, ParamTys, R.getFastMathFlags(),
       dyn_cast_or_null<IntrinsicInst>(R.getUnderlyingValue()),
       InstructionCost::getInvalid(), &Ctx.TLI);
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, Ctx.CostKind);

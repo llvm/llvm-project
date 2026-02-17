@@ -4001,8 +4001,7 @@ public:
   VPScalarIVStepsRecipe *clone() override {
     return new VPScalarIVStepsRecipe(getOperand(0), getOperand(1),
                                      getOperand(2), InductionOpcode,
-                                     getFastMathFlags(),
-        getDebugLoc());
+                                     getFastMathFlags(), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPScalarIVStepsSC)
