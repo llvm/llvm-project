@@ -496,6 +496,7 @@ class LoopVectorizationPlanner {
 
   /// The profitability analysis.
   LoopVectorizationCostModel &CM;
+  LoopVectorizationCostModel *EpilogueTailFoldedCM;
 
   /// The interleaved access analysis.
   InterleavedAccessInfo &IAI;
@@ -507,6 +508,7 @@ class LoopVectorizationPlanner {
   OptimizationRemarkEmitter *ORE;
 
   SmallVector<VPlanPtr, 4> VPlans;
+  SmallVector<VPlanPtr, 4> EpilogueTailFoldedPlans;
 
   /// Profitable vector factors.
   SmallVector<VectorizationFactor, 8> ProfitableVFs;
@@ -538,7 +540,20 @@ public:
       PredicatedScalarEvolution &PSE, const LoopVectorizeHints &Hints,
       OptimizationRemarkEmitter *ORE)
       : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
+        EpilogueTailFoldedCM(nullptr), IAI(IAI), PSE(PSE), Hints(Hints),
+        ORE(ORE) {}
+
+  void setEpilogueTailFoldingCM(LoopVectorizationCostModel *Cost) {
+    EpilogueTailFoldedCM = Cost;
+  }
+
+  LoopVectorizationCostModel *getEpilogueTailFoldingCM() const {
+    return EpilogueTailFoldedCM;
+  }
+
+  bool isEpilogueTailFolded() const;
+
+  void disableEpilogueTailFolding() { EpilogueTailFoldedCM = nullptr; }
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
@@ -551,7 +566,7 @@ public:
 
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
   /// for each VF.
-  VPlan &getPlanFor(ElementCount VF) const;
+  VPlan &getPlanFor(ElementCount VF, bool ForEpilogue = false) const;
 
   /// Compute and return the most profitable vectorization factor. Also collect
   /// all profitable VFs in ProfitableVFs.
@@ -586,8 +601,10 @@ public:
 
   /// Look through the existing plans and return true if we have one with
   /// vectorization factor \p VF.
-  bool hasPlanWithVF(ElementCount VF) const {
-    return any_of(VPlans,
+  bool hasPlanWithVF(ElementCount VF, bool ForEpilogue = false) const {
+    return any_of((ForEpilogue && isEpilogueTailFolded())
+                      ? EpilogueTailFoldedPlans
+                      : VPlans,
                   [&](const VPlanPtr &Plan) { return Plan->hasVF(VF); });
   }
 
@@ -648,7 +665,8 @@ private:
   /// set the largest included VF to the maximum VF for which no plan could be
   /// built. Each VPlan is built starting from a copy of \p InitialPlan, which
   /// is a plain CFG VPlan wrapping the original scalar loop.
-  VPlanPtr tryToBuildVPlanWithVPRecipes(VPlanPtr InitialPlan, VFRange &Range,
+  VPlanPtr tryToBuildVPlanWithVPRecipes(LoopVectorizationCostModel *Cost,
+                                        VPlanPtr InitialPlan, VFRange &Range,
                                         LoopVersioning *LVer);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
@@ -660,7 +678,8 @@ private:
   /// ComputeReductionResult depending on the reduction) in
   /// the middle block. Selects are introduced for reductions between the phi
   /// and users outside the vector region when folding the tail.
-  void addReductionResultComputation(VPlanPtr &Plan,
+  void addReductionResultComputation(LoopVectorizationCostModel *Cost,
+                                     VPlanPtr &Plan,
                                      VPRecipeBuilder &RecipeBuilder,
                                      ElementCount MinVF);
 

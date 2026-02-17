@@ -2670,6 +2670,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   // cannot use RAUW after creating a new truncate, as this would could make
   // other uses have different types for their operands, making them invalidly
   // typed.
+  if (MinBWs.empty()) {
+    return;
+  }
   DenseMap<VPValue *, VPWidenCastRecipe *> ProcessedTruncs;
   VPTypeAnalysis TypeInfo(Plan);
   VPBasicBlock *PH = Plan.getVectorPreheader();
