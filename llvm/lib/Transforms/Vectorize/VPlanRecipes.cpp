@@ -4609,7 +4609,8 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN-REDUCTION-PHI ";
 
   printAsOperand(O, SlotTracker);
-  O << " = phi ";
+  O << " = phi";
+  printFlags(O);
   printOperands(O, SlotTracker);
   if (getVFScaleFactor() > 1)
     O << " (VF scaled by 1/" << getVFScaleFactor() << ")";
