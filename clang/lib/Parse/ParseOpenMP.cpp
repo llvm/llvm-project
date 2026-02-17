@@ -5086,23 +5086,24 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     // Look ahead to detect top-level colon
     TentativeParsingAction TPA(*this);
     bool HasColon = false;
-    int Depth = 0;
 
     while (!Tok.is(tok::annot_pragma_openmp_end)) {
-      if (Tok.is(tok::l_paren))
-        Depth++;
-      else if (Tok.is(tok::r_paren)) {
-        // If depth is 0, this closing paren closes the num_teams clause
-        if (Depth == 0)
-          break;
-        Depth--;
-      } else if (Tok.is(tok::comma) && Depth == 0) {
-        break; // comma-separated syntax
-      } else if (Tok.is(tok::colon) && Depth == 0) {
+      if (Tok.is(tok::l_paren)) {
+        BalancedDelimiterTracker ParenTracker(*this, tok::l_paren,
+                                              tok::annot_pragma_openmp_end);
+        if (ParenTracker.consumeOpen())
+          break; // Error consuming paren
+        ParenTracker.skipToEnd();
+      } else if (Tok.is(tok::colon)) {
+        // Top-level colon found - this is colon syntax
         HasColon = true;
         break;
+      } else if (Tok.isOneOf(tok::r_paren, tok::comma)) {
+        // End of expression without colon
+        break;
+      } else {
+	ConsumeAnyToken();
       }
-      ConsumeAnyToken();
     }
     TPA.Revert();
 
