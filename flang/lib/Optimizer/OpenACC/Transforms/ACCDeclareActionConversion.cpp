@@ -207,7 +207,3 @@ public:
 };
 
 } // namespace
-
-std::unique_ptr<mlir::Pass> fir::acc::createACCDeclareActionConversionPass() {
-  return std::make_unique<ACCDeclareActionConversion>();
-}

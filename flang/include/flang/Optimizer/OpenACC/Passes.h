@@ -30,7 +30,6 @@ namespace acc {
 
 std::unique_ptr<mlir::Pass> createACCInitializeFIRAnalysesPass();
 std::unique_ptr<mlir::Pass> createACCOptimizeFirstprivateMapPass();
-std::unique_ptr<mlir::Pass> createACCDeclareActionConversionPass();
 std::unique_ptr<mlir::Pass> createACCRecipeBufferizationPass();
 std::unique_ptr<mlir::Pass> createACCUseDeviceCanonicalizerPass();
 
