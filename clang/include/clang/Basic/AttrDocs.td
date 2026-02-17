@@ -216,7 +216,7 @@ The meaning of each value is defined by the target; multiple address spaces are
 used in environments such as OpenCL, CUDA, HIP, and other GPU programming
 models to distinguish global, local, constant, and private memory. See for
 example the address spaces defined in the `NVPTX Usage Guide`_ and the `AMDGPU
-Usage Guide`_
+Usage Guide`_.
 
 .. _`NVPTX Usage Guide`: https://llvm.org/docs/NVPTXUsage.html#address-spaces
 .. _`AMDGPU Usage Guide`: https://llvm.org/docs/AMDGPUUsage.html#address-spaces
@@ -224,6 +224,11 @@ Usage Guide`_
 Only one address space qualifier may be applied to a given pointer or reference
 type. Where address spaces are allowed (e.g., variables, parameters, return
 types) and what values are valid depends on the target and language mode.
+
+Address spaces may partially overlap or be entirely distinct.
+The compiler may reject attempts to convert between distinct, incompatible
+address spaces. Pointer width may vary between different address spaces, so
+some explicit casts may truncate.
   }];
 }
 
