@@ -117,7 +117,7 @@ void SystemZHLASMAsmStreamer::emitAlignmentDS(uint64_t ByteAlignment,
 
 raw_ostream &SystemZHLASMAsmStreamer::getCommentOS() {
   if (!IsVerboseAsm)
-    return nulls();  // Discard comments unless in verbose asm mode.
+    return nulls(); // Discard comments unless in verbose asm mode.
   return CommentStream;
 }
 
@@ -254,7 +254,7 @@ void SystemZHLASMAsmStreamer::addEncodingComment(const MCInst &Inst,
       OS << "0b";
       for (unsigned J = 8; J--;) {
         unsigned Bit = (Code[I] >> J) & 1;
-        unsigned FixupBit = I * 8 + (7-J);
+        unsigned FixupBit = I * 8 + (7 - J);
         if (uint8_t MapEntry = FixupMap[FixupBit]) {
           assert(Bit == 0 && "Encoder wrote into fixed up bit!");
           OS << char('A' + MapEntry - 1);
@@ -263,8 +263,7 @@ void SystemZHLASMAsmStreamer::addEncodingComment(const MCInst &Inst,
       }
     }
   }
-  OS << "]";
-  EmitEOL();
+  OS << "]\n";
 
   for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
     MCFixup &F = Fixups[I];
@@ -282,7 +281,7 @@ void SystemZHLASMAsmStreamer::addEncodingComment(const MCInst &Inst,
       else
         OS << Info.Name;
     }
-    EmitEOL();
+    OS << "\n";
   }
 }
 
@@ -290,6 +289,7 @@ void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
                                               const MCSubtargetInfo &STI) {
   // Show the encoding in a comment if we have a code emitter.
   addEncodingComment(Inst, STI);
+  EmitEOL();
 
   InstPrinter->printInst(&Inst, 0, "", STI, OS);
   EmitEOL();
