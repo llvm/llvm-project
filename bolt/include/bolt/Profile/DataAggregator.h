@@ -478,16 +478,17 @@ private:
   /// The generator also creates a file header, where these events
   /// are listed along with the length information of their contents.
   /// The given length numbers in the header are in bytes, they are used
-  /// as an offset int the pre-parsed profile.
-  /// Some of these events are essential to be presented in the file.
-  /// Please see a short summary below:
+  /// as an offset in the pre-parsed profile.
+  /// Some of these events are required to be presented in the file.
+  ///
+  /// Short description of supported events:
   /// MEM: Optional. Parsing memory profile is enabled by default, unless
   /// '--itrace' aggregation is set. In the latter case MEM profile
   /// won't be added into the pre-parsed profile. Note that, currently
   /// mem events only supported if they were gathered on X86_64.
   /// MMAP: Compulsory, the mmap data is required to be in the file.
-  /// BUILDID: Ignored (you should use --ignore-build-id),
-  /// if buildid information doesn't exist in the input profile.
+  /// BUILDID: Ignored when buildid information doesn't exist in the input
+  /// profile. In that case, must use `--ignore-build-id`.
   /// TASK: If task related data exists in the input profile,
   /// Perf2bolt will always parse it.
   /// MAIN: Compulsory; the MAIN events always have to be represented in the
