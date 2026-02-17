@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple-only %s -verify -DTEST2 -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm-only %s -verify -DTEST3
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm-only %s -verify -DTEST4
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm-only %s -verify -DTEST5
 
 #ifdef TEST1
 
@@ -69,6 +70,13 @@ namespace nm {
 float foo() {
   return _ZN2nm3abcE + nm::abc;
 }
+
+#elif TEST5
+
+inline void f(int) asm("foo");
+inline void f(int) {}
+inline void f() asm("foo");
+inline void f(){} // expected-error {{definition with same mangled name 'foo' as another definition}}
 
 #else
 
