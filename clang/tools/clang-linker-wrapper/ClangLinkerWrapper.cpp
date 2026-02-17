@@ -528,13 +528,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   if (!Triple.isNVPTX() && !Triple.isSPIRV())
     CmdArgs.push_back("-Wl,--no-undefined");
 
-  if (Triple.isSPIRV()) {
-    // Some functions are provided by the GPU runtime, so
-    // allow some functions to be undefined.
-    CmdArgs.push_back("-Xlinker");
-    CmdArgs.push_back("--allow-partial-linkage");
-  }
-
   for (StringRef InputFile : InputFiles)
     CmdArgs.push_back(InputFile);
 
