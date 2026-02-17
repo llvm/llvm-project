@@ -115,6 +115,13 @@ public:
 
 using SUnitsToCandidateSGsMap = DenseMap<SUnit *, SmallVector<int, 4>>;
 
+namespace {
+/// Try to add and edge from SU \p A to SU \p B to the \p DAG.
+bool tryAddEdge(ScheduleDAGInstrs *DAG, SUnit *A, SUnit *B) {
+  return A != B && DAG->addEdge(B, SDep(A, SDep::Artificial));
+}
+} // namespace
+
 // Classify instructions into groups to enable fine tuned control over the
 // scheduler. These groups may be more specific than current SchedModel
 // instruction classes.
@@ -702,6 +709,7 @@ void PipelineSolver::greedyFind(
   int TempCost;
   SchedGroup *BestGroup = nullptr;
   int BestGroupID = -1;
+  std::vector<std::pair<SUnit *, SUnit *>> BestEdges;
   auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
   LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
                     << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
@@ -711,7 +719,6 @@ void PipelineSolver::greedyFind(
   // first. If we fail to do this for the greedy algorithm, the solution will
   // likely not be good in more complex cases.
   for (; I != E; ++I) {
-    std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
     SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
       return SG.getSGID() == CandSGID;
@@ -729,21 +736,35 @@ void PipelineSolver::greedyFind(
       LLVM_DEBUG(dbgs() << "SGID # " << CandSGID << " has conflicting rule\n");
       continue;
     }
-    TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddedEdges);
+
+    std::vector<std::pair<SUnit *, SUnit *>> TempEdges;
+    TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, TempEdges);
     LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
+
     if (TempCost < BestNodeCost || BestNodeCost == -1) {
+      BestEdges = TempEdges;
       BestGroup = Match;
       BestNodeCost = TempCost;
       BestGroupID = CandSGID;
+
+      if (BestNodeCost == 0)
+        break;
+
+      removeEdges(BestEdges);
     }
-    removeEdges(AddedEdges);
-    if (BestNodeCost == 0)
-      break;
+
+    removeEdges(TempEdges);
   }
 
   if (BestGroupID != -1) {
     BestGroup->add(*CurrSU.first);
-    addEdges(SyncPipeline, CurrSU.first, BestGroupID, AddedEdges);
+
+    for (auto &E : BestEdges) {
+      AddedEdges.push_back(E);
+      [[maybe_unused]] bool Added = tryAddEdge(DAG, E.first, E.second);
+      assert(Added && "Edges known to be insertable.");
+    }
+
     LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
                       << (int)BestGroup->getMask() << "\n");
     BestCost += TempCost;
@@ -2381,11 +2402,7 @@ public:
 unsigned SchedGroup::NumSchedGroups = 0;
 
 bool SchedGroup::tryAddEdge(SUnit *A, SUnit *B) {
-  if (A != B && DAG->canAddEdge(B, A)) {
-    DAG->addEdge(B, SDep(A, SDep::Artificial));
-    return true;
-  }
-  return false;
+  return ::tryAddEdge(DAG, A, B);
 }
 
 bool SchedGroup::canAddMI(const MachineInstr &MI) const {
