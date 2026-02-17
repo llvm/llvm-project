@@ -7,6 +7,7 @@ add_fp_unittest(
   SRCS
     shared_math_test.cpp
   DEPENDS
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.math.acos
     libc.src.__support.math.acosf
     libc.src.__support.math.acosf16
