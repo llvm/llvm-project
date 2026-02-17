@@ -2351,9 +2351,22 @@ void CombinerHelper::applyCombineUnmergeConstant(
   assert((MI.getNumOperands() - 1 == Csts.size()) &&
          "Not enough operands to replace all defs");
   unsigned NumElems = MI.getNumOperands() - 1;
-  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
-    Register DstReg = MI.getOperand(Idx).getReg();
-    Builder.buildConstant(DstReg, Csts[Idx]);
+
+  Register SrcReg = MI.getOperand(NumElems).getReg();
+
+  if (MRI.getType(SrcReg).isFloat()) {
+    APFloat Val(getFltSemanticForLLT(MRI.getType(MI.getOperand(0).getReg())));
+
+    for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+      Register DstReg = MI.getOperand(Idx).getReg();
+      Val.convertFromAPInt(Csts[Idx], false, detail::rmTowardZero);
+      Builder.buildFConstant(DstReg, Val);
+    }
+  } else {
+    for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+      Register DstReg = MI.getOperand(Idx).getReg();
+      Builder.buildConstant(DstReg, Csts[Idx]);
+    }
   }
 
   MI.eraseFromParent();

@@ -285,24 +285,46 @@ bool GIMatchTableExecutor::executeMatchTable(
         break;
       }
       const LLT Ty = MRI.getType(MO.getReg());
-      const auto TyI = ExecInfo.TypeIDMap.find(Ty);
-      if (TyI == ExecInfo.TypeIDMap.end()) {
+
+      SmallVector<LLT> TypesToTry;
+      TypesToTry.push_back(Ty);
+
+      // Always try the integer patterns as we now consider that to be generic
+      // (to an extent)
+      if (LLT::getUseExtended() && !Ty.getScalarType().isInteger())
+        TypesToTry.push_back(
+            Ty.changeElementType(LLT::integer(Ty.getScalarSizeInBits())));
+
+      if (LLT::getUseExtended() && Ty.isAnyScalar() &&
+          Ty.getScalarSizeInBits() > 8)
+        TypesToTry.push_back(
+            Ty.changeElementType(LLT::floatIEEE(Ty.getScalarSizeInBits())));
+
+      const auto JumpTableBase = CurrentIdx;
+      bool Matched = false;
+      for (LLT Type : TypesToTry) {
+        const auto TyI = ExecInfo.TypeIDMap.find(Type);
+        if (TyI == ExecInfo.TypeIDMap.end())
+          continue;
+        const int64_t TypeID = TyI->second;
+        if (TypeID < LowerBound || UpperBound <= TypeID)
+          continue;
+        const auto NumEntry = (TypeID - LowerBound);
+        // Each entry is 4 bytes
+        CurrentIdx =
+            readBytesAs<uint32_t>(MatchTable + JumpTableBase + (NumEntry * 4));
+        if (!CurrentIdx) {
+          CurrentIdx = Default;
+          continue;
+        }
+        Matched = true;
+        break;
+      }
+      if (!Matched) {
         CurrentIdx = Default;
         break;
       }
-      const int64_t TypeID = TyI->second;
-      if (TypeID < LowerBound || UpperBound <= TypeID) {
-        CurrentIdx = Default;
-        break;
-      }
-      const auto NumEntry = (TypeID - LowerBound);
-      // Each entry is 4 bytes
-      CurrentIdx =
-          readBytesAs<uint32_t>(MatchTable + CurrentIdx + (NumEntry * 4));
-      if (!CurrentIdx) {
-        CurrentIdx = Default;
-        break;
-      }
+
       OnFailResumeAt.push_back(Default);
       break;
     }
