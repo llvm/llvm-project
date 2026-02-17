@@ -968,9 +968,11 @@ toConstrainedExceptMd(LangOptions::FPExceptionModeKind kind) {
     return llvm::fp::ebMayTrap;
   case LangOptions::FPE_Strict:
     return llvm::fp::ebStrict;
-  default:
-    llvm_unreachable("unsupported FP exception behavior");
+  case LangOptions::FPE_Default:
+    llvm_unreachable("expected explicitly initialized exception behavior");
   }
+  
+  llvm_unreachable("unsupported FP exception behavior");
 }
 
 clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
