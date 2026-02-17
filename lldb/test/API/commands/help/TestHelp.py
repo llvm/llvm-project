@@ -327,8 +327,6 @@ class HelpCommandTestCase(TestBase):
         ANSI codes acccording to the terminal width."""
         self.runCmd("settings set use-color on")
 
-        # FIXME: lldb crashes when the width is exactly 135 - https://github.com/llvm/llvm-project/issues/177570
-
         # Should fit on one line.
         self.runCmd("settings set term-width 138")
         self.expect(
@@ -340,17 +338,27 @@ class HelpCommandTestCase(TestBase):
             ],
         )
 
-        # Must be printed on two lines.
-        # FIXME: Second line is truncated - https://github.com/llvm/llvm-project/issues/177570
         self.runCmd("settings set term-width 100")
         self.expect(
             "help breakpoint set",
             matching=True,
             patterns=[
-                r"\s+\x1b\[4mS\x1b\[0met the breakpoint only in this shared library.  Can repeat this option\n"
-                r"\s+multiple times to specify multiple shared li\n"
+                r"\s+\x1b\[4mS\x1b\[0met the breakpoint only in this shared library.  Can repeat this option multiple times\n"
+                r"\s+to specify multiple shared libraries.\n"
             ],
         )
+
+        # If we do not account for the difference between the visible character's
+        # position and that character's real position into the string with the invisible
+        # ANSI codes, we will crash in various ways. Writing tests for each width
+        # would require duplicating the line splitting algorithm here. So instead,
+        # we will try to provoke crashes if any exist, checking that the start
+        # and end of the output is shown.
+        for width in range(70, 150):
+            self.runCmd(f"settings set term-width {width}")
+            self.expect(
+                "help breakpoint set", substrs=["\x1b[4mS\x1b[0met the", "libraries."]
+            )
 
     @no_debug_info_test
     def test_help_shows_optional_short_options(self):
