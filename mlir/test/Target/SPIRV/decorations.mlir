@@ -91,7 +91,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, TransformFeedback], []> {
   // CHECK: offset = 0
   // CHECK-SAME: xfb_buffer = 0
   // CHECK-SAME: xfb_stride = 112
