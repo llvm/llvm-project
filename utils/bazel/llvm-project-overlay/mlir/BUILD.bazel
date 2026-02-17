@@ -5388,7 +5388,7 @@ cc_library(
 )
 
 gentbl_cc_library(
-    name = "LLVMDialectInterfaceIncGen",
+    name = "LLVMInterfacesIncGen",
     tbl_outs = {
         "include/mlir/Dialect/LLVMIR/LLVMInterfaces.h.inc": ["-gen-op-interface-decls"],
         "include/mlir/Dialect/LLVMIR/LLVMInterfaces.cpp.inc": ["-gen-op-interface-defs"],
@@ -5399,6 +5399,16 @@ gentbl_cc_library(
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/LLVMInterfaces.td",
+    deps = [":LLVMOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "LLVMTranslationDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Target/LLVMIR/LLVMTranslationDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Target/LLVMIR/LLVMTranslationDialectInterface.td",
     deps = [":LLVMOpsTdFiles"],
 )
 
@@ -5451,9 +5461,10 @@ cc_library(
         ":InferTypeOpInterface",
         ":InliningUtils",
         ":LLVMDialectBytecodeIncGen",
-        ":LLVMDialectInterfaceIncGen",
+        ":LLVMInterfacesIncGen",
         ":LLVMIntrinsicOpsIncGen",
         ":LLVMOpsIncGen",
+        ":LLVMTranslationDialectInterfaceIncGen",
         ":LLVMTypesIncGen",
         ":MemorySlotInterfaces",
         ":MemorySlotInterfacesIncGen",
@@ -8974,6 +8985,7 @@ cc_library(
         ":LLVMDialect",
         ":LLVMIRTransformsDIExpressionLegalization",
         ":LLVMIRTransformsLegalizeForExport",
+        ":LLVMTranslationDialectInterfaceIncGen",
         ":LLVMIntrinsicConversionIncGen",
         ":OpenMPDialect",
         ":Support",
