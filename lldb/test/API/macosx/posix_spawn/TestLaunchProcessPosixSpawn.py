@@ -61,6 +61,7 @@ class TestLaunchProcessPosixSpawn(TestBase):
         self.run_arch(exe, "x86_64h")
 
     @skipUnlessDarwin
+    @skipIf(bugnumber="rdar://170040996")
     @skipIfDarwinEmbedded
     @skipIfLLVMTargetMissing("AArch64")
     @skipIfLLVMTargetMissing("X86")

@@ -77,10 +77,11 @@ static std::pair<bool, bool> readsWritesFloatRegister(MachineInstr &MI,
                                                       Register Reg) {
   bool Reads = false;
   bool Writes = false;
-  unsigned Idx = 0;
+  int Idx = -1;
   Register RegF32 = getFloatRegFromFReg(Reg);
   assert(RegF32 != Mips::NoRegister && "Reg is not a Float Register");
   for (llvm::MachineOperand &MO : MI.operands()) {
+    Idx++;
     if (!MO.isReg())
       continue;
     Register MORegF32 = getFloatRegFromFReg(MO.getReg());
@@ -92,7 +93,6 @@ static std::pair<bool, bool> readsWritesFloatRegister(MachineInstr &MI,
       else
         Reads = true;
     }
-    Idx++;
   }
   return std::make_pair(Reads, Writes);
 }
@@ -242,7 +242,7 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = Mips::FMOV_D64;
       unsigned DestRegOff = DestReg.id() - Mips::D0_64;
       unsigned SrcRegOff = SrcReg.id() - Mips::F0;
-      if (SrcRegOff == DestRegOff && SrcRegOff >= 0 && SrcRegOff <= 31)
+      if (SrcRegOff == DestRegOff && SrcRegOff <= 31)
         return;
     }
   } else if (Opc == 0 && Mips::FGR32RegClass.contains(DestReg) &&
@@ -253,7 +253,7 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = Mips::FMOV_D32;
       unsigned DestRegOff = DestReg.id() - Mips::F0;
       unsigned SrcRegOff = SrcReg.id() - Mips::D0_64;
-      if (SrcRegOff == DestRegOff && SrcRegOff >= 0 && SrcRegOff <= 31)
+      if (SrcRegOff == DestRegOff && SrcRegOff <= 31)
         return;
     }
   }

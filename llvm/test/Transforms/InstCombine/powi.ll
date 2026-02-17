@@ -207,7 +207,7 @@ define double @powi_fmul_powi_fast_on_powi(double %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[P2:%.*]] = tail call fast double @llvm.powi.f64.i32(double [[X]], i32 [[Z:%.*]])
-; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[P2]], [[P1]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan double [[P2]], [[P1]]
 ; CHECK-NEXT:    ret double [[MUL]]
 ;
 entry:

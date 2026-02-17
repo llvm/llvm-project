@@ -1,0 +1,58 @@
+name: Build libc Container
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-libc-container.yml
+      - '.github/workflows/containers/libc/**'
+  pull_request:
+    paths:
+      - .github/workflows/build-libc-container.yml
+      - '.github/workflows/containers/libc/**'
+
+jobs:
+  build-libc-container:
+    name: Build libc container
+    if: github.repository_owner == 'llvm'
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      matrix:
+        runs-on:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          sparse-checkout: |
+            .github/workflows/containers/libc/
+            .github/actions/build-container
+      - name: Build Container
+        uses: ./.github/actions/build-container
+        with:
+          container-name: libc-ubuntu-24.04
+          dockerfile: .github/workflows/containers/libc/Dockerfile
+          target: ''
+          test-command: ${{ matrix.test-command }}
+  push-libc-container:
+    if: github.event_name == 'push'
+    needs:
+      - build-libc-container
+    permissions:
+      packages: write
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          sparse-checkout: |
+            .github/actions/push-container
+
+      - uses: ./.github/actions/push-container
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

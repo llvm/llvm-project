@@ -706,3 +706,13 @@ func.func @expand_shape_requires_ranked_tensor(%arg0: tensor<*xf32>) {
   return
 }
 
+// -----
+
+
+func.func @no_fold_invalid_collapse() -> tensor<i64> {
+    %c = arith.constant dense<[1, 2, 3]> : tensor<3xi64>
+    // expected-error@below {{'tensor.collapse_shape' op number of elements must be preserved: 3 != 1}}
+    %0 = tensor.collapse_shape %c [] : tensor<3xi64> into tensor<i64>
+    return %0 : tensor<i64>
+}
+
