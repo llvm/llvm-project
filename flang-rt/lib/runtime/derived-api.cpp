@@ -66,7 +66,7 @@ void RTDEF(Finalize)(
 
 static RT_API_ATTRS const typeInfo::DerivedType *GetDerivedType(
     const Descriptor &desc) {
-  if (const DescriptorAddendum * addendum{desc.Addendum()}) {
+  if (const DescriptorAddendum *addendum{desc.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
       return derived;
     }
