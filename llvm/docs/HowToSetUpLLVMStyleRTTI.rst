@@ -391,13 +391,6 @@ is in ``bool DeclContext::classof(const Decl *)``, which asks the question
 It answers this with a simple switch over the set of ``Decl`` "kinds", and
 returning true for ones that are known to be ``DeclContext``'s.
 
-.. TODO::
-
-   Touch on some of the more advanced features, like ``isa_impl`` and
-   ``simplify_type``. However, those two need reference documentation in
-   the form of doxygen comments as well. We need the doxygen so that we can
-   say "for full details, see https://llvm.org/doxygen/..."
-
 Rules of Thumb
 ==============
 
@@ -486,6 +479,46 @@ header file ready to be used, and we'll show a few examples motivating their
 usage. These examples are not exhaustive, and adding new cast traits is easy
 so users should feel free to add them to their project, or contribute them if
 they're particularly useful!
+
+Enabling isa/cast/dyn_cast for Wrapper Classes by Specializing ``simplify_type``
+--------------------------------------------------------------------------------
+
+It is common to require pointer wrapper classes like smart pointers or iterators. Yet, since the
+``classof`` method is only implemented for the underlying types, developers must manually unwrap
+them into raw pointers prior to invoking ``isa``, ``cast``, or ``dyn_cast``.
+
+To avoid this boilerplate, you can specialize the ``simplify_type`` template for your wrapper class.
+For example, if you have an iterator class for ``Shape`` called ``ShapeIterator``, you can specialize
+``simplify_type`` like so:
+
+.. code-block:: c++
+
+    class ShapeIterator {
+    public:
+      ShapeIterator(Shape *ptr) : ptr(ptr) {}
+      Shape *get() const { return ptr; }
+    private:
+      Shape *ptr;
+    };
+
+    template <>
+    struct simplify_type<ShapeIterator> {
+      using SimpleType = Shape *;
+      static SimpleType getSimplifiedValue(const ShapeIterator &I) {
+        return I.get();
+      }
+    };
+
+By doing this, you can now use ``isa``, ``cast``, and ``dyn_cast`` directly on ``ShapeIterator`` objects
+without having to manually call ``get()`` on them. For example:
+
+.. code-block:: c++
+
+    ShapeIterator it = ...;
+    if (isa<Square>(it)) {
+      Square *S = cast<Square>(it);
+      /* do something with S ... */
+    }
 
 Value to value casting
 ----------------------
