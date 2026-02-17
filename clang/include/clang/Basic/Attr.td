@@ -4140,7 +4140,7 @@ def NoThreadSafetyAnalysis : InheritableAttr {
 }
 
 def GuardedBy : InheritableAttr {
-  let Spellings = [GNU<"guarded_by">];
+  let Spellings = [Clang<"guarded_by", 0>];
   let Args = [ExprArgument<"Arg">];
   let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
