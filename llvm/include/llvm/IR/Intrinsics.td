@@ -2598,7 +2598,7 @@ def int_masked_compressstore:
             [IntrWriteMem, IntrArgMemOnly,
              NoCapture<ArgIndex<1>>]>;
 
-def int_masked_load_first_fault:
+def int_masked_load_ff:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty,
                          LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                          [llvm_anyptr_ty, llvm_i32_ty,

@@ -1188,7 +1188,7 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
         any_of(II->args(), [](Value *V) {
           return isa<ScalableVectorType>(V->getType());
         })) {
-      if (II->getIntrinsicID() == Intrinsic::masked_load_first_fault) {
+      if (II->getIntrinsicID() == Intrinsic::masked_load_ff) {
         scalarizeMaskedFirstFaultingLoad(DL, CI, DTU, ModifiedDT);
         return true;
       }
@@ -1264,7 +1264,7 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
       scalarizeMaskedCompressStore(DL, HasBranchDivergence, CI, DTU,
                                    ModifiedDT);
       return true;
-    case Intrinsic::masked_load_first_fault: {
+    case Intrinsic::masked_load_ff: {
       scalarizeMaskedFirstFaultingLoad(DL, CI, DTU, ModifiedDT);
       return true;
     }

@@ -27679,8 +27679,8 @@ Other targets may support this intrinsic differently, for example, by lowering i
 
 .. _int_mloadff:
 
-'``llvm.masked.load.first.fault.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.masked.load.ff.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -27689,10 +27689,10 @@ floating-point or pointer data type.
 
 ::
 
-      declare { <16 x float>, <16 x i1> } @llvm.masked.load.first.fault.v16f32.p0(ptr <ptr>, i32 <alignment>, <16 x i1> <mask>)
-      declare { <2 x double>, <2 x i1> } @llvm.masked.load.first.fault.v2f64.p0(ptr <ptr>, i32 <alignment>, <2 x i1> <mask>)
+      declare { <16 x float>, <16 x i1> } @llvm.masked.load.ff.v16f32.p0(ptr <ptr>, i32 <alignment>, <16 x i1> <mask>)
+      declare { <2 x double>, <2 x i1> } @llvm.masked.load.ff.v2f64.p0(ptr <ptr>, i32 <alignment>, <2 x i1> <mask>)
       ;; The data is a vector of pointers
-      declare { <8 x ptr>, <8 x i1> } @llvm.masked.load.first.fault.v8p0.p0(ptr <ptr>, i32 <alignment>, <8 x i1> <mask>)
+      declare { <8 x ptr>, <8 x i1> } @llvm.masked.load.ff.v8p0.p0(ptr <ptr>, i32 <alignment>, <8 x i1> <mask>)
 
 Overview:
 """""""""
@@ -27717,17 +27717,17 @@ number of elements as the return type.
 Semantics:
 """"""""""
 
-The '``llvm.masked.load.first.fault``' intrinsic is similar to the
-'``llvm.masked.load``' intrinsic, in that it conditionally loads values from
-memory into a vector based on a mask. However, it allows loading from addresses
-which may not be entirely safe. If the memory corresponding to the first element
-of the vector is inaccessible, then a fault will be raised as normal. For all
-subsequent lanes, if a fault occurs, it will be suppressed and the corresponding
-bit in the output mask will be marked inactive. The remaining elements in the
-output mask after a suppressed fault will also be marked inactive. All elements
-in the data result (first vector in the returned struct) with a corresponding
-element in the mask result (second vector in the returned struct) set to
-inactive contain poison values.
+The '``llvm.masked.load.ff``' intrinsic is similar to the '``llvm.masked.load``'
+intrinsic, in that it conditionally loads values from memory into a vector based
+on a mask. However, it allows loading from addresses which may not be entirely
+safe. If the memory corresponding to the first element of the vector is
+inaccessible, then a fault will be raised as normal. For all subsequent lanes,
+if a fault occurs, it will be suppressed and the corresponding bit in the output
+mask will be marked inactive. The remaining elements in the output mask after a
+suppressed fault will also be marked inactive. All elements in the data result
+(first vector in the returned struct) with a corresponding element in the mask
+result (second vector in the returned struct) set to inactive contain poison
+values.
 
 Reasons for marking output elements inactive are processor dependent; it may be
 a genuine fault, e.g. if the range of the data being loaded spans a page
