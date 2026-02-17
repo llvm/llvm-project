@@ -27719,27 +27719,13 @@ argument.
 Semantics:
 """"""""""
 
-The '``llvm.masked.load.ff``' intrinsic is similar to the '``llvm.masked.load``'
-intrinsic, in that it conditionally loads values from memory into a vector based
-on a mask. However, it allows loading from addresses which may not be entirely
-safe. If the memory corresponding to the first element of the vector is
-inaccessible, then a fault will be raised as normal. For all subsequent lanes,
-if a fault occurs, it will be suppressed and the corresponding bit in the output
-mask will be marked inactive. The remaining elements in the output mask after a
-suppressed fault will also be marked inactive. All elements in the data result
-(first vector in the returned struct) with a corresponding element in the mask
-result (second vector in the returned struct) set to inactive contain poison
-values.
+The '``llvm.masked.load.ff``' intrinsic is very similar to the
+'``llvm.vp.load.ff``' intrinsic, with the differences being the lack of an EVL
+parameter and the second returned value being a mask instead of an updated EVL
+value.
 
-Reasons for marking output elements inactive are processor dependent; it may be
-a genuine fault, e.g. if the range of the data being loaded spans a page
-boundary and the page at the higher address is not mapped. It may also be due to
-the hardware lacking a way of suppressing faults. But a given processor may also
-mark elements as inactive for other reasons, such as a cache miss. Code using
-this intrinsic must take this into account and not assume that inactive lanes
-signal the end of accessible memory. If more data should be loaded based on the
-semantics of the user code, then the base pointer should be advanced to the
-address of the first inactive element and a new first fault load attempted.
+If the processor suppresses a fault for any lane, then the returned mask will
+indicate that lane and all subsequent lanes are inactive.
 
 Memory Use Markers
 ------------------
