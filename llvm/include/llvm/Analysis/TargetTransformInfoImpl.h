@@ -345,6 +345,8 @@ public:
     return false;
   }
 
+  virtual bool useSizeAwareStackSlotColoring() const { return false; }
+
   virtual TTI::AddressingModeKind
   getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const {
     return TTI::AMK_None;

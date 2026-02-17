@@ -114,6 +114,8 @@ public:
 
   bool hasBranchDivergence(const Function *F = nullptr) const override;
 
+  bool useSizeAwareStackSlotColoring() const override { return true; }
+  
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE) const override;

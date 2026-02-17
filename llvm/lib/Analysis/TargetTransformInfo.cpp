@@ -470,6 +470,10 @@ bool TargetTransformInfo::canSaveCmp(Loop *L, BranchInst **BI,
   return TTIImpl->canSaveCmp(L, BI, SE, LI, DT, AC, LibInfo);
 }
 
+bool TargetTransformInfo::useSizeAwareStackSlotColoring() const {
+  return TTIImpl->useSizeAwareStackSlotColoring();
+}
+
 TTI::AddressingModeKind
 TargetTransformInfo::getPreferredAddressingMode(const Loop *L,
                                                 ScalarEvolution *SE) const {
