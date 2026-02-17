@@ -744,7 +744,7 @@ let Features = "xsave", Attributes = [NoThrow] in {
 }
 
 let Header = "immintrin.h", Languages = "ALL_MS_LANGUAGES", Attributes = [NoThrow, RequireDeclaration] in {
-  def _xgetbv : X86LibBuiltin<"uint64_t(unsigned int)">;
+  def _xgetbv : X86LibBuiltin<"unsigned long long int(unsigned int)">;
 }
 
 let Features = "xsave", Attributes = [NoThrow] in {
@@ -752,7 +752,7 @@ let Features = "xsave", Attributes = [NoThrow] in {
 }
 
 let Header = "immintrin.h", Languages = "ALL_MS_LANGUAGES", Attributes = [NoThrow, RequireDeclaration] in {
-  def _xsetbv : X86LibBuiltin<"void(unsigned int, uint64_t)">;
+  def _xsetbv : X86LibBuiltin<"void(unsigned int, unsigned long long int)">;
 }
 
 let Features = "xsaveopt", Attributes = [NoThrow] in {
@@ -4470,14 +4470,14 @@ let Features = "sha512", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
 }
 
 let Header = "intrin.h", Languages = "ALL_MS_LANGUAGES", Attributes = [NoThrow, RequireDeclaration] in {
-  def _InterlockedAnd64 : X86LibBuiltin<"int64_t(int64_t volatile *, int64_t)">;
-  def _InterlockedDecrement64 : X86LibBuiltin<"int64_t(int64_t volatile *)">;
-  def _InterlockedExchange64 : X86LibBuiltin<"int64_t(int64_t volatile *, int64_t)">;
-  def _InterlockedExchangeAdd64 : X86LibBuiltin<"int64_t(int64_t volatile *, int64_t)">;
-  def _InterlockedExchangeSub64 : X86LibBuiltin<"int64_t(int64_t volatile *, int64_t)">;
-  def _InterlockedIncrement64 : X86LibBuiltin<"int64_t(int64_t volatile *)">;
-  def _InterlockedOr64 : X86LibBuiltin<"int64_t(int64_t volatile *, int64_t)">;
-  def _InterlockedXor64 : X86LibBuiltin<"int64_t(int64_t volatile *, int64_t)">;
+  def _InterlockedAnd64 : X86LibBuiltin<"long long int(long long int volatile *, long long int)">;
+  def _InterlockedDecrement64 : X86LibBuiltin<"long long int(long long int volatile *)">;
+  def _InterlockedExchange64 : X86LibBuiltin<"long long int(long long int volatile *, long long int)">;
+  def _InterlockedExchangeAdd64 : X86LibBuiltin<"long long int(long long int volatile *, long long int)">;
+  def _InterlockedExchangeSub64 : X86LibBuiltin<"long long int(long long int volatile *, long long int)">;
+  def _InterlockedIncrement64 : X86LibBuiltin<"long long int(long long int volatile *)">;
+  def _InterlockedOr64 : X86LibBuiltin<"long long int(long long int volatile *, long long int)">;
+  def _InterlockedXor64 : X86LibBuiltin<"long long int(long long int volatile *, long long int)">;
 }
 
 let Features = "sm3", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
