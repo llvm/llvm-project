@@ -1853,7 +1853,9 @@ def err_placeholder_expected_auto_or_decltype_auto : Error<
   "expected 'auto' or 'decltype(auto)' after concept name">;
 }
 
-let CategoryName = "Reflection Issue" in {
+let CategoryName = "Reflection Diagnostics" in {
+def err_cannot_reflect_operand : Error<
+  "unknown or unimplemented reflectable entity">;
 def err_annotation_with_using : Error<
   "annotations are not permitted following an attribute-using-prefix">;
 }

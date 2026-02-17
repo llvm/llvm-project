@@ -665,6 +665,15 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("-lto-stats-file=" + StatsFile.str()));
   }
 
+  // Set up stack usage file path.
+  if (Args.hasArg(options::OPT_fstack_usage)) {
+    SmallString<128> StackUsageFile(Output.getFilename());
+    llvm::sys::path::replace_extension(StackUsageFile, "su");
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(
+        Args.MakeArgString("-stack-usage-file=" + StackUsageFile));
+  }
+
   // It seems that the 'e' option is completely ignored for dynamic executables
   // (the default), and with static executables, the last one wins, as expected.
   Args.addAllArgs(CmdArgs, {options::OPT_d_Flag, options::OPT_s, options::OPT_t,
@@ -1110,10 +1119,14 @@ VersionTuple MachO::getLinkerVersion(const llvm::opt::ArgList &Args) const {
   }
 
   VersionTuple NewLinkerVersion;
-  if (Arg *A = Args.getLastArg(options::OPT_mlinker_version_EQ))
-    if (NewLinkerVersion.tryParse(A->getValue()))
+  if (Arg *A = Args.getLastArg(options::OPT_mlinker_version_EQ)) {
+    // Rejecting subbuild version is probably not necessary, but some
+    // existing tests depend on this.
+    if (NewLinkerVersion.tryParse(A->getValue()) ||
+        NewLinkerVersion.getSubbuild())
       getDriver().Diag(diag::err_drv_invalid_version_number)
-        << A->getAsString(Args);
+          << A->getAsString(Args);
+  }
 
   LinkerVersion = NewLinkerVersion;
   return *LinkerVersion;
@@ -1875,7 +1888,7 @@ struct DarwinPlatform {
         auto TargetVariantVersion = TargetVariantTriple->getOSVersion();
         if (TargetVariantVersion.getMajor()) {
           if (TargetVariantVersion < ZipperedOSVersion)
-            ZipperedOSVersion = TargetVariantVersion;
+            ZipperedOSVersion = std::move(TargetVariantVersion);
         }
       }
       break;

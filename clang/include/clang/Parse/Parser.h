@@ -150,6 +150,7 @@ enum class TentativeCXXTypeIdContext {
   AsTemplateArgument,
   InTrailingReturnType,
   AsGenericSelectionArgument,
+  AsReflectionOperand
 };
 
 /// The kind of attribute specifier we have found.
@@ -5156,6 +5157,15 @@ private:
   ExprResult ParseExpressionTrait();
 
   ///@}
+
+  //===--------------------------------------------------------------------===//
+  // Reflection parsing
+
+  /// ParseCXXReflectExpression - parses the operand of reflection operator.
+  ///
+  /// \returns on success, an expression holding the constructed CXXReflectExpr;
+  ///          on failure, an ExprError.
+  ExprResult ParseCXXReflectExpression();
 
   //
   //

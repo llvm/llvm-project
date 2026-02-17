@@ -6,7 +6,7 @@
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-macos -mcpu=apple-a15 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64-apple-macos -mcpu=apple-a16 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 ; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=neoverse-v2 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
-; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=neoverse-v3 -S %s | FileCheck --check-prefix=INTERLEAVE-4-VLA %s
+; RUN: opt -passes=loop-vectorize -mtriple=arm64 -mcpu=neoverse-v3 -S %s | FileCheck --check-prefix=INTERLEAVE-4 %s
 
 ; Tests for selecting the interleave count for loops with reductions.
 
@@ -132,92 +132,6 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-2:       exit:
 ; INTERLEAVE-2-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i32 [ [[RED_NEXT]], [[LOOP]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-2-NEXT:    ret i32 [[RED_NEXT_LCSSA]]
-;
-; INTERLEAVE-4-VLA-LABEL: @interleave_integer_reduction(
-; INTERLEAVE-4-VLA-NEXT:  iter.check:
-; INTERLEAVE-4-VLA-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 2
-; INTERLEAVE-4-VLA-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
-; INTERLEAVE-4-VLA:       vector.main.loop.iter.check:
-; INTERLEAVE-4-VLA-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-4-VLA-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
-; INTERLEAVE-4-VLA-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], [[TMP1]]
-; INTERLEAVE-4-VLA-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
-; INTERLEAVE-4-VLA:       vector.ph:
-; INTERLEAVE-4-VLA-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-4-VLA-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP2]], 2
-; INTERLEAVE-4-VLA-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP5]], 2
-; INTERLEAVE-4-VLA-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
-; INTERLEAVE-4-VLA-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; INTERLEAVE-4-VLA-NEXT:    br label [[VECTOR_BODY:%.*]]
-; INTERLEAVE-4-VLA:       vector.body:
-; INTERLEAVE-4-VLA-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; INTERLEAVE-4-VLA-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
-; INTERLEAVE-4-VLA-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
-; INTERLEAVE-4-VLA-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
-; INTERLEAVE-4-VLA-NEXT:    [[VEC_PHI4:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 [[INDEX]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP9:%.*]] = shl nuw nsw i64 [[TMP5]], 1
-; INTERLEAVE-4-VLA-NEXT:    [[TMP12:%.*]] = mul nuw nsw i64 [[TMP5]], 3
-; INTERLEAVE-4-VLA-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[TMP5]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[TMP9]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 [[TMP12]]
-; INTERLEAVE-4-VLA-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP4]], align 1
-; INTERLEAVE-4-VLA-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 4 x i32>, ptr [[TMP7]], align 1
-; INTERLEAVE-4-VLA-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 4 x i32>, ptr [[TMP10]], align 1
-; INTERLEAVE-4-VLA-NEXT:    [[WIDE_LOAD7:%.*]] = load <vscale x 4 x i32>, ptr [[TMP13]], align 1
-; INTERLEAVE-4-VLA-NEXT:    [[TMP14]] = add <vscale x 4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP15]] = add <vscale x 4 x i32> [[VEC_PHI2]], [[WIDE_LOAD5]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP16]] = add <vscale x 4 x i32> [[VEC_PHI3]], [[WIDE_LOAD6]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP17]] = add <vscale x 4 x i32> [[VEC_PHI4]], [[WIDE_LOAD7]]
-; INTERLEAVE-4-VLA-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; INTERLEAVE-4-VLA-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; INTERLEAVE-4-VLA:       middle.block:
-; INTERLEAVE-4-VLA-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[TMP15]], [[TMP14]]
-; INTERLEAVE-4-VLA-NEXT:    [[BIN_RDX8:%.*]] = add <vscale x 4 x i32> [[TMP16]], [[BIN_RDX]]
-; INTERLEAVE-4-VLA-NEXT:    [[BIN_RDX9:%.*]] = add <vscale x 4 x i32> [[TMP17]], [[BIN_RDX8]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[BIN_RDX9]])
-; INTERLEAVE-4-VLA-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; INTERLEAVE-4-VLA-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
-; INTERLEAVE-4-VLA:       vec.epilog.iter.check:
-; INTERLEAVE-4-VLA-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
-; INTERLEAVE-4-VLA-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
-; INTERLEAVE-4-VLA:       vec.epilog.ph:
-; INTERLEAVE-4-VLA-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; INTERLEAVE-4-VLA-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP19]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; INTERLEAVE-4-VLA-NEXT:    [[N_MOD_VF10:%.*]] = urem i64 [[N]], 2
-; INTERLEAVE-4-VLA-NEXT:    [[N_VEC11:%.*]] = sub i64 [[N]], [[N_MOD_VF10]]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP20:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
-; INTERLEAVE-4-VLA-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
-; INTERLEAVE-4-VLA:       vec.epilog.vector.body:
-; INTERLEAVE-4-VLA-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; INTERLEAVE-4-VLA-NEXT:    [[VEC_PHI13:%.*]] = phi <2 x i32> [ [[TMP20]], [[VEC_EPILOG_PH]] ], [ [[TMP22:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; INTERLEAVE-4-VLA-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX12]]
-; INTERLEAVE-4-VLA-NEXT:    [[WIDE_LOAD14:%.*]] = load <2 x i32>, ptr [[TMP21]], align 1
-; INTERLEAVE-4-VLA-NEXT:    [[TMP22]] = add <2 x i32> [[VEC_PHI13]], [[WIDE_LOAD14]]
-; INTERLEAVE-4-VLA-NEXT:    [[INDEX_NEXT15]] = add nuw i64 [[INDEX12]], 2
-; INTERLEAVE-4-VLA-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC11]]
-; INTERLEAVE-4-VLA-NEXT:    br i1 [[TMP23]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; INTERLEAVE-4-VLA:       vec.epilog.middle.block:
-; INTERLEAVE-4-VLA-NEXT:    [[TMP24:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[TMP22]])
-; INTERLEAVE-4-VLA-NEXT:    [[CMP_N16:%.*]] = icmp eq i64 [[N]], [[N_VEC11]]
-; INTERLEAVE-4-VLA-NEXT:    br i1 [[CMP_N16]], label [[EXIT]], label [[VEC_EPILOG_SCALAR_PH]]
-; INTERLEAVE-4-VLA:       vec.epilog.scalar.ph:
-; INTERLEAVE-4-VLA-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC11]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
-; INTERLEAVE-4-VLA-NEXT:    [[BC_MERGE_RDX17:%.*]] = phi i32 [ [[TMP24]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP19]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]
-; INTERLEAVE-4-VLA-NEXT:    br label [[LOOP:%.*]]
-; INTERLEAVE-4-VLA:       loop:
-; INTERLEAVE-4-VLA-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; INTERLEAVE-4-VLA-NEXT:    [[RED:%.*]] = phi i32 [ [[BC_MERGE_RDX17]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[RED_NEXT:%.*]], [[LOOP]] ]
-; INTERLEAVE-4-VLA-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
-; INTERLEAVE-4-VLA-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 1
-; INTERLEAVE-4-VLA-NEXT:    [[RED_NEXT]] = add i32 [[RED]], [[L]]
-; INTERLEAVE-4-VLA-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; INTERLEAVE-4-VLA-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; INTERLEAVE-4-VLA-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
-; INTERLEAVE-4-VLA:       exit:
-; INTERLEAVE-4-VLA-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i32 [ [[RED_NEXT]], [[LOOP]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ], [ [[TMP24]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
-; INTERLEAVE-4-VLA-NEXT:    ret i32 [[RED_NEXT_LCSSA]]
 ;
 entry:
   br label %loop

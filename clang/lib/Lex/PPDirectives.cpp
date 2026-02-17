@@ -641,14 +641,13 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
             Tok.is(tok::raw_identifier) &&
             (Tok.getRawIdentifier() == "export" ||
              Tok.getRawIdentifier() == "module")) {
-          llvm::SaveAndRestore ModuleDirectiveSkipping(
-              LastTokenWasExportKeyword);
-          LastTokenWasExportKeyword.reset();
+          llvm::SaveAndRestore ModuleDirectiveSkipping(LastExportKeyword);
+          LastExportKeyword.startToken();
           LookUpIdentifierInfo(Tok);
           IdentifierInfo *II = Tok.getIdentifierInfo();
 
           if (II->getName()[0] == 'e') { // export
-            HandleModuleContextualKeyword(Tok, Tok.isAtStartOfLine());
+            HandleModuleContextualKeyword(Tok);
             CurLexer->Lex(Tok);
             if (Tok.is(tok::raw_identifier)) {
               LookUpIdentifierInfo(Tok);
@@ -661,7 +660,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
             // to save RawLexingMode
             llvm::SaveAndRestore RestoreLexingRawMode(CurPPLexer->LexingRawMode,
                                                       false);
-            if (HandleModuleContextualKeyword(Tok, Tok.isAtStartOfLine())) {
+            if (HandleModuleContextualKeyword(Tok)) {
               // We just parsed a # character at the start of a line, so we're
               // in directive mode.  Tell the lexer this so any newlines we see
               // will be converted into an EOD token (this terminates the
@@ -2494,15 +2493,10 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       (getLangOpts().CPlusPlusModules || getLangOpts().Modules) &&
       ModuleToImport && !ModuleToImport->isHeaderUnit();
 
-  if (MaybeTranslateInclude && (UsableHeaderUnit || UsableClangHeaderModule) &&
-      PPOpts.SingleModuleParseMode) {
-    Action = IncludeLimitReached;
-  }
   // Determine whether we should try to import the module for this #include, if
   // there is one. Don't do so if precompiled module support is disabled or we
   // are processing this module textually (because we're building the module).
-  else if (MaybeTranslateInclude &&
-           (UsableHeaderUnit || UsableClangHeaderModule)) {
+  if (MaybeTranslateInclude && (UsableHeaderUnit || UsableClangHeaderModule)) {
     // If this include corresponds to a module but that module is
     // unavailable, diagnose the situation and bail out.
     // FIXME: Remove this; loadModule does the same check (but produces
@@ -4198,8 +4192,8 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
   llvm::SaveAndRestore<bool> SaveImportingCXXModules(
       this->ImportingCXXNamedModules, true);
 
-  if (LastTokenWasExportKeyword.isValid())
-    LastTokenWasExportKeyword.reset();
+  if (LastExportKeyword.is(tok::kw_export))
+    LastExportKeyword.startToken();
 
   Token Tok;
   if (LexHeaderName(Tok)) {
@@ -4357,9 +4351,9 @@ void Preprocessor::HandleCXXImportDirective(Token ImportTok) {
 void Preprocessor::HandleCXXModuleDirective(Token ModuleTok) {
   assert(getLangOpts().CPlusPlusModules && ModuleTok.is(tok::kw_module));
   Token Introducer = ModuleTok;
-  if (LastTokenWasExportKeyword.isValid()) {
-    Introducer = LastTokenWasExportKeyword.getExportTok();
-    LastTokenWasExportKeyword.reset();
+  if (LastExportKeyword.is(tok::kw_export)) {
+    Introducer = LastExportKeyword;
+    LastExportKeyword.startToken();
   }
 
   SourceLocation StartLoc = Introducer.getLocation();

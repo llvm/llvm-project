@@ -1004,11 +1004,13 @@ def MFMALdScaleXForm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(New, SDLoc(N), MVT::i32);
 }]>;
 
-def is_canonicalized : PatLeaf<(fAny srcvalue:$src), [{
+def fcanonicalize_canonicalized
+    : PatFrag<(ops node:$op), (fcanonicalize node:$op), [{
   const SITargetLowering &Lowering =
       *static_cast<const SITargetLowering *>(getTargetLowering());
-  return Lowering.isCanonicalized(*CurDAG, Op);
+  return Lowering.isCanonicalized(*CurDAG, Op->getOperand(0), N->getFlags());
 }]> {
+  // FIXME: This predicate for GlobalISel is dead code.
   let GISelPredicateCode = [{
     const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
         MF.getSubtarget().getTargetLowering());
@@ -1086,6 +1088,8 @@ def VReg32OrOffClass : AsmOperandClass {
 }
 
 def SendMsg : CustomOperand<i32>;
+
+def WaitEvent : CustomOperand<i16>;
 
 def Swizzle : CustomOperand<i16, 1>;
 
@@ -1262,6 +1266,8 @@ def CPol_GLC : ValuePredicatedOperand<CPol, "Op.getImm() & CPol::GLC">;
 def CPol_NonGLC : ValuePredicatedOperand<CPol, "!(Op.getImm() & CPol::GLC)", 1>;
 def CPol_GLC_WithDefault : DefaultOperand<CPol_GLC, !shl(1, CPolBit.GLC)>;
 def CPol_NonGLC_WithDefault : DefaultOperand<CPol_NonGLC, 0>;
+
+def IsAsync : NamedBitOperand<"isasync">;
 
 def TFE : NamedBitOperand<"tfe">;
 def UNorm : NamedBitOperand<"unorm">;

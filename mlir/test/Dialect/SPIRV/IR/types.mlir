@@ -120,6 +120,16 @@ func.func private @unknown_storage_class(!spirv.ptr<f32, SomeStorageClass>) -> (
 
 // -----
 
+// expected-error @+1 {{SPIR-V does not allow one-element vectors}}
+func.func private @invalid_ptr_to_vector_one_element(!spirv.ptr<vector<1xi32>, SomeStorageClass>) -> ()
+
+// -----
+
+// expected-error @+1 {{vector element type must be a SPIR-V scalar type}}
+func.func private @invalid_ptr_to_vector_index(!spirv.ptr<vector<2xindex>, SomeStorageClass>) -> ()
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // RuntimeArrayType
 //===----------------------------------------------------------------------===//

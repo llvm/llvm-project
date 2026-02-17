@@ -1339,7 +1339,7 @@ void LinkerDriver::parsePDBAltPath() {
     cursor = secondMark + 1;
   }
 
-  ctx.config.pdbAltPath = buf;
+  ctx.config.pdbAltPath = std::move(buf);
 }
 
 /// Convert resource files and potentially merge input resource object
