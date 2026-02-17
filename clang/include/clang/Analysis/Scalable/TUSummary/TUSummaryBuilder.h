@@ -35,7 +35,7 @@ public:
   /// \sa std::unique_ptr<EntitySummary>, otherwise the conversion operator will
   /// automatically consume the \p Data.
   std::pair<EntitySummary *, bool>
-  addFact(EntityId Entity, std::unique_ptr<EntitySummary> &&Data);
+  addSummary(EntityId Entity, std::unique_ptr<EntitySummary> &&Data);
 
 private:
   TUSummary &Summary;

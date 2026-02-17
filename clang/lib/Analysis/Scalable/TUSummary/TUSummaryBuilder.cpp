@@ -13,8 +13,8 @@ EntityId TUSummaryBuilder::addEntity(const EntityName &E) {
 }
 
 std::pair<EntitySummary *, bool>
-TUSummaryBuilder::addFact(EntityId Entity,
-                          std::unique_ptr<EntitySummary> &&Data) {
+TUSummaryBuilder::addSummary(EntityId Entity,
+                             std::unique_ptr<EntitySummary> &&Data) {
   auto &EntitySummaries = Summary.Data[Data->getSummaryName()];
   auto [It, Inserted] = EntitySummaries.try_emplace(Entity, std::move(Data));
   return {It->second.get(), Inserted};

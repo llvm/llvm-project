@@ -37,20 +37,20 @@ static EntityId addTestEntity(TUSummaryBuilder &Builder, llvm::StringRef USR) {
   return Builder.addEntity(EntityName(USR, /*Suffix=*/"", /*Namespace=*/{}));
 }
 
-struct FactResult {
-  EntitySummary *Fact;
+struct SummaryResult {
+  EntitySummary *Summary;
   bool Inserted;
 };
 
 template <class ConcreteEntitySummary>
 [[nodiscard]]
-static auto addFactTo(TUSummaryBuilder &Builder, EntityId ID,
-                      ConcreteEntitySummary Fact) {
+static auto addSummaryTo(TUSummaryBuilder &Builder, EntityId ID,
+                         ConcreteEntitySummary Summary) {
   static_assert(std::is_base_of_v<EntitySummary, ConcreteEntitySummary>);
-  auto NewFact = std::make_unique<ConcreteEntitySummary>(std::move(Fact));
-  SummaryName Name = NewFact->getSummaryName();
-  auto [Place, Inserted] = Builder.addFact(ID, std::move(NewFact));
-  return std::pair{Name, FactResult{Place, Inserted}};
+  auto NewSummary = std::make_unique<ConcreteEntitySummary>(std::move(Summary));
+  SummaryName Name = NewSummary->getSummaryName();
+  auto [Place, Inserted] = Builder.addSummary(ID, std::move(NewSummary));
+  return std::pair{Name, SummaryResult{Place, Inserted}};
 }
 
 namespace {
@@ -142,11 +142,11 @@ TEST_F(TUSummaryBuilderTest, AddEntity) {
   EXPECT_TRUE(IdTable.contains(EN2));
 }
 
-TEST_F(TUSummaryBuilderTest, TUSummaryBuilderAddSingleFact) {
+TEST_F(TUSummaryBuilderTest, TUSummaryBuilderAddSingleSummary) {
   EntityId ID = addTestEntity(Builder, "c:@F@foo");
-  auto [Name, Res] = addFactTo(Builder, ID, MockSummaryData1(10));
+  auto [Name, Res] = addSummaryTo(Builder, ID, MockSummaryData1(10));
   ASSERT_TRUE(Res.Inserted);
-  ASSERT_TRUE(Res.Fact);
+  ASSERT_TRUE(Res.Summary);
 
   // Should have a summary type with an entity.
   EXPECT_THAT(summaryNames(Summary), UnorderedElementsAre(Name));
@@ -156,19 +156,19 @@ TEST_F(TUSummaryBuilderTest, TUSummaryBuilderAddSingleFact) {
               Optional(Field(&MockSummaryData1::Value, 10)));
 }
 
-TEST_F(TUSummaryBuilderTest, AddMultipleFactsToSameEntity) {
+TEST_F(TUSummaryBuilderTest, AddMultipleSummariesToSameEntity) {
   EntityId ID = addTestEntity(Builder, "c:@F@foo");
 
   // Add different summary types to the same entity.
-  auto [Name1, Res1] = addFactTo(Builder, ID, MockSummaryData1(42));
-  auto [Name2, Res2] = addFactTo(Builder, ID, MockSummaryData2("test data"));
-  auto [Name3, Res3] = addFactTo(Builder, ID, MockSummaryData3(true));
+  auto [Name1, Res1] = addSummaryTo(Builder, ID, MockSummaryData1(42));
+  auto [Name2, Res2] = addSummaryTo(Builder, ID, MockSummaryData2("test data"));
+  auto [Name3, Res3] = addSummaryTo(Builder, ID, MockSummaryData3(true));
   ASSERT_TRUE(Res1.Inserted);
   ASSERT_TRUE(Res2.Inserted);
   ASSERT_TRUE(Res3.Inserted);
-  ASSERT_TRUE(Res1.Fact);
-  ASSERT_TRUE(Res2.Fact);
-  ASSERT_TRUE(Res3.Fact);
+  ASSERT_TRUE(Res1.Summary);
+  ASSERT_TRUE(Res2.Summary);
+  ASSERT_TRUE(Res3.Summary);
 
   // All Names must be unique
   EXPECT_EQ((std::set<SummaryName>{Name1, Name2, Name3}.size()), 3U);
@@ -187,21 +187,21 @@ TEST_F(TUSummaryBuilderTest, AddMultipleFactsToSameEntity) {
               Optional(Field(&MockSummaryData3::Flag, true)));
 }
 
-TEST_F(TUSummaryBuilderTest, AddSameFactTypeToMultipleEntities) {
+TEST_F(TUSummaryBuilderTest, AddSameSummaryTypeToMultipleEntities) {
   EntityId ID1 = addTestEntity(Builder, "c:@F@foo");
   EntityId ID2 = addTestEntity(Builder, "c:@F@bar");
   EntityId ID3 = addTestEntity(Builder, "c:@F@baz");
 
   // Add the same summary type to different entities.
-  auto [Name1, Res1] = addFactTo(Builder, ID1, MockSummaryData1(1));
-  auto [Name2, Res2] = addFactTo(Builder, ID2, MockSummaryData1(2));
-  auto [Name3, Res3] = addFactTo(Builder, ID3, MockSummaryData1(3));
+  auto [Name1, Res1] = addSummaryTo(Builder, ID1, MockSummaryData1(1));
+  auto [Name2, Res2] = addSummaryTo(Builder, ID2, MockSummaryData1(2));
+  auto [Name3, Res3] = addSummaryTo(Builder, ID3, MockSummaryData1(3));
   ASSERT_TRUE(Res1.Inserted);
   ASSERT_TRUE(Res2.Inserted);
   ASSERT_TRUE(Res3.Inserted);
-  ASSERT_TRUE(Res1.Fact);
-  ASSERT_TRUE(Res2.Fact);
-  ASSERT_TRUE(Res3.Fact);
+  ASSERT_TRUE(Res1.Summary);
+  ASSERT_TRUE(Res2.Summary);
+  ASSERT_TRUE(Res3.Summary);
 
   // All 3 should be the same summary type.
   EXPECT_THAT((llvm::ArrayRef{Name1, Name2, Name3}), testing::Each(Name1));
@@ -219,12 +219,12 @@ TEST_F(TUSummaryBuilderTest, AddSameFactTypeToMultipleEntities) {
               Optional(Field(&MockSummaryData1::Value, 3)));
 }
 
-TEST_F(TUSummaryBuilderTest, AddConflictingFactToSameEntity) {
+TEST_F(TUSummaryBuilderTest, AddConflictingSummaryToSameEntity) {
   EntityId ID = addTestEntity(Builder, "c:@F@foo");
 
-  auto [Name, Res] = addFactTo(Builder, ID, MockSummaryData1(10));
+  auto [Name, Res] = addSummaryTo(Builder, ID, MockSummaryData1(10));
   ASSERT_TRUE(Res.Inserted);
-  ASSERT_TRUE(Res.Fact);
+  ASSERT_TRUE(Res.Summary);
 
   // Check the initial value.
   EXPECT_THAT(summaryNames(Summary), UnorderedElementsAre(Name));
@@ -232,20 +232,20 @@ TEST_F(TUSummaryBuilderTest, AddConflictingFactToSameEntity) {
   EXPECT_THAT(getAsEntitySummary<MockSummaryData1>(Summary, Name, ID),
               Optional(Field(&MockSummaryData1::Value, 10)));
 
-  // This is a different fact of the same kind.
-  std::unique_ptr<EntitySummary> NewFact =
+  // This is a different summary of the same kind.
+  std::unique_ptr<EntitySummary> NewSummary =
       std::make_unique<MockSummaryData1>(20);
-  ASSERT_EQ(NewFact->getSummaryName(), Name);
+  ASSERT_EQ(NewSummary->getSummaryName(), Name);
 
-  // Let's add this different fact.
+  // Let's add this different summary.
   // This should keep the map intact and give us the existing entity summary.
-  auto [Slot, Inserted] = Builder.addFact(ID, std::move(NewFact));
+  auto [Slot, Inserted] = Builder.addSummary(ID, std::move(NewSummary));
   ASSERT_FALSE(Inserted);
   ASSERT_TRUE(Slot);
 
-  // Check that the fact object is not consumed and remained the same.
-  ASSERT_TRUE(NewFact);
-  ASSERT_EQ(static_cast<MockSummaryData1 *>(NewFact.get())->Value, 20);
+  // Check that the summary object is not consumed and remained the same.
+  ASSERT_TRUE(NewSummary);
+  ASSERT_EQ(static_cast<MockSummaryData1 *>(NewSummary.get())->Value, 20);
 
   // Check that the Slot refers to the existing entity summary.
   ASSERT_EQ(Slot->getSummaryName(), Name);
@@ -258,7 +258,7 @@ TEST_F(TUSummaryBuilderTest, AddConflictingFactToSameEntity) {
               Optional(Field(&MockSummaryData1::Value, 10)));
 
   // We can update the existing summary.
-  static_cast<MockSummaryData1 *>(Res.Fact)->Value = 30;
+  static_cast<MockSummaryData1 *>(Res.Summary)->Value = 30;
 
   // Check that the values remained the same except what we updated.
   EXPECT_THAT(summaryNames(Summary), UnorderedElementsAre(Name));
