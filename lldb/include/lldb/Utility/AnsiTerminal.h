@@ -293,16 +293,19 @@ inline size_t ColumnWidth(llvm::StringRef str) {
 // to the given stream. The indent level of the stream is counted towards the
 // output line length.
 // FIXME: This contains several bugs and does not handle unicode.
-inline void OutputWordWrappedLines(Stream &strm,
-                                   // FIXME: should be StringRef, but triggers
-                                   // a crash when changed.
-                                   const std::string &text,
+inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
                                    uint32_t output_max_columns) {
+  // We will indent using the stream, so leading whitespace is not significant.
+  text = text.ltrim();
+  if (text.size() == 0)
+    return;
+
   const size_t visible_length = ansi::ColumnWidth(text);
 
-  // Will it all fit on one line?
+  // Will it all fit on one line, or is it a single word that we must not break?
   if (static_cast<uint32_t>(visible_length + strm.GetIndentLevel()) <
-      output_max_columns) {
+          output_max_columns ||
+      text.find_first_of(" \t\n") == llvm::StringRef::npos) {
     // Output it as a single line.
     strm.Indent(text);
     strm.EOL();
@@ -329,9 +332,10 @@ inline void OutputWordWrappedLines(Stream &strm,
       start++;
 
     end = start + max_text_width;
-    if (end > final_end) {
+    if (end > final_end)
       end = final_end;
-    } else {
+
+    if (end != final_end) {
       // If we're not at the end of the text, make sure we break the line on
       // white space.
       while (end > start && text[end] != ' ' && text[end] != '\t' &&
@@ -345,7 +349,7 @@ inline void OutputWordWrappedLines(Stream &strm,
     strm.Indent();
     assert(start < final_end);
     assert(start + sub_len <= final_end);
-    strm.PutCString(llvm::StringRef(text.c_str() + start, sub_len));
+    strm << text.substr(start, sub_len);
     start = end + 1;
   }
   strm.EOL();
