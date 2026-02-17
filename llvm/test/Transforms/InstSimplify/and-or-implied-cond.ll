@@ -347,3 +347,107 @@ define i1 @pr98753(i32 noundef %x, i32 %y) {
 }
 
 declare i1 @llvm.is.constant.i1(i1)
+
+
+define i1 @or_icmp_fold(i64 %arg0) {
+; CHECK-LABEL: @or_icmp_fold(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[ARG0:%.*]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 55296
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], -1114112
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], -1112064
+; CHECK-NEXT:    ret i1 [[TMP5]]
+;
+  %1 = lshr i64 %arg0, 32
+  %2 = trunc nuw i64 %1 to i32
+  %3 = xor i32 %2, 55296
+  %4 = add i32 %3, -1114112
+  %5 = icmp ult i32 %4, -1112064
+  %6 = icmp eq i64 %1, 1114112
+  %7 = or i1 %6, %5
+  ret i1 %7
+}
+
+
+define i1 @or_icmp_fold_negative(i64 %arg0) {
+; CHECK-LABEL: @or_icmp_fold_negative(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[ARG0:%.*]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 55296
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], -1114112
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 1000
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP1]], 1114112
+; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    ret i1 [[TMP7]]
+;
+  %1 = lshr i64 %arg0, 32
+  %2 = trunc nuw i64 %1 to i32
+  %3 = xor i32 %2, 55296
+  %4 = add i32 %3, -1114112
+  %5 = icmp ult i32 %4, 1000
+  %6 = icmp eq i64 %1, 1114112
+  %7 = or i1 %6, %5
+  ret i1 %7
+}
+
+declare void @use(i32)
+
+define i1 @or_icmp_fold_multi_use(i64 %arg0) {
+; CHECK-LABEL: @or_icmp_fold_multi_use(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[ARG0:%.*]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 55296
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], -1114112
+; CHECK-NEXT:    call void @use(i32 [[TMP4]])
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], -1112064
+; CHECK-NEXT:    ret i1 [[TMP5]]
+;
+  %1 = lshr i64 %arg0, 32
+  %2 = trunc nuw i64 %1 to i32
+  %3 = xor i32 %2, 55296
+  %4 = add i32 %3, -1114112
+  call void @use(i32 %4)
+  %5 = icmp ult i32 %4, -1112064
+  %6 = icmp eq i64 %1, 1114112
+  %7 = or i1 %6, %5
+  ret i1 %7
+}
+
+define i1 @or_icmp_fold_commuted(i64 %arg0) {
+; CHECK-LABEL: @or_icmp_fold_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[ARG0:%.*]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 55296
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], -1114112
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], -1112064
+; CHECK-NEXT:    ret i1 [[TMP5]]
+;
+  %1 = lshr i64 %arg0, 32
+  %2 = trunc nuw i64 %1 to i32
+  %3 = xor i32 %2, 55296
+  %4 = add i32 %3, -1114112
+  %5 = icmp ult i32 %4, -1112064
+  %6 = icmp eq i64 %1, 1114112
+  %7 = or i1 %5, %6
+  ret i1 %7
+}
+
+
+define <2 x i1> @or_icmp_fold_vec(<2 x i64> %arg0) {
+; CHECK-LABEL: @or_icmp_fold_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[ARG0:%.*]], splat (i64 32)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP2]], splat (i32 55296)
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP3]], splat (i32 -1114112)
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <2 x i32> [[TMP4]], splat (i32 -1112064)
+; CHECK-NEXT:    ret <2 x i1> [[TMP5]]
+;
+  %1 = lshr <2 x i64> %arg0, <i64 32, i64 32>
+  %2 = trunc <2 x i64> %1 to <2 x i32>
+  %3 = xor <2 x i32> %2, <i32 55296, i32 55296>
+  %4 = add <2 x i32> %3, <i32 -1114112, i32 -1114112>
+  %5 = icmp ult <2 x i32> %4, <i32 -1112064, i32 -1112064>
+  %6 = icmp eq <2 x i64> %1, <i64 1114112, i64 1114112>
+  %7 = or <2 x i1> %6, %5
+  ret <2 x i1> %7
+}
