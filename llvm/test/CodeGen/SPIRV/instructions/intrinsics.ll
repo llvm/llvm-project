@@ -16,6 +16,8 @@ declare float @llvm.log10.f32(float)
 declare float @llvm.log2.f32(float)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
+declare float @llvm.minimumnum.f32(float, float)
+declare float @llvm.maximumnum.f32(float, float)
 declare <2 x half> @llvm.fabs.v2f16(<2 x half>)
 declare <2 x half> @llvm.rint.v2f16(<2 x half>)
 declare <2 x half> @llvm.nearbyint.v2f16(<2 x half>)
@@ -30,6 +32,8 @@ declare <2 x half> @llvm.exp2.v2f16(<2 x half>)
 declare <2 x half> @llvm.log.v2f16(<2 x half>)
 declare <2 x half> @llvm.log10.v2f16(<2 x half>)
 declare <2 x half> @llvm.log2.v2f16(<2 x half>)
+declare <2 x half> @llvm.minimumnum.v2f16(<2 x half>, <2 x half>)
+declare <2 x half> @llvm.maximumnum.v2f16(<2 x half>, <2 x half>)
 
 ; CHECK-DAG: OpName %[[#SCALAR_FABS:]] "scalar_fabs"
 ; CHECK-DAG: OpName %[[#SCALAR_RINT:]] "scalar_rint"
@@ -47,6 +51,8 @@ declare <2 x half> @llvm.log2.v2f16(<2 x half>)
 ; CHECK-DAG: OpName %[[#SCALAR_LOG2:]] "scalar_log2"
 ; CHECK-DAG: OpName %[[#SCALAR_MINNUM:]] "scalar_minnum"
 ; CHECK-DAG: OpName %[[#SCALAR_MAXNUM:]] "scalar_maxnum"
+; CHECK-DAG: OpName %[[#SCALAR_MINIMUMNUM:]] "scalar_minimumnum"
+; CHECK-DAG: OpName %[[#SCALAR_MAXIMUMNUM:]] "scalar_maximumnum"
 ; CHECK-DAG: OpName %[[#VECTOR_FABS:]] "vector_fabs"
 ; CHECK-DAG: OpName %[[#VECTOR_RINT:]] "vector_rint"
 ; CHECK-DAG: OpName %[[#VECTOR_NEARBYINT:]] "vector_nearbyint"
@@ -61,6 +67,8 @@ declare <2 x half> @llvm.log2.v2f16(<2 x half>)
 ; CHECK-DAG: OpName %[[#VECTOR_LOG:]] "vector_log"
 ; CHECK-DAG: OpName %[[#VECTOR_LOG10:]] "vector_log10"
 ; CHECK-DAG: OpName %[[#VECTOR_LOG2:]] "vector_log2"
+; CHECK-DAG: OpName %[[#VECTOR_MINIMUMNUM:]] "vector_minimumnum"
+; CHECK-DAG: OpName %[[#VECTOR_MAXIMUMNUM:]] "vector_maximumnum"
 
 ; CHECK-DAG: %[[#CLEXT:]] = OpExtInstImport "OpenCL.std"
 
@@ -218,6 +226,53 @@ define float @scalar_log2(float %a) {
     ret float %r
 }
 
+; CHECK:      %[[#SCALAR_MINNUM]] = OpFunction
+; CHECK-NEXT: %[[#A:]] = OpFunctionParameter
+; CHECK-NEXT: %[[#B:]] = OpFunctionParameter
+; CHECK:      OpLabel
+; CHECK:      %[[#R:]] = OpExtInst %[[#]] %[[#CLEXT]] fmin %[[#A]] %[[#B]]
+; CHECK:      OpReturnValue %[[#R]]
+; CHECK-NEXT: OpFunctionEnd
+define float @scalar_minnum(float %A, float %B) {
+  %r = call float @llvm.minnum.f32(float %A, float %B)
+  ret float %r
+}
+
+; CHECK:      %[[#SCALAR_MAXNUM]] = OpFunction
+; CHECK-NEXT: %[[#A:]] = OpFunctionParameter
+; CHECK-NEXT: %[[#B:]] = OpFunctionParameter
+; CHECK:      OpLabel
+; CHECK:      %[[#R:]] = OpExtInst %[[#]] %[[#CLEXT]] fmax %[[#A]] %[[#B]]
+; CHECK:      OpReturnValue %[[#R]]
+; CHECK-NEXT: OpFunctionEnd
+define float @scalar_maxnum(float %A, float %B) {
+  %r = call float @llvm.maxnum.f32(float %A, float %B)
+  ret float %r
+}
+
+; CHECK:      %[[#SCALAR_MINIMUMNUM]] = OpFunction
+; CHECK-NEXT: %[[#A:]] = OpFunctionParameter
+; CHECK-NEXT: %[[#B:]] = OpFunctionParameter
+; CHECK:      OpLabel
+; CHECK:      %[[#R:]] = OpExtInst %[[#]] %[[#CLEXT]] fmin %[[#A]] %[[#B]]
+; CHECK:      OpReturnValue %[[#R]]
+; CHECK-NEXT: OpFunctionEnd
+define float @scalar_minimumnum(float %A, float %B) {
+  %r = call float @llvm.minimumnum.f32(float %A, float %B)
+  ret float %r
+}
+
+; CHECK:      %[[#SCALAR_MAXIMUMNUM]] = OpFunction
+; CHECK-NEXT: %[[#A:]] = OpFunctionParameter
+; CHECK-NEXT: %[[#B:]] = OpFunctionParameter
+; CHECK:      OpLabel
+; CHECK:      %[[#R:]] = OpExtInst %[[#]] %[[#CLEXT]] fmax %[[#A]] %[[#B]]
+; CHECK:      OpReturnValue %[[#R]]
+; CHECK-NEXT: OpFunctionEnd
+define float @scalar_maximumnum(float %A, float %B) {
+  %r = call float @llvm.maximumnum.f32(float %A, float %B)
+  ret float %r
+}
 ; CHECK:      %[[#VECTOR_FABS]] = OpFunction
 ; CHECK-NEXT: %[[#A:]] = OpFunctionParameter
 ; CHECK:      OpLabel
@@ -372,26 +427,26 @@ define <2 x half> @vector_log2(<2 x half> %a) {
     ret <2 x half> %r
 }
 
-; CHECK:      %[[#SCALAR_MINNUM]] = OpFunction
+; CHECK:      %[[#VECTOR_MINIMUMNUM]] = OpFunction
 ; CHECK-NEXT: %[[#A:]] = OpFunctionParameter
 ; CHECK-NEXT: %[[#B:]] = OpFunctionParameter
 ; CHECK:      OpLabel
 ; CHECK:      %[[#R:]] = OpExtInst %[[#]] %[[#CLEXT]] fmin %[[#A]] %[[#B]]
 ; CHECK:      OpReturnValue %[[#R]]
 ; CHECK-NEXT: OpFunctionEnd
-define float @scalar_minnum(float %A, float %B) {
-  %r = call float @llvm.minnum.f32(float %A, float %B)
-  ret float %r
+define <2 x half> @vector_minimumnum(<2 x half> %A, <2 x half> %B) {
+  %r = call <2 x half> @llvm.minimumnum.v2f16(<2 x half> %A, <2 x half> %B)
+  ret <2 x half> %r
 }
 
-; CHECK:      %[[#SCALAR_MAXNUM]] = OpFunction
+; CHECK:      %[[#VECTOR_MAXIMUMNUM]] = OpFunction
 ; CHECK-NEXT: %[[#A:]] = OpFunctionParameter
 ; CHECK-NEXT: %[[#B:]] = OpFunctionParameter
 ; CHECK:      OpLabel
 ; CHECK:      %[[#R:]] = OpExtInst %[[#]] %[[#CLEXT]] fmax %[[#A]] %[[#B]]
 ; CHECK:      OpReturnValue %[[#R]]
 ; CHECK-NEXT: OpFunctionEnd
-define float @scalar_maxnum(float %A, float %B) {
-  %r = call float @llvm.maxnum.f32(float %A, float %B)
-  ret float %r
+define <2 x half> @vector_maximumnum(<2 x half> %A, <2 x half> %B) {
+  %r = call <2 x half> @llvm.maximumnum.v2f16(<2 x half> %A, <2 x half> %B)
+  ret <2 x half> %r
 }
