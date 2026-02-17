@@ -474,11 +474,12 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
 
     if (auto *d = dyn_cast<DefinedData>(sym)) {
       // Get __memory_base
-      writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       if (sym->isTLS())
         writeGetTLSBase(ctx, os);
-      else
+      else {
+        writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
         writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(), "__memory_base");
+      }
 
       // Add the virtual address of the data symbol
       writePtrConst(os, d->getVA(), is64, "offset");
