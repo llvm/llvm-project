@@ -1205,7 +1205,7 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol,
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
-                       OptionalAttr<StrAttr>:$sym_visibility,
+                       OptionalAttr<SymbolVisibilityAttr>:$sym_visibility,
                        MemRefTypeAttr:$type,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$constant,
