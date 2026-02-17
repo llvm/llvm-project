@@ -1623,16 +1623,12 @@ void Writer::createInitTLSFunction() {
 
     writeUleb128(os, 0, "num locals");
     if (tlsSeg) {
-      writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
-      writeUleb128(os, 0, "local index");
+      // On WASIP3, we don't set the TLS base inside the thread context;
+      // this should be done as part of the thread startup stub.
+      if (!ctx.arg.isWasip3) {
+        writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
+        writeUleb128(os, 0, "local index");
 
-      // On WASIP3, we call `context.set 1` to set the TLS base,
-      // otherwise, we set the `__tls_base` global.
-      if (ctx.arg.isWasip3) {
-        writeU8(os, WASM_OPCODE_CALL, "call");
-        writeUleb128(os, ctx.sym.contextSet1->getFunctionIndex(),
-                     "function index");
-      } else {
         writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
         writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "global index");
       }

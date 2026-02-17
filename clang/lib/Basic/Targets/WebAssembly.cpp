@@ -398,7 +398,8 @@ void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
   // Turn off POSIXThreads and ThreadModel so that we don't predefine _REENTRANT
   // or __STDCPP_THREADS__ if we will eventually end up stripping atomics
   // because they are unsupported.
-  if (!HasAtomics || !HasBulkMemory) {
+  if (getTriple().getOSName() != "wasip3" &&
+      (!HasAtomics || !HasBulkMemory)) {
     Opts.POSIXThreads = false;
     Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
     Opts.ThreadsafeStatics = false;
