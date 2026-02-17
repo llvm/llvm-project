@@ -1379,9 +1379,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
             .getResult();
     cir::PtrStrideOp stackSaveSlot = cir::PtrStrideOp::create(
         builder, loc, ppTy, castBuf.getPointer(), builder.getSInt32(2, loc));
-    CharUnits slotAlign = castBuf.getAlignment().alignmentAtOffset(
-        2 * cgm.getDataLayout().getTypeAllocSize(voidPtrTy));
-    Address slotAddr = Address(castBuf.getPointer(), voidPtrTy, slotAlign);
+    CharUnits slotAlign =
+        castBuf.getAlignment().alignmentAtOffset(CharUnits().fromQuantity(
+            2 * cgm.getDataLayout().getTypeAllocSize(voidPtrTy)));
+    Address slotAddr = Address(stackSaveSlot, voidPtrTy, slotAlign);
     builder.createStore(loc, stacksave, slotAddr);
     auto op = cir::EhSetjmpOp::create(builder, loc, castBuf.getPointer());
     return RValue::get(op);
