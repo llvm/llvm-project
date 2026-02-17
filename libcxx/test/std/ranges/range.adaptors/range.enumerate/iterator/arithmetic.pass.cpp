@@ -19,14 +19,15 @@
 // constexpr iterator& operator-=(difference_type x)
 //   requires random_access_range<Base>;
 
-// friend constexpr iterator operator+(const iterator& x, difference_type y)
-//   requires random_access_range<Base>;
-// friend constexpr iterator operator+(difference_type x, const iterator& y)
-//   requires random_access_range<Base>;
-// friend constexpr iterator operator-(const iterator& x, difference_type y)
-//   requires random_access_range<Base>;
-// friend constexpr difference_type operator-(const iterator& x, const iterator& y);
+//    friend constexpr iterator operator+(const iterator& x, difference_type y)
+//      requires random_access_range<Base>;
+//    friend constexpr iterator operator+(difference_type x, const iterator& y)
+//      requires random_access_range<Base>;
+//    friend constexpr iterator operator-(const iterator& x, difference_type y)
+//      requires random_access_range<Base>;
+//    friend constexpr difference_type operator-(const iterator& x, const iterator& y) noexcept;
 
+#include <concepts>
 #include <ranges>
 
 #include "test_iterators.h"
@@ -80,6 +81,8 @@ constexpr void test_with_common_range() {
   RandomAccessRange r{ts, ts + 4};
   auto ev = r | std::views::enumerate;
 
+  using DifferenceT = std::ranges::range_difference_t<decltype(ev)>;
+
   // operator+(x, n), operator+(n,x) and operator+=
   {
     auto it1 = ev.begin();
@@ -107,13 +110,18 @@ constexpr void test_with_common_range() {
     assert(it1.base() == &ts[1]);
   }
 
-  // operator-(x, y)
+  // friend constexpr difference_type operator-(const iterator& x, const iterator& y) noexcept;
   {
-    assert((ev.end() - ev.begin()) == 4);
+    auto it1 = ev.begin();
+    auto it2 = ev.end();
 
-    auto it1 = ev.begin() + 1;
-    auto it2 = ev.end() - 1;
-    assert((it1 - it2) == -2);
+    std::same_as<DifferenceT> decltype(auto) result = (it2 - it1);
+
+    assert(result == 4);
+
+    static_assert(noexcept(it1 - it2));
+
+    assert(((it2 - 1) - (it1 + 1)) == 2);
   }
 }
 
@@ -124,6 +132,8 @@ constexpr void test_with_noncommon_range() {
   auto it = std::counted_iterator{r.begin(), std::ssize(r)};
   auto sr = std::ranges::subrange{it, std::default_sentinel};
   auto ev = sr | std::views::enumerate;
+
+  using DifferenceT = std::ranges::range_difference_t<decltype(ev)>;
 
   // operator+(x, n), operator+(n,x) and operator+=
   {
@@ -152,10 +162,7 @@ constexpr void test_with_noncommon_range() {
     assert(*it2.base() == 90);
   }
 
-  // operator-(x, y)
-  {
-    assert((ev.end() - ev.begin()) == 4);
-  }
+  // When the range is non-common, the ev.end() is a sentinel type.
 }
 
 constexpr bool test() {

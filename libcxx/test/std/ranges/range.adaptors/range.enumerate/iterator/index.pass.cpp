@@ -38,10 +38,10 @@ constexpr void test() {
   View mv{Iterator(std::to_address(base(array.begin()))), Sentinel(Iterator(std::to_address(base(array.end()))))};
   EnumerateView ev(std::move(mv));
 
+  using DifferenceT = std::ranges::range_difference_t<decltype(ev)>;
+
   {
     auto it = ev.begin();
-
-    using DifferenceT = std::iter_difference_t<decltype(it)>;
 
     std::same_as<DifferenceT> decltype(auto) index = it.index();
 
@@ -60,8 +60,6 @@ constexpr void test() {
   // const
   {
     auto it = std::as_const(ev).begin();
-
-    using DifferenceT = std::iter_difference_t<decltype(it)>;
 
     std::same_as<DifferenceT> decltype(auto) index = it.index();
 
