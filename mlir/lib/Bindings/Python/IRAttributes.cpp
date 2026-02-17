@@ -513,13 +513,15 @@ void PySymbolRefAttribute::bindDerived(ClassTy &c) {
   c.def_prop_ro(
       "value",
       [](PySymbolRefAttribute &self) {
+        MlirStringRef rootRef = mlirSymbolRefAttrGetRootReference(self);
         std::vector<std::string> symbols = {
-            unwrap(mlirSymbolRefAttrGetRootReference(self)).str()};
-        for (int i = 0; i < mlirSymbolRefAttrGetNumNestedReferences(self); ++i)
-          symbols.push_back(
-              unwrap(mlirSymbolRefAttrGetRootReference(
-                         mlirSymbolRefAttrGetNestedReference(self, i)))
-                  .str());
+            std::string(rootRef.data, rootRef.length)};
+        for (int i = 0; i < mlirSymbolRefAttrGetNumNestedReferences(self);
+             ++i) {
+          MlirStringRef nestedRef = mlirSymbolRefAttrGetRootReference(
+              mlirSymbolRefAttrGetNestedReference(self, i));
+          symbols.push_back(std::string(nestedRef.data, nestedRef.length));
+        }
         return symbols;
       },
       "Returns the value of the SymbolRef attribute as a list[str]");
