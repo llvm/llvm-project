@@ -448,7 +448,7 @@ define void @p4(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx5, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   %cmp1 = icmp sgt i64 %n, 0
@@ -501,7 +501,7 @@ define void @p5(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx5, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.02, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   %cmp1 = icmp sgt i64 %n, 0
@@ -727,11 +727,11 @@ entry:
 define void @foo(ptr %s, i32 %size) nounwind uwtable ssp {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Src: %1 = load i32, ptr %0, align 4 --> Dst: %1 = load i32, ptr %0, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent input [*]!
 ; CHECK-NEXT:  Src: %1 = load i32, ptr %0, align 4 --> Dst: store i32 %1, ptr %i.02, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1]!
+; CHECK-NEXT:    da analyze - consistent anti [*|<]!
 ; CHECK-NEXT:  Src: store i32 %1, ptr %i.02, align 4 --> Dst: store i32 %1, ptr %i.02, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - consistent output [*]!
 ;
 entry:
   %idx.ext = zext i32 %size to i64
