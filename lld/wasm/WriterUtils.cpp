@@ -98,8 +98,7 @@ void writeSleb128(raw_ostream &os, int64_t number, const Twine &msg) {
   encodeSLEB128(number, os);
 }
 
-void writeBytes(raw_ostream &os, const char *bytes, size_t count,
-                const Twine &msg) {
+void writeBytes(raw_ostream &os, const char *bytes, size_t count, const Twine &msg) {
   debugWrite(os.tell(), msg + " [data[" + Twine(count) + "]]");
   os.write(bytes, count);
 }
