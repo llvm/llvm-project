@@ -109,8 +109,7 @@ function(add_bitcode_entrypoint_library target_name base_target_name)
   endforeach()
 
   add_executable(${target_name} ${objects})
-  if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^spirv" OR
-     "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^spirv")
+  if(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
       target_link_options(${target_name} PRIVATE "${LIBC_COMPILE_OPTIONS_DEFAULT}"
                       "-nostdlib" "-emit-llvm")
   else()  
