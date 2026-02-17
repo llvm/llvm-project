@@ -631,6 +631,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   /// Ignore the threshold when finalizing analysis.
   const bool IgnoreThreshold;
 
+  /// Whether this call is the result of inlining another call.
+  const bool IsInlinedCall;
+
   // True if the cost-benefit-analysis-based inliner is enabled.
   const bool CostBenefitAnalysisEnabled;
 
@@ -1213,7 +1216,8 @@ public:
       OptimizationRemarkEmitter *ORE = nullptr, bool BoostIndirect = true,
       bool IgnoreThreshold = false,
       function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-          nullptr)
+          nullptr,
+      bool IsInlinedCall = false)
       : CallAnalyzer(Callee, Call, TTI, GetAssumptionCache, GetBFI, GetTLI, PSI,
                      ORE, GetEphValuesCache),
         ComputeFullInlineCost(OptComputeFullInlineCost ||
@@ -1221,6 +1225,7 @@ public:
                               isCostBenefitAnalysisEnabled()),
         Params(Params), Threshold(Params.DefaultThreshold),
         BoostIndirectCalls(BoostIndirect), IgnoreThreshold(IgnoreThreshold),
+        IsInlinedCall(IsInlinedCall),
         CostBenefitAnalysisEnabled(isCostBenefitAnalysisEnabled()),
         Writer(this) {
     AllowRecursiveCall = *Params.AllowRecursiveCall;
@@ -2058,6 +2063,13 @@ InlineCostCallAnalyzer::getHotCallSiteThreshold(CallBase &Call,
   // Otherwise we need BFI to be available and to have a locally hot callsite
   // threshold.
   if (!CallerBFI || !Params.LocallyHotCallSiteThreshold)
+    return std::nullopt;
+
+  // Do not apply locally hot call-site threshold if this is an inlined
+  // call-site. This could use a larger theshold for a call-site that was
+  // previously not inlined with a smaller threshold, resulting in exponential
+  // inlining.
+  if (IsInlinedCall)
     return std::nullopt;
 
   // Determine if the callsite is hot relative to caller's entry. We could
@@ -3136,10 +3148,11 @@ InlineCost llvm::getInlineCost(
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
-    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
+    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache,
+    bool IsInlinedCall) {
   return getInlineCost(Call, Call.getCalledFunction(), Params, CalleeTTI,
                        GetAssumptionCache, GetTLI, GetBFI, PSI, ORE,
-                       GetEphValuesCache);
+                       GetEphValuesCache, IsInlinedCall);
 }
 
 std::optional<int> llvm::getInliningCostEstimate(
@@ -3264,7 +3277,8 @@ InlineCost llvm::getInlineCost(
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
     ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
-    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
+    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache,
+    bool IsInlinedCall) {
 
   auto UserDecision =
       llvm::getAttributeBasedInliningDecision(Call, Callee, CalleeTTI, GetTLI);
@@ -3286,7 +3300,7 @@ InlineCost llvm::getInlineCost(
   InlineCostCallAnalyzer CA(*Callee, Call, Params, CalleeTTI,
                             GetAssumptionCache, GetBFI, GetTLI, PSI, ORE,
                             /*BoostIndirect=*/true, /*IgnoreThreshold=*/false,
-                            GetEphValuesCache);
+                            GetEphValuesCache, IsInlinedCall);
   InlineResult ShouldInline = CA.analyze();
 
   LLVM_DEBUG(CA.dump());

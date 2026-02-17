@@ -68,7 +68,8 @@ public:
                       std::unique_ptr<InlineAdvisor> OriginalAdvisor,
                       const ReplayInlinerSettings &ReplaySettings,
                       bool EmitRemarks, InlineContext IC);
-  std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override;
+  std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB,
+                                              bool IsInlinedCall) override;
   bool areReplayRemarksLoaded() const { return HasReplayRemarks; }
 
 private:
