@@ -311,10 +311,10 @@ public:
     return generateSink(L, St, Pred);
   }
 
-  const ExplodedNodeSet &getResults() { return Frontier; }
+  const ExplodedNodeSet &getResults() const { return Frontier; }
 
-  const NodeBuilderContext &getContext() { return C; }
-  bool hasGeneratedNodes() { return HasGeneratedNodes; }
+  const NodeBuilderContext &getContext() const { return C; }
+  bool hasGeneratedNodes() const { return HasGeneratedNodes; }
 
   void takeNodes(const ExplodedNodeSet &S) {
     for (const auto I : S)
