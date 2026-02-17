@@ -144,7 +144,7 @@ bb2:                                              ; preds = %bb13, %bb11, %bb
   br i1 %icmp, label %bb3, label %bb13
 
 bb3:                                              ; preds = %bb2
-  %load4 = load i32, ptr addrspace(5) null, align 4
+  %load4 = load i32, ptr addrspace(5) zeroinitializer, align 4
   %load5 = load i32, ptr addrspace(1) null, align 4
   br label %bb6
 

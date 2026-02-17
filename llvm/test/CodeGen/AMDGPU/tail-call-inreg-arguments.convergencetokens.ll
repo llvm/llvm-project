@@ -48,7 +48,7 @@ define void @tail_call_i64_inreg_uniform_in_vgpr_convergence_tokens() #0 {
   ; CHECK-NEXT:   CONVERGENCECTRL_GLUE [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   SI_TCRETURN killed [[S_LOAD_DWORDX2_IMM]], @void_func_i64_inreg, 0, csr_amdgpu, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit $sgpr0, implicit $sgpr1, implicit [[CONVERGENCECTRL_ENTRY]]
   %t = call token @llvm.experimental.convergence.entry()
-  %uniform.vgpr = load i64, ptr addrspace(3) null, align 8
+  %uniform.vgpr = load i64, ptr addrspace(3) zeroinitializer, align 8
   tail call void @void_func_i64_inreg(i64 inreg %uniform.vgpr) #0 [ "convergencectrl"(token %t) ]
   ret void
 }

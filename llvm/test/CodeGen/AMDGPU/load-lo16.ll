@@ -644,7 +644,7 @@ define void @load_local_lo_v2i16_reghi_vreg_multi_use_lo(ptr addrspace(3) %in, <
 entry:
   %load = load i16, ptr addrspace(3) %in
   %elt1 = extractelement <2 x i16> %reg, i32 1
-  store i16 %load, ptr addrspace(3) null
+  store i16 %load, ptr addrspace(3) zeroinitializer
   %build1 = insertelement <2 x i16> %reg, i16 %load, i32 0
   store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
@@ -694,7 +694,7 @@ define void @load_local_lo_v2i16_reghi_vreg_multi_use_hi(ptr addrspace(3) %in, <
 entry:
   %load = load i16, ptr addrspace(3) %in
   %elt1 = extractelement <2 x i16> %reg, i32 1
-  store i16 %elt1, ptr addrspace(3) null
+  store i16 %elt1, ptr addrspace(3) zeroinitializer
   %build1 = insertelement <2 x i16> %reg, i16 %load, i32 0
   store <2 x i16> %build1, ptr addrspace(1) poison
   ret void

@@ -68,9 +68,9 @@ define <2 x half> @chain_hi_to_lo_private() {
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  %gep_lo = getelementptr inbounds half, ptr addrspace(5) null, i64 1
+  %gep_lo = getelementptr inbounds half, ptr addrspace(5) zeroinitializer, i64 1
   %load_lo = load half, ptr addrspace(5) %gep_lo
-  %load_hi = load half, ptr addrspace(5) null
+  %load_hi = load half, ptr addrspace(5) zeroinitializer
 
   %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
@@ -244,9 +244,9 @@ define <2 x half> @chain_hi_to_lo_group() {
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  %gep_lo = getelementptr inbounds half, ptr addrspace(3) null, i64 1
+  %gep_lo = getelementptr inbounds half, ptr addrspace(3) zeroinitializer, i64 1
   %load_lo = load half, ptr addrspace(3) %gep_lo
-  %load_hi = load half, ptr addrspace(3) null
+  %load_hi = load half, ptr addrspace(3) zeroinitializer
 
   %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1

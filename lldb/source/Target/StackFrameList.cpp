@@ -972,14 +972,14 @@ std::string StackFrameList::GetFrameMarker(lldb::StackFrameSP frame_sp,
                                            bool show_hidden_marker) {
   bool show_unicode_marker = Terminal::SupportsUnicode() && show_hidden_marker;
   if (frame_sp == selected_frame_sp)
-    return show_unicode_marker ? u8" * " : u8"* ";
+    return show_unicode_marker ? " * " : "* ";
   if (!show_unicode_marker)
-    return u8"  ";
+    return "  ";
   if (IsPreviousFrameHidden(*frame_sp))
-    return u8"﹉ ";
+    return reinterpret_cast<const char *>(u8"﹉ ");
   if (IsNextFrameHidden(*frame_sp))
-    return u8"﹍ ";
-  return u8"   ";
+    return reinterpret_cast<const char *>(u8"﹍ ");
+  return "   ";
 }
 
 size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,

@@ -66,7 +66,7 @@ define void @tail_call_i64_inreg_uniform_in_vgpr() {
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
 ; CHECK-NEXT:    s_setpc_b64 s[16:17]
-  %uniform.vgpr = load i64, ptr addrspace(3) null, align 8
+  %uniform.vgpr = load i64, ptr addrspace(3) zeroinitializer, align 8
   tail call void @void_func_i64_inreg(i64 inreg %uniform.vgpr)
   ret void
 }

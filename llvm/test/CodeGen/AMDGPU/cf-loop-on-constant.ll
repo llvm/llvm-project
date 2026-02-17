@@ -456,7 +456,7 @@ define amdgpu_kernel void @loop_arg_0(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN_DBG-NEXT:    s_cbranch_vccnz .LBB4_1
 ; GCN_DBG-NEXT:    s_branch .LBB4_2
 entry:
-  %cond = load volatile i1, ptr addrspace(3) null
+  %cond = load volatile i1, ptr addrspace(3) zeroinitializer
   br label %for.body
 
 for.exit:
