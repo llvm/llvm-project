@@ -451,7 +451,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nextupl
     libc.src.math.pow
     libc.src.math.powf
-    libc.src.math.powf16
     libc.src.math.remainder
     libc.src.math.remainderf
     libc.src.math.remainderl
@@ -671,6 +670,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.nextdownbf16
   libc.src.math.nexttowardbf16
   libc.src.math.nextupbf16
+  libc.src.math.powf16
   libc.src.math.remainderbf16
   libc.src.math.remquobf16
   libc.src.math.rintbf16
