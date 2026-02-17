@@ -141,6 +141,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   bool visitFMOVDr(MachineInstr &MI);
   bool visitUBFMXri(MachineInstr &MI);
   bool visitCopy(MachineInstr &MI);
+  bool visitUMOVvi(MachineInstr &MI);
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
@@ -882,6 +883,76 @@ bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
   return true;
 }
 
+bool AArch64MIPeepholeOpt::visitUMOVvi(MachineInstr &MI) {
+  // Optimize the pattern:
+  //   %vec:fpr128 = LDRQpre %base:gpr64sp, 16
+  //   %scalar:gpr32 = UMOVvi32 %vec:fpr128, lane_idx
+  // To:
+  //   %vec:fpr128 = LDRQpre %base:gpr64sp, 16
+  //   %scalar:gpr32 = LDRWui %base:gpr64sp, lane_idx
+  //
+  // This avoids the expensive cross-domain transfer from FPR to GPR.
+  // The scalar load reads directly from memory using the updated base pointer.
+
+  unsigned Opc = MI.getOpcode();
+  unsigned EltSize;
+  unsigned LoadOpc;
+  switch (Opc) {
+  default:
+    return false;
+  case AArch64::UMOVvi32:
+    EltSize = 4;
+    LoadOpc = AArch64::LDRWui;
+    break;
+  case AArch64::UMOVvi64:
+    EltSize = 8;
+    LoadOpc = AArch64::LDRXui;
+    break;
+  }
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  unsigned LaneIdx = MI.getOperand(2).getImm();
+
+  // Find the definition of the source vector register.
+  MachineInstr *SrcMI = MRI->getUniqueVRegDef(SrcReg);
+  if (!SrcMI)
+    return false;
+
+  // Check if the source is a pre-indexed vector load.
+  // LDRQpre has two defs: the updated base register and the loaded vector.
+  if (SrcMI->getOpcode() != AArch64::LDRQpre)
+    return false;
+
+  // LDRQpre: early-clobber %updated_base:gpr64sp, %vec:fpr128 =
+  //          LDRQpre %base:gpr64sp(tied-def 0), imm
+  // Operand 0: updated base (def, tied to operand 2)
+  // Operand 1: loaded vector (def)
+  // Operand 2: base register (use, tied to operand 0)
+  // Operand 3: immediate offset
+  Register UpdatedBaseReg = SrcMI->getOperand(0).getReg();
+
+  // Compute the byte offset for the lane within the vector.
+  // For LDRWui/LDRXui, the immediate is scaled by the load size.
+  // Lane 2 of a 32-bit element vector = byte offset 8 = LDRWui offset 2.
+  unsigned ScaledOffset = LaneIdx;
+
+  // Create the scalar load instruction.
+  const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
+  Register NewDstReg = MRI->createVirtualRegister(DstRC);
+
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(LoadOpc), NewDstReg)
+      .addReg(UpdatedBaseReg)
+      .addImm(ScaledOffset);
+
+  MRI->replaceRegWith(DstReg, NewDstReg);
+  LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+  LLVM_DEBUG(dbgs() << "     with: LDR from base + " << (LaneIdx * EltSize) << "\n");
+  MI.eraseFromParent();
+
+  return true;
+}
+
 bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -998,6 +1069,10 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::COPY:
         Changed |= visitCopy(MI);
+        break;
+      case AArch64::UMOVvi32:
+      case AArch64::UMOVvi64:
+        Changed |= visitUMOVvi(MI);
         break;
       }
     }
