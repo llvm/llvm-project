@@ -43,7 +43,7 @@ jobs:
         id: changed-files
         uses: tj-actions/changed-files@e0021407031f5be11a464abee9a0776171c79891 # v47.0.1
         with:
-          separator: ","
+          separator: " "
           skip_initial_fetch: true
           base_sha: 'HEAD~1'
           sha: 'HEAD'
@@ -59,4 +59,4 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          echo "$CHANGED_FILES" | grep "\.py" | pylint --fail-on=E0102 --fail-under=0
+          pylint --fail-on=E0102 --fail-under=0 $CHANGED_FILES
