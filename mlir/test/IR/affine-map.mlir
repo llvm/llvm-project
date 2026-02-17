@@ -207,6 +207,18 @@
 // CHECK: #map{{[0-9]*}} = affine_map<(d0, d1)[s0] -> (d0 + d1 + s0)>
 #map64 = affine_map<(i0, i1)[mod] -> (i0 + i1 + mod)>
 
+// Simplifying add expressions with floordiv on RHS to a mod.
+// CHECK: #map{{[0-9]*}} = affine_map<(d0) -> (d0 mod 4)>
+#map65 = affine_map<(d0) -> (d0 - d0 floordiv 4 * 4)>
+
+// Same as above but with semi-affine.
+// CHECK: #map{{[0-9]*}} = affine_map<(d0)[s0] -> (d0 mod (s0 * 4))>
+#map65a = affine_map<(d0)[s0] -> (d0 - d0 floordiv (4 * s0) * (4 * s0))>
+
+// Negative test for the above; shouldn't get simplified.
+// CHECK: #map{{[0-9]*}} = affine_map<(d0) -> (d0 + d0 floordiv 4 - 4)>
+#map66 = affine_map<(d0) -> (d0 + ((d0 floordiv 4) - 4))>
+
 // Single identity maps are removed.
 // CHECK: @f0(memref<2x4xi8, 1>)
 func.func private @f0(memref<2x4xi8, #map0, 1>)
@@ -409,3 +421,12 @@ func.func private @f56(memref<1x1xi8, #map56>)
 
 // CHECK: "f64"() {map = #map{{[0-9]*}}} : () -> ()
 "f64"() {map = #map64} : () -> ()
+
+// CHECK: "f65"() {map = #map{{[0-9]*}}} : () -> ()
+"f65"() {map = #map65} : () -> ()
+
+// CHECK: "f65a"() {map = #map{{[0-9]*}}} : () -> ()
+"f65a"() {map = #map65a} : () -> ()
+
+// CHECK: "f66"() {map = #map{{[0-9]*}}} : () -> ()
+"f66"() {map = #map66} : () -> ()

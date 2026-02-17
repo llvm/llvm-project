@@ -423,7 +423,8 @@ void Prescanner::NextLine() {
 }
 
 void Prescanner::LabelField(TokenSequence &token) {
-  int outCol{1};
+  int outChars{0};
+  int colOffset{column_ - 1};
   const char *start{at_};
   std::optional<int> badColumn;
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
@@ -435,7 +436,7 @@ void Prescanner::LabelField(TokenSequence &token) {
     if (int n{IsSpace(at_)}; n == 0 &&
         !(*at_ == '0' && column_ == 6)) { // '0' in column 6 becomes space
       EmitChar(token, *at_);
-      ++outCol;
+      ++outChars;
       if (!badColumn && (column_ == 6 || !IsDecimalDigit(*at_))) {
         badColumn = column_;
       }
@@ -443,6 +444,7 @@ void Prescanner::LabelField(TokenSequence &token) {
     ++column_;
   }
   if (badColumn && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
+    int badOffset{*badColumn - colOffset - 1};
     if (*badColumn == 6) {
       if ((prescannerNesting_ > 0 &&
               cooked_.BufferedBytes() == firstCookedCharacterOffset_) ||
@@ -455,34 +457,32 @@ void Prescanner::LabelField(TokenSequence &token) {
         // CookedSource::Marshal().
         cooked_.MarkPossibleFixedFormContinuation();
       } else if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
-        Say(common::UsageWarning::Scanning,
-            GetProvenance(start + *badColumn - 1),
+        Say(common::UsageWarning::Scanning, GetProvenance(start + badOffset),
             "Statement should not begin with a continuation line"_warn_en_US);
       }
     } else if (preprocessingOnly_) {
       if (features_.ShouldWarn(common::UsageWarning::Scanning)) {
-        Say(common::UsageWarning::Scanning,
-            GetProvenance(start + *badColumn - 1),
+        Say(common::UsageWarning::Scanning, GetProvenance(start + badOffset),
             "Character in fixed-form label field should be a digit"_warn_en_US);
       }
     } else {
-      Say(GetProvenance(start + *badColumn - 1),
+      Say(GetProvenance(start + badOffset),
           "Character in fixed-form label field must be a digit"_err_en_US);
     }
     token.clear();
     if (*badColumn < 6) {
       at_ = start;
-      column_ = 1;
+      column_ = 1 + colOffset;
       return;
     }
-    outCol = 1;
+    outChars = 0;
   }
-  if (outCol == 1) { // empty or ignored label field
+  if (outChars == 0) { // empty or ignored label field
     // Emit a space so that, if the line is rescanned after preprocessing,
     // a leading 'C' or 'D' won't be left-justified and then accidentally
     // misinterpreted as a comment card.
     EmitChar(token, ' ');
-    ++outCol;
+    ++outChars;
   }
   token.CloseToken();
   SkipToNextSignificantCharacter();
@@ -1633,12 +1633,9 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
   // - Columns 3 through 5 must have only white space or numbers.
   // - Column 6 must be space or zero.
   bool isOpenMPConditional{sp == &sentinel[1] && sentinel[0] == '$'};
-  bool hadDigit{false};
   if (isOpenMPConditional) {
     for (; column < 6; ++column, ++p) {
-      if (IsDecimalDigit(*p)) {
-        hadDigit = true;
-      } else if (!IsSpaceOrTab(p)) {
+      if (!IsDecimalDigit(*p) && !IsSpaceOrTab(p)) {
         return std::nullopt;
       }
     }
@@ -1648,14 +1645,17 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
       ++p;
     } else if (int n{IsSpaceOrTab(p)}) {
       p += n;
-    } else if (isOpenMPConditional && preprocessingOnly_ && !hadDigit &&
-        *p != '\n') {
-      // In -E mode, "!$   &" is treated as a directive
     } else {
-      // This is a Continuation line, not an initial directive line.
-      return std::nullopt;
+      // This is a continuation line.
+      // Directives are not allowed to begin with a continuation line, but
+      // this is allowed for OpenMP conditional compilation, which will result
+      // in a warning.
+      ++p;
+      if (!isOpenMPConditional) {
+        return std::nullopt;
+      }
     }
-    ++column, ++p;
+    ++column;
   }
   if (isOpenMPConditional) {
     for (; column <= fixedFormColumnLimit_; ++column, ++p) {

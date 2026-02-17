@@ -1756,12 +1756,9 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   SDValue LoadedVal = SDValue(Res, 1);
   if (InsertTo64) {
     SDValue SubReg = CurDAG->getTargetConstant(AArch64::sub_32, dl, MVT::i32);
-    LoadedVal =
-        SDValue(CurDAG->getMachineNode(
-                    AArch64::SUBREG_TO_REG, dl, MVT::i64,
-                    CurDAG->getTargetConstant(0, dl, MVT::i64), LoadedVal,
-                    SubReg),
-                0);
+    LoadedVal = SDValue(CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, dl,
+                                               MVT::i64, LoadedVal, SubReg),
+                        0);
   }
 
   ReplaceUses(SDValue(N, 0), LoadedVal);
@@ -3989,47 +3986,14 @@ bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
     NewShiftAmt = narrowIfNeeded(CurDAG, NewShiftAmt);
   else if (VT == MVT::i64 && NewShiftAmt->getValueType(0) == MVT::i32) {
     SDValue SubReg = CurDAG->getTargetConstant(AArch64::sub_32, DL, MVT::i32);
-    MachineSDNode *Ext = CurDAG->getMachineNode(
-        AArch64::SUBREG_TO_REG, DL, VT,
-        CurDAG->getTargetConstant(0, DL, MVT::i64), NewShiftAmt, SubReg);
+    MachineSDNode *Ext = CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, DL, VT,
+                                                NewShiftAmt, SubReg);
     NewShiftAmt = SDValue(Ext, 0);
   }
 
   SDValue Ops[] = {N->getOperand(0), NewShiftAmt};
   CurDAG->SelectNodeTo(N, Opc, VT, Ops);
   return true;
-}
-
-static unsigned CheckFixedPointOperandConstant(APFloat &FVal, unsigned RegWidth,
-                                               bool isReciprocal) {
-  // An FCVT[SU] instruction performs: convertToInt(Val * 2^fbits) where fbits
-  // is between 1 and 32 for a destination w-register, or 1 and 64 for an
-  // x-register.
-  //
-  // By this stage, we've detected (fp_to_[su]int (fmul Val, THIS_NODE)) so we
-  // want THIS_NODE to be 2^fbits. This is much easier to deal with using
-  // integers.
-  bool IsExact;
-
-  if (isReciprocal)
-    if (!FVal.getExactInverse(&FVal))
-      return 0;
-
-  // fbits is between 1 and 64 in the worst-case, which means the fmul
-  // could have 2^64 as an actual operand. Need 65 bits of precision.
-  APSInt IntVal(65, true);
-  FVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
-
-  // N.b. isPowerOf2 also checks for > 0.
-  if (!IsExact || !IntVal.isPowerOf2())
-    return 0;
-  unsigned FBits = IntVal.logBase2();
-
-  // Checks above should have guaranteed that we haven't lost information in
-  // finding FBits, but it must still be in range.
-  if (FBits == 0 || FBits > RegWidth)
-    return 0;
-  return FBits;
 }
 
 static bool checkCVTFixedPointOperandWithFBits(SelectionDAG *CurDAG, SDValue N,
@@ -4710,8 +4674,8 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
       SDValue MOVIV = SDValue(MOV, 0);
 
       SDValue ZSub = CurDAG->getTargetConstant(AArch64::zsub, DL, MVT::i32);
-      SDNode *SubRegToReg = CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, DL,
-                                                   VT, Zero, MOVIV, ZSub);
+      SDNode *SubRegToReg =
+          CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, DL, VT, MOVIV, ZSub);
 
       R1 = N1->getOperand(1);
       R2 = SDValue(SubRegToReg, 0);

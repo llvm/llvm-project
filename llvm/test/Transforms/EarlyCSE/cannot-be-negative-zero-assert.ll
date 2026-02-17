@@ -38,4 +38,4 @@ entry:
   ret double %add.i
 }
 
-attributes #0 = { "denormal-fp-math"="dynamic,dynamic" }
+attributes #0 = { denormal_fpenv(dynamic) }

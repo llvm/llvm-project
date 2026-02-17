@@ -379,7 +379,7 @@ define i1 @uadd_add(i8 %a, i8 %b, ptr %p) {
 
 ; This is a unique edge case that will generate the following MIR
 ;   MOVi32imm -1000000
-;   SUBREG_TO_REG 0, killed %1, %subreg.sub_32
+;   SUBREG_TO_REG killed %1, %subreg.sub_32
 ; When using a 64-bit unsigned for the "-1000000" immediate, the code
 ; must make sure to zero out the top 32 bits since SUBREG_TO_REG is
 ; zero extending the value
