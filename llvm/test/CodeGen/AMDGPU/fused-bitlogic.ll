@@ -34,8 +34,8 @@ define amdgpu_kernel void @divergent_or3_b64(ptr addrspace(1) %arg) {
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_lshlrev_b32_e32 v6, 5, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx2 v[4:5], v6, s[0:1] offset:16
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v6, s[0:1]
+; GCN-NEXT:    global_load_dwordx2 v[4:5], v6, s[0:1] offset:16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_or3_b32 v1, v3, v1, v5
 ; GCN-NEXT:    v_or3_b32 v0, v2, v0, v4

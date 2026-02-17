@@ -70,8 +70,8 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV64-NEXT:    addi a0, sp, 8
 ; RV64-NEXT:    addi a1, sp, 24
 ; RV64-NEXT:    sd a1, 8(sp)
-; RV64-NEXT:    lw a0, 4(a0)
 ; RV64-NEXT:    lwu a1, 8(sp)
+; RV64-NEXT:    lw a0, 4(a0)
 ; RV64-NEXT:    sd a5, 56(sp)
 ; RV64-NEXT:    sd a6, 64(sp)
 ; RV64-NEXT:    sd a7, 72(sp)
@@ -135,8 +135,8 @@ define i32 @va1(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    addi a0, s0, -24
 ; RV64-WITHFP-NEXT:    addi a1, s0, 8
 ; RV64-WITHFP-NEXT:    sd a1, -24(s0)
-; RV64-WITHFP-NEXT:    lw a0, 4(a0)
 ; RV64-WITHFP-NEXT:    lwu a1, -24(s0)
+; RV64-WITHFP-NEXT:    lw a0, 4(a0)
 ; RV64-WITHFP-NEXT:    sd a5, 40(s0)
 ; RV64-WITHFP-NEXT:    sd a6, 48(s0)
 ; RV64-WITHFP-NEXT:    sd a7, 56(s0)
@@ -1633,8 +1633,8 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-NEXT:    addi a1, a1, 280
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    sd a1, 8(sp)
-; RV64-NEXT:    lw a0, 4(a0)
 ; RV64-NEXT:    lwu a1, 8(sp)
+; RV64-NEXT:    lw a0, 4(a0)
 ; RV64-NEXT:    lui a2, 24414
 ; RV64-NEXT:    add a2, sp, a2
 ; RV64-NEXT:    sd a5, 312(a2)

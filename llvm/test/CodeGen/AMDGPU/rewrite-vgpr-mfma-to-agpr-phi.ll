@@ -14,14 +14,14 @@ define amdgpu_kernel void @test_rewrite_mfma_copy_to_agpr_phi(ptr addrspace(1) %
 ; CHECK-NEXT:    s_bitcmp0_b32 s6, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %else
-; CHECK-NEXT:    global_load_dwordx4 a[28:31], v32, s[2:3] offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[24:27], v32, s[2:3] offset:96
-; CHECK-NEXT:    global_load_dwordx4 a[20:23], v32, s[2:3] offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v32, s[2:3] offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[16:19], v32, s[2:3] offset:64
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v32, s[2:3] offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v32, s[2:3] offset:80
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v32, s[2:3] offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v32, s[2:3] offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v32, s[2:3] offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v32, s[2:3]
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v32, s[2:3] offset:16
 ; CHECK-NEXT:    v_mov_b32_e32 v33, 2.0
 ; CHECK-NEXT:    v_mov_b32_e32 v34, 4.0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -34,14 +34,14 @@ define amdgpu_kernel void @test_rewrite_mfma_copy_to_agpr_phi(ptr addrspace(1) %
 ; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
 ; CHECK-NEXT:  .LBB0_3: ; %if
 ; CHECK-NEXT:    s_nop 15
-; CHECK-NEXT:    global_load_dwordx4 a[28:31], v32, s[0:1] offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[24:27], v32, s[0:1] offset:96
-; CHECK-NEXT:    global_load_dwordx4 a[20:23], v32, s[0:1] offset:80
+; CHECK-NEXT:    global_load_dwordx4 a[28:31], v32, s[0:1] offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[16:19], v32, s[0:1] offset:64
-; CHECK-NEXT:    global_load_dwordx4 a[12:15], v32, s[0:1] offset:48
+; CHECK-NEXT:    global_load_dwordx4 a[20:23], v32, s[0:1] offset:80
 ; CHECK-NEXT:    global_load_dwordx4 a[8:11], v32, s[0:1] offset:32
-; CHECK-NEXT:    global_load_dwordx4 a[4:7], v32, s[0:1] offset:16
+; CHECK-NEXT:    global_load_dwordx4 a[12:15], v32, s[0:1] offset:48
 ; CHECK-NEXT:    global_load_dwordx4 a[0:3], v32, s[0:1]
+; CHECK-NEXT:    global_load_dwordx4 a[4:7], v32, s[0:1] offset:16
 ; CHECK-NEXT:    v_mov_b32_e32 v32, 2.0
 ; CHECK-NEXT:    v_mov_b32_e32 v33, 4.0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -84,14 +84,14 @@ define amdgpu_kernel void @test_rewrite_mfma_copy_to_agpr_phi_loop(ptr addrspace
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[28:31], v32, s[2:3] offset:112
 ; CHECK-NEXT:    global_load_dwordx4 v[24:27], v32, s[2:3] offset:96
-; CHECK-NEXT:    global_load_dwordx4 v[20:23], v32, s[2:3] offset:80
+; CHECK-NEXT:    global_load_dwordx4 v[28:31], v32, s[2:3] offset:112
 ; CHECK-NEXT:    global_load_dwordx4 v[16:19], v32, s[2:3] offset:64
-; CHECK-NEXT:    global_load_dwordx4 v[12:15], v32, s[2:3] offset:48
+; CHECK-NEXT:    global_load_dwordx4 v[20:23], v32, s[2:3] offset:80
 ; CHECK-NEXT:    global_load_dwordx4 v[8:11], v32, s[2:3] offset:32
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v32, s[2:3] offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[12:15], v32, s[2:3] offset:48
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[2:3]
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v32, s[2:3] offset:16
 ; CHECK-NEXT:    v_mov_b32_e32 v64, 4.0
 ; CHECK-NEXT:    v_mov_b32_e32 v65, 2.0
 ; CHECK-NEXT:  .LBB1_1: ; %loop
