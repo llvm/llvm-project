@@ -117,6 +117,7 @@ add_fp_unittest(
     libc.src.__support.math.rsqrtf16
     libc.src.__support.math.sqrtf16
     libc.src.__support.math.sin
+    libc.src.__support.math.sincos
     libc.src.__support.math.sincosf
     libc.src.__support.math.sinf
     libc.src.__support.math.sinf16
