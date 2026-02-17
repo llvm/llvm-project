@@ -7,6 +7,7 @@ add_fp_unittest(
   SRCS
     shared_math_test.cpp
   DEPENDS
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.math.acos
     libc.src.__support.math.acosf
     libc.src.__support.math.acosf16
@@ -108,6 +109,12 @@ add_fp_unittest(
     libc.src.__support.math.llogbf16
     libc.src.__support.math.logf16    
     libc.src.__support.math.llogbl
+    libc.src.__support.math.nextup
+    libc.src.__support.math.nextupbf16
+    libc.src.__support.math.nextupf
+    libc.src.__support.math.nextupf128
+    libc.src.__support.math.nextupf16
+    libc.src.__support.math.nextupl
     libc.src.__support.math.pow
     libc.src.__support.math.powf
     libc.src.__support.math.rsqrtf
