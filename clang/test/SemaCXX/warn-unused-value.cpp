@@ -178,3 +178,52 @@ auto b() {
 }
 } // namespace test6
 #endif
+
+#if __cplusplus >= 201402L
+namespace test7 {
+auto L1 = [] {
+  0, 0; // expected-warning {{left operand of comma operator has no effect}}
+  return;
+  0, 0;
+};
+auto L2 = [](auto) {
+  0, 0; // expected-warning {{left operand of comma operator has no effect}}
+  return;
+  0, 0; // expected-warning {{left operand of comma operator has no effect}}
+};
+
+void f1() {
+  auto L1 = [] {
+    0, 0; // expected-warning {{left operand of comma operator has no effect}}
+    return;
+    0, 0;
+  };
+  auto L2 = [](auto) {
+    0, 0; // expected-warning {{left operand of comma operator has no effect}}
+    return;
+    0, 0; // expected-warning {{left operand of comma operator has no effect}}
+  };
+
+  0, 0; // expected-warning {{left operand of comma operator has no effect}}
+  return;
+  0, 0;
+}
+
+template <typename> void f2() {
+  auto L1 = [] {
+    0, 0; // expected-warning {{left operand of comma operator has no effect}}
+    return;
+    0, 0; // expected-warning {{left operand of comma operator has no effect}}
+  };
+  auto L2 = [](auto) {
+    0, 0; // expected-warning {{left operand of comma operator has no effect}}
+    return;
+    0, 0; // expected-warning {{left operand of comma operator has no effect}}
+  };
+
+  0, 0; // expected-warning {{left operand of comma operator has no effect}}
+  return;
+  0, 0; // expected-warning {{left operand of comma operator has no effect}}
+}
+}
+#endif

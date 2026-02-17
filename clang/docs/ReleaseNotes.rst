@@ -247,6 +247,8 @@ Improvements to Clang's diagnostics
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
+- Now more analysis-based warnings are emitted before template instantiation.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
