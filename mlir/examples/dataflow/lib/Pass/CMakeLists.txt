@@ -1,0 +1,2 @@
+add_subdirectory(TestStringConstantPropagation)
+add_subdirectory(TestMetadataAnalsys)
