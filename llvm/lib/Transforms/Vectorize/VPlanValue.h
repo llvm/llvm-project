@@ -101,11 +101,24 @@ public:
   void dump() const;
 #endif
 
-  unsigned getNumUsers() const { return Users.size(); }
-  void addUser(VPUser &User) { Users.push_back(&User); }
+  /// Assert that this VPValue has not been materialized, if it is a
+  /// VPSymbolicValue.
+  void assertNotMaterialized() const;
+
+  unsigned getNumUsers() const {
+    if (Users.empty())
+      return 0;
+    assertNotMaterialized();
+    return Users.size();
+  }
+  void addUser(VPUser &User) {
+    assertNotMaterialized();
+    Users.push_back(&User);
+  }
 
   /// Remove a single \p User from the list of users.
   void removeUser(VPUser &User) {
+    assertNotMaterialized();
     // The same user can be added multiple times, e.g. because the same VPValue
     // is used twice by the same VPUser. Remove a single one.
     auto *I = find(Users, &User);
@@ -118,10 +131,22 @@ public:
   typedef iterator_range<user_iterator> user_range;
   typedef iterator_range<const_user_iterator> const_user_range;
 
-  user_iterator user_begin() { return Users.begin(); }
-  const_user_iterator user_begin() const { return Users.begin(); }
-  user_iterator user_end() { return Users.end(); }
-  const_user_iterator user_end() const { return Users.end(); }
+  user_iterator user_begin() {
+    assertNotMaterialized();
+    return Users.begin();
+  }
+  const_user_iterator user_begin() const {
+    assertNotMaterialized();
+    return Users.begin();
+  }
+  user_iterator user_end() {
+    assertNotMaterialized();
+    return Users.end();
+  }
+  const_user_iterator user_end() const {
+    assertNotMaterialized();
+    return Users.end();
+  }
   user_range users() { return user_range(user_begin(), user_end()); }
   const_user_range users() const {
     return const_user_range(user_begin(), user_end());
@@ -226,6 +251,19 @@ struct VPSymbolicValue : public VPValue {
   static bool classof(const VPValue *V) {
     return V->getVPValueID() == VPVSymbolicSC;
   }
+
+#if !defined(NDEBUG)
+  /// Returns true if this symbolic value has been materialized.
+  bool isMaterialized() const { return Materialized; }
+
+  /// Mark this symbolic value as materialized.
+  void markMaterialized() { Materialized = true; }
+
+private:
+  /// Track whether this symbolic value has been materialized (replaced).
+  /// After materialization, accessing users should trigger an assertion.
+  bool Materialized = false;
+#endif
 };
 
 /// A VPValue defined by a recipe that produces one or more values.
@@ -426,6 +464,12 @@ public:
   /// Returns the number of values defined by the VPDef.
   unsigned getNumDefinedValues() const { return DefinedValues.size(); }
 };
+
+inline void VPValue::assertNotMaterialized() const {
+  assert((!isa<VPSymbolicValue>(this) ||
+          !cast<VPSymbolicValue>(this)->isMaterialized()) &&
+         "accessing materialized symbolic value");
+}
 
 } // namespace llvm
 

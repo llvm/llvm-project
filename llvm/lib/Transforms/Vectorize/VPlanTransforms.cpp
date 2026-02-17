@@ -4887,6 +4887,9 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
 
   VPValue *TC = Plan.getTripCount();
+  if (TC->getNumUsers() == 0)
+    return;
+
   // Skip cases for which the trip count may be non-trivial to materialize.
   // I.e., when a scalar tail is absent - due to tail folding, or when a scalar
   // tail is required.
@@ -5078,12 +5081,19 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
                                          ElementCount VFEC) {
   VPBuilder Builder(VectorPH, VectorPH->begin());
   Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
-  VPValue &VF = Plan.getVF();
-  VPValue &VFxUF = Plan.getVFxUF();
   VPValue *UF =
       Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getConcreteUF()));
   Plan.getUF().replaceAllUsesWith(UF);
 
+  // If VF and VFxUF are already materialized, there's nothing more to do.
+  if (Plan.getVF().isMaterialized()) {
+    assert(Plan.getVFxUF().isMaterialized() &&
+           "VF and VFxUF must be materialized together");
+    return;
+  }
+
+  VPValue &VF = Plan.getVF();
+  VPValue &VFxUF = Plan.getVFxUF();
   // If there are no users of the runtime VF, compute VFxUF by constant folding
   // the multiplication of VF and UF.
   if (VF.getNumUsers() == 0) {
@@ -5106,10 +5116,6 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VPValue *MulByUF = Builder.createOverflowingOp(
       Instruction::Mul, {RuntimeVF, UF}, {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
-
-  assert(Plan.getVF().getNumUsers() == 0 && Plan.getUF().getNumUsers() == 0 &&
-         Plan.getVFxUF().getNumUsers() == 0 &&
-         "VF, UF, and VFxUF not expected to be used");
 }
 
 DenseMap<const SCEV *, Value *>
