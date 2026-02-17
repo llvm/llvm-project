@@ -2120,8 +2120,8 @@ public:
   /// Returns true if the tree results in the reduced cmp bitcast root.
   bool isReducedCmpBitcastRoot() const {
     return VectorizableTree.front()->hasState() &&
-           (VectorizableTree.front()->CombinedOp ==
-            TreeEntry::ReducedCmpBitcast) &&
+           VectorizableTree.front()->CombinedOp ==
+               TreeEntry::ReducedCmpBitcast &&
            VectorizableTree.front()->State == TreeEntry::Vectorize;
   }
 
