@@ -59,4 +59,4 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          echo $CHANGED_FILES | grep '\.py' | pylint --fail-on=E0102 --fail-under=0 | grep E0102
+          pylint --fail-on=E0102 --fail-under=0 $CHANGED_FILES | grep E0102
