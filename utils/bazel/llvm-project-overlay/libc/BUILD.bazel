@@ -2646,6 +2646,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_bf16addf",
+    hdrs = ["src/__support/math/bf16addf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_bf16addf128",
     hdrs = ["src/__support/math/bf16addf128.h"],
     deps = [
@@ -3295,6 +3305,16 @@ libc_support_library(
         ":__support_macros_properties_cpu_features",
         ":__support_math_common_constants",
         ":__support_math_log_range_reduction",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_logb",
+    hdrs = ["src/__support/math/logb.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
     ],
 )
 
@@ -4414,6 +4434,11 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "bf16addf",
+    additional_deps = [":__support_math_bf16addf"],
+)
+
+libc_math_function(
     name = "bf16addf128",
     additional_deps = [":__support_math_bf16addf128"],
 )
@@ -5223,7 +5248,12 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "logb")
+libc_math_function(
+    name = "logb",
+    additional_deps = [
+        ":__support_math_logb",
+    ],
+)
 
 libc_math_function(
     name = "logbf",

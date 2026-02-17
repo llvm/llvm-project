@@ -1176,8 +1176,9 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
 }
 
 Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
-                         ol_memory_register_flags_t flags, void **LockedPtr) {
-  Expected<void *> LockedPtrOrErr = Device->Device->dataLock(Ptr, Size);
+                         ol_memory_register_flags_t Flags, void **LockedPtr) {
+  Expected<void *> LockedPtrOrErr = Device->Device->registerMemory(
+      Ptr, Size, Flags & OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY);
   if (!LockedPtrOrErr)
     return LockedPtrOrErr.takeError();
 
@@ -1186,8 +1187,10 @@ Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
   return Error::success();
 }
 
-Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr) {
-  return Device->Device->dataUnlock(Ptr);
+Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr,
+                           ol_memory_register_flags_t Flags) {
+  return Device->Device->unregisterMemory(
+      Ptr, Flags & OL_MEMORY_REGISTER_FLAG_UNLOCK_MEMORY);
 }
 
 Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {

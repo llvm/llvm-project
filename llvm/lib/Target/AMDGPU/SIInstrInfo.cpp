@@ -8319,6 +8319,26 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       const TargetRegisterClass *SrcRC = RI.getRegClassForReg(MRI, NewDstReg);
       if (const TargetRegisterClass *CommonRC =
               RI.getCommonSubClass(NewDstRC, SrcRC)) {
+        // Also intersect with VGPR-compatible operand register class
+        // constraints from user instructions. This preserves restricted
+        // register classes (e.g., VGPR_32_Lo256 for WMMA scale operands) that
+        // would otherwise be lost when an SGPR is replaced with a VGPR.
+        // Constraints incompatible with VGPRs (e.g., SALU instructions
+        // requiring SReg_32) are skipped because those users will be converted
+        // to VALU by the worklist.
+        for (const MachineOperand &UseMO : MRI.use_operands(DstReg)) {
+          const MachineInstr *UseMI = UseMO.getParent();
+          if (UseMI == &Inst)
+            continue;
+          unsigned OpIdx = UseMI->getOperandNo(&UseMO);
+          if (const TargetRegisterClass *OpRC =
+                  getRegClass(UseMI->getDesc(), OpIdx)) {
+            if (const TargetRegisterClass *Narrowed =
+                    RI.getCommonSubClass(CommonRC, OpRC))
+              CommonRC = Narrowed;
+          }
+        }
+
         // Instead of creating a copy where src and dst are the same register
         // class, we just replace all uses of dst with src.  These kinds of
         // copies interfere with the heuristics MachineSink uses to decide

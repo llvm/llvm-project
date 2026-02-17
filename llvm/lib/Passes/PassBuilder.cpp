@@ -100,6 +100,7 @@
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/CodeGen/GCMetadata.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"

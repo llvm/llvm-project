@@ -343,6 +343,16 @@ add_header_library(
 )
 
 add_header_library(
+  bf16addf
+  HDRS
+    bf16addf.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   bf16addf128
   HDRS
     bf16addf128.h
@@ -1441,6 +1451,16 @@ add_header_library(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.integer_literals
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  logb
+  HDRS
+    logb.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_header_library(

@@ -13,12 +13,12 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/regular_cdb_clangcl.json > %t_clangcl.cdb
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess-dependency-directives | \
-// RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO,CHECK3%if system-darwin %{,CHECK-DARWIN1,CHECK-DARWIN2 %} %s
+// RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO,CHECK3%if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{,CHECK-DARWIN1,CHECK-DARWIN2 %} %s
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 1 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO,CHECK3 %s
 
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -mode preprocess | \
-// RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO,CHECK3%if system-darwin %{,CHECK-DARWIN1,CHECK-DARWIN2 %} %s
+// RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO,CHECK3%if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}}  %{,CHECK-DARWIN1,CHECK-DARWIN2 %} %s
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 1 -mode preprocess | \
 // RUN:   FileCheck --check-prefixes=CHECK1,CHECK2,CHECK2NO,CHECK3 %s
 
@@ -34,22 +34,22 @@
 // `regular_cdb_input2.cpp`.
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess-dependency-directives | \
-// RUN:   FileCheck --check-prefixes=CHECK1%if system-darwin %{,CHECK-DARWIN1 %} %s
+// RUN:   FileCheck --check-prefixes=CHECK1%if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{,CHECK-DARWIN1 %} %s
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck --check-prefix=CHECK1 %s
 
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess | \
-// RUN:   FileCheck --check-prefixes=CHECK1%if system-darwin %{,CHECK-DARWIN1 %} %s
+// RUN:   FileCheck --check-prefixes=CHECK1%if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{,CHECK-DARWIN1 %} %s
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess | \
 // RUN:   FileCheck --check-prefix=CHECK1 %s
 
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess-dependency-directives | \
-// RUN:   FileCheck --check-prefixes=CHECK2%if system-darwin %{,CHECK-DARWIN2 %} %s
+// RUN:   FileCheck --check-prefixes=CHECK2%if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{,CHECK-DARWIN2 %} %s
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess-dependency-directives | \
 // RUN:   FileCheck --check-prefix=CHECK2 %s
 
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 2 -mode preprocess | \
-// RUN:   FileCheck --check-prefixes=CHECK2%if system-darwin %{,CHECK-DARWIN2 %} %s
+// RUN:   FileCheck --check-prefixes=CHECK2%if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{,CHECK-DARWIN2 %} %s
 // RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 2 -mode preprocess | \
 // RUN:   FileCheck --check-prefix=CHECK2 %s
 

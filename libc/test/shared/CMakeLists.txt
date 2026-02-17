@@ -27,6 +27,7 @@ add_fp_unittest(
     libc.src.__support.math.atanhf
     libc.src.__support.math.atanhf16
     libc.src.__support.math.bf16add
+    libc.src.__support.math.bf16addf
     libc.src.__support.math.bf16addf128
     libc.src.__support.math.canonicalize
     libc.src.__support.math.canonicalizebf16
@@ -94,6 +95,7 @@ add_fp_unittest(
     libc.src.__support.math.log1p
     libc.src.__support.math.log1pf
     libc.src.__support.math.log2
+    libc.src.__support.math.logb
     libc.src.__support.math.log2f
     libc.src.__support.math.log2f16
     libc.src.__support.math.logbf

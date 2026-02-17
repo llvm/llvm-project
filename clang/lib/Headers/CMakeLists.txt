@@ -516,8 +516,8 @@ foreach( f ${generated_files} )
   endif()
 endforeach( f )
 
-function(add_header_target target_name file_list)
-  add_library(${target_name} INTERFACE ${file_list})
+function(add_header_target target_name)
+  add_library(${target_name} INTERFACE ${ARGN})
   set_target_properties(${target_name} PROPERTIES
     FOLDER "Clang/Resources"
     RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
