@@ -1776,6 +1776,8 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     if (parseRegisterFlag(Flags))
       return true;
   }
+  // Update IsDef as we may have read a def flag.
+  IsDef = hasRegState(Flags, RegState::Define);
   if (!Token.isRegister())
     return error("expected a register after register flags");
   Register Reg;
@@ -1801,10 +1803,10 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
   if (consumeIfPresent(MIToken::lparen)) {
     // For a def, we only expect a type. For use we expect either a type or a
     // tied-def. Additionally, for physical registers, we don't expect a type.
-    unsigned Idx;
     if (Token.is(MIToken::kw_tied_def)) {
       if (IsDef)
         return error("tied-def not supported for defs");
+      unsigned Idx;
       if (parseRegisterTiedDefIndex(Idx))
         return true;
       TiedDefIdx = Idx;
@@ -1836,7 +1838,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       return error("generic virtual registers must have a type");
   }
 
-  if (hasRegState(Flags, RegState::Define)) {
+  if (IsDef) {
     if (hasRegState(Flags, RegState::Kill))
       return error("cannot have a killed def operand");
   } else {
@@ -1844,15 +1846,14 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       return error("cannot have a dead use operand");
   }
 
-  Dest = MachineOperand::CreateReg(Reg, hasRegState(Flags, RegState::Define),
-                                   hasRegState(Flags, RegState::Implicit),
-                                   hasRegState(Flags, RegState::Kill),
-                                   hasRegState(Flags, RegState::Dead),
-                                   hasRegState(Flags, RegState::Undef),
-                                   hasRegState(Flags, RegState::EarlyClobber),
-                                   SubReg, hasRegState(Flags, RegState::Debug),
-                                   hasRegState(Flags, RegState::InternalRead),
-                                   hasRegState(Flags, RegState::Renamable));
+  Dest = MachineOperand::CreateReg(
+      Reg, IsDef, hasRegState(Flags, RegState::Implicit),
+      hasRegState(Flags, RegState::Kill), hasRegState(Flags, RegState::Dead),
+      hasRegState(Flags, RegState::Undef),
+      hasRegState(Flags, RegState::EarlyClobber), SubReg,
+      hasRegState(Flags, RegState::Debug),
+      hasRegState(Flags, RegState::InternalRead),
+      hasRegState(Flags, RegState::Renamable));
 
   return false;
 }
