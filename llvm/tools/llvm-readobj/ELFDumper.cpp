@@ -4878,9 +4878,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printProgramHeaders() {
   uint32_t PhNum = 0;
   if (Expected<uint32_t> PhNumOrErr = this->Obj.getPhNum(); PhNumOrErr)
     PhNum = *PhNumOrErr;
-  else {
+  else
     this->reportUniqueWarning(PhNumOrErr.takeError());
-  }
 
   OS << "\nElf file type is "
      << enumToString(Header.e_type, ArrayRef(ElfObjectFileType)) << "\n"

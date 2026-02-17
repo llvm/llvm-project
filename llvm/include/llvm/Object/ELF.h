@@ -818,12 +818,12 @@ Expected<StringRef>
 ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections,
                                      WarningHandler WarnHandler) const {
   Expected<uint32_t> ShStrNdxOrErr = getShStrNdx();
-  if (!ShStrNdxOrErr)
-    return ShStrNdxOrErr.takeError();
 
-  if (*ShStrNdxOrErr == ELF::SHN_XINDEX && Sections.empty())
+  if (!ShStrNdxOrErr) {
+    llvm::consumeError(ShStrNdxOrErr.takeError());
     return createError(
         "e_shstrndx == SHN_XINDEX, but the section header table is empty");
+  }
 
   uint32_t Index = *ShStrNdxOrErr;
   // There is no section name string table. Return FakeSectionStrings which
@@ -935,10 +935,12 @@ template <class ELFT> ELFFile<ELFT>::ELFFile(StringRef Object) : Buf(Object) {}
 template <class ELFT> Error ELFFile<ELFT>::readShdrZero() {
   const Elf_Ehdr &Header = getHeader();
 
-  // If e_shnum == 0 && e_shoff == 0, that means we actually have no section and
-  // thus is a valid ELF. But if the condition is still true when e_phnum ==
-  // PN_XNUM || e_shtstrndx == SHN_XINDEX and e_shoff == 0 The error will
-  // trigger when getSection() and e_shoff == 0
+  // If e_shnum == 0 && e_shoff == 0, this indicates that there are no sections,
+  // which is valid for an ELF file.
+  //
+  // However, if e_phnum == PN_XNUM or e_shstrndx == SHN_XINDEX while
+  // e_shoff == 0, the file is inconsistent. In that case, an error will be
+  // triggered later when getSection() is called and detects that e_shoff == 0.
   if ((Header.e_phnum == ELF::PN_XNUM ||
        (Header.e_shnum == 0 && Header.e_shoff != 0) ||
        Header.e_shstrndx == ELF::SHN_XINDEX)) {
