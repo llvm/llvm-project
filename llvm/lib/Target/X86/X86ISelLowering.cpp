@@ -24393,8 +24393,7 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
     // Use BT if the immediate can't be encoded in a TEST instruction or we
     // are optimizing for size and the immediate won't fit in a byte.
     bool OptForSize = DAG.shouldOptForSize();
-    if (!AndRHSVal.isPowerOf2() ||
-        (AndRHSVal.isIntN(32) && (!OptForSize || AndRHSVal.isIntN(8))))
+    if (!AndRHSVal.isPowerOf2() || AndRHSVal.isIntN(OptForSize ? 8 : 32))
       return SDValue();
     // (Src & ConstPow2) ==/!= 0
     BitNo = DAG.getConstant(AndRHSVal.ceilLogBase2(), dl, Src.getValueType());
