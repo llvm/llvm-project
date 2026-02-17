@@ -34,12 +34,19 @@ class SerializationFormat;
 /// translation units in a format-specific encoding. It is produced by the
 /// entity linker and contains deduplicated and patched entity summaries.
 class LUSummaryEncoding {
+  friend class EntityLinker;
+  friend class SerializationFormat;
+
+  /// The namespace identifying this link unit.
   NestedBuildNamespace LUNamespace;
 
+  /// Maps entity names to their unique identifiers within this link unit.
   EntityIdTable IdTable;
 
+  /// Maps entity IDs to their linkage properties (None, Internal, External).
   std::map<EntityId, EntityLinkage> LinkageTable;
 
+  /// Encoded summary data organized by summary type and entity ID.
   std::map<SummaryName,
            std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
       Data;
@@ -47,9 +54,6 @@ class LUSummaryEncoding {
 public:
   LUSummaryEncoding(NestedBuildNamespace LUNamespace)
       : LUNamespace(std::move(LUNamespace)) {}
-
-  friend class EntityLinker;
-  friend class SerializationFormat;
 };
 
 } // namespace clang::ssaf

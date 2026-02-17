@@ -17,8 +17,6 @@
 #include "clang/Analysis/Scalable/EntityLinker/LUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/EntityId.h"
-#include "clang/Analysis/Scalable/Model/EntityLinkage.h"
-#include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "llvm/Support/Error.h"
 #include <map>
@@ -27,6 +25,8 @@
 
 namespace clang::ssaf {
 
+class EntityLinkage;
+class EntityName;
 class EntitySummaryEncoding;
 class TUSummaryEncoding;
 
@@ -34,16 +34,31 @@ class EntityLinker {
   LUSummaryEncoding Output;
 
 public:
+  /// Constructs an EntityLinker for a link unit.
+  ///
+  /// \param LUNamespace The namespace identifying this link unit.
   EntityLinker(NestedBuildNamespace LUNamespace)
       : Output(std::move(LUNamespace)) {}
 
+  /// Links a translation unit summary into the link unit summary.
+  ///
+  /// Processes entity names, resolves namespace conflicts based on linkage,
+  /// deduplicates entities, and patches entity ID references in the summary
+  /// data. The provided TU summary is consumed by this operation.
+  ///
+  /// \param Summary The TU summary to link. Ownership is transferred.
+  /// \returns Error if linking fails (e.g., duplicate internal entities,
+  ///          missing linkage information), success otherwise.
   llvm::Error link(std::unique_ptr<TUSummaryEncoding> Summary);
 
+  /// Returns the accumulated link unit summary.
+  ///
+  /// \returns A const reference to the linked output containing all
+  ///          deduplicated and patched entity summaries.
   const LUSummaryEncoding &getOutput() const { return Output; }
 
 private:
   llvm::Expected<EntityId> resolve(const EntityName &OldName,
-                                   const EntityId OldId,
                                    const EntityLinkage &Linkage);
 
   llvm::Error

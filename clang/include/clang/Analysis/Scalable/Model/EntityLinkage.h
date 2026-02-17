@@ -19,6 +19,8 @@ namespace clang::ssaf {
 /// or external linkage, which determines its visibility and accessibility
 /// across translation units.
 class EntityLinkage {
+  friend class SerializationFormat;
+
 public:
   enum class LinkageType {
     None,     ///< local variables, function parameters
@@ -32,8 +34,6 @@ public:
 
 private:
   LinkageType Linkage;
-
-  friend class SerializationFormat;
 };
 
 /// Returns a string representation of the linkage type.

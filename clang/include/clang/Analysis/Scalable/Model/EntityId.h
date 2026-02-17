@@ -28,6 +28,10 @@ class EntityIdTable;
 ///
 /// \see EntityIdTable
 class EntityId {
+  friend class EntityIdTable;
+  friend class EntityLinker;
+  friend class SerializationFormat;
+
   size_t Index;
 
   explicit EntityId(size_t Index) : Index(Index) {}
@@ -38,10 +42,6 @@ public:
   bool operator==(const EntityId &Other) const { return Index == Other.Index; }
   bool operator<(const EntityId &Other) const { return Index < Other.Index; }
   bool operator!=(const EntityId &Other) const { return !(*this == Other); }
-
-  friend class EntityIdTable;
-  friend class EntityLinker;
-  friend class SerializationFormat;
 };
 
 } // namespace clang::ssaf

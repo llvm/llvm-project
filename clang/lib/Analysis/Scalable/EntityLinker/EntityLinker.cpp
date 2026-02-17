@@ -8,9 +8,12 @@
 
 #include "clang/Analysis/Scalable/EntityLinker/EntityLinker.h"
 #include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
+#include "clang/Analysis/Scalable/Model/EntityLinkage.h"
+#include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "clang/Analysis/Scalable/Support/ErrorBuilder.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 
 using namespace clang::ssaf;
 
@@ -58,7 +61,6 @@ resolveNamespace(const NestedBuildNamespace &LUNamespace,
 }
 
 llvm::Expected<EntityId> EntityLinker::resolve(const EntityName &OldName,
-                                               const EntityId OldId,
                                                const EntityLinkage &Linkage) {
   NestedBuildNamespace NewNamespace = resolveNamespace(
       Output.LUNamespace, OldName.Namespace, Linkage.getLinkage());
@@ -71,7 +73,8 @@ llvm::Expected<EntityId> EntityLinker::resolve(const EntityName &OldName,
   // function will return the id assigned at the first insertion.
   EntityId NewId = Output.IdTable.getId(NewName);
 
-  auto [It, Inserted] = Output.LinkageTable.try_emplace(NewId, Linkage);
+  [[maybe_unused]] auto [It, Inserted] =
+      Output.LinkageTable.try_emplace(NewId, Linkage);
   if (!Inserted) {
     return ErrorBuilder::create(
                llvm::inconvertibleErrorCode(),
@@ -93,8 +96,9 @@ llvm::Error EntityLinker::merge(
     std::vector<EntitySummaryEncoding *> &PatchTargets) {
   for (auto &[Name, DataMap] : InputData) {
     auto Iter = DataMap.find(OldId);
-    if (Iter == DataMap.end())
+    if (Iter == DataMap.end()) {
       continue;
+    }
 
     auto &OutputMap = OutputData[Name];
     auto InsertResult = OutputMap.insert({NewId, std::move(Iter->second)});
@@ -133,6 +137,7 @@ void EntityLinker::patch(
     std::vector<EntitySummaryEncoding *> &PatchTargets,
     const std::map<EntityId, EntityId> &EntityResolutionTable) {
   for (auto *PatchTarget : PatchTargets) {
+    assert(PatchTarget && "Patch target cannot be null");
     PatchTarget->patch(EntityResolutionTable);
   }
 }
@@ -142,7 +147,6 @@ llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
   std::vector<EntitySummaryEncoding *> PatchTargets;
 
   for (const auto &[OldName, OldId] : Summary->IdTable.Entities) {
-
     auto Iter = Summary->LinkageTable.find(OldId);
     if (Iter == Summary->LinkageTable.end()) {
       return ErrorBuilder::create(llvm::inconvertibleErrorCode(),
@@ -152,18 +156,19 @@ llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
           .build();
     }
 
-    EntityLinkage &Linkage = Iter->second;
+    const EntityLinkage &Linkage = Iter->second;
 
-    llvm::Expected<EntityId> NewIdOrErr = resolve(OldName, OldId, Linkage);
-    if (!NewIdOrErr)
+    auto NewIdOrErr = resolve(OldName, Linkage);
+    if (!NewIdOrErr) {
       return ErrorBuilder::wrap(NewIdOrErr.takeError())
           .context(ErrorMessages::LinkingTUSummary)
           .build();
+    }
 
     EntityId NewId = *NewIdOrErr;
 
-    auto Res = EntityResolutionTable.insert({OldId, NewId});
-    if (!Res.second) {
+    auto InsertResult = EntityResolutionTable.insert({OldId, NewId});
+    if (!InsertResult.second) {
       return ErrorBuilder::create(llvm::inconvertibleErrorCode(),
                                   ErrorMessages::DuplicateEntityIdInLinking,
                                   OldId.Index)
@@ -172,11 +177,12 @@ llvm::Error EntityLinker::link(std::unique_ptr<TUSummaryEncoding> Summary) {
     }
 
     if (llvm::Error Err = merge(Summary->Data, Output.Data, OldId, NewId,
-                                Linkage, PatchTargets))
+                                Linkage, PatchTargets)) {
       return ErrorBuilder::wrap(std::move(Err))
           .context(ErrorMessages::MergingSummaryData)
           .context(ErrorMessages::LinkingTUSummary)
           .build();
+    }
   }
 
   patch(PatchTargets, EntityResolutionTable);

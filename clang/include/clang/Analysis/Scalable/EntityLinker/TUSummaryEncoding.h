@@ -35,13 +35,19 @@ class SerializationFormat;
 /// full EntitySummary objects. This enables efficient entity ID patching
 /// during the linking process.
 class TUSummaryEncoding {
-  /// Identifies the translation unit.
+  friend class EntityLinker;
+  friend class SerializationFormat;
+
+  /// The namespace identifying this translation unit.
   BuildNamespace TUNamespace;
 
+  /// Maps entity names to their unique identifiers within this TU.
   EntityIdTable IdTable;
 
+  /// Maps entity IDs to their linkage properties (None, Internal, External).
   std::map<EntityId, EntityLinkage> LinkageTable;
 
+  /// Encoded summary data organized by summary type and entity ID.
   std::map<SummaryName,
            std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
       Data;
@@ -49,9 +55,6 @@ class TUSummaryEncoding {
 public:
   TUSummaryEncoding(BuildNamespace TUNamespace)
       : TUNamespace(std::move(TUNamespace)) {}
-
-  friend class EntityLinker;
-  friend class SerializationFormat;
 };
 
 } // namespace clang::ssaf

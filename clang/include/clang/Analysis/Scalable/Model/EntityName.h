@@ -25,6 +25,10 @@ namespace clang::ssaf {
 /// Client code should not make assumptions about the implementation details,
 /// such as USRs.
 class EntityName {
+  friend class EntityLinker;
+  friend class LinkUnitResolution;
+  friend class SerializationFormat;
+
   std::string USR;
   llvm::SmallString<16> Suffix;
   NestedBuildNamespace Namespace;
@@ -46,10 +50,6 @@ public:
   ///
   /// \param Namespace The namespace steps to append to this entity's namespace.
   EntityName makeQualified(NestedBuildNamespace Namespace) const;
-
-  friend class EntityLinker;
-  friend class LinkUnitResolution;
-  friend class SerializationFormat;
 };
 
 } // namespace clang::ssaf
