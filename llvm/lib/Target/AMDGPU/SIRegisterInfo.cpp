@@ -1542,12 +1542,19 @@ void SIRegisterInfo::buildSpillLoadStore(
   // 32-bit splits.
   bool IsRegMisaligned = false;
   if (ST.needsAlignedVGPRs() && IsFlat && !IsBlock && RegWidth > 4) {
-    // Get the instruction we would use for the full register width
-    unsigned Opc2 = getFlatScratchSpillOpcode(TII, LoadStoreOp, RegWidth);
-    const MCInstrDesc &Desc2 = TII->get(Opc2);
-    int VDataIdx = AMDGPU::getNamedOperandIdx(Opc2, AMDGPU::OpName::vdata);
-    const TargetRegisterClass *ExpectedRC = TII->getRegClass(Desc2, VDataIdx);
-    IsRegMisaligned = !ExpectedRC->contains(ValueReg);
+    unsigned SpillOpcode =
+        getFlatScratchSpillOpcode(TII, LoadStoreOp, std::min(RegWidth, 16u));
+    int VDataIdx =
+        IsStore ? AMDGPU::getNamedOperandIdx(SpillOpcode, AMDGPU::OpName::vdata)
+                : 0; // Restore Ops have data reg as the first (output) operand.
+    const TargetRegisterClass *ExpectedRC =
+        TII->getRegClass(TII->get(SpillOpcode), VDataIdx);
+    // For large tuples (>128-bit), check the first 4 sub-regs for alignment
+    Register RegToCheck =
+        RegWidth <= 16
+            ? ValueReg
+            : Register(getSubReg(ValueReg, getSubRegFromChannel(0, 4)));
+    IsRegMisaligned = !ExpectedRC->contains(RegToCheck);
   }
   // Always use 4 byte operations for AGPRs because we need to scavenge
   // a temporary VGPR.
