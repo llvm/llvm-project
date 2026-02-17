@@ -22,6 +22,10 @@
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/CIR/MissingFeatures.h"
 
+// Required to construct OpenMP operations such as `omp.wsloop` and
+// `omp.loop_nest` during lowering.
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+
 using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
@@ -939,16 +943,36 @@ CIRGenFunction::emitCXXForRangeStmt(const CXXForRangeStmt &s,
   return mlir::success();
 }
 
+/// Emit a `for` statement as either a CIR `cir.for` or, when inside an
+/// OpenMP `#pragma omp for`, an `omp.loop_nest` within the wsloop created
+/// by emitOMPForDirective.
+
 mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
+
+  // CIR for-loop operation (used in the non-OpenMP case).
   cir::ForOp forOp;
 
+  // OpenMP loop nest operation (used when inside `omp.wsloop`).
+  mlir::omp::LoopNestOp loopNestOp;
+
+  auto scopeLoc = getLoc(s.getSourceRange());
+  bool isOpenMPFor = currentOMPLoopBounds.has_value();
+
+  // This lambda emits either an OpenMP `omp.loop_nest` or a regular CIR
+  // `cir.for`, depending on whether we are inside an OpenMP for directive.
   // TODO: pass in an array of attributes.
   auto forStmtBuilder = [&]() -> mlir::LogicalResult {
     mlir::LogicalResult loopRes = mlir::success();
-    // Evaluate the first part before the loop.
-    if (s.getInit())
-      if (emitStmt(s.getInit(), /*useCurrentScope=*/true).failed())
-        return mlir::failure();
+
+    // For OpenMP loops, init is emitted by emitOMPForDirective before the
+    // wsloop so that the alloca lives outside the loop region.
+    if (!isOpenMPFor) {
+      // Evaluate the first part before the loop.
+      if (s.getInit())
+        if (emitStmt(s.getInit(), /*useCurrentScope=*/true).failed())
+          return mlir::failure();
+    }
+
     assert(!cir::MissingFeatures::loopInfoStack());
     // In the classic codegen, if there are any cleanups between here and the
     // loop-exit scope, a block is created to stage the loop exit. We probably
@@ -956,58 +980,110 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
     // to be sure we handle all cases.
     assert(!cir::MissingFeatures::requiresCleanups());
 
-    forOp = builder.createFor(
-        getLoc(s.getSourceRange()),
-        /*condBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          assert(!cir::MissingFeatures::createProfileWeightsForLoop());
-          assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
-          mlir::Value condVal;
-          if (s.getCond()) {
-            // If the for statement has a condition scope,
-            // emit the local variable declaration.
-            if (s.getConditionVariable())
-              emitDecl(*s.getConditionVariable());
-            // C99 6.8.5p2/p4: The first substatement is executed if the
-            // expression compares unequal to 0. The condition must be a
-            // scalar type.
-            condVal = evaluateExprAsBool(s.getCond());
-          } else {
-            condVal = cir::ConstantOp::create(b, loc, builder.getTrueAttr());
-          }
-          builder.createCondition(condVal);
-        },
-        /*bodyBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          // The scope of the for loop body is nested within the scope of the
-          // for loop's init-statement and condition.
-          if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
-            loopRes = mlir::failure();
-          emitStopPoint(&s);
-        },
-        /*stepBuilder=*/
-        [&](mlir::OpBuilder &b, mlir::Location loc) {
-          if (s.getInc())
-            if (emitStmt(s.getInc(), /*useCurrentScope=*/true).failed())
+    // OpenMP path: emit omp.loop_nest using bounds from emitOMPForDirective.
+    if (isOpenMPFor) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+
+      mlir::Type loopBoundsType = currentOMPLoopBounds->inductionVarType;
+      mlir::Value lb = currentOMPLoopBounds->lowerBound;
+      mlir::Value ub = currentOMPLoopBounds->upperBound;
+      mlir::Value step = currentOMPLoopBounds->step;
+      bool inclusive = currentOMPLoopBounds->inclusive;
+      const VarDecl *inductionVar = currentOMPLoopBounds->inductionVar;
+
+      loopNestOp = loopNestOp.create(builder, scopeLoc, 1, lb, ub, step,
+                                     inclusive, nullptr);
+
+      mlir::Region &region = loopNestOp.getRegion();
+      mlir::Block *block = new mlir::Block();
+      region.push_back(block);
+
+      block->addArgument(loopBoundsType, scopeLoc);
+      builder.setInsertionPointToStart(block);
+
+      // Store the IV block argument into the loop variable alloca, converting
+      // back from standard integer to CIR integer type.
+      mlir::Value iv = block->getArgument(0);
+      Address inductionAddr = getAddrOfLocalVar(inductionVar);
+      mlir::Value civVal =
+          mlir::UnrealizedConversionCastOp::create(
+              builder, scopeLoc, inductionAddr.getElementType(), iv)
+              .getResult(0);
+      cir::StoreOp::create(builder, scopeLoc, civVal,
+                           inductionAddr.getPointer(),
+                           /*is_volatile=*/nullptr, /*alignment=*/nullptr,
+                           /*sync_scope=*/nullptr, /*mem_order=*/nullptr);
+
+      // Emit the loop body.
+      if (s.getBody()) {
+        if (emitStmt(s.getBody(), /*useCurrentScope=*/true).failed())
+          loopRes = mlir::failure();
+      }
+
+      mlir::omp::YieldOp::create(builder, getLoc(s.getEndLoc()));
+    } else {
+      forOp = builder.createFor(
+          getLoc(s.getSourceRange()),
+          /*condBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            assert(!cir::MissingFeatures::createProfileWeightsForLoop());
+            assert(
+                !cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+            mlir::Value condVal;
+            if (s.getCond()) {
+              // If the for statement has a condition scope,
+              // emit the local variable declaration.
+              if (s.getConditionVariable())
+                emitDecl(*s.getConditionVariable());
+              // C99 6.8.5p2/p4: The first substatement is executed if the
+              // expression compares unequal to 0. The condition must be a
+              // scalar type.
+              condVal = evaluateExprAsBool(s.getCond());
+            } else {
+              condVal = cir::ConstantOp::create(b, loc, builder.getTrueAttr());
+            }
+            builder.createCondition(condVal);
+          },
+          /*bodyBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            // The scope of the for loop body is nested within the scope of the
+            // for loop's init-statement and condition.
+            if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
               loopRes = mlir::failure();
-          builder.createYield(loc);
-        });
+            emitStopPoint(&s);
+          },
+          /*stepBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            if (s.getInc())
+              if (emitStmt(s.getInc(), /*useCurrentScope=*/true).failed())
+                loopRes = mlir::failure();
+            builder.createYield(loc);
+          });
+    }
     return loopRes;
   };
 
   auto res = mlir::success();
-  auto scopeLoc = getLoc(s.getSourceRange());
-  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
-                       [&](mlir::OpBuilder &b, mlir::Location loc) {
-                         LexicalScope lexScope{*this, loc,
-                                               builder.getInsertionBlock()};
-                         res = forStmtBuilder();
-                       });
+
+  if (isOpenMPFor) {
+    res = forStmtBuilder();
+  } else {
+    cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
+                         [&](mlir::OpBuilder &b, mlir::Location loc) {
+                           LexicalScope lexScope{*this, loc,
+                                                 builder.getInsertionBlock()};
+                           res = forStmtBuilder();
+                         });
+  }
 
   if (res.failed())
     return res;
 
-  terminateBody(builder, forOp.getBody(), getLoc(s.getEndLoc()));
+  // Only regular CIR loops require explicit termination.
+  // OpenMP wsloop/loop_nest regions terminate via omp.yield.
+  if (!isOpenMPFor) {
+    terminateBody(builder, forOp.getBody(), getLoc(s.getEndLoc()));
+  }
   return mlir::success();
 }
 
