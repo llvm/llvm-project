@@ -125,9 +125,9 @@ export void call6(Derived D) {
 
 // vector flat cast from matrix of same size (float)
 // CHECK-LABEL: call7
-// CHECK:    [[M_ADDR:%.*]] = alloca [4 x float], align 4
+// CHECK:    [[M_ADDR:%.*]] = alloca [2 x <2 x float>], align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [4 x float], align 4
+// CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [2 x <2 x float>], align 4
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <4 x float>, align 16
 // CHECK-NEXT:    store <4 x float> %M, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[M_ADDR]], align 4
@@ -156,9 +156,11 @@ export void call7(float2x2 M) {
 
 // vector flat cast from matrix of same size (int)
 // CHECK-LABEL: call8
-// CHECK:    [[M_ADDR:%.*]] = alloca [3 x i32], align 4
+// COL-CHECK:    [[M_ADDR:%.*]] = alloca [1 x <3 x i32>], align 4
+// ROW-CHECK:    [[M_ADDR:%.*]] = alloca [3 x <1 x i32>], align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca <3 x i32>, align 16
-// CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [3 x i32], align 4
+// COL-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [1 x <3 x i32>], align 4
+// ROW-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [3 x <1 x i32>], align 4
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <3 x i32>, align 16
 // CHECK-NEXT:    store <3 x i32> %M, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[M_ADDR]], align 4
