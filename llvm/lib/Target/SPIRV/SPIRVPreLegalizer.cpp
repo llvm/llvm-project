@@ -195,7 +195,7 @@ static void buildOpBitcast(SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
 // We lower G_BITCAST to OpBitcast here to avoid a MachineVerifier error.
 // The verifier checks if the source and destination LLTs of a G_BITCAST are
 // different, but this check is too strict for SPIR-V's typed pointers, which
-// may have the same LLT but different SPIRVType (e.g. pointers to different
+// may have the same LLT but different SPIRV type (e.g. pointers to different
 // pointee types). By lowering to OpBitcast here, we bypass the verifier's
 // check. See discussion in https://github.com/llvm/llvm-project/pull/110270
 // for more context.
@@ -295,9 +295,9 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
 //  %1 = G_ZEXT %2
 //  G_MEMCPY ... %2 ...
 //
-// New registers have no SPIRVType and no register class info.
+// New registers have no SPIRV type and no register class info.
 //
-// Set SPIRVType for GV, propagate it from GV to other instructions,
+// Set SPIRV type for GV, propagate it from GV to other instructions,
 // also set register classes.
 static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
                                         SPIRVGlobalRegistry *GR,
@@ -628,7 +628,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
 
   // Address the case when IRTranslator introduces instructions with new
-  // registers without SPIRVType associated.
+  // registers without associated SPIRV type.
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       switch (MI.getOpcode()) {

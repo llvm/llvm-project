@@ -49,13 +49,25 @@ static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
 #endif
 
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(
-    AnalysisDeclContext &AC, LifetimeSafetySemaHelper *SemaHelper)
-    : AC(AC), SemaHelper(SemaHelper) {}
+    AnalysisDeclContext &AC, LifetimeSafetySemaHelper *SemaHelper,
+    const LifetimeSafetyOpts &LSOpts)
+    : AC(AC), SemaHelper(SemaHelper), LSOpts(LSOpts) {}
 
 void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
 
   const CFG &Cfg = *AC.getCFG();
+  if (LSOpts.MaxCFGBlocks > 0 && Cfg.getNumBlockIDs() > LSOpts.MaxCFGBlocks) {
+    DEBUG_WITH_TYPE(
+        "LifetimeSafety", std::string FuncName = "<unknown>";
+        if (const Decl *D = AC.getDecl()) if (const auto *ND =
+                                                  dyn_cast<NamedDecl>(D))
+            FuncName = ND->getQualifiedNameAsString();
+        llvm::dbgs() << "LifetimeSafety: Skipping function " << FuncName
+                     << "due to large CFG: " << Cfg.getNumBlockIDs()
+                     << " blocks (threshold: " << LSOpts.MaxCFGBlocks << ")\n");
+    return;
+  }
 
   FactMgr = std::make_unique<FactManager>(AC, Cfg);
 
@@ -111,7 +123,11 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetySemaHelper *SemaHelper,
                                LifetimeSafetyStats &Stats, bool CollectStats) {
-  internal::LifetimeSafetyAnalysis Analysis(AC, SemaHelper);
+  LifetimeSafetyOpts LSOpts;
+  LSOpts.MaxCFGBlocks =
+      AC.getASTContext().getLangOpts().LifetimeSafetyMaxCFGBlocks;
+
+  internal::LifetimeSafetyAnalysis Analysis(AC, SemaHelper, LSOpts);
   Analysis.run();
   if (CollectStats)
     collectLifetimeStats(AC, Analysis.getFactManager().getOriginMgr(), Stats);
