@@ -186,12 +186,13 @@ static void* mmap_interceptor(Mmap real_mmap, void* addr, SIZE_T length,
     return real_mmap(addr, length, prot, flags, fd, offset);
   const uptr start = reinterpret_cast<uptr>(addr);
   uptr end_excl;
-  if (UNLIKELY(__builtin_add_overflow(start, static_cast<uptr>(length), &end_excl))) {
+  if (UNLIKELY(__builtin_add_overflow(start, static_cast<uptr>(length),
+                                      &end_excl))) {
     errno = errno_EINVAL;
     return (void*)-1;
   }
   if (flags & map_fixed) {
-    //TODO: shadow gap may need to be checked
+  // TODO: shadow gap may need to be checked	  
     if (__asan::IntersectsShadow(start, end_excl)) {
       errno = errno_EINVAL;
       return (void*)-1;
@@ -220,11 +221,12 @@ static int munmap_interceptor(Munmap real_munmap, void* addr, SIZE_T length) {
     return real_munmap(addr, length);
 
   uptr end_excl;
-  if (UNLIKELY(__builtin_add_overflow(start, static_cast<uptr>(length), &end_excl))) {
+  if (UNLIKELY(__builtin_add_overflow(start, static_cast<uptr>(length),
+                                      &end_excl))) {
     errno = errno_EINVAL;
     return -1;
   }
-  //TODO: shadow gap may need to be checked
+  // TODO: shadow gap may need to be checked
   if (__asan::IntersectsShadow(start, end_excl)) {
     errno = errno_EINVAL;
     return -1;
