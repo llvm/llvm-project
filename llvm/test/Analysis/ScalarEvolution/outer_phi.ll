@@ -7,7 +7,7 @@ define i32 @test_01(i32 %a, i32 %b) {
 ; CHECK-LABEL: 'test_01'
 ; CHECK-NEXT:  Classifying expressions for: @test_01
 ; CHECK-NEXT:    %outer.iv = phi i32 [ 0, %entry ], [ %iv.next, %outer.backedge ]
-; CHECK-NEXT:    --> %outer.iv U: [0,-2147483647) S: [0,-2147483647) Exits: <<Unknown>> LoopDispositions: { %outer: Variant, %inner: Invariant }
+; CHECK-NEXT:    --> %outer.iv U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer: Variant, %inner: Invariant }
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %outer ], [ %iv.next, %inner.backedge ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%inner> U: [0,-2147483648) S: [0,-2147483648) Exits: <<Unknown>> LoopDispositions: { %inner: Computable, %outer: Variant }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1

@@ -308,7 +308,7 @@ define void @mul_6(i32 %n) {
 ; CHECK-LABEL: 'mul_6'
 ; CHECK-NEXT:  Classifying expressions for: @mul_6
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
-; CHECK-NEXT:    --> %iv U: [0,-1) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.inc = mul nuw i32 %iv, 6
 ; CHECK-NEXT:    --> (6 * %iv) U: [0,-3) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_6
@@ -358,7 +358,7 @@ define void @mul_8(i32 %n) {
 ; CHECK-LABEL: 'mul_8'
 ; CHECK-NEXT:  Classifying expressions for: @mul_8
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
-; CHECK-NEXT:    --> %iv U: [0,-7) S: [-2147483648,2147483585) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv U: [0,-7) S: [-2147483648,2147483641) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.inc = mul nuw i32 %iv, 8
 ; CHECK-NEXT:    --> (8 * %iv) U: [0,-63) S: [-2147483648,2147483585) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_8
@@ -408,7 +408,7 @@ define void @mul_10(i32 %n) {
 ; CHECK-LABEL: 'mul_10'
 ; CHECK-NEXT:  Classifying expressions for: @mul_10
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
-; CHECK-NEXT:    --> %iv U: [0,-1) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.inc = mul nuw i32 %iv, 10
 ; CHECK-NEXT:    --> (10 * %iv) U: [0,-3) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_10
@@ -433,7 +433,7 @@ define void @mul_8_wrap(i32 %n) {
 ; CHECK-LABEL: 'mul_8_wrap'
 ; CHECK-NEXT:  Classifying expressions for: @mul_8_wrap
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
-; CHECK-NEXT:    --> %iv U: [0,-7) S: [-2147483648,2147483585) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv U: [0,-7) S: [-2147483648,2147483641) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.inc = mul i32 %iv, 8
 ; CHECK-NEXT:    --> (8 * %iv) U: [0,-63) S: [-2147483648,2147483585) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_8_wrap
@@ -458,7 +458,7 @@ define void @mul_10_wrap(i32 %n) {
 ; CHECK-LABEL: 'mul_10_wrap'
 ; CHECK-NEXT:  Classifying expressions for: @mul_10_wrap
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
-; CHECK-NEXT:    --> %iv U: [0,-1) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv U: [0,-1) S: [-2147483648,2147483647) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.inc = mul i32 %iv, 10
 ; CHECK-NEXT:    --> (10 * %iv) U: [0,-3) S: [-2147483648,2147483645) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_10_wrap
