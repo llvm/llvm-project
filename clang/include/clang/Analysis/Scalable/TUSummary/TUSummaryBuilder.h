@@ -27,7 +27,7 @@ public:
   /// If the entity already exists, returns the existing ID (idempotent).
   EntityId addEntity(const EntityName &E);
 
-  /// Associate a \p Data EntitySummary with the \p Entity.
+  /// Associate the \p Data EntitySummary with the \p Entity.
   /// This consumes the \p Data only if \p Entity wasn't associated yet with the
   /// same kind of EntitySummary.
   /// \returns a pointer to the EntitySummary and whether it inserted or not.
