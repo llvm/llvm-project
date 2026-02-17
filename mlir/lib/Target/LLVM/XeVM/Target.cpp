@@ -278,6 +278,7 @@ void SPIRVSerializer::init() {
 
 static const std::vector<std::string> getDefaultSPIRVExtensions() {
   return {
+      "SPV_EXT_relaxed_printf_string_address_space",
       "SPV_INTEL_cache_controls",
       "SPV_INTEL_variable_length_array",
   };
@@ -353,8 +354,12 @@ std::optional<SmallVector<char, 0>> SPIRVSerializer::run() {
   if (linkedLlvmIRCallback)
     linkedLlvmIRCallback(*llvmModule);
 
-  // Note: Optimizing module discards metadata for cache hints.
-  // Just directly serialize the module.
+  // Optimize the module.
+  if (failed(optimizeModule(*llvmModule, optLevel)))
+    return std::nullopt;
+
+  if (optimizedLlvmIRCallback)
+    optimizedLlvmIRCallback(*llvmModule);
 
   // Return the serialized object.
   return moduleToObject(*llvmModule);
