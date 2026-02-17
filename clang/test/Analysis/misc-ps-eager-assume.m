@@ -120,13 +120,8 @@ void rdar7342806(void) {
     rdar7342806_aux(*Pointer); // no-warning
 }
 
-//===---------------------------------------------------------------------===//
 // PR 5627 - http://llvm.org/bugs/show_bug.cgi?id=5627
-//  This testcase was added as a regression test for a complex bug within the
-//  analyzer engine. The internal logic that was relevant for this bug was
-//  completely replaced during the last 15+ years, so now this testcase is just
-//  a random code fragment.
-//===---------------------------------------------------------------------===//
+// The engine internals that were responsible for this bug no longer exist.
 
 float *pr5627_f(int y);
 
