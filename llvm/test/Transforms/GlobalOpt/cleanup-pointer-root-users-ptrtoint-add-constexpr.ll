@@ -12,8 +12,6 @@ declare i32 @fn1()
 define void @stores_single_use_gep_constexpr() {
 ; CHECK-LABEL: @stores_single_use_gep_constexpr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store ptr @fn0, ptr @global.20ptr, align 8
-; CHECK-NEXT:    store ptr @fn1, ptr getelementptr inbounds ([[STRUCT_GLOBAL_20PTR:%.*]], ptr @global.20ptr, i64 0, i32 1), align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
