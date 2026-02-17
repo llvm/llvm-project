@@ -24,7 +24,8 @@
 // acc.combine
 //===----------------------------------------------------------------------===//
 
-def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine", [SameTypeOperands, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine", 
+    [SameTypeOperands, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Combine a reduction partial sum with its original value";
   let description = [{
     This operation is a composite to do a typical update of a reduction
