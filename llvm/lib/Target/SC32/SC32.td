@@ -63,52 +63,62 @@ def LUIimm : PatLeaf<(imm), [{
   return isShiftedUInt<16, 16>(N->getZExtValue());
 }]>;
 
+multiclass Operator<string OpStr, SDNode OpNode> {
+  def "" : Instruction {
+    let OutOperandList = (outs GP:$out);
+    let InOperandList = (ins GP:$in1, GP:$in2);
+    let Constraints = "$out = $in1";
+    let Pattern = [(set i32:$out, (OpNode i32:$in1, i32:$in2))];
+    let AsmString = !strconcat(OpStr, " $in1, $in2");
+  }
+
+  def I : Instruction {
+    let OutOperandList = (outs GP:$out);
+    let InOperandList = (ins GP:$in1, i32imm:$in2);
+    let Constraints = "$out = $in1";
+    let AsmString = !strconcat(OpStr, "I $in1, $in2");
+  }
+}
+
 let Namespace = "SC32" in {
+  defm ADD : Operator<"ADD", add>;
+  defm SUB : Operator<"SUB", sub>;
+  defm MUL : Operator<"MUL", mul>;
+  defm DIV : Operator<"DIV", udiv>;
+  defm AND : Operator<"AND", and>;
+  defm OR : Operator<"OR", or>;
+  defm XOR : Operator<"XOR", xor>;
+  defm SHL : Operator<"SHL", shl>;
+  defm SHR : Operator<"SHR", srl>;
+
   def ST : Instruction {
     let OutOperandList = (outs);
-    let InOperandList = (ins GP:$op1, GP:$op2);
-    let Pattern = [(store i32:$op1, i32:$op2)];
-    let AsmString = "ST $op1, $op2, #0";
+    let InOperandList = (ins GP:$val, GP:$base, i32imm:$offset);
+    let AsmString = "ST $val, $base, $offset";
   }
 
   def LD : Instruction {
-    let OutOperandList = (outs GP:$op1);
-    let InOperandList = (ins GP:$op2);
-    let Pattern = [(set i32:$op1, (load i32:$op2))];
-    let AsmString = "LD $op1, $op2, #0";
+    let OutOperandList = (outs GP:$val);
+    let InOperandList = (ins GP:$base, i32imm:$offset);
+    let AsmString = "LD $val, $base, $offset";
   }
 
   def LUI : Instruction {
-    let OutOperandList = (outs GP:$op1);
-    let InOperandList = (ins i32imm:$op2);
-    let AsmString = "LUI $op1, $op2";
+    let OutOperandList = (outs GP:$dst);
+    let InOperandList = (ins i32imm:$val);
+    let AsmString = "LUI $dst, $val";
   }
 
   def LLI : Instruction {
-    let OutOperandList = (outs GP:$op1);
-    let InOperandList = (ins i32imm:$op2);
-    let AsmString = "LLI $op1, $op2";
-  }
-
-  def ORI : Instruction {
-    let OutOperandList = (outs GP:$op1);
-    let InOperandList = (ins GP:$op2, i32imm:$op3);
-    let Constraints = "$op1 = $op2";
-    let AsmString = "ORI $op2, $op3";
-  }
-
-  def ADD : Instruction {
-    let OutOperandList = (outs GP:$op1);
-    let InOperandList = (ins GP:$op2, GP:$op3);
-    let Constraints = "$op1 = $op2";
-    let Pattern = [(set i32:$op1, (add i32:$op2, i32:$op3))];
-    let AsmString = "ADD $op2, $op3";
+    let OutOperandList = (outs GP:$dst);
+    let InOperandList = (ins i32imm:$val);
+    let AsmString = "LLI $dst, $val";
   }
 
   def MOV : Instruction {
-    let OutOperandList = (outs GP:$op1);
-    let InOperandList = (ins GP:$op2);
-    let AsmString = "MOV $op1, $op2";
+    let OutOperandList = (outs GP:$dst);
+    let InOperandList = (ins GP:$src);
+    let AsmString = "MOV $dst, $src";
   }
 
   def RET : Instruction {
@@ -125,6 +135,10 @@ def : Pat<(i32 LLIimm:$val), (LLI imm:$val)>;
 def : Pat<(i32 LUIimm:$val), (LUI (HI16 imm:$val))>;
 
 def : Pat<(i32 imm:$val), (ORI (LUI (HI16 imm:$val)), (LO16 imm:$val))>;
+
+def : Pat<(store i32:$val, i32:$addr), (ST i32:$val, i32:$addr, (i32 0))>;
+
+def : Pat<(load i32:$addr), (LD i32:$addr, (i32 0))>;
 
 def SC32InstrInfo : InstrInfo;
 
