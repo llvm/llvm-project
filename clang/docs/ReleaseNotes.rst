@@ -103,6 +103,8 @@ What's New in Clang |release|?
 C++ Language Changes
 --------------------
 
+- ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -382,8 +384,10 @@ AST Matchers
 
 clang-format
 ------------
-- Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the 
+- Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the
   '-'/'+' and the return type in Objective-C method declarations
+- Add ``AfterComma`` value to ``BreakConstructorInitializers`` to allow breaking
+  constructor initializers after commas, keeping the colon on the same line.
 
 libclang
 --------

@@ -90,19 +90,19 @@ def TestTarget : Target;
 // CHECK-LABEL: RegisterClass DRegs:
 
 // CHECK-LABEL: SubRegIndex ssub1:
-// CHECK:        Offset: { Default:16 }
-// CHECK:        Size: { Default:16 }
+// CHECK:        Offset: 16
+// CHECK:        Size: 16
 // CHECK-LABEL: SubRegIndex sub0:
 // CHECK-LABEL: SubRegIndex sub1:
 // CHECK-LABEL: SubRegIndex sub2:
 // Check inferred indexes:
 // CHECK-LABEL: SubRegIndex ssub1_ssub2:
-// CHECK:         Offset: { Default:16 }
-// CHECK:         Size: { Default:65535 }
+// CHECK:         Offset: 16
+// CHECK:         Size: 65535
 // CHECK-LABEL: SubRegIndex ssub3_ssub4:
 // CHECK-LABEL: SubRegIndex ssub0_ssub1_ssub2_ssub3:
-// CHECK:         Offset: { Default:65535 }
-// CHECK:         Size: { Default:65535 }
+// CHECK:         Offset: 65535
+// CHECK:         Size: 65535
 // CHECK-LABEL: SubRegIndex ssub1_ssub2_ssub3_ssub4:
 
 // Check that all subregs are generated on some examples

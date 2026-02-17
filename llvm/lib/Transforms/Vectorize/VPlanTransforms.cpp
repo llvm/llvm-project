@@ -2065,7 +2065,9 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
   VPValue *Cond;
-  if (match(Term, m_BranchOnCount()) ||
+  if (match(Term,
+            m_BranchOnCount(m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF())),
+                            m_VPValue())) ||
       match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
                       m_VPValue(), m_VPValue(), m_VPValue()))))) {
     // Try to simplify the branch condition if VectorTC <= VF * UF when the
@@ -3945,6 +3947,14 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         ToRemove.push_back(Blend);
       }
 
+      if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(&R)) {
+        if (!VEPR->getOffset()) {
+          assert(Plan.getConcreteUF() == 1 &&
+                 "Expected unroller to have materialized offset for UF != 1");
+          VEPR->materializeOffset();
+        }
+      }
+
       if (auto *Expr = dyn_cast<VPExpressionRecipe>(&R)) {
         Expr->decompose();
         ToRemove.push_back(Expr);
@@ -4662,6 +4672,7 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
                 "Only Load and Store opcodes supported");
   constexpr bool IsLoad = (Opcode == Instruction::Load);
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPDominatorTree VPDT(Plan);
   VPTypeAnalysis TypeInfo(Plan);
 
   // Group predicated operations by their address SCEV.
@@ -4721,6 +4732,11 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
 
       if (HasComplementaryMask) {
         assert(Group.size() >= 2 && "must have at least 2 entries");
+        // Sort replicates by dominance order, with earliest (most dominating)
+        // first.
+        sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
+          return VPDT.properlyDominates(A, B);
+        });
         AllGroups.push_back(std::move(Group));
       }
     }
@@ -4747,15 +4763,8 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan,
   if (Groups.empty())
     return;
 
-  VPDominatorTree VPDT(Plan);
-
   // Process each group of loads.
   for (auto &Group : Groups) {
-    // Sort loads by dominance order, with earliest (most dominating) first.
-    sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
-      return VPDT.properlyDominates(A, B);
-    });
-
     // Try to use the earliest (most dominating) load to replace all others.
     VPReplicateRecipe *EarliestLoad = Group[0];
     VPBasicBlock *FirstBB = EarliestLoad->getParent();
@@ -4816,14 +4825,9 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
   if (Groups.empty())
     return;
 
-  VPDominatorTree VPDT(Plan);
   VPTypeAnalysis TypeInfo(Plan);
 
   for (auto &Group : Groups) {
-    sort(Group, [&VPDT](VPReplicateRecipe *A, VPReplicateRecipe *B) {
-      return VPDT.properlyDominates(A, B);
-    });
-
     if (!canSinkStoreWithNoAliasCheck(Group, PSE, *L, TypeInfo))
       continue;
 
