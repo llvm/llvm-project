@@ -2808,29 +2808,28 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
            << TRI->getSubRegIndexName(SubIdx) << '\n';
         return;
       }
-      if (MONum >= MCID.getNumOperands())
-        break;
-      const TargetRegisterClass *DRC = TII->getRegClass(MCID, MONum);
-      if (!DRC)
-        break;
-
-      // If SubIdx is used, validate that RC with SubIdx can be used for an
-      // operand of class DRC. This is valid if for every register in RC, the
-      // register obtained by applying SubIdx to it is in DRC, i.e.,
-      // getMatchingSuperRegClass(RC, DRC, SubIdx) returns RC.
-      if (SubIdx && TRI->getMatchingSuperRegClass(RC, DRC, SubIdx) != RC) {
-        report("Illegal virtual register for instruction", MO, MONum);
-        OS << TRI->getRegClassName(RC) << "." << TRI->getSubRegIndexName(SubIdx)
-           << " cannot be used for " << TRI->getRegClassName(DRC)
-           << " operands.";
-      }
-
-      // If no SubIdx is used, just that that RC is a sub-class of DRC.
-      if (!SubIdx && !RC->hasSuperClassEq(DRC)) {
-        report("Illegal virtual register for instruction", MO, MONum);
-        OS << "Expected a " << TRI->getRegClassName(DRC)
-           << " register, but got a " << TRI->getRegClassName(RC)
-           << " register\n";
+      if (MONum < MCID.getNumOperands()) {
+        if (const TargetRegisterClass *DRC = TII->getRegClass(MCID, MONum)) {
+          if (SubIdx) {
+            const TargetRegisterClass *SuperRC =
+                TRI->getLargestLegalSuperClass(RC, *MF);
+            if (!SuperRC) {
+              report("No largest legal super class exists.", MO, MONum);
+              return;
+            }
+            DRC = TRI->getMatchingSuperRegClass(SuperRC, DRC, SubIdx);
+            if (!DRC) {
+              report("No matching super-reg register class.", MO, MONum);
+              return;
+            }
+          }
+          if (!RC->hasSuperClassEq(DRC)) {
+            report("Illegal virtual register for instruction", MO, MONum);
+            OS << "Expected a " << TRI->getRegClassName(DRC)
+               << " register, but got a " << TRI->getRegClassName(RC)
+               << " register\n";
+          }
+        }
       }
     }
     break;
