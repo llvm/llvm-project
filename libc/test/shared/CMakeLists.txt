@@ -108,6 +108,11 @@ add_fp_unittest(
     libc.src.__support.math.llogbf16
     libc.src.__support.math.logf16    
     libc.src.__support.math.llogbl
+    libc.src.__support.math.nexttoward
+    libc.src.__support.math.nexttowardbf16
+    libc.src.__support.math.nexttowardf
+    libc.src.__support.math.nexttowardf16
+    libc.src.__support.math.nexttowardl
     libc.src.__support.math.pow
     libc.src.__support.math.powf
     libc.src.__support.math.rsqrtf
