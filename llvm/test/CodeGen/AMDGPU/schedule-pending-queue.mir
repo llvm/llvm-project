@@ -4,7 +4,7 @@
 # Check that cycle counts are consistent with hazards.
 
 # CHECK: Cycle: 3 TopQ.A
-# CHECK: hazard:  SU(6) HWXDL[0]=9c, is later than CurrCycle = 3c
+# CHECK: hazard:  SU(6) HWXDL[0]=8c, is later than CurrCycle = 3c
 # CHECK-NOT: Cycle: 9 TopQ.A
 # CHECK: Cycle: 83 TopQ.A
 # CHECK: Checking pending node SU(6)
