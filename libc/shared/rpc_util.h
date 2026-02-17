@@ -179,7 +179,9 @@ template <typename T> struct optional {
 
     template <typename... Args>
     RPC_ATTRS constexpr explicit OptionalStorage(in_place_t, Args &&...args)
-        : stored_value(forward<Args>(args)...) {}
+        : stored_value(forward<Args>(args)...) {
+      in_use = true;
+    }
 
     RPC_ATTRS constexpr void reset() {
       if (in_use)
@@ -194,15 +196,15 @@ public:
   RPC_ATTRS constexpr optional() = default;
   RPC_ATTRS constexpr optional(nullopt_t) {}
 
-  RPC_ATTRS constexpr optional(const T &t) : storage(in_place, t) {
-    storage.in_use = true;
-  }
+  RPC_ATTRS constexpr optional(const T &t) : storage(in_place, t) {}
   RPC_ATTRS constexpr optional(const optional &) = default;
 
-  RPC_ATTRS constexpr optional(T &&t) : storage(in_place, move(t)) {
-    storage.in_use = true;
-  }
+  RPC_ATTRS constexpr optional(T &&t) : storage(in_place, move(t)) {}
   RPC_ATTRS constexpr optional(optional &&O) = default;
+
+  template <typename... Args>
+  RPC_ATTRS constexpr optional(in_place_t, Args &&...args)
+      : storage(in_place, forward<Args>(args)...) {}
 
   RPC_ATTRS constexpr optional &operator=(T &&t) {
     storage = move(t);
