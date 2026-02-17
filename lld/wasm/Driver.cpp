@@ -892,7 +892,7 @@ static void writeWhyExtract() {
 // Equivalent of demote demoteSharedAndLazySymbols() in the ELF linker
 static void demoteLazySymbols() {
   for (Symbol *sym : symtab->symbols()) {
-    if (auto *s = dyn_cast<LazySymbol>(sym)) {
+    if (auto* s = dyn_cast<LazySymbol>(sym)) {
       if (s->signature) {
         LLVM_DEBUG(llvm::dbgs()
                    << "demoting lazy func: " << s->getName() << "\n");
