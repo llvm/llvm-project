@@ -54,12 +54,16 @@ public:
 
   void setType(wasm::WasmSymbolType type) { Type = type; }
 
-  bool isExported() const { return getFlags() & wasm::WASM_SYMBOL_EXPORTED; }
+  bool isExported() const {
+    return getFlags() & wasm::WASM_SYMBOL_EXPORTED;
+  }
   void setExported() const {
     modifyFlags(wasm::WASM_SYMBOL_EXPORTED, wasm::WASM_SYMBOL_EXPORTED);
   }
 
-  bool isNoStrip() const { return getFlags() & wasm::WASM_SYMBOL_NO_STRIP; }
+  bool isNoStrip() const {
+    return getFlags() & wasm::WASM_SYMBOL_NO_STRIP;
+  }
   void setNoStrip() const {
     modifyFlags(wasm::WASM_SYMBOL_NO_STRIP, wasm::WASM_SYMBOL_NO_STRIP);
   }
