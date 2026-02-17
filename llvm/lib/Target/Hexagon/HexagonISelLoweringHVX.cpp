@@ -910,8 +910,9 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
                             (Constant**)Consts.end());
     Constant *CV = ConstantVector::get(Tmp);
     Align Alignment(HwLen);
-    SDValue CP =
-        LowerConstantPool(DAG.getConstantPool(CV, VecTy, Alignment), DAG);
+    SDValue CP = LowerConstantPool(
+        DAG.getConstantPool(CV, getPointerTy(DAG.getDataLayout()), Alignment),
+        DAG);
     return DAG.getLoad(VecTy, dl, DAG.getEntryNode(), CP,
                        MachinePointerInfo::getConstantPool(MF), Alignment);
   }
@@ -1623,8 +1624,9 @@ HexagonTargetLowering::compressHvxPred(SDValue VecQ, const SDLoc &dl,
   }
   Constant *CV = ConstantVector::get(Tmp);
   Align Alignment(HwLen);
-  SDValue CP =
-      LowerConstantPool(DAG.getConstantPool(CV, ByteTy, Alignment), DAG);
+  SDValue CP = LowerConstantPool(
+      DAG.getConstantPool(CV, getPointerTy(DAG.getDataLayout()), Alignment),
+      DAG);
   SDValue Bytes =
       DAG.getLoad(ByteTy, dl, DAG.getEntryNode(), CP,
                   MachinePointerInfo::getConstantPool(MF), Alignment);

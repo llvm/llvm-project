@@ -2502,6 +2502,13 @@ SDValue SelectionDAG::getFreeze(SDValue V) {
   return getNode(ISD::FREEZE, SDLoc(V), V.getValueType(), V);
 }
 
+SDValue SelectionDAG::getFreeze(SDValue V, const APInt &DemandedElts,
+                                bool PoisonOnly) {
+  if (isGuaranteedNotToBeUndefOrPoison(V, DemandedElts, PoisonOnly))
+    return V;
+  return getFreeze(V);
+}
+
 /// getShiftAmountOperand - Return the specified value casted to
 /// the target's desired shift amount type.
 SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {

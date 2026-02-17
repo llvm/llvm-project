@@ -107,8 +107,13 @@ public:
     mlir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());
     builder.setInsertionPoint(assign);
+    mlir::ArrayAttr accessGroups;
+    if (auto attrs = assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+            fir::getAccessGroupsAttrName()))
+      accessGroups = attrs;
     hlfir::genNoAliasArrayAssignment(
-        loc, builder, rhs, lhs, flangomp::shouldUseWorkshareLowering(assign));
+        loc, builder, rhs, lhs, flangomp::shouldUseWorkshareLowering(assign),
+        /*temporaryLHS=*/false, /*combiner=*/nullptr, accessGroups);
     rewriter.eraseOp(assign);
     return mlir::success();
   }

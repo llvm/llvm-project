@@ -668,6 +668,9 @@ struct Ctx : CommonLinkerContext {
   ElfSym sym{};
   std::unique_ptr<SymbolTable> symtab;
   SmallVector<Symbol *, 0> synthesizedSymbols;
+  // ifunc resolver symbol clones for IRELATIVE. Linker relaxation adjusts
+  // these.
+  SmallVector<Defined *, 0> irelativeSyms;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;

@@ -379,11 +379,39 @@ class DAPTestCaseBase(TestBase):
 
     def set_local(self, name, value, id=None):
         """Set a top level local variable only."""
-        return self.set_variable(1, name, str(value), id=id)
+        # Get the locals scope reference dynamically
+        locals_ref = self.get_locals_scope_reference()
+        if locals_ref is None:
+            return None
+        return self.set_variable(locals_ref, name, str(value), id=id)
 
     def set_global(self, name, value, id=None):
         """Set a top level global variable only."""
-        return self.set_variable(2, name, str(value), id=id)
+        # Get the globals scope reference dynamically
+        stackFrame = self.dap_server.get_stackFrame()
+        if stackFrame is None:
+            return None
+        frameId = stackFrame["id"]
+        scopes_response = self.dap_server.request_scopes(frameId)
+        frame_scopes = scopes_response["body"]["scopes"]
+        for scope in frame_scopes:
+            if scope["name"] == "Globals":
+                varRef = scope["variablesReference"]
+                return self.set_variable(varRef, name, str(value), id=id)
+        return None
+
+    def get_locals_scope_reference(self):
+        """Get the variablesReference for the locals scope."""
+        stackFrame = self.dap_server.get_stackFrame()
+        if stackFrame is None:
+            return None
+        frameId = stackFrame["id"]
+        scopes_response = self.dap_server.request_scopes(frameId)
+        frame_scopes = scopes_response["body"]["scopes"]
+        for scope in frame_scopes:
+            if scope["name"] == "Locals":
+                return scope["variablesReference"]
+        return None
 
     def stepIn(
         self,

@@ -964,6 +964,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_UnaryOperator);
 }
 
+TEST_F(TokenAnnotatorTest, CompoundLiteral) {
+  auto Tokens =
+      annotate("return (struct foo){};", getLLVMStyle(FormatStyle::LK_C));
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  // Not TT_CastRParen.
+  EXPECT_TOKEN(Tokens[4], tok::r_paren, TT_Unknown);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsDynamicExceptionSpecifier) {
   auto Tokens = annotate("void f() throw(int);");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;

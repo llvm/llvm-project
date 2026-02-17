@@ -242,7 +242,7 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = Mips::FMOV_D64;
       unsigned DestRegOff = DestReg.id() - Mips::D0_64;
       unsigned SrcRegOff = SrcReg.id() - Mips::F0;
-      if (SrcRegOff == DestRegOff && SrcRegOff >= 0 && SrcRegOff <= 31)
+      if (SrcRegOff == DestRegOff && SrcRegOff <= 31)
         return;
     }
   } else if (Opc == 0 && Mips::FGR32RegClass.contains(DestReg) &&
@@ -253,7 +253,7 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = Mips::FMOV_D32;
       unsigned DestRegOff = DestReg.id() - Mips::F0;
       unsigned SrcRegOff = SrcReg.id() - Mips::D0_64;
-      if (SrcRegOff == DestRegOff && SrcRegOff >= 0 && SrcRegOff <= 31)
+      if (SrcRegOff == DestRegOff && SrcRegOff <= 31)
         return;
     }
   }

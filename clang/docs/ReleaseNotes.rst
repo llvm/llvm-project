@@ -571,6 +571,7 @@ Bug Fixes in This Version
 - Fixed a crash when parsing malformed #pragma clang loop vectorize_width(4,8,16)
   by diagnosing invalid comma-separated argument lists. (#GH166325)
 - Clang now treats enumeration constants of fixed-underlying enums as the enumerated type. (#GH172118)
+- Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -902,6 +903,8 @@ Crash and bug fixes
 - The ``core.builtin.BuiltinFunctions`` checker crashed when passing
   ``_BitInt(N)`` or ``__int128_t`` to ``__builtin_add_overflow`` or similar
   checked arithmetic builtin functions. (#GH173795)
+- Fixed a crash introduced in clang-20 when analyzing some "swap" functions.
+  (#GH178797)
 
 Improvements
 ^^^^^^^^^^^^

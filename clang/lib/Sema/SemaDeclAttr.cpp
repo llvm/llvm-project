@@ -7035,6 +7035,11 @@ ModularFormatAttr *Sema::mergeModularFormatAttr(
 
 static void handleModularFormat(Sema &S, Decl *D, const ParsedAttr &AL) {
   bool Valid = true;
+  if (!AL.isArgIdent(0)) {
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
+        << AL << 1 << AANT_ArgumentIdentifier;
+    Valid = false;
+  }
   StringRef ImplName;
   if (!S.checkStringLiteralArgumentAttr(AL, 1, ImplName))
     Valid = false;

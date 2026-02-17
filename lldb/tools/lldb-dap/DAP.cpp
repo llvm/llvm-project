@@ -841,13 +841,11 @@ bool DAP::HandleObject(const Message &M) {
                    llvm::Twine("request_command:", req->command).str());
     if (handler_pos != request_handlers.end()) {
       handler_pos->second->Run(*req);
-      return true; // Success
+    } else {
+      UnknownRequestHandler handler(*this);
+      handler.BaseRequestHandler::Run(*req);
     }
-
-    dispatcher.Set("error",
-                   llvm::Twine("unhandled-command:" + req->command).str());
-    DAP_LOG(log, "error: unhandled command '{0}'", req->command);
-    return false; // Fail
+    return true; // Success
   }
 
   if (const auto *resp = std::get_if<Response>(&M)) {
@@ -1312,21 +1310,23 @@ void DAP::StartEventThreads() {
 
 llvm::Error DAP::InitializeDebugger(const DAPSession &session) {
   // Find the existing debugger by ID
-  debugger = lldb::SBDebugger::FindDebuggerWithID(session.debuggerId);
-  if (!debugger.IsValid()) {
+  lldb::SBDebugger found_debugger =
+      lldb::SBDebugger::FindDebuggerWithID(session.debuggerId);
+  if (!found_debugger.IsValid()) {
     return llvm::createStringError(
         "Unable to find existing debugger for debugger ID");
   }
 
   // Find the target within the debugger by its globally unique ID
   lldb::SBTarget target =
-      debugger.FindTargetByGloballyUniqueID(session.targetId);
+      found_debugger.FindTargetByGloballyUniqueID(session.targetId);
   if (!target.IsValid()) {
     return llvm::createStringError(
         "Unable to find existing target for target ID");
   }
 
-  // Set the target for this DAP session.
+  // Set the target and debugger for this DAP session.
+  debugger = found_debugger;
   SetTarget(target);
   StartEventThreads();
   return llvm::Error::success();

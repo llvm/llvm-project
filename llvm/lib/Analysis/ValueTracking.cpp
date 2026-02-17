@@ -5108,9 +5108,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if ((InterestedClasses & fcNegative) == fcNone)
         break;
 
-      if (II->getArgOperand(0) != II->getArgOperand(1) ||
-          !isGuaranteedNotToBeUndef(II->getArgOperand(0), Q.AC, Q.CxtI, Q.DT,
-                                    Depth + 1))
+      // FIXME: This should check isGuaranteedNotToBeUndef
+      if (II->getArgOperand(0) != II->getArgOperand(1))
         break;
 
       // The multiply cannot be -0 and therefore the add can't be -0
@@ -5589,8 +5588,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           : DenormalMode::getDynamic();
 
     // X * X is always non-negative or a NaN.
-    if (Op->getOperand(0) == Op->getOperand(1) &&
-        isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
+    // FIXME: Should check isGuaranteedNotToBeUndef
+    if (Op->getOperand(0) == Op->getOperand(1)) {
       KnownFPClass KnownSrc;
       computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownSrc,
                           Q, Depth + 1);

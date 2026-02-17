@@ -3725,47 +3725,45 @@ llvm::Expected<uint32_t> Target::AddScriptedFrameProviderDescriptor(
   if (!descriptor.IsValid())
     return llvm::createStringError("invalid frame provider descriptor");
 
+  uint32_t descriptor_id = descriptor.GetID();
+
   llvm::StringRef name = descriptor.GetName();
   if (name.empty())
     return llvm::createStringError(
         "frame provider descriptor has no class name");
 
-  std::lock_guard<std::recursive_mutex> guard(
-      m_frame_provider_descriptors_mutex);
+  {
+    std::unique_lock<std::recursive_mutex> guard(
+        m_frame_provider_descriptors_mutex);
+    m_frame_provider_descriptors[descriptor_id] = descriptor;
+  }
 
-  uint32_t descriptor_id = descriptor.GetID();
-  m_frame_provider_descriptors[descriptor_id] = descriptor;
-
-  // Clear frame providers on existing threads so they reload with new config.
-  if (ProcessSP process_sp = GetProcessSP())
-    for (ThreadSP thread_sp : process_sp->Threads())
-      thread_sp->ClearScriptedFrameProvider();
+  InvalidateThreadFrameProviders();
 
   return descriptor_id;
 }
 
 bool Target::RemoveScriptedFrameProviderDescriptor(uint32_t id) {
-  std::lock_guard<std::recursive_mutex> guard(
-      m_frame_provider_descriptors_mutex);
-  bool removed = m_frame_provider_descriptors.erase(id);
+  bool removed = false;
+  {
+    std::lock_guard<std::recursive_mutex> guard(
+        m_frame_provider_descriptors_mutex);
+    removed = m_frame_provider_descriptors.erase(id);
+  }
 
   if (removed)
-    if (ProcessSP process_sp = GetProcessSP())
-      for (ThreadSP thread_sp : process_sp->Threads())
-        thread_sp->ClearScriptedFrameProvider();
-
+    InvalidateThreadFrameProviders();
   return removed;
 }
 
 void Target::ClearScriptedFrameProviderDescriptors() {
-  std::lock_guard<std::recursive_mutex> guard(
-      m_frame_provider_descriptors_mutex);
+  {
+    std::lock_guard<std::recursive_mutex> guard(
+        m_frame_provider_descriptors_mutex);
+    m_frame_provider_descriptors.clear();
+  }
 
-  m_frame_provider_descriptors.clear();
-
-  if (ProcessSP process_sp = GetProcessSP())
-    for (ThreadSP thread_sp : process_sp->Threads())
-      thread_sp->ClearScriptedFrameProvider();
+  InvalidateThreadFrameProviders();
 }
 
 const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
@@ -3773,6 +3771,21 @@ Target::GetScriptedFrameProviderDescriptors() const {
   std::lock_guard<std::recursive_mutex> guard(
       m_frame_provider_descriptors_mutex);
   return m_frame_provider_descriptors;
+}
+
+void Target::InvalidateThreadFrameProviders() {
+  ProcessSP process_sp = GetProcessSP();
+  if (!process_sp)
+    return;
+  for (ThreadSP thread_sp : process_sp->Threads()) {
+    // Clear frame providers on existing threads so they reload with new config.
+    thread_sp->ClearScriptedFrameProvider();
+    // Notify threads that the stack traces might have changed.
+    if (thread_sp->EventTypeHasListeners(Thread::eBroadcastBitStackChanged)) {
+      auto data_sp = std::make_shared<Thread::ThreadEventData>(thread_sp);
+      thread_sp->BroadcastEvent(Thread::eBroadcastBitStackChanged, data_sp);
+    }
+  }
 }
 
 void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
