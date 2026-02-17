@@ -4662,7 +4662,7 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
 
   EVT OpVT = Val.getValueType();
   unsigned BitWidth = OpVT.getScalarSizeInBits();
-  unsigned NumElts = DemandedElts.getBitWidth();
+  [[maybe_unused]] unsigned NumElts = DemandedElts.getBitWidth();
   assert((!OpVT.isScalableVector() || NumElts == 1) &&
          "DemandedElts for scalable vectors must be 1 to represent all lanes");
   assert(
