@@ -168,9 +168,6 @@ public:
   virtual void AddedAttributeToRecord(const Attr *Attr,
                                       const RecordDecl *Record) {}
 
-  /// The parser find the named module declaration.
-  virtual void EnteringModulePurview() {}
-
   /// An mangling number was added to a Decl
   ///
   /// \param D The decl that got a mangling number
