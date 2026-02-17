@@ -45,6 +45,7 @@ static cl::opt<unsigned>
              cl::init(std::numeric_limits<unsigned>::max()));
 
 extern cl::opt<unsigned> RDFFuncBlockLimit;
+extern cl::opt<unsigned> RDFFuncInstrLimit;
 
 static cl::opt<bool> RDFDump("hexagon-rdf-dump", cl::Hidden);
 static cl::opt<bool> RDFTrackReserved("hexagon-rdf-track-reserved", cl::Hidden);
@@ -285,6 +286,16 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
   if (MF.size() > RDFFuncBlockLimit) {
     if (RDFDump)
       dbgs() << "Skipping " << getPassName() << ": too many basic blocks\n";
+    return false;
+  }
+
+  unsigned InstrCount = 0;
+  for (const MachineBasicBlock &MBB : MF)
+    InstrCount += MBB.size();
+  if (InstrCount > RDFFuncInstrLimit) {
+    if (RDFDump)
+      dbgs() << "Skipping " << getPassName() << ": too many instructions ("
+             << InstrCount << ")\n";
     return false;
   }
 

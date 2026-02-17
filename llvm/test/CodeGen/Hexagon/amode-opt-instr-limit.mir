@@ -1,0 +1,34 @@
+# RUN: llc -mtriple=hexagon -run-pass amode-opt -rdf-instr-limit=1 \
+# RUN:   -debug-only=opt-addr-mode %s -o - 2>&1 | FileCheck -check-prefix=SKIP %s
+# RUN: llc -mtriple=hexagon -run-pass amode-opt \
+# RUN:   -debug-only=opt-addr-mode %s -o - 2>&1 | FileCheck -check-prefix=OPT %s
+# REQUIRES: asserts
+#
+# Regression test for a compile-time blowup in amode-opt (issue #178535).
+#
+# HexagonOptAddrMode builds an RDF dataflow graph whose use-traversal is
+# quadratic in the number of instructions when a single register has many
+# uses.  Functions with few basic blocks but thousands of instructions
+# (e.g. kernel drivers after register allocation) can hang.
+#
+# Verify that the instruction-count limit (-rdf-instr-limit) causes the
+# pass to bail out early, and that the pass runs normally when the limit
+# is not exceeded.
+#
+# SKIP: Skipping Optimize addressing mode of load/store: too many instructions
+# OPT: [RefMap#]
+
+--- |
+  define void @test() { ret void }
+...
+---
+name: test
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r0, $r1
+    $r2 = A2_tfrsi 255
+    S2_storerb_io $r0, 0, $r1
+    S2_storerb_io $r0, 1, $r2
+    PS_jmpret $r31, implicit-def $pc
+...

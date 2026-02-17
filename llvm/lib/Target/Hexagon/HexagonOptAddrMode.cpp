@@ -49,6 +49,7 @@ static cl::opt<int> CodeGrowthLimit("hexagon-amode-growth-limit",
   "optimization"));
 
 extern cl::opt<unsigned> RDFFuncBlockLimit;
+extern cl::opt<unsigned> RDFFuncInstrLimit;
 
 namespace {
 
@@ -1146,6 +1147,20 @@ bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   if (MF.size() > RDFFuncBlockLimit) {
     LLVM_DEBUG(dbgs() << "Skipping " << getPassName()
                       << ": too many basic blocks\n");
+    return false;
+  }
+
+  // The address mode optimization uses RDF dataflow analysis whose
+  // getAllRealUses traversal is quadratic in the number of instructions
+  // when a single register has many uses.  Skip very large functions
+  // to avoid compile-time blowups (e.g. kernel drivers with -O2 that
+  // generate thousands of stores through a single base register).
+  unsigned InstrCount = 0;
+  for (const MachineBasicBlock &MBB : MF)
+    InstrCount += MBB.size();
+  if (InstrCount > RDFFuncInstrLimit) {
+    LLVM_DEBUG(dbgs() << "Skipping " << getPassName()
+                      << ": too many instructions (" << InstrCount << ")\n");
     return false;
   }
 

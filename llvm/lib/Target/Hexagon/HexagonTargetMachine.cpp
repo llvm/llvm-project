@@ -43,6 +43,10 @@ cl::opt<unsigned> RDFFuncBlockLimit(
     "rdf-bb-limit", cl::Hidden, cl::init(1000),
     cl::desc("Basic block limit for a function for RDF optimizations"));
 
+cl::opt<unsigned> RDFFuncInstrLimit(
+    "rdf-instr-limit", cl::Hidden, cl::init(6000),
+    cl::desc("Instruction limit for a function for RDF optimizations"));
+
 static cl::opt<bool>
     DisableHardwareLoops("disable-hexagon-hwloops", cl::Hidden,
                          cl::desc("Disable Hardware Loops for Hexagon target"));
