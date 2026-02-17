@@ -96,18 +96,18 @@ kernel void format_v4f32(float4 arg)
 
 kernel void format_only_v(int arg)
 {
-    printf("%v", arg); // expected-warning {{incomplete format specifier}}
+    printf("%v", arg); // expected-warning {{incomplete format specifier}} expected-warning{{data argument not used by format string}}
 }
 
 kernel void format_missing_num(int arg)
 {
-    printf("%v4", arg); // expected-warning {{incomplete format specifier}}
+    printf("%v4", arg); // expected-warning {{incomplete format specifier}} expected-warning{{data argument not used by format string}}
 }
 
 kernel void format_not_num(int arg)
 {
-    printf("%vNd", arg); // expected-warning {{incomplete format specifier}}
-    printf("%v*d", arg); // expected-warning {{incomplete format specifier}}
+    printf("%vNd", arg); // expected-warning {{incomplete format specifier}} expected-warning{{data argument not used by format string}}
+    printf("%v*d", arg); // expected-warning {{incomplete format specifier}} expected-warning{{data argument not used by format string}}
 }
 
 kernel void format_v16i32(int16 arg)
@@ -127,7 +127,7 @@ kernel void format_v4i32_wrong_num_elts_2_to_4(int2 arg)
 
 kernel void format_missing_num_elts_format(int4 arg)
 {
-    printf("%vd\n", arg); // expected-warning {{incomplete format specifier}}
+    printf("%vd\n", arg); // expected-warning {{incomplete format specifier}} expected-warning{{data argument not used by format string}}
 }
 
 kernel void format_v4f32_scalar(float arg)
@@ -142,7 +142,7 @@ kernel void format_v4f32_wrong_num_elts(float2 arg)
 
 kernel void format_missing_num_elts(float4 arg)
 {
-    printf("%vf\n", arg); // expected-warning {{incomplete format specifier}}
+    printf("%vf\n", arg); // expected-warning {{incomplete format specifier}} expected-warning{{data argument not used by format string}}
 }
 
 kernel void vector_precision_modifier_v4i32_to_v4f32(int4 arg)
