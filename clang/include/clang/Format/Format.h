@@ -2454,9 +2454,8 @@ struct FormatStyle {
   /// A rule that specifies how to break a specific set of binary operators.
   /// \version 23
   struct BinaryOperationBreakRule {
-    /// The list of operator token kinds this rule applies to.
-    /// Stored as ``tok::TokenKind`` so that alternative spellings
-    /// (e.g. ``and`` vs ``&&``) are handled automatically.
+    /// The list of operators this rule applies to, e.g. ``&&``, ``||``, ``|``.
+    /// Alternative spellings (e.g. ``and`` for ``&&``) are accepted.
     std::vector<tok::TokenKind> Operators;
     /// The break style for these operators (defaults to ``OnePerLine``).
     BreakBinaryOperationsStyle Style;

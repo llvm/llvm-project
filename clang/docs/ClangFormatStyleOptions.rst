@@ -3674,10 +3674,9 @@ the configuration (without a prefix: ``Auto``).
 
   * ``List of BinaryOperationBreakRules PerOperator`` Per-operator override rules.
 
-  * ``std::vector<tok::TokenKind> Operators`` :versionbadge:`clang-format 23`
-  The list of operator token kinds this rule applies to.
-    Stored as ``tok::TokenKind`` so that alternative spellings
-    (e.g. ``and`` vs ``&&``) are handled automatically.
+  * ``List of Strings Operators`` :versionbadge:`clang-format 23`
+  The list of operators this rule applies to, e.g. ``&&``, ``||``, ``|``.
+    Alternative spellings (e.g. ``and`` for ``&&``) are accepted.
 
   * ``BreakBinaryOperationsStyle Style``
     The break style for these operators (defaults to ``OnePerLine``).

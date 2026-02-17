@@ -79,6 +79,8 @@ def to_yaml_type(typestr: str):
         return "Unsigned"
     elif typestr == "std::string":
         return "String"
+    elif typestr == "tok::TokenKind":
+        return "String"
 
     match = re.match(r"std::vector<(.*)>$", typestr)
     if match:
@@ -413,9 +415,21 @@ class OptionsReader:
                             )
                             nested_struct.values.extend(inner_struct.values)
                         else:
+                            vec_match = re.match(
+                                r"std::vector<(.*)>$", field_type
+                            )
+                            if vec_match:
+                                display_type = (
+                                    "List of "
+                                    + pluralize(
+                                        to_yaml_type(vec_match.group(1))
+                                    )
+                                )
+                            else:
+                                display_type = field_type
                             nested_struct.values.append(
                                 NestedField(
-                                    field_type + " " + field_name,
+                                    display_type + " " + field_name,
                                     comment,
                                     version,
                                 )
