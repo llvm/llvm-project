@@ -14,18 +14,12 @@
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/iterator.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
 
 using namespace clang;
 using namespace tooling;
 using namespace dependencies;
-
-DependencyScanningTool::DependencyScanningTool(
-    DependencyScanningService &Service,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : Worker(Service, std::move(FS)) {}
 
 namespace {
 /// Prints out all of the gathered dependencies into a string.

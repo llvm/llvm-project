@@ -156,7 +156,7 @@ public:
                  const Instruction *I = nullptr) const override {
     return 1;
   }
-
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
   bool isLegalMaskedStore(Type *DataType, Align Alignment,
                           unsigned AddressSpace,
                           TTI::MaskKind MaskKind) const override;

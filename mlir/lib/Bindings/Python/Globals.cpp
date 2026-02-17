@@ -176,7 +176,8 @@ PyGlobals::lookupAttributeBuilder(const std::string &attributeKind) {
 std::optional<nb::callable> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
                                                         MlirDialect dialect) {
   // Try to load dialect module.
-  (void)loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
+  MlirStringRef ns = mlirDialectGetNamespace(dialect);
+  (void)loadDialectModule(std::string_view(ns.data, ns.length));
   nb::ft_lock_guard lock(mutex);
   const auto foundIt = typeCasterMap.find(mlirTypeID);
   if (foundIt != typeCasterMap.end()) {
@@ -189,7 +190,8 @@ std::optional<nb::callable> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
 std::optional<nb::callable> PyGlobals::lookupValueCaster(MlirTypeID mlirTypeID,
                                                          MlirDialect dialect) {
   // Try to load dialect module.
-  (void)loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
+  MlirStringRef ns = mlirDialectGetNamespace(dialect);
+  (void)loadDialectModule(std::string_view(ns.data, ns.length));
   nb::ft_lock_guard lock(mutex);
   const auto foundIt = valueCasterMap.find(mlirTypeID);
   if (foundIt != valueCasterMap.end()) {
