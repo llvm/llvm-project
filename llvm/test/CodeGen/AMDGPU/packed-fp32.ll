@@ -188,64 +188,61 @@ define amdgpu_kernel void @fadd_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX900-LABEL: fadd_v32_vs:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX900-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; GFX900-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
 ; GFX900-NEXT:    s_load_dwordx16 s[36:51], s[4:5], 0xa4
 ; GFX900-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0xe4
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-NEXT:    global_load_dwordx4 v[25:28], v0, s[0:1] offset:112
-; GFX900-NEXT:    global_load_dwordx4 v[29:32], v0, s[0:1] offset:96
-; GFX900-NEXT:    global_load_dwordx4 v[1:4], v0, s[0:1] offset:16
-; GFX900-NEXT:    global_load_dwordx4 v[5:8], v0, s[0:1]
-; GFX900-NEXT:    global_load_dwordx4 v[9:12], v0, s[0:1] offset:48
-; GFX900-NEXT:    global_load_dwordx4 v[13:16], v0, s[0:1] offset:32
-; GFX900-NEXT:    global_load_dwordx4 v[17:20], v0, s[0:1] offset:80
-; GFX900-NEXT:    global_load_dwordx4 v[21:24], v0, s[0:1] offset:64
-; GFX900-NEXT:    s_waitcnt vmcnt(5)
-; GFX900-NEXT:    v_add_f32_e32 v4, s43, v4
-; GFX900-NEXT:    v_add_f32_e32 v3, s42, v3
-; GFX900-NEXT:    v_add_f32_e32 v2, s41, v2
-; GFX900-NEXT:    v_add_f32_e32 v1, s40, v1
-; GFX900-NEXT:    v_add_f32_e32 v32, s19, v32
-; GFX900-NEXT:    v_add_f32_e32 v31, s18, v31
-; GFX900-NEXT:    v_add_f32_e32 v30, s17, v30
-; GFX900-NEXT:    v_add_f32_e32 v29, s16, v29
-; GFX900-NEXT:    s_waitcnt vmcnt(4)
-; GFX900-NEXT:    v_add_f32_e32 v8, s39, v8
-; GFX900-NEXT:    v_add_f32_e32 v7, s38, v7
-; GFX900-NEXT:    v_add_f32_e32 v6, s37, v6
-; GFX900-NEXT:    v_add_f32_e32 v5, s36, v5
-; GFX900-NEXT:    s_waitcnt vmcnt(3)
-; GFX900-NEXT:    v_add_f32_e32 v12, s51, v12
-; GFX900-NEXT:    v_add_f32_e32 v11, s50, v11
-; GFX900-NEXT:    v_add_f32_e32 v10, s49, v10
-; GFX900-NEXT:    v_add_f32_e32 v9, s48, v9
-; GFX900-NEXT:    s_waitcnt vmcnt(2)
-; GFX900-NEXT:    v_add_f32_e32 v16, s47, v16
-; GFX900-NEXT:    v_add_f32_e32 v15, s46, v15
-; GFX900-NEXT:    v_add_f32_e32 v14, s45, v14
-; GFX900-NEXT:    v_add_f32_e32 v13, s44, v13
-; GFX900-NEXT:    s_waitcnt vmcnt(1)
-; GFX900-NEXT:    v_add_f32_e32 v20, s15, v20
-; GFX900-NEXT:    v_add_f32_e32 v19, s14, v19
-; GFX900-NEXT:    v_add_f32_e32 v18, s13, v18
-; GFX900-NEXT:    v_add_f32_e32 v17, s12, v17
+; GFX900-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1] offset:16
+; GFX900-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1]
+; GFX900-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:48
+; GFX900-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:32
+; GFX900-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:80
+; GFX900-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:64
+; GFX900-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:112
+; GFX900-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:96
+; GFX900-NEXT:    s_waitcnt vmcnt(7)
+; GFX900-NEXT:    v_add_f32_e32 v3, s43, v3
+; GFX900-NEXT:    v_add_f32_e32 v2, s42, v2
+; GFX900-NEXT:    v_add_f32_e32 v1, s41, v1
+; GFX900-NEXT:    v_add_f32_e32 v0, s40, v0
+; GFX900-NEXT:    s_waitcnt vmcnt(6)
+; GFX900-NEXT:    v_add_f32_e32 v7, s39, v7
+; GFX900-NEXT:    v_add_f32_e32 v6, s38, v6
+; GFX900-NEXT:    v_add_f32_e32 v5, s37, v5
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    v_add_f32_e32 v24, s11, v24
-; GFX900-NEXT:    v_add_f32_e32 v23, s10, v23
-; GFX900-NEXT:    v_add_f32_e32 v22, s9, v22
-; GFX900-NEXT:    v_add_f32_e32 v21, s8, v21
-; GFX900-NEXT:    v_add_f32_e32 v28, s23, v28
-; GFX900-NEXT:    v_add_f32_e32 v27, s22, v27
-; GFX900-NEXT:    v_add_f32_e32 v26, s21, v26
-; GFX900-NEXT:    v_add_f32_e32 v25, s20, v25
-; GFX900-NEXT:    global_store_dwordx4 v0, v[29:32], s[0:1] offset:96
-; GFX900-NEXT:    global_store_dwordx4 v0, v[25:28], s[0:1] offset:112
-; GFX900-NEXT:    global_store_dwordx4 v0, v[21:24], s[0:1] offset:64
-; GFX900-NEXT:    global_store_dwordx4 v0, v[17:20], s[0:1] offset:80
-; GFX900-NEXT:    global_store_dwordx4 v0, v[13:16], s[0:1] offset:32
-; GFX900-NEXT:    global_store_dwordx4 v0, v[9:12], s[0:1] offset:48
-; GFX900-NEXT:    global_store_dwordx4 v0, v[5:8], s[0:1]
-; GFX900-NEXT:    global_store_dwordx4 v0, v[1:4], s[0:1] offset:16
+; GFX900-NEXT:    v_add_f32_e32 v31, s19, v31
+; GFX900-NEXT:    v_add_f32_e32 v30, s18, v30
+; GFX900-NEXT:    v_add_f32_e32 v29, s17, v29
+; GFX900-NEXT:    v_add_f32_e32 v28, s16, v28
+; GFX900-NEXT:    v_add_f32_e32 v4, s36, v4
+; GFX900-NEXT:    v_add_f32_e32 v11, s51, v11
+; GFX900-NEXT:    v_add_f32_e32 v10, s50, v10
+; GFX900-NEXT:    v_add_f32_e32 v9, s49, v9
+; GFX900-NEXT:    v_add_f32_e32 v8, s48, v8
+; GFX900-NEXT:    v_add_f32_e32 v15, s47, v15
+; GFX900-NEXT:    v_add_f32_e32 v14, s46, v14
+; GFX900-NEXT:    v_add_f32_e32 v13, s45, v13
+; GFX900-NEXT:    v_add_f32_e32 v12, s44, v12
+; GFX900-NEXT:    v_add_f32_e32 v19, s15, v19
+; GFX900-NEXT:    v_add_f32_e32 v18, s14, v18
+; GFX900-NEXT:    v_add_f32_e32 v17, s13, v17
+; GFX900-NEXT:    v_add_f32_e32 v16, s12, v16
+; GFX900-NEXT:    v_add_f32_e32 v23, s11, v23
+; GFX900-NEXT:    v_add_f32_e32 v22, s10, v22
+; GFX900-NEXT:    v_add_f32_e32 v21, s9, v21
+; GFX900-NEXT:    v_add_f32_e32 v20, s8, v20
+; GFX900-NEXT:    v_add_f32_e32 v27, s23, v27
+; GFX900-NEXT:    v_add_f32_e32 v26, s22, v26
+; GFX900-NEXT:    v_add_f32_e32 v25, s21, v25
+; GFX900-NEXT:    v_add_f32_e32 v24, s20, v24
+; GFX900-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:96
+; GFX900-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:112
+; GFX900-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:64
+; GFX900-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:80
+; GFX900-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:32
+; GFX900-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:48
+; GFX900-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1]
+; GFX900-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:16
 ; GFX900-NEXT:    s_endpgm
 ;
 ; PACKED-SDAG-LABEL: fadd_v32_vs:
@@ -1475,64 +1472,61 @@ define amdgpu_kernel void @fmul_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX900-LABEL: fmul_v32_vs:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX900-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; GFX900-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
 ; GFX900-NEXT:    s_load_dwordx16 s[36:51], s[4:5], 0xa4
 ; GFX900-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0xe4
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-NEXT:    global_load_dwordx4 v[25:28], v0, s[0:1] offset:112
-; GFX900-NEXT:    global_load_dwordx4 v[29:32], v0, s[0:1] offset:96
-; GFX900-NEXT:    global_load_dwordx4 v[1:4], v0, s[0:1] offset:16
-; GFX900-NEXT:    global_load_dwordx4 v[5:8], v0, s[0:1]
-; GFX900-NEXT:    global_load_dwordx4 v[9:12], v0, s[0:1] offset:48
-; GFX900-NEXT:    global_load_dwordx4 v[13:16], v0, s[0:1] offset:32
-; GFX900-NEXT:    global_load_dwordx4 v[17:20], v0, s[0:1] offset:80
-; GFX900-NEXT:    global_load_dwordx4 v[21:24], v0, s[0:1] offset:64
-; GFX900-NEXT:    s_waitcnt vmcnt(5)
-; GFX900-NEXT:    v_mul_f32_e32 v4, s43, v4
-; GFX900-NEXT:    v_mul_f32_e32 v3, s42, v3
-; GFX900-NEXT:    v_mul_f32_e32 v2, s41, v2
-; GFX900-NEXT:    v_mul_f32_e32 v1, s40, v1
-; GFX900-NEXT:    v_mul_f32_e32 v32, s19, v32
-; GFX900-NEXT:    v_mul_f32_e32 v31, s18, v31
-; GFX900-NEXT:    v_mul_f32_e32 v30, s17, v30
-; GFX900-NEXT:    v_mul_f32_e32 v29, s16, v29
-; GFX900-NEXT:    s_waitcnt vmcnt(4)
-; GFX900-NEXT:    v_mul_f32_e32 v8, s39, v8
-; GFX900-NEXT:    v_mul_f32_e32 v7, s38, v7
-; GFX900-NEXT:    v_mul_f32_e32 v6, s37, v6
-; GFX900-NEXT:    v_mul_f32_e32 v5, s36, v5
-; GFX900-NEXT:    s_waitcnt vmcnt(3)
-; GFX900-NEXT:    v_mul_f32_e32 v12, s51, v12
-; GFX900-NEXT:    v_mul_f32_e32 v11, s50, v11
-; GFX900-NEXT:    v_mul_f32_e32 v10, s49, v10
-; GFX900-NEXT:    v_mul_f32_e32 v9, s48, v9
-; GFX900-NEXT:    s_waitcnt vmcnt(2)
-; GFX900-NEXT:    v_mul_f32_e32 v16, s47, v16
-; GFX900-NEXT:    v_mul_f32_e32 v15, s46, v15
-; GFX900-NEXT:    v_mul_f32_e32 v14, s45, v14
-; GFX900-NEXT:    v_mul_f32_e32 v13, s44, v13
-; GFX900-NEXT:    s_waitcnt vmcnt(1)
-; GFX900-NEXT:    v_mul_f32_e32 v20, s15, v20
-; GFX900-NEXT:    v_mul_f32_e32 v19, s14, v19
-; GFX900-NEXT:    v_mul_f32_e32 v18, s13, v18
-; GFX900-NEXT:    v_mul_f32_e32 v17, s12, v17
+; GFX900-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1] offset:16
+; GFX900-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1]
+; GFX900-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:48
+; GFX900-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:32
+; GFX900-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:80
+; GFX900-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:64
+; GFX900-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:112
+; GFX900-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:96
+; GFX900-NEXT:    s_waitcnt vmcnt(7)
+; GFX900-NEXT:    v_mul_f32_e32 v3, s43, v3
+; GFX900-NEXT:    v_mul_f32_e32 v2, s42, v2
+; GFX900-NEXT:    v_mul_f32_e32 v1, s41, v1
+; GFX900-NEXT:    v_mul_f32_e32 v0, s40, v0
+; GFX900-NEXT:    s_waitcnt vmcnt(6)
+; GFX900-NEXT:    v_mul_f32_e32 v7, s39, v7
+; GFX900-NEXT:    v_mul_f32_e32 v6, s38, v6
+; GFX900-NEXT:    v_mul_f32_e32 v5, s37, v5
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    v_mul_f32_e32 v24, s11, v24
-; GFX900-NEXT:    v_mul_f32_e32 v23, s10, v23
-; GFX900-NEXT:    v_mul_f32_e32 v22, s9, v22
-; GFX900-NEXT:    v_mul_f32_e32 v21, s8, v21
-; GFX900-NEXT:    v_mul_f32_e32 v28, s23, v28
-; GFX900-NEXT:    v_mul_f32_e32 v27, s22, v27
-; GFX900-NEXT:    v_mul_f32_e32 v26, s21, v26
-; GFX900-NEXT:    v_mul_f32_e32 v25, s20, v25
-; GFX900-NEXT:    global_store_dwordx4 v0, v[29:32], s[0:1] offset:96
-; GFX900-NEXT:    global_store_dwordx4 v0, v[25:28], s[0:1] offset:112
-; GFX900-NEXT:    global_store_dwordx4 v0, v[21:24], s[0:1] offset:64
-; GFX900-NEXT:    global_store_dwordx4 v0, v[17:20], s[0:1] offset:80
-; GFX900-NEXT:    global_store_dwordx4 v0, v[13:16], s[0:1] offset:32
-; GFX900-NEXT:    global_store_dwordx4 v0, v[9:12], s[0:1] offset:48
-; GFX900-NEXT:    global_store_dwordx4 v0, v[5:8], s[0:1]
-; GFX900-NEXT:    global_store_dwordx4 v0, v[1:4], s[0:1] offset:16
+; GFX900-NEXT:    v_mul_f32_e32 v31, s19, v31
+; GFX900-NEXT:    v_mul_f32_e32 v30, s18, v30
+; GFX900-NEXT:    v_mul_f32_e32 v29, s17, v29
+; GFX900-NEXT:    v_mul_f32_e32 v28, s16, v28
+; GFX900-NEXT:    v_mul_f32_e32 v4, s36, v4
+; GFX900-NEXT:    v_mul_f32_e32 v11, s51, v11
+; GFX900-NEXT:    v_mul_f32_e32 v10, s50, v10
+; GFX900-NEXT:    v_mul_f32_e32 v9, s49, v9
+; GFX900-NEXT:    v_mul_f32_e32 v8, s48, v8
+; GFX900-NEXT:    v_mul_f32_e32 v15, s47, v15
+; GFX900-NEXT:    v_mul_f32_e32 v14, s46, v14
+; GFX900-NEXT:    v_mul_f32_e32 v13, s45, v13
+; GFX900-NEXT:    v_mul_f32_e32 v12, s44, v12
+; GFX900-NEXT:    v_mul_f32_e32 v19, s15, v19
+; GFX900-NEXT:    v_mul_f32_e32 v18, s14, v18
+; GFX900-NEXT:    v_mul_f32_e32 v17, s13, v17
+; GFX900-NEXT:    v_mul_f32_e32 v16, s12, v16
+; GFX900-NEXT:    v_mul_f32_e32 v23, s11, v23
+; GFX900-NEXT:    v_mul_f32_e32 v22, s10, v22
+; GFX900-NEXT:    v_mul_f32_e32 v21, s9, v21
+; GFX900-NEXT:    v_mul_f32_e32 v20, s8, v20
+; GFX900-NEXT:    v_mul_f32_e32 v27, s23, v27
+; GFX900-NEXT:    v_mul_f32_e32 v26, s22, v26
+; GFX900-NEXT:    v_mul_f32_e32 v25, s21, v25
+; GFX900-NEXT:    v_mul_f32_e32 v24, s20, v24
+; GFX900-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:96
+; GFX900-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:112
+; GFX900-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:64
+; GFX900-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:80
+; GFX900-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:32
+; GFX900-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:48
+; GFX900-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1]
+; GFX900-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:16
 ; GFX900-NEXT:    s_endpgm
 ;
 ; PACKED-SDAG-LABEL: fmul_v32_vs:
@@ -2323,64 +2317,61 @@ define amdgpu_kernel void @fma_v32_vs(ptr addrspace(1) %a, <32 x float> %x) {
 ; GFX900-LABEL: fma_v32_vs:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX900-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; GFX900-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
 ; GFX900-NEXT:    s_load_dwordx16 s[36:51], s[4:5], 0xa4
 ; GFX900-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0xe4
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-NEXT:    global_load_dwordx4 v[25:28], v0, s[0:1] offset:112
-; GFX900-NEXT:    global_load_dwordx4 v[29:32], v0, s[0:1] offset:96
-; GFX900-NEXT:    global_load_dwordx4 v[1:4], v0, s[0:1] offset:16
-; GFX900-NEXT:    global_load_dwordx4 v[5:8], v0, s[0:1]
-; GFX900-NEXT:    global_load_dwordx4 v[9:12], v0, s[0:1] offset:48
-; GFX900-NEXT:    global_load_dwordx4 v[13:16], v0, s[0:1] offset:32
-; GFX900-NEXT:    global_load_dwordx4 v[17:20], v0, s[0:1] offset:80
-; GFX900-NEXT:    global_load_dwordx4 v[21:24], v0, s[0:1] offset:64
-; GFX900-NEXT:    s_waitcnt vmcnt(5)
-; GFX900-NEXT:    v_fma_f32 v4, v4, s43, s43
-; GFX900-NEXT:    v_fma_f32 v3, v3, s42, s42
-; GFX900-NEXT:    v_fma_f32 v2, v2, s41, s41
-; GFX900-NEXT:    v_fma_f32 v1, v1, s40, s40
-; GFX900-NEXT:    v_fma_f32 v32, v32, s19, s19
-; GFX900-NEXT:    v_fma_f32 v31, v31, s18, s18
-; GFX900-NEXT:    v_fma_f32 v30, v30, s17, s17
-; GFX900-NEXT:    v_fma_f32 v29, v29, s16, s16
-; GFX900-NEXT:    s_waitcnt vmcnt(4)
-; GFX900-NEXT:    v_fma_f32 v8, v8, s39, s39
-; GFX900-NEXT:    v_fma_f32 v7, v7, s38, s38
-; GFX900-NEXT:    v_fma_f32 v6, v6, s37, s37
-; GFX900-NEXT:    v_fma_f32 v5, v5, s36, s36
-; GFX900-NEXT:    s_waitcnt vmcnt(3)
-; GFX900-NEXT:    v_fma_f32 v12, v12, s51, s51
-; GFX900-NEXT:    v_fma_f32 v11, v11, s50, s50
-; GFX900-NEXT:    v_fma_f32 v10, v10, s49, s49
-; GFX900-NEXT:    v_fma_f32 v9, v9, s48, s48
-; GFX900-NEXT:    s_waitcnt vmcnt(2)
-; GFX900-NEXT:    v_fma_f32 v16, v16, s47, s47
-; GFX900-NEXT:    v_fma_f32 v15, v15, s46, s46
-; GFX900-NEXT:    v_fma_f32 v14, v14, s45, s45
-; GFX900-NEXT:    v_fma_f32 v13, v13, s44, s44
-; GFX900-NEXT:    s_waitcnt vmcnt(1)
-; GFX900-NEXT:    v_fma_f32 v20, v20, s15, s15
-; GFX900-NEXT:    v_fma_f32 v19, v19, s14, s14
-; GFX900-NEXT:    v_fma_f32 v18, v18, s13, s13
-; GFX900-NEXT:    v_fma_f32 v17, v17, s12, s12
+; GFX900-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1] offset:16
+; GFX900-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1]
+; GFX900-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:48
+; GFX900-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:32
+; GFX900-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:80
+; GFX900-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:64
+; GFX900-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:112
+; GFX900-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:96
+; GFX900-NEXT:    s_waitcnt vmcnt(7)
+; GFX900-NEXT:    v_fma_f32 v3, v3, s43, s43
+; GFX900-NEXT:    v_fma_f32 v2, v2, s42, s42
+; GFX900-NEXT:    v_fma_f32 v1, v1, s41, s41
+; GFX900-NEXT:    v_fma_f32 v0, v0, s40, s40
+; GFX900-NEXT:    s_waitcnt vmcnt(6)
+; GFX900-NEXT:    v_fma_f32 v7, v7, s39, s39
+; GFX900-NEXT:    v_fma_f32 v6, v6, s38, s38
+; GFX900-NEXT:    v_fma_f32 v5, v5, s37, s37
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    v_fma_f32 v24, v24, s11, s11
-; GFX900-NEXT:    v_fma_f32 v23, v23, s10, s10
-; GFX900-NEXT:    v_fma_f32 v22, v22, s9, s9
-; GFX900-NEXT:    v_fma_f32 v21, v21, s8, s8
-; GFX900-NEXT:    v_fma_f32 v28, v28, s23, s23
-; GFX900-NEXT:    v_fma_f32 v27, v27, s22, s22
-; GFX900-NEXT:    v_fma_f32 v26, v26, s21, s21
-; GFX900-NEXT:    v_fma_f32 v25, v25, s20, s20
-; GFX900-NEXT:    global_store_dwordx4 v0, v[29:32], s[0:1] offset:96
-; GFX900-NEXT:    global_store_dwordx4 v0, v[25:28], s[0:1] offset:112
-; GFX900-NEXT:    global_store_dwordx4 v0, v[21:24], s[0:1] offset:64
-; GFX900-NEXT:    global_store_dwordx4 v0, v[17:20], s[0:1] offset:80
-; GFX900-NEXT:    global_store_dwordx4 v0, v[13:16], s[0:1] offset:32
-; GFX900-NEXT:    global_store_dwordx4 v0, v[9:12], s[0:1] offset:48
-; GFX900-NEXT:    global_store_dwordx4 v0, v[5:8], s[0:1]
-; GFX900-NEXT:    global_store_dwordx4 v0, v[1:4], s[0:1] offset:16
+; GFX900-NEXT:    v_fma_f32 v31, v31, s19, s19
+; GFX900-NEXT:    v_fma_f32 v30, v30, s18, s18
+; GFX900-NEXT:    v_fma_f32 v29, v29, s17, s17
+; GFX900-NEXT:    v_fma_f32 v28, v28, s16, s16
+; GFX900-NEXT:    v_fma_f32 v4, v4, s36, s36
+; GFX900-NEXT:    v_fma_f32 v11, v11, s51, s51
+; GFX900-NEXT:    v_fma_f32 v10, v10, s50, s50
+; GFX900-NEXT:    v_fma_f32 v9, v9, s49, s49
+; GFX900-NEXT:    v_fma_f32 v8, v8, s48, s48
+; GFX900-NEXT:    v_fma_f32 v15, v15, s47, s47
+; GFX900-NEXT:    v_fma_f32 v14, v14, s46, s46
+; GFX900-NEXT:    v_fma_f32 v13, v13, s45, s45
+; GFX900-NEXT:    v_fma_f32 v12, v12, s44, s44
+; GFX900-NEXT:    v_fma_f32 v19, v19, s15, s15
+; GFX900-NEXT:    v_fma_f32 v18, v18, s14, s14
+; GFX900-NEXT:    v_fma_f32 v17, v17, s13, s13
+; GFX900-NEXT:    v_fma_f32 v16, v16, s12, s12
+; GFX900-NEXT:    v_fma_f32 v23, v23, s11, s11
+; GFX900-NEXT:    v_fma_f32 v22, v22, s10, s10
+; GFX900-NEXT:    v_fma_f32 v21, v21, s9, s9
+; GFX900-NEXT:    v_fma_f32 v20, v20, s8, s8
+; GFX900-NEXT:    v_fma_f32 v27, v27, s23, s23
+; GFX900-NEXT:    v_fma_f32 v26, v26, s22, s22
+; GFX900-NEXT:    v_fma_f32 v25, v25, s21, s21
+; GFX900-NEXT:    v_fma_f32 v24, v24, s20, s20
+; GFX900-NEXT:    global_store_dwordx4 v32, v[28:31], s[0:1] offset:96
+; GFX900-NEXT:    global_store_dwordx4 v32, v[24:27], s[0:1] offset:112
+; GFX900-NEXT:    global_store_dwordx4 v32, v[20:23], s[0:1] offset:64
+; GFX900-NEXT:    global_store_dwordx4 v32, v[16:19], s[0:1] offset:80
+; GFX900-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:32
+; GFX900-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:48
+; GFX900-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1]
+; GFX900-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1] offset:16
 ; GFX900-NEXT:    s_endpgm
 ;
 ; PACKED-SDAG-LABEL: fma_v32_vs:

@@ -2707,14 +2707,14 @@ define amdgpu_kernel void @fma_neg_b_c_v4f32(ptr addrspace(1) %out, ptr addrspac
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v12, 4, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    global_load_b128 v[0:3], v12, s[2:3] offset:16
-; GFX11-NEXT:    global_load_b128 v[4:7], v12, s[2:3]
+; GFX11-NEXT:    global_load_b128 v[0:3], v12, s[2:3]
+; GFX11-NEXT:    global_load_b128 v[4:7], v12, s[2:3] offset:16
 ; GFX11-NEXT:    global_load_b128 v[8:11], v12, s[2:3] offset:48
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_fma_f32 v3, v11, -v7, -v3
-; GFX11-NEXT:    v_fma_f32 v2, v10, -v6, -v2
-; GFX11-NEXT:    v_fma_f32 v1, v9, -v5, -v1
-; GFX11-NEXT:    v_fma_f32 v0, v8, -v4, -v0
+; GFX11-NEXT:    v_fma_f32 v3, v11, -v3, -v7
+; GFX11-NEXT:    v_fma_f32 v2, v10, -v2, -v6
+; GFX11-NEXT:    v_fma_f32 v1, v9, -v1, -v5
+; GFX11-NEXT:    v_fma_f32 v0, v8, -v0, -v4
 ; GFX11-NEXT:    global_store_b128 v12, v[0:3], s[0:1]
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
