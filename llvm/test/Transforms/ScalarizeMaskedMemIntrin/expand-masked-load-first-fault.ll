@@ -17,7 +17,7 @@ define { <4 x i32>, <4 x i1> } @load_ff_v4i32(ptr %p, <4 x i1> %mask) {
 ; CHECK-NEXT:    [[RES_FIRST_LANE_ONLY:%.*]] = insertvalue { <4 x i32>, <4 x i1> } [[TMP5]], <4 x i1> [[TMP4]], 1
 ; CHECK-NEXT:    ret { <4 x i32>, <4 x i1> } [[RES_FIRST_LANE_ONLY]]
 ;
-  %res = call { <4 x i32>, <4 x i1> } @llvm.masked.load.first.fault(ptr %p, i32 16, <4 x i1> %mask)
+  %res = call { <4 x i32>, <4 x i1> } @llvm.masked.load.ff(ptr %p, i32 16, <4 x i1> %mask)
   ret { <4 x i32>, <4 x i1> } %res
 }
 
@@ -39,7 +39,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i1> } @load_ff_nxv4i32(ptr %p, <vscal
 ; CHECK-NEXT:    [[RES:%.*]] = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i1> } [[TMP5]], <vscale x 4 x i1> [[TMP4]], 1
 ; CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i1> } [[RES]]
 ;
-  %res = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.masked.load.first.fault(ptr %p, i32 16, <vscale x 4 x i1> %mask)
+  %res = call { <vscale x 4 x i32>, <vscale x 4 x i1> } @llvm.masked.load.ff(ptr %p, i32 16, <vscale x 4 x i1> %mask)
   ret { <vscale x 4 x i32>, <vscale x 4 x i1> } %res
 }
 
@@ -58,7 +58,7 @@ define { <2 x double>, <2 x i1> } @load_ff_v2f64_all_true(ptr %p) {
 ; CHECK-NEXT:    [[RES_FIRST_LANE_ONLY:%.*]] = insertvalue { <2 x double>, <2 x i1> } [[TMP5]], <2 x i1> [[TMP4]], 1
 ; CHECK-NEXT:    ret { <2 x double>, <2 x i1> } [[RES_FIRST_LANE_ONLY]]
 ;
-  %res = call { <2 x double>, <2 x i1> } @llvm.masked.load.first.fault(ptr %p, i32 16, <2 x i1> <i1 true, i1 true>)
+  %res = call { <2 x double>, <2 x i1> } @llvm.masked.load.ff(ptr %p, i32 16, <2 x i1> <i1 true, i1 true>)
   ret { <2 x double>, <2 x i1> } %res
 }
 
@@ -77,6 +77,6 @@ define { <16 x i16>, <16 x i1> } @load_ff_v16i16_all_false(ptr %p) {
 ; CHECK-NEXT:    [[RES_FIRST_LANE_ONLY:%.*]] = insertvalue { <16 x i16>, <16 x i1> } [[TMP5]], <16 x i1> [[TMP4]], 1
 ; CHECK-NEXT:    ret { <16 x i16>, <16 x i1> } [[RES_FIRST_LANE_ONLY]]
 ;
-  %res = call { <16 x i16>, <16 x i1> } @llvm.masked.load.first.fault(ptr %p, i32 32, <16 x i1> zeroinitializer)
+  %res = call { <16 x i16>, <16 x i1> } @llvm.masked.load.ff(ptr %p, i32 32, <16 x i1> zeroinitializer)
   ret { <16 x i16>, <16 x i1> } %res
 }
