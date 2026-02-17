@@ -36,8 +36,6 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   clc/lib/spirv/SOURCES;
 )
 
-set( LIBCLC_MIN_LLVM 3.9.0 )
-
 # A runtimes cross-build should only use the requested target.
 set( LIBCLC_DEFAULT_TARGET "all" )
 if( LLVM_RUNTIMES_BUILD AND LLVM_DEFAULT_TARGET_TRIPLE MATCHES "^nvptx|^amdgcn" )
@@ -66,10 +64,6 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
   include(AddLLVM)
 
   message( STATUS "libclc LLVM version: ${LLVM_PACKAGE_VERSION}" )
-
-  if( LLVM_PACKAGE_VERSION VERSION_LESS LIBCLC_MIN_LLVM )
-    message( FATAL_ERROR "libclc needs at least LLVM ${LIBCLC_MIN_LLVM}" )
-  endif()
 
   # Import required tools
   if( NOT EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )

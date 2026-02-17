@@ -2657,6 +2657,7 @@ cc_library(
         ":IR",
         ":LinalgDialect",
         ":LinalgInterfaces",
+        ":SCFDialect",
         ":Support",
         ":VectorDialect",
         ":X86VectorDialect",
@@ -2679,6 +2680,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefUtils",
         ":Pass",
+        ":SCFDialect",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
@@ -4552,7 +4554,6 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DataLayoutInterfacesIncGen",
-        ":DialectFoldInterfaceIncGen",
         ":IR",
         "//llvm:Support",
     ],
@@ -7916,6 +7917,7 @@ gentbl_cc_library(
     tbl_outs = {
         "include/mlir/Interfaces/DataLayoutAttrInterface.h.inc": ["-gen-attr-interface-decls"],
         "include/mlir/Interfaces/DataLayoutAttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
+        "include/mlir/Interfaces/DataLayoutDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
         "include/mlir/Interfaces/DataLayoutOpInterface.h.inc": ["-gen-op-interface-decls"],
         "include/mlir/Interfaces/DataLayoutOpInterface.cpp.inc": ["-gen-op-interface-defs"],
         "include/mlir/Interfaces/DataLayoutTypeInterface.h.inc": ["-gen-type-interface-decls"],
@@ -8946,6 +8948,16 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "LLVMTranslationDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Target/LLVMIR/LLVMTranslationDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Target/LLVMIR/LLVMTranslationDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
 cc_library(
     name = "ToLLVMIRTranslation",
     srcs = [
@@ -8973,6 +8985,7 @@ cc_library(
         ":LLVMIRTransformsDIExpressionLegalization",
         ":LLVMIRTransformsLegalizeForExport",
         ":LLVMIntrinsicConversionIncGen",
+        ":LLVMTranslationDialectInterfaceIncGen",
         ":OpenMPDialect",
         ":Support",
         ":TransformUtils",
@@ -10461,8 +10474,8 @@ cc_library(
         ":ArithDialect",
         ":FuncDialect",
         ":FunctionInterfaces",
+        ":GPUDialect",
         ":IR",
-        ":LoopLikeInterface",
         ":MemRefDialect",
         ":OpenACCAnalysis",
         ":OpenACCDialect",
@@ -14011,6 +14024,16 @@ cc_library(
 )
 
 gentbl_cc_library(
+    name = "DialectReductionPatternInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Reducer/DialectReductionPatternInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Reducer/DialectReductionPatternInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
     name = "ReducerIncGen",
     tbl_outs = {"include/mlir/Reducer/Passes.h.inc": [
         "-gen-pass-decls",
@@ -14030,6 +14053,7 @@ cc_library(
     hdrs = glob(["include/mlir/Reducer/*.h"]),
     includes = ["include"],
     deps = [
+        ":DialectReductionPatternInterfaceIncGen",
         ":IR",
         ":Pass",
         ":ReducerIncGen",

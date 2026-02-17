@@ -145,7 +145,8 @@ let Predicates = [FeatureVector] in {
   // LEY and LDY offer full 20-bit displacement fields.  It's often better
   // to use those instructions rather than force a 20-bit displacement
   // into a GPR temporary.
-  let mayLoad = 1, SimpleBDXLoad = 1, canFoldAsLoad = 1 in {
+  let mayLoad = 1, SimpleBDXLoad = 1, canFoldAsLoad = 1,
+      isReMaterializable = 1 in {
     def VL16 : UnaryAliasVRX<z_load, v16hb, bdxaddr12pair>;
     def VL32 : UnaryAliasVRX<z_load, v32sb, bdxaddr12pair>;
     def VL64 : UnaryAliasVRX<z_load, v64db, bdxaddr12pair>;

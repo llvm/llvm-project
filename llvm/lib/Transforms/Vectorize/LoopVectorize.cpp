@@ -374,6 +374,11 @@ cl::opt<bool> llvm::VPlanPrintAfterAll(
 cl::list<std::string> llvm::VPlanPrintAfterPasses(
     "vplan-print-after", cl::Hidden,
     cl::desc("Print VPlans after specified VPlan transformations (regexp)."));
+
+cl::opt<bool> llvm::VPlanPrintVectorRegionScope(
+    "vplan-print-vector-region-scope", cl::init(false), cl::Hidden,
+    cl::desc("Limit VPlan printing to vector loop region in "
+             "`-vplan-print-after*` if the plan has one."));
 #endif
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the
@@ -7445,11 +7450,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     return DenseMap<const SCEV *, Value *>();
   }
 
-  VPlanTransforms::narrowInterleaveGroups(
-      BestVPlan, BestVF,
-      TTI.getRegisterBitWidth(BestVF.isScalable()
-                                  ? TargetTransformInfo::RGK_ScalableVector
-                                  : TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
@@ -7467,7 +7467,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
       CM.requiresScalarEpilogue(BestVF.isVector()));
-  VPlanTransforms::materializeVFAndVFxUF(BestVPlan, VectorPH, BestVF);
+  VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
 
@@ -8149,6 +8149,10 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                        CM.getMaxSafeElements());
         RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
       }
+
+      if (auto P = VPlanTransforms::narrowInterleaveGroups(*Plan, TTI))
+        VPlans.push_back(std::move(P));
+
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
@@ -8232,7 +8236,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  VPlanTransforms::introduceMasksAndLinearize(*Plan, CM.foldTailByMasking());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize, *Plan,
+                           CM.foldTailByMasking());
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
