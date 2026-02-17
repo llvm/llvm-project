@@ -68,3 +68,28 @@ func.func @symbol_bar() {
   "foo.possibly_unknown_symbol_table"() ({
   }) : () -> ()
 }
+
+// -----
+
+module {
+  // expected-remark@below {{symbol has 2 uses}}
+  module @inner_module {
+    // expected-remark@below {{symbol has 1 uses}}
+    func.func private @private_inner()
+    // expected-remark@below {{symbol has 1 uses}}
+    func.func nested @nested_inner()
+  }
+
+
+  // expected-remark@below {{symbol has no uses}}
+  // expected-remark@below {{symbol contains 2 nested references}}
+  func.func @outer_caller() {
+    // expected-remark@below {{found use of symbol : @inner_module::@nested_inner : "inner_module"}}
+    // expected-remark@below {{found use of symbol : @inner_module::@nested_inner : "nested_inner"}}
+    "foo.op"() { use = @inner_module::@nested_inner } : () -> ()
+    // expected-remark@below {{failed to resolve use of symbol : @inner_module::@private_inner : "inner_module"}}
+    // expected-remark@below {{failed to resolve use of symbol : @inner_module::@private_inner : "private_inner"}}
+    "foo.op"() { use = @inner_module::@private_inner } : () -> ()
+    return
+  }
+}

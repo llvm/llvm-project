@@ -111,8 +111,10 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.set_source_breakpoints(source, [first_loop_break_line])
         self.continue_to_next_stop()
         self.dap_server.get_local_variables()
+        locals_ref = self.get_locals_scope_reference()
+        self.assertIsNotNone(locals_ref, "Failed to get locals scope reference")
         # Test write watchpoints on x, arr[2]
-        response_x = self.dap_server.request_dataBreakpointInfo(1, "x")
+        response_x = self.dap_server.request_dataBreakpointInfo(locals_ref, "x")
         arr = self.dap_server.get_local_variable("arr")
         response_arr_2 = self.dap_server.request_dataBreakpointInfo(
             arr["variablesReference"], "[2]"

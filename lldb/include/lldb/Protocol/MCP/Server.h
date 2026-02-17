@@ -21,6 +21,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Signals.h"
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -40,7 +41,7 @@ public:
   void AddTool(std::unique_ptr<Tool> tool);
   void AddResourceProvider(std::unique_ptr<ResourceProvider> resource_provider);
 
-  llvm::Error Accept(lldb_private::MainLoop &, MCPTransportUP);
+  llvm::Error Accept(MCPTransportUP);
 
 protected:
   MCPBinderUP Bind(MCPTransport &);
@@ -70,7 +71,6 @@ private:
 
   LogCallback m_log_callback;
   struct Client {
-    ReadHandleUP handle;
     MCPTransportUP transport;
     MCPBinderUP binder;
   };

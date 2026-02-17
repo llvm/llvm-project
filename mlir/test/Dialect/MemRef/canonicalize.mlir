@@ -1385,6 +1385,21 @@ func.func @expand_collapse_do_not_fold_to_cast(%m: memref<1x3x2x384xui8, strided
 
 // -----
 
+// CHECK-LABEL: func @expand_collapse_dynamic_do_not_fold_to_cast(
+//   CHECK-NOT:   memref.cast
+
+func.func @expand_collapse_dynamic_do_not_fold_to_cast(%m: memref<1x?x1x32xsi8, strided<[?, 32, 32, 1]>>, %dyn_size: index)
+    -> (memref<1x1x?x32xsi8, strided<[?, ?, 32, 1]>>)
+  {
+  %0 = memref.collapse_shape %m [[0], [1, 2], [3]]
+      : memref<1x?x1x32xsi8, strided<[?, 32, 32, 1]>> into memref<1x?x32xsi8, strided<[?, 32, 1]>>
+  %1 = memref.expand_shape %0 [[0, 1], [2], [3]] output_shape [1, 1, %dyn_size, 32]
+      : memref<1x?x32xsi8, strided<[?, 32, 1]>> into memref<1x1x?x32xsi8, strided<[?, ?, 32, 1]>>
+  return %1 : memref<1x1x?x32xsi8, strided<[?, ?, 32, 1]>>
+}
+
+// -----
+
 // CHECK-LABEL: func @fold_trivial_subviews(
 //  CHECK-SAME:     %[[m:.*]]: memref<?xf32, strided<[?], offset: ?>>
 //       CHECK:   %[[subview:.*]] = memref.subview %[[m]][5]

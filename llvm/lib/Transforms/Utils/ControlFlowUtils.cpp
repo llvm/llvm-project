@@ -299,6 +299,8 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
       Outgoing.insert(Succ1);
   }
 
+  assert(Outgoing.size() && "No outgoing edges");
+
   if (Outgoing.size() < 2)
     return {Outgoing.front(), false};
 

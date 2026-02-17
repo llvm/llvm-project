@@ -112,7 +112,7 @@ class SafeStack {
   ScalarEvolution &SE;
 
   Type *StackPtrTy;
-  Type *IntPtrTy;
+  Type *AddrTy;
   Type *Int32Ty;
 
   Value *UnsafeStackPtr = nullptr;
@@ -189,7 +189,7 @@ public:
             DomTreeUpdater *DTU, ScalarEvolution &SE)
       : F(F), TL(TL), Libcalls(Libcalls), DL(DL), DTU(DTU), SE(SE),
         StackPtrTy(DL.getAllocaPtrType(F.getContext())),
-        IntPtrTy(DL.getIntPtrType(F.getContext())),
+        AddrTy(DL.getAddressType(StackPtrTy)),
         Int32Ty(Type::getInt32Ty(F.getContext())) {}
 
   // Run the transformation on the associated function.
@@ -510,10 +510,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   // Unsafe stack always grows down.
   StackLayout SSL(StackAlignment);
   if (StackGuardSlot) {
-    Type *Ty = StackGuardSlot->getAllocatedType();
-    Align Align = std::max(DL.getPrefTypeAlign(Ty), StackGuardSlot->getAlign());
     SSL.addObject(StackGuardSlot, getStaticAllocaAllocationSize(StackGuardSlot),
-                  Align, SSC.getFullLiveRange());
+                  StackGuardSlot->getAlign(), SSC.getFullLiveRange());
   }
 
   for (Argument *Arg : ByValArguments) {
@@ -530,15 +528,11 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   }
 
   for (AllocaInst *AI : StaticAllocas) {
-    Type *Ty = AI->getAllocatedType();
     uint64_t Size = getStaticAllocaAllocationSize(AI);
     if (Size == 0)
       Size = 1; // Don't create zero-sized stack objects.
 
-    // Ensure the object is properly aligned.
-    Align Align = std::max(DL.getPrefTypeAlign(Ty), AI->getAlign());
-
-    SSL.addObject(AI, Size, Align,
+    SSL.addObject(AI, Size, AI->getAlign(),
                   ClColoring ? SSC.getLiveRange(AI) : NoColoringRange);
   }
 
@@ -550,11 +544,9 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   if (FrameAlignment > StackAlignment) {
     // Re-align the base pointer according to the max requested alignment.
     IRB.SetInsertPoint(BasePointer->getNextNode());
-    BasePointer = cast<Instruction>(IRB.CreateIntToPtr(
-        IRB.CreateAnd(
-            IRB.CreatePtrToInt(BasePointer, IntPtrTy),
-            ConstantInt::get(IntPtrTy, ~(FrameAlignment.value() - 1))),
-        StackPtrTy));
+    BasePointer = IRB.CreateIntrinsic(
+        StackPtrTy, Intrinsic::ptrmask,
+        {BasePointer, ConstantInt::get(AddrTy, ~(FrameAlignment.value() - 1))});
   }
 
   IRB.SetInsertPoint(BasePointer->getNextNode());
@@ -669,26 +661,16 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
     IRBuilder<> IRB(AI);
 
     // Compute the new SP value (after AI).
-    Value *ArraySize = AI->getArraySize();
-    if (ArraySize->getType() != IntPtrTy)
-      ArraySize = IRB.CreateIntCast(ArraySize, IntPtrTy, false);
+    Value *Size = IRB.CreateAllocationSize(AddrTy, AI);
+    Value *SP = IRB.CreateLoad(StackPtrTy, UnsafeStackPtr);
+    SP = IRB.CreatePtrAdd(SP, IRB.CreateNeg(Size));
 
-    Type *Ty = AI->getAllocatedType();
-    uint64_t TySize = DL.getTypeAllocSize(Ty);
-    Value *Size = IRB.CreateMul(ArraySize, ConstantInt::get(IntPtrTy, TySize));
+    // Align the SP value to satisfy the AllocaInst and stack alignments.
+    auto Align = std::max(AI->getAlign(), StackAlignment);
 
-    Value *SP = IRB.CreatePtrToInt(IRB.CreateLoad(StackPtrTy, UnsafeStackPtr),
-                                   IntPtrTy);
-    SP = IRB.CreateSub(SP, Size);
-
-    // Align the SP value to satisfy the AllocaInst, type and stack alignments.
-    auto Align = std::max(std::max(DL.getPrefTypeAlign(Ty), AI->getAlign()),
-                          StackAlignment);
-
-    Value *NewTop = IRB.CreateIntToPtr(
-        IRB.CreateAnd(
-            SP, ConstantInt::getSigned(IntPtrTy, ~uint64_t(Align.value() - 1))),
-        StackPtrTy);
+    Value *NewTop = IRB.CreateIntrinsic(
+        StackPtrTy, Intrinsic::ptrmask,
+        {SP, ConstantInt::getSigned(AddrTy, ~uint64_t(Align.value() - 1))});
 
     // Save the stack pointer.
     IRB.CreateStore(NewTop, UnsafeStackPtr);

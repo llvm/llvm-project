@@ -2239,13 +2239,13 @@ Value *HvxIdioms::processVScatter(Instruction &In) const {
   Value *CastIndex = nullptr;
   if (cstDataVector) {
     // Our indexes are represented as a constant. We need it in a reg.
-    AllocaInst *IndexesAlloca =
-        Builder.CreateAlloca(HVC.getHvxTy(HVC.getIntTy(32), false));
+    Type *IndexVectorType = HVC.getHvxTy(HVC.getIntTy(32), false);
+    AllocaInst *IndexesAlloca = Builder.CreateAlloca(IndexVectorType);
     [[maybe_unused]] auto *StoreIndexes =
         Builder.CreateStore(cstDataVector, IndexesAlloca);
     LLVM_DEBUG(dbgs() << "  StoreIndexes     : " << *StoreIndexes << "\n");
-    CastIndex = Builder.CreateLoad(IndexesAlloca->getAllocatedType(),
-                                   IndexesAlloca, "reload_index");
+    CastIndex =
+        Builder.CreateLoad(IndexVectorType, IndexesAlloca, "reload_index");
   } else {
     if (ElemWidth == 2)
       CastIndex = getReinterpretiveCast_i16_to_i32(HVC, Builder, Ctx, Indexes);
@@ -2622,8 +2622,8 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         [[maybe_unused]] auto *StoreIndexes =
             Builder.CreateStore(cstDataVector, IndexesAlloca);
         LLVM_DEBUG(dbgs() << "  StoreIndexes   : " << *StoreIndexes << "\n");
-        Value *LoadedIndex = Builder.CreateLoad(
-            IndexesAlloca->getAllocatedType(), IndexesAlloca, "reload_index");
+        Value *LoadedIndex =
+            Builder.CreateLoad(NT, IndexesAlloca, "reload_index");
         AllocaInst *ResultAlloca = Builder.CreateAlloca(NT);
         LLVM_DEBUG(dbgs() << "  ResultAlloca   : " << *ResultAlloca << "\n");
 
@@ -2703,8 +2703,8 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         [[maybe_unused]] auto *StoreIndexes =
             Builder.CreateStore(cstDataVector, IndexesAlloca);
         LLVM_DEBUG(dbgs() << "  StoreIndexes   : " << *StoreIndexes << "\n");
-        Value *LoadedIndex = Builder.CreateLoad(
-            IndexesAlloca->getAllocatedType(), IndexesAlloca, "reload_index");
+        Value *LoadedIndex =
+            Builder.CreateLoad(NT, IndexesAlloca, "reload_index");
         AllocaInst *ResultAlloca = Builder.CreateAlloca(NT);
         LLVM_DEBUG(dbgs() << "  ResultAlloca   : " << *ResultAlloca
                           << "\n  AddressSpace: "
@@ -3349,7 +3349,7 @@ auto HexagonVectorCombine::getConstInt(int Val, unsigned Width) const
 
 auto HexagonVectorCombine::isZero(const Value *Val) const -> bool {
   if (auto *C = dyn_cast<Constant>(Val))
-    return C->isZeroValue();
+    return C->isNullValue();
   return false;
 }
 

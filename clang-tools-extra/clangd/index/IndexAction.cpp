@@ -11,6 +11,7 @@
 #include "Headers.h"
 #include "clang-include-cleaner/Record.h"
 #include "index/Relation.h"
+#include "index/Serialization.h"
 #include "index/SymbolCollector.h"
 #include "index/SymbolOrigin.h"
 #include "clang/AST/ASTConsumer.h"
@@ -130,13 +131,8 @@ public:
   IndexAction(std::shared_ptr<SymbolCollector> C,
               std::unique_ptr<include_cleaner::PragmaIncludes> PI,
               const index::IndexingOptions &Opts,
-              std::function<void(SymbolSlab)> SymbolsCallback,
-              std::function<void(RefSlab)> RefsCallback,
-              std::function<void(RelationSlab)> RelationsCallback,
-              std::function<void(IncludeGraph)> IncludeGraphCallback)
-      : SymbolsCallback(SymbolsCallback), RefsCallback(RefsCallback),
-        RelationsCallback(RelationsCallback),
-        IncludeGraphCallback(IncludeGraphCallback), Collector(C),
+              std::function<void(IndexFileIn)> IndexContentsCallback)
+      : IndexContentsCallback(IndexContentsCallback), Collector(C),
         PI(std::move(PI)), Opts(Opts) {
     this->Opts.ShouldTraverseDecl = [this](const Decl *D) {
       // Many operations performed during indexing is linear in terms of depth
@@ -161,9 +157,8 @@ public:
   std::unique_ptr<ASTConsumer>
   CreateASTConsumer(CompilerInstance &CI, llvm::StringRef InFile) override {
     PI->record(CI.getPreprocessor());
-    if (IncludeGraphCallback != nullptr)
-      CI.getPreprocessor().addPPCallbacks(
-          std::make_unique<IncludeGraphCollector>(CI.getSourceManager(), IG));
+    CI.getPreprocessor().addPPCallbacks(
+        std::make_unique<IncludeGraphCollector>(CI.getSourceManager(), IG));
 
     return index::createIndexingASTConsumer(Collector, Opts,
                                             CI.getPreprocessorPtr());
@@ -185,26 +180,21 @@ public:
   }
 
   void EndSourceFileAction() override {
-    SymbolsCallback(Collector->takeSymbols());
-    if (RefsCallback != nullptr)
-      RefsCallback(Collector->takeRefs());
-    if (RelationsCallback != nullptr)
-      RelationsCallback(Collector->takeRelations());
-    if (IncludeGraphCallback != nullptr) {
+    IndexFileIn Result;
+    Result.Symbols = Collector->takeSymbols();
+    Result.Refs = Collector->takeRefs();
+    Result.Relations = Collector->takeRelations();
 #ifndef NDEBUG
       // This checks if all nodes are initialized.
       for (const auto &Node : IG)
         assert(Node.getKeyData() == Node.getValue().URI.data());
 #endif
-      IncludeGraphCallback(std::move(IG));
-    }
+      Result.Sources = std::move(IG);
+      IndexContentsCallback(std::move(Result));
   }
 
 private:
-  std::function<void(SymbolSlab)> SymbolsCallback;
-  std::function<void(RefSlab)> RefsCallback;
-  std::function<void(RelationSlab)> RelationsCallback;
-  std::function<void(IncludeGraph)> IncludeGraphCallback;
+  std::function<void(IndexFileIn)> IndexContentsCallback;
   std::shared_ptr<SymbolCollector> Collector;
   std::unique_ptr<include_cleaner::PragmaIncludes> PI;
   index::IndexingOptions Opts;
@@ -215,10 +205,7 @@ private:
 
 std::unique_ptr<FrontendAction> createStaticIndexingAction(
     SymbolCollector::Options Opts,
-    std::function<void(SymbolSlab)> SymbolsCallback,
-    std::function<void(RefSlab)> RefsCallback,
-    std::function<void(RelationSlab)> RelationsCallback,
-    std::function<void(IncludeGraph)> IncludeGraphCallback) {
+    std::function<void(IndexFileIn)> IndexContentsCallback) {
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
@@ -231,16 +218,13 @@ std::unique_ptr<FrontendAction> createStaticIndexingAction(
   if (Opts.Origin == SymbolOrigin::Unknown)
     Opts.Origin = SymbolOrigin::Static;
   Opts.StoreAllDocumentation = false;
-  if (RefsCallback != nullptr) {
-    Opts.RefFilter = RefKind::All;
-    Opts.RefsInHeaders = true;
-  }
+  Opts.RefFilter = RefKind::All;
+  Opts.RefsInHeaders = true;
   auto PragmaIncludes = std::make_unique<include_cleaner::PragmaIncludes>();
   Opts.PragmaIncludes = PragmaIncludes.get();
   return std::make_unique<IndexAction>(std::make_shared<SymbolCollector>(Opts),
                                        std::move(PragmaIncludes), IndexOpts,
-                                       SymbolsCallback, RefsCallback,
-                                       RelationsCallback, IncludeGraphCallback);
+                                       IndexContentsCallback);
 }
 
 } // namespace clangd

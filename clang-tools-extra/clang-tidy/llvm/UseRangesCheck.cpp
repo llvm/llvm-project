@@ -50,28 +50,46 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
   const auto AddStdToLLVM =
       [&Results](llvm::IntrusiveRefCntPtr<Replacer> Replacer,
                  std::initializer_list<StringRef> Names) {
-        for (const auto &Name : Names)
+        for (const StringRef Name : Names)
           Results.try_emplace(("::std::" + Name).str(), Replacer);
       };
 
-  // Single range algorithms
+  // Single range algorithms. One per line, keep sorted.
+  // clang-format off
   AddStdToLLVM(llvm::makeIntrusiveRefCnt<StdToLLVMReplacer>(SingleSig),
-               {"all_of",       "any_of",
-                "none_of",      "for_each",
-                "find",         "find_if",
-                "find_if_not",  "fill",
-                "count",        "count_if",
-                "copy",         "copy_if",
-                "transform",    "replace",
-                "remove_if",    "stable_sort",
-                "partition",    "partition_point",
-                "is_sorted",    "min_element",
-                "max_element",  "binary_search",
-                "lower_bound",  "upper_bound",
-                "unique",       "uninitialized_copy",
-                "adjacent_find"});
+               {"accumulate",
+                "adjacent_find",
+                "all_of",
+                "any_of",
+                "binary_search",
+                "copy",
+                "copy_if",
+                "count",
+                "count_if",
+                "fill",
+                "find",
+                "find_if",
+                "find_if_not",
+                "for_each",
+                "is_sorted",
+                "lower_bound",
+                "max_element",
+                "min_element",
+                "none_of",
+                "partition",
+                "partition_point",
+                "remove_if",
+                "replace",
+                "replace_copy",
+                "replace_copy_if",
+                "stable_sort",
+                "transform",
+                "uninitialized_copy",
+                "unique",
+                "upper_bound"});
+  // clang-format on
 
-  // Two range algorithms
+  // Two range algorithms.
   AddStdToLLVM(llvm::makeIntrusiveRefCnt<StdToLLVMReplacer>(TwoSig),
                {"equal", "mismatch", "includes", "search"});
 

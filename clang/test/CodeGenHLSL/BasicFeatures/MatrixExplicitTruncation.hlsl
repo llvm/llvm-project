@@ -4,8 +4,8 @@
 // CHECK-LABEL: define hidden noundef <12 x i32> @_Z10trunc_castu11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [16 x i32], align 4
-// CHECK-NEXT:    [[I34:%.*]] = alloca [12 x i32], align 4
+// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
+// CHECK-NEXT:    [[I34:%.*]] = alloca [4 x <3 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -21,8 +21,8 @@
 // CHECK-LABEL: define hidden noundef <12 x i32> @_Z11trunc_cast0u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [16 x i32], align 4
-// CHECK-NEXT:    [[I43:%.*]] = alloca [12 x i32], align 4
+// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
+// CHECK-NEXT:    [[I43:%.*]] = alloca [3 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 4, i32 5, i32 6, i32 8, i32 9, i32 10, i32 12, i32 13, i32 14>
@@ -38,8 +38,8 @@
 // CHECK-LABEL: define hidden noundef <9 x i32> @_Z11trunc_cast1u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [16 x i32], align 4
-// CHECK-NEXT:    [[I33:%.*]] = alloca [9 x i32], align 4
+// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
+// CHECK-NEXT:    [[I33:%.*]] = alloca [3 x <3 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 4, i32 5, i32 6, i32 8, i32 9, i32 10>
@@ -55,8 +55,8 @@
 // CHECK-LABEL: define hidden noundef <6 x i32> @_Z11trunc_cast2u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [16 x i32], align 4
-// CHECK-NEXT:    [[I32:%.*]] = alloca [6 x i32], align 4
+// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
+// CHECK-NEXT:    [[I32:%.*]] = alloca [2 x <3 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <6 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9>
@@ -72,8 +72,8 @@
 // CHECK-LABEL: define hidden noundef <6 x i32> @_Z11trunc_cast3u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [16 x i32], align 4
-// CHECK-NEXT:    [[I23:%.*]] = alloca [6 x i32], align 4
+// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
+// CHECK-NEXT:    [[I23:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 4, i32 5, i32 6>
@@ -89,8 +89,8 @@
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z11trunc_cast4u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [16 x i32], align 4
-// CHECK-NEXT:    [[I22:%.*]] = alloca [4 x i32], align 4
+// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
+// CHECK-NEXT:    [[I22:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
@@ -106,8 +106,8 @@
 // CHECK-LABEL: define hidden noundef <2 x i32> @_Z11trunc_cast5u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [16 x i32], align 4
-// CHECK-NEXT:    [[I21:%.*]] = alloca [2 x i32], align 4
+// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
+// CHECK-NEXT:    [[I21:%.*]] = alloca [1 x <2 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <2 x i32> <i32 0, i32 4>
@@ -123,7 +123,7 @@
 // CHECK-LABEL: define hidden noundef i32 @_Z11trunc_cast6u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    [[I1:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
@@ -140,7 +140,7 @@
 // CHECK-LABEL: define hidden noundef i32 @_Z16trunc_multi_castu11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    [[I1:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4

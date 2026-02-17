@@ -5,7 +5,7 @@
 ; Test prolog/epilog for non-XPLEAF.
 
 ; Small stack frame.
-; CHECK-LABEL: func0
+; CHECK-LABEL: func0 DS 0H
 ; CHECK64: stmg  6,7,1872(4)
 ; stmg instruction's displacement field must be 2064-dsa_size
 ; as per ABI
@@ -15,15 +15,16 @@
 ; CHECK64: aghi  4,192
 ; CHECK64: b 2(7)
 
-; CHECK64: L#PPA1_func0_0:
-; CHECK64: .short	0  * Length/4 of Parms
+; CHECK64: L#PPA1_func0_0 DS 0H
+; CHECK64: * Length/4 of Parms
+; CHECK64:  DC XL2'0000'
 define void @func0() {
   call i64 (i64) @fun(i64 10) 
   ret void
 }
 
 ; Spill all GPR CSRs
-; CHECK-LABEL: func1
+; CHECK-LABEL: func1 DS 0H
 ; CHECK64: stmg 6,15,1904(4)
 ; CHECK64: aghi  4,-160
 
@@ -31,8 +32,9 @@ define void @func0() {
 ; CHECK64: aghi  4,160
 ; CHECK64: b 2(7)
 
-; CHECK64: L#PPA1_func1_0:
-; CHECK64: .short	2  * Length/4 of Parms
+; CHECK64: L#PPA1_func1_0 DS 0H
+; CHECK64: * Length/4 of Parms
+; CHECK64:  DC XL2'0002'
 define void @func1(ptr %ptr) {
   %l01 = load volatile i64, ptr %ptr
   %l02 = load volatile i64, ptr %ptr
@@ -84,42 +86,42 @@ define void @func1(ptr %ptr) {
 
 
 ; Spill all FPRs and VRs
-; CHECK-LABEL: func2
+; CHECK-LABEL: func2 DS 0H
 ; CHECK64: stmg	6,7,1744(4)
 ; CHECK64: aghi  4,-320
-; CHECK64: std	15,{{[0-9]+}}(4)                      * 8-byte Spill
-; CHECK64: std	14,{{[0-9]+}}(4)                      * 8-byte Spill
-; CHECK64: std	13,{{[0-9]+}}(4)                      * 8-byte Spill
-; CHECK64: std	12,{{[0-9]+}}(4)                      * 8-byte Spill
-; CHECK64: std	11,{{[0-9]+}}(4)                      * 8-byte Spill
-; CHECK64: std	10,{{[0-9]+}}(4)                      * 8-byte Spill
-; CHECK64: std	9,{{[0-9]+}}(4)                       * 8-byte Spill
-; CHECK64: std	8,{{[0-9]+}}(4)                       * 8-byte Spill
-; CHECK64: vst	23,{{[0-9]+}}(4),4                   * 16-byte Spill
-; CHECK64: vst	22,{{[0-9]+}}(4),4                   * 16-byte Spill
-; CHECK64: vst	21,{{[0-9]+}}(4),4                   * 16-byte Spill
-; CHECK64: vst	20,{{[0-9]+}}(4),4                   * 16-byte Spill
-; CHECK64: vst	19,{{[0-9]+}}(4),4                   * 16-byte Spill
-; CHECK64: vst	18,{{[0-9]+}}(4),4                   * 16-byte Spill
-; CHECK64: vst	17,{{[0-9]+}}(4),4                   * 16-byte Spill
-; CHECK64: vst	16,{{[0-9]+}}(4),4                   * 16-byte Spill
+; CHECK64: vst  16,{{[0-9]+}}(4),4
+; CHECK64: vst  17,{{[0-9]+}}(4),4
+; CHECK64: vst  18,{{[0-9]+}}(4),4
+; CHECK64: vst  19,{{[0-9]+}}(4),4
+; CHECK64: vst  20,{{[0-9]+}}(4),4
+; CHECK64: vst  21,{{[0-9]+}}(4),4
+; CHECK64: vst  22,{{[0-9]+}}(4),4
+; CHECK64: vst  23,{{[0-9]+}}(4),4
+; CHECK64: std	8,{{[0-9]+}}(4)
+; CHECK64: std	9,{{[0-9]+}}(4)
+; CHECK64: std	10,{{[0-9]+}}(4)
+; CHECK64: std	11,{{[0-9]+}}(4)
+; CHECK64: std	12,{{[0-9]+}}(4)
+; CHECK64: std	13,{{[0-9]+}}(4)
+; CHECK64: std	14,{{[0-9]+}}(4)
+; CHECK64: std	15,{{[0-9]+}}(4)
 
-; CHECK64: ld	15,{{[0-9]+}}(4)                      * 8-byte Reload
-; CHECK64: ld	14,{{[0-9]+}}(4)                      * 8-byte Reload
-; CHECK64: ld	13,{{[0-9]+}}(4)                      * 8-byte Reload
-; CHECK64: ld	12,{{[0-9]+}}(4)                      * 8-byte Reload
-; CHECK64: ld	11,{{[0-9]+}}(4)                      * 8-byte Reload
-; CHECK64: ld	10,{{[0-9]+}}(4)                      * 8-byte Reload
-; CHECK64: ld	9,{{[0-9]+}}(4)                       * 8-byte Reload
-; CHECK64: ld	8,{{[0-9]+}}(4)                       * 8-byte Reload
-; CHECK64: vl	23,{{[0-9]+}}(4),4                   * 16-byte Reload
-; CHECK64: vl	22,{{[0-9]+}}(4),4                   * 16-byte Reload
-; CHECK64: vl	21,{{[0-9]+}}(4),4                   * 16-byte Reload
-; CHECK64: vl	20,{{[0-9]+}}(4),4                   * 16-byte Reload
-; CHECK64: vl	19,{{[0-9]+}}(4),4                   * 16-byte Reload
-; CHECK64: vl	18,{{[0-9]+}}(4),4                   * 16-byte Reload
-; CHECK64: vl	17,{{[0-9]+}}(4),4                   * 16-byte Reload
-; CHECK64: vl	16,{{[0-9]+}}(4),4                   * 16-byte Reload
+; CHECK64: vl   16,{{[0-9]+}}(4),4
+; CHECK64: vl   17,{{[0-9]+}}(4),4
+; CHECK64: vl   18,{{[0-9]+}}(4),4
+; CHECK64: vl   19,{{[0-9]+}}(4),4
+; CHECK64: vl   20,{{[0-9]+}}(4),4
+; CHECK64: vl   21,{{[0-9]+}}(4),4
+; CHECK64: vl   22,{{[0-9]+}}(4),4
+; CHECK64: vl   23,{{[0-9]+}}(4),4
+; CHECK64: ld	8,{{[0-9]+}}(4)
+; CHECK64: ld	9,{{[0-9]+}}(4)
+; CHECK64: ld	10,{{[0-9]+}}(4)
+; CHECK64: ld	11,{{[0-9]+}}(4)
+; CHECK64: ld	12,{{[0-9]+}}(4)
+; CHECK64: ld	13,{{[0-9]+}}(4)
+; CHECK64: ld	14,{{[0-9]+}}(4)
+; CHECK64: ld	15,{{[0-9]+}}(4)
 ; CHECK64: lg  7,2072(4)
 ; CHECK64: aghi  4,320
 ; CHECK64: b 2(7)
@@ -316,12 +318,32 @@ define i64 @func5(i64 %n) {
   ret i64 %call
 }
 
+; Require saving of r5, which is not restored.
+; CHECK64: stmg 5,9,1864(4)
+; CHECK64-NEXT: aghi 4,-192
+; CHECK64: lmg 7,9,2072(4)
+; CHECK64-NEXT: aghi 4,192
+declare i32 @personality(...)
+declare void @panic()
+define void @func6() uwtable personality ptr @personality {
+entry:
+  br label %bb1
+bb1:
+  invoke void @panic()
+          to label %bb2 unwind label %bb3
+bb2:
+  ret void
+bb3:
+  %lp = landingpad { ptr, i32 }
+          catch ptr null
+  br label %bb1
+}
+
 ; CHECK-LABEL: large_stack
 ; CHECK64: agfi  4,-1048800
 ; CHECK64-NEXT: llgt  3,1208
 ; CHECK64-NEXT: cg  4,64(3)
 ; CHECK64-NEXT: jhe
-; CHECK64: * %bb.1:
 ; CHECK64: lg  3,72(3)
 ; CHECK64: basr  3,3
 ; CHECK64: stmg  6,7,2064(4)
@@ -331,22 +353,22 @@ define void @large_stack0() {
   ret void
 }
 
-; CHECK-LABEL: large_stack1
+; CHECK-LABEL: large_stack1 DS 0H
 ; CHECK64: agfi  4,-1048800
 ; CHECK64: lgr 0,3
 ; CHECK64: llgt  3,1208
 ; CHECK64: cg  4,64(3)
-; CHECK64: jhe L#BB7_2
-; CHECK64: %bb.1:
+; CHECK64: jhe L#BB8_2
 ; CHECK64: lg  3,72(3)
 ; CHECK64: basr  3,3
 ; CHECK64: bcr 0,7
-; CHECK64: L#BB7_2:
+; CHECK64: L#BB8_2 DS 0H
 ; CHECK64: stmg  6,7,2064(4)
 ; CHECK64: lgr 3,0
 
-; CHECK64: L#PPA1_large_stack1_0:
-; CHECK64: .short	6  * Length/4 of Parms
+; CHECK64: L#PPA1_large_stack1_0 DS 0H
+; CHECK64: * Length/4 of Parms
+; CHECK64:  DC XL2'0006'
 define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
   %arr = alloca [131072 x i64], align 8
   call i64 (ptr, i64, i64, i64) @fun3(ptr %arr,
@@ -361,12 +383,11 @@ define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
 ; CHECK64: agfi  4,-1048800
 ; CHECK64: llgt  3,1208
 ; CHECK64: cg  4,64(3)
-; CHECK64: jhe L#BB8_2
-; CHECK64: %bb.1:
+; CHECK64: jhe L#BB9_2
 ; CHECK64: lg  3,72(3)
 ; CHECK64: basr  3,3
 ; CHECK64: bcr 0,7
-; CHECK64: L#BB8_2:
+; CHECK64: L#BB9_2 DS 0H
 ; CHECK64: lgr 3,0
 ; CHECK64: lg  3,2192(3)
 ; CHECK64: stmg  4,12,2048(4)
@@ -379,11 +400,13 @@ define void @large_stack2(i64 %n1, i64 %n2, i64 %n3) {
   ret void
 }
 
-; CHECK-LABEL: leaf_func
-; CHECK: .long	8 * DSA Size 0x0
-; CHECK-NEXT:     * Entry Flags
-; CHECK-NEXT:     *   Bit 1: 1 = Leaf function
-; CHECK-NEXT:     *   Bit 2: 0 = Does not use alloca
+; CHECK-LABEL: L#EPM_leaf_func0_0 DS 0H
+; CHECK: * DSA Size 0x0
+; CHECK: * Entry Flags
+; CHECK: *   Bit 1: 1 = Leaf function
+; CHECK: *   Bit 2: 0 = Does not use alloca
+; CHECK:  DC XL4'00000008'
+; CHECK-LABEL: leaf_func0 DS 0H
 ; CHECK-NOT: aghi  4,
 ; CHECK-NOT: stmg
 ; CHECK: agr	1,2
@@ -402,17 +425,18 @@ define i64 @leaf_func0(i64 %a, i64 %b, i64 %c) {
 ; =============================
 ;     Tests for PPA1 Fields
 ; =============================
-; CHECK-LABEL: named_func
-; CHECK: .byte	129  * PPA1 Flags 4
+; CHECK-LABEL: named_func DS 0H
+; CHECK:      * PPA1 Flags 4
 ; CHECK-NEXT: *   Bit 7: 1 = Name Length and Name
+; CHECK-NEXT:  DC XL1'81'
 define i64 @named_func(i64 %arg) {
   %sum = add i64 1, %arg
   ret i64 %sum
 }
 
-; CHECK-LABEL: __unnamed_1
-; CHECK: .byte	128  * PPA1 Flags 4
-; CHECK-NOT: *   Bit 7: 1 = Name Length and Name
+; CHECK-LABEL: __unnamed_1 DS 0H
+; CHECK:      * PPA1 Flags 4
+; CHECK-NEXT:  DC XL1'80'
 define void @""(ptr %p) {
   call i64 (ptr) @fun1(ptr %p)
   ret void

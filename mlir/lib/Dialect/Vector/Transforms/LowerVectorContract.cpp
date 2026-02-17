@@ -253,12 +253,12 @@ private:
 ///    %bt = vector.transpose %b, [1, 0]
 ///    %aRow0 = vector.extract %a[0]
 ///    %btRow0 = vector.extract %bt[0]
-///    %c00 = vector.reduce %atRow0, %bRow0
+///    %c00 = vector.reduction %atRow0, %bRow0
 ///    %out00 = vector.insert %c00, %out[0, 0]
 ///    ...
 ///    %aRowLast = vector.extract %at[M-1]
 ///    %btRowLast = vector.extract %b[N-1]
-///    %cLastLast = vector.reduce %atRowLast, %bRowLast
+///    %cLastLast = vector.reduction %atRowLast, %bRowLast
 ///    %outcLastLast = vector.insert %cLastLast, %out[M-1, N-1]
 /// ```
 ///

@@ -1776,26 +1776,44 @@ defm SIMD_RELAXED_FMIN :
 defm SIMD_RELAXED_FMAX :
    RelaxedBinary<F64x2, int_wasm_relaxed_max, "relaxed_max", 0x110>;
 
+def relaxed_fmin : SDNode<"WebAssemblyISD::RELAXED_FMIN", SDTFPBinOp>;
+def relaxed_fmax : SDNode<"WebAssemblyISD::RELAXED_FMAX", SDTFPBinOp>;
+
+def relaxed_pmin :
+  PatFrag<(ops node:$lhs, node:$rhs), (pmin $lhs, $rhs), [{
+  return (N->getFlags().hasNoNaNs() ||
+          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
+         (N->getFlags().hasNoSignedZeros() ||
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(0)) ||
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)));
+}]>;
+
+def relaxed_pmax :
+  PatFrag<(ops node:$lhs, node:$rhs), (pmax $lhs, $rhs), [{
+  return (N->getFlags().hasNoNaNs() ||
+          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
+         (N->getFlags().hasNoSignedZeros() ||
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(0)) ||
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)));
+}]>;
+
 let Predicates = [HasRelaxedSIMD] in {
   foreach vec = [F32x4, F64x2] in {
     defvar relaxed_min = !cast<NI>("SIMD_RELAXED_FMIN_"#vec);
     defvar relaxed_max = !cast<NI>("SIMD_RELAXED_FMAX_"#vec);
 
-    // Transform standard fminimum/fmaximum to relaxed versions
-    def : Pat<(vec.vt (fminnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+    def : Pat<(vec.vt (relaxed_fmin (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
               (relaxed_min V128:$lhs, V128:$rhs)>;
-    def : Pat<(vec.vt (fminimumnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
-              (relaxed_min V128:$lhs, V128:$rhs)>;
-    def : Pat<(vec.vt (fmaxnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
-              (relaxed_max V128:$lhs, V128:$rhs)>;
-    def : Pat<(vec.vt (fmaximumnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+    def : Pat<(vec.vt (relaxed_fmax (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
               (relaxed_max V128:$lhs, V128:$rhs)>;
 
     // Transform pmin/max-supposed patterns to relaxed min max
     let AddedComplexity = 1 in {
-      def : Pat<(vec.vt (pmin (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+      def : Pat<(vec.vt (relaxed_pmin (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
                 (relaxed_min $lhs, $rhs)>;
-      def : Pat<(vec.vt (pmax (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+      def : Pat<(vec.vt (relaxed_pmax (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
                 (relaxed_max $lhs, $rhs)>;
       defm : PMinMaxInt<vec, relaxed_min, relaxed_max>;
     }

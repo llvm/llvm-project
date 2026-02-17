@@ -735,6 +735,7 @@ public:
   static MDString *get(LLVMContext &Context, const char *Str) {
     return get(Context, Str ? StringRef(Str) : StringRef());
   }
+  LLVM_ABI static MDString *getIfExists(LLVMContext &Context, StringRef Str);
 
   LLVM_ABI StringRef getString() const;
 

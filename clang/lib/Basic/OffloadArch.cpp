@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #include "clang/Basic/OffloadArch.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -90,6 +97,7 @@ static const OffloadArchToStringMap ArchNames[] = {
     GFX(1151), // gfx1151
     GFX(1152), // gfx1152
     GFX(1153), // gfx1153
+    GFX(1170), // gfx1170
     {OffloadArch::GFX12_GENERIC, "gfx12-generic", "compute_amdgcn"},
     GFX(1200), // gfx1200
     GFX(1201), // gfx1201

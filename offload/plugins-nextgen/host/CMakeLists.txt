@@ -1,9 +1,3 @@
-set(supported_targets x86_64 aarch64 ppc64 ppc64le riscv64 s390x loongarch64)
-if(NOT ${CMAKE_SYSTEM_PROCESSOR} IN_LIST supported_targets)
-  message(STATUS "Not building ${machine} NextGen offloading plugin")
-  return()
-endif()
-
 set(machine ${CMAKE_SYSTEM_PROCESSOR})
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le$")
   set(machine ppc64)
