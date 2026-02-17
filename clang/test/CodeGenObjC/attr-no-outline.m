@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - | FileCheck %s --check-prefix=OBJC
-// RUN: %clang_cc1 -emit-llvm -x objective-c++ %s -o - | FileCheck %s --check-prefix=OBJCXX
+// RUN: %clang_cc1 -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s --check-prefix=OBJC
+// RUN: %clang_cc1 -emit-llvm -x objective-c++ %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s --check-prefix=OBJCXX
 
 @interface Test
 - (int)method:(int)x;
