@@ -367,8 +367,11 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
 
 FastMathFlags VPIRFlags::getFastMathFlags() const {
   assert((OpType == OperationType::FPMathOp || OpType == OperationType::FCmp ||
-          OpType == OperationType::ReductionOp) &&
+          OpType == OperationType::ReductionOp ||
+          OpType == OperationType::Other) &&
          "recipe doesn't have fast math flags");
+  if (OpType == OperationType::Other)
+    return FastMathFlags();
   const FastMathFlagsTy &F = getFMFsRef();
   FastMathFlags Res;
   Res.setAllowReassoc(F.AllowReassoc);
@@ -584,9 +587,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
                   OnlyFirstLaneUsed || vputils::isSingleScalar(getOperand(0)));
     Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
     Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
-    FastMathFlags FMFs =
-        hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
-    return Builder.CreateSelectFMF(Cond, Op1, Op2, FMFs, Name);
+    return Builder.CreateSelectFMF(Cond, Op1, Op2, getFastMathFlags(), Name);
   }
   case VPInstruction::ActiveLaneMask: {
     // Get first lane of vector induction variable.
@@ -1948,10 +1949,8 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
   }
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
-  FastMathFlags FMF =
-      R.hasFastMathFlags() ? R.getFastMathFlags() : FastMathFlags();
   IntrinsicCostAttributes CostAttrs(
-      ID, RetTy, Arguments, ParamTys, FMF,
+				    ID, RetTy, Arguments, ParamTys, R.getFastMathFlags(),
       dyn_cast_or_null<IntrinsicInst>(R.getUnderlyingValue()),
       InstructionCost::getInvalid(), &Ctx.TLI);
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, Ctx.CostKind);

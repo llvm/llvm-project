@@ -3999,9 +3999,9 @@ public:
   ~VPScalarIVStepsRecipe() override = default;
 
   VPScalarIVStepsRecipe *clone() override {
-    return new VPScalarIVStepsRecipe(
-        getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
-        hasFastMathFlags() ? getFastMathFlags() : FastMathFlags(),
+    return new VPScalarIVStepsRecipe(getOperand(0), getOperand(1),
+                                     getOperand(2), InductionOpcode,
+                                     getFastMathFlags(),
         getDebugLoc());
   }
 

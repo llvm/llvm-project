@@ -8528,10 +8528,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
           Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
                                {Start, NewVal, NewExitingVPV}, ExitDL);
     } else {
-      FastMathFlags FMFs =
-          PhiR->hasFastMathFlags() ? PhiR->getFastMathFlags() : FastMathFlags();
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
-                      FMFs);
+                      PhiR->getFastMathFlags());
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeReductionResult,
                                {NewExitingVPV}, Flags, ExitDL);
@@ -8624,9 +8622,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
          !RecurrenceDescriptor::isFindLastRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(getRecurrenceIdentity(
-          RK, PhiTy,
-          PhiR->hasFastMathFlags() ? PhiR->getFastMathFlags()
-                                   : FastMathFlags()));
+								 RK, PhiTy, PhiR->getFastMathFlags()));
       auto *ScaleFactorVPV = Plan->getConstantInt(32, 1);
       VPValue *StartV = PHBuilder.createNaryOp(
           VPInstruction::ReductionStartVector,
