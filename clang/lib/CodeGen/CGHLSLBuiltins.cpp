@@ -361,7 +361,7 @@ static Intrinsic::ID getPrefixCountBitsIntrinsic(llvm::Triple::ArchType Arch) {
 
 // Return wave prefix sum that corresponds to the QT scalar type
 static Intrinsic::ID getWavePrefixSumIntrinsic(llvm::Triple::ArchType Arch,
-                                               CGHLSLRuntime &RT, QualType QT) {
+                                               QualType QT) {
   switch (Arch) {
   case llvm::Triple::spirv:
     return Intrinsic::spv_wave_prefix_sum;
@@ -372,6 +372,23 @@ static Intrinsic::ID getWavePrefixSumIntrinsic(llvm::Triple::ArchType Arch,
   }
   default:
     llvm_unreachable("Intrinsic WavePrefixSum"
+                     " not supported by target architecture");
+  }
+}
+
+// Return wave prefix product that corresponds to the QT scalar type
+static Intrinsic::ID getWavePrefixProductIntrinsic(llvm::Triple::ArchType Arch,
+                                                   QualType QT) {
+  switch (Arch) {
+  case llvm::Triple::spirv:
+    return Intrinsic::spv_wave_prefix_product;
+  case llvm::Triple::dxil: {
+    if (QT->isUnsignedIntegerType())
+      return Intrinsic::dx_wave_prefix_uproduct;
+    return Intrinsic::dx_wave_prefix_product;
+  }
+  default:
+    llvm_unreachable("Intrinsic WavePrefixProduct"
                      " not supported by target architecture");
   }
 }
@@ -1183,11 +1200,18 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Intrinsic::ID IID = getWavePrefixSumIntrinsic(
-        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
-        E->getArg(0)->getType());
+        getTarget().getTriple().getArch(), E->getArg(0)->getType());
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),
                            ArrayRef{OpExpr}, "hlsl.wave.prefix.sum");
+  }
+  case Builtin::BI__builtin_hlsl_wave_prefix_product: {
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID IID = getWavePrefixProductIntrinsic(
+        getTarget().getTriple().getArch(), E->getArg(0)->getType());
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), IID, {OpExpr->getType()}),
+                           ArrayRef{OpExpr}, "hlsl.wave.prefix.product");
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     auto *Arg0 = E->getArg(0);

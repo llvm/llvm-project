@@ -3885,7 +3885,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
-  case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
+  case Builtin::BI__builtin_hlsl_wave_prefix_sum:
+  case Builtin::BI__builtin_hlsl_wave_prefix_product: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
