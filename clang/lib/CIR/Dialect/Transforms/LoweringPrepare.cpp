@@ -1509,7 +1509,7 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
 
   // If a global with this name already exists (e.g. CIRGen materializes
   // constexpr locals as globals when their address is taken), reuse it.
-  if (!mlir::SymbolTable::lookupNearestSymbolFrom(
+  if (!mlir::SymbolTable::lookupSymbolIn(
           mlirModule, mlir::StringAttr::get(&getContext(), name))) {
     auto gv = cir::GlobalOp::create(builder, op.getLoc(), name, ty,
                                     /*isConstant=*/true,
