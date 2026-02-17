@@ -849,7 +849,7 @@ def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpTextForVariants<[FlangOption, FC1Option],
-    "Deprecated; use '-O3 -ffast-math -fstack-arrays' for the same behavior,"
+    "Deprecated; use '-O3 -ffast-math -fstack-arrays -fno-protect-parens' for the same behavior,"
     " or '-O3 -fstack-arrays' to enable only conforming optimizations">,
   HelpText<"Deprecated; use '-O3 -ffast-math' for the same behavior,"
            " or '-O3' to enable only conforming optimizations">;
@@ -1966,6 +1966,14 @@ defm lifetime_safety : BoolFOption<
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option], " lifetime safety for C++">>;
+
+def lifetime_safety_max_cfg_blocks
+    : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
+      Group<m_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Skip LifetimeSafety analysis for functions with CFG block "
+               "count exceeding this threshold. Specify 0 for no limit.">,
+      MarshallingInfoInt<LangOpts<"LifetimeSafetyMaxCFGBlocks">>;
 
 defm lifetime_safety_inference
     : BoolFOption<"lifetime-safety-inference",
@@ -6645,6 +6653,9 @@ def _param_EQ : Joined<["--"], "param=">, Alias<_param>;
 def _precompile : Flag<["--"], "precompile">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption]>,
   Group<Action_Group>, HelpText<"Only precompile the input">;
+def _precompile_reduced_bmi : Flag<["--"], "precompile-reduced-bmi">, Flags<[NoXarchOption]>,
+  Visibility<[ClangOption, CLOption]>,
+  Group<Action_Group>, HelpText<"Only precompile the input as a reduced BMI">;
 def _prefix_EQ : Joined<["--"], "prefix=">, Alias<B>;
 def _prefix : Separate<["--"], "prefix">, Alias<B>;
 def _preprocess : Flag<["--"], "preprocess">, Alias<E>;

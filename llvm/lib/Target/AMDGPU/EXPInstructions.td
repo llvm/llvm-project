@@ -38,7 +38,7 @@ class EXP_Pseudo<bit row, bit done>
 
 // Real instruction with optional asm operands "compr" and "vm".
 class EXP_Real_ComprVM<EXP_Pseudo ps, int subtarget>
-  : EXPCommon<0, ps.done, "exp$tgt $src0, $src1, $src2, $src3"
+  : EXPCommon<0, ps.done, "exp$tgt, $src0, $src1, $src2, $src3"
                        #!if(ps.done, " done", "")#"$compr$vm">,
     SIMCInstr<ps.PseudoInstr, subtarget> {
   let AsmMatchConverter = "cvtExp";
@@ -46,7 +46,7 @@ class EXP_Real_ComprVM<EXP_Pseudo ps, int subtarget>
 
 // Real instruction with optional asm operand "row_en".
 class EXP_Real_Row<EXP_Pseudo ps, int subtarget, string name = "exp">
-  : EXPCommon<ps.row, ps.done, name#"$tgt $src0, $src1, $src2, $src3"
+  : EXPCommon<ps.row, ps.done, name#"$tgt, $src0, $src1, $src2, $src3"
                          #!if(ps.done, " done", "")#!if(ps.row, " row_en", "")>,
     SIMCInstr<ps.PseudoInstr, subtarget> {
   let AsmMatchConverter = "cvtExp";

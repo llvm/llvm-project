@@ -1070,7 +1070,7 @@ static llvm::Constant *constStructWithPadding(CodeGenModule &CGM,
       Values.push_back(patternOrZeroFor(CGM, isPattern, PadTy));
     }
     llvm::Constant *CurOp;
-    if (constant->isZeroValue())
+    if (constant->isNullValue())
       CurOp = llvm::Constant::getNullValue(STy->getElementType(i));
     else
       CurOp = cast<llvm::Constant>(constant->getAggregateElement(i));
@@ -2023,7 +2023,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
       D.mightBeUsableInConstantExpressions(getContext())) {
     assert(!capturedByInit && "constant init contains a capturing block?");
     constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
-    if (constant && !constant->isZeroValue() &&
+    if (constant && !constant->isNullValue() &&
         (trivialAutoVarInit !=
          LangOptions::TrivialAutoVarInitKind::Uninitialized)) {
       IsPattern isPattern =
@@ -2228,8 +2228,10 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
 
   // Check the type for a cleanup.
   if (QualType::DestructionKind dtorKind = D.needsDestruction(getContext())) {
-    // Check if we're in a SEH block with EHa, prevent it
-    if (getLangOpts().EHAsynch && currentFunctionUsesSEHTry())
+    // Check if we're in a SEH block with /EH, prevent it
+    // TODO: /EHs* differs from /EHa, the former may not be executed to this
+    // point.
+    if (getLangOpts().CXXExceptions && currentFunctionUsesSEHTry())
       getContext().getDiagnostics().Report(D.getLocation(),
                                            diag::err_seh_object_unwinding);
     emitAutoVarTypeCleanup(emission, dtorKind);
