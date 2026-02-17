@@ -16,6 +16,7 @@
 // To get the test dialect def.
 include "TestDialect.td"
 include "TestAttrDefs.td"
+include "TestEnumDefs.td"
 include "TestInterfaces.td"
 include "mlir/IR/BuiltinTypes.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
@@ -284,6 +285,15 @@ def TestTypeOptionalGroupStruct : Test_Type<"TestTypeOptionalGroupStruct"> {
                         OptionalParameter<"std::optional<int>">:$b);
   let mnemonic = "optional_group_struct";
   let assemblyFormat = "`<` (`(` struct(params)^ `)`) : (`x`)? `>`";
+}
+
+def TestTypeDefaultEnumParameter
+    : Test_Type<"TestTypeDefaultEnumParameter"> {
+  let parameters = (ins
+    DefaultValuedEnumParameter<TestDefaultValuedEnum, TestDefaultCase>:$a
+  );
+  let mnemonic = "default_enum_parameter";
+  let assemblyFormat = "`<` $a `>`";
 }
 
 def TestTypeSpaces : Test_Type<"TestTypeSpaceS"> {
