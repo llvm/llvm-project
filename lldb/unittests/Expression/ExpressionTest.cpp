@@ -162,7 +162,7 @@ TEST(ExpressionTests, ExpressionOptions_Basic) {
                        llvm::FailedWithMessage("option '' does not exist"));
   EXPECT_THAT_ERROR(
       options.SetBooleanLanguageOption("", true),
-      llvm::FailedWithMessage("Can't set an option with an empty name"));
+      llvm::FailedWithMessage("can't set an option with an empty name"));
   EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption(""),
                        llvm::FailedWithMessage("option '' does not exist"));
 }
