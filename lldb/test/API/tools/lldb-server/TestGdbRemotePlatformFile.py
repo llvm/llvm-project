@@ -43,6 +43,8 @@ def uint32_trunc(x):
 
 
 class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
+    BUILD_SHARED_TESTCASE = False
+
     @skipIfWindows
     @add_test_categories(["llgs"])
     def test_platform_file_rdonly(self):
