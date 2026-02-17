@@ -83,13 +83,13 @@ SmallVector<int64_t> mlir::computeElementwiseMul(ArrayRef<int64_t> v1,
 
 int64_t mlir::computeProduct(ArrayRef<int64_t> basis) {
   assert(llvm::all_of(basis, [](int64_t s) { return s > 0; }) &&
-         "basis must be nonnegative");
+         "basis must be positive");
   return llvm::product_of(basis);
 }
 
 int64_t mlir::linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis) {
   assert(llvm::all_of(basis, [](int64_t s) { return s > 0; }) &&
-         "basis must be nonnegative");
+         "basis must be positive");
   int64_t zero = 0;
   return linearizeImpl(offsets, basis, zero);
 }
