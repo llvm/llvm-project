@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=riscv32 -run-pass=prologepilog -verify-machineinstrs -x=mir %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=riscv32 -run-pass=prologepilog -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck %s
 
 # CHECK: LLVM ERROR: Incomplete scavenging after 2nd pass
 
