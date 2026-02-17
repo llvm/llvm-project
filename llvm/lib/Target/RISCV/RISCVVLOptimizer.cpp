@@ -898,6 +898,10 @@ bool RISCVVLOptimizer::isSupportedInstr(const MachineInstr &MI) const {
   if (!RVVOpc)
     return false;
 
+  assert(!(MI.getNumExplicitDefs() == 0 && !MI.mayStore() &&
+           RISCVII::elementsDependOnVL(TII->get(RVVOpc).TSFlags)) &&
+         "No defs but elements depend on VL?");
+
   // TODO: Reduce vl for vmv.s.x and vfmv.s.f. Currently this introduces more vl
   // toggles, we need to extend PRE in RISCVInsertVSETVLI first.
   if (RVVOpc == RISCV::VMV_S_X || RVVOpc == RISCV::VFMV_S_F)
