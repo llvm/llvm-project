@@ -17312,21 +17312,6 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
   return DAG.getAnyExtOrTrunc(Result, DL, VT);
 }
 
-static std::optional<Intrinsic::ID> getPairwiseOpForReduction(unsigned Op) {
-  switch (Op) {
-  case ISD::VECREDUCE_SMIN:
-    return Intrinsic::aarch64_sve_sminp;
-  case ISD::VECREDUCE_SMAX:
-    return Intrinsic::aarch64_sve_smaxp;
-  case ISD::VECREDUCE_UMIN:
-    return Intrinsic::aarch64_sve_uminp;
-  case ISD::VECREDUCE_UMAX:
-    return Intrinsic::aarch64_sve_umaxp;
-  default:
-    return std::nullopt;
-  }
-}
-
 SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -17342,75 +17327,10 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
                        DAG.getExtractVectorElt(DL, MVT::f16, Src, 1));
   }
 
-  // Try to lower fixed length reductions to SVE.
-  bool OverrideNEON = !Subtarget->isNeonAvailable() ||
-                      Op.getOpcode() == ISD::VECREDUCE_AND ||
-                      Op.getOpcode() == ISD::VECREDUCE_OR ||
-                      Op.getOpcode() == ISD::VECREDUCE_XOR ||
-                      Op.getOpcode() == ISD::VECREDUCE_FADD ||
-                      (Op.getOpcode() != ISD::VECREDUCE_ADD &&
-                       SrcVT.getVectorElementType() == MVT::i64);
-
-  bool UsesSVEForFixedLengthVT = useSVEForFixedLengthVectorVT(
-      SrcVT, OverrideNEON && Subtarget->useSVEForFixedLengthVectors());
-
-  // Always lower try to lower v2i64 vectors to pairwise operations (as NEON
-  // does not natively support reductions on these types). Try lowering v2i32
-  // vectors to pairwise operations when using SVE for fixed-length VTs, as the
-  // pairwise operations are likely to be cheaper than a full reduction.
-  bool TryPairwiseOps =
-      SrcVT == MVT::v2i64 || (UsesSVEForFixedLengthVT && SrcVT == MVT::v2i32);
-
-  // Attempt to lower v2<ty> reductions to SVE2 pairwise operations.
-  auto PairwiseIID = getPairwiseOpForReduction(Op->getOpcode());
-  if (TryPairwiseOps && PairwiseIID &&
-      (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
-    SDValue Pg = getPredicateForVector(DAG, DL, SrcVT);
-    EVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT);
-    SDValue VecOp = convertToScalableVector(DAG, ContainerVT, Src);
-    SDValue Rdx = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VecOp.getValueType(),
-                              DAG.getConstant(*PairwiseIID, DL, MVT::i32), Pg,
-                              VecOp, VecOp);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, Op.getValueType(), Rdx,
-                       DAG.getConstant(0, DL, MVT::i64));
-  }
-
-  if (SrcVT.isScalableVector() || UsesSVEForFixedLengthVT) {
-
-    if (SrcVT.getVectorElementType() == MVT::i1)
-      return LowerPredReductionToSVE(Op, DAG);
-
-    switch (Op.getOpcode()) {
-    case ISD::VECREDUCE_ADD:
-      return LowerReductionToSVE(AArch64ISD::UADDV_PRED, Op, DAG);
-    case ISD::VECREDUCE_AND:
-      return LowerReductionToSVE(AArch64ISD::ANDV_PRED, Op, DAG);
-    case ISD::VECREDUCE_OR:
-      return LowerReductionToSVE(AArch64ISD::ORV_PRED, Op, DAG);
-    case ISD::VECREDUCE_SMAX:
-      return LowerReductionToSVE(AArch64ISD::SMAXV_PRED, Op, DAG);
-    case ISD::VECREDUCE_SMIN:
-      return LowerReductionToSVE(AArch64ISD::SMINV_PRED, Op, DAG);
-    case ISD::VECREDUCE_UMAX:
-      return LowerReductionToSVE(AArch64ISD::UMAXV_PRED, Op, DAG);
-    case ISD::VECREDUCE_UMIN:
-      return LowerReductionToSVE(AArch64ISD::UMINV_PRED, Op, DAG);
-    case ISD::VECREDUCE_XOR:
-      return LowerReductionToSVE(AArch64ISD::EORV_PRED, Op, DAG);
-    case ISD::VECREDUCE_FADD:
-      return LowerReductionToSVE(AArch64ISD::FADDV_PRED, Op, DAG);
-    case ISD::VECREDUCE_FMAX:
-      return LowerReductionToSVE(AArch64ISD::FMAXNMV_PRED, Op, DAG);
-    case ISD::VECREDUCE_FMIN:
-      return LowerReductionToSVE(AArch64ISD::FMINNMV_PRED, Op, DAG);
-    case ISD::VECREDUCE_FMAXIMUM:
-      return LowerReductionToSVE(AArch64ISD::FMAXV_PRED, Op, DAG);
-    case ISD::VECREDUCE_FMINIMUM:
-      return LowerReductionToSVE(AArch64ISD::FMINV_PRED, Op, DAG);
-    default:
-      llvm_unreachable("Unhandled fixed length reduction");
-    }
-  }
+  // Try lowering the reduction to SVE. This will fail for NEON reductions where
+  // SVE is not preferred.
+  if (SDValue Result = LowerReductionToSVE(Op, DAG))
+    return Result;
 
   // Lower NEON reductions.
   switch (Op.getOpcode()) {
@@ -31525,22 +31445,95 @@ SDValue AArch64TargetLowering::LowerPredReductionToSVE(SDValue ReduceOp,
   return SDValue();
 }
 
-SDValue AArch64TargetLowering::LowerReductionToSVE(unsigned Opcode,
-                                                   SDValue ScalarOp,
-                                                   SelectionDAG &DAG) const {
-  SDLoc DL(ScalarOp);
-  SDValue VecOp = ScalarOp.getOperand(0);
-  EVT SrcVT = VecOp.getValueType();
+/// Returns the pairwise SVE2 op that could be used for a v2<ty> reduction.
+static std::optional<Intrinsic::ID> getPairwiseOpForReduction(unsigned Op) {
+  switch (Op) {
+  case ISD::VECREDUCE_SMIN:
+    return Intrinsic::aarch64_sve_sminp;
+  case ISD::VECREDUCE_SMAX:
+    return Intrinsic::aarch64_sve_smaxp;
+  case ISD::VECREDUCE_UMIN:
+    return Intrinsic::aarch64_sve_uminp;
+  case ISD::VECREDUCE_UMAX:
+    return Intrinsic::aarch64_sve_umaxp;
+  default:
+    return std::nullopt;
+  }
+}
 
-  if (useSVEForFixedLengthVectorVT(
-          SrcVT,
-          /*OverrideNEON=*/Subtarget->useSVEForFixedLengthVectors())) {
-    EVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT);
-    VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
+/// Returns the corresponding predicated SVE reduction opcode for a VECREDUCE_*.
+static unsigned getPredicatedReductionOpcode(unsigned Op) {
+  switch (Op) {
+  case ISD::VECREDUCE_ADD:
+    return AArch64ISD::UADDV_PRED;
+  case ISD::VECREDUCE_AND:
+    return AArch64ISD::ANDV_PRED;
+  case ISD::VECREDUCE_OR:
+    return AArch64ISD::ORV_PRED;
+  case ISD::VECREDUCE_SMAX:
+    return AArch64ISD::SMAXV_PRED;
+  case ISD::VECREDUCE_SMIN:
+    return AArch64ISD::SMINV_PRED;
+  case ISD::VECREDUCE_UMAX:
+    return AArch64ISD::UMAXV_PRED;
+  case ISD::VECREDUCE_UMIN:
+    return AArch64ISD::UMINV_PRED;
+  case ISD::VECREDUCE_XOR:
+    return AArch64ISD::EORV_PRED;
+  case ISD::VECREDUCE_FADD:
+    return AArch64ISD::FADDV_PRED;
+  case ISD::VECREDUCE_FMAX:
+    return AArch64ISD::FMAXNMV_PRED;
+  case ISD::VECREDUCE_FMIN:
+    return AArch64ISD::FMINNMV_PRED;
+  case ISD::VECREDUCE_FMAXIMUM:
+    return AArch64ISD::FMAXV_PRED;
+  case ISD::VECREDUCE_FMINIMUM:
+    return AArch64ISD::FMINV_PRED;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+}
+
+bool AArch64TargetLowering::shouldLowerReductionToSVE(
+    SDValue RdxOp, std::optional<Intrinsic::ID> &PairwiseOpIID) const {
+  EVT SrcVT = RdxOp.getOperand(0).getValueType();
+  if (SrcVT.isScalableVector())
+    return true;
+
+  bool OverrideNEON = !Subtarget->isNeonAvailable() ||
+                      RdxOp.getOpcode() == ISD::VECREDUCE_AND ||
+                      RdxOp.getOpcode() == ISD::VECREDUCE_OR ||
+                      RdxOp.getOpcode() == ISD::VECREDUCE_XOR ||
+                      RdxOp.getOpcode() == ISD::VECREDUCE_FADD ||
+                      (RdxOp.getOpcode() != ISD::VECREDUCE_ADD &&
+                       SrcVT.getVectorElementType() == MVT::i64);
+
+  bool UseSVE = useSVEForFixedLengthVectorVT(
+      SrcVT, OverrideNEON && Subtarget->useSVEForFixedLengthVectors());
+
+  // Always lower v2i64 vectors to pairwise SVE2 operations when possible as
+  // NEON does not natively support reductions on v2i64. Lower v2i32 to pairwise
+  // SVE2 operations when UseSVE is true, as the pairwise ops are likely to be
+  // cheaper than a full reduction.
+  if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
+    if (SrcVT == MVT::v2i64 || (UseSVE && SrcVT == MVT::v2i32)) {
+      PairwiseOpIID = getPairwiseOpForReduction(RdxOp.getOpcode());
+      UseSVE |= PairwiseOpIID.has_value();
+    }
   }
 
+  return UseSVE;
+}
+
+SDValue AArch64TargetLowering::LowerReductionToSVE(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue VecOp = Op.getOperand(0);
+  EVT SrcVT = VecOp.getValueType();
+
   // Lower VECREDUCE_ADD of nxv2i1-nxv16i1 to CNTP rather than UADDV.
-  if (ScalarOp.getOpcode() == ISD::VECREDUCE_ADD &&
+  if (SrcVT.isScalableVector() && Op.getOpcode() == ISD::VECREDUCE_ADD &&
       VecOp.getOpcode() == ISD::ZERO_EXTEND) {
     SDValue BoolVec = VecOp.getOperand(0);
     if (BoolVec.getValueType().getVectorElementType() == MVT::i1) {
@@ -31549,25 +31542,47 @@ SDValue AArch64TargetLowering::LowerReductionToSVE(unsigned Opcode,
           ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
           DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
           BoolVec, BoolVec);
-      return DAG.getAnyExtOrTrunc(CntpOp, DL, ScalarOp.getValueType());
+      return DAG.getAnyExtOrTrunc(CntpOp, DL, Op.getValueType());
     }
   }
 
-  // UADDV always returns an i64 result.
-  EVT ResVT = (Opcode == AArch64ISD::UADDV_PRED) ? MVT::i64 :
-                                                   SrcVT.getVectorElementType();
-  EVT RdxVT = SrcVT;
-  if (SrcVT.isFixedLengthVector() || Opcode == AArch64ISD::UADDV_PRED)
-    RdxVT = getPackedSVEVectorVT(ResVT);
+  if (SrcVT.isScalableVector() && SrcVT.getVectorElementType() == MVT::i1)
+    return LowerPredReductionToSVE(Op, DAG);
 
+  std::optional<Intrinsic::ID> PairwiseOpIID;
+  if (!shouldLowerReductionToSVE(Op, PairwiseOpIID))
+    return SDValue();
+
+  if (!SrcVT.isScalableVector()) {
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT);
+    VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
+  }
+
+  EVT ResVT = SrcVT.getVectorElementType();
   SDValue Pg = getPredicateForVector(DAG, DL, SrcVT);
-  SDValue Rdx = DAG.getNode(Opcode, DL, RdxVT, Pg, VecOp);
+
+  SDValue Rdx;
+  if (PairwiseOpIID) {
+    Rdx = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VecOp.getValueType(),
+                      DAG.getConstant(*PairwiseOpIID, DL, MVT::i32), Pg, VecOp,
+                      VecOp);
+  } else {
+    unsigned RdxOpcode = getPredicatedReductionOpcode(Op.getOpcode());
+    // UADDV always returns an i64 result.
+    if (RdxOpcode == AArch64ISD::UADDV_PRED)
+      ResVT = MVT::i64;
+    EVT RdxVT = SrcVT;
+    if (SrcVT.isFixedLengthVector() || RdxOpcode == AArch64ISD::UADDV_PRED)
+      RdxVT = getPackedSVEVectorVT(ResVT);
+    Rdx = DAG.getNode(RdxOpcode, DL, RdxVT, Pg, VecOp);
+  }
+
   SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResVT,
                             Rdx, DAG.getConstant(0, DL, MVT::i64));
 
   // The VEC_REDUCE nodes expect an element size result.
-  if (ResVT != ScalarOp.getValueType())
-    Res = DAG.getAnyExtOrTrunc(Res, DL, ScalarOp.getValueType());
+  if (ResVT != Op.getValueType())
+    Res = DAG.getAnyExtOrTrunc(Res, DL, Op.getValueType());
 
   return Res;
 }
