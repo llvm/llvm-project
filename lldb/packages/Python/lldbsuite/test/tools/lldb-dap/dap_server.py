@@ -1597,7 +1597,7 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_setVariable(self, containingVarRef, name, value, id=None):
+    def request_setVariable(self, containingVarRef, name, value, id=None, is_hex=None):
         args_dict = {
             "variablesReference": containingVarRef,
             "name": name,
@@ -1605,6 +1605,8 @@ class DebugCommunication(object):
         }
         if id is not None:
             args_dict["id"] = id
+        if is_hex is not None:
+            args_dict["format"] = {"hex": is_hex}
         command_dict = {
             "command": "setVariable",
             "type": "request",
