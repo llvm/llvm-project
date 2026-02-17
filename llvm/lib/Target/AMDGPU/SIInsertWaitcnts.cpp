@@ -1003,10 +1003,6 @@ private:
   // State of all counters at each async mark encountered so far.
   SmallVector<CounterValueArray> AsyncMarks;
 
-  // For each backedge in isolation, the algorithm reaches a fixed point after
-  // the first call to merge(). This is unchanged even with the AsyncMarks
-  // array because we call mergeScore just like the other cases.
-  //
   // But in the rare pathological case, a nest of loops that pushes marks
   // without waiting on any mark can cause AsyncMarks to grow very large. We cap
   // it to a reasonable limit. We can tune this later or potentially introduce a
