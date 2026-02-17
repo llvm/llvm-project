@@ -112,7 +112,7 @@ func.func @test_f64_slice(%arg0: tensor<13x21x3xf64>) -> tensor<4x11x1xf64> {
   %size = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
   %start = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // COMMON: %[[SLICE:.*]] = tosa.slice %{{.*}}, %{{.*}}, %{{.*}} : (tensor<13x21x3xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xf32>
-  %0 = tosa.slice %arg0, %size, %start : (tensor<13x21x3xf64>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xf64>
+  %0 = tosa.slice %arg0, %start, %size : (tensor<13x21x3xf64>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xf64>
   // DEFAULT: %[[OUT:.*]] = tosa.cast %[[SLICE]] : (tensor<4x11x1xf32>) -> tensor<4x11x1xf64>
   // DEFAULT: return %[[OUT]] : tensor<4x11x1xf64>
   // FUNCBOUND: return %[[SLICE]] : tensor<4x11x1xf32>
