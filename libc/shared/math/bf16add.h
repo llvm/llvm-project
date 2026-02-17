@@ -1,4 +1,4 @@
-//===-- Implementation of bf16add function --------------------------------===//
+//===-- Shared bf16add function ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/bf16add.h"
+#ifndef LLVM_LIBC_SHARED_MATH_BF16ADD_H
+#define LLVM_LIBC_SHARED_MATH_BF16ADD_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/bf16add.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(bfloat16, bf16add, (double x, double y)) {
-  return math::bf16add(x, y);
-}
+using math::bf16add;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_BF16ADD_H
