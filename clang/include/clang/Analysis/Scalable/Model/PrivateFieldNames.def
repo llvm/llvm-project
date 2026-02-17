@@ -19,8 +19,6 @@
 
 FIELD(BuildNamespace, Kind)
 FIELD(BuildNamespace, Name)
-FIELD(EntityId, Index)
-FIELD(EntityIdTable, Entities)
 FIELD(EntityName, Namespace)
 FIELD(EntityName, Suffix)
 FIELD(EntityName, USR)
