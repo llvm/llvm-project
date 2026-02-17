@@ -707,4 +707,65 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_negzero_nsz_nxv8bf16(<vscale x 8 x b
   ret <vscale x 8 x bfloat> %fsub
 }
 
+define <vscale x 4 x float> @partial_reduce_to_nxv4f32(<vscale x 4 x float> %acc, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; SVE2-LABEL: fdot_wide_nxv4f32:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    uunpklo z3.s, z1.h
+; SVE2-NEXT:    uunpklo z4.s, z2.h
+; SVE2-NEXT:    ptrue p0.s
+; SVE2-NEXT:    uunpkhi z1.s, z1.h
+; SVE2-NEXT:    uunpkhi z2.s, z2.h
+; SVE2-NEXT:    fcvt z3.s, p0/m, z3.h
+; SVE2-NEXT:    fcvt z4.s, p0/m, z4.h
+; SVE2-NEXT:    fcvt z1.s, p0/m, z1.h
+; SVE2-NEXT:    fcvt z2.s, p0/m, z2.h
+; SVE2-NEXT:    fmul z3.s, z3.s, z4.s
+; SVE2-NEXT:    fmul z1.s, z1.s, z2.s
+; SVE2-NEXT:    fadd z0.s, z0.s, z3.s
+; SVE2-NEXT:    fadd z0.s, z0.s, z1.s
+; SVE2-NEXT:    ret
+;
+; SVE2P1-LABEL: fdot_wide_nxv4f32:
+; SVE2P1:       // %bb.0: // %entry
+; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
+; SVE2P1-NEXT:    ret
+; SVE-LABEL: partial_reduce_to_nxv4f32:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    uunpklo z3.s, z1.h
+; SVE-NEXT:    uunpklo z4.s, z2.h
+; SVE-NEXT:    uunpkhi z1.s, z1.h
+; SVE-NEXT:    uunpkhi z2.s, z2.h
+; SVE-NEXT:    lsl z3.s, z3.s, #16
+; SVE-NEXT:    lsl z4.s, z4.s, #16
+; SVE-NEXT:    lsl z1.s, z1.s, #16
+; SVE-NEXT:    lsl z2.s, z2.s, #16
+; SVE-NEXT:    fmul z3.s, z3.s, z4.s
+; SVE-NEXT:    fmul z1.s, z1.s, z2.s
+; SVE-NEXT:    fadd z0.s, z0.s, z3.s
+; SVE-NEXT:    fadd z0.s, z0.s, z1.s
+; SVE-NEXT:    ret
+;
+; SVE-B16B16-LABEL: partial_reduce_to_nxv4f32:
+; SVE-B16B16:       // %bb.0: // %entry
+; SVE-B16B16-NEXT:    uunpklo z3.s, z1.h
+; SVE-B16B16-NEXT:    uunpklo z4.s, z2.h
+; SVE-B16B16-NEXT:    uunpkhi z1.s, z1.h
+; SVE-B16B16-NEXT:    uunpkhi z2.s, z2.h
+; SVE-B16B16-NEXT:    lsl z3.s, z3.s, #16
+; SVE-B16B16-NEXT:    lsl z4.s, z4.s, #16
+; SVE-B16B16-NEXT:    lsl z1.s, z1.s, #16
+; SVE-B16B16-NEXT:    lsl z2.s, z2.s, #16
+; SVE-B16B16-NEXT:    fmul z3.s, z3.s, z4.s
+; SVE-B16B16-NEXT:    fmul z1.s, z1.s, z2.s
+; SVE-B16B16-NEXT:    fadd z0.s, z0.s, z3.s
+; SVE-B16B16-NEXT:    fadd z0.s, z0.s, z1.s
+; SVE-B16B16-NEXT:    ret
+entry:
+  %a.wide = fpext <vscale x 8 x bfloat> %a to <vscale x 8 x float>
+  %b.wide = fpext <vscale x 8 x bfloat> %b to <vscale x 8 x float>
+  %mult = fmul <vscale x 8 x float> %a.wide, %b.wide
+  %partial.reduce = call <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %mult)
+  ret <vscale x 4 x float> %partial.reduce
+}
+
 declare <vscale x 8 x bfloat> @llvm.fma.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
