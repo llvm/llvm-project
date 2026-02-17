@@ -119,7 +119,7 @@ namespace cwg1638 { // cwg1638: 3.1
     friend enum class A<unsigned>::E;
     // since-cxx11-error@-1 {{reference to enumeration must use 'enum' not 'enum class'}}
     // since-cxx11-error@-2 {{elaborated enum specifier cannot be declared as a friend}}
-    // since-cxx11-note@-3 {{remove 'enum class' to befriend an enum}}
+    //   since-cxx11-note@-3 {{remove 'enum class' to befriend an enum}}
   };
 #endif
 } // namespace cwg1638

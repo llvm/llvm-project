@@ -1,0 +1,100 @@
+set(TARGET_LIBC_ENTRYPOINTS
+    # ctype.h entrypoints
+    libc.src.ctype.isalnum
+    libc.src.ctype.isalnum_l
+    libc.src.ctype.isalpha
+    libc.src.ctype.isalpha_l
+    libc.src.ctype.isascii
+    libc.src.ctype.isblank
+    libc.src.ctype.isblank_l
+    libc.src.ctype.iscntrl
+    libc.src.ctype.iscntrl_l
+    libc.src.ctype.isdigit
+    libc.src.ctype.isdigit_l
+    libc.src.ctype.isgraph
+    libc.src.ctype.isgraph_l
+    libc.src.ctype.islower
+    libc.src.ctype.islower_l
+    libc.src.ctype.isprint
+    libc.src.ctype.isprint_l
+    libc.src.ctype.ispunct
+    libc.src.ctype.ispunct_l
+    libc.src.ctype.isspace
+    libc.src.ctype.isspace_l
+    libc.src.ctype.isupper
+    libc.src.ctype.isupper_l
+    libc.src.ctype.isxdigit
+    libc.src.ctype.isxdigit_l
+    libc.src.ctype.toascii
+    libc.src.ctype.tolower
+    libc.src.ctype.tolower_l
+    libc.src.ctype.toupper
+    libc.src.ctype.toupper_l
+
+    # string.h entrypoints
+    libc.src.string.memccpy
+    libc.src.string.memchr
+    libc.src.string.memcmp
+    libc.src.string.memcpy
+    libc.src.string.memmem
+    libc.src.string.memmove
+    libc.src.string.mempcpy
+    libc.src.string.memrchr
+    libc.src.string.memset
+    libc.src.string.stpcpy
+    libc.src.string.stpncpy
+    libc.src.string.strcasestr
+    libc.src.string.strcat
+    libc.src.string.strchr
+    libc.src.string.strchrnul
+    libc.src.string.strcmp
+    libc.src.string.strcoll
+    libc.src.string.strcoll_l
+    libc.src.string.strcpy
+    libc.src.string.strcspn
+    libc.src.string.strdup
+    libc.src.string.strerror
+    libc.src.string.strlcat
+    libc.src.string.strlcpy
+    libc.src.string.strlen
+    libc.src.string.strncat
+    libc.src.string.strncmp
+    libc.src.string.strncpy
+    libc.src.string.strndup
+    libc.src.string.strnlen
+    libc.src.string.strpbrk
+    libc.src.string.strrchr
+    libc.src.string.strsep
+    libc.src.string.strspn
+    libc.src.string.strstr
+    libc.src.string.strtok
+    libc.src.string.strtok_r
+    libc.src.string.strxfrm
+    libc.src.string.strxfrm_l
+
+    # strings.h entrypoints
+    libc.src.strings.bcmp
+    libc.src.strings.bcopy
+    libc.src.strings.bzero
+    libc.src.strings.index
+    libc.src.strings.rindex
+    libc.src.strings.strcasecmp
+    libc.src.strings.strncasecmp
+
+)
+
+set(TARGET_LIBM_ENTRYPOINTS
+)
+
+if(LIBC_TYPES_HAS_FLOAT16)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+  )
+endif()
+
+list(APPEND TARGET_LIBM_ENTRYPOINTS
+)
+
+set(TARGET_LLVMLIBC_ENTRYPOINTS
+  ${TARGET_LIBC_ENTRYPOINTS}
+  ${TARGET_LIBM_ENTRYPOINTS}
+)
