@@ -9,14 +9,14 @@
 #ifndef LLVM_CLANG_ANALYSIS_SCALABLE_TUSUMMARY_TUSUMMARYBUILDER_H
 #define LLVM_CLANG_ANALYSIS_SCALABLE_TUSUMMARY_TUSUMMARYBUILDER_H
 
+#include "clang/Analysis/Scalable/Model/EntityId.h"
+#include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
 #include <memory>
 #include <utility>
 
 namespace clang::ssaf {
 
-class EntityId;
 class EntityName;
-class EntitySummary;
 class TUSummary;
 
 class TUSummaryBuilder {
@@ -31,14 +31,25 @@ public:
   /// This consumes the \p Data only if \p Entity wasn't associated yet with the
   /// same kind of EntitySummary.
   /// \returns a pointer to the EntitySummary and whether it inserted or not.
-  /// \note Be sure to pass exactly an expression of type
-  /// \sa std::unique_ptr<EntitySummary>, otherwise the conversion operator will
-  /// automatically consume the \p Data.
+  template <typename ConcreteEntitySummary,
+            DerivesFromEntitySummary<ConcreteEntitySummary> * = nullptr>
   std::pair<EntitySummary *, bool>
-  addSummary(EntityId Entity, std::unique_ptr<EntitySummary> &&Data);
+  addSummary(EntityId Entity, std::unique_ptr<ConcreteEntitySummary> &&Data) {
+    std::unique_ptr<EntitySummary> TypeErasedData = std::move(Data);
+    auto [It, Inserted] = addSummaryImpl(Entity, std::move(TypeErasedData));
+    // Move it back on failue to keep the `Data` unconsumed.
+    if (!Inserted) {
+      Data = std::unique_ptr<ConcreteEntitySummary>(
+          static_cast<ConcreteEntitySummary *>(TypeErasedData.release()));
+    }
+    return {It, Inserted};
+  }
 
 private:
   TUSummary &Summary;
+
+  std::pair<EntitySummary *, bool>
+  addSummaryImpl(EntityId Entity, std::unique_ptr<EntitySummary> &&Data);
 };
 
 } // namespace clang::ssaf
