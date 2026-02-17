@@ -510,3 +510,73 @@ Symbols:
     Section:  .text
     Value:    0x0 
 ...
+
+## Check multiple function names handling.
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t4 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM-MULTI-NAMES -DFILE=%t4
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t4 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=JSON-MULTI-NAMES -DFILE=%t4
+
+# LLVM-MULTI-NAMES:      CallGraph [
+# LLVM-MULTI-NAMES-NEXT:   Function {
+# LLVM-MULTI-NAMES-NEXT:     Names: [alias, foo]
+# LLVM-MULTI-NAMES-NEXT:     Address: 0x1000
+# LLVM-MULTI-NAMES-NEXT:     Version: 0
+# LLVM-MULTI-NAMES-NEXT:     IsIndirectTarget: Yes
+# LLVM-MULTI-NAMES-NEXT:     TypeID: 0x0
+# LLVM-MULTI-NAMES-NEXT:     NumDirectCallees: 0
+# LLVM-MULTI-NAMES-NEXT:     DirectCallees [
+# LLVM-MULTI-NAMES-NEXT:     ]
+# LLVM-MULTI-NAMES-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-MULTI-NAMES-NEXT:     IndirectTypeIDs: []
+# LLVM-MULTI-NAMES-NEXT:   }
+# LLVM-MULTI-NAMES-NEXT: ]
+
+# JSON-MULTI-NAMES:      "CallGraph": [
+# JSON-MULTI-NAMES-NEXT:    {
+# JSON-MULTI-NAMES-NEXT:      "Function": {
+# JSON-MULTI-NAMES-NEXT:        "Names": [
+# JSON-MULTI-NAMES-NEXT:          "alias",
+# JSON-MULTI-NAMES-NEXT:          "foo"
+# JSON-MULTI-NAMES-NEXT:        ],
+# JSON-MULTI-NAMES-NEXT:        "Address": 4096,
+# JSON-MULTI-NAMES-NEXT:        "Version": 0,
+# JSON-MULTI-NAMES-NEXT:        "IsIndirectTarget": true,
+# JSON-MULTI-NAMES-NEXT:        "TypeID": 0,
+# JSON-MULTI-NAMES-NEXT:        "NumDirectCallees": 0,
+# JSON-MULTI-NAMES-NEXT:        "DirectCallees": [],
+# JSON-MULTI-NAMES-NEXT:        "NumIndirectTargetTypeIDs": 0,
+# JSON-MULTI-NAMES-NEXT:        "IndirectTypeIDs": []
+# JSON-MULTI-NAMES-NEXT:      }
+# JSON-MULTI-NAMES-NEXT:    }
+# JSON-MULTI-NAMES-NEXT:  ]
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Flags:  [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Type:   SHT_LLVM_CALL_GRAPH
+    Flags:  [ SHF_LINK_ORDER ]
+    Link:   .text
+    ContentArray: [
+      ## --- foo/alias ---
+      0x00, ## Version
+      0x01, ## Flags
+      0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x1000
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  ## FunctionTypeID: 0
+    ]
+Symbols:
+  - Name:     alias
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1000
