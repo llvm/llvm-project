@@ -42,6 +42,9 @@ private:
   bool shortenOn001AddCC(MachineInstr &MI, unsigned Opcode);
   bool shortenFPConv(MachineInstr &MI, unsigned Opcode);
   bool shortenFusedFPOp(MachineInstr &MI, unsigned Opcode);
+  MCRegister getUnneededRISBGSubReg(const MachineInstr &MI) const;
+  void getPreservedSubRegs(const MachineInstr &MI,
+                           SmallVectorImpl<MCRegister> &Result) const;
 
   const SystemZInstrInfo *TII;
   const TargetRegisterInfo *TRI;
@@ -198,6 +201,128 @@ bool SystemZShortenInst::shortenFusedFPOp(MachineInstr &MI, unsigned Opcode) {
     return true;
   }
   return false;
+}
+
+// For RISBG-family instructions, return the sub-register of R2 that is NOT
+// needed by the instruction's bit selection, or MCRegister() if both halves
+// may be needed.  This allows refining the liveness of R2 when only one
+// 32-bit half is actually read.
+MCRegister
+SystemZShortenInst::getUnneededRISBGSubReg(const MachineInstr &MI) const {
+  bool IsOpt;
+  switch (MI.getOpcode()) {
+  case SystemZ::RISBG:
+  case SystemZ::RISBGZ:
+  case SystemZ::RISBGN:
+  case SystemZ::RISBGNZ:
+  case SystemZ::RNSBG:
+  case SystemZ::ROSBG:
+  case SystemZ::RXSBG:
+    IsOpt = false;
+    break;
+  case SystemZ::RISBGOpt:
+  case SystemZ::RISBGZOpt:
+  case SystemZ::RISBGNOpt:
+  case SystemZ::RISBGNZOpt:
+  case SystemZ::RNSBGOpt:
+  case SystemZ::ROSBGOpt:
+  case SystemZ::RXSBGOpt:
+    IsOpt = true;
+    break;
+  default:
+    return MCRegister();
+  }
+
+  // Operand layout:
+  //   0: R1 (def), 1: R1src (tied), 2: R2, 3: I3 (start), 4: I4 (end)
+  //   5: I5 (rotation) [regular only; Opt variants have I5 implicitly 0]
+  Register R1 = MI.getOperand(0).getReg();
+  const MachineOperand &R1Src = MI.getOperand(1);
+  Register R2 = MI.getOperand(2).getReg();
+  unsigned I3 = MI.getOperand(3).getImm();
+  unsigned I4 = MI.getOperand(4).getImm();
+  unsigned I5 = IsOpt ? 0 : MI.getOperand(5).getImm();
+
+  // Only refine GR64 registers.
+  if (!SystemZ::GR64BitRegClass.contains(R2))
+    return MCRegister();
+
+  // If R1 == R2 and R1src is actually read, the full GR64 is needed
+  // (the non-selected bits come from R1src which aliases R2).
+  if (R1 == R2 && R1Src.readsReg())
+    return MCRegister();
+
+  unsigned Start = I3 & 63;
+  unsigned End = I4 & 63;
+  unsigned Rotate = I5 & 63;
+
+  // Wrapping selection in the instruction-level bit range.
+  if (Start > End)
+    return MCRegister();
+
+  // De-rotate to find the original bit positions in R2.
+  unsigned OrigStart = (Start + Rotate) & 63;
+  unsigned OrigEnd = (End + Rotate) & 63;
+
+  // Wrapping after de-rotation means both halves may be touched.
+  if (OrigStart > OrigEnd)
+    return MCRegister();
+
+  // SystemZ bit numbering: 0-31 = subreg_h32, 32-63 = subreg_l32.
+  if (OrigEnd <= 31)
+    return TRI->getSubReg(R2, SystemZ::subreg_l32);
+  if (OrigStart >= 32)
+    return TRI->getSubReg(R2, SystemZ::subreg_h32);
+
+  return MCRegister();
+}
+
+// Collect sub-registers whose liveness should not be forced by stepBackward.
+// Two sources:
+//
+// 1. RISBG-family: bit-range analysis shows only one half of R2 is needed.
+//
+// 2. Pass-through: an instruction with implicit use + implicit-def of a GR64
+//    alongside an explicit sub-register def merely preserves the other half.
+//    stepBackward's implicit use would force it live, but it should only
+//    remain live if it was already live before the instruction.
+void SystemZShortenInst::getPreservedSubRegs(
+    const MachineInstr &MI, SmallVectorImpl<MCRegister> &Result) const {
+  // RISBG refinement.
+  if (MCRegister R = getUnneededRISBGSubReg(MI))
+    Result.push_back(R);
+
+  // Detect pass-through sub-registers.
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg() || !MO.readsReg() || !MO.isImplicit() ||
+        !MO.getReg().isPhysical())
+      continue;
+    MCRegister SuperReg = MO.getReg().asMCReg();
+    if (!SystemZ::GR64BitRegClass.contains(SuperReg))
+      continue;
+
+    // Look for a matching implicit-def and explicit sub-register def.
+    bool HasImplicitDef = false;
+    MCRegister ExplicitSubDef;
+    for (const MachineOperand &MO2 : MI.operands()) {
+      if (!MO2.isReg() || !MO2.isDef() || !MO2.getReg().isPhysical())
+        continue;
+      MCRegister DefReg = MO2.getReg().asMCReg();
+      if (DefReg == SuperReg && MO2.isImplicit())
+        HasImplicitDef = true;
+      else if (TRI->isSubRegister(SuperReg, DefReg) && !MO2.isImplicit())
+        ExplicitSubDef = DefReg;
+    }
+    if (!HasImplicitDef || !ExplicitSubDef)
+      continue;
+
+    // The sub-register NOT explicitly defined has pass-through semantics.
+    unsigned SubIdx = TRI->getSubRegIndex(SuperReg, ExplicitSubDef);
+    unsigned OtherIdx = (SubIdx == SystemZ::subreg_l32) ? SystemZ::subreg_h32
+                                                        : SystemZ::subreg_l32;
+    if (MCRegister Other = TRI->getSubReg(SuperReg, OtherIdx))
+      Result.push_back(Other);
+  }
 }
 
 // Process all instructions in MBB.  Return true if something changed.
@@ -374,7 +499,23 @@ bool SystemZShortenInst::processBlock(MachineBasicBlock &MBB) {
     }
     }
 
+    // Collect sub-registers that should preserve their liveness through
+    // this instruction rather than being forced live by stepBackward.
+    SmallVector<MCRegister, 2> PreservedRegs;
+    getPreservedSubRegs(MI, PreservedRegs);
+
+    // Save whether each preserved sub-register was already live.
+    SmallVector<bool, 2> WasLive;
+    for (MCRegister R : PreservedRegs)
+      WasLive.push_back(!LiveRegs.available(R));
+
     LiveRegs.stepBackward(MI);
+
+    // Remove sub-registers that were freshly forced live but shouldn't be.
+    for (unsigned I = 0, E = PreservedRegs.size(); I != E; ++I) {
+      if (!WasLive[I])
+        LiveRegs.removeReg(PreservedRegs[I]);
+    }
   }
 
   return Changed;
