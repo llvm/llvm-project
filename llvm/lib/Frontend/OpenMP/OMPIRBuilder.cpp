@@ -564,12 +564,12 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
 
   ArgsVector = {Version,
                 PointerNum,
-                KernelArgs.RTArgs.BasePointersArray,
-                KernelArgs.RTArgs.PointersArray,
-                KernelArgs.RTArgs.SizesArray,
-                KernelArgs.RTArgs.MapTypesArray,
-                KernelArgs.RTArgs.MapNamesArray,
-                KernelArgs.RTArgs.MappersArray,
+                KernelArgs.RTArgs.BasePointersArray.Ptr,
+                KernelArgs.RTArgs.PointersArray.Ptr,
+                KernelArgs.RTArgs.SizesArray.Ptr,
+                KernelArgs.RTArgs.MapTypesArray.Ptr,
+                KernelArgs.RTArgs.MapNamesArray.Ptr,
+                KernelArgs.RTArgs.MappersArray.Ptr,
                 KernelArgs.NumIterations,
                 Flags,
                 NumTeams3D,
@@ -8070,11 +8070,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
     }
 
     SmallVector<llvm::Value *, 13> OffloadingArgs = {
-        SrcLocInfo,           DeviceID,
-        PointerNum,           RTArgs.BasePointersArray,
-        RTArgs.PointersArray, RTArgs.SizesArray,
-        RTArgs.MapTypesArray, RTArgs.MapNamesArray,
-        RTArgs.MappersArray};
+        SrcLocInfo,
+        DeviceID,
+        PointerNum,
+        RTArgs.BasePointersArray.Ptr,
+        RTArgs.PointersArray.Ptr,
+        RTArgs.SizesArray.Ptr,
+        RTArgs.MapTypesArray.Ptr,
+        RTArgs.MapNamesArray.Ptr,
+        RTArgs.MappersArray.Ptr};
 
     if (IsStandAlone) {
       assert(MapperFunc && "MapperFunc missing for standalone target data");
@@ -8163,11 +8167,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
       SrcLocInfo = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
     }
 
-    Value *OffloadingArgs[] = {SrcLocInfo,           DeviceID,
-                               PointerNum,           RTArgs.BasePointersArray,
-                               RTArgs.PointersArray, RTArgs.SizesArray,
-                               RTArgs.MapTypesArray, RTArgs.MapNamesArray,
-                               RTArgs.MappersArray};
+    Value *OffloadingArgs[] = {SrcLocInfo,
+                               DeviceID,
+                               PointerNum,
+                               RTArgs.BasePointersArray.Ptr,
+                               RTArgs.PointersArray.Ptr,
+                               RTArgs.SizesArray.Ptr,
+                               RTArgs.MapTypesArray.Ptr,
+                               RTArgs.MapNamesArray.Ptr,
+                               RTArgs.MappersArray.Ptr};
     Function *EndMapperFunc =
         getOrCreateRuntimeFunctionPtr(omp::OMPRTL___tgt_target_data_end_mapper);
 
@@ -8671,16 +8679,6 @@ static Function *emitTargetTaskProxyFunction(
   Builder.CreateRetVoid();
   return ProxyFn;
 }
-static Type *getOffloadingArrayType(Value *V) {
-
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(V))
-    return GEP->getSourceElementType();
-  if (auto *Alloca = dyn_cast<AllocaInst>(V))
-    return Alloca->getAllocatedType();
-
-  llvm_unreachable("Unhandled Instruction type");
-  return nullptr;
-}
 // This function returns a struct that has at most two members.
 // The first member is always %struct.kmp_task_ompbuilder_t, that is the task
 // descriptor. The second member, if needed, is a struct containing arrays
@@ -8695,21 +8693,19 @@ static Type *getOffloadingArrayType(Value *V) {
 // %struct.task_with_privates is returned by this function.
 // If there aren't any offloading arrays to pass to the target kernel,
 // %struct.kmp_task_ompbuilder_t is returned.
-static StructType *
-createTaskWithPrivatesTy(OpenMPIRBuilder &OMPIRBuilder,
-                         ArrayRef<Value *> OffloadingArraysToPrivatize) {
+static StructType *createTaskWithPrivatesTy(
+    OpenMPIRBuilder &OMPIRBuilder,
+    ArrayRef<OpenMPIRBuilder::TypedPointerArray> OffloadingArraysToPrivatize) {
 
   if (OffloadingArraysToPrivatize.empty())
     return OMPIRBuilder.Task;
 
   SmallVector<Type *, 4> StructFieldTypes;
-  for (Value *V : OffloadingArraysToPrivatize) {
-    assert(V->getType()->isPointerTy() &&
-           "Expected pointer to array to privatize. Got a non-pointer value "
-           "instead");
-    Type *ArrayTy = getOffloadingArrayType(V);
-    assert(ArrayTy && "ArrayType cannot be nullptr");
-    StructFieldTypes.push_back(ArrayTy);
+  for (const OpenMPIRBuilder::TypedPointerArray &TPA :
+       OffloadingArraysToPrivatize) {
+    assert(TPA.Ty &&
+           "ArrayType must be set for offloading arrays to privatize");
+    StructFieldTypes.push_back(TPA.Ty);
   }
   StructType *PrivatesStructTy =
       StructType::create(StructFieldTypes, "struct.privates");
@@ -8901,16 +8897,16 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
   emitBlock(OI.ExitBB, Builder.GetInsertBlock()->getParent(),
             /*IsFinished=*/true);
 
-  SmallVector<Value *, 2> OffloadingArraysToPrivatize;
+  SmallVector<TypedPointerArray, 2> OffloadingArraysToPrivatize;
   bool NeedsTargetTask = HasNoWait && DeviceID;
   if (NeedsTargetTask) {
-    for (auto *V :
+    for (auto TPA :
          {RTArgs.BasePointersArray, RTArgs.PointersArray, RTArgs.MappersArray,
           RTArgs.MapNamesArray, RTArgs.MapTypesArray, RTArgs.MapTypesArrayEnd,
           RTArgs.SizesArray}) {
-      if (V && !isa<ConstantPointerNull, GlobalVariable>(V)) {
-        OffloadingArraysToPrivatize.push_back(V);
-        OI.ExcludeArgsFromAggregate.push_back(V);
+      if (TPA.Ptr && !isa<ConstantPointerNull, GlobalVariable>(TPA.Ptr)) {
+        OffloadingArraysToPrivatize.push_back(TPA);
+        OI.ExcludeArgsFromAggregate.push_back(TPA.Ptr);
       }
     }
   }
@@ -9042,20 +9038,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
       Value *Privates =
           Builder.CreateStructGEP(TaskWithPrivatesTy, TaskData, 1);
       for (unsigned int i = 0; i < OffloadingArraysToPrivatize.size(); ++i) {
-        Value *PtrToPrivatize = OffloadingArraysToPrivatize[i];
-        [[maybe_unused]] Type *ArrayType =
-            getOffloadingArrayType(PtrToPrivatize);
-        assert(ArrayType && "ArrayType cannot be nullptr");
-
-        Type *ElementType = PrivatesTy->getElementType(i);
-        assert(ElementType == ArrayType &&
-               "ElementType should match ArrayType");
-        (void)ArrayType;
-
+        TypedPointerArray TPA = OffloadingArraysToPrivatize[i];
         Value *Dst = Builder.CreateStructGEP(PrivatesTy, Privates, i);
+        assert(PrivatesTy->getElementType(i) == TPA.Ty);
         Builder.CreateMemCpy(
-            Dst, Alignment, PtrToPrivatize, Alignment,
-            Builder.getInt64(M.getDataLayout().getTypeStoreSize(ElementType)));
+            Dst, Alignment, TPA.Ptr, Alignment,
+            Builder.getInt64(M.getDataLayout().getTypeStoreSize(TPA.Ty)));
       }
     }
 
@@ -9505,56 +9493,41 @@ void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
                                                    bool ForEndCall) {
   assert((!ForEndCall || Info.separateBeginEndCalls()) &&
          "expected region end call to runtime only when end call is separate");
-  auto UnqualPtrTy = PointerType::getUnqual(M.getContext());
-  auto VoidPtrTy = UnqualPtrTy;
-  auto VoidPtrPtrTy = UnqualPtrTy;
+  auto PtrTy = PointerType::getUnqual(M.getContext());
   auto Int64Ty = Type::getInt64Ty(M.getContext());
-  auto Int64PtrTy = UnqualPtrTy;
 
   if (!Info.NumberOfPtrs) {
-    RTArgs.BasePointersArray = ConstantPointerNull::get(VoidPtrPtrTy);
-    RTArgs.PointersArray = ConstantPointerNull::get(VoidPtrPtrTy);
-    RTArgs.SizesArray = ConstantPointerNull::get(Int64PtrTy);
-    RTArgs.MapTypesArray = ConstantPointerNull::get(Int64PtrTy);
-    RTArgs.MapNamesArray = ConstantPointerNull::get(VoidPtrPtrTy);
-    RTArgs.MappersArray = ConstantPointerNull::get(VoidPtrPtrTy);
+    RTArgs.BasePointersArray = {ConstantPointerNull::get(PtrTy)};
+    RTArgs.PointersArray = {ConstantPointerNull::get(PtrTy)};
+    RTArgs.SizesArray = {ConstantPointerNull::get(PtrTy)};
+    RTArgs.MapTypesArray = {ConstantPointerNull::get(PtrTy)};
+    RTArgs.MapNamesArray = {ConstantPointerNull::get(PtrTy)};
+    RTArgs.MappersArray = {ConstantPointerNull::get(PtrTy)};
     return;
   }
 
-  RTArgs.BasePointersArray = Builder.CreateConstInBoundsGEP2_32(
-      ArrayType::get(VoidPtrTy, Info.NumberOfPtrs),
-      Info.RTArgs.BasePointersArray,
-      /*Idx0=*/0, /*Idx1=*/0);
-  RTArgs.PointersArray = Builder.CreateConstInBoundsGEP2_32(
-      ArrayType::get(VoidPtrTy, Info.NumberOfPtrs), Info.RTArgs.PointersArray,
-      /*Idx0=*/0,
-      /*Idx1=*/0);
-  RTArgs.SizesArray = Builder.CreateConstInBoundsGEP2_32(
-      ArrayType::get(Int64Ty, Info.NumberOfPtrs), Info.RTArgs.SizesArray,
-      /*Idx0=*/0, /*Idx1=*/0);
-  RTArgs.MapTypesArray = Builder.CreateConstInBoundsGEP2_32(
-      ArrayType::get(Int64Ty, Info.NumberOfPtrs),
-      ForEndCall && Info.RTArgs.MapTypesArrayEnd ? Info.RTArgs.MapTypesArrayEnd
-                                                 : Info.RTArgs.MapTypesArray,
-      /*Idx0=*/0,
-      /*Idx1=*/0);
+  ArrayType *ArrayPtrTy = ArrayType::get(PtrTy, Info.NumberOfPtrs);
+  RTArgs.BasePointersArray = {Info.RTArgs.BasePointersArray.Ptr, ArrayPtrTy};
+  RTArgs.PointersArray = {Info.RTArgs.PointersArray.Ptr, ArrayPtrTy};
+  RTArgs.SizesArray = {Info.RTArgs.SizesArray.Ptr,
+                       ArrayType::get(Int64Ty, Info.NumberOfPtrs)};
+  Value *MapTypes = ForEndCall && Info.RTArgs.MapTypesArrayEnd.Ptr
+                        ? Info.RTArgs.MapTypesArrayEnd.Ptr
+                        : Info.RTArgs.MapTypesArray.Ptr;
+  RTArgs.MapTypesArray = {MapTypes, ArrayType::get(Int64Ty, Info.NumberOfPtrs)};
 
   // Only emit the mapper information arrays if debug information is
   // requested.
   if (!Info.EmitDebug)
-    RTArgs.MapNamesArray = ConstantPointerNull::get(VoidPtrPtrTy);
+    RTArgs.MapNamesArray = {ConstantPointerNull::get(PtrTy)};
   else
-    RTArgs.MapNamesArray = Builder.CreateConstInBoundsGEP2_32(
-        ArrayType::get(VoidPtrTy, Info.NumberOfPtrs), Info.RTArgs.MapNamesArray,
-        /*Idx0=*/0,
-        /*Idx1=*/0);
+    RTArgs.MapNamesArray = {Info.RTArgs.MapNamesArray.Ptr, ArrayPtrTy};
   // If there is no user-defined mapper, set the mapper array to nullptr to
   // avoid an unnecessary data privatization
   if (!Info.HasMapper)
-    RTArgs.MappersArray = ConstantPointerNull::get(VoidPtrPtrTy);
+    RTArgs.MappersArray = {ConstantPointerNull::get(PtrTy)};
   else
-    RTArgs.MappersArray =
-        Builder.CreatePointerCast(Info.RTArgs.MappersArray, VoidPtrPtrTy);
+    RTArgs.MappersArray = {Info.RTArgs.MappersArray.Ptr, ArrayPtrTy};
 }
 
 void OpenMPIRBuilder::emitNonContiguousDescriptor(InsertPointTy AllocaIP,
@@ -9617,8 +9590,7 @@ void OpenMPIRBuilder::emitNonContiguousDescriptor(InsertPointTy AllocaIP,
     Value *DAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(
         DimsAddr, Builder.getPtrTy());
     Value *P = Builder.CreateConstInBoundsGEP2_32(
-        ArrayType::get(Builder.getPtrTy(), Info.NumberOfPtrs),
-        Info.RTArgs.PointersArray, 0, I);
+        Info.RTArgs.PointersArray.Ty, Info.RTArgs.PointersArray.Ptr, 0, I);
     Builder.CreateAlignedStore(
         DAddr, P, M.getDataLayout().getPrefTypeAlign(Builder.getPtrTy()));
     ++L;
@@ -9928,14 +9900,18 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
   ArrayType *PointerArrayType =
       ArrayType::get(Builder.getPtrTy(), Info.NumberOfPtrs);
 
-  Info.RTArgs.BasePointersArray = Builder.CreateAlloca(
-      PointerArrayType, /* ArraySize = */ nullptr, ".offload_baseptrs");
+  Info.RTArgs.BasePointersArray = {
+      Builder.CreateAlloca(PointerArrayType, /* ArraySize = */ nullptr,
+                           ".offload_baseptrs"),
+      PointerArrayType};
 
-  Info.RTArgs.PointersArray = Builder.CreateAlloca(
-      PointerArrayType, /* ArraySize = */ nullptr, ".offload_ptrs");
+  Info.RTArgs.PointersArray = {Builder.CreateAlloca(PointerArrayType,
+                                                    /* ArraySize = */ nullptr,
+                                                    ".offload_ptrs"),
+                               PointerArrayType};
   AllocaInst *MappersArray = Builder.CreateAlloca(
       PointerArrayType, /* ArraySize = */ nullptr, ".offload_mappers");
-  Info.RTArgs.MappersArray = MappersArray;
+  Info.RTArgs.MappersArray = {MappersArray, PointerArrayType};
 
   // If we don't have any VLA types or other types that require runtime
   // evaluation, we can use a constant array for the map sizes, otherwise we
@@ -9963,8 +9939,10 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
 
   if (RuntimeSizes.all()) {
     ArrayType *SizeArrayType = ArrayType::get(Int64Ty, Info.NumberOfPtrs);
-    Info.RTArgs.SizesArray = Builder.CreateAlloca(
-        SizeArrayType, /* ArraySize = */ nullptr, ".offload_sizes");
+    Info.RTArgs.SizesArray = {Builder.CreateAlloca(SizeArrayType,
+                                                   /* ArraySize = */ nullptr,
+                                                   ".offload_sizes"),
+                              SizeArrayType};
     restoreIPandDebugLoc(Builder, CodeGenIP);
   } else {
     auto *SizesArrayInit = ConstantArray::get(
@@ -9976,7 +9954,7 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
     SizesArrayGbl->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
     if (!RuntimeSizes.any()) {
-      Info.RTArgs.SizesArray = SizesArrayGbl;
+      Info.RTArgs.SizesArray = {SizesArrayGbl};
     } else {
       unsigned IndexSize = M.getDataLayout().getIndexSizeInBits(0);
       Align OffloadSizeAlign = M.getDataLayout().getABIIntegerTypeAlignment(64);
@@ -9992,7 +9970,7 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
               IndexSize,
               Buffer->getAllocationSize(M.getDataLayout())->getFixedValue()));
 
-      Info.RTArgs.SizesArray = Buffer;
+      Info.RTArgs.SizesArray = {Buffer, SizeArrayType};
     }
     restoreIPandDebugLoc(Builder, CodeGenIP);
   }
@@ -10005,18 +9983,19 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
         static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
             mapFlag));
   std::string MaptypesName = createPlatformSpecificName({"offload_maptypes"});
-  auto *MapTypesArrayGbl = createOffloadMaptypes(Mapping, MaptypesName);
-  Info.RTArgs.MapTypesArray = MapTypesArrayGbl;
+  GlobalVariable *MapTypesArrayGbl =
+      createOffloadMaptypes(Mapping, MaptypesName);
+  Info.RTArgs.MapTypesArray = {MapTypesArrayGbl};
 
   // The information types are only built if provided.
   if (!CombinedInfo.Names.empty()) {
-    auto *MapNamesArrayGbl = createOffloadMapnames(
+    GlobalVariable *MapNamesArrayGbl = createOffloadMapnames(
         CombinedInfo.Names, createPlatformSpecificName({"offload_mapnames"}));
-    Info.RTArgs.MapNamesArray = MapNamesArrayGbl;
+    Info.RTArgs.MapNamesArray = {MapNamesArrayGbl};
     Info.EmitDebug = true;
   } else {
-    Info.RTArgs.MapNamesArray =
-        Constant::getNullValue(PointerType::getUnqual(Builder.getContext()));
+    Info.RTArgs.MapNamesArray = {
+        Constant::getNullValue(PointerType::getUnqual(Builder.getContext()))};
     Info.EmitDebug = false;
   }
 
@@ -10034,7 +10013,7 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
     }
     if (EndMapTypesDiffer) {
       MapTypesArrayGbl = createOffloadMaptypes(Mapping, MaptypesName);
-      Info.RTArgs.MapTypesArrayEnd = MapTypesArrayGbl;
+      Info.RTArgs.MapTypesArrayEnd = {MapTypesArrayGbl};
     }
   }
 
@@ -10042,8 +10021,8 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
   for (unsigned I = 0; I < Info.NumberOfPtrs; ++I) {
     Value *BPVal = CombinedInfo.BasePointers[I];
     Value *BP = Builder.CreateConstInBoundsGEP2_32(
-        ArrayType::get(PtrTy, Info.NumberOfPtrs), Info.RTArgs.BasePointersArray,
-        0, I);
+        Info.RTArgs.BasePointersArray.Ty, Info.RTArgs.BasePointersArray.Ptr, 0,
+        I);
     Builder.CreateAlignedStore(BPVal, BP,
                                M.getDataLayout().getPrefTypeAlign(PtrTy));
 
@@ -10064,17 +10043,16 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
 
     Value *PVal = CombinedInfo.Pointers[I];
     Value *P = Builder.CreateConstInBoundsGEP2_32(
-        ArrayType::get(PtrTy, Info.NumberOfPtrs), Info.RTArgs.PointersArray, 0,
-        I);
+        Info.RTArgs.PointersArray.Ty, Info.RTArgs.PointersArray.Ptr, 0, I);
     // TODO: Check alignment correct.
     Builder.CreateAlignedStore(PVal, P,
                                M.getDataLayout().getPrefTypeAlign(PtrTy));
 
     if (RuntimeSizes.test(I)) {
-      Value *S = Builder.CreateConstInBoundsGEP2_32(
-          ArrayType::get(Int64Ty, Info.NumberOfPtrs), Info.RTArgs.SizesArray,
-          /*Idx0=*/0,
-          /*Idx1=*/I);
+      Value *S = Builder.CreateConstInBoundsGEP2_32(Info.RTArgs.SizesArray.Ty,
+                                                    Info.RTArgs.SizesArray.Ptr,
+                                                    /*Idx0=*/0,
+                                                    /*Idx1=*/I);
       Builder.CreateAlignedStore(Builder.CreateIntCast(CombinedInfo.Sizes[I],
                                                        Int64Ty,
                                                        /*isSigned=*/true),

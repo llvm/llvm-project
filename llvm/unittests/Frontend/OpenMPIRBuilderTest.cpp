@@ -7751,30 +7751,31 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysArguments) {
   auto VoidPtrPtrTy = PointerType::getUnqual(Builder.getContext());
   auto Int64PtrTy = PointerType::getUnqual(Builder.getContext());
 
-  Info.RTArgs.BasePointersArray = ConstantPointerNull::get(Builder.getPtrTy(0));
-  Info.RTArgs.PointersArray = ConstantPointerNull::get(Builder.getPtrTy(0));
-  Info.RTArgs.SizesArray = ConstantPointerNull::get(Builder.getPtrTy(0));
-  Info.RTArgs.MapTypesArray = ConstantPointerNull::get(Builder.getPtrTy(0));
-  Info.RTArgs.MapNamesArray = ConstantPointerNull::get(Builder.getPtrTy(0));
-  Info.RTArgs.MappersArray = ConstantPointerNull::get(Builder.getPtrTy(0));
+  Info.RTArgs.BasePointersArray = {
+      ConstantPointerNull::get(Builder.getPtrTy(0))};
+  Info.RTArgs.PointersArray = {ConstantPointerNull::get(Builder.getPtrTy(0))};
+  Info.RTArgs.SizesArray = {ConstantPointerNull::get(Builder.getPtrTy(0))};
+  Info.RTArgs.MapTypesArray = {ConstantPointerNull::get(Builder.getPtrTy(0))};
+  Info.RTArgs.MapNamesArray = {ConstantPointerNull::get(Builder.getPtrTy(0))};
+  Info.RTArgs.MappersArray = {ConstantPointerNull::get(Builder.getPtrTy(0))};
   Info.NumberOfPtrs = 4;
   Info.EmitDebug = false;
   OMPBuilder.emitOffloadingArraysArgument(Builder, RTArgs, Info, false);
 
-  EXPECT_NE(RTArgs.BasePointersArray, nullptr);
-  EXPECT_NE(RTArgs.PointersArray, nullptr);
-  EXPECT_NE(RTArgs.SizesArray, nullptr);
-  EXPECT_NE(RTArgs.MapTypesArray, nullptr);
-  EXPECT_NE(RTArgs.MappersArray, nullptr);
-  EXPECT_NE(RTArgs.MapNamesArray, nullptr);
-  EXPECT_EQ(RTArgs.MapTypesArrayEnd, nullptr);
+  EXPECT_NE(RTArgs.BasePointersArray.Ptr, nullptr);
+  EXPECT_NE(RTArgs.PointersArray.Ptr, nullptr);
+  EXPECT_NE(RTArgs.SizesArray.Ptr, nullptr);
+  EXPECT_NE(RTArgs.MapTypesArray.Ptr, nullptr);
+  EXPECT_NE(RTArgs.MappersArray.Ptr, nullptr);
+  EXPECT_NE(RTArgs.MapNamesArray.Ptr, nullptr);
+  EXPECT_EQ(RTArgs.MapTypesArrayEnd.Ptr, nullptr);
 
-  EXPECT_EQ(RTArgs.BasePointersArray->getType(), VoidPtrPtrTy);
-  EXPECT_EQ(RTArgs.PointersArray->getType(), VoidPtrPtrTy);
-  EXPECT_EQ(RTArgs.SizesArray->getType(), Int64PtrTy);
-  EXPECT_EQ(RTArgs.MapTypesArray->getType(), Int64PtrTy);
-  EXPECT_EQ(RTArgs.MappersArray->getType(), VoidPtrPtrTy);
-  EXPECT_EQ(RTArgs.MapNamesArray->getType(), VoidPtrPtrTy);
+  EXPECT_EQ(RTArgs.BasePointersArray.Ptr->getType(), VoidPtrPtrTy);
+  EXPECT_EQ(RTArgs.PointersArray.Ptr->getType(), VoidPtrPtrTy);
+  EXPECT_EQ(RTArgs.SizesArray.Ptr->getType(), Int64PtrTy);
+  EXPECT_EQ(RTArgs.MapTypesArray.Ptr->getType(), Int64PtrTy);
+  EXPECT_EQ(RTArgs.MappersArray.Ptr->getType(), VoidPtrPtrTy);
+  EXPECT_EQ(RTArgs.MapNamesArray.Ptr->getType(), VoidPtrPtrTy);
 }
 
 TEST_F(OpenMPIRBuilderTest, OffloadEntriesInfoManager) {

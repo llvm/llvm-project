@@ -10878,28 +10878,30 @@ static void emitTargetCallKernelLaunch(
                               /*IsNonContiguous=*/true, /*ForEndCall=*/false);
 
   InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
-  InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray,
+  InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray.Ptr,
                                         CGF.VoidPtrTy, CGM.getPointerAlign());
-  InputInfo.PointersArray =
-      Address(Info.RTArgs.PointersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
+  InputInfo.PointersArray = Address(Info.RTArgs.PointersArray.Ptr,
+                                    CGF.VoidPtrTy, CGM.getPointerAlign());
   InputInfo.SizesArray =
-      Address(Info.RTArgs.SizesArray, CGF.Int64Ty, CGM.getPointerAlign());
-  InputInfo.MappersArray =
-      Address(Info.RTArgs.MappersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
-  MapTypesArray = Info.RTArgs.MapTypesArray;
-  MapNamesArray = Info.RTArgs.MapNamesArray;
+      Address(Info.RTArgs.SizesArray.Ptr, CGF.Int64Ty, CGM.getPointerAlign());
+  InputInfo.MappersArray = Address(Info.RTArgs.MappersArray.Ptr, CGF.VoidPtrTy,
+                                   CGM.getPointerAlign());
+  MapTypesArray = Info.RTArgs.MapTypesArray.Ptr;
+  MapNamesArray = Info.RTArgs.MapNamesArray.Ptr;
 
+  auto &CallerRTArgs = Info.RTArgs;
   auto &&ThenGen = [&OMPRuntime, OutlinedFn, &D, &CapturedVars,
                     RequiresOuterTask, &CS, OffloadingMandatory, Device,
-                    OutlinedFnID, &InputInfo, &MapTypesArray, &MapNamesArray,
+                    OutlinedFnID, &CallerRTArgs, &InputInfo, &MapTypesArray,
+                    &MapNamesArray,
                     SizeEmitter](CodeGenFunction &CGF, PrePostActionTy &) {
     bool IsReverseOffloading = Device.getInt() == OMPC_DEVICE_ancestor;
 
     if (IsReverseOffloading) {
       // Reverse offloading is not supported, so just execute on the host.
       // FIXME: This fallback solution is incorrect since it ignores the
-      // OMP_TARGET_OFFLOAD environment variable. Instead it would be better to
-      // assert here and ensure SEMA emits an error.
+      // OMP_TARGET_OFFLOAD environment variable. Instead it would be better
+      // to assert here and ensure SEMA emits an error.
       emitTargetCallFallback(OMPRuntime, OutlinedFn, D, CapturedVars,
                              RequiresOuterTask, CS, OffloadingMandatory, CGF);
       return;
@@ -10946,8 +10948,13 @@ static void emitTargetCallKernelLaunch(
         CGF.AllocaInsertPt->getParent(), CGF.AllocaInsertPt->getIterator());
 
     llvm::OpenMPIRBuilder::TargetDataRTArgs RTArgs(
-        BasePointersArray, PointersArray, SizesArray, MapTypesArray,
-        nullptr /* MapTypesArrayEnd */, MappersArray, MapNamesArray);
+        {BasePointersArray, CallerRTArgs.BasePointersArray.Ty},
+        {PointersArray, CallerRTArgs.PointersArray.Ty},
+        {SizesArray, CallerRTArgs.SizesArray.Ty},
+        {MapTypesArray, CallerRTArgs.MapTypesArray.Ty},
+        {nullptr}, /* MapTypesArrayEnd */
+        {MappersArray, CallerRTArgs.MappersArray.Ty},
+        {MapNamesArray, CallerRTArgs.MapNamesArray.Ty});
 
     llvm::OpenMPIRBuilder::TargetKernelArgs Args(
         NumTargetItems, RTArgs, NumIterations, NumTeams, NumThreads,
@@ -11806,16 +11813,16 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
                              D.hasClausesOfKind<OMPNowaitClause>();
 
     InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
-    InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray,
+    InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray.Ptr,
                                           CGF.VoidPtrTy, CGM.getPointerAlign());
-    InputInfo.PointersArray = Address(Info.RTArgs.PointersArray, CGF.VoidPtrTy,
-                                      CGM.getPointerAlign());
+    InputInfo.PointersArray = Address(Info.RTArgs.PointersArray.Ptr,
+                                      CGF.VoidPtrTy, CGM.getPointerAlign());
     InputInfo.SizesArray =
-        Address(Info.RTArgs.SizesArray, CGF.Int64Ty, CGM.getPointerAlign());
-    InputInfo.MappersArray =
-        Address(Info.RTArgs.MappersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
-    MapTypesArray = Info.RTArgs.MapTypesArray;
-    MapNamesArray = Info.RTArgs.MapNamesArray;
+        Address(Info.RTArgs.SizesArray.Ptr, CGF.Int64Ty, CGM.getPointerAlign());
+    InputInfo.MappersArray = Address(Info.RTArgs.MappersArray.Ptr,
+                                     CGF.VoidPtrTy, CGM.getPointerAlign());
+    MapTypesArray = Info.RTArgs.MapTypesArray.Ptr;
+    MapNamesArray = Info.RTArgs.MapNamesArray.Ptr;
     if (RequiresOuterTask)
       CGF.EmitOMPTargetTaskBasedDirective(D, ThenGen, InputInfo);
     else
