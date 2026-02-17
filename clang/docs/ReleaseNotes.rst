@@ -149,6 +149,10 @@ Deprecated Compiler Flags
 
 Modified Compiler Flags
 -----------------------
+- ``-ftrivial-auto-var-init=zero`` and ``-ftrivial-auto-var-init=pattern`` now
+  correctly initialize variables whose declaration is bypassed by ``goto`` or
+  ``switch`` statements. Previously, such variables were silently left
+  uninitialized.
 
 Removed Compiler Flags
 ----------------------

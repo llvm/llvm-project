@@ -1636,6 +1636,18 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       }
     }
 
+    if (Bypasses.IsBypassed(&D) && !emission.IsEscapingByRef &&
+        !emission.NRVOFlag && !Ty->isVariablyModifiedType()) {
+      if (getAutoVarInitKind(Ty, D) !=
+              LangOptions::TrivialAutoVarInitKind::Uninitialized &&
+          isTrivialInitializer(D.getInit())) {
+        llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+        Builder.SetInsertPoint(getPostAllocaInsertPoint());
+        emitZeroOrPatternForAutoVarInit(Ty, D, address);
+        emission.IsInitializedInEntryBlock = true;
+      }
+    }
+
     if (D.hasAttr<StackProtectorIgnoreAttr>()) {
       if (auto *AI = dyn_cast<llvm::AllocaInst>(address.getBasePointer())) {
         llvm::LLVMContext &Ctx = Builder.getContext();
@@ -1833,6 +1845,18 @@ bool CodeGenFunction::isTrivialInitializer(const Expr *Init) {
   return false;
 }
 
+LangOptions::TrivialAutoVarInitKind
+CodeGenFunction::getAutoVarInitKind(QualType type, const VarDecl &D) {
+  auto hasNoTrivialAutoVarInitAttr = [](const Decl *D) {
+    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
+  };
+  if (D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
+      hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
+      hasNoTrivialAutoVarInitAttr(CurFuncDecl))
+    return LangOptions::TrivialAutoVarInitKind::Uninitialized;
+  return getContext().getLangOpts().getTrivialAutoVarInit();
+}
+
 void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
                                                       const VarDecl &D,
                                                       Address Loc) {
@@ -1992,16 +2016,9 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   const Address Loc =
       locIsByrefHeader ? emission.getObjectAddress(*this) : emission.Addr;
 
-  auto hasNoTrivialAutoVarInitAttr = [&](const Decl *D) {
-    return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
-  };
   // Note: constexpr already initializes everything correctly.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
-      ((D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
-        hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
-        hasNoTrivialAutoVarInitAttr(CurFuncDecl))
-           ? LangOptions::TrivialAutoVarInitKind::Uninitialized
-           : getContext().getLangOpts().getTrivialAutoVarInit());
+      getAutoVarInitKind(type, D);
 
   auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==
@@ -2015,8 +2032,11 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     return emitZeroOrPatternForAutoVarInit(type, D, Loc);
   };
 
-  if (isTrivialInitializer(Init))
+  if (isTrivialInitializer(Init)) {
+    if (emission.wasInitializedInEntryBlock())
+      return;
     return initializeWhatIsTechnicallyUninitialized(Loc);
+  }
 
   llvm::Constant *constant = nullptr;
   if (emission.IsConstantAggregate ||
