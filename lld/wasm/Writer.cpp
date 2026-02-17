@@ -644,6 +644,12 @@ void Writer::populateTargetFeatures() {
             " because it was not compiled with 'atomics' or 'bulk-memory' "
             "features.");
 
+    for (auto feature : {"atomics", "bulk-memory"})
+      if (!allowed.contains(feature))
+        error(StringRef("'") + feature +
+              "' feature must be used in order to use shared memory");
+  }
+
   if (ctx.arg.componentModelThreadContext && disallowed.contains("component-model-thread-context"))
     error("--component-model-thread-context is disallowed by " +
             disallowed["component-model-thread-context"] +
@@ -654,13 +660,7 @@ void Writer::populateTargetFeatures() {
             used["component-model-thread-context"] +
             " but --component-model-thread-context not specified.");
 
-    for (auto feature : {"atomics", "bulk-memory"})
-      if (!allowed.contains(feature))
-        error(StringRef("'") + feature +
-              "' feature must be used in order to use shared memory");
-  }
-
-  if (tlsUsed) {
+  if (tlsUsed && !ctx.arg.componentModelThreadContext) {
     for (auto feature : {"atomics", "bulk-memory"})
       if (!allowed.contains(feature))
         error(StringRef("'") + feature +
