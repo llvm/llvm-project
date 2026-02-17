@@ -25,16 +25,18 @@ static LogicalResult verifyIndexingMapOperandType(Operation *op, Type t,
     return success();
 
   // MemRefs: must be ranked.
-  if (isa<UnrankedMemRefType>(t))
+  if (isa<UnrankedMemRefType>(t)) {
     return op->emitOpError("operand #")
            << operandNumber << " must be a ranked memref, but got " << t;
+  }
   if (isa<MemRefType>(t))
     return success();
 
   // Tensors: must be ranked.
-  if (isa<UnrankedTensorType>(t))
+  if (isa<UnrankedTensorType>(t)) {
     return op->emitOpError("operand #")
            << operandNumber << " must be a ranked tensor, but got " << t;
+  }
   if (isa<RankedTensorType>(t))
     return success();
 
