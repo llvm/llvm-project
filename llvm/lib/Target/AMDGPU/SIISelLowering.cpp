@@ -19788,3 +19788,18 @@ SITargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   AI->eraseFromParent();
   return LI;
 }
+
+bool SITargetLowering::hasBitTest(SDValue X, SDValue Y) const {
+  if (X->isDivergent() || Y->isDivergent())
+    return false;
+
+  EVT ScalarType = X.getValueType().getScalarType();
+
+  if (ScalarType != MVT::i32)
+    return false;
+
+  if (!isConstOrConstSplat(Y))
+    return false;
+
+  return true;
+}
