@@ -2065,7 +2065,9 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
   VPValue *Cond;
-  if (match(Term, m_BranchOnCount()) ||
+  if (match(Term,
+            m_BranchOnCount(m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF())),
+                            m_VPValue())) ||
       match(Term, m_BranchOnCond(m_Not(m_ActiveLaneMask(
                       m_VPValue(), m_VPValue(), m_VPValue()))))) {
     // Try to simplify the branch condition if VectorTC <= VF * UF when the
@@ -3943,6 +3945,14 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
                                         R.getDebugLoc(), "predphi", *Blend);
         Blend->replaceAllUsesWith(Select);
         ToRemove.push_back(Blend);
+      }
+
+      if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(&R)) {
+        if (!VEPR->getOffset()) {
+          assert(Plan.getConcreteUF() == 1 &&
+                 "Expected unroller to have materialized offset for UF != 1");
+          VEPR->materializeOffset();
+        }
       }
 
       if (auto *Expr = dyn_cast<VPExpressionRecipe>(&R)) {

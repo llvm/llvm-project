@@ -1048,9 +1048,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
 vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last, difference_type __n) {
   size_type __new_size = static_cast<size_type>(__n);
   if (__new_size <= capacity()) {
-    if (__new_size > size()) {
-      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), size(), this->__begin_).first;
-      __construct_at_end(std::move(__mid), std::move(__last), __new_size - size());
+    auto const __size = size();
+    if (__new_size > __size) {
+      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), __size, this->__begin_).first;
+      __construct_at_end(std::move(__mid), std::move(__last), __new_size - __size);
     } else {
       pointer __m = std::__copy(std::move(__first), __last, this->__begin_).second;
       this->__destruct_at_end(__m);

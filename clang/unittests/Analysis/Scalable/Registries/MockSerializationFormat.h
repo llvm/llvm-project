@@ -20,10 +20,10 @@ class MockSerializationFormat final : public SerializationFormat {
 public:
   MockSerializationFormat();
 
-  TUSummary readTUSummary(llvm::StringRef Path) override;
+  llvm::Expected<TUSummary> readTUSummary(llvm::StringRef Path) override;
 
-  void writeTUSummary(const TUSummary &Summary,
-                      llvm::StringRef OutputDir) override;
+  llvm::Error writeTUSummary(const TUSummary &Summary,
+                             llvm::StringRef Path) override;
 
   struct SpecialFileRepresentation {
     std::string MockRepresentation;
