@@ -20,11 +20,16 @@ public:
   ; // ok, one extra ';' is permitted
   void m() {
     int l = 2;
-  };; // expected-warning{{extra ';' after member function definition}}
-
+  };;
+#if __cplusplus < 201103L
+  // expected-warning@-2{{extra ';' after member function definition is a C++11 extension}}
+#endif
   template<typename T> void mt(T) { }
   ;
-  ; // expected-warning{{extra ';' inside a class}}
+  ;
+#if __cplusplus < 201103L
+  // expected-warning@-2{{extra ';' inside a class is a C++11 extension}}
+#endif
 
   virtual int vf() const volatile = 0;
 

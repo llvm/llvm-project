@@ -40,8 +40,12 @@ let CategoryName = "Parse Issue" in {
 def ext_empty_translation_unit : Extension<
   "ISO C requires a translation unit to contain at least one declaration">,
   InGroup<DiagGroup<"empty-translation-unit">>;
-def warn_cxx98_compat_top_level_semi : Warning<
-  "extra ';' outside of a function is incompatible with C++98">,
+def warn_cxx98_compat_extra_semi : Warning<
+  "%select{|||multiple }0extra ';' %select{"
+  "outside of a function|"
+  "inside a %1|"
+  "inside instance variable list|"
+  "after member function definition}0 is incompatible with C++98">,
   InGroup<CXX98CompatExtraSemi>, DefaultIgnore;
 def ext_extra_semi : Extension<
   "extra ';' %select{"
@@ -51,7 +55,11 @@ def ext_extra_semi : Extension<
   "after member function definition}0">,
   InGroup<ExtraSemi>;
 def ext_extra_semi_cxx11 : Extension<
-  "extra ';' outside of a function is a C++11 extension">,
+  "%select{|||multiple }0extra ';' %select{"
+  "outside of a function|"
+  "inside a %1|"
+  "inside instance variable list|"
+  "after member function definition}0 is a C++11 extension">,
   InGroup<CXX11ExtraSemi>;
 def warn_extra_semi_after_mem_fn_def : Warning<
   "extra ';' after member function definition">,
