@@ -8311,7 +8311,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
         return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH;
       });
   if (!MapOrErr || MapOrErr->empty()) {
-    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found: " +
+    reportWarning(createError("unable to read SHT_LLVM_CALL_GRAPH section: " +
                               toString(MapOrErr.takeError())),
                   this->FileName);
     return;
@@ -8326,6 +8326,16 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   if (this->Obj.getHeader().e_type == ELF::ET_REL) {
     const Elf_Shdr *CGRelSection = MapOrErr->front().second;
     if (CGRelSection) {
+      Expected<const typename ELFT::Shdr *> SymtabOrErr =
+          this->Obj.getSection(CGRelSection->sh_link);
+      if (!SymtabOrErr) {
+        reportWarning(createError("invalid section linked to " +
+                                  this->describe(*CGRelSection) + ": " +
+                                  toString(SymtabOrErr.takeError())),
+                      this->FileName);
+        return;
+      }
+
       RelocSymTab = unwrapOrError(this->FileName,
                                   this->Obj.getSection(CGRelSection->sh_link));
       this->forEachRelocationDo(

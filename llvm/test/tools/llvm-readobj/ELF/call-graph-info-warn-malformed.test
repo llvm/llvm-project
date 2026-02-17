@@ -9,7 +9,7 @@
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t1 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t1 --check-prefix=WARN-NO-SECTION
 
-# WARN-NO-SECTION: warning: '[[FILE]]': no SHT_LLVM_CALL_GRAPH section found
+# WARN-NO-SECTION: warning: '[[FILE]]': unable to read SHT_LLVM_CALL_GRAPH section
 
 --- !ELF
 FileHeader:
@@ -350,3 +350,40 @@ Symbols:
     Type:     STT_FUNC
     Section:  .text
     Value:    0x1790
+
+## Check warning when the relocation section linked to SHT_LLVM_CALL_GRAPH has an invalid sh_link.
+# RUN: yaml2obj --docnum=8 %s -o %t13
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t13 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t13 --check-prefix=INVALID-RELA-LINK
+# RUN: llvm-readobj --elf-output-style=JSON --call-graph-info %t13 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t13 --check-prefix=INVALID-RELA-LINK
+
+# INVALID-RELA-LINK: warning: '[[FILE]]': invalid section linked to SHT_RELA section with index 3: invalid section index: 255
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+  - Name: .llvm_call_graph
+    Type: SHT_LLVM_CALL_GRAPH
+    ContentArray: [
+        '0', ## Format version number
+        '1', ## Flag IsIndirectTarget true
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s address
+        '0', '0', '0', '0', '0', '0', '0', '0', ## foo()'s TypeID Unknown
+      ]
+  - Name: .rela.llvm_call_graph
+    Type: SHT_RELA
+    Link: 255
+    Info: .llvm_call_graph
+    Relocations:
+      - Offset: 0x2
+        Symbol: foo
+        Type:   R_X86_64_64
+Symbols:
+  - Name: foo
