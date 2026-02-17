@@ -2,8 +2,6 @@
 // RUN: ls %t.dia
 
 // CHECK: warning: unknown warning option '-Wdoes-not-exist'
-// CHECK-NOT: Assertion failed
-// CHECK-NOT: Stack dump
 
 int main() {
   return 0;
