@@ -21,6 +21,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <cstdio>
@@ -161,18 +162,27 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
       return M;
     });
     P.Initialize();
+
+    S.registerSemaProxy();
+
     Parser::DeclGroupPtrTy ADecl;
     Sema::ModuleImportState ImportState;
     EnterExpressionEvaluationContext PotentiallyEvaluated(
         S, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 
-    for (bool AtEOF = P.ParseFirstTopLevelDecl(ADecl, ImportState); !AtEOF;
-         AtEOF = P.ParseTopLevelDecl(ADecl, ImportState)) {
-      // If we got a null return and something *was* parsed, ignore it.  This
-      // is due to a top-level semicolon, an action override, or a parse error
-      // skipping something.
-      if (ADecl && !Consumer->HandleTopLevelDecl(ADecl.get()))
-        return;
+    {
+      // Remove the sema proxy after the initial parse.
+      llvm::scope_exit SemaProxyScope([&S]() { S.unregisterSemaProxy(); });
+
+      for (bool AtEOF = P.ParseFirstTopLevelDecl(ADecl, ImportState); !AtEOF;
+           AtEOF = P.ParseTopLevelDecl(ADecl, ImportState)) {
+
+        // If we got a null return and something *was* parsed, ignore it.  This
+        // is due to a top-level semicolon, an action override, or a parse error
+        // skipping something.
+        if (ADecl && !Consumer->HandleTopLevelDecl(ADecl.get()))
+          return;
+      }
     }
   }
 

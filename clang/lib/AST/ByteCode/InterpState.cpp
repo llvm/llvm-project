@@ -24,6 +24,7 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
       StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0) {
   InConstantContext = Parent.InConstantContext;
+  PerformingTrialEvaluation = Parent.PerformingTrialEvaluation;
   CheckingPotentialConstantExpression =
       Parent.CheckingPotentialConstantExpression;
   CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
@@ -38,6 +39,7 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
       Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0) {
   InConstantContext = Parent.InConstantContext;
+  PerformingTrialEvaluation = Parent.PerformingTrialEvaluation;
   CheckingPotentialConstantExpression =
       Parent.CheckingPotentialConstantExpression;
   CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;

@@ -44,6 +44,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/TypeSize.h"
+#include <memory>
 #include <optional>
 
 namespace llvm {
@@ -213,6 +214,16 @@ struct TypeInfoChars {
   bool isAlignRequired() {
     return AlignRequirement != AlignRequirementKind::None;
   }
+};
+
+/// Interface that allows constant evaluator to call Sema
+/// and mutate the AST.
+struct SemaProxy {
+  virtual ~SemaProxy() = default;
+
+  virtual void
+  instantiateFunctionDefinition(SourceLocation PointOfInstantiation,
+                                FunctionDecl *Function) = 0;
 };
 
 /// Holds long-lived AST nodes (such as types and decls) that can be
@@ -785,6 +796,8 @@ private:
 
   /// Keeps track of the deallocated DeclListNodes for future reuse.
   DeclListNode *ListNodeFreeList = nullptr;
+
+  std::unique_ptr<SemaProxy> SemaProxyPtr;
 
 public:
   IdentifierTable &Idents;
@@ -1408,6 +1421,10 @@ public:
   /// Retrieve a pointer to the AST mutation listener associated
   /// with this AST context, if any.
   ASTMutationListener *getASTMutationListener() const { return Listener; }
+
+  SemaProxy *getSemaProxy();
+
+  void setSemaProxy(std::unique_ptr<SemaProxy> Proxy);
 
   void PrintStats() const;
   const SmallVectorImpl<Type *>& getTypes() const { return Types; }
