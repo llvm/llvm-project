@@ -890,6 +890,7 @@ let SubtargetPredicate = isGFX11Plus in {
     let True16Predicate = UseRealTrue16Insts;
   }
   // Restrict src0 to be VGPR
+  let isConvergent = 1 in
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
                                       [], /*VOP1Only=*/ 1>;
   let isAsCheapAsAMove = 1, isMoveImm = 1 in
@@ -1202,6 +1203,7 @@ defm V_CTZ_I32_B32         : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x03a,
 defm V_CLS_I32             : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x03b,
   "V_FFBH_I32", "v_cls_i32">;
 defm V_SWAP_B16              : VOP1Only_Real_gfx11_gfx12_gfx13<0x066>;
+let isConvergent =1 in
 defm V_PERMLANE64_B32        : VOP1Only_Real_gfx11_gfx12_gfx13<0x067>;
 defm V_MOV_B16_t16           : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x01c, "v_mov_b16">;
 defm V_NOT_B16               : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x069>;
