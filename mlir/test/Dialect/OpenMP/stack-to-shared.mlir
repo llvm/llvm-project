@@ -32,7 +32,7 @@ llvm.func @foo(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declareta
 llvm.func @device_func(%arg0: i64, %cond: i1) attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>} {
   // CHECK: %[[ALLOC0:.*]] = omp.alloc_shared_mem %[[N]] x i64 : (i64) -> !llvm.ptr
   %0 = llvm.alloca %arg0 x i64 : (i64) -> !llvm.ptr
-  // CHECK: %[[ALLOC1:.*]] = omp.alloc_shared_mem %[[N]] x f32 {alignment = 128 : i64} : (i64) -> !llvm.ptr
+  // CHECK: %[[ALLOC1:.*]] = omp.alloc_shared_mem %[[N]] x f32 : (i64) align(128) -> !llvm.ptr
   %1 = llvm.alloca %arg0 x f32 {alignment = 128} : (i64) -> !llvm.ptr
   // CHECK: %[[ALLOC2:.*]] = omp.alloc_shared_mem %[[N]] x vector<16xf32> : (i64) -> !llvm.ptr
   %2 = llvm.alloca %arg0 x vector<16xf32> : (i64) -> !llvm.ptr
@@ -81,10 +81,10 @@ llvm.func @device_func(%arg0: i64, %cond: i1) attributes {omp.declare_target = #
 
 // CHECK: ^[[EXIT]]:
 ^exit:
-  // CHECK: omp.free_shared_mem %[[ALLOC0]] : !llvm.ptr
-  // CHECK: omp.free_shared_mem %[[ALLOC1]] : !llvm.ptr
-  // CHECK: omp.free_shared_mem %[[ALLOC2]] : !llvm.ptr
-  // CHECK: omp.free_shared_mem %[[ALLOC3]] : !llvm.ptr
+  // CHECK: omp.free_shared_mem [%[[N]] x i64 : (i64)] %[[ALLOC0]] : !llvm.ptr
+  // CHECK: omp.free_shared_mem [%[[N]] x f32 : (i64) align(128)] %[[ALLOC1]] : !llvm.ptr
+  // CHECK: omp.free_shared_mem [%[[N]] x vector<16xf32> : (i64)] %[[ALLOC2]] : !llvm.ptr
+  // CHECK: omp.free_shared_mem [%[[N]] x i32 : (i64)] %[[ALLOC3]] : !llvm.ptr
   // CHECK-NOT: omp.free_shared_mem
   // CHECK: llvm.return
   llvm.return
@@ -102,11 +102,11 @@ llvm.func @host_func(%arg0: i64) {
     // CHECK: omp.target
     omp.target {
       %c0 = llvm.mlir.constant(1 : i64) : i64
-      // CHECK: %[[ALLOC1:.*]] = omp.alloc_shared_mem %{{.*}}
+      // CHECK: %[[ALLOC1:.*]] = omp.alloc_shared_mem [[ALLOC1_SIZE:.*]] -> !llvm.ptr
       %1 = llvm.alloca %c0 x i32 : (i64) -> !llvm.ptr
       // CHECK-NEXT: llvm.call @foo(%[[ALLOC1]]) : (!llvm.ptr) -> ()
       llvm.call @foo(%1) : (!llvm.ptr) -> ()
-      // CHECK-NEXT: omp.free_shared_mem %[[ALLOC1]] : !llvm.ptr
+      // CHECK-NEXT: omp.free_shared_mem [[[ALLOC1_SIZE]]] %[[ALLOC1]] : !llvm.ptr
       // CHECK-NEXT: omp.terminator
       omp.terminator
     }

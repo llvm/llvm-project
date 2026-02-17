@@ -85,7 +85,7 @@ static bool shouldReplaceAllocaWithUses(const Operation::use_range &uses) {
 // similar is also implemented there to choose between allocas and device
 // shared memory allocations when processing OpenMP reductions, mapping and
 // privatization.
-bool shouldReplaceAllocaWithDeviceSharedMem(Operation &op) {
+static bool shouldReplaceAllocaWithDeviceSharedMem(Operation &op) {
   auto offloadIface = op.getParentOfType<omp::OffloadModuleInterface>();
   if (!offloadIface || !offloadIface.getIsTargetDevice())
     return false;
@@ -114,7 +114,11 @@ bool shouldReplaceAllocaWithDeviceSharedMem(Operation &op) {
   return shouldReplaceAllocaWithUses(op.getUses());
 }
 
-void insertDeviceSharedMemDeallocation(OpBuilder &builder, Value allocVal) {
+static void insertDeviceSharedMemDeallocation(OpBuilder &builder,
+                                              TypeAttr elemType,
+                                              Value arraySize,
+                                              IntegerAttr alignment,
+                                              Value allocVal) {
   Block *allocaBlock = allocVal.getParentBlock();
   DominanceInfo domInfo;
   for (Block &block : allocVal.getParentRegion()->getBlocks()) {
@@ -122,7 +126,8 @@ void insertDeviceSharedMemDeallocation(OpBuilder &builder, Value allocVal) {
     if (!terminator->hasSuccessors() &&
         domInfo.dominates(allocaBlock, &block)) {
       builder.setInsertionPoint(terminator);
-      omp::FreeSharedMemOp::create(builder, allocVal.getLoc(), allocVal);
+      omp::FreeSharedMemOp::create(builder, allocVal.getLoc(), elemType,
+                                   arraySize, alignment, allocVal);
     }
   }
 }
@@ -151,8 +156,8 @@ public:
 
       // TODO: The handling of non-default address spaces might need to be
       // improved. This currently only handles the case where an alloca to
-      // non-default address space must only be used by a single addrspacecast
-      // to default address space.
+      // non-default address space is only used by a single addrspacecast to
+      // default address space.
       bool nonDefaultAddrSpace = false;
       if (auto llvmPtrType = dyn_cast<LLVM::LLVMPointerType>(resultType))
         nonDefaultAddrSpace = llvmPtrType.getAddressSpace() != 0;
@@ -163,7 +168,8 @@ public:
           allocaOp.getElemTypeAttr(), allocaOp.getArraySize(),
           allocaOp.getAlignmentAttr());
       if (nonDefaultAddrSpace) {
-        assert(allocaOp->hasOneUse() && "alloca must have only one use");
+        assert(allocaOp->hasOneUse() && " unsupported non-default address "
+                                        "space alloca with multiple uses");
         auto asCastOp =
             cast<LLVM::AddrSpaceCastOp>(*allocaOp->getUsers().begin());
         asCastOp.replaceAllUsesWith(sharedAllocOp.getOperation());
@@ -179,7 +185,9 @@ public:
 
       // Create a new omp.free_shared_mem for the allocated buffer prior to
       // exiting the region.
-      insertDeviceSharedMemDeallocation(builder, sharedAllocOp.getResult());
+      insertDeviceSharedMemDeallocation(
+          builder, allocaOp.getElemTypeAttr(), allocaOp.getArraySize(),
+          allocaOp.getAlignmentAttr(), sharedAllocOp.getResult());
     });
     for (Operation *op : toBeDeleted)
       op->erase();
