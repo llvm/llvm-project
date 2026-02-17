@@ -429,6 +429,14 @@ private:
       M.addModuleFlag(Module::ModFlagBehavior::Error, "wasm-feature-shared-mem",
                       wasm::WASM_FEATURE_PREFIX_DISALLOWED);
     }
+    
+    // Mark component-model-thread-context as disallowed when not in use to
+    // prevent linking object files with incompatible threading ABIs.
+    if (!Features[WebAssembly::FeatureComponentModelThreadContext]) {
+      M.addModuleFlag(Module::ModFlagBehavior::Error,
+                      "wasm-feature-component-model-thread-context",
+                      wasm::WASM_FEATURE_PREFIX_DISALLOWED);
+    }
   }
 };
 char CoalesceFeaturesAndStripAtomics::ID = 0;

@@ -56,6 +56,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("bulk-memory", HasBulkMemory)
       .Case("bulk-memory-opt", HasBulkMemoryOpt)
       .Case("call-indirect-overlong", HasCallIndirectOverlong)
+      .Case("component-model-thread-context", HasComponentModelThreadContext)
       .Case("compact-imports", HasCompactImports)
       .Case("exception-handling", HasExceptionHandling)
       .Case("extended-const", HasExtendedConst)
@@ -120,6 +121,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_tail_call__");
   if (HasWideArithmetic)
     Builder.defineMacro("__wasm_wide_arithmetic__");
+  if (HasComponentModelThreadContext)
+    Builder.defineMacro("__wasm_component_model_thread_context__");
   // Note that not all wasm features appear here.   For example,
   // HasCompatctImports
 

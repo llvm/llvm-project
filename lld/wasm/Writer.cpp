@@ -644,6 +644,16 @@ void Writer::populateTargetFeatures() {
             " because it was not compiled with 'atomics' or 'bulk-memory' "
             "features.");
 
+  if (ctx.arg.componentModelThreadContext && disallowed.contains("component-model-thread-context"))
+    error("--component-model-thread-context is disallowed by " +
+            disallowed["component-model-thread-context"] +
+            " because it was not compiled with the 'component-model-thread-context' feature.");
+
+  if (!ctx.arg.componentModelThreadContext && used.contains("component-model-thread-context"))
+    error("component-model-thread-context feature used by " +
+            used["component-model-thread-context"] +
+            " but --component-model-thread-context not specified.");
+
     for (auto feature : {"atomics", "bulk-memory"})
       if (!allowed.contains(feature))
         error(StringRef("'") + feature +
