@@ -1327,11 +1327,39 @@ EMPTY_CLASS(AssumedRankSpec);
 //        explicit-shape-spec-list | assumed-shape-spec-list |
 //        deferred-shape-spec-list | assumed-size-spec | implied-shape-spec |
 //        implied-shape-or-assumed-size-spec | assumed-rank-spec
+// R814 array-spec is 
+//    explicit-shape-spec-list
+// or explicit-shape-bounds-spec
+// or assumed-shape-spec-list
+// or assumed-shape-bounds-spec
+// or deferred-shape-spec-list
+// or assumed-size-spec
+// or implied-shape-spec
+// or implied-shape-or-assumed-size-spec
+// or assumed-rank-spec
+// Combine first two rules:
+// eplicit-shape-spec-list-or-array
+using ExplicitBoundsExpr = IntExpr;
+
+struct ExplicitShapeBoundsSpec {
+  TUPLE_CLASS_BOILERPLATE(ExplicitShapeBoundsSpec);
+  std::tuple<
+    std::optional<ExplicitBoundsExpr>,
+    ExplicitBoundsExpr>
+  t;
+};
+
 struct ArraySpec {
   UNION_CLASS_BOILERPLATE(ArraySpec);
-  std::variant<std::list<ExplicitShapeSpec>, std::list<AssumedShapeSpec>,
-      DeferredShapeSpecList, AssumedSizeSpec, ImpliedShapeSpec, AssumedRankSpec>
-      u;
+  std::variant<
+    std::list<ExplicitShapeSpec>,
+    ExplicitShapeBoundsSpec,
+    std::list<AssumedShapeSpec>,
+    DeferredShapeSpecList, 
+    AssumedSizeSpec, 
+    ImpliedShapeSpec, 
+    AssumedRankSpec>
+  u;
 };
 
 // R826 intent-spec -> IN | OUT | INOUT

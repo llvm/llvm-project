@@ -565,10 +565,15 @@ public:
     Walk(std::get<std::optional<SpecificationExpr>>(x.t), ":");
     Walk(std::get<SpecificationExpr>(x.t));
   }
+  void Unparse(const ExplicitShapeBoundsSpec &x) {
+    // TODO: don't remember if this was needed to compile 
+    // or if I just put it here
+  }
   void Unparse(const ArraySpec &x) { // R815
     common::visit(
         common::visitors{
             [&](const std::list<ExplicitShapeSpec> &y) { Walk(y, ","); },
+            [&](const ExplicitShapeBoundsSpec &y) { Walk(y); },
             [&](const std::list<AssumedShapeSpec> &y) { Walk(y, ","); },
             [&](const DeferredShapeSpecList &y) { Walk(y); },
             [&](const AssumedSizeSpec &y) { Walk(y); },
