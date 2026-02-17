@@ -270,6 +270,32 @@ void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
   }
 }
 
+CaptureComponents
+CapturesBeforeAnalysis::getCapturesBefore(const Value *Object,
+                                          const Instruction *I, bool OrAt) {
+  assert(I && "CapturesBeforeAnalysis requires a context instruction.");
+  if (!isIdentifiedFunctionLocal(Object))
+    return CaptureComponents::Provenance;
+
+  return PointerMayBeCapturedBefore(
+      Object, /* ReturnCaptures */ true, I, &DT, /* IncludeI */ true,
+      CaptureComponents::Provenance, capturesAnything, LI);
+}
+
+CaptureComponents
+ChainedCaptureAnalysis::getCapturesBefore(const Value *Object,
+                                          const Instruction *I, bool OrAt) {
+  CaptureComponents CC = EEA.getCapturesBefore(Object, I, OrAt);
+  if (!capturesAnyProvenance(CC))
+    return CC;
+
+  // If we still happen not to have the context instruction, we cannot provide
+  // more precision than EarliestEscapeAnalysis.
+  if (!I)
+    return CC;
+  return CBA.getCapturesBefore(Object, I, OrAt);
+}
+
 //===----------------------------------------------------------------------===//
 // GetElementPtr Instruction Decomposition and Analysis
 //===----------------------------------------------------------------------===//
