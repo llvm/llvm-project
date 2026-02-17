@@ -23,6 +23,7 @@
 #include <atomic>
 #include <cassert>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "atomic_helpers.h"
