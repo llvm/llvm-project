@@ -18,6 +18,8 @@
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/Support/MathExtras.h"
 
 #include "llvm/Support/Debug.h"
@@ -55,8 +57,8 @@ public:
 
   void printEdges() {
     for (auto &en : edges) {
-      llvm::dbgs() << *en.first << " (" << en.first << ")"
-                   << " has " << en.second.size() << " edges:\n";
+      llvm::dbgs() << *en.first << " (" << en.first << ")" << " has "
+                   << en.second.size() << " edges:\n";
       for (auto *node : en.second) {
         llvm::dbgs() << '\t' << *node->op << '\n';
       }
@@ -67,7 +69,7 @@ private:
   /// A node of a directed graph between MLIR Operations to model various
   /// relationships. This is meant to be used internally.
   struct DGNode {
-    DGNode(Operation *op) : op(op) {};
+    DGNode(Operation *op) : op(op){};
     Operation *op;
 
     // Start and finish visit numbers are standard in DFS to implement things
@@ -209,32 +211,68 @@ void mlir::affine::getTripCountMapAndOperands(
                             tripCountValueMap.getOperands().end());
 }
 
-/// Returns the trip count of the loop if it's a constant, std::nullopt
-/// otherwise. This method uses affine expression analysis (in turn using
-/// getTripCount) and is able to determine constant trip count in non-trivial
-/// cases.
-std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
-  SmallVector<Value, 4> operands;
-  AffineMap map;
-  getTripCountMapAndOperands(forOp, &map, &operands);
-
-  if (!map)
-    return std::nullopt;
-
-  // Take the min if all trip counts are constant.
+/// The function make map be computed with the given operands to get the value
+/// of trip, which may have a range when a range exists for either operand.
+/// If type is equal to BoundType::LB get the minimum value of the trip, if type
+/// is equal to BoundType::UB get the maximum value of the trip.
+static std::optional<uint64_t>
+getKnownTripCountBound(AffineMap map, SmallVectorImpl<Value> &operands,
+                       presburger::BoundType type) {
   std::optional<uint64_t> tripCount;
-  for (auto resultExpr : map.getResults()) {
-    if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
+  for (unsigned i = 0, e = map.getResults().size(); i < e; ++i) {
+    AffineMap subMap = map.getSubMap(i);
+    ValueBoundsConstraintSet::Variable var(subMap, operands);
+    auto lbBound = ValueBoundsConstraintSet::computeConstantBound(
+        mlir::presburger::BoundType::LB, var);
+    auto ubBound = ValueBoundsConstraintSet::computeConstantBound(
+        mlir::presburger::BoundType::UB, var, nullptr, /*closedUB*/ true);
+    if (failed(lbBound) || failed(ubBound))
+      return std::nullopt;
+    if (type == presburger::BoundType::LB) {
       if (tripCount.has_value())
         tripCount =
-            std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
+            std::min(*tripCount, static_cast<uint64_t>(lbBound.value()));
       else
-        tripCount = constExpr.getValue();
+        tripCount = lbBound.value();
+    } else if (type == presburger::BoundType::UB) {
+      if (tripCount.has_value())
+        tripCount =
+            std::max(*tripCount, static_cast<uint64_t>(ubBound.value()));
+      else
+        tripCount = ubBound.value();
     } else {
       return std::nullopt;
     }
   }
   return tripCount;
+}
+
+/// Returns the trip count of the loop if it's a constant, std::nullopt
+/// otherwise. This method uses affine expression analysis (in turn using
+/// getTripCount) and is able to determine constant trip count in non-trivial
+/// cases.
+std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
+  SmallVector<Value> operands;
+  AffineMap map;
+  getTripCountMapAndOperands(forOp, &map, &operands);
+
+  if (!map)
+    return std::nullopt;
+  return getKnownTripCountBound(map, operands, presburger::BoundType::LB);
+}
+
+/// Returns the maximum trip count when the operand of forOp has a range.
+/// If the operand of forOp is a constant, the return value is the same as
+/// `getConstantTripCount`.
+std::optional<uint64_t>
+mlir::affine::getUpperBoundOnTripCount(AffineForOp forOp) {
+  SmallVector<Value> operands;
+  AffineMap map;
+  getTripCountMapAndOperands(forOp, &map, &operands);
+
+  if (!map)
+    return std::nullopt;
+  return getKnownTripCountBound(map, operands, presburger::BoundType::UB);
 }
 
 /// Returns the greatest known integral divisor of the trip count. Affine
@@ -252,10 +290,14 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
   // divisors.
   assert(map.getNumResults() >= 1 && "expected one or more results");
   std::optional<uint64_t> gcd;
-  for (auto resultExpr : map.getResults()) {
+  for (unsigned i = 0, e = map.getResults().size(); i < e; ++i) {
     uint64_t thisGcd;
-    if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
-      uint64_t tripCount = constExpr.getValue();
+    AffineMap subMap = map.getSubMap(i);
+    ValueBoundsConstraintSet::Variable var(subMap, operands);
+    auto lbBound = ValueBoundsConstraintSet::computeConstantBound(
+        mlir::presburger::BoundType::LB, var);
+    if (!failed(lbBound)) {
+      uint64_t tripCount = lbBound.value();
       // 0 iteration loops (greatest divisor is 2^64 - 1).
       if (tripCount == 0)
         thisGcd = std::numeric_limits<uint64_t>::max();
@@ -264,7 +306,7 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
         thisGcd = tripCount;
     } else {
       // Trip count is not a known constant; return its largest known divisor.
-      thisGcd = resultExpr.getLargestKnownDivisor();
+      thisGcd = map.getResult(i).getLargestKnownDivisor();
     }
     if (gcd.has_value())
       gcd = std::gcd(*gcd, thisGcd);

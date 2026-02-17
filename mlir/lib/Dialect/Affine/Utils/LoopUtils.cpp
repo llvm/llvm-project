@@ -117,8 +117,10 @@ static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// was known to have a single iteration.
 LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
-  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
-  if (!tripCount || *tripCount != 1)
+  std::optional<uint64_t> minTripCount = getConstantTripCount(forOp);
+  std::optional<uint64_t> maxTripCount = getUpperBoundOnTripCount(forOp);
+  if (!minTripCount || *minTripCount != 1 || !maxTripCount ||
+      *maxTripCount != 1)
     return failure();
 
   // TODO: extend this for arbitrary affine bounds.
@@ -870,15 +872,23 @@ void mlir::affine::getPerfectlyNestedLoops(
 /// Unrolls this loop completely.
 LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
-  if (mayBeConstantTripCount.has_value()) {
-    uint64_t tripCount = *mayBeConstantTripCount;
-    if (tripCount == 0)
-      return success();
-    if (tripCount == 1)
-      return promoteIfSingleIteration(forOp);
-    return loopUnrollByFactor(forOp, tripCount);
-  }
-  return failure();
+  std::optional<uint64_t> maxMayBeConstantTripCount =
+      getUpperBoundOnTripCount(forOp);
+
+  if (!mayBeConstantTripCount.has_value() &&
+      !maxMayBeConstantTripCount.has_value())
+    return failure();
+
+  uint64_t tripCount = *mayBeConstantTripCount;
+
+  // Trip equals 0, this loop cannot unroll.
+  if (tripCount <= 0)
+    return success();
+
+  if (succeeded(promoteIfSingleIteration(forOp)))
+    return success();
+
+  return loopUnrollByFactor(forOp, tripCount);
 }
 
 /// Unrolls this loop by the specified factor or by the trip count (if constant)
@@ -999,8 +1009,12 @@ LogicalResult mlir::affine::loopUnrollByFactor(
   assert(unrollFactor > 0 && "unroll factor should be positive");
 
   std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<uint64_t> maxMayBeConstantTripCount =
+      getUpperBoundOnTripCount(forOp);
   if (unrollFactor == 1) {
-    if (mayBeConstantTripCount == 1 && failed(promoteIfSingleIteration(forOp)))
+    if (mayBeConstantTripCount && *mayBeConstantTripCount == 1 &&
+        maxMayBeConstantTripCount && *maxMayBeConstantTripCount == 1 &&
+        failed(promoteIfSingleIteration(forOp)))
       return failure();
     return success();
   }
@@ -1020,7 +1034,10 @@ LogicalResult mlir::affine::loopUnrollByFactor(
   }
 
   // Generate the cleanup loop if trip count isn't a multiple of unrollFactor.
-  if (getLargestDivisorOfTripCount(forOp) % unrollFactor != 0) {
+  // If the trip count has a range, a clean up loop needs to be generated.
+  if ((mayBeConstantTripCount && maxMayBeConstantTripCount &&
+       *mayBeConstantTripCount != *maxMayBeConstantTripCount) ||
+      getLargestDivisorOfTripCount(forOp) % unrollFactor != 0) {
     // Loops where the lower bound is a max expression or the upper bound is
     // a min expression and the trip count doesn't divide the unroll factor
     // can't be unrolled since the lower bound of the cleanup loop in such cases
