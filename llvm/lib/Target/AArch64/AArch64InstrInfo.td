@@ -1748,6 +1748,10 @@ def BFCVTN2      : SIMD_BFCVTN2;
 
 def : Pat<(concat_vectors (v4bf16 V64:$Rd), (any_fpround (v4f32 V128:$Rn))),
           (BFCVTN2 (v8bf16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub)), V128:$Rn)>;
+
+def : Pat<(v4f32 (partial_reduce_fmla v4f32:$acc, v8bf16:$LHS, v8bf16:$RHS)),
+          (BFMLALT (BFMLALB v4f32:$acc, V128:$LHS, V128:$RHS),
+              V128:$LHS, V128:$RHS)>;
 }
 
 let Predicates = [HasNEONandIsStreamingSafe, HasBF16] in {

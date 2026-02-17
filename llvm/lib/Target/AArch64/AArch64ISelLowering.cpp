@@ -1507,6 +1507,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
+    if (Subtarget->hasBF16())
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
+                                MVT::v8bf16, Legal);
+
     setOperationAction(ISD::CLMUL, {MVT::v8i8, MVT::v16i8}, Legal);
     if (Subtarget->hasAES())
       setOperationAction(ISD::CLMUL, {MVT::v1i64, MVT::v2i64}, Legal);
@@ -2022,6 +2026,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
                                 MVT::v8f16, Custom);
     }
+
+    if (Subtarget->hasBF16())
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
+                                MVT::nxv8bf16, Legal);
   }
 
   if (Subtarget->hasSVEAES() &&

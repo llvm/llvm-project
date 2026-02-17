@@ -968,14 +968,8 @@ define <8 x bfloat> @fsub_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
 define <4 x float> @partial_reduce_to_v4f32(<4 x float> %acc, <8 x bfloat> %a, <8 x bfloat> %b) {
 ; CHECK-LABEL: partial_reduce_to_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    shll v3.4s, v1.4h, #16
-; CHECK-NEXT:    shll v4.4s, v2.4h, #16
-; CHECK-NEXT:    shll2 v1.4s, v1.8h, #16
-; CHECK-NEXT:    shll2 v2.4s, v2.8h, #16
-; CHECK-NEXT:    fmul v3.4s, v3.4s, v4.4s
-; CHECK-NEXT:    fmul v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v3.4s
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    bfmlalb v0.4s, v1.8h, v2.8h
+; CHECK-NEXT:    bfmlalt v0.4s, v1.8h, v2.8h
 ; CHECK-NEXT:    ret
 entry:
   %a.wide = fpext <8 x bfloat> %a to <8 x float>
