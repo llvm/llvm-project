@@ -14,5 +14,6 @@ using namespace clang;
 using namespace dependencies;
 
 DependencyScanningServiceOptions::DependencyScanningServiceOptions()
-    : BuildSessionTimestamp(
+    : MakeVFS([] { return llvm::vfs::createPhysicalFileSystem(); }),
+      BuildSessionTimestamp(
           llvm::sys::toTimeT(std::chrono::system_clock::now())) {}
