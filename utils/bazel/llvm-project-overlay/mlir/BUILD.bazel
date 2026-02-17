@@ -8959,6 +8959,16 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "LLVMTranslationDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Target/LLVMIR/LLVMTranslationDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Target/LLVMIR/LLVMTranslationDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
 cc_library(
     name = "ToLLVMIRTranslation",
     srcs = [
