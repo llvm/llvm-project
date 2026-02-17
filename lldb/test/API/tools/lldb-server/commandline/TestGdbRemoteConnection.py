@@ -6,9 +6,12 @@ from lldbsuite.test.lldbtest import *
 from lldbgdbserverutils import Server
 import lldbsuite.test.lldbplatformutil
 from lldbgdbserverutils import Pipe
+import lldb
 
 
 class TestGdbRemoteConnection(gdbremote_testcase.GdbRemoteTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIfRemote  # reverse connect is not a supported use case for now
     def test_reverse_connect(self):
         # Reverse connect is the default connection method.

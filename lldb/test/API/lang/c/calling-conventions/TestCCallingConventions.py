@@ -3,10 +3,12 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test_event.build_exception import BuildError
+import re
 
 
 class TestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def build_and_run(self, test_file):
         """

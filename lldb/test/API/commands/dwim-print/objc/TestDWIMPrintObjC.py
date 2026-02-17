@@ -9,8 +9,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestCase(TestBase):
-    SHARED_BUILD_TESTCASE = True
-
     @skipUnlessDarwin
     def test(self):
         self.build()

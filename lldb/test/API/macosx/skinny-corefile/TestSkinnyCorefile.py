@@ -9,9 +9,12 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+import shutil
 
 
 class TestSkinnyCorefile(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIf(
         debug_info=no_match(["dsym"]),
         bugnumber="This test is looking explicitly for a dSYM",

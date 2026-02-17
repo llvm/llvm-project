@@ -9,10 +9,13 @@ import lldbgdbserverutils
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+import lldb
+import os
 
 
 class TestAutoInstallMainExecutable(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     @skipIfRemote
     @skipIfWindows  # This test is flaky on Windows

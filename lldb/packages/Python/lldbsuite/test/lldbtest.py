@@ -571,7 +571,7 @@ class Base(unittest.TestCase):
 
     # Subclasses can set this to True to avoid repeated building of the test
     # source (by default, a separate build happens for each test function).
-    SHARED_BUILD_TESTCASE = False
+    SHARED_BUILD_TESTCASE = True
 
     @staticmethod
     def compute_mydir(test_file):

@@ -9,10 +9,12 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from pathlib import Path
+import re
 
 
 class ProcessLaunchTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def setUp(self):
         # Call super's setUp().
