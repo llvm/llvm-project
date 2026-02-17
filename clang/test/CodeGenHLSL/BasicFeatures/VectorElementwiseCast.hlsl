@@ -184,9 +184,11 @@ export void call8(int3x1 M) {
 
 // vector flat cast from matrix of same size (bool)
 // CHECK-LABEL: call9
-// CHECK:    [[M_ADDR:%.*]] = alloca [2 x i32], align 4
+// COL-CHECK:    [[M_ADDR:%.*]] = alloca [2 x <1 x i32>], align 4
+// ROW-CHECK:    [[M_ADDR:%.*]] = alloca [1 x <2 x i32>], align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca <2 x i32>, align 8
-// CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [2 x i32], align 4
+// COL-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [2 x <1 x i32>], align 4
+// ROW-CHECK-NEXT:    [[HLSL_EWCAST_SRC:%.*]] = alloca [1 x <2 x i32>], align 4
 // CHECK-NEXT:    [[FLATCAST_TMP:%.*]] = alloca <2 x i1>, align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <2 x i1> %M to <2 x i32>
 // CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
