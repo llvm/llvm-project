@@ -1545,9 +1545,12 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     if (isa<CoroutineBodyStmt>(Body))
       ShouldEmitLifetimeMarkers = true;
 
-    // Initialize helper which will detect jumps which can cause invalid
-    // lifetime markers.
-    if (ShouldEmitLifetimeMarkers)
+    // Detect jumps that invalidate lifetime markers or bypass auto-var-init.
+    bool NeedsBypassDetection =
+        ShouldEmitLifetimeMarkers ||
+        (CGM.getLangOpts().getTrivialAutoVarInit() !=
+         LangOptions::TrivialAutoVarInitKind::Uninitialized);
+    if (NeedsBypassDetection)
       Bypasses.Init(CGM, Body);
   }
 
