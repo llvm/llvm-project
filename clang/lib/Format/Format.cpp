@@ -1325,6 +1325,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.SpaceBeforeRangeBasedForLoopColon);
     IO.mapOptional("SpaceBeforeSquareBrackets",
                    Style.SpaceBeforeSquareBrackets);
+    IO.mapOptional("SpaceBetweenUnderscoreParens",
+                   Style.SpaceBetweenUnderscoreParens);
     IO.mapOptional("SpaceInEmptyBraces", Style.SpaceInEmptyBraces);
     IO.mapOptional("SpacesBeforeTrailingComments",
                    Style.SpacesBeforeTrailingComments);
@@ -1830,6 +1832,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeParensOptions.AfterIfMacros = true;
   LLVMStyle.SpaceBeforeRangeBasedForLoopColon = true;
   LLVMStyle.SpaceBeforeSquareBrackets = false;
+  LLVMStyle.SpaceBetweenUnderscoreParens = true;
   LLVMStyle.SpaceInEmptyBraces = FormatStyle::SIEB_Never;
   LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.SpacesInAngles = FormatStyle::SIAS_Never;
@@ -2155,6 +2158,7 @@ FormatStyle getGNUStyle() {
   Style.FixNamespaceComments = false;
   Style.KeepFormFeed = true;
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
+  Style.SpaceBetweenUnderscoreParens = false;
   return Style;
 }
 

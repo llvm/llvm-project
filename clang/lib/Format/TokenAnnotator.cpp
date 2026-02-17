@@ -4576,6 +4576,14 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
 }
 
 bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
+  // Handle underscore macro: _("string") or _(message)
+  // Special case when SpaceBetweenUnderscoreParens is false
+  const FormatToken *Left = Right.Previous;
+  if (Left && Left->is(tok::identifier) && Left->TokenText == "_" &&
+      !Style.SpaceBetweenUnderscoreParens) {
+    return false;
+  }
+
   if (Style.SpaceBeforeParens == FormatStyle::SBPO_Always)
     return true;
   if (Right.is(TT_OverloadedOperatorLParen) &&
@@ -4984,6 +4992,11 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     // Handle builtins like identifiers.
     if (Line.Type != LT_PreprocessorDirective &&
         (Left.Tok.getIdentifierInfo() || Left.is(tok::r_paren))) {
+      // Check for special case: single underscore token (gettext macro).
+      if (Left.Tok.getIdentifierInfo() && !Style.SpaceBetweenUnderscoreParens &&
+          Left.TokenText == "_") {
+        return false;
+      }
       return spaceRequiredBeforeParens(Right);
     }
     return false;
