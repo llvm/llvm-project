@@ -2203,14 +2203,13 @@ protected:
 ///  * VPWidenIntOrFpInductionRecipe: Generates vector values for integer and
 ///    floating point inductions with arbitrary start and step values. Produces
 ///    a vector PHI per-part.
-///  * VPDerivedIVRecipe: Converts the canonical IV value to the corresponding
-///    value of an IV with different start and step values. Produces a single
-///    scalar value per iteration
-///  * VPScalarIVStepsRecipe: Generates scalar values per-lane based on a
-///    canonical or derived induction.
 ///  * VPWidenPointerInductionRecipe: Generate vector and scalar values for a
 ///    pointer induction. Produces either a vector PHI per-part or scalar values
 ///    per-lane based on the canonical induction.
+///  * VPFirstOrderRecurrencePHIRecipe
+///  * VPReductionPHIRecipe
+///  * VPActiveLaneMaskPHIRecipe
+///  * VPEVLBasedIVPHIRecipe
 class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
                                             public VPPhiAccessors {
 protected:
