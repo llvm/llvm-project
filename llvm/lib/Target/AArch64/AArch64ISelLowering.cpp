@@ -1897,6 +1897,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v1i64, Custom);
     setOperationAction(ISD::MUL, MVT::v2i64, Custom);
 
+    if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
+      setOperationAction(ISD::VECREDUCE_SMAX, MVT::v2i64, Custom);
+      setOperationAction(ISD::VECREDUCE_SMIN, MVT::v2i64, Custom);
+      setOperationAction(ISD::VECREDUCE_UMAX, MVT::v2i64, Custom);
+      setOperationAction(ISD::VECREDUCE_UMIN, MVT::v2i64, Custom);
+    }
+
     // NOTE: Currently this has to happen after computeRegisterProperties rather
     // than the preferred option of combining it with the addRegisterClass call.
     if (Subtarget->useSVEForFixedLengthVectors()) {
@@ -17304,8 +17311,24 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
   return DAG.getAnyExtOrTrunc(Result, DL, VT);
 }
 
+static std::optional<Intrinsic::ID> getPairwiseOpForReduction(unsigned Op) {
+  switch (Op) {
+  case ISD::VECREDUCE_SMIN:
+    return Intrinsic::aarch64_sve_sminp;
+  case ISD::VECREDUCE_SMAX:
+    return Intrinsic::aarch64_sve_smaxp;
+  case ISD::VECREDUCE_UMIN:
+    return Intrinsic::aarch64_sve_uminp;
+  case ISD::VECREDUCE_UMAX:
+    return Intrinsic::aarch64_sve_umaxp;
+  default:
+    return std::nullopt;
+  }
+}
+
 SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
 
@@ -17313,7 +17336,6 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
   // widening by inserting zeroes.
   if (Subtarget->hasFullFP16() && Op.getOpcode() == ISD::VECREDUCE_FADD &&
       SrcVT == MVT::v2f16) {
-    SDLoc DL(Op);
     return DAG.getNode(ISD::FADD, DL, MVT::f16,
                        DAG.getExtractVectorElt(DL, MVT::f16, Src, 0),
                        DAG.getExtractVectorElt(DL, MVT::f16, Src, 1));
@@ -17327,9 +17349,32 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
                       Op.getOpcode() == ISD::VECREDUCE_FADD ||
                       (Op.getOpcode() != ISD::VECREDUCE_ADD &&
                        SrcVT.getVectorElementType() == MVT::i64);
-  if (SrcVT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(
-          SrcVT, OverrideNEON && Subtarget->useSVEForFixedLengthVectors())) {
+
+  bool UsesSVEForFixedLengthVT =  useSVEForFixedLengthVectorVT(
+          SrcVT, OverrideNEON && Subtarget->useSVEForFixedLengthVectors());
+
+  // Always lower try to lower v2i64 pairwise operations (as NEON does not
+  // natively support reductions on these types). Try lowering any v2<ty> vector
+  // to pairwise operations when using SVE for fixed-length VTs, as the pairwise
+  // operations are likely to be cheaper than a full reduction.
+  bool TryPairwiseOps = SrcVT == MVT::v2i64 || (UsesSVEForFixedLengthVT &&
+    SrcVT.getVectorElementCount() ==  ElementCount::getFixed(2));
+
+  // Attempt to lower v2<ty> reductions to SVE2 pairwise operations.
+  auto PairwiseIID = getPairwiseOpForReduction(Op->getOpcode());
+  if (TryPairwiseOps && PairwiseIID &&
+      (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable())) {
+    SDValue Pg = getPredicateForVector(DAG, DL, SrcVT);
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT);
+    SDValue VecOp = convertToScalableVector(DAG, ContainerVT, Src);
+    SDValue Rdx = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VecOp.getValueType(),
+                              DAG.getConstant(*PairwiseIID, DL, MVT::i32), Pg,
+                              VecOp, VecOp);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, Op.getValueType(), Rdx,
+                       DAG.getConstant(0, DL, MVT::i64));
+  }
+
+  if (SrcVT.isScalableVector() || UsesSVEForFixedLengthVT) {
 
     if (SrcVT.getVectorElementType() == MVT::i1)
       return LowerPredReductionToSVE(Op, DAG);
@@ -17367,7 +17412,6 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
   }
 
   // Lower NEON reductions.
-  SDLoc DL(Op);
   switch (Op.getOpcode()) {
   case ISD::VECREDUCE_AND:
   case ISD::VECREDUCE_OR:
