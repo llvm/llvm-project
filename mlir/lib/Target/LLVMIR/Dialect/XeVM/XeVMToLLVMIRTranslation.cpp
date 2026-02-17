@@ -72,8 +72,8 @@ buildCacheControlPayloads(llvm::ArrayRef<mlir::Attribute> Attrs) {
     auto Vals = Arr.getValue();
     // Assert that the attribute has exactly 3 integer values: [SPIR-V token, L1
     // value, L3 value].
-    llvm::assert(Vals.size() == 3 &&
-                 "Expected 3 integer values in cache control attribute.");
+    assert(Vals.size() == 3 &&
+           "Expected 3 integer values in cache control attribute.");
 
     auto FirstAttr = mlir::dyn_cast<mlir::IntegerAttr>(Vals[0]);
     auto SecondAttr = mlir::dyn_cast<mlir::IntegerAttr>(Vals[1]);
