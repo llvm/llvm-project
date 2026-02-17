@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if (defined(__NVPTX__) || defined(__AMDGPU__)) &&                             \
+#if (defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__)) &&       \
     !((defined(__CUDA__) && !defined(__CUDA_ARCH__)) ||                        \
       (defined(__HIP__) && !defined(__HIP_DEVICE_COMPILE__)))
 #include <gpuintrin.h>
