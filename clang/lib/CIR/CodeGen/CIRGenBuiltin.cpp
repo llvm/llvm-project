@@ -901,8 +901,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   if (e->isPRValue() && !getContext().BuiltinInfo.isImmediate(builtinID) &&
       e->EvaluateAsRValue(result, cgm.getASTContext()) &&
       !result.hasSideEffects()) {
-    if (result.Val.isInt())
+    if (result.Val.isInt()) {
+      QualType type = e->getType();
+      if (type->isBooleanType())
+        return RValue::get(
+            builder.getBool(result.Val.getInt().getBoolValue(), loc));
       return RValue::get(builder.getConstInt(loc, result.Val.getInt()));
+    }
     if (result.Val.isFloat()) {
       // Note: we are using result type of CallExpr to determine the type of
       // the constant. Classic codegen uses the result value to determine the
