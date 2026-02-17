@@ -45698,15 +45698,14 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
       MaxMask8 = MaskedVal1;
     } else {
-      unsigned MaskBW = Op1.getValueType().getSizeInBits();
-      APInt MaskDemand = APInt::getLowBitsSet(MaskBW, 8);
+      APInt MaskDemand = APInt::getLowBitsSet(BitWidth, 8);
 
       KnownBits Known1;
       if (SimplifyDemandedBits(Op1, MaskDemand, Known1, TLO, Depth + 1))
         return true;
 
       // Compute an upper bound on mask[7:0].
-      KnownBits MaskBits = Known1.extractBits(8, 0);
+      KnownBits MaskBits = Known1.trunc(8);
       MaxMask8 = MaskBits.getMaxValue().getZExtValue();
     }
 
