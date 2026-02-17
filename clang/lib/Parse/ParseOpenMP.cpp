@@ -5102,7 +5102,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         // End of expression without colon
         break;
       } else {
-	ConsumeAnyToken();
+        ConsumeAnyToken();
       }
     }
     TPA.Revert();
