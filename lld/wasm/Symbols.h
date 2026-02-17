@@ -127,7 +127,7 @@ public:
   // or similar.
   bool isNoStrip() const;
 
-  const WasmSignature* getSignature() const;
+  const WasmSignature *getSignature() const;
 
   uint32_t getGOTIndex() const {
     assert(gotIndex != INVALID_INDEX);
@@ -561,10 +561,10 @@ union SymbolUnion {
 static_assert(sizeof(SymbolUnion) <= 120, "SymbolUnion too large");
 
 void printTraceSymbol(Symbol *sym);
-void printTraceSymbolUndefined(StringRef name, const InputFile* file);
+void printTraceSymbolUndefined(StringRef name, const InputFile *file);
 
 template <typename T, typename... ArgT>
-T *replaceSymbol(Symbol *s, ArgT &&... arg) {
+T *replaceSymbol(Symbol *s, ArgT &&...arg) {
   static_assert(std::is_trivially_destructible<T>(),
                 "Symbol types must be trivially destructible");
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");

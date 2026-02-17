@@ -8,7 +8,7 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/header_stat_before_open_cdb.json > %t.cdb
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | \
-// RUN:   FileCheck %s %if system-darwin %{ --check-prefixes=CHECK,CHECK-DARWIN %}
+// RUN:   FileCheck %s %if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{ --check-prefixes=CHECK,CHECK-DARWIN %}
 
 #include "Framework/Framework.h"
 #include "Framework/PrivateHeader.h"
