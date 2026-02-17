@@ -691,8 +691,14 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
     failIfError(FlagsOrErr);
     uint32_t Flags = FlagsOrErr.get();
 
+    StringRef EffectiveName = Name;
+    
+    if (isa<object::XCOFFObjectFile>(&O) && Name.starts_with(".")) { 
+      EffectiveName = Name.drop_front(1);
+    }
+
     if (!(Flags & object::BasicSymbolRef::SF_Undefined) &&
-        isCoveragePointSymbol(Name)) {
+        isCoveragePointSymbol(EffectiveName)) {
       Result.insert(Address);
     }
   }
@@ -714,23 +720,7 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
   if (const auto *MO = dyn_cast<object::MachOObjectFile>(&O)) {
     findMachOIndirectCovFunctions(*MO, &Result);
   }
-  if (const auto *XO = dyn_cast<object::XCOFFObjectFile>(&O)) {
-    for (const object::SymbolRef &Symbol : XO->symbols()) {
-      Expected<uint64_t> AddressOrErr = Symbol.getAddress();
-      failIfError(AddressOrErr);
-      uint64_t Address = AddressOrErr.get();
-
-      Expected<StringRef> NameOrErr = Symbol.getName();
-      failIfError(NameOrErr);
-      StringRef Name = NameOrErr.get();
-
-      if (isCoveragePointSymbol(Name) ||
-          (Name.starts_with(".") &&
-           isCoveragePointSymbol(Name.drop_front(1)))) {
-        Result.insert(Address);
-      }
-    }
-  }
+   
   return Result;
 }
 
