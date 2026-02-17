@@ -2241,8 +2241,7 @@ private:
     if (!hasNonZeroOffset())
       return C;
 
-    // TO_UPSTREAM(BoundsSafety)
-    return applyOffsetArgument(C, getOffset());
+    return llvm::ConstantExpr::getPtrAdd(C, getOffset());
   }
 
   /* TO_UPSTREAM(BoundsSafety) ON */
