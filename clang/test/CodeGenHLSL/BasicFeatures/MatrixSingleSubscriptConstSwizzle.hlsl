@@ -108,7 +108,7 @@ void setVectorOnMatrixSwizzle(out int2x3 M, int3 V) {
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(24) [[M:%.*]], <6 x i32> noundef [[N:%.*]], i32 noundef [[MINDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [2 x <3 x i32>], align 4
+// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    [[MINDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store <6 x i32> [[N]], ptr [[N_ADDR]], align 4
@@ -139,7 +139,7 @@ void setMatrixFromMatrix(out int2x3 M, int2x3 N, int MIndex) {
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(24) [[M:%.*]], <6 x i32> noundef [[N:%.*]], i32 noundef [[NINDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [2 x <3 x i32>], align 4
+// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    [[NINDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store <6 x i32> [[N]], ptr [[N_ADDR]], align 4

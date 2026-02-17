@@ -10,6 +10,7 @@ add_clang_library(clangAnalysisScalable
   Serialization/JSONFormat.cpp
   Serialization/SerializationFormatRegistry.cpp
   TUSummary/ExtractorRegistry.cpp
+  TUSummary/TUSummaryBuilder.cpp
 
   LINK_LIBS
   clangAST

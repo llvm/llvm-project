@@ -120,7 +120,7 @@ void ExplicitIntToBoolCastThenSplat(int3 Value) {
 // CHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <2 x float>, align 8
-// CHECK-NEXT:    [[M:%.*]] = alloca [2 x <3 x i32>], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    store <2 x float> [[VALUE]], ptr [[VALUE_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[VALUE_ADDR]], align 8
 // CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une <2 x float> [[TMP0]], zeroinitializer
@@ -139,7 +139,7 @@ void ExplicitFloatToBoolCastThenSplat(float2 Value) {
 // CHECK-SAME: i1 noundef [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[M:%.*]] = alloca [3 x <2 x float>], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [2 x <3 x float>], align 4
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[VALUE]] to i32
 // CHECK-NEXT:    store i32 [[STOREDV]], ptr [[VALUE_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VALUE_ADDR]], align 4

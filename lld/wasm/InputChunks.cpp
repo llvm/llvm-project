@@ -423,8 +423,7 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
 
   bool is64 = ctx.arg.is64.value_or(false);
   bool generated = false;
-  unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD
-                                 : WASM_OPCODE_I32_ADD;
+  unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
 
   uint64_t tombstone = getTombstone();
   // TODO(sbc): Encode the relocations in the data section and write a loop
@@ -585,12 +584,12 @@ uint64_t InputSection::getTombstoneForSection(StringRef name) {
     return UINT64_C(-2);
   if (name.starts_with(".debug_"))
     return UINT64_C(-1);
-  // If the function occurs in an function attribute section change it to -1 since
-  // 0 is a valid function index.
+  // If the function occurs in an function attribute section change it to -1
+  // since 0 is a valid function index.
   if (name.starts_with("llvm.func_attr."))
     return UINT64_C(-1);
-  // Returning 0 means there is no tombstone value for this section, and relocation
-  // will just use the addend.
+  // Returning 0 means there is no tombstone value for this section, and
+  // relocation will just use the addend.
   return 0;
 }
 
