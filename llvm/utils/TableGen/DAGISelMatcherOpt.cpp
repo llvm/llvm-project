@@ -492,7 +492,7 @@ static void FactorNodes(MatcherList &ML) {
     // Remove and delete the first node from the other matchers we're factoring.
     for (unsigned i = 1, e = EqualMatchers.size(); i != e; ++i) {
       EqualMatchers[i].pop_front();
-      Matcher *Tmp =
+      [[maybe_unused]] Matcher *Tmp =
           EqualMatchers[i].empty() ? nullptr : EqualMatchers[i].front();
       assert(!Optn == !Tmp && "Expected all to be null if any are null");
     }
