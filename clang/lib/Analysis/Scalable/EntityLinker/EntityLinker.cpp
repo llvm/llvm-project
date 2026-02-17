@@ -8,11 +8,9 @@
 
 #include "clang/Analysis/Scalable/EntityLinker/EntityLinker.h"
 #include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
-#include "clang/Analysis/Scalable/Serialization/SerializationFormat.h"
 #include "clang/Analysis/Scalable/Support/ErrorBuilder.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormatVariadic.h"
 
 using namespace clang::ssaf;
 
@@ -37,8 +35,6 @@ constexpr const char *MissingLinkageInformation =
 constexpr const char *DuplicateEntityIdInLinking =
     "duplicate TU EntityId({0}) encountered during linking";
 
-constexpr const char *ResolvingEntity =
-    "resolving entity '{0}' (TU EntityId({1}))";
 constexpr const char *MergingSummaryData = "merging summary data";
 constexpr const char *LinkingTUSummary = "linking TU summary";
 
@@ -63,9 +59,9 @@ resolveNamespace(const NestedBuildNamespace &LUNamespace,
 
 llvm::Expected<EntityId> EntityLinker::resolve(const EntityName &OldName,
                                                const EntityId OldId,
-                                               const EntityLinkage &EL) {
-  NestedBuildNamespace NewNamespace =
-      resolveNamespace(Output.LUNamespace, OldName.Namespace, EL.getLinkage());
+                                               const EntityLinkage &Linkage) {
+  NestedBuildNamespace NewNamespace = resolveNamespace(
+      Output.LUNamespace, OldName.Namespace, Linkage.getLinkage());
 
   EntityName NewName(OldName.USR, OldName.Suffix, NewNamespace);
 
@@ -75,7 +71,7 @@ llvm::Expected<EntityId> EntityLinker::resolve(const EntityName &OldName,
   // function will return the id assigned at the first insertion.
   EntityId NewId = Output.IdTable.getId(NewName);
 
-  auto [It, Inserted] = Output.LinkageTable.try_emplace(NewId, EL);
+  auto [It, Inserted] = Output.LinkageTable.try_emplace(NewId, Linkage);
   if (!Inserted) {
     return ErrorBuilder::create(
                llvm::inconvertibleErrorCode(),
@@ -93,7 +89,7 @@ llvm::Error EntityLinker::merge(
     std::map<SummaryName,
              std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
         &OutputData,
-    const EntityId OldId, const EntityId NewId, const EntityLinkage &EL,
+    const EntityId OldId, const EntityId NewId, const EntityLinkage &Linkage,
     std::vector<EntitySummaryEncoding *> &PatchTargets) {
   for (auto &[Name, DataMap] : InputData) {
     auto Iter = DataMap.find(OldId);
@@ -101,26 +97,23 @@ llvm::Error EntityLinker::merge(
       continue;
 
     auto &OutputMap = OutputData[Name];
-    auto Result = OutputMap.insert({NewId, std::move(Iter->second)});
+    auto InsertResult = OutputMap.insert({NewId, std::move(Iter->second)});
 
     // If insertion is successful, we will have to replace OldId with NewId in
     // this EntitySummaryEncoding.
-    if (Result.second) {
-      PatchTargets.push_back(Result.first->second.get());
+    if (InsertResult.second) {
+      PatchTargets.push_back(InsertResult.first->second.get());
     } else {
-      switch (EL.getLinkage()) {
+      switch (Linkage.getLinkage()) {
         // Insertion should never fail for `None` and `Internal` linkage
         // entities because these entities have different namespaces even if
         // their names clash.
       case EntityLinkage::LinkageType::None:
-        return ErrorBuilder::create(llvm::inconvertibleErrorCode(),
-                                    ErrorMessages::FailedToMergeSummaryData,
-                                    OldId.Index, NewId.Index, "None")
-            .build();
       case EntityLinkage::LinkageType::Internal:
         return ErrorBuilder::create(llvm::inconvertibleErrorCode(),
                                     ErrorMessages::FailedToMergeSummaryData,
-                                    OldId.Index, NewId.Index, "Internal")
+                                    OldId.Index, NewId.Index,
+                                    toString(Linkage.getLinkage()))
             .build();
       case EntityLinkage::LinkageType::External:
         // Insertion is expected to fail for duplicate occurrences of `External`

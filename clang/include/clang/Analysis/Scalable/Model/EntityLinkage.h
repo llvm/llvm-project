@@ -9,6 +9,8 @@
 #ifndef LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITYLINKAGE_H
 #define LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITYLINKAGE_H
 
+#include "llvm/ADT/StringRef.h"
+
 namespace clang::ssaf {
 
 /// Represents the linkage properties of an entity in the program model.
@@ -33,6 +35,9 @@ private:
 
   friend class SerializationFormat;
 };
+
+/// Returns a string representation of the linkage type.
+llvm::StringRef toString(EntityLinkage::LinkageType Linkage);
 
 } // namespace clang::ssaf
 

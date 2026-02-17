@@ -7,6 +7,7 @@ add_clang_library(clangAnalysisScalable
   EntityLinker/EntityLinker.cpp
   Model/BuildNamespace.cpp
   Model/EntityIdTable.cpp
+  Model/EntityLinkage.cpp
   Model/EntityName.cpp
   Serialization/JSONFormat.cpp
   Serialization/SerializationFormatRegistry.cpp

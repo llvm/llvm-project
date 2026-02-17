@@ -44,7 +44,7 @@ public:
 private:
   llvm::Expected<EntityId> resolve(const EntityName &OldName,
                                    const EntityId OldId,
-                                   const EntityLinkage &EL);
+                                   const EntityLinkage &Linkage);
 
   llvm::Error
   merge(std::map<SummaryName,
@@ -53,7 +53,8 @@ private:
         std::map<SummaryName,
                  std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
             &OutputData,
-        const EntityId OldId, const EntityId NewId, const EntityLinkage &EL,
+        const EntityId OldId, const EntityId NewId,
+        const EntityLinkage &Linkage,
         std::vector<EntitySummaryEncoding *> &PatchTargets);
 
   void patch(std::vector<EntitySummaryEncoding *> &PatchTargets,
