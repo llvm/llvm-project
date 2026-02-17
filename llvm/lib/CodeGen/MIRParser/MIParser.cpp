@@ -1721,8 +1721,8 @@ bool MIParser::parseSubRegisterIndex(unsigned &SubReg) {
 }
 
 bool MIParser::parseRegisterTiedDefIndex(unsigned &TiedDefIdx) {
-  if (!consumeIfPresent(MIToken::kw_tied_def))
-    return true;
+  assert(Token.is(MIToken::kw_tied_def));
+  lex();
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected an integer literal after 'tied-def'");
   if (getUnsigned(TiedDefIdx))
@@ -1800,23 +1800,26 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
 
   if (consumeIfPresent(MIToken::lparen)) {
     // For a def, we only expect a type. For use we expect either a type or a
-    // tied-def.
+    // tied-def. Additionally, for physical registers, we don't expect a type.
     unsigned Idx;
-    if (!IsDef && !parseRegisterTiedDefIndex(Idx)) {
+    if (Token.is(MIToken::kw_tied_def)) {
+      if (IsDef)
+        return error("tied-def not supported for defs");
+      if (parseRegisterTiedDefIndex(Idx))
+        return true;
       TiedDefIdx = Idx;
     } else {
+      if (!Reg.isVirtual())
+        return error("unexpected type on physical register");
+
       LLT Ty;
-      auto TyLoc = Token.location();
       // If type parsing fails, forwad the parse error for defs.
-      if (parseLowLevelType(TyLoc, Ty))
+      if (parseLowLevelType(Token.location(), Ty))
         return IsDef ? true
                      : error("expected tied-def or low-level type after '('");
 
       if (expectAndConsume(MIToken::rparen))
         return true;
-
-      if (!Reg.isVirtual())
-        return error(TyLoc, "unexpected type on physical register");
 
       MachineRegisterInfo &MRI = MF.getRegInfo();
       if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
