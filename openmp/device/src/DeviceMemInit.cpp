@@ -1,3 +1,4 @@
+#ifdef __AMDGPU__
 extern "C" {
 void __ockl_dm_init_v1(unsigned long hp, unsigned long sp, unsigned int hb,
                        unsigned int nis);
@@ -14,3 +15,4 @@ __omp_dm_init_kernel(unsigned long heap_ptr, unsigned long slab_ptr) {
   __ockl_dm_init_v1(heap_ptr, slab_ptr, HEAP_BYTES, NUM_SLABS);
 }
 }
+#endif

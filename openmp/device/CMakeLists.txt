@@ -40,7 +40,12 @@ set(src_files
   ${emissary_sources}
 
 )
-if(NOT LLVM_TARGETS_TO_BUILD OR "AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
+# Only link AMD ockl/ocml device libraries when actually building for AMDGCN.
+# The previous condition checked LLVM_TARGETS_TO_BUILD which includes all backends
+# (e.g. X86;AMDGPU;NVPTX), causing ockl.bc/ocml.bc to be linked into NVPTX builds
+# and contaminating the NVPTX DeviceRTL bitcode with AMDGCN intrinsics.
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn" OR
+   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn")
   find_package(AMDDeviceLibs REQUIRED CONFIG
                HINTS ${CMAKE_BINARY_DIR}/../../tools/rocm-device-libs
                      ${CMAKE_BINARY_DIR}/../rocm-device-libs-prefix/src/rocm-device-libs-build
