@@ -44,7 +44,6 @@ add_clang_library(clangStaticAnalyzerCheckers
   ErrnoModeling.cpp
   ErrnoTesterChecker.cpp
   ExprInspectionChecker.cpp
-  FixedAddressChecker.cpp
   FuchsiaHandleChecker.cpp
   GCDAntipatternChecker.cpp
   GenericTaintChecker.cpp
