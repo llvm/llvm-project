@@ -217,13 +217,13 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   // We want to copy the "true" value when the condition is true which means
   // we need to invert the branch condition to jump over TrueBB when the
   // condition is false.
-  auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
-  CC = RISCVCC::getInverseBranchCondition(CC);
+
+  unsigned BranchOpCode = MI.getOperand(3).getImm();
 
   // Insert branch instruction.
-  BuildMI(MBB, MBBI, DL, TII->get(RISCVCC::getBrCond(CC)))
-      .addReg(MI.getOperand(1).getReg())
-      .addReg(MI.getOperand(2).getReg())
+  BuildMI(MBB, MBBI, DL, TII->get(BranchOpCode))
+      .add(MI.getOperand(1))
+      .add(MI.getOperand(2))
       .addMBB(MergeBB);
 
   Register DestReg = MI.getOperand(0).getReg();
@@ -345,7 +345,36 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
       MI.getOperand(5).getReg() == RISCV::X0)
     return false;
 
-  auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
+  auto BCC = MI.getOperand(3).getImm();
+  auto CC = RISCVCC::COND_EQ;
+  switch (BCC) {
+  default:
+    llvm_unreachable("Unexpected branch opcode!");
+  case RISCV::BEQ: {
+    CC = RISCVCC::COND_NE;
+    break;
+  }
+  case RISCV::BNE: {
+    CC = RISCVCC::COND_EQ;
+    break;
+  }
+  case RISCV::BLT: {
+    CC = RISCVCC::COND_GE;
+    break;
+  }
+  case RISCV::BGE: {
+    CC = RISCVCC::COND_LT;
+    break;
+  }
+  case RISCV::BLTU: {
+    CC = RISCVCC::COND_GEU;
+    break;
+  }
+  case RISCV::BGEU: {
+    CC = RISCVCC::COND_LTU;
+    break;
+  }
+  }
 
   unsigned CMovOpcode, CMovIOpcode;
   switch (CC) {
