@@ -487,12 +487,127 @@ static hlsl::Binding getHandleIntrinsicBinding(IntrinsicInst *Handle,
 
   return hlsl::Binding(Class, Space, LowerBound, UpperBound, nullptr);
 }
+namespace {
+/// Helper for propogating the current handle and ptr indicies.
+struct AccessIndicies {
+  Value *GetPtrIdx;
+  Value *HandleIdx;
 
+  bool hasGetPtrIdx() { return GetPtrIdx != nullptr; }
+};
+} // namespace
+
+// getAccessIndicies traverses up the control flow that a ptr came from and
+// propagates back the indicies used to access the resource (AccessIndicies):
+//
+//  - GetPtrIdx is the index of dx.resource.getpointer
+//  - HandleIdx is the index of dx.resource.handlefrom.*
+static AccessIndicies
+getAccessIndicies(Instruction *I,
+                  SmallSetVector<Instruction *, 16> &DeadInsts) {
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    if (llvm::is_contained(HandleIntrins, II->getIntrinsicID())) {
+      DeadInsts.insert(II);
+      return {nullptr, II->getArgOperand(/*Index=*/3)};
+    }
+
+    if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
+      auto *V = dyn_cast<Instruction>(II->getArgOperand(/*Handle=*/0));
+      auto AccessIdx = getAccessIndicies(V, DeadInsts);
+      assert(!AccessIdx.hasGetPtrIdx() &&
+             "Encountered multiple dx.resource.getpointers in ptr chain?");
+      AccessIdx.GetPtrIdx = II->getArgOperand(1);
+
+      DeadInsts.insert(II);
+      return AccessIdx;
+    }
+  }
+
+  if (auto *Phi = dyn_cast<PHINode>(I)) {
+    unsigned NumEdges = Phi->getNumIncomingValues();
+    assert(NumEdges != 0 && "Malformed Phi Node");
+
+    IRBuilder<> Builder(Phi);
+    PHINode *GetPtrPhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
+    PHINode *HandlePhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
+
+    bool HasGetPtr = true;
+    for (unsigned I = 0; I < NumEdges; I++) {
+      auto *BB = Phi->getIncomingBlock(I);
+      auto *V = dyn_cast<Instruction>(Phi->getIncomingValue(I));
+      auto AccessIdx = getAccessIndicies(V, DeadInsts);
+      HasGetPtr &= AccessIdx.hasGetPtrIdx();
+      if (HasGetPtr)
+        GetPtrPhi->addIncoming(AccessIdx.GetPtrIdx, BB);
+      HandlePhi->addIncoming(AccessIdx.HandleIdx, BB);
+    }
+
+    if (HasGetPtr)
+      Builder.Insert(GetPtrPhi);
+    else
+      GetPtrPhi = nullptr;
+
+    Builder.Insert(HandlePhi);
+
+    DeadInsts.insert(Phi);
+    return {GetPtrPhi, HandlePhi};
+  }
+
+  if (auto *Select = dyn_cast<SelectInst>(I)) {
+    auto *TrueV = dyn_cast<Instruction>(Select->getTrueValue());
+    auto TrueAccessIdx = getAccessIndicies(TrueV, DeadInsts);
+
+    auto *FalseV = dyn_cast<Instruction>(Select->getFalseValue());
+    auto FalseAccessIdx = getAccessIndicies(FalseV, DeadInsts);
+
+    IRBuilder<> Builder(Select);
+    Value *GetPtrSelect = nullptr;
+
+    if (TrueAccessIdx.hasGetPtrIdx() && FalseAccessIdx.hasGetPtrIdx())
+      GetPtrSelect =
+          Builder.CreateSelect(Select->getCondition(), TrueAccessIdx.GetPtrIdx,
+                               FalseAccessIdx.GetPtrIdx);
+
+    auto *HandleSelect =
+        Builder.CreateSelect(Select->getCondition(), TrueAccessIdx.HandleIdx,
+                             FalseAccessIdx.HandleIdx);
+    DeadInsts.insert(Select);
+    return {GetPtrSelect, HandleSelect};
+  }
+
+  llvm_unreachable("collectUsedHandles should assure this does not occur");
+}
+
+static void
+replaceHandleWithIndicies(Instruction *Ptr, IntrinsicInst *OldHandle,
+                          SmallSetVector<Instruction *, 16> &DeadInsts) {
+  auto AccessIdx = getAccessIndicies(Ptr, DeadInsts);
+
+  IRBuilder<> Builder(Ptr);
+  IntrinsicInst *Handle = cast<IntrinsicInst>(OldHandle->clone());
+  Handle->setArgOperand(/*Index=*/3, AccessIdx.HandleIdx);
+  Builder.Insert(Handle);
+
+  auto *GetPtr =
+      Builder.CreateIntrinsic(Ptr->getType(), Intrinsic::dx_resource_getpointer,
+                              {Handle, AccessIdx.GetPtrIdx});
+
+  Ptr->replaceAllUsesWith(GetPtr);
+  DeadInsts.insert(Ptr);
+}
+
+// Try to legalize dx.resource.handlefrom.*.binding and dx.resource.getpointer
+// calls with their respective index values and propogate the index values to
+// be used at resource access.
+//
+// If it can't be transformed to be legal then:
+//
 // Reports an error if a resource access is not guarenteed to be into a unique
 // global resource.
 //
 // Returns true if any changes are made.
 static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
+  SmallSetVector<Instruction *, 16> DeadInsts;
   for (BasicBlock &BB : make_early_inc_range(F))
     for (Instruction &I : BB)
       if (auto *PtrOp = getPointerOperand(&I)) {
@@ -509,10 +624,19 @@ static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
 
         if (!SameGlobalBinding) {
           diagnoseNonUniqueResourceAccess(&I, Handles);
+          continue;
         }
+
+        replaceHandleWithIndicies(PtrOp, Handles[0], DeadInsts);
       }
 
-  return false;
+  bool MadeChanges = DeadInsts.size() > 0;
+
+  for (auto *I : llvm::reverse(DeadInsts))
+    if (I->hasNUses(0)) // Handle maybe used elsewhere aside from replaced path
+      I->eraseFromParent();
+
+  return MadeChanges;
 }
 
 static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
