@@ -5392,9 +5392,7 @@ static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     AL.setInvalid();
     return;
   }
-  if (Triple.isNVPTX()) {
-    handleGlobalAttr(S, D, AL);
-  } else {
+  if (DeviceKernelAttr::isOpenCLSpelling(AL) || !Triple.isNVPTX()) {
     // OpenCL C++ will throw a more specific error.
     if (!LangOpts.OpenCLCPlusPlus && (!FD || IsFunctionTemplate)) {
       S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type_str)
@@ -5403,6 +5401,8 @@ static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       return;
     }
     handleSimpleAttribute<DeviceKernelAttr>(S, D, AL);
+  } else {
+    handleGlobalAttr(S, D, AL);
   }
   // TODO: isGPU() should probably return true for SPIR.
   bool TargetDeviceEnvironment = Triple.isGPU() || Triple.isSPIR() ||
