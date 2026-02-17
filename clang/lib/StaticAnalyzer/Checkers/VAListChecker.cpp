@@ -176,20 +176,11 @@ const MemRegion *VAListChecker::getVAListAsRegion(SVal SV, const Expr *E,
   const MemRegion *Reg = SV.getAsRegion();
   if (!Reg)
     return nullptr;
-  // TODO: In the future this should be abstracted away by the analyzer.
-  bool VAListModelledAsArray = false;
-  if (const auto *Cast = dyn_cast<CastExpr>(E)) {
-    QualType Ty = Cast->getType();
-    VAListModelledAsArray =
-        Ty->isPointerType() && Ty->getPointeeType()->isRecordType();
-  }
-  if (const auto *DeclReg = Reg->getAs<DeclRegion>()) {
-    if (isa<ParmVarDecl>(DeclReg->getDecl()))
-      Reg = C.getState()->getSVal(SV.castAs<Loc>()).getAsRegion();
-  }
-  // Some VarRegion based VA lists reach here as ElementRegions.
-  const auto *EReg = dyn_cast_or_null<ElementRegion>(Reg);
-  return (EReg && VAListModelledAsArray) ? EReg->getSuperRegion() : Reg;
+
+  return C.getAnalysisManager()
+      .getRegionStore()
+      .getMemRegionManager()
+      .getVAListRegion(Reg);
 }
 
 void VAListChecker::checkPreStmt(const VAArgExpr *VAA,

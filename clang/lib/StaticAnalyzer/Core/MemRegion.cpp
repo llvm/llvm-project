@@ -1888,3 +1888,19 @@ bool RegionAndSymbolInvalidationTraits::hasTrait(const MemRegion *MR,
 
   return false;
 }
+
+MemRegion *MemRegionManager::getVAListRegion(const MemRegion *Reg) {
+  if (!Reg) return nullptr;
+
+  if (const ElementRegion *EReg = dyn_cast<ElementRegion>(Reg)) {
+    return getVAListRegion(EReg->getSuperRegion());
+  }
+
+  if (const DeclRegion *DeclReg = dyn_cast<DeclRegion>(Reg)) {
+    if (isa<ParmVarDecl>(DeclReg->getDecl())) {
+      return const_cast<MemRegion*>(Reg);
+    }
+  }
+
+  return const_cast<MemRegion*>(Reg);
+}

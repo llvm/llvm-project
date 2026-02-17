@@ -133,6 +133,10 @@ public:
     return dyn_cast<MemSpace>(getRawMemorySpace());
   }
 
+  /// Strips ElementRegion wrappers from VA lists
+  /// Returning canonical base region.
+  MemRegion *getVAListRegion(const MemRegion *Reg);
+
   /// Returns the most specific memory space for this memory region in the given
   /// ProgramStateRef. We may infer a more accurate memory space for unknown
   /// space regions and associate this in the State.
