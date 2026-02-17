@@ -286,6 +286,7 @@ struct MissingFeatures {
   static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIndices() { return false; }
   static bool globalViewIntLowering() { return false; }
+  static bool guardAbortOnException() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
   static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
@@ -380,6 +381,7 @@ struct MissingFeatures {
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }
+  static bool functionArgumentAttrs() { return false; }
 
   // Maybe only needed for Windows exception handling
   static bool currentFuncletPad() { return false; }

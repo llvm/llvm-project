@@ -19,10 +19,10 @@
 
 let Predicates = [HasStdExtZvfofp8min], Constraints = "@earlyclobber $vd",
     mayRaiseFPException = true, Uses = [FRM, VL, VTYPE] in {
-  defm VFNCVTBF16_SAT_F_F_W
+  def VFNCVTBF16_SAT_F_F_W
       : VNCVTF_FV_VS2<"vfncvtbf16.sat.f.f.w", 0b010010, 0b11111>;
-  defm VFNCVT_F_F_Q : VNCVTF_FV_VS2<"vfncvt.f.f.q", 0b010010, 0b11001>;
-  defm VFNCVT_SAT_F_F_Q : VNCVTF_FV_VS2<"vfncvt.sat.f.f.q", 0b010010, 0b11011>;
+  def VFNCVT_F_F_Q : VNCVTF_FV_VS2<"vfncvt.f.f.q", 0b010010, 0b11001>;
+  def VFNCVT_SAT_F_F_Q : VNCVTF_FV_VS2<"vfncvt.sat.f.f.q", 0b010010, 0b11011>;
 }
 
 //===----------------------------------------------------------------------===//

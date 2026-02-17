@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
-#include "lldb/Core/ModuleList.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -19,6 +19,7 @@
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/VirtualDataExtractor.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -684,33 +685,51 @@ const char *dyld_image_get_file_path(dyld_image_t image);
 namespace {
 class SharedCacheInfo {
 public:
-  llvm::StringMap<SharedCacheImageInfo> &GetImages() {
-    return m_caches[m_host_uuid];
+  SharedCacheImageInfo GetByFilename(UUID sc_uuid, ConstString filename) {
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    if (!sc_uuid)
+      sc_uuid = m_host_uuid;
+    if (!m_filename_map.contains(sc_uuid))
+      return {};
+    if (!m_filename_map[sc_uuid].contains(filename))
+      return {};
+    size_t idx = m_filename_map[sc_uuid][filename];
+    return m_file_infos[sc_uuid][idx];
   }
 
-  bool GetImages(llvm::StringMap<SharedCacheImageInfo> **images,
-                 const UUID &uuid) {
-    if (m_caches.find(uuid) != m_caches.end()) {
-      *images = &m_caches[uuid];
-      return true;
-    }
-    *images = nullptr;
-    return false;
+  SharedCacheImageInfo GetByUUID(UUID sc_uuid, UUID file_uuid) {
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    if (!sc_uuid)
+      sc_uuid = m_host_uuid;
+    if (!m_uuid_map.contains(sc_uuid))
+      return {};
+    if (!m_uuid_map[sc_uuid].contains(file_uuid))
+      return {};
+    size_t idx = m_uuid_map[sc_uuid][file_uuid];
+    return m_file_infos[sc_uuid][idx];
   }
 
   /// Given the UUID and filepath to a shared cache on the local debug host
   /// system, open it and add all of the binary images to m_caches.
   bool CreateSharedCacheImageList(UUID uuid, std::string filepath);
 
-  SharedCacheInfo();
+  SharedCacheInfo(SymbolSharedCacheUse sc_mode);
 
 private:
   bool CreateSharedCacheInfoWithInstrospectionSPIs();
   void CreateSharedCacheInfoLLDBsVirtualMemory();
   bool CreateHostSharedCacheImageList();
 
-  std::map<UUID, llvm::StringMap<SharedCacheImageInfo>> m_caches;
+  // These three ivars have an initial key of a shared cache UUID.
+  // All of the entries for a given shared cache are in m_file_infos.
+  // m_filename_map and m_uuid_map have pointers into those entries.
+  llvm::SmallDenseMap<UUID, std::vector<SharedCacheImageInfo>> m_file_infos;
+  llvm::SmallDenseMap<UUID, llvm::DenseMap<ConstString, size_t>> m_filename_map;
+  llvm::SmallDenseMap<UUID, llvm::DenseMap<UUID, size_t>> m_uuid_map;
+
   UUID m_host_uuid;
+
+  std::recursive_mutex m_mutex;
 
   // macOS 26.4 and newer
   void (*m_dyld_image_retain_4HWTrace)(void *image);
@@ -721,7 +740,7 @@ private:
 
 } // namespace
 
-SharedCacheInfo::SharedCacheInfo() {
+SharedCacheInfo::SharedCacheInfo(SymbolSharedCacheUse sc_mode) {
   // macOS 26.4 and newer
   m_dyld_image_retain_4HWTrace =
       (void (*)(void *))dlsym(RTLD_DEFAULT, "dyld_image_retain_4HWTrace");
@@ -735,14 +754,25 @@ SharedCacheInfo::SharedCacheInfo() {
   _dyld_get_shared_cache_uuid(dsc_uuid);
   m_host_uuid = UUID(dsc_uuid);
 
-  if (ModuleList::GetGlobalModuleListProperties()
-          .GetSharedCacheBinaryLoading() &&
-      CreateHostSharedCacheImageList())
+  // Don't scan/index lldb's own shared cache at all, in-memory or
+  // via libdyld SPI.
+  if (sc_mode == eSymbolSharedCacheUseInferiorSharedCacheOnly)
     return;
 
+  // Check if the settings allow the use of the libdyld SPI.
+  bool use_libdyld_spi =
+      sc_mode == eSymbolSharedCacheUseHostSharedCache ||
+      sc_mode == eSymbolSharedCacheUseHostAndInferiorSharedCache;
+  if (use_libdyld_spi && CreateHostSharedCacheImageList())
+    return;
+
+  // Scan lldb's shared cache memory if we're built against the
+  // internal SDK and have those headers.
   if (CreateSharedCacheInfoWithInstrospectionSPIs())
     return;
 
+  // Scan lldb's shared cache memory if we're built against the public
+  // SDK.
   CreateSharedCacheInfoLLDBsVirtualMemory();
 }
 
@@ -837,8 +867,9 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
 // Scan the binaries in the specified shared cache filepath
 // if the UUID matches, using the macOS 26.4 libdyld SPI,
 // create a new entry in m_caches.
-bool SharedCacheInfo::CreateSharedCacheImageList(UUID uuid,
+bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
                                                  std::string filepath) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_dyld_image_retain_4HWTrace || !m_dyld_image_release_4HWTrace ||
       !m_dyld_image_segment_data_4HWTrace)
     return false;
@@ -847,18 +878,29 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID uuid,
     return false;
 
   Log *log = GetLog(LLDBLog::Modules);
+
+  // Have we already indexed this shared cache.
+  if (m_file_infos.contains(sc_uuid)) {
+    LLDB_LOGF(log, "Have already indexed shared cache UUID %s",
+              sc_uuid.GetAsString().c_str());
+    return true;
+  }
+
   LLDB_LOGF(log, "Opening shared cache at %s to check for matching UUID %s",
-            filepath.c_str(), uuid.GetAsString().c_str());
+            filepath.c_str(), sc_uuid.GetAsString().c_str());
 
   __block bool return_failed = false;
   dyld_shared_cache_for_file(filepath.c_str(), ^(dyld_shared_cache_t cache) {
-    uuid_t sc_uuid;
-    dyld_shared_cache_copy_uuid(cache, &sc_uuid);
-    UUID this_cache(sc_uuid, sizeof(uuid_t));
-    if (this_cache != uuid) {
+    uuid_t uuid;
+    dyld_shared_cache_copy_uuid(cache, &uuid);
+    UUID this_cache(uuid, sizeof(uuid_t));
+    if (this_cache != sc_uuid) {
       return_failed = true;
       return;
     }
+
+    // In macOS 26, a shared cache has around 3500 files.
+    m_file_infos[sc_uuid].reserve(4000);
 
     dyld_shared_cache_for_each_image(cache, ^(dyld_image_t image) {
       uuid_t uuid_tmp;
@@ -866,19 +908,30 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID uuid,
         return;
       UUID image_uuid(uuid_tmp, sizeof(uuid_t));
 
+      // Copy the filename into the const string pool to
+      // ensure lifetime.
+      ConstString installname(dyld_image_get_installname(image));
       Log *log = GetLog(LLDBLog::Modules);
       if (log && log->GetVerbose())
-        LLDB_LOGF(log, "sc file %s image %p", dyld_image_get_installname(image),
+        LLDB_LOGF(log, "sc file %s image %p", installname.GetCString(),
                   (void *)image);
 
       m_dyld_image_retain_4HWTrace(image);
-      m_caches[m_host_uuid][dyld_image_get_installname(image)] =
-          SharedCacheImageInfo(image_uuid, map_shared_cache_binary_segments,
-                               image);
+      m_file_infos[sc_uuid].push_back(SharedCacheImageInfo(
+          installname, image_uuid, map_shared_cache_binary_segments, image));
     });
   });
   if (return_failed)
     return false;
+
+  // Vector of SharedCacheImageInfos has been fully populated, we can
+  // take pointers to the objects now.
+  size_t file_info_size = m_file_infos[sc_uuid].size();
+  for (size_t i = 0; i < file_info_size; i++) {
+    SharedCacheImageInfo *entry = &m_file_infos[sc_uuid][i];
+    m_filename_map[sc_uuid][entry->GetFilename()] = i;
+    m_uuid_map[sc_uuid][entry->GetUUID()] = i;
+  }
 
   return true;
 }
@@ -886,6 +939,7 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID uuid,
 // Get the filename and uuid of lldb's own shared cache, scan
 // the files in it using the macOS 26.4 and newer libdyld SPI.
 bool SharedCacheInfo::CreateHostSharedCacheImageList() {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   std::string host_shared_cache_file = dyld_shared_cache_file_path();
   __block UUID host_sc_uuid;
   dyld_shared_cache_for_file(host_shared_cache_file.c_str(),
@@ -905,6 +959,7 @@ bool SharedCacheInfo::CreateHostSharedCacheImageList() {
 // libdyld SPI present on macOS 12 and newer, when building against
 // the internal SDK, and add an entry to the m_caches map.
 bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
 #if defined(SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS)
   dyld_process_t dyld_process = dyld_process_create_for_current_task();
   if (!dyld_process)
@@ -926,6 +981,9 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
   if (!shared_cache)
     return false;
 
+  // In macOS 26, a shared cache has around 3500 files.
+  m_file_infos[m_host_uuid].reserve(4000);
+
   dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
     __block uint64_t minVmAddr = UINT64_MAX;
     __block uint64_t maxVmAddr = 0;
@@ -944,9 +1002,21 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
     lldb::DataBufferSP data_sp = std::make_shared<DataBufferUnowned>(
         (uint8_t *)minVmAddr, maxVmAddr - minVmAddr);
     lldb::DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
-    m_caches[m_host_uuid][dyld_image_get_installname(image)] =
-        SharedCacheImageInfo{UUID(uuid, 16), extractor_sp};
+    // Copy the filename into the const string pool to
+    // ensure lifetime.
+    ConstString installname(dyld_image_get_installname(image));
+    m_file_infos[m_host_uuid].push_back(
+        SharedCacheImageInfo(installname, UUID(uuid, 16), extractor_sp));
   });
+
+  // std::vector of SharedCacheImageInfos has been fully populated, we can
+  // take pointers to the objects now.
+  size_t file_info_size = m_file_infos[m_host_uuid].size();
+  for (size_t i = 0; i < file_info_size; i++) {
+    SharedCacheImageInfo *entry = &m_file_infos[m_host_uuid][i];
+    m_filename_map[m_host_uuid][entry->GetFilename()] = i;
+    m_uuid_map[m_host_uuid][entry->GetUUID()] = i;
+  }
   return true;
 #endif
   return false;
@@ -956,9 +1026,13 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
 // libdyld SPI available on macOS 10.13 or newer, add an entry to
 // m_caches.
 void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   size_t shared_cache_size;
   uint8_t *shared_cache_start =
       _dyld_get_shared_cache_range(&shared_cache_size);
+
+  // In macOS 26, a shared cache has around 3500 files.
+  m_file_infos[m_host_uuid].reserve(4000);
 
   dyld_shared_cache_iterate_text(
       m_host_uuid.GetBytes().data(),
@@ -968,37 +1042,59 @@ void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
             shared_cache_size - info->textSegmentOffset);
         lldb::DataExtractorSP extractor_sp =
             std::make_shared<DataExtractor>(buffer_sp);
-        m_caches[m_host_uuid][info->path] =
-            SharedCacheImageInfo{UUID(info->dylibUuid, 16), extractor_sp};
+        ConstString filepath(info->path);
+        m_file_infos[m_host_uuid].push_back(SharedCacheImageInfo(
+            filepath, UUID(info->dylibUuid, 16), extractor_sp));
       });
+
+  // std::vector of SharedCacheImageInfos has been fully populated, we can
+  // take pointers to the objects now.
+  size_t file_info_size = m_file_infos[m_host_uuid].size();
+  for (size_t i = 0; i < file_info_size; i++) {
+    SharedCacheImageInfo *entry = &m_file_infos[m_host_uuid][i];
+    m_filename_map[m_host_uuid][entry->GetFilename()] = i;
+    m_uuid_map[m_host_uuid][entry->GetUUID()] = i;
+  }
 }
 
-SharedCacheInfo &GetSharedCacheSingleton() {
-  static SharedCacheInfo g_shared_cache_info;
+SharedCacheInfo &GetSharedCacheSingleton(SymbolSharedCacheUse sc_mode) {
+  static SharedCacheInfo g_shared_cache_info(sc_mode);
   return g_shared_cache_info;
 }
 
 SharedCacheImageInfo
-HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name) {
-  return GetSharedCacheSingleton().GetImages().lookup(image_name);
+HostInfoMacOSX::GetSharedCacheImageInfo(ConstString filepath,
+                                        SymbolSharedCacheUse sc_mode) {
+  return GetSharedCacheSingleton(sc_mode).GetByFilename(UUID(), filepath);
 }
 
 SharedCacheImageInfo
-HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name,
-                                        const UUID &uuid) {
-  llvm::StringMap<SharedCacheImageInfo> *shared_cache_info;
-  if (GetSharedCacheSingleton().GetImages(&shared_cache_info, uuid))
-    return shared_cache_info->lookup(image_name);
-  return {};
+HostInfoMacOSX::GetSharedCacheImageInfo(const UUID &file_uuid,
+                                        SymbolSharedCacheUse sc_mode) {
+  return GetSharedCacheSingleton(sc_mode).GetByUUID(UUID(), file_uuid);
 }
 
-bool HostInfoMacOSX::SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid) {
+SharedCacheImageInfo HostInfoMacOSX::GetSharedCacheImageInfo(
+    ConstString filepath, const UUID &sc_uuid, SymbolSharedCacheUse sc_mode) {
+  return GetSharedCacheSingleton(sc_mode).GetByFilename(sc_uuid, filepath);
+}
+
+SharedCacheImageInfo HostInfoMacOSX::GetSharedCacheImageInfo(
+    const UUID &file_uuid, const UUID &sc_uuid, SymbolSharedCacheUse sc_mode) {
+  return GetSharedCacheSingleton(sc_mode).GetByUUID(sc_uuid, file_uuid);
+}
+
+bool HostInfoMacOSX::SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
+                                           SymbolSharedCacheUse sc_mode) {
+  if (sc_mode == eSymbolSharedCacheUseHostLLDBMemory)
+    return false;
+
   // There is a libdyld SPI to iterate over all installed shared caches,
   // but it can have performance problems if an older Simulator SDK shared
   // cache is installed.  So require that we are given a filepath of
   // the shared cache.
   if (FileSystem::Instance().Exists(filepath))
-    return GetSharedCacheSingleton().CreateSharedCacheImageList(
+    return GetSharedCacheSingleton(sc_mode).CreateSharedCacheImageList(
         uuid, filepath.GetPath());
   return false;
 }
