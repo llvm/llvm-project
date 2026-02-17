@@ -311,8 +311,7 @@ void Writer::writeBuildId() {
 }
 
 static void setGlobalPtr(DefinedGlobal *g, uint64_t memoryPtr) {
-  LLVM_DEBUG(dbgs() << "setGlobalPtr " << g->getName() << " -> " << memoryPtr
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "setGlobalPtr " << g->getName() << " -> " << memoryPtr << "\n");
   g->global->setPointerValue(memoryPtr);
 }
 
@@ -359,8 +358,7 @@ void Writer::layoutMemory() {
     placeStack();
     if (ctx.arg.globalBase) {
       if (ctx.arg.globalBase < memoryPtr) {
-        error("--global-base cannot be less than stack size when --stack-first "
-              "is used");
+        error("--global-base cannot be less than stack size when --stack-first is used");
         return;
       }
       memoryPtr = ctx.arg.globalBase;
@@ -384,7 +382,6 @@ void Writer::layoutMemory() {
   for (OutputSegment *seg : segments) {
     out.dylinkSec->memAlign = std::max(out.dylinkSec->memAlign, seg->alignment);
     memoryPtr = alignTo(memoryPtr, 1ULL << seg->alignment);
-
     seg->startVA = memoryPtr;
     log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}", seg->name,
                 memoryPtr, seg->size, seg->alignment));
@@ -1196,7 +1193,7 @@ void Writer::createSyntheticInitFunctions() {
 
     auto hasTLSRelocs = [](const OutputSegment *segment) {
       if (segment->isTLS())
-        for (const auto *is : segment->inputSegments)
+        for (const auto* is : segment->inputSegments)
           if (is->getRelocations().size())
             return true;
       return false;
