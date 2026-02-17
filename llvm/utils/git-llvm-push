@@ -304,6 +304,10 @@ class GitHubAPI:
 
         self.runner.print(f"Enabling auto-merge for #{pr_number}...")
         node_id = self._get_node_id(pr_number)
+        # Use the enablePullRequestAutoMerge mutation to enable auto merge
+        # through the GraphQL API as this cannot be done through the REST
+        # API. Documented in
+        # https://docs.github.com/en/graphql/reference/mutations#enablepullrequestautomerge
         graphql_mutation = """
         mutation EnableAutomergeMutation($pr_id: ID!) {
             enablePullRequestAutoMerge(input: {pullRequestId: $pr_id, mergeMethod: SQUASH}) {
