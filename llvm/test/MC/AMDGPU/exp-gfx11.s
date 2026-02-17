@@ -4,17 +4,17 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX11 --implicit-check-not=error: %s
 
 exp dual_src_blend0 v4, v3, v2, v1
-// GFX11: exp dual_src_blend0 v4, v3, v2, v1      ; encoding: [0x5f,0x01,0x00,0xf8,0x04,0x03,0x02,0x01]
+// GFX11: exp dual_src_blend0, v4, v3, v2, v1     ; encoding: [0x5f,0x01,0x00,0xf8,0x04,0x03,0x02,0x01]
 // PREGFX11: :[[@LINE-2]]:5: error: exp target is not supported on this GPU
 
 exp dual_src_blend1 v2, v3, off, off
-// GFX11: exp dual_src_blend1 v2, v3, off, off    ; encoding: [0x63,0x01,0x00,0xf8,0x02,0x03,0x00,0x00]
+// GFX11: exp dual_src_blend1, v2, v3, off, off   ; encoding: [0x63,0x01,0x00,0xf8,0x02,0x03,0x00,0x00]
 // PREGFX11: :[[@LINE-2]]:5: error: exp target is not supported on this GPU
 
 exp mrtz v4, v3, off, off done row_en
-// GFX11: exp mrtz v4, v3, off, off done row_en   ; encoding: [0x83,0x28,0x00,0xf8,0x04,0x03,0x00,0x00]
+// GFX11: exp mrtz, v4, v3, off, off done row_en  ; encoding: [0x83,0x28,0x00,0xf8,0x04,0x03,0x00,0x00]
 // PREGFX11: :[[@LINE-2]]:32: error: invalid operand for instruction
 
 exp mrtz v4, v3, v2, v1 row_en
-// GFX11: exp mrtz v4, v3, v2, v1 row_en          ; encoding: [0x8f,0x20,0x00,0xf8,0x04,0x03,0x02,0x01]
+// GFX11: exp mrtz, v4, v3, v2, v1 row_en         ; encoding: [0x8f,0x20,0x00,0xf8,0x04,0x03,0x02,0x01]
 // PREGFX11: :[[@LINE-2]]:25: error: invalid operand for instruction

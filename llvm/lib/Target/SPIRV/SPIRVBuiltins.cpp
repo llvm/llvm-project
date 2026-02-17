@@ -531,8 +531,9 @@ static Register buildBuiltinVariableLoad(
   return LoadedRegister;
 }
 
-/// Helper external function for assigning SPIRVType to a register, ensuring the
-/// register class and type are set in MRI. Defined in SPIRVPreLegalizer.cpp.
+/// Helper external function for assigning a SPIRV type to a register, ensuring
+/// the register class and type are set in MRI. Defined in
+/// SPIRVPreLegalizer.cpp.
 extern void updateRegType(Register Reg, Type *Ty, SPIRVTypeInst SpirvTy,
                           SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
                           MachineRegisterInfo &MRI);
@@ -3617,7 +3618,7 @@ lowerBuiltinType(const Type *OpaqueType,
     // "Lower" the BuiltinType into TargetType. The following get<...>Type
     // methods use the implementation details from TableGen records or
     // TargetExtType parameters to either create a new OpType<...> machine
-    // instruction or get an existing equivalent SPIRVType from
+    // instruction or get an existing equivalent SPIRV type from
     // GlobalRegistry.
 
     switch (TypeRecord->Opcode) {

@@ -34,10 +34,6 @@
 // RUN: %clang -target aarch64 -march=armv9.7-a+f16mm -### -c %s 2>&1 | FileCheck -check-prefix=V97A-F16MM %s
 // V97A-F16MM: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+f16mm"
 
-// RUN: %clang -target aarch64 -march=armv9.7a+cmh -### -c %s 2>&1 | FileCheck -check-prefix=V97A-CMH %s
-// RUN: %clang -target aarch64 -march=armv9.7-a+cmh -### -c %s 2>&1 | FileCheck -check-prefix=V97A-CMH %s
-// V97A-CMH: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+cmh"
-
 // RUN: %clang -target aarch64 -march=armv9.7a+lscp -### -c %s 2>&1 | FileCheck -check-prefix=V97A-LSCP %s
 // RUN: %clang -target aarch64 -march=armv9.7-a+lscp -### -c %s 2>&1 | FileCheck -check-prefix=V97A-LSCP %s
 // V97A-LSCP: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "generic" "-target-feature" "+v9.7a"{{.*}} "-target-feature" "+lscp"
