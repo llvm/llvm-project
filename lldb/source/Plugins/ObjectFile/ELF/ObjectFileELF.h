@@ -271,11 +271,11 @@ private:
 
   lldb::SectionType GetSectionType(const ELFSectionHeaderInfo &H) const;
 
-  // Parse and ELF header section to detect the RISCV attributes.
-  // This function traverses the section headers of the ELF object file to
-  // verify the presence of the Xqci feature extension in the RISCV attributes.
-  // If the extension is found, it updates the '+xqci' feature string.
-  static void ParseRISCVAttributes(lldb_private::DataExtractor &data,
+  // Parse the ELF attributes to detect RISC-V extensions.
+  // This function traverses the attributes of the ELF object file to
+  // verify the presence of supported extensions. If a supported extension
+  // is found, it updates the architecture's feature string.
+  static void ParseRISCVAttributes(const lldb_private::DataExtractor &data,
                                    uint64_t length,
                                    lldb_private::ArchSpec &arch_spec);
 

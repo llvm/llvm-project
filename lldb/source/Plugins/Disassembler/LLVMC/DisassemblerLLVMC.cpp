@@ -1462,31 +1462,91 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
   return InstrDesc.isAuthenticated() || IsBrkC47x;
 }
 
-void DisassemblerLLVMC::UpdateFeatureString(llvm::StringRef additional_features,
-                                            std::string &features) {
-  // Allow users to override default additional features.
-  for (llvm::StringRef flag : llvm::split(additional_features, ",")) {
+static void UpdateFeatureString(llvm::StringRef default_features,
+                                std::string &user_feature_overrides) {
+
+  // If the user has not provided any overrides AND defaults exist,
+  // then simply use the default feature string.
+  if (user_feature_overrides.empty() && !default_features.empty()) {
+    user_feature_overrides = default_features.str();
+    return;
+  }
+
+  std::string warning_reason;
+  std::vector<std::string> valid_user_flags;
+  std::set<std::string> user_disabled_features;
+  for (llvm::StringRef flag : llvm::split(user_feature_overrides, ",")) {
+    bool is_valid = true;
     flag = flag.trim();
+
+    // If we don't do this, flag.front() below will crash.
     if (flag.empty())
       continue;
-    // By default, if both +flag and -flag are present in the feature string,
-    // disassembler keeps the feature enabled (+flag).
-    // To respect user intent, we make -flag(user) take priority over the
-    // default +flag coming from ELF.
-    bool add_flag = true;
-    if (flag.starts_with('+')) {
-      std::string disable_flag = "-" + flag.substr(1).str();
-      if (features.find(disable_flag) != std::string::npos) {
-        add_flag = false;
-      }
+
+    // 1. Must be at least 2 chars (e.g., "+a").
+    // 2. Must start with '+' or '-' (Users can enable OR disable).
+    // 3. Name cannot start with a digit (e.g. "+123" is invalid)
+    // 4. All characters after the sign must be alphabets.
+    if (flag.front() != '+' && flag.front() != '-') {
+      is_valid = false;
+      warning_reason = "must start with '+' or '-'";
+    } else if (flag.size() < 2) {
+      is_valid = false;
+      warning_reason = "must have a name";
+    } else if (std::isdigit(static_cast<unsigned char>(flag[1]))) {
+      is_valid = false;
+      warning_reason = "name cannot start with a digit";
+    } else if (!std::all_of(flag.begin() + 1, flag.end(), [](unsigned char c) {
+                 return std::isalnum(c) || c == '_';
+               })) {
+      is_valid = false;
+      warning_reason = "contains invalid characters";
     }
-    if (add_flag) {
-      if (!features.empty()) {
-        features = ',' + features;
-      }
-      features = flag.str() + features;
+    if (!is_valid) {
+      llvm::errs() << "Warning: Malformed feature '" << flag
+                   << "': " << warning_reason << ". Ignoring.\n";
+      continue; // Skip this flag, continue to the next
+    }
+    valid_user_flags.push_back(flag.str());
+
+    if (flag.starts_with('-')) {
+      user_disabled_features.insert(flag.substr(1).str());
     }
   }
+
+  // Rebuild the user string with ONLY valid flags.
+  std::vector<std::string> final_features;
+
+  // Allow users to override default additional features.
+  if (!default_features.empty()) {
+    for (llvm::StringRef flag : llvm::split(default_features, ",")) {
+      flag = flag.trim();
+      if (flag.empty())
+        continue;
+      // By default, if both +flag and -flag are present in the feature string,
+      // disassembler keeps the feature enabled (+flag).
+      // To respect user intent, we make -flag(user) take priority over the
+      // default +flag coming from ELF.
+      bool add_flag = true;
+      // flag starts with plus and it's at least two characters.
+      // We check size >= 2 to ensure we have '+' AND a feature name (e.g.,
+      // "+m").
+      if (flag.size() >= 2 && flag.starts_with('+')) {
+        llvm::StringRef feature_name = flag.substr(1);
+        if (user_disabled_features.count(feature_name.str())) {
+          add_flag = false;
+        }
+      }
+      if (add_flag) {
+        final_features.push_back(flag.str());
+      }
+    }
+  }
+
+  // Append User Flags (User overrides come after defaults)
+  final_features.insert(final_features.end(), valid_user_flags.begin(),
+                        valid_user_flags.end());
+  user_feature_overrides = llvm::join(final_features, ",");
 }
 
 DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
@@ -1636,12 +1696,9 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
     features_str += "+a,+m,";
   }
 
-  llvm::StringRef additional_features = arch.GetDisassemblyFeatures();
-  // Prepend the additional_features if it's not already in the features_str to
+  // Prepend the default features if it's not already in the features_str to
   // avoid duplicates.
-  if (!additional_features.empty()) {
-    UpdateFeatureString(additional_features, features_str);
-  }
+  UpdateFeatureString(arch.GetDisassemblyFeatures(), features_str);
 
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this
   // isn't good for some reason, we won't be valid and FindPlugin will fail and

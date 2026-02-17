@@ -1338,50 +1338,69 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
   return error;
 }
 
-void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
-                                         ArchSpec &arch_spec) {
+void ObjectFileELF::ParseRISCVAttributes(const DataExtractor &data,
+                                         uint64_t length, ArchSpec &arch_spec) {
   lldb::offset_t offset = 0;
 
   uint8_t format_version = data.GetU8(&offset);
   if (format_version != llvm::ELFAttrs::Format_Version)
     return;
 
-  offset = offset + sizeof(uint32_t); // Section Length
+  // We are skipping over the Section Length field here.
+  offset = offset + sizeof(uint32_t);
   llvm::StringRef vendor_name = data.GetCStr(&offset);
-
   if (vendor_name != "riscv")
     return;
 
   llvm::StringRef attr = "";
 
-  while (offset < length) {
+  // Loop through sub-sections until we reach the end or find the architecture
+  // string. We check attr.empty() to ensure we stop reading immediately after
+  // finding the target tag, preventing invalid reads of subsequent bytes.
+  while (offset < length && attr.empty()) {
     uint8_t Tag = data.GetU8(&offset);
     uint32_t Size = data.GetU32(&offset);
 
-    if (Tag != llvm::ELFAttrs::File || Size == 0)
+    // If this is not a File attribute (Tag 1) or size is invalid, skip the
+    // whole sub-section.
+    if (Tag != llvm::ELFAttrs::File || Size == 0) {
+      offset += Size;
       continue;
+    }
+    uint64_t end = offset + Size;
 
-    while (offset < length) {
+    // Parse the inner attributes for the File sub-section.
+    // We stop if we exceed the sub-section size or have found our attribute.
+    while (offset < length && attr.empty()) {
       uint64_t Tag = data.GetULEB128(&offset);
       if (Tag == llvm::RISCVAttrs::ARCH) {
         attr = data.GetCStr(&offset);
         break;
       } else {
+        // This is consuming a non-arch field (key-value pair).
+        // Since we are only interested in the ARCH tag, we skip the value.
+        // Note: This assumes the value is ULEB128, which is standard for most
+        // RISC-V int attributes, but string attributes would require different
+        // handling.
         data.GetULEB128(&offset);
       }
     }
+    // Ensure we start the next sub-section at the correct boundary
+    // in case the inner loop exited early or skipped data.
+    offset = end;
   }
 
-  // List of RISC-V architecture extensions to detect from ELF.
-  // These extensions are extracted from the ".riscv.attributes" section.
-  // New extensions can be added to this list for detection without
-  // modifying the core logic.
+  // Limit detection to specific extensions (like 'xqci') that LLDB has been
+  // made aware of and can support by default. This ensures we do not attempt to
+  // enable features from the ELF attributes that this version of LLDB
+  // does not handle, while also verifying that the attribute is present in the
+  // ELF.
   std::vector<std::string> riscv_extensions = {"xqci"};
 
   for (const auto &ext : riscv_extensions) {
     if (!attr.empty() && attr.contains(ext) &&
         !arch_spec.GetDisassemblyFeatures().contains(ext)) {
-      arch_spec.SetDisassemblyFeatures("+" + ext + ",");
+      arch_spec.AddDisassemblyFeatures("+" + ext + ",");
     }
   }
 }

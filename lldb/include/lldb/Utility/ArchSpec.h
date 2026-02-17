@@ -544,11 +544,11 @@ public:
 
   /// Sets the feature string that describes architecture specific capabilities
   /// for use during instruction decoding.
-  void SetDisassemblyFeatures(std::string additional_features);
+  void AddDisassemblyFeatures(std::string default_features);
 
   /// Returns the feature string used by the disassembler to decode instructions
   /// based on target specific features.
-  llvm::StringRef GetDisassemblyFeatures() const {
+  inline llvm::StringRef GetDisassemblyFeatures() const {
     return m_disassembly_feature_str;
   }
 
