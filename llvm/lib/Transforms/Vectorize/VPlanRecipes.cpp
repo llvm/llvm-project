@@ -2686,31 +2686,44 @@ void VPWidenGEPRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPVectorEndPointerRecipe::materializeOffset(unsigned Part) {
+  assert(!getOffset() && "Unexpected offset operand");
+  VPBuilder Builder(this);
+  VPlan &Plan = *getParent()->getPlan();
+  VPValue *VFVal = getVFValue();
+  VPTypeAnalysis TypeInfo(Plan);
+  const DataLayout &DL =
+      Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
+  Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(getPointer()));
+  VPValue *Stride =
+      Plan.getConstantInt(IndexTy, getStride(), /*IsSigned=*/true);
+  Type *VFTy = TypeInfo.inferScalarType(VFVal);
+  VPValue *VF = Builder.createScalarZExtOrTrunc(VFVal, IndexTy, VFTy,
+                                                DebugLoc::getUnknown());
+
+  // Offset for Part0 = Offset0 = Stride * (VF - 1).
+  VPInstruction *VFMinusOne =
+      Builder.createSub(VF, Plan.getConstantInt(IndexTy, 1u),
+                        DebugLoc::getUnknown(), "", {true, true});
+  VPInstruction *Offset0 =
+      Builder.createOverflowingOp(Instruction::Mul, {VFMinusOne, Stride});
+
+  // Offset for PartN = Offset0 + Part * Stride * VF.
+  VPValue *PartxStride =
+      Plan.getConstantInt(IndexTy, Part * getStride(), /*IsSigned=*/true);
+  VPValue *Offset = Builder.createAdd(
+      Offset0,
+      Builder.createOverflowingOp(Instruction::Mul, {PartxStride, VF}));
+  addOperand(Offset);
+}
+
 void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
-  unsigned CurrentPart = getUnrollPart(*this);
-  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  Type *IndexTy = DL.getIndexType(State.TypeAnalysis.inferScalarType(this));
-
-  // The wide store needs to start at the last vector element.
-  Value *RunTimeVF = State.get(getVFValue(), VPLane(0));
-  if (IndexTy != RunTimeVF->getType())
-    RunTimeVF = Builder.CreateZExtOrTrunc(RunTimeVF, IndexTy);
-  // NumElt = Stride * CurrentPart * RunTimeVF
-  Value *NumElt = Builder.CreateMul(
-      ConstantInt::getSigned(IndexTy, Stride * (int64_t)CurrentPart),
-      RunTimeVF);
-  // LastLane = Stride * (RunTimeVF - 1)
-  Value *LastLane = Builder.CreateSub(RunTimeVF, ConstantInt::get(IndexTy, 1));
-  if (Stride != 1)
-    LastLane =
-        Builder.CreateMul(ConstantInt::getSigned(IndexTy, Stride), LastLane);
-  Value *Ptr = State.get(getOperand(0), VPLane(0));
-  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, NumElt, "",
+  assert(getOffset() && "Expected prior materialization of offset");
+  Value *Ptr = State.get(getPointer(), true);
+  Value *Offset = State.get(getOffset(), true);
+  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Offset, "",
                                        getGEPNoWrapFlags());
-  ResultPtr = Builder.CreateGEP(getSourceElementType(), ResultPtr, LastLane, "",
-                                getGEPNoWrapFlags());
-
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
 
