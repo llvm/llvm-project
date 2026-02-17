@@ -566,7 +566,7 @@ public:
   /// Registers the module compilation, unless this instance is about to be
   /// destroyed.
   void add(llvm::unique_function<void()> Compile) {
-    std::lock_guard Lock(Mutex);
+    std::lock_guard<std::mutex> Lock(Mutex);
     if (!Stop)
       Compiles.emplace_back(std::move(Compile));
   }
@@ -574,7 +574,7 @@ public:
   ~AsyncModuleCompiles() {
     {
       // Prevent registration of further module compiles.
-      std::lock_guard Lock(Mutex);
+      std::lock_guard<std::mutex> Lock(Mutex);
       Stop = true;
     }
 
