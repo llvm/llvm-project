@@ -265,10 +265,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     const Type *RetTy = TheCall->getType().getTypePtr();
     if (auto *VTy = dyn_cast<VectorType>(RetTy))
       NumElementsInRetTy = VTy->getNumElements();
-    assert(
-        High <= 4 &&
-        "DMask is a 4-bit value in underlying LLVM IR intrinsics (and HW "
-        "instructions). This assert indicates malformed built-in declaration");
     int NumActiveBitsInDMask =
         llvm::popcount(static_cast<uint8_t>(Result.getExtValue()));
     if (NumActiveBitsInDMask > NumElementsInRetTy) {
