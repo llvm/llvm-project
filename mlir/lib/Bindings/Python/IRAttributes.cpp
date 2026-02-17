@@ -153,15 +153,15 @@ namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 nb_buffer_info::nb_buffer_info(
-    void *ptr, ssize_t itemsize, const char *format, ssize_t ndim,
-    std::vector<ssize_t> shape_in, std::vector<ssize_t> strides_in,
+    void *ptr, Py_ssize_t itemsize, const char *format, Py_ssize_t ndim,
+    std::vector<Py_ssize_t> shape_in, std::vector<Py_ssize_t> strides_in,
     bool readonly,
     std::unique_ptr<Py_buffer, void (*)(Py_buffer *)> owned_view_in)
     : ptr(ptr), itemsize(itemsize), format(format), ndim(ndim),
       shape(std::move(shape_in)), strides(std::move(strides_in)),
       readonly(readonly), owned_view(std::move(owned_view_in)) {
   size = 1;
-  for (ssize_t i = 0; i < ndim; ++i) {
+  for (Py_ssize_t i = 0; i < ndim; ++i) {
     size *= shape[i];
   }
 }
