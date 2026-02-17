@@ -97,7 +97,7 @@ int64_t mlir::linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis) {
 SmallVector<int64_t> mlir::delinearize(int64_t linearIndex,
                                        ArrayRef<int64_t> strides) {
   assert(llvm::all_of(strides, [](int64_t s) { return s > 0; }) &&
-         "strides must be nonnegative");
+         "strides must be positive");
   return delinearizeImpl(linearIndex, strides,
                          [](int64_t e1, int64_t e2) { return e1 / e2; });
 }
@@ -107,9 +107,9 @@ mlir::computeShapeRatio(ArrayRef<int64_t> shape, ArrayRef<int64_t> subShape) {
   if (shape.size() < subShape.size())
     return std::nullopt;
   assert(llvm::all_of(shape, [](int64_t s) { return s > 0; }) &&
-         "shape must be nonnegative");
+         "shape must be positive");
   assert(llvm::all_of(subShape, [](int64_t s) { return s > 0; }) &&
-         "subShape must be nonnegative");
+         "subShape must be positive");
 
   // Starting from the end, compute the integer divisors.
   std::vector<int64_t> result;
