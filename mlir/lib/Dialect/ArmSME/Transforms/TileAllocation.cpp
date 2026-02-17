@@ -363,14 +363,11 @@ generateOperationNumbering(FunctionOpInterface function) {
         sawNestedArmSMEOp = true;
       });
       if (sawNestedArmSMEOp)
-        break;
+        return failure();
       operationToIndexMap.try_emplace(&op, index++);
     }
-    if (sawNestedArmSMEOp)
-      break;
   }
-  if (sawNestedArmSMEOp)
-    return failure();
+    
   return operationToIndexMap;
 }
 
