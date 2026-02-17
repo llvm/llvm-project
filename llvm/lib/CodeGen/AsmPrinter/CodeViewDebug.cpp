@@ -1735,6 +1735,9 @@ TypeIndex CodeViewDebug::lowerTypeAlias(const DIDerivedType *Ty) {
 
   addToUDTs(Ty);
 
+  AliasRecord AR(UnderlyingTypeIndex, TypeName);
+  auto AliasIndex = TypeTable.writeLeafType(AR);
+
   if (UnderlyingTypeIndex == TypeIndex(SimpleTypeKind::Int32Long) &&
       TypeName == "HRESULT")
     return TypeIndex(SimpleTypeKind::HResult);
@@ -1742,7 +1745,7 @@ TypeIndex CodeViewDebug::lowerTypeAlias(const DIDerivedType *Ty) {
       TypeName == "wchar_t")
     return TypeIndex(SimpleTypeKind::WideCharacter);
 
-  return UnderlyingTypeIndex;
+  return AliasIndex;
 }
 
 TypeIndex CodeViewDebug::lowerTypeArray(const DICompositeType *Ty) {
@@ -2756,14 +2759,6 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(const DIType *Ty) {
   // The null DIType is the void type. Don't try to hash it.
   if (!Ty)
     return TypeIndex::Void();
-
-  // Look through typedefs when getting the complete type index. Call
-  // getTypeIndex on the typdef to ensure that any UDTs are accumulated and are
-  // emitted only once.
-  if (Ty->getTag() == dwarf::DW_TAG_typedef)
-    (void)getTypeIndex(Ty);
-  while (Ty->getTag() == dwarf::DW_TAG_typedef)
-    Ty = cast<DIDerivedType>(Ty)->getBaseType();
 
   // If this is a non-record type, the complete type index is the same as the
   // normal type index. Just call getTypeIndex.

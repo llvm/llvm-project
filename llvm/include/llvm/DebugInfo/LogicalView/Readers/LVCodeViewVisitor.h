@@ -418,6 +418,8 @@ public:
                          LVElement *Element);
   Error visitKnownRecord(CVType &Record, EndPrecompRecord &EndPrecomp,
                          TypeIndex TI, LVElement *Element);
+  Error visitKnownRecord(CVType &Record, AliasRecord &Alias,
+                         TypeIndex TI, LVElement *Element);
 
   Error visitUnknownMember(CVMemberRecord &Record, TypeIndex TI);
   Error visitKnownMember(CVMemberRecord &Record, BaseClassRecord &Base,
