@@ -272,6 +272,8 @@ Symbols:
 ...
 
 ## Check that the first call graph section is processed and the second call graph section is ignored.
+## Note that we do not expect an object file to have more than one call graph section as we merge the
+## call graph sections when there are more than one.
 # RUN: yaml2obj --docnum=7 %s -o %t12
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t12 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t12 --check-prefix=LLVM-FIRST-CGSECTION --match-full-lines
