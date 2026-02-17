@@ -19,6 +19,7 @@
 // template<class T>
 //   constexpr T atomic_fetch_max(atomic<T>*, typename atomic<T>::value_type) noexcept;
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <type_traits>

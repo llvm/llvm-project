@@ -21,6 +21,7 @@
 //   constexpr T atomic_fetch_min_explicit(atomic<T>*, typename atomic<T>::value_type,
 //                                         memory_order) noexcept;
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <type_traits>
