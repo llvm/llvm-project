@@ -289,6 +289,9 @@ public:
   // because of jumps.
   VarBypassDetector Bypasses;
 
+  // Map from bypassed VarDecl to its alloca address, for per-target init.
+  llvm::SmallVector<std::pair<const VarDecl *, Address>, 4> BypassedVarInits;
+
   /// List of recently emitted OMPCanonicalLoops.
   ///
   /// Since OMPCanonicalLoops are nested inside other statements (in particular
@@ -3468,10 +3471,6 @@ public:
     /// True if lifetime markers should be used.
     bool UseLifetimeMarkers;
 
-    /// True if the variable was initialized in the entry block because its
-    /// declaration is bypassed by a goto or switch jump.
-    bool IsInitializedInEntryBlock;
-
     /// Address with original alloca instruction. Invalid if the variable was
     /// emitted as a global constant.
     RawAddress AllocaAddr;
@@ -3479,13 +3478,12 @@ public:
     struct Invalid {};
     AutoVarEmission(Invalid)
         : Variable(nullptr), Addr(Address::invalid()),
-          IsInitializedInEntryBlock(false), AllocaAddr(RawAddress::invalid()) {}
+          AllocaAddr(RawAddress::invalid()) {}
 
     AutoVarEmission(const VarDecl &variable)
         : Variable(&variable), Addr(Address::invalid()), NRVOFlag(nullptr),
           IsEscapingByRef(false), IsConstantAggregate(false),
-          UseLifetimeMarkers(false), IsInitializedInEntryBlock(false),
-          AllocaAddr(RawAddress::invalid()) {}
+          UseLifetimeMarkers(false), AllocaAddr(RawAddress::invalid()) {}
 
     bool wasEmittedAsGlobal() const { return !Addr.isValid(); }
 
@@ -3493,9 +3491,6 @@ public:
     static AutoVarEmission invalid() { return AutoVarEmission(Invalid()); }
 
     bool useLifetimeMarkers() const { return UseLifetimeMarkers; }
-    bool wasInitializedInEntryBlock() const {
-      return IsInitializedInEntryBlock;
-    }
 
     /// Returns the raw, allocated address, which is not necessarily
     /// the address of the object itself. It is casted to default
@@ -3520,6 +3515,9 @@ public:
   void EmitAutoVarCleanups(const AutoVarEmission &emission);
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               QualType::DestructionKind dtorKind);
+
+  /// Emit zero/pattern init stores for bypassed variables at a jump target.
+  void emitBypassedVarInitsForTarget(const Stmt *Target);
 
   void MaybeEmitDeferredVarDeclInit(const VarDecl *var);
 
@@ -5494,8 +5492,8 @@ private:
 
   void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
                                        Address Loc);
-  LangOptions::TrivialAutoVarInitKind
-  getAutoVarInitKind(QualType type, const VarDecl &D);
+  LangOptions::TrivialAutoVarInitKind getAutoVarInitKind(QualType type,
+                                                         const VarDecl &D);
 
 public:
   enum class EvaluationOrder {

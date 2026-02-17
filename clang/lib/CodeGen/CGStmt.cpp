@@ -774,6 +774,7 @@ void CodeGenFunction::LexicalScope::rescopeLabels() {
 
 void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
   EmitLabel(S.getDecl());
+  emitBypassedVarInitsForTarget(&S);
 
   // IsEHa - emit eha.scope.begin if it's a side entry of a scope
   if (getLangOpts().EHAsynch && S.isSideEntry())
@@ -1753,6 +1754,7 @@ void CodeGenFunction::EmitCaseStmtRange(const CaseStmt &S,
   // switch machinery to enter this block.
   llvm::BasicBlock *CaseDest = createBasicBlock("sw.bb");
   EmitBlockWithFallThrough(CaseDest, &S);
+  emitBypassedVarInitsForTarget(&S);
   EmitStmt(S.getSubStmt());
 
   // If range is empty, do nothing.
@@ -1890,6 +1892,7 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
 
   llvm::BasicBlock *CaseDest = createBasicBlock("sw.bb");
   EmitBlockWithFallThrough(CaseDest, &S);
+  emitBypassedVarInitsForTarget(&S);
   if (SwitchWeights)
     SwitchWeights->push_back(getProfileCount(&S));
   SwitchInsn->addCase(CaseVal, CaseDest);
@@ -1922,6 +1925,7 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
       CaseDest = createBasicBlock("sw.bb");
       EmitBlockWithFallThrough(CaseDest, CurCase);
     }
+    emitBypassedVarInitsForTarget(CurCase);
     // Since this loop is only executed when the CaseStmt has no attributes
     // use a hard-coded value.
     if (SwitchLikelihood)
@@ -1959,6 +1963,7 @@ void CodeGenFunction::EmitDefaultStmt(const DefaultStmt &S,
     SwitchLikelihood->front() = Stmt::getLikelihood(Attrs);
 
   EmitBlockWithFallThrough(DefaultBlock, &S);
+  emitBypassedVarInitsForTarget(&S);
 
   EmitStmt(S.getSubStmt());
 }

@@ -22,6 +22,7 @@ void VarBypassDetector::Init(CodeGenModule &CGM, const Stmt *Body) {
   FromScopes.clear();
   ToScopes.clear();
   Bypasses.clear();
+  BypassedVarsAtTarget.clear();
   Scopes = {{~0U, nullptr}};
   unsigned ParentScope = 0;
   AlwaysBypassed = !BuildScopeInformation(CGM, Body, ParentScope);
@@ -144,11 +145,11 @@ void VarBypassDetector::Detect() {
     unsigned from = S.second;
     if (const GotoStmt *GS = dyn_cast<GotoStmt>(St)) {
       if (const LabelStmt *LS = GS->getLabel()->getStmt())
-        Detect(from, ToScopes[LS]);
+        Detect(from, ToScopes[LS], LS);
     } else if (const SwitchStmt *SS = dyn_cast<SwitchStmt>(St)) {
       for (const SwitchCase *SC = SS->getSwitchCaseList(); SC;
            SC = SC->getNextSwitchCase()) {
-        Detect(from, ToScopes[SC]);
+        Detect(from, ToScopes[SC], SC);
       }
     } else {
       llvm_unreachable("goto or switch was expected");
@@ -157,13 +158,15 @@ void VarBypassDetector::Detect() {
 }
 
 /// Checks the jump and stores each variable declaration it bypasses.
-void VarBypassDetector::Detect(unsigned From, unsigned To) {
+void VarBypassDetector::Detect(unsigned From, unsigned To, const Stmt *Target) {
   while (From != To) {
     if (From < To) {
       assert(Scopes[To].first < To);
       const auto &ScopeTo = Scopes[To];
       To = ScopeTo.first;
       Bypasses.insert(ScopeTo.second);
+      if (ScopeTo.second)
+        BypassedVarsAtTarget[Target].insert(ScopeTo.second);
     } else {
       assert(Scopes[From].first < From);
       From = Scopes[From].first;

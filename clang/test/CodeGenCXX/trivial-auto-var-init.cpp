@@ -77,13 +77,17 @@ void test_block_captures_self_after_init() {
   });
 }
 
-// Bypassed variables are now initialized in the entry block.
+// Bypassed variables are initialized at the jump target
 // UNINIT-LABEL:  test_goto_unreachable_value(
 // ZERO-LABEL:    test_goto_unreachable_value(
 // ZERO: %oops = alloca i32, align 4
+// ZERO-NOT: store i32 0, ptr %oops
+// ZERO: jump:
 // ZERO: store i32 0, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
 // PATTERN-LABEL: test_goto_unreachable_value(
 // PATTERN: %oops = alloca i32, align 4
+// PATTERN-NOT: store i32 -1431655766, ptr %oops
+// PATTERN: jump:
 // PATTERN: store i32 -1431655766, ptr %oops, align 4, !annotation [[AUTO_INIT:!.+]]
 void test_goto_unreachable_value() {
   goto jump;
@@ -92,8 +96,7 @@ void test_goto_unreachable_value() {
   used(oops);
 }
 
-// Bypassed variables are now initialized in the entry block.
-// The init store appears after the alloca, not at the declaration site.
+// Bypassed variables are initialized at the jump target.
 // UNINIT-LABEL:  test_goto(
 // ZERO-LABEL:    test_goto(
 // ZERO: %oops = alloca i32, align 4
@@ -109,7 +112,7 @@ void test_goto(int i) {
   used(oops);
 }
 
-// Bypassed variables are now initialized in the entry block.
+// Bypassed variables are initialized at the case target.
 // UNINIT-LABEL:  test_switch(
 // ZERO-LABEL:    test_switch(
 // ZERO: %oops = alloca i32, align 4
@@ -308,18 +311,17 @@ void test_huge_larger_init() {
   used(big);
 }
 
-// Multiple bypassed variables: both should be initialized in the entry block.
 // UNINIT-LABEL:  test_goto_multiple_bypassed(
 // ZERO-LABEL:    test_goto_multiple_bypassed(
 // ZERO: %a = alloca i32, align 4
 // ZERO: %b = alloca i32, align 4
-// ZERO: store i32 0, ptr %a, align 4, !annotation [[AUTO_INIT:!.+]]
-// ZERO: store i32 0, ptr %b, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO-DAG: store i32 0, ptr %a, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO-DAG: store i32 0, ptr %b, align 4, !annotation [[AUTO_INIT:!.+]]
 // PATTERN-LABEL: test_goto_multiple_bypassed(
 // PATTERN: %a = alloca i32, align 4
 // PATTERN: %b = alloca i32, align 4
-// PATTERN: store i32 -1431655766, ptr %a, align 4, !annotation [[AUTO_INIT:!.+]]
-// PATTERN: store i32 -1431655766, ptr %b, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-DAG: store i32 -1431655766, ptr %a, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-DAG: store i32 -1431655766, ptr %b, align 4, !annotation [[AUTO_INIT:!.+]]
 void test_goto_multiple_bypassed() {
   goto jump;
   int a;
@@ -329,7 +331,6 @@ void test_goto_multiple_bypassed() {
   used(b);
 }
 
-// [[clang::uninitialized]] on a bypassed variable should NOT init.
 // UNINIT-LABEL:  test_goto_bypassed_uninitialized_attr(
 // ZERO-LABEL:    test_goto_bypassed_uninitialized_attr(
 // ZERO-NOT: store {{.*}}%skip_me
@@ -344,7 +345,6 @@ void test_goto_bypassed_uninitialized_attr() {
   used(skip_me);
 }
 
-// Switch with declaration between case labels: init in entry block.
 // UNINIT-LABEL:  test_switch_between_cases(
 // ZERO-LABEL:    test_switch_between_cases(
 // ZERO: %x = alloca i32, align 4
@@ -365,7 +365,6 @@ void test_switch_between_cases(int c) {
   }
 }
 
-// Switch with pre-case declaration: init in entry block.
 // UNINIT-LABEL:  test_switch_precase(
 // ZERO-LABEL:    test_switch_precase(
 // ZERO: %x = alloca i32, align 4
@@ -380,6 +379,47 @@ void test_switch_precase(int c) {
     x = 1;
     used(x);
     break;
+  }
+}
+
+// UNINIT-LABEL:  test_computed_goto(
+// ZERO-LABEL:    test_computed_goto(
+// ZERO: %y = alloca i32, align 4
+// ZERO: store i32 0, ptr %y, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN-LABEL: test_computed_goto(
+// PATTERN: %y = alloca i32, align 4
+// PATTERN: store i32 -1431655766, ptr %y, align 4, !annotation [[AUTO_INIT:!.+]]
+void test_computed_goto(int x) {
+  void *targets[] = {&&label1, &&label2};
+  goto *targets[x];
+  int y;
+label1:
+  used(y);
+  return;
+label2:
+  return;
+}
+
+// UNINIT-LABEL:  test_loop_bypass(
+// ZERO-LABEL:    test_loop_bypass(
+// ZERO: %x = alloca i32, align 4
+// ZERO-NOT: store i32 0, ptr %x
+// ZERO: X:
+// ZERO: store i32 0, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// ZERO: call void @{{.*}}used
+// PATTERN-LABEL: test_loop_bypass(
+// PATTERN: %x = alloca i32, align 4
+// PATTERN-NOT: store i32 -1431655766, ptr %x
+// PATTERN: X:
+// PATTERN: store i32 -1431655766, ptr %x, align 4, !annotation [[AUTO_INIT:!.+]]
+// PATTERN: call void @{{.*}}used
+void test_loop_bypass() {
+  while (true) {
+    goto X;
+    int x;
+    X:
+    used(x);
+    if (x) break;
   }
 }
 

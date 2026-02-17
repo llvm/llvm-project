@@ -1641,10 +1641,13 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       if (getAutoVarInitKind(Ty, D) !=
               LangOptions::TrivialAutoVarInitKind::Uninitialized &&
           isTrivialInitializer(D.getInit())) {
-        llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
-        Builder.SetInsertPoint(getPostAllocaInsertPoint());
-        emitZeroOrPatternForAutoVarInit(Ty, D, address);
-        emission.IsInitializedInEntryBlock = true;
+        if (Bypasses.isAlwaysBypassed()) {
+          llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+          Builder.SetInsertPoint(getPostAllocaInsertPoint());
+          emitZeroOrPatternForAutoVarInit(Ty, D, address);
+        } else {
+          BypassedVarInits.push_back({&D, address});
+        }
       }
     }
 
@@ -1857,6 +1860,21 @@ CodeGenFunction::getAutoVarInitKind(QualType type, const VarDecl &D) {
   return getContext().getLangOpts().getTrivialAutoVarInit();
 }
 
+void CodeGenFunction::emitBypassedVarInitsForTarget(const Stmt *Target) {
+  const auto *Vars = Bypasses.getBypassedVarsForTarget(Target);
+  if (!Vars)
+    return;
+  for (const VarDecl *VD : *Vars) {
+    for (const auto &[D, Addr] : BypassedVarInits) {
+      if (D != VD)
+        continue;
+      QualType Ty = VD->getType().getNonReferenceType();
+      emitZeroOrPatternForAutoVarInit(Ty, *VD, Addr);
+      break;
+    }
+  }
+}
+
 void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
                                                       const VarDecl &D,
                                                       Address Loc) {
@@ -2032,11 +2050,8 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     return emitZeroOrPatternForAutoVarInit(type, D, Loc);
   };
 
-  if (isTrivialInitializer(Init)) {
-    if (emission.wasInitializedInEntryBlock())
-      return;
+  if (isTrivialInitializer(Init))
     return initializeWhatIsTechnicallyUninitialized(Loc);
-  }
 
   llvm::Constant *constant = nullptr;
   if (emission.IsConstantAggregate ||
