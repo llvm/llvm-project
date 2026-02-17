@@ -5,10 +5,10 @@
 # CASE-INVALID: SectionHeaderOffset: 0x0
 # CASE-INVALID: ProgramHeaderEntrySize: 56
 # CASE-INVALID-NEXT: warning: '[[FILE]]': invalid section index: 0
-# CHECK-INVALID-NEXT:  ProgramHeaderCount: <?>
-# CHECK-INVALID-NEXT:  SectionHeaderEntrySize: 64
-# CHECK-INVALID-NEXT:  SectionHeaderCount: <?>
-# CHECK-INVALID-NEXT:  StringTableSectionIndex: <?>
+# CASE-INVALID-NEXT:  ProgramHeaderCount: <?>
+# CASE-INVALID-NEXT:  SectionHeaderEntrySize: 64
+# CASE-INVALID-NEXT:  SectionHeaderCount: 0
+# CASE-INVALID-NEXT:  StringTableSectionIndex: 65535 (corrupt: out of range)
 
 --- !ELF
 FileHeader:
@@ -17,6 +17,8 @@ FileHeader:
   Type:    ET_EXEC
   Machine: EM_X86_64
   EPhNum:  65535
+  EShNum:  0
+  EShStrNdx:  0xffff
   EShOff:  0
 ProgramHeaders:
   - Type: PT_LOAD
