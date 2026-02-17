@@ -2474,8 +2474,12 @@ public:
         MDFrom = Inst;
     }
 
-    for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))
+    for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors())) {
+      assert(isa<VectorType>(CV->getType()) ^ static_cast<bool>(MDFrom) &&
+             "Only profile metadata for scalar-conditioned selects should be "
+             "propagated.");
       Result.addVector(Builder.CreateSelect(CV, AV, BV, "", MDFrom));
+    }
 
     return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                    Result.getNumVectors());
