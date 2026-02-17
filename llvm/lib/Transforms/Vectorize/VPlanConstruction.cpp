@@ -1027,23 +1027,23 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   assert(LoopRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
          "The vector loop region must have the middle block as its single "
          "successor for now");
-  SmallSetVector<VPValue *, 4> NeedsPhi;
+  DenseMap<VPValue *, SmallVector<VPUser *>> NeedsPhi;
   for (VPRecipeBase &R : Header->phis())
     if (auto *Phi = dyn_cast<VPHeaderPHIRecipe>(&R))
       if (!isa<VPCanonicalIVPHIRecipe, VPWidenInductionRecipe>(Phi))
-        NeedsPhi.insert(Phi->getBackedgeValue());
+        NeedsPhi[Phi->getBackedgeValue()].push_back(&R);
 
   VPValue *V;
   for (VPRecipeBase &R : *Plan.getMiddleBlock())
     if (match(&R, m_CombineOr(m_VPInstruction<VPInstruction::ExitingIVValue>(
                                   m_VPValue(V)),
-                              m_ExtractLastLaneOfLastPart(m_VPValue(V)))))
-      NeedsPhi.insert(V);
+                              m_ExtractLastPart(m_VPValue(V)))))
+      NeedsPhi[V].push_back(&R);
 
   // Insert phis with a poison incoming value for past the end of the tail.
   Builder.setInsertPoint(Latch, Latch->begin());
   VPTypeAnalysis TypeInfo(Plan);
-  for (VPValue *V : NeedsPhi) {
+  for (auto [V, Users] : NeedsPhi) {
     if (isa<VPIRValue>(V))
       continue;
     // TODO: For reduction phis, use phi value instead of poison so we can
@@ -1052,8 +1052,8 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
     VPValue *Poison =
         Plan.getOrAddLiveIn(PoisonValue::get(TypeInfo.inferScalarType(V)));
     VPInstruction *Phi = Builder.createScalarPhi({V, Poison});
-    V->replaceUsesWithIf(Phi,
-                         [&Phi](VPUser &U, unsigned) { return &U != Phi; });
+    for (VPUser *U : Users)
+      U->replaceUsesOfWith(V, Phi);
   }
 
   // Any extract of the last element must be updated to extract from the last

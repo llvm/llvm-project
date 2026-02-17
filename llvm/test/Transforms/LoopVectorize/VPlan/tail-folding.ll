@@ -29,13 +29,13 @@ define i32 @live_out(ptr noalias %p, i32 %n) {
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT ir<%x> = load ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%y> = add ir<%x>, ir<1>
-; CHECK-NEXT:      EMIT store vp<[[VP8:%[0-9]+]]>, ir<%gep>
+; CHECK-NEXT:      EMIT store ir<%y>, ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:
-; CHECK-NEXT:      EMIT-SCALAR vp<[[VP8]]> = phi [ ir<%y>, vector.body.split ], [ ir<poison>, vector.body ]
+; CHECK-NEXT:      EMIT-SCALAR vp<[[VP8:%[0-9]+]]> = phi [ ir<%y>, vector.body.split ], [ ir<poison>, vector.body ]
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
