@@ -453,7 +453,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.dsqrtl
     libc.src.math.dsubl
     libc.src.math.erff
-    libc.src.math.erff16
     libc.src.math.exp
     libc.src.math.exp10
     libc.src.math.exp10f
@@ -670,6 +669,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ceilf16
     libc.src.math.copysignf16
     libc.src.math.cospif16
+    libc.src.math.erff16
     libc.src.math.expf16
     libc.src.math.f16add
     libc.src.math.f16addf
