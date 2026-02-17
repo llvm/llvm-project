@@ -1297,26 +1297,21 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
 
   if (AttrSpec.Form == dwarf::DW_FORM_ref_addr ||
       (Unit.hasODR() && isODRAttribute(AttrSpec.Attr))) {
-    // We cannot currently rely on a DIEEntry to emit ref_addr
-    // references, because the implementation calls back to DwarfDebug
-    // to find the unit offset. (We don't have a DwarfDebug)
-    // FIXME: we should be able to design DIEEntry reliance on
-    // DwarfDebug away.
-    uint64_t Attr;
     if (Ref < InputDIE.getOffset() && !RefInfo.UnclonedReference) {
-      // We have already cloned that DIE.
-      uint32_t NewRefOffset =
-          RefUnit->getStartOffset() + NewRefDie->getOffset();
-      Attr = NewRefOffset;
+      // Backward reference: the target DIE is already cloned and
+      // parented in a unit tree, so DIEEntry can resolve the
+      // absolute offset at emission time.
       Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
-                   dwarf::DW_FORM_ref_addr, DIEInteger(Attr));
+                   dwarf::DW_FORM_ref_addr, DIEEntry(*NewRefDie));
     } else {
-      // A forward reference. Note and fixup later.
-      Attr = 0xBADDEF;
+      // Forward reference: the target DIE may be a placeholder that
+      // never gets adopted into a unit tree (e.g. due to ODR
+      // pruning), so DIEEntry cannot safely resolve it. Use a
+      // placeholder integer and fix it up after all units are cloned.
       Unit.noteForwardReference(
           NewRefDie, RefUnit, RefInfo.Ctxt,
           Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
-                       dwarf::DW_FORM_ref_addr, DIEInteger(Attr)));
+                       dwarf::DW_FORM_ref_addr, DIEInteger(0)));
     }
     return U.getRefAddrByteSize();
   }
