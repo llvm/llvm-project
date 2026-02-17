@@ -122,19 +122,10 @@ void rdar7342806(void) {
 
 //===---------------------------------------------------------------------===//
 // PR 5627 - http://llvm.org/bugs/show_bug.cgi?id=5627
-//  This test case depends on using -analyzer-config eagerly-assume=true.
-//  The 'eagerly-assume=true' causes the path
-//  to bifurcate when evaluating the function call argument, and a state
-//  caching bug in ExprEngine::CheckerVisit (and friends) caused the store
-//  to 'p' to not be evaluated along one path, but then an autotransition caused
-//  the path to keep on propagating with 'p' still set to an undefined value.
-//  We would then get a bogus report of returning uninitialized memory.
-//  Note: CheckerVisit mistakenly cleared an existing node, and the cleared
-//  node was resurrected by GRStmtNodeBuilder::~GRStmtNodeBuilder(), where
-//  'p' was not assigned.
-//  Note 2: This "resurrecting" destructor was removed from the codebase by
-//  commit 320d0b5467b9586a188e06dd2620126f5cb99318 (in 2026) because it was
-//  already dead code at that time.
+//  This testcase was added as a regression test for a complex bug within the
+//  analyzer engine. The internal logic that was relevant for this bug was
+//  completely replaced during the last 15+ years, so now this testcase is just
+//  a random code fragment.
 //===---------------------------------------------------------------------===//
 
 float *pr5627_f(int y);
