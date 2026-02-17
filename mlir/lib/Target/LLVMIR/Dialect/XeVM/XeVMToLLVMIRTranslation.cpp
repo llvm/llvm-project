@@ -17,19 +17,145 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
-
-#include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
 
 namespace {
+//===----------------------------------------------------------------------===//
+// Utility functions for the translation
+//===----------------------------------------------------------------------===//
+// Extract the source filename from the debug location of \p Inst, if available.
+static std::string getSourceFilename(const llvm::Instruction *Inst) {
+  if (const llvm::DebugLoc &DbgLoc = Inst->getDebugLoc()) {
+    if (auto *Loc = DbgLoc.get()) {
+      if (llvm::DIFile *File = Loc->getFile()) {
+        if (!File->getDirectory().empty())
+          return (File->getDirectory() + "/" + File->getFilename()).str();
+        return File->getFilename().str();
+      }
+    }
+  }
+  return "";
+}
+
+// Build one cache-control payload string per attribute.
+//
+// Each mlir::Attribute is expected to be an ArrayAttr of (at least) 3
+// IntegerAttr values: [SPIR-V token number of that attribute, value for L1
+// cache, value for L3 cache].
+//
+// A single entry produces a string that appears in LLVM IR as:
+//   {6442:\220,1\22}\00
+static llvm::SmallVector<std::string>
+buildCacheControlPayloads(llvm::ArrayRef<mlir::Attribute> Attrs) {
+  llvm::SmallVector<std::string> Payloads;
+  llvm::StringMap<bool> Seen;
+
+  for (mlir::Attribute A : Attrs) {
+    auto Arr = mlir::dyn_cast<mlir::ArrayAttr>(A);
+    if (!Arr)
+      continue;
+
+    auto Vals = Arr.getValue();
+    // Assert that the attribute has exactly 3 integer values: [SPIR-V token, L1
+    // value, L3 value].
+    llvm::assert(Vals.size() == 3 &&
+                 "Expected 3 integer values in cache control attribute.");
+
+    auto FirstAttr = mlir::dyn_cast<mlir::IntegerAttr>(Vals[0]);
+    auto SecondAttr = mlir::dyn_cast<mlir::IntegerAttr>(Vals[1]);
+    auto ThirdAttr = mlir::dyn_cast<mlir::IntegerAttr>(Vals[2]);
+
+    if (!FirstAttr || !SecondAttr || !ThirdAttr)
+      continue;
+
+    uint64_t First = FirstAttr.getValue().getZExtValue();
+    uint64_t Second = SecondAttr.getValue().getZExtValue();
+    uint64_t Third = ThirdAttr.getValue().getZExtValue();
+
+    // Produce: {FIRST:\22SECOND,THIRD\22}
+    // where \22 is the 0x22 byte ("), which LLVM IR prints as \22.
+    // The null terminator (\00) is added by ConstantDataArray::getString.
+    std::string Entry;
+    Entry.push_back('{');
+    Entry += std::to_string(First);
+    Entry.push_back(':');
+    Entry.push_back('"'); // 0x22 → prints as \22 in LLVM IR
+    Entry += std::to_string(Second);
+    Entry.push_back(',');
+    Entry += std::to_string(Third);
+    Entry.push_back('"'); // 0x22 → prints as \22 in LLVM IR
+    Entry.push_back('}');
+
+    // Skip duplicates — identical annotations on the same pointer are
+    // redundant.
+    if (!Seen.insert({Entry, true}).second)
+      continue;
+
+    Payloads.push_back(std::move(Entry));
+  }
+
+  return Payloads;
+}
+
+// Create (or reuse) an addrspace(1) global string in section "llvm.metadata"
+// and return an i8 addrspace(1)* pointer to its first element.
+//
+// A module-level StringMap caches previously created globals so that
+// identical strings are not duplicated.
+static llvm::Value *getOrCreateAS1MetadataStringPtr(llvm::Module &M,
+                                                    llvm::StringRef Str,
+                                                    llvm::StringRef NameHint) {
+  // Per-module cache keyed on the string content.
+  static llvm::DenseMap<llvm::Module *, llvm::StringMap<llvm::Value *>> Cache;
+  auto &ModuleCache = Cache[&M];
+
+  auto It = ModuleCache.find(Str);
+  if (It != ModuleCache.end())
+    return It->second;
+
+  llvm::LLVMContext &Ctx = M.getContext();
+
+  llvm::Constant *Arr =
+      llvm::ConstantDataArray::getString(Ctx, Str, /*AddNull=*/true);
+  auto *ArrTy = llvm::cast<llvm::ArrayType>(Arr->getType());
+
+  auto *GV = new llvm::GlobalVariable(
+      M, ArrTy,
+      /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage, Arr, NameHint,
+      /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+      /*AddressSpace=*/1);
+
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  GV->setSection("llvm.metadata");
+  GV->setAlignment(llvm::Align(1));
+
+  llvm::Constant *Zero = llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 0);
+  llvm::Constant *Idxs[] = {Zero, Zero};
+
+  llvm::Constant *GEP =
+      llvm::ConstantExpr::getInBoundsGetElementPtr(ArrTy, GV, Idxs);
+
+  auto *AS1PtrTy = llvm::PointerType::get(Ctx, /*AddrSpace=*/1);
+  llvm::Value *Result = llvm::ConstantExpr::getBitCast(GEP, AS1PtrTy);
+
+  ModuleCache[Str] = Result;
+  return Result;
+}
+
 /// Implementation of the dialect interface that converts operations belonging
 /// to the XeVM dialect to LLVM IR.
 class XeVMDialectLLVMIRTranslationInterface
