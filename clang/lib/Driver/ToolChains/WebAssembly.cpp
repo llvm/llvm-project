@@ -100,8 +100,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     arch = "wasm64";
   else
     arch = "wasm32";
-  if (ToolChain.getTriple().getOSName() == "wasip3")
-    arch += "-wasip3";
+
   CmdArgs.push_back(Args.MakeArgString(arch));
 
   if (Args.hasArg(options::OPT_s))
@@ -171,6 +170,14 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (WantsSharedMemory(ToolChain.getTriple(), Args))
     CmdArgs.push_back("--shared-memory");
+
+  // Enable component model thread context by default for wasip3
+  bool DefaultComponentModelThreadContext =
+      ToolChain.getTriple().getOSName() == "wasip3";
+  if (Args.hasFlag(options::OPT_mcomponent_model_thread_context,
+                   options::OPT_mno_component_model_thread_context,
+                   DefaultComponentModelThreadContext))
+    CmdArgs.push_back("--component-model-thread-context");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     if (ToolChain.ShouldLinkCXXStdlib(Args))

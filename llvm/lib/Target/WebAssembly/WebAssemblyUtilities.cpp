@@ -201,7 +201,7 @@ MachineSDNode *WebAssembly::getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
   auto GlobalGetIns = PtrVT == MVT::i64 ? WebAssembly::GLOBAL_GET_I64
                                         : WebAssembly::GLOBAL_GET_I32;
 
-  if (Subtarget->getTargetTriple().getOSName() == "wasip3") {
+  if (Subtarget->hasComponentModelThreadContext()) {
     return DAG.getMachineNode(
         WebAssembly::CALL, DL, PtrVT, MVT::Other,
         DAG.getTargetExternalSymbol(

@@ -2002,7 +2002,7 @@ WebAssemblyTargetLowering::LowerGlobalTLSAddress(SDValue Op,
       (model == GlobalValue::GeneralDynamicTLSModel &&
        getTargetMachine().shouldAssumeDSOLocal(GV))) {
     // For DSO-local TLS variables we use offset from __tls_base, or
-    // context.get(1) on wasip3.
+    // context.get(1) if using component model threading intrinsics.
 
     MVT PtrVT = getPointerTy(DAG.getDataLayout());
     SDValue BaseAddr(WebAssembly::getTLSBase(DAG, DL, Subtarget), 0);

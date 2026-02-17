@@ -656,16 +656,15 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.exportDynamic =
       args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, ctx.arg.shared);
 
-  // Parse wasm32/64 and maybe -wasip3.
+   // Parse wasm32/64.
   if (auto *arg = args.getLastArg(OPT_m)) {
     StringRef s = arg->getValue();
-    if (s.starts_with("wasm32"))
+    if (s == "wasm32")
       ctx.arg.is64 = false;
-    else if (s.starts_with("wasm64"))
+    else if (s == "wasm64")
       ctx.arg.is64 = true;
     else
       error("invalid target architecture: " + s);
-    ctx.arg.isWasip3 = s.ends_with("-wasip3");
   }
 
   // --threads= takes a positive integer and provides the default value for
@@ -705,6 +704,9 @@ static void readConfigs(opt::InputArgList &args) {
 
   if (args.hasArg(OPT_print_map))
     ctx.arg.mapFile = "-";
+
+  if (args.hasArg(OPT_component_model_thread_context))
+    ctx.arg.componentModelThreadContext = true;
 
   std::tie(ctx.arg.buildId, ctx.arg.buildIdVector) = getBuildId(args);
 }
@@ -829,8 +831,8 @@ static void checkOptions(opt::InputArgList &args) {
       error("--table-base may not be used with -shared/-pie");
   }
 
-  if (ctx.arg.sharedMemory && ctx.arg.isWasip3) {
-    error("--shared-memory is incompatible with the wasip3 target");
+  if (ctx.arg.sharedMemory && ctx.arg.componentModelThreadContext) {
+    error("--shared-memory is incompatible with component model thread context intrinsics");
   }
 }
 
@@ -964,7 +966,7 @@ static void createSyntheticSymbols() {
   bool is64 = ctx.arg.is64.value_or(false);
 
   auto stack_pointer_name =
-      ctx.arg.isWasip3 ? "__init_stack_pointer" : "__stack_pointer";
+      ctx.arg.componentModelThreadContext ? "__init_stack_pointer" : "__stack_pointer";
   if (ctx.isPic) {
     ctx.sym.stackPointer =
         createUndefinedGlobal(stack_pointer_name, ctx.arg.is64.value_or(false)
@@ -988,7 +990,7 @@ static void createSyntheticSymbols() {
 
   if (ctx.arg.isMultithreaded()) {
     // TLS symbols are all hidden/dso-local
-    auto tls_base_name = ctx.arg.isWasip3 ? "__init_tls_base" : "__tls_base";
+    auto tls_base_name = ctx.arg.componentModelThreadContext ? "__init_tls_base" : "__tls_base";
     ctx.sym.tlsBase = createGlobalVariable(tls_base_name, true,
                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
@@ -999,7 +1001,7 @@ static void createSyntheticSymbols() {
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
                                 "__wasm_init_tls"));
-    if (ctx.arg.isWasip3) {
+    if (ctx.arg.componentModelThreadContext) {
       ctx.sym.tlsBase->markLive();
       ctx.sym.tlsSize->markLive();
       ctx.sym.tlsAlign->markLive();
@@ -1049,7 +1051,7 @@ static void createOptionalSymbols() {
   //
   // __tls_size and __tls_align are not needed in this case since they are only
   // needed for __wasm_init_tls (which we do not create in this case).
-  if (!ctx.arg.sharedMemory && !ctx.arg.isWasip3)
+  if (!ctx.arg.sharedMemory && !ctx.arg.componentModelThreadContext)
     ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
 

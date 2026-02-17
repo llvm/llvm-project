@@ -261,7 +261,8 @@ class CoalesceFeaturesAndStripAtomics final : public ModulePass {
   // function individually, since having multiple feature sets in one module
   // currently does not make sense for WebAssembly. If atomics are not enabled,
   // also strip atomic operations and thread local storage, unless the target
-  // is WASIP3, which can use TLS without atomics due to cooperative threading.
+  // is using component model threading intrinsics which allow thread local storage 
+  // without atomics, in which case only strip atomics.
   static char ID;
   WebAssemblyTargetMachine *WasmTM;
 
@@ -280,9 +281,9 @@ public:
     bool StrippedAtomics = false;
     bool StrippedTLS = false;
 
-    if (WasmTM->getTargetTriple().getOSName() == "wasip3") {
-      // WASIP3 allows TLS without atomics, so don't strip TLS even if
-      // atomics are disabled.
+    if (Features[WebAssembly::FeatureComponentModelThreadContext]) {
+      // Using component model threading intrinsics allows TLS without 
+      // atomics, so don't strip TLS even if atomics are disabled.
       if (!Features[WebAssembly::FeatureAtomics]) {
         StrippedAtomics = stripAtomics(M);
       }

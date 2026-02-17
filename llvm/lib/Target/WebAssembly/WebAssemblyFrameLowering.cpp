@@ -229,8 +229,7 @@ void WebAssemblyFrameLowering::writeBackSP(
     MachineBasicBlock::iterator &InsertStore, const DebugLoc &DL) const {
   const auto *TII = MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
 
-  if (MF.getSubtarget<WebAssemblySubtarget>().getTargetTriple().getOSName() ==
-      "wasip3") {
+  if (MF.getSubtarget<WebAssemblySubtarget>().hasComponentModelThreadContext()) {
     const char *ES = "__wasm_component_model_builtin_context_set_0";
     auto *SPSymbol = MF.createExternalSymbolName(ES);
     BuildMI(MBB, InsertStore, DL, TII->get(WebAssembly::CALL))
@@ -289,7 +288,7 @@ void WebAssemblyFrameLowering::emitPrologue(MachineFunction &MF,
   if (StackSize)
     SPReg = MRI.createVirtualRegister(PtrRC);
 
-  if (ST.getTargetTriple().getOSName() == "wasip3") {
+  if (ST.hasComponentModelThreadContext()) {
     const char *ES = "__wasm_component_model_builtin_context_get_0";
     auto *SPSymbol = MF.createExternalSymbolName(ES);
     BuildMI(MBB, InsertPt, DL, TII->get(WebAssembly::CALL), SPReg)

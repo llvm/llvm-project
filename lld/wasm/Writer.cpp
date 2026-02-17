@@ -1623,9 +1623,9 @@ void Writer::createInitTLSFunction() {
 
     writeUleb128(os, 0, "num locals");
     if (tlsSeg) {
-      // On WASIP3, we don't set the TLS base inside the thread context;
-      // this should be done as part of the thread startup stub.
-      if (!ctx.arg.isWasip3) {
+      // When using component model thread context intrinsics, we don't set the TLS base
+      //inside __init_tls; this should be done as part of the thread startup stub.
+      if (!ctx.arg.componentModelThreadContext) {
         writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
         writeUleb128(os, 0, "local index");
 

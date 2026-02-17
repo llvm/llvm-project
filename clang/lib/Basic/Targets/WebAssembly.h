@@ -61,6 +61,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
   bool HasCallIndirectOverlong = false;
+  bool HasComponentModelThreadContext = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
@@ -104,6 +105,9 @@ public:
       SizeType = UnsignedLong;
       PtrDiffType = SignedLong;
       IntPtrType = SignedLong;
+    }
+    if (T.getOSName() == "wasip3") {
+      HasComponentModelThreadContext = true;
     }
   }
 

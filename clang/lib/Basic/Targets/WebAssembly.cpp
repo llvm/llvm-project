@@ -362,6 +362,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasWideArithmetic = false;
       continue;
     }
+    if (Feature == "+component-model-thread-context") {
+      HasComponentModelThreadContext = true;
+      continue;
+    }
+    if (Feature == "-component-model-thread-context") {
+      HasComponentModelThreadContext = false;
+      continue;
+    }
 
     Diags.Report(diag::err_opt_not_valid_with_opt)
         << Feature << "-target-feature";
@@ -395,10 +403,10 @@ WebAssemblyTargetInfo::getTargetBuiltins() const {
 void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
                                    const TargetInfo *Aux) {
   TargetInfo::adjust(Diags, Opts, Aux);
-  // Turn off POSIXThreads and ThreadModel so that we don't predefine _REENTRANT
-  // or __STDCPP_THREADS__ if we will eventually end up stripping atomics
-  // because they are unsupported.
-  if (getTriple().getOSName() != "wasip3" &&
+  // If not using component model threading intrinsics, turn off POSIXThreads 
+  // and ThreadModel so that we don't predefine _REENTRANT or __STDCPP_THREADS__ 
+  // if we will eventually end up stripping atomics because they are unsupported.
+  if (!HasComponentModelThreadContext &&
       (!HasAtomics || !HasBulkMemory)) {
     Opts.POSIXThreads = false;
     Opts.setThreadModel(LangOptions::ThreadModelKind::Single);
