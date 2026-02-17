@@ -3932,7 +3932,7 @@ private:
   bool matchesShlZExt(const TreeEntry &TE, OrdersType &Order, bool &IsBSwap,
                       bool &ForLoads) const;
 
-  /// Checks if the \p SelectOp matches zext+selects, which can be inversed for
+  /// Checks if the \p SelectTE matches zext+selects, which can be inversed for
   /// better codegen in case like zext (icmp ne), select (icmp eq), ....
   bool matchesInversedZExtSelect(
       const TreeEntry &SelectTE,
@@ -3957,15 +3957,21 @@ private:
     SmallVector<int> getSplitMask() const {
       assert(State == TreeEntry::SplitVectorize && !ReorderIndices.empty() &&
              "Expected only split vectorize node.");
-      SmallVector<int> Mask(getVectorFactor(), PoisonMaskElem);
       unsigned CommonVF = std::max<unsigned>(
           CombinedEntriesWithIndices.back().second,
           Scalars.size() - CombinedEntriesWithIndices.back().second);
-      for (auto [Idx, I] : enumerate(ReorderIndices))
-        Mask[I] =
-            Idx + (Idx >= CombinedEntriesWithIndices.back().second
-                       ? CommonVF - CombinedEntriesWithIndices.back().second
-                       : 0);
+      const unsigned Scale = getNumElements(Scalars.front()->getType());
+      CommonVF *= Scale;
+      SmallVector<int> Mask(getVectorFactor() * Scale, PoisonMaskElem);
+      for (auto [Idx, I] : enumerate(ReorderIndices)) {
+        for (unsigned K : seq<unsigned>(Scale)) {
+          Mask[Scale * I + K] =
+              Scale * Idx + K +
+              (Idx >= CombinedEntriesWithIndices.back().second
+                   ? CommonVF - CombinedEntriesWithIndices.back().second * Scale
+                   : 0);
+        }
+      }
       return Mask;
     }
 
@@ -7237,6 +7243,10 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
         if (!SC)
           continue;
         Offset = SC->getAPInt().getSExtValue();
+        if (Offset >= std::numeric_limits<int64_t>::max() - 1) {
+          Offset = 0;
+          continue;
+        }
         break;
       }
     }
@@ -11794,70 +11804,13 @@ BoUpSLP::ScalarsVectorizationLegality BoUpSLP::getScalarsVectorizationLegality(
     }
   }
 
-  // If all of the operands are identical or constant we have a simple solution.
-  // If we deal with insert/extract instructions, they all must have constant
-  // indices, otherwise we should gather them, not try to vectorize.
-  // If alternate op node with 2 elements with gathered operands - do not
-  // vectorize.
-  auto NotProfitableForVectorization = [&S, this, Depth](ArrayRef<Value *> VL) {
-    if (!S || !S.isAltShuffle() || VL.size() > 2)
-      return false;
-    if (VectorizableTree.size() < MinTreeSize)
-      return false;
-    if (Depth >= RecursionMaxDepth - 1)
-      return true;
-    // Check if all operands are extracts, part of vector node or can build a
-    // regular vectorize node.
-    SmallVector<unsigned, 8> InstsCount;
-    for (Value *V : VL) {
-      auto *I = cast<Instruction>(V);
-      InstsCount.push_back(count_if(I->operand_values(), [](Value *Op) {
-        return isa<Instruction>(Op) || isVectorLikeInstWithConstOps(Op);
-      }));
-    }
-    bool IsCommutative =
-        isCommutative(S.getMainOp()) || isCommutative(S.getAltOp());
-    if ((IsCommutative &&
-         std::accumulate(InstsCount.begin(), InstsCount.end(), 0) < 2) ||
-        (!IsCommutative &&
-         all_of(InstsCount, [](unsigned ICnt) { return ICnt < 2; })))
-      return true;
-    assert(VL.size() == 2 && "Expected only 2 alternate op instructions.");
-    SmallVector<SmallVector<std::pair<Value *, Value *>>> Candidates;
-    auto *I1 = cast<Instruction>(VL.front());
-    auto *I2 = cast<Instruction>(VL.back());
-    for (int Op : seq<int>(S.getMainOp()->getNumOperands()))
-      Candidates.emplace_back().emplace_back(I1->getOperand(Op),
-                                             I2->getOperand(Op));
-    if (static_cast<unsigned>(count_if(
-            Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
-              return findBestRootPair(Cand, LookAheadHeuristics::ScoreSplat);
-            })) >= S.getMainOp()->getNumOperands() / 2)
-      return false;
-    if (S.getMainOp()->getNumOperands() > 2)
-      return true;
-    if (IsCommutative) {
-      // Check permuted operands.
-      Candidates.clear();
-      for (int Op = 0, E = S.getMainOp()->getNumOperands(); Op < E; ++Op)
-        Candidates.emplace_back().emplace_back(I1->getOperand(Op),
-                                               I2->getOperand((Op + 1) % E));
-      if (any_of(
-              Candidates, [this](ArrayRef<std::pair<Value *, Value *>> Cand) {
-                return findBestRootPair(Cand, LookAheadHeuristics::ScoreSplat);
-              }))
-        return false;
-    }
-    return true;
-  };
   bool AreAllSameBlock = !AreScatterAllGEPSameBlock;
   bool AreAllSameInsts = AreAllSameBlock || AreScatterAllGEPSameBlock;
   if (!AreAllSameInsts || isSplat(VL) ||
       (isa<InsertElementInst, ExtractValueInst, ExtractElementInst>(
            S.getMainOp()) &&
-       !all_of(VL, isVectorLikeInstWithConstOps)) ||
-      NotProfitableForVectorization(VL)) {
-    LLVM_DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O, small shuffle. \n";
+       !all_of(VL, isVectorLikeInstWithConstOps))) {
+    LLVM_DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O conditions. \n";
                dbgs() << "[";
                interleaveComma(VL, dbgs(), [&](Value *V) { dbgs() << *V; });
                dbgs() << "]\n");
@@ -12266,7 +12219,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
 
       TE->setOperands(Operands);
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
-        buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
+        buildTreeRec(TE->getOperand(I), Depth, {TE, I});
       if (ShuffleOrOp == Instruction::Trunc) {
         ExtraBitWidthNodes.insert(getOperandEntry(TE, 0)->Idx);
       } else if (ShuffleOrOp == Instruction::SIToFP ||
@@ -12312,8 +12265,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         }
       }
       TE->setOperands(Operands);
-      buildTreeRec(Operands.front(), Depth + 1, {TE, 0});
-      buildTreeRec(Operands.back(), Depth + 1, {TE, 1});
+      buildTreeRec(Operands.front(), Depth, {TE, 0});
+      buildTreeRec(Operands.back(), Depth, {TE, 1});
       if (ShuffleOrOp == Instruction::ICmp) {
         unsigned NumSignBits0 =
             ComputeNumSignBits(VL0->getOperand(0), *DL, AC, nullptr, DT);
@@ -13573,8 +13526,7 @@ bool BoUpSLP::matchesInversedZExtSelect(
   const auto *Op2TE = getOperandEntry(&SelectTE, 2);
   // Compares must be alternate vectorized, and other operands must be gathers
   // or copyables.
-  if (CmpTE->State != TreeEntry::Vectorize || !CmpTE->hasState() ||
-      !CmpTE->isAltShuffle() ||
+  if (CmpTE->State != TreeEntry::Vectorize || !CmpTE->isAltShuffle() ||
       (CmpTE->getOpcode() != Instruction::ICmp &&
        CmpTE->getOpcode() != Instruction::FCmp) ||
       !Op1TE->ReorderIndices.empty() || !Op1TE->ReuseShuffleIndices.empty() ||
@@ -20486,16 +20438,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     unsigned CommonVF =
         std::max(OpTE1.getVectorFactor(), OpTE2.getVectorFactor());
+    const unsigned Scale = getNumElements(ScalarTy);
+    CommonVF *= Scale;
     if (getNumElements(Op1->getType()) != CommonVF) {
       SmallVector<int> Mask(CommonVF, PoisonMaskElem);
-      std::iota(Mask.begin(), std::next(Mask.begin(), OpTE1.getVectorFactor()),
-                0);
+      copy(createReplicatedMask(Scale, OpTE1.getVectorFactor() * Scale),
+           Mask.begin());
       Op1 = Builder.CreateShuffleVector(Op1, Mask);
     }
     if (getNumElements(Op2->getType()) != CommonVF) {
       SmallVector<int> Mask(CommonVF, PoisonMaskElem);
-      std::iota(Mask.begin(), std::next(Mask.begin(), OpTE2.getVectorFactor()),
-                0);
+      copy(createReplicatedMask(Scale, OpTE2.getVectorFactor() * Scale),
+           Mask.begin());
       Op2 = Builder.CreateShuffleVector(Op2, Mask);
     }
     Value *Vec = Builder.CreateShuffleVector(Op1, Op2, E->getSplitMask());

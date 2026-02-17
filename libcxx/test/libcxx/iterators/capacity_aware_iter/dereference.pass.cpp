@@ -18,7 +18,9 @@
 // operator->();
 
 #include <__iterator/capacity_aware_iterator.h>
+#include <cassert>
 #include <concepts>
+#include <iterator>
 
 #include "test_iterators.h"
 #include "test_macros.h"
