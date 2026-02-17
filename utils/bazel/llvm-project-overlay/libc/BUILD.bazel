@@ -3571,6 +3571,129 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_f16div",
+    hdrs = ["src/__support/math/f16div.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16divf",
+    hdrs = ["src/__support/math/f16divf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16divf128",
+    hdrs = ["src/__support/math/f16divf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16divl",
+    hdrs = ["src/__support/math/f16divl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16mul",
+    hdrs = ["src/__support/math/f16mul.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16mulf",
+    hdrs = ["src/__support/math/f16mulf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16mulf128",
+    hdrs = ["src/__support/math/f16mulf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16mull",
+    hdrs = ["src/__support/math/f16mull.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16sub",
+    hdrs = ["src/__support/math/f16sub.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16subf",
+    hdrs = ["src/__support/math/f16subf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16subf128",
+    hdrs = ["src/__support/math/f16subf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16subl",
+    hdrs = ["src/__support/math/f16subl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_fadd",
     hdrs = ["src/__support/math/fadd.h"],
     deps = [
@@ -6016,18 +6139,30 @@ libc_math_function(
 
 libc_math_function(
     name = "f16div",
+    additional_deps = [
+        ":__support_math_f16div",
+    ],
 )
 
 libc_math_function(
     name = "f16divf",
+    additional_deps = [
+        ":__support_math_f16divf",
+    ],
 )
 
 libc_math_function(
     name = "f16divf128",
+    additional_deps = [
+        ":__support_math_f16divf128",
+    ],
 )
 
 libc_math_function(
     name = "f16divl",
+    additional_deps = [
+        ":__support_math_f16divl",
+    ],
 )
 
 libc_math_function(
@@ -6060,18 +6195,30 @@ libc_math_function(
 
 libc_math_function(
     name = "f16mul",
+    additional_deps = [
+        ":__support_math_f16mul",
+    ],
 )
 
 libc_math_function(
     name = "f16mulf",
+    additional_deps = [
+        ":__support_math_f16mulf",
+    ],
 )
 
 libc_math_function(
     name = "f16mulf128",
+    additional_deps = [
+        ":__support_math_f16mulf128",
+    ],
 )
 
 libc_math_function(
     name = "f16mull",
+    additional_deps = [
+        ":__support_math_f16mull",
+    ],
 )
 
 libc_math_function(
@@ -6105,18 +6252,30 @@ libc_math_function(
 
 libc_math_function(
     name = "f16sub",
+    additional_deps = [
+        ":__support_math_f16sub",
+    ],
 )
 
 libc_math_function(
     name = "f16subf",
+    additional_deps = [
+        ":__support_math_f16subf",
+    ],
 )
 
 libc_math_function(
     name = "f16subf128",
+    additional_deps = [
+        ":__support_math_f16subf128",
+    ],
 )
 
 libc_math_function(
     name = "f16subl",
+    additional_deps = [
+        ":__support_math_f16subl",
+    ],
 )
 
 libc_math_function(name = "fabs")
