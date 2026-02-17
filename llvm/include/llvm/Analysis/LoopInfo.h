@@ -327,6 +327,12 @@ public:
   /// Return true if the loop body is safe to clone in practice.
   bool isSafeToClone() const;
 
+  /// Like `isSafeToClone`, but also checks whether we may form phis for all
+  /// values that are live-out from the loop. This is required if either of
+  /// the cloned loop bodies may run conditionally.
+  bool isSafeToCloneConditionally(const DominatorTree &DT,
+                                  bool AllowConvergent = false) const;
+
   /// Returns true if the loop is annotated parallel.
   ///
   /// A parallel loop can be assumed to not contain any dependencies between

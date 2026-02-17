@@ -3356,19 +3356,10 @@ static bool collectUnswitchCandidatesWithInjections(
   return Found;
 }
 
-static bool isSafeForNoNTrivialUnswitching(Loop &L, LoopInfo &LI) {
-  if (!L.isSafeToClone())
+static bool isSafeForNoNTrivialUnswitching(const DominatorTree &DT, Loop &L,
+                                           LoopInfo &LI) {
+  if (!L.isSafeToCloneConditionally(DT))
     return false;
-  for (auto *BB : L.blocks())
-    for (auto &I : *BB) {
-      if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
-        return false;
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        assert(!CB->cannotDuplicate() && "Checked by L.isSafeToClone().");
-        if (CB->isConvergent())
-          return false;
-      }
-    }
 
   // Check if there are irreducible CFG cycles in this loop. If so, we cannot
   // easily unswitch non-trivial edges out of the loop. Doing so might turn the
@@ -3714,7 +3705,7 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
     return false;
 
   // Perform legality checks.
-  if (!isSafeForNoNTrivialUnswitching(L, LI))
+  if (!isSafeForNoNTrivialUnswitching(DT, L, LI))
     return false;
 
   // For non-trivial unswitching, because it often creates new loops, we rely on
