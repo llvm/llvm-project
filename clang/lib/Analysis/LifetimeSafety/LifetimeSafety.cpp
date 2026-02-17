@@ -64,8 +64,8 @@ void LifetimeSafetyAnalysis::run() {
                                                   dyn_cast<NamedDecl>(D))
             FuncName = ND->getQualifiedNameAsString();
         llvm::dbgs() << "LifetimeSafety: Skipping function " << FuncName
-                     << "due to large CFG: " << Cfg.getNumBlockIDs() << " blocks (threshold: "
-                     << LSOpts.MaxCFGBlocks << ")\n");
+                     << "due to large CFG: " << Cfg.getNumBlockIDs()
+                     << " blocks (threshold: " << LSOpts.MaxCFGBlocks << ")\n");
     return;
   }
 
