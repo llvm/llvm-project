@@ -8,6 +8,19 @@
 # nomenclature, adds libraries.
 ################################################################################
 
+# INTERFACE library that provides the include directories needed to compile
+# against MLIR CAPI headers. The CAPI headers (e.g., mlir/CAPI/Wrap.h)
+# transitively include LLVM headers (via mlir/Support/LLVM.h), so consumers
+# need the LLVM include paths even if they don't link against LLVMSupport.
+# Defined here (rather than in lib/CAPI/) so it is available to both in-tree
+# and external project builds that include this module.
+if(NOT TARGET MLIRCAPIHeaderDeps)
+  add_library(MLIRCAPIHeaderDeps INTERFACE)
+  target_include_directories(MLIRCAPIHeaderDeps INTERFACE
+    $<TARGET_PROPERTY:LLVMSupport,INTERFACE_INCLUDE_DIRECTORIES>
+  )
+endif()
+
 # Function: declare_mlir_python_sources
 # Declares pure python sources as part of a named grouping that can be built
 # later.
@@ -441,6 +454,7 @@ function(add_mlir_python_modules name)
         OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
         MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
         LINK_LIBS PRIVATE
+          MLIRCAPIHeaderDeps
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
           ${support_libs}
@@ -474,10 +488,14 @@ function(add_mlir_python_modules name)
         MLIR_BINDINGS_PYTHON_NB_DOMAIN ${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
         _PRIVATE_SUPPORT_LIB
         LINK_LIBS PRIVATE
-        # LLVMSupport is intentionally removed to avoid introducing an LLVM dependency
-        # for the mlir-python bindings. Do not add new dependencies on the C++ LLVM/MLIR
-        # libraries; use the C++ standard library instead, or wrap LLVM functionality in
-        # the C API first.
+        # LLVMSupport is intentionally removed to avoid introducing an LLVM link
+        # dependency for the mlir-python bindings. Do not add new link dependencies
+        # on the C++ LLVM/MLIR libraries; use the C++ standard library instead, or
+        # wrap LLVM functionality in the C API first.
+        # MLIRCAPIHeaderDeps is an include-only (INTERFACE) target that provides
+        # LLVM include directories needed to compile against CAPI headers. It does
+        # not introduce any link or runtime dependency on LLVM.
+          MLIRCAPIHeaderDeps
           ${sources_target}
           ${ARG_COMMON_CAPI_LINK_LIBS}
       )
