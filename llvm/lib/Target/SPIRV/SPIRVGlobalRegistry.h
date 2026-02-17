@@ -43,8 +43,8 @@ class SPIRVTypeInst {
 
   // Used by DenseMapInfo to bypass the assertion. The thombstone and empty keys
   // are not null. They are -1 and -2 aligned to the appropiate pointer size.
-  struct BypassAssertion {};
-  SPIRVTypeInst(const MachineInstr *MI, BypassAssertion) : MI(MI) {};
+  struct UncheckedConstructor {};
+  SPIRVTypeInst(const MachineInstr *MI, UncheckedConstructor) : MI(MI) {};
 
 public:
   SPIRVTypeInst(const MachineInstr &MI) : SPIRVTypeInst(&MI) {}
@@ -80,10 +80,10 @@ public:
 template <> struct DenseMapInfo<SPIRVTypeInst> {
   using MIInfo = DenseMapInfo<MachineInstr *>;
   static SPIRVTypeInst getEmptyKey() {
-    return {MIInfo::getEmptyKey(), SPIRVTypeInst::BypassAssertion()};
+    return {MIInfo::getEmptyKey(), SPIRVTypeInst::UncheckedConstructor()};
   }
   static SPIRVTypeInst getTombstoneKey() {
-    return {MIInfo::getTombstoneKey(), SPIRVTypeInst::BypassAssertion()};
+    return {MIInfo::getTombstoneKey(), SPIRVTypeInst::UncheckedConstructor()};
   }
   static unsigned getHashValue(SPIRVTypeInst Ty) {
     return MIInfo::getHashValue(Ty.MI);
