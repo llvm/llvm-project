@@ -43,13 +43,26 @@ private:
   addSummaryImpl(EntityId Entity, std::unique_ptr<EntitySummary> &&Data);
 };
 
+// Why is this a template?
+//
+// We use template here to avoid an implicit conversion from
+// `std::unique_ptr<ConcreteEntitySummary>` to `std::unique_ptr<EntitySummary>`
+// because constructing that implicit temporary would unconditionally "consume"
+// the Data. This would make it impossible to recover from the call-site the
+// Data you pass in even if no insertion happens.
 template <typename ConcreteEntitySummary,
           DerivesFromEntitySummary<ConcreteEntitySummary> *>
 std::pair<EntitySummary *, bool>
 TUSummaryBuilder::addSummary(EntityId Entity,
                              std::unique_ptr<ConcreteEntitySummary> &&Data) {
+  // Prepare a unique_ptr of the base type to avoid implicit conversions at the
+  // call-site.
   std::unique_ptr<EntitySummary> TypeErasedData = std::move(Data);
+
+  // This only moves (consumes) TypeErasedData if insertion happened.
+  // Otherwise it doesn't touch the `TypeErasedData`.
   auto [It, Inserted] = addSummaryImpl(Entity, std::move(TypeErasedData));
+
   // Move it back on failue to keep the `Data` unconsumed.
   if (!Inserted) {
     Data = std::unique_ptr<ConcreteEntitySummary>(
