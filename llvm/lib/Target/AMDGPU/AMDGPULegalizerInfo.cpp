@@ -3559,7 +3559,11 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
   const LLT F16 = LLT::scalar(16);
 
   if (Ty == F16 || MI.getFlag(MachineInstr::FmAfn)) {
-    if (Ty == F16 && !ST.has16BitInsts()) {
+    // TODO: The direct f16 path is 1.79 ulp for f16. This should be used
+    // depending on !fpmath metadata.
+    bool PromoteToF32 =
+        Ty == F16 && (!MI.getFlag(MachineInstr::FmAfn) || !ST.has16BitInsts());
+    if (PromoteToF32) {
       Register LogVal = MRI.createGenericVirtualRegister(F32);
       auto PromoteSrc = B.buildFPExt(F32, X);
       legalizeFlogUnsafe(B, LogVal, PromoteSrc.getReg(0), IsLog10, Flags);
