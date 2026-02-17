@@ -8184,7 +8184,11 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
                "int x = (a, b);\n"
                "int y = (a,\n"
                "         b,\n"
-               "         c);",
+               "         c);\n"
+               "(a, b);\n"
+               "(a,\n"
+               " b,\n"
+               " c);",
                Style);
   Style.BreakParametersAfter = 4;
   verifyFormat("void functionDecl(paramA);\n"
@@ -8229,7 +8233,12 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
                "         b,\n"
                "         c,\n"
                "         d,\n"
-               "         e);",
+               "         e);\n"
+               "(a,\n"
+               " b,\n"
+               " c,\n"
+               " d,\n"
+               " e);",
                Style);
   Style.BreakParametersAfter = 0;
 }
