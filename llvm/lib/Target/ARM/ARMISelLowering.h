@@ -341,6 +341,8 @@ class VectorType;
       return Opc != ISD::VECREDUCE_ADD;
     }
 
+    bool isCtlzFast() const override;
+
     /// Returns true if an argument of type Ty needs to be passed in a
     /// contiguous block of registers in calling convention CallConv.
     bool functionArgumentNeedsConsecutiveRegisters(
