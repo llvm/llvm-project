@@ -293,6 +293,12 @@ lldb::thread_result_t ThreadedCommunication::ReadThread() {
         disconnect = GetCloseOnEOF();
         done = true;
       }
+      if (error.GetType() == eErrorTypeWin32 && error.GetError() == ENXIO) {
+        // ENXIO on a pipe is usually caused by a remote shutdown of the
+        // attached ConPTY
+        disconnect = GetCloseOnEOF();
+        done = true;
+      }
       if (error.Fail())
         LLDB_LOG(log, "error: {0}, status = {1}", error,
                  ThreadedCommunication::ConnectionStatusAsString(status));
