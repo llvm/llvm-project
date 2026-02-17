@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if (defined(__NVPTX__) || defined(__AMDGPU__)) &&                             \
+#if (defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__)) &&       \
     !((defined(__CUDA__) && !defined(__CUDA_ARCH__)) ||                        \
       (defined(__HIP__) && !defined(__HIP_DEVICE_COMPILE__)))
 #include <gpuintrin.h>
@@ -179,7 +179,9 @@ template <typename T> struct optional {
 
     template <typename... Args>
     RPC_ATTRS constexpr explicit OptionalStorage(in_place_t, Args &&...args)
-        : stored_value(forward<Args>(args)...) {}
+        : stored_value(forward<Args>(args)...) {
+      in_use = true;
+    }
 
     RPC_ATTRS constexpr void reset() {
       if (in_use)
@@ -194,15 +196,15 @@ public:
   RPC_ATTRS constexpr optional() = default;
   RPC_ATTRS constexpr optional(nullopt_t) {}
 
-  RPC_ATTRS constexpr optional(const T &t) : storage(in_place, t) {
-    storage.in_use = true;
-  }
+  RPC_ATTRS constexpr optional(const T &t) : storage(in_place, t) {}
   RPC_ATTRS constexpr optional(const optional &) = default;
 
-  RPC_ATTRS constexpr optional(T &&t) : storage(in_place, move(t)) {
-    storage.in_use = true;
-  }
+  RPC_ATTRS constexpr optional(T &&t) : storage(in_place, move(t)) {}
   RPC_ATTRS constexpr optional(optional &&O) = default;
+
+  template <typename... Args>
+  RPC_ATTRS constexpr optional(in_place_t, Args &&...args)
+      : storage(in_place, forward<Args>(args)...) {}
 
   RPC_ATTRS constexpr optional &operator=(T &&t) {
     storage = move(t);
@@ -366,7 +368,7 @@ RPC_ATTRS uint32_t get_num_lanes() {
 #endif
 }
 
-/// Returns the id of the thread inside of an AMD wavefront executing together.
+/// Returns a bitmask of the currently active lanes.
 RPC_ATTRS uint64_t get_lane_mask() {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_lane_mask();
@@ -440,13 +442,17 @@ RPC_ATTRS constexpr uint64_t string_length(const char *s) {
   return static_cast<uint64_t>(end - s + 1);
 }
 
-/// Helper for dealing with function types.
+/// Helper for dealing with function pointers and lambda types.
 template <typename> struct function_traits;
 template <typename R, typename... Args> struct function_traits<R (*)(Args...)> {
   using return_type = R;
   using arg_types = rpc::tuple<Args...>;
   static constexpr uint64_t ARITY = sizeof...(Args);
 };
+template <typename T> T &&declval();
+template <typename T>
+struct function_traits
+    : function_traits<decltype(+declval<rpc::remove_reference_t<T>>())> {};
 
 template <typename T, typename U>
 RPC_ATTRS constexpr T max(const T &a, const U &b) {

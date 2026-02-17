@@ -18,9 +18,7 @@ body:             |
     ; X64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 34359738368
     ; X64-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[C]]
     ; X64-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s64) = G_CTTZ_ZERO_UNDEF [[OR]](s64)
-    ; X64-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 34359738367
-    ; X64-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[CTTZ_ZERO_UNDEF]], [[C1]]
-    ; X64-NEXT: RET 0, implicit [[AND]](s64)
+    ; X64-NEXT: RET 0, implicit [[CTTZ_ZERO_UNDEF]](s64)
     ;
     ; X86-LABEL: name: test_cttz35
     ; X86: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx

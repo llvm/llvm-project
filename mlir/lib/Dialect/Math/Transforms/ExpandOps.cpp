@@ -523,6 +523,11 @@ static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
   auto eTy = getElementTypeOrSelf(operandTy);
   Location loc = op.getLoc();
 
+  // Only expand for integer or float element types (index has no fixed bitwidth).
+  if (!eTy.isIntOrFloat()) {
+    return rewriter.notifyMatchFailure(op, "ctlz expansion only supports int or float types");
+  }
+
   int32_t bitwidth = eTy.getIntOrFloatBitWidth();
   if (bitwidth > 64)
     return failure();

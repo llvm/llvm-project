@@ -23,29 +23,30 @@ constexpr extern long double cx_var_ld = __builtin_huge_vall();
 // LLVM: @cx_var_ld = {{.*}} x86_fp80 0xK7FFF8000000000000000
 // OGCG: @cx_var_ld = {{.*}} x86_fp80 0xK7FFF8000000000000000
 
-int is_constant_evaluated() {
+bool is_constant_evaluated() {
   return __builtin_is_constant_evaluated();
 }
 
-// CIR: cir.func{{.*}} @_Z21is_constant_evaluatedv() -> !s32i
-// CIR: %[[ZERO:.+]] = cir.const #cir.int<0>
+// CIR: cir.func{{.*}} @_Z21is_constant_evaluatedv() -> (!cir.bool{{.*}})
+// CIR: %[[FALSE:.+]] = cir.const #false
 
-// LLVM: define {{.*}}i32 @_Z21is_constant_evaluatedv()
-// LLVM: %[[MEM:.+]] = alloca i32
-// LLVM: store i32 0, ptr %[[MEM]]
-// LLVM: %[[RETVAL:.+]] = load i32, ptr %[[MEM]]
-// LLVM: ret i32 %[[RETVAL]]
+// LLVM: define {{.*}}i1 @_Z21is_constant_evaluatedv()
+// LLVM: %[[MEM:.+]] = alloca i8
+// LLVM: store i8 0, ptr %[[MEM]]
+// LLVM: %[[RETVAL:.+]] = load i8, ptr %[[MEM]]
+// LLVM: %[[BOOL:.+]] = trunc i8 %[[RETVAL]] to i1
+// LLVM: ret i1 %[[BOOL]]
 // LLVM: }
 
-// OGCG: define {{.*}}i32 @_Z21is_constant_evaluatedv()
-// OGCG: ret i32 0
+// OGCG: define {{.*}}i1 @_Z21is_constant_evaluatedv()
+// OGCG: ret i1 false
 // OGCG: }
 
 long double constant_fp_builtin_ld() {
   return __builtin_fabsl(-0.1L);
 }
 
-// CIR: cir.func{{.*}} @_Z22constant_fp_builtin_ldv() -> !cir.long_double<!cir.f80>
+// CIR: cir.func{{.*}} @_Z22constant_fp_builtin_ldv() -> (!cir.long_double<!cir.f80>{{.*}})
 // CIR: %[[PONE:.+]] = cir.const #cir.fp<1.000000e-01> : !cir.long_double<!cir.f80>
 
 // LLVM: define {{.*}}x86_fp80 @_Z22constant_fp_builtin_ldv()
@@ -63,7 +64,7 @@ float constant_fp_builtin_single() {
   return __builtin_fabsf(-0.1f);
 }
 
-// CIR: cir.func{{.*}} @_Z26constant_fp_builtin_singlev() -> !cir.float
+// CIR: cir.func{{.*}} @_Z26constant_fp_builtin_singlev() -> (!cir.float{{.*}})
 // CIR: %[[PONE:.+]] = cir.const #cir.fp<1.000000e-01> : !cir.float
 
 // LLVM: define {{.*}}float @_Z26constant_fp_builtin_singlev()
