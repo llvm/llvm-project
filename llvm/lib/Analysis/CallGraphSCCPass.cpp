@@ -679,14 +679,13 @@ namespace {
       auto PrintBannerOnce = [&]() {
         if (BannerPrinted)
           return;
-        OS << Banner;
+        OS << Banner << "\n";
         BannerPrinted = true;
       };
 
       bool NeedModule = llvm::forcePrintModuleIR();
       if (isFunctionInPrintList("*") && NeedModule) {
         PrintBannerOnce();
-        OS << "\n";
         SCC.getCallGraph().getModule().print(OS, nullptr);
         return false;
       }
@@ -702,12 +701,11 @@ namespace {
           }
         } else if (isFunctionInPrintList("*")) {
           PrintBannerOnce();
-          OS << "\nPrinting <null> Function\n";
+          OS << "Printing <null> Function\n";
         }
       }
       if (NeedModule && FoundFunction) {
         PrintBannerOnce();
-        OS << "\n";
         SCC.getCallGraph().getModule().print(OS, nullptr);
       }
       return false;
