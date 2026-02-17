@@ -526,10 +526,5 @@ bool CrashRecoveryContext::RunSafelyOnThread(function_ref<void()> Fn,
 
 bool CrashRecoveryContext::RunSafelyOnNewStack(function_ref<void()> Fn,
                                                unsigned RequestedStackSize) {
-#ifdef LLVM_HAS_SPLIT_STACKS
-  return runOnNewStack(RequestedStackSize,
-                       function_ref<bool()>([&]() { return RunSafely(Fn); }));
-#else
   return RunSafelyOnThread(Fn, RequestedStackSize);
-#endif
 }
