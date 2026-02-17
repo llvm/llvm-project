@@ -934,13 +934,13 @@ static InputGlobal *createGlobal(StringRef name, bool isMutable) {
   return make<InputGlobal>(wasmGlobal, nullptr);
 }
 
-static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable,
-                                          uint32_t flags = 0) {
+static DefinedGlobal *createGlobalVariable(StringRef name, bool isMutable,
+                                           uint32_t flags = 0) {
   InputGlobal *g = createGlobal(name, isMutable);
   return symtab->addSyntheticGlobal(name, flags, g);
 }
 
-static GlobalSymbol *createOptionalGlobal(StringRef name, bool isMutable) {
+static DefinedGlobal *createOptionalGlobal(StringRef name, bool isMutable) {
   InputGlobal *g = createGlobal(name, isMutable);
   return symtab->addOptionalGlobalSymbol(name, g);
 }
@@ -1025,8 +1025,11 @@ static void createOptionalSymbols() {
 
   ctx.sym.dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
 
-  if (!ctx.arg.shared)
+  if (!ctx.arg.shared) {
     ctx.sym.dataEnd = symtab->addOptionalDataSymbol("__data_end");
+    ctx.sym.rodataStart = symtab->addOptionalDataSymbol("__rodata_start");
+    ctx.sym.rodataEnd = symtab->addOptionalDataSymbol("__rodata_end");
+  }
 
   if (!ctx.isPic) {
     ctx.sym.stackLow = symtab->addOptionalDataSymbol("__stack_low");
@@ -1034,8 +1037,8 @@ static void createOptionalSymbols() {
     ctx.sym.globalBase = symtab->addOptionalDataSymbol("__global_base");
     ctx.sym.heapBase = symtab->addOptionalDataSymbol("__heap_base");
     ctx.sym.heapEnd = symtab->addOptionalDataSymbol("__heap_end");
-    ctx.sym.definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
-    ctx.sym.definedTableBase = symtab->addOptionalDataSymbol("__table_base");
+    ctx.sym.memoryBase = createOptionalGlobal("__memory_base", false);
+    ctx.sym.tableBase = createOptionalGlobal("__table_base", false);
   }
 
   ctx.sym.firstPageEnd = symtab->addOptionalDataSymbol("__wasm_first_page_end");
@@ -1140,9 +1143,9 @@ static void processStubLibraries() {
 
       // First look for any imported symbols that directly match
       // the names of the stub imports
-      for (auto [name, deps] : stub_file->symbolDependencies) {
-        auto *sym = symtab->find(name);
-        if (sym && sym->isUndefined()) {
+      for (auto [name, deps]: stub_file->symbolDependencies) {
+        auto* sym = symtab->find(name);
+        if (sym && sym->isUndefined() && sym->isUsedInRegularObj) {
           depsAdded |= addStubSymbolDeps(stub_file, sym, deps);
         } else {
           if (sym && sym->traced)
@@ -1210,9 +1213,10 @@ struct WrappedSymbol {
   Symbol *wrap;
 };
 
-static Symbol *addUndefined(StringRef name) {
+static Symbol *addUndefined(StringRef name,
+                            const WasmSignature *signature = nullptr) {
   return symtab->addUndefinedFunction(name, std::nullopt, std::nullopt,
-                                      WASM_SYMBOL_UNDEFINED, nullptr, nullptr,
+                                      WASM_SYMBOL_UNDEFINED, nullptr, signature,
                                       false);
 }
 
@@ -1235,7 +1239,8 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
       continue;
 
     Symbol *real = addUndefined(saver().save("__real_" + name));
-    Symbol *wrap = addUndefined(saver().save("__wrap_" + name));
+    Symbol *wrap =
+        addUndefined(saver().save("__wrap_" + name), sym->getSignature());
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten
@@ -1429,7 +1434,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (!ctx.arg.relocatable && !ctx.arg.shared &&
       !ctx.sym.callCtors->isUsedInRegularObj &&
       ctx.sym.callCtors->getName() != ctx.arg.entry &&
-      !ctx.arg.exportedSymbols.count(ctx.sym.callCtors->getName())) {
+      !ctx.arg.exportedSymbols.contains(ctx.sym.callCtors->getName())) {
     if (Symbol *callDtors =
             handleUndefined("__wasm_call_dtors", "<internal>")) {
       if (auto *callDtorsFunc = dyn_cast<DefinedFunction>(callDtors)) {

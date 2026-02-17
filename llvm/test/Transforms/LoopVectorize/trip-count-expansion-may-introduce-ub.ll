@@ -424,7 +424,7 @@ define i64 @multi_exit_3_exit_count_with_udiv_by_constant_in_block_executed_cond
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp slt i64 [[IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_HEADER]], label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ 0, [[LOOP_LATCH]] ], [ 1, [[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ 1, [[LOOP_HEADER]] ], [ 0, [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:

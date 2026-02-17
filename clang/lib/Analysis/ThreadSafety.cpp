@@ -43,6 +43,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
@@ -725,11 +726,12 @@ void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
       }
     }
 
-    if (VDec && Ctx.lookup(VDec)) {
+    if (VDec)
       Ctx = VMap->clearDefinition(VDec, Ctx);
-      VMap->saveContext(CE, Ctx);
-    }
   }
+  // Save the context after the call where escaped variables' definitions (if
+  // they exist) are cleared.
+  VMap->saveContext(CE, Ctx);
 }
 
 // Computes the intersection of two contexts.  The intersection is the
@@ -1681,7 +1683,7 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
           return LocalVarMap.lookupExpr(D, Ctx);
         });
   }
-  auto Cleanup = llvm::make_scope_exit(
+  llvm::scope_exit Cleanup(
       [this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
 
   const auto *Exp = getTrylockCallExpr(Cond, LVarCtx, Negate);
@@ -1725,10 +1727,14 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   FactSet FSet;
   // The fact set for the function on exit.
   const FactSet &FunctionExitFSet;
+  // Use `LVarCtx` to keep track of the context at each program point, which
+  // will be used to translate variables (by `SExprBuilder::translateVariable`)
+  // to their canonical definitions:
   LocalVariableMap::Context LVarCtx;
   unsigned CtxIndex;
 
-  // To update and adjust the context.
+  // To update the context used in attr-expr translation.  If `S` is non-null,
+  // the context is updated to the program point right after 'S'.
   void updateLocalVarMapCtx(const Stmt *S) {
     if (S)
       LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, S, LVarCtx);
@@ -1770,6 +1776,8 @@ public:
   }
 
   ~BuildLockset() { Analyzer->SxBuilder.setLookupLocalVarExpr(nullptr); }
+  BuildLockset(const BuildLockset &) = delete;
+  BuildLockset &operator=(const BuildLockset &) = delete;
 
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -2269,9 +2277,8 @@ void BuildLockset::VisitUnaryOperator(const UnaryOperator *UO) {
 void BuildLockset::VisitBinaryOperator(const BinaryOperator *BO) {
   if (!BO->isAssignmentOp())
     return;
-
-  updateLocalVarMapCtx(BO);
   checkAccess(BO->getLHS(), AK_Written);
+  updateLocalVarMapCtx(BO);
 }
 
 /// Whenever we do an LValue to Rvalue cast, we are reading a variable and
@@ -2316,8 +2323,6 @@ void BuildLockset::examineArguments(const FunctionDecl *FD,
 }
 
 void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
-  updateLocalVarMapCtx(Exp);
-
   if (const auto *CE = dyn_cast<CXXMemberCallExpr>(Exp)) {
     const auto *ME = dyn_cast<MemberExpr>(CE->getCallee());
     // ME can be null when calling a method pointer
@@ -2381,9 +2386,9 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
   }
 
   auto *D = dyn_cast_or_null<NamedDecl>(Exp->getCalleeDecl());
-  if (!D)
-    return;
-  handleCall(Exp, D);
+  if (D)
+    handleCall(Exp, D);
+  updateLocalVarMapCtx(Exp);
 }
 
 void BuildLockset::VisitCXXConstructExpr(const CXXConstructExpr *Exp) {
@@ -2412,8 +2417,6 @@ static const Expr *UnpackConstruction(const Expr *E) {
 }
 
 void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
-  updateLocalVarMapCtx(S);
-
   for (auto *D : S->getDeclGroup()) {
     if (auto *VD = dyn_cast_or_null<VarDecl>(D)) {
       const Expr *E = VD->getInit();
@@ -2433,6 +2436,7 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
       }
     }
   }
+  updateLocalVarMapCtx(S);
 }
 
 void BuildLockset::VisitMaterializeTemporaryExpr(
@@ -2820,7 +2824,13 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
           const auto *DD = AD.getDestructorDecl(AC.getASTContext());
-          if (!DD->hasAttrs())
+          // Function parameters as they are constructed in caller's context and
+          // the CFG does not contain the ctors. Ignore them as their
+          // capabilities cannot be analysed because of this missing
+          // information.
+          if (isa_and_nonnull<ParmVarDecl>(AD.getVarDecl()))
+            break;
+          if (!DD || !DD->hasAttrs())
             break;
 
           LocksetBuilder.handleCall(

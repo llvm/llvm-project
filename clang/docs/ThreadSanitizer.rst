@@ -110,6 +110,59 @@ and only if absolutely required; for example for certain code that cannot
 tolerate any instrumentation and resulting side-effects. This attribute
 overrides ``no_sanitize("thread")``.
 
+Interaction of Inlining with Disabling Sanitizer Instrumentation
+-----------------------------------------------------------------
+
+* A `no_sanitize` function will not be inlined heuristically by the compiler into a sanitized function.
+* An `always_inline` function will adopt the instrumentation status of the function it is inlined into.
+* Forcibly combining `no_sanitize` and ``__attribute__((always_inline))`` is not supported, and will often lead to unexpected results. To avoid mixing these attributes, use:
+
+. code-block:: c
+
+    // Note, __has_feature test for sanitizers is deprecated, and Clang will support __SANITIZE_<sanitizer>__ similar to GCC.
+    #if __has_feature(thread_sanitizer) || defined(__SANITIZE_THREAD__) || ... <other sanitizers>
+    #define ALWAYS_INLINE_IF_UNINSTRUMENTED
+    #else
+    #define ALWAYS_INLINE_IF_UNINSTRUMENTED __attribute__((always_inline))
+    #endif
+
+Explicit Sanitizer Checks with ``__builtin_allow_sanitize_check``
+-----------------------------------------------------------------
+
+The ``__builtin_allow_sanitize_check("thread")`` builtin can be used to
+conditionally execute code depending on whether ThreadSanitizer checks are
+enabled and permitted by the current policy (after inlining). This is
+particularly useful for inserting explicit, sanitizer-specific checks around
+operations like syscalls or inline assembly, which might otherwise be unchecked
+by the sanitizer.
+
+Example:
+
+.. code-block:: c
+
+    void __tsan_read8(void *);
+
+    inline __attribute__((always_inline))
+    void my_helper(void *addr) {
+      if (__builtin_allow_sanitize_check("thread"))
+        __tsan_read8(addr);
+      // ... actual logic, e.g. inline assembly ...
+      asm volatile ("..." : : "r" (addr) : "memory");
+    }
+
+    void instrumented_function() {
+      ...
+      my_helper(&shared_data); // checks are active
+      ...
+    }
+
+    __attribute__((no_sanitize("thread")))
+    void uninstrumented_function() {
+      ...
+      my_helper(&shared_data); // checks are skipped
+      ...
+    }
+
 Ignorelist
 ----------
 
@@ -153,6 +206,126 @@ and can be run with ``make check-tsan`` command.
 
 We are actively working on enhancing the tool --- stay tuned.  Any help,
 especially in the form of minimized standalone tests is more than welcome.
+
+Adaptive Delay
+--------------
+
+Overview
+~~~~~~~~
+
+Adaptive Delay is an optional ThreadSanitizer feature that injects delays at
+synchronization points to explore novel thread interleavings and increase the
+likelihood of exposing data races. By perturbing thread scheduling, adaptive
+delay creates more opportunities for concurrent accesses to shared data,
+improving race detection.
+
+Adaptive delay is particularly useful for:
+
+* Detecting races in rarely-executed thread interleavings or code paths
+* Testing parallel data structures and algorithms
+
+When enabled, adaptive delay maintains a configurable time budget to balance
+race exposure against performance overhead. The delays can be
+
+ * random amount of spin cycles
+ * a single yield to the OS scheduler
+ * random usleep
+
+The strategy prioritizes high-value synchronization points:
+
+* Relaxed atomic operations receive cheap delays (spin cycles) with low sampling
+* Synchronizing atomic operations (acquire/release/seq_cst) receive moderate
+  delays with higher sampling
+* Mutex and thread lifecycle operations receive the longest delays with highest
+  sampling
+
+The delays focus on synchronization points with clear happens-before relationships,
+as those are most likely to expose data races.
+
+Enabling Adaptive Delay
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Adaptive delay is disabled by default. Enable it by setting the
+``enable_adaptive_delay`` flag:
+
+.. code-block:: console
+
+  $ TSAN_OPTIONS=enable_adaptive_delay=1 ./myapp
+
+Configuration Options
+~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table:: Adaptive Delay Options
+   :name: adaptive-delay-options-table
+   :header-rows: 1
+   :widths: 35 10 15 40
+
+   * - Flag
+     - Type
+     - Default
+     - Description
+   * - ``enable_adaptive_delay``
+     - bool
+     - false
+     - Enable adaptive delay injection to expose data races.
+   * - ``adaptive_delay_aggressiveness``
+     - int
+     - 25
+     - Controls delay injection intensity for race detection. Higher values inject
+       more delays to expose races. Value must be greater than 0. Suggested values:
+       10 (minimal), 50 (moderate), 200 (aggressive). This is a tuning parameter;
+       actual overhead varies by workload and platform.
+   * - ``adaptive_delay_relaxed_sample_rate``
+     - int
+     - 10000
+     - Sample 1 in N relaxed atomic operations for delay injection. Relaxed atomics
+       have minimal synchronization, so sampling helps avoid excessive overhead.
+   * - ``adaptive_delay_sync_atomic_sample_rate``
+     - int
+     - 100
+     - Sample 1 in N acquire/release/seq_cst atomic operations for delay injection.
+       These synchronizing atomics are more likely to expose races, so are sampled
+       more often.
+   * - ``adaptive_delay_mutex_sample_rate``
+     - int
+     - 10
+     - Sample 1 in N mutex/condition variable operations for delay injection. Mutex
+       ops are high-value synchronization points and are sampled frequently.
+   * - ``adaptive_delay_max_atomic``
+     - string
+     - ``"sleep_us=50"``
+     - Maximum delay for atomic operations. Format: ``"spin=N"`` (N spin cycles,
+       1 <= N <= 10,000), ``"yield"`` (one yield to the OS), or ``"sleep_us=N"``
+       (up to N microseconds). The delay is randomly chosen up to the specified
+       maximum N.
+   * - ``adaptive_delay_max_sync``
+     - string
+     - ``"sleep_us=500"``
+     - Maximum delay for synchronization operations (mutex and thread lifecycle
+       operations). Format: same as ``adaptive_delay_max_atomic``. Typically set
+       longer than atomic delays since these operations involve waking blocked threads
+       and may be more likely to expose races.
+
+Examples
+~~~~~~~~
+
+Enable adaptive delay with moderate aggressiveness:
+
+.. code-block:: console
+
+  $ TSAN_OPTIONS=enable_adaptive_delay=1:adaptive_delay_aggressiveness=50 ./myapp
+
+Enable aggressive delay injection:
+
+.. code-block:: console
+
+  $ TSAN_OPTIONS=enable_adaptive_delay=1:adaptive_delay_aggressiveness=200 ./myapp
+
+Increase sampling frequency for mutex operations:
+
+.. code-block:: console
+
+  $ TSAN_OPTIONS=enable_adaptive_delay=1:adaptive_delay_mutex_sample_rate=5 ./myapp
 
 More Information
 ----------------

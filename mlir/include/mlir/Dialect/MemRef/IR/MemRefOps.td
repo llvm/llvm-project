@@ -149,7 +149,9 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
       Pure,
       ViewLikeOpInterface,
       SameOperandsAndResultType,
-      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>
+      DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
+      DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+                                ["reifyDimOfResult"]>
     ]> {
   let summary =
       "assumption that gives alignment information to the input memref";
@@ -418,7 +420,8 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource,[
 
 def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope",
       [AutomaticAllocationScope,
-       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+          "getSuccessorInputs"]>,
        SingleBlockImplicitTerminator<"AllocaScopeReturnOp">,
        RecursiveMemoryEffects,
        NoRegionArguments]> {
@@ -2455,6 +2458,9 @@ def MemRef_ViewOp : MemRef_Op<"view", [
   let extraClassDeclaration = [{
     /// The result of a view is always a memref.
     MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
+
+    // Return both static and dynamic sizes as a list of `OpFoldResult`.
+    SmallVector<OpFoldResult> getMixedSizes();
 
     /// Returns the dynamic sizes for this view operation. This is redundant
     /// with `sizes` but needed in template implementations. More specifically:

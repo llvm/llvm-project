@@ -186,7 +186,8 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
         attr.getName() == gpuFuncOp.getWorkgroupAttribAttrsAttrName() ||
         attr.getName() == gpuFuncOp.getPrivateAttribAttrsAttrName() ||
         attr.getName() == gpuFuncOp.getKnownBlockSizeAttrName() ||
-        attr.getName() == gpuFuncOp.getKnownGridSizeAttrName())
+        attr.getName() == gpuFuncOp.getKnownGridSizeAttrName() ||
+        attr.getName() == gpuFuncOp.getKnownClusterSizeAttrName())
       continue;
     if (attr.getName() == gpuFuncOp.getArgAttrsAttrName()) {
       argAttrs = gpuFuncOp.getArgAttrsAttr();
@@ -197,6 +198,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
 
   DenseI32ArrayAttr knownBlockSize = gpuFuncOp.getKnownBlockSizeAttr();
   DenseI32ArrayAttr knownGridSize = gpuFuncOp.getKnownGridSizeAttr();
+  DenseI32ArrayAttr knownClusterSize = gpuFuncOp.getKnownClusterSizeAttr();
   // Ensure we don't lose information if the function is lowered before its
   // surrounding context.
   auto *gpuDialect = cast<gpu::GPUDialect>(gpuFuncOp->getDialect());
@@ -206,6 +208,10 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   if (knownGridSize)
     attributes.emplace_back(gpuDialect->getKnownGridSizeAttrHelper().getName(),
                             knownGridSize);
+  if (knownClusterSize)
+    attributes.emplace_back(
+        gpuDialect->getKnownClusterSizeAttrHelper().getName(),
+        knownClusterSize);
 
   // Add a dialect specific kernel attribute in addition to GPU kernel
   // attribute. The former is necessary for further translation while the
@@ -216,6 +222,10 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     // Set the dialect-specific block size attribute if there is one.
     if (kernelBlockSizeAttributeName && knownBlockSize) {
       attributes.emplace_back(kernelBlockSizeAttributeName, knownBlockSize);
+    }
+    // Set the dialect-specific cluster size attribute if there is one.
+    if (kernelClusterSizeAttributeName && knownClusterSize) {
+      attributes.emplace_back(kernelClusterSizeAttributeName, knownClusterSize);
     }
   }
   LLVM::CConv callingConvention = gpuFuncOp.isKernel()

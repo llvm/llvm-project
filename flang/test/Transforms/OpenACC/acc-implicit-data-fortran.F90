@@ -57,8 +57,8 @@ end program
 !CHECKHLFIR-DAG: acc.copyin varPtr(%{{.*}}  : !fir.ref<!fir.type<_QFTaggr{field:f32}>>) -> !fir.ref<!fir.type<_QFTaggr{field:f32}>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "aggrvar"}
 !CHECKHLFIR-DAG: acc.copyin varPtr(%{{.*}}  : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "arrayvar"}
 !CHECKHLFIR-DAG: acc.copyin varPtr(%{{.*}}  : !fir.ref<!fir.type<_QFTnested{outer:!fir.type<_QFTaggr{field:f32}>}>>) -> !fir.ref<!fir.type<_QFTnested{outer:!fir.type<_QFTaggr{field:f32}>}>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "nestaggrvar"}
-!CHECKHLFIR-DAG: acc.firstprivate varPtr(%{{.*}}  : !fir.ref<complex<f32>>) -> !fir.ref<complex<f32>> {implicit = true, name = "scalarcomp"}
-!CHECKHLFIR-DAG: acc.firstprivate varPtr(%{{.*}}  : !fir.ref<f32>) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
+!CHECKHLFIR-DAG: acc.firstprivate varPtr(%{{.*}}  : !fir.ref<complex<f32>>) recipe({{.*}}) -> !fir.ref<complex<f32>> {implicit = true, name = "scalarcomp"}
+!CHECKHLFIR-DAG: acc.firstprivate varPtr(%{{.*}}  : !fir.ref<f32>) recipe({{.*}}) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
 !CHECKHLFIR: acc.parallel
 
 !CHECKCSE-LABEL: @_QQmain
@@ -70,8 +70,8 @@ end program
 !CHECKCSE-DAG: acc.copyin varPtr(%{{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "arrayvar(2)"}
 !CHECKCSE: acc.kernels
 !CHECKCSE-DAG: acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "arrayvar"}
-!CHECKCSE-DAG: acc.firstprivate varPtr(%{{.*}} : !fir.ref<complex<f32>>) -> !fir.ref<complex<f32>> {implicit = true, name = "scalarcomp"}
-!CHECKCSE-DAG: acc.firstprivate varPtr(%{{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
+!CHECKCSE-DAG: acc.firstprivate varPtr(%{{.*}} : !fir.ref<complex<f32>>) recipe({{.*}}) -> !fir.ref<complex<f32>> {implicit = true, name = "scalarcomp"}
+!CHECKCSE-DAG: acc.firstprivate varPtr(%{{.*}} : !fir.ref<f32>) recipe({{.*}}) -> !fir.ref<f32> {implicit = true, name = "scalarvar"}
 !CHECKCSE-DAG: acc.copyin varPtr(%{{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "aggrvar%field"}
 !CHECKCSE-DAG: acc.copyin varPtr(%{{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "nestaggrvar%outer%field"}
 !CHECKCSE-DAG: acc.copyin varPtr(%{{.*}} : !fir.ref<f32>) -> !fir.ref<f32> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "arrayvar(2)"}

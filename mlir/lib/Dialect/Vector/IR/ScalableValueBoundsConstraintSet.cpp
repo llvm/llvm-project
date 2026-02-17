@@ -106,14 +106,12 @@ ScalableValueBoundsConstraintSet::computeScalableBound(
 
   AffineMap bound = [&] {
     if (boundType == BoundType::EQ && !invalidBound(lowerBound) &&
-        lowerBound[0] == upperBound[0]) {
+        lowerBound[0] == upperBound[0])
       return lowerBound[0];
-    }
-    if (boundType == BoundType::LB && !invalidBound(lowerBound)) {
+    if (boundType == BoundType::LB && !invalidBound(lowerBound))
       return lowerBound[0];
-    } else if (boundType == BoundType::UB && !invalidBound(upperBound)) {
+    if (boundType == BoundType::UB && !invalidBound(upperBound))
       return upperBound[0];
-    }
     return AffineMap{};
   }();
 

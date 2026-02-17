@@ -63,7 +63,7 @@ struct SpecificIntrinsicFunctionInterface : public characteristics::Procedure {
 // Generic intrinsic classes from table 16.1
 ENUM_CLASS(IntrinsicClass, atomicSubroutine, collectiveSubroutine,
     elementalFunction, elementalSubroutine, inquiryFunction, pureSubroutine,
-    impureSubroutine, transformationalFunction, noClass)
+    impureFunction, impureSubroutine, transformationalFunction, noClass)
 
 class IntrinsicProcTable {
 private:

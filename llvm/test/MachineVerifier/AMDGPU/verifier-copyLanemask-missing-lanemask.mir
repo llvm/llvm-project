@@ -1,0 +1,19 @@
+# RUN: not --crash llc -o - -mtriple=amdgcn-amd-amdhsa -run-pass=none %s 2>&1 | FileCheck %s
+
+# CHECK: *** Bad machine code: Too few operands ***
+# CHECK-NEXT: - function:    test_copy_lanemask_instruction_1
+# CHECK-NEXT: - basic block: %bb.0
+# CHECK-NEXT: - instruction: $vgpr2 = COPY_LANEMASK %0:vgpr_32
+
+---
+name: test_copy_lanemask_instruction_1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    $vgpr2 = COPY_LANEMASK %0
+    S_ENDPGM 0
+...
+

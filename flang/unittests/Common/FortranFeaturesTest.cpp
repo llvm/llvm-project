@@ -364,9 +364,6 @@ TEST(FortranFeaturesTest, CamelCaseToLowerCaseHyphenated) {
       CamelCaseToLowerCaseHyphenated(EnumToString(LanguageFeature::Unsigned)),
       "unsigned");
   EXPECT_EQ(CamelCaseToLowerCaseHyphenated(
-                EnumToString(LanguageFeature::AmbiguousStructureConstructor)),
-      "ambiguous-structure-constructor");
-  EXPECT_EQ(CamelCaseToLowerCaseHyphenated(
                 EnumToString(LanguageFeature::ContiguousOkForSeqAssociation)),
       "contiguous-ok-for-seq-association");
   EXPECT_EQ(CamelCaseToLowerCaseHyphenated(

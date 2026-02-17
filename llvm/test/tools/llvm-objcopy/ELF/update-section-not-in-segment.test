@@ -1,0 +1,25 @@
+## Show that when updating a section not in a segment, symbols still correctly
+## refer to the updated section.
+
+# RUN: echo -n 11223344 > %t.data
+# RUN: yaml2obj %s -o %t.in
+# RUN: llvm-objcopy --update-section=.foo=%t.data %t.in %t.out
+# RUN: llvm-readelf --symbols %t.out | FileCheck %s
+
+# CHECK: Num: {{.*}} Ndx Name
+# CHECK:   1: {{.*}}   1 sym
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS
+    Size: 0x10
+Symbols:
+  - Name: sym
+    Type: STT_FUNC
+    Value: 0x1
+    Section: .foo

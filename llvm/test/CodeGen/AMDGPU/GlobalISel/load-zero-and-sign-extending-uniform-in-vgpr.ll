@@ -299,7 +299,7 @@ define amdgpu_ps void @sextload_and_zextload_P3_i8(ptr addrspace(3) inreg %ptra,
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, s1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    ds_store_b32 v0, v1
 ; GFX12-NEXT:    s_endpgm
@@ -338,7 +338,7 @@ define amdgpu_ps void @sextload_and_zextload_P3_i16(ptr addrspace(3) inreg %ptra
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX12-NEXT:    s_add_co_i32 s0, s0, s1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    ds_store_b32 v0, v1
 ; GFX12-NEXT:    s_endpgm

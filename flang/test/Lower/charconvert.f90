@@ -1,17 +1,17 @@
 ! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine test_c1_to_c4(c4, c1)
-  character(len=*, kind=4) :: c4                           
-  character(len=*, kind=1) :: c1            
-  c4 = c1                                         
-end subroutine                                           
+  character(len=*, kind=4) :: c4
+  character(len=*, kind=1) :: c1
+  c4 = c1
+end subroutine
 
 subroutine test_c4_to_c1(c4, c1)
-  character(len=*, kind=4) :: c4                           
-  character(len=*, kind=1) :: c1            
-  c1 = c4                                         
-end subroutine                                           
-                                                
+  character(len=*, kind=4) :: c4
+  character(len=*, kind=1) :: c1
+  c1 = c4
+end subroutine
+
 ! CHECK: func.func @_QPtest_c1_to_c4(%[[ARG0:.*]]: !fir.boxchar<4> {fir.bindc_name = "c4"}, %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "c1"}) {
 ! CHECK:   %[[VAL_0:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:   %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]]#0 typeparams %[[VAL_0]]#1 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFtest_c1_to_c4Ec1"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)

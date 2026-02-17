@@ -10,7 +10,7 @@ declare void @llvm.debugtrap()
 define void @test_trap() nounwind {
 ; CHECK-LABEL: test_trap:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    amswap.w $zero, $ra, $zero
+; CHECK-NEXT:    ud 0
 ; CHECK-NEXT:    ret
   tail call void @llvm.trap()
   ret void

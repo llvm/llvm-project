@@ -355,6 +355,13 @@ ClangAttrParsedAttrKinds
 ``AttributeList::getKind`` function, mapping a string (and syntax) to a parsed
 attribute ``AttributeList::Kind`` enumeration.
 
+ClangAttrIsTypeDependent
+------------------------
+
+**Purpose**: Creates ``AttrIsTypeDependent.inc``, which is used to implement the
+``Sema::CheckAttributesOnDeducedType`` function, mapping an attribute kind to a
+Sema function if it exists.
+
 ClangAttrDump
 -------------
 

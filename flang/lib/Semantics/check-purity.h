@@ -23,6 +23,8 @@ public:
   void Enter(const parser::ExecutableConstruct &);
   void Enter(const parser::SubroutineSubprogram &);
   void Leave(const parser::SubroutineSubprogram &);
+  void Enter(const parser::MainProgram &);
+  void Leave(const parser::MainProgram &);
   void Enter(const parser::FunctionSubprogram &);
   void Leave(const parser::FunctionSubprogram &);
 

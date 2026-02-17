@@ -9,10 +9,8 @@
 // AMDGCN_CL_DEF-LABEL: define hidden i32 @fi1a(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[V:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[V_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[V]] to ptr
 // AMDGCN_CL_DEF-NEXT:    store ptr [[I]], ptr [[I_ADDR_ASCAST]], align 8
@@ -40,10 +38,8 @@
 // AMDGCN_CL_20-LABEL: define hidden i32 @fi1a(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[V:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[I]], ptr [[I_ADDR_ASCAST]], align 8
 // AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[I_ADDR_ASCAST]], align 8
@@ -108,7 +104,6 @@ int fi1a(int *i) {
 // AMDGCN-LABEL: define hidden i32 @fi1b(
 // AMDGCN-SAME: ptr noundef [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
-// AMDGCN-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN-NEXT:    [[ATOMIC_TEMP1:%.*]] = alloca i32, align 4, addrspace(5)
@@ -116,7 +111,6 @@ int fi1a(int *i) {
 // AMDGCN-NEXT:    [[ATOMIC_TEMP3:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN-NEXT:    [[ATOMIC_TEMP4:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN-NEXT:    [[ATOMIC_TEMP5:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // AMDGCN-NEXT:    [[ATOMIC_TEMP1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP1]] to ptr
@@ -2591,12 +2585,10 @@ void fi3e(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi4a(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DESIRED:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[CMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DESIRED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DESIRED]] to ptr
@@ -2624,12 +2616,10 @@ void fi3e(int *a, int *b, int *c, int *d, int *e, int *f, int *g, int *h) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi4a(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DESIRED:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMPXCHG_BOOL]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[I]], ptr [[I_ADDR_ASCAST]], align 8
@@ -2691,12 +2681,10 @@ _Bool fi4a(int *i) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi4b(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DESIRED:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[CMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DESIRED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DESIRED]] to ptr
@@ -2724,12 +2712,10 @@ _Bool fi4a(int *i) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi4b(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DESIRED:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMPXCHG_BOOL]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[I]], ptr [[I_ADDR_ASCAST]], align 8
@@ -2791,12 +2777,10 @@ _Bool fi4b(int *i) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi4c(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DESIRED:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[CMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DESIRED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DESIRED]] to ptr
@@ -2824,12 +2808,10 @@ _Bool fi4b(int *i) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi4c(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DESIRED:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMPXCHG_BOOL]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[I]], ptr [[I_ADDR_ASCAST]], align 8
@@ -2891,12 +2873,10 @@ _Bool fi4c(int *i) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi4_clustr(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DESIRED:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[CMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DESIRED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DESIRED]] to ptr
@@ -2924,12 +2904,10 @@ _Bool fi4c(int *i) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi4_clustr(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DESIRED:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMPXCHG_BOOL]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[I]], ptr [[I_ADDR_ASCAST]], align 8
@@ -2991,12 +2969,10 @@ _Bool fi4_clustr(int *i) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi4d(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DESIRED:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[CMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DESIRED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DESIRED]] to ptr
@@ -3024,12 +3000,10 @@ _Bool fi4_clustr(int *i) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi4d(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DESIRED:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMPXCHG_BOOL]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[I]], ptr [[I_ADDR_ASCAST]], align 8
@@ -3091,12 +3065,10 @@ _Bool fi4d(int *i) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi4e(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DESIRED:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[CMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DESIRED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DESIRED]] to ptr
@@ -3124,12 +3096,10 @@ _Bool fi4d(int *i) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi4e(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DESIRED:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMPXCHG_BOOL]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[I]], ptr [[I_ADDR_ASCAST]], align 8
@@ -3191,12 +3161,10 @@ _Bool fi4e(int *i) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi5a(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[CMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
@@ -3224,12 +3192,10 @@ _Bool fi4e(int *i) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi5a(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMPXCHG_BOOL]] to ptr
@@ -3290,12 +3256,10 @@ _Bool fi5a(int *i) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi5b(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[CMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
@@ -3323,12 +3287,10 @@ _Bool fi5a(int *i) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi5b(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMPXCHG_BOOL]] to ptr
@@ -3389,12 +3351,10 @@ _Bool fi5b(int *i) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi5c(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[CMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
@@ -3422,12 +3382,10 @@ _Bool fi5b(int *i) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi5c(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMPXCHG_BOOL]] to ptr
@@ -3487,12 +3445,10 @@ _Bool fi5c(int *i) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi5_clustr(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[CMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
@@ -3520,12 +3476,10 @@ _Bool fi5c(int *i) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi5_clustr(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMPXCHG_BOOL]] to ptr
@@ -3585,12 +3539,10 @@ _Bool fi5_clustr(int *i) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi5d(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[CMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
@@ -3618,12 +3570,10 @@ _Bool fi5_clustr(int *i) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi5d(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMPXCHG_BOOL]] to ptr
@@ -3683,12 +3633,10 @@ _Bool fi5d(int *i) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi5e(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[CMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
@@ -3716,12 +3664,10 @@ _Bool fi5d(int *i) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi5e(
 // AMDGCN_CL_20-SAME: ptr noundef [[I:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[I_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[I_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_20-NEXT:    [[CMPXCHG_BOOL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CMPXCHG_BOOL]] to ptr
@@ -3781,11 +3727,9 @@ _Bool fi5e(int *i) {
 // AMDGCN_CL_DEF-LABEL: define hidden i32 @fi6a(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[RET:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
@@ -3802,11 +3746,9 @@ _Bool fi5e(int *i) {
 // AMDGCN_CL_20-LABEL: define hidden i32 @fi6a(
 // AMDGCN_CL_20-SAME: ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[RET:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[C]], ptr [[C_ADDR_ASCAST]], align 8
@@ -3845,11 +3787,9 @@ int fi6a(int *c, int *d) {
 // AMDGCN_CL_DEF-LABEL: define hidden i32 @fi6b(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[RET:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
@@ -3866,11 +3806,9 @@ int fi6a(int *c, int *d) {
 // AMDGCN_CL_20-LABEL: define hidden i32 @fi6b(
 // AMDGCN_CL_20-SAME: ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[RET:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[C]], ptr [[C_ADDR_ASCAST]], align 8
@@ -3909,11 +3847,9 @@ int fi6b(int *c, int *d) {
 // AMDGCN_CL_DEF-LABEL: define hidden i32 @fi6c(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[RET:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
@@ -3930,11 +3866,9 @@ int fi6b(int *c, int *d) {
 // AMDGCN_CL_20-LABEL: define hidden i32 @fi6c(
 // AMDGCN_CL_20-SAME: ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[RET:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[C]], ptr [[C_ADDR_ASCAST]], align 8
@@ -3973,11 +3907,9 @@ int fi6c(int *c, int *d) {
 // AMDGCN_CL_DEF-LABEL: define hidden i32 @fi6_clustr(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[RET:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
@@ -3994,11 +3926,9 @@ int fi6c(int *c, int *d) {
 // AMDGCN_CL_20-LABEL: define hidden i32 @fi6_clustr(
 // AMDGCN_CL_20-SAME: ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[RET:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[C]], ptr [[C_ADDR_ASCAST]], align 8
@@ -4037,11 +3967,9 @@ int fi6_clustr(int *c, int *d) {
 // AMDGCN_CL_DEF-LABEL: define hidden i32 @fi6d(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[RET:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
@@ -4058,11 +3986,9 @@ int fi6_clustr(int *c, int *d) {
 // AMDGCN_CL_20-LABEL: define hidden i32 @fi6d(
 // AMDGCN_CL_20-SAME: ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[RET:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[C]], ptr [[C_ADDR_ASCAST]], align 8
@@ -4101,11 +4027,9 @@ int fi6d(int *c, int *d) {
 // AMDGCN_CL_DEF-LABEL: define hidden i32 @fi6e(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[RET:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[RET_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RET]] to ptr
@@ -4122,11 +4046,9 @@ int fi6d(int *c, int *d) {
 // AMDGCN_CL_20-LABEL: define hidden i32 @fi6e(
 // AMDGCN_CL_20-SAME: ptr noundef [[C:%.*]], ptr noundef [[D:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[RET:%.*]] = alloca i32, align 4, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[D_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[D_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    store ptr [[C]], ptr [[C_ADDR_ASCAST]], align 8
@@ -4165,11 +4087,9 @@ int fi6e(int *c, int *d) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi7a(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i8, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
@@ -4186,11 +4106,9 @@ int fi6e(int *c, int *d) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi7a(
 // AMDGCN_CL_20-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i8, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
@@ -4228,11 +4146,9 @@ _Bool fi7a(_Bool *c) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi7b(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i8, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
@@ -4249,11 +4165,9 @@ _Bool fi7a(_Bool *c) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi7b(
 // AMDGCN_CL_20-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i8, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
@@ -4291,11 +4205,9 @@ _Bool fi7b(_Bool *c) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi7c(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i8, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
@@ -4312,11 +4224,9 @@ _Bool fi7b(_Bool *c) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi7c(
 // AMDGCN_CL_20-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i8, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
@@ -4354,11 +4264,9 @@ _Bool fi7c(_Bool *c) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi7_clustr(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i8, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
@@ -4375,11 +4283,9 @@ _Bool fi7c(_Bool *c) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi7_clustr(
 // AMDGCN_CL_20-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i8, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
@@ -4417,11 +4323,9 @@ _Bool fi7_clustr(_Bool *c) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi7d(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i8, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
@@ -4438,11 +4342,9 @@ _Bool fi7_clustr(_Bool *c) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi7d(
 // AMDGCN_CL_20-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i8, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
@@ -4480,11 +4382,9 @@ _Bool fi7d(_Bool *c) {
 // AMDGCN_CL_DEF-LABEL: define hidden zeroext i1 @fi7e(
 // AMDGCN_CL_DEF-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i8, align 1, addrspace(5)
 // AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_DEF-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
@@ -4501,11 +4401,9 @@ _Bool fi7d(_Bool *c) {
 // AMDGCN_CL_20-LABEL: define hidden zeroext i1 @fi7e(
 // AMDGCN_CL_20-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
 // AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
-// AMDGCN_CL_20-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i8, align 1, addrspace(5)
 // AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i8, align 1, addrspace(5)
-// AMDGCN_CL_20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN_CL_20-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
 // AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
 // AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
@@ -4539,6 +4437,111 @@ _Bool fi7e(_Bool *c) {
   return __scoped_atomic_exchange_n(c, 1, __ATOMIC_RELAXED,
                                     __MEMORY_SCOPE_SINGLE);
 }
+
+// AMDGCN_CL_DEF-LABEL: define hidden void @fi8a(
+// AMDGCN_CL_DEF-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// AMDGCN_CL_DEF-NEXT:  [[ENTRY:.*:]]
+// AMDGCN_CL_DEF-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// AMDGCN_CL_DEF-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP1:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN_CL_DEF-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// AMDGCN_CL_DEF-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
+// AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
+// AMDGCN_CL_DEF-NEXT:    [[DOTATOMICTMP1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP1]] to ptr
+// AMDGCN_CL_DEF-NEXT:    [[ATOMIC_TEMP2_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP2]] to ptr
+// AMDGCN_CL_DEF-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
+// AMDGCN_CL_DEF-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
+// AMDGCN_CL_DEF-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// AMDGCN_CL_DEF-NEXT:    store i32 -1, ptr [[DOTATOMICTMP_ASCAST]], align 4
+// AMDGCN_CL_DEF-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTATOMICTMP_ASCAST]], align 4
+// AMDGCN_CL_DEF-NEXT:    [[TMP2:%.*]] = atomicrmw uinc_wrap ptr [[TMP0]], i32 [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_DEF-NEXT:    store i32 [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// AMDGCN_CL_DEF-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// AMDGCN_CL_DEF-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// AMDGCN_CL_DEF-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
+// AMDGCN_CL_DEF-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// AMDGCN_CL_DEF-NEXT:    store i32 -1, ptr [[DOTATOMICTMP1_ASCAST]], align 4
+// AMDGCN_CL_DEF-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTATOMICTMP1_ASCAST]], align 4
+// AMDGCN_CL_DEF-NEXT:    [[TMP7:%.*]] = atomicrmw udec_wrap ptr [[TMP5]], i32 [[TMP6]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// AMDGCN_CL_DEF-NEXT:    store i32 [[TMP7]], ptr [[ATOMIC_TEMP2_ASCAST]], align 4
+// AMDGCN_CL_DEF-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ATOMIC_TEMP2_ASCAST]], align 4
+// AMDGCN_CL_DEF-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// AMDGCN_CL_DEF-NEXT:    store i32 [[TMP8]], ptr [[TMP9]], align 4
+// AMDGCN_CL_DEF-NEXT:    ret void
+//
+// AMDGCN_CL_20-LABEL: define hidden void @fi8a(
+// AMDGCN_CL_20-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// AMDGCN_CL_20-NEXT:  [[ENTRY:.*:]]
+// AMDGCN_CL_20-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// AMDGCN_CL_20-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP1:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca i32, align 4, addrspace(5)
+// AMDGCN_CL_20-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
+// AMDGCN_CL_20-NEXT:    [[B_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B_ADDR]] to ptr
+// AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
+// AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
+// AMDGCN_CL_20-NEXT:    [[DOTATOMICTMP1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP1]] to ptr
+// AMDGCN_CL_20-NEXT:    [[ATOMIC_TEMP2_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP2]] to ptr
+// AMDGCN_CL_20-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
+// AMDGCN_CL_20-NEXT:    store ptr [[B]], ptr [[B_ADDR_ASCAST]], align 8
+// AMDGCN_CL_20-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// AMDGCN_CL_20-NEXT:    store i32 -1, ptr [[DOTATOMICTMP_ASCAST]], align 4
+// AMDGCN_CL_20-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTATOMICTMP_ASCAST]], align 4
+// AMDGCN_CL_20-NEXT:    [[TMP2:%.*]] = atomicrmw uinc_wrap ptr [[TMP0]], i32 [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// AMDGCN_CL_20-NEXT:    store i32 [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// AMDGCN_CL_20-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// AMDGCN_CL_20-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
+// AMDGCN_CL_20-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
+// AMDGCN_CL_20-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// AMDGCN_CL_20-NEXT:    store i32 -1, ptr [[DOTATOMICTMP1_ASCAST]], align 4
+// AMDGCN_CL_20-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTATOMICTMP1_ASCAST]], align 4
+// AMDGCN_CL_20-NEXT:    [[TMP7:%.*]] = atomicrmw udec_wrap ptr [[TMP5]], i32 [[TMP6]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// AMDGCN_CL_20-NEXT:    store i32 [[TMP7]], ptr [[ATOMIC_TEMP2_ASCAST]], align 4
+// AMDGCN_CL_20-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ATOMIC_TEMP2_ASCAST]], align 4
+// AMDGCN_CL_20-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
+// AMDGCN_CL_20-NEXT:    store i32 [[TMP8]], ptr [[TMP9]], align 4
+// AMDGCN_CL_20-NEXT:    ret void
+//
+// SPIRV-LABEL: define hidden spir_func void @fi8a(
+// SPIRV-SAME: ptr noundef [[A:%.*]], ptr noundef [[B:%.*]]) #[[ATTR0]] {
+// SPIRV-NEXT:  [[ENTRY:.*:]]
+// SPIRV-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
+// SPIRV-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
+// SPIRV-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[DOTATOMICTMP1:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca i32, align 4
+// SPIRV-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
+// SPIRV-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
+// SPIRV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// SPIRV-NEXT:    store i32 -1, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-NEXT:    [[TMP2:%.*]] = atomicrmw uinc_wrap ptr [[TMP0]], i32 [[TMP1]] syncscope("device") monotonic, align 4
+// SPIRV-NEXT:    store i32 [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// SPIRV-NEXT:    store i32 [[TMP3]], ptr [[TMP4]], align 4
+// SPIRV-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// SPIRV-NEXT:    store i32 -1, ptr [[DOTATOMICTMP1]], align 4
+// SPIRV-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTATOMICTMP1]], align 4
+// SPIRV-NEXT:    [[TMP7:%.*]] = atomicrmw udec_wrap ptr [[TMP5]], i32 [[TMP6]] syncscope("device") monotonic, align 4
+// SPIRV-NEXT:    store i32 [[TMP7]], ptr [[ATOMIC_TEMP2]], align 4
+// SPIRV-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ATOMIC_TEMP2]], align 4
+// SPIRV-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// SPIRV-NEXT:    store i32 [[TMP8]], ptr [[TMP9]], align 4
+// SPIRV-NEXT:    ret void
+//
+void fi8a(unsigned int *a, unsigned int *b) {
+  *b = __scoped_atomic_fetch_uinc(b, ~0U, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
+  *a = __scoped_atomic_fetch_udec(a, ~0U, __ATOMIC_RELAXED, __MEMORY_SCOPE_DEVICE);
+}
+
 //.
 // AMDGCN_CL_DEF: [[META3]] = !{}
 //.

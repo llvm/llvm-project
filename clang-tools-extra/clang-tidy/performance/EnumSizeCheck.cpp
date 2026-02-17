@@ -25,6 +25,17 @@ namespace {
 
 AST_MATCHER(EnumDecl, hasEnumerators) { return !Node.enumerators().empty(); }
 
+AST_MATCHER(EnumDecl, isExternC) {
+  return Node.getDeclContext()->isExternCContext();
+}
+
+AST_MATCHER_P(EnumDecl, hasTypedefNameForAnonDecl,
+              ast_matchers::internal::Matcher<NamedDecl>, InnerMatcher) {
+  if (const TypedefNameDecl *TD = Node.getTypedefNameForAnonDecl())
+    return InnerMatcher.matches(*TD, Finder, Builder);
+  return false;
+}
+
 const std::uint64_t Min8 =
     std::imaxabs(std::numeric_limits<std::int8_t>::min());
 const std::uint64_t Max8 = std::numeric_limits<std::int8_t>::max();
@@ -39,25 +50,21 @@ const std::uint64_t Max32 = std::numeric_limits<std::int32_t>::max();
 static std::pair<const char *, std::uint32_t>
 getNewType(std::size_t Size, std::uint64_t Min, std::uint64_t Max) noexcept {
   if (Min) {
-    if (Min <= Min8 && Max <= Max8) {
+    if (Min <= Min8 && Max <= Max8)
       return {"std::int8_t", sizeof(std::int8_t)};
-    }
 
-    if (Min <= Min16 && Max <= Max16 && Size > sizeof(std::int16_t)) {
+    if (Min <= Min16 && Max <= Max16 && Size > sizeof(std::int16_t))
       return {"std::int16_t", sizeof(std::int16_t)};
-    }
 
-    if (Min <= Min32 && Max <= Max32 && Size > sizeof(std::int32_t)) {
+    if (Min <= Min32 && Max <= Max32 && Size > sizeof(std::int32_t))
       return {"std::int32_t", sizeof(std::int32_t)};
-    }
 
     return {};
   }
 
   if (Max) {
-    if (Max <= std::numeric_limits<std::uint8_t>::max()) {
+    if (Max <= std::numeric_limits<std::uint8_t>::max())
       return {"std::uint8_t", sizeof(std::uint8_t)};
-    }
 
     if (Max <= std::numeric_limits<std::uint16_t>::max() &&
         Size > sizeof(std::uint16_t)) {
@@ -94,8 +101,11 @@ bool EnumSizeCheck::isLanguageVersionSupported(
 void EnumSizeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       enumDecl(unless(isExpansionInSystemHeader()), isDefinition(),
-               hasEnumerators(),
-               unless(matchers::matchesAnyListedName(EnumIgnoreList)))
+               hasEnumerators(), unless(isExternC()),
+               unless(anyOf(
+                   matchers::matchesAnyListedRegexName(EnumIgnoreList),
+                   hasTypedefNameForAnonDecl(
+                       matchers::matchesAnyListedRegexName(EnumIgnoreList)))))
           .bind("e"),
       this);
 }
@@ -115,11 +125,10 @@ void EnumSizeCheck::check(const MatchFinder::MatchResult &Result) {
 
   for (const auto &It : MatchedDecl->enumerators()) {
     const llvm::APSInt &InitVal = It->getInitVal();
-    if ((InitVal.isUnsigned() || InitVal.isNonNegative())) {
+    if ((InitVal.isUnsigned() || InitVal.isNonNegative()))
       MaxV = std::max<std::uint64_t>(MaxV, InitVal.getZExtValue());
-    } else {
+    else
       MinV = std::max<std::uint64_t>(MinV, InitVal.abs().getZExtValue());
-    }
   }
 
   auto NewType = getNewType(Size, MinV, MaxV);

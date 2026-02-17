@@ -50,7 +50,6 @@ namespace Intrinsic {
   // Get the intrinsic enums generated from Intrinsics.td
 #define GET_INTRINSIC_ENUM_VALUES
 #include "llvm/IR/IntrinsicEnums.inc"
-#undef GET_INTRINSIC_ENUM_VALUES
   };
 
   /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx".
@@ -108,6 +107,21 @@ namespace Intrinsic {
   /// the intrinsic.
   LLVM_ABI Function *getOrInsertDeclaration(Module *M, ID id,
                                             ArrayRef<Type *> Tys = {});
+
+  /// Look up the Function declaration of the intrinsic \p IID in the Module
+  /// \p M. If it does not exist, add a declaration and return it. Otherwise,
+  /// return the existing declaration.
+  ///
+  /// This overload automatically resolves overloaded intrinsics based on the
+  /// provided return type and argument types. For non-overloaded intrinsics,
+  /// the return type and argument types are ignored.
+  ///
+  /// \param M - The module to get or insert the intrinsic declaration.
+  /// \param IID - The intrinsic ID.
+  /// \param RetTy - The return type of the intrinsic.
+  /// \param ArgTys - The argument types of the intrinsic.
+  LLVM_ABI Function *getOrInsertDeclaration(Module *M, ID IID, Type *RetTy,
+                                            ArrayRef<Type *> ArgTys);
 
   /// Look up the Function declaration of the intrinsic \p id in the Module
   /// \p M and return it if it exists. Otherwise, return nullptr. This version
@@ -181,7 +195,6 @@ namespace Intrinsic {
     enum ArgKind {
 #define GET_INTRINSIC_ARGKIND
 #include "llvm/IR/IntrinsicEnums.inc"
-#undef GET_INTRINSIC_ARGKIND
     };
 
     unsigned getArgumentNumber() const {

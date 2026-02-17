@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: linux && target={{aarch64-.+}}
+// REQUIRES: target={{aarch64-.+}}
+// UNSUPPORTED: target={{.*-windows.*}}
 
 #include <libunwind.h>
 #include <stdlib.h>

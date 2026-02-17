@@ -22,6 +22,15 @@
 # RUN: llvm-lipo %t-i386-x86_64-universal.o -thin x86_64 -output %t-extracted-x86_64.o
 # RUN: cmp %t-extracted-x86_64.o %t-x86_64.o
 
+# RUN: llvm-ar cr %t-x86_64-lib.a %t-x86_64.o
+# RUN: llvm-lipo %t-i386-lib.a -create -output %t-i386-universal-lib.a
+# RUN: llvm-lipo %t-i386-universal-lib.a %t-x86_64-lib.a -create -output %t-combined.a
+# RUN: llvm-lipo %t-combined.a -info | FileCheck --check-prefix=INFO-i386-x86_64 %s
+# RUN: llvm-lipo %t-combined.a -thin i386 -output %t-combined-extracted-i386.a
+# RUN: llvm-lipo %t-combined.a -thin x86_64 -output %t-combined-extracted-x86_64.a
+# RUN: cmp %t-combined-extracted-i386.a %t-i386-lib.a
+# RUN: cmp %t-combined-extracted-x86_64.a %t-x86_64-lib.a
+
 # RUN: llvm-ar cr %t-ir-armv7-lib.a %t-ir-armv7.o
 # RUN: llvm-lipo %t-ir-armv7-lib.a %t-ir-x86_64.o -create -output %t-ir-armv7-x86_64-universal.o
 # RUN: llvm-lipo %t-ir-armv7-x86_64-universal.o -thin armv7 -output %t-ir-extracted-armv7-lib.a

@@ -82,15 +82,13 @@ class LongJmpPass : public BinaryFunctionPass {
   /// purposes, we need to do a size worst-case estimation. Real layout is done
   /// by RewriteInstance::mapFileSections()
   void tentativeLayout(const BinaryContext &BC,
-                       std::vector<BinaryFunction *> &SortedFunctions);
-  uint64_t
-  tentativeLayoutRelocMode(const BinaryContext &BC,
-                           std::vector<BinaryFunction *> &SortedFunctions,
-                           uint64_t DotAddress);
-  uint64_t
-  tentativeLayoutRelocColdPart(const BinaryContext &BC,
-                               std::vector<BinaryFunction *> &SortedFunctions,
-                               uint64_t DotAddress);
+                       BinaryFunctionListType &SortedFunctions);
+  uint64_t tentativeLayoutRelocMode(const BinaryContext &BC,
+                                    BinaryFunctionListType &SortedFunctions,
+                                    uint64_t DotAddress);
+  uint64_t tentativeLayoutRelocColdPart(const BinaryContext &BC,
+                                        BinaryFunctionListType &SortedFunctions,
+                                        uint64_t DotAddress);
   void tentativeBBLayout(const BinaryFunction &Func);
 
   /// Update stubs addresses with their exact address after a round of stub

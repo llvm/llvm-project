@@ -5272,4 +5272,3 @@ add x0, x27, 1
 # CHECK-NEXT: 2.     1     5.0    0.0    0.0       ldr	x2, [x1], #254
 # CHECK-NEXT: 3.     1     2.0    0.0    6.0       add	x0, x27, #1
 # CHECK-NEXT:        1     2.5    0.3    2.0       <total>
-

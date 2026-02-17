@@ -22,7 +22,7 @@ end
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Linear -> OmpLinearClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 !PARSE-TREE: DoConstruct
 
 subroutine f01(x)
@@ -48,7 +48,7 @@ end
 !PARSE-TREE: | | Modifier -> OmpStepSimpleModifier -> Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE: | | | LiteralConstant -> IntLiteralConstant = '2'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 !PARSE-TREE: DoConstruct
 
 subroutine f02(x)
@@ -74,7 +74,7 @@ end
 !PARSE-TREE: | | Modifier -> OmpStepComplexModifier -> Scalar -> Integer -> Expr = '3_4'
 !PARSE-TREE: | | | LiteralConstant -> IntLiteralConstant = '3'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 !PARSE-TREE: DoConstruct
 
 subroutine f03(x)
@@ -93,7 +93,7 @@ end
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | Modifier -> OmpLinearModifier -> Value = Uval
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 subroutine f04(x)
   integer :: x
@@ -113,4 +113,4 @@ end
 !PARSE-TREE: | | Modifier -> OmpStepComplexModifier -> Scalar -> Integer -> Expr = '3_4'
 !PARSE-TREE: | | | LiteralConstant -> IntLiteralConstant = '3'
 !PARSE-TREE: | | bool = 'true'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}

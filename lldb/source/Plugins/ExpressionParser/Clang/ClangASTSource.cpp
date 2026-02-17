@@ -545,8 +545,7 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
       LLDB_LOG(log, "  CAS::FEVD Registering namespace map {0:x} ({1} entries)",
                context.m_namespace_map.get(), context.m_namespace_map->size());
 
-    NamespaceDecl *clang_namespace_decl =
-        AddNamespace(context, context.m_namespace_map);
+    NamespaceDecl *clang_namespace_decl = AddNamespace(context);
 
     if (clang_namespace_decl)
       clang_namespace_decl->setHasExternalVisibleStorage();
@@ -1432,13 +1431,12 @@ void ClangASTSource::CompleteNamespaceMap(
   }
 }
 
-NamespaceDecl *ClangASTSource::AddNamespace(
-    NameSearchContext &context,
-    ClangASTImporter::NamespaceMapSP &namespace_decls) {
-  if (!namespace_decls)
+NamespaceDecl *ClangASTSource::AddNamespace(NameSearchContext &context) {
+  if (!context.m_namespace_map)
     return nullptr;
 
-  const CompilerDeclContext &namespace_decl = namespace_decls->begin()->second;
+  const CompilerDeclContext &namespace_decl =
+      context.m_namespace_map->begin()->second;
 
   clang::ASTContext *src_ast =
       TypeSystemClang::DeclContextGetTypeSystemClang(namespace_decl);
@@ -1463,7 +1461,7 @@ NamespaceDecl *ClangASTSource::AddNamespace(
   context.m_decls.push_back(copied_namespace_decl);
 
   m_ast_importer_sp->RegisterNamespaceMap(copied_namespace_decl,
-                                          namespace_decls);
+                                          context.m_namespace_map);
 
   return dyn_cast<NamespaceDecl>(copied_decl);
 }

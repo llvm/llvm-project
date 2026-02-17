@@ -35,6 +35,9 @@
 // RUN: %clang -cc1 -triple x86_64-unknown-linux-gnu -flto=full -ffat-lto-objects -fsplit-lto-unit -S < %s -o - \
 // RUN: | FileCheck %s --check-prefixes=ASM
 
+// RUN: %clang -cc1 -triple i386-pc-win32 -flto=full -ffat-lto-objects -fsplit-lto-unit -S < %s -o - \
+// RUN: | FileCheck %s --check-prefixes=ASM-COFF
+
 /// Make sure that FatLTO generates .llvm.lto sections that are the same as the output from normal LTO compilations
 // RUN: %clang -O2 --target=x86_64-unknown-linux-gnu -fPIE -flto=full -ffat-lto-objects -c %s -o %t.fatlto.full.o
 // RUN: llvm-objcopy --dump-section=.llvm.lto=%t.fatlto.full.bc %t.fatlto.full.o
@@ -42,6 +45,13 @@
 // RUN: %clang -O2 --target=x86_64-unknown-linux-gnu -fPIE -flto=full -c %s -o %t.nofat.full.bc
 // RUN: llvm-dis < %t.nofat.full.bc -o %t.nofat.full.ll
 // RUN: diff %t.fatlto.full.ll %t.nofat.full.ll
+
+// RUN: %clang -O2 --target=i386-pc-win32 -flto=full -ffat-lto-objects -c %s -o %t.fatlto.full.coff.o
+// RUN: llvm-objcopy --dump-section=.llvm.lto=%t.fatlto.full.coff.bc %t.fatlto.full.coff.o
+// RUN: llvm-dis < %t.fatlto.full.coff.bc -o %t.fatlto.full.coff.ll
+// RUN: %clang -O2 --target=i386-pc-win32 -flto=full -c %s -o %t.nofat.full.coff.bc
+// RUN: llvm-dis < %t.nofat.full.coff.bc -o %t.nofat.full.coff.ll
+// RUN: diff %t.fatlto.full.coff.ll %t.nofat.full.coff.ll
 
 // RUN: %clang -O2 --target=x86_64-unknown-linux-gnu -fPIE -flto=thin -ffat-lto-objects -c %s -o %t.fatlto.thin.o
 // RUN: llvm-objcopy --dump-section=.llvm.lto=%t.fatlto.thin.bc %t.fatlto.thin.o
@@ -66,6 +76,10 @@
 // ASM-NEXT: .Lllvm.embedded.object:
 // ASM-NEXT:        .asciz  "BC
 // ASM-NEXT: .size   .Lllvm.embedded.object
+
+// ASM-COFF:      .section .llvm.lto,"ynD"
+// ASM-COFF-NEXT: L_llvm.embedded.object:
+// ASM-COFF-NEXT:        .asciz  "BC
 
 const char* foo = "foo";
 

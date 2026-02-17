@@ -90,10 +90,7 @@ public:
     }
     Cond.notify_all();
     ThreadsCreated.get_future().wait();
-  }
 
-  ~ThreadPoolExecutor() override {
-    stop();
     std::thread::id CurrentThreadId = std::this_thread::get_id();
     for (std::thread &T : Threads)
       if (T.get_id() == CurrentThreadId)
@@ -101,6 +98,8 @@ public:
       else
         T.join();
   }
+
+  ~ThreadPoolExecutor() override { stop(); }
 
   struct Creator {
     static void *call() { return new ThreadPoolExecutor(strategy); }
@@ -129,8 +128,6 @@ private:
     // first successful tryAcquire() in a process. This guarantees forward
     // progress without requiring a dedicated "always-on" thread here.
 
-    static thread_local std::unique_ptr<ExponentialBackoff> Backoff;
-
     while (true) {
       if (TheJobserver) {
         // Jobserver-mode scheduling:
@@ -152,7 +149,7 @@ private:
             break;
         } while (Backoff.waitForNextAttempt());
 
-        auto SlotReleaser = llvm::make_scope_exit(
+        llvm::scope_exit SlotReleaser(
             [&] { TheJobserver->release(std::move(Slot)); });
 
         while (true) {
@@ -193,54 +190,25 @@ private:
   JobserverClient *TheJobserver = nullptr;
 };
 
-// A global raw pointer to the executor. Lifetime is managed by the
-// objects created within createExecutor().
-static Executor *TheExec = nullptr;
-static std::once_flag Flag;
-
-// This function will be called exactly once to create the executor.
-// It contains the necessary platform-specific logic. Since functions
-// called by std::call_once cannot return value, we have to set the
-// executor as a global variable.
-void createExecutor() {
+Executor *Executor::getDefaultExecutor() {
 #ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
-  // llvm_shutdown() which allows a "clean" fast exit, e.g. via _exit(). This
-  // stops the thread pool and waits for any worker thread creation to complete
-  // but does not wait for the threads to finish. The wait for worker thread
-  // creation to complete is important as it prevents intermittent crashes on
-  // Windows due to a race condition between thread creation and process exit.
-  //
-  // The ThreadPoolExecutor will only be destroyed when the static unique_ptr to
-  // it is destroyed, i.e. in a normal full exit. The ThreadPoolExecutor
-  // destructor ensures it has been stopped and waits for worker threads to
-  // finish. The wait is important as it prevents intermittent crashes on
-  // Windows when the process is doing a full exit.
-  //
-  // The Windows crashes appear to only occur with the MSVC static runtimes and
-  // are more frequent with the debug static runtime.
-  //
-  // This also prevents intermittent deadlocks on exit with the MinGW runtime.
+  // llvm_shutdown() on Windows. This is important to avoid various race
+  // conditions at process exit that can cause crashes or deadlocks.
 
   static ManagedStatic<ThreadPoolExecutor, ThreadPoolExecutor::Creator,
                        ThreadPoolExecutor::Deleter>
       ManagedExec;
   static std::unique_ptr<ThreadPoolExecutor> Exec(&(*ManagedExec));
-  TheExec = Exec.get();
+  return Exec.get();
 #else
   // ManagedStatic is not desired on other platforms. When `Exec` is destroyed
   // by llvm_shutdown(), worker threads will clean up and invoke TLS
   // destructors. This can lead to race conditions if other threads attempt to
   // access TLS objects that have already been destroyed.
   static ThreadPoolExecutor Exec(strategy);
-  TheExec = &Exec;
+  return &Exec;
 #endif
-}
-
-Executor *Executor::getDefaultExecutor() {
-  // Use std::call_once to lazily and safely initialize the executor.
-  std::call_once(Flag, createExecutor);
-  return TheExec;
 }
 } // namespace
 } // namespace detail

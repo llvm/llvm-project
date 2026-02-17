@@ -443,8 +443,8 @@ def SPIRV_AtomicIIncrementOp : SPIRV_AtomicUpdateOp<"AtomicIIncrement", []> {
     #### Example:
 
     ```mlir
-    %0 = spirv.AtomicIncrement <Device> <None> %pointer :
-                             !spirv.ptr<i32, StorageBuffer>
+    %0 = spirv.AtomicIIncrement <Device> <None> %pointer :
+                               !spirv.ptr<i32, StorageBuffer>
     ```
   }];
 }

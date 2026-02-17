@@ -20,7 +20,7 @@ void test1() {
   }).Foo();
 }
 
-// CIR: cir.func dso_local @_Z5test1v()
+// CIR: cir.func {{.*}} @_Z5test1v()
 // CIR:   cir.scope {
 // CIR:     %[[REF_TMP0:.+]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["ref.tmp0"]
 // CIR:     %[[TMP:.+]]      = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["tmp"]
@@ -67,7 +67,7 @@ void cleanup() {
   ({ with_dtor wd; });
 }
 
-// CIR: cir.func dso_local @_Z7cleanupv()
+// CIR: cir.func {{.*}} @_Z7cleanupv()
 // CIR:   cir.scope {
 // CIR:     %[[WD:.+]] = cir.alloca !rec_with_dtor, !cir.ptr<!rec_with_dtor>, ["wd"]
 // CIR:     cir.call @_ZN9with_dtorD1Ev(%[[WD]]) nothrow : (!cir.ptr<!rec_with_dtor>) -> ()
@@ -88,3 +88,46 @@ void cleanup() {
 // OGCG:   %[[WD:.+]] = alloca %struct.with_dtor
 // OGCG:   call void @_ZN9with_dtorD1Ev(ptr {{.*}} %[[WD]])
 // OGCG:   ret void
+
+void gnu_statement_extension() {
+  float b = __real__ ({float _Complex a; a;});
+}
+
+// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
+// CIR: %[[TMP_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["tmp"]
+// CIR: cir.scope {
+// CIR:   %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR:   %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR:   cir.store {{.*}} %[[TMP_A]], %[[TMP_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: }
+// CIR: %[[TMP:.*]] = cir.load {{.*}} %[[TMP_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.float> -> !cir.float
+// CIR: cir.store {{.*}} %[[REAL]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
+
+// LLVM:   %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM:   %[[B_ADDR:.*]] = alloca float, i64 1, align 4
+// LLVM:   %[[TMP_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM:   br label %[[LABEL_1:.*]]
+// LLVM: [[LABEL_1]]:
+// LLVM:   %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
+// LLVM:   store { float, float } %[[TMP_A]], ptr %[[TMP_ADDR]], align 4
+// LLVM:   br label %[[LABEL_2:.*]]
+// LLVM: [[LABEL_2]]:
+// LLVM:   %[[TMP:.*]] = load { float, float }, ptr %[[TMP_ADDR]], align 4
+// LLVM:   %[[REAL:.*]] = extractvalue { float, float } %[[TMP]], 0
+// LLVM:   store float %[[REAL]], ptr %[[B_ADDR]], align 4
+
+// OGCG: %[[B_ADDR:.*]] = alloca float, align 4
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[TMP_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_REAL:.*]] = load float, ptr %[[A_REAL_PTR]], align 4
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: %[[A_IMAG:.*]] = load float, ptr %[[A_IMAG_PTR]], align 4
+// OGCG: %[[TMP_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[TMP_ADDR]], i32 0, i32 0
+// OGCG: %[[TMP_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[TMP_ADDR]], i32 0, i32 1
+// OGCG: store float %[[A_REAL]], ptr %[[TMP_REAL_PTR]], align 4
+// OGCG: store float %[[A_IMAG]], ptr %[[TMP_IMAG_PTR]], align 4
+// OGCG: %[[TMP_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[TMP_ADDR]], i32 0, i32 0
+// OGCG: %[[TMP_REAL:.*]] = load float, ptr %[[TMP_REAL_PTR]], align 4
+// OGCG: store float %[[TMP_REAL]], ptr %[[B_ADDR]], align 4

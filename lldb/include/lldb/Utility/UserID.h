@@ -52,26 +52,6 @@ struct UserID {
   ///     The new user ID.
   void SetID(lldb::user_id_t uid) { m_uid = uid; }
 
-  /// Unary predicate function object that can search for a matching user ID.
-  ///
-  /// Function object that can be used on any class that inherits from UserID:
-  /// \code
-  /// iterator pos;
-  /// pos = std::find_if (coll.begin(), coll.end(), UserID::IDMatches(blockID));
-  /// \endcode
-  class IDMatches {
-  public:
-    /// Construct with the user ID to look for.
-    IDMatches(lldb::user_id_t uid) : m_uid(uid) {}
-
-    /// Unary predicate function object callback.
-    bool operator()(const UserID &rhs) const { return m_uid == rhs.GetID(); }
-
-  private:
-    // Member variables.
-    const lldb::user_id_t m_uid; ///< The user ID we are looking for
-  };
-
 protected:
   // Member variables.
   lldb::user_id_t m_uid; ///< The user ID that uniquely identifies an object.

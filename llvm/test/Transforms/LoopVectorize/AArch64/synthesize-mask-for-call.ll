@@ -30,7 +30,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN ir<%load> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     REPLICATE ir<%call> = call @foo(ir<%load>)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer inbounds ir<%arrayidx>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, ir<%call>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
@@ -77,7 +77,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN ir<%load> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN-CALL ir<%call> = call @foo(ir<%load>) (using library function: foo_vector_fixed4_nomask)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer inbounds ir<%arrayidx>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, ir<%call>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
@@ -129,7 +129,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN ir<%load> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN-CALL ir<%call> = call @foo(ir<%load>) (using library function: foo_vector_fixed2_nomask)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%arrayidx>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%call>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXST:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
@@ -176,7 +176,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN ir<%load> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN-CALL ir<%call> = call @foo(ir<%load>, ir<true>) (using library function: foo_vector_fixed4_mask)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer inbounds ir<%arrayidx>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, ir<%call>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
@@ -227,7 +227,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN ir<%load> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN-CALL ir<%call> = call @foo(ir<%load>) (using library function: foo_vector_fixed2_nomask)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer inbounds ir<%arrayidx>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, ir<%call>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
@@ -274,7 +274,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN ir<%load> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:     WIDEN-CALL ir<%call> = call @foo(ir<%load>) (using library function: foo_vector_fixed4_nomask)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
-; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer ir<%arrayidx>
+; CHECK-NEXT:     vp<[[VEC_PTR2:%.+]]> = vector-pointer inbounds ir<%arrayidx>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR2]]>, ir<%call>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>

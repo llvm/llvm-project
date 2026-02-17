@@ -138,6 +138,10 @@ public:
   virtual void createCoercedStore(llvm::Value *Val, Address DstAddr,
                                   const ABIArgInfo &AI, bool DestIsVolatile,
                                   CodeGenFunction &CGF) const;
+
+  /// Used by Arm64EC calling convention code to call into x86 calling
+  /// convention code for varargs function.
+  virtual ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty) const;
 };
 
 /// Target specific hooks for defining how a type should be passed or returned

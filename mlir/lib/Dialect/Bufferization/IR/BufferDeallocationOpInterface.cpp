@@ -248,7 +248,12 @@ bool ValueComparator::operator()(const Value &lhs, const Value &rhs) const {
     lhsRegion = lhs.getDefiningOp()->getParentRegion();
     rhsRegion = rhs.getDefiningOp()->getParentRegion();
     if (lhsRegion == rhsRegion) {
-      return lhs.getDefiningOp()->isBeforeInBlock(rhs.getDefiningOp());
+      Block *lhsBlock = lhs.getDefiningOp()->getBlock();
+      Block *rhsBlock = rhs.getDefiningOp()->getBlock();
+      if (lhsBlock == rhsBlock) {
+        return lhs.getDefiningOp()->isBeforeInBlock(rhs.getDefiningOp());
+      }
+      return lhsBlock->computeBlockNumber() < rhsBlock->computeBlockNumber();
     }
   }
 
@@ -262,8 +267,14 @@ bool ValueComparator::operator()(const Value &lhs, const Value &rhs) const {
       return lhsRegion->getRegionNumber() < rhsRegion->getRegionNumber();
     }
     if (lhsRegion->getParentRegion() == rhsRegion->getParentRegion()) {
-      return lhsRegion->getParentOp()->isBeforeInBlock(
-          rhsRegion->getParentOp());
+      Block *lhsParentOpBlock = lhsRegion->getParentOp()->getBlock();
+      Block *rhsParentOpBlock = rhsRegion->getParentOp()->getBlock();
+      if (lhsParentOpBlock == rhsParentOpBlock) {
+        return lhsRegion->getParentOp()->isBeforeInBlock(
+            rhsRegion->getParentOp());
+      }
+      return lhsParentOpBlock->computeBlockNumber() <
+             rhsParentOpBlock->computeBlockNumber();
     }
     lhsRegion = lhsRegion->getParentRegion();
     rhsRegion = rhsRegion->getParentRegion();

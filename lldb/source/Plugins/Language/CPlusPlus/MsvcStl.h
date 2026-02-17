@@ -19,6 +19,8 @@ namespace formatters {
 
 bool IsMsvcStlStringType(ValueObject &valobj);
 
+bool IsMsvcStlStringViewType(ValueObject &valobj);
+
 template <StringPrinter::StringElementType element_type>
 bool MsvcStlStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
@@ -37,6 +39,21 @@ bool MsvcStlStringViewSummaryProvider(
 bool MsvcStlWStringViewSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // std::wstring_view
+
+// MSVC STL std::*_ordering
+bool IsMsvcStlOrdering(ValueObject &valobj);
+
+bool MsvcStlPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // std::partial_ordering
+
+bool MsvcStlWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // std::weak_ordering
+
+bool MsvcStlStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // std::strong_ordering
 
 // MSVC STL std::shared_ptr<> and std::weak_ptr<>
 bool IsMsvcStlSmartPointer(ValueObject &valobj);
@@ -118,6 +135,12 @@ bool IsMsvcStlDeque(ValueObject &valobj);
 SyntheticChildrenFrontEnd *
 MsvcStlDequeSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                      lldb::ValueObjectSP valobj_sp);
+
+// MSVC STL std::span<>
+bool IsMsvcStlSpan(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlSpanSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                    lldb::ValueObjectSP valobj_sp);
 
 } // namespace formatters
 } // namespace lldb_private

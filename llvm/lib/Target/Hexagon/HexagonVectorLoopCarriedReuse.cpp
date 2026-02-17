@@ -486,7 +486,7 @@ void HexagonVectorLoopCarriedReuse::findValueToReuse() {
           LLVM_DEBUG(dbgs() << "Found Value for reuse.\n");
           ReuseCandidate.Inst2Replace = I;
           ReuseCandidate.BackedgeInst = BEUser;
-          ReuseCandidate.DepChains = DepChains;
+          ReuseCandidate.DepChains = std::move(DepChains);
           ReuseCandidate.Iterations = Iters;
           return;
         }

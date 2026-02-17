@@ -14,6 +14,7 @@
 #ifndef CLANG_BASIC_HLSLRUNTIME_H
 #define CLANG_BASIC_HLSLRUNTIME_H
 
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/LangOptions.h"
 #include <cstdint>
 
@@ -28,6 +29,10 @@ getStageFromEnvironment(const llvm::Triple::EnvironmentType &E) {
   if (Pipeline > (uint32_t)ShaderStage::Invalid)
     return ShaderStage::Invalid;
   return static_cast<ShaderStage>(Pipeline);
+}
+
+constexpr bool isInitializedByPipeline(LangAS AS) {
+  return AS == LangAS::hlsl_input || AS == LangAS::hlsl_push_constant;
 }
 
 #define ENUM_COMPARE_ASSERT(Value)                                             \

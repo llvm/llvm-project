@@ -35,7 +35,6 @@ void UseOverrideCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseOverrideCheck::registerMatchers(MatchFinder *Finder) {
-
   auto IgnoreDestructorMatcher =
       IgnoreDestructors ? cxxMethodDecl(unless(cxxDestructorDecl()))
                         : cxxMethodDecl();
@@ -83,10 +82,6 @@ parseTokens(CharSourceRange Range, const MatchFinder::MatchResult &Result) {
     Tokens.push_back(Tok);
   }
   return Tokens;
-}
-
-static StringRef getText(const Token &Tok, const SourceManager &Sources) {
-  return {Sources.getCharacterData(Tok.getLocation()), Tok.getLength()};
 }
 
 void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
@@ -142,90 +137,28 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   if (!FileRange.isValid())
     return;
 
-  // FIXME: Instead of re-lexing and looking for specific macros such as
-  // 'ABSTRACT', properly store the location of 'virtual' and '= 0' in each
-  // FunctionDecl.
+  // FIXME: Instead of re-lexing and looking for the 'virtual' token,
+  // store the location of 'virtual' in each FunctionDecl.
   SmallVector<Token, 16> Tokens = parseTokens(FileRange, Result);
 
   // Add 'override' on inline declarations that don't already have it.
   if (!HasFinal && !HasOverride) {
-    SourceLocation InsertLoc;
-    std::string ReplacementText = (OverrideSpelling + " ").str();
-    const SourceLocation MethodLoc = Method->getLocation();
-
-    for (const Token T : Tokens) {
-      if (T.is(tok::kw___attribute) &&
-          !Sources.isBeforeInTranslationUnit(T.getLocation(), MethodLoc)) {
-        InsertLoc = T.getLocation();
-        break;
-      }
-    }
-
-    if (Method->hasAttrs()) {
-      for (const clang::Attr *A : Method->getAttrs()) {
-        if (!A->isImplicit() && !A->isInherited()) {
-          const SourceLocation Loc =
-              Sources.getExpansionLoc(A->getRange().getBegin());
-          if ((!InsertLoc.isValid() ||
-               Sources.isBeforeInTranslationUnit(Loc, InsertLoc)) &&
-              !Sources.isBeforeInTranslationUnit(Loc, MethodLoc))
-            InsertLoc = Loc;
-        }
-      }
-    }
-
-    if (InsertLoc.isInvalid() && Method->doesThisDeclarationHaveABody() &&
-        Method->getBody() && !Method->isDefaulted()) {
-      // For methods with inline definition, add the override keyword at the
-      // end of the declaration of the function, but prefer to put it on the
-      // same line as the declaration if the beginning brace for the start of
-      // the body falls on the next line.
-      ReplacementText = (" " + OverrideSpelling).str();
-      auto *LastTokenIter = std::prev(Tokens.end());
-      // When try statement is used instead of compound statement as
-      // method body - insert override keyword before it.
-      if (LastTokenIter->is(tok::kw_try))
-        LastTokenIter = std::prev(LastTokenIter);
-      InsertLoc = LastTokenIter->getEndLoc();
-    }
-
-    if (!InsertLoc.isValid()) {
-      // For declarations marked with "= 0" or "= [default|delete]", the end
-      // location will point until after those markings. Therefore, the override
-      // keyword shouldn't be inserted at the end, but before the '='.
-      if (Tokens.size() > 2 &&
-          (getText(Tokens.back(), Sources) == "0" ||
-           Tokens.back().is(tok::kw_default) ||
-           Tokens.back().is(tok::kw_delete)) &&
-          getText(Tokens[Tokens.size() - 2], Sources) == "=") {
-        InsertLoc = Tokens[Tokens.size() - 2].getLocation();
-        // Check if we need to insert a space.
-        if ((Tokens[Tokens.size() - 2].getFlags() & Token::LeadingSpace) == 0)
-          ReplacementText = (" " + OverrideSpelling + " ").str();
-      } else if (getText(Tokens.back(), Sources) == "ABSTRACT")
-        InsertLoc = Tokens.back().getLocation();
-    }
-
-    if (!InsertLoc.isValid()) {
-      InsertLoc = FileRange.getEnd();
-      ReplacementText = (" " + OverrideSpelling).str();
-    }
-
     // If the override macro has been specified just ensure it exists,
     // if not don't apply a fixit but keep the warning.
     if (OverrideSpelling != "override" &&
         !Context.Idents.get(OverrideSpelling).hasMacroDefinition())
       return;
 
-    Diag << FixItHint::CreateInsertion(InsertLoc, ReplacementText);
+    Diag << FixItHint::CreateInsertion(
+        Lexer::getLocForEndOfToken(
+            Method->getTypeSourceInfo()->getTypeLoc().getEndLoc(), 0, Sources,
+            getLangOpts()),
+        (" " + OverrideSpelling).str());
   }
 
-  if (HasFinal && HasOverride && !AllowOverrideAndFinal) {
-    const SourceLocation OverrideLoc =
-        Method->getAttr<OverrideAttr>()->getLocation();
+  if (HasFinal && HasOverride && !AllowOverrideAndFinal)
     Diag << FixItHint::CreateRemoval(
-        CharSourceRange::getTokenRange(OverrideLoc, OverrideLoc));
-  }
+        Method->getAttr<OverrideAttr>()->getLocation());
 
   if (HasVirtual) {
     for (const Token Tok : Tokens) {

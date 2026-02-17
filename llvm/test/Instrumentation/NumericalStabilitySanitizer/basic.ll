@@ -528,7 +528,7 @@ declare float @sinf(float)
 define float @call_sinf_libfunc() sanitize_numerical_stability {
 ; CHECK-LABEL: @call_sinf_libfunc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = call float @sinf(float 1.000000e+00) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = call float @sinf(float 1.000000e+00) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call double @llvm.sin.f64(double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_float_d(float [[R]], double [[TMP0]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
@@ -549,7 +549,7 @@ declare double @sin(double)
 define double @call_sin_libfunc() sanitize_numerical_stability {
 ; DQQ-LABEL: @call_sin_libfunc(
 ; DQQ-NEXT:  entry:
-; DQQ-NEXT:    [[R:%.*]] = call double @sin(double 1.000000e+00) #[[ATTR4]]
+; DQQ-NEXT:    [[R:%.*]] = call double @sin(double 1.000000e+00) #[[ATTR3]]
 ; DQQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sin.f80(x86_fp80 0xK3FFF8000000000000000)
 ; DQQ-NEXT:    [[TMP1:%.*]] = fpext x86_fp80 [[TMP0]] to fp128
 ; DQQ-NEXT:    [[TMP2:%.*]] = call i32 @__nsan_internal_check_double_q(double [[R]], fp128 [[TMP1]], i32 1, i64 0)
@@ -562,7 +562,7 @@ define double @call_sin_libfunc() sanitize_numerical_stability {
 ;
 ; DLQ-LABEL: @call_sin_libfunc(
 ; DLQ-NEXT:  entry:
-; DLQ-NEXT:    [[R:%.*]] = call double @sin(double 1.000000e+00) #[[ATTR4]]
+; DLQ-NEXT:    [[R:%.*]] = call double @sin(double 1.000000e+00) #[[ATTR3]]
 ; DLQ-NEXT:    [[TMP0:%.*]] = call x86_fp80 @llvm.sin.f80(x86_fp80 0xK3FFF8000000000000000)
 ; DLQ-NEXT:    [[TMP1:%.*]] = call i32 @__nsan_internal_check_double_l(double [[R]], x86_fp80 [[TMP0]], i32 1, i64 0)
 ; DLQ-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
@@ -849,7 +849,7 @@ define float @sub_fabs(float %a, float %b) sanitize_numerical_stability {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = fpext float [[S]] to double
 ; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP10]], double [[TMP11]], double [[TMP8]]
-; CHECK-NEXT:    [[R:%.*]] = call float @fabsf(float [[S]]) #[[ATTR4]]
+; CHECK-NEXT:    [[R:%.*]] = call float @fabsf(float [[S]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = call double @llvm.fabs.f64(double [[TMP8]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @__nsan_internal_check_float_d(float [[R]], double [[TMP13]], i32 1, i64 0)
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[TMP14]], 1
@@ -914,4 +914,4 @@ entry:
 }
 
 
-attributes #0 = { nounwind readonly uwtable sanitize_numerical_stability "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
+attributes #0 = { nounwind readonly uwtable sanitize_numerical_stability "correctly-rounded-divide-sqrt-fp-math"="false" denormal_fpenv(preservesign, float: ieee) "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }

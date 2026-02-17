@@ -36,6 +36,7 @@ class DefinedData;
 class GlobalSymbol;
 class DefinedFunction;
 class UndefinedFunction;
+class DefinedGlobal;
 class UndefinedGlobal;
 class TableSymbol;
 
@@ -177,6 +178,11 @@ struct Ctx {
     // Symbol whose value is the alignment of the TLS block.
     GlobalSymbol *tlsAlign;
 
+    // __rodata_start/__rodata_end
+    // Symbols marking the start/end of readonly data
+    DefinedData *rodataStart;
+    DefinedData *rodataEnd;
+
     // __data_end
     // Symbol marking the end of the data and bss.
     DefinedData *dataEnd;
@@ -240,13 +246,11 @@ struct Ctx {
 
     // __table_base
     // Used in PIC code for offset of indirect function table
-    UndefinedGlobal *tableBase;
-    DefinedData *definedTableBase;
+    GlobalSymbol *tableBase;
 
     // __memory_base
     // Used in PIC code for offset of global data
-    UndefinedGlobal *memoryBase;
-    DefinedData *definedMemoryBase;
+    GlobalSymbol *memoryBase;
 
     // __indirect_function_table
     // Used as an address space for function pointers, with each function that

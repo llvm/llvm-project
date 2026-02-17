@@ -123,3 +123,25 @@ func.func @vector_maskedstore_with_alignment(%arg0 : memref<4x5xf32>, %arg1 : ve
   vector.maskedstore %arg0[%idx_0, %idx_4], %mask, %arg1 { alignment = 8 } : memref<4x5xf32>, vector<4xi1>, vector<4xf32>
   return
 }
+
+// CHECK-LABEL:  @vector_maskedload_rank0
+// CHECK-SAME:  %[[ARG0:.*]]: memref<f32>, %[[ARG3:.*]]: vector<1xi1>, %[[ARG4:.*]]: vector<1xf32>
+// CHECK-NEXT:  %[[VAL0:.*]] = vector.extract %[[ARG3]][0]
+// CHECK-NEXT:  scf.if %[[VAL0]] -> (vector<1xf32>) {
+// CHECK-NEXT:  %[[VAL1:.*]] = memref.load %[[ARG0]][]
+// CHECK-NEXT:  vector.insert %[[VAL1]], %[[ARG4]] [0]
+func.func @vector_maskedload_rank0(%arg0: memref<f32>, %arg3: vector<1xi1>, %arg4: vector<1xf32>) -> vector<1xf32> {
+  %0 = vector.maskedload %arg0[], %arg3, %arg4 : memref<f32>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+  return %0: vector<1xf32>
+}
+
+// CHECK-LABEL:  @vector_maskedstore_rank0
+// CHECK-SAME:  %[[ARG0:.*]]: memref<f32>, %[[ARG3:.*]]: vector<1xi1>, %[[ARG4:.*]]: vector<1xf32>
+// CHECK-NEXT:  %[[VAL0:.*]] = vector.extract %[[ARG3]][0]
+// CHECK-NEXT:  scf.if %[[VAL0]] {
+// CHECK-NEXT:  %[[VAL1:.*]] = vector.extract %[[ARG4]][0]
+// CHECK-NEXT:  memref.store %[[VAL1]], %[[ARG0]][]
+func.func @vector_maskedstore_rank0(%arg0: memref<f32>, %arg3: vector<1xi1>, %arg4: vector<1xf32>) {
+  vector.maskedstore %arg0[], %arg3, %arg4 : memref<f32>, vector<1xi1>, vector<1xf32>
+  return
+}

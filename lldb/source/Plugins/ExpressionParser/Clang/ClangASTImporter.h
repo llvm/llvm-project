@@ -202,7 +202,7 @@ public:
   typedef std::shared_ptr<NamespaceMap> NamespaceMapSP;
 
   void RegisterNamespaceMap(const clang::NamespaceDecl *decl,
-                            NamespaceMapSP &namespace_map);
+                            NamespaceMapSP namespace_map);
 
   NamespaceMapSP GetNamespaceMap(const clang::NamespaceDecl *decl);
 

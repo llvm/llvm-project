@@ -12,7 +12,7 @@
 !CHECK:   %[[CONST_1:.*]] = arith.constant 4 : i64
 !CHECK:   %[[PRIVATE_ETA:.*]] = fir.alloca f32 {bindc_name = "eta", pinned, uniq_name = "_QFEeta"}
 !CHECK:   %[[PRIVATE_ETA_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_ETA]] {uniq_name = "_QFEeta"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-!CHECK:   %[[PRIVATE_DOUBLE_COUNT:.*]] = fir.alloca i32 {bindc_name = "double_count", pinned, uniq_name = "_QFEdouble_count"} 
+!CHECK:   %[[PRIVATE_DOUBLE_COUNT:.*]] = fir.alloca i32 {bindc_name = "double_count", pinned, uniq_name = "_QFEdouble_count"}
 !CHECK:   %[[PRIVATE_DOUBLE_COUNT_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_DOUBLE_COUNT]] {uniq_name = "_QFEdouble_count"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   omp.sections allocate(%[[CONST_1]] : i64 -> %[[COUNT_DECL]]#0 : !fir.ref<i32>)  {
 !CHECK:     omp.section {
@@ -79,7 +79,7 @@ program sample
 end program sample
 
 !CHECK: func @_QPfirstprivate(%[[ARG:.*]]: !fir.ref<f32> {fir.bindc_name = "alpha"}) {
-!CHECK:   %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFfirstprivateEalpha"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>) 
+!CHECK:   %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFfirstprivateEalpha"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:   %[[PRIVATE_ALPHA:.*]] = fir.alloca f32 {bindc_name = "alpha", pinned, uniq_name = "_QFfirstprivateEalpha"}
 !CHECK:   %[[PRIVATE_ALPHA_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_ALPHA]] {uniq_name = "_QFfirstprivateEalpha"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:   %[[TEMP:.*]] = fir.load %[[ARG_DECL]]#0 : !fir.ref<f32>

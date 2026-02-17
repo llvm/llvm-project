@@ -85,7 +85,10 @@ static mlir::LLVM::MemoryEffectsAttr getGenericMemoryAttr(fir::CallOp callOp) {
         callOp->getContext(),
         {/*other=*/mlir::LLVM::ModRefInfo::NoModRef,
          /*argMem=*/mlir::LLVM::ModRefInfo::ModRef,
-         /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::ModRef});
+         /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::ModRef,
+         /*errnoMem=*/mlir::LLVM::ModRefInfo::NoModRef,
+         /*targetMem0=*/mlir::LLVM::ModRefInfo::NoModRef,
+         /*targetMem1=*/mlir::LLVM::ModRefInfo::NoModRef});
   }
 
   return {};

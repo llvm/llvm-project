@@ -1,5 +1,5 @@
 ! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s -check-prefixes=HONORINF,ALL
-! RUN: flang -fc1 -menable-no-infs -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s -check-prefixes=CHECK,ALL,%if flang-supports-f128-math %{F128%} %else %{F64%}
+! RUN: %flang_fc1 -menable-no-infs -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s -check-prefixes=CHECK,ALL,%if flang-supports-f128-math %{F128%} %else %{F64%}
 
 ! ALL-LABEL: func @_QPmodulo_testr(
 ! ALL-SAME: %[[arg0:.*]]: !fir.ref<f64>{{.*}}, %[[arg1:.*]]: !fir.ref<f64>{{.*}}, %[[arg2:.*]]: !fir.ref<f64>{{.*}}) {

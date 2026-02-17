@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../SPIRVCommon/Pattern.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
@@ -45,14 +46,12 @@ static constexpr const char kSPIRVModule[] = "__spv__";
 
 /// Returns the string name of the `DescriptorSet` decoration.
 static std::string descriptorSetName() {
-  return llvm::convertToSnakeFromCamelCase(
-      stringifyDecoration(spirv::Decoration::DescriptorSet));
+  return spirv::getDecorationString(spirv::Decoration::DescriptorSet);
 }
 
 /// Returns the string name of the `Binding` decoration.
 static std::string bindingName() {
-  return llvm::convertToSnakeFromCamelCase(
-      stringifyDecoration(spirv::Decoration::Binding));
+  return spirv::getDecorationString(spirv::Decoration::Binding);
 }
 
 /// Calculates the index of the kernel's operand that is represented by the

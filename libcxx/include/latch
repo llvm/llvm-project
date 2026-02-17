@@ -70,7 +70,9 @@ class latch {
   atomic<ptrdiff_t> __a_;
 
 public:
-  static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept { return numeric_limits<ptrdiff_t>::max(); }
+  [[nodiscard]] static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept {
+    return numeric_limits<ptrdiff_t>::max();
+  }
 
   inline _LIBCPP_HIDE_FROM_ABI constexpr explicit latch(ptrdiff_t __expected) : __a_(__expected) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
@@ -97,7 +99,7 @@ public:
     if (__old == __update)
       __a_.notify_all();
   }
-  inline _LIBCPP_HIDE_FROM_ABI bool try_wait() const noexcept {
+  [[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool try_wait() const noexcept {
     auto __value = __a_.load(memory_order_acquire);
     return try_wait_impl(__value);
   }

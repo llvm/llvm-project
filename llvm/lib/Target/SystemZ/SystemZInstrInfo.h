@@ -71,18 +71,13 @@ enum {
   MO_GOT = (1 << 0),
 
   // @INDNTPOFF
-  MO_INDNTPOFF = (2 << 0)
-};
+  MO_INDNTPOFF = (2 << 0),
 
-// z/OS XPLink specific: classifies the types of
-// accesses to the ADA (Associated Data Area).
-// These enums contains values that overlap with the above MO_ enums,
-// but that's fine since the above enums are used with ELF,
-// while these values are used with z/OS.
-enum {
-  MO_ADA_DATA_SYMBOL_ADDR = 1,
-  MO_ADA_INDIRECT_FUNC_DESC,
-  MO_ADA_DIRECT_FUNC_DESC,
+  // z/OS XPLink specific: classifies the types of
+  // accesses to the ADA (Associated Data Area).
+  MO_ADA_DATA_SYMBOL_ADDR = (1 << 2),
+  MO_ADA_INDIRECT_FUNC_DESC = (2 << 2),
+  MO_ADA_DIRECT_FUNC_DESC = (3 << 2),
 };
 
 // Classifies a branch.
@@ -164,8 +159,8 @@ enum FusedCompareType {
 } // end namespace SystemZII
 
 namespace SystemZ {
-int getTwoOperandOpcode(uint16_t Opcode);
-int getTargetMemOpcode(uint16_t Opcode);
+int64_t getTwoOperandOpcode(uint32_t Opcode);
+int64_t getTargetMemOpcode(uint32_t Opcode);
 
 // Return a version of comparison CC mask CCMask in which the LT and GT
 // actions are swapped.
@@ -287,8 +282,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIdx, const TargetRegisterClass *RC,
-
-      Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
   MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
                                       LiveIntervals *LIS) const override;
@@ -391,6 +385,14 @@ public:
 
   std::optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
+
+  std::pair<unsigned, unsigned>
+  decomposeMachineOperandsTargetFlags(unsigned TF) const override;
+
+  ArrayRef<std::pair<unsigned, const char *>>
+  getSerializableDirectMachineOperandTargetFlags() const override;
+
+  MCInst getNop() const override;
 };
 
 } // end namespace llvm

@@ -38,7 +38,7 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
@@ -228,11 +228,13 @@ std::string getMainExecutable(const char *Name) {
 Expected<StringRef> createOutputFile(const Twine &Prefix, StringRef Extension) {
   std::scoped_lock<decltype(TempFilesMutex)> Lock(TempFilesMutex);
   SmallString<128> OutputFile;
+  std::string PrefixStr = clang::sanitizeTargetIDInFileName(Prefix.str());
+
   if (SaveTemps) {
-    (Prefix + "." + Extension).toNullTerminatedStringRef(OutputFile);
+    (PrefixStr + "." + Extension).toNullTerminatedStringRef(OutputFile);
   } else {
     if (std::error_code EC =
-            sys::fs::createTemporaryFile(Prefix, Extension, OutputFile))
+            sys::fs::createTemporaryFile(PrefixStr, Extension, OutputFile))
       return createFileError(OutputFile, EC);
   }
 
@@ -407,8 +409,19 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 } // namespace nvptx
 
 namespace amdgcn {
+
+// Constructs a triple string for clang offload bundler.
+// NOTE: copied from HIPUtility.cpp.
+static std::string normalizeForBundler(const llvm::Triple &T,
+                                       bool HasTargetID) {
+  return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
+                        T.getOSName() + "-" + T.getEnvironmentName())
+                           .str()
+                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
+}
+
 Expected<StringRef>
-fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
+fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
           const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("AMDGPU Fatbinary");
 
@@ -439,8 +452,11 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
         Args.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
 
   SmallVector<StringRef> Targets = {"-targets=host-x86_64-unknown-linux-gnu"};
-  for (const auto &[File, Arch] : InputFiles)
-    Targets.push_back(Saver.save("hip-amdgcn-amd-amdhsa--" + Arch));
+  for (const auto &[File, TripleRef, Arch] : InputFiles) {
+    std::string NormalizedTriple =
+        normalizeForBundler(Triple(TripleRef), !Arch.empty());
+    Targets.push_back(Saver.save("hip-" + NormalizedTriple + "-" + Arch));
+  }
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
 
 #ifdef _WIN32
@@ -448,7 +464,7 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 #else
   CmdArgs.push_back("-input=/dev/null");
 #endif
-  for (const auto &[File, Arch] : InputFiles)
+  for (const auto &[File, Triple, Arch] : InputFiles)
     CmdArgs.push_back(Saver.save("-input=" + File));
 
   CmdArgs.push_back(Saver.save("-output=" + *TempFileOrErr));
@@ -622,7 +638,6 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
   SmallString<128> Filename;
   (Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch())
       .toVector(Filename);
-  llvm::replace(Filename, ':', '-');
   auto TempFileOrErr = createOutputFile(Filename, "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
@@ -812,10 +827,11 @@ bundleCuda(ArrayRef<OffloadingImage> Images, const ArgList &Args) {
 
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleHIP(ArrayRef<OffloadingImage> Images, const ArgList &Args) {
-  SmallVector<std::pair<StringRef, StringRef>, 4> InputFiles;
+  SmallVector<std::tuple<StringRef, StringRef, StringRef>, 4> InputFiles;
   for (const OffloadingImage &Image : Images)
-    InputFiles.emplace_back(std::make_pair(Image.Image->getBufferIdentifier(),
-                                           Image.StringData.lookup("arch")));
+    InputFiles.emplace_back(std::make_tuple(Image.Image->getBufferIdentifier(),
+                                            Image.StringData.lookup("triple"),
+                                            Image.StringData.lookup("arch")));
 
   auto FileOrErr = amdgcn::fatbinary(InputFiles, Args);
   if (!FileOrErr)

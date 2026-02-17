@@ -1129,7 +1129,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   LLVM_DEBUG(llvm::dbgs() << "done collecting ops used in result patterns\n");
 
   // Emit RewritePattern for Pattern.
-  auto locs = pattern.getLocation();
+  auto locs = pattern.getLocation(/*forSourceOutput=*/true);
   os << formatv("/* Generated from:\n    {0:$[ instantiating\n    ]}\n*/\n",
                 llvm::reverse(locs));
   os << formatv(R"(struct {0} : public ::mlir::RewritePattern {

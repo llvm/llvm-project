@@ -4,6 +4,8 @@ Test saving a core file (or mini dump).
 
 import os
 import lldb
+import tempfile
+import stat
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -104,5 +106,44 @@ class ProcessSaveCoreTestCase(TestBase):
                 "Values:",
                 "full",
                 "stack",
+            ],
+        )
+
+    @skipIfRemote
+    def test_save_core_to_nonwritable_dir(self):
+        """Test that saving a core file to a non-writable directory produces a helpful error message."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        # Create a non-writable temporary directory.
+        temp_dir = tempfile.mkdtemp()
+
+        def make_readonly(path):
+            if sys.platform == "win32":
+                os.system(f'icacls "{path}" /deny Everyone:(W)')
+            else:
+                os.chmod(path, stat.S_IRUSR | stat.S_IXUSR)
+
+        def cleanup():
+            if sys.platform == "win32":
+                os.system(f'icacls "{temp_dir}" /grant Everyone:(F)')
+            shutil.rmtree(temp_dir)
+
+        make_readonly(temp_dir)
+        self.addTearDownHook(cleanup)
+
+        target = self.dbg.CreateTarget(exe)
+        target.BreakpointCreateByName("bar")
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertState(process.GetState(), lldb.eStateStopped)
+
+        # Try to save a core file to the non-writable directory.
+        core_file = os.path.join(temp_dir, "core")
+        self.expect(
+            f"process save-core {core_file}",
+            error=True,
+            substrs=[
+                "failed to save core file for process to",
+                os.path.join(temp_dir, "core"),
             ],
         )

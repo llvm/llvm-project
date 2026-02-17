@@ -592,13 +592,13 @@ int test_iso_volatile_load32(int volatile *p) { return __iso_volatile_load32(p);
 __int64 test_iso_volatile_load64(__int64 volatile *p) { return __iso_volatile_load64(p); }
 
 // CHECK: define{{.*}}i8 @test_iso_volatile_load8(ptr{{.*}}%p)
-// CHECK: = load volatile i8, ptr %p
+// CHECK: = load atomic volatile i8, ptr %p monotonic
 // CHECK: define{{.*}}i16 @test_iso_volatile_load16(ptr{{.*}}%p)
-// CHECK: = load volatile i16, ptr %p
+// CHECK: = load atomic volatile i16, ptr %p monotonic
 // CHECK: define{{.*}}i32 @test_iso_volatile_load32(ptr{{.*}}%p)
-// CHECK: = load volatile i32, ptr %p
+// CHECK: = load atomic volatile i32, ptr %p monotonic
 // CHECK: define{{.*}}i64 @test_iso_volatile_load64(ptr{{.*}}%p)
-// CHECK: = load volatile i64, ptr %p
+// CHECK: = load atomic volatile i64, ptr %p monotonic
 
 void test_iso_volatile_store8(char volatile *p, char v) { __iso_volatile_store8(p, v); }
 void test_iso_volatile_store16(short volatile *p, short v) { __iso_volatile_store16(p, v); }
@@ -606,13 +606,13 @@ void test_iso_volatile_store32(int volatile *p, int v) { __iso_volatile_store32(
 void test_iso_volatile_store64(__int64 volatile *p, __int64 v) { __iso_volatile_store64(p, v); }
 
 // CHECK: define{{.*}}void @test_iso_volatile_store8(ptr{{.*}}%p, i8 {{[a-z_ ]*}}%v)
-// CHECK: store volatile i8 %v, ptr %p
+// CHECK: store atomic volatile i8 %v, ptr %p monotonic
 // CHECK: define{{.*}}void @test_iso_volatile_store16(ptr{{.*}}%p, i16 {{[a-z_ ]*}}%v)
-// CHECK: store volatile i16 %v, ptr %p
+// CHECK: store atomic volatile i16 %v, ptr %p monotonic
 // CHECK: define{{.*}}void @test_iso_volatile_store32(ptr{{.*}}%p, i32 {{[a-z_ ]*}}%v)
-// CHECK: store volatile i32 %v, ptr %p
+// CHECK: store atomic volatile i32 %v, ptr %p monotonic
 // CHECK: define{{.*}}void @test_iso_volatile_store64(ptr{{.*}}%p, i64 {{[a-z_ ]*}}%v)
-// CHECK: store volatile i64 %v, ptr %p
+// CHECK: store atomic volatile i64 %v, ptr %p monotonic
 
 
 #if defined(__i386__) || defined(__x86_64__) || defined(__arm__) || defined(__aarch64__)

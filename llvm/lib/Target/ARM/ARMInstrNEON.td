@@ -115,6 +115,13 @@ def VectorIndex64 : Operand<i32>, ImmLeaf<i32, [{
   let PrintMethod = "printVectorIndex";
 }
 
+def VectorIndex32_Hi_XForm  : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() - 2, SDLoc(N), MVT::i32);
+}]>;
+def VectorIndex32_Hi : ImmLeaf<i32, [{
+  return ((uint64_t)Imm) >= 2 && ((uint64_t)Imm) < 4;
+}], VectorIndex32_Hi_XForm>;
+
 // Register list of one D register.
 def VecListOneDAsmOperand : AsmOperandClass {
   let Name = "VecListOneD";
@@ -475,6 +482,8 @@ def non_word_alignedstore : PatFrag<(ops node:$val, node:$ptr),
 //===----------------------------------------------------------------------===//
 
 def SDTARMVTST    : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<1, 2>]>;
+
+// Vector test bits.
 def NEONvtst      : SDNode<"ARMISD::VTST", SDTARMVTST>;
 
 // Types for vector shift by immediates.  The "SHX" version is for long and
@@ -487,10 +496,12 @@ def SDTARMVSHINSIMM  : SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
 
 def NEONvshrnImm     : SDNode<"ARMISD::VSHRNIMM", SDTARMVSHXIMM>;
 
+// Vector rounding shift by immediate
 def NEONvrshrsImm    : SDNode<"ARMISD::VRSHRsIMM", SDTARMVSHIMM>;
 def NEONvrshruImm    : SDNode<"ARMISD::VRSHRuIMM", SDTARMVSHIMM>;
 def NEONvrshrnImm    : SDNode<"ARMISD::VRSHRNIMM", SDTARMVSHXIMM>;
 
+// Vector saturating shift by immediate
 def NEONvqshlsImm    : SDNode<"ARMISD::VQSHLsIMM", SDTARMVSHIMM>;
 def NEONvqshluImm    : SDNode<"ARMISD::VQSHLuIMM", SDTARMVSHIMM>;
 def NEONvqshlsuImm   : SDNode<"ARMISD::VQSHLsuIMM", SDTARMVSHIMM>;
@@ -498,13 +509,16 @@ def NEONvqshrnsImm   : SDNode<"ARMISD::VQSHRNsIMM", SDTARMVSHXIMM>;
 def NEONvqshrnuImm   : SDNode<"ARMISD::VQSHRNuIMM", SDTARMVSHXIMM>;
 def NEONvqshrnsuImm  : SDNode<"ARMISD::VQSHRNsuIMM", SDTARMVSHXIMM>;
 
+// Vector saturating rounding shift by immediate
 def NEONvqrshrnsImm  : SDNode<"ARMISD::VQRSHRNsIMM", SDTARMVSHXIMM>;
 def NEONvqrshrnuImm  : SDNode<"ARMISD::VQRSHRNuIMM", SDTARMVSHXIMM>;
 def NEONvqrshrnsuImm : SDNode<"ARMISD::VQRSHRNsuIMM", SDTARMVSHXIMM>;
 
+// Vector shift and insert
 def NEONvsliImm      : SDNode<"ARMISD::VSLIIMM", SDTARMVSHINSIMM>;
 def NEONvsriImm      : SDNode<"ARMISD::VSRIIMM", SDTARMVSHINSIMM>;
 
+// Pseudo vector bitwise select
 def NEONvbsp      : SDNode<"ARMISD::VBSP",
                            SDTypeProfile<1, 3, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
@@ -518,15 +532,25 @@ def NEONvext      : SDNode<"ARMISD::VEXT", SDTARMVEXT>;
 def SDTARMVSHUF2  : SDTypeProfile<2, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
                                          SDTCisSameAs<0, 2>,
                                          SDTCisSameAs<0, 3>]>;
+
+// zip (interleave)
 def NEONzip       : SDNode<"ARMISD::VZIP", SDTARMVSHUF2>;
+
+// unzip (deinterleave)
 def NEONuzp       : SDNode<"ARMISD::VUZP", SDTARMVSHUF2>;
+
+// transpose
 def NEONtrn       : SDNode<"ARMISD::VTRN", SDTARMVSHUF2>;
 
 def SDTARMVTBL1   : SDTypeProfile<1, 2, [SDTCisVT<0, v8i8>, SDTCisVT<1, v8i8>,
                                          SDTCisVT<2, v8i8>]>;
 def SDTARMVTBL2   : SDTypeProfile<1, 3, [SDTCisVT<0, v8i8>, SDTCisVT<1, v8i8>,
                                          SDTCisVT<2, v8i8>, SDTCisVT<3, v8i8>]>;
+
+// 1-register shuffle with mask
 def NEONvtbl1     : SDNode<"ARMISD::VTBL1", SDTARMVTBL1>;
+
+// 2-register shuffle with mask
 def NEONvtbl2     : SDNode<"ARMISD::VTBL2", SDTARMVTBL2>;
 
 
@@ -4863,6 +4887,23 @@ defm VUDOTQI : DOTI<"vudot", "u8", 0b1, 0b1, QPR, v4i32, v16i8,
 defm VSDOTQI : DOTI<"vsdot", "s8", 0b1, 0b0, QPR, v4i32, v16i8,
                     int_arm_neon_sdot, (EXTRACT_SUBREG QPR:$Vm, dsub_0)>;
 
+let Predicates = [HasDotProd, IsLE] in {
+  def : Pat<(v4i32 (int_arm_neon_sdot (v4i32 QPR:$Vd),
+                        (v16i8 QPR:$Vn),
+                        (v16i8 (bitconvert (v4i32
+                                    (ARMvduplane (v4i32 QPR:$Vm),
+                                                  VectorIndex32_Hi:$lane)))))),
+            (VSDOTQI QPR:$Vd, QPR:$Vn,
+                      (EXTRACT_SUBREG QPR:$Vm, dsub_1), VectorIndex32_Hi:$lane)>;
+  def : Pat<(v4i32 (int_arm_neon_udot (v4i32 QPR:$Vd),
+                        (v16i8 QPR:$Vn),
+                        (v16i8 (bitconvert (v4i32
+                                    (ARMvduplane (v4i32 QPR:$Vm),
+                                                  VectorIndex32_Hi:$lane)))))),
+            (VUDOTQI QPR:$Vd, QPR:$Vn,
+                      (EXTRACT_SUBREG QPR:$Vm, dsub_1), VectorIndex32_Hi:$lane)>;
+}
+
 // v8.6A matrix multiplication extension
 let Predicates = [HasMatMulInt8] in {
   class N3VMatMul<bit B, bit U, string Asm, string AsmTy,
@@ -7362,28 +7403,28 @@ def SHA256SU1 : N3SHA3Op<"256su1", 0b00110, 0b10, int_arm_neon_sha256su1>;
 let Predicates = [HasNEON] in {
 def : Pat<(i32 (int_arm_neon_sha1h i32:$Rn)),
           (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG
-              (SHA1H (SUBREG_TO_REG (i64 0),
+              (SHA1H (INSERT_SUBREG (IMPLICIT_DEF),
                                     (f32 (COPY_TO_REGCLASS i32:$Rn, SPR)),
                                     ssub_0)),
               ssub_0)), GPR)>;
 
 def : Pat<(v4i32 (int_arm_neon_sha1c v4i32:$hash_abcd, i32:$hash_e, v4i32:$wk)),
           (SHA1C v4i32:$hash_abcd,
-                 (SUBREG_TO_REG (i64 0),
+                 (INSERT_SUBREG (IMPLICIT_DEF),
                                 (f32 (COPY_TO_REGCLASS i32:$hash_e, SPR)),
                                 ssub_0),
                  v4i32:$wk)>;
 
 def : Pat<(v4i32 (int_arm_neon_sha1m v4i32:$hash_abcd, i32:$hash_e, v4i32:$wk)),
           (SHA1M v4i32:$hash_abcd,
-                 (SUBREG_TO_REG (i64 0),
+                 (INSERT_SUBREG (IMPLICIT_DEF),
                                 (f32 (COPY_TO_REGCLASS i32:$hash_e, SPR)),
                                 ssub_0),
                  v4i32:$wk)>;
 
 def : Pat<(v4i32 (int_arm_neon_sha1p v4i32:$hash_abcd, i32:$hash_e, v4i32:$wk)),
           (SHA1P v4i32:$hash_abcd,
-                 (SUBREG_TO_REG (i64 0),
+                 (INSERT_SUBREG (IMPLICIT_DEF),
                                 (f32 (COPY_TO_REGCLASS i32:$hash_e, SPR)),
                                 ssub_0),
                  v4i32:$wk)>;

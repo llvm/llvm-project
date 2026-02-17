@@ -101,57 +101,88 @@ multiclass int_cond_alias<string cond, int condVal> {
   // b<cond> %icc, $imm
   def : InstAlias<!strconcat(!strconcat("b", cond), " %icc, $imm"),
                   (BPICC brtarget:$imm, condVal)>, Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("b", cond), " %ncc, $imm"),
+                  (BPICC brtarget:$imm, condVal)>, Requires<[HasV9, Is32Bit]>;
 
   // b<cond>,pt %icc, $imm
   def : InstAlias<!strconcat(!strconcat("b", cond), ",pt %icc, $imm"),
                   (BPICC brtarget:$imm, condVal)>, Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("b", cond), ",pt %ncc, $imm"),
+                  (BPICC brtarget:$imm, condVal)>, Requires<[HasV9, Is32Bit]>;
 
   // b<cond>,a %icc, $imm
   def : InstAlias<!strconcat(!strconcat("b", cond), ",a %icc, $imm"),
                   (BPICCA brtarget:$imm, condVal)>, Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("b", cond), ",a %ncc, $imm"),
+                  (BPICCA brtarget:$imm, condVal)>, Requires<[HasV9, Is32Bit]>;
 
   // b<cond>,a,pt %icc, $imm
   def : InstAlias<!strconcat(!strconcat("b", cond), ",a,pt %icc, $imm"),
                   (BPICCA brtarget:$imm, condVal)>, Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("b", cond), ",a,pt %ncc, $imm"),
+                  (BPICCA brtarget:$imm, condVal)>, Requires<[HasV9, Is32Bit]>;
 
   // b<cond>,pn %icc, $imm
   def : InstAlias<!strconcat(!strconcat("b", cond), ",pn %icc, $imm"),
                   (BPICCNT brtarget:$imm, condVal)>, Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("b", cond), ",pn %ncc, $imm"),
+                  (BPICCNT brtarget:$imm, condVal)>, Requires<[HasV9, Is32Bit]>;
 
   // b<cond>,a,pn %icc, $imm
   def : InstAlias<!strconcat(!strconcat("b", cond), ",a,pn %icc, $imm"),
                   (BPICCANT brtarget:$imm, condVal)>, Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("b", cond), ",a,pn %ncc, $imm"),
+                  (BPICCANT brtarget:$imm, condVal)>, Requires<[HasV9, Is32Bit]>;
 
   // b<cond> %xcc, $imm
   def : InstAlias<!strconcat(!strconcat("b", cond), " %xcc, $imm"),
+                  (BPXCC brtarget:$imm, condVal)>, Requires<[Is64Bit]>;
+  def : InstAlias<!strconcat(!strconcat("b", cond), " %ncc, $imm"),
                   (BPXCC brtarget:$imm, condVal)>, Requires<[Is64Bit]>;
 
   // b<cond>,pt %xcc, $imm
   def : InstAlias<!strconcat(!strconcat("b", cond), ",pt %xcc, $imm"),
                   (BPXCC brtarget:$imm, condVal)>, Requires<[Is64Bit]>;
+  def : InstAlias<!strconcat(!strconcat("b", cond), ",pt %ncc, $imm"),
+                  (BPXCC brtarget:$imm, condVal)>, Requires<[Is64Bit]>;
 
   // b<cond>,a %xcc, $imm
   def : InstAlias<!strconcat(!strconcat("b", cond), ",a %xcc, $imm"),
+                  (BPXCCA brtarget:$imm, condVal)>, Requires<[Is64Bit]>;
+  def : InstAlias<!strconcat(!strconcat("b", cond), ",a %ncc, $imm"),
                   (BPXCCA brtarget:$imm, condVal)>, Requires<[Is64Bit]>;
 
   // b<cond>,a,pt %xcc, $imm
   def : InstAlias<!strconcat(!strconcat("b", cond), ",a,pt %xcc, $imm"),
                   (BPXCCA brtarget:$imm, condVal)>, Requires<[Is64Bit]>;
+  def : InstAlias<!strconcat(!strconcat("b", cond), ",a,pt %ncc, $imm"),
+                  (BPXCCA brtarget:$imm, condVal)>, Requires<[Is64Bit]>;
 
   // b<cond>,pn %xcc, $imm
   def : InstAlias<!strconcat(!strconcat("b", cond), ",pn %xcc, $imm"),
+                  (BPXCCNT brtarget:$imm, condVal)>, Requires<[Is64Bit]>;
+  def : InstAlias<!strconcat(!strconcat("b", cond), ",pn %ncc, $imm"),
                   (BPXCCNT brtarget:$imm, condVal)>, Requires<[Is64Bit]>;
 
   // b<cond>,a,pn %xcc, $imm
   def : InstAlias<!strconcat(!strconcat("b", cond), ",a,pn %xcc, $imm"),
                   (BPXCCANT brtarget:$imm, condVal)>, Requires<[Is64Bit]>;
-
+  def : InstAlias<!strconcat(!strconcat("b", cond), ",a,pn %ncc, $imm"),
+                  (BPXCCANT brtarget:$imm, condVal)>, Requires<[Is64Bit]>;
 
   defm : intcond_mov_alias<cond, condVal, " %icc",
                             MOVICCrr, MOVICCri,
                             FMOVS_ICC, FMOVD_ICC>, Requires<[HasV9]>;
 
+  defm : intcond_mov_alias<cond, condVal, " %ncc",
+                            MOVICCrr, MOVICCri,
+                            FMOVS_ICC, FMOVD_ICC>, Requires<[Is32Bit, HasV9]>;
+
   defm : intcond_mov_alias<cond, condVal, " %xcc",
+                            MOVXCCrr, MOVXCCri,
+                            FMOVS_XCC, FMOVD_XCC>, Requires<[Is64Bit]>;
+
+  defm : intcond_mov_alias<cond, condVal, " %ncc",
                             MOVXCCrr, MOVXCCri,
                             FMOVS_XCC, FMOVD_XCC>, Requires<[Is64Bit]>;
 
@@ -159,7 +190,13 @@ multiclass int_cond_alias<string cond, int condVal> {
   def : InstAlias<!strconcat(!strconcat("fmovq", cond), " %icc, $rs2, $rd"),
                   (FMOVQ_ICC QFPRegs:$rd, QFPRegs:$rs2, condVal)>,
                   Requires<[HasV9, HasHardQuad]>;
+  def : InstAlias<!strconcat(!strconcat("fmovq", cond), " %ncc, $rs2, $rd"),
+                  (FMOVQ_ICC QFPRegs:$rd, QFPRegs:$rs2, condVal)>,
+                  Requires<[HasV9, Is32Bit, HasHardQuad]>;
   def : InstAlias<!strconcat(!strconcat("fmovq", cond), " %xcc, $rs2, $rd"),
+                  (FMOVQ_XCC QFPRegs:$rd, QFPRegs:$rs2, condVal)>,
+                  Requires<[Is64Bit, HasHardQuad]>;
+  def : InstAlias<!strconcat(!strconcat("fmovq", cond), " %ncc, $rs2, $rd"),
                   (FMOVQ_XCC QFPRegs:$rd, QFPRegs:$rs2, condVal)>,
                   Requires<[Is64Bit, HasHardQuad]>;
 
@@ -167,48 +204,65 @@ multiclass int_cond_alias<string cond, int condVal> {
   def : InstAlias<!strconcat(!strconcat("t", cond), " %icc, $rs2"),
                   (TICCrr G0, IntRegs:$rs2, condVal)>,
                   Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("t", cond), " %ncc, $rs2"),
+                  (TICCrr G0, IntRegs:$rs2, condVal)>,
+                  Requires<[HasV9, Is32Bit]>;
+
   // t<cond> %icc, rs1 + rs2
   def : InstAlias<!strconcat(!strconcat("t", cond), " %icc, $rs1 + $rs2"),
                   (TICCrr IntRegs:$rs1, IntRegs:$rs2, condVal)>,
                   Requires<[HasV9]>;
-
+  def : InstAlias<!strconcat(!strconcat("t", cond), " %ncc, $rs1 + $rs2"),
+                  (TICCrr IntRegs:$rs1, IntRegs:$rs2, condVal)>,
+                  Requires<[HasV9, Is32Bit]>;
 
   // t<cond> %xcc, rs => t<cond> %xcc, G0 + rs
   def : InstAlias<!strconcat(!strconcat("t", cond), " %xcc, $rs2"),
                   (TXCCrr G0, IntRegs:$rs2, condVal)>,
                   Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("t", cond), " %ncc, $rs2"),
+                  (TXCCrr G0, IntRegs:$rs2, condVal)>,
+                  Requires<[HasV9, Is64Bit]>;
+
   // t<cond> %xcc, rs1 + rs2
   def : InstAlias<!strconcat(!strconcat("t", cond), " %xcc, $rs1 + $rs2"),
                   (TXCCrr IntRegs:$rs1, IntRegs:$rs2, condVal)>,
                   Requires<[HasV9]>;
-
-
-  // t<cond> rs=> t<cond> %icc,  G0 + rs2
-  //def : InstAlias<!strconcat(!strconcat("t", cond), " $rs2"),
-  //                (TICCrr G0, IntRegs:$rs2, condVal)>,
-  //                Requires<[HasV9]>;
-
-  // t<cond> rs1 + rs2 => t<cond> %icc, rs1 + rs2
-  //def : InstAlias<!strconcat(!strconcat("t", cond), " $rs1 + $rs2"),
-  //                (TICCrr IntRegs:$rs1, IntRegs:$rs2, condVal)>,
-  //                Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("t", cond), " %ncc, $rs1 + $rs2"),
+                  (TXCCrr IntRegs:$rs1, IntRegs:$rs2, condVal)>,
+                  Requires<[HasV9, Is64Bit]>;
 
   // t<cond> %icc, imm => t<cond> %icc, G0 + imm
   def : InstAlias<!strconcat(!strconcat("t", cond), " %icc, $imm"),
                   (TICCri G0, i32imm:$imm, condVal)>,
                   Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("t", cond), " %ncc, $imm"),
+                  (TICCri G0, i32imm:$imm, condVal)>,
+                  Requires<[HasV9, Is32Bit]>;
+
   // t<cond> %icc, rs1 + imm
   def : InstAlias<!strconcat(!strconcat("t", cond), " %icc, $rs1 + $imm"),
                   (TICCri IntRegs:$rs1, i32imm:$imm, condVal)>,
                   Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("t", cond), " %ncc, $rs1 + $imm"),
+                  (TICCri IntRegs:$rs1, i32imm:$imm, condVal)>,
+                  Requires<[HasV9, Is32Bit]>;
+
   // t<cond> %xcc, imm => t<cond> %xcc, G0 + imm
   def : InstAlias<!strconcat(!strconcat("t", cond), " %xcc, $imm"),
                   (TXCCri G0, i32imm:$imm, condVal)>,
                   Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("t", cond), " %ncc, $imm"),
+                  (TXCCri G0, i32imm:$imm, condVal)>,
+                  Requires<[HasV9, Is64Bit]>;
+
   // t<cond> %xcc, rs1 + imm
   def : InstAlias<!strconcat(!strconcat("t", cond), " %xcc, $rs1 + $imm"),
                   (TXCCri IntRegs:$rs1, i32imm:$imm, condVal)>,
                   Requires<[HasV9]>;
+  def : InstAlias<!strconcat(!strconcat("t", cond), " %ncc, $rs1 + $imm"),
+                  (TXCCri IntRegs:$rs1, i32imm:$imm, condVal)>,
+                  Requires<[HasV9, Is64Bit]>;
 
   // t<cond> imm => t<cond> G0 + imm
   def : InstAlias<!strconcat(!strconcat("t", cond), " $imm"),
@@ -599,7 +653,8 @@ def : InstAlias<"clrh [$addr]", (STHrr MEMrr:$addr, G0), 0>;
 def : InstAlias<"clrh [$addr]", (STHri MEMri:$addr, G0), 0>;
 def : InstAlias<"clr [$addr]", (STrr MEMrr:$addr, G0), 0>;
 def : InstAlias<"clr [$addr]", (STri MEMri:$addr, G0), 0>;
-
+def : InstAlias<"clrx [$addr]", (STXrr MEMrr:$addr, G0), 0>, Requires<[HasV9]>;
+def : InstAlias<"clrx [$addr]", (STXri MEMri:$addr, G0), 0>, Requires<[HasV9]>;
 
 // mov reg_or_imm, rd -> or %g0, reg_or_imm, rd
 def : InstAlias<"mov $rs2, $rd", (ORrr IntRegs:$rd, G0, IntRegs:$rs2)>;
@@ -701,6 +756,31 @@ def : MnemonicAlias<"addccc", "addxcc">, Requires<[HasV9]>;
 def : MnemonicAlias<"subc", "subx">, Requires<[HasV9]>;
 def : MnemonicAlias<"subccc", "subxcc">, Requires<[HasV9]>;
 
+// Solaris Natural Instructions extension
+// We match GCC's coverage of the extension; everything except setn & setnhi.
+// See also: https://docs.oracle.com/cd/E53394_01/html/E54833/gmael.html
+let Predicates = [Is32Bit] in {
+  def : MnemonicAlias<"ldn", "ld">;
+  def : MnemonicAlias<"stn", "st">;
+  def : MnemonicAlias<"ldna", "lda">;
+  def : MnemonicAlias<"stna", "sta">;
+  def : MnemonicAlias<"casn", "cas">;
+  def : MnemonicAlias<"slln", "sll">;
+  def : MnemonicAlias<"srln", "srl">;
+  def : MnemonicAlias<"sran", "sra">;
+  def : MnemonicAlias<"clrn", "clr">;
+}
+let Predicates = [Is64Bit] in {
+  def : MnemonicAlias<"ldn", "ldx">;
+  def : MnemonicAlias<"stn", "stx">;
+  def : MnemonicAlias<"ldna", "ldxa">;
+  def : MnemonicAlias<"stna", "stxa">;
+  def : MnemonicAlias<"casn", "casx">;
+  def : MnemonicAlias<"slln", "sllx">;
+  def : MnemonicAlias<"srln", "srlx">;
+  def : MnemonicAlias<"sran", "srax">;
+  def : MnemonicAlias<"clrn", "clrx">;
+}
 
 def : InstAlias<"fcmps $rs1, $rs2", (V9FCMPS FCC0, FPRegs:$rs1, FPRegs:$rs2)>;
 def : InstAlias<"fcmpd $rs1, $rs2", (V9FCMPD FCC0, DFPRegs:$rs1, DFPRegs:$rs2)>;

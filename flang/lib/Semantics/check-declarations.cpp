@@ -961,7 +961,10 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "!DIR$ IGNORE_TKR(R) may not apply in an ELEMENTAL procedure"_err_en_US);
       }
-      if (IsPassedViaDescriptor(symbol)) {
+      // Descriptor based dummy args passed with ignore_tkr(c) are allowed
+      // to have type/kind/rank differences
+      if (IsPassedViaDescriptor(symbol) &&
+          !ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
         if (IsAllocatableOrObjectPointer(&symbol) &&
             !ignoreTKR.test(common::IgnoreTKR::Pointer)) {
           if (inExplicitExternalInterface) {
@@ -1188,10 +1191,10 @@ void CheckHelper::CheckObjectEntity(
       }
       break;
     case common::CUDADataAttr::Managed:
-      if (!IsAutomatic(symbol) && !IsAllocatable(symbol) &&
+      if (!IsAutomatic(symbol) && !IsAllocatableOrPointer(symbol) &&
           !details.isDummy() && !evaluate::IsExplicitShape(symbol)) {
         messages_.Say(
-            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, explicit shape, or a dummy argument"_err_en_US,
+            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, pointer, automatic, explicit shape, or a dummy argument"_err_en_US,
             symbol.name());
       }
       break;
@@ -2608,9 +2611,6 @@ void CheckHelper::CheckPassArg(
   if (!passArg.has<ObjectEntityDetails>()) {
     msg = "Passed-object dummy argument '%s' of procedure '%s'"
           " must be a data object"_err_en_US;
-  } else if (passArg.attrs().test(Attr::POINTER)) {
-    msg = "Passed-object dummy argument '%s' of procedure '%s'"
-          " may not have the POINTER attribute"_err_en_US;
   } else if (passArg.attrs().test(Attr::ALLOCATABLE)) {
     msg = "Passed-object dummy argument '%s' of procedure '%s'"
           " may not have the ALLOCATABLE attribute"_err_en_US;
@@ -2620,6 +2620,23 @@ void CheckHelper::CheckPassArg(
   } else if (passArg.Rank() > 0) {
     msg = "Passed-object dummy argument '%s' of procedure '%s'"
           " must be scalar"_err_en_US;
+  } else if (passArg.attrs().test(Attr::POINTER)) {
+    if (context_.IsEnabled(common::LanguageFeature::PointerPassObject) &&
+        IsIntentIn(passArg)) {
+      if (proc.has<ProcBindingDetails>()) {
+        // Extension: allow a passed object to be an INTENT(IN) POINTER.
+        // Only works for TBPs, needs lowering work for proc ptr components.
+        Warn(common::LanguageFeature::PointerPassObject, name,
+            "Passed-object dummy argument '%s' of procedure '%s' that is an INTENT(IN) POINTER is not standard"_port_en_US,
+            *passName, name);
+      } else {
+        msg =
+            "Passed-object dummy argument '%s' of procedure '%s' used as procedure pointer component interface may not have the POINTER attribute"_err_en_US;
+      }
+    } else {
+      msg =
+          "Passed-object dummy argument '%s' of procedure '%s' may not have the POINTER attribute unless INTENT(IN)"_err_en_US;
+    }
   }
   if (msg) {
     messages_.Say(name, std::move(*msg), passName.value(), name);
@@ -3848,9 +3865,15 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
   } else if (auto dyType{evaluate::DynamicType::From(relevant)}) {
     if (dyType->IsPolymorphic() && !dyType->IsAssumedType() &&
         !(IsDummy(symbol) && !IsProcedure(relevant))) { // C708
-      messages_.Say(
-          "CLASS entity '%s' must be a dummy argument, allocatable, or object pointer"_err_en_US,
-          symbol.name());
+      if (IsProcedure(symbol)) {
+        messages_.Say(
+            "Polymorphic function%s '%s' must have an explicit interface whose result is ALLOCATABLE or POINTER"_err_en_US,
+            IsPointer(symbol) ? " pointer" : "", symbol.name());
+      } else {
+        messages_.Say(
+            "CLASS entity '%s' must be a dummy argument, allocatable, or object pointer"_err_en_US,
+            symbol.name());
+      }
     }
     if (dyType->HasDeferredTypeParameter()) { // C702
       messages_.Say(

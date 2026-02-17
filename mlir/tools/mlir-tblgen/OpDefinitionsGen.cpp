@@ -970,7 +970,7 @@ genAttributeVerifier(const OpOrAdaptorHelper &emitHelper, FmtContext &ctx,
   const char *const findRequiredAttr = R"(
 while (true) {{
   if (namedAttrIt == namedAttrRange.end())
-    return {1}"requires attribute '{2}'");
+    return {1}requires attribute '{2}'");
   if (namedAttrIt->getName() == {0}) {{
     tblgen_{2} = namedAttrIt->getValue();
     break;
@@ -2641,7 +2641,14 @@ void OpEmitter::genInlineCreateBody(
   std::string nonBuilderStateArgs = "";
   if (!nonBuilderStateArgsList.empty()) {
     llvm::raw_string_ostream nonBuilderStateArgsOS(nonBuilderStateArgs);
-    interleaveComma(nonBuilderStateArgsList, nonBuilderStateArgsOS);
+    interleave(
+        nonBuilderStateArgsList,
+        [&](StringRef name) {
+          nonBuilderStateArgsOS << "std::forward<decltype(" << name << ")>("
+                                << name << ')';
+        },
+        [&] { nonBuilderStateArgsOS << ", "; });
+
     nonBuilderStateArgs = ", " + nonBuilderStateArgs;
   }
   if (cWithLoc)

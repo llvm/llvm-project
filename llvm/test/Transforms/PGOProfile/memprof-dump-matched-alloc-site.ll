@@ -26,7 +26,13 @@
 ; REQUIRES: x86_64-linux
 ; RUN: split-file %s %t
 ; RUN: llvm-profdata merge %t/memprof-dump-matched-alloc-site.yaml -o %t/memprof-dump-matched-alloc-site.memprofdata
-; RUN: opt < %t/memprof-dump-matched-alloc-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-alloc-site.memprofdata>' -memprof-print-match-info -S 2>&1 | FileCheck %s
+; RUN: opt < %t/memprof-dump-matched-alloc-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-alloc-site.memprofdata>' -memprof-print-match-info -memprof-print-function-guids -S -pass-remarks=memprof 2>&1 | FileCheck %s --check-prefixes=MATCH,FUNCGUID,REMARK
+;; Test that -memprof-print-matched-alloc-stack enables reporting of the full
+;; matched stack.
+; RUN: opt < %t/memprof-dump-matched-alloc-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-alloc-site.memprofdata>' -memprof-print-match-info -memprof-print-matched-alloc-stack -S 2>&1 | FileCheck %s --check-prefixes=MATCH,STACK
+;; Test that -memprof-print-matched-alloc-stack without -memprof-print-match-info
+;; is a noop.
+; RUN: opt < %t/memprof-dump-matched-alloc-site.ll -passes='memprof-use<profile-filename=%t/memprof-dump-matched-alloc-site.memprofdata>' -memprof-print-matched-alloc-stack -S 2>&1 | FileCheck %s --implicit-check-not="context with id" --implicit-check-not="and call stack"
 
 ;--- memprof-dump-matched-alloc-site.yaml
 ---
@@ -77,9 +83,21 @@ HeapProfileRecords:
       # Kept empty here because this section is irrelevant for this test.
 ...
 ;--- memprof-dump-matched-alloc-site.ll
-; CHECK: MemProf notcold context with id 5736731103568718490 has total profiled size 3 is matched with 1 frames
-; CHECK: MemProf notcold context with id 5736731103568718490 has total profiled size 3 is matched with 2 frames
-; CHECK: MemProf notcold context with id 5736731103568718490 has total profiled size 3 is matched with 3 frames
+
+;; From -pass-remarks=memprof and -memprof-print-function-guids
+; FUNCGUID: MemProf: Function GUID 4708092051066754107 is _Z2f1v
+; REMARK: remark: memprof-dump-matched-alloc-site.cc:1:21: call in function _Z2f1v matched alloc context with alloc type notcold total size 3 full context id 5736731103568718490 frame count 1
+; FUNCGUID: MemProf: Function GUID 14255129117669598641 is _Z2f2v
+; REMARK: remark: memprof-dump-matched-alloc-site.cc:1:21: call in function _Z2f2v matched alloc context with alloc type notcold total size 3 full context id 5736731103568718490 frame count 2
+; FUNCGUID: MemProf: Function GUID 2771528421763978342 is _Z2f3v
+; REMARK: remark: memprof-dump-matched-alloc-site.cc:1:21: call in function _Z2f3v matched alloc context with alloc type notcold total size 3 full context id 5736731103568718490 frame count 3
+
+; MATCH: MemProf notcold context with id 5736731103568718490 has total profiled size 3 is matched with 1 frames
+; STACK-SAME: and call stack 16675831946704128299 1244320836757332728 8373967866436022208 5401059281181789382
+; MATCH: MemProf notcold context with id 5736731103568718490 has total profiled size 3 is matched with 2 frames
+; STACK-SAME: and call stack 16675831946704128299 1244320836757332728 8373967866436022208 5401059281181789382
+; MATCH: MemProf notcold context with id 5736731103568718490 has total profiled size 3 is matched with 3 frames
+; STACK-SAME: and call stack 16675831946704128299 1244320836757332728 8373967866436022208 5401059281181789382
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

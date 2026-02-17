@@ -86,7 +86,8 @@ public:
     return true;
   }
 
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
 
   bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                               SDValue C) const override;

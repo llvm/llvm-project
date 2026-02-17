@@ -421,8 +421,17 @@ define void @Foo2() {
     auto *GV2 = M2->getNamedValue("GV2");
     ASSERT_TRUE(GV2);
     ASSERT_EQ(GV2->getParent(), &*M2);
+
+    auto *Foo2MD = M2->getNamedMetadata("foo2");
+    auto *Bar2MD = M2->getNamedMetadata("bar2");
     *M1 = std::move(*M2);
     ASSERT_EQ(GV2->getParent(), &*M1);
+    ASSERT_EQ(M1->getNamedMetadata("foo2"), Foo2MD);
+    ASSERT_EQ(M1->getNamedMetadata("bar2"), Bar2MD);
+    ASSERT_EQ(M1->getNamedMetadata("foo1"), nullptr);
+
+    for (const NamedMDNode &NMD : M1->named_metadata())
+      ASSERT_EQ(NMD.getParent(), &*M1);
   }
 
   std::string M1Print;
@@ -431,6 +440,84 @@ define void @Foo2() {
     Os << "\n" << *M1;
   }
   ASSERT_EQ(M2Str, M1Print);
+}
+
+TEST(ModuleTest, FunctionDefinitions) {
+  // Test getFunctionDefs() method which returns only functions with bodies
+  LLVMContext Context;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+declare void @Decl1()
+declare void @Decl2()
+
+define void @Def1() {
+  ret void
+}
+
+define void @Def2() {
+  ret void
+}
+
+declare void @Decl3()
+
+define void @Def3() {
+  ret void
+}
+)",
+                                                  Err, Context);
+  ASSERT_TRUE(M);
+
+  // Count total functions (should be 6: 3 declarations + 3 definitions)
+  size_t TotalFunctions = 0;
+  for (Function &F : *M) {
+    (void)F;
+    ++TotalFunctions;
+  }
+  EXPECT_EQ(TotalFunctions, 6u);
+
+  // Count function definitions only (should be 3)
+  size_t DefinitionCount = 0;
+  for (Function &F : M->getFunctionDefs()) {
+    EXPECT_FALSE(F.isDeclaration());
+    ++DefinitionCount;
+  }
+  EXPECT_EQ(DefinitionCount, 3u);
+
+  // Verify the names of the definitions
+  auto DefRange = M->getFunctionDefs();
+  auto It = DefRange.begin();
+  EXPECT_EQ(It->getName(), "Def1");
+  ++It;
+  EXPECT_EQ(It->getName(), "Def2");
+  ++It;
+  EXPECT_EQ(It->getName(), "Def3");
+  ++It;
+  EXPECT_EQ(It, DefRange.end());
+}
+
+TEST(ModuleTest, FunctionDefinitionsEmpty) {
+  // Test getFunctionDefs() with no definitions (only declarations)
+  LLVMContext Context;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+declare void @Decl1()
+declare void @Decl2()
+declare void @Decl3()
+)",
+                                                  Err, Context);
+  ASSERT_TRUE(M);
+
+  // Should have functions
+  EXPECT_FALSE(M->empty());
+  EXPECT_EQ(M->size(), 3u);
+
+  // But no definitions
+  size_t DefinitionCount = 0;
+  for (Function &F : M->getFunctionDefs()) {
+    (void)F;
+    ++DefinitionCount;
+  }
+  EXPECT_EQ(DefinitionCount, 0u);
 }
 
 } // end namespace

@@ -35,7 +35,8 @@ int main() {
 // RUN:   -nostdlib
 // RUN: llvm-bolt %t_pie.exe -o %t.bolt
 
-// RUN: %clang %cflags -fPIC -shared %s -o %t.so -Wl,-q -fuse-ld=lld
+// RUN: %clang %cflags -Wl,--unresolved-symbols=ignore-all -fPIC -shared %s -o \
+// RUN:   %t.so -Wl,-q -fuse-ld=lld
 // RUN: llvm-objdump -d -r --disassemble-symbols=main %t.so | FileCheck %s
 // RUN: llvm-bolt %t.so -o %t.bolt.so
 

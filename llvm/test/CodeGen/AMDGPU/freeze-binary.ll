@@ -152,7 +152,7 @@ define <8 x float> @freeze_frem_vec(<8 x float> %input) nounwind {
 ; CHECK-NEXT:    v_trunc_f32_e32 v12, v0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_sub_f32_e32 v0, v0, v12
-; CHECK-NEXT:    s_waitcnt_depctr 0xfff
+; CHECK-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; CHECK-NEXT:    v_fma_f32 v17, -v11, v13, 1.0
 ; CHECK-NEXT:    v_fmac_f32_e32 v13, v17, v13
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -177,7 +177,7 @@ define <8 x float> @freeze_frem_vec(<8 x float> %input) nounwind {
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_fma_f32 v15, -v8, v19, v14
 ; CHECK-NEXT:    v_fmac_f32_e32 v19, v15, v10
-; CHECK-NEXT:    s_waitcnt_depctr 0xfff
+; CHECK-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; CHECK-NEXT:    v_fma_f32 v15, -v16, v18, 1.0
 ; CHECK-NEXT:    v_mul_f32_e32 v9, 0x3e800000, v3
 ; CHECK-NEXT:    v_fma_f32 v8, -v8, v19, v14

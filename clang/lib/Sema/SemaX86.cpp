@@ -510,6 +510,15 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_tdphf8ps:
   case X86::BI__builtin_ia32_tmmultf32ps:
     return CheckBuiltinTileRangeAndDuplicate(TheCall, {0, 1, 2});
+  case X86::BI__builtin_ia32_tcvtrowps2bf16hi:
+  case X86::BI__builtin_ia32_tcvtrowps2bf16li:
+  case X86::BI__builtin_ia32_tcvtrowps2phhi:
+  case X86::BI__builtin_ia32_tcvtrowps2phli:
+  case X86::BI__builtin_ia32_tcvtrowd2psi:
+  case X86::BI__builtin_ia32_tilemovrowi:
+    return CheckBuiltinTileArgumentsRange(TheCall, 0) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 255,
+                                           /*RangeIsError=*/false);
   }
 }
 static bool isX86_32Builtin(unsigned BuiltinID) {
@@ -1044,9 +1053,10 @@ void SemaX86::handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL) {
                  X86ForceAlignArgPointerAttr(getASTContext(), AL));
 }
 
-bool SemaX86::checkTargetClonesAttr(
-    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
-    SmallVectorImpl<SmallString<64>> &NewParams) {
+bool SemaX86::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
+                                    const SmallVectorImpl<SourceLocation> &Locs,
+                                    SmallVectorImpl<SmallString<64>> &NewParams,
+                                    SourceLocation AttrLoc) {
   using namespace DiagAttrParams;
 
   assert(Params.size() == Locs.size() &&
@@ -1096,7 +1106,7 @@ bool SemaX86::checkTargetClonesAttr(
     Diag(Locs[0], diag::warn_target_clone_mixed_values);
 
   if (!HasDefault)
-    return Diag(Locs[0], diag::err_target_clone_must_have_default);
+    return Diag(AttrLoc, diag::err_target_clone_must_have_default);
 
   return false;
 }

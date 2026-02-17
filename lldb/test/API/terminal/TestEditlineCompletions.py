@@ -72,11 +72,11 @@ class EditlineCompletionsTest(PExpectTest):
         self.child.expect("Available completions:")
         self.child.expect("        _regexp-attach")
         self.child.expect("        _regexp-break")
+        self.child.expect("        _regexp-break-add")
         self.child.expect("        _regexp-bt")
         self.child.expect("        _regexp-display")
         self.child.expect("        _regexp-down")
         self.child.expect("        _regexp-env")
-        self.child.expect("        _regexp-jump")
         self.child.expect("More")
 
     @skipIfAsan

@@ -2,24 +2,10 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32,-wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG %s
 ; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32,-wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
 
-declare <2 x i32>    @llvm.amdgcn.global.load.tr4.b64.v2i32.p1(ptr addrspace(1))
-declare <2 x i32>    @llvm.amdgcn.global.load.tr.b64.v2i32.p1(ptr addrspace(1))
-declare <3 x i32>    @llvm.amdgcn.global.load.tr6.b96.v3i32.p1(ptr addrspace(1))
-declare <8 x i16>    @llvm.amdgcn.global.load.tr.b128.v8i16.p1(ptr addrspace(1))
-declare <8 x half>   @llvm.amdgcn.global.load.tr.b128.v8f16.p1(ptr addrspace(1))
-declare <8 x bfloat> @llvm.amdgcn.global.load.tr.b128.v8bf16.p1(ptr addrspace(1))
-
-declare <2 x i32>    @llvm.amdgcn.ds.load.tr4.b64.v2i32.p3(ptr addrspace(3))
-declare <2 x i32>    @llvm.amdgcn.ds.load.tr8.b64.v2i32.p3(ptr addrspace(3))
-declare <3 x i32>    @llvm.amdgcn.ds.load.tr6.b96.v3i32.p3(ptr addrspace(3))
-declare <8 x i16>    @llvm.amdgcn.ds.load.tr16.b128.v8i16.p3(ptr addrspace(3))
-declare <8 x half>   @llvm.amdgcn.ds.load.tr16.b128.v8f16.p3(ptr addrspace(3))
-declare <8 x bfloat> @llvm.amdgcn.ds.load.tr16.b128.v8bf16.p3(ptr addrspace(3))
-
-
 define amdgpu_ps void @global_load_tr4_b64_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr4_b64_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    global_load_tr4_b64 v[0:1], v[0:1], off offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b64 v[2:3], v[0:1], off
@@ -34,6 +20,7 @@ entry:
 define amdgpu_ps void @global_load_tr4_b64_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr4_b64_saddr:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    global_load_tr4_b64 v[2:3], v2, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -49,6 +36,7 @@ entry:
 define amdgpu_ps void @global_load_tr8_b64_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr8_b64_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    global_load_tr8_b64 v[0:1], v[0:1], off offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b64 v[2:3], v[0:1], off
@@ -63,6 +51,7 @@ entry:
 define amdgpu_ps void @global_load_tr8_b64_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr8_b64_saddr:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    global_load_tr8_b64 v[2:3], v2, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -78,6 +67,7 @@ entry:
 define amdgpu_ps void @global_load_tr6_b96_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr6_b96_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    global_load_tr6_b96 v[4:6], v[0:1], off offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b96 v[2:3], v[4:6], off
@@ -92,6 +82,7 @@ entry:
 define amdgpu_ps void @global_load_tr6_b96_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr6_b96_saddr:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    global_load_tr6_b96 v[2:4], v2, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -107,6 +98,7 @@ entry:
 define amdgpu_ps void @global_load_tr16_b128_v8i16_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr16_b128_v8i16_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    global_load_tr16_b128 v[4:7], v[0:1], off offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b128 v[2:3], v[4:7], off
@@ -121,6 +113,7 @@ entry:
 define amdgpu_ps void @global_load_tr16_b128_v8i16_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr16_b128_v8i16_saddr:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    global_load_tr16_b128 v[2:5], v2, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -136,6 +129,7 @@ entry:
 define amdgpu_ps void @global_load_tr16_b128_v8f16_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr16_b128_v8f16_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    global_load_tr16_b128 v[4:7], v[0:1], off offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b128 v[2:3], v[4:7], off
@@ -150,6 +144,7 @@ entry:
 define amdgpu_ps void @global_load_tr16_b128_v8f16_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr16_b128_v8f16_saddr:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    global_load_tr16_b128 v[2:5], v2, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -165,6 +160,7 @@ entry:
 define amdgpu_ps void @global_load_tr16_b128_v8b16_vaddr(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr16_b128_v8b16_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    global_load_tr16_b128 v[4:7], v[0:1], off offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b128 v[2:3], v[4:7], off
@@ -179,6 +175,7 @@ entry:
 define amdgpu_ps void @global_load_tr16_b128_v8bf16_saddr(ptr addrspace(1) inreg %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: global_load_tr16_b128_v8bf16_saddr:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    global_load_tr16_b128 v[2:5], v2, s[0:1] offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -194,6 +191,7 @@ entry:
 define amdgpu_ps void @ds_load_tr4_b64(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
 ; GFX1250-SDAG-LABEL: ds_load_tr4_b64:
 ; GFX1250-SDAG:       ; %bb.0: ; %entry
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-SDAG-NEXT:    ds_load_tr4_b64 v[0:1], v0 offset:32
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
@@ -202,6 +200,7 @@ define amdgpu_ps void @ds_load_tr4_b64(ptr addrspace(3) %addr, ptr addrspace(1) 
 ;
 ; GFX1250-GISEL-LABEL: ds_load_tr4_b64:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    ds_load_tr4_b64 v[0:1], v0 offset:32
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
@@ -217,6 +216,7 @@ entry:
 define amdgpu_ps void @ds_load_tr8_b64(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
 ; GFX1250-SDAG-LABEL: ds_load_tr8_b64:
 ; GFX1250-SDAG:       ; %bb.0: ; %entry
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
 ; GFX1250-SDAG-NEXT:    ds_load_tr8_b64 v[0:1], v0 offset:32
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
@@ -225,6 +225,7 @@ define amdgpu_ps void @ds_load_tr8_b64(ptr addrspace(3) %addr, ptr addrspace(1) 
 ;
 ; GFX1250-GISEL-LABEL: ds_load_tr8_b64:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    ds_load_tr8_b64 v[0:1], v0 offset:32
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
@@ -240,6 +241,7 @@ entry:
 define amdgpu_ps void @ds_load_tr6_b96(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
 ; GFX1250-SDAG-LABEL: ds_load_tr6_b96:
 ; GFX1250-SDAG:       ; %bb.0: ; %entry
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v4, v1
 ; GFX1250-SDAG-NEXT:    ds_load_tr6_b96 v[0:2], v0 offset:32
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
@@ -248,6 +250,7 @@ define amdgpu_ps void @ds_load_tr6_b96(ptr addrspace(3) %addr, ptr addrspace(1) 
 ;
 ; GFX1250-GISEL-LABEL: ds_load_tr6_b96:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    ds_load_tr6_b96 v[0:2], v0 offset:32
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
@@ -263,6 +266,7 @@ entry:
 define amdgpu_ps void @ds_load_tr16_b128_v8i16(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
 ; GFX1250-SDAG-LABEL: ds_load_tr16_b128_v8i16:
 ; GFX1250-SDAG:       ; %bb.0: ; %entry
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v4, v1
 ; GFX1250-SDAG-NEXT:    ds_load_tr16_b128 v[0:3], v0 offset:32
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
@@ -271,6 +275,7 @@ define amdgpu_ps void @ds_load_tr16_b128_v8i16(ptr addrspace(3) %addr, ptr addrs
 ;
 ; GFX1250-GISEL-LABEL: ds_load_tr16_b128_v8i16:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    ds_load_tr16_b128 v[0:3], v0 offset:32
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
@@ -286,6 +291,7 @@ entry:
 define amdgpu_ps void @ds_load_tr16_b128_v8f16(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
 ; GFX1250-SDAG-LABEL: ds_load_tr16_b128_v8f16:
 ; GFX1250-SDAG:       ; %bb.0: ; %entry
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v4, v1
 ; GFX1250-SDAG-NEXT:    ds_load_tr16_b128 v[0:3], v0 offset:32
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
@@ -294,6 +300,7 @@ define amdgpu_ps void @ds_load_tr16_b128_v8f16(ptr addrspace(3) %addr, ptr addrs
 ;
 ; GFX1250-GISEL-LABEL: ds_load_tr16_b128_v8f16:
 ; GFX1250-GISEL:       ; %bb.0: ; %entry
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    ds_load_tr16_b128 v[0:3], v0 offset:32
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
@@ -309,6 +316,7 @@ entry:
 define amdgpu_ps void @ds_load_tr16_b128_v8bf16(ptr addrspace(3) %addr, ptr addrspace(1) %use) {
 ; GFX1250-LABEL: ds_load_tr16_b128_v8bf16:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v4, v1
 ; GFX1250-NEXT:    ds_load_tr16_b128 v[0:3], v0 offset:32
 ; GFX1250-NEXT:    s_wait_dscnt 0x0

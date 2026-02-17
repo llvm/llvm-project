@@ -33,76 +33,6 @@ def make_word_regex(word):
     return r"\b" + word + r"\b"
 
 
-def to_bytes(s):
-    """Return the parameter as type 'bytes', possibly encoding it.
-
-    In Python2, the 'bytes' type is the same as 'str'. In Python3, they
-    are distinct.
-
-    """
-    if isinstance(s, bytes):
-        # In Python2, this branch is taken for both 'str' and 'bytes'.
-        # In Python3, this branch is taken only for 'bytes'.
-        return s
-    # In Python2, 's' is a 'unicode' object.
-    # In Python3, 's' is a 'str' object.
-    # Encode to UTF-8 to get 'bytes' data.
-    return s.encode("utf-8")
-
-
-def to_string(b):
-    """Return the parameter as type 'str', possibly encoding it.
-
-    In Python2, the 'str' type is the same as 'bytes'. In Python3, the
-    'str' type is (essentially) Python2's 'unicode' type, and 'bytes' is
-    distinct.
-
-    """
-    if isinstance(b, str):
-        # In Python2, this branch is taken for types 'str' and 'bytes'.
-        # In Python3, this branch is taken only for 'str'.
-        return b
-    if isinstance(b, bytes):
-        # In Python2, this branch is never taken ('bytes' is handled as 'str').
-        # In Python3, this is true only for 'bytes'.
-        try:
-            return b.decode("utf-8")
-        except UnicodeDecodeError:
-            # If the value is not valid Unicode, return the default
-            # repr-line encoding.
-            return str(b)
-
-    # By this point, here's what we *don't* have:
-    #
-    #  - In Python2:
-    #    - 'str' or 'bytes' (1st branch above)
-    #  - In Python3:
-    #    - 'str' (1st branch above)
-    #    - 'bytes' (2nd branch above)
-    #
-    # The last type we might expect is the Python2 'unicode' type. There is no
-    # 'unicode' type in Python3 (all the Python3 cases were already handled). In
-    # order to get a 'str' object, we need to encode the 'unicode' object.
-    try:
-        return b.encode("utf-8")
-    except AttributeError:
-        raise TypeError("not sure how to convert %s to %s" % (type(b), str))
-
-
-def to_unicode(s):
-    """Return the parameter as type which supports unicode, possibly decoding
-    it.
-
-    In Python2, this is the unicode type. In Python3 it's the str type.
-
-    """
-    if isinstance(s, bytes):
-        # In Python2, this branch is taken for both 'str' and 'bytes'.
-        # In Python3, this branch is taken only for 'bytes'.
-        return s.decode("utf-8")
-    return s
-
-
 def usable_core_count():
     """Return the number of cores the current process can use, if supported.
     Otherwise, return the total number of cores (like `os.cpu_count()`).
@@ -113,11 +43,6 @@ def usable_core_count():
         n = len(os.sched_getaffinity(0))
     except AttributeError:
         n = os.cpu_count() or 1
-
-    # On Windows with more than 60 processes, multiprocessing's call to
-    # _winapi.WaitForMultipleObjects() prints an error and lit hangs.
-    if platform.system() == "Windows":
-        return min(n, 60)
 
     return n
 
@@ -341,7 +266,7 @@ def executeCommand(
 
     """
     if input is not None:
-        input = to_bytes(input)
+        input = input.encode("utf-8")
     err_out = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     p = subprocess.Popen(
         command,
@@ -377,8 +302,8 @@ def executeCommand(
             timerObject.cancel()
 
     # Ensure the resulting output is always of string type.
-    out = to_string(out)
-    err = "" if redirect_stderr else to_string(err)
+    out = out.decode("utf-8", errors="replace")
+    err = "" if redirect_stderr else err.decode("utf-8", errors="replace")
 
     if hitTimeOut[0]:
         raise ExecuteCommandTimeoutException(

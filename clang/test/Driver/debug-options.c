@@ -297,6 +297,9 @@
 // RUN: %clang -### -g -gno-column-info %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=NOCI %s
 //
+// RUN: %clang -### -g -gno-call-site-info %s 2>&1 \
+// RUN:        | FileCheck -check-prefix=NOCALLSITE %s
+//
 // RUN: %clang -### -g -target x86_64-unknown-unknown %s 2>&1 \
 //             | FileCheck -check-prefix=CI %s
 //
@@ -425,6 +428,8 @@
 // CI-NOT: "-gno-column-info"
 //
 // NOCI-DAG: "-gno-column-info"
+//
+// NOCALLSITE: "-gno-call-site-info"
 //
 // GEXTREFS: "-dwarf-ext-refs" "-fmodule-format=obj"
 // GEXTREFS: "-debug-info-kind={{standalone|constructor}}"

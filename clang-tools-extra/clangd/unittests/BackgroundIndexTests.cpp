@@ -1,3 +1,4 @@
+#include "Annotations.h"
 #include "CompileCommands.h"
 #include "Config.h"
 #include "Headers.h"
@@ -14,7 +15,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <deque>
-#include <thread>
 
 using ::testing::_;
 using ::testing::AllOf;
@@ -231,6 +231,126 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
                        fileURI("unittest:///root/B.cc"),
                        fileURI("unittest:///root/B.cc"),
                        fileURI("unittest:///root/B.cc")}));
+}
+
+TEST_F(BackgroundIndexTest, ConstructorForwarding) {
+  Annotations Header(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+    struct Test {
+      [[Test]](){}
+    };
+  )cpp");
+  Annotations Main(R"cpp(
+    #include "header.hpp"
+    int main() {
+      auto a = std::[[make_unique]]<Test>();
+    }
+  )cpp");
+
+  MockFS FS;
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+  OverlayCDB CDB(/*Base=*/nullptr);
+  BackgroundIndex::Options Opts;
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+
+  FS.Files[testPath("root/header.hpp")] = Header.code();
+  FS.Files[testPath("root/test.cpp")] = Main.code();
+
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = testPath("root/test.cpp");
+  Cmd.Directory = testPath("root");
+  Cmd.CommandLine = {"clang++", testPath("root/test.cpp")};
+  CDB.setCompileCommand(testPath("root/test.cpp"), Cmd);
+
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
+
+  auto Syms = runFuzzyFind(Idx, "Test");
+  auto Constructor =
+      std::find_if(Syms.begin(), Syms.end(), [](const Symbol &S) {
+        return S.SymInfo.Kind == index::SymbolKind::Constructor;
+      });
+  ASSERT_TRUE(Constructor != Syms.end());
+  EXPECT_THAT(getRefs(Idx, Constructor->ID),
+              refsAre({fileURI("unittest:///root/header.hpp"),
+                       fileURI("unittest:///root/test.cpp")}));
+}
+
+TEST_F(BackgroundIndexTest, ConstructorForwardingMultiFile) {
+  // If a forwarding function like `make_unique` is defined in a header its body
+  // used to be skipped on the second encounter. This meant in practise we could
+  // only find constructors indirectly called by these type of functions in the
+  // first indexed file (and all files that were indexed at the same time,
+  // before a flag to skip it was set).
+  Annotations Header(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+    struct Test {
+      [[Test]](){}
+    };
+  )cpp");
+  Annotations First(R"cpp(
+    #include "header.hpp"
+    int main() {
+      auto a = std::[[make_unique]]<Test>();
+    }
+  )cpp");
+  Annotations Second(R"cpp(
+    #include "header.hpp"
+    void test() {
+      auto a = std::[[make_unique]]<Test>();
+    }
+  )cpp");
+
+  MockFS FS;
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+  OverlayCDB CDB(/*Base=*/nullptr);
+  BackgroundIndex::Options Opts;
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+
+  FS.Files[testPath("root/header.hpp")] = Header.code();
+  FS.Files[testPath("root/first.cpp")] = First.code();
+  FS.Files[testPath("root/second.cpp")] = Second.code();
+
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = testPath("root/first.cpp");
+  Cmd.Directory = testPath("root");
+  Cmd.CommandLine = {"clang++", testPath("root/first.cpp")};
+  CDB.setCompileCommand(testPath("root/first.cpp"), Cmd);
+
+  // Make sure the first file is done indexing to make sure the flag for the
+  // header is set.
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
+
+  Cmd.Filename = testPath("root/second.cpp");
+  Cmd.Directory = testPath("root");
+  Cmd.CommandLine = {"clang++", testPath("root/second.cpp")};
+  CDB.setCompileCommand(testPath("root/second.cpp"), Cmd);
+
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
+
+  auto Syms = runFuzzyFind(Idx, "Test");
+  auto Constructor =
+      std::find_if(Syms.begin(), Syms.end(), [](const Symbol &S) {
+        return S.SymInfo.Kind == index::SymbolKind::Constructor;
+      });
+  ASSERT_TRUE(Constructor != Syms.end());
+  EXPECT_THAT(getRefs(Idx, Constructor->ID),
+              refsAre({fileURI("unittest:///root/header.hpp"),
+                       fileURI("unittest:///root/first.cpp"),
+                       fileURI("unittest:///root/second.cpp")}));
 }
 
 TEST_F(BackgroundIndexTest, MainFileRefs) {

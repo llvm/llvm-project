@@ -35,7 +35,13 @@ mlir_tablegen(DataLayoutOpInterface.h.inc -gen-op-interface-decls)
 mlir_tablegen(DataLayoutOpInterface.cpp.inc -gen-op-interface-defs)
 mlir_tablegen(DataLayoutTypeInterface.h.inc -gen-type-interface-decls)
 mlir_tablegen(DataLayoutTypeInterface.cpp.inc -gen-type-interface-defs)
+mlir_tablegen(DataLayoutDialectInterface.h.inc -gen-dialect-interface-decls)
 add_mlir_generic_tablegen_target(MLIRDataLayoutInterfacesIncGen)
+
+set(LLVM_TARGET_DEFINITIONS DialectFoldInterface.td)
+mlir_tablegen(DialectFoldInterface.h.inc -gen-dialect-interface-decls)
+add_mlir_generic_tablegen_target(MLIRDialectFoldInterfaceIncGen)
+
 
 add_mlir_doc(DataLayoutInterfaces
   DataLayoutAttrInterface

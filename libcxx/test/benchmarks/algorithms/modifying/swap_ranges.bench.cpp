@@ -53,9 +53,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::swap_ranges(vector<int>)", std_swap_ranges);
     bm.operator()<std::deque<int>>("std::swap_ranges(deque<int>)", std_swap_ranges);
     bm.operator()<std::list<int>>("std::swap_ranges(list<int>)", std_swap_ranges);
-    bm.operator()<std::vector<int>>("rng::swap_ranges(vector<int>)", std::ranges::swap_ranges);
-    bm.operator()<std::deque<int>>("rng::swap_ranges(deque<int>)", std::ranges::swap_ranges);
-    bm.operator()<std::list<int>>("rng::swap_ranges(list<int>)", std::ranges::swap_ranges);
   }
 
   benchmark::Initialize(&argc, argv);

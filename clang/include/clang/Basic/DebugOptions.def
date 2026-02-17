@@ -65,6 +65,9 @@ DEBUGOPT(DebugKeyInstructions, 1, 0, Benign)
 DEBUGOPT(DebugColumnInfo, 1, 0, Compatible) ///< Whether or not to use column information
                                            ///< in debug info.
 
+/// Whether or not to include call site information in debug info.
+DEBUGOPT(DebugCallSiteInfo, 1, 1, Benign)
+
 DEBUGOPT(DebugTypeExtRefs, 1, 0, Compatible) ///< Whether or not debug info should contain
                                             ///< external references to a PCH or module.
 
@@ -96,6 +99,10 @@ ENUM_DEBUGOPT(DebugInfo, DebugInfoKind, 4,
 
 /// Whether to generate macro debug info.
 DEBUGOPT(MacroDebugInfo, 1, 0, Compatible)
+
+/// Whether to use expansion location for debug info.
+/// TODO: #175249: Remove once testing is complete for sample pgo users.
+DEBUGOPT(DebugInfoMacroExpansionLoc, 1, 0, Compatible)
 
 /// Tune the debug info for this debugger.
 ENUM_DEBUGOPT(DebuggerTuning, DebuggerKind, 3,

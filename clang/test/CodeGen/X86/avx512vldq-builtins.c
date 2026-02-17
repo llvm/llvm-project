@@ -921,11 +921,20 @@ __mmask8 test_mm_movepi32_mask(__m128i __A) {
   return _mm_movepi32_mask(__A); 
 }
 
+TEST_CONSTEXPR(_mm512_movepi16_mask(
+    ((__m512i)(__v32hi){0, 1, short(32768), 3, 4, 5, 6, 7,
+                        8, 9, 10, 11, 12, 13, 14, 15,
+                        16, 17, 18, 19, 20, 21, 22, 23,
+                        24, 25, 26, 27, 28, 29, 30, short(32768)})
+) == (__mmask32)0x80000004);
+
 __mmask8 test_mm256_movepi32_mask(__m256i __A) {
   // CHECK-LABEL: test_mm256_movepi32_mask
   // CHECK: [[CMP:%.*]] = icmp slt <8 x i32> %{{.*}}, zeroinitializer
   return _mm256_movepi32_mask(__A); 
 }
+
+TEST_CONSTEXPR(_mm256_movepi32_mask(((__m256i)(__v8si){0, 1, -1, 3, 4, 5, 6, -2147483648})) == (__mmask8)0x84);
 
 __m128i test_mm_movm_epi32(__mmask8 __A) {
   // CHECK-LABEL: test_mm_movm_epi32
@@ -935,12 +944,16 @@ __m128i test_mm_movm_epi32(__mmask8 __A) {
   return _mm_movm_epi32(__A); 
 }
 
+TEST_CONSTEXPR(match_v4si(_mm_movm_epi32(0x05), -1, 0, -1, 0));
+
 __m256i test_mm256_movm_epi32(__mmask8 __A) {
   // CHECK-LABEL: test_mm256_movm_epi32
   // CHECK: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: %vpmovm2.i = sext <8 x i1> %{{.*}} to <8 x i32>
   return _mm256_movm_epi32(__A); 
 }
+
+TEST_CONSTEXPR(match_v8si(_mm256_movm_epi32(0x85), -1, 0, -1, 0, 0, 0, 0, -1));
 
 __m128i test_mm_movm_epi64(__mmask8 __A) {
   // CHECK-LABEL: test_mm_movm_epi64
@@ -950,6 +963,9 @@ __m128i test_mm_movm_epi64(__mmask8 __A) {
   return _mm_movm_epi64(__A); 
 }
 
+TEST_CONSTEXPR(match_v2di(_mm_movm_epi64(0x03), -1, -1));
+
+
 __m256i test_mm256_movm_epi64(__mmask8 __A) {
   // CHECK-LABEL: test_mm256_movm_epi64
   // CHECK: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
@@ -958,12 +974,17 @@ __m256i test_mm256_movm_epi64(__mmask8 __A) {
   return _mm256_movm_epi64(__A); 
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_movm_epi64(0x05), -1, 0, -1, 0));
+
+
 __mmask8 test_mm_movepi64_mask(__m128i __A) {
   // CHECK-LABEL: test_mm_movepi64_mask
   // CHECK: [[CMP:%.*]] = icmp slt <2 x i64> %{{.*}}, zeroinitializer
   // CHECK: [[SHUF:%.*]] = shufflevector <2 x i1> [[CMP]], <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
   return _mm_movepi64_mask(__A); 
 }
+
+TEST_CONSTEXPR(_mm_movepi64_mask(((__m128i)(__v2di){0, -1})) == (__mmask8)0x02);
 
 __mmask8 test_mm256_movepi64_mask(__m256i __A) {
   // CHECK-LABEL: test_mm256_movepi64_mask
@@ -972,6 +993,7 @@ __mmask8 test_mm256_movepi64_mask(__m256i __A) {
   return _mm256_movepi64_mask(__A); 
 }
 
+TEST_CONSTEXPR(_mm256_movepi64_mask(((__m256i)(__v4di){0, 1, -1, 3})) == (__mmask8)0x04);
 
 __m256 test_mm256_broadcast_f32x2(__m128 __A) {
   // CHECK-LABEL: test_mm256_broadcast_f32x2

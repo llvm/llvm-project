@@ -115,7 +115,23 @@ class RAIIMutexDescriptor {
       return false;
     const IdentifierInfo *II =
         cast<CXXRecordDecl>(C->getDecl()->getParent())->getIdentifier();
-    return II == Guard;
+    if (II != Guard)
+      return false;
+
+    // For unique_lock, check if it's constructed with a ctor that takes the tag
+    // type defer_lock_t. In this case, the lock is not acquired.
+    if constexpr (std::is_same_v<T, CXXConstructorCall>) {
+      if (GuardName == "unique_lock" && C->getNumArgs() >= 2) {
+        const Expr *SecondArg = C->getArgExpr(1);
+        QualType ArgType = SecondArg->getType().getNonReferenceType();
+        if (const auto *RD = ArgType->getAsRecordDecl();
+            RD && RD->getName() == "defer_lock_t" && RD->isInStdNamespace()) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
 public:
@@ -198,7 +214,7 @@ public:
 
 class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 private:
-  const std::array<MutexDescriptor, 8> MutexDescriptors{
+  const std::array<MutexDescriptor, 9> MutexDescriptors{
       // NOTE: There are standard library implementations where some methods
       // of `std::mutex` are inherited from an implementation detail base
       // class, and those aren't matched by the name specification {"std",
@@ -222,7 +238,8 @@ private:
       FirstArgMutexDescriptor({CDM::CLibrary, {"mtx_timedlock"}, 1},
                               {CDM::CLibrary, {"mtx_unlock"}, 1}),
       RAIIMutexDescriptor("lock_guard"),
-      RAIIMutexDescriptor("unique_lock")};
+      RAIIMutexDescriptor("unique_lock"),
+      RAIIMutexDescriptor("scoped_lock")};
 
   const CallDescriptionSet BlockingFunctions{{CDM::CLibrary, {"sleep"}},
                                              {CDM::CLibrary, {"getc"}},

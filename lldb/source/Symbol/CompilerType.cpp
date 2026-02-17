@@ -20,6 +20,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <iterator>
 #include <mutex>
@@ -240,13 +241,21 @@ bool CompilerType::ShouldTreatScalarValueAsAddress() const {
   return false;
 }
 
-bool CompilerType::IsFloatingPointType(bool &is_complex) const {
-  if (IsValid()) {
+bool CompilerType::IsComplexType() const {
+  return GetTypeClass() & eTypeClassComplexFloat ||
+         GetTypeClass() & eTypeClassComplexInteger;
+}
+
+bool CompilerType::IsFloatingPointType() const {
+  if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->IsFloatingPointType(m_type, is_complex);
-  }
-  is_complex = false;
+      return type_system_sp->IsFloatingPointType(m_type);
+
   return false;
+}
+
+bool CompilerType::IsRealFloatingPointType() const {
+  return IsFloatingPointType() && !IsComplexType() && !IsVectorType();
 }
 
 bool CompilerType::IsDefined() const {
@@ -328,11 +337,6 @@ bool CompilerType::IsInteger() const {
   return IsIntegerType(is_signed);
 }
 
-bool CompilerType::IsFloat() const {
-  bool is_complex = false;
-  return IsFloatingPointType(is_complex);
-}
-
 bool CompilerType::IsEnumerationType() const {
   bool is_signed = false; // May be reset by the call below.
   return IsEnumerationType(is_signed);
@@ -370,30 +374,10 @@ bool CompilerType::IsScalarOrUnscopedEnumerationType() const {
 }
 
 bool CompilerType::IsPromotableIntegerType() const {
-  // Unscoped enums are always considered as promotable, even if their
-  // underlying type does not need to be promoted (e.g. "int").
-  if (IsUnscopedEnumerationType())
-    return true;
-
-  switch (GetBasicTypeEnumeration()) {
-  case lldb::eBasicTypeBool:
-  case lldb::eBasicTypeChar:
-  case lldb::eBasicTypeSignedChar:
-  case lldb::eBasicTypeUnsignedChar:
-  case lldb::eBasicTypeShort:
-  case lldb::eBasicTypeUnsignedShort:
-  case lldb::eBasicTypeWChar:
-  case lldb::eBasicTypeSignedWChar:
-  case lldb::eBasicTypeUnsignedWChar:
-  case lldb::eBasicTypeChar16:
-  case lldb::eBasicTypeChar32:
-    return true;
-
-  default:
-    return false;
-  }
-
-  llvm_unreachable("All cases handled above.");
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsPromotableIntegerType(m_type);
+  return false;
 }
 
 bool CompilerType::IsPointerToVoid() const {

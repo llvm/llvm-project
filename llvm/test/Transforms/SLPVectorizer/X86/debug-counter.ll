@@ -3,7 +3,6 @@
 ; RUN: opt -S -passes=slp-vectorizer -mtriple=x86_64-unknown-linux -debug-counter=slp-vectorized=1 -slp-threshold=-99999 < %s | FileCheck %s --check-prefix=COUNT1
 ; RUN: opt -S -passes=slp-vectorizer -mtriple=x86_64-unknown-linux -debug-counter=slp-vectorized=2 -slp-threshold=-99999 < %s | FileCheck %s --check-prefix=COUNT2
 ; RUN: opt -S -passes=slp-vectorizer -mtriple=x86_64-unknown-linux -debug-counter=slp-vectorized=0-1 -slp-threshold=-99999 < %s | FileCheck %s --check-prefix=COUNT-1
-; REQUIRES: asserts
 
 define void @blam(ptr %arg, double %load2, i1 %fcmp3) {
 ; COUNT0-LABEL: define void @blam

@@ -360,6 +360,43 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*defaultImplementation=*/[{
           return failure();
         }]
+      >,
+      //===------------------------------------------------------------------===//
+      // Interface methods for querying fusability.
+      //===------------------------------------------------------------------===//
+      InterfaceMethod<
+        /*desc=*/[{
+          Indicates whether it is possible to fuse this operation with the given
+          result slice. This method is not allowed to generate any IR.
+        }],
+        /*retTy=*/"bool",
+        /*methodName=*/"isOpFusableWithConsumerSlice",
+        /*args=*/(ins
+          "unsigned":$resultNumber,
+          "::mlir::ArrayRef<::mlir::OpFoldResult>":$offsets,
+          "::mlir::ArrayRef<::mlir::OpFoldResult>":$sizes
+        ),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Indicates whether it is possible to fuse this operation with the given
+          list of operand slices. This method is not allowed to generate any IR.
+        }],
+        /*retTy=*/"bool",
+        /*methodName=*/"isOpFusableWithProducerSlices",
+        /*args=*/(ins
+          "::mlir::ArrayRef<unsigned>":$operandNumbers,
+          "::mlir::ArrayRef<::mlir::SmallVector<::mlir::OpFoldResult>>":$allOffsets,
+          "::mlir::ArrayRef<::mlir::SmallVector<::mlir::OpFoldResult>>":$allSizes
+        ),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
+        }]
       >
   ];
 }
@@ -402,7 +439,7 @@ def PartialReductionOpInterface :
           reduction dimension are converted to parallel dimensions with a size
           less or equal to the tile size. This is meant to be used with
           `mergeReductions` method which will combine the partial reductions.
-          The method recieves the `offset` and `sizes` for all iteration space
+          The method receives the `offset` and `sizes` for all iteration space
           dimensions, as well as the iteration number of the tiled reduction
           dimensions (which is the induction variable of the inter-tile loop
           for the reduction dimension divided by the step of the loop) in
@@ -448,7 +485,7 @@ def PartialReductionOpInterface :
           the tiled operation. This is same as
           TilingInterface:::getResultTilePosition, but determines the result
           tile position for partial reduction.
-          The method recieves the `offset` and `sizes` for all iteration space
+          The method receives the `offset` and `sizes` for all iteration space
           dimensions, as well as the iteration number of the tiled reduction
           dimensions (which is the induction variable of the inter-tile loop
           for the reduction dimension divided by the tile size specified) in

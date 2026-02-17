@@ -165,9 +165,9 @@ static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
     external->PopChildIo(child);
     if (!actualExternal) {
       // Close unit created for internal I/O above.
-      auto *closing{external->LookUpForClose(external->unitNumber())};
+      auto *closing{external->LookUpForClose(external->unitNumber(), handler)};
       RUNTIME_CHECK(handler, external == closing);
-      external->DestroyClosed();
+      external->DestroyClosed(handler);
     }
     if (startPos) {
       io.GotChar(io.InquirePos() - *startPos);

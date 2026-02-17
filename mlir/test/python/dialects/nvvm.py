@@ -164,19 +164,19 @@ def test_reductions():
         for abs in (True, False):
             for nan in (True, False):
                 for kind in (
-                    nvvm.ReduxKind.AND,
-                    nvvm.ReduxKind.MAX,
-                    nvvm.ReduxKind.MIN,
-                    nvvm.ReduxKind.OR,
-                    nvvm.ReduxKind.UMAX,
-                    nvvm.ReduxKind.UMIN,
-                    nvvm.ReduxKind.XOR,
+                    nvvm.ReductionKind.AND,
+                    nvvm.ReductionKind.MAX,
+                    nvvm.ReductionKind.MIN,
+                    nvvm.ReductionKind.OR,
+                    nvvm.ReductionKind.UMAX,
+                    nvvm.ReductionKind.UMIN,
+                    nvvm.ReductionKind.XOR,
                 ):
                     nvvm.redux_sync(i32, vi32, kind, vi32)
 
                 for kind in (
-                    nvvm.ReduxKind.FMIN,
-                    nvvm.ReduxKind.FMAX,
+                    nvvm.ReductionKind.FMIN,
+                    nvvm.ReductionKind.FMAX,
                 ):
                     nvvm.redux_sync(f32, vf32, kind, vi32, abs=abs, nan=nan)
 

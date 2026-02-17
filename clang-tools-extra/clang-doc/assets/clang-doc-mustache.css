@@ -92,9 +92,8 @@ html, body {
 
 .container {
     display: flex;
-    margin-top: 60px;
-    height: calc(100% - 60px);
     box-sizing: border-box;
+    align-items: stretch;
 }
 
 body, html {
@@ -105,31 +104,34 @@ body, html {
 }
 
 /* Navbar Styles */
+header {
+    background-color: var(--surface2);
+    display: flex;
+    flex-direction: column;
+}
+
 .navbar {
     background-color: var(--surface2);
     border-bottom: 1px solid var(--text2);
-    position: fixed;
     width: 100%;
-    top: 0;
-    left: 0;
-    height: 60px; /* Adjust as needed */
     color: white;
     display: flex;
-    align-items: center;
-    padding: 0 20px;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
     box-sizing: border-box;
-    z-index: 1000;
 }
 
 
 .navbar__container {
-    display:flex;
-    justify-content:space-between;
+    display:grid;
+    grid-template-columns: auto 1fr auto;
     align-items:center;
     padding:1rem;
     color:var(--text1);
     max-width:2048px;
-    margin:auto
+    margin:auto;
+    width:100%
 }
 .navbar__logo {
     display:flex;
@@ -172,7 +174,9 @@ body, html {
     margin:0;
     padding:0;
     gap:.25rem;
-    margin-left:auto
+    margin-left:0;
+    grid-column:2;
+    justify-self:center
 }
 
 @media(max-width:768px) {
@@ -218,7 +222,8 @@ body, html {
     gap:1rem;
     align-items:center;
     margin:0;
-    padding:0
+    padding:0;
+    justify-content:center
 }
 
 @media(max-width:768px) {
@@ -253,6 +258,36 @@ body, html {
 
 .navbar__theme-toggle-button:hover {
     color:var(--text1)
+}
+
+.navbar-breadcrumb-container {
+    position: static;
+    width: 100%;
+    background: var(--surface2);
+    padding: 0.5rem 1rem;
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--text2);
+    box-sizing: border-box;
+    border-top: 1px solid var(--text2);
+    border-bottom: 1px solid var(--text2);
+}
+
+.navbar-breadcrumb-item {
+    padding: 0.25rem 0.75rem;
+    background: var(--surface1);
+    border: 1px solid var(--text2);
+    border-radius: 4px;
+    color: var(--text1);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.navbar-breadcrumb-item:hover {
+    background: var(--brand);
+    color: var(--text1-inverse);
+    border-color: var(--brand);
+    cursor: pointer;
 }
 
 .hero__container {
@@ -317,9 +352,7 @@ body, html {
     max-width: 2048px;
     margin-left:auto;
     margin-right:auto;
-    margin-top:0;
     margin-bottom: 1rem;
-    padding:1rem 2rem
 }
 
 @media(max-width:768px) {
@@ -384,10 +417,18 @@ body, html {
     margin-bottom:1rem; 
 }
 
+.nested-delimiter-container {
+    margin-bottom: 1rem;
+}
+
+.nested-delimiter-container:last-of-type {
+    margin-bottom: 0rem;
+}
+
 .resizer {
     width: 5px;
     cursor: col-resize;
-    background-color: var(--text2);
+    background-color: var(--surface1);
 }
 
 .resizer:hover {
@@ -396,16 +437,15 @@ body, html {
 
 .sidebar {
     width: 250px;
-    top: 60px;
-    left: 0;
-    height: 100%;
-    position: fixed;
+    position: sticky;
+    top: 0;
     background-color: var(--surface1);
     display: flex;
     border-left: 1px solid var(--text2);
     flex-direction: column;
     overflow-y: auto;
     scrollbar-width: thin;
+    flex-shrink: 0;
 }
 
 .sidebar h2 {
@@ -421,8 +461,7 @@ body, html {
 }
 
 .sidebar ul li {
-    padding-right: 1rem;
-    padding-left: 2rem;
+    padding-left: 1rem;
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
 }
@@ -430,8 +469,7 @@ body, html {
 .sidebar-section {
     font-size:1.5rem;
     font-weight: bold;
-    margin-bottom: 1rem;
-    padding: 3rem;
+    padding-left: 1rem;
 }
 .sidebar-section a {
     color: var(--brand)
@@ -440,11 +478,11 @@ body, html {
 /* Content */
 .content {
     background-color: var(--text1-inverse);
-    padding: 20px;
-    left: 250px;
     position: relative;
-    width: calc(100% - 250px);
-    height: 100vh;
+    flex: 1;
+    min-width: 0;
+    min-height: 100vh;
+    padding-left: 1rem;
 }
 
 .sidebar-item {
@@ -472,4 +510,13 @@ a, a:visited, a:hover, a:active {
 
 .code-block {
   white-space: pre-line;
+}
+
+.doc-card {
+  border: 3px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  background: var(--surface1);
+  margin: 14px 0;
+  overflow: hidden;
+  padding: 10px;
 }

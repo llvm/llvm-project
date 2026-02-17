@@ -19,9 +19,9 @@ outputs:
       The filename of the downloaded artifact or the empty string if the
       artifact was not found.
     value: ${{ steps.download-artifact.outputs.filename }}
-  artifact-id:
+  artifact-ids:
     description: "The id of the artifact being downloaded."
-    value: ${{ steps.artifact-url.outputs.id }}
+    value: ${{ steps.artifact-url.outputs.ids }}
 
 
 runs:
@@ -36,46 +36,67 @@ runs:
             response = await github.rest.actions.listArtifactsForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              name: "${{ inputs.artifact-name }}"
             })
           } else {
             response = await github.rest.actions.listWorkflowRunArtifacts({
               owner: context.repo.owner,
               repo: context.repo.repo,
               run_id: "${{ inputs.run-id }}",
-              name: "${{ inputs.artifact-name }}"
             })
           }
 
           console.log(response)
 
+          artifacts_to_download = []
           for (artifact of response.data.artifacts) {
+            if (artifact.name.startsWith("${{ inputs.artifact-name }}")) {
+              artifacts_to_download.push(artifact)
+            }
+          }
+
+          for (artifact of artifacts_to_download) {
             console.log(artifact);
           }
 
-          if (response.data.artifacts.length == 0) {
-            console.log("Could not find artifact ${{ inputs.artifact-name }} for workflow run ${{ inputs.run-id }}")
+          if (artifacts_to_download.length == 0) {
+            console.log("Could not find artifacts starting with name ${{ inputs.artifact-name }} for workflow run ${{ inputs.run-id }}")
             return;
           }
 
-          const url_response = await github.rest.actions.downloadArtifact({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            artifact_id: response.data.artifacts[0].id,
-            archive_format: "zip"
-          })
+          artifact_ids = []
+          artifact_urls = []
+          artifact_names = []
+          for (artifact_to_download of artifacts_to_download) {
+            const url_response = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: artifact_to_download.id,
+              archive_format: "zip"
+            })
 
-          core.setOutput("url", url_response.url);
-          core.setOutput("id", response.data.artifacts[0].id);
+            artifact_ids.push(artifact_to_download.id)
+            artifact_urls.push('"' + url_response.url + '"')
+            artifact_names.push('"' + artifact_to_download.name + '"')
+          }
+
+          core.setOutput("urls", artifact_urls.join(" "));
+          core.setOutput("ids", artifact_ids.join(" "));
+          core.setOutput("names", artifact_names.join(" "));
 
     - shell: bash
-      if: steps.artifact-url.outputs.url != ''
+      if: steps.artifact-url.outputs.urls != ''
       id: download-artifact
       run: |
-        curl -L -o ${{ inputs.artifact-name }}.zip "${{ steps.artifact-url.outputs.url }}"
-        echo "filename=${{ inputs.artifact-name }}.zip" >> $GITHUB_OUTPUT
+        artifact_urls=(${{ steps.artifact-url.outputs.urls }})
+        artifact_names=(${{ steps.artifact-url.outputs.names }})
+        for i in "${!artifact_urls[@]}"; do
+          curl -L -o "${artifact_names[$i]}.zip" "${artifact_urls[$i]}"
+        done
 
     - shell: bash
-      if: steps.download-artifact.outputs.filename != ''
+      if: steps.artifact-url.outputs.names != ''
       run: |
-        unzip ${{ steps.download-artifact.outputs.filename }}
+        artifact_names=(${{ steps.artifact-url.outputs.names }})
+        for name in "${artifact_names[@]}"; do
+          unzip "${name}.zip"
+        done

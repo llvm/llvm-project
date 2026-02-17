@@ -325,7 +325,7 @@ public:
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Return true if this is a store to a volatile memory location.
   bool isVolatile() const { return getSubclassData<VolatileField>(); }
@@ -449,7 +449,7 @@ public:
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Returns the ordering constraint of this fence instruction.
   AtomicOrdering getOrdering() const {
@@ -530,7 +530,7 @@ public:
 
   // allocate space for exactly three operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   using VolatileField = BoolBitfieldElementT<0>;
   using WeakField = BoolBitfieldElementT<VolatileField::NextBit>;
@@ -806,7 +806,7 @@ public:
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   using VolatileField = BoolBitfieldElementT<0>;
   using AtomicOrderingField =
@@ -1958,7 +1958,9 @@ public:
                              InsertPosition InsertBefore = nullptr);
 
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { return User::operator delete(Ptr); }
+  void operator delete(void *Ptr) {
+    return User::operator delete(Ptr, AllocMarker);
+  }
 
   /// Swap the operands and adjust the mask to preserve the semantics
   /// of the instruction.
@@ -2553,7 +2555,7 @@ protected:
 public:
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   static InsertValueInst *Create(Value *Agg, Value *Val,
                                  ArrayRef<unsigned> Idxs,
@@ -2650,7 +2652,6 @@ class PHINode : public Instruction {
                    InsertPosition InsertBefore = nullptr)
       : Instruction(Ty, Instruction::PHI, AllocMarker, InsertBefore),
         ReservedSpace(NumReservedValues) {
-    assert(!Ty->isTokenTy() && "PHI nodes cannot have token type!");
     setName(NameStr);
     allocHungoffUses(ReservedSpace);
   }
@@ -2665,7 +2666,7 @@ protected:
   // User::allocHungoffUses, because we have to allocate Uses for the incoming
   // values and pointers to the incoming blocks, all in one allocation.
   void allocHungoffUses(unsigned N) {
-    User::allocHungoffUses(N, /* IsPhi */ true);
+    User::allocHungoffUses(N, /*WithExtraValues=*/true);
   }
 
 public:
@@ -2787,7 +2788,6 @@ public:
   /// is true), the PHI node is destroyed and any uses of it are replaced with
   /// dummy values.  The only time there should be zero incoming values to a PHI
   /// node is when the block is dead, so this strategy is sound.
-  ///
   LLVM_ABI Value *removeIncomingValue(unsigned Idx,
                                       bool DeletePHIIfEmpty = true);
 
@@ -2908,7 +2908,7 @@ protected:
   LLVM_ABI LandingPadInst *cloneImpl() const;
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Constructors - NumReservedClauses is a hint for the number of incoming
   /// clauses that this landingpad will have (use 0 if you really have no idea).
@@ -3198,10 +3198,10 @@ class SwitchInst : public Instruction {
 
   unsigned ReservedSpace;
 
-  // Operand[0]    = Value to switch on
-  // Operand[1]    = Default basic block destination
-  // Operand[2n  ] = Value to match
-  // Operand[2n+1] = BasicBlock to go to on match
+  // Operand[0] = Value to switch on
+  // Operand[1] = Default basic block destination
+  // Operand[n] = BasicBlock to go to on match
+  // Values are stored after the Uses similar to PHINode's basic blocks.
   SwitchInst(const SwitchInst &SI);
 
   /// Create a new switch instruction, specifying a value to switch on and a
@@ -3223,8 +3223,19 @@ protected:
 
   LLVM_ABI SwitchInst *cloneImpl() const;
 
+  void allocHungoffUses(unsigned N) {
+    User::allocHungoffUses(N, /*WithExtraValues=*/true);
+  }
+
+  ConstantInt *const *case_values() const {
+    return reinterpret_cast<ConstantInt *const *>(op_begin() + ReservedSpace);
+  }
+  ConstantInt **case_values() {
+    return reinterpret_cast<ConstantInt **>(op_begin() + ReservedSpace);
+  }
+
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   // -2
   static const unsigned DefaultPseudoIndex = static_cast<unsigned>(~0L-1);
@@ -3257,7 +3268,7 @@ public:
     ConstantIntT *getCaseValue() const {
       assert((unsigned)Index < SI->getNumCases() &&
              "Index out the number of cases.");
-      return reinterpret_cast<ConstantIntT *>(SI->getOperand(2 + Index * 2));
+      return SI->case_values()[Index];
     }
 
     /// Resolves successor for current case.
@@ -3299,7 +3310,7 @@ public:
     void setValue(ConstantInt *V) const {
       assert((unsigned)Index < SI->getNumCases() &&
              "Index out the number of cases.");
-      SI->setOperand(2 + Index*2, reinterpret_cast<Value*>(V));
+      SI->case_values()[Index] = V;
     }
 
     /// Sets the new successor for current case.
@@ -3406,9 +3417,7 @@ public:
 
   /// Return the number of 'cases' in this switch instruction, excluding the
   /// default case.
-  unsigned getNumCases() const {
-    return getNumOperands()/2 - 1;
-  }
+  unsigned getNumCases() const { return getNumOperands() - 2; }
 
   /// Returns a read/write iterator that points to the first case in the
   /// SwitchInst.
@@ -3510,14 +3519,14 @@ public:
   /// case.
   LLVM_ABI CaseIt removeCase(CaseIt I);
 
-  unsigned getNumSuccessors() const { return getNumOperands()/2; }
+  unsigned getNumSuccessors() const { return getNumOperands() - 1; }
   BasicBlock *getSuccessor(unsigned idx) const {
     assert(idx < getNumSuccessors() &&"Successor idx out of range for switch!");
-    return cast<BasicBlock>(getOperand(idx*2+1));
+    return cast<BasicBlock>(getOperand(idx + 1));
   }
   void setSuccessor(unsigned idx, BasicBlock *NewSucc) {
     assert(idx < getNumSuccessors() && "Successor # out of range for switch!");
-    setOperand(idx * 2 + 1, NewSucc);
+    setOperand(idx + 1, NewSucc);
   }
 
   // Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -3616,7 +3625,7 @@ protected:
   LLVM_ABI IndirectBrInst *cloneImpl() const;
 
 public:
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Iterator type that casts an operand to a basic block.
   ///
@@ -4138,7 +4147,9 @@ protected:
   LLVM_ABI CatchSwitchInst *cloneImpl() const;
 
 public:
-  void operator delete(void *Ptr) { return User::operator delete(Ptr); }
+  void operator delete(void *Ptr) {
+    return User::operator delete(Ptr, AllocMarker);
+  }
 
   static CatchSwitchInst *Create(Value *ParentPad, BasicBlock *UnwindDest,
                                  unsigned NumHandlers,
@@ -4525,7 +4536,7 @@ public:
 
   // allocate space for exactly zero operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   unsigned getNumSuccessors() const { return 0; }
 

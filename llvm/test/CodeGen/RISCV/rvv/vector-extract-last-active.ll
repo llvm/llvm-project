@@ -322,15 +322,3 @@ define double @extract_last_double_scalable(<vscale x 2 x double> %data, <vscale
   ret double %res
 }
 
-declare i8 @llvm.experimental.vector.extract.last.active.v16i8(<16 x i8>, <16 x i1>, i8)
-declare i16 @llvm.experimental.vector.extract.last.active.v8i16(<8 x i16>, <8 x i1>, i16)
-declare i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32>, <4 x i1>, i32)
-declare i64 @llvm.experimental.vector.extract.last.active.v2i64(<2 x i64>, <2 x i1>, i64)
-declare float @llvm.experimental.vector.extract.last.active.v4f32(<4 x float>, <4 x i1>, float)
-declare double @llvm.experimental.vector.extract.last.active.v2f64(<2 x double>, <2 x i1>, double)
-declare i8 @llvm.experimental.vector.extract.last.active.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, i8)
-declare i16 @llvm.experimental.vector.extract.last.active.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, i16)
-declare i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, i32)
-declare i64 @llvm.experimental.vector.extract.last.active.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, i64)
-declare float @llvm.experimental.vector.extract.last.active.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, float)
-declare double @llvm.experimental.vector.extract.last.active.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, double)

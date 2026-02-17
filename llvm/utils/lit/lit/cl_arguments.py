@@ -424,6 +424,12 @@ def parse_args():
         default=os.environ.get("LIT_FILTER_OUT", "^$"),
     )
     selection_group.add_argument(
+        "--filter-failed",
+        dest="filterFailed",
+        help="Only run tests which failed in the previous run",
+        action="store_true",
+    )
+    selection_group.add_argument(
         "--xfail",
         metavar="LIST",
         type=_semicolon_list,

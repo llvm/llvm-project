@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Variables.h"
+#include "Protocol/ProtocolTypes.h"
+#include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
 #include "gtest/gtest.h"
@@ -17,6 +19,15 @@ class VariablesTest : public ::testing::Test {
 protected:
   enum : bool { Permanent = true, Temporary = false };
   Variables vars;
+
+  static const protocol::Scope *
+  FindScope(const std::vector<protocol::Scope> &scopes, llvm::StringRef name) {
+    for (const auto &scope : scopes) {
+      if (scope.name == name)
+        return &scope;
+    }
+    return nullptr;
+  }
 };
 
 TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
@@ -66,20 +77,46 @@ TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
 }
 
 TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
-  vars.locals.Append(lldb::SBValue());
-  vars.globals.Append(lldb::SBValue());
-  vars.registers.Append(lldb::SBValue());
+  lldb::SBFrame frame;
+  uint32_t frame_id = 0;
 
-  EXPECT_EQ(vars.GetTopLevelScope(VARREF_LOCALS), &vars.locals);
-  EXPECT_EQ(vars.GetTopLevelScope(VARREF_GLOBALS), &vars.globals);
-  EXPECT_EQ(vars.GetTopLevelScope(VARREF_REGS), &vars.registers);
-  EXPECT_EQ(vars.GetTopLevelScope(9999), nullptr);
+  std::vector<protocol::Scope> scopes = vars.CreateScopes(frame_id, frame);
+
+  const protocol::Scope *locals_scope = FindScope(scopes, "Locals");
+  const protocol::Scope *globals_scope = FindScope(scopes, "Globals");
+  const protocol::Scope *registers_scope = FindScope(scopes, "Registers");
+
+  ASSERT_NE(locals_scope, nullptr);
+  ASSERT_NE(globals_scope, nullptr);
+  ASSERT_NE(registers_scope, nullptr);
+
+  auto locals_data = vars.GetTopLevelScope(locals_scope->variablesReference);
+  auto globals_data = vars.GetTopLevelScope(globals_scope->variablesReference);
+  auto registers_data =
+      vars.GetTopLevelScope(registers_scope->variablesReference);
+
+  ASSERT_TRUE(locals_data.has_value());
+  ASSERT_TRUE(globals_data.has_value());
+  ASSERT_TRUE(registers_data.has_value());
+
+  EXPECT_EQ(locals_data->kind, eScopeKindLocals);
+  EXPECT_EQ(globals_data->kind, eScopeKindGlobals);
+  EXPECT_EQ(registers_data->kind, eScopeKindRegisters);
+
+  EXPECT_FALSE(vars.GetTopLevelScope(9999).has_value());
 }
 
 TEST_F(VariablesTest, FindVariable_LocalsByName) {
+  lldb::SBFrame frame;
+  uint32_t frame_id = 0;
+
+  std::vector<protocol::Scope> scopes = vars.CreateScopes(frame_id, frame);
+
+  const protocol::Scope *locals_scope = FindScope(scopes, "Locals");
+  ASSERT_NE(locals_scope, nullptr);
+
+  lldb::SBValue found = vars.FindVariable(locals_scope->variablesReference, "");
   lldb::SBValue dummy;
-  vars.locals.Append(dummy);
-  lldb::SBValue found = vars.FindVariable(VARREF_LOCALS, "");
 
   EXPECT_EQ(found.IsValid(), dummy.IsValid());
 }

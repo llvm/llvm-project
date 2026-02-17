@@ -92,8 +92,10 @@ static void viewCFG(Function &F, const BlockFrequencyInfo *BFI,
 }
 
 DOTFuncInfo::DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
-                         const BranchProbabilityInfo *BPI, uint64_t MaxFreq)
-    : F(F), BFI(BFI), BPI(BPI), MaxFreq(MaxFreq) {
+                         const BranchProbabilityInfo *BPI, uint64_t MaxFreq,
+                         std::optional<NodeIdFormatterTy> NodeIdFormatter)
+    : F(F), BFI(BFI), BPI(BPI), MaxFreq(MaxFreq),
+      NodeIdFormatter(NodeIdFormatter) {
   ShowHeat = false;
   EdgeWeights = !!BPI; // Print EdgeWeights when BPI is available.
   RawWeights = !!BFI;  // Print RawWeights when BFI is available.

@@ -28,19 +28,22 @@ struct TosaLevel {
   int32_t MAX_LOG2_SIZE = 0;
   int32_t MAX_NESTING = 0;
   int32_t MAX_TENSOR_LIST_SIZE = 0;
+  int32_t MAX_SHAPE_LEN = 0;
 
   bool operator==(const TosaLevel &rhs) {
     return MAX_RANK == rhs.MAX_RANK && MAX_KERNEL == rhs.MAX_KERNEL &&
            MAX_STRIDE == rhs.MAX_STRIDE && MAX_SCALE == rhs.MAX_SCALE &&
            MAX_LOG2_SIZE == rhs.MAX_LOG2_SIZE &&
            MAX_NESTING == rhs.MAX_NESTING &&
-           MAX_TENSOR_LIST_SIZE == rhs.MAX_TENSOR_LIST_SIZE;
+           MAX_TENSOR_LIST_SIZE == rhs.MAX_TENSOR_LIST_SIZE &&
+           MAX_SHAPE_LEN == rhs.MAX_SHAPE_LEN;
   }
 };
 
-static constexpr TosaLevel TOSA_LEVEL_EIGHTK = {6, 8192, 8192, 256, 31, 6, 64};
+static constexpr TosaLevel TOSA_LEVEL_EIGHTK = {6,  8192, 8192, 256,
+                                                31, 6,    64,   16};
 static constexpr TosaLevel TOSA_LEVEL_NONE = {32, 2147483647, 2147483647, 2048,
-                                              63, 256,        256};
+                                              63, 256,        256,        64};
 
 TargetEnvAttr lookupTargetEnv(Operation *op);
 TargetEnvAttr getDefaultTargetEnv(MLIRContext *context);

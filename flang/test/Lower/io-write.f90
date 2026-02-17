@@ -1,6 +1,6 @@
 ! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
-! Test that IO item calls stackrestore in the right place 
+! Test that IO item calls stackrestore in the right place
 
 ! CHECK-LABEL: func.func @_QQmain() {
   character(3) string

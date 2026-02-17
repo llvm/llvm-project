@@ -29,8 +29,6 @@ class Type;
 
 using namespace llvm;
 
-namespace {
-
 static inline int sizeOfSCEV(const SCEV *S) {
   struct FindSCEVSize {
     int Size = 0;
@@ -51,8 +49,6 @@ static inline int sizeOfSCEV(const SCEV *S) {
   ST.visitAll(S);
   return F.Size;
 }
-
-} // namespace
 
 // Computes the Quotient and Remainder of the division of Numerator by
 // Denominator.
@@ -145,10 +141,11 @@ void SCEVDivision::visitAddRecExpr(const SCEVAddRecExpr *Numerator) {
   if (Ty != StartQ->getType() || Ty != StartR->getType() ||
       Ty != StepQ->getType() || Ty != StepR->getType())
     return cannotDivide(Numerator);
+
   Quotient = SE.getAddRecExpr(StartQ, StepQ, Numerator->getLoop(),
-                              Numerator->getNoWrapFlags());
+                              SCEV::NoWrapFlags::FlagAnyWrap);
   Remainder = SE.getAddRecExpr(StartR, StepR, Numerator->getLoop(),
-                               Numerator->getNoWrapFlags());
+                               SCEV::NoWrapFlags::FlagAnyWrap);
 }
 
 void SCEVDivision::visitAddExpr(const SCEVAddExpr *Numerator) {

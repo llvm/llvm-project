@@ -6054,9 +6054,9 @@ metadata: !LinalgOpMetadata
   doc: |-
     Fills the output tensor with the given value.
 
-    Works for arbitrary ranked output tensors since the operation performs scalar
-    accesses only and is thus rank polymorphic. Numeric casting is performed on
-    the value operand, promoting it to the same data type as the output.
+    Works for arbitrary ranked output tensors since the operation performs
+    scalar accesses only and is thus rank polymorphic. The value operand
+    type must match the element type of the output.
   implements:
   - LinalgFillOpInterface
   defines:
@@ -6066,11 +6066,11 @@ structured_op: !LinalgStructuredOpConfig
   - !LinalgOperandDefConfig
     name: value
     kind: scalar
-    type_var: T1
+    type_var: T
   - !LinalgOperandDefConfig
     name: O
     kind: output_tensor
-    type_var: U
+    type_var: T
     shape_map: affine_map<() -> ()>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
@@ -6081,13 +6081,7 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      scalar_fn:
-        kind: type
-        fn_name: cast_signed
-        type_var: U
-        operands:
-        - !ScalarExpression
-          scalar_arg: value
+      scalar_arg: value
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: fill_rng_2d

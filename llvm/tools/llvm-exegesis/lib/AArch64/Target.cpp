@@ -70,6 +70,13 @@ static MCInst loadPPRImmediate(MCRegister Reg, unsigned RegBitWidth,
       .addImm(31); // All lanes true for 16 bits
 }
 
+static MCInst loadFFRImmediate(MCRegister Reg, unsigned RegBitWidth,
+                               const APInt &Value) {
+  assert(Value.getZExtValue() == 0 && "Expected initialisation value 0");
+  // For first-fault register FFR, we set it to a true
+  return MCInstBuilder(AArch64::SETFFR);
+}
+
 // Generates instructions to load an immediate value into an FPCR register.
 static std::vector<MCInst>
 loadFPCRImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
@@ -78,6 +85,42 @@ loadFPCRImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
   MCInst MoveToFPCR =
       MCInstBuilder(AArch64::MSR).addImm(AArch64SysReg::FPCR).addReg(TempReg);
   return {LoadImm, MoveToFPCR};
+}
+
+// Generates instructions to load an immediate value into a pair of W registers
+static std::vector<MCInst> loadWSeqPairImmediate(MCRegister Reg,
+                                                 unsigned RegBitWidth,
+                                                 const APInt &Value) {
+  MCRegister EvenReg = (Reg - AArch64::W0_W1) * 2 + AArch64::W0 + 0;
+  MCRegister OddReg = (Reg - AArch64::W0_W1) * 2 + AArch64::W0 + 1;
+  assert(Value.getBitWidth() <= RegBitWidth &&
+         "Value must fit in the Register");
+
+  MCInst LoadEven = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
+                        .addReg(EvenReg)
+                        .addImm(Value.getZExtValue());
+  MCInst LoadOdd = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
+                       .addReg(OddReg)
+                       .addImm(Value.getZExtValue());
+  return {LoadEven, LoadOdd};
+}
+
+// Generates instructions to load an immediate value into a pair of X registers
+static std::vector<MCInst> loadXSeqPairImmediate(MCRegister Reg,
+                                                 unsigned RegBitWidth,
+                                                 const APInt &Value) {
+  MCRegister EvenReg = (Reg - AArch64::X0_X1) * 2 + AArch64::X0 + 0;
+  MCRegister OddReg = (Reg - AArch64::X0_X1) * 2 + AArch64::X0 + 1;
+  assert(Value.getBitWidth() <= RegBitWidth &&
+         "Value must fit in the Register");
+
+  MCInst LoadEven = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
+                        .addReg(EvenReg)
+                        .addImm(Value.getZExtValue());
+  MCInst LoadOdd = MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
+                       .addReg(OddReg)
+                       .addImm(Value.getZExtValue());
+  return {LoadEven, LoadOdd};
 }
 
 // Fetch base-instruction to load an FP immediate value into a register.
@@ -104,6 +147,59 @@ static MCInst loadFPImmediate(MCRegister Reg, unsigned RegBitWidth,
   if (RegBitWidth >= 64)
     Instructions.addOperand(MCOperand::createImm(Value.getZExtValue()));
   return Instructions;
+}
+
+// Generates instructions to load an immediate value into a DD, DDD, DDDD,
+// QQ, QQQ or QQQQ Reg
+static std::vector<MCInst>
+loadDQ234RegImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value,
+                      MCRegister BaseReg, unsigned RegCount) {
+  MCRegister RegDorQ0 = AArch64::D0;
+  if (RegBitWidth == 128)
+    RegDorQ0 = AArch64::Q0;
+
+  MCRegister RegDQ0 = RegDorQ0 + ((Reg - BaseReg + 0) % 32);
+  MCRegister RegDQ1 = RegDorQ0 + ((Reg - BaseReg + 1) % 32);
+  MCRegister RegDQ2 = RegDorQ0 + ((Reg - BaseReg + 2) % 32);
+  MCRegister RegDQ3 = RegDorQ0 + ((Reg - BaseReg + 3) % 32);
+
+  MCInst LoadDQ0 = loadFPImmediate(RegDQ0, RegBitWidth, Value);
+  MCInst LoadDQ1 = loadFPImmediate(RegDQ1, RegBitWidth, Value);
+  if (RegCount == 2)
+    return {LoadDQ0, LoadDQ1};
+  MCInst LoadDQ2 = loadFPImmediate(RegDQ2, RegBitWidth, Value);
+  if (RegCount == 3)
+    return {LoadDQ0, LoadDQ1, LoadDQ2};
+  MCInst LoadDQ3 = loadFPImmediate(RegDQ3, RegBitWidth, Value);
+  assert((RegCount == 4) && "ExpectedRegCount 2, 3 or 4");
+  return {LoadDQ0, LoadDQ1, LoadDQ2, LoadDQ3};
+}
+
+// Generates instructions to load immediate in the flags register
+static std::vector<MCInst>
+loadNZCVImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
+  MCRegister TempReg1 = AArch64::X8;
+  MCRegister TempReg2 = AArch64::X9;
+
+  MCInst MoveFromNZCV =
+      MCInstBuilder(AArch64::MRS).addReg(TempReg1).addImm(AArch64SysReg::NZCV);
+  MCInst LoadMask =
+      MCInstBuilder(AArch64::MOVi64imm).addReg(TempReg2).addImm(0xf0000000);
+  MCInst BitClear = MCInstBuilder(AArch64::BICXrr)
+                        .addReg(TempReg1)
+                        .addReg(TempReg1)
+                        .addReg(TempReg2);
+  MCInst MoveToNZCV =
+      MCInstBuilder(AArch64::MSR).addImm(AArch64SysReg::NZCV).addReg(TempReg1);
+
+  if (Value.getZExtValue() == 0)
+    return {MoveFromNZCV, LoadMask, BitClear, MoveToNZCV};
+
+  MCInst OrrMask = MCInstBuilder(AArch64::ORRXrr)
+                       .addReg(TempReg1)
+                       .addReg(TempReg1)
+                       .addImm(Value.getZExtValue());
+  return {MoveFromNZCV, LoadMask, BitClear, OrrMask, MoveToNZCV};
 }
 
 #include "AArch64GenExegesis.inc"
@@ -146,6 +242,30 @@ private:
       return {loadZPRImmediate(Reg, 128, Value)};
     if (Reg == AArch64::FPCR)
       return {loadFPCRImmediate(Reg, 32, Value)};
+    if (Reg == AArch64::NZCV)
+      return {loadNZCVImmediate(Reg, 32, Value)};
+    if (Reg == AArch64::FFR)
+      return {loadFFRImmediate(Reg, 32, Value)};
+    if (AArch64::WSeqPairsClassRegClass.contains(Reg))
+      return {loadWSeqPairImmediate(Reg, 32, Value)};
+    if (AArch64::XSeqPairsClassRegClass.contains(Reg))
+      return {loadXSeqPairImmediate(Reg, 64, Value)};
+    if (AArch64::DDRegClass.contains(Reg))
+      return loadDQ234RegImmediate(Reg, 64, Value, AArch64::D0_D1, 2);
+    if (AArch64::DDDRegClass.contains(Reg))
+      return loadDQ234RegImmediate(Reg, 64, Value, AArch64::D0_D1_D2, 3);
+    if (AArch64::DDDDRegClass.contains(Reg))
+      return loadDQ234RegImmediate(Reg, 64, Value, AArch64::D0_D1_D2_D3, 4);
+    if (AArch64::QQRegClass.contains(Reg))
+      return loadDQ234RegImmediate(Reg, 128, Value, AArch64::Q0_Q1, 2);
+    if (AArch64::QQQRegClass.contains(Reg))
+      return loadDQ234RegImmediate(Reg, 128, Value, AArch64::Q0_Q1_Q2, 3);
+    if (AArch64::QQQQRegClass.contains(Reg))
+      return loadDQ234RegImmediate(Reg, 128, Value, AArch64::Q0_Q1_Q2_Q3, 4);
+    // TODO if (AArch64::PNRRegClass.contains(Reg))
+    // TODO if (AArch64::ZPRRegClass.contains(Reg))
+    // TODO if (AArch64::ZPR2RegClass.contains(Reg))
+    // TODO if (AArch64::ZPR2StridedOrContiguousRegClass.contains(Reg))
 
     errs() << "setRegTo is not implemented, results will be unreliable\n";
     return {};
@@ -222,6 +342,13 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
     return Error::success();
   }
   case llvm::AArch64::OPERAND_IMPLICIT_IMM_0:
+    AssignedValue = MCOperand::createImm(0);
+    return Error::success();
+  case llvm::AArch64::OPERAND_SHIFTED_REGISTER:
+    // TODO it would be better if these operands were randomized
+    AssignedValue = MCOperand::createReg(0);
+    return Error::success();
+  case llvm::AArch64::OPERAND_SHIFTED_IMMEDIATE:
     AssignedValue = MCOperand::createImm(0);
     return Error::success();
   case MCOI::OperandType::OPERAND_PCREL:

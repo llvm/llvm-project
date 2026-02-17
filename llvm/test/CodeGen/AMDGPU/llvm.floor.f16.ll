@@ -57,7 +57,7 @@ define amdgpu_kernel void @floor_f16(
 ; GFX11-NEXT:    s_mov_b32 s8, s2
 ; GFX11-NEXT:    s_mov_b32 s9, s3
 ; GFX11-NEXT:    s_mov_b32 s4, s0
-; GFX11-NEXT:    buffer_load_u16 v0, off, s[8:11], 0
+; GFX11-NEXT:    buffer_load_d16_b16 v0, off, s[8:11], 0
 ; GFX11-NEXT:    s_mov_b32 s5, s1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_floor_f16_e32 v0.l, v0.l
@@ -161,9 +161,8 @@ define amdgpu_kernel void @floor_v2f16(
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-NEXT:    v_floor_f16_e32 v0.l, v0.l
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_floor_f16_e32 v0.h, v1.l
-; GFX11-NEXT:    v_pack_b32_f16 v0, v0.l, v0.h
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-NEXT:    s_endpgm
 ;

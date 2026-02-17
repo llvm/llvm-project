@@ -55,3 +55,27 @@ func.func @nested(%ub1: index, %ub2: index, %ub3: index, %ub4: index) {
   }
   return
 }
+
+// -----
+
+// The pass should bail out cleanly and not crash here. `scf.forall` with outputs
+// is not supported, but we should still handle the `forall` op with no results
+// present in the same function.
+
+func.func private @callee(%i: index)
+
+// CHECK-LABEL: @shared_outs
+func.func @shared_outs(%arg0: tensor<1xf32>, %ub: index) -> tensor<1xf32> {
+  // CHECK: %{{.*}} = scf.forall
+  %0 = scf.forall (%i) in (1) shared_outs(%out = %arg0) -> (tensor<1xf32>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %out into %out[%i] [1] [1] : tensor<1xf32> into tensor<1xf32>
+    }
+  }
+
+  // CHECK: scf.for
+  scf.forall (%i) in (%ub) {
+    func.call @callee(%i) : (index) -> ()
+  }
+  return %0 : tensor<1xf32>
+}

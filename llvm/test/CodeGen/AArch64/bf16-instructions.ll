@@ -1131,38 +1131,6 @@ define bfloat @test_bitcast_i16tobfloat(i16 %a) #0 {
   ret bfloat %r
 }
 
-declare bfloat @llvm.sqrt.f16(bfloat %a) #0
-declare bfloat @llvm.powi.f16.i32(bfloat %a, i32 %b) #0
-declare bfloat @llvm.sin.f16(bfloat %a) #0
-declare bfloat @llvm.cos.f16(bfloat %a) #0
-declare bfloat @llvm.tan.f16(bfloat %a) #0
-declare bfloat @llvm.asin.f16(bfloat %a) #0
-declare bfloat @llvm.acos.f16(bfloat %a) #0
-declare bfloat @llvm.atan.f16(bfloat %a) #0
-declare bfloat @llvm.atan2.f16(bfloat %a, bfloat %b) #0
-declare bfloat @llvm.sinh.f16(bfloat %a) #0
-declare bfloat @llvm.cosh.f16(bfloat %a) #0
-declare bfloat @llvm.tanh.f16(bfloat %a) #0
-declare bfloat @llvm.pow.f16(bfloat %a, bfloat %b) #0
-declare bfloat @llvm.exp.f16(bfloat %a) #0
-declare bfloat @llvm.exp2.f16(bfloat %a) #0
-declare bfloat @llvm.log.f16(bfloat %a) #0
-declare bfloat @llvm.log10.f16(bfloat %a) #0
-declare bfloat @llvm.log2.f16(bfloat %a) #0
-declare bfloat @llvm.fma.f16(bfloat %a, bfloat %b, bfloat %c) #0
-declare bfloat @llvm.fabs.f16(bfloat %a) #0
-declare bfloat @llvm.minnum.f16(bfloat %a, bfloat %b) #0
-declare bfloat @llvm.maxnum.f16(bfloat %a, bfloat %b) #0
-declare bfloat @llvm.copysign.f16(bfloat %a, bfloat %b) #0
-declare bfloat @llvm.floor.f16(bfloat %a) #0
-declare bfloat @llvm.ceil.f16(bfloat %a) #0
-declare bfloat @llvm.trunc.f16(bfloat %a) #0
-declare bfloat @llvm.rint.f16(bfloat %a) #0
-declare bfloat @llvm.nearbyint.f16(bfloat %a) #0
-declare bfloat @llvm.round.f16(bfloat %a) #0
-declare bfloat @llvm.roundeven.f16(bfloat %a) #0
-declare bfloat @llvm.fmuladd.f16(bfloat %a, bfloat %b, bfloat %c) #0
-
 
 define bfloat @test_sqrt(bfloat %a) #0 {
 ; CHECK-CVT-LABEL: test_sqrt:
@@ -1187,7 +1155,7 @@ define bfloat @test_sqrt(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    fsqrt s0, s0
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.sqrt.f16(bfloat %a)
+  %r = call bfloat @llvm.sqrt.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1220,7 +1188,7 @@ define bfloat @test_powi(bfloat %a, i32 %b) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.powi.f16.i32(bfloat %a, i32 %b)
+  %r = call bfloat @llvm.powi.bf16.i32(bfloat %a, i32 %b)
   ret bfloat %r
 }
 
@@ -1254,7 +1222,7 @@ define bfloat @test_sin(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.sin.f16(bfloat %a)
+  %r = call bfloat @llvm.sin.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1287,7 +1255,7 @@ define bfloat @test_cos(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.cos.f16(bfloat %a)
+  %r = call bfloat @llvm.cos.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1320,7 +1288,7 @@ define bfloat @test_tan(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.tan.f16(bfloat %a)
+  %r = call bfloat @llvm.tan.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1353,7 +1321,7 @@ define bfloat @test_acos(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.acos.f16(bfloat %a)
+  %r = call bfloat @llvm.acos.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1386,7 +1354,7 @@ define bfloat @test_asin(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.asin.f16(bfloat %a)
+  %r = call bfloat @llvm.asin.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1419,7 +1387,7 @@ define bfloat @test_atan(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.atan.f16(bfloat %a)
+  %r = call bfloat @llvm.atan.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1458,7 +1426,7 @@ define bfloat @test_atan2(bfloat %a, bfloat %b) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.atan2.f16(bfloat %a, bfloat %b)
+  %r = call bfloat @llvm.atan2.bf16(bfloat %a, bfloat %b)
   ret bfloat %r
 }
 
@@ -1491,7 +1459,7 @@ define bfloat @test_cosh(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.cosh.f16(bfloat %a)
+  %r = call bfloat @llvm.cosh.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1524,7 +1492,7 @@ define bfloat @test_sinh(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.sinh.f16(bfloat %a)
+  %r = call bfloat @llvm.sinh.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1557,7 +1525,7 @@ define bfloat @test_tanh(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.tanh.f16(bfloat %a)
+  %r = call bfloat @llvm.tanh.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1596,7 +1564,7 @@ define bfloat @test_pow(bfloat %a, bfloat %b) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.pow.f16(bfloat %a, bfloat %b)
+  %r = call bfloat @llvm.pow.bf16(bfloat %a, bfloat %b)
   ret bfloat %r
 }
 
@@ -1629,7 +1597,7 @@ define bfloat @test_exp(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.exp.f16(bfloat %a)
+  %r = call bfloat @llvm.exp.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1662,7 +1630,7 @@ define bfloat @test_exp2(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.exp2.f16(bfloat %a)
+  %r = call bfloat @llvm.exp2.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1695,7 +1663,7 @@ define bfloat @test_log(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.log.f16(bfloat %a)
+  %r = call bfloat @llvm.log.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1728,7 +1696,7 @@ define bfloat @test_log10(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.log10.f16(bfloat %a)
+  %r = call bfloat @llvm.log10.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1761,7 +1729,7 @@ define bfloat @test_log2(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.log2.f16(bfloat %a)
+  %r = call bfloat @llvm.log2.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1796,7 +1764,7 @@ define bfloat @test_fma(bfloat %a, bfloat %b, bfloat %c) #0 {
 ; CHECK-BF16-NEXT:    fmadd s0, s0, s1, s2
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.fma.f16(bfloat %a, bfloat %b, bfloat %c)
+  %r = call bfloat @llvm.fma.bf16(bfloat %a, bfloat %b, bfloat %c)
   ret bfloat %r
 }
 
@@ -1809,7 +1777,7 @@ define bfloat @test_fabs(bfloat %a) #0 {
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
-  %r = call bfloat @llvm.fabs.f16(bfloat %a)
+  %r = call bfloat @llvm.fabs.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -1840,7 +1808,7 @@ define bfloat @test_minnum(bfloat %a, bfloat %b) #0 {
 ; CHECK-BF16-NEXT:    fminnm s0, s0, s1
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.minnum.f16(bfloat %a, bfloat %b)
+  %r = call bfloat @llvm.minnum.bf16(bfloat %a, bfloat %b)
   ret bfloat %r
 }
 
@@ -1871,7 +1839,7 @@ define bfloat @test_maxnum(bfloat %a, bfloat %b) #0 {
 ; CHECK-BF16-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.maxnum.f16(bfloat %a, bfloat %b)
+  %r = call bfloat @llvm.maxnum.bf16(bfloat %a, bfloat %b)
   ret bfloat %r
 }
 
@@ -1909,7 +1877,7 @@ define bfloat @test_copysign(bfloat %a, bfloat %b) #0 {
 ; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-GI-NEXT:    ret
-  %r = call bfloat @llvm.copysign.f16(bfloat %a, bfloat %b)
+  %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %b)
   ret bfloat %r
 }
 
@@ -1946,7 +1914,7 @@ define bfloat @test_copysign_f32(bfloat %a, float %b) #0 {
 ; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %tb = fptrunc float %b to bfloat
-  %r = call bfloat @llvm.copysign.f16(bfloat %a, bfloat %tb)
+  %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %tb)
   ret bfloat %r
 }
 
@@ -1984,7 +1952,7 @@ define bfloat @test_copysign_f64(bfloat %a, double %b) #0 {
 ; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %tb = fptrunc double %b to bfloat
-  %r = call bfloat @llvm.copysign.f16(bfloat %a, bfloat %tb)
+  %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %tb)
   ret bfloat %r
 }
 
@@ -2026,7 +1994,7 @@ define float @test_copysign_extended(bfloat %a, bfloat %b) #0 {
 ; CHECK-GI-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-GI-NEXT:    ret
-  %r = call bfloat @llvm.copysign.f16(bfloat %a, bfloat %b)
+  %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %b)
   %xr = fpext bfloat %r to float
   ret float %xr
 }
@@ -2054,7 +2022,7 @@ define bfloat @test_floor(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    frintm s0, s0
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.floor.f16(bfloat %a)
+  %r = call bfloat @llvm.floor.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -2081,7 +2049,7 @@ define bfloat @test_ceil(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    frintp s0, s0
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.ceil.f16(bfloat %a)
+  %r = call bfloat @llvm.ceil.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -2108,7 +2076,7 @@ define bfloat @test_trunc(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    frintz s0, s0
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.trunc.f16(bfloat %a)
+  %r = call bfloat @llvm.trunc.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -2135,7 +2103,7 @@ define bfloat @test_rint(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    frintx s0, s0
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.rint.f16(bfloat %a)
+  %r = call bfloat @llvm.rint.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -2162,7 +2130,7 @@ define bfloat @test_nearbyint(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    frinti s0, s0
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.nearbyint.f16(bfloat %a)
+  %r = call bfloat @llvm.nearbyint.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -2189,7 +2157,7 @@ define bfloat @test_round(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    frinta s0, s0
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.round.f16(bfloat %a)
+  %r = call bfloat @llvm.round.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -2216,7 +2184,7 @@ define bfloat @test_roundeven(bfloat %a) #0 {
 ; CHECK-BF16-NEXT:    frintn s0, s0
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.roundeven.f16(bfloat %a)
+  %r = call bfloat @llvm.roundeven.bf16(bfloat %a)
   ret bfloat %r
 }
 
@@ -2262,7 +2230,7 @@ define bfloat @test_fmuladd(bfloat %a, bfloat %b, bfloat %c) #0 {
 ; CHECK-BF16-NEXT:    fadd s0, s0, s1
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
-  %r = call bfloat @llvm.fmuladd.f16(bfloat %a, bfloat %b, bfloat %c)
+  %r = call bfloat @llvm.fmuladd.bf16(bfloat %a, bfloat %b, bfloat %c)
   ret bfloat %r
 }
 

@@ -33,25 +33,59 @@ public:
       OS << "#undef " << Name << "\n";
     OS << "\n";
   }
-  ~IfDefEmitter() { close(); }
-
-  // Explicit function to close the ifdef scopes.
-  void close() {
-    if (Closed)
-      return;
-
+  ~IfDefEmitter() {
     OS << "\n";
     if (LateUndef)
       OS << "#undef " << Name << "\n";
     OS << "#endif // " << Name << "\n\n";
-    Closed = true;
   }
 
 private:
   std::string Name;
   raw_ostream &OS;
   bool LateUndef;
-  bool Closed = false;
+};
+
+// Base class for RAII helpers for emitting various if guards.
+class IfGuardEmitterBase {
+protected:
+  IfGuardEmitterBase(raw_ostream &OS, StringRef If, StringRef Condition)
+      : Condition(Condition.str()), OS(OS) {
+    OS << If << " " << Condition << "\n\n";
+  }
+
+  ~IfGuardEmitterBase() { OS << "\n#endif // " << Condition << "\n\n"; }
+
+private:
+  std::string Condition;
+  raw_ostream &OS;
+};
+
+// RAII emitter for:
+// #if <Condition>
+// #endif // <Condition>
+class IfGuardEmitter : private IfGuardEmitterBase {
+public:
+  IfGuardEmitter(raw_ostream &OS, StringRef Condition)
+      : IfGuardEmitterBase(OS, "#if", Condition) {}
+};
+
+// RAII emitter for:
+// #ifdef <Condition>
+// #endif // <Condition>
+class IfDefGuardEmitter : private IfGuardEmitterBase {
+public:
+  IfDefGuardEmitter(raw_ostream &OS, StringRef Condition)
+      : IfGuardEmitterBase(OS, "#ifdef", Condition) {}
+};
+
+// RAII emitter for:
+// #ifndef <Condition>
+// #endif // <Condition>
+class IfNDefGuardEmitter : private IfGuardEmitterBase {
+public:
+  IfNDefGuardEmitter(raw_ostream &OS, StringRef Condition)
+      : IfGuardEmitterBase(OS, "#ifndef", Condition) {}
 };
 
 // Simple RAII helper for emitting header include guard (ifndef-define-endif).
@@ -62,20 +96,11 @@ public:
     OS << "#ifndef " << Name << "\n"
        << "#define " << Name << "\n\n";
   }
-  ~IncludeGuardEmitter() { close(); }
-
-  // Explicit function to close the ifdef scopes.
-  void close() {
-    if (Closed)
-      return;
-    OS << "\n#endif // " << Name << "\n\n";
-    Closed = true;
-  }
+  ~IncludeGuardEmitter() { OS << "\n#endif // " << Name << "\n\n"; }
 
 private:
   std::string Name;
   raw_ostream &OS;
-  bool Closed = false;
 };
 
 // Simple RAII helper for emitting namespace scope. Name can be a single
@@ -89,15 +114,9 @@ public:
       OS << "namespace " << Name << " {\n\n";
   }
 
-  ~NamespaceEmitter() { close(); }
-
-  // Explicit function to close the namespace scopes.
-  void close() {
-    if (Closed)
-      return;
+  ~NamespaceEmitter() {
     if (!Name.empty())
       OS << "\n} // namespace " << Name << "\n";
-    Closed = true;
   }
 
 private:
@@ -112,9 +131,19 @@ private:
     Name.consume_front("::");
     return Name;
   }
+
   std::string Name;
   raw_ostream &OS;
-  bool Closed = false;
+};
+
+// Simple RAII helper for emitting anonymous namespace scope.
+class AnonNamespaceEmitter {
+public:
+  AnonNamespaceEmitter(raw_ostream &OS) : OS(OS) { OS << "namespace {\n\n"; }
+  ~AnonNamespaceEmitter() { OS << "} // namespace\n"; }
+
+private:
+  raw_ostream &OS;
 };
 
 } // end namespace llvm

@@ -80,6 +80,7 @@ namespace call_with_std_move {
 void consume(CheckedObj&&);
 void foo(CheckedObj&& obj) {
   consume(std::move(obj));
+  consume(WTF::move(obj));
 }
 
 }

@@ -221,6 +221,14 @@ public:
 
   /// at - Return the entry for the specified key, or abort if no such
   /// entry exists.
+  [[nodiscard]] ValueT &at(const_arg_type_t<KeyT> Val) {
+    auto Iter = this->find(std::move(Val));
+    assert(Iter != this->end() && "DenseMap::at failed due to a missing key");
+    return Iter->second;
+  }
+
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.
   [[nodiscard]] const ValueT &at(const_arg_type_t<KeyT> Val) const {
     auto Iter = this->find(std::move(Val));
     assert(Iter != this->end() && "DenseMap::at failed due to a missing key");
@@ -743,10 +751,10 @@ class DenseMap : public DenseMapBase<DenseMap<KeyT, ValueT, KeyInfoT, BucketT>,
   // simplicity of referring to them.
   using BaseT = DenseMapBase<DenseMap, KeyT, ValueT, KeyInfoT, BucketT>;
 
-  BucketT *Buckets;
-  unsigned NumEntries;
-  unsigned NumTombstones;
-  unsigned NumBuckets;
+  BucketT *Buckets = nullptr;
+  unsigned NumEntries = 0;
+  unsigned NumTombstones = 0;
+  unsigned NumBuckets = 0;
 
   explicit DenseMap(unsigned NumBuckets, typename BaseT::ExactBucketCount) {
     this->initWithExactBucketCount(NumBuckets);

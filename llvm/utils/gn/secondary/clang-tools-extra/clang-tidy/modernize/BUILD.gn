@@ -15,6 +15,7 @@ static_library("modernize") {
   sources = [
     "AvoidBindCheck.cpp",
     "AvoidCArraysCheck.cpp",
+    "AvoidCStyleCastCheck.cpp",
     "AvoidSetjmpLongjmpCheck.cpp",
     "AvoidVariadicFunctionsCheck.cpp",
     "ConcatNestedNamespacesCheck.cpp",
@@ -58,6 +59,8 @@ static_library("modernize") {
     "UseStdFormatCheck.cpp",
     "UseStdNumbersCheck.cpp",
     "UseStdPrintCheck.cpp",
+    "UseStringViewCheck.cpp",
+    "UseStructuredBindingCheck.cpp",
     "UseTrailingReturnTypeCheck.cpp",
     "UseTransparentFunctorsCheck.cpp",
     "UseUncaughtExceptionsCheck.cpp",
