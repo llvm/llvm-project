@@ -1252,25 +1252,28 @@ public:
           InterchangeableMask = CIValue.isZero() ? CanBeAll : UDivBIT | LShrBIT;
         break;
       case Instruction::Mul:
+        if (CIValue.isOne()) {
+          InterchangeableMask = CanBeAll;
+          break;
+        }
+        if (CIValue.isPowerOf2())
+	  InterchangeableMask = MulBIT | ShlBIT;
+        break;
       case Instruction::UDiv:
         if (CIValue.isOne()) {
           InterchangeableMask = CanBeAll;
           break;
         }
-        if (CIValue.isPowerOf2()) {
-          if (Opcode == Instruction::Mul)
-            InterchangeableMask = MulBIT | ShlBIT;
-          else // Instruction::UDiv
-            InterchangeableMask = UDivBIT | LShrBIT;
-        }
+        if (CIValue.isPowerOf2())
+	  InterchangeableMask = UDivBIT | LShrBIT;
         break;
       case Instruction::Add:
       case Instruction::Sub:
         InterchangeableMask = CIValue.isZero() ? CanBeAll : SubBIT | AddBIT;
         break;
       case Instruction::And:
-        if (CIValue.isAllOnes())
-          InterchangeableMask = CanBeAll;
+	if (CIValue.isAllOnes())
+	  InterchangeableMask = CanBeAll;
         break;
       case Instruction::Xor:
         if (CIValue.isZero())
