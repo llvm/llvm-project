@@ -19,7 +19,7 @@ class TestDAP_launch_stdio_redirection_and_console(lldbdap_testcase.DAPTestCaseB
     """
 
     @skipIfAsan
-    @skipIfWindows # https://github.com/llvm/llvm-project/issues/62336
+    @skipIfWindows  # https://github.com/llvm/llvm-project/issues/62336
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     @skipIfBuildType(["debug"])
     def test(self):
