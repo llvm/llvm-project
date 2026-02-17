@@ -522,8 +522,6 @@ class TrivialFunctionAnalysisVisitor
       return false;
     if (T->isIntegralOrEnumerationType())
       return true;
-    if (isa<PointerType>(T) || T->isNullPtrType())
-      return true;
     auto *R = T->getAsCXXRecordDecl();
     if (!R)
       return false;
