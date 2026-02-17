@@ -53414,6 +53414,32 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Match pattern to identify a shift-left combined with
+  // a bitwise AND
+  //   (B << ShiftConst) | (A & MaskConst)
+  //
+  // only if the SHLD instruction is not slow on this subtarget.
+  if (!Subtarget.isSHLDSlow()) {
+    using namespace llvm::SDPatternMatch;
+    APInt MaskConst, ShlConst;
+    SDValue A, B;
+    if (sd_match(N, m_Or(m_Shl(m_Value(B), m_ConstInt(ShlConst)),
+                         m_And(m_Value(A), m_ConstInt(MaskConst))))) {
+      uint64_t ShiftValue = ShlConst.getZExtValue();
+      // Check if the mask is a valid bit mask of the given shift value
+      if (MaskConst.isMask(ShiftValue)) {
+        unsigned NumBits = B.getScalarValueSizeInBits();
+        unsigned NewShift = NumBits - ShiftValue;
+
+        SDValue NewSHL = DAG.getNode(
+            ISD::SHL, dl, VT, A, DAG.getShiftAmountConstant(NewShift, VT, dl));
+        SDValue R = DAG.getNode(ISD::FSHR, dl, VT, B, NewSHL,
+                                DAG.getShiftAmountConstant(NewShift, VT, dl));
+        return R;
+      }
+    }
+  }
+
   if (SDValue SetCC = combineAndOrForCcmpCtest(N, DAG, DCI, Subtarget))
     return SetCC;
 
