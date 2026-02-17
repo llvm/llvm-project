@@ -233,8 +233,7 @@ TEST_F(TUSummaryBuilderTest, AddConflictingSummaryToSameEntity) {
               Optional(Field(&MockSummaryData1::Value, 10)));
 
   // This is a different summary of the same kind.
-  std::unique_ptr<EntitySummary> NewSummary =
-      std::make_unique<MockSummaryData1>(20);
+  auto NewSummary = std::make_unique<MockSummaryData1>(20);
   ASSERT_EQ(NewSummary->getSummaryName(), Name);
 
   // Let's add this different summary.
