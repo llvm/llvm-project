@@ -11,6 +11,7 @@
 #include "EventHelper.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
@@ -132,15 +133,16 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
   body.type = desc.display_type_name;
 
   if (value.MightHaveChildren() || ValuePointsToCode(value))
-    body.variablesReference =
-        dap.variables.InsertVariable(value, /*is_permanent=*/is_repl_context);
+    body.variablesReference = dap.reference_storage.InsertVariable(
+        value, /*is_permanent=*/is_repl_context);
 
   if (lldb::addr_t addr = value.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
     body.memoryReference = EncodeMemoryReference(addr);
 
   if (ValuePointsToCode(value) &&
-      body.variablesReference != LLDB_DAP_INVALID_VAR_REF)
-    body.valueLocationReference = PackLocation(body.variablesReference, true);
+      body.variablesReference.Kind() != eReferenceKindInvalid)
+    body.valueLocationReference =
+        PackLocation(body.variablesReference.AsUInt32(), true);
 
   return body;
 }
