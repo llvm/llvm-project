@@ -224,14 +224,19 @@ public:
 #error Wrong code for getaffinity system call.
 #endif /* __NR_sched_getaffinity */
 #elif KMP_ARCH_X86_64
+#ifdef __ILP32__
+#define X32_BIT 0x40000000
+#else
+#define X32_BIT 0
+#endif /* __ILP32__ */
 #ifndef __NR_sched_setaffinity
-#define __NR_sched_setaffinity 203
-#elif __NR_sched_setaffinity != 203
+#define __NR_sched_setaffinity (203 + X32_BIT)
+#elif __NR_sched_setaffinity != (203 + X32_BIT)
 #error Wrong code for setaffinity system call.
 #endif /* __NR_sched_setaffinity */
 #ifndef __NR_sched_getaffinity
-#define __NR_sched_getaffinity 204
-#elif __NR_sched_getaffinity != 204
+#define __NR_sched_getaffinity (204 + X32_BIT)
+#elif __NR_sched_getaffinity != (204 + X32_BIT)
 #error Wrong code for getaffinity system call.
 #endif /* __NR_sched_getaffinity */
 #elif KMP_ARCH_PPC64
