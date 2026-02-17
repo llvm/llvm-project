@@ -5092,8 +5092,9 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
       Instruction::Mul, {RuntimeVF, UF}, {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
 
-  assert(Plan.getVF().getNumUsers() == Plan.getVFxUF().getNumUsers() == 1 &&
-         "VF and VFxUF not expected to be used");
+  assert(Plan.getVF().getNumUsers() == 0 && Plan.getUF().getNumUsers() == 0 &&
+         Plan.getVFxUF().getNumUsers() == 0 &&
+         "VF, UF, and VFxUF not expected to be used");
 }
 
 DenseMap<const SCEV *, Value *>
