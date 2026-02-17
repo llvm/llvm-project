@@ -4246,11 +4246,10 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
                              ChildSize + Current->SpacesRequiredBefore;
     }
 
-    if (Style.BreakParametersAfter > 0 &&
-        Current->is(tok::l_paren) &&
-        Current->ParameterCount > Style.BreakParametersAfter) {
-      const auto *RParen = Current->MatchingParen;
-      for (auto *ParamTok = Current->Next; ParamTok && ParamTok != RParen;
+    if (Style.BreakParametersAfter > 0 && Prev->is(tok::l_paren) &&
+        Prev->ParameterCount > Style.BreakParametersAfter) {
+      const auto *RParen = Prev->MatchingParen;
+      for (auto *ParamTok = Current; ParamTok && ParamTok != RParen;
            ParamTok = ParamTok->Next) {
         if (ParamTok->opensScope()) {
           ParamTok = ParamTok->MatchingParen;
