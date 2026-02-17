@@ -19,24 +19,24 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 
     // CHECK:      %[[ALLOC3_SZ:.*]] = mul i64 128, %[[N1]]
     // CHECK-NEXT: %[[ALLOC3:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 %[[ALLOC3_SZ]])
-    %3 = omp.alloc_shared_mem %n1 x vector<16xf32> {alignment = 128} : (i64) -> !llvm.ptr
+    %3 = omp.alloc_shared_mem %n1 x vector<16xf32> : (i64) align(128) -> !llvm.ptr
 
     // CHECK:      %[[CAST_N0_1:.*]] = zext i32 %[[N0]] to i64
     // CHECK-NEXT: %[[FREE0_SZ:.*]] = mul i64 8, %[[CAST_N0_1]]
     // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[ALLOC0]], i64 %[[FREE0_SZ]])
-    omp.free_shared_mem %0 : !llvm.ptr
+    omp.free_shared_mem [%n0 x i64 : (i32)] %0 : !llvm.ptr
 
     // CHECK:      %[[FREE1_SZ:.*]] = mul i64 8, %[[N1]]
     // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[ALLOC1]], i64 %[[FREE1_SZ]])
-    omp.free_shared_mem %1 : !llvm.ptr
+    omp.free_shared_mem [%n1 x i64 : (i64)] %1 : !llvm.ptr
 
     // CHECK:      %[[FREE2_SZ:.*]] = mul i64 64, %[[N1]]
     // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[ALLOC2]], i64 %[[FREE2_SZ]])
-    omp.free_shared_mem %2 : !llvm.ptr
+    omp.free_shared_mem [%n1 x vector<16xf32> : (i64)] %2 : !llvm.ptr
 
     // CHECK:      %[[FREE3_SZ:.*]] = mul i64 128, %[[N1]]
     // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[ALLOC3]], i64 %[[FREE3_SZ]])
-    omp.free_shared_mem %3 : !llvm.ptr
+    omp.free_shared_mem [%n1 x vector<16xf32> : (i64) align(128)] %3 : !llvm.ptr
     llvm.return
   }
 }

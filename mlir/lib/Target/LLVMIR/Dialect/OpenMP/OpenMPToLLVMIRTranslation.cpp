@@ -7202,10 +7202,32 @@ static llvm::Function *getOmpTargetAlloc(llvm::IRBuilderBase &builder,
   return func;
 }
 
+template <typename T>
 static llvm::Value *
 getAllocationSize(llvm::IRBuilderBase &builder,
-                  LLVM::ModuleTranslation &moduleTranslation,
-                  omp::TargetAllocMemOp op) {
+                  LLVM::ModuleTranslation &moduleTranslation, T op) {
+  llvm::DataLayout dataLayout =
+      moduleTranslation.getLLVMModule()->getDataLayout();
+  llvm::Type *llvmHeapTy =
+      moduleTranslation.convertType(op.getMemElemTypeAttr().getValue());
+
+  auto alignment = op.getMemAlignment();
+  llvm::TypeSize typeSize = llvm::alignTo(
+      dataLayout.getTypeStoreSize(llvmHeapTy),
+      alignment ? *alignment : dataLayout.getABITypeAlign(llvmHeapTy).value());
+
+  llvm::Value *allocSize = builder.getInt64(typeSize.getFixedValue());
+  return builder.CreateMul(
+      allocSize,
+      builder.CreateIntCast(moduleTranslation.lookupValue(op.getMemArraySize()),
+                            builder.getInt64Ty(),
+                            /*isSigned=*/false));
+}
+
+template <>
+llvm::Value *getAllocationSize(llvm::IRBuilderBase &builder,
+                               LLVM::ModuleTranslation &moduleTranslation,
+                               omp::TargetAllocMemOp op) {
   llvm::DataLayout dataLayout =
       moduleTranslation.getLLVMModule()->getDataLayout();
   llvm::Type *llvmHeapTy = moduleTranslation.convertType(op.getAllocatedType());
@@ -7219,27 +7241,6 @@ getAllocationSize(llvm::IRBuilderBase &builder,
                               /*isSigned=*/false));
   }
   return allocSize;
-}
-
-static llvm::Value *
-getAllocationSize(llvm::IRBuilderBase &builder,
-                  LLVM::ModuleTranslation &moduleTranslation,
-                  omp::AllocSharedMemOp op) {
-  llvm::DataLayout dataLayout =
-      moduleTranslation.getLLVMModule()->getDataLayout();
-  llvm::Type *llvmHeapTy = moduleTranslation.convertType(op.getAllocatedType());
-
-  auto alignment = op.getAlignment();
-  llvm::TypeSize typeSize = llvm::alignTo(
-      dataLayout.getTypeStoreSize(llvmHeapTy),
-      alignment ? *alignment : dataLayout.getABITypeAlign(llvmHeapTy).value());
-
-  llvm::Value *allocSize = builder.getInt64(typeSize.getFixedValue());
-  return builder.CreateMul(
-      allocSize,
-      builder.CreateIntCast(moduleTranslation.lookupValue(op.getArraySize()),
-                            builder.getInt64Ty(),
-                            /*isSigned=*/false));
 }
 
 static LogicalResult
@@ -7319,9 +7320,7 @@ convertFreeSharedMemOp(omp::FreeSharedMemOp freeMemOp,
                        llvm::IRBuilderBase &builder,
                        LLVM::ModuleTranslation &moduleTranslation) {
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  auto allocMemOp =
-      freeMemOp.getHeapref().getDefiningOp<omp::AllocSharedMemOp>();
-  llvm::Value *size = getAllocationSize(builder, moduleTranslation, allocMemOp);
+  llvm::Value *size = getAllocationSize(builder, moduleTranslation, freeMemOp);
   ompBuilder->createOMPFreeShared(
       builder, moduleTranslation.lookupValue(freeMemOp.getHeapref()), size);
   return success();

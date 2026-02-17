@@ -2241,14 +2241,10 @@ def TargetFreeMemOp : OpenMP_Op<"target_freemem",
 
 def AllocSharedMemOp : OpenMP_Op<"alloc_shared_mem", traits = [
     MemoryEffects<[MemAlloc<DefaultResource>]>
+  ], clauses = [
+    OpenMP_MemAllocationSizeClause
   ]> {
   let summary = "allocate storage on shared memory for objects of a given type";
-
-  let arguments = (ins
-    TypeAttr:$elem_type,
-    AnySignlessInteger:$array_size,
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$alignment
-  );
 
   let description = [{
     Allocates memory shared across threads of a team for an object of the given
@@ -2258,27 +2254,18 @@ def AllocSharedMemOp : OpenMP_Op<"alloc_shared_mem", traits = [
 
     ```mlir
       // Allocate an i32 vector with %size elements and aligned to 8 bytes.
-      %ptr_shared = omp.alloc_shared_mem %size x i32 {alignment = 8} : (i64) -> (!llvm.ptr)
+      %ptr_shared = omp.alloc_shared_mem %size x i32 : (i64) align(8) -> !llvm.ptr
       // ...
-      omp.free_shared_mem %ptr_shared : !llvm.ptr
+      omp.free_shared_mem [%size x i32 : (i64) align(8)] %ptr_shared : !llvm.ptr
     ```
-
-    The `elem_type` is the type of the object for which memory is being
-    allocated.
-
-    The `array_size` is the number of objects to allocate memory for.
-
-    The optional `alignment` is used to specify the alignment for each element.
-    If not set, the `DataLayout` defaults will be used instead.
-  }];
+  }] # clausesDescription;
 
   let results = (outs OpenMP_PointerLikeType);
-  let assemblyFormat = [{
-    $array_size `x` $elem_type attr-dict `:` `(` type($array_size) `)` `->` type(results)
-  }];
+  let assemblyFormat = clausesReqAssemblyFormat # " oilist(" #
+    clausesOptAssemblyFormat # ") `->` type(results) attr-dict";
 
   let extraClassDeclaration = [{
-    mlir::Type getAllocatedType() { return getElemTypeAttr().getValue(); }
+    mlir::Type getAllocatedType() { return getMemElemTypeAttr().getValue(); }
   }];
   let hasVerifier = 1;
 }
@@ -2287,31 +2274,34 @@ def AllocSharedMemOp : OpenMP_Op<"alloc_shared_mem", traits = [
 // FreeSharedMemOp
 //===----------------------------------------------------------------------===//
 
-def FreeSharedMemOp : OpenMP_Op<"free_shared_mem", [MemoryEffects<[MemFree]>]> {
+def FreeSharedMemOp : OpenMP_Op<"free_shared_mem", traits = [
+    MemoryEffects<[MemFree]>
+  ], clauses = [
+    OpenMP_MemAllocationSizeClause
+  ]> {
   let summary = "free shared memory";
 
   let description = [{
     Deallocates shared memory that was previously allocated by an
     `omp.alloc_shared_mem` operation. After this operation, the deallocated
     memory is in an undefined state and should not be accessed.
-    It is crucial to ensure that all accesses to the memory region are completed
-    before `omp.alloc_shared_mem` is called to avoid undefined behavior.
 
     ```mlir
       // Example of allocating and freeing shared memory.
-      %ptr_shared = omp.alloc_shared_mem %size x i32 : (i64) -> (!llvm.ptr)
+      %ptr_shared = omp.alloc_shared_mem %size x i32 : (i64) -> !llvm.ptr
       // ...
-      omp.free_shared_mem %ptr_shared : !llvm.ptr
+      omp.free_shared_mem [%size x i32 : (i64)] %ptr_shared : !llvm.ptr
     ```
 
     The `heapref` operand represents the pointer to shared memory to be
     deallocated, previously returned by `omp.alloc_shared_mem`.
-  }];
+  }] # clausesDescription;
 
-  let arguments = (ins
+  let arguments = !con(clausesArgs, (ins
     Arg<OpenMP_PointerLikeType, "", [MemFree]>:$heapref
-  );
-  let assemblyFormat = "$heapref attr-dict `:` type($heapref)";
+  ));
+  let assemblyFormat = "` ` `[`" # clausesReqAssemblyFormat # " oilist(" #
+    clausesOptAssemblyFormat # ") `]` $heapref `:` type($heapref) attr-dict";
   let hasVerifier = 1;
 }
 

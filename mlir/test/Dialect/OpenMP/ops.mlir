@@ -3584,8 +3584,8 @@ func.func @omp_alloc_shared_mem(%n: i32) {
   %0 = omp.alloc_shared_mem %n x i64 : (i32) -> !llvm.ptr
   // CHECK: %{{.*}} = omp.alloc_shared_mem %[[N]] x vector<16x16xf32> : (i32) -> !llvm.ptr
   %1 = omp.alloc_shared_mem %n x vector<16x16xf32> : (i32) -> !llvm.ptr
-  // CHECK: %{{.*}} = omp.alloc_shared_mem %[[N]] x !llvm.ptr {alignment = 16 : i64} : (i32) -> !llvm.ptr
-  %2 = omp.alloc_shared_mem %n x !llvm.ptr {alignment = 16} : (i32) -> !llvm.ptr
+  // CHECK: %{{.*}} = omp.alloc_shared_mem %[[N]] x !llvm.ptr : (i32) align(16) -> !llvm.ptr
+  %2 = omp.alloc_shared_mem %n x !llvm.ptr : (i32) align(16) -> !llvm.ptr
   return
 }
 
@@ -3594,7 +3594,11 @@ func.func @omp_alloc_shared_mem(%n: i32) {
 func.func @omp_free_shared_mem(%n: i64) {
   // CHECK: %[[PTR:.*]] = omp.alloc_shared_mem %[[N]] x f32 : (i64) -> !llvm.ptr
   %0 = omp.alloc_shared_mem %n x f32 : (i64) -> !llvm.ptr
-  // CHECK: omp.free_shared_mem %[[PTR]] : !llvm.ptr
-  omp.free_shared_mem %0 : !llvm.ptr
+  // CHECK: omp.free_shared_mem [%[[N]] x f32 : (i64)] %[[PTR]] : !llvm.ptr
+  omp.free_shared_mem [%n x f32 : (i64)] %0 : !llvm.ptr
+  // CHECK: %[[PTR:.*]] = omp.alloc_shared_mem %[[N]] x f32 : (i64) align(32) -> !llvm.ptr
+  %1 = omp.alloc_shared_mem %n x f32 : (i64) align(32) -> !llvm.ptr
+  // CHECK: omp.free_shared_mem [%[[N]] x f32 : (i64) align(32)] %[[PTR]] : !llvm.ptr
+  omp.free_shared_mem [%n x f32 : (i64) align(32)] %1 : !llvm.ptr
   return
 }
