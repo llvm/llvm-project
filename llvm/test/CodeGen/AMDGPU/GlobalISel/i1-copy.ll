@@ -8,7 +8,7 @@ define amdgpu_ps void @i1_vcc_to_vcc_copy(i32 %val, float %a0, float %a1, float 
 ; WAVE64-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v0
 ; WAVE64-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; WAVE64-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
-; WAVE64-NEXT:    exp mrt0 v0, v1, v0, v0 done vm
+; WAVE64-NEXT:    exp mrt0, v0, v1, v0, v0 done vm
 ; WAVE64-NEXT:    s_endpgm
 ;
 ; WAVE32-LABEL: i1_vcc_to_vcc_copy:
@@ -16,7 +16,7 @@ define amdgpu_ps void @i1_vcc_to_vcc_copy(i32 %val, float %a0, float %a1, float 
 ; WAVE32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
 ; WAVE32-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc_lo
 ; WAVE32-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc_lo
-; WAVE32-NEXT:    exp mrt0 v0, v1, v0, v0 done vm
+; WAVE32-NEXT:    exp mrt0, v0, v1, v0, v0 done vm
 ; WAVE32-NEXT:    s_endpgm
 main_body:
   %vcc = icmp eq i32 %val, 2
@@ -35,7 +35,7 @@ define amdgpu_ps void @i1_sgpr_to_vcc_copy(i32 inreg %val, float %a0, float %a1,
 ; WAVE64-NEXT:    v_cmp_ne_u32_e64 vcc, 0, s0
 ; WAVE64-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; WAVE64-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc
-; WAVE64-NEXT:    exp mrt0 v0, v1, v0, v0 done vm
+; WAVE64-NEXT:    exp mrt0, v0, v1, v0, v0 done vm
 ; WAVE64-NEXT:    s_endpgm
 ;
 ; WAVE32-LABEL: i1_sgpr_to_vcc_copy:
@@ -46,7 +46,7 @@ define amdgpu_ps void @i1_sgpr_to_vcc_copy(i32 inreg %val, float %a0, float %a1,
 ; WAVE32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s0
 ; WAVE32-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; WAVE32-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc_lo
-; WAVE32-NEXT:    exp mrt0 v0, v1, v0, v0 done vm
+; WAVE32-NEXT:    exp mrt0, v0, v1, v0, v0 done vm
 ; WAVE32-NEXT:    s_endpgm
 main_body:
   %uniform_i1 = icmp eq i32 %val, 2

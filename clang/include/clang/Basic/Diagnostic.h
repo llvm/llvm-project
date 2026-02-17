@@ -310,6 +310,11 @@ private:
   // Suppress all diagnostics.
   bool SuppressAllDiagnostics = false;
 
+  // Force system warnings to be shown, regardless of the current
+  // diagnostic state. This is used for temporary overrides and is not
+  // stored as location-specific state in modules.
+  bool ForceSystemWarnings = false;
+
   // Elide common types of templates.
   bool ElideType = true;
 
@@ -729,6 +734,9 @@ public:
   /// client
   void setSuppressAllDiagnostics(bool Val) { SuppressAllDiagnostics = Val; }
   bool getSuppressAllDiagnostics() const { return SuppressAllDiagnostics; }
+
+  void setForceSystemWarnings(bool Val) { ForceSystemWarnings = Val; }
+  bool getForceSystemWarnings() const { return ForceSystemWarnings; }
 
   /// Set type eliding, to skip outputting same types occurring in
   /// template types.

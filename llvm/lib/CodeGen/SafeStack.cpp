@@ -112,7 +112,7 @@ class SafeStack {
   ScalarEvolution &SE;
 
   Type *StackPtrTy;
-  Type *IntPtrTy;
+  Type *AddrTy;
   Type *Int32Ty;
 
   Value *UnsafeStackPtr = nullptr;
@@ -189,7 +189,7 @@ public:
             DomTreeUpdater *DTU, ScalarEvolution &SE)
       : F(F), TL(TL), Libcalls(Libcalls), DL(DL), DTU(DTU), SE(SE),
         StackPtrTy(DL.getAllocaPtrType(F.getContext())),
-        IntPtrTy(DL.getIntPtrType(F.getContext())),
+        AddrTy(DL.getAddressType(StackPtrTy)),
         Int32Ty(Type::getInt32Ty(F.getContext())) {}
 
   // Run the transformation on the associated function.
@@ -544,11 +544,9 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   if (FrameAlignment > StackAlignment) {
     // Re-align the base pointer according to the max requested alignment.
     IRB.SetInsertPoint(BasePointer->getNextNode());
-    BasePointer = cast<Instruction>(IRB.CreateIntToPtr(
-        IRB.CreateAnd(
-            IRB.CreatePtrToInt(BasePointer, IntPtrTy),
-            ConstantInt::get(IntPtrTy, ~(FrameAlignment.value() - 1))),
-        StackPtrTy));
+    BasePointer = IRB.CreateIntrinsic(
+        StackPtrTy, Intrinsic::ptrmask,
+        {BasePointer, ConstantInt::get(AddrTy, ~(FrameAlignment.value() - 1))});
   }
 
   IRB.SetInsertPoint(BasePointer->getNextNode());
@@ -663,18 +661,16 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
     IRBuilder<> IRB(AI);
 
     // Compute the new SP value (after AI).
-    Value *Size = IRB.CreateAllocationSize(IntPtrTy, AI);
-    Value *SP = IRB.CreatePtrToInt(IRB.CreateLoad(StackPtrTy, UnsafeStackPtr),
-                                   IntPtrTy);
-    SP = IRB.CreateSub(SP, Size);
+    Value *Size = IRB.CreateAllocationSize(AddrTy, AI);
+    Value *SP = IRB.CreateLoad(StackPtrTy, UnsafeStackPtr);
+    SP = IRB.CreatePtrAdd(SP, IRB.CreateNeg(Size));
 
     // Align the SP value to satisfy the AllocaInst and stack alignments.
     auto Align = std::max(AI->getAlign(), StackAlignment);
 
-    Value *NewTop = IRB.CreateIntToPtr(
-        IRB.CreateAnd(
-            SP, ConstantInt::getSigned(IntPtrTy, ~uint64_t(Align.value() - 1))),
-        StackPtrTy);
+    Value *NewTop = IRB.CreateIntrinsic(
+        StackPtrTy, Intrinsic::ptrmask,
+        {SP, ConstantInt::getSigned(AddrTy, ~uint64_t(Align.value() - 1))});
 
     // Save the stack pointer.
     IRB.CreateStore(NewTop, UnsafeStackPtr);
