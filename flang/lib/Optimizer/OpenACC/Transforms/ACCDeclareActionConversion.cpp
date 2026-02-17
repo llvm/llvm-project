@@ -56,6 +56,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
+#include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
@@ -81,9 +82,9 @@ namespace {
 
 // Fortran runtime symbol names for pointer allocate/deallocate.
 static constexpr llvm::StringRef pointerAllocateName =
-    "_FortranAPointerAllocate";
+    RTNAME_STRING(PointerAllocate);
 static constexpr llvm::StringRef pointerDeallocateName =
-    "_FortranAPointerDeallocate";
+    RTNAME_STRING(PointerDeallocate);
 
 class ACCDeclareActionConversion
     : public fir::acc::impl::ACCDeclareActionConversionBase<
