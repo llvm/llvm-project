@@ -6199,6 +6199,9 @@ X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
 InstructionCost X86TTIImpl::getCFInstrCost(unsigned Opcode,
                                            TTI::TargetCostKind CostKind,
                                            const Instruction *I) const {
+  if (Opcode == Instruction::Switch)
+    return BaseT::getCFInstrCost(Opcode, CostKind, I);
+
   if (CostKind != TTI::TCK_RecipThroughput)
     return Opcode == Instruction::PHI ? TTI::TCC_Free : TTI::TCC_Basic;
   // Branches are assumed to be predicted.

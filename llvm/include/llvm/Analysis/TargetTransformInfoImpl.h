@@ -819,6 +819,45 @@ public:
   virtual InstructionCost getCFInstrCost(unsigned Opcode,
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I = nullptr) const {
+    if (Opcode == Instruction::Switch && CostKind == TTI::TCK_CodeSize && I) {
+      const SwitchInst *SI = cast<SwitchInst>(I);
+      unsigned JumpTableSize, NumSuccs = I->getNumSuccessors();
+      auto BrCost = getCFInstrCost(Instruction::Br, CostKind);
+      if (SI->defaultDestUnreachable())
+        NumSuccs--;
+
+      // An unreachable switch
+      if (NumSuccs == 0)
+        return TTI::TCC_Free;
+
+      // A trivial unconditional branch.
+      if (NumSuccs == 1)
+        return BrCost;
+
+      getEstimatedNumberOfCaseClusters(*SI, JumpTableSize, nullptr, nullptr);
+
+      Type *BoolTy = IntegerType::get(SI->getContext(), 1);
+      Type *CondTy = SI->getCondition()->getType();
+      auto CmpCost = getCmpSelInstrCost(
+          BinaryOperator::ICmp, BoolTy, CondTy, CmpInst::ICMP_UGT, CostKind,
+          {TTI::OK_AnyValue, TTI::OP_None},
+          {TTI::OK_UniformConstantValue, TTI::OP_None}, nullptr);
+
+      // Assume that lowering the switch block is implemented by binary search
+      // if no jump table is generated.
+      if (JumpTableSize == 0)
+        return llvm::Log2_32_Ceil(NumSuccs) * (CmpCost + BrCost);
+
+      // Cost for jump table: load + jump + default compare + default jump
+      Type *EntryTy = PointerType::get(SI->getContext(), 0);
+      Align Alignment = DL.getABITypeAlign(EntryTy);
+      auto LoadCost =
+          getMemoryOpCost(Instruction::Load, EntryTy, Alignment, 0, CostKind,
+                          {TTI::OK_AnyValue, TTI::OP_None}, nullptr);
+      return LoadCost + BrCost +
+             (SI->defaultDestUnreachable() ? 0 : (CmpCost + BrCost));
+    }
+
     // A phi would be free, unless we're costing the throughput because it
     // will require a register.
     if (Opcode == Instruction::PHI && CostKind != TTI::TCK_RecipThroughput)
