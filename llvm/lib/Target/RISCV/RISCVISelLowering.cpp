@@ -4584,8 +4584,12 @@ static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
                              ElemDL, XLenVT, A, B),
           0);
 
-    A = DAG.getNode(ISD::AND, SDLoc(A), XLenVT, A, Mask);
-    B = DAG.getNode(ISD::AND, SDLoc(B), XLenVT, B, Mask);
+    // Manually optimize away the ANDs if we can, DAGCombiner will
+    // sometimes end up perturbing codegen if we don't.
+    if (DAG.computeKnownBits(A).countMaxActiveBits() > ElemSizeInBits)
+      A = DAG.getNode(ISD::AND, SDLoc(A), XLenVT, A, Mask);
+    if (DAG.computeKnownBits(B).countMaxActiveBits() > ElemSizeInBits)
+      B = DAG.getNode(ISD::AND, SDLoc(B), XLenVT, B, Mask);
     SDValue ShtAmt = DAG.getConstant(ElemSizeInBits, ElemDL, XLenVT);
     return DAG.getNode(ISD::OR, ElemDL, XLenVT, A,
                        DAG.getNode(ISD::SHL, ElemDL, XLenVT, B, ShtAmt),
