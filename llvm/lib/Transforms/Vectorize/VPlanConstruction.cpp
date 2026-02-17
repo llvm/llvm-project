@@ -1030,7 +1030,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   SmallSetVector<VPValue *, 4> NeedsPhi;
   for (VPRecipeBase &R : Header->phis())
     if (auto *Phi = dyn_cast<VPHeaderPHIRecipe>(&R))
-      if (!isa<VPCanonicalIVPHIRecipe>(Phi) && Phi->getNumIncoming() > 1)
+      if (!isa<VPCanonicalIVPHIRecipe, VPWidenInductionRecipe>(Phi))
         NeedsPhi.insert(Phi->getBackedgeValue());
 
   VPValue *V;
