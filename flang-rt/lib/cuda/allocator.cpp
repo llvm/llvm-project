@@ -156,8 +156,9 @@ int RTDECL(CUFSetAssociatedStream)(void *p, cudaStream_t stream) {
   return StatOk;
 }
 
-void RTDECL(CUFSetDefaultStream)(cudaStream_t stream) {
+int RTDECL(CUFSetDefaultStream)(cudaStream_t stream) {
   defaultStream = stream;
+  return StatOk;
 }
 
 cudaStream_t RTDECL(CUFGetDefaultStream)() { return defaultStream; }
