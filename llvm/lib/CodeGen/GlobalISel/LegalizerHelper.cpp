@@ -7799,7 +7799,19 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     auto C_B8Mask4HiTo0 = B.buildConstant(Ty, B8Mask4HiTo0);
     auto B8Count = B.buildAnd(Ty, B8CountDirty4Hi, C_B8Mask4HiTo0);
 
-    assert(Size<=128 && "Scalar size is too large for CTPOP lower algorithm");
+    assert(Size <= 128 && "Scalar size is too large for CTPOP lower algorithm");
+
+    // Avoid the multiply when shift-add is cheaper.
+    if (Size == 16 && !Ty.isVector()) {
+      // v = (v + (v >> 8)) & 0xFF;
+      auto C_8 = B.buildConstant(Ty, 8);
+      auto HighSum = B.buildLShr(Ty, B8Count, C_8);
+      auto Res = B.buildAdd(Ty, B8Count, HighSum);
+      B.buildAnd(MI.getOperand(0).getReg(), Res, B.buildConstant(Ty, 0xFF));
+      MI.eraseFromParent();
+      return Legalized;
+    }
+
     // 8 bits can hold CTPOP result of 128 bit int or smaller. Mul with this
     // bitmask will set 8 msb in ResTmp to sum of all B8Counts in 8 bit blocks.
     auto MulMask = B.buildConstant(Ty, APInt::getSplat(Size, APInt(8, 0x01)));

@@ -199,6 +199,10 @@ Changes in existing checks
   - Added support for analyzing function parameters with the `AnalyzeParameters`
     option.
 
+- Improved :doc:`modernize-pass-by-value
+  <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
+  option to suppress warnings in macros.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
   when an argument is part of a macro expansion.
@@ -214,9 +218,18 @@ Changes in existing checks
 
   - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
 
+- Improved :doc:`performance-inefficient-vector-operation
+  <clang-tidy/checks/performance/inefficient-vector-operation>` check by
+  correctly handling vector-like classes when ``push_back``/``emplace_back`` are
+  inherited.
+
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
   positives on trivially copyable types with a non-public copy constructor.
+
+- Improved :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability/container-size-empty>` check by fixing a crash
+  when a member expression has a non-identifier name.
 
 - Improved :doc:`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
@@ -225,7 +238,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
-  positives on parameters used in dependent expressions.
+  positives on parameters used in dependent expressions (e.g. inside generic
+  lambdas).
 
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check to provide valid
