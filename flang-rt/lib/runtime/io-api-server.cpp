@@ -9,6 +9,7 @@
 // Implements the RPC server-side handlling of the I/O statement API needed for
 // basic list-directed output (PRINT *) of intrinsic types for the GPU.
 
+#include "array.h"
 #include "io-api-gpu.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/terminator.h"
@@ -59,7 +60,7 @@ struct DeferredFunctionBase {
 
   void execute(IOContext &ctx) { execute_(impl_, ctx); }
 
-  static OwningPtr<char[]> TempString(const char *str) {
+  static OwningPtr<char> TempString(const char *str) {
     if (!str) {
       return {};
     }
@@ -67,7 +68,7 @@ struct DeferredFunctionBase {
     const auto size = std::strlen(str) + 1;
     OwningPtr<char> temp = SizedNew<char>{Terminator{__FILE__, __LINE__}}(size);
     std::memcpy(temp.get(), str, size);
-    return OwningPtr<char[]>(temp.release());
+    return OwningPtr<char>(temp.release());
   }
 
 private:
@@ -115,7 +116,7 @@ template <typename FnTy, typename... Args> struct DeferredFunction {
 private:
   template <typename T> T &Rewrite(T &v, IOContext &) { return v; }
 
-  const char *Rewrite(OwningPtr<char[]> &p, IOContext &) { return p.get(); }
+  const char *Rewrite(OwningPtr<char> &p, IOContext &) { return p.get(); }
 
   Cookie Rewrite(Cookie, IOContext &ctx) { return ctx.cookie; }
 };
@@ -171,8 +172,9 @@ rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
       DeferredContext *ctx = reinterpret_cast<DeferredContext *>(cookie);
 
       ctx->commands.emplace_back(MakeDeferred(IONAME(EndIoStatement), cookie));
-      for (auto &fn : ctx->commands)
+      for (auto &fn : ctx->commands) {
         fn.execute(ctx->ioCtx);
+      }
       Iostat result = ctx->ioCtx.result;
 
       ctx->~DeferredContext();
@@ -251,17 +253,17 @@ rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
 
 RT_EXT_API_GROUP_BEGIN
 std::uint32_t IODEF(HandleRPCOpcodes)(void *raw, std::uint32_t numLanes) {
-  rpc::Server::Port &Port = *reinterpret_cast<rpc::Server::Port *>(raw);
-  if (numLanes == 1) {
-    return HandleOpcodesImpl<1>(Port);
+  rpc::Server::Port &port = *reinterpret_cast<rpc::Server::Port *>(raw);
+  switch (numLanes) {
+  case 1:
+    return HandleOpcodesImpl<1>(port);
+  case 32:
+    return HandleOpcodesImpl<32>(port);
+  case 64:
+    return HandleOpcodesImpl<64>(port);
+  default:
+    return rpc::RPC_ERROR;
   }
-  if (numLanes == 32) {
-    return HandleOpcodesImpl<32>(Port);
-  }
-  if (numLanes == 64) {
-    return HandleOpcodesImpl<64>(Port);
-  }
-  return rpc::RPC_ERROR;
 }
 RT_EXT_API_GROUP_END
 } // namespace Fortran::runtime::io
