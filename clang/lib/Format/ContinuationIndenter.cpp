@@ -171,9 +171,8 @@ static bool mustBreakBinaryOperation(const FormatToken &Current,
   if (BreakBefore) {
     if (!isAlignableBinaryOperator(Current))
       return false;
-  } else {
-    if (!startsNextOperand(Current))
-      return false;
+  } else if (!startsNextOperand(Current)) {
+    return false;
   }
 
   // Look up per-operator rule or fall back to Default.

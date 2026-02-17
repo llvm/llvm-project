@@ -453,7 +453,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BreakBeforeBinaryOperators: true", BreakBeforeBinaryOperators,
               FormatStyle::BOS_All);
 
-  Style.BreakBinaryOperations = {FormatStyle::BBO_Never, {}};
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
   CHECK_PARSE("BreakBinaryOperations: OnePerLine", BreakBinaryOperations,
               FormatStyle::BreakBinaryOperationsOptions(
                   {FormatStyle::BBO_OnePerLine, {}}));
@@ -465,14 +465,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
       FormatStyle::BreakBinaryOperationsOptions({FormatStyle::BBO_Never, {}}));
 
   // Structured form
-  Style.BreakBinaryOperations = {FormatStyle::BBO_Never, {}};
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
   CHECK_PARSE("BreakBinaryOperations:\n"
               "  Default: OnePerLine",
               BreakBinaryOperations,
               FormatStyle::BreakBinaryOperationsOptions(
                   {FormatStyle::BBO_OnePerLine, {}}));
 
-  Style.BreakBinaryOperations = {FormatStyle::BBO_Never, {}};
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
   EXPECT_EQ(0, parseConfiguration("BreakBinaryOperations:\n"
                                   "  Default: Never\n"
                                   "  PerOperator:\n"
@@ -488,6 +488,23 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].Style,
             FormatStyle::BBO_OnePerLine);
   EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].MinChainLength, 3u);
+
+  // Parse ">" and ">>" which have edge cases: clang-format splits ">>" into
+  // two ">" tokens, so ">>" maps to tok::greatergreater while ">" maps to
+  // tok::greater.
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
+  EXPECT_EQ(0, parseConfiguration("BreakBinaryOperations:\n"
+                                  "  Default: Never\n"
+                                  "  PerOperator:\n"
+                                  "    - Operators: ['>', '>>']\n"
+                                  "      Style: OnePerLine",
+                                  &Style)
+                   .value());
+  ASSERT_EQ(Style.BreakBinaryOperations.PerOperator.size(), 1u);
+  std::vector<tok::TokenKind> ExpectedShiftOps = {tok::greater,
+                                                   tok::greatergreater};
+  EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].Operators,
+            ExpectedShiftOps);
 
   Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   CHECK_PARSE("BreakConstructorInitializers: BeforeComma",

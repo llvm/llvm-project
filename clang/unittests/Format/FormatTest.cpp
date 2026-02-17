@@ -28444,7 +28444,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    longOperand_3_;",
                Style);
 
-  Style.BreakBinaryOperations = {FormatStyle::BBO_OnePerLine, {}};
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_OnePerLine;
 
   // Logical operations
   verifyFormat("if (condition1 && condition2) {\n"
@@ -28529,7 +28529,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    longOperand_3_;",
                Style);
 
-  Style.BreakBinaryOperations = {FormatStyle::BBO_RespectPrecedence, {}};
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
   verifyFormat("result = operand1 +\n"
@@ -28561,7 +28561,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    longOperand_3_;",
                Style);
 
-  Style.BreakBinaryOperations = {FormatStyle::BBO_OnePerLine, {}};
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_OnePerLine;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
 
   // Logical operations
@@ -28642,7 +28642,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    >> longOperand_3_;",
                Style);
 
-  Style.BreakBinaryOperations = {FormatStyle::BBO_RespectPrecedence, {}};
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
   verifyFormat("result = operand1\n"
@@ -28748,6 +28748,7 @@ TEST_F(FormatTest, BreakBinaryOperationsPerOperator) {
                "    packet_number >>\n"
                "    packet_scale;",
                Style);
+
 }
 
 TEST_F(FormatTest, BreakBinaryOperationsMinChainLength) {

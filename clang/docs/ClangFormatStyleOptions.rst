@@ -3672,7 +3672,53 @@ the configuration (without a prefix: ``Auto``).
          eeeeeeeeeeeeeeee;
 
 
-  * ``std::vector<BinaryOperationBreakRule> PerOperator`` Per-operator override rules.
+  * ``List of BinaryOperationBreakRules PerOperator`` Per-operator override rules.
+
+  * ``std::vector<tok::TokenKind> Operators`` :versionbadge:`clang-format 23`
+  The list of operator token kinds this rule applies to.
+    Stored as ``tok::TokenKind`` so that alternative spellings
+    (e.g. ``and`` vs ``&&``) are handled automatically.
+
+  * ``BreakBinaryOperationsStyle Style``
+    The break style for these operators (defaults to ``OnePerLine``).
+
+    Possible values:
+
+    * ``BBO_Never`` (in configuration: ``Never``)
+      Don't break binary operations
+
+      .. code-block:: c++
+
+         aaa + bbbb * ccccc - ddddd +
+         eeeeeeeeeeeeeeee;
+
+    * ``BBO_OnePerLine`` (in configuration: ``OnePerLine``)
+      Binary operations will either be all on the same line, or each operation
+      will have one line each.
+
+      .. code-block:: c++
+
+         aaa +
+         bbbb *
+         ccccc -
+         ddddd +
+         eeeeeeeeeeeeeeee;
+
+    * ``BBO_RespectPrecedence`` (in configuration: ``RespectPrecedence``)
+      Binary operations of a particular precedence that exceed the column
+      limit will have one line each.
+
+      .. code-block:: c++
+
+         aaa +
+         bbbb * ccccc -
+         ddddd +
+         eeeeeeeeeeeeeeee;
+
+
+  * ``unsigned MinChainLength`` Minimum number of operands in a chain before the rule triggers.
+    For example, ``a && b && c`` is a chain of length 3.
+    ``0`` means always break (when the line is too long).
 
 
 .. _BreakConstructorInitializers:

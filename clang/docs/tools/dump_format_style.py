@@ -399,9 +399,27 @@ class OptionsReader:
                             )
                         )
                     else:
-                        nested_struct.values.append(
-                            NestedField(field_type + " " + field_name, comment, version)
+                        vec_match = re.match(
+                            r"std::vector<(.*)>$", field_type
                         )
+                        if vec_match and vec_match.group(1) in nested_structs:
+                            inner_struct = nested_structs[vec_match.group(1)]
+                            display = (
+                                "List of %ss %s"
+                                % (vec_match.group(1), field_name)
+                            )
+                            nested_struct.values.append(
+                                NestedField(display, comment, version)
+                            )
+                            nested_struct.values.extend(inner_struct.values)
+                        else:
+                            nested_struct.values.append(
+                                NestedField(
+                                    field_type + " " + field_name,
+                                    comment,
+                                    version,
+                                )
+                            )
                     version = None
             elif state == State.InEnum:
                 if line.startswith("///"):
