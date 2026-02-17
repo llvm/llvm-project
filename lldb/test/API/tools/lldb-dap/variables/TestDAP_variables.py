@@ -462,7 +462,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                     "type": "const char *",
                 },
                 "matches": {
-                    "value": re.compile(r'0x\w+ "𐌶𐌰L𐌾𐍈 C𐍈𐌼𐌴𐍃"'),
+                    "value": r'0x\w+ "𐌶𐌰L𐌾𐍈 C𐍈𐌼𐌴𐍃"',
                 },
             },
             "malformed_str": {
@@ -470,7 +470,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                     "type": "const char *",
                 },
                 "matches": {
-                    "value": re.compile(r'0x\w+ "lone trailing \\x81\\x82 bytes"'),
+                    "value": r'0x\w+ "lone trailing \\x81\\x82 bytes"',
                 },
             },
             "x": {
