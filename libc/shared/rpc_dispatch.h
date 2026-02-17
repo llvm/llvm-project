@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_LIBC_SHARED_RPC_DISPATCH_H
+#define LLVM_LIBC_SHARED_RPC_DISPATCH_H
+
 #include "rpc.h"
 #include "rpc_util.h"
 
@@ -13,7 +16,7 @@ namespace rpc {
 namespace {
 
 // Forward declarations needed for the server, we assume these are present.
-extern "C" void *malloc(uint64_t);
+extern "C" void *malloc(__SIZE_TYPE__);
 extern "C" void free(void *);
 
 // Traits to convert between a tuple and binary representation of an argument
@@ -52,13 +55,14 @@ template <typename... Ts>
 struct tuple_bytes<rpc::tuple<Ts...>> : tuple_bytes<Ts...> {};
 
 // Client-side dispatch of pointer values. We copy the memory associated with
-// the pointer to the server and recieve back a server-side pointer to replace
+// the pointer to the server and receive back a server-side pointer to replace
 // the client-side pointer in the argument list.
 template <uint64_t Idx, typename Tuple>
 RPC_ATTRS constexpr void prepare_arg(rpc::Client::Port &port, Tuple &t) {
   using ArgTy = rpc::tuple_element_t<Idx, Tuple>;
-  if constexpr (rpc::is_pointer_v<ArgTy> &&
-                !rpc::is_void_v<rpc::remove_pointer_t<ArgTy>>) {
+  using ElemTy = rpc::remove_pointer_t<ArgTy>;
+  if constexpr (rpc::is_pointer_v<ArgTy> && rpc::is_complete_v<ElemTy> &&
+                !rpc::is_void_v<ElemTy>) {
     // We assume all constant character arrays are C-strings.
     uint64_t size{};
     if constexpr (rpc::is_same_v<ArgTy, const char *>)
@@ -72,13 +76,14 @@ RPC_ATTRS constexpr void prepare_arg(rpc::Client::Port &port, Tuple &t) {
   }
 }
 
-// Server-side handling of pointer arguments. We recieve the memory into a
+// Server-side handling of pointer arguments. We receive the memory into a
 // temporary buffer and pass a pointer to this new memory back to the client.
 template <uint32_t NUM_LANES, typename Tuple, uint64_t Idx>
 RPC_ATTRS constexpr void prepare_arg(rpc::Server::Port &port) {
   using ArgTy = rpc::tuple_element_t<Idx, Tuple>;
-  if constexpr (rpc::is_pointer_v<ArgTy> &&
-                !rpc::is_void_v<rpc::remove_pointer_t<ArgTy>>) {
+  using ElemTy = rpc::remove_pointer_t<ArgTy>;
+  if constexpr (rpc::is_pointer_v<ArgTy> && rpc::is_complete_v<ElemTy> &&
+                !rpc::is_void_v<ElemTy>) {
     void *args[NUM_LANES]{};
     uint64_t sizes[NUM_LANES]{};
     port.recv_n(args, sizes, [](uint64_t size) {
@@ -100,9 +105,10 @@ RPC_ATTRS constexpr void prepare_arg(rpc::Server::Port &port) {
 template <uint64_t Idx, typename Tuple>
 RPC_ATTRS constexpr void finish_arg(rpc::Client::Port &port, Tuple &t) {
   using ArgTy = rpc::tuple_element_t<Idx, Tuple>;
+  using ElemTy = rpc::remove_pointer_t<ArgTy>;
   using MemoryTy = rpc::remove_const_t<rpc::remove_pointer_t<ArgTy>> *;
   if constexpr (rpc::is_pointer_v<ArgTy> && !rpc::is_const_v<ArgTy> &&
-                !rpc::is_void_v<rpc::remove_pointer_t<ArgTy>>) {
+                rpc::is_complete_v<ElemTy> && !rpc::is_void_v<ElemTy>) {
     uint64_t size{};
     void *buf{};
     port.recv_n(&buf, &size, [&](uint64_t) {
@@ -118,8 +124,9 @@ template <uint32_t NUM_LANES, uint64_t Idx, typename Tuple>
 RPC_ATTRS constexpr void finish_arg(rpc::Server::Port &port,
                                     Tuple (&t)[NUM_LANES]) {
   using ArgTy = rpc::tuple_element_t<Idx, Tuple>;
+  using ElemTy = rpc::remove_pointer_t<ArgTy>;
   if constexpr (rpc::is_pointer_v<ArgTy> && !rpc::is_const_v<ArgTy> &&
-                !rpc::is_void_v<rpc::remove_pointer_t<ArgTy>>) {
+                rpc::is_complete_v<ElemTy> && !rpc::is_void_v<ElemTy>) {
     const void *buffer[NUM_LANES]{};
     size_t sizes[NUM_LANES]{};
     for (uint32_t id = 0; id < NUM_LANES; ++id) {
@@ -131,8 +138,8 @@ RPC_ATTRS constexpr void finish_arg(rpc::Server::Port &port,
     port.send_n(buffer, sizes);
   }
 
-  if constexpr (rpc::is_pointer_v<ArgTy> &&
-                !rpc::is_void_v<rpc::remove_pointer_t<ArgTy>>) {
+  if constexpr (rpc::is_pointer_v<ArgTy> && rpc::is_complete_v<ElemTy> &&
+                !rpc::is_void_v<ElemTy>) {
     for (uint32_t id = 0; id < NUM_LANES; ++id) {
       if (port.get_lane_mask() & (uint64_t(1) << id))
         free(const_cast<void *>(
@@ -204,22 +211,21 @@ dispatch(rpc::Client &client, FnTy, CallArgs... args) {
   using BufferTy = rpc::conditional_t<rpc::is_void_v<RetTy>, uint8_t, RetTy>;
   BufferTy ret{};
   port.recv_n(&ret);
-  port.close();
 
   if constexpr (!rpc::is_void_v<RetTy>)
     return ret;
 }
 
-// Invoke a function on the server on behalf of the client. Recieves the
+// Invoke a function on the server on behalf of the client. Receives the
 // arguments through the interface and forwards them to the function.
 template <uint32_t NUM_LANES, typename FnTy>
-RPC_ATTRS constexpr void invoke(FnTy fn, rpc::Server::Port &port) {
+RPC_ATTRS constexpr void invoke(rpc::Server::Port &port, FnTy fn) {
   using Traits = function_traits<FnTy>;
   using RetTy = typename Traits::return_type;
   using TupleTy = typename Traits::arg_types;
   using Bytes = tuple_bytes<TupleTy>;
 
-  // Recieve pointer data from the host and pack it in server-side memory.
+  // Receive pointer data from the host and pack it in server-side memory.
   rpc::prepare_args<NUM_LANES, TupleTy>(
       port, rpc::make_index_sequence<Traits::ARITY>{});
 
@@ -227,7 +233,7 @@ RPC_ATTRS constexpr void invoke(FnTy fn, rpc::Server::Port &port) {
   typename Bytes::array_type arg_buf[NUM_LANES]{};
   port.recv_n(arg_buf);
 
-  // Convert the recieved arguments into an invocable argument list.
+  // Convert the received arguments into an invocable argument list.
   TupleTy args[NUM_LANES];
   for (uint32_t id = 0; id < NUM_LANES; ++id) {
     if (port.get_lane_mask() & (uint64_t(1) << id))
@@ -256,3 +262,5 @@ RPC_ATTRS constexpr void invoke(FnTy fn, rpc::Server::Port &port) {
   port.send_n(rets);
 }
 } // namespace rpc
+
+#endif // LLVM_LIBC_SHARED_RPC_DISPATCH_H

@@ -573,26 +573,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   // The CFG leaves in dead things, and we don't want the dead code paths to
   // confuse us, so we mark all live things first.
   llvm::BitVector live(cfg->getNumBlockIDs());
-  unsigned count = reachable_code::ScanReachableFromBlock(&cfg->getEntry(),
-                                                          live);
-
-  bool AddEHEdges = AC.getAddEHEdges();
-  if (!AddEHEdges && count != cfg->getNumBlockIDs())
-    // When there are things remaining dead, and we didn't add EH edges
-    // from CallExprs to the catch clauses, we have to go back and
-    // mark them as live.
-    for (const auto *B : *cfg) {
-      if (!live[B->getBlockID()]) {
-        if (B->preds().empty()) {
-          const Stmt *Term = B->getTerminatorStmt();
-          if (isa_and_nonnull<CXXTryStmt>(Term))
-            // When not adding EH edges from calls, catch clauses
-            // can otherwise seem dead.  Avoid noting them as dead.
-            count += reachable_code::ScanReachableFromBlock(B, live);
-          continue;
-        }
-      }
-    }
+  reachable_code::ScanReachableFromBlock(&cfg->getEntry(), live);
 
   // Now we know what is live, we check the live precessors of the exit block
   // and look for fall through paths, being careful to ignore normal returns,
@@ -2956,10 +2937,16 @@ public:
             : diag::warn_lifetime_safety_intra_tu_param_suggestion;
     SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
         ParmToAnnotate->getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+    StringRef FixItText = " [[clang::lifetimebound]]";
+    if (!ParmToAnnotate->getIdentifier()) {
+      // For unnamed parameters, placing attributes after the type would be
+      // parsed as a type attribute, not a parameter attribute.
+      InsertionPoint = ParmToAnnotate->getBeginLoc();
+      FixItText = "[[clang::lifetimebound]] ";
+    }
     S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
         << ParmToAnnotate->getSourceRange()
-        << FixItHint::CreateInsertion(InsertionPoint,
-                                      " [[clang::lifetimebound]]");
+        << FixItHint::CreateInsertion(InsertionPoint, FixItText);
     S.Diag(EscapeExpr->getBeginLoc(),
            diag::note_lifetime_safety_suggestion_returned_here)
         << EscapeExpr->getSourceRange();
@@ -2971,10 +2958,24 @@ public:
     unsigned DiagID = (Scope == SuggestionScope::CrossTU)
                           ? diag::warn_lifetime_safety_cross_tu_this_suggestion
                           : diag::warn_lifetime_safety_intra_tu_this_suggestion;
-    SourceLocation InsertionPoint;
-    InsertionPoint = Lexer::getLocForEndOfToken(
-        MD->getTypeSourceInfo()->getTypeLoc().getEndLoc(), 0,
-        S.getSourceManager(), S.getLangOpts());
+    const auto MDL = MD->getTypeSourceInfo()->getTypeLoc();
+    SourceLocation InsertionPoint = Lexer::getLocForEndOfToken(
+        MDL.getEndLoc(), 0, S.getSourceManager(), S.getLangOpts());
+    if (const auto *FPT = MD->getType()->getAs<FunctionProtoType>();
+        FPT && FPT->hasTrailingReturn()) {
+      // For trailing return types, 'getEndLoc()' includes the return type
+      // after '->', placing the attribute in an invalid position.
+      // Instead use 'getLocalRangeEnd()' which gives the '->' location
+      // for trailing returns, so find the last token before it.
+      const auto FTL = MDL.getAs<FunctionTypeLoc>();
+      assert(FTL);
+      InsertionPoint = Lexer::getLocForEndOfToken(
+          Lexer::findPreviousToken(FTL.getLocalRangeEnd(), S.getSourceManager(),
+                                   S.getLangOpts(),
+                                   /*IncludeComments=*/false)
+              ->getLocation(),
+          0, S.getSourceManager(), S.getLangOpts());
+    }
     S.Diag(InsertionPoint, DiagID)
         << MD->getNameInfo().getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint,

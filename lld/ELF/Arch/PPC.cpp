@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InputFiles.h"
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -40,6 +42,9 @@ public:
   void writeIplt(uint8_t *buf, const Symbol &sym,
                  uint64_t pltEntryAddr) const override;
   void writeGotPlt(uint8_t *buf, const Symbol &s) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
+  void scanSection(InputSectionBase &) override;
   bool needsThunk(RelExpr expr, RelType relocType, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -47,10 +52,6 @@ public:
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
-  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
-  int getTlsGdRelaxSkip(RelType type) const override;
-  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
-
 private:
   void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -219,53 +220,19 @@ bool PPC::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   llvm_unreachable("unsupported relocation type used in branch");
 }
 
+// Only needed to support relocations used by relocateNonAlloc and
+// preprocessRelocs.
 RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
   switch (type) {
   case R_PPC_NONE:
     return R_NONE;
-  case R_PPC_ADDR16_HA:
-  case R_PPC_ADDR16_HI:
-  case R_PPC_ADDR16_LO:
-  case R_PPC_ADDR24:
   case R_PPC_ADDR32:
     return R_ABS;
-  case R_PPC_DTPREL16:
-  case R_PPC_DTPREL16_HA:
-  case R_PPC_DTPREL16_HI:
-  case R_PPC_DTPREL16_LO:
   case R_PPC_DTPREL32:
     return R_DTPREL;
-  case R_PPC_REL14:
   case R_PPC_REL32:
-  case R_PPC_REL16_LO:
-  case R_PPC_REL16_HI:
-  case R_PPC_REL16_HA:
     return R_PC;
-  case R_PPC_GOT16:
-    return R_GOT_OFF;
-  case R_PPC_LOCAL24PC:
-  case R_PPC_REL24:
-    return R_PLT_PC;
-  case R_PPC_PLTREL24:
-    return RE_PPC32_PLTREL;
-  case R_PPC_GOT_TLSGD16:
-    return R_TLSGD_GOT;
-  case R_PPC_GOT_TLSLD16:
-    return R_TLSLD_GOT;
-  case R_PPC_GOT_TPREL16:
-    return R_GOT_OFF;
-  case R_PPC_TLS:
-    return R_TLSIE_HINT;
-  case R_PPC_TLSGD:
-    return R_TLSDESC_CALL;
-  case R_PPC_TLSLD:
-    return R_TLSLD_HINT;
-  case R_PPC_TPREL16:
-  case R_PPC_TPREL16_HA:
-  case R_PPC_TPREL16_LO:
-  case R_PPC_TPREL16_HI:
-    return R_TPREL;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
@@ -299,6 +266,134 @@ int64_t PPC::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
+template <class ELFT, class RelTy>
+void PPC::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    const RelTy &rel = *it;
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelType type = rel.getType(false);
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
+    switch (type) {
+    case R_PPC_NONE:
+      continue;
+    // Absolute relocations:
+    case R_PPC_ADDR16_HA:
+    case R_PPC_ADDR16_HI:
+    case R_PPC_ADDR16_LO:
+    case R_PPC_ADDR24:
+    case R_PPC_ADDR32:
+      expr = R_ABS;
+      break;
+
+    // PC-relative relocations:
+    case R_PPC_REL14:
+    case R_PPC_REL32:
+    case R_PPC_REL16_LO:
+    case R_PPC_REL16_HI:
+    case R_PPC_REL16_HA:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+
+    // GOT-generating relocation:
+    case R_PPC_GOT16:
+      expr = R_GOT_OFF;
+      break;
+
+    // PLT-generating relocations:
+    case R_PPC_LOCAL24PC:
+    case R_PPC_REL24:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+    case R_PPC_PLTREL24:
+      ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+      if (LLVM_UNLIKELY(sym.isGnuIFunc())) {
+        rs.process(RE_PPC32_PLTREL, type, offset, sym, addend);
+      } else if (sym.isPreemptible) {
+        sym.setFlags(NEEDS_PLT);
+        sec.addReloc({RE_PPC32_PLTREL, type, offset, addend, &sym});
+      } else {
+        // The 0x8000 bit of r_addend selects call stub type; mask it for direct
+        // calls.
+        addend &= ~0x8000;
+        rs.processAux(R_PC, type, offset, sym, addend);
+      }
+      continue;
+
+    // TLS relocations:
+
+    // TLS LE:
+    case R_PPC_TPREL16:
+    case R_PPC_TPREL16_HA:
+    case R_PPC_TPREL16_LO:
+    case R_PPC_TPREL16_HI:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+
+    // TLS IE:
+    case R_PPC_GOT_TPREL16:
+      rs.handleTlsIe(R_GOT_OFF, type, offset, addend, sym);
+      continue;
+    case R_PPC_TLS:
+      if (!ctx.arg.shared && !sym.isPreemptible)
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      continue;
+
+    // TLS GD:
+    case R_PPC_GOT_TLSGD16:
+      rs.handleTlsGd(R_TLSGD_GOT, R_GOT_OFF, R_TPREL, type, offset, addend,
+                     sym);
+      continue;
+    case R_PPC_TLSGD:
+    case R_PPC_TLSLD:
+      if (!ctx.arg.shared) {
+        sec.addReloc({sym.isPreemptible ? R_GOT_OFF : R_TPREL, type, offset,
+                      addend, &sym});
+        ++it; // Skip REL24
+      }
+      continue;
+
+    // TLS LD:
+    case R_PPC_GOT_TLSLD16:
+      rs.handleTlsLd(R_TLSLD_GOT, type, offset, addend, sym);
+      continue;
+    case R_PPC_DTPREL16:
+    case R_PPC_DTPREL16_HA:
+    case R_PPC_DTPREL16_HI:
+    case R_PPC_DTPREL16_LO:
+    case R_PPC_DTPREL32:
+      sec.addReloc({R_DTPREL, type, offset, addend, &sym});
+      continue;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
+  }
+}
+
+void PPC::scanSection(InputSectionBase &sec) {
+  if (ctx.arg.isLE)
+    elf::scanSection1<PPC, ELF32LE>(*this, sec);
+  else
+    elf::scanSection1<PPC, ELF32BE>(*this, sec);
+}
+
 static std::pair<RelType, uint64_t> fromDTPREL(RelType type, uint64_t val) {
   uint64_t dtpBiasedVal = val - 0x8000;
   switch (type) {
@@ -326,12 +421,35 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write16(ctx, loc, val);
     break;
   case R_PPC_GOT16:
-  case R_PPC_GOT_TLSGD16:
-  case R_PPC_GOT_TLSLD16:
-  case R_PPC_GOT_TPREL16:
   case R_PPC_TPREL16:
     checkInt(ctx, loc, val, 16, rel);
     write16(ctx, loc, val);
+    break;
+  case R_PPC_GOT_TLSGD16:
+    if (rel.expr == R_TPREL)
+      relaxTlsGdToLe(loc, rel, val);
+    else if (rel.expr == R_GOT_OFF)
+      relaxTlsGdToIe(loc, rel, val);
+    else {
+      checkInt(ctx, loc, val, 16, rel);
+      write16(ctx, loc, val);
+    }
+    break;
+  case R_PPC_GOT_TLSLD16:
+    if (rel.expr == R_TPREL)
+      relaxTlsLdToLe(loc, rel, val);
+    else {
+      checkInt(ctx, loc, val, 16, rel);
+      write16(ctx, loc, val);
+    }
+    break;
+  case R_PPC_GOT_TPREL16:
+    if (rel.expr == R_TPREL)
+      relaxTlsIeToLe(loc, rel, val);
+    else {
+      checkInt(ctx, loc, val, 16, rel);
+      write16(ctx, loc, val);
+    }
     break;
   case R_PPC_ADDR16_HA:
   case R_PPC_DTPREL16_HA:
@@ -381,31 +499,23 @@ void PPC::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write32(ctx, loc, (read32(ctx, loc) & ~mask) | (val & mask));
     break;
   }
+  case R_PPC_TLSGD:
+    if (rel.expr == R_TPREL)
+      relaxTlsGdToLe(loc, rel, val);
+    else if (rel.expr == R_GOT_OFF)
+      relaxTlsGdToIe(loc, rel, val);
+    break;
+  case R_PPC_TLSLD:
+    if (rel.expr == R_TPREL)
+      relaxTlsLdToLe(loc, rel, val);
+    break;
+  case R_PPC_TLS:
+    if (rel.expr == R_TPREL)
+      relaxTlsIeToLe(loc, rel, val);
+    break;
   default:
     llvm_unreachable("unknown relocation");
   }
-}
-
-RelExpr PPC::adjustTlsExpr(RelType type, RelExpr expr) const {
-  if (expr == R_RELAX_TLS_GD_TO_IE)
-    return R_RELAX_TLS_GD_TO_IE_GOT_OFF;
-  if (expr == R_RELAX_TLS_LD_TO_LE)
-    return R_RELAX_TLS_LD_TO_LE_ABS;
-  return expr;
-}
-
-int PPC::getTlsGdRelaxSkip(RelType type) const {
-  // A __tls_get_addr call instruction is marked with 2 relocations:
-  //
-  //   R_PPC_TLSGD / R_PPC_TLSLD: marker relocation
-  //   R_PPC_REL24: __tls_get_addr
-  //
-  // After the relaxation we no longer call __tls_get_addr and should skip both
-  // relocations to not create a false dependence on __tls_get_addr being
-  // defined.
-  if (type == R_PPC_TLSGD || type == R_PPC_TLSLD)
-    return 2;
-  return 1;
 }
 
 void PPC::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
@@ -456,12 +566,6 @@ void PPC::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
     // bl __tls_get_addr(x@tlsld) --> addi r3, r3, 4096
     write32(ctx, loc, 0x38631000);
     break;
-  case R_PPC_DTPREL16:
-  case R_PPC_DTPREL16_HA:
-  case R_PPC_DTPREL16_HI:
-  case R_PPC_DTPREL16_LO:
-    relocate(loc, rel, val);
-    break;
   default:
     llvm_unreachable("unsupported relocation for TLS LD to LE relaxation");
   }
@@ -493,32 +597,6 @@ void PPC::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   }
   default:
     llvm_unreachable("unsupported relocation for TLS IE to LE relaxation");
-  }
-}
-
-void PPC::relocateAlloc(InputSection &sec, uint8_t *buf) const {
-  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
-  for (const Relocation &rel : sec.relocs()) {
-    uint8_t *loc = buf + rel.offset;
-    const uint64_t val =
-        SignExtend64(sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), 32);
-    switch (rel.expr) {
-    case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
-      relaxTlsGdToIe(loc, rel, val);
-      break;
-    case R_RELAX_TLS_GD_TO_LE:
-      relaxTlsGdToLe(loc, rel, val);
-      break;
-    case R_RELAX_TLS_LD_TO_LE_ABS:
-      relaxTlsLdToLe(loc, rel, val);
-      break;
-    case R_RELAX_TLS_IE_TO_LE:
-      relaxTlsIeToLe(loc, rel, val);
-      break;
-    default:
-      relocate(loc, rel, val);
-      break;
-    }
   }
 }
 

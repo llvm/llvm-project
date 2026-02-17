@@ -16,7 +16,9 @@
 // constexpr counted_iterator& operator+=(iter_difference_t<I> n)
 //     requires random_access_iterator<I>;
 
+#include <cassert>
 #include <iterator>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "test_iterators.h"

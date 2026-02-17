@@ -271,9 +271,11 @@ struct BMGuArch : public Xe2Plus {
     static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
     static const SpirvStoreScatterInstruction storeScatterInst;
     static const SpirvLoadGatherInstruction loadGatherInst;
-    static const Instruction *arr[] = {&dpasInst,         &loadNdInst,
-                                       &storeNdInst,      &prefetchNdInst,
-                                       &storeScatterInst, &loadGatherInst};
+    static const StoreMatrixInstruction storeMatrixInst;
+    static const LoadMatrixInstruction loadMatrixInst;
+    static const Instruction *arr[] = {
+        &dpasInst,         &loadNdInst,     &storeNdInst,     &prefetchNdInst,
+        &storeScatterInst, &loadGatherInst, &storeMatrixInst, &loadMatrixInst};
     return arr;
   }
 

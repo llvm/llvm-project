@@ -312,6 +312,7 @@ SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
                                      MachineIRBuilder &MIRBuilder) {
   auto EleOpc = ElemType->getOpcode();
   (void)EleOpc;
+  assert(NumElems >= 2 && "SPIR-V OpTypeVector requires at least 2 components");
   assert((EleOpc == SPIRV::OpTypeInt || EleOpc == SPIRV::OpTypeFloat ||
           EleOpc == SPIRV::OpTypeBool) &&
          "Invalid vector element type");
@@ -1286,6 +1287,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVType(
     const Type *Ty, MachineIRBuilder &MIRBuilder,
     SPIRV::AccessQualifier::AccessQualifier AccessQual,
     bool ExplicitLayoutRequired, bool EmitIR) {
+  // SPIR-V doesn't support single-element vectors. Treat <1 x T> as T.
+  if (auto *FVT = dyn_cast<FixedVectorType>(Ty);
+      FVT && FVT->getNumElements() == 1)
+    return getOrCreateSPIRVType(FVT->getElementType(), MIRBuilder, AccessQual,
+                                ExplicitLayoutRequired, EmitIR);
   const MachineFunction *MF = &MIRBuilder.getMF();
   Register Reg;
   if (auto *ExtTy = dyn_cast<TargetExtType>(Ty);
