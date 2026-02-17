@@ -17351,15 +17351,16 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
                       (Op.getOpcode() != ISD::VECREDUCE_ADD &&
                        SrcVT.getVectorElementType() == MVT::i64);
 
-  bool UsesSVEForFixedLengthVT =  useSVEForFixedLengthVectorVT(
-          SrcVT, OverrideNEON && Subtarget->useSVEForFixedLengthVectors());
+  bool UsesSVEForFixedLengthVT = useSVEForFixedLengthVectorVT(
+      SrcVT, OverrideNEON && Subtarget->useSVEForFixedLengthVectors());
 
   // Always lower try to lower v2i64 pairwise operations (as NEON does not
   // natively support reductions on these types). Try lowering any v2<ty> vector
   // to pairwise operations when using SVE for fixed-length VTs, as the pairwise
   // operations are likely to be cheaper than a full reduction.
   bool TryPairwiseOps = SrcVT == MVT::v2i64 || (UsesSVEForFixedLengthVT &&
-    SrcVT.getVectorElementCount() ==  ElementCount::getFixed(2));
+                                                SrcVT.getVectorElementCount() ==
+                                                    ElementCount::getFixed(2));
 
   // Attempt to lower v2<ty> reductions to SVE2 pairwise operations.
   auto PairwiseIID = getPairwiseOpForReduction(Op->getOpcode());
