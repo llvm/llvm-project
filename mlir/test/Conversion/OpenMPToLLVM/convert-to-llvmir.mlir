@@ -615,3 +615,22 @@ omp.declare_mapper @my_mapper : !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)>
   // CHECK: omp.declare_mapper.info map_entries(%{{.*}}, %{{.*}} : !llvm.ptr, !llvm.ptr)
   omp.declare_mapper.info map_entries(%3, %2 : !llvm.ptr, !llvm.ptr)
 }
+
+// CHECK-LABEL: llvm.func @omp_dist_schedule(%arg0: i32) {
+func.func @omp_dist_schedule(%arg0: i32) {
+  %c1_i32 = arith.constant 1 : i32
+  // CHECK: %1 = llvm.mlir.constant(1024 : i32) : i32
+  %c1024_i32 = arith.constant 1024 : i32
+  %c16_i32 = arith.constant 16 : i32
+  %c8_i32 = arith.constant 8 : i32
+  omp.teams num_teams( to %c8_i32 : i32) thread_limit(%c16_i32 : i32) {
+    // CHECK: omp.distribute dist_schedule_static dist_schedule_chunk_size(%1 : i32) {
+    omp.distribute dist_schedule_static dist_schedule_chunk_size(%c1024_i32 : i32) {
+      omp.loop_nest (%arg1) : i32 = (%c1_i32) to (%arg0) inclusive step (%c1_i32) {
+        omp.terminator
+      }
+    }
+    omp.terminator
+  }
+  return
+}

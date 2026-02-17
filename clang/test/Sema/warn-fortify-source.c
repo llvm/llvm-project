@@ -76,6 +76,14 @@ void call_strcpy_nowarn(void) {
   __builtin_strcpy(dst, src);
 }
 
+void call_strcat(void) {
+  const char *const src = "abcd";
+  char dst1[5];
+  char dst2[4];
+  __builtin_strcat(dst1, src);
+  __builtin_strcat(dst2, src); // expected-warning {{'strcat' will always overflow; destination buffer has size 4, but the source string has length 5 (including NUL byte)}}
+}
+
 void call_stpcpy(void) {
   const char *const src = "abcd";
   char dst1[5];

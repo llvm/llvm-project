@@ -320,8 +320,8 @@ define void @nsw_latch(ptr %a) nounwind {
 ; CHECK:       for.cond.1:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[B_03_LCSSA:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 8, [[FOR_BODY_1]] ], [ 0, [[FOR_COND_1]] ]
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[FOR_COND]] ], [ 1, [[FOR_BODY_1]] ], [ 0, [[FOR_COND_1]] ]
+; CHECK-NEXT:    [[B_03_LCSSA:%.*]] = phi i32 [ 0, [[FOR_COND_1]] ], [ 0, [[FOR_COND]] ], [ 8, [[FOR_BODY_1]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 0, [[FOR_COND_1]] ], [ 0, [[FOR_COND]] ], [ 1, [[FOR_BODY_1]] ]
 ; CHECK-NEXT:    store i32 [[B_03_LCSSA]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -56,17 +56,17 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP:       vector.body:
 ; NO-VP-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 16
-; NO-VP-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 32
-; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 48
+; NO-VP-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 16
+; NO-VP-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 32
+; NO-VP-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i64 48
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, ptr [[TMP4]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i32>, ptr [[TMP9]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x i32>, ptr [[TMP10]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i32>, ptr [[TMP11]], align 4
 ; NO-VP-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i32 16
-; NO-VP-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i32 32
-; NO-VP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i32 48
+; NO-VP-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i64 16
+; NO-VP-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i64 32
+; NO-VP-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i64 48
 ; NO-VP-NEXT:    [[WIDE_LOAD5:%.*]] = load <16 x i32>, ptr [[TMP12]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD6:%.*]] = load <16 x i32>, ptr [[TMP17]], align 4
 ; NO-VP-NEXT:    [[WIDE_LOAD7:%.*]] = load <16 x i32>, ptr [[TMP18]], align 4
@@ -76,9 +76,9 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-NEXT:    [[TMP22:%.*]] = add nsw <16 x i32> [[WIDE_LOAD7]], [[WIDE_LOAD3]]
 ; NO-VP-NEXT:    [[TMP23:%.*]] = add nsw <16 x i32> [[WIDE_LOAD8]], [[WIDE_LOAD4]]
 ; NO-VP-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i32 16
-; NO-VP-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i32 32
-; NO-VP-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i32 48
+; NO-VP-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 16
+; NO-VP-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 32
+; NO-VP-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i32, ptr [[TMP24]], i64 48
 ; NO-VP-NEXT:    store <16 x i32> [[TMP20]], ptr [[TMP24]], align 4
 ; NO-VP-NEXT:    store <16 x i32> [[TMP21]], ptr [[TMP29]], align 4
 ; NO-VP-NEXT:    store <16 x i32> [[TMP22]], ptr [[TMP30]], align 4

@@ -141,13 +141,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __
   __locale_guard __current(__loc);
   return ::asprintf(__s, __format, std::forward<_Args>(__args)...); // non-standard
 }
-template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT(__scanf__, 3, 4) int __sscanf(
-    const char* __s, __locale_t __loc, const char* __format, _Args&&... __args) {
-  __locale_guard __current(__loc);
-  return std::sscanf(__s, __format, std::forward<_Args>(__args)...);
-}
-
 _LIBCPP_DIAGNOSTIC_POP
 #undef _LIBCPP_VARIADIC_ATTRIBUTE_FORMAT
 

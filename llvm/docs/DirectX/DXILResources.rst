@@ -277,7 +277,7 @@ Examples:
 Accessing Resources as Memory
 -----------------------------
 
-*relevant types: Buffers and Textures*
+*relevant types: Buffers, Textures, and CBuffers*
 
 Loading and storing from resources is generally represented in LLVM using
 operations on memory that is only accessible via a handle object. Given a
@@ -302,14 +302,14 @@ stores are described later in this document.
      -
      - Pointer
      - A pointer to an object in the buffer
-   * - ``%buffer``
+   * - ``%resource``
      - 0
-     - ``target(dx.TypedBuffer, ...)``
-     - The buffer to access
+     - Any buffer, texture, or cbuffer type
+     - The resource to access
    * - ``%index``
      - 1
      - ``i32``
-     - Index into the buffer
+     - Index into the resource
 
 Examples:
 
@@ -402,6 +402,11 @@ which matches DXIL. Unlike in the `RawBufferLoad`_ operation, we do not need
 arguments for the mask/type size and alignment, since we can calculate these
 from the return type of the load during lowering.
 
+Note that RawBuffer loads represent either "structured" accesses, as in HLSL's
+StructuredBuffer<T>, or a "raw" access, as in HLSL's "ByteAddressBuffer". The
+`%offset` parameter is only used for structured accesses, and *must* be
+`poison` for raw accesses.
+
 .. _RawBufferLoad: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferload
 
 .. list-table:: ``@llvm.dx.resource.load.rawbuffer``
@@ -442,7 +447,7 @@ Examples:
        @llvm.dx.resource.load.rawbuffer.f32.tdx.RawBuffer_i8_0_0_0t(
            target("dx.RawBuffer", i8, 0, 0, 0) %buffer,
            i32 %byte_offset,
-           i32 0)
+           i32 poison)
 
    ; float4
    %ret = call {<4 x float>, i1}
@@ -454,7 +459,7 @@ Examples:
        @llvm.dx.resource.load.rawbuffer.v4f32.tdx.RawBuffer_i8_0_0_0t(
            target("dx.RawBuffer", i8, 0, 0, 0) %buffer,
            i32 %byte_offset,
-           i32 0)
+           i32 poison)
 
    ; struct S0 { float4 f; int4 i; };
    %ret = call {<4 x float>, i1}
@@ -488,7 +493,7 @@ Examples:
        @llvm.dx.resource.load.rawbuffer.v4i64.tdx.RawBuffer_i8_0_0t(
            target("dx.RawBuffer", i8, 0, 0, 0) %buffer,
            i32 %byte_offset,
-           i32 0)
+           i32 poison)
 
 Stores
 ------

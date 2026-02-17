@@ -6,15 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LoweringPrepareCXXABI.h"
 #include "PassDetail.h"
+#include "mlir/IR/Attributes.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Mangle.h"
 #include "clang/Basic/Module.h"
+#include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/Path.h"
 
@@ -69,12 +75,17 @@ struct LoweringPreparePass
   void lowerComplexMulOp(cir::ComplexMulOp op);
   void lowerUnaryOp(cir::UnaryOp op);
   void lowerGlobalOp(cir::GlobalOp op);
-  void lowerDynamicCastOp(cir::DynamicCastOp op);
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
+  void lowerTrivialCopyCall(cir::CallOp op);
 
   /// Build the function that initializes the specified global
   cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
+
+  /// Handle the dtor region by registering destructor with __cxa_atexit
+  cir::FuncOp getOrCreateDtorFunc(CIRBaseBuilderTy &builder, cir::GlobalOp op,
+                                  mlir::Region &dtorRegion,
+                                  cir::CallOp &dtorCall);
 
   /// Build a module init function that calls all the dynamic initializers.
   void buildCXXGlobalInitFunc();
@@ -93,14 +104,79 @@ struct LoweringPreparePass
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage,
       cir::VisibilityKind visibility = cir::VisibilityKind::Default);
 
+  /// Handle static local variable initialization with guard variables.
+  void handleStaticLocal(cir::GlobalOp globalOp, cir::GetGlobalOp getGlobalOp);
+
+  /// Get or create __cxa_guard_acquire function.
+  cir::FuncOp getGuardAcquireFn(cir::PointerType guardPtrTy);
+
+  /// Get or create __cxa_guard_release function.
+  cir::FuncOp getGuardReleaseFn(cir::PointerType guardPtrTy);
+
+  /// Create a guard global variable for a static local.
+  cir::GlobalOp createGuardGlobalOp(CIRBaseBuilderTy &builder,
+                                    mlir::Location loc, llvm::StringRef name,
+                                    cir::IntType guardTy,
+                                    cir::GlobalLinkageKind linkage);
+
+  /// Get the guard variable for a static local declaration.
+  cir::GlobalOp getStaticLocalDeclGuardAddress(llvm::StringRef globalSymName) {
+    auto it = staticLocalDeclGuardMap.find(globalSymName);
+    if (it != staticLocalDeclGuardMap.end())
+      return it->second;
+    return nullptr;
+  }
+
+  /// Set the guard variable for a static local declaration.
+  void setStaticLocalDeclGuardAddress(llvm::StringRef globalSymName,
+                                      cir::GlobalOp guard) {
+    staticLocalDeclGuardMap[globalSymName] = guard;
+  }
+
+  /// Get or create the guard variable for a static local declaration.
+  cir::GlobalOp getOrCreateStaticLocalDeclGuardAddress(
+      CIRBaseBuilderTy &builder, cir::GlobalOp globalOp,
+      cir::ASTVarDeclInterface varDecl, cir::IntType guardTy,
+      clang::CharUnits guardAlignment) {
+    llvm::StringRef globalSymName = globalOp.getSymName();
+    cir::GlobalOp guard = getStaticLocalDeclGuardAddress(globalSymName);
+    if (!guard) {
+      // Get the guard name from the static_local attribute.
+      llvm::StringRef guardName =
+          globalOp.getStaticLocalGuard()->getName().getValue();
+
+      // Create the guard variable with a zero-initializer.
+      guard = createGuardGlobalOp(builder, globalOp->getLoc(), guardName,
+                                  guardTy, globalOp.getLinkage());
+      guard.setInitialValueAttr(cir::IntAttr::get(guardTy, 0));
+      guard.setDSOLocal(globalOp.getDsoLocal());
+      guard.setAlignment(guardAlignment.getAsAlign().value());
+
+      // The ABI says: "It is suggested that it be emitted in the same COMDAT
+      // group as the associated data object." In practice, this doesn't work
+      // for non-ELF and non-Wasm object formats, so only do it for ELF and
+      // Wasm.
+      bool hasComdat = globalOp.getComdat();
+      const llvm::Triple &triple = astCtx->getTargetInfo().getTriple();
+      if (!varDecl.isLocalVarDecl() && hasComdat &&
+          (triple.isOSBinFormatELF() || triple.isOSBinFormatWasm())) {
+        globalOp->emitError("NYI: guard COMDAT for non-local variables");
+        return {};
+      } else if (hasComdat && globalOp.isWeakForLinker()) {
+        globalOp->emitError("NYI: guard COMDAT for weak linkage");
+        return {};
+      }
+
+      setStaticLocalDeclGuardAddress(globalSymName, guard);
+    }
+    return guard;
+  }
+
   ///
   /// AST related
   /// -----------
 
   clang::ASTContext *astCtx;
-
-  // Helper for lowering C++ ABI specific operations.
-  std::shared_ptr<cir::LoweringPrepareCXXABI> cxxABI;
 
   /// Tracks current module.
   mlir::ModuleOp mlirModule;
@@ -109,29 +185,120 @@ struct LoweringPreparePass
   llvm::StringMap<uint32_t> dynamicInitializerNames;
   llvm::SmallVector<cir::FuncOp> dynamicInitializers;
 
+  /// Tracks guard variables for static locals (keyed by global symbol name).
+  llvm::StringMap<cir::GlobalOp> staticLocalDeclGuardMap;
+
   /// List of ctors and their priorities to be called before main()
   llvm::SmallVector<std::pair<std::string, uint32_t>, 4> globalCtorList;
   /// List of dtors and their priorities to be called when unloading module.
   llvm::SmallVector<std::pair<std::string, uint32_t>, 4> globalDtorList;
 
-  void setASTContext(clang::ASTContext *c) {
-    astCtx = c;
-    switch (c->getCXXABIKind()) {
-    case clang::TargetCXXABI::GenericItanium:
-      // We'll need X86-specific support for handling vaargs lowering, but for
-      // now the Itanium ABI will work.
-      assert(!cir::MissingFeatures::loweringPrepareX86CXXABI());
-      cxxABI.reset(cir::LoweringPrepareCXXABI::createItaniumABI());
-      break;
+  /// Returns true if the target uses ARM-style guard variables for static
+  /// local initialization (32-bit guard, check bit 0 only).
+  bool useARMGuardVarABI() const {
+    switch (astCtx->getCXXABIKind()) {
+    case clang::TargetCXXABI::GenericARM:
+    case clang::TargetCXXABI::iOS:
+    case clang::TargetCXXABI::WatchOS:
     case clang::TargetCXXABI::GenericAArch64:
-    case clang::TargetCXXABI::AppleARM64:
-      assert(!cir::MissingFeatures::loweringPrepareAArch64XXABI());
-      cxxABI.reset(cir::LoweringPrepareCXXABI::createItaniumABI());
-      break;
+    case clang::TargetCXXABI::WebAssembly:
+      return true;
     default:
-      llvm_unreachable("NYI");
+      return false;
     }
   }
+
+  /// Emit the guarded initialization for a static local variable.
+  /// This handles the if/else structure after the guard byte check,
+  /// following OG's ItaniumCXXABI::EmitGuardedInit skeleton.
+  void emitCXXGuardedInitIf(CIRBaseBuilderTy &builder, cir::GlobalOp globalOp,
+                            cir::ASTVarDeclInterface varDecl,
+                            mlir::Value guardPtr, cir::PointerType guardPtrTy,
+                            bool threadsafe) {
+    auto loc = globalOp->getLoc();
+
+    // The semantics of dynamic initialization of variables with static or
+    // thread storage duration depends on whether they are declared at
+    // block-scope. The initialization of such variables at block-scope can be
+    // aborted with an exception and later retried (per C++20 [stmt.dcl]p4),
+    // and recursive entry to their initialization has undefined behavior (also
+    // per C++20 [stmt.dcl]p4). For such variables declared at non-block scope,
+    // exceptions lead to termination (per C++20 [except.terminate]p1), and
+    // recursive references to the variables are governed only by the lifetime
+    // rules (per C++20 [class.cdtor]p2), which means such references are
+    // perfectly fine as long as they avoid touching memory. As a result,
+    // block-scope variables must not be marked as initialized until after
+    // initialization completes (unless the mark is reverted following an
+    // exception), but non-block-scope variables must be marked prior to
+    // initialization so that recursive accesses during initialization do not
+    // restart initialization.
+
+    // Variables used when coping with thread-safe statics and exceptions.
+    if (threadsafe) {
+      // Call __cxa_guard_acquire.
+      cir::CallOp acquireCall = builder.createCallOp(
+          loc, getGuardAcquireFn(guardPtrTy), mlir::ValueRange{guardPtr});
+      mlir::Value acquireResult = acquireCall.getResult();
+
+      auto acquireZero = builder.getConstantInt(
+          loc, mlir::cast<cir::IntType>(acquireResult.getType()), 0);
+      auto shouldInit = builder.createCompare(loc, cir::CmpOpKind::ne,
+                                              acquireResult, acquireZero);
+
+      // Create the IfOp for the shouldInit check.
+      // Pass an empty callback to avoid auto-creating a yield terminator.
+      auto ifOp =
+          cir::IfOp::create(builder, loc, shouldInit, /*withElseRegion=*/false,
+                            [](mlir::OpBuilder &, mlir::Location) {});
+      mlir::OpBuilder::InsertionGuard insertGuard(builder);
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+
+      // Call __cxa_guard_abort along the exceptional edge.
+      // OG: CGF.EHStack.pushCleanup<CallGuardAbort>(EHCleanup, guard);
+      assert(!cir::MissingFeatures::guardAbortOnException());
+
+      // Emit the initializer and add a global destructor if appropriate.
+      auto &ctorRegion = globalOp.getCtorRegion();
+      assert(!ctorRegion.empty() && "This should never be empty here.");
+      if (!ctorRegion.hasOneBlock())
+        llvm_unreachable("Multiple blocks NYI");
+      mlir::Block &block = ctorRegion.front();
+      mlir::Block *insertBlock = builder.getInsertionBlock();
+      insertBlock->getOperations().splice(insertBlock->end(),
+                                          block.getOperations(), block.begin(),
+                                          std::prev(block.end()));
+      builder.setInsertionPointToEnd(insertBlock);
+      ctorRegion.getBlocks().clear();
+
+      // Pop the guard-abort cleanup if we pushed one.
+      // OG: CGF.PopCleanupBlock();
+      assert(!cir::MissingFeatures::guardAbortOnException());
+
+      // Call __cxa_guard_release. This cannot throw.
+      builder.createCallOp(loc, getGuardReleaseFn(guardPtrTy),
+                           mlir::ValueRange{guardPtr});
+
+      builder.createYield(loc);
+    } else if (!varDecl.isLocalVarDecl()) {
+      // For non-local variables, store 1 into the first byte of the guard
+      // variable before the object initialization begins so that references
+      // to the variable during initialization don't restart initialization.
+      // OG: Builder.CreateStore(llvm::ConstantInt::get(CGM.Int8Ty, 1), ...);
+      // Then: CGF.EmitCXXGlobalVarDeclInit(D, var, shouldPerformInit);
+      globalOp->emitError("NYI: non-threadsafe init for non-local variables");
+      return;
+    } else {
+      // For local variables, store 1 into the first byte of the guard variable
+      // after the object initialization completes so that initialization is
+      // retried if initialization is interrupted by an exception.
+      globalOp->emitError("NYI: non-threadsafe init for local variables");
+      return;
+    }
+
+    builder.createYield(loc); // Outermost IfOp
+  }
+
+  void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
 
 } // namespace
@@ -460,7 +627,7 @@ static mlir::Type higherPrecisionElementTypeForComplexArithmetic(
       return info.getFloat128Format();
     }
 
-    assert(false && "Unsupported float type semantics");
+    llvm_unreachable("Unsupported float type semantics");
   };
 
   const mlir::Type higherElementType = getHigherPrecisionFPType(elementType);
@@ -691,6 +858,102 @@ void LoweringPreparePass::lowerUnaryOp(cir::UnaryOp op) {
   op.erase();
 }
 
+cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
+                                                     cir::GlobalOp op,
+                                                     mlir::Region &dtorRegion,
+                                                     cir::CallOp &dtorCall) {
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  assert(!cir::MissingFeatures::astVarDeclInterface());
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+
+  cir::VoidType voidTy = builder.getVoidTy();
+  auto voidPtrTy = cir::PointerType::get(voidTy);
+
+  // Look for operations in dtorBlock
+  mlir::Block &dtorBlock = dtorRegion.front();
+
+  // The first operation should be a get_global to retrieve the address
+  // of the global variable we're destroying.
+  auto opIt = dtorBlock.getOperations().begin();
+  cir::GetGlobalOp ggop = mlir::cast<cir::GetGlobalOp>(*opIt);
+
+  // The simple case is just a call to a destructor, like this:
+  //
+  //   %0 = cir.get_global %globalS : !cir.ptr<!rec_S>
+  //   cir.call %_ZN1SD1Ev(%0) : (!cir.ptr<!rec_S>) -> ()
+  //   (implicit cir.yield)
+  //
+  // That is, if the second operation is a call that takes the get_global result
+  // as its only operand, and the only other operation is a yield, then we can
+  // just return the called function.
+  if (dtorBlock.getOperations().size() == 3) {
+    auto callOp = mlir::dyn_cast<cir::CallOp>(&*(++opIt));
+    auto yieldOp = mlir::dyn_cast<cir::YieldOp>(&*(++opIt));
+    if (yieldOp && callOp && callOp.getNumOperands() == 1 &&
+        callOp.getArgOperand(0) == ggop) {
+      dtorCall = callOp;
+      return getCalledFunction(callOp);
+    }
+  }
+
+  // Otherwise, we need to create a helper function to replace the dtor region.
+  // This name is kind of arbitrary, but it matches the name that classic
+  // codegen uses, based on the expected case that gets us here.
+  builder.setInsertionPointAfter(op);
+  SmallString<256> fnName("__cxx_global_array_dtor");
+  uint32_t cnt = dynamicInitializerNames[fnName]++;
+  if (cnt)
+    fnName += "." + std::to_string(cnt);
+
+  // Create the helper function.
+  auto fnType = cir::FuncType::get({voidPtrTy}, voidTy);
+  cir::FuncOp dtorFunc =
+      buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
+                           cir::GlobalLinkageKind::InternalLinkage);
+  mlir::Block *entryBB = dtorFunc.addEntryBlock();
+
+  // Move everything from the dtor region into the helper function.
+  entryBB->getOperations().splice(entryBB->begin(), dtorBlock.getOperations(),
+                                  dtorBlock.begin(), dtorBlock.end());
+
+  // Before erasing this, clone it back into the dtor region
+  cir::GetGlobalOp dtorGGop =
+      mlir::cast<cir::GetGlobalOp>(entryBB->getOperations().front());
+  builder.setInsertionPointToStart(&dtorBlock);
+  builder.clone(*dtorGGop.getOperation());
+
+  // Replace all uses of the help function's get_global with the function
+  // argument.
+  mlir::Value dtorArg = entryBB->getArgument(0);
+  dtorGGop.replaceAllUsesWith(dtorArg);
+  dtorGGop.erase();
+
+  // Replace the yield in the final block with a return
+  mlir::Block &finalBlock = dtorFunc.getBody().back();
+  auto yieldOp = cast<cir::YieldOp>(finalBlock.getTerminator());
+  builder.setInsertionPoint(yieldOp);
+  cir::ReturnOp::create(builder, yieldOp->getLoc());
+  yieldOp->erase();
+
+  // Create a call to the helper function, passing the original get_global op
+  // as the argument.
+  cir::GetGlobalOp origGGop =
+      mlir::cast<cir::GetGlobalOp>(dtorBlock.getOperations().front());
+  builder.setInsertionPointAfter(origGGop);
+  mlir::Value ggopResult = origGGop.getResult();
+  dtorCall = builder.createCallOp(op.getLoc(), dtorFunc, ggopResult);
+
+  // Add a yield after the call.
+  auto finalYield = cir::YieldOp::create(builder, op.getLoc());
+
+  // Erase everything after the yield.
+  dtorBlock.getOperations().erase(std::next(mlir::Block::iterator(finalYield)),
+                                  dtorBlock.end());
+  dtorRegion.getBlocks().erase(std::next(dtorRegion.begin()), dtorRegion.end());
+
+  return dtorFunc;
+}
+
 cir::FuncOp
 LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   // TODO(cir): Store this in the GlobalOp.
@@ -699,7 +962,7 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   // Get a unique name
   uint32_t cnt = dynamicInitializerNames[fnName]++;
   if (cnt)
-    fnName += "." + llvm::Twine(cnt).str();
+    fnName += "." + std::to_string(cnt);
 
   // Create a variable initialization function.
   CIRBaseBuilderTy builder(getContext());
@@ -722,22 +985,20 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   if (!dtorRegion.empty()) {
     assert(!cir::MissingFeatures::astVarDeclInterface());
     assert(!cir::MissingFeatures::opGlobalThreadLocal());
+
     // Create a variable that binds the atexit to this shared object.
     builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
     cir::GlobalOp handle = buildRuntimeVariable(
         builder, "__dso_handle", op.getLoc(), builder.getI8Type(),
         cir::GlobalLinkageKind::ExternalLinkage, cir::VisibilityKind::Hidden);
 
-    // Look for the destructor call in dtorBlock
-    mlir::Block &dtorBlock = dtorRegion.front();
+    // If this is a simple call to a destructor, get the called function.
+    // Otherwise, create a helper function for the entire dtor region,
+    // replacing the current dtor region body with a call to the helper
+    // function.
     cir::CallOp dtorCall;
-    for (auto op : reverse(dtorBlock.getOps<cir::CallOp>())) {
-      dtorCall = op;
-      break;
-    }
-    assert(dtorCall && "Expected a dtor call");
-    cir::FuncOp dtorFunc = getCalledFunction(dtorCall);
-    assert(dtorFunc && "Expected a dtor call");
+    cir::FuncOp dtorFunc =
+        getOrCreateDtorFunc(builder, op, dtorRegion, dtorCall);
 
     // Create a runtime helper function:
     //    extern "C" int __cxa_atexit(void (*f)(void *), void *p, void *d);
@@ -751,8 +1012,8 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
     cir::FuncOp fnAtExit =
         buildRuntimeFunction(builder, nameAtExit, op.getLoc(), fnAtExitType);
 
-    // Replace the dtor call with a call to __cxa_atexit(&dtor, &var,
-    // &__dso_handle)
+    // Replace the dtor (or helper) call with a call to
+    //   __cxa_atexit(&dtor, &var, &__dso_handle)
     builder.setInsertionPointAfter(dtorCall);
     mlir::Value args[3];
     auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType());
@@ -768,6 +1029,7 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
                                        handle.getSymName());
     builder.createCallOp(dtorCall.getLoc(), fnAtExit, args);
     dtorCall->erase();
+    mlir::Block &dtorBlock = dtorRegion.front();
     entryBB->getOperations().splice(entryBB->end(), dtorBlock.getOperations(),
                                     dtorBlock.begin(),
                                     std::prev(dtorBlock.end()));
@@ -790,7 +1052,215 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   return f;
 }
 
+cir::FuncOp
+LoweringPreparePass::getGuardAcquireFn(cir::PointerType guardPtrTy) {
+  // int __cxa_guard_acquire(__guard *guard_object);
+  CIRBaseBuilderTy builder(getContext());
+  mlir::OpBuilder::InsertionGuard ipGuard{builder};
+  builder.setInsertionPointToStart(mlirModule.getBody());
+  mlir::Location loc = mlirModule.getLoc();
+  cir::IntType intTy = cir::IntType::get(&getContext(), 32, /*isSigned=*/true);
+  auto fnType = cir::FuncType::get({guardPtrTy}, intTy);
+  return buildRuntimeFunction(builder, "__cxa_guard_acquire", loc, fnType);
+}
+
+cir::FuncOp
+LoweringPreparePass::getGuardReleaseFn(cir::PointerType guardPtrTy) {
+  // void __cxa_guard_release(__guard *guard_object);
+  CIRBaseBuilderTy builder(getContext());
+  mlir::OpBuilder::InsertionGuard ipGuard{builder};
+  builder.setInsertionPointToStart(mlirModule.getBody());
+  mlir::Location loc = mlirModule.getLoc();
+  cir::VoidType voidTy = cir::VoidType::get(&getContext());
+  auto fnType = cir::FuncType::get({guardPtrTy}, voidTy);
+  return buildRuntimeFunction(builder, "__cxa_guard_release", loc, fnType);
+}
+
+cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
+    CIRBaseBuilderTy &builder, mlir::Location loc, llvm::StringRef name,
+    cir::IntType guardTy, cir::GlobalLinkageKind linkage) {
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(mlirModule.getBody());
+  cir::GlobalOp g = cir::GlobalOp::create(builder, loc, name, guardTy);
+  g.setLinkageAttr(
+      cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
+  mlir::SymbolTable::setSymbolVisibility(
+      g, mlir::SymbolTable::Visibility::Private);
+  return g;
+}
+
+void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
+                                            cir::GetGlobalOp getGlobalOp) {
+  CIRBaseBuilderTy builder(getContext());
+
+  std::optional<cir::ASTVarDeclInterface> astOption = globalOp.getAst();
+  assert(astOption.has_value());
+  cir::ASTVarDeclInterface varDecl = astOption.value();
+
+  builder.setInsertionPointAfter(getGlobalOp);
+  mlir::Block *getGlobalOpBlock = builder.getInsertionBlock();
+
+  // Remove the terminator temporarily - we'll add it back at the end.
+  mlir::Operation *ret = getGlobalOpBlock->getTerminator();
+  ret->remove();
+  builder.setInsertionPointAfter(getGlobalOp);
+
+  // Inline variables that weren't instantiated from variable templates have
+  // partially-ordered initialization within their translation unit.
+  bool nonTemplateInline =
+      varDecl.isInline() &&
+      !clang::isTemplateInstantiation(varDecl.getTemplateSpecializationKind());
+
+  // Inline namespace-scope variables require guarded initialization in a
+  // __cxx_global_var_init function. This is not yet implemented.
+  if (nonTemplateInline) {
+    globalOp->emitError(
+        "NYI: guarded initialization for inline namespace-scope variables");
+    return;
+  }
+
+  // We only need to use thread-safe statics for local non-TLS variables and
+  // inline variables; other global initialization is always single-threaded
+  // or (through lazy dynamic loading in multiple threads) unsequenced.
+  bool threadsafe = astCtx->getLangOpts().ThreadsafeStatics &&
+                    (varDecl.isLocalVarDecl() || nonTemplateInline) &&
+                    !varDecl.getTLSKind();
+
+  // TLS variables need special handling - the guard must also be thread-local.
+  if (varDecl.getTLSKind()) {
+    globalOp->emitError("NYI: guarded initialization for thread-local statics");
+    return;
+  }
+
+  // If we have a global variable with internal linkage and thread-safe statics
+  // are disabled, we can just let the guard variable be of type i8.
+  bool useInt8GuardVariable = !threadsafe && globalOp.hasInternalLinkage();
+  if (useInt8GuardVariable) {
+    globalOp->emitError("NYI: int8 guard variables for non-threadsafe statics");
+    return;
+  }
+
+  // Guard variables are 64 bits in the generic ABI and size width on ARM
+  // (i.e. 32-bit on AArch32, 64-bit on AArch64).
+  if (useARMGuardVarABI()) {
+    globalOp->emitError("NYI: ARM-style guard variables for static locals");
+    return;
+  }
+  cir::IntType guardTy =
+      cir::IntType::get(&getContext(), 64, /*isSigned=*/true);
+  cir::CIRDataLayout dataLayout(mlirModule);
+  clang::CharUnits guardAlignment =
+      clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
+  auto guardPtrTy = cir::PointerType::get(guardTy);
+
+  // Create the guard variable if we don't already have it.
+  cir::GlobalOp guard = getOrCreateStaticLocalDeclGuardAddress(
+      builder, globalOp, varDecl, guardTy, guardAlignment);
+  if (!guard) {
+    // Error was already emitted, just restore the terminator and return.
+    getGlobalOpBlock->push_back(ret);
+    return;
+  }
+
+  mlir::Value guardPtr = builder.createGetGlobal(guard, /*threadLocal*/ false);
+
+  // Test whether the variable has completed initialization.
+  //
+  // Itanium C++ ABI 3.3.2:
+  //   The following is pseudo-code showing how these functions can be used:
+  //     if (obj_guard.first_byte == 0) {
+  //       if ( __cxa_guard_acquire (&obj_guard) ) {
+  //         try {
+  //           ... initialize the object ...;
+  //         } catch (...) {
+  //            __cxa_guard_abort (&obj_guard);
+  //            throw;
+  //         }
+  //         ... queue object destructor with __cxa_atexit() ...;
+  //         __cxa_guard_release (&obj_guard);
+  //       }
+  //     }
+  //
+  // If threadsafe statics are enabled, but we don't have inline atomics, just
+  // call __cxa_guard_acquire unconditionally. The "inline" check isn't
+  // actually inline, and the user might not expect calls to __atomic libcalls.
+  unsigned maxInlineWidthInBits =
+      astCtx->getTargetInfo().getMaxAtomicInlineWidth();
+
+  if (!threadsafe || maxInlineWidthInBits) {
+    // Load the first byte of the guard variable.
+    auto bytePtrTy = cir::PointerType::get(builder.getSIntNTy(8));
+    mlir::Value bytePtr = builder.createBitcast(guardPtr, bytePtrTy);
+    mlir::Value guardLoad = builder.createAlignedLoad(
+        getGlobalOp.getLoc(), bytePtr, guardAlignment.getAsAlign().value());
+
+    // Itanium ABI:
+    //   An implementation supporting thread-safety on multiprocessor
+    //   systems must also guarantee that references to the initialized
+    //   object do not occur before the load of the initialization flag.
+    //
+    // In LLVM, we do this by marking the load Acquire.
+    if (threadsafe) {
+      auto loadOp = mlir::cast<cir::LoadOp>(guardLoad.getDefiningOp());
+      loadOp.setMemOrder(cir::MemOrder::Acquire);
+      loadOp.setSyncScope(cir::SyncScopeKind::System);
+    }
+
+    // For ARM, we should only check the first bit, rather than the entire byte:
+    //
+    // ARM C++ ABI 3.2.3.1:
+    //   To support the potential use of initialization guard variables
+    //   as semaphores that are the target of ARM SWP and LDREX/STREX
+    //   synchronizing instructions we define a static initialization
+    //   guard variable to be a 4-byte aligned, 4-byte word with the
+    //   following inline access protocol.
+    //     #define INITIALIZED 1
+    //     if ((obj_guard & INITIALIZED) != INITIALIZED) {
+    //       if (__cxa_guard_acquire(&obj_guard))
+    //         ...
+    //     }
+    //
+    // and similarly for ARM64:
+    //
+    // ARM64 C++ ABI 3.2.2:
+    //   This ABI instead only specifies the value bit 0 of the static guard
+    //   variable; all other bits are platform defined. Bit 0 shall be 0 when
+    //   the variable is not initialized and 1 when it is.
+    if (useARMGuardVarABI()) {
+      globalOp->emitError(
+          "NYI: ARM-style guard variable check (bit 0 only) for static locals");
+      return;
+    }
+
+    // Check if the first byte of the guard variable is zero.
+    auto zero = builder.getConstantInt(
+        getGlobalOp.getLoc(), mlir::cast<cir::IntType>(guardLoad.getType()), 0);
+    auto needsInit = builder.createCompare(getGlobalOp.getLoc(),
+                                           cir::CmpOpKind::eq, guardLoad, zero);
+
+    // Build the guarded initialization inside an if block.
+    cir::IfOp::create(builder, globalOp.getLoc(), needsInit,
+                      /*withElseRegion=*/false,
+                      [&](mlir::OpBuilder &, mlir::Location) {
+                        emitCXXGuardedInitIf(builder, globalOp, varDecl,
+                                             guardPtr, guardPtrTy, threadsafe);
+                      });
+  } else {
+    // Threadsafe statics without inline atomics - call __cxa_guard_acquire
+    // unconditionally without the initial guard byte check.
+    globalOp->emitError("NYI: guarded init without inline atomics support");
+    return;
+  }
+
+  // Insert the removed terminator back.
+  builder.getInsertionBlock()->push_back(ret);
+}
+
 void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
+  // Static locals are handled separately via guard variables.
+  if (op.getStaticLocalGuard())
+    return;
+
   mlir::Region &ctorRegion = op.getCtorRegion();
   mlir::Region &dtorRegion = op.getDtorRegion();
 
@@ -882,17 +1352,6 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   cir::ReturnOp::create(builder, f.getLoc());
 }
 
-void LoweringPreparePass::lowerDynamicCastOp(DynamicCastOp op) {
-  CIRBaseBuilderTy builder(getContext());
-  builder.setInsertionPointAfter(op);
-
-  assert(astCtx && "AST context is not available during lowering prepare");
-  auto loweredValue = cxxABI->lowerDynamicCast(builder, *astCtx, op);
-
-  op.replaceAllUsesWith(loweredValue);
-  op.erase();
-}
-
 static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
                                        clang::ASTContext *astCtx,
                                        mlir::Operation *op, mlir::Type eltTy,
@@ -926,8 +1385,7 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
       /*condBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
-        mlir::Type boolTy = cir::BoolType::get(b.getContext());
-        auto cmp = cir::CmpOp::create(builder, loc, boolTy, cir::CmpOpKind::ne,
+        auto cmp = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
                                       currentElement, stop);
         builder.createCondition(cmp);
       },
@@ -984,6 +1442,25 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
                              true);
 }
 
+void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
+  cir::FuncOp funcOp = getCalledFunction(op);
+  if (!funcOp)
+    return;
+
+  std::optional<cir::CtorKind> ctorKind = funcOp.getCxxConstructorKind();
+  if (ctorKind && *ctorKind == cir::CtorKind::Copy &&
+      funcOp.isCxxTrivialMemberFunction()) {
+    // Replace the trivial copy constructor call with a `CopyOp`
+    CIRBaseBuilderTy builder(getContext());
+    mlir::ValueRange operands = op.getOperands();
+    mlir::Value dest = operands[0];
+    mlir::Value src = operands[1];
+    builder.setInsertionPoint(op);
+    builder.createCopy(dest, src);
+    op.erase();
+  }
+}
+
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
@@ -997,10 +1474,27 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerComplexMulOp(complexMul);
   } else if (auto glob = mlir::dyn_cast<cir::GlobalOp>(op)) {
     lowerGlobalOp(glob);
-  } else if (auto dynamicCast = mlir::dyn_cast<cir::DynamicCastOp>(op)) {
-    lowerDynamicCastOp(dynamicCast);
+  } else if (auto getGlobal = mlir::dyn_cast<cir::GetGlobalOp>(op)) {
+    // Handle static local variables with guard variables.
+    // Only process GetGlobalOps inside function bodies, not in GlobalOp
+    // regions.
+    if (getGlobal.getStaticLocal() &&
+        getGlobal->getParentOfType<cir::FuncOp>()) {
+      auto globalOp = mlir::dyn_cast_or_null<cir::GlobalOp>(
+          mlir::SymbolTable::lookupNearestSymbolFrom(getGlobal,
+                                                     getGlobal.getNameAttr()));
+      // Only process if the GlobalOp has static_local and the ctor region is
+      // not empty. After handleStaticLocal processes a static local, the ctor
+      // region is cleared. GetGlobalOps that were spliced from the ctor region
+      // into the function will be skipped on subsequent iterations.
+      if (globalOp && globalOp.getStaticLocalGuard() &&
+          !globalOp.getCtorRegion().empty())
+        handleStaticLocal(globalOp, getGlobal);
+    }
   } else if (auto unary = mlir::dyn_cast<cir::UnaryOp>(op)) {
     lowerUnaryOp(unary);
+  } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
+    lowerTrivialCopyCall(callOp);
   } else if (auto fnOp = dyn_cast<cir::FuncOp>(op)) {
     if (auto globalCtor = fnOp.getGlobalCtorPriority())
       globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());
@@ -1019,7 +1513,8 @@ void LoweringPreparePass::runOnOperation() {
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
-                  cir::FuncOp, cir::GlobalOp, cir::UnaryOp>(op))
+                  cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
+                  cir::UnaryOp>(op))
       opsToTransform.push_back(op);
   });
 

@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -70,6 +71,8 @@ namespace {
 // If lower=[a], higher=[a, a], [a] reshaped into [1, a].
 // If lower=[a], target=[a, b, a], [a] reshaped into [1, 1, a].
 // If lower=[], target=[a, b, c], [] reshaped into [1, 1, 1].
+// If lower=[c], higher=[?, ?, c], [c] reshaped into [1, 1, c].
+// If lower=[?], higher=[?, ?, ?], [?] reshaped into [1, 1, ?].
 LogicalResult
 computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
                      ArrayRef<int64_t> lowerRankShape,
@@ -87,7 +90,12 @@ computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
     higherRankDim = higherRankShape[i + rankDiff];
     lowerRankDim = lowerRankShape[i];
 
-    if (lowerRankDim != 1 && higherRankDim != 1 &&
+    auto isStaticDimAndNotEqualToOne = [](int64_t dim) {
+      return dim != 1 && dim != ShapedType::kDynamic;
+    };
+
+    if (isStaticDimAndNotEqualToOne(lowerRankDim) &&
+        isStaticDimAndNotEqualToOne(higherRankDim) &&
         lowerRankDim != higherRankDim)
       return failure();
 
@@ -173,9 +181,8 @@ Value mlir::tosa::getTosaConstShape(PatternRewriter &rewriter, Location loc,
 }
 
 SmallVector<int64_t> mlir::tosa::convertFromMlirShape(ArrayRef<int64_t> shape) {
-  return to_vector(llvm::map_range(shape, [](int64_t dim) {
-    return ShapedType::isDynamic(dim) ? -1 : dim;
-  }));
+  return map_to_vector(
+      shape, [](int64_t dim) { return ShapedType::isDynamic(dim) ? -1 : dim; });
 }
 
 bool mlir::tosa::getConstShapeValues(Operation *op,

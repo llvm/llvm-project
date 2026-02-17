@@ -667,6 +667,7 @@ LogicalResult LLVMStructType::verifyEntries(DataLayoutEntryListRef entries,
 
 static constexpr llvm::StringRef kSpirvPrefix = "spirv.";
 static constexpr llvm::StringRef kArmSVCount = "aarch64.svcount";
+static constexpr llvm::StringRef kAMDGCNNamedBarrier = "amdgcn.named.barrier";
 
 bool LLVM::LLVMTargetExtType::hasProperty(Property prop) const {
   // See llvm/lib/IR/Type.cpp for reference.
@@ -675,6 +676,9 @@ bool LLVM::LLVMTargetExtType::hasProperty(Property prop) const {
   if (getExtTypeName().starts_with(kSpirvPrefix))
     properties |=
         (LLVMTargetExtType::HasZeroInit | LLVM::LLVMTargetExtType::CanBeGlobal);
+
+  if (getExtTypeName() == kAMDGCNNamedBarrier)
+    properties |= LLVMTargetExtType::CanBeGlobal;
 
   return (properties & prop) == prop;
 }
@@ -759,26 +763,24 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
 
   bool result =
       llvm::TypeSwitch<Type, bool>(type)
-          .Case<LLVMStructType>([&](auto structType) {
+          .Case([&](LLVMStructType structType) {
             return llvm::all_of(structType.getBody(), isCompatible);
           })
-          .Case<LLVMFunctionType>([&](auto funcType) {
+          .Case([&](LLVMFunctionType funcType) {
             return isCompatible(funcType.getReturnType()) &&
                    llvm::all_of(funcType.getParams(), isCompatible);
           })
-          .Case<IntegerType>([](auto intType) { return intType.isSignless(); })
-          .Case<VectorType>([&](auto vecType) {
+          .Case([](IntegerType intType) { return intType.isSignless(); })
+          .Case([&](VectorType vecType) {
             return vecType.getRank() == 1 &&
                    isCompatible(vecType.getElementType());
           })
-          .Case<LLVMPointerType>([&](auto pointerType) { return true; })
-          .Case<LLVMTargetExtType>([&](auto extType) {
+          .Case([&](LLVMPointerType pointerType) { return true; })
+          .Case([&](LLVMTargetExtType extType) {
             return llvm::all_of(extType.getTypeParams(), isCompatible);
           })
           // clang-format off
-          .Case<
-              LLVMArrayType
-          >([&](auto containerType) {
+          .Case([&](LLVMArrayType containerType) {
             return isCompatible(containerType.getElementType());
           })
           .Case<
@@ -891,12 +893,12 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
       .Case<Float64Type>([](Type) { return llvm::TypeSize::getFixed(64); })
       .Case<Float80Type>([](Type) { return llvm::TypeSize::getFixed(80); })
       .Case<Float128Type>([](Type) { return llvm::TypeSize::getFixed(128); })
-      .Case<IntegerType>([](IntegerType intTy) {
+      .Case([](IntegerType intTy) {
         return llvm::TypeSize::getFixed(intTy.getWidth());
       })
       .Case<LLVMPPCFP128Type>(
           [](Type) { return llvm::TypeSize::getFixed(128); })
-      .Case<VectorType>([](VectorType t) {
+      .Case([](VectorType t) {
         assert(isCompatibleVectorType(t) &&
                "unexpected incompatible with LLVM vector type");
         llvm::TypeSize elementSize =

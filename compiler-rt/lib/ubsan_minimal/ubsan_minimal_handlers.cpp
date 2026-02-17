@@ -12,6 +12,22 @@ static void message(const char *msg) { ubsan_message(msg); }
 static void message(const char *msg) { (void)write(2, msg, strlen(msg)); }
 #endif
 
+// If for some reason we cannot build the runtime with preserve_all, don't
+// emit any symbol. Programs that need them will fail to link, but that is
+// better than randomly corrupted registers.
+// Some architectures don't support preserve_all (but clang still has the)
+// attribute. For now, only support x86-64 and aarch64.
+#if defined(__clang__) && defined(__has_cpp_attribute) &&                      \
+    (defined(__x86_64__) || defined(__aarch64__))
+#if __has_cpp_attribute(clang::preserve_all)
+#define PRESERVE_HANDLERS true
+#else
+#define PRESERVE_HANDLERS false
+#endif
+#else
+#define PRESERVE_HANDLERS false
+#endif
+
 static const int kMaxCallerPcs = 20;
 static __sanitizer::atomic_uintptr_t caller_pcs[kMaxCallerPcs];
 // Number of elements in caller_pcs. A special value of kMaxCallerPcs + 1 means
@@ -34,16 +50,12 @@ static char *append_hex(uintptr_t d, char *buf, const char *end) {
   return buf;
 }
 
-static void format_msg(const char *kind, uintptr_t caller,
-                       const uintptr_t *address, char *buf, const char *end) {
+static void format_msg(const char *kind, uintptr_t caller, char *buf,
+                       const char *end) {
   buf = append_str("ubsan: ", buf, end);
   buf = append_str(kind, buf, end);
   buf = append_str(" by 0x", buf, end);
   buf = append_hex(caller, buf, end);
-  if (address) {
-    buf = append_str(" address 0x", buf, end);
-    buf = append_hex(*address, buf, end);
-  }
   buf = append_str("\n", buf, end);
   if (buf == end)
     --buf; // Make sure we don't cause a buffer overflow.
@@ -51,7 +63,7 @@ static void format_msg(const char *kind, uintptr_t caller,
 }
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
-                             uintptr_t caller, const uintptr_t *address) {
+                             uintptr_t caller) {
   if (caller == 0)
     return;
   while (true) {
@@ -84,32 +96,40 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
     __sanitizer::atomic_store_relaxed(&caller_pcs[sz], caller);
 
     char msg_buf[128];
-    format_msg(kind, caller, address, msg_buf, msg_buf + sizeof(msg_buf));
+    format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
     message(msg_buf);
   }
 }
 
+#if PRESERVE_HANDLERS
+SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_preserve,
+                             const char *kind, uintptr_t caller)
+[[clang::preserve_all]] {
+  // Additional indirecton so the user can override this with their own
+  // preserve_all function. This would allow, e.g., a function that reports the
+  // first error only, so for all subsequent calls we can skip the register save
+  // / restore.
+  __ubsan_report_error(kind, caller);
+}
+#endif
+
 SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_fatal, const char *kind,
-                             uintptr_t caller, const uintptr_t *address) {
+                             uintptr_t caller) {
   // Use another handlers, in case it's already overriden.
-  __ubsan_report_error(kind, caller, address);
+  __ubsan_report_error(kind, caller);
 }
 
 #if defined(__ANDROID__)
 extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
-static void abort_with_message(const char *kind, uintptr_t caller,
-                               const uintptr_t *address) {
+static void abort_with_message(const char *kind, uintptr_t caller) {
   char msg_buf[128];
-  format_msg(kind, caller, address, msg_buf, msg_buf + sizeof(msg_buf));
+  format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
   if (&android_set_abort_message)
     android_set_abort_message(msg_buf);
   abort();
 }
 #else
-static void abort_with_message(const char *kind, uintptr_t caller,
-                               const uintptr_t *address) {
-  abort();
-}
+static void abort_with_message(const char *kind, uintptr_t caller) { abort(); }
 #endif
 
 #if SANITIZER_DEBUG
@@ -127,41 +147,34 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define INTERFACE extern "C" __attribute__((visibility("default")))
 
+#if PRESERVE_HANDLERS
+#define HANDLER_PRESERVE(name, kind)                                           \
+  INTERFACE void __ubsan_handle_##name##_minimal_preserve()                    \
+      [[clang::preserve_all]] {                                                \
+    __ubsan_report_error_preserve(kind, GET_CALLER_PC());                      \
+  }
+#else
+#define HANDLER_PRESERVE(name, kind)
+#endif
+
 #define HANDLER_RECOVER(name, kind)                                            \
   INTERFACE void __ubsan_handle_##name##_minimal() {                           \
-    __ubsan_report_error(kind, GET_CALLER_PC(), nullptr);                      \
-  }
+    __ubsan_report_error(kind, GET_CALLER_PC());                               \
+  }                                                                            \
+  HANDLER_PRESERVE(name, kind)
 
 #define HANDLER_NORECOVER(name, kind)                                          \
   INTERFACE void __ubsan_handle_##name##_minimal_abort() {                     \
     uintptr_t caller = GET_CALLER_PC();                                        \
-    __ubsan_report_error_fatal(kind, caller, nullptr);                         \
-    abort_with_message(kind, caller, nullptr);                                 \
+    __ubsan_report_error_fatal(kind, caller);                                  \
+    abort_with_message(kind, caller);                                          \
   }
 
 #define HANDLER(name, kind)                                                    \
   HANDLER_RECOVER(name, kind)                                                  \
   HANDLER_NORECOVER(name, kind)
 
-#define HANDLER_RECOVER_PTR(name, kind)                                        \
-  INTERFACE void __ubsan_handle_##name##_minimal(const uintptr_t address) {    \
-    __ubsan_report_error(kind, GET_CALLER_PC(), &address);                     \
-  }
-
-#define HANDLER_NORECOVER_PTR(name, kind)                                      \
-  INTERFACE void __ubsan_handle_##name##_minimal_abort(                        \
-      const uintptr_t address) {                                               \
-    uintptr_t caller = GET_CALLER_PC();                                        \
-    __ubsan_report_error_fatal(kind, caller, &address);                        \
-    abort_with_message(kind, caller, &address);                                \
-  }
-
-// A version of a handler that takes a pointer to a value.
-#define HANDLER_PTR(name, kind)                                                \
-  HANDLER_RECOVER_PTR(name, kind)                                              \
-  HANDLER_NORECOVER_PTR(name, kind)
-
-HANDLER_PTR(type_mismatch, "type-mismatch")
+HANDLER(type_mismatch, "type-mismatch")
 HANDLER(alignment_assumption, "alignment-assumption")
 HANDLER(add_overflow, "add-overflow")
 HANDLER(sub_overflow, "sub-overflow")

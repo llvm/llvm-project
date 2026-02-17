@@ -29,9 +29,6 @@ TEST_CONSTEXPR_CXX14 bool test() {
 
 int main(int, char**) {
   test();
-#if TEST_STD_VER > 11
-  static_assert(test(), "");
-#endif
 
   return 0;
 }

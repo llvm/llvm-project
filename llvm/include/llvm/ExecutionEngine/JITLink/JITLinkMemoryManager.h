@@ -321,6 +321,8 @@ public:
   using OnFinalizedFunction =
       JITLinkMemoryManager::InFlightAlloc::OnFinalizedFunction;
 
+  using OnAbandonedFunction = unique_function<void(Error)>;
+
   LLVM_ABI static void Create(JITLinkMemoryManager &MemMgr,
                               std::shared_ptr<orc::SymbolStringPool> SSP,
                               Triple TT, const JITLinkDylib *JD,
@@ -346,6 +348,11 @@ public:
   /// Finalize all groups.
   Expected<JITLinkMemoryManager::FinalizedAlloc> finalize() {
     return Alloc->finalize();
+  }
+
+  /// Free allocated memory if finalize won't be called.
+  void abandon(OnAbandonedFunction OnAbandoned) {
+    Alloc->abandon(std::move(OnAbandoned));
   }
 
 private:

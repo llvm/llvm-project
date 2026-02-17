@@ -65,6 +65,7 @@ static_library("IR") {
     "Metadata.cpp",
     "Module.cpp",
     "ModuleSummaryIndex.cpp",
+    "NVVMIntrinsicUtils.cpp",
     "Operator.cpp",
     "OptBisect.cpp",
     "Pass.cpp",

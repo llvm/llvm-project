@@ -358,6 +358,9 @@ static void RemoveFilesToRemove() {
 }
 
 void sys::CleanupOnSignal(uintptr_t Context) {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
   int Sig = (int)Context;
 
   if (llvm::is_contained(InfoSigs, Sig)) {
@@ -440,7 +443,12 @@ static void InfoSignalHandler(int Sig) {
     CurrentInfoFunction();
 }
 
-void llvm::sys::RunInterruptHandlers() { RemoveFilesToRemove(); }
+void sys::RunInterruptHandlers() {
+  // Let's not interfere with stack trace symbolication and friends.
+  auto BypassSandbox = sandbox::scopedDisable();
+
+  RemoveFilesToRemove();
+}
 
 void llvm::sys::SetInterruptFunction(void (*IF)()) {
   InterruptFunction.exchange(IF);

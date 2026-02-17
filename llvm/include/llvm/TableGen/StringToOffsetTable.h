@@ -28,10 +28,13 @@ class StringToOffsetTable {
   /// plus ::)
   const StringRef ClassPrefix;
   const bool AppendZero;
+  const bool UsePrefixForStorageMember;
 
 public:
-  StringToOffsetTable(bool AppendZero = true, StringRef ClassPrefix = "")
-      : ClassPrefix(ClassPrefix), AppendZero(AppendZero) {
+  StringToOffsetTable(bool AppendZero = true, StringRef ClassPrefix = "",
+                      bool UsePrefixForStorageMember = true)
+      : ClassPrefix(ClassPrefix), AppendZero(AppendZero),
+        UsePrefixForStorageMember(UsePrefixForStorageMember) {
     // Ensure we always put the empty string at offset zero. That lets empty
     // initialization also be zero initialization for offsets into the table.
     GetOrAddStringOffset("");

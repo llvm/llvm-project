@@ -19,9 +19,8 @@ namespace clang::tidy::performance {
 
 namespace {
 AST_MATCHER_P(Type, isBuiltinType, BuiltinType::Kind, Kind) {
-  if (const auto *BT = dyn_cast<BuiltinType>(&Node)) {
+  if (const auto *BT = dyn_cast<BuiltinType>(&Node))
     return BT->getKind() == Kind;
-  }
   return false;
 }
 } // anonymous namespace

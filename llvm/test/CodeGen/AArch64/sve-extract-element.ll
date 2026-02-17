@@ -745,15 +745,13 @@ define i1 @test_lane9_8xi1(<vscale x 8 x i1> %a) #0 {
 define i1 @test_last_8xi1(<vscale x 8 x i1> %a) #0 {
 ; CHECK-LABEL: test_last_8xi1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
-; CHECK-NEXT:    whilels p0.h, xzr, x8
-; CHECK-NEXT:    lastb w8, p0, z0.h
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %shl = shl nuw nsw i64 %vscale, 3
-  %idx = add nuw nsw i64 %shl, -1
+  %idx = add nsw i64 %shl, -1
   %bit = extractelement <vscale x 8 x i1> %a, i64 %idx
   ret i1 %bit
 }
@@ -780,6 +778,32 @@ define i1 @test_lane4_2xi1(<vscale x 2 x i1> %a) #0 {
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %b = extractelement <vscale x 2 x i1> %a, i32 4
+  ret i1 %b
+}
+
+define i1 @test_lane0_1xi1(<vscale x 1 x i1> %a) #0 {
+; CHECK-LABEL: test_lane0_1xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p0.d
+; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 1 x i1> %a, i32 0
+  ret i1 %b
+}
+
+define i1 @test_lanex_1xi1(<vscale x 1 x i1> %a, i32 %x) #0 {
+; CHECK-LABEL: test_lanex_1xi1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 p0.d, p0.d, p0.d
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
+; CHECK-NEXT:    whilels p0.d, xzr, x8
+; CHECK-NEXT:    lastb x8, p0, z0.d
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %b = extractelement <vscale x 1 x i1> %a, i32 %x
   ret i1 %b
 }
 

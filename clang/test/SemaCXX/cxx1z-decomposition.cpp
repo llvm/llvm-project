@@ -105,7 +105,7 @@ void enclosing() {
 void bitfield() {
   struct { int a : 3, : 4, b : 5; } a;
   auto &[x, y] = a;
-  auto &[p, q, r] = a; // expected-error-re {{type 'struct (unnamed struct at {{.*}})' binds to 2 elements, but 3 names were provided}}
+  auto &[p, q, r] = a; // expected-error-re {{type 'struct (unnamed at {{.*}})' binds to 2 elements, but 3 names were provided}}
 }
 
 void for_range() {

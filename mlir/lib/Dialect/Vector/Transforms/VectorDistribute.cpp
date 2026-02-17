@@ -398,7 +398,8 @@ getInnerRegionEscapingValues(WarpExecuteOnLane0Op warpOp, Region &innerRegion,
       Type distType = operand->get().getType();
       if (auto vecType = dyn_cast<VectorType>(distType)) {
         AffineMap map = distributionMapFn(operand->get());
-        distType = getDistributedType(vecType, map, warpOp.getWarpSize());
+        distType = getDistributedType(vecType, map,
+                                      map.isEmpty() ? 1 : warpOp.getWarpSize());
       }
       escapingValueTypes.push_back(operand->get().getType());
       escapingValueDistTypes.push_back(distType);
@@ -1100,12 +1101,14 @@ struct WarpOpShapeCast : public WarpDistributionPattern {
   }
 };
 
-/// Sink out vector.create_mask op feeding into a warp op yield.
+/// Sink out vector.create_mask / vector.constant_mask op feeding into a warp op
+/// yield.
 /// ```
 /// %0 = ...
 /// %1 = gpu.warp_execute_on_lane_0(%arg0) -> (vector<1xf32>) {
 ///   ...
 ///   %mask = vector.create_mask %0 : vector<32xi1>
+///   // or %mask = vector.constant_mask[2] : vector<32xi1>
 ///   gpu.yield %mask : vector<32xi1>
 /// }
 /// ```
@@ -1118,31 +1121,45 @@ struct WarpOpShapeCast : public WarpDistributionPattern {
 /// %cmp = arith.cmpi ult, %laneid, %0
 /// %ub = arith.select %cmp, %c0, %c1
 /// %1 = vector.create_mask %ub : vector<1xi1>
+template <typename OpType,
+          typename = std::enable_if_t<llvm::is_one_of<
+              OpType, vector::CreateMaskOp, vector::ConstantMaskOp>::value>>
 struct WarpOpCreateMask : public WarpDistributionPattern {
   using Base::Base;
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *yieldOperand =
-        getWarpResult(warpOp, llvm::IsaPred<vector::CreateMaskOp>);
+    OpOperand *yieldOperand = getWarpResult(warpOp, (llvm::IsaPred<OpType>));
     if (!yieldOperand)
       return failure();
 
-    auto mask = yieldOperand->get().getDefiningOp<vector::CreateMaskOp>();
+    Operation *mask = yieldOperand->get().getDefiningOp<OpType>();
 
     // Early exit if any values needed for calculating the new mask indices
     // are defined inside the warp op.
-    if (!llvm::all_of(mask->getOperands(), [&](Value value) {
+    if (mask->getOperands().size() &&
+        !llvm::all_of(mask->getOperands(), [&](Value value) {
           return warpOp.isDefinedOutsideOfRegion(value);
         }))
       return failure();
 
-    Location loc = mask.getLoc();
+    Location loc = mask->getLoc();
     unsigned operandIndex = yieldOperand->getOperandNumber();
 
     auto distType = cast<VectorType>(warpOp.getResult(operandIndex).getType());
-    VectorType seqType = mask.getVectorType();
+    VectorType seqType = cast<VectorType>(mask->getResult(0).getType());
     ArrayRef<int64_t> seqShape = seqType.getShape();
     ArrayRef<int64_t> distShape = distType.getShape();
+    SmallVector<Value> materializedOperands;
+    if constexpr (std::is_same_v<OpType, vector::CreateMaskOp>) {
+      materializedOperands.append(mask->getOperands().begin(),
+                                  mask->getOperands().end());
+    } else {
+      auto constantMaskOp = cast<vector::ConstantMaskOp>(mask);
+      auto dimSizes = constantMaskOp.getMaskDimSizesAttr().asArrayRef();
+      for (auto dimSize : dimSizes)
+        materializedOperands.push_back(
+            arith::ConstantIndexOp::create(rewriter, loc, dimSize).getResult());
+    }
 
     rewriter.setInsertionPointAfter(warpOp);
 
@@ -1170,7 +1187,7 @@ struct WarpOpCreateMask : public WarpDistributionPattern {
       // mask sizes are always in the range [0, mask_vector_size[i]).
       Value maskDimIdx = affine::makeComposedAffineApply(
           rewriter, loc, s1 - s0 * distShape[i],
-          {delinearizedIds[i], mask.getOperand(i)});
+          {delinearizedIds[i], materializedOperands[i]});
       newOperands.push_back(maskDimIdx);
     }
 
@@ -1870,7 +1887,9 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
         // Fallback to affine map if the dist result was not previously recorded
         distType = ifResultDistTypes.count(i)
                        ? ifResultDistTypes[i]
-                       : getDistributedType(vecType, map, warpOp.getWarpSize());
+                       : getDistributedType(
+                             vecType, map,
+                             map.isEmpty() ? 1 : newWarpOp.getWarpSize());
       }
       newIfOpDistResTypes.push_back(distType);
     }
@@ -2059,9 +2078,11 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
         // we can get the distributed type from `forResultDistTypes` map.
         // Otherwise, we compute it using distributionMapFn.
         AffineMap map = distributionMapFn(initArg);
-        distType = forResultDistTypes.count(i)
-                       ? forResultDistTypes[i]
-                       : getDistributedType(vecType, map, warpOp.getWarpSize());
+        distType =
+            forResultDistTypes.count(i)
+                ? forResultDistTypes[i]
+                : getDistributedType(vecType, map,
+                                     map.isEmpty() ? 1 : warpOp.getWarpSize());
       }
       newWarpOpDistTypes.push_back(distType);
     }
@@ -2282,12 +2303,13 @@ void mlir::vector::populatePropagateWarpVectorDistributionPatterns(
     const WarpShuffleFromIdxFn &warpShuffleFromIdxFn, PatternBenefit benefit,
     PatternBenefit readBenefit) {
   patterns.add<WarpOpTransferRead>(patterns.getContext(), readBenefit);
-  patterns
-      .add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast,
-           WarpOpShapeCast, WarpOpExtract, WarpOpForwardOperand, WarpOpConstant,
-           WarpOpInsertScalar, WarpOpInsert, WarpOpCreateMask,
-           WarpOpExtractStridedSlice, WarpOpInsertStridedSlice, WarpOpStep>(
-          patterns.getContext(), benefit);
+  patterns.add<WarpOpElementwise, WarpOpDeadResult, WarpOpBroadcast,
+               WarpOpShapeCast, WarpOpExtract, WarpOpForwardOperand,
+               WarpOpConstant, WarpOpInsertScalar, WarpOpInsert,
+               WarpOpCreateMask<vector::CreateMaskOp>,
+               WarpOpCreateMask<vector::ConstantMaskOp>,
+               WarpOpExtractStridedSlice, WarpOpInsertStridedSlice, WarpOpStep>(
+      patterns.getContext(), benefit);
   patterns.add<WarpOpExtractScalar>(patterns.getContext(), warpShuffleFromIdxFn,
                                     benefit);
   patterns.add<WarpOpScfForOp>(patterns.getContext(), distributionMapFn,

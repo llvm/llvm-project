@@ -72,6 +72,15 @@ public:
 
   explicit operator bool() const;
 
+  /// \brief Returns \c true if this object contains an underlying \c Status
+  /// object.
+  ///
+  /// That object may represent a success or a failure. When \c IsValid returns
+  /// \c false, it may be the case that the \c SBError represents a success but
+  /// does not contain a \c Status representing that success.
+  ///
+  /// It is safe to call \c Success or \c Fail in the case where \c IsValid
+  /// returns \c false.
   bool IsValid() const;
 
   bool GetDescription(lldb::SBStream &description);

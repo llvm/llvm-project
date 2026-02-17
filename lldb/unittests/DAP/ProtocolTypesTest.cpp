@@ -21,14 +21,10 @@ using namespace llvm;
 using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
+using lldb_private::PrettyPrint;
 using lldb_private::roundtripJSON;
 using llvm::json::parse;
 using llvm::json::Value;
-
-/// Returns a pretty printed json string of a `llvm::json::Value`.
-static std::string pp(const json::Value &E) {
-  return formatv("{0:2}", E).str();
-}
 
 TEST(ProtocolTypesTest, ExceptionBreakpointsFilter) {
   ExceptionBreakpointsFilter filter;
@@ -597,7 +593,7 @@ TEST(ProtocolTypesTest, DisassembledInstruction) {
 })";
 
   // Validate toJSON
-  EXPECT_EQ(json, pp(instruction));
+  EXPECT_EQ(json, PrettyPrint(instruction));
 
   // Validate fromJSON
   EXPECT_THAT_EXPECTED(parse<DisassembledInstruction>(json),
@@ -627,7 +623,7 @@ TEST(ProtocolTypesTest, Thread) {
   "name": "thr1"
 })";
   // Validate toJSON
-  EXPECT_EQ(json, pp(thread));
+  EXPECT_EQ(json, PrettyPrint(thread));
   // Validate fromJSON
   EXPECT_THAT_EXPECTED(parse<Thread>(json), HasValue(Value(thread)));
   // Validate parsing errors
@@ -654,7 +650,7 @@ TEST(ProtocolTypesTest, ThreadResponseBody) {
   ]
 })";
   // Validate toJSON
-  EXPECT_EQ(json, pp(body));
+  EXPECT_EQ(json, PrettyPrint(body));
 }
 
 TEST(ProtocolTypesTest, CapabilitiesEventBody) {
@@ -672,7 +668,7 @@ TEST(ProtocolTypesTest, CapabilitiesEventBody) {
   }
 })";
   // Validate toJSON
-  EXPECT_EQ(json, pp(body));
+  EXPECT_EQ(json, PrettyPrint(body));
 }
 
 TEST(ProtocolTypesTest, ExceptionFilterOptions) {
@@ -741,7 +737,7 @@ TEST(ProtocolTypesTest, SetExceptionBreakpointsResponseBody) {
     }
   ]
 })",
-            pp(body));
+            PrettyPrint(body));
 }
 
 TEST(ProtocolTypesTest, StepInTarget) {
@@ -794,7 +790,7 @@ TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
   Expected<Value> expected = json::parse(
       R"({ "address": "0xDEADBEEF", "data": "aGVsbG8gd29ybGQh", "unreadableBytes": 1})");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(pp(*expected), pp(response));
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(response));
 }
 
 TEST(ProtocolTypesTest, Modules) {
@@ -825,7 +821,7 @@ TEST(ProtocolTypesTest, Modules) {
                   "addressRange": "0xcafeface",
                   "debugInfoSize": "1.5MB" })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(pp(*expected), pp(module));
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(module));
 
   // Test without optional values.
   module.path.clear();
@@ -837,14 +833,14 @@ TEST(ProtocolTypesTest, Modules) {
   module.dateTimeStamp.clear();
   module.addressRange.clear();
   module.debugInfoSizeBytes = 0;
-  EXPECT_NE(pp(*expected), pp(module));
+  EXPECT_NE(PrettyPrint(*expected), PrettyPrint(module));
 
   Expected<json::Value> expected_no_opt = json::parse(
       R"({
                   "id" : "AC805E8E-B6A4-CD92-4B05-5CFA7CE24AE8-8926C776",
                   "name": "libm.so.6"})");
   ASSERT_THAT_EXPECTED(expected_no_opt, llvm::Succeeded());
-  EXPECT_EQ(pp(*expected_no_opt), pp(module));
+  EXPECT_EQ(PrettyPrint(*expected_no_opt), PrettyPrint(module));
 }
 
 TEST(ProtocolTypesTest, ModulesArguments) {
@@ -885,7 +881,7 @@ TEST(ProtocolTypesTest, ModulesResponseBody) {
                   ],
                   "totalModules": 2 })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(pp(*expected), pp(response));
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(response));
 }
 
 TEST(ProtocolTypesTest, VariablePresentationHint) {
@@ -906,7 +902,7 @@ TEST(ProtocolTypesTest, VariablePresentationHint) {
   "visibility": "public"
 })";
 
-  EXPECT_EQ(pp(Value(hint)), json);
+  EXPECT_EQ(PrettyPrint(Value(hint)), json);
   EXPECT_THAT_EXPECTED(json::parse(json), HasValue(Value(hint)));
 }
 
@@ -943,7 +939,7 @@ TEST(ProtocolTypesTest, Variable) {
   "variablesReference": 42
 })";
 
-  EXPECT_EQ(pp(Value(var)), json);
+  EXPECT_EQ(PrettyPrint(Value(var)), json);
   EXPECT_THAT_EXPECTED(json::parse(json), HasValue(Value(var)));
 }
 
@@ -1002,7 +998,7 @@ TEST(ProtocolTypesTest, VariablesResponseBody) {
       ]
     })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(pp(*expected), pp(response));
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(response));
 }
 
 TEST(ProtocolTypesTest, CompletionItem) {
@@ -1029,7 +1025,7 @@ TEST(ProtocolTypesTest, CompletionItem) {
   "type": "constructor"
 })";
 
-  EXPECT_EQ(pp(Value(item)), json);
+  EXPECT_EQ(PrettyPrint(Value(item)), json);
   EXPECT_THAT_EXPECTED(json::parse(json), HasValue(Value(item)));
 }
 
@@ -1042,10 +1038,10 @@ TEST(ProtocolTypesTest, CompletionsArguments) {
     "text": "abc"
   })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(expected->frameId, 7u);
+  EXPECT_EQ(expected->frameId, 7U);
   EXPECT_EQ(expected->text, "abc");
-  EXPECT_EQ(expected->column, 8);
-  EXPECT_EQ(expected->line, 9);
+  EXPECT_EQ(expected->column, 8U);
+  EXPECT_EQ(expected->line, 9U);
 
   // Check required keys.
   EXPECT_THAT_EXPECTED(parse<CompletionsArguments>(R"({})"),
@@ -1071,7 +1067,7 @@ TEST(ProtocolTypesTest, CompletionsResponseBody) {
       ]
     })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(pp(*expected), pp(response));
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(response));
 }
 
 TEST(ProtocolTypesTest, InvalidatedEventBody) {
@@ -1089,7 +1085,7 @@ TEST(ProtocolTypesTest, InvalidatedEventBody) {
     "threadId": 20
     })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(pp(*expected), pp(body));
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
 }
 
 TEST(ProtocolTypesTest, MemoryEventBody) {
@@ -1102,7 +1098,7 @@ TEST(ProtocolTypesTest, MemoryEventBody) {
   "memoryReference": "0x3039",
   "offset": 0
 })";
-  EXPECT_EQ(json, pp(body));
+  EXPECT_EQ(json, PrettyPrint(body));
 }
 
 TEST(ProtocolTypesTest, DataBreakpointInfoArguments) {
@@ -1137,7 +1133,7 @@ TEST(ProtocolTypesTest, ExceptionBreakMode) {
        {ExceptionBreakMode::eExceptionBreakModeUnhandled, "unhandled"},
        {ExceptionBreakMode::eExceptionBreakModeUserUnhandled, "userUnhandled"}};
 
-  for (const auto [value, expected] : test_cases) {
+  for (const auto &[value, expected] : test_cases) {
     json::Value const serialized = toJSON(value);
     ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
     EXPECT_EQ(serialized.getAsString(), expected);
@@ -1150,7 +1146,7 @@ TEST(ProtocolTypesTest, ExceptionDetails) {
   // Check required keys.
   Expected<json::Value> expected = parse(R"({})");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(pp(*expected), pp(details));
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(details));
 
   // Check optional keys.
   details.message = "SIGABRT exception";
@@ -1174,5 +1170,100 @@ TEST(ProtocolTypesTest, ExceptionDetails) {
     })");
 
   ASSERT_THAT_EXPECTED(expected_opt, llvm::Succeeded());
-  EXPECT_EQ(pp(*expected_opt), pp(details));
+  EXPECT_EQ(PrettyPrint(*expected_opt), PrettyPrint(details));
+}
+
+TEST(ProtocolTypesTest, StackFramePresentationHint) {
+  // Test all PresentationHint values.
+  std::vector<std::pair<StackFrame::PresentationHint, llvm::StringRef>>
+      test_cases = {{StackFrame::ePresentationHintNormal, "normal"},
+                    {StackFrame::ePresentationHintLabel, "label"},
+                    {StackFrame::ePresentationHintSubtle, "subtle"}};
+
+  for (const auto &test_case : test_cases) {
+    // Serialize the PresentationHint to JSON.
+    llvm::json::Value serialized = toJSON(test_case.first);
+    ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
+    EXPECT_EQ(serialized.getAsString(), test_case.second);
+  }
+}
+
+TEST(ProtocolTypesTest, StackFrameFormat) {
+  llvm::Expected<StackFrameFormat> expected = parse<StackFrameFormat>(R"({})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->parameters, false);
+  EXPECT_EQ(expected->parameterTypes, false);
+  EXPECT_EQ(expected->parameterNames, false);
+  EXPECT_EQ(expected->parameterValues, false);
+  EXPECT_EQ(expected->line, false);
+  EXPECT_EQ(expected->module, false);
+  EXPECT_EQ(expected->includeAll, false);
+
+  expected = parse<StackFrameFormat>(R"({
+    "line": true,
+    "parameterNames": true
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->parameters, false);
+  EXPECT_EQ(expected->parameterTypes, false);
+  EXPECT_EQ(expected->parameterNames, true);
+  EXPECT_EQ(expected->parameterValues, false);
+  EXPECT_EQ(expected->line, true);
+  EXPECT_EQ(expected->module, false);
+  EXPECT_EQ(expected->includeAll, false);
+}
+
+TEST(ProtocolTypesTest, StackFrame) {
+  StackFrame frame;
+  frame.id = 1;
+  frame.name = "test";
+  frame.source = Source{};
+  frame.source->name = "test.cpp";
+  frame.source->sourceReference = 23;
+  frame.line = 10;
+  frame.column = 1;
+  frame.presentationHint = StackFrame::ePresentationHintNormal;
+
+  Expected<json::Value> expected_frame = parse(R"({
+    "id": 1,
+    "name": "test",
+    "source": {
+      "name": "test.cpp",
+      "sourceReference": 23
+    },
+    "line": 10,
+    "column": 1,
+    "presentationHint": "normal"
+  })");
+
+  ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_frame), PrettyPrint(frame));
+
+  frame.id = 2;
+  frame.canRestart = true;
+  frame.source = std::nullopt;
+  frame.presentationHint = StackFrame::ePresentationHintSubtle;
+  frame.name = "foo";
+  frame.instructionPointerReference = 12345;
+  expected_frame = parse(R"({
+    "id": 2,
+    "name": "foo",
+    "line": 0,
+    "column": 0,
+    "canRestart": true,
+    "instructionPointerReference": "0x3039",
+    "presentationHint": "subtle"
+  })");
+
+  ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_frame), PrettyPrint(frame));
+}
+
+TEST(ProtocolTypesTest, DAPSession) {
+  const DAPSession session{/*targetId=*/1000, /*debuggerId=*/300};
+
+  auto expected = parse<DAPSession>(R"({"targetId": 1000, "debuggerId": 300})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->debuggerId, session.debuggerId);
+  EXPECT_EQ(expected->targetId, session.targetId);
 }

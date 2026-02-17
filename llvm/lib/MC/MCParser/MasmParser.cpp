@@ -212,7 +212,7 @@ struct FieldInfo {
 StructFieldInfo::StructFieldInfo(std::vector<StructInitializer> V,
                                  StructInfo S) {
   Initializers = std::move(V);
-  Structure = S;
+  Structure = std::move(S);
 }
 
 StructInfo::StructInfo(StringRef StructName, bool Union,
@@ -962,8 +962,6 @@ private:
 namespace llvm {
 
 extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
-
-extern MCAsmParserExtension *createCOFFMasmParser();
 
 } // end namespace llvm
 

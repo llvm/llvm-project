@@ -28,8 +28,8 @@ func.func @test_reduction_implicit_copy() {
   memref.store %c0_i32, %r[] : memref<i32>
 
   acc.parallel {
-    %red_var = acc.reduction varPtr(%r : memref<i32>) -> memref<i32> {name = "r"}
-    acc.loop reduction(@reduction_add_memref_i32 -> %red_var : memref<i32>) control(%iv : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
+    %red_var = acc.reduction varPtr(%r : memref<i32>) recipe(@reduction_add_memref_i32) -> memref<i32> {name = "r"}
+    acc.loop reduction(%red_var : memref<i32>) control(%iv : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
       %load = memref.load %red_var[] : memref<i32>
       %add = arith.addi %load, %c1_i32 : i32
       memref.store %add, %red_var[] : memref<i32>
@@ -47,7 +47,7 @@ func.func @test_reduction_implicit_copy() {
 
 // When enable-implicit-reduction-copy=false: expect firstprivate for reduction variable  
 // FIRSTPRIVATE-LABEL: func.func @test_reduction_implicit_copy
-// FIRSTPRIVATE: acc.firstprivate varPtr({{.*}} : memref<i32>) -> memref<i32> {implicit = true, name = ""}
+// FIRSTPRIVATE: acc.firstprivate varPtr({{.*}} : memref<i32>) recipe({{.*}}) -> memref<i32> {implicit = true, name = ""}
 // FIRSTPRIVATE-NOT: acc.copyin
 // FIRSTPRIVATE-NOT: acc.copyout
 
@@ -81,8 +81,8 @@ func.func @test_reduction_with_usage_outside_loop() {
 
   %out_create = acc.create varPtr(%out : memref<i32>) -> memref<i32> {dataClause = #acc<data_clause acc_copyout>, name = "out"}
   acc.parallel dataOperands(%out_create : memref<i32>) {
-    %red_var = acc.reduction varPtr(%r : memref<i32>) -> memref<i32> {name = "r"}
-    acc.loop reduction(@reduction_add_memref_i32_2 -> %red_var : memref<i32>) control(%iv : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
+    %red_var = acc.reduction varPtr(%r : memref<i32>) recipe(@reduction_add_memref_i32_2) -> memref<i32> {name = "r"}
+    acc.loop reduction(%red_var : memref<i32>) control(%iv : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
       %load = memref.load %red_var[] : memref<i32>
       %add = arith.addi %load, %c1_i32 : i32
       memref.store %add, %red_var[] : memref<i32>
@@ -100,10 +100,10 @@ func.func @test_reduction_with_usage_outside_loop() {
 // In this case, r should be firstprivate regardless of the flag setting 
 // because it's used outside the reduction context
 // COPY-LABEL: func.func @test_reduction_with_usage_outside_loop
-// COPY: acc.firstprivate varPtr({{.*}} : memref<i32>) -> memref<i32> {implicit = true, name = ""}
+// COPY: acc.firstprivate varPtr({{.*}} : memref<i32>) recipe({{.*}}) -> memref<i32> {implicit = true, name = ""}
 // COPY-NOT: acc.copyin varPtr({{.*}} : memref<i32>) -> memref<i32> {{.*}} name = ""
 
 // FIRSTPRIVATE-LABEL: func.func @test_reduction_with_usage_outside_loop
-// FIRSTPRIVATE: acc.firstprivate varPtr({{.*}} : memref<i32>) -> memref<i32> {implicit = true, name = ""}
+// FIRSTPRIVATE: acc.firstprivate varPtr({{.*}} : memref<i32>) recipe({{.*}}) -> memref<i32> {implicit = true, name = ""}
 // FIRSTPRIVATE-NOT: acc.copyin varPtr({{.*}} : memref<i32>) -> memref<i32> {{.*}} name = ""
 

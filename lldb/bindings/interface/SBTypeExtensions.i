@@ -158,6 +158,16 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBType, lldb::eDescriptionLevelBrief)
     def __len__(self):
         '''Return the number of types in a lldb.SBTypeList object.'''
         return self.GetSize()
+
+    def __getitem__(self, idx):
+        '''Get the type at a given index in an lldb.SBTypeList object.'''
+        if not isinstance(idx, int):
+            raise TypeError("unsupported index type: %s" % type(idx))
+        count = len(self)
+        if not (-count <= idx < count):
+            raise IndexError("list index out of range")
+        idx %= count
+        return self.GetTypeAtIndex(idx)
     %}
 #endif
 }

@@ -1,15 +1,15 @@
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+cmh,+lscp < %s \
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+lscp < %s \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 // RUN: not llvm-mc -triple=aarch64 -show-encoding < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+cmh,+lscp < %s \
-// RUN:        | llvm-objdump -d --mattr=+cmh,+lscp --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-INST
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+cmh,+lscp < %s \
-// RUN:        | llvm-objdump -d --mattr=-cmh,-lscp --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+lscp < %s \
+// RUN:        | llvm-objdump -d --mattr=+lscp --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+lscp < %s \
+// RUN:        | llvm-objdump -d --mattr=-lscp --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 // Disassemble encoding and check the re-encoding (-show-encoding) matches.
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+cmh,+lscp < %s \
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+lscp < %s \
 // RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
-// RUN:        | llvm-mc -triple=aarch64 -mattr=+cmh,+lscp -disassemble -show-encoding \
+// RUN:        | llvm-mc -triple=aarch64 -mattr=+lscp -disassemble -show-encoding \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 
 // Armv9.7-A Contention Management Hints (FEAT_CMH).
@@ -17,20 +17,14 @@
 shuh
 // CHECK-INST: shuh
 // CHECK-ENCODING: encoding: [0x5f,0x26,0x03,0xd5]
-// CHECK-ERROR: error: instruction requires: cmh
-// CHECK-UNKNOWN: d503265f hint    #50
 
 shuh ph
 // CHECK-INST: shuh  ph
 // CHECK-ENCODING: encoding: [0x7f,0x26,0x03,0xd5]
-// CHECK-ERROR: error: instruction requires: cmh
-// CHECK-UNKNOWN: d503267f hint    #51
 
 stcph
 // CHECK-INST: stcph
 // CHECK-ENCODING: [0x9f,0x26,0x03,0xd5]
-// CHECK-ERROR: error: instruction requires: cmh
-// CHECK-UNKNOWN: d503269f hint    #52
 
 ldap x0, x1, [x2]
 // CHECK-INST: ldap    x0, x1, [x2]

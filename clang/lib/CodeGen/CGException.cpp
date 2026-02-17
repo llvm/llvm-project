@@ -450,7 +450,7 @@ void CodeGenFunction::EmitCXXThrowExpr(const CXXThrowExpr *E,
   // Therefore, we emit a trap which will abort the program, and
   // prompt a warning indicating that a trap will be emitted.
   const llvm::Triple &T = Target.getTriple();
-  if (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN())) {
+  if (CGM.getLangOpts().OpenMPIsTargetDevice && T.isGPU()) {
     EmitTrapCall(llvm::Intrinsic::trap);
     return;
   }
@@ -627,7 +627,7 @@ void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
   // If we encounter a try statement on in an OpenMP target region offloaded to
   // a GPU, we treat it as a basic block.
   const bool IsTargetDevice =
-      (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN()));
+      (CGM.getLangOpts().OpenMPIsTargetDevice && T.isGPU());
   if (!IsTargetDevice)
     EnterCXXTryStmt(S);
   EmitStmt(S.getTryBlock());
@@ -1143,7 +1143,6 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
   llvm::Function *llvm_eh_typeid_for =
       CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for, {CGF.VoidPtrTy});
   llvm::Type *argTy = llvm_eh_typeid_for->getArg(0)->getType();
-  LangAS globAS = CGF.CGM.GetGlobalVarAddressSpace(nullptr);
 
   // Load the selector value.
   llvm::Value *selector = CGF.getSelectorFromSlot();
@@ -1159,8 +1158,7 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
     assert(typeValue && "fell into catch-all case!");
     // With opaque ptrs, only the address space can be a mismatch.
     if (typeValue->getType() != argTy)
-      typeValue = CGF.getTargetHooks().performAddrSpaceCast(CGF, typeValue,
-                                                            globAS, argTy);
+      typeValue = CGF.performAddrSpaceCast(typeValue, argTy);
 
     // Figure out the next block.
     bool nextIsEnd;

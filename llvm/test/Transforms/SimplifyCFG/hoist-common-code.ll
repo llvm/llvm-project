@@ -14,12 +14,12 @@ define void @test(i1 %P, ptr %Q) {
   br i1 %P, label %T, label %F
 T:              ; preds = %0
   store i32 1, ptr %Q
-  %A = load i32, ptr %Q               ; <i32> [#uses=1]
+  %A = load i32, ptr %Q
   call void @bar( i32 %A )
   ret void
 F:              ; preds = %0
   store i32 1, ptr %Q
-  %B = load i32, ptr %Q               ; <i32> [#uses=1]
+  %B = load i32, ptr %Q
   call void @bar( i32 %B )
   ret void
 }
@@ -38,17 +38,17 @@ define void @test_switch(i64 %i, ptr %Q) {
   ]
 bb0:              ; preds = %0
   store i32 1, ptr %Q
-  %A = load i32, ptr %Q               ; <i32> [#uses=1]
+  %A = load i32, ptr %Q
   call void @bar( i32 %A )
   ret void
 bb1:              ; preds = %0
   store i32 1, ptr %Q
-  %B = load i32, ptr %Q               ; <i32> [#uses=1]
+  %B = load i32, ptr %Q
   call void @bar( i32 %B )
   ret void
 bb2:              ; preds = %0
   store i32 1, ptr %Q
-  %C = load i32, ptr %Q               ; <i32> [#uses=1]
+  %C = load i32, ptr %Q
   call void @bar( i32 %C )
   ret void
 }
@@ -600,5 +600,35 @@ foo:
 
 bar:
   call void @bar()
+  ret void
+}
+
+define void @test_switch_with_multicases_dest(i64 %i, ptr %Q) {
+; CHECK-LABEL: @test_switch_with_multicases_dest(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    store i32 1, ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    [[C:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    call void @bar(i32 [[C]])
+; CHECK-NEXT:    ret void
+;
+  switch i64 %i, label %bb0 [
+  i64 1, label %bb1
+  i64 2, label %bb2
+  i64 3, label %bb2
+  ]
+bb0:              ; preds = %0
+  store i32 1, ptr %Q
+  %A = load i32, ptr %Q
+  call void @bar( i32 %A )
+  ret void
+bb1:              ; preds = %0
+  store i32 1, ptr %Q
+  %B = load i32, ptr %Q
+  call void @bar( i32 %B )
+  ret void
+bb2:              ; preds = %0
+  store i32 1, ptr %Q
+  %C = load i32, ptr %Q
+  call void @bar( i32 %C )
   ret void
 }

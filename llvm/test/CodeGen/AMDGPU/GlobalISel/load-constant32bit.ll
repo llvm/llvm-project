@@ -11,8 +11,8 @@ define amdgpu_ps float @load_constant32bit_vgpr_offset(i32 %arg) {
 ; GFX6-LABEL: load_constant32bit_vgpr_offset:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, 0
+; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX6-NEXT:    buffer_load_dword v0, v[0:1], s[0:3], 0 addr64
@@ -59,8 +59,8 @@ define amdgpu_ps <8 x float> @load_constant32bit_vgpr_v8f32(ptr addrspace(6) %ar
 ; GFX6-LABEL: load_constant32bit_vgpr_v8f32:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    v_mov_b32_e32 v4, v0
-; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    v_mov_b32_e32 v5, 0
+; GFX6-NEXT:    s_mov_b32 s2, 0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX6-NEXT:    buffer_load_dwordx4 v[0:3], v[4:5], s[0:3], 0 addr64

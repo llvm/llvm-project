@@ -711,11 +711,6 @@ def Vector_ExtractOp :
     bool hasDynamicPosition() {
       return !getDynamicPosition().empty();
     }
-
-    /// Wrapper for getSource, which replaced getVector.
-    [[deprecated("Use getSource instead!")]] ::mlir::Value getVector() {
-      return getSource();
-    }
   }];
 
   let assemblyFormat = [{
@@ -1031,10 +1026,6 @@ def Vector_ScalableExtractOp :
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
     }
-    /// Wrapper for getSource, which replaced getVector.
-    [[deprecated("Use getSource instead!")]] ::mlir::Value getVector() {
-      return getSource();
-    }
   }];
 }
 
@@ -1228,10 +1219,6 @@ def Vector_ExtractStridedSliceOp :
       return llvm::any_of(getStrides(), [](Attribute attr) {
         return ::llvm::cast<IntegerAttr>(attr).getInt() != 1;
       });
-    }
-    /// Wrapper for getSource, which replaced getVector.
-    [[deprecated("Use getSource instead!")]] ::mlir::Value getVector() {
-      return getSource();
     }
   }];
   let hasCanonicalizer = 1;
@@ -2424,6 +2411,7 @@ def Vector_CompressStoreOp :
 
 def Vector_ShapeCastOp :
   Vector_Op<"shape_cast", [Pure,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
   ]>,
     Arguments<(ins AnyVectorOfAnyRank:$source)>,
@@ -2546,7 +2534,9 @@ def Vector_TypeCastOp :
 }
 
 def Vector_ConstantMaskOp :
-  Vector_Op<"constant_mask", [Pure]>,
+  Vector_Op<"constant_mask", [Pure, 
+   DeclareOpInterfaceMethods<VectorUnrollOpInterface>
+   ]>,
     Arguments<(ins DenseI64ArrayAttr:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a constant vector mask";
@@ -2604,7 +2594,9 @@ def Vector_ConstantMaskOp :
 }
 
 def Vector_CreateMaskOp :
-  Vector_Op<"create_mask", [Pure]>,
+  Vector_Op<"create_mask", [Pure, 
+   DeclareOpInterfaceMethods<VectorUnrollOpInterface>
+   ]>,
     Arguments<(ins Variadic<Index>:$operands)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a vector mask";

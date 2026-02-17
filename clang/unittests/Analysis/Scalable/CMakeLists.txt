@@ -1,0 +1,31 @@
+add_distinct_clang_unittest(ClangScalableAnalysisTests
+  ASTEntityMappingTest.cpp
+  BuildNamespaceTest.cpp
+  EntityIdTest.cpp
+  EntityIdTableTest.cpp
+  EntityLinkageTest.cpp
+  EntityNameTest.cpp
+  Registries/FancyAnalysisData.cpp
+  Registries/MockSerializationFormat.cpp
+  Registries/MockSummaryExtractor1.cpp
+  Registries/MockSummaryExtractor2.cpp
+  Registries/SerializationFormatRegistryTest.cpp
+  Registries/SummaryExtractorRegistryTest.cpp
+  Serialization/JSONFormatTest.cpp
+  SummaryNameTest.cpp
+
+  CLANG_LIBS
+  clangAnalysisScalable
+  clangAST
+  clangASTMatchers
+  clangBasic
+  clangFrontend
+  clangSerialization
+  clangTooling
+  LINK_LIBS
+  clangTesting
+  LLVMTestingSupport
+  LLVM_COMPONENTS
+  FrontendOpenMP
+  Support
+  )

@@ -21,10 +21,8 @@ define i32 @check_lr_liveness(ptr %arg) #1 {
   ; CHECK-NEXT:   B %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.bb:
-  ; CHECK-NEXT:   successors: %bb.3(0x2aaaaaab), %bb.2(0x55555555)
   ; CHECK-NEXT:   liveins: $w0, $lr
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   CBNZW $wzr, %bb.3
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb1:

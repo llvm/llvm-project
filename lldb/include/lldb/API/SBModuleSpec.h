@@ -87,7 +87,7 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
-  lldb::SBTarget GetTarget();
+  lldb::SBTarget GetTarget() const;
 
   /// Set the target to be used when resolving a module.
   ///
@@ -102,6 +102,7 @@ private:
   friend class SBModule;
   friend class SBPlatform;
   friend class SBTarget;
+  friend class lldb_private::ScriptInterpreter;
 
   SBModuleSpec(const lldb_private::ModuleSpec &module_spec);
 

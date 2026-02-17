@@ -50,17 +50,11 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
 }
 
-template <typename Val, typename Pattern> struct MatchFunctor {
-  const Pattern &P;
-  MatchFunctor(const Pattern &P) : P(P) {}
-  bool operator()(Val *V) const { return P.match(V); }
-};
-
 /// A match functor that can be used as a UnaryPredicate in functional
 /// algorithms like all_of.
 template <typename Val = const Value, typename Pattern>
-MatchFunctor<Val, Pattern> match_fn(const Pattern &P) {
-  return P;
+auto match_fn(const Pattern &P) {
+  return bind_back<match<Val, Pattern>>(P);
 }
 
 template <typename Pattern> bool match(ArrayRef<int> Mask, const Pattern &P) {
@@ -610,6 +604,15 @@ struct is_zero_int {
 /// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_zero_int> m_ZeroInt() {
   return cst_pred_ty<is_zero_int>();
+}
+
+struct is_non_zero_int {
+  bool isValue(const APInt &C) const { return !C.isZero(); }
+};
+/// Match a non-zero integer or a vector with all non-zero elements.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_non_zero_int> m_NonZeroInt() {
+  return cst_pred_ty<is_non_zero_int>();
 }
 
 struct is_zero {

@@ -46,6 +46,18 @@ const char *tok::getKeywordSpelling(TokenKind Kind) {
   return nullptr;
 }
 
+const char *tok::getObjCKeywordSpelling(ObjCKeywordKind Kind) {
+  switch (Kind) {
+#define OBJC_AT_KEYWORD(X)                                                     \
+  case objc_##X:                                                               \
+    return "@" #X;
+#include "clang/Basic/TokenKinds.def"
+  default:
+    break;
+  }
+  return nullptr;
+}
+
 const char *tok::getPPKeywordSpelling(tok::PPKeywordKind Kind) {
   switch (Kind) {
 #define PPKEYWORD(x) case tok::pp_##x: return #x;

@@ -96,7 +96,7 @@ static BoolValue &unpackValue(BoolValue &V, Environment &Env) {
 }
 
 // Unpacks the value (if any) associated with `E` and updates `E` to the new
-// value, if any unpacking occured. Also, does the lvalue-to-rvalue conversion,
+// value, if any unpacking occurred. Also, does the lvalue-to-rvalue conversion,
 // by skipping past the reference.
 static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
   auto *Loc = Env.getStorageLocation(E);
@@ -169,8 +169,16 @@ public:
         break;
 
       auto *RHSVal = Env.getValue(*RHS);
-      if (RHSVal == nullptr)
-        break;
+      if (RHSVal == nullptr) {
+        RHSVal = Env.createValue(LHS->getType());
+        if (RHSVal == nullptr) {
+          // At least make sure the old value is gone. It's unlikely to be there
+          // in the first place given that we don't even know how to create
+          // a basic unknown value of that type.
+          Env.clearValue(*LHSLoc);
+          break;
+        }
+      }
 
       // Assign a value to the storage location of the left-hand side.
       Env.setValue(*LHSLoc, *RHSVal);
@@ -328,7 +336,6 @@ public:
       RecordStorageLocation *Loc = nullptr;
       if (S->getType()->isPointerType()) {
         auto *PV = Env.get<PointerValue>(*SubExpr);
-        assert(PV != nullptr);
         if (PV == nullptr)
           break;
         Loc = cast<RecordStorageLocation>(&PV->getPointeeLoc());
@@ -769,8 +776,29 @@ public:
       StorageLocation *TrueLoc = TrueEnv->getStorageLocation(*S->getTrueExpr());
       StorageLocation *FalseLoc =
           FalseEnv->getStorageLocation(*S->getFalseExpr());
-      if (TrueLoc == FalseLoc && TrueLoc != nullptr)
+      if (TrueLoc == FalseLoc && TrueLoc != nullptr) {
         Env.setStorageLocation(*S, *TrueLoc);
+      } else if (!S->getType()->isRecordType()) {
+        // Ideally, we would have something like an "alias set" to say that the
+        // result StorageLocation can be either of the locations from the
+        // TrueEnv or FalseEnv. Then, when this ConditionalOperator is
+        // (a) used in an LValueToRValue cast, the value is the join of all of
+        //     the values in the alias set.
+        // (b) or, used in an assignment to the resulting LValue, the assignment
+        //     *may* update all of the locations in the alias set.
+        // For now, we do the simpler thing of creating a new StorageLocation
+        // and joining the values right away, handling only case (a).
+        // Otherwise, the dataflow framework needs to be updated be able to
+        // represent alias sets and weak updates (for the "may").
+        if (Value *Val = Environment::joinValues(
+                S->getType(), TrueEnv->getValue(*S->getTrueExpr()), *TrueEnv,
+                FalseEnv->getValue(*S->getFalseExpr()), *FalseEnv, Env,
+                Model)) {
+          StorageLocation &Loc = Env.createStorageLocation(*S);
+          Env.setStorageLocation(*S, Loc);
+          Env.setValue(Loc, *Val);
+        }
+      }
     } else if (!S->getType()->isRecordType()) {
       // The conditional operator can evaluate to either of the values of the
       // two branches. To model this, join these two values together to yield

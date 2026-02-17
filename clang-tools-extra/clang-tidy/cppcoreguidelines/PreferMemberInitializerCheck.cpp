@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PreferMemberInitializerCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseMap.h"
 
 using namespace clang::ast_matchers;
@@ -95,10 +95,14 @@ static void updateAssignmentLevel(
   }
 }
 
+namespace {
+
 struct AssignmentPair {
   const FieldDecl *Field;
   const Expr *Init;
 };
+
+} // namespace
 
 static std::optional<AssignmentPair>
 isAssignmentToMemberOf(const CXXRecordDecl *Rec, const Stmt *S,
@@ -265,7 +269,7 @@ void PreferMemberInitializerCheck::check(
     }
 
     SourceLocation SemiColonEnd;
-    if (auto NextToken = Lexer::findNextToken(
+    if (auto NextToken = utils::lexer::findNextTokenSkippingComments(
             S->getEndLoc(), *Result.SourceManager, getLangOpts()))
       SemiColonEnd = NextToken->getEndLoc();
     else

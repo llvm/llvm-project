@@ -176,19 +176,19 @@ constexpr void test() {
 
 template <template <class...> class KeyContainer, template <class...> class ValueContainer>
 constexpr void test_alloc() {
-  using P = std::pair<int, short>;
+  using P = std::pair<int, long>;
   P ar[]  = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
   {
     // flat_multimap(from_range_t, R&&, const Allocator&)
     using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    using M  = std::flat_multimap<int, short, std::less<int>, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    using A2 = test_allocator<long>;
+    using M  = std::flat_multimap<int, long, std::less<int>, KeyContainer<int, A1>, ValueContainer<long, A2>>;
     using R  = std::ranges::subrange<const P*>;
     auto m   = M(std::from_range, R(ar, ar + 9), A1(5));
     assert(std::ranges::equal(m.keys(), KeyContainer<int, A1>{1, 1, 1, 2, 2, 2, 3, 3, 3}));
     check_possible_values(
         m.values(),
-        std::vector<std::vector<short>>{
+        std::vector<std::vector<long>>{
             {1, 2, 3},
             {1, 2, 3},
             {1, 2, 3},
@@ -206,14 +206,14 @@ constexpr void test_alloc() {
     // flat_multimap(from_range_t, R&&, const Allocator&)
     // explicit(false)
     using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    using M  = std::flat_multimap<int, short, std::less<int>, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    using A2 = test_allocator<long>;
+    using M  = std::flat_multimap<int, long, std::less<int>, KeyContainer<int, A1>, ValueContainer<long, A2>>;
     using R  = std::ranges::subrange<const P*>;
     M m      = {std::from_range, R(ar, ar + 9), A1(5)}; // implicit ctor
     assert(std::ranges::equal(m.keys(), KeyContainer<int, A1>{1, 1, 1, 2, 2, 2, 3, 3, 3}));
     check_possible_values(
         m.values(),
-        std::vector<std::vector<short>>{
+        std::vector<std::vector<long>>{
             {1, 2, 3},
             {1, 2, 3},
             {1, 2, 3},
@@ -231,14 +231,14 @@ constexpr void test_alloc() {
     // flat_multimap(from_range_t, R&&, const key_compare&, const Allocator&)
     using C  = test_less<int>;
     using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    using M  = std::flat_multimap<int, short, C, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    using A2 = test_allocator<long>;
+    using M  = std::flat_multimap<int, long, C, KeyContainer<int, A1>, ValueContainer<long, A2>>;
     using R  = std::ranges::subrange<const P*>;
     auto m   = M(std::from_range, R(ar, ar + 9), C(3), A1(5));
     assert(std::ranges::equal(m.keys(), KeyContainer<int, A1>{1, 1, 1, 2, 2, 2, 3, 3, 3}));
     check_possible_values(
         m.values(),
-        std::vector<std::vector<short>>{
+        std::vector<std::vector<long>>{
             {1, 2, 3},
             {1, 2, 3},
             {1, 2, 3},
@@ -257,14 +257,14 @@ constexpr void test_alloc() {
     // flat_multimap(from_range_t, R&&, const key_compare&, const Allocator&)
     // explicit(false)
     using A1 = test_allocator<int>;
-    using A2 = test_allocator<short>;
-    using M  = std::flat_multimap<int, short, std::less<int>, KeyContainer<int, A1>, ValueContainer<short, A2>>;
+    using A2 = test_allocator<long>;
+    using M  = std::flat_multimap<int, long, std::less<int>, KeyContainer<int, A1>, ValueContainer<long, A2>>;
     using R  = std::ranges::subrange<const P*>;
     M m      = {std::from_range, R(ar, ar + 9), {}, A2(5)}; // implicit ctor
     assert(std::ranges::equal(m.keys(), KeyContainer<int, A1>{1, 1, 1, 2, 2, 2, 3, 3, 3}));
     check_possible_values(
         m.values(),
-        std::vector<std::vector<short>>{
+        std::vector<std::vector<long>>{
             {1, 2, 3},
             {1, 2, 3},
             {1, 2, 3},

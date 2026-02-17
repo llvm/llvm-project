@@ -175,6 +175,13 @@ void Value::destroy() {
 
 void Value::print(llvm::raw_ostream &OS) const { OS << *this; }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void Value::dump() const {
+  print(llvm::dbgs());
+  llvm::dbgs() << '\n';
+}
+#endif
+
 bool operator==(const Value &L, const Value &R) {
   if (L.kind() != R.kind())
     return false;

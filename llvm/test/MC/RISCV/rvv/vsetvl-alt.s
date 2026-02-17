@@ -7,6 +7,15 @@
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-zvfbfa %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+# RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+experimental-zvfofp8min %s \
+# RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+# RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
+# RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
+# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-zvfofp8min %s \
+# RUN:        | llvm-objdump -d --mattr=+experimental-zvfofp8min --no-print-imm-hex - \
+# RUN:        | FileCheck %s --check-prefix=CHECK-INST
+# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-zvfofp8min %s \
+# RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 vsetvli a2, a0, e8alt, m1, ta, ma
 # CHECK-INST: vsetvli a2, a0, e8alt, m1, ta, ma

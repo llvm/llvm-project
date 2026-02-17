@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling>=1.27", "hatch-vcs>=0.4"]
+build-backend = "hatchling.build"
+
+[project]
+name = "clang"
+description = "clang python bindings"
+readme = {file = "README.txt", content-type = "text/plain"}
+
+license = "Apache-2.0 WITH LLVM-exception"
+authors = [
+    { name = "LLVM" }
+]
+keywords = ["llvm", "clang", "libclang"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Development Status :: 5 - Production/Stable",
+    "Topic :: Software Development :: Compilers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+requires-python = ">=3.8"
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://clang.llvm.org/"
+Download = "https://llvm.org/releases/download.html"
+Discussions = "https://discourse.llvm.org/"
+"Issue Tracker" = "https://github.com/llvm/llvm-project/issues"
+"Source Code" = "https://github.com/llvm/llvm-project/tree/main/clang/bindings/python"
+
+[tool.hatch.version]
+source = "vcs"
+version-scheme = "no-guess-dev"
+# regex version capture group gets x.y.z with optional -rcN, -aN, -bN suffixes; -init is just consumed
+tag-pattern = "^llvmorg-(?P<version>\\d+(?:\\.\\d+)*(?:-rc\\d+)?)"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "clang/_version.py"
+
+[tool.hatch.version.raw-options]
+search_parent_directories = true
+version_scheme = "no-guess-dev"

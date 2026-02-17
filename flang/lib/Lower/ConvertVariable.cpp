@@ -1806,6 +1806,9 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
   if (sym.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
     // CrayPointee are represented as pointers.
     flags = flags | fir::FortranVariableFlagsEnum::pointer;
+    // Still use the CrayPointee flag so that AliasAnalysis can handle these
+    // separately.
+    flags = flags | fir::FortranVariableFlagsEnum::cray_pointee;
     return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
   }
   const auto &attrs = sym.attrs();
@@ -1835,6 +1838,8 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
     flags = flags | fir::FortranVariableFlagsEnum::value;
   if (attrs.test(Fortran::semantics::Attr::VOLATILE))
     flags = flags | fir::FortranVariableFlagsEnum::fortran_volatile;
+  if (sym.test(Fortran::semantics::Symbol::Flag::CrayPointer))
+    flags = flags | fir::FortranVariableFlagsEnum::cray_pointer;
   if (flags == fir::FortranVariableFlagsEnum::None)
     return {};
   return fir::FortranVariableFlagsAttr::get(mlirContext, flags);

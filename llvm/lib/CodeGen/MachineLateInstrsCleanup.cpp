@@ -68,10 +68,7 @@ class MachineLateInstrsCleanupLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineLateInstrsCleanupLegacy() : MachineFunctionPass(ID) {
-    initializeMachineLateInstrsCleanupLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  MachineLateInstrsCleanupLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

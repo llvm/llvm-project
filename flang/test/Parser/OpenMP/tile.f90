@@ -19,7 +19,7 @@ subroutine openmp_tiles(x)
 !PARSE-TREE: OmpBeginLoopDirective
 !PARSE-TREE:   OmpClauseList -> OmpClause -> Sizes -> Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE:     LiteralConstant -> IntLiteralConstant = '2'
-!PARSE-TREE:     Flags = None
+!PARSE-TREE:     Flags = {}
 !PARSE-TREE:   DoConstruct
 !PARSE-TREE:   EndDoStmt
 !PARSE-TREE: OmpEndLoopDirective

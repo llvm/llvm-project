@@ -80,7 +80,8 @@ framework module B_Private { umbrella header "B_Private.h" }
 // CHECK:                "file-deps": [
 // CHECK-NEXT:             "[[PREFIX]]/tu.m",
 // CHECK-NEXT:             "[[PREFIX]]/shared/H.h",
-// CHECK-NEXT:             "[[PREFIX]]/overlay.json"
+// CHECK-NEXT:             "[[PREFIX]]/overlay.json",
+// CHECK-NEXT:             "[[PREFIX]]/frameworks/A.framework/Modules/module.modulemap"
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "input-file": "[[PREFIX]]/tu.m"
 // CHECK-NEXT:         }

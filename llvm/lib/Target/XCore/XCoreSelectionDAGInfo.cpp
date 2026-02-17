@@ -38,15 +38,20 @@ SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
     Args.emplace_back(Src, ArgTy);
     Args.emplace_back(Size, ArgTy);
 
-    const char *MemcpyAlign4Name = TLI.getLibcallName(RTLIB::MEMCPY_ALIGN_4);
-    CallingConv::ID CC = TLI.getLibcallCallingConv(RTLIB::MEMCPY_ALIGN_4);
+    RTLIB::LibcallImpl MemcpyAlign4Impl =
+        DAG.getLibcalls().getLibcallImpl(RTLIB::MEMCPY_ALIGN_4);
+    if (MemcpyAlign4Impl == RTLIB::Unsupported)
+      return SDValue();
+
+    CallingConv::ID CC =
+        DAG.getLibcalls().getLibcallImplCallingConv(MemcpyAlign4Impl);
 
     TargetLowering::CallLoweringInfo CLI(DAG);
     CLI.setDebugLoc(dl)
         .setChain(Chain)
         .setLibCallee(
             CC, Type::getVoidTy(*DAG.getContext()),
-            DAG.getExternalSymbol(MemcpyAlign4Name,
+            DAG.getExternalSymbol(MemcpyAlign4Impl,
                                   TLI.getPointerTy(DAG.getDataLayout())),
             std::move(Args))
         .setDiscardResult();

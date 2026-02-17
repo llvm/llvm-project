@@ -22,6 +22,7 @@ add_llvm_component_library(LLVMOrcDebugging
   BinaryFormat
   DebugInfoDWARF
   JITLink
+  Object
   OrcJIT
   OrcShared
   Support

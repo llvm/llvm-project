@@ -819,6 +819,15 @@ void ExegesisRISCVTarget::fillMemoryOperands(InstructionTemplate &IT,
 
   assert(MemOp.isReg() && "Memory operand expected to be register");
 
+  unsigned Opcode = I.getOpcode();
+  if (Opcode == RISCV::C_LDSP || Opcode == RISCV::C_LWSP ||
+      Opcode == RISCV::C_SDSP || Opcode == RISCV::C_SWSP) {
+    IT.getValueFor(I.Operands[0]) = MCOperand::createReg(RISCV::X2);
+    // Force base register to SP (X2)
+    IT.getValueFor(MemOp) = MCOperand::createReg(RISCV::X2);
+    return;
+  }
+
   IT.getValueFor(MemOp) = MCOperand::createReg(Reg);
 }
 
@@ -855,10 +864,17 @@ Error ExegesisRISCVTarget::randomizeTargetMCOperand(
     // 5-bit unsigned immediate value.
     AssignedValue = MCOperand::createImm(randomIndex(31));
     break;
+  case RISCVOp::OPERAND_SIMM12_LO:
+  case RISCVOp::OPERAND_UIMM20_LUI:
+  case RISCVOp::OPERAND_UIMM20_AUIPC:
+  case RISCVOp::OPERAND_BARE_SIMM32:
+    AssignedValue = MCOperand::createImm(0);
+    break;
   default:
     if (OperandType >= RISCVOp::OPERAND_FIRST_RISCV_IMM &&
         OperandType <= RISCVOp::OPERAND_LAST_RISCV_IMM)
       AssignedValue = MCOperand::createImm(0);
+    break;
   }
   return Error::success();
 }

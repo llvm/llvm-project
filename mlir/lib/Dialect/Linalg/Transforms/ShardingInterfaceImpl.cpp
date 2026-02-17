@@ -128,7 +128,7 @@ static Value createDestinationPassingStyleInitOperand(
     ArrayRef<GridAxis> reductionGridAxes, GridOp gridOp,
     ImplicitLocOpBuilder &builder) {
   Value processLinearIndexInReductionGroup = shard::createProcessLinearIndex(
-      gridOp.getSymName(), reductionGridAxes, builder);
+      builder, gridOp.getSymName(), reductionGridAxes);
   Value zero = arith::ConstantIndexOp::create(builder, 0);
   Value isLeadProcess = arith::CmpIOp::create(
       builder, builder.getI1Type(), arith::CmpIPredicate::eq,

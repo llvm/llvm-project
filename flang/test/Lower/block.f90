@@ -1,66 +1,66 @@
-! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QQmain
 program bb ! block stack management and exits
-    ! CHECK:   %[[V_0:[0-9]+]] = fir.alloca i32 {adapt.valuebyref}
     ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
+    ! CHECK:   %[[V_I:[0-9]+]]:2 = hlfir.declare %[[V_1]] {uniq_name = "_QFEi"}
     integer :: i, j
-    ! CHECK:   fir.store %c0{{.*}} to %[[V_1]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c0{{.*}} to %[[V_I]]#0
     i = 0
     ! CHECK:   %[[V_3:[0-9]+]] = llvm.intr.stacksave : !llvm.ptr
-    ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
-    ! CHECK:   br ^bb1
+    ! CHECK:   hlfir.assign %{{.*}} to %[[V_I]]#0
+    ! CHECK:   cf.br ^bb1
     ! CHECK: ^bb1:  // 2 preds: ^bb0, ^bb16
-    ! CHECK:   cond_br %{{.*}}, ^bb2, ^bb17
+    ! CHECK:   cf.cond_br %{{.*}}, ^bb2, ^bb17
     ! CHECK: ^bb2:  // pred: ^bb1
     ! CHECK:   %[[V_11:[0-9]+]] = llvm.intr.stacksave : !llvm.ptr
-    ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
-    ! CHECK:   cond_br %{{.*}}, ^bb3, ^bb4
+    ! CHECK:   hlfir.assign %{{.*}} to %[[V_I]]#0
+    ! CHECK:   cf.cond_br %{{.*}}, ^bb3, ^bb4
     ! CHECK: ^bb3:  // pred: ^bb2
-    ! CHECK:   br ^bb10
+    ! CHECK:   cf.br ^bb10
     ! CHECK: ^bb4:  // pred: ^bb2
-    ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
-    ! CHECK:   cond_br %{{.*}}, ^bb5, ^bb6
+    ! CHECK:   hlfir.assign %{{.*}} to %[[V_I]]#0
+    ! CHECK:   cf.cond_br %{{.*}}, ^bb5, ^bb6
     ! CHECK: ^bb5:  // pred: ^bb4
-    ! CHECK:   br ^bb14
+    ! CHECK:   cf.br ^bb14
     ! CHECK: ^bb6:  // pred: ^bb4
-    ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
-    ! CHECK:   cond_br %{{.*}}, ^bb7, ^bb8
+    ! CHECK:   hlfir.assign %{{.*}} to %[[V_I]]#0
+    ! CHECK:   cf.cond_br %{{.*}}, ^bb7, ^bb8
     ! CHECK: ^bb7:  // pred: ^bb6
     ! CHECK:   llvm.intr.stackrestore %[[V_11]] : !llvm.ptr
-    ! CHECK:   br ^bb15
+    ! CHECK:   cf.br ^bb15
     ! CHECK: ^bb8:  // pred: ^bb6
-    ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
-    ! CHECK:   cond_br %{{.*}}, ^bb9, ^bb10
+    ! CHECK:   hlfir.assign %{{.*}} to %[[V_I]]#0
+    ! CHECK:   cf.cond_br %{{.*}}, ^bb9, ^bb10
     ! CHECK: ^bb9:  // pred: ^bb8
     ! CHECK:   llvm.intr.stackrestore %[[V_11]] : !llvm.ptr
-    ! CHECK:   br ^bb16
+    ! CHECK:   cf.br ^bb16
     ! CHECK: ^bb10:  // 2 preds: ^bb3, ^bb8
-    ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
-    ! CHECK:   cond_br %{{.*}}, ^bb11, ^bb12
+    ! CHECK:   hlfir.assign %{{.*}} to %[[V_I]]#0
+    ! CHECK:   cf.cond_br %{{.*}}, ^bb11, ^bb12
     ! CHECK: ^bb11:  // pred: ^bb10
     ! CHECK:   llvm.intr.stackrestore %[[V_11]] : !llvm.ptr
-    ! CHECK:   br ^bb18
+    ! CHECK:   cf.br ^bb18
     ! CHECK: ^bb12:  // pred: ^bb10
-    ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
-    ! CHECK:   cond_br %{{.*}}, ^bb13, ^bb14
+    ! CHECK:   hlfir.assign %{{.*}} to %[[V_I]]#0
+    ! CHECK:   cf.cond_br %{{.*}}, ^bb13, ^bb14
     ! CHECK: ^bb13:  // pred: ^bb12
     ! CHECK:   llvm.intr.stackrestore %[[V_11]] : !llvm.ptr
     ! CHECK:   llvm.intr.stackrestore %[[V_3]] : !llvm.ptr
-    ! CHECK:   br ^bb19
+    ! CHECK:   cf.br ^bb19
     ! CHECK: ^bb14: // 2 preds: ^bb5, ^bb12
     ! CHECK:   llvm.intr.stackrestore %[[V_11]] : !llvm.ptr
-    ! CHECK:   br ^bb15
+    ! CHECK:   cf.br ^bb15
     ! CHECK: ^bb15:  // 2 preds: ^bb7, ^bb14
-    ! CHECK:   br ^bb16
+    ! CHECK:   cf.br ^bb16
     ! CHECK: ^bb16:  // 2 preds: ^bb9, ^bb15
-    ! CHECK:   br ^bb1
+    ! CHECK:   cf.br ^bb1
     ! CHECK: ^bb17:  // pred: ^bb1
-    ! CHECK:   fir.store %{{.*}} to %[[V_1]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %{{.*}} to %[[V_I]]#0
     ! CHECK:   cf.br ^bb18
     ! CHECK: ^bb18:  // 2 preds: ^bb11, ^bb17
     ! CHECK:   llvm.intr.stackrestore %[[V_3]] : !llvm.ptr
-    ! CHECK:   br ^bb19
+    ! CHECK:   cf.br ^bb19
     ! CHECK: ^bb19:  // 2 preds: ^bb13, ^bb18
     block
       i = i + 1 ! 1 increment
@@ -80,8 +80,9 @@ program bb ! block stack management and exits
 100 print*, i ! expect 21
 
     ! CHECK: %[[V_51:[0-9]+]] = llvm.intr.stacksave : !llvm.ptr
-    ! CHECK: fir.store %c5{{.*}} to %[[V_0]] : !fir.ref<i32>
-    ! CHECK: fir.call @ss(%[[V_0]]) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> ()
+    ! CHECK: %[[ASSOC:[0-9]+]]:3 = hlfir.associate %c5{{.*}} {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+    ! CHECK: fir.call @ss(%[[ASSOC]]#0) proc_attrs<bind_c> fastmath<contract> : (!fir.ref<i32>) -> ()
+    ! CHECK: hlfir.end_associate %[[ASSOC]]#1, %[[ASSOC]]#2 : !fir.ref<i32>, i1
     ! CHECK: llvm.intr.stackrestore %[[V_51]] : !llvm.ptr
     block
       interface

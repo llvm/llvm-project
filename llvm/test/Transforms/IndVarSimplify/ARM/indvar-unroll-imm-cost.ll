@@ -60,7 +60,7 @@ define dso_local arm_aapcscc void @test(ptr nocapture %pDest, ptr nocapture read
 ; CHECK-NEXT:    [[ADD_PTR23]] = getelementptr inbounds i16, ptr [[PSRCB_ADDR_173]], i32 4
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i32, ptr [[PDEST_ADDR_175]], i32 1
 ; CHECK-NEXT:    [[ADD24]] = add nuw nsw i32 [[J_076]], 4
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[ADD24]], [[TMP0]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp samesign ult i32 [[ADD24]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    [[ADD_PTR_LCSSA:%.*]] = phi ptr [ [[ADD_PTR]], [[FOR_BODY3]] ]

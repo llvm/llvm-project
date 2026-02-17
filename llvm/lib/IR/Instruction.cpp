@@ -473,6 +473,19 @@ void Instruction::dropPoisonGeneratingFlags() {
   case Instruction::ICmp:
     cast<ICmpInst>(this)->setSameSign(false);
     break;
+
+  case Instruction::Call: {
+    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::ctlz:
+      case Intrinsic::cttz:
+      case Intrinsic::abs:
+        II->setOperand(1, ConstantInt::getFalse(getContext()));
+        break;
+      }
+    }
+    break;
+  }
   }
 
   if (isa<FPMathOperator>(this)) {
@@ -559,11 +572,13 @@ void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
 void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
   // !annotation and !prof metadata does not impact semantics.
   // !range, !nonnull and !align produce poison, so they are safe to speculate.
+  // !fpmath specifies floating-point precision and does not imply UB.
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
   static const unsigned KnownIDs[] = {
       LLVMContext::MD_annotation, LLVMContext::MD_range,
-      LLVMContext::MD_nonnull, LLVMContext::MD_align, LLVMContext::MD_prof};
+      LLVMContext::MD_nonnull,    LLVMContext::MD_align,
+      LLVMContext::MD_fpmath,     LLVMContext::MD_prof};
   SmallVector<unsigned> KeepIDs;
   KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
   append_range(KeepIDs, (!ProfcheckDisableMetadataFixes ? KnownIDs
@@ -865,7 +880,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
 }
 
 /// This must be kept in sync with FunctionComparator::cmpOperations in
-/// lib/Transforms/IPO/MergeFunctions.cpp.
+/// lib/Transforms/Utils/FunctionComparator.cpp.
 bool Instruction::hasSameSpecialState(const Instruction *I2,
                                       bool IgnoreAlignment,
                                       bool IntersectAttrs) const {
@@ -913,6 +928,12 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
     return CI->getCallingConv() == cast<CallBrInst>(I2)->getCallingConv() &&
            CheckAttrsSame(CI, cast<CallBrInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<CallBrInst>(I2));
+  if (const SwitchInst *SI = dyn_cast<SwitchInst>(I1)) {
+    for (auto [Case1, Case2] : zip(SI->cases(), cast<SwitchInst>(I2)->cases()))
+      if (Case1.getCaseValue() != Case2.getCaseValue())
+        return false;
+    return true;
+  }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(I1))
     return IVI->getIndices() == cast<InsertValueInst>(I2)->getIndices();
   if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(I1))
@@ -1271,6 +1292,7 @@ bool Instruction::isAssociative() const {
 
   switch (Opcode) {
   case FMul:
+    return cast<FPMathOperator>(this)->hasAllowReassoc();
   case FAdd:
     return cast<FPMathOperator>(this)->hasAllowReassoc() &&
            cast<FPMathOperator>(this)->hasNoSignedZeros();
@@ -1282,6 +1304,13 @@ bool Instruction::isAssociative() const {
 bool Instruction::isCommutative() const {
   if (auto *II = dyn_cast<IntrinsicInst>(this))
     return II->isCommutative();
+  // TODO: Should allow icmp/fcmp?
+  return isCommutative(getOpcode());
+}
+
+bool Instruction::isCommutableOperand(unsigned Op) const {
+  if (auto *II = dyn_cast<IntrinsicInst>(this))
+    return II->isCommutableOperand(Op);
   // TODO: Should allow icmp/fcmp?
   return isCommutative(getOpcode());
 }

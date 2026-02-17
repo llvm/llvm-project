@@ -239,6 +239,14 @@ public:
     return *this;
   }
 
+  /// Reset all properties and re-establish baseline invariants.
+  MachineFunctionProperties &resetToInitial() {
+    reset();
+    setIsSSA();
+    setTracksLiveness();
+    return *this;
+  }
+
   MachineFunctionProperties &set(const MachineFunctionProperties &MFP) {
     Properties |= MFP.Properties;
     return *this;
@@ -1207,7 +1215,7 @@ public:
       ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol = nullptr,
       MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr,
       MDNode *PCSections = nullptr, uint32_t CFIType = 0,
-      MDNode *MMRAs = nullptr);
+      MDNode *MMRAs = nullptr, Value *DS = nullptr);
 
   /// Allocate a string and populate it with the given external symbol name.
   const char *createExternalSymbolName(StringRef Name);
@@ -1264,6 +1272,8 @@ public:
   /// Notes the global and target flags for a call site.
   void addCalledGlobal(const MachineInstr *MI, CalledGlobalInfo Details) {
     assert(MI && "MI must not be null");
+    assert(MI->isCandidateForAdditionalCallInfo() &&
+           "Cannot store called global info for this instruction");
     assert(Details.Callee && "Global must not be null");
     CalledGlobalsInfo.insert({MI, Details});
   }

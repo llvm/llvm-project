@@ -51,7 +51,7 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX1010_W32-NEXT:    buffer_load_format_x v5, v4, s[8:11], 0 idxen
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr4
-; GFX1010_W32-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010_W32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
 ; GFX1010_W32-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX1010_W32-NEXT:  ; %bb.2:
@@ -76,7 +76,7 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 ; GFX1010_W64-NEXT:    buffer_load_format_x v5, v4, s[8:11], 0 idxen
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr4
-; GFX1010_W64-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010_W64-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX1010_W64-NEXT:    s_cbranch_execnz .LBB0_1
 ; GFX1010_W64-NEXT:  ; %bb.2:
@@ -305,7 +305,7 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1010_W32-NEXT:    s_and_saveexec_b32 s4, s4
 ; GFX1010_W32-NEXT:    buffer_load_format_x v13, v8, s[8:11], 0 idxen
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX1010_W32-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010_W32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
 ; GFX1010_W32-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX1010_W32-NEXT:  ; %bb.2:
@@ -323,7 +323,7 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1010_W32-NEXT:    buffer_load_format_x v0, v8, s[8:11], 0 idxen
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr8
-; GFX1010_W32-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010_W32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
 ; GFX1010_W32-NEXT:    s_cbranch_execnz .LBB1_3
 ; GFX1010_W32-NEXT:  ; %bb.4:
@@ -351,7 +351,7 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1010_W64-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX1010_W64-NEXT:    buffer_load_format_x v13, v8, s[8:11], 0 idxen
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; GFX1010_W64-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010_W64-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX1010_W64-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX1010_W64-NEXT:  ; %bb.2:
@@ -369,7 +369,7 @@ define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, pt
 ; GFX1010_W64-NEXT:    buffer_load_format_x v0, v8, s[8:11], 0 idxen
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr8
-; GFX1010_W64-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010_W64-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX1010_W64-NEXT:    s_cbranch_execnz .LBB1_3
 ; GFX1010_W64-NEXT:  ; %bb.4:
@@ -784,7 +784,7 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1010_W32-NEXT:    buffer_load_format_x v9, v8, s[8:11], 0 idxen
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr8
-; GFX1010_W32-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010_W32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s5
 ; GFX1010_W32-NEXT:    s_cbranch_execnz .LBB2_1
 ; GFX1010_W32-NEXT:  ; %bb.2:
@@ -808,7 +808,7 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1010_W32-NEXT:    buffer_load_format_x v9, v0, s[8:11], 0 idxen
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1010_W32-NEXT:    ; implicit-def: $vgpr0
-; GFX1010_W32-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010_W32-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010_W32-NEXT:    s_xor_b32 exec_lo, exec_lo, s4
 ; GFX1010_W32-NEXT:    s_cbranch_execnz .LBB2_4
 ; GFX1010_W32-NEXT:  ; %bb.5:
@@ -840,7 +840,7 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1010_W64-NEXT:    buffer_load_format_x v9, v8, s[8:11], 0 idxen
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr8
-; GFX1010_W64-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010_W64-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010_W64-NEXT:    s_xor_b64 exec, exec, s[6:7]
 ; GFX1010_W64-NEXT:    s_cbranch_execnz .LBB2_1
 ; GFX1010_W64-NEXT:  ; %bb.2:
@@ -864,7 +864,7 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1010_W64-NEXT:    buffer_load_format_x v9, v0, s[8:11], 0 idxen
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
 ; GFX1010_W64-NEXT:    ; implicit-def: $vgpr0
-; GFX1010_W64-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX1010_W64-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX1010_W64-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX1010_W64-NEXT:    s_cbranch_execnz .LBB2_4
 ; GFX1010_W64-NEXT:  ; %bb.5:

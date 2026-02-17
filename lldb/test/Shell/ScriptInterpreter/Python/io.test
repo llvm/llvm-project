@@ -1,0 +1,15 @@
+# UNSUPPORTED: system-windows
+
+# RUN: rm -rf %t.stdout %t.stderr
+# RUN: cat %s | %lldb --script-language python > %t.stdout 2> %t.stderr
+# RUN: cat %t.stdout | FileCheck %s --check-prefix STDOUT
+# RUN: cat %t.stderr | FileCheck %s --check-prefix STDERR
+script
+import sys
+variable = 250 + 5
+print(variable)
+print("wrote to", "stderr", file=sys.stderr)
+quit
+
+# STDOUT: 255
+# STDERR: wrote to stderr

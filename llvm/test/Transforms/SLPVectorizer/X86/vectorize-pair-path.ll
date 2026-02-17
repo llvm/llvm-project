@@ -15,22 +15,22 @@ define double @root_selection(double %a, double %b, double %c, double %d) local_
 ; CHECK-LABEL: @root_selection(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[B:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[A:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fdiv fast <2 x double> [[TMP2]], <double 5.000000e+00, double 7.000000e+00>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = fdiv fast <2 x double> [[TMP2]], <double 7.000000e+00, double 5.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[I09:%.*]] = fmul fast double [[TMP4]], undef
 ; CHECK-NEXT:    [[I10:%.*]] = fsub fast double undef, [[I09]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP3]], <double undef, double 3.000000e+00>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[I10]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP3]], <double 3.000000e+00, double undef>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[I10]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <2 x double> [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast <2 x double> [[TMP7]], <double 1.100000e+01, double undef>
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <2 x double> [[TMP8]], <double 1.200000e+01, double 4.000000e+00>
-; CHECK-NEXT:    [[TMP10:%.*]] = fdiv fast <2 x double> [[TMP9]], splat (double 1.400000e+00)
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP10]], i32 1
-; CHECK-NEXT:    [[I07:%.*]] = fadd fast double undef, [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP10]], i32 0
-; CHECK-NEXT:    [[I16:%.*]] = fadd fast double [[I07]], [[TMP12]]
-; CHECK-NEXT:    [[I17:%.*]] = fadd fast double [[I16]], [[C:%.*]]
-; CHECK-NEXT:    [[I18:%.*]] = fadd fast double [[I17]], [[D:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> poison, double [[C:%.*]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x double> [[TMP8]], double [[D:%.*]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP12:%.*]] = fsub <4 x double> [[TMP11]], <double 0.000000e+00, double 0.000000e+00, double undef, double 1.100000e+01>
+; CHECK-NEXT:    [[TMP13:%.*]] = fmul <4 x double> [[TMP12]], <double 1.000000e+00, double 1.000000e+00, double 4.000000e+00, double 1.200000e+01>
+; CHECK-NEXT:    [[TMP14:%.*]] = fdiv <4 x double> [[TMP13]], <double 1.000000e+00, double 1.000000e+00, double 1.400000e+00, double 1.400000e+00>
+; CHECK-NEXT:    [[TMP15:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP14]])
+; CHECK-NEXT:    [[I18:%.*]] = fadd fast double [[TMP15]], undef
 ; CHECK-NEXT:    ret double [[I18]]
 ;
   %i01 = fdiv fast double %a, 7.0

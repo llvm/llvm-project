@@ -143,6 +143,9 @@ __isl_give isl_basic_map *isl_map_unshifted_simple_hull_from_map_list(
 	__isl_take isl_map *map, __isl_take isl_map_list *list);
 
 __isl_export
+__isl_give isl_basic_map *isl_basic_map_intersect_params(
+	__isl_take isl_basic_map *bmap, __isl_take isl_basic_set *bset);
+__isl_export
 __isl_give isl_basic_map *isl_basic_map_intersect_domain(
 		__isl_take isl_basic_map *bmap,
 		__isl_take isl_basic_set *bset);
@@ -325,6 +328,8 @@ __isl_null isl_map *isl_map_free(__isl_take isl_map *map);
 __isl_give isl_map *isl_map_copy(__isl_keep isl_map *map);
 __isl_export
 __isl_give isl_map *isl_map_reverse(__isl_take isl_map *map);
+__isl_export
+__isl_give isl_map *isl_map_domain_reverse(__isl_take isl_map *map);
 __isl_export
 __isl_give isl_map *isl_map_range_reverse(__isl_take isl_map *map);
 __isl_export
@@ -564,6 +569,7 @@ __isl_give isl_basic_set *isl_basic_set_flatten(__isl_take isl_basic_set *bset);
 __isl_export
 __isl_give isl_set *isl_set_flatten(__isl_take isl_set *set);
 __isl_give isl_map *isl_set_flatten_map(__isl_take isl_set *set);
+__isl_export
 __isl_give isl_set *isl_map_params(__isl_take isl_map *map);
 __isl_export
 __isl_give isl_set *isl_map_domain(__isl_take isl_map *bmap);
@@ -759,6 +765,7 @@ __isl_give isl_map *isl_map_align_params(__isl_take isl_map *map,
 	__isl_take isl_space *model);
 __isl_give isl_basic_map *isl_basic_map_drop_unused_params(
 	__isl_take isl_basic_map *bmap);
+__isl_export
 __isl_give isl_map *isl_map_drop_unused_params(__isl_take isl_map *map);
 
 __isl_give isl_mat *isl_basic_map_equalities_matrix(

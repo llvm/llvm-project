@@ -62,6 +62,19 @@ func.func @loop_for_single_index_argument(%arg0: index) {
   // expected-error@+1 {{expected induction variable to be same type as bounds}}
   "scf.for"(%arg0, %arg0, %arg0) (
     {
+    ^bb0(%i0 : i32):
+      scf.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @loop_for_invalid_ind_type(%arg0: index) {
+  // expected-error@+1 {{0-th induction variable has invalid type: 'f32'}}
+  "scf.for"(%arg0, %arg0, %arg0) (
+    {
     ^bb0(%i0 : f32):
       scf.yield
     }
@@ -274,6 +287,37 @@ func.func @parallel_different_types_of_results_and_reduces(
 
 // -----
 
+// The scf.parallel operation requires the number of operands in the terminator
+// (scf.reduce) to match the number of initial values provided to the loop.
+func.func @invalid_reduce_too_few_regions() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel (%arg1) = (%c0) to (%c1) step (%c1) {
+    // expected-error @+1 {{expects number of reduction regions: 0 to be the same as number of reduction operands: 1}}
+    scf.reduce(%c1 : index)
+  }
+  return
+}
+
+// -----
+
+// The scf.parallel operation requires the number of operands in the terminator
+// (scf.reduce) to match the number of initial values provided to the loop.
+func.func @invalid_reduce_too_many_regions() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.parallel (%i0) = (%c0) to (%c1) step (%c1) init (%c0) -> (index) {
+    // expected-error @+1 {{expects number of reduction regions: 1 to be the same as number of reduction operands: 0}}
+    scf.reduce {
+      ^bb0(%lhs : index, %rhs : index):
+        scf.reduce.return %lhs : index
+    }
+  }
+  return
+}
+
+// -----
+
 func.func @top_level_reduce(%arg0 : f32) {
   // expected-error@+1 {{expects parent op 'scf.parallel'}}
   scf.reduce(%arg0 : f32) {
@@ -373,9 +417,10 @@ func.func @reduceReturn_not_inside_reduce(%arg0 : f32) {
 
 func.func @std_if_incorrect_yield(%arg0: i1, %arg1: f32)
 {
-  // expected-error@+1 {{region control flow edge from Operation scf.yield to parent results: source has 1 operands, but target successor <to parent> needs 2}}
+  // expected-error@+1 {{along control flow edge from Operation scf.yield to parent: region branch point has 1 operands, but region successor needs 2 inputs}}
   %x, %y = scf.if %arg0 -> (f32, f32) {
     %0 = arith.addf %arg1, %arg1 : f32
+    // expected-note@+1 {{region branch point}}
     scf.yield %0 : f32
   } else {
     %0 = arith.subf %arg1, %arg1 : f32
@@ -544,8 +589,9 @@ func.func @while_invalid_terminator() {
 
 func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{region control flow edge from Operation scf.condition to Region #1: source has 0 operands, but target successor <to region #1 with 1 inputs> needs 1}}
+  // expected-error@+1 {{along control flow edge from Operation scf.condition to Region #1: region branch point has 0 operands, but region successor needs 1 inputs}}
   scf.while : () -> () {
+    // expected-note@+1 {{region branch point}}
     scf.condition(%true)
   } do {
   ^bb0(%arg0: i32):
@@ -557,8 +603,9 @@ func.func @while_cross_region_type_mismatch() {
 
 func.func @while_cross_region_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{along control flow edge from Operation scf.condition to Region #1: source type #0 'i1' should match input type #0 'i32'}}
+  // expected-error@+1 {{along control flow edge from Operation scf.condition to Region #1: successor operand type #0 'i1' should match successor input type #0 'i32'}}
   %0 = scf.while : () -> (i1) {
+    // expected-note@+1 {{region branch point}}
     scf.condition(%true) %true : i1
   } do {
   ^bb0(%arg0: i32):
@@ -570,8 +617,9 @@ func.func @while_cross_region_type_mismatch() {
 
 func.func @while_result_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{region control flow edge from Operation scf.condition to parent results: source has 1 operands, but target successor <to parent> needs 0}}
+  // expected-error@+1 {{along control flow edge from Operation scf.condition to parent: region branch point has 1 operands, but region successor needs 0 inputs}}
   scf.while : () -> () {
+    // expected-note@+1 {{region branch point}}
     scf.condition(%true) %true : i1
   } do {
   ^bb0(%arg0: i1):

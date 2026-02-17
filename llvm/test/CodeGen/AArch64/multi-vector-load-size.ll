@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-gnu -stop-after=instruction-select < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -stop-after=aarch64-isel < %s | FileCheck %s
 
 %struct.__neon_float32x2x2_t = type { <2 x float>,  <2 x float> }
 %struct.__neon_float32x2x3_t = type { <2 x float>,  <2 x float>,  <2 x float> }

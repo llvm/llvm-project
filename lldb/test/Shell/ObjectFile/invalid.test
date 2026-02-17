@@ -1,0 +1,4 @@
+RUN: mkdir -p %t.dir
+RUN: %lldb %t.dir 2>&1| FileCheck %s
+
+CHECK: error: '{{.*}}.dir' is not a valid executable

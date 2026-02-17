@@ -46,6 +46,12 @@ public:
   /// Destroys the frame, killing all live pointers to stack slots.
   ~InterpFrame();
 
+  std::string getName() const {
+    if (!Func)
+      return "Bottom frame";
+    return Func->getName();
+  }
+
   static void free(InterpFrame *F) {
     if (!F->isBottomFrame())
       delete F;
@@ -55,6 +61,10 @@ public:
   void destroy(unsigned Idx);
   void initScope(unsigned Idx);
   void destroyScopes();
+  void enableLocal(unsigned Idx);
+  bool isLocalEnabled(unsigned Idx) const {
+    return localInlineDesc(Idx)->IsActive;
+  }
 
   /// Describes the frame with arguments for diagnostic purposes.
   void describe(llvm::raw_ostream &OS) const override;
@@ -109,6 +119,7 @@ public:
   /// Returns the 'this' pointer.
   const Pointer &getThis() const {
     assert(hasThisPointer());
+    assert(!isBottomFrame());
     return stackRef<Pointer>(ThisPointerOffset);
   }
 
@@ -116,6 +127,7 @@ public:
   const Pointer &getRVOPtr() const {
     assert(Func);
     assert(Func->hasRVO());
+    assert(!isBottomFrame());
     return stackRef<Pointer>(0);
   }
 
@@ -186,6 +198,9 @@ private:
   const size_t FrameOffset;
   /// Mapping from arg offsets to their argument blocks.
   llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Params;
+
+public:
+  unsigned MSVCConstexprAllowed = 0;
 };
 
 } // namespace interp

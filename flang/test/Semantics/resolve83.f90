@@ -11,16 +11,16 @@ module m
 contains
 
 ! C1543 A prefix shall contain at most one of each prefix-spec.
-! 
-! R1535 subroutine-stmt is 
-!   [prefix] SUBROUTINE subroutine-name [ ( [dummy-arg-list] ) 
+!
+! R1535 subroutine-stmt is
+!   [prefix] SUBROUTINE subroutine-name [ ( [dummy-arg-list] )
 !   [proc-language-binding-spec] ]
-! 
+!
 ! R1526  prefix is
 !   prefix-spec[prefix-spec]...
-!   
+!
 !   prefix-spec values are:
-!      declaration-type-spec, ELEMENTAL, IMPURE, MODULE, NON_RECURSIVE, 
+!      declaration-type-spec, ELEMENTAL, IMPURE, MODULE, NON_RECURSIVE,
 !      PURE, RECURSIVE
 
     !ERROR: FUNCTION prefix cannot specify the type more than once

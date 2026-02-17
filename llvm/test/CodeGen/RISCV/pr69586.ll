@@ -2413,8 +2413,3 @@ define void @test(ptr %0, ptr %1, i64 %2) {
   ret void
 }
 
-declare i64 @llvm.riscv.vsetvli.i64(i64, i64, i64)
-declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i64(<vscale x 4 x i32>, ptr, i64)
-declare void @llvm.riscv.sf.vc.vv.se.i64.nxv4i32.nxv4i32.i64(i64, i64, <vscale x 4 x i32>, <vscale x 4 x i32>, i64)
-declare <vscale x 4 x i32> @llvm.riscv.sf.vc.v.i.se.nxv4i32.i64.i64.i64(i64, i64, i64, i64)
-declare void @llvm.riscv.vse.nxv4i32.i64(<vscale x 4 x i32>, ptr, i64)

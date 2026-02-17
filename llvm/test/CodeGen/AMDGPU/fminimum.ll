@@ -515,7 +515,7 @@ define amdgpu_ps <3 x half> @test_fminimum_v3f16_ss(<3 x half> inreg %a, <3 x ha
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_pk_minimum_f16 v0, s0, s2
 ; GFX12-GISEL-NEXT:    s_minimum_f16 s0, s1, s3
-; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog

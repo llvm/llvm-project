@@ -8,7 +8,7 @@ nor protected and non-virtual. A virtual class's destructor should be specified
 in one of these ways to prevent undefined behavior.
 
 This check implements
-`C.35 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rc-dtor-virtual>`_
+`C.35 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rc-dtor-virtual>`_
 from the C++ Core Guidelines.
 
 Note that this check will diagnose a class with a virtual method regardless of

@@ -96,7 +96,7 @@ static void test_status_cannot_resolve()
 #ifndef TEST_HAS_NO_EXCEPTIONS
         { // test throwing case
             try {
-                status(TC.p);
+              (void)status(TC.p);
             } catch (filesystem_error const& err) {
                 assert(err.path1() == TC.p);
                 assert(err.path2() == "");

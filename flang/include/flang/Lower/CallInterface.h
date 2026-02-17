@@ -401,11 +401,17 @@ public:
     llvm_unreachable("getting host associated type in CallerInterface");
   }
 
+  std::optional<mlir::Value> getOriginalPassArg() const {
+    return originalPassArg;
+  }
+  void setOriginalPassArg(mlir::Value x) { originalPassArg = x; }
+
 private:
   /// Check that the input vector is complete.
   bool verifyActualInputs() const;
   const Fortran::evaluate::ProcedureRef &procRef;
   llvm::SmallVector<mlir::Value> actualInputs;
+  std::optional<mlir::Value> originalPassArg;
 };
 
 //===----------------------------------------------------------------------===//

@@ -122,8 +122,8 @@ Transforms to:
 
 .. code-block:: c++
 
-  auto AreSame = std::ranges::equal(std::ranges::reverse_view(Items1),
-                                    std::ranges::reverse_view(Items2));
+  auto AreSame = std::ranges::equal(std::views::reverse(Items1),
+                                    std::views::reverse(Items2));
 
 Options
 -------

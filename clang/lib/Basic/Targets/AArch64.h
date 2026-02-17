@@ -15,6 +15,7 @@
 
 #include "OSTargets.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include <optional>
 
@@ -48,13 +49,15 @@ static const unsigned ARM64AddrSpaceMap[] = {
     0, // hlsl_private
     0, // hlsl_device
     0, // hlsl_input
+    0, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
 };
 
+using AArch64FeatureSet = llvm::SmallDenseSet<StringRef, 32>;
+
 class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
-  virtual void setDataLayout() = 0;
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   static const char *const GCCRegNames[];
 
@@ -131,8 +134,21 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasRCPC3 = false;
   bool HasSMEFA64 = false;
   bool HasPAuthLR = false;
+  bool HasFPRCVT = false;
+  bool HasF8F16MM = false;
+  bool HasF8F32MM = false;
+  bool HasSVE_F16F32MM = false;
+  bool HasSVE_BFSCALE = false;
+  bool HasSVE_AES2 = false;
+  bool HasSSVE_AES = false;
+  bool HasSVE2p2 = false;
+  bool HasSME2p2 = false;
 
   const llvm::AArch64::ArchInfo *ArchInfo = &llvm::AArch64::ARMV8A;
+
+  AArch64FeatureSet HasFeatureLookup;
+
+  void computeFeatureLookup();
 
 protected:
   std::string ABI;
@@ -274,9 +290,7 @@ public:
   AArch64leTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
 
   void getTargetDefines(const LangOptions &Opts,
-                            MacroBuilder &Builder) const override;
-private:
-  void setDataLayout() override;
+                        MacroBuilder &Builder) const override;
 };
 
 template <>
@@ -296,8 +310,6 @@ class LLVM_LIBRARY_VISIBILITY WindowsARM64TargetInfo
 public:
   WindowsARM64TargetInfo(const llvm::Triple &Triple,
                          const TargetOptions &Opts);
-
-  void setDataLayout() override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override;
 
@@ -332,9 +344,6 @@ public:
   AArch64beTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
-
-private:
-  void setDataLayout() override;
 };
 
 void getAppleMachOAArch64Defines(MacroBuilder &Builder, const LangOptions &Opts,

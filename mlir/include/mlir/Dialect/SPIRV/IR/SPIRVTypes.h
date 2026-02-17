@@ -84,9 +84,9 @@ public:
 
   static bool classof(Type type);
 
-  /// Returns true if the given integer type is valid for the SPIR-V dialect.
-  static bool isValid(FloatType);
   /// Returns true if the given float type is valid for the SPIR-V dialect.
+  static bool isValid(FloatType);
+  /// Returns true if the given integer type is valid for the SPIR-V dialect.
   static bool isValid(IntegerType);
 };
 
@@ -407,7 +407,7 @@ public:
   /// Returns the use parameter of the cooperative matrix.
   CooperativeMatrixUseKHR getUse() const;
 
-  operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
+  operator ShapedType() const { return cast<ShapedType>(*this); }
 
   ArrayRef<int64_t> getShape() const;
 
@@ -491,7 +491,7 @@ public:
   Type getElementType() const;
   ArrayRef<int64_t> getShape() const;
   bool hasRank() const { return !getShape().empty(); }
-  operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
+  operator ShapedType() const { return cast<ShapedType>(*this); }
 };
 
 } // namespace spirv

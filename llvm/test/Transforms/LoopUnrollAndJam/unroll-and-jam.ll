@@ -638,18 +638,18 @@ define i32 @test6() #0 {
 ; CHECK:       [[FOR_LATCH]]:
 ; CHECK-NEXT:    br i1 false, label %[[FOR_OUTER]], label %[[FOR_END_UNR_LCSSA:.*]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[FOR_END_UNR_LCSSA]]:
-; CHECK-NEXT:    [[DOTLCSSA_LCSSA_PH_PH:%.*]] = phi i32 [ 2, %[[FOR_LATCH]] ]
-; CHECK-NEXT:    [[INC_LCSSA_LCSSA_PH_PH:%.*]] = phi i32 [ 7, %[[FOR_LATCH]] ]
-; CHECK-NEXT:    [[P0_UNR_PH:%.*]] = phi i32 [ 2, %[[FOR_LATCH]] ]
+; CHECK-NEXT:    [[DOTLCSSA_LCSSA_PH:%.*]] = phi i32 [ 2, %[[FOR_LATCH]] ]
+; CHECK-NEXT:    [[INC_LCSSA_LCSSA_PH:%.*]] = phi i32 [ 7, %[[FOR_LATCH]] ]
+; CHECK-NEXT:    [[P0_UNR:%.*]] = phi i32 [ 2, %[[FOR_LATCH]] ]
 ; CHECK-NEXT:    br i1 true, label %[[FOR_OUTER_EPIL_PREHEADER]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_OUTER_EPIL_PREHEADER]]:
-; CHECK-NEXT:    [[P0_UNR:%.*]] = phi i32 [ [[F_PROMOTED10]], %[[ENTRY]] ], [ [[P0_UNR_PH]], %[[FOR_END_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[P0_EPIL_INIT:%.*]] = phi i32 [ [[F_PROMOTED10]], %[[ENTRY]] ], [ [[P0_UNR]], %[[FOR_END_UNR_LCSSA]] ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true)
 ; CHECK-NEXT:    br label %[[FOR_OUTER_EPIL:.*]]
 ; CHECK:       [[FOR_OUTER_EPIL]]:
 ; CHECK-NEXT:    br label %[[FOR_INNER_EPIL:.*]]
 ; CHECK:       [[FOR_INNER_EPIL]]:
-; CHECK-NEXT:    [[P1_EPIL:%.*]] = phi i32 [ [[P0_UNR]], %[[FOR_OUTER_EPIL]] ], [ 2, %[[FOR_INNER_EPIL]] ]
+; CHECK-NEXT:    [[P1_EPIL:%.*]] = phi i32 [ [[P0_EPIL_INIT]], %[[FOR_OUTER_EPIL]] ], [ 2, %[[FOR_INNER_EPIL]] ]
 ; CHECK-NEXT:    [[INC_SINK8_EPIL:%.*]] = phi i32 [ 0, %[[FOR_OUTER_EPIL]] ], [ [[INC_EPIL:%.*]], %[[FOR_INNER_EPIL]] ]
 ; CHECK-NEXT:    [[INC_EPIL]] = add nuw nsw i32 [[INC_SINK8_EPIL]], 1
 ; CHECK-NEXT:    [[EXITCOND_EPIL:%.*]] = icmp ne i32 [[INC_EPIL]], 7
@@ -658,8 +658,8 @@ define i32 @test6() #0 {
 ; CHECK-NEXT:    [[DOTLCSSA_EPIL:%.*]] = phi i32 [ [[P1_EPIL]], %[[FOR_INNER_EPIL]] ]
 ; CHECK-NEXT:    br label %[[FOR_END]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    [[DOTLCSSA_LCSSA:%.*]] = phi i32 [ [[DOTLCSSA_LCSSA_PH_PH]], %[[FOR_END_UNR_LCSSA]] ], [ [[DOTLCSSA_EPIL]], %[[FOR_LATCH_EPIL]] ]
-; CHECK-NEXT:    [[INC_LCSSA_LCSSA:%.*]] = phi i32 [ [[INC_LCSSA_LCSSA_PH_PH]], %[[FOR_END_UNR_LCSSA]] ], [ 7, %[[FOR_LATCH_EPIL]] ]
+; CHECK-NEXT:    [[DOTLCSSA_LCSSA:%.*]] = phi i32 [ [[DOTLCSSA_LCSSA_PH]], %[[FOR_END_UNR_LCSSA]] ], [ [[DOTLCSSA_EPIL]], %[[FOR_LATCH_EPIL]] ]
+; CHECK-NEXT:    [[INC_LCSSA_LCSSA:%.*]] = phi i32 [ [[INC_LCSSA_LCSSA_PH]], %[[FOR_END_UNR_LCSSA]] ], [ 7, %[[FOR_LATCH_EPIL]] ]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -1324,9 +1324,9 @@ define signext i16 @test10(i32 %k) #0 {
 ; CHECK-NEXT:    [[STOREMERGE_4_LCSSA_3:%.*]] = phi i64 [ [[STOREMERGE_4_3:%.*]], %[[FOR_INC21_3]] ]
 ; CHECK-NEXT:    br i1 false, label %[[FOR_BODY]], label %[[FOR_END26_UNR_LCSSA:.*]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[FOR_END26_UNR_LCSSA]]:
-; CHECK-NEXT:    [[DEC_LCSSA_LCSSA_PH_PH:%.*]] = phi i64 [ 0, %[[FOR_INC24]] ]
-; CHECK-NEXT:    [[STOREMERGE_4_LCSSA_LCSSA_PH_PH:%.*]] = phi i64 [ [[STOREMERGE_4_LCSSA_3]], %[[FOR_INC24]] ]
-; CHECK-NEXT:    [[STOREMERGE_5_LCSSA_LCSSA_PH_PH:%.*]] = phi i32 [ 0, %[[FOR_INC24]] ]
+; CHECK-NEXT:    [[DEC_LCSSA_LCSSA_PH:%.*]] = phi i64 [ 0, %[[FOR_INC24]] ]
+; CHECK-NEXT:    [[STOREMERGE_4_LCSSA_LCSSA_PH:%.*]] = phi i64 [ [[STOREMERGE_4_LCSSA_3]], %[[FOR_INC24]] ]
+; CHECK-NEXT:    [[STOREMERGE_5_LCSSA_LCSSA_PH:%.*]] = phi i32 [ 0, %[[FOR_INC24]] ]
 ; CHECK-NEXT:    br i1 true, label %[[FOR_BODY_EPIL_PREHEADER]], label %[[FOR_END26:.*]]
 ; CHECK:       [[FOR_BODY_EPIL_PREHEADER]]:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true)
@@ -1353,9 +1353,9 @@ define signext i16 @test10(i32 %k) #0 {
 ; CHECK-NEXT:    [[STOREMERGE_4_LCSSA_EPIL:%.*]] = phi i64 [ [[STOREMERGE_4_EPIL]], %[[FOR_INC21_EPIL]] ]
 ; CHECK-NEXT:    br label %[[FOR_END26]]
 ; CHECK:       [[FOR_END26]]:
-; CHECK-NEXT:    [[DEC_LCSSA_LCSSA:%.*]] = phi i64 [ [[DEC_LCSSA_LCSSA_PH_PH]], %[[FOR_END26_UNR_LCSSA]] ], [ 0, %[[FOR_INC24_EPIL]] ]
-; CHECK-NEXT:    [[STOREMERGE_4_LCSSA_LCSSA:%.*]] = phi i64 [ [[STOREMERGE_4_LCSSA_LCSSA_PH_PH]], %[[FOR_END26_UNR_LCSSA]] ], [ [[STOREMERGE_4_LCSSA_EPIL]], %[[FOR_INC24_EPIL]] ]
-; CHECK-NEXT:    [[STOREMERGE_5_LCSSA_LCSSA:%.*]] = phi i32 [ [[STOREMERGE_5_LCSSA_LCSSA_PH_PH]], %[[FOR_END26_UNR_LCSSA]] ], [ 0, %[[FOR_INC24_EPIL]] ]
+; CHECK-NEXT:    [[DEC_LCSSA_LCSSA:%.*]] = phi i64 [ [[DEC_LCSSA_LCSSA_PH]], %[[FOR_END26_UNR_LCSSA]] ], [ 0, %[[FOR_INC24_EPIL]] ]
+; CHECK-NEXT:    [[STOREMERGE_4_LCSSA_LCSSA:%.*]] = phi i64 [ [[STOREMERGE_4_LCSSA_LCSSA_PH]], %[[FOR_END26_UNR_LCSSA]] ], [ [[STOREMERGE_4_LCSSA_EPIL]], %[[FOR_INC24_EPIL]] ]
+; CHECK-NEXT:    [[STOREMERGE_5_LCSSA_LCSSA:%.*]] = phi i32 [ [[STOREMERGE_5_LCSSA_LCSSA_PH]], %[[FOR_END26_UNR_LCSSA]] ], [ 0, %[[FOR_INC24_EPIL]] ]
 ; CHECK-NEXT:    store i64 [[DEC_LCSSA_LCSSA]], ptr @g, align 8
 ; CHECK-NEXT:    ret i16 0
 ; CHECK:       [[FOR_BODY2_SPLIT2_1]]:

@@ -79,7 +79,7 @@ void registerFromLLVMIRTranslation() {
 
         // Now that the translation supports importing debug records directly,
         // make it the default, but allow the user to override to old behavior.
-        if (!convertDebugRecToIntrinsics)
+        if (convertDebugRecToIntrinsics)
           llvmModule->convertFromNewDbgValues();
 
         return translateLLVMIRToModule(

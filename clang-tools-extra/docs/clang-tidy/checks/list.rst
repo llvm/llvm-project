@@ -54,6 +54,7 @@ Clang-Tidy Checks
    :doc:`abseil-string-find-str-contains <abseil/string-find-str-contains>`, "Yes"
    :doc:`abseil-time-comparison <abseil/time-comparison>`, "Yes"
    :doc:`abseil-time-subtraction <abseil/time-subtraction>`, "Yes"
+   :doc:`abseil-unchecked-statusor-access <abseil/unchecked-statusor-access>`,
    :doc:`abseil-upgrade-duration-conversions <abseil/upgrade-duration-conversions>`, "Yes"
    :doc:`altera-id-dependent-backward-branch <altera/id-dependent-backward-branch>`,
    :doc:`altera-kernel-name-restriction <altera/kernel-name-restriction>`,
@@ -181,10 +182,6 @@ Clang-Tidy Checks
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
    :doc:`cert-err33-c <cert/err33-c>`,
-   :doc:`cert-err60-cpp <cert/err60-cpp>`,
-   :doc:`cert-flp30-c <cert/flp30-c>`,
-   :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
-   :doc:`cert-oop58-cpp <cert/oop58-cpp>`,
    :doc:`concurrency-mt-unsafe <concurrency/mt-unsafe>`,
    :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
    :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines <cppcoreguidelines/avoid-capturing-lambda-coroutines>`,
@@ -222,14 +219,12 @@ Clang-Tidy Checks
    :doc:`darwin-dispatch-once-nonstatic <darwin/dispatch-once-nonstatic>`, "Yes"
    :doc:`fuchsia-default-arguments-calls <fuchsia/default-arguments-calls>`,
    :doc:`fuchsia-default-arguments-declarations <fuchsia/default-arguments-declarations>`, "Yes"
-   :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`,
    :doc:`fuchsia-overloaded-operator <fuchsia/overloaded-operator>`,
    :doc:`fuchsia-statically-constructed-objects <fuchsia/statically-constructed-objects>`,
    :doc:`fuchsia-temporary-objects <fuchsia/temporary-objects>`,
    :doc:`fuchsia-trailing-return <fuchsia/trailing-return>`,
    :doc:`fuchsia-virtual-inheritance <fuchsia/virtual-inheritance>`,
    :doc:`google-build-explicit-make-pair <google/build-explicit-make-pair>`,
-   :doc:`google-build-namespaces <google/build-namespaces>`,
    :doc:`google-build-using-namespace <google/build-using-namespace>`,
    :doc:`google-default-arguments <google/default-arguments>`,
    :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
@@ -239,7 +234,6 @@ Clang-Tidy Checks
    :doc:`google-objc-function-naming <google/objc-function-naming>`,
    :doc:`google-objc-global-variable-declaration <google/objc-global-variable-declaration>`,
    :doc:`google-readability-avoid-underscore-in-googletest-name <google/readability-avoid-underscore-in-googletest-name>`,
-   :doc:`google-readability-casting <google/readability-casting>`,
    :doc:`google-readability-todo <google/readability-todo>`,
    :doc:`google-runtime-float <google/runtime-float>`,
    :doc:`google-runtime-int <google/runtime-int>`,
@@ -258,12 +252,15 @@ Clang-Tidy Checks
    :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
    :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
+   :doc:`llvm-type-switch-case-types <llvm/type-switch-case-types>`, "Yes"
    :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
    :doc:`llvm-use-ranges <llvm/use-ranges>`, "Yes"
+   :doc:`llvm-use-vector-utils <llvm/use-vector-utils>`, "Yes"
    :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
    :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes"
    :doc:`llvmlibc-restrict-system-libc-headers <llvmlibc/restrict-system-libc-headers>`, "Yes"
+   :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
    :doc:`misc-confusable-identifiers <misc/confusable-identifiers>`,
    :doc:`misc-const-correctness <misc/const-correctness>`, "Yes"
    :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>`,
@@ -273,6 +270,7 @@ Clang-Tidy Checks
    :doc:`misc-misleading-bidirectional <misc/misleading-bidirectional>`,
    :doc:`misc-misleading-identifier <misc/misleading-identifier>`,
    :doc:`misc-misplaced-const <misc/misplaced-const>`,
+   :doc:`misc-multiple-inheritance <misc/multiple-inheritance>`,
    :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`misc-no-recursion <misc/no-recursion>`,
    :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
@@ -291,6 +289,7 @@ Clang-Tidy Checks
    :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes"
    :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes"
    :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
+   :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`, "Yes"
    :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,
    :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes"
@@ -330,6 +329,8 @@ Clang-Tidy Checks
    :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
+   :doc:`modernize-use-string-view <modernize/use-string-view>`, "Yes"
+   :doc:`modernize-use-structured-binding <modernize/use-structured-binding>`, "Yes"
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
    :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes"
    :doc:`modernize-use-uncaught-exceptions <modernize/use-uncaught-exceptions>`, "Yes"
@@ -362,6 +363,7 @@ Clang-Tidy Checks
    :doc:`performance-noexcept-destructor <performance/noexcept-destructor>`, "Yes"
    :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
    :doc:`performance-noexcept-swap <performance/noexcept-swap>`, "Yes"
+   :doc:`performance-string-view-conversions <performance/string-view-conversions>`, "Yes"
    :doc:`performance-trivially-destructible <performance/trivially-destructible>`, "Yes"
    :doc:`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>`, "Yes"
    :doc:`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>`, "Yes"
@@ -392,6 +394,7 @@ Clang-Tidy Checks
    :doc:`readability-identifier-naming <readability/identifier-naming>`, "Yes"
    :doc:`readability-implicit-bool-conversion <readability/implicit-bool-conversion>`, "Yes"
    :doc:`readability-inconsistent-declaration-parameter-name <readability/inconsistent-declaration-parameter-name>`, "Yes"
+   :doc:`readability-inconsistent-ifelse-braces <readability/inconsistent-ifelse-braces>`, "Yes"
    :doc:`readability-isolate-declaration <readability/isolate-declaration>`, "Yes"
    :doc:`readability-magic-numbers <readability/magic-numbers>`,
    :doc:`readability-make-member-function-const <readability/make-member-function-const>`, "Yes"
@@ -422,6 +425,7 @@ Clang-Tidy Checks
    :doc:`readability-static-definition-in-anonymous-namespace <readability/static-definition-in-anonymous-namespace>`, "Yes"
    :doc:`readability-string-compare <readability/string-compare>`, "Yes"
    :doc:`readability-suspicious-call-argument <readability/suspicious-call-argument>`,
+   :doc:`readability-trailing-comma <readability/trailing-comma>`, "Yes"
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
@@ -446,7 +450,7 @@ Check aliases
    :doc:`cert-dcl51-cpp <cert/dcl51-cpp>`, :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
    :doc:`cert-dcl54-cpp <cert/dcl54-cpp>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`, :doc:`bugprone-std-namespace-modification <bugprone/std-namespace-modification>`,
-   :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`google-build-namespaces <google/build-namespaces>`,
+   :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
    :doc:`cert-env33-c <cert/env33-c>`, :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`cert-err34-c <cert/err34-c>`, :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
@@ -462,9 +466,9 @@ Check aliases
    :doc:`cert-mem57-cpp <cert/mem57-cpp>`, :doc:`bugprone-default-operator-new-on-overaligned-type <bugprone/default-operator-new-on-overaligned-type>`,
    :doc:`cert-msc24-c <cert/msc24-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`cert-msc30-c <cert/msc30-c>`, :doc:`misc-predictable-rand <misc/predictable-rand>`,
-   :doc:`cert-msc50-cpp <cert/msc50-cpp>`, :doc:`misc-predictable-rand <misc/predictable-rand>`,
    :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`bugprone-random-generator-seed <bugprone/random-generator-seed>`,
    :doc:`cert-msc33-c <cert/msc33-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
+   :doc:`cert-msc50-cpp <cert/msc50-cpp>`, :doc:`misc-predictable-rand <misc/predictable-rand>`,
    :doc:`cert-msc51-cpp <cert/msc51-cpp>`, :doc:`bugprone-random-generator-seed <bugprone/random-generator-seed>`,
    :doc:`cert-msc54-cpp <cert/msc54-cpp>`, :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`cert-oop11-cpp <cert/oop11-cpp>`, :doc:`performance-move-constructor-init <performance/move-constructor-init>`,
@@ -583,8 +587,11 @@ Check aliases
    :doc:`cppcoreguidelines-noexcept-swap <cppcoreguidelines/noexcept-swap>`, :doc:`performance-noexcept-swap <performance/noexcept-swap>`, "Yes"
    :doc:`cppcoreguidelines-non-private-member-variables-in-classes <cppcoreguidelines/non-private-member-variables-in-classes>`, :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
    :doc:`cppcoreguidelines-use-default-member-init <cppcoreguidelines/use-default-member-init>`, :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
-   :doc:`fuchsia-header-anon-namespaces <fuchsia/header-anon-namespaces>`, :doc:`google-build-namespaces <google/build-namespaces>`,
+   :doc:`fuchsia-header-anon-namespaces <fuchsia/header-anon-namespaces>`, :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
+   :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`, :doc:`misc-multiple-inheritance <misc/multiple-inheritance>`,
+   :doc:`google-build-namespaces <google/build-namespaces>`, :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
    :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
+   :doc:`google-readability-casting <google/readability-casting>`, :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`, "Yes"
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`hicpp-avoid-c-arrays <hicpp/avoid-c-arrays>`, :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,

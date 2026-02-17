@@ -293,6 +293,7 @@ public:
   bool isTargetKFreeBSD() const { return TargetTriple.isOSKFreeBSD(); }
   bool isTargetHurd() const { return TargetTriple.isOSHurd(); }
   bool isTargetGlibc() const { return TargetTriple.isOSGlibc(); }
+  bool isTargetMusl() const { return TargetTriple.isMusl(); }
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
   bool isTargetMCU() const { return TargetTriple.isOSIAMCU(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }

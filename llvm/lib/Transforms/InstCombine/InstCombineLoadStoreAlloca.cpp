@@ -27,6 +27,10 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 STATISTIC(NumDeadStore, "Number of dead stores eliminated");
 STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
 
@@ -172,13 +176,11 @@ isOnlyCopiedFromConstantMemory(AAResults *AA,
 /// Returns true if V is dereferenceable for size of alloca.
 static bool isDereferenceableForAllocaSize(const Value *V, const AllocaInst *AI,
                                            const DataLayout &DL) {
-  if (AI->isArrayAllocation())
-    return false;
-  uint64_t AllocaSize = DL.getTypeStoreSize(AI->getAllocatedType());
-  if (!AllocaSize)
+  std::optional<TypeSize> AllocaSize = AI->getAllocationSize(DL);
+  if (!AllocaSize || AllocaSize->isScalable())
     return false;
   return isDereferenceableAndAlignedPointer(V, AI->getAlign(),
-                                            APInt(64, AllocaSize), DL);
+                                            APInt(64, *AllocaSize), DL);
 }
 
 static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
@@ -296,10 +298,9 @@ bool PointerReplacer::collectUsers() {
       /// TODO: Handle poison and null pointers for PHI and select.
       // If all incoming values are available, mark this PHI as
       // replacable and push it's users into the worklist.
-      bool IsReplaceable = true;
-      if (all_of(PHI->incoming_values(), [&](Value *V) {
-            if (!isa<Instruction>(V))
-              return IsReplaceable = false;
+      bool IsReplaceable = all_of(PHI->incoming_values(),
+                                  [](Value *V) { return isa<Instruction>(V); });
+      if (IsReplaceable && all_of(PHI->incoming_values(), [&](Value *V) {
             return isAvailable(cast<Instruction>(V));
           })) {
         UsersToReplace.insert(PHI);
@@ -500,40 +501,39 @@ Instruction *InstCombinerImpl::visitAllocaInst(AllocaInst &AI) {
   if (auto *I = simplifyAllocaArraySize(*this, AI, DT))
     return I;
 
-  if (AI.getAllocatedType()->isSized()) {
-    // Move all alloca's of zero byte objects to the entry block and merge them
-    // together.  Note that we only do this for alloca's, because malloc should
-    // allocate and return a unique pointer, even for a zero byte allocation.
-    if (DL.getTypeAllocSize(AI.getAllocatedType()).getKnownMinValue() == 0) {
-      // For a zero sized alloca there is no point in doing an array allocation.
-      // This is helpful if the array size is a complicated expression not used
-      // elsewhere.
-      if (AI.isArrayAllocation())
-        return replaceOperand(AI, 0,
-            ConstantInt::get(AI.getArraySize()->getType(), 1));
+  // Move all alloca's of zero byte objects to the entry block and merge them
+  // together.  Note that we only do this for alloca's, because malloc should
+  // allocate and return a unique pointer, even for a zero byte allocation.
+  std::optional<TypeSize> Size = AI.getAllocationSize(DL);
+  if (Size && Size->isZero()) {
+    // For a zero sized alloca there is no point in doing an array allocation.
+    // This is helpful if the array size is a complicated expression not used
+    // elsewhere.
+    if (AI.isArrayAllocation())
+      return replaceOperand(AI, 0,
+                            ConstantInt::get(AI.getArraySize()->getType(), 1));
 
-      // Get the first instruction in the entry block.
-      BasicBlock &EntryBlock = AI.getParent()->getParent()->getEntryBlock();
-      BasicBlock::iterator FirstInst = EntryBlock.getFirstNonPHIOrDbg();
-      if (&*FirstInst != &AI) {
-        // If the entry block doesn't start with a zero-size alloca then move
-        // this one to the start of the entry block.  There is no problem with
-        // dominance as the array size was forced to a constant earlier already.
-        AllocaInst *EntryAI = dyn_cast<AllocaInst>(FirstInst);
-        if (!EntryAI || !EntryAI->getAllocatedType()->isSized() ||
-            DL.getTypeAllocSize(EntryAI->getAllocatedType())
-                    .getKnownMinValue() != 0) {
-          AI.moveBefore(FirstInst);
-          return &AI;
-        }
-
-        // Replace this zero-sized alloca with the one at the start of the entry
-        // block after ensuring that the address will be aligned enough for both
-        // types.
-        const Align MaxAlign = std::max(EntryAI->getAlign(), AI.getAlign());
-        EntryAI->setAlignment(MaxAlign);
-        return replaceInstUsesWith(AI, EntryAI);
+    // Get the first instruction in the entry block.
+    BasicBlock &EntryBlock = AI.getParent()->getParent()->getEntryBlock();
+    BasicBlock::iterator FirstInst = EntryBlock.getFirstNonPHIOrDbg();
+    if (&*FirstInst != &AI) {
+      // If the entry block doesn't start with a zero-size alloca then move
+      // this one to the start of the entry block.  There is no problem with
+      // dominance as the array size was forced to a constant earlier already.
+      AllocaInst *EntryAI = dyn_cast<AllocaInst>(FirstInst);
+      std::optional<TypeSize> EntryAISize =
+          EntryAI ? EntryAI->getAllocationSize(DL) : std::nullopt;
+      if (!EntryAISize || !EntryAISize->isZero()) {
+        AI.moveBefore(FirstInst);
+        return &AI;
       }
+
+      // Replace this zero-sized alloca with the one at the start of the entry
+      // block after ensuring that the address will be aligned enough for both
+      // types.
+      const Align MaxAlign = std::max(EntryAI->getAlign(), AI.getAlign());
+      EntryAI->setAlignment(MaxAlign);
+      return replaceInstUsesWith(AI, EntryAI);
     }
   }
 
@@ -873,20 +873,9 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
     // If we know how big this object is, and it is less than MaxSize, continue
     // searching. Otherwise, return false.
     if (AllocaInst *AI = dyn_cast<AllocaInst>(P)) {
-      if (!AI->getAllocatedType()->isSized())
-        return false;
-
-      ConstantInt *CS = dyn_cast<ConstantInt>(AI->getArraySize());
-      if (!CS)
-        return false;
-
-      TypeSize TS = DL.getTypeAllocSize(AI->getAllocatedType());
-      if (TS.isScalable())
-        return false;
-      // Make sure that, even if the multiplication below would wrap as an
-      // uint64_t, we still do the right thing.
-      if ((CS->getValue().zext(128) * APInt(128, TS.getFixedValue()))
-              .ugt(MaxSize))
+      std::optional<TypeSize> AllocSize = AI->getAllocationSize(DL);
+      if (!AllocSize || AllocSize->isScalable() ||
+          AllocSize->getFixedValue() > MaxSize)
         return false;
       continue;
     }
@@ -895,7 +884,7 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
       if (!GV->hasDefinitiveInitializer() || !GV->isConstant())
         return false;
 
-      uint64_t InitSize = DL.getTypeAllocSize(GV->getValueType());
+      uint64_t InitSize = GV->getGlobalSize(DL);
       if (InitSize > MaxSize)
         return false;
       continue;
@@ -1138,19 +1127,35 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
     // but it would not be valid if we transformed it to load from null
     // unconditionally.
     //
-    if (SelectInst *SI = dyn_cast<SelectInst>(Op)) {
+
+    AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(Op);
+    Value *SelectOp = Op;
+    if (ASC && ASC->getOperand(0)->hasOneUse())
+      SelectOp = ASC->getOperand(0);
+    if (SelectInst *SI = dyn_cast<SelectInst>(SelectOp)) {
       // load (select (Cond, &V1, &V2))  --> select(Cond, load &V1, load &V2).
+      // or
+      // load (addrspacecast(select (Cond, &V1, &V2))) -->
+      //  select(Cond, load (addrspacecast(&V1)), load (addrspacecast(&V2))).
       Align Alignment = LI.getAlign();
       if (isSafeToLoadUnconditionally(SI->getOperand(1), LI.getType(),
                                       Alignment, DL, SI) &&
           isSafeToLoadUnconditionally(SI->getOperand(2), LI.getType(),
                                       Alignment, DL, SI)) {
-        LoadInst *V1 =
-            Builder.CreateLoad(LI.getType(), SI->getOperand(1),
-                               SI->getOperand(1)->getName() + ".val");
-        LoadInst *V2 =
-            Builder.CreateLoad(LI.getType(), SI->getOperand(2),
-                               SI->getOperand(2)->getName() + ".val");
+
+        auto MaybeCastedLoadOperand = [&](Value *Op) {
+          if (ASC)
+            return Builder.CreateAddrSpaceCast(Op, ASC->getType(),
+                                               Op->getName() + ".cast");
+          return Op;
+        };
+        Value *LoadOp1 = MaybeCastedLoadOperand(SI->getOperand(1));
+        LoadInst *V1 = Builder.CreateLoad(LI.getType(), LoadOp1,
+                                          LoadOp1->getName() + ".val");
+
+        Value *LoadOp2 = MaybeCastedLoadOperand(SI->getOperand(2));
+        LoadInst *V2 = Builder.CreateLoad(LI.getType(), LoadOp2,
+                                          LoadOp2->getName() + ".val");
         assert(LI.isUnordered() && "implied by above");
         V1->setAlignment(Alignment);
         V1->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
@@ -1160,7 +1165,8 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         // poison-generating metadata.
         V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
         V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
-        return SelectInst::Create(SI->getCondition(), V1, V2);
+        return SelectInst::Create(SI->getCondition(), V1, V2, "", nullptr,
+                                  ProfcheckDisableMetadataFixes ? nullptr : SI);
       }
     }
   }

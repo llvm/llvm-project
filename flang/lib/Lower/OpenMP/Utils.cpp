@@ -31,6 +31,7 @@
 #include <flang/Semantics/tools.h>
 #include <flang/Semantics/type.h>
 #include <flang/Utils/OpenMP.h>
+#include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/CommandLine.h>
@@ -189,7 +190,7 @@ bool requiresImplicitDefaultDeclareMapper(
 
     semantics::DirectComponentIterator directComponents{spec};
     for (const semantics::Symbol &component : directComponents) {
-      if (semantics::IsAllocatableOrPointer(component))
+      if (component.attrs().test(semantics::Attr::ALLOCATABLE))
         return true;
 
       if (const semantics::DeclTypeSpec *declType = component.GetType())
@@ -255,9 +256,10 @@ getIterationVariableSymbol(const lower::pft::Evaluation &eval) {
         if (const auto &maybeCtrl = doLoop.GetLoopControl()) {
           using LoopControl = parser::LoopControl;
           if (auto *bounds = std::get_if<LoopControl::Bounds>(&maybeCtrl->u)) {
-            static_assert(std::is_same_v<decltype(bounds->name),
-                                         parser::Scalar<parser::Name>>);
-            return bounds->name.thing.symbol;
+            using NameType = llvm::remove_cvref_t<decltype(bounds->Name())>;
+            static_assert(
+                std::is_same_v<NameType, parser::Scalar<parser::Name>>);
+            return bounds->Name().thing.symbol;
           }
         }
         return static_cast<semantics::Symbol *>(nullptr);
@@ -796,6 +798,28 @@ static void processTileSizesFromOpenMPConstruct(
   }
 }
 
+pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
+  for (pft::Evaluation &nested : eval.getNestedEvaluations()) {
+    // In an OpenMPConstruct there can be compiler directives:
+    // 1 <<OpenMPConstruct>>
+    //     2 CompilerDirective: !unroll
+    //     <<DoConstruct>> -> 8
+    if (nested.getIf<parser::CompilerDirective>())
+      continue;
+    // Within a DoConstruct, there can be compiler directives, plus
+    // there is a DoStmt before the body:
+    // <<DoConstruct>> -> 8
+    //     3 NonLabelDoStmt -> 7: do i = 1, n
+    //     <<DoConstruct>> -> 7
+    if (nested.getIf<parser::NonLabelDoStmt>())
+      continue;
+    assert(nested.getIf<parser::DoConstruct>() &&
+           "Unexpected construct in the nested evaluations");
+    return &nested;
+  }
+  llvm_unreachable("Expected do loop to be in the nested evaluations");
+}
+
 /// Populates the sizes vector with values if the given OpenMPConstruct
 /// contains a loop construct with an inner tiling construct.
 void collectTileSizesFromOpenMPConstruct(
@@ -818,7 +842,7 @@ int64_t collectLoopRelatedInfo(
   int64_t numCollapse = 1;
 
   // Collect the loops to collapse.
-  lower::pft::Evaluation *doConstructEval = &eval.getFirstNestedEvaluation();
+  lower::pft::Evaluation *doConstructEval = getNestedDoConstruct(eval);
   if (doConstructEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
     TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
   }
@@ -844,7 +868,7 @@ void collectLoopRelatedInfo(
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   // Collect the loops to collapse.
-  lower::pft::Evaluation *doConstructEval = &eval.getFirstNestedEvaluation();
+  lower::pft::Evaluation *doConstructEval = getNestedDoConstruct(eval);
   if (doConstructEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
     TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
   }
@@ -872,22 +896,21 @@ void collectLoopRelatedInfo(
     assert(bounds && "Expected bounds for worksharing do loop");
     lower::StatementContext stmtCtx;
     result.loopLowerBounds.push_back(fir::getBase(
-        converter.genExprValue(*semantics::GetExpr(bounds->lower), stmtCtx)));
+        converter.genExprValue(*semantics::GetExpr(bounds->Lower()), stmtCtx)));
     result.loopUpperBounds.push_back(fir::getBase(
-        converter.genExprValue(*semantics::GetExpr(bounds->upper), stmtCtx)));
-    if (bounds->step) {
+        converter.genExprValue(*semantics::GetExpr(bounds->Upper()), stmtCtx)));
+    if (auto &step = bounds->Step()) {
       result.loopSteps.push_back(fir::getBase(
-          converter.genExprValue(*semantics::GetExpr(bounds->step), stmtCtx)));
+          converter.genExprValue(*semantics::GetExpr(step), stmtCtx)));
     } else { // If `step` is not present, assume it as `1`.
       result.loopSteps.push_back(firOpBuilder.createIntegerConstant(
           currentLocation, firOpBuilder.getIntegerType(32), 1));
     }
-    iv.push_back(bounds->name.thing.symbol);
-    loopVarTypeSize = std::max(loopVarTypeSize,
-                               bounds->name.thing.symbol->GetUltimate().size());
-    collapseValue--;
-    doConstructEval =
-        &*std::next(doConstructEval->getNestedEvaluations().begin());
+    iv.push_back(bounds->Name().thing.symbol);
+    loopVarTypeSize = std::max(
+        loopVarTypeSize, bounds->Name().thing.symbol->GetUltimate().size());
+    if (--collapseValue)
+      doConstructEval = getNestedDoConstruct(*doConstructEval);
   } while (collapseValue > 0);
 
   convertLoopBounds(converter, currentLocation, result, loopVarTypeSize);

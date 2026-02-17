@@ -1448,7 +1448,7 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
     return;
   }
 
-  auto _ = llvm::make_scope_exit([&] {
+  llvm::scope_exit _([&] {
     // If we still have an octal value but we did not see an octal prefix,
     // diagnose as being an obsolescent feature starting in C2y.
     if (radix == 8 && LangOpts.C2y && !hadError && !IsSingleZero)

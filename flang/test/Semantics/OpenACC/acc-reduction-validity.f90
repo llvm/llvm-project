@@ -171,14 +171,14 @@ program openacc_reduction_validity
 
   !ERROR: No explicit type declared for 'xyz'
   !$acc parallel reduction(+:xyz)
-  !$acc end parallel  
+  !$acc end parallel
 
 
 end program
 
 subroutine sum()
   !ERROR: 'sum' is already declared in this scoping unit
-  integer :: i,sum 
+  integer :: i,sum
   sum = 0
   !$acc parallel
   !ERROR: Only variables are allowed in data clauses on the LOOP directive

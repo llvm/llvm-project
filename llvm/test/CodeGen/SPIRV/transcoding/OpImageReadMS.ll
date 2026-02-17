@@ -11,7 +11,7 @@
 
 ; CHECK-SPIRV: %[[#]] = OpImageRead %[[#]] %[[#]] %[[#]] Sample %[[#]]
 
-define spir_kernel void @sample_test(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0) %source, i32 %sampler, <4 x float> addrspace(1)* nocapture %results) {
+define spir_kernel void @sample_test(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0) %source, i32 %sampler, ptr addrspace(1) nocapture %results) {
 entry:
   %call = tail call spir_func i32 @_Z13get_global_idj(i32 0)
   %call1 = tail call spir_func i32 @_Z13get_global_idj(i32 1)
@@ -33,8 +33,8 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %tmp19 = mul i32 %tmp, %call2
   %add7 = add i32 %tmp19, %call
   %call9 = tail call spir_func <4 x float> @_Z11read_imagef19ocl_image2d_msaa_roDv2_ii(target("spirv.Image", void, 1, 0, 0, 1, 0, 0, 0) %source, <2 x i32> %vecinit8, i32 %sample.021)
-  %arrayidx = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %results, i32 %add7
-  store <4 x float> %call9, <4 x float> addrspace(1)* %arrayidx, align 16
+  %arrayidx = getelementptr inbounds <4 x float>, ptr addrspace(1) %results, i32 %add7
+  store <4 x float> %call9, ptr addrspace(1) %arrayidx, align 16
   %inc = add nuw i32 %sample.021, 1
   %cmp = icmp ult i32 %inc, %call4
   br i1 %cmp, label %for.body, label %for.end.loopexit

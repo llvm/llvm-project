@@ -34,6 +34,8 @@ class ThreadSpec {
 public:
   ThreadSpec();
 
+  ThreadSpec(Thread &thread);
+
   static std::unique_ptr<ThreadSpec>
   CreateFromStructuredData(const StructuredData::Dictionary &data_dict,
                            Status &error);

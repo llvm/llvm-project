@@ -22,6 +22,23 @@ using namespace llvm;
 
 namespace {
 
+TEST(ValueTest, setNameShrink) {
+  LLVMContext C;
+
+  const char *ModuleString = "define void @f1() {\n"
+                             "bb0:\n"
+                             "  ret void\n"
+                             "}\n";
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(ModuleString, Err, C);
+
+  Function *F = M->getFunction("f1");
+  StringRef FName = F->getName();
+  FName = FName.drop_back();
+  F->setName(FName);
+  EXPECT_EQ(F->getName(), "f");
+}
+
 TEST(ValueTest, UsedInBasicBlock) {
   LLVMContext C;
 

@@ -718,6 +718,123 @@ define i64 @test_pr128441_commuted4_negative(i64 %x, i64 %y) {
   ret i64 %sel
 }
 
+define i32 @test_ctlz_sub_zero_not_poison(i32 %arg) {
+; CHECK-LABEL: @test_ctlz_sub_zero_not_poison(
+; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[ARG:%.*]], i1 false)
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTZ]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %cmp = icmp eq i32 %arg, 0
+  %ctz = call i32 @llvm.ctlz.i32(i32 %arg, i1 false)
+  %sub = sub nuw nsw i32 32, %ctz
+  %sel = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %sel
+}
+
+define i32 @test_ctlz_sub_zero_poison(i32 %arg) {
+; CHECK-LABEL: @test_ctlz_sub_zero_poison(
+; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[ARG:%.*]], i1 false)
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTZ]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %cmp = icmp eq i32 %arg, 0
+  %ctz = call i32 @llvm.ctlz.i32(i32 %arg, i1 true)
+  %sub = sub nuw nsw i32 32, %ctz
+  %sel = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %sel
+}
+
+define i32 @test_ctlz_sub_wrong_const(i32 %arg) {
+; CHECK-LABEL: @test_ctlz_sub_wrong_const(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[ARG]], i1 true)
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTZ]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[SUB]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %arg, 0
+  %ctz = call i32 @llvm.ctlz.i32(i32 %arg, i1 true)
+  %sub = sub nuw nsw i32 32, %ctz
+  %sel = select i1 %cmp, i32 1, i32 %sub
+  ret i32 %sel
+}
+
+define i32 @test_cttz_sub_zero_not_poison(i32 %arg) {
+; CHECK-LABEL: @test_cttz_sub_zero_not_poison(
+; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ARG:%.*]], i1 false)
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTZ]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %cmp = icmp eq i32 %arg, 0
+  %ctz = call i32 @llvm.cttz.i32(i32 %arg, i1 false)
+  %sub = sub nuw nsw i32 32, %ctz
+  %sel = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %sel
+}
+
+define i32 @test_cttz_sub_zero_poison(i32 %arg) {
+; CHECK-LABEL: @test_cttz_sub_zero_poison(
+; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ARG:%.*]], i1 false)
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTZ]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %cmp = icmp eq i32 %arg, 0
+  %ctz = call i32 @llvm.cttz.i32(i32 %arg, i1 true)
+  %sub = sub nuw nsw i32 32, %ctz
+  %sel = select i1 %cmp, i32 0, i32 %sub
+  ret i32 %sel
+}
+
+define i32 @test_cttz_sub_zero_poison_wrong_const(i32 %arg) {
+; CHECK-LABEL: @test_cttz_sub_zero_poison_wrong_const(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTZ]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[SUB]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %arg, 0
+  %ctz = call i32 @llvm.cttz.i32(i32 %arg, i1 true)
+  %sub = sub nuw nsw i32 32, %ctz
+  %sel = select i1 %cmp, i32 1, i32 %sub
+  ret i32 %sel
+}
+
+define i32 @test_abs_int_min_not_poison(i32 %arg) {
+; CHECK-LABEL: @test_abs_int_min_not_poison(
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[ARG:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[ABS]]
+;
+  %cmp = icmp eq i32 %arg, u0x80000000
+  %abs = call i32 @llvm.abs.i32(i32 %arg, i1 false)
+  %sel = select i1 %cmp, i32 u0x80000000, i32 %abs
+  ret i32 %sel
+}
+
+define i32 @test_abs_int_min_poison(i32 %arg) {
+; CHECK-LABEL: @test_abs_int_min_poison(
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[ARG:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %arg, u0x80000000
+  %abs = call i32 @llvm.abs.i32(i32 %arg, i1 true)
+  %sel = select i1 %cmp, i32 u0x80000000, i32 %abs
+  ret i32 %sel
+}
+
+define i32 @test_abs_int_min_poison_wrong_const(i32 %arg) {
+; CHECK-LABEL: @test_abs_int_min_poison_wrong_const(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], -2147483648
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[ARG]], i1 true)
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1879048192, i32 [[ABS]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %arg, u0x80000000
+  %abs = call i32 @llvm.abs.i32(i32 %arg, i1 true)
+  %sel = select i1 %cmp, i32 u0x70000000, i32 %abs
+  ret i32 %sel
+}
+
 declare i16 @llvm.ctlz.i16(i16, i1)
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare i64 @llvm.ctlz.i64(i64, i1)

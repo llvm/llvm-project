@@ -335,7 +335,7 @@ def testIfWithElse():
 
     @func.FuncOp.from_py_func(bool)
     def simple_if_else(cond):
-        if_op = scf.IfOp(cond, [i32, i32], hasElse=True)
+        if_op = scf.IfOp(cond, [i32, i32], has_else=True)
         with InsertionPoint(if_op.then_block):
             x_true = arith.ConstantOp(i32, 0)
             y_true = arith.ConstantOp(i32, 1)

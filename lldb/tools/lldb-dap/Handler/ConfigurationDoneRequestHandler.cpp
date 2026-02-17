@@ -9,7 +9,6 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "LLDBUtils.h"
-#include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "ProtocolUtils.h"
 #include "RequestHandler.h"
@@ -50,6 +49,8 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   /// lldb-dap specific editor extension.
   SendExtraCapabilities(dap);
 
+  PrintIntroductionMessage();
+
   // Clients can request a baseline of currently existing threads after
   // we acknowledge the configurationDone request.
   // Client requests the baseline of currently existing threads after
@@ -64,6 +65,15 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
     return SendThreadStoppedEvent(dap, /*on_entry=*/true);
 
   return ToError(process.Continue());
+}
+
+void ConfigurationDoneRequestHandler::PostRun() const {
+  if (!dap.on_configuration_done)
+    return;
+
+  dap.on_configuration_done();
+  // Clear the callback to ensure any captured resources are released.
+  dap.on_configuration_done = nullptr;
 }
 
 } // namespace lldb_dap

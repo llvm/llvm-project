@@ -1556,3 +1556,40 @@ for.cond.cleanup:                                 ; preds = %for.cond32.preheade
   %call49 = call fastcc ptr null(ptr %B, ptr %M, ptr null, ptr %P)
   ret ptr null
 }
+
+declare i32 @llvm.loongarch.lsx.bnz.v(<16 x i8>)
+
+define i1 @test22() {
+; CHECK-LABEL: test22:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.b $vr0, 0
+; CHECK-NEXT:    vsetnez.v $fcc0, $vr0
+; CHECK-NEXT:    bcnez $fcc0, .LBB25_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    addi.w $a0, $zero, 0
+; CHECK-NEXT:    sltui $a0, $a0, 1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB25_2: # %entry
+; CHECK-NEXT:    addi.w $a0, $zero, 1
+; CHECK-NEXT:    sltui $a0, $a0, 1
+; CHECK-NEXT:    ret
+;
+; NORMV-LABEL: test22:
+; NORMV:       # %bb.0: # %entry
+; NORMV-NEXT:    vrepli.b $vr0, 0
+; NORMV-NEXT:    vsetnez.v $fcc0, $vr0
+; NORMV-NEXT:    bcnez $fcc0, .LBB25_2
+; NORMV-NEXT:  # %bb.1: # %entry
+; NORMV-NEXT:    addi.d $a0, $zero, 0
+; NORMV-NEXT:    b .LBB25_3
+; NORMV-NEXT:  .LBB25_2: # %entry
+; NORMV-NEXT:    addi.d $a0, $zero, 1
+; NORMV-NEXT:  .LBB25_3: # %entry
+; NORMV-NEXT:    addi.w $a0, $a0, 0
+; NORMV-NEXT:    sltui $a0, $a0, 1
+; NORMV-NEXT:    ret
+entry:
+  %0 = tail call i32 @llvm.loongarch.lsx.bnz.v(<16 x i8> zeroinitializer)
+  %1 = icmp eq i32 %0, 0
+  ret i1 %1
+}

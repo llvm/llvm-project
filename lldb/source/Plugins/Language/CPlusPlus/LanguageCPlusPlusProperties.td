@@ -1,6 +1,6 @@
 include "../../../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "language_cplusplus" in {
+let Definition = "language_cplusplus", Path = "plugin.cplusplus.display" in {
   def FunctionNameFormat: Property<"function-name-format", "FormatEntity">,
     Global,
     DefaultStringValue<"${function.return-left}${function.scope}${ansi.fg.yellow}${function.basename}${ansi.normal}${function.template-arguments}${function.formatted-arguments}${function.return-right}${function.qualifiers}${function.suffix}">,

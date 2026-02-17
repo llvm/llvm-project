@@ -217,7 +217,7 @@ LogicalResult PatternApplicator::matchAndRewrite(
                 std::make_unique<RewriterBase::PatternLoggingListener>(
                     oldListener, pattern->getDebugName());
             rewriter.setListener(loggingListener.get());
-            auto resetListenerCallback = llvm::make_scope_exit(
+            llvm::scope_exit resetListenerCallback(
                 [&] { rewriter.setListener(oldListener); });
 #endif
             result = pattern->matchAndRewrite(op, rewriter);

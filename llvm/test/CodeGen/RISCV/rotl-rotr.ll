@@ -1436,7 +1436,6 @@ define signext i32 @rotl_32_mask_shared(i32 signext %a, i32 signext %b, i32 sign
   %3 = add i32 %1, %2
   ret i32 %3
 }
-declare i32 @llvm.fshl.i32(i32, i32, i32)
 
 define signext i64 @rotl_64_mask_shared(i64 signext %a, i64 signext %b, i64 signext %amt) nounwind {
 ; RV32I-LABEL: rotl_64_mask_shared:
@@ -1602,7 +1601,6 @@ define signext i64 @rotl_64_mask_shared(i64 signext %a, i64 signext %b, i64 sign
   %3 = add i64 %1, %2
   ret i64 %3
 }
-declare i64 @llvm.fshl.i64(i64, i64, i64)
 
 define signext i32 @rotr_32_mask_shared(i32 signext %a, i32 signext %b, i32 signext %amt) nounwind {
 ; RV32I-LABEL: rotr_32_mask_shared:
@@ -1664,7 +1662,6 @@ define signext i32 @rotr_32_mask_shared(i32 signext %a, i32 signext %b, i32 sign
   %3 = add i32 %1, %2
   ret i32 %3
 }
-declare i32 @llvm.fshr.i32(i32, i32, i32)
 
 define signext i64 @rotr_64_mask_shared(i64 signext %a, i64 signext %b, i64 signext %amt) nounwind {
 ; RV32I-LABEL: rotr_64_mask_shared:
@@ -1828,7 +1825,6 @@ define signext i64 @rotr_64_mask_shared(i64 signext %a, i64 signext %b, i64 sign
   %3 = add i64 %1, %2
   ret i64 %3
 }
-declare i64 @llvm.fshr.i64(i64, i64, i64)
 
 define signext i32 @rotl_32_mask_multiple(i32 signext %a, i32 signext %b, i32 signext %amt) nounwind {
 ; RV32I-LABEL: rotl_32_mask_multiple:

@@ -1,8 +1,8 @@
-# RUN: not --crash llc -verify-machineinstrs -mtriple=arm64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            g_step_vector
+name: g_step_vector
 body: |
   bb.0:
 
@@ -24,6 +24,4 @@ body: |
   %6:_(<vscale x 2 x s33>) = G_STEP_VECTOR i32 56
 
   %7:_(<vscale x 2 x s128>) = G_STEP_VECTOR i128 79
-
 ...
-

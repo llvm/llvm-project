@@ -4,12 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -target-abi=lp64 \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-declare <vscale x 1 x i32> @llvm.vp.sext.nxv1i32.nxv1i16(<vscale x 1 x i16>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x i32> @llvm.vp.zext.nxv1i32.nxv1i16(<vscale x 1 x i16>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x i32> @llvm.vp.mul.nxv1i32(<vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x i32> @llvm.vp.add.nxv1i32(<vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i1>, i32)
-declare <vscale x 1 x i32> @llvm.vp.merge.nxv1i32(<vscale x 1 x i1>, <vscale x 1 x i32>, <vscale x 1 x i32>, i32)
-
 define <vscale x 1 x i32> @vwmacc_vv_nxv1i32_unmasked_tu(<vscale x 1 x i16> %a,
 ; CHECK-LABEL: vwmacc_vv_nxv1i32_unmasked_tu:
 ; CHECK:       # %bb.0:

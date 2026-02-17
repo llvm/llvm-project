@@ -340,18 +340,16 @@ define amdgpu_ps void @load_to_lds_p7_dword_volatile(ptr addrspace(7) inreg %gpt
 define amdgpu_ps void @load_to_lds_p7_dword_nontemporal(ptr addrspace(7) inreg %gptr, i32 %off, ptr addrspace(3) inreg %lptr) {
 ; GFX90A-LABEL: load_to_lds_p7_dword_nontemporal:
 ; GFX90A:       ; %bb.0:
-; GFX90A-NEXT:    v_add_u32_e32 v0, s4, v0
 ; GFX90A-NEXT:    s_mov_b32 m0, s5
-; GFX90A-NEXT:    s_nop 0
+; GFX90A-NEXT:    v_add_u32_e32 v0, s4, v0
 ; GFX90A-NEXT:    buffer_load_dword v0, s[0:3], 0 offen glc slc lds
 ; GFX90A-NEXT:    buffer_load_dword v0, s[0:3], 0 offen offset:512 lds
 ; GFX90A-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: load_to_lds_p7_dword_nontemporal:
 ; GFX942:       ; %bb.0:
-; GFX942-NEXT:    v_add_u32_e32 v0, s4, v0
 ; GFX942-NEXT:    s_mov_b32 m0, s5
-; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_add_u32_e32 v0, s4, v0
 ; GFX942-NEXT:    buffer_load_dword v0, s[0:3], 0 offen nt lds
 ; GFX942-NEXT:    buffer_load_dword v0, s[0:3], 0 offen offset:512 lds
 ; GFX942-NEXT:    s_endpgm

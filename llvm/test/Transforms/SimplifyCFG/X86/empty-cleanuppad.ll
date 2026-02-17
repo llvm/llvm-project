@@ -318,7 +318,7 @@ define i32 @f7() personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    invoke void @g()
 ; CHECK-NEXT:            to label [[RETURN:%.*]] unwind label [[CATCH_DISPATCH]]
 ; CHECK:       catch.dispatch:
-; CHECK-NEXT:    [[STATE_1:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 3, [[INVOKE_CONT_1]] ], [ 2, [[INVOKE_CONT]] ]
+; CHECK-NEXT:    [[STATE_1:%.*]] = phi i32 [ 2, [[INVOKE_CONT]] ], [ 1, [[ENTRY:%.*]] ], [ 3, [[INVOKE_CONT_1]] ]
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch] unwind to caller
 ; CHECK:       catch:
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchpad within [[CS1]] [ptr null, i32 64, ptr null]

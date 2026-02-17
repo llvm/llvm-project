@@ -30,7 +30,6 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/ThreadPool.h"
 
 #include <cstddef>
 #include <memory>
@@ -714,6 +713,10 @@ MlirValue mlirOperationGetOperand(MlirOperation op, intptr_t pos) {
   return wrap(unwrap(op)->getOperand(static_cast<unsigned>(pos)));
 }
 
+MlirOpOperand mlirOperationGetOpOperand(MlirOperation op, intptr_t pos) {
+  return wrap(&unwrap(op)->getOpOperand(static_cast<unsigned>(pos)));
+}
+
 void mlirOperationSetOperand(MlirOperation op, intptr_t pos,
                              MlirValue newValue) {
   unwrap(op)->setOperand(static_cast<unsigned>(pos), unwrap(newValue));
@@ -835,7 +838,8 @@ void mlirOperationPrintWithState(MlirOperation op, MlirAsmState state,
   detail::CallbackOstream stream(callback, userData);
   if (state.ptr)
     unwrap(op)->print(stream, *unwrap(state));
-  unwrap(op)->print(stream);
+  else
+    unwrap(op)->print(stream);
 }
 
 void mlirOperationWriteBytecode(MlirOperation op, MlirStringCallback callback,
@@ -900,6 +904,11 @@ void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
           return unwrap(callback(wrap(op), userData));
         });
   }
+}
+
+void mlirOperationReplaceUsesOfWith(MlirOperation op, MlirValue oldValue,
+                                    MlirValue newValue) {
+  unwrap(op)->replaceUsesOfWith(unwrap(oldValue), unwrap(newValue));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1127,6 +1136,11 @@ intptr_t mlirBlockArgumentGetArgNumber(MlirValue value) {
 void mlirBlockArgumentSetType(MlirValue value, MlirType type) {
   if (auto blockArg = llvm::dyn_cast<BlockArgument>(unwrap(value)))
     blockArg.setType(unwrap(type));
+}
+
+void mlirBlockArgumentSetLocation(MlirValue value, MlirLocation loc) {
+  if (auto blockArg = llvm::dyn_cast<BlockArgument>(unwrap(value)))
+    blockArg.setLoc(unwrap(loc));
 }
 
 MlirOperation mlirOpResultGetOwner(MlirValue value) {
