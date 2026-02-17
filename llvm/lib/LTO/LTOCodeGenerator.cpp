@@ -394,7 +394,7 @@ bool LTOCodeGenerator::determineTarget() {
   if (Config.CPU.empty())
     Config.CPU = lto::getThinLTODefaultCPU(MergedModule->getTargetTriple());
 
-  Config.InitTargetOptions = [](const Triple& TT) {
+  Config.InitTargetOptions = [](const Triple &TT) {
     TargetOptions TO = codegen::InitTargetOptionsFromCodeGenFlags(TT);
     // If data-sections is not explicitly set or unset, set data-sections by
     // default to match the behaviour of lld and gold plugin.

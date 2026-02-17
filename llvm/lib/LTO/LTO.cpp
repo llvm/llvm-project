@@ -2468,10 +2468,9 @@ public:
   void buildCommonRemoteCompilerOptions() {
     const lto::Config &C = Conf;
     auto &Ops = CodegenOptions;
-
     Ops.push_back(Saver.save("-O" + Twine(C.OptLevel)));
-    TargetOptions TO = C.InitTargetOptions(Triple);
 
+    TargetOptions TO = C.InitTargetOptions(Triple);
     if (TO.EmitAddrsig)
       Ops.push_back("-faddrsig");
     if (TO.FunctionSections)
