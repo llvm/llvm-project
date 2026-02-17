@@ -1623,27 +1623,29 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
 }
 
 /// Reassociate (headermask && x) && y -> headermask && (x && y) to allow the
-/// header mask to be simplified further, e.g. in optimizeEVLMasks.
+/// header mask to be simplified further when tail folding, e.g. in
+/// optimizeEVLMasks.
 static void reassociateHeaderMask(VPlan &Plan) {
   VPValue *HeaderMask = vputils::findHeaderMask(Plan);
   if (!HeaderMask)
     return;
-  SmallVector<VPUser *> Worklist(HeaderMask->users());
+
+  SmallVector<VPUser *> Worklist;
+  for (VPUser *U : HeaderMask->users())
+    if (match(U, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue())))
+      append_range(Worklist, cast<VPSingleDefRecipe>(U)->users());
+
   while (!Worklist.empty()) {
     auto *R = dyn_cast<VPSingleDefRecipe>(Worklist.pop_back_val());
-    if (!R)
-      continue;
     VPValue *X, *Y;
-    if (match(R, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue())))
-      Worklist.append(R->user_begin(), R->user_end());
-    else if (match(R, m_LogicalAnd(
-                          m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
-                          m_VPValue(Y)))) {
-      VPBuilder Builder(R);
-      Worklist.append(R->user_begin(), R->user_end());
-      R->replaceAllUsesWith(
-          Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
-    }
+    if (!R || !match(R, m_LogicalAnd(
+                            m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(X)),
+                            m_VPValue(Y))))
+      continue;
+    append_range(Worklist, R->users());
+    VPBuilder Builder(R);
+    R->replaceAllUsesWith(
+        Builder.createLogicalAnd(HeaderMask, Builder.createLogicalAnd(X, Y)));
   }
 }
 
@@ -5067,10 +5069,6 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
   VPValue &VF = Plan.getVF();
   VPValue &VFxUF = Plan.getVFxUF();
-  // Note that after the transform, Plan.getVF and Plan.getVFxUF should not be
-  // used.
-  // TODO: Assert that they aren't used.
-
   VPValue *UF =
       Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getConcreteUF()));
   Plan.getUF().replaceAllUsesWith(UF);
@@ -5097,6 +5095,10 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VPValue *MulByUF = Builder.createOverflowingOp(
       Instruction::Mul, {RuntimeVF, UF}, {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
+
+  assert(Plan.getVF().getNumUsers() == 0 && Plan.getUF().getNumUsers() == 0 &&
+         Plan.getVFxUF().getNumUsers() == 0 &&
+         "VF, UF, and VFxUF not expected to be used");
 }
 
 DenseMap<const SCEV *, Value *>

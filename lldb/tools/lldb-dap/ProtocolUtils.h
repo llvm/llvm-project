@@ -144,7 +144,7 @@ std::string ConvertDebugInfoSizeToString(uint64_t debug_size);
 /// \return
 ///     A Variable representing the given value.
 protocol::Variable
-CreateVariable(lldb::SBValue v, int64_t var_ref, bool format_hex,
+CreateVariable(lldb::SBValue v, var_ref_t var_ref, bool format_hex,
                bool auto_variable_summaries, bool synthetic_child_debugging,
                bool is_name_duplicated,
                std::optional<llvm::StringRef> custom_name = {});

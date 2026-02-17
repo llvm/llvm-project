@@ -23,9 +23,9 @@ define void @foo(i1 %cmp) {
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       inner.header.split1:
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [1000 x [1000 x i32]], ptr @global, i64 0, i64 [[INNER_IV]], i64 [[OUTER_IV]]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = mul i32 [[LV]], 100
-; CHECK-NEXT:    store i32 [[V]], ptr [[PTR]]
+; CHECK-NEXT:    store i32 [[V]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[INNER_IV_NEXT:%.*]] = add nsw i64 [[INNER_IV]], 1
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[INNER_IV_NEXT]], 1000
 ; CHECK-NEXT:    br label [[OUTER_LATCH]]
@@ -93,9 +93,9 @@ define void @foo1(i1 %cmp) {
 ; CHECK-NEXT:    br label [[OUTER_HEADER_PREHEADER]]
 ; CHECK:       inner.header.split1:
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [1000 x [1000 x i32]], ptr @global, i64 0, i64 [[INNER_IV]], i64 [[OUTER_IV]]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = mul i32 [[LV]], 100
-; CHECK-NEXT:    store i32 [[V]], ptr [[PTR]]
+; CHECK-NEXT:    store i32 [[V]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[INNER_IV_NEXT:%.*]] = add nsw i64 [[INNER_IV]], 1
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[INNER_IV_NEXT]], 1000
 ; CHECK-NEXT:    br label [[OUTER_LATCH]]
