@@ -75,6 +75,8 @@ struct LoweringPreparePass
   void lowerComplexMulOp(cir::ComplexMulOp op);
   void lowerUnaryOp(cir::UnaryOp op);
   void lowerGlobalOp(cir::GlobalOp op);
+  void lowerThreeWayCmpOp(cir::CmpThreeWayOp op);
+  void lowerDynamicCastOp(cir::DynamicCastOp op);
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
   void lowerTrivialCopyCall(cir::CallOp op);
@@ -1280,6 +1282,46 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
   assert(!cir::MissingFeatures::opGlobalAnnotations());
 }
 
+void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
+  CIRBaseBuilderTy builder(getContext());
+  builder.setInsertionPointAfter(op);
+
+  mlir::Location loc = op->getLoc();
+  cir::CmpThreeWayInfoAttr cmpInfo = op.getInfo();
+
+  mlir::Value ltRes =
+      builder.getConstantInt(loc, op.getType(), cmpInfo.getLt());
+  mlir::Value eqRes =
+      builder.getConstantInt(loc, op.getType(), cmpInfo.getEq());
+  mlir::Value gtRes =
+      builder.getConstantInt(loc, op.getType(), cmpInfo.getGt());
+
+  mlir::Value lt =
+      builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
+  mlir::Value eq =
+      builder.createCompare(loc, CmpOpKind::eq, op.getLhs(), op.getRhs());
+
+  mlir::Value transformedResult;
+  if (cmpInfo.getOrdering() != CmpOrdering::Partial) {
+    // Total ordering
+    mlir::Value selectOnEq = builder.createSelect(loc, eq, eqRes, gtRes);
+    transformedResult = builder.createSelect(loc, lt, ltRes, selectOnEq);
+  } else {
+    // Partial ordering
+    cir::ConstantOp unorderedRes = builder.getConstantInt(
+        loc, op.getType(), cmpInfo.getUnordered().value());
+
+    mlir::Value gt =
+        builder.createCompare(loc, CmpOpKind::gt, op.getLhs(), op.getRhs());
+    mlir::Value selectOnEq = builder.createSelect(loc, eq, eqRes, unorderedRes);
+    mlir::Value selectOnGt = builder.createSelect(loc, gt, gtRes, selectOnEq);
+    transformedResult = builder.createSelect(loc, lt, ltRes, selectOnGt);
+  }
+
+  op.replaceAllUsesWith(transformedResult);
+  op.erase();
+}
+
 template <typename AttributeTy>
 static llvm::SmallVector<mlir::Attribute>
 prepareCtorDtorAttrList(mlir::MLIRContext *context,
@@ -1500,6 +1542,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
       globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());
     else if (auto globalDtor = fnOp.getGlobalDtorPriority())
       globalDtorList.emplace_back(fnOp.getName(), globalDtor.value());
+  } else if (auto threeWayCmp = dyn_cast<cir::CmpThreeWayOp>(op)) {
+    lowerThreeWayCmpOp(threeWayCmp);
   }
 }
 
@@ -1514,7 +1558,7 @@ void LoweringPreparePass::runOnOperation() {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
                   cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
-                  cir::UnaryOp>(op))
+                  cir::UnaryOp, cir::CmpThreeWayOp>(op))
       opsToTransform.push_back(op);
   });
 

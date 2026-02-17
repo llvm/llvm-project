@@ -13,6 +13,7 @@
 #include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
@@ -653,6 +654,40 @@ public:
 
   cir::StackRestoreOp createStackRestore(mlir::Location loc, mlir::Value v) {
     return cir::StackRestoreOp::create(*this, loc, v);
+  }
+
+  cir::CmpThreeWayOp createThreeWayCmpTotalOrdering(
+      mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+      const llvm::APSInt &ltRes, const llvm::APSInt &eqRes,
+      const llvm::APSInt &gtRes, cir::CmpOrdering ordering) {
+    assert(ltRes.getBitWidth() == eqRes.getBitWidth() &&
+           ltRes.getBitWidth() == gtRes.getBitWidth() &&
+           "the three comparison results must have the same bit width");
+    assert((ordering == cir::CmpOrdering::Strong ||
+            ordering == cir::CmpOrdering::Weak) &&
+           "total ordering must be strong or weak");
+    cir::IntType cmpResultTy = getSIntNTy(ltRes.getBitWidth());
+    auto infoAttr = cir::CmpThreeWayInfoAttr::get(
+        getContext(), ordering, ltRes.getSExtValue(), eqRes.getSExtValue(),
+        gtRes.getSExtValue());
+    return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
+                                      infoAttr);
+  }
+
+  cir::CmpThreeWayOp createThreeWayCmpPartialOrdering(
+      mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+      const llvm::APSInt &ltRes, const llvm::APSInt &eqRes,
+      const llvm::APSInt &gtRes, const llvm::APSInt &unorderedRes) {
+    assert(ltRes.getBitWidth() == eqRes.getBitWidth() &&
+           ltRes.getBitWidth() == gtRes.getBitWidth() &&
+           ltRes.getBitWidth() == unorderedRes.getBitWidth() &&
+           "the four comparison results must have the same bit width");
+    cir::IntType cmpResultTy = getSIntNTy(ltRes.getBitWidth());
+    auto infoAttr = cir::CmpThreeWayInfoAttr::get(
+        getContext(), ltRes.getSExtValue(), eqRes.getSExtValue(),
+        gtRes.getSExtValue(), unorderedRes.getSExtValue());
+    return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
+                                      infoAttr);
   }
 
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,

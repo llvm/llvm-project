@@ -250,6 +250,66 @@ LogicalResult FPAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// CmpThreeWayInfoAttr definitions
+//===----------------------------------------------------------------------===//
+
+std::string CmpThreeWayInfoAttr::getAlias() const {
+  std::string alias = "cmp3way_info";
+
+  switch (getOrdering()) {
+  case CmpOrdering::Strong:
+    alias.append("_strong_");
+    break;
+  case CmpOrdering::Weak:
+    alias.append("_weak_");
+    break;
+  case CmpOrdering::Partial:
+    alias.append("_partial_");
+    break;
+  }
+
+  auto appendInt = [&](int64_t value) {
+    if (value < 0) {
+      alias.push_back('n');
+      value = -value;
+    }
+    alias.append(std::to_string(value));
+  };
+
+  alias.append("lt");
+  appendInt(getLt());
+  alias.append("eq");
+  appendInt(getEq());
+  alias.append("gt");
+  appendInt(getGt());
+
+  if (std::optional<int> unordered = getUnordered()) {
+    alias.append("un");
+    appendInt(unordered.value());
+  }
+
+  return alias;
+}
+
+LogicalResult
+CmpThreeWayInfoAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                            CmpOrdering ordering, int64_t lt, int64_t eq,
+                            int64_t gt, std::optional<int64_t> unordered) {
+  // The presence of unordered must match the value of ordering.
+  if ((ordering == CmpOrdering::Strong || ordering == CmpOrdering::Weak) &&
+      unordered) {
+    emitError() << "strong and weak ordering do not include unordered";
+    return failure();
+  }
+  if (ordering == CmpOrdering::Partial && !unordered) {
+    emitError() << "partial ordering requires unordered value";
+    return failure();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr definitions
 //===----------------------------------------------------------------------===//
 
