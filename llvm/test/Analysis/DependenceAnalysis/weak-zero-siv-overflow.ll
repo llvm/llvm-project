@@ -21,15 +21,15 @@ define void @weakzero_dst_siv_prod_ovfl(ptr %A) {
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - consistent output [S]!
+; CHECK-ALL-NEXT:    da analyze - output [S]!
 ;
 ; CHECK-WEAK-ZERO-SIV-LABEL: 'weakzero_dst_siv_prod_ovfl'
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - none!
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - consistent output [S]!
+; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [S]!
 ;
 entry:
   br label %loop.header
@@ -79,15 +79,15 @@ define void @weakzero_dst_siv_delta_ovfl(ptr %A, i64 %n) {
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - consistent output [S]!
+; CHECK-ALL-NEXT:    da analyze - output [S]!
 ;
 ; CHECK-WEAK-ZERO-SIV-LABEL: 'weakzero_dst_siv_delta_ovfl'
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
-; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - none!
 ; CHECK-WEAK-ZERO-SIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - consistent output [S]!
+; CHECK-WEAK-ZERO-SIV-NEXT:    da analyze - output [S]!
 ;
 entry:
   %guard = icmp sgt i64 %n, 0

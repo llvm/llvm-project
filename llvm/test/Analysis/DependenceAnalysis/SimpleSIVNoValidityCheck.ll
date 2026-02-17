@@ -15,7 +15,7 @@ define void @t1(i32 signext %n, i32 signext %m, ptr %a) {
 ; CHECK-NEXT:  Src: %6 = load i32, ptr %arrayidx7, align 4 --> Dst: %6 = load i32, ptr %arrayidx7, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %6 = load i32, ptr %arrayidx7, align 4 --> Dst: store i32 %6, ptr %arrayidx11, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1 -2]!
+; CHECK-NEXT:    da analyze - anti [1 -2]!
 ; CHECK-NEXT:  Src: store i32 %6, ptr %arrayidx11, align 4 --> Dst: store i32 %6, ptr %arrayidx11, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;
@@ -80,7 +80,7 @@ define void @t2(i32 signext %n, i32 signext %m, ptr %a) {
 ; CHECK-NEXT:  Src: %21 = load i32, ptr %arrayidx28, align 4 --> Dst: %21 = load i32, ptr %arrayidx28, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %21 = load i32, ptr %arrayidx28, align 4 --> Dst: store i32 %21, ptr %arrayidx38, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1 -2 0 -3 2]!
+; CHECK-NEXT:    da analyze - anti [1 -2 0 -3 2]!
 ; CHECK-NEXT:  Src: store i32 %21, ptr %arrayidx38, align 4 --> Dst: store i32 %21, ptr %arrayidx38, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;

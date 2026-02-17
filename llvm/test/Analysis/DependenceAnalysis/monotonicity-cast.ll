@@ -14,7 +14,7 @@ define void @sext_nsw(ptr %a, i8 %start, i8 %step) {
 ; CHECK-NEXT:      Monotonicity: MultivariateSignedMonotonic
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Src: store i8 0, ptr %idx, align 1 --> Dst: store i8 0, ptr %idx, align 1
-; CHECK-NEXT:    da analyze - consistent output [0]!
+; CHECK-NEXT:    da analyze - output [0]!
 ; CHECK-NEXT:    Runtime Assumptions:
 ; CHECK-NEXT:    Compare predicate: (sext i8 %step to i64) ne) 0
 ;

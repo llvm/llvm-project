@@ -433,7 +433,7 @@ define void @symbolicrdiv6(ptr %A, ptr %B, i64 %n1, i64 %n2) nounwind uwtable ss
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: %0 = load i32, ptr %arrayidx4, align 4
-; CHECK-NEXT:    da analyze - consistent input [S S]!
+; CHECK-NEXT:    da analyze - input [S S]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx4, align 4 --> Dst: store i32 %0, ptr %B.addr.12, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %B.addr.12, align 4 --> Dst: store i32 %0, ptr %B.addr.12, align 4

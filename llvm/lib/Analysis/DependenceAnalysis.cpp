@@ -590,7 +590,6 @@ FullDependence::FullDependence(Instruction *Source, Instruction *Destination,
                                unsigned CommonLevels)
     : Dependence(Source, Destination, Assumes), Levels(CommonLevels),
       LoopIndependent(PossiblyLoopIndependent) {
-  Consistent = true;
   SameSDLevels = 0;
   if (CommonLevels)
     DV = std::make_unique<DVEntry[]>(CommonLevels);
@@ -778,8 +777,6 @@ void Dependence::dump(raw_ostream &OS) const {
   if (isConfused())
     OS << "confused";
   else {
-    if (isConsistent())
-      OS << "consistent ";
     if (isFlow())
       OS << "flow";
     else if (isOutput())
@@ -1283,7 +1280,6 @@ bool DependenceInfo::testZIV(const SCEV *Src, const SCEV *Dst,
     return true; // provably independent
   }
   LLVM_DEBUG(dbgs() << "    possibly dependent\n");
-  Result.Consistent = false;
   return false; // possibly dependent
 }
 
@@ -1334,10 +1330,8 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   Level--;
 
   const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
-  if (!Delta) {
-    Result.Consistent = false;
+  if (!Delta)
     return false;
-  }
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta);
   LLVM_DEBUG(dbgs() << ", " << *Delta->getType() << "\n");
 
@@ -1420,8 +1414,6 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
     if (Coeff->isOne()) {
       LLVM_DEBUG(dbgs() << "\t    Distance = " << *Delta << "\n");
       Result.DV[Level].Distance = Delta; // since X/1 == X
-    } else {
-      Result.Consistent = false;
     }
 
     // maybe we can get a useful direction
@@ -1493,7 +1485,6 @@ bool DependenceInfo::weakCrossingSIVtest(const SCEV *Coeff,
   ++WeakCrossingSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
-  Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (Delta->isZero()) {
@@ -1757,7 +1748,6 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   ++ExactSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "Level out of range");
   Level--;
-  Result.Consistent = false;
   const SCEV *Delta = minusSCEVNoSignedOverflow(DstConst, SrcConst, *SE);
   if (!Delta)
     return false;
@@ -1945,7 +1935,6 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   ++WeakZeroSIVapplications;
   assert(0 < Level && Level <= MaxLevels && "Level out of range");
   Level--;
-  Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(SrcConst, DstConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (SE->isKnownPredicate(CmpInst::ICMP_EQ, SrcConst, DstConst)) {
@@ -2058,7 +2047,6 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   ++WeakZeroSIVapplications;
   assert(0 < Level && Level <= SrcLevels && "Level out of range");
   Level--;
-  Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (SE->isKnownPredicate(CmpInst::ICMP_EQ, DstConst, SrcConst)) {
@@ -2142,7 +2130,6 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
   LLVM_DEBUG(dbgs() << "\t    DstConst = " << *DstConst << "\n");
   ++ExactRDIVapplications;
-  Result.Consistent = false;
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   const SCEVConstant *ConstDelta = dyn_cast<SCEVConstant>(Delta);
@@ -2522,7 +2509,6 @@ bool DependenceInfo::testMIV(const SCEV *Src, const SCEV *Dst,
                              FullDependence &Result) const {
   LLVM_DEBUG(dbgs() << "    src = " << *Src << "\n");
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
-  Result.Consistent = false;
   return gcdMIVtest(Src, Dst, Result) ||
          banerjeeMIVtest(Src, Dst, Loops, Result);
 }
@@ -3612,7 +3598,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                          Pair[SI].Loops);
       collectCommonLoops(Pair[SI].Dst, LI->getLoopFor(Dst->getParent()),
                          Pair[SI].Loops);
-      Result.Consistent = false;
       break;
     case Subscript::ZIV:
       LLVM_DEBUG(dbgs() << ", ZIV\n");
@@ -3687,8 +3672,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     Result.DVSameSD = std::move(DVSameSD);
     Result.Levels = CommonLevels;
     Result.SameSDLevels = SameSDLevels;
-    // Result is not consistent if it considers SameSD levels
-    Result.Consistent = false;
   }
 
   if (PossiblyLoopIndependent) {

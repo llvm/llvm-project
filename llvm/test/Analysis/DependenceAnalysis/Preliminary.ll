@@ -546,7 +546,7 @@ define void @p6(ptr %A, ptr %B, i64 %n) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: store i32 %1, ptr %arrayidx, align 4 --> Dst: store i32 %1, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %1, ptr %arrayidx, align 4 --> Dst: %2 = load i32, ptr %arrayidx3, align 4
-; CHECK-NEXT:    da analyze - consistent flow [2]!
+; CHECK-NEXT:    da analyze - flow [2]!
 ; CHECK-NEXT:  Src: store i32 %1, ptr %arrayidx, align 4 --> Dst: store i32 %2, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx3, align 4 --> Dst: %2 = load i32, ptr %arrayidx3, align 4
@@ -729,7 +729,7 @@ define void @foo(ptr %s, i32 %size) nounwind uwtable ssp {
 ; CHECK-NEXT:  Src: %1 = load i32, ptr %0, align 4 --> Dst: %1 = load i32, ptr %0, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %1 = load i32, ptr %0, align 4 --> Dst: store i32 %1, ptr %i.02, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1]!
+; CHECK-NEXT:    da analyze - anti [1]!
 ; CHECK-NEXT:  Src: store i32 %1, ptr %i.02, align 4 --> Dst: store i32 %1, ptr %i.02, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;
