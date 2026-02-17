@@ -120,7 +120,7 @@ define i64 @loop_contains_unsafe_call() {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[BAD_CALL:%.*]] = call i32 @foo(i32 [[LD1]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[BAD_CALL:%.*]] = call i32 @foo(i32 [[LD1]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[BAD_CALL]], 34
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_INC]], label [[LOOP_END:%.*]]
 ; CHECK:       loop.inc:
@@ -439,28 +439,41 @@ define i64 @uncountable_exits_in_diamond_pattern() {
 ; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
 ; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[LOOP_HEADER]] ], [ [[INDEX_NEXT4:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
-; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[GEP1]], align 1
-; CHECK-NEXT:    [[BRANCH_COND:%.*]] = icmp slt i8 [[LD1]], 0
-; CHECK-NEXT:    br i1 [[BRANCH_COND]], label [[BLOCK_A:%.*]], label [[BLOCK_B:%.*]]
-; CHECK:       block.a:
-; CHECK-NEXT:    [[GEP2A:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
-; CHECK-NEXT:    [[LD2A:%.*]] = load i8, ptr [[GEP2A]], align 1
-; CHECK-NEXT:    [[CMP_A:%.*]] = icmp eq i8 [[LD1]], [[LD2A]]
-; CHECK-NEXT:    br i1 [[CMP_A]], label [[LOOP_END:%.*]], label [[LOOP_LATCH]]
-; CHECK:       block.b:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[GEP1]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    [[GEP2B:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
-; CHECK-NEXT:    [[LD2B:%.*]] = load i8, ptr [[GEP2B]], align 1
-; CHECK-NEXT:    [[CMP_B:%.*]] = icmp eq i8 [[LD1]], [[LD2B]]
-; CHECK-NEXT:    br i1 [[CMP_B]], label [[LOOP_END]], label [[LOOP_LATCH]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 64
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_HEADER]], label [[LOOP_END]]
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[GEP2B]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], [[WIDE_LOAD2]]
+; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i8>, ptr [[GEP2B]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], [[WIDE_LOAD3]]
+; CHECK-NEXT:    [[INDEX_NEXT4]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP2]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> splat (i1 true), <4 x i1> [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i1> [[TMP8]]
+; CHECK-NEXT:    [[CMP_B:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP9]])
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 64
+; CHECK-NEXT:    br i1 [[CMP_B]], label [[LOOP_END:%.*]], label [[LOOP_LATCH]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[LOOP_END1:%.*]]
+; CHECK:       vector.early.exit.check:
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP8]], i1 false)
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP6]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT_0:%.*]], label [[VECTOR_EARLY_EXIT_1:%.*]]
+; CHECK:       vector.early.exit.1:
+; CHECK-NEXT:    br label [[LOOP_END1]]
+; CHECK:       vector.early.exit.0:
+; CHECK-NEXT:    br label [[LOOP_END1]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 1, [[BLOCK_A]] ], [ 2, [[BLOCK_B]] ], [ 0, [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 2, [[VECTOR_EARLY_EXIT_0]] ], [ 1, [[VECTOR_EARLY_EXIT_1]] ], [ 0, [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -723,3 +736,8 @@ declare i32 @foo(i32) readonly
 declare <vscale x 4 x i32> @foo_vec(<vscale x 4 x i32>)
 
 attributes #0 = { "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vec)" }
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+;.

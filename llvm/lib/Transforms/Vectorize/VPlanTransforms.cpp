@@ -4070,10 +4070,13 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
                                   : Builder.createNot(CondOfEarlyExitingVPBB);
 
       // For predicated early exits, AND the condition with the block mask.
-      if (VPValue *BlockMask = TermVPI->getMask())
+      VPValue *BlockMask = TermVPI->getMask();
+      if (BlockMask)
         CondToEarlyExit = Builder.createLogicalAnd(BlockMask, CondToEarlyExit);
 
-      assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
+      // For predicated early exits, the block mask ensures the condition is
+      // only evaluated when the block is active, so dominance is not required.
+      assert((BlockMask || isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
               VPDT.properlyDominates(
                   CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
                   LatchVPBB)) &&
@@ -4087,9 +4090,12 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   }
 
   assert(!Exits.empty() && "must have at least one early exit");
-  // Sort exits by dominance to get the correct program order.
+  // Sort exits by DFS order to get a consistent program order. This handles
+  // both dominating exits and exits in parallel branches (diamond pattern).
+  VPDT.updateDFSNumbers();
   llvm::sort(Exits, [&VPDT](const EarlyExitInfo &A, const EarlyExitInfo &B) {
-    return VPDT.properlyDominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
+    return VPDT.getNode(A.EarlyExitingVPBB)->getDFSNumIn() <
+           VPDT.getNode(B.EarlyExitingVPBB)->getDFSNumIn();
   });
 
   // Build the AnyOf condition for the latch terminator using logical OR

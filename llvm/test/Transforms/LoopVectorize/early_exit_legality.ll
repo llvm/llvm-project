@@ -318,7 +318,7 @@ return:
 ; support this yet.
 define i64 @uncountable_exit_on_last_block() {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_on_last_block'
-; CHECK:       LV: Not vectorizing: Last early exiting block in the chain is not the latch predecessor.
+; CHECK:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -594,9 +594,10 @@ loop.end:
 
 
 ; Two early exits on parallel branches (neither dominates the other).
+; This is now supported with predicated early exits.
 define i64 @uncountable_exits_on_parallel_branches() {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exits_on_parallel_branches'
-; CHECK:       LV: Not vectorizing: Uncountable early exits do not form a dominance chain.
+; CHECK:       LV: We can vectorize this loop!
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -633,9 +634,11 @@ loop.end:
 
 
 ; Parallel uncountable exits with loop-invariant conditions.
+; Note: This loop cannot be vectorized because the latch has no determinate
+; exit count (loop is infinite without early exits).
 define void @uncountable_exits_invariant_conditions(ptr %p, i1 %cond1, i1 %cond2, i1 %cond3) {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exits_invariant_conditions'
-; CHECK:       LV: Not vectorizing: Uncountable early exits do not form a dominance chain.
+; CHECK:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
 entry:
   br label %loop.header
 

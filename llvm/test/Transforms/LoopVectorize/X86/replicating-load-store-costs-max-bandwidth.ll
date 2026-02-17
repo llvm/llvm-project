@@ -20,6 +20,9 @@ define void @replicating_store_with_phi_addr1(ptr noalias %array, i64 %N, i32 %x
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE32:.*]] ]
+; CHECK-NEXT:    [[TMP83:%.*]] = icmp ne i64 [[INDEX]], 99
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <16 x i1> poison, i1 [[TMP83]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT3]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAY]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -55,6 +58,7 @@ define void @replicating_store_with_phi_addr1(ptr noalias %array, i64 %N, i32 %x
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <16 x i32> [[TMP31]], i32 [[TMP16]], i32 15
 ; CHECK-NEXT:    [[TMP33:%.*]] = icmp sgt <16 x i32> [[TMP32]], zeroinitializer
 ; CHECK-NEXT:    [[TMP34:%.*]] = xor <16 x i1> [[TMP33]], splat (i1 true)
+; CHECK-NEXT:    [[TMP118:%.*]] = select <16 x i1> [[BROADCAST_SPLAT4]], <16 x i1> [[TMP34]], <16 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp slt i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp slt i32 [[X]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = icmp slt i32 [[X]], [[TMP3]]
@@ -103,9 +107,10 @@ define void @replicating_store_with_phi_addr1(ptr noalias %array, i64 %N, i32 %x
 ; CHECK-NEXT:    [[TMP80:%.*]] = insertelement <16 x ptr> [[TMP79]], ptr [[TMP64]], i32 13
 ; CHECK-NEXT:    [[TMP81:%.*]] = insertelement <16 x ptr> [[TMP80]], ptr [[TMP65]], i32 14
 ; CHECK-NEXT:    [[TMP82:%.*]] = insertelement <16 x ptr> [[TMP81]], ptr [[TMP66]], i32 15
-; CHECK-NEXT:    [[TMP83:%.*]] = select <16 x i1> [[TMP33]], <16 x i1> [[BROADCAST_SPLAT2]], <16 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP84:%.*]] = or <16 x i1> [[TMP83]], [[TMP34]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP33]], <16 x ptr> [[BROADCAST_SPLAT]], <16 x ptr> [[TMP82]]
+; CHECK-NEXT:    [[TMP119:%.*]] = select <16 x i1> [[BROADCAST_SPLAT4]], <16 x i1> [[TMP33]], <16 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP120:%.*]] = select <16 x i1> [[TMP119]], <16 x i1> [[BROADCAST_SPLAT2]], <16 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP84:%.*]] = or <16 x i1> [[TMP120]], [[TMP118]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP118]], <16 x ptr> [[TMP82]], <16 x ptr> [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP85:%.*]] = extractelement <16 x i1> [[TMP84]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP85]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:

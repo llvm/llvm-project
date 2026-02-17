@@ -333,11 +333,22 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
         VPBB->getTerminator()->eraseFromParent();
       for (auto *Succ : Successors)
         VPBlockUtils::disconnectBlocks(VPBB, Succ);
+    } else if (VPBB != Latch) {
+      // Exiting block: disconnect in-loop successors, keeping exit edge.
+      // Negate condition if exit is on false branch.
+      if (VPBB->getNumSuccessors() == 2 &&
+          isa<VPIRBasicBlock>(VPBB->getSuccessors()[1])) {
+        auto *Term = cast<VPInstruction>(VPBB->getTerminator());
+        Term->setOperand(0, VPBuilder(Term).createNot(Term->getOperand(0)));
+      }
+      for (auto *Succ : to_vector(VPBB->getSuccessors()))
+        if (!isa<VPIRBasicBlock>(Succ))
+          VPBlockUtils::disconnectBlocks(VPBB, Succ);
     }
 
     // Flatten the CFG in the loop. To do so, first disconnect VPBB from its
     // successors. Then connect VPBB to the previously visited VPBB.
-    if (PrevVPBB && !is_contained(PrevVPBB->getSuccessors(), VPBB))
+    if (PrevVPBB)
       VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
 
     PrevVPBB = VPBB;
