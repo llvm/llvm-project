@@ -68,6 +68,10 @@ public:
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
 
+  bool inBounds(const APInt &NewAddr) const {
+    return NewAddr.uge(Address) && NewAddr.ule(Address + Size);
+  }
+
   Byte &operator[](uint64_t Offset) {
     assert(Offset < Size && "Offset out of bounds");
     return Bytes[Offset];
@@ -129,6 +133,8 @@ class Context {
   // For now we don't model the behavior of address reuse, which is common
   // with stack coloring.
   uint64_t AllocationBase = 8;
+  // Maintains a global list of ‘exposed’ provenances. This is used to form a
+  // pointer with an exposed provenance.
   std::map<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
 
   // Constants
