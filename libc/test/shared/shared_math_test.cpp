@@ -13,8 +13,9 @@
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
 TEST(LlvmLibcSharedMathTest, AllFloat16) {
-  int exponent;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float16>;
 
+  int exponent;
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::acoshf16(1.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::acospif16(1.0f16));
   EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::rsqrtf16(1.0f16));
@@ -104,14 +105,14 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::setpayloadsigf16(&setpayloadsigf16_res,
                                                         0.0f16));
   EXPECT_FP_EQ(0x0p+0f16, setpayloadsigf16_res);
-  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::nextdownf16(0.0f16));
-  EXPECT_FP_EQ(LIBC_NAMESPACE::shared::nextdownf16(0.0f16),
-               LIBC_NAMESPACE::shared::nextdownf16(0.0f16));
+  float16 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
+  EXPECT_FP_EQ(neg_min_denormal, LIBC_NAMESPACE::shared::nextdownf16(0.0f16));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
 
 TEST(LlvmLibcSharedMathTest, AllFloat) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
   int exponent;
   float sin, cos;
 
@@ -183,14 +184,16 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_EQ(1,
             LIBC_NAMESPACE::shared::setpayloadsigf(&setpayloadsigf_res, 0.0f));
   EXPECT_FP_EQ(0x0p+0f, setpayloadsigf_res);
-  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::nextdownf(0.0f));
-  EXPECT_FP_EQ(LIBC_NAMESPACE::shared::nextdownf(0.0f),
-               LIBC_NAMESPACE::shared::nextdownf(0.0f));
+  float neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
+  EXPECT_FP_EQ(neg_min_denormal, LIBC_NAMESPACE::shared::nextdownf(0.0f));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<double>;
+
   double sin, cos;
   LIBC_NAMESPACE::shared::sincos(0.0, &sin, &cos);
+
   EXPECT_FP_EQ(0x1.921fb54442d18p+0, LIBC_NAMESPACE::shared::acos(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::asin(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::atan(0.0));
@@ -237,12 +240,12 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   double setpayloadsig_res = 0.0;
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::setpayloadsig(&setpayloadsig_res, 0.0));
   EXPECT_FP_EQ(0.0, setpayloadsig_res);
-  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::nextdown(0.0));
-  EXPECT_FP_EQ(LIBC_NAMESPACE::shared::nextdown(0.0),
-               LIBC_NAMESPACE::shared::nextdown(0.0));
+  double neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
+  EXPECT_FP_EQ(neg_min_denormal, LIBC_NAMESPACE::shared::nextdown(0.0));
 }
 
 TEST(LlvmLibcSharedMathTest, AllLongDouble) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
   EXPECT_FP_EQ(0x0p+0L,
                LIBC_NAMESPACE::shared::dfmal(0x0.p+0L, 0x0.p+0L, 0x0.p+0L));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fsqrtl(0.0L));
@@ -271,14 +274,15 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_EQ(1,
             LIBC_NAMESPACE::shared::setpayloadsigl(&setpayloadsigl_res, 0.0L));
   EXPECT_FP_EQ(0x0p+0L, setpayloadsigl_res);
-  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::nextdownl(0.0L));
-  EXPECT_FP_EQ(LIBC_NAMESPACE::shared::nextdownl(0.0L),
-               LIBC_NAMESPACE::shared::nextdownl(0.0L));
+
+  long double neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
+  EXPECT_FP_EQ(neg_min_denormal, LIBC_NAMESPACE::shared::nextdownl(0.0L));
 }
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
 
 TEST(LlvmLibcSharedMathTest, AllFloat128) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float128>;
   int exponent;
 
   EXPECT_FP_EQ(float128(0x0p+0),
@@ -332,14 +336,16 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::setpayloadsigf128(&setpayloadsigf128_res,
                                                          float128(0.0)));
   EXPECT_FP_EQ(float128(0.0), setpayloadsigf128_res);
-  EXPECT_FP_EQ(float128(0.0),
-  EXPECT_FP_EQ(LIBC_NAMESPACE::shared::nextdownf128(float128(0.0)),
+
+  float128 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
+  EXPECT_FP_EQ(neg_min_denormal,
                LIBC_NAMESPACE::shared::nextdownf128(float128(0.0)));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
 
 TEST(LlvmLibcSharedMathTest, AllBFloat16) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
   EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16add(2.0, 3.0));
   EXPECT_FP_EQ(bfloat16(2.0f), LIBC_NAMESPACE::shared::bf16divf(4.0f, 2.0f));
   EXPECT_FP_EQ(bfloat16(2.0), LIBC_NAMESPACE::shared::bf16divl(6.0L, 3.0L));
@@ -372,7 +378,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::setpayloadsigbf16(&setpayloadsigbf16_res,
                                                          bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), setpayloadsigbf16_res);
-  EXPECT_FP_EQ(bfloat16(0.0),
-  EXPECT_FP_EQ(LIBC_NAMESPACE::shared::nextdownbf16(bfloat16(0.0)),
+  bfloat16 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
+  EXPECT_FP_EQ(neg_min_denormal,
                LIBC_NAMESPACE::shared::nextdownbf16(bfloat16(0.0)));
 }
