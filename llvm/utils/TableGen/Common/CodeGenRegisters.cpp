@@ -755,8 +755,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   GlobalPriority = R->getValueAsBit("GlobalPriority");
 
   const BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
-  for (auto [Idx, Bit] : enumerate(TSF->getBits()))
-    TSFlags |= uint8_t(cast<BitInit>(Bit)->getValue()) << Idx;
+  TSFlags = uint8_t(*TSF->convertInitializerToInt());
 
   // Saturate negative costs to the maximum
   if (CopyCostParsed < 0)
