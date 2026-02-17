@@ -222,3 +222,49 @@ struct on_void_ty {
   // expected-error@+1{{field has incomplete type 'void'}}
   void wrong_ty __counted_by_or_null(count);
 };
+
+//==============================================================================
+// __counted_by_or_null on pointer members in unions
+//==============================================================================
+
+// Pointer in anonymous union with count in parent struct - OK
+struct ptr_in_anon_union_count_in_parent {
+  int count;
+  union {
+    int a;
+    struct size_known *buf __counted_by_or_null(count);
+  };
+};
+
+// Pointer in named union - ERROR
+union ptr_in_named_union {
+  int count;
+  struct size_known *buf __counted_by_or_null(count); // expected-error {{'counted_by_or_null' cannot be applied to a union member}}
+};
+
+// Both pointer and count in same anonymous union - ERROR (they share storage)
+struct ptr_and_count_in_same_anon_union {
+  union {
+    int count;
+    struct size_known *buf __counted_by_or_null(count); // expected-error {{'counted_by_or_null' cannot be applied to a union member}}
+  };
+};
+
+// Count in anonymous union, pointer in parent struct - ERROR (count in union)
+struct count_in_anon_union_ptr_in_parent {
+  union {
+    int count;
+    int x;
+  };
+  struct size_known *buf __counted_by_or_null(count); // expected-error {{'counted_by_or_null' argument cannot refer to a union member}}
+};
+
+// Count in anonymous union, but hidden by struct - ERROR (count in union)
+struct count_in_deep_anon_union {
+  union {
+    struct {
+      int count;
+    };
+  };
+  struct size_known *buf __counted_by_or_null(count); // expected-error {{'counted_by_or_null' argument cannot refer to a union member}}
+};
