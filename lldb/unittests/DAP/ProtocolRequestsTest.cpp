@@ -14,6 +14,7 @@
 
 using namespace llvm;
 using namespace lldb_dap::protocol;
+using namespace lldb_dap;
 using lldb_private::PrettyPrint;
 using llvm::json::parse;
 
@@ -85,7 +86,7 @@ TEST(ProtocolRequestsTest, EvaluateArguments) {
 TEST(ProtocolRequestsTest, EvaluateResponseBody) {
   EvaluateResponseBody body;
   body.result = "hello world";
-  body.variablesReference = 7;
+  body.variablesReference = var_ref_t(7);
 
   // Check required keys.
   Expected<json::Value> expected = parse(R"({
@@ -99,7 +100,7 @@ TEST(ProtocolRequestsTest, EvaluateResponseBody) {
   // Check optional keys.
   body.result = "'abc'";
   body.type = "string";
-  body.variablesReference = 42;
+  body.variablesReference = var_ref_t(42);
   body.namedVariables = 1;
   body.indexedVariables = 2;
   body.memoryReference = "0x123";
