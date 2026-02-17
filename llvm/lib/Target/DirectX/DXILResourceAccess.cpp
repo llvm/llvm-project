@@ -12,6 +12,7 @@
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -27,6 +29,13 @@
 #define DEBUG_TYPE "dxil-resource-access"
 
 using namespace llvm;
+
+static void diagnoseNonUniqueResourceAccess(Instruction *I,
+                                            ArrayRef<IntrinsicInst *> Handles) {
+  LLVMContext &Context = I->getContext();
+  Context.diagnose(DiagnosticInfoGeneric(
+      "Resource access is not guarenteed to map to a unique global resource"));
+}
 
 static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
                                  Value *Ptr, uint64_t AccessSize) {
@@ -57,7 +66,7 @@ static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
       GEPOffset = *GEP->idx_begin();
     } else if (NumIndices == 2) {
       // If we have two indices, this should be an access through a pointer.
-      auto IndexIt = GEP->idx_begin();
+      auto *IndexIt = GEP->idx_begin();
       assert(cast<ConstantInt>(IndexIt)->getZExtValue() == 0 &&
              "GEP is not indexing through pointer");
       GEPOffset = *(++IndexIt);
@@ -419,6 +428,93 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
   llvm_unreachable("Unhandled case in switch");
 }
 
+static Instruction *getPointerOperand(Instruction *AI) {
+  if (auto *LI = dyn_cast<LoadInst>(AI))
+    return dyn_cast<Instruction>(LI->getPointerOperand());
+  if (auto *SI = dyn_cast<StoreInst>(AI))
+    return dyn_cast<Instruction>(SI->getPointerOperand());
+
+  return nullptr;
+}
+
+static const std::array<Intrinsic::ID, 2> HandleIntrins = {
+    Intrinsic::dx_resource_handlefrombinding,
+    Intrinsic::dx_resource_handlefromimplicitbinding,
+};
+
+static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
+  SmallVector<Value *> Worklist = {Ptr};
+  SmallVector<IntrinsicInst *> Handles;
+
+  while (!Worklist.empty()) {
+    Value *X = Worklist.pop_back_val();
+
+    if (!X->getType()->isPointerTy() && !X->getType()->isTargetExtTy())
+      return {}; // Early exit on store/load into non-resource
+
+    if (auto *Phi = dyn_cast<PHINode>(X))
+      for (Use &V : Phi->incoming_values())
+        Worklist.push_back(V.get());
+    else if (auto *Select = dyn_cast<SelectInst>(X))
+      for (Value *V : {Select->getTrueValue(), Select->getFalseValue()})
+        Worklist.push_back(V);
+    else if (auto *II = dyn_cast<IntrinsicInst>(X)) {
+      Intrinsic::ID IID = II->getIntrinsicID();
+
+      if (IID == Intrinsic::dx_resource_getpointer)
+        Worklist.push_back(II->getArgOperand(/*Handle=*/0));
+
+      if (llvm::is_contained(HandleIntrins, IID))
+        Handles.push_back(II);
+    }
+  }
+
+  return Handles;
+}
+
+static hlsl::Binding getHandleIntrinsicBinding(IntrinsicInst *Handle,
+                                               DXILResourceTypeMap &DRTM) {
+  assert(llvm::is_contained(HandleIntrins, Handle->getIntrinsicID()) &&
+         "Only expects a Handle as determined from collectUsedHandles.");
+
+  auto *HandleTy = cast<TargetExtType>(Handle->getType());
+  dxil::ResourceClass Class = DRTM[HandleTy].getResourceClass();
+  uint32_t Space = cast<ConstantInt>(Handle->getArgOperand(0))->getZExtValue();
+  uint32_t LowerBound =
+      cast<ConstantInt>(Handle->getArgOperand(1))->getZExtValue();
+  int32_t Size = cast<ConstantInt>(Handle->getArgOperand(2))->getZExtValue();
+  uint32_t UpperBound = Size < 0 ? UINT32_MAX : LowerBound + Size - 1;
+
+  return hlsl::Binding(Class, Space, LowerBound, UpperBound, nullptr);
+}
+
+// Reports an error if a resource access is not guarenteed to be into a unique
+// global resource.
+//
+// Returns true if any changes are made.
+static bool legalizeResourceHandles(Function &F, DXILResourceTypeMap &DRTM) {
+  for (BasicBlock &BB : make_early_inc_range(F))
+    for (Instruction &I : BB)
+      if (auto *PtrOp = getPointerOperand(&I)) {
+        SmallVector<IntrinsicInst *> Handles = collectUsedHandles(PtrOp);
+        unsigned NumHandles = Handles.size();
+        if (NumHandles <= 1)
+          continue; // Legal, no-replacement required
+
+        bool SameGlobalBinding = true;
+        hlsl::Binding B = getHandleIntrinsicBinding(Handles[0], DRTM);
+        for (unsigned I = 1; I < NumHandles; I++)
+          SameGlobalBinding &=
+              (B == getHandleIntrinsicBinding(Handles[I], DRTM));
+
+        if (!SameGlobalBinding) {
+          diagnoseNonUniqueResourceAccess(&I, Handles);
+        }
+      }
+
+  return false;
+}
+
 static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
   SmallVector<User *> Worklist;
   for (User *U : II->users())
@@ -475,8 +571,9 @@ PreservedAnalyses DXILResourceAccess::run(Function &F,
       MAMProxy.getCachedResult<DXILResourceTypeAnalysis>(*F.getParent());
   assert(DRTM && "DXILResourceTypeAnalysis must be available");
 
-  bool MadeChanges = transformResourcePointers(F, *DRTM);
-  if (!MadeChanges)
+  bool MadeHandleChanges = legalizeResourceHandles(F, *DRTM);
+  bool MadeResourceChanges = transformResourcePointers(F, *DRTM);
+  if (!(MadeHandleChanges || MadeResourceChanges))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -491,7 +588,9 @@ public:
   bool runOnFunction(Function &F) override {
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-    return transformResourcePointers(F, DRTM);
+    bool MadeHandleChanges = legalizeResourceHandles(F, DRTM);
+    bool MadeResourceChanges = transformResourcePointers(F, DRTM);
+    return MadeHandleChanges || MadeResourceChanges;
   }
   StringRef getPassName() const override { return "DXIL Resource Access"; }
   DXILResourceAccessLegacy() : FunctionPass(ID) {}
