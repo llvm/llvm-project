@@ -1897,6 +1897,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v1i64, Custom);
     setOperationAction(ISD::MUL, MVT::v2i64, Custom);
 
+    // With SVE2 we can try lowering these to pairwise operations (e.g. smaxp).
     if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
       setOperationAction(ISD::VECREDUCE_SMAX, MVT::v2i64, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, MVT::v2i64, Custom);
