@@ -245,13 +245,6 @@ protected:
   /// the builder dies.
   ExplodedNodeSet &Frontier;
 
-  bool hasNoSinksInFrontier() {
-    for (const auto  I : Frontier)
-      if (I->isSink())
-        return false;
-    return true;
-  }
-
   ExplodedNode *generateNodeImpl(const ProgramPoint &PP,
                                  ProgramStateRef State,
                                  ExplodedNode *Pred,
@@ -267,8 +260,9 @@ public:
   NodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
               const NodeBuilderContext &Ctx)
       : C(Ctx), Frontier(DstSet) {
-    Frontier.insert(SrcSet);
-    assert(hasNoSinksInFrontier());
+    for (ExplodedNode *Node : SrcSet)
+      if (!Node->isSink())
+        Frontier.insert(Node);
   }
 
   /// Generates a node in the ExplodedGraph.
