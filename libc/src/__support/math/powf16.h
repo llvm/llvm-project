@@ -102,6 +102,7 @@ LIBC_INLINE constexpr bool is_integer(float16 x) {
 
 } // namespace powf16_impl
 
+// TODO : optimize by using float whenever possible
 LIBC_INLINE constexpr float16 powf16(float16 x, float16 y) {
   using namespace powf16_impl;
   using namespace common_constants_internal;
