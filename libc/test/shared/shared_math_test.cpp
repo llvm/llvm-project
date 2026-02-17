@@ -13,8 +13,9 @@
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
 TEST(LlvmLibcSharedMathTest, AllFloat16) {
-  int exponent;
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float16>;
 
+  int exponent;
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::acoshf16(1.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::acospif16(1.0f16));
   EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::rsqrtf16(1.0f16));
@@ -82,12 +83,14 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
                                                        &canonicalizef16_x));
   EXPECT_FP_EQ(0x0p+0f16, canonicalizef16_cx);
 
-  EXPECT_FP_EQ(0x1p-24f16, LIBC_NAMESPACE::shared::nextupf16(0.0f16));
+  float16 min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextupf16(0.0f16));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
 
 TEST(LlvmLibcSharedMathTest, AllFloat) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
   int exponent;
   float sin, cos;
 
@@ -145,10 +148,12 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
                                                      &canonicalizef_x));
   EXPECT_FP_EQ(0x0p+0f, canonicalizef_cx);
 
-  EXPECT_FP_EQ(0x1p-149f, LIBC_NAMESPACE::shared::nextupf(0.0f));
+  float min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextupf(0.0f));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<double>;
   EXPECT_FP_EQ(0x1.921fb54442d18p+0, LIBC_NAMESPACE::shared::acos(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::asin(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::atan(0.0));
@@ -179,10 +184,12 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
                                                     &canonicalize_x));
   EXPECT_FP_EQ(0.0, canonicalize_cx);
 
-  EXPECT_FP_EQ(0x1p-1074, LIBC_NAMESPACE::shared::nextup(0.0));
+  double min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextup(0.0));
 }
 
 TEST(LlvmLibcSharedMathTest, AllLongDouble) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
   EXPECT_FP_EQ(0x0p+0L,
                LIBC_NAMESPACE::shared::dfmal(0x0.p+0L, 0x0.p+0L, 0x0.p+0L));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fsqrtl(0.0L));
@@ -196,12 +203,14 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
                                                      &canonicalizel_x));
   EXPECT_FP_EQ(0x0p+0L, canonicalizel_cx);
 
-  EXPECT_FP_EQ(0x1p-16445L, LIBC_NAMESPACE::shared::nextupl(0.0L));
+  long double min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextupl(0.0L));
 }
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
 
 TEST(LlvmLibcSharedMathTest, AllFloat128) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float128>;
   int exponent;
 
   EXPECT_FP_EQ(float128(0x0p+0),
@@ -233,12 +242,14 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                                                         &canonicalizef128_x));
   EXPECT_FP_EQ(float128(0.0), canonicalizef128_cx);
 
-  EXPECT_FP_EQ(0x1p-16494Q, LIBC_NAMESPACE::shared::nextupf128(float128(0.0)));
+  float128 min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextupf128(float128(0.0)));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
 
 TEST(LlvmLibcSharedMathTest, AllBFloat16) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
   EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16add(2.0, 3.0));
 
   bfloat16 canonicalizebf16_cx = bfloat16(0.0);
@@ -247,6 +258,6 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                                                         &canonicalizebf16_x));
   EXPECT_FP_EQ(bfloat16(0.0), canonicalizebf16_cx);
 
-  EXPECT_FP_EQ(bfloat16(0x1p-133),
-               LIBC_NAMESPACE::shared::nextupbf16(bfloat16(0.0)));
+  bfloat16 min_denormal = FPBits::min_subnormal(Sign ::POS).get_val();
+  EXPECT_FP_EQ(min_denormal, LIBC_NAMESPACE::shared::nextupbf16(bfloat16(0.0)));
 }
