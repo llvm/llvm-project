@@ -139,3 +139,22 @@ template<> class coroutine_traits<Task, int> {
 } // namespace std
 // expected-error@+1 {{neither a coroutine nor a coroutine wrapper}}
 Task foo(int) { return Task{}; }
+
+// Testing that we can add a `[[clang::coro_wrapper]]` attribute to the class.
+class [[clang::coro_return_type]] [[clang::coro_wrapper]] WrappedTask{
+public:
+  struct promise_type {
+    Task get_return_object() {
+      return {};
+    }
+    suspend_always initial_suspend();
+    suspend_always final_suspend() noexcept;
+    void unhandled_exception();
+  };
+};
+namespace std {
+template<> class coroutine_traits<WrappedTask, int> {
+    using promise_type = WrappedTask::promise_type;
+};
+} // namespace std
+WrappedTask wrapped_class(int) { return WrappedTask{}; }
