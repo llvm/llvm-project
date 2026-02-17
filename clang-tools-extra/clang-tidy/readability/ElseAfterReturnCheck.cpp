@@ -169,14 +169,18 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
   const auto InterruptsControlFlow = stmt(anyOf(
       returnStmt().bind(InterruptingStr), continueStmt().bind(InterruptingStr),
       breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr)));
+
+  const auto IfWithInterruptingThenElse =
+      ifStmt(unless(isConstexpr()), unless(isConsteval()),
+             hasThen(stmt(anyOf(InterruptsControlFlow,
+                                compoundStmt(has(InterruptsControlFlow))))),
+             hasElse(stmt().bind("else")))
+          .bind("if");
+
   Finder->addMatcher(
       compoundStmt(
-          forEach(ifStmt(unless(isConstexpr()), unless(isConsteval()),
-                         hasThen(stmt(
-                             anyOf(InterruptsControlFlow,
-                                   compoundStmt(has(InterruptsControlFlow))))),
-                         hasElse(stmt().bind("else")))
-                      .bind("if")))
+          forEach(stmt(anyOf(IfWithInterruptingThenElse,
+                             switchCase(has(IfWithInterruptingThenElse))))))
           .bind("cs"),
       this);
 }
