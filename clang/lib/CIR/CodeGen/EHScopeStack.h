@@ -236,14 +236,6 @@ public:
   /// Pops a cleanup scope off the stack.  This is private to CIRGenCleanup.cpp.
   void popCleanup();
 
-  /// Push a set of catch handlers on the stack.  The catch is
-  /// uninitialized and will need to have the given number of handlers
-  /// set on it.
-  class EHCatchScope *pushCatch(unsigned numHandlers);
-
-  /// Pops a catch scope off the stack. This is private to CIRGenException.cpp.
-  void popCatch();
-
   /// Determines whether the exception-scopes stack is empty.
   bool empty() const { return startOfData == endOfBuffer; }
 

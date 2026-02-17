@@ -89,7 +89,7 @@ def nanobind_pyi_genrule(name, module_name, outs, deps, **kwargs):
         name = name,
         srcs = deps,
         outs = outs,
-        cmd = "$(location :stubgen_runner) --module " + module_name + " --deps " + deps_arg + " -o $(RULEDIR)",
+        cmd = "$(location :stubgen_runner) --module " + module_name + " --deps " + deps_arg + " -o $(RULEDIR) > /dev/null",
         tools = [":stubgen_runner"],
         **kwargs
     )
