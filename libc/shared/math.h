@@ -122,6 +122,7 @@
 #include "math/sinhf.h"
 #include "math/sinhf16.h"
 #include "math/sinpif.h"
+#include "math/sinpif16.h"
 #include "math/sqrt.h"
 #include "math/sqrtf.h"
 #include "math/sqrtf128.h"
