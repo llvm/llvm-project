@@ -1145,9 +1145,9 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
       }
 
       int64_t numElements = scaleSrcType.getNumElements();
-      if (numElements <= 4) {
+      if (numElements < 4) {
         return rewriter.notifyMatchFailure(
-            op, "no packing if # of scales less than four");
+            op, "do not pack if # of scales less than four");
       }
 
       // Find a linearized idx using the size and offsets of the extract op.

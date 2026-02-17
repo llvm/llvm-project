@@ -616,11 +616,10 @@ public:
   ProgramStateRef handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
                                       const LocationContext *LCtx, QualType T,
                                       QualType ExTy, const CastExpr *CastE,
-                                      StmtNodeBuilder &Bldr,
-                                      ExplodedNode *Pred);
+                                      NodeBuilder &Bldr, ExplodedNode *Pred);
 
   void handleUOExtension(ExplodedNode *N, const UnaryOperator *U,
-                         StmtNodeBuilder &Bldr);
+                         NodeBuilder &Bldr);
 
 public:
   SVal evalBinOp(ProgramStateRef ST, BinaryOperator::Opcode Op,

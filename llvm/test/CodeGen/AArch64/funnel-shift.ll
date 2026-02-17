@@ -541,14 +541,12 @@ define <4 x i32> @fshr_v4i32_shift_by_bitwidth(<4 x i32> %x, <4 x i32> %y) {
 define i32 @or_shl_fshl(i32 %x, i32 %y, i32 %s) {
 ; CHECK-SD-LABEL: or_shl_fshl:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, w2
-; CHECK-SD-NEXT:    lsr w9, w1, #1
-; CHECK-SD-NEXT:    lsl w10, w1, w2
-; CHECK-SD-NEXT:    mvn w11, w2
-; CHECK-SD-NEXT:    lsl w8, w0, w8
-; CHECK-SD-NEXT:    lsr w9, w9, w11
-; CHECK-SD-NEXT:    orr w8, w8, w10
-; CHECK-SD-NEXT:    orr w0, w8, w9
+; CHECK-SD-NEXT:    lsr w8, w1, #1
+; CHECK-SD-NEXT:    orr w9, w0, w1
+; CHECK-SD-NEXT:    mvn w10, w2
+; CHECK-SD-NEXT:    lsl w9, w9, w2
+; CHECK-SD-NEXT:    lsr w8, w8, w10
+; CHECK-SD-NEXT:    orr w0, w9, w8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_shl_fshl:
@@ -586,14 +584,12 @@ define i32 @or_shl_rotl(i32 %x, i32 %y, i32 %s) {
 define i32 @or_shl_fshl_commute(i32 %x, i32 %y, i32 %s) {
 ; CHECK-SD-LABEL: or_shl_fshl_commute:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, w2
-; CHECK-SD-NEXT:    lsr w9, w1, #1
-; CHECK-SD-NEXT:    lsl w10, w1, w2
-; CHECK-SD-NEXT:    mvn w11, w2
-; CHECK-SD-NEXT:    lsl w8, w0, w8
-; CHECK-SD-NEXT:    lsr w9, w9, w11
-; CHECK-SD-NEXT:    orr w8, w10, w8
-; CHECK-SD-NEXT:    orr w0, w8, w9
+; CHECK-SD-NEXT:    lsr w8, w1, #1
+; CHECK-SD-NEXT:    orr w9, w0, w1
+; CHECK-SD-NEXT:    mvn w10, w2
+; CHECK-SD-NEXT:    lsl w9, w9, w2
+; CHECK-SD-NEXT:    lsr w8, w8, w10
+; CHECK-SD-NEXT:    orr w0, w9, w8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_shl_fshl_commute:
@@ -631,14 +627,12 @@ define i32 @or_shl_rotl_commute(i32 %x, i32 %y, i32 %s) {
 define i32 @or_lshr_fshr(i32 %x, i32 %y, i32 %s) {
 ; CHECK-SD-LABEL: or_lshr_fshr:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, w2
-; CHECK-SD-NEXT:    lsl w9, w1, #1
-; CHECK-SD-NEXT:    lsr w10, w1, w2
-; CHECK-SD-NEXT:    lsr w8, w0, w8
-; CHECK-SD-NEXT:    mvn w11, w2
-; CHECK-SD-NEXT:    lsl w9, w9, w11
-; CHECK-SD-NEXT:    orr w8, w8, w10
-; CHECK-SD-NEXT:    orr w0, w9, w8
+; CHECK-SD-NEXT:    lsl w8, w1, #1
+; CHECK-SD-NEXT:    orr w9, w1, w0
+; CHECK-SD-NEXT:    mvn w10, w2
+; CHECK-SD-NEXT:    lsr w9, w9, w2
+; CHECK-SD-NEXT:    lsl w8, w8, w10
+; CHECK-SD-NEXT:    orr w0, w8, w9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_lshr_fshr:
@@ -675,13 +669,11 @@ define i32 @or_lshr_rotr(i32 %x, i32 %y, i32 %s) {
 define i32 @or_lshr_fshr_commute(i32 %x, i32 %y, i32 %s) {
 ; CHECK-SD-LABEL: or_lshr_fshr_commute:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, w2
-; CHECK-SD-NEXT:    lsl w9, w1, #1
-; CHECK-SD-NEXT:    lsr w10, w1, w2
-; CHECK-SD-NEXT:    lsr w8, w0, w8
-; CHECK-SD-NEXT:    mvn w11, w2
-; CHECK-SD-NEXT:    lsl w9, w9, w11
-; CHECK-SD-NEXT:    orr w8, w10, w8
+; CHECK-SD-NEXT:    lsl w8, w1, #1
+; CHECK-SD-NEXT:    orr w9, w1, w0
+; CHECK-SD-NEXT:    mvn w10, w2
+; CHECK-SD-NEXT:    lsr w9, w9, w2
+; CHECK-SD-NEXT:    lsl w8, w8, w10
 ; CHECK-SD-NEXT:    orr w0, w8, w9
 ; CHECK-SD-NEXT:    ret
 ;

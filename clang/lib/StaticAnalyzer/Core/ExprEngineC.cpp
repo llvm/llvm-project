@@ -78,7 +78,7 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
     }
 
     if (!B->isAssignmentOp()) {
-      StmtNodeBuilder Bldr(*it, Tmp2, *currBldrCtx);
+      NodeBuilder Bldr(*it, Tmp2, *currBldrCtx);
 
       if (B->isAdditiveOp()) {
         // TODO: This can be removed after we enable history tracking with
@@ -246,7 +246,7 @@ void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
   }
 
   ExplodedNodeSet Tmp;
-  StmtNodeBuilder Bldr(Pred, Tmp, *currBldrCtx);
+  NodeBuilder Bldr(Pred, Tmp, *currBldrCtx);
   Bldr.generateNode(BE, Pred,
                     State->BindExpr(BE, Pred->getLocationContext(), V),
                     nullptr, ProgramPoint::PostLValueKind);
@@ -255,10 +255,11 @@ void ExprEngine::VisitBlockExpr(const BlockExpr *BE, ExplodedNode *Pred,
   getCheckerManager().runCheckersForPostStmt(Dst, Tmp, BE, *this);
 }
 
-ProgramStateRef ExprEngine::handleLValueBitCast(
-    ProgramStateRef state, const Expr* Ex, const LocationContext* LCtx,
-    QualType T, QualType ExTy, const CastExpr* CastE, StmtNodeBuilder& Bldr,
-    ExplodedNode* Pred) {
+ProgramStateRef
+ExprEngine::handleLValueBitCast(ProgramStateRef state, const Expr *Ex,
+                                const LocationContext *LCtx, QualType T,
+                                QualType ExTy, const CastExpr *CastE,
+                                NodeBuilder &Bldr, ExplodedNode *Pred) {
   if (T->isLValueReferenceType()) {
     assert(!CastE->getType()->isLValueReferenceType());
     ExTy = getContext().getLValueReferenceType(ExTy);
@@ -310,7 +311,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
     }
     // Simulate the operation that actually casts the original value to a new
     // value of the destination type :
-    StmtNodeBuilder Bldr(DstEvalLoc, Dst, *currBldrCtx);
+    NodeBuilder Bldr(DstEvalLoc, Dst, *currBldrCtx);
 
     for (ExplodedNode *Node : DstEvalLoc) {
       ProgramStateRef State = Node->getState();
@@ -338,7 +339,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
   if (const ExplicitCastExpr *ExCast=dyn_cast_or_null<ExplicitCastExpr>(CastE))
     T = ExCast->getTypeAsWritten();
 
-  StmtNodeBuilder Bldr(DstPreStmt, Dst, *currBldrCtx);
+  NodeBuilder Bldr(DstPreStmt, Dst, *currBldrCtx);
   for (ExplodedNode *Pred : DstPreStmt) {
     ProgramStateRef state = Pred->getState();
     const LocationContext *LCtx = Pred->getLocationContext();
@@ -579,7 +580,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
 void ExprEngine::VisitCompoundLiteralExpr(const CompoundLiteralExpr *CL,
                                           ExplodedNode *Pred,
                                           ExplodedNodeSet &Dst) {
-  StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
+  NodeBuilder B(Pred, Dst, *currBldrCtx);
 
   ProgramStateRef State = Pred->getState();
   const LocationContext *LCtx = Pred->getLocationContext();
@@ -629,7 +630,7 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
   getCheckerManager().runCheckersForPreStmt(dstPreVisit, Pred, DS, *this);
 
   ExplodedNodeSet dstEvaluated;
-  StmtNodeBuilder B(dstPreVisit, dstEvaluated, *currBldrCtx);
+  NodeBuilder B(dstPreVisit, dstEvaluated, *currBldrCtx);
   for (ExplodedNodeSet::iterator I = dstPreVisit.begin(), E = dstPreVisit.end();
        I!=E; ++I) {
     ExplodedNode *N = *I;
@@ -698,7 +699,7 @@ void ExprEngine::VisitLogicalExpr(const BinaryOperator* B, ExplodedNode *Pred,
   assert(B->getOpcode() == BO_LAnd ||
          B->getOpcode() == BO_LOr);
 
-  StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   ProgramStateRef state = Pred->getState();
 
   if (B->getType()->isVectorType()) {
@@ -779,7 +780,7 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
                                   ExplodedNodeSet &Dst) {
   assert(L && R);
 
-  StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
+  NodeBuilder B(Pred, Dst, *currBldrCtx);
   ProgramStateRef state = Pred->getState();
   const LocationContext *LCtx = Pred->getLocationContext();
   const CFGBlock *SrcBlock = nullptr;
@@ -839,7 +840,7 @@ void ExprEngine::VisitGuardedExpr(const Expr *Ex,
 void ExprEngine::
 VisitOffsetOfExpr(const OffsetOfExpr *OOE,
                   ExplodedNode *Pred, ExplodedNodeSet &Dst) {
-  StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
+  NodeBuilder B(Pred, Dst, *currBldrCtx);
   Expr::EvalResult Result;
   if (OOE->EvaluateAsInt(Result, getContext())) {
     APSInt IV = Result.Val.getInt();
@@ -864,7 +865,7 @@ VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
   getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, Ex, *this);
 
   ExplodedNodeSet EvalSet;
-  StmtNodeBuilder Bldr(CheckedSet, EvalSet, *currBldrCtx);
+  NodeBuilder Bldr(CheckedSet, EvalSet, *currBldrCtx);
 
   QualType T = Ex->getTypeOfArgument();
 
@@ -899,7 +900,7 @@ VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Ex,
 }
 
 void ExprEngine::handleUOExtension(ExplodedNode *N, const UnaryOperator *U,
-                                   StmtNodeBuilder &Bldr) {
+                                   NodeBuilder &Bldr) {
   // FIXME: We can probably just have some magic in Environment::getSVal()
   // that propagates values, instead of creating a new node here.
   //
@@ -920,7 +921,7 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
   getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, U, *this);
 
   ExplodedNodeSet EvalSet;
-  StmtNodeBuilder Bldr(CheckedSet, EvalSet, *currBldrCtx);
+  NodeBuilder Bldr(CheckedSet, EvalSet, *currBldrCtx);
 
   for (ExplodedNode *N : CheckedSet) {
     switch (U->getOpcode()) {
@@ -1065,7 +1066,7 @@ void ExprEngine::VisitIncrementDecrementOperator(const UnaryOperator* U,
   evalLoad(Tmp, U, Ex, Pred, state, loc);
 
   ExplodedNodeSet Dst2;
-  StmtNodeBuilder Bldr(Tmp, Dst2, *currBldrCtx);
+  NodeBuilder Bldr(Tmp, Dst2, *currBldrCtx);
   for (ExplodedNode *N : Tmp) {
     state = N->getState();
     assert(LCtx == N->getLocationContext());

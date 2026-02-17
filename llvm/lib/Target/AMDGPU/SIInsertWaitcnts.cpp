@@ -99,21 +99,6 @@ static unsigned getWaitCountMax(const AMDGPU::HardwareLimits &Limits,
   }
 }
 
-static bool isSoftXcnt(MachineInstr &MI) {
-  return MI.getOpcode() == AMDGPU::S_WAIT_XCNT_soft;
-}
-
-static bool isAtomicRMW(MachineInstr &MI) {
-  return (MI.getDesc().TSFlags & SIInstrFlags::maybeAtomic) && MI.mayLoad() &&
-         MI.mayStore();
-}
-
-enum class AtomicRMWState {
-  NewBlock,    // Start of a new atomic RMW block
-  InsideBlock, // Middle of an existing block
-  NotInBlock   // Not in an atomic RMW block
-};
-
 /// Integer IDs used to track vector memory locations we may have to wait on.
 /// Encoded as u16 chunks:
 ///
@@ -676,10 +661,11 @@ public:
                              WaitcntBrackets &ScoreBrackets);
   bool insertWaitcntInBlock(MachineFunction &MF, MachineBasicBlock &Block,
                             WaitcntBrackets &ScoreBrackets);
+  /// Removes redundant Soft Xcnt Waitcnts in \p Block emitted by the Memory
+  /// Legalizer. Returns true if block was modified.
+  bool removeRedundantSoftXcnts(MachineBasicBlock &Block);
   void setSchedulingMode(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                          bool ExpertMode) const;
-  AtomicRMWState getAtomicRMWState(MachineInstr &MI,
-                                   AtomicRMWState PrevState) const;
   const WaitEventSet &getWaitEvents(InstCounterType T) const {
     return WCG->getWaitEvents(T);
   }
@@ -3126,39 +3112,6 @@ void SIInsertWaitcnts::setSchedulingMode(MachineBasicBlock &MBB,
       .addImm(EncodedReg);
 }
 
-// Track back-to-back atomic RMW instructions, referred to as a block.
-//
-// Determines whether \p MI starts a new atomic RMW block, is inside
-// an existing block, or is outside of a block. A block is broken when a
-// CU-scoped memory op or an atomic store is encountered. ALU ops
-// and non-memory instructions don't break a block. The function returns
-// the new state after processing the current instruction based on
-// \p PrevState, the previously captured state.
-AtomicRMWState
-SIInsertWaitcnts::getAtomicRMWState(MachineInstr &MI,
-                                    AtomicRMWState PrevState) const {
-  if (isAtomicRMW(MI)) {
-    // Transition from NotInBlock -> NewBlock -> InsideBlock.
-    if (PrevState == AtomicRMWState::NotInBlock)
-      return AtomicRMWState::NewBlock;
-    if (PrevState == AtomicRMWState::NewBlock)
-      return AtomicRMWState::InsideBlock;
-
-    return PrevState;
-  }
-
-  // LDS memory operations don't break the block.
-  if (TII->isDS(MI) || (TII->isFLAT(MI) && TII->mayAccessLDSThroughFlat(MI)))
-    return PrevState;
-
-  // Reset the atomic RMW block state when found other VMEM and SMEM operations.
-  if (MI.mayLoad() ^ MI.mayStore())
-    return AtomicRMWState::NotInBlock;
-
-  // Return the previous state otherwise.
-  return PrevState;
-}
-
 // Generate s_waitcnt instructions where needed.
 bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                             MachineBasicBlock &Block,
@@ -3187,7 +3140,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
-  AtomicRMWState RMWState = AtomicRMWState::NotInBlock;
 
   for (MachineBasicBlock::instr_iterator Iter = Block.instr_begin(),
                                          E = Block.instr_end();
@@ -3197,32 +3149,13 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       ++Iter;
       continue;
     }
-    // Get the atomic RMW block state for current instruction.
-    RMWState = getAtomicRMWState(Inst, RMWState);
-
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.
     if (isWaitInstr(Inst) ||
         (IsExpertMode && Inst.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR)) {
-      ++Iter;
-      bool IsSoftXcnt = isSoftXcnt(Inst);
-      // The Memory Legalizer conservatively inserts a soft xcnt before each
-      // atomic RMW operation. However, for sequences of back-to-back atomic
-      // RMWs, only the first s_wait_xcnt insertion is necessary. Optimize away
-      // the redundant soft xcnts when we're inside an atomic RMW block.
-      if (Iter != E && IsSoftXcnt) {
-        // Check if the next instruction can potentially change the atomic RMW
-        // state.
-        RMWState = getAtomicRMWState(*Iter, RMWState);
-      }
-
-      if (IsSoftXcnt && RMWState == AtomicRMWState::InsideBlock) {
-        // Delete this soft xcnt.
-        Inst.eraseFromParent();
-        Modified = true;
-      } else if (!OldWaitcntInstr) {
+      if (!OldWaitcntInstr)
         OldWaitcntInstr = &Inst;
-      }
+      ++Iter;
       continue;
     }
 
@@ -3341,6 +3274,41 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     ScoreBrackets.dump();
   });
 
+  return Modified;
+}
+
+bool SIInsertWaitcnts::removeRedundantSoftXcnts(MachineBasicBlock &Block) {
+  if (Block.size() <= 1)
+    return false;
+  // The Memory Legalizer conservatively inserts a soft xcnt before each
+  // atomic RMW operation. However, for sequences of back-to-back atomic
+  // RMWs, only the first s_wait_xcnt insertion is necessary. Optimize away
+  // the redundant soft xcnts.
+  bool Modified = false;
+  // Remember the last atomic with a soft xcnt right before it.
+  MachineInstr *LastAtomicWithSoftXcnt = nullptr;
+
+  for (MachineInstr &MI : drop_begin(Block)) {
+    // Ignore last atomic if non-LDS VMEM and SMEM.
+    bool IsLDS =
+        TII->isDS(MI) || (TII->isFLAT(MI) && TII->mayAccessLDSThroughFlat(MI));
+    if (!IsLDS && (MI.mayLoad() ^ MI.mayStore()))
+      LastAtomicWithSoftXcnt = nullptr;
+
+    bool IsAtomicRMW = (MI.getDesc().TSFlags & SIInstrFlags::maybeAtomic) &&
+                       MI.mayLoad() && MI.mayStore();
+    MachineInstr &PrevMI = *MI.getPrevNode();
+    // This is an atomic with a soft xcnt.
+    if (PrevMI.getOpcode() == AMDGPU::S_WAIT_XCNT_soft && IsAtomicRMW) {
+      // If we have already found an atomic with a soft xcnt, remove this soft
+      // xcnt as it's redundant.
+      if (LastAtomicWithSoftXcnt) {
+        PrevMI.eraseFromParent();
+        Modified = true;
+      }
+      LastAtomicWithSoftXcnt = &MI;
+    }
+  }
   return Modified;
 }
 
@@ -3668,6 +3636,8 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
         }
       }
 
+      if (ST->hasWaitXcnt())
+        Modified |= removeRedundantSoftXcnts(*MBB);
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);
       BI.Dirty = false;
 
