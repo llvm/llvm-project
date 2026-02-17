@@ -396,25 +396,6 @@ struct SgToWiPrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
 };
 
 /// Distributes a subgroup-level LoadGather (xegpu.load) op to workitem-level.
-/// The result at workitem level is always 1D. A ShapeCast is added to restore
-/// the expected rank from the lane layout if needed.
-///
-/// Example (with chunk_size):
-///   %0 = xegpu.load %src[%offset], %mask <{chunk_size = 8,
-///     layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
-///     : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
-/// To:
-///   %0 = xegpu.load %src[%offset], %mask <{chunk_size = 8}>
-///     : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
-///   %1 = vector.shape_cast %0 : vector<8xf16> to vector<1x8xf16>
-///
-/// Example (without chunk_size):
-///   %0 = xegpu.load %src[%offset], %mask
-///     <{layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}>
-///     : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16xf16>
-/// To:
-///   %0 = xegpu.load %src[%offset], %mask
-///     : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<1xf16>
 struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
   using OpConversionPattern<xegpu::LoadGatherOp>::OpConversionPattern;
 
@@ -422,7 +403,6 @@ struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
   matchAndRewrite(xegpu::LoadGatherOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     xegpu::DistributeLayoutAttr layout = op.getAnchorLayout();
-    // If no layout, nothing to do.
     if (!layout)
       return failure();
 
@@ -430,7 +410,7 @@ struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
     if (!resultTy)
       return failure();
 
-    // Check that all leading dimensions are unit dimensions.
+    // Check that leading dimensions are unit.
     int chunkSize = op.getChunkSize().value_or(1);
     int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
     for (int i = 0; i < resultTy.getRank() - effectiveVecRank; i++) {
@@ -448,15 +428,13 @@ struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
           "unable to compute expected workitem vector type from lane layout");
 
     VectorType expectedWiResultTy = expectedWiResultTyOrFailure.value();
-    // The hardware-supported WI type for scatter ops is always 1D.
     VectorType supportedWiResultTy =
         VectorType::get({expectedWiResultTy.getNumElements()},
                         expectedWiResultTy.getElementType());
 
-    // Flatten offsets and mask to 1D for hardware compatibility.
-    Value offsets = adaptor.getOffsets() ? adaptor.getOffsets() : Value();
-    if (offsets) {
-      auto offsetsTy = cast<VectorType>(offsets.getType());
+    // Flatten offsets and mask to 1D to match the 1D result type.
+    Value offsets = adaptor.getOffsets();
+    if (auto offsetsTy = dyn_cast<VectorType>(offsets.getType())) {
       VectorType offsetsTy1D = VectorType::get({offsetsTy.getNumElements()},
                                                offsetsTy.getElementType());
       if (offsetsTy != offsetsTy1D)
@@ -465,20 +443,20 @@ struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
                       .getResult();
     }
     Value mask = adaptor.getMask();
-    auto maskTy = cast<VectorType>(mask.getType());
-    VectorType maskTy1D =
-        VectorType::get({maskTy.getNumElements()}, maskTy.getElementType());
-    if (maskTy != maskTy1D)
-      mask = vector::ShapeCastOp::create(rewriter, op.getLoc(), maskTy1D, mask)
-                 .getResult();
+    if (auto maskTy = dyn_cast<VectorType>(mask.getType())) {
+      VectorType maskTy1D =
+          VectorType::get({maskTy.getNumElements()}, maskTy.getElementType());
+      if (maskTy != maskTy1D)
+        mask =
+            vector::ShapeCastOp::create(rewriter, op.getLoc(), maskTy1D, mask)
+                .getResult();
+    }
 
-    // Build the new op with adapted (type-converted) values.
     auto newOp = xegpu::LoadGatherOp::create(
         rewriter, op.getLoc(), supportedWiResultTy, adaptor.getSource(),
         offsets, mask, op.getChunkSizeAttr(), op.getL1HintAttr(),
         op.getL2HintAttr(), op.getL3HintAttr(), /*layout=*/nullptr);
 
-    // Cast the result to the expected type if needed (e.g., 1D to 2D).
     Value result = newOp->getResult(0);
     if (supportedWiResultTy != expectedWiResultTy)
       result = vector::ShapeCastOp::create(rewriter, op.getLoc(),
@@ -617,25 +595,7 @@ struct LowerVectorMultiReductionPattern
 };
 
 /// Distributes a subgroup-level StoreScatter (xegpu.store) op to
-/// workitem-level. Stored value in workitem-level StoreScatter op is 1D.
-/// A ShapeCast is added to cast the incoming value to 1D if needed.
-///
-/// Example (with chunk_size):
-///   xegpu.store %val, %src[%offset], %mask <{chunk_size = 8,
-///     layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}>
-///     : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
-/// To:
-///   %0 = vector.shape_cast %val : vector<1x8xf16> to vector<8xf16>
-///   xegpu.store %0, %src[%offset], %mask <{chunk_size = 8}>
-///     : vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
-///
-/// Example (without chunk_size):
-///   xegpu.store %val, %src[%offset], %mask
-///     <{layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}>
-///     : vector<16xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
-/// To:
-///   xegpu.store %val, %src[%offset], %mask
-///     : vector<1xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
+/// workitem-level.
 struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
   using OpConversionPattern<xegpu::StoreScatterOp>::OpConversionPattern;
 
@@ -643,7 +603,6 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
   matchAndRewrite(xegpu::StoreScatterOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     xegpu::DistributeLayoutAttr layout = op.getAnchorLayout();
-    // If no layout, nothing to do.
     if (!layout)
       return failure();
 
@@ -669,12 +628,10 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
           "unable to compute expected workitem vector type from lane layout");
 
     VectorType expectedWiValueTy = expectedWiValueTyOrFailure.value();
-    // The hardware-supported WI type for scatter ops is always 1D.
     VectorType supportedWiValueTy =
         VectorType::get({expectedWiValueTy.getNumElements()},
                         expectedWiValueTy.getElementType());
 
-    // Cast the adapted value to the supported 1D type if needed.
     Value adaptedValue = adaptor.getValue();
     if (adaptedValue.getType() != supportedWiValueTy)
       adaptedValue =
@@ -682,10 +639,9 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
                                       adaptedValue)
               .getResult();
 
-    // Flatten offsets and mask to 1D for hardware compatibility.
-    Value offsets = adaptor.getOffsets() ? adaptor.getOffsets() : Value();
-    if (offsets) {
-      auto offsetsTy = cast<VectorType>(offsets.getType());
+    // Flatten offsets and mask to 1D to match the 1D value type.
+    Value offsets = adaptor.getOffsets();
+    if (auto offsetsTy = dyn_cast<VectorType>(offsets.getType())) {
       VectorType offsetsTy1D = VectorType::get({offsetsTy.getNumElements()},
                                                offsetsTy.getElementType());
       if (offsetsTy != offsetsTy1D)
@@ -694,14 +650,15 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
                       .getResult();
     }
     Value mask = adaptor.getMask();
-    auto maskTy = cast<VectorType>(mask.getType());
-    VectorType maskTy1D =
-        VectorType::get({maskTy.getNumElements()}, maskTy.getElementType());
-    if (maskTy != maskTy1D)
-      mask = vector::ShapeCastOp::create(rewriter, op.getLoc(), maskTy1D, mask)
-                 .getResult();
+    if (auto maskTy = dyn_cast<VectorType>(mask.getType())) {
+      VectorType maskTy1D =
+          VectorType::get({maskTy.getNumElements()}, maskTy.getElementType());
+      if (maskTy != maskTy1D)
+        mask =
+            vector::ShapeCastOp::create(rewriter, op.getLoc(), maskTy1D, mask)
+                .getResult();
+    }
 
-    // Build the new op with adapted values.
     xegpu::StoreScatterOp::create(
         rewriter, op.getLoc(), adaptedValue, adaptor.getDest(), offsets, mask,
         op.getChunkSizeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
