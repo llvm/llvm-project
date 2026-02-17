@@ -186,7 +186,6 @@ void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       // GD PLT: call foo@GDPLT becomes call __tls_get_addr. Create the
       // __tls_get_addr symbol if needed and route the PLT entry to it
       // instead of the TLS symbol.
-      sym.setFlags(NEEDS_PLT);
       Symbol *ta = ctx.symtab->find("__tls_get_addr");
       if (!ta) {
         ta = ctx.symtab->addSymbol(Undefined{ctx.internalFile, "__tls_get_addr",
