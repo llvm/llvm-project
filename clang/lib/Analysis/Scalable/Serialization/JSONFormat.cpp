@@ -1,5 +1,6 @@
 #include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
+#include "clang/Support/Compiler.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FileSystem.h"
@@ -18,6 +19,9 @@ using Value = llvm::json::Value;
 //----------------------------------------------------------------------------
 // ErrorBuilder - Fluent API for constructing contextual errors.
 //----------------------------------------------------------------------------
+
+template class CLANG_EXPORT_TEMPLATE
+    llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>;
 
 namespace {
 
