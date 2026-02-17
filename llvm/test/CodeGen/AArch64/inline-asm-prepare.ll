@@ -180,7 +180,7 @@ define i32 @split_me1(i1 %z) {
 ; CHECK:       x:
 ; CHECK-NEXT:    ret i32 42
 ; CHECK:       v:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[W_V_CRIT_EDGE]] ], [ undef, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP1]], [[W_V_CRIT_EDGE]] ], [ 42, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
@@ -194,7 +194,7 @@ x:
   ret i32 42
 
 v:
-  %1 = phi i32 [%0, %w], [%0, %w], [undef, %entry]
+  %1 = phi i32 [%0, %w], [%0, %w], [42, %entry]
   ret i32 %1
 }
 
