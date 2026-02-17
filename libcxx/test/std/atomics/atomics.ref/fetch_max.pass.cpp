@@ -15,26 +15,25 @@
 #include <cassert>
 #include <concepts>
 #include <type_traits>
-#include <utility>
 
 #include "atomic_helpers.h"
 #include "test_macros.h"
 
 template <typename T>
-concept has_fetch_max = requires {
-  std::declval<T const>().fetch_max(std::declval<T>());
-  std::declval<T const>().fetch_max(std::declval<T>(), std::declval<std::memory_order>());
+concept has_fetch_max = requires(std::atomic_ref<T> const& a, T v) {
+  { a.fetch_max(v) } -> std::same_as<T>;
+  { a.fetch_max(v, std::memory_order::relaxed) } -> std::same_as<T>;
 };
 
 template <typename T>
 struct TestDoesNotHaveFetchMax {
-  void operator()() const { static_assert(!has_fetch_max<std::atomic_ref<T>>); }
+  void operator()() const { static_assert(!has_fetch_max<T>); }
 };
 
 template <typename T>
 struct TestFetchMax {
   void operator()() const {
-    static_assert(std::is_integral_v<T>);
+    static_assert(std::is_integral_v<T> && has_fetch_max<T>);
 
     alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
     std::atomic_ref<T> const a(x);
