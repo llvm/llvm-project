@@ -9,9 +9,6 @@
 // REQUIRES: std-at-least-c++26
 // XFAIL: !has-64-bit-atomics
 
-// https://llvm.org/PR72893
-// XFAIL: target={{x86_64-.*}} && tsan
-
 // <atomic>
 
 // template<class T>
