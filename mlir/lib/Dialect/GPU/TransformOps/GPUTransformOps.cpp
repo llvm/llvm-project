@@ -786,17 +786,21 @@ static DiagnosedSilenceableFailure checkMappingSpec(
   }
   bool hasZeroParallelIteration =
       llvm::any_of(numParallelIterations, [](int64_t i) { return i == 0; });
-  int64_t required = hasZeroParallelIteration
-                         ? 0
-                         : computeProduct(numParallelIterations) * factor;
-  int64_t available = computeProduct(blockOrGridSizes);
-  if (required > available) {
+  // `computeProduct` requires strictly positive inputs, so handle the
+  // zero-iteration case explicitly to avoid asserting on valid degenerate
+  // loop bounds.
+  int64_t requiredResourceCount =
+      hasZeroParallelIteration ? 0
+                               : computeProduct(numParallelIterations) * factor;
+  int64_t availableResourceCount = computeProduct(blockOrGridSizes);
+  if (requiredResourceCount > availableResourceCount) {
     auto diag = definiteFailureHelper(
         transformOp, forallOp,
         Twine("the number of required parallel resources (blocks or "
               "threads) ") +
-            Twine(required) + " overflows the number of available resources " +
-            Twine(available));
+            Twine(requiredResourceCount) +
+            " overflows the number of available resources " +
+            Twine(availableResourceCount));
     return diag;
   }
   return DiagnosedSilenceableFailure::success();
