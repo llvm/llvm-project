@@ -252,7 +252,7 @@ def ApplyReorderAndExpandMultiReductionPatternsOp: Op<Transform_Dialect,
     outermost, and 1-D reductions are lifted to 2-D.
 
     This populates the patterns from
-    `populateVectorMultiReductionTransformationPatterns`, i.e.:
+    `populateVectorMultiReductionReorderAndExpandPatterns`, i.e.:
     * `InnerOuterDimReductionConversion`
     * `OneDimMultiReductionToTwoDim`
   }];
