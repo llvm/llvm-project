@@ -64,10 +64,6 @@
 // These flags are documented in ABIGuarantees.rst
 #  define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 #  define _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
-#  define _LIBCPP_ABI_DO_NOT_EXPORT_ALIGN
-#  define _LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON
-#  define _LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON
-#  define _LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10
 #  define _LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI
 #  define _LIBCPP_ABI_ENABLE_UNIQUE_PTR_TRIVIAL_ABI
 #  define _LIBCPP_ABI_FIX_CITYHASH_IMPLEMENTATION
@@ -88,17 +84,6 @@
 #  define _LIBCPP_ABI_TRIVIALLY_COPYABLE_BIT_ITERATOR
 
 #elif _LIBCPP_ABI_VERSION == 1
-#  if !(defined(_LIBCPP_OBJECT_FORMAT_COFF) || defined(_LIBCPP_OBJECT_FORMAT_XCOFF))
-// Enable compiling copies of now inline methods into the dylib to support
-// applications compiled against older libraries. This is unnecessary with
-// COFF dllexport semantics, since dllexport forces a non-inline definition
-// of inline functions to be emitted anyway. Our own non-inline copy would
-// conflict with the dllexport-emitted copy, so we disable it. For XCOFF,
-// the linker will take issue with the symbols in the shared object if the
-// weak inline methods get visibility (such as from -fvisibility-inlines-hidden),
-// so disable it.
-#    define _LIBCPP_DEPRECATED_ABI_LEGACY_LIBRARY_DEFINITIONS_FOR_INLINE_FUNCTIONS
-#  endif
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
 #  if defined(__FreeBSD__)

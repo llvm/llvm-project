@@ -68,10 +68,12 @@ public:
 
   // Get the delay type for a MachineInstr.
   DelayType getDelayType(const MachineInstr &MI) {
-    if (SIInstrInfo::isTRANS(MI))
+    // Non-F64 TRANS instructions use a separate delay type.
+    if (SIInstrInfo::isTRANS(MI) &&
+        !AMDGPU::isDPMACCInstruction(MI.getOpcode()))
       return TRANS;
     // WMMA XDL ops are treated the same as TRANS.
-    if (AMDGPU::isGFX1250(*ST) && SII->isXDLWMMA(MI))
+    if (ST->hasGFX1250Insts() && SII->isXDLWMMA(MI))
       return TRANS;
     if (SIInstrInfo::isVALU(MI))
       return VALU;
@@ -325,6 +327,13 @@ public:
       for (auto I = MachineBasicBlock::instr_iterator(LastDelayAlu),
                 E = MachineBasicBlock::instr_iterator(MI);
            ++I != E;) {
+        if (I->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
+          // It is not deterministic whether the skip count counts
+          // S_SET_VGPR_MSB instructions or not, so do not include them in a
+          // skip region.
+          Skip = 6;
+          break;
+        }
         if (!I->isBundle() && !I->isMetaInstruction())
           ++Skip;
       }

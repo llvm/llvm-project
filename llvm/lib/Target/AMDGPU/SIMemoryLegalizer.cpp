@@ -398,6 +398,10 @@ public:
                              bool IsCrossAddrSpaceOrdering,
                              Position Pos) const = 0;
 
+  /// Handle operations that are considered non-volatile.
+  /// See \ref isNonVolatileMemoryAccess
+  virtual bool handleNonVolatile(MachineInstr &MI) const { return false; }
+
   /// Virtual destructor to allow derivations to be deleted.
   virtual ~SICacheControl() = default;
 };
@@ -512,9 +516,9 @@ protected:
 
 public:
   SIGfx12CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {
-    // GFX12.0 and GFX12.5 memory models greatly overlap, and in some cases
-    // the behavior is the same if assuming GFX12.0 in CU mode.
-    assert(!ST.hasGFX1250Insts() || ST.isCuModeEnabled());
+    // GFX120x and GFX125x memory models greatly overlap, and in some cases
+    // the behavior is the same if assuming GFX120x in CU mode.
+    assert(!ST.hasGFX1250Insts() || ST.hasGFX13Insts() || ST.isCuModeEnabled());
   }
 
   bool insertWait(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
@@ -555,6 +559,8 @@ public:
                             SIAtomicAddrSpace AddrSpace) const override {
     return setAtomicScope(MI, Scope, AddrSpace);
   }
+
+  bool handleNonVolatile(MachineInstr &MI) const override;
 };
 
 class SIMemoryLegalizer final {
@@ -897,6 +903,18 @@ SIMemOpAccess::getLDSDMAInfo(const MachineBasicBlock::iterator &MI) const {
     return std::nullopt;
 
   return constructFromMIWithMMO(MI);
+}
+
+/// \returns true if \p MI has one or more MMO, and all of them are fit for
+/// being marked as non-volatile. This means that either they are accessing the
+/// constant address space, are accessing a known invariant memory location, or
+/// that they are marked with the non-volatile metadata/MMO flag.
+static bool isNonVolatileMemoryAccess(const MachineInstr &MI) {
+  if (MI.getNumMemOperands() == 0)
+    return false;
+  return all_of(MI.memoperands(), [&](const MachineMemOperand *MMO) {
+    return MMO->getFlags() & (MOThreadPrivate | MachineMemOperand::MOInvariant);
+  });
 }
 
 SICacheControl::SICacheControl(const GCNSubtarget &ST) : ST(ST) {
@@ -1974,6 +1992,17 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     --MI;
 
+  // Target requires a waitcnt to ensure that the proceeding INV has completed
+  // as it may get reorded with following load instructions.
+  if (ST.hasINVWBL2WaitCntRequirement() && Scope > SIAtomicScope::CLUSTER) {
+    insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD,
+               /*IsCrossAddrSpaceOrdering=*/false, Pos, AtomicOrdering::Acquire,
+               /*AtomicsOnly=*/false);
+
+    if (Pos == Position::AFTER)
+      --MI;
+  }
+
   return true;
 }
 
@@ -2001,19 +2030,15 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
     //
     // Emitting it for lower scopes is a slow no-op, so we omit it
     // for performance.
+    std::optional<AMDGPU::CPol::CPol> NeedsWB;
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-          .addImm(AMDGPU::CPol::SCOPE_SYS);
-      Changed = true;
+      NeedsWB = AMDGPU::CPol::SCOPE_SYS;
       break;
     case SIAtomicScope::AGENT:
       // GFX12.5 may have >1 L2 per device so we must emit a device scope WB.
-      if (ST.hasGFX1250Insts()) {
-        BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-            .addImm(AMDGPU::CPol::SCOPE_DEV);
-        Changed = true;
-      }
+      if (ST.hasGFX1250Insts())
+        NeedsWB = AMDGPU::CPol::SCOPE_DEV;
       break;
     case SIAtomicScope::CLUSTER:
     case SIAtomicScope::WORKGROUP:
@@ -2024,6 +2049,20 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
       break;
     default:
       llvm_unreachable("Unsupported synchronization scope");
+    }
+
+    if (NeedsWB) {
+      // Target requires a waitcnt to ensure that the proceeding store
+      // proceeding store/rmw operations have completed in L2 so their data will
+      // be written back by the WB instruction.
+      if (ST.hasINVWBL2WaitCntRequirement())
+        insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+                   /*IsCrossAddrSpaceOrdering=*/false, Pos,
+                   AtomicOrdering::Release,
+                   /*AtomicsOnly=*/false);
+
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB)).addImm(*NeedsWB);
+      Changed = true;
     }
 
     if (Pos == Position::AFTER)
@@ -2038,6 +2077,17 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
                         /*AtomicsOnly=*/false);
 
   return Changed;
+}
+
+bool SIGfx12CacheControl::handleNonVolatile(MachineInstr &MI) const {
+  // On GFX12.5, set the NV CPol bit.
+  if (!ST.hasGFX1250Insts())
+    return false;
+  MachineOperand *CPol = TII->getNamedOperand(MI, OpName::cpol);
+  if (!CPol)
+    return false;
+  CPol->setImm(CPol->getImm() | AMDGPU::CPol::NV);
+  return true;
 }
 
 bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
@@ -2435,20 +2485,21 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
         MI = II->getIterator();
       }
 
-      if (!(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic))
-        continue;
-
-      if (const auto &MOI = MOA.getLoadInfo(MI)) {
-        Changed |= expandLoad(*MOI, MI);
-      } else if (const auto &MOI = MOA.getStoreInfo(MI)) {
-        Changed |= expandStore(*MOI, MI);
-      } else if (const auto &MOI = MOA.getLDSDMAInfo(MI)) {
-        Changed |= expandLDSDMA(*MOI, MI);
-      } else if (const auto &MOI = MOA.getAtomicFenceInfo(MI)) {
-        Changed |= expandAtomicFence(*MOI, MI);
-      } else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI)) {
-        Changed |= expandAtomicCmpxchgOrRmw(*MOI, MI);
+      if (MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic) {
+        if (const auto &MOI = MOA.getLoadInfo(MI))
+          Changed |= expandLoad(*MOI, MI);
+        else if (const auto &MOI = MOA.getStoreInfo(MI))
+          Changed |= expandStore(*MOI, MI);
+        else if (const auto &MOI = MOA.getLDSDMAInfo(MI))
+          Changed |= expandLDSDMA(*MOI, MI);
+        else if (const auto &MOI = MOA.getAtomicFenceInfo(MI))
+          Changed |= expandAtomicFence(*MOI, MI);
+        else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI))
+          Changed |= expandAtomicCmpxchgOrRmw(*MOI, MI);
       }
+
+      if (isNonVolatileMemoryAccess(*MI))
+        Changed |= CC->handleNonVolatile(*MI);
     }
   }
 

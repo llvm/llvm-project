@@ -16,6 +16,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/StringMap.h"
@@ -59,21 +60,32 @@ public:
       // no support for bitfields in here (yet)
       if (is_bitfield)
         return;
-      auto size = field_type.GetByteSize(nullptr);
+      auto size_or_err = field_type.GetByteSize(nullptr);
+      if (!size_or_err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Target), size_or_err.takeError(), "{0}");
+        return;
+      }
+      size_t size = *size_or_err;
+
       // no support for things larger than a uint64_t (yet)
-      if (!size || *size > 8)
+      if (size > 8)
         return;
       size_t byte_index = static_cast<size_t>(bit_offset / 8);
-      m_fields.insert({name, FieldImpl{field_type, byte_index,
-                                       static_cast<size_t>(*size)}});
+      m_fields.insert(
+          {name, FieldImpl{field_type, byte_index, static_cast<size_t>(size)}});
     }
-    auto total_size = struct_type.GetByteSize(nullptr);
-    if (!total_size)
+    auto total_size_or_err = struct_type.GetByteSize(nullptr);
+    if (!total_size_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Target), total_size_or_err.takeError(),
+                     "{0}");
       return;
-    lldb::WritableDataBufferSP buffer_sp(new DataBufferHeap(*total_size, 0));
+    }
+    size_t total_size = *total_size_or_err;
+
+    lldb::WritableDataBufferSP buffer_sp(new DataBufferHeap(total_size, 0));
     Status error;
     process->ReadMemoryFromInferior(base_addr, buffer_sp->GetBytes(),
-                                    *total_size, error);
+                                    total_size, error);
     if (error.Fail())
       return;
     m_data = DataExtractor(buffer_sp, m_byte_order, m_addr_byte_size);

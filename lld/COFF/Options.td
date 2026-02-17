@@ -354,6 +354,11 @@ defm build_id: B<
 def incl_glob : Joined<["/", "-", "/?", "-?"], "includeglob:">,
     HelpText<"Force symbol to be added to symbol table as undefined one using a glob pattern">;
 
+defm prefetch_inputs : B<"prefetch-inputs",
+                         "Request the OS to prefetch input files as early as "
+                         "possible, to improve link times",
+                         "Do not prefetch input files (default)">;
+
 // Flags for debugging
 def lldmap : F<"lldmap">;
 def lldmap_file : P_priv<"lldmap">;

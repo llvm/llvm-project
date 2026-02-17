@@ -151,14 +151,21 @@ static bool shouldSkipInBacktrace(const Function *F) {
 }
 
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
+  assert(Func);
   // For lambda static invokers, we would just print __invoke().
-  if (const auto *F = getFunction(); F && shouldSkipInBacktrace(F))
+  if (shouldSkipInBacktrace(Func))
     return;
 
   const Expr *CallExpr = Caller->getExpr(getRetPC());
   const FunctionDecl *F = getCallee();
-  bool IsMemberCall = isa<CXXMethodDecl>(F) && !isa<CXXConstructorDecl>(F) &&
-                      cast<CXXMethodDecl>(F)->isImplicitObjectMemberFunction();
+
+  bool IsMemberCall = false;
+  bool ExplicitInstanceParam = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
+    IsMemberCall = !isa<CXXConstructorDecl>(MD) && !MD->isStatic();
+    ExplicitInstanceParam = MD->isExplicitObjectMemberFunction();
+  }
+
   if (Func->hasThisPointer() && IsMemberCall) {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
       const Expr *Object = MCE->getImplicitObjectArgument();
@@ -190,16 +197,15 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
   Off += Func->hasRVO() ? primSize(PT_Ptr) : 0;
   Off += Func->hasThisPointer() ? primSize(PT_Ptr) : 0;
-
-  for (unsigned I = 0, N = F->getNumParams(); I < N; ++I) {
-    QualType Ty = F->getParamDecl(I)->getType();
-
+  llvm::ListSeparator Comma;
+  for (const ParmVarDecl *Param :
+       F->parameters().slice(ExplicitInstanceParam)) {
+    OS << Comma;
+    QualType Ty = Param->getType();
     PrimType PrimTy = S.Ctx.classify(Ty).value_or(PT_Ptr);
 
     TYPE_SWITCH(PrimTy, print(OS, stackRef<T>(Off), S.getASTContext(), Ty));
     Off += align(primSize(PrimTy));
-    if (I + 1 != N)
-      OS << ", ";
   }
   OS << ")";
 }
@@ -246,14 +252,14 @@ Pointer InterpFrame::getParamPointer(unsigned Off) {
   assert(!isBottomFrame());
 
   // Allocate memory to store the parameter and the block metadata.
-  const auto &Desc = Func->getParamDescriptor(Off);
-  size_t BlockSize = sizeof(Block) + Desc.second->getAllocSize();
+  const auto &PDesc = Func->getParamDescriptor(Off);
+  size_t BlockSize = sizeof(Block) + PDesc.Desc->getAllocSize();
   auto Memory = std::make_unique<char[]>(BlockSize);
-  auto *B = new (Memory.get()) Block(S.Ctx.getEvalID(), Desc.second);
+  auto *B = new (Memory.get()) Block(S.Ctx.getEvalID(), PDesc.Desc);
   B->invokeCtor();
 
   // Copy the initial value.
-  TYPE_SWITCH(Desc.first, new (B->data()) T(stackRef<T>(Off)));
+  TYPE_SWITCH(PDesc.T, new (B->data()) T(stackRef<T>(Off)));
 
   // Record the param.
   Params.insert({Off, std::move(Memory)});

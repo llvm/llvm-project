@@ -10,3 +10,16 @@ define i32 @clmul32r(i32 %a, i32 %b) nounwind {
   %tmp = call i32 @llvm.riscv.clmulr.i32(i32 %a, i32 %b)
   ret i32 %tmp
 }
+
+define i32 @llvm_clmulr_i32(i32 %a, i32 %b) nounwind {
+; RV32ZBC-LABEL: llvm_clmulr_i32:
+; RV32ZBC:       # %bb.0:
+; RV32ZBC-NEXT:    clmulr a0, a0, a1
+; RV32ZBC-NEXT:    ret
+  %tmp1 = zext i32 %a to i64
+  %tmp2 = zext i32 %b to i64
+  %tmp3 = call i64 @llvm.clmul.i64(i64 %tmp1, i64 %tmp2)
+  %tmp4 = lshr i64 %tmp3, 31
+  %tmp5 = trunc i64 %tmp4 to i32
+  ret i32 %tmp5
+}

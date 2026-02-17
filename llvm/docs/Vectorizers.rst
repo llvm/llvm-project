@@ -428,9 +428,12 @@ header.
 
 .. image:: vplan-early-exit.png
 
-BranchOnTwoConds is lowered to a chain of conditional branches after dissolving loop regions:
+BranchOnTwoConds is lowered to a chain of conditional branches exiting
+the vector loop after dissolving loop regions:
 
 .. image:: vplan-early-exit-lowered.png
+
+
 
 Performance
 -----------

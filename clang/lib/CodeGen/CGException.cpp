@@ -1143,7 +1143,6 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
   llvm::Function *llvm_eh_typeid_for =
       CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for, {CGF.VoidPtrTy});
   llvm::Type *argTy = llvm_eh_typeid_for->getArg(0)->getType();
-  LangAS globAS = CGF.CGM.GetGlobalVarAddressSpace(nullptr);
 
   // Load the selector value.
   llvm::Value *selector = CGF.getSelectorFromSlot();
@@ -1159,8 +1158,7 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
     assert(typeValue && "fell into catch-all case!");
     // With opaque ptrs, only the address space can be a mismatch.
     if (typeValue->getType() != argTy)
-      typeValue = CGF.getTargetHooks().performAddrSpaceCast(CGF, typeValue,
-                                                            globAS, argTy);
+      typeValue = CGF.performAddrSpaceCast(typeValue, argTy);
 
     // Figure out the next block.
     bool nextIsEnd;

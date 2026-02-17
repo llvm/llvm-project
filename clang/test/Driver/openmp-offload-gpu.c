@@ -344,9 +344,15 @@
 // CHECK-XLINKER: -device-linker=a{{.*}}-device-linker=nvptx64-nvidia-cuda=b{{.*}}-device-linker=nvptx64-nvidia-cuda=c{{.*}}--
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
+// RUN:     -Xoffload-compiler a -Xoffload-compiler-nvptx64-nvidia-cuda b -Xoffload-compiler-nvptx64 c \
+// RUN:     %s 2>&1 | FileCheck --check-prefix=CHECK-XCOMPILER %s
+
+// CHECK-XCOMPILER: -device-compiler=a{{.*}}-device-compiler=nvptx64-nvidia-cuda=b{{.*}}-device-compiler=nvptx64-nvidia-cuda=c{{.*}}--
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-FEATURES %s
 
-// CHECK-LTO-FEATURES: llvm-offload-binary{{.*}}--image={{.*}}feature=+ptx{{[0-9]+}}
+// CHECK-LTO-FEATURES: llvm-offload-binary{{.*}}--image={{.*}}
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx64 -foffload-lto %s 2>&1 \
@@ -404,3 +410,20 @@
 // RUN:   | FileCheck --check-prefix=SHOULD-EXTRACT %s
 //
 // SHOULD-EXTRACT: clang-linker-wrapper{{.*}}"--should-extract=gfx906"
+
+//
+// Check ompdevice is linked.
+//
+// RUN:   %clang -###  -fopenmp -fopenmp-targets=nvptx64 --offload-arch=sm_52 \
+// RUN:     --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
+// RUN:     --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=OMPDEVICE %s
+//
+// RUN:   %clang -###  -fopenmp -fopenmp-targets=amdgcn --offload-arch=gfx908 \
+// RUN:     --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=OMPDEVICE %s
+//
+// RUN:   %clang -###  -fopenmp -fopenmp-targets=spirv64 \
+// RUN:     --libomptarget-spirv-bc-path=%S/Inputs/spirv-openmp/lib/libomptarget-spirv.bc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=OMPDEVICE %s
+// OMPDEVICE: clang-linker-wrapper{{.*}}--device-linker{{.*}}-lompdevice

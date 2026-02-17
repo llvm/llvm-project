@@ -26,6 +26,10 @@ namespace xegpu {
 class DistributeLayoutAttr;
 class LayoutAttr;
 class TensorDescType;
+
+namespace uArch {
+struct uArch;
+} // namespace uArch
 } // namespace xegpu
 
 namespace xegpu {
@@ -62,6 +66,21 @@ FailureOr<VectorType> getDistributedVectorType(xegpu::TensorDescType tdescTy);
 /// to a given LayoutAttr.
 FailureOr<VectorType> getDistributedVectorType(VectorType originalType,
                                                LayoutAttr layout);
+
+/// Helper function to get distributed vector type for a source vector type
+/// according to the lane_layout. We simply divide each dimension of tensor
+/// descriptor shape by corresponding lane_layout dimension. If
+/// array_length > 1, that is appended to the front of the distributed shape.
+///
+/// Examples:
+/// | original vector shape | lane_layout | distributed vector shape |
+/// |-----------------------|-------------|--------------------------|
+/// | 32x16                 | [1, 16]     | 32x1                     |
+/// | 32x16                 | [2, 8]      | 16x2                     |
+/// | 2x32x16               | [1, 16]     | 2x32x1                   |
+FailureOr<VectorType>
+getDistVecTypeBasedOnLaneLayout(DistributeLayoutAttr layout,
+                                VectorType originalType);
 
 /// Extract a set of small vectors from a value with a given shape using
 /// vector.extract_stride_slice
@@ -110,6 +129,24 @@ SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
                                               ArrayRef<OpFoldResult> lhs,
                                               ArrayRef<OpFoldResult> rhs);
 
+/// Given an `input` value representing per-lane data, this function returns the
+/// result after performing a reduction on the input over all lanes (number of
+/// lanes given by `size`). This uses butterfly shuffles to perform the
+/// reduction in a log2(size) number of steps.
+/// NOTE: Implementation taken from TestVectorTransforms.cpp
+Value subgroupReduction(Location loc, OpBuilder &builder, Value input,
+                        vector::CombiningKind kind, uint32_t size);
+
+/// Given a `src` and an `acc` argumments from a vector::MultiDimReductionOp,
+/// lower to a set of vector::ReductionOp ops over 1D slices extracted from
+/// `src`. The reduction is performed along `reductionDim`. The result is a
+/// vector with the same shape as `acc`.
+/// TODO: Only 2D to 1D reduction is supported for now.
+Value lowerToVectorReductions(TypedValue<VectorType> src,
+                              TypedValue<VectorType> acc,
+                              vector::CombiningKind kind, int64_t reductionDim,
+                              Location loc, PatternRewriter &rewriter);
+
 /// Helper Function to find a proper instruction multiple for the user-supplied
 /// sg-level data shape (diven by `dim`). `candidates` are uArch allowed shapes.
 /// `candidateMultiples` are uArch multiples of such shapes (i.e. block count or
@@ -117,12 +154,6 @@ SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
 template <typename T>
 int getLargestDivisor(T dim, ArrayRef<T> candidates,
                       ArrayRef<T> candidateMultiples = {});
-
-/// Return the attribute name for the OpOperand to attach DistributeLayoutAttr
-std::string getTemporaryLayoutName(const OpOperand &operand);
-
-/// Return the attribute name for the OpResult to attach DistributeLayoutAttr
-std::string getTemporaryLayoutName(const OpResult result);
 
 /// Retrieves the DistributeLayoutAttr associated with a given Value. For
 /// TensorDescType values, the DistributeLayoutAttr is extracted from the
@@ -136,17 +167,6 @@ DistributeLayoutAttr getDistributeLayoutAttr(const Value value);
 /// found, it will check the operand itself and its defining op.
 DistributeLayoutAttr getDistributeLayoutAttr(const OpOperand &opr);
 
-/// Removes the LayoutAttr for a given OpOperand or OpResult if it exists.
-template <typename T,
-          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
-                                      std::is_same_v<T, OpResult>>>
-void removeLayoutAttr(const T &operandOrResult);
-
-/// Removes the DistributeLayoutAttr for each OpOperand and OpResult of the
-/// given operation if they exist. If the operation contains regions, it is also
-/// applied recursively to the contained operations
-void removeLayoutAttrs(Operation *op);
-
 /// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpResult
 /// user should use setAnchorLayout instead
 void setDistributeLayoutAttr(const OpResult &Result,
@@ -156,6 +176,12 @@ void setDistributeLayoutAttr(const OpResult &Result,
 /// user should use setAnchorLayout instead
 void setDistributeLayoutAttr(const OpOperand &opr,
                              const DistributeLayoutAttr layout);
+
+/// Return the attribute name for the OpOperand to attach DistributeLayoutAttr
+std::string getTemporaryLayoutName(const OpOperand &operand);
+
+/// Return the attribute name for the OpResult to attach DistributeLayoutAttr
+std::string getTemporaryLayoutName(const OpResult result);
 
 /// get and set distribute layout attribute for non-anchor operations
 /// (and offsets/masks of load/store ops before we get rid of their temp attrs)
@@ -170,16 +196,22 @@ template <typename T,
 void setTemporaryLayout(const T &operandOrResult,
                         const DistributeLayoutAttr layout);
 
-/// [to-be-deprecated] Set the DistributeLayoutAttr for each OpOperand and
-/// OpResult of of the given operation. If the operation contains regions, it is
-/// also applied recursively to the contained operations operation.
-/// TODO: To be replaced by recoverTemporaryLayouts()
-void recoverTemporaryLayoutsDeprecated(Operation *op);
+/// Helper function to check if the layout is packed. Layout is packed if it is
+/// 2D and lane_data[0] != 1 (data packed from col dimension).
+/// TODO: Move to target info.
+bool requirePacked(const LayoutAttr layout);
 
-/// Attach layout attributes to all vector-type operands of operations within
-/// the given operation's region. Reports an error if any vector operand lacks
-/// a layout attribute.
-bool recoverTemporaryLayouts(Operation *rootOp);
+/// Helper function to check if the layout requires a transpose effect.
+bool requireTranspose(const LayoutAttr layout, const uArch::uArch *uArch);
+
+// Check if dst shape is an expansion of src shape by inserting unit dimensions.
+bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                           SmallVector<int64_t> &expandedUnitDims);
+
+// Checks if dst shape is an expansion of src shape where each dimension in src
+// is split into one or more consecutive dimensions in dst
+bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                            SmallVector<SmallVector<int64_t>> &splitDimGroups);
 
 } // namespace xegpu
 

@@ -92,9 +92,8 @@ html, body {
 
 .container {
     display: flex;
-    margin-top: 60px;
-    height: calc(100% - 60px);
     box-sizing: border-box;
+    align-items: stretch;
 }
 
 body, html {
@@ -105,30 +104,34 @@ body, html {
 }
 
 /* Navbar Styles */
+header {
+    background-color: var(--surface2);
+    display: flex;
+    flex-direction: column;
+}
+
 .navbar {
     background-color: var(--surface2);
     border-bottom: 1px solid var(--text2);
-    position: fixed;
     width: 100%;
-    top: 0;
-    left: 0;
     color: white;
     display: flex;
-    align-items: center;
-    padding: 0 20px;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
     box-sizing: border-box;
-    z-index: 1000;
 }
 
 
 .navbar__container {
-    display:flex;
-    justify-content:space-between;
+    display:grid;
+    grid-template-columns: auto 1fr auto;
     align-items:center;
     padding:1rem;
     color:var(--text1);
     max-width:2048px;
-    margin:auto
+    margin:auto;
+    width:100%
 }
 .navbar__logo {
     display:flex;
@@ -171,7 +174,9 @@ body, html {
     margin:0;
     padding:0;
     gap:.25rem;
-    margin-left:auto
+    margin-left:0;
+    grid-column:2;
+    justify-self:center
 }
 
 @media(max-width:768px) {
@@ -217,7 +222,8 @@ body, html {
     gap:1rem;
     align-items:center;
     margin:0;
-    padding:0
+    padding:0;
+    justify-content:center
 }
 
 @media(max-width:768px) {
@@ -255,9 +261,7 @@ body, html {
 }
 
 .navbar-breadcrumb-container {
-    position: absolute;
-    top: 60px;
-    left: 0;
+    position: static;
     width: 100%;
     background: var(--surface2);
     padding: 0.5rem 1rem;
@@ -424,7 +428,7 @@ body, html {
 .resizer {
     width: 5px;
     cursor: col-resize;
-    background-color: var(--text2);
+    background-color: var(--surface1);
 }
 
 .resizer:hover {
@@ -433,10 +437,8 @@ body, html {
 
 .sidebar {
     width: 250px;
-    left: 0;
-    top: 60px;
-    bottom: 0;
-    position: fixed;
+    position: sticky;
+    top: 0;
     background-color: var(--surface1);
     display: flex;
     border-left: 1px solid var(--text2);
@@ -475,12 +477,12 @@ body, html {
 
 /* Content */
 .content {
-    top: 60px;
     background-color: var(--text1-inverse);
-    left: 250px;
     position: relative;
-    width: calc(100% - 250px);
+    flex: 1;
+    min-width: 0;
     min-height: 100vh;
+    padding-left: 1rem;
 }
 
 .sidebar-item {

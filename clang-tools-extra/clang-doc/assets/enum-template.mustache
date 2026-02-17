@@ -15,9 +15,6 @@
             <tr>
                 <th>Name</th>
                 <th>Value</th>
-                {{#HasComment}}
-                <th>Comment</th>
-                {{/HasComment}}
             </tr>
             {{#Members}}
             <tr>
@@ -29,21 +26,16 @@
                 {{^Value}}
                 <td>{{ValueExpr}}</td>
                 {{/Value}}
-                {{#EnumValueComments}}
-                <td>{{>Comments}}</td>
-                {{/EnumValueComments}}
             </tr>
             {{/Members}}
         </tbody>
     </table>
-    {{#EnumComments}}
-    <div>
+    {{#Description}}
+    <div class="doc-card">
         {{>Comments}}
     </div>
-    {{/EnumComments}}
+    {{/Description}}
     {{#Location}}
-    <div>
-        Defined at line {{LineNumber}} of file {{Filename}}
-    </div>
+    <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
     {{/Location}}
 </div>

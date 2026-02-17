@@ -504,7 +504,8 @@ unsigned char test_builtin_rotateleft8(unsigned char x, unsigned char y) {
 // OGCG-LABEL: @_Z24test_builtin_rotateleft8hh
 // OGCG:         %[[INPUT:.+]] = load i8, ptr %{{.+}}, align 1
 // OGCG-NEXT:    %[[AMOUNT:.+]] = load i8, ptr %{{.+}}, align 1
-// OGCG-NEXT:    %{{.+}} = call i8 @llvm.fshl.i8(i8 %[[INPUT]], i8 %[[INPUT]], i8 %[[AMOUNT]])
+// OGCG-NEXT:    %[[CANON_AMOUNT:.+]] = urem i8 %[[AMOUNT]], 8
+// OGCG-NEXT:    %{{.+}} = call i8 @llvm.fshl.i8(i8 %[[INPUT]], i8 %[[INPUT]], i8 %[[CANON_AMOUNT]])
 
 unsigned short test_builtin_rotateleft16(unsigned short x, unsigned short y) {
   return __builtin_rotateleft16(x, y);
@@ -521,7 +522,8 @@ unsigned short test_builtin_rotateleft16(unsigned short x, unsigned short y) {
 // OGCG-LABEL: @_Z25test_builtin_rotateleft16tt
 // OGCG:         %[[INPUT:.+]] = load i16, ptr %{{.+}}, align 2
 // OGCG-NEXT:    %[[AMOUNT:.+]] = load i16, ptr %{{.+}}, align 2
-// OGCG-NEXT:    %{{.+}} = call i16 @llvm.fshl.i16(i16 %[[INPUT]], i16 %[[INPUT]], i16 %[[AMOUNT]])
+// OGCG-NEXT:    %[[CANON_AMOUNT:.+]] = urem i16 %[[AMOUNT]], 16
+// OGCG-NEXT:    %{{.+}} = call i16 @llvm.fshl.i16(i16 %[[INPUT]], i16 %[[INPUT]], i16 %[[CANON_AMOUNT]])
 
 unsigned test_builtin_rotateleft32(unsigned x, unsigned y) {
   return __builtin_rotateleft32(x, y);
@@ -538,7 +540,8 @@ unsigned test_builtin_rotateleft32(unsigned x, unsigned y) {
 // OGCG-LABEL: @_Z25test_builtin_rotateleft32jj
 // OGCG:         %[[INPUT:.+]] = load i32, ptr %{{.+}}, align 4
 // OGCG-NEXT:    %[[AMOUNT:.+]] = load i32, ptr %{{.+}}, align 4
-// OGCG-NEXT:    %{{.+}} = call i32 @llvm.fshl.i32(i32 %[[INPUT]], i32 %[[INPUT]], i32 %[[AMOUNT]])
+// OGCG-NEXT:    %[[CANON_AMOUNT:.+]] = urem i32 %[[AMOUNT]], 32
+// OGCG-NEXT:    %{{.+}} = call i32 @llvm.fshl.i32(i32 %[[INPUT]], i32 %[[INPUT]], i32 %[[CANON_AMOUNT]])
 
 unsigned long long test_builtin_rotateleft64(unsigned long long x,
                                              unsigned long long y) {
@@ -556,7 +559,8 @@ unsigned long long test_builtin_rotateleft64(unsigned long long x,
 // OGCG-LABEL: @_Z25test_builtin_rotateleft64yy
 // OGCG:         %[[INPUT:.+]] = load i64, ptr %{{.+}}, align 8
 // OGCG-NEXT:    %[[AMOUNT:.+]] = load i64, ptr %{{.+}}, align 8
-// OGCG-NEXT:    %{{.+}} = call i64 @llvm.fshl.i64(i64 %[[INPUT]], i64 %[[INPUT]], i64 %[[AMOUNT]])
+// OGCG-NEXT:    %[[CANON_AMOUNT:.+]] = urem i64 %[[AMOUNT]], 64
+// OGCG-NEXT:    %{{.+}} = call i64 @llvm.fshl.i64(i64 %[[INPUT]], i64 %[[INPUT]], i64 %[[CANON_AMOUNT]])
 
 unsigned char test_builtin_rotateright8(unsigned char x, unsigned char y) {
   return __builtin_rotateright8(x, y);
@@ -573,7 +577,8 @@ unsigned char test_builtin_rotateright8(unsigned char x, unsigned char y) {
 // OGCG-LABEL: @_Z25test_builtin_rotateright8hh
 // OGCG:         %[[INPUT:.+]] = load i8, ptr %{{.+}}, align 1
 // OGCG-NEXT:    %[[AMOUNT:.+]] = load i8, ptr %{{.+}}, align 1
-// OGCG-NEXT:    %{{.+}} = call i8 @llvm.fshr.i8(i8 %[[INPUT]], i8 %[[INPUT]], i8 %[[AMOUNT]])
+// OGCG-NEXT:    %[[CANON_AMOUNT:.+]] = urem i8 %[[AMOUNT]], 8
+// OGCG-NEXT:    %{{.+}} = call i8 @llvm.fshr.i8(i8 %[[INPUT]], i8 %[[INPUT]], i8 %[[CANON_AMOUNT]])
 
 unsigned short test_builtin_rotateright16(unsigned short x, unsigned short y) {
   return __builtin_rotateright16(x, y);
@@ -590,7 +595,8 @@ unsigned short test_builtin_rotateright16(unsigned short x, unsigned short y) {
 // OGCG-LABEL: @_Z26test_builtin_rotateright16tt
 // OGCG:         %[[INPUT:.+]] = load i16, ptr %{{.+}}, align 2
 // OGCG-NEXT:    %[[AMOUNT:.+]] = load i16, ptr %{{.+}}, align 2
-// OGCG-NEXT:    %{{.+}} = call i16 @llvm.fshr.i16(i16 %[[INPUT]], i16 %[[INPUT]], i16 %[[AMOUNT]])
+// OGCG-NEXT:    %[[CANON_AMOUNT:.+]] = urem i16 %[[AMOUNT]], 16
+// OGCG-NEXT:    %{{.+}} = call i16 @llvm.fshr.i16(i16 %[[INPUT]], i16 %[[INPUT]], i16 %[[CANON_AMOUNT]])
 
 unsigned test_builtin_rotateright32(unsigned x, unsigned y) {
   return __builtin_rotateright32(x, y);
@@ -607,7 +613,8 @@ unsigned test_builtin_rotateright32(unsigned x, unsigned y) {
 // OGCG-LABEL: @_Z26test_builtin_rotateright32jj
 // OGCG:         %[[INPUT:.+]] = load i32, ptr %{{.+}}, align 4
 // OGCG-NEXT:    %[[AMOUNT:.+]] = load i32, ptr %{{.+}}, align 4
-// OGCG-NEXT:    %{{.+}} = call i32 @llvm.fshr.i32(i32 %[[INPUT]], i32 %[[INPUT]], i32 %[[AMOUNT]])
+// OGCG-NEXT:    %[[CANON_AMOUNT:.+]] = urem i32 %[[AMOUNT]], 32
+// OGCG-NEXT:    %{{.+}} = call i32 @llvm.fshr.i32(i32 %[[INPUT]], i32 %[[INPUT]], i32 %[[CANON_AMOUNT]])
 
 unsigned long long test_builtin_rotateright64(unsigned long long x,
                                               unsigned long long y) {
@@ -625,4 +632,5 @@ unsigned long long test_builtin_rotateright64(unsigned long long x,
 // OGCG-LABEL: @_Z26test_builtin_rotateright64yy
 // OGCG:         %[[INPUT:.+]] = load i64, ptr %{{.+}}, align 8
 // OGCG-NEXT:    %[[AMOUNT:.+]] = load i64, ptr %{{.+}}, align 8
-// OGCG-NEXT:    %{{.+}} = call i64 @llvm.fshr.i64(i64 %[[INPUT]], i64 %[[INPUT]], i64 %[[AMOUNT]])
+// OGCG-NEXT:    %[[CANON_AMOUNT:.+]] = urem i64 %[[AMOUNT]], 64
+// OGCG-NEXT:    %{{.+}} = call i64 @llvm.fshr.i64(i64 %[[INPUT]], i64 %[[INPUT]], i64 %[[CANON_AMOUNT]])

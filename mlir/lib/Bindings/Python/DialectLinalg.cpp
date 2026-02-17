@@ -1,4 +1,4 @@
-//===- DialectLinalg.cpp - Pybind module for Linalg dialect API support --===//
+//===- DialectLinalg.cpp - Nanobind module for Linalg dialect API support -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,16 +8,44 @@
 
 #include "mlir-c/Dialect/Linalg.h"
 #include "mlir-c/IR.h"
+#include "mlir/Bindings/Python/IRAttributes.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
 using namespace mlir::python::nanobind_adaptors;
+namespace mlir {
+namespace python {
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+namespace linalg {
 
-static std::optional<MlirLinalgContractionDimensions>
-InferContractionDimensions(MlirOperation op) {
+struct PyLinalgContractionDimensions : MlirLinalgContractionDimensions {
+  PyLinalgContractionDimensions(const MlirLinalgContractionDimensions &dims) {
+    batch = dims.batch;
+    m = dims.m;
+    n = dims.n;
+    k = dims.k;
+  }
+};
+
+struct PyLinalgConvolutionDimensions : MlirLinalgConvolutionDimensions {
+  PyLinalgConvolutionDimensions(const MlirLinalgConvolutionDimensions &dims) {
+    batch = dims.batch;
+    outputImage = dims.outputImage;
+    outputChannel = dims.outputChannel;
+    filterLoop = dims.filterLoop;
+    inputChannel = dims.inputChannel;
+    depth = dims.depth;
+    strides = dims.strides;
+    dilations = dims.dilations;
+  }
+};
+
+static std::optional<PyLinalgContractionDimensions>
+InferContractionDimensions(PyOperationBase &op) {
   MlirLinalgContractionDimensions dims =
-      mlirLinalgInferContractionDimensions(op);
+      mlirLinalgInferContractionDimensions(op.getOperation());
 
   // Detect "empty" result. This occurs when `op` is not a contraction op,
   // or when `linalg::inferContractionDims` fails.
@@ -28,10 +56,10 @@ InferContractionDimensions(MlirOperation op) {
   return dims;
 }
 
-static std::optional<MlirLinalgConvolutionDimensions>
-InferConvolutionDimensions(MlirOperation op) {
+static std::optional<PyLinalgConvolutionDimensions>
+InferConvolutionDimensions(PyOperationBase &op) {
   MlirLinalgConvolutionDimensions dims =
-      mlirLinalgInferConvolutionDimensions(op);
+      mlirLinalgInferConvolutionDimensions(op.getOperation());
 
   // Detect "empty" result. This occurs when `op` is not a convolution op,
   // or when `linalg::inferConvolutionDims` fails.
@@ -51,27 +79,30 @@ InferConvolutionDimensions(MlirOperation op) {
 static void populateDialectLinalgSubmodule(nb::module_ m) {
   m.def(
       "fill_builtin_region",
-      [](MlirOperation op) { mlirLinalgFillBuiltinNamedOpRegion(op); },
+      [](PyOperationBase &op) {
+        mlirLinalgFillBuiltinNamedOpRegion(op.getOperation());
+      },
       nb::arg("op"),
       "Fill the region for `op`, which is assumed to be a builtin named Linalg "
       "op.");
 
-  m.def("isa_contraction_op", &mlirLinalgIsAContractionOp,
-        "Checks if the given operation is a Linalg contraction operation.",
-        nb::arg("op"));
+  m.def(
+      "isa_contraction_op",
+      [](PyOperationBase &op) {
+        return mlirLinalgIsAContractionOp(op.getOperation());
+      },
+      "Checks if the given operation is a Linalg contraction operation.",
+      nb::arg("op"));
 
-  nb::class_<MlirLinalgContractionDimensions>(m, "ContractionDimensions")
-      .def_prop_ro("batch",
-                   [](const MlirLinalgContractionDimensions &self) {
-                     return self.batch;
-                   })
+  nb::class_<PyLinalgContractionDimensions>(m, "ContractionDimensions")
       .def_prop_ro(
-          "m",
-          [](const MlirLinalgContractionDimensions &self) { return self.m; })
+          "batch",
+          [](const PyLinalgContractionDimensions &self) { return self.batch; })
       .def_prop_ro(
-          "n",
-          [](const MlirLinalgContractionDimensions &self) { return self.n; })
-      .def_prop_ro("k", [](const MlirLinalgContractionDimensions &self) {
+          "m", [](const PyLinalgContractionDimensions &self) { return self.m; })
+      .def_prop_ro(
+          "n", [](const PyLinalgContractionDimensions &self) { return self.n; })
+      .def_prop_ro("k", [](const PyLinalgContractionDimensions &self) {
         return self.k;
       });
 
@@ -82,14 +113,17 @@ static void populateDialectLinalgSubmodule(nb::module_ m) {
 
   m.def(
       "infer_contraction_dimensions_from_maps",
-      [](std::vector<MlirAffineMap> indexingMaps)
-          -> std::optional<MlirLinalgContractionDimensions> {
+      [](std::vector<PyAffineMap> indexingMaps)
+          -> std::optional<PyLinalgContractionDimensions> {
         if (indexingMaps.empty())
           return std::nullopt;
 
+        std::vector<MlirAffineMap> indexingMaps_(indexingMaps.size());
+        std::copy(indexingMaps.begin(), indexingMaps.end(),
+                  indexingMaps_.begin());
         MlirLinalgContractionDimensions dims =
-            mlirLinalgInferContractionDimensionsFromMaps(indexingMaps.data(),
-                                                         indexingMaps.size());
+            mlirLinalgInferContractionDimensionsFromMaps(indexingMaps_.data(),
+                                                         indexingMaps_.size());
 
         // Detect "empty" result from invalid input or failed inference.
         if (mlirAttributeIsNull(dims.batch) && mlirAttributeIsNull(dims.m) &&
@@ -102,60 +136,67 @@ static void populateDialectLinalgSubmodule(nb::module_ m) {
       "maps.",
       nb::arg("indexing_maps"));
 
-  m.def("isa_convolution_op", &mlirLinalgIsAConvolutionOp,
-        "Checks if the given operation is a Linalg convolution operation.",
-        nb::arg("op"));
+  m.def(
+      "isa_convolution_op",
+      [](PyOperationBase &op) {
+        return mlirLinalgIsAConvolutionOp(op.getOperation());
+      },
+      "Checks if the given operation is a Linalg convolution operation.",
+      nb::arg("op"));
 
-  nb::class_<MlirLinalgConvolutionDimensions>(m, "ConvolutionDimensions")
-      .def_prop_ro("batch",
-                   [](const MlirLinalgConvolutionDimensions &self) {
-                     return self.batch;
-                   })
+  nb::class_<PyLinalgConvolutionDimensions>(m, "ConvolutionDimensions")
+      .def_prop_ro(
+          "batch",
+          [](const PyLinalgConvolutionDimensions &self) { return self.batch; })
       .def_prop_ro("output_image",
-                   [](const MlirLinalgConvolutionDimensions &self) {
+                   [](const PyLinalgConvolutionDimensions &self) {
                      return self.outputImage;
                    })
       .def_prop_ro("output_channel",
-                   [](const MlirLinalgConvolutionDimensions &self) {
+                   [](const PyLinalgConvolutionDimensions &self) {
                      return self.outputChannel;
                    })
       .def_prop_ro("filter_loop",
-                   [](const MlirLinalgConvolutionDimensions &self) {
+                   [](const PyLinalgConvolutionDimensions &self) {
                      return self.filterLoop;
                    })
       .def_prop_ro("input_channel",
-                   [](const MlirLinalgConvolutionDimensions &self) {
+                   [](const PyLinalgConvolutionDimensions &self) {
                      return self.inputChannel;
                    })
-      .def_prop_ro("depth",
-                   [](const MlirLinalgConvolutionDimensions &self) {
-                     return self.depth;
-                   })
+      .def_prop_ro(
+          "depth",
+          [](const PyLinalgConvolutionDimensions &self) { return self.depth; })
       .def_prop_ro("strides",
-                   [](const MlirLinalgConvolutionDimensions &self) {
+                   [](const PyLinalgConvolutionDimensions &self) {
                      return self.strides;
                    })
-      .def_prop_ro("dilations",
-                   [](const MlirLinalgConvolutionDimensions &self) {
-                     return self.dilations;
-                   });
+      .def_prop_ro("dilations", [](const PyLinalgConvolutionDimensions &self) {
+        return self.dilations;
+      });
 
   m.def("infer_convolution_dimensions", &InferConvolutionDimensions,
         "Infers convolution dimensions", nb::arg("op"));
 
   m.def(
       "get_indexing_maps",
-      [](MlirOperation op) -> std::optional<MlirAttribute> {
-        MlirAttribute attr = mlirLinalgGetIndexingMapsAttribute(op);
+      [](PyOperationBase &op) -> std::optional<PyArrayAttribute> {
+        MlirAttribute attr =
+            mlirLinalgGetIndexingMapsAttribute(op.getOperation());
         if (mlirAttributeIsNull(attr))
           return std::nullopt;
-        return attr;
+        return PyArrayAttribute(op.getOperation().getContext(), attr);
       },
       "Returns the indexing_maps attribute for a linalg op.");
 }
+} // namespace linalg
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
+} // namespace python
+} // namespace mlir
 
 NB_MODULE(_mlirDialectsLinalg, m) {
   m.doc() = "MLIR Linalg dialect.";
 
-  populateDialectLinalgSubmodule(m);
+  mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN::linalg::
+      populateDialectLinalgSubmodule(m);
 }

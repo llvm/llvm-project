@@ -881,7 +881,7 @@ static bool isLinearizable(Operation *op) {
       // As type legalization is done with vector.shape_cast, shape_cast
       // itself cannot be linearized (will create new shape_casts to linearize
       // ad infinitum).
-      .Case<vector::ShapeCastOp>([&](auto) { return false; })
+      .Case([&](vector::ShapeCastOp) { return false; })
       // The operations
       // - vector.extract_strided_slice
       // - vector.extract
@@ -891,18 +891,16 @@ static bool isLinearizable(Operation *op) {
       // vector.shuffle only supports fixed size vectors, so it is impossible to
       // use this approach to linearize these ops if they operate on scalable
       // vectors.
-      .Case<vector::ExtractStridedSliceOp>(
-          [&](vector::ExtractStridedSliceOp extractOp) {
-            return !extractOp.getType().isScalable();
-          })
-      .Case<vector::InsertStridedSliceOp>(
-          [&](vector::InsertStridedSliceOp insertOp) {
-            return !insertOp.getType().isScalable();
-          })
-      .Case<vector::InsertOp>([&](vector::InsertOp insertOp) {
+      .Case([&](vector::ExtractStridedSliceOp extractOp) {
+        return !extractOp.getType().isScalable();
+      })
+      .Case([&](vector::InsertStridedSliceOp insertOp) {
         return !insertOp.getType().isScalable();
       })
-      .Case<vector::ExtractOp>([&](vector::ExtractOp extractOp) {
+      .Case([&](vector::InsertOp insertOp) {
+        return !insertOp.getType().isScalable();
+      })
+      .Case([&](vector::ExtractOp extractOp) {
         return !extractOp.getSourceVectorType().isScalable();
       })
       .Default([&](auto) { return true; });

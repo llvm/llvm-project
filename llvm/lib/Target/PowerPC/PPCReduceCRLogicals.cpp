@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -222,7 +223,7 @@ static bool splitMBB(BlockSplitInfo &BSI) {
   // Add the branches to ThisMBB.
   BuildMI(*ThisMBB, ThisMBB->end(), BSI.SplitBefore->getDebugLoc(),
           TII->get(NewBROpcode))
-      .addReg(BSI.SplitCond->getOperand(0).getReg(), 0, BSI.SplitCondSubreg)
+      .addReg(BSI.SplitCond->getOperand(0).getReg(), {}, BSI.SplitCondSubreg)
       .addMBB(NewBRTarget);
   BuildMI(*ThisMBB, ThisMBB->end(), BSI.SplitBefore->getDebugLoc(),
           TII->get(PPC::B))

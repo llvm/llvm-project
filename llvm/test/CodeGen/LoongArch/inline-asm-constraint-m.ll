@@ -145,7 +145,8 @@ define i32 @m_offset_2048(ptr %p) nounwind {
 define i32 @m_constant_0() nounwind {
 ; LA32-LABEL: m_constant_0:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI7_0)
+; LA32-NEXT:  .Lpcadd_hi0:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI7_0)
 ; LA32-NEXT:    #APP
 ; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    ret
@@ -163,9 +164,10 @@ define i32 @m_constant_0() nounwind {
 define i32 @m_constant_1() nounwind {
 ; LA32-LABEL: m_constant_1:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI8_0)
+; LA32-NEXT:  .Lpcadd_hi1:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI8_0)
 ; LA32-NEXT:    #APP
-; LA32-NEXT:    ld.w $a0, $a0, %pc_lo12(.LCPI8_0)
+; LA32-NEXT:    ld.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi10)
 ; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    ret
 ;
@@ -185,9 +187,10 @@ define i32 @m_constant_1() nounwind {
 define i32 @m_addr_pcrel() nounwind {
 ; LA32-LABEL: m_addr_pcrel:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a1, %pc_hi20(g_i32)
+; LA32-NEXT:  .Lpcadd_hi2:
+; LA32-NEXT:    pcaddu12i $a1, %pcadd_hi20(g_i32)
 ; LA32-NEXT:    #APP
-; LA32-NEXT:    ld.w $a0, $a1, %pc_lo12(g_i32)
+; LA32-NEXT:    ld.w $a0, $a1, %pcadd_lo12(.Lpcadd_hi20)
 ; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    ret
 ;
@@ -205,8 +208,9 @@ define i32 @m_addr_pcrel() nounwind {
 define i32 @m_addr_should_not_fold() nounwind {
 ; LA32-LABEL: m_addr_should_not_fold:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(g_i32)
-; LA32-NEXT:    addi.w $a1, $a0, %pc_lo12(g_i32)
+; LA32-NEXT:  .Lpcadd_hi3:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(g_i32)
+; LA32-NEXT:    addi.w $a1, $a0, %pcadd_lo12(.Lpcadd_hi3)
 ; LA32-NEXT:    #APP
 ; LA32-NEXT:    ld.w $a0, $a1, 0
 ; LA32-NEXT:    #NO_APP

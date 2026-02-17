@@ -20,9 +20,8 @@
 // This pass should be run after register allocation and is based on the
 // earliest versions of AArch64RedundantCopyElimination.
 //
-// FIXME: Support compares with non-zero constants for the Zibi extension. Also,
-// support compare with non-zero immediates where the immediate is stored in a
-// register.
+// FIXME: Support compare with non-zero immediates where the immediate is stored
+// in a register.
 //
 //===----------------------------------------------------------------------===//
 
@@ -93,11 +92,11 @@ guaranteesRegEqualsImmInBlock(MachineBasicBlock &MBB,
   assert(TBB != nullptr && "Expected branch target basic block");
   auto Opc = Cond[0].getImm();
   if ((Opc == RISCV::QC_BEQI || Opc == RISCV::QC_E_BEQI ||
-       Opc == RISCV::NDS_BEQC) &&
+       Opc == RISCV::NDS_BEQC || Opc == RISCV::BEQI) &&
       Cond[2].isImm() && Cond[2].getImm() != 0 && TBB == &MBB)
     return true;
   if ((Opc == RISCV::QC_BNEI || Opc == RISCV::QC_E_BNEI ||
-       Opc == RISCV::NDS_BNEC) &&
+       Opc == RISCV::NDS_BNEC || Opc == RISCV::BNEI) &&
       Cond[2].isImm() && Cond[2].getImm() != 0 && TBB != &MBB)
     return true;
   return false;
@@ -148,7 +147,7 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
           RemoveMI = true;
       }
     } else {
-      // Xqcibi compare with non-zero immediate:
+      // Xqcibi, XAndesPref and Zibi compare with non-zero immediate:
       // remove redundant addi rd,x0,imm or qc.li rd,imm as applicable.
       if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(0).isReg() &&
           MI->getOperand(1).isReg() && MI->getOperand(2).isImm()) {
@@ -189,6 +188,8 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator CondBr = PredMBB->getFirstTerminator();
   assert((CondBr->getOpcode() == RISCV::BEQ ||
           CondBr->getOpcode() == RISCV::BNE ||
+          CondBr->getOpcode() == RISCV::BEQI ||
+          CondBr->getOpcode() == RISCV::BNEI ||
           CondBr->getOpcode() == RISCV::QC_BEQI ||
           CondBr->getOpcode() == RISCV::QC_BNEI ||
           CondBr->getOpcode() == RISCV::QC_E_BEQI ||

@@ -581,6 +581,7 @@ def OMPC_To : Clause<[Spelling<"to">]> {
   let flangClass = "OmpToClause";
 }
 def OMPC_Transparent : Clause<[Spelling<"transparent">]> {
+  let clangClass = "OMPTransparentClause";
   let flangClass = "OmpTransparentClause";
   let isValueOptional = true;
 }
@@ -889,6 +890,7 @@ def OMP_Distribute : Directive<[Spelling<"distribute">]> {
 }
 def OMP_Do : Directive<[Spelling<"do">]> {
   let allowedClauses = [
+    VersionedClause<OMPC_Allocate, 50>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_LastPrivate>,
     VersionedClause<OMPC_Linear>,
@@ -1790,6 +1792,7 @@ def OMP_MasterTaskloopSimd : Directive<[Spelling<"master taskloop simd">]> {
 }
 def OMP_ParallelDo : Directive<[Spelling<"parallel do">]> {
   let allowedClauses = [
+    VersionedClause<OMPC_Allocate, 50>,
     VersionedClause<OMPC_Copyin>,
     VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_FirstPrivate>,

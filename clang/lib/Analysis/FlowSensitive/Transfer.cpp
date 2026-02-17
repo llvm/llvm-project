@@ -96,7 +96,7 @@ static BoolValue &unpackValue(BoolValue &V, Environment &Env) {
 }
 
 // Unpacks the value (if any) associated with `E` and updates `E` to the new
-// value, if any unpacking occured. Also, does the lvalue-to-rvalue conversion,
+// value, if any unpacking occurred. Also, does the lvalue-to-rvalue conversion,
 // by skipping past the reference.
 static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
   auto *Loc = Env.getStorageLocation(E);
@@ -169,8 +169,16 @@ public:
         break;
 
       auto *RHSVal = Env.getValue(*RHS);
-      if (RHSVal == nullptr)
-        break;
+      if (RHSVal == nullptr) {
+        RHSVal = Env.createValue(LHS->getType());
+        if (RHSVal == nullptr) {
+          // At least make sure the old value is gone. It's unlikely to be there
+          // in the first place given that we don't even know how to create
+          // a basic unknown value of that type.
+          Env.clearValue(*LHSLoc);
+          break;
+        }
+      }
 
       // Assign a value to the storage location of the left-hand side.
       Env.setValue(*LHSLoc, *RHSVal);
@@ -328,7 +336,6 @@ public:
       RecordStorageLocation *Loc = nullptr;
       if (S->getType()->isPointerType()) {
         auto *PV = Env.get<PointerValue>(*SubExpr);
-        assert(PV != nullptr);
         if (PV == nullptr)
           break;
         Loc = cast<RecordStorageLocation>(&PV->getPointeeLoc());

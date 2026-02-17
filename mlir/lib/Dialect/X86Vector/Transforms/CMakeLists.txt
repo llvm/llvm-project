@@ -5,6 +5,7 @@ add_mlir_dialect_library(MLIRX86VectorTransforms
   VectorContractToPackedTypeDotProduct.cpp
   VectorContractBF16ToFMA.cpp
   SinkVectorProducerOps.cpp
+  ShuffleVectorFMAOps.cpp
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

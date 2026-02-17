@@ -114,28 +114,6 @@ hand, backwards compatibility is generally guaranteed.
 
 There are multiple ABI flags that change the symbols exported from the built library:
 
-``_LIBCPP_ABI_DO_NOT_EXPORT_ALIGN``
--------------------------------------------------
-This removes ``std::align()`` from the built library. In the past, ``std::align()`` was defined in the built library,
-but nowadays it is an inline function defined in the headers for performance reasons.
-
-``_LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON``
--------------------------------------------------
-This removes ``__basic_string_common<true>::__throw_length_error()`` and
-``__basic_string_common<true>::__throw_out_of_range()``. These symbols have been used by ``basic_string`` in the past,
-but are not referenced from the headers anymore.
-
-``_LIBCPP_ABI_DO_NOT_EXPORT_VECTOR_BASE_COMMON``
-------------------------------------------------
-This removes ``__vector_base_common<true>::__throw_length_error()`` and
-``__vector_base_common<true>::__throw_out_of_range()``. These symbols have been used by ``vector`` in the past, but are
-not referenced from the headers anymore.
-
-``_LIBCPP_ABI_DO_NOT_EXPORT_TO_CHARS_BASE_10``
-----------------------------------------------
-This removes ``__itoa::__u32toa()`` and ``__iota::__u64toa``. These symbols have been used by ``to_chars`` in the past,
-but are not referenced from the headers anymore.
-
 ``_LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION``
 -------------------------------------------------------
 This replaces the symbols that are exported for ``basic_string`` to avoid exporting functions which are likely to be

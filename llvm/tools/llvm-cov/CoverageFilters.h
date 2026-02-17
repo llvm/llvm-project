@@ -55,10 +55,20 @@ public:
 
 /// Matches functions whose name matches a certain regular expression.
 class NameRegexCoverageFilter : public CoverageFilter {
+public:
+  enum class FilterType {
+    Include,
+    Exclude,
+  };
+
+private:
   StringRef Regex;
+  FilterType Type;
 
 public:
-  NameRegexCoverageFilter(StringRef Regex) : Regex(Regex) {}
+  NameRegexCoverageFilter(StringRef Regex,
+                          FilterType Type = FilterType::Exclude)
+      : Regex(Regex), Type(Type) {}
 
   bool matches(const coverage::CoverageMapping &CM,
                const coverage::FunctionRecord &Function) const override;

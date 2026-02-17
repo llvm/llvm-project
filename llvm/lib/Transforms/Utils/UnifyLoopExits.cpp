@@ -154,8 +154,13 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   SmallVector<BasicBlock *, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
+  // No exit blocks, so nothing to do. Just return.
+  if (ExitingBlocks.empty())
+    return false;
+
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   SmallVector<BasicBlock *, 8> CallBrTargetBlocksToFix;
+
   // Redirect exiting edges through a control flow hub.
   ControlFlowHub CHub;
   bool Changed = false;

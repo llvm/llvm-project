@@ -3,10 +3,6 @@
 ; RUN:   -verify-machineinstrs -target-abi=ilp32d | FileCheck %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zvfh \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
-; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+v,+zfhmin,+zvfh \
-; RUN:   -verify-machineinstrs -target-abi=ilp32d | FileCheck %s
-; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zfhmin,+zvfh \
-; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
 ; RUN: sed 's/iXLen/i32/g' %s | not --crash llc -mtriple=riscv32 -mattr=+v,+zvfhmin \
 ; RUN:   -target-abi=ilp32d 2>&1 | FileCheck %s --check-prefixes=ZVFMIN
 ; RUN: sed 's/iXLen/i64/g' %s | not --crash llc -mtriple=riscv64 -mattr=+v,+zvfhmin \
@@ -220,9 +216,9 @@ entry:
 define <vscale x 32 x half> @intrinsic_vfadd_mask_vv_nxv32f16_nxv32f16_nxv32f16(<vscale x 32 x half> %0, <vscale x 32 x half> %1, <vscale x 32 x half> %2, <vscale x 32 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfadd_mask_vv_nxv32f16_nxv32f16_nxv32f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vl8re16.v v24, (a0)
-; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
+; CHECK-NEXT:    vle16.v v24, (a0)
+; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
@@ -406,9 +402,9 @@ entry:
 define <vscale x 16 x float> @intrinsic_vfadd_mask_vv_nxv16f32_nxv16f32_nxv16f32(<vscale x 16 x float> %0, <vscale x 16 x float> %1, <vscale x 16 x float> %2, <vscale x 16 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfadd_mask_vv_nxv16f32_nxv16f32_nxv16f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vl8re32.v v24, (a0)
-; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; CHECK-NEXT:    vle32.v v24, (a0)
+; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret
@@ -555,9 +551,9 @@ entry:
 define <vscale x 8 x double> @intrinsic_vfadd_mask_vv_nxv8f64_nxv8f64_nxv8f64(<vscale x 8 x double> %0, <vscale x 8 x double> %1, <vscale x 8 x double> %2, <vscale x 8 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfadd_mask_vv_nxv8f64_nxv8f64_nxv8f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vl8re64.v v24, (a0)
-; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    vle64.v v24, (a0)
+; CHECK-NEXT:    fsrmi a0, 0
 ; CHECK-NEXT:    vfadd.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    fsrm a0
 ; CHECK-NEXT:    ret

@@ -86,6 +86,7 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
   const MachineBlockFrequencyInfo &MBFI;
+  LiveRegMatrix *Matrix;
 
   InsertPointAnalysis IPA;
 
@@ -129,16 +130,17 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
 
 public:
   HoistSpillHelper(const Spiller::RequiredAnalyses &Analyses,
-                   MachineFunction &mf, VirtRegMap &vrm)
+                   MachineFunction &mf, VirtRegMap &vrm, LiveRegMatrix *matrix)
       : MF(mf), LIS(Analyses.LIS), LSS(Analyses.LSS), MDT(Analyses.MDT),
         VRM(vrm), MRI(mf.getRegInfo()), TII(*mf.getSubtarget().getInstrInfo()),
         TRI(*mf.getSubtarget().getRegisterInfo()), MBFI(Analyses.MBFI),
-        IPA(LIS, mf.getNumBlockIDs()) {}
+        Matrix(matrix), IPA(LIS, mf.getNumBlockIDs()) {}
 
   void addToMergeableSpills(MachineInstr &Spill, int StackSlot,
                             Register Original);
   bool rmFromMergeableSpills(MachineInstr &Spill, int StackSlot);
   void hoistAllSpills();
+  bool LRE_CanEraseVirtReg(Register) override;
   void LRE_DidCloneVirtReg(Register, Register) override;
 };
 
@@ -191,7 +193,7 @@ public:
       : MF(MF), LIS(Analyses.LIS), LSS(Analyses.LSS), VRM(VRM),
         MRI(MF.getRegInfo()), TII(*MF.getSubtarget().getInstrInfo()),
         TRI(*MF.getSubtarget().getRegisterInfo()), Matrix(Matrix),
-        HSpiller(Analyses, MF, VRM), VRAI(VRAI) {}
+        HSpiller(Analyses, MF, VRM, Matrix), VRAI(VRAI) {}
 
   void spill(LiveRangeEdit &, AllocationOrder *Order = nullptr) override;
   ArrayRef<Register> getSpilledRegs() override { return RegsToSpill; }
@@ -1409,8 +1411,14 @@ bool HoistSpillHelper::isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
 
   for (const Register &SibReg : Siblings) {
     LiveInterval &LI = LIS.getInterval(SibReg);
-    VNInfo *VNI = LI.getVNInfoAt(Idx);
-    if (VNI) {
+    if (!LI.getVNInfoAt(Idx))
+      continue;
+    // All of the sub-ranges should be alive at the prospective slot index.
+    // Otherwise, we might risk storing unrelated / compromised values from some
+    // sub-registers to the spill slot.
+    if (all_of(LI.subranges(), [&](const LiveInterval::SubRange &SR) {
+          return SR.getVNInfoAt(Idx) != nullptr;
+        })) {
       LiveReg = SibReg;
       return true;
     }
@@ -1748,6 +1756,17 @@ void HoistSpillHelper::hoistAllSpills() {
     }
     Edit.eliminateDeadDefs(SpillsToRm, {});
   }
+}
+
+/// Called before a virtual register is erased from LiveIntervals.
+/// Forcibly remove the register from LiveRegMatrix before it's deleted,
+/// preventing dangling pointers.
+bool HoistSpillHelper::LRE_CanEraseVirtReg(Register VirtReg) {
+  if (Matrix && VRM.hasPhys(VirtReg)) {
+    const LiveInterval &LI = LIS.getInterval(VirtReg);
+    Matrix->unassign(LI, /*ClearAllReferencingSegments=*/true);
+  }
+  return true; // Allow deletion to proceed
 }
 
 /// For VirtReg clone, the \p New register should have the same physreg or

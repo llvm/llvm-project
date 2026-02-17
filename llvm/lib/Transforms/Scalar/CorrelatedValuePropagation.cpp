@@ -224,7 +224,7 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
     if (Constant *C = LVI->getConstantOnEdge(Condition, From, To, CxtI)) {
       if (C->isOneValue())
         return SI->getTrueValue();
-      if (C->isZeroValue())
+      if (C->isNullValue())
         return SI->getFalseValue();
     }
   }

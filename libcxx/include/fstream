@@ -400,14 +400,12 @@ private:
   // If the file is already open, switch to unbuffered mode. Otherwise, record
   // the request to use unbuffered mode so that we use that mode when we
   // eventually open the file.
-  _LIBCPP_HIDE_FROM_ABI void __request_unbuffered_mode(char_type* __s, streamsize __n) {
-    if (__cm_ == __no_io_operations && __s == nullptr && __n == 0) {
-      if (__file_) {
-        std::setbuf(__file_, nullptr);
-        __cm_ = 0;
-      } else {
-        __cm_ = __no_io_operations | __use_unbuffered_io;
-      }
+  _LIBCPP_HIDE_FROM_ABI void __request_unbuffered_mode() {
+    if (__file_) {
+      std::setbuf(__file_, nullptr);
+      __cm_ = 0;
+    } else {
+      __cm_ = __no_io_operations | __use_unbuffered_io;
     }
   }
 
@@ -759,7 +757,12 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::close() {
     if (fclose(__h.release()))
       __rt = nullptr;
     __file_ = nullptr;
-    setbuf(0, 0);
+    // Reset the get and the put areas without getting rid of the underlying buffers,
+    // which might have been configured by the user. Make sure to keep the buffers
+    // since the user may re-open the stream.
+    this->setg(nullptr, nullptr, nullptr);
+    this->setp(nullptr, nullptr);
+    __cm_ = __no_io_operations;
   }
   return __rt;
 }
@@ -915,7 +918,9 @@ template <class _CharT, class _Traits>
 basic_streambuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::setbuf(char_type* __s, streamsize __n) {
   this->setg(nullptr, nullptr, nullptr);
   this->setp(nullptr, nullptr);
-  __request_unbuffered_mode(__s, __n);
+  // Calling setbuf(nullptr, 0) before any i/o operation switches the stream to unbuffered mode
+  if (__cm_ == __no_io_operations && __s == nullptr && __n == 0)
+    __request_unbuffered_mode();
   if (__owns_eb_)
     delete[] __extbuf_;
   if (__owns_ib_)

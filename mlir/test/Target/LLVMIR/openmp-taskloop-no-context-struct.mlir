@@ -22,7 +22,8 @@ llvm.func @_QPtest() {
   llvm.return
 }
 // CHECK-LABEL: define void @_QPtest() {
-// CHECK:         %[[STRUCTARG:.*]] = alloca { i64, i64, i64, ptr }, align 8
+// No task context structure:
+// CHECK:         %[[STRUCTARG:.*]] = alloca { i64, i64, i64 }, align 8
 // CHECK:         %[[VAL_0:.*]] = alloca i32, i64 1, align 4
 // CHECK:         %[[VAL_1:.*]] = alloca i32, i64 1, align 4
 // CHECK:         %[[VAL_2:.*]] = alloca i32, i64 1, align 4
@@ -30,31 +31,28 @@ llvm.func @_QPtest() {
 // CHECK:       entry:                                            ; preds = %[[VAL_4:.*]]
 // CHECK:         br label %[[VAL_5:.*]]
 // CHECK:       omp.private.init:                                 ; preds = %[[VAL_3]]
-// CHECK:         %[[VAL_6:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({}, ptr null, i32 1) to i64))
 // CHECK:         br label %[[VAL_7:.*]]
 // CHECK:       omp.private.copy:                                 ; preds = %[[VAL_5]]
 // CHECK:         br label %[[VAL_8:.*]]
 // CHECK:       omp.taskloop.start:                               ; preds = %[[VAL_7]]
 // CHECK:         br label %[[VAL_9:.*]]
 // CHECK:       codeRepl:                                         ; preds = %[[VAL_8]]
-// CHECK:         %[[VAL_10:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[STRUCTARG]], i32 0, i32 0
+// CHECK:         %[[VAL_10:.*]] = getelementptr { i64, i64, i64 }, ptr %[[STRUCTARG]], i32 0, i32 0
 // CHECK:         store i64 1, ptr %[[VAL_10]], align 4
-// CHECK:         %[[VAL_11:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[STRUCTARG]], i32 0, i32 1
+// CHECK:         %[[VAL_11:.*]] = getelementptr { i64, i64, i64 }, ptr %[[STRUCTARG]], i32 0, i32 1
 // CHECK:         store i64 20, ptr %[[VAL_11]], align 4
-// CHECK:         %[[VAL_12:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[STRUCTARG]], i32 0, i32 2
+// CHECK:         %[[VAL_12:.*]] = getelementptr { i64, i64, i64 }, ptr %[[STRUCTARG]], i32 0, i32 2
 // CHECK:         store i64 1, ptr %[[VAL_12]], align 4
-// CHECK:         %[[VAL_13:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[STRUCTARG]], i32 0, i32 3
-// CHECK:         store ptr %[[VAL_6]], ptr %[[VAL_13]], align 8
 // CHECK:         %[[VAL_14:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         call void @__kmpc_taskgroup(ptr @1, i32 %[[VAL_14]])
-// CHECK:         %[[VAL_15:.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %[[VAL_14]], i32 1, i64 40, i64 32, ptr @_QPtest..omp_par)
+// CHECK:         %[[VAL_15:.*]] = call ptr @__kmpc_omp_task_alloc(ptr @1, i32 %[[VAL_14]], i32 1, i64 40, i64 24, ptr @_QPtest..omp_par)
 // CHECK:         %[[VAL_16:.*]] = load ptr, ptr %[[VAL_15]], align 8
-// CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[VAL_16]], ptr align 1 %[[STRUCTARG]], i64 32, i1 false)
-// CHECK:         %[[VAL_17:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_16]], i32 0, i32 0
-// CHECK:         %[[VAL_18:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_16]], i32 0, i32 1
-// CHECK:         %[[VAL_19:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_16]], i32 0, i32 2
+// CHECK:         call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[VAL_16]], ptr align 1 %[[STRUCTARG]], i64 24, i1 false)
+// CHECK:         %[[VAL_17:.*]] = getelementptr { i64, i64, i64 }, ptr %[[VAL_16]], i32 0, i32 0
+// CHECK:         %[[VAL_18:.*]] = getelementptr { i64, i64, i64 }, ptr %[[VAL_16]], i32 0, i32 1
+// CHECK:         %[[VAL_19:.*]] = getelementptr { i64, i64, i64 }, ptr %[[VAL_16]], i32 0, i32 2
 // CHECK:         %[[VAL_20:.*]] = load i64, ptr %[[VAL_19]], align 4
-// CHECK:         call void @__kmpc_taskloop(ptr @1, i32 %[[VAL_14]], ptr %[[VAL_15]], i32 1, ptr %[[VAL_17]], ptr %[[VAL_18]], i64 %[[VAL_20]], i32 1, i32 0, i64 0, ptr @omp_taskloop_dup)
+// CHECK:         call void @__kmpc_taskloop(ptr @1, i32 %[[VAL_14]], ptr %[[VAL_15]], i32 1, ptr %[[VAL_17]], ptr %[[VAL_18]], i64 %[[VAL_20]], i32 1, i32 0, i64 0, ptr null)
 // CHECK:         call void @__kmpc_end_taskgroup(ptr @1, i32 %[[VAL_14]])
 // CHECK:         br label %[[VAL_21:.*]]
 // CHECK:       taskloop.exit:                                    ; preds = %[[VAL_9]]
@@ -63,14 +61,12 @@ llvm.func @_QPtest() {
 // CHECK-LABEL: define internal void @_QPtest..omp_par
 // CHECK:       taskloop.alloca:
 // CHECK:         %[[VAL_22:.*]] = load ptr, ptr %[[VAL_23:.*]], align 8
-// CHECK:         %[[VAL_24:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_22]], i32 0, i32 0
+// CHECK:         %[[VAL_24:.*]] = getelementptr { i64, i64, i64 }, ptr %[[VAL_22]], i32 0, i32 0
 // CHECK:         %[[VAL_25:.*]] = load i64, ptr %[[VAL_24]], align 4
-// CHECK:         %[[VAL_26:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_22]], i32 0, i32 1
+// CHECK:         %[[VAL_26:.*]] = getelementptr { i64, i64, i64 }, ptr %[[VAL_22]], i32 0, i32 1
 // CHECK:         %[[VAL_27:.*]] = load i64, ptr %[[VAL_26]], align 4
-// CHECK:         %[[VAL_28:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_22]], i32 0, i32 2
+// CHECK:         %[[VAL_28:.*]] = getelementptr { i64, i64, i64 }, ptr %[[VAL_22]], i32 0, i32 2
 // CHECK:         %[[VAL_29:.*]] = load i64, ptr %[[VAL_28]], align 4
-// CHECK:         %[[VAL_30:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_22]], i32 0, i32 3
-// CHECK:         %[[VAL_31:.*]] = load ptr, ptr %[[VAL_30]], align 8, !align !1
 // CHECK:         %[[VAL_32:.*]] = alloca i32, align 4
 // CHECK:         %[[VAL_33:.*]] = alloca i32, align 4
 // CHECK:         %[[VAL_34:.*]] = alloca i32, align 4
@@ -97,7 +93,6 @@ llvm.func @_QPtest() {
 // CHECK:       omp_loop.after:                                   ; preds = %[[VAL_51]]
 // CHECK:         br label %[[VAL_53:.*]]
 // CHECK:       omp.region.cont:                                  ; preds = %[[VAL_52]]
-// CHECK:         tail call void @free(ptr %[[VAL_31]])
 // CHECK:         br label %[[VAL_54:.*]]
 // CHECK:       omp_loop.body:                                    ; preds = %[[VAL_48]]
 // CHECK:         %[[VAL_55:.*]] = mul i32 %[[VAL_46]], 1
@@ -114,15 +109,4 @@ llvm.func @_QPtest() {
 // CHECK:       taskloop.exit.exitStub:                           ; preds = %[[VAL_53]]
 // CHECK:         ret void
 
-// CHECK-LABEL: define internal void @omp_taskloop_dup(
-// CHECK:       entry:
-// CHECK:         %[[VAL_59:.*]] = getelementptr { %[[VAL_60:.*]], { i64, i64, i64, ptr } }, ptr %[[VAL_61:.*]], i32 0, i32 1
-// CHECK:         %[[VAL_62:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_59]], i32 0, i32 3
-// CHECK:         %[[VAL_63:.*]] = getelementptr { %[[VAL_60]], { i64, i64, i64, ptr } }, ptr %[[VAL_64:.*]], i32 0, i32 1
-// CHECK:         %[[VAL_65:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[VAL_63]], i32 0, i32 3
-// CHECK:         %[[VAL_66:.*]] = load ptr, ptr %[[VAL_65]], align 8
-// TODO: don't generate allocation for empty task context struct (for later patch)
-// CHECK:         %[[VAL_67:.*]] = tail call ptr @malloc(i64 ptrtoint (ptr getelementptr ({}, ptr null, i32 1) to i64))
-// CHECK:         store ptr %[[VAL_67]], ptr %[[VAL_62]], align 8
-// CHECK:         ret void
-
+// CHECK-NOT: define internal void @omp_taskloop_dup

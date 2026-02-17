@@ -150,7 +150,8 @@ bool AutoExporter::shouldExport(Defined *sym) const {
   // disallow import symbols.
   if (!isa<DefinedRegular>(sym) && !isa<DefinedCommon>(sym))
     return false;
-  if (excludeSymbols.count(sym->getName()) || manualExcludeSymbols.count(sym->getName()))
+  if (excludeSymbols.contains(sym->getName()) ||
+      manualExcludeSymbols.contains(sym->getName()))
     return false;
 
   for (StringRef prefix : excludeSymbolPrefixes.keys())
@@ -174,10 +175,10 @@ bool AutoExporter::shouldExport(Defined *sym) const {
   // Drop the file extension.
   libName = libName.substr(0, libName.rfind('.'));
   if (!libName.empty())
-    return !excludeLibs.count(libName);
+    return !excludeLibs.contains(libName);
 
   StringRef fileName = sys::path::filename(sym->getFile()->getName());
-  return !excludeObjects.count(fileName);
+  return !excludeObjects.contains(fileName);
 }
 
 void lld::coff::writeDefFile(COFFLinkerContext &ctx, StringRef name,

@@ -8,15 +8,14 @@
 
 ;.
 ; CHECK: @llvm.amdgcn.kernelA.dynlds = external addrspace(3) global [0 x i8], align 4, !absolute_symbol [[META0:![0-9]+]]
-; CHECK: @llvm.amdgcn.dynlds.offset.table = internal addrspace(4) constant [1 x i32] [i32 ptrtoint (ptr addrspace(3) @llvm.amdgcn.kernelA.dynlds to i32)]
+; CHECK: @llvm.amdgcn.dynlds.offset.table = internal addrspace(4) constant [1 x ptr addrspace(3)] [ptr addrspace(3) @llvm.amdgcn.kernelA.dynlds]
 ;.
 define void @fn(float %val, i32 %idx) #0 {
 ; CHECK-LABEL: define void @fn(
 ; CHECK-SAME: float [[VAL:%.*]], i32 [[IDX:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds [1 x i32], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i32 0, i32 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[VAR0]], align 4
-; CHECK-NEXT:    [[VAR01:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds [1 x ptr addrspace(3)], ptr addrspace(4) @llvm.amdgcn.dynlds.offset.table, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[VAR01:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[VAR0]], align 4
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i32, ptr addrspace(3) [[VAR01]], i32 [[IDX]]
 ; CHECK-NEXT:    store float [[VAL]], ptr addrspace(3) [[PTR]], align 4
 ; CHECK-NEXT:    ret void

@@ -114,14 +114,22 @@ def report_platform():
     report_prog_version("LLD", ["ld.lld", "--version"])
 
 
-def run_command(cmd, shell=False, **kwargs):
+def run_command(cmd, shell=False, env=None, add_env=None, **kwargs):
     """
     Report which command is being run, then execute it using
-    subprocess.check_call.
+    subprocess.check_call. Any arguments are forwarded to check_call.
+
+    Additional Parameters
+    ----------
+    add_env : dict
+        Like env, but adds to the original environment instead of replacing it
     """
     report(f"Running: {cmd if shell else shjoin(cmd)}")
     sys.stderr.flush()
-    subprocess.check_call(cmd, shell=shell, **kwargs)
+    if add_env:
+        env = dict(os.environ) if env is None else dict(env)
+        env.update(add_env)
+    subprocess.check_call(cmd, shell=shell, env=env, **kwargs)
 
 
 def _remove_readonly(func, path, _):
@@ -140,7 +148,7 @@ def rmtree(path):
     Taken from official Python docs
     https://docs.python.org/3/library/shutil.html#rmtree-example
     """
-    shutil.rmtree(path, onexc=_remove_readonly)
+    shutil.rmtree(path, onerror=_remove_readonly)
 
 
 def try_delete(path):
@@ -282,6 +290,10 @@ class Worker:
     def rmtree(self, *args, **kwargs):
         """Convenience wrapper for rmtree()"""
         return rmtree(*args, *kwargs)
+
+    def try_delete(self, *args, **kwargs):
+        """Convenience wrapper for try_delete()"""
+        return try_delete(*args, *kwargs)
 
     def checkout(self, giturl, sourcepath):
         """Convenience wrapper for checkout()"""

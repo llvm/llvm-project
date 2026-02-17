@@ -366,10 +366,11 @@ bool InstructionSelect::selectInstr(MachineInstr &MI) {
     //
     // Propagate that through to the source register.
     const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(DstReg);
-    if (DstRC)
+    const TargetRegisterClass *SrcRC = MRI.getRegClassOrNull(SrcReg);
+    if (DstRC && SrcRC)
+      MRI.constrainRegClass(SrcReg, DstRC);
+    else if (DstRC)
       MRI.setRegClass(SrcReg, DstRC);
-    assert(canReplaceReg(DstReg, SrcReg, MRI) &&
-           "Must be able to replace dst with src!");
     MI.eraseFromParent();
     MRI.replaceRegWith(DstReg, SrcReg);
     return true;

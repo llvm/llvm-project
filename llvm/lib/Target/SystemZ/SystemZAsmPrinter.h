@@ -93,6 +93,12 @@ private:
 
   AssociatedDataAreaTable ADATable;
 
+  // Record a list of GlobalAlias associated with a GlobalObject.
+  // This is used for z/OS's extra-label-at-definition aliasing strategy.
+  // This is similar to what is done for AIX.
+  DenseMap<const GlobalObject *, SmallVector<const GlobalAlias *, 1>>
+      GOAliasMap;
+
   void emitPPA1(MCSymbol *FnEndSym);
   void emitPPA2(Module &M);
   void emitADASection();
@@ -108,6 +114,8 @@ public:
   StringRef getPassName() const override { return "SystemZ Assembly Printer"; }
   void emitInstruction(const MachineInstr *MI) override;
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
+  void emitXXStructorList(const DataLayout &DL, const Constant *List,
+                          bool IsCtor) override;
   void emitEndOfAsmFile(Module &M) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;
@@ -123,13 +131,14 @@ public:
     return false;
   }
 
-  bool doInitialization(Module &M) override {
-    SM.reset();
-    return AsmPrinter::doInitialization(M);
-  }
+  bool doInitialization(Module &M) override;
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyEnd() override;
   void emitStartOfAsmFile(Module &M) override;
+  void emitGlobalAlias(const Module &M, const GlobalAlias &GA) override;
+  const MCExpr *lowerConstant(const Constant *CV,
+                              const Constant *BaseCV = nullptr,
+                              uint64_t Offset = 0) override;
 
 private:
   void emitCallInformation(CallType CT);

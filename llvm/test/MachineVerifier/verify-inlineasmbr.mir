@@ -1,5 +1,4 @@
-# RUN: not --crash llc -run-pass=none -verify-machineinstrs %s -o /dev/null 2>&1 \
-# RUN:  | FileCheck %s
+# RUN: not --crash llc -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: powerpc-registered-target
 
 # Test for a case we observed after the initial implementation of D129997
@@ -8,13 +7,13 @@
 # successor. Removing one of the exits corrupted the successor/predecessor
 # lists.
 
-# CHECK: *** Bad machine code: INLINEASM_BR indirect target missing from successor list ***
+# CHECK: Bad machine code: INLINEASM_BR indirect target missing from successor list
 # CHECK-NEXT: - function:    ceph_con_v2_try_read
 # CHECK-NEXT: - basic block: %bb.3 if.else.i.i
 # CHECK-NEXT: - instruction: INLINEASM_BR &"" [sideeffect] [attdialect], $0:[imm], %bb.5
 # CHECK-NEXT: - operand 3:   %bb.5
 
-# CHECK: *** Bad machine code: INLINEASM_BR indirect target predecessor list missing parent ***
+# CHECK: Bad machine code: INLINEASM_BR indirect target predecessor list missing parent
 # CHECK-NEXT: - function:    ceph_con_v2_try_read
 # CHECK-NEXT: - basic block: %bb.3 if.else.i.i
 # CHECK-NEXT: - instruction: INLINEASM_BR &"" [sideeffect] [attdialect], $0:[imm], %bb.5
@@ -54,71 +53,18 @@
   }
 
   attributes #0 = { argmemonly nocallback nofree nosync nounwind willreturn }
-
 ...
 ---
-name:            ceph_con_v2_try_read
-alignment:       16
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-failedISel:      false
+name: ceph_con_v2_try_read
 tracksRegLiveness: true
-hasWinCFI:       false
-callsEHReturn:   false
-callsUnwindInit: false
-hasEHContTarget: false
-hasEHScopes:     false
-hasEHFunclets:   false
-failsVerification: false
-tracksDebugUserValues: false
-registers:
-  - { id: 0, class: crbitrc, preferred-register: '' }
-  - { id: 1, class: g8rc, preferred-register: '' }
-  - { id: 2, class: g8rc, preferred-register: '' }
-  - { id: 3, class: crbitrc, preferred-register: '' }
-  - { id: 4, class: gprc, preferred-register: '' }
-  - { id: 5, class: crrc, preferred-register: '' }
-  - { id: 6, class: g8rc, preferred-register: '' }
-  - { id: 7, class: g8rc, preferred-register: '' }
-  - { id: 8, class: g8rc, preferred-register: '' }
-  - { id: 9, class: g8rc, preferred-register: '' }
-  - { id: 10, class: g8rc, preferred-register: '' }
 liveins:
   - { reg: '$x3', virtual-reg: '%1' }
   - { reg: '$x4', virtual-reg: '%2' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    4
-  adjustsStack:    false
-  hasCalls:        true
-  stackProtector:  ''
-  functionContext: ''
-  maxCallFrameSize: 4294967295
-  cvBytesOfCalleeSavedRegisters: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
-  hasTailCall:     false
-  localFrameSize:  0
-  savePoint:       []
-  restorePoint:    []
-fixedStack:      []
 stack:
   - { id: 0, name: skip.i.i, type: default, offset: 0, size: 1, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-callSites:       []
-debugValueSubstitutions: []
-constants:       []
-machineFunctionInfo: {}
-body:             |
+body: |
   bb.0.entry:
     successors: %bb.1(0x80000000)
     liveins: $x3, $x4
@@ -174,5 +120,4 @@ body:             |
 
     LIFETIME_END %stack.0.skip.i.i
     B %bb.1
-
 ...

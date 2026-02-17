@@ -623,6 +623,25 @@ void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm, uint8_t OpType,
         printImmediateFP16(static_cast<uint16_t>(Imm), STI, O))
       return;
     break;
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT: {
+    if (AMDGPU::isGFX11Plus(STI)) {
+      // For GFX11+, the inline constant is duplicated to both channels, so we
+      // need to check if the low and high 16 bits are the same, and then if
+      // they can be printed as inline constant values.
+      uint16_t Lo16 = static_cast<uint16_t>(Imm & 0xFFFF);
+      uint16_t Hi16 = static_cast<uint16_t>((Imm >> 16) & 0xFFFF);
+      if (Lo16 == Hi16 &&
+          printImmediateFP16(static_cast<uint16_t>(Imm), STI, O))
+        return;
+    } else {
+      // For pre-GFX11, the inline constant is in the low 16 bits, so we need
+      // to check if it can be printed as inline constant value.
+      if (isUInt<16>(Imm) &&
+          printImmediateFP16(static_cast<uint16_t>(Imm), STI, O))
+        return;
+    }
+    break;
+  }
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     if (isUInt<16>(Imm) &&
@@ -867,6 +886,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_V2INT16:
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP16:
+    case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
     case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
@@ -1448,26 +1468,10 @@ void AMDGPUInstPrinter::printMatrixFMT(const MCInst *MI, unsigned OpNo,
     return;
 
   O << " matrix_" << AorB << "_fmt:";
-  switch (Imm) {
-  default:
+  if (Imm < static_cast<int64_t>(std::size(WMMAMods::ModMatrixFmt)))
+    O << WMMAMods::ModMatrixFmt[Imm];
+  else
     O << Imm;
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_FP8:
-    O << "MATRIX_FMT_FP8";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_BF8:
-    O << "MATRIX_FMT_BF8";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_FP6:
-    O << "MATRIX_FMT_FP6";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_BF6:
-    O << "MATRIX_FMT_BF6";
-    break;
-  case WMMA::MatrixFMT::MATRIX_FMT_FP4:
-    O << "MATRIX_FMT_FP4";
-    break;
-  }
 }
 
 void AMDGPUInstPrinter::printMatrixAFMT(const MCInst *MI, unsigned OpNo,
@@ -1490,17 +1494,10 @@ void AMDGPUInstPrinter::printMatrixScale(const MCInst *MI, unsigned OpNo,
     return;
 
   O << " matrix_" << AorB << "_scale:";
-  switch (Imm) {
-  default:
+  if (Imm < static_cast<int64_t>(std::size(WMMAMods::ModMatrixScale)))
+    O << WMMAMods::ModMatrixScale[Imm];
+  else
     O << Imm;
-    break;
-  case WMMA::MatrixScale::MATRIX_SCALE_ROW0:
-    O << "MATRIX_SCALE_ROW0";
-    break;
-  case WMMA::MatrixScale::MATRIX_SCALE_ROW1:
-    O << "MATRIX_SCALE_ROW1";
-    break;
-  }
 }
 
 void AMDGPUInstPrinter::printMatrixAScale(const MCInst *MI, unsigned OpNo,
@@ -1523,20 +1520,10 @@ void AMDGPUInstPrinter::printMatrixScaleFmt(const MCInst *MI, unsigned OpNo,
     return;
 
   O << " matrix_" << AorB << "_scale_fmt:";
-  switch (Imm) {
-  default:
+  if (Imm < static_cast<int64_t>(std::size(WMMAMods::ModMatrixScaleFmt)))
+    O << WMMAMods::ModMatrixScaleFmt[Imm];
+  else
     O << Imm;
-    break;
-  case WMMA::MatrixScaleFmt::MATRIX_SCALE_FMT_E8:
-    O << "MATRIX_SCALE_FMT_E8";
-    break;
-  case WMMA::MatrixScaleFmt::MATRIX_SCALE_FMT_E5M3:
-    O << "MATRIX_SCALE_FMT_E5M3";
-    break;
-  case WMMA::MatrixScaleFmt::MATRIX_SCALE_FMT_E4M3:
-    O << "MATRIX_SCALE_FMT_E4M3";
-    break;
-  }
 }
 
 void AMDGPUInstPrinter::printMatrixAScaleFmt(const MCInst *MI, unsigned OpNo,
@@ -1672,6 +1659,19 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
   } else {
     O << Imm16; // Unknown imm16 code.
   }
+}
+
+void AMDGPUInstPrinter::printWaitEvent(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  using namespace llvm::AMDGPU::WaitEvent;
+  const uint16_t Imm16 = static_cast<uint16_t>(MI->getOperand(OpNo).getImm());
+
+  StringRef EventName = getWaitEventMaskName(Imm16, STI);
+  if (EventName.empty())
+    O << formatHex(static_cast<uint64_t>(Imm16));
+  else
+    O << EventName;
 }
 
 static void printSwizzleBitmask(const uint16_t AndMask,

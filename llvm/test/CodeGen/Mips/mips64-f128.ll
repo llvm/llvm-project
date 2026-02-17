@@ -1232,11 +1232,11 @@ define fp128 @libcall1_fabsl() {
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %0 = load fp128, ptr @gld0, align 16
-  %call = tail call fp128 @fabsl(fp128 %0) nounwind readnone
+  %call = tail call fp128 @llvm.fabs.f128(fp128 %0) nounwind readnone
   ret fp128 %call
 }
 
-declare fp128 @fabsl(fp128) #1
+declare fp128 @llvm.fabs.f128(fp128) #1
 
 define fp128 @libcall1_ceill() {
 ; C_CC_FMT-LABEL: libcall1_ceill:

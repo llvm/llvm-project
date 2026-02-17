@@ -75,10 +75,12 @@
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1151 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1151 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1152 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1152 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1153 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1153 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1170 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1170 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1200 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1200 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1201 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1201 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1250 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1250 %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1251 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1251 %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx1310 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1310 %s
 
 ; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx9-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX9_GENERIC %s
 ; RUN: llc -filetype=obj --amdhsa-code-object-version=6 -mtriple=amdgcn -mcpu=gfx9-4-generic < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX9_4_GENERIC %s
@@ -158,10 +160,12 @@
 ; GFX1151:       EF_AMDGPU_MACH_AMDGCN_GFX1151 (0x4A)
 ; GFX1152:       EF_AMDGPU_MACH_AMDGCN_GFX1152 (0x55)
 ; GFX1153:       EF_AMDGPU_MACH_AMDGCN_GFX1153 (0x58)
+; GFX1170:       EF_AMDGPU_MACH_AMDGCN_GFX1170 (0x5D)
 ; GFX1200:       EF_AMDGPU_MACH_AMDGCN_GFX1200 (0x48)
 ; GFX1201:       EF_AMDGPU_MACH_AMDGCN_GFX1201 (0x4E)
 ; GFX1250:       EF_AMDGPU_MACH_AMDGCN_GFX1250 (0x49)
 ; GFX1251:       EF_AMDGPU_MACH_AMDGCN_GFX1251 (0x5A)
+; GFX1310:       EF_AMDGPU_MACH_AMDGCN_GFX1310 (0x50)
 
 ; GFX9_GENERIC:       EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC (0x51)
 ; GFX9_4_GENERIC:     EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC (0x5F)

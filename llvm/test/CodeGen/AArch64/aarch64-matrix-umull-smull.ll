@@ -634,9 +634,8 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-GI-NEXT:    mov w8, w2
 ; CHECK-GI-NEXT:    b.hs .LBB5_4
 ; CHECK-GI-NEXT:  // %bb.2:
-; CHECK-GI-NEXT:    mov w10, #0 // =0x0
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    mov x9, xzr
-; CHECK-GI-NEXT:    fmov s0, w10
 ; CHECK-GI-NEXT:    b .LBB5_8
 ; CHECK-GI-NEXT:  .LBB5_3:
 ; CHECK-GI-NEXT:    mov w0, wzr
@@ -823,14 +822,15 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:  // %bb.9: // %vec.epilog.iter.check
 ; CHECK-SD-NEXT:    cbz x11, .LBB6_13
 ; CHECK-SD-NEXT:  .LBB6_10: // %vec.epilog.ph
-; CHECK-SD-NEXT:    mov w11, w1
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi v3.2d, #0x000000000000ff
+; CHECK-SD-NEXT:    mov w11, w1
+; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-SD-NEXT:    sxtb x11, w11
-; CHECK-SD-NEXT:    fmov d2, x8
-; CHECK-SD-NEXT:    dup v1.2s, w11
+; CHECK-SD-NEXT:    movi v3.2d, #0x000000000000ff
+; CHECK-SD-NEXT:    dup v2.2s, w11
 ; CHECK-SD-NEXT:    mov x11, x10
 ; CHECK-SD-NEXT:    and x10, x9, #0xfffffffc
+; CHECK-SD-NEXT:    mov v0.d[0], x8
 ; CHECK-SD-NEXT:    sub x8, x11, x10
 ; CHECK-SD-NEXT:    add x11, x0, x11
 ; CHECK-SD-NEXT:  .LBB6_11: // %vec.epilog.vector.body
@@ -845,11 +845,11 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:    and v4.16b, v4.16b, v3.16b
 ; CHECK-SD-NEXT:    xtn v5.2s, v5.2d
 ; CHECK-SD-NEXT:    xtn v4.2s, v4.2d
-; CHECK-SD-NEXT:    smlal v0.2d, v1.2s, v4.2s
-; CHECK-SD-NEXT:    smlal v2.2d, v1.2s, v5.2s
+; CHECK-SD-NEXT:    smlal v1.2d, v2.2s, v4.2s
+; CHECK-SD-NEXT:    smlal v0.2d, v2.2s, v5.2s
 ; CHECK-SD-NEXT:    b.ne .LBB6_11
 ; CHECK-SD-NEXT:  // %bb.12: // %vec.epilog.middle.block
-; CHECK-SD-NEXT:    add v0.2d, v2.2d, v0.2d
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    cmp x10, x9
 ; CHECK-SD-NEXT:    addp d0, v0.2d
 ; CHECK-SD-NEXT:    fmov x8, d0
