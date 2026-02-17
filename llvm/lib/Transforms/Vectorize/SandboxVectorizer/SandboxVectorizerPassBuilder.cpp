@@ -8,6 +8,7 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/RegionsFromBBs.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/RegionsFromMetadata.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/SeedCollection.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/StructInitVec.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionAcceptOrRevert.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionAlwaysAccept.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionAlwaysRevert.h"
