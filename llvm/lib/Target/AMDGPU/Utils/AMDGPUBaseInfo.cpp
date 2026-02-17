@@ -3447,10 +3447,10 @@ std::optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
 }
 
 unsigned getNumFlatOffsetBits(const MCSubtargetInfo &ST) {
-  if (AMDGPU::isGFX10(ST))
+  if (isGFX10(ST))
     return 12;
 
-  if (AMDGPU::isGFX12(ST))
+  if (isGFX12Plus(ST))
     return 24;
   return 13;
 }
