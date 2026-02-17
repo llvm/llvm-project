@@ -378,4 +378,14 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ModuleSP>(
   return {};
 }
 
+// MakeSBModuleSpec is defined here rather than in ScriptInterpreter.cpp
+// because it constructs an SBModuleSpec, whose symbols live in liblldb.
+// ScriptInterpreter.cpp is part of lldbInterpreter which is also linked
+// into lldb-server, which does not link the API library.
+std::unique_ptr<lldb::SBModuleSpec>
+ScriptInterpreter::MakeSBModuleSpec(const ModuleSpec &module_spec) const {
+  return std::unique_ptr<lldb::SBModuleSpec>(
+      new lldb::SBModuleSpec(module_spec));
+}
+
 #endif
