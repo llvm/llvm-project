@@ -109,21 +109,17 @@ static Value genLaunchGPUFunc(OpBuilder &builder, gpu::GPUFuncOp gpuFunc,
 /// Writes from the host are guaranteed to be visible to device kernels
 /// that are launched afterwards. Writes from the device are guaranteed
 /// to be visible on the host after synchronizing with the device kernel
-/// completion. Needs to cast the buffer to a unranked buffer.
+/// completion.
 static Value genHostRegisterMemref(OpBuilder &builder, Location loc,
                                    Value mem) {
-  MemRefType memTp = cast<MemRefType>(mem.getType());
-  UnrankedMemRefType resTp =
-      UnrankedMemRefType::get(memTp.getElementType(), /*memorySpace=*/0);
-  Value cast = memref::CastOp::create(builder, loc, resTp, mem);
-  gpu::HostRegisterOp::create(builder, loc, cast);
-  return cast;
+  gpu::HostRegisterOp::create(builder, loc, mem);
+  return mem;
 }
 
-/// Unmaps the provided buffer, expecting the casted buffer.
+/// Unmaps the provided buffer.
 static void genHostUnregisterMemref(OpBuilder &builder, Location loc,
-                                    Value cast) {
-  gpu::HostUnregisterOp::create(builder, loc, cast);
+                                    Value mem) {
+  gpu::HostUnregisterOp::create(builder, loc, mem);
 }
 
 /// Generates first wait in an asynchronous chain.

@@ -1606,7 +1606,7 @@ def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
 }
 
 def GPU_HostRegisterOp : GPU_Op<"host_register">,
-    Arguments<(ins AnyUnrankedMemRef:$value)> {
+    Arguments<(ins AnyMemRef:$value)> {
   let summary = "Registers a memref for access from device.";
   let description = [{
     This op maps the provided host buffer into the device address space.
@@ -1623,7 +1623,7 @@ def GPU_HostRegisterOp : GPU_Op<"host_register">,
 }
 
 def GPU_HostUnregisterOp : GPU_Op<"host_unregister">,
-    Arguments<(ins AnyUnrankedMemRef:$value)> {
+    Arguments<(ins AnyMemRef:$value)> {
   let summary = "Unregisters a memref for access from device.";
   let description = [{
       This op unmaps the provided host buffer from the device address space.
