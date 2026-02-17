@@ -971,7 +971,6 @@ toConstrainedExceptMd(LangOptions::FPExceptionModeKind kind) {
   case LangOptions::FPE_Default:
     llvm_unreachable("expected explicitly initialized exception behavior");
   }
-  
   llvm_unreachable("unsupported FP exception behavior");
 }
 
