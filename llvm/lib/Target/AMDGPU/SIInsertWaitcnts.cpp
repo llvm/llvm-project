@@ -3636,9 +3636,8 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
         }
       }
 
-      if (ST->hasWaitXcnt()) {
+      if (ST->hasWaitXcnt())
         Modified |= removeRedundantSoftXcnts(*MBB);
-      }
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);
       BI.Dirty = false;
 
