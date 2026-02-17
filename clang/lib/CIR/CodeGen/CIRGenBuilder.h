@@ -139,12 +139,12 @@ public:
   }
 
   /// Get the exception handling used with constrained floating point
-  llvm::fp::ExceptionBehavior getDefaultConstrainedExcept() {
+  const llvm::fp::ExceptionBehavior getDefaultConstrainedExcept() {
     return defaultConstrainedExcept;
   }
 
   /// Get the rounding mode handling used with constrained floating point
-  llvm::RoundingMode getDefaultConstrainedRounding() {
+  const llvm::RoundingMode getDefaultConstrainedRounding() {
     return defaultConstrainedRounding;
   }
 
