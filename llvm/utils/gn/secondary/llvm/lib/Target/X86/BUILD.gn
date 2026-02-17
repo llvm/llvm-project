@@ -48,6 +48,24 @@ tablegen("X86GenRegisterBank") {
   td_file = "X86.td"
 }
 
+tablegen("X86GenPreLegalizeGICombiner") {
+  visibility = [ ":LLVMX86CodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=X86PreLegalizerCombiner",
+  ]
+  td_file = "X86.td"
+}
+
+tablegen("X86GenPostLegalizeGICombiner") {
+  visibility = [ ":LLVMX86CodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=X86PostLegalizerCombiner",
+  ]
+  td_file = "X86.td"
+}
+
 static_library("LLVMX86CodeGen") {
   deps = [
     ":X86GenCallingConv",
@@ -56,6 +74,8 @@ static_library("LLVMX86CodeGen") {
     ":X86GenFoldTables",
     ":X86GenGlobalISel",
     ":X86GenInstrMapping",
+    ":X86GenPostLegalizeGICombiner",
+    ":X86GenPreLegalizeGICombiner",
     ":X86GenRegisterBank",
     "MCTargetDesc",
     "TargetInfo",
@@ -80,6 +100,8 @@ static_library("LLVMX86CodeGen") {
     "GISel/X86CallLowering.cpp",
     "GISel/X86InstructionSelector.cpp",
     "GISel/X86LegalizerInfo.cpp",
+    "GISel/X86PostLegalizerCombiner.cpp",
+    "GISel/X86PreLegalizerCombiner.cpp",
     "GISel/X86RegisterBankInfo.cpp",
     "X86ArgumentStackSlotRebase.cpp",
     "X86AsmPrinter.cpp",
@@ -87,6 +109,7 @@ static_library("LLVMX86CodeGen") {
     "X86AvoidTrailingCall.cpp",
     "X86CallFrameOptimization.cpp",
     "X86CallingConv.cpp",
+    "X86CleanupLocalDynamicTLS.cpp",
     "X86CmovConversion.cpp",
     "X86CodeGenPassBuilder.cpp",
     "X86CompressEVEX.cpp",
@@ -104,12 +127,13 @@ static_library("LLVMX86CodeGen") {
     "X86FlagsCopyLowering.cpp",
     "X86FloatingPoint.cpp",
     "X86FrameLowering.cpp",
+    "X86GlobalBaseReg.cpp",
     "X86ISelDAGToDAG.cpp",
     "X86ISelLowering.cpp",
     "X86ISelLoweringCall.cpp",
     "X86IndirectBranchTracking.cpp",
     "X86IndirectThunks.cpp",
-    "X86InsertWait.cpp",
+    "X86InsertX87Wait.cpp",
     "X86InstCombineIntrinsic.cpp",
     "X86InstrFMA3Info.cpp",
     "X86InstrFoldTables.cpp",

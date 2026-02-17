@@ -103,6 +103,11 @@ struct VectorizationStrategy {
   ReductionLoopMap reductionLoops;
 };
 
+/// Vectorize affine loops that are children of parentOp (including itself)
+void vectorizeChildAffineLoops(Operation *parentOp, bool vectorizeReductions,
+                               ArrayRef<int64_t> vectorSizes,
+                               ArrayRef<int64_t> fastestVaryingPattern);
+
 /// Replace affine store and load accesses by scalars by forwarding stores to
 /// loads and eliminate invariant affine loads; consequently, eliminate dead
 /// allocs.

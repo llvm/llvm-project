@@ -20,6 +20,51 @@
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
 
+// In full build mode we are the system fenv in libc.
+#if defined(LIBC_FULL_BUILD)
+#undef LIBC_MATH_USE_SYSTEM_FENV
+#endif // LIBC_FULL_BUILD
+
+#if defined(LIBC_MATH_USE_SYSTEM_FENV)
+
+// Simply call the system libc fenv.h functions, only for those that are used in
+// math function implementations.
+// To be used as an option for math function implementation, not to be used to
+// implement fenv.h functions themselves.
+
+#include <fenv.h>
+
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
+
+LIBC_INLINE int clear_except(int excepts) { return feclearexcept(excepts); }
+
+LIBC_INLINE int test_except(int excepts) { return fetestexcept(excepts); }
+
+LIBC_INLINE int get_except() {
+  fexcept_t excepts = 0;
+  fegetexceptflag(&excepts, FE_ALL_EXCEPT);
+  return static_cast<int>(excepts);
+}
+
+LIBC_INLINE int set_except(int excepts) {
+  fexcept_t exc = static_cast<fexcept_t>(excepts);
+  return fesetexceptflag(&exc, FE_ALL_EXCEPT);
+}
+
+LIBC_INLINE int raise_except(int excepts) { return feraiseexcept(excepts); }
+
+LIBC_INLINE int get_round() { return fegetround(); }
+
+LIBC_INLINE int set_round(int rounding_mode) {
+  return fesetround(rounding_mode);
+}
+
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
+
+#else // !LIBC_MATH_USE_SYSTEM_FENV
+
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP)
 #if defined(__APPLE__)
 #include "aarch64/fenv_darwin_impl.h"
@@ -72,6 +117,8 @@ LIBC_INLINE int set_env(const fenv_t *) { return 0; }
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 #endif
+
+#endif // LIBC_MATH_USE_SYSTEM_FENV
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {

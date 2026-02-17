@@ -9,99 +9,142 @@
 <html lang="en-US">
 {{>HeadPartial}}
 <body>
-    {{>NavbarPartial}}
+    <header>
+        {{>NavbarPartial}}
+    </header>
     <main>
         <div class="container">
             <div class="sidebar">
                 <h2>{{TagType}} {{Name}}</h2>
                 <ul>
                     {{#HasPublicMembers}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#PublicMembers">Public Members</a>
-                    </li>
                     <li>
-                        <ul>
-                            {{#PublicMembers}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
-                            </li>
-                            {{/PublicMembers}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                              <a class="sidebar-item" href="#PublicMembers">Public Members</a>
+                            </summary>
+                            <ul>
+                                {{#PublicMembers}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
+                                </li>
+                                {{/PublicMembers}}
+                            </ul>
+                        </details>
                     </li>
                     {{/HasPublicMembers}}
-                    {{#ProtectedMembers}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#PublicMethods">Protected Members</a>
-                    </li>
+                    {{#HasProtectedMembers}}
                     <li>
-                        <ul>
-                            {{#Obj}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
-                            </li>
-                            {{/Obj}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#ProtectedMembers">Protected Members</a>
+                            </summary>
+                            <ul>
+                                {{#ProtectedMembers}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{Name}}">{{Name}}</a>
+                                </li>
+                                {{/ProtectedMembers}}
+                            </ul>
+                        </details>
                     </li>
-                    {{/ProtectedMembers}}
-                    {{#HasPublicFunctions}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#PublicMethods">Public Method</a>
-                    </li>
+                    {{/HasProtectedMembers}}
+                    {{#HasPublicMethods}}
                     <li>
-                        <ul>
-                            {{#PublicFunctions}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
-                            </li>
-                            {{/PublicFunctions}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
+                            </summary>
+                            <ul>
+                                {{#PublicMethods}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/PublicMethods}}
+                            </ul>
+                        </details>
                     </li>
-                    {{/HasPublicFunctions}}
-                    {{#ProtectedFunction}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#ProtectedFunction">Protected Method</a>
-                    </li>
+                    {{/HasPublicMethods}}
+                    {{#HasProtectedMethods}}
                     <li>
-                        <ul>
-                            {{#Obj}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
-                            </li>
-                            {{/Obj}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#ProtectedMethods">Protected Methods</a>
+                            </summary>
+                            <ul>
+                                {{#ProtectedMethods}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/ProtectedMethods}}
+                            </ul>
+                        </details>
                     </li>
-                    {{/ProtectedFunction}}
-                    {{#Enums}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Enums">Enums</a>
-                    </li>
+                    {{/HasProtectedMethods}}
+                    {{#HasEnums}}
                     <li>
-                        <ul>
-                            {{#Obj}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{USR}}">{{EnumName}}</a>
-                            </li>
-                            {{/Obj}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Enums">Enums</a>
+                            </summary>
+                            <ul>
+                                {{#Enums}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Enums}}
+                            </ul>
+                        </details>
                     </li>
-                    {{/Enums}}
-                    {{#Typedef}}
-                    <li class="sidebar-section">Typedef</li>
-                    {{/Typedef}}
-                    {{#Record}}
-                    <li class="sidebar-section">
-                        <a class="sidebar-item" href="#Classes">Inner Classes</a>
-                    </li>
+                    {{/HasEnums}}
+                    {{#HasTypedefs}}
                     <li>
-                        <ul>
-                            {{#Links}}
-                            <li class="sidebar-item-container">
-                                <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
-                            </li>
-                            {{/Links}}
-                        </ul>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Typedefs">Typedefs</a>
+                            </summary>
+                            <ul>
+                                {{#Typedefs}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Typedefs}}
+                            </ul>
+                        </details>
                     </li>
-                    {{/Record}}
+                    {{/HasTypedefs}}
+                    {{#HasRecords}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Records">Records</a>
+                            </summary>
+                            <ul>
+                                {{#Records}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{USR}}">{{Name}}</a>
+                                </li>
+                                {{/Records}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasRecords}}
+                    {{#HasFriends}}
+                    <li>
+                        <details open>
+                            <summary class="sidebar-section">
+                                <a class="sidebar-item" href="#Friends">Friends</a>
+                            </summary>
+                            <ul>
+                                {{#Friends}}
+                                <li class="sidebar-item-container">
+                                    <a class="sidebar-item" href="#{{Reference.USR}}">{{Reference.Name}}</a>
+                                </li>
+                                {{/Friends}}
+                            </ul>
+                        </details>
+                    </li>
+                    {{/HasFriends}}
                 </ul>
             </div>
             <div class="resizer" id="resizer"></div>
@@ -112,9 +155,11 @@
                     {{/Template}}
                     <div class="hero__title">
                         <h1 class="hero__title-large">{{TagType}} {{Name}}</h1>
-                        <p>Defined at line {{Location.LineNumber}} of file {{Location.Filename}}</p>
+                        {{#Location}}
+                        <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
+                        {{/Location}}
                         {{#Description}}
-                        <div class="hero__subtitle">
+                        <div class="doc-card">
                             {{>Comments}}
                         </div>
                         {{/Description}}
@@ -127,84 +172,89 @@
                         {{#PublicMembers}}
                         <div id="{{Name}}" class="delimiter-container">
                             <pre><code class="language-cpp code-clang-doc" >{{#IsStatic}}static {{/IsStatic}}{{Type}} {{Name}}</code></pre>
-                            {{#MemberComments}}
-                            <div>
-                                {{>Comments}}
-                            </div>
-                            {{/MemberComments}}
                         </div>
                         {{/PublicMembers}}
                     </div>
                 </section>
                 {{/HasPublicMembers}}
-                {{#ProtectedMembers}}
+                {{#HasProtectedMembers}}
                 <section id="ProtectedMembers" class="section-container">
                     <h2>Protected Members</h2>
                     <div>
-                        {{#Obj}}
+                        {{#ProtectedMembers}}
                         <div id="{{Name}}" class="delimiter-container">
                             <pre><code class="language-cpp code-clang-doc" >{{#IsStatic}}static {{/IsStatic}}{{Type}} {{Name}}</code></pre>
-                            {{#MemberComments}}
-                            <div>
-                                {{>Comments}}
-                            </div>
-                            {{/MemberComments}}
                         </div>
-                        {{/Obj}}
+                        {{/ProtectedMembers}}
                     </div>
                 </section>
-                {{/ProtectedMembers}}
-                {{#HasPublicFunctions}}
+                {{/HasProtectedMembers}}
+                {{#HasPublicMethods}}
                 <section id="PublicMethods" class="section-container">
                     <h2>Public Methods</h2>
+                    {{#PublicMethods}}
+                    {{>FunctionPartial}}
+                    {{/PublicMethods}}
+                </section>
+                {{/HasPublicMethods}}
+                {{#HasProtectedMethods}}
+                <section id="ProtectedMethods" class="section-container">
+                    <h2>Protected Methods</h2>
                     <div>
-                        {{#PublicFunctions}}
+                        {{#ProtectedMethods}}
                         {{>FunctionPartial}}
-                        {{/PublicFunctions}}
+                        {{/ProtectedMethods}}
                     </div>
                 </section>
-                {{/PublicFunctions}}
-                {{#ProtectedFunction}}
-                <li class="sidebar-section">
-                    <a class="sidebar-item" href="#ProtectedFunction">Protected Method</a>
-                </li>
-                <ul>
-                    {{#Obj}}
-                    <li class="sidebar-item-container">
-                        <a class="sidebar-item" href="#{{ID}}">{{Name}}</a>
-                    </li>
-                    {{/Obj}}
-                </ul>
-                {{/ProtectedFunction}}
-                {{#Enums}}
+                {{/HasProtectedMethods}}
+                {{#HasEnums}}
                 <section id="Enums" class="section-container">
                     <h2>Enumerations</h2>
-                    <div>
-                        {{#Obj}}
-                        {{>EnumPartial}}
-                        {{/Obj}}
-                    </div>
+                    {{#Enums}}
+                    {{>EnumPartial}}
+                    {{/Enums}}
                 </section>
-                {{/Enums}}
-                {{#Record}}
-                <section id="Classes" class="section-container">
-                    <h2>Inner Classes</h2>
+                {{/HasEnums}}
+                {{#HasRecords}}
+                <section id="Records" class="section-container">
+                    <h2>Records</h2>
                     <ul class="class-container">
-                        {{#Links}}
-                        <li id="{{ID}}" style="max-height: 40px;">
-                            <a href="{{Link}}">
-                                <pre><code class="language-cpp code-clang-doc" >class {{Name}}</code></pre>
+                        {{#Records}}
+                        <li id="{{USR}}" style="max-height: 40px;">
+                            <a href="{{PathStem}}/{{DocumentationFileName}}.html">
+                                <pre><code class="language-cpp code-clang-doc">class {{Name}}</code></pre>
                             </a>
                         </li>
-                        {{/Links}}
+                        {{/Records}}
                     </ul>
                 </section>
-                {{/Record}}
-                {{#Typedef}}
-                <section class="section-container">
-                    <h2 id="Enums">Enums</h2>
+                {{/HasRecords}}
+                {{#HasTypedefs}}
+                <section id="Typedefs" class="section-container">
+                    <h2>Typedefs</h2>
+                    {{#Typedefs}}
+                    {{>AliasPartial}}
+                    {{/Typedefs}}
                 </section>
-                {{/Typedef}}
+                {{/HasTypedefs}}
+                {{#HasFriends}}
+                <section id="Friends" class="section-container">
+                    <h2>Friends</h2>
+                    {{#Friends}}
+                    <div id="{{Reference.USR}}" class="delimiter-container">
+                        {{#Template}}
+                        <pre><code class="language-cpp code-clang-doc">template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;</code></pre>
+                        {{/Template}}
+                        {{#IsClass}}
+                        <pre><code class="language-cpp code-clang-doc">class {{Reference.Name}}</code></pre>
+                        {{/IsClass}}
+                        {{^IsClass}}
+                        <pre><code class="language-cpp code-clang-doc">{{ReturnType.Name}} {{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}} ({{#Params}}{{Type.QualName}} {{Name}}{{^End}}, {{/End}}{{/Params}})</code></pre>
+                        {{/IsClass}}
+                    </div>
+                    {{/Friends}}
+                </section>
+                {{/HasFriends}}
             </div>
         </div>
     </main>

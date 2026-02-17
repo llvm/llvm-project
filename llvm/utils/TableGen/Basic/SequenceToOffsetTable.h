@@ -69,8 +69,8 @@ class SequenceToOffsetTable {
   // True if `layout` method was called.
   bool IsLaidOut = false;
 
-  // Entries in the final table, or 0 before layout was called.
-  unsigned Entries = 0;
+  // Size of the final table, or 0 before layout was called.
+  unsigned Size = 0;
 
   // isSuffix - Returns true if A is a suffix of B.
   static bool isSuffix(const SeqT &A, const SeqT &B) {
@@ -85,7 +85,7 @@ public:
   /// This must be called before layout().
   void add(const SeqT &Seq) {
     assert(!IsLaidOut && "Cannot call add() after layout()");
-    typename SeqMap::iterator I = Seqs.lower_bound(Seq);
+    auto I = Seqs.lower_bound(Seq);
 
     // If SeqMap contains a sequence that has Seq as a suffix, I will be
     // pointing to it.
@@ -103,7 +103,7 @@ public:
 
   unsigned size() const {
     assert(IsLaidOut && "Call layout() before size()");
-    return Entries;
+    return Size;
   }
 
   /// layout - Computes the final table layout.
@@ -112,18 +112,17 @@ public:
     IsLaidOut = true;
 
     // Lay out the table in Seqs iteration order.
-    for (typename SeqMap::iterator I = Seqs.begin(), E = Seqs.end(); I != E;
-         ++I) {
-      I->second = Entries;
+    for (auto &[Seq, Offset] : Seqs) {
+      Offset = Size;
       // Include space for a terminator.
-      Entries += I->first.size() + Terminator.has_value();
+      Size += Seq.size() + Terminator.has_value();
     }
   }
 
   /// get - Returns the offset of Seq in the final table.
   unsigned get(const SeqT &Seq) const {
     assert(IsLaidOut && "Call layout() before get()");
-    typename SeqMap::const_iterator I = Seqs.lower_bound(Seq);
+    auto I = Seqs.lower_bound(Seq);
     assert(I != Seqs.end() && isSuffix(Seq, I->first) &&
            "get() called with sequence that wasn't added first");
     return I->second + (I->first.size() - Seq.size());
@@ -179,7 +178,7 @@ public:
     }
 
     // Print a dummy element if the array would be empty otherwise.
-    if (!Entries) {
+    if (Size == 0) {
       OS << "  /* dummy */ ";
       Print(OS, ElemT());
       OS << '\n';

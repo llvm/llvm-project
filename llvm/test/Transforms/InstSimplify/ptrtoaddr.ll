@@ -470,3 +470,118 @@ define i1 @icmp_ptrtoint_null_dyn_addrsize(ptr addrspace(1) nonnull %a) {
   %cmp = icmp ne i64 %a.addr, 0
   ret i1 %cmp
 }
+
+define i1 @non_zero_ptrtoaddr(ptr nonnull %p, i64 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoaddr(
+; CHECK-SAME: ptr nonnull [[P:%.*]], i64 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoaddr ptr %p to i64
+  %or = or i64 %p.addr, %unknown
+  %cmp = icmp ne i64 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoaddr_addrsize(ptr addrspace(1) nonnull %p, i32 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoaddr_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[P:%.*]], i32 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %or = or i32 %p.addr, %unknown
+  %cmp = icmp ne i32 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoint_equal_addrsize(ptr addrspace(1) nonnull %p, i32 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoint_equal_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[P:%.*]], i32 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoint ptr addrspace(1) %p to i32
+  %or = or i32 %p.addr, %unknown
+  %cmp = icmp ne i32 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoint_larger_addrsize(ptr addrspace(1) nonnull %p, i64 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoint_larger_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[P:%.*]], i64 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    ret i1 true
+;
+  %p.addr = ptrtoint ptr addrspace(1) %p to i64
+  %or = or i64 %p.addr, %unknown
+  %cmp = icmp ne i64 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrtoint_smaller_addrsize(ptr addrspace(1) nonnull %p, i16 %unknown) {
+; CHECK-LABEL: define i1 @non_zero_ptrtoint_smaller_addrsize(
+; CHECK-SAME: ptr addrspace(1) nonnull [[P:%.*]], i16 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[P_ADDR:%.*]] = ptrtoint ptr addrspace(1) [[P]] to i16
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[P_ADDR]], [[UNKNOWN]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[OR]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %p.addr = ptrtoint ptr addrspace(1) %p to i16
+  %or = or i16 %p.addr, %unknown
+  %cmp = icmp ne i16 %or, 0
+  ret i1 %cmp
+}
+
+define i1 @ptrtoaddr_diff_non_equal(ptr %p0, ptr %p1) {
+; CHECK-LABEL: define i1 @ptrtoaddr_diff_non_equal(
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]]) {
+; CHECK-NEXT:    [[I0:%.*]] = ptrtoaddr ptr [[P0]] to i64
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoaddr ptr [[P1]] to i64
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[I0]], [[I1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[DIFF]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    ret i1 false
+;
+  %i0 = ptrtoaddr ptr %p0 to i64
+  %i1 = ptrtoaddr ptr %p1 to i64
+  %diff = sub i64 %i0, %i1
+  %cond = icmp eq i64 %diff, 12
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq ptr %p0, %p1
+  ret i1 %cmp
+}
+
+define i1 @ptrtoaddr_diff_non_equal_addrsize(ptr addrspace(1) %p0, ptr addrspace(1) %p1) {
+; CHECK-LABEL: define i1 @ptrtoaddr_diff_non_equal_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[P0:%.*]], ptr addrspace(1) [[P1:%.*]]) {
+; CHECK-NEXT:    [[I0:%.*]] = ptrtoaddr ptr addrspace(1) [[P0]] to i32
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoaddr ptr addrspace(1) [[P1]] to i32
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i32 [[I0]], [[I1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[DIFF]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    ret i1 false
+;
+  %i0 = ptrtoaddr ptr addrspace(1) %p0 to i32
+  %i1 = ptrtoaddr ptr addrspace(1) %p1 to i32
+  %diff = sub i32 %i0, %i1
+  %cond = icmp eq i32 %diff, 12
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq ptr addrspace(1) %p0, %p1
+  ret i1 %cmp
+}
+
+define i1 @ptrtoaddr_diff_non_equal_addrsize_commuted(ptr addrspace(1) %p0, ptr addrspace(1) %p1) {
+; CHECK-LABEL: define i1 @ptrtoaddr_diff_non_equal_addrsize_commuted(
+; CHECK-SAME: ptr addrspace(1) [[P0:%.*]], ptr addrspace(1) [[P1:%.*]]) {
+; CHECK-NEXT:    [[I0:%.*]] = ptrtoaddr ptr addrspace(1) [[P0]] to i32
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoaddr ptr addrspace(1) [[P1]] to i32
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i32 [[I0]], [[I1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[DIFF]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    ret i1 false
+;
+  %i0 = ptrtoaddr ptr addrspace(1) %p0 to i32
+  %i1 = ptrtoaddr ptr addrspace(1) %p1 to i32
+  %diff = sub i32 %i0, %i1
+  %cond = icmp eq i32 %diff, 12
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq ptr addrspace(1) %p1, %p0
+  ret i1 %cmp
+}

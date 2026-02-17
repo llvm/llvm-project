@@ -1327,9 +1327,9 @@ TEST_F(PatternMatchTest, OverflowingBinOps) {
 TEST_F(PatternMatchTest, LoadStoreOps) {
   // Create this load/store sequence:
   //
-  //  %p = alloca i32*
-  //  %0 = load i32*, i32** %p
-  //  store i32 42, i32* %0
+  //  %p = alloca ptr
+  //  %0 = load ptr, ptr %p
+  //  store i32 42, ptr %0
 
   Value *Alloca = IRB.CreateAlloca(IRB.getInt32Ty());
   Value *LoadInst = IRB.CreateLoad(IRB.getInt32Ty(), Alloca);

@@ -82,6 +82,9 @@ foreach(tool ${SUPPORTED_TOOLS})
                              "${SANITIZER_COMMON_TEST_TARGET_CFLAGS}")
     endif()
 
+    set(SANITIZER_COMMON_TEST_APPLE_TARGET_IS_HOST ON)
+    pythonize_bool(SANITIZER_COMMON_TEST_APPLE_TARGET_IS_HOST)
+
     configure_lit_site_cfg(
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
@@ -131,6 +134,8 @@ if(APPLE)
         set(CONFIG_NAME "${tool}-${arch}-${platform}")
         set(SANITIZER_COMMON_TEST_CONFIG_SUFFIX "-${arch}-${platform}")
         set(SANITIZER_COMMON_TEST_APPLE_PLATFORM "${platform}")
+        set(SANITIZER_COMMON_TEST_APPLE_TARGET_IS_HOST OFF)
+        pythonize_bool(SANITIZER_COMMON_TEST_APPLE_TARGET_IS_HOST)
         set(SANITIZER_COMMON_TEST_TARGET_ARCH "${arch}")
         set(SANITIZER_COMMON_TEST_MIN_DEPLOYMENT_TARGET_FLAG "${DARWIN_${platform}_MIN_VER_FLAG}")
         configure_lit_site_cfg(

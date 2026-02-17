@@ -230,3 +230,35 @@ func.func @pad_reification(%cst : f32, %idx : index, %t: tensor<64x?x64xf32>) {
   %1 = "test.reify_bound"(%padded) {dim = 1, constant} : (tensor<1x?x64xf32>) -> (index)
   return
 }
+
+// -----
+
+//       CHECK: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 * 2)>
+// CHECK-LABEL: func @tensor_collapse(
+//  CHECK-SAME:     %[[sz0:.*]]: index
+//   CHECK-DAG:   %[[c2:.*]] = arith.constant 2 : index
+//   CHECK-DAG:   %[[c12:.*]] = arith.constant 12 : index
+//       CHECK:   %[[dim:.*]] = tensor.dim %{{.*}}, %[[c2]] : tensor<3x4x?x2xf32>
+//       CHECK:   %[[mul:.*]] = affine.apply #[[$MAP]]()[%[[dim]]]
+//       CHECK:   return %[[c12]], %[[mul]]
+func.func @tensor_collapse(%sz0: index) -> (index, index) {
+  %0 = tensor.empty(%sz0) : tensor<3x4x?x2xf32>
+  %1 = tensor.collapse_shape %0 [[0, 1], [2, 3]] : tensor<3x4x?x2xf32> into tensor<12x?xf32>
+  %2 = "test.reify_bound"(%1) {dim = 0} : (tensor<12x?xf32>) -> (index)
+  %3 = "test.reify_bound"(%1) {dim = 1} : (tensor<12x?xf32>) -> (index)
+  return %2, %3 : index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor_expand(
+//  CHECK-SAME:     %[[t:[a-zA-Z0-9]+]]: tensor<?xf32>
+//  CHECK-SAME:     %[[sz:[a-zA-Z0-9]+]]: index
+//       CHECK:   %[[c4:.*]] = arith.constant 4 : index
+//       CHECK:   return %[[c4]], %[[sz]]
+func.func @tensor_expand(%t: tensor<?xf32>, %sz: index) -> (index, index) {
+  %0 = tensor.expand_shape %t [[0, 1]] output_shape [4, %sz] : tensor<?xf32> into tensor<4x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (tensor<4x?xf32>) -> (index)
+  %2 = "test.reify_bound"(%0) {dim = 1} : (tensor<4x?xf32>) -> (index)
+  return %1, %2 : index, index
+}

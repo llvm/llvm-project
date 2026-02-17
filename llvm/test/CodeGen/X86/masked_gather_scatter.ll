@@ -966,10 +966,9 @@ define <2 x double> @test17(ptr %base, <2 x i32> %ind, <2 x i1> %mask, <2 x doub
 ; X86-SKX-LABEL: test17:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpsllq $63, %xmm1, %xmm1
-; X86-SKX-NEXT:    vpmovq2m %xmm1, %k0
 ; X86-SKX-NEXT:    vpslld $3, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpaddd {{[0-9]+}}(%esp){1to4}, %xmm0, %xmm0
-; X86-SKX-NEXT:    kmovw %k0, %eax
+; X86-SKX-NEXT:    vmovmskpd %xmm1, %eax
 ; X86-SKX-NEXT:    testb $1, %al
 ; X86-SKX-NEXT:    jne .LBB16_1
 ; X86-SKX-NEXT:  # %bb.2: # %else
@@ -1255,8 +1254,7 @@ define void @test20(<2 x float>%a1, <2 x ptr> %ptr, <2 x i1> %mask) {
 ; X64-SKX-LABEL: test20:
 ; X64-SKX:       # %bb.0:
 ; X64-SKX-NEXT:    vpsllq $63, %xmm2, %xmm2
-; X64-SKX-NEXT:    vpmovq2m %xmm2, %k0
-; X64-SKX-NEXT:    kmovw %k0, %eax
+; X64-SKX-NEXT:    vmovmskpd %xmm2, %eax
 ; X64-SKX-NEXT:    testb $1, %al
 ; X64-SKX-NEXT:    jne .LBB19_1
 ; X64-SKX-NEXT:  # %bb.2: # %else
@@ -1277,8 +1275,7 @@ define void @test20(<2 x float>%a1, <2 x ptr> %ptr, <2 x i1> %mask) {
 ; X86-SKX-LABEL: test20:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpsllq $63, %xmm2, %xmm2
-; X86-SKX-NEXT:    vpmovq2m %xmm2, %k0
-; X86-SKX-NEXT:    kmovw %k0, %eax
+; X86-SKX-NEXT:    vmovmskpd %xmm2, %eax
 ; X86-SKX-NEXT:    testb $1, %al
 ; X86-SKX-NEXT:    jne .LBB19_1
 ; X86-SKX-NEXT:  # %bb.2: # %else
@@ -1352,8 +1349,7 @@ define void @test21(<2 x i32>%a1, <2 x ptr> %ptr, <2 x i1>%mask) {
 ; X64-SKX-LABEL: test21:
 ; X64-SKX:       # %bb.0:
 ; X64-SKX-NEXT:    vpsllq $63, %xmm2, %xmm2
-; X64-SKX-NEXT:    vpmovq2m %xmm2, %k0
-; X64-SKX-NEXT:    kmovw %k0, %eax
+; X64-SKX-NEXT:    vmovmskpd %xmm2, %eax
 ; X64-SKX-NEXT:    testb $1, %al
 ; X64-SKX-NEXT:    jne .LBB20_1
 ; X64-SKX-NEXT:  # %bb.2: # %else
@@ -1374,8 +1370,7 @@ define void @test21(<2 x i32>%a1, <2 x ptr> %ptr, <2 x i1>%mask) {
 ; X86-SKX-LABEL: test21:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpsllq $63, %xmm2, %xmm2
-; X86-SKX-NEXT:    vpmovq2m %xmm2, %k0
-; X86-SKX-NEXT:    kmovw %k0, %eax
+; X86-SKX-NEXT:    vmovmskpd %xmm2, %eax
 ; X86-SKX-NEXT:    testb $1, %al
 ; X86-SKX-NEXT:    jne .LBB20_1
 ; X86-SKX-NEXT:  # %bb.2: # %else
@@ -1494,10 +1489,9 @@ define <2 x float> @test22(ptr %base, <2 x i32> %ind, <2 x i1> %mask, <2 x float
 ; X86-SKX-LABEL: test22:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpsllq $63, %xmm1, %xmm1
-; X86-SKX-NEXT:    vpmovq2m %xmm1, %k0
 ; X86-SKX-NEXT:    vpslld $2, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpaddd {{[0-9]+}}(%esp){1to4}, %xmm0, %xmm0
-; X86-SKX-NEXT:    kmovw %k0, %eax
+; X86-SKX-NEXT:    vmovmskpd %xmm1, %eax
 ; X86-SKX-NEXT:    testb $1, %al
 ; X86-SKX-NEXT:    jne .LBB21_1
 ; X86-SKX-NEXT:  # %bb.2: # %else
@@ -1617,11 +1611,10 @@ define <2 x float> @test22a(ptr %base, <2 x i64> %ind, <2 x i1> %mask, <2 x floa
 ; X86-SKX-LABEL: test22a:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpsllq $63, %xmm1, %xmm1
-; X86-SKX-NEXT:    vpmovq2m %xmm1, %k0
 ; X86-SKX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-SKX-NEXT:    vpslld $2, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpaddd {{[0-9]+}}(%esp){1to4}, %xmm0, %xmm0
-; X86-SKX-NEXT:    kmovw %k0, %eax
+; X86-SKX-NEXT:    vmovmskpd %xmm1, %eax
 ; X86-SKX-NEXT:    testb $1, %al
 ; X86-SKX-NEXT:    jne .LBB22_1
 ; X86-SKX-NEXT:  # %bb.2: # %else
@@ -1741,10 +1734,9 @@ define <2 x i32> @test23(ptr %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i32> %s
 ; X86-SKX-LABEL: test23:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpsllq $63, %xmm1, %xmm1
-; X86-SKX-NEXT:    vpmovq2m %xmm1, %k0
 ; X86-SKX-NEXT:    vpslld $2, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpaddd {{[0-9]+}}(%esp){1to4}, %xmm0, %xmm0
-; X86-SKX-NEXT:    kmovw %k0, %eax
+; X86-SKX-NEXT:    vmovmskpd %xmm1, %eax
 ; X86-SKX-NEXT:    testb $1, %al
 ; X86-SKX-NEXT:    jne .LBB23_1
 ; X86-SKX-NEXT:  # %bb.2: # %else
@@ -1860,11 +1852,10 @@ define <2 x i32> @test23b(ptr %base, <2 x i64> %ind, <2 x i1> %mask, <2 x i32> %
 ; X86-SKX-LABEL: test23b:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpsllq $63, %xmm1, %xmm1
-; X86-SKX-NEXT:    vpmovq2m %xmm1, %k0
 ; X86-SKX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-SKX-NEXT:    vpslld $2, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpaddd {{[0-9]+}}(%esp){1to4}, %xmm0, %xmm0
-; X86-SKX-NEXT:    kmovw %k0, %eax
+; X86-SKX-NEXT:    vmovmskpd %xmm1, %eax
 ; X86-SKX-NEXT:    testb $1, %al
 ; X86-SKX-NEXT:    jne .LBB24_1
 ; X86-SKX-NEXT:  # %bb.2: # %else
@@ -2034,10 +2025,9 @@ define <2 x i64> @test25(ptr %base, <2 x i32> %ind, <2 x i1> %mask, <2 x i64> %s
 ; X86-SKX-LABEL: test25:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpsllq $63, %xmm1, %xmm1
-; X86-SKX-NEXT:    vpmovq2m %xmm1, %k0
 ; X86-SKX-NEXT:    vpslld $3, %xmm0, %xmm0
 ; X86-SKX-NEXT:    vpaddd {{[0-9]+}}(%esp){1to4}, %xmm0, %xmm0
-; X86-SKX-NEXT:    kmovw %k0, %eax
+; X86-SKX-NEXT:    vmovmskpd %xmm1, %eax
 ; X86-SKX-NEXT:    testb $1, %al
 ; X86-SKX-NEXT:    jne .LBB26_1
 ; X86-SKX-NEXT:  # %bb.2: # %else
@@ -3762,10 +3752,9 @@ define void @test_scatter_2i32_index(<2 x double> %a1, ptr %base, <2 x i32> %ind
 ; X86-SKX-LABEL: test_scatter_2i32_index:
 ; X86-SKX:       # %bb.0:
 ; X86-SKX-NEXT:    vpsllq $63, %xmm2, %xmm2
-; X86-SKX-NEXT:    vpmovq2m %xmm2, %k0
 ; X86-SKX-NEXT:    vpslld $3, %xmm1, %xmm1
 ; X86-SKX-NEXT:    vpaddd {{[0-9]+}}(%esp){1to4}, %xmm1, %xmm1
-; X86-SKX-NEXT:    kmovw %k0, %eax
+; X86-SKX-NEXT:    vmovmskpd %xmm2, %eax
 ; X86-SKX-NEXT:    testb $1, %al
 ; X86-SKX-NEXT:    jne .LBB52_1
 ; X86-SKX-NEXT:  # %bb.2: # %else

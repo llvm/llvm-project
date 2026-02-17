@@ -1480,6 +1480,9 @@ SDValue R600TargetLowering::LowerFormalArguments(
       MemVT = MemVT.getVectorElementType();
     }
 
+    if (VT.isInteger() && !MemVT.isInteger())
+      MemVT = MemVT.changeTypeToInteger();
+
     if (AMDGPU::isShader(CallConv)) {
       Register Reg = MF.addLiveIn(VA.getLocReg(), &R600::R600_Reg128RegClass);
       SDValue Register = DAG.getCopyFromReg(Chain, DL, Reg, VT);
@@ -1496,11 +1499,15 @@ SDValue R600TargetLowering::LowerFormalArguments(
     // thread group and global sizes.
     ISD::LoadExtType Ext = ISD::NON_EXTLOAD;
     if (MemVT.getScalarSizeInBits() != VT.getScalarSizeInBits()) {
-      // FIXME: This should really check the extload type, but the handling of
-      // extload vector parameters seems to be broken.
+      if (VT.isFloatingPoint()) {
+        Ext = ISD::EXTLOAD;
+      } else {
+        // FIXME: This should really check the extload type, but the handling of
+        // extload vector parameters seems to be broken.
 
-      // Ext = In.Flags.isSExt() ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
-      Ext = ISD::SEXTLOAD;
+        // Ext = In.Flags.isSExt() ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
+        Ext = ISD::SEXTLOAD;
+      }
     }
 
     // Compute the offset from the value.
@@ -2178,7 +2185,7 @@ SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
 }
 
 TargetLowering::AtomicExpansionKind
-R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+R600TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   switch (RMW->getOperation()) {
   case AtomicRMWInst::Nand:
   case AtomicRMWInst::FAdd:
@@ -2191,7 +2198,7 @@ R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::UIncWrap:
   case AtomicRMWInst::UDecWrap:
     // FIXME: Cayman at least appears to have instructions for this, but the
-    // instruction defintions appear to be missing.
+    // instruction definitions appear to be missing.
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg: {
     const DataLayout &DL = RMW->getFunction()->getDataLayout();

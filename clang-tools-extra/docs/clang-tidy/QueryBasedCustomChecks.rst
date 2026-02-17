@@ -28,7 +28,8 @@ Configuration
   - Diagnostic: list of diagnostics to be reported.
     - BindName: name of the node to be bound in `Query`.
     - Message: message to be reported.
-    - Level: severity of the diagnostic, the possible values are `Note`, `Warning`.
+    - Level: severity of the diagnostic, the possible values are
+    `Note`, `Warning`.
 
 `CustomChecks` can be configured by `Checks` option in the configuration file.
 

@@ -644,8 +644,10 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
   }
 
   // Find the std::type_info type.
-  if (!getStdNamespace())
-    return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));
+  if (!getStdNamespace()) {
+    return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid)
+                     << (getLangOpts().CPlusPlus20 ? 1 : 0));
+  }
 
   if (!CXXTypeInfoDecl) {
     IdentifierInfo *TypeInfoII = &PP.getIdentifierTable().get("type_info");
@@ -659,7 +661,8 @@ Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
       CXXTypeInfoDecl = R.getAsSingle<RecordDecl>();
     }
     if (!CXXTypeInfoDecl)
-      return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid));
+      return ExprError(Diag(OpLoc, diag::err_need_header_before_typeid)
+                       << (getLangOpts().CPlusPlus20 ? 1 : 0));
   }
 
   if (!getLangOpts().RTTI) {
@@ -2673,8 +2676,9 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   else if (AllocType.getAddressSpace() != LangAS::Default &&
            !getLangOpts().OpenCLCPlusPlus)
     return Diag(Loc, diag::err_address_space_qualified_new)
-      << AllocType.getUnqualifiedType()
-      << AllocType.getQualifiers().getAddressSpaceAttributePrintValue();
+           << AllocType.getUnqualifiedType()
+           << Qualifiers::getAddrSpaceAsString(AllocType.getAddressSpace());
+
   else if (getLangOpts().ObjCAutoRefCount) {
     if (const ArrayType *AT = Context.getAsArrayType(AllocType)) {
       QualType BaseAllocType = Context.getBaseElementType(AT);
@@ -4066,7 +4070,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       return Diag(Ex.get()->getBeginLoc(),
                   diag::err_address_space_qualified_delete)
              << Pointee.getUnqualifiedType()
-             << Pointee.getQualifiers().getAddressSpaceAttributePrintValue();
+             << Qualifiers::getAddrSpaceAsString(Pointee.getAddressSpace());
 
     CXXRecordDecl *PointeeRD = nullptr;
     if (Pointee->isVoidType() && !isSFINAEContext()) {

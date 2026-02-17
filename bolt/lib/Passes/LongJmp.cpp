@@ -43,6 +43,8 @@ static void relaxStubToShortJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   BC.MIB->createShortJmp(Seq, Tgt, BC.Ctx.get());
   StubBB.clear();
   StubBB.addInstructions(Seq.begin(), Seq.end());
+  if (BC.usesBTI())
+    BC.MIB->applyBTIFixupToTarget(StubBB);
 }
 
 static void relaxStubToLongJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
@@ -51,6 +53,8 @@ static void relaxStubToLongJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   BC.MIB->createLongJmp(Seq, Tgt, BC.Ctx.get());
   StubBB.clear();
   StubBB.addInstructions(Seq.begin(), Seq.end());
+  if (BC.usesBTI())
+    BC.MIB->applyBTIFixupToTarget(StubBB);
 }
 
 static BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
@@ -69,6 +73,13 @@ static BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
 }
 
 static bool mayNeedStub(const BinaryContext &BC, const MCInst &Inst) {
+  if (BC.isAArch64() && BC.MIB->isShortRangeBranch(Inst) &&
+      !opts::CompactCodeModel) {
+    BC.errs() << "BOLT-ERROR: short range branch not supported"
+              << " outside compact code model\n";
+    BC.printInstruction(BC.errs(), Inst);
+    exit(1);
+  }
   return (BC.MIB->isBranch(Inst) || BC.MIB->isCall(Inst)) &&
          !BC.MIB->isIndirectBranch(Inst) && !BC.MIB->isIndirectCall(Inst);
 }
@@ -470,8 +481,8 @@ uint64_t LongJmpPass::getSymbolAddress(const BinaryContext &BC,
 }
 
 Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
-  const BinaryFunction &Func = *StubBB.getFunction();
-  const BinaryContext &BC = Func.getBinaryContext();
+  BinaryFunction &Func = *StubBB.getFunction();
+  BinaryContext &BC = Func.getBinaryContext();
   const int Bits = StubBits[&StubBB];
   // Already working with the largest range?
   if (Bits == static_cast<int>(BC.AsmInfo->getCodePointerSize() * 8))
@@ -489,6 +500,7 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
   uint64_t DotAddress = BBAddresses[&StubBB];
   uint64_t PCRelTgtAddress = DotAddress > TgtAddress ? DotAddress - TgtAddress
                                                      : TgtAddress - DotAddress;
+
   // If it fits in one instruction, do not relax
   if (!(PCRelTgtAddress & SingleInstrMask))
     return Error::success();

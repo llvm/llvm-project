@@ -81,14 +81,15 @@ private:
 /// `CustomDirective` with a single parameter argument or `RefDirective`.
 static ParameterElement *getEncapsulatedParameterElement(FormatElement *el) {
   return TypeSwitch<FormatElement *, ParameterElement *>(el)
-      .Case<CustomDirective>([&](auto custom) {
+      .Case([&](CustomDirective *custom) {
         FailureOr<ParameterElement *> maybeParam =
             custom->template getFrontAs<ParameterElement>();
         return *maybeParam;
       })
-      .Case<ParameterElement>([&](auto param) { return param; })
-      .Case<RefDirective>(
-          [&](auto ref) { return cast<ParameterElement>(ref->getArg()); })
+      .Case([&](ParameterElement *param) { return param; })
+      .Case([&](RefDirective *ref) {
+        return cast<ParameterElement>(ref->getArg());
+      })
       .DefaultUnreachable("unexpected struct element type");
 }
 
@@ -956,9 +957,7 @@ void DefFormat::genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
 void DefFormat::genWhitespacePrinter(WhitespaceElement *el, FmtContext &ctx,
                                      MethodBody &os) {
   if (el->getValue() == "\\n") {
-    // FIXME: The newline should be `printer.printNewLine()`, i.e., handled by
-    // the printer.
-    os << tgfmt("$_printer << '\\n';\n", &ctx);
+    os << tgfmt("$_printer.printNewline();\n", &ctx);
   } else if (!el->getValue().empty()) {
     os << tgfmt("$_printer << \"$0\";\n", &ctx, el->getValue());
   } else {

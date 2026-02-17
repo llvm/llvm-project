@@ -303,6 +303,13 @@ list(REMOVE_ITEM root_public_headers ${root_private_headers})
 # Skip the initial copy of lldb-defines.h. The fixed version is generated at build time.
 list(REMOVE_ITEM root_public_headers ${LLDB_SOURCE_DIR}/include/lldb/lldb-defines.h)
 
+add_custom_command(
+  OUTPUT ${lldb_header_staging_dir}
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_header_staging_dir}
+  COMMENT "LLDB headers: create staging directory for LLDB headers")
+
+add_custom_target(liblldb-header-staging-dir DEPENDS ${lldb_header_staging_dir})
+
 find_program(unifdef_EXECUTABLE unifdef)
 
 add_custom_target(liblldb-header-staging)
@@ -330,11 +337,12 @@ foreach(header
   endif()
 
   add_custom_target(liblldb-stage-header-${basename} DEPENDS ${staged_header})
-  add_dependencies(liblldb-stage-header-${basename} lldb-sbapi-dwarf-enums)
+  add_dependencies(liblldb-stage-header-${basename} lldb-sbapi-dwarf-enums liblldb-header-staging-dir)
   add_dependencies(liblldb-header-staging liblldb-stage-header-${basename})
   add_custom_command(
-    DEPENDS ${header} OUTPUT ${staged_header}
+    OUTPUT ${staged_header}
     COMMAND ${copy_command}
+    DEPENDS ${header}     
     COMMENT "LLDB headers: stage LLDB headers in include directory")
 
   list(APPEND lldb_staged_headers ${staged_header})

@@ -120,9 +120,7 @@ namespace {
   public:
     static char ID;
 
-    HardwareLoopsLegacy() : FunctionPass(ID) {
-      initializeHardwareLoopsLegacyPass(*PassRegistry::getPassRegistry());
-    }
+    HardwareLoopsLegacy() : FunctionPass(ID) {}
 
     bool runOnFunction(Function &F) override;
 

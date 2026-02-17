@@ -2645,3 +2645,13 @@ func.func @mul_no_const_shift(%arg0: tensor<2x3xi32>, %arg1: tensor<2x3xi32>, %a
   %0 = tosa.mul %arg0, %arg1, %arg2 : (tensor<2x3xi32>, tensor<2x3xi32>, tensor<1xi8>) -> tensor<2x3xi32>
   return %0 : tensor<2x3xi32>
 }
+// -----
+
+// CHECK-LABEL: @negate_i64_no_noop_cast
+// CHECK: linalg.generic
+// CHECK-NOT: arith.extsi {{.*}} : i64 to i64
+// CHECK-NOT: arith.trunci {{.*}} : i64 to i64
+func.func @negate_i64_no_noop_cast(%arg0: tensor<4xi64>, %in_zp: tensor<1xi64>, %out_zp: tensor<1xi64>) -> tensor<4xi64> {
+  %neg = tosa.negate %arg0, %in_zp, %out_zp : (tensor<4xi64>, tensor<1xi64>, tensor<1xi64>) -> tensor<4xi64>
+  return %neg : tensor<4xi64>
+}

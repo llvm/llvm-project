@@ -119,7 +119,7 @@ TEST(UnsignedStat, ExplicitlySetUnsignedStatistic) {
       std::string("dump-entry-point-stats-to-csv=") +
           TempMetricsCsvPath.str().str()};
   // Clean up on exit
-  auto Cleanup = llvm::make_scope_exit(
+  llvm::scope_exit Cleanup(
       [&]() { llvm::sys::fs::remove(TempMetricsCsvPath); });
   EXPECT_TRUE(runCheckerOnCodeWithArgs<addUnsignedStatTesterChecker>(
       R"cpp(

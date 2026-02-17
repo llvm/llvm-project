@@ -33,6 +33,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
@@ -490,6 +491,26 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = KnownBits::shl(LHSKnown, RHSKnown);
     break;
   }
+  case TargetOpcode::G_ROTL:
+  case TargetOpcode::G_ROTR: {
+    MachineInstr *AmtOpMI = MRI.getVRegDef(MI.getOperand(2).getReg());
+    auto MaybeAmtOp = isConstantOrConstantSplatVector(*AmtOpMI, MRI);
+    if (!MaybeAmtOp)
+      break;
+
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+
+    unsigned Amt = MaybeAmtOp->urem(BitWidth);
+
+    // Canonicalize to ROTR.
+    if (Opcode == TargetOpcode::G_ROTL)
+      Amt = BitWidth - Amt;
+
+    Known.Zero = Known.Zero.rotr(Amt);
+    Known.One = Known.One.rotr(Amt);
+    break;
+  }
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_PTRTOINT:
     if (DstTy.isVector())
@@ -622,7 +643,37 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   case TargetOpcode::G_UADDO:
   case TargetOpcode::G_UADDE:
   case TargetOpcode::G_SADDO:
-  case TargetOpcode::G_SADDE:
+  case TargetOpcode::G_SADDE: {
+    if (MI.getOperand(1).getReg() == R) {
+      // If we know the result of a compare has the top bits zero, use this
+      // info.
+      if (TL.getBooleanContents(DstTy.isVector(), false) ==
+              TargetLowering::ZeroOrOneBooleanContent &&
+          BitWidth > 1)
+        Known.Zero.setBitsFrom(1);
+      break;
+    }
+
+    assert(MI.getOperand(0).getReg() == R &&
+           "We only compute knownbits for the sum here.");
+    // With [US]ADDE, a carry bit may be added in.
+    KnownBits Carry(1);
+    if (Opcode == TargetOpcode::G_UADDE || Opcode == TargetOpcode::G_SADDE) {
+      computeKnownBitsImpl(MI.getOperand(4).getReg(), Carry, DemandedElts,
+                           Depth + 1);
+      // Carry has bit width 1
+      Carry = Carry.trunc(1);
+    } else {
+      Carry.setAllZero();
+    }
+
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(3).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+    Known = KnownBits::computeForAddCarry(Known, Known2, Carry);
+    break;
+  }
   case TargetOpcode::G_USUBO:
   case TargetOpcode::G_USUBE:
   case TargetOpcode::G_SSUBO:
@@ -648,6 +699,18 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     unsigned PossibleLZ = SrcOpKnown.countMaxLeadingZeros();
     unsigned LowBits = llvm::bit_width(PossibleLZ);
     Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
+  case TargetOpcode::G_CTLS: {
+    Register Reg = MI.getOperand(1).getReg();
+    unsigned MinRedundantSignBits = computeNumSignBits(Reg, Depth + 1) - 1;
+
+    unsigned MaxUpperRedundantSignBits = MRI.getType(Reg).getScalarSizeInBits();
+
+    ConstantRange Range(APInt(BitWidth, MinRedundantSignBits),
+                        APInt(BitWidth, MaxUpperRedundantSignBits));
+
+    Known = Range.toKnownBits();
     break;
   }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
@@ -852,8 +915,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   // assume this from flags/attributes.
   InterestedClasses &= ~KnownNotFromFlags;
 
-  auto ClearClassesFromFlags =
-      make_scope_exit([=, &Known] { Known.knownNot(KnownNotFromFlags); });
+  llvm::scope_exit ClearClassesFromFlags(
+      [=, &Known] { Known.knownNot(KnownNotFromFlags); });
 
   // All recursive calls that increase depth must come after this.
   if (Depth == MaxAnalysisRecursionDepth)

@@ -15623,6 +15623,14 @@ TEST_F(FormatTest, FormatForObjectiveCMethodDecls) {
   verifyGoogleFormat("- foo:(int)foo;");
 }
 
+TEST_F(FormatTest, SpaceBeforeObjCMethodDeclColon) {
+  auto Style = getLLVMStyle();
+  EXPECT_TRUE(Style.ObjCSpaceAfterMethodDeclarationPrefix);
+  verifyFormat("- (void)method;", Style);
+  Style.ObjCSpaceAfterMethodDeclarationPrefix = false;
+  verifyFormat("-(void)method;", Style);
+}
+
 TEST_F(FormatTest, BreaksStringLiterals) {
   // FIXME: unstable test case
   EXPECT_EQ("\"some text \"\n"
@@ -20854,6 +20862,22 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "}",
                Style);
   // clang-format on
+
+  Style = getLLVMStyle();
+  Style.AlignConsecutiveAssignments.Enabled = true;
+  verifyFormat("param->fault_depth = grid->jfault * grid->dz; //\n"
+               "grid->corner       = grid->jlid + 1;          //\n"
+               "param->peclet      = param->V                 //\n"
+               "                     * param->L * 1000.0      //\n"
+               "                     / param->kappa;          //",
+               Style);
+  Style.AlignOperands = FormatStyle::OAS_AlignAfterOperator;
+  verifyFormat("param->fault_depth = grid->jfault * grid->dz; //\n"
+               "grid->corner       = grid->jlid + 1;          //\n"
+               "param->peclet      = param->V                 //\n"
+               "                   * param->L * 1000.0        //\n"
+               "                   / param->kappa;            //",
+               Style);
 
   Style = getLLVMStyleWithColumns(70);
   Style.AlignConsecutiveDeclarations.Enabled = true;
@@ -29035,6 +29059,13 @@ TEST_F(FormatTest, KeywordedFunctionLikeMacros) {
                "                     WRITE setName\n"
                "                     NOTIFY nameChanged)",
                Style);
+}
+
+TEST_F(FormatTest, UnbalancedAngleBrackets) {
+  verifyFormat("template <");
+
+  verifyNoCrash("typename foo<bar>::value, const String &>::type f();",
+                getLLVMStyleWithColumns(50));
 }
 
 } // namespace

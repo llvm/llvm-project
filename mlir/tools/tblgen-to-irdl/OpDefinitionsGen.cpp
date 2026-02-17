@@ -122,7 +122,7 @@ static std::optional<Type> recordToType(MLIRContext *ctx,
   }
 
   if (predRec.getName() == "NoneType") {
-    return NoneType::get(ctx);
+    return mlir::NoneType::get(ctx);
   }
 
   if (predRec.getName() == "BF16") {

@@ -341,3 +341,25 @@ void constructLVRef(int *p) {
   // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be
   Temp1 t(*p);
 }
+
+template<bool>
+class A final {
+    char* sz_ = {};
+
+public:
+    explicit A(char* sz) noexcept : sz_(sz) {}
+    void f() { sz_ = {}; }
+};
+
+class B final {
+    char* sz_ = {};
+
+public:
+    explicit B(char* sz) noexcept : sz_(sz) {}
+    void f() { sz_ = {}; }
+};
+
+void gh176623() {
+    auto const V1 = []<bool tc>(char* p) { auto X = A<tc>(p); };
+    auto const V2 = []<bool tc>(char* p) { auto Y = B(p); };
+}

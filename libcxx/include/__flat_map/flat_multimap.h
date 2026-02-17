@@ -573,6 +573,15 @@ public:
     __append_sort_merge</*WasSorted = */ false>(ranges::begin(__range), ranges::end(__range));
   }
 
+  template <_ContainerCompatibleRange<value_type> _Range>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert_range(sorted_equivalent_t, _Range&& __range) {
+    if constexpr (ranges::sized_range<_Range>) {
+      __reserve(ranges::size(__range));
+    }
+
+    __append_sort_merge</*WasSorted = */ true>(ranges::begin(__range), ranges::end(__range));
+  }
+
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void insert(initializer_list<value_type> __il) {
     insert(__il.begin(), __il.end());
   }
@@ -633,13 +642,17 @@ public:
     return iterator(std::move(__key_it), std::move(__mapped_it));
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(flat_multimap& __y) noexcept {
-    // warning: The spec has unconditional noexcept, which means that
-    // if any of the following functions throw an exception,
-    // std::terminate will be called
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(flat_multimap& __y) noexcept(
+      is_nothrow_swappable_v<key_container_type> && is_nothrow_swappable_v<mapped_container_type> &&
+      is_nothrow_swappable_v<key_compare>) {
+    auto __on_failure = std::__make_exception_guard([&]() noexcept {
+      clear() /* noexcept */;
+      __y.clear() /* noexcept */;
+    });
     ranges::swap(__compare_, __y.__compare_);
     ranges::swap(__containers_.keys, __y.__containers_.keys);
     ranges::swap(__containers_.values, __y.__containers_.values);
+    __on_failure.__complete();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void clear() noexcept {
@@ -781,7 +794,7 @@ public:
   }
 
   friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  swap(flat_multimap& __x, flat_multimap& __y) noexcept {
+  swap(flat_multimap& __x, flat_multimap& __y) noexcept(noexcept(__x.swap(__y))) {
     __x.swap(__y);
   }
 
@@ -841,7 +854,7 @@ private:
       auto __zv                  = ranges::views::zip(__containers_.keys, __containers_.values);
       auto __append_start_offset = __containers_.keys.size() - __num_appended;
       auto __end                 = __zv.end();
-      auto __compare_key         = [this](const auto& __p1, const auto& __p2) {
+      auto __compare_key         = [this](const auto& __p1, const auto& __p2) -> bool {
         return __compare_(std::get<0>(__p1), std::get<0>(__p2));
       };
       if constexpr (!_WasSorted) {
@@ -921,15 +934,6 @@ private:
 
   containers __containers_;
   _LIBCPP_NO_UNIQUE_ADDRESS key_compare __compare_;
-
-  struct __key_equiv {
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __key_equiv(key_compare __c) : __comp_(__c) {}
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
-    operator()(const_reference __x, const_reference __y) const {
-      return !__comp_(std::get<0>(__x), std::get<0>(__y)) && !__comp_(std::get<0>(__y), std::get<0>(__x));
-    }
-    key_compare __comp_;
-  };
 };
 
 template <class _KeyContainer, class _MappedContainer, class _Compare = less<typename _KeyContainer::value_type>>

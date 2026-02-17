@@ -121,6 +121,11 @@ enum NodeType {
   /// function calling this intrinsic.
   SPONENTRY,
 
+  /// STACKADDRESS - Represents the llvm.stackaddress intrinsic. Takes no
+  /// argument and returns the starting address of the stack region that may be
+  /// used by called functions.
+  STACKADDRESS,
+
   /// LOCAL_RECOVER - Represents the llvm.localrecover intrinsic.
   /// Materializes the offset from the local object pointer of another
   /// function to a particular local object passed to llvm.localescape. The
@@ -371,11 +376,13 @@ enum NodeType {
 
   /// RESULT = [US]SHLSAT(LHS, RHS) - Perform saturation left shift. The first
   /// operand is the value to be shifted, and the second argument is the amount
-  /// to shift by. Both must be integers of the same bit width (W). If the true
-  /// value of LHS << RHS exceeds the largest value that can be represented by
-  /// W bits, the resulting value is this maximum value, Otherwise, if this
-  /// value is less than the smallest value that can be represented by W bits,
-  /// the resulting value is this minimum value.
+  /// to shift by. Both must be integers. After legalization the type of the
+  /// shift amount is known to be TLI.getShiftAmountTy(). Before legalization
+  /// the shift amount can be any type, but care must be taken to ensure it is
+  /// large enough. If the true value of LHS << RHS exceeds the largest value
+  /// that can be represented by W bits, the resulting value is this maximum
+  /// value, Otherwise, if this value is less than the smallest value that can
+  /// be represented by W bits, the resulting value is this minimum value.
   SSHLSAT,
   USHLSAT,
 
@@ -641,17 +648,13 @@ enum NodeType {
   /// in terms of the element size of VEC1/VEC2, not in terms of bytes.
   VECTOR_SHUFFLE,
 
-  /// VECTOR_SPLICE(VEC1, VEC2, IMM) - Returns a subvector of the same type as
-  /// VEC1/VEC2 from CONCAT_VECTORS(VEC1, VEC2), based on the IMM in two ways.
-  /// Let the result type be T, if IMM is positive it represents the starting
-  /// element number (an index) from which a subvector of type T is extracted
-  /// from CONCAT_VECTORS(VEC1, VEC2). If IMM is negative it represents a count
-  /// specifying the number of trailing elements to extract from VEC1, where the
-  /// elements of T are selected using the following algorithm:
-  ///   RESULT[i] = CONCAT_VECTORS(VEC1,VEC2)[VEC1.ElementCount - ABS(IMM) + i]
-  /// If IMM is not in the range [-VL, VL-1] the result vector is undefined. IMM
-  /// is a constant integer.
-  VECTOR_SPLICE,
+  /// VECTOR_SPLICE_LEFT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
+  /// left by OFFSET elements and returns the lower half.
+  VECTOR_SPLICE_LEFT,
+  /// VECTOR_SPLICE_RIGHT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1,
+  /// VEC2)
+  /// right by OFFSET elements and returns the upper half.
+  VECTOR_SPLICE_RIGHT,
 
   /// SCALAR_TO_VECTOR(VAL) - This represents the operation of loading a
   /// scalar value into element 0 of the resultant vector type.  The top
@@ -767,6 +770,11 @@ enum NodeType {
   FSHL,
   FSHR,
 
+  /// Carry-less multiplication operations.
+  CLMUL,
+  CLMULR,
+  CLMULH,
+
   /// Byte Swap and Counting operators.
   BSWAP,
   CTTZ,
@@ -778,6 +786,10 @@ enum NodeType {
   /// Bit counting operators with an undefined result for zero inputs.
   CTTZ_ZERO_UNDEF,
   CTLZ_ZERO_UNDEF,
+
+  /// Count leading redundant sign bits. Equivalent to
+  /// (sub (ctlz (x < 0 ? ~x : x)), 1).
+  CTLS,
 
   /// Select(COND, TRUEVAL, FALSEVAL).  If the type of the boolean COND is not
   /// i1 then the high bits must conform to getBooleanContents.
@@ -1429,6 +1441,10 @@ enum NodeType {
   /// debugging purposes.
   FAKE_USE,
 
+  /// COND_LOOP is a conditional branch to self, used for implementing efficient
+  /// conditional traps.
+  COND_LOOP,
+
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary
   /// information that target might need for lowering.  The first operand is
@@ -1609,6 +1625,11 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
 /// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
 LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
+
+/// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns the
+/// corresponding opcode with the opposite signedness:
+/// ISD::SMIN <-> ISD::UMIN, ISD::SMAX <-> ISD::UMAX.
+LLVM_ABI NodeType getOppositeSignednessMinMaxOpcode(unsigned MinMaxOpc);
 
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.

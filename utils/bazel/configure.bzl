@@ -4,6 +4,7 @@
 
 """Helper macros to configure the LLVM overlay project."""
 
+# Should be kept in sync with LLVM_ALL_TARGETS in llvm/CMakeLists.txt
 DEFAULT_TARGETS = [
     "AArch64",
     "AMDGPU",
@@ -25,7 +26,6 @@ DEFAULT_TARGETS = [
     "WebAssembly",
     "X86",
     "XCore",
-    "Xtensa",
 ]
 
 MAX_TRAVERSAL_STEPS = 1000000  # "big number" upper bound on total visited dirs

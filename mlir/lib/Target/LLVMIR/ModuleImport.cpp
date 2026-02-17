@@ -1221,6 +1221,9 @@ static TypedAttr getScalarConstantAsAttr(OpBuilder &builder,
                                          llvm::Constant *constScalar) {
   MLIRContext *context = builder.getContext();
 
+  if (constScalar->getType()->isVectorTy())
+    return {};
+
   // Convert scalar integers.
   if (auto *constInt = dyn_cast<llvm::ConstantInt>(constScalar)) {
     return builder.getIntegerAttr(
@@ -1269,6 +1272,17 @@ Attribute ModuleImport::getConstantAsAttr(llvm::Constant *constant) {
     return llvm::dyn_cast_if_present<ShapedType>(
         getBuiltinTypeForAttr(convertType(type)));
   };
+
+  // Convert constant vector splat values.
+  if (isa<llvm::ConstantInt, llvm::ConstantFP>(constant)) {
+    assert(constant->getType()->isVectorTy() && "expected a vector splat");
+    auto shape = getConstantShape(constant->getType());
+    if (!shape)
+      return {};
+    Attribute splatAttr =
+        getScalarConstantAsAttr(builder, constant->getSplatValue());
+    return SplatElementsAttr::get(shape, splatAttr);
+  }
 
   // Convert one-dimensional constant arrays or vectors that store 1/2/4/8-byte
   // integer or half/bfloat/float/double values.
@@ -1419,10 +1433,10 @@ LogicalResult ModuleImport::convertIFunc(llvm::GlobalIFunc *ifunc) {
 /// Converts LLVM string, integer, and enum attributes into MLIR attributes,
 /// skipping those in `attributesToSkip` and emitting a warning at `loc` for
 /// any other unsupported attributes.
-static ArrayAttr
-convertLLVMAttributesToMLIR(Location loc, MLIRContext *context,
-                            llvm::AttributeSet attributes,
-                            ArrayRef<StringLiteral> attributesToSkip = {}) {
+static ArrayAttr convertLLVMAttributesToMLIR(
+    Location loc, MLIRContext *context, llvm::AttributeSet attributes,
+    ArrayRef<StringLiteral> attributesToSkip = {},
+    ArrayRef<StringLiteral> attributePrefixesToSkip = {}) {
   SmallVector<Attribute> mlirAttributes;
   for (llvm::Attribute attr : attributes) {
     StringRef attrName;
@@ -1431,6 +1445,13 @@ convertLLVMAttributesToMLIR(Location loc, MLIRContext *context,
     else
       attrName = llvm::Attribute::getNameFromAttrKind(attr.getKindAsEnum());
     if (llvm::is_contained(attributesToSkip, attrName))
+      continue;
+
+    auto attrNameStartsWith = [attrName](StringLiteral sl) {
+      return attrName.starts_with(sl);
+    };
+    if (attributePrefixesToSkip.end() !=
+        llvm::find_if(attributePrefixesToSkip, attrNameStartsWith))
       continue;
 
     auto keyAttr = StringAttr::get(context, attrName);
@@ -1749,7 +1770,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     // since later calls to `getAsInstruction` may return the same address
     // resulting in a conflicting `valueMapping` entry.
     llvm::Instruction *inst = constExpr->getAsInstruction();
-    auto guard = llvm::make_scope_exit([&]() {
+    llvm::scope_exit guard([&]() {
       assert(!noResultOpMapping.contains(inst) &&
              "expected constant expression to return a result");
       valueMapping.erase(inst);
@@ -2641,6 +2662,23 @@ static void processMemoryEffects(llvm::Function *func, LLVMFuncOp funcOp) {
   funcOp.setMemoryEffectsAttr(memAttr);
 }
 
+static void processDenormalFPEnv(llvm::Function *func, LLVMFuncOp funcOp) {
+  llvm::DenormalFPEnv denormalFpEnv = func->getDenormalFPEnv();
+  // Only set the attr when it does not match the default value.
+  if (denormalFpEnv == llvm::DenormalFPEnv::getDefault())
+    return;
+
+  llvm::DenormalMode defaultMode = denormalFpEnv.DefaultMode;
+  llvm::DenormalMode floatMode = denormalFpEnv.F32Mode;
+
+  auto denormalFpEnvAttr = DenormalFPEnvAttr::get(
+      funcOp.getContext(), convertDenormalModeKindFromLLVM(defaultMode.Output),
+      convertDenormalModeKindFromLLVM(defaultMode.Input),
+      convertDenormalModeKindFromLLVM(floatMode.Output),
+      convertDenormalModeKindFromLLVM(floatMode.Input));
+  funcOp.setDenormalFpenvAttr(denormalFpEnvAttr);
+}
+
 // List of LLVM IR attributes that map to an explicit attribute on the MLIR
 // LLVMFuncOp.
 static constexpr std::array kExplicitLLVMFuncOpAttributes{
@@ -2652,28 +2690,93 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("aarch64_pstate_sm_body"),
     StringLiteral("aarch64_pstate_sm_compatible"),
     StringLiteral("aarch64_pstate_sm_enabled"),
+    StringLiteral("allocsize"),
     StringLiteral("alwaysinline"),
+    StringLiteral("cold"),
     StringLiteral("convergent"),
-    StringLiteral("denormal-fp-math"),
-    StringLiteral("denormal-fp-math-f32"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
+    StringLiteral("hot"),
     StringLiteral("inlinehint"),
     StringLiteral("instrument-function-entry"),
     StringLiteral("instrument-function-exit"),
+    StringLiteral("modular-format"),
     StringLiteral("memory"),
-    StringLiteral("no-infs-fp-math"),
+    StringLiteral("minsize"),
+    StringLiteral("no_caller_saved_registers"),
     StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
+    StringLiteral("no-builtins"),
+    StringLiteral("nocallback"),
+    StringLiteral("noduplicate"),
     StringLiteral("noinline"),
+    StringLiteral("noreturn"),
     StringLiteral("nounwind"),
     StringLiteral("optnone"),
+    StringLiteral("optsize"),
+    StringLiteral("returns_twice"),
+    StringLiteral("save-reg-params"),
     StringLiteral("target-features"),
+    StringLiteral("trap-func-name"),
     StringLiteral("tune-cpu"),
     StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
     StringLiteral("willreturn"),
+    StringLiteral("zero-call-used-regs"),
+    StringLiteral("denormal_fpenv"),
 };
+
+// List of LLVM IR attributes that are handled by prefix to map onto an MLIR
+// LLVMFuncOp.
+static constexpr std::array kExplicitLLVMFuncOpAttributePrefixes{
+    StringLiteral("no-builtin-"),
+};
+
+template <typename OpTy>
+static void convertNoBuiltinAttrs(MLIRContext *ctx,
+                                  const llvm::AttributeSet &attrs,
+                                  OpTy target) {
+  // 'no-builtins' is the complete collection, and overrides all the rest.
+  if (attrs.hasAttribute("no-builtins")) {
+    target.setNobuiltinsAttr(ArrayAttr::get(ctx, {}));
+    return;
+  }
+
+  llvm::SetVector<Attribute> nbAttrs;
+  for (llvm::Attribute attr : attrs) {
+    // Attributes that are part of llvm directly (that is, have an AttributeKind
+    // in the enum) shouldn't be checked.
+    if (attr.hasKindAsEnum())
+      continue;
+
+    StringRef val = attr.getKindAsString();
+
+    if (val.starts_with("no-builtin-"))
+      nbAttrs.insert(
+          StringAttr::get(ctx, val.drop_front(sizeof("no-builtin-") - 1)));
+  }
+
+  if (!nbAttrs.empty())
+    target.setNobuiltinsAttr(ArrayAttr::get(ctx, nbAttrs.getArrayRef()));
+}
+
+template <typename OpTy>
+static void convertAllocsizeAttr(MLIRContext *ctx,
+                                 const llvm::AttributeSet &attrs, OpTy target) {
+  llvm::Attribute attr = attrs.getAttribute(llvm::Attribute::AllocSize);
+  if (!attr.isValid())
+    return;
+
+  auto [elemSize, numElems] = attr.getAllocSizeArgs();
+  if (numElems) {
+    target.setAllocsizeAttr(
+        DenseI32ArrayAttr::get(ctx, {static_cast<int32_t>(elemSize),
+                                     static_cast<int32_t>(*numElems)}));
+  } else {
+    target.setAllocsizeAttr(
+        DenseI32ArrayAttr::get(ctx, {static_cast<int32_t>(elemSize)}));
+  }
+}
 
 /// Converts LLVM attributes from `func` into MLIR attributes and adds them
 /// to `funcOp` as passthrough attributes, skipping those listed in
@@ -2681,9 +2784,9 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
   llvm::AttributeSet funcAttrs = func->getAttributes().getAttributes(
       llvm::AttributeList::AttrIndex::FunctionIndex);
-  ArrayAttr passthroughAttr =
-      convertLLVMAttributesToMLIR(funcOp.getLoc(), funcOp.getContext(),
-                                  funcAttrs, kExplicitLLVMFuncOpAttributes);
+  ArrayAttr passthroughAttr = convertLLVMAttributesToMLIR(
+      funcOp.getLoc(), funcOp.getContext(), funcAttrs,
+      kExplicitLLVMFuncOpAttributes, kExplicitLLVMFuncOpAttributePrefixes);
   if (!passthroughAttr.empty())
     funcOp.setPassthroughAttr(passthroughAttr);
 }
@@ -2691,6 +2794,7 @@ static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
 void ModuleImport::processFunctionAttributes(llvm::Function *func,
                                              LLVMFuncOp funcOp) {
   processMemoryEffects(func, funcOp);
+  processDenormalFPEnv(func, funcOp);
   processPassthroughAttrs(func, funcOp);
 
   if (func->hasFnAttribute(llvm::Attribute::NoInline))
@@ -2707,6 +2811,33 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setNoUnwind(true);
   if (func->hasFnAttribute(llvm::Attribute::WillReturn))
     funcOp.setWillReturn(true);
+  if (func->hasFnAttribute(llvm::Attribute::NoReturn))
+    funcOp.setNoreturn(true);
+  if (func->hasFnAttribute(llvm::Attribute::OptimizeForSize))
+    funcOp.setOptsize(true);
+  if (func->hasFnAttribute("save-reg-params"))
+    funcOp.setSaveRegParams(true);
+  if (func->hasFnAttribute(llvm::Attribute::MinSize))
+    funcOp.setMinsize(true);
+  if (func->hasFnAttribute(llvm::Attribute::ReturnsTwice))
+    funcOp.setReturnsTwice(true);
+  if (func->hasFnAttribute(llvm::Attribute::Cold))
+    funcOp.setCold(true);
+  if (func->hasFnAttribute(llvm::Attribute::Hot))
+    funcOp.setHot(true);
+  if (func->hasFnAttribute(llvm::Attribute::NoDuplicate))
+    funcOp.setNoduplicate(true);
+  if (func->hasFnAttribute("no_caller_saved_registers"))
+    funcOp.setNoCallerSavedRegisters(true);
+  if (func->hasFnAttribute(llvm::Attribute::NoCallback))
+    funcOp.setNocallback(true);
+  if (llvm::Attribute attr = func->getFnAttribute("modular-format");
+      attr.isStringAttribute())
+    funcOp.setModularFormat(StringAttr::get(context, attr.getValueAsString()));
+  if (llvm::Attribute attr = func->getFnAttribute("zero-call-used-regs");
+      attr.isStringAttribute())
+    funcOp.setZeroCallUsedRegsAttr(
+        StringAttr::get(context, attr.getValueAsString()));
 
   if (func->hasFnAttribute("aarch64_pstate_sm_enabled"))
     funcOp.setArmStreaming(true);
@@ -2725,6 +2856,9 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setArmInoutZa(true);
   else if (func->hasFnAttribute("aarch64_preserves_za"))
     funcOp.setArmPreservesZa(true);
+
+  convertNoBuiltinAttrs(context, func->getAttributes().getFnAttrs(), funcOp);
+  convertAllocsizeAttr(context, func->getAttributes().getFnAttrs(), funcOp);
 
   llvm::Attribute attr = func->getFnAttribute(llvm::Attribute::VScaleRange);
   if (attr.isValid()) {
@@ -2767,10 +2901,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setPreferVectorWidth(attr.getValueAsString());
 
-  if (llvm::Attribute attr = func->getFnAttribute("no-infs-fp-math");
-      attr.isStringAttribute())
-    funcOp.setNoInfsFpMath(attr.getValueAsBool());
-
   if (llvm::Attribute attr = func->getFnAttribute("no-nans-fp-math");
       attr.isStringAttribute())
     funcOp.setNoNansFpMath(attr.getValueAsBool());
@@ -2788,16 +2918,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("no-signed-zeros-fp-math");
       attr.isStringAttribute())
     funcOp.setNoSignedZerosFpMath(attr.getValueAsBool());
-
-  if (llvm::Attribute attr = func->getFnAttribute("denormal-fp-math");
-      attr.isStringAttribute())
-    funcOp.setDenormalFpMathAttr(
-        StringAttr::get(context, attr.getValueAsString()));
-
-  if (llvm::Attribute attr = func->getFnAttribute("denormal-fp-math-f32");
-      attr.isStringAttribute())
-    funcOp.setDenormalFpMathF32Attr(
-        StringAttr::get(context, attr.getValueAsString()));
 
   if (llvm::Attribute attr = func->getFnAttribute("fp-contract");
       attr.isStringAttribute())
@@ -2927,6 +3047,33 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setConvergent(callAttrs.getFnAttr(llvm::Attribute::Convergent).isValid());
   op.setNoUnwind(callAttrs.getFnAttr(llvm::Attribute::NoUnwind).isValid());
   op.setWillReturn(callAttrs.getFnAttr(llvm::Attribute::WillReturn).isValid());
+  op.setNoreturn(callAttrs.getFnAttr(llvm::Attribute::NoReturn).isValid());
+  op.setOptsize(
+      callAttrs.getFnAttr(llvm::Attribute::OptimizeForSize).isValid());
+  op.setSaveRegParams(callAttrs.getFnAttr("save-reg-params").isValid());
+  op.setNobuiltin(callAttrs.getFnAttr(llvm::Attribute::NoBuiltin).isValid());
+  op.setMinsize(callAttrs.getFnAttr(llvm::Attribute::MinSize).isValid());
+
+  op.setReturnsTwice(
+      callAttrs.getFnAttr(llvm::Attribute::ReturnsTwice).isValid());
+  op.setHot(callAttrs.getFnAttr(llvm::Attribute::Hot).isValid());
+  op.setCold(callAttrs.getFnAttr(llvm::Attribute::Cold).isValid());
+  op.setNoduplicate(
+      callAttrs.getFnAttr(llvm::Attribute::NoDuplicate).isValid());
+  op.setNoCallerSavedRegisters(
+      callAttrs.getFnAttr("no_caller_saved_registers").isValid());
+  op.setNocallback(callAttrs.getFnAttr(llvm::Attribute::NoCallback).isValid());
+
+  if (llvm::Attribute attr = callAttrs.getFnAttr("modular-format");
+      attr.isStringAttribute())
+    op.setModularFormat(StringAttr::get(context, attr.getValueAsString()));
+  if (llvm::Attribute attr = callAttrs.getFnAttr("zero-call-used-regs");
+      attr.isStringAttribute())
+    op.setZeroCallUsedRegsAttr(
+        StringAttr::get(context, attr.getValueAsString()));
+  if (llvm::Attribute attr = callAttrs.getFnAttr("trap-func-name");
+      attr.isStringAttribute())
+    op.setTrapFuncNameAttr(StringAttr::get(context, attr.getValueAsString()));
   op.setNoInline(callAttrs.getFnAttr(llvm::Attribute::NoInline).isValid());
   op.setAlwaysInline(
       callAttrs.getFnAttr(llvm::Attribute::AlwaysInline).isValid());
@@ -2951,6 +3098,9 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   // Only set the attribute when it does not match the default value.
   if (!memAttr.isReadWrite())
     op.setMemoryEffectsAttr(memAttr);
+
+  convertNoBuiltinAttrs(op.getContext(), callAttrs.getFnAttrs(), op);
+  convertAllocsizeAttr(op.getContext(), callAttrs.getFnAttrs(), op);
 
   return convertCallBaseAttributes(inst, op);
 }

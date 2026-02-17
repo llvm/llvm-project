@@ -671,4 +671,4 @@ define double @sqrt_simplify_before_recip_4_uses(double %x, ptr %p1, ptr %p2, pt
   ret double %sqrt_fast
 }
 
-attributes #0 = { "denormal-fp-math"="ieee" }
+attributes #0 = { denormal_fpenv(ieee) }

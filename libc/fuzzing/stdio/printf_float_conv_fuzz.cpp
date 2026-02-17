@@ -58,6 +58,7 @@ inline TestResult test_vals(const char *fmt, F num, int prec, int width) {
 
   int test_result = 0;
   int reference_result = 0;
+  TestResult result = TestResult::Success;
 
   test_result = LIBC_NAMESPACE::snprintf(test_buff, buffer_size + 1, fmt, width,
                                          prec, num);
@@ -66,16 +67,14 @@ inline TestResult test_vals(const char *fmt, F num, int prec, int width) {
 
   // All of these calls should return that they wrote the same amount.
   if (test_result != reference_result || test_result != buffer_size) {
-    return TestResult::LengthsDiffer;
-  }
-
-  if (!simple_streq(test_buff, reference_buff, buffer_size)) {
-    return TestResult::StringsNotEqual;
+    result = TestResult::LengthsDiffer;
+  } else if (!simple_streq(test_buff, reference_buff, buffer_size)) {
+    result = TestResult::StringsNotEqual;
   }
 
   delete[] test_buff;
   delete[] reference_buff;
-  return TestResult::Success;
+  return result;
 }
 
 constexpr char const *fmt_arr[] = {

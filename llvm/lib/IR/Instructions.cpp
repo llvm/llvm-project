@@ -64,6 +64,9 @@ static cl::opt<bool> DisableI2pP2iOpt(
 std::optional<TypeSize>
 AllocaInst::getAllocationSize(const DataLayout &DL) const {
   TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
+  // Zero-sized types can return early since 0 * N = 0 for any array size N.
+  if (Size.isZero())
+    return Size;
   if (isArrayAllocation()) {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
@@ -160,8 +163,9 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
 void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
                                     bool DeletePHIIfEmpty) {
   unsigned NumOps = getNumIncomingValues();
-  unsigned Idx = 0;
-  while (Idx < NumOps) {
+
+  // Loop backwards in case the predicate is purely index based.
+  for (unsigned Idx = NumOps; Idx-- > 0;) {
     if (Predicate(Idx)) {
       unsigned LastIdx = NumOps - 1;
       if (Idx != LastIdx) {
@@ -170,8 +174,6 @@ void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
       }
       getOperandUse(LastIdx).set(nullptr);
       NumOps--;
-    } else {
-      Idx++;
     }
   }
 
@@ -2319,7 +2321,7 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF) {
     return false;
   for (unsigned K = 0, Sz = Mask.size(); K < Sz; K += VF) {
     ArrayRef<int> SubMask = Mask.slice(K, VF);
-    if (all_of(SubMask, [](int Idx) { return Idx == PoisonMaskElem; }))
+    if (all_of(SubMask, equal_to(PoisonMaskElem)))
       continue;
     SmallBitVector Used(VF, false);
     for (int Idx : SubMask) {

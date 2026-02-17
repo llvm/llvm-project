@@ -638,9 +638,7 @@ class MachineBlockPlacementLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
@@ -700,7 +698,6 @@ static std::string getBlockName(const MachineBasicBlock *BB) {
   raw_string_ostream OS(Result);
   OS << printMBBReference(*BB);
   OS << " ('" << BB->getName() << "')";
-  OS.flush();
   return Result;
 }
 #endif
@@ -3541,20 +3538,24 @@ MachineBlockPlacementPass::run(MachineFunction &MF,
   auto *MPDT = MachineBlockPlacement::allowTailDupPlacement(MF)
                    ? &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF)
                    : nullptr;
+  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
   auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
                   .getCachedResult<ProfileSummaryAnalysis>(
                       *MF.getFunction().getParent());
   if (!PSI)
     report_fatal_error("MachineBlockPlacement requires ProfileSummaryAnalysis",
                        false);
-
   MachineBlockPlacement MBP(MBPI, MLI, PSI, std::move(MBFI), MPDT,
                             AllowTailMerge);
 
-  if (!MBP.run(MF))
-    return PreservedAnalyses::all();
+  if (MBP.run(MF))
+    return getMachineFunctionPassPreservedAnalyses();
 
-  return getMachineFunctionPassPreservedAnalyses();
+  if (MDT)
+    MDT->updateBlockNumbers();
+  if (MPDT)
+    MPDT->updateBlockNumbers();
+  return PreservedAnalyses::all();
 }
 
 void MachineBlockPlacementPass::printPipeline(
@@ -3868,10 +3869,7 @@ class MachineBlockPlacementStatsLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacementStatsLegacy() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementStatsLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  MachineBlockPlacementStatsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override {
     auto *MBPI =

@@ -49,7 +49,7 @@ struct ImplicitTypeIDRegistry {
                    "`MLIR_DEFINE_EXPLICIT_TYPE_ID` or "
                    "`MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID`.\n";
       }
-      llvm::report_fatal_error(errorStr);
+      llvm::report_fatal_error(llvm::StringRef(errorStr));
     }
 #endif
 

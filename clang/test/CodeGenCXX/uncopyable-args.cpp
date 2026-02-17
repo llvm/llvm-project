@@ -59,12 +59,12 @@ void bar() {
 // CHECK-LABEL: define{{.*}} void @_ZN9move_ctor3barEv()
 // CHECK: call void @_Z{{.*}}C1Ev(
 // CHECK-NOT: call
-// NEWABI: call void @_ZN9move_ctor3fooENS_1AE(ptr dead_on_return noundef %{{.*}})
+// NEWABI: call void @_ZN9move_ctor3fooENS_1AE(ptr noundef dead_on_return %{{.*}})
 // OLDABI: call void @_ZN9move_ctor3fooENS_1AE(ptr %{{.*}})
-// NEWABI-LABEL: declare void @_ZN9move_ctor3fooENS_1AE(ptr dead_on_return noundef)
+// NEWABI-LABEL: declare void @_ZN9move_ctor3fooENS_1AE(ptr noundef dead_on_return)
 // OLDABI-LABEL: declare void @_ZN9move_ctor3fooENS_1AE(ptr)
 
-// WIN64-LABEL: declare dso_local void @"?foo@move_ctor@@YAXUA@1@@Z"(ptr dead_on_return noundef)
+// WIN64-LABEL: declare dso_local void @"?foo@move_ctor@@YAXUA@1@@Z"(ptr noundef dead_on_return)
 }
 
 namespace all_deleted {
@@ -81,12 +81,12 @@ void bar() {
 // CHECK-LABEL: define{{.*}} void @_ZN11all_deleted3barEv()
 // CHECK: call void @_Z{{.*}}C1Ev(
 // CHECK-NOT: call
-// NEWABI: call void @_ZN11all_deleted3fooENS_1AE(ptr dead_on_return noundef %{{.*}})
+// NEWABI: call void @_ZN11all_deleted3fooENS_1AE(ptr noundef dead_on_return %{{.*}})
 // OLDABI: call void @_ZN11all_deleted3fooENS_1AE(ptr %{{.*}})
-// NEWABI-LABEL: declare void @_ZN11all_deleted3fooENS_1AE(ptr dead_on_return noundef)
+// NEWABI-LABEL: declare void @_ZN11all_deleted3fooENS_1AE(ptr noundef dead_on_return)
 // OLDABI-LABEL: declare void @_ZN11all_deleted3fooENS_1AE(ptr)
 
-// WIN64-LABEL: declare dso_local void @"?foo@all_deleted@@YAXUA@1@@Z"(ptr dead_on_return noundef)
+// WIN64-LABEL: declare dso_local void @"?foo@all_deleted@@YAXUA@1@@Z"(ptr noundef dead_on_return)
 }
 
 namespace implicitly_deleted {
@@ -102,14 +102,14 @@ void bar() {
 // CHECK-LABEL: define{{.*}} void @_ZN18implicitly_deleted3barEv()
 // CHECK: call void @_Z{{.*}}C1Ev(
 // CHECK-NOT: call
-// NEWABI: call void @_ZN18implicitly_deleted3fooENS_1AE(ptr dead_on_return noundef %{{.*}})
+// NEWABI: call void @_ZN18implicitly_deleted3fooENS_1AE(ptr noundef dead_on_return %{{.*}})
 // OLDABI: call void @_ZN18implicitly_deleted3fooENS_1AE(ptr %{{.*}})
-// NEWABI-LABEL: declare void @_ZN18implicitly_deleted3fooENS_1AE(ptr dead_on_return noundef)
+// NEWABI-LABEL: declare void @_ZN18implicitly_deleted3fooENS_1AE(ptr noundef dead_on_return)
 // OLDABI-LABEL: declare void @_ZN18implicitly_deleted3fooENS_1AE(ptr)
 
 // In MSVC 2013, the copy ctor is not deleted by a move assignment. In MSVC 2015, it is.
 // WIN64-18-LABEL: declare dso_local void @"?foo@implicitly_deleted@@YAXUA@1@@Z"(i64
-// WIN64-19-LABEL: declare dso_local void @"?foo@implicitly_deleted@@YAXUA@1@@Z"(ptr dead_on_return noundef)
+// WIN64-19-LABEL: declare dso_local void @"?foo@implicitly_deleted@@YAXUA@1@@Z"(ptr noundef dead_on_return)
 }
 
 namespace one_deleted {
@@ -125,12 +125,12 @@ void bar() {
 // CHECK-LABEL: define{{.*}} void @_ZN11one_deleted3barEv()
 // CHECK: call void @_Z{{.*}}C1Ev(
 // CHECK-NOT: call
-// NEWABI: call void @_ZN11one_deleted3fooENS_1AE(ptr dead_on_return noundef %{{.*}})
+// NEWABI: call void @_ZN11one_deleted3fooENS_1AE(ptr noundef dead_on_return %{{.*}})
 // OLDABI: call void @_ZN11one_deleted3fooENS_1AE(ptr %{{.*}})
-// NEWABI-LABEL: declare void @_ZN11one_deleted3fooENS_1AE(ptr dead_on_return noundef)
+// NEWABI-LABEL: declare void @_ZN11one_deleted3fooENS_1AE(ptr noundef dead_on_return)
 // OLDABI-LABEL: declare void @_ZN11one_deleted3fooENS_1AE(ptr)
 
-// WIN64-LABEL: declare dso_local void @"?foo@one_deleted@@YAXUA@1@@Z"(ptr dead_on_return noundef)
+// WIN64-LABEL: declare dso_local void @"?foo@one_deleted@@YAXUA@1@@Z"(ptr noundef dead_on_return)
 }
 
 namespace copy_defaulted {
@@ -170,7 +170,7 @@ void bar() {
 // CHECK: call void @_ZN14move_defaulted3fooENS_1AE(ptr %{{.*}})
 // CHECK-LABEL: declare void @_ZN14move_defaulted3fooENS_1AE(ptr)
 
-// WIN64-LABEL: declare dso_local void @"?foo@move_defaulted@@YAXUA@1@@Z"(ptr dead_on_return noundef)
+// WIN64-LABEL: declare dso_local void @"?foo@move_defaulted@@YAXUA@1@@Z"(ptr noundef dead_on_return)
 }
 
 namespace trivial_defaulted {
@@ -207,12 +207,12 @@ void bar() {
 }
 // CHECK-LABEL: define{{.*}} void @_ZN14two_copy_ctors3barEv()
 // CHECK: call void @_Z{{.*}}C1Ev(
-// NEWABI: call void @_ZN14two_copy_ctors3fooENS_1BE(ptr dead_on_return noundef %{{.*}})
+// NEWABI: call void @_ZN14two_copy_ctors3fooENS_1BE(ptr noundef dead_on_return %{{.*}})
 // OLDABI: call void @_ZN14two_copy_ctors3fooENS_1BE(ptr noundef byval
-// NEWABI-LABEL: declare void @_ZN14two_copy_ctors3fooENS_1BE(ptr dead_on_return noundef)
+// NEWABI-LABEL: declare void @_ZN14two_copy_ctors3fooENS_1BE(ptr noundef dead_on_return)
 // OLDABI-LABEL: declare void @_ZN14two_copy_ctors3fooENS_1BE(ptr noundef byval
 
-// WIN64-LABEL: declare dso_local void @"?foo@two_copy_ctors@@YAXUB@1@@Z"(ptr dead_on_return noundef)
+// WIN64-LABEL: declare dso_local void @"?foo@two_copy_ctors@@YAXUB@1@@Z"(ptr noundef dead_on_return)
 }
 
 namespace definition_only {

@@ -276,6 +276,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_debug_pass_manager, false))
     opts.DebugPassManager = 1;
 
+  if (!args.hasFlag(clang::options::OPT_fprotect_parens,
+                    clang::options::OPT_fno_protect_parens, true))
+    opts.ProtectParens = 0;
+
   if (args.hasFlag(clang::options::OPT_fstack_arrays,
                    clang::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
@@ -1657,6 +1661,14 @@ bool CompilerInvocation::createFromArgs(
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
   parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
   success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags);
+
+  // Enable USE statement preservation for debug info if debug level is above
+  // LineTablesOnly.
+  using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
+  DebugInfoKind debugLevel = invoc.getCodeGenOpts().getDebugInfo();
+  invoc.loweringOpts.setPreserveUseDebugInfo(
+      debugLevel > DebugInfoKind::DebugLineTablesOnly);
+
   success &= parseVectorLibArg(invoc.getCodeGenOpts(), args, diags);
   success &= parseSemaArgs(invoc, args, diags);
   success &= parseDialectArgs(invoc, args, diags);
@@ -1912,6 +1924,7 @@ void CompilerInvocation::setLoweringOptions() {
   const Fortran::common::LangOptions &langOptions = getLangOpts();
   loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
                                     Fortran::common::LangOptions::SOB_Defined);
+  loweringOpts.setProtectParens(codegenOpts.ProtectParens);
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
   // TODO: when LangOptions are finalized, we can represent
   //       the math related options using Fortran::commmon::MathOptionsBase,

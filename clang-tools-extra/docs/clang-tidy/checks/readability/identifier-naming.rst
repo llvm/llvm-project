@@ -44,6 +44,36 @@ settings. The options and their corresponding values are:
  - ``LowerCase`` - example: ``int i_Variable``
  - ``CamelCase`` - example: ``int IVariable``
 
+The check only enforces style on kinds of identifiers which have been
+configured, so an empty config effectively disables it.
+The :option:`DefaultCase` option can be used to enforce style on all kinds of
+identifiers, then optionally overriden for specific kinds which are desired
+with a different case.
+
+For example using values of:
+
+  - DefaultCase of ``lower_case``
+  - MacroDefinitionCase of ``UPPER_CASE``
+  - TemplateParameterCase of ``CamelCase``
+
+Identifies and transforms names as follows:
+
+Before:
+
+.. code-block:: c++
+
+  #define macroDefinition
+  template <typename typenameParameter>
+  int functionDeclaration(typenameParameter paramVal, int paramCount);
+
+After:
+
+.. code-block:: c++
+
+  #define MACRO_DEFINITION
+  template <typename TypenameParameter>
+  int function_declarations(TypenameParameter param_val, int param_count);
+
 Options summary
 ---------------
 
@@ -58,6 +88,9 @@ The available options are summarized below:
 
 **Specific options**
 
+ - :option:`DefaultCase`, :option:`DefaultPrefix`,
+   :option:`DefaultSuffix`, :option:`DefaultIgnoredRegexp`,
+   :option:`DefaultHungarianPrefix`
  - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`,
    :option:`AbstractClassSuffix`, :option:`AbstractClassIgnoredRegexp`,
    :option:`AbstractClassHungarianPrefix`
@@ -222,6 +255,31 @@ Options description
 -------------------
 
 A detailed description of each option is presented below:
+
+.. option:: DefaultCase
+
+    When defined, the check will ensure all names by default conform to the
+    selected casing.
+
+.. option:: DefaultPrefix
+
+    When defined, the check will ensure all names by default will add the
+    prefix with the given value (regardless of casing).
+
+.. option:: DefaultIgnoredRegexp
+
+    Identifier naming checks won't be enforced for all names by default
+    matching this regular expression.
+
+.. option:: DefaultSuffix
+
+    When defined, the check will ensure all names by default will add the
+    suffix with the given value (regardless of casing).
+
+.. option:: DefaultHungarianPrefix
+
+    When enabled, the check ensures that the declared identifier will
+    have a Hungarian notation prefix based on the declared type.
 
 .. option:: AbstractClassCase
 

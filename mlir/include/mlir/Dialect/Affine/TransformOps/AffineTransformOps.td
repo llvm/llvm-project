@@ -94,4 +94,38 @@ def SimplifyMinMaxAffineOpsOp :
   }];
 }
 
+def SuperVectorizeOp
+    : Op<Transform_Dialect, "affine.super_vectorize",
+         [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+         DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Vectorize to a target independent n-D vector abstraction.
+    This operation is an exposition to the transform dialect of the affine-super-vectorize pass.
+    To make its usage easier, it ignores inputs which are children of an affine.for op (itself excluded),
+    this way the matcher can be simpler.
+
+    This operation may generate operations from the vector dialect.
+
+    Example:
+    ```
+    %0 = transform.structured.match ops{["affine.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.affine.super_vectorize %0 [8, 16] fastest_varying_pattern=[1,0] vectorize_reductions=true : !transform.any_op
+    ```
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       DenseI64ArrayAttr:$vector_sizes,
+                       OptionalAttr<DenseI64ArrayAttr>:$fastest_varying_pattern,
+                       DefaultValuedAttr<BoolAttr, "false">:$vectorize_reductions);
+  let results = (outs);
+
+  let assemblyFormat = [{
+      $target $vector_sizes
+          (`fastest_varying_pattern` `=` $fastest_varying_pattern^)? 
+          (`vectorize_reductions` `=` $vectorize_reductions^)? 
+          attr-dict `:` type($target)
+  }];
+  let hasVerifier = 1;
+}
+
 #endif // Affine_TRANSFORM_OPS

@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "IdDependentBackwardBranchCheck.h"
 #include "KernelNameRestrictionCheck.h"
 #include "SingleWorkItemBarrierCheck.h"

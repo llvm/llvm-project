@@ -305,25 +305,25 @@ public:
   class _LIBCPP_EXPORTED_FROM_ABI Init;
 
   // 27.5.2.2 fmtflags state:
-  _LIBCPP_HIDE_FROM_ABI fmtflags flags() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI fmtflags flags() const;
   _LIBCPP_HIDE_FROM_ABI fmtflags flags(fmtflags __fmtfl);
   _LIBCPP_HIDE_FROM_ABI fmtflags setf(fmtflags __fmtfl);
   _LIBCPP_HIDE_FROM_ABI fmtflags setf(fmtflags __fmtfl, fmtflags __mask);
   _LIBCPP_HIDE_FROM_ABI void unsetf(fmtflags __mask);
 
-  _LIBCPP_HIDE_FROM_ABI streamsize precision() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI streamsize precision() const;
   _LIBCPP_HIDE_FROM_ABI streamsize precision(streamsize __prec);
-  _LIBCPP_HIDE_FROM_ABI streamsize width() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI streamsize width() const;
   _LIBCPP_HIDE_FROM_ABI streamsize width(streamsize __wide);
 
   // 27.5.2.3 locales:
   locale imbue(const locale& __loc);
-  locale getloc() const;
+  [[__nodiscard__]] locale getloc() const;
 
   // 27.5.2.5 storage:
-  static int xalloc();
-  long& iword(int __index);
-  void*& pword(int __index);
+  [[__nodiscard__]] static int xalloc();
+  [[__nodiscard__]] long& iword(int __index);
+  [[__nodiscard__]] void*& pword(int __index);
 
   // destructor
   virtual ~ios_base();
@@ -338,16 +338,16 @@ public:
 
   static bool sync_with_stdio(bool __sync = true);
 
-  _LIBCPP_HIDE_FROM_ABI iostate rdstate() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iostate rdstate() const;
   void clear(iostate __state = goodbit);
   _LIBCPP_HIDE_FROM_ABI void setstate(iostate __state);
 
-  _LIBCPP_HIDE_FROM_ABI bool good() const;
-  _LIBCPP_HIDE_FROM_ABI bool eof() const;
-  _LIBCPP_HIDE_FROM_ABI bool fail() const;
-  _LIBCPP_HIDE_FROM_ABI bool bad() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool good() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool eof() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool fail() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool bad() const;
 
-  _LIBCPP_HIDE_FROM_ABI iostate exceptions() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iostate exceptions() const;
   _LIBCPP_HIDE_FROM_ABI void exceptions(iostate __iostate);
 
   void __set_badbit_and_consider_rethrow();
@@ -425,13 +425,13 @@ template <>
 struct is_error_code_enum<io_errc::__lx> : public true_type {};
 #    endif
 
-_LIBCPP_EXPORTED_FROM_ABI const error_category& iostream_category() _NOEXCEPT;
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI const error_category& iostream_category() _NOEXCEPT;
 
-inline _LIBCPP_HIDE_FROM_ABI error_code make_error_code(io_errc __e) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI error_code make_error_code(io_errc __e) _NOEXCEPT {
   return error_code(static_cast<int>(__e), iostream_category());
 }
 
-inline _LIBCPP_HIDE_FROM_ABI error_condition make_error_condition(io_errc __e) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI error_condition make_error_condition(io_errc __e) _NOEXCEPT {
   return error_condition(static_cast<int>(__e), iostream_category());
 }
 
@@ -580,16 +580,16 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const { return !fail(); }
 #    endif
 
-  _LIBCPP_HIDE_FROM_ABI bool operator!() const { return fail(); }
-  _LIBCPP_HIDE_FROM_ABI iostate rdstate() const { return ios_base::rdstate(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool operator!() const { return fail(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iostate rdstate() const { return ios_base::rdstate(); }
   _LIBCPP_HIDE_FROM_ABI void clear(iostate __state = goodbit) { ios_base::clear(__state); }
   _LIBCPP_HIDE_FROM_ABI void setstate(iostate __state) { ios_base::setstate(__state); }
-  _LIBCPP_HIDE_FROM_ABI bool good() const { return ios_base::good(); }
-  _LIBCPP_HIDE_FROM_ABI bool eof() const { return ios_base::eof(); }
-  _LIBCPP_HIDE_FROM_ABI bool fail() const { return ios_base::fail(); }
-  _LIBCPP_HIDE_FROM_ABI bool bad() const { return ios_base::bad(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool good() const { return ios_base::good(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool eof() const { return ios_base::eof(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool fail() const { return ios_base::fail(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool bad() const { return ios_base::bad(); }
 
-  _LIBCPP_HIDE_FROM_ABI iostate exceptions() const { return ios_base::exceptions(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI iostate exceptions() const { return ios_base::exceptions(); }
   _LIBCPP_HIDE_FROM_ABI void exceptions(iostate __iostate) { ios_base::exceptions(__iostate); }
 
   // 27.5.4.1 Constructor/destructor:
@@ -597,21 +597,21 @@ public:
   ~basic_ios() override;
 
   // 27.5.4.2 Members:
-  _LIBCPP_HIDE_FROM_ABI basic_ostream<char_type, traits_type>* tie() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI basic_ostream<char_type, traits_type>* tie() const;
   _LIBCPP_HIDE_FROM_ABI basic_ostream<char_type, traits_type>* tie(basic_ostream<char_type, traits_type>* __tiestr);
 
-  _LIBCPP_HIDE_FROM_ABI basic_streambuf<char_type, traits_type>* rdbuf() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI basic_streambuf<char_type, traits_type>* rdbuf() const;
   _LIBCPP_HIDE_FROM_ABI basic_streambuf<char_type, traits_type>* rdbuf(basic_streambuf<char_type, traits_type>* __sb);
 
   basic_ios& copyfmt(const basic_ios& __rhs);
 
-  _LIBCPP_HIDE_FROM_ABI char_type fill() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type fill() const;
   _LIBCPP_HIDE_FROM_ABI char_type fill(char_type __ch);
 
   _LIBCPP_HIDE_FROM_ABI locale imbue(const locale& __loc);
 
-  _LIBCPP_HIDE_FROM_ABI char narrow(char_type __c, char __dfault) const;
-  _LIBCPP_HIDE_FROM_ABI char_type widen(char __c) const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char narrow(char_type __c, char __dfault) const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type widen(char __c) const;
 
 protected:
   _LIBCPP_HIDE_FROM_ABI basic_ios() {

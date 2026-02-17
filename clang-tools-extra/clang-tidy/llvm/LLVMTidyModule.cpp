@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../readability/ElseAfterReturnCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
 #include "../readability/QualifiedAutoCheck.h"
@@ -18,8 +17,10 @@
 #include "PreferRegisterOverUnsignedCheck.h"
 #include "PreferStaticOverAnonymousNamespaceCheck.h"
 #include "TwineLocalCheck.h"
+#include "TypeSwitchCaseTypesCheck.h"
 #include "UseNewMLIROpBuilderCheck.h"
 #include "UseRangesCheck.h"
+#include "UseVectorUtilsCheck.h"
 
 namespace clang::tidy {
 namespace llvm_check {
@@ -43,9 +44,12 @@ public:
     CheckFactories.registerCheck<readability::QualifiedAutoCheck>(
         "llvm-qualified-auto");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
+    CheckFactories.registerCheck<TypeSwitchCaseTypesCheck>(
+        "llvm-type-switch-case-types");
     CheckFactories.registerCheck<UseNewMlirOpBuilderCheck>(
         "llvm-use-new-mlir-op-builder");
     CheckFactories.registerCheck<UseRangesCheck>("llvm-use-ranges");
+    CheckFactories.registerCheck<UseVectorUtilsCheck>("llvm-use-vector-utils");
   }
 
   ClangTidyOptions getModuleOptions() override {

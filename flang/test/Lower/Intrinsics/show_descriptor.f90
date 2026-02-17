@@ -10,8 +10,7 @@ subroutine test_int
   integer,allocatable :: a(:)
   n = 5
   allocate(a(n))
-! CHECK:           %[[C3:.*]] = arith.constant 3 : index
-! CHECK:           %[[C1:.*]] = arith.constant 1 : index
+! CHECK:           %[[C0_I64:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[C5:.*]] = arith.constant 5 : i32
 ! CHECK:           %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
@@ -34,20 +33,15 @@ subroutine test_int
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[SELECT_0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[EMBOX_1:.*]] = fir.embox %[[ALLOCMEM_0]](%[[SHAPE_1]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:           fir.store %[[EMBOX_1]] to %[[DECLARE_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[LOAD_1]]) fastmath<contract> : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> ()
+! CHECK:           %[[CONVERT_ARG:.*]] = fir.convert %[[DECLARE_0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[CONVERT_ARG]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 
   call show_descriptor(a(1:3))
-! CHECK:           %[[LOAD_2:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:           %[[SHAPE_2:.*]] = fir.shape %[[C3]] : (index) -> !fir.shape<1>
-! CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_2]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:           %[[CONSTANT_4:.*]] = arith.constant 0 : index
-! CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_2]], %[[CONSTANT_4]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-! CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[BOX_ADDR_0]](%[[SHAPE_SHIFT_0]]) %[[C1]] : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
-! CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[ARRAY_COOR_0]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<3xi32>>
-! CHECK:           %[[EMBOX_2:.*]] = fir.embox %[[CONVERT_1]](%[[SHAPE_2]]) : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<3xi32>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_2]]) fastmath<contract> : (!fir.box<!fir.array<3xi32>>) -> ()
+! CHECK:           %[[SHAPE_2:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+! CHECK:           %[[EMBOX_2:.*]] = fir.embox %{{.*}}(%[[SHAPE_2]]) : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<3xi32>>
+! CHECK:           %[[CONVERT_2:.*]] = fir.convert %[[EMBOX_2]] : (!fir.box<!fir.array<3xi32>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_2]] to %[[ALLOCA_2:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_2]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
   deallocate(a)
 end subroutine test_int
 
@@ -56,23 +50,20 @@ subroutine test_char
   implicit none
   character(len=9) :: c = 'Hey buddy'
   call show_descriptor(c)
-! CHECK:           %[[C3:.*]] = arith.constant 3 : index
-! CHECK:           %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:           %[[C9:.*]] = arith.constant 9 : index
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_charEc) : !fir.ref<!fir.char<1,9>>
 ! CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] typeparams %[[C9]] {uniq_name = "_QMtest_show_descriptorFtest_charEc"} : (!fir.ref<!fir.char<1,9>>, index) -> !fir.ref<!fir.char<1,9>>
-! CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[DECLARE_0]] : (!fir.ref<!fir.char<1,9>>) -> !fir.box<!fir.char<1,9>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_0]]) fastmath<contract> : (!fir.box<!fir.char<1,9>>) -> ()
+! CHECK:           %[[EMBOX_CHAR:.*]] = fir.embox %[[DECLARE_0]] : (!fir.ref<!fir.char<1,9>>) -> !fir.box<!fir.char<1,9>>
+! CHECK:           %[[CONVERT_CHAR:.*]] = fir.convert %[[EMBOX_CHAR]] : (!fir.box<!fir.char<1,9>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_CHAR]] to %[[ALLOCA_CHAR:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_CHAR]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 
   call show_descriptor(c(1:3))
-! CHECK:           %[[C1_0:.*]] = arith.constant 1 : index
-! CHECK:           %[[SUBI_0:.*]] = arith.subi %[[C1]], %[[C1_0]] : index
-! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[DECLARE_0]] : (!fir.ref<!fir.char<1,9>>) -> !fir.ref<!fir.array<9x!fir.char<1>>>
-! CHECK:           %[[COORDINATE_OF_0:.*]] = fir.coordinate_of %[[CONVERT_0]], %[[SUBI_0]] : (!fir.ref<!fir.array<9x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-! CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[COORDINATE_OF_0]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.char<1,3>>
-! CHECK:           %[[EMBOX_1:.*]] = fir.embox %[[CONVERT_1]] : (!fir.ref<!fir.char<1,3>>) -> !fir.box<!fir.char<1,3>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_1]]) fastmath<contract> : (!fir.box<!fir.char<1,3>>) -> ()
+! CHECK:           %[[EMBOX_CHAR_SLICE:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.char<1,3>>) -> !fir.box<!fir.char<1,3>>
+! CHECK:           %[[CONVERT_CHAR_SLICE:.*]] = fir.convert %[[EMBOX_CHAR_SLICE]] : (!fir.box<!fir.char<1,3>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_CHAR_SLICE]] to %[[ALLOCA_CHAR_SLICE:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_CHAR_SLICE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 ! CHECK:           return
 end subroutine test_char
 
@@ -103,20 +94,26 @@ subroutine test_logical
   call show_descriptor(l2)
   pla2 => la2
 ! CHECK:           %[[DECLARE_3:.*]] = fir.declare %[[ALLOCA_0]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QMtest_show_descriptorFtest_logicalEpla2"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>>
-! CHECK:           %[[EMBOX_1:.*]] = fir.embox %[[DECLARE_0]] : (!fir.ref<!fir.logical<1>>) -> !fir.box<!fir.logical<1>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_1]]) fastmath<contract> : (!fir.box<!fir.logical<1>>) -> ()
-! CHECK:           %[[EMBOX_2:.*]] = fir.embox %[[DECLARE_1]] : (!fir.ref<!fir.logical<2>>) -> !fir.box<!fir.logical<2>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_2]]) fastmath<contract> : (!fir.box<!fir.logical<2>>) -> ()
+! CHECK:           %[[EMBOX_L1:.*]] = fir.embox %[[DECLARE_0]] : (!fir.ref<!fir.logical<1>>) -> !fir.box<!fir.logical<1>>
+! CHECK:           %[[CONVERT_L1:.*]] = fir.convert %[[EMBOX_L1]] : (!fir.box<!fir.logical<1>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_L1]] to %[[ALLOCA_L1:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_L1]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
+! CHECK:           %[[EMBOX_L2:.*]] = fir.embox %[[DECLARE_1]] : (!fir.ref<!fir.logical<2>>) -> !fir.box<!fir.logical<2>>
+! CHECK:           %[[CONVERT_L2:.*]] = fir.convert %[[EMBOX_L2]] : (!fir.box<!fir.logical<2>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_L2]] to %[[ALLOCA_L2:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_L2]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 
   call show_descriptor(la2)
   call show_descriptor(pla2)
 ! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[DECLARE_2]] : (!fir.ref<!fir.array<2x!fir.logical<2>>>) -> !fir.ref<!fir.array<?x!fir.logical<2>>>
 ! CHECK:           %[[EMBOX_3:.*]] = fir.embox %[[CONVERT_0]](%[[SHAPE_0]]) : (!fir.ref<!fir.array<?x!fir.logical<2>>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>
 ! CHECK:           fir.store %[[EMBOX_3]] to %[[DECLARE_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>>
-! CHECK:           %[[EMBOX_4:.*]] = fir.embox %[[DECLARE_2]](%[[SHAPE_0]]) : (!fir.ref<!fir.array<2x!fir.logical<2>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.logical<2>>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_4]]) fastmath<contract> : (!fir.box<!fir.array<2x!fir.logical<2>>>) -> ()
-! CHECK:           %[[LOAD_0:.*]] = fir.load %[[DECLARE_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[LOAD_0]]) fastmath<contract> : (!fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>) -> ()
+! CHECK:           %[[EMBOX_LA2:.*]] = fir.embox %[[DECLARE_2]](%[[SHAPE_0]]) : (!fir.ref<!fir.array<2x!fir.logical<2>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.logical<2>>>
+! CHECK:           %[[CONVERT_LA2:.*]] = fir.convert %[[EMBOX_LA2]] : (!fir.box<!fir.array<2x!fir.logical<2>>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_LA2]] to %[[ALLOCA_LA2:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_LA2]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
+! CHECK:           %[[CONVERT_PLA2:.*]] = fir.convert %[[DECLARE_3]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.logical<2>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[CONVERT_PLA2]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 ! CHECK:           return
 end subroutine test_logical
 
@@ -130,6 +127,7 @@ subroutine test_real
 ! CHECK:           %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:           %[[C4:.*]] = arith.constant 4 : index
 ! CHECK:           %[[C3:.*]] = arith.constant 3 : index
+! CHECK:           %[[ALLOCA_BOX:.*]] = fir.alloca !fir.box<none>
 ! CHECK:           %[[DUMMY_SCOPE_2:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[ADDRESS_OF_4:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_realEhalf) : !fir.ref<f32>
 ! CHECK:           %[[DECLARE_5:.*]] = fir.declare %[[ADDRESS_OF_4]] {uniq_name = "_QMtest_show_descriptorFtest_realEhalf"} : (!fir.ref<f32>) -> !fir.ref<f32>
@@ -144,17 +142,25 @@ subroutine test_real
   call show_descriptor(row)
   call show_descriptor(w)
   call show_descriptor(w(1:4:2))
-! CHECK:           %[[EMBOX_7:.*]] = fir.embox %[[DECLARE_5]] : (!fir.ref<f32>) -> !fir.box<f32>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_7]]) fastmath<contract> : (!fir.box<f32>) -> ()
-! CHECK:           %[[EMBOX_8:.*]] = fir.embox %[[DECLARE_6]](%[[SHAPE_2]]) : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<3xf32>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_8]]) fastmath<contract> : (!fir.box<!fir.array<3xf32>>) -> ()
-! CHECK:           %[[EMBOX_9:.*]] = fir.embox %[[DECLARE_7]](%[[SHAPE_3]]) : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<4xf64>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_9]]) fastmath<contract> : (!fir.box<!fir.array<4xf64>>) -> ()
+! CHECK:           %[[EMBOX_HALF:.*]] = fir.embox %[[DECLARE_5]] : (!fir.ref<f32>) -> !fir.box<f32>
+! CHECK:           %[[CONVERT_HALF:.*]] = fir.convert %[[EMBOX_HALF]] : (!fir.box<f32>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_HALF]] to %[[ALLOCA_HALF:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_HALF]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
+! CHECK:           %[[EMBOX_ROW:.*]] = fir.embox %[[DECLARE_6]](%[[SHAPE_2]]) : (!fir.ref<!fir.array<3xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<3xf32>>
+! CHECK:           %[[CONVERT_ROW:.*]] = fir.convert %[[EMBOX_ROW]] : (!fir.box<!fir.array<3xf32>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_ROW]] to %[[ALLOCA_ROW:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_ROW]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
+! CHECK:           %[[EMBOX_W:.*]] = fir.embox %[[DECLARE_7]](%[[SHAPE_3]]) : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<4xf64>>
+! CHECK:           %[[CONVERT_W:.*]] = fir.convert %[[EMBOX_W]] : (!fir.box<!fir.array<4xf64>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_W]] to %[[ALLOCA_W:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_W]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 ! CHECK:           %[[SHAPE_4:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[UNDEFINED_0:.*]] = fir.undefined index
 ! CHECK:           %[[SLICE_0:.*]] = fir.slice %[[C1]], %[[C4]], %[[C2]] : (index, index, index) -> !fir.slice<1>
 ! CHECK:           %[[EMBOX_10:.*]] = fir.embox %[[DECLARE_7]](%[[SHAPE_3]]) {{\[}}%[[SLICE_0]]] : (!fir.ref<!fir.array<4xf64>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<2xf64>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_10]]) fastmath<contract> : (!fir.box<!fir.array<2xf64>>) -> ()
+! CHECK:           %[[CONVERT_BOX:.*]] = fir.convert %[[EMBOX_10]] : (!fir.box<!fir.array<2xf64>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_BOX]] to %[[ALLOCA_BOX]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_BOX]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 ! CHECK:           return
 end subroutine test_real
 
@@ -166,11 +172,7 @@ subroutine test_complex
   complex :: c1 = hr
   complex :: c2 = hi
   complex :: a2(2) = (/ hr, hi /)
-! CHECK:           %[[CST_0:.*]] = arith.constant 0.000000e+00 : f32
-! CHECK:           %[[CST_1:.*]] = arith.constant 5.000000e-01 : f32
 ! CHECK:           %[[C2:.*]] = arith.constant 2 : index
-! CHECK:           %[[ALLOCA_1:.*]] = fir.alloca complex<f32>
-! CHECK:           %[[ALLOCA_2:.*]] = fir.alloca complex<f32>
 ! CHECK:           %[[DUMMY_SCOPE_3:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[ADDRESS_OF_7:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_complexEa2) : !fir.ref<!fir.array<2xcomplex<f32>>>
 ! CHECK:           %[[SHAPE_5:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
@@ -183,25 +185,30 @@ subroutine test_complex
 ! CHECK:           %[[DECLARE_11:.*]] = fir.declare %[[ADDRESS_OF_10]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QMtest_show_descriptorFtest_complexEChi"} : (!fir.ref<complex<f32>>) -> !fir.ref<complex<f32>>
 ! CHECK:           %[[ADDRESS_OF_11:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_complexEChr) : !fir.ref<complex<f32>>
 ! CHECK:           %[[DECLARE_12:.*]] = fir.declare %[[ADDRESS_OF_11]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QMtest_show_descriptorFtest_complexEChr"} : (!fir.ref<complex<f32>>) -> !fir.ref<complex<f32>>
-! CHECK:           %[[UNDEFINED_1:.*]] = fir.undefined complex<f32>
-! CHECK:           %[[INSERT_VALUE_0:.*]] = fir.insert_value %[[UNDEFINED_1]], %[[CST_1]], [0 : index] : (complex<f32>, f32) -> complex<f32>
-! CHECK:           %[[INSERT_VALUE_1:.*]] = fir.insert_value %[[INSERT_VALUE_0]], %[[CST_0]], [1 : index] : (complex<f32>, f32) -> complex<f32>
-! CHECK:           fir.store %[[INSERT_VALUE_1]] to %[[ALLOCA_2]] : !fir.ref<complex<f32>>
 
   call show_descriptor(hr)
-! CHECK:           %[[EMBOX_11:.*]] = fir.embox %[[ALLOCA_2]] : (!fir.ref<complex<f32>>) -> !fir.box<complex<f32>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_11]]) fastmath<contract> : (!fir.box<complex<f32>>) -> ()
+! CHECK:           %[[VAL_HR_0:.*]] = fir.insert_value {{.*}}
+! CHECK:           %[[VAL_HR:.*]] = fir.insert_value %[[VAL_HR_0]], {{.*}}
+! CHECK:           fir.store %[[VAL_HR]] to %[[TEMP_HR:.*]] : !fir.ref<complex<f32>>
+! CHECK:           %[[EMBOX_HR:.*]] = fir.embox %[[TEMP_HR]] : (!fir.ref<complex<f32>>) -> !fir.box<complex<f32>>
+! CHECK:           %[[CONVERT_HR:.*]] = fir.convert %[[EMBOX_HR]] : (!fir.box<complex<f32>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_HR]] to %[[ALLOCA_HR:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_HR]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 
   call show_descriptor(hi)
-! CHECK:           %[[INSERT_VALUE_2:.*]] = fir.insert_value %[[UNDEFINED_1]], %[[CST_0]], [0 : index] : (complex<f32>, f32) -> complex<f32>
-! CHECK:           %[[INSERT_VALUE_3:.*]] = fir.insert_value %[[INSERT_VALUE_2]], %[[CST_1]], [1 : index] : (complex<f32>, f32) -> complex<f32>
-! CHECK:           fir.store %[[INSERT_VALUE_3]] to %[[ALLOCA_1]] : !fir.ref<complex<f32>>
-! CHECK:           %[[EMBOX_12:.*]] = fir.embox %[[ALLOCA_1]] : (!fir.ref<complex<f32>>) -> !fir.box<complex<f32>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_12]]) fastmath<contract> : (!fir.box<complex<f32>>) -> ()
+! CHECK:           %[[VAL_HI_0:.*]] = fir.insert_value {{.*}}
+! CHECK:           %[[VAL_HI:.*]] = fir.insert_value %[[VAL_HI_0]], {{.*}}
+! CHECK:           fir.store %[[VAL_HI]] to %[[TEMP_HI:.*]] : !fir.ref<complex<f32>>
+! CHECK:           %[[EMBOX_HI:.*]] = fir.embox %[[TEMP_HI]] : (!fir.ref<complex<f32>>) -> !fir.box<complex<f32>>
+! CHECK:           %[[CONVERT_HI:.*]] = fir.convert %[[EMBOX_HI]] : (!fir.box<complex<f32>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_HI]] to %[[ALLOCA_HI:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_HI]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 
   call show_descriptor(a2)
-! CHECK:           %[[EMBOX_13:.*]] = fir.embox %[[DECLARE_8]](%[[SHAPE_5]]) : (!fir.ref<!fir.array<2xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.array<2xcomplex<f32>>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_13]]) fastmath<contract> : (!fir.box<!fir.array<2xcomplex<f32>>>) -> ()
+! CHECK:           %[[EMBOX_A2:.*]] = fir.embox %[[DECLARE_8]](%[[SHAPE_5]]) : (!fir.ref<!fir.array<2xcomplex<f32>>>, !fir.shape<1>) -> !fir.box<!fir.array<2xcomplex<f32>>>
+! CHECK:           %[[CONVERT_A2:.*]] = fir.convert %[[EMBOX_A2]] : (!fir.box<!fir.array<2xcomplex<f32>>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_A2]] to %[[ALLOCA_A2:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_A2]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 ! CHECK:           return
 end subroutine test_complex
 
@@ -216,6 +223,12 @@ subroutine test_derived
      integer :: c
   end type t2
   type(t2) :: vt2 = t2(7,5,3)
+  class(t1), allocatable :: c_t1
+  class(*), allocatable :: c_unlimited
+  allocate(t2 :: c_t1)
+  c_t1 = vt2
+  allocate(c_unlimited, source=vt2)
+
 ! CHECK:           %[[C0:.*]] = arith.constant 0 : index
 ! CHECK:           %[[C2:.*]] = arith.constant 2 : index
 ! CHECK:           %[[C1:.*]] = arith.constant 1 : index
@@ -230,12 +243,51 @@ subroutine test_derived
 ! CHECK:           %[[DECLARE_16:.*]] = fir.declare %[[ADDRESS_OF_15]] typeparams %[[C1]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_derivedE.n.c"} : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
 ! CHECK:           %[[ADDRESS_OF_16:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_derivedE.n.t2) : !fir.ref<!fir.char<1,2>>
 ! CHECK:           %[[DECLARE_17:.*]] = fir.declare %[[ADDRESS_OF_16]] typeparams %[[C2]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMtest_show_descriptorFtest_derivedE.n.t2"} : (!fir.ref<!fir.char<1,2>>, index) -> !fir.ref<!fir.char<1,2>>
+! CHECK:           %[[ALLOCA_CT1:.*]] = fir.alloca !fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>> {bindc_name = "c_t1", uniq_name = "_QMtest_show_descriptorFtest_derivedEc_t1"}
+! CHECK:           %[[ZERO_BITS_CT1:.*]] = fir.zero_bits !fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>
+! CHECK:           %[[EMBOX_CT1:.*]] = fir.embox %[[ZERO_BITS_CT1]] : (!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>) -> !fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>
+! CHECK:           fir.store %[[EMBOX_CT1]] to %[[ALLOCA_CT1]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>
+! CHECK:           %[[DECLARE_CT1:.*]] = fir.declare %[[ALLOCA_CT1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_show_descriptorFtest_derivedEc_t1"} : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>
+! CHECK:           %[[ALLOCA_CU:.*]] = fir.alloca !fir.class<!fir.heap<none>> {bindc_name = "c_unlimited", uniq_name = "_QMtest_show_descriptorFtest_derivedEc_unlimited"}
+! CHECK:           %[[ZERO_BITS_CU:.*]] = fir.zero_bits !fir.heap<none>
+! CHECK:           %[[EMBOX_CU:.*]] = fir.embox %[[ZERO_BITS_CU]] : (!fir.heap<none>) -> !fir.class<!fir.heap<none>>
+! CHECK:           fir.store %[[EMBOX_CU]] to %[[ALLOCA_CU]] : !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK:           %[[DECLARE_CU:.*]] = fir.declare %[[ALLOCA_CU]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QMtest_show_descriptorFtest_derivedEc_unlimited"} : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.class<!fir.heap<none>>>
 ! CHECK:           %[[ADDRESS_OF_17:.*]] = fir.address_of(@_QMtest_show_descriptorFtest_derivedEvt2) : !fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>
 ! CHECK:           %[[DECLARE_18:.*]] = fir.declare %[[ADDRESS_OF_17]] {uniq_name = "_QMtest_show_descriptorFtest_derivedEvt2"} : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>) -> !fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>
+! CHECK:           %[[CONVERT_CT1:.*]] = fir.convert %[[DECLARE_CT1]] : (!fir.ref<!fir.class<!fir.heap<!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAAssignPolymorphic(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 
   call show_descriptor(vt2)
-! CHECK:           %[[EMBOX_16:.*]] = fir.embox %[[DECLARE_18]] : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>) -> !fir.box<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>
-! CHECK:           fir.call @_FortranAShowDescriptor(%[[EMBOX_16]]) fastmath<contract> : (!fir.box<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>) -> ()
+! CHECK:           %[[EMBOX_VT2:.*]] = fir.embox %[[DECLARE_18]] : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>) -> !fir.box<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>
+! CHECK:           %[[CONVERT_CU:.*]] = fir.convert %[[DECLARE_CU]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[CONVERT_VT2:.*]] = fir.convert %[[EMBOX_VT2]] : (!fir.box<!fir.type<_QMtest_show_descriptorFtest_derivedTt2{t1:!fir.type<_QMtest_show_descriptorFtest_derivedTt1{a:i32,b:i32}>,c:i32}>>) -> !fir.box<none>
+! CHECK:           fir.store %[[CONVERT_VT2]] to %[[ALLOCA_VT2:.*]] : !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[ALLOCA_VT2]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
+
+  call show_descriptor(c_t1)
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[CONVERT_CT1]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
+
+  call show_descriptor(c_unlimited)
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[CONVERT_CU]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
 ! CHECK:           return
 end subroutine test_derived
+
+subroutine test_derived_member
+! CHECK-LABEL:   func.func @_QMtest_show_descriptorPtest_derived_member() {
+  implicit none
+  type :: t3
+     integer, allocatable :: a(:)
+  end type t3
+  type(t3) :: vt3
+! CHECK:           %[[VT3:.*]] = fir.alloca !fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
+! CHECK:           %[[VT3_DECL:.*]] = fir.declare %[[VT3]] {uniq_name = "_QMtest_show_descriptorFtest_derived_memberEvt3"} : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+  allocate(vt3%a(5))
+! CHECK:           %[[A_FIELD:.*]] = fir.field_index a, !fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>
+! CHECK:           %[[A_COORD:.*]] = fir.coordinate_of %[[VT3_DECL]], a : (!fir.ref<!fir.type<_QMtest_show_descriptorFtest_derived_memberTt3{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  call show_descriptor(vt3%a)
+! CHECK:           %[[CONVERT_A:.*]] = fir.convert %[[A_COORD]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           fir.call @_FortranAShowDescriptor(%[[CONVERT_A]]) fastmath<contract> : (!fir.ref<!fir.box<none>>) -> ()
+  deallocate(vt3%a)
+end subroutine test_derived_member
 end module test_show_descriptor

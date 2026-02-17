@@ -33,13 +33,12 @@ Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
 
 Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
+  assert(Pointee);
   assert((Base == RootPtrMark || Base % alignof(void *) == 0) && "wrong base");
   assert(Base >= Pointee->getDescriptor()->getMetadataSize());
 
   BS = {Pointee, Base, nullptr, nullptr};
-
-  if (Pointee)
-    Pointee->addPointer(this);
+  Pointee->addPointer(this);
 }
 
 Pointer::Pointer(const Pointer &P)
@@ -249,7 +248,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
         unsigned Index = Ptr.getIndex();
         QualType ElemType = Desc->getElemQualType();
         Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
-        if (Ptr.getArray().getType()->isArrayType())
+        if (Ptr.getArray().getFieldDesc()->IsArray)
           Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
         Ptr = Ptr.getArray();
       } else {
@@ -279,7 +278,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       } else {
         Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
       }
-      if (Ptr.getArray().getType()->isArrayType())
+      if (Ptr.getArray().getFieldDesc()->IsArray)
         Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
     } else {
@@ -363,7 +362,13 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   }
 }
 
-size_t Pointer::computeOffsetForComparison() const {
+/// Compute an offset that can be used to compare the pointer to another one
+/// with the same base. To get accurate results, we basically _have to_ compute
+/// the lvalue offset using the ASTRecordLayout.
+///
+/// FIXME: We're still mixing values from the record layout with our internal
+/// offsets, which will inevitably lead to cryptic errors.
+size_t Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
   switch (StorageKind) {
   case Storage::Int:
     return Int.Value + Offset;
@@ -379,7 +384,6 @@ size_t Pointer::computeOffsetForComparison() const {
   size_t Result = 0;
   Pointer P = *this;
   while (true) {
-
     if (P.isVirtualBaseClass()) {
       Result += getInlineDesc()->Offset;
       P = P.getBase();
@@ -401,28 +405,29 @@ size_t Pointer::computeOffsetForComparison() const {
 
     if (P.isRoot()) {
       if (P.isOnePastEnd())
-        ++Result;
+        Result +=
+            ASTCtx.getTypeSizeInChars(P.getDeclDesc()->getType()).getQuantity();
       break;
     }
 
-    if (const Record *R = P.getBase().getRecord(); R && R->isUnion()) {
-      if (P.isOnePastEnd())
-        ++Result;
-      // Direct child of a union - all have offset 0.
-      P = P.getBase();
-      continue;
-    }
+    assert(P.getField());
+    const Record *R = P.getBase().getRecord();
+    assert(R);
 
-    // Fields, etc.
-    Result += P.getInlineDesc()->Offset;
+    const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());
+    Result += ASTCtx
+                  .toCharUnitsFromBits(
+                      Layout.getFieldOffset(P.getField()->getFieldIndex()))
+                  .getQuantity();
+
     if (P.isOnePastEnd())
-      ++Result;
+      Result +=
+          ASTCtx.getTypeSizeInChars(P.getField()->getType()).getQuantity();
 
     P = P.getBase();
     if (P.isRoot())
       break;
   }
-
   return Result;
 }
 
@@ -490,6 +495,59 @@ bool Pointer::isElementInitialized(unsigned Index) const {
   return isInitialized();
 }
 
+bool Pointer::isElementAlive(unsigned Index) const {
+  assert(getFieldDesc()->isPrimitiveArray());
+
+  InitMapPtr &IM = getInitMap();
+  if (!IM.hasInitMap())
+    return true;
+
+  if (IM.allInitialized())
+    return true;
+
+  return IM->isElementAlive(Index);
+}
+
+void Pointer::startLifetime() const {
+  if (!isBlockPointer())
+    return;
+  if (BS.Base < sizeof(InlineDescriptor))
+    return;
+
+  if (inArray()) {
+    const Descriptor *Desc = getFieldDesc();
+    InitMapPtr &IM = getInitMap();
+    if (!IM.hasInitMap())
+      IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
+
+    IM->startElementLifetime(getIndex());
+    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Started));
+    return;
+  }
+
+  getInlineDesc()->LifeState = Lifetime::Started;
+}
+
+void Pointer::endLifetime() const {
+  if (!isBlockPointer())
+    return;
+  if (BS.Base < sizeof(InlineDescriptor))
+    return;
+
+  if (inArray()) {
+    const Descriptor *Desc = getFieldDesc();
+    InitMapPtr &IM = getInitMap();
+    if (!IM.hasInitMap())
+      IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
+
+    IM->endElementLifetime(getIndex());
+    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Ended));
+    return;
+  }
+
+  getInlineDesc()->LifeState = Lifetime::Ended;
+}
+
 void Pointer::initialize() const {
   if (!isBlockPointer())
     return;
@@ -524,7 +582,6 @@ void Pointer::initializeElement(unsigned Index) const {
   assert(Index < getFieldDesc()->getNumElems());
 
   InitMapPtr &IM = getInitMap();
-
   if (IM.allInitialized())
     return;
 
@@ -560,6 +617,23 @@ bool Pointer::allElementsInitialized() const {
 
   InitMapPtr IM = getInitMap();
   return IM.allInitialized();
+}
+
+bool Pointer::allElementsAlive() const {
+  assert(getFieldDesc()->isPrimitiveArray());
+  assert(isArrayRoot());
+
+  if (isStatic() && BS.Base == 0)
+    return true;
+
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
+    return GD.InitState == GlobalInitState::Initialized;
+  }
+
+  InitMapPtr &IM = getInitMap();
+  return IM.allInitialized() || (IM.hasInitMap() && IM->allElementsAlive());
 }
 
 void Pointer::activate() const {
@@ -863,6 +937,10 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     llvm_unreachable("invalid value to return");
   };
 
+  // Can't return functions as rvalues.
+  if (ResultType->isFunctionType())
+    return std::nullopt;
+
   // Invalid to read from.
   if (isDummy() || !isLive() || isPastEnd())
     return std::nullopt;
@@ -873,6 +951,8 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
   // Just load primitive types.
   if (OptPrimType T = Ctx.classify(ResultType)) {
+    if (!canDeref(*T))
+      return std::nullopt;
     TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx));
   }
 

@@ -78,7 +78,6 @@ let TargetPrefix = "riscv" in {
   def int_riscv_orc_b : RISCVBitManipGPRIntrinsics;
 
   // Zbc or Zbkc
-  def int_riscv_clmul  : RISCVBitManipGPRGPRIntrinsics;
   def int_riscv_clmulh : RISCVBitManipGPRGPRIntrinsics;
 
   // Zbc
@@ -1957,6 +1956,26 @@ let TargetPrefix = "riscv" in {
 //===----------------------------------------------------------------------===//
 let TargetPrefix = "riscv" in
 def int_riscv_pause : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+
+
+//===----------------------------------------------------------------------===//
+// Zvfofp8min - OFP8 conversion extension
+// The Zvfofp8min extension provides basic support for the two 8-bit
+// floating-point formats defined in the Open Compute Project OFP8
+// specification, OFP8 E4M3 and OFP8 E5M2.
+let TargetPrefix = "riscv" in {
+  // OFP8 to BF16 conversion instructions
+  defm vfwcvt_f_f_v_alt : RISCVConversion;
+  // BF16 to OFP8 conversion instructions
+  defm vfncvt_sat_f_f_w : RISCVConversionRoundingMode;
+  defm vfncvt_f_f_w_alt : RISCVConversionRoundingMode;
+  defm vfncvt_sat_f_f_w_alt : RISCVConversionRoundingMode;
+  // FP32 to OFP8 conversion instructions
+  defm vfncvt_f_f_q : RISCVConversionRoundingMode;
+  defm vfncvt_f_f_q_alt : RISCVConversionRoundingMode;
+  defm vfncvt_sat_f_f_q : RISCVConversionRoundingMode;
+  defm vfncvt_sat_f_f_q_alt : RISCVConversionRoundingMode;
+} // TargetPrefix = "riscv"
 
 // Vendor extensions
 //===----------------------------------------------------------------------===//

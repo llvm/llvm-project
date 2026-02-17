@@ -14,6 +14,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/TilingInterface.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -73,10 +74,10 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
   if (dimension >= iterationSpace.size())
     return std::make_pair(op, TilingInterface());
 
-  SmallVector<OpFoldResult> offsets = llvm::to_vector(llvm::map_range(
-      iterationSpace, [](const Range &range) { return range.offset; }));
-  SmallVector<OpFoldResult> sizes = llvm::to_vector(llvm::map_range(
-      iterationSpace, [](const Range &range) { return range.size; }));
+  SmallVector<OpFoldResult> offsets = llvm::map_to_vector(
+      iterationSpace, [](const Range &range) { return range.offset; });
+  SmallVector<OpFoldResult> sizes = llvm::map_to_vector(
+      iterationSpace, [](const Range &range) { return range.size; });
 
   // Adjust the split point so that it doesn't overflow the size.
   AffineExpr d0, d1, d2;

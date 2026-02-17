@@ -10,7 +10,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; WIDE-NEXT:    br label [[VECTOR_PH:%.*]]
 ; WIDE:       vector.ph:
 ; WIDE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; WIDE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; WIDE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; WIDE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; WIDE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; WIDE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -48,7 +48,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; NARROW-NEXT:    br label [[VECTOR_PH:%.*]]
 ; NARROW:       vector.ph:
 ; NARROW-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NARROW-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP2]], 4
+; NARROW-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP2]], 2
 ; NARROW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP1]]
 ; NARROW-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; NARROW-NEXT:    br label [[VECTOR_BODY:%.*]]

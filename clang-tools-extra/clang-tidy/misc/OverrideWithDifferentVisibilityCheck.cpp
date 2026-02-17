@@ -71,7 +71,7 @@ void OverrideWithDifferentVisibilityCheck::storeOptions(
 void OverrideWithDifferentVisibilityCheck::registerMatchers(
     MatchFinder *Finder) {
   const auto IgnoredDecl =
-      namedDecl(matchers::matchesAnyListedName(IgnoredFunctions));
+      namedDecl(matchers::matchesAnyListedRegexName(IgnoredFunctions));
   const auto FilterDestructors =
       CheckDestructors ? decl() : decl(unless(cxxDestructorDecl()));
   const auto FilterOperators =

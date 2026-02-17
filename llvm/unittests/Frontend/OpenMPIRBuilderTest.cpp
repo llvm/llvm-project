@@ -6369,27 +6369,6 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
   EXPECT_TRUE(TargetDataCall->getOperand(2)->getType()->isIntegerTy(32));
   EXPECT_TRUE(TargetDataCall->getOperand(8)->getType()->isPointerTy());
 
-  // Check that BodyGenCB is still made when IsTargetDevice is set to true.
-  OMPBuilder.Config.setIsTargetDevice(true);
-  bool CheckDevicePassBodyGen = false;
-  auto BodyTargetCB = [&](InsertPointTy CodeGenIP, BodyGenTy BodyGenType) {
-    CheckDevicePassBodyGen = true;
-    Builder.restoreIP(CodeGenIP);
-    CallInst *TargetDataCall =
-        dyn_cast<CallInst>(BB->back().getPrevNode()->getPrevNode());
-    // Make sure no begin_mapper call is present for device pass.
-    EXPECT_EQ(TargetDataCall, nullptr);
-    return Builder.saveIP();
-  };
-  ASSERT_EXPECTED_INIT(
-      OpenMPIRBuilder::InsertPointTy, TargetDataIP2,
-      OMPBuilder.createTargetData(Loc, AllocaIP, Builder.saveIP(),
-                                  Builder.getInt64(DeviceID),
-                                  /* IfCond= */ nullptr, Info, GenMapInfoCB,
-                                  CustomMapperCB, nullptr, BodyTargetCB));
-  Builder.restoreIP(TargetDataIP2);
-  EXPECT_TRUE(CheckDevicePassBodyGen);
-
   Builder.CreateRetVoid();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
@@ -6501,6 +6480,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   RuntimeAttrs.TargetThreadLimit[0] = Builder.getInt32(20);
   RuntimeAttrs.TeamsThreadLimit[0] = Builder.getInt32(30);
   RuntimeAttrs.MaxThreads = Builder.getInt32(40);
+  RuntimeAttrs.DeviceID = Builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
 
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, AfterIP,
@@ -6834,6 +6814,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionSPMD) {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD,
       /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
   RuntimeAttrs.LoopTripCount = Builder.getInt64(1000);
+  RuntimeAttrs.DeviceID = Builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);

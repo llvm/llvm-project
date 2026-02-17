@@ -36,18 +36,21 @@ to learn about the defaults for your platform and target.
     - ``LIBC_ADD_NULL_CHECKS``: Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior.
 * **"math" options**
     - ``LIBC_CONF_FREXP_INF_NAN_EXPONENT``: The value written back to the second parameter when calling frexp/frexpf/frexpl` with `+/-Inf`/`NaN` is unspecified.  Configure an explicit exp value for Inf/NaN inputs.
-    - ``LIBC_CONF_MATH_OPTIMIZATIONS``: Configures optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST.
+    - ``LIBC_CONF_MATH_OPTIMIZATIONS``: Configure optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, LIBC_MATH_FAST, and LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT.
+    - ``LIBC_CONF_MATH_USE_SYSTEM_FENV``: Use C standard fenv.h calls from the system libc instead our internal fenv implementations.
 * **"printf" options**
     - ``LIBC_CONF_PRINTF_DISABLE_FIXED_POINT``: Disable printing fixed point values in printf and friends.
     - ``LIBC_CONF_PRINTF_DISABLE_FLOAT``: Disable printing floating point values in printf and friends.
     - ``LIBC_CONF_PRINTF_DISABLE_INDEX_MODE``: Disable index mode in the printf format string.
     - ``LIBC_CONF_PRINTF_DISABLE_STRERROR``: Disable handling of %m to print strerror in printf and friends.
+    - ``LIBC_CONF_PRINTF_DISABLE_WIDE``: Disable handling wide characters for printf and friends.
     - ``LIBC_CONF_PRINTF_DISABLE_WRITE_INT``: Disable handling of %n in printf format string.
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_NO_SPECIALIZE_LD``: Use the same mode for double and long double in printf.
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT``: Use dyadic float for faster and smaller but less accurate printf doubles.
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320``: Use an alternative printf float implementation based on 320-bit floats
     - ``LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE``: Use large table for better printf long double performance.
     - ``LIBC_CONF_PRINTF_RUNTIME_DISPATCH``: Use dynamic dispatch for the output mechanism to reduce code size.
+    - ``LIBC_COPT_PRINTF_DISABLE_BITINT``: Disable bitint length modifiers to reduce code size. Specifically the wNUM and wfNUM modifiers.
 * **"pthread" options**
     - ``LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a mutex is in contention (default to 100).
     - ``LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a rwlock is in contention (default to 100).
@@ -59,6 +62,10 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_SCANF_DISABLE_INDEX_MODE``: Disable index mode in the scanf format string.
 * **"setjmp" options**
     - ``LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER``: Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved.
+* **"str_to_float" options**
+    - ``LIBC_CONF_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH``: Disable Clinger's fast path for string to float conversion.
+    - ``LIBC_CONF_STRTOFLOAT_DISABLE_EISEL_LEMIRE``: Disable Eisel-Lemire algorithm for string to float conversion.
+    - ``LIBC_CONF_STRTOFLOAT_DISABLE_SIMPLE_DECIMAL_CONVERSION``: Disable simple decimal conversion for string to float conversion.
 * **"string" options**
     - ``LIBC_CONF_FIND_FIRST_CHARACTER_IMPL``: Selects the implementation for find-first-character-related functions: 'element', 'word', 'clang_vector', or 'arch_vector'.
     - ``LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING``: Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled.

@@ -1,4 +1,5 @@
 #include "CIRGenBuilder.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
 #include "clang/AST/StmtVisitor.h"
@@ -66,7 +67,12 @@ public:
 
   mlir::Value VisitExpr(Expr *e);
   mlir::Value VisitConstantExpr(ConstantExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitConstantExpr");
+    if (mlir::Attribute result = ConstantEmitter(cgf).tryEmitConstantExpr(e))
+      return builder.getConstant(cgf.getLoc(e->getSourceRange()),
+                                 mlir::cast<mlir::TypedAttr>(result));
+
+    cgf.cgm.errorNYI(e->getExprLoc(),
+                     "ComplexExprEmitter VisitConstantExpr non constantexpr");
     return {};
   }
 
@@ -204,9 +210,12 @@ public:
     return Visit(die->getExpr());
   }
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitExprWithCleanups");
-    return {};
+    CIRGenFunction::RunCleanupsScope scope(cgf);
+    mlir::Value complexVal = Visit(e->getSubExpr());
+    // Defend against dominance problems caused by jumps out of expression
+    // evaluation through the shared cleanup block.
+    scope.forceCleanup();
+    return complexVal;
   }
   mlir::Value VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
     mlir::Location loc = cgf.getLoc(e->getExprLoc());

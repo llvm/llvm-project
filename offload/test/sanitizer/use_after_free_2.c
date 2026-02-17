@@ -7,6 +7,7 @@
 // UNSUPPORTED: nvidiagpu
 //
 // REQUIRES: gpu
+// XFAIL: intelgpu
 
 // If offload memory pooling is enabled for a large allocation, reuse error is
 // not detected. UNSUPPORTED: large_allocation_memory_pool

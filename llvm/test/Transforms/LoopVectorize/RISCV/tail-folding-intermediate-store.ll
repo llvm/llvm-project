@@ -129,7 +129,7 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; NO-VP-OUTLOOP-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; NO-VP-OUTLOOP:       vector.ph:
 ; NO-VP-OUTLOOP-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-OUTLOOP-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
+; NO-VP-OUTLOOP-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
 ; NO-VP-OUTLOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP5]]
 ; NO-VP-OUTLOOP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-OUTLOOP-NEXT:    [[TMP8:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[START]], i32 0
@@ -182,7 +182,7 @@ define void @reduction_intermediate_store(ptr %a, i64 %n, i32 %start, ptr %addr)
 ; NO-VP-INLOOP-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; NO-VP-INLOOP:       vector.ph:
 ; NO-VP-INLOOP-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-INLOOP-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
+; NO-VP-INLOOP-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
 ; NO-VP-INLOOP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP5]]
 ; NO-VP-INLOOP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-INLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]

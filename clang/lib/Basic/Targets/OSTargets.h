@@ -255,6 +255,7 @@ public:
       break;
     case llvm::Triple::loongarch64:
     case llvm::Triple::riscv64:
+    case llvm::Triple::riscv64be:
       break;
     }
   }
@@ -519,6 +520,7 @@ public:
       break;
     case llvm::Triple::loongarch64:
     case llvm::Triple::riscv64:
+    case llvm::Triple::riscv64be:
       break;
     }
   }
@@ -940,14 +942,45 @@ public:
   }
 };
 
-// WASI target
+// WASIp1 target
 template <typename Target>
-class LLVM_LIBRARY_VISIBILITY WASITargetInfo
+class LLVM_LIBRARY_VISIBILITY WASIP1TargetInfo
     : public WebAssemblyOSTargetInfo<Target> {
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const final {
     WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
     Builder.defineMacro("__wasi__");
+    Builder.defineMacro("__wasip1__");
+  }
+
+public:
+  using WebAssemblyOSTargetInfo<Target>::WebAssemblyOSTargetInfo;
+};
+
+// WASIp2 target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY WASIP2TargetInfo
+    : public WebAssemblyOSTargetInfo<Target> {
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const final {
+    WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
+    Builder.defineMacro("__wasi__");
+    Builder.defineMacro("__wasip2__");
+  }
+
+public:
+  using WebAssemblyOSTargetInfo<Target>::WebAssemblyOSTargetInfo;
+};
+
+// WASIp3 target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY WASIP3TargetInfo
+    : public WebAssemblyOSTargetInfo<Target> {
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const final {
+    WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
+    Builder.defineMacro("__wasi__");
+    Builder.defineMacro("__wasip3__");
   }
 
 public:

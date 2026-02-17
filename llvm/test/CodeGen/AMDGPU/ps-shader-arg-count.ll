@@ -359,7 +359,7 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
   ret { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res
 }
 
-attributes #0 = { nounwind "target-features"=",+wavefrontsize64,+cumode"  }
-attributes #1 = { nounwind "InitialPSInputAddr"="2" "target-features"=",+wavefrontsize64,+cumode" }
-attributes #2 = { nounwind "InitialPSInputAddr"="0xffff" "target-features"=",+wavefrontsize64,+cumode" }
-attributes #3 = { nounwind "InitialPSInputAddr"="0" "target-features"=",+wavefrontsize64,+cumode" }
+attributes #0 = { nounwind "target-features"="+wavefrontsize64,+cumode"  }
+attributes #1 = { nounwind "InitialPSInputAddr"="2" "target-features"="+wavefrontsize64,+cumode" }
+attributes #2 = { nounwind "InitialPSInputAddr"="0xffff" "target-features"="+wavefrontsize64,+cumode" }
+attributes #3 = { nounwind "InitialPSInputAddr"="0" "target-features"="+wavefrontsize64,+cumode" }

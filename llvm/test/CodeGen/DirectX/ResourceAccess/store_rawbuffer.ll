@@ -26,7 +26,7 @@ define void @storef32_byte(i32 %offset, float %data) {
   %ptr = call ptr @llvm.dx.resource.getpointer(
       target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset)
 
-  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.f32(target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset, i32 0, float %data)
+  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.f32(target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset, i32 poison, float %data)
   store float %data, ptr %ptr
 
   ret void
@@ -56,7 +56,7 @@ define void @storev4f32_byte(i32 %offset, <4 x float> %data) {
   %ptr = call ptr @llvm.dx.resource.getpointer(
       target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset)
 
-  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f32(target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset, i32 0, <4 x float> %data)
+  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f32(target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset, i32 poison, <4 x float> %data)
   store <4 x float> %data, ptr %ptr
 
   ret void
@@ -117,7 +117,7 @@ define void @storev4f64_byte(i32 %offset, <4 x double> %data) {
   %ptr = call ptr @llvm.dx.resource.getpointer(
       target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset)
 
-  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f64(target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset, i32 0, <4 x double> %data)
+  ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f64(target("dx.RawBuffer", i8, 1, 0, 0) %buffer, i32 %offset, i32 poison, <4 x double> %data)
   store <4 x double> %data, ptr %ptr
 
   ret void

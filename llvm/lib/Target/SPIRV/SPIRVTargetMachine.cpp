@@ -14,6 +14,7 @@
 #include "SPIRV.h"
 #include "SPIRVCBufferAccess.h"
 #include "SPIRVGlobalRegistry.h"
+#include "SPIRVLegalizeZeroSizeArrays.h"
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVPushConstantAccess.h"
 #include "SPIRVStructurizerWrapper.h"
@@ -32,6 +33,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include <optional>
@@ -54,6 +56,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVPushConstantAccessLegacyPass(PR);
   initializeSPIRVPreLegalizerCombinerPass(PR);
   initializeSPIRVLegalizePointerCastPass(PR);
+  initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
   initializeSPIRVRegularizerPass(PR);
   initializeSPIRVPreLegalizerPass(PR);
   initializeSPIRVPostLegalizerPass(PR);
@@ -171,7 +174,16 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void SPIRVPassConfig::addIRPasses() {
+  addPass(createAtomicExpandLegacyPass());
+
   TargetPassConfig::addIRPasses();
+
+  // Variadic function calls aren't supported in shader code.
+  // This needs to come before SPIRVPrepareFunctions because this
+  // may introduce intrinsic calls.
+  if (!TM.getSubtargetImpl()->isShader()) {
+    addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
+  }
 
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVPrepareFunctionsPass(TM));
@@ -209,15 +221,15 @@ void SPIRVPassConfig::addISelPrepare() {
     // back to virtual registers.
     addPass(createPromoteMemoryToRegisterPass());
   }
-
+  SPIRVTargetMachine &TM = getTM<SPIRVTargetMachine>();
   addPass(createSPIRVStripConvergenceIntrinsicsPass());
   addPass(createSPIRVLegalizeImplicitBindingPass());
+  addPass(createSPIRVLegalizeZeroSizeArraysPass(TM));
   addPass(createSPIRVCBufferAccessLegacyPass());
-  addPass(
-      createSPIRVPushConstantAccessLegacyPass(&getTM<SPIRVTargetMachine>()));
-  addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
+  addPass(createSPIRVPushConstantAccessLegacyPass(&TM));
+  addPass(createSPIRVEmitIntrinsicsPass(&TM));
   if (TM.getSubtargetImpl()->isLogicalSPIRV())
-    addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
+    addPass(createSPIRVLegalizePointerCastPass(&TM));
   TargetPassConfig::addISelPrepare();
 }
 

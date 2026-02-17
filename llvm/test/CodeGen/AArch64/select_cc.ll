@@ -120,12 +120,11 @@ define <4 x i32> @select_icmp_sgt(<4 x i32> %a, <4 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: select_icmp_sgt:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #0 // =0x0
+; CHECK-GI-NEXT:    movi d2, #0000000000000000
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    fmov s2, w8
-; CHECK-GI-NEXT:    mov v2.b[1], w8
-; CHECK-GI-NEXT:    mov v2.b[2], w8
-; CHECK-GI-NEXT:    mov v2.b[3], w8
+; CHECK-GI-NEXT:    mov v2.b[1], wzr
+; CHECK-GI-NEXT:    mov v2.b[2], wzr
+; CHECK-GI-NEXT:    mov v2.b[3], wzr
 ; CHECK-GI-NEXT:    cmgt v1.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    umov w8, v1.b[0]
 ; CHECK-GI-NEXT:    umov w9, v1.b[1]

@@ -11,6 +11,7 @@ tablegen(LLVM HexagonGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM HexagonGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM HexagonGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM HexagonGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM HexagonGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM HexagonGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(HexagonCommonTableGen)
@@ -37,6 +38,8 @@ add_llvm_target(HexagonCodeGen
   HexagonGenMemAbsolute.cpp
   HexagonGenMux.cpp
   HexagonGenPredicate.cpp
+  HexagonGlobalRegion.cpp
+  HexagonLiveVariables.cpp
   HexagonHardwareLoops.cpp
   HexagonHazardRecognizer.cpp
   HexagonInstrInfo.cpp

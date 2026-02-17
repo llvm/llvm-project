@@ -21,6 +21,7 @@ extern "C" {
 
 void RTDECL(CUFRegisterAllocator)();
 cudaStream_t RTDECL(CUFGetAssociatedStream)(void *);
+int RTDECL(CUFSetAssociatedStream)(void *, cudaStream_t);
 }
 
 void *CUFAllocPinned(std::size_t, std::int64_t *);

@@ -83,7 +83,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
     if (Data.contains("/*"))
       continue;
 
-    UnnamedParams.push_back(std::make_pair(Function, I));
+    UnnamedParams.emplace_back(Function, I);
   }
 
   // Emit only one warning per function but fixits for all unnamed parameters.

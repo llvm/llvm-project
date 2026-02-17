@@ -23,7 +23,7 @@
 #include "orc-rt-c/WrapperFunction.h"
 
 #include <cassert>
-#include <condition_variable>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -156,15 +156,13 @@ public:
     if (auto TmpCA = CA)
       CA->callController(std::move(OnComplete), T, std::move(ArgBytes));
     else
-      OnComplete(
-          WrapperFunctionBuffer::createOutOfBandError("no controller attached")
-              .release());
+      OnComplete(WrapperFunctionBuffer::createOutOfBandError(
+          "no controller attached"));
   }
 
 private:
   struct ShutdownInfo {
     bool Complete = false;
-    std::condition_variable CompleteCV;
     std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
     std::vector<OnShutdownCompleteFn> OnCompletes;
   };

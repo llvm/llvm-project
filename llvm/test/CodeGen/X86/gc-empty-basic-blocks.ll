@@ -1,6 +1,6 @@
-;; This test verifies that -gc-empty-basic-blocks removes regular empty blocks
-;; but does not remove empty blocks which have their address taken.
-; RUN: llc < %s -mtriple=x86_64 -O0 -gc-empty-basic-blocks | FileCheck %s
+;; This test verifies that -enable-gc-empty-basic-blocks removes regular empty
+;; blocks but does not remove empty blocks which have their address taken.
+; RUN: llc < %s -mtriple=x86_64 -O0 -enable-gc-empty-basic-blocks | FileCheck %s
 
 ;; This function has a regular empty block.
 define void @foo(i1 zeroext %0) nounwind {
@@ -33,7 +33,7 @@ empty_block:                                     ; preds = %1
 }
 
 ;; This function has an empty block which has its address taken. Check that it
-;; is not removed by -gc-empty-basic-blocks.
+;; is not removed by -enable-gc-empty-basic-blocks.
 define void @bar(i1 zeroext %0) nounwind {
 entry:
   %1 = select i1 %0, ptr blockaddress(@bar, %empty_block), ptr blockaddress(@bar, %bb2) ; <ptr> [#uses=1]

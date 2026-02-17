@@ -94,7 +94,7 @@ bool M68kInstrInfo::AnalyzeBranchImpl(MachineBasicBlock &MBB,
 
   // Erase any instructions if allowed at the end of the scope.
   std::vector<std::reference_wrapper<llvm::MachineInstr>> EraseList;
-  auto FinalizeOnReturn = llvm::make_scope_exit([&EraseList] {
+  llvm::scope_exit FinalizeOnReturn([&EraseList] {
     for (auto &Ref : EraseList)
       Ref.get().eraseFromParent();
   });
@@ -841,7 +841,7 @@ void M68kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MI,
                                          Register DstReg, int FrameIndex,
                                          const TargetRegisterClass *RC,
-                                         Register VReg,
+                                         Register VReg, unsigned SubReg,
                                          MachineInstr::MIFlag Flags) const {
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
   assert(MFI.getObjectSize(FrameIndex) >= TRI.getSpillSize(*RC) &&

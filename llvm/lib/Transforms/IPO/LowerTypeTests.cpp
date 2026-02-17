@@ -851,7 +851,7 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     }
 
     GlobalInits.push_back(GV->getInitializer());
-    uint64_t InitSize = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t InitSize = GV->getGlobalSize(DL);
     CurOffset = GVOffset + InitSize;
 
     // Compute the amount of padding that we'd like for the next element.
@@ -1001,10 +1001,12 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
       GV->setMetadata(LLVMContext::MD_absolute_symbol,
                       MDNode::get(M.getContext(), {MinC, MaxC}));
     };
-    if (AbsWidth == IntPtrTy->getBitWidth())
-      SetAbsRange(~0ull, ~0ull); // Full set.
-    else
+    if (AbsWidth == IntPtrTy->getBitWidth()) {
+      uint64_t AllOnes = IntPtrTy->getBitMask();
+      SetAbsRange(AllOnes, AllOnes); // Full set.
+    } else {
       SetAbsRange(0, 1ull << AbsWidth);
+    }
     return C;
   };
 
@@ -1454,8 +1456,7 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   // Can not RAUW F with an expression that uses F. Replace with a temporary
   // placeholder first.
   Function *PlaceholderFn =
-      Function::Create(cast<FunctionType>(F->getValueType()),
-                       GlobalValue::ExternalWeakLinkage,
+      Function::Create(F->getFunctionType(), GlobalValue::ExternalWeakLinkage,
                        F->getAddressSpace(), "", &M);
   replaceCfiUses(F, PlaceholderFn, IsJumpTableCanonical);
 

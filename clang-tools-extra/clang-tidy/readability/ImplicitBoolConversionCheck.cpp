@@ -27,7 +27,7 @@ AST_MATCHER(Stmt, isMacroExpansion) {
   return SM.isMacroBodyExpansion(Loc) || SM.isMacroArgExpansion(Loc);
 }
 
-AST_MATCHER(Stmt, isC23) { return Finder->getASTContext().getLangOpts().C23; }
+AST_MATCHER(Stmt, isC) { return Finder->getASTContext().getLangOpts().C99; }
 
 // Preserve same name as AST_MATCHER(isNULLMacroExpansion)
 // NOLINTNEXTLINE(llvm-prefer-static-over-anonymous-namespace)
@@ -293,8 +293,8 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                          hasCastKind(CK_FloatingToBoolean),
                          hasCastKind(CK_PointerToBoolean),
                          hasCastKind(CK_MemberPointerToBoolean)),
-                   // Exclude cases of C23 comparison result.
-                   unless(allOf(isC23(),
+                   // Exclude cases of C comparison result.
+                   unless(allOf(isC(),
                                 hasSourceExpression(ignoringParens(
                                     binaryOperator(hasAnyOperatorName(
                                         ">", ">=", "==", "!=", "<", "<=")))))),
@@ -337,6 +337,9 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               unless(hasParent(
                   binaryOperator(anyOf(BoolComparison, BoolXor,
                                        BoolOpAssignment, BitfieldAssignment)))),
+              // Exclude logical operators in C
+              unless(allOf(isC(), hasParent(binaryOperator(
+                                      hasAnyOperatorName("&&", "||"))))),
               implicitCastExpr().bind("implicitCastFromBool"),
               unless(hasParent(BitfieldConstruct)),
               // Check also for nested casts, for example: bool -> int -> float.

@@ -103,6 +103,7 @@ static_library("Support") {
     "InitLLVM.cpp",
     "InstructionCost.cpp",
     "IntEqClasses.cpp",
+    "IntegerInclusiveInterval.cpp",
     "IntervalMap.cpp",
     "JSON.cpp",
     "Jobserver.cpp",

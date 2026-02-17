@@ -41,10 +41,11 @@ private:
 
 } // namespace
 
-static const char InterruptingStr[] = "interrupting";
-static const char WarningMessage[] = "do not use 'else' after '%0'";
-static const char WarnOnUnfixableStr[] = "WarnOnUnfixable";
-static const char WarnOnConditionVariablesStr[] = "WarnOnConditionVariables";
+static constexpr char InterruptingStr[] = "interrupting";
+static constexpr char WarningMessage[] = "do not use 'else' after '%0'";
+static constexpr char WarnOnUnfixableStr[] = "WarnOnUnfixable";
+static constexpr char WarnOnConditionVariablesStr[] =
+    "WarnOnConditionVariables";
 
 static const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
   if (!Node)

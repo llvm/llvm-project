@@ -13,8 +13,8 @@ define i32 @iv_live_out_wide(ptr %dst) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i32 [[TMP4]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i32 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i32 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i32 [[TMP5]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 2000, [[TMP6]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 2000, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

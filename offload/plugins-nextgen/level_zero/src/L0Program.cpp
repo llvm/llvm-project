@@ -102,7 +102,7 @@ Error L0ProgramBuilderTy::addModule(size_t Size, const uint8_t *Image,
 Error L0ProgramBuilderTy::linkModules() {
   auto &l0Device = getL0Device();
   if (!RequiresModuleLink) {
-    DP("Module link is not required\n");
+    ODBG(OLDT_Module) << "Module link is not required";
     return Plugin::success();
   }
 
@@ -150,19 +150,19 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
   auto ExpectedNewE =
       ELFObjectFileBase::createELFObjectFile(MB->getMemBufferRef());
   if (!ExpectedNewE) {
-    DP("Warning: unable to get ELF handle!\n");
+    ODBG(OLDT_Module) << "Warning: unable to get ELF handle!";
     return false;
   }
   bool Res = false;
   auto processObjF = [&](const auto ELFObjF) {
     if (!ELFObjF) {
-      DP("Warning: Unexpected ELF type!\n");
+      ODBG(OLDT_Module) << "Warning: Unexpected ELF type!";
       return false;
     }
     const auto &ELFF = ELFObjF->getELFFile();
     auto Sections = ELFF.sections();
     if (!Sections) {
-      DP("Warning: unable to get ELF sections!\n");
+      ODBG(OLDT_Module) << "Warning: unable to get ELF sections!";
       return false;
     }
     bool SeenOffloadSection = false;
@@ -172,7 +172,7 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
       Error Err = Plugin::success();
       for (auto Note : ELFF.notes(Sec, Err)) {
         if (Err) {
-          DP("Warning: unable to get ELF notes handle!\n");
+          ODBG(OLDT_Module) << "Warning: unable to get ELF notes handle!";
           return false;
         }
         if (Note.getName() != "INTELONEOMPOFFLOAD")
@@ -185,8 +185,8 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
         const auto DelimPos = DescStr.find('.');
         if (DelimPos == std::string::npos) {
           // The version has to look like "Major#.Minor#".
-          DP("Invalid NT_INTEL_ONEOMP_OFFLOAD_VERSION: '%s'\n",
-             DescStr.c_str());
+          ODBG(OLDT_Module)
+              << "Invalid NT_INTEL_ONEOMP_OFFLOAD_VERSION: '" << DescStr << "'";
           return false;
         }
         const std::string MajorVerStr = DescStr.substr(0, DelimPos);
@@ -222,7 +222,7 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
 
   uint64_t MajorVer, MinorVer;
   if (!isValidOneOmpImage(Image.getBuffer(), MajorVer, MinorVer)) {
-    DP("Warning: image is not a valid oneAPI OpenMP image.\n");
+    ODBG(OLDT_Module) << "Warning: image is not a valid oneAPI OpenMP image.";
     return Plugin::error(ErrorCode::UNKNOWN, "Invalid oneAPI OpenMP image");
   }
 
@@ -270,14 +270,15 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
         auto DescStrRef = Note.getDescAsStringRef(4);
         switch (Type) {
         default:
-          DP("Warning: unrecognized INTELONEOMPOFFLOAD note.\n");
+          ODBG(OLDT_Module) << "Warning: unrecognized INTELONEOMPOFFLOAD note.";
           break;
         case NT_INTEL_ONEOMP_OFFLOAD_VERSION:
           break;
         case NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT:
           if (DescStrRef.getAsInteger(10, ImageCount)) {
-            DP("Warning: invalid NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT: '%s'\n",
-               DescStrRef.str().c_str());
+            ODBG(OLDT_Module) << "Warning: invalid "
+                              << "NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT: '"
+                              << DescStrRef.str() << "'";
             ImageCount = 0;
           }
           break;
@@ -288,31 +289,30 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
 
           // Ignore records with less than 4 strings.
           if (Parts.size() != 4) {
-            DP("Warning: short NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX "
-               "record is ignored.\n");
+            ODBG(OLDT_Module) << "Warning: short "
+                              << "NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX "
+                              << "record is ignored.";
             continue;
           }
 
           uint64_t Idx = 0;
           if (Parts[0].getAsInteger(10, Idx)) {
-            DP("Warning: ignoring auxiliary information (invalid index "
-               "'%s').\n",
-               Parts[0].str().c_str());
+            ODBG(OLDT_Module) << "Warning: ignoring auxiliary information "
+                              << "(invalid index '" << Parts[0].str() << "').";
             continue;
           }
           MaxImageIdx = (std::max)(MaxImageIdx, Idx);
           if (AuxInfo.find(Idx) != AuxInfo.end()) {
-            DP("Warning: duplicate auxiliary information for image %" PRIu64
-               " is ignored.\n",
-               Idx);
+            ODBG(OLDT_Module) << "Warning: duplicate auxiliary information for "
+                              << "image " << Idx << " is ignored.";
             continue;
           }
 
           uint64_t Part1Id;
           if (Parts[1].getAsInteger(10, Part1Id)) {
-            DP("Warning: ignoring auxiliary information (invalid part id "
-               "'%s').\n",
-               Parts[1].str().c_str());
+            ODBG(OLDT_Module)
+                << "Warning: ignoring auxiliary information "
+                << "(invalid part id '" << Parts[1].str() << "').";
             continue;
           }
 
@@ -325,7 +325,8 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
     }
 
     if (MaxImageIdx >= ImageCount)
-      DP("Warning: invalid image index found in auxiliary information.\n");
+      ODBG(OLDT_Module) << "Warning: invalid image index found in auxiliary "
+                        << "information.";
 
     for (auto Sec : *Sections) {
       const char *Prefix = "__openmp_offload_spirv_";
@@ -343,27 +344,26 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
       // in the image and we keep the ordering in the runtime.
       SectionNameRef = Parts.first;
       if (Parts.second.empty()) {
-        DP("Found a single section in the image\n");
+        ODBG(OLDT_Module) << "Found a single section in the image";
       } else {
-        DP("Found a split section in the image\n");
+        ODBG(OLDT_Module) << "Found a split section in the image";
       }
 
       uint64_t Idx = 0;
       if (SectionNameRef.getAsInteger(10, Idx)) {
-        DP("Warning: ignoring image section (invalid index '%s').\n",
-           SectionNameRef.str().c_str());
+        ODBG(OLDT_Module) << "Warning: ignoring image section (invalid index '"
+                          << SectionNameRef.str() << "').";
         continue;
       }
       if (Idx >= ImageCount) {
-        DP("Warning: ignoring image section (index %" PRIu64
-           " is out of range).\n",
-           Idx);
+        ODBG(OLDT_Module) << "Warning: ignoring image section (index " << Idx
+                          << " is out of range).";
         continue;
       }
 
       auto AuxInfoIt = AuxInfo.find(Idx);
       if (AuxInfoIt == AuxInfo.end()) {
-        DP("Warning: ignoring image section (no aux info).\n");
+        ODBG(OLDT_Module) << "Warning: ignoring image section (no aux info).";
         continue;
       }
       auto Contents = E.getSectionContents(Sec);
@@ -384,22 +384,23 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
   for (uint64_t Idx = 0; Idx < ImageCount; ++Idx) {
     const auto It = AuxInfo.find(Idx);
     if (It == AuxInfo.end()) {
-      DP("Warning: image %" PRIu64
-         " without auxiliary information is ingored.\n",
-         Idx);
+      ODBG(OLDT_Module) << "Warning: image " << Idx
+                        << " without auxiliary information is ingored.";
       continue;
     }
 
     const auto NumParts = It->second.PartBegin.size();
     // Split-kernel is not supported in SPIRV format.
     if (NumParts > 1 && It->second.Format != 0) {
-      DP("Warning: split-kernel images are not supported in SPIRV format\n");
+      ODBG(OLDT_Module) << "Warning: split-kernel images are not supported in "
+                        << "SPIRV format";
       continue;
     }
 
     // Skip unknown image format.
     if (It->second.Format != 0 && It->second.Format != 1) {
-      DP("Warning: image %" PRIu64 "is ignored due to unknown format.\n", Idx);
+      ODBG(OLDT_Module) << "Warning: image " << Idx << " is ignored due to "
+                        << "unknown format.";
       continue;
     }
 
@@ -417,15 +418,16 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
           reinterpret_cast<const unsigned char *>(It->second.PartBegin[I]);
       size_t ImgSize = It->second.PartSize[I];
 
-      DP("Creating module from %s image part #%" PRIu64 "-%zu.\n",
-         IsBinary ? "Binary" : "SPIR-V", Idx, I);
+      ODBG(OLDT_Module) << "Creating module from "
+                        << (IsBinary ? "Binary" : "SPIR-V") << " image part #"
+                        << Idx << "-" << I << ".";
       if (auto Err = addModule(ImgSize, ImgBegin, Options, ModuleFormat))
         return Err;
     }
-    DP("Created module from image #%" PRIu64 ".\n", Idx);
+    ODBG(OLDT_Module) << "Created module from image #" << Idx << ".";
 
     if (RequiresModuleLink) {
-      DP("Linking modules after adding image #%" PRIu64 ".\n", Idx);
+      ODBG(OLDT_Module) << "Linking modules after adding image #" << Idx << ".";
       if (auto Err = linkModules())
         return Err;
     }
@@ -451,7 +453,7 @@ Expected<std::unique_ptr<MemoryBuffer>> L0ProgramBuilderTy::getELF() {
 }
 
 Expected<void *> L0ProgramTy::getSymbolDeviceAddr(const char *CName) const {
-  DP("Looking up OpenMP global variable '%s'.\n", CName);
+  ODBG(OLDT_Module) << "Looking up OpenMP global variable '" << CName << "'.";
 
   if (!GlobalModule || !CName)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,

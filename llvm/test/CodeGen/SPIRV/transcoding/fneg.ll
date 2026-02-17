@@ -11,21 +11,21 @@
 ; CHECK-SPIRV: %[[#r6:]] = OpFNegate %[[#float]]
 ; CHECK-SPIRV: %[[#r7:]] = OpFNegate %[[#float]]
 
-define spir_kernel void @testFNeg(float %a, float addrspace(1)* %out) local_unnamed_addr {
+define spir_kernel void @testFNeg(float %a, ptr addrspace(1) %out) local_unnamed_addr {
 entry:
   %r1 = fneg float %a
-  store volatile float %r1, float addrspace(1)* %out
+  store volatile float %r1, ptr addrspace(1) %out
   %r2 = fneg nnan float %a
-  store volatile float %r2, float addrspace(1)* %out
+  store volatile float %r2, ptr addrspace(1) %out
   %r3 = fneg ninf float %a
-  store volatile float %r3, float addrspace(1)* %out
+  store volatile float %r3, ptr addrspace(1) %out
   %r4 = fneg nsz float %a
-  store volatile float %r4, float addrspace(1)* %out
+  store volatile float %r4, ptr addrspace(1) %out
   %r5 = fneg arcp float %a
-  store volatile float %r5, float addrspace(1)* %out
+  store volatile float %r5, ptr addrspace(1) %out
   %r6 = fneg fast float %a
-  store volatile float %r6, float addrspace(1)* %out
+  store volatile float %r6, ptr addrspace(1) %out
   %r7 = fneg nnan ninf float %a
-  store volatile float %r7, float addrspace(1)* %out
+  store volatile float %r7, ptr addrspace(1) %out
   ret void
 }

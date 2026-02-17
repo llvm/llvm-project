@@ -116,11 +116,17 @@
 ; RUN:	-thinlto-threads=1 \
 ; RUN:  -memprof-verify-ccg -memprof-verify-nodes -stats \
 ; RUN:  -pass-remarks=. -save-temps \
+; RUN:	-memprof-export-to-dot -memprof-dot-file-path-prefix=%t. \
 ; RUN:  -o %t.out 2>&1 | FileCheck %s --check-prefix=STATS \
 ; RUN:  --check-prefix=STATS-BE --check-prefix=REMARKS-MAIN \
 ; RUN:  --check-prefix=REMARKS-FOO --check-prefix=REMARKS-FOO-IMPORT
 
 ; RUN: llvm-dis %t.out.2.4.opt.bc -o - | FileCheck %s --check-prefix=IR --check-prefix=IR-IMPORT
+
+;; We should print both potential indirect callees after initially matching
+;; stack nodes to the summary.
+; RUN: cat %t.ccg.poststackupdate.dot | FileCheck %s --check-prefix=DOT
+; DOT: {OrigId: 0 NodeId: 10\n_Z3fooR2B0j -\> _ZN1B3barEj\n_Z3fooR2B0j -\> _ZN2B03barEj}
 
 ;; Try again but with distributed ThinLTO
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \

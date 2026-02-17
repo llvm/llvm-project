@@ -297,7 +297,7 @@ The :doc:`CodeOfConduct` applies to all office hours.
       submitting talks; and other general LLVM-related topics. Arm/AArch64
       codegen. LLVM security group. LLVM Office Hours.
     - Every 2nd and 4th Wednesday of the month at 9.30am CET, for 30 minutes.
-      `ics <https://calendar.google.com/calendar/ical/co0h4ndpvtfe64opn7eraiq3ac%40group.calendar.google.com/public/basic.ics>`__
+      `ics <https://user.fm/calendar/v1-eac36694e3024854a9402da023f9e0fa/Kristof%20Beyls%20LLVM%20office%20hours.ics>`__
     - `Jitsi <https://meet.jit.si/KristofBeylsLLVMOfficeHour>`__
     - English, Flemish, Dutch
   * - Alina Sbirlea
