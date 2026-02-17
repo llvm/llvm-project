@@ -179,8 +179,8 @@ for.end:
 ; Cost of store:
 ;   store(4) / 2 = 2
 ;
-; CHECK: Scalarizing: %tmp2 = add nsw i32 %tmp1, %x
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %tmp0, align 4
+; CHECK: Scalarizing: %tmp2 = add nsw i32 %tmp1, %x
 ; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %tmp0, align 4
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp2 = add nsw i32 %tmp1, %x
 ;
@@ -229,10 +229,11 @@ for.end:
 ;   store(4) / 2 = 2
 ;
 ; CHECK-NOT: Scalarizing: %tmp2 = add i32 %tmp1, %x
+; CHECK:     Scalarizing and predicating: store i32 %tmp5, ptr %tmp0, align 4
+; CHECK-NOT: Scalarizing: %tmp2 = add i32 %tmp1, %x
 ; CHECK:     Scalarizing and predicating: %tmp3 = sdiv i32 %tmp1, %tmp2
 ; CHECK:     Scalarizing and predicating: %tmp4 = udiv i32 %tmp3, %tmp2
 ; CHECK:     Scalarizing: %tmp5 = sub i32 %tmp4, %x
-; CHECK:     Scalarizing and predicating: store i32 %tmp5, ptr %tmp0, align 4
 ; CHECK: Cost of 7 for VF 2: profitable to scalarize   %tmp3 = sdiv i32 %tmp1, %tmp2
 ; CHECK: Cost of 7 for VF 2: profitable to scalarize   %tmp4 = udiv i32 %tmp3, %tmp2
 ; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp5, ptr %tmp0, align 4

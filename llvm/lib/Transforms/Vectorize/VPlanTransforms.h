@@ -483,6 +483,10 @@ struct VPlanTransforms {
   /// are only valid for a subset of VFs in Range, Range.End is updated.
   static void createPartialReductions(VPlan &Plan, VPCostContext &CostCtx,
                                       VFRange &Range);
+
+  static void makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
+                                         VPRecipeBuilder &RecipeBuilder,
+                                         VPCostContext &CostCtx);
 };
 
 } // namespace llvm

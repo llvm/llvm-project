@@ -5,6 +5,7 @@
 
 ; CHECK: VPlan for loop in 'foo' after printAfterInitialConstruction
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::introduceMasksAndLinearize
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::makeMemOpWideningDecisions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::clearReductionWrapFlags
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimizeFindIVReductions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::handleMultiUseReductions

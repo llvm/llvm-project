@@ -52,11 +52,6 @@ class VPRecipeBuilder {
   /// Range. The function should not be called for memory instructions or calls.
   bool shouldWiden(Instruction *I, VFRange &Range) const;
 
-  /// Check if the load or store instruction \p VPI should widened for \p
-  /// Range.Start and potentially masked. Such instructions are handled by a
-  /// recipe that takes an additional VPInstruction for the mask.
-  VPRecipeBase *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
-
   /// Optimize the special case where the operand of \p VPI is a constant
   /// integer induction variable.
   VPWidenIntOrFpInductionRecipe *
@@ -72,23 +67,30 @@ class VPRecipeBuilder {
   /// cost-model indicates that widening should be performed.
   VPWidenRecipe *tryToWiden(VPInstruction *VPI);
 
-  /// Makes Histogram count operations safe for vectorization, by emitting a
-  /// llvm.experimental.vector.histogram.add intrinsic in place of the
-  /// Load + Add|Sub + Store operations that perform the histogram in the
-  /// original scalar loop.
-  VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
-                                         VPInstruction *VPI);
-
 public:
   VPRecipeBuilder(VPlan &Plan, const TargetLibraryInfo *TLI,
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM, VPBuilder &Builder)
       : Plan(Plan), TLI(TLI), Legal(Legal), CM(CM), Builder(Builder) {}
 
+  VPBuilder &getVPBuilder() const { return Builder; }
+
   /// Create and return a widened recipe for a non-phi recipe \p R if one can be
   /// created within the given VF \p Range.
   VPRecipeBase *tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                                              VFRange &Range);
+
+  /// Check if the load or store instruction \p VPI should widened for \p
+  /// Range.Start and potentially masked. Such instructions are handled by a
+  /// recipe that takes an additional VPInstruction for the mask.
+  VPRecipeBase *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
+
+  /// Makes Histogram count operations safe for vectorization, by emitting a
+  /// llvm.experimental.vector.histogram.add intrinsic in place of the
+  /// Load + Add|Sub + Store operations that perform the histogram in the
+  /// original scalar loop.
+  VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
+                                         VPInstruction *VPI);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {
