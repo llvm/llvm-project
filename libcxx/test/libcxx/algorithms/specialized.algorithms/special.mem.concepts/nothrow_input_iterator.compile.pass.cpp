@@ -11,7 +11,6 @@
 // template<class I>
 // concept __nothrow_input_iterator;
 
-#include <iterator>
 #include <memory>
 
 #include "test_iterators.h"

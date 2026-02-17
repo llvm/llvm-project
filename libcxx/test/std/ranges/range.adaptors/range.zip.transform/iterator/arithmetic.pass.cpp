@@ -22,7 +22,6 @@
 #include <ranges>
 
 #include <array>
-#include <cassert>
 #include <concepts>
 #include <functional>
 

@@ -25,7 +25,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cassert>
 #include <ranges>
 
 #include "almost_satisfies_types.h"

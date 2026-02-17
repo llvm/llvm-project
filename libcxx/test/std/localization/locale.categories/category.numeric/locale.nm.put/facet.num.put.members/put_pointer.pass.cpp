@@ -19,7 +19,6 @@
 #include <locale>
 
 #include "test_iterators.h"
-#include "test_macros.h"
 
 typedef std::num_put<char, cpp17_output_iterator<char*> > F;
 

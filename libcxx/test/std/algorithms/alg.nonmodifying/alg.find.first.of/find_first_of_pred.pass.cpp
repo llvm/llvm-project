@@ -15,9 +15,8 @@
 //   find_first_of(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2, Pred pred);
 
 #include <algorithm>
-#include <cassert>
 #include <functional>
-#include <iterator>
+#include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"

@@ -32,7 +32,6 @@
 #include <functional>
 #include <iterator>
 #include <ranges>
-#include <type_traits>
 
 #include "test_iterators.h"
 

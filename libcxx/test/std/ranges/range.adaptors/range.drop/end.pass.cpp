@@ -13,7 +13,6 @@
 // constexpr auto end() const
 //   requires range<const V>
 
-#include <cassert>
 #include <ranges>
 
 #include "test_macros.h"

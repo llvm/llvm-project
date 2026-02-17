@@ -10,7 +10,6 @@
 
 // Test std::views::adjacent<N>
 
-#include <cassert>
 #include <concepts>
 #include <cstddef>
 #include <iterator>

@@ -17,9 +17,8 @@
 //   replace_copy_if(InIter first, InIter last, OutIter result, Pred pred, const T& new_value);
 
 #include <algorithm>
-#include <cassert>
 #include <functional>
-#include <iterator>
+#include <cassert>
 
 #include "test_macros.h"
 #include "test_iterators.h"

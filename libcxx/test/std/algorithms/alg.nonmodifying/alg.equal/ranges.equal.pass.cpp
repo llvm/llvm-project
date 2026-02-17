@@ -26,7 +26,6 @@
 #include <array>
 #include <cassert>
 #include <concepts>
-#include <cstdint>
 #include <functional>
 #include <ranges>
 #include <vector>

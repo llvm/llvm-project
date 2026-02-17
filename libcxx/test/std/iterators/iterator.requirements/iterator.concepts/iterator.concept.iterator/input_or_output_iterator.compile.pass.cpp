@@ -11,7 +11,6 @@
 // template<class In>
 // concept input_or_output_iterator;
 
-#include <cstddef>
 #include <iterator>
 
 #include "test_iterators.h"

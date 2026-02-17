@@ -24,7 +24,6 @@
 //  using reference         = iter_rvalue_reference_t<Iterator>; // Until C++20, value_type&&
 // };
 
-#include <cstddef>
 #include <functional>
 #include <iterator>
 #include <type_traits>

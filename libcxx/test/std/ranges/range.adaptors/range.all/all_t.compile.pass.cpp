@@ -14,7 +14,6 @@
 #include <ranges>
 
 #include "test_iterators.h"
-#include "test_macros.h"
 
 struct View : std::ranges::view_base {
   int *begin() const;

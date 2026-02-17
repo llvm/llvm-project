@@ -11,7 +11,6 @@
 // zip_transform_view() = default;
 
 #include <ranges>
-#include <utility>
 
 #include <cassert>
 #include <type_traits>

@@ -11,10 +11,8 @@
 // constexpr auto end() requires(!(simple-view<Views> && ...))
 // constexpr auto end() const requires(range<const Views>&&...)
 
-#include <cassert>
 #include <ranges>
 #include <tuple>
-#include <utility>
 
 #include "../range_adaptor_types.h"
 

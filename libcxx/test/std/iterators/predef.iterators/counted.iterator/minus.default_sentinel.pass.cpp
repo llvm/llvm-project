@@ -13,7 +13,6 @@
 // friend constexpr iter_difference_t<I> operator-(
 //   default_sentinel_t, const counted_iterator& y);
 
-#include <cassert>
 #include <iterator>
 
 #include "test_macros.h"

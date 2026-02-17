@@ -26,9 +26,8 @@
 #include <vector>
 
 #include "almost_satisfies_types.h"
-#include "MoveOnly.h"
 #include "test_iterators.h"
-#include "type_algorithms.h"
+#include "MoveOnly.h"
 
 struct InvalidDifferenceT {};
 

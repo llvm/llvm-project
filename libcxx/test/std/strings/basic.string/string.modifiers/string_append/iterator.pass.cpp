@@ -13,7 +13,6 @@
 
 #include <string>
 #include <cassert>
-#include <cstdint>
 
 #include "test_macros.h"
 #include "test_iterators.h"
