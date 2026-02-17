@@ -128,14 +128,14 @@ define amdgpu_kernel void @maxnum_f16(
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
-; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], 0 glc dlc
+; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[12:15], 0 glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    buffer_load_u16 v1, off, s[4:7], 0 glc dlc
+; GFX11-TRUE16-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], 0 glc dlc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s1
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
-; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v0.h, v0.h
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
@@ -267,7 +267,7 @@ define amdgpu_kernel void @maxnum_f16_imm_a(
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s4, s0
-; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[8:11], 0
+; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[8:11], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
@@ -393,7 +393,7 @@ define amdgpu_kernel void @maxnum_f16_imm_b(
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s4, s0
-; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[8:11], 0
+; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[8:11], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
@@ -1115,4 +1115,4 @@ entry:
   ret void
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { denormal_fpenv(float: preservesign) }

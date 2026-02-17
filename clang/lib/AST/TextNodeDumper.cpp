@@ -1689,6 +1689,10 @@ void TextNodeDumper::VisitExtVectorElementExpr(
   OS << " " << Node->getAccessor().getNameStart();
 }
 
+void TextNodeDumper::VisitMatrixElementExpr(const MatrixElementExpr *Node) {
+  OS << " " << Node->getAccessor().getNameStart();
+}
+
 void TextNodeDumper::VisitBinaryOperator(const BinaryOperator *Node) {
   OS << " '" << BinaryOperator::getOpcodeStr(Node->getOpcode()) << "'";
   if (Node->hasStoredFPFeatures())

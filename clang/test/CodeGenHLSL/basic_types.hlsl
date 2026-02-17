@@ -38,22 +38,6 @@
 // CHECK: @double2_Val = external hidden addrspace(2) global <2 x double>, align 16
 // CHECK: @double3_Val = external hidden addrspace(2) global <3 x double>, align 32
 // CHECK: @double4_Val = external hidden addrspace(2) global <4 x double>, align 32
-// CHECK: @bool1x1_Val = external hidden addrspace(2) global [1 x i32], align 4
-// CHECK: @bool1x2_Val = external hidden addrspace(2) global [2 x i32], align 4
-// CHECK: @bool1x3_Val = external hidden addrspace(2) global [3 x i32], align 4
-// CHECK: @bool1x4_Val = external hidden addrspace(2) global [4 x i32], align 4
-// CHECK: @bool2x1_Val = external hidden addrspace(2) global [2 x i32], align 4
-// CHECK: @bool2x2_Val = external hidden addrspace(2) global [4 x i32], align 4
-// CHECK: @bool2x3_Val = external hidden addrspace(2) global [6 x i32], align 4
-// CHECK: @bool2x4_Val = external hidden addrspace(2) global [8 x i32], align 4
-// CHECK: @bool3x1_Val = external hidden addrspace(2) global [3 x i32], align 4
-// CHECK: @bool3x2_Val = external hidden addrspace(2) global [6 x i32], align 4
-// CHECK: @bool3x3_Val = external hidden addrspace(2) global [9 x i32], align 4
-// CHECK: @bool3x4_Val = external hidden addrspace(2) global [12 x i32], align 4
-// CHECK: @bool4x1_Val = external hidden addrspace(2) global [4 x i32], align 4
-// CHECK: @bool4x2_Val = external hidden addrspace(2) global [8 x i32], align 4
-// CHECK: @bool4x3_Val = external hidden addrspace(2) global [12 x i32], align 4
-// CHECK: @bool4x4_Val = external hidden addrspace(2) global [16 x i32], align 4
 
 #ifdef NAMESPACED
 #define TYPE_DECL(T)  hlsl::T T##_Val
@@ -109,20 +93,3 @@ TYPE_DECL( float4  );
 TYPE_DECL( double2 );
 TYPE_DECL( double3 );
 TYPE_DECL( double4 );
-
-TYPE_DECL( bool1x1 );
-TYPE_DECL( bool1x2 );
-TYPE_DECL( bool1x3 );
-TYPE_DECL( bool1x4 );
-TYPE_DECL( bool2x1 );
-TYPE_DECL( bool2x2 );
-TYPE_DECL( bool2x3 );
-TYPE_DECL( bool2x4 );
-TYPE_DECL( bool3x1 );
-TYPE_DECL( bool3x2 );
-TYPE_DECL( bool3x3 );
-TYPE_DECL( bool3x4 );
-TYPE_DECL( bool4x1 );
-TYPE_DECL( bool4x2 );
-TYPE_DECL( bool4x3 );
-TYPE_DECL( bool4x4 );

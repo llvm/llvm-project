@@ -347,7 +347,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     mlir::omp::LoopRelatedClauseOps result;
     llvm::SmallVector<const semantics::Symbol *> iv;
     collectLoopRelatedInfo(converter, converter.getCurrentLocation(), eval,
-                           clauses, result, iv);
+                           getNestedDoConstruct(eval), clauses, result, iv);
 
     // Update the original variable just before exiting the worksharing
     // loop. Conversion as follows:
@@ -479,8 +479,7 @@ void DataSharingProcessor::collectSymbols(
         for (const semantics::Scope &child : scope->children())
           collectScopes(&child);
       };
-  parser::CharBlock source =
-      clauses.empty() ? getSource(semaCtx, eval) : clauses.front().source;
+  parser::CharBlock source = getSource(semaCtx, eval);
   const semantics::Scope *curScope = nullptr;
   if (!source.empty()) {
     curScope = &semaCtx.FindScope(source);

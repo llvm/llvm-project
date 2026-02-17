@@ -70,11 +70,10 @@ class PrivateUsingFriendVar { static PrivateUsingFriend::T i; };
 PrivateUsingFriend::T PrivateUsingFriendVar::i = 42;
 
 // The following should still diagnose (inspired by PR13642)
-// FIXME: Should not be diagnosed twice!
 class PR13642 { class Inner { public: static int i; }; };
-// expected-note@-1 2 {{implicitly declared private here}}
+// expected-note@-1 {{implicitly declared private here}}
 PR13642::Inner::i = 5;
-// expected-error@-1 2 {{'Inner' is a private member of 'PR13642'}}
+// expected-error@-1 {{'Inner' is a private member of 'PR13642'}}
 
 // Deduction guide
 template<typename T> struct A { A(); A(T); };

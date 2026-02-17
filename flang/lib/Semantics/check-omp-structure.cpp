@@ -633,13 +633,30 @@ void OmpStructureChecker::CheckMultListItems() {
     CheckMultipleOccurrence(listVars, nameList, clause->source, "LINEAR");
   }
 }
+bool OmpStructureChecker::IsCombinedParallelWorksharing(
+    llvm::omp::Directive directive) const {
+  // Combined parallel-worksharing constructs create their own parallel region
+  // They should not be subject to worksharing nesting restrictions
+  switch (directive) {
+  case llvm::omp::OMPD_parallel_do:
+  case llvm::omp::OMPD_parallel_do_simd:
+  case llvm::omp::OMPD_parallel_sections:
+  case llvm::omp::OMPD_parallel_workshare:
+    return true;
+  default:
+    return false;
+  }
+}
 
 bool OmpStructureChecker::HasInvalidWorksharingNesting(
-    const parser::CharBlock &source, const OmpDirectiveSet &set) {
+    const parser::OmpDirectiveName &name, const OmpDirectiveSet &set) {
   // set contains all the invalid closely nested directives
   // for the given directive (`source` here)
+  if (IsCombinedParallelWorksharing(name.v)) {
+    return false;
+  }
   if (IsCloselyNestedRegion(set)) {
-    context_.Say(source,
+    context_.Say(name.source,
         "A worksharing region may not be closely nested inside a "
         "worksharing, explicit task, taskloop, critical, ordered, atomic, or "
         "master region"_err_en_US);
@@ -1056,7 +1073,8 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
   case llvm::omp::OMPD_parallel_workshare:
     CheckWorkshareBlockStmts(block, beginSpec.source);
     HasInvalidWorksharingNesting(
-        beginSpec.source, llvm::omp::nestedWorkshareErrSet);
+        std::get<parser::OmpDirectiveName>(beginSpec.t),
+        llvm::omp::nestedWorkshareErrSet);
     break;
   case llvm::omp::OMPD_workdistribute:
     if (!CurrentDirectiveIsNested()) {
@@ -1074,7 +1092,8 @@ void OmpStructureChecker::Enter(const parser::OmpBlockConstruct &x) {
     // TODO: This check needs to be extended while implementing nesting of
     // regions checks.
     HasInvalidWorksharingNesting(
-        beginSpec.source, llvm::omp::nestedWorkshareErrSet);
+        std::get<parser::OmpDirectiveName>(beginSpec.t),
+        llvm::omp::nestedWorkshareErrSet);
     break;
   case llvm::omp::Directive::OMPD_task:
     for (const auto &clause : beginSpec.Clauses().v) {
@@ -1233,8 +1252,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
     CheckNoBranching(
         std::get<parser::Block>(section.t), beginName.v, beginName.source);
   }
-  HasInvalidWorksharingNesting(
-      beginName.source, llvm::omp::nestedWorkshareErrSet);
+  HasInvalidWorksharingNesting(std::get<parser::OmpDirectiveName>(beginSpec.t),
+      llvm::omp::nestedWorkshareErrSet);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPSectionsConstruct &) {
@@ -3689,6 +3708,20 @@ static bool CheckSymbolSupportsType(const Scope &scope,
     if (const auto *reductionDetails{
             symbol->detailsIf<UserReductionDetails>()}) {
       return reductionDetails->SupportsType(type);
+    }
+  }
+  // Look through module scopes in the global scope.
+  // This covers reductions declared in a module and used via USE association
+  const SemanticsContext &semCtx{scope.context()};
+  Scope &global = const_cast<SemanticsContext &>(semCtx).globalScope();
+  for (const Scope &child : global.children()) {
+    if (child.kind() == Scope::Kind::Module) {
+      if (const auto *symbol{child.FindSymbol(name)}) {
+        if (const auto *reductionDetails{
+                symbol->detailsIf<UserReductionDetails>()}) {
+          return reductionDetails->SupportsType(type);
+        }
+      }
     }
   }
   return false;

@@ -1,0 +1,34 @@
+//===-- PrivateFieldNames.def -----------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file defines a list of non-static data members of the SSAF objects.
+//  These are used for granting access for:
+//   - SerializationFormat
+//   - TextFixture
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef FIELD
+#define FIELD(CLASS, FIELD_NAME)
+#endif
+
+FIELD(BuildNamespace, Kind)
+FIELD(BuildNamespace, Name)
+FIELD(EntityId, Index)
+FIELD(EntityIdTable, Entities)
+FIELD(EntityLinkage, Linkage)
+FIELD(EntityName, Namespace)
+FIELD(EntityName, Suffix)
+FIELD(EntityName, USR)
+FIELD(NestedBuildNamespace, Namespaces)
+FIELD(TUSummary, Data)
+FIELD(TUSummary, IdTable)
+FIELD(TUSummary, LinkageTable)
+FIELD(TUSummary, TUNamespace)
+
+#undef FIELD

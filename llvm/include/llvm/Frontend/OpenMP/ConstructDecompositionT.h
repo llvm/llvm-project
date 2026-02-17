@@ -497,7 +497,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
   // [5.2:340:33]
   bool applied = applyIf(input, [&](const auto &leaf) {
     return llvm::any_of(leaf.clauses, [&](const ClauseTy *n) {
-      return llvm::omp::isPrivatizingClause(n->id);
+      return llvm::omp::isPrivatizingClause(n->id, version);
     });
   });
 
