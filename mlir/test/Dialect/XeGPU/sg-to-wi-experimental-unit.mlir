@@ -242,12 +242,16 @@ gpu.func @scatter_store(%src: memref<256xf16>) {
 // CHECK-LABEL: gpu.func @scatter_ops_with_leading_dims
 // CHECK: %[[MASK:.*]] = arith.constant dense<true> : vector<1x1x1xi1>
 // CHECK: %[[OFFSET:.*]] = arith.constant dense<12> : vector<1x1x1xindex>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[OFFSET]]], %[[MASK]]
-// CHECK-SAME: : memref<256xf16>, vector<1x1x1xindex>, vector<1x1x1xi1> -> vector<1xf16>
+// CHECK: %[[V1:.*]] = vector.shape_cast %[[OFFSET]] : vector<1x1x1xindex> to vector<1xindex>
+// CHECK: %[[V2:.*]] = vector.shape_cast %[[MASK]] : vector<1x1x1xi1> to vector<1xi1>
+// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[V1]]], %[[V2]]
+// CHECK-SAME: : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<1xf16>
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<1xf16> to vector<1x1x1xf16>
 // CHECK: %[[CAST2:.*]] = vector.shape_cast %[[CAST]] : vector<1x1x1xf16> to vector<1xf16>
-// CHECK: xegpu.store %[[CAST2]], %arg0[%[[OFFSET]]], %[[MASK]]
-// CHECK-SAME: : vector<1xf16>, memref<256xf16>, vector<1x1x1xindex>, vector<1x1x1xi1>
+// CHECK: %[[V3:.*]] = vector.shape_cast %[[OFFSET]] : vector<1x1x1xindex> to vector<1xindex>
+// CHECK: %[[V4:.*]] = vector.shape_cast %[[MASK]] : vector<1x1x1xi1> to vector<1xi1>
+// CHECK: xegpu.store %[[CAST2]], %arg0[%[[V3]]], %[[V4]]
+// CHECK-SAME: : vector<1xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
 gpu.func @scatter_ops_with_leading_dims(%src: memref<256xf16>) {
   %mask = arith.constant
     {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>}

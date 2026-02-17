@@ -453,12 +453,29 @@ struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
         VectorType::get({expectedWiResultTy.getNumElements()},
                         expectedWiResultTy.getElementType());
 
-    // Build the new op with adapted (type-converted) values.
-    // Use Value() for offsets if not present (optional operand).
+    // Flatten offsets and mask to 1D for hardware compatibility.
     Value offsets = adaptor.getOffsets() ? adaptor.getOffsets() : Value();
+    if (offsets) {
+      auto offsetsTy = cast<VectorType>(offsets.getType());
+      VectorType offsetsTy1D = VectorType::get({offsetsTy.getNumElements()},
+                                               offsetsTy.getElementType());
+      if (offsetsTy != offsetsTy1D)
+        offsets = vector::ShapeCastOp::create(rewriter, op.getLoc(),
+                                              offsetsTy1D, offsets)
+                      .getResult();
+    }
+    Value mask = adaptor.getMask();
+    auto maskTy = cast<VectorType>(mask.getType());
+    VectorType maskTy1D =
+        VectorType::get({maskTy.getNumElements()}, maskTy.getElementType());
+    if (maskTy != maskTy1D)
+      mask = vector::ShapeCastOp::create(rewriter, op.getLoc(), maskTy1D, mask)
+                 .getResult();
+
+    // Build the new op with adapted (type-converted) values.
     auto newOp = xegpu::LoadGatherOp::create(
         rewriter, op.getLoc(), supportedWiResultTy, adaptor.getSource(),
-        offsets, adaptor.getMask(), op.getChunkSizeAttr(), op.getL1HintAttr(),
+        offsets, mask, op.getChunkSizeAttr(), op.getL1HintAttr(),
         op.getL2HintAttr(), op.getL3HintAttr(), /*layout=*/nullptr);
 
     // Cast the result to the expected type if needed (e.g., 1D to 2D).
@@ -665,13 +682,30 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
                                       adaptedValue)
               .getResult();
 
-    // Build the new op with adapted values.
-    // Use Value() for offsets if not present (optional operand).
+    // Flatten offsets and mask to 1D for hardware compatibility.
     Value offsets = adaptor.getOffsets() ? adaptor.getOffsets() : Value();
+    if (offsets) {
+      auto offsetsTy = cast<VectorType>(offsets.getType());
+      VectorType offsetsTy1D = VectorType::get({offsetsTy.getNumElements()},
+                                               offsetsTy.getElementType());
+      if (offsetsTy != offsetsTy1D)
+        offsets = vector::ShapeCastOp::create(rewriter, op.getLoc(),
+                                              offsetsTy1D, offsets)
+                      .getResult();
+    }
+    Value mask = adaptor.getMask();
+    auto maskTy = cast<VectorType>(mask.getType());
+    VectorType maskTy1D =
+        VectorType::get({maskTy.getNumElements()}, maskTy.getElementType());
+    if (maskTy != maskTy1D)
+      mask = vector::ShapeCastOp::create(rewriter, op.getLoc(), maskTy1D, mask)
+                 .getResult();
+
+    // Build the new op with adapted values.
     xegpu::StoreScatterOp::create(
-        rewriter, op.getLoc(), adaptedValue, adaptor.getDest(), offsets,
-        adaptor.getMask(), op.getChunkSizeAttr(), op.getL1HintAttr(),
-        op.getL2HintAttr(), op.getL3HintAttr(), /*layout=*/nullptr);
+        rewriter, op.getLoc(), adaptedValue, adaptor.getDest(), offsets, mask,
+        op.getChunkSizeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
+        op.getL3HintAttr(), /*layout=*/nullptr);
     rewriter.eraseOp(op);
     return success();
   }
