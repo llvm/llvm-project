@@ -6,6 +6,8 @@ define hidden void @foo() {
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    br label [[IF:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i8 [ [[TMP1:%.*]], [[IF]] ], [ poison, [[TOP:%.*]] ]
+; CHECK-NEXT:    [[TMP1]] = xor i8 [[TMP0]], undef
 ; CHECK-NEXT:    br i1 false, label [[L50:%.*]], label [[IF]]
 ; CHECK:       L50:
 ; CHECK-NEXT:    store i8 poison, ptr null, align 1
