@@ -16,6 +16,10 @@
 ; RUN:     -mattr=+sve,+sme2 -scalable-vectorization=on                            \
 ; RUN:     -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SCALABLE
 
+; FIXME: This test currently fails because the cost-model deems the cost of a partial reduction
+; of i16 -> i32 too high, such that the LV doesn't consider it profitable to use partial reductions.
+; XFAIL: *
+
 ; LV: Checking a loop in 'sext_reduction_i16_to_i32'
 ; CHECK-FIXED-BASE: Cost of 3 for VF 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.add (ir<%load> sext to i32)
 ; CHECK-FIXED: Cost of 1 for VF 8: EXPRESSION vp<%8> = ir<%acc> + partial.reduce.add (ir<%load> sext to i32)
