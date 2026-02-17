@@ -97,7 +97,7 @@ static void test_scan_divergent() {
   }
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int, char **, char **) {
   if (gpu::get_thread_id() >= gpu::get_lane_size())
     return 0;
 

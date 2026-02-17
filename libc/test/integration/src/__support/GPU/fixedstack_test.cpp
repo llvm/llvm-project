@@ -37,7 +37,7 @@ void run() {
     ;
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int, char **, char **) {
   run();
 
   return 0;

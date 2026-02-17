@@ -36,12 +36,17 @@ using StructOffsetDecorator = std::function<void(Register)>;
 class SPIRVTypeInst {
   const MachineInstr *MI;
 
-public:
   static bool definesATypeRegister(const MachineInstr &MI) {
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     return MRI.getRegClass(MI.getOperand(0).getReg()) == &SPIRV::TYPERegClass;
   }
 
+  // Used by DenseMapInfo to bypass the assertion. The thombstone and empty keys
+  // are not null. They are -1 and -2 aligned to the appropiate pointer size.
+  struct UncheckedConstructor {};
+  SPIRVTypeInst(const MachineInstr *MI, UncheckedConstructor) : MI(MI) {};
+
+public:
   SPIRVTypeInst(const MachineInstr &MI) : SPIRVTypeInst(&MI) {}
   SPIRVTypeInst(const MachineInstr *MI) : MI(MI) {
     // A SPIRV Type whose result is not a type is invalid.
@@ -69,15 +74,20 @@ public:
 
   operator bool() const { return MI; }
 
-  unsigned getHashValue() const {
-    return DenseMapInfo<const MachineInstr *>::getHashValue(MI);
-  }
+  friend struct DenseMapInfo<SPIRVTypeInst>;
 };
 
 template <> struct DenseMapInfo<SPIRVTypeInst> {
-  static SPIRVTypeInst getEmptyKey() { return SPIRVTypeInst(nullptr); }
-  static SPIRVTypeInst getTombstoneKey() { return SPIRVTypeInst(nullptr); }
-  static unsigned getHashValue(SPIRVTypeInst Ty) { return Ty.getHashValue(); }
+  using MIInfo = DenseMapInfo<MachineInstr *>;
+  static SPIRVTypeInst getEmptyKey() {
+    return {MIInfo::getEmptyKey(), SPIRVTypeInst::UncheckedConstructor()};
+  }
+  static SPIRVTypeInst getTombstoneKey() {
+    return {MIInfo::getTombstoneKey(), SPIRVTypeInst::UncheckedConstructor()};
+  }
+  static unsigned getHashValue(SPIRVTypeInst Ty) {
+    return MIInfo::getHashValue(Ty.MI);
+  }
   static bool isEqual(SPIRVTypeInst Ty1, SPIRVTypeInst Ty2) {
     return Ty1 == Ty2;
   }
