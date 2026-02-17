@@ -224,6 +224,25 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
   ptrauth_auth_and_resign(__value, __old_key, __old_data,                      \
                           ptrauth_key_function_pointer, 0)
 
+/* Cast a value to the given type without changing any signature.
+
+   The type must be a pointer sized type compatible with the __ptrauth
+   qualifier.
+   The value must be an expression with a non-address diversified pointer
+   authentication schema, and will be converted to an rvalue prior to the cast.
+   The result has type given by the first argument.
+
+   The result has an identical bit-pattern to the input pointer. */
+#define ptrauth_nop_cast(__type, __value)                                      \
+  ({                                                                           \
+    union {                                                                    \
+      typeof(*(__value)) *__fptr;                                              \
+      typeof(__type) __opaque;                                                 \
+    } __storage;                                                               \
+    __storage.__fptr = (__value);                                              \
+    __storage.__opaque;                                                        \
+  })
+
 /* Authenticate a data pointer.
 
    The value must be an expression of non-function pointer type.
@@ -299,6 +318,32 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
    will be coerce to uintptr_t. */
 #define ptrauth_sign_generic_data(__value, __data)                             \
   __builtin_ptrauth_sign_generic_data(__value, __data)
+
+/* Define some standard __ptrauth qualifiers used in the ABI. */
+#define __ptrauth_function_pointer(__typekey)                                  \
+  __ptrauth(ptrauth_key_function_pointer, 0, __typekey)
+#define __ptrauth_return_address __ptrauth(ptrauth_key_return_address, 1, 0)
+#define __ptrauth_block_invocation_pointer                                     \
+  __ptrauth(ptrauth_key_function_pointer, 1, 0)
+#define __ptrauth_block_copy_helper                                            \
+  __ptrauth(ptrauth_key_function_pointer, 1, 0)
+#define __ptrauth_block_destroy_helper                                         \
+  __ptrauth(ptrauth_key_function_pointer, 1, 0)
+#define __ptrauth_block_byref_copy_helper                                      \
+  __ptrauth(ptrauth_key_function_pointer, 1, 0)
+#define __ptrauth_block_byref_destroy_helper                                   \
+  __ptrauth(ptrauth_key_function_pointer, 1, 0)
+#if __has_feature(ptrauth_signed_block_descriptors)
+#define __ptrauth_block_descriptor_pointer                                     \
+  __ptrauth(ptrauth_key_block_descriptor_pointer, 1, 0xC0BB)
+#else
+#define __ptrauth_block_descriptor_pointer
+#endif
+
+#define __ptrauth_cxx_vtable_pointer                                           \
+  __ptrauth(ptrauth_key_cxx_vtable_pointer, 0, 0)
+#define __ptrauth_cxx_vtt_vtable_pointer                                       \
+  __ptrauth(ptrauth_key_cxx_vtable_pointer, 0, 0)
 
 /* C++ vtable pointer signing class attribute */
 #define ptrauth_cxx_vtable_pointer(key, address_discrimination,                \
@@ -419,6 +464,7 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
     ((ptrauth_extra_data_t)0);                                                 \
   })
 
+#define ptrauth_nop_cast(__type, __value) (__type)(__value)
 #define ptrauth_type_discriminator(__type) ((ptrauth_extra_data_t)0)
 #define ptrauth_function_pointer_type_discriminator(__type)                    \
   ((ptrauth_extra_data_t)0)
@@ -434,9 +480,23 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 #define ptrauth_cxx_vtable_pointer(key, address_discrimination,                \
                                    extra_discrimination...)
 
+#define __ptrauth_function_pointer(__typekey)
+#define __ptrauth_return_address
+#define __ptrauth_block_invocation_pointer
+#define __ptrauth_block_copy_helper
+#define __ptrauth_block_destroy_helper
+#define __ptrauth_block_byref_copy_helper
+#define __ptrauth_block_byref_destroy_helper
+#define __ptrauth_block_descriptor_pointer
+#define __ptrauth_objc_method_list_imp
+#define __ptrauth_objc_method_list_pointer
 #define __ptrauth_objc_isa_pointer
 #define __ptrauth_objc_isa_uintptr
 #define __ptrauth_objc_super_pointer
+#define __ptrauth_cxx_vtable_pointer
+#define __ptrauth_cxx_vtt_vtable_pointer
+#define __ptrauth_objc_sel
+#define __ptrauth_objc_class_ro
 
 #endif /* __has_feature(ptrauth_intrinsics) || defined(__PTRAUTH__) */
 
