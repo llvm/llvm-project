@@ -1,4 +1,4 @@
-//===-- Implementation of f16subl function --------------------------------===//
+//===-- Shared f16subl function ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/f16subl.h"
+#ifndef LLVM_LIBC_SHARED_MATH_F16SUBL_H
+#define LLVM_LIBC_SHARED_MATH_F16SUBL_H
+
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "src/__support/math/f16subl.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float16, f16subl, (long double x, long double y)) {
-  return math::f16subl(x, y);
-}
+using math::f16subl;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
+
+#endif // LLVM_LIBC_SHARED_MATH_F16SUBL_H
