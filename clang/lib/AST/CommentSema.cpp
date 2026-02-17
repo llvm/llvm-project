@@ -119,9 +119,6 @@ void Sema::checkFunctionDeclVerbatimLine(const BlockCommandComment *Comment) {
     case CommandTraits::KCI_callback:
       DiagSelect = diag::CallableKind::Callback;
       break;
-    default:
-      DiagSelect = std::nullopt;
-      break;
   }
   if (DiagSelect)
     Diag(Comment->getLocation(), diag::warn_doc_function_method_decl_mismatch)
