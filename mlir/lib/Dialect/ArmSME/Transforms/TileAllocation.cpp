@@ -367,7 +367,7 @@ generateOperationNumbering(FunctionOpInterface function) {
       operationToIndexMap.try_emplace(&op, index++);
     }
   }
-    
+
   return operationToIndexMap;
 }
 
