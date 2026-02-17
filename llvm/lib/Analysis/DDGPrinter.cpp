@@ -137,10 +137,10 @@ DDGDotGraphTraits::getVerboseNodeLabel(const DDGNode *Node,
   return OS.str();
 }
 
-// EdgeKind to DOT color mapping:
-// - MemoryDependence: red
-// - RegisterDefUse: blue
-// - Rooted/Unknown=default (no attribute).
+/// EdgeKind to DOT color mapping:
+/// - MemoryDependence: red
+/// - RegisterDefUse: blue
+/// - Rooted/Unknown=default (no attribute).
 static void writeEdgeKindColorAttr(raw_ostream &OS, DDGEdge::EdgeKind Kind) {
   if (Kind == DDGEdge::EdgeKind::MemoryDependence)
     OS << ", color=red";
