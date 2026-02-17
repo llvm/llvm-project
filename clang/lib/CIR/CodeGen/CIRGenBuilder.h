@@ -138,9 +138,9 @@ public:
 
   /// Set the rounding mode handling to be used with constrained floating point
   void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
-    assert(llvm::convertRoundingModeToStr(NewRounding) &&
+    assert(llvm::convertRoundingModeToStr(newRounding) &&
            "Garbage strict rounding mode!");
-    defaultConstrainedRounding = NewRounding;
+    defaultConstrainedRounding = newRounding;
   }
 
   /// Get the rounding mode handling used with constrained floating point
