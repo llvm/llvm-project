@@ -1002,54 +1002,58 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   VPValue *HeaderMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
   Builder.createNaryOp(VPInstruction::BranchOnCond, HeaderMask);
 
-  VPBasicBlock *Latch = LoopRegion->getExitingBasicBlock();
+  VPBasicBlock *OrigLatch = LoopRegion->getExitingBasicBlock();
   VPValue *IVInc;
   [[maybe_unused]] bool TermBranchOnCount =
-      match(Latch->getTerminator(),
+      match(OrigLatch->getTerminator(),
             m_BranchOnCount(m_VPValue(IVInc),
                             m_Specific(&Plan.getVectorTripCount())));
   assert(TermBranchOnCount &&
          match(IVInc, m_Add(m_Specific(LoopRegion->getCanonicalIV()),
                             m_Specific(&Plan.getVFxUF()))) &&
          std::next(IVInc->getDefiningRecipe()->getIterator()) ==
-             Latch->getTerminator()->getIterator() &&
+             OrigLatch->getTerminator()->getIterator() &&
          "Unexpected canonical iv increment");
 
   // Split the latch at the IV update, and branch to it from the header mask.
-  VPBasicBlock *LatchSplit =
-      Latch->splitAt(IVInc->getDefiningRecipe()->getIterator());
-  VPBlockUtils::connectBlocks(Header, LatchSplit);
+  VPBasicBlock *Latch =
+      OrigLatch->splitAt(IVInc->getDefiningRecipe()->getIterator());
+  Latch->setName("latch");
+  VPBlockUtils::connectBlocks(Header, Latch);
 
-  // Insert phis for any values in the predicated body used outside. Currently,
-  // this consists of header phis and extracts in the middle block.
-  // TODO: Handle all successors, not just the middle block when supporting
-  // early exits.
+  // Collect any values defined in the loop that need a phi. Currently this is
+  // header phi backedges and live outs extracted in the middle block.
+  // TODO: Handle early exits via Plan.getExitBlocks()
   assert(LoopRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
          "The vector loop region must have the middle block as its single "
          "successor for now");
-  Builder.setInsertPoint(LatchSplit, LatchSplit->begin());
-  for (VPBasicBlock *VPBB : {Header, Plan.getMiddleBlock()}) {
-    for (VPRecipeBase &R : *VPBB) {
-      for (VPValue *V : R.operands()) {
-        VPRecipeBase *VR = V->getDefiningRecipe();
-        if (!VR || !VR->getRegion() || VR->getParent() == LatchSplit ||
-            VR->getParent() == Header)
-          continue;
-        assert((isa<VPHeaderPHIRecipe>(R) ||
-                match(&R, m_CombineOr(
-                              m_VPInstruction<VPInstruction::ExitingIVValue>(),
-                              m_ExtractLastPart(m_Specific(V))))) &&
-               "Unexpected user of value defined inside vector loop region");
-        // TODO: For reduction phis, use phi value instead of poison so we can
-        // remove the special casing for tail folding in
-        // LoopVectorizationPlanner::addReductionResultComputation
-        VPValue *Poison = Plan.getOrAddLiveIn(
-            PoisonValue::get(V->getUnderlyingValue()->getType()));
-        VPInstruction *Phi = Builder.createScalarPhi({V, Poison}, {});
-        V->replaceUsesWithIf(Phi,
-                             [&Phi](VPUser &U, unsigned) { return &U != Phi; });
-      }
-    }
+  SmallSetVector<VPValue *, 4> NeedsPhi;
+  for (VPRecipeBase &R : Header->phis())
+    if (auto *Phi = dyn_cast<VPHeaderPHIRecipe>(&R))
+      if (!isa<VPCanonicalIVPHIRecipe>(Phi) && Phi->getNumIncoming() > 1)
+        NeedsPhi.insert(Phi->getBackedgeValue());
+
+  VPValue *V;
+  for (VPRecipeBase &R : *Plan.getMiddleBlock())
+    if (match(&R, m_CombineOr(m_VPInstruction<VPInstruction::ExitingIVValue>(
+                                  m_VPValue(V)),
+                              m_ExtractLastLaneOfLastPart(m_VPValue(V)))))
+      NeedsPhi.insert(V);
+
+  // Insert phis with a poison incoming value for past the end of the tail.
+  Builder.setInsertPoint(Latch, Latch->begin());
+  VPTypeAnalysis TypeInfo(Plan);
+  for (VPValue *V : NeedsPhi) {
+    if (isa<VPIRValue>(V))
+      continue;
+    // TODO: For reduction phis, use phi value instead of poison so we can
+    // remove the special casing for tail folding in
+    // LoopVectorizationPlanner::addReductionResultComputation
+    VPValue *Poison =
+        Plan.getOrAddLiveIn(PoisonValue::get(TypeInfo.inferScalarType(V)));
+    VPInstruction *Phi = Builder.createScalarPhi({V, Poison});
+    V->replaceUsesWithIf(Phi,
+                         [&Phi](VPUser &U, unsigned) { return &U != Phi; });
   }
 
   // Any extract of the last element must be updated to extract from the last
