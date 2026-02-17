@@ -42,6 +42,11 @@ bool AddPythonDLLToSearchPath();
 ///   can be loaded. If successful, returns immediately. Otherwise, attempts to
 ///   resolve the relative path and add it to the DLL search path, then checks
 ///   again if python3xx.dll can be loaded.
-llvm::Error SetupPythonRuntimeLibrary();
+///
+/// \return If LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME is defined, return the
+/// absolute path of the Python shared library which was resolved or an error if
+/// it could not be found. If LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME and
+/// LLDB_PYTHON_DLL_RELATIVE_PATH are not defined, return an empty string.
+llvm::Expected<std::string> SetupPythonRuntimeLibrary();
 
 #endif // LLDB_SOURCE_HOST_PYTHONPATHSETUP_H
