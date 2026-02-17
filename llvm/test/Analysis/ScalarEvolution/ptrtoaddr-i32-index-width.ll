@@ -60,7 +60,7 @@ define void @ptrtoaddr_of_gep(ptr %in, ptr %out0) {
 ; CHECK-NEXT:    %in_adj = getelementptr inbounds i8, ptr %in, i64 42
 ; CHECK-NEXT:    --> (42 + %in) U: full-set S: full-set
 ; CHECK-NEXT:    %p0 = ptrtoaddr ptr %in_adj to i32
-; CHECK-NEXT:    --> (ptrtoaddr ptr (42 + %in) to i32) U: full-set S: full-set
+; CHECK-NEXT:    --> (42 + (ptrtoaddr ptr %in to i32)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_gep
 ;
   %in_adj = getelementptr inbounds i8, ptr %in, i64 42

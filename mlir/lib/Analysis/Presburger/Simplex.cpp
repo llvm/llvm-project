@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -329,8 +330,7 @@ MaybeOptimum<SmallVector<DynamicAPInt, 8>> LexSimplex::findIntegerLexMin() {
   assert(!sample.isEmpty() && "If we reached here the sample should exist!");
   if (sample.isUnbounded())
     return OptimumKind::Unbounded;
-  return llvm::to_vector<8>(
-      llvm::map_range(*sample, std::mem_fn(&Fraction::getAsInteger)));
+  return llvm::map_to_vector<8>(*sample, std::mem_fn(&Fraction::getAsInteger));
 }
 
 bool LexSimplex::isSeparateInequality(ArrayRef<DynamicAPInt> coeffs) {

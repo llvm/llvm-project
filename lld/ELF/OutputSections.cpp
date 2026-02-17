@@ -303,8 +303,6 @@ static void nopInstrFill(Ctx &ctx, uint8_t *buf, size_t size) {
   if (size == 0)
     return;
   unsigned i = 0;
-  if (size == 0)
-    return;
   std::vector<std::vector<uint8_t>> nopFiller = *ctx.target->nopInstrs;
   unsigned num = size / nopFiller.back().size();
   for (unsigned c = 0; c < num; ++c) {
@@ -627,7 +625,7 @@ static void finalizeShtGroup(Ctx &ctx, OutputSection *os,
   // new size. The content will be rewritten in InputSection::copyShtGroup.
   DenseSet<uint32_t> seen;
   ArrayRef<InputSectionBase *> sections = section->file->getSections();
-  for (const uint32_t &idx : section->getDataAs<uint32_t>().slice(1))
+  for (auto &idx : section->getDataAs<std::array<char, 4>>().slice(1))
     if (OutputSection *osec = sections[read32(ctx, &idx)]->getOutputSection())
       seen.insert(osec->sectionIndex);
   os->size = (1 + seen.size()) * sizeof(uint32_t);

@@ -4,10 +4,10 @@ add_clang_library(MLIRCIRTransforms
   CIRCanonicalize.cpp
   CIRSimplify.cpp
   CXXABILowering.cpp
+  TargetLowering.cpp
   FlattenCFG.cpp
   HoistAllocas.cpp
   LoweringPrepare.cpp
-  LoweringPrepareItaniumCXXABI.cpp
   GotoSolver.cpp
 
   DEPENDS

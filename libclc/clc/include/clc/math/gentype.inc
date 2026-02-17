@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/clcfunc.h>
-#include <clc/clctypes.h>
 #include <clc/utils.h>
 
 // Define some useful macros for type conversions.

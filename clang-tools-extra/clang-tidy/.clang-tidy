@@ -7,7 +7,6 @@ Checks: >
   -bugprone-branch-clone,
   -bugprone-easily-swappable-parameters,
   -bugprone-narrowing-conversions,
-  -bugprone-unchecked-optional-access,
   -bugprone-unused-return-value,
   cppcoreguidelines-init-variables,
   cppcoreguidelines-missing-std-forward,

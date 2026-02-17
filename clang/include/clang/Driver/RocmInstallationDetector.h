@@ -177,8 +177,7 @@ private:
 public:
   RocmInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,
                            const llvm::opt::ArgList &Args,
-                           bool DetectHIPRuntime = true,
-                           bool DetectDeviceLib = false);
+                           bool DetectHIPRuntime = true);
 
   /// Get file paths of default bitcode libraries common to AMDGPU based
   /// toolchains.

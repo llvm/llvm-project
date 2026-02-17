@@ -452,7 +452,7 @@ public:
   bool parseVirtualRegister(VRegInfo *&Info);
   bool parseNamedVirtualRegister(VRegInfo *&Info);
   bool parseRegister(Register &Reg, VRegInfo *&VRegInfo);
-  bool parseRegisterFlag(unsigned &Flags);
+  bool parseRegisterFlag(RegState &Flags);
   bool parseRegisterClassOrBank(VRegInfo &RegInfo);
   bool parseSubRegisterIndex(unsigned &SubReg);
   bool parseRegisterTiedDefIndex(unsigned &TiedDefIdx);
@@ -523,6 +523,7 @@ public:
   bool parsePreOrPostInstrSymbol(MCSymbol *&Symbol);
   bool parseHeapAllocMarker(MDNode *&Node);
   bool parsePCSections(MDNode *&Node);
+  bool parseMMRA(MDNode *&Node);
 
   bool parseTargetImmMnemonic(const unsigned OpCode, const unsigned OpIdx,
                               MachineOperand &Dest, const MIRFormatter &MF);
@@ -1077,7 +1078,7 @@ bool MIParser::parse(MachineInstr *&MI) {
   while (!Token.isNewlineOrEOF() && Token.isNot(MIToken::kw_pre_instr_symbol) &&
          Token.isNot(MIToken::kw_post_instr_symbol) &&
          Token.isNot(MIToken::kw_heap_alloc_marker) &&
-         Token.isNot(MIToken::kw_pcsections) &&
+         Token.isNot(MIToken::kw_pcsections) && Token.isNot(MIToken::kw_mmra) &&
          Token.isNot(MIToken::kw_cfi_type) &&
          Token.isNot(MIToken::kw_deactivation_symbol) &&
          Token.isNot(MIToken::kw_debug_location) &&
@@ -1113,7 +1114,9 @@ bool MIParser::parse(MachineInstr *&MI) {
   if (Token.is(MIToken::kw_pcsections))
     if (parsePCSections(PCSections))
       return true;
-
+  MDNode *MMRA = nullptr;
+  if (Token.is(MIToken::kw_mmra) && parseMMRA(MMRA))
+    return true;
   unsigned CFIType = 0;
   if (Token.is(MIToken::kw_cfi_type)) {
     lex();
@@ -1210,6 +1213,8 @@ bool MIParser::parse(MachineInstr *&MI) {
     MI->setHeapAllocMarker(MF, HeapAllocMarker);
   if (PCSections)
     MI->setPCSections(MF, PCSections);
+  if (MMRA)
+    MI->setMMRAMetadata(MF, MMRA);
   if (CFIType)
     MI->setCFIType(MF, CFIType);
   if (DS)
@@ -1658,8 +1663,8 @@ bool MIParser::parseRegisterClassOrBank(VRegInfo &RegInfo) {
   llvm_unreachable("Unexpected register kind");
 }
 
-bool MIParser::parseRegisterFlag(unsigned &Flags) {
-  const unsigned OldFlags = Flags;
+bool MIParser::parseRegisterFlag(RegState &Flags) {
+  const RegState OldFlags = Flags;
   switch (Token.kind()) {
   case MIToken::kw_implicit:
     Flags |= RegState::Implicit;
@@ -1768,7 +1773,7 @@ bool MIParser::assignRegisterTies(MachineInstr &MI,
 bool MIParser::parseRegisterOperand(MachineOperand &Dest,
                                     std::optional<unsigned> &TiedDefIdx,
                                     bool IsDef) {
-  unsigned Flags = getDefRegState(IsDef);
+  RegState Flags = getDefRegState(IsDef);
   while (Token.isRegisterFlag()) {
     if (parseRegisterFlag(Flags))
       return true;
@@ -3605,6 +3610,20 @@ bool MIParser::parsePCSections(MDNode *&Node) {
     return true;
   if (!Node)
     return error("expected a MDNode after 'pcsections'");
+  if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
+      Token.is(MIToken::lbrace))
+    return false;
+  if (Token.isNot(MIToken::comma))
+    return error("expected ',' before the next machine operand");
+  lex();
+  return false;
+}
+
+bool MIParser::parseMMRA(MDNode *&Node) {
+  assert(Token.is(MIToken::kw_mmra) && "Invalid token for MMRA!");
+  lex();
+  if (parseMDNode(Node))
+    return true;
   if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
       Token.is(MIToken::lbrace))
     return false;

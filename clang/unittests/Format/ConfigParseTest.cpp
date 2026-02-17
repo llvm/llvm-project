@@ -203,6 +203,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL_FIELD(KeepEmptyLines.AtStartOfBlock,
                          "KeepEmptyLinesAtTheStartOfBlocks");
   CHECK_PARSE_BOOL(KeepFormFeed);
+  CHECK_PARSE_BOOL(ObjCSpaceAfterMethodDeclarationPrefix);
   CHECK_PARSE_BOOL(ObjCSpaceAfterProperty);
   CHECK_PARSE_BOOL(ObjCSpaceBeforeProtocolList);
   CHECK_PARSE_BOOL(RemoveBracesLLVM);
@@ -465,6 +466,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeComma);
   CHECK_PARSE("BreakConstructorInitializers: AfterColon",
               BreakConstructorInitializers, FormatStyle::BCIS_AfterColon);
+  CHECK_PARSE("BreakConstructorInitializers: AfterComma",
+              BreakConstructorInitializers, FormatStyle::BCIS_AfterComma);
   CHECK_PARSE("BreakConstructorInitializers: BeforeColon",
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeColon);
   // For backward compatibility:
