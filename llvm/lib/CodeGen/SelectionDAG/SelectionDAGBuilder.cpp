@@ -10189,8 +10189,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   }
 
   int OpNo = -1;
-  SmallVector<StringRef> AsmStrs;
-  IA->collectAsmStrs(AsmStrs);
+  SmallVector<StringRef> AsmInstrs = IA->collectAsmInstrs();
 
   // Second pass over the constraints: compute which constraint option to use.
   for (SDISelAsmOperandInfo &OpInfo : ConstraintOperands) {
@@ -10234,7 +10233,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     // label, so here we don't handle jmp function label now, but we need to
     // enhance it (especilly in PIC model) if we meet meaningful requirements.
     if (OpInfo.isIndirect && isFunction(OpInfo.CallOperand) &&
-        TLI.isInlineAsmTargetBranch(AsmStrs, OpNo) &&
+        TLI.isInlineAsmTargetBranch(AsmInstrs, OpNo) &&
         TM.getCodeModel() != CodeModel::Large) {
       OpInfo.isIndirect = false;
       OpInfo.ConstraintType = TargetLowering::C_Address;
