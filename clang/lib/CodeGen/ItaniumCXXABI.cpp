@@ -919,7 +919,7 @@ static llvm::Constant *pointerAuthResignConstant(
       return nullptr;
 
     assert(Info->getKey()->getZExtValue() == CurAuthInfo.getKey() &&
-           Info->getAddrDiscriminator()->isZeroValue() &&
+           Info->getAddrDiscriminator()->isNullValue() &&
            Info->getDiscriminator() == CurAuthInfo.getDiscriminator() &&
            "unexpected key or discriminators");
 
