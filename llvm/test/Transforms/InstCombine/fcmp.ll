@@ -1285,6 +1285,33 @@ define <1 x i1> @bitcast_1vec_eq0(i32 %x) {
   ret <1 x i1> %cmp
 }
 
+; negative test - denormal inputs flushed to zero
+
+define i1 @bitcast_eq0_denorm_positivezero(i32 %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: @bitcast_eq0_denorm_positivezero(
+; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[F]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast i32 %x to float
+  %r = fcmp oeq float %f, 0.0
+  ret i1 %r
+}
+
+; negative test - denormal inputs flushed to zero
+
+define <2 x i1> @bitcast_ne0_denorm_positivezero(<2 x i32> %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: @bitcast_ne0_denorm_positivezero(
+; CHECK-NEXT:    [[F:%.*]] = bitcast <2 x i32> [[X:%.*]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = fcmp une <2 x float> [[F]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %f = bitcast <2 x i32> %x to <2 x float>
+  %r = fcmp une <2 x float> %f, <float 0.0, float 0.0>
+  ret <2 x i1> %r
+}
+
+
 ; Simplify fcmp (x + 0.0), y => fcmp x, y
 
 define i1 @fcmp_fadd_zero_ugt(float %x, float %y) {
