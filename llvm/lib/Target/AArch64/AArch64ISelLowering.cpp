@@ -3837,7 +3837,8 @@ static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &DL,
 }
 
 static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
-                              const SDLoc &DL, SelectionDAG &DAG) {
+                              const SDLoc &DL, SelectionDAG &DAG,
+                              bool optimizeMIOrPL = false) {
   EVT VT = LHS.getValueType();
   const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
 
@@ -3880,6 +3881,44 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     } else if (LHS.getOpcode() == AArch64ISD::ANDS) {
       // Use result of ANDS
       return LHS.getValue(1);
+    }
+
+    if (LHS.getOpcode() == ISD::SUB) {
+      if (LHS->getFlags().hasNoSignedWrap() ||
+          ((CC == ISD::SETLT || CC == ISD::SETGE) && optimizeMIOrPL) ||
+          (CC == ISD::SETEQ || CC == ISD::SETNE)) {
+        const SDValue SUBSNode =
+            DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT),
+                        LHS.getOperand(0), LHS.getOperand(1));
+        // Replace all users of (and X, Y) with newly generated (ands X, Y)
+        DAG.ReplaceAllUsesWith(LHS, SUBSNode);
+        return SUBSNode.getValue(1);
+      }
+    } else if (LHS.getOpcode() == AArch64ISD::SUBS) {
+      if (LHS->getFlags().hasNoSignedWrap() ||
+          ((CC == ISD::SETLT || CC == ISD::SETGE) && optimizeMIOrPL) ||
+          (CC == ISD::SETEQ || CC == ISD::SETNE)) {
+        return LHS.getValue(1);
+      }
+    }
+
+    if (LHS.getOpcode() == ISD::ADD) {
+      if (LHS->getFlags().hasNoSignedWrap() ||
+          ((CC == ISD::SETLT || CC == ISD::SETGE) && optimizeMIOrPL) ||
+          (CC == ISD::SETEQ || CC == ISD::SETNE)) {
+        const SDValue ADDSNode =
+            DAG.getNode(AArch64ISD::ADDS, DL, DAG.getVTList(VT, FlagsVT),
+                        LHS.getOperand(0), LHS.getOperand(1));
+        // Replace all users of (and X, Y) with newly generated (ands X, Y)
+        DAG.ReplaceAllUsesWith(LHS, ADDSNode);
+        return ADDSNode.getValue(1);
+      }
+    } else if (LHS.getOpcode() == AArch64ISD::ADDS) {
+      if (LHS->getFlags().hasNoSignedWrap() ||
+          ((CC == ISD::SETLT || CC == ISD::SETGE) && optimizeMIOrPL) ||
+          (CC == ISD::SETEQ || CC == ISD::SETNE)) {
+        return LHS.getValue(1);
+      }
     }
   }
 
@@ -4107,7 +4146,7 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
 
     // Produce a normal comparison if we are first in the chain
     if (!CCOp)
-      return emitComparison(LHS, RHS, CC, DL, DAG);
+      return emitComparison(LHS, RHS, CC, DL, DAG, isInteger);
     // Otherwise produce a ccmp.
     return emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate, OutCC, DL,
                                      DAG);
@@ -4397,7 +4436,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   }
 
   if (!Cmp) {
-    Cmp = emitComparison(LHS, RHS, CC, DL, DAG);
+    Cmp = emitComparison(LHS, RHS, CC, DL, DAG, true);
     AArch64CC = changeIntCCToAArch64CC(CC, RHS);
   }
   AArch64cc = getCondCode(DAG, AArch64CC);
