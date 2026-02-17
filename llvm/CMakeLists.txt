@@ -540,6 +540,7 @@ set(LLVM_ALL_EXPERIMENTAL_TARGETS
   DirectX
   M68k
   Xtensa
+  SC32
 )
 
 # List of targets with JIT support:

@@ -1,0 +1,13 @@
+#ifndef LLVM_LIB_TARGET_SC32_MCTARGETDESC_SC32MCTARGETDESC_H
+#define LLVM_LIB_TARGET_SC32_MCTARGETDESC_SC32MCTARGETDESC_H
+
+#define GET_REGINFO_ENUM
+#include "SC32GenRegisterInfo.inc"
+
+#define GET_SUBTARGETINFO_ENUM
+#include "SC32GenSubtargetInfo.inc"
+
+#define GET_INSTRINFO_ENUM
+#include "SC32GenInstrInfo.inc"
+
+#endif
