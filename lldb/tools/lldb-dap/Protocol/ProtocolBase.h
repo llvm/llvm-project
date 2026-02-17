@@ -49,13 +49,24 @@ public:
   String(llvm::StringRef str) : m_str(str.str()) {}
   String(const char *str) : m_str(str) {}
   String(const llvm::formatv_object_base &payload) : m_str(payload.str()) {}
+  String(const String &) = default;
+  String(String &&str) : m_str(std::move(str.m_str)) {}
+  String(std::string &&str) : m_str(std::move(str)) {}
+
+  ~String() = default;
+
+  String &operator=(const String &) = default;
+  String &operator=(String &&Other) {
+    m_str = std::move(Other.m_str);
+    return *this;
+  }
 
   /// Conversion Operators
   /// @{
   operator std::string &() { return m_str; }
   operator llvm::Twine() const { return m_str; }
   operator std::string() const { return m_str; }
-  operator llvm::StringRef() const { return llvm::StringRef(m_str); }
+  operator llvm::StringRef() const { return {m_str}; }
   /// @}
 
   void clear() { m_str.clear(); }
