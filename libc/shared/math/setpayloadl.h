@@ -1,4 +1,4 @@
-//===-- Implementation of setpayloadsig function --------------------------===//
+//===-- Shared setpayloadl function -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/setpayloadsig.h"
-#include "src/__support/math/setpayloadsig.h"
+#ifndef LLVM_LIBC_SHARED_MATH_SETPAYLOADL_H
+#define LLVM_LIBC_SHARED_MATH_SETPAYLOADL_H
+
+#include "src/__support/math/setpayloadl.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(int, setpayloadsig, (double *res, double pl)) {
-  return math::setpayloadsig(res, pl);
-}
+using math::setpayloadl;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_SETPAYLOADL_H
