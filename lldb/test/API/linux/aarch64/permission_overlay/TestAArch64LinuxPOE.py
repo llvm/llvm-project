@@ -101,7 +101,7 @@ class AArch64LinuxPOE(TestBase):
         )
 
         # Allow writes so we can continue. This value has permission 6 changed
-        # from read only (1) to read+write (4).
+        # from read only (1) to write (4).
         self.runCmd("register write por 0x4234567")
 
         self.expect("continue", substrs=["exited with status = 0"])
