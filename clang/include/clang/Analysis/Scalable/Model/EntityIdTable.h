@@ -23,6 +23,7 @@ namespace clang::ssaf {
 class EntityIdTable {
   friend class EntityLinker;
   friend class SerializationFormat;
+  friend class TestFixture;
 
   std::map<EntityName, EntityId> Entities;
 

@@ -50,6 +50,9 @@ public:
   ///
   /// \param Namespace The namespace steps to append to this entity's namespace.
   EntityName makeQualified(NestedBuildNamespace Namespace) const;
+
+  friend class SerializationFormat;
+  friend class TestFixture;
 };
 
 } // namespace clang::ssaf

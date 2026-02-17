@@ -95,6 +95,14 @@ namespace PR42276 {
     using l = void (State::*)();
     static constexpr l m[]{&State::f1, &State::f2};
   };
+  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f1Ev(!cir.ptr<!rec_PR422763A3AState>)
+  // CIR-CXX11-LABEL: cir.func {{.*}} @_ZN7PR422765State2f2Ev(!cir.ptr<!rec_PR422763A3AState>)
+  //
+  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr)
+  // LLVM-CXX11-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr)
+  //
+  // OG-Codegen always generates these deferred, not only if they are non-const.
+  //
   // CIR-LABEL: cir.func {{.*}} @_ZN7PR422765State16syncDirtyObjectsEv(
   // LLVM-LABEL: define{{.*}} void @_ZN7PR422765State16syncDirtyObjectsEv(
   // OGCG-LABEL: define{{.*}} void @_ZN7PR422765State16syncDirtyObjectsEv(
@@ -110,4 +118,13 @@ namespace PR42276 {
       // OGCG-CXX2A: getelementptr inbounds [2 x { i64, i64 }], ptr @_ZN7PR422765State1mE, i64 0, i64 %{{.*}}
       (this->*m[i])();
   }
+  // CIR-CXX2A-LABEL: cir.func {{.*}} @_ZN7PR422765State2f1Ev(!cir.ptr<!rec_PR422763A3AState>)
+  // CIR-CXX2A-LABEL: cir.func {{.*}} @_ZN7PR422765State2f2Ev(!cir.ptr<!rec_PR422763A3AState>)
+  //
+  // LLVM-CXX2A-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr)
+  // LLVM-CXX2A-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr)
+  //
+  // OGCG-LABEL: declare{{.*}} @_ZN7PR422765State2f1Ev(ptr{{.*}})
+  // OGCG-LABEL: declare{{.*}} @_ZN7PR422765State2f2Ev(ptr{{.*}})
+  //
 }

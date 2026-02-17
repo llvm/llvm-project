@@ -31,6 +31,7 @@ class EntityId {
   friend class EntityIdTable;
   friend class EntityLinker;
   friend class SerializationFormat;
+  friend class TestFixture;
 
   size_t Index;
 

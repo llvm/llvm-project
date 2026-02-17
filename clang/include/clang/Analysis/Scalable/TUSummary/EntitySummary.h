@@ -10,6 +10,7 @@
 #define LLVM_CLANG_ANALYSIS_SCALABLE_TUSUMMARY_ENTITYSUMMARY_H
 
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
+#include <type_traits>
 
 namespace clang::ssaf {
 
@@ -19,6 +20,10 @@ public:
   virtual ~EntitySummary() = default;
   virtual SummaryName getSummaryName() const = 0;
 };
+
+template <typename Derived>
+using DerivesFromEntitySummary =
+    std::enable_if_t<std::is_base_of_v<EntitySummary, Derived>>;
 
 } // namespace clang::ssaf
 

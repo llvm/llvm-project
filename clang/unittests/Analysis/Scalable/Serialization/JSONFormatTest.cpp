@@ -93,7 +93,8 @@ deserializePairsEntitySummaryForJSONFormatTest(
   return std::move(Result);
 }
 
-struct PairsEntitySummaryForJSONFormatTestFormatInfo : JSONFormat::FormatInfo {
+struct PairsEntitySummaryForJSONFormatTestFormatInfo final
+    : JSONFormat::FormatInfo {
   PairsEntitySummaryForJSONFormatTestFormatInfo()
       : JSONFormat::FormatInfo(
             SummaryName("PairsEntitySummaryForJSONFormatTest"),

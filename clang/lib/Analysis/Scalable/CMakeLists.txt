@@ -13,6 +13,7 @@ add_clang_library(clangAnalysisScalable
   Serialization/SerializationFormatRegistry.cpp
   Support/ErrorBuilder.cpp
   TUSummary/ExtractorRegistry.cpp
+  TUSummary/TUSummaryBuilder.cpp
 
   LINK_LIBS
   clangAST

@@ -29,6 +29,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/CodeGenHelpers.h"
@@ -146,7 +147,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, raw_ostream &MainOS,
   const auto &RegisterClasses = RegBank.getRegClasses();
   if (!RegisterClasses.empty()) {
     // RegisterClass enums are stored as uint16_t in the tables.
-    assert(RegisterClasses.size() <= 0xffff &&
+    assert(RegisterClasses.size() <= UINT16_MAX &&
            "Too many register classes to fit in tables");
 
     OS << "\n// Register classes\n\n";
@@ -1314,12 +1315,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
        << " = {\n";
     for (unsigned M = 0; M < NumModes; ++M) {
       unsigned EV = 0;
-      OS << "  // Mode = " << M << " (";
-      if (M == 0)
-        OS << "Default";
-      else
-        OS << CGH.getMode(M).Name;
-      OS << ")\n";
+      OS << "  // Mode = " << M << " ("
+         << CGH.getModeName(M, /*IncludeDefault=*/true) << ")\n";
       for (const auto &RC : RegisterClasses) {
         assert(RC.EnumValue == EV && "Unexpected order of register classes");
         ++EV;
@@ -1538,13 +1535,23 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
        << " const {\n";
     // Use the smallest type that can hold a regclass ID with room for a
     // sentinel.
-    if (RegisterClasses.size() <= UINT8_MAX)
-      OS << "  static const uint8_t Table[";
-    else if (RegisterClasses.size() <= UINT16_MAX)
-      OS << "  static const uint16_t Table[";
-    else
-      PrintFatalError("Too many register classes.");
-    OS << RegisterClasses.size() << "][" << SubRegIndicesSize << "] = {\n";
+    const size_t NumRegClasses = RegisterClasses.size();
+    const char *RegClassTy = getMinimalTypeForRange(NumRegClasses + 1);
+    auto EmitTableLookup = [&]() {
+      OS << formatv(R"(
+  };
+  assert(RC && "Missing regclass");
+  if (!Idx) return RC;
+  --Idx;
+  assert(Idx < {} && "Bad subreg");
+  unsigned TV = Table[RC->getID()][Idx];
+  return TV ? getRegClass(TV - 1) : nullptr;
+})",
+                    SubRegIndicesSize);
+    };
+
+    OS << formatv("  static constexpr {} Table[{}][{}] = {{\n", RegClassTy,
+                  NumRegClasses, SubRegIndicesSize);
     for (const auto &RC : RegisterClasses) {
       OS << "    {\t// " << RC.getName() << "\n";
       for (auto &Idx : SubRegIndices) {
@@ -1556,28 +1563,15 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
       }
       OS << "    },\n";
     }
-    OS << "  };\n  assert(RC && \"Missing regclass\");\n"
-       << "  if (!Idx) return RC;\n  --Idx;\n"
-       << "  assert(Idx < " << SubRegIndicesSize << " && \"Bad subreg\");\n"
-       << "  unsigned TV = Table[RC->getID()][Idx];\n"
-       << "  return TV ? getRegClass(TV - 1) : nullptr;\n}\n\n";
+    EmitTableLookup();
 
-    // Emit getSubRegisterClass
+    // Emit getSubRegisterClass.
     OS << "const TargetRegisterClass *" << ClassName
        << "::getSubRegisterClass(const TargetRegisterClass *RC, unsigned Idx)"
        << " const {\n";
 
-    // Use the smallest type that can hold a regclass ID with room for a
-    // sentinel.
-    if (RegisterClasses.size() <= UINT8_MAX)
-      OS << "  static const uint8_t Table[";
-    else if (RegisterClasses.size() <= UINT16_MAX)
-      OS << "  static const uint16_t Table[";
-    else
-      PrintFatalError("Too many register classes.");
-
-    OS << RegisterClasses.size() << "][" << SubRegIndicesSize << "] = {\n";
-
+    OS << formatv("  static constexpr {} Table[{}][{}] = {{\n", RegClassTy,
+                  NumRegClasses, SubRegIndicesSize);
     for (const auto &RC : RegisterClasses) {
       OS << "    {\t// " << RC.getName() << '\n';
       for (auto &Idx : SubRegIndices) {
@@ -1603,11 +1597,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 
       OS << "    },\n";
     }
-    OS << "  };\n  assert(RC && \"Missing regclass\");\n"
-       << "  if (!Idx) return RC;\n  --Idx;\n"
-       << "  assert(Idx < " << SubRegIndicesSize << " && \"Bad subreg\");\n"
-       << "  unsigned TV = Table[RC->getID()][Idx];\n"
-       << "  return TV ? getRegClass(TV - 1) : nullptr;\n}\n\n";
+    EmitTableLookup();
   }
 
   EmitRegUnitPressure(OS, ClassName);
@@ -1894,7 +1884,7 @@ Printable RegisterInfoEmitter::printByHwMode(const InfoByHwMode<InfoTy> &Info,
 
     OS << "{";
     for (unsigned M = 0, E = CGH.getNumModeIds(); M != E; ++M)
-      OS << ' ' << (M ? CGH.getModeName(M, true) : "Default") << ':'
+      OS << ' ' << CGH.getModeName(M, /*IncludeDefault=*/true) << ':'
          << Func(Info.get(M));
     OS << " }";
   });
