@@ -2808,20 +2808,29 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
            << TRI->getSubRegIndexName(SubIdx) << '\n';
         return;
       }
-      if (MONum < MCID.getNumOperands()) {
-        if (const TargetRegisterClass *DRC = TII->getRegClass(MCID, MONum)) {
-          if (!TRI->isSubRegValidForRegClass(RC, DRC, SubIdx)) {
-            report("Illegal virtual register for instruction", MO, MONum);
-            const char *DRCName = TRI->getRegClassName(DRC);
-            const char *RCName = TRI->getRegClassName(RC);
-            if (SubIdx)
-              OS << RCName << "." << TRI->getSubRegIndexName(SubIdx)
-                 << " cannot be used for " << DRCName << " operands.";
-            else
-              OS << "Expected a " << DRCName << " register, but got a "
-                 << RCName << " register\n";
-          }
-        }
+      if (MONum >= MCID.getNumOperands())
+        break;
+      const TargetRegisterClass *DRC = TII->getRegClass(MCID, MONum);
+      if (!DRC)
+        break;
+
+      // If SubIdx is used, validate that RC with SubIdx can be used for an
+      // operand of class DRC. This is valid if for every register in RC, the
+      // register obtained by applying SubIdx to it is in DRC, i.e.,
+      // getMatchingSuperRegClass(RC, DRC, SubIdx) returns RC.
+      if (SubIdx && TRI->getMatchingSuperRegClass(RC, DRC, SubIdx) != RC) {
+        report("Illegal virtual register for instruction", MO, MONum);
+        OS << TRI->getRegClassName(RC) << "." << TRI->getSubRegIndexName(SubIdx)
+           << " cannot be used for " << TRI->getRegClassName(DRC)
+           << " operands.";
+      }
+
+      // If no SubIdx is used, just that that RC is a sub-class of DRC.
+      if (!SubIdx && !RC->hasSuperClassEq(DRC)) {
+        report("Illegal virtual register for instruction", MO, MONum);
+        OS << "Expected a " << TRI->getRegClassName(DRC)
+           << " register, but got a " << TRI->getRegClassName(RC)
+           << " register\n";
       }
     }
     break;

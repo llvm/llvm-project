@@ -739,12 +739,6 @@ public:
   bool isSubRegValidForRegClass(const TargetRegisterClass *RC,
                                 unsigned Idx) const;
 
-  /// Returns true if sub-register \p Idx can be used with register class \p RC
-  /// and the resulting set of registers is a sub-class of \p DRC.
-  bool isSubRegValidForRegClass(const TargetRegisterClass *RC,
-                                const TargetRegisterClass *DRC,
-                                unsigned Idx) const;
-
   /// Return the subregister index you get from composing
   /// two subregister indices.
   ///
