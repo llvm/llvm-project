@@ -2248,28 +2248,20 @@ bool DSEState::tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
 }
 
 bool DSEState::dominatingConditionImpliesValue(StoreInst *SI, MemoryDef *Def) {
-  BasicBlock *EntryBB = &SI->getFunction()->getEntryBlock();
   BasicBlock *StoreBB = SI->getParent();
+  Value *StorePtr = SI->getPointerOperand();
+  Value *StoreVal = SI->getValueOperand();
 
+  // Walk up the dominator tree looking for dominating conditions, up to limit.
   static constexpr unsigned Limit = 4;
-  SmallVector<BasicBlock *, 4> DomChain;
   BasicBlock *Node = StoreBB;
-  // Walk up the dominator tree until the entry block is found, up to limit.
   for (unsigned Depth = 0; Depth < Limit; ++Depth) {
     DomTreeNode *IDomNode = DT.getNode(Node)->getIDom();
     if (!IDomNode)
       break;
     Node = IDomNode->getBlock();
-    DomChain.emplace_back(Node);
-    if (Node == EntryBB)
-      break;
-  }
 
-  Value *StorePtr = SI->getPointerOperand();
-  Value *StoreVal = SI->getValueOperand();
-  SmallVector<std::pair<BasicBlock *, Instruction *>, 4> VisitConditions;
-  for (BasicBlock *DomBB : DomChain) {
-    auto *BI = dyn_cast<BranchInst>(DomBB->getTerminator());
+    auto *BI = dyn_cast<BranchInst>(Node->getTerminator());
     if (!BI || !BI->isConditional())
       continue;
 
@@ -2290,26 +2282,22 @@ bool DSEState::dominatingConditionImpliesValue(StoreInst *SI, MemoryDef *Def) {
       continue;
 
     unsigned ImpliedSucc = (Pred == ICmpInst::ICMP_EQ) ? 0 : 1;
-    if (!DT.dominates(BasicBlockEdge(DomBB, BI->getSuccessor(ImpliedSucc)),
+    if (!DT.dominates(BasicBlockEdge(Node, BI->getSuccessor(ImpliedSucc)),
                       StoreBB))
       continue;
 
-    // Found a dominating condition.
-    VisitConditions.emplace_back(DomBB, ICmpL);
+    // Found a dominating condition. Make sure there does not exist any
+    // clobbering access between the load and the potential redundant store.
+    MemoryAccess *LoadAcc = MSSA.getMemoryAccess(ICmpL);
+    MemoryAccess *ClobAcc =
+        MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def, BatchAA);
+
+    if (MSSA.dominates(ClobAcc, LoadAcc))
+      return true;
     break;
   }
 
-  if (VisitConditions.empty())
-    return false;
-
-  // Make sure there does not exist any clobbering access between the load and
-  // the potential redundant store.
-  const auto &[_, LI] = VisitConditions[0];
-  MemoryAccess *LoadAcc = MSSA.getMemoryAccess(LI);
-  MemoryAccess *ClobAcc =
-      MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def, BatchAA);
-
-  return MSSA.dominates(ClobAcc, LoadAcc);
+  return false;
 }
 
 bool DSEState::storeIsNoop(MemoryDef *Def, const Value *DefUO) {
