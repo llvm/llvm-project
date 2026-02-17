@@ -656,7 +656,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.exportDynamic =
       args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, ctx.arg.shared);
 
-   // Parse wasm32/64.
+  // Parse wasm32/64.
   if (auto *arg = args.getLastArg(OPT_m)) {
     StringRef s = arg->getValue();
     if (s == "wasm32")
