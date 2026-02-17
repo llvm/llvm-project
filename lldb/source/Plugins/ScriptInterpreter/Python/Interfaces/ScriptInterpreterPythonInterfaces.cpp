@@ -11,6 +11,10 @@
 
 #if LLDB_ENABLE_PYTHON
 
+// Include lldb-python.h first to define NO_PID_T on Windows before any
+// LLDB header transitively pulls in PosixApi.h.
+#include "../lldb-python.h"
+
 #include "ScriptInterpreterPythonInterfaces.h"
 
 #include "lldb/Core/PluginManager.h"
