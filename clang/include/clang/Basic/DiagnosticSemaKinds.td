@@ -606,7 +606,8 @@ def err_decomp_decl_template : Error<
 def err_decomp_decl_not_alone : Error<
   "structured binding declaration must be the only declaration in its group">;
 def err_decomp_decl_requires_init : Error<
-  "structured binding declaration %0 requires an initializer">;
+  "structured binding declaration %0 requires an initializer; "
+  "expected '=', '(', or a braced initializer list">;
 def err_decomp_decl_wrong_number_bindings : Error<
   "type %0 binds to %3 %plural{1:element|:elements}2, but "
   "%select{%plural{0:no|:only %1}1|%1}4 "

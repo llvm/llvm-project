@@ -22,7 +22,7 @@ constexpr int foo(Q &&q) {
   return a * 10 + b;
 }
 
-auto [noinit]; // expected-error{{structured binding declaration '[noinit]' requires an initializer}}
+auto [noinit]; // expected-error{{structured binding declaration '[noinit]' requires an initializer; expected '=', '(', or a braced initializer list}}
 
 #else
 
