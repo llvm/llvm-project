@@ -8341,9 +8341,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
                       this->FileName);
         return;
       }
-
-      RelocSymTab = unwrapOrError(this->FileName,
-                                  this->Obj.getSection(CGRelSection->sh_link));
+      RelocSymTab = SymtabOrErr.get();
       this->forEachRelocationDo(
           *CGRelSection, [&](const auto &R, ...) { Relocations.push_back(R); });
       llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
