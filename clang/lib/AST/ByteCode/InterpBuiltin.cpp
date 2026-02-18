@@ -5902,22 +5902,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_minss:
   case clang::X86::BI__builtin_ia32_minsd:
-  case clang::X86::BI__builtin_ia32_minsh:
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
         [](const APFloat &A, const APFloat &B,
            std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
-          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
-          // specified
-          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
-          if (RoundingMode.value_or(DefaultMode) != 4)
-            return std::nullopt;
-          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
-              B.isInfinity() || B.isDenormal())
-            return std::nullopt;
-          if (A.isZero() && B.isZero())
-            return B;
-          return llvm::minimum(A, B);
+          return EvalScalarMinMaxFp(A, B, RoundingMode, /*IsMin=*/true);
         },
         /*IsScalar=*/true);
 
@@ -5934,17 +5923,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call,
         [IsMin](const APFloat &A, const APFloat &B,
                 std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
-          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
-          // specified
-          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
-          if (RoundingMode.value_or(DefaultMode) != 4)
-            return std::nullopt;
-          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
-              B.isInfinity() || B.isDenormal())
-            return std::nullopt;
-          if (A.isZero() && B.isZero())
-            return B;
-          return IsMin ? llvm::minimum(A, B) : llvm::maximum(A, B);
+          return EvalScalarMinMaxFp(A, B, RoundingMode, IsMin);
         });
   }
 
@@ -5971,22 +5950,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_maxss:
   case clang::X86::BI__builtin_ia32_maxsd:
-  case clang::X86::BI__builtin_ia32_maxsh:
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
         [](const APFloat &A, const APFloat &B,
            std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
-          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
-          // specified
-          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
-          if (RoundingMode.value_or(DefaultMode) != 4)
-            return std::nullopt;
-          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
-              B.isInfinity() || B.isDenormal())
-            return std::nullopt;
-          if (A.isZero() && B.isZero())
-            return B;
-          return llvm::maximum(A, B);
+          return EvalScalarMinMaxFp(A, B, RoundingMode, /*IsMin=*/false);
         },
         /*IsScalar=*/true);
 

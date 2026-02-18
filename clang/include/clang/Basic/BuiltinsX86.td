@@ -3402,8 +3402,6 @@ let Features = "avx512fp16", Attributes = [NoThrow, Const, Constexpr, RequiredVe
 }
 
 let Features = "avx512fp16", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
-  def maxsh : X86Builtin<"_Vector<8, _Float16>(_Vector<8, _Float16>, _Vector<8, _Float16>)">;
-  def minsh : X86Builtin<"_Vector<8, _Float16>(_Vector<8, _Float16>, _Vector<8, _Float16>)">;
   def maxsh_round_mask : X86Builtin<"_Vector<8, _Float16>(_Vector<8, _Float16>, _Vector<8, _Float16>, _Vector<8, _Float16>, unsigned char, _Constant int)">;
   def minsh_round_mask : X86Builtin<"_Vector<8, _Float16>(_Vector<8, _Float16>, _Vector<8, _Float16>, _Vector<8, _Float16>, unsigned char, _Constant int)">;
 }

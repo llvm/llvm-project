@@ -12141,6 +12141,20 @@ static bool evalShiftWithCount(
   return true;
 }
 
+std::optional<APFloat> EvalScalarMinMaxFp(const APFloat &A, const APFloat &B,
+                                          std::optional<APSInt> RoundingMode,
+                                          bool IsMin) {
+  APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+  if (RoundingMode.value_or(DefaultMode) != 4)
+    return std::nullopt;
+  if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+      B.isInfinity() || B.isDenormal())
+    return std::nullopt;
+  if (A.isZero() && B.isZero())
+    return B;
+  return IsMin ? llvm::minimum(A, B) : llvm::maximum(A, B);
+}
+
 bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (!IsConstantEvaluatedBuiltinCall(E))
     return ExprEvaluatorBaseTy::VisitCallExpr(E);
@@ -14339,21 +14353,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
   case clang::X86::BI__builtin_ia32_minss:
   case clang::X86::BI__builtin_ia32_minsd:
-  case clang::X86::BI__builtin_ia32_minsh:
     return EvaluateFpBinOpExpr(
         [](const APFloat &A, const APFloat &B,
            std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
-          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
-          // specified
-          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
-          if (RoundingMode.value_or(DefaultMode) != 4)
-            return std::nullopt;
-          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
-              B.isInfinity() || B.isDenormal())
-            return std::nullopt;
-          if (A.isZero() && B.isZero())
-            return B;
-          return llvm::minimum(A, B);
+          return EvalScalarMinMaxFp(A, B, RoundingMode, /*IsMin=*/true);
         },
         /*IsScalar=*/true);
 
@@ -14372,17 +14375,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return EvaluateScalarFpRoundMaskBinOp(
         [IsMin](const APFloat &A, const APFloat &B,
                 std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
-          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
-          // specified
-          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
-          if (RoundingMode.value_or(DefaultMode) != 4)
-            return std::nullopt;
-          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
-              B.isInfinity() || B.isDenormal())
-            return std::nullopt;
-          if (A.isZero() && B.isZero())
-            return B;
-          return IsMin ? llvm::minimum(A, B) : llvm::maximum(A, B);
+          return EvalScalarMinMaxFp(A, B, RoundingMode, IsMin);
         });
   }
 
@@ -14408,21 +14401,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
   case clang::X86::BI__builtin_ia32_maxss:
   case clang::X86::BI__builtin_ia32_maxsd:
-  case clang::X86::BI__builtin_ia32_maxsh:
     return EvaluateFpBinOpExpr(
         [](const APFloat &A, const APFloat &B,
            std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
-          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
-          // specified
-          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
-          if (RoundingMode.value_or(DefaultMode) != 4)
-            return std::nullopt;
-          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
-              B.isInfinity() || B.isDenormal())
-            return std::nullopt;
-          if (A.isZero() && B.isZero())
-            return B;
-          return llvm::maximum(A, B);
+          return EvalScalarMinMaxFp(A, B, RoundingMode, /*IsMin=*/false);
         },
         /*IsScalar=*/true);
 
