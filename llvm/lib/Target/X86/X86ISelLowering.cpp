@@ -24365,55 +24365,42 @@ X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 /// Returns the BT node and the condition code needed to use it.
 static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
                             SelectionDAG &DAG, X86::CondCode &X86CC) {
+  using namespace SDPatternMatch;
   assert(And.getOpcode() == ISD::AND && "Expected AND node!");
-  SDValue Op0 = And.getOperand(0);
-  SDValue Op1 = And.getOperand(1);
-  if (Op0.getOpcode() == ISD::TRUNCATE)
-    Op0 = Op0.getOperand(0);
-  if (Op1.getOpcode() == ISD::TRUNCATE)
-    Op1 = Op1.getOperand(0);
+  assert(And.getValueType().isScalarInteger() && "Scalar type expected");
 
-  SDValue Src, BitNo;
-  if (Op1.getOpcode() == ISD::SHL)
-    std::swap(Op0, Op1);
-  if (Op0.getOpcode() == ISD::SHL) {
-    if (isOneConstant(Op0.getOperand(0))) {
-      // If we looked past a truncate, check that it's only truncating away
-      // known zeros.
-      unsigned BitWidth = Op0.getValueSizeInBits();
-      unsigned AndBitWidth = And.getValueSizeInBits();
-      if (BitWidth > AndBitWidth) {
-        KnownBits Known = DAG.computeKnownBits(Op0);
-        if (Known.countMinLeadingZeros() < BitWidth - AndBitWidth)
-          return SDValue();
-      }
-      Src = Op1;
-      BitNo = Op0.getOperand(1);
+  APInt AndRHSVal;
+  SDValue Shl, Src, BitNo;
+  if (sd_match(And,
+               m_And(m_TruncOrSelf(m_Value(Src)),
+                     m_TruncOrSelf(m_AllOf(m_Value(Shl),
+                                           m_Shl(m_One(), m_Value(BitNo))))))) {
+    // If we looked past a truncate, check that it's only truncating away known
+    // zeros.
+    unsigned BitWidth = Shl.getValueSizeInBits();
+    unsigned AndBitWidth = And.getValueSizeInBits();
+    if (BitWidth > AndBitWidth) {
+      KnownBits Known = DAG.computeKnownBits(Shl);
+      if (Known.countMinLeadingZeros() < (BitWidth - AndBitWidth))
+        return SDValue();
     }
-  } else if (Op1.getOpcode() == ISD::Constant) {
-    ConstantSDNode *AndRHS = cast<ConstantSDNode>(Op1);
-    uint64_t AndRHSVal = AndRHS->getZExtValue();
-    SDValue AndLHS = Op0;
-
-    if (AndRHSVal == 1 && AndLHS.getOpcode() == ISD::SRL) {
-      Src = AndLHS.getOperand(0);
-      BitNo = AndLHS.getOperand(1);
-    } else {
-      // Use BT if the immediate can't be encoded in a TEST instruction or we
-      // are optimizing for size and the immedaite won't fit in a byte.
-      bool OptForSize = DAG.shouldOptForSize();
-      if ((!isUInt<32>(AndRHSVal) || (OptForSize && !isUInt<8>(AndRHSVal))) &&
-          isPowerOf2_64(AndRHSVal)) {
-        Src = AndLHS;
-        BitNo = DAG.getConstant(Log2_64_Ceil(AndRHSVal), dl,
-                                Src.getValueType());
-      }
-    }
-  }
-
-  // No patterns found, give up.
-  if (!Src.getNode())
+  } else if (sd_match(And,
+                      m_And(m_TruncOrSelf(m_Srl(m_Value(Src), m_Value(BitNo))),
+                            m_One()))) {
+    // ((Src >> BitNo) & 1) ==/!= 0
+  } else if (sd_match(And, m_And(m_TruncOrSelf(m_Value(Src)),
+                                 m_ConstInt(AndRHSVal)))) {
+    // Use BT if the immediate can't be encoded in a TEST instruction or we
+    // are optimizing for size and the immediate won't fit in a byte.
+    bool OptForSize = DAG.shouldOptForSize();
+    if (!AndRHSVal.isPowerOf2() || AndRHSVal.isIntN(OptForSize ? 8 : 32))
+      return SDValue();
+    // (Src & ConstPow2) ==/!= 0
+    BitNo = DAG.getConstant(AndRHSVal.ceilLogBase2(), dl, Src.getValueType());
+  } else {
+    // No patterns found, give up.
     return SDValue();
+  }
 
   // Remove any bit flip.
   if (isBitwiseNot(Src)) {
