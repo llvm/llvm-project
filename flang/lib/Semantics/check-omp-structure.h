@@ -193,9 +193,11 @@ private:
   void CheckStructureComponent(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool HasInvalidWorksharingNesting(
-      const parser::CharBlock &, const OmpDirectiveSet &);
+      const parser::OmpDirectiveName &name, const OmpDirectiveSet &);
+
   bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
   bool IsNestedInDirective(llvm::omp::Directive directive);
+  bool IsCombinedParallelWorksharing(llvm::omp::Directive directive) const;
   bool InTargetRegion();
   void HasInvalidTeamsNesting(
       const llvm::omp::Directive &dir, const parser::CharBlock &source);
