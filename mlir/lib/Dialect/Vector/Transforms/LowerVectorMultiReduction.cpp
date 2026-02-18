@@ -287,7 +287,8 @@ public:
       return success();
     }
 
-    // 8. Shape cast the flattened result back to the original n-D parallel shape.
+    // 8. Shape cast the flattened result back to the original n-D parallel
+    // shape.
     VectorType outputCastedType = VectorType::get(
         parallelShapes, multiReductionOp.getSourceVectorType().getElementType(),
         parallelScalableDims);
