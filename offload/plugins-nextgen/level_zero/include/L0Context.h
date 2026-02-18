@@ -135,6 +135,14 @@ public:
 
   const MemAllocatorTy &getHostMemAllocator() const { return HostMemAllocator; }
   MemAllocatorTy &getHostMemAllocator() { return HostMemAllocator; }
+
+  /// Level Zero extension function pointers.
+  struct ZeKernelArgumentsSizeExtension_Ty {
+    bool Supported = false;
+    ze_result_t(ZE_APICALL *zexKernelGetArgumentSize)(
+        ze_kernel_handle_t hKernel, uint32_t argIndex,
+        uint32_t *pArgSize) = NULL;
+  } ZeKernelArgumentSizeExt;
 };
 
 } // namespace llvm::omp::target::plugin

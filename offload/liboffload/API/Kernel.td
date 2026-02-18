@@ -20,20 +20,52 @@ def ol_kernel_launch_size_args_t : Struct {
     ];
 }
 
+def OL_KERNEL_LAUNCH_PROP_END : Macro {
+  let desc = "last element of the ol_kernel_launch_prop_t array";
+  let value = "{OL_KERNEL_LAUNCH_PROP_TYPE_NONE, NULL}";
+}
+
+def ol_kernel_launch_prop_type_t : Enum {
+  let desc = "Defines structure type";
+  // TODO: Convert to typed enum
+  //  let is_typed = 1;
+  let etors = [Etor<"none", "Used for null terminating property array">,
+               Etor<"size", "Array of the arguments sizes.">,
+  ];
+}
+
+def ol_kernel_launch_prop_t : Struct {
+  let desc = "Optional properties for kernel launch.";
+  let members = [StructMember<"ol_kernel_launch_prop_type_t", "type",
+                              "Type of the data field">,
+                 StructMember<"void *", "data",
+                              "Pointer to property-specific data.">];
+}
+
 def olLaunchKernel : Function {
     let desc = "Enqueue a kernel launch with the specified size and parameters.";
     let details = [
         "If a queue is not specified, kernel execution happens synchronously",
         "ArgumentsData may be set to NULL (to indicate no parameters)"
     ];
-    let params = [
-        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN_OPTIONAL>,
-        Param<"ol_device_handle_t", "Device", "handle of the device to execute on", PARAM_IN>,
-        Param<"ol_symbol_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
-        Param<"const void*", "ArgumentsData", "pointer to the kernel argument struct", PARAM_IN_OPTIONAL>,
-        Param<"size_t", "ArgumentsSize", "size of the kernel argument struct", PARAM_IN>,
-        Param<"const ol_kernel_launch_size_args_t*", "LaunchSizeArgs", "pointer to the struct containing launch size parameters", PARAM_IN>,
-    ];
+    let params =
+        [Param<"ol_queue_handle_t", "Queue", "handle of the queue",
+               PARAM_IN_OPTIONAL>,
+         Param<"ol_device_handle_t", "Device",
+               "handle of the device to execute on", PARAM_IN>,
+         Param<"ol_symbol_handle_t", "Kernel", "handle of the kernel",
+               PARAM_IN>,
+         Param<"const void*", "ArgumentsData",
+               "pointer to the kernel argument struct", PARAM_IN_OPTIONAL>,
+         Param<"size_t", "ArgumentsSize", "size of the kernel argument struct",
+               PARAM_IN>,
+         Param<"const ol_kernel_launch_size_args_t*", "LaunchSizeArgs",
+               "pointer to the struct containing launch size parameters",
+               PARAM_IN>,
+         Param<"const ol_kernel_launch_prop_t*", "Properties",
+               "Array of optional properties, last element must be "
+               "OL_KERNEL_LAUNCH_PROP_END",
+               PARAM_IN_OPTIONAL>];
     let returns = [
         Return<"OL_ERRC_INVALID_ARGUMENT", ["`ArgumentsSize > 0 && ArgumentsData == NULL`"]>,
         Return<"OL_ERRC_INVALID_DEVICE", ["If Queue is non-null but does not belong to Device"]>,
