@@ -718,8 +718,8 @@ UnrollCostEstimator::UnrollCostEstimator(
 
 bool UnrollCostEstimator::canUnroll() const {
   if (Convergence == ConvergenceKind::ExtendedLoop) {
-    LLVM_DEBUG(
-        dbgs().indent(1) << "Not unrolling: contains convergent operations.\n");
+    LLVM_DEBUG(dbgs().indent(1)
+               << "Not unrolling: contains convergent operations.\n");
     return false;
   }
   if (!LoopSize.isValid()) {
