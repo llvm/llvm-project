@@ -899,8 +899,9 @@ to true (the default value), then this checker never reports dereference of
 pointers with a specified address space. If the option is set to false, then
 reports from the specific x86 address spaces 256, 257 and 258 are still
 suppressed, but fixed address dereferences from other address spaces are
-reported. Do not use ``address_space`` attributes to suppress the reports -
-it just happens so that the checker also doesn't raise issues if the attribute is present.
+reported.
+Do not use the :ref:`address_space <langext-address_space_documentation>`
+attribute to suppress the reports - it just happens so that the checker also doesn't raise issues if the attribute is present.
 
 .. _optin-cplusplus-UninitializedObject:
 

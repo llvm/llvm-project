@@ -196,6 +196,7 @@ TLS models are mutually exclusive.
 def AddressSpaceDocs : Documentation {
   let Category = DocCatType;
   let Heading = "address_space";
+  let Label = "langext-address_space_documentation";
   let Content = [{
 .. Note:: This attribute is mainly intended to be used by target headers
   provided by the toolchain. End users should prefer the documented, named
