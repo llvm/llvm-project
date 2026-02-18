@@ -9,18 +9,18 @@
 #include "clang/Analysis/Scalable/Support/ErrorBuilder.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include <cassert>
 
 namespace clang::ssaf {
 
 ErrorBuilder ErrorBuilder::wrap(llvm::Error E) {
-  if (!E) {
-    llvm::consumeError(std::move(E));
-    // Return builder with generic error code for success case.
-    return ErrorBuilder(std::make_error_code(std::errc::invalid_argument));
-  }
+  assert(
+      E &&
+      "Cannot wrap a success error - check for success before calling wrap()");
 
   std::error_code EC;
   bool FirstError = true;
+  std::vector<std::string> Messages;
   ErrorBuilder Builder(std::make_error_code(std::errc::invalid_argument));
 
   llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
@@ -34,24 +34,27 @@ ErrorBuilder ErrorBuilder::wrap(llvm::Error E) {
     // Collect messages from all errors.
     std::string ErrorMsg = EI.message();
     if (!ErrorMsg.empty()) {
-      Builder.ContextStack.push_back(std::move(ErrorMsg));
+      Messages.push_back(std::move(ErrorMsg));
     }
   });
+
+  // Combine all messages with " + " and push as a single context entry
+  std::string CombinedMsg = llvm::join(Messages, " + ");
+  Builder.pushContext(std::move(CombinedMsg));
 
   return Builder;
 }
 
 ErrorBuilder &ErrorBuilder::context(const char *Msg) {
-  ContextStack.push_back(Msg);
+  pushContext(std::string(Msg));
   return *this;
 }
 
 llvm::Error ErrorBuilder::build() {
-  if (ContextStack.empty())
-    return llvm::Error::success();
-
   // Reverse the context stack so that the most recent context appears first
   // and the wrapped error (if any) appears last.
+  // Note: Even if ContextStack is empty, we create an error with the stored
+  // error code and an empty message (this is valid in LLVM).
   return llvm::createStringError(llvm::join(llvm::reverse(ContextStack), "\n"),
                                  Code);
 }

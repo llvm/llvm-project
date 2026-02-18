@@ -25,7 +25,7 @@ namespace clang::ssaf {
 /// Fluent API for constructing contextual errors.
 ///
 /// ErrorBuilder allows building error messages with layered context
-/// information. Context is added from innermost to outermost, and the final
+/// information. Context is added innermost to outermost, and the final
 /// error message presents the context in reverse order (outermost first).
 ///
 /// Example usage:
@@ -39,19 +39,35 @@ private:
   std::error_code Code;
   std::vector<std::string> ContextStack;
 
-  // Private constructor - only accessible via static factories.
   explicit ErrorBuilder(std::error_code EC) : Code(EC) {}
 
-  // Helper: Format message and add to context stack.
+  void pushContext(std::string Msg) {
+    if (!Msg.empty()) {
+      ContextStack.push_back(std::move(Msg));
+    }
+  }
+
   template <typename... Args>
   void addFormattedContext(const char *Fmt, Args &&...ArgVals) {
     std::string Message =
         llvm::formatv(Fmt, std::forward<Args>(ArgVals)...).str();
-    ContextStack.push_back(std::move(Message));
+    pushContext(std::move(Message));
   }
 
 public:
-  // Static factory: Create new error from error code and formatted message.
+  /// Create an ErrorBuilder with an error code and formatted message.
+  ///
+  /// \param EC The error code for this error.
+  /// \param Fmt Format string for the error message (using llvm::formatv).
+  /// \param ArgVals Arguments for the format string.
+  /// \returns A new ErrorBuilder with the initial error message.
+  ///
+  /// Example:
+  /// \code
+  ///   return ErrorBuilder::create(std::errc::invalid_argument,
+  ///                               "invalid value: {0}", 42)
+  ///       .build();
+  /// \endcode
   template <typename... Args>
   static ErrorBuilder create(std::error_code EC, const char *Fmt,
                              Args &&...ArgVals) {
@@ -60,27 +76,99 @@ public:
     return Builder;
   }
 
-  // Convenience overload for std::errc.
+  /// Convenience overload that accepts std::errc instead of std::error_code.
+  ///
+  /// \param EC The error condition for this error.
+  /// \param Fmt Format string for the error message.
+  /// \param ArgVals Arguments for the format string.
+  /// \returns A new ErrorBuilder with the initial error message.
   template <typename... Args>
   static ErrorBuilder create(std::errc EC, const char *Fmt, Args &&...ArgVals) {
     return create(std::make_error_code(EC), Fmt,
                   std::forward<Args>(ArgVals)...);
   }
 
-  // Static factory: Wrap existing error and optionally add context.
+  /// Wrap an existing error and optionally add context.
+  ///
+  /// Extracts the error code and message(s) from the given error. If multiple
+  /// errors are joined (via llvm::joinErrors), their messages are combined
+  /// using " + " separator.
+  ///
+  /// \param E The error to wrap. Must be a failure (cannot be success).
+  /// \returns A new ErrorBuilder containing the wrapped error information.
+  ///
+  /// \pre E must evaluate to true (i.e., must be a failure). Wrapping
+  ///      Error::success() is a programming error and will trigger an
+  ///      assertion failure in debug builds.
+  ///
+  /// Example:
+  /// \code
+  ///   if (auto Err = foo())
+  ///     return ErrorBuilder::wrap(std::move(Err))
+  ///         .context("while processing file")
+  ///         .build();
+  /// \endcode
   static ErrorBuilder wrap(llvm::Error E);
 
-  // Add context (plain string).
+  /// Add context information as a plain string.
+  ///
+  /// Empty strings are ignored and not added to the context stack.
+  ///
+  /// \param Msg Context message to add. Must be a null-terminated string.
+  /// \returns Reference to this ErrorBuilder for method chaining.
+  ///
+  /// Example:
+  /// \code
+  ///   return ErrorBuilder::create(...)
+  ///       .context("reading configuration file")
+  ///       .build();
+  /// \endcode
   ErrorBuilder &context(const char *Msg);
 
-  // Add context (formatted string).
+  /// Add context information with formatted string.
+  ///
+  /// Uses llvm::formatv for formatting. Empty messages (after formatting)
+  /// are ignored and not added to the context stack.
+  ///
+  /// \param Fmt Format string (using llvm::formatv syntax).
+  /// \param ArgVals Arguments for the format string.
+  /// \returns Reference to this ErrorBuilder for method chaining.
+  ///
+  /// Example:
+  /// \code
+  ///   return ErrorBuilder::create(...)
+  ///       .context("processing field '{0}'", fieldName)
+  ///       .context("at line {0}, column {1}", line, col)
+  ///       .build();
+  /// \endcode
   template <typename... Args>
   ErrorBuilder &context(const char *Fmt, Args &&...ArgVals) {
     addFormattedContext(Fmt, std::forward<Args>(ArgVals)...);
     return *this;
   }
 
-  // Build the final error.
+  /// Build and return the final error.
+  ///
+  /// Constructs an llvm::Error with all accumulated context. The context
+  /// is presented in reverse order: most recent context first, original
+  /// error message last. Each context layer is separated by a newline.
+  ///
+  /// \returns An llvm::Error containing the error code and formatted message.
+  ///          Even if no context was added (empty context stack), an error
+  ///          with the stored error code is returned.
+  ///
+  /// Example output:
+  /// \code
+  ///   // ErrorBuilder::create(errc::invalid_argument, "value is 42")
+  ///   //     .context("processing field 'age'")
+  ///   //     .context("reading config")
+  ///   //     .build();
+  ///   //
+  ///   // Produces:
+  ///   // "reading config
+  ///   //  processing field 'age'
+  ///   //  value is 42"
+  /// \endcode
   llvm::Error build();
 };
 
