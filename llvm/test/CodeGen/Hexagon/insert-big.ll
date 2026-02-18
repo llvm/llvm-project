@@ -1,20 +1,19 @@
-; Check that llc does not abort, which happened due to incorrect MIR.
-; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=1 < %s
-; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=2 < %s
-; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=3 < %s
-; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=4 < %s
-; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=5 < %s
+;; Verify the output of the hexinsert pass, llc will abort if verification
+;; fails. In the failing case, a def (%15) is used in an bb that does
+;; not follow the one with the def, e.g.:
 
-; Look for this symptom, in case llc does not check invalid IR.
-; CHECK-NOT: insert(%14,%5,#5,#5)
+;; # | bb.3 (%ir-block.3):
+;; # |   %17:intregs = S2_insert %15:intregs(tied-def 0), %5:intregs, 5, 5
+;; # |   J2_jump %bb.2, implicit-def dead $pc
+;; # |
+;; # | bb.4 (%ir-block.6):
+;; # |   %15:intregs = S2_insert %6:intregs(tied-def 0), %3:intregs, 5, 5
 
-; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=1 -debug-only=hexinsert -stop-after hexinsert < %s 2>&1 | FileCheck %s
-; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=2 -debug-only=hexinsert -stop-after hexinsert < %s 2>&1 | FileCheck %s
-; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=3 -debug-only=hexinsert -stop-after hexinsert < %s 2>&1 | FileCheck %s
-; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=4 -debug-only=hexinsert -stop-after hexinsert < %s 2>&1 | FileCheck %s
-; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=5 -debug-only=hexinsert -stop-after hexinsert < %s 2>&1 | FileCheck %s
-
-; REQUIRES: asserts
+; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=1 -stop-after hexinsert -verify-machineinstrs < %s
+; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=2 -stop-after hexinsert -verify-machineinstrs < %s
+; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=3 -stop-after hexinsert -verify-machineinstrs < %s
+; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=4 -stop-after hexinsert -verify-machineinstrs < %s
+; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=5 -stop-after hexinsert -verify-machineinstrs < %s
 
 define i32 @f(i32 %0, i32 %1, i32 %2) {
 entry:
