@@ -168,13 +168,21 @@ See tools/llvm-driver/CMakeLists.txt for the reference implementation.""",
 
 def llvm_driver_cc_binary(
         name,
+        needs_posix_utility_signal_handling = False,
         deps = None,
         **kwargs):
     """cc_binary wrapper for binaries using the llvm-driver template."""
+    init_llvm_args = ""
+    if needs_posix_utility_signal_handling:
+        init_llvm_args = ", /*InstallPipeSignalExitHandler=*/true, /*NeedsPOSIXUtilitySignalHandling=*/true"
+
     expand_template(
         name = "_gen_" + name,
         out = name + "-driver.cpp",
-        substitutions = {"@TOOL_NAME@": name.replace("-", "_")},
+        substitutions = {
+            "@TOOL_NAME@": name.replace("-", "_"),
+            "@INITLLVM_ARGS@": init_llvm_args,
+        },
         template = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
     )
     deps = deps or []

@@ -2251,6 +2251,7 @@ cc_library(
 llvm_driver_cc_binary(
     name = "clang",
     stamp = 0,
+    needs_posix_utility_signal_handling = True,
     deps = [":clang-driver"],
 )
 
