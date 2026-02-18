@@ -20169,6 +20169,30 @@ static SDValue performBuildShuffleExtendCombine(SDValue BV, SelectionDAG &DAG) {
     SeenZExtOrSExt = true;
   }
 
+  // Avoid the said use of vector SExt/ZExt in case all vector elements are
+  // consumed and each shuffle's mask uses same index (== homogeneous), in order
+  // to permit use of indexed OP (aka by-element) instruction variant. Example
+  // OPs: MLA, MUL.
+  EVT ExtendType = Extend->getValueType(0);
+  if (ExtendType.isVector() && !ExtendType.isScalableVT()) {
+    SmallBitVector UsedElements(ExtendType.getVectorNumElements(), false);
+    for (SDNode *User : Extend.getNode()->users()) {
+      // look for shuffles whose first operand is our Extend
+      if (User->getOpcode() != ISD::VECTOR_SHUFFLE ||
+          User->getOperand(0) != Extend)
+        continue;
+      ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(User)->getMask();
+      const int Idx = Mask[0];
+      // early exit if a shuffle mask isn't homogeneous
+      if (!all_of(Mask, [Idx](int M) { return M == Idx; }))
+        break;
+      UsedElements.set(Idx);
+    }
+    // Verified relevant shuffles cover all elements of the Extend vector
+    if (UsedElements.all())
+      return SDValue();
+  }
+
   SDValue NBV;
   SDLoc DL(BV);
   if (BV.getOpcode() == ISD::BUILD_VECTOR) {
