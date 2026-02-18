@@ -9,51 +9,53 @@
 define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
 ; SCALAR-LABEL: clmul_i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    movl %esi, %edx
-; SCALAR-NEXT:    andb $1, %dl
+; SCALAR-NEXT:    pushq %rbx
 ; SCALAR-NEXT:    movl %esi, %ecx
 ; SCALAR-NEXT:    andb $2, %cl
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %cl
 ; SCALAR-NEXT:    movl %eax, %ecx
-; SCALAR-NEXT:    movl %edi, %eax
-; SCALAR-NEXT:    mulb %dl
-; SCALAR-NEXT:    movl %eax, %edx
-; SCALAR-NEXT:    xorb %cl, %dl
-; SCALAR-NEXT:    movl %esi, %ecx
-; SCALAR-NEXT:    andb $4, %cl
-; SCALAR-NEXT:    movl %edi, %eax
-; SCALAR-NEXT:    mulb %cl
-; SCALAR-NEXT:    movl %eax, %r8d
-; SCALAR-NEXT:    movl %esi, %ecx
-; SCALAR-NEXT:    andb $8, %cl
-; SCALAR-NEXT:    movl %edi, %eax
-; SCALAR-NEXT:    mulb %cl
-; SCALAR-NEXT:    movl %eax, %ecx
-; SCALAR-NEXT:    xorb %r8b, %cl
-; SCALAR-NEXT:    xorb %dl, %cl
 ; SCALAR-NEXT:    movl %esi, %edx
-; SCALAR-NEXT:    andb $16, %dl
+; SCALAR-NEXT:    andb $1, %dl
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %dl
 ; SCALAR-NEXT:    movl %eax, %edx
 ; SCALAR-NEXT:    movl %esi, %r8d
-; SCALAR-NEXT:    andb $32, %r8b
+; SCALAR-NEXT:    andb $4, %r8b
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %r8b
 ; SCALAR-NEXT:    movl %eax, %r8d
 ; SCALAR-NEXT:    movl %esi, %r9d
-; SCALAR-NEXT:    andb $64, %r9b
+; SCALAR-NEXT:    andb $8, %r9b
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %r9b
 ; SCALAR-NEXT:    movl %eax, %r9d
-; SCALAR-NEXT:    xorb %dl, %r8b
-; SCALAR-NEXT:    xorb %r8b, %r9b
-; SCALAR-NEXT:    xorb %cl, %r9b
+; SCALAR-NEXT:    movl %esi, %r10d
+; SCALAR-NEXT:    andb $16, %r10b
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    mulb %r10b
+; SCALAR-NEXT:    movl %eax, %r10d
+; SCALAR-NEXT:    movl %esi, %r11d
+; SCALAR-NEXT:    andb $32, %r11b
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    mulb %r11b
+; SCALAR-NEXT:    movl %eax, %r11d
+; SCALAR-NEXT:    movl %esi, %ebx
+; SCALAR-NEXT:    andb $64, %bl
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    mulb %bl
+; SCALAR-NEXT:    movl %eax, %ebx
 ; SCALAR-NEXT:    andb $-128, %sil
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %sil
-; SCALAR-NEXT:    xorb %r9b, %al
+; SCALAR-NEXT:    xorb %cl, %dl
+; SCALAR-NEXT:    xorb %r8b, %r9b
+; SCALAR-NEXT:    xorb %dl, %r9b
+; SCALAR-NEXT:    xorb %r10b, %r11b
+; SCALAR-NEXT:    xorb %r11b, %bl
+; SCALAR-NEXT:    xorb %r9b, %bl
+; SCALAR-NEXT:    xorb %bl, %al
+; SCALAR-NEXT:    popq %rbx
 ; SCALAR-NEXT:    retq
 ;
 ; SSE-PCLMUL-LABEL: clmul_i8:
@@ -2141,51 +2143,53 @@ define i64 @clmulh_i64(i64 %a, i64 %b) nounwind {
 define i8 @clmul_i8_noimplicitfloat(i8 %a, i8 %b) nounwind noimplicitfloat {
 ; CHECK-LABEL: clmul_i8_noimplicitfloat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    andb $1, %dl
+; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    andb $2, %cl
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    mulb %cl
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    mulb %dl
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    xorb %cl, %dl
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    andb $4, %cl
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    mulb %cl
-; CHECK-NEXT:    movl %eax, %r8d
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    andb $8, %cl
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    mulb %cl
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    xorb %r8b, %cl
-; CHECK-NEXT:    xorb %dl, %cl
 ; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    andb $16, %dl
+; CHECK-NEXT:    andb $1, %dl
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    mulb %dl
 ; CHECK-NEXT:    movl %eax, %edx
 ; CHECK-NEXT:    movl %esi, %r8d
-; CHECK-NEXT:    andb $32, %r8b
+; CHECK-NEXT:    andb $4, %r8b
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    mulb %r8b
 ; CHECK-NEXT:    movl %eax, %r8d
 ; CHECK-NEXT:    movl %esi, %r9d
-; CHECK-NEXT:    andb $64, %r9b
+; CHECK-NEXT:    andb $8, %r9b
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    mulb %r9b
 ; CHECK-NEXT:    movl %eax, %r9d
-; CHECK-NEXT:    xorb %dl, %r8b
-; CHECK-NEXT:    xorb %r8b, %r9b
-; CHECK-NEXT:    xorb %cl, %r9b
+; CHECK-NEXT:    movl %esi, %r10d
+; CHECK-NEXT:    andb $16, %r10b
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    mulb %r10b
+; CHECK-NEXT:    movl %eax, %r10d
+; CHECK-NEXT:    movl %esi, %r11d
+; CHECK-NEXT:    andb $32, %r11b
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    mulb %r11b
+; CHECK-NEXT:    movl %eax, %r11d
+; CHECK-NEXT:    movl %esi, %ebx
+; CHECK-NEXT:    andb $64, %bl
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    mulb %bl
+; CHECK-NEXT:    movl %eax, %ebx
 ; CHECK-NEXT:    andb $-128, %sil
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    mulb %sil
-; CHECK-NEXT:    xorb %r9b, %al
+; CHECK-NEXT:    xorb %cl, %dl
+; CHECK-NEXT:    xorb %r8b, %r9b
+; CHECK-NEXT:    xorb %dl, %r9b
+; CHECK-NEXT:    xorb %r10b, %r11b
+; CHECK-NEXT:    xorb %r11b, %bl
+; CHECK-NEXT:    xorb %r9b, %bl
+; CHECK-NEXT:    xorb %bl, %al
+; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
   %res = call i8 @llvm.clmul.i8(i8 %a, i8 %b)
   ret i8 %res
@@ -2196,57 +2200,53 @@ declare void @use(i8)
 define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ; SCALAR-LABEL: commutative_clmul_i8:
 ; SCALAR:       # %bb.0:
-; SCALAR-NEXT:    pushq %rbp
-; SCALAR-NEXT:    pushq %rbx
-; SCALAR-NEXT:    movl %esi, %r8d
-; SCALAR-NEXT:    andb $1, %r8b
 ; SCALAR-NEXT:    movl %esi, %r9d
-; SCALAR-NEXT:    andb $2, %r9b
-; SCALAR-NEXT:    movl %edi, %eax
-; SCALAR-NEXT:    mulb %r9b
-; SCALAR-NEXT:    movl %eax, %r9d
+; SCALAR-NEXT:    andb $1, %r9b
+; SCALAR-NEXT:    movl %esi, %r8d
+; SCALAR-NEXT:    andb $2, %r8b
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %r8b
 ; SCALAR-NEXT:    movl %eax, %r8d
-; SCALAR-NEXT:    xorb %r9b, %r8b
-; SCALAR-NEXT:    movl %esi, %r9d
-; SCALAR-NEXT:    andb $4, %r9b
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %r9b
 ; SCALAR-NEXT:    movl %eax, %r9d
+; SCALAR-NEXT:    xorb %r8b, %r9b
+; SCALAR-NEXT:    movl %esi, %r8d
+; SCALAR-NEXT:    andb $4, %r8b
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    mulb %r8b
+; SCALAR-NEXT:    movl %eax, %r8d
 ; SCALAR-NEXT:    movl %esi, %r10d
 ; SCALAR-NEXT:    andb $8, %r10b
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %r10b
 ; SCALAR-NEXT:    movl %eax, %r10d
-; SCALAR-NEXT:    movl %esi, %r11d
-; SCALAR-NEXT:    andb $16, %r11b
-; SCALAR-NEXT:    movl %edi, %eax
-; SCALAR-NEXT:    mulb %r11b
-; SCALAR-NEXT:    movl %eax, %r11d
-; SCALAR-NEXT:    movl %esi, %ebx
-; SCALAR-NEXT:    andb $32, %bl
-; SCALAR-NEXT:    movl %edi, %eax
-; SCALAR-NEXT:    mulb %bl
-; SCALAR-NEXT:    movl %eax, %ebx
-; SCALAR-NEXT:    movl %esi, %ebp
-; SCALAR-NEXT:    andb $64, %bpl
-; SCALAR-NEXT:    movl %edi, %eax
-; SCALAR-NEXT:    mulb %bpl
-; SCALAR-NEXT:    movl %eax, %ebp
-; SCALAR-NEXT:    xorb %r9b, %r10b
 ; SCALAR-NEXT:    xorb %r8b, %r10b
-; SCALAR-NEXT:    xorb %r11b, %bl
-; SCALAR-NEXT:    xorb %bl, %bpl
-; SCALAR-NEXT:    xorb %r10b, %bpl
+; SCALAR-NEXT:    xorb %r9b, %r10b
+; SCALAR-NEXT:    movl %esi, %r8d
+; SCALAR-NEXT:    andb $16, %r8b
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    mulb %r8b
+; SCALAR-NEXT:    movl %eax, %r8d
+; SCALAR-NEXT:    movl %esi, %r9d
+; SCALAR-NEXT:    andb $32, %r9b
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    mulb %r9b
+; SCALAR-NEXT:    movl %eax, %r9d
+; SCALAR-NEXT:    xorb %r8b, %r9b
+; SCALAR-NEXT:    movl %esi, %r8d
+; SCALAR-NEXT:    andb $64, %r8b
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    mulb %r8b
+; SCALAR-NEXT:    movl %eax, %r8d
+; SCALAR-NEXT:    xorb %r9b, %r8b
+; SCALAR-NEXT:    xorb %r10b, %r8b
 ; SCALAR-NEXT:    andb $-128, %sil
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %sil
-; SCALAR-NEXT:    xorb %bpl, %al
+; SCALAR-NEXT:    xorb %r8b, %al
 ; SCALAR-NEXT:    movb %al, (%rdx)
 ; SCALAR-NEXT:    movb %al, (%rcx)
-; SCALAR-NEXT:    popq %rbx
-; SCALAR-NEXT:    popq %rbp
 ; SCALAR-NEXT:    retq
 ;
 ; SSE-PCLMUL-LABEL: commutative_clmul_i8:
@@ -2436,51 +2436,51 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwi
 ; SCALAR-NEXT:    pushq %rbx
 ; SCALAR-NEXT:    pushq %rax
 ; SCALAR-NEXT:    movq %rcx, %rbx
-; SCALAR-NEXT:    movl %esi, %ecx
-; SCALAR-NEXT:    andb $1, %cl
 ; SCALAR-NEXT:    movl %esi, %r8d
-; SCALAR-NEXT:    andb $2, %r8b
-; SCALAR-NEXT:    movl %edi, %eax
-; SCALAR-NEXT:    mulb %r8b
-; SCALAR-NEXT:    movl %eax, %r8d
+; SCALAR-NEXT:    andb $1, %r8b
+; SCALAR-NEXT:    movl %esi, %ecx
+; SCALAR-NEXT:    andb $2, %cl
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %cl
 ; SCALAR-NEXT:    movl %eax, %ecx
-; SCALAR-NEXT:    xorb %r8b, %cl
-; SCALAR-NEXT:    movl %esi, %r8d
-; SCALAR-NEXT:    andb $4, %r8b
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %r8b
 ; SCALAR-NEXT:    movl %eax, %r8d
+; SCALAR-NEXT:    xorb %cl, %r8b
+; SCALAR-NEXT:    movl %esi, %ecx
+; SCALAR-NEXT:    andb $4, %cl
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    mulb %cl
+; SCALAR-NEXT:    movl %eax, %ecx
 ; SCALAR-NEXT:    movl %esi, %r9d
 ; SCALAR-NEXT:    andb $8, %r9b
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %r9b
 ; SCALAR-NEXT:    movl %eax, %r9d
-; SCALAR-NEXT:    movl %esi, %r10d
-; SCALAR-NEXT:    andb $16, %r10b
-; SCALAR-NEXT:    movl %edi, %eax
-; SCALAR-NEXT:    mulb %r10b
-; SCALAR-NEXT:    movl %eax, %r10d
-; SCALAR-NEXT:    movl %esi, %r11d
-; SCALAR-NEXT:    andb $32, %r11b
-; SCALAR-NEXT:    movl %edi, %eax
-; SCALAR-NEXT:    mulb %r11b
-; SCALAR-NEXT:    movl %eax, %r11d
-; SCALAR-NEXT:    movl %esi, %ebp
-; SCALAR-NEXT:    andb $64, %bpl
-; SCALAR-NEXT:    movl %edi, %eax
-; SCALAR-NEXT:    mulb %bpl
-; SCALAR-NEXT:    movl %eax, %ebp
-; SCALAR-NEXT:    xorb %r8b, %r9b
 ; SCALAR-NEXT:    xorb %cl, %r9b
-; SCALAR-NEXT:    xorb %r10b, %r11b
-; SCALAR-NEXT:    xorb %r11b, %bpl
-; SCALAR-NEXT:    xorb %r9b, %bpl
+; SCALAR-NEXT:    xorb %r8b, %r9b
+; SCALAR-NEXT:    movl %esi, %ecx
+; SCALAR-NEXT:    andb $16, %cl
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    mulb %cl
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    movl %esi, %r8d
+; SCALAR-NEXT:    andb $32, %r8b
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    mulb %r8b
+; SCALAR-NEXT:    movl %eax, %r8d
+; SCALAR-NEXT:    xorb %cl, %r8b
+; SCALAR-NEXT:    movl %esi, %ecx
+; SCALAR-NEXT:    andb $64, %cl
+; SCALAR-NEXT:    movl %edi, %eax
+; SCALAR-NEXT:    mulb %cl
+; SCALAR-NEXT:    movl %eax, %ecx
+; SCALAR-NEXT:    xorb %r8b, %cl
+; SCALAR-NEXT:    xorb %r9b, %cl
 ; SCALAR-NEXT:    andb $-128, %sil
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    mulb %sil
-; SCALAR-NEXT:    xorb %bpl, %al
+; SCALAR-NEXT:    xorb %cl, %al
 ; SCALAR-NEXT:    movb %al, (%rdx)
 ; SCALAR-NEXT:    movzbl %al, %ebp
 ; SCALAR-NEXT:    movl %ebp, %edi
