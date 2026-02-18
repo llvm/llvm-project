@@ -813,8 +813,6 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
       if (IsEHa && getInvokeDest()) {
         if (Personality.isMSVCXXPersonality())
           EmitSehCppScopeEnd();
-        else
-          EmitSehTryScopeEnd();
       }
 
       destroyOptimisticNormalEntry(*this, Scope);
