@@ -1397,8 +1397,9 @@ createReplacement(ICmpInst *ICmp, const Loop *L, BasicBlock *ExitingBB,
     // So we manually construct umin(a - 1, b - 1).
     SmallVector<const SCEV *, 4> Elements;
     if (auto *UMin = dyn_cast<SCEVUMinExpr>(MaxIter)) {
-      for (const SCEV *Op : UMin->operands())
-        Elements.push_back(SE->getMinusSCEV(Op, SE->getOne(Op->getType())));
+      for (SCEVUse Op : UMin->operands())
+        Elements.push_back(SE->getMinusSCEV(
+            Op.getPointer(), SE->getOne(Op.getPointer()->getType())));
       MaxIter = SE->getUMinFromMismatchedTypes(Elements);
     } else
       MaxIter = SE->getMinusSCEV(MaxIter, SE->getOne(MaxIter->getType()));

@@ -423,22 +423,16 @@ bool InductiveRangeCheck::reassociateSubLHS(
   auto getExprScaledIfOverflow = [&](Instruction::BinaryOps BinOp,
                                      const SCEV *LHS,
                                      const SCEV *RHS) -> const SCEV * {
-    const SCEV *(ScalarEvolution::*Operation)(const SCEV *, const SCEV *,
-                                              SCEV::NoWrapFlags, unsigned);
-    switch (BinOp) {
-    default:
-      llvm_unreachable("Unsupported binary op");
-    case Instruction::Add:
-      Operation = &ScalarEvolution::getAddExpr;
-      break;
-    case Instruction::Sub:
-      Operation = &ScalarEvolution::getMinusSCEV;
-      break;
-    }
+    const SCEV *Result = nullptr;
 
     if (SE.willNotOverflow(BinOp, ICmpInst::isSigned(Pred), LHS, RHS,
-                           cast<Instruction>(VariantLHS)))
-      return (SE.*Operation)(LHS, RHS, SCEV::FlagAnyWrap, 0);
+                           cast<Instruction>(VariantLHS))) {
+      if (BinOp == Instruction::Add)
+        Result = SE.getAddExpr(LHS, RHS, SCEV::FlagAnyWrap);
+      else if (BinOp == Instruction::Sub)
+        Result = SE.getMinusSCEV(LHS, RHS);
+      return Result;
+    }
 
     // We couldn't prove that the expression does not overflow.
     // Than scale it to a wider type to check overflow at runtime.
@@ -447,9 +441,13 @@ bool InductiveRangeCheck::reassociateSubLHS(
       return nullptr;
 
     auto WideTy = IntegerType::get(Ty->getContext(), Ty->getBitWidth() * 2);
-    return (SE.*Operation)(SE.getSignExtendExpr(LHS, WideTy),
-                           SE.getSignExtendExpr(RHS, WideTy), SCEV::FlagAnyWrap,
-                           0);
+    const SCEV *LHSExt = SE.getSignExtendExpr(LHS, WideTy);
+    const SCEV *RHSExt = SE.getSignExtendExpr(RHS, WideTy);
+    if (BinOp == Instruction::Add)
+      Result = SE.getAddExpr(LHSExt, RHSExt, SCEV::FlagAnyWrap);
+    else if (BinOp == Instruction::Sub)
+      Result = SE.getMinusSCEV(LHSExt, RHSExt);
+    return Result;
   };
 
   if (OffsetSubtracted)
@@ -765,7 +763,7 @@ InductiveRangeCheck::computeSafeIterationSpace(ScalarEvolution &SE,
   const SCEV *Zero = SE.getZero(M->getType());
 
   // This function returns SCEV equal to 1 if X is non-negative 0 otherwise.
-  auto SCEVCheckNonNegative = [&](const SCEV *X) {
+  auto SCEVCheckNonNegative = [&](const SCEV *X) -> const SCEV * {
     const Loop *L = IndVar->getLoop();
     const SCEV *Zero = SE.getZero(X->getType());
     const SCEV *One = SE.getOne(X->getType());

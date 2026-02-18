@@ -2786,7 +2786,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   bool Runtime = true;
   if (ST->hasLOB()) {
     if (SE.hasLoopInvariantBackedgeTakenCount(L)) {
-      const auto *BETC = SE.getBackedgeTakenCount(L);
+      const SCEV *BETC = SE.getBackedgeTakenCount(L);
       auto *Outer = L->getOutermostLoop();
       if ((L != Outer && Outer != L->getParentLoop()) ||
           (L != Outer && BETC && !SE.isLoopInvariant(BETC, Outer))) {
