@@ -2789,8 +2789,8 @@ SelectionDAGBuilder::ShouldEmitAsBranches(const std::vector<CaseBlock> &Cases) {
 
   // Handle: (X != null) | (Y != null) --> (X|Y) != 0
   // Handle: (X == null) & (Y == null) --> (X|Y) == 0
-  if (Cases[0].CmpRHS == Cases[1].CmpRHS &&
-      Cases[0].CC == Cases[1].CC &&
+  if (Cases[0].CmpRHS == Cases[1].CmpRHS && Cases[0].CC == Cases[1].CC &&
+      !Cases[0].CmpRHS->getType()->isFloatTy() &&
       isa<Constant>(Cases[0].CmpRHS) &&
       cast<Constant>(Cases[0].CmpRHS)->isNullValue()) {
     if (Cases[0].CC == ISD::SETEQ && Cases[0].TrueBB == Cases[1].ThisBB)
