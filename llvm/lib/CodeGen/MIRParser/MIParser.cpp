@@ -1724,16 +1724,14 @@ bool MIParser::parseSubRegisterIndex(unsigned &SubReg) {
 }
 
 bool MIParser::parseRegisterTiedDefIndex(unsigned &TiedDefIdx) {
-  if (!consumeIfPresent(MIToken::kw_tied_def))
-    return true;
+  assert(Token.is(MIToken::kw_tied_def));
+  lex();
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected an integer literal after 'tied-def'");
   if (getUnsigned(TiedDefIdx))
     return true;
   lex();
-  if (expectAndConsume(MIToken::rparen))
-    return true;
-  return false;
+  return expectAndConsume(MIToken::rparen);
 }
 
 bool MIParser::assignRegisterTies(MachineInstr &MI,
@@ -1781,6 +1779,8 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     if (parseRegisterFlag(Flags))
       return true;
   }
+  // Update IsDef as we may have read a def flag.
+  IsDef = hasRegState(Flags, RegState::Define);
   if (!Token.isRegister())
     return error("expected a register after register flags");
   Register Reg;
@@ -1802,56 +1802,46 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     if (parseRegisterClassOrBank(*RegInfo))
         return true;
   }
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (!hasRegState(Flags, RegState::Define)) {
-    if (consumeIfPresent(MIToken::lparen)) {
+
+  if (consumeIfPresent(MIToken::lparen)) {
+    // For a def, we only expect a type. For use we expect either a type or a
+    // tied-def. Additionally, for physical registers, we don't expect a type.
+    if (Token.is(MIToken::kw_tied_def)) {
+      if (IsDef)
+        return error("tied-def not supported for defs");
       unsigned Idx;
-      if (!parseRegisterTiedDefIndex(Idx))
-        TiedDefIdx = Idx;
-      else {
-        // Try a redundant low-level type.
-        LLT Ty;
-        if (parseLowLevelType(Token.location(), Ty))
-          return error("expected tied-def or low-level type after '('");
+      if (parseRegisterTiedDefIndex(Idx))
+        return true;
+      TiedDefIdx = Idx;
+    } else {
+      if (!Reg.isVirtual())
+        return error("unexpected type on physical register");
 
-        if (expectAndConsume(MIToken::rparen))
-          return true;
+      LLT Ty;
+      // If type parsing fails, forwad the parse error for defs.
+      if (parseLowLevelType(Token.location(), Ty))
+        return IsDef ? true
+                     : error("expected tied-def or low-level type after '('");
 
-        if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
-          return error("inconsistent type for generic virtual register");
+      if (expectAndConsume(MIToken::rparen))
+        return true;
 
-        MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
-        MRI.setType(Reg, Ty);
-        MRI.noteNewVirtualRegister(Reg);
-      }
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
+        return error("inconsistent type for generic virtual register");
+
+      MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
+      MRI.setType(Reg, Ty);
+      MRI.noteNewVirtualRegister(Reg);
     }
-  } else if (consumeIfPresent(MIToken::lparen)) {
-    // Virtual registers may have a tpe with GlobalISel.
-    if (!Reg.isVirtual())
-      return error("unexpected type on physical register");
-
-    LLT Ty;
-    if (parseLowLevelType(Token.location(), Ty))
-      return true;
-
-    if (expectAndConsume(MIToken::rparen))
-      return true;
-
-    if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
-      return error("inconsistent type for generic virtual register");
-
-    MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
-    MRI.setType(Reg, Ty);
-  } else if (Reg.isVirtual()) {
-    // Generic virtual registers must have a type.
-    // If we end up here this means the type hasn't been specified and
-    // this is bad!
+  } else if (IsDef && Reg.isVirtual()) {
+    // Generic virtual registers defs must have a type.
     if (RegInfo->Kind == VRegInfo::GENERIC ||
         RegInfo->Kind == VRegInfo::REGBANK)
       return error("generic virtual registers must have a type");
   }
 
-  if (hasRegState(Flags, RegState::Define)) {
+  if (IsDef) {
     if (hasRegState(Flags, RegState::Kill))
       return error("cannot have a killed def operand");
   } else {
@@ -1859,15 +1849,14 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       return error("cannot have a dead use operand");
   }
 
-  Dest = MachineOperand::CreateReg(Reg, hasRegState(Flags, RegState::Define),
-                                   hasRegState(Flags, RegState::Implicit),
-                                   hasRegState(Flags, RegState::Kill),
-                                   hasRegState(Flags, RegState::Dead),
-                                   hasRegState(Flags, RegState::Undef),
-                                   hasRegState(Flags, RegState::EarlyClobber),
-                                   SubReg, hasRegState(Flags, RegState::Debug),
-                                   hasRegState(Flags, RegState::InternalRead),
-                                   hasRegState(Flags, RegState::Renamable));
+  Dest = MachineOperand::CreateReg(
+      Reg, IsDef, hasRegState(Flags, RegState::Implicit),
+      hasRegState(Flags, RegState::Kill), hasRegState(Flags, RegState::Dead),
+      hasRegState(Flags, RegState::Undef),
+      hasRegState(Flags, RegState::EarlyClobber), SubReg,
+      hasRegState(Flags, RegState::Debug),
+      hasRegState(Flags, RegState::InternalRead),
+      hasRegState(Flags, RegState::Renamable));
 
   return false;
 }

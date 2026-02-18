@@ -188,11 +188,6 @@ def CallAndMessageChecker
 ]>,
       Documentation<HasDocumentation>;
 
-def FixedAddressDereferenceChecker
-    : Checker<"FixedAddressDereference">,
-      HelpText<"Check for dereferences of fixed addresses">,
-      Documentation<HasDocumentation>;
-
 def NullDereferenceChecker
     : Checker<"NullDereference">,
       HelpText<"Check for dereferences of null pointers">,
@@ -425,6 +420,11 @@ let ParentPackage = CoreOptIn in {
 def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
   HelpText<"Check integer to enumeration casts for out of range values">,
   Documentation<HasDocumentation>;
+
+def FixedAddressDereferenceChecker
+    : Checker<"FixedAddressDereference">,
+      HelpText<"Check for dereferences of fixed addresses">,
+      Documentation<HasDocumentation>;
 
 } // end "optin.core"
 

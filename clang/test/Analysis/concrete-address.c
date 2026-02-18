@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.core.FixedAddr,optin.core.FixedAddressDereference -verify %s
 
 extern void __assert_fail (__const char *__assertion, __const char *__file,
     unsigned int __line, __const char *__function)
