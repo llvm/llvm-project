@@ -246,10 +246,10 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) vsca
 ; RV64-NEXT:    .cfi_def_cfa_offset 256
 ; RV64-NEXT:    sd ra, 248(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 240(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 232(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 232(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
-; RV64-NEXT:    .cfi_offset s2, -24
+; RV64-NEXT:    .cfi_offset s1, -24
 ; RV64-NEXT:    addi s0, sp, 256
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    andi sp, sp, -128
@@ -259,21 +259,21 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) vsca
 ; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-NEXT:    vslidedown.vi v18, v15, 1, v0.t
-; RV64-NEXT:    mv s2, sp
-; RV64-NEXT:    vs8r.v v16, (s2)
+; RV64-NEXT:    mv s1, sp
+; RV64-NEXT:    vs8r.v v16, (s1)
 ; RV64-NEXT:    andi a0, a0, 15
 ; RV64-NEXT:    li a1, 8
 ; RV64-NEXT:    call __muldi3
-; RV64-NEXT:    add a0, s2, a0
+; RV64-NEXT:    add a0, s1, a0
 ; RV64-NEXT:    ld a0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -256
 ; RV64-NEXT:    .cfi_def_cfa sp, 256
 ; RV64-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 232(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 232(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore s0
-; RV64-NEXT:    .cfi_restore s2
+; RV64-NEXT:    .cfi_restore s1
 ; RV64-NEXT:    addi sp, sp, 256
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret

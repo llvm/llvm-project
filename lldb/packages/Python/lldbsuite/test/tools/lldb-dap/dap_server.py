@@ -125,48 +125,6 @@ class Breakpoint(TypedDict, total=False):
     def is_verified(src: "Breakpoint") -> bool:
         return src.get("verified", False)
 
-
-def dump_memory(base_addr, data, num_per_line, outfile):
-    data_len = len(data)
-    hex_string = binascii.hexlify(data)
-    addr = base_addr
-    ascii_str = ""
-    i = 0
-    while i < data_len:
-        outfile.write("0x%8.8x: " % (addr + i))
-        bytes_left = data_len - i
-        if bytes_left >= num_per_line:
-            curr_data_len = num_per_line
-        else:
-            curr_data_len = bytes_left
-        hex_start_idx = i * 2
-        hex_end_idx = hex_start_idx + curr_data_len * 2
-        curr_hex_str = hex_string[hex_start_idx:hex_end_idx]
-        # 'curr_hex_str' now contains the hex byte string for the
-        # current line with no spaces between bytes
-        t = iter(curr_hex_str)
-        # Print hex bytes separated by space
-        outfile.write(" ".join(a + b for a, b in zip(t, t)))
-        # Print two spaces
-        outfile.write("  ")
-        # Calculate ASCII string for bytes into 'ascii_str'
-        ascii_str = ""
-        for j in range(i, i + curr_data_len):
-            ch = data[j]
-            if ch in string.printable and ch not in string.whitespace:
-                ascii_str += "%c" % (ch)
-            else:
-                ascii_str += "."
-        # Print ASCII representation and newline
-        outfile.write(ascii_str)
-        i = i + curr_data_len
-        outfile.write("\n")
-
-
-def packet_type_is(packet, packet_type):
-    return "type" in packet and packet["type"] == packet_type
-
-
 def dump_dap_log(log_file: Optional[str]) -> None:
     print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
     if log_file is None:
@@ -1674,6 +1632,14 @@ class DebugCommunication(object):
             "command": "_testGetTargetBreakpoints",
             "type": "request",
             "arguments": {},
+        }
+        return self._send_recv(command_dict)
+
+    def request_custom(self, command: str, arguments: Optional[dict[str, Any]] = None):
+        command_dict = {
+            "command": command,
+            "type": "request",
+            "arguments": {} if arguments is None else arguments,
         }
         return self._send_recv(command_dict)
 
