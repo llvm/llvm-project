@@ -45,7 +45,7 @@ body:             |
   ; CHECK-LABEL: name: f
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT:   liveins: $w0, $lr
+  ; CHECK-NEXT:   liveins: $w0, $lr, $fp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.2), (store (s64) into %stack.1)
   ; CHECK-NEXT:   $x9 = frame-setup SUBXri $sp, 36, 12
@@ -55,7 +55,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x25, $x27, $x28
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sp = frame-setup SUBXri $sp, 1, 12
-  ; CHECK-NEXT:   frame-setup STRXui $xzr, $sp, 0
+  ; CHECK-NEXT:   $xzr = frame-setup LDRXui $sp, 0 :: (volatile load (s64))
   ; CHECK-NEXT:   $xzr = frame-setup SUBSXrx64 $sp, $x9, 24, implicit-def $nzcv
   ; CHECK-NEXT:   frame-setup Bcc 1, %bb.3, implicit $nzcv
   ; CHECK-NEXT: {{  $}}
@@ -64,7 +64,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x25, $x27, $x28
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sp = frame-setup SUBXri $sp, 2544, 0
-  ; CHECK-NEXT:   frame-setup STRXui $xzr, $sp, 0
+  ; CHECK-NEXT:   $xzr = frame-setup LDRXui $sp, 0 :: (volatile load (s64))
   ; CHECK-NEXT:   $x9 = IMPLICIT_DEF
   ; CHECK-NEXT:   dead $wzr = SUBSWri killed renamable $w0, 1, 0, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 12, %bb.2, implicit $nzcv

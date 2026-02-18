@@ -100,6 +100,12 @@ struct CachedBlock {
   u16 Next = 0;
   u16 Prev = 0;
 
+  enum CacheFlags : u16 {
+    None = 0,
+    NoAccess = 0x1,
+  };
+  CacheFlags Flags = CachedBlock::None;
+
   bool isValid() { return CommitBase != 0; }
 
   void invalidate() { CommitBase = 0; }
@@ -284,6 +290,7 @@ public:
     Entry.BlockBegin = BlockBegin;
     Entry.MemMap = MemMap;
     Entry.Time = UINT64_MAX;
+    Entry.Flags = CachedBlock::None;
 
     bool MemoryTaggingEnabled = useMemoryTagging<Config>(Options);
     if (MemoryTaggingEnabled) {
@@ -299,6 +306,7 @@ public:
         Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
                                          MAP_NOACCESS);
       }
+      Entry.Flags = CachedBlock::NoAccess;
     }
 
     // Usually only one entry will be evicted from the cache.
@@ -515,27 +523,34 @@ public:
   void releaseToOS([[maybe_unused]] ReleaseToOS ReleaseType) EXCLUDES(Mutex) {
     SCUDO_SCOPED_TRACE(GetSecondaryReleaseToOSTraceName(ReleaseType));
 
-    // Since this is a request to release everything, always wait for the
-    // lock so that we guarantee all entries are released after this call.
-    ScopedLock L(Mutex);
-    releaseOlderThan(UINT64_MAX);
+    if (ReleaseType == ReleaseToOS::ForceFast) {
+      // Never wait for the lock, always move on if there is already
+      // a release operation in progress.
+      if (Mutex.tryLock()) {
+        releaseOlderThan(UINT64_MAX);
+        Mutex.unlock();
+      }
+    } else {
+      // Since this is a request to release everything, always wait for the
+      // lock so that we guarantee all entries are released after this call.
+      ScopedLock L(Mutex);
+      releaseOlderThan(UINT64_MAX);
+    }
   }
 
   void disableMemoryTagging() EXCLUDES(Mutex) {
-    ScopedLock L(Mutex);
-    if (!Config::getQuarantineDisabled()) {
-      for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
-        if (Quarantine[I].isValid()) {
-          MemMapT &MemMap = Quarantine[I].MemMap;
-          unmapCallBack(MemMap);
-          Quarantine[I].invalidate();
-        }
-      }
-      QuarantinePos = -1U;
-    }
+    if (Config::getQuarantineDisabled())
+      return;
 
-    for (CachedBlock &Entry : LRUEntries)
-      Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
+    ScopedLock L(Mutex);
+    for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
+      if (Quarantine[I].isValid()) {
+        MemMapT &MemMap = Quarantine[I].MemMap;
+        unmapCallBack(MemMap);
+        Quarantine[I].invalidate();
+      }
+    }
+    QuarantinePos = -1U;
   }
 
   void disable() NO_THREAD_SAFETY_ANALYSIS { Mutex.lock(); }
@@ -754,9 +769,15 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
   LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(
       LargeBlock::addHeaderTag<Config>(EntryHeaderPos));
   bool Zeroed = Entry.Time == 0;
+
+  if (UNLIKELY(Entry.Flags & CachedBlock::NoAccess)) {
+    // NOTE: Flags set to 0 actually restores read-write.
+    Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
+                                     /*Flags=*/0);
+  }
+
   if (useMemoryTagging<Config>(Options)) {
     uptr NewBlockBegin = reinterpret_cast<uptr>(H + 1);
-    Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
     if (Zeroed) {
       storeTags(LargeBlock::addHeaderTag<Config>(Entry.CommitBase),
                 NewBlockBegin);

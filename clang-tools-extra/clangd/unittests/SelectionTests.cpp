@@ -608,6 +608,11 @@ TEST(SelectionTest, CommonAncestor) {
         template <typename T> void g(D<[[^T]]> auto abc) {}
       )cpp",
        "TemplateTypeParmTypeLoc"},
+      {R"cpp(
+        const unsigned WALDO = 64;
+        struct alignas([[WA^LDO]]) foo {};
+      )cpp",
+       "DeclRefExpr"},
   };
 
   for (const Case &C : Cases) {

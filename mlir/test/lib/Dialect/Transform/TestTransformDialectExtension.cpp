@@ -21,6 +21,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
@@ -488,18 +489,18 @@ mlir::test::TestAddToParamOp::apply(transform::TransformRewriter &rewriter,
                                     transform::TransformState &state) {
   SmallVector<uint32_t> values(/*Size=*/1, /*Value=*/0);
   if (Value param = getParam()) {
-    values = llvm::to_vector(
-        llvm::map_range(state.getParams(param), [](Attribute attr) -> uint32_t {
+    values = llvm::map_to_vector(
+        state.getParams(param), [](Attribute attr) -> uint32_t {
           return llvm::cast<IntegerAttr>(attr).getValue().getLimitedValue(
               UINT32_MAX);
-        }));
+        });
   }
 
   Builder builder(getContext());
-  SmallVector<Attribute> result = llvm::to_vector(
-      llvm::map_range(values, [this, &builder](uint32_t value) -> Attribute {
+  SmallVector<Attribute> result = llvm::map_to_vector(
+      values, [this, &builder](uint32_t value) -> Attribute {
         return builder.getI32IntegerAttr(value + getAddendum());
-      }));
+      });
   results.setParams(llvm::cast<OpResult>(getResult()), result);
   return DiagnosedSilenceableFailure::success();
 }
@@ -509,16 +510,16 @@ mlir::test::TestProduceParamWithNumberOfTestOps::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   Builder builder(getContext());
-  SmallVector<Attribute> result = llvm::to_vector(
-      llvm::map_range(state.getPayloadOps(getHandle()),
-                      [&builder](Operation *payload) -> Attribute {
-                        int32_t count = 0;
-                        payload->walk([&count](Operation *op) {
-                          if (op->getName().getDialectNamespace() == "test")
-                            ++count;
-                        });
-                        return builder.getI32IntegerAttr(count);
-                      }));
+  SmallVector<Attribute> result =
+      llvm::map_to_vector(state.getPayloadOps(getHandle()),
+                          [&builder](Operation *payload) -> Attribute {
+                            int32_t count = 0;
+                            payload->walk([&count](Operation *op) {
+                              if (op->getName().getDialectNamespace() == "test")
+                                ++count;
+                            });
+                            return builder.getI32IntegerAttr(count);
+                          });
   results.setParams(llvm::cast<OpResult>(getResult()), result);
   return DiagnosedSilenceableFailure::success();
 }
@@ -734,9 +735,9 @@ mlir::test::TestReEnterRegionOp::apply(transform::TransformRewriter &rewriter,
 
   SmallVector<SmallVector<transform::MappedValue>> mappings;
   for (BlockArgument arg : getBody().front().getArguments()) {
-    mappings.emplace_back(llvm::to_vector(llvm::map_range(
+    mappings.emplace_back(llvm::map_to_vector(
         state.getPayloadOps(getOperand(arg.getArgNumber())),
-        [](Operation *op) -> transform::MappedValue { return op; })));
+        [](Operation *op) -> transform::MappedValue { return op; }));
   }
 
   for (int i = 0; i < 4; ++i) {

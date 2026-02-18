@@ -475,6 +475,13 @@ static SymbolizerTool *ChooseExternalSymbolizer(LowLevelAllocator *allocator) {
       return new (*allocator) Addr2LinePool(found_path, allocator);
     }
   }
+
+#    if SANITIZER_APPLE
+  Report(
+      "WARN: No external symbolizers found. Symbols may be missing or "
+      "unreliable.\n");
+  Report("HINT: Is PATH set? Does sandbox allow file-read of /usr/bin/atos?\n");
+#    endif
   return nullptr;
 #  endif    // SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH
 }
@@ -509,13 +516,6 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
   }
 
 #  if SANITIZER_APPLE
-  if (list->empty()) {
-    Report(
-        "WARN: No external symbolizers found. Symbols may be missing or "
-        "unreliable.\n");
-    Report(
-        "HINT: Is PATH set? Does sandbox allow file-read of /usr/bin/atos?\n");
-  }
   VReport(2, "Using dladdr symbolizer.\n");
   list->push_back(new (*allocator) DlAddrSymbolizer());
 #  endif  // SANITIZER_APPLE

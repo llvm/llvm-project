@@ -8,6 +8,7 @@
 
 // REQUIRES: unified_shared_memory
 // XFAIL: nvptx
+// XFAIL: intelgpu
 
 // CHECK: SUCCESS
 // NO_USM: Not accessible

@@ -1,14 +1,14 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: not ld.lld %t.o %t.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: not ld.lld %t.o %t.o -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 
 ## Check we are able to report errors even if DW_AT_decl_file
 ## contains invalid file name index.
 ## We did not try to support this intentionally but have
 ## an error handling and reporting logic that can take care
-## of that and hence needs a test. 
+## of that and hence needs a test.
 
-# CHECK:      duplicate symbol: foo
+# CHECK:      error: duplicate symbol: foo
 # CHECK-NEXT: >>> defined at {{.*}}.o:(foo)
 # CHECK-NEXT: >>>            {{.*}}.o:(.bss+0x0)
 

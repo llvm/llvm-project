@@ -1,4 +1,4 @@
-XFAIL: ios
+XFAIL: darwin-remote
 # Uses ulimit
 # UNSUPPORTED: system-windows
 RUN: %cpp_compiler %S/FullCoverageSetTest.cpp -o %t-FullCoverageSetTest

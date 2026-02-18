@@ -190,11 +190,13 @@ public:
   /// Client can specify empty string or null to get all settings.
   ///
   /// Example usages:
+  /// \code
   /// lldb::SBStructuredData settings = debugger.GetSetting();
   /// lldb::SBStructuredData settings = debugger.GetSetting(nullptr);
   /// lldb::SBStructuredData settings = debugger.GetSetting("");
   /// lldb::SBStructuredData settings = debugger.GetSetting("target.arg0");
   /// lldb::SBStructuredData settings = debugger.GetSetting("target");
+  /// \endcode
   lldb::SBStructuredData GetSetting(const char *setting = nullptr);
 
   /// Set whether the debugger should run in asynchronous mode.

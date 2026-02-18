@@ -59,6 +59,3 @@
 #undef __CLC_U_GENTYPE_SRC
 #undef __CLC_FUNCTION
 #undef __CLC_FUNCTION_SAT
-
-#include <clc_convert_float2int.cl>
-#include <clc_convert_int2float.cl>

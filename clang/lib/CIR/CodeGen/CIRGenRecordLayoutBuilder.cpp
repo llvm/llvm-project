@@ -811,9 +811,10 @@ void CIRRecordLowering::lowerUnion() {
     fieldTypes.push_back(fieldType);
   }
 
-  if (!storageType)
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "No-storage Union NYI");
+  if (!storageType) {
+    appendPaddingBytes(layoutSize);
+    return;
+  }
 
   if (layoutSize < getSize(storageType))
     storageType = getByteArrayType(layoutSize);

@@ -215,6 +215,15 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
   ];
 }
 
+def FIRToMemRef : Pass<"fir-to-memref", "::mlir::func::FuncOp"> {
+  let summary = "Convert FIR memory operations to MemRef dialect";
+  let description = [{
+    Lower FIR memory operations (`fir.alloca`, `fir.load`, `fir.store`, 'fir.array_coor', and etc.) to MLIR's MemRef core dialect.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::arith::ArithDialect",
+                           "mlir::memref::MemRefDialect"];
+}
+
 // This needs to be a "mlir::ModuleOp" pass, because we are creating debug for
 // the module in this pass.
 def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
@@ -390,10 +399,10 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
      Set an attribute for the vscale range on functions, to allow scalable
      vector operations to be used on processors with variable vector length.
   }];
-  let options = [
-    Option<"vscaleRange", "vscale-range",
-           "std::pair<unsigned, unsigned>", /*default=*/"std::pair<unsigned, unsigned>{}",
-           "vector scale range">,
+  let options = [Option<"vscaleMin", "vscale-min", "unsigned", /*default=*/"1",
+                        "vector scale minimum value. Defaults to \"1\"">,
+                 Option<"vscaleMax", "vscale-max", "unsigned", /*default=*/"0",
+                        "vector scale maximum value. Defaults to \"0\"">,
   ];
 }
 
@@ -417,7 +426,8 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::None, "None", ""),
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf, "NonLeaf", ""),
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::All, "All", ""),
-            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", "")
+            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", ""),
+            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::NonLeafNoReserve, "NonLeafNoReserve", "")
           )}]>,
        Option<"instrumentFunctionEntry", "instrument-function-entry",
               "std::string", /*default=*/"",
@@ -428,7 +438,7 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               "Sets the name of the profiling function called during function "
               "exit">,
        Option<"noInfsFPMath", "no-infs-fp-math", "bool", /*default=*/"false",
-              "Set the no-infs-fp-math attribute on functions in the module.">,
+              "Set the ninf flag on instructions in the module.">,
        Option<"noNaNsFPMath", "no-nans-fp-math", "bool", /*default=*/"false",
               "Set the no-nans-fp-math attribute on functions in the module.">,
        Option<"approxFuncFPMath", "approx-func-fp-math", "bool",
@@ -477,12 +487,13 @@ def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
 
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
   let summary = "Convert some CUF operations to runtime calls";
-  let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::gpu::GPUDialect", "mlir::DLTIDialect"
-  ];
-  let options = [Option<"allocationConversion", "allocation-conversion", "bool",
-                        /*default=*/"true",
-                        "Convert allocation related operation with this pass">];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::gpu::GPUDialect",
+                           "mlir::DLTIDialect"];
+}
+
+def CUFOpConversionLate : Pass<"cuf-convert-late", "mlir::ModuleOp"> {
+  let summary = "Convert CUF operations to runtime calls late in the pipeline";
+  let dependentDialects = ["fir::FIROpsDialect"];
 }
 
 def CUFDeviceGlobal :
@@ -521,6 +532,41 @@ def CUFComputeSharedMemoryOffsetsAndSize
     "cuf::CUFDialect", "fir::FIROpsDialect", "mlir::gpu::GPUDialect",
     "mlir::DLTIDialect"
   ];
+}
+
+def CUFDeviceFuncTransform
+    : Pass<"cuf-transform-device-func", "::mlir::ModuleOp"> {
+  let summary = "Transform device function to GPU func";
+  let dependentDialects = ["mlir::gpu::GPUDialect",
+                           "mlir::cf::ControlFlowDialect",
+                           "mlir::NVVM::NVVMDialect"];
+  let options = [Option<"computeCap", "compute-capability", "int",
+                        /*default=*/"0", "CUDA compute capability version">];
+}
+
+def CUFFunctionRewrite : Pass<"cuf-function-rewrite", ""> {
+  let summary = "Convert some CUDA Fortran specific call";
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
+def CUFLaunchAttachAttr : Pass<"cuf-launch-attach-attr", ""> {
+  let summary = "Attach CUDA attribute to CUF kernel generated launch";
+  let description = [{
+    CUF kernel is generated via gpu.launch and then outlined. The resulting
+    launch operation needs to hava a CUDA attribute attached so it will
+    be distinguishable from other launch.
+  }];
+  let dependentDialects = ["cuf::CUFDialect"];
+}
+
+def CUFPredefinedVarToGPU
+    : Pass<"cuf-predefined-var-to-gpu", "::mlir::func::FuncOp"> {
+  let summary = "Transform predefined variables to GPU operations";
+  let description = [{
+    Change the predefined variables injected in the device function to their
+    corresponding NVVM dialect operations.
+  }];
+  let dependentDialects = ["mlir::NVVM::NVVMDialect"];
 }
 
 def SetRuntimeCallAttributes
@@ -594,6 +640,17 @@ def OptimizeArrayRepacking
 def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
   let summary = "Convert some MIF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
+}
+
+def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
+  let summary = "Hoist invariants from loops";
+  let description = [{
+    Hoist invariants from loops. This is a FIR-specific version of loop
+    invariant code motion, which relies on FIR types, operations (such as
+    fir.declare) and interfaces such as FortranObjectViewOpInterface.
+    The pass only moves existing operations, so there are no dependent
+    dialects.
+  }];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

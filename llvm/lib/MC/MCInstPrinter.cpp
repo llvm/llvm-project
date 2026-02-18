@@ -8,6 +8,7 @@
 
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
@@ -22,17 +23,11 @@
 
 using namespace llvm;
 
-void llvm::dumpBytes(ArrayRef<uint8_t> bytes, raw_ostream &OS) {
-  static const char hex_rep[] = "0123456789abcdef";
-  bool First = true;
-  for (char i: bytes) {
-    if (First)
-      First = false;
-    else
-      OS << ' ';
-    OS << hex_rep[(i & 0xF0) >> 4];
-    OS << hex_rep[i & 0xF];
-  }
+void llvm::dumpBytes(ArrayRef<uint8_t> Bytes, raw_ostream &OS) {
+  static const char HexRep[] = "0123456789abcdef";
+  ListSeparator LS(" ");
+  for (char Byte : Bytes)
+    OS << LS << HexRep[(Byte & 0xF0) >> 4] << HexRep[Byte & 0xF];
 }
 
 MCInstPrinter::~MCInstPrinter() = default;

@@ -319,10 +319,9 @@ define void @sincos_v3f32(<3 x float> %x, ptr addrspace(1) nocapture writeonly %
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca <3 x float>, align 16, addrspace(5)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call contract <3 x float> @_Z6sincosDv3_fPU3AS5S_(<3 x float> [[X]], ptr addrspace(5) [[__SINCOS_]])
-; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr addrspace(5) [[__SINCOS_]], align 16
+; CHECK-NEXT:    [[EXTRACTVEC6:%.*]] = load <4 x float>, ptr addrspace(5) [[__SINCOS_]], align 16
 ; CHECK-NEXT:    [[EXTRACTVEC2:%.*]] = shufflevector <3 x float> [[TMP0]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    store <4 x float> [[EXTRACTVEC2]], ptr addrspace(1) [[SIN_OUT]], align 16
-; CHECK-NEXT:    [[EXTRACTVEC6:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    store <4 x float> [[EXTRACTVEC6]], ptr addrspace(1) [[COS_OUT]], align 16
 ; CHECK-NEXT:    ret void
 ;

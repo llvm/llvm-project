@@ -10,12 +10,14 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_FOLD_H
 #define _LIBCPP___ALGORITHM_RANGES_FOLD_H
 
+#include <__algorithm/for_each.h>
 #include <__concepts/assignable.h>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/invocable.h>
 #include <__concepts/movable.h>
 #include <__config>
+#include <__functional/identity.h>
 #include <__functional/invoke.h>
 #include <__functional/reference_wrapper.h>
 #include <__iterator/concepts.h>
@@ -87,11 +89,17 @@ struct __fold_left_with_iter {
     }
 
     _Up __result = std::invoke(__f, std::move(__init), *__first);
-    for (++__first; __first != __last; ++__first) {
-      __result = std::invoke(__f, std::move(__result), *__first);
-    }
+    ++__first;
+    __identity __proj;
+    auto __end = std::__for_each(
+        std::move(__first),
+        std::move(__last),
+        [&](auto&& __element) {
+          __result = std::invoke(__f, std::move(__result), std::forward<decltype(__element)>(__element));
+        },
+        __proj);
 
-    return fold_left_with_iter_result<_Ip, _Up>{std::move(__first), std::move(__result)};
+    return fold_left_with_iter_result<_Ip, _Up>{std::move(__end), std::move(__result)};
   }
 
   template <input_range _Rp, class _Tp, __indirectly_binary_left_foldable<_Tp, iterator_t<_Rp>> _Fp>

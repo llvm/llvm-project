@@ -34,9 +34,8 @@ std::optional<SourceRange>
 NS::getCleanedNamespaceFrontRange(const SourceManager &SM,
                                   const LangOptions &LangOpts) const {
   // Front from namespace tp '{'
-  std::optional<Token> Tok =
-      ::clang::tidy::utils::lexer::findNextTokenSkippingComments(
-          back()->getLocation(), SM, LangOpts);
+  std::optional<Token> Tok = utils::lexer::findNextTokenSkippingComments(
+      back()->getLocation(), SM, LangOpts);
   if (!Tok)
     return std::nullopt;
   while (Tok->getKind() != tok::TokenKind::l_brace) {

@@ -41,10 +41,10 @@ define i32 @f() {
 entry:
   %o = alloca %class
   %f1 = getelementptr inbounds %class, %class* %o, i32 0, i32 0
-  store i32 42, i32* %f1
+  store i32 42, ptr %f1
   %f2 = getelementptr inbounds %class, %class* %o, i32 0, i32 1
-  store i32 43, i32* %f2
-  %v = load i32, i32* %f1
+  store i32 43, ptr %f2
+  %v = load i32, ptr %f1
   ret i32 %v
 }
 )IR");
@@ -73,16 +73,16 @@ TEST(LoadsTest, CanReplacePointersIfEqual) {
                                       R"IR(
 @y = common global [1 x i32] zeroinitializer, align 4
 @x = common global [1 x i32] zeroinitializer, align 4
-declare void @use(i32*)
+declare void @use(ptr)
 
-define void @f(i32* %p1, i32* %p2, i64 %i) {
-  call void @use(i32* getelementptr inbounds ([1 x i32], [1 x i32]* @y, i64 0, i64 0))
+define void @f(ptr %p1, ptr %p2, i64 %i) {
+  call void @use(ptr getelementptr inbounds ([1 x i32], ptr @y, i64 0, i64 0))
 
-  %p1_idx = getelementptr inbounds i32, i32* %p1, i64 %i
-  call void @use(i32* %p1_idx)
+  %p1_idx = getelementptr inbounds i32, ptr %p1, i64 %i
+  call void @use(ptr %p1_idx)
 
-  %icmp = icmp eq i32* %p1, getelementptr inbounds ([1 x i32], [1 x i32]* @y, i64 0, i64 0)
-  %ptrInt = ptrtoint i32* %p1 to i64
+  %icmp = icmp eq ptr %p1, getelementptr inbounds ([1 x i32], ptr @y, i64 0, i64 0)
+  %ptrInt = ptrtoint ptr %p1 to i64
   ret void
 }
 )IR");

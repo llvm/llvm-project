@@ -835,6 +835,22 @@ TEST(STLExtrasTest, DropEndDefaultTest) {
   EXPECT_THAT(drop_end(vec), ElementsAre(0, 1, 2, 3));
 }
 
+TEST(STLExtrasTest, CallableMemberPointer) {
+  struct S {
+    int X;
+    int getX() const { return X; }
+  };
+  S Obj{42};
+
+  // Data member pointer.
+  callable_detail::Callable<int S::*> DataMember(&S::X);
+  EXPECT_EQ(DataMember(Obj), 42);
+
+  // Member function pointer.
+  callable_detail::Callable<int (S::*)() const> MemFn(&S::getX);
+  EXPECT_EQ(MemFn(Obj), 42);
+}
+
 TEST(STLExtrasTest, MapRangeTest) {
   SmallVector<int, 5> Vec{0, 1, 2};
   EXPECT_THAT(map_range(Vec, [](int V) { return V + 1; }),
@@ -845,6 +861,17 @@ TEST(STLExtrasTest, MapRangeTest) {
   some_namespace::some_struct S;
   S.data = {3, 4, 5};
   EXPECT_THAT(map_range(S, [](int V) { return V * 2; }), ElementsAre(6, 8, 10));
+
+  // Pointer to data member.
+  struct MapRangeStruct {
+    int X;
+    int getX() const { return X; }
+  };
+  std::vector<MapRangeStruct> Structs = {{1}, {2}, {3}};
+  EXPECT_THAT(map_range(Structs, &MapRangeStruct::X), ElementsAre(1, 2, 3));
+
+  // Pointer to member function.
+  EXPECT_THAT(map_range(Structs, &MapRangeStruct::getX), ElementsAre(1, 2, 3));
 }
 
 TEST(STLExtrasTest, EarlyIncrementTest) {
@@ -1053,6 +1080,28 @@ TEST(STLExtrasTest, to_address) {
 
   V3.reset(V1);
   EXPECT_EQ(V1, llvm::to_address(V3));
+}
+
+TEST(STLExtras, EqualToNotEqualTo) {
+  std::vector<int> V;
+  EXPECT_TRUE(all_of(V, equal_to(1)));
+  EXPECT_TRUE(all_of(V, not_equal_to(1)));
+
+  V.push_back(1);
+  EXPECT_TRUE(all_of(V, equal_to(1)));
+  EXPECT_TRUE(all_of(V, not_equal_to(2)));
+
+  V.push_back(1);
+  V.push_back(1);
+  EXPECT_TRUE(all_of(V, equal_to(1)));
+  EXPECT_TRUE(all_of(V, not_equal_to(2)));
+  EXPECT_TRUE(none_of(V, equal_to(2)));
+
+  V.push_back(2);
+  EXPECT_FALSE(all_of(V, equal_to(1)));
+  EXPECT_FALSE(all_of(V, not_equal_to(1)));
+  EXPECT_TRUE(any_of(V, equal_to(2)));
+  EXPECT_TRUE(any_of(V, not_equal_to(2)));
 }
 
 TEST(STLExtrasTest, partition_point) {
@@ -1914,5 +1963,15 @@ TEST(STLExtrasTest, AdjacentFind) {
   EXPECT_EQ(*It13, 3);
   EXPECT_EQ(*std::next(It13), 3);
 }
+
+// Compile-time tests for llvm::is_sorted_constexpr
+// Check to ensure range based functions as expected
+static constexpr std::array<int, 5> CSorted{{1, 2, 2, 3, 5}};
+static_assert(llvm::is_sorted_constexpr(CSorted),
+              "Non-descending order with duplicates should be sorted");
+static_assert(llvm::is_sorted_constexpr(CSorted, std::less<>()),
+              "Explicit std::less non-descending order should be sorted");
+static_assert(!llvm::is_sorted_constexpr(CSorted, std::greater<>()),
+              "Non-descending order should not be sorted by std::greater");
 
 } // namespace

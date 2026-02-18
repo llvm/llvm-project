@@ -32,7 +32,7 @@ public:
       os << "none";
   }
 
-  /// Join the state with another. If either is unintialized, take the
+  /// Join the state with another. If either is uninitialized, take the
   /// initialized value. Otherwise, XOR the integer values.
   ChangeResult join(const FooState &rhs) {
     if (rhs.isUninitialized())

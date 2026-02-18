@@ -21,7 +21,7 @@ FROM docker.io/library/ubuntu:noble
 # Changing this file causes a rebuild of the image in a GitHub action. However, it does not cause
 # the CI runners to switch to that image automatically, that must be done by updating the image used
 # by the libc++ self-hosted runners in llvm-zorg. The date uses the ISO format YYYY-MM-DD.
-RUN echo "Last forced update executed on 2025-11-11."
+RUN echo "Last forced update executed on 2026-01-07."
 
 # Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
 ENV DEBIAN_FRONTEND=noninteractive

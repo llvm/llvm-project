@@ -71,11 +71,6 @@ int main(int argc, char** argv) {
       bm.operator()<std::vector<support::NonIntegral>>(
           name("std::stable_sort(vector<NonIntegral>)"), std_stable_sort, gen2);
       bm.operator()<std::deque<int>>(name("std::stable_sort(deque<int>)"), std_stable_sort, generate);
-
-      bm.operator()<std::vector<int>>(name("rng::stable_sort(vector<int>)"), std::ranges::stable_sort, generate);
-      bm.operator()<std::vector<support::NonIntegral>>(
-          name("rng::stable_sort(vector<NonIntegral>)"), std::ranges::stable_sort, gen2);
-      bm.operator()<std::deque<int>>(name("rng::stable_sort(deque<int>)"), std::ranges::stable_sort, generate);
     };
 
     register_bm(support::quicksort_adversarial_data<int>, "qsort adversarial");
@@ -136,11 +131,6 @@ int main(int argc, char** argv) {
       bm.operator()<std::vector<support::NonIntegral>>(
           name("std::stable_sort(vector<NonIntegral>)"), std_stable_sort, gen2);
       bm.operator()<std::deque<int>>(name("std::stable_sort(deque<int>)"), std_stable_sort, generate);
-
-      bm.operator()<std::vector<int>>(name("rng::stable_sort(vector<int>)"), std::ranges::stable_sort, generate);
-      bm.operator()<std::vector<support::NonIntegral>>(
-          name("rng::stable_sort(vector<NonIntegral>)"), std::ranges::stable_sort, gen2);
-      bm.operator()<std::deque<int>>(name("rng::stable_sort(deque<int>)"), std::ranges::stable_sort, generate);
     };
 
     register_bm(support::quicksort_adversarial_data<int>, "qsort adversarial");

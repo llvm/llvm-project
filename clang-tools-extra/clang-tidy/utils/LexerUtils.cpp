@@ -10,10 +10,11 @@
 #include "clang/Basic/SourceManager.h"
 #include <optional>
 #include <utility>
+#include <vector>
 
 namespace clang::tidy::utils::lexer {
 
-std::pair<Token, SourceLocation>
+std::pair<std::optional<Token>, SourceLocation>
 getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
                          const LangOptions &LangOpts, bool SkipComments) {
   const std::optional<Token> Tok =
@@ -22,13 +23,13 @@ getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
   if (Tok.has_value())
     return {*Tok, Lexer::GetBeginningOfToken(Tok->getLocation(), SM, LangOpts)};
 
-  Token Token;
-  Token.setKind(tok::unknown);
-  return {Token, SourceLocation()};
+  return {std::nullopt, SourceLocation()};
 }
 
-Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
-                       const LangOptions &LangOpts, bool SkipComments) {
+std::optional<Token> getPreviousToken(SourceLocation Location,
+                                      const SourceManager &SM,
+                                      const LangOptions &LangOpts,
+                                      bool SkipComments) {
   auto [Token, Start] =
       getPreviousTokenAndStart(Location, SM, LangOpts, SkipComments);
   return Token;
@@ -75,21 +76,6 @@ SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
   return findNextAnyTokenKind(Start, SM, LangOpts, tok::comma, tok::semi);
 }
 
-std::optional<Token>
-findNextTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
-                              const LangOptions &LangOpts) {
-  while (Start.isValid()) {
-    std::optional<Token> CurrentToken =
-        Lexer::findNextToken(Start, SM, LangOpts);
-    if (!CurrentToken || !CurrentToken->is(tok::comment))
-      return CurrentToken;
-
-    Start = CurrentToken->getLocation();
-  }
-
-  return std::nullopt;
-}
-
 bool rangeContainsExpansionsOrDirectives(SourceRange Range,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts) {
@@ -100,7 +86,7 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
     if (Loc.isMacroID())
       return true;
 
-    std::optional<Token> Tok = Lexer::findNextToken(Loc, SM, LangOpts);
+    std::optional<Token> Tok = findNextTokenSkippingComments(Loc, SM, LangOpts);
 
     if (!Tok)
       return true;
@@ -112,6 +98,66 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
   }
 
   return false;
+}
+
+std::vector<CommentToken>
+getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
+                           const LangOptions &LangOpts) {
+  std::vector<CommentToken> Comments;
+  if (Range.isInvalid())
+    return Comments;
+
+  const CharSourceRange FileRange =
+      Lexer::makeFileCharRange(Range, SM, LangOpts);
+  if (FileRange.isInvalid())
+    return Comments;
+
+  const std::pair<FileID, unsigned> BeginLoc =
+      SM.getDecomposedLoc(FileRange.getBegin());
+  const std::pair<FileID, unsigned> EndLoc =
+      SM.getDecomposedLoc(FileRange.getEnd());
+
+  if (BeginLoc.first != EndLoc.first)
+    return Comments;
+
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(BeginLoc.first, &Invalid);
+  if (Invalid)
+    return Comments;
+
+  const char *StrData = Buffer.data() + BeginLoc.second;
+
+  Lexer TheLexer(SM.getLocForStartOfFile(BeginLoc.first), LangOpts,
+                 Buffer.begin(), StrData, Buffer.end());
+  // Use raw lexing with comment retention so we can see comment tokens without
+  // preprocessing or macro expansion effects.
+  TheLexer.SetCommentRetentionState(true);
+
+  while (true) {
+    Token Tok;
+    if (TheLexer.LexFromRawLexer(Tok))
+      break;
+    if (Tok.is(tok::eof) || Tok.getLocation() == FileRange.getEnd() ||
+        SM.isBeforeInTranslationUnit(FileRange.getEnd(), Tok.getLocation()))
+      break;
+
+    if (Tok.is(tok::comment)) {
+      const std::pair<FileID, unsigned> CommentLoc =
+          SM.getDecomposedLoc(Tok.getLocation());
+      assert(CommentLoc.first == BeginLoc.first);
+      Comments.emplace_back(CommentToken{
+          Tok.getLocation(),
+          StringRef(Buffer.begin() + CommentLoc.second, Tok.getLength()),
+      });
+    } else {
+      // Clear comments found before the different token, e.g. comma. Callers
+      // use this to retrieve only the contiguous comment block that directly
+      // precedes a token of interest.
+      Comments.clear();
+    }
+  }
+
+  return Comments;
 }
 
 std::optional<Token> getQualifyingToken(tok::TokenKind TK,

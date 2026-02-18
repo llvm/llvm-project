@@ -1,8 +1,5 @@
 ; RUN: FileCheck -input-file %s %s
-; XFAIL: *
 
-; Trying to back-reference more than 9 variables is intended to fail.
+r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r9 r8
 
-r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r9
-
-; CHECK: [[REG1:r0]] [[REG2:r1]] [[REG3:r2]] [[REG4:r3]] [[REG5:r4]] [[REG6:r5]] [[REG7:r6]] [[REG8:r7]] [[REG9:r8]] [[REG10:r9]] [[REG10]]
+; CHECK: [[REG1:r0]] [[REG2:r1]] [[REG3:r2]] [[REG4:r3]] [[REG5:r4]] [[REG6:r5]] [[REG7:r6]] [[REG8:r7]] [[REG9:r8]] [[REG10:r9]] [[REG10]] [[REG9]]

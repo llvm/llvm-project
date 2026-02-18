@@ -313,9 +313,18 @@ bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
 /// field is required.
 using LaunchResponse = VoidResponse;
 
-#define LLDB_DAP_INVALID_PORT -1
+#define LLDB_DAP_INVALID_PORT (-1)
 /// An invalid 'frameId' default value.
 #define LLDB_DAP_INVALID_FRAME_ID UINT64_MAX
+
+struct DAPSession {
+  /// A unique ID of an existing target to attach to.
+  lldb::user_id_t targetId;
+
+  /// A unique ID of an existing debugger instance to use.
+  lldb::user_id_t debuggerId;
+};
+bool fromJSON(const llvm::json::Value &, DAPSession &, llvm::json::Path);
 
 /// lldb-dap specific attach arguments.
 struct AttachRequestArguments {
@@ -351,11 +360,8 @@ struct AttachRequestArguments {
   /// Path to the core file to debug.
   std::string coreFile;
 
-  /// Unique ID of an existing target to attach to.
-  std::optional<lldb::user_id_t> targetId;
-
-  /// ID of an existing debugger instance to use.
-  std::optional<int> debuggerId;
+  /// An existing session that consist of a target and debugger.
+  std::optional<DAPSession> session;
 
   /// @}
 };
@@ -401,11 +407,11 @@ struct CompletionsArguments {
   /// The position within `text` for which to determine the completion
   /// proposals. It is measured in UTF-16 code units and the client capability
   /// `columnsStartAt1` determines whether it is 0- or 1-based.
-  int64_t column = 0;
+  uint32_t column = LLDB_INVALID_COLUMN_NUMBER;
 
   /// A line for which to determine the completion proposals. If missing the
   /// first line of the text is assumed.
-  int64_t line = 0;
+  uint32_t line = 1;
 };
 bool fromJSON(const llvm::json::Value &, CompletionsArguments &,
               llvm::json::Path);
@@ -429,7 +435,7 @@ struct SetVariableArguments {
   /// The reference of the variable container. The `variablesReference` must
   /// have been obtained in the current suspended state. See 'Lifetime of Object
   ///  References' in the Overview section for details.
-  uint64_t variablesReference = UINT64_MAX;
+  var_ref_t variablesReference{var_ref_t::k_invalid_var_ref};
 
   /// The name of the variable in the container.
   std::string name;
@@ -460,7 +466,7 @@ struct SetVariableResponseBody {
   /// If this property is included in the response, any `variablesReference`
   /// previously associated with the updated variable, and those of its
   /// children, are no longer valid.
-  uint64_t variablesReference = 0;
+  var_ref_t variablesReference{var_ref_t::k_no_child};
 
   /// The number of named child variables.
   /// The client can use this information to present the variables in a paged
@@ -721,7 +727,7 @@ struct DataBreakpointInfoArguments {
   /// for a child of the container. The `variablesReference` must have been
   /// obtained in the current suspended state.See 'Lifetime of Object
   /// References' in the Overview section for details.
-  std::optional<int64_t> variablesReference;
+  std::optional<var_ref_t> variablesReference;
 
   /// The name of the variable's child to obtain data breakpoint information
   /// for. If `variablesReference` isn't specified, this can be an expression,
@@ -947,7 +953,7 @@ struct VariablesArguments {
   /// The variable for which to retrieve its children. The `variablesReference`
   /// must have been obtained in the current suspended state. See 'Lifetime of
   /// Object References' in the Overview section for details.
-  uint64_t variablesReference;
+  var_ref_t variablesReference{var_ref_t::k_invalid_var_ref};
 
   enum VariablesFilter : unsigned {
     eVariablesFilterBoth = 0,
@@ -1152,7 +1158,7 @@ struct EvaluateResponseBody {
   /// children can be retrieved by passing `variablesReference` to the
   /// `variables` request as long as execution remains suspended. See 'Lifetime
   /// of Object References' in the Overview section for details.
-  int64_t variablesReference = 0;
+  var_ref_t variablesReference{var_ref_t::k_no_child};
 
   /// The number of named child variables.
   /// The client can use this information to present the variables in a paged
@@ -1305,6 +1311,11 @@ struct StackTraceResponseBody {
   uint32_t totalFrames = 0;
 };
 llvm::json::Value toJSON(const StackTraceResponseBody &);
+
+/// Arguments for unknown request.
+using UnknownArguments = EmptyArguments;
+/// Response to unknowns request.
+using UnknownResponseBody = VoidResponse;
 
 } // namespace lldb_dap::protocol
 

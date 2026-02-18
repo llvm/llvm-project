@@ -11,9 +11,9 @@ body: |
     ; CHECK: liveins: $x1, $v8, $v9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %false:vrnov0 = COPY $v8
-    ; CHECK-NEXT: %true:vmnov0 = COPY $v9
+    ; CHECK-NEXT: %true:vrnov0 = COPY $v9
     ; CHECK-NEXT: %avl:gprnox0 = COPY $x1
-    ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl, 0 /* e8 */
+    ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY %mask
     %false:vrnov0 = COPY $v8
     %true:vrnov0 = COPY $v9
@@ -34,9 +34,9 @@ body: |
     ; CHECK-NEXT: %false:vrnov0 = COPY $noreg
     ; CHECK-NEXT: %true:vrnov0 = COPY $v9
     ; CHECK-NEXT: %avl:gprnox0 = COPY $x1
-    ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl, 0 /* e8 */
+    ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY %mask
-    ; CHECK-NEXT: %x:vr = PseudoVMV_V_V_M1 %pt, %true, %avl, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %x:vr = PseudoVMV_V_V_M1 %pt, %true, %avl /* vl */, 5 /* e32 */, 0 /* tu, mu */
     %pt:vrnov0 = COPY $v8
     %false:vrnov0 = COPY $noreg
     %true:vrnov0 = COPY $v9
@@ -57,8 +57,8 @@ body: |
     ; CHECK-NEXT: %pt:vr = COPY $v8
     ; CHECK-NEXT: %true:vrnov0 = COPY $v9
     ; CHECK-NEXT: %avl:gprnox0 = COPY $x1
-    ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl, 0 /* e8 */
-    ; CHECK-NEXT: %x:vr = PseudoVMV_V_V_M1 %pt, %true, %avl, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %mask:vmv0 = PseudoVMSET_M_B8 %avl /* vl */, 0 /* e8 */
+    ; CHECK-NEXT: %x:vr = PseudoVMV_V_V_M1 %pt, %true, %avl /* vl */, 5 /* e32 */, 0 /* tu, mu */
     %false:vrnov0 = COPY $v8
     %pt:vrnov0 = COPY $v8
     %true:vrnov0 = COPY $v9
@@ -77,8 +77,8 @@ body: |
     ; CHECK-NEXT: %pt:vr = COPY $v8
     ; CHECK-NEXT: %false:vrnov0 = COPY $v9
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
-    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 4, 5 /* e32 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %x:vr = PseudoVMV_V_V_M1 %pt, %true, 4, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 4 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %x:vr = PseudoVMV_V_V_M1 %pt, %true, 4 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     %pt:vrnov0 = COPY $v8
     %false:vrnov0 = COPY $v9
     %mask:vmv0 = COPY $v0
@@ -97,8 +97,8 @@ body: |
     ; CHECK-NEXT: %pt:vrnov0 = COPY $v8
     ; CHECK-NEXT: %false:vrnov0 = COPY $v9
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
-    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %pt, $noreg, $noreg, %mask, 4, 5 /* e32 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %x:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, %mask, 8, 5 /* e32 */
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %pt, $noreg, $noreg, %mask, 4 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %x:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, %mask, 8 /* vl */, 5 /* e32 */
     %pt:vrnov0 = COPY $v8
     %false:vrnov0 = COPY $v9
     %mask:vmv0 = COPY $v0
@@ -117,8 +117,8 @@ body: |
     ; CHECK-NEXT: %pt:vrnov0 = COPY $v8
     ; CHECK-NEXT: %false:vrnov0 = COPY $v9
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
-    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 4, 4 /* e16 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %x:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, %mask, 8, 5 /* e32 */
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 4 /* vl */, 4 /* e16 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %x:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, %mask, 8 /* vl */, 5 /* e32 */
     %pt:vrnov0 = COPY $v8
     %false:vrnov0 = COPY $v9
     %mask:vmv0 = COPY $v0
@@ -135,7 +135,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %false:vrnov0 = COPY $v8
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
-    ; CHECK-NEXT: %true:vmnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 4, 5 /* e32 */, 1 /* ta, mu */
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 4 /* vl */, 5 /* e32 */, 1 /* ta, mu */
     %false:vrnov0 = COPY $v8
     %mask:vmv0 = COPY $v0
     %true:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %mask, 4, 5 /* e32 */, 0 /* tu, mu */
@@ -152,10 +152,10 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %false:vrnov0 = COPY $v8
   ; CHECK-NEXT:   %mask:vmv0 = COPY $v0
-  ; CHECK-NEXT:   %true:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %mask, 4, 5 /* e32 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   %true:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %mask, 4 /* vl */, 5 /* e32 */, 0 /* tu, mu */
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %false, %true, %mask, 4, 5 /* e32 */
+  ; CHECK-NEXT:   [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %false, %true, %mask, 4 /* vl */, 5 /* e32 */
   bb.0:
     liveins: $v8, $v0
     %false:vrnov0 = COPY $v8
@@ -178,8 +178,8 @@ body: |
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
     ; CHECK-NEXT: %avl1:gprnox0 = COPY $x8
     ; CHECK-NEXT: %avl2:gprnox0 = COPY $x9
-    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %mask, %avl1, 5 /* e32 */, 3 /* ta, ma */
-    ; CHECK-NEXT: [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, %mask, %avl2, 5 /* e32 */
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, $noreg, $noreg, %mask, %avl1 /* vl */, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 %pt, %false, %true, %mask, %avl2 /* vl */, 5 /* e32 */
     %pt:vrnov0 = COPY $v8
     %false:vrnov0 = COPY $v9
     %mask:vmv0 = COPY $v0
@@ -200,8 +200,8 @@ body: |
     ; CHECK-NEXT: %pt:vr = COPY $v8
     ; CHECK-NEXT: %false:vrnov0 = COPY $v9
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
-    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 1, 5 /* e32 */, 3 /* ta, ma */
-    ; CHECK-NEXT: [[PseudoVMV_V_V_M1_:%[0-9]+]]:vr = PseudoVMV_V_V_M1 %pt, %true, 1, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %true:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, 1 /* vl */, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: [[PseudoVMV_V_V_M1_:%[0-9]+]]:vr = PseudoVMV_V_V_M1 %pt, %true, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
     %pt:vrnov0 = COPY $v8
     %false:vrnov0 = COPY $v9
     %mask:vmv0 = COPY $v0

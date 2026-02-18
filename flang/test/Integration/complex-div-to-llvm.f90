@@ -384,8 +384,8 @@ end subroutine div_test_single
 
 ! CHECK-LABEL: @div_test_double
 ! CHECK-SAME: ptr noalias %[[RET:.*]], ptr noalias %[[LHS:.*]], ptr noalias %[[RHS:.*]])
-! CHECK: %[[LOAD_LHS:.*]] = load { double, double }, ptr %[[LHS]], align 8
-! CHECK: %[[LOAD_RHS:.*]] = load { double, double }, ptr %[[RHS]], align 8
+! CHECK: %[[LOAD_LHS:.*]] = load { double, double }, ptr %[[LHS]], align {{4|8}}
+! CHECK: %[[LOAD_RHS:.*]] = load { double, double }, ptr %[[RHS]], align {{4|8}}
 ! CHECK: %[[LHS_REAL:.*]] = extractvalue { double, double } %[[LOAD_LHS]], 0
 ! CHECK: %[[LHS_IMAG:.*]] = extractvalue { double, double } %[[LOAD_LHS]], 1
 ! CHECK: %[[RHS_REAL:.*]] = extractvalue { double, double } %[[LOAD_RHS]], 0
@@ -484,7 +484,7 @@ end subroutine div_test_single
 ! IMPRVD: %[[RESULT_IMAG_WITH_SPECIAL_CASES:.*]] = select i1 %[[RESULT_IS_NAN]], double %[[RESULT_IMAG_SPECIAL_CASE_1]], double %[[RESULT_IMAG]]
 ! IMPRVD: %[[RESULT_1:.*]] = insertvalue { double, double } poison, double %[[RESULT_REAL_WITH_SPECIAL_CASES]], 0
 ! IMPRVD: %[[RESULT_2:.*]] = insertvalue { double, double } %[[RESULT_1]], double %[[RESULT_IMAG_WITH_SPECIAL_CASES]], 1
-! IMPRVD: store { double, double } %[[RESULT_2]], ptr %[[RET]], align 8
+! IMPRVD: store { double, double } %[[RESULT_2]], ptr %[[RET]], align {{4|8}}
 
 ! BASIC-DAG: %[[RHS_REAL_SQ:.*]] = fmul contract double %[[RHS_REAL]], %[[RHS_REAL]]
 ! BASIC-DAG: %[[RHS_IMAG_SQ:.*]] = fmul contract double %[[RHS_IMAG]], %[[RHS_IMAG]]
@@ -499,7 +499,7 @@ end subroutine div_test_single
 ! BASIC: %[[IMAG:.*]] = fdiv contract double %[[IMAG_TMP_2]], %[[SQ_NORM]]
 ! BASIC: %[[RESULT_1:.*]] = insertvalue { double, double } poison, double %[[REAL]], 0
 ! BASIC: %[[RESULT_2:.*]] = insertvalue { double, double } %[[RESULT_1]], double %[[IMAG]], 1
-! BASIC: store { double, double } %[[RESULT_2]], ptr %[[RET]], align 8
+! BASIC: store { double, double } %[[RESULT_2]], ptr %[[RET]], align {{4|8}}
 
 ! CHECK: ret void
 subroutine div_test_double(a,b,c)

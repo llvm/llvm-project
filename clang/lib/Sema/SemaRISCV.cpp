@@ -13,7 +13,6 @@
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -136,6 +135,10 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
     break;
   case ScalarTypeKind::UnsignedInteger:
     QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
+    break;
+  case ScalarTypeKind::FloatE4M3:
+  case ScalarTypeKind::FloatE5M2:
+    QT = Context.getIntTypeForBitwidth(8, false);
     break;
   case ScalarTypeKind::BFloat:
     QT = Context.BFloat16Ty;
@@ -379,7 +382,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
 
   RVVIntrinsic::updateNamesAndPolicy(IsMasked, HasPolicy, Name, BuiltinName,
                                      OverloadedName, PolicyAttrs,
-                                     Record.HasFRMRoundModeOp);
+                                     Record.HasFRMRoundModeOp, Record.AltFmt);
 
   // Put into IntrinsicList.
   uint32_t Index = IntrinsicList.size();

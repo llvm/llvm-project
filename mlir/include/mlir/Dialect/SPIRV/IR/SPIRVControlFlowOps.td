@@ -249,20 +249,20 @@ def SPIRV_SwitchOp : SPIRV_Op<"Switch",
      DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
      Pure, Terminator]> {
   let summary = [{
-    Multi-way branch to one of the operand label <id>.
+    Multi-way branch to one of the operand label `<id>`.
   }];
 
   let description = [{
     Selector must have a type of OpTypeInt. Selector is compared for equality to
     the Target literals.
 
-    Default must be the <id> of a label. If Selector does not equal any of the
-    Target literals, control flow branches to the Default label <id>.
+    Default must be the `<id>` of a label. If Selector does not equal any of the
+    Target literals, control flow branches to the Default label `<id>`.
 
-    Target must be alternating scalar integer literals and the <id> of a label.
+    Target must be alternating scalar integer literals and the `<id>` of a label.
     If Selector equals a literal, control flow branches to the following label
-    <id>. It is invalid for any two literal to be equal to each other. If Selector
-    does not equal any literal, control flow branches to the Default label <id>.
+    `<id>`. It is invalid for any two literal to be equal to each other. If Selector
+    does not equal any literal, control flow branches to the Default label `<id>`.
     Each literal is interpreted with the type of Selector: The bit width of
     Selector’s type is the width of each literal’s type. If this width is not a
     multiple of 32-bits and the OpTypeInt Signedness is set to 1, the literal values

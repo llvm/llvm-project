@@ -427,22 +427,13 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                      Expand);
 
   setOperationAction(ISD::FREM, {MVT::f16, MVT::f32, MVT::f64}, Expand);
-
-  if (Subtarget->has16BitInsts()) {
-    setOperationAction(ISD::IS_FPCLASS, {MVT::f16, MVT::f32, MVT::f64}, Legal);
-    setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Legal);
-  } else {
-    setOperationAction(ISD::IS_FPCLASS, {MVT::f32, MVT::f64}, Legal);
-    setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Custom);
-  }
+  setOperationAction(ISD::IS_FPCLASS, {MVT::f32, MVT::f64}, Legal);
+  setOperationAction({ISD::FLOG2, ISD::FEXP2}, MVT::f16, Custom);
 
   setOperationAction({ISD::FLOG10, ISD::FLOG, ISD::FEXP, ISD::FEXP10}, MVT::f16,
                      Custom);
 
   setOperationAction(ISD::FCANONICALIZE, {MVT::f32, MVT::f64}, Legal);
-  if (Subtarget->has16BitInsts()) {
-    setOperationAction(ISD::FCANONICALIZE, MVT::f16, Legal);
-  }
 
   // FIXME: These IS_FPCLASS vector fp types are marked custom so it reaches
   // scalarization code. Can be removed when IS_FPCLASS expand isn't called by
@@ -453,11 +444,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                       MVT::v2f64, MVT::v3f64, MVT::v4f64, MVT::v8f64,
                       MVT::v16f64},
                      Custom);
-
-  if (isTypeLegal(MVT::f16))
-    setOperationAction(ISD::IS_FPCLASS,
-                       {MVT::v2f16, MVT::v3f16, MVT::v4f16, MVT::v16f16},
-                       Custom);
 
   // Expand to fneg + fadd.
   setOperationAction(ISD::FSUB, MVT::f64, Expand);
@@ -481,7 +467,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
        MVT::v4i64,  MVT::v8f64,  MVT::v8i64,  MVT::v16f64, MVT::v16i64},
       Custom);
 
-  setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
+  setOperationAction({ISD::FP16_TO_FP, ISD::STRICT_FP16_TO_FP}, MVT::f64,
+                     Expand);
   setOperationAction(ISD::FP_TO_FP16, {MVT::f64, MVT::f32}, Custom);
 
   const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
@@ -510,9 +497,10 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::MULHU, ISD::MULHS}, MVT::i16, Expand);
 
   setOperationAction({ISD::MUL, ISD::MULHU, ISD::MULHS}, MVT::i64, Expand);
-  setOperationAction(
-      {ISD::UINT_TO_FP, ISD::SINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT},
-      MVT::i64, Custom);
+  setOperationAction({ISD::UINT_TO_FP, ISD::SINT_TO_FP, ISD::FP_TO_SINT,
+                      ISD::FP_TO_UINT, ISD::FP_TO_SINT_SAT,
+                      ISD::FP_TO_UINT_SAT},
+                     MVT::i64, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
 
   setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, MVT::i32,
@@ -531,19 +519,28 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   for (MVT VT : VectorIntTypes) {
     // Expand the following operations for the current type by default.
-    setOperationAction({ISD::ADD,        ISD::AND,          ISD::FP_TO_SINT,
-                        ISD::FP_TO_UINT, ISD::MUL,          ISD::MULHU,
-                        ISD::MULHS,      ISD::OR,           ISD::SHL,
-                        ISD::SRA,        ISD::SRL,          ISD::ROTL,
-                        ISD::ROTR,       ISD::SUB,          ISD::SINT_TO_FP,
-                        ISD::UINT_TO_FP, ISD::SDIV,         ISD::UDIV,
-                        ISD::SREM,       ISD::UREM,         ISD::SMUL_LOHI,
-                        ISD::UMUL_LOHI,  ISD::SDIVREM,      ISD::UDIVREM,
-                        ISD::SELECT,     ISD::VSELECT,      ISD::SELECT_CC,
-                        ISD::XOR,        ISD::BSWAP,        ISD::CTPOP,
-                        ISD::CTTZ,       ISD::CTLZ,         ISD::VECTOR_SHUFFLE,
-                        ISD::SETCC,      ISD::ADDRSPACECAST},
+    // clang-format off
+    setOperationAction({ISD::ADD,            ISD::AND,
+                        ISD::FP_TO_SINT,     ISD::FP_TO_UINT,
+                        ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT,
+                        ISD::MUL,            ISD::MULHU,
+                        ISD::MULHS,          ISD::OR,
+                        ISD::SHL,            ISD::SRA,
+                        ISD::SRL,            ISD::ROTL,
+                        ISD::ROTR,           ISD::SUB,
+                        ISD::SINT_TO_FP,     ISD::UINT_TO_FP,
+                        ISD::SDIV,           ISD::UDIV,
+                        ISD::SREM,           ISD::UREM,
+                        ISD::SMUL_LOHI,      ISD::UMUL_LOHI,
+                        ISD::SDIVREM,        ISD::UDIVREM,
+                        ISD::SELECT,         ISD::VSELECT,
+                        ISD::SELECT_CC,      ISD::XOR,
+                        ISD::BSWAP,          ISD::CTPOP,
+                        ISD::CTTZ,           ISD::CTLZ,
+                        ISD::VECTOR_SHUFFLE, ISD::SETCC,
+                        ISD::ADDRSPACECAST},
                        VT, Expand);
+    // clang-format on
   }
 
   static const MVT::SimpleValueType FloatVectorTypes[] = {
@@ -644,9 +641,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 }
 
 bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
-  if (getTargetMachine().Options.NoSignedZerosFPMath)
-    return true;
-
   const auto Flags = Op.getNode()->getFlags();
   if (Flags.hasNoSignedZeros())
     return true;
@@ -821,9 +815,7 @@ bool AMDGPUTargetLowering::isSelectSupported(SelectSupportKind SelType) const {
 // FIXME: Why are we reporting vectors of FP immediates as legal?
 bool AMDGPUTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                         bool ForCodeSize) const {
-  EVT ScalarVT = VT.getScalarType();
-  return (ScalarVT == MVT::f32 || ScalarVT == MVT::f64 ||
-         (ScalarVT == MVT::f16 && Subtarget->has16BitInsts()));
+  return isTypeLegal(VT.getScalarType());
 }
 
 // We don't want to shrink f64 / f32 constants.
@@ -967,8 +959,8 @@ bool AMDGPUTargetLowering::isFAbsFree(EVT VT) const {
   assert(VT.isFloatingPoint());
 
   // Packed operations do not have a fabs modifier.
-  return VT == MVT::f32 || VT == MVT::f64 ||
-         (Subtarget->has16BitInsts() && (VT == MVT::f16 || VT == MVT::bf16));
+  // Report this based on the end legalized type.
+  return VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f16 || VT == MVT::bf16;
 }
 
 bool AMDGPUTargetLowering::isFNegFree(EVT VT) const {
@@ -1057,8 +1049,9 @@ bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
-    if (Subtarget->has16BitInsts() &&
-        (!DestVT.isVector() || !Subtarget->hasVOP3PInsts())) {
+    if (isTypeLegal(MVT::i16) &&
+        (!DestVT.isVector() ||
+         !isOperationLegal(ISD::ADD, MVT::v2i16))) { // Check if VOP3P
       // Don't narrow back down to i16 if promoted to i32 already.
       if (!N->isDivergent() && DestVT.isInteger() &&
           DestVT.getScalarSizeInBits() > 1 &&
@@ -1218,8 +1211,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
   const MachineFunction &MF = State.getMachineFunction();
   const Function &Fn = MF.getFunction();
   LLVMContext &Ctx = Fn.getContext();
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(MF);
-  const unsigned ExplicitOffset = ST.getExplicitKernelArgOffset();
+  const unsigned ExplicitOffset = Subtarget->getExplicitKernelArgOffset();
   CallingConv::ID CC = Fn.getCallingConv();
 
   Align MaxAlign = Align(1);
@@ -1472,6 +1464,9 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
     return LowerFP_TO_INT(Op, DAG);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    return LowerFP_TO_INT_SAT(Op, DAG);
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTLZ:
@@ -1535,7 +1530,7 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
     if (std::optional<uint32_t> Address =
             AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
       if (IsNamedBarrier) {
-        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+        unsigned BarCnt = cast<GlobalVariable>(GV)->getGlobalSize(DL) / 16;
         MFI->recordNumNamedBarriers(Address.value(), BarCnt);
       }
       return DAG.getConstant(*Address, SDLoc(Op), Op.getValueType());
@@ -2635,6 +2630,7 @@ static bool valueIsKnownNeverF32Denorm(SDValue Src) {
     return Src.getOperand(0).getValueType() == MVT::f16;
   case ISD::FP16_TO_FP:
   case ISD::FFREXP:
+  case ISD::FSQRT:
   case AMDGPUISD::LOG:
   case AMDGPUISD::EXP:
     return true;
@@ -2645,6 +2641,7 @@ static bool valueIsKnownNeverF32Denorm(SDValue Src) {
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_log_clamp:
     case Intrinsic::amdgcn_exp2:
+    case Intrinsic::amdgcn_sqrt:
       return true;
     default:
       return false;
@@ -2743,7 +2740,7 @@ SDValue AMDGPUTargetLowering::LowerFLOG2(SDValue Op, SelectionDAG &DAG) const {
 
   if (VT == MVT::f16) {
     // Nothing in half is a denormal when promoted to f32.
-    assert(!Subtarget->has16BitInsts());
+    assert(!isTypeLegal(VT));
     SDValue Ext = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src, Flags);
     SDValue Log = DAG.getNode(AMDGPUISD::LOG, SL, MVT::f32, Ext, Flags);
     return DAG.getNode(ISD::FP_ROUND, SL, VT, Log,
@@ -2779,16 +2776,20 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
   const bool IsLog10 = Op.getOpcode() == ISD::FLOG10;
   assert(IsLog10 || Op.getOpcode() == ISD::FLOG);
 
-  const auto &Options = getTargetMachine().Options;
   if (VT == MVT::f16 || Flags.hasApproximateFuncs()) {
+    // TODO: The direct f16 path is 1.79 ulp for f16. This should be used
+    // depending on !fpmath metadata.
 
-    if (VT == MVT::f16 && !Subtarget->has16BitInsts()) {
-      // Log and multiply in f32 is good enough for f16.
+    bool PromoteToF32 = VT == MVT::f16 && (!Flags.hasApproximateFuncs() ||
+                                           !isTypeLegal(MVT::f16));
+
+    if (PromoteToF32) {
+      // Log and multiply in f32 is always good enough for f16.
       X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X, Flags);
     }
 
     SDValue Lowered = LowerFLOGUnsafe(X, DL, DAG, IsLog10, Flags);
-    if (VT == MVT::f16 && !Subtarget->has16BitInsts()) {
+    if (PromoteToF32) {
       return DAG.getNode(ISD::FP_ROUND, DL, VT, Lowered,
                          DAG.getTargetConstant(0, DL, MVT::i32), Flags);
     }
@@ -2796,9 +2797,14 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
     return Lowered;
   }
 
-  auto [ScaledInput, IsScaled] = getScaledLogInput(DAG, DL, X, Flags);
-  if (ScaledInput)
-    X = ScaledInput;
+  SDValue ScaledInput, IsScaled;
+  if (VT == MVT::f16)
+    X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X, Flags);
+  else {
+    std::tie(ScaledInput, IsScaled) = getScaledLogInput(DAG, DL, X, Flags);
+    if (ScaledInput)
+      X = ScaledInput;
+  }
 
   SDValue Y = DAG.getNode(AMDGPUISD::LOG, DL, VT, X, Flags);
 
@@ -2848,8 +2854,7 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
     R = getMad(DAG, DL, VT, YH, CH, Mad1);
   }
 
-  const bool IsFiniteOnly =
-      (Flags.hasNoNaNs() || Options.NoNaNsFPMath) && Flags.hasNoInfs();
+  const bool IsFiniteOnly = Flags.hasNoNaNs() && Flags.hasNoInfs();
 
   // TODO: Check if known finite from source value.
   if (!IsFiniteOnly) {
@@ -2925,7 +2930,7 @@ SDValue AMDGPUTargetLowering::lowerFEXP2(SDValue Op, SelectionDAG &DAG) const {
 
   if (VT == MVT::f16) {
     // Nothing in half is a denormal when promoted to f32.
-    assert(!Subtarget->has16BitInsts());
+    assert(!isTypeLegal(MVT::f16));
     SDValue Ext = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src, Flags);
     SDValue Log = DAG.getNode(AMDGPUISD::EXP, SL, MVT::f32, Ext, Flags);
     return DAG.getNode(ISD::FP_ROUND, SL, VT, Log,
@@ -3394,8 +3399,9 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
   // Get the 32-bit normalized integer.
   Norm = DAG.getNode(ISD::OR, SL, MVT::i32, Hi, Adjust);
   // Convert the normalized 32-bit integer into f32.
-  unsigned Opc =
-      (Signed && Subtarget->isGCN()) ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
+
+  bool UseLDEXP = isOperationLegal(ISD::FLDEXP, MVT::f32);
+  unsigned Opc = Signed && UseLDEXP ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
   SDValue FVal = DAG.getNode(Opc, SL, MVT::f32, Norm);
 
   // Finally, need to scale back the converted floating number as the original
@@ -3403,7 +3409,7 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
   ShAmt = DAG.getNode(ISD::SUB, SL, MVT::i32, DAG.getConstant(32, SL, MVT::i32),
                       ShAmt);
   // On GCN, use LDEXP directly.
-  if (Subtarget->isGCN())
+  if (UseLDEXP)
     return DAG.getNode(ISD::FLDEXP, SL, MVT::f32, FVal, ShAmt);
 
   // Otherwise, align 'ShAmt' to the exponent part and add it into the exponent
@@ -3470,7 +3476,7 @@ SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (SrcVT != MVT::i64)
     return Op;
 
-  if (Subtarget->has16BitInsts() && DestVT == MVT::f16) {
+  if (DestVT == MVT::f16 && isTypeLegal(MVT::f16)) {
     SDLoc DL(Op);
 
     SDValue IntToFp32 = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Src);
@@ -3518,7 +3524,7 @@ SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
 
   // TODO: Factor out code common with LowerUINT_TO_FP.
 
-  if (Subtarget->has16BitInsts() && DestVT == MVT::f16) {
+  if (DestVT == MVT::f16 && isTypeLegal(MVT::f16)) {
     SDLoc DL(Op);
     SDValue Src = Op.getOperand(0);
 
@@ -3758,6 +3764,86 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT(const SDValue Op,
 
   if (SrcVT == MVT::f32 || SrcVT == MVT::f64)
     return LowerFP_TO_INT64(Op, DAG, OpOpcode == ISD::FP_TO_SINT);
+
+  return SDValue();
+}
+
+SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDValue Src = Op.getOperand(0);
+  unsigned OpOpcode = Op.getOpcode();
+  EVT SrcVT = Src.getValueType();
+  EVT DstVT = Op.getValueType();
+  SDValue SatVTOp = Op.getNode()->getOperand(1);
+  EVT SatVT = cast<VTSDNode>(SatVTOp)->getVT();
+  SDLoc DL(Op);
+
+  uint64_t DstWidth = DstVT.getScalarSizeInBits();
+  uint64_t SatWidth = SatVT.getScalarSizeInBits();
+  assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
+
+  // Will be selected natively
+  if (DstVT == MVT::i32 && SatWidth == DstWidth &&
+      (SrcVT == MVT::f32 || SrcVT == MVT::f64))
+    return Op;
+
+  const SDValue Int32VT = DAG.getValueType(MVT::i32);
+
+  // Perform all saturation at i32 and truncate
+  if (SatWidth < DstWidth) {
+    const uint64_t Int32Width = 32;
+    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, Int32VT);
+    SDValue Int32SatVal;
+
+    if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+      SDValue MinConst = DAG.getConstant(
+          APInt::getSignedMaxValue(SatWidth).sext(Int32Width), DL, MVT::i32);
+      SDValue MaxConst = DAG.getConstant(
+          APInt::getSignedMinValue(SatWidth).sext(Int32Width), DL, MVT::i32);
+      SDValue MinVal =
+          DAG.getNode(ISD::SMIN, DL, MVT::i32, FpToInt32, MinConst);
+      Int32SatVal = DAG.getNode(ISD::SMAX, DL, MVT::i32, MinVal, MaxConst);
+    } else {
+      SDValue MinConst = DAG.getConstant(
+          APInt::getMaxValue(SatWidth).zext(Int32Width), DL, MVT::i32);
+      Int32SatVal = DAG.getNode(ISD::UMIN, DL, MVT::i32, FpToInt32, MinConst);
+    }
+
+    if (DstWidth == Int32Width)
+      return Int32SatVal;
+    if (DstWidth < Int32Width)
+      return DAG.getNode(ISD::TRUNCATE, DL, DstVT, Int32SatVal);
+
+    // DstWidth > Int32Width
+    const unsigned Ext =
+        OpOpcode == ISD::FP_TO_SINT_SAT ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    return DAG.getNode(Ext, DL, DstVT, FpToInt32);
+  }
+
+  // SatWidth == DstWidth
+
+  // Saturate at i32 for i64 dst and 16b src (will invoke f16 promotion below)
+  if (DstVT == MVT::i64 &&
+      (SrcVT == MVT::f16 || SrcVT == MVT::bf16 ||
+       (SrcVT == MVT::f32 && Src.getOpcode() == ISD::FP16_TO_FP))) {
+    return DAG.getNode(OpOpcode, DL, DstVT, Src, Int32VT);
+  }
+
+  // Promote f16/bf16 src to f32
+  if (SrcVT == MVT::f16 || SrcVT == MVT::bf16) {
+    SDValue PromotedSrc = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
+    return DAG.getNode(Op.getOpcode(), DL, DstVT, PromotedSrc, SatVTOp);
+  }
+
+  // Promote sub-i32 dst to i32 with sub-i32 saturation
+  if (DstWidth < 32) {
+    // Note: this triggers SatWidth < DstWidth above to generate saturated
+    // truncate by requesting MVT::i32 destination with SatWidth < 32.
+    SDValue FpToInt32 = DAG.getNode(OpOpcode, DL, MVT::i32, Src, SatVTOp);
+    return DAG.getNode(ISD::TRUNCATE, DL, DstVT, FpToInt32);
+  }
+
+  // TODO: can we implement i64 dst for f32/f64?
 
   return SDValue();
 }
@@ -4569,7 +4655,7 @@ SDValue AMDGPUTargetLowering::performMulCombine(SDNode *N,
   }
 
   // There are i16 integer mul/mad.
-  if (Subtarget->has16BitInsts() && VT.getScalarType().bitsLE(MVT::i16))
+  if (isTypeLegal(MVT::i16) && VT.getScalarType().bitsLE(MVT::i16))
     return SDValue();
 
   // SimplifyDemandedBits has the annoying habit of turning useful zero_extends
@@ -4688,7 +4774,7 @@ SDValue AMDGPUTargetLowering::performMulhuCombine(SDNode *N,
                                                   DAGCombinerInfo &DCI) const {
   EVT VT = N->getValueType(0);
 
-  if (!Subtarget->hasMulU24() || VT.isVector() || VT.getSizeInBits() > 32)
+  if (VT.isVector() || VT.getSizeInBits() > 32 || !Subtarget->hasMulU24())
     return SDValue();
 
   // Don't generate 24-bit multiplies on values that are in SGPRs, since
@@ -4697,7 +4783,7 @@ SDValue AMDGPUTargetLowering::performMulhuCombine(SDNode *N,
   // value is in an SGPR.
   // This doesn't apply if no s_mul_hi is available (since we'll end up with a
   // valu op anyway)
-  if (Subtarget->hasSMulHi() && !N->isDivergent())
+  if (!N->isDivergent() && Subtarget->hasSMulHi())
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
@@ -4722,9 +4808,7 @@ SDValue AMDGPUTargetLowering::getFFBX_U32(SelectionDAG &DAG,
                                           const SDLoc &DL,
                                           unsigned Opc) const {
   EVT VT = Op.getValueType();
-  EVT LegalVT = getTypeToTransformTo(*DAG.getContext(), VT);
-  if (LegalVT != MVT::i32 && (Subtarget->has16BitInsts() &&
-                              LegalVT != MVT::i16))
+  if (VT.bitsGT(MVT::i32))
     return SDValue();
 
   if (VT != MVT::i32)
@@ -5021,7 +5105,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   SDLoc SL(N);
   switch (Opc) {
   case ISD::FADD: {
-    if (!mayIgnoreSignedZero(N0))
+    if (!mayIgnoreSignedZero(N0) && !N->getFlags().hasNoSignedZeros())
       return SDValue();
 
     // (fneg (fadd x, y)) -> (fadd (fneg x), (fneg y))
@@ -5069,7 +5153,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FMA:
   case ISD::FMAD: {
     // TODO: handle llvm.amdgcn.fma.legacy
-    if (!mayIgnoreSignedZero(N0))
+    if (!mayIgnoreSignedZero(N0) && !N->getFlags().hasNoSignedZeros())
       return SDValue();
 
     // (fneg (fma x, y, z)) -> (fma x, (fneg y), (fneg z))
@@ -5281,7 +5365,7 @@ SDValue AMDGPUTargetLowering::performFAbsCombine(SDNode *N,
 
   switch (N0.getOpcode()) {
   case ISD::FP16_TO_FP: {
-    assert(!Subtarget->has16BitInsts() && "should only see if f16 is illegal");
+    assert(!isTypeLegal(MVT::f16) && "should only see if f16 is illegal");
     SDLoc SL(N);
     SDValue Src = N0.getOperand(0);
     EVT SrcVT = Src.getValueType();
@@ -5481,7 +5565,7 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
     }
 
     if ((OffsetVal + WidthVal) >= 32 &&
-        !(Subtarget->hasSDWA() && OffsetVal == 16 && WidthVal == 16)) {
+        !(OffsetVal == 16 && WidthVal == 16 && Subtarget->hasSDWA())) {
       SDValue ShiftVal = DAG.getConstant(OffsetVal, DL, MVT::i32);
       return DAG.getNode(Signed ? ISD::SRA : ISD::SRL, DL, MVT::i32,
                          BitsFrom, ShiftVal);

@@ -146,8 +146,9 @@ class ARMFastISel final : public FastISel {
 
   public:
     explicit ARMFastISel(FunctionLoweringInfo &funcInfo,
-                         const TargetLibraryInfo *libInfo)
-        : FastISel(funcInfo, libInfo),
+                         const TargetLibraryInfo *libInfo,
+                         const LibcallLoweringInfo *libcallLowering)
+        : FastISel(funcInfo, libInfo, libcallLowering),
           Subtarget(&funcInfo.MF->getSubtarget<ARMSubtarget>()),
           M(const_cast<Module &>(*funcInfo.Fn->getParent())),
           TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()),
@@ -2268,7 +2269,9 @@ Register ARMFastISel::getLibcallReg(const Twine &Name) {
 // TODO: Try to unify this and the normal call bits for ARM, then try to unify
 // with X86.
 bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
-  CallingConv::ID CC = TLI.getLibcallCallingConv(Call);
+  RTLIB::LibcallImpl LCImpl = LibcallLowering->getLibcallImpl(Call);
+  if (LCImpl == RTLIB::Unsupported)
+    return false;
 
   // Handle *simple* calls for now.
   Type *RetTy = I->getType();
@@ -2277,6 +2280,8 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
     RetVT = MVT::isVoid;
   else if (!isTypeLegal(RetTy, RetVT))
     return false;
+
+  CallingConv::ID CC = LibcallLowering->getLibcallImplCallingConv(LCImpl);
 
   // Can't handle non-double multi-reg retvals.
   if (RetVT != MVT::isVoid && RetVT != MVT::i32) {
@@ -2321,9 +2326,11 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
                        RegArgs, CC, NumBytes, false))
     return false;
 
+  StringRef FuncName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
+
   Register CalleeReg;
   if (Subtarget->genLongCalls()) {
-    CalleeReg = getLibcallReg(TLI.getLibcallName(Call));
+    CalleeReg = getLibcallReg(FuncName);
     if (!CalleeReg)
       return false;
   }
@@ -2340,7 +2347,7 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
         constrainOperandRegClass(TII.get(CallOpc), CalleeReg, isThumb2 ? 2 : 0);
     MIB.addReg(CalleeReg);
   } else
-    MIB.addExternalSymbol(TLI.getLibcallName(Call));
+    MIB.addExternalSymbol(FuncName.data());
 
   // Add implicit physical register uses to the call.
   for (Register R : RegArgs)
@@ -2798,7 +2805,7 @@ Register ARMFastISel::ARMEmitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
     if (setsCPSR)
       MIB.addReg(ARM::CPSR, RegState::Define);
     SrcReg = constrainOperandRegClass(TII.get(Opcode), SrcReg, 1 + setsCPSR);
-    MIB.addReg(SrcReg, isKill * RegState::Kill)
+    MIB.addReg(SrcReg, getKillRegState(isKill))
         .addImm(ImmEnc)
         .add(predOps(ARMCC::AL));
     if (hasS)
@@ -3150,12 +3157,13 @@ bool ARMFastISel::fastLowerArguments() {
 
 namespace llvm {
 
-  FastISel *ARM::createFastISel(FunctionLoweringInfo &funcInfo,
-                                const TargetLibraryInfo *libInfo) {
-    if (funcInfo.MF->getSubtarget<ARMSubtarget>().useFastISel())
-      return new ARMFastISel(funcInfo, libInfo);
+FastISel *ARM::createFastISel(FunctionLoweringInfo &funcInfo,
+                              const TargetLibraryInfo *libInfo,
+                              const LibcallLoweringInfo *libcallLowering) {
+  if (funcInfo.MF->getSubtarget<ARMSubtarget>().useFastISel())
+    return new ARMFastISel(funcInfo, libInfo, libcallLowering);
 
-    return nullptr;
-  }
+  return nullptr;
+}
 
 } // end namespace llvm

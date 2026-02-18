@@ -729,7 +729,7 @@ Context::CallbackID Context::registerEraseInstrCallback(EraseInstrCallback CB) {
   assert(EraseInstrCallbacks.size() <= MaxRegisteredCallbacks &&
          "EraseInstrCallbacks size limit exceeded");
   CallbackID ID{NextCallbackID++};
-  EraseInstrCallbacks[ID] = CB;
+  EraseInstrCallbacks[ID] = std::move(CB);
   return ID;
 }
 void Context::unregisterEraseInstrCallback(CallbackID ID) {
@@ -743,7 +743,7 @@ Context::registerCreateInstrCallback(CreateInstrCallback CB) {
   assert(CreateInstrCallbacks.size() <= MaxRegisteredCallbacks &&
          "CreateInstrCallbacks size limit exceeded");
   CallbackID ID{NextCallbackID++};
-  CreateInstrCallbacks[ID] = CB;
+  CreateInstrCallbacks[ID] = std::move(CB);
   return ID;
 }
 void Context::unregisterCreateInstrCallback(CallbackID ID) {
@@ -756,7 +756,7 @@ Context::CallbackID Context::registerMoveInstrCallback(MoveInstrCallback CB) {
   assert(MoveInstrCallbacks.size() <= MaxRegisteredCallbacks &&
          "MoveInstrCallbacks size limit exceeded");
   CallbackID ID{NextCallbackID++};
-  MoveInstrCallbacks[ID] = CB;
+  MoveInstrCallbacks[ID] = std::move(CB);
   return ID;
 }
 void Context::unregisterMoveInstrCallback(CallbackID ID) {
@@ -769,7 +769,7 @@ Context::CallbackID Context::registerSetUseCallback(SetUseCallback CB) {
   assert(SetUseCallbacks.size() <= MaxRegisteredCallbacks &&
          "SetUseCallbacks size limit exceeded");
   CallbackID ID{NextCallbackID++};
-  SetUseCallbacks[ID] = CB;
+  SetUseCallbacks[ID] = std::move(CB);
   return ID;
 }
 void Context::unregisterSetUseCallback(CallbackID ID) {

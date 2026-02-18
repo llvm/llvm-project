@@ -18,7 +18,7 @@ open Llvm
 open Llvm_bitwriter
 
 open Testsuite
-let context = global_context ()
+let context = create_context ()
 let i1_type = Llvm.i1_type context
 let i8_type = Llvm.i8_type context
 let i16_type = Llvm.i16_type context
@@ -535,7 +535,7 @@ let test_global_variables () =
     let m = create_module context "temp" in
 
     insist (get_module_identifier m = "temp");
-    set_module_identifer m "temp2";
+    set_module_identifier m "temp2";
     insist (get_module_identifier m = "temp2");
 
     insist (At_end m = global_begin m);
@@ -1507,4 +1507,5 @@ let _ =
   suite "builder"          test_builder;
   suite "memory buffer"    test_memory_buffer;
   suite "writer"           test_writer; (* Keep this last; it disposes m. *)
+  dispose_context context;
   exit !exit_status

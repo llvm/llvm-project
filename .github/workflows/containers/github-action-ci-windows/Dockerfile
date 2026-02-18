@@ -2,6 +2,8 @@
 # .net 4.8 is required by chocolately package manager.
 FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2022
 
+# FORCE BUILD 1/23/26
+
 # Restore the default Windows shell for correct batch processing.
 SHELL ["cmd", "/S", "/C"]
 
@@ -87,7 +89,7 @@ RUN powershell -Command \
 RUN git config --system core.longpaths true & \
     git config --global core.autocrlf false
 
-ARG RUNNER_VERSION=2.330.0
+ARG RUNNER_VERSION=2.331.0
 ENV RUNNER_VERSION=$RUNNER_VERSION
 
 RUN powershell -Command \
@@ -97,7 +99,7 @@ RUN powershell -Command \
     rm actions-runner-win.zip
 
 # Set the LLVM_VERSION environment variable
-ENV LLVM_VERSION=21.1.2
+ENV LLVM_VERSION=21.1.8
 
 # Download and extract Clang compiler.
 # Create directories, download, extract, and clean up all in one layer

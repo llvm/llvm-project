@@ -417,7 +417,7 @@ bool Vreg1LoweringHelper::lowerCopiesFromI1() {
 
       // Copy into a 32-bit vector register.
       LLVM_DEBUG(dbgs() << "Lower copy from i1: " << MI);
-      DebugLoc DL = MI.getDebugLoc();
+      const DebugLoc &DL = MI.getDebugLoc();
 
       assert(isVRegCompatibleReg(TII->getRegisterInfo(), *MRI, DstReg));
       assert(!MI.getOperand(0).getSubReg());
@@ -616,7 +616,7 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
       if (MI.getOpcode() == AMDGPU::IMPLICIT_DEF)
         continue;
 
-      DebugLoc DL = MI.getDebugLoc();
+      const DebugLoc &DL = MI.getDebugLoc();
       Register SrcReg = MI.getOperand(1).getReg();
       assert(!MI.getOperand(1).getSubReg());
 
@@ -888,9 +888,7 @@ class SILowerI1CopiesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SILowerI1CopiesLegacy() : MachineFunctionPass(ID) {
-    initializeSILowerI1CopiesLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SILowerI1CopiesLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

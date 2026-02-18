@@ -16,8 +16,9 @@
 //   replace_if(Iter first, Iter last, Pred pred, const T& new_value);
 
 #include <algorithm>
-#include <functional>
 #include <cassert>
+#include <functional>
+#include <iterator>
 
 #include "test_macros.h"
 #include "test_iterators.h"

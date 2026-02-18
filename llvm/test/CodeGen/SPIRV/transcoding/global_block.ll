@@ -30,31 +30,31 @@
 ; CHECK-SPIRV-NEXT: %[[#]] = OpFunctionParameter %[[#int8Ptr]]
 ; CHECK-SPIRV-NEXT: %[[#]] = OpFunctionParameter %[[#int]]
 
-%struct.__opencl_block_literal_generic = type { i32, i32, i8 addrspace(4)* }
+%struct.__opencl_block_literal_generic = type { i32, i32, ptr addrspace(4) }
 
-@block_kernel.b1 = internal addrspace(2) constant %struct.__opencl_block_literal_generic addrspace(4)* addrspacecast (%struct.__opencl_block_literal_generic addrspace(1)* bitcast ({ i32, i32, i8 addrspace(4)* } addrspace(1)* @__block_literal_global to %struct.__opencl_block_literal_generic addrspace(1)*) to %struct.__opencl_block_literal_generic addrspace(4)*), align 4
-@__block_literal_global = internal addrspace(1) constant { i32, i32, i8 addrspace(4)* } { i32 12, i32 4, i8 addrspace(4)* addrspacecast (i8* bitcast (i32 (i8 addrspace(4)*, i32)* @_block_invoke to i8*) to i8 addrspace(4)*) }, align 4
+@block_kernel.b1 = internal addrspace(2) constant ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global to ptr addrspace(4)), align 4
+@__block_literal_global = internal addrspace(1) constant { i32, i32, ptr addrspace(4) } { i32 12, i32 4, ptr addrspace(4) addrspacecast (ptr @_block_invoke to ptr addrspace(4)) }, align 4
 
-define dso_local spir_kernel void @block_kernel(i32 addrspace(1)* noundef %res) {
+define dso_local spir_kernel void @block_kernel(ptr addrspace(1) noundef %res) {
 entry:
-  %res.addr = alloca i32 addrspace(1)*, align 4
-  store i32 addrspace(1)* %res, i32 addrspace(1)** %res.addr, align 4
-  %call = call spir_func i32 @_block_invoke(i8 addrspace(4)* noundef addrspacecast (i8 addrspace(1)* bitcast ({ i32, i32, i8 addrspace(4)* } addrspace(1)* @__block_literal_global to i8 addrspace(1)*) to i8 addrspace(4)*), i32 noundef 5)
-  %0 = load i32 addrspace(1)*, i32 addrspace(1)** %res.addr, align 4
-  store i32 %call, i32 addrspace(1)* %0, align 4
+  %res.addr = alloca ptr addrspace(1), align 4
+  store ptr addrspace(1) %res, ptr %res.addr, align 4
+  %call = call spir_func i32 @_block_invoke(ptr addrspace(4) noundef addrspacecast (ptr addrspace(1) @__block_literal_global to ptr addrspace(4)), i32 noundef 5)
+  %0 = load ptr addrspace(1), ptr %res.addr, align 4
+  store i32 %call, ptr addrspace(1) %0, align 4
   ret void
 }
 
-define internal spir_func i32 @_block_invoke(i8 addrspace(4)* noundef %.block_descriptor, i32 noundef %i) #0 {
+define internal spir_func i32 @_block_invoke(ptr addrspace(4) noundef %.block_descriptor, i32 noundef %i) #0 {
 entry:
-  %.block_descriptor.addr = alloca i8 addrspace(4)*, align 4
+  %.block_descriptor.addr = alloca ptr addrspace(4), align 4
   %i.addr = alloca i32, align 4
-  %block.addr = alloca <{ i32, i32, i8 addrspace(4)* }> addrspace(4)*, align 4
-  store i8 addrspace(4)* %.block_descriptor, i8 addrspace(4)** %.block_descriptor.addr, align 4
-  %block = bitcast i8 addrspace(4)* %.block_descriptor to <{ i32, i32, i8 addrspace(4)* }> addrspace(4)*
-  store i32 %i, i32* %i.addr, align 4
-  store <{ i32, i32, i8 addrspace(4)* }> addrspace(4)* %block, <{ i32, i32, i8 addrspace(4)* }> addrspace(4)** %block.addr, align 4
-  %0 = load i32, i32* %i.addr, align 4
+  %block.addr = alloca ptr addrspace(4), align 4
+  store ptr addrspace(4) %.block_descriptor, ptr %.block_descriptor.addr, align 4
+  %block = bitcast ptr addrspace(4) %.block_descriptor to ptr addrspace(4)
+  store i32 %i, ptr %i.addr, align 4
+  store ptr addrspace(4) %block, ptr %block.addr, align 4
+  %0 = load i32, ptr %i.addr, align 4
   %add = add nsw i32 %0, 1
   ret i32 %add
 }

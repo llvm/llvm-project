@@ -16,7 +16,7 @@
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Frontend/PCHContainerOperations.h"
-#include "llvm/Support/Error.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -87,25 +87,43 @@ public:
   /// Construct a dependency scanning worker.
   ///
   /// @param Service The parent service. Must outlive the worker.
-  /// @param BaseFS The filesystem for the worker to use.
-  DependencyScanningWorker(DependencyScanningService &Service,
-                           IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
+  DependencyScanningWorker(DependencyScanningService &Service);
 
   ~DependencyScanningWorker();
 
-  /// Run the dependency scanning tool for a given clang driver command-line,
-  /// and report the discovered dependencies to the provided consumer. If
-  /// TUBuffer is not nullopt, it is used as TU input for the dependency
-  /// scanning. Otherwise, the input should be included as part of the
-  /// command-line.
+  /// Run the dependency scanning worker for the given frontend command-line,
+  /// and report the discovered dependencies to the provided consumer.
   ///
-  /// \returns false if clang errors occurred (with diagnostics reported to
+  /// OverlayFS should be based on the Worker's dependency scanning file-system
+  /// and can be used to provide any input specified on the command-line as
+  /// in-memory file. If no overlay file-system is provided, the Worker's
+  /// dependency scanning file-system is used instead.
+  ///
+  /// \returns false if any errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
   bool computeDependencies(
       StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
       DependencyConsumer &DepConsumer, DependencyActionController &Controller,
       DiagnosticConsumer &DiagConsumer,
-      std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
+      llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
+          nullptr);
+
+  /// Run the dependency scanning tool for all given frontend command-lines,
+  /// and report the discovered dependencies to the provided consumer.
+  ///
+  /// OverlayFS should be based on the Worker's dependency scanning file-system
+  /// and can be used to provide any input specified on the command-line as
+  /// in-memory file. If no overlay file-system is provided, the Worker's
+  /// dependency scanning file-system is used instead.
+  ///
+  /// \returns false if any errors occurred (with diagnostics reported to
+  /// \c DiagConsumer), true otherwise.
+  bool computeDependencies(
+      StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
+      DependencyConsumer &DepConsumer, DependencyActionController &Controller,
+      DiagnosticConsumer &DiagConsumer,
+      llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
+          nullptr);
 
   /// The three method below implements a new interface for by name
   /// dependency scanning. They together enable the dependency scanning worker
@@ -162,15 +180,20 @@ private:
 
   friend CompilerInstanceWithContext;
   std::unique_ptr<CompilerInstanceWithContext> CIWithContext;
-
-  /// Actually carries out the scan. If \c OverlayFS is provided, it must be
-  /// based on top of DepFS.
-  bool scanDependencies(
-      StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
-      DependencyConsumer &Consumer, DependencyActionController &Controller,
-      DiagnosticConsumer &DC,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 };
+
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
+initVFSForTUBufferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                           ArrayRef<std::string> CommandLine,
+                           StringRef WorkingDirectory,
+                           llvm::MemoryBufferRef TUBuffer);
+
+std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+          std::vector<std::string>>
+initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+                         ArrayRef<std::string> CommandLine,
+                         StringRef WorkingDirectory, StringRef ModuleName);
 
 } // end namespace dependencies
 } // end namespace clang

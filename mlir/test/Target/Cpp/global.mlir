@@ -21,6 +21,10 @@ emitc.global const @myconstant : !emitc.array<2xi16> = dense<2>
 // CPP-DEFAULT: const int16_t myconstant[2] = {2, 2};
 // CPP-DECLTOP: const int16_t myconstant[2] = {2, 2};
 
+emitc.global const @myconstant_2d : !emitc.array<2x3xi16> = dense<1>
+// CPP-DEFAULT: const int16_t myconstant_2d[2][3] = {1, 1, 1, 1, 1, 1};
+// CPP-DECLTOP: const int16_t myconstant_2d[2][3] = {1, 1, 1, 1, 1, 1};
+
 emitc.global extern const @extern_constant : !emitc.array<2xi16>
 // CPP-DEFAULT: extern const int16_t extern_constant[2];
 // CPP-DECLTOP: extern const int16_t extern_constant[2];
@@ -29,9 +33,9 @@ emitc.global static @static_var : f32
 // CPP-DEFAULT: static float static_var;
 // CPP-DECLTOP: static float static_var;
 
-emitc.global static @static_const : f32 = 3.0
-// CPP-DEFAULT: static float static_const = 3.000000000e+00f;
-// CPP-DECLTOP: static float static_const = 3.000000000e+00f;
+emitc.global static const @static_const : f32 = 3.0
+// CPP-DEFAULT: static const float static_const = 3.000000000e+00f;
+// CPP-DECLTOP: static const float static_const = 3.000000000e+00f;
 
 emitc.global @opaque_init : !emitc.opaque<"char"> = #emitc.opaque<"CHAR_MIN">
 // CPP-DEFAULT: char opaque_init = CHAR_MIN;
@@ -98,3 +102,101 @@ func.func @use_global_array_write(%i: index, %val : f32) {
 // CPP-DECLTOP-SAME: (size_t [[V1:.*]], float [[V2:.*]])
 // CPP-DECLTOP-NEXT: myglobal[[[V1]]] = [[V2]];
 // CPP-DECLTOP-NEXT: return;
+
+func.func @use_const_global_array_pointer(%i: index) -> !emitc.ptr<i16> {
+  %0 = emitc.get_global @myconstant : !emitc.array<2xi16>
+  %1 = emitc.subscript %0[%i] : (!emitc.array<2xi16>, index) -> !emitc.lvalue<i16>
+  %2 = emitc.apply "&"(%1) : (!emitc.lvalue<i16>) -> !emitc.ptr<i16>
+  return %2 : !emitc.ptr<i16>
+}
+// CPP-DEFAULT-LABEL: int16_t* use_const_global_array_pointer
+// CPP-DEFAULT-SAME: (size_t [[V1:.*]])
+// CPP-DEFAULT-NEXT: int16_t* [[V2:.*]] = (int16_t*)(&myconstant[[[V1]]]);
+// CPP-DEFAULT-NEXT: return [[V2]];
+
+// CPP-DECLTOP-LABEL: int16_t* use_const_global_array_pointer
+// CPP-DECLTOP-SAME: (size_t [[V1:.*]])
+// CPP-DECLTOP-NEXT: int16_t* [[V2:.*]];
+// CPP-DECLTOP-NEXT: [[V2]] = (int16_t*)(&myconstant[[[V1]]]);
+// CPP-DECLTOP-NEXT: return [[V2]];
+
+func.func @use_const_global_scalar_pointer() -> !emitc.ptr<f32> {
+  %0 = emitc.get_global @static_const : !emitc.lvalue<f32>
+  %1 = emitc.apply "&"(%0) : (!emitc.lvalue<f32>) -> !emitc.ptr<f32>
+  return %1 : !emitc.ptr<f32>
+}
+// CPP-DEFAULT-LABEL: float* use_const_global_scalar_pointer()
+// CPP-DEFAULT-NEXT: float* [[V1:.*]] = (float*)(&static_const);
+// CPP-DEFAULT-NEXT: return [[V1]];
+
+// CPP-DECLTOP-LABEL: float* use_const_global_scalar_pointer()
+// CPP-DECLTOP-NEXT: float* [[V1:.*]];
+// CPP-DECLTOP-NEXT: [[V1]] = (float*)(&static_const);
+// CPP-DECLTOP-NEXT: return [[V1]];
+
+func.func @use_const_global_2d_array_pointer(%i: index, %j: index) -> !emitc.ptr<i16> {
+  %0 = emitc.get_global @myconstant_2d : !emitc.array<2x3xi16>
+  %1 = emitc.subscript %0[%i, %j] : (!emitc.array<2x3xi16>, index, index) -> !emitc.lvalue<i16>
+  %2 = emitc.apply "&"(%1) : (!emitc.lvalue<i16>) -> !emitc.ptr<i16>
+  return %2 : !emitc.ptr<i16>
+}
+// CPP-DEFAULT-LABEL: int16_t* use_const_global_2d_array_pointer
+// CPP-DEFAULT-SAME: (size_t [[I:.*]], size_t [[J:.*]])
+// CPP-DEFAULT-NEXT: int16_t* [[V:.*]] = (int16_t*)(&myconstant_2d[[[I]]][[[J]]]);
+// CPP-DEFAULT-NEXT: return [[V]];
+
+// CPP-DECLTOP-LABEL: int16_t* use_const_global_2d_array_pointer
+// CPP-DECLTOP-SAME: (size_t [[I:.*]], size_t [[J:.*]])
+// CPP-DECLTOP-NEXT: int16_t* [[V:.*]];
+// CPP-DECLTOP-NEXT: [[V]] = (int16_t*)(&myconstant_2d[[[I]]][[[J]]]);
+// CPP-DECLTOP-NEXT: return [[V]];
+
+// Test emitc.address_of with const globals (same as emitc.apply "&" tests above)
+
+func.func @use_const_global_array_pointer_address_of(%i: index) -> !emitc.ptr<i16> {
+  %0 = emitc.get_global @myconstant : !emitc.array<2xi16>
+  %1 = emitc.subscript %0[%i] : (!emitc.array<2xi16>, index) -> !emitc.lvalue<i16>
+  %2 = emitc.address_of %1 : !emitc.lvalue<i16>
+  return %2 : !emitc.ptr<i16>
+}
+// CPP-DEFAULT-LABEL: int16_t* use_const_global_array_pointer_address_of
+// CPP-DEFAULT-SAME: (size_t [[V1:.*]])
+// CPP-DEFAULT-NEXT: int16_t* [[V2:.*]] = (int16_t*)(&myconstant[[[V1]]]);
+// CPP-DEFAULT-NEXT: return [[V2]];
+
+// CPP-DECLTOP-LABEL: int16_t* use_const_global_array_pointer_address_of
+// CPP-DECLTOP-SAME: (size_t [[V1:.*]])
+// CPP-DECLTOP-NEXT: int16_t* [[V2:.*]];
+// CPP-DECLTOP-NEXT: [[V2]] = (int16_t*)(&myconstant[[[V1]]]);
+// CPP-DECLTOP-NEXT: return [[V2]];
+
+func.func @use_const_global_scalar_pointer_address_of() -> !emitc.ptr<f32> {
+  %0 = emitc.get_global @static_const : !emitc.lvalue<f32>
+  %1 = emitc.address_of %0 : !emitc.lvalue<f32>
+  return %1 : !emitc.ptr<f32>
+}
+// CPP-DEFAULT-LABEL: float* use_const_global_scalar_pointer_address_of()
+// CPP-DEFAULT-NEXT: float* [[V1:.*]] = (float*)(&static_const);
+// CPP-DEFAULT-NEXT: return [[V1]];
+
+// CPP-DECLTOP-LABEL: float* use_const_global_scalar_pointer_address_of()
+// CPP-DECLTOP-NEXT: float* [[V1:.*]];
+// CPP-DECLTOP-NEXT: [[V1]] = (float*)(&static_const);
+// CPP-DECLTOP-NEXT: return [[V1]];
+
+func.func @use_const_global_2d_array_pointer_address_of(%i: index, %j: index) -> !emitc.ptr<i16> {
+  %0 = emitc.get_global @myconstant_2d : !emitc.array<2x3xi16>
+  %1 = emitc.subscript %0[%i, %j] : (!emitc.array<2x3xi16>, index, index) -> !emitc.lvalue<i16>
+  %2 = emitc.address_of %1 : !emitc.lvalue<i16>
+  return %2 : !emitc.ptr<i16>
+}
+// CPP-DEFAULT-LABEL: int16_t* use_const_global_2d_array_pointer_address_of
+// CPP-DEFAULT-SAME: (size_t [[I:.*]], size_t [[J:.*]])
+// CPP-DEFAULT-NEXT: int16_t* [[V:.*]] = (int16_t*)(&myconstant_2d[[[I]]][[[J]]]);
+// CPP-DEFAULT-NEXT: return [[V]];
+
+// CPP-DECLTOP-LABEL: int16_t* use_const_global_2d_array_pointer_address_of
+// CPP-DECLTOP-SAME: (size_t [[I:.*]], size_t [[J:.*]])
+// CPP-DECLTOP-NEXT: int16_t* [[V:.*]];
+// CPP-DECLTOP-NEXT: [[V]] = (int16_t*)(&myconstant_2d[[[I]]][[[J]]]);
+// CPP-DECLTOP-NEXT: return [[V]];

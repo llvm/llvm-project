@@ -13,22 +13,10 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVOpTraits.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <string>
 
 namespace mlir {
 namespace spirv {
-
-//===----------------------------------------------------------------------===//
-// Utility Functions
-//===----------------------------------------------------------------------===//
-
-/// Converts a SPIR-V Decoration enum value to its snake_case string
-/// representation for use in MLIR attributes.
-inline std::string getDecorationString(spirv::Decoration decor) {
-  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decor));
-}
 
 /// Converts elementwise unary, binary and ternary standard operations to SPIR-V
 /// operations.

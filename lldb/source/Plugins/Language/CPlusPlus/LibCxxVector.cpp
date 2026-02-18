@@ -126,8 +126,8 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::GetChildAtIndex(
 }
 
 static ValueObjectSP GetDataPointer(ValueObject &root) {
-  auto [cap_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      root, /*anon_struct_idx=*/2, "__cap_", "__end_cap_");
+  auto [cap_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(root, "__cap_", "__end_cap_");
   if (!cap_sp)
     return nullptr;
 
