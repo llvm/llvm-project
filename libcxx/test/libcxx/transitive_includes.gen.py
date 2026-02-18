@@ -75,7 +75,7 @@ else:
 
 // When built with modules, this test doesn't work because --trace-includes doesn't
 // report the stack of includes correctly.
-// UNSUPPORTED: clang-modules-build
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // This test uses --trace-includes, which is not supported by GCC.
 // UNSUPPORTED: gcc

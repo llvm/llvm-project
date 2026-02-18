@@ -9,9 +9,10 @@
 // This test verifies that setting the hardening mode to a value that's not part of the predefined constants triggers
 // a compile-time error.
 
-// Modules build produces a different error ("Could not build module 'std'").
-// UNSUPPORTED: clang-modules-build
 // REQUIRES: verify-support
+
+// TODO: Investigate
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // Note that GCC doesn't support `-Wno-macro-redefined`.
 // RUN: %{verify} -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=42
