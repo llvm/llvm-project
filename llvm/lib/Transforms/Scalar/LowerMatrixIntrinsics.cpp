@@ -37,6 +37,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MatrixBuilder.h"
@@ -1537,6 +1538,32 @@ public:
     return Builder.CreateAdd(Sum, Mul);
   }
 
+  bool tryLowerExtractElement(ExtractElementInst *Inst) {
+    uint64_t Index;
+    if (!match(Inst->getOperand(1), m_ConstantInt(Index)))
+      return false;
+
+    Value *Op0 = Inst->getOperand(0);
+    auto *VTy = cast<VectorType>(Op0->getType());
+
+    if (VTy->getElementCount().getKnownMinValue() < Index) {
+      Inst->replaceAllUsesWith(PoisonValue::get(VTy->getElementType()));
+      Inst->eraseFromParent();
+      return true;
+    }
+
+    auto *I = Inst2ColumnMatrix.find(Op0);
+    if (I == Inst2ColumnMatrix.end())
+      return false;
+
+    const MatrixTy &M = I->second;
+
+    IRBuilder<> Builder(Inst);
+    Inst->setOperand(0, M.getVector(Index / M.getStride()));
+    Inst->setOperand(1, Builder.getInt32(Index % M.getStride()));
+    return true;
+  }
+
   /// Cache \p Matrix as result of \p Inst and update the uses of \p Inst. For
   /// users with shape information, there's nothing to do: they will use the
   /// cached value when they are lowered. For other users, \p Matrix is
@@ -1554,6 +1581,10 @@ public:
     for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
       if (ShapeMap.contains(U.getUser()))
         continue;
+
+      if (auto *Extract = dyn_cast<ExtractElementInst>(U.getUser()))
+        if (tryLowerExtractElement(Extract))
+          continue;
 
       if (!Flattened) {
         Flattened = Matrix.embedInVector(Builder);
