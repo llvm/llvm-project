@@ -24,6 +24,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <integral _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp byteswap(_Tp __val) noexcept {
+#  if __has_builtin(__builtin_bswapg)
+  return __builtin_bswapg(__val);
+#  else
   if constexpr (sizeof(_Tp) == 1) {
     return __val;
   } else if constexpr (sizeof(_Tp) == 2) {
@@ -32,18 +35,19 @@ template <integral _Tp>
     return __builtin_bswap32(__val);
   } else if constexpr (sizeof(_Tp) == 8) {
     return __builtin_bswap64(__val);
-#  if _LIBCPP_HAS_INT128
+#    if _LIBCPP_HAS_INT128
   } else if constexpr (sizeof(_Tp) == 16) {
-#    if __has_builtin(__builtin_bswap128)
+#      if __has_builtin(__builtin_bswap128)
     return __builtin_bswap128(__val);
-#    else
+#      else
     return (static_cast<_Tp>(byteswap(static_cast<uint64_t>(__val))) << 64) |
            static_cast<_Tp>(byteswap(static_cast<uint64_t>(__val >> 64)));
-#    endif // __has_builtin(__builtin_bswap128)
-#  endif   // _LIBCPP_HAS_INT128
+#      endif // __has_builtin(__builtin_bswap128)
+#    endif   // _LIBCPP_HAS_INT128
   } else {
     static_assert(sizeof(_Tp) == 0, "byteswap is unimplemented for integral types of this size");
   }
+#  endif
 }
 
 #endif // _LIBCPP_STD_VER >= 23
