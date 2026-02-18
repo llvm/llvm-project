@@ -552,8 +552,16 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP, MVT::i32, Legal);
 
     // SPE supports signaling compare of f32/f64.
-    setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Legal);
+    // But it doesn't comply IEEE-754 rules for comparing
+    // special values like NaNs, Infs.
+    setOperationAction(ISD::SETCC, MVT::f32, Custom);
+    setOperationAction(ISD::SETCC, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Custom);
+    setOperationAction(ISD::BR_CC, MVT::f32, Custom);
+    setOperationAction(ISD::BR_CC, MVT::f64, Custom);
   } else {
     // PowerPC turns FP_TO_SINT into FCTIWZ and some load/stores.
     setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
@@ -3581,6 +3589,7 @@ SDValue PPCTargetLowering::LowerGlobalAddress(SDValue Op,
 
 SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   bool IsStrict = Op->isStrictFPOpcode();
+  const SDNodeFlags Flags = Op.getNode()->getFlags();
   ISD::CondCode CC =
       cast<CondCodeSDNode>(Op.getOperand(IsStrict ? 3 : 2))->get();
   SDValue LHS = Op.getOperand(IsStrict ? 1 : 0);
@@ -3589,8 +3598,10 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   EVT LHSVT = LHS.getValueType();
   SDLoc dl(Op);
 
-  // Soften the setcc with libcall if it is fp128.
-  if (LHSVT == MVT::f128) {
+  // Soften the setcc with libcall if it is fp128 or it is SPE and fp32/fp64.
+  if (LHSVT == MVT::f128 ||
+      (Subtarget.hasSPE() && (LHSVT == MVT::f32 || LHSVT == MVT::f64) &&
+       (!Flags.hasNoNaNs() || !Flags.hasNoInfs()))) {
     assert(!Subtarget.hasP9Vector() &&
            "SETCC for f128 is already legal under Power9!");
     softenSetCCOperands(DAG, LHSVT, LHS, RHS, CC, dl, LHS, RHS, Chain,
@@ -3601,6 +3612,8 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     if (IsStrict)
       return DAG.getMergeValues({LHS, Chain}, dl);
     return LHS;
+  } else if (LHSVT == MVT::f32 || LHSVT == MVT::f64) {
+    return Op;
   }
 
   assert(!IsStrict && "Don't know how to handle STRICT_FSETCC!");
@@ -3653,6 +3666,35 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getSetCC(dl, VT, Sub, DAG.getConstant(0, dl, LHSVT), CC);
   }
   return SDValue();
+}
+
+SDValue PPCTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
+  const SDNodeFlags Flags = Op->getFlags();
+  SDValue Chain = Op.getOperand(0);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  SDValue LHS = Op.getOperand(2);
+  SDValue RHS = Op.getOperand(3);
+  SDValue Dest = Op.getOperand(4);
+  EVT LHSVT = LHS.getValueType();
+  SDLoc dl(Op);
+
+  assert(Subtarget.hasSPE() && "LowerBR_CC used only for targets with SPE");
+
+  if ((LHSVT == MVT::f32 || LHSVT == MVT::f64) && Flags.hasNoNaNs() &&
+      Flags.hasNoInfs())
+    return Op;
+
+  softenSetCCOperands(DAG, LHSVT, LHS, RHS, CC, dl, LHS, RHS);
+
+  // If softenSetCCOperands returned a scalar, we need to compare the result
+  // against zero to select between true and false values.
+  if (!RHS) {
+    RHS = DAG.getConstant(0, dl, LHSVT);
+    CC = ISD::SETNE;
+  }
+
+  return DAG.getNode(ISD::BR_CC, dl, Op.getValueType(), Chain,
+                     DAG.getCondCode(CC), LHS, RHS, Dest);
 }
 
 SDValue PPCTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
@@ -12644,6 +12686,7 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
   case ISD::SETCC:              return LowerSETCC(Op, DAG);
+  case ISD::BR_CC:              return LowerBR_CC(Op, DAG);
   case ISD::INIT_TRAMPOLINE:    return LowerINIT_TRAMPOLINE(Op, DAG);
   case ISD::ADJUST_TRAMPOLINE:  return LowerADJUST_TRAMPOLINE(Op, DAG);
   case ISD::SSUBO:
