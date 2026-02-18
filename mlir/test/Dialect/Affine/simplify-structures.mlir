@@ -608,3 +608,32 @@ func.func @semiaffine_simplification_floordiv_and_ceildiv_const(%arg0: tensor<?x
   // CHECK-NEXT: return %[[C6]], %[[C7]]
   return %a, %b : index, index
 }
+
+// -----
+
+// CHECK-DAG: #[[$MAP:.*]] = affine_map<()[s0] -> (13 mod s0)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> (d0 * 2)>
+// CHECK-LABEL: semi_affine_simplification_local_expr_folded_into_non_binary_expr
+func.func @semi_affine_simplification_local_expr_folded_into_non_binary_expr(%arg0: memref<?x?xf32>) -> (index, index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c13 = arith.constant 13 : index
+  // CHECK: %[[DIM:.*]] = memref.dim
+  %dim = memref.dim %arg0, %c0 : memref<?x?xf32>
+  // CHECK: %[[VAL0:.*]] = affine.apply #[[$MAP]]()[%[[DIM]]]
+  %c = affine.apply affine_map<()[s0, s1, s2, s3] -> (s0 mod (s1 + (-s1 + s3) * (-s1 + s1 * s2 + 1)))>()[%c13, %dim, %c1, %dim]
+  %alloc = memref.alloc() : memref<1xindex>
+  affine.for %iv = 0 to 1 {
+    %d = affine.apply affine_map<(d0)[s1, s2] -> ((d0 - s1 + s1 * s2) * (s1 + (-s1 + 2) * (-s1 + s1 * s2 + 1)))>(%iv)[%dim, %c1]
+    affine.store %d, %alloc[0] : memref<1xindex>
+  }
+  // CHECK:      affine.for %[[IV:.*]] = 0 to 1 {
+  // CHECK-NEXT:   %[[VAL:.*]] = affine.apply #[[$MAP1]](%[[IV]])
+  // CHECK-NEXT:   affine.store %[[VAL]], %{{.*}}[0] : memref<1xindex>
+  // CHECK-NEXT: }
+  // CHECK: %[[VAL1:.*]] = affine.load %{{.*}}[0]
+  %d = affine.load %alloc[0] : memref<1xindex>
+  // CHECK: return %[[VAL0]], %[[VAL1]]
+  return %c, %d : index, index
+}
