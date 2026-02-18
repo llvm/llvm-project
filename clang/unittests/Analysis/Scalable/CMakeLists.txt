@@ -13,6 +13,8 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Registries/SummaryExtractorRegistryTest.cpp
   Serialization/JSONFormatTest.cpp
   SummaryNameTest.cpp
+  TestFixture.cpp
+  TUSummaryBuilderTest.cpp
 
   CLANG_LIBS
   clangAnalysisScalable

@@ -125,3 +125,17 @@ entry:
   %ret = call i32 @llvm.dx.wave.prefix.usum.i32(i32 %x)
   ret i32 %ret
 }
+
+define noundef i32 @wave_prefix_product(i32 noundef %x) {
+entry:
+  ; CHECK: Function wave_prefix_product : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.prefix.product.i32(i32 %x)
+  ret i32 %ret
+}
+
+define noundef i32 @wave_prefix_uproduct(i32 noundef %x) {
+entry:
+  ; CHECK: Function wave_prefix_uproduct : [[WAVE_FLAG]]
+  %ret = call i32 @llvm.dx.wave.prefix.uproduct.i32(i32 %x)
+  ret i32 %ret
+}
