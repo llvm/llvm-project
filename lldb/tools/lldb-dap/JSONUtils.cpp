@@ -9,23 +9,13 @@
 #include "JSONUtils.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
-#include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
-#include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
-#include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBDeclaration.h"
-#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
-#include "lldb/API/SBFrame.h"
-#include "lldb/API/SBFunction.h"
-#include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBLineEntry.h"
-#include "lldb/API/SBModule.h"
-#include "lldb/API/SBQueue.h"
-#include "lldb/API/SBSection.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
@@ -37,19 +27,15 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
 #include <cstddef>
-#include <iomanip>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -64,46 +50,6 @@ void EmplaceSafeString(llvm::json::Object &obj, llvm::StringRef key,
     obj.try_emplace(key, str.str());
   else
     obj.try_emplace(key, llvm::json::fixUTF8(str));
-}
-
-llvm::StringRef GetAsString(const llvm::json::Value &value) {
-  if (auto s = value.getAsString())
-    return *s;
-  return llvm::StringRef();
-}
-
-// Gets a string from a JSON object using the key, or returns an empty string.
-std::optional<llvm::StringRef> GetString(const llvm::json::Object &obj,
-                                         llvm::StringRef key) {
-  return obj.getString(key);
-}
-
-std::optional<llvm::StringRef> GetString(const llvm::json::Object *obj,
-                                         llvm::StringRef key) {
-  if (obj == nullptr)
-    return std::nullopt;
-
-  return GetString(*obj, key);
-}
-
-std::optional<bool> GetBoolean(const llvm::json::Object &obj,
-                               llvm::StringRef key) {
-  if (auto value = obj.getBoolean(key))
-    return *value;
-  if (auto value = obj.getInteger(key))
-    return *value != 0;
-  return std::nullopt;
-}
-
-std::optional<bool> GetBoolean(const llvm::json::Object *obj,
-                               llvm::StringRef key) {
-  if (obj != nullptr)
-    return GetBoolean(*obj, key);
-  return std::nullopt;
-}
-
-bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
-  return obj.find(key) != obj.end();
 }
 
 std::string EncodeMemoryReference(lldb::addr_t addr) {
@@ -161,55 +107,6 @@ bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
 
   out = *addr_opt;
   return true;
-}
-
-std::vector<std::string> GetStrings(const llvm::json::Object *obj,
-                                    llvm::StringRef key) {
-  std::vector<std::string> strs;
-  const auto *json_array = obj->getArray(key);
-  if (!json_array)
-    return strs;
-  for (const auto &value : *json_array) {
-    switch (value.kind()) {
-    case llvm::json::Value::String:
-      strs.push_back(value.getAsString()->str());
-      break;
-    case llvm::json::Value::Number:
-    case llvm::json::Value::Boolean:
-      strs.push_back(llvm::to_string(value));
-      break;
-    case llvm::json::Value::Null:
-    case llvm::json::Value::Object:
-    case llvm::json::Value::Array:
-      break;
-    }
-  }
-  return strs;
-}
-
-std::unordered_map<std::string, std::string>
-GetStringMap(const llvm::json::Object &obj, llvm::StringRef key) {
-  std::unordered_map<std::string, std::string> strs;
-  const auto *const json_object = obj.getObject(key);
-  if (!json_object)
-    return strs;
-
-  for (const auto &[key, value] : *json_object) {
-    switch (value.kind()) {
-    case llvm::json::Value::String:
-      strs.emplace(key.str(), value.getAsString()->str());
-      break;
-    case llvm::json::Value::Number:
-    case llvm::json::Value::Boolean:
-      strs.emplace(key.str(), llvm::to_string(value));
-      break;
-    case llvm::json::Value::Null:
-    case llvm::json::Value::Object:
-    case llvm::json::Value::Array:
-      break;
-    }
-  }
-  return strs;
 }
 
 static bool IsClassStructOrUnionType(lldb::SBType t) {
@@ -293,7 +190,7 @@ void FillResponse(const llvm::json::Object &request,
   response.try_emplace("type", "response");
   response.try_emplace("seq", protocol::kCalculateSeq);
   EmplaceSafeString(response, "command",
-                    GetString(request, "command").value_or(""));
+                    request.getString("command").value_or(""));
   const uint64_t seq = GetInteger<uint64_t>(request, "seq").value_or(0);
   response.try_emplace("request_seq", seq);
   response.try_emplace("success", true);

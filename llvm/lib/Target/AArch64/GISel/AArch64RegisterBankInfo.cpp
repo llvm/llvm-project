@@ -1243,7 +1243,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // Fp conversions to i16 must be kept on fp register banks to ensure
       // proper saturation, as there are no 16-bit gprs.
       // In addition, conversion intrinsics have fpr output when the input
-      // size matches the output size, or PRCVT is present.
+      // size matches the output size, or FPRCVT is present.
       if (DstSize == 16 ||
           ((DstSize == SrcSize || STI.hasFeature(AArch64::FeatureFPRCVT)) &&
            all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
