@@ -323,11 +323,11 @@ struct FormatToken {
         IsUnterminatedLiteral(false), CanBreakBefore(false),
         ClosesTemplateDeclaration(false), StartsBinaryExpression(false),
         EndsBinaryExpression(false), PartOfMultiVariableDeclStmt(false),
-        ContinuesLineCommentSection(false), Finalized(false),
-        ClosesRequiresClause(false), EndsCppAttributeGroup(false),
-        BlockKind(BK_Unknown), Decision(FD_Unformatted),
-        PackingKind(PPK_Inconclusive), TypeIsFinalized(false),
-        Type(TT_Unknown) {}
+        InTemplateArgumentList(false), ContinuesLineCommentSection(false),
+        Finalized(false), ClosesRequiresClause(false),
+        EndsCppAttributeGroup(false), BlockKind(BK_Unknown),
+        Decision(FD_Unformatted), PackingKind(PPK_Inconclusive),
+        TypeIsFinalized(false), Type(TT_Unknown) {}
 
   /// The \c Token.
   Token Tok;
@@ -386,6 +386,9 @@ struct FormatToken {
   ///
   /// Only set if \c Type == \c TT_StartOfName.
   unsigned PartOfMultiVariableDeclStmt : 1;
+
+  /// \c true if this token is part of a template argument list.
+  unsigned InTemplateArgumentList : 1;
 
   /// Does this line comment continue a line comment section?
   ///

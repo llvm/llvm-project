@@ -428,6 +428,66 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
                      "  int jjj; /*b*/");
 }
 
+TEST_F(FormatTestComments,
+       AlwaysOnePerLineRespectsTemplateArgumentsFlagWithComments) {
+  FormatStyle Style = getGoogleStyle();
+  Style.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+
+  // Case 1: Template arguments split by AlwaysOnePerLine
+  Style.ApplyAlwaysOnePerLineToTemplateArguments = true;
+  verifyFormat("template <typename T,  // comment\n"
+               "          int N>       // comment\n"
+               "struct Foo {\n"
+               "  T mData[N];\n"
+               "  Foo<T,\n"
+               "      N>\n"
+               "  operator+(const Foo<T,\n"
+               "                      N> &other) const {  // comment\n"
+               "  }\n"
+               "  Foo<T,\n"
+               "      N>\n"
+               "  bar(const Foo<T,\n"
+               "                N> &other,  // comment\n"
+               "      float t) const {      // comment\n"
+               "  }\n"
+               "};\n",
+               Style);
+
+  // Case 2: Template arguments not split by The
+  // ApplyAlwaysOnePerLineToTemplateArguments
+  Style.ApplyAlwaysOnePerLineToTemplateArguments = false;
+  verifyFormat(
+      "template <typename T,  // comment\n"
+      "          int N>       // comment\n"
+      "struct Foo {\n"
+      "  T mData[N];\n"
+      "  Foo<T, N> operator+(const Foo<T, N> &other) const {  // comment\n"
+      "  }\n"
+      "  Foo<T, N> bar(const Foo<T, N> &other,  // comment\n"
+      "                float t) const {         // comment\n"
+      "  }\n"
+      "};\n",
+      Style);
+
+  // Case 3: Template arguments not split by the
+  // ApplyAlwaysOnePerLineToTemplateArguments but using the
+  // BreakFunctionDefinitionParameters flag
+  Style.BreakFunctionDefinitionParameters = true;
+  verifyFormat("template <typename T,  // comment\n"
+               "          int N>       // comment\n"
+               "struct Foo {\n"
+               "  T mData[N];\n"
+               "  Foo<T, N> operator+(\n"
+               "      const Foo<T, N> &other) const {  // comment\n"
+               "  }\n"
+               "  Foo<T, N> bar(\n"
+               "      const Foo<T, N> &other,  // comment\n"
+               "      float t) const {         // comment\n"
+               "  }\n"
+               "};\n",
+               Style);
+}
+
 TEST_F(FormatTestComments, AlignsBlockComments) {
   verifyFormat("/*\n"
                " * Really multi-line\n"
