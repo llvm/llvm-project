@@ -11,9 +11,9 @@
 ;     if (x == 1) return 7;
 ;     return f(x-1) + f(x-1); // f(x-1) * 2
 ; }
-define dso_local i32 @f(i32 noundef %x) local_unnamed_addr {
-; CHECK-LABEL: define dso_local i32 @f(
-; CHECK-SAME: i32 noundef [[X:%.*]]) local_unnamed_addr {
+define i32 @f(i32 %x) {
+; CHECK-LABEL: define i32 @f(
+; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[TAILRECURSE:.*]]
 ; CHECK:       [[TAILRECURSE]]:
@@ -48,9 +48,9 @@ if.end:
 ;     if (x == 1) return 14;
 ;     return f2(x-1) >> 1;
 ; }
-define dso_local i32 @f2(i32 noundef %x) local_unnamed_addr {
-; CHECK-LABEL: define dso_local i32 @f2(
-; CHECK-SAME: i32 noundef [[X:%.*]]) local_unnamed_addr {
+define i32 @f2(i32 %x) {
+; CHECK-LABEL: define i32 @f2(
+; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[TAILRECURSE:.*]]
 ; CHECK:       [[TAILRECURSE]]:
@@ -85,9 +85,9 @@ if.end:
 ;     if (x <= 1) return 14;
 ;     return f3(x - 1) >> 1;
 ; }
-define dso_local i32 @f3(i32 noundef %x) local_unnamed_addr {
-; CHECK-LABEL: define dso_local i32 @f3(
-; CHECK-SAME: i32 noundef [[X:%.*]]) local_unnamed_addr {
+define i32 @f3(i32 %x) {
+; CHECK-LABEL: define i32 @f3(
+; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[TAILRECURSE:.*]]
 ; CHECK:       [[TAILRECURSE]]:
@@ -114,5 +114,75 @@ if.end:
   %sub = add i32 %x, -1
   %call = tail call i32 @f3(i32 noundef %sub)
   %shr = lshr i32 %call, 1
+  br label %common.ret
+}
+
+; Negative test: non-constant shift amount prevents shift-accumulator optimization
+; int f4(int x, int k) {
+;   if (x == 1) return 7;
+;   return f4(x-1, k) << k; // variable shift amount
+; }
+define i32 @f4(i32 %x, i32 %k) {
+; CHECK-LABEL: define i32 @f4(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[K:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label %[[COMMON_RET:.*]], label %[[IF_END:.*]]
+; CHECK:       [[COMMON_RET]]:
+; CHECK-NEXT:    ret i32 7
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[X]], -1
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @f4(i32 [[SUB]], i32 [[K]])
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CALL]], [[K]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 1
+  br i1 %cmp, label %common.ret, label %if.end
+
+common.ret:
+  %common.ret.op = phi i32 [ %shl, %if.end ], [ 7, %entry ]
+  ret i32 %common.ret.op
+
+if.end:
+  %sub = add nsw i32 %x, -1
+  %call = tail call i32 @f4(i32 %sub, i32 %k)
+  %shl = shl i32 %call, %k
+  br label %common.ret
+}
+
+; Negative test: intervening operation on result prevents forming clean accumulator
+; int f5(int x) {
+;   if (x == 1) return 7;
+;   return (f5(x-1) + 1) << 1; // extra add breaks accumulator invariant
+; }
+define i32 @f5(i32 %x) {
+; CHECK-LABEL: define i32 @f5(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label %[[COMMON_RET:.*]], label %[[IF_END:.*]]
+; CHECK:       [[COMMON_RET]]:
+; CHECK-NEXT:    ret i32 7
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[X]], -1
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @f5(i32 [[SUB]])
+; CHECK-NEXT:    [[TMP:%.*]] = add i32 [[CALL]], 1
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP]], 1
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 1
+  br i1 %cmp, label %common.ret, label %if.end
+
+common.ret:
+  %common.ret.op = phi i32 [ %shl, %if.end ], [ 7, %entry ]
+  ret i32 %common.ret.op
+
+if.end:
+  %sub = add nsw i32 %x, -1
+  %call = tail call i32 @f5(i32 %sub)
+  %tmp = add i32 %call, 1
+  %shl = shl i32 %tmp, 1
   br label %common.ret
 }
