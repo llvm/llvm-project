@@ -12,8 +12,8 @@
 # LLVM monorepo, and we make it a no-op unless the libc++ pipeline needs to be triggered.
 #
 
-# Set by buildkite
-: ${BUILDKITE_PULL_REQUEST_BASE_BRANCH:=}
+# Set by buildkite (may be unset for cross-fork PRs)
+: ${BUILDKITE_PULL_REQUEST_BASE_BRANCH:=main}
 
 # Fetch origin to have an up to date merge base for the diff.
 git fetch origin
