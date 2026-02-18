@@ -1401,12 +1401,6 @@ struct WgToSgMultiDimReductionOp
     SmallVector<int64_t> sgSrcShape(sgSrcType.getShape().begin(),
                                     sgSrcType.getShape().end());
 
-    // debug print sgDstShape
-    llvm::errs() << "[WgToSgMultiDimReductionOp] sgDstShape = [";
-    for (auto [i, v] : llvm::enumerate(sgDstShape))
-      llvm::errs() << (i ? ", " : "") << v;
-    llvm::errs() << "]\n";
-
     VectorType newDstType = VectorType::get(sgDstShape, elemTy);
     for (auto sgSrc : sgSrcs) {
       // Create ZERO accumulator for local reduction
@@ -1457,21 +1451,6 @@ struct WgToSgMultiDimReductionOp
     for (int64_t dim : reductionDims)
       slmShape[dim] = originalSrcShape[dim] / sgSrcShape[dim];
 
-    // Debug print.
-    llvm::errs() << "[WgToSgMultiDimReductionOp] originalSrcShape = [";
-    for (auto [i, v] : llvm::enumerate(originalSrcShape))
-      llvm::errs() << (i ? ", " : "") << v;
-    llvm::errs() << "], sgSrcShape = [";
-    for (auto [i, v] : llvm::enumerate(sgSrcShape))
-      llvm::errs() << (i ? ", " : "") << v;
-    llvm::errs() << "], slmShape = [";
-    for (auto [i, v] : llvm::enumerate(slmShape))
-      llvm::errs() << (i ? ", " : "") << v;
-    llvm::errs() << "], reductionDims = [";
-    for (auto [i, v] : llvm::enumerate(reductionDims))
-      llvm::errs() << (i ? ", " : "") << v;
-    llvm::errs() << "]\n";
-
     // Allocate SLM
     auto bitWidth = elemTy.getIntOrFloatBitWidth();
     auto bytesPerElement = bitWidth / 8;
@@ -1516,14 +1495,7 @@ struct WgToSgMultiDimReductionOp
       Value offsetVal = arith::MulIOp::create(rewriter, loc, dimVal, strideVal);
       slmStoreOffsets.push_back(offsetVal);
     }
-    // debug print
-    llvm::errs() << "[WgToSgMultiDimReductionOp] sgIds = [";
-    for (auto [i, v] : llvm::enumerate(sgIds))
-      llvm::errs() << (i ? ", " : "") << v;
-    llvm::errs() << "], slmStoreOffsets = [";
-    for (auto [i, v] : llvm::enumerate(slmStoreOffsets))
-      llvm::errs() << (i ? ", " : "") << v;
-    llvm::errs() << "]\n";
+
     xegpu::StoreMatrixOp::create(rewriter, loc, slmStoreData,
                                  memDesc.getResult(), slmStoreOffsets,
                                  /*layout=*/nullptr);
@@ -1534,11 +1506,6 @@ struct WgToSgMultiDimReductionOp
     SmallVector<int64_t> slmLoadDataShape(sgSrcShape.begin(), sgSrcShape.end());
     for (int64_t dim : reductionDims)
       slmLoadDataShape[dim] = slmShape[dim];
-
-    llvm::errs() << "[WgToSgMultiDimReductionOp] slmLoadDataShape = [";
-    for (auto [i, v] : llvm::enumerate(slmLoadDataShape))
-      llvm::errs() << (i ? ", " : "") << v;
-    llvm::errs() << "]\n";
 
     SmallVector<OpFoldResult> slmLoadOffsets;
     for (int i = 0; i < srcVecRank; ++i) {
