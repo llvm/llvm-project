@@ -914,6 +914,32 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Constants) {
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SplatBig, /*OrZero=*/true));
 }
 
+TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_BSWAP_BITREVERSE) {
+
+  SDLoc Loc;
+  SDValue Cst4 = DAG->getConstant(4, Loc, MVT::i32);
+  SDValue BSwapOp = DAG->getNode(ISD::BSWAP, Loc, MVT::i32, Cst4);
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(BSwapOp, /*OrZero=*/false));
+
+  SDValue BReverseOp = DAG->getNode(ISD::BITREVERSE, Loc, MVT::i32, Cst4);
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(BReverseOp, /*OrZero=*/false));
+
+  SDValue Vec44 = DAG->getBuildVector(MVT::v2i16, Loc, {Cst4, Cst4});
+  SDValue BReverseOpVec = DAG->getNode(ISD::BSWAP, Loc, MVT::v2i16, Vec44);
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(BReverseOpVec, /*OrZero=*/true));
+
+  SDValue Cst0 = DAG->getConstant(0, Loc, MVT::i32);
+  SDValue Vec04 = DAG->getBuildVector(MVT::v2i16, Loc, {Cst0, Cst4});
+  SDValue BSwapOpVec = DAG->getNode(ISD::BSWAP, Loc, MVT::v2i16, Vec04);
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(BSwapOpVec, /*OrZero=*/true));
+
+  SDValue BitReverseOpVec =
+      DAG->getNode(ISD::BITREVERSE, Loc, MVT::v2i16, Vec04);
+  APInt DemandLo(2, 1);
+  EXPECT_TRUE(
+      DAG->isKnownToBeAPowerOfTwo(BitReverseOpVec, DemandLo, /*OrZero=*/true));
+}
+
 TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Select) {
   SDLoc Loc;
   auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);
