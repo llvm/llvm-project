@@ -54,6 +54,7 @@
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSwift.h"
@@ -3622,6 +3623,9 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   } else if (S.Context.getTargetInfo().getTriple().isX86()) {
     if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams,
                                       AL.getLoc()))
+      return;
+  } else if (S.Context.getTargetInfo().getTriple().isOSAIX()) {
+    if (S.PPC().checkTargetClonesAttr(Params, Locations, NewParams))
       return;
   }
   Params.clear();

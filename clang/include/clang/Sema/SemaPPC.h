@@ -53,6 +53,10 @@ public:
   // vector double vec_xxpermdi(vector double, vector double, int);
   // vector short vec_xxsldwi(vector short, vector short, int);
   bool BuiltinVSX(CallExpr *TheCall);
+
+  bool checkTargetClonesAttr(SmallVectorImpl<StringRef> &Params,
+                             SmallVectorImpl<SourceLocation> &Locs,
+                             SmallVectorImpl<SmallString<64>> &NewParams);
 };
 } // namespace clang
 
