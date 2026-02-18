@@ -178,6 +178,11 @@ static cl::opt<unsigned> PragmaUnrollFullMaxIterations(
     "pragma-unroll-full-max-iterations", cl::init(1'000'000), cl::Hidden,
     cl::desc("Maximum allowed iterations to unroll under pragma unroll full."));
 
+static cl::opt<bool> UnrollRuntimeExpensiveTripCount(
+    "unroll-runtime-expensive-trip-count", cl::init(false), cl::Hidden,
+    cl::desc("Allow emitting expensive instructions (such as divisions) when "
+             "computing the trip count of a loop for runtime unrolling"));
+
 /// A magic value for use with the Threshold parameter to indicate
 /// that the loop unroll should be performed regardless of how much
 /// code expansion would result.
@@ -212,7 +217,7 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.Runtime = false;
   UP.AllowRemainder = true;
   UP.UnrollRemainder = false;
-  UP.AllowExpensiveTripCount = false;
+  UP.AllowExpensiveTripCount = UnrollRuntimeExpensiveTripCount;
   UP.Force = false;
   UP.UpperBound = false;
   UP.UnrollAndJam = false;
