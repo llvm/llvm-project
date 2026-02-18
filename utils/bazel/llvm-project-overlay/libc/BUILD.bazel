@@ -2993,6 +2993,47 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_f16add",
+    hdrs = ["src/__support/math/f16add.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16addf",
+    hdrs = ["src/__support/math/f16addf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16addf128",
+    hdrs = ["src/__support/math/f16addf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16addl",
+    hdrs = ["src/__support/math/f16addl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_f16fma",
     hdrs = ["src/__support/math/f16fma.h"],
     deps = [
@@ -4791,13 +4832,25 @@ libc_math_function(
     additional_deps = [":__support_math_expm1f16"],
 )
 
-libc_math_function(name = "f16add")
+libc_math_function(
+    name = "f16add",
+    additional_deps = [":__support_math_f16add"],
+)
 
-libc_math_function(name = "f16addf")
+libc_math_function(
+    name = "f16addf",
+    additional_deps = [":__support_math_f16addf"],
+)
 
-libc_math_function(name = "f16addf128")
+libc_math_function(
+    name = "f16addf128",
+    additional_deps = [":__support_math_f16addf128"],
+)
 
-libc_math_function(name = "f16addl")
+libc_math_function(
+    name = "f16addl",
+    additional_deps = [":__support_math_f16addl"],
+)
 
 libc_math_function(name = "f16div")
 
