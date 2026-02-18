@@ -23,26 +23,21 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-namespace tanpif_internal {
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE_VAR constexpr size_t N_EXCEPTS = 3;
-
-LIBC_INLINE_VAR constexpr fputil::ExceptValues<float, N_EXCEPTS> TANPIF_EXCEPTS{
-    {
-        // (input, RZ output, RU offset, RD offset, RN offset)
-        {0x38F26685, 0x39BE6182, 1, 0, 0},
-        {0x3E933802, 0x3FA267DD, 1, 0, 0},
-        {0x3F3663FF, 0xBFA267DD, 0, 1, 0},
-    }};
-#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-} // namespace tanpif_internal
-
 LIBC_INLINE float tanpif(float x) {
   using namespace sincosf_utils_internal;
-  using namespace tanpif_internal;
 
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
+
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  constexpr size_t N_EXCEPTS = 3;
+  constexpr fputil::ExceptValues<float, N_EXCEPTS> TANPIF_EXCEPTS{{
+      // (input, RZ output, RU offset, RD offset, RN offset)
+      {0x38F26685, 0x39BE6182, 1, 0, 0},
+      {0x3E933802, 0x3FA267DD, 1, 0, 0},
+      {0x3F3663FF, 0xBFA267DD, 0, 1, 0},
+  }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   uint32_t x_u = xbits.uintval();
   uint32_t x_abs = x_u & 0x7fff'ffffU;
