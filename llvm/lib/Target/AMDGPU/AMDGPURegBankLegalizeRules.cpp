@@ -1370,11 +1370,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_s_sleep}).Any({{_, _}, {{}, {IntrId, Imm}}});
 
-  addRulesForIOpcs({amdgcn_bitop3})
-      .Any({{UniS16}, {{UniInVgprS16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}}})
-      .Any({{DivS16}, {{Vgpr16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}}})
-      .Any({{UniS32}, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}}})
-      .Any({{DivS32}, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}}});
+  addRulesForIOpcs({amdgcn_bitop3}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16, Vgpr16, Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
   addRulesForIOpcs({amdgcn_mul_u24, amdgcn_mul_i24}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}})
