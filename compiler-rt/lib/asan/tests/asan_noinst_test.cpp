@@ -234,7 +234,7 @@ TEST(AddressSanitizer, ShadowRegionIsPoisonedTest) {
 // before given end address of a memory range (LowMem / MidMem / HighMem).
 // __asan_region_is_poisoned() should not crash for those regions.
 static void TestRegionIsPoisonedNearEnd(uptr end) {
-  static const size_t granularity = 1ULL << 3; // shadow granularity
+  static const size_t granularity = 1ULL << 3;  // shadow granularity
   for (size_t offset = 0; offset < granularity; ++offset) {
     uptr ptr = end - offset;
     for (size_t size = 1; ptr + size <= end + 1; ++size) {
@@ -251,9 +251,9 @@ TEST(AddressSanitizer, IsPoisonedDoesNotCrashOnMemoryBoundaries) {
   using __asan::kMidMemEnd;
 
   TestRegionIsPoisonedNearEnd(kLowMemEnd);
-  if (__asan::kMidMemBeg) // if mid memory is available
+  if (__asan::kMidMemBeg)  // if mid memory is available
     TestRegionIsPoisonedNearEnd(__asan::kMidMemEnd);
-  if (kHighMemBeg) // if high memory is available
+  if (kHighMemBeg)  // if high memory is available
     TestRegionIsPoisonedNearEnd(__asan::kHighMemEnd);
 }
 

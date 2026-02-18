@@ -253,12 +253,12 @@ uptr __asan_region_is_poisoned(uptr beg, uptr size) {
   if (!__asan::AddressIsPoisoned(beg) && !__asan::AddressIsPoisoned(end - 1)) {
     uptr aligned_b = RoundUpTo(beg, ASAN_SHADOW_GRANULARITY);
     uptr aligned_e = RoundDownTo(end, ASAN_SHADOW_GRANULARITY);
-    if (aligned_e < aligned_b)
+    if (aligned_e <= aligned_b)
       return 0;
     uptr shadow_beg = MemToShadow(aligned_b);
     uptr shadow_end = MemToShadow(aligned_e);
-    if (shadow_end <= shadow_beg ||
-        __sanitizer::mem_is_zero((const char*)shadow_beg,
+    CHECK_LE(shadow_beg, shadow_end);
+    if (__sanitizer::mem_is_zero((const char*)shadow_beg,
                                  shadow_end - shadow_beg))
       return 0;
   }
