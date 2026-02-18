@@ -114,41 +114,42 @@ private:
         const short pressure_revents = pfds[stop_idx].revents;
         if (pressure_revents & POLLERR)
           return {};
-        if ((pressure_revents & POLLPRI) && isLowMemory())
-          m_callback();
+        if (pressure_revents & POLLPRI) {
+          if (const std::optional<bool> is_low_opt = IsLowMemory();
+              is_low_opt && *is_low_opt)
+            m_callback();
+        }
       }
     }
     return {};
   }
 
-  static bool isLowMemory() {
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> bufferOrErr =
+  static std::optional<bool> IsLowMemory() {
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buffer_or_err =
         getProcFile("meminfo");
 
-    if (!bufferOrErr)
-      return false;
+    if (!buffer_or_err)
+      return std::nullopt;
 
     uint64_t mem_total = 0;
     uint64_t mem_available = 0;
     const int radix = 10;
 
-    for (llvm::line_iterator iter(**bufferOrErr, true); !iter.is_at_end();
+    for (llvm::line_iterator iter(**buffer_or_err, true); !iter.is_at_end();
          ++iter) {
       llvm::StringRef line = *iter;
       if (line.consume_front("MemTotal:")) {
         line.ltrim().consumeInteger(radix, mem_total);
-        continue;
+      } else if (line.consume_front("MemAvailable:")) {
+        line.ltrim().consumeInteger(radix, mem_available);
       }
 
-      if (line.consume_front("MemAvailable:")) {
-        line.ltrim().consumeInteger(radix, mem_available);
-        // MemAvailable comes after MemTotal.
+      if (mem_total && mem_available)
         break;
-      }
     }
 
     if (mem_total == 0 || mem_available == 0)
-      return false;
+      return std::nullopt;
 
     const uint64_t approx_memory_percent = (mem_available * 100) / mem_total;
     const uint64_t low_memory_percent = 20;
