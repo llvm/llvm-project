@@ -42,7 +42,7 @@ Options
 .. option:: MakeSmartPtrType
 
    A string specifying the smart pointer type to match. This option must be
-   set for the check to work. Default is empty.
+   set for the check to work. Default is empty string.
 
 .. option:: IncludeStyle
 
