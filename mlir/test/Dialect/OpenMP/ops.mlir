@@ -3591,3 +3591,56 @@ func.func @omp_iterators_2d(%lb0 : index, %ub0 : index, %st0 : index,
 
   return
 }
+
+// CHECK-LABEL: func.func @omp_task_affinity_iterator_1d(
+func.func @omp_task_affinity_iterator_1d(%lb : index, %ub : index, %step : index,
+                                       %addr : !llvm.ptr, %len : i64) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterators(%[[IV:.*]]: index) = (%[[LB:.*]] to %[[UB:.*]] step %[[ST:.*]]) {
+  // CHECK:   %[[E:.*]] = omp.affinity_entry %[[ADDR:.*]], %[[LEN:.*]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  // CHECK:   omp.yield(%[[E]] : !omp.affinity_entry_ty<!llvm.ptr, i64>)
+  // CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+  // CHECK: omp.task affinity(%[[IT]] : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
+  // CHECK: }
+  %it = omp.iterators(%iv: index) = (%lb to %ub step %step) {
+    %e = omp.affinity_entry %addr, %len
+      : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+    omp.yield(%e : !omp.affinity_entry_ty<!llvm.ptr, i64>)
+  } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+
+  omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
+    omp.terminator
+  }
+
+  return
+}
+
+func.func @omp_task_affinity_iterator_2d(%lb0 : index, %ub0 : index, %st0 : index,
+                                          %lb1 : index, %ub1 : index, %st1 : index,
+                                          %addr0 : !llvm.ptr, %addr1 : !llvm.ptr,
+                                          %len0 : i64, %len1 : i64) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterators(%[[I:.*]]: index, %[[J:.*]]: index) = (%[[LB0:.*]] to %[[UB0:.*]] step %[[ST0:.*]], %[[LB1:.*]] to %[[UB1:.*]] step %[[ST1:.*]]) {
+  // CHECK:   %[[E0:.*]] = omp.affinity_entry %[[A0:.*]], %[[L0:.*]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  // CHECK:   %[[E1:.*]] = omp.affinity_entry %[[A1:.*]], %[[L1:.*]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  // CHECK:   omp.yield(%[[E1]] : !omp.affinity_entry_ty<!llvm.ptr, i64>)
+  // CHECK: } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+  // CHECK: omp.task affinity(%[[IT]] : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
+  // CHECK: }
+  %it = omp.iterators(%i: index, %j: index) = (%lb0 to %ub0 step %st0, %lb1 to %ub1 step %st1) {
+    %use_i = arith.addi %i, %lb0 : index
+    %use_j = arith.addi %j, %lb1 : index
+    %_ = arith.cmpi ult, %use_i, %use_j : index
+
+    %e0 = omp.affinity_entry %addr0, %len0
+      : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+    %e1 = omp.affinity_entry %addr1, %len1
+      : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+
+    omp.yield(%e1 : !omp.affinity_entry_ty<!llvm.ptr, i64>)
+  } -> !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>
+
+  omp.task affinity(%it : !omp.iterated<!omp.affinity_entry_ty<!llvm.ptr, i64>>) {
+    omp.terminator
+  }
+
+  return
+}
