@@ -1,7 +1,11 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX8,PREGFX11 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX10,PREGFX11 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX8,PREGFX11 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX8,PREGFX11 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX10,PREGFX11 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX10,PREGFX11 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
 declare void @llvm.amdgcn.exp.i32(i32, i32, i32, i32, i32, i32, i1, i1) #1
@@ -554,7 +558,7 @@ end:
 ; GFX8-DAG: v_mov_b32_e32 [[X:v[0-9]+]], s1
 ; GFX8-DAG: v_mov_b32_e32 [[Y:v[0-9]+]], s0
 ; GFX8-DAG: v_add_f32_e{{32|64}} [[Z0:v[0-9]+]]
-; GFX8-DAG: v_sub_f32_e{{32|64}} [[Z1:v[0-9]+]]
+; GFX8-DAG: v_{{sub|subrev}}_f32_e{{32|64}} [[Z1:v[0-9]+]]
 ; GFX8: {{exp|export}} param0 [[Y]], [[X]], [[Z0]], [[W0]]{{$}}
 ; GFX8-NEXT: {{exp|export}} param1 [[Y]], [[X]], [[Z1]], [[W1]] done{{$}}
 
