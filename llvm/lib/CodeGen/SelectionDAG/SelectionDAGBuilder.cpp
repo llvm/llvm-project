@@ -6560,7 +6560,7 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
   // on i64's.
   bool MustExtendIndex = VT == MVT::i64 && IdxVT.getScalarSizeInBits() < 64;
   EVT EltTy = MustExtendIndex ? VT : IdxVT.getVectorElementType();
-  if (TLI.shouldExtendGSIndex(IdxVT, EltTy) || MustExtendIndex) {
+  if (MustExtendIndex || TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
     EVT NewIdxVT = IdxVT.changeVectorElementType(*DAG.getContext(), EltTy);
     Index = DAG.getNode(ISD::SIGN_EXTEND, sdl, NewIdxVT, Index);
   }

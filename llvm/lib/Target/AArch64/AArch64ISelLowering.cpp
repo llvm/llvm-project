@@ -26207,8 +26207,8 @@ static SDValue performMaskedGatherScatterCombine(
   // so if the 'add' would need to be performed on a vector of i64's, then
   // we can't use the more optimal addressing with i32 offsets as that
   // would return a vector of nxv4i32, which wouldn't get widened.
-  if (HG->getInc().getValueType().getScalarType() == MVT::i64 &&
-      Index.getValueType().getScalarType() == MVT::i32)
+  if (HG->getInc().getValueType().getScalarSizeInBits() >
+      Index.getValueType().getScalarSizeInBits())
     // FIXME: If the increment value is a constant or extended value,
     // we can truncate the increment value.
     return SDValue();
