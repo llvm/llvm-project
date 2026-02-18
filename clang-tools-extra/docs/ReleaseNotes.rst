@@ -121,6 +121,12 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`modernize-use-constexpr
+  <clang-tidy/checks/modernize/use-constexpr>` check.
+
+  Finds ``const`` local variables with literal types and compile-time
+  constant initializers that can be declared ``constexpr``.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 

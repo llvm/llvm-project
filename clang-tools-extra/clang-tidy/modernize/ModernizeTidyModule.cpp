@@ -33,6 +33,7 @@
 #include "UnaryStaticAssertCheck.h"
 #include "UseAutoCheck.h"
 #include "UseBoolLiteralsCheck.h"
+#include "UseConstexprCheck.h"
 #include "UseConstraintsCheck.h"
 #include "UseDefaultMemberInitCheck.h"
 #include "UseDesignatedInitializersCheck.h"
@@ -119,6 +120,7 @@ public:
     CheckFactories.registerCheck<UseAutoCheck>("modernize-use-auto");
     CheckFactories.registerCheck<UseBoolLiteralsCheck>(
         "modernize-use-bool-literals");
+    CheckFactories.registerCheck<UseConstexprCheck>("modernize-use-constexpr");
     CheckFactories.registerCheck<UseConstraintsCheck>(
         "modernize-use-constraints");
     CheckFactories.registerCheck<UseDefaultMemberInitCheck>(

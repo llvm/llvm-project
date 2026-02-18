@@ -313,6 +313,7 @@ Clang-Tidy Checks
    :doc:`modernize-unary-static-assert <modernize/unary-static-assert>`, "Yes"
    :doc:`modernize-use-auto <modernize/use-auto>`, "Yes"
    :doc:`modernize-use-bool-literals <modernize/use-bool-literals>`, "Yes"
+   :doc:`modernize-use-constexpr <modernize/use-constexpr>`, "Yes"
    :doc:`modernize-use-constraints <modernize/use-constraints>`, "Yes"
    :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
    :doc:`modernize-use-designated-initializers <modernize/use-designated-initializers>`, "Yes"
