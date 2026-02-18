@@ -96,6 +96,9 @@ private:
   std::unique_ptr<detail::PDLByteCodeMutableState> mutableByteCodeState;
 };
 
+/// Register command-line options for the pattern applicator.
+void registerPatternApplicatorCLOptions();
+
 } // namespace mlir
 
 #endif // MLIR_REWRITE_PATTERNAPPLICATOR_H

@@ -28,6 +28,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Remark/RemarkStreamer.h"
+#include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/Timing.h"
 #include "mlir/Support/ToolUtilities.h"
@@ -688,6 +689,7 @@ std::string mlir::registerCLIOptions(llvm::StringRef toolName,
   registerMLIRContextCLOptions();
   registerPassManagerCLOptions();
   registerDefaultTimingManagerCLOptions();
+  registerPatternApplicatorCLOptions();
   tracing::DebugCounter::registerCLOptions();
 
   // Build the list of dialects as a header for the --help message.
