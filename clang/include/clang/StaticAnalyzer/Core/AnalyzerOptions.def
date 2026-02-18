@@ -103,7 +103,7 @@ ANALYZER_OPTION(
 ANALYZER_OPTION(bool, ShouldIncludeLoopExitInCFG, "cfg-loopexit",
                 "Whether or not the end of the loop information should "
                 "be included in the CFG.",
-                false)
+                true)
 
 ANALYZER_OPTION(bool, ShouldIncludeRichConstructorsInCFG,
                 "cfg-rich-constructors",
@@ -295,7 +295,7 @@ ANALYZER_OPTION(bool, ShouldWidenLoops, "widen-loops",
 
 ANALYZER_OPTION(
     bool, ShouldUnrollLoops, "unroll-loops",
-    "Whether the analysis should try to unroll loops with known bounds.", false)
+    "Whether the analysis should try to unroll loops with known bounds.", true)
 
 ANALYZER_OPTION(
     bool, ShouldAssumeAtLeastOneIteration, "assume-at-least-one-iteration",

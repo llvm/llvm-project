@@ -274,10 +274,11 @@ void test_if_jumps() {
 // CHECK:      [B6 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B5
 // CHECK:      [B1]
-// CHECK-NEXT:   1: [B4.5].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(b)
-// CHECK-NEXT:   3: [B5.3].~A() (Implicit destructor)
-// CHECK-NEXT:   4: CFGScopeEnd(a)
+// CHECK-NEXT:   1: WhileStmt (LoopExit)
+// CHECK-NEXT:   2: [B4.5].~A() (Implicit destructor)
+// CHECK-NEXT:   3: CFGScopeEnd(b)
+// CHECK-NEXT:   4: [B5.3].~A() (Implicit destructor)
+// CHECK-NEXT:   5: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -325,13 +326,14 @@ void test_while_implicit_scope() {
 // CHECK:      [B12 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
-// CHECK-NEXT:   1: [B10.5].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(b)
-// CHECK-NEXT:   3:  (CXXConstructExpr, [B1.4], A)
-// CHECK-NEXT:   4: A e;
-// CHECK-NEXT:   5: [B1.4].~A() (Implicit destructor)
-// CHECK-NEXT:   6: [B11.3].~A() (Implicit destructor)
-// CHECK-NEXT:   7: CFGScopeEnd(a)
+// CHECK-NEXT:   1: WhileStmt (LoopExit)
+// CHECK-NEXT:   2: [B10.5].~A() (Implicit destructor)
+// CHECK-NEXT:   3: CFGScopeEnd(b)
+// CHECK-NEXT:   4:  (CXXConstructExpr, [B1.5], A)
+// CHECK-NEXT:   5: A e;
+// CHECK-NEXT:   6: [B1.5].~A() (Implicit destructor)
+// CHECK-NEXT:   7: [B11.3].~A() (Implicit destructor)
+// CHECK-NEXT:   8: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (2): B8 B10
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -430,11 +432,12 @@ void test_while_jumps() {
 // CHECK:      [B12 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
-// CHECK-NEXT:   1:  (CXXConstructExpr, [B1.2], A)
-// CHECK-NEXT:   2: A d;
-// CHECK-NEXT:   3: [B1.2].~A() (Implicit destructor)
-// CHECK-NEXT:   4: [B11.3].~A() (Implicit destructor)
-// CHECK-NEXT:   5: CFGScopeEnd(a)
+// CHECK-NEXT:   1: DoStmt (LoopExit)
+// CHECK-NEXT:   2:  (CXXConstructExpr, [B1.3], A)
+// CHECK-NEXT:   3: A d;
+// CHECK-NEXT:   4: [B1.3].~A() (Implicit destructor)
+// CHECK-NEXT:   5: [B11.3].~A() (Implicit destructor)
+// CHECK-NEXT:   6: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (2): B8 B2
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -518,10 +521,11 @@ void test_do_jumps() {
 // CHECK:      [B6 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B5
 // CHECK:      [B1]
-// CHECK-NEXT:   1: [B4.5].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(b)
-// CHECK-NEXT:   3: [B5.3].~A() (Implicit destructor)
-// CHECK-NEXT:   4: CFGScopeEnd(a)
+// CHECK-NEXT:   1: ForStmt (LoopExit)
+// CHECK-NEXT:   2: [B4.5].~A() (Implicit destructor)
+// CHECK-NEXT:   3: CFGScopeEnd(b)
+// CHECK-NEXT:   4: [B5.3].~A() (Implicit destructor)
+// CHECK-NEXT:   5: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B4
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -570,15 +574,16 @@ void test_for_implicit_scope() {
 // CHECK:      [B12 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
-// CHECK-NEXT:   1: [B10.5].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(c)
-// CHECK-NEXT:   3: [B11.6].~A() (Implicit destructor)
-// CHECK-NEXT:   4: CFGScopeEnd(b)
-// CHECK-NEXT:   5:  (CXXConstructExpr, [B1.6], A)
-// CHECK-NEXT:   6: A f;
-// CHECK-NEXT:   7: [B1.6].~A() (Implicit destructor)
-// CHECK-NEXT:   8: [B11.3].~A() (Implicit destructor)
-// CHECK-NEXT:   9: CFGScopeEnd(a)
+// CHECK-NEXT:   1: ForStmt (LoopExit)
+// CHECK-NEXT:   2: [B10.5].~A() (Implicit destructor)
+// CHECK-NEXT:   3: CFGScopeEnd(c)
+// CHECK-NEXT:   4: [B11.6].~A() (Implicit destructor)
+// CHECK-NEXT:   5: CFGScopeEnd(b)
+// CHECK-NEXT:   6:  (CXXConstructExpr, [B1.7], A)
+// CHECK-NEXT:   7: A f;
+// CHECK-NEXT:   8: [B1.7].~A() (Implicit destructor)
+// CHECK-NEXT:   9: [B11.3].~A() (Implicit destructor)
+// CHECK-NEXT:  10: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (2): B8 B10
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -680,10 +685,11 @@ void test_for_jumps() {
 // CHECK:      [B9 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B8
 // CHECK:      [B1]
-// CHECK-NEXT:   1: [B7.5].~A() (Implicit destructor)
-// CHECK-NEXT:   2: CFGScopeEnd(b)
-// CHECK-NEXT:   3: [B8.3].~A() (Implicit destructor)
-// CHECK-NEXT:   4: CFGScopeEnd(a)
+// CHECK-NEXT:   1: ForStmt (LoopExit)
+// CHECK-NEXT:   2: [B7.5].~A() (Implicit destructor)
+// CHECK-NEXT:   3: CFGScopeEnd(b)
+// CHECK-NEXT:   4: [B8.3].~A() (Implicit destructor)
+// CHECK-NEXT:   5: CFGScopeEnd(a)
 // CHECK-NEXT:   Preds (1): B7
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -825,10 +831,11 @@ l1:
 // CHECK:      [B7 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B6
 // CHECK:      [B1]
-// CHECK-NEXT:   1: CFGScopeEnd(i)
-// CHECK-NEXT:   2: CFGScopeBegin(unused2)
-// CHECK-NEXT:   3: int unused2;
-// CHECK-NEXT:   4: CFGScopeEnd(unused2)
+// CHECK-NEXT:   1: ForStmt (LoopExit)
+// CHECK-NEXT:   2: CFGScopeEnd(i)
+// CHECK-NEXT:   3: CFGScopeBegin(unused2)
+// CHECK-NEXT:   4: int unused2;
+// CHECK-NEXT:   5: CFGScopeEnd(unused2)
 // CHECK-NEXT:   Preds (2): B4 B5
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]
@@ -1142,7 +1149,8 @@ void test_without_compound() {
 // CHECK:      [B12 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B11
 // CHECK:      [B1]
-// CHECK-NEXT:   1: CFGScopeEnd(i)
+// CHECK-NEXT:   1: ForStmt (LoopExit)
+// CHECK-NEXT:   2: CFGScopeEnd(i)
 // CHECK-NEXT:   Preds (2): B4 B10
 // CHECK-NEXT:   Succs (1): B0
 // CHECK:      [B2]

@@ -9,6 +9,8 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection \
 // RUN:     -analyzer-config assume-at-least-one-iteration=true,eagerly-assume=false \
 // RUN:     -verify=expected,noeagerlyassume %s
+// Note: With loop unrolling enabled by default, simple loops with known bounds
+// are fully unrolled, which changes the behavior of this test.
 
 // The verify tag "combo" is used for one unique warning which is produced in three
 // of the four RUN combinations.
@@ -25,14 +27,13 @@ void clang_analyzer_numTimesReached(void);
 void clang_analyzer_dump(int);
 
 void clearTrueCondition(void) {
-  // If the analyzer can definitely determine that the loop condition is true,
-  // then this corrective logic doesn't activate and the engine executes
-  // `-analyzer-max-loop` iterations (by default, 4).
+  // With loop unrolling enabled, simple loops with known bounds are fully unrolled.
+  // This loop has a compile-time constant bound (i < 10), so it's unrolled completely.
   int i;
   for (i = 0; i < 10; i++)
-    clang_analyzer_numTimesReached(); // expected-warning {{4}}
+    clang_analyzer_numTimesReached(); // expected-warning {{10}}
 
-  clang_analyzer_dump(i); // Unreachable, no reports.
+  clang_analyzer_dump(i); // expected-warning {{10 S32b}}
 }
 
 void clearFalseCondition(void) {
