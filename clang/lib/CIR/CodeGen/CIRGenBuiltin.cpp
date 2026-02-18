@@ -817,6 +817,17 @@ decodeFixedType(CIRGenFunction &cgf,
   case IITDescriptor::Integer:
     return cir::IntType::get(context, descriptor.Integer_Width,
                              /*isSigned=*/true);
+  case IITDescriptor::Vector: {
+    mlir::Type elementType = decodeFixedType(cgf, infos, context);
+    unsigned numElements = descriptor.Vector_Width.getFixedValue();
+    return cir::VectorType::get(elementType, numElements);
+  }
+  case IITDescriptor::Pointer: {
+    mlir::Builder builder(context);
+    auto addrSpace = cir::TargetAddressSpaceAttr::get(
+        context, builder.getUI32IntegerAttr(descriptor.Pointer_AddressSpace));
+    return cir::PointerType::get(cir::VoidType::get(context), addrSpace);
+  }
   default:
     cgf.cgm.errorNYI("Unimplemented intrinsic type descriptor");
     return cir::VoidType::get(context);
