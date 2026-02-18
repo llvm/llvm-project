@@ -1617,7 +1617,7 @@
 ; INLINER-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; INLINER-NEXT:        Function Alias Analysis Results
 ; INLINER-NEXT:        ObjC ARC contraction
-; INLINER-NEXT:        Prepare callbr
+; INLINER-NEXT:        Prepare inline asm insts
 ; INLINER-NEXT:        Safe Stack instrumentation pass
 ; INLINER-NEXT:        Insert stack protectors
 ; INLINER-NEXT:        Cycle Info Analysis

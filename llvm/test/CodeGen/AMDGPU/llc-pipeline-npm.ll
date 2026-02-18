@@ -508,7 +508,7 @@
 ; INLINER-NEXT: amdgpu-perf-hint
 ; INLINER-NEXT: cgscc(function(require<uniformity>
 ; INLINER-NEXT: objc-arc-contract
-; INLINER-NEXT: callbr-prepare
+; INLINER-NEXT: inline-asm-prepare
 ; INLINER-NEXT: safe-stack
 ; INLINER-NEXT: stack-protector
 ; INLINER-NEXT: verify))
