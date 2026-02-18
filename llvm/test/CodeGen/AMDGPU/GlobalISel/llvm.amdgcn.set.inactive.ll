@@ -418,7 +418,7 @@ define amdgpu_kernel void @set_inactive_p2(ptr addrspace(1) %out, ptr addrspace(
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
-  %tmp.0 = call ptr addrspace(2) @llvm.amdgcn.set.inactive.p2(ptr addrspace(2) %in, ptr addrspace(2) null) #0
+  %tmp.0 = call ptr addrspace(2) @llvm.amdgcn.set.inactive.p2(ptr addrspace(2) %in, ptr addrspace(2) zeroinitializer) #0
   %tmp = call ptr addrspace(2) @llvm.amdgcn.strict.wwm.p2(ptr addrspace(2) %tmp.0)
   store ptr addrspace(2) %tmp, ptr addrspace(1) %out
   ret void
@@ -439,7 +439,7 @@ define amdgpu_kernel void @set_inactive_p3(ptr addrspace(1) %out, ptr addrspace(
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
-  %tmp.0 = call ptr addrspace(3) @llvm.amdgcn.set.inactive.p3(ptr addrspace(3) %in, ptr addrspace(3) null) #0
+  %tmp.0 = call ptr addrspace(3) @llvm.amdgcn.set.inactive.p3(ptr addrspace(3) %in, ptr addrspace(3) zeroinitializer) #0
   %tmp = call ptr addrspace(3) @llvm.amdgcn.strict.wwm.p3(ptr addrspace(3) %tmp.0)
   store ptr addrspace(3) %tmp, ptr addrspace(1) %out
   ret void
@@ -460,7 +460,7 @@ define amdgpu_kernel void @set_inactive_p5(ptr addrspace(1) %out, ptr addrspace(
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
-  %tmp.0 = call ptr addrspace(5) @llvm.amdgcn.set.inactive.p5(ptr addrspace(5) %in, ptr addrspace(5) null) #0
+  %tmp.0 = call ptr addrspace(5) @llvm.amdgcn.set.inactive.p5(ptr addrspace(5) %in, ptr addrspace(5) zeroinitializer) #0
   %tmp = call ptr addrspace(5) @llvm.amdgcn.strict.wwm.p5(ptr addrspace(5) %tmp.0)
   store ptr addrspace(5) %tmp, ptr addrspace(1) %out
   ret void
