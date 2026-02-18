@@ -1400,6 +1400,11 @@ public:
       return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                        Op1Info, Op2Info, I);
 
+    // Structs etc
+    if (getTLI()->getValueType(DL, ValTy, true) == MVT::Other)
+      return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                       Op1Info, Op2Info, I);
+
     // Selects on vectors are actually vector selects.
     if (ISD == ISD::SELECT) {
       assert(CondTy && "CondTy must exist");
