@@ -137,30 +137,6 @@ struct CXXStandardLibraryVersionInfo {
   std::uint64_t Version;
 };
 
-/// Record the previous 'export' keyword info.
-///
-/// Since P1857R3, the standard introduced several rules to determine whether
-/// the 'module', 'export module', 'import', 'export import' is a valid
-/// directive introducer. This class is used to record the previous 'export'
-/// keyword token, and then handle 'export module' and 'export import'.
-class ExportContextualKeywordInfo {
-  Token ExportTok;
-  bool AtPhysicalStartOfLine = false;
-
-public:
-  ExportContextualKeywordInfo() = default;
-  ExportContextualKeywordInfo(const Token &Tok, bool AtPhysicalStartOfLine)
-      : ExportTok(Tok), AtPhysicalStartOfLine(AtPhysicalStartOfLine) {}
-
-  bool isValid() const { return ExportTok.is(tok::kw_export); }
-  bool isAtPhysicalStartOfLine() const { return AtPhysicalStartOfLine; }
-  Token getExportTok() const { return ExportTok; }
-  void reset() {
-    ExportTok.startToken();
-    AtPhysicalStartOfLine = false;
-  }
-};
-
 class ModuleNameLoc final
     : llvm::TrailingObjects<ModuleNameLoc, IdentifierLoc> {
   friend TrailingObjects;
@@ -415,7 +391,7 @@ private:
   bool ImportingCXXNamedModules = false;
 
   /// Whether the last token we lexed was an 'export' keyword.
-  ExportContextualKeywordInfo LastTokenWasExportKeyword;
+  Token LastExportKeyword;
 
   /// First pp-token source location in current translation unit.
   SourceLocation FirstPPTokenLoc;
@@ -1869,8 +1845,7 @@ public:
   /// This consumes the import/module directive, modifies the
   /// lexer/preprocessor state, and advances the lexer(s) so that the next token
   /// read is the correct one.
-  bool HandleModuleContextualKeyword(Token &Result,
-                                     bool TokAtPhysicalStartOfLine);
+  bool HandleModuleContextualKeyword(Token &Result);
 
   /// Get the start location of the first pp-token in main file.
   SourceLocation getMainFileFirstPPTokenLoc() const {

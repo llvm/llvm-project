@@ -568,13 +568,24 @@ Address CIRGenModule::createUnnamedGlobalFrom(const VarDecl &d,
 cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
     const VarDecl &d, cir::GlobalOp gv, cir::GetGlobalOp gvAddr) {
   ConstantEmitter emitter(*this);
-  mlir::TypedAttr init =
-      mlir::cast<mlir::TypedAttr>(emitter.tryEmitForInitializer(d));
+  mlir::TypedAttr init = mlir::dyn_cast_if_present<mlir::TypedAttr>(
+      emitter.tryEmitForInitializer(d));
 
   // If constant emission failed, then this should be a C++ static
   // initializer.
   if (!init) {
-    cgm.errorNYI(d.getSourceRange(), "static var without initializer");
+    if (!getLangOpts().CPlusPlus) {
+      cgm.errorNYI(d.getInit()->getSourceRange(),
+                   "constant l-value expression");
+    } else if (d.hasFlexibleArrayInit(getContext())) {
+      cgm.errorNYI(d.getInit()->getSourceRange(), "flexible array initializer");
+    } else {
+      // Since we have a static initializer, this global variable can't
+      // be constant.
+      gv.setConstant(false);
+      emitCXXGuardedInit(d, gv, /*performInit*/ true);
+      gvAddr.setStaticLocal(true);
+    }
     return gv;
   }
 

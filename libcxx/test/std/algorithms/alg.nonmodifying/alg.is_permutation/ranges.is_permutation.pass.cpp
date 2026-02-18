@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <concepts>
 #include <list>
 #include <ranges>
