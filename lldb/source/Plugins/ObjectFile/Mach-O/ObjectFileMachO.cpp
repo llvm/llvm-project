@@ -6367,334 +6367,337 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
     }
 
     if (make_core) {
-      CoreFileMemoryRanges core_ranges;
-      error = process_sp->CalculateCoreFileSaveRanges(options, core_ranges);
-      if (error.Success()) {
-        const uint32_t addr_byte_size = target_arch.GetAddressByteSize();
-        const ByteOrder byte_order = target_arch.GetByteOrder();
-        std::vector<llvm::MachO::segment_command_64> segment_load_commands;
-        for (const auto &core_range_info : core_ranges) {
-          // TODO: Refactor RangeDataVector to have a data iterator.
-          const auto &core_range = core_range_info.data;
-          uint32_t cmd_type = LC_SEGMENT_64;
-          uint32_t segment_size = sizeof(llvm::MachO::segment_command_64);
-          if (addr_byte_size == 4) {
-            cmd_type = LC_SEGMENT;
-            segment_size = sizeof(llvm::MachO::segment_command);
+      llvm::Expected<CoreFileMemoryRanges> core_ranges_maybe =
+          options.GetMemoryRegionsToSave();
+      if (!core_ranges_maybe) {
+        error = Status::FromError(core_ranges_maybe.takeError());
+        return false;
+      }
+
+      CoreFileMemoryRanges &core_ranges = *core_ranges_maybe;
+      const uint32_t addr_byte_size = target_arch.GetAddressByteSize();
+      const ByteOrder byte_order = target_arch.GetByteOrder();
+      std::vector<llvm::MachO::segment_command_64> segment_load_commands;
+      for (const auto &core_range_info : core_ranges) {
+        // TODO: Refactor RangeDataVector to have a data iterator.
+        const auto &core_range = core_range_info.data;
+        uint32_t cmd_type = LC_SEGMENT_64;
+        uint32_t segment_size = sizeof(llvm::MachO::segment_command_64);
+        if (addr_byte_size == 4) {
+          cmd_type = LC_SEGMENT;
+          segment_size = sizeof(llvm::MachO::segment_command);
+        }
+        // Skip any ranges with no read/write/execute permissions and empty
+        // ranges.
+        if (core_range.lldb_permissions == 0 || core_range.range.size() == 0)
+          continue;
+        uint32_t vm_prot = 0;
+        if (core_range.lldb_permissions & ePermissionsReadable)
+          vm_prot |= VM_PROT_READ;
+        if (core_range.lldb_permissions & ePermissionsWritable)
+          vm_prot |= VM_PROT_WRITE;
+        if (core_range.lldb_permissions & ePermissionsExecutable)
+          vm_prot |= VM_PROT_EXECUTE;
+        const addr_t vm_addr = core_range.range.start();
+        const addr_t vm_size = core_range.range.size();
+        llvm::MachO::segment_command_64 segment = {
+            cmd_type,     // uint32_t cmd;
+            segment_size, // uint32_t cmdsize;
+            {0},          // char segname[16];
+            vm_addr,      // uint64_t vmaddr;   // uint32_t for 32-bit Mach-O
+            vm_size,      // uint64_t vmsize;   // uint32_t for 32-bit Mach-O
+            0,            // uint64_t fileoff;  // uint32_t for 32-bit Mach-O
+            vm_size,      // uint64_t filesize; // uint32_t for 32-bit Mach-O
+            vm_prot,      // uint32_t maxprot;
+            vm_prot,      // uint32_t initprot;
+            0,            // uint32_t nsects;
+            0};           // uint32_t flags;
+        segment_load_commands.push_back(segment);
+      }
+
+      StreamString buffer(Stream::eBinary, addr_byte_size, byte_order);
+
+      llvm::MachO::mach_header_64 mach_header;
+      mach_header.magic = addr_byte_size == 8 ? MH_MAGIC_64 : MH_MAGIC;
+      mach_header.cputype = target_arch.GetMachOCPUType();
+      mach_header.cpusubtype = target_arch.GetMachOCPUSubType();
+      mach_header.filetype = MH_CORE;
+      mach_header.ncmds = segment_load_commands.size();
+      mach_header.flags = 0;
+      mach_header.reserved = 0;
+      ThreadList &thread_list = process_sp->GetThreadList();
+      const uint32_t num_threads = thread_list.GetSize();
+
+      // Make an array of LC_THREAD data items. Each one contains the
+      // contents of the LC_THREAD load command. The data doesn't contain
+      // the load command + load command size, we will add the load command
+      // and load command size as we emit the data.
+      std::vector<StreamString> LC_THREAD_datas(num_threads);
+      for (auto &LC_THREAD_data : LC_THREAD_datas) {
+        LC_THREAD_data.GetFlags().Set(Stream::eBinary);
+        LC_THREAD_data.SetAddressByteSize(addr_byte_size);
+        LC_THREAD_data.SetByteOrder(byte_order);
+      }
+      for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+        ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
+        if (thread_sp) {
+          switch (mach_header.cputype) {
+          case llvm::MachO::CPU_TYPE_ARM64:
+          case llvm::MachO::CPU_TYPE_ARM64_32:
+            RegisterContextDarwin_arm64_Mach::Create_LC_THREAD(
+                thread_sp.get(), LC_THREAD_datas[thread_idx]);
+            break;
+
+          case llvm::MachO::CPU_TYPE_ARM:
+            RegisterContextDarwin_arm_Mach::Create_LC_THREAD(
+                thread_sp.get(), LC_THREAD_datas[thread_idx]);
+            break;
+
+          case llvm::MachO::CPU_TYPE_X86_64:
+            RegisterContextDarwin_x86_64_Mach::Create_LC_THREAD(
+                thread_sp.get(), LC_THREAD_datas[thread_idx]);
+            break;
+
+          case llvm::MachO::CPU_TYPE_RISCV:
+            RegisterContextDarwin_riscv32_Mach::Create_LC_THREAD(
+                thread_sp.get(), LC_THREAD_datas[thread_idx]);
+            break;
           }
-          // Skip any ranges with no read/write/execute permissions and empty
-          // ranges.
-          if (core_range.lldb_permissions == 0 || core_range.range.size() == 0)
-            continue;
-          uint32_t vm_prot = 0;
-          if (core_range.lldb_permissions & ePermissionsReadable)
-            vm_prot |= VM_PROT_READ;
-          if (core_range.lldb_permissions & ePermissionsWritable)
-            vm_prot |= VM_PROT_WRITE;
-          if (core_range.lldb_permissions & ePermissionsExecutable)
-            vm_prot |= VM_PROT_EXECUTE;
-          const addr_t vm_addr = core_range.range.start();
-          const addr_t vm_size = core_range.range.size();
-          llvm::MachO::segment_command_64 segment = {
-              cmd_type,     // uint32_t cmd;
-              segment_size, // uint32_t cmdsize;
-              {0},          // char segname[16];
-              vm_addr,      // uint64_t vmaddr;   // uint32_t for 32-bit Mach-O
-              vm_size,      // uint64_t vmsize;   // uint32_t for 32-bit Mach-O
-              0,            // uint64_t fileoff;  // uint32_t for 32-bit Mach-O
-              vm_size,      // uint64_t filesize; // uint32_t for 32-bit Mach-O
-              vm_prot,      // uint32_t maxprot;
-              vm_prot,      // uint32_t initprot;
-              0,            // uint32_t nsects;
-              0};           // uint32_t flags;
-          segment_load_commands.push_back(segment);
         }
+      }
 
-        StreamString buffer(Stream::eBinary, addr_byte_size, byte_order);
+      // The size of the load command is the size of the segments...
+      if (addr_byte_size == 8) {
+        mach_header.sizeofcmds = segment_load_commands.size() *
+                                 sizeof(llvm::MachO::segment_command_64);
+      } else {
+        mach_header.sizeofcmds =
+            segment_load_commands.size() * sizeof(llvm::MachO::segment_command);
+      }
 
-        llvm::MachO::mach_header_64 mach_header;
-        mach_header.magic = addr_byte_size == 8 ? MH_MAGIC_64 : MH_MAGIC;
-        mach_header.cputype = target_arch.GetMachOCPUType();
-        mach_header.cpusubtype = target_arch.GetMachOCPUSubType();
-        mach_header.filetype = MH_CORE;
-        mach_header.ncmds = segment_load_commands.size();
-        mach_header.flags = 0;
-        mach_header.reserved = 0;
-        ThreadList &thread_list = process_sp->GetThreadList();
-        const uint32_t num_threads = thread_list.GetSize();
+      // and the size of all LC_THREAD load command
+      for (const auto &LC_THREAD_data : LC_THREAD_datas) {
+        ++mach_header.ncmds;
+        mach_header.sizeofcmds += 8 + LC_THREAD_data.GetSize();
+      }
 
-        // Make an array of LC_THREAD data items. Each one contains the
-        // contents of the LC_THREAD load command. The data doesn't contain
-        // the load command + load command size, we will add the load command
-        // and load command size as we emit the data.
-        std::vector<StreamString> LC_THREAD_datas(num_threads);
-        for (auto &LC_THREAD_data : LC_THREAD_datas) {
-          LC_THREAD_data.GetFlags().Set(Stream::eBinary);
-          LC_THREAD_data.SetAddressByteSize(addr_byte_size);
-          LC_THREAD_data.SetByteOrder(byte_order);
-        }
-        for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-          ThreadSP thread_sp(thread_list.GetThreadAtIndex(thread_idx));
-          if (thread_sp) {
-            switch (mach_header.cputype) {
-            case llvm::MachO::CPU_TYPE_ARM64:
-            case llvm::MachO::CPU_TYPE_ARM64_32:
-              RegisterContextDarwin_arm64_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
-              break;
-
-            case llvm::MachO::CPU_TYPE_ARM:
-              RegisterContextDarwin_arm_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
-              break;
-
-            case llvm::MachO::CPU_TYPE_X86_64:
-              RegisterContextDarwin_x86_64_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
-              break;
-
-            case llvm::MachO::CPU_TYPE_RISCV:
-              RegisterContextDarwin_riscv32_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
-              break;
-            }
-          }
-        }
-
-        // The size of the load command is the size of the segments...
-        if (addr_byte_size == 8) {
-          mach_header.sizeofcmds = segment_load_commands.size() *
-                                   sizeof(llvm::MachO::segment_command_64);
-        } else {
-          mach_header.sizeofcmds = segment_load_commands.size() *
-                                   sizeof(llvm::MachO::segment_command);
-        }
-
-        // and the size of all LC_THREAD load command
-        for (const auto &LC_THREAD_data : LC_THREAD_datas) {
-          ++mach_header.ncmds;
-          mach_header.sizeofcmds += 8 + LC_THREAD_data.GetSize();
-        }
-
-        // Bits will be set to indicate which bits are NOT used in
-        // addressing in this process or 0 for unknown.
-        uint64_t address_mask = process_sp->GetCodeAddressMask();
-        if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
-          // LC_NOTE "addrable bits"
-          mach_header.ncmds++;
-          mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
-        }
-
-        // LC_NOTE "process metadata"
+      // Bits will be set to indicate which bits are NOT used in
+      // addressing in this process or 0 for unknown.
+      uint64_t address_mask = process_sp->GetCodeAddressMask();
+      if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
+        // LC_NOTE "addrable bits"
         mach_header.ncmds++;
         mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
+      }
 
-        // LC_NOTE "all image infos"
-        mach_header.ncmds++;
-        mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
+      // LC_NOTE "process metadata"
+      mach_header.ncmds++;
+      mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
 
-        // Write the mach header
-        buffer.PutHex32(mach_header.magic);
-        buffer.PutHex32(mach_header.cputype);
-        buffer.PutHex32(mach_header.cpusubtype);
-        buffer.PutHex32(mach_header.filetype);
-        buffer.PutHex32(mach_header.ncmds);
-        buffer.PutHex32(mach_header.sizeofcmds);
-        buffer.PutHex32(mach_header.flags);
-        if (addr_byte_size == 8) {
-          buffer.PutHex32(mach_header.reserved);
-        }
+      // LC_NOTE "all image infos"
+      mach_header.ncmds++;
+      mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
 
-        // Skip the mach header and all load commands and align to the next
-        // 0x1000 byte boundary
-        addr_t file_offset = buffer.GetSize() + mach_header.sizeofcmds;
+      // Write the mach header
+      buffer.PutHex32(mach_header.magic);
+      buffer.PutHex32(mach_header.cputype);
+      buffer.PutHex32(mach_header.cpusubtype);
+      buffer.PutHex32(mach_header.filetype);
+      buffer.PutHex32(mach_header.ncmds);
+      buffer.PutHex32(mach_header.sizeofcmds);
+      buffer.PutHex32(mach_header.flags);
+      if (addr_byte_size == 8) {
+        buffer.PutHex32(mach_header.reserved);
+      }
 
-        file_offset = llvm::alignTo(file_offset, 16);
-        std::vector<std::unique_ptr<LCNoteEntry>> lc_notes;
+      // Skip the mach header and all load commands and align to the next
+      // 0x1000 byte boundary
+      addr_t file_offset = buffer.GetSize() + mach_header.sizeofcmds;
 
-        // Add "addrable bits" LC_NOTE when an address mask is available
-        if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
-          std::unique_ptr<LCNoteEntry> addrable_bits_lcnote_up(
-              new LCNoteEntry(addr_byte_size, byte_order));
-          addrable_bits_lcnote_up->name = "addrable bits";
-          addrable_bits_lcnote_up->payload_file_offset = file_offset;
-          int bits = std::bitset<64>(~address_mask).count();
-          addrable_bits_lcnote_up->payload.PutHex32(4); // version
-          addrable_bits_lcnote_up->payload.PutHex32(
-              bits); // # of bits used for low addresses
-          addrable_bits_lcnote_up->payload.PutHex32(
-              bits); // # of bits used for high addresses
-          addrable_bits_lcnote_up->payload.PutHex32(0); // reserved
+      file_offset = llvm::alignTo(file_offset, 16);
+      std::vector<std::unique_ptr<LCNoteEntry>> lc_notes;
 
-          file_offset += addrable_bits_lcnote_up->payload.GetSize();
-
-          lc_notes.push_back(std::move(addrable_bits_lcnote_up));
-        }
-
-        // Add "process metadata" LC_NOTE
-        std::unique_ptr<LCNoteEntry> thread_extrainfo_lcnote_up(
+      // Add "addrable bits" LC_NOTE when an address mask is available
+      if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
+        std::unique_ptr<LCNoteEntry> addrable_bits_lcnote_up(
             new LCNoteEntry(addr_byte_size, byte_order));
-        thread_extrainfo_lcnote_up->name = "process metadata";
-        thread_extrainfo_lcnote_up->payload_file_offset = file_offset;
+        addrable_bits_lcnote_up->name = "addrable bits";
+        addrable_bits_lcnote_up->payload_file_offset = file_offset;
+        int bits = std::bitset<64>(~address_mask).count();
+        addrable_bits_lcnote_up->payload.PutHex32(4); // version
+        addrable_bits_lcnote_up->payload.PutHex32(
+            bits); // # of bits used for low addresses
+        addrable_bits_lcnote_up->payload.PutHex32(
+            bits); // # of bits used for high addresses
+        addrable_bits_lcnote_up->payload.PutHex32(0); // reserved
 
-        StructuredData::DictionarySP dict(
+        file_offset += addrable_bits_lcnote_up->payload.GetSize();
+
+        lc_notes.push_back(std::move(addrable_bits_lcnote_up));
+      }
+
+      // Add "process metadata" LC_NOTE
+      std::unique_ptr<LCNoteEntry> thread_extrainfo_lcnote_up(
+          new LCNoteEntry(addr_byte_size, byte_order));
+      thread_extrainfo_lcnote_up->name = "process metadata";
+      thread_extrainfo_lcnote_up->payload_file_offset = file_offset;
+
+      StructuredData::DictionarySP dict(
+          std::make_shared<StructuredData::Dictionary>());
+      StructuredData::ArraySP threads(
+          std::make_shared<StructuredData::Array>());
+      for (const ThreadSP &thread_sp :
+           process_sp->CalculateCoreFileThreadList(options)) {
+        StructuredData::DictionarySP thread(
             std::make_shared<StructuredData::Dictionary>());
-        StructuredData::ArraySP threads(
-            std::make_shared<StructuredData::Array>());
-        for (const ThreadSP &thread_sp :
-             process_sp->CalculateCoreFileThreadList(options)) {
-          StructuredData::DictionarySP thread(
-              std::make_shared<StructuredData::Dictionary>());
-          thread->AddIntegerItem("thread_id", thread_sp->GetID());
-          threads->AddItem(thread);
-        }
-        dict->AddItem("threads", threads);
-        StreamString strm;
-        dict->Dump(strm, /* pretty */ false);
-        thread_extrainfo_lcnote_up->payload.PutRawBytes(strm.GetData(),
-                                                        strm.GetSize());
+        thread->AddIntegerItem("thread_id", thread_sp->GetID());
+        threads->AddItem(thread);
+      }
+      dict->AddItem("threads", threads);
+      StreamString strm;
+      dict->Dump(strm, /* pretty */ false);
+      thread_extrainfo_lcnote_up->payload.PutRawBytes(strm.GetData(),
+                                                      strm.GetSize());
 
-        file_offset += thread_extrainfo_lcnote_up->payload.GetSize();
-        file_offset = llvm::alignTo(file_offset, 16);
-        lc_notes.push_back(std::move(thread_extrainfo_lcnote_up));
+      file_offset += thread_extrainfo_lcnote_up->payload.GetSize();
+      file_offset = llvm::alignTo(file_offset, 16);
+      lc_notes.push_back(std::move(thread_extrainfo_lcnote_up));
 
-        // Add "all image infos" LC_NOTE
-        std::unique_ptr<LCNoteEntry> all_image_infos_lcnote_up(
-            new LCNoteEntry(addr_byte_size, byte_order));
-        all_image_infos_lcnote_up->name = "all image infos";
-        all_image_infos_lcnote_up->payload_file_offset = file_offset;
-        file_offset = CreateAllImageInfosPayload(
-            process_sp, file_offset, all_image_infos_lcnote_up->payload,
-            options);
-        lc_notes.push_back(std::move(all_image_infos_lcnote_up));
+      // Add "all image infos" LC_NOTE
+      std::unique_ptr<LCNoteEntry> all_image_infos_lcnote_up(
+          new LCNoteEntry(addr_byte_size, byte_order));
+      all_image_infos_lcnote_up->name = "all image infos";
+      all_image_infos_lcnote_up->payload_file_offset = file_offset;
+      file_offset = CreateAllImageInfosPayload(
+          process_sp, file_offset, all_image_infos_lcnote_up->payload, options);
+      lc_notes.push_back(std::move(all_image_infos_lcnote_up));
 
-        // Add LC_NOTE load commands
-        for (auto &lcnote : lc_notes) {
-          // Add the LC_NOTE load command to the file.
-          buffer.PutHex32(LC_NOTE);
-          buffer.PutHex32(sizeof(llvm::MachO::note_command));
-          char namebuf[16];
-          memset(namebuf, 0, sizeof(namebuf));
-          // This is the uncommon case where strncpy is exactly
-          // the right one, doesn't need to be nul terminated.
-          // LC_NOTE name field is char[16] and is not guaranteed to be
-          // nul-terminated.
-          // coverity[buffer_size_warning]
-          strncpy(namebuf, lcnote->name.c_str(), sizeof(namebuf));
-          buffer.PutRawBytes(namebuf, sizeof(namebuf));
-          buffer.PutHex64(lcnote->payload_file_offset);
-          buffer.PutHex64(lcnote->payload.GetSize());
-        }
+      // Add LC_NOTE load commands
+      for (auto &lcnote : lc_notes) {
+        // Add the LC_NOTE load command to the file.
+        buffer.PutHex32(LC_NOTE);
+        buffer.PutHex32(sizeof(llvm::MachO::note_command));
+        char namebuf[16];
+        memset(namebuf, 0, sizeof(namebuf));
+        // This is the uncommon case where strncpy is exactly
+        // the right one, doesn't need to be nul terminated.
+        // LC_NOTE name field is char[16] and is not guaranteed to be
+        // nul-terminated.
+        // coverity[buffer_size_warning]
+        strncpy(namebuf, lcnote->name.c_str(), sizeof(namebuf));
+        buffer.PutRawBytes(namebuf, sizeof(namebuf));
+        buffer.PutHex64(lcnote->payload_file_offset);
+        buffer.PutHex64(lcnote->payload.GetSize());
+      }
 
-        // Align to 4096-byte page boundary for the LC_SEGMENTs.
-        file_offset = llvm::alignTo(file_offset, 4096);
+      // Align to 4096-byte page boundary for the LC_SEGMENTs.
+      file_offset = llvm::alignTo(file_offset, 4096);
 
-        for (auto &segment : segment_load_commands) {
-          segment.fileoff = file_offset;
-          file_offset += segment.filesize;
-        }
+      for (auto &segment : segment_load_commands) {
+        segment.fileoff = file_offset;
+        file_offset += segment.filesize;
+      }
 
-        // Write out all of the LC_THREAD load commands
-        for (const auto &LC_THREAD_data : LC_THREAD_datas) {
-          const size_t LC_THREAD_data_size = LC_THREAD_data.GetSize();
-          buffer.PutHex32(LC_THREAD);
-          buffer.PutHex32(8 + LC_THREAD_data_size); // cmd + cmdsize + data
-          buffer.Write(LC_THREAD_data.GetString().data(), LC_THREAD_data_size);
-        }
+      // Write out all of the LC_THREAD load commands
+      for (const auto &LC_THREAD_data : LC_THREAD_datas) {
+        const size_t LC_THREAD_data_size = LC_THREAD_data.GetSize();
+        buffer.PutHex32(LC_THREAD);
+        buffer.PutHex32(8 + LC_THREAD_data_size); // cmd + cmdsize + data
+        buffer.Write(LC_THREAD_data.GetString().data(), LC_THREAD_data_size);
+      }
 
-        // Write out all of the segment load commands
-        for (const auto &segment : segment_load_commands) {
-          buffer.PutHex32(segment.cmd);
-          buffer.PutHex32(segment.cmdsize);
-          buffer.PutRawBytes(segment.segname, sizeof(segment.segname));
-          if (addr_byte_size == 8) {
-            buffer.PutHex64(segment.vmaddr);
-            buffer.PutHex64(segment.vmsize);
-            buffer.PutHex64(segment.fileoff);
-            buffer.PutHex64(segment.filesize);
-          } else {
-            buffer.PutHex32(static_cast<uint32_t>(segment.vmaddr));
-            buffer.PutHex32(static_cast<uint32_t>(segment.vmsize));
-            buffer.PutHex32(static_cast<uint32_t>(segment.fileoff));
-            buffer.PutHex32(static_cast<uint32_t>(segment.filesize));
-          }
-          buffer.PutHex32(segment.maxprot);
-          buffer.PutHex32(segment.initprot);
-          buffer.PutHex32(segment.nsects);
-          buffer.PutHex32(segment.flags);
-        }
-
-        std::string core_file_path(outfile.GetPath());
-        auto core_file = FileSystem::Instance().Open(
-            outfile, File::eOpenOptionWriteOnly | File::eOpenOptionTruncate |
-                         File::eOpenOptionCanCreate);
-        if (!core_file) {
-          error = Status::FromError(core_file.takeError());
+      // Write out all of the segment load commands
+      for (const auto &segment : segment_load_commands) {
+        buffer.PutHex32(segment.cmd);
+        buffer.PutHex32(segment.cmdsize);
+        buffer.PutRawBytes(segment.segname, sizeof(segment.segname));
+        if (addr_byte_size == 8) {
+          buffer.PutHex64(segment.vmaddr);
+          buffer.PutHex64(segment.vmsize);
+          buffer.PutHex64(segment.fileoff);
+          buffer.PutHex64(segment.filesize);
         } else {
-          // Read 1 page at a time
-          uint8_t bytes[0x1000];
-          // Write the mach header and load commands out to the core file
-          size_t bytes_written = buffer.GetString().size();
-          error =
-              core_file.get()->Write(buffer.GetString().data(), bytes_written);
-          if (error.Success()) {
+          buffer.PutHex32(static_cast<uint32_t>(segment.vmaddr));
+          buffer.PutHex32(static_cast<uint32_t>(segment.vmsize));
+          buffer.PutHex32(static_cast<uint32_t>(segment.fileoff));
+          buffer.PutHex32(static_cast<uint32_t>(segment.filesize));
+        }
+        buffer.PutHex32(segment.maxprot);
+        buffer.PutHex32(segment.initprot);
+        buffer.PutHex32(segment.nsects);
+        buffer.PutHex32(segment.flags);
+      }
 
-            for (auto &lcnote : lc_notes) {
-              if (core_file.get()->SeekFromStart(lcnote->payload_file_offset) ==
-                  -1) {
-                error = Status::FromErrorStringWithFormat(
-                    "Unable to seek to corefile pos "
-                    "to write '%s' LC_NOTE payload",
-                    lcnote->name.c_str());
-                return false;
-              }
-              bytes_written = lcnote->payload.GetSize();
-              error = core_file.get()->Write(lcnote->payload.GetData(),
-                                             bytes_written);
-              if (!error.Success())
-                return false;
+      std::string core_file_path(outfile.GetPath());
+      auto core_file = FileSystem::Instance().Open(
+          outfile, File::eOpenOptionWriteOnly | File::eOpenOptionTruncate |
+                       File::eOpenOptionCanCreate);
+      if (!core_file) {
+        error = Status::FromError(core_file.takeError());
+      } else {
+        // Read 1 page at a time
+        uint8_t bytes[0x1000];
+        // Write the mach header and load commands out to the core file
+        size_t bytes_written = buffer.GetString().size();
+        error =
+            core_file.get()->Write(buffer.GetString().data(), bytes_written);
+        if (error.Success()) {
+
+          for (auto &lcnote : lc_notes) {
+            if (core_file.get()->SeekFromStart(lcnote->payload_file_offset) ==
+                -1) {
+              error = Status::FromErrorStringWithFormat(
+                  "Unable to seek to corefile pos "
+                  "to write '%s' LC_NOTE payload",
+                  lcnote->name.c_str());
+              return false;
+            }
+            bytes_written = lcnote->payload.GetSize();
+            error = core_file.get()->Write(lcnote->payload.GetData(),
+                                           bytes_written);
+            if (!error.Success())
+              return false;
+          }
+
+          // Now write the file data for all memory segments in the process
+          for (const auto &segment : segment_load_commands) {
+            if (core_file.get()->SeekFromStart(segment.fileoff) == -1) {
+              error = Status::FromErrorStringWithFormat(
+                  "unable to seek to offset 0x%" PRIx64 " in '%s'",
+                  segment.fileoff, core_file_path.c_str());
+              break;
             }
 
-            // Now write the file data for all memory segments in the process
-            for (const auto &segment : segment_load_commands) {
-              if (core_file.get()->SeekFromStart(segment.fileoff) == -1) {
-                error = Status::FromErrorStringWithFormat(
-                    "unable to seek to offset 0x%" PRIx64 " in '%s'",
-                    segment.fileoff, core_file_path.c_str());
-                break;
-              }
+            target.GetDebugger().GetAsyncOutputStream()->Printf(
+                "Saving %" PRId64
+                " bytes of data for memory region at 0x%" PRIx64 "\n",
+                segment.vmsize, segment.vmaddr);
+            addr_t bytes_left = segment.vmsize;
+            addr_t addr = segment.vmaddr;
+            Status memory_read_error;
+            while (bytes_left > 0 && error.Success()) {
+              const size_t bytes_to_read =
+                  bytes_left > sizeof(bytes) ? sizeof(bytes) : bytes_left;
 
-              target.GetDebugger().GetAsyncOutputStream()->Printf(
-                  "Saving %" PRId64
-                  " bytes of data for memory region at 0x%" PRIx64 "\n",
-                  segment.vmsize, segment.vmaddr);
-              addr_t bytes_left = segment.vmsize;
-              addr_t addr = segment.vmaddr;
-              Status memory_read_error;
-              while (bytes_left > 0 && error.Success()) {
-                const size_t bytes_to_read =
-                    bytes_left > sizeof(bytes) ? sizeof(bytes) : bytes_left;
+              // In a savecore setting, we don't really care about caching,
+              // as the data is dumped and very likely never read again,
+              // so we call ReadMemoryFromInferior to bypass it.
+              const size_t bytes_read = process_sp->ReadMemoryFromInferior(
+                  addr, bytes, bytes_to_read, memory_read_error);
 
-                // In a savecore setting, we don't really care about caching,
-                // as the data is dumped and very likely never read again,
-                // so we call ReadMemoryFromInferior to bypass it.
-                const size_t bytes_read = process_sp->ReadMemoryFromInferior(
-                    addr, bytes, bytes_to_read, memory_read_error);
-
-                if (bytes_read == bytes_to_read) {
-                  size_t bytes_written = bytes_read;
-                  error = core_file.get()->Write(bytes, bytes_written);
-                  bytes_left -= bytes_read;
-                  addr += bytes_read;
-                } else {
-                  // Some pages within regions are not readable, those should
-                  // be zero filled
-                  memset(bytes, 0, bytes_to_read);
-                  size_t bytes_written = bytes_to_read;
-                  error = core_file.get()->Write(bytes, bytes_written);
-                  bytes_left -= bytes_to_read;
-                  addr += bytes_to_read;
-                }
+              if (bytes_read == bytes_to_read) {
+                size_t bytes_written = bytes_read;
+                error = core_file.get()->Write(bytes, bytes_written);
+                bytes_left -= bytes_read;
+                addr += bytes_read;
+              } else {
+                // Some pages within regions are not readable, those should
+                // be zero filled
+                memset(bytes, 0, bytes_to_read);
+                size_t bytes_written = bytes_to_read;
+                error = core_file.get()->Write(bytes, bytes_written);
+                bytes_left -= bytes_to_read;
+                addr += bytes_to_read;
               }
             }
           }
