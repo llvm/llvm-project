@@ -126,8 +126,10 @@ New checks
 
   Finds constructions of custom smart pointer types from raw ``new`` expressions
   and replaces them with a configurable factory function. Unlike
-  ``modernize-make-shared`` and ``modernize-make-unique``, this check requires
-  explicit configuration and allows using custom smart pointer types without
+  :doc:`modernize-make-shared <clang-tidy/checks/modernize/make-shared>` and
+  :doc:`modernize-make-unique <clang-tidy/checks/modernize/make-unique>`,
+  this check requires explicit configuration and allows using custom smart
+  pointer types without
   losing the default ``std::shared_ptr``/``std::unique_ptr`` support.
 
 - New :doc:`modernize-use-string-view
@@ -221,7 +223,7 @@ Changes in existing checks
 - Improved :doc:`modernize-make-unique
   <clang-tidy/checks/modernize/make-unique>` check by adding a new option
   ``MakeSmartPtrType`` to specify the smart pointer type to match, with a
-  default value of ``::std::unique_ptr``.
+  `MakeSmartPtrType` to specify the smart pointer type to match.
 
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
