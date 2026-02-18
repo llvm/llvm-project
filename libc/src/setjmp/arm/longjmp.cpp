@@ -59,6 +59,7 @@ namespace LIBC_NAMESPACE_DECL {
       # While sp may appear in a register list for ARM mode, it may not for
       # Thumb2 mode. Just load the previous value of sp into r12 then move it
       # into sp, so that this code is portable between ARM and Thumb2.
+
       ldm r0, {r4-r12, lr}
       mov sp, r12
 
