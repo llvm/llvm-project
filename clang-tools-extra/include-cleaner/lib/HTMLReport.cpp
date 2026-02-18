@@ -185,8 +185,7 @@ class Reporter {
     if (!R.Includes.empty())
       R.Satisfied = true;
     // Include pointers are meaningfully ordered as they are backed by a vector.
-    llvm::sort(R.Includes);
-    R.Includes.erase(llvm::unique(R.Includes), R.Includes.end());
+    llvm::sort_and_unique(R.Includes);
 
     if (!R.Headers.empty())
       R.Insert =

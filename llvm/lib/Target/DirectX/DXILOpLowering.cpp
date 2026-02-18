@@ -190,8 +190,7 @@ public:
     }
 
     // Deduplicate the cast functions so that we only erase each one once.
-    llvm::sort(CastFns);
-    CastFns.erase(llvm::unique(CastFns), CastFns.end());
+    llvm::sort_and_unique(CastFns);
     for (Function *F : CastFns)
       F->eraseFromParent();
 
