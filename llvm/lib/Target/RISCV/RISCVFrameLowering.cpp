@@ -501,7 +501,7 @@ bool RISCVFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // conservatively return true when the call frame size hasd not been
   // computed yet. On RISC-V that caused MachineOutliner tests to fail the
   // MachineVerifier due to outlined functions not computing max call frame
-  // size thus the frame pointr would always be reserved.
+  // size thus the frame pointer would always be reserved.
   if (MFI.isMaxCallFrameSizeComputed() && MFI.getMaxCallFrameSize() > 2047)
     return true;
 
