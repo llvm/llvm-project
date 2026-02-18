@@ -5,6 +5,11 @@ target datalayout = "e-p:64:64:64:32"
 
 %struct = type { i64, [2 x i32], i64 }
 
+define ptr @dead_stack_object() {
+  %alloc = alloca i32
+  ret ptr %alloc
+}
+
 define void @main() {
   %alloc = alloca i32
   %alloc_struct = alloca %struct
@@ -43,6 +48,10 @@ define void @main() {
   ; During the successive addition of offsets to the address, the resulting pointer
   ; must remain in bounds of the allocated object at each step.
   %gep_inbounds_invalid3 = getelementptr inbounds %struct, ptr %alloc_struct, i64 1, i32 1, i32 -2
+  %dead_stack_ptr = call ptr @dead_stack_object()
+  ; The object does not have to be live anymore; being in-bounds of a deallocated object is sufficient.
+  %gep_inbounds_valid4 = getelementptr inbounds i8, ptr %dead_stack_ptr, i64 4
+  %gep_inbounds_invalid4 = getelementptr inbounds i8, ptr %dead_stack_ptr, i64 5
 
   ; If the type of an index is larger than the pointer index type, the truncation to the pointer index
   ; type preserves the signed value (trunc nsw).
@@ -107,6 +116,13 @@ define void @main() {
 ; CHECK-NEXT:   %gep_inbounds_invalid1 = getelementptr inbounds i8, ptr %alloc, i64 -1 => poison
 ; CHECK-NEXT:   %gep_inbounds_invalid2 = getelementptr inbounds i8, ptr %alloc, i64 5 => poison
 ; CHECK-NEXT:   %gep_inbounds_invalid3 = getelementptr inbounds %struct, ptr %alloc_struct, i64 1, i32 1, i32 -2 => poison
+; CHECK-NEXT: Entering function: dead_stack_object
+; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x28 [alloc]
+; CHECK-NEXT:   ret ptr %alloc
+; CHECK-NEXT: Exiting function: dead_stack_object
+; CHECK-NEXT:   %dead_stack_ptr = call ptr @dead_stack_object() => ptr 0x28 [dangling]
+; CHECK-NEXT:   %gep_inbounds_valid4 = getelementptr inbounds i8, ptr %dead_stack_ptr, i64 4 => ptr 0x2C [dangling]
+; CHECK-NEXT:   %gep_inbounds_invalid4 = getelementptr inbounds i8, ptr %dead_stack_ptr, i64 5 => poison
 ; CHECK-NEXT:   %gep_nusw_valid1 = getelementptr nusw i8, ptr %alloc, i64 -1 => ptr 0x7 [alloc + -1]
 ; CHECK-NEXT:   %gep_nusw_invalid1 = getelementptr nusw i8, ptr %large_address, i64 -2147483649 => poison
 ; CHECK-NEXT:   %gep_nusw_valid2 = getelementptr nusw i32, ptr null, i32 536870911 => ptr 0x7FFFFFFC [dangling]

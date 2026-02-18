@@ -249,11 +249,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
   }
 
   AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags,
-                         AnyValue *AccumulatedOffset = nullptr) {
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
     if (Offset.isZero())
       return Ptr;
-    auto IndexBits = Ptr.address().trunc(Offset.getBitWidth());
+    APInt IndexBits = Ptr.address().trunc(Offset.getBitWidth());
     auto NewIndex = addNoWrap(IndexBits, Offset, /*HasNSW=*/false,
                               Flags.hasNoUnsignedWrap());
     if (NewIndex.isPoison())
@@ -274,11 +273,11 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
     if (Flags.isInBounds() && (!MO || !MO->inBounds(NewAddr)))
       return AnyValue::poison();
 
-    if (AccumulatedOffset && !AccumulatedOffset->isPoison()) {
-      *AccumulatedOffset =
-          addNoWrap(AccumulatedOffset->asInteger(), Offset,
+    if (!AccumulatedOffset.isPoison()) {
+      AccumulatedOffset =
+          addNoWrap(AccumulatedOffset.asInteger(), Offset,
                     Flags.hasNoUnsignedSignedWrap(), Flags.hasNoUnsignedWrap());
-      if (AccumulatedOffset->isPoison())
+      if (AccumulatedOffset.isPoison())
         return AnyValue::poison();
     }
 
@@ -288,8 +287,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
   }
 
   AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags,
-                         AnyValue *AccumulatedOffset = nullptr) {
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
     if (Ptr.isPoison())
       return AnyValue::poison();
     return computePtrAdd(Ptr.asPointer(), Offset, Flags, AccumulatedOffset);
@@ -297,12 +295,12 @@ class InstExecutor : public InstVisitor<InstExecutor, void> {
 
   AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
                                const APInt &Scale, GEPNoWrapFlags Flags,
-                               AnyValue *AccumulatedOffset = nullptr) {
+                               AnyValue &AccumulatedOffset) {
     if (Ptr.isPoison() || Index.isPoison())
       return AnyValue::poison();
     assert(Ptr.isPointer() && Index.isInteger() && "Unexpected type.");
     if (Scale.isOne())
-      return computePtrAdd(Ptr, Index.asInteger(), Flags);
+      return computePtrAdd(Ptr, Index.asInteger(), Flags, AccumulatedOffset);
     auto ScaledOffset =
         mulNoWrap(Index.asInteger(), Scale, Flags.hasNoUnsignedSignedWrap(),
                   Flags.hasNoUnsignedWrap());
@@ -843,30 +841,31 @@ public:
     AnyValue AccumulatedOffset = APInt(IndexBitWidth, 0);
     if (Res.isAggregate())
       AccumulatedOffset =
-          std::vector<AnyValue>(Res.asAggregate().size(), AccumulatedOffset);
+          AnyValue::getVectorSplat(AccumulatedOffset, Res.asAggregate().size());
     auto ApplyScaledOffset = [&](const AnyValue &Index, const APInt &Scale) {
       if (Index.isAggregate() && !Res.isAggregate()) {
-        Res = std::vector<AnyValue>(Index.asAggregate().size(), Res);
-        AccumulatedOffset = std::vector<AnyValue>(Index.asAggregate().size(),
-                                                  AccumulatedOffset);
+        Res = AnyValue::getVectorSplat(Res, Index.asAggregate().size());
+        AccumulatedOffset = AnyValue::getVectorSplat(
+            AccumulatedOffset, Index.asAggregate().size());
       }
       if (Index.isAggregate() && Res.isAggregate()) {
-        for (uint32_t I = 0, E = Res.asAggregate().size(); I != E; ++I)
-          Res.asAggregate()[I] = computeScaledPtrAdd(
-              Res.asAggregate()[I],
-              canonicalizeIndex(Index.asAggregate()[I], IndexBitWidth, Flags),
-              Scale, Flags, &AccumulatedOffset.asAggregate()[I]);
+        for (auto &&[ResElem, IndexElem, OffsetElem] :
+             zip(Res.asAggregate(), Index.asAggregate(),
+                 AccumulatedOffset.asAggregate()))
+          ResElem = computeScaledPtrAdd(
+              ResElem, canonicalizeIndex(IndexElem, IndexBitWidth, Flags),
+              Scale, Flags, OffsetElem);
       } else {
         AnyValue CanonicalIndex =
             canonicalizeIndex(Index, IndexBitWidth, Flags);
         if (Res.isAggregate()) {
-          for (uint32_t I = 0, E = Res.asAggregate().size(); I != E; ++I)
-            Res.asAggregate()[I] =
-                computeScaledPtrAdd(Res.asAggregate()[I], CanonicalIndex, Scale,
-                                    Flags, &AccumulatedOffset.asAggregate()[I]);
+          for (auto &&[ResElem, OffsetElem] :
+               zip(Res.asAggregate(), AccumulatedOffset.asAggregate()))
+            ResElem = computeScaledPtrAdd(ResElem, CanonicalIndex, Scale, Flags,
+                                          OffsetElem);
         } else {
           Res = computeScaledPtrAdd(Res, CanonicalIndex, Scale, Flags,
-                                    &AccumulatedOffset);
+                                    AccumulatedOffset);
         }
       }
     };
@@ -895,6 +894,8 @@ public:
       }
 
       // Truncate if type size exceeds index space.
+      // TODO: Should be documented in LangRef: GEPs with nowrap flags should
+      // return poison when the type size exceeds index space.
       TypeSize Offset = GTI.getSequentialElementStride(DL);
       APInt Scale(IndexBitWidth,
                   Offset.isScalable()

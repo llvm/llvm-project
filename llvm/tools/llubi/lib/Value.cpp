@@ -228,4 +228,9 @@ AnyValue AnyValue::getNullValue(Context &Ctx, Type *Ty) {
   llvm_unreachable("Unsupported type");
 }
 
+AnyValue AnyValue::getVectorSplat(const AnyValue &Scalar, size_t NumElements) {
+  assert(!Scalar.isAggregate() && !Scalar.isNone() && "Expect a scalar value");
+  return AnyValue(std::vector<AnyValue>(NumElements, Scalar));
+}
+
 } // namespace llvm::ubi
