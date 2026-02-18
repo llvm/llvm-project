@@ -267,7 +267,7 @@ void IntrinsicEmitter::EmitIntrinsicBitTable(
       OS << " | (1<<" << Idx % 8 << ')';
   }
   OS << "\n};\n\n";
-  OS << formatv("return ({}[id/8] & (1 << (id%8))) != 0;\n", TableName);
+  OS << formatv("return ({}[Id/8] & (1 << (Id%8))) != 0;\n", TableName);
 }
 
 void IntrinsicEmitter::EmitIntrinsicToNameTable(
@@ -774,11 +774,11 @@ inline std::pair<uint32_t, uint32_t> unpackID(const IDTy PackedID) {{
   return {{FnAttrID, ArgAttrID};
 }
 
-AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id,
+AttributeList Intrinsic::getAttributes(LLVMContext &C, ID Id,
                                        FunctionType *FT) {{
-  if (id == 0)
+  if (Id == 0)
     return AttributeList();
-  auto [FnAttrID, ArgAttrID] = unpackID(IntrinsicsToAttributesMap[id - 1]);
+  auto [FnAttrID, ArgAttrID] = unpackID(IntrinsicsToAttributesMap[Id - 1]);
   using PairTy = std::pair<unsigned, AttributeSet>;
   alignas(PairTy) char ASStorage[sizeof(PairTy) * {}];
   PairTy *AS = reinterpret_cast<PairTy *>(ASStorage);
@@ -801,10 +801,10 @@ AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id,
   return AttributeList::get(C, ArrayRef(AS, NumAttrs));
 }
 
-AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {{
-  if (id == 0)
+AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID Id) {{
+  if (Id == 0)
     return AttributeSet();
-  auto [FnAttrID, _] = unpackID(IntrinsicsToAttributesMap[id - 1]);
+  auto [FnAttrID, _] = unpackID(IntrinsicsToAttributesMap[Id - 1]);
   if (FnAttrID == {})
     return AttributeSet();
   return getIntrinsicFnAttributeSet(C, FnAttrID);
@@ -828,7 +828,6 @@ void IntrinsicEmitter::EmitPrettyPrintArguments(
   IfDefEmitter IfDef(OS, "GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS");
   OS << R"(
 void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Constant *ImmArgVal) {
-  using namespace Intrinsic;
   switch (IID) {
 )";
 
@@ -920,7 +919,6 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
 Intrinsic::ID
 Intrinsic::getIntrinsicFor{}Builtin(StringRef TargetPrefix, 
                                       StringRef BuiltinName) {{
-  using namespace Intrinsic;
 )",
                 CompilerName);
 
