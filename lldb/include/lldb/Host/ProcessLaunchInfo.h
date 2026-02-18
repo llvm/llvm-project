@@ -130,7 +130,7 @@ public:
 
   PTY &GetPTY() const { return *m_pty; }
 
-  std::shared_ptr<PTY> GetPTYSP() const { return m_pty; }
+  std::shared_ptr<PTY> TakePTY() { return std::move(m_pty); }
 
   /// Returns whether if lldb should read information from the PTY. This is
   /// always true on non Windows.
