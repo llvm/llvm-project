@@ -176,10 +176,12 @@ let Predicates = [HasStdExtZvkned] in {
   defm VAESDM     : VAES_MV_V_S<0b101000, 0b101001, 0b00000, OPMVV, "vaesdm">;
   defm VAESEF     : VAES_MV_V_S<0b101000, 0b101001, 0b00011, OPMVV, "vaesef">;
   defm VAESEM     : VAES_MV_V_S<0b101000, 0b101001, 0b00010, OPMVV, "vaesem">;
-  def  VAESKF1_VI : PALUVINoVm<0b100010, "vaeskf1.vi", uimm5>,
-                    SchedUnaryMC<"WriteVAESKF1V", "ReadVAESKF1V">;
-  def  VAESKF2_VI : PALUVINoVmBinary<0b101010, "vaeskf2.vi", uimm5>,
-                    SchedBinaryMC<"WriteVAESKF2V", "ReadVAESKF2V", "ReadVAESKF2V">;
+  let RVVConstraint = NoConstraint in {
+    def  VAESKF1_VI : PALUVINoVm<0b100010, "vaeskf1.vi", uimm5>,
+                      SchedUnaryMC<"WriteVAESKF1V", "ReadVAESKF1V">;
+    def  VAESKF2_VI : PALUVINoVmBinary<0b101010, "vaeskf2.vi", uimm5>,
+                      SchedBinaryMC<"WriteVAESKF2V", "ReadVAESKF2V", "ReadVAESKF2V">;
+  }
   let RVVConstraint = VS2Constraint in
   def  VAESZ_VS   : PALUVs2NoVmBinary<0b101001, 0b00111, OPMVV, "vaesz.vs">,
                     SchedBinaryMC<"WriteVAESZV", "ReadVAESZV", "ReadVAESZV">;
