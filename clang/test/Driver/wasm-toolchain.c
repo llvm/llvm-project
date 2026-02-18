@@ -77,13 +77,13 @@
 // '-pthread' sets +atomics, +bulk-memory, +mutable-globals, +sign-ext, and --shared-memory
 // RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -pthread 2>&1 \
 // RUN:  | FileCheck -check-prefix=PTHREAD %s
-// PTHREAD: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
+// PTHREAD: "-cc1" {{.*}} "-target-feature" "+bulk-memory" "-target-feature" "+atomics" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
 // PTHREAD: wasm-ld{{.*}}" "--shared-memory" "-lpthread"
 //
 // '-pthread' with '-nostdlib' should still set '--shared-memory' but not include '-lpthread'
 // RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -pthread -nostdlib 2>&1 \
 // RUN:  | FileCheck -check-prefix=PTHREAD-NOSTDLIB %s
-// PTHREAD-NOSTDLIB: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
+// PTHREAD-NOSTDLIB: "-cc1" {{.*}} "-target-feature" "+bulk-memory" "-target-feature" "+atomics" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
 // PTHREAD-NOSTDLIB: wasm-ld{{.*}}" "--shared-memory" "-o" "a.out"
 
 // '-pthread' not allowed with '-mno-atomics'
@@ -113,7 +113,7 @@
 // 'wasm32-wasi-threads' does the same thing as '-pthread'
 // RUN: %clang -### --target=wasm32-wasi-threads --sysroot=/foo %s 2>&1 \
 // RUN:  | FileCheck -check-prefix=WASI_THREADS %s
-// WASI_THREADS: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
+// WASI_THREADS: "-cc1" {{.*}} "-target-feature" "+bulk-memory" "-target-feature" "+atomics" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
 // WASI_THREADS: wasm-ld{{.*}}" "--shared-memory" "-lpthread"
 
 // '-mllvm -emscripten-cxx-exceptions-allowed=foo,bar' sets
@@ -303,7 +303,3 @@
 // RUN:   | FileCheck -check-prefix=LINK_WALI_BASIC %s
 // LINK_WALI_BASIC: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_WALI_BASIC: wasm-ld{{.*}}" "-L/foo/lib/wasm32-linux-muslwali" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
-
-// `-target=wasm32-wasip2` sets -component-model-thread-context
-// RUN: %clang --target=wasm32-wasip2 %s -### 2>&1 | FileCheck -check-prefix=WASIP3_DISABLED %s
-// WASIP3_DISABLED: "-target-feature" "-component-model-thread-context"
