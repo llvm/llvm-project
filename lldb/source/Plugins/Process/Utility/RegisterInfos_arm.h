@@ -146,7 +146,7 @@ enum {
   fpu_q14,
   fpu_q15,
 
-  tls_tpidruro,
+  tls_tpidr,
 
   exc_exception,
   exc_fsr,
@@ -685,14 +685,14 @@ static RegisterInfo g_register_infos_arm[] = {
     FPU_QREG(q15, 60),
 
     {
-        "tpidruro",
+        "tpidr",
         nullptr,
         4,
         0,
         eEncodingUint,
         eFormatHex,
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_REGNUM_GENERIC_TP,
-         LLDB_INVALID_REGNUM, tls_tpidruro},
+         LLDB_INVALID_REGNUM, tls_tpidr},
         nullptr,
         nullptr,
         nullptr,
