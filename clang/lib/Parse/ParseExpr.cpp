@@ -3466,6 +3466,21 @@ std::optional<AvailabilitySpec> Parser::ParseAvailabilitySpec() {
       return std::nullopt;
     }
 
+    // Validate and correct anyAppleOS version.
+    if (Platform == "anyappleos") {
+      auto [IsValid, CorrectedVersion] =
+          AvailabilitySpec::validateAnyAppleOSVersion(Version);
+      if (!IsValid) {
+        Diag(VersionRange.getBegin(),
+             diag::warn_avail_query_anyappleos_min_version)
+            << Version.getAsString();
+        Diag(VersionRange.getBegin(),
+             diag::note_avail_query_anyappleos_adjusted)
+            << CorrectedVersion.getAsString();
+        Version = CorrectedVersion;
+      }
+    }
+
     return AvailabilitySpec(Version, Platform, PlatformIdentifier->getLoc(),
                             VersionRange.getEnd());
   }

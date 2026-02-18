@@ -33,6 +33,7 @@ def ArrayBoundsPointerArithmetic : DiagGroup<"array-bounds-pointer-arithmetic">;
 def ArrayParameter : DiagGroup<"array-parameter">;
 def AutoDisableVptrSanitizer : DiagGroup<"auto-disable-vptr-sanitizer">;
 def Availability : DiagGroup<"availability">;
+def InvalidVersionAvailability : DiagGroup<"invalid-version-availability">;
 def Section : DiagGroup<"section">;
 def : DiagGroup<"auto-import">;
 def FrameworkHdrQuotedInclude : DiagGroup<"quoted-include-in-framework-header">;
