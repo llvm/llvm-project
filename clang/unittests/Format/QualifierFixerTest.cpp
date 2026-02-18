@@ -50,6 +50,31 @@ TEST_F(QualifierFixerTest, RotateTokens) {
             tok::kw_restrict);
   EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("friend"),
             tok::kw_friend);
+  EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("typedef"),
+            tok::kw_typedef);
+  EXPECT_EQ(
+      LeftRightQualifierAlignmentFixer::getTokenFromQualifier("consteval"),
+      tok::kw_consteval);
+  EXPECT_EQ(
+      LeftRightQualifierAlignmentFixer::getTokenFromQualifier("constinit"),
+      tok::kw_constinit);
+  EXPECT_EQ(
+      LeftRightQualifierAlignmentFixer::getTokenFromQualifier("thread_local"),
+      tok::kw_thread_local);
+  EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("extern"),
+            tok::kw_extern);
+  EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("mutable"),
+            tok::kw_mutable);
+  EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("signed"),
+            tok::kw_signed);
+  EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("unsigned"),
+            tok::kw_unsigned);
+  EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("long"),
+            tok::kw_long);
+  EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("short"),
+            tok::kw_short);
+  EXPECT_EQ(LeftRightQualifierAlignmentFixer::getTokenFromQualifier("explicit"),
+            tok::kw_explicit);
 }
 
 TEST_F(QualifierFixerTest, FailQualifierInvalidConfiguration) {
@@ -1059,48 +1084,45 @@ TEST_F(QualifierFixerTest, IsQualifierType) {
   ConfiguredTokens.push_back(tok::kw_restrict);
   ConfiguredTokens.push_back(tok::kw_constexpr);
   ConfiguredTokens.push_back(tok::kw_friend);
+  ConfiguredTokens.push_back(tok::kw_typedef);
+  ConfiguredTokens.push_back(tok::kw_consteval);
+  ConfiguredTokens.push_back(tok::kw_constinit);
+  ConfiguredTokens.push_back(tok::kw_thread_local);
+  ConfiguredTokens.push_back(tok::kw_extern);
+  ConfiguredTokens.push_back(tok::kw_mutable);
+  ConfiguredTokens.push_back(tok::kw_unsigned);
+  ConfiguredTokens.push_back(tok::kw_long);
+  ConfiguredTokens.push_back(tok::kw_explicit);
 
   TestLexer lexer{Allocator, Buffers};
   const auto LangOpts = getFormattingLangOpts();
 
   auto Tokens = lexer.lex(
-      "const static inline auto restrict int double long constexpr friend");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+      "const static inline restrict int double constexpr friend "
+      "typedef consteval constinit thread_local extern mutable signed unsigned "
+      "long short explicit");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
 
-  EXPECT_TRUE(
-      isConfiguredQualifierOrType(Tokens[0], ConfiguredTokens, LangOpts));
-  EXPECT_TRUE(
-      isConfiguredQualifierOrType(Tokens[1], ConfiguredTokens, LangOpts));
-  EXPECT_TRUE(
-      isConfiguredQualifierOrType(Tokens[2], ConfiguredTokens, LangOpts));
-  EXPECT_TRUE(
-      isConfiguredQualifierOrType(Tokens[3], ConfiguredTokens, LangOpts));
-  EXPECT_TRUE(
-      isConfiguredQualifierOrType(Tokens[4], ConfiguredTokens, LangOpts));
-  EXPECT_TRUE(
-      isConfiguredQualifierOrType(Tokens[5], ConfiguredTokens, LangOpts));
-  EXPECT_TRUE(
-      isConfiguredQualifierOrType(Tokens[6], ConfiguredTokens, LangOpts));
-  EXPECT_TRUE(
-      isConfiguredQualifierOrType(Tokens[7], ConfiguredTokens, LangOpts));
-  EXPECT_TRUE(
-      isConfiguredQualifierOrType(Tokens[8], ConfiguredTokens, LangOpts));
-  EXPECT_TRUE(
-      isConfiguredQualifierOrType(Tokens[9], ConfiguredTokens, LangOpts));
+  for (size_t i = 0; i < 19; ++i) {
+    EXPECT_TRUE(isQualifierOrType(Tokens[i], LangOpts))
+        << "Token " << i << " should be recognized by isQualifierOrType";
+  }
 
-  EXPECT_TRUE(isQualifierOrType(Tokens[0], LangOpts));
-  EXPECT_TRUE(isQualifierOrType(Tokens[1], LangOpts));
-  EXPECT_TRUE(isQualifierOrType(Tokens[2], LangOpts));
-  EXPECT_TRUE(isQualifierOrType(Tokens[3], LangOpts));
-  EXPECT_TRUE(isQualifierOrType(Tokens[4], LangOpts));
-  EXPECT_TRUE(isQualifierOrType(Tokens[5], LangOpts));
-  EXPECT_TRUE(isQualifierOrType(Tokens[6], LangOpts));
-  EXPECT_TRUE(isQualifierOrType(Tokens[7], LangOpts));
-  EXPECT_TRUE(isQualifierOrType(Tokens[8], LangOpts));
-  EXPECT_TRUE(isQualifierOrType(Tokens[9], LangOpts));
+  // When unsigned is configured, signed is automatically added to
+  // ConfiguredTokens to handle them at the same position
+  ConfiguredTokens.push_back(tok::kw_signed);
+  // When long is configured, short is automatically added to
+  // ConfiguredTokens to handle them at the same position
+  ConfiguredTokens.push_back(tok::kw_short);
+
+  for (size_t i = 0; i < 19; ++i) {
+    EXPECT_TRUE(
+        isConfiguredQualifierOrType(Tokens[i], ConfiguredTokens, LangOpts))
+        << "Token " << i << " should be recognized";
+  }
 
   auto NotTokens = lexer.lex("for while do Foo Bar ");
-  ASSERT_EQ(NotTokens.size(), 6u) << Tokens;
+  ASSERT_EQ(NotTokens.size(), 6u) << NotTokens;
 
   EXPECT_FALSE(
       isConfiguredQualifierOrType(NotTokens[0], ConfiguredTokens, LangOpts));
@@ -1419,6 +1441,107 @@ TEST_F(QualifierFixerTest, TemplatesLeft) {
   verifyFormat("TemplateType<const T> t;", "TemplateType<T const> t;", Style);
   verifyFormat("TemplateType<const Container> t;",
                "TemplateType<Container const> t;", Style);
+}
+
+TEST_F(QualifierFixerTest, NewQualifierSupport) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+
+  Style.QualifierOrder = {"typedef", "type"};
+  verifyFormat("typedef int MyInt;", Style);
+
+  Style.QualifierOrder = {"consteval", "type"};
+  verifyFormat("consteval int func();", "int consteval func();", Style);
+  verifyFormat("consteval void func();", "void consteval func();", Style);
+
+  Style.QualifierOrder = {"constinit", "static", "type"};
+  verifyFormat("constinit static int var = 10;",
+               "static constinit int var = 10;", Style);
+
+  Style.QualifierOrder = {"thread_local", "static", "type"};
+  verifyFormat("thread_local static int counter;",
+               "static thread_local int counter;", Style);
+
+  Style.QualifierOrder = {"extern", "type"};
+  verifyFormat("extern int global_var;", "int extern global_var;", Style);
+
+  Style.QualifierOrder = {"mutable", "type"};
+  verifyFormat("mutable int cache;", "int mutable cache;", Style);
+
+  Style.QualifierOrder = {"unsigned", "type"};
+  verifyFormat("unsigned int num;", "int unsigned num;", Style);
+  verifyFormat("unsigned long long value;", "long long unsigned value;", Style);
+  verifyFormat("signed int num;", "int signed num;", Style);
+  verifyFormat("signed long long value;", "long long signed value;", Style);
+
+  Style.QualifierOrder = {"long", "type"};
+  verifyFormat("long int num;", "int long num;", Style);
+  verifyFormat("long unsigned int num;", "unsigned long int num;", Style);
+  verifyFormat("long long int num;", "int long long num;", Style);
+  verifyFormat("long long unsigned int num;", "unsigned long long int num;",
+               Style);
+
+  Style.QualifierOrder = {"short", "type"};
+  verifyFormat("short int num;", "int short num;", Style);
+  verifyFormat("short unsigned value;", "unsigned short value;", Style);
+
+  Style.QualifierOrder = {"explicit", "type"};
+  verifyFormat("explicit Foo(int x);", Style);
+
+  Style.QualifierOrder = {"extern", "thread_local", "static", "constexpr",
+                          "inline", "unsigned",     "long",   "type",
+                          "const",  "volatile"};
+
+  verifyFormat("extern thread_local static constexpr inline unsigned long int "
+               "const volatile var;",
+               "volatile const extern constexpr thread_local static inline "
+               "unsigned long int var;",
+               Style);
+}
+
+TEST_F(QualifierFixerTest, PairedQualifiersSamePosition) {
+  FormatStyle Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+
+  Style.QualifierOrder = {"unsigned", "type"};
+  verifyFormat("unsigned int x;", "int unsigned x;", Style);
+  verifyFormat("signed int x;", "int signed x;", Style);
+  verifyFormat("unsigned long int y;", "long unsigned int y;", Style);
+  verifyFormat("signed long int y;", "long signed int y;", Style);
+
+  Style.QualifierOrder = {"signed", "type"};
+  verifyFormat("signed int x;", "int signed x;", Style);
+  verifyFormat("unsigned int x;", "int unsigned x;", Style);
+
+  Style.QualifierOrder = {"long", "type"};
+  verifyFormat("long int x;", "int long x;", Style);
+  verifyFormat("short int x;", "int short x;", Style);
+  verifyFormat("long unsigned int y;", "unsigned long int y;", Style);
+  verifyFormat("short unsigned int y;", "unsigned short int y;", Style);
+
+  Style.QualifierOrder = {"short", "type"};
+  verifyFormat("short int x;", "int short x;", Style);
+  verifyFormat("long int x;", "int long x;", Style);
+
+  Style.QualifierOrder = {"type", "unsigned"};
+  verifyFormat("int unsigned x;", "unsigned int x;", Style);
+  verifyFormat("int signed x;", "signed int x;", Style);
+
+  Style.QualifierOrder = {"type", "long"};
+  verifyFormat("int long x;", "long int x;", Style);
+  verifyFormat("int short x;", "short int x;", Style);
+
+  Style.QualifierOrder = {"static", "unsigned", "long", "type"};
+  verifyFormat("static unsigned long int x;", "long unsigned static int x;",
+               Style);
+  verifyFormat("static signed short int x;", "short signed static int x;",
+               Style);
+
+  Style.QualifierOrder = {"unsigned", "signed", "type"};
+  verifyFormat("unsigned signed int x;", "signed unsigned int x;", Style);
+
+  Style.QualifierOrder = {"long", "short", "type"};
+  verifyFormat("long short int x;", "short long int x;", Style);
 }
 
 TEST_F(QualifierFixerTest, Ranges) {
