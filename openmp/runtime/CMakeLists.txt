@@ -24,7 +24,7 @@ if(${OPENMP_STANDALONE_BUILD})
   # If adding a new architecture, take a look at cmake/LibompGetArchitecture.cmake
   libomp_get_architecture(LIBOMP_DETECTED_ARCH)
   set(LIBOMP_ARCH ${LIBOMP_DETECTED_ARCH} CACHE STRING
-    "The architecture to build for (x86_64/i386/arm/ppc/ppc64/ppc64le/aarch64/aarch64_32/mic/mips/mips64/riscv64/loongarch64/ve/s390x/sparc/sparcv9/wasm32).")
+    "The architecture to build for (x86_64/i386/arm/ppc/ppc64/ppc64le/aarch64/aarch64_32/mic/mips/mips64/riscv64/loongarch64/ve/s390x/sparc/sparcv9/wasm32/wasm64).")
   # Should assertions be enabled?  They are on by default.
   set(LIBOMP_ENABLE_ASSERTIONS TRUE CACHE BOOL
     "enable assertions?")
@@ -69,8 +69,10 @@ else() # Part of LLVM build
     set(LIBOMP_ARCH sparcv9)
   elseif(LIBOMP_NATIVE_ARCH MATCHES "sparc")
     set(LIBOMP_ARCH sparc)
-  elseif(LIBOMP_NATIVE_ARCH MATCHES "wasm")
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "wasm32")
     set(LIBOMP_ARCH wasm32)
+  elseif(LIBOMP_NATIVE_ARCH MATCHES "wasm64")
+    set(LIBOMP_ARCH wasm64)
   else()
     # last ditch effort
     libomp_get_architecture(LIBOMP_ARCH)
@@ -91,7 +93,7 @@ if(LIBOMP_ARCH STREQUAL "aarch64")
   endif()
 endif()
 
-libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx mic mips mips64 riscv64 loongarch64 ve s390x sparc sparcv9 wasm32)
+libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc ppc64 ppc64le aarch64 aarch64_32 aarch64_a64fx mic mips mips64 riscv64 loongarch64 ve s390x sparc sparcv9 wasm32 wasm64)
 
 set(LIBOMP_LIB_TYPE normal CACHE STRING
   "Performance,Profiling,Stubs library (normal/profile/stubs)")
@@ -186,7 +188,8 @@ set(RISCV64 FALSE)
 set(LOONGARCH64 FALSE)
 set(VE FALSE)
 set(S390X FALSE)
-set(WASM FALSE)
+set(WASM32 FALSE)
+set(WASM64 FALSE)
 set(PPC FALSE)
 set(SPARC FALSE)
 set(SPARCV9 FALSE)
@@ -224,8 +227,10 @@ elseif("${LIBOMP_ARCH}" STREQUAL "ve") # VE architecture
     set(VE TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "s390x") # S390x (Z) architecture
     set(S390X TRUE)
-elseif("${LIBOMP_ARCH}" STREQUAL "wasm32") # WebAssembly architecture
-    set(WASM TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "wasm32") # WebAssembly 32 bit architecture
+    set(WASM32 TRUE)
+elseif("${LIBOMP_ARCH}" STREQUAL "wasm64") # WebAssembly 64 bit architecture
+    set(WASM64 TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "sparc") # SPARC architecture
     set(SPARC TRUE)
 elseif("${LIBOMP_ARCH}" STREQUAL "sparcv9") # SPARC V9 architecture
@@ -334,7 +339,7 @@ endif()
 set(LIBOMP_ENABLE_SHARED TRUE CACHE BOOL
   "Shared library instead of static library?")
 
-if(WASM)
+if(WASM32 OR WASM64)
   libomp_warning_say("The WebAssembly build currently only supports static libraries; forcing LIBOMP_ENABLE_SHARED to false")
   set(LIBOMP_ENABLE_SHARED FALSE)
 endif()

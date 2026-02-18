@@ -59,6 +59,8 @@ function(libomp_get_architecture return_arch)
       #error ARCHITECTURE=s390x
     #elif defined(__wasm32__)
       #error ARCHITECTURE=wasm32
+    #elif defined(__wasm64__)
+      #error ARCHITECTURE=wasm64
     #elif defined(__sparcv9)
       #error ARCHITECTURE=sparcv9
     #elif defined(__sparc)

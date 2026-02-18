@@ -321,7 +321,8 @@ int __kmp_futex_determine_capable() {
 
 #endif // KMP_USE_FUTEX
 
-#if (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_WASM) && (!KMP_ASM_INTRINS)
+#if (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_WASM32 || KMP_ARCH_WASM64) && \
+    (!KMP_ASM_INTRINS)
 /* Only 32-bit "add-exchange" instruction on IA-32 architecture causes us to
    use compare_and_store for these routines */
 
@@ -381,7 +382,7 @@ kmp_uint32 __kmp_test_then_and32(volatile kmp_uint32 *p, kmp_uint32 d) {
   return old_value;
 }
 
-#if KMP_ARCH_X86 || KMP_ARCH_WASM
+#if KMP_ARCH_X86 || KMP_ARCH_WASM32
 kmp_int8 __kmp_test_then_add8(volatile kmp_int8 *p, kmp_int8 d) {
   kmp_int8 old_value, new_value;
 
