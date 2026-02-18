@@ -487,6 +487,10 @@ static_assert(
 static_assert(
     std::is_constructible_v<MutableArrayRef<int>, std::span<int>>,
     "should be able to construct MutableArrayRef from mutable std::span");
+static_assert(
+    std::is_constructible_v<MutableArrayRef<int>, const std::span<int>>,
+    "should be able to construct MutableArrayRef from const std::span with "
+    "mutable elements");
 #endif
 
 } // end anonymous namespace

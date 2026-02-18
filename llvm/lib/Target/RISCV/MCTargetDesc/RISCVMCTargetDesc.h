@@ -39,6 +39,11 @@ std::unique_ptr<MCObjectTargetWriter> createRISCVELFObjectWriter(uint8_t OSABI,
                                                                  bool Is64Bit);
 std::unique_ptr<MCObjectTargetWriter>
 createRISCVMachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype);
+
+namespace RISCV {
+void updateCZceFeatureImplications(MCSubtargetInfo &STI);
+}
+
 } // namespace llvm
 
 // Defines symbolic names for RISC-V registers.
@@ -48,6 +53,7 @@ createRISCVMachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype);
 // Defines symbolic names for RISC-V instructions.
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_MC_HELPER_DECLS
+#define GET_INSTRINFO_OPERAND_ENUM
 #include "RISCVGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

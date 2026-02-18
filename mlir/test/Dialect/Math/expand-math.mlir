@@ -128,6 +128,17 @@ func.func @ctlz_vector(%arg: vector<4xi32>) -> vector<4xi32> {
 
 // -----
 
+// Index type has no fixed bitwidth; expand pass must not expand ctlz on index
+// (would assert in getIntOrFloatBitWidth). Op is left unchanged.
+// CHECK-LABEL: func @ctlz_index
+func.func @ctlz_index(%arg: index) -> index {
+  // CHECK: math.ctlz %{{.*}} : index
+  %res = math.ctlz %arg : index
+  return %res : index
+}
+
+// -----
+
 // CHECK-LABEL:    func @fmaf_func
 // CHECK-SAME:     ([[ARG0:%.+]]: f64, [[ARG1:%.+]]: f64, [[ARG2:%.+]]: f64) -> f64
 func.func @fmaf_func(%a: f64, %b: f64, %c: f64) -> f64 {
@@ -143,18 +154,52 @@ func.func @fmaf_func(%a: f64, %b: f64, %c: f64) -> f64 {
 // CHECK-LABEL:     func @ceilf_func
 // CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
 func.func @ceilf_func(%a: f64) -> f64 {
-  // CHECK-DAG:   [[CST:%.+]] = arith.constant 0.000
-  // CHECK-DAG:   [[CST_0:%.+]] = arith.constant 1.000
+  // CHECK-DAG:   [[C_0:%.+]] = arith.constant 0.000
+  // CHECK-DAG:   [[C_1:%.+]] = arith.constant 1.000
+  // CHECK-DAG:   [[C_4841369599423283200:%.*]] = arith.constant 4841369599423283200
+  // CHECK-DAG:   [[C_9223372036854775807:%.*]] = arith.constant 9223372036854775807
+  // CHECK-NEXT:   [[ARG_BITCAST:%.*]] = arith.bitcast [[ARG0]] : f64 to i64
+  // CHECK-NEXT:   [[ANDI:%.*]] = arith.andi [[ARG_BITCAST]], [[C_9223372036854775807]]
+  // CHECK-NEXT:   [[IS_SPECIAL_VAL:%.*]] = arith.cmpi uge, [[ANDI]], [[C_4841369599423283200]]
   // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
   // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
   // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
   // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[COPYSIGN]]
-  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST]]
+  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[C_1]], [[C_0]]
   // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
-  // CHECK-NEXT:   return [[ADDF]]
+  // CHECK-NEXT:   [[RESULT:%.*]] = arith.select [[IS_SPECIAL_VAL]], [[ARG0]], [[ADDF]]
+  // CHECK-NEXT:   return [[RESULT]]
   // CHECK-FILTER: math.ceil
   %ret = math.ceil %a : f64
   return %ret : f64
+}
+
+// -----
+
+// CHECK-LABEL:     func @ceilf_fnuz_func
+// CHECK-SAME:      ([[ARG0:%.+]]: f8E5M2FNUZ) -> f8E5M2FNUZ
+func.func @ceilf_fnuz_func(%a: f8E5M2FNUZ) -> f8E5M2FNUZ {
+  // CHECK-DAG:   [[C_0:%.+]] = arith.constant 0.000
+  // CHECK-DAG:   [[C_1:%.+]] = arith.constant 1.000
+  // CHECK-DAG:   [[C_NEG_128:%.*]] = arith.constant -128
+  // CHECK-DAG:   [[C_72:%.*]] = arith.constant 72
+  // CHECK-DAG:   [[C_127:%.*]] = arith.constant 127
+  // CHECK-NEXT:   [[ARG_BITCAST:%.*]] = arith.bitcast [[ARG0]] : f8E5M2FNUZ to i8
+  // CHECK-NEXT:   [[ANDI:%.*]] = arith.andi [[ARG_BITCAST]], [[C_127]]
+  // CHECK-NEXT:   [[IS_LARGE:%.+]] = arith.cmpi uge, [[ANDI]], [[C_72]]
+  // CHECK-NEXT:   [[IS_NAN:%.+]] = arith.cmpi eq, [[ARG_BITCAST]], [[C_NEG_128]]
+  // CHECK-NEXT:   [[IS_SPECIAL_VAL:%.+]] = arith.ori [[IS_LARGE]], [[IS_NAN]]
+  // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
+  // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
+  // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
+  // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[COPYSIGN]]
+  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[C_1]], [[C_0]]
+  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
+  // CHECK-NEXT:   [[RESULT:%.*]] = arith.select [[IS_SPECIAL_VAL]], [[ARG0]], [[ADDF]]
+  // CHECK-NEXT:   return [[RESULT]]
+  // CHECK-FILTER: math.ceil
+  %ret = math.ceil %a : f8E5M2FNUZ
+  return %ret : f8E5M2FNUZ
 }
 
 // -----

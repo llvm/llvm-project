@@ -14,11 +14,10 @@ namespace llvm {
 namespace exegesis {
 
 DisassemblerHelper::DisassemblerHelper(const LLVMState &State) : State_(State) {
-  MCTargetOptions MCOptions;
   const auto &TM = State.getTargetMachine();
   const auto &Triple = TM.getTargetTriple();
   AsmInfo_.reset(
-      TM.getTarget().createMCAsmInfo(State_.getRegInfo(), Triple, MCOptions));
+      TM.getTarget().createMCAsmInfo(State_.getRegInfo(), Triple, MCOptions_));
   InstPrinter_.reset(TM.getTarget().createMCInstPrinter(
       Triple, 0 /*default variant*/, *AsmInfo_, State_.getInstrInfo(),
       State_.getRegInfo()));

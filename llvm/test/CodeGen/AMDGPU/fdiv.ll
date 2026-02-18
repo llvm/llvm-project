@@ -8044,8 +8044,8 @@ define float @v_fdiv_f32_daz_25ulp_nodenorm_y(float %x, float nofpclass(sub) %y)
   ret float %div
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math-f32"="ieee,ieee" }
-attributes #2 = { "denormal-fp-math-f32"="dynamic,dynamic" }
+attributes #0 = { denormal_fpenv(float: preservesign) }
+attributes #1 = { denormal_fpenv(float: ieee|ieee) }
+attributes #2 = { denormal_fpenv(float: dynamic|dynamic) }
 
 !0 = !{float 2.500000e+00}

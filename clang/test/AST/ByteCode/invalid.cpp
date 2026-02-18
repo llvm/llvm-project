@@ -57,6 +57,12 @@ namespace Casts {
 
   /// Just make sure this doesn't crash.
   float PR9558 = reinterpret_cast<const float&>("asd");
+
+  /// Ensure we don't crash when trying to dereference a cast pointer where the
+  /// target type is larger than the source allocation (GH#179015).
+  void GH179015() {
+    *(int **)""; // both-warning {{expression result unused}}
+  }
 }
 
 
@@ -136,4 +142,49 @@ namespace RetVoidInInvalidFunc {
 namespace BitCastWithErrors {
   template<class T> int f(); // both-note {{candidate template ignored}}
   static union { char *x = f(); }; // both-error {{no matching function for call to 'f'}}
+}
+
+namespace NullRecord {
+  struct S1; // both-note {{forward declaration}}
+  struct S2 {
+    S1 s[2]; // both-error {{field has incomplete type 'S1'}}
+  };
+  S2 s = S2();
+}
+
+namespace NamedLoops {
+  constexpr int foo() {
+  bar: // both-note {{previous definition is here}} \
+       // both-warning {{use of this statement in a constexpr function is a C++23 extension}}
+    return 0;
+
+  bar: // both-error {{redefinition of label 'bar'}}
+    do {
+      break bar; // both-error {{named 'break' is only supported in C2y}}
+    } while (0);
+  }
+}
+
+constexpr int invalidUnaryOrTypeTrait() {
+  return __builtin_vectorelements * 10; // both-error {{indirection requires pointer operand}}
+}
+
+static_assert(invalidUnaryOrTypeTrait() == 11, ""); // both-error {{not an integral constant expression}}
+
+constexpr int invalidUnaryOrTypeTrait2() {
+  return alignof * 10; // both-error {{indirection requires pointer operand}} \
+                       // both-warning {{'alignof' applied to an expression is a GNU extension}}
+}
+
+/// Pointer::toRValue() of a function type.
+void foo() { *(void (*)()) ""; } // both-warning {{expression result unused}}
+
+namespace InvalidCallExpr {
+  constexpr bool foo() {
+    struct A {};
+    A a;
+    a.~A(__builtin_popcountg == 0, ""); // both-error {{builtin functions must be directly called}}
+
+    return true;
+  }
 }

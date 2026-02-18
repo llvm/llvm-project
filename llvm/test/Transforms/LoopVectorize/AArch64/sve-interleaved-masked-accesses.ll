@@ -76,44 +76,42 @@ define dso_local void @masked_strided1(ptr noalias nocapture readonly %p, ptr no
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 4
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP4:%.*]] = sub i32 1024, [[TMP3]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP2]], 64
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 [[TMP4]], i32 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = sub i32 1024, [[TMP1]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP0]], 64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 1024)
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP1]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.body:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP7]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP8]], <vscale x 16 x i1> zeroinitializer
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = shl i32 [[INDEX]], 1
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = sext i32 [[TMP10]] to i64
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP11]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP9]], <vscale x 16 x i1> [[TMP9]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8.p0(ptr align 1 [[TMP12]], <vscale x 32 x i1> [[INTERLEAVED_MASK]], <vscale x 32 x i8> poison)
+; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP5]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> zeroinitializer
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = shl i32 [[INDEX]], 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP8]] to i64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP9]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP7]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8.p0(ptr align 1 [[TMP10]], <vscale x 32 x i1> [[INTERLEAVED_MASK]], <vscale x 32 x i8> poison)
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[WIDE_MASKED_VEC]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP13]], <vscale x 16 x i8> [[TMP14]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP10]] to i64
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP16]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP18:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP15]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> [[TMP15]], <vscale x 16 x i8> [[TMP18]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP9]], <vscale x 16 x i1> [[TMP9]])
-; PREDICATED_TAIL_FOLDING-NEXT:    call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVED_VEC]], ptr align 1 [[TMP17]], <vscale x 32 x i1> [[INTERLEAVED_MASK3]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP13:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP11]], <vscale x 16 x i8> [[TMP12]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = sext i32 [[TMP8]] to i64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP14]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP13]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> [[TMP13]], <vscale x 16 x i8> [[TMP16]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP7]])
+; PREDICATED_TAIL_FOLDING-NEXT:    call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVED_VEC]], ptr align 1 [[TMP15]], <vscale x 32 x i1> [[INTERLEAVED_MASK3]])
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[TMP1]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 [[TMP6]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP19:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 [[TMP4]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP19]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP17]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       middle.block:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_END:%.*]]
 ; PREDICATED_TAIL_FOLDING:       for.end:
@@ -214,37 +212,35 @@ define dso_local void @masked_strided2(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 4
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP4:%.*]] = sub i32 1024, [[TMP3]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP2]], 64
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 [[TMP4]], i32 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = sub i32 1024, [[TMP1]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP0]], 64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 1024)
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP1]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.body:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP7]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = shl nuw nsw <vscale x 16 x i32> [[VEC_IND]], splat (i32 1)
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = zext nneg <vscale x 16 x i32> [[TMP8]] to <vscale x 16 x i64>
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP9]]
-; PREDICATED_TAIL_FOLDING-NEXT:    call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> splat (i8 1), <vscale x 16 x ptr> align 1 [[TMP10]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP12:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP11]], <vscale x 16 x i1> zeroinitializer
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP13:%.*]] = or disjoint <vscale x 16 x i32> [[TMP8]], splat (i32 1)
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = zext nneg <vscale x 16 x i32> [[TMP13]] to <vscale x 16 x i64>
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP14]]
-; PREDICATED_TAIL_FOLDING-NEXT:    call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> splat (i8 2), <vscale x 16 x ptr> align 1 [[TMP15]], <vscale x 16 x i1> [[TMP12]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP5]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = shl nuw nsw <vscale x 16 x i32> [[VEC_IND]], splat (i32 1)
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = zext nneg <vscale x 16 x i32> [[TMP6]] to <vscale x 16 x i64>
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP7]]
+; PREDICATED_TAIL_FOLDING-NEXT:    call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> splat (i8 1), <vscale x 16 x ptr> align 1 [[TMP8]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP9]], <vscale x 16 x i1> zeroinitializer
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = or disjoint <vscale x 16 x i32> [[TMP6]], splat (i32 1)
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP12:%.*]] = zext nneg <vscale x 16 x i32> [[TMP11]] to <vscale x 16 x i64>
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP12]]
+; PREDICATED_TAIL_FOLDING-NEXT:    call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> splat (i8 2), <vscale x 16 x ptr> align 1 [[TMP13]], <vscale x 16 x i1> [[TMP10]])
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[TMP1]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 [[TMP6]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 [[TMP4]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP16]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP14]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       middle.block:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_END:%.*]]
 ; PREDICATED_TAIL_FOLDING:       for.end:
@@ -345,41 +341,39 @@ define dso_local void @masked_strided3(ptr noalias nocapture readnone %p, ptr no
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD1]] to i32
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 4
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP4:%.*]] = sub i32 1024, [[TMP3]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP2]], 64
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 [[TMP4]], i32 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = sub i32 1024, [[TMP1]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP0]], 64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 1024)
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV3]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP1]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT3]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.body:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP7]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = shl nuw nsw <vscale x 16 x i32> [[VEC_IND]], splat (i32 1)
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP9]], <vscale x 16 x i1> zeroinitializer
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = zext nneg <vscale x 16 x i32> [[TMP8]] to <vscale x 16 x i64>
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP11]]
-; PREDICATED_TAIL_FOLDING-NEXT:    call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> splat (i8 1), <vscale x 16 x ptr> align 1 [[TMP12]], <vscale x 16 x i1> [[TMP10]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP13:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP13]], <vscale x 16 x i1> zeroinitializer
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = or disjoint <vscale x 16 x i32> [[TMP8]], splat (i32 1)
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = zext nneg <vscale x 16 x i32> [[TMP15]] to <vscale x 16 x i64>
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP16]]
-; PREDICATED_TAIL_FOLDING-NEXT:    call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> splat (i8 2), <vscale x 16 x ptr> align 1 [[TMP17]], <vscale x 16 x i1> [[TMP14]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP5]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = shl nuw nsw <vscale x 16 x i32> [[VEC_IND]], splat (i32 1)
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> zeroinitializer
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = zext nneg <vscale x 16 x i32> [[TMP6]] to <vscale x 16 x i64>
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP9]]
+; PREDICATED_TAIL_FOLDING-NEXT:    call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> splat (i8 1), <vscale x 16 x ptr> align 1 [[TMP10]], <vscale x 16 x i1> [[TMP8]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP12:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP11]], <vscale x 16 x i1> zeroinitializer
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP13:%.*]] = or disjoint <vscale x 16 x i32> [[TMP6]], splat (i32 1)
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = zext nneg <vscale x 16 x i32> [[TMP13]] to <vscale x 16 x i64>
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP14]]
+; PREDICATED_TAIL_FOLDING-NEXT:    call void @llvm.masked.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> splat (i8 2), <vscale x 16 x ptr> align 1 [[TMP15]], <vscale x 16 x i1> [[TMP12]])
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[TMP1]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 [[TMP6]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP18:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 [[TMP4]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT4]]
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP18]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP4:![0-9]+]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP16]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP4:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       middle.block:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_END:%.*]]
 ; PREDICATED_TAIL_FOLDING:       for.end:
@@ -499,48 +493,46 @@ define dso_local void @masked_strided_factor4(ptr noalias nocapture readonly %p,
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[CONV:%.*]] = zext i8 [[GUARD]] to i32
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 4
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 4
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP4:%.*]] = sub i32 1024, [[TMP3]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP2]], 64
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 [[TMP4]], i32 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP2:%.*]] = sub i32 1024, [[TMP1]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP0]], 64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 [[TMP2]], i32 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 1024)
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP1]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PREDICATED_TAIL_FOLDING:       vector.body:
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], [[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP7]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP8]], <vscale x 16 x i1> zeroinitializer
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = shl i32 [[INDEX]], 2
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = sext i32 [[TMP10]] to i64
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP11]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP9]], <vscale x 16 x i1> [[TMP9]], <vscale x 16 x i1> [[TMP9]], <vscale x 16 x i1> [[TMP9]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8.p0(ptr align 1 [[TMP12]], <vscale x 64 x i1> [[INTERLEAVED_MASK]], <vscale x 64 x i8> poison)
+; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP5]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP6:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP7:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> zeroinitializer
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP8:%.*]] = shl i32 [[INDEX]], 2
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP8]] to i64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP9]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP7]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8.p0(ptr align 1 [[TMP10]], <vscale x 64 x i1> [[INTERLEAVED_MASK]], <vscale x 64 x i8> poison)
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave4.nxv64i8(<vscale x 64 x i8> [[WIDE_MASKED_VEC]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 2
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 3
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 2
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP14:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 3
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP15:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP11]], <vscale x 16 x i8> [[TMP12]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP16:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP15]]
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP17:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP13]], <vscale x 16 x i8> [[TMP14]])
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP18:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP17]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP19:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP15]], <vscale x 16 x i8> [[TMP16]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP20:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP19]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP21:%.*]] = sext i32 [[TMP10]] to i64
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP21]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.vector.interleave4.nxv64i8(<vscale x 16 x i8> [[TMP17]], <vscale x 16 x i8> [[TMP18]], <vscale x 16 x i8> [[TMP19]], <vscale x 16 x i8> [[TMP20]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP9]], <vscale x 16 x i1> [[TMP9]], <vscale x 16 x i1> [[TMP9]], <vscale x 16 x i1> [[TMP9]])
-; PREDICATED_TAIL_FOLDING-NEXT:    call void @llvm.masked.store.nxv64i8.p0(<vscale x 64 x i8> [[INTERLEAVED_VEC]], ptr align 1 [[TMP22]], <vscale x 64 x i1> [[INTERLEAVED_MASK3]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP19:%.*]] = sext i32 [[TMP8]] to i64
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP19]]
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.vector.interleave4.nxv64i8(<vscale x 16 x i8> [[TMP15]], <vscale x 16 x i8> [[TMP16]], <vscale x 16 x i8> [[TMP17]], <vscale x 16 x i8> [[TMP18]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP7]])
+; PREDICATED_TAIL_FOLDING-NEXT:    call void @llvm.masked.store.nxv64i8.p0(<vscale x 64 x i8> [[INTERLEAVED_VEC]], ptr align 1 [[TMP20]], <vscale x 64 x i1> [[INTERLEAVED_MASK3]])
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[TMP1]]
-; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 [[TMP6]])
-; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP23:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
+; PREDICATED_TAIL_FOLDING-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 [[TMP4]])
+; PREDICATED_TAIL_FOLDING-NEXT:    [[TMP21:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; PREDICATED_TAIL_FOLDING-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP23]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP5:![0-9]+]]
+; PREDICATED_TAIL_FOLDING-NEXT:    br i1 [[TMP21]], label [[VECTOR_BODY]], label [[MIDDLE_BLOCK:%.*]], !llvm.loop [[LOOP5:![0-9]+]]
 ; PREDICATED_TAIL_FOLDING:       middle.block:
 ; PREDICATED_TAIL_FOLDING-NEXT:    br label [[FOR_END:%.*]]
 ; PREDICATED_TAIL_FOLDING:       for.end:

@@ -221,7 +221,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // Phi node's operands may not have been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewR = VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi");
+      NewR =
+          VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi", *Phi);
       NewR->setUnderlyingValue(Phi);
       if (isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent()))) {
         // Header phis need to be fixed after the VPBB for the latch has been
@@ -457,8 +458,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                   VPBasicBlock *LatchVPBB, Type *IdxTy,
                                   DebugLoc DL) {
-  Value *StartIdx = ConstantInt::get(IdxTy, 0);
-  auto *StartV = Plan.getOrAddLiveIn(StartIdx);
+  auto *StartV = Plan.getConstantInt(IdxTy, 0);
 
   // Add a VPCanonicalIVPHIRecipe starting at 0 to the header.
   auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DL);
@@ -476,9 +476,8 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
   // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
   // Initially the induction increment is guaranteed to not wrap, but that may
   // change later, e.g. when tail-folding, when the flags need to be dropped.
-  auto *CanonicalIVIncrement = Builder.createOverflowingOp(
-      Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()}, {true, false}, DL,
-      "index.next");
+  auto *CanonicalIVIncrement = Builder.createAdd(
+      CanonicalIVPHI, &Plan.getVFxUF(), DL, "index.next", {true, false});
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
   // Add the BranchOnCount VPInstruction to the latch.
@@ -624,9 +623,37 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
 
-  if (IndDesc.getKind() == InductionDescriptor::IK_PtrInduction)
-    return new VPWidenPointerInductionRecipe(Phi, Start, Step, &Plan.getVFxUF(),
-                                             IndDesc, DL);
+  VPValue *BackedgeVal = PhiR->getOperand(1);
+  // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
+  // recipes. optimizeInductionExitUsers will later compute the proper
+  // DerivedIV.
+  auto ReplaceExtractsWithExitingIVValue = [&](VPHeaderPHIRecipe *WideIV) {
+    for (VPUser *U : to_vector(BackedgeVal->users())) {
+      if (!match(U, m_ExtractLastPart(m_VPValue())))
+        continue;
+      auto *ExtractLastPart = cast<VPInstruction>(U);
+      VPUser *ExtractLastPartUser = ExtractLastPart->getSingleUser();
+      assert(ExtractLastPartUser && "must have a single user");
+      if (!match(ExtractLastPartUser, m_ExtractLastLane(m_VPValue())))
+        continue;
+      auto *ExtractLastLane = cast<VPInstruction>(ExtractLastPartUser);
+      assert(is_contained(ExtractLastLane->getParent()->successors(),
+                          Plan.getScalarPreheader()) &&
+             "last lane must be extracted in the middle block");
+      VPBuilder Builder(ExtractLastLane);
+      ExtractLastLane->replaceAllUsesWith(Builder.createNaryOp(
+          VPInstruction::ExitingIVValue, {WideIV, BackedgeVal}));
+      ExtractLastLane->eraseFromParent();
+      ExtractLastPart->eraseFromParent();
+    }
+  };
+
+  if (IndDesc.getKind() == InductionDescriptor::IK_PtrInduction) {
+    auto *WideIV = new VPWidenPointerInductionRecipe(
+        Phi, Start, Step, &Plan.getVFxUF(), IndDesc, DL);
+    ReplaceExtractsWithExitingIVValue(WideIV);
+    return WideIV;
+  }
 
   assert((IndDesc.getKind() == InductionDescriptor::IK_IntInduction ||
           IndDesc.getKind() == InductionDescriptor::IK_FpInduction) &&
@@ -635,17 +662,19 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // Update wide induction increments to use the same step as the corresponding
   // wide induction. This enables detecting induction increments directly in
   // VPlan and removes redundant splats.
-  using namespace llvm::VPlanPatternMatch;
-  if (match(PhiR->getOperand(1), m_Add(m_Specific(PhiR), m_VPValue())))
-    PhiR->getOperand(1)->getDefiningRecipe()->setOperand(1, Step);
+  if (match(BackedgeVal, m_Add(m_Specific(PhiR), m_VPValue())))
+    BackedgeVal->getDefiningRecipe()->setOperand(1, Step);
 
   // It is always safe to copy over the NoWrap and FastMath flags. In
   // particular, when folding tail by masking, the masked-off lanes are never
   // used, so it is safe.
   VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
 
-  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                           IndDesc, Flags, DL);
+  auto *WideIV = new VPWidenIntOrFpInductionRecipe(
+      Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
+
+  ReplaceExtractsWithExitingIVValue(WideIV);
+  return WideIV;
 }
 
 void VPlanTransforms::createHeaderPhiRecipes(
@@ -713,8 +742,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
 }
 
 void VPlanTransforms::createInLoopReductionRecipes(
-    VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
-    const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+    VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
     ElementCount MinVF) {
   VPTypeAnalysis TypeInfo(Plan);
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
@@ -813,11 +841,10 @@ void VPlanTransforms::createInLoopReductionRecipes(
                  match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
         Type *PhiTy = TypeInfo.inferScalarType(PhiR);
         auto *Zero = Plan.getConstantInt(PhiTy, 0);
-        auto *Sub = new VPInstruction(Instruction::Sub,
-                                      {Zero, CurrentLink->getOperand(1)}, {},
-                                      {}, CurrentLinkI->getDebugLoc());
+        VPBuilder Builder(LinkVPBB, CurrentLink->getIterator());
+        auto *Sub = Builder.createSub(Zero, CurrentLink->getOperand(1),
+                                      CurrentLinkI->getDebugLoc());
         Sub->setUnderlyingValue(CurrentLinkI);
-        LinkVPBB->insert(Sub, CurrentLink->getIterator());
         VecOp = Sub;
       } else {
         // Index of the first operand which holds a non-mask vector operand.
@@ -837,17 +864,18 @@ void VPlanTransforms::createInLoopReductionRecipes(
                 ? IndexOfFirstOperand + 1
                 : IndexOfFirstOperand;
         VecOp = CurrentLink->getOperand(VecOpId);
-        assert(VecOp != PreviousLink &&
-               CurrentLink->getOperand(CurrentLink->getNumOperands() - 1 -
-                                       (VecOpId - IndexOfFirstOperand)) ==
-                   PreviousLink &&
-               "PreviousLink must be the operand other than VecOp");
+        assert(
+            VecOp != PreviousLink &&
+            CurrentLink->getOperand(
+                cast<VPInstruction>(CurrentLink)->getNumOperandsWithoutMask() -
+                1 - (VecOpId - IndexOfFirstOperand)) == PreviousLink &&
+            "PreviousLink must be the operand other than VecOp");
       }
 
-      // Get block mask from BlockMaskCache if the block needs predication.
+      // Get block mask from CurrentLink, if it needs predication.
       VPValue *CondOp = nullptr;
       if (BlocksNeedingPredication.contains(CurrentLinkI->getParent()))
-        CondOp = BlockMaskCache.lookup(LinkVPBB);
+        CondOp = cast<VPInstruction>(CurrentLink)->getMask();
 
       assert(PhiR->getVFScaleFactor() == 1 &&
              "inloop reductions must be unscaled");
@@ -881,33 +909,27 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
   VPBlockBase *HeaderVPB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
 
-  // Disconnect all early exits from the loop leaving it with a single exit from
-  // the latch. Early exits that are countable are left for a scalar epilog. The
-  // condition of uncountable early exits (currently at most one is supported)
-  // is fused into the latch exit, and used to branch from middle block to the
-  // early exit destination.
-  [[maybe_unused]] bool HandledUncountableEarlyExit = false;
+  if (HasUncountableEarlyExit) {
+    handleUncountableEarlyExits(Plan, cast<VPBasicBlock>(HeaderVPB), LatchVPBB,
+                                MiddleVPBB);
+    return;
+  }
+
+  // Disconnect countable early exits from the loop, leaving it with a single
+  // exit from the latch. Countable early exits are left for a scalar epilog.
   for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
     for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
       if (Pred == MiddleVPBB)
         continue;
-      if (HasUncountableEarlyExit) {
-        assert(!HandledUncountableEarlyExit &&
-               "can handle exactly one uncountable early exit");
-        handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
-                                   cast<VPBasicBlock>(HeaderVPB), LatchVPBB);
-        HandledUncountableEarlyExit = true;
-      } else {
-        for (VPRecipeBase &R : EB->phis())
-          cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
-      }
-      cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
+
+      // Remove phi operands for the early exiting block.
+      for (VPRecipeBase &R : EB->phis())
+        cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
+      auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
+      EarlyExitingVPBB->getTerminator()->eraseFromParent();
       VPBlockUtils::disconnectBlocks(Pred, EB);
     }
   }
-
-  assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
-         "missed an uncountable exit that must be handled");
 }
 
 void VPlanTransforms::addMiddleCheck(VPlan &Plan,
@@ -1061,9 +1083,8 @@ void VPlanTransforms::addMinimumIterationCheck(
       // Get the maximum unsigned value for the type.
       VPValue *MaxUIntTripCount =
           Plan.getConstantInt(cast<IntegerType>(TripCountTy)->getMask());
-      VPValue *DistanceToMax = Builder.createNaryOp(
-          Instruction::Sub, {MaxUIntTripCount, TripCountVPV},
-          DebugLoc::getUnknown());
+      VPValue *DistanceToMax =
+          Builder.createSub(MaxUIntTripCount, TripCountVPV);
 
       // Don't execute the vector loop if (UMax - n) < (VF * UF).
       // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
@@ -1111,9 +1132,8 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
   VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
       TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
-  VPValue *Count = Builder.createNaryOp(
-      Instruction::Sub, {TC, Plan.getOrAddLiveIn(VectorTripCount)},
-      DebugLoc::getUnknown(), "n.vec.remaining");
+  VPValue *Count = Builder.createSub(TC, Plan.getOrAddLiveIn(VectorTripCount),
+                                     DebugLoc::getUnknown(), "n.vec.remaining");
 
   // Generate code to check if the loop's trip count is less than VF * UF of
   // the vector epilogue loop.
@@ -1262,8 +1282,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   auto *IsLatchExitTaken = LatchBuilder.createICmp(
       CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
       LatchExitingBranch->getOperand(1));
-  auto *AnyExitTaken = LatchBuilder.createNaryOp(
-      Instruction::Or, {AnyNaNLane, IsLatchExitTaken});
+  auto *AnyExitTaken = LatchBuilder.createOr(AnyNaNLane, IsLatchExitTaken);
   LatchBuilder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
 
@@ -1338,11 +1357,34 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
                      PhiR->getRecurrenceKind()))
       continue;
 
-    // Find the condition for the select.
+    // Find the condition for the select/blend.
     auto *SelectR = cast<VPSingleDefRecipe>(&PhiR->getBackedgeRecipe());
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
+
+    // If we're matching a blend rather than a select, there should be one
+    // incoming value which is the data, then all other incoming values should
+    // be the phi.
+    auto MatchBlend = [&](VPRecipeBase *R) {
+      auto *Blend = dyn_cast<VPBlendRecipe>(R);
+      if (!Blend)
+        return false;
+      assert(!Blend->isNormalized() && "must run before blend normalizaion");
+      unsigned NumIncomingDataValues = 0;
+      for (unsigned I = 0; I < Blend->getNumIncomingValues(); ++I) {
+        VPValue *Incoming = Blend->getIncomingValue(I);
+        if (Incoming != PhiR) {
+          ++NumIncomingDataValues;
+          Cond = Blend->getMask(I);
+          Op1 = Incoming;
+          Op2 = PhiR;
+        }
+      }
+      return NumIncomingDataValues == 1;
+    };
+
     if (!match(SelectR,
-               m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))))
+               m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))) &&
+        !MatchBlend(SelectR))
       return false;
 
     // Add mask phi.
@@ -1469,8 +1511,20 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     }
 
     auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
-    if (!FindIVPhiR || !RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+    if (!FindIVPhiR || !RecurrenceDescriptor::isFindIVRecurrenceKind(
                            FindIVPhiR->getRecurrenceKind()))
+      return false;
+
+    // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
+    // on its ComputeReductionResult. SMax/UMax indicates FindLast.
+    VPInstruction *FindIVResult =
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+            FindIVPhiR->getBackedgeValue());
+    assert(FindIVResult &&
+           "must be able to retrieve the FindIVResult VPInstruction");
+    RecurKind FindIVMinMaxKind = FindIVResult->getRecurKind();
+    if (FindIVMinMaxKind != RecurKind::SMax &&
+        FindIVMinMaxKind != RecurKind::UMax)
       return false;
 
     // TODO: Support cases where IVOp is the IV increment.

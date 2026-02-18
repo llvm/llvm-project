@@ -103,9 +103,10 @@
   ; GCN-NEXT:    ; implicit-def: $vgpr197
   ; GCN-NEXT:    ; iglp_opt mask(0x00000002)
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
+  ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    ds_write_b128 v230, v[64:67]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b128 v230, v[68:71] offset:1024
   ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
   ; GCN-NEXT:    buffer_load_dwordx4 v[160:163], v226, s[8:11], 0 offen offset:64 sc0 sc1
@@ -150,10 +151,11 @@
   ; GCN-NEXT:    ;;#ASMEND
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[80:95], v[64:65], v[152:153], 0
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
+  ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    ds_write_b128 v230, v[160:163]
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[80:95], v[66:67], v[154:155], v[80:95]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b128 v230, v[164:167] offset:1024
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[64:79], v[168:169], v[152:153], 0
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[64:79], v[170:171], v[154:155], v[64:79]
@@ -199,9 +201,10 @@
   ; GCN-NEXT:    s_waitcnt vmcnt(8)
   ; GCN-NEXT:    ;;#ASMEND
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
+  ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    ds_write_b128 v230, v[152:155]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b128 v230, v[160:163] offset:1024
   ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
   ; GCN-NEXT:    buffer_load_dwordx4 v[152:155], v226, s[8:11], 0 offen offset:192 sc0 sc1
@@ -280,9 +283,10 @@
   ; GCN-NEXT:    s_waitcnt vmcnt(8)
   ; GCN-NEXT:    ;;#ASMEND
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
+  ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    ds_write_b128 v230, v[152:155]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b128 v230, v[226:229] offset:1024
   ; GCN-NEXT:    ;;#ASMSTART
   ; GCN-NEXT:    s_waitcnt vmcnt(8)
@@ -322,15 +326,16 @@
   ; GCN-NEXT:    s_waitcnt vmcnt(8)
   ; GCN-NEXT:    ;;#ASMEND
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
+  ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v199, v[238:239]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v200, v[240:241]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v201, v[242:243]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v202, v[244:245]
   ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
   ; GCN-NEXT:    buffer_load_dwordx2 v[192:193], v247, s[0:3], 0 offen sc0 sc1
@@ -649,15 +654,16 @@
   ; GCN-NEXT:    s_waitcnt vmcnt(8)
   ; GCN-NEXT:    ;;#ASMEND
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
+  ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v199, v[188:189]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v200, v[190:191]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v201, v[192:193]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v202, v[194:195]
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[32:47], v[146:147], v[126:127], v[32:47]
   ; GCN-NEXT:    v_exp_f32_e32 v101, v125
@@ -792,16 +798,17 @@
   ; GCN-NEXT:    s_waitcnt vmcnt(8)
   ; GCN-NEXT:    ;;#ASMEND
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
+  ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v199, v[126:127]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v200, v[150:151]
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[130:131], v[144:145], v[0:15]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v201, v[152:153]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v202, v[154:155]
   ; GCN-NEXT:    v_fma_f32 v127, s4, v84, -v128
   ; GCN-NEXT:    v_exp_f32_e32 v84, v129
@@ -942,18 +949,19 @@
   ; GCN-NEXT:    s_waitcnt vmcnt(8)
   ; GCN-NEXT:    ;;#ASMEND
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
+  ; GCN-NEXT:    s_waitcnt vmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v199, v[150:151]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v200, v[152:153]
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[132:133], v[142:143], v[0:15]
   ; GCN-NEXT:    v_cvt_f16_f32_e32 v132, v125
   ; GCN-NEXT:    v_exp_f32_e32 v130, v158
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v201, v[154:155]
   ; GCN-NEXT:    buffer_wbl2 sc0 sc1
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
   ; GCN-NEXT:    ds_write_b64 v202, v[156:157]
   ; GCN-NEXT:    ;;#ASMSTART
   ; GCN-NEXT:    s_waitcnt vmcnt(8)

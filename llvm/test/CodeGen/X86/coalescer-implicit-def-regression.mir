@@ -11,7 +11,7 @@ body:             |
 
     %0:gr32 = MOV32r0 implicit-def dead $eflags
     %1:gr8 = COPY %0.sub_8bit
-    %2:gr64 = SUBREG_TO_REG 0, killed %0, %subreg.sub_32bit
+    %2:gr64 = SUBREG_TO_REG killed %0, %subreg.sub_32bit
     JCC_1 %bb.2, 5, implicit killed undef $eflags
 
   bb.1:

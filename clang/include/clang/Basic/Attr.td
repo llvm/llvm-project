@@ -476,7 +476,7 @@ def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
 def TargetM68k : TargetArch<["m68k"]>;
-def TargetRISCV : TargetArch<["riscv32", "riscv64"]>;
+def TargetRISCV : TargetArch<["riscv32", "riscv64", "riscv32be", "riscv64be"]>;
 def TargetX86 : TargetArch<["x86"]>;
 def TargetX86_64 : TargetArch<["x86_64"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
@@ -852,7 +852,7 @@ def AbiTag : Attr {
 def AddressSpace : TypeAttr {
   let Spellings = [Clang<"address_space">];
   let Args = [IntArgument<"AddressSpace">];
-  let Documentation = [Undocumented];
+  let Documentation = [AddressSpaceDocs];
 }
 
 def Alias : Attr {
@@ -2369,6 +2369,13 @@ def NoInline : DeclOrStmtAttr {
   let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
   let SimpleHandler = 1;
+}
+
+def NoOutline : DeclOrStmtAttr {
+  let Spellings = [Clang<"no_outline">];
+  let Subjects = SubjectList<[Function, ObjCMethod, Block], ErrorDiag>;
+  let Documentation = [NoOutlineDocs];
+  let SimpleHandler = true;
 }
 
 def NoMips16 : InheritableAttr, TargetSpecificAttr<TargetMips32> {

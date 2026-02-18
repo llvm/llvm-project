@@ -890,11 +890,11 @@ enum SMEMatrixType {
 #undef TSFLAG_INSTR_FLAGS
 #undef TSFLAG_SME_MATRIX_TYPE
 
-int getSVEPseudoMap(uint16_t Opcode);
-int getSVERevInstr(uint16_t Opcode);
-int getSVENonRevInstr(uint16_t Opcode);
+int32_t getSVEPseudoMap(uint32_t Opcode);
+int32_t getSVERevInstr(uint32_t Opcode);
+int32_t getSVENonRevInstr(uint32_t Opcode);
 
-int getSMEPseudoMap(uint16_t Opcode);
+int32_t getSMEPseudoMap(uint32_t Opcode);
 }
 
 } // end namespace llvm

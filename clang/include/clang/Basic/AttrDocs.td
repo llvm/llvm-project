@@ -193,6 +193,53 @@ TLS models are mutually exclusive.
   }];
 }
 
+def AddressSpaceDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "address_space";
+  let Content = [{
+.. Note:: This attribute is mainly intended to be used by target headers
+  provided by the toolchain. End users should prefer the documented, named
+  address space annotations for their platform, such as the
+  `OpenCL address spaces`_, ``__global__``, ``__local__``, or something else.
+
+The ``address_space`` attribute functions as a type qualifier that allows the
+programmer to specify the address space for a pointer or reference type.
+Qualified pointer types are considered distinct types for the purposes of
+overload resolution. The attribute takes a single, non-negative integer
+constant expression identifying the address space. For example:
+
+.. code-block:: c
+
+  int * __attribute__((address_space(1))) ptr;
+
+  void foo(__attribute__((address_space(2))) float *buf);
+
+
+Only one address space qualifier may be applied to a given pointer or reference
+type. Where address spaces are allowed (e.g., variables, parameters, return
+types) and what values are valid depends on the target and language mode.
+
+The meaning of each value is defined by the target; multiple address spaces are
+used in environments such as OpenCL, CUDA, HIP, and other GPU programming
+models to distinguish global, local, constant, and private memory. See for
+example the address spaces defined in the `NVPTX Usage Guide`_ and the
+`AMDGPU Usage Guide`_.
+
+.. _`NVPTX Usage Guide`: https://llvm.org/docs/NVPTXUsage.html#address-spaces
+.. _`AMDGPU Usage Guide`: https://llvm.org/docs/AMDGPUUsage.html#address-spaces
+
+Address spaces may partially overlap or be entirely distinct. The compiler may
+reject attempts to convert between distinct, incompatible address spaces.
+Pointer width may vary between different address spaces, so some explicit casts
+may truncate.
+
+For more information, refer to `ISO TR18037`_, which covers embedded C language
+extensions. Section 5 covers named address spaces.
+
+.. _`ISO TR18037`: https://standards.iso.org/ittf/PubliclyAvailableStandards/c051126_ISO_IEC_TR_18037_2008.zip
+  }];
+}
+
 def DLLExportDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -859,6 +906,18 @@ with ``__noinline__`` defined as a macro as ``__attribute__((noinline))``.
     return r;
   }
 
+  }];
+}
+
+def NoOutlineDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+This function attribute suppresses outlining from the annotated function.
+
+Outlining is the process where common parts of separate functions are extracted
+into a separate function (or assembly snippet), and calls to that function or
+snippet are inserted in the original functions. In this way, it can be seen as
+the opposite of inlining. It can help to reduce code size.
   }];
 }
 
@@ -6698,6 +6757,13 @@ Not all targets support this attribute:
   with an indirect call. The function pointer is initialized by a constructor
   that calls the resolver.
 - Baremetal target supports it on AVR.
+- AIX/XCOFF supports it via a compiler-only solution. An ifunc appears as a
+  regular function (has an entry point ``.foo[PR]`` and a function descriptor
+  ``foo[DS]``). The entry point is a stub that branches to the function address
+  in the descriptor, and the descriptor is initialized via a constructor
+  function (``__init_ifuncs``) that is linked into every shared object and
+  executable. ``__init_ifuncs`` calls the resolver of each ifunc and stores the
+  result in the corresponding descriptor.
 - Other targets currently do not support this attribute.
   }];
 }

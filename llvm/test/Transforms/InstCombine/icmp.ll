@@ -3665,10 +3665,9 @@ define i1 @icmp_neg_cst_slt(i32 %a) {
 define i1 @icmp_and_or_lshr(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @icmp_and_or_lshr(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHF1:%.*]] = shl nuw i32 1, [[Y]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[SHF1]], 1
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[X]], [[OR2]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[AND3]], 0
+; CHECK-NEXT:    [[SHF:%.*]] = lshr i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHF]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[OR]] to i1
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %shf = lshr i32 %x, %y
@@ -3681,10 +3680,9 @@ define i1 @icmp_and_or_lshr(i32 %x, i32 %y) {
 define i1 @icmp_and_or_lshr_samesign(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @icmp_and_or_lshr_samesign(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHF1:%.*]] = shl nuw i32 1, [[Y]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[SHF1]], 1
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[X]], [[OR2]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[AND3]], 0
+; CHECK-NEXT:    [[SHF:%.*]] = lshr i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHF]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[OR]] to i1
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %shf = lshr i32 %x, %y
@@ -5217,8 +5215,7 @@ define <2 x i1> @zext_bool_and_eq0_commute(<2 x i1> %x, <2 x i8> %p) {
 define i1 @zext_bool_and_ne0(i1 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @zext_bool_and_ne0(
 ; CHECK-SAME: i1 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y]], 1
-; CHECK-NEXT:    [[R1:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[R1:%.*]] = trunc i8 [[Y]] to i1
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i1 [[R1]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;

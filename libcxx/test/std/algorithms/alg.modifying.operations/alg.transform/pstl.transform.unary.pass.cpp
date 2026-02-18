@@ -26,6 +26,7 @@
 #include "test_macros.h"
 #include "test_execution_policies.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 // We can't test the constraint on the execution policy, because that would conflict with the binary
 // transform algorithm that doesn't take an execution policy, which is not constrained at all.

@@ -24,6 +24,29 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 //===----------------------------------------------------------------------===//
+// V5.2: [12.5.1] `affinity` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_AffinityClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$affinity_vars);
+
+  let optAssemblyFormat = [{
+    `affinity` `(` custom<AffinityClause>($affinity_vars, type($affinity_vars)) `)`
+  }];
+
+  let description = [{
+    The `affinity` clause specifies a locator list used as a hint for task
+    placement / scheduling affinity.
+  }];
+}
+
+def OpenMP_AffinityClause : OpenMP_AffinityClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [6.3] `align` clause
 //===----------------------------------------------------------------------===//
 
@@ -1096,6 +1119,32 @@ class OpenMP_SizesClauseSkip<
 }
 
 def OpenMP_SizesClause : OpenMP_SizesClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+//  V6.0 `looprange` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_LooprangeClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins OptionalAttr<I64Attr>:$first,
+      OptionalAttr<I64Attr>:$count);
+
+  let optAssemblyFormat = [{
+    `looprange` `(` `first` `=` $first `,` `count` `=` $count `)`
+  }];
+
+  let description = [{
+    The `looprange` clause contains a range that represent the loops affected
+    by a loop fusion. The `first` attribute is the first loop of the sequence
+    that will be affected and the `count` attribute is the number of loops that
+    are affected by the loop fusion.
+  }];
+}
+
+def OpenMP_LooprangeClause : OpenMP_LooprangeClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [10.1.2] `num_threads` clause

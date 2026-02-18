@@ -687,7 +687,6 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
         std::string name;
         uint64_t field_bit_offset = 0;
         bool is_signed;
-        bool is_complex;
 
         CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
             idx, name, &field_bit_offset, nullptr, nullptr);
@@ -733,7 +732,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
             // return a nullptr return value object.
             return return_valobj_sp;
           }
-        } else if (field_compiler_type.IsFloatingPointType(is_complex)) {
+        } else if (field_compiler_type.GetTypeInfo() & eTypeIsFloat) {
           // Structs with long doubles are always passed in memory.
           if (*field_bit_width == 128) {
             is_memory = true;

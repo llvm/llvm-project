@@ -680,15 +680,15 @@ template <> LIBC_INLINE constexpr int32_t get_lower_bound<double>() {
 // accuracy.
 template <typename T, typename CharType>
 LIBC_INLINE FloatConvertReturn<T> decimal_exp_to_float(
-    ExpandedFloat<T> init_num, bool truncated, RoundDirection round,
-    const CharType *__restrict numStart,
+    ExpandedFloat<T> init_num, [[maybe_unused]] bool truncated,
+    RoundDirection round, const CharType *__restrict numStart,
     const size_t num_len = cpp::numeric_limits<size_t>::max()) {
   using FPBits = typename fputil::FPBits<T>;
 
   int32_t exp10 = init_num.exponent;
 
   FloatConvertReturn<T> output;
-  cpp::optional<ExpandedFloat<T>> opt_output;
+  [[maybe_unused]] cpp::optional<ExpandedFloat<T>> opt_output;
 
   // If the exponent is too large and can't be represented in this size of
   // float, return inf. These bounds are relatively loose, but are mostly

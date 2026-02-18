@@ -78,11 +78,18 @@ public:
   /// \param[in] ctx_obj
   ///     If not empty, then expression is evaluated in context of this object.
   ///     See the comment to `UserExpression::Evaluate` for details.
+  ///
+  /// \param[in] ignore_context_qualifiers
+  ///     If \c true, evaluates the expression without taking into account the
+  ///     CV-qualifiers of the scope. E.g., this would permit calling a
+  ///     non-const C++ method when stopped in a const-method (which would be
+  ///     disallowed by C++ language rules).
   ClangExpressionDeclMap(
       bool keep_result_in_memory,
       Materializer::PersistentVariableDelegate *result_delegate,
       const lldb::TargetSP &target,
-      const std::shared_ptr<ClangASTImporter> &importer, ValueObject *ctx_obj);
+      const std::shared_ptr<ClangASTImporter> &importer, ValueObject *ctx_obj,
+      bool ignore_context_qualifiers);
 
   /// Destructor
   ~ClangExpressionDeclMap() override;
@@ -305,6 +312,12 @@ private:
                           ///evaluated in context of this object.
                           ///For details see the comment to
                           ///`UserExpression::Evaluate`.
+
+  /// If \c true, evaluates the expression without taking into account the
+  /// CV-qualifiers of the scope. E.g., this would permit calling a
+  /// non-const C++ method when stopped in a const-method (which would be
+  /// disallowed by C++ language rules).
+  bool m_ignore_context_qualifiers = false;
 
   /// The following values should not live beyond parsing
   class ParserVars {
