@@ -104,6 +104,58 @@ exit:
   ret void
 }
 
+; Test that after narrowInterleaveGroups, the vector loop is not incorrectly
+; removed when VectorTC <= VF * UF. The narrowed plan has a smaller step
+; (vscale * UF instead of VF * UF), so it needs multiple iterations.
+define void @narrow_interleave_tc_16_vf_4_if_4(ptr noalias %data) vscale_range(2,2) {
+; CHECK-LABEL: define void @narrow_interleave_tc_16_vf_4_if_4(
+; CHECK-SAME: ptr noalias [[DATA:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 16, [[TMP3]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 16, [[N_MOD_VF]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[DATA]], i64 [[TMP0]]
+; CHECK-NEXT:    store <vscale x 4 x float> splat (float 1.000000e+00), ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 16, [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT1:label %.*]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul.4 = shl nsw i64 %iv, 2
+  %data.0 = getelementptr inbounds float, ptr %data, i64 %mul.4
+  store float 1.0, ptr %data.0, align 4
+  %idx.1 = or disjoint i64 %mul.4, 1
+  %data.1 = getelementptr inbounds float, ptr %data, i64 %idx.1
+  store float 1.0, ptr %data.1, align 4
+  %idx.2 = or disjoint i64 %mul.4, 2
+  %data.2 = getelementptr inbounds float, ptr %data, i64 %idx.2
+  store float 1.0, ptr %data.2, align 4
+  %idx.3 = or disjoint i64 %mul.4, 3
+  %data.3 = getelementptr inbounds float, ptr %data, i64 %idx.3
+  store float 1.0, ptr %data.3, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 16
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst) {
 ; IC1-LABEL: define void @test_masked_interleave_group(
 ; IC1-SAME: i32 [[N:%.*]], ptr [[MASK:%.*]], ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
@@ -213,10 +265,10 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    [[TMP26:%.*]] = mul i64 [[INDEX1]], 16
 ; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP26]]
 ; CHECK-NEXT:    [[NEXT_GEP10:%.*]] = getelementptr i8, ptr [[MASK]], i64 [[INDEX1]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[NEXT_GEP10]], align 1, !alias.scope [[META6:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[NEXT_GEP10]], align 1, !alias.scope [[META8:![0-9]+]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq <vscale x 16 x i8> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP27]], <vscale x 16 x i1> [[TMP27]], <vscale x 16 x i1> [[TMP27]], <vscale x 16 x i1> [[TMP27]])
-; CHECK-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 64 x float> @llvm.masked.load.nxv64f32.p0(ptr align 4 [[NEXT_GEP9]], <vscale x 64 x i1> [[INTERLEAVED_MASK]], <vscale x 64 x float> poison), !alias.scope [[META9:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 64 x float> @llvm.masked.load.nxv64f32.p0(ptr align 4 [[NEXT_GEP9]], <vscale x 64 x i1> [[INTERLEAVED_MASK]], <vscale x 64 x float> poison), !alias.scope [[META11:![0-9]+]]
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float> } @llvm.vector.deinterleave4.nxv64f32(<vscale x 64 x float> [[WIDE_MASKED_VEC]])
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractvalue { <vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float> } [[STRIDED_VEC]], 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractvalue { <vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float> } [[STRIDED_VEC]], 1
@@ -224,10 +276,10 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractvalue { <vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float> } [[STRIDED_VEC]], 3
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 64 x float> @llvm.vector.interleave4.nxv64f32(<vscale x 16 x float> [[TMP28]], <vscale x 16 x float> [[TMP16]], <vscale x 16 x float> [[TMP17]], <vscale x 16 x float> [[TMP18]])
 ; CHECK-NEXT:    [[INTERLEAVED_MASK9:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP27]], <vscale x 16 x i1> [[TMP27]], <vscale x 16 x i1> [[TMP27]], <vscale x 16 x i1> [[TMP27]])
-; CHECK-NEXT:    call void @llvm.masked.store.nxv64f32.p0(<vscale x 64 x float> [[INTERLEAVED_VEC]], ptr align 4 [[NEXT_GEP1]], <vscale x 64 x i1> [[INTERLEAVED_MASK9]]), !alias.scope [[META11:![0-9]+]], !noalias [[META13:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.masked.store.nxv64f32.p0(<vscale x 64 x float> [[INTERLEAVED_VEC]], ptr align 4 [[NEXT_GEP1]], <vscale x 64 x i1> [[INTERLEAVED_MASK9]]), !alias.scope [[META13:![0-9]+]], !noalias [[META15:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX1]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
@@ -239,7 +291,7 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[MASK]], i64 [[N_VEC]]
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[UMAX]]
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF17:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
@@ -260,10 +312,10 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    [[OFFSET_IDX14:%.*]] = mul i64 [[INDEX12]], 16
 ; CHECK-NEXT:    [[NEXT_GEP15:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[OFFSET_IDX14]]
 ; CHECK-NEXT:    [[NEXT_GEP16:%.*]] = getelementptr i8, ptr [[MASK]], i64 [[INDEX12]]
-; CHECK-NEXT:    [[WIDE_LOAD17:%.*]] = load <vscale x 8 x i8>, ptr [[NEXT_GEP16]], align 1, !alias.scope [[META6]]
+; CHECK-NEXT:    [[WIDE_LOAD17:%.*]] = load <vscale x 8 x i8>, ptr [[NEXT_GEP16]], align 1, !alias.scope [[META8]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq <vscale x 8 x i8> [[WIDE_LOAD17]], zeroinitializer
 ; CHECK-NEXT:    [[INTERLEAVED_MASK18:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave4.nxv32i1(<vscale x 8 x i1> [[TMP30]], <vscale x 8 x i1> [[TMP30]], <vscale x 8 x i1> [[TMP30]], <vscale x 8 x i1> [[TMP30]])
-; CHECK-NEXT:    [[WIDE_MASKED_VEC19:%.*]] = call <vscale x 32 x float> @llvm.masked.load.nxv32f32.p0(ptr align 4 [[NEXT_GEP15]], <vscale x 32 x i1> [[INTERLEAVED_MASK18]], <vscale x 32 x float> poison), !alias.scope [[META9]]
+; CHECK-NEXT:    [[WIDE_MASKED_VEC19:%.*]] = call <vscale x 32 x float> @llvm.masked.load.nxv32f32.p0(ptr align 4 [[NEXT_GEP15]], <vscale x 32 x i1> [[INTERLEAVED_MASK18]], <vscale x 32 x float> poison), !alias.scope [[META11]]
 ; CHECK-NEXT:    [[STRIDED_VEC20:%.*]] = call { <vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float> } @llvm.vector.deinterleave4.nxv32f32(<vscale x 32 x float> [[WIDE_MASKED_VEC19]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractvalue { <vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float> } [[STRIDED_VEC20]], 0
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractvalue { <vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float> } [[STRIDED_VEC20]], 1
@@ -271,10 +323,10 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractvalue { <vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float> } [[STRIDED_VEC20]], 3
 ; CHECK-NEXT:    [[INTERLEAVED_VEC21:%.*]] = call <vscale x 32 x float> @llvm.vector.interleave4.nxv32f32(<vscale x 8 x float> [[TMP31]], <vscale x 8 x float> [[TMP32]], <vscale x 8 x float> [[TMP33]], <vscale x 8 x float> [[TMP34]])
 ; CHECK-NEXT:    [[INTERLEAVED_MASK22:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave4.nxv32i1(<vscale x 8 x i1> [[TMP30]], <vscale x 8 x i1> [[TMP30]], <vscale x 8 x i1> [[TMP30]], <vscale x 8 x i1> [[TMP30]])
-; CHECK-NEXT:    call void @llvm.masked.store.nxv32f32.p0(<vscale x 32 x float> [[INTERLEAVED_VEC21]], ptr align 4 [[NEXT_GEP13]], <vscale x 32 x i1> [[INTERLEAVED_MASK22]]), !alias.scope [[META11]], !noalias [[META13]]
+; CHECK-NEXT:    call void @llvm.masked.store.nxv32f32.p0(<vscale x 32 x float> [[INTERLEAVED_VEC21]], ptr align 4 [[NEXT_GEP13]], <vscale x 32 x i1> [[INTERLEAVED_MASK22]]), !alias.scope [[META13]], !noalias [[META15]]
 ; CHECK-NEXT:    [[INDEX_NEXT23]] = add nuw i64 [[INDEX12]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[INDEX_NEXT23]], [[INDEX]]
-; CHECK-NEXT:    br i1 [[TMP35]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP35]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N24:%.*]] = icmp eq i64 [[TMP1]], [[INDEX]]
 ; CHECK-NEXT:    br i1 [[CMP_N24]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
@@ -314,7 +366,7 @@ define void @test_masked_interleave_group(i32 %N, ptr %mask, ptr %src, ptr %dst)
 ; CHECK-NEXT:    [[SRC_IV_NEXT]] = getelementptr i8, ptr [[SRC_IV]], i64 16
 ; CHECK-NEXT:    [[DST_IV_NEXT]] = getelementptr i8, ptr [[DST_IV]], i64 16
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
