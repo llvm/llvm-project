@@ -257,6 +257,9 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
 
+  // Honor -mllvm options
+  CI->parseLLVMArgs();
+
   Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
     return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
                                                std::move(Consumer));
@@ -463,6 +466,12 @@ Interpreter::Parse(llvm::StringRef Code) {
     llvm::Error Err = DeviceParser->GenerateFatbinary();
     if (Err)
       return std::move(Err);
+  }
+
+  // Re-apply stored -mllvm options; wasm builds reset LLVM opts in wasm-ld.
+  llvm::Triple Triple(getCompilerInstance()->getTargetOpts().Triple);
+  if (Triple.isWasm()) {
+    getCompilerInstance()->parseLLVMArgs();
   }
 
   // Tell the interpreter sliently ignore unused expressions since value

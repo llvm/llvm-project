@@ -80,6 +80,7 @@ target_link_options(ClangReplInterpreterTests
   PUBLIC "SHELL: -s ALLOW_MEMORY_GROWTH=1"
   PUBLIC "SHELL: -s STACK_SIZE=32mb"
   PUBLIC "SHELL: -s INITIAL_MEMORY=128mb"
+  PUBLIC "SHELL: -s NO_DISABLE_EXCEPTION_CATCHING"
   PUBLIC "SHELL: --emrun"
   PUBLIC "SHELL: -Wl,--export=__clang_Interpreter_SetValueWithAlloc"
   PUBLIC "SHELL: -Wl,--export=__clang_Interpreter_SetValueNoAlloc"
