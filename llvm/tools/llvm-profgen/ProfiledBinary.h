@@ -33,6 +33,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Transforms/IPO/SampleContextTracker.h"
+#include <algorithm>
 #include <map>
 #include <set>
 #include <sstream>
@@ -268,9 +269,6 @@ class ProfiledBinary {
   // Address to context location map. Used to expand the context.
   std::unordered_map<uint64_t, SampleContextFrameVector> AddressToLocStackMap;
 
-  // Address to instruction size map. Also used for quick Address lookup.
-  std::unordered_map<uint64_t, uint64_t> AddressToInstSizeMap;
-
   // An array of Addresses of all instructions sorted in increasing order. The
   // sorting is needed to fast advance to the next forward/backward instruction.
   std::vector<uint64_t> CodeAddressVec;
@@ -444,15 +442,9 @@ public:
     return TextSegmentOffsets;
   }
 
-  uint64_t getInstSize(uint64_t Address) const {
-    auto I = AddressToInstSizeMap.find(Address);
-    if (I == AddressToInstSizeMap.end())
-      return 0;
-    return I->second;
-  }
-
   bool addressIsCode(uint64_t Address) const {
-    return AddressToInstSizeMap.find(Address) != AddressToInstSizeMap.end();
+    return std::binary_search(CodeAddressVec.begin(), CodeAddressVec.end(),
+                              Address);
   }
 
   bool addressIsCall(uint64_t Address) const {
