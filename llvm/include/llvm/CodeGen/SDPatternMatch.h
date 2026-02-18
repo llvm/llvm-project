@@ -278,7 +278,7 @@ template <typename PredPattern> struct Value_bind {
 inline auto m_Value(SDValue &N) {
   return Value_bind<Value_match>(N, m_Value());
 }
-/// Conditionally bind a SDValue based on the predicate.
+/// Conditionally bind an SDValue based on the predicate.
 template <typename PredPattern>
 inline auto m_Value(SDValue &N, const PredPattern &P) {
   return Value_bind<PredPattern>(N, P);
