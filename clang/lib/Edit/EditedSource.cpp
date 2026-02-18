@@ -308,7 +308,23 @@ bool EditedSource::commit(const Commit &commit) {
   return true;
 }
 
-// Returns true if it is ok to make the two given characters adjacent.
+/// Checks if two characters can be placed adjacent without creating unintended tokens.
+///
+/// Returns false when adjacency would cause token concatenation:
+///   - 'a' + 'b' → "ab" (different identifier)  
+///   - '<' + '<' → "<<" (shift operator)
+///   - '+' + '+' → "++" (increment operator)
+///   - '/' + '*' → "/*" (comment start)
+///
+/// Returns true when adjacency is safe:
+///   - 'a' + ')' → "a)" (separate tokens)
+///   - '5' + ')' → "5)" (separate tokens)
+///
+/// Used by adjustRemoval() to decide whether to insert space during text removal.
+///
+/// @param left Character on the left side
+/// @param right Character on the right side
+/// @return true if safe to place adjacent, false if space needed
 static bool canBeJoined(char left, char right, const LangOptions &LangOpts) {
   // FIXME: Should use TokenConcatenation to make sure we don't allow stuff like
   // making two '<' adjacent.
