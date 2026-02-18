@@ -302,8 +302,8 @@ template <bool T> struct Port {
 private:
   RPC_ATTRS Port(const Port &) = delete;
   RPC_ATTRS Port &operator=(const Port &) = delete;
-  RPC_ATTRS Port(Port &&) = default;
-  RPC_ATTRS Port &operator=(Port &&) = default;
+  RPC_ATTRS Port(Port &&) = delete;
+  RPC_ATTRS Port &operator=(Port &&) = delete;
 
   friend struct Client;
   friend struct Server;
@@ -383,7 +383,6 @@ struct Server {
   using Port = rpc::Port<true>;
   RPC_ATTRS rpc::optional<Port> try_open(uint32_t lane_size,
                                          uint32_t start = 0);
-  RPC_ATTRS Port open(uint32_t lane_size);
 
   RPC_ATTRS static constexpr uint64_t allocation_size(uint32_t lane_size,
                                                       uint32_t port_count) {
@@ -611,17 +610,10 @@ Server::try_open(uint32_t lane_size, uint32_t start) {
       continue;
     }
 
-    return Port(process, lane_mask, lane_size, index, out);
+    return rpc::optional<Port>(rpc::in_place, process, lane_mask, lane_size,
+                               index, out);
   }
   return rpc::nullopt;
-}
-
-RPC_ATTRS Server::Port Server::open(uint32_t lane_size) {
-  for (;;) {
-    if (rpc::optional<Server::Port> p = try_open(lane_size))
-      return rpc::move(p.value());
-    sleep_briefly();
-  }
 }
 
 #if !__has_builtin(__scoped_atomic_load_n)
