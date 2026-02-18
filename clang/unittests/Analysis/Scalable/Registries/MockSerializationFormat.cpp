@@ -27,6 +27,8 @@
 using namespace clang;
 using namespace ssaf;
 
+LLVM_INSTANTIATE_REGISTRY(llvm::Registry<MockSerializationFormat::FormatInfo>)
+
 MockSerializationFormat::MockSerializationFormat() {
   for (const auto &FormatInfoEntry : llvm::Registry<FormatInfo>::entries()) {
     std::unique_ptr<FormatInfo> Info = FormatInfoEntry.instantiate();
@@ -89,7 +91,7 @@ MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
     assert(Inserted);
   }
 
-  return Summary;
+  return std::move(Summary);
 }
 
 llvm::Error MockSerializationFormat::writeTUSummary(const TUSummary &Summary,
