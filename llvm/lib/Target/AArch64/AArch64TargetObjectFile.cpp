@@ -28,9 +28,7 @@ void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
   PLTRelativeSpecifier = AArch64::S_PLT;
   SupportIndirectSymViaGOTPCRel = true;
 
-  // AARCH64 ELF ABI does not define static relocation type for TLS offset
-  // within a module.  Do not generate AT_location for TLS variables.
-  SupportDebugThreadLocalLocation = false;
+  SupportDebugThreadLocalLocation = true;
 
   // Make sure the implicitly created empty .text section has the
   // SHF_AARCH64_PURECODE flag set if the "+execute-only" target feature is
@@ -185,4 +183,9 @@ MCSection *AArch64_ELFTargetObjectFile::SelectSectionForGlobal(
     Kind = SectionKind::getExecuteOnly();
 
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
+}
+
+const MCExpr *AArch64_ELFTargetObjectFile::getDebugThreadLocalSymbol(
+    const MCSymbol *Sym) const {
+  return MCSymbolRefExpr::create(Sym, AArch64::S_DTPREL, getContext());
 }

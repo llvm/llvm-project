@@ -169,6 +169,8 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
     return R_ABS;
   case R_AARCH64_AUTH_ABS64:
     return RE_AARCH64_AUTH;
+  case R_AARCH64_TLS_DTPREL64:
+    return R_DTPREL;
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     return RE_AARCH64_TLSDESC_PAGE;
   case R_AARCH64_AUTH_TLSDESC_ADR_PAGE21:
@@ -543,6 +545,10 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     // encode the schema.
     checkInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
+    break;
+  case R_AARCH64_TLS_DTPREL64:
+    checkInt(ctx, loc, val, 64, rel);
+    write64(ctx, loc, val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
   case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
