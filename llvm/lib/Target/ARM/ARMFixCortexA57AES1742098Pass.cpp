@@ -288,7 +288,8 @@ void ARMFixCortexA57AES1742098::analyzeMF(
       // Inspect all operands, choosing whether to insert a fixup.
       for (MachineOperand &MOp : MI.uses()) {
         SmallPtrSet<MachineInstr *, 1> AllDefs{};
-        RDI.getGlobalReachingDefs(&MI, MOp.getReg(), AllDefs);
+        bool HasLiveInPath = false;
+        RDI.getGlobalReachingDefs(&MI, MOp.getReg(), AllDefs, HasLiveInPath);
 
         // Planned Fixup: This should be added to FixupLocsForFn at most once.
         AESFixupLocation NewLoc{&MBB, &MI, &MOp};
