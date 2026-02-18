@@ -1,5 +1,6 @@
 add_flang_library(FIRAnalysis
   AliasAnalysis.cpp
+  ArraySectionAnalyzer.cpp
   TBAAForest.cpp
 
   DEPENDS
@@ -10,7 +11,6 @@ add_flang_library(FIRAnalysis
 
   LINK_LIBS
   CUFDialect
-  FIRBuilder
   FIRDialect
   FIRSupport
   HLFIRDialect

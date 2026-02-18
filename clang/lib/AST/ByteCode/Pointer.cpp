@@ -937,6 +937,10 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     llvm_unreachable("invalid value to return");
   };
 
+  // Can't return functions as rvalues.
+  if (ResultType->isFunctionType())
+    return std::nullopt;
+
   // Invalid to read from.
   if (isDummy() || !isLive() || isPastEnd())
     return std::nullopt;
@@ -947,8 +951,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
   // Just load primitive types.
   if (OptPrimType T = Ctx.classify(ResultType)) {
-    if (const Descriptor *D = getFieldDesc();
-        (D->isPrimitive() || D->isPrimitiveArray()) && D->getPrimType() != *T)
+    if (!canDeref(*T))
       return std::nullopt;
     TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx));
   }

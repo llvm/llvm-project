@@ -596,6 +596,27 @@ void JSONNodeDumper::VisitTLSModelAttr(const TLSModelAttr *TA) {
   JOS.attribute("tls_model", TA->getModel());
 }
 
+void JSONNodeDumper::VisitAvailabilityAttr(const AvailabilityAttr *AA) {
+  if (const IdentifierInfo *Platform = AA->getPlatform())
+    JOS.attribute("platform", Platform->getName());
+  if (!AA->getIntroduced().empty())
+    JOS.attribute("introduced", AA->getIntroduced().getAsString());
+  if (!AA->getDeprecated().empty())
+    JOS.attribute("deprecated", AA->getDeprecated().getAsString());
+  if (!AA->getObsoleted().empty())
+    JOS.attribute("obsoleted", AA->getObsoleted().getAsString());
+  attributeOnlyIfTrue("unavailable", AA->getUnavailable());
+  if (!AA->getMessage().empty())
+    JOS.attribute("message", AA->getMessage());
+  attributeOnlyIfTrue("strict", AA->getStrict());
+  if (!AA->getReplacement().empty())
+    JOS.attribute("replacement", AA->getReplacement());
+  if (AA->getPriority() != 0)
+    JOS.attribute("priority", AA->getPriority());
+  if (const IdentifierInfo *Env = AA->getEnvironment())
+    JOS.attribute("environment", Env->getName());
+}
+
 void JSONNodeDumper::VisitTypedefType(const TypedefType *TT) {
   JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
   if (!TT->typeMatchesDecl())

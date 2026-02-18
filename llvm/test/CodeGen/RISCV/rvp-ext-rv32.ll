@@ -488,6 +488,76 @@ define i8 @test_extract_vector_8_elem1(<4 x i8> %a) {
   ret i8 %extracted
 }
 
+define <2 x i16> @test_insert_vector_16(<2 x i16> %a, i16 %val) {
+; CHECK-RV32-LABEL: test_insert_vector_16:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srli a0, a0, 16
+; CHECK-RV32-NEXT:    pack a0, a1, a0
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_insert_vector_16:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srli a0, a0, 16
+; CHECK-RV64-NEXT:    ppaire.h a0, a1, a0
+; CHECK-RV64-NEXT:    ret
+  %res = insertelement <2 x i16> %a, i16 %val, i32 0
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_insert_vector_16_elem1(<2 x i16> %a, i16 %val) {
+; CHECK-RV32-LABEL: test_insert_vector_16_elem1:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    pack a0, a0, a1
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_insert_vector_16_elem1:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a1
+; CHECK-RV64-NEXT:    ret
+  %res = insertelement <2 x i16> %a, i16 %val, i32 1
+  ret <2 x i16> %res
+}
+
+define <4 x i8> @test_insert_vector_8(<4 x i8> %a, i8 %val) {
+; CHECK-RV32-LABEL: test_insert_vector_8:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    li a2, 255
+; CHECK-RV32-NEXT:    mvm a0, a1, a2
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_insert_vector_8:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srli a2, a0, 8
+; CHECK-RV64-NEXT:    srli a3, a0, 24
+; CHECK-RV64-NEXT:    srli a0, a0, 16
+; CHECK-RV64-NEXT:    ppaire.b a0, a0, a3
+; CHECK-RV64-NEXT:    ppaire.b a1, a1, a2
+; CHECK-RV64-NEXT:    ppaire.h a0, a1, a0
+; CHECK-RV64-NEXT:    ret
+  %res = insertelement <4 x i8> %a, i8 %val, i32 0
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_insert_vector_8_elem2(<4 x i8> %a, i8 %val) {
+; CHECK-RV32-LABEL: test_insert_vector_8_elem2:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    slli a1, a1, 16
+; CHECK-RV32-NEXT:    lui a2, 4080
+; CHECK-RV32-NEXT:    mvm a0, a1, a2
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_insert_vector_8_elem2:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srli a2, a0, 8
+; CHECK-RV64-NEXT:    srli a3, a0, 24
+; CHECK-RV64-NEXT:    ppaire.b a1, a1, a3
+; CHECK-RV64-NEXT:    ppaire.b a0, a0, a2
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a1
+; CHECK-RV64-NEXT:    ret
+  %res = insertelement <4 x i8> %a, i8 %val, i32 2
+  ret <4 x i8> %res
+}
+
 ; Test for splat
 define <4 x i8> @test_non_const_splat_i8(i8 %elt) {
 ; CHECK-LABEL: test_non_const_splat_i8:
@@ -1629,10 +1699,10 @@ define <2 x i16> @test_select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB115_2
+; CHECK-NEXT:    bnez a3, .LBB119_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB115_2:
+; CHECK-NEXT:  .LBB119_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i16> %a, <2 x i16> %b
   ret <2 x i16> %res
@@ -1643,10 +1713,10 @@ define <4 x i8> @test_select_v4i8(i1 %cond, <4 x i8> %a, <4 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB116_2
+; CHECK-NEXT:    bnez a3, .LBB120_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB116_2:
+; CHECK-NEXT:  .LBB120_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i8> %a, <4 x i8> %b
   ret <4 x i8> %res

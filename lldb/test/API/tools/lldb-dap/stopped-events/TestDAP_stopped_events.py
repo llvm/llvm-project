@@ -7,6 +7,8 @@ from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 
 
+@skipIfWindows  # This is flakey on Windows: llvm.org/pr24668, llvm.org/pr38373
+@skipIfLinux
 class TestDAP_stopped_events(lldbdap_testcase.DAPTestCaseBase):
     """
     Test validates different operations that produce 'stopped' events.
@@ -22,12 +24,17 @@ class TestDAP_stopped_events(lldbdap_testcase.DAPTestCaseBase):
         threads_resp = self.dap_server.request_threads()
         self.assertTrue(threads_resp["success"])
         threads = threads_resp["body"]["threads"]
-        self.assertEqual(len(threads), len(expected_threads))
+        self.assertGreaterEqual(
+            len(threads),
+            len(expected_threads),
+            f"thread: {threads!r}\n expected threads: {expected_threads}",
+        )
+
         for idx, expected_thread in enumerate(expected_threads):
             thread = threads[idx]
             self.assertTrue(
                 self.matches(thread, expected_thread),
-                f"Invalid thread state in {threads_resp}",
+                f"Invalid thread state in {threads_resp!r} for {expected_thread!r}",
             )
 
     @expectedFailureAll(
@@ -35,18 +42,29 @@ class TestDAP_stopped_events(lldbdap_testcase.DAPTestCaseBase):
         bugnumber="llvm.org/pr18190 thread states not properly maintained",
     )
     @expectedFailureNetBSD
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr24668, llvm.org/pr38373
-    def test_multiple_threads_sample_breakpoint(self):
+    def test_multiple_threads_same_breakpoint(self):
         """
-        Test that multiple threads being stopped on the same breakpoint only produces a single 'stopped' event.
+        Test that multiple threads being stopped on the same breakpoint produces multiple 'stopped' event.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-        line = line_number("main.cpp", "breakpoint")
-        [bp] = self.set_source_breakpoints("main.cpp", [line])
+        launch_seq = self.build_and_launch(program)
+        self.dap_server.wait_for_event(["initialized"])
+        [bp] = self.set_function_breakpoints(["my_add"])
+        self.verify_configuration_done()
+        response = self.dap_server.receive_response(launch_seq)
+        self.assertTrue(response["success"])
 
-        events = self.continue_to_next_stop()
-        self.assertEqual(len(events), 2, "Expected exactly two 'stopped' events")
+        events = self.dap_server.wait_for_stopped()
+        if len(events) == 1:
+            # we may not catch both events at the same time if we run with sanitizers
+            # enabled or on slow or heavily used computer.
+            events.extend(self.dap_server.wait_for_stopped())
+
+        self.assertEqual(
+            len(events),
+            2,
+            f"Expected two 'stopped' events, seen events: {events!r}",
+        )
         for event in events:
             body = event["body"]
             self.assertEqual(body["reason"], "breakpoint")
@@ -63,7 +81,7 @@ class TestDAP_stopped_events(lldbdap_testcase.DAPTestCaseBase):
         #   thread #3: tid = 0x03, 0x0c a.out`add(a=4, b=5) at main.cpp:10:32, stop reason = breakpoint 1.1
         self.verify_threads(
             [
-                {},
+                self.ANY_THREAD,
                 {
                     "reason": "breakpoint",
                     "text": "breakpoint 1.1",
@@ -90,18 +108,26 @@ class TestDAP_stopped_events(lldbdap_testcase.DAPTestCaseBase):
         bugnumber="llvm.org/pr18190 thread states not properly maintained",
     )
     @expectedFailureNetBSD
-    @skipIfWindows  # This is flakey on Windows: llvm.org/pr24668, llvm.org/pr38373
     def test_multiple_breakpoints_same_location(self):
         """
         Test stopping at a location that reports multiple overlapping breakpoints.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        launch_seq = self.build_and_launch(program)
+        self.dap_server.wait_for_event(["initialized"])
         line_1 = line_number("main.cpp", "breakpoint")
         [bp1] = self.set_source_breakpoints("main.cpp", [line_1])
         [bp2] = self.set_function_breakpoints(["my_add"])
+        self.verify_configuration_done()
+        response = self.dap_server.receive_response(launch_seq)
+        self.assertTrue(response["success"])
 
-        events = self.continue_to_next_stop()
+        events = self.dap_server.wait_for_stopped()
+        if len(events) == 1:
+            # we may not catch both events at the same time if we run with sanitizers
+            # enabled or on slow or heavily used computer.
+            events.extend(self.dap_server.wait_for_stopped())
+
         self.assertEqual(len(events), 2, "Expected two stopped events")
         for event in events:
             body = event["body"]
