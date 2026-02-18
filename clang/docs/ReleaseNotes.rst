@@ -397,6 +397,7 @@ clang-format
 
 libclang
 --------
+- Return valid CXUnaryOperatorKind and CXBinaryOperatorKind for overloaded operators.
 
 Code Completion
 ---------------
