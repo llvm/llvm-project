@@ -12,7 +12,6 @@ from lldbsuite.test.lldbtest import line_number
 @skipIfBuildType(["debug"])
 class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
     @skipIfAsan
-    @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm$"])  # Always times out on buildbot
     def test_basic_functionality(self):
         """
@@ -61,7 +60,6 @@ class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
 
     @skipIfAsan
-    @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm$"])  # Always times out on buildbot
     def test_stopOnEntry(self):
         """
