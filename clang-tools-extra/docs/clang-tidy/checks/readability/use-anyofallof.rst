@@ -4,8 +4,9 @@ readability-use-anyofallof
 ==========================
 
 Finds range-based for loops that can be replaced by a call to
-``std::any_of`` or ``std::all_of``. In C++20 mode, suggests
-``std::ranges::any_of`` or ``std::ranges::all_of``.
+``std::any_of``, ``std::all_of``, or ``std::none_of``. In C++20 mode,
+suggests ``std::ranges::any_of``, ``std::ranges::all_of``, or
+``std::ranges::none_of``.
 
 Example:
 

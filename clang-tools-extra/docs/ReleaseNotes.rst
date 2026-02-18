@@ -242,6 +242,10 @@ Changes in existing checks
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
 
+- Improved :doc:`readability-use-anyofallof
+  <clang-tidy/checks/readability/use-anyofallof>` check by adding fix-it hints
+  for simple loop forms and support for ``std::none_of`` suggestions.
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
   positives on parameters used in dependent expressions (e.g. inside generic
