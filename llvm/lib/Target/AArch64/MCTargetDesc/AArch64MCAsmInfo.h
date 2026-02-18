@@ -185,14 +185,19 @@ enum {
 StringRef getSpecifierName(Specifier S);
 
 inline Specifier getSymbolLoc(Specifier S) {
+  assert(S >= MCSymbolRefExpr::FirstTargetSpecifier);
   return static_cast<Specifier>(S & AArch64::S_SymLocBits);
 }
 
 inline Specifier getAddressFrag(Specifier S) {
+  assert(S >= MCSymbolRefExpr::FirstTargetSpecifier);
   return static_cast<Specifier>(S & AArch64::S_AddressFragBits);
 }
 
-inline bool isNotChecked(Specifier S) { return S & AArch64::S_NC; }
+inline bool isNotChecked(Specifier S) {
+  assert(S >= MCSymbolRefExpr::FirstTargetSpecifier);
+  return S & AArch64::S_NC;
+}
 } // namespace AArch64
 
 class AArch64AuthMCExpr final : public MCSpecifierExpr {
