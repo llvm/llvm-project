@@ -5123,14 +5123,13 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       if (!T.consumeClose())
         Data.RLoc = T.getCloseLocation();
       return false;
-    } else {
-      // Single value or error - parse closing paren
-      Vars.push_back(FirstExpr.get());
-      Data.RLoc = Tok.getLocation();
-      if (!T.consumeClose())
-        Data.RLoc = T.getCloseLocation();
-      return false;
     }
+      // Single value or error - parse closing paren
+    Vars.push_back(FirstExpr.get());
+    Data.RLoc = Tok.getLocation();
+    if (!T.consumeClose())
+      Data.RLoc = T.getCloseLocation();
+     return false;
   }
 
   bool IsComma =
