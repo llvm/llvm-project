@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -15,6 +15,7 @@ cc_library(
     name = "lib",
     srcs = glob(["*.cpp"]),
     hdrs = glob(["*.h"]),
+    includes = ["."],
     deps = [
         "//clang:ast",
         "//clang:ast_matchers",
@@ -22,6 +23,19 @@ cc_library(
         "//clang:basic",
         "//clang:frontend",
         "//clang:serialization",
+        "//llvm:LineEditor",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
+    name = "clang-query",
+    srcs = ["tool/ClangQuery.cpp"],
+    stamp = 0,
+    deps = [
+        ":lib",
+        "//clang:frontend",
+        "//clang:tooling",
         "//llvm:LineEditor",
         "//llvm:Support",
     ],

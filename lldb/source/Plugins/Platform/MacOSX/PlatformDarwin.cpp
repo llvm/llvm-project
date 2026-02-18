@@ -199,7 +199,7 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
   return PlatformPOSIX::PutFile(source, destination, uid, gid);
 }
 
-static FileSpecList LoadExecutableScriptingResourceFromDSYM(
+static FileSpecList LocateExecutableScriptingResourcesFromDSYM(
     Stream &feedback_stream, FileSpec module_spec, const Target &target,
     const FileSpec &symfile_spec) {
   FileSpecList file_list;
@@ -324,8 +324,8 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
       llvm::StringRef(symfile_spec.GetPath())
           .contains_insensitive(".dSYM/Contents/Resources/DWARF") &&
       FileSystem::Instance().Exists(symfile_spec))
-    return LoadExecutableScriptingResourceFromDSYM(feedback_stream, module_spec,
-                                                   *target, symfile_spec);
+    return LocateExecutableScriptingResourcesFromDSYM(
+        feedback_stream, module_spec, *target, symfile_spec);
 
   return {};
 }

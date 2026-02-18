@@ -2598,6 +2598,10 @@ bool isGFX11(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX11);
 }
 
+bool isGFX1170(const MCSubtargetInfo &STI) {
+  return isGFX11(STI) && STI.hasFeature(AMDGPU::FeatureWMMA128bInsts);
+}
+
 bool isGFX11Plus(const MCSubtargetInfo &STI) {
   return isGFX11(STI) || isGFX12Plus(STI);
 }
