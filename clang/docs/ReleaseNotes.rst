@@ -160,6 +160,8 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 - The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
+- The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
+  `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
 
 Removed Compiler Flags
 ----------------------
