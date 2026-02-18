@@ -99,6 +99,7 @@ public:
     // Noop -- Nothing to do (yet).
     return Error::success();
   }
+  Error notifyFailed(MaterializationResponsibility &MR) override;
 
 private:
   GenericLLVMIRPlatformSupport &S;
@@ -224,6 +225,44 @@ public:
           DeInitFunctions[&JD].add(KV.first);
         }
     }
+    return Error::success();
+  }
+
+  Error notifyFailed(MaterializationResponsibility &MR) {
+    auto &JD = MR.getTargetJITDylib();
+
+    // We only care about symbols with our known (init/deinit) prefixes
+    DenseSet<SymbolStringPtr> FailedInitSyms;
+    DenseSet<SymbolStringPtr> FailedDeInitSyms;
+
+    for (auto &[Name, Flags] : MR.getSymbols()) {
+      if ((*Name).starts_with(InitFunctionPrefix))
+        FailedInitSyms.insert(Name);
+      else if ((*Name).starts_with(DeInitFunctionPrefix))
+        FailedDeInitSyms.insert(Name);
+    }
+
+    // Remove failed symbols from tracking maps.
+    auto cleanMap = [&](auto &Map,
+                        const DenseSet<SymbolStringPtr> &FailedSyms) {
+      if (FailedSyms.empty())
+        return;
+
+      auto It = Map.find(&JD);
+      if (It == Map.end())
+        return;
+
+      It->second.remove_if([&](const SymbolStringPtr &Name, SymbolLookupFlags) {
+        return FailedSyms.contains(Name);
+      });
+
+      if (It->second.empty())
+        Map.erase(It);
+    };
+
+    cleanMap(InitFunctions, FailedInitSyms);
+    cleanMap(DeInitFunctions, FailedDeInitSyms);
+
     return Error::success();
   }
 
@@ -503,6 +542,10 @@ Error GenericLLVMIRPlatform::teardownJITDylib(JITDylib &JD) {
 Error GenericLLVMIRPlatform::notifyAdding(ResourceTracker &RT,
                                           const MaterializationUnit &MU) {
   return S.notifyAdding(RT, MU);
+}
+
+Error GenericLLVMIRPlatform::notifyFailed(MaterializationResponsibility &MR) {
+  return S.notifyFailed(MR);
 }
 
 Expected<ThreadSafeModule>
