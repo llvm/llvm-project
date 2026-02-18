@@ -398,6 +398,7 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
     mlir::Block *block = &handler->getBlocks().back();
     if (block->empty() ||
         !block->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPointToEnd(block);
       builder.createYield(handlerLoc);
     }

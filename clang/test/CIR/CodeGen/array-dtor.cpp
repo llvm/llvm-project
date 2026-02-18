@@ -140,7 +140,7 @@ void multi_dimensional() {
 // CIR:       cir.return
 
 // LLVM:     define{{.*}} void @_Z17multi_dimensionalv()
-// LLVM:       %[[ITER:.*]] = alloca ptr, i64 1
+// LLVM:       %[[ITER:.*]] = alloca ptr
 // LLVM:       %[[S:.*]] = alloca [3 x [5 x %struct.S]]
 // LLVM:       %[[START:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0
 // LLVM:       %[[END:.*]] = getelementptr %struct.S, ptr %[[START]], i64 14

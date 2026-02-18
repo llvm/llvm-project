@@ -19,7 +19,6 @@
 #include "EHScopeStack.h"
 #include "mlir/IR/Value.h"
 #include "clang/AST/StmtCXX.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 namespace clang::CIRGen {
 
@@ -114,7 +113,8 @@ class alignas(EHScopeStack::ScopeStackAlignment) EHCleanupScope
   /// from this index onwards belong to this scope.
   unsigned fixupDepth = 0;
 
-  cir::CleanupScopeOp cleanupScope;
+  /// Cleanup scope op that represent the current scope in CIR
+  cir::CleanupScopeOp cleanupScopeOp;
 
 public:
   /// Gets the size required for a lazy cleanup scope with the given
@@ -128,12 +128,12 @@ public:
   }
 
   EHCleanupScope(bool isNormal, bool isEH, unsigned cleanupSize,
-                 unsigned fixupDepth, cir::CleanupScopeOp cleanupScope,
+                 unsigned fixupDepth, cir::CleanupScopeOp cleanupScopeOp,
                  EHScopeStack::stable_iterator enclosingNormal,
                  EHScopeStack::stable_iterator enclosingEH)
       : EHScope(EHScope::Cleanup, enclosingEH),
         enclosingNormal(enclosingNormal), fixupDepth(fixupDepth),
-        cleanupScope(cleanupScope) {
+        cleanupScopeOp(cleanupScopeOp) {
     cleanupBits.isNormalCleanup = isNormal;
     cleanupBits.isEHCleanup = isEH;
     cleanupBits.isActive = true;
@@ -172,7 +172,7 @@ public:
     return reinterpret_cast<EHScopeStack::Cleanup *>(getCleanupBuffer());
   }
 
-  cir::CleanupScopeOp getCleanupScope() { return cleanupScope; }
+  cir::CleanupScopeOp getCleanupScopeOp() { return cleanupScopeOp; }
 
   static bool classof(const EHScope *scope) {
     return (scope->getKind() == Cleanup);
