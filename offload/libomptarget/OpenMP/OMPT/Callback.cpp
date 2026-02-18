@@ -51,8 +51,8 @@ bool llvm::omp::target::ompt::Initialized = false;
 
 ompt_get_callback_t llvm::omp::target::ompt::lookupCallbackByCode = nullptr;
 ompt_function_lookup_t llvm::omp::target::ompt::lookupCallbackByName = nullptr;
-ompt_get_target_task_data_t ompt_get_target_task_data_fn = nullptr;
 ompt_get_task_data_t ompt_get_task_data_fn = nullptr;
+ompt_get_task_info_target_t ompt_get_task_info_target_fn = nullptr;
 
 /// Unique correlation id
 static std::atomic<uint64_t> IdCounter(1);
@@ -411,6 +411,9 @@ void Interface::endTarget(int64_t DeviceId, void *Code) {
 }
 
 void Interface::beginTargetDataOperation() {
+  if (IsRuntimeRoutine) {
+    OmptTaskInfoPtr = &OmptTaskInfo;
+  }
   ODBG(ODT_Tool) << "in ompt_target_region_begin (TargetRegionId = "
                  << TargetData.value << ")";
 }
@@ -418,24 +421,32 @@ void Interface::beginTargetDataOperation() {
 void Interface::endTargetDataOperation() {
   ODBG(ODT_Tool) << "in ompt_target_region_end (TargetRegionId = "
                  << TargetData.value << ")";
+  if (IsRuntimeRoutine) {
+    OmptTaskInfoPtr = nullptr;
+  }
 }
 
 void Interface::beginTargetRegion() {
   // Set up task state
   assert(ompt_get_task_data_fn && "Calling a null task data function");
   TaskData = ompt_get_task_data_fn();
-  // Set up target task state
-  assert(ompt_get_target_task_data_fn &&
-         "Calling a null target task data function");
-  TargetTaskData = ompt_get_target_task_data_fn();
-  // Target state will be set later
-  TargetData = ompt_data_none;
+  // Set up target task and target state
+  assert(ompt_get_task_info_target_fn &&
+         "Calling a null target task info function");
+  // In case of deferred target tasks, use pointer from libomp
+  if (ompt_task_info_t *TempTaskInfoPtr = ompt_get_task_info_target_fn())
+    OmptTaskInfoPtr = TempTaskInfoPtr;
+  else
+    OmptTaskInfoPtr = &OmptTaskInfo;
+
+  IsRuntimeRoutine = false;
 }
 
 void Interface::endTargetRegion() {
   TaskData = 0;
-  TargetTaskData = 0;
-  TargetData = ompt_data_none;
+  OmptTaskInfo = {ompt_data_none, ompt_data_none};
+  OmptTaskInfoPtr = nullptr;
+  IsRuntimeRoutine = true;
 }
 
 /// Used to maintain the finalization functions that are received
@@ -474,7 +485,7 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
 
   bindOmptFunctionName(ompt_get_callback, lookupCallbackByCode);
   bindOmptFunctionName(ompt_get_task_data, ompt_get_task_data_fn);
-  bindOmptFunctionName(ompt_get_target_task_data, ompt_get_target_task_data_fn);
+  bindOmptFunctionName(ompt_get_task_info_target, ompt_get_task_info_target_fn);
 #undef bindOmptFunctionName
 
   // Store pointer of 'ompt_libomp_target_fn_lookup' for use by libomptarget
@@ -483,8 +494,6 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
   assert(lookupCallbackByCode && "lookupCallbackByCode should be non-null");
   assert(lookupCallbackByName && "lookupCallbackByName should be non-null");
   assert(ompt_get_task_data_fn && "ompt_get_task_data_fn should be non-null");
-  assert(ompt_get_target_task_data_fn &&
-         "ompt_get_target_task_data_fn should be non-null");
   assert(LibraryFinalizer == nullptr &&
          "LibraryFinalizer should not be initialized yet");
 

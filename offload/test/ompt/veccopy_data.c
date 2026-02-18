@@ -4,6 +4,7 @@
 // REQUIRES: gpu
 // XFAIL: intelgpu
 // clang-format on
+// clang-format on
 
 /*
  * Example OpenMP program that registers EMI callbacks.
