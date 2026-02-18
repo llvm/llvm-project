@@ -62,4 +62,4 @@ jobs:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           pylint --fail-on=E0102 --fail-under=0 $CHANGED_FILES | grep E0102 && exit 0
-        shell: bash --noprofile --norc -o pipefail {0}
+        shell: bash --noprofile --norc {0}
