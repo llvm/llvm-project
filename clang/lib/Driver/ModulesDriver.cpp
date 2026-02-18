@@ -531,6 +531,9 @@ static SmallVector<std::string, 0> buildCommandLine(const Command &Job) {
 }
 
 /// Performs a dependency scan for a single job.
+///
+/// \returns a pair containing TranslationUnitDeps on success, or std::nullopt
+/// on failure, along with any diagnostics produced.
 static std::pair<std::optional<deps::TranslationUnitDeps>,
                  SmallVector<StandaloneDiagnostic, 0>>
 scanDependenciesForJob(const Command &Job, ScanningWorkerPool &WorkerPool,
