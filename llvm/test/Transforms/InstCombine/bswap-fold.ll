@@ -838,7 +838,7 @@ define i32 @bs_active_high7(i32 %0) {
 define <2 x i64> @bs_active_high4(<2 x i64> %0) {
 ; CHECK-LABEL: @bs_active_high4(
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP0:%.*]], splat (i64 4)
-; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], splat (i64 240)
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], splat (i64 255)
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %2 = shl <2 x i64> %0, <i64 60, i64 60>
