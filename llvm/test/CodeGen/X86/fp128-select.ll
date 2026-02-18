@@ -12,13 +12,9 @@ define void @test_select(ptr %p, ptr %q, i1 zeroext %c) nounwind {
 ; SSE-LABEL: test_select:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    testl %edx, %edx
-; SSE-NEXT:    jne .LBB0_1
-; SSE-NEXT:  # %bb.2:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [NaN]
-; SSE-NEXT:    movaps %xmm0, (%rsi)
-; SSE-NEXT:    retq
-; SSE-NEXT:  .LBB0_1:
-; SSE-NEXT:    movups (%rdi), %xmm0
+; SSE-NEXT:    movl ${{\.?LCPI[0-9]+_[0-9]+}}, %eax
+; SSE-NEXT:    cmovneq %rdi, %rax
+; SSE-NEXT:    movups (%rax), %xmm0
 ; SSE-NEXT:    movaps %xmm0, (%rsi)
 ; SSE-NEXT:    retq
 ;
