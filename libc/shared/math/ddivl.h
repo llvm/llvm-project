@@ -1,4 +1,4 @@
-//===-- Implementation of ddivl function ----------------------------------===//
+//===-- Shared ddivl function -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/ddivl.h"
+#ifndef LLVM_LIBC_SHARED_MATH_DDIVL_H
+#define LLVM_LIBC_SHARED_MATH_DDIVL_H
+
 #include "src/__support/math/ddivl.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(double, ddivl, (long double x, long double y)) {
-  return math::ddivl(x, y);
-}
+using math::ddivl;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_DDIVL_H
