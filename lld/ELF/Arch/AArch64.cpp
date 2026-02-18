@@ -145,7 +145,8 @@ AArch64::AArch64(Ctx &ctx) : TargetInfo(ctx) {
   needsThunks = true;
 }
 
-// Only needed to support relocations used by relocateNonAlloc and relocateEh.
+// Only needed to support relocations used by relocateNonAlloc and
+// preprocessRelocs.
 RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
                             const uint8_t *loc) const {
   switch (type) {
