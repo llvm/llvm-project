@@ -5096,6 +5096,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  powf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    powf16_test.cpp
+  DEPENDS
+    libc.src.math.powf16
+    libc.src.__support.FPUtil.fp_bits
+)
+add_fp_unittest(
   totalorder_test
   SUITE
     libc-math-smoke-tests

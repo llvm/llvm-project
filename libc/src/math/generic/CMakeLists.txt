@@ -1502,6 +1502,18 @@ add_entrypoint_object(
     libc.src.__support.math.expm1f16
 )
 
+
+add_entrypoint_object(
+  powf16
+  SRCS
+    powf16.cpp
+  HDRS
+    ../powf16.h
+  DEPENDS
+    libc.src.__support.math.powf16
+    libc.src.errno.errno
+)
+
 add_entrypoint_object(
   powf
   SRCS
