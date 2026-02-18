@@ -1038,28 +1038,39 @@ gpu.func @vector_insert_strided_slice_unsupported_offset(%laneid: index) {
   gpu.return
 }
 
-// CHECK-LABEL: gpu.func @vector_broadcast_1d_to_2d_broadcast_within_lane
+// CHECK-LABEL: gpu.func @vector_broadcast_1d_to_2d_to_3d_broadcast_within_lane
 // CHECK-SAME: (%[[ARG0:.*]]: index) {
-// CHECK: %[[R:.*]]:2 = gpu.warp_execute_on_lane_0(%[[ARG0]])[16] -> (vector<16x1xf16>, vector<1xf16>)
-// CHECK: %[[DEF:.*]] = "some_def"()
-// CHECK: %[[BCAST_INNER:.*]] = vector.broadcast %[[DEF]]
-// CHECK: gpu.yield %[[BCAST_INNER]], %[[DEF]]
-// CHECK: %[[BCAST:.*]] = vector.broadcast %[[R]]#1 : vector<1xf16> to vector<16x1xf16>
-// CHECK: "some_use"(%[[BCAST]])
-gpu.func  @vector_broadcast_1d_to_2d_broadcast_within_lane(%laneid: index) {
+// CHECK: %[[R:.*]]:4 = gpu.warp_execute_on_lane_0(%[[ARG0]])[16] -> (vector<16x1xf16>, vector<1x16x1xf16>, vector<1xf16>, vector<16x1xf16>)
+// CHECK: %[[DEF0:.*]] = "some_def"() : () -> vector<16xf16>
+// CHECK: %[[DEF1:.*]] = "some_def"() : () -> vector<16x16xf16>
+// CHECK: %[[BCAST_INNER:.*]] = vector.broadcast %[[DEF0]]
+// CHECK: %[[CAST_INNER:.*]] = vector.shape_cast %[[DEF1]] : vector<16x16xf16> to vector<1x16x16xf16>
+// CHECK: gpu.yield %[[BCAST_INNER]], %[[CAST_INNER]], %[[DEF0]], %[[DEF1]]
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[R]]#3 : vector<16x1xf16> to vector<1x16x1xf16>
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[R]]#2 : vector<1xf16> to vector<16x1xf16>
+// CHECK: "some_use"(%[[BCAST]]) : (vector<16x1xf16>) -> ()
+// CHECK: "some_use"(%[[CAST]]) : (vector<1x16x1xf16>) -> ()
+gpu.func  @vector_broadcast_1d_to_2d_to_3d_broadcast_within_lane(%laneid: index) {
 
-  %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<16x1xf16>) {
+  %r:2 = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<16x1xf16>, vector<1x16x1xf16>) {
 
     %1 = "some_def"() : () -> vector<16xf16>
+    %3 = "some_def"() : () -> vector<16x16xf16>
 
     %2 = vector.broadcast %1 {
       layout_operand_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>,
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     } : vector<16xf16> to vector<16x16xf16>
 
-    gpu.yield %2 : vector<16x16xf16>
+    %4 = vector.broadcast %3 {
+      layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>
+    } : vector<16x16xf16> to vector<1x16x16xf16>
+
+    gpu.yield %2, %4 : vector<16x16xf16>, vector<1x16x16xf16>
   }
-  "some_use"(%r) : (vector<16x1xf16>) -> ()
+  "some_use"(%r#0) : (vector<16x1xf16>) -> ()
+  "some_use"(%r#1) : (vector<1x16x1xf16>) -> ()
   gpu.return
 }
 

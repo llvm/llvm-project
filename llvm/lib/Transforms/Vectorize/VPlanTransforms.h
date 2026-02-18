@@ -285,9 +285,9 @@ struct VPlanTransforms {
       VPlan &Plan,
       const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
 
-  /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
+  /// Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
   /// replaces all uses except the canonical IV increment of
-  /// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
+  /// VPCanonicalIVPHIRecipe with a VPCurrentIterationPHIRecipe.
   /// VPCanonicalIVPHIRecipe is only used to control the loop after
   /// this transformation.
   static void
@@ -336,14 +336,14 @@ struct VPlanTransforms {
   /// BranchOnCond instructions. Should be called after dissolveLoopRegions.
   static void expandBranchOnTwoConds(VPlan &Plan);
 
-  /// Transform EVL loops to use variable-length stepping after region
+  /// Transform loops with variable-length stepping after region
   /// dissolution.
   ///
-  /// Once loop regions are replaced with explicit CFG, EVL loops can step with
+  /// Once loop regions are replaced with explicit CFG, loops can step with
   /// variable vector lengths instead of fixed lengths. This transformation:
-  ///  * Makes EVL-Phi concrete.
+  ///  * Makes CurrentIteration-Phi concrete.
   //   * Removes CanonicalIV and increment.
-  static void canonicalizeEVLLoops(VPlan &Plan);
+  static void convertToVariableLengthStep(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
