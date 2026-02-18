@@ -101,19 +101,6 @@ entry:
   ret void
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %4:_(s128), %5:_(s1) = G_UMULO %0:_, %6:_ (in function: umul_s128)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for umul_s128
-; FALLBACK-WITH-REPORT-OUT-LABEL: umul_s128
-declare {i128, i1} @llvm.umul.with.overflow.i128(i128, i128) nounwind readnone
-define zeroext i1 @umul_s128(i128 %v1, ptr %res) {
-entry:
-  %t = call {i128, i1} @llvm.umul.with.overflow.i128(i128 %v1, i128 2)
-  %val = extractvalue {i128, i1} %t, 0
-  %obit = extractvalue {i128, i1} %t, 1
-  store i128 %val, ptr %res
-  ret i1 %obit
-}
-
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: {{.*}}llvm.experimental.gc.statepoint{{.*}} (in function: gc_intr)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for gc_intr
 ; FALLBACK-WITH-REPORT-OUT-LABEL: gc_intr
