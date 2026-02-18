@@ -1,7 +1,7 @@
 .. title:: clang-tidy - misc-make-smart-ptr
 
 misc-make-smart-ptr
-====================
+===================
 
 Finds constructions of custom smart pointer types from raw ``new`` expressions
 and replaces them with a configurable factory function.
