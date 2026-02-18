@@ -3,6 +3,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -69,33 +70,168 @@ int dumpBuffer(StringRef Base, StringRef Label, int BufferId, StringRef Ext,
   return 0;
 }
 
-Error processIntelBinary(const OffloadEnvTy &OffloadEnv, const BinEnvTy &BinEnv,
-                         size_t FileId, const object::OffloadBinary &Binary) {
-  StringRef Image = Binary.getImage();
-  const char *Data = Image.data();
-  size_t Size = Image.size();
+int dumpBuffer(StringRef Base, StringRef Label, int BufferId, StringRef Ext,
+               StringRef Buffer) {
+  return dumpBuffer(Base, Label, BufferId, Ext, Buffer.data(), Buffer.size());
+}
 
-  std::cout << "Processing SPIR-V binary #" << FileId
-            << " for target " << Binary.getTriple().str() << "/"
-            << Binary.getArch().str() << ".\n";
+#define NT_INTEL_ONEOMP_OFFLOAD_VERSION 1
+#define NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT 2
+#define NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX 3
 
-  /* TODO: extract spv files from Binary*/
+struct IntelKernelImageInfo {
+  // 0 - native, 1 - SPIR-V.
+  uint64_t Format = std::numeric_limits<uint64_t>::max();
+  std::string CompileOpts;
+  std::string LinkOpts;
+  // We may have multiple sections created from split-kernel mode.
+  std::vector<StringRef> Parts;
 
-  dumpBuffer(BinEnv.Name, "spirv", FileId, "spv", Data, Size);
+  IntelKernelImageInfo() = default;
+  IntelKernelImageInfo(uint64_t Format, std::string CompileOpts,
+                       std::string LinkOpts)
+      : Format(Format), CompileOpts(std::move(CompileOpts)),
+        LinkOpts(std::move(LinkOpts)) {}
+};
+
+template <typename T>
+Error getIntelKernelImages(const T *Object,
+                           llvm::SmallVector<IntelKernelImageInfo> &Images) {
+  const auto &E = Object->getELFFile();
+  auto Sections = E.sections();
+  if (!Sections)
+    return Sections.takeError();
+
+  for (auto Sec : *Sections) {
+    if (Sec.sh_type != ELF::SHT_NOTE)
+      continue;
+    Error Err = Error::success();
+    for (auto Note : E.notes(Sec, Err)) {
+      if (Err)
+        return Err;
+      if (Note.getName().str() != "INTELONEOMPOFFLOAD")
+        continue;
+
+      const uint64_t Type = Note.getType();
+      auto DescStrRef = Note.getDescAsStringRef(4);
+      switch (Type) {
+      default:
+      case NT_INTEL_ONEOMP_OFFLOAD_VERSION:
+      case NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT:
+        break;
+      case NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX:
+        uint64_t Idx = 0;
+        uint64_t Part1Id = 0;
+        llvm::SmallVector<llvm::StringRef, 4> Parts;
+
+        DescStrRef.split(Parts, '\0', /* MaxSplit = */ 4,
+                         /* KeepEmpty = */ true);
+
+        // Ignore records with less than 4 strings or invalid index/part id.
+        if (Parts.size() != 4 || Parts[0].getAsInteger(10, Idx) ||
+            Parts[1].getAsInteger(10, Part1Id))
+          continue;
+
+        if (Idx >= Images.size())
+          Images.resize(Idx + 1);
+
+        Images[Idx] =
+            IntelKernelImageInfo(Part1Id, Parts[2].str(), Parts[3].str());
+        break;
+      }
+    }
+  }
+
+  for (auto Sec : *Sections) {
+    const char *Prefix = "__openmp_offload_spirv_";
+    auto ExpectedSectionName = E.getSectionName(Sec);
+    if (!ExpectedSectionName)
+      return ExpectedSectionName.takeError();
+    auto &SectionNameRef = *ExpectedSectionName;
+    if (!SectionNameRef.consume_front(Prefix))
+      continue;
+
+    // Expected section name in split-kernel mode with the following pattern:
+    // __openmp_offload_spirv_<image_id>_<part_id>
+    auto Parts = SectionNameRef.split('_');
+    // It seems that we do not need part ID as long as they are ordered
+    // in the image and we keep the ordering in the runtime.
+    SectionNameRef = Parts.first;
+
+    uint64_t Idx = 0;
+    if (SectionNameRef.getAsInteger(10, Idx))
+      continue;
+    if (Idx >= Images.size())
+      continue;
+
+    auto Contents = E.getSectionContents(Sec);
+    if (!Contents)
+      return Contents.takeError();
+
+    Images[Idx].Parts.push_back(StringRef(
+        reinterpret_cast<const char *>((*Contents).data()), Sec.sh_size));
+  }
   return Error::success();
 }
 
-Error processOffloadBinary(const OffloadEnvTy &OffloadEnv, const BinEnvTy &BinEnv,
+Error processIntelBinary(const OffloadEnvTy &OffloadEnv, const BinEnvTy &BinEnv,
                          size_t FileId, const object::OffloadBinary &Binary) {
+  StringRef Image = Binary.getImage();
+  auto ImageBuffer = MemoryBuffer::getMemBuffer(Image, "", false);
+
+  llvm::SmallVector<IntelKernelImageInfo> ImageList;
+
+  auto ExpectedNewE = object::ELFObjectFileBase::createELFObjectFile(
+      ImageBuffer->getMemBufferRef());
+  if (!ExpectedNewE)
+    return ExpectedNewE.takeError();
+
+  if (auto *O = dyn_cast<object::ELF64LEObjectFile>((*ExpectedNewE).get())) {
+    if (auto Err = getIntelKernelImages(O, ImageList))
+      return Err;
+  } else if (auto *O =
+                 dyn_cast<object::ELF32LEObjectFile>((*ExpectedNewE).get())) {
+    if (auto Err = getIntelKernelImages(O, ImageList))
+      return Err;
+  } else
+    return make_error<error::OffloadError>(
+        error::ErrorCode::INVALID_ARGUMENT,
+        "Unsupported ELF type in the provided binary");
+
+  constexpr static struct {
+    StringRef Name;
+    bool supportSplitKernel;
+    StringRef Ext;
+  } supportedImages[] = {
+      {"binary", true, "bin"}, // Native binary format.
+      {"spirv", false, "spv"}, // SPIR-V format.
+  };
+  constexpr size_t NumSupportedFormats =
+      sizeof(supportedImages) / sizeof(supportedImages[0]);
+
+  for (uint64_t Idx = 0; Idx < ImageList.size(); ++Idx) {
+    auto &ImageInfo = ImageList[Idx];
+    const auto NumParts = ImageInfo.Parts.size();
+
+    // Skip unknown image format.
+    if (ImageInfo.Format >= NumSupportedFormats ||
+        (NumParts > 1 && !supportedImages[ImageInfo.Format].supportSplitKernel))
+      continue;
+
+    for (size_t I = 0; I < NumParts; I++)
+      dumpBuffer(BinEnv.Name, "kernels", Idx * 10 + I,
+                 supportedImages[ImageInfo.Format].Ext, ImageInfo.Parts[I]);
+  }
+
+  return Error::success();
+}
+
+Error processOffloadBinary(const OffloadEnvTy &OffloadEnv,
+                           const BinEnvTy &BinEnv, size_t FileId,
+                           const object::OffloadBinary &Binary) {
   StringRef Image = Binary.getImage();
   const char *Data = Image.data();
   size_t Size = Image.size();
-
-  std::cout << "Processing offloading binary #" << FileId << " with image kind "
-            << Binary.getImageKind() << " and offload kind "
-            << Binary.getOffloadKind() << " for target "
-            << Binary.getTriple().str() << "/" << Binary.getArch().str() << ".\n"
-            << ".\n";
 
   dumpBuffer(BinEnv.Name, "image", FileId, "bin", Data, Size);
 
@@ -136,7 +272,7 @@ Error processBinary(const OffloadEnvTy &OffloadEnv, const BinEnvTy &BinEnv) {
   for (size_t FileId = 0; FileId < Files.size(); ++FileId) {
     const auto &OffloadFile = Files[FileId];
     if (auto Err = processOffloadBinary(OffloadEnv, BinEnv, FileId,
-                                      *OffloadFile.getBinary()))
+                                        *OffloadFile.getBinary()))
       return Err;
   }
 
