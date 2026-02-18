@@ -144,6 +144,7 @@
 #include "AMDGPU.h"
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -362,8 +363,11 @@ void NextUseResult::analyze(const MachineFunction &MF) {
       }
 
       NextUseMap[MBBNum].Bottom = Curr;
+      NextUseMap[MBBNum].VRegEvents.clear();
+      unsigned Seq = 0;
 
       for (const MachineInstr &MI : reverse(*MBB)) {
+        SmallDenseSet<unsigned, 8> TouchedVRegs;
 
         for (const MachineOperand &MO : MI.operands()) {
 
@@ -379,16 +383,29 @@ void NextUseResult::analyze(const MachineFunction &MF) {
             if (!MI.isPHI()) {
               Curr.insert(P, -(int64_t)Offset, /*ForceCloserToEntry=*/true);
               UsedInBlock[MBB->getNumber()].insert(P);
+              TouchedVRegs.insert(P.getVReg());
             }
           } else if (MO.isDef()) {
             Curr.clear(P);
             UsedInBlock[MBB->getNumber()].remove(P);
+            TouchedVRegs.insert(P.getVReg());
           }
         }
-        NextUseMap[MBBNum].InstrDist[&MI] = Curr;
+
+        for (unsigned VReg : TouchedVRegs) {
+          VRegDistances::iterator It = Curr.find(VReg);
+          if (It != Curr.end())
+            NextUseMap[MBBNum].VRegEvents[VReg].push_back(
+                {Seq, It->second});
+          else
+            NextUseMap[MBBNum].VRegEvents[VReg].push_back({Seq, {}});
+        }
+
         NextUseMap[MBBNum].InstrOffset[&MI] = Offset;
+        NextUseMap[MBBNum].InstrSeq[&MI] = Seq;
         if (!MI.isPHI())
           ++Offset;
+        ++Seq;
       }
 
       // EntryOff needs the TOTAL instruction count for correct predecessor
@@ -454,6 +471,30 @@ void NextUseResult::getFromSortedRecords(
   }
 }
 
+const NextUseResult::VRegDistances::SortedRecords *
+NextUseResult::resolveVReg(const NextUseInfo &Info, unsigned VReg,
+                           unsigned Seq) const {
+  auto EventsIt = Info.VRegEvents.find(VReg);
+  if (EventsIt != Info.VRegEvents.end()) {
+    const auto &Events = EventsIt->second;
+    const VRegEvent *Best = nullptr;
+    for (const VRegEvent &E : Events) {
+      if (E.Seq <= Seq)
+        Best = &E;
+      else
+        break;
+    }
+    if (Best)
+      return Best->Records.empty() ? nullptr : &Best->Records;
+  }
+
+  auto BottomIt = Info.Bottom.find(VReg);
+  if (BottomIt != Info.Bottom.end())
+    return &BottomIt->second;
+
+  return nullptr;
+}
+
 // Helper to collect subreg uses from sorted records
 static void
 collectSubregUses(const NextUseResult::VRegDistances::SortedRecords &Dists,
@@ -481,14 +522,12 @@ NextUseResult::getSortedSubregUses(const MachineBasicBlock::iterator I,
   DenseMap<unsigned, NextUseInfo>::iterator MBBIt = NextUseMap.find(MBBNum);
   if (MBBIt == NextUseMap.end())
     return Result;
-  DenseMap<const MachineInstr *, VRegDistances>::iterator InstrIt =
-      MBBIt->second.InstrDist.find(&*I);
-  if (InstrIt == MBBIt->second.InstrDist.end())
+  unsigned Seq = MBBIt->second.InstrSeq.lookup(&*I);
+  const VRegDistances::SortedRecords *Records =
+      resolveVReg(MBBIt->second, VMP.getVReg(), Seq);
+  if (!Records)
     return Result;
-  VRegDistances::iterator VRegIt = InstrIt->second.find(VMP.getVReg());
-  if (VRegIt == InstrIt->second.end())
-    return Result;
-  collectSubregUses(VRegIt->second, VMP, Result);
+  collectSubregUses(*Records, VMP, Result);
   return Result;
 }
 
@@ -529,15 +568,12 @@ unsigned NextUseResult::getNextUseDistance(const MachineBasicBlock::iterator I,
   unsigned MBBNum = MBB->getNumber();
   DenseMap<unsigned, NextUseInfo>::iterator MBBIt = NextUseMap.find(MBBNum);
   if (MBBIt != NextUseMap.end()) {
-    DenseMap<const MachineInstr *, VRegDistances>::iterator InstrIt =
-        MBBIt->second.InstrDist.find(&*I);
-    if (InstrIt != MBBIt->second.InstrDist.end()) {
-      VRegDistances::iterator VRegIt = InstrIt->second.find(VMP.getVReg());
-      if (VRegIt != InstrIt->second.end()) {
-        unsigned SnapOff = MBBIt->second.InstrOffset.lookup(&*I);
-        getFromSortedRecords(VRegIt->second, VMP.getLaneMask(), SnapOff, Dist);
-      }
-    }
+    unsigned SnapOff = MBBIt->second.InstrOffset.lookup(&*I);
+    unsigned Seq = MBBIt->second.InstrSeq.lookup(&*I);
+    const VRegDistances::SortedRecords *Records =
+        resolveVReg(MBBIt->second, VMP.getVReg(), Seq);
+    if (Records)
+      getFromSortedRecords(*Records, VMP.getLaneMask(), SnapOff, Dist);
   }
 
   if (EnableTimers)
@@ -636,6 +672,15 @@ void NextUseResult::dumpAllNextUseDistances(const MachineFunction &MF) {
 
     const NextUseInfo &Info = NextUseMap.at(MBBNum);
 
+    // Collect and sort all VReg keys from Bottom and VRegEvents.
+    SmallVector<unsigned, 32> AllVRegs;
+    for (const auto &[VReg, Recs] : Info.Bottom)
+      AllVRegs.push_back(VReg);
+    for (const auto &[VReg, Events] : Info.VRegEvents)
+      AllVRegs.push_back(VReg);
+    llvm::sort(AllVRegs);
+    AllVRegs.erase(llvm::unique(AllVRegs), AllVRegs.end());
+
     // Per-instruction dump (materialized with per-MI snapshot offset).
     for (MachineBasicBlock::const_iterator II = MBB.begin(), IE = MBB.end();
          II != IE; ++II) {
@@ -647,18 +692,18 @@ void NextUseResult::dumpAllNextUseDistances(const MachineFunction &MF) {
       dbgs() << "\n";
 
       dbgs() << "    Next-use distances:\n";
-      DenseMap<const MachineInstr *, VRegDistances>::const_iterator InstrIt =
-          Info.InstrDist.find(&MI);
-      if (InstrIt != Info.InstrDist.end()) {
-        const VRegDistances &Dists = InstrIt->second;
-        const unsigned SnapOff = Info.InstrOffset.lookup(&MI); // 0 if absent
-        const bool Any =
-            printVregDistances(Dists, SnapOff, 0, dbgs(), "      ");
-        if (!Any)
-          dbgs() << "      (no register uses)\n";
-      } else {
-        dbgs() << "      (no distance data)\n";
+      const unsigned SnapOff = Info.InstrOffset.lookup(&MI);
+      const unsigned Seq = Info.InstrSeq.lookup(&MI);
+      bool Any = false;
+      for (unsigned VReg : AllVRegs) {
+        const VRegDistances::SortedRecords *Records =
+            resolveVReg(Info, VReg, Seq);
+        if (Records)
+          Any |= printSortedRecords(*Records, VReg, SnapOff, 0, dbgs(),
+                                    "      ");
       }
+      if (!Any)
+        dbgs() << "      (no register uses)\n";
       dbgs() << "\n";
     }
 

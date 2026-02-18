@@ -123,6 +123,7 @@ public:
     bool contains(unsigned Key) const { return NextUseMap.contains(Key); }
 
     iterator find(unsigned Key) { return NextUseMap.find(Key); }
+    const_iterator find(unsigned Key) const { return NextUseMap.find(Key); }
 
     // Compare two stored distances: returns true if A is closer or equal to B.
     // Handles mixed-sign values correctly:
@@ -269,13 +270,17 @@ public:
       }
     }
   };
+  struct VRegEvent {
+    unsigned Seq;
+    VRegDistances::SortedRecords Records; // empty = VReg cleared/dead
+  };
+
   class NextUseInfo {
-    // FIXME: need to elaborate proper class interface!
   public:
     VRegDistances Bottom;
-    DenseMap<const MachineInstr *, VRegDistances> InstrDist;
-    DenseMap<const MachineInstr *, unsigned>
-        InstrOffset; // offset at that MI snapshot
+    DenseMap<unsigned, SmallVector<VRegEvent, 2>> VRegEvents;
+    DenseMap<const MachineInstr *, unsigned> InstrOffset;
+    DenseMap<const MachineInstr *, unsigned> InstrSeq;
   };
 
   DenseMap<unsigned, NextUseInfo> NextUseMap;
@@ -297,6 +302,12 @@ private:
   void init(const MachineFunction &MF);
   void analyze(const MachineFunction &MF);
   void ensureAnalyzed();
+
+  /// Resolve the SortedRecords for a VReg at a given instruction offset
+  /// within a block. Searches the VRegEvents delta list first, then falls
+  /// back to the Bottom snapshot.
+  const VRegDistances::SortedRecords *
+  resolveVReg(const NextUseInfo &Info, unsigned VReg, unsigned Seq) const;
 
   // Core materialization: convert stored relative value + snapshot offset
   // to full materialized distance with bounds checking.
@@ -386,16 +397,20 @@ private:
     return Any;
   }
 
-  // Iterate VRegs and delegate to printSortedRecords.
-  // Returns true if anything was printed.
+  // Iterate VRegs (sorted by register number) and delegate to
+  // printSortedRecords. Returns true if anything was printed.
   LLVM_DUMP_METHOD
   bool printVregDistances(const VRegDistances &D, unsigned SnapshotOffset,
                           int64_t EdgeWeight = 0, raw_ostream &O = dbgs(),
                           StringRef Indent = "      ") const {
+    SmallVector<unsigned, 32> Keys;
+    for (const auto &[VReg, Recs] : D)
+      Keys.push_back(VReg);
+    llvm::sort(Keys);
     bool Any = false;
-    for (const auto &[VReg, Recs] : D) {
-      Any |=
-          printSortedRecords(Recs, VReg, SnapshotOffset, EdgeWeight, O, Indent);
+    for (unsigned VReg : Keys) {
+      Any |= printSortedRecords(D.get(VReg).second, VReg, SnapshotOffset,
+                                EdgeWeight, O, Indent);
     }
     return Any;
   }
