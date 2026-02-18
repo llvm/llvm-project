@@ -9,9 +9,9 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include <cstddef>
 #include <optional>
-#include <type_traits>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -21,12 +21,13 @@ template <class T>
 using size_func = decltype(T::GetSizeMember(std::declval<ValueObject &>()));
 template <class T>
 using start_func = decltype(T::GetStartMember(std::declval<ValueObject &>()));
-namespace {
-template <typename...> struct check_func : std::true_type {};
-} // namespace
+template <class T>
+using end_func = decltype(T::GetEndMember(std::declval<ValueObject &>()));
 
 template <typename T>
-using has_functions = check_func<size_func<T>, start_func<T>>;
+using has_start_function = llvm::is_detected<start_func, T>;
+template <typename T> using has_size_function = llvm::is_detected<size_func, T>;
+template <typename T> using has_end_function = llvm::is_detected<end_func, T>;
 } // namespace generic_check
 
 struct LibCxx {
@@ -49,14 +50,24 @@ struct LibStdcpp {
   }
 };
 
+struct MsvcStl {
+  static ValueObjectSP GetStartMember(ValueObject &backend) {
+    return backend.GetChildMemberWithName("_First");
+  }
+
+  static ValueObjectSP GetEndMember(ValueObject &backend) {
+    return backend.GetChildMemberWithName("_Last");
+  }
+};
+
 namespace lldb_private::formatters {
 
 template <class StandardImpl>
 class GenericInitializerListSyntheticFrontEnd
     : public SyntheticChildrenFrontEnd {
 public:
-  static_assert(generic_check::has_functions<StandardImpl>::value,
-                "Missing Required Functions.");
+  static_assert(generic_check::has_start_function<StandardImpl>::value,
+                "Missing start function.");
 
   GenericInitializerListSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
       : SyntheticChildrenFrontEnd(*valobj_sp), m_element_type() {
@@ -71,16 +82,11 @@ public:
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
-    m_num_elements = 0;
-
-    const ValueObjectSP size_sp(StandardImpl::GetSizeMember(m_backend));
-    if (size_sp)
-      m_num_elements = size_sp->GetValueAsUnsigned(0);
     return m_num_elements;
   }
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
-    if (!m_start)
+    if (!m_start || idx >= m_num_elements)
       return {};
 
     uint64_t offset = static_cast<uint64_t>(idx) * m_element_size;
@@ -95,18 +101,46 @@ public:
   lldb::ChildCacheState Update() override {
     m_start = nullptr;
     m_num_elements = 0;
-    m_element_type = m_backend.GetCompilerType().GetTypeTemplateArgument(0);
-    if (!m_element_type.IsValid())
+    // Store raw pointers or end up with a circular dependency.
+    m_start = StandardImpl::GetStartMember(m_backend).get();
+    if (!m_start)
       return lldb::ChildCacheState::eRefetch;
+
+    m_element_type = m_backend.GetCompilerType().GetTypeTemplateArgument(0);
+    if (!m_element_type) {
+      // PDB doesn't have template types, so get the element type from the start
+      // pointer.
+      m_element_type = m_start->GetCompilerType().GetPointeeType();
+      if (!m_element_type)
+        return lldb::ChildCacheState::eRefetch;
+    }
 
     llvm::Expected<uint64_t> size_or_err = m_element_type.GetByteSize(nullptr);
     if (!size_or_err)
       LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), size_or_err.takeError(),
                       "{0}");
-    else {
+    else
       m_element_size = *size_or_err;
-      // Store raw pointers or end up with a circular dependency.
-      m_start = StandardImpl::GetStartMember(m_backend).get();
+
+    if (m_element_size == 0)
+      return lldb::ChildCacheState::eRefetch;
+
+    if constexpr (generic_check::has_size_function<StandardImpl>::value) {
+      const ValueObjectSP size_sp(StandardImpl::GetSizeMember(m_backend));
+      if (size_sp)
+        m_num_elements = size_sp->GetValueAsUnsigned(0);
+    } else {
+      static_assert(generic_check::has_end_function<StandardImpl>::value,
+                    "Must have size or end function");
+      ValueObjectSP end_sp = StandardImpl::GetEndMember(m_backend);
+      if (!end_sp)
+        return lldb::ChildCacheState::eRefetch;
+
+      uint64_t start = m_start->GetValueAsUnsigned(0);
+      uint64_t end = end_sp->GetValueAsUnsigned(0);
+      if (end < start)
+        return lldb::ChildCacheState::eRefetch;
+      m_num_elements = (end - start) / m_element_size;
     }
 
     return lldb::ChildCacheState::eRefetch;
@@ -139,6 +173,9 @@ SyntheticChildrenFrontEnd *GenericInitializerListSyntheticFrontEndCreator(
 
   if (LibCxx::GetStartMember(*valobj_sp) != nullptr)
     return new GenericInitializerListSyntheticFrontEnd<LibCxx>(valobj_sp);
+
+  if (MsvcStl::GetStartMember(*valobj_sp) != nullptr)
+    return new GenericInitializerListSyntheticFrontEnd<MsvcStl>(valobj_sp);
 
   return new GenericInitializerListSyntheticFrontEnd<LibStdcpp>(valobj_sp);
 }
