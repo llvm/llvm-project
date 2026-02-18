@@ -156,6 +156,12 @@ public:
       report_fatal_error(std::move(E));
   }
 
+  // Returns memory block addresses recorded during profiling (V6+).
+  // TODO: Used by llvm-profdata to map addresses back to symbols.
+  const llvm::SmallVector<uint64_t> &getMemBlockAddresses() const {
+    return MemBlockAddresses;
+  }
+
 private:
   RawMemProfReader(object::OwningBinary<object::Binary> &&Bin, bool KeepName)
       : Binary(std::move(Bin)), KeepSymbolName(KeepName) {}
@@ -201,6 +207,9 @@ private:
   // information recorded for that allocation context.
   llvm::MapVector<uint64_t, MemInfoBlock> CallstackProfileData;
   CallStackMap StackMap;
+
+  // Memory block addresses recorded during profiling (V6+).
+  llvm::SmallVector<uint64_t> MemBlockAddresses;
 
   // Cached symbolization from PC to Frame.
   llvm::DenseMap<uint64_t, llvm::SmallVector<FrameId>> SymbolizedFrame;

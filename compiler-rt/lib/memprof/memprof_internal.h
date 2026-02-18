@@ -52,11 +52,12 @@ void PrintAddressSpaceLayout();
 // memprof_shadow_setup.cpp
 void InitializeShadowMemory();
 
-// memprof_malloc_linux.cpp
+// memprof_malloc_linux.cpp / memprof_malloc_mac.cpp
 void ReplaceSystemMalloc();
 
-// memprof_linux.cpp
+// memprof_linux.cpp / memprof_mac.cpp
 uptr FindDynamicShadowStart();
+void InitializePlatformExceptionHandlers();
 
 // memprof_thread.cpp
 MemprofThread *CreateMainThread();

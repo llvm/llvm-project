@@ -35,7 +35,9 @@ config.substitutions.append(
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
 
-libdl_flag = "-ldl"
+libdl_flag = ""
+if config.target_os == "Linux":
+    libdl_flag = "-ldl"
 
 # Setup default compiler flags used with -fmemory-profile option.
 # FIXME: Review the set of required flags and check if it can be reduced.
@@ -74,10 +76,16 @@ config.substitutions.append(
     ("%clangxx_memprof ", build_invocation(clang_memprof_cxxflags))
 )
 if config.memprof_dynamic:
-    shared_libmemprof_path = os.path.join(
-        config.compiler_rt_libdir,
-        "libclang_rt.memprof{}.so".format(config.target_suffix),
-    )
+    if config.target_os == "Darwin":
+        shared_libmemprof_path = os.path.join(
+            config.compiler_rt_libdir,
+            "libclang_rt.memprof_osx_dynamic.dylib",
+        )
+    else:
+        shared_libmemprof_path = os.path.join(
+            config.compiler_rt_libdir,
+            "libclang_rt.memprof{}.so".format(config.target_suffix),
+        )
     config.substitutions.append(("%shared_libmemprof", shared_libmemprof_path))
     config.substitutions.append(
         ("%clang_memprof_static ", build_invocation(clang_memprof_static_cflags))
@@ -92,11 +100,17 @@ config.available_features.add("memprof-" + config.bits + "-bits")
 
 config.available_features.add("fast-unwinder-works")
 
-# Set LD_LIBRARY_PATH to pick dynamic runtime up properly.
-new_ld_library_path = os.path.pathsep.join(
-    (config.compiler_rt_libdir, config.environment.get("LD_LIBRARY_PATH", ""))
-)
-config.environment["LD_LIBRARY_PATH"] = new_ld_library_path
+# Set library path to pick dynamic runtime up properly.
+if config.target_os == "Darwin":
+    new_dyld_library_path = os.path.pathsep.join(
+        (config.compiler_rt_libdir, config.environment.get("DYLD_LIBRARY_PATH", ""))
+    )
+    config.environment["DYLD_LIBRARY_PATH"] = new_dyld_library_path
+else:
+    new_ld_library_path = os.path.pathsep.join(
+        (config.compiler_rt_libdir, config.environment.get("LD_LIBRARY_PATH", ""))
+    )
+    config.environment["LD_LIBRARY_PATH"] = new_ld_library_path
 
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
@@ -106,7 +120,7 @@ config.substitutions.append(("%fPIE", "-fPIE"))
 config.substitutions.append(("%pie", "-pie"))
 
 # Only run the tests on supported OSs.
-if config.target_os not in ["Linux"]:
+if config.target_os not in ["Linux", "Darwin"]:
     config.unsupported = True
 
 if not config.parallelism_group:
