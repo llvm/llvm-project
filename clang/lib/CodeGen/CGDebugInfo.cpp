@@ -4360,6 +4360,32 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
   }
   TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
 
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    SmallVector<llvm::Metadata *, 16> EltTys;
+    const ASTRecordLayout &Layout = CGM.getContext().getASTRecordLayout(CXXRD);
+
+    for (const FieldDecl *Field : CXXRD->fields()) {
+      if (!CXXRD->isLambda() && Field->isImplicit())
+        continue;
+
+      llvm::DIType *FieldType = getOrCreateType(Field->getType(), DefUnit);
+      unsigned FieldLine = getLineNumber(Field->getLocation());
+      uint64_t FieldOffset = Layout.getFieldOffset(Field->getFieldIndex());
+      llvm::DIFile *FieldFile = DefUnit;
+
+      llvm::DIDerivedType *Elem = DBuilder.createMemberType(
+          RealDecl, Field->getName(), FieldFile, FieldLine,
+          CGM.getContext().getTypeSize(Field->getType()),
+          getTypeAlignIfRequired(Field->getType(), CGM.getContext()),
+          FieldOffset,
+          getAccessFlag(Field->getAccess()), FieldType);
+
+      EltTys.push_back(Elem);
+    }
+    // Attach the fields.
+    DBuilder.replaceArrays(RealDecl, DBuilder.getOrCreateArray(EltTys));
+  }
+
   if (const auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
     DBuilder.replaceArrays(RealDecl, llvm::DINodeArray(),
                            CollectCXXTemplateParams(TSpecial, DefUnit));
