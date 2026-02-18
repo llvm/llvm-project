@@ -1376,6 +1376,7 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
  
   // If the ABI is undetermined at this point, default to the globals ABI
   ctx.componentModelThreadContext = (threadContextABI == ThreadContextABI::ComponentModelBuiltins);
+  
   if (ctx.arg.sharedMemory && ctx.componentModelThreadContext) {
     error("--shared-memory is currently incompatible with component model thread context intrinsics");
   }
