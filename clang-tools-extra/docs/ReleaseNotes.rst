@@ -121,6 +121,12 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`modernize-use-return-value
+  <clang-tidy/checks/modernize/use-return-value>` check.
+
+  Finds ``void`` functions with a single non-const reference output
+  parameter, suggesting they return the value directly instead.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 
