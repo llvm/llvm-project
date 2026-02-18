@@ -74,3 +74,40 @@ void llvm::reduceConditionalsFalseDeltaPass(Oracle &O,
                                             ReducerWorkItem &WorkItem) {
   reduceConditionals(O, WorkItem, false);
 }
+
+void llvm::reduceUnconditionalBranchDeltaPass(Oracle &O,
+                                              ReducerWorkItem &WorkItem) {
+  Module &M = WorkItem.getModule();
+  LLVMContext &Ctx = M.getContext();
+
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    SmallVector<BasicBlock *, 16> ToSimplify;
+
+    Type *RetTy = F.getReturnType();
+
+    for (auto &BB : F) {
+      auto *BR = dyn_cast<BranchInst>(BB.getTerminator());
+      if (!BR || !BR->isUnconditional())
+        continue;
+
+      if (O.shouldKeep())
+        continue;
+
+      BasicBlock *Succ = BR->getSuccessor(0);
+      Succ->removePredecessor(&BB, /*KeepOneInputPHIs=*/true);
+      BR->eraseFromParent();
+      ToSimplify.push_back(&BB);
+
+      if (RetTy->isVoidTy())
+        ReturnInst::Create(Ctx, &BB);
+      else
+        ReturnInst::Create(Ctx, getDefaultValue(RetTy), &BB);
+    }
+
+    if (!ToSimplify.empty())
+      simpleSimplifyCFG(F, ToSimplify);
+  }
+}
