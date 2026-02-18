@@ -1,4 +1,4 @@
-//===-- Implementation of dmulf128 function -------------------------------===//
+//===-- Shared dmull function -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/dmulf128.h"
-#include "src/__support/math/dmulf128.h"
+#ifndef LLVM_LIBC_SHARED_MATH_DMULL_H
+#define LLVM_LIBC_SHARED_MATH_DMULL_H
+
+#include "src/__support/math/dmull.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(double, dmulf128, (float128 x, float128 y)) {
-  return math::dmulf128(x, y);
-}
+using math::dmull;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_DMULL_H
