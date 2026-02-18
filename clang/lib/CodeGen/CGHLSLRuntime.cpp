@@ -267,6 +267,13 @@ static std::optional<llvm::Value *> initializeLocalResourceArray(
   return Index;
 }
 
+static void addDisableOptimizations(llvm::Module &M) {
+  if (M.getModuleFlag("dx.disable_optimizations"))
+    return;
+  StringRef Key = "dx.disable_optimizations";
+  M.addModuleFlag(llvm::Module::ModFlagBehavior::Override, Key, 1);
+}
+
 } // namespace
 
 llvm::Type *
@@ -523,7 +530,7 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
   // hence not able to set attributes of the newly materialized entry functions.
   // So, set attributes of entry function here, as appropriate.
   if (CGM.getCodeGenOpts().OptimizationLevel == 0)
-    Fn->addFnAttr(llvm::Attribute::OptimizeNone);
+    addDisableOptimizations(CGM.getModule());
   Fn->addFnAttr(llvm::Attribute::NoInline);
 
   if (CGM.getLangOpts().HLSLSpvEnableMaximalReconvergence) {
