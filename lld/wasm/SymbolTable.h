@@ -104,6 +104,8 @@ public:
   void handleWeakUndefines();
   DefinedFunction *createUndefinedStub(const WasmSignature &sig);
 
+  void validateThreadContextAbi(const ObjFile *obj);
+
 private:
   std::pair<Symbol *, bool> insert(StringRef name, const InputFile *file);
   std::pair<Symbol *, bool> insertName(StringRef name);

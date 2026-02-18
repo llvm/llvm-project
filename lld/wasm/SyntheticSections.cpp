@@ -523,7 +523,7 @@ void GlobalSection::writeBody() {
         mutable_ = true;
       // With multi-threading any TLS globals must be mutable since they get
       // set during `__wasm_apply_global_tls_relocs`
-      if (ctx.arg.isMultithreaded() && sym->isTLS())
+      if (ctx.isMultithreaded() && sym->isTLS())
         mutable_ = true;
     }
     WasmGlobalType type{itype, mutable_};
@@ -564,7 +564,7 @@ void GlobalSection::writeBody() {
         // `__wasm_apply_global_tls_relocs`, but in the non-multi-threaded case
         // we know the absolute value at link time.
         initExpr =
-            intConst(d->getVA(/*absolute=*/!ctx.arg.isMultithreaded()), is64);
+            intConst(d->getVA(/*absolute=*/!ctx.isMultithreaded()), is64);
       else if (auto *f = dyn_cast<FunctionSymbol>(sym))
         initExpr = intConst(f->isStub ? 0 : f->getTableIndex(), is64);
       else {
@@ -665,7 +665,7 @@ void DataCountSection::writeBody() {
 }
 
 bool DataCountSection::isNeeded() const {
-  return numSegments && ctx.arg.isMultithreaded();
+  return numSegments && ctx.isMultithreaded();
 }
 
 void LinkingSection::writeBody() {

@@ -51,12 +51,9 @@ enum class BuildIdKind { None, Fast, Sha1, Hexstring, Uuid };
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
 struct Config {
-  bool isMultithreaded() const { return sharedMemory || componentModelThreadContext; }
-
   bool allowMultipleDefinition;
   bool bsymbolic;
   bool checkFeatures;
-  bool componentModelThreadContext;
   bool compressRelocations;
   bool demangle;
   bool disableVerify;
@@ -137,6 +134,8 @@ struct Config {
   std::optional<std::vector<std::string>> extraFeatures;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
 };
+
+enum class ThreadContextAbi { Undetermined, Globals, ComponentModelBuiltins };
 
 // The Ctx object hold all other (non-configuration) global state.
 struct Ctx {
@@ -283,8 +282,19 @@ struct Ctx {
                     0>
       whyExtractRecords;
 
+  ThreadContextAbi threadContextAbi = ThreadContextAbi::Undetermined;
+
   Ctx();
   void reset();
+  bool componentModelThreadContext() const {
+    return threadContextAbi == ThreadContextAbi::ComponentModelBuiltins;
+  }
+  bool globalsThreadContext() const {
+    // Use the global thread context ABI by default, even if we can't determine
+    // the ABI from the object files passed.
+    return !componentModelThreadContext();
+  }
+  bool isMultithreaded() const { return componentModelThreadContext() || arg.sharedMemory; }
 };
 
 extern Ctx ctx;

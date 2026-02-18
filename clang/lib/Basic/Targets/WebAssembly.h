@@ -109,9 +109,6 @@ public:
       PtrDiffType = SignedLong;
       IntPtrType = SignedLong;
     }
-    if (T.getOSName() == "wasip3") {
-      HasComponentModelThreadContext = true;
-    }
   }
 
   StringRef getABI() const override;

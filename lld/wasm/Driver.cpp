@@ -705,9 +705,6 @@ static void readConfigs(opt::InputArgList &args) {
   if (args.hasArg(OPT_print_map))
     ctx.arg.mapFile = "-";
 
-  if (args.hasArg(OPT_component_model_thread_context))
-    ctx.arg.componentModelThreadContext = true;
-
   std::tie(ctx.arg.buildId, ctx.arg.buildIdVector) = getBuildId(args);
 }
 
@@ -831,8 +828,8 @@ static void checkOptions(opt::InputArgList &args) {
       error("--table-base may not be used with -shared/-pie");
   }
 
-  if (ctx.arg.sharedMemory && ctx.arg.componentModelThreadContext) {
-    error("--shared-memory is incompatible with component model thread context intrinsics");
+  if (ctx.arg.sharedMemory && ctx.componentModelThreadContext()) {
+    error("--shared-memory is currently incompatible with component model thread context intrinsics");
   }
 }
 
@@ -966,7 +963,7 @@ static void createSyntheticSymbols() {
   bool is64 = ctx.arg.is64.value_or(false);
 
   auto stack_pointer_name =
-      ctx.arg.componentModelThreadContext ? "__init_stack_pointer" : "__stack_pointer";
+      ctx.componentModelThreadContext() ? "__init_stack_pointer" : "__stack_pointer";
   if (ctx.isPic) {
     ctx.sym.stackPointer =
         createUndefinedGlobal(stack_pointer_name, ctx.arg.is64.value_or(false)
@@ -988,9 +985,9 @@ static void createSyntheticSymbols() {
     ctx.sym.stackPointer->markLive();
   }
 
-  if (ctx.arg.isMultithreaded()) {
+  if (ctx.isMultithreaded()) {
     // TLS symbols are all hidden/dso-local
-    auto tls_base_name = ctx.arg.componentModelThreadContext ? "__init_tls_base" : "__tls_base";
+    auto tls_base_name = ctx.componentModelThreadContext() ? "__init_tls_base" : "__tls_base";
     ctx.sym.tlsBase = createGlobalVariable(tls_base_name, true,
                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
@@ -1001,7 +998,7 @@ static void createSyntheticSymbols() {
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
                                 "__wasm_init_tls"));
-    if (ctx.arg.componentModelThreadContext) {
+    if (ctx.componentModelThreadContext()) {
       ctx.sym.tlsBase->markLive();
       ctx.sym.tlsSize->markLive();
       ctx.sym.tlsAlign->markLive();
@@ -1054,7 +1051,7 @@ static void createOptionalSymbols() {
   //
   // __tls_size and __tls_align are not needed in this case since they are only
   // needed for __wasm_init_tls (which we do not create in this case).
-  if (!ctx.arg.sharedMemory && !ctx.arg.componentModelThreadContext)
+  if (!ctx.arg.sharedMemory && !ctx.componentModelThreadContext())
     ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
 
@@ -1398,14 +1395,14 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.arg.requiredExports.push_back(arg->getValue());
   }
 
-  createSyntheticSymbols();
-
   // Add all files to the symbol table. This will add almost all
   // symbols that we need to the symbol table.
   for (InputFile *f : files)
     symtab->addFile(f);
   if (errorCount())
     return;
+  
+  createSyntheticSymbols();
 
   // Handle the `--undefined <sym>` options.
   for (auto *arg : args.filtered(OPT_undefined))
