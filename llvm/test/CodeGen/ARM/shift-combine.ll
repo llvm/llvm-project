@@ -1521,21 +1521,15 @@ entry:
 define <2 x i32> @lshr_into_vsri(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-ARM-LABEL: lshr_into_vsri:
 ; CHECK-ARM:       @ %bb.0: @ %bb1
-; CHECK-ARM-NEXT:    vmov.i32 d16, #0xe0000000
-; CHECK-ARM-NEXT:    vshr.u32 d17, d1, #3
-; CHECK-ARM-NEXT:    vand d16, d0, d16
-; CHECK-ARM-NEXT:    vorr d0, d17, d16
+; CHECK-ARM-NEXT:    vsri.32 d0, d1, #3
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: lshr_into_vsri:
 ; CHECK-BE:       @ %bb.0: @ %bb1
-; CHECK-BE-NEXT:    vrev64.32 d17, d1
-; CHECK-BE-NEXT:    vmov.i32 d16, #0xe0000000
-; CHECK-BE-NEXT:    vrev64.32 d18, d0
-; CHECK-BE-NEXT:    vand d16, d18, d16
-; CHECK-BE-NEXT:    vshr.u32 d17, d17, #3
-; CHECK-BE-NEXT:    vorr d16, d17, d16
-; CHECK-BE-NEXT:    vrev64.32 d0, d16
+; CHECK-BE-NEXT:    vrev64.32 d16, d1
+; CHECK-BE-NEXT:    vrev64.32 d17, d0
+; CHECK-BE-NEXT:    vsri.32 d17, d16, #3
+; CHECK-BE-NEXT:    vrev64.32 d0, d17
 ; CHECK-BE-NEXT:    bx lr
 ;
 ; CHECK-ALIGN-LABEL: lshr_into_vsri:
@@ -1568,21 +1562,15 @@ bb1:
 define <2 x i32> @shl_into_vsli(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-ARM-LABEL: shl_into_vsli:
 ; CHECK-ARM:       @ %bb.0: @ %bb1
-; CHECK-ARM-NEXT:    vmov.i32 d16, #0x7
-; CHECK-ARM-NEXT:    vshl.i32 d17, d1, #3
-; CHECK-ARM-NEXT:    vand d16, d0, d16
-; CHECK-ARM-NEXT:    vorr d0, d17, d16
+; CHECK-ARM-NEXT:    vsli.32 d0, d1, #3
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: shl_into_vsli:
 ; CHECK-BE:       @ %bb.0: @ %bb1
-; CHECK-BE-NEXT:    vrev64.32 d17, d1
-; CHECK-BE-NEXT:    vmov.i32 d16, #0x7
-; CHECK-BE-NEXT:    vrev64.32 d18, d0
-; CHECK-BE-NEXT:    vand d16, d18, d16
-; CHECK-BE-NEXT:    vshl.i32 d17, d17, #3
-; CHECK-BE-NEXT:    vorr d16, d17, d16
-; CHECK-BE-NEXT:    vrev64.32 d0, d16
+; CHECK-BE-NEXT:    vrev64.32 d16, d1
+; CHECK-BE-NEXT:    vrev64.32 d17, d0
+; CHECK-BE-NEXT:    vsli.32 d17, d16, #3
+; CHECK-BE-NEXT:    vrev64.32 d0, d17
 ; CHECK-BE-NEXT:    bx lr
 ;
 ; CHECK-ALIGN-LABEL: shl_into_vsli:
@@ -1614,21 +1602,15 @@ bb1:
 define <2 x i32> @lshr_into_vsri_shift1(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-ARM-LABEL: lshr_into_vsri_shift1:
 ; CHECK-ARM:       @ %bb.0: @ %bb1
-; CHECK-ARM-NEXT:    vmov.i32 d16, #0x80000000
-; CHECK-ARM-NEXT:    vshr.u32 d17, d1, #1
-; CHECK-ARM-NEXT:    vand d16, d0, d16
-; CHECK-ARM-NEXT:    vorr d0, d17, d16
+; CHECK-ARM-NEXT:    vsri.32 d0, d1, #1
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: lshr_into_vsri_shift1:
 ; CHECK-BE:       @ %bb.0: @ %bb1
-; CHECK-BE-NEXT:    vrev64.32 d17, d1
-; CHECK-BE-NEXT:    vmov.i32 d16, #0x80000000
-; CHECK-BE-NEXT:    vrev64.32 d18, d0
-; CHECK-BE-NEXT:    vand d16, d18, d16
-; CHECK-BE-NEXT:    vshr.u32 d17, d17, #1
-; CHECK-BE-NEXT:    vorr d16, d17, d16
-; CHECK-BE-NEXT:    vrev64.32 d0, d16
+; CHECK-BE-NEXT:    vrev64.32 d16, d1
+; CHECK-BE-NEXT:    vrev64.32 d17, d0
+; CHECK-BE-NEXT:    vsri.32 d17, d16, #1
+; CHECK-BE-NEXT:    vrev64.32 d0, d17
 ; CHECK-BE-NEXT:    bx lr
 ;
 ; CHECK-ALIGN-LABEL: lshr_into_vsri_shift1:
@@ -1661,21 +1643,15 @@ bb1:
 define <2 x i32> @shl_into_vsli_shift1(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-ARM-LABEL: shl_into_vsli_shift1:
 ; CHECK-ARM:       @ %bb.0: @ %bb1
-; CHECK-ARM-NEXT:    vmov.i32 d16, #0x1
-; CHECK-ARM-NEXT:    vshl.i32 d17, d1, #1
-; CHECK-ARM-NEXT:    vand d16, d0, d16
-; CHECK-ARM-NEXT:    vorr d0, d17, d16
+; CHECK-ARM-NEXT:    vsli.32 d0, d1, #1
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-BE-LABEL: shl_into_vsli_shift1:
 ; CHECK-BE:       @ %bb.0: @ %bb1
-; CHECK-BE-NEXT:    vrev64.32 d17, d1
-; CHECK-BE-NEXT:    vmov.i32 d16, #0x1
-; CHECK-BE-NEXT:    vrev64.32 d18, d0
-; CHECK-BE-NEXT:    vand d16, d18, d16
-; CHECK-BE-NEXT:    vshl.i32 d17, d17, #1
-; CHECK-BE-NEXT:    vorr d16, d17, d16
-; CHECK-BE-NEXT:    vrev64.32 d0, d16
+; CHECK-BE-NEXT:    vrev64.32 d16, d1
+; CHECK-BE-NEXT:    vrev64.32 d17, d0
+; CHECK-BE-NEXT:    vsli.32 d17, d16, #1
+; CHECK-BE-NEXT:    vrev64.32 d0, d17
 ; CHECK-BE-NEXT:    bx lr
 ;
 ; CHECK-ALIGN-LABEL: shl_into_vsli_shift1:
