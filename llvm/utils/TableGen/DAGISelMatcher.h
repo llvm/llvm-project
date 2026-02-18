@@ -35,9 +35,9 @@ class SDNodeInfo;
 class TreePredicateFn;
 class TreePattern;
 
-MatcherList ConvertPatternToMatcher(const PatternToMatch &Pattern,
-                                    unsigned Variant,
-                                    const CodeGenDAGPatterns &CGP);
+MatcherList ConvertPatternToMatcherList(const PatternToMatch &Pattern,
+                                        unsigned Variant,
+                                        const CodeGenDAGPatterns &CGP);
 void OptimizeMatcher(MatcherList &ML, const CodeGenDAGPatterns &CGP);
 void EmitMatcherTable(MatcherList &ML, const CodeGenDAGPatterns &CGP,
                       raw_ostream &OS);
@@ -353,14 +353,14 @@ public:
   void splice_after(iterator Pos, MatcherList &X) {
     assert(Size == 0 && "Should not modify list once size is set");
     if (!X.empty()) {
-      if (Pos->Next != nullptr) {
+      if (Pos.Pointer->Next != nullptr) {
         auto LM1 = X.before_begin();
         while (LM1.Pointer->Next != nullptr)
           ++LM1;
         LM1.Pointer->Next = Pos.Pointer->Next;
       }
-      Pos.Pointer->Next = X.before_begin()->Next;
-      X.before_begin()->Next = nullptr;
+      Pos.Pointer->Next = X.BeforeBegin.Next;
+      X.BeforeBegin.Next = nullptr;
     }
   }
 

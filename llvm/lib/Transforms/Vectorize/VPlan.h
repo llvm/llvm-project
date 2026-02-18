@@ -2068,9 +2068,10 @@ protected:
 
 /// A recipe to compute a pointer to the last element of each part of a widened
 /// memory access for widened memory accesses of SourceElementTy. Used for
-/// VPWidenMemoryRecipes or VPInterleaveRecipes that are reversed.
-class VPVectorEndPointerRecipe : public VPRecipeWithIRFlags,
-                                 public VPUnrollPartAccessor<2> {
+/// VPWidenMemoryRecipes or VPInterleaveRecipes that are reversed. An extra
+/// Offset operand is added by convertToConcreteRecipes when UF = 1, and by the
+/// unroller otherwise.
+class VPVectorEndPointerRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
   /// The constant stride of the pointer computed by this recipe, expressed in
@@ -2089,8 +2090,16 @@ public:
   VP_CLASSOF_IMPL(VPRecipeBase::VPVectorEndPointerSC)
 
   Type *getSourceElementType() const { return SourceElementTy; }
-  VPValue *getVFValue() { return getOperand(1); }
-  const VPValue *getVFValue() const { return getOperand(1); }
+  int64_t getStride() const { return Stride; }
+  VPValue *getPointer() const { return getOperand(0); }
+  VPValue *getVFValue() const { return getOperand(1); }
+  VPValue *getOffset() const {
+    return getNumOperands() == 3 ? getOperand(2) : nullptr;
+  }
+
+  /// Adds the offset operand to the recipe.
+  /// Offset = Stride * (VF - 1) + Part * Stride * VF.
+  void materializeOffset(unsigned Part = 0);
 
   void execute(VPTransformState &State) override;
 
@@ -2116,9 +2125,12 @@ public:
   }
 
   VPVectorEndPointerRecipe *clone() override {
-    return new VPVectorEndPointerRecipe(getOperand(0), getVFValue(),
-                                        getSourceElementType(), Stride,
-                                        getGEPNoWrapFlags(), getDebugLoc());
+    auto *VEPR = new VPVectorEndPointerRecipe(
+        getPointer(), getVFValue(), getSourceElementType(), getStride(),
+        getGEPNoWrapFlags(), getDebugLoc());
+    if (auto *Offset = getOffset())
+      VEPR->addOperand(Offset);
+    return VEPR;
   }
 
 protected:
@@ -2203,14 +2215,13 @@ protected:
 ///  * VPWidenIntOrFpInductionRecipe: Generates vector values for integer and
 ///    floating point inductions with arbitrary start and step values. Produces
 ///    a vector PHI per-part.
-///  * VPDerivedIVRecipe: Converts the canonical IV value to the corresponding
-///    value of an IV with different start and step values. Produces a single
-///    scalar value per iteration
-///  * VPScalarIVStepsRecipe: Generates scalar values per-lane based on a
-///    canonical or derived induction.
 ///  * VPWidenPointerInductionRecipe: Generate vector and scalar values for a
 ///    pointer induction. Produces either a vector PHI per-part or scalar values
 ///    per-lane based on the canonical induction.
+///  * VPFirstOrderRecurrencePHIRecipe
+///  * VPReductionPHIRecipe
+///  * VPActiveLaneMaskPHIRecipe
+///  * VPEVLBasedIVPHIRecipe
 class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
                                             public VPPhiAccessors {
 protected:

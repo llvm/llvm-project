@@ -394,18 +394,18 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       expr = RE_RISCV_PC_INDIRECT;
       break;
 
-    // GOT-generating relocations:
-    case R_RISCV_GOT_HI20:
-    case R_RISCV_GOT32_PCREL:
-      expr = R_GOT_PC;
-      break;
-
     // PLT-generating relocations:
     case R_RISCV_CALL:
     case R_RISCV_CALL_PLT:
     case R_RISCV_PLT32:
       rs.processR_PLT_PC(type, offset, addend, sym);
       continue;
+
+    // GOT-generating relocations:
+    case R_RISCV_GOT_HI20:
+    case R_RISCV_GOT32_PCREL:
+      expr = R_GOT_PC;
+      break;
 
     // TLS relocations:
     case R_RISCV_TPREL_HI20:
