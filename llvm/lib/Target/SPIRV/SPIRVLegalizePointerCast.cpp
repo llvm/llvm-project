@@ -78,18 +78,25 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     Value *AssignValue = NewLoad;
     if (TargetType->getElementType() != SourceType->getElementType()) {
       const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
-      [[maybe_unused]] TypeSize TargetTypeSize =
-          DL.getTypeSizeInBits(TargetType);
-      [[maybe_unused]] TypeSize SourceTypeSize =
-          DL.getTypeSizeInBits(SourceType);
-      assert(TargetTypeSize == SourceTypeSize);
+      TypeSize TargetTypeSize = DL.getTypeSizeInBits(TargetType);
+      TypeSize SourceTypeSize = DL.getTypeSizeInBits(SourceType);
+      // Bitcast to a same-bitwidth vector with TargetType's element type.
+      // When sizes differ, use an intermediate type to preserve bitwidth.
+      auto *BitcastType = TargetType;
+      if (TargetTypeSize != SourceTypeSize) {
+        unsigned ElemBits = TargetType->getElementType()->getScalarSizeInBits();
+        BitcastType = FixedVectorType::get(TargetType->getElementType(),
+                                           SourceTypeSize / ElemBits);
+      }
       AssignValue = B.CreateIntrinsic(Intrinsic::spv_bitcast,
-                                      {TargetType, SourceType}, {NewLoad});
-      buildAssignType(B, TargetType, AssignValue);
-      return AssignValue;
+                                      {BitcastType, SourceType}, {NewLoad});
+      buildAssignType(B, BitcastType, AssignValue);
+      if (BitcastType == TargetType)
+        return AssignValue;
     }
 
-    assert(TargetType->getNumElements() < SourceType->getNumElements());
+    assert(TargetType->getNumElements() <
+           cast<FixedVectorType>(AssignValue->getType())->getNumElements());
     SmallVector<int> Mask(/* Size= */ TargetType->getNumElements());
     for (unsigned I = 0; I < TargetType->getNumElements(); ++I)
       Mask[I] = I;
