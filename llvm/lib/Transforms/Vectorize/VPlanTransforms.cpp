@@ -5534,7 +5534,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
         MiddleBuilder.createNaryOp(VPInstruction::ComputeReductionResult,
                                    RdxResult->getOperand(0), Flags, ExitDL);
 
-    VPInstruction *NewRdxResult;
+    VPValue *NewRdxResult;
     VPValue *StartVPV = PhiR->getStartValue();
     if (SentinelVal) {
       // Sentinel-based approach: reduce IVs with min/max, compare against
@@ -5542,8 +5542,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       VPValue *Sentinel = Plan.getConstantInt(*SentinelVal);
       auto *Cmp = MiddleBuilder.createICmp(CmpInst::ICMP_NE, ReducedIV,
                                            Sentinel, ExitDL);
-      NewRdxResult = cast<VPInstruction>(
-          MiddleBuilder.createSelect(Cmp, ReducedIV, StartVPV, ExitDL));
+      NewRdxResult =
+          MiddleBuilder.createSelect(Cmp, ReducedIV, StartVPV, ExitDL);
       StartVPV = Sentinel;
     } else {
       // Introduce a boolean AnyOf reduction to track if the condition was ever
