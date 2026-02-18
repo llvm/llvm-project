@@ -16,6 +16,8 @@ SC32TargetLowering::SC32TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UREM, MVT::i32, Expand);
   setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
 
+  setOperationAction(ISD::BR_CC, MVT::i32, Custom);
+
   computeRegisterProperties(STI.getRegisterInfo());
 }
 
@@ -63,8 +65,33 @@ SC32TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   RetOps[0] = Chain;
 
-  if (Glue.getNode())
+  if (Glue.getNode()) {
     RetOps.push_back(Glue);
+  }
 
   return DAG.getNode(SC32ISD::RET_GLUE, DL, MVT::Other, RetOps);
+}
+
+static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) {
+  SDValue Chain = Op.getOperand(0);
+  SDValue CC = Op.getOperand(1);
+  SDValue LHS = Op.getOperand(2);
+  SDValue RHS = Op.getOperand(3);
+  SDValue Dest = Op.getOperand(4);
+
+  SDLoc DL(Op);
+
+  SDValue CompareFlag = DAG.getNode(SC32ISD::CMP, DL, MVT::Glue, LHS, RHS);
+  return DAG.getNode(SC32ISD::JMP, DL, MVT::Other, Chain, CC, Dest,
+                     CompareFlag);
+}
+
+SDValue SC32TargetLowering::LowerOperation(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  switch (Op.getOpcode()) {
+  default:
+    llvm_unreachable("Should not custom lower this!");
+  case ISD::BR_CC:
+    return LowerBR_CC(Op, DAG);
+  }
 }

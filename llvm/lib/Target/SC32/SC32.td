@@ -33,17 +33,24 @@ let Namespace = "SC32" in {
   def GP29 : Register<"GP29">;
   def GP30 : Register<"GP30">;
   def GP31 : Register<"GP31">;
+
+  def FLAGS : Register<"FLAGS">;
 }
 
 def GP : RegisterClass<"SC32", [i32], 32, (sequence "GP%u", 0, 31)>;
 
 def CC_SC32 : CallingConv<[CCAssignToReg<[GP23, GP24, GP25, GP26]>]>;
-
 def RetCC_SC32 : CallingConv<[CCAssignToReg<[GP28]>]>;
 
 def CSR : CalleeSavedRegs<(add)>;
 
 defm : RemapAllTargetPseudoPointerOperands<GP>;
+
+def SDTSC32cmp : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>]>;
+def SDTSC32jmp : SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>, SDTCisVT<1, OtherVT>]>;
+
+def SC32cmp : SDNode<"SC32ISD::CMP", SDTSC32cmp, [SDNPOutGlue]>;
+def SC32jmp : SDNode<"SC32ISD::JMP", SDTSC32jmp, [SDNPHasChain, SDNPInGlue]>;
 
 def retglue : SDNode<"SC32ISD::RET_GLUE", SDTNone, [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
@@ -72,19 +79,28 @@ def brtarget : Operand<OtherVT>;
 multiclass Operator<string OpStr, SDNode OpNode> {
   def "" : Instruction {
     let OutOperandList = (outs GP:$out);
-    let InOperandList = (ins GP:$in1, GP:$in2);
-    let Constraints = "$out = $in1";
-    let Pattern = [(set i32:$out, (OpNode i32:$in1, i32:$in2))];
-    let AsmString = !strconcat(OpStr, " $in1, $in2");
+    let InOperandList = (ins GP:$lhs, GP:$rhs);
+    let Constraints = "$out = $lhs";
+    let Pattern = [(set i32:$out, (OpNode i32:$lhs, i32:$rhs))];
+    let AsmString = !strconcat(OpStr, " $lhs, $rhs");
   }
 
   def I : Instruction {
     let OutOperandList = (outs GP:$out);
-    let InOperandList = (ins GP:$in1, i32imm:$in2);
-    let Constraints = "$out = $in1";
-    let Pattern = [(set i32:$out, (OpNode i32:$in1, uimm20:$in2))];
-    let AsmString = !strconcat(OpStr, "I $in1, $in2");
+    let InOperandList = (ins GP:$lhs, i32imm:$rhs);
+    let Constraints = "$out = $lhs";
+    let Pattern = [(set i32:$out, (OpNode i32:$lhs, uimm20:$rhs))];
+    let AsmString = !strconcat(OpStr, "I $lhs, $rhs");
   }
+}
+
+class Jump<string OpStr, CondCode OpCC> : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins brtarget:$tgt);
+  let Pattern = [(SC32jmp OpCC, bb:$tgt)];
+  let AsmString = !strconcat(OpStr, " $tgt");
+  let Uses = [FLAGS];
+  let isTerminator = 1;
 }
 
 let Namespace = "SC32" in {
@@ -97,6 +113,17 @@ let Namespace = "SC32" in {
   defm XOR : Operator<"XOR", xor>;
   defm SHL : Operator<"SHL", shl>;
   defm SHR : Operator<"SHR", srl>;
+
+  def JEQ : Jump<"JEQ", SETEQ>;
+  def JNE : Jump<"JNE", SETNE>;
+  def JLE : Jump<"JLE", SETLE>;
+  def JLT : Jump<"JLT", SETLT>;
+  def JGT : Jump<"JGT", SETGT>;
+  def JGE : Jump<"JGE", SETGE>;
+  def JLEU : Jump<"JLEU", SETULE>;
+  def JLTU : Jump<"JLTU", SETULT>;
+  def JGTU : Jump<"JGTU", SETUGT>;
+  def JGEU : Jump<"JGEU", SETUGE>;
 
   def ST : Instruction {
     let OutOperandList = (outs);
@@ -142,6 +169,14 @@ let Namespace = "SC32" in {
     let Pattern = [(br bb:$tgt)];
     let AsmString = "JMP $tgt";
     let isTerminator = 1;
+  }
+
+  def CMP : Instruction {
+    let OutOperandList = (outs);
+    let InOperandList = (ins GP:$lhs, GP:$rhs);
+    let Pattern = [(SC32cmp i32:$lhs, i32:$rhs)];
+    let AsmString = "CMP $lhs, $rhs";
+    let Defs = [FLAGS];
   }
 }
 
