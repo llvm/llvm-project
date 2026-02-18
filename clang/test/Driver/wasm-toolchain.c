@@ -304,16 +304,6 @@
 // LINK_WALI_BASIC: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_WALI_BASIC: wasm-ld{{.*}}" "-L/foo/lib/wasm32-linux-muslwali" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
 
-// Test that `wasm32-wasip3` passes --component-model-thread-context to the linker by default.
-
-// RUN: %clang --target=wasm32-wasip3 %s -### 2>&1 | FileCheck -check-prefix=WASIP3_DEFAULT %s
-// WASIP3_DEFAULT: wasm-component-ld{{.*}}" {{.*}} "--component-model-thread-context"
-
-// Test that `wasm32-wasip3` does not pass --component-model-thread-context to the linker when 
-// -mno-component-model-thread-context is used, and that it also passes -target-feature -component-model-thread-context 
-// to disable the feature in clang-cc1.
-
-// RUN: %clang --target=wasm32-wasip3 %s -### -mno-component-model-thread-context 2>&1 | FileCheck -check-prefix=WASIP3_DISABLED %s
-
-// WASIP3_DISABLED-NOT: "--component-model-thread-context"
+// `-target=wasm32-wasip2` sets -component-model-thread-context
+// RUN: %clang --target=wasm32-wasip2 %s -### 2>&1 | FileCheck -check-prefix=WASIP3_DISABLED %s
 // WASIP3_DISABLED: "-target-feature" "-component-model-thread-context"
