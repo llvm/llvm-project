@@ -128,6 +128,13 @@ namespace types {
   ID lookupHeaderTypeForSourceType(ID Id);
 
 } // end namespace types
+
+/// A list of inputs and their types for the given arguments.
+using InputTy = std::pair<types::ID, const llvm::opt::Arg *>;
+
+/// A list of inputs and their types for the given arguments.
+using InputList = llvm::SmallVector<InputTy, 16>;
+
 } // end namespace driver
 } // end namespace clang
 

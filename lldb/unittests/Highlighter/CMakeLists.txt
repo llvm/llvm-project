@@ -1,5 +1,8 @@
 if (LLDB_ENABLE_TREESITTER)
-  set(SWIFT_HIGHLIGHTER_PLUGIN lldbPluginHighlighterTreeSitterSwift)
+  set(TREESITTER_HIGHLIGHTER_PLUGINS
+    lldbPluginHighlighterTreeSitterRust
+    lldbPluginHighlighterTreeSitterSwift
+  )
 endif()
 
 add_lldb_unittest(HighlighterTests
@@ -11,5 +14,5 @@ add_lldb_unittest(HighlighterTests
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     lldbPluginObjCPlusPlusLanguage
-    ${SWIFT_HIGHLIGHTER_PLUGIN}
+    ${TREESITTER_HIGHLIGHTER_PLUGINS}
 )

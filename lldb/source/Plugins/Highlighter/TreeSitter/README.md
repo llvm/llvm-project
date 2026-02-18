@@ -14,3 +14,4 @@ Each plugin contains a vendored copy of the corresponding grammar in the
 ## Supported Languages
 
 - Swift based on [swift-tree-sitter](https://github.com/tree-sitter/swift-tree-sitter) 0.9.0
+- Rust based on [tree-sitter-rust](https://github.com/tree-sitter/tree-sitter-rust) 0.24.0

@@ -1,6 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// XFAIL: intelgpu
 
 #include <assert.h>
 #include <stdio.h>

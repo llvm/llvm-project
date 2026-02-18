@@ -8,7 +8,8 @@
 // REQUIRES: gpu
 // UNSUPPORTED: nvidiagpu
 // UNSUPPORTED: amdgpu
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <cassert>
 #include <cmath>

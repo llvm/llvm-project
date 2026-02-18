@@ -13,7 +13,6 @@
 
 #include "mlir/Target/LLVM/XeVM/Target.h"
 
-#include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
@@ -42,6 +41,7 @@
 #include "llvm/Support/raw_ostream.h"
 // From llvm/lib/Target/SPIRV
 #if LLVM_HAS_SPIRV_TARGET
+#include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVCommandLine.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
@@ -276,6 +276,7 @@ void SPIRVSerializer::init() {
   });
 }
 
+#if LLVM_HAS_SPIRV_TARGET
 static const std::vector<std::string> getDefaultSPIRVExtensions() {
   return {
       "SPV_EXT_relaxed_printf_string_address_space",
@@ -283,6 +284,7 @@ static const std::vector<std::string> getDefaultSPIRVExtensions() {
       "SPV_INTEL_variable_length_array",
   };
 }
+#endif
 
 std::optional<SmallVector<char, 0>> SPIRVSerializer::run() {
   // Translate the module to LLVM IR.
