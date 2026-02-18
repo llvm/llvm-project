@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/DistributionUtils.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
@@ -1988,6 +1989,70 @@ struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
+/// Distribute a vector::StepOp with the sliced result layout.
+/// The sliced layout must have exactly 1 effective lane dimension.
+/// The lane id is delinearized into the parent layout coordinate and only
+/// the effective dim coordinate is used.
+/// Example:
+/// ```
+///    %0 = gpu.warp_execute_on_lane_0(%arg0)[16] -> (vector<1xindex>) {
+///      %5 = vector.step {layout_result_0 =
+///      #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1,
+///      1, 1, 1]>, dims = [0, 1, 3]>} : vector<1xindex> gpu.yield %5 :
+///      vector<1xindex>
+///    }
+/// ```
+/// is distributed to `arith.constant dense<0> : vector<1xindex>`
+/// because the effective lane dimension is dim 2 and the lane id is
+/// delinearized into 4D coordinate (0, 0, 0, laneid).
+struct VectorStepSliceDistribution final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *operand = getWarpResult(warpOp, llvm::IsaPred<vector::StepOp>);
+    if (!operand)
+      return rewriter.notifyMatchFailure(
+          warpOp, "warp result is not a vector::StepOp op");
+    auto stepOp = operand->get().getDefiningOp<vector::StepOp>();
+    unsigned operandIdx = operand->getOperandNumber();
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(stepOp->getOpResult(0));
+    if (!resultLayout)
+      return rewriter.notifyMatchFailure(
+          stepOp, "the result vector of the step op lacks layout "
+                  "attribute");
+    auto sliceLayout = dyn_cast<xegpu::SliceAttr>(resultLayout);
+    if (!sliceLayout)
+      return rewriter.notifyMatchFailure(
+          stepOp, "the result layout must be a slice layout");
+    if (sliceLayout.getEffectiveLaneLayoutAsInt().size() != 1)
+      return rewriter.notifyMatchFailure(
+          stepOp, "expecting 1 dim in the effective result layout");
+
+    rewriter.setInsertionPointAfter(warpOp);
+    auto parentLayout = cast<xegpu::LayoutAttr>(sliceLayout.getParent());
+    auto loc = stepOp.getLoc();
+    auto laneLayout = parentLayout.getEffectiveLaneLayoutAsInt();
+    auto laneLayoutValues = llvm::map_to_vector(laneLayout, [&](int64_t dim) {
+      return arith::ConstantIndexOp::create(rewriter, loc, dim).getResult();
+    });
+    auto laneIdsResult = affine::delinearizeIndex(
+        rewriter, loc, warpOp.getLaneid(), laneLayoutValues);
+    assert(!failed(laneIdsResult));
+    int expectedDimIdxSum = (laneLayout.size() * (laneLayout.size() - 1)) / 2;
+    auto sliceDims = sliceLayout.getDims().asArrayRef();
+    int actualSum = std::accumulate(sliceDims.begin(), sliceDims.end(), 0);
+    int missingDimIdx = expectedDimIdxSum - actualSum;
+    Value distributedVal = warpOp.getResult(operandIdx);
+    VectorType newVecTy = cast<VectorType>(distributedVal.getType());
+    Value laneIdVec =
+        vector::BroadcastOp::create(rewriter, warpOp.getLoc(), newVecTy,
+                                    laneIdsResult.value()[missingDimIdx]);
+    rewriter.replaceAllUsesWith(distributedVal, laneIdVec);
+    return success();
+  }
+};
+
 } // namespace
 
 namespace {
@@ -2014,8 +2079,9 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
   patterns
       .add<VectorShapeCastDistribution, VectorExtractStridedSliceDistribution,
            VectorInsertStridedSliceDistribution, VectorBroadcastDistribution,
-           SinkUniformOps>(patterns.getContext(),
-                           /*pattern benefit=*/PatternHierarchy::AboveRegular);
+           VectorStepSliceDistribution, SinkUniformOps>(
+          patterns.getContext(),
+          /*pattern benefit=*/PatternHierarchy::AboveRegular);
 }
 
 void xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(

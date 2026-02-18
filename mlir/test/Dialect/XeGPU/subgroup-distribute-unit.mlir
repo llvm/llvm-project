@@ -1132,4 +1132,31 @@ gpu.func
     gpu.return
   }
 
+// CHECK-LABEL: gpu.func @vector_step_slice
+// CHECK:         (%[[SG_ID:[0-9a-zA-Z]+]]: index) {
+// CHECK-NEXT:    %[[SG_ID_IN_SLICED_DIM:.*]] = affine.apply #map()[%[[SG_ID]]]
+// CHECK-NEXT:    %[[SG_ID_IN_SLICED_DIM_VEC:.*]] = vector.broadcast %[[SG_ID_IN_SLICED_DIM]] : index to vector<1xindex>
+// CHECK-NEXT:    "some_use"(%[[SG_ID_IN_SLICED_DIM_VEC]]) : (vector<1xindex>) -> ()
+  gpu.func @vector_step_slice(%arg0: index) {
+    %0 = gpu.warp_execute_on_lane_0(%arg0)[16] -> (vector<1xindex>) {
+      %5 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>, dims = [0, 1, 2]>} : vector<16xindex>
+      gpu.yield %5 : vector<16xindex>
+    }
+    "some_use"(%0) : (vector<1xindex>) -> ()
+    gpu.return
+  }
+
+  // CHECK-LABEL: gpu.func @vector_step_slice_unit
+  // CHECK:         (%[[SG_ID:[0-9a-zA-Z]+]]: index) {
+  // CHECK-NEXT:    %[[SG_ID_IN_SLICED_DIM_VEC:.*]] = arith.constant dense<0> : vector<1xindex>
+  // CHECK-NEXT:    "some_use"(%[[SG_ID_IN_SLICED_DIM_VEC]]) : (vector<1xindex>) -> ()
+  gpu.func @vector_step_slice_unit(%arg0: index) {
+    %0 = gpu.warp_execute_on_lane_0(%arg0)[16] -> (vector<1xindex>) {
+      %5 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>, dims = [0, 1, 3]>} : vector<1xindex>
+      gpu.yield %5 : vector<1xindex>
+    }
+    "some_use"(%0) : (vector<1xindex>) -> ()
+    gpu.return
+  }
+
 }
