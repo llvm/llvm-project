@@ -13596,9 +13596,7 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
   if (!ScalarTy->isIntegerTy())
     return false;
   // Check that second operand is all zeroes.
-  if (any_of(Op2TE->Scalars, [](Value *V) {
-        return !match(V, m_ZeroInt());
-      }))
+  if (any_of(Op2TE->Scalars, [](Value *V) { return !match(V, m_ZeroInt()); }))
     return false;
   // Check that first operand is 1,2,4,...
   if (any_of(enumerate(Op1TE->Scalars), [](const auto &P) {
