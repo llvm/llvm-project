@@ -746,8 +746,70 @@ bool ClauseProcessor::processAffinity(
         }
 
         const auto &objects = std::get<omp::ObjectList>(clause.t);
-        if (!objects.empty())
-          genObjectList(objects, converter, result.affinityVars);
+        lower::StatementContext stmtCtx;
+        auto &builder = converter.getFirOpBuilder();
+        auto &context = converter.getMLIRContext();
+        mlir::Location clauseLocation = converter.getCurrentLocation();
+
+        mlir::Type refI8Ty = fir::ReferenceType::get(builder.getIntegerType(8));
+        mlir::Type entryTy = mlir::omp::AffinityEntryType::get(
+            &context, refI8Ty, builder.getI64Type());
+
+        auto normalizeAddr = [](fir::FirOpBuilder &b, mlir::Location l,
+                                mlir::Type addrTy,
+                                mlir::Value v) -> mlir::Value {
+          mlir::Value addr = v;
+
+          // ref-to-box -> load box -> box_addr
+          if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(addr.getType())) {
+            if (auto innerBoxTy =
+                    mlir::dyn_cast<fir::BoxType>(refTy.getEleTy())) {
+              mlir::Value boxVal = fir::LoadOp::create(b, l, innerBoxTy, addr);
+              mlir::Type boxedEleTy = innerBoxTy.getEleTy();
+              addr = fir::BoxAddrOp::create(
+                  b, l, fir::ReferenceType::get(boxedEleTy), boxVal);
+            }
+          }
+
+          // box value -> box_addr
+          if (auto boxTy = mlir::dyn_cast<fir::BoxType>(addr.getType())) {
+            mlir::Type boxedEleTy = boxTy.getEleTy();
+            addr = fir::BoxAddrOp::create(
+                b, l, fir::ReferenceType::get(boxedEleTy), addr);
+          }
+
+          assert(mlir::isa<fir::ReferenceType>(addr.getType()) &&
+                 "expect fir.ref after normalization");
+          return fir::ConvertOp::create(b, l, addrTy, addr);
+        };
+
+        auto makeAffinityEntry = [&](fir::FirOpBuilder &b, mlir::Location l,
+                                     mlir::Type entryTy, mlir::Value addr,
+                                     mlir::Value len) -> mlir::Value {
+          mlir::Value addrI8 = normalizeAddr(b, l, refI8Ty, addr);
+          return mlir::omp::AffinityEntryOp::create(b, l, entryTy, addrI8, len)
+              .getResult();
+        };
+
+        for (const omp::Object &object : objects) {
+          llvm::SmallVector<mlir::Value> bounds;
+          std::stringstream asFortran;
+          mlir::Value addr =
+              genAffinityAddr(converter, object, stmtCtx, clauseLocation);
+          fir::factory::AddrAndBoundsInfo info =
+              lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
+                                                    mlir::omp::MapBoundsType>(
+                  converter, builder, semaCtx, stmtCtx, *object.sym(),
+                  object.ref(), clauseLocation, asFortran, bounds,
+                  treatIndexAsSection);
+          mlir::Value len = genAffinityLen(
+              builder, clauseLocation, builder.getDataLayout(), info.addr,
+              bounds, static_cast<bool>(object.ref()));
+          // info.addr is not the base address so use the result from
+          // genAffinityAddr instead
+          result.affinityVars.push_back(
+              makeAffinityEntry(builder, clauseLocation, entryTy, addr, len));
+        }
 
         return true;
       });
