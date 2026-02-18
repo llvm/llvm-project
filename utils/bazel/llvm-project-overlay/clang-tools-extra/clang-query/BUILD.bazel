@@ -34,6 +34,9 @@ cc_binary(
     stamp = 0,
     deps = [
         ":lib",
+        "//clang:frontend",
         "//clang:tooling",
+        "//llvm:LineEditor",
+        "//llvm:Support",
     ],
 )
