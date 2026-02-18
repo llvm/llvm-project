@@ -63,6 +63,8 @@ def LUIimm : PatLeaf<(imm), [{
   return isShiftedUInt<16, 16>(N->getZExtValue());
 }]>;
 
+def brtarget : Operand<OtherVT>;
+
 multiclass Operator<string OpStr, SDNode OpNode> {
   def "" : Instruction {
     let OutOperandList = (outs GP:$out);
@@ -126,6 +128,14 @@ let Namespace = "SC32" in {
     let InOperandList = (ins);
     let Pattern = [(retglue)];
     let AsmString = "RET";
+    let isTerminator = 1;
+  }
+
+  def JMP : Instruction {
+    let OutOperandList = (outs);
+    let InOperandList = (ins brtarget:$tgt);
+    let Pattern = [(br bb:$tgt)];
+    let AsmString = "JMP $tgt";
     let isTerminator = 1;
   }
 }

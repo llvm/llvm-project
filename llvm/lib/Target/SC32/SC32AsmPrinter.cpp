@@ -24,6 +24,11 @@ void SC32AsmPrinter::emitInstruction(const MachineInstr *MI) {
     case MachineOperand::MO_Immediate:
       Inst.addOperand(MCOperand::createImm(MO.getImm()));
       break;
+    case MachineOperand::MO_MachineBasicBlock:
+      const MCSymbol *Symbol = MO.getMBB()->getSymbol();
+      const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, OutContext);
+      Inst.addOperand(MCOperand::createExpr(Expr));
+      break;
     }
   }
 

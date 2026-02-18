@@ -1,4 +1,5 @@
 #include "SC32InstPrinter.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 
 using namespace llvm;
@@ -11,15 +12,16 @@ void SC32InstPrinter::printInst(const MCInst *MI, uint64_t Address,
   printInstruction(MI, Address, OS);
 }
 
-void SC32InstPrinter::printOperand(const MCInst *MI, unsigned i,
+void SC32InstPrinter::printOperand(const MCInst *MI, unsigned I,
                                    raw_ostream &OS) {
-  const MCOperand &MO = MI->getOperand(i);
+  const MCOperand &MO = MI->getOperand(I);
 
   if (MO.isReg()) {
     OS << getRegisterName(MO.getReg());
   } else if (MO.isImm()) {
     OS << '#' << MO.getImm();
   } else {
-    llvm_unreachable("unknwon operand type");
+    assert(MO.isExpr());
+    MAI.printExpr(OS, *MO.getExpr());
   }
 }
