@@ -148,3 +148,12 @@ func.func @analysis_crash(%arg0: i32, %arg1: tensor<128xi1>) -> tensor<128xi64> 
   %2 = arith.extsi %1 : tensor<128xi32> to tensor<128xi64>
   return %2 : tensor<128xi64>
 }
+
+// -----
+
+// CHECK-LABEL: func @test_i0_trunc_crash
+func.func @test_i0_trunc_crash() {
+  %c1_i1 = arith.constant true
+  %0 = arith.trunci %c1_i1 : i1 to i0
+  return
+}

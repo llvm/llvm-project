@@ -347,6 +347,8 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
           op, "no operands or operand types don't match result type");
 
     for (unsigned targetBitwidth : targetBitwidths) {
+      if (targetBitwidth == 0)
+        continue;
       CastKind castKind = CastKind::Both;
       for (const ConstantIntRanges &range : ranges) {
         castKind = mergeCastKinds(castKind,
