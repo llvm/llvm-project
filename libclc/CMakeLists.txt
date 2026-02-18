@@ -24,7 +24,6 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   opencl/lib/clspv/SOURCES;
   opencl/lib/generic/SOURCES;
   opencl/lib/ptx-nvidiacl/SOURCES;
-  opencl/lib/r600/SOURCES;
   opencl/lib/spirv/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
@@ -32,11 +31,8 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   clc/lib/amdgpu/SOURCES;
   clc/lib/clspv/SOURCES;
   clc/lib/ptx-nvidiacl/SOURCES;
-  clc/lib/r600/SOURCES;
   clc/lib/spirv/SOURCES;
 )
-
-set( LIBCLC_MIN_LLVM 3.9.0 )
 
 # A runtimes cross-build should only use the requested target.
 set( LIBCLC_DEFAULT_TARGET "all" )
@@ -66,10 +62,6 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
   include(AddLLVM)
 
   message( STATUS "libclc LLVM version: ${LLVM_PACKAGE_VERSION}" )
-
-  if( LLVM_PACKAGE_VERSION VERSION_LESS LIBCLC_MIN_LLVM )
-    message( FATAL_ERROR "libclc needs at least LLVM ${LIBCLC_MIN_LLVM}" )
-  endif()
 
   # Import required tools
   if( NOT EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
@@ -157,7 +149,6 @@ set( LIBCLC_TARGETS_ALL
   amdgcn-amd-amdhsa-llvm
   clspv--
   clspv64--
-  r600--
   nvptx64--
   nvptx64--nvidiacl
   nvptx64-nvidia-cuda
@@ -204,7 +195,6 @@ list( SORT LIBCLC_TARGETS_TO_BUILD )
 include_directories( ${LLVM_INCLUDE_DIRS} )
 
 # Setup arch devices
-set( r600--_devices cedar cypress barts cayman )
 set( amdgcn--_devices none )
 set( amdgcn-mesa-mesa3d_devices none )
 set( amdgcn-amd-amdhsa-llvm_devices none )
@@ -259,7 +249,6 @@ set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp2.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_log10.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/r600/math/clc_native_rsqrt.cl
   # OpenCL builtins
   ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_cos.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_divide.cl
@@ -289,7 +278,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
   set( opencl_dirs )
 
-  if( ${ARCH} STREQUAL r600 OR ${ARCH} STREQUAL amdgcn )
+  if( ${ARCH} STREQUAL amdgcn )
     list( APPEND opencl_dirs amdgpu )
   endif()
 
@@ -420,7 +409,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     # maps to the private address space.
     set ( private_addrspace_val 0 )
     set ( generic_addrspace_val 0 )
-    if( ARCH STREQUAL amdgcn OR ARCH STREQUAL r600 OR ARCH STREQUAL amdgcn-amdhsa )
+    if( ARCH STREQUAL amdgcn-amdhsa )
       set ( private_addrspace_val 5 )
     endif()
     if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
