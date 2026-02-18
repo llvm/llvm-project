@@ -400,6 +400,8 @@ public:
     return getGeneration() == GFX11 && hasWMMA128bInsts();
   }
 
+  bool isGFX1170Plus() const { return getGeneration() >= GFX12 || isGFX1170(); }
+
   bool hasMad64_32() const { return getGeneration() >= SEA_ISLANDS; }
 
   bool hasAtomicFaddInsts() const {
@@ -686,10 +688,10 @@ public:
   bool hasSplitBarriers() const { return getGeneration() >= GFX12; }
 
   // \returns true if the target has DX10_CLAMP kernel descriptor mode bit
-  bool hasDX10ClampMode() const { return getGeneration() < GFX12; }
+  bool hasDX10ClampMode() const { return !isGFX1170Plus(); }
 
   // \returns true if the target has IEEE kernel descriptor mode bit
-  bool hasIEEEMode() const { return getGeneration() < GFX12; }
+  bool hasIEEEMode() const { return !isGFX1170Plus(); }
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }
