@@ -37,6 +37,7 @@ bool isAnyPtr(LLT Ty, unsigned Width);
 // to apply (see Fast Rules), IDs are useful when two or more operands need to
 // be checked.
 enum UniformityLLTOpPredicateID {
+  // Represents non-register and physical register operands.
   _,
   // scalars
   S1,

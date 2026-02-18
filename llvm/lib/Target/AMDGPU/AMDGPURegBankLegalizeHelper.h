@@ -26,8 +26,8 @@ namespace AMDGPU {
 /// loop.
 struct WaterfallInfo {
   SmallSet<Register, 4> SgprWaterfallOperandRegs;
-  const MachineInstr *Start = nullptr;
-  const MachineInstr *End = nullptr;
+  MachineBasicBlock::iterator Start;
+  MachineBasicBlock::iterator End;
 };
 
 // Receives list of RegBankLLTMappingApplyID and applies register banks on all

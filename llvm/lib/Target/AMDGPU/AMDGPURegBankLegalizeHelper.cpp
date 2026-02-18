@@ -79,7 +79,8 @@ bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
 
 bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
                                                    const WaterfallInfo &WFI) {
-  assert(WFI.Start && WFI.End && "Waterfall range not initialized");
+  assert(WFI.Start.isValid() && WFI.End.isValid() &&
+         "Waterfall range not initialized");
 
   // Track use registers which have already been expanded with a readfirstlane
   // sequence. This may have multiple uses if moving a sequence.
@@ -88,9 +89,8 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   MachineBasicBlock &MBB = B.getMBB();
   MachineFunction &MF = B.getMF();
 
-  // Obtain non-const iterators for splice operations.
-  MachineBasicBlock::iterator BeginIt(const_cast<MachineInstr &>(*WFI.Start));
-  MachineBasicBlock::iterator EndIt(const_cast<MachineInstr &>(*WFI.End));
+  MachineBasicBlock::iterator BeginIt = WFI.Start;
+  MachineBasicBlock::iterator EndIt = WFI.End;
 
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const TargetRegisterClass *WaveRC = TRI->getWaveMaskRegClass();
@@ -1570,9 +1570,9 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB != SgprRB) {
         WFI.SgprWaterfallOperandRegs.insert(Reg);
-        if (!WFI.Start) {
-          WFI.Start = &MI;
-          WFI.End = &*std::next(MI.getIterator());
+        if (!WFI.Start.isValid()) {
+          WFI.Start = MI.getIterator();
+          WFI.End = std::next(MI.getIterator());
         }
       }
       break;
@@ -1595,8 +1595,8 @@ bool RegBankLegalizeHelper::applyMappingSrc(
         ++End;
 
         B.setInsertPt(*MI.getParent(), Start);
-        WFI.Start = &*Start;
-        WFI.End = &*End;
+        WFI.Start = Start;
+        WFI.End = End;
       }
       break;
     }
