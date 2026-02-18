@@ -55,4 +55,12 @@ entry:
   ret half %0
 }
 
+define fp128 @testExpf128(fp128 %val, i32 %a) {
+; LINUX: bl ldexpl
+; WINDOWS: bl ldexpl
+entry:
+  %0 = tail call fp128 @llvm.ldexp.f128.i32(fp128 %val, i32 %a)
+  ret fp128 %0
+}
+
 declare half @llvm.ldexp.f16.i32(half, i32) memory(none)
