@@ -1188,6 +1188,7 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   switch (ID) {
   case SgprB32:
   case VgprB32:
+  case ForceSgprB32:
   case UniInVgprB32:
     if (Ty == LLT::scalar(32) || Ty == LLT::fixed_vector(2, 16) ||
         isAnyPtr(Ty, 32))
@@ -1638,6 +1639,16 @@ bool RegBankLegalizeHelper::applyMappingSrc(
         WFI.Start = Start;
         WFI.End = End;
       }
+      break;
+    }
+    case ForceSgprB32: {
+      assert(Ty == getBTyFromID(MethodIDs[i], Ty));
+      if (RB == SgprRB)
+        break;
+      assert(RB == VgprRB);
+      Register NewSGPR32 = MRI.createVirtualRegister({SgprRB, Ty});
+      buildReadAnyLane(B, NewSGPR32, Op.getReg(), RBI);
+      Op.setReg(NewSGPR32);
       break;
     }
     // sgpr and vgpr scalars with extend
