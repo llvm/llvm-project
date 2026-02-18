@@ -542,6 +542,11 @@ struct UnrollMultiReductionOuterBaseCase
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {
+    auto srcRank = multiReductionOp.getSourceVectorType().getRank();
+    if (srcRank < 2)
+      return rewriter.notifyMatchFailure(multiReductionOp,
+                                         "expected source rank >= 2.");
+
     if (!multiReductionOp.isReducedDim(0))
       return rewriter.notifyMatchFailure(
           multiReductionOp,
