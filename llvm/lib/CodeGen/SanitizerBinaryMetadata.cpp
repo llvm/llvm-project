@@ -82,7 +82,7 @@ bool MachineSanitizerBinaryMetadata::run(MachineFunction &MF) {
   if (!Features->getUniqueInteger()[kSanitizerBinaryMetadataUARBit])
     return false;
   // Calculate size of stack args for the function.
-  int64_t Size = 0;
+  uint64_t Size = 0;
   uint64_t Align = 0;
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   for (int i = -1; i >= (int)-MFI.getNumFixedObjects(); --i) {

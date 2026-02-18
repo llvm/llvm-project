@@ -478,14 +478,14 @@ public:
   }
 
   /// Return the size of the specified object.
-  int64_t getObjectSize(int ObjectIdx) const {
+  uint64_t getObjectSize(int ObjectIdx) const {
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     return Objects[ObjectIdx+NumFixedObjects].Size;
   }
 
   /// Change the size of the specified stack object.
-  void setObjectSize(int ObjectIdx, int64_t Size) {
+  void setObjectSize(int ObjectIdx, uint64_t Size) {
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     Objects[ObjectIdx+NumFixedObjects].Size = Size;

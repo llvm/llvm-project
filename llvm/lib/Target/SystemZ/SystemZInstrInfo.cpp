@@ -405,7 +405,7 @@ bool SystemZInstrInfo::isStackSlotCopy(const MachineInstr &MI,
     return false;
 
   // Check that Length covers the full slots.
-  int64_t Length = MI.getOperand(2).getImm();
+  uint64_t Length = MI.getOperand(2).getImm();
   unsigned FI1 = MI.getOperand(0).getIndex();
   unsigned FI2 = MI.getOperand(3).getIndex();
   if (MFI.getObjectSize(FI1) != Length ||
