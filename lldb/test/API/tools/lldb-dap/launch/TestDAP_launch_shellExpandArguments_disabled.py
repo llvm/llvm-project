@@ -13,9 +13,6 @@ class TestDAP_launch_shellExpandArguments_disabled(lldbdap_testcase.DAPTestCaseB
     disabled.
     """
 
-    @expectedFailureWindows(
-        bugnumber="https://github.com/llvm/llvm-project/issues/137599"
-    )
     def test(self):
         program = self.getBuildArtifact("a.out")
         program_dir = os.path.dirname(program)
