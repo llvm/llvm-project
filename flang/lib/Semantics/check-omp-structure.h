@@ -332,7 +332,6 @@ private:
   void CheckNestedBlock(
       const parser::OpenMPLoopConstruct &x, const parser::Block &body);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
-  void CheckFullUnroll(const parser::OpenMPLoopConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
   void CheckTaskgraph(const parser::OmpBlockConstruct &x);

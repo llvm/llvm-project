@@ -270,6 +270,17 @@ static bool IsLoopTransforming(llvm::omp::Directive dir) {
   }
 }
 
+static bool IsFullUnroll(const parser::OpenMPLoopConstruct &x) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+
+  if (beginSpec.DirName().v == llvm::omp::Directive::OMPD_unroll) {
+    return llvm::none_of(beginSpec.Clauses().v, [](const parser::OmpClause &c) {
+      return c.Id() == llvm::omp::Clause::OMPC_partial;
+    });
+  }
+  return false;
+}
+
 void OmpStructureChecker::CheckNestedBlock(
     const parser::OpenMPLoopConstruct &x, const parser::Block &body) {
   using BlockRange = parser::omp::BlockRange;
@@ -282,23 +293,16 @@ void OmpStructureChecker::CheckNestedBlock(
         context_.Say(omp->source,
             "Only loop-transforming OpenMP constructs are allowed inside OpenMP loop constructs"_err_en_US);
       }
+      if (IsFullUnroll(*omp)) {
+        context_.Say(x.source,
+            "OpenMP loop construct cannot apply to a fully unrolled loop"_err_en_US);
+      }
     } else if (!parser::Unwrap<parser::DoConstruct>(stmt)) {
       parser::CharBlock source{parser::GetSource(stmt).value_or(x.source)};
       context_.Say(source,
           "OpenMP loop construct can only contain DO loops or loop-nest-generating OpenMP constructs"_err_en_US);
     }
   }
-}
-
-static bool IsFullUnroll(const parser::OpenMPLoopConstruct &x) {
-  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
-
-  if (beginSpec.DirName().v == llvm::omp::Directive::OMPD_unroll) {
-    return llvm::none_of(beginSpec.Clauses().v, [](const parser::OmpClause &c) {
-      return c.Id() == llvm::omp::Clause::OMPC_partial;
-    });
-  }
-  return false;
 }
 
 static std::optional<size_t> CountGeneratedNests(
@@ -403,18 +407,6 @@ void OmpStructureChecker::CheckNestedConstruct(
   }
 }
 
-void OmpStructureChecker::CheckFullUnroll(
-    const parser::OpenMPLoopConstruct &x) {
-  // If the nested construct is a full unroll, then this construct is invalid
-  // since it won't contain a loop.
-  if (const parser::OpenMPLoopConstruct *nested{x.GetNestedConstruct()}) {
-    if (IsFullUnroll(*nested)) {
-      context_.Say(x.source,
-          "OpenMP loop construct cannot apply to a fully unrolled loop"_err_en_US);
-    }
-  }
-}
-
 void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   loopStack_.push_back(&x);
 
@@ -471,7 +463,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
   }
   CheckLoopItrVariableIsInt(x);
   CheckNestedConstruct(x);
-  CheckFullUnroll(x);
   CheckAssociatedLoopConstraints(x);
   HasInvalidDistributeNesting(x);
   HasInvalidLoopBinding(x);
