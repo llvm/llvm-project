@@ -2128,3 +2128,23 @@ func.func @matmul_invalid_mixed_types(%t: tensor<?xf16>, %f: vector<4xf16>)
                                 outs(%f : vector<4xf16>) -> tensor<?xf16>
   func.return %0, %f : tensor<?xf16>, vector<4xf16>
 }
+
+// -----
+
+func.func @batch_reduce_matmul_invalid_types() {
+  %0 = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %1 = "test.op"() {attr = #test.custom_float<"float" : 2.>} : () -> tensor<1xvector<4xf32>>
+  // expected-warning @unknown {{could not cast operand of type 'i32' to 'vector<4xf32>'}}
+  // expected-error @below {{custom op 'linalg.batch_reduce_matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got 'vector<4xf32>' and 'i32'}}
+  %2 = linalg.batch_reduce_matmul ins(%0, %0 : tensor<1xi32>, tensor<1xi32>) outs(%1 : tensor<1xvector<4xf32>>) -> tensor<1xvector<4xf32>>
+  return
+}
+
+// -----
+
+func.func @elemwise_invalid_types(%arg0: tensor<4xi32>, %arg1: tensor<4xf32>) -> tensor<4xi32> {
+  %0 = "test.op"() {attr = #test.custom_float<"float" : 2.>} : () -> tensor<1xvector<4xi32>>
+  // expected-error @below {{custom op 'linalg.add' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got 'i32' and 'f32'}}
+  %1 = linalg.add ins(%arg0, %arg1 : tensor<4xi32>, tensor<4xf32>) outs(%0 : tensor<1xvector<4xi32>>) -> tensor<1xvector<4xi32>>
+  return %1
+}

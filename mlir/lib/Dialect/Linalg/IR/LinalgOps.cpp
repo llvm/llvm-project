@@ -506,14 +506,11 @@ public:
     bool allBool = allInteger && arg0.getType().getIntOrFloatBitWidth() == 1 &&
                    arg1.getType().getIntOrFloatBitWidth() == 1;
     if (!allComplex && !allFloatingPoint && !allInteger) {
-      if (emitError) {
-        emitError()
-            << "Cannot build binary Linalg operation: expects allComplex, "
-               "allFloatingPoint, or allInteger, got "
-            << arg0.getType() << " and " << arg1.getType();
-        return nullptr;
-      }
-      llvm_unreachable("unsupported non numeric type");
+      auto diag = emitError ? emitError() : mlir::emitError(arg0.getLoc());
+      diag << "Cannot build binary Linalg operation: expects allComplex, "
+           << "allFloatingPoint, or allInteger, got " << arg0.getType()
+           << " and " << arg1.getType();
+      return {};
     }
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
@@ -4648,9 +4645,14 @@ void BatchMatmulOp::regionBuilder(
   auto toType = block.getArgument(2).getType();
   Value castValA = helper.buildTypeFn(castVal, toType, block.getArgument(0));
   Value castValB = helper.buildTypeFn(castVal, toType, block.getArgument(1));
-  Value mulVal = helper.buildBinaryFn(BinaryFn::mul, castValA, castValB);
-  Value addVal =
-      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), mulVal);
+  Value mulVal =
+      helper.buildBinaryFn(BinaryFn::mul, castValA, castValB, emitError);
+  if (!mulVal)
+    return;
+  Value addVal = helper.buildBinaryFn(BinaryFn::add, block.getArgument(2),
+                                      mulVal, emitError);
+  if (!addVal)
+    return;
   yields.push_back(addVal);
   helper.yieldOutputs(yields);
 }
@@ -4933,7 +4935,7 @@ void ElementwiseOp::regionBuilder(
 
   } else if (arityGroup == ElementwiseArityGroup::Binary) {
     result = helper.buildBinaryFn(kind.binaryFn, block.getArgument(0),
-                                  block.getArgument(1));
+                                  block.getArgument(1), emitError);
 
   } else if (arityGroup == ElementwiseArityGroup::Ternary) {
     result = helper.buildTernaryFn(kind.ternaryFn, block.getArgument(0),
@@ -4942,7 +4944,8 @@ void ElementwiseOp::regionBuilder(
   } else {
     assert(false && "found unhandled category in elemwise");
   }
-
+  if (!result)
+    return;
   yields.push_back(result);
   helper.yieldOutputs(yields);
 }
@@ -6586,9 +6589,14 @@ void BatchReduceMatmulOp::regionBuilder(
       helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(0));
   Value castValB =
       helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(1));
-  Value mulVal = helper.buildBinaryFn(BinaryFn::mul, castValA, castValB);
-  Value addVal =
-      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), mulVal);
+  Value mulVal =
+      helper.buildBinaryFn(BinaryFn::mul, castValA, castValB, emitError);
+  if (!mulVal)
+    return;
+  Value addVal = helper.buildBinaryFn(BinaryFn::add, block.getArgument(2),
+                                      mulVal, emitError);
+  if (!addVal)
+    return;
   yields.push_back(addVal);
   helper.yieldOutputs(yields);
 }
