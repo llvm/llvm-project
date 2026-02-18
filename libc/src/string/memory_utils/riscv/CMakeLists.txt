@@ -1,0 +1,49 @@
+add_header_library(
+  inline_bcmp
+  HDRS
+    inline_bcmp.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.type_traits
+    libc.src.string.memory_utils.utils
+)
+
+add_header_library(
+  inline_memcmp
+  HDRS
+    inline_memcmp.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.type_traits
+    libc.src.string.memory_utils.utils
+)
+
+add_header_library(
+  inline_memcpy
+  HDRS
+    inline_memcpy.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.type_traits
+    libc.src.string.memory_utils.utils
+)
+
+add_header_library(
+  inline_memmove
+  HDRS
+    inline_memmove.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.type_traits
+    libc.src.string.memory_utils.utils
+)
+
+add_header_library(
+  inline_memset
+  HDRS
+    inline_memset.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.type_traits
+    libc.src.string.memory_utils.utils
+)

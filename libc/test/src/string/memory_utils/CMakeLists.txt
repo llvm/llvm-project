@@ -16,6 +16,11 @@ add_libc_test(
     libc.src.__support.macros.properties.os
     libc.src.__support.macros.properties.types
     libc.src.__support.macros.sanitizer
-    libc.src.string.memory_utils.memory_utils
+    libc.src.string.memory_utils.utils
+    libc.src.string.memory_utils.op_aarch64
+    libc.src.string.memory_utils.op_builtin
+    libc.src.string.memory_utils.op_generic
+    libc.src.string.memory_utils.op_riscv
+    libc.src.string.memory_utils.op_x86
   UNIT_TEST_ONLY
 )

@@ -1,40 +1,17 @@
-# TODO(michaelrj): split out the implementations from memory_utils
+add_subdirectory(generic)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
+  add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+endif()
+
+# ------------------------------------------------------------------------------
+# Common Utilities
+# ------------------------------------------------------------------------------
+
 add_header_library(
-  memory_utils
+  utils
   HDRS
-    aarch64/inline_bcmp.h
-    aarch64/inline_memcmp.h
-    aarch64/inline_memcpy.h
-    aarch64/inline_memmove.h
-    aarch64/inline_memset.h
-    arm/common.h
-    arm/inline_memcpy.h
-    arm/inline_memset.h
-    generic/aligned_access.h
-    generic/byte_per_byte.h
-    inline_bcmp.h
-    inline_bzero.h
-    inline_memcmp.h
-    inline_memcpy.h
-    inline_memmove.h
-    inline_memset.h
-    op_aarch64.h
-    op_builtin.h
-    op_generic.h
-    op_x86.h
-    riscv/inline_bcmp.h
-    riscv/inline_memcmp.h
-    riscv/inline_memcpy.h
-    riscv/inline_memmove.h
-    riscv/inline_memset.h
     utils.h
-    x86_64/inline_bcmp.h
-    x86_64/inline_memcmp.h
-    x86_64/inline_memcpy.h
-    x86_64/inline_memmove.h
-    x86_64/inline_memset.h
   DEPENDS
-    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.cstddef
@@ -45,60 +22,62 @@ add_header_library(
     libc.src.__support.macros.properties.compiler
 )
 
-add_header_library(
-  inline_memcpy
-  HDRS
-    inline_memcpy.h
-  DEPENDS
-    .memory_utils
-)
+add_header_library(op_builtin HDRS op_builtin.h DEPENDS .utils)
+add_header_library(op_generic HDRS op_generic.h DEPENDS .utils)
+add_header_library(op_x86     HDRS op_x86.h     DEPENDS .utils)
+add_header_library(op_aarch64 HDRS op_aarch64.h DEPENDS .utils)
+add_header_library(op_riscv   HDRS op_riscv.h   DEPENDS .utils)
 
-add_header_library(
-  inline_memmove
-  HDRS
-    inline_memmove.h
-  DEPENDS
-    .memory_utils
-)
+# ------------------------------------------------------------------------------
+# Dispatch Logic
+# ------------------------------------------------------------------------------
 
-add_header_library(
-  inline_memcmp
-  HDRS
-    inline_memcmp.h
-  DEPENDS
-    .memory_utils
-)
+function(add_memory_utils_shim name)
+  set(depends_list "")
+  get_fq_target_name("${LIBC_TARGET_ARCHITECTURE}.${name}" fq_machine_specific_target_name)
+  if(TARGET ${fq_machine_specific_target_name})
+    list(APPEND depends_list ${fq_machine_specific_target_name})
+  else()
+    get_fq_target_name("generic.${name}" fq_generic_target_name)
+    if(TARGET ${fq_generic_target_name})
+      list(APPEND depends_list ${fq_generic_target_name})
+    endif()
+  endif()
 
-add_header_library(
-  inline_memset
-  HDRS
-    inline_memset.h
-  DEPENDS
-    .memory_utils
-)
+  add_header_library(
+    ${name}
+    HDRS ${name}.h
+    DEPENDS ${depends_list}
+  )
+endfunction()
+
+add_memory_utils_shim(inline_memcpy)
+add_memory_utils_shim(inline_memmove)
+add_memory_utils_shim(inline_memcmp)
+add_memory_utils_shim(inline_memset)
+add_memory_utils_shim(inline_bcmp)
+
+# ------------------------------------------------------------------------------
+# No-dispatch implementations
+# ------------------------------------------------------------------------------
 
 add_header_library(
   inline_bzero
-  HDRS
-    inline_bzero.h
-  DEPENDS
-    .inline_memset
+  HDRS inline_bzero.h
+  DEPENDS .inline_memset
 )
 
 add_header_library(
   inline_strcmp
-  HDRS
-    inline_strcmp.h
+  HDRS inline_strcmp.h
 )
 
 add_header_library(
   inline_strstr
-  HDRS
-    inline_strstr.h
+  HDRS inline_strstr.h
 )
 
 add_header_library(
   inline_memmem
-  HDRS
-    inline_memmem.h
+  HDRS inline_memmem.h
 )
