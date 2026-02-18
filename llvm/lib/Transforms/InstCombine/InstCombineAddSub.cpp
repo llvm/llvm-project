@@ -2630,10 +2630,25 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   {
     // (sub (and Op1, (neg X)), Op1) --> neg (and Op1, (add X, -1))
     Value *X;
-    if (match(Op0, m_OneUse(m_c_And(m_Specific(Op1),
-                                    m_OneUse(m_Neg(m_Value(X))))))) {
-      return BinaryOperator::CreateNeg(Builder.CreateAnd(
-          Op1, Builder.CreateAdd(X, Constant::getAllOnesValue(I.getType()))));
+    BinaryOperator *NegInst;
+    if (match(Op0,
+              m_OneUse(m_c_And(m_Specific(Op1), m_OneUse(m_BinOp(NegInst))))) &&
+        match(NegInst, m_Neg(m_Value(X)))) {
+
+      // If neg X is nsw, then X - 1 must be too
+      bool AddHasNSW = NegInst->hasNoSignedWrap();
+
+      // If the original sub is nsw, then the final neg must be too
+      bool NegHasNSW = I.hasNoSignedWrap();
+
+      Value *Add =
+          Builder.CreateAdd(X, Constant::getAllOnesValue(I.getType()), "",
+                            /*HasNUW=*/false, /*HasNSW=*/AddHasNSW);
+      Value *And = Builder.CreateAnd(Op1, Add);
+
+      // Use CreateNSWNeg or CreateNeg based on the flag
+      return NegHasNSW ? BinaryOperator::CreateNSWNeg(And)
+                       : BinaryOperator::CreateNeg(And);
     }
   }
 
