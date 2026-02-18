@@ -2119,8 +2119,16 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   auto &ModuleMap =
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
 
+  auto GetTripleFromConf = [&]() -> Triple {
+    if (!Conf.OverrideTriple.empty())
+      return Triple(Conf.OverrideTriple);
+    if (!RegularLTO.CombinedModule->getTargetTriple().empty())
+      return RegularLTO.CombinedModule->getTargetTriple();
+    return Triple(Conf.DefaultTriple);
+  };
+
   auto RunBackends = [&](ThinBackendProc *BackendProcess) -> Error {
-    const Triple &TheTriple = RegularLTO.CombinedModule->getTargetTriple();
+    Triple TheTriple = GetTripleFromConf();
     assert(!TheTriple.getTriple().empty() && "Empty TargetTriple for ThinLTO!");
     auto ProcessOneModule = [&](int I) -> Error {
       auto &Mod = *(ModuleMap.begin() + I);
