@@ -50,6 +50,8 @@ add_fp_unittest(
     libc.src.__support.math.cospif16
     libc.src.__support.math.dfmaf128
     libc.src.__support.math.dfmal
+    libc.src.__support.math.dmulf128
+    libc.src.__support.math.dmull
     libc.src.__support.math.dsqrtl
     libc.src.__support.math.exp10m1f
     libc.src.__support.math.exp10m1f16
