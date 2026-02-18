@@ -100,9 +100,9 @@ void InefficientVectorOperationCheck::addMatcher(
           .bind(VarDeclStmtName);
 
   const auto AppendCallExpr =
-      cxxMemberCallExpr(
-          callee(AppendMethodDecl), on(hasType(TargetRecordDecl)),
-          onImplicitObjectArgument(declRefExpr(to(TargetVarDecl))))
+      cxxMemberCallExpr(callee(AppendMethodDecl), on(hasType(TargetRecordDecl)),
+                        onImplicitObjectArgument(ignoringParenImpCasts(
+                            declRefExpr(to(TargetVarDecl)))))
           .bind(AppendCallName);
   const auto AppendCall = expr(ignoringImplicit(AppendCallExpr));
   const auto LoopVarInit = declStmt(hasSingleDecl(
