@@ -1137,7 +1137,7 @@ bool llvm::computeUnrollCount(
 
     using namespace ore;
 
-    if (unrollCountPragmaValue(L) > 0 && !UP.AllowRemainder)
+    if (PragmaCount > 0 && !UP.AllowRemainder)
       ORE->emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE,
                                         "DifferentUnrollCountFromDirected",
