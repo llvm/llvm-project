@@ -767,6 +767,13 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       return false;
     }
 
+    // When BeforeLambdaBody is set, lambda bodies are intentionally expanded
+    // onto their own lines. Do not prevent line breaks in the parent scope,
+    // as that would force all arguments (including those before the lambda)
+    // to be wrapped to new lines.
+    if (Style.BraceWrapping.BeforeLambdaBody)
+      return false;
+
     // For example, `/*Newline=*/false`.
     if (Previous.is(TT_BlockComment) && Current.SpacesRequiredBefore == 0)
       return false;
