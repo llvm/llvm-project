@@ -16,6 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace shared {
 
 using math::logbl;
+
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
 
