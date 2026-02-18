@@ -4,44 +4,37 @@
 define fp128 @f128_minimum(fp128 %a, fp128 %b) {
 ; CHECK-LABEL: f128_minimum:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xscmpuqp 0, 3, 3
+; CHECK-NEXT:    vmr 4, 2
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    bun 0, .LBB0_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    vmr 2, 4
+; CHECK-NEXT:  .LBB0_2: # %entry
 ; CHECK-NEXT:    xscmpuqp 0, 2, 3
 ; CHECK-NEXT:    vmr 4, 2
-; CHECK-NEXT:    bge 0, .LBB0_8
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    bun 0, .LBB0_9
-; CHECK-NEXT:  .LBB0_2: # %entry
-; CHECK-NEXT:    xststdcqp 0, 2, 4
-; CHECK-NEXT:    bc 4, 2, .LBB0_10
-; CHECK-NEXT:  .LBB0_3: # %entry
-; CHECK-NEXT:    xststdcqp 0, 3, 4
-; CHECK-NEXT:    bc 12, 2, .LBB0_5
-; CHECK-NEXT:  .LBB0_4: # %entry
-; CHECK-NEXT:    vmr 3, 2
-; CHECK-NEXT:  .LBB0_5: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI0_1@toc@l
-; CHECK-NEXT:    lxv 34, 0(3)
-; CHECK-NEXT:    xscmpuqp 0, 4, 2
-; CHECK-NEXT:    beq 0, .LBB0_7
-; CHECK-NEXT:  # %bb.6: # %entry
-; CHECK-NEXT:    vmr 3, 4
-; CHECK-NEXT:  .LBB0_7: # %entry
-; CHECK-NEXT:    vmr 2, 3
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB0_8: # %entry
+; CHECK-NEXT:    cror 20, 0, 3
+; CHECK-NEXT:    bc 12, 20, .LBB0_4
+; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    vmr 4, 3
-; CHECK-NEXT:    bnu 0, .LBB0_2
-; CHECK-NEXT:  .LBB0_9:
+; CHECK-NEXT:  .LBB0_4: # %entry
+; CHECK-NEXT:    xscvqpdpo 3, 2
+; CHECK-NEXT:    xsrsp 0, 35
+; CHECK-NEXT:    xscvdpspn 0, 0
+; CHECK-NEXT:    mffprwz 3, 0
+; CHECK-NEXT:    cmpwi 3, 0
+; CHECK-NEXT:    blt 0, .LBB0_6
+; CHECK-NEXT:  # %bb.5: # %entry
+; CHECK-NEXT:    vmr 2, 4
+; CHECK-NEXT:  .LBB0_6: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI0_0@toc@l
-; CHECK-NEXT:    lxv 36, 0(3)
-; CHECK-NEXT:    xststdcqp 0, 2, 4
-; CHECK-NEXT:    bc 12, 2, .LBB0_3
-; CHECK-NEXT:  .LBB0_10: # %entry
+; CHECK-NEXT:    lxv 35, 0(3)
+; CHECK-NEXT:    xscmpuqp 0, 4, 3
+; CHECK-NEXT:    beqlr 0
+; CHECK-NEXT:  # %bb.7: # %entry
 ; CHECK-NEXT:    vmr 2, 4
-; CHECK-NEXT:    xststdcqp 0, 3, 4
-; CHECK-NEXT:    bc 4, 2, .LBB0_4
-; CHECK-NEXT:    b .LBB0_5
+; CHECK-NEXT:    blr
 entry:
   %m = call fp128 @llvm.minimum.f128(fp128 %a, fp128 %b)
   ret fp128 %m
@@ -50,44 +43,37 @@ entry:
 define fp128 @f128_maximum(fp128 %a, fp128 %b) {
 ; CHECK-LABEL: f128_maximum:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xscmpuqp 0, 3, 3
+; CHECK-NEXT:    vmr 4, 2
+; CHECK-NEXT:    vmr 2, 3
+; CHECK-NEXT:    bun 0, .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    vmr 2, 4
+; CHECK-NEXT:  .LBB1_2: # %entry
 ; CHECK-NEXT:    xscmpuqp 0, 2, 3
 ; CHECK-NEXT:    vmr 4, 2
-; CHECK-NEXT:    ble 0, .LBB1_8
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    bun 0, .LBB1_9
-; CHECK-NEXT:  .LBB1_2: # %entry
-; CHECK-NEXT:    xststdcqp 0, 2, 8
-; CHECK-NEXT:    bc 4, 2, .LBB1_10
-; CHECK-NEXT:  .LBB1_3: # %entry
-; CHECK-NEXT:    xststdcqp 0, 3, 8
-; CHECK-NEXT:    bc 12, 2, .LBB1_5
-; CHECK-NEXT:  .LBB1_4: # %entry
-; CHECK-NEXT:    vmr 3, 2
-; CHECK-NEXT:  .LBB1_5: # %entry
-; CHECK-NEXT:    addis 3, 2, .LCPI1_1@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI1_1@toc@l
-; CHECK-NEXT:    lxv 34, 0(3)
-; CHECK-NEXT:    xscmpuqp 0, 4, 2
-; CHECK-NEXT:    beq 0, .LBB1_7
-; CHECK-NEXT:  # %bb.6: # %entry
-; CHECK-NEXT:    vmr 3, 4
-; CHECK-NEXT:  .LBB1_7: # %entry
-; CHECK-NEXT:    vmr 2, 3
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB1_8: # %entry
+; CHECK-NEXT:    cror 20, 1, 3
+; CHECK-NEXT:    bc 12, 20, .LBB1_4
+; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    vmr 4, 3
-; CHECK-NEXT:    bnu 0, .LBB1_2
-; CHECK-NEXT:  .LBB1_9:
+; CHECK-NEXT:  .LBB1_4: # %entry
+; CHECK-NEXT:    xscvqpdpo 3, 2
+; CHECK-NEXT:    xsrsp 0, 35
+; CHECK-NEXT:    xscvdpspn 0, 0
+; CHECK-NEXT:    mffprwz 3, 0
+; CHECK-NEXT:    cmpwi 3, -1
+; CHECK-NEXT:    bgt 0, .LBB1_6
+; CHECK-NEXT:  # %bb.5: # %entry
+; CHECK-NEXT:    vmr 2, 4
+; CHECK-NEXT:  .LBB1_6: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI1_0@toc@l
-; CHECK-NEXT:    lxv 36, 0(3)
-; CHECK-NEXT:    xststdcqp 0, 2, 8
-; CHECK-NEXT:    bc 12, 2, .LBB1_3
-; CHECK-NEXT:  .LBB1_10: # %entry
+; CHECK-NEXT:    lxv 35, 0(3)
+; CHECK-NEXT:    xscmpuqp 0, 4, 3
+; CHECK-NEXT:    beqlr 0
+; CHECK-NEXT:  # %bb.7: # %entry
 ; CHECK-NEXT:    vmr 2, 4
-; CHECK-NEXT:    xststdcqp 0, 3, 8
-; CHECK-NEXT:    bc 4, 2, .LBB1_4
-; CHECK-NEXT:    b .LBB1_5
+; CHECK-NEXT:    blr
 entry:
   %m = call fp128 @llvm.maximum.f128(fp128 %a, fp128 %b)
   ret fp128 %m
