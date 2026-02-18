@@ -3869,8 +3869,11 @@ void Verifier::visitCallBase(CallBase &Call) {
     Check(Callee->getFunctionType() == FTy,
           "Intrinsic called with incompatible signature", Call);
 
+  // Find the actual CC of the callee from the Module.
+  CallingConv::ID CalleeCC = Call.getParent()->getParent()->getParent()
+      ->getFunction(Call.getCalledFunction()->getName())->getCallingConv();
   // Verify if the calling convention of the callee is callable.
-  Check(isCallableCC(Call.getCallingConv()),
+  Check(isCallableCC(CalleeCC),
         "calling convention does not permit calls", Call);
 
   // Disallow passing/returning values with alignment higher than we can
