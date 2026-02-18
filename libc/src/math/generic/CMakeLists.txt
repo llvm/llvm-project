@@ -125,9 +125,7 @@ add_entrypoint_object(
   HDRS
     ../ceil.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer_operations
-  FLAGS
-    ROUND_OPT
+    libc.src.__support.math.ceil
 )
 
 add_entrypoint_object(
@@ -137,9 +135,7 @@ add_entrypoint_object(
   HDRS
     ../ceilf.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer_operations
-  FLAGS
-    ROUND_OPT
+    libc.src.__support.math.ceilf
 )
 
 add_entrypoint_object(
@@ -149,7 +145,7 @@ add_entrypoint_object(
   HDRS
     ../ceill.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.math.ceill
 )
 
 add_entrypoint_object(
@@ -159,12 +155,7 @@ add_entrypoint_object(
   HDRS
     ../ceilf16.h
   DEPENDS
-    libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.properties.cpu_features
-    libc.src.__support.macros.properties.types
-  FLAGS
-    ROUND_OPT
+    libc.src.__support.math.ceilf16
 )
 
 add_entrypoint_object(
@@ -174,8 +165,7 @@ add_entrypoint_object(
   HDRS
     ../ceilf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.math.ceilf128
 )
 
 add_entrypoint_object(
@@ -185,13 +175,7 @@ add_entrypoint_object(
   HDRS
     ../ceilbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-  FLAGS
-    ROUND_OPT
+    libc.src.__support.math.ceilbf16
 )
 
 add_entrypoint_object(
