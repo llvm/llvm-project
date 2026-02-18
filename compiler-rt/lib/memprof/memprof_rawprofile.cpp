@@ -189,6 +189,30 @@ void SerializeMIBInfoToBuffer(MIBMapTy &MIBMap, const Vector<u64> &StackIds,
   CHECK(ExpectedNumBytes >= static_cast<u64>(Ptr - Buffer) &&
         "Expected num bytes != actual bytes written");
 }
+
+// The memory address section uses the following format:
+// ---------- Mem Address Info
+// Num Entries (u64)
+// ---------- Address Entry
+// Address (u64)
+// ----------
+// ...
+u64 MemAddressSizeBytes(const Vector<u64> &Addresses) {
+  return sizeof(u64) + Addresses.Size() * sizeof(u64);
+}
+
+void SerializeMemAddressesToBuffer(const Vector<u64> &Addresses,
+                                   const u64 ExpectedNumBytes, char *&Buffer) {
+  char *Ptr = Buffer;
+  const u64 NumEntries = Addresses.Size();
+  Ptr = WriteBytes(NumEntries, Ptr);
+  for (u64 i = 0; i < NumEntries; i++) {
+    Ptr = WriteBytes(Addresses[i], Ptr);
+  }
+  CHECK(ExpectedNumBytes >= static_cast<u64>(Ptr - Buffer) &&
+        "Expected num bytes != actual bytes written");
+}
+
 } // namespace
 
 // Format
@@ -199,6 +223,7 @@ void SerializeMIBInfoToBuffer(MIBMapTy &MIBMap, const Vector<u64> &StackIds,
 // Segment Offset
 // MIB Info Offset
 // Stack Offset
+// Mem Address Offset
 // ---------- Segment Info
 // Num Entries
 // ---------- Segment Entry
@@ -234,9 +259,16 @@ void SerializeMIBInfoToBuffer(MIBMapTy &MIBMap, const Vector<u64> &StackIds,
 // ...
 // ----------
 // Optional Padding Bytes
+// ---------- Mem Address Info (V6+)
+// Num Entries
+// ---------- Address Entry
+// Address (u64)
+// ----------
+// ...
+// Optional Padding Bytes
 // ...
 u64 SerializeToRawProfile(MIBMapTy &MIBMap, ArrayRef<LoadedModule> Modules,
-                          char *&Buffer) {
+                          Vector<u64> &MemBlockAddresses, char *&Buffer) {
   // Each section size is rounded up to 8b since the first entry in each section
   // is a u64 which holds the number of entries in the section by convention.
   const u64 NumSegmentBytes = RoundUpTo(SegmentSizeBytes(Modules), 8);
@@ -262,25 +294,32 @@ u64 SerializeToRawProfile(MIBMapTy &MIBMap, ArrayRef<LoadedModule> Modules,
 
   const u64 NumStackBytes = RoundUpTo(StackSizeBytes(StackIds), 8);
 
+  const u64 NumMemAddressBytes =
+      RoundUpTo(MemAddressSizeBytes(MemBlockAddresses), 8);
+
   // Ensure that the profile is 8b aligned. We allow for some optional padding
   // at the end so that any subsequent profile serialized to the same file does
   // not incur unaligned accesses.
   const u64 TotalSizeBytes =
       RoundUpTo(sizeof(Header) + NumSegmentBytes + NumStackBytes +
-                    NumMIBInfoBytes + NumHistogramBytes,
+                    NumMIBInfoBytes + NumHistogramBytes + NumMemAddressBytes,
                 8);
 
   // Allocate the memory for the entire buffer incl. info blocks.
   Buffer = (char *)InternalAlloc(TotalSizeBytes);
   char *Ptr = Buffer;
 
+  const u64 StackOffset =
+      sizeof(Header) + NumSegmentBytes + NumMIBInfoBytes + NumHistogramBytes;
+  const u64 MemAddressOffset = StackOffset + NumStackBytes;
+
   Header header{MEMPROF_RAW_MAGIC_64,
                 MEMPROF_RAW_VERSION,
                 static_cast<u64>(TotalSizeBytes),
                 sizeof(Header),
                 sizeof(Header) + NumSegmentBytes,
-                sizeof(Header) + NumSegmentBytes + NumMIBInfoBytes +
-                    NumHistogramBytes};
+                StackOffset,
+                MemAddressOffset};
   Ptr = WriteBytes(header, Ptr);
 
   SerializeSegmentsToBuffer(Modules, NumSegmentBytes, Ptr);
@@ -291,6 +330,9 @@ u64 SerializeToRawProfile(MIBMapTy &MIBMap, ArrayRef<LoadedModule> Modules,
   Ptr += NumMIBInfoBytes + NumHistogramBytes;
 
   SerializeStackToBuffer(StackIds, NumStackBytes, Ptr);
+  Ptr += NumStackBytes;
+
+  SerializeMemAddressesToBuffer(MemBlockAddresses, NumMemAddressBytes, Ptr);
 
   return TotalSizeBytes;
 }

@@ -37,6 +37,9 @@ SANITIZER_WEAK_ATTRIBUTE char __memprof_profile_filename[1];
 // Share ClHistogram compiler flag with runtime.
 SANITIZER_WEAK_ATTRIBUTE bool __memprof_histogram;
 
+// Share ClFineGranularity compiler flag with runtime.
+SANITIZER_WEAK_ATTRIBUTE bool __memprof_fine_granularity;
+
 namespace __memprof {
 
 static void MemprofDie() {

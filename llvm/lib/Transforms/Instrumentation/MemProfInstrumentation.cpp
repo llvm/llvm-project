@@ -71,6 +71,8 @@ constexpr char MemProfFilenameVar[] = "__memprof_profile_filename";
 
 constexpr char MemProfHistogramFlagVar[] = "__memprof_histogram";
 
+constexpr char MemProfFineGranularityFlagVar[] = "__memprof_fine_granularity";
+
 // Command-line flags.
 
 static cl::opt<bool> ClInsertVersionCheck(
@@ -138,6 +140,12 @@ static cl::opt<bool> ClHistogram("memprof-histogram",
                                  cl::desc("Collect access count histograms"),
                                  cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClFineGranularity(
+    "memprof-fine-granularity",
+    cl::desc("Use fine shadow granularity (8 bytes) without collecting "
+             "histograms"),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<std::string>
     MemprofRuntimeDefaultOptions("memprof-runtime-default-options",
                                  cl::desc("The default memprof options"),
@@ -156,7 +164,8 @@ namespace {
 struct ShadowMapping {
   ShadowMapping() {
     Scale = ClMappingScale;
-    Granularity = ClHistogram ? HistogramGranularity : ClMappingGranularity;
+    Granularity = (ClHistogram || ClFineGranularity) ? HistogramGranularity
+                                                     : ClMappingGranularity;
     Mask = ~(Granularity - 1);
   }
 
@@ -240,8 +249,15 @@ MemProfilerPass::MemProfilerPass() = default;
 
 PreservedAnalyses MemProfilerPass::run(Function &F,
                                        AnalysisManager<Function> &AM) {
-  assert((!ClHistogram || ClMappingGranularity == DefaultMemGranularity) &&
-         "Memprof with histogram only supports default mapping granularity");
+  if (ClHistogram && ClMappingGranularity != DefaultMemGranularity)
+    report_fatal_error(
+        "Memprof with histogram only supports default mapping granularity");
+  if (ClFineGranularity && ClMappingGranularity != DefaultMemGranularity)
+    report_fatal_error("Memprof with fine granularity only supports default "
+                       "mapping granularity");
+  if (ClHistogram && ClFineGranularity)
+    report_fatal_error(
+        "Cannot use both -memprof-histogram and -memprof-fine-granularity");
   Module &M = *F.getParent();
   MemProfiler Profiler(M);
   if (Profiler.instrumentFunction(F))
@@ -451,14 +467,16 @@ void MemProfiler::instrumentAddress(Instruction *OrigIns,
     return;
   }
 
-  Type *ShadowTy = ClHistogram ? Type::getInt8Ty(*C) : Type::getInt64Ty(*C);
+  Type *ShadowTy = (ClHistogram || ClFineGranularity) ? Type::getInt8Ty(*C)
+                                                      : Type::getInt64Ty(*C);
   Type *ShadowPtrTy = PointerType::get(*C, 0);
 
   Value *ShadowPtr = memToShadow(AddrLong, IRB);
   Value *ShadowAddr = IRB.CreateIntToPtr(ShadowPtr, ShadowPtrTy);
   Value *ShadowValue = IRB.CreateLoad(ShadowTy, ShadowAddr);
-  // If we are profiling with histograms, add overflow protection at 255.
-  if (ClHistogram) {
+  // If we are using fine granularity shadow (histogram or fine-granularity
+  // mode), add overflow protection at 255.
+  if (ClHistogram || ClFineGranularity) {
     Value *MaxCount = ConstantInt::get(Type::getInt8Ty(*C), 255);
     Value *Cmp = IRB.CreateICmpULT(ShadowValue, MaxCount);
     Instruction *IncBlock =
@@ -506,6 +524,23 @@ void createMemprofHistogramFlagVar(Module &M) {
   appendToCompilerUsed(M, MemprofHistogramFlag);
 }
 
+// Set MemprofFineGranularityFlag as a Global variable in IR. This tells the
+// runtime to use fine (8-byte) shadow granularity without collecting
+// histograms.
+void createMemprofFineGranularityFlagVar(Module &M) {
+  const StringRef VarName(MemProfFineGranularityFlagVar);
+  Type *IntTy1 = Type::getInt1Ty(M.getContext());
+  auto MemprofFineGranularityFlag = new GlobalVariable(
+      M, IntTy1, true, GlobalValue::WeakAnyLinkage,
+      Constant::getIntegerValue(IntTy1, APInt(1, ClFineGranularity)), VarName);
+  const Triple &TT = M.getTargetTriple();
+  if (TT.supportsCOMDAT()) {
+    MemprofFineGranularityFlag->setLinkage(GlobalValue::ExternalLinkage);
+    MemprofFineGranularityFlag->setComdat(M.getOrInsertComdat(VarName));
+  }
+  appendToCompilerUsed(M, MemprofFineGranularityFlag);
+}
+
 void createMemprofDefaultOptionsVar(Module &M) {
   Constant *OptionsConst = ConstantDataArray::getString(
       M.getContext(), MemprofRuntimeDefaultOptions, /*AddNull=*/true);
@@ -539,6 +574,8 @@ bool ModuleMemProfiler::instrumentModule(Module &M) {
 
   createMemprofHistogramFlagVar(M);
 
+  createMemprofFineGranularityFlagVar(M);
+
   createMemprofDefaultOptionsVar(M);
 
   return true;
@@ -549,7 +586,8 @@ void MemProfiler::initializeCallbacks(Module &M) {
 
   for (size_t AccessIsWrite = 0; AccessIsWrite <= 1; AccessIsWrite++) {
     const std::string TypeStr = AccessIsWrite ? "store" : "load";
-    const std::string HistPrefix = ClHistogram ? "hist_" : "";
+    const std::string HistPrefix =
+        (ClHistogram || ClFineGranularity) ? "hist_" : "";
 
     SmallVector<Type *, 2> Args1{1, IntptrTy};
     MemProfMemoryAccessCallback[AccessIsWrite] = M.getOrInsertFunction(

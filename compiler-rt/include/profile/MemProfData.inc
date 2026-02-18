@@ -33,10 +33,10 @@
    (uint64_t)'o' << 24 | (uint64_t)'f' << 16 | (uint64_t)'r' << 8 | (uint64_t)129)
 
 // The version number of the raw binary format.
-#define MEMPROF_RAW_VERSION 5ULL
+#define MEMPROF_RAW_VERSION 6ULL
 
 // Currently supported versions.
-#define MEMPROF_RAW_SUPPORTED_VERSIONS {3ULL, 4ULL, 5ULL}
+#define MEMPROF_RAW_SUPPORTED_VERSIONS {3ULL, 4ULL, 5ULL, 6ULL}
 
 #define MEMPROF_V3_MIB_SIZE 132ULL;
 
@@ -52,6 +52,8 @@ PACKED(struct Header {
   uint64_t SegmentOffset;
   uint64_t MIBOffset;
   uint64_t StackOffset;
+  // Added in V6: offset to memory block address section.
+  uint64_t MemAddressOffset;
 });
 
 // A struct describing the information necessary to describe a /proc/maps

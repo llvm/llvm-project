@@ -42,6 +42,14 @@ if(NOT WIN32)
   list(APPEND MEMPROF_UNITTEST_LINK_FLAGS -pthread)
 endif()
 
+if(APPLE)
+  list(APPEND MEMPROF_UNITTEST_CFLAGS ${DARWIN_osx_CFLAGS})
+  list(APPEND MEMPROF_UNITTEST_LINK_FLAGS ${DARWIN_osx_LINK_FLAGS})
+
+  add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
+  list(APPEND MEMPROF_UNITTEST_LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS})
+endif()
+
 set(MEMPROF_UNITTEST_DEPS)
 if (TARGET cxx-headers OR HAVE_LIBCXX)
   list(APPEND MEMPROF_UNITTEST_DEPS cxx-headers)
@@ -54,13 +62,22 @@ append_list_if(COMPILER_RT_HAS_LIBDL -ldl MEMPROF_UNITTEST_LINK_LIBRARIES)
 
 # Adds memprof tests for each architecture.
 macro(add_memprof_tests_for_arch arch)
-  set(MEMPROF_TEST_RUNTIME_OBJECTS
-    $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
-    $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
-    $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
-    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
-    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
-  )
+  if(APPLE)
+    set(MEMPROF_TEST_RUNTIME_OBJECTS
+      $<TARGET_OBJECTS:RTSanitizerCommon.osx>
+      $<TARGET_OBJECTS:RTSanitizerCommonCoverage.osx>
+      $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>
+      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.osx>
+    )
+  else()
+    set(MEMPROF_TEST_RUNTIME_OBJECTS
+      $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+      $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
+    )
+  endif()
   set(MEMPROF_TEST_RUNTIME RTMemProfTest.${arch})
   add_library(${MEMPROF_TEST_RUNTIME} STATIC ${MEMPROF_TEST_RUNTIME_OBJECTS})
   set_target_properties(${MEMPROF_TEST_RUNTIME} PROPERTIES

@@ -1,4 +1,5 @@
 // REQUIRES: memprof-64-bits
+// UNSUPPORTED: darwin
 // Stress test dynamic TLS + dlopen + threads.
 //
 // RUN: %clang_memprof -x c -DSO_NAME=f0 %s -shared -o %t-f0.so -fPIC
