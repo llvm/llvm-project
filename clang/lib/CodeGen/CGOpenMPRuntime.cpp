@@ -815,7 +815,7 @@ void ReductionCodeGen::emitAggregateType(CodeGenFunction &CGF, unsigned N) {
     Size = CGF.Builder.CreatePtrDiff(ElemType,
                                      OrigAddresses[N].second.getPointer(CGF),
                                      OrigAddresses[N].first.getPointer(CGF));
-    Size = CGF.Builder.CreateZExtOrTrunc(Size, CGF.Int64Ty);
+    Size = CGF.Builder.CreateZExtOrTrunc(Size, ElemSizeOf->getType());
     Size = CGF.Builder.CreateNUWAdd(
         Size, llvm::ConstantInt::get(Size->getType(), /*V=*/1));
     SizeInChars = CGF.Builder.CreateNUWMul(Size, ElemSizeOf);
