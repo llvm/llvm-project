@@ -1341,7 +1341,7 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
                                     threadContextFeature->Prefix == WASM_FEATURE_PREFIX_USED;
 
     if (threadContextFeature == targetFeatures.end()) {
-      // If the feature is not explicitly used or disallowed, check for the presence of __stack_pointer
+      // If the feature is not explicitly used or disallowed, check for the presence of a __stack_pointer
       // import in this specific file to determine if the global thread context ABI is being used.
       bool hasStackPointerImport = llvm::any_of(obj->getSymbols(), [](const auto &sym) {
         return sym && sym->getName() == "__stack_pointer" && 
