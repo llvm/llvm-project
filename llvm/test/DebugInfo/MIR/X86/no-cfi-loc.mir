@@ -48,10 +48,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 tracksRegLiveness: true
-calleeSavedRegisters: [ '$bh', '$bl', '$bp', '$bpl', '$bx', '$ebp', '$ebx', 
-                        '$rbp', '$rbx', '$r12', '$r13', '$r14', '$r15', 
-                        '$r12b', '$r13b', '$r14b', '$r15b', '$r12d', '$r13d', 
-                        '$r14d', '$r15d', '$r12w', '$r13w', '$r14w', '$r15w' ]
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false
