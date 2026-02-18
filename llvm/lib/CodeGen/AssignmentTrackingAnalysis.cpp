@@ -11,6 +11,8 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
@@ -976,6 +978,16 @@ public:
   }
 };
 
+/// A { DbgVariableRecord | Instruction | Bit } union. If Bit value is 1
+/// that means the DbgVariableRecords that follow the current Instruction
+/// come immediately after it. Else there's a gap of one or more instructions.
+using DbgOrInst =
+    PointerIntPair<PointerUnion<DbgVariableRecord *, Instruction *>, 1>;
+using DbgOrInstBlock = SmallVector<DbgOrInst>;
+/// Map of BasicBlock to a list of the instructions and debug records that are
+/// interesting.
+using DbgOrInstCacheTy = DenseMap<BasicBlock *, DbgOrInstBlock>;
+
 /// AssignmentTrackingLowering encapsulates a dataflow analysis over a function
 /// that interprets assignment tracking debug info metadata and stores in IR to
 /// create a map of variable locations.
@@ -1091,6 +1103,10 @@ private:
   /// Map untagged unknown stores (e.g. strided/masked store intrinsics)
   /// to the variables they may assign to. Used by processUntaggedInstruction.
   UnknownStoreAssignmentMap UnknownStoreVars;
+
+  // Rather than iterating over all instructions ever time, cache the
+  // interesting ones.
+  DbgOrInstCacheTy DbgOrInstCache;
 
   // Machinery to defer inserting dbg.values.
   using InstInsertMap = MapVector<VarLocInsertPt, SmallVector<VarLocInfo>>;
@@ -1759,10 +1775,9 @@ void AssignmentTrackingLowering::processTaggedInstruction(
 
 void AssignmentTrackingLowering::processDbgAssign(DbgVariableRecord *DbgAssign,
                                                   BlockInfo *LiveSet) {
-  // Only bother tracking variables that are at some point stack homed. Other
-  // variables can be dealt with trivially later.
-  if (!VarsWithStackSlot->count(getAggregate(DbgAssign)))
-    return;
+  // Fully promoted variables are dealt with later.
+  assert(VarsWithStackSlot->count(getAggregate(DbgAssign)) &&
+         "Not a stack variable");
 
   VariableID Var = getVariableID(DebugVariable(DbgAssign));
   Assignment AV = Assignment::make(getIDFromMarker(*DbgAssign), DbgAssign);
@@ -1801,10 +1816,9 @@ void AssignmentTrackingLowering::processDbgAssign(DbgVariableRecord *DbgAssign,
 
 void AssignmentTrackingLowering::processDbgValue(DbgVariableRecord *DbgValue,
                                                  BlockInfo *LiveSet) {
-  // Only other tracking variables that are at some point stack homed.
-  // Other variables can be dealt with trivally later.
-  if (!VarsWithStackSlot->count(getAggregate(DbgValue)))
-    return;
+  // Fully promoted variables are dealt with later.
+  assert(VarsWithStackSlot->count(getAggregate(DbgValue)) &&
+         "Not a stack variable");
 
   VariableID Var = getVariableID(DebugVariable(DbgValue));
   // We have no ID to create an Assignment with so we mark this assignment as
@@ -1857,47 +1871,31 @@ void AssignmentTrackingLowering::resetInsertionPoint(DbgVariableRecord &After) {
 }
 
 void AssignmentTrackingLowering::process(BasicBlock &BB, BlockInfo *LiveSet) {
-  // If the block starts with DbgRecords, we need to process those DbgRecords as
-  // their own frame without processing any instructions first.
-  bool ProcessedLeadingDbgRecords = !BB.begin()->hasDbgRecords();
-  for (auto II = BB.begin(), EI = BB.end(); II != EI;) {
-    assert(VarsTouchedThisFrame.empty());
-    // Process the instructions in "frames". A "frame" includes a single
-    // non-debug instruction followed any debug instructions before the
-    // next non-debug instruction.
-
-    // Skip the current instruction if it has unprocessed DbgRecords attached
-    // (see comment above `ProcessedLeadingDbgRecords`).
-    if (ProcessedLeadingDbgRecords) {
-      // II is now either a debug intrinsic, a non-debug instruction with no
-      // attached DbgRecords, or a non-debug instruction with attached processed
-      // DbgRecords.
-      // II has not been processed.
-      if (II->isTerminator())
-        break;
-      resetInsertionPoint(*II);
-      processNonDbgInstruction(*II, LiveSet);
-      assert(LiveSet->isValid());
-      ++II;
+  auto &BBCache = DbgOrInstCache[&BB];
+  // Process the instructions in "frames". A "frame" includes a single
+  // non-debug instruction followed any debug instructions before the
+  // next non-debug instruction. A pointer-int int value of 1 on an
+  // instruction means non-debug instructions follow (end of frame).
+  for (auto II = BBCache.begin(), EI = BBCache.end(); II != EI;) {
+    LLVM_DEBUG(dbgs() << "---------------------------- new frame "
+                         "------------------------------\n");
+    bool DbgInstsInThisFrame = true;
+    if (Instruction *Inst = II->getPointer().dyn_cast<Instruction *>()) {
+      resetInsertionPoint(*Inst);
+      processNonDbgInstruction(*Inst, LiveSet);
+      DbgInstsInThisFrame = II++->getInt();
     }
-    // II is now either a debug intrinsic, a non-debug instruction with no
-    // attached DbgRecords, or a non-debug instruction with attached unprocessed
-    // DbgRecords.
-    if (II != EI && II->hasDbgRecords()) {
-      // Skip over non-variable debug records (i.e., labels). They're going to
-      // be read from IR (possibly re-ordering them within the debug record
-      // range) rather than from the analysis results.
-      for (DbgVariableRecord &DVR : filterDbgVars(II->getDbgRecordRange())) {
-        resetInsertionPoint(DVR);
-        processDbgVariableRecord(DVR, LiveSet);
-        assert(LiveSet->isValid());
+
+    // Process a wedge of debug records.
+    if (DbgInstsInThisFrame) {
+      DbgVariableRecord *DVR;
+      while (II != EI &&
+             (DVR = II->getPointer().dyn_cast<DbgVariableRecord *>())) {
+        resetInsertionPoint(*DVR);
+        processDbgVariableRecord(*DVR, LiveSet);
+        ++II;
       }
     }
-    ProcessedLeadingDbgRecords = true;
-    // II is now a non-debug instruction either with no attached DbgRecords, or
-    // with attached processed DbgRecords. II has not been processed, and all
-    // debug instructions or DbgRecords in the frame preceding II have been
-    // processed.
 
     // We've processed everything in the "frame". Now determine which variables
     // cannot be represented by a dbg.declare.
@@ -2116,7 +2114,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
     const DenseSet<DebugAggregate> &VarsWithStackSlot,
     AssignmentTrackingLowering::UntaggedStoreAssignmentMap &UntaggedStoreVars,
     AssignmentTrackingLowering::UnknownStoreAssignmentMap &UnknownStoreVars,
-    unsigned &TrackedVariablesVectorSize) {
+    DbgOrInstCacheTy &DbgOrInstCache, unsigned &TrackedVariablesVectorSize) {
   DenseSet<DebugVariable> Seen;
   // Map of Variable: [Fragments].
   DenseMap<DebugAggregate, SmallVector<DebugVariable, 8>> FragmentMap;
@@ -2129,23 +2127,42 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
   // We need to add fragments for untagged stores too so that we can correctly
   // clobber overlapped fragment locations later.
   SmallVector<DbgVariableRecord *> DPDeclares;
-  auto ProcessDbgRecord = [&](DbgVariableRecord *Record) {
-    if (Record->isDbgDeclare()) {
-      DPDeclares.push_back(Record);
-      return;
-    }
-    DebugVariable DV = DebugVariable(Record);
-    DebugAggregate DA = {DV.getVariable(), DV.getInlinedAt()};
-    if (!VarsWithStackSlot.contains(DA))
-      return;
-    if (Seen.insert(DV).second)
-      FragmentMap[DA].push_back(DV);
-  };
   for (auto &BB : Fn) {
+    auto &BBCache = DbgOrInstCache[&BB];
+
+    auto ProcessDbgRecord = [&](DbgVariableRecord *Record) {
+      if (Record->isDbgDeclare()) {
+        DPDeclares.push_back(Record);
+        return;
+      }
+      DebugVariable DV = DebugVariable(Record);
+      DebugAggregate DA = {DV.getVariable(), DV.getInlinedAt()};
+      if (!VarsWithStackSlot.contains(DA))
+        return;
+
+      if (Seen.insert(DV).second)
+        FragmentMap[DA].push_back(DV);
+
+      BBCache.push_back({Record, 0});
+    };
+
     for (auto &I : BB) {
+      auto TFBlockSize = BBCache.size();
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
         ProcessDbgRecord(&DVR);
-      if (auto Info = getUntaggedStoreAssignmentInfo(I, Fn.getDataLayout())) {
+
+      if (TFBlockSize && TFBlockSize != BBCache.size() &&
+          BBCache[TFBlockSize - 1].getPointer().dyn_cast<Instruction *>() &&
+          &*std::next(BBCache[TFBlockSize - 1]
+                          .getPointer()
+                          .dyn_cast<Instruction *>()
+                          ->getIterator()) == &I)
+        BBCache[TFBlockSize - 1].setInt(1);
+
+      if (I.getMetadata(LLVMContext::MD_DIAssignID)) {
+        BBCache.push_back({&I, 0});
+      } else if (auto Info =
+                     getUntaggedStoreAssignmentInfo(I, Fn.getDataLayout())) {
         // Find markers linked to this alloca.
         auto HandleDbgAssignForStore = [&](DbgVariableRecord *Assign) {
           std::optional<DIExpression::FragmentInfo> FragInfo;
@@ -2182,6 +2199,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
         };
         for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(Info->Base))
           HandleDbgAssignForStore(DVR);
+        BBCache.push_back({&I, 0});
       } else if (auto *AI = getUnknownStore(I, Fn.getDataLayout())) {
         // Find markers linked to this alloca.
         auto HandleDbgAssignForUnknownStore = [&](DbgVariableRecord *Assign) {
@@ -2199,6 +2217,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
         };
         for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(AI))
           HandleDbgAssignForUnknownStore(DVR);
+        BBCache.push_back({&I, 0});
       }
     }
   }
@@ -2271,7 +2290,7 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   // appears to be rare occurance.
   VarContains = buildOverlapMapAndRecordDeclares(
       Fn, FnVarLocs, *VarsWithStackSlot, UntaggedStoreVars, UnknownStoreVars,
-      TrackedVariablesVectorSize);
+      DbgOrInstCache, TrackedVariablesVectorSize);
 
   // Prepare for traversal.
   ReversePostOrderTraversal<Function *> RPOT(&Fn);
