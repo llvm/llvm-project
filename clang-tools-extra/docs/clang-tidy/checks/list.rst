@@ -311,6 +311,7 @@ Clang-Tidy Checks
    :doc:`modernize-shrink-to-fit <modernize/shrink-to-fit>`, "Yes"
    :doc:`modernize-type-traits <modernize/type-traits>`, "Yes"
    :doc:`modernize-unary-static-assert <modernize/unary-static-assert>`, "Yes"
+   :doc:`modernize-use-aggregate <modernize/use-aggregate>`,
    :doc:`modernize-use-auto <modernize/use-auto>`, "Yes"
    :doc:`modernize-use-bool-literals <modernize/use-bool-literals>`, "Yes"
    :doc:`modernize-use-constraints <modernize/use-constraints>`, "Yes"
