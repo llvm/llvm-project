@@ -867,6 +867,15 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     }
     break;
   }
+  case ISD::SRA: {
+    // If we only want bits that already match the signbit then we don't need
+    // to shift.
+    SDValue Op0 = Op.getOperand(0);
+    unsigned HiDemandedBits = BitWidth - DemandedBits.countr_zero();
+    if (DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1) >= HiDemandedBits)
+      return Op0;
+    break;
+  }
   case ISD::SETCC: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
