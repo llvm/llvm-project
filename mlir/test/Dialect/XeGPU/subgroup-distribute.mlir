@@ -182,6 +182,23 @@ gpu.module @xevm_module{
 }
 
 // -----
+// CHECK-LABEL: gpu.func @scf_if_preserve_attrs({{.*}}) {
+// CHECK:         %[[PREDICATE:.*]] = llvm.mlir.poison : i1
+// CHECK:         scf.if %[[PREDICATE]] {
+// CHECK-NEXT:      xegpu.store
+// CHECK-NEXT:    } {sg_id_range = #xegpu.range<[0 : i64, 32 : i64]>}
+gpu.module @xevm_module{
+  gpu.func @scf_if_preserve_attrs(%src: memref<256xf16>, %val: vector<16x8xf16>, %offset: vector<16xindex>, %mask: vector<16xi1>) {
+    %pred = llvm.mlir.poison : i1
+    scf.if %pred  {
+      xegpu.store %val, %src[%offset], %mask <{chunk_size=8}>
+      : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
+    } {sg_id_range = #xegpu.range<[0 : i64, 32 : i64]>}
+    gpu.return
+  }
+}
+
+// -----
 // CHECK-LABEL: gpu.func @mma_transpose_b(
 // CHECK: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x16xf16>, %[[ARG1:[0-9a-zA-Z]+]]: memref<16x8xi32>, %[[ARG2:[0-9a-zA-Z]+]]: memref<8x16xf32>) {
 // CHECK-DAG:     %[[ADESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>

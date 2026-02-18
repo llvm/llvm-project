@@ -1900,6 +1900,7 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
         rewriter, ifOp.getLoc(), newIfOpDistResTypes,
         newWarpOp.getResult(newIndices[0]), static_cast<bool>(ifOp.thenBlock()),
         static_cast<bool>(ifOp.elseBlock()));
+    newIfOp->setAttrs(ifOp->getAttrDictionary());
     auto encloseRegionInWarpOp =
         [&](Block *oldIfBranch, Block *newIfBranch,
             llvm::SmallSetVector<Value, 32> &escapingValues,

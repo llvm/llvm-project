@@ -1935,7 +1935,7 @@ func.func @warp_scf_if_no_yield_distribute(%buffer: memref<128xindex>, %pred : i
     %seq = vector.step : vector<32xindex>
     scf.if %pred {
       vector.store %seq, %buffer[%c0] : memref<128xindex>, vector<32xindex>
-    }
+    } {my_attr = 42 : i64}
     gpu.yield
   }
   return
@@ -1947,6 +1947,7 @@ func.func @warp_scf_if_no_yield_distribute(%buffer: memref<128xindex>, %pred : i
 //       CHECK-PROP:   gpu.warp_execute_on_lane_0(%{{.*}})[32] args(%{{.*}} : vector<1xindex>) {
 //       CHECK-PROP:   ^bb0(%[[ARG2:.+]]: vector<32xindex>):
 //       CHECK-PROP:   vector.store %[[ARG2]], %[[ARG0]][%{{.*}}] : memref<128xindex>, vector<32xindex>
+//       CHECK-PROP:   } {my_attr = 42 : i64}
 
 // -----
 
@@ -1963,7 +1964,7 @@ func.func @warp_scf_if_distribute(%pred : i1)  {
     } else {
       %2 = "other_op"(%seq2) : (vector<32xindex>) -> (vector<32xf32>)
       scf.yield %2 : vector<32xf32>
-    }
+    } {my_attr = 42 : i64}
     gpu.yield %0 : vector<32xf32>
   }
   "some_use"(%0) : (vector<1xf32>) -> ()
@@ -1989,7 +1990,7 @@ func.func @warp_scf_if_distribute(%pred : i1)  {
 //       CHECK-PROP:        gpu.yield %{{.*}} : vector<32xf32>
 //       CHECK-PROP:      }
 //       CHECK-PROP:      scf.yield %[[ELSE_DIST]] : vector<1xf32>
-//       CHECK-PROP:    }
+//       CHECK-PROP:    } {my_attr = 42 : i64}
 //       CHECK-PROP:    "some_use"(%[[IF_YIELD_DIST]]) : (vector<1xf32>) -> ()
 //       CHECK-PROP:    return
 //       CHECK-PROP:  }
