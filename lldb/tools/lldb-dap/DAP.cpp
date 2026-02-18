@@ -22,6 +22,7 @@
 #include "Protocol/ProtocolTypes.h"
 #include "ProtocolUtils.h"
 #include "Transport.h"
+#include "Variables.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBEvent.h"
@@ -125,7 +126,8 @@ llvm::StringRef DAP::debug_adapter_path = "";
 DAP::DAP(Log &log, const ReplMode default_repl_mode,
          std::vector<std::string> pre_init_commands, bool no_lldbinit,
          llvm::StringRef client_name, DAPTransport &transport, MainLoop &loop)
-    : log(log), transport(transport), broadcaster("lldb-dap"),
+    : log(log), transport(transport), reference_storage(log),
+      broadcaster("lldb-dap"),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
       repl_mode(default_repl_mode), no_lldbinit(no_lldbinit),
