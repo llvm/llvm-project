@@ -5108,7 +5108,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       Data.RLoc = Tok.getLocation();
       if (!T.consumeClose())
         Data.RLoc = T.getCloseLocation();
-      return false; //Success
+      return false; // Success
     } else if (Tok.is(tok::comma)) {
       Vars.push_back(FirstExpr.get());
       while (Tok.is(tok::comma)) {
@@ -5134,7 +5134,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     Data.RLoc = Tok.getLocation();
     if (!T.consumeClose())
       Data.RLoc = T.getCloseLocation();
-    return false; //Success
+    return false; // Success
   }
 
   bool IsComma =
