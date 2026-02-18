@@ -21,4 +21,4 @@
 // Bring this file into the link if __printf_float is referenced.
 extern "C" void __printf_float() {}
 
-#endif
+#endif // LIBC_COPT_PRINTF_MODULAR

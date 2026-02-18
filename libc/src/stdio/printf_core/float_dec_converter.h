@@ -1220,7 +1220,7 @@ LIBC_PRINTF_MODULE((template <WriteMode write_mode>
       Writer<WriteMode::MODE> * writer, const FormatSection &to_conv);
 #include "src/stdio/printf_core/write_modes.def"
 #undef HANDLE_WRITE_MODE
-#endif
+#endif // LIBC_PRINTF_DEFINE_MODULES
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
