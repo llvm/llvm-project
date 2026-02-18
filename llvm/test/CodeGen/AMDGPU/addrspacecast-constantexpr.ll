@@ -31,7 +31,7 @@ define amdgpu_kernel void @store_cast_0_group_to_flat_addrspacecast() #1 {
 ; HSA-NEXT:    store i32 7, ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4)), align 4
 ; HSA-NEXT:    ret void
 ;
-  store i32 7, ptr addrspace(4) addrspacecast (ptr addrspace(3) null to ptr addrspace(4))
+  store i32 7, ptr addrspace(4) addrspacecast (ptr addrspace(3) zeroinitializer to ptr addrspace(4))
   ret void
 }
 
