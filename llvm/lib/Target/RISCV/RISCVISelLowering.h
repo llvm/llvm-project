@@ -480,6 +480,9 @@ public:
   static bool isSpreadMask(ArrayRef<int> Mask, unsigned Factor,
                            unsigned &Index);
 
+  bool generateFMAsInMachineCombiner(EVT VT,
+                                     CodeGenOptLevel OptLevel) const override;
+
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
