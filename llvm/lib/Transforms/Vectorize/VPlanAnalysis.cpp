@@ -286,7 +286,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
           .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
                 VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,
-                VPWidenPointerInductionRecipe, VPEVLBasedIVPHIRecipe>(
+                VPWidenPointerInductionRecipe, VPCurrentIterationPHIRecipe>(
               [this](const auto *R) {
                 // Handle header phi recipes, except VPWidenIntOrFpInduction
                 // which needs special handling due it being possibly truncated.
@@ -559,7 +559,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
         if (VFs[J].isScalar() ||
             isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
-                VPEVLBasedIVPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
+                VPCurrentIterationPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
             (isa<VPInstruction>(VPV) && vputils::onlyScalarValuesUsed(VPV)) ||
             (isa<VPReductionPHIRecipe>(VPV) &&
              (cast<VPReductionPHIRecipe>(VPV))->isInLoop())) {
