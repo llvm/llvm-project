@@ -173,13 +173,29 @@ void SplitAnalysis::analyzeUses() {
     if (!VNI->isPHIDef() && !VNI->isUnused())
       UseSlots.push_back(VNI->def);
 
-  // Get use slots form the use-def chain.
+  // Get use slots from the use-def chain.
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (MachineOperand &MO : MRI.use_nodbg_operands(CurLI->reg()))
     if (!MO.isUndef())
       UseSlots.push_back(LIS.getInstructionIndex(*MO.getParent()).getRegSlot());
 
   array_pod_sort(UseSlots.begin(), UseSlots.end());
+
+  // Remove uses in blocks not covered by the live interval. This can happen
+  // during register allocation when the live interval is shrunk (e.g., due to
+  // dead PHI elimination) after spill code has been inserted. The spill
+  // instructions create uses that remain in the use-def chain until they are
+  // later deleted, but the live interval no longer covers those blocks.
+  if (!CurLI->empty()) {
+    UseSlots.erase(remove_if(UseSlots,
+                             [this](SlotIndex Idx) {
+                               auto [Start, Stop] =
+                                   LIS.getSlotIndexes()->getMBBRange(
+                                       LIS.getMBBFromIndex(Idx));
+                               return !CurLI->overlaps(Start, Stop);
+                             }),
+                   UseSlots.end());
+  }
 
   // Remove duplicates, keeping the smaller slot for each instruction.
   // That is what we want for early clobbers.
