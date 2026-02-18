@@ -6,12 +6,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64SelectionDAGInfo.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -912,6 +916,56 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Constants) {
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Splat4, /*OrZero=*/true));
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(SplatBig));
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SplatBig, /*OrZero=*/true));
+}
+
+TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_SHL) {
+  SDLoc Loc;
+  auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);
+  auto Cst1 = DAG->getConstant(1, Loc, MVT::i32);
+  auto Cst3 = DAG->getConstant(3, Loc, MVT::i32);
+  auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
+  auto Cst16 = DAG->getConstant(16, Loc, MVT::i32);
+
+  auto Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::i32);
+  auto ShlConst1 = DAG->getNode(ISD::SHL, Loc, MVT::i32, Cst1, Cond);
+
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlConst1));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlConst1, /*OrZero=*/true));
+
+  auto And16 = DAG->getNode(ISD::AND, Loc, MVT::i32, Cond, Cst16);
+  auto ShlMaybeZero = DAG->getNode(ISD::SHL, Loc, MVT::i32, And16, Cst1);
+
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(ShlMaybeZero));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(ShlMaybeZero, /*OrZero=*/true));
+
+  auto ShlUnknown = DAG->getNode(ISD::SHL, Loc, MVT::i32, Cond, Cst1);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(ShlUnknown));
+
+  auto Neg3 = DAG->getNode(ISD::SUB, Loc, MVT::i32, Cst0, Cst3);
+  auto AndPow2 = DAG->getNode(ISD::AND, Loc, MVT::i32, Cst3, Neg3);
+  auto ShlPow2 = DAG->getNode(ISD::SHL, Loc, MVT::i32, AndPow2, Cst1);
+
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlPow2));
+
+  auto VecVT = MVT::v2i32;
+  auto Vec13 = DAG->getBuildVector(VecVT, Loc, {Cst1, Cst3});
+  auto Vec04 = DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4});
+  auto VecShift = DAG->getBuildVector(VecVT, Loc, {Cst1, Cst1});
+  auto VecShl13 = DAG->getNode(ISD::SHL, Loc, VecVT, Vec13, VecShift);
+  auto VecShl04 = DAG->getNode(ISD::SHL, Loc, VecVT, Vec04, VecShift);
+
+  APInt DemandLo(2, 1);
+  APInt DemandHi(2, 2);
+  APInt DemandAll(2, 3);
+
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(VecShl13, DemandLo));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VecShl13, DemandHi));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VecShl13, DemandAll));
+
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(VecShl04, DemandAll));
+  EXPECT_TRUE(
+      DAG->isKnownToBeAPowerOfTwo(VecShl04, DemandAll, /*OrZero=*/true));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(VecShl04, DemandHi));
 }
 
 TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Select) {
