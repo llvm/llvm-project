@@ -65,7 +65,7 @@ entry:
   %gep = getelementptr inbounds i16, ptr addrspace(3) %in, i32 8
   %load.lo = load i16, ptr addrspace(3) %in
   %load.hi = load i16, ptr addrspace(3) %gep
-  store i16 %load.lo, ptr addrspace(3) null
+  store i16 %load.lo, ptr addrspace(3) zeroinitializer
   %build0 = insertelement <2 x i16> poison, i16 %load.lo, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load.hi, i32 1
   ret <2 x i16> %build1
@@ -132,7 +132,7 @@ entry:
   %gep = getelementptr inbounds i16, ptr addrspace(3) %in, i32 8
   %load.lo = load i16, ptr addrspace(3) %in
   %load.hi = load i16, ptr addrspace(3) %gep
-  store i16 %load.hi, ptr addrspace(3) null
+  store i16 %load.hi, ptr addrspace(3) zeroinitializer
   %build0 = insertelement <2 x i16> poison, i16 %load.lo, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load.hi, i32 1
   ret <2 x i16> %build1
