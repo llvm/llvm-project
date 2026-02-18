@@ -381,9 +381,9 @@ static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
 // This relation applies to left shifts as well as arithmetic/logical right
 // shifts when the shift amount is a constant.
 static bool isPseudoAssociative(Instruction *I) {
-    if (!I->isShift())
-      return false;
-    return isa<ConstantInt>(I->getOperand(1));
+  if (!I->isShift())
+    return false;
+  return isa<ConstantInt>(I->getOperand(1));
 }
 
 // Find the base-case return value for function F: examine all
@@ -405,39 +405,48 @@ static bool isPseudoAssociative(Instruction *I) {
 static Constant *getReturnValue(Function &F) {
   Constant *BaseCaseVal = nullptr;
 
-  auto ValueUsesRecursiveCall = [&](Value *V) {
-    SmallVector<Value *, 8> Worklist;
-    SmallPtrSet<Value *, 8> Visited;
-    Worklist.push_back(V);
-    while (!Worklist.empty()) {
-      Value *Cur = Worklist.pop_back_val();
-      if (!Visited.insert(Cur).second)
-        continue;
-      if (Instruction *I = dyn_cast<Instruction>(Cur)) {
-        if (CallInst *CI = dyn_cast<CallInst>(I))
-          if (CI->getCalledFunction() == &F)
-            return true;
-        for (Use &U : I->operands())
-          Worklist.push_back(U.get());
+  // Local lambda with conservative bail-out: It isn't so trivial to perform TRE
+  // if the return value depends on the result of a recursive call, because the
+  // return value will be different for different iterations of the recursion.
+  // So we ignore return values that depend on recursive calls.
+  auto TryGetConstantBaseCase = [&](Value *RV) -> Constant * {
+    // Case 1: direct constant return.
+    if (auto *C = dyn_cast<Constant>(RV))
+      return C;
+
+    // Case 2: PHI with one constant incoming.
+    if (auto *PN = dyn_cast<PHINode>(RV)) {
+      if (PN->getNumIncomingValues() != 2)
+        return nullptr;
+      for (unsigned I = 0; I < 2; ++I) {
+        if (auto *C = dyn_cast<Constant>(PN->getIncomingValue(I)))
+          return C;
       }
+      return nullptr;
     }
-    return false;
+
+    // Case 3: select with a constant arm.
+    if (auto *SI = dyn_cast<SelectInst>(RV)) {
+      if (auto *CTrue = dyn_cast<Constant>(SI->getTrueValue()))
+        return CTrue;
+      if (auto *CFalse = dyn_cast<Constant>(SI->getFalseValue()))
+        return CFalse;
+      return nullptr;
+    }
+
+    return nullptr;
   };
 
   for (BasicBlock &BB : F) {
-    if (ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator())) {
+    if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator())) {
       Value *RV = RI->getReturnValue();
-      if (!RV)
-        continue;
-      // It isn't so trivial to perform TRE if the return value depends on the
-      // result of a recursive call, because the return value will be different
-      // for different iterations of the recursion. So we ignore return values
-      // that depend on recursive calls.
-      if (ValueUsesRecursiveCall(RV))
-        continue;
-      if (!BaseCaseVal && isa<Constant>(RV))
-        BaseCaseVal = cast<Constant>(RV);
-      else if (BaseCaseVal != RV)
+      Constant *Candidate = TryGetConstantBaseCase(RV);
+      if (!Candidate)
+        return nullptr;
+
+      if (!BaseCaseVal)
+        BaseCaseVal = Candidate;
+      else if (BaseCaseVal != Candidate)
         return nullptr;
     }
   }
