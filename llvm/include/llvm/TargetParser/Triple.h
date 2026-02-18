@@ -335,6 +335,15 @@ public:
     XCOFF,
   };
 
+  // This should be a copy from enum class TargetMemLoc
+  // in ModRef.h
+  enum class TargetMemLoc : uint8_t {
+    TargetMem0 = 4,
+    TargetMem1 = 5,
+    // Reserve more if/when needed
+    Last
+  };
+
 private:
   std::string Data;
 
@@ -1237,6 +1246,10 @@ public:
 
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }
+
+  StringRef getAArch64TargetMemLocName(TargetMemLoc Kind) const;
+
+  std::string getTargetMemLocName(TargetMemLoc Kind) const;
 
   /// @}
   /// @name Mutators
