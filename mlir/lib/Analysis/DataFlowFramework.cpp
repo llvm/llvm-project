@@ -42,16 +42,31 @@ AnalysisState::~AnalysisState() = default;
 void AnalysisState::addDependency(ProgramPoint *dependent,
                                   DataFlowAnalysis *analysis) {
   auto inserted = dependents.insert({dependent, analysis});
-  (void)inserted;
   DATAFLOW_DEBUG({
     if (inserted) {
       LDBG() << "Creating dependency between " << debugName << " of " << anchor
-             << "\nand " << debugName << " on " << *dependent;
+             << "\nand " << debugName << " on " << *dependent << "\nwith "
+             << analysis->debugName;
     }
   });
 }
 
 void AnalysisState::dump() const { print(llvm::errs()); }
+
+void AnalysisState::onUpdate(DataFlowSolver *solver) const {
+  for (const DataFlowSolver::WorkItem &item : dependents) {
+    DATAFLOW_DEBUG(LDBG() << debugName << " of " << anchor << "\n"
+                          << "Value: " << *this
+                          << "\nenqueueing dependent work item: " << *item.first
+                          << "\nwith " << item.second->debugName);
+    solver->enqueue(item);
+  }
+}
+
+StringRef
+AnalysisState::getAnalysisDebugName(DataFlowAnalysis *analysis) const {
+  return analysis->debugName;
+}
 
 //===----------------------------------------------------------------------===//
 // ProgramPoint
@@ -135,6 +150,8 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
   // Run the analysis until fixpoint.
   // Iterate until all states are in some initialized state and the worklist
   // is exhausted.
+  DATAFLOW_DEBUG(LDBG() << "Initialize child analyses successfully, start run "
+                           "the analysis until fixpoint");
   while (!worklist.empty()) {
     auto [point, analysis] = worklist.front();
     worklist.pop();
