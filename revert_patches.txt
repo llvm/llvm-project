@@ -12,3 +12,6 @@ fails 2 JSON tests in merge
 disable JSON NoReadPermission and WriteStreamOpenFailure
 clang/unittests/Analysis/Scalable/Serialization/JSONFormatTest.cpp
 ---
+Needs additional merge work
+[OFFLOAD] Extend olMemRegister API to handle cases when a memory block may have been mapped outside of liboffload. (#172226)
+---
