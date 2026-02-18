@@ -17262,7 +17262,7 @@ static SDValue combineZextSetccWithZero(SDNode *N, SelectionDAG &DAG) {
   ISD::CondCode CC = cast<CondCodeSDNode>(Src.getOperand(2))->get();
 
   if(!isNullConstant(RHS) && !isNullConstant(LHS))
-     return SDValue();
+    return SDValue();
 
   SDValue NonNullConstant = isNullConstant(RHS) ? LHS : RHS ;
 
@@ -17284,14 +17284,13 @@ static SDValue combineZextSetccWithZero(SDNode *N, SelectionDAG &DAG) {
     // This keeps the value in i32 instead of converting to i1
     SDLoc DL(N);
     EVT VType = N->getValueType(0);
-    SDValue NewNonNullConstant =
-        DAG.getZExtOrTrunc(NonNullConstant, DL, VType);
+    SDValue NewNonNullConstant = DAG.getZExtOrTrunc(NonNullConstant, DL, VType);
 
     if (CC == ISD::SETNE)
       return NewNonNullConstant;
 
     SDValue One = DAG.getConstant(1, DL, VType);
-    return  DAG.getNode(ISD::XOR, DL, VType, NewNonNullConstant, One);
+    return DAG.getNode(ISD::XOR, DL, VType, NewNonNullConstant, One);
   }
 
   return SDValue();
