@@ -1751,8 +1751,8 @@ public:
 };
 
 inline ExpandedSpecialSubstitution::ExpandedSpecialSubstitution(
-    SpecialSubstitution const *SS)
-    : ExpandedSpecialSubstitution(SS->SSK) {}
+    SpecialSubstitution const *SSub)
+    : ExpandedSpecialSubstitution(SSub->SSK) {}
 
 class CtorDtorName final : public Node {
   const Node *Basename;
