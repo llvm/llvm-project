@@ -16,6 +16,7 @@ namespace emitc {
 
 #define GEN_PASS_DECL_FORMEXPRESSIONSPASS
 #define GEN_PASS_DECL_WRAPFUNCINCLASSPASS
+#define GEN_PASS_DECL_ADDREFLECTIONMAPPASS
 #include "mlir/Dialect/EmitC/Transforms/Passes.h.inc"
 
 //===----------------------------------------------------------------------===//
