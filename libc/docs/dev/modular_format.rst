@@ -60,9 +60,9 @@ always be fixed and finite. Accordingly, libc contains def files to enumerate
 possible arguments and provide handling for each. Templates are instantiated in
 the headers whenever ``LIBC_PRINTF_DEFINE_MODULES`` is defined.
 
-The aspect naming system provides independent evolution between the libc and
-compiler via a simple agreement protocol. The libc may report that it requires
-decisions for aspects unknown to the compiler; in such cases, the compiler must
-summarily report that the aspect is required for any given call. The compiler
-will also not provide support for any aspects not requested by the libc, even
-if it could opine on them.
+libc and the compiler may understand different sets of aspect names, but their
+understanding of what an aspect name means must be identical. libc reports the
+set of aspect names that it needs a verdict on, and the compiler will only
+provide a verdict for those aspects. If libc asks for a verdict on an aspect
+unknown to the compiler, the aspect must be summarily considered to be
+required.
