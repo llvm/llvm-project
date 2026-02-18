@@ -1342,14 +1342,20 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
 
     if (threadContextFeature == targetFeatures.end()) {
       // If the feature is not explicitly used or disallowed, check for the presence of __stack_pointer
-      // to determine if the global thread context ABI is being used.
-      auto sym = symtab->find("__stack_pointer");
-      if (!sym || sym->kind() != Symbol::UndefinedGlobalKind || sym->importModule != "env") {
+      // import in this specific file to determine if the global thread context ABI is being used.
+      bool hasStackPointerImport = llvm::any_of(obj->getSymbols(), [](const auto &sym) {
+        return sym && sym->getName() == "__stack_pointer" && 
+               sym->kind() == Symbol::UndefinedGlobalKind &&
+               sym->importModule && sym->importModule == "env";
+      });
+      if (!hasStackPointerImport) {
         // No __stack_pointer import, so this is probably an object file compiled from assembly or
         // some other source that doesn't care about the thread context ABI. As such, we let it pass.
         continue;
       }
-    }
+      // Treat this as using the globals ABI
+      usesComponentModelThreadContext = false;
+    }     
 
     if (usesComponentModelThreadContext) {
       if (threadContextABI == ThreadContextABI::Undetermined) {
