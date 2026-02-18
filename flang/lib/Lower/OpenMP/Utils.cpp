@@ -836,13 +836,14 @@ void collectTileSizesFromOpenMPConstruct(
 
 int64_t collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
-    lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
+    lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
+    const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
   int64_t numCollapse = 1;
 
   // Collect the loops to collapse.
-  lower::pft::Evaluation *doConstructEval = getNestedDoConstruct(eval);
+  lower::pft::Evaluation *doConstructEval = nestedEval;
   if (doConstructEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
     TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
   }
@@ -854,21 +855,21 @@ int64_t collectLoopRelatedInfo(
     numCollapse = collapseValue;
   }
 
-  collectLoopRelatedInfo(converter, currentLocation, eval, numCollapse, result,
-                         iv);
+  collectLoopRelatedInfo(converter, currentLocation, eval, nestedEval,
+                         numCollapse, result, iv);
   return numCollapse;
 }
 
 void collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
-    lower::pft::Evaluation &eval, int64_t numCollapse,
-    mlir::omp::LoopRelatedClauseOps &result,
+    lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
+    int64_t numCollapse, mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
 
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   // Collect the loops to collapse.
-  lower::pft::Evaluation *doConstructEval = getNestedDoConstruct(eval);
+  lower::pft::Evaluation *doConstructEval = nestedEval;
   if (doConstructEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
     TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
   }
