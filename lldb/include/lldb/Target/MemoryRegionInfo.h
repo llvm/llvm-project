@@ -15,6 +15,7 @@
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RangeMap.h"
+#include "lldb/Utility/StreamString.h"
 #include "llvm/Support/FormatProviders.h"
 
 namespace lldb_private {
@@ -139,6 +140,35 @@ public:
     if (m_dirty_pages)
       m_dirty_pages->clear();
     m_dirty_pages = std::move(pagelist);
+  }
+
+  std::string Dump() const {
+    lldb_private::StreamString stream;
+    stream << "[";
+    stream.PutHex64(GetRange().GetRangeBase());
+    stream << "-";
+    stream.PutHex64(GetRange().GetRangeEnd());
+    stream << ") ";
+    if (m_read == eYes)
+      stream << "r";
+    else if (m_read == eNo)
+      stream << "-";
+    else
+      stream << "?";
+    if (m_write == eYes)
+      stream << "w";
+    else if (m_write == eNo)
+      stream << "-";
+    else
+      stream << "?";
+    if (m_execute == eYes)
+      stream << "x";
+    else if (m_execute == eNo)
+      stream << "-";
+    else
+      stream << "?";
+
+    return stream.GetString().str();
   }
 
 protected:

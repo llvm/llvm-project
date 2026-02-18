@@ -602,9 +602,41 @@ bool ProcessMinidump::GetProcessInfo(ProcessInstanceInfo &info) {
   return true;
 }
 
+std::optional<lldb_private::MemoryRegionInfo>
+ProcessMinidump::TryGetMemoryRegionInCore(
+    lldb::addr_t addr,
+    std::optional<lldb_private::MemoryRegionInfo> &closest_prior_region,
+    std::optional<lldb_private::MemoryRegionInfo> &closest_following_region) {
+  // Ensure memory regions are built!
+  BuildMemoryRegions();
+
+  // First try to find the region that contains the address (if any
+  std::optional<minidump::Range> addr_region_maybe =
+      m_minidump_parser->FindMemoryRange(addr);
+  if (addr_region_maybe) {
+    MemoryRegionInfo region = MinidumpParser::GetMemoryRegionInfo(
+        *m_memory_regions, addr_region_maybe->start);
+    return region;
+  }
+
+  // If we didn't find a region, try to find the closest prior and following
+  std::optional<minidump::Range> closest_prior_range_maybe =
+      m_minidump_parser->GetClosestPriorRegion(addr);
+  if (closest_prior_range_maybe)
+    closest_prior_region = MinidumpParser::GetMemoryRegionInfo(
+        *m_memory_regions, closest_prior_range_maybe->start);
+
+  std::optional<minidump::Range> closest_following_range_maybe =
+      m_minidump_parser->GetClosestFollowingRegion(addr);
+  if (closest_following_range_maybe)
+    closest_following_region = MinidumpParser::GetMemoryRegionInfo(
+        *m_memory_regions, closest_following_range_maybe->start);
+
+  return std::nullopt;
+}
+
 // For minidumps there's no runtime generated code so we don't need JITLoader(s)
 // Avoiding them will also speed up minidump loading since JITLoaders normally
-// try to set up symbolic breakpoints, which in turn may force loading more
 // debug information than needed.
 JITLoaderList &ProcessMinidump::GetJITLoaders() {
   if (!m_jit_loaders_up) {
@@ -962,6 +994,73 @@ public:
   }
 };
 
+class CommandObjectProcessMinidumpCheckMemory : public CommandObjectParsed {
+public:
+  CommandObjectProcessMinidumpCheckMemory(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "process plugin check-memory",
+                            "Check if a memory address is stored in the "
+                            "Minidump, or the closest ranges.",
+                            nullptr) {
+    CommandArgumentEntry arg1;
+    CommandArgumentData addr_arg;
+    addr_arg.arg_type = eArgTypeAddressOrExpression;
+
+    arg1.push_back(addr_arg);
+    m_arguments.push_back(arg1);
+  }
+
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    const size_t argc = command.GetArgumentCount();
+    if (argc == 0) {
+      result.AppendErrorWithFormat("'%s' Requires a memory address",
+                                   m_cmd_name.c_str());
+      return;
+    }
+
+    Status error;
+    lldb::addr_t address = OptionArgParser::ToAddress(
+        &m_exe_ctx, command[0].ref(), LLDB_INVALID_ADDRESS, &error);
+
+    if (error.Fail() || address == LLDB_INVALID_ADDRESS) {
+      result.AppendErrorWithFormat("'%s' Is an invalid address.",
+                                   command[0].c_str());
+      return;
+    }
+
+    ProcessMinidump *process = static_cast<ProcessMinidump *>(
+        m_interpreter.GetExecutionContext().GetProcessPtr());
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+    std::optional<lldb_private::MemoryRegionInfo> closest_prior_region;
+    std::optional<lldb_private::MemoryRegionInfo> closest_following_region;
+    std::optional<lldb_private::MemoryRegionInfo> memory_region_maybe =
+        process->TryGetMemoryRegionInCore(address, closest_prior_region,
+                                          closest_following_region);
+
+    if (memory_region_maybe) {
+      result.AppendMessageWithFormat(
+          "Address found in Minidump. Address located in range: %s",
+          memory_region_maybe->Dump().c_str());
+      return;
+    }
+
+    lldb_private::StreamString result_stream;
+    result_stream << "Address not found in Minidump" << "\n";
+    if (closest_prior_region)
+      result_stream << "Closest prior range: "
+                    << closest_prior_region->Dump().c_str() << "\n";
+    else
+      result_stream << "No prior range found" << "\n";
+    if (closest_following_region)
+      result_stream << "Closest following range: "
+                    << closest_following_region->Dump().c_str() << "\n";
+    else
+      result_stream << "No following range found" << "\n";
+
+    result.AppendMessage(result_stream.GetString());
+  }
+};
+
 class CommandObjectMultiwordProcessMinidump : public CommandObjectMultiword {
 public:
   CommandObjectMultiwordProcessMinidump(CommandInterpreter &interpreter)
@@ -970,6 +1069,9 @@ public:
           "process plugin <subcommand> [<subcommand-options>]") {
     LoadSubCommand("dump",
         CommandObjectSP(new CommandObjectProcessMinidumpDump(interpreter)));
+    LoadSubCommand("check-memory",
+                   CommandObjectSP(new CommandObjectProcessMinidumpCheckMemory(
+                       interpreter)));
   }
 
   ~CommandObjectMultiwordProcessMinidump() override = default;

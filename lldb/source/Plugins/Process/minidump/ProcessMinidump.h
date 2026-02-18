@@ -74,6 +74,11 @@ public:
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
 
+  std::optional<lldb_private::MemoryRegionInfo> TryGetMemoryRegionInCore(
+      lldb::addr_t addr,
+      std::optional<lldb_private::MemoryRegionInfo> &closest_prior_region,
+      std::optional<lldb_private::MemoryRegionInfo> &closest_following_region);
+
   ArchSpec GetArchitecture();
 
   Status
