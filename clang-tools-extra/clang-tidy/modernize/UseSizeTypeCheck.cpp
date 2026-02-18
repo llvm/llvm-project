@@ -52,11 +52,9 @@ static bool allUsesAreUnsignedCompatible(const VarDecl *VD,
     // Walk up through implicit casts to find the "real" parent context.
     // The DeclRefExpr is typically wrapped in LValueToRValue and
     // IntegralCast implicit casts.
-    const Expr *Current = DRE;
     DynTypedNodeList CurrentParents = Parents;
     while (CurrentParents.size() == 1) {
       if (const auto *ICE = CurrentParents[0].get<ImplicitCastExpr>()) {
-        Current = ICE;
         CurrentParents = Ctx.getParents(*ICE);
         continue;
       }

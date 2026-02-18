@@ -31,8 +31,8 @@ The check only triggers when all of the following are true:
 - The variable is a local, non-static variable.
 - The variable has a signed integer type (e.g. ``int``).
 - The initializer is an unsigned integer expression.
-- Every use of the variable is in an unsigned-compatible context
-  (comparison, function argument expecting unsigned, array
-  subscript, or implicit cast to unsigned).
+- Every use of the variable is in an unsigned-compatible context (comparison,
+  function argument expecting unsigned, array subscript, or implicit cast to
+  unsigned).
 - The variable is not ``constexpr``.
 - The declaration is not in a macro.

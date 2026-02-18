@@ -124,9 +124,10 @@ New checks
 - New :doc:`modernize-use-size-type
   <clang-tidy/checks/modernize/use-size-type>` check.
 
-  Finds local variables declared as signed integer types initialized
-  from unsigned sources and only used in unsigned contexts, and
-  suggests changing the type to ``size_t``.
+  Finds local variables declared as signed integer types that are
+  initialized from an unsigned/``size_t`` source (e.g. ``container.size()``)
+  and only used in contexts expecting unsigned types, and suggests
+  changing the type to ``size_t``.
 
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
