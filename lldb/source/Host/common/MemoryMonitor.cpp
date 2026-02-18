@@ -134,22 +134,28 @@ private:
     uint64_t mem_total = 0;
     uint64_t mem_available = 0;
     const int radix = 10;
+    bool parse_error = false;
 
     for (llvm::line_iterator iter(**buffer_or_err, true); !iter.is_at_end();
          ++iter) {
       llvm::StringRef line = *iter;
-      if (line.consume_front("MemTotal:")) {
-        line.ltrim().consumeInteger(radix, mem_total);
-      } else if (line.consume_front("MemAvailable:")) {
-        line.ltrim().consumeInteger(radix, mem_available);
-      }
+      if (line.consume_front("MemTotal:"))
+        parse_error = line.ltrim().consumeInteger(radix, mem_total);
+      else if (line.consume_front("MemAvailable:"))
+        parse_error = line.ltrim().consumeInteger(radix, mem_available);
+
+      if (parse_error)
+        return std::nullopt;
 
       if (mem_total && mem_available)
         break;
     }
 
-    if (mem_total == 0 || mem_available == 0)
+    if (mem_total == 0)
       return std::nullopt;
+
+    if (mem_available == 0) // We are actually out of memory.
+      return true;
 
     const uint64_t approx_memory_percent = (mem_available * 100) / mem_total;
     const uint64_t low_memory_percent = 20;
