@@ -792,13 +792,15 @@ public:
   void setHasNonWeakDefinition() { hasNonWeakDef = true; }
 
   // Returns an (ordinal, inline addend) tuple used by dyld_chained_ptr_64_bind.
-  std::pair<uint32_t, uint8_t> getBinding(const Symbol *sym,
-                                          int64_t addend) const;
+  std::pair<uint32_t, uint32_t> getBinding(const Symbol *sym,
+                                           int64_t addend) const;
 
   const std::vector<Location> &getLocations() const { return locations; }
 
   bool hasWeakBinding() const { return hasWeakBind; }
   bool hasNonWeakDefinition() const { return hasNonWeakDef; }
+
+  llvm::MachO::ChainedPointerFormat pointerFormat() const { return ptrFormat; }
 
 private:
   // Location::offset initially stores the offset within an InputSection, but
@@ -827,6 +829,7 @@ private:
   bool hasWeakBind = false;
   bool hasNonWeakDef = false;
   llvm::MachO::ChainedImportFormat importFormat;
+  llvm::MachO::ChainedPointerFormat ptrFormat;
 };
 
 void writeChainedRebase(uint8_t *buf, uint64_t targetVA);
