@@ -1840,7 +1840,6 @@ add_header_library(
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.types
     libc.include.llvm-libc-macros.float16_macros
 )
 

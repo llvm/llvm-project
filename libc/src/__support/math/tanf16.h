@@ -27,31 +27,26 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-namespace tanf16_internal {
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE_VAR constexpr size_t N_EXCEPTS = 9;
-
-LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_EXCEPTS>
-    TANF16_EXCEPTS{{
-        // (input, RZ output, RU offset, RD offset, RN offset)
-        {0x2894, 0x2894, 1, 0, 1},
-        {0x3091, 0x3099, 1, 0, 0},
-        {0x3098, 0x30a0, 1, 0, 0},
-        {0x55ed, 0x3911, 1, 0, 0},
-        {0x607b, 0xc638, 0, 1, 1},
-        {0x674e, 0x3b7d, 1, 0, 0},
-        {0x6807, 0x4014, 1, 0, 1},
-        {0x6f4d, 0xbe19, 0, 1, 1},
-        {0x7330, 0xcb62, 0, 1, 0},
-    }};
-#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-} // namespace tanf16_internal
-
 LIBC_INLINE float16 tanf16(float16 x) {
   using namespace sincosf16_internal;
-  using namespace tanf16_internal;
   using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
+
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  constexpr size_t N_EXCEPTS = 9;
+  constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANF16_EXCEPTS{{
+      // (input, RZ output, RU offset, RD offset, RN offset)
+      {0x2894, 0x2894, 1, 0, 1},
+      {0x3091, 0x3099, 1, 0, 0},
+      {0x3098, 0x30a0, 1, 0, 0},
+      {0x55ed, 0x3911, 1, 0, 0},
+      {0x607b, 0xc638, 0, 1, 1},
+      {0x674e, 0x3b7d, 1, 0, 0},
+      {0x6807, 0x4014, 1, 0, 1},
+      {0x6f4d, 0xbe19, 0, 1, 1},
+      {0x7330, 0xcb62, 0, 1, 0},
+  }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   uint16_t x_u = xbits.uintval();
   uint16_t x_abs = x_u & 0x7fff;
