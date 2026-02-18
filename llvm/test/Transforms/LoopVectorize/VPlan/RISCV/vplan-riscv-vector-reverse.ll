@@ -24,7 +24,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[INDUCTION:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[INDEX_NEXT:%.+]]>
-; CHECK-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%.+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
+; CHECK-NEXT:     CURRENT-ITERATION-PHI vp<[[EVL_PHI:%.+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; CHECK-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ vp<[[OTC]]>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; CHECK-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%n> + vp<[[EVL_PHI]]> * ir<-1>

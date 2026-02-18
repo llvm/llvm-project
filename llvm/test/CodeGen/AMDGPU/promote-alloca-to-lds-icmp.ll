@@ -119,7 +119,7 @@ define amdgpu_kernel void @lds_promoted_alloca_icmp_null_lhs(ptr addrspace(1) %o
 ;
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %ptr0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
-  %cmp = icmp eq ptr addrspace(5) null, %ptr0
+  %cmp = icmp eq ptr addrspace(5) zeroinitializer, %ptr0
   %zext = zext i1 %cmp to i32
   store volatile i32 %zext, ptr addrspace(1) %out
   ret void

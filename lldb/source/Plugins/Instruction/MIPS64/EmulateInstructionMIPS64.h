@@ -12,6 +12,7 @@
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include <optional>
 
 namespace llvm {
@@ -173,6 +174,7 @@ private:
   std::unique_ptr<llvm::MCDisassembler> m_disasm;
   std::unique_ptr<llvm::MCSubtargetInfo> m_subtype_info;
   std::unique_ptr<llvm::MCRegisterInfo> m_reg_info;
+  llvm::MCTargetOptions m_mc_options;
   std::unique_ptr<llvm::MCAsmInfo> m_asm_info;
   std::unique_ptr<llvm::MCContext> m_context;
   std::unique_ptr<llvm::MCInstrInfo> m_insn_info;

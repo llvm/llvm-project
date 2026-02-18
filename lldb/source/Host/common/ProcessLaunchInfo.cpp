@@ -200,6 +200,9 @@ void ProcessLaunchInfo::SetDetachOnError(bool enable) {
 llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   Log *log = GetLog(LLDBLog::Process);
 
+  if (!m_pty)
+    m_pty = std::make_shared<PTY>();
+
   bool stdin_free = GetFileActionForFD(STDIN_FILENO) == nullptr;
   bool stdout_free = GetFileActionForFD(STDOUT_FILENO) == nullptr;
   bool stderr_free = GetFileActionForFD(STDERR_FILENO) == nullptr;
