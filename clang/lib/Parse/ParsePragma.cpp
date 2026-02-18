@@ -3267,8 +3267,9 @@ void PragmaDetectMismatchHandler::HandlePragma(Preprocessor &PP,
 /// \code
 ///   #pragma comment(linker, "foo")
 /// \endcode
-/// 'linker' is one of six identifiers: compiler, exestr, lib, linker, user,
-/// copyright.
+/// 'linker' is one of six identifiers: compiler, copyright, exestr, lib,
+/// linker, user.
+///
 /// "foo" is a string, which is fully macro expanded, and permits string
 /// concatenation, embedded escape characters etc.  See MSDN for more details.
 void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
@@ -3300,10 +3301,30 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
           .Case("copyright", PCK_Copyright)
           .Default(PCK_Unknown);
 
+  if (Kind == PCK_Unknown) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_comment_unknown_kind);
+    return;
+  }
+
+  if (PP.getTargetInfo().getTriple().isOSAIX() && (Kind != PCK_Copyright)) {
+    // On AIX, pragma comment linker, lib, compiler, exestr and user are
+    // ignored.
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
+        << II->getName();
+    return;
+  }
+
+  if (PP.getTargetInfo().getTriple().isOSBinFormatELF() && Kind != PCK_Lib) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
+        << II->getName();
+    return;
+  }
+
   if (Kind == PCK_Copyright) {
     if (!PP.getTargetInfo().getTriple().isOSAIX()) {
       // Restrict pragma comment copyright to AIX targets only.
-      PP.Diag(Tok.getLocation(), diag::err_pragma_comment_copyright_aix);
+      PP.Diag(Tok.getLocation(),
+              diag::err_pragma_comment_copyright_unsupported);
       return;
     }
     if (SeenCopyrightInTU) {
@@ -3313,24 +3334,6 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
       return;
     }
     SeenCopyrightInTU = true;
-  }
-
-  if (PP.getTargetInfo().getTriple().isOSAIX() &&
-      (Kind == PCK_Lib || Kind == PCK_Linker)) {
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
-        << II->getName();
-    return;
-  }
-
-  if (Kind == PCK_Unknown) {
-    PP.Diag(Tok.getLocation(), diag::err_pragma_comment_unknown_kind);
-    return;
-  }
-
-  if (PP.getTargetInfo().getTriple().isOSBinFormatELF() && Kind != PCK_Lib) {
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
-        << II->getName();
-    return;
   }
 
   // Read the optional string if present.

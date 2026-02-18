@@ -20,10 +20,10 @@ int main() {return 0; }
 #pragma comment(lib, "m") // expected-warning {{'#pragma comment lib' ignored}}
 #pragma comment(linker, "foo") // expected-warning {{'#pragma comment linker' ignored}}
 
-// These are recognized but silently ignored in CodeGen; no diagnostics expected
-#pragma comment(compiler) 
-#pragma comment(exestr, "foo") 
-#pragma comment(user, "foo\abar\nbaz\tsomething")
+// These are recognized but ignored in CodeGen
+#pragma comment(compiler) // expected-warning {{'#pragma comment compiler' ignored}}
+#pragma comment(exestr, "foo") // expected-warning {{'#pragma comment exestr' ignored}}
+#pragma comment(user, "foo\abar\nbaz\tsomething") // expected-warning {{'#pragma comment user' ignored}}
 int main() {return 0; }
 
 #else

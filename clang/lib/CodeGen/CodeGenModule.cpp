@@ -3531,18 +3531,17 @@ void CodeGenModule::AddDependentLib(StringRef Lib) {
 void CodeGenModule::ProcessPragmaComment(PragmaMSCommentKind Kind,
                                          StringRef Comment,
                                          bool isFromASTFile) {
-  // Target Guard: Only AIX supports PCK_Copyright currently.
-  assert(getTriple().isOSAIX() &&
-         "pragma comment copyright is supported only on AIX target");
-
-  // Deserialization Guard: Only process if copyright originated in this TU.
-  if (isFromASTFile)
-    return;
-
   // Ensure we are only processing Copyright Pragmas
   assert(Kind == PCK_Copyright &&
          "Unexpected pragma comment kind, ProcessPragmaComment should only be "
          "called for PCK_Copyright");
+  // Target Guard: Only AIX supports PCK_Copyright currently.
+  assert(getTriple().isOSAIX() &&
+         "pragma comment copyright is supported only when targeting AIX");
+
+  // Deserialization Guard: Only process if copyright originated in this TU.
+  if (isFromASTFile)
+    return;
 
   // Only one copyright pragma allowed per translation unit
   assert(!LoadTimeComment &&
