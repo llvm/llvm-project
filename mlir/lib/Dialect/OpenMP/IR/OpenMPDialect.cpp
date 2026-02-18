@@ -1431,6 +1431,56 @@ static void printUseDeviceAddrUseDevicePtrRegion(OpAsmPrinter &p, Operation *op,
   printBlockArgRegion(p, op, region, args);
 }
 
+template <typename ParsePrefixFn>
+static ParseResult parseSplitIteratedList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &iteratedVars,
+    SmallVectorImpl<Type> &iteratedTypes,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &plainVars,
+    SmallVectorImpl<Type> &plainTypes, ParsePrefixFn &&parsePrefix) {
+
+  return parser.parseCommaSeparatedList([&]() -> ParseResult {
+    if (failed(parsePrefix()))
+      return failure();
+
+    OpAsmParser::UnresolvedOperand v;
+    Type ty;
+    if (parser.parseOperand(v) || parser.parseColonType(ty))
+      return failure();
+
+    if (llvm::isa<mlir::omp::IteratedType>(ty)) {
+      iteratedVars.push_back(v);
+      iteratedTypes.push_back(ty);
+    } else {
+      plainVars.push_back(v);
+      plainTypes.push_back(ty);
+    }
+    return success();
+  });
+}
+
+template <typename PrintPrefixFn>
+static void printSplitIteratedList(OpAsmPrinter &p, ValueRange iteratedVars,
+                                   TypeRange iteratedTypes,
+                                   ValueRange plainVars, TypeRange plainTypes,
+                                   PrintPrefixFn &&printPrefixForPlain,
+                                   PrintPrefixFn &&printPrefixForIterated) {
+
+  bool first = true;
+  auto emit = [&](Value v, Type t, auto &&printPrefix) {
+    if (!first)
+      p << ", ";
+    printPrefix(v, t);
+    p << v << " : " << t;
+    first = false;
+  };
+
+  for (unsigned i = 0; i < iteratedVars.size(); ++i)
+    emit(iteratedVars[i], iteratedTypes[i], printPrefixForIterated);
+  for (unsigned i = 0; i < plainVars.size(); ++i)
+    emit(plainVars[i], plainTypes[i], printPrefixForPlain);
+}
+
 /// Verifies Reduction Clause
 static LogicalResult
 verifyReductionVarList(Operation *op, std::optional<ArrayAttr> reductionSyms,
@@ -3137,10 +3187,10 @@ LogicalResult DeclareReductionOp::verifyRegions() {
 void TaskOp::build(OpBuilder &builder, OperationState &state,
                    const TaskOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TaskOp::build(builder, state, clauses.affinityVars, clauses.allocateVars,
-                clauses.allocatorVars, makeArrayAttr(ctx, clauses.dependKinds),
-                clauses.dependVars, clauses.final, clauses.ifExpr,
-                clauses.inReductionVars,
+  TaskOp::build(builder, state, clauses.iterated, clauses.affinityVars,
+                clauses.allocateVars, clauses.allocatorVars,
+                makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
+                clauses.final, clauses.ifExpr, clauses.inReductionVars,
                 makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
                 makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
                 clauses.priority, /*private_vars=*/clauses.privateVars,
@@ -4541,24 +4591,26 @@ static void printUniformClause(OpAsmPrinter &p, Operation *op,
 
 static ParseResult parseAffinityClause(
     OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &iterated,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &affinityVars,
-    SmallVectorImpl<Type> &affinityTypes) {
-  return parser.parseCommaSeparatedList([&]() -> ParseResult {
-    if (parser.parseOperand(affinityVars.emplace_back()) ||
-        parser.parseColonType(affinityTypes.emplace_back()))
-      return failure();
-    return success();
-  });
+    SmallVectorImpl<Type> &iteratedTypes,
+    SmallVectorImpl<Type> &affinityVarTypes) {
+  if (failed(parseSplitIteratedList(
+          parser, iterated, iteratedTypes, affinityVars, affinityVarTypes,
+          /*parsePrefix=*/[&]() -> ParseResult { return success(); })))
+    return failure();
+  return success();
 }
 
 static void printAffinityClause(OpAsmPrinter &p, Operation *op,
-                                ValueRange affinityVars,
-                                TypeRange affinityTypes) {
-  for (unsigned i = 0; i < affinityVars.size(); ++i) {
-    if (i)
-      p << ", ";
-    p << affinityVars[i] << " : " << affinityTypes[i];
-  }
+                                ValueRange iterated, ValueRange affinityVars,
+                                TypeRange iteratedTypes,
+                                TypeRange affinityVarTypes) {
+  auto nop = [&](Value, Type) {};
+  printSplitIteratedList(p, iterated, iteratedTypes, affinityVars,
+                         affinityVarTypes,
+                         /*plain prefix*/ nop,
+                         /*iterated prefix*/ nop);
 }
 
 //===----------------------------------------------------------------------===//
