@@ -455,7 +455,7 @@ void MapTableEmitter::emitMapFuncBody(raw_ostream &OS, unsigned TableSize) {
       OS << ")\n";
       OS << "    return Table[mid][" << I + 1 << "];\n";
     }
-    OS << "  return (uint32_t)-1U;";
+    OS << "  llvm_unreachable(\"Unrecognized column value!\");\n";
   } else {
     OS << "  return Table[mid][1];\n";
   }
