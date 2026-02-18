@@ -1,0 +1,10 @@
+; Check that we get a warning when processing a multi-process profile without
+; the relevant flag
+RUN: llvm-profgen --format=text --perfscript=%S/Inputs/multi-process-warning.perfscript --binary=%S/Inputs/multi-process-nocs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 2>&1 | FileCheck %s
+CHECK: warning: Binary previously loaded in process ID 149754 at 0x5ffeb3637000 was reloaded in process ID 149755 at 0x5caa46c41000. If profiling multiple processes running concurrently, use --multi-process-profile to prevent loss of samples.
+
+; Make sure we don't get the warning if using the multi process flag
+; Just test that there's no warning, other tests will check the validity of the
+; output
+RUN: llvm-profgen --format=text --perfscript=%S/Inputs/multi-process-nocs-noprobe.perfscript --binary=%S/Inputs/multi-process-nocs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --multi-process-profile 2>&1 | FileCheck %s --check-prefix=CHECK-NOWARN
+CHECK-NOWARN-NOT: warning: Binary previously loaded
