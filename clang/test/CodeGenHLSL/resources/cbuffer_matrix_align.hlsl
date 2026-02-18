@@ -7,7 +7,7 @@ cbuffer MatArr0Pass {
 
 cbuffer MatArr0Fail {
   float2x4 A0f[2] : packoffset(c0.x);
-  float    a0bad  : packoffset(c1.w);
+  float    a0bad  : packoffset(c3.z);
   // expected-error@-1 {{packoffset overlap between 'a0bad', 'A0f'}}
 }
 
@@ -20,12 +20,12 @@ struct MS0 {
 
 cbuffer MatStruct0Pass {
   MS0   s0p   : packoffset(c0.x);
-  float s0tail: packoffset(c5.x);
+  float s0tail: packoffset(c2.z);
 }
 
 cbuffer MatStruct0Fail {
   MS0   s0f   : packoffset(c0.x);
-  float s0bad : packoffset(c0.y);
+  float s0bad : packoffset(c2.y);
   // expected-error@-1 {{packoffset overlap between 's0bad', 's0f'}}
 }
 
@@ -43,12 +43,12 @@ struct Outer0 {
 
 cbuffer MatNested0Pass {
   Outer0 o0p   : packoffset(c0.x);
-  float  o0tail: packoffset(c8.x);
+  float  o0tail: packoffset(c4.x);
 }
 
 cbuffer MatNested0Fail {
   Outer0 o0f  : packoffset(c0.x);
-  float  o0bad: packoffset(c3.y);
+  float  o0bad: packoffset(c3.z);
   // expected-error@-1 {{packoffset overlap between 'o0bad', 'o0f'}}
 }
 
@@ -61,11 +61,11 @@ struct AMS0 {
 
 cbuffer MatArrStruct0Pass {
   AMS0  as0p[2] : packoffset(c0.x);
-  float as0tail : packoffset(c10.x);
+  float as0tail : packoffset(c5.z);
 }
 
 cbuffer MatArrStruct0Fail {
   AMS0  as0f[2] : packoffset(c0.x);
-  float as0bad  : packoffset(c4.z);
+  float as0bad  : packoffset(c5.y);
   // expected-error@-1 {{packoffset overlap between 'as0bad', 'as0f'}}
 }
