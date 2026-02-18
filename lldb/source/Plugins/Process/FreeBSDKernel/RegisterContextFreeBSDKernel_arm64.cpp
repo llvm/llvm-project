@@ -18,8 +18,6 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
-#include <optional>
-
 using namespace lldb;
 using namespace lldb_private;
 
