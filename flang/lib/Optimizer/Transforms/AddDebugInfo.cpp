@@ -514,19 +514,18 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
 
   // Check if the function has the pure, elemental, or recursive procedure
   // attribute
-  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::pure>(funcOp)) {
+  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::pure>(funcOp))
     subprogramFlags = subprogramFlags | mlir::LLVM::DISubprogramFlags::Pure;
-  }
+  
   if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::elemental>(
-          funcOp)) {
+          funcOp))
     subprogramFlags =
         subprogramFlags | mlir::LLVM::DISubprogramFlags::Elemental;
-  }
+  
   if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::recursive>(
-          funcOp)) {
+          funcOp))
     subprogramFlags =
         subprogramFlags | mlir::LLVM::DISubprogramFlags::Recursive;
-  }
 
   unsigned line = getLineFromLoc(l);
   if (fir::isInternalProcedure(funcOp)) {
