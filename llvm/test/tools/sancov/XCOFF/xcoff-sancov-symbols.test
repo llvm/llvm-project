@@ -1,0 +1,26 @@
+## In XCOFF (AIX), function entry point symbols have a "." prefix.
+## This test verifies sancov correctly strips the prefix.
+
+# REQUIRES: powerpc-registered-target
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: sancov -print-coverage-pcs %t.o
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x01F7
+Sections:
+  - Name: .text
+    Flags: [ STYP_TEXT ]
+    SectionData: "60000000"
+Symbols:
+  - Name: .__sanitizer_cov_trace_pc_guard
+    Value: 0x1000
+    Section: .text
+    Type: 0x0
+    StorageClass: C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type: AUX_CSECT
+        SymbolType: XTY_LD
+        StorageMappingClass: XMC_PR
