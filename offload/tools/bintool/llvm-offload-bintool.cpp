@@ -236,7 +236,8 @@ Error processOffloadBinary(const OffloadEnvTy &OffloadEnv,
                            const object::OffloadBinary &Binary) {
   StringRef Image = Binary.getImage();
 
-  dumpBuffer(makeFilename("bin", BinEnv.Name, "image", std::to_string(FileId)), Image);
+  dumpBuffer(makeFilename("bin", BinEnv.Name, "image", std::to_string(FileId)),
+             Image);
 
   if (Binary.getTriple() == "spirv64-intel")
     if (auto Err = processIntelBinary(OffloadEnv, BinEnv, FileId, Binary))
@@ -274,10 +275,11 @@ Error processBinary(const OffloadEnvTy &OffloadEnv, const BinEnvTy &BinEnv) {
     return Err;
   }
 
-  std::cout << "Found " << Files.size()
-            << " offloading binary(ies) in the file.\n";
+  const size_t NumFiles = Files.size();
+  std::cout << "Found " << NumFiles << " offloading "
+            << (NumFiles == 1 ? "binary" : "binaries") << " in the file.\n";
 
-  for (size_t FileId = 0; FileId < Files.size(); ++FileId) {
+  for (size_t FileId = 0; FileId < NumFiles; ++FileId) {
     const auto &OffloadFile = Files[FileId];
     if (auto Err = processOffloadBinary(OffloadEnv, BinEnv, FileId,
                                         *OffloadFile.getBinary()))
