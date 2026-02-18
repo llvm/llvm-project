@@ -2867,16 +2867,11 @@ void ExprEngine::processBranch(
   getCheckerManager().runCheckersForBranchCondition(Condition, CheckersOutSet,
                                                     Pred, *this);
   // We generated only sinks.
-  // FIXME: Do sinks appear in CheckersOutSet? If yes, update this comment, if
-  // not, remove the PredN->isSink() test at the start of the for loop.
   if (CheckersOutSet.empty())
     return;
 
   BranchNodeBuilder Builder(Dst, BldCtx, DstT, DstF);
   for (ExplodedNode *PredN : CheckersOutSet) {
-    if (PredN->isSink())
-      continue;
-
     ProgramStateRef PrevState = PredN->getState();
 
     ProgramStateRef StTrue = PrevState, StFalse = PrevState;
