@@ -1647,7 +1647,17 @@ bool PPCAsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveTC(isPPC64() ? 8 : 4, DirectiveID);
   else if (IDVal == ".machine")
     parseDirectiveMachine(DirectiveID.getLoc());
-  else if (IDVal == ".abiversion")
+  else if (IDVal == ".big") {
+    PPCTargetStreamer *TStreamer = static_cast<PPCTargetStreamer *>(
+        getParser().getStreamer().getTargetStreamer());
+    if (TStreamer != nullptr)
+      TStreamer->emitEndianSet(false);
+  } else if (IDVal == ".little") {
+    PPCTargetStreamer *TStreamer = static_cast<PPCTargetStreamer *>(
+        getParser().getStreamer().getTargetStreamer());
+    if (TStreamer != nullptr)
+      TStreamer->emitEndianSet(true);
+  } else if (IDVal == ".abiversion")
     parseDirectiveAbiVersion(DirectiveID.getLoc());
   else if (IDVal == ".localentry")
     parseDirectiveLocalEntry(DirectiveID.getLoc());
