@@ -387,7 +387,7 @@ static FunctionSummary *calculatePrevailingSummary(
       }
       Local = FS;
     } else if (GlobalValue::isExternalLinkage(Linkage)) {
-      assert(IsPrevailing(VI.getGUID(), GVS.get()));
+      assert(IsPrevailing(VI.getGUID(), GVS.get()) || GVS->wasPromoted());
       Prevailing = FS;
       break;
     } else if (GlobalValue::isWeakODRLinkage(Linkage) ||

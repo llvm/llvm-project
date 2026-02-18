@@ -393,6 +393,9 @@ static void thinLTOResolvePrevailingGUID(
     // FIXME: We may want to split the compile time and correctness
     // aspects into separate routines.
     if (isPrevailing(VI.getGUID(), S.get())) {
+      assert(!S->wasPromoted() &&
+             "promoted symbols used to be internal linkage and shouldn't have "
+             "a prevailing variant");
       if (GlobalValue::isLinkOnceLinkage(OriginalLinkage)) {
         S->setLinkage(GlobalValue::getWeakLinkage(
             GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
@@ -415,8 +418,11 @@ static void thinLTOResolvePrevailingGUID(
     // When force-import-all is used, it indicates that object linking is not
     // supported by the target. In this case, we can't change the linkage as
     // well in case the global is converted to declaration.
+    // Also, if the symbol was promoted, it wouldn't have a prevailing variant,
+    // but also its linkage is set correctly (to External) already.
     else if (!isa<AliasSummary>(S.get()) &&
-             !GlobalInvolvedWithAlias.count(S.get()) && !ForceImportAll)
+             !GlobalInvolvedWithAlias.count(S.get()) && !ForceImportAll &&
+             !S->wasPromoted())
       S->setLinkage(GlobalValue::AvailableExternallyLinkage);
 
     // For ELF, set visibility to the computed visibility from summaries. We
@@ -485,7 +491,7 @@ static void thinLTOInternalizeAndPromoteGUID(
     // exported.
     if (isExported(S->modulePath(), VI)) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
-        S->setLinkage(GlobalValue::ExternalLinkage);
+        S->promote();
       continue;
     }
 
