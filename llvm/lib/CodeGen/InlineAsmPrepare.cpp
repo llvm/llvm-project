@@ -1,4 +1,4 @@
-//===-- CallBrPrepare - Prepare callbr for code generation ----------------===//
+//===-- InlineAsmPrepare - Prepare inline asm for code gen ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -31,7 +31,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/CallBrPrepare.h"
+#include "llvm/CodeGen/InlineAsmPrepare.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -52,7 +52,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "callbr-prepare"
+#define DEBUG_TYPE "inline-asm-prepare"
 
 static bool SplitCriticalEdges(ArrayRef<CallBrInst *> CBRs, DominatorTree &DT);
 static bool InsertIntrinsicCalls(ArrayRef<CallBrInst *> CBRs,
@@ -63,9 +63,9 @@ static SmallVector<CallBrInst *, 2> FindCallBrs(Function &F);
 
 namespace {
 
-class CallBrPrepare : public FunctionPass {
+class InlineAsmPrepare : public FunctionPass {
 public:
-  CallBrPrepare() : FunctionPass(ID) {}
+  InlineAsmPrepare() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
   static char ID;
@@ -73,8 +73,8 @@ public:
 
 } // end anonymous namespace
 
-PreservedAnalyses CallBrPreparePass::run(Function &F,
-                                         FunctionAnalysisManager &FAM) {
+PreservedAnalyses InlineAsmPreparePass::run(Function &F,
+                                            FunctionAnalysisManager &FAM) {
   bool Changed = false;
   SmallVector<CallBrInst *, 2> CBRs = FindCallBrs(F);
 
@@ -93,16 +93,18 @@ PreservedAnalyses CallBrPreparePass::run(Function &F,
   return PA;
 }
 
-char CallBrPrepare::ID = 0;
-INITIALIZE_PASS_BEGIN(CallBrPrepare, "callbrprepare", "Prepare callbr", false,
-                      false)
+char InlineAsmPrepare::ID = 0;
+INITIALIZE_PASS_BEGIN(InlineAsmPrepare, "inline-asm-prepare",
+                      "Prepare inline asm insts", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(CallBrPrepare, "callbrprepare", "Prepare callbr", false,
-                    false)
+INITIALIZE_PASS_END(InlineAsmPrepare, "inline-asm-prepare",
+                    "Prepare inline asm insts", false, false)
 
-FunctionPass *llvm::createCallBrPass() { return new CallBrPrepare(); }
+FunctionPass *llvm::createInlineAsmPreparePass() {
+  return new InlineAsmPrepare();
+}
 
-void CallBrPrepare::getAnalysisUsage(AnalysisUsage &AU) const {
+void InlineAsmPrepare::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<DominatorTreeWrapperPass>();
 }
 
@@ -219,7 +221,7 @@ void UpdateSSA(DominatorTree &DT, CallBrInst *CBR, CallInst *Intrinsic,
   }
 }
 
-bool CallBrPrepare::runOnFunction(Function &F) {
+bool InlineAsmPrepare::runOnFunction(Function &F) {
   bool Changed = false;
   SmallVector<CallBrInst *, 2> CBRs = FindCallBrs(F);
 

@@ -512,3 +512,33 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+func.func @map_nested_forall_to_threads_invalid_block_dims(%x: memref<2 x 32 x f32>, %y: memref<2 x 32 x f32>, %t: memref<32 x f32>, %alpha : f32, %stream : !gpu.async.token) -> memref<2 x 32 x f32> {
+  %one = arith.constant 1 : index
+  %c900 = arith.constant 900 : index
+  %c7 = arith.constant 7 : index
+  %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
+            threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
+  {
+    scf.forall (%i, %j) in (%c7, %c900) {
+        %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
+        %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
+        %6 = math.fma %alpha, %4, %5 : f32
+        memref.store %6, %y[%i, %j] : memref<2 x 32 x f32>
+     }  { mapping = [#gpu.thread<y>, #gpu.thread<x>] }
+    gpu.terminator
+  }
+  return %y : memref<2 x 32 x f32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{block/grid sizes must be strictly positive}}
+    transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 0, 1] : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
