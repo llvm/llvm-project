@@ -8,8 +8,8 @@ and replaces them with a configurable factory function.
 
 Unlike :doc:`modernize-make-shared <../modernize/make-shared>` and
 :doc:`modernize-make-unique <../modernize/make-unique>`, this check has no
-default smart pointer type or factory function. Both ``MakeSmartPtrType`` and
-``MakeSmartPtrFunction`` must be configured for the check to produce
+default smart pointer type or factory function. Both :option:`MakeSmartPtrType` and
+:option:`MakeSmartPtrFunction` must be configured for the check to produce
 diagnostics.
 
 This allows using the ``modernize-make-shared`` and ``modernize-make-unique``
