@@ -31,6 +31,7 @@
 #include "math/atanhf.h"
 #include "math/atanhf16.h"
 #include "math/bf16add.h"
+#include "math/bf16addf.h"
 #include "math/bf16addf128.h"
 #include "math/canonicalize.h"
 #include "math/canonicalizebf16.h"
