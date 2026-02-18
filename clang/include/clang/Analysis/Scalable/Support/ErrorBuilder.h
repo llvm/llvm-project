@@ -169,7 +169,7 @@ public:
   ///   //  processing field 'age'
   ///   //  value is 42"
   /// \endcode
-  llvm::Error build();
+  llvm::Error build() const;
 };
 
 } // namespace clang::ssaf

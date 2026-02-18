@@ -35,7 +35,7 @@ protected:
   }
 };
 
-TEST_F(ErrorBuilderTest, CreateSimpleError) {
+TEST_F(ErrorBuilderTest, CreatesSimpleError) {
   auto Err =
       ErrorBuilder::create(std::errc::invalid_argument, "test error").build();
 
@@ -45,7 +45,7 @@ TEST_F(ErrorBuilderTest, CreateSimpleError) {
   EXPECT_EQ(Info.Message, "test error");
 }
 
-TEST_F(ErrorBuilderTest, CreateWithErrorCode) {
+TEST_F(ErrorBuilderTest, CreatesErrorWithErrorCode) {
   auto EC = std::make_error_code(std::errc::no_such_file_or_directory);
   auto Err = ErrorBuilder::create(EC, "file not found").build();
 
@@ -55,7 +55,7 @@ TEST_F(ErrorBuilderTest, CreateWithErrorCode) {
   EXPECT_EQ(Info.Message, "file not found");
 }
 
-TEST_F(ErrorBuilderTest, CreateWithFormattedMessage) {
+TEST_F(ErrorBuilderTest, CreatesErrorWithFormattedMessage) {
   auto Err = ErrorBuilder::create(std::errc::invalid_argument,
                                   "field '{0}' has value {1}", "age", 150)
                  .build();
@@ -66,7 +66,7 @@ TEST_F(ErrorBuilderTest, CreateWithFormattedMessage) {
   EXPECT_EQ(Info.Message, "field 'age' has value 150");
 }
 
-TEST_F(ErrorBuilderTest, AddPlainContext) {
+TEST_F(ErrorBuilderTest, AddsPlainContext) {
   auto Err = ErrorBuilder::create(std::errc::invalid_argument, "inner error")
                  .context("outer context")
                  .build();
@@ -77,7 +77,7 @@ TEST_F(ErrorBuilderTest, AddPlainContext) {
   EXPECT_EQ(Info.Message, "outer context\ninner error");
 }
 
-TEST_F(ErrorBuilderTest, AddMultipleArgumentContext) {
+TEST_F(ErrorBuilderTest, AddsMultipleContextLayers) {
   auto Err = ErrorBuilder::create(std::errc::invalid_argument,
                                   "expected {0} but got {1} in field '{2}'",
                                   "string", "number", "value")
@@ -93,7 +93,7 @@ TEST_F(ErrorBuilderTest, AddMultipleArgumentContext) {
                           "expected string but got number in field 'value'");
 }
 
-TEST_F(ErrorBuilderTest, AddSpecialCharacterContext) {
+TEST_F(ErrorBuilderTest, HandlesSpecialCharactersInContext) {
   auto Err = ErrorBuilder::create(std::errc::invalid_argument,
                                   "special chars: {0}", "test\nwith\nnewlines")
                  .context("tab\tseparated\tvalues")
@@ -108,7 +108,7 @@ TEST_F(ErrorBuilderTest, AddSpecialCharacterContext) {
                           "newlines");
 }
 
-TEST_F(ErrorBuilderTest, WrapExistingError) {
+TEST_F(ErrorBuilderTest, WrapsExistingError) {
   auto OriginalErr =
       createStringError(std::errc::invalid_argument, "original error message");
 
@@ -122,7 +122,7 @@ TEST_F(ErrorBuilderTest, WrapExistingError) {
   EXPECT_EQ(Info.Message, "additional context\noriginal error message");
 }
 
-TEST_F(ErrorBuilderTest, WrapMultipleErrors) {
+TEST_F(ErrorBuilderTest, WrapsMultipleJoinedErrors) {
   auto Err1 = createStringError(std::errc::invalid_argument, "first");
   auto Err2 = createStringError(std::errc::argument_list_too_long, "second");
   auto Err3 = createStringError(std::errc::filename_too_long, "third");
@@ -142,7 +142,7 @@ TEST_F(ErrorBuilderTest, WrapMultipleErrors) {
             "wrapping three joined errors\nfirst + second + third");
 }
 
-TEST_F(ErrorBuilderTest, WrapErrorWithEmptyMessage) {
+TEST_F(ErrorBuilderTest, WrapsErrorWithEmptyMessage) {
   auto EmptyErr = createStringError(std::errc::invalid_argument, "");
 
   auto WrappedErr = ErrorBuilder::wrap(std::move(EmptyErr))
@@ -157,7 +157,7 @@ TEST_F(ErrorBuilderTest, WrapErrorWithEmptyMessage) {
   EXPECT_EQ(Info.Message, "wrapping error with empty message");
 }
 
-TEST_F(ErrorBuilderTest, CreateErrorWithEmptyMessage) {
+TEST_F(ErrorBuilderTest, CreatesErrorWithEmptyMessage) {
   auto Err = ErrorBuilder::create(std::errc::invalid_argument, "")
                  .context("")
                  .context("creating error with empty message")
@@ -172,7 +172,7 @@ TEST_F(ErrorBuilderTest, CreateErrorWithEmptyMessage) {
 
 #ifndef NDEBUG
 // Death test only works in debug builds where assertions are enabled
-TEST_F(ErrorBuilderTest, WrapSuccessErrorTriggersAssertion) {
+TEST_F(ErrorBuilderTest, TriggersAssertionOnWrappingSuccessError) {
   EXPECT_DEATH(
       {
         auto SuccessErr = Error::success();

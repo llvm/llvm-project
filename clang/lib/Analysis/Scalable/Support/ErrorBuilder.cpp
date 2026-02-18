@@ -13,6 +13,9 @@
 
 namespace clang::ssaf {
 
+constexpr llvm::StringLiteral ErrorSeparator = " + ";
+constexpr llvm::StringLiteral ContextSeparator = "\n";
+
 ErrorBuilder ErrorBuilder::wrap(llvm::Error E) {
   assert(
       E &&
@@ -39,7 +42,7 @@ ErrorBuilder ErrorBuilder::wrap(llvm::Error E) {
   });
 
   // Combine all messages with " + " and push as a single context entry
-  std::string CombinedMsg = llvm::join(Messages, " + ");
+  std::string CombinedMsg = llvm::join(Messages, ErrorSeparator);
   Builder.pushContext(std::move(CombinedMsg));
 
   return Builder;
@@ -50,13 +53,13 @@ ErrorBuilder &ErrorBuilder::context(const char *Msg) {
   return *this;
 }
 
-llvm::Error ErrorBuilder::build() {
+llvm::Error ErrorBuilder::build() const {
   // Reverse the context stack so that the most recent context appears first
   // and the wrapped error (if any) appears last.
   // Note: Even if ContextStack is empty, we create an error with the stored
   // error code and an empty message (this is valid in LLVM).
-  return llvm::createStringError(llvm::join(llvm::reverse(ContextStack), "\n"),
-                                 Code);
+  return llvm::createStringError(
+      llvm::join(llvm::reverse(ContextStack), ContextSeparator), Code);
 }
 
 } // namespace clang::ssaf
