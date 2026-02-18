@@ -775,6 +775,14 @@ defm CvtFP8VOP1Bug : AMDGPUSubtargetFeature<"cvt-fp8-vop1-bug",
   [FeatureFP8ConversionInsts]
 >;
 
+defm WMMA256bInsts : AMDGPUSubtargetFeature<"wmma-256b-insts",
+  "Has WMMA instructions where A and B matrices have duplicated data"
+>;
+
+defm WMMA128bInsts : AMDGPUSubtargetFeature<"wmma-128b-insts",
+  "Has WMMA instructions where A and B matrices do not have duplicated data"
+>;
+
 defm PkFmacF16Inst : AMDGPUSubtargetFeature<"pk-fmac-f16-inst",
   "Has v_pk_fmac_f16 instruction"
 >;
@@ -1820,9 +1828,9 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureD16Writes32BitVgpr,
 ]>;
 
-// There are few workarounds that need to be
-// added to all targets. This pessimizes codegen
-// a bit on the generic GFX11 target.
+// There are few workarounds that need to be added to all targets. This
+// pessimizes codegen a bit on the generic GFX11 target. This generic target
+// does not include GFX1170 due to incompatible changes.
 def FeatureISAVersion11_Generic: FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
@@ -1831,14 +1839,16 @@ def FeatureISAVersion11_Generic: FeatureSet<
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
      FeatureRequiresCOV6,
-     FeatureRequiredExportPriority])>;
+     FeatureRequiredExportPriority,
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
      FeatureMADIntraFwdBug,
-     FeaturePrivEnabledTrap2NopBug])>;
+     FeaturePrivEnabledTrap2NopBug,
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1861,7 +1871,8 @@ def FeatureISAVersion11_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureRequiredExportPriority])>;
+     FeatureRequiredExportPriority,
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_5_Common.Features,
@@ -1885,7 +1896,8 @@ def FeatureISAVersion11_7_0 : FeatureSet<
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureFP8ConversionInsts,
-     FeatureDot11Insts])>;
+     FeatureDot11Insts,
+     FeatureWMMA128bInsts])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -1915,6 +1927,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureImageInsts,
    FeatureExtendedImageInsts,
    FeatureFP8ConversionInsts,
+   FeatureWMMA128bInsts,
    FeatureIEEEMinimumMaximumInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
