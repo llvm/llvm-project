@@ -233,21 +233,22 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
   // value can never be that constant. In that case replace the incoming
   // value with the other value of the select. This often allows us to
   // remove the select later.
+  if (!SI->getType()->isFPOrFPVectorTy()) {
+    // The "false" case
+    if (auto *C = dyn_cast<Constant>(SI->getFalseValue()))
+      if (auto *Res = dyn_cast_or_null<ConstantInt>(LVI->getPredicateOnEdge(
+              ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
+          Res && Res->isZero())
+        return SI->getTrueValue();
 
-  // The "false" case
-  if (auto *C = dyn_cast<Constant>(SI->getFalseValue()))
-    if (auto *Res = dyn_cast_or_null<ConstantInt>(
-            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
-        Res && Res->isZero())
-      return SI->getTrueValue();
-
-  // The "true" case,
-  // similar to the select "false" case, but try the select "true" value
-  if (auto *C = dyn_cast<Constant>(SI->getTrueValue()))
-    if (auto *Res = dyn_cast_or_null<ConstantInt>(
-            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
-        Res && Res->isZero())
-      return SI->getFalseValue();
+    // The "true" case,
+    // similar to the select "false" case, but try the select "true" value
+    if (auto *C = dyn_cast<Constant>(SI->getTrueValue()))
+      if (auto *Res = dyn_cast_or_null<ConstantInt>(LVI->getPredicateOnEdge(
+              ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
+          Res && Res->isZero())
+        return SI->getFalseValue();
+  }
 
   return nullptr;
 }
