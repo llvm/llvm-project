@@ -21,11 +21,10 @@ cpp::simd<float> expf(cpp::simd<float> x) { return mathvec::expf(x); }
 #define EXPF_MANGLED_NAME other_mangled_name
 #endif
 #endif
-void *EXPF_MANGLED_NAME;
-void *mangled_fn_name = &EXPF_MANGLED_NAME;
+extern expf_simd_float_ftype EXPF_MANGLED_NAME;
 
 } // namespace LIBC_NAMESPACE_DECL
 
-LIBC_NAMESPACE::expf_simd_float_ftype __expf_simd_float =
+extern const LIBC_NAMESPACE::expf_simd_float_ftype __expf_simd_float =
     reinterpret_cast<LIBC_NAMESPACE::expf_simd_float_ftype>(
         &LIBC_NAMESPACE::EXPF_MANGLED_NAME);

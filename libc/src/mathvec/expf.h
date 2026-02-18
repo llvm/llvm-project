@@ -26,6 +26,6 @@ static_assert(cpp::is_trivially_copyable<cpp_simd_float>::value == true);
 using expf_simd_float_ftype = cpp_simd_float (*)(cpp_simd_float);
 } // namespace LIBC_NAMESPACE_DECL
 
-extern LIBC_NAMESPACE::expf_simd_float_ftype __expf_cpp_simd_float;
+extern const LIBC_NAMESPACE::expf_simd_float_ftype __expf_cpp_simd_float;
 
 #endif // LLVM_LIBC_SRC_MATHVEC_EXPF_H
