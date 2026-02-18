@@ -377,21 +377,6 @@ def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
 
 def AMDGPUperm_impl : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
-def SDTAMDGPUBytePerm4x4 : SDTypeProfile<4, 5, [
-  SDTCisVT<0, i32>,
-  SDTCisSameAs<1, 0>,
-  SDTCisSameAs<2, 0>,
-  SDTCisSameAs<3, 0>,
-  SDTCisSameAs<4, 0>,
-  SDTCisSameAs<5, 0>,
-  SDTCisSameAs<6, 0>,
-  SDTCisSameAs<7, 0>,
-  SDTCisVT<8, i64>
-]>;
-
-def AMDGPUbyteperm_4x4 : SDNode<"AMDGPUISD::BYTEPERM_4X4",
-                                SDTAMDGPUBytePerm4x4, []>;
-
 // Marks the entry into a whole wave function.
 def AMDGPUwhole_wave_setup : SDNode<
   "AMDGPUISD::WHOLE_WAVE_SETUP", SDTypeProfile<1, 0, [SDTCisInt<0>]>,

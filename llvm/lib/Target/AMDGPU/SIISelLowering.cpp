@@ -15690,7 +15690,7 @@ SDValue SITargetLowering::performCvtPkRTZCombine(SDNode *N,
 // collect source-side dwords, and then we track bytes of those dwords down the
 // same network pattern to collect destination-side dwords. We then verify that
 // we have a bijection and that each output dword selects one byte from each
-// input dword. After processing, we emit multi-result BYTEPERM_4X4 pseudos and
+// input dword. After processing, we directly emit AMDGPUISD::PERM nodes and
 // build the replacement vectors from the results.
 
 // For given element in vec `V` at index `Lane`, try to find a vec `SrcVec` from
@@ -15895,7 +15895,7 @@ using DwordKey = PointerIntPair<SDNode *, 2, unsigned>;
 
 // Determine if the dword `DstDwordSeed` is one of the four outputs of a
 // 4x4 byte permutation. On success, returns the 4 input dwords, the 4 output
-// dwords, and the 16x4-bit permutation encoding used by BYTEPERM_4X4.
+// dwords, and the 16x4-bit permutation encoding used by emitBytePerm4x4.
 static bool matchDwordBYTEPERM_4X4(DwordKey DstDwordSeed,
                                    std::array<DwordKey, 4> &SrcDwords,
                                    std::array<DwordKey, 4> &DstDwords,
@@ -16063,85 +16063,17 @@ static bool isCandidateDstVec(SDValue Seed) {
   return true;
 }
 
-static SDValue matchBYTEPERM_4X4(SDNode *N,
-                                 AMDGPUTargetLowering::DAGCombinerInfo &DCI) {
-  if (!DCI.isBeforeLegalize())
-    return SDValue();
-
-  SDValue Seed(N, 0);
-  if (!isCandidateDstVec(Seed))
-    return SDValue();
-
-  EVT SeedVT = Seed.getValueType();
-  if (SeedVT != MVT::v16i8)
-    return SDValue();
-
-  std::array<DwordKey, 4> SrcDwords;
-  std::array<DwordKey, 4> DstDwords;
-  uint64_t PermMask = 0;
-  if (!matchDwordBYTEPERM_4X4(DwordKey(Seed.getNode(), 0), SrcDwords, DstDwords,
-                              PermMask))
-    return SDValue();
-
-  SDNode *SrcNode = SrcDwords[0].getPointer();
-  for (unsigned I = 0; I < 4; ++I) {
-    if (SrcDwords[I].getPointer() != SrcNode)
-      return SDValue();
-    if (SrcDwords[I].getInt() != I)
-      return SDValue();
-  }
-  for (unsigned Out = 0; Out < 4; ++Out) {
-    DwordKey DstDword = DstDwords[Out];
-    if (DstDword.getPointer() != Seed.getNode())
-      return SDValue();
-    if (DstDword.getInt() != Out)
-      return SDValue();
-  }
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc DL(Seed);
-  SDValue In[4];
-  for (unsigned I = 0; I < 4; ++I) {
-    SDValue SrcVec(SrcDwords[I].getPointer(), 0);
-    In[I] = getDWordFromOffset(DAG, DL, SrcVec, SrcDwords[I].getInt());
-  }
-
-  SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32, MVT::i32, MVT::i32);
-  SDValue Mask = DAG.getConstant(PermMask, DL, MVT::i64);
-  SDValue Pseudo = DAG.getNode(AMDGPUISD::BYTEPERM_4X4, DL, VTs, In[0], In[1],
-                               In[2], In[3], Mask);
-  DCI.AddToWorklist(Pseudo.getNode());
-
-  std::array<SDValue, 4> DwordsI32;
-  for (unsigned D = 0; D < 4; ++D)
-    DwordsI32[D] = SDValue(Pseudo.getNode(), D);
-
-  SDValue DwordVec = DAG.getBuildVector(MVT::v4i32, DL, DwordsI32);
-  SDValue NewVec = DAG.getNode(ISD::BITCAST, DL, SeedVT, DwordVec);
-  DCI.AddToWorklist(NewVec.getNode());
-  return NewVec;
-}
-
-static bool expandBYTEPERM_4X4(SDNode *N,
-                               AMDGPUTargetLowering::DAGCombinerInfo &DCI,
-                               SmallVectorImpl<SDValue> &Results) {
-  if (DCI.isBeforeLegalize())
-    return false;
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc DL(N);
-
-  uint64_t PermMask =
-      dyn_cast<ConstantSDNode>(N->getOperand(4))->getZExtValue();
-
-  // The permutation can be effected in two stages of 4 v_perms each. Let P0 and
-  // P1 be a partition of the input dwords into sets of 2, and similarly let Q0
-  // and Q1 be such a partition of the output dwords. The partition determines
-  // the contents of the nodes of a network: the first stage of the network is
-  // comprised of nodes which collect the elements of P_i which are requested by
-  // Q_j. Labelling these nodes as I_{ij}, the nodes of stage 2 then take I_{0j}
-  // and I_{1j} as operands to produce the desired outputs.
-
+// Emit two stages of 4 v_perm_b32 each to effect a 4x4 byte permutation.
+//
+// Let P0 and P1 be a partition of the input dwords into sets of 2, and
+// similarly let Q0 and Q1 be such a partition of the output dwords. The
+// partition determines the contents of the nodes of a network: the first stage
+// of the network is comprised of nodes which collect the elements of P_i which
+// are requested by Q_j. Labelling these nodes as I_{ij}, the nodes of stage 2
+// then take I_{0j} and I_{1j} as operands to produce the desired outputs.
+static bool emitBytePerm4x4(SelectionDAG &DAG, SDLoc DL,
+                            ArrayRef<SDValue> SrcDwordVals, uint64_t PermMask,
+                            SmallVectorImpl<SDValue> &Results) {
   auto EmitPerm = [&](SDValue Src0, SDValue Src1, uint32_t MaskVal) {
     return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Src0, Src1,
                        DAG.getConstant(MaskVal, DL, MVT::i32));
@@ -16151,9 +16083,6 @@ static bool expandBYTEPERM_4X4(SDNode *N,
     return uint32_t(B0) | (uint32_t(B1) << 8) | (uint32_t(B2) << 16) |
            (uint32_t(B3) << 24);
   };
-
-  SDValue SrcDwordVal[4] = {N->getOperand(0), N->getOperand(1),
-                            N->getOperand(2), N->getOperand(3)};
 
   // SrcId[FlatDstByte] = FlatSrcByte
   // ByteSel[DstDword][SrcDword] = SrcByte
@@ -16204,7 +16133,7 @@ static bool expandBYTEPERM_4X4(SDNode *N,
       Stage1Src[Pi][Qj][1] = uint8_t(A * 4 + A1b);
       Stage1Src[Pi][Qj][2] = uint8_t(B * 4 + B0b);
       Stage1Src[Pi][Qj][3] = uint8_t(B * 4 + B1b);
-      I[Pi][Qj] = EmitPerm(SrcDwordVal[B], SrcDwordVal[A], M);
+      I[Pi][Qj] = EmitPerm(SrcDwordVals[B], SrcDwordVals[A], M);
     }
   }
 
@@ -16235,6 +16164,57 @@ static bool expandBYTEPERM_4X4(SDNode *N,
   }
 
   return true;
+}
+
+static SDValue matchBYTEPERM_4X4(SDNode *N,
+                                 AMDGPUTargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  SDValue Seed(N, 0);
+  if (!isCandidateDstVec(Seed))
+    return SDValue();
+
+  EVT SeedVT = Seed.getValueType();
+  if (SeedVT != MVT::v16i8)
+    return SDValue();
+
+  std::array<DwordKey, 4> SrcDwords;
+  std::array<DwordKey, 4> DstDwords;
+  uint64_t PermMask = 0;
+  if (!matchDwordBYTEPERM_4X4(DwordKey(Seed.getNode(), 0), SrcDwords, DstDwords,
+                              PermMask))
+    return SDValue();
+
+  SDNode *SrcNode = SrcDwords[0].getPointer();
+  for (unsigned I = 0; I < 4; ++I) {
+    if (SrcDwords[I].getPointer() != SrcNode)
+      return SDValue();
+    if (SrcDwords[I].getInt() != I)
+      return SDValue();
+  }
+  for (unsigned Out = 0; Out < 4; ++Out) {
+    DwordKey DstDword = DstDwords[Out];
+    if (DstDword.getPointer() != Seed.getNode())
+      return SDValue();
+    if (DstDword.getInt() != Out)
+      return SDValue();
+  }
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(Seed);
+  SDValue In[4];
+  for (unsigned I = 0; I < 4; ++I) {
+    SDValue SrcVec(SrcDwords[I].getPointer(), 0);
+    In[I] = getDWordFromOffset(DAG, DL, SrcVec, SrcDwords[I].getInt());
+  }
+
+  SmallVector<SDValue, 4> DwordsI32;
+  if (!emitBytePerm4x4(DAG, DL, In, PermMask, DwordsI32))
+    return SDValue();
+
+  SDValue DwordVec = DAG.getBuildVector(MVT::v4i32, DL, DwordsI32);
+  return DAG.getNode(ISD::BITCAST, DL, SeedVT, DwordVec);
 }
 
 // Check if EXTRACT_VECTOR_ELT/INSERT_VECTOR_ELT (<n x e>, var-idx) should be
@@ -18127,12 +18107,6 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::BUILD_VECTOR:
   case ISD::VECTOR_SHUFFLE:
     return matchBYTEPERM_4X4(N, DCI);
-  case AMDGPUISD::BYTEPERM_4X4: {
-    SmallVector<SDValue, 4> Results;
-    if (expandBYTEPERM_4X4(N, DCI, Results))
-      return DCI.CombineTo(N, Results);
-    break;
-  }
   case ISD::EXTRACT_VECTOR_ELT:
     return performExtractVectorEltCombine(N, DCI);
   case ISD::INSERT_VECTOR_ELT:
