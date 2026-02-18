@@ -1,8 +1,8 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 %s -o - | FileCheck %s --check-prefixes ALL,HOST
 !RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -fopenmp-is-device %s -o - | FileCheck %s --check-prefixes ALL,DEVICE
 
-! Check specification valid forms of declare target with functions 
-! utilising device_type and to clauses as well as the default 
+! Check specification valid forms of declare target with functions
+! utilising device_type and to clauses as well as the default
 ! zero clause declare target
 
 ! DEVICE-LABEL: func.func @_QPfunc_t_device()
@@ -94,8 +94,8 @@ END FUNCTION FUNC_NAME_AS_RESULT
 
 !! -----
 
-! Check specification valid forms of declare target with subroutines 
-! utilising device_type and to clauses as well as the default 
+! Check specification valid forms of declare target with subroutines
+! utilising device_type and to clauses as well as the default
 ! zero clause declare target
 
 ! DEVICE-LABEL: func.func @_QPsubr_t_device()

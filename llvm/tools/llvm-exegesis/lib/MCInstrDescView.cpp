@@ -8,7 +8,6 @@
 
 #include "MCInstrDescView.h"
 
-#include <iterator>
 #include <tuple>
 
 #include "llvm/ADT/STLExtras.h"
@@ -120,7 +119,7 @@ Instruction::create(const MCInstrInfo &InstrInfo,
     Operand.IsDef = (OpIndex < Description->getNumDefs());
     Operand.IsEarlyClobber =
         (Description->getOperandConstraint(OpIndex, MCOI::EARLY_CLOBBER) != -1);
-    // TODO(gchatelet): Handle isLookupPtrRegClass.
+    // TODO(gchatelet): Handle LookupRegClassByHwMode.
     if (OpInfo.RegClass >= 0)
       Operand.Tracker = &RATC.getRegisterClass(OpInfo.RegClass);
     int TiedToIndex = Description->getOperandConstraint(OpIndex, MCOI::TIED_TO);

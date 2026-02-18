@@ -8,8 +8,8 @@ Within your LLVM pass:
 
 ``` C++
 // 1. Include the necessary Sandbox IR header files.
-#include "llvm/SandboxIR/Context.h
-#include "llvm/SandboxIR/Function.h
+#include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/Function.h"
 
 // 2. Create a sandboxir::Context using LLVMContext `LLVMCtx`.
 sandboxir::Context Ctx(LLVMCtx);

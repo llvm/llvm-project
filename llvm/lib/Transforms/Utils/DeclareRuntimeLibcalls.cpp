@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/DeclareRuntimeLibcalls.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 
@@ -49,7 +50,9 @@ static void mergeAttributes(LLVMContext &Ctx, const Module &M,
 
 PreservedAnalyses DeclareRuntimeLibcallsPass::run(Module &M,
                                                   ModuleAnalysisManager &MAM) {
-  RTLIB::RuntimeLibcallsInfo RTLCI(M.getTargetTriple());
+  const RTLIB::RuntimeLibcallsInfo &RTLCI =
+      MAM.getResult<RuntimeLibraryAnalysis>(M);
+
   LLVMContext &Ctx = M.getContext();
   const DataLayout &DL = M.getDataLayout();
   const Triple &TT = M.getTargetTriple();

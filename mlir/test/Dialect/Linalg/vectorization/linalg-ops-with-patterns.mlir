@@ -1481,23 +1481,23 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-//  CHECK-LABEL: func @reduce_1d(
-//   CHECK-SAME:   %[[A:.*]]: tensor<32xf32>
-func.func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
+//  CHECK-LABEL: func @reduce_to_rank_0(
+//   CHECK-SAME:   %[[SRC:.*]]: tensor<32xf32>
+func.func @reduce_to_rank_0(%arg0: tensor<32xf32>) -> tensor<f32> {
   //  CHECK-DAG: %[[F0:.*]] = arith.constant 0.000000e+00 : f32
   //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
   %f0 = arith.constant 0.000000e+00 : f32
 
-  //      CHECK: %[[init:.*]] = tensor.empty() : tensor<f32>
+  //      CHECK: %[[INIT:.*]] = tensor.empty() : tensor<f32>
   %0 = tensor.empty() : tensor<f32>
 
   %1 = linalg.fill ins(%f0 : f32) outs(%0 : tensor<f32>) -> tensor<f32>
-  //      CHECK: %[[r:.*]] = vector.transfer_read %[[A]][%[[C0]]]
+  //      CHECK: %[[R:.*]] = vector.transfer_read %[[SRC]][%[[C0]]]
   // CHECK-SAME:   : tensor<32xf32>, vector<32xf32>
-  //      CHECK: %[[red:.*]] = vector.multi_reduction <add>, %[[r]], %[[F0]] [0]
+  //      CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %[[R]], %[[F0]] [0]
   // CHECK-SAME:   : vector<32xf32> to f32
-  //      CHECK: %[[red_v1:.*]] = vector.broadcast %[[red]] : f32 to vector<f32>
-  //      CHECK: %[[res:.*]] = vector.transfer_write %[[red_v1]], %[[init]][]
+  //      CHECK: %[[RED_V1:.*]] = vector.broadcast %[[RED]] : f32 to vector<f32>
+  //      CHECK: %[[RES:.*]] = vector.transfer_write %[[RED_V1]], %[[INIT]][]
   // CHECK-SAME:   : vector<f32>, tensor<f32>
   %2 = linalg.generic {
          indexing_maps = [affine_map<(d0) -> (d0)>,
@@ -1511,6 +1511,58 @@ func.func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
     } -> tensor<f32>
 
   return %2 : tensor<f32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+
+// -----
+
+//  CHECK-LABEL: func @reduce_to_rank_1(
+//   CHECK-SAME:   %[[SRC:.*]]: tensor<32xf32>
+func.func @reduce_to_rank_1(%arg0: tensor<32xf32>) -> tensor<1xf32> {
+  //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  //  CHECK-DAG: %[[F0:.*]] = arith.constant dense<0.000000e+00> : vector<1xf32>
+  %f0 = arith.constant 0.000000e+00 : f32
+
+  //      CHECK: %[[INIT:.*]] = tensor.empty() : tensor<1xf32>
+  %0 = tensor.empty() : tensor<1xf32>
+
+  //      CHECK: %[[INIT_ZERO:.*]] = vector.transfer_write %[[F0]], %[[INIT]][%[[C0]]]
+  // CHECK-SAME:   : vector<1xf32>, tensor<1xf32>
+  %1 = linalg.fill ins(%f0 : f32) outs(%0 : tensor<1xf32>) -> tensor<1xf32>
+
+  //      CHECK: %[[R:.*]] = vector.transfer_read %[[SRC]][%[[C0]]]
+  // CHECK-SAME:   : tensor<32xf32>, vector<32xf32>
+  //      CHECK: %[[INIT_ZERO_VEC:.*]] = vector.transfer_read %[[INIT_ZERO]][%[[C0]]]
+  // CHECK-SAME:   : tensor<1xf32>, vector<f32>
+  //      CHECK: %[[INIT_ZERO_SCL:.*]] = vector.extract %[[INIT_ZERO_VEC]][]
+  // CHECK-SAME:   : f32 from vector<f32>
+  //      CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %[[R]], %[[INIT_ZERO_SCL]] [0]
+  // CHECK-SAME:   : vector<32xf32> to f32
+  //      CHECK: %[[RED_V1:.*]] = vector.broadcast %[[RED]] : f32 to vector<f32>
+  //      CHECK: vector.transfer_write %[[RED_V1]], %[[INIT_ZERO]][%[[C0]]]
+  // CHECK-SAME:   : vector<f32>, tensor<1xf32>
+
+  %2 = linalg.generic {
+         indexing_maps = [affine_map<(d0) -> (d0)>,
+                          affine_map<(d0) -> (0)>],
+         iterator_types = ["reduction"]}
+         ins(%arg0 : tensor<32xf32>)
+         outs(%1 : tensor<1xf32>) {
+    ^bb0(%a: f32, %b: f32):
+      %3 = arith.addf %a, %b : f32
+      linalg.yield %3 : f32
+    } -> tensor<1xf32>
+
+  return %2 : tensor<1xf32>
 }
 
 module attributes {transform.with_named_sequence} {

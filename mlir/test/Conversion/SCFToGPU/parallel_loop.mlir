@@ -673,3 +673,51 @@ func.func @nested_parallel_with_side_effect() {
 
 // CHECK: gpu.launch
 // CHECK-NOT: scf.parallel
+
+// -----
+
+func.func @scf2gpu_index_creation_2d() {
+  %c0  = arith.constant 0 : index
+  %c1  = arith.constant 1 : index
+  %c32 = arith.constant 32 : index
+
+  // Single 2-D scf.parallel mapped to block_x and thread_x.
+  // Use both IVs so the conversion must compute indices.
+  scf.parallel (%bx, %tx) = (%c0, %c0) to (%c32, %c32) step (%c1, %c1) {
+    %u = arith.addi %bx, %c0 : index
+    %v = arith.addi %tx, %c0 : index
+  } {
+    mapping = [
+      #gpu.loop_dim_map<processor = block_x,  map = (d0) -> (d0), bound = (d0) -> (d0)>,
+      #gpu.loop_dim_map<processor = thread_x, map = (d0) -> (d0), bound = (d0) -> (d0)>
+    ]
+  }
+  return
+}
+
+// CHECK-LABEL: func @scf2gpu_index_creation_2d
+//       CHECK:   gpu.launch
+//       CHECK:     %[[IDX:.*]] = affine.apply
+//       CHECK:     arith.addi %[[IDX]],
+
+// -----
+
+func.func @scf2gpu_index_creation_1d() {
+  %c0  = arith.constant 0 : index
+  %c1  = arith.constant 1 : index
+  %c64 = arith.constant 64 : index
+
+  scf.parallel (%t) = (%c0) to (%c64) step (%c1) {
+    %w = arith.addi %t, %c0 : index
+  } {
+    mapping = [
+      #gpu.loop_dim_map<processor = thread_x, map = (d0) -> (d0), bound = (d0) -> (d0)>
+    ]
+  }
+  return
+}
+
+// CHECK-LABEL: func @scf2gpu_index_creation_1d
+//       CHECK:   gpu.launch
+//       CHECK:     %[[IDX:.*]] = affine.apply
+//       CHECK:     arith.addi %[[IDX]],

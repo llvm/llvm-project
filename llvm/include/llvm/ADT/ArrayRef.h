@@ -10,8 +10,8 @@
 #define LLVM_ADT_ARRAYREF_H
 
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <array>
@@ -19,7 +19,6 @@
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>
-#include <memory>
 #include <type_traits>
 #include <vector>
 
@@ -332,7 +331,7 @@ namespace llvm {
                           decltype(std::declval<C &>().data()) *, T *const *>,
                       std::is_integral<decltype(std::declval<C &>().size())>>,
                   void>>
-    /*implicit*/ constexpr MutableArrayRef(const C &V) : ArrayRef<T>(V) {}
+    /*implicit*/ constexpr MutableArrayRef(C &V) : ArrayRef<T>(V) {}
 
     /// Construct a MutableArrayRef from a C array.
     template <size_t N>
@@ -444,29 +443,6 @@ namespace llvm {
       assert(Index < this->size() && "Invalid index!");
       return data()[Index];
     }
-  };
-
-  /// This is a MutableArrayRef that owns its array.
-  template <typename T> class OwningArrayRef : public MutableArrayRef<T> {
-  public:
-    OwningArrayRef() = default;
-    OwningArrayRef(size_t Size) : MutableArrayRef<T>(new T[Size], Size) {}
-
-    OwningArrayRef(ArrayRef<T> Data)
-        : MutableArrayRef<T>(new T[Data.size()], Data.size()) {
-      std::copy(Data.begin(), Data.end(), this->begin());
-    }
-
-    OwningArrayRef(OwningArrayRef &&Other) { *this = std::move(Other); }
-
-    OwningArrayRef &operator=(OwningArrayRef &&Other) {
-      delete[] this->data();
-      this->MutableArrayRef<T>::operator=(Other);
-      Other.MutableArrayRef<T>::operator=(MutableArrayRef<T>());
-      return *this;
-    }
-
-    ~OwningArrayRef() { delete[] this->data(); }
   };
 
   /// @name ArrayRef Deduction guides

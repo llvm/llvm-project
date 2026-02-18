@@ -16,13 +16,13 @@ define i32 @test(i1 %c) {
 ; CHECK-NEXT:    [[CONV2:%.*]] = ashr exact i32 [[SEXT]], 24
 ; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub nsw i32 7, [[CONV2]]
 ; CHECK-NEXT:    call void @use(i32 [[INVARIANT_OP]])
-; CHECK-NEXT:    [[SEXT_US:%.*]] = shl i32 [[SEL]], 24
-; CHECK-NEXT:    [[CONV2_US:%.*]] = ashr exact i32 [[SEXT_US]], 24
-; CHECK-NEXT:    [[INVARIANT_OP_US:%.*]] = sub nsw i32 7, [[CONV2_US]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[SEXT_US:%.*]] = shl i32 [[SEL]], 24
+; CHECK-NEXT:    [[CONV2_US:%.*]] = ashr exact i32 [[SEXT_US]], 24
+; CHECK-NEXT:    [[INVARIANT_OP_US:%.*]] = sub nsw i32 7, [[CONV2_US]]
 ; CHECK-NEXT:    ret i32 [[INVARIANT_OP_US]]
 ;
 entry:

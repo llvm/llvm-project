@@ -58,13 +58,12 @@ define <32 x i8> @test_div7_32i8(<32 x i8> %a) {
 define <32 x i8> @test_mul_32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX256BW-LABEL: test_mul_32i8:
 ; AVX256BW:       # %bb.0:
-; AVX256BW-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; AVX256BW-NEXT:    vpand %ymm2, %ymm1, %ymm3
-; AVX256BW-NEXT:    vpmaddubsw %ymm3, %ymm0, %ymm3
-; AVX256BW-NEXT:    vpandn %ymm1, %ymm2, %ymm1
+; AVX256BW-NEXT:    vpmullw %ymm1, %ymm0, %ymm2
+; AVX256BW-NEXT:    vpbroadcastw {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; AVX256BW-NEXT:    vpandn %ymm1, %ymm3, %ymm1
 ; AVX256BW-NEXT:    vpmaddubsw %ymm1, %ymm0, %ymm0
 ; AVX256BW-NEXT:    vpsllw $8, %ymm0, %ymm0
-; AVX256BW-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | (ymm3 & ymm2)
+; AVX256BW-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 | (ymm2 & ymm3)
 ; AVX256BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: test_mul_32i8:

@@ -77,6 +77,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fchown
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fchown
+)
+
+add_entrypoint_object(
   fork
   ALIAS
   DEPENDS
@@ -130,6 +137,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.gethostname
+)
+
+add_entrypoint_object(
+  getpagesize
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getpagesize
 )
 
 add_entrypoint_object(

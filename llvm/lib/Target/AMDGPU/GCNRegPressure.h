@@ -102,6 +102,29 @@ struct GCNRegPressure {
                                                 DynamicVGPRBlockSize));
   }
 
+  unsigned getVGPRSpills(MachineFunction &MF, unsigned ArchVGPRThreshold,
+                         unsigned AGPRThreshold, unsigned CombinedThreshold) {
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    if (!ST.hasGFX90AInsts())
+      return 0;
+
+    unsigned ArchPressure = getArchVGPRNum();
+    unsigned AGPRPressure = getAGPRNum();
+
+    unsigned ArchSpill = ArchPressure > ArchVGPRThreshold
+                             ? (ArchPressure - ArchVGPRThreshold)
+                             : 0;
+    unsigned AGPRSpill =
+        AGPRPressure > AGPRThreshold ? (AGPRPressure - AGPRThreshold) : 0;
+
+    unsigned UnifiedPressure = getVGPRNum(/*UnifiedVGPRFile=*/true);
+    unsigned UnifiedSpill = UnifiedPressure > CombinedThreshold
+                                ? (UnifiedPressure - CombinedThreshold)
+                                : 0;
+
+    return std::max(UnifiedSpill, ArchSpill + AGPRSpill);
+  }
+
   void inc(unsigned Reg,
            LaneBitmask PrevMask,
            LaneBitmask NewMask,
@@ -234,6 +257,12 @@ public:
 
   /// Whether the current RP is at or below the defined pressure target.
   bool satisfied() const;
+  bool hasVectorRegisterExcess() const;
+
+  unsigned getMaxSGPRs() const { return MaxSGPRs; }
+  unsigned getMaxVGPRs() const {
+    return UnifiedRF ? MaxUnifiedVGPRs : MaxVGPRs;
+  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   friend raw_ostream &operator<<(raw_ostream &OS, const GCNRPTarget &Target) {
@@ -292,7 +321,7 @@ protected:
   /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
   void bumpDeadDefs(ArrayRef<VRegMaskOrUnit> DeadDefs);
 
-  LaneBitmask getLastUsedLanes(Register RegUnit, SlotIndex Pos) const;
+  LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
 public:
   // reset tracker and set live register set to the specified value.
@@ -455,7 +484,7 @@ template <typename Range>
 DenseMap<MachineInstr*, GCNRPTracker::LiveRegSet>
 getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
   std::vector<SlotIndex> Indexes;
-  Indexes.reserve(std::distance(R.begin(), R.end()));
+  Indexes.reserve(llvm::size(R));
   auto &SII = *LIS.getSlotIndexes();
   for (MachineInstr *I : R) {
     auto SI = SII.getInstructionIndex(*I);
@@ -463,7 +492,7 @@ getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
   }
   llvm::sort(Indexes);
 
-  auto &MRI = (*R.begin())->getParent()->getParent()->getRegInfo();
+  auto &MRI = (*R.begin())->getMF()->getRegInfo();
   DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet> LiveRegMap;
   SmallVector<SlotIndex, 32> LiveIdxs, SRLiveIdxs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
@@ -493,13 +522,13 @@ getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
 inline GCNRPTracker::LiveRegSet getLiveRegsAfter(const MachineInstr &MI,
                                                  const LiveIntervals &LIS) {
   return getLiveRegs(LIS.getInstructionIndex(MI).getDeadSlot(), LIS,
-                     MI.getParent()->getParent()->getRegInfo());
+                     MI.getMF()->getRegInfo());
 }
 
 inline GCNRPTracker::LiveRegSet getLiveRegsBefore(const MachineInstr &MI,
                                                   const LiveIntervals &LIS) {
   return getLiveRegs(LIS.getInstructionIndex(MI).getBaseIndex(), LIS,
-                     MI.getParent()->getParent()->getRegInfo());
+                     MI.getMF()->getRegInfo());
 }
 
 template <typename Range>

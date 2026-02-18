@@ -25,11 +25,11 @@ enum Opcode : uint32_t;
 /// An emitter which links the program to bytecode for later use.
 class ByteCodeEmitter {
 protected:
-  using LabelTy = uint32_t;
   using AddrTy = uintptr_t;
   using Local = Scope::Local;
 
 public:
+  using LabelTy = uint32_t;
   /// Compiles the function into the module.
   void compileFunc(const FunctionDecl *FuncDecl, Function *Func = nullptr);
 

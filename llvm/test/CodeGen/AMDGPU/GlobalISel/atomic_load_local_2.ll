@@ -377,14 +377,10 @@ define <2 x i16> @atomic_load_local_monotonic_i16_d16_hi_vector_insert(ptr addrs
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    ds_read_u16 v0, v0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX7-NEXT:    v_or_b32_e32 v1, v2, v1
 ; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: atomic_load_local_monotonic_i16_d16_hi_vector_insert:
@@ -455,13 +451,9 @@ define <2 x i16> @atomic_load_local_monotonic_i16_d16_lo_vector_insert(ptr addrs
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b32 m0, -1
 ; GFX7-NEXT:    ds_read_u16 v0, v0
-; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX7-NEXT:    v_or_b32_e32 v1, v2, v1
 ; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_or_b32_e32 v0, v1, v0
-; GFX7-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: atomic_load_local_monotonic_i16_d16_lo_vector_insert:

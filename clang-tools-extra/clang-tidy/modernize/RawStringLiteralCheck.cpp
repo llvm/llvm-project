@@ -131,9 +131,8 @@ static std::string createRawStringLiteral(const StringLiteral *Literal,
                                           const LangOptions &LangOpts) {
   const StringRef Bytes = Literal->getBytes();
   std::string Delimiter;
-  for (int I = 0; containsDelimiter(Bytes, Delimiter); ++I) {
+  for (int I = 0; containsDelimiter(Bytes, Delimiter); ++I)
     Delimiter = (I == 0) ? DelimiterStem : DelimiterStem + std::to_string(I);
-  }
 
   const std::optional<StringRef> UserDefinedSuffix =
       createUserDefinedSuffix(Literal, SM, LangOpts);

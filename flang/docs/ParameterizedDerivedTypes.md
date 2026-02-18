@@ -786,7 +786,7 @@ subroutine foo(x, n)
   ! type parameters of `x(n)%pdt_component` are not propagated from the caller.
 
   ! A descriptor local to this function is created to pass the array section
-  ! in bar. 
+  ! in bar.
   call bar(x%pdt_component)
 end subroutine
 

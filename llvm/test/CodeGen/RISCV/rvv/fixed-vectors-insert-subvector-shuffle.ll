@@ -13,7 +13,6 @@ define <4 x i32> @insert_subvector_load_v4i32_v4i32(<4 x i32> %v1, ptr %p) {
   ret <4 x i32> %v3
 }
 
-declare <4 x i32> @llvm.vp.load.v4i32(ptr, <4 x i1>, i32)
 define <4 x i32> @insert_subvector_vp_load_v4i32_v4i32(<4 x i32> %v1, ptr %p, <4 x i1> %mask) {
 ; CHECK-LABEL: insert_subvector_vp_load_v4i32_v4i32:
 ; CHECK:       # %bb.0:
@@ -26,7 +25,6 @@ define <4 x i32> @insert_subvector_vp_load_v4i32_v4i32(<4 x i32> %v1, ptr %p, <4
 }
 
 ; Can't fold this in because the load has a non-poison passthru that isn't equal to the vmv.v.v passtrhu
-declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32, <4 x i1>, <4 x i32>)
 define <4 x i32> @insert_subvector_load_unfoldable_passthru_v4i32_v4i32(<4 x i32> %v1, ptr %p, <4 x i1> %mask, <4 x i32> %passthru) {
 ; CHECK-LABEL: insert_subvector_load_unfoldable_passthru_v4i32_v4i32:
 ; CHECK:       # %bb.0:
@@ -65,7 +63,6 @@ define <4 x i32> @insert_subvector_add_v4i32_v4i32(<4 x i32> %v1, <4 x i32> %v2)
   ret <4 x i32> %v4
 }
 
-declare <4 x i32> @llvm.vp.add.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define <4 x i32> @insert_subvector_vp_add_v4i32_v4i32(<4 x i32> %v1, <4 x i32> %v2, <4 x i1> %mask) {
 ; CHECK-LABEL: insert_subvector_vp_add_v4i32_v4i32:
 ; CHECK:       # %bb.0:
@@ -91,7 +88,6 @@ define <4 x i32> @insert_subvector_load_v4i32_v2i32(<4 x i32> %v1, ptr %p) {
   ret <4 x i32> %v4
 }
 
-declare <2 x i32> @llvm.vp.load.v2i32(ptr, <2 x i1>, i32)
 define <4 x i32> @insert_subvector_vp_load_v4i32_v2i32(<4 x i32> %v1, ptr %p, <2 x i1> %mask) {
 ; CHECK-LABEL: insert_subvector_vp_load_v4i32_v2i32:
 ; CHECK:       # %bb.0:
@@ -121,7 +117,6 @@ define <4 x i32> @insert_subvector_add_v4i32_v2i32(<4 x i32> %v1, <2 x i32> %v2)
   ret <4 x i32> %v5
 }
 
-declare <2 x i32> @llvm.vp.add.v2i32(<2 x i32>, <2 x i32>, <2 x i1>, i32)
 define <4 x i32> @insert_subvector_vp_add_v4i32_v2i32(<4 x i32> %v1, <2 x i32> %v2, <2 x i1> %mask) {
 ; CHECK-LABEL: insert_subvector_vp_add_v4i32_v2i32:
 ; CHECK:       # %bb.0:
@@ -148,7 +143,6 @@ define <4 x i32> @insert_subvector_load_v4i32_v8i32(<4 x i32> %v1, ptr %p) {
   ret <4 x i32> %v4
 }
 
-declare <8 x i32> @llvm.vp.load.v8i32(ptr, <8 x i1>, i32)
 define <4 x i32> @insert_subvector_vp_load_v4i32_v8i32(<4 x i32> %v1, ptr %p, <8 x i1> %mask) {
 ; CHECK-LABEL: insert_subvector_vp_load_v4i32_v8i32:
 ; CHECK:       # %bb.0:
@@ -177,7 +171,6 @@ define <4 x i32> @insert_subvector_add_v4i32_v8i32(<4 x i32> %v1, <8 x i32> %v2)
   ret <4 x i32> %v5
 }
 
-declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 define <4 x i32> @insert_subvector_vp_add_v4i32_v8i32(<4 x i32> %v1, <8 x i32> %v2, <8 x i1> %mask) {
 ; CHECK-LABEL: insert_subvector_vp_add_v4i32_v8i32:
 ; CHECK:       # %bb.0:

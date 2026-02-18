@@ -77,7 +77,7 @@
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia -O3 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FP-NONE
 // CHECK-FP-ALL: "-mframe-pointer=all"
-// CHECK-FP-NONLEAF: "-mframe-pointer=non-leaf"
+// CHECK-FP-NONLEAF: "-mframe-pointer=non-leaf-no-reserve"
 // CHECK-FP-NONE: "-mframe-pointer=none"
 
 // RUN: not %clang -### %s --target=x86_64-unknown-fuchsia -rtlib=libgcc 2>&1 \

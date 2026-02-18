@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -35,6 +36,7 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -135,13 +137,20 @@ PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
         "ProfileSummaryAnalysis is required for BranchFoldingPass", false);
 
   auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+  auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
   MBFIWrapper MBBFreqInfo(MBFI);
   BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo, MBPI,
                       PSI);
-  if (!Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
-                               MF.getSubtarget().getRegisterInfo()))
-    return PreservedAnalyses::all();
-  return getMachineFunctionPassPreservedAnalyses();
+  if (Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
+                              MF.getSubtarget().getRegisterInfo()))
+    return getMachineFunctionPassPreservedAnalyses();
+
+  if (MDT)
+    MDT->updateBlockNumbers();
+  if (MPDT)
+    MPDT->updateBlockNumbers();
+  return PreservedAnalyses::all();
 }
 
 bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -1250,7 +1259,8 @@ bool BranchFolder::OptimizeBranches(MachineFunction &MF) {
     MadeChange |= OptimizeBlock(&MBB);
 
     // If it is dead, remove it.
-    if (MBB.pred_empty() && !MBB.isMachineBlockAddressTaken()) {
+    if (MBB.pred_empty() && !MBB.isMachineBlockAddressTaken() &&
+        !MBB.isEHPad()) {
       RemoveDeadBlock(&MBB);
       MadeChange = true;
       ++NumDeadBlocks;
@@ -1979,7 +1989,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   MachineBasicBlock::iterator FIB = FBB->begin();
   MachineBasicBlock::iterator TIE = TBB->end();
   MachineBasicBlock::iterator FIE = FBB->end();
-  MachineFunction &MF = *MBB->getParent();
+  MachineFunction &MF = *TBB->getParent();
   while (TIB != TIE && FIB != FIE) {
     // Skip dbg_value instructions. These do not count.
     TIB = skipDebugInstructionsForward(TIB, TIE, false);
@@ -1994,7 +2004,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       // Hard to reason about register liveness with predicated instruction.
       break;
 
-    if (!TII->isSafeToMove(*TIB, MBB, MF))
+    if (!TII->isSafeToMove(*TIB, TBB, MF))
       // Don't hoist the instruction if it isn't safe to move.
       break;
 

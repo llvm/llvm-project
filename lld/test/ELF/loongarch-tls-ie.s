@@ -1,7 +1,7 @@
 # REQUIRES: loongarch
 # RUN: rm -rf %t && split-file %s %t
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/32.s -o %t/32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 --mattr=-32s %t/32.s -o %t/32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/64.s -o %t/64.o
 
 ## LA32 IE
@@ -41,11 +41,11 @@
 ## LA32:
 ## &.got[0] - . = 0x20214 - 0x101a4: 0x10 pages, page offset 0x214
 ## &.got[1] - . = 0x20218 - 0x101b0: 0x10 pages, page offset 0x218
-# IE32:      101a4: pcalau12i $a4, 16
-# IE32-NEXT:        ld.w $a4, $a4, 532
+# IE32:      101a4: pcaddu12i $a4, 16
+# IE32-NEXT:        ld.w $a4, $a4, 112
 # IE32-NEXT:        add.w $a4, $a4, $tp
-# IE32-NEXT: 101b0: pcalau12i $a5, 16
-# IE32-NEXT:        ld.w $a5, $a5, 536
+# IE32:      101b0: pcaddu12i $a5, 16
+# IE32-NEXT:        ld.w $a5, $a5, 104
 # IE32-NEXT:        add.w $a5, $a5, $tp
 
 ## LA64:
@@ -62,15 +62,16 @@
 
 # a@tprel = st_value(a) = 0x8
 # b@tprel = st_value(a) = 0xc
-# LE32-GOT: could not find section '.got'
+# LE32-GOT: section '.got':
+# LE32-GOT-NEXT: 0x0003012c 08000000 0c000000
 # LE64-GOT: could not find section '.got'
 
 ## LA32:
-# LE32:      200d4: nop
-# LE32-NEXT:        ori $a4, $zero, 8
+# LE32:      20114: pcaddu12i $a4, 16
+# LE32-NEXT:        ld.w $a4, $a4, 24
 # LE32-NEXT:        add.w $a4, $a4, $tp
-# LE32-NEXT: 200e0: nop
-# LE32-NEXT:        ori $a5, $zero, 12
+# LE32:      20120: pcaddu12i $a5, 16
+# LE32-NEXT:        ld.w $a5, $a5, 16
 # LE32-NEXT:        add.w $a5, $a5, $tp
 
 ## LA64:

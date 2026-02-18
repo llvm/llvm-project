@@ -23,7 +23,6 @@ define i32 @aext_fptosi(half %a) nounwind strictfp {
   %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %a, metadata !"fpexcept.strict")
   ret i32 %1
 }
-declare i32 @llvm.experimental.constrained.fptosi.i32.f16(half, metadata)
 
 define signext i32 @sext_fptosi(half %a) nounwind strictfp {
 ; RV64IZFHMIN-LABEL: sext_fptosi:
@@ -76,7 +75,6 @@ define i32 @aext_fptoui(half %a) nounwind strictfp {
   %1 = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %a, metadata !"fpexcept.strict")
   ret i32 %1
 }
-declare i32 @llvm.experimental.constrained.fptoui.i32.f16(half, metadata)
 
 define signext i32 @sext_fptoui(half %a) nounwind strictfp {
 ; RV64IZFHMIN-LABEL: sext_fptoui:
@@ -125,7 +123,6 @@ define half @uitofp_aext_i32_to_f16(i32 %a) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.uitofp.f16.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret half %1
 }
-declare half @llvm.experimental.constrained.uitofp.f16.i32(i32 %a, metadata, metadata)
 
 define half @uitofp_sext_i32_to_f16(i32 signext %a) nounwind strictfp {
 ; RV64IZFHMIN-LABEL: uitofp_sext_i32_to_f16:
@@ -174,7 +171,6 @@ define half @sitofp_aext_i32_to_f16(i32 %a) nounwind strictfp {
   %1 = call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret half %1
 }
-declare half @llvm.experimental.constrained.sitofp.f16.i32(i32 %a, metadata, metadata)
 
 define half @sitofp_sext_i32_to_f16(i32 signext %a) nounwind strictfp {
 ; RV64IZFHMIN-LABEL: sitofp_sext_i32_to_f16:

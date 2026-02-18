@@ -17,6 +17,6 @@ struct Foo {
   Bar *__weak f;
 };
 
-// WITH_NOALIAS: define{{.*}} void @take(ptr dead_on_return noundef %arg)
-// NO_NOALIAS: define{{.*}} void @take(ptr dead_on_return noundef %arg)
+// WITH_NOALIAS: define{{.*}} void @take(ptr noundef dead_on_return %arg)
+// NO_NOALIAS: define{{.*}} void @take(ptr noundef dead_on_return %arg)
 void take(struct Foo arg) {}

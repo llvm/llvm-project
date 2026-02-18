@@ -864,8 +864,8 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
   o << "static const struct OperandSpecifier x86OperandSets[]["
     << X86_MAX_OPERANDS << "] = {\n";
 
-  typedef SmallVector<std::pair<OperandEncoding, OperandType>, X86_MAX_OPERANDS>
-      OperandListTy;
+  using OperandListTy =
+      SmallVector<std::pair<OperandEncoding, OperandType>, X86_MAX_OPERANDS>;
   std::map<OperandListTy, unsigned> OperandSets;
 
   unsigned OperandSetNum = 0;

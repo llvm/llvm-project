@@ -85,7 +85,7 @@ public:
 
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
-  LLVM_ABI static ConstantInt *get(Type *Ty, uint64_t V, bool IsSigned = false);
+  LLVM_ABI static Constant *get(Type *Ty, uint64_t V, bool IsSigned = false);
 
   /// Return a ConstantInt with the specified integer value for the specified
   /// type. If the type is wider than 64 bits, the value will be zero-extended
@@ -1363,7 +1363,8 @@ class ConstantPtrAuth final : public Constant {
 public:
   /// Return a pointer signed with the specified parameters.
   LLVM_ABI static ConstantPtrAuth *get(Constant *Ptr, ConstantInt *Key,
-                                       ConstantInt *Disc, Constant *AddrDisc);
+                                       ConstantInt *Disc, Constant *AddrDisc,
+                                       Constant *DeactivationSymbol);
   /// The pointer that is signed in this ptrauth signed pointer.
   LLVM_ABI Constant *getPointer() const;
 
@@ -1377,6 +1378,8 @@ public:
   /// If present, this must be a value equivalent to the storage location of
   /// the only global-initializer user of the ptrauth signed pointer.
   LLVM_ABI Constant *getAddrDiscriminator() const;
+
+  LLVM_ABI Constant *getDeactivationSymbol() const;
 
   /// Whether there is any non-null address discriminator.
   bool hasAddressDiscriminator() const {

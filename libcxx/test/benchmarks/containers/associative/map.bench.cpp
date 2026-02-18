@@ -38,6 +38,9 @@ struct support::adapt_operations<std::map<K, V>> {
 
   using InsertionResult = std::pair<typename std::map<K, V>::iterator, bool>;
   static auto get_iterator(InsertionResult const& result) { return result.first; }
+
+  template <class Allocator>
+  using rebind_alloc = std::map<K, V, std::less<K>, Allocator>;
 };
 
 int main(int argc, char** argv) {

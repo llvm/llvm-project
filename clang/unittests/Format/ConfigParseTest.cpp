@@ -203,6 +203,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL_FIELD(KeepEmptyLines.AtStartOfBlock,
                          "KeepEmptyLinesAtTheStartOfBlocks");
   CHECK_PARSE_BOOL(KeepFormFeed);
+  CHECK_PARSE_BOOL(ObjCSpaceAfterMethodDeclarationPrefix);
   CHECK_PARSE_BOOL(ObjCSpaceAfterProperty);
   CHECK_PARSE_BOOL(ObjCSpaceBeforeProtocolList);
   CHECK_PARSE_BOOL(RemoveBracesLLVM);
@@ -465,6 +466,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeComma);
   CHECK_PARSE("BreakConstructorInitializers: AfterColon",
               BreakConstructorInitializers, FormatStyle::BCIS_AfterColon);
+  CHECK_PARSE("BreakConstructorInitializers: AfterComma",
+              BreakConstructorInitializers, FormatStyle::BCIS_AfterComma);
   CHECK_PARSE("BreakConstructorInitializers: BeforeColon",
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeColon);
   // For backward compatibility:
@@ -960,6 +963,13 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               StatementAttributeLikeMacros,
               std::vector<std::string>({"emit", "Q_EMIT"}));
 
+  Style.Macros.clear();
+  CHECK_PARSE("{Macros: [foo]}", Macros, std::vector<std::string>({"foo"}));
+  std::vector<std::string> GoogleMacros;
+  GoogleMacros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
+  GoogleMacros.push_back("ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
+  CHECK_PARSE("BasedOnStyle: Google", Macros, GoogleMacros);
+
   Style.StatementMacros.clear();
   CHECK_PARSE("StatementMacros: [QUNUSED]", StatementMacros,
               std::vector<std::string>{"QUNUSED"});
@@ -967,7 +977,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               std::vector<std::string>({"QUNUSED", "QT_REQUIRE_VERSION"}));
 
   CHECK_PARSE_LIST(JavaImportGroups);
-  CHECK_PARSE_LIST(Macros);
   CHECK_PARSE_LIST(MacrosSkippedByRemoveParentheses);
   CHECK_PARSE_LIST(NamespaceMacros);
   CHECK_PARSE_LIST(ObjCPropertyAttributeOrder);
@@ -1164,6 +1173,36 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BLS_Block);
   CHECK_PARSE("Cpp11BracedListStyle: true", Cpp11BracedListStyle,
               FormatStyle::BLS_AlignFirstComment);
+
+  constexpr FormatStyle::IntegerLiteralSeparatorStyle
+      ExpectedIntegerLiteralSeparatorStyle{/*Binary=*/2,
+                                           /*BinaryMinDigitInsert=*/5,
+                                           /*BinaryMaxDigitRemove=*/2,
+                                           /*Decimal=*/6,
+                                           /*DecimalMinDigitInsert=*/6,
+                                           /*DecimalMaxDigitRemove=*/3,
+                                           /*Hex=*/4,
+                                           /*HexMinDigitInsert=*/2,
+                                           /*HexMaxDigitRemove=*/1};
+  CHECK_PARSE("IntegerLiteralSeparator:\n"
+              "  Binary: 2\n"
+              "  BinaryMinDigitsInsert: 5\n"
+              "  BinaryMaxDigitsRemove: 2\n"
+              "  Decimal: 6\n"
+              "  DecimalMinDigitsInsert: 6\n"
+              "  DecimalMaxDigitsRemove: 3\n"
+              "  Hex: 4\n"
+              "  HexMinDigitsInsert: 2\n"
+              "  HexMaxDigitsRemove: 1",
+              IntegerLiteralSeparator, ExpectedIntegerLiteralSeparatorStyle);
+
+  // Backward compatibility:
+  CHECK_PARSE_NESTED_VALUE("BinaryMinDigits: 6", IntegerLiteralSeparator,
+                           BinaryMinDigitsInsert, 6);
+  CHECK_PARSE_NESTED_VALUE("DecimalMinDigits: 5", IntegerLiteralSeparator,
+                           DecimalMinDigitsInsert, 5);
+  CHECK_PARSE_NESTED_VALUE("HexMinDigits: 5", IntegerLiteralSeparator,
+                           HexMinDigitsInsert, 5);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {

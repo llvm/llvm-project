@@ -231,7 +231,7 @@ size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
   lldb::DataExtractorSP data_extractor_sp =
       GetInterface().ReadMemoryAtAddress(addr, size, error);
 
-  if (!data_extractor_sp || !data_extractor_sp->GetByteSize() || error.Fail())
+  if (!data_extractor_sp || !data_extractor_sp->HasData() || error.Fail())
     return 0;
 
   offset_t bytes_copied = data_extractor_sp->CopyByteOrderedData(
@@ -252,7 +252,7 @@ size_t ScriptedProcess::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
   lldb::DataExtractorSP data_extractor_sp = std::make_shared<DataExtractor>(
       buf, size, GetByteOrder(), GetAddressByteSize());
 
-  if (!data_extractor_sp || !data_extractor_sp->GetByteSize())
+  if (!data_extractor_sp || !data_extractor_sp->HasData())
     return 0;
 
   lldb::offset_t bytes_written =

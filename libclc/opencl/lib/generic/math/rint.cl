@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_rint.h>
-#include <clc/opencl/math/rint.h>
 
 #define __CLC_FUNCTION rint
 #define __CLC_BODY <clc/shared/unary_def.inc>

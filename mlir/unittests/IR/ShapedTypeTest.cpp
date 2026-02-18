@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "gtest/gtest.h"
 #include <cstdint>
+#include <limits>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -296,6 +297,28 @@ TEST(ShapedTypeTest, RankedTensorTypeView) {
   EXPECT_EQ(
       noEncodingRankedTensorType,
       cast<RankedTensorType>(stringEncodingRankedTensorType).dropEncoding());
+}
+
+TEST(ShapedTypeTest, GetNumElements) {
+  // Test normal case.
+  EXPECT_EQ(ShapedType::getNumElements({2, 3, 4}), 24);
+  EXPECT_EQ(ShapedType::getNumElements({1}), 1);
+  EXPECT_EQ(ShapedType::getNumElements({}), 1);
+
+  // Test tryGetNumElements returns value for normal shapes.
+  EXPECT_TRUE(ShapedType::tryGetNumElements({2, 3, 4}).has_value());
+  EXPECT_EQ(*ShapedType::tryGetNumElements({2, 3, 4}), 24);
+
+  // Test tryGetNumElements returns nullopt for overflow.
+  // INT64_MAX = 9223372036854775807, so multiplying large dimensions overflows.
+  SmallVector<int64_t> overflowShape;
+  for (int i = 0; i < 64; ++i)
+    overflowShape.push_back(2); // 2^64 would overflow int64_t
+  EXPECT_FALSE(ShapedType::tryGetNumElements(overflowShape).has_value());
+
+  // Another overflow case with fewer but larger dimensions.
+  int64_t maxVal = std::numeric_limits<int64_t>::max();
+  EXPECT_FALSE(ShapedType::tryGetNumElements({maxVal, 2}).has_value());
 }
 
 } // namespace

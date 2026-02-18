@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -200,6 +201,8 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::assume:
   case Intrinsic::abs:
   case Intrinsic::atan2:
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
   case Intrinsic::exp:
   case Intrinsic::is_fpclass:
   case Intrinsic::log:
@@ -274,7 +277,7 @@ static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   // Handle the initial start value for floating-point addition.
   if (IsFAdd) {
     Constant *StartValue = dyn_cast<Constant>(Orig->getOperand(0));
-    if (StartValue && !StartValue->isZeroValue())
+    if (StartValue && !StartValue->isNullValue())
       Sum = Builder.CreateFAdd(Sum, StartValue);
   }
 
@@ -483,7 +486,8 @@ static Value *expandIsFPClass(CallInst *Orig) {
   switch (TCI->getZExtValue()) {
   case FPClassTest::fcNegZero: {
     Value *NegZero =
-        ConstantInt::get(Builder.getIntNTy(BitWidth), 1 << (BitWidth - 1));
+        ConstantInt::get(Builder.getIntNTy(BitWidth), 1 << (BitWidth - 1),
+                         /*IsSigned=*/true);
     Value *RetVal;
     if (FNumElem) {
       Value *NegZeroSplat = Builder.CreateVectorSplat(FNumElem, NegZero);
@@ -653,6 +657,63 @@ static Value *expandAtan2Intrinsic(CallInst *Orig) {
   Value *XEq0AndYGe0 = Builder.CreateAnd(XEq0, YGe0);
   Result = Builder.CreateSelect(XEq0AndYGe0, HalfPi, Result);
 
+  return Result;
+}
+
+template <bool LeftFunnel>
+static Value *expandFunnelShiftIntrinsic(CallInst *Orig) {
+  Type *Ty = Orig->getType();
+  Value *A = Orig->getOperand(0);
+  Value *B = Orig->getOperand(1);
+  Value *Shift = Orig->getOperand(2);
+
+  IRBuilder<> Builder(Orig);
+
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+  assert(llvm::isPowerOf2_32(BitWidth) &&
+         "Can't use Mask to compute modulo and inverse");
+
+  // Note: if (Shift % BitWidth) == 0 then (BitWidth - Shift) == BitWidth,
+  // shifting by the bitwidth for shl/lshr returns a poisoned result. As such,
+  // we implement the same formula as LegalizerHelper::lowerFunnelShiftAsShifts.
+  //
+  // The funnel shift is expanded like so:
+  // fshl
+  //  -> msb_extract((concat(A, B) << (Shift % BitWidth)), BitWidth)
+  //  -> A << (Shift % BitWidth) | B >> 1 >> (BitWidth - 1 - (Shift % BitWidth))
+  // fshr
+  //  -> lsb_extract((concat(A, B) >> (Shift % BitWidth), BitWidth))
+  //  -> A << 1 << (BitWidth - 1 - (Shift % BitWidth)) | B >> (Shift % BitWidth)
+
+  // (BitWidth - 1) -> Mask
+  Constant *Mask = ConstantInt::get(Ty, Ty->getScalarSizeInBits() - 1);
+
+  // Shift % BitWidth
+  //  -> Shift & (BitWidth - 1)
+  //  -> Shift & Mask
+  Value *MaskedShift = Builder.CreateAnd(Shift, Mask);
+
+  // (BitWidth - 1) - (Shift % BitWidth)
+  //  -> ~Shift & (BitWidth - 1)
+  //  -> ~Shift & Mask
+  Value *NotShift = Builder.CreateNot(Shift);
+  Value *InverseShift = Builder.CreateAnd(NotShift, Mask);
+
+  Constant *One = ConstantInt::get(Ty, 1);
+  Value *ShiftedA;
+  Value *ShiftedB;
+
+  if (LeftFunnel) {
+    ShiftedA = Builder.CreateShl(A, MaskedShift);
+    Value *ShiftB1 = Builder.CreateLShr(B, One);
+    ShiftedB = Builder.CreateLShr(ShiftB1, InverseShift);
+  } else {
+    Value *ShiftA1 = Builder.CreateShl(A, One);
+    ShiftedA = Builder.CreateShl(ShiftA1, InverseShift);
+    ShiftedB = Builder.CreateLShr(B, MaskedShift);
+  }
+
+  Value *Result = Builder.CreateOr(ShiftedA, ShiftedB);
   return Result;
 }
 
@@ -994,6 +1055,12 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     return true;
   case Intrinsic::atan2:
     Result = expandAtan2Intrinsic(Orig);
+    break;
+  case Intrinsic::fshl:
+    Result = expandFunnelShiftIntrinsic<true>(Orig);
+    break;
+  case Intrinsic::fshr:
+    Result = expandFunnelShiftIntrinsic<false>(Orig);
     break;
   case Intrinsic::exp:
     Result = expandExpIntrinsic(Orig);

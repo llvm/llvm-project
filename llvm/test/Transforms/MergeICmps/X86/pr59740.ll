@@ -126,7 +126,7 @@ define noundef i1 @partial_sequent_eq(ptr nocapture readonly dereferenceable(16)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ [[TMP5]], %"bb1+bb2" ], [ false, [[BB01:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[BB01:%.*]] ], [ [[TMP5]], %"bb1+bb2" ]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 bb0:

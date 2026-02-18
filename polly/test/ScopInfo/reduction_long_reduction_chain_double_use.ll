@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Sum is added twice in the statement. Hence no reduction.
 ; CHECK: Reduction Type: NONE

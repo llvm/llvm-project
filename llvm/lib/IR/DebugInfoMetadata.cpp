@@ -839,7 +839,7 @@ DISubrangeType::convertRawToBound(Metadata *IN) const {
     return BoundType();
 
   assert(isa<ConstantAsMetadata>(IN) || isa<DIVariable>(IN) ||
-         isa<DIExpression>(IN));
+         isa<DIExpression>(IN) || isa<DIDerivedType>(IN));
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(IN))
     return BoundType(cast<ConstantInt>(MD->getValue()));
@@ -849,6 +849,9 @@ DISubrangeType::convertRawToBound(Metadata *IN) const {
 
   if (auto *MD = dyn_cast<DIExpression>(IN))
     return BoundType(MD);
+
+  if (auto *DT = dyn_cast<DIDerivedType>(IN))
+    return BoundType(DT);
 
   return BoundType();
 }
@@ -1441,6 +1444,70 @@ bool DISubprogram::describes(const Function *F) const {
   assert(F && "Invalid function");
   return F->getSubprogram() == this;
 }
+
+template <typename ScopeT, typename NodeT>
+static ScopeT getRawRetainedNodeScopeInternal(NodeT *N) {
+  auto getScope = [](auto *N) { return N->getScope(); };
+
+  return DISubprogram::visitRetainedNode<ScopeT>(
+      N, getScope, getScope, getScope, getScope,
+      [](auto *N) { return nullptr; });
+}
+
+const DIScope *DISubprogram::getRawRetainedNodeScope(const MDNode *N) {
+  return getRawRetainedNodeScopeInternal<const DIScope *>(N);
+}
+
+DIScope *DISubprogram::getRawRetainedNodeScope(MDNode *N) {
+  return getRawRetainedNodeScopeInternal<DIScope *>(N);
+}
+
+const DILocalScope *DISubprogram::getRetainedNodeScope(const MDNode *N) {
+  return cast<DILocalScope>(getRawRetainedNodeScope(N));
+}
+
+DILocalScope *DISubprogram::getRetainedNodeScope(MDNode *N) {
+  return cast<DILocalScope>(getRawRetainedNodeScope(N));
+}
+
+void DISubprogram::cleanupRetainedNodes() {
+  // Checks if a metadata node from retainedTypes is a type not belonging to
+  // this subprogram.
+  auto IsAlienType = [this](DINode *N) {
+    auto *T = dyn_cast_or_null<DIType>(N);
+    if (!T)
+      return false;
+
+    DISubprogram *TypeSP = nullptr;
+    // The type might have been global in the previously loaded IR modules.
+    if (auto *LS = dyn_cast_or_null<DILocalScope>(T->getScope()))
+      TypeSP = LS->getSubprogram();
+
+    return this != TypeSP;
+  };
+
+  // As this is expected to be called during module loading, before
+  // stripping old or incorrect debug info, perform minimal sanity check.
+  if (!isa_and_present<MDTuple>(getRawRetainedNodes()))
+    return;
+
+  MDTuple *RetainedNodes = cast<MDTuple>(getRawRetainedNodes());
+  SmallVector<Metadata *> MDs;
+  MDs.reserve(RetainedNodes->getNumOperands());
+  for (const MDOperand &Node : RetainedNodes->operands()) {
+    // Ignore malformed retainedNodes.
+    if (Node && !isa<DINode>(Node))
+      return;
+
+    auto *N = cast_or_null<DINode>(Node);
+    if (!IsAlienType(N))
+      MDs.push_back(N);
+  }
+
+  if (MDs.size() != RetainedNodes->getNumOperands())
+    replaceRetainedNodes(MDNode::get(getContext(), MDs));
+}
+
 DILexicalBlockBase::DILexicalBlockBase(LLVMContext &C, unsigned ID,
                                        StorageType Storage,
                                        ArrayRef<Metadata *> Ops)

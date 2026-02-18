@@ -1,5 +1,6 @@
 // RUN: %libomptarget-compile-generic
 // RUN: %libomptarget-compileopt-generic
+// XFAIL: intelgpu
 
 #include <stdio.h>
 #define N 10

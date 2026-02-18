@@ -112,18 +112,18 @@ define float @caller(ptr %error_ref) {
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w21, -24
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w22, -32
 ; CHECK-O0-AARCH64-NEXT:    ; implicit-def: $x1
-; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x21, xzr
 ; CHECK-O0-AARCH64-NEXT:    bl _foo
-; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #16] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #16] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    cbnz x21, LBB1_2
 ; CHECK-O0-AARCH64-NEXT:  ; %bb.1: ; %cont
-; CHECK-O0-AARCH64-NEXT:    ldr x9, [sp, #8] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x8, [sp, #16] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x9, [sp, #8] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x8, [sp, #16] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    ldrb w8, [x8, #8]
 ; CHECK-O0-AARCH64-NEXT:    strb w8, [x9]
 ; CHECK-O0-AARCH64-NEXT:  LBB1_2: ; %handler
-; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #16] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #16] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    bl _free
 ; CHECK-O0-AARCH64-NEXT:    fmov s0, #1.00000000
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
@@ -173,20 +173,20 @@ define float @caller(ptr %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w21, -24
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w22, -32
 ; CHECK-O0-ARM64_32-NEXT:    ; implicit-def: $x1
-; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, xzr
 ; CHECK-O0-ARM64_32-NEXT:    bl _foo
-; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #16] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #16] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    cmp x21, #0
 ; CHECK-O0-ARM64_32-NEXT:    b.ne LBB1_2
 ; CHECK-O0-ARM64_32-NEXT:  ; %bb.1: ; %cont
-; CHECK-O0-ARM64_32-NEXT:    ldr x9, [sp, #8] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp, #16] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x9, [sp, #8] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp, #16] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldrb w8, [x8, #8]
 ; CHECK-O0-ARM64_32-NEXT:    ; kill: def $w0 killed $w8
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x9]
 ; CHECK-O0-ARM64_32-NEXT:  LBB1_2: ; %handler
-; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #16] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #16] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    bl _free
 ; CHECK-O0-ARM64_32-NEXT:    fmov s0, #1.00000000
 ; CHECK-O0-ARM64_32-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
@@ -268,27 +268,27 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w21, -24
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w22, -32
 ; CHECK-O0-AARCH64-NEXT:    ; implicit-def: $x1
-; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #16] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:  LBB2_1: ; %bb_loop
 ; CHECK-O0-AARCH64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-O0-AARCH64-NEXT:    mov x21, xzr
 ; CHECK-O0-AARCH64-NEXT:    bl _foo
-; CHECK-O0-AARCH64-NEXT:    str s0, [sp, #4] ; 4-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str s0, [sp, #4] ; 4-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    cbnz x21, LBB2_4
 ; CHECK-O0-AARCH64-NEXT:  ; %bb.2: ; %cont
 ; CHECK-O0-AARCH64-NEXT:    ; in Loop: Header=BB2_1 Depth=1
-; CHECK-O0-AARCH64-NEXT:    ldr s0, [sp, #4] ; 4-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr s0, [sp, #4] ; 4-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    fmov s1, #1.00000000
 ; CHECK-O0-AARCH64-NEXT:    fcmp s0, s1
 ; CHECK-O0-AARCH64-NEXT:    b.le LBB2_1
 ; CHECK-O0-AARCH64-NEXT:  ; %bb.3: ; %bb_end
-; CHECK-O0-AARCH64-NEXT:    ldr x9, [sp, #16] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x8, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x9, [sp, #16] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x8, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    ldrb w8, [x8, #8]
 ; CHECK-O0-AARCH64-NEXT:    strb w8, [x9]
 ; CHECK-O0-AARCH64-NEXT:  LBB2_4: ; %handler
-; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    bl _free
 ; CHECK-O0-AARCH64-NEXT:    fmov s0, #1.00000000
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
@@ -349,29 +349,29 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w21, -24
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w22, -32
 ; CHECK-O0-ARM64_32-NEXT:    ; implicit-def: $x1
-; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #16] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:  LBB2_1: ; %bb_loop
 ; CHECK-O0-ARM64_32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, xzr
 ; CHECK-O0-ARM64_32-NEXT:    bl _foo
-; CHECK-O0-ARM64_32-NEXT:    str s0, [sp, #4] ; 4-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str s0, [sp, #4] ; 4-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    cmp x21, #0
 ; CHECK-O0-ARM64_32-NEXT:    b.ne LBB2_4
 ; CHECK-O0-ARM64_32-NEXT:  ; %bb.2: ; %cont
 ; CHECK-O0-ARM64_32-NEXT:    ; in Loop: Header=BB2_1 Depth=1
-; CHECK-O0-ARM64_32-NEXT:    ldr s0, [sp, #4] ; 4-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr s0, [sp, #4] ; 4-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    fmov s1, #1.00000000
 ; CHECK-O0-ARM64_32-NEXT:    fcmp s0, s1
 ; CHECK-O0-ARM64_32-NEXT:    b.le LBB2_1
 ; CHECK-O0-ARM64_32-NEXT:  ; %bb.3: ; %bb_end
-; CHECK-O0-ARM64_32-NEXT:    ldr x9, [sp, #16] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x9, [sp, #16] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldrb w8, [x8, #8]
 ; CHECK-O0-ARM64_32-NEXT:    ; kill: def $w0 killed $w8
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x9]
 ; CHECK-O0-ARM64_32-NEXT:  LBB2_4: ; %handler
-; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    bl _free
 ; CHECK-O0-ARM64_32-NEXT:    fmov s0, #1.00000000
 ; CHECK-O0-ARM64_32-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
@@ -435,7 +435,7 @@ define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-O0-AARCH64-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w30, -8
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w29, -16
-; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    cbz w0, LBB3_2
 ; CHECK-O0-AARCH64-NEXT:  ; %bb.1: ; %gen_error
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #16 ; =0x10
@@ -449,7 +449,7 @@ define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-O0-AARCH64-NEXT:    add sp, sp, #32
 ; CHECK-O0-AARCH64-NEXT:    ret
 ; CHECK-O0-AARCH64-NEXT:  LBB3_2: ; %normal
-; CHECK-O0-AARCH64-NEXT:    ldr x21, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x21, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    movi d0, #0000000000000000
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    add sp, sp, #32
@@ -458,10 +458,10 @@ define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-O0-ARM64_32-LABEL: foo_if:
 ; CHECK-O0-ARM64_32:       ; %bb.0: ; %entry
 ; CHECK-O0-ARM64_32-NEXT:    sub sp, sp, #32
-; CHECK-O0-ARM64_32-NEXT:    str x30, [sp, #16] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x30, [sp, #16] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w30, -16
-; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    cbz w0, LBB3_2
 ; CHECK-O0-ARM64_32-NEXT:  ; %bb.1: ; %gen_error
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #16 ; =0x10
@@ -471,13 +471,13 @@ define float @foo_if(ptr swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x0, #8]
 ; CHECK-O0-ARM64_32-NEXT:    fmov s0, #1.00000000
-; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #16] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #16] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #32
 ; CHECK-O0-ARM64_32-NEXT:    ret
 ; CHECK-O0-ARM64_32-NEXT:  LBB3_2: ; %normal
-; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    movi d0, #0000000000000000
-; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #16] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #16] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #32
 ; CHECK-O0-ARM64_32-NEXT:    ret
 
@@ -549,7 +549,7 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-AARCH64-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w30, -8
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w29, -16
-; CHECK-O0-AARCH64-NEXT:    str s0, [sp, #16] ; 4-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str s0, [sp, #16] ; 4-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    stur w0, [x29, #-12] ; 4-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    stur x21, [x29, #-8] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    b LBB4_1
@@ -557,7 +557,7 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-AARCH64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-O0-AARCH64-NEXT:    ldur w8, [x29, #-12] ; 4-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    ldur x0, [x29, #-8] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    cbz w8, LBB4_3
 ; CHECK-O0-AARCH64-NEXT:  ; %bb.2: ; %gen_error
 ; CHECK-O0-AARCH64-NEXT:    ; in Loop: Header=BB4_1 Depth=1
@@ -567,18 +567,18 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-AARCH64-NEXT:    mov x9, x0
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-AARCH64-NEXT:    strb w8, [x9, #8]
-; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:  LBB4_3: ; %bb_cont
 ; CHECK-O0-AARCH64-NEXT:    ; in Loop: Header=BB4_1 Depth=1
-; CHECK-O0-AARCH64-NEXT:    ldr s0, [sp, #16] ; 4-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    str x0, [sp] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    ldr s0, [sp, #16] ; 4-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    str x0, [sp] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    fmov s1, #1.00000000
 ; CHECK-O0-AARCH64-NEXT:    fcmp s0, s1
 ; CHECK-O0-AARCH64-NEXT:    stur x0, [x29, #-8] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    b.le LBB4_1
 ; CHECK-O0-AARCH64-NEXT:  ; %bb.4: ; %bb_end
-; CHECK-O0-AARCH64-NEXT:    ldr x21, [sp] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x21, [sp] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    movi d0, #0000000000000000
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    add sp, sp, #48
@@ -587,18 +587,18 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-ARM64_32-LABEL: foo_loop:
 ; CHECK-O0-ARM64_32:       ; %bb.0: ; %entry
 ; CHECK-O0-ARM64_32-NEXT:    sub sp, sp, #48
-; CHECK-O0-ARM64_32-NEXT:    str x30, [sp, #32] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x30, [sp, #32] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w30, -16
-; CHECK-O0-ARM64_32-NEXT:    str s0, [sp, #16] ; 4-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str w0, [sp, #20] ; 4-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #24] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str s0, [sp, #16] ; 4-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str w0, [sp, #20] ; 4-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #24] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    b LBB4_1
 ; CHECK-O0-ARM64_32-NEXT:  LBB4_1: ; %bb_loop
 ; CHECK-O0-ARM64_32-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-O0-ARM64_32-NEXT:    ldr w8, [sp, #20] ; 4-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #24] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    ldr w8, [sp, #20] ; 4-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #24] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    cbz w8, LBB4_3
 ; CHECK-O0-ARM64_32-NEXT:  ; %bb.2: ; %gen_error
 ; CHECK-O0-ARM64_32-NEXT:    ; in Loop: Header=BB4_1 Depth=1
@@ -610,20 +610,20 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-ARM64_32-NEXT:    mov x0, x9
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x9, #8]
-; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:  LBB4_3: ; %bb_cont
 ; CHECK-O0-ARM64_32-NEXT:    ; in Loop: Header=BB4_1 Depth=1
-; CHECK-O0-ARM64_32-NEXT:    ldr s0, [sp, #16] ; 4-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    str x0, [sp] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    ldr s0, [sp, #16] ; 4-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    fmov s1, #1.00000000
 ; CHECK-O0-ARM64_32-NEXT:    fcmp s0, s1
-; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #24] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #24] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    b.le LBB4_1
 ; CHECK-O0-ARM64_32-NEXT:  ; %bb.4: ; %bb_end
-; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    movi d0, #0000000000000000
-; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #32] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #32] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #48
 ; CHECK-O0-ARM64_32-NEXT:    ret
 
@@ -690,11 +690,11 @@ define void @foo_sret(ptr sret(%struct.S) %agg.result, i32 %val1, ptr swifterror
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w30, -8
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w29, -16
 ; CHECK-O0-AARCH64-NEXT:    stur w0, [x29, #-4] ; 4-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x8, [sp] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x8, [sp] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-AARCH64-NEXT:    mov w0, w8
 ; CHECK-O0-AARCH64-NEXT:    bl _malloc
-; CHECK-O0-AARCH64-NEXT:    ldr x8, [sp] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x8, [sp] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    mov x10, x0
 ; CHECK-O0-AARCH64-NEXT:    ldur w0, [x29, #-4] ; 4-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    mov x21, x10
@@ -708,22 +708,22 @@ define void @foo_sret(ptr sret(%struct.S) %agg.result, i32 %val1, ptr swifterror
 ; CHECK-O0-ARM64_32-LABEL: foo_sret:
 ; CHECK-O0-ARM64_32:       ; %bb.0: ; %entry
 ; CHECK-O0-ARM64_32-NEXT:    sub sp, sp, #32
-; CHECK-O0-ARM64_32-NEXT:    str x30, [sp, #16] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x30, [sp, #16] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w30, -16
-; CHECK-O0-ARM64_32-NEXT:    str w0, [sp, #12] ; 4-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x8, [sp] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str w0, [sp, #12] ; 4-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x8, [sp] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-ARM64_32-NEXT:    mov w0, w8
 ; CHECK-O0-ARM64_32-NEXT:    bl _malloc
-; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    mov x10, x0
-; CHECK-O0-ARM64_32-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr w0, [sp, #12] ; 4-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, x10
 ; CHECK-O0-ARM64_32-NEXT:    mov w9, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    strb w9, [x10, #8]
 ; CHECK-O0-ARM64_32-NEXT:    str w0, [x8, #4]
-; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #16] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #16] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #32
 ; CHECK-O0-ARM64_32-NEXT:    ret
 
@@ -786,20 +786,20 @@ define float @caller3(ptr %error_ref) {
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w21, -24
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w22, -32
 ; CHECK-O0-AARCH64-NEXT:    ; implicit-def: $x1
-; CHECK-O0-AARCH64-NEXT:    str x0, [sp] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x0, [sp] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x21, xzr
 ; CHECK-O0-AARCH64-NEXT:    add x8, sp, #24
 ; CHECK-O0-AARCH64-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-O0-AARCH64-NEXT:    bl _foo_sret
-; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    cbnz x21, LBB6_2
 ; CHECK-O0-AARCH64-NEXT:  ; %bb.1: ; %cont
-; CHECK-O0-AARCH64-NEXT:    ldr x9, [sp] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x8, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x9, [sp] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x8, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    ldrb w8, [x8, #8]
 ; CHECK-O0-AARCH64-NEXT:    strb w8, [x9]
 ; CHECK-O0-AARCH64-NEXT:  LBB6_2: ; %handler
-; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    bl _free
 ; CHECK-O0-AARCH64-NEXT:    fmov s0, #1.00000000
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
@@ -851,22 +851,22 @@ define float @caller3(ptr %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w21, -24
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w22, -32
 ; CHECK-O0-ARM64_32-NEXT:    ; implicit-def: $x1
-; CHECK-O0-ARM64_32-NEXT:    str x0, [sp] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, xzr
 ; CHECK-O0-ARM64_32-NEXT:    add x8, sp, #24
 ; CHECK-O0-ARM64_32-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    bl _foo_sret
-; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    cmp x21, #0
 ; CHECK-O0-ARM64_32-NEXT:    b.ne LBB6_2
 ; CHECK-O0-ARM64_32-NEXT:  ; %bb.1: ; %cont
-; CHECK-O0-ARM64_32-NEXT:    ldr x9, [sp] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x9, [sp] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldrb w8, [x8, #8]
 ; CHECK-O0-ARM64_32-NEXT:    ; kill: def $w0 killed $w8
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x9]
 ; CHECK-O0-ARM64_32-NEXT:  LBB6_2: ; %handler
-; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    bl _free
 ; CHECK-O0-ARM64_32-NEXT:    fmov s0, #1.00000000
 ; CHECK-O0-ARM64_32-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
@@ -997,7 +997,7 @@ define float @foo_vararg(ptr swifterror %error_ptr_ref, ...) {
 ; CHECK-O0-ARM64_32-LABEL: foo_vararg:
 ; CHECK-O0-ARM64_32:       ; %bb.0: ; %entry
 ; CHECK-O0-ARM64_32-NEXT:    sub sp, sp, #48
-; CHECK-O0-ARM64_32-NEXT:    str x30, [sp, #32] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x30, [sp, #32] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w30, -16
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #16 ; =0x10
@@ -1031,7 +1031,7 @@ define float @foo_vararg(ptr swifterror %error_ptr_ref, ...) {
 ; CHECK-O0-ARM64_32-NEXT:    ldr w8, [x8]
 ; CHECK-O0-ARM64_32-NEXT:    str w8, [sp, #12]
 ; CHECK-O0-ARM64_32-NEXT:    fmov s0, #1.00000000
-; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #32] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #32] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #48
 ; CHECK-O0-ARM64_32-NEXT:    ret
 
@@ -1114,7 +1114,7 @@ define float @caller4(ptr %error_ref) {
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w21, -24
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w22, -32
 ; CHECK-O0-AARCH64-NEXT:    ; implicit-def: $x1
-; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #24] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #24] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x21, xzr
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #10 ; =0xa
 ; CHECK-O0-AARCH64-NEXT:    stur w8, [x29, #-28]
@@ -1133,15 +1133,15 @@ define float @caller4(ptr %error_ref) {
 ; CHECK-O0-AARCH64-NEXT:    str x10, [x9, #8]
 ; CHECK-O0-AARCH64-NEXT:    str x8, [x9]
 ; CHECK-O0-AARCH64-NEXT:    bl _foo_vararg
-; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #32] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #32] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    cbnz x21, LBB8_2
 ; CHECK-O0-AARCH64-NEXT:  ; %bb.1: ; %cont
-; CHECK-O0-AARCH64-NEXT:    ldr x9, [sp, #24] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x8, [sp, #32] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x9, [sp, #24] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x8, [sp, #32] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    ldrb w8, [x8, #8]
 ; CHECK-O0-AARCH64-NEXT:    strb w8, [x9]
 ; CHECK-O0-AARCH64-NEXT:  LBB8_2: ; %handler
-; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #32] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #32] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    bl _free
 ; CHECK-O0-AARCH64-NEXT:    fmov s0, #1.00000000
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #80] ; 16-byte Folded Reload
@@ -1200,7 +1200,7 @@ define float @caller4(ptr %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w21, -24
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w22, -32
 ; CHECK-O0-ARM64_32-NEXT:    ; implicit-def: $x1
-; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #16] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, xzr
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #10 ; =0xa
 ; CHECK-O0-ARM64_32-NEXT:    str w8, [sp, #40]
@@ -1216,17 +1216,17 @@ define float @caller4(ptr %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    str w10, [x9, #4]
 ; CHECK-O0-ARM64_32-NEXT:    str w8, [x9]
 ; CHECK-O0-ARM64_32-NEXT:    bl _foo_vararg
-; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #24] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #24] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    cmp x21, #0
 ; CHECK-O0-ARM64_32-NEXT:    b.ne LBB8_2
 ; CHECK-O0-ARM64_32-NEXT:  ; %bb.1: ; %cont
-; CHECK-O0-ARM64_32-NEXT:    ldr x9, [sp, #16] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp, #24] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x9, [sp, #16] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp, #24] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldrb w8, [x8, #8]
 ; CHECK-O0-ARM64_32-NEXT:    ; kill: def $w0 killed $w8
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x9]
 ; CHECK-O0-ARM64_32-NEXT:  LBB8_2: ; %handler
-; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #24] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #24] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    bl _free
 ; CHECK-O0-ARM64_32-NEXT:    fmov s0, #1.00000000
 ; CHECK-O0-ARM64_32-NEXT:    ldp x29, x30, [sp, #64] ; 16-byte Folded Reload
@@ -1361,11 +1361,11 @@ define swiftcc void @swifterror_clobber(ptr nocapture swifterror %err) {
 ; CHECK-O0-AARCH64-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w30, -8
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w29, -16
-; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    ; InlineAsm Start
 ; CHECK-O0-AARCH64-NEXT:    nop
 ; CHECK-O0-AARCH64-NEXT:    ; InlineAsm End
-; CHECK-O0-AARCH64-NEXT:    ldr x21, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x21, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    add sp, sp, #32
 ; CHECK-O0-AARCH64-NEXT:    ret
@@ -1374,11 +1374,11 @@ define swiftcc void @swifterror_clobber(ptr nocapture swifterror %err) {
 ; CHECK-O0-ARM64_32:       ; %bb.0:
 ; CHECK-O0-ARM64_32-NEXT:    sub sp, sp, #16
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    ; InlineAsm Start
 ; CHECK-O0-ARM64_32-NEXT:    nop
 ; CHECK-O0-ARM64_32-NEXT:    ; InlineAsm End
-; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #16
 ; CHECK-O0-ARM64_32-NEXT:    ret
   call void asm sideeffect "nop", "~{x21}"()
@@ -1458,7 +1458,7 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr s
 ; CHECK-APPLE-NEXT:    .cfi_offset w26, -72
 ; CHECK-APPLE-NEXT:    .cfi_offset w27, -80
 ; CHECK-APPLE-NEXT:    .cfi_offset w28, -96
-; CHECK-APPLE-NEXT:    str x20, [sp] ; 8-byte Folded Spill
+; CHECK-APPLE-NEXT:    str x20, [sp] ; 8-byte Spill
 ; CHECK-APPLE-NEXT:    mov x23, x7
 ; CHECK-APPLE-NEXT:    mov x24, x6
 ; CHECK-APPLE-NEXT:    mov x25, x5
@@ -1493,14 +1493,14 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr s
 ; CHECK-APPLE-NEXT:    ldp x23, x22, [sp, #64] ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    ldp x25, x24, [sp, #48] ; 16-byte Folded Reload
 ; CHECK-APPLE-NEXT:    ldp x27, x26, [sp, #32] ; 16-byte Folded Reload
-; CHECK-APPLE-NEXT:    ldr x28, [sp, #16] ; 8-byte Folded Reload
+; CHECK-APPLE-NEXT:    ldr x28, [sp, #16] ; 8-byte Reload
 ; CHECK-APPLE-NEXT:    add sp, sp, #112
 ; CHECK-APPLE-NEXT:    ret
 ;
 ; CHECK-O0-AARCH64-LABEL: params_in_reg:
 ; CHECK-O0-AARCH64:       ; %bb.0:
 ; CHECK-O0-AARCH64-NEXT:    sub sp, sp, #128
-; CHECK-O0-AARCH64-NEXT:    str x20, [sp, #96] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x20, [sp, #96] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    stp x29, x30, [sp, #112] ; 16-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    add x29, sp, #112
 ; CHECK-O0-AARCH64-NEXT:    .cfi_def_cfa w29, 16
@@ -1508,15 +1508,15 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr s
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w29, -16
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w20, -32
 ; CHECK-O0-AARCH64-NEXT:    stur x21, [x29, #-32] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x20, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x20, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    stur x7, [x29, #-40] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    stur x6, [x29, #-48] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x5, [sp, #56] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x4, [sp, #48] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x3, [sp, #40] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x2, [sp, #32] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x1, [sp, #24] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x5, [sp, #56] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x4, [sp, #48] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x3, [sp, #40] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x2, [sp, #32] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x1, [sp, #24] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #16] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    ; implicit-def: $x0
 ; CHECK-O0-AARCH64-NEXT:    mov x20, xzr
 ; CHECK-O0-AARCH64-NEXT:    mov x21, x20
@@ -1537,20 +1537,20 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr s
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #8 ; =0x8
 ; CHECK-O0-AARCH64-NEXT:    mov w7, w8
 ; CHECK-O0-AARCH64-NEXT:    bl _params_in_reg2
-; CHECK-O0-AARCH64-NEXT:    ldr x20, [sp, #8] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #16] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x1, [sp, #24] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x2, [sp, #32] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x3, [sp, #40] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x4, [sp, #48] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x5, [sp, #56] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x20, [sp, #8] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #16] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x1, [sp, #24] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x2, [sp, #32] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x3, [sp, #40] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x4, [sp, #48] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x5, [sp, #56] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    ldur x6, [x29, #-48] ; 8-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    ldur x7, [x29, #-40] ; 8-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    mov x8, x21
 ; CHECK-O0-AARCH64-NEXT:    ldur x21, [x29, #-32] ; 8-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    bl _params_in_reg2
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #112] ; 16-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x20, [sp, #96] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x20, [sp, #96] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    add sp, sp, #128
 ; CHECK-O0-AARCH64-NEXT:    ret
 ;
@@ -1561,16 +1561,16 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr s
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_def_cfa_offset 112
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w30, -8
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w20, -16
-; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #80] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x20, [sp, #8] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x7, [sp, #72] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x6, [sp, #64] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x5, [sp, #56] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x4, [sp, #48] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x3, [sp, #40] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x2, [sp, #32] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x1, [sp, #24] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #80] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x20, [sp, #8] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x7, [sp, #72] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x6, [sp, #64] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x5, [sp, #56] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x4, [sp, #48] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x3, [sp, #40] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x2, [sp, #32] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x1, [sp, #24] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #16] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    ; implicit-def: $x0
 ; CHECK-O0-ARM64_32-NEXT:    mov x20, xzr
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, x20
@@ -1591,17 +1591,17 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, i64, i64, ptr s
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #8 ; =0x8
 ; CHECK-O0-ARM64_32-NEXT:    mov w7, w8
 ; CHECK-O0-ARM64_32-NEXT:    bl _params_in_reg2
-; CHECK-O0-ARM64_32-NEXT:    ldr x20, [sp, #8] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #16] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x1, [sp, #24] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x2, [sp, #32] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x3, [sp, #40] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x4, [sp, #48] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x5, [sp, #56] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x6, [sp, #64] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x7, [sp, #72] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x20, [sp, #8] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #16] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x1, [sp, #24] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x2, [sp, #32] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x3, [sp, #40] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x4, [sp, #48] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x5, [sp, #56] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x6, [sp, #64] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x7, [sp, #72] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x21
-; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #80] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #80] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    bl _params_in_reg2
 ; CHECK-O0-ARM64_32-NEXT:    ldp x20, x30, [sp, #96] ; 16-byte Folded Reload
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #112
@@ -1638,7 +1638,7 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-APPLE-NEXT:    .cfi_offset w27, -80
 ; CHECK-APPLE-NEXT:    .cfi_offset w28, -96
 ; CHECK-APPLE-NEXT:    mov x23, x21
-; CHECK-APPLE-NEXT:    str x7, [sp, #16] ; 8-byte Folded Spill
+; CHECK-APPLE-NEXT:    str x7, [sp, #16] ; 8-byte Spill
 ; CHECK-APPLE-NEXT:    mov x24, x6
 ; CHECK-APPLE-NEXT:    mov x25, x5
 ; CHECK-APPLE-NEXT:    mov x26, x4
@@ -1657,7 +1657,7 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-APPLE-NEXT:    mov x20, xzr
 ; CHECK-APPLE-NEXT:    mov x21, xzr
 ; CHECK-APPLE-NEXT:    bl _params_in_reg2
-; CHECK-APPLE-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
+; CHECK-APPLE-NEXT:    str x21, [sp, #8] ; 8-byte Spill
 ; CHECK-APPLE-NEXT:    mov x0, x22
 ; CHECK-APPLE-NEXT:    mov x1, x19
 ; CHECK-APPLE-NEXT:    mov x2, x28
@@ -1676,7 +1676,7 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-APPLE-NEXT:    mov x27, x5
 ; CHECK-APPLE-NEXT:    mov x28, x6
 ; CHECK-APPLE-NEXT:    mov x23, x7
-; CHECK-APPLE-NEXT:    str x21, [sp, #24] ; 8-byte Folded Spill
+; CHECK-APPLE-NEXT:    str x21, [sp, #24] ; 8-byte Spill
 ; CHECK-APPLE-NEXT:    mov w0, #1 ; =0x1
 ; CHECK-APPLE-NEXT:    mov w1, #2 ; =0x2
 ; CHECK-APPLE-NEXT:    mov w2, #3 ; =0x3
@@ -1686,7 +1686,7 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-APPLE-NEXT:    mov w6, #7 ; =0x7
 ; CHECK-APPLE-NEXT:    mov w7, #8 ; =0x8
 ; CHECK-APPLE-NEXT:    mov x20, xzr
-; CHECK-APPLE-NEXT:    ldr x21, [sp, #8] ; 8-byte Folded Reload
+; CHECK-APPLE-NEXT:    ldr x21, [sp, #8] ; 8-byte Reload
 ; CHECK-APPLE-NEXT:    bl _params_in_reg2
 ; CHECK-APPLE-NEXT:    mov x0, x19
 ; CHECK-APPLE-NEXT:    mov x1, x22
@@ -1716,38 +1716,38 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w29, -16
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w20, -24
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w28, -32
-; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #72] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x20, [sp] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x7, [sp, #64] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x6, [sp, #56] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x5, [sp, #48] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x4, [sp, #40] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x3, [sp, #32] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x2, [sp, #24] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x1, [sp, #16] ; 8-byte Folded Spill
-; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #72] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x20, [sp] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x7, [sp, #64] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x6, [sp, #56] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x5, [sp, #48] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x4, [sp, #40] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x3, [sp, #32] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x2, [sp, #24] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x1, [sp, #16] ; 8-byte Spill
+; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    ; implicit-def: $x0
 ; CHECK-O0-AARCH64-NEXT:    mov x20, xzr
-; CHECK-O0-AARCH64-NEXT:    str x20, [sp, #80] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x20, [sp, #80] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x21, x20
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-AARCH64-NEXT:    mov w0, w8
-; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #88] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #88] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #2 ; =0x2
 ; CHECK-O0-AARCH64-NEXT:    mov w1, w8
-; CHECK-O0-AARCH64-NEXT:    str x1, [sp, #96] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x1, [sp, #96] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #3 ; =0x3
 ; CHECK-O0-AARCH64-NEXT:    mov w2, w8
-; CHECK-O0-AARCH64-NEXT:    str x2, [sp, #104] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x2, [sp, #104] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-O0-AARCH64-NEXT:    mov w3, w8
-; CHECK-O0-AARCH64-NEXT:    str x3, [sp, #112] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x3, [sp, #112] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #5 ; =0x5
 ; CHECK-O0-AARCH64-NEXT:    mov w4, w8
-; CHECK-O0-AARCH64-NEXT:    str x4, [sp, #120] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x4, [sp, #120] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #6 ; =0x6
 ; CHECK-O0-AARCH64-NEXT:    mov w5, w8
-; CHECK-O0-AARCH64-NEXT:    str x5, [sp, #128] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x5, [sp, #128] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #7 ; =0x7
 ; CHECK-O0-AARCH64-NEXT:    mov w6, w8
 ; CHECK-O0-AARCH64-NEXT:    stur x6, [x29, #-120] ; 8-byte Folded Spill
@@ -1755,37 +1755,37 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-O0-AARCH64-NEXT:    mov w7, w8
 ; CHECK-O0-AARCH64-NEXT:    stur x7, [x29, #-112] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    bl _params_in_reg2
-; CHECK-O0-AARCH64-NEXT:    ldr x20, [sp] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x1, [sp, #16] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x2, [sp, #24] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x3, [sp, #32] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x4, [sp, #40] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x5, [sp, #48] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x6, [sp, #56] ; 8-byte Folded Reload
-; CHECK-O0-AARCH64-NEXT:    ldr x7, [sp, #64] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x20, [sp] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x1, [sp, #16] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x2, [sp, #24] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x3, [sp, #32] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x4, [sp, #40] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x5, [sp, #48] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x6, [sp, #56] ; 8-byte Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x7, [sp, #64] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    mov x8, x21
-; CHECK-O0-AARCH64-NEXT:    ldr x21, [sp, #72] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x21, [sp, #72] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    stur x8, [x29, #-104] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    bl _params_and_return_in_reg2
-; CHECK-O0-AARCH64-NEXT:    ldr x20, [sp, #80] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x20, [sp, #80] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    mov x8, x0
-; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #88] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp, #88] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    stur x8, [x29, #-96] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x8, x1
-; CHECK-O0-AARCH64-NEXT:    ldr x1, [sp, #96] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x1, [sp, #96] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    stur x8, [x29, #-88] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x8, x2
-; CHECK-O0-AARCH64-NEXT:    ldr x2, [sp, #104] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x2, [sp, #104] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    stur x8, [x29, #-80] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x8, x3
-; CHECK-O0-AARCH64-NEXT:    ldr x3, [sp, #112] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x3, [sp, #112] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    stur x8, [x29, #-72] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x8, x4
-; CHECK-O0-AARCH64-NEXT:    ldr x4, [sp, #120] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x4, [sp, #120] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    stur x8, [x29, #-64] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x8, x5
-; CHECK-O0-AARCH64-NEXT:    ldr x5, [sp, #128] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x5, [sp, #128] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    stur x8, [x29, #-56] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x8, x6
 ; CHECK-O0-AARCH64-NEXT:    ldur x6, [x29, #-120] ; 8-byte Folded Reload
@@ -1815,105 +1815,105 @@ define swiftcc { i64, i64, i64, i64, i64, i64, i64, i64 } @params_and_return_in_
 ; CHECK-O0-ARM64_32-LABEL: params_and_return_in_reg:
 ; CHECK-O0-ARM64_32:       ; %bb.0:
 ; CHECK-O0-ARM64_32-NEXT:    sub sp, sp, #272
-; CHECK-O0-ARM64_32-NEXT:    str x28, [sp, #240] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x28, [sp, #240] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    stp x20, x30, [sp, #256] ; 16-byte Folded Spill
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_def_cfa_offset 272
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w30, -8
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w20, -16
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w28, -32
-; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #72] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x20, [sp] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x7, [sp, #64] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x6, [sp, #56] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x5, [sp, #48] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x4, [sp, #40] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x3, [sp, #32] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x2, [sp, #24] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x1, [sp, #16] ; 8-byte Folded Spill
-; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #72] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x20, [sp] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x7, [sp, #64] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x6, [sp, #56] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x5, [sp, #48] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x4, [sp, #40] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x3, [sp, #32] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x2, [sp, #24] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x1, [sp, #16] ; 8-byte Spill
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    ; implicit-def: $x0
 ; CHECK-O0-ARM64_32-NEXT:    mov x20, xzr
-; CHECK-O0-ARM64_32-NEXT:    str x20, [sp, #80] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x20, [sp, #80] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, x20
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    mov w0, w8
-; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #88] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #88] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #2 ; =0x2
 ; CHECK-O0-ARM64_32-NEXT:    mov w1, w8
-; CHECK-O0-ARM64_32-NEXT:    str x1, [sp, #96] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x1, [sp, #96] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #3 ; =0x3
 ; CHECK-O0-ARM64_32-NEXT:    mov w2, w8
-; CHECK-O0-ARM64_32-NEXT:    str x2, [sp, #104] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x2, [sp, #104] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #4 ; =0x4
 ; CHECK-O0-ARM64_32-NEXT:    mov w3, w8
-; CHECK-O0-ARM64_32-NEXT:    str x3, [sp, #112] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x3, [sp, #112] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #5 ; =0x5
 ; CHECK-O0-ARM64_32-NEXT:    mov w4, w8
-; CHECK-O0-ARM64_32-NEXT:    str x4, [sp, #120] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x4, [sp, #120] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #6 ; =0x6
 ; CHECK-O0-ARM64_32-NEXT:    mov w5, w8
-; CHECK-O0-ARM64_32-NEXT:    str x5, [sp, #128] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x5, [sp, #128] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #7 ; =0x7
 ; CHECK-O0-ARM64_32-NEXT:    mov w6, w8
-; CHECK-O0-ARM64_32-NEXT:    str x6, [sp, #136] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x6, [sp, #136] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #8 ; =0x8
 ; CHECK-O0-ARM64_32-NEXT:    mov w7, w8
-; CHECK-O0-ARM64_32-NEXT:    str x7, [sp, #144] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x7, [sp, #144] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    bl _params_in_reg2
-; CHECK-O0-ARM64_32-NEXT:    ldr x20, [sp] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x1, [sp, #16] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x2, [sp, #24] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x3, [sp, #32] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x4, [sp, #40] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x5, [sp, #48] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x6, [sp, #56] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x7, [sp, #64] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x20, [sp] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x1, [sp, #16] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x2, [sp, #24] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x3, [sp, #32] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x4, [sp, #40] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x5, [sp, #48] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x6, [sp, #56] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x7, [sp, #64] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x21
-; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #72] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #152] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #72] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #152] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    bl _params_and_return_in_reg2
-; CHECK-O0-ARM64_32-NEXT:    ldr x20, [sp, #80] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x20, [sp, #80] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x0
-; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #88] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #160] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #88] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #160] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x1
-; CHECK-O0-ARM64_32-NEXT:    ldr x1, [sp, #96] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #168] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    ldr x1, [sp, #96] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #168] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x2
-; CHECK-O0-ARM64_32-NEXT:    ldr x2, [sp, #104] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #176] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    ldr x2, [sp, #104] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #176] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x3
-; CHECK-O0-ARM64_32-NEXT:    ldr x3, [sp, #112] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #184] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    ldr x3, [sp, #112] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #184] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x4
-; CHECK-O0-ARM64_32-NEXT:    ldr x4, [sp, #120] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #192] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    ldr x4, [sp, #120] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #192] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x5
-; CHECK-O0-ARM64_32-NEXT:    ldr x5, [sp, #128] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #200] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    ldr x5, [sp, #128] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #200] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x6
-; CHECK-O0-ARM64_32-NEXT:    ldr x6, [sp, #136] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #208] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    ldr x6, [sp, #136] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #208] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x7
-; CHECK-O0-ARM64_32-NEXT:    ldr x7, [sp, #144] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #216] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    ldr x7, [sp, #144] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #216] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x21
-; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #152] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #224] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #152] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    str x8, [sp, #224] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    bl _params_in_reg2
-; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #160] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x1, [sp, #168] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x2, [sp, #176] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x3, [sp, #184] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x4, [sp, #192] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x5, [sp, #200] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x6, [sp, #208] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x7, [sp, #216] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #160] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x1, [sp, #168] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x2, [sp, #176] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x3, [sp, #184] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x4, [sp, #192] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x5, [sp, #200] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x6, [sp, #208] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x7, [sp, #216] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    mov x8, x21
-; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #224] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #224] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldp x20, x30, [sp, #256] ; 16-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x28, [sp, #240] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x28, [sp, #240] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #272
 ; CHECK-O0-ARM64_32-NEXT:    ret
   %error_ptr_ref = alloca swifterror ptr, align 8
@@ -1956,10 +1956,10 @@ define swiftcc void @tailcall_from_swifterror(ptr swifterror %error_ptr_ref) {
 ; CHECK-O0-AARCH64-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w30, -8
 ; CHECK-O0-AARCH64-NEXT:    .cfi_offset w29, -16
-; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x21, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:    mov x0, xzr
 ; CHECK-O0-AARCH64-NEXT:    bl _acallee
-; CHECK-O0-AARCH64-NEXT:    ldr x21, [sp, #8] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x21, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    add sp, sp, #32
 ; CHECK-O0-AARCH64-NEXT:    ret
@@ -1967,14 +1967,14 @@ define swiftcc void @tailcall_from_swifterror(ptr swifterror %error_ptr_ref) {
 ; CHECK-O0-ARM64_32-LABEL: tailcall_from_swifterror:
 ; CHECK-O0-ARM64_32:       ; %bb.0: ; %entry
 ; CHECK-O0-ARM64_32-NEXT:    sub sp, sp, #32
-; CHECK-O0-ARM64_32-NEXT:    str x30, [sp, #16] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x30, [sp, #16] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-O0-ARM64_32-NEXT:    .cfi_offset w30, -16
-; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x21, [sp, #8] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:    mov x0, xzr
 ; CHECK-O0-ARM64_32-NEXT:    bl _acallee
-; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #8] ; 8-byte Folded Reload
-; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #16] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x21, [sp, #8] ; 8-byte Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x30, [sp, #16] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    add sp, sp, #32
 ; CHECK-O0-ARM64_32-NEXT:    ret
 entry:
@@ -2019,9 +2019,9 @@ define swiftcc ptr @testAssign(ptr %error_ref) {
 ; CHECK-O0-AARCH64-NEXT:    ; implicit-def: $x1
 ; CHECK-O0-AARCH64-NEXT:    mov x21, xzr
 ; CHECK-O0-AARCH64-NEXT:    bl _foo2
-; CHECK-O0-AARCH64-NEXT:    str x21, [sp] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    str x21, [sp] ; 8-byte Spill
 ; CHECK-O0-AARCH64-NEXT:  ; %bb.1: ; %a
-; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp] ; 8-byte Folded Reload
+; CHECK-O0-AARCH64-NEXT:    ldr x0, [sp] ; 8-byte Reload
 ; CHECK-O0-AARCH64-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    ldp x22, x21, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-O0-AARCH64-NEXT:    add sp, sp, #48
@@ -2040,9 +2040,9 @@ define swiftcc ptr @testAssign(ptr %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    ; implicit-def: $x1
 ; CHECK-O0-ARM64_32-NEXT:    mov x21, xzr
 ; CHECK-O0-ARM64_32-NEXT:    bl _foo2
-; CHECK-O0-ARM64_32-NEXT:    str x21, [sp] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    str x21, [sp] ; 8-byte Spill
 ; CHECK-O0-ARM64_32-NEXT:  ; %bb.1: ; %a
-; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp] ; 8-byte Folded Reload
+; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    and x0, x8, #0xffffffff
 ; CHECK-O0-ARM64_32-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldp x22, x21, [sp, #16] ; 16-byte Folded Reload

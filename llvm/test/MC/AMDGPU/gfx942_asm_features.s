@@ -1,7 +1,7 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx942 -show-encoding %s | FileCheck --check-prefix=GFX942 --strict-whitespace %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -show-encoding %s | FileCheck --check-prefix=GFX942 --strict-whitespace %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx90a %s 2>&1 | FileCheck --check-prefixes=NOT-GFX942,GFX90A --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=NOT-GFX942,GFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx90a %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOT-GFX942,GFX90A --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOT-GFX942,GFX10 --implicit-check-not=error: %s
 
 // NOT-GFX942: :[[@LINE+2]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX942: global_load_dword v2, v[2:3], off sc0   ; encoding: [0x00,0x80,0x51,0xdc,0x02,0x00,0x7f,0x02]

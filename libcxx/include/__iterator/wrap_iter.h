@@ -117,8 +117,8 @@ private:
   friend class span;
   template <class _Tp, size_t _Size>
   friend struct array;
-  template <class _Tp>
-  friend class optional;
+  template <class _Tp, class>
+  friend struct __optional_iterator;
 };
 
 template <class _Iter1>
@@ -147,8 +147,8 @@ operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXC
 
 #if _LIBCPP_STD_VER <= 17
 template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR bool operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
   return !(__x == __y);
 }
 
@@ -214,9 +214,8 @@ operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noex
 template <class _Iter1, class _Iter2>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 #ifndef _LIBCPP_CXX03_LANG
-    auto
-    operator-(const __wrap_iter<_Iter1>& __x,
-              const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
+auto operator-(const __wrap_iter<_Iter1>& __x,
+               const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
 #else
 typename __wrap_iter<_Iter1>::difference_type
 operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT

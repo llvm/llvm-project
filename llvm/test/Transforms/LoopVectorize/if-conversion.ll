@@ -237,22 +237,36 @@ for.end:                                          ; preds = %for.inc, %entry
 ; Handle PHI with single incoming value having a full mask.
 ; PR34523
 
-; NOTE: Changing PHI inputs from undef to poison leads to change in
-; behaviour of the test. Left as undef for now.
-define void @PR34523() {
-; CHECK-LABEL: define void @PR34523() {
-; CHECK-NEXT:  [[BB1:.*:]]
-; CHECK-NEXT:    br i1 true, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+define void @PR34523(ptr %p, i16 %val) {
+; CHECK-LABEL: define void @PR34523(
+; CHECK-SAME: ptr [[P:%.*]], i16 [[VAL:%.*]]) {
+; CHECK-NEXT:  [[BB1:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[VAL]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP0]], i16 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i16 [[VAL]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i16 [[SMAX]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i32 [[TMP3]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i16 [[TMP2]], 3
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP4]], 131068
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[N_VEC]] to i16
+; CHECK-NEXT:    [[TMP5:%.*]] = add i16 [[VAL]], [[DOTCAST]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    br i1 poison, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br i1 poison, label %[[BB5:.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP4]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[BB5:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[VAL]], %[[BB1]] ]
 ; CHECK-NEXT:    br label %[[BB2:.*]]
 ; CHECK:       [[BB2]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i16 [ undef, %[[SCALAR_PH]] ], [ [[_TMP2:%.*]], %[[BB4:.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i16 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[_TMP2:%.*]], %[[BB4:.*]] ]
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    br label %[[BB4]]
@@ -267,11 +281,11 @@ bb1:
   br label %bb2
 
 bb2:                                             ; preds = %bb4, %bb1
-  %i = phi i16 [ undef, %bb1 ], [ %_tmp2, %bb4 ]
+  %i = phi i16 [ %val, %bb1 ], [ %_tmp2, %bb4 ]
   br label %bb3
 
 bb3:                                             ; preds = %bb2
-  %_tmp1 = phi ptr [ undef, %bb2 ]
+  %_tmp1 = phi ptr [ %p, %bb2 ]
   br label %bb4
 
 bb4:                                             ; preds = %bb3

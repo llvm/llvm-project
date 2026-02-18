@@ -28,7 +28,6 @@ UniqueptrDeleteReleaseCheck::UniqueptrDeleteReleaseCheck(
       PreferResetCall(Options.get("PreferResetCall", false)) {}
 
 void UniqueptrDeleteReleaseCheck::registerMatchers(MatchFinder *Finder) {
-
   auto UniquePtrWithDefaultDelete = classTemplateSpecializationDecl(
       hasName("::std::unique_ptr"),
       hasTemplateArgument(1, refersToType(hasDeclaration(cxxRecordDecl(

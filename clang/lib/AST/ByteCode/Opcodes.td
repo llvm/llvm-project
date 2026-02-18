@@ -251,6 +251,16 @@ def InitScope : Opcode {
   let Args = [ArgUint32];
 }
 
+def GetLocalEnabled : Opcode {
+  let Args = [ArgUint32];
+  let HasCustomEval = 1;
+}
+
+def EnableLocal : Opcode {
+  let Args = [ArgUint32];
+  let HasCustomEval = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Constants
 //===----------------------------------------------------------------------===//
@@ -322,9 +332,13 @@ def GetPtrThisField : OffsetOpcode;
 def GetPtrBase : OffsetOpcode;
 // [Pointer] -> [Pointer]
 def GetPtrBasePop : OffsetOpcode { let Args = [ArgUint32, ArgBool]; }
-def GetMemberPtrBasePop : Opcode {
+def CastMemberPtrBasePop : Opcode {
   // Offset of field, which is a base.
-  let Args = [ArgSint32];
+  let Args = [ArgSint32, ArgRecordDecl];
+}
+def CastMemberPtrDerivedPop : Opcode {
+  // Offset of field, which is a base.
+  let Args = [ArgSint32, ArgRecordDecl];
 }
 
 def FinishInitPop : Opcode;
@@ -361,8 +375,14 @@ def NarrowPtr : Opcode;
 // [Pointer] -> [Pointer]
 def ExpandPtr : Opcode;
 // [Pointer, Offset] -> [Pointer]
-def ArrayElemPtr : AluOpcode;
-def ArrayElemPtrPop : AluOpcode;
+def ArrayElemPtr : Opcode {
+  let Types = [IntegralTypeClass];
+  let HasGroup = 1;
+}
+def ArrayElemPtrPop : Opcode {
+  let Types = [IntegralTypeClass];
+  let HasGroup = 1;
+}
 
 def ArrayElemPop : Opcode {
   let Args = [ArgUint32];
@@ -422,8 +442,8 @@ def CheckLiteralType : Opcode {
 }
 
 def CheckArraySize : Opcode { let Args = [ArgUint64]; }
-
 def CheckFunctionDecl : Opcode { let Args = [ArgFunctionDecl]; }
+def CheckBitCast : Opcode { let Args = [ArgTypePtr, ArgBool]; }
 
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
@@ -536,13 +556,20 @@ def InitElemPop : Opcode {
 //===----------------------------------------------------------------------===//
 
 // [Pointer, Integral] -> [Pointer]
-def AddOffset : AluOpcode;
+def AddOffset : Opcode {
+  let Types = [IntegralTypeClass];
+  let HasGroup = 1;
+}
 // [Pointer, Integral] -> [Pointer]
-def SubOffset : AluOpcode;
+def SubOffset : Opcode {
+  let Types = [IntegralTypeClass];
+  let HasGroup = 1;
+}
 
 // [Pointer, Pointer] -> [Integral]
 def SubPtr : Opcode {
   let Types = [IntegerTypeClass];
+  let Args = [ArgBool];
   let HasGroup = 1;
 }
 
@@ -854,13 +881,13 @@ def Alloc : Opcode {
 }
 
 def AllocN : Opcode {
-  let Types = [IntegerTypeClass];
+  let Types = [IntegralTypeClass];
   let Args = [ArgPrimType, ArgExpr, ArgBool];
   let HasGroup = 1;
 }
 
 def AllocCN : Opcode {
-  let Types = [IntegerTypeClass];
+  let Types = [IntegralTypeClass];
   let Args = [ArgDesc, ArgBool];
   let HasGroup = 1;
 }
@@ -900,5 +927,10 @@ def DiagTypeid : Opcode;
 
 def CheckDestruction : Opcode;
 
+def CtorCheck : Opcode;
+
 def PushCC : Opcode { let Args = [ArgBool]; }
 def PopCC : Opcode;
+
+def PushMSVCCE : Opcode;
+def PopMSVCCE : Opcode;

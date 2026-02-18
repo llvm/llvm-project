@@ -312,9 +312,41 @@ class 8RR_XX4Form_XTABC6_P<bits<6> opcode, dag OOL, dag IOL, string asmstr,
   let Inst{63} = XT{5};
 }
 
+class MLS_DForm_R_SI32_RTA5<bits<6> opcode, dag OOL, dag IOL, string asmstr,
+                            InstrItinClass itin, list<dag> pattern>
+    : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<5> RT;
+  bits<5> RA;
+  bits<32> SI;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6...7} = 2;
+  let Inst{8} = 0;
+  let Inst{11} = PCRel;
+  let Inst{16...31} = SI{31...16};
+
+  // The instruction.
+  let Inst{38...42} = RT;
+  let Inst{43...47} = RA;
+  let Inst{48...63} = SI{15...0};
+}
+
+multiclass MLS_DForm_R_SI32_RTA5_p<bits<6> opcode, dag OOL, dag IOL,
+                                   dag PCRel_IOL, string asmstr,
+                                   InstrItinClass itin> {
+  def NAME : MLS_DForm_R_SI32_RTA5<opcode, OOL, IOL, !strconcat(asmstr, ", 0"),
+                                   itin, []>;
+  def pc : MLS_DForm_R_SI32_RTA5<opcode, OOL, PCRel_IOL,
+                                 !strconcat(asmstr, ", 1"), itin, []>,
+           isPCRel;
+}
+
 //-------------------------- Instruction definitions -------------------------//
 // Predicate combinations available:
 // [IsISAFuture]
+// [IsISAFuture, PrefixInstrs]
 // [HasVSX, IsISAFuture]
 // [HasVSX, PrefixInstrs, IsISAFuture]
 
@@ -344,6 +376,18 @@ let Predicates = [IsISAFuture] in {
     def MTLPL8 : XForm_RBS5<31, 275, (outs), (ins g8rc:$RB, g8rc:$RS),
                             "mtlpl $RB, $RS", IIC_SprMTSPR, []>, isPPC64;
   }
+}
+
+let Predicates = [IsISAFuture, PrefixInstrs] in {
+  defm PADDIS : MLS_DForm_R_SI32_RTA5_p<15, (outs gprc:$RT),
+                                        (ins gprc_nor0:$RA, s32imm:$SI),
+                                        (ins immZero:$RA, s32imm_pcrel:$SI),
+                                        "paddis $RT, $RA, $SI", IIC_LdStLFD>;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in
+    defm PADDIS8 : MLS_DForm_R_SI32_RTA5_p<15, (outs g8rc:$RT),
+                                           (ins g8rc_nox0:$RA, s32imm:$SI),
+                                           (ins immZero:$RA, s32imm_pcrel:$SI),
+                                           "paddis $RT, $RA, $SI", IIC_LdStLFD>;
 }
 
 let Predicates = [HasVSX, IsISAFuture] in {
@@ -420,8 +464,10 @@ let Predicates = [HasVSX, IsISAFuture] in {
       : VXForm_VRTAB5<323, (outs vrrc:$VRT), (ins vrrc:$VRA, vrrc:$VRB),
                       "vucmprlh $VRT, $VRA, $VRB", []>;
 
-  def XVRLW: XX3Form_XTAB6<60, 184, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
-                              "xvrlw $XT, $XA, $XB", []>;
+  def XVRLW : XX3Form_XTAB6<60, 184, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+                            "xvrlw $XT, $XA, $XB",
+                            [(set v4i32:$XT, (int_ppc_vsx_xvrlw v4i32:$XA,
+                                                 v4i32:$XB))]>;
 
   // AES Acceleration Instructions
   def XXAESENCP : XX3Form_XTABp5_M2<194, (outs vsrprc:$XTp),
@@ -550,6 +596,10 @@ def : Pat<(int_ppc_vsx_stxvprl v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRL $XTp,
                                                                     $RA, $RB)>;
 def : Pat<(int_ppc_vsx_stxvprll v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRLL $XTp,
                                                                      $RA, $RB)>;
+let Predicates = [HasVSX, IsISAFuture] in {
+  def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)), (v4i32 (XVRLW v4i32:$vA,
+                                                     v4i32:$vB))>;
+}
 
 //---------------------------- Instruction aliases ---------------------------//
 // Predicate combinations available:

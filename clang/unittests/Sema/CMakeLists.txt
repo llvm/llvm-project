@@ -13,6 +13,7 @@ add_distinct_clang_unittest(SemaTests
   clangAST
   clangASTMatchers
   clangBasic
+  clangDriver
   clangFrontend
   clangParse
   clangSema

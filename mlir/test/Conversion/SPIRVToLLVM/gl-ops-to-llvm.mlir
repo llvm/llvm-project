@@ -162,9 +162,7 @@ spirv.func @sqrt(%arg0: f32, %arg1: vector<3xf16>) "None" {
 
 // CHECK-LABEL: @tan
 spirv.func @tan(%arg0: f32) "None" {
-  // CHECK: %[[SIN:.*]] = llvm.intr.sin(%{{.*}}) : (f32) -> f32
-  // CHECK: %[[COS:.*]] = llvm.intr.cos(%{{.*}}) : (f32) -> f32
-  // CHECK: llvm.fdiv %[[SIN]], %[[COS]] : f32
+  // CHECK: llvm.intr.tan(%{{.*}}) : (f32) -> f32
   %0 = spirv.GL.Tan %arg0 : f32
   spirv.Return
 }
@@ -175,13 +173,7 @@ spirv.func @tan(%arg0: f32) "None" {
 
 // CHECK-LABEL: @tanh
 spirv.func @tanh(%arg0: f32) "None" {
-  // CHECK: %[[TWO:.*]] = llvm.mlir.constant(2.000000e+00 : f32) : f32
-  // CHECK: %[[X2:.*]] = llvm.fmul %[[TWO]], %{{.*}} : f32
-  // CHECK: %[[EXP:.*]] = llvm.intr.exp(%[[X2]]) : (f32) -> f32
-  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
-  // CHECK: %[[T0:.*]] = llvm.fsub %[[EXP]], %[[ONE]] : f32
-  // CHECK: %[[T1:.*]] = llvm.fadd %[[EXP]], %[[ONE]] : f32
-  // CHECK: llvm.fdiv %[[T0]], %[[T1]] : f32
+  // CHECK: llvm.intr.tanh(%{{.*}}) : (f32) -> f32
   %0 = spirv.GL.Tanh %arg0 : f32
   spirv.Return
 }

@@ -22,6 +22,12 @@ template <typename T> T* begin(T (&arr)[5]);
 template <typename T> T* end(T (&arr)[5]);
 
 template <class InputIt, class T>
+T accumulate(InputIt first, InputIt last, T init);
+
+template <class InputIt, class T, class BinaryOp>
+T accumulate(InputIt first, InputIt last, T init, BinaryOp op);
+
+template <class InputIt, class T>
 InputIt find(InputIt first, InputIt last, const T &value);
 
 template <class RandomIt>
@@ -66,15 +72,32 @@ bool is_sorted(ForwardIt first, ForwardIt last);
 template <class InputIt1, class InputIt2>
 bool includes(InputIt1 first1, InputIt1 last1, InputIt2 first2, InputIt2 last2);
 
+template <class InputIt, class OutputIt, class T>
+OutputIt replace_copy(InputIt first, InputIt last, OutputIt d_first,
+                      const T& old_value, const T& new_value);
+
+template <class InputIt, class OutputIt, class UnaryPredicate, class T>
+OutputIt replace_copy_if(InputIt first, InputIt last, OutputIt d_first,
+                         UnaryPredicate p, const T& new_value);
+
 } // namespace std
 
 bool is_even(int x);
 void double_ref(int& x);
+int multiply(int a, int b);
 
 void test_positive() {
   std::vector<int> vec;
   int arr[5] = {1, 2, 3, 4, 5};
-  
+
+  int sum = std::accumulate(vec.begin(), vec.end(), 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use an LLVM range-based algorithm
+  // CHECK-FIXES: int sum = llvm::accumulate(vec, 0);
+
+  int product = std::accumulate(vec.begin(), vec.end(), 1, multiply);
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use an LLVM range-based algorithm
+  // CHECK-FIXES: int product = llvm::accumulate(vec, 1, multiply);
+
   auto it1 = std::find(vec.begin(), vec.end(), 3);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: auto it1 = llvm::find(vec, 3);
@@ -111,7 +134,7 @@ void test_positive() {
   std::fill(vec.begin(), vec.end(), 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: llvm::fill(vec, 0);
-  
+
   auto last = std::unique(vec.begin(), vec.end());
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: auto last = llvm::unique(vec);
@@ -123,18 +146,26 @@ void test_positive() {
   std::includes(vec.begin(), vec.end(), std::begin(arr), std::end(arr));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use an LLVM range-based algorithm
   // CHECK-FIXES: llvm::includes(vec, arr);
+
+  std::replace_copy(vec.begin(), vec.end(), vec2.begin(), 1, 2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use an LLVM range-based algorithm
+  // CHECK-FIXES: llvm::replace_copy(vec, vec2.begin(), 1, 2);
+
+  std::replace_copy_if(vec.begin(), vec.end(), vec2.begin(), is_even, 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use an LLVM range-based algorithm
+  // CHECK-FIXES: llvm::replace_copy_if(vec, vec2.begin(), is_even, 0);
 }
 
 void test_negative() {
   std::vector<int> v;
-  
+
   // can not use `llvm::sort` because of potential different ordering from `std::sort`.
   std::sort(v.begin(), v.end());
 
   //non-begin/end iterators
   auto it1 = std::find(v.begin() + 1, v.end(), 2);
   auto it2 = std::find(v.begin(), v.end() - 1, 2);
-  
+
   // Using different containers (3-arg equal)
   std::vector<int> v2;
   bool eq = std::equal(v.begin(), v.end(), v2.begin());

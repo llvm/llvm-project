@@ -26,7 +26,7 @@ define i1 @kill_backedge_and_phis(ptr align 1 %lhs, ptr align 1 %rhs, i32 %len) 
 ; CHECK-NEXT:    %or.cond = select i1 %baz_ret, i1 true, i1 false
 ; CHECK-NEXT:    br i1 %or.cond, label %loop, label %exit.loopexit
 ; CHECK:       exit.loopexit:
-; CHECK-NEXT:    %val.ph = phi i1 [ %baz_ret, %exiting_3 ], [ %bar_ret, %exiting_2 ], [ false, %exiting_1 ], [ %result, %loop ]
+; CHECK-NEXT:    %val.ph = phi i1 [ %result, %loop ], [ %baz_ret, %exiting_3 ], [ %bar_ret, %exiting_2 ], [ false, %exiting_1 ]
 ; CHECK-NEXT:    br label %exit
 ; CHECK:       exit:
 ; CHECK-NEXT:    %val = phi i1 [ false, %entry ], [ %val.ph, %exit.loopexit ]
@@ -102,7 +102,7 @@ define i1 @siblings(ptr align 1 %lhs, ptr align 1 %rhs, i32 %len) {
 ; CHECK-NEXT:    %or.cond = select i1 %baz_ret, i1 true, i1 false
 ; CHECK-NEXT:    br i1 %or.cond, label %loop, label %exit.loopexit
 ; CHECK:       exit.loopexit:
-; CHECK-NEXT:    %val.ph = phi i1 [ %baz_ret, %exiting_3 ], [ %bar_ret, %exiting_2 ], [ false, %exiting_1 ], [ %result, %loop ]
+; CHECK-NEXT:    %val.ph = phi i1 [ %result, %loop ], [ %baz_ret, %exiting_3 ], [ %bar_ret, %exiting_2 ], [ false, %exiting_1 ]
 ; CHECK-NEXT:    br label %exit
 ; CHECK:       exit:
 ; CHECK-NEXT:    %val = phi i1 [ false, %entry ], [ %val.ph, %exit.loopexit ]

@@ -12,8 +12,6 @@
 ; RUN:     -target-abi=lp64d -verify-machineinstrs < %s | FileCheck %s \
 ; RUN:     --check-prefixes=CHECK,RV64
 
-declare <vscale x 1 x i8> @llvm.masked.gather.nxv1i8.nxv1p0(<vscale x 1 x ptr>, i32, <vscale x 1 x i1>, <vscale x 1 x i8>)
-
 define <vscale x 1 x i8> @mgather_nxv1i8(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, <vscale x 1 x i8> %passthru) {
 ; RV32-LABEL: mgather_nxv1i8:
 ; RV32:       # %bb.0:
@@ -31,8 +29,6 @@ define <vscale x 1 x i8> @mgather_nxv1i8(<vscale x 1 x ptr> %ptrs, <vscale x 1 x
   %v = call <vscale x 1 x i8> @llvm.masked.gather.nxv1i8.nxv1p0(<vscale x 1 x ptr> %ptrs, i32 1, <vscale x 1 x i1> %m, <vscale x 1 x i8> %passthru)
   ret <vscale x 1 x i8> %v
 }
-
-declare <vscale x 2 x i8> @llvm.masked.gather.nxv2i8.nxv2p0(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i8>)
 
 define <vscale x 2 x i8> @mgather_nxv2i8(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, <vscale x 2 x i8> %passthru) {
 ; RV32-LABEL: mgather_nxv2i8:
@@ -180,8 +176,6 @@ define <vscale x 2 x i64> @mgather_nxv2i8_zextload_nxv2i64(<vscale x 2 x ptr> %p
   ret <vscale x 2 x i64> %ev
 }
 
-declare <vscale x 4 x i8> @llvm.masked.gather.nxv4i8.nxv4p0(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x i8>)
-
 define <vscale x 4 x i8> @mgather_nxv4i8(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, <vscale x 4 x i8> %passthru) {
 ; RV32-LABEL: mgather_nxv4i8:
 ; RV32:       # %bb.0:
@@ -234,8 +228,6 @@ define <vscale x 4 x i8> @mgather_falsemask_nxv4i8(<vscale x 4 x ptr> %ptrs, <vs
   ret <vscale x 4 x i8> %v
 }
 
-declare <vscale x 8 x i8> @llvm.masked.gather.nxv8i8.nxv8p0(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x i8>)
-
 define <vscale x 8 x i8> @mgather_nxv8i8(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, <vscale x 8 x i8> %passthru) {
 ; RV32-LABEL: mgather_nxv8i8:
 ; RV32:       # %bb.0:
@@ -277,8 +269,6 @@ define <vscale x 8 x i8> @mgather_baseidx_nxv8i8(ptr %base, <vscale x 8 x i8> %i
   ret <vscale x 8 x i8> %v
 }
 
-declare <vscale x 1 x i16> @llvm.masked.gather.nxv1i16.nxv1p0(<vscale x 1 x ptr>, i32, <vscale x 1 x i1>, <vscale x 1 x i16>)
-
 define <vscale x 1 x i16> @mgather_nxv1i16(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, <vscale x 1 x i16> %passthru) {
 ; RV32-LABEL: mgather_nxv1i16:
 ; RV32:       # %bb.0:
@@ -296,8 +286,6 @@ define <vscale x 1 x i16> @mgather_nxv1i16(<vscale x 1 x ptr> %ptrs, <vscale x 1
   %v = call <vscale x 1 x i16> @llvm.masked.gather.nxv1i16.nxv1p0(<vscale x 1 x ptr> %ptrs, i32 2, <vscale x 1 x i1> %m, <vscale x 1 x i16> %passthru)
   ret <vscale x 1 x i16> %v
 }
-
-declare <vscale x 2 x i16> @llvm.masked.gather.nxv2i16.nxv2p0(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i16>)
 
 define <vscale x 2 x i16> @mgather_nxv2i16(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, <vscale x 2 x i16> %passthru) {
 ; RV32-LABEL: mgather_nxv2i16:
@@ -403,8 +391,6 @@ define <vscale x 2 x i64> @mgather_nxv2i16_zextload_nxv2i64(<vscale x 2 x ptr> %
   ret <vscale x 2 x i64> %ev
 }
 
-declare <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x i16>)
-
 define <vscale x 4 x i16> @mgather_nxv4i16(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, <vscale x 4 x i16> %passthru) {
 ; RV32-LABEL: mgather_nxv4i16:
 ; RV32:       # %bb.0:
@@ -456,8 +442,6 @@ define <vscale x 4 x i16> @mgather_falsemask_nxv4i16(<vscale x 4 x ptr> %ptrs, <
   %v = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 2, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i16> %passthru)
   ret <vscale x 4 x i16> %v
 }
-
-declare <vscale x 8 x i16> @llvm.masked.gather.nxv8i16.nxv8p0(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x i16>)
 
 define <vscale x 8 x i16> @mgather_nxv8i16(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, <vscale x 8 x i16> %passthru) {
 ; RV32-LABEL: mgather_nxv8i16:
@@ -566,8 +550,6 @@ define <vscale x 8 x i16> @mgather_baseidx_nxv8i16(ptr %base, <vscale x 8 x i16>
   ret <vscale x 8 x i16> %v
 }
 
-declare <vscale x 1 x i32> @llvm.masked.gather.nxv1i32.nxv1p0(<vscale x 1 x ptr>, i32, <vscale x 1 x i1>, <vscale x 1 x i32>)
-
 define <vscale x 1 x i32> @mgather_nxv1i32(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, <vscale x 1 x i32> %passthru) {
 ; RV32-LABEL: mgather_nxv1i32:
 ; RV32:       # %bb.0:
@@ -585,8 +567,6 @@ define <vscale x 1 x i32> @mgather_nxv1i32(<vscale x 1 x ptr> %ptrs, <vscale x 1
   %v = call <vscale x 1 x i32> @llvm.masked.gather.nxv1i32.nxv1p0(<vscale x 1 x ptr> %ptrs, i32 4, <vscale x 1 x i1> %m, <vscale x 1 x i32> %passthru)
   ret <vscale x 1 x i32> %v
 }
-
-declare <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i32>)
 
 define <vscale x 2 x i32> @mgather_nxv2i32(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, <vscale x 2 x i32> %passthru) {
 ; RV32-LABEL: mgather_nxv2i32:
@@ -650,8 +630,6 @@ define <vscale x 2 x i64> @mgather_nxv2i32_zextload_nxv2i64(<vscale x 2 x ptr> %
   ret <vscale x 2 x i64> %ev
 }
 
-declare <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x i32>)
-
 define <vscale x 4 x i32> @mgather_nxv4i32(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, <vscale x 4 x i32> %passthru) {
 ; RV32-LABEL: mgather_nxv4i32:
 ; RV32:       # %bb.0:
@@ -702,8 +680,6 @@ define <vscale x 4 x i32> @mgather_falsemask_nxv4i32(<vscale x 4 x ptr> %ptrs, <
   %v = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 4, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %passthru)
   ret <vscale x 4 x i32> %v
 }
-
-declare <vscale x 8 x i32> @llvm.masked.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x i32>)
 
 define <vscale x 8 x i32> @mgather_nxv8i32(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, <vscale x 8 x i32> %passthru) {
 ; RV32-LABEL: mgather_nxv8i32:
@@ -877,8 +853,6 @@ define <vscale x 8 x i32> @mgather_baseidx_nxv8i32(ptr %base, <vscale x 8 x i32>
   ret <vscale x 8 x i32> %v
 }
 
-declare <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0(<vscale x 1 x ptr>, i32, <vscale x 1 x i1>, <vscale x 1 x i64>)
-
 define <vscale x 1 x i64> @mgather_nxv1i64(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, <vscale x 1 x i64> %passthru) {
 ; RV32-LABEL: mgather_nxv1i64:
 ; RV32:       # %bb.0:
@@ -897,8 +871,6 @@ define <vscale x 1 x i64> @mgather_nxv1i64(<vscale x 1 x ptr> %ptrs, <vscale x 1
   ret <vscale x 1 x i64> %v
 }
 
-declare <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x i64>)
-
 define <vscale x 2 x i64> @mgather_nxv2i64(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, <vscale x 2 x i64> %passthru) {
 ; RV32-LABEL: mgather_nxv2i64:
 ; RV32:       # %bb.0:
@@ -916,8 +888,6 @@ define <vscale x 2 x i64> @mgather_nxv2i64(<vscale x 2 x ptr> %ptrs, <vscale x 2
   %v = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> %ptrs, i32 8, <vscale x 2 x i1> %m, <vscale x 2 x i64> %passthru)
   ret <vscale x 2 x i64> %v
 }
-
-declare <vscale x 4 x i64> @llvm.masked.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x i64>)
 
 define <vscale x 4 x i64> @mgather_nxv4i64(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, <vscale x 4 x i64> %passthru) {
 ; RV32-LABEL: mgather_nxv4i64:
@@ -963,8 +933,6 @@ define <vscale x 4 x i64> @mgather_falsemask_nxv4i64(<vscale x 4 x ptr> %ptrs, <
   %v = call <vscale x 4 x i64> @llvm.masked.gather.nxv4i64.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 8, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i64> %passthru)
   ret <vscale x 4 x i64> %v
 }
-
-declare <vscale x 8 x i64> @llvm.masked.gather.nxv8i64.nxv8p0(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x i64>)
 
 define <vscale x 8 x i64> @mgather_nxv8i64(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, <vscale x 8 x i64> %passthru) {
 ; RV32-LABEL: mgather_nxv8i64:
@@ -1211,11 +1179,6 @@ define <vscale x 8 x i64> @mgather_baseidx_nxv8i64(ptr %base, <vscale x 8 x i64>
   ret <vscale x 8 x i64> %v
 }
 
-declare <vscale x 16 x i64> @llvm.masked.gather.nxv16i64.nxv16p0(<vscale x 16 x ptr>, i32, <vscale x 16 x i1>, <vscale x 16 x i64>)
-
-declare <vscale x 16 x i64> @llvm.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64>, <vscale x 8 x i64>, i64 %idx)
-declare <vscale x 16 x ptr> @llvm.vector.insert.nxv8p0.nxv16p0(<vscale x 16 x ptr>, <vscale x 8 x ptr>, i64 %idx)
-
 define void @mgather_nxv16i64(<vscale x 8 x ptr> %ptrs0, <vscale x 8 x ptr> %ptrs1, <vscale x 16 x i1> %m, <vscale x 8 x i64> %passthru0, <vscale x 8 x i64> %passthru1, ptr %out) {
 ; RV32-LABEL: mgather_nxv16i64:
 ; RV32:       # %bb.0:
@@ -1262,8 +1225,6 @@ define void @mgather_nxv16i64(<vscale x 8 x ptr> %ptrs0, <vscale x 8 x ptr> %ptr
   ret void
 }
 
-declare <vscale x 1 x bfloat> @llvm.masked.gather.nxv1bf16.nxv1p0(<vscale x 1 x ptr>, i32, <vscale x 1 x i1>, <vscale x 1 x bfloat>)
-
 define <vscale x 1 x bfloat> @mgather_nxv1bf16(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, <vscale x 1 x bfloat> %passthru) {
 ; RV32-LABEL: mgather_nxv1bf16:
 ; RV32:       # %bb.0:
@@ -1282,8 +1243,6 @@ define <vscale x 1 x bfloat> @mgather_nxv1bf16(<vscale x 1 x ptr> %ptrs, <vscale
   ret <vscale x 1 x bfloat> %v
 }
 
-declare <vscale x 2 x bfloat> @llvm.masked.gather.nxv2bf16.nxv2p0(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x bfloat>)
-
 define <vscale x 2 x bfloat> @mgather_nxv2bf16(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, <vscale x 2 x bfloat> %passthru) {
 ; RV32-LABEL: mgather_nxv2bf16:
 ; RV32:       # %bb.0:
@@ -1301,8 +1260,6 @@ define <vscale x 2 x bfloat> @mgather_nxv2bf16(<vscale x 2 x ptr> %ptrs, <vscale
   %v = call <vscale x 2 x bfloat> @llvm.masked.gather.nxv2bf16.nxv2p0(<vscale x 2 x ptr> %ptrs, i32 2, <vscale x 2 x i1> %m, <vscale x 2 x bfloat> %passthru)
   ret <vscale x 2 x bfloat> %v
 }
-
-declare <vscale x 4 x bfloat> @llvm.masked.gather.nxv4bf16.nxv4p0(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x bfloat>)
 
 define <vscale x 4 x bfloat> @mgather_nxv4bf16(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, <vscale x 4 x bfloat> %passthru) {
 ; RV32-LABEL: mgather_nxv4bf16:
@@ -1355,8 +1312,6 @@ define <vscale x 4 x bfloat> @mgather_falsemask_nxv4bf16(<vscale x 4 x ptr> %ptr
   %v = call <vscale x 4 x bfloat> @llvm.masked.gather.nxv4bf16.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 2, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x bfloat> %passthru)
   ret <vscale x 4 x bfloat> %v
 }
-
-declare <vscale x 8 x bfloat> @llvm.masked.gather.nxv8bf16.nxv8p0(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x bfloat>)
 
 define <vscale x 8 x bfloat> @mgather_nxv8bf16(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, <vscale x 8 x bfloat> %passthru) {
 ; RV32-LABEL: mgather_nxv8bf16:
@@ -1465,8 +1420,6 @@ define <vscale x 8 x bfloat> @mgather_baseidx_nxv8bf16(ptr %base, <vscale x 8 x 
   ret <vscale x 8 x bfloat> %v
 }
 
-declare <vscale x 1 x half> @llvm.masked.gather.nxv1f16.nxv1p0(<vscale x 1 x ptr>, i32, <vscale x 1 x i1>, <vscale x 1 x half>)
-
 define <vscale x 1 x half> @mgather_nxv1f16(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, <vscale x 1 x half> %passthru) {
 ; RV32-LABEL: mgather_nxv1f16:
 ; RV32:       # %bb.0:
@@ -1485,8 +1438,6 @@ define <vscale x 1 x half> @mgather_nxv1f16(<vscale x 1 x ptr> %ptrs, <vscale x 
   ret <vscale x 1 x half> %v
 }
 
-declare <vscale x 2 x half> @llvm.masked.gather.nxv2f16.nxv2p0(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x half>)
-
 define <vscale x 2 x half> @mgather_nxv2f16(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, <vscale x 2 x half> %passthru) {
 ; RV32-LABEL: mgather_nxv2f16:
 ; RV32:       # %bb.0:
@@ -1504,8 +1455,6 @@ define <vscale x 2 x half> @mgather_nxv2f16(<vscale x 2 x ptr> %ptrs, <vscale x 
   %v = call <vscale x 2 x half> @llvm.masked.gather.nxv2f16.nxv2p0(<vscale x 2 x ptr> %ptrs, i32 2, <vscale x 2 x i1> %m, <vscale x 2 x half> %passthru)
   ret <vscale x 2 x half> %v
 }
-
-declare <vscale x 4 x half> @llvm.masked.gather.nxv4f16.nxv4p0(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x half>)
 
 define <vscale x 4 x half> @mgather_nxv4f16(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, <vscale x 4 x half> %passthru) {
 ; RV32-LABEL: mgather_nxv4f16:
@@ -1558,8 +1507,6 @@ define <vscale x 4 x half> @mgather_falsemask_nxv4f16(<vscale x 4 x ptr> %ptrs, 
   %v = call <vscale x 4 x half> @llvm.masked.gather.nxv4f16.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 2, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x half> %passthru)
   ret <vscale x 4 x half> %v
 }
-
-declare <vscale x 8 x half> @llvm.masked.gather.nxv8f16.nxv8p0(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x half>)
 
 define <vscale x 8 x half> @mgather_nxv8f16(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, <vscale x 8 x half> %passthru) {
 ; RV32-LABEL: mgather_nxv8f16:
@@ -1668,8 +1615,6 @@ define <vscale x 8 x half> @mgather_baseidx_nxv8f16(ptr %base, <vscale x 8 x i16
   ret <vscale x 8 x half> %v
 }
 
-declare <vscale x 1 x float> @llvm.masked.gather.nxv1f32.nxv1p0(<vscale x 1 x ptr>, i32, <vscale x 1 x i1>, <vscale x 1 x float>)
-
 define <vscale x 1 x float> @mgather_nxv1f32(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, <vscale x 1 x float> %passthru) {
 ; RV32-LABEL: mgather_nxv1f32:
 ; RV32:       # %bb.0:
@@ -1688,8 +1633,6 @@ define <vscale x 1 x float> @mgather_nxv1f32(<vscale x 1 x ptr> %ptrs, <vscale x
   ret <vscale x 1 x float> %v
 }
 
-declare <vscale x 2 x float> @llvm.masked.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x float>)
-
 define <vscale x 2 x float> @mgather_nxv2f32(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, <vscale x 2 x float> %passthru) {
 ; RV32-LABEL: mgather_nxv2f32:
 ; RV32:       # %bb.0:
@@ -1707,8 +1650,6 @@ define <vscale x 2 x float> @mgather_nxv2f32(<vscale x 2 x ptr> %ptrs, <vscale x
   %v = call <vscale x 2 x float> @llvm.masked.gather.nxv2f32.nxv2p0(<vscale x 2 x ptr> %ptrs, i32 4, <vscale x 2 x i1> %m, <vscale x 2 x float> %passthru)
   ret <vscale x 2 x float> %v
 }
-
-declare <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x float>)
 
 define <vscale x 4 x float> @mgather_nxv4f32(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, <vscale x 4 x float> %passthru) {
 ; RV32-LABEL: mgather_nxv4f32:
@@ -1760,8 +1701,6 @@ define <vscale x 4 x float> @mgather_falsemask_nxv4f32(<vscale x 4 x ptr> %ptrs,
   %v = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 4, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %passthru)
   ret <vscale x 4 x float> %v
 }
-
-declare <vscale x 8 x float> @llvm.masked.gather.nxv8f32.nxv8p0(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x float>)
 
 define <vscale x 8 x float> @mgather_nxv8f32(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, <vscale x 8 x float> %passthru) {
 ; RV32-LABEL: mgather_nxv8f32:
@@ -1935,8 +1874,6 @@ define <vscale x 8 x float> @mgather_baseidx_nxv8f32(ptr %base, <vscale x 8 x i3
   ret <vscale x 8 x float> %v
 }
 
-declare <vscale x 1 x double> @llvm.masked.gather.nxv1f64.nxv1p0(<vscale x 1 x ptr>, i32, <vscale x 1 x i1>, <vscale x 1 x double>)
-
 define <vscale x 1 x double> @mgather_nxv1f64(<vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, <vscale x 1 x double> %passthru) {
 ; RV32-LABEL: mgather_nxv1f64:
 ; RV32:       # %bb.0:
@@ -1955,8 +1892,6 @@ define <vscale x 1 x double> @mgather_nxv1f64(<vscale x 1 x ptr> %ptrs, <vscale 
   ret <vscale x 1 x double> %v
 }
 
-declare <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr>, i32, <vscale x 2 x i1>, <vscale x 2 x double>)
-
 define <vscale x 2 x double> @mgather_nxv2f64(<vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, <vscale x 2 x double> %passthru) {
 ; RV32-LABEL: mgather_nxv2f64:
 ; RV32:       # %bb.0:
@@ -1974,8 +1909,6 @@ define <vscale x 2 x double> @mgather_nxv2f64(<vscale x 2 x ptr> %ptrs, <vscale 
   %v = call <vscale x 2 x double> @llvm.masked.gather.nxv2f64.nxv2p0(<vscale x 2 x ptr> %ptrs, i32 8, <vscale x 2 x i1> %m, <vscale x 2 x double> %passthru)
   ret <vscale x 2 x double> %v
 }
-
-declare <vscale x 4 x double> @llvm.masked.gather.nxv4f64.nxv4p0(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x double>)
 
 define <vscale x 4 x double> @mgather_nxv4f64(<vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, <vscale x 4 x double> %passthru) {
 ; RV32-LABEL: mgather_nxv4f64:
@@ -2021,8 +1954,6 @@ define <vscale x 4 x double> @mgather_falsemask_nxv4f64(<vscale x 4 x ptr> %ptrs
   %v = call <vscale x 4 x double> @llvm.masked.gather.nxv4f64.nxv4p0(<vscale x 4 x ptr> %ptrs, i32 8, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x double> %passthru)
   ret <vscale x 4 x double> %v
 }
-
-declare <vscale x 8 x double> @llvm.masked.gather.nxv8f64.nxv8p0(<vscale x 8 x ptr>, i32, <vscale x 8 x i1>, <vscale x 8 x double>)
 
 define <vscale x 8 x double> @mgather_nxv8f64(<vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, <vscale x 8 x double> %passthru) {
 ; RV32-LABEL: mgather_nxv8f64:
@@ -2269,8 +2200,6 @@ define <vscale x 8 x double> @mgather_baseidx_nxv8f64(ptr %base, <vscale x 8 x i
   ret <vscale x 8 x double> %v
 }
 
-declare <vscale x 16 x i8> @llvm.masked.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr>, i32, <vscale x 16 x i1>, <vscale x 16 x i8>)
-
 define <vscale x 16 x i8> @mgather_baseidx_nxv16i8(ptr %base, <vscale x 16 x i8> %idxs, <vscale x 16 x i1> %m, <vscale x 16 x i8> %passthru) {
 ; RV32-LABEL: mgather_baseidx_nxv16i8:
 ; RV32:       # %bb.0:
@@ -2301,8 +2230,6 @@ define <vscale x 16 x i8> @mgather_baseidx_nxv16i8(ptr %base, <vscale x 16 x i8>
   %v = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> %ptrs, i32 2, <vscale x 16 x i1> %m, <vscale x 16 x i8> %passthru)
   ret <vscale x 16 x i8> %v
 }
-
-declare <vscale x 32 x i8> @llvm.masked.gather.nxv32i8.nxv32p0(<vscale x 32 x ptr>, i32, <vscale x 32 x i1>, <vscale x 32 x i8>)
 
 define <vscale x 32 x i8> @mgather_baseidx_nxv32i8(ptr %base, <vscale x 32 x i8> %idxs, <vscale x 32 x i1> %m, <vscale x 32 x i8> %passthru) {
 ; RV32-LABEL: mgather_baseidx_nxv32i8:

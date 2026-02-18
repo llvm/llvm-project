@@ -206,6 +206,9 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
   OFFLOAD_ERR(printDeviceValue<uint64_t>(S, D, OL_DEVICE_INFO_GLOBAL_MEM_SIZE,
                                          "Global Mem Size", "B"));
   OFFLOAD_ERR(
+      printDeviceValue<uint64_t>(S, D, OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE,
+                                 "Work Group Shared Mem Size", "B"));
+  OFFLOAD_ERR(
       (printDeviceValue<ol_device_fp_capability_flags_t, PrintKind::FP_FLAGS>(
           S, D, OL_DEVICE_INFO_SINGLE_FP_CONFIG,
           "Single Precision Floating Point Capability")));
@@ -243,7 +246,7 @@ ol_result_t printDevice(std::ostream &S, ol_device_handle_t D) {
 }
 
 ol_result_t printRoot(std::ostream &S) {
-  OFFLOAD_ERR(olInit());
+  OFFLOAD_ERR(olInit(nullptr));
   S << "Liboffload Version: " << OL_VERSION_MAJOR << "." << OL_VERSION_MINOR
     << "." << OL_VERSION_PATCH << "\n";
 

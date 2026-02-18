@@ -27,8 +27,8 @@ end subroutine
 ! CHECK-LABEL: func @_QPparallel_do_with_parallel_clauses
 ! CHECK-SAME: %[[COND_REF:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"}, %[[NT_REF:.*]]: !fir.ref<i32> {fir.bindc_name = "nt"}
 subroutine parallel_do_with_parallel_clauses(cond, nt)
-  ! CHECK: %[[COND_DECL:.*]]:2 = hlfir.declare %[[COND_REF]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFparallel_do_with_parallel_clausesEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-  ! CHECK: %[[NT_DECL:.*]]:2 = hlfir.declare %[[NT_REF]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFparallel_do_with_parallel_clausesEnt"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[COND_DECL:.*]]:2 = hlfir.declare %[[COND_REF]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFparallel_do_with_parallel_clausesEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+  ! CHECK: %[[NT_DECL:.*]]:2 = hlfir.declare %[[NT_REF]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFparallel_do_with_parallel_clausesEnt"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   logical :: cond
   integer :: nt
   integer :: i
@@ -56,7 +56,7 @@ end subroutine
 ! CHECK-LABEL: func @_QPparallel_do_with_clauses
 ! CHECK-SAME: %[[NT_REF:.*]]: !fir.ref<i32> {fir.bindc_name = "nt"}
 subroutine parallel_do_with_clauses(nt)
-  ! CHECK:  %[[NT_DECL:.*]]:2 = hlfir.declare %[[NT_REF]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFparallel_do_with_clausesEnt"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK:  %[[NT_DECL:.*]]:2 = hlfir.declare %[[NT_REF]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFparallel_do_with_clausesEnt"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   integer :: nt
   integer :: i
   ! CHECK:  %[[NT:.*]] = fir.load %[[NT_DECL]]#0 : !fir.ref<i32>
@@ -86,8 +86,8 @@ end subroutine
 ! CHECK-LABEL: func @_QPparallel_do_with_privatisation_clauses
 ! CHECK-SAME: %[[COND_REF:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"}, %[[NT_REF:.*]]: !fir.ref<i32> {fir.bindc_name = "nt"}
 subroutine parallel_do_with_privatisation_clauses(cond,nt)
-  ! CHECK: %[[COND_DECL:.*]]:2 = hlfir.declare %[[COND_REF]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFparallel_do_with_privatisation_clausesEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-  ! CHECK: %[[NT_DECL:.*]]:2 = hlfir.declare %[[NT_REF]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFparallel_do_with_privatisation_clausesEnt"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[COND_DECL:.*]]:2 = hlfir.declare %[[COND_REF]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFparallel_do_with_privatisation_clausesEcond"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+  ! CHECK: %[[NT_DECL:.*]]:2 = hlfir.declare %[[NT_REF]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFparallel_do_with_privatisation_clausesEnt"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   logical :: cond
   integer :: nt
   integer :: i
@@ -139,7 +139,7 @@ end subroutine parallel_private_do
 ! CHECK-LABEL:   func.func @_QPparallel_private_do(
 ! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"},
 ! CHECK-SAME:                                      %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "nt"}) {
-! CHECK:           %[[NT_DECL:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFparallel_private_doEnt"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[NT_DECL:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFparallel_private_doEnt"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel private(@{{.*}} %{{.*}}#0 -> %[[COND_ADDR:.*]], @{{.*firstprivate.*}} %{{.*}}#0 -> %[[NT_PRIV_ADDR:.*]] : {{.*}}) {
 
 ! CHECK:             %[[COND_DECL:.*]]:2 = hlfir.declare %[[COND_ADDR]] {uniq_name = "_QFparallel_private_doEcond"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
@@ -182,8 +182,8 @@ end subroutine omp_parallel_multiple_firstprivate_do
 ! CHECK-LABEL:   func.func @_QPomp_parallel_multiple_firstprivate_do(
 ! CHECK-SAME:                                                        %[[A_ADDR:.*]]: !fir.ref<i32> {fir.bindc_name = "a"},
 ! CHECK-SAME:                                                        %[[B_ADDR:.*]]: !fir.ref<i32> {fir.bindc_name = "b"}) {
-! CHECK:            %[[A_DECL:.*]]:2 = hlfir.declare %[[A_ADDR]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFomp_parallel_multiple_firstprivate_doEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:            %[[B_DECL:.*]]:2 = hlfir.declare %[[B_ADDR]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFomp_parallel_multiple_firstprivate_doEb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:            %[[A_DECL:.*]]:2 = hlfir.declare %[[A_ADDR]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFomp_parallel_multiple_firstprivate_doEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:            %[[B_DECL:.*]]:2 = hlfir.declare %[[B_ADDR]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFomp_parallel_multiple_firstprivate_doEb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel private(@{{.*firstprivate.*}} %{{.*}}#0 -> %[[A_PRIV_ADDR:.*]], @{{.*firstprivate.*}} %{{.*}}#0 -> %[[B_PRIV_ADDR:.*]] : {{.*}}) {
 
 ! CHECK:             %[[A_PRIV_DECL:.*]]:2 = hlfir.declare %[[A_PRIV_ADDR]] {uniq_name = "_QFomp_parallel_multiple_firstprivate_doEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -229,7 +229,7 @@ end subroutine parallel_do_private
 ! CHECK-LABEL:   func.func @_QPparallel_do_private(
 ! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "cond"},
 ! CHECK-SAME:                                      %[[VAL_1:.*]]: !fir.ref<i32> {fir.bindc_name = "nt"}) {
-! CHECK:           %[[NT_DECL:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFparallel_do_privateEnt"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[NT_DECL:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFparallel_do_privateEnt"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel   {
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 9 : i32
@@ -270,8 +270,8 @@ end subroutine omp_parallel_do_multiple_firstprivate
 ! CHECK-LABEL:   func.func @_QPomp_parallel_do_multiple_firstprivate(
 ! CHECK-SAME:                                                        %[[A_ADDR:.*]]: !fir.ref<i32> {fir.bindc_name = "a"},
 ! CHECK-SAME:                                                        %[[B_ADDR:.*]]: !fir.ref<i32> {fir.bindc_name = "b"}) {
-! CHECK:           %[[A_DECL:.*]]:2 = hlfir.declare %[[A_ADDR]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFomp_parallel_do_multiple_firstprivateEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[B_DECL:.*]]:2 = hlfir.declare %[[B_ADDR]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFomp_parallel_do_multiple_firstprivateEb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>
+! CHECK:           %[[A_DECL:.*]]:2 = hlfir.declare %[[A_ADDR]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFomp_parallel_do_multiple_firstprivateEa"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[B_DECL:.*]]:2 = hlfir.declare %[[B_ADDR]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFomp_parallel_do_multiple_firstprivateEb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 10 : i32

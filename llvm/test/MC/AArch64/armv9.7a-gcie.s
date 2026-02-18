@@ -828,10 +828,10 @@ GIC CDEN, x3
 // CHECK-UNKNOWN: d508c123 sys #0, c12, c1, #1, x3
 // CHECK-ERROR: error: GIC cden requires: gcie
 
-GIC CDEOI, x3
-// CHECK-INST:    gic cdeoi, x3
-// CHECK-ENCODING: [0xe3,0xc1,0x08,0xd5]
-// CHECK-UNKNOWN: d508c1e3 sys #0, c12, c1, #7, x3
+GIC CDEOI
+// CHECK-INST:    gic cdeoi
+// CHECK-ENCODING: [0xff,0xc1,0x08,0xd5]
+// CHECK-UNKNOWN: d508c1ff sys #0, c12, c1, #7
 // CHECK-ERROR: error: GIC cdeoi requires: gcie
 
 GIC CDHM, x3

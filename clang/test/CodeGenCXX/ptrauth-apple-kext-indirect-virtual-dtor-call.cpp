@@ -14,11 +14,11 @@ void DELETE(B1 *pb1) {
 // CHECK-LABEL: define void @_ZN2B1D0Ev
 // CHECK: [[T1:%.*]] = load ptr, ptr getelementptr inbounds (ptr, ptr @_ZTV2B1, i64 2)
 // CHECK-NEXT: [[B1:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr getelementptr inbounds (ptr, ptr @_ZTV2B1, i64 2) to i64), i64 14635)
-// CHECK-NEXT: call noundef ptr [[T1]](ptr noundef nonnull align 8 dereferenceable(8) [[T2:%.*]]) [ "ptrauth"(i32 0, i64 [[B1]]) ]
+// CHECK-NEXT: call noundef ptr [[T1]](ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) [[T2:%.*]]) [ "ptrauth"(i32 0, i64 [[B1]]) ]
 // CHECK-LABEL: define void @_Z6DELETEP2B1
 // CHECK: [[T3:%.*]] = load ptr, ptr getelementptr inbounds (ptr, ptr @_ZTV2B1, i64 2)
 // CHECK-NEXT: [[B3:%.*]] = call i64 @llvm.ptrauth.blend(i64 ptrtoint (ptr getelementptr inbounds (ptr, ptr @_ZTV2B1, i64 2) to i64), i64 14635)
-// CHECK-NEXT:  call noundef ptr [[T3]](ptr noundef nonnull align 8 dereferenceable(8) [[T4:%.*]]) [ "ptrauth"(i32 0, i64 [[B3]])
+// CHECK-NEXT:  call noundef ptr [[T3]](ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) [[T4:%.*]]) [ "ptrauth"(i32 0, i64 [[B3]])
 
 template<class T>
 struct Templ {
@@ -45,6 +45,6 @@ void f(SubTempl<int>* t) {
 }
 
 // CHECK: getelementptr inbounds (ptr, ptr @_ZTV5TemplIiE, i64 2)
-// CHECK: declare void @_ZN5TemplIiED0Ev(ptr noundef nonnull align 8 dereferenceable(8))
+// CHECK: declare void @_ZN5TemplIiED0Ev(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8))
 // CHECK: define internal void @_ZN5TemplIiE1fEv(ptr noundef nonnull align 8 dereferenceable(8) %this)
 // CHECK: define internal void @_ZN5TemplIiE1gEv(ptr noundef nonnull align 8 dereferenceable(8) %this)

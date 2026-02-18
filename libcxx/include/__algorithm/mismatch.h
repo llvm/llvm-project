@@ -136,7 +136,7 @@ template <class _Tp,
           class _Proj2,
           __enable_if_t<!is_integral<_Tp>::value && __desugars_to_v<__equal_tag, _Pred, _Tp, _Tp> &&
                             __is_identity<_Proj1>::value && __is_identity<_Proj2>::value &&
-                            __can_map_to_integer_v<_Tp> && __libcpp_is_trivially_equality_comparable<_Tp, _Tp>::value,
+                            __can_map_to_integer_v<_Tp> && __is_trivially_equality_comparable_v<_Tp, _Tp>,
                         int> = 0>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Tp*, _Tp*>
 __mismatch(_Tp* __first1, _Tp* __last1, _Tp* __first2, _Pred& __pred, _Proj1& __proj1, _Proj2& __proj2) {

@@ -68,11 +68,11 @@ written authorization of the copyright holder.
 namespace llvm {
 namespace sys {
 namespace unicode {
-extern const char *UnicodeNameToCodepointDict;
-extern const uint8_t *UnicodeNameToCodepointIndex;
+extern const char *const UnicodeNameToCodepointDict;
+extern const uint8_t *const UnicodeNameToCodepointIndex;
 extern const std::size_t UnicodeNameToCodepointIndexSize;
 extern const std::size_t UnicodeNameToCodepointLargestNameSize;
-const char *UnicodeNameToCodepointDict =
+const char *const UnicodeNameToCodepointDict =
     " _-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789E SQUARED LATIN CAPITAL LETTER "
     "PEDIUM SHADE AND LOWER HALF BLOCK KORANIC STOP SIGN ISOLATED "
     "FORMATHARVAVEDIC INDEPENDENT SVARITA CONTAINING SMALL WHITE TRIANGLES "
@@ -979,7 +979,7 @@ const char *UnicodeNameToCodepointDict =
     "2TUJF8CR-7R-6R-5R-4R-3R-2FUEG-1G-2G-3G-4G-5G-CP-5R-9R-8T-5T-4T-3T-2T-1T-"
     "0T-6P-9P-8P-7P-6IMNT-7I-YI-UI-APOQI-OI-8I-7I-6I-5I-4I-1I-2I-"
     "3HSA64P01A1D161748494B22QW09403836R7C0U0G0G9F37199959291VD";
-uint8_t UnicodeNameToCodepointIndex_[242258] = {
+const uint8_t UnicodeNameToCodepointIndex_[242258] = {
     0x00, 0x05, 0xc0, 0x00, 0x89, 0x15, 0xc0, 0x00, 0xb3, 0x12, 0xc0, 0x00,
     0xfb, 0x06, 0xc0, 0x01, 0x21, 0x14, 0xc0, 0x01, 0x45, 0x18, 0xc0, 0x01,
     0x5f, 0x16, 0xc0, 0x01, 0x75, 0x03, 0xc0, 0x01, 0x95, 0x04, 0xc0, 0x01,
@@ -21169,7 +21169,7 @@ uint8_t UnicodeNameToCodepointIndex_[242258] = {
     0x0e, 0xc1, 0x90, 0x00, 0x43, 0xb2, 0x3f, 0xc4, 0x16, 0xf5, 0x0e, 0xc1,
     0x79, 0xc9, 0x14, 0x99, 0x0e, 0xc1, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0};
-const uint8_t *UnicodeNameToCodepointIndex = UnicodeNameToCodepointIndex_;
+const uint8_t *const UnicodeNameToCodepointIndex = UnicodeNameToCodepointIndex_;
 const std::size_t UnicodeNameToCodepointIndexSize = 242258;
 const std::size_t UnicodeNameToCodepointLargestNameSize = 74;
 

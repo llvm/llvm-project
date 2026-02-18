@@ -332,6 +332,7 @@ public:
     MachineDominatorTree &MDT;
     AAResults &AA;
     LiveIntervals &LIS;
+    MachineBlockFrequencyInfo &MBFI;
   };
 
   MachineSchedulerImpl() = default;
@@ -415,12 +416,11 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass);
 INITIALIZE_PASS_END(MachineSchedulerLegacy, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
 
-MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {
-  initializeMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
-}
+MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {}
 
 void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -432,6 +432,7 @@ void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -448,9 +449,7 @@ INITIALIZE_PASS_END(PostMachineSchedulerLegacy, "postmisched",
                     "PostRA Machine Instruction Scheduler", false, false)
 
 PostMachineSchedulerLegacy::PostMachineSchedulerLegacy()
-    : MachineFunctionPass(ID) {
-  initializePostMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 void PostMachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
@@ -555,6 +554,7 @@ bool MachineSchedulerImpl::run(MachineFunction &Func, const TargetMachine &TM,
   this->TM = &TM;
   AA = &Analyses.AA;
   LIS = &Analyses.LIS;
+  MBFI = &Analyses.MBFI;
 
   if (VerifyScheduling) {
     LLVM_DEBUG(LIS->dump());
@@ -660,8 +660,9 @@ bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  auto &MBFI = getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   Impl.setLegacyPass(this);
-  return Impl.run(MF, TM, {MLI, MDT, AA, LIS});
+  return Impl.run(MF, TM, {MLI, MDT, AA, LIS, MBFI});
 }
 
 MachineSchedulerPass::MachineSchedulerPass(const TargetMachine *TM)
@@ -693,8 +694,10 @@ MachineSchedulerPass::run(MachineFunction &MF,
                   .getManager();
   auto &AA = FAM.getResult<AAManager>(MF.getFunction());
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+
   Impl->setMFAM(&MFAM);
-  bool Changed = Impl->run(MF, *TM, {MLI, MDT, AA, LIS});
+  bool Changed = Impl->run(MF, *TM, {MLI, MDT, AA, LIS, MBFI});
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -1580,10 +1583,10 @@ updateScheduledPressure(const SUnit *SU,
 /// instruction.
 void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
   for (const VRegMaskOrUnit &P : LiveUses) {
-    Register Reg = P.RegUnit;
     /// FIXME: Currently assuming single-use physregs.
-    if (!Reg.isVirtual())
+    if (!P.VRegOrUnit.isVirtualReg())
       continue;
+    Register Reg = P.VRegOrUnit.asVirtualReg();
 
     if (ShouldTrackLaneMasks) {
       // If the register has just become live then other uses won't change
@@ -1599,7 +1602,7 @@ void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
           continue;
 
         PressureDiff &PDiff = getPressureDiff(&SU);
-        PDiff.addPressureChange(Reg, Decrement, &MRI);
+        PDiff.addPressureChange(VirtRegOrUnit(Reg), Decrement, &MRI);
         if (llvm::any_of(PDiff, [](const PressureChange &Change) {
               return Change.isValid();
             }))
@@ -1611,7 +1614,7 @@ void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
       }
     } else {
       assert(P.LaneMask.any());
-      LLVM_DEBUG(dbgs() << "  LiveReg: " << printVRegOrUnit(Reg, TRI) << "\n");
+      LLVM_DEBUG(dbgs() << "  LiveReg: " << printReg(Reg, TRI) << "\n");
       // This may be called before CurrentBottom has been initialized. However,
       // BotRPTracker must have a valid position. We want the value live into the
       // instruction or live out of the block, so ask for the previous
@@ -1638,7 +1641,7 @@ void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
               LI.Query(LIS->getInstructionIndex(*SU->getInstr()));
           if (LRQ.valueIn() == VNI) {
             PressureDiff &PDiff = getPressureDiff(SU);
-            PDiff.addPressureChange(Reg, true, &MRI);
+            PDiff.addPressureChange(VirtRegOrUnit(Reg), true, &MRI);
             if (llvm::any_of(PDiff, [](const PressureChange &Change) {
                   return Change.isValid();
                 }))
@@ -1814,9 +1817,9 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
   unsigned MaxCyclicLatency = 0;
   // Visit each live out vreg def to find def/use pairs that cross iterations.
   for (const VRegMaskOrUnit &P : RPTracker.getPressure().LiveOutRegs) {
-    Register Reg = P.RegUnit;
-    if (!Reg.isVirtual())
+    if (!P.VRegOrUnit.isVirtualReg())
       continue;
+    Register Reg = P.VRegOrUnit.asVirtualReg();
     const LiveInterval &LI = LIS->getInterval(Reg);
     const VNInfo *DefVNI = LI.getVNInfoBefore(LIS->getMBBEndIdx(BB));
     if (!DefVNI)

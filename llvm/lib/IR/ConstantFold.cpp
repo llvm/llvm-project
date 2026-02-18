@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
@@ -86,8 +87,14 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
         APFloat(DestTy->getScalarType()->getFltSemantics(), CI->getValue()));
   }
 
-  // Handle ConstantFP -> ConstantInt
+  // Handle ConstantFP -> Constant{Int, FP}
   if (ConstantFP *FP = dyn_cast<ConstantFP>(V)) {
+    // Handle half <-> bfloat
+    if (!isa<VectorType>(SrcTy) && DestTy->isFloatingPointTy()) {
+      APInt Val = FP->getValueAPF().bitcastToAPInt();
+      APFloat ResultFP(DestTy->getFltSemantics(), Val);
+      return ConstantFP::get(DestTy->getContext(), ResultFP);
+    }
     // Canonicalize scalar-to-vector bitcasts into vector-to-vector bitcasts
     // This allows for other simplifications (although some of them
     // can only be handled by Analysis/ConstantFolding.cpp).
@@ -446,13 +453,13 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
   Type *EltTy = V1VTy->getElementType();
 
   // Poison shuffle mask -> poison value.
-  if (all_of(Mask, [](int Elt) { return Elt == PoisonMaskElem; })) {
+  if (all_of(Mask, equal_to(PoisonMaskElem))) {
     return PoisonValue::get(VectorType::get(EltTy, MaskEltCount));
   }
 
   // If the mask is all zeros this is a splat, no need to go through all
   // elements.
-  if (all_of(Mask, [](int Elt) { return Elt == 0; })) {
+  if (all_of(Mask, equal_to(0))) {
     Type *Ty = IntegerType::get(V1->getContext(), 32);
     Constant *Elt =
         ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, 0));

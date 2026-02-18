@@ -822,6 +822,12 @@
 
 /// Check __loongarch_arch{_tune/_frecipe/_lam_bh/_lamcas/_ld_seq_sa/_div32/_scq}.
 
+// RUN: %clang --target=loongarch32 -x c -E -dM %s -o - | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la32rv1.0 -DTUNE=loongarch32 %s
+// RUN: %clang --target=loongarch32 -x c -E -dM %s -o - -march=la32v1.0 | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la32v1.0 -DTUNE=loongarch32 %s
+// RUN: %clang --target=loongarch32 -x c -E -dM %s -o - -march=la32rv1.0 | \
+// RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la32rv1.0 -DTUNE=loongarch32 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - | \
 // RUN:   FileCheck --match-full-lines --check-prefix=ARCH-TUNE -DARCH=la64v1.0 -DTUNE=loongarch64 %s
 // RUN: %clang --target=loongarch64 -x c -E -dM %s -o - -march=loongarch64 | \
@@ -925,6 +931,7 @@
 // RUN: %clang --target=loongarch64 -mno-lasx -mlsx -x c -E -dM %s -o - \
 // RUN:   | FileCheck --match-full-lines --check-prefix=MLSX %s
 // MLSX-NOT: #define __loongarch_asx
+// MLSX-NOT: #define __loongarch_asx_sx_conv
 // MLSX: #define __loongarch_simd_width 128
 // MLSX: #define __loongarch_sx 1
 
@@ -937,6 +944,7 @@
 // RUN: %clang --target=loongarch64 -mno-lasx -mlasx -x c -E -dM %s -o - \
 // RUN:   | FileCheck --match-full-lines --check-prefix=MLASX %s
 // MLASX: #define __loongarch_asx 1
+// MLASX: #define __loongarch_asx_sx_conv 1
 // MLASX: #define __loongarch_simd_width 256
 // MLASX: #define __loongarch_sx 1
 
@@ -953,5 +961,6 @@
 // RUN: %clang --target=loongarch64 -mno-lsx -march=la464 -x c -E -dM %s -o - \
 // RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
 // MNO-LSX-NOT: #define __loongarch_asx
+// MNO-LSX-NOT: #define __loongarch_asx_sx_conv
 // MNO-LSX-NOT: #define __loongarch_simd_width
 // MNO-LSX-NOT: #define __loongarch_sx

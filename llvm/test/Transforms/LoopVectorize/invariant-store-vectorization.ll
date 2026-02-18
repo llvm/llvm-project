@@ -380,6 +380,7 @@ define void @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP8]], 8589934588
+; CHECK-NEXT:    [[IND_END:%.*]] = add nuw nsw i64 [[N_VEC]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, i32 [[ARRAYIDX5_PROMOTED]], i64 0
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i32, ptr [[VAR2]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -395,7 +396,6 @@ define void @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi <4 x i32> [ [[TMP17]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[IND_END:%.*]] = add nuw nsw i64 [[N_VEC]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[DOTLCSSA]])
 ; CHECK-NEXT:    store i32 [[TMP19]], ptr [[ARRAYIDX5]], align 4, !alias.scope [[META27:![0-9]+]], !noalias [[META23]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP8]], [[N_VEC]]

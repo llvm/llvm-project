@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_global_id.h>
 #include <clc/workitem/clc_get_global_id.h>
 
 _CLC_OVERLOAD _CLC_DEF size_t get_global_id(uint dim) {

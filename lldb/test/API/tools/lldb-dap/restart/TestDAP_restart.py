@@ -51,7 +51,7 @@ class TestDAP_restart(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program, stopOnEntry=True)
         [bp_main] = self.set_function_breakpoints(["main"])
 
-        self.continue_to_next_stop()
+        self.verify_configuration_done()
         self.verify_stop_on_entry()
 
         # Then, if we continue, we should hit the breakpoint at main.

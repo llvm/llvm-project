@@ -11,7 +11,6 @@
 
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <memory>
 #include <mutex>
 
 namespace llvm {
@@ -25,7 +24,7 @@ public:
   enum class Level { Debug, Info, Error };
 
   /// Set the severity level of the logger.
-  static void setLogLevel(Level LogLevel);
+  LLVM_ABI_FOR_TEST static void setLogLevel(Level LogLevel);
 
   /// Initiate a log message at various severity levels. These should be called
   /// after a call to `initialize`.
@@ -46,8 +45,8 @@ private:
   static Logger &get();
 
   /// Start a log message with the given severity level.
-  static void log(Level LogLevel, const char *Fmt,
-                  const llvm::formatv_object_base &Message);
+  LLVM_ABI_FOR_TEST static void log(Level LogLevel, const char *Fmt,
+                                    const llvm::formatv_object_base &Message);
 
   /// The minimum logging level. Messages with lower level are ignored.
   Level LogLevel = Level::Error;

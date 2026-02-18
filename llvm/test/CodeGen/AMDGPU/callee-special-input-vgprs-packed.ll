@@ -1553,13 +1553,13 @@ define void @too_many_args_use_workitem_id_xyz(
 ; GFX90A-LABEL: too_many_args_use_workitem_id_xyz:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    buffer_load_dword v32, off, s[0:3], s32
-; GFX90A-NEXT:    v_and_b32_e32 v33, 0x3ff, v31
-; GFX90A-NEXT:    global_store_dword v[0:1], v33, off
+; GFX90A-NEXT:    buffer_load_dword v33, off, s[0:3], s32
+; GFX90A-NEXT:    v_and_b32_e32 v32, 0x3ff, v31
+; GFX90A-NEXT:    global_store_dword v[0:1], v32, off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_bfe_u32 v33, v31, 10, 10
+; GFX90A-NEXT:    v_bfe_u32 v32, v31, 10, 10
 ; GFX90A-NEXT:    v_bfe_u32 v31, v31, 20, 10
-; GFX90A-NEXT:    global_store_dword v[0:1], v33, off
+; GFX90A-NEXT:    global_store_dword v[0:1], v32, off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_store_dword v[0:1], v31, off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
@@ -1625,7 +1625,7 @@ define void @too_many_args_use_workitem_id_xyz(
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_store_dword v[0:1], v30, off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    global_store_dword v[0:1], v32, off
+; GFX90A-NEXT:    global_store_dword v[0:1], v33, off
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,

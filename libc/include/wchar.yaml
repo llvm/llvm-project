@@ -50,14 +50,6 @@ functions:
       - type: const char *__restrict
       - type: size_t
       - type: mbstate_t *__restrict
-  - name: mbtowc
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: wchar_t *__restrict
-      - type: const char *__restrict
-      - type: size_t
   - name: mbsnrtowcs
     standards:
       - stdc
@@ -77,14 +69,6 @@ functions:
       - type: const char **__restrict
       - type: size_t
       - type: mbstate_t *__restrict
-  - name: mbstowcs
-    standards:
-      - stdc
-    return_type: size_t
-    arguments:
-      - type: wchar_t *__restrict
-      - type: const char *__restrict
-      - type: size_t
   - name: mbsinit
     standards:
       - stdc
@@ -269,13 +253,6 @@ functions:
       - type: char *__restrict
       - type: wchar_t
       - type: mbstate_t *__restrict
-  - name: wctomb
-    standards:
-      - stdc
-    return_type: int
-    arguments:
-      - type: char *
-      - type: wchar_t
   - name: wcscpy
     standards:
       - stdc
@@ -336,14 +313,6 @@ functions:
       - type: const wchar_t *__restrict
       - type: wchar_t **__restrict
       - type: int
-  - name: wcstombs
-    standards:
-      - stdc
-    return_type: size_t
-    arguments:
-      - type: char *__restrict
-      - type: const wchar_t *__restrict
-      - type: size_t
   - name: wcstoul
     standards:
       - stdc
@@ -360,3 +329,24 @@ functions:
       - type: const wchar_t *__restrict
       - type: wchar_t **__restrict
       - type: int
+  - name: wcstof
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+  - name: wcstod
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+  - name: wcstold
+    standards:
+      - stdc
+    return_type: long double
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict

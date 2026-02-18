@@ -1,10 +1,10 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: not ld.lld --entry=func --gc-sections %t.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: not ld.lld --entry=func --gc-sections %t.o -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 
 ## Check we are able to find a function symbol that encloses
 ## a given location when reporting error messages.
-# CHECK: {{.*}}.o:(function func: .text.func+0x3): relocation R_X86_64_32S out of range: -281474974609120 is not in [-2147483648, 2147483647]; references 'func'
+# CHECK: error: {{.*}}.o:(function func: .text.func+0x3): relocation R_X86_64_32S out of range: -281474974609120 is not in [-2147483648, 2147483647]; references 'func'
 # CHECK-NEXT: >>> defined in {{.*}}.o
 # CHECK-EMPTY:
 

@@ -17,6 +17,9 @@ LIBHELP: OVERVIEW: LLVM Lib
 # RUN: env LLD_IN_TEST=1 not lld-link /WX /lib 2>&1 | FileCheck -check-prefix=LIBBAD %s
 LIBBAD: ignoring /lib since it's not the first argument
 
+# RUN: env LLD_IN_TEST=1 not lld-link /link 2>&1 | FileCheck -check-prefix=LINKBAD %s
+LINKBAD: ignoring /link, did you pass it multiple times?
+
 # RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
 # RUN: not lld-link /out:/ %t.obj 2>&1 | FileCheck -check-prefix=DIR %s
 DIR: cannot open output file

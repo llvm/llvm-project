@@ -88,6 +88,11 @@ public:
     Gen->HandleCXXStaticMemberVarInstantiation(VD);
   }
 
+  void HandleOpenACCRoutineReference(const FunctionDecl *FD,
+                                     const OpenACCRoutineDecl *RD) override {
+    Gen->HandleOpenACCRoutineReference(FD, RD);
+  }
+
   void HandleInlineFunctionDefinition(FunctionDecl *D) override {
     Gen->HandleInlineFunctionDefinition(D);
   }

@@ -146,6 +146,13 @@ namespace AArch64CMHPriorityHint {
 } // namespace llvm
 
 namespace llvm {
+namespace AArch64TIndexHint {
+#define GET_TINDEX_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64TIndexHint
+} // namespace llvm
+
+namespace llvm {
   namespace AArch64SysReg {
 #define GET_SysRegsList_IMPL
 #include "AArch64GenSystemOperands.inc"
@@ -186,11 +193,18 @@ std::string AArch64SysReg::genericRegisterString(uint32_t Bits) {
 }
 
 namespace llvm {
-  namespace AArch64TLBI {
+namespace AArch64TLBI {
 #define GET_TLBITable_IMPL
 #include "AArch64GenSystemOperands.inc"
-  }
-}
+} // namespace AArch64TLBI
+} // namespace llvm
+
+namespace llvm {
+namespace AArch64PLBI {
+#define GET_PLBITable_IMPL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64PLBI
+} // namespace llvm
 
 namespace llvm {
 namespace AArch64TLBIP {

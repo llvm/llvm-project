@@ -136,11 +136,15 @@ struct LineEntry {
   /// The section offset address range for this line entry.
   AddressRange range;
 
+  /// This gets set for LineEntries created without a valid address range.
+  /// When set, `LineEntry::IsValid` doesn't check the `range` validity.
+  bool synthetic = false;
+
   /// The source file, possibly mapped by the target.source-map setting.
-  lldb::SupportFileSP file_sp;
+  SupportFileNSP file_sp;
 
   /// The original source file, from debug info.
-  lldb::SupportFileSP original_file_sp;
+  SupportFileNSP original_file_sp;
 
   /// The source line number, or LLDB_INVALID_LINE_NUMBER if there is no line
   /// number information.

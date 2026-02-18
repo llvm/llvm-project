@@ -18,6 +18,7 @@
 #include "CIRGenModule.h"
 #include "EHScopeStack.h"
 #include "mlir/IR/Value.h"
+#include "clang/AST/StmtCXX.h"
 
 namespace clang::CIRGen {
 
@@ -38,13 +39,9 @@ class EHScope {
   };
   enum { NumCommonBits = 3 };
 
-protected:
-  class CatchBitFields {
-    friend class EHCatchScope;
-    unsigned : NumCommonBits;
-    unsigned numHandlers : 32 - NumCommonBits;
-  };
+  bool scopeMayThrow;
 
+protected:
   class CleanupBitFields {
     friend class EHCleanupScope;
     unsigned : NumCommonBits;
@@ -74,12 +71,11 @@ protected:
 
   union {
     CommonBitFields commonBits;
-    CatchBitFields catchBits;
     CleanupBitFields cleanupBits;
   };
 
 public:
-  enum Kind { Cleanup, Catch, Terminate, Filter };
+  enum Kind { Cleanup, Terminate, Filter };
 
   EHScope(Kind kind, EHScopeStack::stable_iterator enclosingEHScope)
       : enclosingEHScope(enclosingEHScope) {
@@ -92,86 +88,13 @@ public:
     // Traditional LLVM codegen also checks for `!block->use_empty()`, but
     // in CIRGen the block content is not important, just used as a way to
     // signal `hasEHBranches`.
-    assert(!cir::MissingFeatures::ehstackBranches());
-    return false;
+    return scopeMayThrow;
   }
+
+  void setMayThrow(bool mayThrow) { scopeMayThrow = mayThrow; }
 
   EHScopeStack::stable_iterator getEnclosingEHScope() const {
     return enclosingEHScope;
-  }
-};
-
-/// A scope which attempts to handle some, possibly all, types of
-/// exceptions.
-///
-/// Objective C \@finally blocks are represented using a cleanup scope
-/// after the catch scope.
-
-class EHCatchScope : public EHScope {
-  // In effect, we have a flexible array member
-  //   Handler Handlers[0];
-  // But that's only standard in C99, not C++, so we have to do
-  // annoying pointer arithmetic instead.
-
-public:
-  struct Handler {
-    /// A type info value, or null MLIR attribute for a catch-all
-    CatchTypeInfo type;
-
-    /// The catch handler for this type.
-    mlir::Region *region;
-
-    bool isCatchAll() const { return type.rtti == nullptr; }
-  };
-
-private:
-  friend class EHScopeStack;
-
-  Handler *getHandlers() { return reinterpret_cast<Handler *>(this + 1); }
-
-  const Handler *getHandlers() const {
-    return reinterpret_cast<const Handler *>(this + 1);
-  }
-
-public:
-  static size_t getSizeForNumHandlers(unsigned n) {
-    return sizeof(EHCatchScope) + n * sizeof(Handler);
-  }
-
-  EHCatchScope(unsigned numHandlers,
-               EHScopeStack::stable_iterator enclosingEHScope)
-      : EHScope(Catch, enclosingEHScope) {
-    catchBits.numHandlers = numHandlers;
-    assert(catchBits.numHandlers == numHandlers && "NumHandlers overflow?");
-  }
-
-  unsigned getNumHandlers() const { return catchBits.numHandlers; }
-
-  void setHandler(unsigned i, CatchTypeInfo type, mlir::Region *region) {
-    assert(i < getNumHandlers());
-    getHandlers()[i].type = type;
-    getHandlers()[i].region = region;
-  }
-
-  const Handler &getHandler(unsigned i) const {
-    assert(i < getNumHandlers());
-    return getHandlers()[i];
-  }
-
-  // Clear all handler blocks.
-  // FIXME: it's better to always call clearHandlerBlocks in DTOR and have a
-  // 'takeHandler' or some such function which removes ownership from the
-  // EHCatchScope object if the handlers should live longer than EHCatchScope.
-  void clearHandlerBlocks() {
-    // The blocks are owned by TryOp, nothing to delete.
-  }
-
-  using iterator = const Handler *;
-  iterator begin() const { return getHandlers(); }
-  iterator end() const { return getHandlers() + getNumHandlers(); }
-
-  static bool classof(const EHScope *scope) {
-    return scope->getKind() == Catch;
   }
 };
 
@@ -201,15 +124,14 @@ public:
     return sizeof(EHCleanupScope) + cleanupBits.cleanupSize;
   }
 
-  EHCleanupScope(unsigned cleanupSize, unsigned fixupDepth,
+  EHCleanupScope(bool isNormal, bool isEH, unsigned cleanupSize,
+                 unsigned fixupDepth,
                  EHScopeStack::stable_iterator enclosingNormal,
                  EHScopeStack::stable_iterator enclosingEH)
       : EHScope(EHScope::Cleanup, enclosingEH),
         enclosingNormal(enclosingNormal), fixupDepth(fixupDepth) {
-    // TODO(cir): When exception handling is upstreamed, isNormalCleanup and
-    // isEHCleanup will be arguments to the constructor.
-    cleanupBits.isNormalCleanup = true;
-    cleanupBits.isEHCleanup = false;
+    cleanupBits.isNormalCleanup = isNormal;
+    cleanupBits.isEHCleanup = isEH;
     cleanupBits.isActive = true;
     cleanupBits.isLifetimeMarker = false;
     cleanupBits.testFlagInNormalCleanup = false;
@@ -227,9 +149,12 @@ public:
   void setNormalBlock(mlir::Block *bb) { normalBlock = bb; }
 
   bool isNormalCleanup() const { return cleanupBits.isNormalCleanup; }
+  bool isEHCleanup() const { return cleanupBits.isEHCleanup; }
 
   bool isActive() const { return cleanupBits.isActive; }
   void setActive(bool isActive) { cleanupBits.isActive = isActive; }
+
+  bool isLifetimeMarker() const { return cleanupBits.isLifetimeMarker; }
 
   unsigned getFixupDepth() const { return fixupDepth; }
   EHScopeStack::stable_iterator getEnclosingNormalCleanup() const {
@@ -268,17 +193,12 @@ public:
   iterator &operator++() {
     size_t size;
     switch (get()->getKind()) {
-    case EHScope::Catch:
-      size = EHCatchScope::getSizeForNumHandlers(
-          static_cast<const EHCatchScope *>(get())->getNumHandlers());
-      break;
-
     case EHScope::Filter:
       llvm_unreachable("EHScopeStack::iterator Filter");
       break;
 
     case EHScope::Cleanup:
-      llvm_unreachable("EHScopeStack::iterator Cleanup");
+      size = static_cast<const EHCleanupScope *>(get())->getAllocatedSize();
       break;
 
     case EHScope::Terminate:
@@ -307,14 +227,6 @@ EHScopeStack::find(stable_iterator savePoint) const {
   assert(savePoint.size <= stable_begin().size &&
          "finding savepoint after pop");
   return iterator(endOfBuffer - savePoint.size);
-}
-
-inline void EHScopeStack::popCatch() {
-  assert(!empty() && "popping exception stack when not empty");
-
-  EHCatchScope &scope = llvm::cast<EHCatchScope>(*begin());
-  innermostEHScope = scope.getEnclosingEHScope();
-  deallocate(EHCatchScope::getSizeForNumHandlers(scope.getNumHandlers()));
 }
 
 /// The exceptions personality for a function.

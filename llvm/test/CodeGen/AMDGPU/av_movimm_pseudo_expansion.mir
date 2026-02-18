@@ -208,3 +208,23 @@ body: |
     ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 -16, implicit $exec, implicit-def $vgpr1_vgpr2
     $vgpr1_vgpr2 = AV_MOV_B64_IMM_PSEUDO 18446744004990074889, implicit $exec
 ...
+
+---
+name: av_mov_b64_misalign_vgpr
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: av_mov_b64_misalign_vgpr
+    ; CHECK: $vgpr5 = V_MOV_B32_e32 0, implicit $exec, implicit-def $vgpr5_vgpr6
+    ; CHECK-NEXT: $vgpr6 = V_MOV_B32_e32 0, implicit $exec, implicit-def $vgpr5_vgpr6
+    $vgpr5_vgpr6 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+...
+
+---
+name: av_mov_b64_misalign_agpr
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: av_mov_b64_misalign_agpr
+    ; CHECK: $agpr5 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec, implicit-def $agpr5_agpr6
+    ; CHECK-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec, implicit-def $agpr5_agpr6
+    $agpr5_agpr6 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+...

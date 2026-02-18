@@ -39,7 +39,6 @@
 #include "llvm/Support/MemAlloc.h"
 #include "llvm/Support/type_traits.h"
 #include <cstring>
-#include <memory>
 #include <type_traits>
 
 namespace llvm {

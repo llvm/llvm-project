@@ -32,12 +32,7 @@
 
 # RUN: llvm-bolt %t.exe -v=1 -o %t.out 2>&1 | FileCheck %s
 
-# CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in main
-# CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in main
-# CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in main
-# CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in main
-# CHECK: BOLT-WARNING: unclaimed data to code reference (possibly an unrecognized jump table entry) to .Ltmp[[#]] in main
-# CHECK: BOLT-WARNING: failed to post-process indirect branches for main
+# CHECK: BOLT-WARNING: 11 unclaimed data relocations remain against function main
 
   .text
   .globl main

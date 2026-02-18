@@ -12,19 +12,15 @@ struct CompleteS {
 
 void cxx_paren_list_init_expr() { CompleteS a(1, 'a'); }
 
+// CIR-DAG: cir.global "private" constant cir_private @[[PAREN_A:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<97> : !s8i}> : !rec_CompleteS
+// LLVM-DAG: @[[PAREN_A:.*]] = private constant %struct.CompleteS { i32 1, i8 97 }
+
 // CIR: %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
-// CIR: %[[ELEM_0_PTR:.*]] = cir.get_member %[[A_ADDR]][0] {name = "a"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s32i>
-// CIR: %[[ELEM_0_VAL:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: cir.store{{.*}} %[[ELEM_0_VAL]], %[[ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
-// CIR: %[[ELEM_1_PTR:.*]] = cir.get_member %[[A_ADDR]][1] {name = "b"} : !cir.ptr<!rec_CompleteS> -> !cir.ptr<!s8i>
-// CIR: %[[ELEM_1_VAL:.*]] = cir.const #cir.int<97> : !s8i
-// CIR: cir.store{{.*}} %[[ELEM_1_VAL]], %[[ELEM_1_PTR]] : !s8i, !cir.ptr<!s8i>
+// CIR: %[[CONST:.*]] = cir.get_global @[[PAREN_A]] : !cir.ptr<!rec_CompleteS>
+// CIR: cir.copy %[[CONST]] to %[[A_ADDR]]
 
 // LLVM: %[[A_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
-// LLVM: %[[ELEM_0_PTR:.*]] = getelementptr %struct.CompleteS, ptr %[[A_ADDR]], i32 0, i32 0
-// LLVM: store i32 1, ptr %[[ELEM_0_PTR]], align 4
-// LLVM: %[[ELEM_1_PTR:.*]] = getelementptr %struct.CompleteS, ptr %[[A_ADDR]], i32 0, i32 1
-// LLVM: store i8 97, ptr %[[ELEM_1_PTR]], align 4
+// LLVM: call void @llvm.memcpy{{.*}}(ptr %[[A_ADDR]], ptr @[[PAREN_A]]
 
 // OGCG: %[[A_ADDR:.*]] = alloca %struct.CompleteS, align 4
 // OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[A_ADDR]], ptr align 4 @__const._Z24cxx_paren_list_init_exprv.a, i64 8, i1 false)

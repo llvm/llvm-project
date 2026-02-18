@@ -36,8 +36,8 @@ func.func @parse_i4_tensor() -> tensor<32xi4> {
 }
 
 // CHECK-LABEL: @parse_i1_tensor
-func.func @parse_i1_tensor() -> tensor<256xi1> {
-  // CHECK: dense<"0x0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F"> : tensor<256xi1>
-  %0 = arith.constant dense<"0x0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F"> : tensor<256xi1>
-  return %0 : tensor<256xi1>
+func.func @parse_i1_tensor() -> tensor<32xi1> {
+  // CHECK: dense<[true, false, true, false, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, false, false, false, false, false, false, true]> : tensor<32xi1>
+  %0 = arith.constant dense<"0x0100010001010101010101010101010101010101010101010100000000000001"> : tensor<32xi1>
+  return %0 : tensor<32xi1>
 }

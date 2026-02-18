@@ -8,10 +8,12 @@
 
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 
+#include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -61,25 +63,7 @@ using namespace mlir::transform::gpu;
 void transform::ApplyGPUToNVVMConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
-  // NVVM uses alloca in the default address space to represent private
-  // memory allocations, so drop private annotations. NVVM uses address
-  // space 3 for shared memory. NVVM uses the default address space to
-  // represent global memory.
-  // Used in populateGpuToNVVMConversionPatternsso attaching here for now.
-  // TODO: We should have a single to_nvvm_type_converter.
-  populateGpuMemorySpaceAttributeConversions(
-      llvmTypeConverter, [](AddressSpace space) -> unsigned {
-        switch (space) {
-        case AddressSpace::Global:
-          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
-        case AddressSpace::Workgroup:
-          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
-        case AddressSpace::Private:
-          return 0;
-        }
-        llvm_unreachable("unknown address space enum value");
-        return static_cast<unsigned>(NVVM::NVVMMemorySpace::Generic);
-      });
+  nvgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
   // Used in GPUToNVVM/WmmaOpsToNvvm.cpp so attaching here for now.
   // TODO: We should have a single to_nvvm_type_converter.
   llvmTypeConverter.addConversion(
@@ -128,18 +112,7 @@ LogicalResult transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
 void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
     TypeConverter &typeConverter, RewritePatternSet &patterns) {
   auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
-  populateGpuMemorySpaceAttributeConversions(
-      llvmTypeConverter, [](AddressSpace space) {
-        switch (space) {
-        case AddressSpace::Global:
-          return ROCDL::ROCDLDialect::kGlobalMemoryAddressSpace;
-        case AddressSpace::Workgroup:
-          return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
-        case AddressSpace::Private:
-          return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
-        }
-        llvm_unreachable("unknown address space enum value");
-      });
+  amdgpu::populateCommonGPUTypeAndAttributeConversions(llvmTypeConverter);
   FailureOr<amdgpu::Chipset> maybeChipset =
       amdgpu::Chipset::parse(getChipset());
   assert(llvm::succeeded(maybeChipset) && "expected valid chipset");
@@ -773,6 +746,10 @@ static DiagnosedSilenceableFailure checkMappingSpec(
     std::optional<TransformOpInterface> transformOp, scf::ForallOp forallOp,
     ArrayRef<int64_t> numParallelIterations, ArrayRef<int64_t> blockOrGridSizes,
     int factor, bool useLinearMapping = false) {
+  if (llvm::any_of(blockOrGridSizes, [](int64_t i) { return i <= 0; })) {
+    return definiteFailureHelper(transformOp, forallOp,
+                                 "block/grid sizes must be strictly positive");
+  }
   if (!useLinearMapping && blockOrGridSizes.front() % factor != 0) {
     auto diag = definiteFailureHelper(
         transformOp, forallOp,
@@ -780,15 +757,23 @@ static DiagnosedSilenceableFailure checkMappingSpec(
             Twine(factor));
     return diag;
   }
-  if (computeProduct(numParallelIterations) * factor >
-      computeProduct(blockOrGridSizes)) {
+  bool hasZeroParallelIteration =
+      llvm::any_of(numParallelIterations, [](int64_t i) { return i == 0; });
+  // `computeProduct` requires strictly positive inputs, so handle the
+  // zero-iteration case explicitly to avoid asserting on valid degenerate
+  // loop bounds.
+  int64_t requiredResourceCount =
+      hasZeroParallelIteration ? 0
+                               : computeProduct(numParallelIterations) * factor;
+  int64_t availableResourceCount = computeProduct(blockOrGridSizes);
+  if (requiredResourceCount > availableResourceCount) {
     auto diag = definiteFailureHelper(
         transformOp, forallOp,
         Twine("the number of required parallel resources (blocks or "
               "threads) ") +
-            Twine(computeProduct(numParallelIterations) * factor) +
+            Twine(requiredResourceCount) +
             " overflows the number of available resources " +
-            Twine(computeProduct(blockOrGridSizes)));
+            Twine(availableResourceCount));
     return diag;
   }
   return DiagnosedSilenceableFailure::success();

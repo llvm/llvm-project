@@ -330,6 +330,13 @@ void ASTStmtWriter::VisitBreakStmt(BreakStmt *S) {
   Code = serialization::STMT_BREAK;
 }
 
+void ASTStmtWriter::VisitDeferStmt(DeferStmt *S) {
+  VisitStmt(S);
+  Record.AddSourceLocation(S->getDeferLoc());
+  Record.AddStmt(S->getBody());
+  Code = serialization::STMT_DEFER;
+}
+
 void ASTStmtWriter::VisitReturnStmt(ReturnStmt *S) {
   VisitStmt(S);
 
@@ -464,6 +471,11 @@ void ASTStmtWriter::VisitCoawaitExpr(CoawaitExpr *E) {
 void ASTStmtWriter::VisitCoyieldExpr(CoyieldExpr *E) {
   VisitCoroutineSuspendExpr(E);
   Code = serialization::EXPR_COYIELD;
+}
+
+void ASTStmtWriter::VisitCXXReflectExpr(CXXReflectExpr *E) {
+  // TODO(Reflection): Implement this.
+  assert(false && "not implemented yet");
 }
 
 void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
@@ -900,6 +912,15 @@ void ASTStmtWriter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   Code = serialization::EXPR_ARRAY_SUBSCRIPT;
 }
 
+void ASTStmtWriter::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getBase());
+  Record.AddStmt(E->getRowIdx());
+  Record.AddSourceLocation(E->getRBracketLoc());
+  Code = serialization::EXPR_ARRAY_SUBSCRIPT;
+}
+
 void ASTStmtWriter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   VisitExpr(E);
   Record.AddStmt(E->getBase());
@@ -1182,6 +1203,14 @@ void ASTStmtWriter::VisitExtVectorElementExpr(ExtVectorElementExpr *E) {
   Record.AddIdentifierRef(&E->getAccessor());
   Record.AddSourceLocation(E->getAccessorLoc());
   Code = serialization::EXPR_EXT_VECTOR_ELEMENT;
+}
+
+void ASTStmtWriter::VisitMatrixElementExpr(MatrixElementExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getBase());
+  Record.AddIdentifierRef(&E->getAccessor());
+  Record.AddSourceLocation(E->getAccessorLoc());
+  Code = serialization::EXPR_MATRIX_ELEMENT;
 }
 
 void ASTStmtWriter::VisitInitListExpr(InitListExpr *E) {

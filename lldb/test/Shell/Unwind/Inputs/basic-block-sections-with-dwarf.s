@@ -8,6 +8,7 @@
 # using the frame pointer register and the are deliberately adjusting the stack
 # pointer to test that we're using the correct unwind row.
 
+        .att_syntax
         .text
 
         .type   baz,@function

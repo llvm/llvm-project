@@ -807,8 +807,6 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
 
     // isl cannot generate an index expression for access-nothing accesses.
     isl::set AccDomain = PWAccRel.domain();
-    isl::set Context = S.getContext();
-    AccDomain = AccDomain.intersect_params(Context);
     if (AccDomain.is_empty())
       continue;
 

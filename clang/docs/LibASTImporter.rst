@@ -502,7 +502,7 @@ The ``-ast-merge <pch-file>`` command-line switch can be used to merge from the 
 This file represents the source context.
 When this switch is present then each top-level AST node of the source context is being merged into the destination context.
 If the merge was successful then ``ASTConsumer::HandleTopLevelDecl`` is called for the Decl.
-This results that we can execute the original front-end action on the extended AST.
+This means that we can execute the original front-end action on the extended AST.
 
 Example for C
 ^^^^^^^^^^^^^

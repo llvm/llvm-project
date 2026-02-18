@@ -98,13 +98,13 @@ public:
   virtual void emitDirectiveSetHardFloat();
 
   // PIC support
-  virtual void emitDirectiveCpAdd(unsigned RegNo);
-  virtual void emitDirectiveCpLoad(unsigned RegNo);
-  virtual void emitDirectiveCpLocal(unsigned RegNo);
+  virtual void emitDirectiveCpAdd(MCRegister Reg);
+  virtual void emitDirectiveCpLoad(MCRegister Reg);
+  virtual void emitDirectiveCpLocal(MCRegister Reg);
   virtual bool emitDirectiveCpRestore(int Offset,
-                                      function_ref<unsigned()> GetATReg,
+                                      function_ref<MCRegister()> GetATReg,
                                       SMLoc IDLoc, const MCSubtargetInfo *STI);
-  virtual void emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
+  virtual void emitDirectiveCpsetup(MCRegister Reg, int RegOrOffset,
                                     const MCSymbol &Sym, bool IsReg);
   virtual void emitDirectiveCpreturn(unsigned SaveLocation,
                                      bool SaveLocationIsRegister);
@@ -164,7 +164,7 @@ public:
   /// by reporting an error).
   void emitStoreWithImmOffset(unsigned Opcode, MCRegister SrcReg,
                               MCRegister BaseReg, int64_t Offset,
-                              function_ref<unsigned()> GetATReg, SMLoc IDLoc,
+                              function_ref<MCRegister()> GetATReg, SMLoc IDLoc,
                               const MCSubtargetInfo *STI);
   void emitLoadWithImmOffset(unsigned Opcode, MCRegister DstReg,
                              MCRegister BaseReg, int64_t Offset,
@@ -205,7 +205,7 @@ protected:
   bool FrameInfoSet;
   int FrameOffset;
   unsigned FrameReg;
-  unsigned GPReg;
+  MCRegister GPReg;
   unsigned ReturnReg;
 
 private:
@@ -290,9 +290,9 @@ public:
   void emitDirectiveSetHardFloat() override;
 
   // PIC support
-  void emitDirectiveCpAdd(unsigned RegNo) override;
-  void emitDirectiveCpLoad(unsigned RegNo) override;
-  void emitDirectiveCpLocal(unsigned RegNo) override;
+  void emitDirectiveCpAdd(MCRegister Reg) override;
+  void emitDirectiveCpLoad(MCRegister Reg) override;
+  void emitDirectiveCpLocal(MCRegister Reg) override;
 
   /// Emit a .cprestore directive.  If the offset is out of range then it will
   /// be synthesized using the assembler temporary.
@@ -301,9 +301,9 @@ public:
   /// temporary and is only called when the assembler temporary is required. It
   /// must handle the case where no assembler temporary is available (typically
   /// by reporting an error).
-  bool emitDirectiveCpRestore(int Offset, function_ref<unsigned()> GetATReg,
+  bool emitDirectiveCpRestore(int Offset, function_ref<MCRegister()> GetATReg,
                               SMLoc IDLoc, const MCSubtargetInfo *STI) override;
-  void emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
+  void emitDirectiveCpsetup(MCRegister Reg, int RegOrOffset,
                             const MCSymbol &Sym, bool IsReg) override;
   void emitDirectiveCpreturn(unsigned SaveLocation,
                              bool SaveLocationIsRegister) override;
@@ -370,12 +370,12 @@ public:
   void emitFMask(unsigned FPUBitmask, int FPUTopSavedRegOff) override;
 
   // PIC support
-  void emitDirectiveCpAdd(unsigned RegNo) override;
-  void emitDirectiveCpLoad(unsigned RegNo) override;
-  void emitDirectiveCpLocal(unsigned RegNo) override;
-  bool emitDirectiveCpRestore(int Offset, function_ref<unsigned()> GetATReg,
+  void emitDirectiveCpAdd(MCRegister Reg) override;
+  void emitDirectiveCpLoad(MCRegister Reg) override;
+  void emitDirectiveCpLocal(MCRegister Reg) override;
+  bool emitDirectiveCpRestore(int Offset, function_ref<MCRegister()> GetATReg,
                               SMLoc IDLoc, const MCSubtargetInfo *STI) override;
-  void emitDirectiveCpsetup(unsigned RegNo, int RegOrOffset,
+  void emitDirectiveCpsetup(MCRegister Reg, int RegOrOffset,
                             const MCSymbol &Sym, bool IsReg) override;
   void emitDirectiveCpreturn(unsigned SaveLocation,
                              bool SaveLocationIsRegister) override;

@@ -106,7 +106,7 @@ static __inline fp_t __addXf3__(fp_t a, fp_t b) {
     if (aSignificand == 0)
       return fromRep(0);
 
-    // If partial cancellation occured, we need to left-shift the result
+    // If partial cancellation occurred, we need to left-shift the result
     // and adjust the exponent.
     if (aSignificand < implicitBit << 3) {
       const int shift = rep_clz(aSignificand) - rep_clz(implicitBit << 3);

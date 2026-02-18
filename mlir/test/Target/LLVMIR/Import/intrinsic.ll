@@ -1128,6 +1128,34 @@ define void @experimental_constrained_fpext(float %s, <4 x float> %v) {
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @ucmp
+define i2 @ucmp(i32 %a, i32 %b) {
+  ; CHECK: %{{.*}} = llvm.intr.ucmp(%{{.*}}, %{{.*}}) : (i32, i32) -> i2
+  %r = call i2 @llvm.ucmp.i2.i32(i32 %a, i32 %b)
+  ret i2 %r
+}
+
+; CHECK-LABEL:  llvm.func @vector_ucmp
+define <4 x i32> @vector_ucmp(<4 x i32> %a, <4 x i32> %b) {
+  ; CHECK: %{{.*}} = llvm.intr.ucmp(%{{.*}}, %{{.*}}) : (vector<4xi32>, vector<4xi32>) -> vector<4xi32>
+  %r = call <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b)
+  ret <4 x i32> %r
+}
+
+; CHECK-LABEL:  llvm.func @scmp
+define i2 @scmp(i32 %a, i32 %b) {
+  ; CHECK: %{{.*}} = llvm.intr.scmp(%{{.*}}, %{{.*}}) : (i32, i32) -> i2
+  %r = call i2 @llvm.scmp.i2.i32(i32 %a, i32 %b)
+  ret i2 %r
+}
+
+; CHECK-LABEL:  llvm.func @vector_scmp
+define <4 x i32> @vector_scmp(<4 x i32> %a, <4 x i32> %b) {
+  ; CHECK: %{{.*}} = llvm.intr.scmp(%{{.*}}, %{{.*}}) : (vector<4xi32>, vector<4xi32>) -> vector<4xi32>
+  %r = call <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> %a, <4 x i32> %b)
+  ret <4 x i32> %r
+}
+
 declare float @llvm.fmuladd.f32(float, float, float)
 declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>)
 declare float @llvm.fma.f32(float, float, float)
@@ -1382,3 +1410,7 @@ declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x doubl
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.fpext.v4f64.v4f32(<4 x float>, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
+declare i2 @llvm.ucmp.i2.i32(i32, i32)
+declare <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32>, <4 x i32>)
+declare i2 @llvm.scmp.i2.i32(i32, i32)
+declare <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32>, <4 x i32>)

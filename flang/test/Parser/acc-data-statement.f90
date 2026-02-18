@@ -39,7 +39,7 @@ program acc_data_test
     print *, "After nested data"
     !$acc end data
 
-    ! Negative tests  
+    ! Negative tests
     ! Basic data construct in program body
     !$acc data copy(a, b) create(d) bogus()
     !CHECK: acc-data-statement.f90:
@@ -67,7 +67,7 @@ program acc_data_test
         !CHECK: acc-data-statement.f90:
         !CHECK-SAME: error: expected OpenACC end block directive
         !CHECK-NEXT: end if
-        !CHECK-NEXT: ^ 
+        !CHECK-NEXT: ^
         !CHECK-NEXT: in the context: OpenACC construct
         !CHECK-NEXT: !$acc data copyout(a)
         !CHECK-NEXT: ^
@@ -85,7 +85,7 @@ program acc_data_test
         !CHECK: acc-data-statement.f90:
         !CHECK-SAME: error: expected OpenACC end block directive
         !CHECK-NEXT: end do
-        !CHECK-NEXT: ^ 
+        !CHECK-NEXT: ^
         !CHECK-NEXT: in the context: OpenACC construct
         !CHECK-NEXT: !$acc data present(a)
         !CHECK-NEXT: ^
@@ -137,7 +137,7 @@ program acc_data_test
 contains
     subroutine positive_process_array(x)
         integer, intent(inout) :: x(:)
-        
+
         ! Data construct in subroutine
         !$acc data copy(x)
         x = x + 1
@@ -148,17 +148,17 @@ contains
     function positive_compute_sum(x) result(total)
         integer, intent(in) :: x(:)
         integer :: total
-        
+
         ! Data construct in function
         !$acc data copyin(x) copy(total)
         total = sum(x)
         !$acc end data
         print *, "Function finished"
     end function
-    
+
     subroutine negative_process_array(x)
         integer, intent(inout) :: x(:)
-        
+
         ! Data construct in subroutine
         !$acc data copy(x)
         x = x + 1
@@ -188,7 +188,7 @@ contains
         !CHECK: acc-data-statement.f90:
         !CHECK-SAME: error: expected OpenACC end block directive
         !CHECK-NEXT: end function
-        !CHECK-NEXT: ^ 
+        !CHECK-NEXT: ^
         !CHECK-NEXT: in the context: OpenACC construct
         !CHECK-NEXT: !$acc data copyin(x) copy(total)
         !CHECK-NEXT: ^

@@ -1061,13 +1061,13 @@ void DataFlowGraph::pushClobbers(Instr IA, DefStackMap &DefM) {
 
     // Push the definition on the stack for the register and all aliases.
     // The def stack traversal in linkNodeUp will check the exact aliasing.
-    DefM[RR.Reg].push(DA);
-    Defined.insert(RR.Reg);
-    for (RegisterId A : getPRI().getAliasSet(RR.Reg)) {
+    DefM[RR.Id].push(DA);
+    Defined.insert(RR.Id);
+    for (RegisterId A : getPRI().getAliasSet(RR)) {
       if (RegisterRef::isRegId(A) && !isTracked(RegisterRef(A)))
         continue;
       // Check that we don't push the same def twice.
-      assert(A != RR.Reg);
+      assert(A != RR.Id);
       if (!Defined.count(A))
         DefM[A].push(DA);
     }
@@ -1109,7 +1109,7 @@ void DataFlowGraph::pushDefs(Instr IA, DefStackMap &DefM) {
 #ifndef NDEBUG
     // Assert if the register is defined in two or more unrelated defs.
     // This could happen if there are two or more def operands defining it.
-    if (!Defined.insert(RR.Reg).second) {
+    if (!Defined.insert(RR.Id).second) {
       MachineInstr *MI = Stmt(IA).Addr->getCode();
       dbgs() << "Multiple definitions of register: " << Print(RR, *this)
              << " in\n  " << *MI << "in " << printMBBReference(*MI->getParent())
@@ -1119,12 +1119,12 @@ void DataFlowGraph::pushDefs(Instr IA, DefStackMap &DefM) {
 #endif
     // Push the definition on the stack for the register and all aliases.
     // The def stack traversal in linkNodeUp will check the exact aliasing.
-    DefM[RR.Reg].push(DA);
-    for (RegisterId A : getPRI().getAliasSet(RR.Reg)) {
+    DefM[RR.Id].push(DA);
+    for (RegisterId A : getPRI().getAliasSet(RR)) {
       if (RegisterRef::isRegId(A) && !isTracked(RegisterRef(A)))
         continue;
       // Check that we don't push the same def twice.
-      assert(A != RR.Reg);
+      assert(A != RR.Id);
       DefM[A].push(DA);
     }
     // Mark all the related defs as visited.
@@ -1465,11 +1465,11 @@ void DataFlowGraph::buildPhis(BlockRefsMap &PhiM, Block BA,
 
   for (RegisterRef RR : Defs.refs()) {
     if (!DefM.empty()) {
-      auto F = DefM.find(RR.Reg);
+      auto F = DefM.find(RR.Id);
       // Do not create a phi for unallocatable registers, or for registers
       // that are never livein to BA.
       // If a phi exists for RR, do not create another.
-      if (!MRI.isAllocatable(RR.Reg) || PhiDefs.hasCoverOf(RR) ||
+      if (!MRI.isAllocatable(RR.asMCReg()) || PhiDefs.hasCoverOf(RR) ||
           F == DefM.end() || F->second.empty())
         continue;
       // Do not create a phi, if all reaching defs are clobbering
@@ -1601,7 +1601,7 @@ void DataFlowGraph::linkStmtRefs(DefStackMap &DefM, Stmt SA, Predicate P) {
     Defs.insert(RR);
 #endif
 
-    auto F = DefM.find(RR.Reg);
+    auto F = DefM.find(RR.Id);
     if (F == DefM.end())
       continue;
     DefStack &DS = F->second;
@@ -1691,7 +1691,7 @@ void DataFlowGraph::linkBlockRefs(DefStackMap &DefM, BlockRefsMap &PhiClobberM,
       for (auto U : IA.Addr->members_if(IsUseForBA, *this)) {
         PhiUse PUA = U;
         RegisterRef RR = PUA.Addr->getRegRef(*this);
-        linkRefUp<UseNode *>(IA, PUA, DefM[RR.Reg]);
+        linkRefUp<UseNode *>(IA, PUA, DefM[RR.Id]);
       }
     }
   }
@@ -1827,7 +1827,7 @@ bool DataFlowGraph::hasUntrackedRef(Stmt S, bool IgnoreReserved) const {
   for (Ref R : S.Addr->members(*this)) {
     Ops.push_back(&R.Addr->getOp());
     RegisterRef RR = R.Addr->getRegRef(*this);
-    if (IgnoreReserved && RR.isReg() && ReservedRegs[RR.idx()])
+    if (IgnoreReserved && RR.isReg() && ReservedRegs[RR.asMCReg().id()])
       continue;
     if (!isTracked(RR))
       return true;

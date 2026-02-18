@@ -51,6 +51,12 @@ cl::opt<bool> ConservativeInstrumentation(
              "accuracy (for debugging, default: false)"),
     cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
 
+cl::opt<uint32_t> InstrumentationMaxSize(
+    "instrumentation-max-size",
+    cl::desc("Set max memory size of the instrumentation bump allocator "
+             "default: 0x6400000)"),
+    cl::init(0x6400000), cl::Optional, cl::cat(BoltInstrCategory));
+
 cl::opt<uint32_t> InstrumentationSleepTime(
     "instrumentation-sleep-time",
     cl::desc("interval between profile writes (default: 0 = write only at "
@@ -600,6 +606,22 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 }
 
 Error Instrumentation::runOnFunctions(BinaryContext &BC) {
+  if (BC.usesBTI())
+    return createFatalBOLTError(
+        "BOLT-ERROR: instrumenting binaries using BTI is not supported.\n");
+  /* BTI TODO:
+   Instrumentation functions add indirect branches into the .text.injected
+   section, see:
+   - __bolt_instr_ind_call_handler
+   - __bolt_instr_ind_tail_call_handler
+   - __bolt_instr_ind_tailcall_handler_func
+   - __bolt_start_trampoline
+   - __bolt_fini_trampoline
+   We cannot add BTIs to their targets when they are created, because the
+   instrumentation snippets get added later to these targets, and the added BTI
+   instruction will not be the first (rendering it useless).
+   */
+
   const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/false,
                                                  /*IsText=*/false,
                                                  /*IsAllocatable=*/true);

@@ -847,7 +847,7 @@ define i32 @test18(i1 %cond1, i1 %cond2, ptr %b1, ptr %b2) {
 ; CHECK-YES:       [[IF_THEN2]]:
 ; CHECK-YES-NEXT:    br label %[[FALLTHROUGH]]
 ; CHECK-YES:       [[FALLTHROUGH]]:
-; CHECK-YES-NEXT:    [[SUNK_PHI:%.*]] = phi ptr [ [[B2]], %[[IF_THEN2]] ], [ [[B1]], %[[IF_THEN1]] ]
+; CHECK-YES-NEXT:    [[SUNK_PHI:%.*]] = phi ptr [ [[B1]], %[[IF_THEN1]] ], [ [[B2]], %[[IF_THEN2]] ]
 ; CHECK-YES-NEXT:    [[SUNKADDR:%.*]] = getelementptr inbounds i8, ptr [[SUNK_PHI]], i64 40
 ; CHECK-YES-NEXT:    [[V1:%.*]] = load i32, ptr [[SUNKADDR]], align 4
 ; CHECK-YES-NEXT:    [[G1_1:%.*]] = getelementptr inbounds i64, ptr [[B2]], i64 5

@@ -11,6 +11,9 @@
 ///
 /// The default <SDKROOT> for both headers and libraries is taken from the
 /// SCE_ORBIS_SDK_DIR environment variable.
+///
+/// In ThinLTO code generation mode (-fthinlto-index=) SDK files are not required
+/// so all warnings are suppressed.
 
 // RUN: echo "-### -Winvalid-or-nonexistent-directory -target x86_64-scei-ps4" > %t.rsp
 
@@ -30,6 +33,10 @@
 /// When compiling and linking, we should see a warnings about both missing
 /// headers and libraries.
 // RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %s 2>&1 | FileCheck -check-prefixes=WARN-SYS-HEADERS,WARN-SYS-LIBS,NO-WARN %s
+
+/// -fthinlto-index= warning suppression.
+// RUN: touch %t_dummy.o
+// RUN: env SCE_ORBIS_SDK_DIR=.. %clang @%t.rsp %t_dummy.o -fthinlto-index=ignored -c 2>&1 | FileCheck -check-prefixes=NO-WARN %s
 
 /// If `-c`, `-S`, `-E` or `-emit-ast` is supplied, the existence check for SDK
 /// libraries is skipped because no linking will be performed. We only expect

@@ -15,7 +15,7 @@ define i32 @test_01() {
 ; CHECK-NEXT:    br i1 [[CHECK_1]], label [[INNER_LATCH]], label [[EXIT:%.*]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[ADD_I]] = add nuw nsw i64 [[STOREMERGE611_I]], 1
-; CHECK-NEXT:    [[CMP5_I:%.*]] = icmp ult i64 [[STOREMERGE611_I]], 11
+; CHECK-NEXT:    [[CMP5_I:%.*]] = icmp samesign ult i64 [[STOREMERGE611_I]], 11
 ; CHECK-NEXT:    br i1 [[CMP5_I]], label [[INNER_LOOP]], label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], -1
@@ -55,14 +55,14 @@ define i32 @test_02() {
 ; CHECK-NEXT:    br label [[OUTER_LOOP:%.*]]
 ; CHECK:       outer.loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[OUTER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[CHECK_1:%.*]] = icmp ult i32 [[IV]], 2147483640
+; CHECK-NEXT:    [[CHECK_1:%.*]] = icmp samesign ult i32 [[IV]], 2147483640
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
 ; CHECK:       inner.loop:
 ; CHECK-NEXT:    [[STOREMERGE611_I:%.*]] = phi i64 [ 0, [[OUTER_LOOP]] ], [ [[ADD_I:%.*]], [[INNER_LATCH:%.*]] ]
 ; CHECK-NEXT:    br i1 [[CHECK_1]], label [[INNER_LATCH]], label [[EXIT:%.*]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[ADD_I]] = add nuw nsw i64 [[STOREMERGE611_I]], 1
-; CHECK-NEXT:    [[CMP5_I:%.*]] = icmp ult i64 [[STOREMERGE611_I]], 11
+; CHECK-NEXT:    [[CMP5_I:%.*]] = icmp samesign ult i64 [[STOREMERGE611_I]], 11
 ; CHECK-NEXT:    br i1 [[CMP5_I]], label [[INNER_LOOP]], label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 10
@@ -109,7 +109,7 @@ define i32 @test_03() {
 ; CHECK-NEXT:    br i1 [[CHECK_1]], label [[INNER_LATCH]], label [[EXIT:%.*]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[ADD_I]] = add nuw nsw i64 [[STOREMERGE611_I]], 1
-; CHECK-NEXT:    [[CMP5_I:%.*]] = icmp ult i64 [[STOREMERGE611_I]], 11
+; CHECK-NEXT:    [[CMP5_I:%.*]] = icmp samesign ult i64 [[STOREMERGE611_I]], 11
 ; CHECK-NEXT:    br i1 [[CMP5_I]], label [[INNER_LOOP]], label [[OUTER_LATCH]]
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 10

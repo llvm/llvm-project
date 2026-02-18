@@ -205,7 +205,7 @@ define i1 @one_with_self(double %arg) {
 ; and between uge and olt, to give reasonble coverage
 ; without combinatorial explosion.
 
-define i1 @orderedLessZeroTree(float,float,float,float) {
+define i1 @orderedLessZeroTree(float noundef, float noundef, float noundef, float noundef) {
 ; CHECK-LABEL: @orderedLessZeroTree(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -220,7 +220,7 @@ define i1 @orderedLessZeroTree(float,float,float,float) {
   ret i1 %uge
 }
 
-define i1 @orderedLessZero_fdiv(float %x) {
+define i1 @orderedLessZero_fdiv(float noundef %x) {
 ; CHECK-LABEL: @orderedLessZero_fdiv(
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -260,7 +260,7 @@ define i1 @orderedLessZeroExp2Trunc(double) {
   ret i1 %olt
 }
 
-define i1 @orderedLessZeroPowi(double,double) {
+define i1 @orderedLessZeroPowi(double noundef, double noundef) {
 ; CHECK-LABEL: @orderedLessZeroPowi(
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -1613,7 +1613,7 @@ entry:
 }
 
 ; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
-define float @fast_square_must_be_positive_ieee(float %arg, float %arg1) {
+define float @fast_square_must_be_positive_ieee(float noundef %arg, float noundef %arg1) {
 ; CHECK-LABEL: @fast_square_must_be_positive_ieee(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1631,7 +1631,7 @@ bb:
 }
 
 ; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
-define float @fast_square_must_be_positive_ieee_nnan(float %arg, float %arg1) {
+define float @fast_square_must_be_positive_ieee_nnan(float noundef %arg, float noundef %arg1) {
 ; CHECK-LABEL: @fast_square_must_be_positive_ieee_nnan(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1649,7 +1649,7 @@ bb:
 }
 
 ; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
-define float @fast_square_must_be_positive_daz(float %arg, float %arg1) #0 {
+define float @fast_square_must_be_positive_daz(float noundef %arg, float noundef %arg1) #0 {
 ; CHECK-LABEL: @fast_square_must_be_positive_daz(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1667,7 +1667,7 @@ bb:
 }
 
 ; Make sure we recognize fcmp < 0 is recognized as impossible here when simplifying the fcmp
-define float @fast_square_must_be_positive_daz_nnan(float %arg, float %arg1) #0 {
+define float @fast_square_must_be_positive_daz_nnan(float noundef %arg, float noundef %arg1) #0 {
 ; CHECK-LABEL: @fast_square_must_be_positive_daz_nnan(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1685,7 +1685,7 @@ bb:
 }
 
 ; Make the compare to negative constant is folded out
-define float @must_be_olt_negative_constant_daz(float %arg, float %arg1) #0 {
+define float @must_be_olt_negative_constant_daz(float noundef %arg, float noundef %arg1) #0 {
 ; CHECK-LABEL: @must_be_olt_negative_constant_daz(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1703,7 +1703,7 @@ bb:
 }
 
 ; Make the compare to negative constant is folded out
-define float @must_be_olt_negative_constant_daz_nnan(float %arg, float %arg1) #0 {
+define float @must_be_olt_negative_constant_daz_nnan(float noundef %arg, float noundef %arg1) #0 {
 ; CHECK-LABEL: @must_be_olt_negative_constant_daz_nnan(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = fmul float [[ARG:%.*]], [[ARG]]
@@ -1720,7 +1720,7 @@ bb:
   ret float %i5
 }
 
-define i1 @is_olt_smallest_normal_dynamic(float %x) "denormal-fp-math"="dynamic,dynamic" {
+define i1 @is_olt_smallest_normal_dynamic(float %x) denormal_fpenv(dynamic) {
 ; CHECK-LABEL: @is_olt_smallest_normal_dynamic(
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
 ; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
@@ -1729,7 +1729,7 @@ define i1 @is_olt_smallest_normal_dynamic(float %x) "denormal-fp-math"="dynamic,
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_olt_smallest_normal_ieee(float %x) "denormal-fp-math"="dynamic,ieee" {
+define i1 @is_olt_smallest_normal_ieee(float %x) denormal_fpenv(dynamic|ieee) {
 ; CHECK-LABEL: @is_olt_smallest_normal_ieee(
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
 ; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
@@ -1738,7 +1738,7 @@ define i1 @is_olt_smallest_normal_ieee(float %x) "denormal-fp-math"="dynamic,iee
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_olt_smallest_normal_preserve_sign(float %x) "denormal-fp-math"="dynamic,preserve-sign" {
+define i1 @is_olt_smallest_normal_preserve_sign(float %x) denormal_fpenv(dynamic|preservesign) {
 ; CHECK-LABEL: @is_olt_smallest_normal_preserve_sign(
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
 ; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
@@ -1747,7 +1747,7 @@ define i1 @is_olt_smallest_normal_preserve_sign(float %x) "denormal-fp-math"="dy
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_olt_smallest_normal_positive_zero(float %x) "denormal-fp-math"="dynamic,positive-zero" {
+define i1 @is_olt_smallest_normal_positive_zero(float %x) denormal_fpenv(dynamic|positivezero) {
 ; CHECK-LABEL: @is_olt_smallest_normal_positive_zero(
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
 ; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
@@ -1756,7 +1756,7 @@ define i1 @is_olt_smallest_normal_positive_zero(float %x) "denormal-fp-math"="dy
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_fabs_olt_smallest_normal_dynamic(float %x) "denormal-fp-math"="dynamic,dynamic" {
+define i1 @is_fabs_olt_smallest_normal_dynamic(float %x) denormal_fpenv(dynamic) {
 ; CHECK-LABEL: @is_fabs_olt_smallest_normal_dynamic(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
@@ -1767,7 +1767,7 @@ define i1 @is_fabs_olt_smallest_normal_dynamic(float %x) "denormal-fp-math"="dyn
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_fabs_olt_smallest_normal_ieee(float %x) "denormal-fp-math"="dynamic,ieee" {
+define i1 @is_fabs_olt_smallest_normal_ieee(float %x) denormal_fpenv(dynamic|ieee) {
 ; CHECK-LABEL: @is_fabs_olt_smallest_normal_ieee(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
@@ -1778,7 +1778,7 @@ define i1 @is_fabs_olt_smallest_normal_ieee(float %x) "denormal-fp-math"="dynami
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_fabs_olt_smallest_normal_preserve_sign(float %x) "denormal-fp-math"="dynamic,preserve-sign" {
+define i1 @is_fabs_olt_smallest_normal_preserve_sign(float %x) denormal_fpenv(dynamic|preservesign) {
 ; CHECK-LABEL: @is_fabs_olt_smallest_normal_preserve_sign(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
@@ -1789,7 +1789,7 @@ define i1 @is_fabs_olt_smallest_normal_preserve_sign(float %x) "denormal-fp-math
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_fabs_olt_smallest_normal_positive_zero(float %x) "denormal-fp-math"="dynamic,positive-zero" {
+define i1 @is_fabs_olt_smallest_normal_positive_zero(float %x) denormal_fpenv(dynamic|positivezero) {
 ; CHECK-LABEL: @is_fabs_olt_smallest_normal_positive_zero(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
@@ -1821,4 +1821,4 @@ declare double @llvm.copysign.f64(double, double)
 declare half @llvm.fabs.f16(half)
 declare void @llvm.assume(i1 noundef)
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #0 = { denormal_fpenv(preservesign) }

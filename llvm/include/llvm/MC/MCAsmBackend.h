@@ -200,7 +200,7 @@ public:
 
   // Return true if fragment offsets have been adjusted and an extra layout
   // iteration is needed.
-  virtual bool finishLayout(const MCAssembler &Asm) const { return false; }
+  virtual bool finishLayout() const { return false; }
 
   /// Generate the compact unwind encoding for the CFI instructions.
   virtual uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,

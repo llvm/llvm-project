@@ -54,7 +54,7 @@ define i128 @test2(i128 %a) {
 ; CHECK-NEXT:      i128 109, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i128 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i128 [ 99783, [[THREE]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 8867, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i128 [[COMMON_RET_OP]]
 ; CHECK:       one:
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -123,7 +123,7 @@ define i32 @test4(i32 %a) {
 ; CHECK-NEXT:      i32 109, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 99783, [[THREE]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 8867, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -160,7 +160,7 @@ define i32 @test5(i32 %a) {
 ; CHECK-NEXT:      i32 112, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 99783, [[THREE]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 8867, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
 ; CHECK-NEXT:    br label [[COMMON_RET]]

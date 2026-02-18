@@ -474,14 +474,13 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
       // "AppendValue", or "SetAttribute", then we assume that arguments may
       // "escape."  This means that something else holds on to the object,
       // allowing it be used even after its local retain count drops to 0.
-      ArgEffectKind E =
-          (StrInStrNoCase(FName, "InsertValue") != StringRef::npos ||
-           StrInStrNoCase(FName, "AddValue") != StringRef::npos ||
-           StrInStrNoCase(FName, "SetValue") != StringRef::npos ||
-           StrInStrNoCase(FName, "AppendValue") != StringRef::npos ||
-           StrInStrNoCase(FName, "SetAttribute") != StringRef::npos)
-              ? MayEscape
-              : DoNothing;
+      ArgEffectKind E = (FName.contains_insensitive("InsertValue") ||
+                         FName.contains_insensitive("AddValue") ||
+                         FName.contains_insensitive("SetValue") ||
+                         FName.contains_insensitive("AppendValue") ||
+                         FName.contains_insensitive("SetAttribute"))
+                            ? MayEscape
+                            : DoNothing;
 
       return getPersistentSummary(RetEffect::MakeNoRet(), ScratchArgs,
                                   ArgEffect(DoNothing), ArgEffect(E, ObjKind::CF));

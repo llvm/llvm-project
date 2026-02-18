@@ -14,8 +14,7 @@
 define amdgpu_ps i32 @s_shl1_add_u32(i32 inreg %src0, i32 inreg %src1) {
 ; GFX9-SDAG-LABEL: s_shl1_add_u32:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
-; GFX9-SDAG-NEXT:    s_add_i32 s0, s0, s1
+; GFX9-SDAG-NEXT:    s_lshl1_add_u32 s0, s0, s1
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-SDAG-LABEL: s_shl1_add_u32:
@@ -26,8 +25,7 @@ define amdgpu_ps i32 @s_shl1_add_u32(i32 inreg %src0, i32 inreg %src1) {
 ;
 ; GFX10-SDAG-LABEL: s_shl1_add_u32:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
-; GFX10-SDAG-NEXT:    s_add_i32 s0, s0, s1
+; GFX10-SDAG-NEXT:    s_lshl1_add_u32 s0, s0, s1
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl1_add_u32:
@@ -53,8 +51,7 @@ define amdgpu_ps i32 @s_shl1_add_u32(i32 inreg %src0, i32 inreg %src1) {
 define amdgpu_ps i32 @s_shl2_add_u32(i32 inreg %src0, i32 inreg %src1) {
 ; GFX9-SDAG-LABEL: s_shl2_add_u32:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX9-SDAG-NEXT:    s_add_i32 s0, s0, s1
+; GFX9-SDAG-NEXT:    s_lshl2_add_u32 s0, s0, s1
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-SDAG-LABEL: s_shl2_add_u32:
@@ -65,8 +62,7 @@ define amdgpu_ps i32 @s_shl2_add_u32(i32 inreg %src0, i32 inreg %src1) {
 ;
 ; GFX10-SDAG-LABEL: s_shl2_add_u32:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX10-SDAG-NEXT:    s_add_i32 s0, s0, s1
+; GFX10-SDAG-NEXT:    s_lshl2_add_u32 s0, s0, s1
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl2_add_u32:
@@ -92,8 +88,7 @@ define amdgpu_ps i32 @s_shl2_add_u32(i32 inreg %src0, i32 inreg %src1) {
 define amdgpu_ps i32 @s_shl3_add_u32(i32 inreg %src0, i32 inreg %src1) {
 ; GFX9-SDAG-LABEL: s_shl3_add_u32:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_lshl_b32 s0, s0, 3
-; GFX9-SDAG-NEXT:    s_add_i32 s0, s0, s1
+; GFX9-SDAG-NEXT:    s_lshl3_add_u32 s0, s0, s1
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-SDAG-LABEL: s_shl3_add_u32:
@@ -104,8 +99,7 @@ define amdgpu_ps i32 @s_shl3_add_u32(i32 inreg %src0, i32 inreg %src1) {
 ;
 ; GFX10-SDAG-LABEL: s_shl3_add_u32:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_lshl_b32 s0, s0, 3
-; GFX10-SDAG-NEXT:    s_add_i32 s0, s0, s1
+; GFX10-SDAG-NEXT:    s_lshl3_add_u32 s0, s0, s1
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl3_add_u32:
@@ -131,8 +125,7 @@ define amdgpu_ps i32 @s_shl3_add_u32(i32 inreg %src0, i32 inreg %src1) {
 define amdgpu_ps i32 @s_shl4_add_u32(i32 inreg %src0, i32 inreg %src1) {
 ; GFX9-SDAG-LABEL: s_shl4_add_u32:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_lshl_b32 s0, s0, 4
-; GFX9-SDAG-NEXT:    s_add_i32 s0, s0, s1
+; GFX9-SDAG-NEXT:    s_lshl4_add_u32 s0, s0, s1
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-SDAG-LABEL: s_shl4_add_u32:
@@ -143,8 +136,7 @@ define amdgpu_ps i32 @s_shl4_add_u32(i32 inreg %src0, i32 inreg %src1) {
 ;
 ; GFX10-SDAG-LABEL: s_shl4_add_u32:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_lshl_b32 s0, s0, 4
-; GFX10-SDAG-NEXT:    s_add_i32 s0, s0, s1
+; GFX10-SDAG-NEXT:    s_lshl4_add_u32 s0, s0, s1
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl4_add_u32:
@@ -598,10 +590,8 @@ define amdgpu_ps float @shl5_add_u32_vgpr1(i32 inreg %src0, i32 %src1) {
 define amdgpu_ps <2 x i32> @s_shl1_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> inreg %src1) {
 ; GFX9-SDAG-LABEL: s_shl1_add_u32_v2:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
-; GFX9-SDAG-NEXT:    s_lshl_b32 s1, s1, 1
-; GFX9-SDAG-NEXT:    s_add_i32 s1, s1, s3
-; GFX9-SDAG-NEXT:    s_add_i32 s0, s0, s2
+; GFX9-SDAG-NEXT:    s_lshl1_add_u32 s1, s1, s3
+; GFX9-SDAG-NEXT:    s_lshl1_add_u32 s0, s0, s2
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-SDAG-LABEL: s_shl1_add_u32_v2:
@@ -614,10 +604,8 @@ define amdgpu_ps <2 x i32> @s_shl1_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> i
 ;
 ; GFX10-SDAG-LABEL: s_shl1_add_u32_v2:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_lshl_b32 s0, s0, 1
-; GFX10-SDAG-NEXT:    s_lshl_b32 s1, s1, 1
-; GFX10-SDAG-NEXT:    s_add_i32 s0, s0, s2
-; GFX10-SDAG-NEXT:    s_add_i32 s1, s1, s3
+; GFX10-SDAG-NEXT:    s_lshl1_add_u32 s0, s0, s2
+; GFX10-SDAG-NEXT:    s_lshl1_add_u32 s1, s1, s3
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl1_add_u32_v2:
@@ -647,10 +635,8 @@ define amdgpu_ps <2 x i32> @s_shl1_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> i
 define amdgpu_ps <2 x i32> @s_shl2_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> inreg %src1) {
 ; GFX9-SDAG-LABEL: s_shl2_add_u32_v2:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX9-SDAG-NEXT:    s_lshl_b32 s1, s1, 2
-; GFX9-SDAG-NEXT:    s_add_i32 s1, s1, s3
-; GFX9-SDAG-NEXT:    s_add_i32 s0, s0, s2
+; GFX9-SDAG-NEXT:    s_lshl2_add_u32 s1, s1, s3
+; GFX9-SDAG-NEXT:    s_lshl2_add_u32 s0, s0, s2
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-SDAG-LABEL: s_shl2_add_u32_v2:
@@ -663,10 +649,8 @@ define amdgpu_ps <2 x i32> @s_shl2_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> i
 ;
 ; GFX10-SDAG-LABEL: s_shl2_add_u32_v2:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX10-SDAG-NEXT:    s_lshl_b32 s1, s1, 2
-; GFX10-SDAG-NEXT:    s_add_i32 s0, s0, s2
-; GFX10-SDAG-NEXT:    s_add_i32 s1, s1, s3
+; GFX10-SDAG-NEXT:    s_lshl2_add_u32 s0, s0, s2
+; GFX10-SDAG-NEXT:    s_lshl2_add_u32 s1, s1, s3
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl2_add_u32_v2:
@@ -696,10 +680,8 @@ define amdgpu_ps <2 x i32> @s_shl2_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> i
 define amdgpu_ps <2 x i32> @s_shl3_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> inreg %src1) {
 ; GFX9-SDAG-LABEL: s_shl3_add_u32_v2:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_lshl_b32 s0, s0, 3
-; GFX9-SDAG-NEXT:    s_lshl_b32 s1, s1, 3
-; GFX9-SDAG-NEXT:    s_add_i32 s1, s1, s3
-; GFX9-SDAG-NEXT:    s_add_i32 s0, s0, s2
+; GFX9-SDAG-NEXT:    s_lshl3_add_u32 s1, s1, s3
+; GFX9-SDAG-NEXT:    s_lshl3_add_u32 s0, s0, s2
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-SDAG-LABEL: s_shl3_add_u32_v2:
@@ -712,10 +694,8 @@ define amdgpu_ps <2 x i32> @s_shl3_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> i
 ;
 ; GFX10-SDAG-LABEL: s_shl3_add_u32_v2:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_lshl_b32 s0, s0, 3
-; GFX10-SDAG-NEXT:    s_lshl_b32 s1, s1, 3
-; GFX10-SDAG-NEXT:    s_add_i32 s0, s0, s2
-; GFX10-SDAG-NEXT:    s_add_i32 s1, s1, s3
+; GFX10-SDAG-NEXT:    s_lshl3_add_u32 s0, s0, s2
+; GFX10-SDAG-NEXT:    s_lshl3_add_u32 s1, s1, s3
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl3_add_u32_v2:
@@ -745,10 +725,8 @@ define amdgpu_ps <2 x i32> @s_shl3_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> i
 define amdgpu_ps <2 x i32> @s_shl4_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> inreg %src1) {
 ; GFX9-SDAG-LABEL: s_shl4_add_u32_v2:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_lshl_b32 s0, s0, 4
-; GFX9-SDAG-NEXT:    s_lshl_b32 s1, s1, 4
-; GFX9-SDAG-NEXT:    s_add_i32 s1, s1, s3
-; GFX9-SDAG-NEXT:    s_add_i32 s0, s0, s2
+; GFX9-SDAG-NEXT:    s_lshl4_add_u32 s1, s1, s3
+; GFX9-SDAG-NEXT:    s_lshl4_add_u32 s0, s0, s2
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-SDAG-LABEL: s_shl4_add_u32_v2:
@@ -761,10 +739,8 @@ define amdgpu_ps <2 x i32> @s_shl4_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> i
 ;
 ; GFX10-SDAG-LABEL: s_shl4_add_u32_v2:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_lshl_b32 s0, s0, 4
-; GFX10-SDAG-NEXT:    s_lshl_b32 s1, s1, 4
-; GFX10-SDAG-NEXT:    s_add_i32 s0, s0, s2
-; GFX10-SDAG-NEXT:    s_add_i32 s1, s1, s3
+; GFX10-SDAG-NEXT:    s_lshl4_add_u32 s0, s0, s2
+; GFX10-SDAG-NEXT:    s_lshl4_add_u32 s1, s1, s3
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl4_add_u32_v2:
@@ -794,10 +770,8 @@ define amdgpu_ps <2 x i32> @s_shl4_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> i
 define amdgpu_ps <2 x i32> @s_shl_2_4_add_u32_v2(<2 x i32> inreg %src0, <2 x i32> inreg %src1) {
 ; GFX9-SDAG-LABEL: s_shl_2_4_add_u32_v2:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX9-SDAG-NEXT:    s_lshl_b32 s1, s1, 4
-; GFX9-SDAG-NEXT:    s_add_i32 s1, s1, s3
-; GFX9-SDAG-NEXT:    s_add_i32 s0, s0, s2
+; GFX9-SDAG-NEXT:    s_lshl4_add_u32 s1, s1, s3
+; GFX9-SDAG-NEXT:    s_lshl2_add_u32 s0, s0, s2
 ; GFX9-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX8-SDAG-LABEL: s_shl_2_4_add_u32_v2:
@@ -810,10 +784,8 @@ define amdgpu_ps <2 x i32> @s_shl_2_4_add_u32_v2(<2 x i32> inreg %src0, <2 x i32
 ;
 ; GFX10-SDAG-LABEL: s_shl_2_4_add_u32_v2:
 ; GFX10-SDAG:       ; %bb.0:
-; GFX10-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
-; GFX10-SDAG-NEXT:    s_lshl_b32 s1, s1, 4
-; GFX10-SDAG-NEXT:    s_add_i32 s0, s0, s2
-; GFX10-SDAG-NEXT:    s_add_i32 s1, s1, s3
+; GFX10-SDAG-NEXT:    s_lshl2_add_u32 s0, s0, s2
+; GFX10-SDAG-NEXT:    s_lshl4_add_u32 s1, s1, s3
 ; GFX10-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl_2_4_add_u32_v2:

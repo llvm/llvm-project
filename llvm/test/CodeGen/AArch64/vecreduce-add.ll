@@ -4808,6 +4808,38 @@ define i64 @extract_scalable(<2 x i32> %0) "target-features"="+sve2" {
   ret i64 %5
 }
 
+define i32 @vecreduce_add_from_i21_zero() {
+; CHECK-SD-LABEL: vecreduce_add_from_i21_zero:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w0, wzr
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vecreduce_add_from_i21_zero:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-GI-NEXT:    addv s0, v0.4s
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %0 = zext <4 x i21> zeroinitializer to <4 x i32>
+  %1 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %0)
+  ret i32 %1
+}
+
+define i32 @vecreduce_add_from_i21(<4 x i21> %a) {
+; CHECK-LABEL: vecreduce_add_from_i21:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v1.4s, #31, msl #16
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %0 = zext <4 x i21> %a to <4 x i32>
+  %1 = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %0)
+  ret i32 %1
+}
+
 declare <8 x i32> @llvm.abs.v8i32(<8 x i32>, i1 immarg) #1
 declare i16 @llvm.vector.reduce.add.v32i16(<32 x i16>)
 declare i16 @llvm.vector.reduce.add.v24i16(<24 x i16>)

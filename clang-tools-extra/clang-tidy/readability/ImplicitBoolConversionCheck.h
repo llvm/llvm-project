@@ -21,7 +21,7 @@ class ImplicitBoolConversionCheck : public ClangTidyCheck {
 public:
   ImplicitBoolConversionCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.Bool;
+    return LangOpts.Bool || LangOpts.C99;
   }
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;

@@ -8,7 +8,7 @@
 
 #include "M68k.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Regex.h"
@@ -21,7 +21,7 @@ using namespace llvm::opt;
 
 /// getM68kTargetCPU - Get the (LLVM) name of the 68000 cpu we are targeting.
 std::string m68k::getM68kTargetCPU(const ArgList &Args) {
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     // The canonical CPU name is captalize. However, we allow
     // starting with lower case or numbers only
     StringRef CPUName = A->getValue();
@@ -45,17 +45,17 @@ std::string m68k::getM68kTargetCPU(const ArgList &Args) {
         .Default(CPUName.str());
   }
   // FIXME: Throw error when multiple sub-architecture flag exist
-  if (Args.hasArg(clang::driver::options::OPT_m68000))
+  if (Args.hasArg(options::OPT_m68000))
     return "M68000";
-  if (Args.hasArg(clang::driver::options::OPT_m68010))
+  if (Args.hasArg(options::OPT_m68010))
     return "M68010";
-  if (Args.hasArg(clang::driver::options::OPT_m68020))
+  if (Args.hasArg(options::OPT_m68020))
     return "M68020";
-  if (Args.hasArg(clang::driver::options::OPT_m68030))
+  if (Args.hasArg(options::OPT_m68030))
     return "M68030";
-  if (Args.hasArg(clang::driver::options::OPT_m68040))
+  if (Args.hasArg(options::OPT_m68040))
     return "M68040";
-  if (Args.hasArg(clang::driver::options::OPT_m68060))
+  if (Args.hasArg(options::OPT_m68060))
     return "M68060";
 
   return "";

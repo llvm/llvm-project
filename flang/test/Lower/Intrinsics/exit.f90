@@ -10,7 +10,7 @@ subroutine exit_test1
   ! CHECK-32: fir.call @_FortranAExit(%[[status]]) {{.*}}: (i32) -> ()
   ! CHECK-64: fir.call @_FortranAExit(%[[statusConvert]]) {{.*}}: (i32) -> ()
   end subroutine exit_test1
-  
+
   ! CHECK-LABEL: func @_QPexit_test2(
   ! CHECK-SAME: %[[statusArg:.*]]: !fir.ref<i[[DEFAULT_INTEGER_SIZE]]>{{.*}}) {
   subroutine exit_test2(status)
@@ -21,3 +21,11 @@ subroutine exit_test1
   ! CHECK-32: fir.call @_FortranAExit(%[[status]]) {{.*}}: (i32) -> ()
   ! CHECK-64: fir.call @_FortranAExit(%[[statusConv]]) {{.*}}: (i32) -> ()
   end subroutine exit_test2
+
+subroutine exit_test3(status)
+    integer(kind=4) :: status
+  ! CHECK: %[[status:.*]] = fir.load %[[statusArg]] : !fir.ref<i32>
+  ! CHECK-32: fir.call @_FortranAExit(%[[status]]) {{.*}}: (i32) -> ()
+  ! CHECK-64: fir.call @_FortranAExit(%[[status]]) {{.*}}: (i32) -> ()
+    call exit(status)
+end subroutine exit_test3

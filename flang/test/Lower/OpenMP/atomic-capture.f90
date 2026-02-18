@@ -7,7 +7,7 @@
 
 
 program OmpAtomicCapture
-    use omp_lib                                                                                                       
+    use omp_lib
 
 !CHECK: %[[VAL_X_ALLOCA:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}
 !CHECK: %[[VAL_X_DECLARE:.*]]:2 = hlfir.declare %[[VAL_X_ALLOCA]] {{.*}}
@@ -25,7 +25,7 @@ program OmpAtomicCapture
 !CHECK: omp.atomic.read %[[VAL_X_DECLARE]]#0 = %[[VAL_Y_DECLARE]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
 !CHECK: }
     !$omp atomic hint(omp_sync_hint_uncontended) capture
-        y = x * y 
+        y = x * y
         x = y
     !$omp end atomic
 
@@ -43,7 +43,7 @@ program OmpAtomicCapture
 !CHECK: }
     !$omp atomic hint(omp_lock_hint_nonspeculative) capture acquire
         x = y
-        y = 2 * 10 + (8 - x) 
+        y = 2 * 10 + (8 - x)
     !$omp end atomic
 end program
 

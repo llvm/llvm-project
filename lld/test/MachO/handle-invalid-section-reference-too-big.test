@@ -1,0 +1,128 @@
+# REQUIRES: aarch64
+
+## This is a regression test which makes sure that when there is an invalid section index
+## associated with a section symbol, the linker does not segfault.
+
+## Test YAML content was created using the following steps
+## 1. Create an object file from the following assembly 
+##     `llvm-mc -filetype=obj -triple=arm64-apple-darwin symbol.s -o symbol.o`
+##
+##     .text
+##     .section __TEST,__mystuff
+##     .globl _mysec
+## _mysec:
+##     .byte 0xC3
+##
+## 2. Use obj2yaml to convert object file to yaml
+##    `obj2yaml symbol.o -o symbol.yaml`
+##
+## 3. Manually set n_sect value of ltmp1 symbol to 10 which is greater than the number of sections 2.
+##
+
+# RUN: yaml2obj %s -o %t
+# RUN: not %lld -platform_version macos 10.14 11.0 -arch arm64 %t 2>&1 | FileCheck %s --check-prefix=FATAL
+
+# FATAL: error: section symbol ltmp0 in {{.*}} has an invalid section index [10] greater than the total number of sections [2]
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           3
+  sizeofcmds:      336
+  flags:           0x0
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         ''
+    vmaddr:          0
+    vmsize:          1
+    fileoff:         368
+    filesize:        1
+    maxprot:         7
+    initprot:        7
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            0
+        offset:          0x170
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         ''
+      - sectname:        __mystuff
+        segname:         __TEST
+        addr:            0x0
+        size:            1
+        offset:          0x170
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         C3
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          376
+    nsyms:           3
+    stroff:          424
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       2
+    iextdefsym:      2
+    nextdefsym:      1
+    iundefsym:       3
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          14
+      n_type:          0xE
+      n_sect:          10
+      n_desc:          0
+      n_value:         0
+    - n_strx:          8
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - _mysec
+    - ltmp1
+    - ltmp0
+    - ''
+    - ''
+    - ''
+    - ''
+...

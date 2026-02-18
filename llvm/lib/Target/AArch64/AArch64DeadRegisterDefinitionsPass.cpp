@@ -156,7 +156,7 @@ void AArch64DeadRegisterDefinitions::processMachineBasicBlock(
         LLVM_DEBUG(dbgs() << "    Ignoring, def is tied operand.\n");
         continue;
       }
-      const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI);
+      const TargetRegisterClass *RC = TII->getRegClass(Desc, I);
       unsigned NewReg;
       if (RC == nullptr) {
         LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");

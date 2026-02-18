@@ -2,9 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zve64x \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
-declare {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i32} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr , i32, i32)
-declare {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i32} @llvm.riscv.vlseg2ff.mask.triscv.vector.tuple_nxv32i8_2t.nxv16i1(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i1>, i32, i32, i32)
-
 define void @test_vlseg2ff_dead_value(ptr %base, i32 %vl, ptr %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_dead_value:
 ; CHECK:       # %bb.0: # %entry

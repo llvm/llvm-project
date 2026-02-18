@@ -28,7 +28,6 @@
 #include "llvm/Support/Error.h"
 
 #include <cstdint>
-#include <map>
 #include <vector>
 
 namespace llvm {

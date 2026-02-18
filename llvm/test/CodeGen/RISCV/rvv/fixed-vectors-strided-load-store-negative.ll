@@ -140,4 +140,3 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr>, i32 immarg, <32 x i1>, <32 x i8>)

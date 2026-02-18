@@ -1315,16 +1315,16 @@ void Gang() {
 
 }
 
-  // expected-error@+4{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
+  // expected-error@+4{{OpenACC clause 'seq' cannot combine with previous 'worker' clause on a 'routine' directive}}
   // expected-note@+3{{previous 'worker' clause is here}}
-  // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
+  // expected-error@+2{{OpenACC clause 'vector' cannot combine with previous 'worker' clause on a 'routine' directive}}
   // expected-note@+1{{previous 'worker' clause is here}}
 #pragma acc routine worker, vector, seq, nohost
 void bar();
 
-  // expected-error@+4{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
+  // expected-error@+4{{OpenACC clause 'seq' cannot combine with previous 'worker' clause on a 'routine' directive}}
   // expected-note@+3{{previous 'worker' clause is here}}
-  // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
+  // expected-error@+2{{OpenACC clause 'vector' cannot combine with previous 'worker' clause on a 'routine' directive}}
   // expected-note@+1{{previous 'worker' clause is here}}
 #pragma acc routine(bar) worker, vector, seq, nohost
 

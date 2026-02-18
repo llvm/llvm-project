@@ -33,3 +33,17 @@ jsr	(%a1)
 ; CHECK:      jsr  (%a2)
 ; CHECK-SAME: encoding: [0x4e,0x92]
 jsr	(%a2)
+
+; CHECK:      jsr  (0,%a0)
+; CHECK-SAME: encoding: [0x4e,0xa8,0x00,0x00]
+jsr	(0,%a0)
+; CHECK:      jsr  (-1,%a1)
+; CHECK-SAME: encoding: [0x4e,0xa9,0xff,0xff]
+jsr	(-1,%a1)
+
+; CHECK:      jsr  (0,%a0,%d0)
+; CHECK-SAME: encoding: [0x4e,0xb0,0x08,0x00]
+jsr	(0,%a0,%d0)
+; CHECK:      jsr  (-1,%sp,%sp)
+; CHECK-SAME: encoding: [0x4e,0xb7,0xf8,0xff]
+jsr	(-1,%sp,%sp)

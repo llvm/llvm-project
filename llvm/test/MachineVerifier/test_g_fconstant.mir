@@ -1,14 +1,9 @@
-#RUN: not --crash llc -mtriple=aarch64 -o /dev/null -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            test_fconstant
-legalized:       true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-liveins:
-body:             |
+name: test_fconstant
+body: |
   bb.0:
     ; CHECK: Bad machine code: Instruction cannot use a vector result type
     %0:_(<2 x s32>) = G_FCONSTANT float 0.0
@@ -31,5 +26,4 @@ body:             |
     ; Size is smaller than result
     ; CHECK: Bad machine code: inconsistent constant size
     %4:_(s32) = G_FCONSTANT half 1.0
-
 ...

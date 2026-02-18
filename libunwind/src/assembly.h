@@ -132,6 +132,10 @@
 
 #if defined(__APPLE__)
 
+#if defined(__aarch64__) || defined(__arm64__) || defined(__arm64e__)
+#define _LIBUNWIND_TRACE_RET_INJECT 1
+#endif
+
 #define SYMBOL_IS_FUNC(name)
 #define HIDDEN_SYMBOL(name) .private_extern name
 #if defined(_LIBUNWIND_HIDE_SYMBOLS)

@@ -7,6 +7,4 @@ entry:
   ret i32 %reg
 }
 
-declare i32 @llvm.read_register.i32(metadata) nounwind
-
 !0 = !{!"notareg\00"}

@@ -35,7 +35,7 @@ struct ExplicitSpec_NotImported {};
 #define USEMEMFUNC(class, func) void (class::*UNIQ(use)())() { return &class::func; }
 #define USESTATICMEMFUNC(class, func) void (*UNIQ(use)())() { return &class::func; }
 #define USECLASS(class) void UNIQ(USE)() { class x; }
-#define USECOPYASSIGN(class) class& (class::*UNIQ(use)())(class&) { return &class::operator=; }
+#define USECOPYASSIGN(class) class& (class::*UNIQ(use)())(const class&) { return &class::operator=; }
 #define USEMOVEASSIGN(class) class& (class::*UNIQ(use)())(class&&) { return &class::operator=; }
 
 //===----------------------------------------------------------------------===//
@@ -649,13 +649,15 @@ struct __declspec(dllimport) T {
   static int b;
   // MO1-DAG: @"?b@T@@2HA" = external dllimport global i32
 
-  T& operator=(T&) = default;
-  // MO1-DAG: define available_externally dllimport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4T@@QAEAAU0@AAU0@@Z"
+  T& operator=(const T&) = default;
+  // MO1-DAG: define available_externally dllimport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4T@@QAEAAU0@ABU0@@Z"
+  // PS-DAG: declare dllimport nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN1TaSERKS_
 
   T& operator=(T&&) = default;
-  // Note: Don't mark inline move operators dllimport because current MSVC versions don't export them.
+  // Note: Don't mark inline move operators dllimport because MSVC versions before 2015 don't export them.
   // M18-DAG: define linkonce_odr dso_local x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4T@@QAEAAU0@$$QAU0@@Z"
   // M19-DAG: define available_externally dllimport x86_thiscallcc nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @"??4T@@QAEAAU0@$$QAU0@@Z"
+  // PS-DAG: declare dllimport nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN1TaSEOS_
 };
 USEMEMFUNC(T, a)
 USESTATICMEMFUNC(T, StaticMethod)

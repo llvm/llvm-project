@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMCExpr.h"
-#include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -317,30 +315,6 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createTotalNumVGPR(const MCExpr *NumAGPR,
   return create(AGVK_TotalNumVGPRs, {NumAGPR, NumVGPR}, Ctx);
 }
 
-/// Mimics GCNSubtarget::computeOccupancy for MCExpr.
-///
-/// Remove dependency on GCNSubtarget and depend only only the necessary values
-/// for said occupancy computation. Should match computeOccupancy implementation
-/// without passing \p STM on.
-const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(
-    unsigned InitOcc, const MCExpr *NumSGPRs, const MCExpr *NumVGPRs,
-    unsigned DynamicVGPRBlockSize, const GCNSubtarget &STM, MCContext &Ctx) {
-  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(&STM);
-  unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM, DynamicVGPRBlockSize);
-  unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(&STM);
-  unsigned Generation = STM.getGeneration();
-
-  auto CreateExpr = [&Ctx](unsigned Value) {
-    return MCConstantExpr::create(Value, Ctx);
-  };
-
-  return create(AGVK_Occupancy,
-                {CreateExpr(MaxWaves), CreateExpr(Granule),
-                 CreateExpr(TargetTotalNumVGPRs), CreateExpr(Generation),
-                 CreateExpr(InitOcc), NumSGPRs, NumVGPRs},
-                Ctx);
-}
-
 const AMDGPUMCExpr *AMDGPUMCExpr::createLit(LitModifier Lit, int64_t Value,
                                             MCContext &Ctx) {
   assert(Lit == LitModifier::Lit || Lit == LitModifier::Lit64);
@@ -481,7 +455,7 @@ static void unaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
     return;
   case MCUnaryExpr::Opcode::Minus: {
     KB.makeNegative();
-    KBM[Expr] = KB;
+    KBM[Expr] = std::move(KB);
     return;
   }
   case MCUnaryExpr::Opcode::Not: {
@@ -492,7 +466,7 @@ static void unaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
   }
   case MCUnaryExpr::Opcode::Plus: {
     KB.makeNonNegative();
-    KBM[Expr] = KB;
+    KBM[Expr] = std::move(KB);
     return;
   }
   }
@@ -514,7 +488,7 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
       knownBitsMapHelper(Arg, KBM, Depth + 1);
       KB |= KBM[Arg];
     }
-    KBM[Expr] = KB;
+    KBM[Expr] = std::move(KB);
     return;
   }
   case AMDGPUMCExpr::VariantKind::AGVK_Max: {
@@ -524,7 +498,7 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
       knownBitsMapHelper(Arg, KBM, Depth + 1);
       KB = KnownBits::umax(KB, KBM[Arg]);
     }
-    KBM[Expr] = KB;
+    KBM[Expr] = std::move(KB);
     return;
   }
   case AMDGPUMCExpr::VariantKind::AGVK_ExtraSGPRs:

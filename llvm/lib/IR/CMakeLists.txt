@@ -35,6 +35,7 @@ add_llvm_component_library(LLVMCore
   GVMaterializer.cpp
   Globals.cpp
   Intrinsics.cpp
+  NVVMIntrinsicUtils.cpp
   IRBuilder.cpp
   IRPrintingPasses.cpp
   SSAContext.cpp

@@ -52,7 +52,11 @@
 #ifndef ORC_RT_RTTI_H
 #define ORC_RT_RTTI_H
 
+#include <type_traits>
+
 namespace orc_rt {
+
+class ErrorInfoBase;
 
 template <typename ThisT, typename ParentT> class RTTIExtends;
 
@@ -107,6 +111,10 @@ private:
 ///
 template <typename ThisT, typename ParentT> class RTTIExtends : public ParentT {
 public:
+  static_assert(!std::is_base_of_v<ErrorInfoBase, ParentT>,
+                "RTTIExtends should not be used to define orc_rt custom error "
+                "types, use ErrorExtends instead");
+
   // Inherit constructors and isA methods from ParentT.
   using ParentT::isA;
   using ParentT::ParentT;

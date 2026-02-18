@@ -69,15 +69,15 @@ declare spir_func float @_Z25atomic_fetch_sub_explicitPU3AS1VU7_Atomicff12memory
 
 define dso_local spir_func void @test4(i64 noundef %arg, float %val) local_unnamed_addr {
 entry:
-  %ptr1 = inttoptr i64 %arg to float addrspace(1)*
+  %ptr1 = inttoptr i64 %arg to ptr addrspace(1)
   %v1 = atomicrmw fadd ptr addrspace(1) %ptr1, float %val seq_cst, align 4
-  %ptr2 = inttoptr i64 %arg to float addrspace(1)*
+  %ptr2 = inttoptr i64 %arg to ptr addrspace(1)
   %v2 = atomicrmw fsub ptr addrspace(1) %ptr2, float %val seq_cst, align 4
-  %ptr3 = inttoptr i64 %arg to float addrspace(1)*
+  %ptr3 = inttoptr i64 %arg to ptr addrspace(1)
   %v3 = tail call spir_func float @_Z21__spirv_AtomicFAddEXT(ptr addrspace(1) %ptr3, i32 1, i32 16, float %val)
-  %ptr4 = inttoptr i64 %arg to float addrspace(1)*
+  %ptr4 = inttoptr i64 %arg to ptr addrspace(1)
   %v4 = tail call spir_func float @_Z25atomic_fetch_add_explicitPU3AS1VU7_Atomicff12memory_order(ptr addrspace(1) %ptr4, float %val, i32 0)
-  %ptr5 = inttoptr i64 %arg to float addrspace(1)*
+  %ptr5 = inttoptr i64 %arg to ptr addrspace(1)
   %v5 = tail call spir_func float @_Z25atomic_fetch_sub_explicitPU3AS1VU7_Atomicff12memory_order(ptr addrspace(1) %ptr5, float %val, i32 0)
   ret void
 }

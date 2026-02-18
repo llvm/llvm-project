@@ -1,10 +1,12 @@
 .. title:: clang-tidy - cert-env33-c
+.. meta::
+   :http-equiv=refresh: 5;URL=../bugprone/command-processor.html
 
 cert-env33-c
 ============
 
 The `cert-env33-c` check is an alias, please see
-`bugprone-command-processor <../bugprone/command-processor.html>`_
+:doc:`bugprone-command-processor <../bugprone/command-processor>`
 for more information.
 
 This check corresponds to the CERT C Coding Standard rule

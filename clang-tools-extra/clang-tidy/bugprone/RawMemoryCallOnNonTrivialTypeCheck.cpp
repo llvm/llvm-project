@@ -64,7 +64,8 @@ void RawMemoryCallOnNonTrivialTypeCheck::storeOptions(
 
 void RawMemoryCallOnNonTrivialTypeCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers::internal;
-  auto IsStructPointer = [](Matcher<CXXRecordDecl> Constraint = anything(),
+  auto IsStructPointer = [](const Matcher<CXXRecordDecl> &Constraint =
+                                anything(),
                             bool Bind = false) {
     return expr(unaryOperator(
         hasOperatorName("&"),
@@ -74,8 +75,8 @@ void RawMemoryCallOnNonTrivialTypeCheck::registerMatchers(MatchFinder *Finder) {
   };
   auto IsRecordSizeOf =
       expr(sizeOfExpr(hasArgumentOfType(equalsBoundNode("Record"))));
-  auto ArgChecker = [&](Matcher<CXXRecordDecl> RecordConstraint,
-                        BindableMatcher<Stmt> SecondArg = expr()) {
+  auto ArgChecker = [&](const Matcher<CXXRecordDecl> &RecordConstraint,
+                        const BindableMatcher<Stmt> &SecondArg = expr()) {
     return allOf(argumentCountIs(3),
                  hasArgument(0, IsStructPointer(RecordConstraint, true)),
                  hasArgument(1, SecondArg), hasArgument(2, IsRecordSizeOf));

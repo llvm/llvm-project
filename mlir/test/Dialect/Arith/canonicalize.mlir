@@ -2958,6 +2958,19 @@ func.func @truncIShrSIToTrunciShrUI(%a: i64) -> i32 {
   return %hi : i32
 }
 
+// CHECK-LABEL: @truncIShrSIExactToTrunciShrUIExact
+//  CHECK-SAME:   (%[[A:.+]]: i64)
+//  CHECK-NEXT:   %[[C32:.+]] = arith.constant 32 : i64
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C32]] exact : i64
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] : i64 to i32
+//  CHECK-NEXT:   return %[[TRU]] : i32
+func.func @truncIShrSIExactToTrunciShrUIExact(%a: i64) -> i32 {
+  %c32 = arith.constant 32: i64
+  %sh = arith.shrsi %a, %c32 exact : i64
+  %hi = arith.trunci %sh: i64 to i32
+  return %hi : i32
+}
+
 // CHECK-LABEL: @truncIShrSIToTrunciShrUIBadShiftAmt1
 //       CHECK:   arith.shrsi
 func.func @truncIShrSIToTrunciShrUIBadShiftAmt1(%a: i64) -> i32 {
@@ -3388,5 +3401,16 @@ func.func @unreachable() {
   // check that we don't infinite loop here.
   %add = arith.addi %add, %c1_i64 : i64
   cf.br ^unreachable
+}
+
+// -----
+
+// Verify that cmpi with dynamic-shaped tensors does not crash during folding.
+// The fold cannot create a DenseElementsAttr for dynamic shapes.
+// CHECK-LABEL: @cmpi_dynamic_shape_no_fold
+//       CHECK:   arith.cmpi eq
+func.func @cmpi_dynamic_shape_no_fold(%arg0: tensor<?xi32>) -> tensor<?xi1> {
+  %0 = arith.cmpi eq, %arg0, %arg0 : tensor<?xi32>
+  return %0 : tensor<?xi1>
 }
 

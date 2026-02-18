@@ -2024,31 +2024,30 @@ entry:
 define amdgpu_ps <8 x float> @dyn_insertelement_v8f32_s_s_s_add_1(<8 x float> inreg %vec, float inreg %val, i32 inreg %idx) {
 ; GPRIDX-LABEL: dyn_insertelement_v8f32_s_s_s_add_1:
 ; GPRIDX:       ; %bb.0: ; %entry
-; GPRIDX-NEXT:    s_add_i32 s11, s11, 1
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 0
-; GPRIDX-NEXT:    s_cselect_b32 s0, s10, s2
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 1
-; GPRIDX-NEXT:    s_cselect_b32 s1, s10, s3
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 2
-; GPRIDX-NEXT:    s_cselect_b32 s2, s10, s4
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 3
-; GPRIDX-NEXT:    s_cselect_b32 s3, s10, s5
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 4
-; GPRIDX-NEXT:    s_cselect_b32 s4, s10, s6
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 5
-; GPRIDX-NEXT:    s_cselect_b32 s5, s10, s7
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 6
-; GPRIDX-NEXT:    s_cselect_b32 s6, s10, s8
-; GPRIDX-NEXT:    s_cmp_eq_u32 s11, 7
-; GPRIDX-NEXT:    s_cselect_b32 s7, s10, s9
-; GPRIDX-NEXT:    v_mov_b32_e32 v0, s0
-; GPRIDX-NEXT:    v_mov_b32_e32 v1, s1
-; GPRIDX-NEXT:    v_mov_b32_e32 v2, s2
-; GPRIDX-NEXT:    v_mov_b32_e32 v3, s3
-; GPRIDX-NEXT:    v_mov_b32_e32 v4, s4
-; GPRIDX-NEXT:    v_mov_b32_e32 v5, s5
-; GPRIDX-NEXT:    v_mov_b32_e32 v6, s6
-; GPRIDX-NEXT:    v_mov_b32_e32 v7, s7
+; GPRIDX-NEXT:    s_add_u32 s0, s11, 1
+; GPRIDX-NEXT:    s_cselect_b32 s1, s10, s2
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 1
+; GPRIDX-NEXT:    s_cselect_b32 s2, s10, s3
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 2
+; GPRIDX-NEXT:    s_cselect_b32 s3, s10, s4
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 3
+; GPRIDX-NEXT:    s_cselect_b32 s4, s10, s5
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 4
+; GPRIDX-NEXT:    s_cselect_b32 s5, s10, s6
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 5
+; GPRIDX-NEXT:    s_cselect_b32 s6, s10, s7
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 6
+; GPRIDX-NEXT:    s_cselect_b32 s7, s10, s8
+; GPRIDX-NEXT:    s_cmp_eq_u32 s0, 7
+; GPRIDX-NEXT:    s_cselect_b32 s0, s10, s9
+; GPRIDX-NEXT:    v_mov_b32_e32 v0, s1
+; GPRIDX-NEXT:    v_mov_b32_e32 v1, s2
+; GPRIDX-NEXT:    v_mov_b32_e32 v2, s3
+; GPRIDX-NEXT:    v_mov_b32_e32 v3, s4
+; GPRIDX-NEXT:    v_mov_b32_e32 v4, s5
+; GPRIDX-NEXT:    v_mov_b32_e32 v5, s6
+; GPRIDX-NEXT:    v_mov_b32_e32 v6, s7
+; GPRIDX-NEXT:    v_mov_b32_e32 v7, s0
 ; GPRIDX-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: dyn_insertelement_v8f32_s_s_s_add_1:

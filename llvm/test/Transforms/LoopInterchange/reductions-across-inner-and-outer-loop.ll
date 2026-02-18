@@ -301,13 +301,13 @@ for.body3:                                        ; preds = %for.body3, %outer.h
   %vB = load float, ptr %arrayidx6
   %float.inner.inc.inc = fadd fast float %float.inner.inc, %vB
   %iv.inner.next = add nuw nsw i64 %iv.inner, 1
-  %exitcond = icmp eq i64 %iv.inner.next, 100
-  br i1 %exitcond, label %outer.inc, label %for.body3
+  %exitcond = icmp slt i64 %iv.inner.next, 100
+  br i1 %exitcond, label %for.body3, label %outer.inc
 
 outer.inc:                                        ; preds = %for.body3
   %float.inner.lcssa = phi float [ %float.inner.inc.inc, %for.body3 ]
   %iv.outer.next = add nsw i64 %iv.outer, 1
-  %cmp = icmp eq i64 %iv.outer.next, 100
+  %cmp = icmp slt i64 %iv.outer.next, 100
   br i1 %cmp, label %outer.header, label %for.exit
 
 for.exit:                                         ; preds = %outer.inc

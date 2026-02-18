@@ -76,16 +76,16 @@ public:
       : __base_(std::move(__base)), __pred_(in_place, std::move(__pred)) {}
 
   template <class _Vp = _View>
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_Vp>
   {
     return __base_;
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Pred const& pred() const { return *__pred_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Pred const& pred() const { return *__pred_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
     // Note: this duplicates a check in `optional` but provides a better error message.
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __pred_.__has_value(), "Trying to call begin() on a filter_view that does not have a valid predicate.");
@@ -99,7 +99,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     if constexpr (common_range<_View>)
       return __iterator{*this, ranges::end(__base_)};
     else
@@ -148,10 +148,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(filter_view& __parent, iterator_t<_View> __current)
       : __current_(std::move(__current)), __parent_(std::addressof(__parent)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> const& base() const& noexcept { return __current_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> base() && { return std::move(__current_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> const& base() const& noexcept { return __current_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> base() && { return std::move(__current_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr range_reference_t<_View> operator*() const { return *__current_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr range_reference_t<_View> operator*() const { return *__current_; }
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> operator->() const
     requires __has_arrow<iterator_t<_View>> && copyable<iterator_t<_View>>
   {
@@ -194,7 +194,7 @@ public:
     return __x.__current_ == __y.__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr range_rvalue_reference_t<_View>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_rvalue_reference_t<_View>
   iter_move(__iterator const& __it) noexcept(noexcept(ranges::iter_move(__it.__current_))) {
     return ranges::iter_move(__it.__current_);
   }
@@ -218,7 +218,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(filter_view& __parent) : __end_(ranges::end(__parent.__base_)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_View> base() const { return __end_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_View> base() const { return __end_; }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(__iterator const& __x, __sentinel const& __y) {
     return __x.__current_ == __y.__end_;

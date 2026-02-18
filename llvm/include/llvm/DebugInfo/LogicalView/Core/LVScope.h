@@ -20,7 +20,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVSort.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Compiler.h"
-#include <list>
 #include <map>
 #include <set>
 

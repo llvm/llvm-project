@@ -22,12 +22,8 @@ if (CMAKE_CROSSCOMPILING)
   return ()
 endif ()
 
-if (NOT TARGET llvm_gtest)
-  message(WARNING "Flang-RT unittests disabled due to GTest being unavailable; "
-                  "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
-  return ()
-endif ()
-
+# Make the targets default_gtest and default_gtest_main available.
+build_gtest()
 
 add_dependencies(flang-rt-test-depends
   FlangRTUnitTests

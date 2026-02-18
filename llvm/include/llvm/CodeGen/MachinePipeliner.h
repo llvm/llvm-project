@@ -51,7 +51,6 @@
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/WindowScheduler.h"
-#include "llvm/InitializePasses.h"
 
 #include <deque>
 
@@ -96,9 +95,7 @@ public:
 
   static char ID;
 
-  MachinePipeliner() : MachineFunctionPass(ID) {
-    initializeMachinePipelinerPass(*PassRegistry::getPassRegistry());
-  }
+  MachinePipeliner() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -778,16 +775,6 @@ public:
 
   /// Return the last cycle in the finalized schedule.
   int getFinalCycle() const { return FirstCycle + InitiationInterval - 1; }
-
-  /// Return the cycle of the earliest scheduled instruction in the dependence
-  /// chain.
-  int earliestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                           const SwingSchedulerDDG *DDG);
-
-  /// Return the cycle of the latest scheduled instruction in the dependence
-  /// chain.
-  int latestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                         const SwingSchedulerDDG *DDG);
 
   void computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart, int II,
                     SwingSchedulerDAG *DAG);

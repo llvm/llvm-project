@@ -137,9 +137,9 @@ llvm::Error LineTable::encode(FileWriter &Out, uint64_t BaseAddr) const {
     int64_t PrevLine = 1;
     bool First = true;
     for (const auto &line_entry : Lines) {
-      if (First)
+      if (First) {
         First = false;
-      else {
+      } else {
         int64_t LineDelta = (int64_t)line_entry.Line - PrevLine;
         auto End = DeltaInfos.end();
         auto Pos = std::lower_bound(DeltaInfos.begin(), End, LineDelta);

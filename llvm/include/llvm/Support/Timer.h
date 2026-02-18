@@ -15,7 +15,6 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Mutex.h"
 #include <cassert>
-#include <memory>
 #include <string>
 #include <vector>
 

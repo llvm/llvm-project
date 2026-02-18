@@ -257,10 +257,8 @@ define void @foo_st2_nxv8i8(<vscale x 8 x i1> %mask, <vscale x 8 x i8> %val1, <v
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    zip2 z2.h, z0.h, z1.h
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
-; CHECK-NEXT:    zip2 p1.h, p0.h, p0.h
-; CHECK-NEXT:    zip1 p0.h, p0.h, p0.h
+; CHECK-NEXT:    trn1 p0.b, p0.b, p0.b
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z2.b
-; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1> %mask, <vscale x 8 x i1> %mask)
@@ -274,10 +272,8 @@ define void @foo_st2_nxv8i8_trunc(<vscale x 4 x i1> %mask, <vscale x 4 x i16> %v
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    zip2 z2.s, z0.s, z1.s
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    zip2 p1.s, p0.s, p0.s
-; CHECK-NEXT:    zip1 p0.s, p0.s, p0.s
+; CHECK-NEXT:    trn1 p0.h, p0.h, p0.h
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z2.h
-; CHECK-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.mask = call <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1> %mask, <vscale x 4 x i1> %mask)

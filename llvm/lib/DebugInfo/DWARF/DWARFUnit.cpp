@@ -1187,9 +1187,15 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA) {
   if (getVersion() >= 5) {
     if (DA.getData().data() == nullptr)
       return std::nullopt;
-    Offset += Header.getFormat() == dwarf::DwarfFormat::DWARF32 ? 8 : 16;
+    // FYI: The .debug_str_offsets.dwo section may use DWARF64 even when the
+    // rest of the file uses DWARF32, so respect whichever encoding the
+    // header/length uses.
+    uint64_t Length = 0;
+    DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
+    std::tie(Length, Format) = DA.getInitialLength(&Offset);
+    Offset += 4; // Skip the DWARF version uint16_t and the uint16_t padding.
     // Look for a valid contribution at the given offset.
-    auto DescOrError = parseDWARFStringOffsetsTableHeader(DA, Header.getFormat(), Offset);
+    auto DescOrError = parseDWARFStringOffsetsTableHeader(DA, Format, Offset);
     if (!DescOrError)
       return DescOrError.takeError();
     return *DescOrError;

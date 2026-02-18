@@ -26,10 +26,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TypeSize.h"
-#include <algorithm>
 #include <cstdint>
 #include <functional>
-#include <iterator>
 #include <optional>
 #include <string>
 #include <utility>

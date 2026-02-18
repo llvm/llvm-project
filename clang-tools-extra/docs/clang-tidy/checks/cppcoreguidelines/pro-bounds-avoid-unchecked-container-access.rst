@@ -25,13 +25,13 @@ and
 
 will generate a warning.
 
-STL containers for which ``operator[]`` is well-defined for all inputs are excluded
-from this check (e.g.: ``std::map::operator[]``).
+STL containers for which ``operator[]`` is well-defined for all inputs are
+excluded from this check (e.g.: ``std::map::operator[]``).
 
 This check enforces part of the `SL.con.3
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors>`
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors>`_
 guideline and is part of the `Bounds Safety (Bounds 4)
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-bounds-arrayindex>`
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-bounds-arrayindex>`_
 profile from the C++ Core Guidelines.
 
 Options

@@ -7,9 +7,11 @@ Converts calls to ``printf``, ``fprintf``, ``absl::PrintF`` and
 ``absl::FPrintf`` to equivalent calls to C++23's ``std::print`` or
 ``std::println`` as appropriate, modifying the format string appropriately.
 The replaced and replacement functions can be customised by configuration
-options. Each argument that is the result of a call to ``std::string::c_str()`` and
-``std::string::data()`` will have that now-unnecessary call removed in a
-similar manner to the `readability-redundant-string-cstr` check.
+options. Each argument that is the result of a call to
+``std::string::c_str()`` and ``std::string::data()`` will have that
+now-unnecessary call removed in a similar manner to the
+:doc:`readability-redundant-string-cstr
+<../readability/redundant-string-cstr>` check.
 
 In other words, it turns lines like:
 
