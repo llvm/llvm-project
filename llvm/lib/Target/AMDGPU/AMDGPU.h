@@ -114,6 +114,14 @@ FunctionPass *createAMDGPULowerKernelArgumentsPass();
 void initializeAMDGPULowerKernelArgumentsPass(PassRegistry &);
 extern char &AMDGPULowerKernelArgumentsID;
 
+FunctionPass *createAMDGPUMachineLevelInlinerLegacyPass();
+void initializeAMDGPUMachineLevelInlinerLegacyPass(PassRegistry &);
+extern char &AMDGPUMachineLevelInlinerLegacyID;
+
+FunctionPass *createAMDGPUInliningAnchorPass();
+void initializeAMDGPUInliningAnchorPass(PassRegistry &);
+extern char &AMDGPUInliningAnchorID;
+
 FunctionPass *createAMDGPUPromoteKernelArgumentsPass();
 void initializeAMDGPUPromoteKernelArgumentsPass(PassRegistry &);
 extern char &AMDGPUPromoteKernelArgumentsID;

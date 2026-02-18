@@ -1,0 +1,9 @@
+# REQUIRES: amdgpu-registered-target
+## Test checking that update_llc_test_checks.py can handle inlined functions with CHECK-NOT
+
+# RUN: cp -f %S/Inputs/amdgpu-inlined-function.ll %t.ll && %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/amdgpu-inlined-function.ll.expected %t.ll
+
+## Verify that running the script again on an already updated file doesn't add duplicate checks
+# RUN: %update_llc_test_checks %t.ll
+# RUN: diff -u %S/Inputs/amdgpu-inlined-function.ll.expected %t.ll

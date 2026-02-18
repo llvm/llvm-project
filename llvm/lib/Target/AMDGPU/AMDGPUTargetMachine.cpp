@@ -26,6 +26,7 @@
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPULowerVGPREncoding.h"
+#include "AMDGPUMachineLevelInliner.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
@@ -588,6 +589,11 @@ static cl::opt<bool>
                            cl::desc("Enable AMDGPUAttributorPass"),
                            cl::init(true), cl::Hidden);
 
+static cl::opt<bool> EnableAMDGPUMachineLevelInliner(
+    "amdgpu-enable-machine-level-inliner",
+    cl::desc("Enable AMDGPU machine level inliner"), cl::init(false),
+    cl::Hidden);
+
 static cl::opt<bool> NewRegBankSelect(
     "new-reg-bank-select",
     cl::desc("Run amdgpu-regbankselect and amdgpu-regbanklegalize instead of "
@@ -693,6 +699,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
   initializeAMDGPUPreloadKernelArgumentsLegacyPass(*PR);
   initializeAMDGPUUniformIntrinsicCombineLegacyPass(*PR);
+  initializeAMDGPUMachineLevelInlinerLegacyPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -1837,6 +1844,10 @@ void GCNPassConfig::addPostRegAlloc() {
 void GCNPassConfig::addPreSched2() {
   if (TM->getOptLevel() > CodeGenOptLevel::None)
     addPass(createSIShrinkInstructionsLegacyPass());
+
+  if (EnableAMDGPUMachineLevelInliner)
+    addPass(createAMDGPUMachineLevelInlinerLegacyPass());
+
   addPass(&SIPostRABundlerLegacyID);
 }
 
@@ -2533,6 +2544,16 @@ void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
 void AMDGPUCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIShrinkInstructionsPass(), PMW);
+
+  if (EnableAMDGPUMachineLevelInliner) {
+    flushFPMsToMPM(PMW);
+    addModulePass(AMDGPUMachineLevelInlinerPass(), PMW);
+    // Enable NoRerun for subsequent CGSCC passes after the machine level
+    // inliner. This is important for skipping processing (and
+    // ultimately printing) functions that have been fully inlined.
+    setNoRerunForCGSCC(PMW, true);
+  }
+
   addMachineFunctionPass(SIPostRABundlerPass(), PMW);
 }
 

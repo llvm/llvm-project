@@ -127,6 +127,7 @@ def update_test(ti: common.TestInfo):
 
     # Dictionary to store MIR function bodies separately
     mir_func_dict = {}
+    mir_processed_prefixes = set()
     for run_tuple, is_mir in [(run, False) for run in run_list] + [
         (run, True) for run in mir_run_list
     ]:
@@ -166,6 +167,7 @@ def update_test(ti: common.TestInfo):
                 triple,
                 prefixes,
                 mir_func_dict,
+                mir_processed_prefixes,
                 ti.args.verbose,
             )
         else:

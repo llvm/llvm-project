@@ -88,6 +88,8 @@ private:
            SSID == getSystemOneAddressSpaceSSID();
   }
 
+  SmallVector<Function *, 8> MachineInlinedFunctions;
+
 public:
   AMDGPUMachineModuleInfo(const MachineModuleInfo &MMI);
 
@@ -150,6 +152,19 @@ public:
 
     return *AIO >= *BIO &&
            (IsAOneAddressSpace == IsBOneAddressSpace || !IsAOneAddressSpace);
+  }
+
+  void addMachineInliningCandidate(Function &F) {
+    MachineInlinedFunctions.push_back(&F);
+  }
+
+  bool isMachineInliningCandidate(Function &F) const {
+    return llvm::find(MachineInlinedFunctions, &F) !=
+           MachineInlinedFunctions.end();
+  }
+
+  ArrayRef<Function *> getMachineInliningCandidates() const {
+    return MachineInlinedFunctions;
   }
 };
 
