@@ -1711,7 +1711,11 @@ public:
                                        StructuredData::DictionarySP args_sp);
   void ClearScriptedSymbolLocator();
   lldb::ScriptedSymbolLocatorInterfaceSP GetScriptedSymbolLocatorInterface();
-  llvm::StringRef GetScriptedSymbolLocatorClassName() const;
+  llvm::StringRef GetScriptedSymbolLocatorClassName() const {
+    return m_scripted_symbol_locator_metadata_sp
+               ? m_scripted_symbol_locator_metadata_sp->GetClassName()
+               : "";
+  }
 
   /// Look up a previously cached source file resolution result.
   /// Returns true if a cached entry exists (even if the result is nullopt).
