@@ -17,13 +17,13 @@
 
 namespace clang::ssaf {
 
-/// An EntityPointerLevel represents a level of the declared pointer
+/// An EntityPointerLevel represents a level of the declared pointer/array
 /// type of an entity.  In the fully-expanded spelling of the declared type, a
-/// EntityPointerLevel is associated with a '*' in that declaration.
+/// EntityPointerLevel is associated with a '*' (or a '[]`) in that declaration.
 ///
-/// For example, for 'int **p;', there are two EntityPointerLevels. One
-/// is associated with 'int **' of 'p' and the other is associated with 'int *'
-/// of 'p'.
+/// For example, for 'int *p[10];', there are two EntityPointerLevels. One
+/// is associated with 'int *[10]' of 'p' and the other is associated with 'int
+/// *' of 'p'.
 ///
 /// An EntityPointerLevel can be identified by an EntityId and an unsigned
 /// integer indicating the pointer level: '(EntityId, PointerLevel)'.  A
@@ -33,8 +33,8 @@ namespace clang::ssaf {
 ///   - 'P.EntityId' identifies an lvalue object and 'P.PointerLevel == 0'.
 /// The latter case represents address-of expressions.
 ///
-/// For the same example 'int **p;', the EntityPointerLevels below are valid:
-/// '(p, 1)' is associated with 'int **' of 'p';
+/// For the same example 'int *p[10];', the EntityPointerLevels below are valid:
+/// '(p, 1)' is associated with 'int *[10]' of 'p';
 /// '(p, 2)' is associated with 'int *' of 'p';
 /// '(p, 0)' represents '&p'.
 class EntityPointerLevel {

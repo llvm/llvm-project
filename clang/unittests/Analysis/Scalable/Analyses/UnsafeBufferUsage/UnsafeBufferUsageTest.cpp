@@ -27,8 +27,8 @@ protected:
 //                   Data Structure Tests                   //
 //////////////////////////////////////////////////////////////
 
-#define EXPECT_CONTAINS(Set, Elt) EXPECT_NE((Set)->find(Elt), (Set)->end());
-#define EXPECT_EXCLUDES(Set, Elt) EXPECT_EQ((Set)->find(Elt), (Set)->end());
+#define EXPECT_CONTAINS(Set, Elt) EXPECT_NE((Set).find(Elt), (Set).end())
+#define EXPECT_EXCLUDES(Set, Elt) EXPECT_EQ((Set).find(Elt), (Set).end())
 
 TEST_F(UnsafeBufferUsageTest, EntityPointerLevelComparison) {
   EntityId E1 = Table.getId({"c:@F@foo", "", {}});
@@ -63,33 +63,34 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
 
   EntityPointerLevelSet Set{P1, P2, P3, P4, P5};
   auto ES = Builder.buildUnsafeBufferUsageEntitySummary(std::move(Set));
+  ASSERT_TRUE(ES);
 
-  EXPECT_CONTAINS(ES, P1);
-  EXPECT_CONTAINS(ES, P2);
-  EXPECT_CONTAINS(ES, P3);
-  EXPECT_CONTAINS(ES, P4);
-  EXPECT_CONTAINS(ES, P5);
-  EXPECT_EXCLUDES(ES, P6);
+  EXPECT_CONTAINS(*ES, P1);
+  EXPECT_CONTAINS(*ES, P2);
+  EXPECT_CONTAINS(*ES, P3);
+  EXPECT_CONTAINS(*ES, P4);
+  EXPECT_CONTAINS(*ES, P5);
+  EXPECT_EXCLUDES(*ES, P6);
 
   EntityPointerLevelSet Subset1{ES->getSubsetOf(E1).begin(),
                                 ES->getSubsetOf(E1).end()};
 
-  EXPECT_CONTAINS(&Subset1, P1);
-  EXPECT_CONTAINS(&Subset1, P2);
+  EXPECT_CONTAINS(Subset1, P1);
+  EXPECT_CONTAINS(Subset1, P2);
   EXPECT_EQ(Subset1.size(), 2U);
 
   EntityPointerLevelSet Subset2{ES->getSubsetOf(E2).begin(),
                                 ES->getSubsetOf(E2).end()};
 
-  EXPECT_CONTAINS(&Subset2, P3);
-  EXPECT_CONTAINS(&Subset2, P4);
+  EXPECT_CONTAINS(Subset2, P3);
+  EXPECT_CONTAINS(Subset2, P4);
   EXPECT_EQ(Subset2.size(), 2U);
 
   EntityPointerLevelSet Subset3{ES->getSubsetOf(E3).begin(),
                                 ES->getSubsetOf(E3).end()};
 
-  EXPECT_CONTAINS(&Subset3, P5);
-  EXPECT_EXCLUDES(&Subset3, P6);
+  EXPECT_CONTAINS(Subset3, P5);
+  EXPECT_EXCLUDES(Subset3, P6);
   EXPECT_EQ(Subset3.size(), 1U);
 }
 } // namespace
