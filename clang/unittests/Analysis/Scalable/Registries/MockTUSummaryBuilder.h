@@ -14,6 +14,7 @@ namespace clang::ssaf {
 
 class MockTUSummaryBuilder : public TUSummaryBuilder {
 public:
+  using TUSummaryBuilder::TUSummaryBuilder;
   void sendMessage(llvm::Twine Message) { Stream << Message << '\n'; }
   std::string consumeMessages() { return std::move(OutputBuffer); }
 
