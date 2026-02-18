@@ -18,7 +18,6 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/baremetal/file_internal.h"
 #include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/scanf_main.h"
 
@@ -34,12 +33,12 @@ public:
 
   LIBC_INLINE char getc() {
     char c;
-    auto result = read_internal(&c, 1, stream);
+    auto result = __llvm_libc_stdio_read(stream, &c, 1);
     if (result != 1)
       return '\0';
     return c;
   }
-  LIBC_INLINE void ungetc(int c) { (void)ungetc_internal(c, stream); }
+  LIBC_INLINE void ungetc(int) {}
 };
 
 } // namespace internal
