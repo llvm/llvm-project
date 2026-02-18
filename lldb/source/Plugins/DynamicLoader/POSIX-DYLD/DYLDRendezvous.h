@@ -346,7 +346,14 @@ protected:
   /// supplied by the runtime linker.
   bool TakeSnapshot(SOEntryList &entry_list);
 
-  enum PThreadField { eSize, eNElem, eOffset, eStructSize };
+  /// For the definitions of the metadata entries, see
+  /// <glibc>/nptl_db/(db_info.c, structs.def, thread_dbP.h).
+  enum PThreadField {
+    eSize,      // Size of an element of a field as defined by DESC, bits
+    eNElem,     // Number of elements in the field
+    eOffset,    // Offset of the field
+    eStructSize // Size of a type as defined by DB_STRUCT, bytes
+  };
 
   bool FindMetadata(const char *name, PThreadField field, uint32_t &value);
 

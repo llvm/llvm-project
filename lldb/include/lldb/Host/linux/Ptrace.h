@@ -41,6 +41,7 @@ typedef int __ptrace_request;
 
 #ifndef PTRACE_GET_THREAD_AREA
 #ifdef __arm__
+// Arm has a different value, see arch/arm/include/uapi/asm/ptrace.h.
 #define PTRACE_GET_THREAD_AREA 22
 #else
 #define PTRACE_GET_THREAD_AREA 25

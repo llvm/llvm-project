@@ -68,6 +68,8 @@ public:
 private:
   const lldb_private::RegisterInfo *m_register_info_p;
   uint32_t m_register_info_count;
+  // Only provide information about the TLS register to users of this class that
+  // can handle it. Currently, only `NativeRegisterContextLinux_arm` reads it.
   bool m_has_tls_reg;
 };
 
