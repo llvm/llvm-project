@@ -52,9 +52,13 @@ public:
   APSInt toAPSInt(unsigned NumBits) const {
     return APSInt(toAPSInt().zextOrTrunc(NumBits), true);
   }
-  APValue toAPValue(const ASTContext &) const { return APValue(toAPSInt()); }
+  APValue toAPValue(const ASTContext &, const Program &) const {
+    return APValue(toAPSInt());
+  }
 
   Boolean toUnsigned() const { return *this; }
+
+  static IntegralKind getKind() { return IntegralKind::Number; }
 
   constexpr static unsigned bitWidth() { return 1; }
   bool isZero() const { return !V; }
@@ -84,7 +88,7 @@ public:
   void bitcastToMemory(std::byte *Buff) { std::memcpy(Buff, &V, sizeof(V)); }
 
   void print(llvm::raw_ostream &OS) const { OS << (V ? "true" : "false"); }
-  std::string toDiagnosticString(const ASTContext &Ctx) const {
+  std::string toDiagnosticString(const ASTContext &Ctx, const Program &) const {
     std::string NameStr;
     llvm::raw_string_ostream OS(NameStr);
     print(OS);

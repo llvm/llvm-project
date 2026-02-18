@@ -184,7 +184,7 @@ template <PrimType OpType> bool EvalEmitter::emitRet(SourceInfo Info) {
     return true;
 
   using T = typename PrimConv<OpType>::T;
-  EvalResult.takeValue(S.Stk.pop<T>().toAPValue(Ctx.getASTContext()));
+  EvalResult.takeValue(S.Stk.pop<T>().toAPValue(Ctx.getASTContext(), S.P));
   return true;
 }
 
@@ -193,6 +193,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
     return true;
 
   const Pointer &Ptr = S.Stk.pop<Pointer>();
+
   // If we're returning a raw pointer, call our callback.
   if (this->PtrCB)
     return (*this->PtrCB)(Ptr);
@@ -204,7 +205,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
 
   // Function pointers are alway returned as lvalues.
   if (Ptr.isFunctionPointer()) {
-    EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
+    EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext(), S.P));
     return true;
   }
 
@@ -226,7 +227,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
       return false;
 
     if (std::optional<APValue> V =
-            Ptr.toRValue(Ctx, EvalResult.getSourceType())) {
+            Ptr.toRValue(Ctx, EvalResult.getSourceType(), P)) {
       EvalResult.takeValue(std::move(*V));
     } else {
       return false;
@@ -236,14 +237,14 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
     // the result, even if the pointer is dead.
     // This will later be diagnosed by CheckLValueConstantExpression.
     if (Ptr.isBlockPointer() && !Ptr.block()->isStatic()) {
-      EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
+      EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext(), S.P));
       return true;
     }
 
     if (!Ptr.isLive() && !Ptr.isTemporary())
       return false;
 
-    EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
+    EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext(), S.P));
   }
 
   return true;
@@ -263,7 +264,7 @@ bool EvalEmitter::emitRetValue(SourceInfo Info) {
     return false;
 
   if (std::optional<APValue> APV =
-          Ptr.toRValue(S.getASTContext(), EvalResult.getSourceType())) {
+          Ptr.toRValue(S.getASTContext(), EvalResult.getSourceType(), P)) {
     EvalResult.takeValue(std::move(*APV));
     return true;
   }
@@ -362,11 +363,12 @@ void EvalEmitter::updateGlobalTemporaries() {
     const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
     APValue *Cached = Temp->getOrCreateValue(true);
     if (OptPrimType T = Ctx.classify(E->getType())) {
-      TYPE_SWITCH(*T,
-                  { *Cached = Ptr.deref<T>().toAPValue(Ctx.getASTContext()); });
+      TYPE_SWITCH(*T, {
+        *Cached = Ptr.deref<T>().toAPValue(Ctx.getASTContext(), S.P);
+      });
     } else {
       if (std::optional<APValue> APV =
-              Ptr.toRValue(Ctx, Temp->getTemporaryExpr()->getType()))
+              Ptr.toRValue(Ctx, Temp->getTemporaryExpr()->getType(), P))
         *Cached = *APV;
     }
   }

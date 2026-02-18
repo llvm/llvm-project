@@ -173,6 +173,9 @@ _Static_assert(A > B, "");
 int * GH149500_p = &(*(int *)0x400);
 static const void *GH149500_q = &(*(const struct sysrq_key_op *)0);
 
+
+void f0(void) { static intptr_t l0 = (unsigned)(intptr_t) f0;} // both-error {{initializer element is not a compile-time constant}}
+
 #else
 #error :(
 #endif

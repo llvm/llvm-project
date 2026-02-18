@@ -31,6 +31,20 @@ const void *Program::getNativePointer(unsigned Idx) const {
   return NativePointers[Idx];
 }
 
+unsigned Program::getOrCreateAddrLabelDiff(const AddrLabelExpr *LHS,
+                                           const AddrLabelExpr *RHS) {
+  auto [It, Inserted] = AddrLabelDiffIndices.try_emplace(
+      AddrLabelDiff{LHS, RHS}, AddrLabelDiffs.size());
+  if (Inserted)
+    AddrLabelDiffs.push_back(AddrLabelDiff{LHS, RHS});
+
+  return It->second;
+}
+
+AddrLabelDiff Program::getLabelDiff(unsigned Index) const {
+  return AddrLabelDiffs[Index];
+}
+
 unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
   const size_t CharWidth = S->getCharByteWidth();
   const size_t BitWidth = CharWidth * Ctx.getCharBit();
@@ -49,7 +63,6 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
                                         /*isConst=*/true,
                                         /*isTemporary=*/false,
                                         /*isMutable=*/false);
-
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
   unsigned GlobalIndex = Globals.size();
@@ -63,15 +76,10 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
   Globals.push_back(G);
 
   const Pointer Ptr(G->block());
-  if (CharWidth == 1) {
-    std::memcpy(&Ptr.elem<char>(0), S->getString().data(), StringLength);
-  } else {
-    // Construct the string in storage.
-    for (unsigned I = 0; I <= StringLength; ++I) {
-      uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
-      INT_TYPE_SWITCH_NO_BOOL(*CharType,
-                              Ptr.elem<T>(I) = T::from(CodePoint, BitWidth););
-    }
+  for (unsigned I = 0; I <= StringLength; ++I) {
+    uint32_t CodePoint = I == StringLength ? 0 : S->getCodeUnit(I);
+    INT_TYPE_SWITCH_NO_BOOL(*CharType,
+                            Ptr.elem<T>(I) = T::from(CodePoint, BitWidth););
   }
   Ptr.initializeAllElements();
 
