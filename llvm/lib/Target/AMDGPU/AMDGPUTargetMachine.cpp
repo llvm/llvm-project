@@ -1064,12 +1064,19 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                 *this, Opt, ThinOrFullLTOPhase::FullLTOPostLink));
           }
         }
-        if (!NoKernelInfoEndLTO) {
-          FunctionPassManager FPM;
-          FPM.addPass(KernelInfoPrinter(this));
-          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-        }
       });
+
+  // Add kernel-info pass using OptimizerLastEPCallback to run during LTO
+  // while remark streamer is still active
+  if (!NoKernelInfoEndLTO) {
+    PB.registerOptimizerLastEPCallback([this](ModulePassManager &PM,
+                                              OptimizationLevel Level,
+                                              ThinOrFullLTOPhase Phase) {
+      FunctionPassManager FPM;
+      FPM.addPass(KernelInfoPrinter(this));
+      PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    });
+  }
 
   PB.registerRegClassFilterParsingCallback(
       [](StringRef FilterName) -> RegAllocFilterFunc {

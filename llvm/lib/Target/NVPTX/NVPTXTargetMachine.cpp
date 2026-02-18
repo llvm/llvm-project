@@ -251,12 +251,13 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 
   if (!NoKernelInfoEndLTO) {
-    PB.registerFullLinkTimeOptimizationLastEPCallback(
-        [this](ModulePassManager &PM, OptimizationLevel Level) {
-          FunctionPassManager FPM;
-          FPM.addPass(KernelInfoPrinter(this));
-          PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-        });
+    PB.registerOptimizerLastEPCallback([this](ModulePassManager &PM,
+                                              OptimizationLevel Level,
+                                              ThinOrFullLTOPhase Phase) {
+      FunctionPassManager FPM;
+      FPM.addPass(KernelInfoPrinter(this));
+      PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+    });
   }
 }
 
