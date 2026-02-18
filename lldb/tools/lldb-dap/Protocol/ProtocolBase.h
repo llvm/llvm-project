@@ -79,48 +79,44 @@ public:
     return *this;
   }
 
+  friend String operator+(const String &LHS, const String &RHS) {
+    return {LHS.m_str + RHS.m_str};
+  }
+
+  /// @name String Comparision Operators
+  /// @{
+
+  friend bool operator==(const String &LHS, const String &RHS) {
+    return llvm::StringRef(LHS) == llvm::StringRef(RHS);
+  }
+
+  friend bool operator!=(const String &LHS, const String &RHS) {
+    return !(LHS == RHS);
+  }
+
+  friend bool operator<(const String &LHS, const String &RHS) {
+    return llvm::StringRef(LHS) < llvm::StringRef(RHS);
+  }
+
+  friend bool operator<=(const String &LHS, const String &RHS) {
+    return llvm::StringRef(LHS) <= llvm::StringRef(RHS);
+  }
+
+  friend bool operator>(const String &LHS, const String &RHS) {
+    return llvm::StringRef(LHS) > llvm::StringRef(RHS);
+  }
+
+  friend bool operator>=(const String &LHS, const String &RHS) {
+    return llvm::StringRef(LHS) >= llvm::StringRef(RHS);
+  }
+
+  /// @}
+
 private:
   std::string m_str;
 };
 llvm::json::Value toJSON(const String &s);
 bool fromJSON(const llvm::json::Value &, String &, llvm::json::Path);
-
-/// @name String Comparision Operators
-/// @{
-
-inline bool operator==(const String &LHS, const String &RHS) {
-  return llvm::StringRef(LHS) == llvm::StringRef(RHS);
-}
-
-inline bool operator!=(const String &LHS, const String &RHS) {
-  return !(LHS == RHS);
-}
-
-inline bool operator<(const String &LHS, const String &RHS) {
-  return llvm::StringRef(LHS) < llvm::StringRef(RHS);
-}
-
-inline bool operator<=(const String &LHS, const String &RHS) {
-  return llvm::StringRef(LHS) <= llvm::StringRef(RHS);
-}
-
-inline bool operator>(const String &LHS, const String &RHS) {
-  return llvm::StringRef(LHS) > llvm::StringRef(RHS);
-}
-
-inline bool operator>=(const String &LHS, const String &RHS) {
-  return llvm::StringRef(LHS) >= llvm::StringRef(RHS);
-}
-
-/// @}
-
-inline String operator+(const char *LHS, const String &RHS) {
-  return std::string(LHS).append(RHS.str().data(), RHS.str().size());
-}
-
-inline String operator+(const std::string &LHS, const String &RHS) {
-  return std::string(LHS).append(RHS.str().data(), RHS.str().size());
-}
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const String &S) {
   OS << S.str();
