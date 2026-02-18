@@ -63,6 +63,10 @@ def LUIimm : PatLeaf<(imm), [{
   return isShiftedUInt<16, 16>(N->getZExtValue());
 }]>;
 
+def uimm20 : PatLeaf<(imm), [{
+  return isUInt<20>(N->getZExtValue());
+}]>;
+
 def brtarget : Operand<OtherVT>;
 
 multiclass Operator<string OpStr, SDNode OpNode> {
@@ -78,8 +82,8 @@ multiclass Operator<string OpStr, SDNode OpNode> {
     let OutOperandList = (outs GP:$out);
     let InOperandList = (ins GP:$in1, i32imm:$in2);
     let Constraints = "$out = $in1";
+    let Pattern = [(set i32:$out, (OpNode i32:$in1, uimm20:$in2))];
     let AsmString = !strconcat(OpStr, "I $in1, $in2");
-    let hasSideEffects = 0;
   }
 }
 
@@ -122,7 +126,6 @@ let Namespace = "SC32" in {
     let OutOperandList = (outs GP:$dst);
     let InOperandList = (ins GP:$src);
     let AsmString = "MOV $dst, $src";
-    let hasSideEffects = 0;
   }
 
   def RET : Instruction {
