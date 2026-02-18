@@ -1243,7 +1243,8 @@ define i32 @mul_maybe_zero(i32 %x, i32 %y) {
 define i32 @bitcast_known_nonzero(<2 x i16> %xx) {
 ; X86-LABEL: bitcast_known_nonzero:
 ; X86:       # %bb.0:
-; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; X86-NEXT:    pxor %xmm1, %xmm1
+; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X86-NEXT:    pslld $23, %xmm0
 ; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    cvttps2dq %xmm0, %xmm0

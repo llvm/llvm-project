@@ -498,18 +498,17 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
 ; NEON-FIXED-NEXT:    sub sp, sp, #16
 ; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; NEON-FIXED-NEXT:    movi v1.2d, #0000000000000000
-; NEON-FIXED-NEXT:    adrp x9, .LCPI18_0
+; NEON-FIXED-NEXT:    adrp x8, .LCPI18_0
 ; NEON-FIXED-NEXT:    mov x11, sp
-; NEON-FIXED-NEXT:    ldr d2, [x9, :lo12:.LCPI18_0]
+; NEON-FIXED-NEXT:    ldr d2, [x8, :lo12:.LCPI18_0]
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    mov v1.h[0], w0
 ; NEON-FIXED-NEXT:    mov v1.h[1], w1
-; NEON-FIXED-NEXT:    fmov x8, d1
 ; NEON-FIXED-NEXT:    mov v1.h[2], w2
 ; NEON-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
-; NEON-FIXED-NEXT:    fmov x9, d1
+; NEON-FIXED-NEXT:    fmov x8, d1
 ; NEON-FIXED-NEXT:    umaxv h2, v2.4h
-; NEON-FIXED-NEXT:    lsr x9, x9, #32
+; NEON-FIXED-NEXT:    lsr x9, x8, #32
 ; NEON-FIXED-NEXT:    orr w9, w8, w9
 ; NEON-FIXED-NEXT:    orr w8, w9, w8, lsr #16
 ; NEON-FIXED-NEXT:    fmov w10, s2
@@ -530,12 +529,11 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
 ; SVE-FIXED-NEXT:    str q0, [sp]
 ; SVE-FIXED-NEXT:    mov v1.h[0], w0
 ; SVE-FIXED-NEXT:    mov v1.h[1], w1
-; SVE-FIXED-NEXT:    fmov x8, d1
 ; SVE-FIXED-NEXT:    mov v1.h[2], w2
 ; SVE-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
-; SVE-FIXED-NEXT:    fmov x9, d1
+; SVE-FIXED-NEXT:    fmov x8, d1
 ; SVE-FIXED-NEXT:    umaxv h2, v2.4h
-; SVE-FIXED-NEXT:    lsr x9, x9, #32
+; SVE-FIXED-NEXT:    lsr x9, x8, #32
 ; SVE-FIXED-NEXT:    orr w9, w8, w9
 ; SVE-FIXED-NEXT:    orr w8, w9, w8, lsr #16
 ; SVE-FIXED-NEXT:    fmov w10, s2

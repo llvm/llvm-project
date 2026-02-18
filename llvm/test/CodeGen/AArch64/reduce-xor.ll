@@ -207,13 +207,12 @@ define i8 @test_redxor_v3i8(<3 x i8> %a) {
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.h[0], w0
 ; CHECK-NEXT:    mov v0.h[1], w1
-; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    mov v0.h[2], w2
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    lsr x10, x9, #32
-; CHECK-NEXT:    lsr x9, x9, #16
-; CHECK-NEXT:    eor w8, w8, w10
-; CHECK-NEXT:    eor w0, w8, w9
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    lsr x9, x8, #32
+; CHECK-NEXT:    lsr x10, x8, #16
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w0, w8, w10
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test_redxor_v3i8:

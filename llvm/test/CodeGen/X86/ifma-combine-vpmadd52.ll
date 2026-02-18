@@ -312,30 +312,32 @@ define <1 x i64> @test_scalar_no_ifma(<1 x i64> %x, <1 x i64> %y, <1 x i64> %z) 
 define <8 x i64> @test_mixed_width_too_wide(<8 x i64> %x, <8 x i64> %y, <8 x i64> %z) {
 ; AVXIFMA-LABEL: test_mixed_width_too_wide:
 ; AVXIFMA:       # %bb.0:
-; AVXIFMA-NEXT:    vpbroadcastq {{.*#+}} ymm6 = [8191,8191,8191,8191]
-; AVXIFMA-NEXT:    vpand %ymm6, %ymm2, %ymm2
-; AVXIFMA-NEXT:    vpand %ymm6, %ymm3, %ymm3
-; AVXIFMA-NEXT:    vpmovzxdq {{.*#+}} ymm6 = [2155905028,2155905036,2155905044,2155905052]
-; AVXIFMA-NEXT:    vpshufb %ymm6, %ymm1, %ymm7
-; AVXIFMA-NEXT:    vpmuludq %ymm3, %ymm7, %ymm7
-; AVXIFMA-NEXT:    vpsllq $32, %ymm7, %ymm7
+; AVXIFMA-NEXT:    vpbroadcastq {{.*#+}} ymm6 = [255,255,255,255,255,0,0,0,255,255,255,255,255,0,0,0,255,255,255,255,255,0,0,0,255,255,255,255,255,0,0,0]
+; AVXIFMA-NEXT:    vpand %ymm6, %ymm0, %ymm7
+; AVXIFMA-NEXT:    vpand %ymm6, %ymm1, %ymm6
+; AVXIFMA-NEXT:    vpbroadcastq {{.*#+}} ymm8 = [8191,8191,8191,8191]
+; AVXIFMA-NEXT:    vpand %ymm2, %ymm8, %ymm2
+; AVXIFMA-NEXT:    vpand %ymm3, %ymm8, %ymm3
+; AVXIFMA-NEXT:    vpsrlq $32, %ymm6, %ymm6
+; AVXIFMA-NEXT:    vpmuludq %ymm3, %ymm6, %ymm6
+; AVXIFMA-NEXT:    vpsllq $32, %ymm6, %ymm6
 ; AVXIFMA-NEXT:    vpmuludq %ymm3, %ymm1, %ymm1
-; AVXIFMA-NEXT:    vpshufb %ymm6, %ymm0, %ymm3
+; AVXIFMA-NEXT:    vpsrlq $32, %ymm7, %ymm3
 ; AVXIFMA-NEXT:    vpmuludq %ymm2, %ymm3, %ymm3
 ; AVXIFMA-NEXT:    vpsllq $32, %ymm3, %ymm3
 ; AVXIFMA-NEXT:    vpmuludq %ymm2, %ymm0, %ymm0
 ; AVXIFMA-NEXT:    vpaddq %ymm0, %ymm4, %ymm0
 ; AVXIFMA-NEXT:    vpaddq %ymm3, %ymm0, %ymm0
 ; AVXIFMA-NEXT:    vpaddq %ymm1, %ymm5, %ymm1
-; AVXIFMA-NEXT:    vpaddq %ymm7, %ymm1, %ymm1
+; AVXIFMA-NEXT:    vpaddq %ymm6, %ymm1, %ymm1
 ; AVXIFMA-NEXT:    retq
 ;
 ; AVX512-LABEL: test_mixed_width_too_wide:
 ; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1
 ; AVX512-NEXT:    vpmuludq %zmm1, %zmm0, %zmm3
 ; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm0
-; AVX512-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; AVX512-NEXT:    vpmuludq %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpsllq $32, %zmm0, %zmm0
 ; AVX512-NEXT:    vpaddq %zmm3, %zmm2, %zmm1
@@ -344,10 +346,10 @@ define <8 x i64> @test_mixed_width_too_wide(<8 x i64> %x, <8 x i64> %y, <8 x i64
 ;
 ; AVX512-NOIFMA-LABEL: test_mixed_width_too_wide:
 ; AVX512-NOIFMA:       # %bb.0:
+; AVX512-NOIFMA-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; AVX512-NOIFMA-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1
 ; AVX512-NOIFMA-NEXT:    vpmuludq %zmm1, %zmm0, %zmm3
 ; AVX512-NOIFMA-NEXT:    vpsrlq $32, %zmm0, %zmm0
-; AVX512-NOIFMA-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; AVX512-NOIFMA-NEXT:    vpmuludq %zmm1, %zmm0, %zmm0
 ; AVX512-NOIFMA-NEXT:    vpsllq $32, %zmm0, %zmm0
 ; AVX512-NOIFMA-NEXT:    vpaddq %zmm3, %zmm2, %zmm1
