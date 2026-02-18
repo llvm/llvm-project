@@ -33,6 +33,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::exp2m1f16(0.0f16));
   EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::expf16(0.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::expm1f16(0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::hypotf16(0.0f16, 0.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::logf16(1.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::sinhf16(0.0f16));
 
@@ -50,6 +51,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
 
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::f16sqrt(0.0));
 
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::f16sqrtf(0.0f));
+
   EXPECT_FP_EQ(float16(10.0),
                LIBC_NAMESPACE::shared::f16fmal(2.0L, 3.0L, 4.0L));
 
@@ -62,12 +65,22 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_EQ(exponent, 5);
 
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbf16(1.0f16));
+  EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::log10f16(10.0f16));
+  EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::log2f16(2.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::logbf16(1.0f16));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbf16(1.0f16));
 
   EXPECT_FP_EQ(0x1.921fb6p+0f16, LIBC_NAMESPACE::shared::acosf16(0.0f16));
   EXPECT_FP_EQ(0x1p+0f16, LIBC_NAMESPACE::shared::f16sqrtl(1.0L));
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::sinf16(0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::sinpif16(0.0f16));
+  EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::tanhf16(0.0f16));
+
+  float16 canonicalizef16_cx = 0.0f16;
+  float16 canonicalizef16_x = 0.0f16;
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef16(&canonicalizef16_cx,
+                                                       &canonicalizef16_x));
+  EXPECT_FP_EQ(0x0p+0f16, canonicalizef16_cx);
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
@@ -108,7 +121,11 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   ASSERT_FP_EQ(float(-1 * (8 << 5)), LIBC_NAMESPACE::shared::ldexpf(-8.0f, 5));
 
   EXPECT_EQ(long(0), LIBC_NAMESPACE::shared::llogbf(1.0f));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::log1pf(0.0f));
+  EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::log10f(10.0f));
+  EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::log2f(2.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::logbf(1.0f));
+  EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::powf(0.0f, 0.0f));
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::rsqrtf(1.0f));
 
   LIBC_NAMESPACE::shared::sincosf(0.0f, &sin, &cos);
@@ -118,9 +135,18 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::sinf(0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::sqrtf(0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::tanf(0.0f));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::tanhf(0.0f));
+
+  float canonicalizef_cx = 0.0f;
+  float canonicalizef_x = 0.0f;
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef(&canonicalizef_cx,
+                                                     &canonicalizef_x));
+  EXPECT_FP_EQ(0x0p+0f, canonicalizef_cx);
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
+  double sin, cos;
+  LIBC_NAMESPACE::shared::sincos(0.0, &sin, &cos);
   EXPECT_FP_EQ(0x1.921fb54442d18p+0, LIBC_NAMESPACE::shared::acos(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::asin(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::atan(0.0));
@@ -132,16 +158,27 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x1p+0, LIBC_NAMESPACE::shared::exp2(0.0));
   EXPECT_FP_EQ(0x1p+0, LIBC_NAMESPACE::shared::exp10(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::expm1(0.0));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::ffma(0.0, 0.0, 0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::fsqrt(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log(1.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log10(1.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log1p(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log2(1.0));
+  EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::shared::pow(0.0, 0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::sin(0.0));
+  EXPECT_FP_EQ(1.0, cos);
+  EXPECT_FP_EQ(0.0, sin);
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::sqrt(0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::tan(0.0));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogb(1.0));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogb(1.0));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::logb(1.0));
+
+  double canonicalize_cx = 0.0;
+  double canonicalize_x = 0.0;
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalize(&canonicalize_cx,
+                                                    &canonicalize_x));
+  EXPECT_FP_EQ(0.0, canonicalize_cx);
 }
 
 TEST(LlvmLibcSharedMathTest, AllLongDouble) {
@@ -149,7 +186,14 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
                LIBC_NAMESPACE::shared::dfmal(0x0.p+0L, 0x0.p+0L, 0x0.p+0L));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fsqrtl(0.0L));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbl(0x1.p+0L));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbl(1.0L));
   EXPECT_FP_EQ(10.0f, LIBC_NAMESPACE::shared::ffmal(2.0L, 3.0, 4.0L));
+
+  long double canonicalizel_cx = 0.0L;
+  long double canonicalizel_x = 0.0L;
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizel(&canonicalizel_cx,
+                                                     &canonicalizel_x));
+  EXPECT_FP_EQ(0x0p+0L, canonicalizel_cx);
 }
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
@@ -176,6 +220,29 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                LIBC_NAMESPACE::shared::sqrtf128(float128(1.0)));
 
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbf128(float128(1.0)));
+
+  EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16addf128(
+                                  float128(2.0), float128(3.0)));
+
+  float128 canonicalizef128_cx = float128(0.0);
+  float128 canonicalizef128_x = float128(0.0);
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef128(&canonicalizef128_cx,
+                                                        &canonicalizef128_x));
+  EXPECT_FP_EQ(float128(0.0), canonicalizef128_cx);
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
+
+TEST(LlvmLibcSharedMathTest, AllBFloat16) {
+  EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16add(2.0, 3.0));
+  EXPECT_FP_EQ(bfloat16(2.0f), LIBC_NAMESPACE::shared::bf16divf(4.0f, 2.0f));
+
+  bfloat16 canonicalizebf16_cx = bfloat16(0.0);
+  bfloat16 canonicalizebf16_x = bfloat16(0.0);
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizebf16(&canonicalizebf16_cx,
+                                                        &canonicalizebf16_x));
+  EXPECT_FP_EQ(bfloat16(0.0), canonicalizebf16_cx);
+  EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16addf(2.0f, 3.0f));
+  EXPECT_FP_EQ(bfloat16(10.0),
+               LIBC_NAMESPACE::shared::bf16fmaf(2.0f, 3.0f, 4.0f));
+}

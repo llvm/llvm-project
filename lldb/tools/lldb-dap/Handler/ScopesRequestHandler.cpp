@@ -37,7 +37,7 @@ ScopesRequestHandler::Run(const ScopesArguments &args) const {
   }
 
   std::vector<protocol::Scope> scopes =
-      dap.variables.CreateScopes(args.frameId, frame);
+      dap.reference_storage.CreateScopes(frame);
 
   return ScopesResponseBody{std::move(scopes)};
 }

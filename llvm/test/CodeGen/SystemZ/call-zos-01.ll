@@ -2,14 +2,14 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z10 | FileCheck %s
 
-; CHECK-LABEL: call_char:
+; CHECK-LABEL: call_char DS 0H
 ; CHECK: lghi  1,8
 define i8 @call_char(){
   %retval = call i8 (i8) @pass_char(i8 8)
   ret i8 %retval
 }
 
-; CHECK-LABEL: call_short:
+; CHECK-LABEL: call_short DS 0H
 ; CHECK: lghi  1,16
 define i16 @call_short() {
 entry:
@@ -17,7 +17,7 @@ entry:
   ret i16 %retval
 }
 
-; CHECK-LABEL: call_int:
+; CHECK-LABEL: call_int DS 0H
 ; CHECK: lghi  1,32
 ; CHECK: lghi  2,33
 define i32 @call_int() {
@@ -26,7 +26,7 @@ entry:
   ret i32 %retval
 }
 
-; CHECK-LABEL: call_long:
+; CHECK-LABEL: call_long DS 0H
 ; CHECK: lghi  1,64
 ; CHECK: lghi  2,65
 ; CHECK: lghi  3,66
@@ -36,7 +36,7 @@ entry:
   ret i64 %retval
 }
 
-; CHECK-LABEL: call_ptr:
+; CHECK-LABEL: call_ptr DS 0H
 ; CHECK: lgr 1,2
 define i32 @call_ptr(ptr %p1, ptr %p2) {
 entry:
@@ -44,7 +44,7 @@ entry:
   ret i32 %retval
 }
 
-; CHECK-LABEL: call_integrals:
+; CHECK-LABEL: call_integrals DS 0H
 ; CHECK: lghi  1,64
 ; CHECK: lghi  2,32
 ; CHECK: lghi  3,16
@@ -54,28 +54,28 @@ entry:
   ret i64 %retval
 }
 
-; CHECK-LABEL: pass_char:
+; CHECK-LABEL: pass_char DS 0H
 ; CHECK: lgr 3,1
 define signext i8 @pass_char(i8 signext %arg) {
 entry:
   ret i8 %arg
 }
 
-; CHECK-LABEL: pass_short:
+; CHECK-LABEL: pass_short DS 0H
 ; CHECK: lgr 3,1
 define signext i16 @pass_short(i16 signext %arg) {
 entry:
   ret i16 %arg
 }
 
-; CHECK-LABEL: pass_int:
+; CHECK-LABEL: pass_int DS 0H
 ; CHECK: lgr 3,2
 define signext i32 @pass_int(i32 signext %arg0, i32 signext %arg1) {
 entry:
   ret i32 %arg1
 }
 
-; CHECK-LABEL: pass_long:
+; CHECK-LABEL: pass_long DS 0H
 ; CHECK: agr 1,2
 ; CHECK: agr 3,1
 define signext i64 @pass_long(i64 signext %arg0, i64 signext %arg1, i64 signext %arg2) {
@@ -85,7 +85,7 @@ entry:
   ret i64 %M
 }
 
-; CHECK-LABEL: pass_integrals0:
+; CHECK-LABEL: pass_integrals0 DS 0H
 ; CHECK: ag  2,2200(4)
 ; CHECK-NEXT: lgr 3,2
 define signext i64 @pass_integrals0(i64 signext %arg0, i32 signext %arg1, i16 signext %arg2, i64 signext %arg3) {
@@ -95,7 +95,7 @@ entry:
   ret i64 %M
 }
 
-; CHECK-LABEL: call_float:
+; CHECK-LABEL: call_float DS 0H
 ; CHECK: le 0,0({{[0-9]}})
 define float @call_float() {
 entry:
@@ -103,7 +103,7 @@ entry:
   ret float %ret
 }
 
-; CHECK-LABEL: call_double:
+; CHECK-LABEL: call_double DS 0H
 ; CHECK: larl  [[GENREG:[0-9]+]],L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT: ld  0,0([[GENREG]])
 define double @call_double() {
@@ -112,7 +112,7 @@ entry:
   ret double %ret
 }
 
-; CHECK-LABEL: call_longdouble:
+; CHECK-LABEL: call_longdouble DS 0H
 ; CHECK: larl  [[GENREG:[0-9]+]],L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT: ld  0,0([[GENREG]])
 ; CHECK-NEXT: ld  2,8([[GENREG]])
@@ -122,7 +122,7 @@ entry:
   ret fp128 %ret
 }
 
-; CHECK-LABEL: call_floats0
+; CHECK-LABEL: call_floats0 DS 0H
 ; CHECK: larl  [[GENREG:[0-9]+]],L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT: ld  1,0([[GENREG]])
 ; CHECK-NEXT: ld  3,8([[GENREG]])
@@ -135,7 +135,7 @@ entry:
   ret i64 %ret
 }
 
-; CHECK-LABEL: call_floats1
+; CHECK-LABEL: call_floats1 DS 0H
 ; CHECK: lxr 1,0
 ; CHECK: ldr 0,4
 ; CHECK: lxr 4,1
@@ -145,7 +145,7 @@ entry:
   ret i64 %ret
 }
 
-; CHECK-LABEL: pass_float:
+; CHECK-LABEL: pass_float DS 0H
 ; CHECK: larl  1,L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK: aeb 0,0(1)
 define float @pass_float(float %arg) {
@@ -154,7 +154,7 @@ entry:
   ret float %X
 }
 
-; CHECK-LABEL: pass_double:
+; CHECK-LABEL: pass_double DS 0H
 ; CHECK: larl  1,L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK: adb 0,0(1)
 define double @pass_double(double %arg) {
@@ -163,7 +163,7 @@ entry:
   ret double %X
 }
 
-; CHECK-LABEL: pass_longdouble
+; CHECK-LABEL: pass_longdouble DS 0H
 ; CHECK: larl  1,L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK: lxdb  1,0(1)
 ; CHECK: axbr  0,1
@@ -173,7 +173,7 @@ entry:
   ret fp128 %X
 }
 
-; CHECK-LABEL: pass_floats0
+; CHECK-LABEL: pass_floats0 DS 0H
 ; CHECK: larl  1,L#{{CPI[0-9]+_[0-9]+}}
 ; CHECK: axbr  0,4
 ; CHECK: axbr  1,0

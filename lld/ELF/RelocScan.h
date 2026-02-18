@@ -66,8 +66,113 @@ public:
                                 uint64_t relOff) const;
   void process(RelExpr expr, RelType type, uint64_t offset, Symbol &sym,
                int64_t addend) const;
+  // Process relocation after needsGot/needsPlt flags are already handled.
+  void processAux(RelExpr expr, RelType type, uint64_t offset, Symbol &sym,
+                  int64_t addend) const;
   unsigned handleTlsRelocation(RelExpr expr, RelType type, uint64_t offset,
                                Symbol &sym, int64_t addend);
+
+  // Process R_PC relocations. These are the most common relocation type, so we
+  // inline the isStaticLinkTimeConstant check.
+  void processR_PC(RelType type, uint64_t offset, int64_t addend, Symbol &sym) {
+    if (LLVM_UNLIKELY(sym.isGnuIFunc()))
+      sym.setFlags(HAS_DIRECT_RELOC);
+    if (sym.isPreemptible || (isAbsolute(sym) && ctx.arg.isPic))
+      processAux(R_PC, type, offset, sym, addend);
+    else
+      sec->addReloc({R_PC, type, offset, addend, &sym});
+  }
+
+  // Process R_PLT_PC relocations. These are very common (calls), so we inline
+  // the isStaticLinkTimeConstant check. Non-preemptible symbols are optimized
+  // to R_PC (direct call).
+  void processR_PLT_PC(RelType type, uint64_t offset, int64_t addend,
+                       Symbol &sym) {
+    if (LLVM_UNLIKELY(sym.isGnuIFunc())) {
+      process(R_PLT_PC, type, offset, sym, addend);
+      return;
+    }
+    if (sym.isPreemptible) {
+      sym.setFlags(NEEDS_PLT);
+      sec->addReloc({R_PLT_PC, type, offset, addend, &sym});
+    } else if (!(isAbsolute(sym) && ctx.arg.isPic)) {
+      sec->addReloc({R_PC, type, offset, addend, &sym});
+    } else {
+      processAux(R_PC, type, offset, sym, addend);
+    }
+  }
+
+  // Handle TLS Initial-Exec relocation.
+  template <bool enableIeToLe = true>
+  void handleTlsIe(RelExpr ieExpr, RelType type, uint64_t offset,
+                   int64_t addend, Symbol &sym) {
+    if (enableIeToLe && !ctx.arg.shared && !sym.isPreemptible) {
+      // Optimize to Local Exec.
+      sec->addReloc({R_TPREL, type, offset, addend, &sym});
+    } else {
+      sym.setFlags(NEEDS_TLSIE);
+      // R_GOT (absolute GOT address) needs a RELATIVE dynamic relocation in
+      // PIC when the relocation uses the full address (not just low page bits).
+      if (ieExpr == R_GOT && ctx.arg.isPic &&
+          !ctx.target->usesOnlyLowPageBits(type))
+        sec->getPartition(ctx).relaDyn->addRelativeReloc(
+            ctx.target->relativeRel, *sec, offset, sym, addend, type, ieExpr);
+      else
+        sec->addReloc({ieExpr, type, offset, addend, &sym});
+    }
+  }
+
+  // Handle TLS Local-Dynamic relocation. Returns true if the __tls_get_addr
+  // call should be skipped (i.e., caller should ++it).
+  bool handleTlsLd(RelExpr sharedExpr, RelType type, uint64_t offset,
+                   int64_t addend, Symbol &sym) {
+    if (ctx.arg.shared) {
+      ctx.needsTlsLd.store(true, std::memory_order_relaxed);
+      sec->addReloc({sharedExpr, type, offset, addend, &sym});
+      return false;
+    }
+    // Optimize to Local Exec.
+    sec->addReloc({R_TPREL, type, offset, addend, &sym});
+    return true;
+  }
+
+  // Handle TLS General-Dynamic relocation. Returns true if the __tls_get_addr
+  // call should be skipped (i.e., caller should ++it).
+  bool handleTlsGd(RelExpr sharedExpr, RelExpr ieExpr, RelExpr leExpr,
+                   RelType type, uint64_t offset, int64_t addend, Symbol &sym) {
+    if (ctx.arg.shared) {
+      sym.setFlags(NEEDS_TLSGD);
+      sec->addReloc({sharedExpr, type, offset, addend, &sym});
+      return false;
+    }
+    if (sym.isPreemptible) {
+      // Optimize to Initial Exec.
+      sym.setFlags(NEEDS_TLSIE);
+      sec->addReloc({ieExpr, type, offset, addend, &sym});
+    } else {
+      // Optimize to Local Exec.
+      sec->addReloc({leExpr, type, offset, addend, &sym});
+    }
+    return true;
+  }
+
+  // Handle TLSDESC relocation.
+  void handleTlsDesc(RelExpr sharedExpr, RelExpr ieExpr, RelType type,
+                     uint64_t offset, int64_t addend, Symbol &sym) {
+    if (ctx.arg.shared) {
+      // NEEDS_TLSDESC_NONAUTH is a no-op for non-AArch64 targets and detects
+      // incompatibility with NEEDS_TLSDESC_AUTH.
+      sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_NONAUTH);
+      sec->addReloc({sharedExpr, type, offset, addend, &sym});
+    } else if (sym.isPreemptible) {
+      // Optimize to Initial Exec.
+      sym.setFlags(NEEDS_TLSIE);
+      sec->addReloc({ieExpr, type, offset, addend, &sym});
+    } else {
+      // Optimize to Local Exec.
+      sec->addReloc({R_TPREL, type, offset, addend, &sym});
+    }
+  }
 };
 
 template <class ELFT, class RelTy>
@@ -99,8 +204,7 @@ void RelocScan::scan(typename Relocs<RelTy>::const_iterator &it, RelType type,
 
   // Ensure GOT or GOTPLT is created for relocations that reference their base
   // addresses without directly creating entries.
-  if (oneof<R_GOTPLTONLY_PC, R_GOTPLTREL, R_GOTPLT, R_PLT_GOTPLT,
-            R_TLSDESC_GOTPLT, R_TLSGD_GOTPLT>(expr)) {
+  if (oneof<R_GOTPLTREL, R_GOTPLT, R_TLSGD_GOTPLT>(expr)) {
     ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
   } else if (oneof<R_GOTONLY_PC, R_GOTREL, RE_PPC32_PLTREL>(expr)) {
     ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);

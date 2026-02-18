@@ -15,6 +15,8 @@
 
 #include <array>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 #include "../unqualified_lookup_wrapper.h"
 #include "test_iterators.h"

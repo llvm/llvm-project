@@ -221,7 +221,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // Phi node's operands may not have been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewR = VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi");
+      NewR =
+          VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi", *Phi);
       NewR->setUnderlyingValue(Phi);
       if (isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent()))) {
         // Header phis need to be fixed after the VPBB for the latch has been
@@ -457,8 +458,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                   VPBasicBlock *LatchVPBB, Type *IdxTy,
                                   DebugLoc DL) {
-  Value *StartIdx = ConstantInt::get(IdxTy, 0);
-  auto *StartV = Plan.getOrAddLiveIn(StartIdx);
+  auto *StartV = Plan.getConstantInt(IdxTy, 0);
 
   // Add a VPCanonicalIVPHIRecipe starting at 0 to the header.
   auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DL);
@@ -902,33 +902,27 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
   VPBlockBase *HeaderVPB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
 
-  // Disconnect all early exits from the loop leaving it with a single exit from
-  // the latch. Early exits that are countable are left for a scalar epilog. The
-  // condition of uncountable early exits (currently at most one is supported)
-  // is fused into the latch exit, and used to branch from middle block to the
-  // early exit destination.
-  [[maybe_unused]] bool HandledUncountableEarlyExit = false;
+  if (HasUncountableEarlyExit) {
+    handleUncountableEarlyExits(Plan, cast<VPBasicBlock>(HeaderVPB), LatchVPBB,
+                                MiddleVPBB);
+    return;
+  }
+
+  // Disconnect countable early exits from the loop, leaving it with a single
+  // exit from the latch. Countable early exits are left for a scalar epilog.
   for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
     for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
       if (Pred == MiddleVPBB)
         continue;
-      if (HasUncountableEarlyExit) {
-        assert(!HandledUncountableEarlyExit &&
-               "can handle exactly one uncountable early exit");
-        handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
-                                   cast<VPBasicBlock>(HeaderVPB), LatchVPBB);
-        HandledUncountableEarlyExit = true;
-      } else {
-        for (VPRecipeBase &R : EB->phis())
-          cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
-      }
-      cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
+
+      // Remove phi operands for the early exiting block.
+      for (VPRecipeBase &R : EB->phis())
+        cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
+      auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
+      EarlyExitingVPBB->getTerminator()->eraseFromParent();
       VPBlockUtils::disconnectBlocks(Pred, EB);
     }
   }
-
-  assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
-         "missed an uncountable exit that must be handled");
 }
 
 void VPlanTransforms::addMiddleCheck(VPlan &Plan,
@@ -1356,11 +1350,34 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
                      PhiR->getRecurrenceKind()))
       continue;
 
-    // Find the condition for the select.
+    // Find the condition for the select/blend.
     auto *SelectR = cast<VPSingleDefRecipe>(&PhiR->getBackedgeRecipe());
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
+
+    // If we're matching a blend rather than a select, there should be one
+    // incoming value which is the data, then all other incoming values should
+    // be the phi.
+    auto MatchBlend = [&](VPRecipeBase *R) {
+      auto *Blend = dyn_cast<VPBlendRecipe>(R);
+      if (!Blend)
+        return false;
+      assert(!Blend->isNormalized() && "must run before blend normalizaion");
+      unsigned NumIncomingDataValues = 0;
+      for (unsigned I = 0; I < Blend->getNumIncomingValues(); ++I) {
+        VPValue *Incoming = Blend->getIncomingValue(I);
+        if (Incoming != PhiR) {
+          ++NumIncomingDataValues;
+          Cond = Blend->getMask(I);
+          Op1 = Incoming;
+          Op2 = PhiR;
+        }
+      }
+      return NumIncomingDataValues == 1;
+    };
+
     if (!match(SelectR,
-               m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))))
+               m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))) &&
+        !MatchBlend(SelectR))
       return false;
 
     // Add mask phi.

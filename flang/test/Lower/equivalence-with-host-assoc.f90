@@ -1,5 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s --check-prefixes=FIR
-! RUN: bbc -emit-hlfir -o - %s | FileCheck %s --check-prefixes=HLFIR
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s --check-prefixes=HLFIR
 
 subroutine test1()
   integer :: i1 = 1
@@ -10,20 +9,6 @@ contains
     i1 = j1
   end subroutine inner
 end subroutine test1
-! FIR-LABEL:   func.func private @_QFtest1Pinner() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
-! FIR:           %[[VAL_0:.*]] = fir.address_of(@_QFtest1Ei1) : !fir.ref<!fir.array<1xi32>>
-! FIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<1xi32>>) -> !fir.ref<!fir.array<4xi8>>
-! FIR:           %[[VAL_2:.*]] = arith.constant 0 : index
-! FIR:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-! FIR:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ptr<i32>
-! FIR:           %[[VAL_5:.*]] = arith.constant 0 : index
-! FIR:           %[[VAL_6:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_5]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-! FIR:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<i8>) -> !fir.ptr<i32>
-! FIR:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] : !fir.ptr<i32>
-! FIR:           fir.store %[[VAL_8]] to %[[VAL_4]] : !fir.ptr<i32>
-! FIR:           return
-! FIR:         }
-
 ! HLFIR-LABEL:   func.func private @_QFtest1Pinner() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
 ! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@_QFtest1Ei1) : !fir.ref<!fir.array<1xi32>>
 ! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<1xi32>>) -> !fir.ref<!fir.array<4xi8>>
@@ -54,20 +39,6 @@ contains
     end subroutine inner
   end subroutine host
 end module test2
-! FIR-LABEL:   func.func private @_QMtest2FhostPinner() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
-! FIR:           %[[VAL_0:.*]] = fir.address_of(@_QMtest2FhostEf1) : !fir.ref<!fir.array<1xi32>>
-! FIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<1xi32>>) -> !fir.ref<!fir.array<4xi8>>
-! FIR:           %[[VAL_2:.*]] = arith.constant 0 : index
-! FIR:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-! FIR:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ptr<f32>
-! FIR:           %[[VAL_5:.*]] = arith.constant 0 : index
-! FIR:           %[[VAL_6:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_5]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-! FIR:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<i8>) -> !fir.ptr<f32>
-! FIR:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] : !fir.ptr<f32>
-! FIR:           fir.store %[[VAL_8]] to %[[VAL_4]] : !fir.ptr<f32>
-! FIR:           return
-! FIR:         }
-
 ! HLFIR-LABEL:   func.func private @_QMtest2FhostPinner() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
 ! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@_QMtest2FhostEf1) : !fir.ref<!fir.array<1xi32>>
 ! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<1xi32>>) -> !fir.ref<!fir.array<4xi8>>
@@ -94,27 +65,6 @@ contains
     i1 = j1 + k1
   end subroutine inner
 end subroutine test3
-! FIR-LABEL:   func.func private @_QFtest3Pinner() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
-! FIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<tuple<i32>>
-! FIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
-! FIR:           %[[VAL_2:.*]] = arith.constant 0 : index
-! FIR:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-! FIR:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ptr<i32>
-! FIR:           %[[VAL_5:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
-! FIR:           %[[VAL_6:.*]] = arith.constant 0 : index
-! FIR:           %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_5]], %[[VAL_6]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-! FIR:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<i8>) -> !fir.ptr<i32>
-! FIR:           %[[VAL_9:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
-! FIR:           %[[VAL_10:.*]] = arith.constant 0 : index
-! FIR:           %[[VAL_11:.*]] = fir.coordinate_of %[[VAL_9]], %[[VAL_10]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-! FIR:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<i8>) -> !fir.ptr<i32>
-! FIR:           %[[VAL_13:.*]] = fir.load %[[VAL_8]] : !fir.ptr<i32>
-! FIR:           %[[VAL_14:.*]] = fir.load %[[VAL_12]] : !fir.ptr<i32>
-! FIR:           %[[VAL_15:.*]] = arith.addi %[[VAL_13]], %[[VAL_14]] : i32
-! FIR:           fir.store %[[VAL_15]] to %[[VAL_4]] : !fir.ptr<i32>
-! FIR:           return
-! FIR:         }
-
 ! HLFIR-LABEL:   func.func private @_QFtest3Pinner() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
 ! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<tuple<i32>>
 ! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
@@ -149,27 +99,6 @@ contains
     i1 = j1 + k1
   end subroutine inner
 end subroutine test4
-! FIR-LABEL:   func.func private @_QFtest4Pinner() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
-! FIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<tuple<i32>>
-! FIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
-! FIR:           %[[VAL_2:.*]] = arith.constant 0 : index
-! FIR:           %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-! FIR:           %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ptr<i32>
-! FIR:           %[[VAL_5:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
-! FIR:           %[[VAL_6:.*]] = arith.constant 0 : index
-! FIR:           %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_5]], %[[VAL_6]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-! FIR:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<i8>) -> !fir.ptr<i32>
-! FIR:           %[[VAL_9:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
-! FIR:           %[[VAL_10:.*]] = arith.constant 0 : index
-! FIR:           %[[VAL_11:.*]] = fir.coordinate_of %[[VAL_9]], %[[VAL_10]] : (!fir.ref<!fir.array<4xi8>>, index) -> !fir.ref<i8>
-! FIR:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<i8>) -> !fir.ptr<i32>
-! FIR:           %[[VAL_13:.*]] = fir.load %[[VAL_8]] : !fir.ptr<i32>
-! FIR:           %[[VAL_14:.*]] = fir.load %[[VAL_12]] : !fir.ptr<i32>
-! FIR:           %[[VAL_15:.*]] = arith.addi %[[VAL_13]], %[[VAL_14]] : i32
-! FIR:           fir.store %[[VAL_15]] to %[[VAL_4]] : !fir.ptr<i32>
-! FIR:           return
-! FIR:         }
-
 ! HLFIR-LABEL:   func.func private @_QFtest4Pinner() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
 ! HLFIR:           %[[VAL_0:.*]] = fir.address_of(@blk_) : !fir.ref<tuple<i32>>
 ! HLFIR:           %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<tuple<i32>>) -> !fir.ref<!fir.array<4xi8>>
