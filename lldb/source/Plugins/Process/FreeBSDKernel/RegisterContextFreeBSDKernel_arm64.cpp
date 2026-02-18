@@ -65,8 +65,8 @@ bool RegisterContextFreeBSDKernel_arm64::ReadRegister(
   Status error;
   constexpr int FBSD14 = 1400084;
   int osreldate = FBSD14;
-  auto osreldate_or_null = GetOsreldate();
-  if (osreldate_or_null)
+
+  if (auto osreldate_or_null = GetOsreldate())
     osreldate = *osreldate_or_null;
   else
     LLDB_LOGF(GetLog(LLDBLog::Object),
