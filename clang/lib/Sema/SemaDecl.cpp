@@ -12372,6 +12372,23 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     }
   }
 
+  // C++11 [dcl.constexpr]p1: An explicit specialization of a constexpr
+  // function can differ from the template declaration with respect to
+  // the constexpr specifier.
+  if (IsMemberSpecialization) {
+    FunctionDecl *InstantiationFunction =
+        OldDecl ? OldDecl->getAsFunction() : nullptr;
+    if (InstantiationFunction &&
+        InstantiationFunction->getTemplateSpecializationKind() ==
+            TSK_ImplicitInstantiation &&
+        (NewFD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization ||
+         NewFD->getTemplateSpecializationKind() == TSK_Undeclared)) {
+      if (InstantiationFunction->getConstexprKind() !=
+          NewFD->getConstexprKind())
+        InstantiationFunction->setConstexprKind(NewFD->getConstexprKind());
+    }
+  }
+
   if (Redeclaration) {
     // NewFD and OldDecl represent declarations that need to be
     // merged.
