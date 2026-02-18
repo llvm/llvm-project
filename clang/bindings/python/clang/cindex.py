@@ -3842,7 +3842,9 @@ class TranslationUnit(ClangObject):
         if locations is not None:
             extent = SourceRange(start=locations[0], end=locations[1])
         if extent is None:
-            raise TypeError("get_tokens() requires exactly one argument (none provided)")
+            raise TypeError(
+                "get_tokens() requires exactly one argument (none provided)"
+            )
 
         return TokenGroup.get_tokens(self, extent)
 
