@@ -29,7 +29,7 @@
 ; O0-NEXT: expand-reductions
 ; O0-NEXT: indirectbr-expand
 ; O0-NEXT: dwarf-eh-prepare
-; O0-NEXT: callbr-prepare
+; O0-NEXT: inline-asm-prepare
 ; O0-NEXT: safe-stack
 ; O0-NEXT: stack-protector
 ; O0-NEXT: verify)
@@ -101,7 +101,7 @@
 ; O2-NEXT: codegenprepare
 ; O2-NEXT: dwarf-eh-prepare
 ; O2-NEXT: objc-arc-contract
-; O2-NEXT: callbr-prepare
+; O2-NEXT: inline-asm-prepare
 ; O2-NEXT: safe-stack
 ; O2-NEXT: stack-protector
 ; O2-NEXT: verify)
@@ -208,7 +208,7 @@
 ; O0-WINDOWS-NEXT: cfguard
 ; O0-WINDOWS-NEXT: win-eh-prepare
 ; O0-WINDOWS-NEXT: dwarf-eh-prepare
-; O0-WINDOWS-NEXT: callbr-prepare
+; O0-WINDOWS-NEXT: inline-asm-prepare
 ; O0-WINDOWS-NEXT: safe-stack
 ; O0-WINDOWS-NEXT: stack-protector
 ; O0-WINDOWS-NEXT: verify)
@@ -284,7 +284,7 @@
 ; O3-WINDOWS-NEXT: win-eh-prepare
 ; O3-WINDOWS-NEXT: dwarf-eh-prepare
 ; O3-WINDOWS-NEXT: objc-arc-contract
-; O3-WINDOWS-NEXT: callbr-prepare
+; O3-WINDOWS-NEXT: inline-asm-prepare
 ; O3-WINDOWS-NEXT: safe-stack
 ; O3-WINDOWS-NEXT: stack-protector
 ; O3-WINDOWS-NEXT: verify)
