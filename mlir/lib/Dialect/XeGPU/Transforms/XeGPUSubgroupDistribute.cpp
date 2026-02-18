@@ -1511,9 +1511,8 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
         // Case 1: source is lower-rank than result.
         bool isSliceOf = sourceLayout.isSliceOf(resultLayout);
         if (!isSliceOf)
-          return rewriter.notifyMatchFailure(
-              warpOp,
-              "Broadcast input layout must be a slice of result layout.");
+          broadcastOp.emitWarning()
+              << "Broadcast input layout must be a slice of result layout.";
       }
       // case 2: source and result have same rank
       if (rankDiff == 0) {

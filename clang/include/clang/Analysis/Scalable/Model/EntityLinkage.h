@@ -18,6 +18,7 @@ namespace clang::ssaf {
 /// across translation units.
 class EntityLinkage {
   friend class SerializationFormat;
+  friend class TestFixture;
 
 public:
   enum class LinkageType {

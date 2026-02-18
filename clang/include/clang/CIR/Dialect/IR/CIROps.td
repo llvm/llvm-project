@@ -6211,12 +6211,6 @@ def CIR_TryOp : CIR_Op<"try",[
     Holds the lexical scope of `try {}`. Note that resources used on catch
     clauses are usually allocated in the same parent as `cir.try`.
 
-    `synthetic`: use `cir.try` to represent try/catches not originally
-    present in the source code. For example, a synthetic `cir.try` region
-    is created around the constructor call when `operator new` is used
-    so that the memory allocated will be freed if the constructor throws
-    an exception.
-
     `cleanup`: indicates that there are cleanups that must be performed
     when exiting the try region via exception, even if the exception is not
     caught.
@@ -6238,7 +6232,6 @@ def CIR_TryOp : CIR_Op<"try",[
   }];
 
   let arguments = (ins
-    UnitAttr:$synthetic,
     UnitAttr:$cleanup,
     DefaultValuedAttr<CIR_TryHandlerArrayAttr, "{}">:$handler_types
   );
@@ -6249,7 +6242,6 @@ def CIR_TryOp : CIR_Op<"try",[
   );
 
   let assemblyFormat = [{
-    (`synthetic` $synthetic^)?
     (`cleanup` $cleanup^)?
     $try_region
     custom<TryHandlerRegions>($handler_regions, $handler_types)
@@ -6279,6 +6271,7 @@ def CIR_TryOp : CIR_Op<"try",[
     }]>
   ];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -6369,6 +6362,57 @@ def CIR_EhTypeIdOp : CIR_Op<"eh.typeid",
   let results = (outs CIR_UInt32:$type_id);
   let assemblyFormat = [{
     $type_sym attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Exception related: EhSetjmpOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhSetjmpOp : CIR_Op<"eh.setjmp"> {
+  let summary = "CIR setjmp operation";
+  let description = [{
+    Saves call-site information (e.g., stack pointer, instruction pointer, 
+    signal mask, and other registers) in memory at `env` for use by longjmp(). 
+    In this case, setjmp() returns 0. Following a successful longjmp(),
+    execution proceeds from cir.eh.setjmp with the operation yielding a 
+    non-zero value.
+
+    Examples:
+    ```mlir
+      %0 = cir.eh.setjmp %arg0 : (!cir.ptr<!cir.void>) -> !s32i
+    ```
+  }];
+  let arguments = (ins CIR_PointerType:$env);
+
+  let results = (outs CIR_SInt32:$res);
+
+  let assemblyFormat = [{
+      $env `:` functional-type($env, results) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Exception related: EhLongjmpOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhLongjmpOp : CIR_Op<"eh.longjmp"> {
+  let summary = "CIR longjmp operation";
+  let description = [{
+    Restore the environment (e.g., stack pointer, instruction pointer,
+    signal mask, and other registers) at the time of setjmp() call, by using
+    the information saved in `env` by setjmp().
+
+    Examples:
+    ```mlir
+      cir.eh.longjmp %arg0 : !cir.ptr<!cir.void>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$env);
+
+  let assemblyFormat = [{
+      $env `:` qualified(type($env)) attr-dict
   }];
 }
 

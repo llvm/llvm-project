@@ -2772,8 +2772,9 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_name));
     std::string_view funcName(name);
     int startLine = PyFrame_GetLineNumber(pyFrame);
-    MlirLocation loc =
-        mlirLocationFileLineColGet(ctx, wrap(fileName), startLine, 0);
+    MlirLocation loc = mlirLocationFileLineColGet(
+        ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
+        0);
 #else
     std::string name =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_qualname));
@@ -2785,10 +2786,12 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
       throw nb::python_error();
     }
     MlirLocation loc = mlirLocationFileLineColRangeGet(
-        ctx, wrap(fileName), startLine, startCol, endLine, endCol);
+        ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
+        startCol, endLine, endCol);
 #endif
 
-    frames[count] = mlirLocationNameGet(ctx, wrap(funcName), loc);
+    frames[count] = mlirLocationNameGet(
+        ctx, mlirStringRefCreate(funcName.data(), funcName.size()), loc);
     ++count;
   }
   // When the loop breaks (after the last iter), current frame (if non-null)

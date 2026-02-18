@@ -57,6 +57,10 @@ TEST_F(HighlighterTest, HighlighterSelectionType) {
   EXPECT_EQ(getName(lldb::eLanguageTypeObjC), "clang");
   EXPECT_EQ(getName(lldb::eLanguageTypeObjC_plus_plus), "clang");
 
+#if LLDB_ENABLE_TREESITTER
+  EXPECT_EQ(getName(lldb::eLanguageTypeSwift), "tree-sitter-swift");
+#endif
+
   EXPECT_EQ(getName(lldb::eLanguageTypeUnknown), "none");
   EXPECT_EQ(getName(lldb::eLanguageTypeJulia), "none");
   EXPECT_EQ(getName(lldb::eLanguageTypeHaskell), "none");

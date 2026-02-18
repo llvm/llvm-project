@@ -331,7 +331,7 @@ namespace llvm {
                           decltype(std::declval<C &>().data()) *, T *const *>,
                       std::is_integral<decltype(std::declval<C &>().size())>>,
                   void>>
-    /*implicit*/ constexpr MutableArrayRef(C &V) : ArrayRef<T>(V) {}
+    /*implicit*/ constexpr MutableArrayRef(const C &V) : ArrayRef<T>(V) {}
 
     /// Construct a MutableArrayRef from a C array.
     template <size_t N>
