@@ -5,6 +5,8 @@
 // RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse))' -mlir-timing -mlir-timing-display=list 2>&1 | FileCheck -check-prefix=MT_LIST %s
 // RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse))' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=MT_PIPELINE %s
 // RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=false -test-pm-nested-pipeline -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=NESTED_PIPELINE %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse),inline)' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=DYNAMIC-PIPELINE %s
+// RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse),inline)' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=DYNAMIC-PIPELINE %s
 
 // LIST: Execution time report
 // LIST: Total Execution Time:
@@ -94,6 +96,24 @@
 // NESTED_PIPELINE-NEXT: Output
 // NESTED_PIPELINE-NEXT: Rest
 // NESTED_PIPELINE-NEXT: Total
+
+// DYNAMIC-PIPELINE: Execution time report
+// DYNAMIC-PIPELINE: Total Execution Time:
+// DYNAMIC-PIPELINE: Name
+// DYNAMIC-PIPELINE-NEXT: Parser
+// DYNAMIC-PIPELINE-NEXT: 'func.func' Pipeline
+// DYNAMIC-PIPELINE-NEXT:   CSE
+// DYNAMIC-PIPELINE-NEXT:     (A) DominanceInfo
+// DYNAMIC-PIPELINE-NEXT:   Canonicalizer
+// DYNAMIC-PIPELINE-NEXT:   CSE
+// DYNAMIC-PIPELINE-NEXT:     (A) DominanceInfo
+// DYNAMIC-PIPELINE-NEXT: Inliner
+// DYNAMIC-PIPELINE-NEXT:   (A) CallGraph
+// DYNAMIC-PIPELINE-NEXT:   'func.func' Pipeline
+// DYNAMIC-PIPELINE-NEXT:     Canonicalizer
+// DYNAMIC-PIPELINE-NEXT: Output
+// DYNAMIC-PIPELINE-NEXT: Rest
+// DYNAMIC-PIPELINE-NEXT: Total
 
 func.func @foo() {
   return
