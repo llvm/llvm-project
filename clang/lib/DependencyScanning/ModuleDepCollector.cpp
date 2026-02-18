@@ -549,6 +549,13 @@ void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
     MDC.addFileDep(llvm::sys::path::remove_leading_dotslash(*Filename));
 }
 
+void ModuleDepCollectorPP::HasInclude(SourceLocation Loc, StringRef FileName,
+                                      bool IsAngled, OptionalFileEntryRef File,
+                                      SrcMgr::CharacteristicKind FileType) {
+  if (File)
+    MDC.addFileDep(File->getName());
+}
+
 void ModuleDepCollectorPP::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
@@ -950,12 +957,9 @@ void ModuleDepCollector::addVisibleModules() {
 
 static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
                                           SmallVectorImpl<char> &Storage) {
-  if (llvm::sys::path::is_absolute(Path) &&
-      !llvm::sys::path::is_style_windows(llvm::sys::path::Style::native))
-    return Path;
   Storage.assign(Path.begin(), Path.end());
   CI.getFileManager().makeAbsolutePath(Storage);
-  llvm::sys::path::make_preferred(Storage);
+  llvm::sys::path::remove_dots(Storage, /*remove_dot_dot=*/true);
   return StringRef(Storage.data(), Storage.size());
 }
 

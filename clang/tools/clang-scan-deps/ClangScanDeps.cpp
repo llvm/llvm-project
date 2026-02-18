@@ -1009,8 +1009,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
       // Run the tool on it.
       if (Format == ScanningOutputFormat::Make) {
-        auto MaybeFile =
-            WorkerTool.getDependencyFile(Input->CommandLine, CWD, DiagConsumer);
+        auto MaybeFile = WorkerTool.getDependencyFile(
+            Input->CommandLine, CWD, LookupOutput, DiagConsumer);
         handleDiagnostics(Filename, S, Errs);
         if (MaybeFile)
           DependencyOS.applyLocked([&](raw_ostream &OS) { OS << *MaybeFile; });

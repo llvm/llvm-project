@@ -106,18 +106,6 @@ std::optional<PrebuiltModulesAttrsMap>
 computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
                              SmallVector<StringRef> &StableDirs);
 
-/// Create the dependency collector that will collect the produced
-/// dependencies. May return the created ModuleDepCollector depending
-/// on the scanning format.
-std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
-    CompilerInstance &ScanInstance,
-    std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
-    StringRef WorkingDirectory, DependencyConsumer &Consumer,
-    DependencyScanningService &Service, CompilerInvocation &Inv,
-    DependencyActionController &Controller,
-    PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-    llvm::SmallVector<StringRef> &StableDirs);
-
 class CompilerInstanceWithContext {
   // Context
   DependencyScanningWorker &Worker;

@@ -225,6 +225,9 @@ public:
   void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
                         SrcMgr::CharacteristicKind FileType, FileID PrevFID,
                         SourceLocation Loc) override;
+  void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
+                  OptionalFileEntryRef File,
+                  SrcMgr::CharacteristicKind FileType) override;
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,

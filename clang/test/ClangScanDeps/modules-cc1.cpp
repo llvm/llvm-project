@@ -16,7 +16,7 @@ module header1 { header "header.h" }
 [{
   "file": "DIR/modules_cc1.cpp",
   "directory": "DIR",
-  "command": "clang -cc1 DIR/modules_cc1.cpp -fimplicit-module-maps -o modules_cc1.o"
+  "command": "clang -cc1 DIR/modules_cc1.cpp -fmodules -fmodules-cache-path=DIR/cache -fimplicit-module-maps -o modules_cc1.o"
 }]
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
