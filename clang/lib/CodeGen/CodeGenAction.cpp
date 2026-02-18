@@ -251,8 +251,6 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   LLVMContext &Ctx = getModule()->getContext();
   std::unique_ptr<DiagnosticHandler> OldDiagnosticHandler =
     Ctx.getDiagnosticHandler();
-  llvm::scope_exit RestoreDiagnosticHandler(
-      [&]() { Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler)); });
   Ctx.setDiagnosticHandler(std::make_unique<ClangDiagnosticHandler>(
       CodeGenOpts, this));
 
@@ -316,6 +314,8 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
                     C.getTargetInfo().getDataLayoutString(), getModule(),
                     Action, FS, std::move(AsmOutStream), std::move(CasIDStream),
                     this);
+
+  Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
 
   if (OptRecordFile)
     OptRecordFile->keep();
