@@ -4715,11 +4715,9 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
     auto *C = isConstOrConstSplat(Val.getOperand(0), DemandedElts);
     if (C && C->getAPIntValue() == 1)
       return true;
-    if (!(OrZero || isKnownNeverZero(Val, Depth)))
-      return false;
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
-                                  Depth + 1) &&
-           isKnownNeverZero(Val, Depth);
+    return (OrZero || isKnownNeverZero(Val, Depth)) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
+                                  Depth + 1);
   }
 
   case ISD::SRL: {
