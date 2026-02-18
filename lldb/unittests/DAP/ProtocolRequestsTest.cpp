@@ -423,7 +423,7 @@ TEST(ProtocolRequestsTest, SetVariableArguments) {
     "value": "12345"
   })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(expected->variablesReference, 42U);
+  EXPECT_EQ(expected->variablesReference.AsUInt32(), 42U);
   EXPECT_EQ(expected->name, "test");
   EXPECT_EQ(expected->value, "12345");
   EXPECT_EQ(expected->format, std::nullopt);
