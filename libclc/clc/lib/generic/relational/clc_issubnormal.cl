@@ -8,6 +8,7 @@
 
 #include <clc/internal/clc.h>
 #include <clc/relational/relational.h>
+#include <clc/relational/clc_issubnormal.h>
 
 _CLC_DEFINE_ISFPCLASS(int, int, __clc_issubnormal, fcSubnormal, float)
 
