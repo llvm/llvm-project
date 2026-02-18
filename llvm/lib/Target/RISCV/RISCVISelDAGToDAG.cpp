@@ -4204,7 +4204,6 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::SUBW:
     case RISCV::MULW:
     case RISCV::SLLW:
-    case RISCV::SLLIW:
     case RISCV::SRAW:
     case RISCV::SRAIW:
     case RISCV::SRLW:
@@ -4248,15 +4247,27 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
     case RISCV::BSET:
     case RISCV::BCLR:
     case RISCV::BINV:
-      // Shift amount operands only use log2(Xlen) bits.
+      // Shift amount / bit index operands only use log2(Xlen) bits.
       if (Use.getOperandNo() == 1 && Bits >= Log2_32(Subtarget->getXLen()))
         break;
       return false;
-    case RISCV::SLLI:
+    case RISCV::SLLI: {
       // SLLI only uses the lower (XLen - ShAmt) bits.
-      if (Bits >= Subtarget->getXLen() - User->getConstantOperandVal(1))
+      uint64_t ShAmt = User->getConstantOperandVal(1);
+      if (Bits >= Subtarget->getXLen() - ShAmt)
+        break;
+      if (hasAllNBitUsers(User, Bits + ShAmt, Depth + 1))
         break;
       return false;
+    }
+    case RISCV::SLLIW: {
+      uint64_t ShAmt = User->getConstantOperandVal(1);
+      if (Bits >= 32 - ShAmt)
+        break;
+      if (hasAllNBitUsers(User, Bits + ShAmt, Depth + 1))
+        break;
+      return false;
+    }
     case RISCV::ANDI:
       if (Bits >= (unsigned)llvm::bit_width(User->getConstantOperandVal(1)))
         break;
@@ -4267,17 +4278,39 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
         break;
       [[fallthrough]];
     }
+    case RISCV::COPY:
+    case RISCV::PHI:
+    case RISCV::ADD:
+    case RISCV::ADDI:
     case RISCV::AND:
+    case RISCV::MUL:
     case RISCV::OR:
+    case RISCV::SUB:
     case RISCV::XOR:
     case RISCV::XORI:
     case RISCV::ANDN:
+    case RISCV::CLMUL:
     case RISCV::ORN:
     case RISCV::XNOR:
     case RISCV::SH1ADD:
     case RISCV::SH2ADD:
     case RISCV::SH3ADD:
+    case RISCV::BSETI:
+    case RISCV::BCLRI:
+    case RISCV::BINVI:
     RecCheck:
+      if (hasAllNBitUsers(User, Bits, Depth + 1))
+        break;
+      return false;
+    case RISCV::BREV8:
+    case RISCV::ORC_B:
+      if (hasAllNBitUsers(User, alignDown(Bits, 8), Depth + 1))
+        break;
+      return false;
+    case RISCV::CZERO_EQZ:
+    case RISCV::CZERO_NEZ:
+      if (Use.getOperandNo() != 0)
+        return false;
       if (hasAllNBitUsers(User, Bits, Depth + 1))
         break;
       return false;
@@ -4316,6 +4349,10 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
       if (Use.getOperandNo() == 0 && Bits >= 32)
         break;
       return false;
+    case RISCV::BEXTI:
+      if (User->getConstantOperandVal(1) >= Bits)
+        return false;
+      break;
     case RISCV::SB:
       if (Use.getOperandNo() == 0 && Bits >= 8)
         break;
