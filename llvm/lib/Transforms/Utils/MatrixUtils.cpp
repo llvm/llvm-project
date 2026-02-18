@@ -16,9 +16,16 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
 
 BasicBlock *TileInfo::CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
                                  ConstantInt *Bound, ConstantInt *Step,
@@ -42,7 +49,15 @@ BasicBlock *TileInfo::CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
   B.SetInsertPoint(Latch);
   Value *Inc = B.CreateAdd(IV, Step, Name + ".step");
   Value *Cond = B.CreateICmpNE(Inc, Bound, Name + ".cond");
-  BranchInst::Create(Header, Exit, Cond, Latch);
+  auto *BR = BranchInst::Create(Header, Exit, Cond, Latch);
+  if (!ProfcheckDisableMetadataFixes) {
+    assert(Step->getZExtValue() != 0 &&
+           "Expected a non-zero step size. This is chosen by the pass and "
+           "should always be non-zero to imply a finite loop.");
+    MDBuilder MDB(Preheader->getContext());
+    setFittedBranchWeights(
+        *BR, {Bound->getZExtValue() / Step->getZExtValue(), 1}, false);
+  }
   IV->addIncoming(Inc, Latch);
 
   BranchInst *PreheaderBr = cast<BranchInst>(Preheader->getTerminator());

@@ -1019,7 +1019,7 @@ define void @multiply_8x8x8(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
 ; CHECK:       [[INNER_LATCH]]:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[INNER_COND:%.*]] = icmp ne i64 [[INNER_STEP]], 8
-; CHECK-NEXT:    br i1 [[INNER_COND]], label %[[INNER_HEADER]], label %[[ROWS_LATCH]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[INNER_COND]], label %[[INNER_HEADER]], label %[[ROWS_LATCH]], !prof [[PROF0:![0-9]+]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK:       [[ROWS_LATCH]]:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND:%.*]] = icmp ne i64 [[ROWS_STEP]], 8
@@ -1029,11 +1029,11 @@ define void @multiply_8x8x8(ptr noalias %A, ptr noalias %B, ptr noalias %C) {
 ; CHECK-NEXT:    store <2 x double> [[TMP921]], ptr [[TMP928]], align 8
 ; CHECK-NEXT:    [[VEC_GEP1260:%.*]] = getelementptr double, ptr [[TMP928]], i64 8
 ; CHECK-NEXT:    store <2 x double> [[TMP927]], ptr [[VEC_GEP1260]], align 8
-; CHECK-NEXT:    br i1 [[ROWS_COND]], label %[[ROWS_HEADER]], label %[[COLS_LATCH]]
+; CHECK-NEXT:    br i1 [[ROWS_COND]], label %[[ROWS_HEADER]], label %[[COLS_LATCH]], !prof [[PROF0]]
 ; CHECK:       [[COLS_LATCH]]:
 ; CHECK-NEXT:    [[COLS_STEP]] = add i64 [[COLS_IV]], 2
 ; CHECK-NEXT:    [[COLS_COND:%.*]] = icmp ne i64 [[COLS_STEP]], 8
-; CHECK-NEXT:    br i1 [[COLS_COND]], label %[[COLS_HEADER]], label %[[CONTINUE:.*]]
+; CHECK-NEXT:    br i1 [[COLS_COND]], label %[[COLS_HEADER]], label %[[CONTINUE:.*]], !prof [[PROF0]]
 ; CHECK:       [[CONTINUE]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -1045,6 +1045,7 @@ entry:
   ret void
 }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.unroll.count", i32 4}
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 4, i32 1}
+; CHECK: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]]}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.count", i32 4}
 ;.
