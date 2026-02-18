@@ -45,6 +45,8 @@ end module
 
 !Expect: m2.mod
 !module m2
+!use m1,only:xyz
+!private::xyz
 !contains
 !function foo(j) result(res)
 !use m1,only:xyz
