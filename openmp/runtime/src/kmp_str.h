@@ -13,6 +13,7 @@
 #ifndef KMP_STR_H
 #define KMP_STR_H
 
+#include <limits.h>
 #include <stdarg.h>
 #include <string.h>
 
@@ -112,7 +113,7 @@ int __kmp_str_match_true(char const *data);
 void __kmp_str_replace(char *str, char search_for, char replace_with);
 void __kmp_str_split(char *str, char delim, char **head, char **tail);
 char *__kmp_str_token(char *str, char const *delim, char **buf);
-int __kmp_basic_str_to_int(char const *str);
+int __kmp_basic_str_to_int(char const *str, int maxlen = INT_MAX);
 int __kmp_str_to_int(char const *str, char sentinel);
 
 void __kmp_str_to_size(char const *str, size_t *out, size_t dfactor,

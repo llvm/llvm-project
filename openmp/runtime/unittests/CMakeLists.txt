@@ -86,4 +86,5 @@ add_openmp_testsuite(
   DEPENDS OpenMPUnitTests
 )
 
+add_subdirectory(ADT)
 add_subdirectory(String)
