@@ -67,7 +67,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
-#define DEBUG_TYPE "fir-acc-declare-action-conversion"
+#define DEBUG_TYPE "acc-declare-action-conversion"
 
 namespace fir {
 namespace acc {

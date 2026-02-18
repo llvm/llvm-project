@@ -71,7 +71,7 @@ def ACCUseDeviceCanonicalizer
 }
 
 def ACCDeclareActionConversion
-    : Pass<"fir-acc-declare-action-conversion", "mlir::ModuleOp"> {
+    : Pass<"acc-declare-action-conversion", "mlir::ModuleOp"> {
   let summary = "Convert acc declare action attributes to function calls";
   let description = [{
     Implements OpenACC specification (section 2.13.2 in OpenACC 3.4) for

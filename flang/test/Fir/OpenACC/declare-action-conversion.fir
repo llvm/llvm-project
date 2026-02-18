@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --fir-acc-declare-action-conversion -split-input-file -o - | FileCheck %s
+// RUN: fir-opt %s --acc-declare-action-conversion -split-input-file -o - | FileCheck %s
 
 // Check declare_action conversion for global variables
 // module mm
