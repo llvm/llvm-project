@@ -17,7 +17,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr41
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr41, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.1, addrspace 5)
+  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr41, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
   ; CHECK-NEXT:   renamable $vgpr41 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   renamable $sgpr4 = S_MOV_B32 0
   ; CHECK-NEXT:   renamable $sgpr5 = S_LSHR_B32 $sgpr32, 5, implicit-def dead $scc
@@ -40,7 +40,7 @@ body:             |
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   $vgpr41 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
+  ; CHECK-NEXT:   $vgpr41 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
   ; CHECK-NEXT:   SI_RETURN
   bb.0:
     renamable $vgpr41 = V_MOV_B32_e32 0, implicit $exec
