@@ -27,6 +27,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-prepare-agpr-alloc"
 
+static cl::opt<bool> InflateToAVClass(
+    "amdgpu-avgpr-inflation", cl::Hidden,
+    cl::desc("Whether to inflate register to the avgpr register "
+             "class -- which is assignable to either vgpr or agpr."),
+    cl::init(false));
+
 namespace {
 
 class AMDGPUPrepareAGPRAllocImpl {
@@ -92,6 +98,8 @@ bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
 
   const MCInstrDesc &AVImmPseudo32 = TII.get(AMDGPU::AV_MOV_B32_IMM_PSEUDO);
   const MCInstrDesc &AVImmPseudo64 = TII.get(AMDGPU::AV_MOV_B64_IMM_PSEUDO);
+  const SIRegisterInfo *TRI =
+      static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
@@ -113,6 +121,20 @@ bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
         MI.setDesc(AVImmPseudo64);
         Changed = true;
         continue;
+      }
+
+      if (!InflateToAVClass)
+        continue;
+
+      for (MachineOperand &Op : MI.all_defs()) {
+        Register DefReg = Op.getReg();
+        if (DefReg.isPhysical())
+          continue;
+
+        const TargetRegisterClass *RC = MRI.getRegClass(DefReg);
+
+        if (TRI->hasVectorRegisters(RC))
+          Changed |= MRI.recomputeRegClass(DefReg);
       }
     }
   }
