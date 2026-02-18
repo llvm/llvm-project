@@ -27720,15 +27720,22 @@ Semantics:
 """"""""""
 
 The '``llvm.speculative.load``' intrinsic performs a load that may access
-memory beyond the allocated object. It must be used in combination with
-:ref:`llvm.can.load.speculatively <int_can_load_speculatively>` to ensure
-the access cannot fault.
+memory beyond what is accessible through the pointer. It must be used in
+combination with :ref:`llvm.can.load.speculatively <int_can_load_speculatively>`
+to ensure the access can be performed speculatively.
 
-For bytes that are within the bounds of the allocated object, the intrinsic
-returns the stored value. For bytes that are beyond the bounds of the
-allocated object, the intrinsic returns ``poison`` for those bytes. At least the
-first accessed byte must be within the bounds of an allocated object the pointer is
-based on.
+A byte at ``ptr + i`` is *accessible through* ``ptr`` if both of the following
+hold:
+
+1. The byte lies within the bounds of an allocated object that ``ptr`` is
+   :ref:`based <pointeraliasing>` on.
+2. Accessing the byte through ``ptr`` does not violate any ``noalias``
+   constraints.
+
+For accessible bytes, the intrinsic returns the stored value. For inaccessible
+bytes, the intrinsic returns ``poison`` and the bytes are not considered accessed
+for the purpose of data races or ``noalias`` constraints. At least the first
+byte must be accessible; otherwise the behavior is undefined.
 
 The behavior is undefined if this intrinsic is used to load from a pointer
 for which ``llvm.can.load.speculatively`` would return false.
@@ -27767,8 +27774,8 @@ Semantics:
 """"""""""
 
 This intrinsic has **target-dependent** semantics. It returns ``true`` if
-``num_bytes`` bytes starting at ``ptr + I * num_bytes``, for any non-negative
-integer ``I`` where the computed address does not wrap around the address
+``num_bytes`` bytes starting at ``ptr + I * num_bytes``, for all non-negative
+integers ``I`` where the computed address does not wrap around the address
 space, can be loaded speculatively, even if the memory is beyond the bounds of
 an allocated object. It returns ``false`` otherwise.
 
