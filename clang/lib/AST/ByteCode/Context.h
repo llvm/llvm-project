@@ -73,7 +73,7 @@ public:
 
   /// Evalute \param E and if it can be evaluated to a string literal,
   /// run strlen() on it.
-  bool evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result);
+  std::optional<uint64_t> evaluateStrlen(State &Parent, const Expr *E);
 
   /// If \param E evaluates to a pointer the number of accessible bytes
   /// past the pointer is estimated in \param Result as if evaluated by
@@ -85,8 +85,8 @@ public:
   /// as the one referred to by E are considered, when Kind & 1 == 0
   /// bytes belonging to the same storage (stack, heap allocation,
   /// global variable) are considered.
-  bool tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind,
-                             uint64_t &Result);
+  std::optional<uint64_t> tryEvaluateObjectSize(State &Parent, const Expr *E,
+                                                unsigned Kind);
 
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }

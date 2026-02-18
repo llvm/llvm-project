@@ -258,14 +258,24 @@ int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
   if (!Inserted)
     return MapEntry->second;
 
-  uint64_t Size =
-      AI.getAllocationSize(*DL).value_or(TypeSize::getZero()).getFixedValue();
+  TypeSize TySize = AI.getAllocationSize(*DL).value_or(TypeSize::getZero());
+  uint64_t Size = TySize.getKnownMinValue();
 
   // Always allocate at least one byte.
   Size = std::max<uint64_t>(Size, 1u);
 
   int &FI = MapEntry->second;
   FI = MF->getFrameInfo().CreateStackObject(Size, AI.getAlign(), false, &AI);
+
+  // Scalable vectors and structures that contain scalable vectors may
+  // need a special StackID to distinguish them from other (fixed size)
+  // stack objects.
+  if (TySize.isScalable()) {
+    auto StackID =
+        MF->getSubtarget().getFrameLowering()->getStackIDForScalableVectors();
+    MF->getFrameInfo().setStackID(FI, StackID);
+  }
+
   return FI;
 }
 
@@ -2819,20 +2829,16 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
     return true;
 
-  TargetLowering::IntrinsicInfo Info;
-  bool IsTgtMemIntrinsic = TLI->getTgtMemIntrinsic(Info, CI, *MF, ID);
+  SmallVector<TargetLowering::IntrinsicInfo> Infos;
+  TLI->getTgtMemIntrinsic(Infos, CI, *MF, ID);
 
-  return translateIntrinsic(CI, ID, MIRBuilder,
-                            IsTgtMemIntrinsic ? &Info : nullptr);
+  return translateIntrinsic(CI, ID, MIRBuilder, Infos);
 }
 
 /// Translate a call or callbr to an intrinsic.
-/// Depending on whether TLI->getTgtMemIntrinsic() is true, TgtMemIntrinsicInfo
-/// is a pointer to the correspondingly populated IntrinsicInfo object.
-/// Otherwise, this pointer is null.
 bool IRTranslator::translateIntrinsic(
     const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
-    const TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo) {
+    ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos) {
   ArrayRef<Register> ResultRegs;
   if (!CB.getType()->isVoidTy())
     ResultRegs = getOrCreateVRegs(CB);
@@ -2874,30 +2880,25 @@ bool IRTranslator::translateIntrinsic(
     }
   }
 
-  // Add a MachineMemOperand if it is a target mem intrinsic.
-  if (TgtMemIntrinsicInfo) {
-    const Function *F = CB.getCalledFunction();
+  // Add MachineMemOperands for each memory access described by the target.
+  for (const auto &Info : TgtMemIntrinsicInfos) {
+    Align Alignment = Info.align.value_or(
+        DL->getABITypeAlign(Info.memVT.getTypeForEVT(CB.getContext())));
+    LLT MemTy = Info.memVT.isSimple()
+                    ? getLLTForMVT(Info.memVT.getSimpleVT())
+                    : LLT::scalar(Info.memVT.getStoreSizeInBits());
 
-    Align Alignment = TgtMemIntrinsicInfo->align.value_or(DL->getABITypeAlign(
-        TgtMemIntrinsicInfo->memVT.getTypeForEVT(F->getContext())));
-    LLT MemTy =
-        TgtMemIntrinsicInfo->memVT.isSimple()
-            ? getLLTForMVT(TgtMemIntrinsicInfo->memVT.getSimpleVT())
-            : LLT::scalar(TgtMemIntrinsicInfo->memVT.getStoreSizeInBits());
-
-    // TODO: We currently just fallback to address space 0 if getTgtMemIntrinsic
-    //       didn't yield anything useful.
+    // TODO: We currently just fallback to address space 0 if
+    // getTgtMemIntrinsic didn't yield anything useful.
     MachinePointerInfo MPI;
-    if (TgtMemIntrinsicInfo->ptrVal) {
-      MPI = MachinePointerInfo(TgtMemIntrinsicInfo->ptrVal,
-                               TgtMemIntrinsicInfo->offset);
-    } else if (TgtMemIntrinsicInfo->fallbackAddressSpace) {
-      MPI = MachinePointerInfo(*TgtMemIntrinsicInfo->fallbackAddressSpace);
+    if (Info.ptrVal) {
+      MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
+    } else if (Info.fallbackAddressSpace) {
+      MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
     }
     MIB.addMemOperand(MF->getMachineMemOperand(
-        MPI, TgtMemIntrinsicInfo->flags, MemTy, Alignment, CB.getAAMetadata(),
-        /*Ranges=*/nullptr, TgtMemIntrinsicInfo->ssid,
-        TgtMemIntrinsicInfo->order, TgtMemIntrinsicInfo->failureOrder));
+        MPI, Info.flags, MemTy, Alignment, CB.getAAMetadata(),
+        /*Ranges=*/nullptr, Info.ssid, Info.order, Info.failureOrder));
   }
 
   if (CB.isConvergent()) {
@@ -3197,11 +3198,20 @@ bool IRTranslator::translateAlloca(const User &U,
   }
 
   Type *Ty = AI.getAllocatedType();
+  TypeSize TySize = DL->getTypeAllocSize(Ty);
 
   Register AllocSize = MRI->createGenericVirtualRegister(IntPtrTy);
-  Register TySize =
-      getOrCreateVReg(*ConstantInt::get(IntPtrIRTy, DL->getTypeAllocSize(Ty)));
-  MIRBuilder.buildMul(AllocSize, NumElts, TySize);
+  Register TySizeReg;
+  if (TySize.isScalable()) {
+    // For scalable types, use vscale * min_value
+    TySizeReg = MRI->createGenericVirtualRegister(IntPtrTy);
+    MIRBuilder.buildVScale(TySizeReg, TySize.getKnownMinValue());
+  } else {
+    // For fixed types, use a constant
+    TySizeReg =
+        getOrCreateVReg(*ConstantInt::get(IntPtrIRTy, TySize.getFixedValue()));
+  }
+  MIRBuilder.buildMul(AllocSize, NumElts, TySizeReg);
 
   // Round the size of the allocation up to the stack alignment size
   // by add SA-1 to the size. This doesn't overflow because we're computing

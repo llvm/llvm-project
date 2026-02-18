@@ -452,18 +452,25 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
     Value bitcast = arith::BitcastOp::create(b, i8Ty, operand);
-    // create constants for NaNs
-    Value cF8NaN = createConst(op.getLoc(), i8Ty, 0xff, rewriter);
-    Value cF32NaN = createConst(op.getLoc(), i32Ty, 0xffffffff, rewriter);
     Value cF32MantissaWidth = createConst(op->getLoc(), i32Ty, 23, rewriter);
-
     Value exti = arith::ExtUIOp::create(b, i32Ty, bitcast);
     Value f32Bits = arith::ShLIOp::create(b, exti, cF32MantissaWidth);
 
-    Value isNan =
-        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, bitcast, cF8NaN);
-    // select for NaNs
-    f32Bits = arith::SelectOp::create(b, isNan, cF32NaN, f32Bits);
+    // If FastMathFlag allows no NaN checks, skip it
+    auto fastMath = op.getFastmathAttr();
+    bool NoNaN = fastMath
+                     ? (fastMath.getValue() & arith::FastMathFlags::nnan) ==
+                           arith::FastMathFlags::nnan
+                     : false;
+    if (!NoNaN) {
+      Value cF8NaN = createConst(op.getLoc(), i8Ty, 0xff, rewriter);
+      Value cF32NaN = createConst(op.getLoc(), i32Ty, 0xffffffff, rewriter);
+      Value isNan =
+          arith::CmpIOp::create(b, arith::CmpIPredicate::eq, bitcast, cF8NaN);
+      // select for NaNs
+      f32Bits = arith::SelectOp::create(b, isNan, cF32NaN, f32Bits);
+    }
+
     Value result = arith::BitcastOp::create(b, f32Ty, f32Bits);
     if (resultETy.getIntOrFloatBitWidth() < 32) {
       result = arith::TruncFOp::create(b, resultTy, result, nullptr,

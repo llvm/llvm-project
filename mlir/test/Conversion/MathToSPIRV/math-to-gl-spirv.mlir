@@ -257,6 +257,27 @@ func.func @round_vector(%x: vector<4xf32>) -> vector<4xf32> {
   return %0: vector<4xf32>
 }
 
+// Unit dimensional vectors are converted to scalars by inserting
+// unrealized_conversion_cast's.
+//
+// CHECK-LABEL: @round_vector_unit_dim
+//  CHECK-SAME: (%[[ARG:.+]]: vector<1xf32>) -> vector<1xf32>
+func.func @round_vector_unit_dim(%x: vector<1xf32>) -> vector<1xf32> {
+  // CHECK: %[[CAST:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : vector<1xf32> to f32
+  // CHECK: %[[ZERO:.+]] = spirv.Constant 0.000000e+00
+  // CHECK: %[[ONE:.+]] = spirv.Constant 1.000000e+00
+  // CHECK: %[[HALF:.+]] = spirv.Constant 5.000000e-01
+  // CHECK: %[[ABS:.+]] = spirv.GL.FAbs %[[CAST]] : f32
+  // CHECK: %[[FLOOR:.+]] = spirv.GL.Floor %[[ABS]]
+  // CHECK: %[[SUB:.+]] = spirv.FSub %[[ABS]], %[[FLOOR]]
+  // CHECK: %[[GE:.+]] = spirv.FOrdGreaterThanEqual %[[SUB]], %[[HALF]]
+  // CHECK: %[[SEL:.+]] = spirv.Select %[[GE]], %[[ONE]], %[[ZERO]]
+  // CHECK: %[[ADD:.+]] = spirv.FAdd %[[FLOOR]], %[[SEL]]
+  // CHECK: %[[BITCAST:.+]] = spirv.Bitcast %[[ADD]] : f32 to i32
+  %0 = math.round %x : vector<1xf32>
+  return %0: vector<1xf32>
+}
+
 } // end module
 
 // -----

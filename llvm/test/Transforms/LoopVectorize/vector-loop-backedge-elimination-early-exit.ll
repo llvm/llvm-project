@@ -341,8 +341,6 @@ define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(ptr dereferencea
 ; VF8UF1-NEXT:    [[OFFSET_IDX:%.*]] = add i64 2, [[INDEX]]
 ; VF8UF1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF8UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
-; VF8UF1-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[WIDE_LOAD]] to <8 x i64>
-; VF8UF1-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i64> [[TMP1]], [[VEC_IND]]
 ; VF8UF1-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF8UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF8UF1-NEXT:    [[TMP4:%.*]] = freeze <8 x i1> [[TMP3]]
@@ -353,6 +351,8 @@ define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(ptr dereferencea
 ; VF8UF1:       [[VECTOR_BODY_INTERIM]]:
 ; VF8UF1-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF8UF1:       [[MIDDLE_BLOCK]]:
+; VF8UF1-NEXT:    [[TMP9:%.*]] = zext <8 x i8> [[WIDE_LOAD]] to <8 x i64>
+; VF8UF1-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i64> [[TMP9]], [[VEC_IND]]
 ; VF8UF1-NEXT:    [[TMP8:%.*]] = extractelement <8 x i1> [[TMP2]], i32 7
 ; VF8UF1-NEXT:    br label %[[EXIT:.*]]
 ; VF8UF1:       [[VECTOR_EARLY_EXIT]]:
@@ -376,8 +376,6 @@ define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(ptr dereferencea
 ; VF8UF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP1]], align 1
-; VF8UF2-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[WIDE_LOAD1]] to <8 x i64>
-; VF8UF2-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i64> [[TMP2]], [[STEP_ADD]]
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF8UF2-NEXT:    [[TMP5:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD1]], zeroinitializer
 ; VF8UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
@@ -390,6 +388,8 @@ define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(ptr dereferencea
 ; VF8UF2:       [[VECTOR_BODY_INTERIM]]:
 ; VF8UF2-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
+; VF8UF2-NEXT:    [[TMP10:%.*]] = zext <8 x i8> [[WIDE_LOAD1]] to <8 x i64>
+; VF8UF2-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i64> [[TMP10]], [[STEP_ADD]]
 ; VF8UF2-NEXT:    [[TMP12:%.*]] = extractelement <8 x i1> [[TMP3]], i32 7
 ; VF8UF2-NEXT:    br label %[[EXIT:.*]]
 ; VF8UF2:       [[VECTOR_EARLY_EXIT]]:
@@ -410,8 +410,6 @@ define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(ptr dereferencea
 ; VF16UF1-NEXT:    [[OFFSET_IDX:%.*]] = add i64 2, [[INDEX]]
 ; VF16UF1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF16UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1
-; VF16UF1-NEXT:    [[TMP1:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i64>
-; VF16UF1-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i64> [[TMP1]], [[VEC_IND]]
 ; VF16UF1-NEXT:    [[TMP3:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF16UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF16UF1-NEXT:    [[TMP4:%.*]] = freeze <16 x i1> [[TMP3]]
@@ -421,6 +419,8 @@ define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(ptr dereferencea
 ; VF16UF1:       [[VECTOR_BODY_INTERIM]]:
 ; VF16UF1-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF16UF1:       [[MIDDLE_BLOCK]]:
+; VF16UF1-NEXT:    [[TMP6:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i64>
+; VF16UF1-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i64> [[TMP6]], [[VEC_IND]]
 ; VF16UF1-NEXT:    [[TMP8:%.*]] = extractelement <16 x i1> [[TMP2]], i32 15
 ; VF16UF1-NEXT:    br label %[[EXIT:.*]]
 ; VF16UF1:       [[VECTOR_EARLY_EXIT]]:

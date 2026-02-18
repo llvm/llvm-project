@@ -808,7 +808,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     PseudoMI.cloneMemRefs(I);
 
     I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+    return true;
   }
   case Intrinsic::riscv_vloxei:
   case Intrinsic::riscv_vloxei_mask:
@@ -872,7 +873,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     PseudoMI.cloneMemRefs(I);
 
     I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+    return true;
   }
   case Intrinsic::riscv_vsm:
   case Intrinsic::riscv_vse:
@@ -914,7 +916,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     PseudoMI.cloneMemRefs(I);
 
     I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+    return true;
   }
   case Intrinsic::riscv_vsoxei:
   case Intrinsic::riscv_vsoxei_mask:
@@ -964,7 +967,8 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     PseudoMI.cloneMemRefs(I);
 
     I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+    return true;
   }
   }
 }
@@ -1029,7 +1033,8 @@ bool RISCVInstructionSelector::selectIntrinsic(MachineInstr &I,
                               .addImm(AVL)
                               .addImm(VTypeI);
           I.eraseFromParent();
-          return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+          constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+          return true;
         }
       }
     }
@@ -1037,7 +1042,8 @@ bool RISCVInstructionSelector::selectIntrinsic(MachineInstr &I,
     auto PseudoMI =
         MIB.buildInstr(Opcode, {DstReg}, {VLOperand}).addImm(VTypeI);
     I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+    return true;
   }
   }
 }
@@ -1162,14 +1168,16 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     if (IsSigned && SrcSize == 32) {
       MI.setDesc(TII.get(RISCV::ADDIW));
       MI.addOperand(MachineOperand::CreateImm(0));
-      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+      return true;
     }
 
     // Use add.uw SrcReg, X0 (zext.w) for i32 with Zba.
     if (!IsSigned && SrcSize == 32 && STI.hasStdExtZba()) {
       MI.setDesc(TII.get(RISCV::ADD_UW));
       MI.addOperand(MachineOperand::CreateReg(RISCV::X0, /*isDef=*/false));
-      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+      return true;
     }
 
     // Use sext.h/zext.h for i16 with Zbb.
@@ -1177,14 +1185,16 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
       MI.setDesc(TII.get(IsSigned       ? RISCV::SEXT_H
                          : STI.isRV64() ? RISCV::ZEXT_H_RV64
                                         : RISCV::ZEXT_H_RV32));
-      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+      return true;
     }
 
     // Use pack(w) SrcReg, X0 for i16 zext with Zbkb.
     if (!IsSigned && SrcSize == 16 && STI.hasStdExtZbkb()) {
       MI.setDesc(TII.get(STI.is64Bit() ? RISCV::PACKW : RISCV::PACK));
       MI.addOperand(MachineOperand::CreateReg(RISCV::X0, /*isDef=*/false));
-      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+      return true;
     }
 
     // Fall back to shift pair.
@@ -1219,8 +1229,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
                         : Size == 32 ? RISCV::FMV_W_X
                                      : RISCV::FMV_H_X;
       auto FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg});
-      if (!FMV.constrainAllUses(TII, TRI, RBI))
-        return false;
+      FMV.constrainAllUses(TII, TRI, RBI);
     } else {
       // s64 on rv32
       assert(Size == 64 && !Subtarget->is64Bit() &&
@@ -1231,8 +1240,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
         MachineInstrBuilder FCVT =
             MIB.buildInstr(RISCV::FCVT_D_W, {DstReg}, {Register(RISCV::X0)})
                 .addImm(RISCVFPRndMode::RNE);
-        if (!FCVT.constrainAllUses(TII, TRI, RBI))
-          return false;
+        FCVT.constrainAllUses(TII, TRI, RBI);
 
         MI.eraseFromParent();
         return true;
@@ -1249,8 +1257,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
         return false;
       MachineInstrBuilder PairF64 = MIB.buildInstr(
           RISCV::BuildPairF64Pseudo, {DstReg}, {GPRRegLow, GPRRegHigh});
-      if (!PairF64.constrainAllUses(TII, TRI, RBI))
-        return false;
+      PairF64.constrainAllUses(TII, TRI, RBI);
     }
 
     MI.eraseFromParent();
@@ -1276,12 +1283,14 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     auto Bcc = MIB.buildInstr(RISCVCC::getBrCond(CC), {}, {LHS, RHS})
                    .addMBB(MI.getOperand(1).getMBB());
     MI.eraseFromParent();
-    return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
+    return true;
   }
   case TargetOpcode::G_BRINDIRECT:
     MI.setDesc(TII.get(RISCV::PseudoBRIND));
     MI.addOperand(MachineOperand::CreateImm(0));
-    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    return true;
   case TargetOpcode::G_SELECT:
     return selectSelect(MI, MIB);
   case TargetOpcode::G_FCMP:
@@ -1327,7 +1336,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 
     if (isStrongerThanMonotonic(Order)) {
       MI.setDesc(TII.get(selectZalasrLoadStoreOp(Opc, MemSize)));
-      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+      return true;
     }
 
     const unsigned NewOpc = selectRegImmLoadStoreOp(MI.getOpcode(), MemSize);
@@ -1350,7 +1360,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
       Fn(NewInst);
     MI.eraseFromParent();
 
-    return constrainSelectedInstRegOperands(*NewInst, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*NewInst, TII, TRI, RBI);
+    return true;
   }
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return selectIntrinsicWithSideEffects(MI, MIB);
@@ -1380,12 +1391,10 @@ bool RISCVInstructionSelector::selectUnmergeValues(
     return false;
 
   MachineInstr *ExtractLo = MIB.buildInstr(RISCV::FMV_X_W_FPR64, {Lo}, {Src});
-  if (!constrainSelectedInstRegOperands(*ExtractLo, TII, TRI, RBI))
-    return false;
+  constrainSelectedInstRegOperands(*ExtractLo, TII, TRI, RBI);
 
   MachineInstr *ExtractHi = MIB.buildInstr(RISCV::FMVH_X_D, {Hi}, {Src});
-  if (!constrainSelectedInstRegOperands(*ExtractHi, TII, TRI, RBI))
-    return false;
+  constrainSelectedInstRegOperands(*ExtractHi, TII, TRI, RBI);
 
   MI.eraseFromParent();
   return true;
@@ -1629,8 +1638,7 @@ bool RISCVInstructionSelector::materializeImm(Register DstReg, int64_t Imm,
       break;
     }
 
-    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
 
     SrcReg = TmpReg;
   }
@@ -1661,7 +1669,8 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
       // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
       // %pcrel_lo(auipc)).
       MI.setDesc(TII.get(RISCV::PseudoLLA));
-      return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+      return true;
     }
 
     // Use PC-relative addressing to access the GOT for this symbol, then
@@ -1679,8 +1688,7 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
                       .addDisp(DispMO, 0)
                       .addMemOperand(MemOp);
 
-    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
 
     MI.eraseFromParent();
     return true;
@@ -1700,14 +1708,12 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
     MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI, {AddrHiDest}, {})
                                .addDisp(DispMO, 0, RISCVII::MO_HI);
 
-    if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI);
 
     auto Result = MIB.buildInstr(RISCV::ADDI, {DefReg}, {AddrHiDest})
                       .addDisp(DispMO, 0, RISCVII::MO_LO);
 
-    if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
 
     MI.eraseFromParent();
     return true;
@@ -1733,8 +1739,7 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
                         .addDisp(DispMO, 0)
                         .addMemOperand(MemOp);
 
-      if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
-        return false;
+      constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
 
       MI.eraseFromParent();
       return true;
@@ -1744,7 +1749,8 @@ bool RISCVInstructionSelector::selectAddr(MachineInstr &MI,
     // within the address space. This generates the pattern (PseudoLLA sym),
     // which expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
     MI.setDesc(TII.get(RISCV::PseudoLLA));
-    return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
+    return true;
   }
 
   return false;
@@ -1775,7 +1781,8 @@ bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
                              .addReg(SelectMI.getTrueReg())
                              .addReg(SelectMI.getFalseReg());
   MI.eraseFromParent();
-  return constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
+  return true;
 }
 
 // Convert an FCMP predicate to one of the supported F or D instructions.
@@ -1850,51 +1857,43 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
     if (NeedInvert)
       TmpReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
     auto Cmp = MIB.buildInstr(getFCmpOpcode(Pred, Size), {TmpReg}, {LHS, RHS});
-    if (!Cmp.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Cmp.constrainAllUses(TII, TRI, RBI);
   } else if (Pred == CmpInst::FCMP_ONE || Pred == CmpInst::FCMP_UEQ) {
     // fcmp one LHS, RHS => (OR (FLT LHS, RHS), (FLT RHS, LHS))
     NeedInvert = Pred == CmpInst::FCMP_UEQ;
     auto Cmp1 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OLT, Size),
                                {&RISCV::GPRRegClass}, {LHS, RHS});
-    if (!Cmp1.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Cmp1.constrainAllUses(TII, TRI, RBI);
     auto Cmp2 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OLT, Size),
                                {&RISCV::GPRRegClass}, {RHS, LHS});
-    if (!Cmp2.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Cmp2.constrainAllUses(TII, TRI, RBI);
     if (NeedInvert)
       TmpReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
     auto Or =
         MIB.buildInstr(RISCV::OR, {TmpReg}, {Cmp1.getReg(0), Cmp2.getReg(0)});
-    if (!Or.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Or.constrainAllUses(TII, TRI, RBI);
   } else if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
     // fcmp ord LHS, RHS => (AND (FEQ LHS, LHS), (FEQ RHS, RHS))
     // FIXME: If LHS and RHS are the same we can use a single FEQ.
     NeedInvert = Pred == CmpInst::FCMP_UNO;
     auto Cmp1 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OEQ, Size),
                                {&RISCV::GPRRegClass}, {LHS, LHS});
-    if (!Cmp1.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Cmp1.constrainAllUses(TII, TRI, RBI);
     auto Cmp2 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OEQ, Size),
                                {&RISCV::GPRRegClass}, {RHS, RHS});
-    if (!Cmp2.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Cmp2.constrainAllUses(TII, TRI, RBI);
     if (NeedInvert)
       TmpReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
     auto And =
         MIB.buildInstr(RISCV::AND, {TmpReg}, {Cmp1.getReg(0), Cmp2.getReg(0)});
-    if (!And.constrainAllUses(TII, TRI, RBI))
-      return false;
+    And.constrainAllUses(TII, TRI, RBI);
   } else
     llvm_unreachable("Unhandled predicate");
 
   // Emit an XORI to invert the result if needed.
   if (NeedInvert) {
     auto Xor = MIB.buildInstr(RISCV::XORI, {DstReg}, {TmpReg}).addImm(1);
-    if (!Xor.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Xor.constrainAllUses(TII, TRI, RBI);
   }
 
   MI.eraseFromParent();

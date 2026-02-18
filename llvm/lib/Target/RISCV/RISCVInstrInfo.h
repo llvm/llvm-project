@@ -19,7 +19,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 
 #define GET_INSTRINFO_HEADER
-#define GET_INSTRINFO_OPERAND_ENUM
 #include "RISCVGenInstrInfo.inc"
 #include "RISCVGenRegisterInfo.inc"
 
@@ -174,10 +173,6 @@ public:
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
-
-  bool analyzeSelect(const MachineInstr &MI,
-                     SmallVectorImpl<MachineOperand> &Cond, unsigned &TrueOp,
-                     unsigned &FalseOp, bool &Optimizable) const override;
 
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,

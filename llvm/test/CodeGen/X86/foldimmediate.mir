@@ -54,7 +54,7 @@ body: |
     ; CHECK-NEXT: NOOP implicit [[ADC32ri]]
     ; CHECK-NEXT: [[SBB32ri:%[0-9]+]]:gr32 = SBB32ri [[COPY]], 81, implicit-def $eflags, implicit $eflags
     ; CHECK-NEXT: NOOP implicit [[SBB32ri]]
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[MOV32ri]], %subreg.sub_32bit
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOV32ri]], %subreg.sub_32bit
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[ADD64ri32_:%[0-9]+]]:gr64 = ADD64ri32 [[COPY1]], 81, implicit-def $eflags
     ; CHECK-NEXT: NOOP implicit [[ADD64ri32_]]
@@ -107,7 +107,7 @@ body: |
     %18 = SBB32rr %1, %0, implicit-def $eflags, implicit $eflags
     NOOP implicit %18
 
-    %7 = SUBREG_TO_REG 0, killed %0:gr32, %subreg.sub_32bit
+    %7 = SUBREG_TO_REG killed %0:gr32, %subreg.sub_32bit
     %8 = COPY $rsi
     %9 = ADD64rr %7, %8, implicit-def $eflags
     NOOP implicit %9

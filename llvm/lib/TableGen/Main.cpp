@@ -214,7 +214,7 @@ int llvm::TableGenMain(const char *argv0, TableGenMainFn MainFn) {
     std::string S;
     raw_string_ostream OS(S);
     int Res = MainFn(OS, Records);
-    OutFiles = {S, {}};
+    OutFiles = {std::move(S), {}};
     return Res;
   });
 }

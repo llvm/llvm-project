@@ -145,6 +145,7 @@ LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
   initializePPCDAGToDAGISelLegacyPass(PR);
+  initializePPCPrepareIFuncsOnAIXPass(PR);
   initializePPCLinuxAsmPrinterPass(PR);
   initializePPCAIXAsmPrinterPass(PR);
 }
@@ -437,6 +438,9 @@ void PPCPassConfig::addIRPasses() {
     // invariant.
     addPass(createLICMPass());
   }
+
+  if (TM->getTargetTriple().isOSAIX())
+    addPass(createPPCPrepareIFuncsOnAIXPass());
 
   TargetPassConfig::addIRPasses();
 }

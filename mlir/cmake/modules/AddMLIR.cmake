@@ -216,6 +216,15 @@ macro(add_mlir_generic_tablegen_target target)
   add_dependencies(mlir-generic-headers ${target})
 endmacro()
 
+# Declare a dialect in the include directory
+function(add_mlir_type_interface interface)
+  set(LLVM_TARGET_DEFINITIONS ${interface}.td)
+  mlir_tablegen(${interface}.h.inc -gen-type-interface-decls)
+  mlir_tablegen(${interface}.cpp.inc -gen-type-interface-defs)
+  add_public_tablegen_target(MLIR${interface}IncGen)
+  add_dependencies(mlir-generic-headers MLIR${interface}IncGen)
+endfunction()
+
 # Generate Documentation
 function(add_mlir_doc doc_filename output_file output_directory command)
   set(LLVM_TARGET_DEFINITIONS ${doc_filename}.td)

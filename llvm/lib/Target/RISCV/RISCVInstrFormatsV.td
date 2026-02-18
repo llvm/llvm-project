@@ -35,16 +35,20 @@ def MOPSTIndexedUnord : RISCVMOP<0b01>;
 def MOPSTStrided      : RISCVMOP<0b10>;
 def MOPSTIndexedOrder : RISCVMOP<0b11>;
 
-class RISCVLSUMOP<bits<5> val> {
+class RISCVLUMOP<bits<5> val> {
   bits<5> Value = val;
 }
-def LUMOPUnitStride  : RISCVLSUMOP<0b00000>;
-def LUMOPUnitStrideMask : RISCVLSUMOP<0b01011>;
-def LUMOPUnitStrideWholeReg : RISCVLSUMOP<0b01000>;
-def LUMOPUnitStrideFF: RISCVLSUMOP<0b10000>;
-def SUMOPUnitStride  : RISCVLSUMOP<0b00000>;
-def SUMOPUnitStrideMask : RISCVLSUMOP<0b01011>;
-def SUMOPUnitStrideWholeReg : RISCVLSUMOP<0b01000>;
+def LUMOPUnitStride  : RISCVLUMOP<0b00000>;
+def LUMOPUnitStrideMask : RISCVLUMOP<0b01011>;
+def LUMOPUnitStrideWholeReg : RISCVLUMOP<0b01000>;
+def LUMOPUnitStrideFF: RISCVLUMOP<0b10000>;
+
+class RISCVSUMOP<bits<5> val> {
+  bits<5> Value = val;
+}
+def SUMOPUnitStride  : RISCVSUMOP<0b00000>;
+def SUMOPUnitStrideMask : RISCVSUMOP<0b01011>;
+def SUMOPUnitStrideWholeReg : RISCVSUMOP<0b01000>;
 
 class RISCVWidth<bits<4> val> {
   bits<4> Value = val;
@@ -98,6 +102,8 @@ class RVInstVBase<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
 
   let Uses = [VL, VTYPE];
   let RVVConstraint = VMConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 class RVInstVV<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
@@ -156,133 +162,98 @@ class RVInstVUnaryRd<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, dag outs,
 
   let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
-class RVInstVLU<bits<3> nf, bit mew, RISCVLSUMOP lumop,
-                bits<3> width, dag outs, dag ins, string opcodestr,
-                string argstr>
+class RVInstVLoadBase<bits<3> nf, RISCVWidth width, RISCVMOP mop,
+                      dag outs, dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
   bits<5> rs1;
   bits<5> vd;
   bit vm;
 
   let Inst{31-29} = nf;
-  let Inst{28} = mew;
-  let Inst{27-26} = MOPLDUnitStride.Value;
+  let Inst{28} = width.Value{3};
+  let Inst{27-26} = mop.Value;
   let Inst{25} = vm;
+  // Inst{24-20} provided by subclasses
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = width.Value{2-0};
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_LOAD_FP.Value;
+
+  let Uses = [VL, VTYPE];
+  let RVVConstraint = VMConstraint;
+
+  let UseNamedOperandTable = true;
+}
+
+class RVInstVLU<bits<3> nf, RISCVWidth width, RISCVLUMOP lumop, dag outs,
+                dag ins, string opcodestr, string argstr>
+    : RVInstVLoadBase<nf, width, MOPLDUnitStride, outs, ins, opcodestr,
+                      argstr> {
   let Inst{24-20} = lumop.Value;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = width;
-  let Inst{11-7} = vd;
-  let Inst{6-0} = OPC_LOAD_FP.Value;
-
-  let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
 }
 
-class RVInstVLS<bits<3> nf, bit mew, bits<3> width,
-                dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+class RVInstVLS<bits<3> nf, RISCVWidth width, dag outs, dag ins,
+                string opcodestr, string argstr>
+    : RVInstVLoadBase<nf, width, MOPLDStrided, outs, ins, opcodestr, argstr> {
   bits<5> rs2;
-  bits<5> rs1;
-  bits<5> vd;
-  bit vm;
 
-  let Inst{31-29} = nf;
-  let Inst{28} = mew;
-  let Inst{27-26} = MOPLDStrided.Value;
-  let Inst{25} = vm;
   let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = width;
-  let Inst{11-7} = vd;
-  let Inst{6-0} = OPC_LOAD_FP.Value;
-
-  let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
 }
 
-class RVInstVLX<bits<3> nf, bit mew, RISCVMOP mop, bits<3> width,
-                dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+class RVInstVLX<bits<3> nf, RISCVWidth width, RISCVMOP mop, dag outs, dag ins,
+                string opcodestr, string argstr>
+    : RVInstVLoadBase<nf, width, mop, outs, ins, opcodestr, argstr> {
   bits<5> vs2;
-  bits<5> rs1;
-  bits<5> vd;
-  bit vm;
 
-  let Inst{31-29} = nf;
-  let Inst{28} = mew;
-  let Inst{27-26} = mop.Value;
-  let Inst{25} = vm;
   let Inst{24-20} = vs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = width;
-  let Inst{11-7} = vd;
-  let Inst{6-0} = OPC_LOAD_FP.Value;
-
-  let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
 }
 
-class RVInstVSU<bits<3> nf, bit mew, RISCVLSUMOP sumop,
-                bits<3> width, dag outs, dag ins, string opcodestr,
-                string argstr>
+class RVInstVStoreBase<bits<3> nf, RISCVWidth width, RISCVMOP mop, dag outs,
+                       dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
   bits<5> rs1;
   bits<5> vs3;
   bit vm;
 
   let Inst{31-29} = nf;
-  let Inst{28} = mew;
-  let Inst{27-26} = MOPSTUnitStride.Value;
+  let Inst{28} = width.Value{3};
+  let Inst{27-26} = mop.Value;
   let Inst{25} = vm;
+  // Inst{24-20} provided by subclasses
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = width.Value{2-0};
+  let Inst{11-7} = vs3;
+  let Inst{6-0} = OPC_STORE_FP.Value;
+
+  let Uses = [VL, VTYPE];
+
+  let UseNamedOperandTable = true;
+}
+
+class RVInstVSU<bits<3> nf, RISCVWidth width, RISCVSUMOP sumop, dag outs,
+                dag ins, string opcodestr, string argstr>
+    : RVInstVStoreBase<nf, width, MOPSTUnitStride, outs, ins, opcodestr,
+                       argstr> {
   let Inst{24-20} = sumop.Value;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = width;
-  let Inst{11-7} = vs3;
-  let Inst{6-0} = OPC_STORE_FP.Value;
-
-  let Uses = [VL, VTYPE];
 }
 
-class RVInstVSS<bits<3> nf, bit mew, bits<3> width,
-                dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+class RVInstVSS<bits<3> nf, RISCVWidth width, dag outs, dag ins,
+                string opcodestr, string argstr>
+    : RVInstVStoreBase<nf, width, MOPSTStrided, outs, ins, opcodestr,
+                       argstr> {
   bits<5> rs2;
-  bits<5> rs1;
-  bits<5> vs3;
-  bit vm;
 
-  let Inst{31-29} = nf;
-  let Inst{28} = mew;
-  let Inst{27-26} = MOPSTStrided.Value;
-  let Inst{25} = vm;
   let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = width;
-  let Inst{11-7} = vs3;
-  let Inst{6-0} = OPC_STORE_FP.Value;
-
-  let Uses = [VL, VTYPE];
 }
 
-class RVInstVSX<bits<3> nf, bit mew, RISCVMOP mop, bits<3> width,
-                dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+class RVInstVSX<bits<3> nf, RISCVWidth width, RISCVMOP mop, dag outs, dag ins,
+                string opcodestr, string argstr>
+    : RVInstVStoreBase<nf, width, mop, outs, ins, opcodestr, argstr> {
   bits<5> vs2;
-  bits<5> rs1;
-  bits<5> vs3;
-  bit vm;
 
-  let Inst{31-29} = nf;
-  let Inst{28} = mew;
-  let Inst{27-26} = mop.Value;
-  let Inst{25} = vm;
   let Inst{24-20} = vs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = width;
-  let Inst{11-7} = vs3;
-  let Inst{6-0} = OPC_STORE_FP.Value;
-
-  let Uses = [VL, VTYPE];
 }

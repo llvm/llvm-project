@@ -22,6 +22,7 @@
 #include "Protocol/ProtocolTypes.h"
 #include "ProtocolUtils.h"
 #include "Transport.h"
+#include "Variables.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBEvent.h"
@@ -125,7 +126,8 @@ llvm::StringRef DAP::debug_adapter_path = "";
 DAP::DAP(Log &log, const ReplMode default_repl_mode,
          std::vector<std::string> pre_init_commands, bool no_lldbinit,
          llvm::StringRef client_name, DAPTransport &transport, MainLoop &loop)
-    : log(log), transport(transport), broadcaster("lldb-dap"),
+    : log(log), transport(transport), reference_storage(log),
+      broadcaster("lldb-dap"),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
       repl_mode(default_repl_mode), no_lldbinit(no_lldbinit),
@@ -206,6 +208,11 @@ void DAP::PopulateExceptionBreakpoints() {
           eExceptionKindCatch);
     }
   }
+}
+
+bool DAP::ProcessIsNotStopped() {
+  const lldb::StateType process_state = target.GetProcess().GetState();
+  return !lldb::SBDebugger::StateIsStoppedState(process_state);
 }
 
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(llvm::StringRef filter) {
@@ -513,17 +520,6 @@ void DAP::SendProgressEvent(uint64_t progress_id, const char *message,
   progress_event_reporter.Push(progress_id, message, completed, total);
 }
 
-void __attribute__((format(printf, 3, 4)))
-DAP::SendFormattedOutput(OutputType o, const char *format, ...) {
-  char buffer[1024];
-  va_list args;
-  va_start(args, format);
-  int actual_length = vsnprintf(buffer, sizeof(buffer), format, args);
-  va_end(args);
-  SendOutput(
-      o, llvm::StringRef(buffer, std::min<int>(actual_length, sizeof(buffer))));
-}
-
 int32_t DAP::CreateSourceReference(lldb::addr_t address) {
   std::lock_guard<std::mutex> guard(m_source_references_mutex);
   auto iter = llvm::find(m_source_references, address);
@@ -570,12 +566,6 @@ lldb::SBThread DAP::GetLLDBThread(lldb::tid_t tid) {
   return target.GetProcess().GetThreadByID(tid);
 }
 
-lldb::SBThread DAP::GetLLDBThread(const llvm::json::Object &arguments) {
-  auto tid = GetInteger<int64_t>(arguments, "threadId")
-                 .value_or(LLDB_INVALID_THREAD_ID);
-  return target.GetProcess().GetThreadByID(tid);
-}
-
 lldb::SBFrame DAP::GetLLDBFrame(uint64_t frame_id) {
   if (frame_id == LLDB_DAP_INVALID_FRAME_ID)
     return lldb::SBFrame();
@@ -586,12 +576,6 @@ lldb::SBFrame DAP::GetLLDBFrame(uint64_t frame_id) {
       process.GetThreadByIndexID(GetLLDBThreadIndexID(frame_id));
   // Lower 32 bits is the frame index
   return thread.GetFrameAtIndex(GetLLDBFrameID(frame_id));
-}
-
-lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
-  const auto frame_id = GetInteger<uint64_t>(arguments, "frameId")
-                            .value_or(LLDB_DAP_INVALID_FRAME_ID);
-  return GetLLDBFrame(frame_id);
 }
 
 ReplMode DAP::DetectReplMode(lldb::SBFrame &frame, std::string &expression,
@@ -846,13 +830,11 @@ bool DAP::HandleObject(const Message &M) {
                    llvm::Twine("request_command:", req->command).str());
     if (handler_pos != request_handlers.end()) {
       handler_pos->second->Run(*req);
-      return true; // Success
+    } else {
+      UnknownRequestHandler handler(*this);
+      handler.BaseRequestHandler::Run(*req);
     }
-
-    dispatcher.Set("error",
-                   llvm::Twine("unhandled-command:" + req->command).str());
-    DAP_LOG(log, "error: unhandled command '{0}'", req->command);
-    return false; // Fail
+    return true; // Success
   }
 
   if (const auto *resp = std::get_if<Response>(&M)) {
@@ -1046,9 +1028,8 @@ void DAP::TransportHandler() {
     m_queue_cv.notify_all();
   });
 
-  auto handle = transport.RegisterMessageHandler(m_loop, *this);
-  if (!handle) {
-    DAP_LOG_ERROR(log, handle.takeError(),
+  if (llvm::Error err = transport.RegisterMessageHandler(*this)) {
+    DAP_LOG_ERROR(log, std::move(err),
                   "registering message handler failed: {0}");
     std::lock_guard<std::mutex> guard(m_queue_mutex);
     m_error_occurred = true;

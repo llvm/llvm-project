@@ -551,6 +551,33 @@ def TileOp : OpenMPTransformBase_Op<"tile",
 }
 
 //===----------------------------------------------------------------------===//
+// OpenMP fuse operation
+//===----------------------------------------------------------------------===//
+
+def FuseOp
+    : OpenMPTransformBase_Op<"fuse", clauses = [OpenMP_LooprangeClause]> {
+  let summary = "OpenMP fuse operation";
+  let description = [{
+    Represents the OpenMP fuse directive introduced in OpenMP 6.0.
+    
+    The construct takes a loop sequence and merges the loops specifed by the
+    `looprange` clause and generates a loop sequence with the loops before the
+    `first` attribute untouched, the generated fused loop, and the loops after
+    the the `first` + `count` attributes untouched mantaining the orignal
+    order. If the `looprange` clause is not present all the loops in the
+    sequence are fused generating a single loop.
+    Each logical iteration of the fused loop executes a logical iteration of
+    each affected loop. The fused loop has the number of logical iterations 
+    equal to the affected loop with most logical iterations.
+
+    The `first` and `count` attributes of the `looprange` clause are constant
+    and known beforehand if present.
+  }]#clausesDescription;
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.8.3 Workshare Construct
 //===----------------------------------------------------------------------===//
 
@@ -905,9 +932,9 @@ def TaskOp
                 traits = [AttrSizedOperandSegments, AutomaticAllocationScope,
                           OutlineableOpenMPOpInterface],
                 clauses = [
-                    // TODO: Complete clause list (affinity, detach).
-                    OpenMP_AllocateClause, OpenMP_DependClause,
-                    OpenMP_FinalClause, OpenMP_IfClause,
+                    // TODO: Complete clause list (detach).
+                    OpenMP_AffinityClause, OpenMP_AllocateClause,
+                    OpenMP_DependClause, OpenMP_FinalClause, OpenMP_IfClause,
                     OpenMP_InReductionClause, OpenMP_MergeableClause,
                     OpenMP_PriorityClause, OpenMP_PrivateClause,
                     OpenMP_UntiedClause, OpenMP_DetachClause],

@@ -1,5 +1,4 @@
 ; RUN: opt < %s -mtriple=arm-unknown-linux-gnu -S -passes=inline | FileCheck %s
-; RUN: opt < %s -mtriple=arm-unknown-linux-gnu -S -passes='cgscc(inline)' | FileCheck %s
 
 declare i32 @foo(...) #0
 

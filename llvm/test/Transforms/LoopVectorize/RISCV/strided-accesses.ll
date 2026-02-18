@@ -604,8 +604,8 @@ exit:
 define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-LABEL: @double_stride_int_scaled(
 ; NOSTRIDED-NEXT:  entry:
-; NOSTRIDED-NEXT:    [[P3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; NOSTRIDED-NEXT:    [[P21:%.*]] = ptrtoint ptr [[P2:%.*]] to i64
+; NOSTRIDED-NEXT:    [[P3:%.*]] = ptrtoaddr ptr [[P:%.*]] to i64
+; NOSTRIDED-NEXT:    [[P21:%.*]] = ptrtoaddr ptr [[P2:%.*]] to i64
 ; NOSTRIDED-NEXT:    br label [[VECTOR_SCEVCHECK:%.*]]
 ; NOSTRIDED:       vector.scevcheck:
 ; NOSTRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE:%.*]], 1
@@ -654,8 +654,8 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ;
 ; NOSTRIDED-UF2-LABEL: @double_stride_int_scaled(
 ; NOSTRIDED-UF2-NEXT:  entry:
-; NOSTRIDED-UF2-NEXT:    [[P3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; NOSTRIDED-UF2-NEXT:    [[P21:%.*]] = ptrtoint ptr [[P2:%.*]] to i64
+; NOSTRIDED-UF2-NEXT:    [[P3:%.*]] = ptrtoaddr ptr [[P:%.*]] to i64
+; NOSTRIDED-UF2-NEXT:    [[P21:%.*]] = ptrtoaddr ptr [[P2:%.*]] to i64
 ; NOSTRIDED-UF2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-UF2-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; NOSTRIDED-UF2-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 12)

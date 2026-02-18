@@ -188,8 +188,8 @@ entry:
 define <vscale x 32 x bfloat> @intrinsic_vfsub_mask_vv_nxv32bf16_nxv32bf16_nxv32bf16(<vscale x 32 x bfloat> %0, <vscale x 32 x bfloat> %1, <vscale x 32 x bfloat> %2, <vscale x 32 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfsub_mask_vv_nxv32bf16_nxv32bf16_nxv32bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16alt, m8, ta, mu
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfsub.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
 entry:

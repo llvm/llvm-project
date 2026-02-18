@@ -6,7 +6,7 @@
 
 // Test --hip-device-lib-path
 // RUN: %clang -### -target x86_64-linux-gnu --offload=spirv64 \
-// RUN:  --hip-path=%S/Inputs/hipspv \
+// RUN:   --hip-path=%S/Inputs/hipspv \
 // RUN:   --hip-device-lib-path=%S/Inputs/hipspv-dev-lib %s \
 // RUN: 2>&1 | FileCheck --check-prefixes=ALL,HIP-DEV-LIB-PATH %s
 
