@@ -9,7 +9,7 @@
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t1 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t1 --check-prefix=WARN-NO-SECTION
 
-# WARN-NO-SECTION: warning: '[[FILE]]': unable to read SHT_LLVM_CALL_GRAPH section
+# WARN-NO-SECTION: warning: '[[FILE]]': no SHT_LLVM_CALL_GRAPH section found
 
 --- !ELF
 FileHeader:

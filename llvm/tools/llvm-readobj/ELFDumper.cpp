@@ -5344,7 +5344,6 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
 
 template <class ELFT>
 bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
-  assert(CGSection && "invalid pointer to  call graph section");
   ArrayRef<uint8_t> Contents = cantFail(Obj.getSectionContents(*CGSection));
   DataExtractor Data(Contents, Obj.isLE(), ObjF.getBytesInAddress());
   DataExtractor::Cursor C(0);
@@ -8311,8 +8310,14 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       this->Obj.getSectionAndRelocations([](const Elf_Shdr &Sec) {
         return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH;
       });
-  if (!MapOrErr || MapOrErr->empty()) {
+  if (!MapOrErr) {
     reportWarning(createError("unable to read SHT_LLVM_CALL_GRAPH section: " +
+                              toString(MapOrErr.takeError())),
+                  this->FileName);
+    return;
+  }
+  if (MapOrErr->empty()) {
+    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found" +
                               toString(MapOrErr.takeError())),
                   this->FileName);
     return;
