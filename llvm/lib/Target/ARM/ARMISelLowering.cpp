@@ -14516,6 +14516,7 @@ static SDValue PerformORCombine(SDNode *N,
                                         VT == MVT::v8i1 || VT == MVT::v16i1))
     return PerformORCombine_i1(N, DAG, Subtarget);
 
+
   APInt SplatBits, SplatUndef;
   unsigned SplatBitSize;
   bool HasAnyUndefs;
