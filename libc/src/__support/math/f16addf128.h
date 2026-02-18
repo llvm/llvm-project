@@ -29,7 +29,6 @@ LIBC_INLINE float16 f16addf128(float128 x, float128 y) {
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_TYPES_HAS_FLOAT16
-
 #endif // LIBC_TYPES_HAS_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_F16ADDF128_H

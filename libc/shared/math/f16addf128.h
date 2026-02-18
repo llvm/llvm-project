@@ -27,7 +27,6 @@ using math::f16addf128;
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_TYPES_HAS_FLOAT16
-
 #endif // LIBC_TYPES_HAS_FLOAT128
 
 #endif // LLVM_LIBC_SHARED_MATH_F16ADDF128_H
