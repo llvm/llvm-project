@@ -225,9 +225,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::f32, Expand);
     setOperationAction(ISD::FMA, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Legal);
-    setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f32, Expand);
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
-    setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f32, Expand);
     setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Legal);
@@ -275,10 +275,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Legal);
     setOperationAction(ISD::FMA, MVT::f64, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
-    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f64, Expand);
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Legal);
     setOperationAction(ISD::FCANONICALIZE, MVT::f64, Legal);
-    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Expand);
     setOperationAction(ISD::IS_FPCLASS, MVT::f64, Legal);
     setOperationAction(ISD::FSIN, MVT::f64, Expand);
     setOperationAction(ISD::FCOS, MVT::f64, Expand);
@@ -373,8 +373,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FFLOOR, VT, Legal);
       setOperationAction(ISD::FTRUNC, VT, Legal);
       setOperationAction(ISD::FROUNDEVEN, VT, Legal);
-      setOperationAction(ISD::FMINNUM, VT, Legal);
-      setOperationAction(ISD::FMAXNUM, VT, Legal);
+      setOperationAction(ISD::FMINNUM, VT, Expand);
+      setOperationAction(ISD::FMAXNUM, VT, Expand);
     }
     setOperationAction(ISD::CTPOP, GRLenVT, Legal);
     setOperationAction(ISD::FCEIL, {MVT::f32, MVT::f64}, Legal);
@@ -462,8 +462,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FFLOOR, VT, Legal);
       setOperationAction(ISD::FTRUNC, VT, Legal);
       setOperationAction(ISD::FROUNDEVEN, VT, Legal);
-      setOperationAction(ISD::FMINNUM, VT, Legal);
-      setOperationAction(ISD::FMAXNUM, VT, Legal);
+      setOperationAction(ISD::FMINNUM, VT, Expand);
+      setOperationAction(ISD::FMAXNUM, VT, Expand);
     }
   }
 
