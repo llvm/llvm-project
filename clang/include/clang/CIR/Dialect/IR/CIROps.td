@@ -3333,6 +3333,7 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 
 class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     : CIR_Op<mnemonic, !listconcat(extra_traits, [
+        DeclareOpInterfaceMethods<ArgAndResultAttrsOpInterface>,
         DeclareOpInterfaceMethods<CIRCallOpInterface>,
         DeclareOpInterfaceMethods<SymbolUserOpInterface>
       ])> {
@@ -3351,15 +3352,6 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
       (*this)->setAttr(getCalleeAttrName(),
                        mlir::cast<mlir::SymbolRefAttr>(callee));
     }
-
-    mlir::ArrayAttr getArgAttrsAttr() { return {}; }
-    ::mlir::ArrayAttr getResAttrsAttr() { return {}; }
-
-    void setResAttrsAttr(::mlir::ArrayAttr attrs) {}
-    void setArgAttrsAttr(::mlir::ArrayAttr attrs) {}
-
-    ::mlir::Attribute removeArgAttrsAttr() { return {}; }
-    ::mlir::Attribute removeResAttrsAttr() { return {}; }
 
     bool isIndirect() { return !getCallee(); }
     mlir::Value getIndirectCall();
@@ -3386,7 +3378,10 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<CIR_AnyType>:$args,
       UnitAttr:$nothrow,
-      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect);
+      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect,
+      OptionalAttr<DictArrayAttr>:$arg_attrs,
+      OptionalAttr<DictArrayAttr>:$res_attrs
+      );
 }
 
 def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
@@ -6233,6 +6228,7 @@ def CIR_TryOp : CIR_Op<"try",[
       cir.call exception @function() : () -> ()
       cir.yield
     } catch [type #cir.global_view<@_ZTIPf> : !cir.ptr<!u8i>] {
+      %1 = cir.catch_param : !cir.ptr<!cir.float>
       ...
       cir.yield
     } unwind {
@@ -6283,6 +6279,7 @@ def CIR_TryOp : CIR_Op<"try",[
     }]>
   ];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -6293,7 +6290,7 @@ def CIR_TryOp : CIR_Op<"try",[
 def CIR_CatchParamOp : CIR_Op<"catch_param", [HasParent<"cir::TryOp">]> {
   let summary = "Represents the catch clause formal parameter";
   let description = [{
-    The `cir.catch_param` is used to retrieves the exception object inside
+    The `cir.catch_param` is used to retrieve the exception object inside
     the handler regions of `cir.try`.
 
     This operation is used only before the CFG flatterning pass.
@@ -6373,6 +6370,57 @@ def CIR_EhTypeIdOp : CIR_Op<"eh.typeid",
   let results = (outs CIR_UInt32:$type_id);
   let assemblyFormat = [{
     $type_sym attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Exception related: EhSetjmpOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhSetjmpOp : CIR_Op<"eh.setjmp"> {
+  let summary = "CIR setjmp operation";
+  let description = [{
+    Saves call-site information (e.g., stack pointer, instruction pointer, 
+    signal mask, and other registers) in memory at `env` for use by longjmp(). 
+    In this case, setjmp() returns 0. Following a successful longjmp(),
+    execution proceeds from cir.eh.setjmp with the operation yielding a 
+    non-zero value.
+
+    Examples:
+    ```mlir
+      %0 = cir.eh.setjmp %arg0 : (!cir.ptr<!cir.void>) -> !s32i
+    ```
+  }];
+  let arguments = (ins CIR_PointerType:$env);
+
+  let results = (outs CIR_SInt32:$res);
+
+  let assemblyFormat = [{
+      $env `:` functional-type($env, results) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Exception related: EhLongjmpOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhLongjmpOp : CIR_Op<"eh.longjmp"> {
+  let summary = "CIR longjmp operation";
+  let description = [{
+    Restore the environment (e.g., stack pointer, instruction pointer,
+    signal mask, and other registers) at the time of setjmp() call, by using
+    the information saved in `env` by setjmp().
+
+    Examples:
+    ```mlir
+      cir.eh.longjmp %arg0 : !cir.ptr<!cir.void>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$env);
+
+  let assemblyFormat = [{
+      $env `:` qualified(type($env)) attr-dict
   }];
 }
 

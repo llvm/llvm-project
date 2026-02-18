@@ -6973,7 +6973,7 @@ bool CodeGenPrepare::optimizePhiType(
   SmallPtrSet<Instruction *, 4> Defs;
   SmallPtrSet<Instruction *, 4> Uses;
   // This works by adding extra bitcasts between load/stores and removing
-  // existing bicasts. If we have a phi(bitcast(load)) or a store(bitcast(phi))
+  // existing bitcasts. If we have a phi(bitcast(load)) or a store(bitcast(phi))
   // we can get in the situation where we remove a bitcast in one iteration
   // just to add it again in the next. We need to ensure that at least one
   // bitcast we remove are anchored to something that will not change back.

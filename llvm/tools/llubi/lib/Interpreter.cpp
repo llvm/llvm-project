@@ -12,6 +12,7 @@
 
 #include "Context.h"
 #include "Value.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/Allocator.h"
@@ -58,6 +59,7 @@ struct Frame {
   DenseMap<Value *, AnyValue> ValueMap;
 
   // Reserved for in-flight subroutines.
+  Function *ResolvedCallee = nullptr;
   SmallVector<AnyValue> CalleeArgs;
   AnyValue CalleeRetVal;
 
@@ -113,10 +115,9 @@ static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
 }
 
 /// Instruction executor using the visitor pattern.
-/// visit* methods return true on success, false on error.
 /// Unlike the Context class that manages the global state,
 /// InstExecutor only maintains the state for call frames.
-class InstExecutor : public InstVisitor<InstExecutor, bool> {
+class InstExecutor : public InstVisitor<InstExecutor, void> {
   Context &Ctx;
   EventHandler &Handler;
   std::list<Frame> CallStack;
@@ -134,17 +135,24 @@ class InstExecutor : public InstVisitor<InstExecutor, bool> {
     Handler.onImmediateUB(Msg);
   }
 
+  void reportError(StringRef Msg) {
+    // Check if we have already reported an error message.
+    if (!Status)
+      return;
+    Status = false;
+    Handler.onError(Msg);
+  }
+
   const AnyValue &getValue(Value *V) {
     if (auto *C = dyn_cast<Constant>(V))
       return Ctx.getConstantValue(C);
     return CurrentFrame->ValueMap.at(V);
   }
 
-  bool setResult(Instruction &I, AnyValue V) {
+  void setResult(Instruction &I, AnyValue V) {
     if (Status)
-      Handler.onInstructionExecuted(I, V);
+      Status &= Handler.onInstructionExecuted(I, V);
     CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
-    return true;
   }
 
   AnyValue computeUnOp(Type *Ty, const AnyValue &Operand,
@@ -160,15 +168,14 @@ class InstExecutor : public InstVisitor<InstExecutor, bool> {
     return ScalarFn(Operand);
   }
 
-  bool visitUnOp(Instruction &I,
+  void visitUnOp(Instruction &I,
                  function_ref<AnyValue(const AnyValue &)> ScalarFn) {
-    return setResult(
-        I, computeUnOp(I.getType(), getValue(I.getOperand(0)), ScalarFn));
+    setResult(I, computeUnOp(I.getType(), getValue(I.getOperand(0)), ScalarFn));
   }
 
-  bool visitIntUnOp(Instruction &I,
+  void visitIntUnOp(Instruction &I,
                     function_ref<AnyValue(const APInt &)> ScalarFn) {
-    return visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
       if (Operand.isPoison())
         return AnyValue::poison();
       return ScalarFn(Operand.asInteger());
@@ -190,22 +197,53 @@ class InstExecutor : public InstVisitor<InstExecutor, bool> {
     return ScalarFn(LHS, RHS);
   }
 
-  bool visitBinOp(
+  void visitBinOp(
       Instruction &I,
       function_ref<AnyValue(const AnyValue &, const AnyValue &)> ScalarFn) {
-    return setResult(I, computeBinOp(I.getType(), getValue(I.getOperand(0)),
-                                     getValue(I.getOperand(1)), ScalarFn));
+    setResult(I, computeBinOp(I.getType(), getValue(I.getOperand(0)),
+                              getValue(I.getOperand(1)), ScalarFn));
   }
 
-  bool
+  void
   visitIntBinOp(Instruction &I,
                 function_ref<AnyValue(const APInt &, const APInt &)> ScalarFn) {
-    return visitBinOp(
-        I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-          if (LHS.isPoison() || RHS.isPoison())
-            return AnyValue::poison();
-          return ScalarFn(LHS.asInteger(), RHS.asInteger());
-        });
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      if (LHS.isPoison() || RHS.isPoison())
+        return AnyValue::poison();
+      return ScalarFn(LHS.asInteger(), RHS.asInteger());
+    });
+  }
+
+  void jumpTo(Instruction &Terminator, BasicBlock *DestBB) {
+    if (!Handler.onBBJump(Terminator, *DestBB)) {
+      Status = false;
+      return;
+    }
+    BasicBlock *From = CurrentFrame->BB;
+    CurrentFrame->BB = DestBB;
+    CurrentFrame->PC = DestBB->begin();
+    // Update PHI nodes in batch to avoid the interference between PHI nodes.
+    // We need to store the incoming values into a temporary buffer.
+    // Otherwise, the incoming value may be overwritten before it is
+    // used by other PHI nodes.
+    SmallVector<std::pair<PHINode *, AnyValue>> IncomingValues;
+    PHINode *PHI = nullptr;
+    while ((PHI = dyn_cast<PHINode>(CurrentFrame->PC))) {
+      Value *Incoming = PHI->getIncomingValueForBlock(From);
+      // TODO: handle fast-math flags.
+      IncomingValues.emplace_back(PHI, getValue(Incoming));
+      ++CurrentFrame->PC;
+    }
+    for (auto &[K, V] : IncomingValues)
+      setResult(*K, std::move(V));
+  }
+
+  /// Helper function to determine whether an inline asm is a no-op, which is
+  /// used to implement black_box style optimization blockers.
+  bool isNoopInlineAsm(Value *V, Type *RetTy) {
+    if (auto *Asm = dyn_cast<InlineAsm>(V))
+      return Asm->getAsmString().empty() && RetTy->isVoidTy();
+    return false;
   }
 
 public:
@@ -216,148 +254,337 @@ public:
                            RetVal, Ctx.getTLIImpl());
   }
 
-  bool visitReturnInst(ReturnInst &RI) {
+  void visitReturnInst(ReturnInst &RI) {
     if (auto *RV = RI.getReturnValue())
       CurrentFrame->RetVal = getValue(RV);
     CurrentFrame->State = FrameState::Exit;
-    return Handler.onInstructionExecuted(RI, None);
+    Status &= Handler.onInstructionExecuted(RI, None);
   }
 
-  bool visitAdd(BinaryOperator &I) {
-    return visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) {
+  void visitBranchInst(BranchInst &BI) {
+    if (BI.isConditional()) {
+      switch (getValue(BI.getCondition()).asBoolean()) {
+      case BooleanKind::True:
+        jumpTo(BI, BI.getSuccessor(0));
+        return;
+      case BooleanKind::False:
+        jumpTo(BI, BI.getSuccessor(1));
+        return;
+      case BooleanKind::Poison:
+        reportImmediateUB("Branch on poison condition.");
+        return;
+      }
+    }
+    jumpTo(BI, BI.getSuccessor(0));
+  }
+
+  void visitSwitchInst(SwitchInst &SI) {
+    auto &Cond = getValue(SI.getCondition());
+    if (Cond.isPoison()) {
+      reportImmediateUB("Switch on poison condition.");
+      return;
+    }
+    for (auto &Case : SI.cases()) {
+      if (Case.getCaseValue()->getValue() == Cond.asInteger()) {
+        jumpTo(SI, Case.getCaseSuccessor());
+        return;
+      }
+    }
+    jumpTo(SI, SI.getDefaultDest());
+  }
+
+  void visitUnreachableInst(UnreachableInst &) {
+    reportImmediateUB("Unreachable code.");
+  }
+
+  void visitCallBrInst(CallBrInst &CI) {
+    if (isNoopInlineAsm(CI.getCalledOperand(), CI.getType())) {
+      jumpTo(CI, CI.getDefaultDest());
+      return;
+    }
+
+    Handler.onUnrecognizedInstruction(CI);
+    Status = false;
+  }
+
+  void visitIndirectBrInst(IndirectBrInst &IBI) {
+    auto &Target = getValue(IBI.getAddress());
+    if (Target.isPoison()) {
+      reportImmediateUB("Indirect branch on poison.");
+      return;
+    }
+    if (BasicBlock *DestBB = Ctx.getTargetBlock(Target.asPointer())) {
+      if (any_of(IBI.successors(),
+                 [DestBB](BasicBlock *Succ) { return Succ == DestBB; }))
+        jumpTo(IBI, DestBB);
+      else
+        reportImmediateUB("Indirect branch on unlisted target BB.");
+
+      return;
+    }
+    reportImmediateUB("Indirect branch on invalid target BB.");
+  }
+
+  void returnFromCallee() {
+    // TODO: handle retval attributes (Attributes from known callee should be
+    // applied if available).
+    // TODO: handle metadata
+    auto &CB = cast<CallBase>(*CurrentFrame->PC);
+    CurrentFrame->CalleeArgs.clear();
+    AnyValue &RetVal = CurrentFrame->CalleeRetVal;
+    setResult(CB, std::move(RetVal));
+
+    if (auto *II = dyn_cast<InvokeInst>(&CB))
+      jumpTo(*II, II->getNormalDest());
+    else if (CurrentFrame->State == FrameState::Pending)
+      ++CurrentFrame->PC;
+  }
+
+  AnyValue callIntrinsic(CallBase &CB) {
+    Intrinsic::ID IID = CB.getIntrinsicID();
+    switch (IID) {
+    case Intrinsic::assume:
+      switch (getValue(CB.getArgOperand(0)).asBoolean()) {
+      case BooleanKind::True:
+        break;
+      case BooleanKind::False:
+      case BooleanKind::Poison:
+        reportImmediateUB("Assume on false or poison condition.");
+        break;
+      }
+      // TODO: handle llvm.assume with operand bundles
+      return AnyValue();
+    default:
+      Handler.onUnrecognizedInstruction(CB);
+      Status = false;
+      return AnyValue();
+    }
+  }
+
+  AnyValue callLibFunc(CallBase &CB, Function *ResolvedCallee) {
+    LibFunc LF;
+    // Respect nobuiltin attributes on call site.
+    if (CB.isNoBuiltin() ||
+        !CurrentFrame->TLI.getLibFunc(*ResolvedCallee, LF)) {
+      Handler.onUnrecognizedInstruction(CB);
+      Status = false;
+      return AnyValue();
+    }
+
+    Handler.onUnrecognizedInstruction(CB);
+    Status = false;
+    return AnyValue();
+  }
+
+  void enterCall(CallBase &CB) {
+    Function *Callee = CB.getCalledFunction();
+    // TODO: handle parameter attributes (Attributes from known callee should be
+    // applied if available).
+    // TODO: handle byval/initializes
+    auto &CalleeArgs = CurrentFrame->CalleeArgs;
+    assert(CalleeArgs.empty() &&
+           "Forgot to call returnFromCallee before entering a new call.");
+    for (Value *Arg : CB.args())
+      CalleeArgs.push_back(getValue(Arg));
+
+    if (!Callee) {
+      Value *CalledOperand = CB.getCalledOperand();
+      if (isNoopInlineAsm(CalledOperand, CB.getType())) {
+        CurrentFrame->ResolvedCallee = nullptr;
+        returnFromCallee();
+        return;
+      }
+
+      if (isa<InlineAsm>(CalledOperand)) {
+        Handler.onUnrecognizedInstruction(CB);
+        Status = false;
+        return;
+      }
+
+      auto &CalleeVal = getValue(CalledOperand);
+      if (CalleeVal.isPoison()) {
+        reportImmediateUB("Indirect call through poison function pointer.");
+        return;
+      }
+      Callee = Ctx.getTargetFunction(CalleeVal.asPointer());
+      if (!Callee) {
+        reportImmediateUB("Indirect call through invalid function pointer.");
+        return;
+      }
+      if (Callee->getFunctionType() != CB.getFunctionType()) {
+        reportImmediateUB("Indirect call through a function pointer with "
+                          "mismatched signature.");
+        return;
+      }
+    }
+
+    assert(Callee && "Expected a resolved callee function.");
+    assert(
+        Callee->getFunctionType() == CB.getFunctionType() &&
+        "Expected the callee function type to match the call site signature.");
+    CurrentFrame->ResolvedCallee = Callee;
+    if (Callee->isIntrinsic()) {
+      CurrentFrame->CalleeRetVal = callIntrinsic(CB);
+      returnFromCallee();
+      return;
+    } else if (Callee->isDeclaration()) {
+      CurrentFrame->CalleeRetVal = callLibFunc(CB, Callee);
+      returnFromCallee();
+      return;
+    } else {
+      uint32_t MaxStackDepth = Ctx.getMaxStackDepth();
+      if (MaxStackDepth && CallStack.size() >= MaxStackDepth) {
+        reportError("Maximum stack depth exceeded.");
+        return;
+      }
+      assert(!Callee->empty() && "Expected a defined function.");
+      // Suspend the current frame and push the callee frame onto the stack.
+      ArrayRef<AnyValue> Args = CurrentFrame->CalleeArgs;
+      AnyValue &RetVal = CurrentFrame->CalleeRetVal;
+      CurrentFrame->State = FrameState::Pending;
+      CallStack.emplace_back(*Callee, &CB, CurrentFrame, Args, RetVal,
+                             Ctx.getTLIImpl());
+    }
+  }
+
+  void visitCallInst(CallInst &CI) { enterCall(CI); }
+
+  void visitInvokeInst(InvokeInst &II) {
+    // TODO: handle exceptions
+    enterCall(II);
+  }
+
+  void visitAdd(BinaryOperator &I) {
+    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) {
       return addNoWrap(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap());
     });
   }
 
-  bool visitSub(BinaryOperator &I) {
-    return visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) {
+  void visitSub(BinaryOperator &I) {
+    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) {
       return subNoWrap(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap());
     });
   }
 
-  bool visitMul(BinaryOperator &I) {
-    return visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) {
+  void visitMul(BinaryOperator &I) {
+    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) {
       return mulNoWrap(LHS, RHS, I.hasNoSignedWrap(), I.hasNoUnsignedWrap());
     });
   }
 
-  bool visitSDiv(BinaryOperator &I) {
-    return visitBinOp(
-        I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-          // Priority: Immediate UB > poison > normal value
-          if (RHS.isPoison()) {
-            reportImmediateUB("Division by zero (refine RHS to 0).");
-            return AnyValue::poison();
-          }
-          const APInt &RHSVal = RHS.asInteger();
-          if (RHSVal.isZero()) {
-            reportImmediateUB("Division by zero.");
-            return AnyValue::poison();
-          }
-          if (LHS.isPoison()) {
-            if (RHSVal.isAllOnes())
-              reportImmediateUB(
-                  "Signed division overflow (refine LHS to INT_MIN).");
-            return AnyValue::poison();
-          }
-          const APInt &LHSVal = LHS.asInteger();
-          if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
-            reportImmediateUB("Signed division overflow.");
-            return AnyValue::poison();
-          }
+  void visitSDiv(BinaryOperator &I) {
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      // Priority: Immediate UB > poison > normal value
+      if (RHS.isPoison()) {
+        reportImmediateUB("Division by zero (refine RHS to 0).");
+        return AnyValue::poison();
+      }
+      const APInt &RHSVal = RHS.asInteger();
+      if (RHSVal.isZero()) {
+        reportImmediateUB("Division by zero.");
+        return AnyValue::poison();
+      }
+      if (LHS.isPoison()) {
+        if (RHSVal.isAllOnes())
+          reportImmediateUB(
+              "Signed division overflow (refine LHS to INT_MIN).");
+        return AnyValue::poison();
+      }
+      const APInt &LHSVal = LHS.asInteger();
+      if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
+        reportImmediateUB("Signed division overflow.");
+        return AnyValue::poison();
+      }
 
-          if (I.isExact()) {
-            APInt Q, R;
-            APInt::sdivrem(LHSVal, RHSVal, Q, R);
-            if (!R.isZero())
-              return AnyValue::poison();
-            return Q;
-          } else {
-            return LHSVal.sdiv(RHSVal);
-          }
-        });
+      if (I.isExact()) {
+        APInt Q, R;
+        APInt::sdivrem(LHSVal, RHSVal, Q, R);
+        if (!R.isZero())
+          return AnyValue::poison();
+        return Q;
+      } else {
+        return LHSVal.sdiv(RHSVal);
+      }
+    });
   }
 
-  bool visitSRem(BinaryOperator &I) {
-    return visitBinOp(
-        I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-          // Priority: Immediate UB > poison > normal value
-          if (RHS.isPoison()) {
-            reportImmediateUB("Division by zero (refine RHS to 0).");
-            return AnyValue::poison();
-          }
-          const APInt &RHSVal = RHS.asInteger();
-          if (RHSVal.isZero()) {
-            reportImmediateUB("Division by zero.");
-            return AnyValue::poison();
-          }
-          if (LHS.isPoison()) {
-            if (RHSVal.isAllOnes())
-              reportImmediateUB(
-                  "Signed division overflow (refine LHS to INT_MIN).");
-            return AnyValue::poison();
-          }
-          const APInt &LHSVal = LHS.asInteger();
-          if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
-            reportImmediateUB("Signed division overflow.");
-            return AnyValue::poison();
-          }
+  void visitSRem(BinaryOperator &I) {
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      // Priority: Immediate UB > poison > normal value
+      if (RHS.isPoison()) {
+        reportImmediateUB("Division by zero (refine RHS to 0).");
+        return AnyValue::poison();
+      }
+      const APInt &RHSVal = RHS.asInteger();
+      if (RHSVal.isZero()) {
+        reportImmediateUB("Division by zero.");
+        return AnyValue::poison();
+      }
+      if (LHS.isPoison()) {
+        if (RHSVal.isAllOnes())
+          reportImmediateUB(
+              "Signed division overflow (refine LHS to INT_MIN).");
+        return AnyValue::poison();
+      }
+      const APInt &LHSVal = LHS.asInteger();
+      if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
+        reportImmediateUB("Signed division overflow.");
+        return AnyValue::poison();
+      }
 
-          return LHSVal.srem(RHSVal);
-        });
+      return LHSVal.srem(RHSVal);
+    });
   }
 
-  bool visitUDiv(BinaryOperator &I) {
-    return visitBinOp(
-        I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-          // Priority: Immediate UB > poison > normal value
-          if (RHS.isPoison()) {
-            reportImmediateUB("Division by zero (refine RHS to 0).");
-            return AnyValue::poison();
-          }
-          const APInt &RHSVal = RHS.asInteger();
-          if (RHSVal.isZero()) {
-            reportImmediateUB("Division by zero.");
-            return AnyValue::poison();
-          }
-          if (LHS.isPoison())
-            return AnyValue::poison();
-          const APInt &LHSVal = LHS.asInteger();
+  void visitUDiv(BinaryOperator &I) {
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      // Priority: Immediate UB > poison > normal value
+      if (RHS.isPoison()) {
+        reportImmediateUB("Division by zero (refine RHS to 0).");
+        return AnyValue::poison();
+      }
+      const APInt &RHSVal = RHS.asInteger();
+      if (RHSVal.isZero()) {
+        reportImmediateUB("Division by zero.");
+        return AnyValue::poison();
+      }
+      if (LHS.isPoison())
+        return AnyValue::poison();
+      const APInt &LHSVal = LHS.asInteger();
 
-          if (I.isExact()) {
-            APInt Q, R;
-            APInt::udivrem(LHSVal, RHSVal, Q, R);
-            if (!R.isZero())
-              return AnyValue::poison();
-            return Q;
-          } else {
-            return LHSVal.udiv(RHSVal);
-          }
-        });
+      if (I.isExact()) {
+        APInt Q, R;
+        APInt::udivrem(LHSVal, RHSVal, Q, R);
+        if (!R.isZero())
+          return AnyValue::poison();
+        return Q;
+      } else {
+        return LHSVal.udiv(RHSVal);
+      }
+    });
   }
 
-  bool visitURem(BinaryOperator &I) {
-    return visitBinOp(
-        I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-          // Priority: Immediate UB > poison > normal value
-          if (RHS.isPoison()) {
-            reportImmediateUB("Division by zero (refine RHS to 0).");
-            return AnyValue::poison();
-          }
-          const APInt &RHSVal = RHS.asInteger();
-          if (RHSVal.isZero()) {
-            reportImmediateUB("Division by zero.");
-            return AnyValue::poison();
-          }
-          if (LHS.isPoison())
-            return AnyValue::poison();
-          const APInt &LHSVal = LHS.asInteger();
-          return LHSVal.urem(RHSVal);
-        });
+  void visitURem(BinaryOperator &I) {
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      // Priority: Immediate UB > poison > normal value
+      if (RHS.isPoison()) {
+        reportImmediateUB("Division by zero (refine RHS to 0).");
+        return AnyValue::poison();
+      }
+      const APInt &RHSVal = RHS.asInteger();
+      if (RHSVal.isZero()) {
+        reportImmediateUB("Division by zero.");
+        return AnyValue::poison();
+      }
+      if (LHS.isPoison())
+        return AnyValue::poison();
+      const APInt &LHSVal = LHS.asInteger();
+      return LHSVal.urem(RHSVal);
+    });
   }
 
-  bool visitTruncInst(TruncInst &Trunc) {
-    return visitIntUnOp(Trunc, [&](const APInt &Operand) -> AnyValue {
+  void visitTruncInst(TruncInst &Trunc) {
+    visitIntUnOp(Trunc, [&](const APInt &Operand) -> AnyValue {
       unsigned DestBW = Trunc.getType()->getScalarSizeInBits();
       if (Trunc.hasNoSignedWrap() && Operand.getSignificantBits() > DestBW)
         return AnyValue::poison();
@@ -367,8 +594,8 @@ public:
     });
   }
 
-  bool visitZExtInst(ZExtInst &ZExt) {
-    return visitIntUnOp(ZExt, [&](const APInt &Operand) -> AnyValue {
+  void visitZExtInst(ZExtInst &ZExt) {
+    visitIntUnOp(ZExt, [&](const APInt &Operand) -> AnyValue {
       uint32_t DestBW = ZExt.getDestTy()->getScalarSizeInBits();
       if (ZExt.hasNonNeg() && Operand.isNegative())
         return AnyValue::poison();
@@ -376,79 +603,92 @@ public:
     });
   }
 
-  bool visitSExtInst(SExtInst &SExt) {
-    return visitIntUnOp(SExt, [&](const APInt &Operand) -> AnyValue {
+  void visitSExtInst(SExtInst &SExt) {
+    visitIntUnOp(SExt, [&](const APInt &Operand) -> AnyValue {
       uint32_t DestBW = SExt.getDestTy()->getScalarSizeInBits();
       return Operand.sext(DestBW);
     });
   }
 
-  bool visitAnd(BinaryOperator &I) {
-    return visitIntBinOp(I, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+  void visitAnd(BinaryOperator &I) {
+    visitIntBinOp(I, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
       return LHS & RHS;
     });
   }
 
-  bool visitXor(BinaryOperator &I) {
-    return visitIntBinOp(I, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+  void visitXor(BinaryOperator &I) {
+    visitIntBinOp(I, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
       return LHS ^ RHS;
     });
   }
 
-  bool visitOr(BinaryOperator &I) {
-    return visitIntBinOp(
-        I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-          if (cast<PossiblyDisjointInst>(I).isDisjoint() && LHS.intersects(RHS))
-            return AnyValue::poison();
-          return LHS | RHS;
-        });
+  void visitOr(BinaryOperator &I) {
+    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
+      if (cast<PossiblyDisjointInst>(I).isDisjoint() && LHS.intersects(RHS))
+        return AnyValue::poison();
+      return LHS | RHS;
+    });
   }
 
-  bool visitShl(BinaryOperator &I) {
-    return visitIntBinOp(
-        I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-          if (RHS.uge(LHS.getBitWidth()))
-            return AnyValue::poison();
-          if (I.hasNoSignedWrap() && RHS.uge(LHS.getNumSignBits()))
-            return AnyValue::poison();
-          if (I.hasNoUnsignedWrap() && RHS.ugt(LHS.countl_zero()))
-            return AnyValue::poison();
-          return LHS.shl(RHS);
-        });
+  void visitShl(BinaryOperator &I) {
+    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
+      if (RHS.uge(LHS.getBitWidth()))
+        return AnyValue::poison();
+      if (I.hasNoSignedWrap() && RHS.uge(LHS.getNumSignBits()))
+        return AnyValue::poison();
+      if (I.hasNoUnsignedWrap() && RHS.ugt(LHS.countl_zero()))
+        return AnyValue::poison();
+      return LHS.shl(RHS);
+    });
   }
 
-  bool visitLShr(BinaryOperator &I) {
-    return visitIntBinOp(I,
-                         [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-                           if (RHS.uge(cast<PossiblyExactOperator>(I).isExact()
-                                           ? LHS.countr_zero() + 1
-                                           : LHS.getBitWidth()))
-                             return AnyValue::poison();
-                           return LHS.lshr(RHS);
-                         });
+  void visitLShr(BinaryOperator &I) {
+    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
+      if (RHS.uge(cast<PossiblyExactOperator>(I).isExact()
+                      ? LHS.countr_zero() + 1
+                      : LHS.getBitWidth()))
+        return AnyValue::poison();
+      return LHS.lshr(RHS);
+    });
   }
 
-  bool visitAShr(BinaryOperator &I) {
-    return visitIntBinOp(I,
-                         [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
-                           if (RHS.uge(cast<PossiblyExactOperator>(I).isExact()
-                                           ? LHS.countr_zero() + 1
-                                           : LHS.getBitWidth()))
-                             return AnyValue::poison();
-                           return LHS.ashr(RHS);
-                         });
+  void visitAShr(BinaryOperator &I) {
+    visitIntBinOp(I, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
+      if (RHS.uge(cast<PossiblyExactOperator>(I).isExact()
+                      ? LHS.countr_zero() + 1
+                      : LHS.getBitWidth()))
+        return AnyValue::poison();
+      return LHS.ashr(RHS);
+    });
   }
 
-  bool visitSelect(SelectInst &SI) {
+  void visitICmpInst(ICmpInst &I) {
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      if (LHS.isPoison() || RHS.isPoison())
+        return AnyValue::poison();
+      // TODO: handle pointer comparison.
+      const APInt &LHSVal = LHS.asInteger();
+      const APInt &RHSVal = RHS.asInteger();
+      if (I.hasSameSign() && LHSVal.isNonNegative() != RHSVal.isNonNegative())
+        return AnyValue::poison();
+      return AnyValue::boolean(
+          ICmpInst::compare(LHSVal, RHSVal, I.getPredicate()));
+    });
+  }
+
+  void visitSelect(SelectInst &SI) {
     // TODO: handle fast-math flags.
     if (SI.getCondition()->getType()->isIntegerTy(1)) {
       switch (getValue(SI.getCondition()).asBoolean()) {
       case BooleanKind::True:
-        return setResult(SI, getValue(SI.getTrueValue()));
+        setResult(SI, getValue(SI.getTrueValue()));
+        return;
       case BooleanKind::False:
-        return setResult(SI, getValue(SI.getFalseValue()));
+        setResult(SI, getValue(SI.getFalseValue()));
+        return;
       case BooleanKind::Poison:
-        return setResult(SI, AnyValue::getPoisonValue(Ctx, SI.getType()));
+        setResult(SI, AnyValue::getPoisonValue(Ctx, SI.getType()));
+        return;
       }
     }
 
@@ -471,12 +711,76 @@ public:
         break;
       }
     }
-    return setResult(SI, std::move(Res));
+    setResult(SI, std::move(Res));
   }
 
-  bool visitInstruction(Instruction &I) {
+  void visitInstruction(Instruction &I) {
     Handler.onUnrecognizedInstruction(I);
-    return false;
+    Status = false;
+  }
+
+  void visitExtractValueInst(ExtractValueInst &EVI) {
+    auto &Res = getValue(EVI.getAggregateOperand());
+    const AnyValue *Pos = &Res;
+    for (unsigned Idx : EVI.indices())
+      Pos = &Pos->asAggregate()[Idx];
+    setResult(EVI, *Pos);
+  }
+
+  void visitInsertValueInst(InsertValueInst &IVI) {
+    AnyValue Res = getValue(IVI.getAggregateOperand());
+    AnyValue *Pos = &Res;
+    for (unsigned Idx : IVI.indices())
+      Pos = &Pos->asAggregate()[Idx];
+    *Pos = getValue(IVI.getInsertedValueOperand());
+    setResult(IVI, std::move(Res));
+  }
+
+  void visitInsertElementInst(InsertElementInst &IEI) {
+    auto Res = getValue(IEI.getOperand(0));
+    auto &ResVec = Res.asAggregate();
+    auto &Idx = getValue(IEI.getOperand(2));
+    if (Idx.isPoison() || Idx.asInteger().uge(ResVec.size())) {
+      setResult(IEI, AnyValue::getPoisonValue(Ctx, IEI.getType()));
+      return;
+    }
+    ResVec[Idx.asInteger().getZExtValue()] = getValue(IEI.getOperand(1));
+    setResult(IEI, std::move(Res));
+  }
+
+  void visitExtractElementInst(ExtractElementInst &EEI) {
+    auto &SrcVec = getValue(EEI.getOperand(0)).asAggregate();
+    auto &Idx = getValue(EEI.getOperand(1));
+    if (Idx.isPoison() || Idx.asInteger().uge(SrcVec.size())) {
+      setResult(EEI, AnyValue::getPoisonValue(Ctx, EEI.getType()));
+      return;
+    }
+    setResult(EEI, SrcVec[Idx.asInteger().getZExtValue()]);
+  }
+
+  void visitShuffleVectorInst(ShuffleVectorInst &SVI) {
+    auto &LHSVec = getValue(SVI.getOperand(0)).asAggregate();
+    auto &RHSVec = getValue(SVI.getOperand(1)).asAggregate();
+    uint32_t Size = cast<VectorType>(SVI.getOperand(0)->getType())
+                        ->getElementCount()
+                        .getKnownMinValue();
+    std::vector<AnyValue> Res;
+    uint32_t DstLen = Ctx.getEVL(SVI.getType()->getElementCount());
+    Res.reserve(DstLen);
+    uint32_t Stride = SVI.getShuffleMask().size();
+    // For scalable vectors, we need to repeat the shuffle mask until we fill
+    // the destination vector.
+    for (uint32_t Off = 0; Off != DstLen; Off += Stride) {
+      for (int Idx : SVI.getShuffleMask()) {
+        if (Idx == PoisonMaskElem)
+          Res.push_back(AnyValue::poison());
+        else if (Idx < static_cast<int>(Size))
+          Res.push_back(LHSVec[Idx]);
+        else
+          Res.push_back(RHSVec[Idx - Size]);
+      }
+    }
+    setResult(SVI, std::move(Res));
   }
 
   /// This function implements the main interpreter loop.
@@ -490,10 +794,10 @@ public:
       CurrentFrame = &Top;
       if (Top.State == FrameState::Entry) {
         Handler.onFunctionEntry(Top.Func, Top.Args, Top.CallSite);
-        // TODO: Handle arg attributes
       } else {
         assert(Top.State == FrameState::Pending &&
                "Expected to return from a callee.");
+        returnFromCallee();
       }
 
       Top.State = FrameState::Running;
@@ -502,16 +806,13 @@ public:
         assert(Top.State == FrameState::Running &&
                "Expected to be in running state.");
         if (MaxSteps != 0 && Steps >= MaxSteps) {
-          reportImmediateUB("Exceeded maximum number of execution steps.");
+          reportError("Exceeded maximum number of execution steps.");
           break;
         }
         ++Steps;
 
         Instruction &I = *Top.PC;
-        if (!visit(&I)) {
-          Status = false;
-          break;
-        }
+        visit(&I);
         if (!Status)
           break;
 
@@ -532,7 +833,6 @@ public:
       if (Top.State == FrameState::Exit) {
         assert((Top.Func.getReturnType()->isVoidTy() || !Top.RetVal.isNone()) &&
                "Expected return value to be set on function exit.");
-        // TODO:Handle retval attributes
         Handler.onFunctionExit(Top.Func, Top.RetVal);
         CallStack.pop_back();
       } else {
