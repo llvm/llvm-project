@@ -29,8 +29,21 @@ subroutine default_none_seq_loop
   enddo
 end subroutine
 
+! Test that DEFAULT(NONE) error check sees implicit references
+subroutine default_none_nested()
+  integer :: a
+
+  !$omp parallel default(none)
+  !$omp task
+  !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-sharing attribute clause
+  a = 1
+  !$omp end task
+  !$omp end parallel
+end subroutine default_none_nested
+
 program mm
   call default_none()
   call default_none_seq_loop()
+  call default_none_nested()
   !TODO: private, firstprivate, shared
 end
