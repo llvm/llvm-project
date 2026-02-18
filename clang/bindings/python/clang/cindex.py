@@ -109,7 +109,7 @@ if TYPE_CHECKING:
     StrPath: TypeAlias = TUnion[str, os.PathLike[str]]
     # The type that is compatible with os.fspath:
     # str, bytes, or os.PathLikes that return either of these two
-    StrBytesPath: TypeAlias = TUnion[str, bytes, os.PathLike[str], os.PathLike[bytes]]
+    StrBytesPath: TypeAlias = TUnion[StrPath, bytes, os.PathLike[bytes]]
     InMemoryFile: TypeAlias = "tuple[StrBytesPath, TUnion[str, bytes, TextIOWrapper]]"
     LibFunc: TypeAlias = TUnion[
         "tuple[str, Optional[list[Any]]]",
@@ -3837,10 +3837,12 @@ class TranslationUnit(ClangObject):
         2-tuple of SourceLocation or as a SourceRange. If both are defined,
         behavior is undefined.
         """
+        if locations is not None and extent is not None:
+            raise TypeError("get_tokens() requires exactly one argument (two provided)")
         if locations is not None:
             extent = SourceRange(start=locations[0], end=locations[1])
         if extent is None:
-            raise TypeError("get_tokens() requires at least one argument")
+            raise TypeError("get_tokens() requires exactly one argument (none provided)")
 
         return TokenGroup.get_tokens(self, extent)
 
