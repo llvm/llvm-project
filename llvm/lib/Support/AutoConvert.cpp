@@ -133,12 +133,12 @@ ErrorOr<bool> llvm::needzOSConversion(const Twine &FileName, const int FD) {
 }
 
 std::error_code llvm::copyFileTagAttributes(const std::string &Source,
-                                            const int Destination) {
+                                            const int DestinationFD) {
   struct stat SourceAttributes;
   if (stat(Source.c_str(), &SourceAttributes) == -1)
     return std::error_code(errno, std::generic_category());
 
-  return setzOSFileTag(Destination, SourceAttributes.st_tag.ft_ccsid,
+  return setzOSFileTag(DestinationFD, SourceAttributes.st_tag.ft_ccsid,
                        SourceAttributes.st_tag.ft_txtflag);
 }
 

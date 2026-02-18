@@ -63,7 +63,7 @@ ErrorOr<bool> needzOSConversion(const Twine &FileName, const int FD = -1);
  *          otherwise returns a specific error_code.
  */
 std::error_code copyFileTagAttributes(const std::string &Source,
-                                      const int Destination);
+                                      const int DestinationFD);
 
 #endif /* __MVS__*/
 
