@@ -1056,3 +1056,30 @@ module {
 // CHECK:         tensor.expand_shape
 // CHECK:         linalg.generic {{.*}}, iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "reduction"]}
 // CHECK-SAME:     ins(%[[ARG0]], %[[FUSED]]#1 : tensor<1x1x2x1xf32>, tensor<4x1x1x1xf32>)
+
+// -----
+
+// Test that splat constant fusion uses dialect's materializeConstant.
+// This test uses test.constant to verify non-arith constant creation.
+#map0 = affine_map<(d0, d1) -> (d0, d1)>
+func.func @generic_op_test_constant_fusion(%arg0 : tensor<4x8xf32>) -> tensor<4x8xf32>
+{
+  %cst = "test.constant"() {value = dense<3.0> : tensor<4x8xf32>} : () -> tensor<4x8xf32>
+  %0 = tensor.empty() : tensor<4x8xf32>
+  %1 = linalg.generic {
+    indexing_maps = [#map0, #map0, #map0],
+    iterator_types = ["parallel", "parallel"]}
+    ins(%cst, %arg0 : tensor<4x8xf32>, tensor<4x8xf32>)
+    outs(%0 : tensor<4x8xf32>) {
+    ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):
+      %2 = arith.mulf %arg1, %arg2 : f32
+      linalg.yield %2 : f32
+    } -> tensor<4x8xf32>
+  return %1 : tensor<4x8xf32>
+}
+// CHECK-LABEL: func @generic_op_test_constant_fusion
+//       CHECK:   %[[CST:.*]] = "test.constant"() <{value = 3.000000e+00 : f32}> : () -> f32
+//       CHECK:   linalg.generic
+//  CHECK-SAME:     indexing_maps = [#{{.*}}, #{{.*}}]
+//       CHECK:   ^{{.*}}(%[[ARG1:[a-zA-Z0-9_]*]]: f32, %{{.*}}: f32)
+//       CHECK:     arith.mulf %[[ARG1]], %[[CST]]
