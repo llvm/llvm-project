@@ -1,4 +1,4 @@
-//===-- Implementation of f16mul function ---------------------------------===//
+//===-- Shared f16mul function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/f16mul.h"
+#ifndef LLVM_LIBC_SHARED_MATH_F16MUL_H
+#define LLVM_LIBC_SHARED_MATH_F16MUL_H
+
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "src/__support/math/f16mul.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float16, f16mul, (double x, double y)) {
-  return math::f16mul(x, y);
-}
+using math::f16mul;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
+
+#endif // LLVM_LIBC_SHARED_MATH_F16MUL_H
