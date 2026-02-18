@@ -48,7 +48,7 @@ jobs:
           base_sha: 'HEAD~1'
           sha: 'HEAD'
           files: |
-            **/*.{py}
+            **/*.py
       
       - name: Listed files
         env:
