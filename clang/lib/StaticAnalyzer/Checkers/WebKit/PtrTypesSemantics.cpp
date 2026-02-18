@@ -516,17 +516,38 @@ class TrivialFunctionAnalysisVisitor
     return Result;
   }
 
-  bool CanTriviallyDestruct(const clang::QualType QT) {
-    auto *T = QT.getTypePtrOrNull();
-    if (!T)
-      return false;
-    if (T->isIntegralOrEnumerationType())
+  bool CanTriviallyDestruct(QualType Ty) {
+    assert(!Ty.isNull());
+
+    // T*, T& or T&& does not run its destructor.
+    if (Ty->isPointerOrReferenceType())
       return true;
-    auto *R = T->getAsCXXRecordDecl();
-    if (!R)
-      return false;
-    auto *Dtor = R->getDestructor();
-    return !Dtor || Dtor->isTrivial() || IsFunctionTrivial(Dtor);
+
+    // Primitive types don't have destructors.
+    if (Ty->isIntegralOrEnumerationType())
+      return true;
+
+    if (const auto *R = Ty->getAsCXXRecordDecl()) {
+      // C++ trivially destructible classes are fine.
+      if (R->hasTrivialDestructor())
+        return true;
+
+      // For Webkit, side-effects are fine as long as we don't delete objects,
+      // so check recursively.
+      if (const auto *Dtor = R->getDestructor())
+        return IsFunctionTrivial(Dtor);
+    }
+
+    // Structs in C are trivial.
+    if (Ty->isRecordType())
+      return true;
+
+    // For arrays it depends on the element type.
+    // FIXME: We should really use ASTContext::getAsArrayType instead.
+    if (const auto *AT = Ty->getAsArrayTypeUnsafe())
+      return CanTriviallyDestruct(AT->getElementType());
+
+    return false; // Otherwise it's likely not trivial.
   }
 
 public:
@@ -560,19 +581,8 @@ public:
   }
 
   bool HasTrivialDestructor(const VarDecl *VD) {
-    return WithCachedResult(VD, [&]() {
-      auto QT = VD->getType();
-      if (QT.isPODType(VD->getASTContext()))
-        return true;
-      auto *Type = QT.getTypePtrOrNull();
-      if (!Type)
-        return false;
-      if (isa<ReferenceType>(Type))
-        return true; // T& or T&& does not run its destructor.
-      if (auto *AT = dyn_cast<ArrayType>(Type))
-        return CanTriviallyDestruct(AT->getElementType());
-      return CanTriviallyDestruct(QT);
-    });
+    return WithCachedResult(
+        VD, [&] { return CanTriviallyDestruct(VD->getType()); });
   }
 
   bool IsStatementTrivial(const Stmt *S) {
@@ -614,6 +624,7 @@ public:
 
   bool VisitDeclStmt(const DeclStmt *DS) {
     for (auto &Decl : DS->decls()) {
+      // FIXME: Handle DecompositionDecls.
       if (auto *VD = dyn_cast<VarDecl>(Decl)) {
         if (!HasTrivialDestructor(VD))
           return false;
