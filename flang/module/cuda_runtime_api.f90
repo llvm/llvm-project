@@ -17,13 +17,13 @@ interface cudaforgetdefaultstream
     !DIR$ IGNORE_TKR (TKR) devptr
     integer, device  :: devptr(*)
   end function
-  integer(kind=cuda_stream_kind) function cudastreamgetdefaultnull()
+  integer(kind=cuda_stream_kind) function cudagetstreamdefaultnull()
     import cuda_stream_kind
   end function
 end interface
 
 interface cudaforsetdefaultstream
-  integer function cudasetdefaultstream(stream)
+  integer function cudasetstreamdefault(stream)
     import cuda_stream_kind
     !DIR$ IGNORE_TKR (K) stream
     integer(kind=cuda_stream_kind), value :: stream
