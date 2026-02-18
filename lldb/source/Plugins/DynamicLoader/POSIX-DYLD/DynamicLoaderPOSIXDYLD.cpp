@@ -880,7 +880,7 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   } else if (metadata.dtv_offset == metadata.pthread_size) {
     // The DTV pointer field is located right after `pthread`. This means that,
     // for this architecture, `TLS_DTV_AT_TP` is set to `1` in `libc`, which may
-    // correspond to the "Version I" memory layout, in which the thread pointer
+    // correspond to the "Variant I" memory layout, in which the thread pointer
     // points directly to the `dtv` field. However, for different architectures,
     // the position of the `dtv` field relative to the thread pointer may vary,
     // so the following calculations must be adjusted for each platform.
