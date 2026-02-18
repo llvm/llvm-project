@@ -3750,6 +3750,14 @@ protected:
       defaultDestination = *convertedBlock;
     }
 
+    // Deal with the case where there is only a default destination.  Handle it
+    // now because emitting empty case values is not legal.
+    if (caseValues.empty()) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(select, defaultOperands,
+                                                    defaultDestination);
+      return mlir::success();
+    }
+
     selector =
         this->integerCast(loc, rewriter, rewriter.getI64Type(), selector);
 

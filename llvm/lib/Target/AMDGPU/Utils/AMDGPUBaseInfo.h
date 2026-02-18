@@ -98,7 +98,7 @@ struct GcnBufferFormatInfo {
 };
 
 struct MAIInstInfo {
-  uint16_t Opcode;
+  uint32_t Opcode;
   bool is_dgemm;
   bool is_gfx940_xdl;
 };
@@ -121,7 +121,7 @@ struct True16D16Info {
 };
 
 struct WMMAInstInfo {
-  uint16_t Opcode;
+  uint32_t Opcode;
   bool is_wmma_xdl;
 };
 
@@ -416,7 +416,7 @@ inline bool hasNamedOperand(uint64_t Opcode, OpName NamedIdx) {
 }
 
 LLVM_READONLY
-int getSOPPWithRelaxation(uint16_t Opcode);
+int32_t getSOPPWithRelaxation(uint32_t Opcode);
 
 struct MIMGBaseOpcodeInfo {
   MIMGBaseOpcode BaseOpcode;
@@ -522,8 +522,8 @@ unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
                            bool IsG16Supported);
 
 struct MIMGInfo {
-  uint16_t Opcode;
-  uint16_t BaseOpcode;
+  uint32_t Opcode;
+  uint32_t BaseOpcode;
   uint8_t MIMGEncoding;
   uint8_t VDataDwords;
   uint8_t VAddrDwords;
@@ -646,7 +646,7 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                                   const MCSubtargetInfo &STI);
 
 LLVM_READONLY
-int getMCOpcode(uint16_t Opcode, unsigned Gen);
+int32_t getMCOpcode(uint32_t Opcode, unsigned Gen);
 
 LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3);
@@ -1705,6 +1705,7 @@ bool isGFX10Plus(const MCSubtargetInfo &STI);
 bool isNotGFX10Plus(const MCSubtargetInfo &STI);
 bool isGFX10Before1030(const MCSubtargetInfo &STI);
 bool isGFX11(const MCSubtargetInfo &STI);
+bool isGFX1170(const MCSubtargetInfo &STI);
 bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);

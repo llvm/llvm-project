@@ -36,6 +36,18 @@ define nofpclass(inf nan norm sub) float @ret_only_zero_sqrt(float %x) {
   ret float %result
 }
 
+define nofpclass(inf nan norm sub) float @ret_only_zero_sqrt_insert_point(float %x) {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_only_zero_sqrt_insert_point(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[X]])
+; CHECK-NEXT:    [[BARRIER:%.*]] = call float @llvm.arithmetic.fence.f32(float [[RESULT]])
+; CHECK-NEXT:    ret float [[BARRIER]]
+;
+  %result = call float @llvm.sqrt.f32(float %x)
+  %barrier = call float @llvm.arithmetic.fence.f32(float %result)
+  ret float %barrier
+}
+
 define nofpclass(inf nan norm sub) float @ret_only_zero_sqrt_preserve_flags(float %x) {
 ; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_only_zero_sqrt_preserve_flags(
 ; CHECK-SAME: float [[X:%.*]]) {

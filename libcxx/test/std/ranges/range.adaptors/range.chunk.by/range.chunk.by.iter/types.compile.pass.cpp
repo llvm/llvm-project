@@ -22,6 +22,7 @@
 
 #include "../types.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 struct TestValueTypeAndDifferenceType {
   template <class Iter>

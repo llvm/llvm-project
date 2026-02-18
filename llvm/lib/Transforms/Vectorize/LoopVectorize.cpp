@@ -318,7 +318,7 @@ static cl::opt<bool> EnableLoadStoreRuntimeInterleave(
         "Enable runtime interleaving until load/store ports are saturated"));
 
 /// The number of stores in a loop that are allowed to need predication.
-static cl::opt<unsigned> NumberOfStoresToPredicate(
+cl::opt<unsigned> NumberOfStoresToPredicate(
     "vectorize-num-stores-pred", cl::init(1), cl::Hidden,
     cl::desc("Max number of stores to be predicated behind an if."));
 
@@ -374,6 +374,11 @@ cl::opt<bool> llvm::VPlanPrintAfterAll(
 cl::list<std::string> llvm::VPlanPrintAfterPasses(
     "vplan-print-after", cl::Hidden,
     cl::desc("Print VPlans after specified VPlan transformations (regexp)."));
+
+cl::opt<bool> llvm::VPlanPrintVectorRegionScope(
+    "vplan-print-vector-region-scope", cl::init(false), cl::Hidden,
+    cl::desc("Limit VPlan printing to vector loop region in "
+             "`-vplan-print-after*` if the plan has one."));
 #endif
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the
@@ -4134,10 +4139,10 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPReplicateSC:
       case VPRecipeBase::VPInstructionSC:
       case VPRecipeBase::VPCanonicalIVPHISC:
+      case VPRecipeBase::VPCurrentIterationPHISC:
       case VPRecipeBase::VPVectorPointerSC:
       case VPRecipeBase::VPVectorEndPointerSC:
       case VPRecipeBase::VPExpandSCEVSC:
-      case VPRecipeBase::VPEVLBasedIVPHISC:
       case VPRecipeBase::VPPredInstPHISC:
       case VPRecipeBase::VPBranchOnMaskSC:
         continue;
@@ -4667,8 +4672,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
-             IsaPred<VPEVLBasedIVPHIRecipe>)) {
-    LLVM_DEBUG(dbgs() << "LV: Preference for VP intrinsics indicated. "
+             IsaPred<VPCurrentIterationPHIRecipe>)) {
+    LLVM_DEBUG(dbgs() << "LV: Loop requires variable-length step. "
                          "Unroll factor forced to be 1.\n");
     return 1;
   }
@@ -5883,9 +5888,9 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // if the loaded register is involved in an address computation, it is
       // instead changed here when we know this is the case.
       InstWidening Decision = getWideningDecision(I, VF);
-      if (Decision == CM_Widen || Decision == CM_Widen_Reverse ||
-          (!isPredicatedInst(I) && !Legal->isUniformMemOp(*I, VF) &&
-           Decision == CM_Scalarize)) {
+      if (!isPredicatedInst(I) &&
+          (Decision == CM_Widen || Decision == CM_Widen_Reverse ||
+           (!Legal->isUniformMemOp(*I, VF) && Decision == CM_Scalarize))) {
         // Scalarize a widened load of address or update the cost of a scalar
         // load of an address.
         setWideningDecision(
@@ -6890,10 +6895,6 @@ unsigned VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
   return CM.getPredBlockCostDivisor(CostKind, BB);
 }
 
-bool VPCostContext::useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF) {
-  return CM.useEmulatedMaskMemRefHack(I, VF);
-}
-
 InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                                           VPCostContext &CostCtx) const {
@@ -7449,11 +7450,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     return DenseMap<const SCEV *, Value *>();
   }
 
-  VPlanTransforms::narrowInterleaveGroups(
-      BestVPlan, BestVF,
-      TTI.getRegisterBitWidth(BestVF.isScalable()
-                                  ? TargetTransformInfo::RGK_ScalableVector
-                                  : TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
@@ -7465,13 +7461,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Expand BranchOnTwoConds after dissolution, when latch has direct access to
   // its successors.
   VPlanTransforms::expandBranchOnTwoConds(BestVPlan);
-  // Canonicalize EVL loops after regions are dissolved.
-  VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
+  // Convert loops with variable-length stepping after regions are dissolved.
+  VPlanTransforms::convertToVariableLengthStep(BestVPlan);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
       CM.requiresScalarEpilogue(BestVF.isVector()));
-  VPlanTransforms::materializeVFAndVFxUF(BestVPlan, VectorPH, BestVF);
+  VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
 
@@ -8134,6 +8130,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
       CM.getInLoopReductions(), Hints.allowReordering());
 
+  VPlanTransforms::simplifyRecipes(*VPlan0);
+
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
@@ -8151,6 +8149,10 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                        CM.getMaxSafeElements());
         RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
       }
+
+      if (auto P = VPlanTransforms::narrowInterleaveGroups(*Plan, TTI))
+        VPlans.push_back(std::move(P));
+
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
@@ -8234,7 +8236,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  VPlanTransforms::introduceMasksAndLinearize(*Plan, CM.foldTailByMasking());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize, *Plan,
+                           CM.foldTailByMasking());
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
@@ -8463,7 +8466,9 @@ void LoopVectorizationPlanner::addReductionResultComputation(
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-    if (!PhiR)
+    // TODO: Remove check for constant incoming value once removeDeadRecipes is
+    // used on VPlan0.
+    if (!PhiR || isa<VPIRValue>(PhiR->getOperand(1)))
       continue;
 
     const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
@@ -9064,11 +9069,17 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   AddFreezeForFindLastIVReductions(MainPlan, true);
   AddFreezeForFindLastIVReductions(EpiPlan, false);
 
-  VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
-  VPValue *VectorTC = &MainPlan.getVectorTripCount();
+  VPValue *VectorTC = nullptr;
+  auto *Term =
+      MainPlan.getVectorLoopRegion()->getExitingBasicBlock()->getTerminator();
+  [[maybe_unused]] bool MatchedTC =
+      match(Term, m_BranchOnCount(m_VPValue(), m_VPValue(VectorTC)));
+  assert(MatchedTC && "must match vector trip count");
+
   // If there is a suitable resume value for the canonical induction in the
   // scalar (which will become vector) epilogue loop, use it and move it to the
   // beginning of the scalar preheader. Otherwise create it below.
+  VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
   auto ResumePhiIter =
       find_if(MainScalarPH->phis(), [VectorTC](VPRecipeBase &R) {
         return match(&R, m_VPInstruction<Instruction::PHI>(m_Specific(VectorTC),
@@ -9503,15 +9514,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       reportVectorizationFailure("Auto-vectorization of loops with uncountable "
                                  "early exit is not enabled",
                                  "UncountableEarlyExitLoopsDisabled", ORE, L);
-      return false;
-    }
-    SmallVector<BasicBlock *, 8> ExitingBlocks;
-    L->getExitingBlocks(ExitingBlocks);
-    // TODO: Support multiple uncountable early exits.
-    if (ExitingBlocks.size() - LVL.getCountableExitingBlocks().size() > 1) {
-      reportVectorizationFailure("Auto-vectorization of loops with multiple "
-                                 "uncountable early exits is not yet supported",
-                                 "MultipleUncountableEarlyExits", ORE, L);
       return false;
     }
   }

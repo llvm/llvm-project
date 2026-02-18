@@ -181,7 +181,7 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
   const mlir::Value length = mlir::LLVM::ConstantOp::create(
-      rewriter, op.getLoc(), rewriter.getI32Type(), op.getLength(layout));
+      rewriter, op.getLoc(), rewriter.getI64Type(), op.getLength(layout));
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
       op, adaptor.getDst(), adaptor.getSrc(), length, op.getIsVolatile());
@@ -915,8 +915,9 @@ mlir::LogicalResult CIRToLLVMAtomicCmpXchgOpLowering::matchAndRewrite(
   auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
       rewriter, op.getLoc(), adaptor.getPtr(), expected, desired,
       getLLVMMemOrder(adaptor.getSuccOrder()),
-      getLLVMMemOrder(adaptor.getFailOrder()));
-  assert(!cir::MissingFeatures::atomicScope());
+      getLLVMMemOrder(adaptor.getFailOrder()),
+      getLLVMSyncScope(op.getSyncScope()));
+
   cmpxchg.setAlignment(adaptor.getAlignment());
   cmpxchg.setWeak(adaptor.getWeak());
   cmpxchg.setVolatile_(adaptor.getIsVolatile());
@@ -1110,11 +1111,12 @@ mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
   }
 
   mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(op.getMemOrder());
+  llvm::StringRef llvmSyncScope = getLLVMSyncScope(op.getSyncScope());
   mlir::LLVM::AtomicBinOp llvmBinOp =
       getLLVMAtomicBinOp(op.getBinop(), isInt, isSignedInt);
-  auto rmwVal = mlir::LLVM::AtomicRMWOp::create(rewriter, op.getLoc(),
-                                                llvmBinOp, adaptor.getPtr(),
-                                                adaptor.getVal(), llvmOrder);
+  auto rmwVal = mlir::LLVM::AtomicRMWOp::create(
+      rewriter, op.getLoc(), llvmBinOp, adaptor.getPtr(), adaptor.getVal(),
+      llvmOrder, llvmSyncScope);
 
   mlir::Value result = rmwVal.getResult();
   if (!op.getFetchFirst()) {
@@ -1669,8 +1671,9 @@ mlir::LogicalResult CIRToLLVMFMaxNumOpLowering::matchAndRewrite(
     cir::FMaxNumOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
-  rewriter.replaceOpWithNewOp<mlir::LLVM::MaxNumOp>(op, resTy, adaptor.getLhs(),
-                                                    adaptor.getRhs());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MaxNumOp>(
+      op, resTy, adaptor.getLhs(), adaptor.getRhs(),
+      mlir::LLVM::FastmathFlags::nsz);
   return mlir::success();
 }
 
@@ -1678,8 +1681,9 @@ mlir::LogicalResult CIRToLLVMFMinNumOpLowering::matchAndRewrite(
     cir::FMinNumOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
-  rewriter.replaceOpWithNewOp<mlir::LLVM::MinNumOp>(op, resTy, adaptor.getLhs(),
-                                                    adaptor.getRhs());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MinNumOp>(
+      op, resTy, adaptor.getLhs(), adaptor.getRhs(),
+      mlir::LLVM::FastmathFlags::nsz);
   return mlir::success();
 }
 
@@ -1994,6 +1998,27 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+mlir::LogicalResult
+cir::direct::CIRToLLVMVecMaskedLoadOpLowering::matchAndRewrite(
+    cir::VecMaskedLoadOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  const mlir::Type llvmResTy =
+      convertTypeForMemory(*getTypeConverter(), dataLayout, op.getType());
+
+  std::optional<size_t> opAlign = op.getAlignment();
+  unsigned alignment =
+      (unsigned)opAlign.value_or(dataLayout.getTypeABIAlignment(llvmResTy));
+
+  mlir::IntegerAttr alignAttr = rewriter.getI32IntegerAttr(alignment);
+
+  auto newLoad = mlir::LLVM::MaskedLoadOp::create(
+      rewriter, op.getLoc(), llvmResTy, adaptor.getAddr(), adaptor.getMask(),
+      adaptor.getPassThru(), alignAttr);
+
+  rewriter.replaceOp(op, newLoad.getResult());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
     cir::StoreOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -2250,6 +2275,17 @@ mlir::LogicalResult CIRToLLVMFAbsOpLowering::matchAndRewrite(
   mlir::Type resTy = typeConverter->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::FAbsOp>(op, resTy,
                                                   adaptor.getOperands()[0]);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMAbsOpLowering::matchAndRewrite(
+    cir::AbsOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  auto absOp = mlir::LLVM::AbsOp::create(rewriter, op.getLoc(), resTy,
+                                         adaptor.getOperands()[0],
+                                         adaptor.getMinIsPoison());
+  rewriter.replaceOp(op, absOp);
   return mlir::success();
 }
 
@@ -3825,6 +3861,25 @@ mlir::LogicalResult CIRToLLVMEhTypeIdOpLowering::matchAndRewrite(
       op.getTypeSymAttr());
   rewriter.replaceOpWithNewOp<mlir::LLVM::EhTypeidForOp>(
       op, rewriter.getI32Type(), addrOp);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMEhSetjmpOpLowering::matchAndRewrite(
+    cir::EhSetjmpOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type returnType = typeConverter->convertType(op.getType());
+  mlir::LLVM::CallIntrinsicOp newOp =
+      createCallLLVMIntrinsicOp(rewriter, op.getLoc(), "llvm.eh.sjlj.setjmp",
+                                returnType, adaptor.getEnv());
+  rewriter.replaceOp(op, newOp);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMEhLongjmpOpLowering::matchAndRewrite(
+    cir::EhLongjmpOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm.eh.sjlj.longjmp",
+                                   /*resultTy=*/{}, adaptor.getOperands());
   return mlir::success();
 }
 

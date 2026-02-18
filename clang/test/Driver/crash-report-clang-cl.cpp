@@ -2,7 +2,7 @@
 // RUN: rm -rf %t
 // RUN: mkdir %t
 
-// RUN: not %clang_cl -fsyntax-only /Brepro /source-charset:utf-8 \
+// RUN: not %crash_opt %clang_cl -fsyntax-only /Brepro /source-charset:utf-8 \
 // RUN:     -fcrash-diagnostics-dir=%t -- %s 2>&1 | FileCheck %s
 // RUN: cat %t/crash-report-clang-cl-*.cpp | FileCheck --check-prefix=CHECKSRC %s
 // RUN: cat %t/crash-report-clang-cl-*.sh | FileCheck --check-prefix=CHECKSH %s
