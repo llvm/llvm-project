@@ -5799,6 +5799,35 @@ def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
   }];
 }
 
+def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
+  let summary = "Computes the absolute value of a signed integer";
+  let description = [{
+    `cir.abs` computes the absolute value of a signed integer or vector
+    of signed integers.
+
+    The `min_is_poison` attribute indicates whether the result value is a
+    poison value if the argument is statically or dynamically the minimum
+    value for the type.
+
+    Example:
+
+    ```mlir
+      %0 = cir.const #cir.int<-42> : s32i
+      %1 = cir.abs %0 min_is_poison : s32i
+      %2 = cir.abs %3 : !cir.vector<!s32i x 4>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_AnySIntOrVecOfSIntType:$src,
+    UnitAttr:$min_is_poison
+  );
+
+  let results = (outs CIR_AnySIntOrVecOfSIntType:$result);
+
+  let assemblyFormat = "$src ( `min_is_poison` $min_is_poison^ )? `:` type($src) attr-dict";
+}
+
 def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
   let summary = "Computes the floating-point floor value";
   let description = [{
