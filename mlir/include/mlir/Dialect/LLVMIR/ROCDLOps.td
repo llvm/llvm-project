@@ -211,6 +211,19 @@ class ROCDL_SpecialIdRegisterOp<string mnemonic> :
       build($_builder, $_state, resultType, ::mlir::LLVM::ConstantRangeAttr{});
     }]>
   ];
+  let description = [{
+    Read a hardware register for thread/workgroup/cluster identification.
+    An optional `range` attribute can constrain the returned value.
+
+    Example:
+    ```mlir
+    // Read the workitem id in the x dimension.
+    %0 = rocdl.workitem.id.x : i32
+
+    // Read with a known range constraint.
+    %1 = rocdl.workitem.id.x range <i32, 0, 64> : i32
+    ```
+  }];
 }
 
 // TODO(krzysz00): This should be a lowering pattern, not an op.
@@ -272,6 +285,18 @@ class ROCDL_MbcntOp<string mnemonic> :
   let assemblyFormat = [{
     $in0 `,` $in1  attr-dict `:` `(` type($in0) `,` type($in1) `)` `->` type($res)
    }];
+  let description = [{
+    Masked bit count of active threads in a wavefront.
+
+    Example:
+    ```mlir
+    // Count active threads in the low 32 lanes.
+    %lo = rocdl.mbcnt.lo %mask, %base : (i32, i32) -> i32
+
+    // Count active threads in the high 32 lanes.
+    %hi = rocdl.mbcnt.hi %mask, %lo : (i32, i32) -> i32
+    ```
+  }];
 }
 
 def ROCDL_MbcntLoOp : ROCDL_MbcntOp<"lo">;
@@ -284,6 +309,15 @@ def ROCDL_DsSwizzleOp : ROCDL_ConcreteNonMemIntrOp<"ds_swizzle", [], 1>,
   let assemblyFormat = [{
     $src `,` $offset  attr-dict `:` `(` type($src) `,` type($offset) `)` `->` type($res)
    }];
+  let description = [{
+    Perform a data-sharing swizzle operation within a wavefront.
+
+    Example:
+    ```mlir
+    // Swizzle data within a wavefront.
+    %0 = rocdl.ds_swizzle %src, %offset : (i32, i32) -> i32
+    ```
+  }];
 }
 
 def ROCDL_DsBpermuteOp : ROCDL_ConcreteNonMemIntrOp<"ds_bpermute", [], 1>,
@@ -293,6 +327,15 @@ def ROCDL_DsBpermuteOp : ROCDL_ConcreteNonMemIntrOp<"ds_bpermute", [], 1>,
   let assemblyFormat = [{
     $index `,` $src  attr-dict `:` `(` type($index) `,` type($src) `)` `->` type($res)
    }];
+  let description = [{
+    Perform a backward permute operation across lanes using LDS hardware.
+
+    Example:
+    ```mlir
+    // Backward permute across lanes.
+    %0 = rocdl.ds_bpermute %index, %src : (i32, i32) -> i32
+    ```
+  }];
 }
 
 def ROCDL_BallotOp :
@@ -415,20 +458,57 @@ def ROCDL_GridDimZOp : ROCDL_DimGetterFunctionOp<"grid.dim.z",
 def ROCDL_SWaitcntOp : ROCDL_ConcreteNonMemIntrOp<"s.waitcnt", [], 0, [0], ["bitfield"]>,
   Arguments<(ins I32Attr:$bitfield)> {
   let assemblyFormat = "attr-dict $bitfield";
+  let description = [{
+    Wait for outstanding memory operations to complete, as specified by a
+    bitfield whose semantics depend on the target chipset.
+
+    Example:
+    ```mlir
+    // Wait for all counters to reach zero.
+    rocdl.s.waitcnt 0
+    ```
+  }];
 }
 
 def ROCDL_SSleepOp : ROCDL_ConcreteNonMemIntrOp<"s.sleep", [], 0, [0], ["count"]>,
   Arguments<(ins I32Attr:$count)> {
   let assemblyFormat = "attr-dict $count";
+  let description = [{
+    Sleep for a number of clock cycles.
+
+    Example:
+    ```mlir
+    // Sleep for a minimum duration.
+    rocdl.s.sleep 0
+    ```
+  }];
 }
 
 def ROCDL_SNopOp : ROCDL_ConcreteNonMemIntrOp<"s.nop", [], 0, [0], ["count"]>,
   Arguments<(ins I16Attr:$count)> {
   let assemblyFormat = "attr-dict $count";
+  let description = [{
+    Insert a number of NOP cycles.
+
+    Example:
+    ```mlir
+    // Insert a no-op.
+    rocdl.s.nop 0
+    ```
+  }];
 }
 
 def ROCDL_SBarrierOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier", [], 0> {
   let assemblyFormat = "attr-dict";
+  let description = [{
+    Insert a workgroup barrier without memory fences.
+
+    Example:
+    ```mlir
+    // Synchronize threads within a workgroup.
+    rocdl.s.barrier
+    ```
+  }];
 }
 
 def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
@@ -477,6 +557,15 @@ def ROCDL_BarrierSignalOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal", [], 0
   Arguments<(ins I32Attr:$id)> {
   let results = (outs);
   let assemblyFormat = "`id` `=` $id attr-dict";
+  let description = [{
+    Signal a barrier by id. Available on gfx1250+.
+
+    Example:
+    ```mlir
+    // Signal barrier with id -1 (all barriers).
+    rocdl.s.barrier.signal id = -1
+    ```
+  }];
 }
 
 def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 0, 0, 0, 0, [1], ["memberCnt"]>,
@@ -528,6 +617,15 @@ def ROCDL_BarrierWaitOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.wait", [], 0, [0
   Arguments<(ins I16Attr:$id)> {
   let results = (outs);
   let assemblyFormat = "`id` `=` $id attr-dict";
+  let description = [{
+    Wait on a barrier by id. Available on gfx1250+.
+
+    Example:
+    ```mlir
+    // Wait on barrier with id -1 (all barriers).
+    rocdl.s.barrier.wait id = -1
+    ```
+  }];
 }
 
 def ROCDL_BarrierSignalIsfirstOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal.isfirst", [], 1, [0], ["id"]>,
@@ -776,11 +874,29 @@ def ROCDL_WaitAsyncmarkOp: ROCDL_ConcreteNonMemIntrOp<"wait.asyncmark", [], 0, [
 def ROCDL_SetPrioOp : ROCDL_ConcreteNonMemIntrOp<"s.setprio", [], 0, [0], ["priority"]>,
   Arguments<(ins I16Attr:$priority)> {
   let assemblyFormat = "$priority attr-dict";
+  let description = [{
+    Set the wavefront scheduling priority.
+
+    Example:
+    ```mlir
+    // Set priority to 0.
+    rocdl.s.setprio 0
+    ```
+  }];
 }
 
 def ROCDL_SchedBarrier : ROCDL_ConcreteNonMemIntrOp<"sched.barrier", [], 0, [0],["mask"]>,
   Arguments<(ins I32Attr:$mask)> {
   let assemblyFormat = "$mask attr-dict";
+  let description = [{
+    Insert a scheduling barrier with the given mask.
+
+    Example:
+    ```mlir
+    // Scheduling barrier with mask 0.
+    rocdl.sched.barrier 0
+    ```
+  }];
 }
 
 def ROCDL_SchedGroupBarrier
@@ -788,11 +904,29 @@ def ROCDL_SchedGroupBarrier
       [0, 1, 2], ["mask", "size", "groupId"]>,
     Arguments<(ins I32Attr:$mask, I32Attr:$size, I32Attr:$groupId)> {
   let assemblyFormat = "$mask `,` $size `,` $groupId attr-dict";
+  let description = [{
+    Insert a scheduling group barrier.
+
+    Example:
+    ```mlir
+    // Schedule group barrier with mask, size, and group id.
+    rocdl.sched.group.barrier 8, 1, 0
+    ```
+  }];
 }
 
 def ROCDL_IglpOpt : ROCDL_ConcreteNonMemIntrOp<"iglp.opt", [], 0, [0], ["variant"]>,
   Arguments<(ins I32Attr:$variant)> {
   let assemblyFormat = "$variant attr-dict";
+  let description = [{
+    Instruction-group-level parallelism optimization hint.
+
+    Example:
+    ```mlir
+    // IGLP optimization hint variant 0.
+    rocdl.iglp.opt 0
+    ```
+  }];
 }
 
 //===---------------------------------------------------------------------===//
@@ -1009,6 +1143,16 @@ class ROCDL_WMMA_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemon
   let assemblyFormat = [{
     $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
   }];
+  let description = [{
+    Wave Matrix Multiply-Accumulate (WMMA) intrinsic.
+
+    Example:
+    ```mlir
+    // WMMA with f16 inputs and f32 accumulator.
+    %r = rocdl.wmma.f32.16x16x16.f16 %a, %b, %c :
+      (vector<16xf16>, vector<16xf16>, vector<8xf32>) -> vector<8xf32>
+    ```
+  }];
 }
 
 class ROCDL_WMMA_Opsel_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
@@ -1021,6 +1165,16 @@ class ROCDL_WMMA_Opsel_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Wave Matrix Multiply-Accumulate (WMMA) with output operand selection.
+
+    Example:
+    ```mlir
+    // WMMA f16 with opsel control.
+    %r = rocdl.wmma.f16.16x16x16.f16 %a, %b, %c {opsel = false} :
+      (vector<16xf16>, vector<16xf16>, vector<16xf16>) -> vector<16xf16>
+    ```
   }];
 }
 
@@ -1036,6 +1190,18 @@ class ROCDL_WMMA_IU_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mne
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Wave Matrix Multiply-Accumulate (WMMA) for integer types with
+    sign and clamp control.
+
+    Example:
+    ```mlir
+    // WMMA i32 with unsigned i8 inputs.
+    %r = rocdl.wmma.i32.16x16x16.iu8 %a, %b, %c
+      {signA = false, signB = false, clamp = false} :
+      (vector<4xi32>, vector<4xi32>, vector<8xi32>) -> vector<8xi32>
+    ```
   }];
 }
 
@@ -1054,6 +1220,16 @@ class ROCDL_WMMA_ModsAll_Reuse_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL
   let assemblyFormat = [{
     $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
   }];
+  let description = [{
+    Wave Matrix Multiply-Accumulate (WMMA) with sign, modC, and reuse controls.
+
+    Example:
+    ```mlir
+    // WMMA f32 with f16 inputs and reuse controls.
+    %r = rocdl.wmma.f32.16x16x32.f16 %a, %b, %c :
+      (vector<16xf16>, vector<16xf16>, vector<8xf32>) -> vector<8xf32>
+    ```
+  }];
 }
 
 class ROCDL_WMMA_ModsC_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
@@ -1068,6 +1244,16 @@ class ROCDL_WMMA_ModsC_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Wave Matrix Multiply-Accumulate (WMMA) with modC and reuse controls.
+
+    Example:
+    ```mlir
+    // WMMA f32 with fp8 inputs and modC/reuse controls.
+    %r = rocdl.wmma.f32.16x16x64.fp8_fp8 %a, %b, %c :
+      (vector<16xi32>, vector<16xi32>, vector<8xf32>) -> vector<8xf32>
+    ```
   }];
 }
 
@@ -1086,6 +1272,16 @@ class ROCDL_WMMA_ModsAll_Diff_IntrOp<string mnemonic, Type AB, Type C, Type D> :
   let assemblyFormat = [{
     $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
   }];
+  let description = [{
+    Wave Matrix Multiply-Accumulate (WMMA) with different C and D types.
+
+    Example:
+    ```mlir
+    // WMMA bf16 output from f32 accumulator with bf16 inputs.
+    %r = rocdl.wmma.bf16f32.16x16x32.bf16 %a, %b, %c :
+      (vector<16xbf16>, vector<16xbf16>, vector<8xf32>) -> vector<16xbf16>
+    ```
+  }];
 }
 
 class ROCDL_WMMA_ModsABClamp_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
@@ -1102,6 +1298,18 @@ class ROCDL_WMMA_ModsABClamp_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_I
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c attr-dict `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Wave Matrix Multiply-Accumulate (WMMA) for integer types with
+    sign, reuse, and clamp controls.
+
+    Example:
+    ```mlir
+    // WMMA i32 with unsigned i8 inputs and reuse controls.
+    %r = rocdl.wmma.i32.16x16x64.iu8 %a, %b, %c
+      {signA = false, signB = false, reuseA = false, reuseB = false, clamp = false} :
+      (vector<8xi32>, vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+    ```
   }];
 }
 
@@ -1130,6 +1338,16 @@ class ROCDL_WMMA_Scale_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleExpTy
   let assemblyFormat = [{
     $a `,` $b `,` $c `,` $scaleA `,` $scaleB attr-dict `:` functional-type(operands, $res)
   }];
+  let description = [{
+    Scaled Wave Matrix Multiply-Accumulate (WMMA) with per-operand scaling.
+
+    Example:
+    ```mlir
+    // Scaled WMMA with f8f6f4 format inputs.
+    %r = rocdl.wmma.scale.f32.16x16x128.f8f6f4 %a, %b, %c, %scaleA, %scaleB :
+      (vector<16xi32>, vector<16xi32>, vector<8xf32>, i32, i32) -> vector<8xf32>
+    ```
+  }];
 }
 
 class ROCDL_WMMA_Scale_F4_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleExpTy> : ROCDL_IntrOp<mnemonic,
@@ -1152,6 +1370,16 @@ class ROCDL_WMMA_Scale_F4_IntrOp<string mnemonic, Type AB, Type CD, Type ScaleEx
   let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
   let assemblyFormat = [{
     $a `,` $b `,` $c `,` $scaleA `,` $scaleB attr-dict `:` functional-type(operands, $res)
+  }];
+  let description = [{
+    Scaled Wave Matrix Multiply-Accumulate (WMMA) for F4 format inputs.
+
+    Example:
+    ```mlir
+    // Scaled WMMA with f4 format inputs.
+    %r = rocdl.wmma.scale.f32.16x16x128.f4 %a, %b, %c, %scaleA, %scaleB :
+      (vector<8xi32>, vector<8xi32>, vector<8xf32>, i32, i32) -> vector<8xf32>
+    ```
   }];
 }
 
