@@ -153,7 +153,7 @@ typedef struct kmp_struct64 kmp_uint64;
 #undef KMP_USE_X87CONTROL
 #define KMP_USE_X87CONTROL 1
 #endif
-#if KMP_ARCH_X86_64 || KMP_ARCH_AARCH64
+#if KMP_ARCH_X86_64 || KMP_ARCH_AARCH64 || KMP_ARCH_ARM64EC
 #define KMP_INTPTR 1
 typedef __int64 kmp_intptr_t;
 typedef unsigned __int64 kmp_uintptr_t;
@@ -183,7 +183,7 @@ typedef unsigned long long kmp_uint64;
 #define KMP_SIZE_T_SPEC KMP_UINT32_SPEC
 #elif KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                 \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
-    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_SPARC64
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_SPARC64 || KMP_ARCH_ARM64EC
 #define KMP_SIZE_T_SPEC KMP_UINT64_SPEC
 #else
 #error "Can't determine size_t printf format specifier."
@@ -464,7 +464,9 @@ enum kmp_mem_fence_type {
 
 // Synchronization primitives
 
-#if KMP_ASM_INTRINS && KMP_OS_WINDOWS && !((KMP_ARCH_AARCH64 || KMP_ARCH_ARM) && (KMP_COMPILER_CLANG || KMP_COMPILER_GCC))
+#if KMP_ASM_INTRINS && KMP_OS_WINDOWS &&                                       \
+    !((KMP_ARCH_AARCH64 || KMP_ARCH_ARM || KMP_ARCH_ARM64EC) &&                \
+      (KMP_COMPILER_CLANG || KMP_COMPILER_GCC))
 
 #if KMP_MSVC_COMPAT && !KMP_COMPILER_CLANG
 #pragma intrinsic(InterlockedExchangeAdd)
