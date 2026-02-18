@@ -125,41 +125,6 @@ public:
   }
 };
 
-/// Policy for flattenFunction template used by AlwaysInliner.
-class AlwaysInlinerFlattenPolicy {
-  InlinerHelper &IH;
-  function_ref<TargetTransformInfo &(Function &)> GetTTI;
-
-public:
-  AlwaysInlinerFlattenPolicy(
-      InlinerHelper &IH, function_ref<TargetTransformInfo &(Function &)> GetTTI)
-      : IH(IH), GetTTI(GetTTI) {}
-
-  bool canInlineCall(Function &F, CallBase &CB) {
-    Function *Callee = CB.getCalledFunction();
-    if (!Callee || !IH.canInline(*Callee))
-      return false;
-    // Use TTI to check for target-specific hard inlining restrictions.
-    // This includes checks like:
-    // - Cannot inline streaming callee into non-streaming caller
-    // - Cannot inline functions that create new ZA/ZT0 state
-    // For flatten, we respect the user's intent to inline as much as possible,
-    // but these are fundamental ABI violations that cannot be worked around.
-    TargetTransformInfo &TTI = GetTTI(*Callee);
-    return TTI.areInlineCompatible(&F, Callee);
-  }
-
-  bool doInline(Function &F, CallBase &CB, Function &Callee) {
-    if (IH.tryInline(CB, "flatten attribute")) {
-      IH.addToMaybeInlinedFunctions(Callee);
-      return true;
-    }
-    return false;
-  }
-
-  ArrayRef<CallBase *> getNewCallSites() { return IH.getInlinedCallSites(); }
-};
-
 bool AlwaysInlineImpl(
     Module &M, bool InsertLifetime, ProfileSummaryInfo &PSI,
     FunctionAnalysisManager *FAM,
@@ -195,13 +160,73 @@ bool AlwaysInlineImpl(
     }
   }
 
-  // Only call flattenFunction (which uses TTI) if there are functions to
-  // flatten. This ensures TTI analysis is not requested at -O0 when there are
-  // no flatten functions, avoiding any overhead.
+  // Flatten functions with the flatten attribute using a local worklist.
   for (Function *F : NeedFlattening) {
-    AlwaysInlinerFlattenPolicy Policy(IH, GetTTI);
+    SmallVector<std::pair<CallBase *, int>, 16> Worklist;
+    SmallVector<std::pair<Function *, int>, 16> InlineHistory;
     OptimizationRemarkEmitter ORE(F);
-    Changed |= flattenFunction(*F, Policy, ORE);
+
+    // Collect initial calls.
+    for (BasicBlock &BB : *F)
+      for (Instruction &I : BB)
+        if (auto *CB = dyn_cast<CallBase>(&I)) {
+          if (CB->getAttributes().hasFnAttr(Attribute::NoInline))
+            continue;
+          Function *Callee = CB->getCalledFunction();
+          if (!Callee || Callee->isDeclaration())
+            continue;
+          Worklist.push_back({CB, -1});
+        }
+
+    while (!Worklist.empty()) {
+      auto Item = Worklist.pop_back_val();
+      CallBase *CB = Item.first;
+      int InlineHistoryID = Item.second;
+      Function *Callee = CB->getCalledFunction();
+      if (!Callee)
+        continue;
+
+      // Detect recursion.
+      if (Callee == F ||
+          inlineHistoryIncludes(Callee, InlineHistoryID, InlineHistory)) {
+        ORE.emit([&]() {
+          return OptimizationRemarkMissed("inline", "NotInlined",
+                                          CB->getDebugLoc(), CB->getParent())
+                 << "'" << ore::NV("Callee", Callee)
+                 << "' is not inlined into '"
+                 << ore::NV("Caller", CB->getCaller())
+                 << "': recursive call during flattening";
+        });
+        continue;
+      }
+
+      if (!IH.canInline(*Callee))
+        continue;
+
+      // Check TTI for target-specific inlining restrictions (e.g., SME ABI).
+      TargetTransformInfo &TTI = GetTTI(*Callee);
+      if (!TTI.areInlineCompatible(F, Callee))
+        continue;
+
+      if (!IH.tryInline(*CB, "flatten attribute"))
+        continue;
+
+      IH.addToMaybeInlinedFunctions(*Callee);
+      Changed = true;
+
+      // Add new call sites from the inlined function to the worklist.
+      ArrayRef<CallBase *> NewCallSites = IH.getInlinedCallSites();
+      if (!NewCallSites.empty()) {
+        int NewHistoryID = InlineHistory.size();
+        InlineHistory.push_back({Callee, InlineHistoryID});
+        for (CallBase *NewCB : NewCallSites) {
+          Function *NewCallee = NewCB->getCalledFunction();
+          if (NewCallee && !NewCallee->isDeclaration() &&
+              !NewCB->getAttributes().hasFnAttr(Attribute::NoInline))
+            Worklist.push_back({NewCB, NewHistoryID});
+        }
+      }
+    }
   }
 
   Changed |= IH.postInlinerCleanup();

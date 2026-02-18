@@ -181,60 +181,6 @@ InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
   return *IAA->getAdvisor();
 }
 
-/// Policy for flattenFunction template used by CGSCC Inliner.
-class CGSCCInlinerFlattenPolicy {
-  FunctionAnalysisManager &FAM;
-  InlineAdvisor &Advisor;
-
-  std::function<AssumptionCache &(Function &)> GetAssumptionCache;
-  InlineFunctionInfo IFI;
-
-public:
-  CGSCCInlinerFlattenPolicy(FunctionAnalysisManager &FAM,
-                            ProfileSummaryInfo *PSI, InlineAdvisor &Advisor)
-      : FAM(FAM), Advisor(Advisor),
-        GetAssumptionCache([&FAM](Function &Fn) -> AssumptionCache & {
-          return FAM.getResult<AssumptionAnalysis>(Fn);
-        }),
-        IFI(GetAssumptionCache, PSI) {}
-
-  bool canInlineCall(Function &F, CallBase &CB) {
-    // This is called both during initial collection and during worklist
-    // processing. We only do cheap checks here - the advisor is called
-    // in doInline to avoid creating InlineAdvice objects that might not
-    // be properly recorded.
-    Function *Callee = CB.getCalledFunction();
-    if (!Callee || Callee->isDeclaration())
-      return false;
-    return isInlineViable(*Callee).isSuccess();
-  }
-
-  bool doInline(Function &F, CallBase &CB, Function &Callee) {
-    // Use the advisor to check viability without performing cost analysis.
-    // For flatten, we want to inline all viable calls regardless of cost.
-    std::unique_ptr<InlineAdvice> Advice = Advisor.getAdviceWithoutCost(CB);
-    if (!Advice)
-      return false;
-    if (!Advice->isInliningRecommended()) {
-      Advice->recordUnattemptedInlining();
-      return false;
-    }
-
-    IFI.reset();
-    InlineResult IR =
-        InlineFunction(CB, IFI, /*MergeAttributes=*/true,
-                       &FAM.getResult<AAManager>(F), /*InsertLifetime=*/true);
-    if (!IR.isSuccess()) {
-      Advice->recordUnsuccessfulInlining(IR);
-      return false;
-    }
-    Advice->recordInlining();
-    return true;
-  }
-
-  ArrayRef<CallBase *> getNewCallSites() { return IFI.InlinedCallSites; }
-};
-
 void makeFunctionBodyUnreachable(Function &F) {
   F.dropAllReferences();
   for (BasicBlock &BB : make_early_inc_range(F))
@@ -288,15 +234,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // incrementally maknig a single function grow in a super linear fashion.
   SmallVector<std::pair<CallBase *, int>, 16> Calls;
 
-  // Track functions with flatten attribute for processing at the end.
-  SmallSetVector<Function *, 4> FlattenFunctions;
-
   // Populate the initial list of calls in this SCC.
   for (auto &N : InitialC) {
-    Function &Fn = N.getFunction();
-    if (Fn.hasFnAttribute(Attribute::Flatten))
-      FlattenFunctions.insert(&Fn);
-
     auto &ORE =
         FAM.getResult<OptimizationRemarkEmitterAnalysis>(N.getFunction());
     // We want to generally process call sites top-down in order for
@@ -405,8 +344,12 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         continue;
       }
 
+      // For flatten callers, inline all viable calls without cost analysis.
+      bool IsFlatten = F.hasFnAttribute(Attribute::Flatten) &&
+                       !CB->getAttributes().hasFnAttr(Attribute::NoInline);
       std::unique_ptr<InlineAdvice> Advice =
-          Advisor.getAdvice(*CB, OnlyMandatory);
+          IsFlatten ? Advisor.getAdviceWithoutCost(*CB)
+                    : Advisor.getAdvice(*CB, OnlyMandatory);
 
       // Check whether we want to inline this callsite.
       if (!Advice)
@@ -580,17 +523,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // Invalidate analyses for this function now so that we don't have to
     // invalidate analyses for all functions in this SCC later.
     FAM.invalidate(F, PreservedAnalyses::none());
-  }
-
-  // Now flatten functions with the flatten attribute.
-  for (Function *FlattenF : FlattenFunctions) {
-    CGSCCInlinerFlattenPolicy Policy(FAM, PSI, Advisor);
-    OptimizationRemarkEmitter &ORE =
-        FAM.getResult<OptimizationRemarkEmitterAnalysis>(*FlattenF);
-    bool FlattenChanged = flattenFunction(*FlattenF, Policy, ORE);
-    if (FlattenChanged)
-      FAM.invalidate(*FlattenF, PreservedAnalyses::none());
-    Changed |= FlattenChanged;
   }
 
   // We must ensure that we only delete functions with comdats if every function
