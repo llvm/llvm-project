@@ -248,7 +248,7 @@ vfmv.f.s f7, v16
 # CHECK-NEXT: [2]   - VLEN512SiFive7PipeA:1
 # CHECK-NEXT: [3]   - VLEN512SiFive7PipeAB:2 VLEN512SiFive7PipeA, VLEN512SiFive7PipeB
 # CHECK-NEXT: [4]   - VLEN512SiFive7PipeB:1
-# CHECK-NEXT: [5]   - VLEN512SiFive7VA:1
+# CHECK-NEXT: [5]   - VLEN512SiFive7VA1:1
 # CHECK-NEXT: [6]   - VLEN512SiFive7VCQ:1
 # CHECK-NEXT: [7]   - VLEN512SiFive7VL:1
 # CHECK-NEXT: [8]   - VLEN512SiFive7VS:1
@@ -266,244 +266,244 @@ vfmv.f.s f7, v16
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA[1,3],VLEN512SiFive7VCQ    VMV1R_V                    vmv1r.v	v8, v16
+# CHECK-NEXT:  1      4     2.00                         4     VLEN512SiFive7VA1[1,3],VLEN512SiFive7VCQ   VMV1R_V                    vmv1r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA[1,5],VLEN512SiFive7VCQ    VMV2R_V                    vmv2r.v	v8, v16
+# CHECK-NEXT:  1      4     4.00                         4     VLEN512SiFive7VA1[1,5],VLEN512SiFive7VCQ   VMV2R_V                    vmv2r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA[1,9],VLEN512SiFive7VCQ    VMV4R_V                    vmv4r.v	v8, v16
+# CHECK-NEXT:  1      4     8.00                         4     VLEN512SiFive7VA1[1,9],VLEN512SiFive7VCQ   VMV4R_V                    vmv4r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA[1,17],VLEN512SiFive7VCQ   VMV8R_V                    vmv8r.v	v8, v16
+# CHECK-NEXT:  1      4     16.00                        4     VLEN512SiFive7VA1[1,17],VLEN512SiFive7VCQ  VMV8R_V                    vmv8r.v	v8, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMV_S_X                    vmv.s.x	v8, t0
-# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VMV_X_S                    vmv.x.s	t2, v16
+# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   VMV_S_X                    vmv.s.x	v8, t0
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA1[1,4],VLEN512SiFive7VCQ   VMV_X_S                    vmv.x.s	t2, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMV_S_X                    vmv.s.x	v8, t0
-# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VMV_X_S                    vmv.x.s	t2, v16
+# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   VMV_S_X                    vmv.s.x	v8, t0
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA1[1,4],VLEN512SiFive7VCQ   VMV_X_S                    vmv.x.s	t2, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMV_S_X                    vmv.s.x	v8, t0
-# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VMV_X_S                    vmv.x.s	t2, v16
+# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   VMV_S_X                    vmv.s.x	v8, t0
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA1[1,4],VLEN512SiFive7VCQ   VMV_X_S                    vmv.x.s	t2, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VMV_S_X                    vmv.s.x	v8, t0
-# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VMV_X_S                    vmv.x.s	t2, v16
+# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   VMV_S_X                    vmv.s.x	v8, t0
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA1[1,4],VLEN512SiFive7VCQ   VMV_X_S                    vmv.x.s	t2, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VFMV_S_F                   vfmv.s.f	v8, ft5
-# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VFMV_F_S                   vfmv.f.s	ft7, v16
+# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   VFMV_S_F                   vfmv.s.f	v8, ft5
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA1[1,4],VLEN512SiFive7VCQ   VFMV_F_S                   vfmv.f.s	ft7, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VFMV_S_F                   vfmv.s.f	v8, ft5
-# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VFMV_F_S                   vfmv.f.s	ft7, v16
+# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   VFMV_S_F                   vfmv.s.f	v8, ft5
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA1[1,4],VLEN512SiFive7VCQ   VFMV_F_S                   vfmv.f.s	ft7, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VFMV_S_F                   vfmv.s.f	v8, ft5
-# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VFMV_F_S                   vfmv.f.s	ft7, v16
+# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   VFMV_S_F                   vfmv.s.f	v8, ft5
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA1[1,4],VLEN512SiFive7VCQ   VFMV_F_S                   vfmv.f.s	ft7, v16
 # CHECK-NEXT:  1      3     1.00                  U      1     VLEN512SiFive7PipeA,VLEN512SiFive7PipeAB   VSETVLI                    vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA[1,2],VLEN512SiFive7VCQ    VFMV_S_F                   vfmv.s.f	v8, ft5
-# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA[1,4],VLEN512SiFive7VCQ    VFMV_F_S                   vfmv.f.s	ft7, v16
+# CHECK-NEXT:  1      4     1.00                         4     VLEN512SiFive7VA1[1,2],VLEN512SiFive7VCQ   VFMV_S_F                   vfmv.s.f	v8, ft5
+# CHECK-NEXT:  1      11    3.00                         11    VLEN512SiFive7VA1[1,4],VLEN512SiFive7VCQ   VFMV_F_S                   vfmv.f.s	ft7, v16
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - VLEN512SiFive7FDiv
 # CHECK-NEXT: [1]   - VLEN512SiFive7IDiv
 # CHECK-NEXT: [2]   - VLEN512SiFive7PipeA
 # CHECK-NEXT: [3]   - VLEN512SiFive7PipeB
-# CHECK-NEXT: [4]   - VLEN512SiFive7VA
+# CHECK-NEXT: [4]   - VLEN512SiFive7VA1
 # CHECK-NEXT: [5]   - VLEN512SiFive7VCQ
 # CHECK-NEXT: [6]   - VLEN512SiFive7VL
 # CHECK-NEXT: [7]   - VLEN512SiFive7VS

@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#if (defined(__NVPTX__) || defined(__AMDGPU__)) &&                             \
+#if (defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__)) &&       \
     !((defined(__CUDA__) && !defined(__CUDA_ARCH__)) ||                        \
       (defined(__HIP__) && !defined(__HIP_DEVICE_COMPILE__)))
 #include <gpuintrin.h>
@@ -38,32 +38,32 @@ template <typename T> struct type_identity {
   using type = T;
 };
 
-template <class T, T v> struct type_constant {
+template <typename T, T v> struct type_constant {
   static inline constexpr T value = v;
 };
 
 /// Freestanding type trait helpers.
-template <class T> struct remove_cv : type_identity<T> {};
-template <class T> struct remove_cv<const T> : type_identity<T> {};
-template <class T> using remove_cv_t = typename remove_cv<T>::type;
+template <typename T> struct remove_cv : type_identity<T> {};
+template <typename T> struct remove_cv<const T> : type_identity<T> {};
+template <typename T> using remove_cv_t = typename remove_cv<T>::type;
 
-template <class T> struct remove_pointer : type_identity<T> {};
-template <class T> struct remove_pointer<T *> : type_identity<T> {};
-template <class T> using remove_pointer_t = typename remove_pointer<T>::type;
+template <typename T> struct remove_pointer : type_identity<T> {};
+template <typename T> struct remove_pointer<T *> : type_identity<T> {};
+template <typename T> using remove_pointer_t = typename remove_pointer<T>::type;
 
-template <class T> struct remove_const : type_identity<T> {};
-template <class T> struct remove_const<const T> : type_identity<T> {};
-template <class T> using remove_const_t = typename remove_const<T>::type;
+template <typename T> struct remove_const : type_identity<T> {};
+template <typename T> struct remove_const<const T> : type_identity<T> {};
+template <typename T> using remove_const_t = typename remove_const<T>::type;
 
-template <class T> struct remove_reference : type_identity<T> {};
-template <class T> struct remove_reference<T &> : type_identity<T> {};
-template <class T> struct remove_reference<T &&> : type_identity<T> {};
-template <class T>
+template <typename T> struct remove_reference : type_identity<T> {};
+template <typename T> struct remove_reference<T &> : type_identity<T> {};
+template <typename T> struct remove_reference<T &&> : type_identity<T> {};
+template <typename T>
 using remove_reference_t = typename remove_reference<T>::type;
 
-template <class T> struct is_const : type_constant<bool, false> {};
-template <class T> struct is_const<const T> : type_constant<bool, true> {};
-template <class T> RPC_ATTRS constexpr bool is_const_v = is_const<T>::value;
+template <typename T> struct is_const : type_constant<bool, false> {};
+template <typename T> struct is_const<const T> : type_constant<bool, true> {};
+template <typename T> RPC_ATTRS constexpr bool is_const_v = is_const<T>::value;
 
 template <typename T> struct is_pointer : type_constant<bool, false> {};
 template <typename T> struct is_pointer<T *> : type_constant<bool, true> {};
@@ -78,32 +78,43 @@ template <typename T> struct is_same<T, T> : type_constant<bool, true> {};
 template <typename T, typename U>
 RPC_ATTRS constexpr bool is_same_v = is_same<T, U>::value;
 
-template <class T> struct is_void : type_constant<bool, false> {};
+template <typename T> struct is_void : type_constant<bool, false> {};
 template <> struct is_void<void> : type_constant<bool, true> {};
 template <typename T> RPC_ATTRS constexpr bool is_void_v = is_void<T>::value;
 
-template <class T>
+// Scary trait that can change within a TU, use with caution.
+template <typename...> using void_t = void;
+template <typename T, typename = void>
+struct is_complete : type_constant<bool, false> {};
+template <typename T>
+struct is_complete<T, void_t<decltype(sizeof(T))>> : type_constant<bool, true> {
+};
+template <typename T>
+RPC_ATTRS constexpr bool is_complete_v = is_complete<T>::value;
+
+template <typename T>
 struct is_trivially_copyable
     : public type_constant<bool, __is_trivially_copyable(T)> {};
-template <class T>
+template <typename T>
 RPC_ATTRS constexpr bool is_trivially_copyable_v =
     is_trivially_copyable<T>::value;
 
-template <class T, class... Args>
+template <typename T, typename... Args>
 struct is_trivially_constructible
     : type_constant<bool, __is_trivially_constructible(T, Args...)> {};
-template <class T, class... Args>
+template <typename T, typename... Args>
 RPC_ATTRS constexpr bool is_trivially_constructible_v =
     is_trivially_constructible<T>::value;
 
-template <bool B, class T, class F> struct conditional : type_identity<T> {};
-template <class T, class F>
+template <bool B, typename T, typename F>
+struct conditional : type_identity<T> {};
+template <typename T, typename F>
 struct conditional<false, T, F> : type_identity<F> {};
-template <bool B, class T, class F>
+template <bool B, typename T, typename F>
 using conditional_t = typename conditional<B, T, F>::type;
 
 /// Freestanding implementation of std::move.
-template <class T>
+template <typename T>
 RPC_ATTRS constexpr typename remove_reference<T>::type &&move(T &&t) {
   return static_cast<typename remove_reference<T>::type &&>(t);
 }
@@ -153,7 +164,7 @@ constexpr inline in_place_t in_place{};
 constexpr inline nullopt_t nullopt{};
 
 /// Freestanding and minimal implementation of std::optional.
-template <typename T> class optional {
+template <typename T> struct optional {
   template <typename U> struct OptionalStorage {
     union {
       char empty;
@@ -168,7 +179,9 @@ template <typename T> class optional {
 
     template <typename... Args>
     RPC_ATTRS constexpr explicit OptionalStorage(in_place_t, Args &&...args)
-        : stored_value(forward<Args>(args)...) {}
+        : stored_value(forward<Args>(args)...) {
+      in_use = true;
+    }
 
     RPC_ATTRS constexpr void reset() {
       if (in_use)
@@ -183,15 +196,15 @@ public:
   RPC_ATTRS constexpr optional() = default;
   RPC_ATTRS constexpr optional(nullopt_t) {}
 
-  RPC_ATTRS constexpr optional(const T &t) : storage(in_place, t) {
-    storage.in_use = true;
-  }
+  RPC_ATTRS constexpr optional(const T &t) : storage(in_place, t) {}
   RPC_ATTRS constexpr optional(const optional &) = default;
 
-  RPC_ATTRS constexpr optional(T &&t) : storage(in_place, move(t)) {
-    storage.in_use = true;
-  }
+  RPC_ATTRS constexpr optional(T &&t) : storage(in_place, move(t)) {}
   RPC_ATTRS constexpr optional(optional &&O) = default;
+
+  template <typename... Args>
+  RPC_ATTRS constexpr optional(in_place_t, Args &&...args)
+      : storage(in_place, forward<Args>(args)...) {}
 
   RPC_ATTRS constexpr optional &operator=(T &&t) {
     storage = move(t);
@@ -355,7 +368,7 @@ RPC_ATTRS uint32_t get_num_lanes() {
 #endif
 }
 
-/// Returns the id of the thread inside of an AMD wavefront executing together.
+/// Returns a bitmask of the currently active lanes.
 RPC_ATTRS uint64_t get_lane_mask() {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_lane_mask();
@@ -429,19 +442,25 @@ RPC_ATTRS constexpr uint64_t string_length(const char *s) {
   return static_cast<uint64_t>(end - s + 1);
 }
 
-/// Helper for dealing with function types.
+/// Helper for dealing with function pointers and lambda types.
 template <typename> struct function_traits;
 template <typename R, typename... Args> struct function_traits<R (*)(Args...)> {
   using return_type = R;
   using arg_types = rpc::tuple<Args...>;
   static constexpr uint64_t ARITY = sizeof...(Args);
 };
+template <typename T> T &&declval();
+template <typename T>
+struct function_traits
+    : function_traits<decltype(+declval<rpc::remove_reference_t<T>>())> {};
 
-template <class T, class U> RPC_ATTRS constexpr T max(const T &a, const U &b) {
+template <typename T, typename U>
+RPC_ATTRS constexpr T max(const T &a, const U &b) {
   return (a < b) ? b : a;
 }
 
-template <class T, class U> RPC_ATTRS constexpr T min(const T &a, const U &b) {
+template <typename T, typename U>
+RPC_ATTRS constexpr T min(const T &a, const U &b) {
   return (a < b) ? a : b;
 }
 

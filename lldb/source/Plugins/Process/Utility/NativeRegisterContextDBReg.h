@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef lldb_NativeRegisterContextDBReg_h
-#define lldb_NativeRegisterContextDBReg_h
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTDBREG_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTDBREG_H
 
 #include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
 
@@ -105,4 +105,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // #ifndef lldb_NativeRegisterContextDBReg_h
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTDBREG_H

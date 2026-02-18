@@ -212,14 +212,6 @@ void Prescanner::Statement() {
     }
     break;
   }
-  case LineClassification::Kind::CompilerDirectiveAfterMacroExpansion:
-    BeginStatementAndAdvance();
-    SkipSpaces();
-    if (*at_ == '!') {
-      tokens.Put(at_++, 1, GetCurrentProvenance());
-      ++column_;
-    }
-    break;
   case LineClassification::Kind::Source: {
     BeginStatementAndAdvance();
     bool checkLabelField{false};
@@ -246,17 +238,30 @@ void Prescanner::Statement() {
     // a comment marker or directive sentinel.  If so, disable line
     // continuation, so that NextToken() won't consume anything from
     // following lines.
-    if (auto kwName{GetKeywordMacroName(at_)}) {
-      checkLabelField = false;
-      Provenance here{GetCurrentProvenance()};
-      TokenSequence replacement{ExpandKeywordMacro(*kwName, here)};
-      auto newLineClass{ClassifyLine(replacement, here)};
-      if (newLineClass.kind == LineClassification::Kind::CompilerDirective) {
-        directiveSentinel_ = newLineClass.sentinel;
-        disableSourceContinuation_ = false;
-      } else {
-        disableSourceContinuation_ = !replacement.empty() &&
-            newLineClass.kind != LineClassification::Kind::Source;
+    if (IsLegalIdentifierStart(*at_)) {
+      // TODO: Only bother with these cases when any keyword macro has
+      // been defined with replacement text that could begin a comment
+      // or directive sentinel.
+      const char *p{at_};
+      while (IsLegalInIdentifier(*++p)) {
+      }
+      CharBlock id{at_, static_cast<std::size_t>(p - at_)};
+      if (preprocessor_.IsNameDefined(id) &&
+          !preprocessor_.IsFunctionLikeDefinition(id)) {
+        checkLabelField = false;
+        TokenSequence toks;
+        toks.Put(id, GetProvenance(at_));
+        if (auto replaced{preprocessor_.MacroReplacement(toks, *this)}) {
+          auto newLineClass{ClassifyLine(*replaced, GetCurrentProvenance())};
+          if (newLineClass.kind ==
+              LineClassification::Kind::CompilerDirective) {
+            directiveSentinel_ = newLineClass.sentinel;
+            disableSourceContinuation_ = false;
+          } else {
+            disableSourceContinuation_ = !replaced->empty() &&
+                newLineClass.kind != LineClassification::Kind::Source;
+          }
+        }
       }
     }
     if (checkLabelField) {
@@ -299,7 +304,6 @@ void Prescanner::Statement() {
       CheckAndEmitLine(preprocessed->ToLowerCase(), newlineProvenance);
       break;
     case LineClassification::Kind::CompilerDirective:
-    case LineClassification::Kind::CompilerDirectiveAfterMacroExpansion:
       if (preprocessed->HasRedundantBlanks()) {
         preprocessed->RemoveRedundantBlanks();
       }
@@ -331,39 +335,40 @@ void Prescanner::Statement() {
           preprocessed->ToLowerCase().ClipComment(*this), newlineProvenance);
       break;
     }
-  } else if (line.kind == LineClassification::Kind::CompilerDirective) {
-    while (CompilerDirectiveContinuation(tokens, line.sentinel)) {
-      newlineProvenance = GetCurrentProvenance();
-    }
-    if (preprocessingOnly_ && inFixedForm_ && InConditionalLine() &&
-        nextLine_ < limit_) {
-      // In -E mode, when the line after !$ conditional compilation is a
-      // regular fixed form continuation line, append a '&' to the line.
-      const char *p{nextLine_};
-      int col{1};
-      while (int n{IsSpace(p)}) {
-        if (*p == '\t') {
-          break;
+  } else { // no macro replacement
+    if (line.kind == LineClassification::Kind::CompilerDirective) {
+      while (CompilerDirectiveContinuation(tokens, line.sentinel)) {
+        newlineProvenance = GetCurrentProvenance();
+      }
+      if (preprocessingOnly_ && inFixedForm_ && InConditionalLine() &&
+          nextLine_ < limit_) {
+        // In -E mode, when the line after !$ conditional compilation is a
+        // regular fixed form continuation line, append a '&' to the line.
+        const char *p{nextLine_};
+        int col{1};
+        while (int n{IsSpace(p)}) {
+          if (*p == '\t') {
+            break;
+          }
+          p += n;
+          ++col;
         }
-        p += n;
-        ++col;
+        if (col == 6 && *p != '0' && *p != '\t' && *p != '\n') {
+          EmitChar(tokens, '&');
+          tokens.CloseToken();
+        }
       }
-      if (col == 6 && *p != '0' && *p != '\t' && *p != '\n') {
-        EmitChar(tokens, '&');
-        tokens.CloseToken();
+      tokens.ToLowerCase();
+      if (!SourceFormChange(tokens.ToString())) {
+        CheckAndEmitLine(tokens, newlineProvenance);
       }
-    }
-    tokens.ToLowerCase();
-    if (!SourceFormChange(tokens.ToString())) {
+    } else { // Kind::Source
+      tokens.ToLowerCase();
+      if (inFixedForm_) {
+        EnforceStupidEndStatementRules(tokens);
+      }
       CheckAndEmitLine(tokens, newlineProvenance);
     }
-  } else {
-    CHECK(line.kind == LineClassification::Kind::Source);
-    tokens.ToLowerCase();
-    if (inFixedForm_) {
-      EnforceStupidEndStatementRules(tokens);
-    }
-    CheckAndEmitLine(tokens, newlineProvenance);
   }
   directiveSentinel_ = nullptr;
 }
@@ -562,8 +567,7 @@ bool Prescanner::MustSkipToEndOfLine() const {
     return true; // skip over ignored columns in right margin (73:80)
   } else if (*at_ == '!' && !inCharLiteral_ &&
       (!inFixedForm_ || tabInCurrentLine_ || column_ != 6)) {
-    return InCompilerDirective() ||
-        !IsCompilerDirectiveSentinelAfterKeywordMacro(at_ + 1);
+    return InCompilerDirective() || !IsCompilerDirectiveSentinel(at_ + 1);
   } else {
     return false;
   }
@@ -1612,9 +1616,6 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
   if (!IsFixedFormCommentChar(col1)) {
     return std::nullopt;
   }
-  // TODO: Handle keyword macros that expand to directives in fixed form.
-  // The comment character can't be 'c' or 'C'.  Need to figure out whether
-  // fixed form continuation should apply to the expansions.
   char sentinel[5], *sp{sentinel};
   int column{2};
   for (; column < 6; ++column) {
@@ -1677,28 +1678,20 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
 std::optional<Prescanner::LineClassification>
 Prescanner::IsFreeFormCompilerDirectiveLine(const char *start) const {
   if (const char *p{SkipWhiteSpaceIncludingEmptyMacros(start)};
-      p && *p == '!') {
-    if (auto lnClass{IsCompilerDirectiveSentinelAfterKeywordMacro(p + 1)}) {
-      if (lnClass->kind == LineClassification::Kind::CompilerDirective) {
-        const char *sentinel{lnClass->sentinel};
-        CHECK(sentinel != nullptr);
-        const char *payload{nullptr};
-        if (sentinel[0] == '$' && sentinel[1] == '\0') {
-          payload = p + 2; // !$
-        } else if (sentinel[1] == '@') {
-          payload = p + 5; // !@acc or !@cuf
-        }
-        if (payload) {
-          if (const char *comment{IsFreeFormComment(payload)}) {
-            if (*comment == '!') { // !$ !blah or !@acc !blah
-              // Conditional line comment - treat as comment
-              return std::nullopt;
-            }
+      p && *p++ == '!') {
+    if (auto maybePair{IsCompilerDirectiveSentinel(p)}) {
+      auto offset{static_cast<std::size_t>(p - start - 1)};
+      const char *sentinel{maybePair->first};
+      if ((sentinel[0] == '$' && sentinel[1] == '\0') || sentinel[1] == '@') {
+        if (const char *comment{IsFreeFormComment(maybePair->second)}) {
+          if (*comment == '!') {
+            // Conditional line comment - treat as comment
+            return std::nullopt;
           }
         }
-        lnClass->payloadOffset = static_cast<std::size_t>(p - start);
       }
-      return lnClass;
+      return {LineClassification{
+          LineClassification::Kind::CompilerDirective, offset, sentinel}};
     }
   }
   return std::nullopt;
@@ -1713,31 +1706,6 @@ Prescanner &Prescanner::AddCompilerDirectiveSentinel(const std::string &dir) {
   compilerDirectiveBloomFilter_.set(packed % prime2);
   compilerDirectiveSentinels_.insert(dir);
   return *this;
-}
-
-std::optional<CharBlock> Prescanner::GetKeywordMacroName(
-    const char *start) const {
-  if (IsLegalIdentifierStart(*start)) {
-    // TODO: Only bother with these cases when any keyword macro has
-    // been defined with replacement text that could begin a comment
-    // or directive sentinel.
-    const char *p{start};
-    while (IsLegalInIdentifier(*++p)) {
-    }
-    CharBlock name{start, static_cast<std::size_t>(p - start)};
-    if (preprocessor_.IsNameDefined(name) &&
-        !preprocessor_.IsFunctionLikeDefinition(name)) {
-      return name;
-    }
-  }
-  return std::nullopt;
-}
-
-TokenSequence Prescanner::ExpandKeywordMacro(
-    CharBlock name, Provenance provenance) const {
-  TokenSequence toks;
-  toks.Put(name, provenance);
-  return preprocessor_.MacroReplacement(toks, *this).value();
 }
 
 const char *Prescanner::IsCompilerDirectiveSentinel(
@@ -1797,26 +1765,8 @@ Prescanner::IsCompilerDirectiveSentinel(const char *p) const {
   return std::nullopt;
 }
 
-auto Prescanner::IsCompilerDirectiveSentinelAfterKeywordMacro(
-    const char *p) const -> std::optional<LineClassification> {
-  if (auto name{GetKeywordMacroName(p)}) {
-    Provenance provenance{GetProvenance(p)};
-    TokenSequence expansion{ExpandKeywordMacro(*name, provenance)};
-    expansion.Put("\n", 1, provenance); // termination
-    CharBlock block{expansion.ToLowerCase().ToCharBlock()};
-    if (auto maybePair{IsCompilerDirectiveSentinel(block.begin())}) {
-      return LineClassification{
-          LineClassification::Kind::CompilerDirectiveAfterMacroExpansion,
-          name->size(), maybePair->first};
-    }
-  } else if (auto maybePair{IsCompilerDirectiveSentinel(p)}) {
-    return LineClassification{LineClassification::Kind::CompilerDirective,
-        static_cast<std::size_t>(maybePair->second - p), maybePair->first};
-  }
-  return std::nullopt;
-}
-
-auto Prescanner::ClassifyLine(const char *start) const -> LineClassification {
+Prescanner::LineClassification Prescanner::ClassifyLine(
+    const char *start) const {
   if (inFixedForm_) {
     if (std::optional<LineClassification> lc{
             IsFixedFormCompilerDirectiveLine(start)}) {

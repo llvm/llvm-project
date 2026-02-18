@@ -52,11 +52,11 @@ define amdgpu_ps void @_amdgpu_ps_main(float %arg) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_cvt_pkrtz_f16_f32 v1, 0, v1
 ; GFX900-NEXT:    v_cvt_pkrtz_f16_f32 v0, v2, v0
-; GFX900-NEXT:    exp mrt0 off, off, off, off compr
+; GFX900-NEXT:    exp mrt0, off, off, off, off compr
 ; GFX900-NEXT:    s_endpgm
 ; GFX900-NEXT:  .LBB0_6:
 ; GFX900-NEXT:    s_mov_b64 exec, 0
-; GFX900-NEXT:    exp null off, off, off, off done vm
+; GFX900-NEXT:    exp null, off, off, off, off done vm
 ; GFX900-NEXT:    s_endpgm
 bb:
   %i = fcmp olt float %arg, 0.000000e+00

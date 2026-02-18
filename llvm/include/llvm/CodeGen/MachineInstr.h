@@ -156,7 +156,7 @@ private:
   uint8_t AsmPrinterFlags;
 
   /// Cached opcode from MCID.
-  uint16_t Opcode;
+  uint32_t Opcode;
 
   /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
   /// defined by this instruction.

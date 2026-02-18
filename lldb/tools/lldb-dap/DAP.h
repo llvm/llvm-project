@@ -102,7 +102,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// The target instance for this DAP session.
   lldb::SBTarget target;
 
-  Variables variables;
+  VariableReferenceStorage reference_storage;
   lldb::SBBroadcaster broadcaster;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
@@ -133,6 +133,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   bool configuration_done;
 
   bool waiting_for_run_in_terminal = false;
+  std::mutex call_mutex;
   ProgressEventReporter progress_event_reporter;
 
   /// Keep track of the last stop thread index IDs as threads won't go away
@@ -140,7 +141,6 @@ struct DAP final : public DAPTransport::MessageHandler {
   llvm::DenseSet<lldb::tid_t> thread_ids;
 
   protocol::Id seq = 0;
-  std::mutex call_mutex;
   llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
   ReplMode repl_mode;
@@ -379,7 +379,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   protocol::Capabilities GetCustomCapabilities();
 
   /// Debuggee will continue from stopped state.
-  void WillContinue() { variables.Clear(); }
+  void WillContinue() { reference_storage.Clear(); }
 
   /// Poll the process to wait for it to reach the eStateStopped state.
   ///

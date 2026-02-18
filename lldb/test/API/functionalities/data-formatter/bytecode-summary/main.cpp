@@ -33,7 +33,7 @@ __attribute__((used, section("__DATA_CONST,__lldbformatters"))) unsigned char
         "^MyOptional<.+>$" // type name
         "\x00"             // flags
         "\x00"             // sig_summary
-        "\x8d"             // program size
+        "\x8e"             // program size
         "\x01"             // program size
         "\x1\x22\x7Storage#\x12\x60\x1,C\x10\x1\x5\x11\x2\x1\x22\x6hasVal#"
         "\x12\x60\x1,\x10\x1e\x2\x22\x1b<could not read MyOptional>\x10G#!\x60 "
