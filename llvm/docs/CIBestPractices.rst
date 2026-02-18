@@ -13,7 +13,7 @@ GitHub Actions Best Practices
 =============================
 
 This section contains information on best practices/guidelines when working on
-LLVM's GitHub actions workflows.
+LLVM's GitHub Actions workflows.
 
 Disabling Jobs In Forks
 -----------------------
