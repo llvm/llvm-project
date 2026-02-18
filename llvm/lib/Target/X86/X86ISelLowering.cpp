@@ -57499,6 +57499,7 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   const SDValue LHS = N->getOperand(0);
   const SDValue RHS = N->getOperand(1);
@@ -57591,7 +57592,6 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
         EVT SrcVT = LHS.getOperand(0).getValueType();
         APInt UpperBits = APInt::getBitsSetFrom(SrcVT.getScalarSizeInBits(),
                                                 OpVT.getScalarSizeInBits());
-        const TargetLowering &TLI = DAG.getTargetLoweringInfo();
         if (DAG.MaskedValueIsZero(LHS.getOperand(0), UpperBits) &&
             TLI.isTypeLegal(LHS.getOperand(0).getValueType()))
           return DAG.getSetCC(DL, VT, LHS.getOperand(0),
@@ -57773,7 +57773,7 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       // current form has a slight latency cost, but it probably worth saving a
       // constant.
       if (ISD::isConstantSplatVectorAllOnes(AddC.getNode()) &&
-          DAG.getTargetLoweringInfo().isOperationLegal(ISD::UMIN, OpVT)) {
+          TLI.isOperationLegal(ISD::UMIN, OpVT)) {
         // Pass
       }
       // Normal Cases

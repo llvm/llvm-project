@@ -9304,8 +9304,13 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
       // If this is OpenMP the device linker will need `-lompdevice`.
       if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&
-          TC->getTriple().isGPU())
+          (TC->getTriple().isAMDGPU() || TC->getTriple().isNVPTX()))
         LinkerArgs.emplace_back("-lompdevice");
+
+      // For SPIR-V some functions will be defined by the runtime so allow
+      // unresolved symbols.
+      if (TC->getTriple().isSPIRV())
+        LinkerArgs.emplace_back("--allow-partial-linkage");
 
       // Forward all of these to the appropriate toolchain.
       for (StringRef Arg : CompilerArgs)

@@ -21,6 +21,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 class MachineBasicBlock;
@@ -222,6 +223,19 @@ public:
   void setMF(MachineFunction &MFunc) { MF = &MFunc; }
   void setComputed(bool Computed) { AlreadyComputed = Computed; }
   void releaseMemory() { Info.releaseMemory(); }
+};
+
+class GISelCSEAnalysis : public AnalysisInfoMixin<GISelCSEAnalysis> {
+  friend AnalysisInfoMixin<GISelCSEAnalysis>;
+  LLVM_ABI static AnalysisKey Key;
+  TargetMachine *TM;
+
+public:
+  using Result = std::unique_ptr<GISelCSEInfo>;
+  LLVM_ABI GISelCSEAnalysis(TargetMachine *TM) : TM(TM) {};
+
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 /// The actual analysis pass wrapper.
