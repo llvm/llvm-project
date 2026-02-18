@@ -247,6 +247,8 @@ Improvements to Clang's diagnostics
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
+- ``-Wimplicit-fallthrough`` was added to ``-Wextra`` for GCC compatibility.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
