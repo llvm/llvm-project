@@ -62,7 +62,7 @@ public:
       DependencyPrinter(DependencyOutputOptions &Opts,
                         ArrayRef<std::string> Dependencies,
                         ArrayRef<std::string> ModuleDependencies)
-      : DependencyFileGenerator(Opts) {
+          : DependencyFileGenerator(Opts) {
         for (const auto &Dep : Dependencies)
           addDependency(Dep);
         for (const auto &Dep : ModuleDependencies)
