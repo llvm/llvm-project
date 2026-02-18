@@ -10,7 +10,8 @@
 
 ## The LEN Type Parameter Runtime Problem
 
-For PDTs with LEN parameters, component offsets can depend either entirely or partially on runtime values:
+For PDTs with LEN parameters, component offsets can depend either entirely or
+partially on runtime values:
 
 ```fortran
 ! Simple PDT with LEN type parameter
@@ -42,9 +43,14 @@ end type
 
 ## Proposed Solution: Concrete Type Instantiation
 
-The concrete type approach creates resolved type descriptions lazily at runtime and caches them. All instances with identical LEN values share the same concrete type, providing O(1) component access after initial instantiation.
+The concrete type approach creates resolved type descriptions lazily at runtime
+and caches them. All instances with identical LEN values share the same
+concrete type, providing O(1) component access after initial instantiation.
 
-For any specific set of LEN values, the type layout is fully determined. For example, all instances of `pdt(10)` will have identical component offsets. Rather than recomputing offsets on each access, we resolve them once and cache the result.
+For any specific set of LEN values, the type layout is fully determined.
+For example, all instances of `pdt(10)` will have identical component offsets.
+Rather than recomputing offsets on each access, we resolve them once and cache
+the result.
 
 
 ### Architecture Overview
@@ -56,7 +62,7 @@ For any specific set of LEN values, the type layout is fully determined. For exa
                     | offset_: 0 (placeholder)  |<------------------+
                     | numLenParams: 1           |                   |
                     | sizeInBytes_: 0           |                   |
-                    | uninstantiated_: self     |<----------------+ |
+                    | uninstantiated_: nullptr  |<----------------+ |
                     +---------------------------+                 | |
             .                                                     | |
             .                                                     | |
@@ -85,6 +91,52 @@ For any specific set of LEN values, the type layout is fully determined. For exa
             .                  | numLenParams: 1                  |
             .                  +----------------------------------+
 ```
+
+## KIND Type Parameter Instantiation
+
+Flang already uses an instantiation pattern for KIND type parameters that
+serves as our initial model for LEN parameter handling.
+
+For KIND parameters, the compiler generates a separate `DerivedType` at compile
+time for each unique KIND instantiation. Each instantiated type points back to
+the original uninstantiated type via `uninstantiated_`:
+
+```
++--------------------+                  +---------------------------+
+| Descriptor         |                  | DerivedType "pdt"         |
+| type(pdt(4)) :: A  |                  | (generic/uninstantiated)  |
+| derivedType_: -----|-+                | uninstantiated_: nullptr  |
++--------------------+ |                +---------------------------+
+                       |                             ^           ^
++-------------------+  |                             |           |
+| Descriptor        |  |   +----------------------+  |           |
+| type(pdt(4)) :: B |  +-> | DerivedType "pdt.k4" |  |           |
+| derivedType_: ----|----> | 0x7fff8a001000 (heap)|  |           |
++-------------------+      | uninstantiated_:-----|--+           |
+                           +----------------------+              |
+                                                                 |
++-------------------+                  +----------------------+  |
+| Descriptor        |                  | DerivedType "pdt.k8" |  |
+| type(pdt(8)) :: C |                  | 0x7fff8a002000 (heap)|  |
+| derivedType_: ----|----------------->| uninstantiated_:-----|--+
++-------------------+                  +----------------------+
+```
+
+Here, descriptors `A` and `B` both store the same pointer (`0x7fff8a001000`) in
+their `derivedType_` field, referencing a single shared generic `DerivedType`
+structure.
+
+The `SameTypeAs` intrinsic in `derived-api` uses the pattern: if direct pointer
+comparison fails, it compares `uninstantiatedType()` pointers which allows for
+Type matching across module boundaries.
+
+For LEN parameters, we apply the same pattern but create concrete types at
+runtime (see Runtime Instantiation Algorithm):
+
+- Concrete type's `uninstantiated_` points to the generic type
+- Cache key: `(genericType, len_values...)` for uniqueing the DerivedType
+- Use the existing `SAME_TYPE_AS` logic
+
 
 ## Data Structures
 
@@ -138,12 +190,16 @@ class Component {
 };
 ```
 
-The `characterLen_` field and the `Value` elements within `bounds_` use the `Value::Genre::LenParameter` mechanism to express LEN-dependent sizes and extents.
+The `characterLen_` field and the `Value` elements within `bounds_` use the
+`Value::Genre::LenParameter` mechanism to express LEN-dependent sizes and
+extents.
 
 The `alignment_` field stores `log2(alignment)` for correct layout
 computation on heterogeneous systems (CPU/GPU).
 
-We also add/expose a public method for changing `offset_` so we can create the ConcreteType members with proper offsets.
+The `Component` class exposes a `SetOffset()` method so that
+`ResolveComponentOffsets` can patch each component's byte offset in the
+concrete type copy.
 
 ### DescriptorAddendum
 
@@ -157,49 +213,36 @@ class DescriptorAddendum {
 };
 ```
 
-The `len_` field is changed from a fixed-size `TypeParameterValue len_[1]` array to `FlexibleArray<TypeParameterValue>`. This template wraps a single inline element `len_ntry_` and provides `operator[]` via pointer arithmetic in order to emulate a C flexible array member.
+The `len_` field is changed from a fixed-size `TypeParameterValue len_[1]`
+array to `FlexibleArray<TypeParameterValue>`. This template wraps a single
+inline element `len_ntry_` and provides `operator[]` via pointer arithmetic in
+order to emulate a C flexible array member.
 
-Note that this is a slightly different `FlexibleArray` from the one in `ISO_Fortran_binding.h` used for `dim`; that version inherits from `T` and indexes via `this`-pointer arithmetic. 
+Note that this is a slightly different `FlexibleArray` from the one in
+`ISO_Fortran_binding.h` used for `dim`; that version inherits from `T` and
+indexes via `this`-pointer arithmetic.
 
+## Lowering Strategy
 
-## KIND Type Parameter Instantiation
+All LEN parameter expressions are evaluated at runtime and stored in the
+descriptor's `len_` Flexible array. Thus, a definition such as:
 
-Flang already uses an instantiation pattern for KIND type parameters that serves as our initial model for LEN parameter handling.
-
-For KIND parameters, the compiler generates a separate `DerivedType` at compile time for each unique KIND instantiation. Each instantiated type points back to the original uninstantiated type via `uninstantiated_`:
-
-```
-+--------------------+                  +---------------------------+
-| Descriptor         |                  | DerivedType "pdt"         |
-| type(pdt(4)) :: A  |                  | (generic/uninstantiated)  |
-| derivedType_: -----|-+                | uninstantiated_: self     |
-+--------------------+ |                +---------------------------+
-                       |                             ^           ^
-+-------------------+  |                             |           |
-| Descriptor        |  |   +----------------------+  |           |
-| type(pdt(4)) :: B |  +-> | DerivedType "pdt.k4" |  |           |
-| derivedType_: ----|----> | 0x7fff8a001000 (heap)|  |           |
-+-------------------+      | uninstantiated_:-----|--+           |
-                           +----------------------+              |
-                                                                 |
-+-------------------+                  +----------------------+  |
-| Descriptor        |                  | DerivedType "pdt.k8" |  |
-| type(pdt(8)) :: C |                  | 0x7fff8a002000 (heap)|  |
-| derivedType_: ----|----------------->| uninstantiated_:-----|--+
-+-------------------+                  +----------------------+
+```fortran
+type(pdt(4, n+1, m*2)) :: x
 ```
 
-Here, descriptors `A` and `B` both store the same pointer (`0x7fff8a001000`) in their `derivedType_` field, referencing a single shared generic `DerivedType` structure.
+will lower to code similar to:
 
-The `SameTypeAs` intrinsic in `derived-api` uses this pattern:
-if direct pointer comparison fails, it compares `uninstantiatedType()`
-pointers which allows for Type matching across module boundaries.
+```
+%len0 = arith.constant 4
+%len1 = arith.addi %n, %c1
+%len2 = arith.muli %m, %c2
 
-For LEN parameters, we apply the same pattern but create concrete types at runtime:
-
-- Concrete type's `uninstantiated_` points to the generic type
-- Cache key: `(genericType, len_values...)` for uniqueing the DerivedType
-- Use the existing `SAME_TYPE_AS` logic
+call @AllocatableSetDerivedLength(%desc, 0, %len0)
+call @AllocatableSetDerivedLength(%desc, 1, %len1)
+call @AllocatableSetDerivedLength(%desc, 2, %len2)
+call @AllocatableAllocate(%desc)  // internally calls GetConcreteType
+```
 
 
 ## Runtime Instantiation Algorithm
@@ -216,13 +259,18 @@ GetConcreteType(const DerivedType &genericType,
 ```
 
 1. If `genericType.LenParameters() == 0`, return `&genericType`
-2. If `genericType.uninstantiatedType() != &genericType`, it is already a Concrete type; return `&genericType`
+2. If `genericType.uninstantiatedType()` is neither `&genericType` nor `nullptr`,
+ it is already a Concrete type; return `&genericType`
 3. Compute hash from `(genericType*, len_values...)`
 4. Check cache; if found, return cached concrete type
 5. Create new concrete type with resolved offsets
 6. Insert into cache; return pointer
 
-Step 2 handles the case where a descriptor's `derivedType_` was previously set to a concrete type, and a subsequent operation (e.g., `AllocatableAllocate`) passes that already-resolved type back to `GetConcreteType`. Concrete types have `uninstantiatedType_` pointing to the original generic; generic types point to themselves.
+Step 2 handles the case where a descriptor's `derivedType_` was previously set
+to a concrete type, and a subsequent operation (e.g., `AllocatableAllocate`)
+passes that already-resolved type back to `GetConcreteType`. Concrete types
+have `uninstantiatedType_` pointing to the original generic; generic types
+point to nothing (nullptr).
 
 
 ### Concrete Type Creation
@@ -235,7 +283,8 @@ When creating a new concrete type:
 4. Patch the pointer members of `DerivedType`:
    - Set `component_` descriptor to point to new Component array
    - Set `uninstantiated_` to point back to generic type
-5. For each component, resolve/compute actual offset based on alignment and sizes
+5. For each component, resolve/compute actual offset based on alignment and
+   sizes
 6. Set sizeInBytes to the final padded size of the resolved type
 
 
@@ -244,11 +293,17 @@ When creating a new concrete type:
 Component offsets are computed sequentially, respecting alignment. Each
 component's size is determined by its genre:
 
-- **Non-Data genres** (Allocatable, Pointer, Automatic): the component stores a Descriptor, so its size is `Descriptor::SizeInBytes(rank, ...)` and alignment is `alignof(Descriptor)`.
-- **Nested PDT with LEN parameters** (Data genre, Derived category): `GetConcreteType` is called recursively, depth-first, to resolve the inner type. The resolved `sizeInBytes` is then used as the element size, and the component's `derivedType_` pointer is updated to the concrete type.
-- **All other Data components** (intrinsic types, non-PDT derived, KIND-only PDT): element byte size times element count.
+- **Non-Data genres** (Allocatable, Pointer, Automatic): the component stores a
+  Descriptor, so its size is `Descriptor::SizeInBytes(rank, ...)` and alignment
+  is `alignof(Descriptor)`.
+- **Nested PDT with LEN parameters** (Data genre, Derived category):
+  `GetConcreteType` is called recursively, depth-first, to resolve the inner
+  type. The resolved `sizeInBytes` is then used as the element size, and the
+  component's `derivedType_` pointer is updated to the concrete type.
+- **All other Data components**: element byte size times element count.
 
-For array components, the element count is computed from the bounds - which may themselves be nested LEN-dependent `Value` expressions.
+For array components, the element count is computed from the bounds - which may
+themselves be nested LEN-dependent `Value` expressions.
 
 ```cpp
 // Simplified view of ResolveComponentOffsets
@@ -272,15 +327,14 @@ type :: trecurse(X)
   type(trecurse(X+1)), pointer :: P
 end type
 ```
+The Fortran standard (F2023, C749) requires self-referential components to be
+`POINTER` or `ALLOCATABLE`, thus `GetConcreteType` never encounters cyclic
+recursion. Pointer/Allocatable components store a fixed-size `Descriptor`
+whose size depends only on rank and DescriptorAddendum - not on the target
+type's layout. Data-genre components are stored inline, so nested PDTs do
+trigger a recursive `GetConcreteType` call, but this always terminates because
+inline components cannot be self-referential.
 
-This does not cause infinite recursion in `GetConcreteType`; `P` has genre `Pointer`, not `Data`.
-During offset resolution, the genre determines how a component's size is computed:
-
-- Data genre: the component is stored inline, so its full size must be known.
-  For a nested PDT, this triggers a recursive `GetConcreteType` call to resolve the inner type.
-- Pointer/Allocatable genre: the component stores a fixed-size `Descriptor`,
-  regardless of the pointed-to type. The size is `Descriptor::SizeInBytes(rank, ...)`,
-  which depends only on rank and addendum — not on the target type's layout.
 
 ```cpp
     if (comp.genre() != Component::Genre::Data) {
@@ -292,47 +346,32 @@ During offset resolution, the genre determines how a component's size is compute
     } else if (...)
 ```
 
-Thus, when `GetConcreteType` resolves `trecurse` with `X=5`:
+For the `trecurse` example, resolving `X=5` processes component `P` as a
+Pointer (fixed ~48-byte `Descriptor`), with no recursion into `trecurse(X+1)`.
+The concrete type for `trecurse(6)` is created lazily only if `P` is later
+allocated. Pointer association such as `foo%P => target` is a shallow
+descriptor copy and does not trigger concrete type creation.
 
-```
-GetConcreteType(trecurse, instance with X=5)
-  --> ResolveComponentOffsets:
-        Component "P" (genre=Pointer, rank=0):
-          size = Descriptor::SizeInBytes(0, ...)  // fixed, ~48 bytes
-          // Does NOT recurse into trecurse(X+1)
-          // Does NOT evaluate X+1
-          // Does NOT call GetConcreteType for the pointed-to type
-        SetOffset(P, 0)
-      sizeInBytes = alignTo(48, maxAlignment)
-  --> done, no recursion
-```
+### LEN Expression Encoding
 
-The concrete type for `trecurse(6)` is created lazily if/when `P` is actually allocated:
+The component's `lenValue_` array maps parent LEN params to child LEN params.
+A bare reference like `type(trecurse(X))` is straightforward:
+`Value(genre=LenParameter, value=0)` indexing the parent's parameter `0`.
+However, `X+1` is an expression, and the Value class can only encode a
+single parameter index or a constant - not computed expressions.
 
-```fortran
-type(trecurse(5)) :: foo
-allocate(foo%P)          !-- Runtime: AllocatableAllocate -> GetConcreteType(trecurse, X=6)
-allocate(foo%P%P)        !-- Runtime: GetConcreteType(trecurse, X=7)
-```
-
-Pointer association does not trigger concrete type creation at all — `foo%P => some_target` is a shallow descriptor copy handled by `PointerAssociate`.
-
-Note that the Fortran standard (C749) requires non-POINTER, non-ALLOCATABLE components to specify a previously defined type.
-A declaration like `type(trecurse(X+1)) :: P` (without `POINTER` or `ALLOCATABLE`) would be rejected at compile time due to
-the specified `type` not being previously defined.
-
-For the `X+1` expression, the component's `lenValue_` array encodes the mapping from parent LEN params to child LEN params. For a bare parameter reference like `type(trecurse(X))`, this is straightforward — `Value(genre=LenParameter, value=0)` referencing the parent's parameter index 0. However, `X+1` is an expression, not a bare parameter reference.
-
-Currently, the `Value` class can only encode `Genre::LenParameter` (a single parameter index) or `Genre::Explicit` (a constant). Encoding computed expressions which do not fold at compile time, like `X+1` but unlike `2+2`, is a known limitation within the front-end. To resolve this, the front-end may introduce anonymous LEN parameter slots in the descriptor's `len_[]` array to hold pre-computed expression results, allowing `lenValue_` entries to reference them via `Genre::LenParameter`.
-
-Regardless of this limitation, offset resolution for Pointer/Allocatable components is unaffected since their `lenValue_` arrays are not consulted during `ResolveComponentOffsets` — they are only relevant when the component is later allocated and the runtime needs to populate the child descriptor's `len_[]` values.
-
-For more information, see [this link](#recursion-and-self-referential-pdts).
+For Data-genre components with such expressions, the compiler will need to
+emit a small compiler-generated function which the runtime can call during
+`ResolveComponentOffsets`. Pointer/Allocatable components avoid this because
+the compiler evaluates LEN expressions inline at the allocation or assignment
+site; their `lenValue_` arrays are not consulted during offset resolution.
 
 
-### Cache Design
+## Cache Design
 
-The cache uses a custom dynamically-sized hash table (`ConcreteTypeCache`) that relies only on C-style memory management (`malloc`, `calloc`, `free`), and uses the hash value directly as the lookup key:
+The cache uses a custom dynamically-sized hash table (`ConcreteTypeCache`) that
+relies only on C-style memory management (`malloc`, `calloc`, `free`), and uses
+the hash value directly as the lookup key:
 
 ```cpp
 // Hashing, based on Boost's hash_combine.
@@ -351,50 +390,47 @@ ComputeConcreteTypeHash(const DerivedType &genericType,
 }
 ```
 
-The hash table starts with 31 buckets (currently tunable at build time using `-DFLANG_RT_PDT_CACHE_INITIAL_BUCKET_CNT`), each holding a linked list of `CacheEntry` nodes, and the bucket count doubles when the average load reaches 2 entries per bucket (again, currently tunable at build time using the define `-DFLANG_RT_PDT_CACHE_MAX_LOAD_FACTOR`).
+The hash table starts with 31 buckets (currently tunable at build time using
+`-DFLANG_RT_PDT_CACHE_INITIAL_BUCKET_CNT`), each holding a linked list of
+`CacheEntry` nodes, and the bucket count doubles when the average load
+reaches 2 entries per bucket (again, currently tunable at build time using the
+define `-DFLANG_RT_PDT_CACHE_MAX_LOAD_FACTOR`).
 
-Bucket arrays are allocated with `std::calloc` while linked-list entries (`CacheEntry` nodes) use the runtime's `New<T>` / `FreeMemory` allocator. The concrete `DerivedType` objects themselves are allocated with `std::calloc`, not `New<T>`.
+Bucket arrays are allocated with `std::calloc` while linked-list entries
+(`CacheEntry` nodes) use the runtime's `New<T>` / `FreeMemory` allocator.
+The concrete `DerivedType` objects themselves are allocated with `std::calloc`,
+not `New<T>`.
 
 Hash collisions are theoretically possible but extremely unlikely given a
-64-bit hash space. Note that `Find()` compares only hash values, and does not verify the full key (`genericType` pointer + LEN values) after a match. A collision between two distinct `(genericType, len_values)` combinations would therefore silently return the wrong concrete type - a correctness bug, not merely a performance issue. If collision resistance becomes a concern, a full-key equality check could be added to `Find()`.
+64-bit hash space. Note that `Find()` compares only hash values, and does not
+verify the full key (`genericType` pointer + LEN values) after a match.
+A collision between two distinct `(genericType, len_values)` combinations would
+therefore silently return the wrong concrete type - a correctness bug,
+not merely a performance issue. If collision resistance becomes a concern,
+a full-key equality check could be added to `Find()`.
 
-Concrete types are never freed. The runtime currently assumes single-threaded allocation; if concurrent PDT allocation becomes a requirement, the existing `Lock` class from `lock.h` could be used.
+Concrete types are never freed. The runtime currently assumes single-threaded
+allocation; if concurrent PDT allocation becomes a requirement, the existing
+`Lock` class from `lock.h` could be used.
 
 
-### Device Compilation
+## Device Compilation
 
-GPU device code cannot use the host-side cache (which relies on `malloc` and dynamic data structures). When `RT_DEVICE_COMPILATION` is defined, `GetConcreteType` currrently provides a pre-implementation stub that passes through types without LEN parameters or already-concrete types, and crashes for actual LEN instantiation requests:
+GPU device code cannot use the host-side cache (which relies on `malloc` and
+dynamic data structures). When `RT_DEVICE_COMPILATION` is defined,
+`GetConcreteType` currently provides a pre-implementation stub that passes
+through types without LEN parameters or already-concrete types, and crashes for
+actual LEN instantiation requests:
 
 ```cpp
 #ifdef RT_DEVICE_COMPILATION
 RT_API_ATTRS const DerivedType *GetConcreteType(...) {
-  if ((numLenParams == 0) || (genericType.uninstantiatedType() != &genericType)) {
+  if ((numLenParams == 0) || (uninst != nullptr && uninst != &genericType)) {
     return &genericType;
   }
   terminator.Crash("PDT LEN param instantiation not supported in device code");
 }
 #endif
-```
-
-## Lowering Strategy
-
-All LEN parameter expressions are evaluated at runtime and stored in the descriptor's `len_` Flexible array.
-
-```fortran
-type(pdt(4, n+1, m*2)) :: x
-```
-
-will lower to:
-
-```
-%len0 = arith.constant 4
-%len1 = arith.addi %n, %c1
-%len2 = arith.muli %m, %c2
-
-call @AllocatableSetDerivedLength(%desc, 0, %len0)
-call @AllocatableSetDerivedLength(%desc, 1, %len1)
-call @AllocatableSetDerivedLength(%desc, 2, %len2)
-call @AllocatableAllocate(%desc)  // internally calls GetConcreteType
 ```
 
 
@@ -413,3 +449,5 @@ call @AllocatableAllocate(%desc)  // internally calls GetConcreteType
 
 ## Version
 1.0 - Initial posting
+1.1 - Added Recursion description
+1.2 - Rearrange sections
