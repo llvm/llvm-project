@@ -985,6 +985,9 @@ future<_Rp>::~future() {
 
 template <class _Rp>
 _Rp future<_Rp>::get() {
+  if (__state_ == nullptr) [[unlikely]] {
+    __throw_future_error(future_errc::no_state);
+  }
   unique_ptr<__shared_count, __release_shared_count> __guard(__state_);
   __assoc_state<_Rp>* __s = __state_;
   __state_                = nullptr;
