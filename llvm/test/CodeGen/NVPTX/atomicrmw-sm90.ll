@@ -1983,29 +1983,23 @@ define double @fmax_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %va
 define double @fminimum_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %val) {
 ; SM90-LABEL: fminimum_acq_rel_double_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .pred %p<6>;
-; SM90-NEXT:    .reg .b64 %rd<10>;
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b64 %rd<7>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param.b64 %rd3, [fminimum_acq_rel_double_global_cta_param_1];
 ; SM90-NEXT:    ld.param.b64 %rd2, [fminimum_acq_rel_double_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.global.b64 %rd9, [%rd2];
-; SM90-NEXT:    setp.eq.b64 %p3, %rd3, -9223372036854775808;
+; SM90-NEXT:    ld.global.b64 %rd6, [%rd2];
 ; SM90-NEXT:  $L__BB70_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    setp.nan.f64 %p1, %rd9, %rd3;
-; SM90-NEXT:    min.f64 %rd4, %rd9, %rd3;
+; SM90-NEXT:    setp.nan.f64 %p1, %rd6, %rd3;
+; SM90-NEXT:    min.f64 %rd4, %rd6, %rd3;
 ; SM90-NEXT:    selp.f64 %rd5, 0d7FF8000000000000, %rd4, %p1;
-; SM90-NEXT:    setp.eq.b64 %p2, %rd9, -9223372036854775808;
-; SM90-NEXT:    selp.f64 %rd6, %rd9, %rd5, %p2;
-; SM90-NEXT:    selp.f64 %rd7, %rd3, %rd6, %p3;
-; SM90-NEXT:    setp.eq.f64 %p4, %rd5, 0d0000000000000000;
-; SM90-NEXT:    selp.f64 %rd8, %rd7, %rd5, %p4;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd1, [%rd2], %rd9, %rd8;
-; SM90-NEXT:    setp.ne.b64 %p5, %rd1, %rd9;
-; SM90-NEXT:    mov.b64 %rd9, %rd1;
-; SM90-NEXT:    @%p5 bra $L__BB70_1;
+; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd1, [%rd2], %rd6, %rd5;
+; SM90-NEXT:    setp.ne.b64 %p2, %rd1, %rd6;
+; SM90-NEXT:    mov.b64 %rd6, %rd1;
+; SM90-NEXT:    @%p2 bra $L__BB70_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd1;
@@ -2017,29 +2011,23 @@ define double @fminimum_acq_rel_double_global_cta(ptr addrspace(1) %addr, double
 define double @fmaximum_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %val) {
 ; SM90-LABEL: fmaximum_acq_rel_double_global_cta(
 ; SM90:       {
-; SM90-NEXT:    .reg .pred %p<6>;
-; SM90-NEXT:    .reg .b64 %rd<10>;
+; SM90-NEXT:    .reg .pred %p<3>;
+; SM90-NEXT:    .reg .b64 %rd<7>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param.b64 %rd3, [fmaximum_acq_rel_double_global_cta_param_1];
 ; SM90-NEXT:    ld.param.b64 %rd2, [fmaximum_acq_rel_double_global_cta_param_0];
 ; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.global.b64 %rd9, [%rd2];
-; SM90-NEXT:    setp.eq.b64 %p3, %rd3, 0;
+; SM90-NEXT:    ld.global.b64 %rd6, [%rd2];
 ; SM90-NEXT:  $L__BB71_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    setp.nan.f64 %p1, %rd9, %rd3;
-; SM90-NEXT:    max.f64 %rd4, %rd9, %rd3;
+; SM90-NEXT:    setp.nan.f64 %p1, %rd6, %rd3;
+; SM90-NEXT:    max.f64 %rd4, %rd6, %rd3;
 ; SM90-NEXT:    selp.f64 %rd5, 0d7FF8000000000000, %rd4, %p1;
-; SM90-NEXT:    setp.eq.b64 %p2, %rd9, 0;
-; SM90-NEXT:    selp.f64 %rd6, %rd9, %rd5, %p2;
-; SM90-NEXT:    selp.f64 %rd7, %rd3, %rd6, %p3;
-; SM90-NEXT:    setp.eq.f64 %p4, %rd5, 0d0000000000000000;
-; SM90-NEXT:    selp.f64 %rd8, %rd7, %rd5, %p4;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd1, [%rd2], %rd9, %rd8;
-; SM90-NEXT:    setp.ne.b64 %p5, %rd1, %rd9;
-; SM90-NEXT:    mov.b64 %rd9, %rd1;
-; SM90-NEXT:    @%p5 bra $L__BB71_1;
+; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd1, [%rd2], %rd6, %rd5;
+; SM90-NEXT:    setp.ne.b64 %p2, %rd1, %rd6;
+; SM90-NEXT:    mov.b64 %rd6, %rd1;
+; SM90-NEXT:    @%p2 bra $L__BB71_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd1;
