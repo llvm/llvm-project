@@ -208,15 +208,6 @@ uint32_t SBSection::GetPermissions() const {
   return 0;
 }
 
-uint32_t SBSection::GetTargetByteSize() {
-  LLDB_INSTRUMENT_VA(this);
-
-  SectionSP section_sp(GetSP());
-  if (section_sp.get())
-    return section_sp->GetTargetByteSize();
-  return 0;
-}
-
 uint32_t SBSection::GetAlignment() {
   LLDB_INSTRUMENT_VA(this);
 

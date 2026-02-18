@@ -67,15 +67,6 @@ public:
   uint32_t
   GetPermissions() const;
 
-  /// Return the size of a target's byte represented by this section
-  /// in numbers of host bytes. Note that certain architectures have
-  /// varying minimum addressable unit (i.e. byte) size for their
-  /// CODE or DATA buses.
-  ///
-  /// \return
-  ///     The number of host (8-bit) bytes needed to hold a target byte
-  uint32_t GetTargetByteSize();
-
   /// Return the alignment of the section in bytes
   ///
   /// \return

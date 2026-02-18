@@ -251,22 +251,6 @@ produces: ::
 ) lldb::SBTarget::FindCompileUnits;
 
 %feature("docstring", "
-    Architecture data byte width accessor
-
-    :return: The size in 8-bit (host) bytes of a minimum addressable unit from the Architecture's data bus.
-
-    "
-) lldb::SBTarget::GetDataByteSize;
-
-%feature("docstring", "
-    Architecture code byte width accessor.
-
-    :return: The size in 8-bit (host) bytes of a minimum addressable unit from the Architecture's code bus.
-
-    "
-) lldb::SBTarget::GetCodeByteSize;
-
-%feature("docstring", "
     Find functions by name.
 
     :param name: The name of the function we are looking for.

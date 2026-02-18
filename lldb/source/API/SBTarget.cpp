@@ -1698,22 +1698,6 @@ uint32_t SBTarget::GetMaximumOpcodeByteSize() const {
   return 0;
 }
 
-uint32_t SBTarget::GetDataByteSize() {
-  LLDB_INSTRUMENT_VA(this);
-
-  if (TargetSP target_sp = GetSP())
-    return target_sp->GetArchitecture().GetDataByteSize();
-  return 0;
-}
-
-uint32_t SBTarget::GetCodeByteSize() {
-  LLDB_INSTRUMENT_VA(this);
-
-  if (TargetSP target_sp = GetSP())
-    return target_sp->GetArchitecture().GetCodeByteSize();
-  return 0;
-}
-
 uint32_t SBTarget::GetMaximumNumberOfChildrenToDisplay() const {
   LLDB_INSTRUMENT_VA(this);
 
