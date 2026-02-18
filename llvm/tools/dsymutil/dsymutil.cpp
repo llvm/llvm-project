@@ -203,7 +203,8 @@ static Error verifyOptions(const DsymutilOptions &Options) {
         "cannot combine --gen-reproducer and --use-reproducer.",
         errc::invalid_argument);
 
-  if (Options.InputIsYAMLDebugMap && !Options.AllowedDebugMapObjectsFile.empty())
+  if (Options.InputIsYAMLDebugMap &&
+      !Options.AllowedDebugMapObjectsFile.empty())
     return make_error<StringError>(
         "-y and --allowed-debug-map-objects cannot be specified together",
         errc::invalid_argument);
@@ -410,8 +411,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   for (auto *SearchPath : Args.filtered(OPT_dsym_search_path))
     Options.LinkOpts.DSYMSearchPaths.push_back(SearchPath->getValue());
 
-  if (opt::Arg *AllowedObjs =
-          Args.getLastArg(OPT_allowed_debug_map_objects))
+  if (opt::Arg *AllowedObjs = Args.getLastArg(OPT_allowed_debug_map_objects))
     Options.AllowedDebugMapObjectsFile = AllowedObjs->getValue();
 
   if (Error E = verifyOptions(Options))
@@ -703,8 +703,7 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
     // Read the allowed debug map objects file if specified.
     std::optional<StringSet<>> AllowedDebugMapObjects;
     if (!Options.AllowedDebugMapObjectsFile.empty()) {
-      auto BufOrErr =
-          MemoryBuffer::getFile(Options.AllowedDebugMapObjectsFile);
+      auto BufOrErr = MemoryBuffer::getFile(Options.AllowedDebugMapObjectsFile);
       if (!BufOrErr) {
         WithColor::error() << "cannot open allowed debug map objects file '"
                            << Options.AllowedDebugMapObjectsFile

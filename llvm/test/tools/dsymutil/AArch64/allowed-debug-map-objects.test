@@ -1,0 +1,59 @@
+# Extract filenames from the debug map for use in allow-lists.
+RUN: dsymutil --dump-debug-map --oso-prepend-path=%p/../Inputs \
+RUN:   %p/../Inputs/remarks/basic.macho.remarks.arm64 2>/dev/null \
+RUN:   | grep 'filename:' | sed "s/.*filename:[[:space:]]*//" | tr -d "'" \
+RUN:   > %t.all-objects
+
+# Build allow-lists from the extracted filenames.
+RUN: grep 'basic1' %t.all-objects > %t.allow-one
+RUN: grep -e 'basic1' -e 'basic3' %t.all-objects > %t.allow-two
+RUN: touch %t.allow-empty
+
+# Test filtering to a single object file.
+RUN: dsymutil --dump-debug-map --oso-prepend-path=%p/../Inputs \
+RUN:   --allowed-debug-map-objects=%t.allow-one \
+RUN:   %p/../Inputs/remarks/basic.macho.remarks.arm64 \
+RUN:   | FileCheck %s --check-prefix=ALLOW-ONE
+
+# Test filtering to two object files.
+RUN: dsymutil --dump-debug-map --oso-prepend-path=%p/../Inputs \
+RUN:   --allowed-debug-map-objects=%t.allow-two \
+RUN:   %p/../Inputs/remarks/basic.macho.remarks.arm64 \
+RUN:   | FileCheck %s --check-prefix=ALLOW-TWO
+
+# Test empty allow-list (allow nothing).
+RUN: dsymutil --dump-debug-map --oso-prepend-path=%p/../Inputs \
+RUN:   --allowed-debug-map-objects=%t.allow-empty \
+RUN:   %p/../Inputs/remarks/basic.macho.remarks.arm64 \
+RUN:   | FileCheck %s --check-prefix=ALLOW-NONE
+
+# Test error when allow-list file does not exist.
+RUN: not dsymutil --dump-debug-map --oso-prepend-path=%p/../Inputs \
+RUN:   --allowed-debug-map-objects=/nonexistent/path \
+RUN:   %p/../Inputs/remarks/basic.macho.remarks.arm64 2>&1 \
+RUN:   | FileCheck %s --check-prefix=MISSING-FILE
+
+# Test error when combined with -y.
+RUN: not dsymutil --allowed-debug-map-objects=%t.allow-one \
+RUN:   -y %p/../Inputs/remarks/basic.macho.remarks.arm64 2>&1 \
+RUN:   | FileCheck %s --check-prefix=YAML-CONFLICT
+
+ALLOW-ONE:     ---
+ALLOW-ONE:     filename:{{.*}}basic1.macho.remarks.arm64.o
+ALLOW-ONE-NOT: filename:
+ALLOW-ONE:     ...
+
+ALLOW-TWO:     ---
+ALLOW-TWO:     filename:{{.*}}basic1.macho.remarks.arm64.o
+ALLOW-TWO-NOT: filename:{{.*}}basic2
+ALLOW-TWO:     filename:{{.*}}basic3.macho.remarks.arm64.o
+ALLOW-TWO-NOT: filename:
+ALLOW-TWO:     ...
+
+ALLOW-NONE:     ---
+ALLOW-NONE-NOT: filename:
+ALLOW-NONE:     ...
+
+MISSING-FILE: error: cannot open allowed debug map objects file
+
+YAML-CONFLICT: error: -y and --allowed-debug-map-objects cannot be specified together

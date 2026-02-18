@@ -28,13 +28,12 @@ using namespace llvm::object;
 
 class MachODebugMapParser {
 public:
-  MachODebugMapParser(BinaryHolder &BinHolder, StringRef BinaryPath,
-                      ArrayRef<std::string> Archs,
-                      ArrayRef<std::string> DSYMSearchPaths,
-                      StringRef PathPrefix = "", StringRef VariantSuffix = "",
-                      bool Verbose = false,
-                      const std::optional<StringSet<>>
-                          &AllowedDebugMapObjects = std::nullopt)
+  MachODebugMapParser(
+      BinaryHolder &BinHolder, StringRef BinaryPath,
+      ArrayRef<std::string> Archs, ArrayRef<std::string> DSYMSearchPaths,
+      StringRef PathPrefix = "", StringRef VariantSuffix = "",
+      bool Verbose = false,
+      const std::optional<StringSet<>> &AllowedDebugMapObjects = std::nullopt)
       : BinaryPath(std::string(BinaryPath)), Archs(Archs),
         DSYMSearchPaths(DSYMSearchPaths), PathPrefix(std::string(PathPrefix)),
         VariantSuffix(std::string(VariantSuffix)), BinHolder(BinHolder),
