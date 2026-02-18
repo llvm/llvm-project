@@ -320,28 +320,12 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   // Many relocations end up in sec.relocations.
   sec.relocations.reserve(rels.size());
 
-  StringRef rvVendor;
+  StringRef vendor;
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     RelType type = it->getType(false);
     uint32_t symIndex = it->getSymbol(false);
     Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
     uint64_t offset = it->r_offset;
-
-    if (type == R_RISCV_VENDOR) {
-      if (!rvVendor.empty())
-        Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
-                 << "malformed consecutive R_RISCV_VENDOR relocations";
-      rvVendor = sym.getName();
-      continue;
-    } else if (!rvVendor.empty()) {
-      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
-               << "unknown vendor-specific relocation (" << type.v
-               << ") in namespace '" << rvVendor << "' against symbol '" << &sym
-               << "'";
-      rvVendor = "";
-      continue;
-    }
-
     if (sym.isUndefined() && symIndex != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
@@ -361,23 +345,6 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_RISCV_LO12_I:
     case R_RISCV_LO12_S:
       expr = R_ABS;
-      break;
-
-    // ADD/SET/SUB:
-    case R_RISCV_ADD8:
-    case R_RISCV_ADD16:
-    case R_RISCV_ADD32:
-    case R_RISCV_ADD64:
-    case R_RISCV_SET6:
-    case R_RISCV_SET8:
-    case R_RISCV_SET16:
-    case R_RISCV_SET32:
-    case R_RISCV_SUB6:
-    case R_RISCV_SUB8:
-    case R_RISCV_SUB16:
-    case R_RISCV_SUB32:
-    case R_RISCV_SUB64:
-      expr = RE_RISCV_ADD;
       break;
 
     // PC-relative relocations:
@@ -454,15 +421,44 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
         sec.addReloc({R_RELAX_HINT, type, offset, addend, &sym});
       continue;
 
+    // Misc relocations:
+    case R_RISCV_ADD8:
+    case R_RISCV_ADD16:
+    case R_RISCV_ADD32:
+    case R_RISCV_ADD64:
+    case R_RISCV_SET6:
+    case R_RISCV_SET8:
+    case R_RISCV_SET16:
+    case R_RISCV_SET32:
+    case R_RISCV_SUB6:
+    case R_RISCV_SUB8:
+    case R_RISCV_SUB16:
+    case R_RISCV_SUB32:
+    case R_RISCV_SUB64:
+      expr = RE_RISCV_ADD;
+      break;
     case R_RISCV_SET_ULEB128:
     case R_RISCV_SUB_ULEB128:
       expr = RE_RISCV_LEB128;
       break;
 
+    case R_RISCV_VENDOR:
+      if (!vendor.empty())
+        Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+                 << "malformed consecutive R_RISCV_VENDOR relocations";
+      vendor = sym.getName();
+      continue;
     default:
-      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
-               << "unknown relocation (" << type.v << ") against symbol "
-               << &sym;
+      auto diag = Err(ctx);
+      diag << getErrorLoc(ctx, sec.content().data() + offset);
+      if (!vendor.empty()) {
+        diag << "unknown vendor-specific relocation (" << type.v
+             << ") in namespace '" << vendor << "' against symbol '" << &sym
+             << "'";
+        vendor = "";
+      } else {
+        diag << "unknown relocation (" << type.v << ") against symbol " << &sym;
+      }
       continue;
     }
     rs.process(expr, type, offset, sym, addend);
