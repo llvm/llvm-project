@@ -25566,6 +25566,16 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
   if ((X86CC == X86::COND_E || X86CC == X86::COND_NE) &&
       (isAllOnesConstant(LHS) || isAllOnesConstant(RHS))) {
     SDValue Y = isAllOnesConstant(RHS) ? LHS : RHS;
+
+    // If CMOV is available, use it instead. Only prefer CMOV when SBB
+    // dependency breaking is not available or when CMOV is likely to be more
+    // efficient.
+    if (!isNullConstant(Y) && Subtarget.canUseCMOV() &&
+        (VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
+        !Subtarget.hasSBBDepBreaking())
+      return SDValue();
+
+    // Fall back to SBB pattern for older processors or unsupported types.
     SDVTList CmpVTs = DAG.getVTList(CmpVT, MVT::i32);
 
     // 'X - 1' sets the carry flag if X == 0.

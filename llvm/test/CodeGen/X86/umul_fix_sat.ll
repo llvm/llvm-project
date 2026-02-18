@@ -441,33 +441,31 @@ define i64 @func7(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    mull %ebp
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    movl %edi, %eax
-; X86-NEXT:    mull %ebx
+; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    mull %edi
 ; X86-NEXT:    addl %edx, %esi
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    mull %ebp
-; X86-NEXT:    movl %edx, %edi
+; X86-NEXT:    movl %edx, %ebx
 ; X86-NEXT:    movl %eax, %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    mull %ebx
+; X86-NEXT:    mull %edi
 ; X86-NEXT:    addl %esi, %eax
 ; X86-NEXT:    adcl %ecx, %edx
-; X86-NEXT:    adcl $0, %edi
+; X86-NEXT:    adcl $0, %ebx
 ; X86-NEXT:    addl %ebp, %edx
-; X86-NEXT:    adcl $0, %edi
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    negl %edi
-; X86-NEXT:    sbbl %ecx, %ecx
-; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    orl %ecx, %edx
+; X86-NEXT:    adcl $0, %ebx
+; X86-NEXT:    movl $-1, %ecx
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    cmovnel %ecx, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
