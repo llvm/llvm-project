@@ -939,8 +939,7 @@ def : InstRW<[P9_DIV_12C, IP_EXECE_1C, IP_EXECO_1C, DISP_EVEN_1C],
     (instregex "M(T|F)MSR(D)?$"),
     (instregex "M(T|F)(U)?DSCR$"),
     (instregex "MTSPR(8)?$"),
-    MSGSNDP,
-    MSGSNDP8
+    (instregex "MSGSNDP(8)?$")
 )>;
 
 // 16 Cycle DIV operation. Only one DIV unit per superslice so we use the whole
