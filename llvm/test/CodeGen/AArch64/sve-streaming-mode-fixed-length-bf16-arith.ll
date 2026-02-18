@@ -12,24 +12,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x float> @partial_reduce_to_v4f32(<4 x float> %acc, <8 x bfloat> %a, <8 x bfloat> %b) {
 ; CHECK-LABEL: partial_reduce_to_v4f32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uunpklo z3.s, z1.h
-; CHECK-NEXT:    stp q1, q2, [sp, #-32]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    uunpklo z1.s, z2.h
-; CHECK-NEXT:    ldr d4, [sp, #8]
-; CHECK-NEXT:    ldr d2, [sp, #24]
-; CHECK-NEXT:    lsl z3.s, z3.s, #16
-; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    uunpklo z4.s, z4.h
-; CHECK-NEXT:    uunpklo z2.s, z2.h
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z2.s, z2.s, #16
-; CHECK-NEXT:    fmul z1.s, p0/m, z1.s, z3.s
-; CHECK-NEXT:    lsl z3.s, z4.s, #16
-; CHECK-NEXT:    fmul z2.s, p0/m, z2.s, z3.s
-; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z2.s
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    bfmlalb z0.s, z1.h, z2.h
+; CHECK-NEXT:    bfmlalt z0.s, z1.h, z2.h
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: partial_reduce_to_v4f32:
