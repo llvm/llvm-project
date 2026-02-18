@@ -30,5 +30,4 @@ attributes #1 = { inaccessiblememonly nounwind willreturn }
 
 !llvm.pseudo_probe_desc = !{!0}
 
-!0 = !{i64 6699318081062747564, i64 4294967295, !"foo", null}
-
+!0 = !{i64 6699318081062747564, i64 4294967295, i8 0, !"foo", null}
