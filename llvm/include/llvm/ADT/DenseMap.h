@@ -208,9 +208,9 @@ public:
     return ValueT();
   }
 
-  // Return the entry with the specified key, or \p Default. This variant is
-  // useful, because `lookup` cannot be used with non-default-constructible
-  // values.
+  /// Returns the mapped value for Val if present, otherwise Default.
+  ///
+  /// This is useful when the mapped type is not default-constructible.
   template <typename U = std::remove_cv_t<ValueT>>
   [[nodiscard]] ValueT lookup_or(const_arg_type_t<KeyT> Val,
                                  U &&Default) const {
@@ -249,17 +249,14 @@ public:
     return try_emplace_impl(std::move(KV.first), std::move(KV.second));
   }
 
-  // Inserts key,value pair into the map if the key isn't already in the map.
-  // The value is constructed in-place if the key is not in the map, otherwise
-  // it is not moved.
+  /// Inserts a value for Key if absent, forwarding Args to construct it.
+  /// Returns an iterator to the element and whether insertion occurred.
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(KeyT &&Key, Ts &&...Args) {
     return try_emplace_impl(std::move(Key), std::forward<Ts>(Args)...);
   }
 
-  // Inserts key,value pair into the map if the key isn't already in the map.
-  // The value is constructed in-place if the key is not in the map, otherwise
-  // it is not moved.
+   
   template <typename... Ts>
   std::pair<iterator, bool> try_emplace(const KeyT &Key, Ts &&...Args) {
     return try_emplace_impl(Key, std::forward<Ts>(Args)...);
@@ -295,6 +292,8 @@ public:
     insert(adl_begin(R), adl_end(R));
   }
 
+  /// Inserts a value for Key if absent, otherwise assigns Val.
+  /// Returns an iterator to the element and whether insertion occurred.
   template <typename V>
   std::pair<iterator, bool> insert_or_assign(const KeyT &Key, V &&Val) {
     auto Ret = try_emplace(Key, std::forward<V>(Val));
@@ -302,6 +301,7 @@ public:
       Ret.first->second = std::forward<V>(Val);
     return Ret;
   }
+  
 
   template <typename V>
   std::pair<iterator, bool> insert_or_assign(KeyT &&Key, V &&Val) {
@@ -311,6 +311,8 @@ public:
     return Ret;
   }
 
+  /// Inserts a value for Key if absent, otherwise assigns a newly constructed one.
+  /// Returns an iterator to the element and whether insertion occurred.
   template <typename... Ts>
   std::pair<iterator, bool> emplace_or_assign(const KeyT &Key, Ts &&...Args) {
     auto Ret = try_emplace(Key, std::forward<Ts>(Args)...);
@@ -319,6 +321,7 @@ public:
     return Ret;
   }
 
+  
   template <typename... Ts>
   std::pair<iterator, bool> emplace_or_assign(KeyT &&Key, Ts &&...Args) {
     auto Ret = try_emplace(std::move(Key), std::forward<Ts>(Args)...);
@@ -346,6 +349,8 @@ public:
     incrementNumTombstones();
   }
 
+  /// Returns a reference to the mapped value for Key, inserting a
+  /// default-constructed value if necessary.
   ValueT &operator[](const KeyT &Key) {
     return lookupOrInsertIntoBucket(Key).first->second;
   }
