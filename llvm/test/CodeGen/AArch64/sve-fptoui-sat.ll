@@ -73,14 +73,15 @@ define <vscale x 4 x i16> @test_signed_v4f32_v4i16(<vscale x 4 x float> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov w8, #65280 // =0xff00
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    movk w8, #18303, lsl #16
-; CHECK-NEXT:    fcmge p1.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    fmaxnm z1.s, p0/m, z1.s, #0.0
 ; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    fcmgt p0.s, p0/z, z0.s, z2.s
-; CHECK-NEXT:    fcvtzu z1.s, p1/m, z0.s
-; CHECK-NEXT:    mov z0.s, #65535 // =0xffff
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    fcvtzu z1.s, p0/m, z1.s
+; CHECK-NEXT:    fcmuo p0.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    mov z1.s, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
     %x = call <vscale x 4 x i16> @llvm.fptoui.sat.nxv4f32.nxv4i16(<vscale x 4 x float> %f)
     ret <vscale x 4 x i16> %x
@@ -91,20 +92,21 @@ define <vscale x 8 x i16> @test_signed_v8f32_v8i16(<vscale x 8 x float> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov w8, #65280 // =0xff00
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    movk w8, #18303, lsl #16
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    fcmge p1.s, p0/z, z1.s, #0.0
+; CHECK-NEXT:    movprfx z2, z1
+; CHECK-NEXT:    fmaxnm z2.s, p0/m, z2.s, #0.0
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    fmaxnm z3.s, p0/m, z3.s, #0.0
 ; CHECK-NEXT:    mov z4.s, w8
-; CHECK-NEXT:    fcmge p2.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    fcvtzu z2.s, p1/m, z1.s
-; CHECK-NEXT:    fcmgt p1.s, p0/z, z1.s, z4.s
-; CHECK-NEXT:    mov z1.s, #65535 // =0xffff
-; CHECK-NEXT:    fcvtzu z3.s, p2/m, z0.s
-; CHECK-NEXT:    fcmgt p0.s, p0/z, z0.s, z4.s
-; CHECK-NEXT:    sel z0.s, p1, z1.s, z2.s
-; CHECK-NEXT:    sel z1.s, p0, z1.s, z3.s
-; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    fcmuo p1.s, p0/z, z1.s, z1.s
+; CHECK-NEXT:    fminnm z2.s, p0/m, z2.s, z4.s
+; CHECK-NEXT:    fminnm z3.s, p0/m, z3.s, z4.s
+; CHECK-NEXT:    fcvtzu z2.s, p0/m, z2.s
+; CHECK-NEXT:    fcvtzu z3.s, p0/m, z3.s
+; CHECK-NEXT:    fcmuo p0.s, p0/z, z0.s, z0.s
+; CHECK-NEXT:    mov z2.s, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z3.s, p0/m, #0 // =0x0
+; CHECK-NEXT:    uzp1 z0.h, z3.h, z2.h
 ; CHECK-NEXT:    ret
     %x = call <vscale x 8 x i16> @llvm.fptoui.sat.nxv8f32.nxv8i16(<vscale x 8 x float> %f)
     ret <vscale x 8 x i16> %x
@@ -165,14 +167,15 @@ define <vscale x 2 x i32> @test_signed_v2f64_v2i32(<vscale x 2 x double> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, #281474974613504 // =0xffffffe00000
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16879, lsl #48
-; CHECK-NEXT:    fcmge p1.d, p0/z, z0.d, #0.0
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    fmaxnm z1.d, p0/m, z1.d, #0.0
 ; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    fcmgt p0.d, p0/z, z0.d, z2.d
-; CHECK-NEXT:    fcvtzu z1.d, p1/m, z0.d
-; CHECK-NEXT:    mov z0.d, #0xffffffff
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    fcvtzu z1.d, p0/m, z1.d
+; CHECK-NEXT:    fcmuo p0.d, p0/z, z0.d, z0.d
+; CHECK-NEXT:    mov z1.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
     %x = call <vscale x 2 x i32> @llvm.fptoui.sat.nxv2f64.nxv2i32(<vscale x 2 x double> %f)
     ret <vscale x 2 x i32> %x
@@ -183,20 +186,21 @@ define <vscale x 4 x i32> @test_signed_v4f64_v4i32(<vscale x 4 x double> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, #281474974613504 // =0xffffffe00000
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16879, lsl #48
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    fcmge p1.d, p0/z, z1.d, #0.0
+; CHECK-NEXT:    movprfx z2, z1
+; CHECK-NEXT:    fmaxnm z2.d, p0/m, z2.d, #0.0
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    fmaxnm z3.d, p0/m, z3.d, #0.0
 ; CHECK-NEXT:    mov z4.d, x8
-; CHECK-NEXT:    fcmge p2.d, p0/z, z0.d, #0.0
-; CHECK-NEXT:    fcvtzu z2.d, p1/m, z1.d
-; CHECK-NEXT:    fcmgt p1.d, p0/z, z1.d, z4.d
-; CHECK-NEXT:    mov z1.d, #0xffffffff
-; CHECK-NEXT:    fcvtzu z3.d, p2/m, z0.d
-; CHECK-NEXT:    fcmgt p0.d, p0/z, z0.d, z4.d
-; CHECK-NEXT:    sel z0.d, p1, z1.d, z2.d
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z3.d
-; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    fcmuo p1.d, p0/z, z1.d, z1.d
+; CHECK-NEXT:    fminnm z2.d, p0/m, z2.d, z4.d
+; CHECK-NEXT:    fminnm z3.d, p0/m, z3.d, z4.d
+; CHECK-NEXT:    fcvtzu z2.d, p0/m, z2.d
+; CHECK-NEXT:    fcvtzu z3.d, p0/m, z3.d
+; CHECK-NEXT:    fcmuo p0.d, p0/z, z0.d, z0.d
+; CHECK-NEXT:    mov z2.d, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z3.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    uzp1 z0.s, z3.s, z2.s
 ; CHECK-NEXT:    ret
     %x = call <vscale x 4 x i32> @llvm.fptoui.sat.nxv4f64.nxv4i32(<vscale x 4 x double> %f)
     ret <vscale x 4 x i32> %x
@@ -205,41 +209,36 @@ define <vscale x 4 x i32> @test_signed_v4f64_v4i32(<vscale x 4 x double> %f) {
 define <vscale x 8 x i32> @test_signed_v8f64_v8i32(<vscale x 8 x double> %f) {
 ; CHECK-LABEL: test_signed_v8f64_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, #281474974613504 // =0xffffffe00000
-; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16879, lsl #48
-; CHECK-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-NEXT:    movi v6.2d, #0000000000000000
-; CHECK-NEXT:    fcmge p1.d, p0/z, z1.d, #0.0
-; CHECK-NEXT:    movi v24.2d, #0000000000000000
-; CHECK-NEXT:    mov z7.d, x8
-; CHECK-NEXT:    fcmge p2.d, p0/z, z0.d, #0.0
-; CHECK-NEXT:    fcmge p3.d, p0/z, z3.d, #0.0
-; CHECK-NEXT:    fcmge p4.d, p0/z, z2.d, #0.0
-; CHECK-NEXT:    fcvtzu z4.d, p1/m, z1.d
-; CHECK-NEXT:    fcvtzu z5.d, p2/m, z0.d
-; CHECK-NEXT:    fcvtzu z6.d, p3/m, z3.d
-; CHECK-NEXT:    fcmgt p1.d, p0/z, z1.d, z7.d
-; CHECK-NEXT:    fcvtzu z24.d, p4/m, z2.d
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-NEXT:    fcmgt p2.d, p0/z, z0.d, z7.d
-; CHECK-NEXT:    mov z0.d, #0xffffffff
-; CHECK-NEXT:    fcmgt p3.d, p0/z, z3.d, z7.d
-; CHECK-NEXT:    fcmgt p0.d, p0/z, z2.d, z7.d
-; CHECK-NEXT:    sel z1.d, p1, z0.d, z4.d
-; CHECK-NEXT:    sel z2.d, p2, z0.d, z5.d
-; CHECK-NEXT:    sel z3.d, p3, z0.d, z6.d
-; CHECK-NEXT:    sel z4.d, p0, z0.d, z24.d
-; CHECK-NEXT:    uzp1 z0.s, z2.s, z1.s
-; CHECK-NEXT:    uzp1 z1.s, z4.s, z3.s
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    movprfx z5, z1
+; CHECK-NEXT:    fmaxnm z5.d, p0/m, z5.d, #0.0
+; CHECK-NEXT:    movprfx z6, z0
+; CHECK-NEXT:    fmaxnm z6.d, p0/m, z6.d, #0.0
+; CHECK-NEXT:    movprfx z7, z3
+; CHECK-NEXT:    fmaxnm z7.d, p0/m, z7.d, #0.0
+; CHECK-NEXT:    movprfx z24, z2
+; CHECK-NEXT:    fmaxnm z24.d, p0/m, z24.d, #0.0
+; CHECK-NEXT:    mov z4.d, x8
+; CHECK-NEXT:    fcmuo p1.d, p0/z, z1.d, z1.d
+; CHECK-NEXT:    fcmuo p2.d, p0/z, z0.d, z0.d
+; CHECK-NEXT:    fminnm z5.d, p0/m, z5.d, z4.d
+; CHECK-NEXT:    fminnm z6.d, p0/m, z6.d, z4.d
+; CHECK-NEXT:    fminnm z7.d, p0/m, z7.d, z4.d
+; CHECK-NEXT:    fminnm z4.d, p0/m, z4.d, z24.d
+; CHECK-NEXT:    fcmuo p3.d, p0/z, z3.d, z3.d
+; CHECK-NEXT:    fcvtzu z5.d, p0/m, z5.d
+; CHECK-NEXT:    fcvtzu z6.d, p0/m, z6.d
+; CHECK-NEXT:    fcvtzu z7.d, p0/m, z7.d
+; CHECK-NEXT:    fcvtzu z4.d, p0/m, z4.d
+; CHECK-NEXT:    fcmuo p0.d, p0/z, z2.d, z2.d
+; CHECK-NEXT:    mov z5.d, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z6.d, p2/m, #0 // =0x0
+; CHECK-NEXT:    mov z7.d, p3/m, #0 // =0x0
+; CHECK-NEXT:    mov z4.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    uzp1 z0.s, z6.s, z5.s
+; CHECK-NEXT:    uzp1 z1.s, z4.s, z7.s
 ; CHECK-NEXT:    ret
     %x = call <vscale x 8 x i32> @llvm.fptoui.sat.nxv8f64.nxv8i32(<vscale x 8 x double> %f)
     ret <vscale x 8 x i32> %x
@@ -250,20 +249,21 @@ define <vscale x 4 x i16> @test_signed_v4f64_v4i16(<vscale x 4 x double> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, #281337537757184 // =0xffe000000000
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16623, lsl #48
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    fcmge p1.d, p0/z, z1.d, #0.0
+; CHECK-NEXT:    movprfx z2, z1
+; CHECK-NEXT:    fmaxnm z2.d, p0/m, z2.d, #0.0
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    fmaxnm z3.d, p0/m, z3.d, #0.0
 ; CHECK-NEXT:    mov z4.d, x8
-; CHECK-NEXT:    fcmge p2.d, p0/z, z0.d, #0.0
-; CHECK-NEXT:    fcvtzu z2.d, p1/m, z1.d
-; CHECK-NEXT:    fcmgt p1.d, p0/z, z1.d, z4.d
-; CHECK-NEXT:    mov z1.d, #65535 // =0xffff
-; CHECK-NEXT:    fcvtzu z3.d, p2/m, z0.d
-; CHECK-NEXT:    fcmgt p0.d, p0/z, z0.d, z4.d
-; CHECK-NEXT:    sel z0.d, p1, z1.d, z2.d
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z3.d
-; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    fcmuo p1.d, p0/z, z1.d, z1.d
+; CHECK-NEXT:    fminnm z2.d, p0/m, z2.d, z4.d
+; CHECK-NEXT:    fminnm z3.d, p0/m, z3.d, z4.d
+; CHECK-NEXT:    fcvtzu z2.d, p0/m, z2.d
+; CHECK-NEXT:    fcvtzu z3.d, p0/m, z3.d
+; CHECK-NEXT:    fcmuo p0.d, p0/z, z0.d, z0.d
+; CHECK-NEXT:    mov z2.d, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z3.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    uzp1 z0.s, z3.s, z2.s
 ; CHECK-NEXT:    ret
     %x = call <vscale x 4 x i16> @llvm.fptoui.sat.nxv4f64.nxv4i16(<vscale x 4 x double> %f)
     ret <vscale x 4 x i16> %x
@@ -272,42 +272,37 @@ define <vscale x 4 x i16> @test_signed_v4f64_v4i16(<vscale x 4 x double> %f) {
 define <vscale x 8 x i16> @test_signed_v8f64_v8i16(<vscale x 8 x double> %f) {
 ; CHECK-LABEL: test_signed_v8f64_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, #281337537757184 // =0xffe000000000
-; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16623, lsl #48
-; CHECK-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-NEXT:    movi v6.2d, #0000000000000000
-; CHECK-NEXT:    fcmge p1.d, p0/z, z3.d, #0.0
-; CHECK-NEXT:    movi v24.2d, #0000000000000000
-; CHECK-NEXT:    mov z7.d, x8
-; CHECK-NEXT:    fcmge p2.d, p0/z, z2.d, #0.0
-; CHECK-NEXT:    fcmge p3.d, p0/z, z1.d, #0.0
-; CHECK-NEXT:    fcmge p4.d, p0/z, z0.d, #0.0
-; CHECK-NEXT:    fcvtzu z4.d, p1/m, z3.d
-; CHECK-NEXT:    fcvtzu z5.d, p2/m, z2.d
-; CHECK-NEXT:    fcvtzu z6.d, p3/m, z1.d
-; CHECK-NEXT:    fcmgt p1.d, p0/z, z3.d, z7.d
-; CHECK-NEXT:    fcvtzu z24.d, p4/m, z0.d
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-NEXT:    fcmgt p2.d, p0/z, z2.d, z7.d
-; CHECK-NEXT:    mov z2.d, #65535 // =0xffff
-; CHECK-NEXT:    fcmgt p3.d, p0/z, z1.d, z7.d
-; CHECK-NEXT:    fcmgt p0.d, p0/z, z0.d, z7.d
-; CHECK-NEXT:    sel z0.d, p1, z2.d, z4.d
-; CHECK-NEXT:    sel z1.d, p2, z2.d, z5.d
-; CHECK-NEXT:    sel z3.d, p3, z2.d, z6.d
-; CHECK-NEXT:    sel z2.d, p0, z2.d, z24.d
-; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
-; CHECK-NEXT:    uzp1 z1.s, z2.s, z3.s
+; CHECK-NEXT:    movprfx z5, z3
+; CHECK-NEXT:    fmaxnm z5.d, p0/m, z5.d, #0.0
+; CHECK-NEXT:    movprfx z6, z2
+; CHECK-NEXT:    fmaxnm z6.d, p0/m, z6.d, #0.0
+; CHECK-NEXT:    movprfx z7, z1
+; CHECK-NEXT:    fmaxnm z7.d, p0/m, z7.d, #0.0
+; CHECK-NEXT:    movprfx z24, z0
+; CHECK-NEXT:    fmaxnm z24.d, p0/m, z24.d, #0.0
+; CHECK-NEXT:    mov z4.d, x8
+; CHECK-NEXT:    fcmuo p1.d, p0/z, z3.d, z3.d
+; CHECK-NEXT:    fcmuo p2.d, p0/z, z2.d, z2.d
+; CHECK-NEXT:    fminnm z5.d, p0/m, z5.d, z4.d
+; CHECK-NEXT:    fminnm z6.d, p0/m, z6.d, z4.d
+; CHECK-NEXT:    fminnm z7.d, p0/m, z7.d, z4.d
+; CHECK-NEXT:    fminnm z4.d, p0/m, z4.d, z24.d
+; CHECK-NEXT:    fcmuo p3.d, p0/z, z1.d, z1.d
+; CHECK-NEXT:    fcvtzu z5.d, p0/m, z5.d
+; CHECK-NEXT:    fcvtzu z6.d, p0/m, z6.d
+; CHECK-NEXT:    fcvtzu z7.d, p0/m, z7.d
+; CHECK-NEXT:    fcvtzu z4.d, p0/m, z4.d
+; CHECK-NEXT:    fcmuo p0.d, p0/z, z0.d, z0.d
+; CHECK-NEXT:    mov z5.d, p1/m, #0 // =0x0
+; CHECK-NEXT:    mov z6.d, p2/m, #0 // =0x0
+; CHECK-NEXT:    mov z7.d, p3/m, #0 // =0x0
+; CHECK-NEXT:    mov z4.d, p0/m, #0 // =0x0
+; CHECK-NEXT:    uzp1 z0.s, z6.s, z5.s
+; CHECK-NEXT:    uzp1 z1.s, z4.s, z7.s
 ; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
     %x = call <vscale x 8 x i16> @llvm.fptoui.sat.nxv8f64.nxv8i16(<vscale x 8 x double> %f)
     ret <vscale x 8 x i16> %x

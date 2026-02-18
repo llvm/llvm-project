@@ -11909,8 +11909,8 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
   // of comparisons and selects.
   auto EmitMinMax = [&](unsigned MinOpcode, unsigned MaxOpcode,
                         bool MayPropagateNaN) {
-    bool MinMaxLegal = isOperationLegal(MinOpcode, SrcVT) &&
-                       isOperationLegal(MaxOpcode, SrcVT);
+    bool MinMaxLegal = isOperationLegalOrCustom(MinOpcode, SrcVT) &&
+                       isOperationLegalOrCustom(MaxOpcode, SrcVT);
     if (!MinMaxLegal)
       return SDValue();
 
