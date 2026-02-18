@@ -54,6 +54,10 @@ blake3_hash_many_sse41:
         sub     rsp, 360
         and     rsp, 0xFFFFFFFFFFFFFFC0
         neg     r9d
+#ifdef _ILP32
+        mov     esi, esi
+        mov     edx, edx
+#endif
         movd    xmm0, r9d
         pshufd  xmm0, xmm0, 0x00
         movdqa  xmmword ptr [rsp+0x130], xmm0
@@ -91,10 +95,17 @@ blake3_hash_many_sse41:
         pshufd  xmm5, xmm7, 0x55
         pshufd  xmm6, xmm7, 0xAA
         pshufd  xmm7, xmm7, 0xFF
+#ifndef _ILP32
         mov     r8, qword ptr [rdi]
         mov     r9, qword ptr [rdi+0x8]
         mov     r10, qword ptr [rdi+0x10]
         mov     r11, qword ptr [rdi+0x18]
+#else
+        mov     r8d, dword ptr [rdi]
+        mov     r9d, dword ptr [rdi+0x4]
+        mov     r10d, dword ptr [rdi+0x8]
+        mov     r11d, dword ptr [rdi+0xc]
+#endif
         movzx   eax, byte ptr [rbp+0x40]
         or      eax, r13d
         xor     edx, edx
@@ -1452,7 +1463,11 @@ blake3_hash_many_sse41:
         psubd   xmm1, xmm0
         movdqa  xmmword ptr [rsp+0x120], xmm1
         add     rbx, 128
+#ifndef _ILP32
         add     rdi, 32
+#else
+        add     rdi, 16
+#endif
         sub     rsi, 4
         cmp     rsi, 4
         jnc     2b
@@ -1483,8 +1498,13 @@ blake3_hash_many_sse41:
         pinsrd  xmm14, dword ptr [rsp+0x124], 1
         pinsrd  xmm14, dword ptr [BLAKE3_BLOCK_LEN+rip], 2
         movaps  xmmword ptr [rsp+0x10], xmm14
+#ifndef _ILP32
         mov     r8, qword ptr [rdi]
         mov     r9, qword ptr [rdi+0x8]
+#else
+        mov     r8d, dword ptr [rdi]
+        mov     r9d, dword ptr [rdi+0x4]
+#endif
         movzx   eax, byte ptr [rbp+0x40]
         or      eax, r13d
         xor     edx, edx
@@ -1686,7 +1706,11 @@ blake3_hash_many_sse41:
         blendvps xmm2, xmm4, xmm0
         movdqa  xmmword ptr [rsp+0x110], xmm1
         movdqa  xmmword ptr [rsp+0x120], xmm2
+#ifndef _ILP32
         add     rdi, 16
+#else
+        add     rdi, 8
+#endif
         add     rbx, 64
         sub     rsi, 2
 3:
@@ -1699,7 +1723,11 @@ blake3_hash_many_sse41:
         pinsrd  xmm13, dword ptr [BLAKE3_BLOCK_LEN+rip], 2
         movaps  xmm14, xmmword ptr [ROT8+rip]
         movaps  xmm15, xmmword ptr [ROT16+rip]
+#ifndef _ILP32
         mov     r8, qword ptr [rdi]
+#else
+        mov     r8d, dword ptr [rdi]
+#endif
         movzx   eax, byte ptr [rbp+0x40]
         or      eax, r13d
         xor     edx, edx
