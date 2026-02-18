@@ -21,6 +21,7 @@ For no-split-dwarf scenarios, there are 2 variations:
 class DebugInfodTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     @skipUnlessPlatform(["linux", "freebsd"])
     def test_normal_no_symbols(self):
