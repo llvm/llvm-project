@@ -786,12 +786,11 @@ bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
                                                  const MCValue &Target,
                                                  uint64_t Value,
                                                  bool Resolved) const {
-  // Prefix Padding may change the target distance and relaxation might be
-  // needed if the Value cann be contained in the Fixup field size. To prevent
-  // this, we roughly adjust the Value to estimate the worst case distance to
-  // the target.
   if (Asm->isBundlingEnabled() && Resolved) {
-    return (!isInt<8>(Value + 32) || !isInt<8>(Value - 32)) ||
+    // This ensures remaining short branches have sufficient headroom to survive
+    // any intra-bundle shift caused by prefix padding in dividePadInBundle.
+    auto BundleAlignSize = Asm->getBundleAlignSize();
+    return (!isInt<8>(Value + BundleAlignSize) || !isInt<8>(Value - BundleAlignSize)) ||
            Target.getSpecifier();
   }
   // If resolved, relax if the value is too big for a (signed) i8.
