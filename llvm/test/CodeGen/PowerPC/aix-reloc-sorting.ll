@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff \
-; RUN:   -data-sections=false -filetype=obj -o %t.o < %s
+; RUN:   -data-sections=false -function-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:   -data-sections=false -filetype=obj -o %t.o < %s
+; RUN:   -data-sections=false -function-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
