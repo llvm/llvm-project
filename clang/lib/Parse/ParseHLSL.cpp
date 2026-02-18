@@ -77,7 +77,7 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd,
                                             T.getOpenLocation());
   Actions.ProcessDeclAttributeList(Actions.CurScope, D, Attrs);
 
-  while (Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
+  while (Tok.isNot(tok::r_brace) && !isAtInputEnd(Tok)) {
     // FIXME: support attribute on constants inside cbuffer/tbuffer.
     ParsedAttributes DeclAttrs(AttrFactory);
     ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);

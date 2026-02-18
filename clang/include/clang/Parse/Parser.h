@@ -519,6 +519,14 @@ public:
   bool SkipUntil(ArrayRef<tok::TokenKind> Toks,
                  SkipUntilFlags Flags = static_cast<SkipUntilFlags>(0));
 
+  /// Determine if the given token marks the end of the current partial
+  /// translation unit. In incremental (REPL) mode, this checks for
+  /// annot_repl_input_end. In normal compilation, this checks for EOF.
+  static bool isAtInputEnd(const Token &T, const LangOptions &LO) {
+    return T.is(tok::eof) ||
+           (LO.IncrementalExtensions && T.is(tok::annot_repl_input_end));
+  }
+
 private:
   Preprocessor &PP;
 
@@ -719,6 +727,10 @@ private:
     return Kind == tok::eof || Kind == tok::annot_module_begin ||
            Kind == tok::annot_module_end || Kind == tok::annot_module_include ||
            Kind == tok::annot_repl_input_end;
+  }
+
+  bool isAtInputEnd(const Token &T) const {
+    return isAtInputEnd(T, getLangOpts());
   }
 
   static void setTypeAnnotation(Token &Tok, TypeResult T) {

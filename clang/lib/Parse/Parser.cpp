@@ -310,7 +310,7 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
     if (Toks.size() == 1 && Toks[0] == tok::eof &&
         !HasFlagsSet(Flags, StopAtSemi) &&
         !HasFlagsSet(Flags, StopAtCodeCompletion)) {
-      while (Tok.isNot(tok::eof))
+      while (!isAtInputEnd(Tok))
         ConsumeAnyToken();
       return true;
     }

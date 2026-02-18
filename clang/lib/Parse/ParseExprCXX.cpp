@@ -3698,7 +3698,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
 
   // Match the ')'.
   if (Result.isInvalid()) {
-    while (Tok.isNot(tok::eof))
+    while (!isAtInputEnd(Tok))
       ConsumeAnyToken();
     assert(Tok.getEofData() == AttrEnd.getEofData());
     ConsumeAnyToken();
