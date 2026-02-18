@@ -19046,6 +19046,46 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
   return LLT();
 }
 
+bool AArch64TargetLowering::findOptimalMemOpLowering(
+    LLVMContext &Context, std::vector<EVT> &MemOps, unsigned Limit,
+    const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+    const AttributeList &FuncAttributes) const {
+  if (!Op.isMemset() && !Op.allowOverlap()) {
+    uint64_t Size = Op.size();
+    // Only handle non-power-of-two sizes > 4 and <= 65, excluding size 10
+    // which doesn't show improvement. Check if size is non-power-of-two:
+    // (Size & (Size - 1)) != 0
+    if (Size > 4 && Size <= 65 && Size != 10 && (Size & (Size - 1)) != 0) {
+      auto AlignmentIsAcceptable = [&](EVT VT, Align AlignCheck) {
+        if (Op.isAligned(AlignCheck))
+          return true;
+        unsigned Fast;
+        return allowsMisalignedMemoryAccesses(
+                   VT, DstAS, Align(1), MachineMemOperand::MONone, &Fast) &&
+               Fast;
+      };
+
+      // Check if we can use the appropriate type for this size range
+      bool CanHandle = false;
+      if (Size >= 5 && Size <= 7) {
+        CanHandle = AlignmentIsAcceptable(MVT::i32, Align(1));
+      } else if (Size >= 9 && Size <= 23) {
+        CanHandle = AlignmentIsAcceptable(MVT::i64, Align(1));
+      } else if (Size >= 25 && Size <= 65) {
+        CanHandle = AlignmentIsAcceptable(MVT::v16i8, Align(1)) &&
+                    AlignmentIsAcceptable(MVT::i64, Align(1));
+      }
+
+      if (CanHandle)
+        return false;
+    }
+  }
+
+  // Otherwise, use the default implementation
+  return TargetLowering::findOptimalMemOpLowering(Context, MemOps, Limit, Op,
+                                                  DstAS, SrcAS, FuncAttributes);
+}
+
 // 12-bit optionally shifted immediates are legal for adds.
 bool AArch64TargetLowering::isLegalAddImmediate(int64_t Immed) const {
   if (Immed == std::numeric_limits<int64_t>::min()) {

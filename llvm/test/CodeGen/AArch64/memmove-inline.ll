@@ -119,4 +119,102 @@ entry:
   ret void
 }
 
+; Test overlapping memmove optimization for non-power-of-two sizes
+; These should use overlapping loads/stores instead of mixed-size operations
+
+define void @move7(ptr %out, ptr %in) {
+; CHECK-ALIGNED-LABEL: move7:
+; CHECK-ALIGNED:       // %bb.0: // %entry
+; CHECK-ALIGNED-NEXT:    ldur w8, [x1, #3]
+; CHECK-ALIGNED-NEXT:    ldr w9, [x1]
+; CHECK-ALIGNED-NEXT:    stur w8, [x0, #3]
+; CHECK-ALIGNED-NEXT:    str w9, [x0]
+; CHECK-ALIGNED-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 7, i1 false)
+  ret void
+}
+
+define void @move13(ptr %out, ptr %in) {
+; CHECK-ALIGNED-LABEL: move13:
+; CHECK-ALIGNED:       // %bb.0: // %entry
+; CHECK-ALIGNED-NEXT:    ldur x8, [x1, #5]
+; CHECK-ALIGNED-NEXT:    ldr x9, [x1]
+; CHECK-ALIGNED-NEXT:    stur x8, [x0, #5]
+; CHECK-ALIGNED-NEXT:    str x9, [x0]
+; CHECK-ALIGNED-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 13, i1 false)
+  ret void
+}
+
+define void @move15(ptr %out, ptr %in) {
+; CHECK-ALIGNED-LABEL: move15:
+; CHECK-ALIGNED:       // %bb.0: // %entry
+; CHECK-ALIGNED-NEXT:    ldur x8, [x1, #7]
+; CHECK-ALIGNED-NEXT:    ldr x9, [x1]
+; CHECK-ALIGNED-NEXT:    stur x8, [x0, #7]
+; CHECK-ALIGNED-NEXT:    str x9, [x0]
+; CHECK-ALIGNED-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 15, i1 false)
+  ret void
+}
+
+define void @move25(ptr %out, ptr %in) {
+; CHECK-ALIGNED-LABEL: move25:
+; CHECK-ALIGNED:       // %bb.0: // %entry
+; CHECK-ALIGNED-NEXT:    ldur x8, [x1, #17]
+; CHECK-ALIGNED-NEXT:    ldr q0, [x1]
+; CHECK-ALIGNED-NEXT:    stur x8, [x0, #17]
+; CHECK-ALIGNED-NEXT:    str q0, [x0]
+; CHECK-ALIGNED-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 25, i1 false)
+  ret void
+}
+
+define void @move33(ptr %out, ptr %in) {
+; CHECK-ALIGNED-LABEL: move33:
+; CHECK-ALIGNED:       // %bb.0: // %entry
+; CHECK-ALIGNED-NEXT:    ldp q1, q0, [x1]
+; CHECK-ALIGNED-NEXT:    ldur x8, [x1, #25]
+; CHECK-ALIGNED-NEXT:    stur x8, [x0, #25]
+; CHECK-ALIGNED-NEXT:    stp q1, q0, [x0]
+; CHECK-ALIGNED-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 33, i1 false)
+  ret void
+}
+
+define void @move49(ptr %out, ptr %in) {
+; CHECK-ALIGNED-LABEL: move49:
+; CHECK-ALIGNED:       // %bb.0: // %entry
+; CHECK-ALIGNED-NEXT:    ldp q2, q0, [x1, #16]
+; CHECK-ALIGNED-NEXT:    ldur x8, [x1, #41]
+; CHECK-ALIGNED-NEXT:    ldr q1, [x1]
+; CHECK-ALIGNED-NEXT:    stur x8, [x0, #41]
+; CHECK-ALIGNED-NEXT:    stp q2, q0, [x0, #16]
+; CHECK-ALIGNED-NEXT:    str q1, [x0]
+; CHECK-ALIGNED-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 49, i1 false)
+  ret void
+}
+
+define void @move65(ptr %out, ptr %in) {
+; CHECK-ALIGNED-LABEL: move65:
+; CHECK-ALIGNED:       // %bb.0: // %entry
+; CHECK-ALIGNED-NEXT:    ldp q0, q1, [x1, #32]
+; CHECK-ALIGNED-NEXT:    ldur x8, [x1, #57]
+; CHECK-ALIGNED-NEXT:    ldp q2, q3, [x1]
+; CHECK-ALIGNED-NEXT:    stur x8, [x0, #57]
+; CHECK-ALIGNED-NEXT:    stp q0, q1, [x0, #32]
+; CHECK-ALIGNED-NEXT:    stp q2, q3, [x0]
+; CHECK-ALIGNED-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 65, i1 false)
+  ret void
+}
+
 declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)
