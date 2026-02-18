@@ -21,8 +21,6 @@
 
 namespace Fortran::runtime::cuda {
 
-static thread_local cudaStream_t defaultStream{nullptr};
-
 struct DeviceAllocation {
   void *ptr;
   std::size_t size;
@@ -155,13 +153,6 @@ int RTDECL(CUFSetAssociatedStream)(void *p, cudaStream_t stream) {
   }
   return StatOk;
 }
-
-int RTDECL(CUFSetDefaultStream)(cudaStream_t stream) {
-  defaultStream = stream;
-  return StatOk;
-}
-
-cudaStream_t RTDECL(CUFGetDefaultStream)() { return defaultStream; }
 }
 
 void *CUFAllocPinned(
