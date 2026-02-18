@@ -2477,8 +2477,12 @@ public:
         MDFrom = Inst;
     }
 
-    for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))
+    for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors())) {
+      assert(!(isa<VectorType>(CV->getType()) && static_cast<bool>(MDFrom)) &&
+             "If we have a vector conditional, we should be propagating "
+             "profile information.");
       Result.addVector(Builder.CreateSelect(CV, AV, BV, "", MDFrom));
+    }
 
     return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                    Result.getNumVectors());
