@@ -66,6 +66,10 @@ def err_drv_no_cuda_libdevice : Error<
   "via '--cuda-path', or pass '-nocudalib' to build without linking with "
   "libdevice">;
 
+def err_drv_cuda_fatbinary_requires_elf_or_ptx : Error<
+  "cannot create CUDA fatbinary from LLVM IR/bitcode; use '--cuda-device-only' "
+  "or '--cuda-host-only', or compile device code to PTX/SASS (e.g. drop '-emit-llvm')">;
+
 def err_drv_no_rocm_device_lib : Error<
   "cannot find ROCm device library%select{| for %1| for ABI version %1"
   "%select{|, which requires ROCm %3 or higher}2}0; provide its path via "

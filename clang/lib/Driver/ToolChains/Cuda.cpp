@@ -546,6 +546,11 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-g");
 
   for (const auto &II : Inputs) {
+    if (II.getType() == types::TY_LLVM_BC ||
+        II.getType() == types::TY_LLVM_IR) {
+      C.getDriver().Diag(diag::err_drv_cuda_fatbinary_requires_elf_or_ptx);
+      return;
+    }
     auto *A = II.getAction();
     assert(A->getInputs().size() == 1 &&
            "Device offload action is expected to have a single input");
