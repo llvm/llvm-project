@@ -1,4 +1,4 @@
-//===-- Implementation of fflush for baremetal -----------------*- C++ -*-===//
+//===-- Shared bf16fmaf function --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/fflush.h"
+#ifndef LLVM_LIBC_SHARED_MATH_BF16FMAF_H
+#define LLVM_LIBC_SHARED_MATH_BF16FMAF_H
 
-#include "src/__support/common.h"
+#include "shared/libc_common.h"
+#include "src/__support/math/bf16fmaf.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-// Baremetal uses unbuffered I/O, so there is nothing to flush.
-LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
-  (void)stream;
-  // TODO: Shall we have an embedding API for fflush?
-  return 0;
-}
+using math::bf16fmaf;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_BF16FMAF_H

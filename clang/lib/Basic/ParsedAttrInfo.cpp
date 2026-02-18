@@ -20,16 +20,13 @@ using namespace clang;
 
 LLVM_INSTANTIATE_REGISTRY(ParsedAttrInfoRegistry)
 
-static std::list<std::unique_ptr<ParsedAttrInfo>> instantiateEntries() {
-  std::list<std::unique_ptr<ParsedAttrInfo>> Instances;
-  for (const auto &It : ParsedAttrInfoRegistry::entries())
-    Instances.emplace_back(It.instantiate());
-  return Instances;
-}
-
 const std::list<std::unique_ptr<ParsedAttrInfo>> &
 clang::getAttributePluginInstances() {
-  static std::list<std::unique_ptr<ParsedAttrInfo>> Instances =
-      instantiateEntries();
-  return Instances;
+  static llvm::ManagedStatic<std::list<std::unique_ptr<ParsedAttrInfo>>>
+      PluginAttrInstances;
+  if (PluginAttrInstances->empty())
+    for (const auto &It : ParsedAttrInfoRegistry::entries())
+      PluginAttrInstances->emplace_back(It.instantiate());
+
+  return *PluginAttrInstances;
 }
