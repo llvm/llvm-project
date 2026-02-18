@@ -1,4 +1,5 @@
 add_mlir_dialect_library(MLIRTensorTransforms
+  BubbleUpExtractSliceThroughTilingInterface.cpp
   BufferizableOpInterfaceImpl.cpp
   ConcatOpPatterns.cpp
   EmptyOpPatterns.cpp
