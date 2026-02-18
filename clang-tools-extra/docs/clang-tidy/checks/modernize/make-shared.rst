@@ -42,7 +42,7 @@ Options
 .. option:: MakeSmartPtrType
 
    A string specifying the smart pointer type to match. Default is
-   ``::std::shared_ptr``.
+   `::std::shared_ptr`.
 
 .. option:: IncludeStyle
 
