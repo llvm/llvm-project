@@ -245,30 +245,25 @@ protected:
   /// the builder dies.
   ExplodedNodeSet &Frontier;
 
-  bool hasNoSinksInFrontier() {
-    for (const auto  I : Frontier)
-      if (I->isSink())
-        return false;
-    return true;
-  }
-
   ExplodedNode *generateNodeImpl(const ProgramPoint &PP,
                                  ProgramStateRef State,
                                  ExplodedNode *Pred,
                                  bool MarkAsSink = false);
 
 public:
+  NodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &Ctx)
+      : C(Ctx), Frontier(DstSet) {}
+
   NodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
               const NodeBuilderContext &Ctx)
-      : C(Ctx), Frontier(DstSet) {
+      : NodeBuilder(DstSet, Ctx) {
     Frontier.Add(SrcNode);
   }
 
   NodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
               const NodeBuilderContext &Ctx)
-      : C(Ctx), Frontier(DstSet) {
+      : NodeBuilder(DstSet, Ctx) {
     Frontier.insert(SrcSet);
-    assert(hasNoSinksInFrontier());
   }
 
   /// Generates a node in the ExplodedGraph.
@@ -333,21 +328,9 @@ class BranchNodeBuilder : public NodeBuilder {
   const CFGBlock *DstF;
 
 public:
-  BranchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-                    const NodeBuilderContext &C, const CFGBlock *DT,
-                    const CFGBlock *DF)
-      : NodeBuilder(SrcNode, DstSet, C), DstT(DT), DstF(DF) {
-    // The branch node builder does not generate autotransitions.
-    // If there are no successors it means that both branches are infeasible.
-    takeNodes(SrcNode);
-  }
-
-  BranchNodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
-                    const NodeBuilderContext &C, const CFGBlock *DT,
-                    const CFGBlock *DF)
-      : NodeBuilder(SrcSet, DstSet, C), DstT(DT), DstF(DF) {
-    takeNodes(SrcSet);
-  }
+  BranchNodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &C,
+                    const CFGBlock *DT, const CFGBlock *DF)
+      : NodeBuilder(DstSet, C), DstT(DT), DstF(DF) {}
 
   ExplodedNode *generateNode(ProgramStateRef State, bool branch,
                              ExplodedNode *Pred);
@@ -358,14 +341,9 @@ class IndirectGotoNodeBuilder : public NodeBuilder {
   const Expr *Target;
 
 public:
-  IndirectGotoNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-                          NodeBuilderContext &Ctx, const Expr *Tgt,
-                          const CFGBlock *Dispatch)
-      : NodeBuilder(SrcNode, DstSet, Ctx), DispatchBlock(*Dispatch),
-        Target(Tgt) {
-    // The indirect goto node builder does not generate autotransitions.
-    takeNodes(SrcNode);
-  }
+  IndirectGotoNodeBuilder(ExplodedNodeSet &DstSet, NodeBuilderContext &Ctx,
+                          const Expr *Tgt, const CFGBlock *Dispatch)
+      : NodeBuilder(DstSet, Ctx), DispatchBlock(*Dispatch), Target(Tgt) {}
 
   using iterator = CFGBlock::const_succ_iterator;
 
@@ -386,12 +364,8 @@ public:
 
 class SwitchNodeBuilder : public NodeBuilder {
 public:
-  SwitchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-                    const NodeBuilderContext &Ctx)
-      : NodeBuilder(SrcNode, DstSet, Ctx) {
-    // The switch node builder does not generate autotransitions.
-    takeNodes(SrcNode);
-  }
+  SwitchNodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &Ctx)
+      : NodeBuilder(DstSet, Ctx) {}
 
   using iterator = CFGBlock::const_succ_reverse_iterator;
 

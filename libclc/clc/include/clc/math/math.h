@@ -24,11 +24,7 @@
 #define PNOR 0x100
 #define PINF 0x200
 
-#ifdef __R600__
-#define __CLC_HAVE_HW_FMA32() (0)
-#else
 #define __CLC_HAVE_HW_FMA32() (1)
-#endif
 
 #define HAVE_BITALIGN() (0)
 #define HAVE_FAST_FMA32() (0)
