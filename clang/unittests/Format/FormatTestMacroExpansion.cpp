@@ -58,10 +58,18 @@ TEST_F(FormatTestMacroExpansion, UnexpandConfiguredMacros) {
   verifyFormat("ASSIGN_OR_RETURN(MySomewhatLongType *variable,\n"
                "                 MySomewhatLongFunction(SomethingElse()));",
                Style);
-  verifyFormat("ASSIGN_OR_RETURN(MySomewhatLongType *variable,\n"
-               "                 MySomewhatLongFunction(SomethingElse()), "
-               "ReturnMe());",
-               Style);
+  verifyFormat(
+      "ASSIGN_OR_RETURN(MySomewhatLongType *variable,\n"
+      "                 MySomewhatLongFunction(SomethingElse()), RetMe());",
+      Style);
+
+  verifyFormat(
+      "void f() {\n"
+      "  ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
+      "                   MySomewhatLongFunction(SomethingElse()));\n"
+      "  ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
+      "                   MySomewhatLongFunction(SomethingElse()), RetMe());",
+      getGoogleStyle());
 
   verifyFormat(R"(
 #define MACRO(a, b) ID(a + b)

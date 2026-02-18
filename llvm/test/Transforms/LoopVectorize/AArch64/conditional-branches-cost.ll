@@ -1406,11 +1406,80 @@ exit:
   ret void
 }
 
+define void @predicated_store(ptr %A, ptr noalias %B, ptr noalias %C, ptr %D, ptr %E, double %divisor, i64 %loop.count) #3 {
+; COMMON-LABEL: define void @predicated_store(
+; COMMON-SAME: ptr [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], ptr [[D:%.*]], ptr [[E:%.*]], double [[DIVISOR:%.*]], i64 [[LOOP_COUNT:%.*]]) #[[ATTR4:[0-9]+]] {
+; COMMON-NEXT:  [[ENTRY:.*]]:
+; COMMON-NEXT:    br label %[[LOOP_HEADER:.*]]
+; COMMON:       [[LOOP_HEADER]]:
+; COMMON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; COMMON-NEXT:    [[GEP_B:%.*]] = getelementptr double, ptr [[B]], i64 [[IV]]
+; COMMON-NEXT:    [[FIRST_VAL:%.*]] = load double, ptr [[B]], align 8
+; COMMON-NEXT:    store double 0.000000e+00, ptr [[D]], align 8
+; COMMON-NEXT:    [[COEFF:%.*]] = load double, ptr [[C]], align 8
+; COMMON-NEXT:    [[NEG:%.*]] = fneg double [[FIRST_VAL]]
+; COMMON-NEXT:    [[NORM:%.*]] = fdiv double [[NEG]], [[DIVISOR]]
+; COMMON-NEXT:    [[SCALED_COEFF:%.*]] = fmul double [[COEFF]], [[NORM]]
+; COMMON-NEXT:    [[INPUT_VAL:%.*]] = load double, ptr [[GEP_B]], align 8
+; COMMON-NEXT:    [[SCALED_INPUT:%.*]] = fmul double [[INPUT_VAL]], [[DIVISOR]]
+; COMMON-NEXT:    [[PRODUCT:%.*]] = fmul double [[SCALED_COEFF]], [[SCALED_INPUT]]
+; COMMON-NEXT:    [[FINAL:%.*]] = fmul double [[PRODUCT]], [[DIVISOR]]
+; COMMON-NEXT:    [[IS_POS:%.*]] = fcmp ogt double [[FINAL]], 0.000000e+00
+; COMMON-NEXT:    br i1 [[IS_POS]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
+; COMMON:       [[THEN]]:
+; COMMON-NEXT:    store double 0.000000e+00, ptr [[A]], align 8
+; COMMON-NEXT:    [[GEP_E:%.*]] = getelementptr i8, ptr [[E]], i64 [[IV]]
+; COMMON-NEXT:    store double 0.000000e+00, ptr [[GEP_E]], align 8
+; COMMON-NEXT:    br label %[[LOOP_LATCH]]
+; COMMON:       [[LOOP_LATCH]]:
+; COMMON-NEXT:    store double 0.000000e+00, ptr null, align 8
+; COMMON-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; COMMON-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[LOOP_COUNT]]
+; COMMON-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; COMMON:       [[EXIT]]:
+; COMMON-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.B = getelementptr double, ptr %B, i64 %iv
+  %first.val = load double, ptr %B, align 8
+  store double 0.000000e+00, ptr %D, align 8
+  %coeff = load double, ptr %C, align 8
+  %neg = fneg double %first.val
+  %norm = fdiv double %neg, %divisor
+  %scaled.coeff = fmul double %coeff, %norm
+  %input.val = load double, ptr %gep.B, align 8
+  %scaled.input = fmul double %input.val, %divisor
+  %product = fmul double %scaled.coeff, %scaled.input
+  %final = fmul double %product, %divisor
+  %is.pos = fcmp ogt double %final, 0.000000e+00
+  br i1 %is.pos, label %then, label %loop.latch
+
+then:
+  store double 0.000000e+00, ptr %A, align 8
+  %gep.E = getelementptr i8, ptr %E, i64 %iv
+  store double 0.000000e+00, ptr %gep.E, align 8
+  br label %loop.latch
+
+loop.latch:
+  store double 0.000000e+00, ptr null, align 8
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, %loop.count
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
 declare float @llvm.fmuladd.f32(float, float, float) #1
 declare double @llvm.pow.f64(double, double)
 
 attributes #1 = { "target-cpu"="neoverse-512tvb" }
 attributes #2 = { vscale_range(2,2) "target-cpu"="neoverse-512tvb" }
+attributes #3 = { "target-cpu"="neoverse-v2" }
 
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.vectorize.width", i32 8}

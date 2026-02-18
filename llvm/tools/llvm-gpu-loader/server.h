@@ -47,8 +47,6 @@ inline uint32_t handle_server(rpc::Server &server, uint32_t index,
   if (status != rpc::RPC_SUCCESS)
     handle_error("Error handling RPC server");
 
-  port->close();
-
   return index;
 }
 
