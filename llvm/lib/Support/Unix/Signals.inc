@@ -124,13 +124,13 @@ public:
     // There are two cases where Filename can be null:
     // - A node left behind by a previous file that we had to remove
     // - A node whose file is actively being removed by a signal handler right
-    //   now.
+    //   now, in which case, it's OK if this file doesn't get removed.
     char *NewFilename = strdup(Filename.c_str());
     std::atomic<FileToRemoveList *> *InsertionPoint = &Head;
-    FileToRemoveList *Current = Head.load();
-    for (; Current; Current = Current->Next.load()) {
-      char *Expected = nullptr;
-      if (Current->Filename.compare_exchange_strong(Expected, NewFilename))
+    for (FileToRemoveList *Current = Head.load(); Current;
+         Current = Current->Next.load()) {
+      char *NullFilename = nullptr;
+      if (Current->Filename.compare_exchange_strong(NullFilename, NewFilename))
         return; // Reused a slot.
       InsertionPoint = &Current->Next;
     }
