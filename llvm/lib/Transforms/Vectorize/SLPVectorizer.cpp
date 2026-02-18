@@ -21624,9 +21624,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           IntegerType::getIntNTy(ScalarTy->getContext(), E->getVectorFactor());
       auto *V = Builder.CreateBitCast(Cmp, DstTy);
       ++NumVectorInstructions;
-      V = Builder.CreateIntCast(V, ScalarTy, /*isSigned=*/false);
+      if (DstTy != ScalarTy) {
+        V = Builder.CreateIntCast(V, ScalarTy, /*isSigned=*/false);
+        ++NumVectorInstructions;
+      }
       E->VectorizedValue = V;
-      ++NumVectorInstructions;
       return V;
     }
     default:
