@@ -4990,14 +4990,14 @@ public:
     const MachineInstr *MI = MRI.getVRegDef(Reg);
     unsigned Opc = MI->getOpcode();
 
-    if (Opc < TargetOpcode::GENERIC_OP_END) {
-      // Keep same for generic op.
-      HasNeg = true;
-    } else if (Opc == TargetOpcode::G_INTRINSIC) {
+    if (Opc == TargetOpcode::G_INTRINSIC) {
       Intrinsic::ID IntrinsicID = cast<GIntrinsic>(*MI).getIntrinsicID();
       // Only float point intrinsic has neg & neg_hi bits.
       if (IntrinsicID == Intrinsic::amdgcn_fdot2)
         HasNeg = true;
+    } else if (TargetInstrInfo::isGenericOpcode(Opc)) {
+      // Keep same for generic op.
+      HasNeg = true;
     }
   }
   bool checkOptions(SrcStatus Stat) const {
