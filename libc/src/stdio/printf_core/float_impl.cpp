@@ -17,7 +17,6 @@
 
 #define LIBC_PRINTF_DEFINE_MODULES
 #include "src/stdio/printf_core/converter.h"
-#include "src/stdio/printf_core/parser.h"
 
 // Bring this file into the link if __printf_float is referenced.
 extern "C" void __printf_float() {}

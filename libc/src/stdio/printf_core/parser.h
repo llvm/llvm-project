@@ -14,7 +14,6 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/core_structs.h"
@@ -252,7 +251,11 @@ public:
       case ('A'):
       case ('g'):
       case ('G'):
-        write_float_arg_val(section, lm, conv_index);
+        if (lm != LengthModifier::L) {
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
+        } else {
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
+        }
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
@@ -310,34 +313,6 @@ public:
     section.raw_string = {str + starting_pos, cur_pos - starting_pos};
     return section;
   }
-
-  LIBC_PRINTF_MODULE(
-      (void write_float_arg_val(FormatSection &section, LengthModifier lm,
-                                [[maybe_unused]] size_t conv_index)),
-      {
-        if (lm != LengthModifier::L) {
-          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
-        } else {
-          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
-        }
-      })
-
-  LIBC_PRINTF_MODULE((TypeDesc float_type_desc(LengthModifier lm)), {
-    if (lm != LengthModifier::L)
-      return type_desc_from_type<double>();
-    else
-      return type_desc_from_type<long double>();
-  })
-
-  LIBC_PRINTF_MODULE((bool advance_arg_if_float(TypeDesc cur_type_desc)), {
-    if (cur_type_desc == type_desc_from_type<double>())
-      args_cur.template next_var<double>();
-    else if (cur_type_desc == type_desc_from_type<long double>())
-      args_cur.template next_var<long double>();
-    else
-      return false;
-    return true;
-  })
 
 private:
   // parse_flags parses the flags inside a format string. It assumes that
@@ -516,9 +491,10 @@ private:
         args_cur.template next_var<uint64_t>();
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
       // Floating point numbers are stored separately from the other arguments.
-      else if (&Parser::advance_arg_if_float &&
-               advance_arg_if_float(cur_type_desc))
-        ;
+      else if (cur_type_desc == type_desc_from_type<double>())
+        args_cur.template next_var<double>();
+      else if (cur_type_desc == type_desc_from_type<long double>())
+        args_cur.template next_var<long double>();
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
       // Floating point numbers may be stored separately from the other
@@ -682,7 +658,10 @@ private:
         case ('A'):
         case ('g'):
         case ('G'):
-          conv_size = float_type_desc(lm);
+          if (lm != LengthModifier::L)
+            conv_size = type_desc_from_type<double>();
+          else
+            conv_size = type_desc_from_type<long double>();
           break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
@@ -730,25 +709,6 @@ private:
 
 #endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 };
-
-#ifdef LIBC_PRINTF_DEFINE_MODULES
-#define HANDLE_ARG_LIST_TYPE(TYPE)                                             \
-  template void Parser<internal::TYPE>::write_float_arg_val(                   \
-      FormatSection &section, LengthModifier lm, size_t conv_index);
-#include "src/__support/arg_list_types.def"
-#undef HANDLE_ARG_LIST_TYPE
-
-#define HANDLE_ARG_LIST_TYPE(TYPE)                                             \
-  template TypeDesc Parser<internal::TYPE>::float_type_desc(LengthModifier lm);
-#include "src/__support/arg_list_types.def"
-#undef HANDLE_ARG_LIST_TYPE
-
-#define HANDLE_ARG_LIST_TYPE(TYPE)                                             \
-  template bool Parser<internal::TYPE>::advance_arg_if_float(                  \
-      TypeDesc cur_type_desc);
-#include "src/__support/arg_list_types.def"
-#undef HANDLE_ARG_LIST_TYPE
-#endif
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
