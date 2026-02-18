@@ -55,13 +55,13 @@ using namespace clang::CIRGen;
 // LLVM lowering handles this.
 static mlir::Value emitVectorFCmp(CIRGenFunction &cgf, const CallExpr &expr,
                                   llvm::SmallVector<mlir::Value> &ops,
-                                  cir::CmpOpKind pred,
-                                  bool shouldInvert) {
+                                  cir::CmpOpKind pred, bool shouldInvert) {
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &expr);
   // TODO(cir): Add isSignaling boolean once emitConstrainedFPCall implemented
   assert(!cir::MissingFeatures::emitConstrainedFPCall());
   clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
-  mlir::Value cmp = builder.createVecCompare(cgf.getLoc(expr.getExprLoc()), pred, ops[0], ops[1]);
+  mlir::Value cmp = builder.createVecCompare(cgf.getLoc(expr.getExprLoc()),
+                                             pred, ops[0], ops[1]);
   mlir::Value bitCast = builder.createBitcast(
       shouldInvert ? builder.createNot(cmp) : cmp, ops[0].getType());
   return bitCast;
@@ -2316,12 +2316,12 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     return mlir::Value{};
   case X86::BI__builtin_ia32_cmpnltps:
   case X86::BI__builtin_ia32_cmpnltpd:
-    return emitVectorFCmp(*this, *expr, ops,
-                          cir::CmpOpKind::lt, /*shouldInvert=*/true);
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::lt,
+                          /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpnleps:
   case X86::BI__builtin_ia32_cmpnlepd:
-    return emitVectorFCmp(*this, *expr, ops,
-                          cir::CmpOpKind::le, /*shouldInvert=*/true);
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::le,
+                          /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpordps:
   case X86::BI__builtin_ia32_cmpordpd:
   case X86::BI__builtin_ia32_cmpph128_mask:
