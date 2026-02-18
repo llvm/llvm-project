@@ -1133,9 +1133,10 @@ private:
 
     const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
       const Loop *ExprL = Expr->getLoop();
-      SmallVector<const SCEV *, 2> Operands;
+      SmallVector<SCEVUse, 2> Operands;
       if (ExprL == &OldL) {
-        append_range(Operands, Expr->operands());
+        for (SCEVUse Op : Expr->operands())
+          Operands.push_back(Op.getPointer());
         return SE.getAddRecExpr(Operands, &NewL, Expr->getNoWrapFlags());
       }
 
@@ -1145,11 +1146,11 @@ private:
           Valid = false;
           return Expr;
         }
-        return visit(Expr->getStart());
+        return visit(Expr->getStart().getPointer());
       }
 
-      for (const SCEV *Op : Expr->operands())
-        Operands.push_back(visit(Op));
+      for (SCEVUse Op : Expr->operands())
+        Operands.push_back(visit(Op.getPointer()));
       return SE.getAddRecExpr(Operands, ExprL, Expr->getNoWrapFlags());
     }
 
