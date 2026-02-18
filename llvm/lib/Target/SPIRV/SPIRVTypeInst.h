@@ -35,7 +35,7 @@ class SPIRVTypeInst {
 
 public:
   SPIRVTypeInst(const MachineInstr &MI) : SPIRVTypeInst(&MI) {}
-  SPIRVTypeInst(const MachineInstr *MI);
+  SPIRVTypeInst(const MachineInstr *MI = nullptr);
 
   // No need to verify the register since it's already verified by the copied
   // object.

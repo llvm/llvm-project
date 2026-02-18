@@ -1263,7 +1263,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::restOfCreateSPIRVType(
   return SpirvType;
 }
 
-SPIRVType *
+SPIRVTypeInst
 SPIRVGlobalRegistry::getSPIRVTypeForVReg(Register VReg,
                                          const MachineFunction *MF) const {
   auto t = VRegToTypeMap.find(MF ? MF : CurMF);
