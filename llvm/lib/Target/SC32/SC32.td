@@ -79,6 +79,7 @@ multiclass Operator<string OpStr, SDNode OpNode> {
     let InOperandList = (ins GP:$in1, i32imm:$in2);
     let Constraints = "$out = $in1";
     let AsmString = !strconcat(OpStr, "I $in1, $in2");
+    let hasSideEffects = 0;
   }
 }
 
@@ -121,6 +122,7 @@ let Namespace = "SC32" in {
     let OutOperandList = (outs GP:$dst);
     let InOperandList = (ins GP:$src);
     let AsmString = "MOV $dst, $src";
+    let hasSideEffects = 0;
   }
 
   def RET : Instruction {
