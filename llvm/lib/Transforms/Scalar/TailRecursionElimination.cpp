@@ -381,20 +381,9 @@ static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
 // This relation applies to left shifts as well as arithmetic/logical right
 // shifts when the shift amount is a constant.
 static bool isPseudoAssociative(Instruction *I) {
-  switch (I->getOpcode()) {
-  case Instruction::Shl:
-  case Instruction::AShr:
-  case Instruction::LShr:
-    break;
-  default:
-    return false;
-  }
-
-  ConstantInt *CI = dyn_cast<ConstantInt>(I->getOperand(1));
-  if (!CI)
-    return false;
-
-  return true;
+    if (!I->isShift())
+      return false;
+    return isa<ConstantInt>(I->getOperand(1));
 }
 
 // Find the base-case return value for function F: examine all
@@ -430,9 +419,6 @@ static Constant *getReturnValue(Function &F) {
             return true;
         for (Use &U : I->operands())
           Worklist.push_back(U.get());
-      } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Cur)) {
-        for (unsigned I = 0, E = CE->getNumOperands(); I != E; ++I)
-          Worklist.push_back(CE->getOperand(I));
       }
     }
     return false;
