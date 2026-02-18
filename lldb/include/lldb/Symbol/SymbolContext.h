@@ -19,6 +19,7 @@
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace lldb_private {
 
@@ -482,6 +483,20 @@ protected:
 
   // Member variables.
   collection m_symbol_contexts; ///< The list of symbol contexts.
+
+private:
+  struct SymbolContextInfo {
+    static SymbolContext getEmptyKey();
+    static SymbolContext getTombstoneKey();
+    static unsigned getHashValue(const SymbolContext &sc);
+    static bool isEqual(const SymbolContext &lhs, const SymbolContext &rhs);
+  };
+
+  /// Threshold above which we switch from linear scan to hash-set lookup
+  /// for uniqueness checks.
+  static constexpr size_t kSetThreshold = 1024;
+
+  llvm::SmallDenseSet<SymbolContext, 1, SymbolContextInfo> m_lookup_set;
 
 public:
   const_iterator begin() const { return m_symbol_contexts.begin(); }

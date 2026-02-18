@@ -28,6 +28,8 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1191,18 +1193,66 @@ void SymbolContextSpecifier::GetDescription(
 //  SymbolContextList
 //
 
+// SymbolContextInfo implementations for DenseSet
+SymbolContext SymbolContextList::SymbolContextInfo::getEmptyKey() {
+  SymbolContext sc;
+  sc.function = llvm::DenseMapInfo<Function *>::getEmptyKey();
+  return sc;
+}
+
+SymbolContext SymbolContextList::SymbolContextInfo::getTombstoneKey() {
+  SymbolContext sc;
+  sc.function = llvm::DenseMapInfo<Function *>::getTombstoneKey();
+  return sc;
+}
+
+unsigned
+SymbolContextList::SymbolContextInfo::getHashValue(const SymbolContext &sc) {
+  // Hash all fields EXCEPT symbol, since CompareConsideringPossiblyNullSymbol
+  // ignores them.
+  auto line_entry_hash =
+      sc.line_entry.IsValid()
+          ? llvm::hash_combine(
+                sc.line_entry.range.GetBaseAddress().GetFileAddress(),
+                sc.line_entry.range.GetByteSize(),
+                sc.line_entry.is_terminal_entry, sc.line_entry.line,
+                sc.line_entry.column)
+          : llvm::hash_value(0);
+  return static_cast<unsigned>(llvm::hash_combine(
+      sc.function, sc.module_sp.get(), sc.comp_unit, sc.target_sp.get(),
+      line_entry_hash, sc.variable, sc.block));
+}
+
+bool SymbolContextList::SymbolContextInfo::isEqual(const SymbolContext &lhs,
+                                                   const SymbolContext &rhs) {
+  // Check for empty/tombstone keys first, since these are invalid pointers we
+  // don't want to accidentally dereference them in
+  // CompareConsideringPossiblyNullSymbol.
+  if (lhs.function == llvm::DenseMapInfo<Function *>::getEmptyKey() ||
+      rhs.function == llvm::DenseMapInfo<Function *>::getEmptyKey() ||
+      lhs.function == llvm::DenseMapInfo<Function *>::getTombstoneKey() ||
+      rhs.function == llvm::DenseMapInfo<Function *>::getTombstoneKey())
+    return lhs.function == rhs.function;
+
+  return SymbolContext::CompareConsideringPossiblyNullSymbol(lhs, rhs);
+}
+
 SymbolContextList::SymbolContextList() : m_symbol_contexts() {}
 
 SymbolContextList::~SymbolContextList() = default;
 
 void SymbolContextList::Append(const SymbolContext &sc) {
   m_symbol_contexts.push_back(sc);
+  if (!m_lookup_set.empty())
+    m_lookup_set.insert(sc);
 }
 
 void SymbolContextList::Append(const SymbolContextList &sc_list) {
-  collection::const_iterator pos, end = sc_list.m_symbol_contexts.end();
-  for (pos = sc_list.m_symbol_contexts.begin(); pos != end; ++pos)
-    m_symbol_contexts.push_back(*pos);
+  for (const auto &sc : sc_list.m_symbol_contexts) {
+    m_symbol_contexts.push_back(sc);
+    if (!m_lookup_set.empty())
+      m_lookup_set.insert(sc);
+  }
 }
 
 uint32_t SymbolContextList::AppendIfUnique(const SymbolContextList &sc_list,
@@ -1218,30 +1268,44 @@ uint32_t SymbolContextList::AppendIfUnique(const SymbolContextList &sc_list,
 
 bool SymbolContextList::AppendIfUnique(const SymbolContext &sc,
                                        bool merge_symbol_into_function) {
-  collection::iterator pos, end = m_symbol_contexts.end();
-  for (pos = m_symbol_contexts.begin(); pos != end; ++pos) {
-    // Because symbol contexts might first be built without the symbol,
-    // which is then appended later on, compare the symbol contexts taking into
-    // accout that one (or either) of them might not have a symbol yet.
-    if (SymbolContext::CompareConsideringPossiblyNullSymbol(*pos, sc))
+
+  // Look in the set if it's populated, otherwise, fall back to linear scan.
+  if (!m_lookup_set.empty()) {
+    if (m_lookup_set.count(sc))
+      return false;
+  } else if (m_symbol_contexts.size() < kSetThreshold) {
+    for (const auto &existing : m_symbol_contexts) {
+      if (SymbolContext::CompareConsideringPossiblyNullSymbol(existing, sc))
+        return false;
+    }
+  } else {
+    // We've just crossed the threshold. Populate the set from existing items.
+    // Since the set won't be empty after this every new append operation will
+    // keep the set in sync with the vector.
+    for (const auto &existing : m_symbol_contexts)
+      m_lookup_set.insert(existing);
+    if (m_lookup_set.count(sc))
       return false;
   }
+
+  // This path is only taken when sc is an "isolated symbol" (only symbol field
+  // is set), so it's not the hot path.
   if (merge_symbol_into_function && sc.symbol != nullptr &&
       sc.comp_unit == nullptr && sc.function == nullptr &&
       sc.block == nullptr && !sc.line_entry.IsValid()) {
     if (sc.symbol->ValueIsAddress()) {
-      for (pos = m_symbol_contexts.begin(); pos != end; ++pos) {
+      for (auto &pos : m_symbol_contexts) {
         // Don't merge symbols into inlined function symbol contexts
-        if (pos->block && pos->block->GetContainingInlinedBlock())
+        if (pos.block && pos.block->GetContainingInlinedBlock())
           continue;
 
-        if (pos->function) {
-          if (pos->function->GetAddress() == sc.symbol->GetAddressRef()) {
+        if (pos.function) {
+          if (pos.function->GetAddress() == sc.symbol->GetAddressRef()) {
             // Do we already have a function with this symbol?
-            if (pos->symbol == sc.symbol)
+            if (pos.symbol == sc.symbol)
               return false;
-            if (pos->symbol == nullptr) {
-              pos->symbol = sc.symbol;
+            if (pos.symbol == nullptr) {
+              pos.symbol = sc.symbol;
               return false;
             }
           }
@@ -1249,11 +1313,17 @@ bool SymbolContextList::AppendIfUnique(const SymbolContext &sc,
       }
     }
   }
+
   m_symbol_contexts.push_back(sc);
+  if (!m_lookup_set.empty())
+    m_lookup_set.insert(sc);
   return true;
 }
 
-void SymbolContextList::Clear() { m_symbol_contexts.clear(); }
+void SymbolContextList::Clear() {
+  m_symbol_contexts.clear();
+  m_lookup_set.clear();
+}
 
 void SymbolContextList::Dump(Stream *s, Target *target) const {
 
@@ -1281,6 +1351,8 @@ bool SymbolContextList::GetContextAtIndex(size_t idx, SymbolContext &sc) const {
 
 bool SymbolContextList::RemoveContextAtIndex(size_t idx) {
   if (idx < m_symbol_contexts.size()) {
+    if (!m_lookup_set.empty())
+      m_lookup_set.erase(m_symbol_contexts[idx]);
     m_symbol_contexts.erase(m_symbol_contexts.begin() + idx);
     return true;
   }
