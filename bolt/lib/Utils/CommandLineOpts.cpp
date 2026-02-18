@@ -230,9 +230,11 @@ OutputFilename("o",
   cl::Optional,
   cl::cat(BoltOutputCategory));
 
-cl::opt<std::string> PerfData("perfdata", cl::desc("<data file>"), cl::Optional,
-                              cl::cat(AggregatorCategory),
-                              cl::sub(cl::SubCommand::getAll()));
+cl::list<std::string>
+    PerfData("perfdata",
+             cl::desc("<data file> (can be specified multiple times)"),
+             cl::Optional, cl::cat(AggregatorCategory),
+             cl::sub(cl::SubCommand::getAll()));
 
 static cl::alias
 PerfDataA("p",
