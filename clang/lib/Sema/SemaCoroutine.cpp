@@ -1103,7 +1103,9 @@ static bool DiagnoseTypeAwareAllocators(Sema &S, SourceLocation Loc,
   S.LookupQualifiedName(R, PromiseType->getAsCXXRecordDecl());
   bool HaveIssuedWarning = false;
   for (auto Decl : R) {
-    if (!Decl->getAsFunction()->isTypeAwareOperatorNewOrDelete())
+    if (!Decl->getUnderlyingDecl()
+             ->getAsFunction()
+             ->isTypeAwareOperatorNewOrDelete())
       continue;
     if (!HaveIssuedWarning) {
       S.Diag(Loc, DiagnosticID) << Name;
