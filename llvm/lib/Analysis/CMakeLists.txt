@@ -34,6 +34,12 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set_source_files_properties(ConstantFolding.cpp PROPERTIES COMPILE_OPTIONS "-ftrapping-math")
 endif()
 
+
+set(LLVM_TARGET_DEFINITIONS ${LLVM_MAIN_INCLUDE_DIR}/llvm/IR/Intrinsics.td)
+tablegen(LLVM IntrinsicConstantFolding.inc
+         -gen-constant-folding)
+add_public_tablegen_target(ConstFoldingGen)
+
 add_llvm_component_library(LLVMAnalysis
   AliasAnalysis.cpp
   AliasAnalysisEvaluator.cpp
@@ -168,6 +174,7 @@ add_llvm_component_library(LLVMAnalysis
   DEPENDS
   analysis_gen
   intrinsics_gen
+  ConstFoldingGen
   ${MLDeps}
 
   LINK_LIBS
