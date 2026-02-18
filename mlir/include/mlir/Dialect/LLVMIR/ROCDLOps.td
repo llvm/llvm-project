@@ -328,7 +328,7 @@ def ROCDL_ReadfirstlaneOp : ROCDL_IntrOp<"readfirstlane", [], [0], [AllTypesMatc
     %0 = rocdl.readfirstlane %src0 : f32
 
     // Vector readfirstlane.
-    %1 = rocdl.readfirstlane %src1 : vector<2 x f32>
+    %1 = rocdl.readfirstlane %src1 : vector<2xf32>
     ```
   }];
 
@@ -352,7 +352,7 @@ def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", 
     %0 = rocdl.readlane %src0, %idx : (f32, i32) -> f32
 
     // Vector readlane.
-    %1 = rocdl.readlane %src1, %idx : (vector<2 x f32>, i32) -> vector<2 x f32>
+    %1 = rocdl.readlane %src1, %idx : (vector<2xf32>, i32) -> vector<2xf32>
     ```
   }];
 
@@ -820,15 +820,15 @@ class ROCDL_Mfma_IntrOp<string mnemonic, Type ABType, Type CDType> :
     ```mlir
     // MFMA with f32 inputs and 32-wide f32 accumulator.
     %r0 = rocdl.mfma.f32.32x32x1f32 %a0, %b0, %c0, 0, 0, 0 :
-      (f32, f32, vector<32 x f32>) -> vector<32 x f32>
+      (f32, f32, vector<32xf32>) -> vector<32xf32>
 
     // MFMA with i8 inputs and 32-wide i32 accumulator.
     %r1 = rocdl.mfma.i32.32x32x4i8 %a1, %a1, %c1, 0, 0, 0 :
-      (i32, i32, vector<32 x i32>) -> vector<32 x i32>
+      (i32, i32, vector<32xi32>) -> vector<32xi32>
 
     // MFMA with bf16 inputs and 32-wide f32 accumulator.
     %r2 = rocdl.mfma.f32.32x32x2bf16 %a2, %a2, %c0, 0, 0, 0 :
-      (vector<2xi16>, vector<2xi16>, vector<32 x f32>) -> vector<32 x f32>
+      (vector<2xi16>, vector<2xi16>, vector<32xf32>) -> vector<32xf32>
     ```
   }];
 }
@@ -1927,7 +1927,7 @@ def ROCDL_PermlaneX16Op : ROCDL_IntrOp<"permlanex16", [], [0],
     %ret0 = rocdl.permlanex16 %src0, %src0, %sel, %sel, 0, -1 : f32, i32
 
     // Vector permlanex16.
-    %ret1 = rocdl.permlanex16 %src1, %src1, %sel, %sel, 0, -1 : vector<2 x f32>, i32
+    %ret1 = rocdl.permlanex16 %src1, %src1, %sel, %sel, 0, -1 : vector<2xf32>, i32
     ```
   }];
 }
