@@ -81,8 +81,6 @@ static BlockVector getSortedEntries(const BlockSet &Entries) {
   return SortedEntries;
 }
 
-class ReachabilityGraph;
-
 struct ReachabilityNode {
   MachineBasicBlock *MBB;
   SmallVector<ReachabilityNode *, 4> Succs;
@@ -134,9 +132,7 @@ private:
   DenseMap<MachineBasicBlock *, ReachabilityNode *> MBBToNodeMap;
 
   ReachabilityNode *getNode(MachineBasicBlock *MBB) const {
-    auto It = MBBToNodeMap.find(MBB);
-    assert(It != MBBToNodeMap.end());
-    return It->second;
+    return MBBToNodeMap.at(MBB);
   }
 
   void calculate();
