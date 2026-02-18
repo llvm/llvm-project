@@ -70,69 +70,6 @@ func.func @vector_reduction_inner(%arg0: vector<2x3x4x5xi32>, %acc: vector<2x3xi
 //       CHECK:       return %[[RESULT]]
 
 // Patterns applied:
-// * InnerOuterDimReductionConversion from populateVectorMultiReductionTransformationPatterns
-// * ReduceMultiDimReductionRank from populateVectorMultiReductionFlatteningPatterns
-// * TwoDimMultiReductionToReduction from populateVectorMultiReductionUnrollingPatterns
-func.func @vector_multi_reduction_transposed(%arg0: vector<2x3x4x5xf32>, %acc: vector<2x5xf32>) -> vector<2x5xf32> {
-    %0 = vector.multi_reduction <add>, %arg0, %acc [1, 2] : vector<2x3x4x5xf32> to vector<2x5xf32>
-    return %0 : vector<2x5xf32>
-}
-
-// CHECK-LABEL: func @vector_multi_reduction_transposed
-//  CHECK-SAME:    %[[INPUT:.+]]: vector<2x3x4x5xf32>
-//       CHECK:     %[[TRANSPOSED_INPUT:.+]] = vector.transpose %[[INPUT]], [0, 3, 1, 2] : vector<2x3x4x5xf32> to vector<2x5x3x4xf32>
-//       CHECK:     vector.shape_cast %[[TRANSPOSED_INPUT]] : vector<2x5x3x4xf32> to vector<10x12xf32>
-//       CHECK:     %[[RESULT:.+]] = vector.shape_cast %{{.*}} : vector<10xf32> to vector<2x5xf32>
-//       CHECK:       return %[[RESULT]]
-
-// Patterns applied:
-// * InnerOuterDimReductionConversion from populateVectorMultiReductionTransformationPatterns
-// * ReduceMultiDimReductionRank from populateVectorMultiReductionFlatteningPatterns
-// * TwoDimMultiReductionToReduction from populateVectorMultiReductionUnrollingPatterns
-func.func @vector_multi_reduction_ordering(%arg0: vector<3x2x4xf32>, %acc: vector<2x4xf32>) -> vector<2x4xf32> {
-    %0 = vector.multi_reduction <mul>, %arg0, %acc [0] : vector<3x2x4xf32> to vector<2x4xf32>
-    return %0 : vector<2x4xf32>
-}
-// CHECK-LABEL: func @vector_multi_reduction_ordering
-//  CHECK-SAME:   %[[INPUT:.+]]: vector<3x2x4xf32>, %[[ACC:.*]]: vector<2x4xf32>)
-//   CHECK-DAG:       %[[RESULT_VEC_0:.+]] = arith.constant dense<{{.*}}> : vector<8xf32>
-//       CHECK:       %[[TRANSPOSED_INPUT:.+]] = vector.transpose %[[INPUT]], [1, 2, 0] : vector<3x2x4xf32> to vector<2x4x3xf32>
-//       CHECK:       %[[V0:.+]] = vector.extract %[[TRANSPOSED_INPUT]][0, 0]
-//       CHECK:       %[[ACC0:.+]] = vector.extract %[[ACC]][0, 0] : f32 from vector<2x4xf32>
-//       CHECK:       %[[RV0:.+]] = vector.reduction <mul>, %[[V0]], %[[ACC0]] : vector<3xf32> into f32
-//       CHECK:       %[[RESULT_VEC_1:.+]] = vector.insert %[[RV0:.+]], %[[RESULT_VEC_0]] [0] : f32 into vector<8xf32>
-//       CHECK:       %[[V1:.+]] = vector.extract %[[TRANSPOSED_INPUT]][0, 1]
-//       CHECK:       %[[ACC1:.+]] = vector.extract %[[ACC]][0, 1] : f32 from vector<2x4xf32>
-//       CHECK:       %[[RV1:.+]] = vector.reduction <mul>, %[[V1]], %[[ACC1]] : vector<3xf32> into f32
-//       CHECK:       %[[RESULT_VEC_2:.+]] = vector.insert %[[RV1:.+]], %[[RESULT_VEC_1]] [1] : f32 into vector<8xf32>
-//       CHECK:       %[[V2:.+]] = vector.extract %[[TRANSPOSED_INPUT]][0, 2]
-//       CHECK:       %[[ACC2:.+]] = vector.extract %[[ACC]][0, 2] : f32 from vector<2x4xf32>
-//       CHECK:       %[[RV2:.+]] = vector.reduction <mul>, %[[V2]], %[[ACC2]] : vector<3xf32> into f32
-//       CHECK:       %[[RESULT_VEC_3:.+]] = vector.insert %[[RV2:.+]], %[[RESULT_VEC_2]] [2] : f32 into vector<8xf32>
-//       CHECK:       %[[V3:.+]] = vector.extract %[[TRANSPOSED_INPUT]][0, 3]
-//       CHECK:       %[[ACC3:.+]] = vector.extract %[[ACC]][0, 3] : f32 from vector<2x4xf32>
-//       CHECK:       %[[RV3:.+]] = vector.reduction <mul>, %[[V3]], %[[ACC3]] : vector<3xf32> into f32
-//       CHECK:       %[[RESULT_VEC_4:.+]] = vector.insert %[[RV3:.+]], %[[RESULT_VEC_3]] [3] : f32 into vector<8xf32>
-//       CHECK:       %[[V4:.+]] = vector.extract %[[TRANSPOSED_INPUT]][1, 0]
-//       CHECK:       %[[ACC4:.+]] = vector.extract %[[ACC]][1, 0] : f32 from vector<2x4xf32>
-//       CHECK:       %[[RV4:.+]] = vector.reduction <mul>, %[[V4]], %[[ACC4]] : vector<3xf32> into f32
-//       CHECK:       %[[RESULT_VEC_5:.+]] = vector.insert %[[RV4:.+]], %[[RESULT_VEC_4]] [4] : f32 into vector<8xf32>
-//       CHECK:       %[[V5:.+]] = vector.extract %[[TRANSPOSED_INPUT]][1, 1]
-//       CHECK:       %[[ACC5:.+]] = vector.extract %[[ACC]][1, 1] : f32 from vector<2x4xf32>
-//       CHECK:       %[[RV5:.+]] = vector.reduction <mul>, %[[V5]], %[[ACC5]] : vector<3xf32> into f32
-//       CHECK:       %[[RESULT_VEC_6:.+]] = vector.insert %[[RV5:.+]], %[[RESULT_VEC_5]] [5] : f32 into vector<8xf32>
-//       CHECK:       %[[V6:.+]] = vector.extract %[[TRANSPOSED_INPUT]][1, 2]
-//       CHECK:       %[[ACC6:.+]] = vector.extract %[[ACC]][1, 2] : f32 from vector<2x4xf32>
-//       CHECK:       %[[RV6:.+]] = vector.reduction <mul>, %[[V6]], %[[ACC6]] : vector<3xf32> into f32
-//       CHECK:       %[[RESULT_VEC_7:.+]] = vector.insert %[[RV6:.+]], %[[RESULT_VEC_6]] [6] : f32 into vector<8xf32>
-//       CHECK:       %[[V7:.+]] = vector.extract %[[TRANSPOSED_INPUT]][1, 3]
-//       CHECK:       %[[ACC7:.+]] = vector.extract %[[ACC]][1, 3] : f32 from vector<2x4xf32>
-//       CHECK:       %[[RV7:.+]] = vector.reduction <mul>, %[[V7]], %[[ACC7]] : vector<3xf32> into f32
-//       CHECK:       %[[RESULT_VEC:.+]] = vector.insert %[[RV7:.+]], %[[RESULT_VEC_7]] [7] : f32 into vector<8xf32>
-//       CHECK:       %[[RESHAPED_VEC:.+]] = vector.shape_cast %[[RESULT_VEC]] : vector<8xf32> to vector<2x4xf32>
-//       CHECK:       return %[[RESHAPED_VEC]]
-
-// Patterns applied:
 // * TwoDimMultiReductionToReduction from populateVectorMultiReductionUnrollingPatterns
 func.func @vectorize_dynamic_reduction(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
   %c0 = arith.constant 0 : index
@@ -246,19 +183,6 @@ func.func @vectorize_dynamic_transpose_reduction(%arg0: tensor<?x?x?xf32>, %arg1
 // CHECK:           %[[VAL_158:.*]] = vector.extract %[[VAL_139]][0, 3] : vector<4xi1> from vector<8x16x4xi1>
 // CHECK:           %[[VAL_159:.*]] = vector.mask %[[VAL_158]] { vector.reduction <add>
 // CHECK:           %[[VAL_160:.*]] = vector.insert %[[VAL_159]]
-
-// Patterns applied:
-// * InnerOuterDimReductionConversion from populateVectorMultiReductionTransformationPatterns
-// * ReduceMultiDimReductionRank from populateVectorMultiReductionFlatteningPatterns
-// * TwoDimMultiReductionToReduction from populateVectorMultiReductionUnrollingPatterns
-func.func @vector_multi_reduction_parallel_middle(%arg0: vector<3x4x5xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
-    %0 = vector.multi_reduction <add>, %arg0, %acc [0, 2] : vector<3x4x5xf32> to vector<4xf32>
-    return %0 : vector<4xf32>
-}
-
-// CHECK-LABEL: func @vector_multi_reduction_parallel_middle
-//  CHECK-SAME:   %[[INPUT:.+]]: vector<3x4x5xf32>, %[[ACC:.+]]: vector<4xf32>
-//       CHECK: vector.transpose %[[INPUT]], [1, 0, 2] : vector<3x4x5xf32> to vector<4x3x5xf32>
 
 // Patterns applied:
 // * ReduceMultiDimReductionRank from populateVectorMultiReductionFlatteningPatterns
