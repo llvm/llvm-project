@@ -12,9 +12,6 @@ class StdVectorDataFormatterTestCase(TestBase):
     TEST_WITH_PDB_DEBUG_INFO = True
 
     def check_numbers(self, var_name, show_ptr=False):
-        pass
-
-    def check_numbers(self, var_name, show_ptr=False):
         patterns = []
         substrs = [
             "[0] = 1",
@@ -241,6 +238,3 @@ class StdVectorDataFormatterTestCase(TestBase):
     def test_ref_and_ptr_msvcstl(self):
         self.build()
         self.do_test_ref_and_ptr()
-
-    def test_ref_and_ptr_msvcstl(self):
-        pass

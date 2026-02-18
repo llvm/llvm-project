@@ -92,9 +92,6 @@ class LibCxxStdFunctionRecognizerTestCase(TestBase):
         end_idx = frame.GetFrameID()
         self.assertLess(i, start_idx - end_idx, "skipped frames")
 
-    def test_api(self):
-        pass
-
     @add_test_categories(["libc++"])
     def test_api(self):
         """Test that std::function implementation details are skipped"""
