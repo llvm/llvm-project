@@ -3,7 +3,7 @@
 
 @global = external local_unnamed_addr global [400 x [400 x i32]], align 16
 
-; We need to move %tmp4 from the inner loop pre header to the outer loop header
+; We need to move %mul from the inner loop pre header to the outer loop header
 ; before interchanging.
 define void @test1() local_unnamed_addr #0 {
 ; CHECK-LABEL: @test1(
@@ -50,13 +50,13 @@ outer.header:                                              ; preds = %bb11, %bb
   br label %inner.ph
 
 inner.ph:                                              ; preds = %bb1
-  %tmp4 = add nsw i64 %outer.iv, 9
+  %mul = add nsw i64 %outer.iv, 9
   br label %inner
 
 inner:                                              ; preds = %bb5, %bb3
   %inner.iv = phi i64 [ 0, %inner.ph ], [ %inner.iv.next, %inner ]
   %inner.red = phi i32 [ %outer.red, %inner.ph ], [ %red.next, %inner ]
-  %ptr = getelementptr inbounds [400 x [400 x i32]], ptr @global, i64 0, i64 %inner.iv, i64 %tmp4
+  %ptr = getelementptr inbounds [400 x [400 x i32]], ptr @global, i64 0, i64 %inner.iv, i64 %mul
   store i32 0, ptr %ptr
   %red.next = or i32 %inner.red, 20
   %inner.iv.next = add nsw i64 %inner.iv, 1
@@ -116,14 +116,14 @@ outer.header:                                              ; preds = %bb11, %bb
   br label %inner.ph
 
 inner.ph:                                              ; preds = %bb1
-  %tmp4 = add nsw i64 %outer.iv, 9
+  %mul = add nsw i64 %outer.iv, 9
   call void @side_effect()
   br label %inner
 
 inner:                                              ; preds = %bb5, %bb3
   %inner.iv = phi i64 [ 0, %inner.ph ], [ %inner.iv.next, %inner ]
   %inner.red = phi i32 [ %outer.red, %inner.ph ], [ %red.next, %inner ]
-  %ptr = getelementptr inbounds [400 x [400 x i32]], ptr @global, i64 0, i64 %inner.iv, i64 %tmp4
+  %ptr = getelementptr inbounds [400 x [400 x i32]], ptr @global, i64 0, i64 %inner.iv, i64 %mul
   store i32 0, ptr %ptr
   %red.next = or i32 %inner.red, 20
   %inner.iv.next = add nsw i64 %inner.iv, 1
