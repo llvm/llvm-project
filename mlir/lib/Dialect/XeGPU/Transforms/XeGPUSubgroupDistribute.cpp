@@ -1253,69 +1253,6 @@ struct SinkUniformOps final : public gpu::WarpDistributionPattern {
   }
 };
 
-/// Helper to rewrite a 2D VectorMultiReductionOp into a sequence of 1D
-/// VectorReductionOps. We also insert layouts for the newly created ops.
-static Value lowerToVectorReductions(TypedValue<VectorType> src,
-                                     TypedValue<VectorType> acc,
-                                     vector::CombiningKind kind,
-                                     int64_t reductionDim, Location loc,
-                                     PatternRewriter &rewriter) {
-  // Expecting a 2D source vector.
-  assert(src.getType().getRank() == 2 && "expected a 2D source vector");
-  VectorType sourceType = src.getType();
-  int64_t sourceH = sourceType.getShape()[0];
-  int64_t sourceW = sourceType.getShape()[1];
-  int nSlices = (reductionDim == 0) ? sourceW : sourceH;
-  // Create a constant vector to hold the result of the reduction.
-  TypedAttr zeroAttr = rewriter.getZeroAttr(sourceType.getElementType());
-  Value reductionResult = arith::ConstantOp::create(
-      rewriter, loc, acc.getType(),
-      DenseElementsAttr::get(acc.getType(), zeroAttr));
-  // Reduction result should have the same layout as the accumulator.
-  xegpu::setTemporaryLayout(cast<OpResult>(reductionResult),
-                            xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc)));
-  // For each slice of the source, extract the slice vector, do a reduction
-  // and, insert the reduced value back to the result vector.
-  for (int i = 0; i < nSlices; ++i) {
-    SmallVector<int64_t, 2> sliceOffsets, sliceSizes;
-    if (reductionDim == 1) {
-      sliceOffsets = {i, 0};
-      sliceSizes = {1, sourceW};
-    } else {
-      sliceOffsets = {0, i};
-      sliceSizes = {sourceH, 1};
-    }
-    vector::ExtractStridedSliceOp extractOp =
-        vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
-                                              sliceSizes, {1, 1});
-
-    int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
-
-    vector::ShapeCastOp slice = vector::ShapeCastOp::create(
-        rewriter, loc,
-        VectorType::get({nSliceElements}, sourceType.getElementType()),
-        extractOp.getResult());
-
-    // Shape cast is currently handled in xegpu side. So layouts must be
-    // retained during lowering. Shape cast output has the same layout as the
-    // accumulator. Shape cast source has the same layout as the original
-    // reduction source.
-    // TODO: other ops generated here may also need layout attributes.
-    auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
-    auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
-
-    xegpu::setTemporaryLayout(slice->getOpOperand(0), srcLayout);
-    xegpu::setTemporaryLayout(slice->getOpResult(0), accLayout);
-    // Extract and reduction results in scalars, so no result layout is needed.
-    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
-    Value reduction = vector::ReductionOp::create(
-        rewriter, loc, kind, slice.getResult(), accExtract);
-    reductionResult =
-        vector::InsertOp::create(rewriter, loc, reduction, reductionResult, i);
-  }
-  return reductionResult;
-}
-
 /// This patterns distribute the `vector.multi_reduction` operation across
 /// lanes in a warp. Currently only 2D to 1D reductions are supported. Given
 /// layouts for the source and accumulator vectors,
@@ -1453,7 +1390,7 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
           rewriter, warpOp, {reductionOp.getSource(), reductionOp.getAcc()},
           {sourceDistType, distributedResultType}, newRetIndices);
       rewriter.setInsertionPointAfter(newWarpOp);
-      Value result = lowerToVectorReductions(
+      Value result = xegpu::lowerToVectorReductions(
           cast<TypedValue<VectorType>>(newWarpOp->getResult(newRetIndices[0])),
           cast<TypedValue<VectorType>>(newWarpOp->getResult(newRetIndices[1])),
           reductionOp.getKind(), reductionDim, reductionOp.getLoc(), rewriter);
@@ -1465,7 +1402,7 @@ struct VectorMultiReductionDistribution : public gpu::WarpDistributionPattern {
     // of multiple ReductionOps. Actual distribution is done by the
     // WarpOpReduction pattern.
     rewriter.setInsertionPointAfter(reductionOp);
-    Value result = lowerToVectorReductions(
+    Value result = xegpu::lowerToVectorReductions(
         cast<TypedValue<VectorType>>(reductionOp.getSource()),
         cast<TypedValue<VectorType>>(reductionOp.getAcc()),
         reductionOp.getKind(), reductionDim, reductionOp.getLoc(), rewriter);
@@ -1574,9 +1511,8 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
         // Case 1: source is lower-rank than result.
         bool isSliceOf = sourceLayout.isSliceOf(resultLayout);
         if (!isSliceOf)
-          return rewriter.notifyMatchFailure(
-              warpOp,
-              "Broadcast input layout must be a slice of result layout.");
+          broadcastOp.emitWarning()
+              << "Broadcast input layout must be a slice of result layout.";
       }
       // case 2: source and result have same rank
       if (rankDiff == 0) {
@@ -2151,23 +2087,8 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   auto shuffleFn = [](Location loc, OpBuilder &builder, Value val, Value srcIdx,
                       int64_t warpSz) { return Value(); };
 
-  auto warpReduction = [](Location loc, OpBuilder &builder, Value input,
-                          vector::CombiningKind kind, uint32_t size) {
-    // First reduce on a single thread to get per lane reduction value.
-    Value laneVal = vector::ReductionOp::create(builder, loc, kind, input);
-    // Parallel reduction using butterfly shuffles.
-    for (uint64_t i = 1; i < size; i <<= 1) {
-      Value shuffled = gpu::ShuffleOp::create(builder, loc, laneVal, i,
-                                              /*width=*/size,
-                                              /*mode=*/gpu::ShuffleMode::XOR)
-                           .getShuffleResult();
-      laneVal = makeArithReduction(builder, loc, kind, laneVal, shuffled);
-    }
-    return laneVal;
-  };
-
   vector::populateDistributeReduction(
-      patterns, warpReduction,
+      patterns, xegpu::subgroupReduction,
       /*pattern benefit=*/PatternHierarchy::Regular);
 
   vector::populatePropagateWarpVectorDistributionPatterns(

@@ -4,7 +4,7 @@
 
 module {
 
-// Global is not marked static_local, but get_global is
+// Global is not marked static_local_guard, but get_global is static_local
 cir.global "private" internal @_ZZ1fvE1x : !s32i
 
 cir.func @test_static_local_mismatch() {
@@ -21,8 +21,8 @@ cir.func @test_static_local_mismatch() {
 
 module {
 
-// Global is marked static_local, but get_global is not
-cir.global "private" internal static_local @_ZZ1fvE1y : !s32i
+// Global is marked static_local_guard, but get_global is not static_local
+cir.global "private" internal static_local_guard<"_ZGVZ1fvE1y"> @_ZZ1fvE1y : !s32i
 
 cir.func @test_static_local_mismatch_reverse() {
   // expected-error @below {{static_local attribute mismatch}}

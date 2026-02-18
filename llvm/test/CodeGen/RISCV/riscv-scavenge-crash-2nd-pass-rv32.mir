@@ -1,0 +1,86 @@
+# RUN: not --crash llc -mtriple=riscv32 -run-pass=prologepilog -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck %s
+
+# CHECK: LLVM ERROR: Incomplete scavenging after 2nd pass
+
+name:            main
+alignment:       2
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 2304, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -2304, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: 0, size: 4, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: 0, size: 2204, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: 0, size: 2204, alignment: 4,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0:
+    renamable $x10 = ADDI %stack.0, 1920
+    ADJCALLSTACKDOWN 2276, 0, implicit-def dead $x2, implicit $x2
+    $x11 = LW %stack.3, 0
+    ADJCALLSTACKUP 2276, 0, implicit-def dead $x2, implicit $x2
+    renamable $x12 = LW undef renamable $x10, 1
+    renamable $x13 = LW undef renamable $x10, 9
+    renamable $x14 = LW undef renamable $x10, 13
+    renamable $x15 = LW undef renamable $x10, 17
+    renamable $x16 = LW undef renamable $x10, 21
+    renamable $x17 = LW undef renamable $x10, 25
+    renamable $x5 = LW undef renamable $x10, 29
+    renamable $x6 = LW undef renamable $x10, 33
+    renamable $x7 = LW undef renamable $x10, 37
+    renamable $x28 = LW undef renamable $x10, 41
+    renamable $x29 = LW undef renamable $x10, 45
+    renamable $x30 = LW undef renamable $x10, 49
+    renamable $x31 = LW undef renamable $x10, 53
+    renamable $x8 = LW undef renamable $x10, 57
+    renamable $x9 = LW undef renamable $x10, 61
+    renamable $x18 = LW undef renamable $x10, 65
+    renamable $x19 = LW undef renamable $x10, 69
+    renamable $x20 = LW undef renamable $x10, 73
+    renamable $x21 = LW undef renamable $x10, 77
+    renamable $x22 = LW undef renamable $x10, 81
+    renamable $x23 = LW undef renamable $x10, 85
+    renamable $x24 = LW undef renamable $x10, 89
+    renamable $x25 = LW undef renamable $x10, 93
+    renamable $x26 = LW undef renamable $x10, 97
+    renamable $x27 = LW undef renamable $x10, 101
+    renamable $x1 = LW undef renamable $x10, 105
+    SW $x10, %stack.2, 0
+    SW killed renamable $x1, undef renamable $x11, 105
+    SW killed renamable $x27, undef renamable $x11, 101
+    SW killed renamable $x26, renamable $x11, 97
+    SW killed renamable $x25, undef renamable $x11, 93
+    SW killed renamable $x24, undef renamable $x11, 89
+    SW killed renamable $x23, undef renamable $x11, 85
+    SW killed renamable $x22, undef renamable $x11, 81
+    SW killed renamable $x21, undef renamable $x11, 77
+    SW killed renamable $x20, undef renamable $x11, 73
+    SW killed renamable $x19, undef renamable $x11, 69
+    SW killed renamable $x18, undef renamable $x11, 65
+    SW killed renamable $x9, undef renamable $x11, 61
+    SW killed renamable $x8, undef renamable $x11, 57
+    SW killed renamable $x31, undef renamable $x11, 53
+    SW killed renamable $x30, undef renamable $x11, 49
+    SW killed renamable $x29, undef renamable $x11, 45
+    SW killed renamable $x28, undef renamable $x11, 41
+    SW killed renamable $x7, undef renamable $x11, 37
+    SW killed renamable $x6, undef renamable $x11, 33
+    SW killed renamable $x5, undef renamable $x11, 29
+    SW killed renamable $x17, undef renamable $x11, 25
+    SW killed renamable $x16, undef renamable $x11, 21
+    SW killed renamable $x15, undef renamable $x11, 17
+    SW killed renamable $x14, undef renamable $x11, 13
+    SW killed renamable $x13, undef renamable $x11, 9
+    SW killed renamable $x12, undef renamable $x11, 5
+    PseudoRET
+...

@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 
 class DebuggerAPITestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def test_debugger_api_boundary_condition(self):
         """Exercise SBDebugger APIs with boundary conditions."""
@@ -59,6 +60,7 @@ class DebuggerAPITestCase(TestBase):
             )
 
             self.assertEqual(value_list.GetSize(), 1)
+            self.assertEqual(value_list[0], value_list.GetStringAtIndex(0))
             try:
                 return int(value_list.GetStringAtIndex(0))
             except ValueError as error:

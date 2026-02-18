@@ -3,13 +3,13 @@
 
 // RUN: echo "%s -fcrash-diagnostics-dir=%t -fsyntax-only" | sed -e 's/\\/\\\\/g' > %t.rsp
 
-// RUN: not %clang -DFATAL @%t.rsp -gen-reproducer=off    2>&1 | FileCheck %s --check-prefix=NOT
-// RUN: not %clang -DFATAL @%t.rsp -fno-crash-diagnostics 2>&1 | FileCheck %s --check-prefix=NOT
-// RUN: not %clang -DFATAL @%t.rsp                        2>&1 | FileCheck %s
-// RUN: not %clang -DFATAL @%t.rsp -gen-reproducer=crash  2>&1 | FileCheck %s
-// RUN: not %clang -DFATAL @%t.rsp -gen-reproducer=error  2>&1 | FileCheck %s
-// RUN: not %clang -DFATAL @%t.rsp -gen-reproducer=always 2>&1 | FileCheck %s
-// RUN: not %clang -DFATAL @%t.rsp -gen-reproducer        2>&1 | FileCheck %s
+// RUN: not %crash_opt %clang -DFATAL @%t.rsp -gen-reproducer=off    2>&1 | FileCheck %s --check-prefix=NOT
+// RUN: not %crash_opt %clang -DFATAL @%t.rsp -fno-crash-diagnostics 2>&1 | FileCheck %s --check-prefix=NOT
+// RUN: not %crash_opt %clang -DFATAL @%t.rsp                        2>&1 | FileCheck %s
+// RUN: not %crash_opt %clang -DFATAL @%t.rsp -gen-reproducer=crash  2>&1 | FileCheck %s
+// RUN: not %crash_opt %clang -DFATAL @%t.rsp -gen-reproducer=error  2>&1 | FileCheck %s
+// RUN: not %crash_opt %clang -DFATAL @%t.rsp -gen-reproducer=always 2>&1 | FileCheck %s
+// RUN: not %crash_opt %clang -DFATAL @%t.rsp -gen-reproducer        2>&1 | FileCheck %s
 
 // RUN: not %clang -DERROR @%t.rsp -gen-reproducer=off    2>&1 | FileCheck %s --check-prefix=NOT
 // RUN: not %clang -DERROR @%t.rsp -fno-crash-diagnostics 2>&1 | FileCheck %s --check-prefix=NOT

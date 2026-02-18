@@ -34,7 +34,7 @@ cc_library(
     hdrs = glob(["Language/ObjC/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangCommon",
+        ":PluginClangHighlighter",
         ":PluginExpressionParserClangHeaders",
         "//lldb:CoreHeaders",
     ],
@@ -782,7 +782,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginCPPRuntime",
-        ":PluginClangCommon",
+        ":PluginClangHighlighter",
         ":PluginTypeSystemClang",
         "//lldb:Core",
         "//lldb:DataFormatters",
@@ -868,7 +868,7 @@ cc_library(
     hdrs = glob(["Language/ObjCPlusPlus/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangCommon",
+        ":PluginClangHighlighter",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Target",
@@ -894,7 +894,7 @@ cc_library(
     hdrs = glob(["Language/CPlusPlus/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangCommon",
+        ":PluginClangHighlighter",
         ":PluginExpressionParserClangHeaders",
         "//lldb:CoreHeaders",
     ],
@@ -908,7 +908,7 @@ cc_library(
         ":LanguageCPlusPlusProperties",
         ":PluginCPPRuntime",
         ":PluginCPlusPlusLanguageHeaders",
-        ":PluginClangCommon",
+        ":PluginClangHighlighter",
         ":PluginExpressionParserClangHeaders",
         ":PluginTypeSystemClang",
         ":PluginTypeSystemClangHeaders",
@@ -2078,6 +2078,7 @@ cc_library(
         "//llvm:BinaryFormat",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
