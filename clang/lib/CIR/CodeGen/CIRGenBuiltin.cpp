@@ -1120,10 +1120,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   // builtin should be added directly to instructions such as branches or
   // switches that use it.
   case Builtin::BI__builtin_unpredictable: {
-        // Always return the argument of __builtin_unpredictable. LLVM does not
-        // have an intrinsic corresponding to this builtin. Metadata for this builtin
-        // should be added directly to instructions such as branches or switches
-        // that use it.
     return RValue::get(emitScalarExpr(e->getArg(0)));
   }
 
