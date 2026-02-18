@@ -61,5 +61,4 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          # E0102: error when class methods have the same name
           pylint --fail-on=E0102 --fail-under=0 $CHANGED_FILES | grep E0102
