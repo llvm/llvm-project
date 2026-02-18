@@ -1,17 +1,12 @@
-add_header_library(
-  common_constants
-  HDRS
-    common_constants.h
-  DEPENDS
-)
+add_header_library(common_constants HDRS common_constants.h)
 
 add_header_library(
   expf_utils
   HDRS
     expf_utils.h
   DEPENDS
-  libc.src.__support.CPP.simd
-  libc.src.__support.mathvec.common_constants
+    .common_constants
+    libc.src.__support.CPP.simd
 )
 
 add_header_library(
@@ -19,9 +14,8 @@ add_header_library(
   HDRS
     expf.h
   DEPENDS
-    libc.src.__support.common
+    .expf_utils
     libc.src.__support.CPP.simd
-    libc.src.__support.FPUtil.FPBits
-    libc.src.__support.mathvec.expf_utils
-    libc.src.__support.mathvec.vector_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.common
 )

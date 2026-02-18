@@ -9,28 +9,28 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATHVEC_EXPF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATHVEC_EXPF_H
 
+#include "expf_utils.h"
 #include "src/__support/CPP/simd.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/common.h"
-#include "src/__support/mathvec/expf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 namespace mathvec {
 
 template <size_t N>
-LIBC_INLINE static cpp::simd<double, N> inline_exp(cpp::simd<double, N> x) {
-  static constexpr cpp::simd<double, N> shift = 0x1.800000000ffc0p+46;
+LIBC_INLINE cpp::simd<double, N> inline_exp(cpp::simd<double, N> x) {
+  constexpr cpp::simd<double, N> shift = 0x1.800000000ffc0p+46;
 
   // inv_ln2 = round(1/log(2), D, RN);
-  static constexpr cpp::simd<double, N> inv_ln2 = 0x1.71547652b82fep+0;
+  constexpr cpp::simd<double, N> inv_ln2 = 0x1.71547652b82fep+0;
   cpp::simd<double, N> z = shift + x * inv_ln2;
   cpp::simd<double, N> n = z - shift;
 
   // ln2_hi = round(log(2), D, RN);
   // ln2_lo = round(log(2) - ln2_hi, D, RN);
-  static constexpr cpp::simd<double, N> ln2_hi = 0x1.62e42fefa39efp-1;
-  static constexpr cpp::simd<double, N> ln2_lo = 0x1.abc9e3b39803fp-56;
+  constexpr cpp::simd<double, N> ln2_hi = 0x1.62e42fefa39efp-1;
+  constexpr cpp::simd<double, N> ln2_lo = 0x1.abc9e3b39803fp-56;
 
   cpp::simd<double, N> r = x;
   r = r - n * ln2_hi;
@@ -44,10 +44,10 @@ LIBC_INLINE static cpp::simd<double, N> inline_exp(cpp::simd<double, N> x) {
   //   poly = poly + x^i*c;
   //   c;
   // };
-  static constexpr cpp::simd<double, N> c0 = 0x1.fffffffffdbcep-2;
-  static constexpr cpp::simd<double, N> c1 = 0x1.55555555543c2p-3;
-  static constexpr cpp::simd<double, N> c2 = 0x1.555573c64f2e3p-5;
-  static constexpr cpp::simd<double, N> c3 = 0x1.111126b4eff73p-7;
+  constexpr cpp::simd<double, N> c0 = 0x1.fffffffffdbcep-2;
+  constexpr cpp::simd<double, N> c1 = 0x1.55555555543c2p-3;
+  constexpr cpp::simd<double, N> c2 = 0x1.555573c64f2e3p-5;
+  constexpr cpp::simd<double, N> c3 = 0x1.111126b4eff73p-7;
 
   /* y = exp(r) - 1 ~= r + C0 r^2 + C1 r^3 + C2 r^4 + C3 r^5.  */
   cpp::simd<double, N> r2 = r * r;

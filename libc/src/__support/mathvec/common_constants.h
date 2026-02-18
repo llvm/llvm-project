@@ -14,7 +14,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace mathvec {
 
 // Lookup table for mantissas of 2^(i / 64) with i = 0, ..., 63.
-static constexpr uint64_t EXP_MANTISSA[64] = {
+LIBC_INLINE_VAR constexpr uint64_t EXP_MANTISSA[64] = {
     0x0000000000000, 0x02c9a3e778061, 0x059b0d3158574, 0x0874518759bc8,
     0x0b5586cf9890f, 0x0e3ec32d3d1a2, 0x11301d0125b51, 0x1429aaea92de0,
     0x172b83c7d517b, 0x1a35beb6fcb75, 0x1d4873168b9aa, 0x2063b88628cd6,

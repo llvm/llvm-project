@@ -5,7 +5,7 @@ add_entrypoint_object(
   HDRS
     ../expf.h
   DEPENDS
-    libc.src.__support.CPP.simd
+    libc.src.__support.mathvec.expf
   FLAGS
     ROUND_OPT
     FMA_OPT
