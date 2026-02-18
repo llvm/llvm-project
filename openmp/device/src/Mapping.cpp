@@ -97,7 +97,7 @@ uint32_t mapping::getWarpSize() { return __gpu_num_lanes(); }
 
 uint32_t mapping::getMaxTeamThreads(bool IsSPMD) {
   uint32_t BlockSize = mapping::getNumberOfThreadsInBlock();
-  // If we are in SPMD mode, remove one warp.
+  // If we are not in SPMD mode, remove one warp.
   return BlockSize - (!IsSPMD * mapping::getWarpSize());
 }
 uint32_t mapping::getMaxTeamThreads() {
