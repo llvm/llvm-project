@@ -512,8 +512,7 @@ bool ThreadList::WillResume(RunDirection &direction) {
   // recreated fresh by SetupToStepOverBreakpointIfNeeded below, and the
   // batching logic will recompute deferred state from scratch.
   m_threads_stepping_over_bp.clear();
-  for (pos = m_threads.begin(); pos != end; ++pos) {
-    ThreadSP thread_sp(*pos);
+  for (const auto &thread_sp : m_threads) {
     ThreadPlan *plan = thread_sp->GetCurrentPlan();
     if (plan && plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
       // Suppress the re-enable side effect in DidPop() — the breakpoint
@@ -709,8 +708,7 @@ bool ThreadList::WillResume(RunDirection &direction) {
     for (ThreadSP &thread_sp : batched_step_threads)
       batch_tids.insert(thread_sp->GetID());
 
-    for (pos = m_threads.begin(); pos != end; ++pos) {
-      ThreadSP thread_sp(*pos);
+    for (const auto &thread_sp : m_threads) {
       if (batch_tids.count(thread_sp->GetID()) > 0) {
         // This thread is in the batch, let it step.
         if (!thread_sp->ShouldResume(thread_sp->GetCurrentPlan()->RunState()))

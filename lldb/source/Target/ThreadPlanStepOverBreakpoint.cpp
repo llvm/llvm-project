@@ -22,14 +22,14 @@ using namespace lldb_private;
 // the pc.
 
 ThreadPlanStepOverBreakpoint::ThreadPlanStepOverBreakpoint(Thread &thread)
-    : ThreadPlan(
-          ThreadPlan::eKindStepOverBreakpoint, "Step over breakpoint trap",
-          thread, eVoteNo,
-          eVoteNoOpinion), // We need to report the run since this happens
-                           // first in the thread plan stack when stepping over
-                           // a breakpoint
-      m_breakpoint_addr(LLDB_INVALID_ADDRESS),
-      m_auto_continue(false), m_reenabled_breakpoint_site(false)
+    : ThreadPlan(ThreadPlan::eKindStepOverBreakpoint,
+                 "Step over breakpoint trap", thread, eVoteNo,
+                 eVoteNoOpinion), // We need to report the run since this
+                                  // happens first in the thread plan stack when
+                                  // stepping over a breakpoint
+      m_breakpoint_addr(LLDB_INVALID_ADDRESS), m_auto_continue(false),
+      m_reenabled_breakpoint_site(false),
+      m_defer_reenable_breakpoint_site(false)
 
 {
   m_breakpoint_addr = thread.GetRegisterContext()->GetPC();
