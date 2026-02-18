@@ -235,20 +235,6 @@ findAncestorIteratorInRegion(Region *r, Block *b, Block::iterator it) {
   return std::make_pair(op->getBlock(), op->getIterator());
 }
 
-/// Given two iterators into the same block, return "true" if `a` is before `b.
-/// Note: This is a variant of Operation::isBeforeInBlock that operates on
-/// block iterators instead of ops.
-static bool isBeforeInBlock(Block *block, Block::iterator a,
-                            Block::iterator b) {
-  if (a == b)
-    return false;
-  if (a == block->end())
-    return false;
-  if (b == block->end())
-    return true;
-  return a->isBeforeInBlock(&*b);
-}
-
 template <bool IsPostDom>
 bool DominanceInfoBase<IsPostDom>::properlyDominatesImpl(
     Block *aBlock, Block::iterator aIt, Block *bBlock, Block::iterator bIt,
@@ -290,9 +276,9 @@ bool DominanceInfoBase<IsPostDom>::properlyDominatesImpl(
     if (!hasSSADominance(aBlock))
       return true;
     if constexpr (IsPostDom) {
-      return isBeforeInBlock(aBlock, bIt, aIt);
+      return aBlock->isBeforeInBlock(bIt, aIt);
     } else {
-      return isBeforeInBlock(aBlock, aIt, bIt);
+      return aBlock->isBeforeInBlock(aIt, bIt);
     }
   }
 
