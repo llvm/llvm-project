@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c23 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fno-builtin-open -std=c23 -fsyntax-only -verify %s
 
 int open() { return 0; }
 void close(typeof(open()) *) {}

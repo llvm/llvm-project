@@ -1031,6 +1031,31 @@ def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
   "%select{subtraction|addition}0 of address-of-label expressions is not "
   "supported with ptrauth indirect gotos">;
 
+// libc checks
+def warn_surplus_args : Warning<"too many arguments passed to '%0'; it expects "
+                                "a maximum of %1 variadic parameter">,
+                        InGroup<IncorrectLibcUse>;
+def warn_open_create_file_without_mode
+    : Warning<"nonzero 'mode' argument must be specified as the flag%s0 "
+              "'%1'%select{|| and '%2'}0 would result in file creation">,
+      InGroup<IncorrectLibcUse>;
+def warn_open_superfluous_mode
+    : Warning<"nonzero 'mode' argument was specified but is unnecessary for "
+              "specified 'flags'">,
+      InGroup<IncorrectLibcUse>;
+
+def warn_libc_invalid_mode_t : Warning<"invalid mode">,
+                               InGroup<IncorrectLibcUse>;
+
+def warn_path_max_overflow : Warning<"'%0' distination buffer needs to be "
+                                     "larger than than PATH_MAX bytes (%2),"
+                                     " but buffer is %1">,
+                             InGroup<IncorrectLibcUse>;
+
+def warn_pollfd_nfds : Warning<"the element count value '%0' is higher than "
+                               "the number of elements in the array '%1'">,
+                       InGroup<IncorrectLibcUse>;
+
 // __ptrauth qualifier
 def err_ptrauth_qualifier_invalid : Error<
   "%select{return type|parameter type|property}1 may not be qualified with "

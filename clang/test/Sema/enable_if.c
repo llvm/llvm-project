@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -verify
-// RUN: %clang_cc1 %s -DCODEGEN -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fno-builtin-open %s -verify
+// RUN: %clang_cc1 -fno-builtin-open %s -DCODEGEN -emit-llvm -o - | FileCheck %s
 
 #define O_CREAT 0x100
 typedef int mode_t;

@@ -23,6 +23,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -56,6 +57,8 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h" // TODO: Extract static functions to fix layering.
+#include "clang/Lex/MacroInfo.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
@@ -1140,6 +1143,152 @@ static bool ProcessFormatStringLiteral(const Expr *FormatExpr,
   return false;
 }
 
+static std::optional<int> getPathMaxValue(const ASTContext &Ctx) {
+  if (Ctx.getTargetInfo().getTriple().isOSGlibc())
+    return {4096};
+
+  if (Ctx.getTargetInfo().getTriple().isOSDarwin())
+    return {1024};
+
+  return std::nullopt;
+}
+
+/* Follow simple references to other macros so we can match the Expr spelling */
+static const MacroInfo *resolveMacroChainAtLoc(Preprocessor &PP,
+                                               const IdentifierInfo *MII,
+                                               SourceLocation Loc) {
+  auto *MI = PP.getMacroDefinitionAtLoc(MII, Loc).getMacroInfo();
+  if (!MI)
+    return nullptr;
+  const IdentifierInfo *MIIN = MII;
+  while (MI->getNumTokens() == 1 && MI->tokens_begin()->is(tok::identifier) &&
+         (MIIN = MI->tokens_begin()->getIdentifierInfo()) &&
+         MIIN->hasMacroDefinition()) {
+    MacroDefinition MacroDef = PP.getMacroDefinitionAtLoc(MIIN, Loc);
+    MI = MacroDef.getMacroInfo();
+  }
+  return MI;
+}
+
+// Search subexpressions for macros and attempt to evaluate them
+class MacroFlagMatcher : public ConstDynamicRecursiveASTVisitor {
+  const Sema &S;
+  llvm::SmallVectorImpl<std::pair<const IdentifierInfo *, const MacroInfo *>>
+      &Macros;
+  std::map<const IdentifierInfo *, int64_t> &FoundMacros;
+  std::optional<SourceRange> LastMatchRange;
+
+public:
+  MacroFlagMatcher(const Sema &S,
+                   llvm::SmallVectorImpl<std::pair<const IdentifierInfo *,
+                                                   const MacroInfo *>> &Macros,
+                   std::map<const IdentifierInfo *, int64_t> &FoundMacros)
+      : S(S), Macros(Macros), FoundMacros(FoundMacros) {}
+
+  bool VisitExpr(const Expr *E) override {
+    if (isa<ParenExpr>(E) || isa<IntegerLiteral>(E)) {
+      // Check location
+      SourceLocation SpLoc = S.SourceMgr.getSpellingLoc(E->getExprLoc());
+      for (auto *M = Macros.begin(); M != Macros.end();) {
+        if (M->second->tokens_begin()->getLocation() == SpLoc) {
+          LastMatchRange = E->getSourceRange();
+
+          Expr::EvalResult Result;
+          const Expr *SizeArg = E;
+          if (SizeArg->EvaluateAsInt(Result, S.getASTContext())) {
+            FoundMacros.insert(
+                std::pair(M->first, Result.Val.getInt().getExtValue()));
+            M = Macros.erase(M);
+            continue;
+          }
+        }
+        ++M;
+      }
+    }
+
+    return !Macros.empty();
+  }
+
+  bool dataTraverseStmtPre(const Stmt *Statement) override {
+    /* Ignore the contents of a matched macro */
+    return !(LastMatchRange &&
+             (*LastMatchRange).fullyContains(Statement->getSourceRange()));
+  }
+
+  static void getExpr(const Expr *E, ArrayRef<const IdentifierInfo *> Macros,
+                      const Sema &S,
+                      std::map<const IdentifierInfo *, int64_t> &FoundMacros) {
+    SmallVector<std::pair<const IdentifierInfo *, const MacroInfo *>, 2>
+        MacrosLoc;
+    for (auto &MII : Macros) {
+      auto *MI = resolveMacroChainAtLoc(S.PP, MII, E->getExprLoc());
+      if (MI)
+        MacrosLoc.push_back(std::make_pair(MII, MI));
+    }
+    MacroFlagMatcher Visitor(S, MacrosLoc, FoundMacros);
+    Visitor.TraverseStmt(E->getExprStmt());
+  }
+};
+
+static std::optional<int>
+evaluateSimpleMacroAtLocation(Preprocessor &PP, const IdentifierInfo *MacroII,
+                              SourceLocation Loc) {
+  auto *MI = resolveMacroChainAtLoc(PP, MacroII, Loc);
+  if (!MI)
+    return std::nullopt;
+
+  // Fast path for single digit integer
+  if (MI->getNumTokens() == 1) {
+    const Token &T = MI->tokens().back();
+    if (T.getLength() == 1 || T.getKind() == tok::binary_data) {
+      const uint8_t Val = PP.getSpellingOfSingleCharacterNumericConstant(T);
+      return llvm::APInt(8, Val, /*isSigned=*/true).getSExtValue();
+    }
+  }
+
+  // Filter out parens.
+  std::vector<Token> FilteredTokens;
+  FilteredTokens.reserve(MI->tokens().size());
+  for (auto &T : MI->tokens())
+    if (!T.isOneOf(tok::l_paren, tok::r_paren))
+      FilteredTokens.push_back(T);
+
+  // Parse an integer at the end of the macro definition.
+  const Token &T = FilteredTokens.back();
+
+  if (!T.isLiteral())
+    return std::nullopt;
+
+  bool InvalidSpelling = false;
+  SmallVector<char> Buffer(T.getLength());
+  // `Preprocessor::getSpelling` can get the spelling of the token regardless of
+  // whether the macro is defined in a PCH or not:
+  StringRef ValueStr = PP.getSpelling(T, Buffer, &InvalidSpelling);
+
+  if (InvalidSpelling)
+    return std::nullopt;
+
+  llvm::APSInt IntValue(/*BitWidth=*/0, /*isUnsigned=*/true);
+  constexpr unsigned AutoSenseRadix = 0;
+  if (ValueStr.getAsInteger(AutoSenseRadix,
+                            static_cast<llvm::APInt &>(IntValue)))
+    return std::nullopt;
+
+  // Parse an optional minus sign.
+  size_t Size = FilteredTokens.size();
+  if (Size >= 2) {
+    if (FilteredTokens[Size - 2].is(tok::minus)) {
+      // Make sure there's space for a sign bit
+      if (IntValue.isSignBitSet())
+        IntValue = IntValue.extend(IntValue.getBitWidth() + 1);
+      IntValue.setIsUnsigned(false);
+      IntValue = -IntValue;
+    }
+  }
+
+  return IntValue.getExtValue();
+}
+
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
   if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
@@ -1240,6 +1389,21 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       return llvm::APSInt::getUnsigned(*Result + 1).extOrTrunc(SizeTypeWidth);
     }
     return std::nullopt;
+  };
+
+  auto DiagnoseBigMode = [&](unsigned ModeArgIndex) {
+    const Expr *ModeArg = TheCall->getArg(ModeArgIndex);
+    Expr::EvalResult Result;
+    uint32_t Mode = 0;
+
+    if (ModeArg->EvaluateAsInt(Result, Context)) {
+      Mode = Result.Val.getInt().getExtValue();
+      if ((Mode & ~0777) > 0) {
+        DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                            PDiag(diag::warn_libc_invalid_mode_t)
+                                << ModeArg->getSourceRange());
+      }
+    }
   };
 
   std::optional<llvm::APSInt> SourceSize;
@@ -1452,6 +1616,136 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       }
     }
     DestinationSize = ComputeSizeArgument(0);
+    break;
+  }
+
+  /* incorrect-libc-use start */
+  case Builtin::BIumask:
+  case Builtin::BI__builtin_umask: {
+    DiagnoseBigMode(0);
+    break;
+  }
+
+  case Builtin::BIopen:
+  case Builtin::BI__builtin_open:
+  case Builtin::BIopen64:
+  case Builtin::BI__builtin_open64:
+  case Builtin::BIopenat:
+  case Builtin::BI__builtin_openat:
+  case Builtin::BIopenat64:
+  case Builtin::BI__builtin_openat64: {
+    /* The param count is the index of the first variadic argument (mode) */
+    unsigned ModeIndex = UseDecl->getNumParams();
+    assert(TheCall->getNumArgs() >= ModeIndex);
+    unsigned NumVarArgs = TheCall->getNumArgs() - ModeIndex;
+
+    if (NumVarArgs > 1) {
+      DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                          PDiag(diag::warn_surplus_args)
+                              << GetFunctionName() << 1);
+    }
+
+    std::optional<int> Flags;
+    const Expr *FlagsArg = TheCall->getArg(ModeIndex - 1);
+    Expr::EvalResult Result;
+
+    const Expr *ModeArg = nullptr;
+
+    std::optional<int> Mode;
+
+    if (NumVarArgs >= 1) {
+      /* GNU libc accepts modes outside the 0777 range */
+      if (!Context.getTargetInfo().getTriple().isOSLinux())
+        DiagnoseBigMode(ModeIndex);
+
+      ModeArg = TheCall->getArg(ModeIndex);
+      Expr::EvalResult Result;
+      if (ModeArg->EvaluateAsInt(Result, Context)) {
+        Mode = Result.Val.getInt().getExtValue();
+      }
+    }
+
+    if (FlagsArg->EvaluateAsInt(Result, Context))
+      Flags = Result.Val.getInt().getExtValue();
+
+    if (!Flags)
+      break;
+
+    int64_t OCreatValue = 0;
+    int64_t OTmpFileValue = 0;
+
+    bool IsOCreat = false;
+    bool IsOTmpFile = false;
+    bool ExpectsMode = false;
+
+    const IdentifierInfo *OCreatII = PP.getIdentifierInfo("O_CREAT");
+    const IdentifierInfo *OTmpFileII = PP.getIdentifierInfo("O_TMPFILE");
+
+    OCreatValue =
+        evaluateSimpleMacroAtLocation(PP, OCreatII, FlagsArg->getExprLoc())
+            .value_or(0);
+    OTmpFileValue =
+        evaluateSimpleMacroAtLocation(PP, OTmpFileII, FlagsArg->getExprLoc())
+            .value_or(0);
+
+    // Fallback to searching the argument for an expression to evaluate
+    if (!OCreatValue || !OTmpFileValue) {
+      std::map<const IdentifierInfo *, int64_t> FoundMacros;
+      MacroFlagMatcher::getExpr(FlagsArg, {OCreatII, OTmpFileII}, *this,
+                                FoundMacros);
+
+      auto OCreatIt = FoundMacros.find(OCreatII);
+      auto OTmpFileIt = FoundMacros.find(OTmpFileII);
+
+      if (OCreatIt != FoundMacros.end())
+        OCreatValue = OCreatIt->second;
+      if (OTmpFileIt != FoundMacros.end())
+        OTmpFileValue = OTmpFileIt->second;
+    }
+
+    IsOCreat = OCreatValue && (*Flags & OCreatValue) == OCreatValue;
+    IsOTmpFile = OTmpFileValue && (*Flags & OTmpFileValue) == OTmpFileValue;
+    ExpectsMode = IsOCreat || IsOTmpFile;
+
+    /* check if mode should be present for flags */
+
+    // If we failed to evaluate the flags don't diagnose
+    if (!OCreatValue && !OTmpFileValue)
+      break;
+
+    if (ExpectsMode && !Mode) {
+      int Count = 0;
+      if (IsOCreat)
+        Count++;
+      if (IsOTmpFile)
+        Count++;
+      auto D = PDiag(diag::warn_open_create_file_without_mode)
+               << FlagsArg->getSourceRange() << Count;
+      if (IsOCreat)
+        D << OCreatII->getName();
+      if (IsOTmpFile)
+        D << OTmpFileII->getName();
+      DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall, D);
+    } else if (!ExpectsMode && (Mode && *Mode != 0)) {
+      DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                          PDiag(diag::warn_open_superfluous_mode)
+                              << FlagsArg->getSourceRange()
+                              << ModeArg->getSourceRange());
+    }
+    break;
+  }
+
+  case Builtin::BIrealpath:
+  case Builtin::BI__builtin_realpath: {
+    DiagID = diag::warn_fortify_source_overflow;
+    std::optional<int> PathMax = getPathMaxValue(Context);
+    DiagID = diag::warn_path_max_overflow;
+    if (PathMax)
+      SourceSize =
+          llvm::APSInt::getUnsigned(*PathMax).extOrTrunc(SizeTypeWidth);
+    DestinationSize = ComputeSizeArgument(TheCall->getNumArgs() - 1);
+
+    break;
   }
   }
 
@@ -4332,6 +4626,125 @@ void Sema::CheckConstructorCall(FunctionDecl *FDecl, QualType ThisType,
             Loc, SourceRange(), CallType);
 }
 
+static std::optional<llvm::APSInt> GetArrayElementCount(Sema &S,
+                                                        const Expr *BaseExpr) {
+  const Type *EffectiveType =
+      BaseExpr->getType()->getPointeeOrArrayElementType();
+  if (EffectiveType->isDependentType())
+    return {};
+
+  BaseExpr = BaseExpr->IgnoreParenCasts();
+  const ConstantArrayType *ArrayTy =
+      S.Context.getAsConstantArrayType(BaseExpr->getType());
+
+  if (!ArrayTy)
+    return {};
+
+  const Type *BaseType = ArrayTy->getElementType().getTypePtr();
+
+  if (BaseType->isDependentType() || BaseType->isIncompleteType())
+    return {};
+
+  LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+      S.getLangOpts().getStrictFlexArraysLevel();
+
+  if (BaseExpr->isFlexibleArrayMemberLike(
+          S.Context, StrictFlexArraysLevel,
+          /*IgnoreTemplateOrMacroSubstitution=*/true))
+    return {};
+
+  llvm::APInt ArrayTySize = ArrayTy->getSize();
+  if (BaseType != EffectiveType) {
+    // Make sure we're comparing apples to apples when comparing index to
+    // size.
+    uint64_t ptrarith_typesize = S.Context.getTypeSize(EffectiveType);
+    uint64_t array_typesize = S.Context.getTypeSize(BaseType);
+
+    // Handle ptrarith_typesize being zero, such as when casting to void*.
+    // Use the size in bits (what "getTypeSize()" returns) rather than bytes.
+    if (!ptrarith_typesize)
+      ptrarith_typesize = S.Context.getCharWidth();
+
+    if (ptrarith_typesize != array_typesize) {
+      // There's a cast to a different size type involved.
+      uint64_t ratio = array_typesize / ptrarith_typesize;
+
+      // TODO: Be smarter about handling cases where array_typesize is not a
+      // multiple of ptrarith_typesize.
+      if (ptrarith_typesize * ratio == array_typesize)
+        ArrayTySize *= llvm::APInt(ArrayTySize.getBitWidth(), ratio);
+    }
+  }
+
+  return llvm::APSInt(std::move(ArrayTySize));
+}
+
+static bool CheckLibcPoll(Sema &S, FunctionDecl *FDecl, CallExpr *TheCall) {
+  // Check that the function resembles libc poll
+  if (!S.getSourceManager().isInSystemHeader(FDecl->getLocation()))
+    return false;
+
+  if (TheCall->getNumArgs() != 3)
+    return false;
+
+  if (!FDecl->getReturnType()->isSignedIntegerType())
+    return false;
+
+  const IdentifierTable::iterator It = S.Context.Idents.find("pollfd");
+
+  // If we can't find pollfd cancel the check
+  if (It == S.Context.Idents.end())
+    return false;
+
+  const IdentifierInfo *II = It->second;
+
+  Expr *FdsArg = TheCall->getArg(0);
+  QualType FdsType = FdsArg->getType();
+
+  if (!FdsType->isPointerOrReferenceType() && !FdsType->isArrayType())
+    return false;
+
+  const Type *elType = FdsType->getPointeeOrArrayElementType();
+
+  if (!elType->isRecordType())
+    return false;
+
+  const RecordDecl *RD = elType->getAsRecordDecl();
+  if (II != RD->getIdentifier())
+    return false;
+
+  // Check size type
+  Expr *NfdsArg = TheCall->getArg(1);
+  auto &ExpectedNfdsType = S.Context.UnsignedLongTy;
+  if (S.Context.getTargetInfo().getTriple().isOSDarwin())
+    ExpectedNfdsType = S.Context.UnsignedIntTy;
+
+  if (!S.Context.hasSameType(NfdsArg->getType().getUnqualifiedType(),
+                             ExpectedNfdsType))
+    return false;
+
+  Expr::EvalResult Result;
+  if (!NfdsArg->EvaluateAsInt(Result, S.getASTContext()))
+    return false;
+  llvm::APSInt NfdsValue = Result.Val.getInt();
+  NfdsValue.setIsUnsigned(true);
+
+  std::optional<llvm::APSInt> FdsElCount = GetArrayElementCount(S, FdsArg);
+
+  if (FdsElCount) {
+    if (llvm::APSInt::compareValues(NfdsValue, *FdsElCount) > 0) {
+      SmallString<16> FdsElCountStr;
+      SmallString<16> NfdsValueStr;
+      FdsElCount->toString(FdsElCountStr, /*Radix=*/10);
+      NfdsValue.toString(NfdsValueStr, /*Radix=*/10);
+      S.Diag(TheCall->getBeginLoc(), diag::warn_pollfd_nfds)
+          << NfdsValueStr << FdsElCountStr;
+    }
+  }
+
+  return true;
+}
+
 bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                              const FunctionProtoType *Proto) {
   bool IsMemberOperatorCall = isa<CXXOperatorCallExpr>(TheCall) &&
@@ -4389,6 +4802,13 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   CheckAbsoluteValueFunction(TheCall, FDecl);
   CheckMaxUnsignedZero(TheCall, FDecl);
   CheckInfNaNFunction(TheCall, FDecl);
+
+  if (FDecl->isExternC()) {
+    const IdentifierInfo *II = FDecl->getIdentifier();
+    if (II->isStr("poll")) {
+      CheckLibcPoll(*this, FDecl, TheCall);
+    }
+  }
 
   if (getLangOpts().ObjC)
     ObjC().DiagnoseCStringFormatDirectiveInCFAPI(FDecl, Args, NumArgs);

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -verify -analyzer-checker=core,unix.API -analyzer-output=text %s
+// RUN: %clang_analyze_cc1 -verify -analyzer-checker=core,unix.API -Wno-incorrect-libc-use -analyzer-output=text %s
 
 // Verify that the UnixAPIChecker finds the missing mode value regardless
 // of the particular values of these macros, particularly O_CREAT.
