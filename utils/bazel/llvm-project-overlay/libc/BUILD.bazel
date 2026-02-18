@@ -2889,6 +2889,25 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_daddf128",
+    hdrs = ["src/__support/math/daddf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_daddl",
+    hdrs = ["src/__support/math/daddl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_dsqrtl",
     hdrs = ["src/__support/math/dsqrtl.h"],
     deps = [
@@ -4730,9 +4749,19 @@ libc_math_function(
     additional_deps = [":__support_math_cospif16"],
 )
 
-libc_math_function(name = "daddl")
+libc_math_function(
+    name = "daddl",
+    additional_deps = [
+        ":__support_math_daddl",
+    ],
+)
 
-libc_math_function(name = "daddf128")
+libc_math_function(
+    name = "daddf128",
+    additional_deps = [
+        ":__support_math_daddf128",
+    ],
+)
 
 libc_math_function(name = "ddivl")
 
