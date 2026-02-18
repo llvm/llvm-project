@@ -736,8 +736,13 @@ public:
   }
 
   /// Returns true if sub-register \p Idx can be used with register class \p RC.
+  /// Idx is valid if the largest subclass of RC that supports sub-register
+  /// index Idx is same as RC. That is, every physical register in RC supports
+  /// sub-register index Idx.
   bool isSubRegValidForRegClass(const TargetRegisterClass *RC,
-                                unsigned Idx) const;
+                                unsigned Idx) const {
+    return getSubClassWithSubReg(RC, Idx) == RC;
+  }
 
   /// Return the subregister index you get from composing
   /// two subregister indices.

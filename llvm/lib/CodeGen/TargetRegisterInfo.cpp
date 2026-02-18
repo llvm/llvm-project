@@ -442,14 +442,6 @@ const TargetRegisterClass *TargetRegisterInfo::findCommonRegClass(
   return getCommonSubClass(DefRC, SrcRC);
 }
 
-bool TargetRegisterInfo::isSubRegValidForRegClass(const TargetRegisterClass *RC,
-                                                  unsigned Idx) const {
-  // `Idx` is valid if the largest subclass of `RC` that supports
-  // sub-register index `Idx` is same as `RC`. That is, every physical
-  // register in `RC` support sub-register index `Idx`.
-  return getSubClassWithSubReg(RC, Idx) == RC;
-}
-
 float TargetRegisterInfo::getSpillWeightScaleFactor(
     const TargetRegisterClass *RC) const {
   return 1.0;
