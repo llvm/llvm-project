@@ -56,12 +56,12 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
+#include "flang/Optimizer/Support/LazySymbolTable.h"
 #include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -96,6 +96,7 @@ public:
   void runOnOperation() override {
     ModuleOp mod = getOperation();
     OpBuilder builder(mod);
+    fir::LazySymbolTable symbolTable(mod);
 
     mod.walk([&](Operation *op) {
       auto declareAction = op->getAttrOfType<acc::DeclareActionAttr>(
@@ -119,7 +120,7 @@ public:
           continue;
 
         if (auto func = dyn_cast<SymbolRefAttr>(action)) {
-          Operation *funcDef = SymbolTable::lookupNearestSymbolFrom(op, func);
+          Operation *funcDef = symbolTable.lookupSymbol(func);
           if (!funcDef)
             continue;
 

@@ -1,4 +1,4 @@
-// RUN: fir-opt %s --fir-acc-declare-action-conversion -o - | FileCheck %s
+// RUN: fir-opt %s --fir-acc-declare-action-conversion -split-input-file -o - | FileCheck %s
 
 // Check declare_action conversion for global variables
 // module mm
@@ -38,6 +38,7 @@ module {
 // CHECK: fir.call @_QMmmEarr_acc_declare_update_desc_post_alloc
 }
 
+// -----
 
 // Test declare_action on runtime allocation path (fir.call) with box<none> argument.
 module {
@@ -63,6 +64,7 @@ module {
   func.func private @_FortranAPointerAllocate(!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 }
 
+// -----
 
 // Test structured declare_action (allocatable with postAlloc)
 module {
