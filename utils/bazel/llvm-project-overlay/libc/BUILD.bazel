@@ -4757,11 +4757,38 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fmaximum_mag_num",
+    hdrs = ["src/__support/math/fmaximum_mag_num.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximum_mag_numbf16",
+    hdrs = ["src/__support/math/fmaximum_mag_numbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaximum_mag_numf",
+    hdrs = ["src/__support/math/fmaximum_mag_numf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_fmaxf",
     hdrs = ["src/__support/math/fmaxf.h"],
     deps = [
         ":__support_fputil_basic_operations",
-        ":__support_macros_config",
     ],
 )
 
@@ -4789,10 +4816,6 @@ libc_support_library(
     name = "__support_math_fmaxl",
     hdrs = ["src/__support/math/fmaxl.h"],
     deps = [
-        ":__support_fputil_basic_operations",
-        ":__support_macros_config",
-    ],
-)
 
 libc_support_library(
     name = "__support_math_ffmal",
@@ -7884,9 +7907,26 @@ libc_math_function(
     name = "fmaximum_magf16",
 )
 
-libc_math_function(name = "fmaximum_mag_num")
+libc_math_function(
+    name = "fmaximum_mag_num",
+    additional_deps = [
+        ":__support_math_fmaximum_mag_num",
+    ],
+)
 
-libc_math_function(name = "fmaximum_mag_numf")
+libc_math_function(
+    name = "fmaximum_mag_numbf16",
+    additional_deps = [
+        ":__support_math_fmaximum_mag_numbf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaximum_mag_numf",
+    additional_deps = [
+        ":__support_math_fmaximum_mag_numf",
+    ],
+)
 
 libc_math_function(name = "fmaximum_mag_numl")
 
