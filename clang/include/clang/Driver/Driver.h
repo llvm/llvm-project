@@ -876,6 +876,18 @@ void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                           llvm::StringSet<> &SavedStrings, StringRef EnvVar,
                           raw_ostream *OS = nullptr);
 
+/// Creates and adds a synthesized input argument.
+///
+/// \param Args The argument list to append the input argument to.
+/// \param Opts The option table used to look up OPT_INPUT.
+/// \param Value The input to add, typically a filename.
+/// \param Claim Whether the newly created argument should be claimed.
+///
+/// \return The newly created input argument.
+llvm::opt::Arg *makeInputArg(llvm::opt::DerivedArgList &Args,
+                             const llvm::opt::OptTable &Opts, StringRef Value,
+                             bool Claim = true);
+
 } // end namespace driver
 } // end namespace clang
 
