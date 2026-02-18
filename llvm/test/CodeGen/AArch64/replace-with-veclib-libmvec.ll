@@ -44,7 +44,7 @@ define <4 x float> @llvm_copysign_f32(<4 x float> %mag, <4 x float> %sgn) {
 
 define <2 x double> @llvm_cos_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_cos_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_cos(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_cos(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.cos.v2f64(<2 x double> %in)
@@ -53,7 +53,7 @@ define <2 x double> @llvm_cos_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_cos_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_cos_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_cosf(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_cosf(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.cos.v4f32(<4 x float> %in)
@@ -62,7 +62,7 @@ define <4 x float> @llvm_cos_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_exp_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_exp_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_exp(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_exp(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.exp.v2f64(<2 x double> %in)
@@ -71,7 +71,7 @@ define <2 x double> @llvm_exp_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_exp_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_exp_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_expf(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_expf(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.exp.v4f32(<4 x float> %in)
@@ -80,7 +80,7 @@ define <4 x float> @llvm_exp_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_exp10_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_exp10_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_exp10(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_exp10(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.exp10.v2f64(<2 x double> %in)
@@ -89,7 +89,7 @@ define <2 x double> @llvm_exp10_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_exp10_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_exp10_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_exp10f(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_exp10f(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.exp10.v4f32(<4 x float> %in)
@@ -98,7 +98,7 @@ define <4 x float> @llvm_exp10_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_exp2_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_exp2_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_exp2(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_exp2(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.exp2.v2f64(<2 x double> %in)
@@ -107,7 +107,7 @@ define <2 x double> @llvm_exp2_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_exp2_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_exp2_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_exp2f(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_exp2f(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.exp2.v4f32(<4 x float> %in)
@@ -170,7 +170,7 @@ define <4 x float> @llvm_fma_f32(<4 x float> %a, <4 x float> %b, <4 x float> %c)
 
 define <2 x double> @llvm_log_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_log_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_log(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_log(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.log.v2f64(<2 x double> %in)
@@ -179,7 +179,7 @@ define <2 x double> @llvm_log_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_log_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_log_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_logf(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_logf(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.log.v4f32(<4 x float> %in)
@@ -188,7 +188,7 @@ define <4 x float> @llvm_log_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_log10_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_log10_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_log10(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_log10(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.log10.v2f64(<2 x double> %in)
@@ -197,7 +197,7 @@ define <2 x double> @llvm_log10_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_log10_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_log10_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_log10f(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_log10f(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.log10.v4f32(<4 x float> %in)
@@ -206,7 +206,7 @@ define <4 x float> @llvm_log10_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_log2_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_log2_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_log2(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_log2(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.log2.v2f64(<2 x double> %in)
@@ -215,7 +215,7 @@ define <2 x double> @llvm_log2_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_log2_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_log2_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_log2f(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_log2f(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.log2.v4f32(<4 x float> %in)
@@ -278,7 +278,7 @@ define <4 x float> @llvm_nearbyint_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_pow_f64(<2 x double> %in, <2 x double> %pow) {
 ; CHECK-LABEL: @llvm_pow_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2vv_pow(<2 x double> [[IN:%.*]], <2 x double> [[POW:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double> [[IN:%.*]], <2 x double> [[POW:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.pow.v2f64(<2 x double> %in, <2 x double> %pow)
@@ -287,7 +287,7 @@ define <2 x double> @llvm_pow_f64(<2 x double> %in, <2 x double> %pow) {
 
 define <4 x float> @llvm_pow_f32(<4 x float> %in, <4 x float> %pow) {
 ; CHECK-LABEL: @llvm_pow_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4vv_powf(<4 x float> [[IN:%.*]], <4 x float> [[POW:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4vv_powf(<4 x float> [[IN:%.*]], <4 x float> [[POW:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %in, <4 x float> %pow)
@@ -332,7 +332,7 @@ define <4 x float> @llvm_round_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_sin_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_sin_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_sin(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_sin(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.sin.v2f64(<2 x double> %in)
@@ -341,7 +341,7 @@ define <2 x double> @llvm_sin_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_sin_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_sin_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_sinf(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_sinf(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.sin.v4f32(<4 x float> %in)
@@ -368,7 +368,7 @@ define <4 x float> @llvm_sqrt_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_tan_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_tan_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_tan(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_tan(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.tan.v2f64(<2 x double> %in)
@@ -377,7 +377,7 @@ define <2 x double> @llvm_tan_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_tan_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_tan_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_tanf(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_tanf(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.tan.v4f32(<4 x float> %in)
@@ -386,7 +386,7 @@ define <4 x float> @llvm_tan_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_acos_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_acos_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_acos(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_acos(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.acos.v2f64(<2 x double> %in)
@@ -395,7 +395,7 @@ define <2 x double> @llvm_acos_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_acos_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_acos_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_acosf(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_acosf(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.acos.v4f32(<4 x float> %in)
@@ -404,7 +404,7 @@ define <4 x float> @llvm_acos_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_asin_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_asin_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_asin(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_asin(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.asin.v2f64(<2 x double> %in)
@@ -413,7 +413,7 @@ define <2 x double> @llvm_asin_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_asin_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_asin_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_asinf(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_asinf(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.asin.v4f32(<4 x float> %in)
@@ -422,7 +422,7 @@ define <4 x float> @llvm_asin_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_atan_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_atan_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_atan(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_atan(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.atan.v2f64(<2 x double> %in)
@@ -431,7 +431,7 @@ define <2 x double> @llvm_atan_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_atan_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_atan_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_atanf(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_atanf(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.atan.v4f32(<4 x float> %in)
@@ -440,7 +440,7 @@ define <4 x float> @llvm_atan_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_atan2_f64(<2 x double> %x, <2 x double> %y) {
 ; CHECK-LABEL: @llvm_atan2_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2vv_atan2(<2 x double> [[INX:%.*]], <2 x double> [[INY:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2vv_atan2(<2 x double> [[X:%.*]], <2 x double> [[Y:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.atan2.v2f64(<2 x double> %x, <2 x double> %y)
@@ -449,7 +449,7 @@ define <2 x double> @llvm_atan2_f64(<2 x double> %x, <2 x double> %y) {
 
 define <4 x float> @llvm_atan2_f32(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @llvm_atan2_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4vv_atan2f(<4 x float> [[INX:%.*]], <4 x float> [[INY:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4vv_atan2f(<4 x float> [[X:%.*]], <4 x float> [[Y:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.atan2.v4f32(<4 x float> %x, <4 x float> %y)
@@ -458,7 +458,7 @@ define <4 x float> @llvm_atan2_f32(<4 x float> %x, <4 x float> %y) {
 
 define <2 x double> @llvm_cosh_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_cosh_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_cosh(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_cosh(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.cosh.v2f64(<2 x double> %in)
@@ -467,7 +467,7 @@ define <2 x double> @llvm_cosh_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_cosh_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_cosh_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_coshf(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_coshf(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.cosh.v4f32(<4 x float> %in)
@@ -476,7 +476,7 @@ define <4 x float> @llvm_cosh_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_sinh_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_sinh_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_sinh(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_sinh(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.sinh.v2f64(<2 x double> %in)
@@ -485,7 +485,7 @@ define <2 x double> @llvm_sinh_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_sinh_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_sinh_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_sinhf(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_sinhf(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.sinh.v4f32(<4 x float> %in)
@@ -494,7 +494,7 @@ define <4 x float> @llvm_sinh_f32(<4 x float> %in) {
 
 define <2 x double> @llvm_tanh_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_tanh_f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @_ZGVnN2v_tanh(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <2 x double> @_ZGVnN2v_tanh(<2 x double> [[IN:%.*]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = call fast <2 x double> @llvm.tanh.v2f64(<2 x double> %in)
@@ -503,7 +503,7 @@ define <2 x double> @llvm_tanh_f64(<2 x double> %in) {
 
 define <4 x float> @llvm_tanh_f32(<4 x float> %in) {
 ; CHECK-LABEL: @llvm_tanh_f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @_ZGVnN4v_tanhf(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast aarch64_vector_pcs <4 x float> @_ZGVnN4v_tanhf(<4 x float> [[IN:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call fast <4 x float> @llvm.tanh.v4f32(<4 x float> %in)
@@ -573,5 +573,6 @@ declare <4 x float> @llvm.tan.v4f32(<4 x float>)
 declare <2 x double> @llvm.trunc.v2f64(<2 x double>)
 declare <4 x float> @llvm.trunc.v4f32(<4 x float>)
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.

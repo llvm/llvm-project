@@ -1334,6 +1334,11 @@ public:
     return getGetElementPtr(Ty, C, IdxList, GEPNoWrapFlags::inBounds());
   }
 
+  /// Create a getelementptr inbounds i8, ptr, offset constant expression.
+  static Constant *getInBoundsPtrAdd(Constant *Ptr, Constant *Offset) {
+    return getPtrAdd(Ptr, Offset, GEPNoWrapFlags::inBounds());
+  }
+
   LLVM_ABI static Constant *getExtractElement(Constant *Vec, Constant *Idx,
                                               Type *OnlyIfReducedTy = nullptr);
   LLVM_ABI static Constant *getInsertElement(Constant *Vec, Constant *Elt,

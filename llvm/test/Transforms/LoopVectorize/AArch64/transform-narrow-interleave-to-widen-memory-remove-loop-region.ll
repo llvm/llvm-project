@@ -13,9 +13,14 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
-; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[DATA]], align 8
-; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[DATA]], align 8
-; VF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP0]]
+; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
+; VF2-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[TMP1]], align 8
+; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 2
+; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:
@@ -200,7 +205,7 @@ define void @test_complex_add_float_tc_4(ptr %res, ptr noalias %A, ptr noalias %
 ; VF2-NEXT:    store <4 x float> [[INTERLEAVED_VEC]], ptr [[TMP5]], align 4
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4
-; VF2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; VF2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br label %[[EXIT:.*]]
 ; VF2:       [[EXIT]]:

@@ -102,6 +102,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-unsafe-to-allow-exceptions
+  <clang-tidy/checks/bugprone/unsafe-to-allow-exceptions>` check.
+
+  Finds functions where throwing exceptions is unsafe but the function is still
+  marked as potentially throwing.
+
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
 
@@ -217,6 +223,11 @@ Changes in existing checks
   - Exclude ``enum`` in ``extern "C"`` blocks.
 
   - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
+
+- Improved :doc:`performance-inefficient-vector-operation
+  <clang-tidy/checks/performance/inefficient-vector-operation>` check by
+  correctly handling vector-like classes when ``push_back``/``emplace_back`` are
+  inherited.
 
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false

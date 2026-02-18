@@ -388,10 +388,20 @@ static constexpr IntrinsicHandler cudaHandlers[]{
          &CI::genCUDAGetDefaultStreamArg),
      {{{"devptr", asAddr}}},
      /*isElemental=*/false},
+    {"cudagetstreamdefaultnull",
+     static_cast<CUDAIntrinsicLibrary::ElementalGenerator>(
+         &CI::genCUDAGetDefaultStreamNull),
+     {},
+     /*isElemental=*/false},
     {"cudasetstreamarray",
      static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
          &CI::genCUDASetDefaultStreamArray),
      {{{"devptr", asAddr}, {"stream", asValue}}},
+     /*isElemental=*/false},
+    {"cudasetstreamdefault",
+     static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
+         &CI::genCUDASetDefaultStream),
+     {{{"stream", asValue}}},
      /*isElemental=*/false},
     {"fence_proxy_async",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
@@ -1114,6 +1124,20 @@ CUDAIntrinsicLibrary::genClusterDimBlocks(mlir::Type resultType,
   return res;
 }
 
+// CUDASETSTREAMDEFAULT
+fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStream(
+    mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value stream = fir::getBase(args[0]);
+  mlir::Type i64Ty = builder.getI64Type();
+  auto ctx = builder.getContext();
+  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {resTy});
+  auto funcOp =
+      builder.createFunction(loc, RTNAME_STRING(CUFSetDefaultStream), ftype);
+  auto call = fir::CallOp::create(builder, loc, funcOp, {stream});
+  return call.getResult(0);
+}
+
 // CUDASETSTREAMARRAY
 fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStreamArray(
     mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
@@ -1151,6 +1175,19 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAGetDefaultStreamArg(
   auto funcOp =
       builder.createFunction(loc, RTNAME_STRING(CUFGetAssociatedStream), ftype);
   auto call = fir::CallOp::create(builder, loc, funcOp, {voidPtr});
+  return call.getResult(0);
+}
+
+// CUDAGETDEFAULTSTREAMNULL
+mlir::Value CUDAIntrinsicLibrary::genCUDAGetDefaultStreamNull(
+    mlir::Type resultType, llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 0);
+  mlir::Type i64Ty = builder.getI64Type();
+  auto ctx = builder.getContext();
+  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {}, {i64Ty});
+  auto funcOp =
+      builder.createFunction(loc, RTNAME_STRING(CUFGetDefaultStream), ftype);
+  auto call = fir::CallOp::create(builder, loc, funcOp, {});
   return call.getResult(0);
 }
 
