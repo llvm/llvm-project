@@ -19,7 +19,7 @@ using namespace llvm;
 // test, while having sensible lifetime for the platform environment
 #ifndef DISABLE_WRAPPER
 struct OffloadInitWrapper {
-  OffloadInitWrapper() { olInit(); }
+  OffloadInitWrapper() { olInit(nullptr); }
   ~OffloadInitWrapper() { olShutDown(); }
 };
 static OffloadInitWrapper Wrapper{};

@@ -901,8 +901,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   if (e->isPRValue() && !getContext().BuiltinInfo.isImmediate(builtinID) &&
       e->EvaluateAsRValue(result, cgm.getASTContext()) &&
       !result.hasSideEffects()) {
-    if (result.Val.isInt())
+    if (result.Val.isInt()) {
+      QualType type = e->getType();
+      if (type->isBooleanType())
+        return RValue::get(
+            builder.getBool(result.Val.getInt().getBoolValue(), loc));
       return RValue::get(builder.getConstInt(loc, result.Val.getInt()));
+    }
     if (result.Val.isFloat()) {
       // Note: we are using result type of CallExpr to determine the type of
       // the constant. Classic codegen uses the result value to determine the
@@ -1558,8 +1563,49 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_eh_return:
   case Builtin::BI__builtin_unwind_init:
   case Builtin::BI__builtin_extend_pointer:
-  case Builtin::BI__builtin_setjmp:
-  case Builtin::BI__builtin_longjmp:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_setjmp: {
+    Address buf = emitPointerWithAlignment(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+
+    cir::PointerType voidPtrTy = builder.getVoidPtrTy();
+    cir::PointerType ppTy = builder.getPointerTo(voidPtrTy);
+    Address castBuf = buf.withElementType(builder, voidPtrTy);
+
+    assert(!cir::MissingFeatures::emitCheckedInBoundsGEP());
+    if (getTarget().getTriple().isSystemZ()) {
+      cgm.errorNYI(e->getExprLoc(), "setjmp on SystemZ");
+      return {};
+    }
+
+    mlir::Value frameAddress =
+        cir::FrameAddrOp::create(builder, loc, voidPtrTy,
+                                 mlir::ValueRange{builder.getUInt32(0, loc)})
+            .getResult();
+
+    builder.createStore(loc, frameAddress, castBuf);
+
+    mlir::Value stacksave =
+        cir::StackSaveOp::create(builder, loc, voidPtrTy).getResult();
+    cir::PtrStrideOp stackSaveSlot = cir::PtrStrideOp::create(
+        builder, loc, ppTy, castBuf.getPointer(), builder.getSInt32(2, loc));
+    llvm::TypeSize voidPtrTySize =
+        cgm.getDataLayout().getTypeAllocSize(voidPtrTy);
+    CharUnits slotAlign = castBuf.getAlignment().alignmentAtOffset(
+        CharUnits().fromQuantity(2 * voidPtrTySize));
+    Address slotAddr = Address(stackSaveSlot, voidPtrTy, slotAlign);
+    builder.createStore(loc, stacksave, slotAddr);
+    auto op = cir::EhSetjmpOp::create(builder, loc, castBuf.getPointer());
+    return RValue::get(op);
+  }
+  case Builtin::BI__builtin_longjmp: {
+    mlir::Value buf = emitScalarExpr(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+
+    cir::EhLongjmpOp::create(builder, loc, buf);
+    cir::UnreachableOp::create(builder, loc);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_launder:
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:

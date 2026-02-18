@@ -291,7 +291,7 @@ TEST(ProtocolTypesTest, Scope) {
   Scope scope;
   scope.name = "Locals";
   scope.presentationHint = Scope::eScopePresentationHintLocals;
-  scope.variablesReference = 1;
+  scope.variablesReference = var_ref_t(1);
   scope.namedVariables = 2;
   scope.indexedVariables = std::nullopt;
   scope.expensive = false;
@@ -311,7 +311,8 @@ TEST(ProtocolTypesTest, Scope) {
   ASSERT_THAT_EXPECTED(deserialized_scope, llvm::Succeeded());
   EXPECT_EQ(scope.name, deserialized_scope->name);
   EXPECT_EQ(scope.presentationHint, deserialized_scope->presentationHint);
-  EXPECT_EQ(scope.variablesReference, deserialized_scope->variablesReference);
+  EXPECT_EQ(scope.variablesReference.AsUInt32(),
+            deserialized_scope->variablesReference.AsUInt32());
   EXPECT_EQ(scope.namedVariables, deserialized_scope->namedVariables);
   EXPECT_EQ(scope.indexedVariables, deserialized_scope->indexedVariables);
   EXPECT_EQ(scope.expensive, deserialized_scope->expensive);
@@ -909,7 +910,7 @@ TEST(ProtocolTypesTest, VariablePresentationHint) {
 TEST(ProtocolTypesTest, Variable) {
   Variable var;
   var.name = "var1";
-  var.variablesReference = 42;
+  var.variablesReference = var_ref_t(42);
   var.value = "value";
   var.type = "type";
 
@@ -954,7 +955,7 @@ TEST(ProtocolTypesTest, VariablesArguments) {
     }
   })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(expected->variablesReference, 42u);
+  EXPECT_EQ(expected->variablesReference.AsUInt32(), 42U);
   EXPECT_EQ(expected->filter, VariablesArguments::eVariablesFilterIndexed);
   EXPECT_EQ(expected->start, 10u);
   EXPECT_EQ(expected->count, 5u);
@@ -973,12 +974,12 @@ TEST(ProtocolTypesTest, VariablesArguments) {
 TEST(ProtocolTypesTest, VariablesResponseBody) {
   Variable var1;
   var1.name = "var1";
-  var1.variablesReference = 42;
+  var1.variablesReference = var_ref_t(42);
   var1.value = "<var1-value>";
 
   Variable var2;
   var2.name = "var2";
-  var2.variablesReference = 3;
+  var2.variablesReference = var_ref_t(3);
   var2.value = "<var2-value>";
 
   VariablesResponseBody response{{var1, var2}};
@@ -1113,7 +1114,7 @@ TEST(ProtocolTypesTest, DataBreakpointInfoArguments) {
   })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(expected->name, "data");
-  EXPECT_EQ(expected->variablesReference, 8);
+  EXPECT_EQ(expected->variablesReference->AsUInt32(), 8U);
   EXPECT_EQ(expected->frameId, 9u);
   EXPECT_EQ(expected->bytes, 10);
   EXPECT_EQ(expected->asAddress, false);

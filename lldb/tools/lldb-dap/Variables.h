@@ -9,21 +9,25 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_VARIABLES_H
 #define LLDB_TOOLS_LLDB_DAP_VARIABLES_H
 
+#include "DAPForward.h"
+#include "DAPLog.h"
+#include "Protocol/DAPTypes.h"
+#include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
+#include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
-#include "llvm/ADT/DenseMap.h"
-#include <map>
-#include <optional>
-#include <utility>
+#include "llvm/Support/ErrorHandling.h"
 
 namespace lldb_dap {
+struct VariableReferenceStorage;
 
 enum ScopeKind : unsigned {
   eScopeKindLocals,
   eScopeKindGlobals,
   eScopeKindRegisters
 };
+
 /// Creates a `protocol::Scope` struct.
 ///
 /// \param[in] kind
@@ -32,100 +36,184 @@ enum ScopeKind : unsigned {
 /// \param[in] variablesReference
 ///     The value to place into the "variablesReference" key
 ///
-/// \param[in] namedVariables
-///     The value to place into the "namedVariables" key
-///
 /// \param[in] expensive
 ///     The value to place into the "expensive" key
 ///
 /// \return
 ///     A `protocol::Scope`
-protocol::Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
-                            int64_t namedVariables, bool expensive);
+protocol::Scope CreateScope(ScopeKind kind, var_ref_t variablesReference,
+                            bool expensive);
 
-struct ScopeData {
-  ScopeKind kind;
-  lldb::SBValueList scope;
+/// An Interface to get or find specific variables by name.
+class VariableStore {
+public:
+  explicit VariableStore() = default;
+  virtual ~VariableStore() = default;
+
+  virtual std::vector<protocol::Variable>
+  GetVariables(VariableReferenceStorage &storage,
+               const protocol::Configuration &config,
+               const protocol::VariablesArguments &args) = 0;
+  virtual lldb::SBValue FindVariable(llvm::StringRef name) = 0;
+
+  // Not copyable.
+  VariableStore(const VariableStore &) = delete;
+  VariableStore &operator=(const VariableStore &) = delete;
+  VariableStore(VariableStore &&) = default;
+  VariableStore &operator=(VariableStore &&) = default;
 };
 
-/// Stores the three scope variable lists for a single stack frame.
-struct FrameScopes {
-  lldb::SBValueList locals;
-  lldb::SBValueList globals;
-  lldb::SBValueList registers;
+/// A Variable store for fetching variables within a specific scope (locals,
+/// globals, or registers) for a given stack frame.
+class ScopeStore final : public VariableStore {
+public:
+  explicit ScopeStore(ScopeKind kind, const lldb::SBFrame &frame)
+      : m_frame(frame), m_kind(kind) {}
 
-  /// Returns a pointer to the scope corresponding to the given kind.
-  lldb::SBValueList *GetScope(ScopeKind kind) {
-    switch (kind) {
-    case eScopeKindLocals:
-      return &locals;
-    case eScopeKindGlobals:
-      return &globals;
-    case eScopeKindRegisters:
-      return &registers;
-    }
+  std::vector<protocol::Variable>
+  GetVariables(VariableReferenceStorage &storage,
+               const protocol::Configuration &config,
+               const protocol::VariablesArguments &args) override;
+  lldb::SBValue FindVariable(llvm::StringRef name) override;
 
-    llvm_unreachable("unknown scope kind");
-  }
+private:
+  void LoadVariables();
+  void SetRegistersFormat();
+  void AddReturnValue(VariableReferenceStorage &storage,
+                      const protocol::Configuration &config,
+                      std::vector<protocol::Variable> &variables,
+                      bool format_hex);
+  lldb::SBFrame m_frame;
+  lldb::SBValueList m_children;
+  ScopeKind m_kind;
+  bool m_variables_loaded = false;
 };
 
-struct Variables {
-  /// Check if \p var_ref points to a variable that should persist for the
-  /// entire duration of the debug session, e.g. repl expandable variables
-  static bool IsPermanentVariableReference(int64_t var_ref);
+/// Variable store for expandable values.
+///
+/// Manages children variables of complex types (structs, arrays, pointers,
+/// etc.) that can be expanded in the debugger UI.
+class ExpandableValueStore final : public VariableStore {
 
+public:
+  explicit ExpandableValueStore(const lldb::SBValue &value) : m_value(value) {}
+
+  std::vector<protocol::Variable>
+  GetVariables(VariableReferenceStorage &storage,
+               const protocol::Configuration &config,
+               const protocol::VariablesArguments &args) override;
+  lldb::SBValue FindVariable(llvm::StringRef name) override;
+  [[nodiscard]] lldb::SBValue GetVariable() const { return m_value; };
+
+private:
+  lldb::SBValue m_value;
+};
+
+struct VariableReferenceStorage {
+  explicit VariableReferenceStorage(Log &log) : log(log) {}
   /// \return a new variableReference.
   /// Specify is_permanent as true for variable that should persist entire
   /// debug session.
-  int64_t GetNewVariableReference(bool is_permanent);
+  var_ref_t CreateVariableReference(bool is_permanent);
 
   /// \return the expandable variable corresponding with variableReference
   /// value of \p value.
   /// If \p var_ref is invalid an empty SBValue is returned.
-  lldb::SBValue GetVariable(int64_t var_ref) const;
-
-  lldb::SBValueList *GetScope(const uint64_t dap_frame_id,
-                              const ScopeKind kind);
+  lldb::SBValue GetVariable(var_ref_t var_ref);
 
   /// Insert a new \p variable.
   /// \return variableReference assigned to this expandable variable.
-  int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
+  var_ref_t InsertVariable(const lldb::SBValue &variable, bool is_permanent);
 
-  std::optional<ScopeData> GetTopLevelScope(int64_t variablesReference);
+  lldb::SBValue FindVariable(var_ref_t var_ref, llvm::StringRef name);
 
-  lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name);
+  std::vector<protocol::Scope> CreateScopes(lldb::SBFrame &frame);
 
-  /// Initialize a frame if it hasn't been already, otherwise do nothing
-  std::vector<protocol::Scope> CreateScopes(const uint64_t dap_frame_id,
-                                            lldb::SBFrame &frame);
+  void Clear() {
+    m_temporary_kind_pool.Clear();
+    m_scope_kind_pool.Clear();
+  }
 
-  /// Clear all scope variables and non-permanent expandable variables.
-  void Clear();
+  VariableStore *GetVariableStore(var_ref_t var_ref);
+  Log &log;
 
 private:
-  /// Variable reference start index of temporary variables.
-  static constexpr int64_t TemporaryVariableStartIndex = 1;
+  /// Template class for managing pools of variable stores.
+  /// All references created starts from zero with the Reference kind mask
+  /// applied, the mask is then removed when fetching a variable store
+  ///
+  /// \tparam VariableStoreType
+  ///     The type of variable store to use.
+  ///
+  /// \tparam ReferenceKind
+  ///     The reference kind created in this pool
+  template <typename VariableStoreType, protocol::ReferenceKind Kind>
+  class ReferenceKindPool {
 
-  /// Variable reference start index of permanent expandable variable.
-  static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
+  public:
+    explicit ReferenceKindPool() = default;
 
-  int64_t m_next_permanent_var_ref{PermanentVariableStartIndex};
-  int64_t m_next_temporary_var_ref{TemporaryVariableStartIndex};
+    /// Resets the count to zero and clears the pool,
+    /// disabled for permanent reference kind.
+    template <protocol::ReferenceKind LHS = Kind,
+              protocol::ReferenceKind RHS = protocol::eReferenceKindPermanent>
+    std::enable_if_t<LHS != RHS, void> Clear() {
+      reference_count = 0;
+      m_pool.clear();
+    }
 
-  // Variable Reference,                 dap_frame_id
-  std::map<int64_t, std::pair<ScopeKind, uint64_t>> m_scope_kinds;
+    VariableStoreType *GetVariableStore(var_ref_t var_ref) {
+      const uint32_t raw_ref = var_ref.Reference();
+
+      if (raw_ref != 0 && raw_ref <= m_pool.size())
+        return &m_pool[raw_ref - 1];
+      return nullptr;
+    }
+
+    template <typename... Args> var_ref_t Add(Args &&...args) {
+      assert(reference_count == m_pool.size() &&
+             "Current reference_count must be the size of the pool");
+
+      if (LLVM_UNLIKELY(reference_count >=
+                        var_ref_t::k_max_variables_references)) {
+        // We cannot add new variables to the pool;
+        return var_ref_t(var_ref_t::k_invalid_var_ref);
+      }
+
+      m_pool.emplace_back(std::forward<Args>(args)...);
+      const uint32_t raw_ref = NextRawReference();
+      return var_ref_t(raw_ref, Kind);
+    }
+
+    [[nodiscard]] size_t Size() const { return m_pool.size(); }
+
+    // Non copyable and non movable.
+    ReferenceKindPool(const ReferenceKindPool &) = delete;
+    ReferenceKindPool &operator=(const ReferenceKindPool &) = delete;
+    ReferenceKindPool(ReferenceKindPool &&) = delete;
+    ReferenceKindPool &operator=(ReferenceKindPool &&) = delete;
+    ~ReferenceKindPool() = default;
+
+  private:
+    uint32_t NextRawReference() {
+      reference_count++;
+      return reference_count;
+    }
+
+    uint32_t reference_count = 0;
+    std::vector<VariableStoreType> m_pool;
+  };
 
   /// Variables that are alive in this stop state.
   /// Will be cleared when debuggee resumes.
-  llvm::DenseMap<int64_t, lldb::SBValue> m_referencedvariables;
-
+  ReferenceKindPool<ExpandableValueStore, protocol::eReferenceKindTemporary>
+      m_temporary_kind_pool;
   /// Variables that persist across entire debug session.
   /// These are the variables evaluated from debug console REPL.
-  llvm::DenseMap<int64_t, lldb::SBValue> m_referencedpermanent_variables;
-
-  /// Key = dap_frame_id (encodes both thread index ID and frame ID)
-  /// Value = scopes for the frame (locals, globals, registers)
-  std::map<uint64_t, FrameScopes> m_frames;
+  ReferenceKindPool<ExpandableValueStore, protocol::eReferenceKindPermanent>
+      m_permanent_kind_pool;
+  ReferenceKindPool<ScopeStore, protocol::eReferenceKindScope>
+      m_scope_kind_pool;
 };
 
 } // namespace lldb_dap

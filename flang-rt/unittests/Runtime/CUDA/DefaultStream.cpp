@@ -25,3 +25,18 @@ TEST(DefaultStreamTest, GetAndSetTest) {
   cudaStream_t outStream = RTDECL(CUFGetDefaultStream)();
   EXPECT_EQ(outStream, stream);
 }
+
+TEST(DefaultStreamTest, GetAndSetArrayTest) {
+  using Fortran::common::TypeCategory;
+  cudaStream_t defaultStream = RTDECL(CUFGetDefaultStream)();
+  EXPECT_EQ(defaultStream, nullptr);
+
+  cudaStream_t outStream = RTDECL(CUFGetDefaultStream)();
+  EXPECT_EQ(outStream, nullptr);
+  cudaStream_t stream;
+  cudaStreamCreate(&stream);
+  EXPECT_EQ(cudaSuccess, cudaGetLastError());
+  RTDECL(CUFSetDefaultStream)(stream);
+  outStream = RTDECL(CUFGetDefaultStream)();
+  EXPECT_EQ(outStream, stream);
+}

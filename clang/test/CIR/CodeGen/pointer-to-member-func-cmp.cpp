@@ -17,9 +17,9 @@ bool cmp_eq(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 }
   
 // CIR-BEFORE: cir.func {{.*}} @_Z6cmp_eqM3FooFviES1_
-// CIR-BEFORE:   %[[LHS:.*]] = cir.load{{.*}} %0 : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>
-// CIR-BEFORE:   %[[RHS:.*]] = cir.load{{.*}} %1 : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>
-// CIR-BEFORE:   %[[CMP:.*]] = cir.cmp(eq, %[[LHS]], %[[RHS]]) : !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.bool
+// CIR-BEFORE:   %[[LHS:.*]] = cir.load{{.*}} %0 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[RHS:.*]] = cir.load{{.*}} %1 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[CMP:.*]] = cir.cmp(eq, %[[LHS]], %[[RHS]]) : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>, !cir.bool
 // CIR-BEFORE:   cir.store %[[CMP]], %{{.*}} : !cir.bool, !cir.ptr<!cir.bool>
 
 // CIR-AFTER: @_Z6cmp_eqM3FooFviES1_
@@ -71,9 +71,9 @@ bool cmp_ne(void (Foo::*lhs)(int), void (Foo::*rhs)(int)) {
 }
   
 // CIR-BEFORE: cir.func {{.*}} @_Z6cmp_neM3FooFviES1_
-// CIR-BEFORE:   %[[LHS:.*]] = cir.load{{.*}} %0 : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>
-// CIR-BEFORE:   %[[RHS:.*]] = cir.load{{.*}} %1 : !cir.ptr<!cir.method<!cir.func<(!s32i)> in !rec_Foo>>
-// CIR-BEFORE:   %[[CMP:.*]] = cir.cmp(ne, %[[LHS]], %[[RHS]]) : !cir.method<!cir.func<(!s32i)> in !rec_Foo>, !cir.bool
+// CIR-BEFORE:   %[[LHS:.*]] = cir.load{{.*}} %0 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[RHS:.*]] = cir.load{{.*}} %1 : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[CMP:.*]] = cir.cmp(ne, %[[LHS]], %[[RHS]]) : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>, !cir.bool
 // CIR-BEFORE:   cir.store %[[CMP]], %{{.*}} : !cir.bool, !cir.ptr<!cir.bool>
 
 // CIR-AFTER: cir.func {{.*}} @_Z6cmp_neM3FooFviES1_

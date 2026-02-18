@@ -876,7 +876,7 @@ CGHLSLRuntime::handleStructSemanticStore(
   assert(RD->getNumFields() == ST->getNumElements());
 
   auto FieldDecl = RD->field_begin();
-  for (unsigned I = 0; I < ST->getNumElements(); ++I) {
+  for (unsigned I = 0; I < ST->getNumElements(); ++I, ++FieldDecl) {
     llvm::Value *Extract = B.CreateExtractValue(Source, I);
     AttrBegin =
         handleSemanticStore(B, FD, Extract, *FieldDecl, AttrBegin, AttrEnd);

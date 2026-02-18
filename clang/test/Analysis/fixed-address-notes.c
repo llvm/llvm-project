@@ -50,3 +50,21 @@ void test4() {
   *x = 3; // expected-warning{{Dereference of a fixed address (loaded from variable 'x')}} \
           // expected-note{{Dereference of a fixed address (loaded from variable 'x')}}
 }
+
+void suppress_volatile_pointee(void) {
+  *(volatile int *)0x00011100 = 4; // no-warning: volatile pointees are suppressed
+}
+
+void suppress_volatile_pointee_using_subscript(void) {
+  ((volatile int *)0x00011100)[0] = 4; // no-warning: volatile pointees are suppressed
+}
+
+void suppress_ptr_to_100element_volatile_array(void) {
+  ((volatile int (*)[100])0x00011100)[2][0] = 4; // no-warning: volatile pointees are suppressed
+}
+
+void deref_volatile_nullptr(void) {
+  *(volatile int *)0 = 1; // core.NullDereference still warns about this
+  // expected-warning@-1 {{Dereference of null pointer [core.NullDereference]}}
+  // expected-note@-2    {{Dereference of null pointer}}
+}

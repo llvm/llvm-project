@@ -59,10 +59,10 @@ int main() {
 // CHECK-NEXT:    store i64 [[TMP1]], ptr [[__VLA_EXPR0]], align 8
 // CHECK-NEXT:    call void @_ZN1SC1Ev(ptr noundef nonnull align 8 dereferenceable(40) [[S]])
 // CHECK-NEXT:    call void @_ZN1S3fooEv(ptr noundef nonnull align 8 dereferenceable(40) [[S]])
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[REF]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[REF]], align 8, !nonnull [[META7:![0-9]+]], !align [[META8:![0-9]+]]
 // CHECK-NEXT:    store ptr [[TMP3]], ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PTR]], align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META7]], !align [[META8]]
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [6 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[A]], ptr [[TMP6]], align 8
 // CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [6 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
@@ -166,7 +166,7 @@ int main() {
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[REF:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[REF]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[REF]], align 8, !nonnull [[META7]], !align [[META8]]
 // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 1
 // CHECK-NEXT:    [[ARR:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 3
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [4 x i32], ptr [[ARR]], i32 1
@@ -262,11 +262,11 @@ int main() {
 // CHECK-NEXT:    store ptr [[ARR]], ptr [[ARR_ADDR]], align 8
 // CHECK-NEXT:    store i64 [[VLA]], ptr [[VLA_ADDR]], align 8
 // CHECK-NEXT:    store ptr [[VLA1]], ptr [[VLA_ADDR2]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[REF_ADDR]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARR_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META7]], !align [[META8]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[REF_ADDR]], align 8, !nonnull [[META7]], !align [[META8]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ARR_ADDR]], align 8, !nonnull [[META7]], !align [[META8]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VLA_ADDR2]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VLA_ADDR2]], align 8, !nonnull [[META7]], !align [[META8]]
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[TMP]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[TMP0]], align 4
 // CHECK-NEXT:    [[INC:%.*]] = fadd float [[TMP5]], 1.000000e+00
@@ -275,7 +275,7 @@ int main() {
 // CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[TMP6]], align 4
 // CHECK-NEXT:    [[INC3:%.*]] = fadd float [[TMP7]], 1.000000e+00
 // CHECK-NEXT:    store float [[INC3]], ptr [[TMP6]], align 4
-// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META7]], !align [[META8]]
 // CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[TMP8]], align 4
 // CHECK-NEXT:    [[INC4:%.*]] = fadd float [[TMP9]], 1.000000e+00
 // CHECK-NEXT:    store float [[INC4]], ptr [[TMP8]], align 4
@@ -323,7 +323,7 @@ int main() {
 // CHECK-NEXT:    [[INC1:%.*]] = add nsw i32 [[TMP3]], 1
 // CHECK-NEXT:    store i32 [[INC1]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    [[REF:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[REF]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[REF]], align 8, !nonnull [[META7]], !align [[META8]]
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
 // CHECK-NEXT:    [[INC2:%.*]] = add nsw i32 [[TMP5]], 1
 // CHECK-NEXT:    store i32 [[INC2]], ptr [[TMP4]], align 4
@@ -360,9 +360,9 @@ int main() {
 // SIMD-ONLY0-NEXT:    store i64 [[TMP1]], ptr [[__VLA_EXPR0]], align 8
 // SIMD-ONLY0-NEXT:    call void @_ZN1SC1Ev(ptr noundef nonnull align 8 dereferenceable(40) [[S]])
 // SIMD-ONLY0-NEXT:    call void @_ZN1S3fooEv(ptr noundef nonnull align 8 dereferenceable(40) [[S]])
-// SIMD-ONLY0-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[REF]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[REF]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // SIMD-ONLY0-NEXT:    store ptr [[TMP3]], ptr [[TMP]], align 8
-// SIMD-ONLY0-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[REF]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[REF]], align 8, !nonnull [[META2]], !align [[META3]]
 // SIMD-ONLY0-NEXT:    [[TMP5:%.*]] = load float, ptr [[A]], align 4
 // SIMD-ONLY0-NEXT:    [[INC:%.*]] = fadd float [[TMP5]], 1.000000e+00
 // SIMD-ONLY0-NEXT:    store float [[INC]], ptr [[A]], align 4
@@ -370,7 +370,7 @@ int main() {
 // SIMD-ONLY0-NEXT:    [[TMP7:%.*]] = load float, ptr [[TMP6]], align 4
 // SIMD-ONLY0-NEXT:    [[INC1:%.*]] = fadd float [[TMP7]], 1.000000e+00
 // SIMD-ONLY0-NEXT:    store float [[INC1]], ptr [[TMP6]], align 4
-// SIMD-ONLY0-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META2]], !align [[META3]]
 // SIMD-ONLY0-NEXT:    [[TMP9:%.*]] = load float, ptr [[TMP8]], align 4
 // SIMD-ONLY0-NEXT:    [[INC2:%.*]] = fadd float [[TMP9]], 1.000000e+00
 // SIMD-ONLY0-NEXT:    store float [[INC2]], ptr [[TMP8]], align 4
@@ -417,7 +417,7 @@ int main() {
 // SIMD-ONLY0-NEXT:    [[INC2:%.*]] = add nsw i32 [[TMP2]], 1
 // SIMD-ONLY0-NEXT:    store i32 [[INC2]], ptr [[TMP1]], align 4
 // SIMD-ONLY0-NEXT:    [[REF:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[THIS1]], i32 0, i32 2
-// SIMD-ONLY0-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[REF]], align 8
+// SIMD-ONLY0-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[REF]], align 8, !nonnull [[META2]], !align [[META3]]
 // SIMD-ONLY0-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 // SIMD-ONLY0-NEXT:    [[INC3:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY0-NEXT:    store i32 [[INC3]], ptr [[TMP3]], align 4

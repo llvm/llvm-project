@@ -540,13 +540,17 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::MemberPointer: {
     const auto *mpt = cast<MemberPointerType>(ty);
 
-    mlir::Type memberTy = convertType(mpt->getPointeeType());
+    NestedNameSpecifier mptNNS = mpt->getQualifier();
     auto clsTy = mlir::cast<cir::RecordType>(
-        convertType(QualType(mpt->getQualifier().getAsType(), 0)));
+        convertType(QualType(mptNNS.getAsType(), 0)));
     if (mpt->isMemberDataPointer()) {
+      mlir::Type memberTy = convertType(mpt->getPointeeType());
       resultType = cir::DataMemberType::get(memberTy, clsTy);
     } else {
-      auto memberFuncTy = mlir::cast<cir::FuncType>(memberTy);
+      auto memberFuncTy = getFunctionType(cgm.getTypes().arrangeCXXMethodType(
+          mptNNS.getAsRecordDecl(),
+          mpt->getPointeeType()->getAs<clang::FunctionProtoType>(),
+          /*methodDecl=*/nullptr));
       resultType = cir::MethodType::get(memberFuncTy, clsTy);
     }
     break;

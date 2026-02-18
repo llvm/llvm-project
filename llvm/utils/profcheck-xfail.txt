@@ -13,7 +13,6 @@ CodeGen/WinEH/wineh-statenumbering.ll
 CodeGen/ARM/loopvectorize_pr33804.ll
 CodeGen/ARM/sjljeh-swifterror.ll
 CodeGen/X86/AMX/amx-low-intrinsics.ll
-CodeGen/X86/masked_gather_scatter.ll
 DebugInfo/AArch64/ir-outliner.ll
 DebugInfo/assignment-tracking/X86/hotcoldsplit.ll
 DebugInfo/Generic/block-asan.ll

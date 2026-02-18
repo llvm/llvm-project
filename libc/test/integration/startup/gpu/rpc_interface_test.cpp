@@ -57,7 +57,7 @@ static void test_interface(bool end_with_send) {
   ASSERT_TRUE(cnt == 9 && "Invalid number of increments");
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int, char **, char **) {
   test_interface(true);
   test_interface(false);
 

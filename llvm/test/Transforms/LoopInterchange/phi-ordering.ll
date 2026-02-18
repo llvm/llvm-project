@@ -33,7 +33,7 @@ define void @test(i32 %T, ptr noalias nocapture %C, ptr noalias nocapture readon
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [90 x [90 x i16]], ptr [[A:%.*]], i32 [[ADD]], i32 [[I]], i32 [[J]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[ADD15:%.*]] = add nsw i16 [[TMP0]], 1
-; CHECK-NEXT:    store i16 [[ADD15]], ptr [[ARRAYIDX]]
+; CHECK-NEXT:    store i16 [[ADD15]], ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[K]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 90
 ; CHECK-NEXT:    br label [[FOR2_INC16]]

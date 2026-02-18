@@ -405,7 +405,7 @@ json::Value toJSON(const SetVariableResponseBody &SVR) {
 
   if (!SVR.type.empty())
     Body.insert({"type", SVR.type});
-  if (SVR.variablesReference)
+  if (SVR.variablesReference.Reference())
     Body.insert({"variablesReference", SVR.variablesReference});
   if (SVR.namedVariables)
     Body.insert({"namedVariables", SVR.namedVariables});

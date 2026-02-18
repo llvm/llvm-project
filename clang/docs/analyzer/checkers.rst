@@ -167,6 +167,20 @@ numerical value.
    int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
  }
 
+ void volatile_pointee() {
+   *(volatile int *)0x404 = 1; // no warning: constant non-null "volatile" pointee, you must know what you are doing
+ }
+
+ void deref_volatile_nullptr() {
+   *(volatile int *)0 = 1; // core.NullDereference still warns about this
+ }
+
+If your project is low-level (e.g., firmware), or deals with hardware interop with a lot of genuine constant addresses, then consider disabling this checker.
+The checker automatically suppresses issues if the type of the pointee of the address is ``volatile``.
+You probably already need this to be ``volatile`` for legitimate access, so the checker suppresses such issues to avoid false-positives.
+Note that null pointers will still be reported by :ref:`core.NullDereference <core-NullDereference>`
+regardless if the pointee is ``volatile`` or not.
+
 If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
 to true (the default value), then this checker never reports dereference of
 pointers with a specified address space. If the option is set to false, then

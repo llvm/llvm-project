@@ -165,6 +165,8 @@ exit:
   ret void
 }
 
+; TODO: The branch condition could be reassociated to be simplified further, see
+; the diff in 3482a9c6cba57b4e605c2b99fb6d90a023439f9b
 define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.ptr, ptr noalias %dst.1, i1 %c.4, ptr %src, ptr noalias %dst.3, i1 %c.3, ptr noalias %dst.2) {
 ; COMMON-LABEL: define void @test_exit_branch_cost(
 ; COMMON-SAME: ptr [[DST:%.*]], ptr noalias [[X_PTR:%.*]], ptr noalias [[Y_PTR:%.*]], ptr noalias [[DST_1:%.*]], i1 [[C_4:%.*]], ptr [[SRC:%.*]], ptr noalias [[DST_3:%.*]], i1 [[C_3:%.*]], ptr noalias [[DST_2:%.*]]) {

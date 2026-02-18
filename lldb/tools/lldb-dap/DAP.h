@@ -102,7 +102,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// The target instance for this DAP session.
   lldb::SBTarget target;
 
-  Variables variables;
+  VariableReferenceStorage reference_storage;
   lldb::SBBroadcaster broadcaster;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
@@ -379,7 +379,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   protocol::Capabilities GetCustomCapabilities();
 
   /// Debuggee will continue from stopped state.
-  void WillContinue() { variables.Clear(); }
+  void WillContinue() { reference_storage.Clear(); }
 
   /// Poll the process to wait for it to reach the eStateStopped state.
   ///
