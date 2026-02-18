@@ -26,6 +26,9 @@ paschalis.mpeis@arm.com (email), [paschalis-mpeis](https://github.com/paschalis-
 
 ### X86 Backend
 
+Amir Ayupov
+aaupov@meta.com (email), [aaupov](https://github.com/aaupov) (GitHub)
+
 Maksim Panchenko
 maks@meta.com (email), [maksfb](https://github.com/maksfb) (GitHub)
 

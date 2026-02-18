@@ -181,6 +181,12 @@ module attributes {gpu.container_module} {
       %rotate, %pred4 = gpu.rotate %arg0, 3, 16 : f32
 
       "gpu.barrier"() : () -> ()
+      gpu.barrier
+      gpu.barrier memfence [#gpu.address_space<workgroup>]
+      gpu.barrier memfence [#gpu.address_space<global>]
+      gpu.barrier memfence [#gpu.address_space<global>, #gpu.address_space<workgroup>]
+      gpu.barrier memfence [#gpu.address_space<private>]
+      gpu.barrier memfence []
 
       "some_op"(%bIdX, %tIdX) : (index, index) -> ()
       %42 = memref.load %arg1[%bIdX] : memref<?xf32, 1>

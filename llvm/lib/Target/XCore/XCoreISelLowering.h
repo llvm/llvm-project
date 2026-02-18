@@ -72,8 +72,6 @@ namespace llvm {
       return XCore::R1;
     }
 
-    bool softPromoteHalfType() const override { return true; }
-
   private:
     const TargetMachine &TM;
     const XCoreSubtarget &Subtarget;

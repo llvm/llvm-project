@@ -19,9 +19,7 @@ using namespace mlir::complex;
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) {
-  return getValue();
-}
+OpFoldResult ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 void ConstantOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
@@ -374,21 +372,34 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
   auto rhs = adaptor.getRhs();
-  if (!rhs)
+  auto lhs = adaptor.getLhs();
+
+  // We can't fold without knowing that LHS isn't NaN
+  if (!rhs || !lhs)
     return {};
 
-  ArrayAttr arrayAttr = dyn_cast<ArrayAttr>(rhs);
-  if (!arrayAttr || arrayAttr.size() != 2)
+  ArrayAttr rhsArrayAttr = dyn_cast<ArrayAttr>(rhs);
+  if (!rhsArrayAttr || rhsArrayAttr.size() != 2)
     return {};
 
-  APFloat real = cast<FloatAttr>(arrayAttr[0]).getValue();
-  APFloat imag = cast<FloatAttr>(arrayAttr[1]).getValue();
-
-  if (!imag.isZero())
+  ArrayAttr lhsArrayAttr = dyn_cast<ArrayAttr>(lhs);
+  if (!lhsArrayAttr || lhsArrayAttr.size() != 2)
     return {};
+
+  APFloat rhsImag = cast<FloatAttr>(rhsArrayAttr[1]).getValue();
+  if (!rhsImag.isZero())
+    return {};
+
+  APFloat lhsReal = cast<FloatAttr>(lhsArrayAttr[0]).getValue();
+  APFloat lhsImag = cast<FloatAttr>(lhsArrayAttr[1]).getValue();
+  if (lhsReal.isNaN() || lhsImag.isNaN()) {
+    Attribute nanValue = lhsReal.isNaN() ? lhsArrayAttr[0] : lhsArrayAttr[1];
+    return ArrayAttr::get(getContext(), {nanValue, nanValue});
+  }
 
   // complex.div(a, complex.constant<1.0, 0.0>) -> a
-  if (real == APFloat(real.getSemantics(), 1))
+  APFloat rhsReal = cast<FloatAttr>(rhsArrayAttr[0]).getValue();
+  if (rhsReal == APFloat(rhsReal.getSemantics(), 1))
     return getLhs();
 
   return {};

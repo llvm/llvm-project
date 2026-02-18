@@ -8,6 +8,7 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -37,6 +38,11 @@ public:
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
+  void scanSection(InputSectionBase &sec) override {
+    elf::scanSection1<Hexagon, ELF32LE>(*this, sec);
+  }
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -99,76 +105,146 @@ static uint32_t applyMask(uint32_t mask, uint32_t data) {
   return result;
 }
 
+// Only needed to support relocations used by relocateNonAlloc and
+// preprocessRelocs.
 RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
                             const uint8_t *loc) const {
   switch (type) {
   case R_HEX_NONE:
     return R_NONE;
-  case R_HEX_6_X:
-  case R_HEX_8_X:
-  case R_HEX_9_X:
-  case R_HEX_10_X:
-  case R_HEX_11_X:
-  case R_HEX_12_X:
-  case R_HEX_16_X:
   case R_HEX_32:
-  case R_HEX_32_6_X:
-  case R_HEX_HI16:
-  case R_HEX_LO16:
-  case R_HEX_DTPREL_32:
     return R_ABS;
-  case R_HEX_B9_PCREL:
-  case R_HEX_B13_PCREL:
-  case R_HEX_B15_PCREL:
-  case R_HEX_6_PCREL_X:
   case R_HEX_32_PCREL:
     return R_PC;
-  case R_HEX_B9_PCREL_X:
-  case R_HEX_B15_PCREL_X:
-  case R_HEX_B22_PCREL:
-  case R_HEX_PLT_B22_PCREL:
-  case R_HEX_B22_PCREL_X:
-  case R_HEX_B32_PCREL_X:
-  case R_HEX_GD_PLT_B22_PCREL:
-  case R_HEX_GD_PLT_B22_PCREL_X:
-  case R_HEX_GD_PLT_B32_PCREL_X:
-    return R_PLT_PC;
-  case R_HEX_IE_32_6_X:
-  case R_HEX_IE_16_X:
-  case R_HEX_IE_HI16:
-  case R_HEX_IE_LO16:
-    return R_GOT;
-  case R_HEX_GD_GOT_11_X:
-  case R_HEX_GD_GOT_16_X:
-  case R_HEX_GD_GOT_32_6_X:
-    return R_TLSGD_GOTPLT;
-  case R_HEX_GOTREL_11_X:
-  case R_HEX_GOTREL_16_X:
-  case R_HEX_GOTREL_32_6_X:
-  case R_HEX_GOTREL_HI16:
-  case R_HEX_GOTREL_LO16:
-    return R_GOTPLTREL;
-  case R_HEX_GOT_11_X:
-  case R_HEX_GOT_16_X:
-  case R_HEX_GOT_32_6_X:
-    return R_GOTPLT;
-  case R_HEX_IE_GOT_11_X:
-  case R_HEX_IE_GOT_16_X:
-  case R_HEX_IE_GOT_32_6_X:
-  case R_HEX_IE_GOT_HI16:
-  case R_HEX_IE_GOT_LO16:
-    return R_GOTPLT;
-  case R_HEX_TPREL_11_X:
-  case R_HEX_TPREL_16:
-  case R_HEX_TPREL_16_X:
-  case R_HEX_TPREL_32_6_X:
-  case R_HEX_TPREL_HI16:
-  case R_HEX_TPREL_LO16:
-    return R_TPREL;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
+  }
+}
+
+template <class ELFT, class RelTy>
+void Hexagon::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    const RelTy &rel = *it;
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelType type = rel.getType(false);
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
+    switch (type) {
+    case R_HEX_NONE:
+      continue;
+
+    // Absolute relocations:
+    case R_HEX_6_X:
+    case R_HEX_8_X:
+    case R_HEX_9_X:
+    case R_HEX_10_X:
+    case R_HEX_11_X:
+    case R_HEX_12_X:
+    case R_HEX_16_X:
+    case R_HEX_32:
+    case R_HEX_32_6_X:
+    case R_HEX_HI16:
+    case R_HEX_LO16:
+    case R_HEX_DTPREL_32:
+      expr = R_ABS;
+      break;
+
+    // PC-relative relocations:
+    case R_HEX_B9_PCREL:
+    case R_HEX_B13_PCREL:
+    case R_HEX_B15_PCREL:
+    case R_HEX_6_PCREL_X:
+    case R_HEX_32_PCREL:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+
+    // PLT-generating relocations:
+    case R_HEX_B9_PCREL_X:
+    case R_HEX_B15_PCREL_X:
+    case R_HEX_B22_PCREL:
+    case R_HEX_PLT_B22_PCREL:
+    case R_HEX_B22_PCREL_X:
+    case R_HEX_B32_PCREL_X:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+    case R_HEX_GD_PLT_B22_PCREL:
+    case R_HEX_GD_PLT_B22_PCREL_X:
+    case R_HEX_GD_PLT_B32_PCREL_X:
+      sym.setFlags(NEEDS_PLT);
+      sec.addReloc({R_PLT_PC, type, offset, addend, &sym});
+      continue;
+
+    // GOT-generating relocations:
+    case R_HEX_GOT_11_X:
+    case R_HEX_GOT_16_X:
+    case R_HEX_GOT_32_6_X:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLT;
+      break;
+
+    // GOTREL relocations:
+    case R_HEX_GOTREL_11_X:
+    case R_HEX_GOTREL_16_X:
+    case R_HEX_GOTREL_32_6_X:
+    case R_HEX_GOTREL_HI16:
+    case R_HEX_GOTREL_LO16:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLTREL;
+      break;
+
+    // TLS relocations:
+    case R_HEX_TPREL_11_X:
+    case R_HEX_TPREL_16:
+    case R_HEX_TPREL_16_X:
+    case R_HEX_TPREL_32_6_X:
+    case R_HEX_TPREL_HI16:
+    case R_HEX_TPREL_LO16:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+    case R_HEX_IE_32_6_X:
+    case R_HEX_IE_16_X:
+    case R_HEX_IE_HI16:
+    case R_HEX_IE_LO16:
+      // There is no IE to LE optimization.
+      rs.handleTlsIe<false>(R_GOT, type, offset, addend, sym);
+      continue;
+    case R_HEX_IE_GOT_11_X:
+    case R_HEX_IE_GOT_16_X:
+    case R_HEX_IE_GOT_32_6_X:
+    case R_HEX_IE_GOT_HI16:
+    case R_HEX_IE_GOT_LO16:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      rs.handleTlsIe<false>(R_GOTPLT, type, offset, addend, sym);
+      continue;
+    case R_HEX_GD_GOT_11_X:
+    case R_HEX_GD_GOT_16_X:
+    case R_HEX_GD_GOT_32_6_X:
+      sym.setFlags(NEEDS_TLSGD);
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      sec.addReloc({R_TLSGD_GOTPLT, type, offset, addend, &sym});
+      continue;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
   }
 }
 
@@ -225,6 +301,8 @@ static uint32_t findMaskR8(uint32_t insn) {
 }
 
 static uint32_t findMaskR11(uint32_t insn) {
+  if (isDuplex(insn))
+    return 0x03f00000;
   if ((0xff000000 & insn) == 0xa1000000)
     return 0x060020ff;
   return 0x06003fe0;

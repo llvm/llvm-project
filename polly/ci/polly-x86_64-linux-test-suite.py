@@ -50,6 +50,9 @@ with worker.run(
     with w.step("checkout-testsuite", halt_on_fail=True):
         w.checkout("https://github.com/llvm/llvm-test-suite", testsuitesrcdir)
 
+    with w.step("clean-testsuite"):
+        w.try_delete(testsuitebuilddir)
+
     with w.step("configure-testsuite", halt_on_fail=True):
         jobsarg = f";-j{w.jobs}" if w.jobs else ""
         w.run_command(

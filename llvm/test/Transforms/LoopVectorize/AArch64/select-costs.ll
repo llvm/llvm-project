@@ -146,3 +146,69 @@ loop:
 exit:
   ret void
 }
+
+declare void @use(i64, i32)
+
+define void @logical_and_select_inverted(i1 %cmp, ptr %start, ptr %end) {
+; CHECK: LV: Checking a loop in 'logical_and_select_inverted'
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
+; CHECK: Cost of 1 for VF 4: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
+; CHECK: Cost of 1 for VF 8: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
+; CHECK: Cost of 1 for VF 16: WIDEN ir<%narrow> = select ir<%trunc>, ir<false>, ir<%cmp>
+; CHECK: LV: Selecting VF: 16.
+
+entry:
+  br label %loop
+
+loop:
+  %for = phi i64 [ %zext, %loop ], [ 0, %entry ]
+  %p = phi i32 [ %spec.select, %loop ], [ 0, %entry ]
+  %ptr = phi ptr [ %ptr.next, %loop ], [ %start, %entry ]
+  %ld = load i8, ptr %ptr, align 8
+  %trunc = trunc i8 %ld to i1
+  %not = xor i1 %trunc, true
+  %zext = zext i1 %not to i64
+  %or.1 = or i64 %for, 1
+  %narrow = select i1 %not, i1 %cmp, i1 false
+  %spec.select = zext i1 %narrow to i32
+  %or.2 = or i32 %p, 1
+  %ptr.next = getelementptr i8, ptr %ptr, i64 40
+  %ec = icmp eq ptr %ptr.next, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  call void @use(i64 %or.1, i32 %or.2)
+  ret void
+}
+
+define void @logical_or_select_inverted(i1 %cmp, ptr %start, ptr %end) {
+; CHECK: LV: Checking a loop in 'logical_or_select_inverted'
+; CHECK: Cost of 1 for VF 2: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
+; CHECK: Cost of 1 for VF 4: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
+; CHECK: Cost of 1 for VF 8: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
+; CHECK: Cost of 1 for VF 16: WIDEN ir<%narrow> = select ir<%trunc>, ir<%cmp>, ir<true>
+; CHECK: LV: Selecting VF: 16.
+
+entry:
+  br label %loop
+
+loop:
+  %for = phi i64 [ %zext, %loop ], [ 0, %entry ]
+  %p = phi i32 [ %spec.select, %loop ], [ 0, %entry ]
+  %ptr = phi ptr [ %ptr.next, %loop ], [ %start, %entry ]
+  %ld = load i8, ptr %ptr, align 8
+  %trunc = trunc i8 %ld to i1
+  %not = xor i1 %trunc, true
+  %zext = zext i1 %not to i64
+  %or.1 = or i64 %for, 1
+  %narrow = select i1 %not, i1 true, i1 %cmp
+  %spec.select = zext i1 %narrow to i32
+  %or.2 = or i32 %p, 1
+  %ptr.next = getelementptr i8, ptr %ptr, i64 40
+  %ec = icmp eq ptr %ptr.next, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  call void @use(i64 %or.1, i32 %or.2)
+  ret void
+}

@@ -16,6 +16,7 @@
 //   d. NF_ND (EVEX) -> NF (EVEX)
 //   e. NonNF (EVEX) -> NF (EVEX)
 //   f. SETZUCCm (EVEX) -> SETCCm (legacy)
+//   g. VPMOV*2M (EVEX) + KMOV -> VMOVMSK/VPMOVMSKB (VEX)
 //
 // Compression a, b and c can always reduce code size, with some exceptions
 // such as promoted 16-bit CRC32 which is as long as the legacy version.
@@ -41,6 +42,7 @@
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
@@ -178,8 +180,143 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   return true;
 }
 
+static bool isKMovNarrowing(unsigned VPMOVOpc, unsigned KMOVOpc) {
+  unsigned VPMOVBits = 0;
+  switch (VPMOVOpc) {
+  case X86::VPMOVQ2MZ128kr:
+    VPMOVBits = 2;
+    break;
+  case X86::VPMOVQ2MZ256kr:
+  case X86::VPMOVD2MZ128kr:
+    VPMOVBits = 4;
+    break;
+  case X86::VPMOVD2MZ256kr:
+    VPMOVBits = 8;
+    break;
+  case X86::VPMOVB2MZ128kr:
+    VPMOVBits = 16;
+    break;
+  case X86::VPMOVB2MZ256kr:
+    VPMOVBits = 32;
+    break;
+  default:
+    llvm_unreachable("Unknown VPMOV opcode");
+  }
+
+  unsigned KMOVSize = 0;
+  switch (KMOVOpc) {
+  case X86::KMOVBrk:
+    KMOVSize = 8;
+    break;
+  case X86::KMOVWrk:
+    KMOVSize = 16;
+    break;
+  case X86::KMOVDrk:
+    KMOVSize = 32;
+    break;
+  default:
+    llvm_unreachable("Unknown KMOV opcode");
+  }
+
+  return KMOVSize < VPMOVBits;
+}
+
+// Try to compress VPMOV*2M + KMOV chain patterns:
+//   vpmov*2m %xmm0, %k0     ->  (erase this)
+//   kmov* %k0, %eax         ->  vmovmskp* %xmm0, %eax
+static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
+                                    const X86Subtarget &ST,
+                                    SmallVectorImpl<MachineInstr *> &ToErase) {
+  const X86InstrInfo *TII = ST.getInstrInfo();
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  MachineRegisterInfo *MRI = &MBB.getParent()->getRegInfo();
+
+  unsigned Opc = MI.getOpcode();
+  if (Opc != X86::VPMOVD2MZ128kr && Opc != X86::VPMOVD2MZ256kr &&
+      Opc != X86::VPMOVQ2MZ128kr && Opc != X86::VPMOVQ2MZ256kr &&
+      Opc != X86::VPMOVB2MZ128kr && Opc != X86::VPMOVB2MZ256kr)
+    return false;
+
+  Register MaskReg = MI.getOperand(0).getReg();
+  Register SrcVecReg = MI.getOperand(1).getReg();
+
+  unsigned MovMskOpc = 0;
+  switch (Opc) {
+  case X86::VPMOVD2MZ128kr:
+    MovMskOpc = X86::VMOVMSKPSrr;
+    break;
+  case X86::VPMOVD2MZ256kr:
+    MovMskOpc = X86::VMOVMSKPSYrr;
+    break;
+  case X86::VPMOVQ2MZ128kr:
+    MovMskOpc = X86::VMOVMSKPDrr;
+    break;
+  case X86::VPMOVQ2MZ256kr:
+    MovMskOpc = X86::VMOVMSKPDYrr;
+    break;
+  case X86::VPMOVB2MZ128kr:
+    MovMskOpc = X86::VPMOVMSKBrr;
+    break;
+  case X86::VPMOVB2MZ256kr:
+    MovMskOpc = X86::VPMOVMSKBYrr;
+    break;
+  default:
+    llvm_unreachable("Unknown VPMOV opcode");
+  }
+
+  MachineInstr *KMovMI = nullptr;
+
+  for (MachineInstr &CurMI : llvm::make_range(
+           std::next(MachineBasicBlock::iterator(MI)), MBB.end())) {
+    if (CurMI.modifiesRegister(MaskReg, TRI)) {
+      if (!KMovMI)
+        return false; // Mask clobbered before use
+      break;
+    }
+
+    if (CurMI.readsRegister(MaskReg, TRI)) {
+      if (KMovMI)
+        return false; // Fail: Mask has MULTIPLE uses
+
+      unsigned UseOpc = CurMI.getOpcode();
+      bool IsKMOV = UseOpc == X86::KMOVBrk || UseOpc == X86::KMOVWrk ||
+                    UseOpc == X86::KMOVDrk;
+      // Only allow non-narrowing KMOV uses of the mask.
+      if (IsKMOV && CurMI.getOperand(1).getReg() == MaskReg &&
+          !isKMovNarrowing(Opc, UseOpc)) {
+        KMovMI = &CurMI;
+        // continue scanning to ensure
+        // there are no *other* uses of the mask later in the block.
+      } else {
+        return false;
+      }
+    }
+
+    if (!KMovMI && CurMI.modifiesRegister(SrcVecReg, TRI)) {
+      return false; // SrcVecReg modified before it could be used by MOVMSK
+    }
+  }
+
+  if (!KMovMI)
+    return false;
+
+  // Check if MaskReg is used in any other basic blocks
+  for (const MachineOperand &MO : MRI->use_operands(MaskReg))
+    if (MO.getParent()->getParent() != &MBB)
+      return false;
+
+  // Apply the transformation
+  KMovMI->setDesc(TII->get(MovMskOpc));
+  KMovMI->getOperand(1).setReg(SrcVecReg);
+  KMovMI->setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+
+  ToErase.push_back(&MI);
+  return true;
+}
+
 static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
-                             const X86Subtarget &ST) {
+                             const X86Subtarget &ST,
+                             SmallVectorImpl<MachineInstr *> &ToErase) {
   uint64_t TSFlags = MI.getDesc().TSFlags;
 
   // Check for EVEX instructions only.
@@ -189,6 +326,10 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   // Instructions with mask or 512-bit vector can't be converted to VEX.
   if (TSFlags & (X86II::EVEX_K | X86II::EVEX_L2))
     return false;
+
+  // Specialized VPMOVD2M + KMOV -> MOVMSK fold first.
+  if (tryCompressVPMOVPattern(MI, MBB, ST, ToErase))
+    return true;
 
   auto IsRedundantNewDataDest = [&](unsigned &Opc) {
     // $rbx = ADD64rr_ND $rbx, $rax / $rbx = ADD64rr_ND $rax, $rbx
@@ -350,9 +491,15 @@ static bool runOnMF(MachineFunction &MF) {
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    // Traverse the basic block.
-    for (MachineInstr &MI : llvm::make_early_inc_range(MBB))
-      Changed |= CompressEVEXImpl(MI, MBB, ST);
+    SmallVector<MachineInstr *, 4> ToErase;
+
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+      Changed |= CompressEVEXImpl(MI, MBB, ST, ToErase);
+    }
+
+    for (MachineInstr *MI : ToErase) {
+      MI->eraseFromParent();
+    }
   }
   LLVM_DEBUG(dbgs() << "End X86CompressEVEXPass\n";);
   return Changed;

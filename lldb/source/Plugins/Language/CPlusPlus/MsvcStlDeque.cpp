@@ -110,7 +110,7 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
   if (!block_size_decl)
     return lldb::eRefetch;
   Scalar block_size = block_size_decl.GetConstantValue();
-  if (!block_size.IsValid())
+  if (!block_size.IsValid() || block_size <= 0)
     return lldb::eRefetch;
 
   ValueObjectSP offset_sp = storage_sp->GetChildMemberWithName("_Myoff");
@@ -126,7 +126,7 @@ lldb_private::formatters::MsvcStlDequeSyntheticFrontEnd::Update() {
     return lldb::eRefetch;
 
   uint64_t map_size = map_size_sp->GetValueAsUnsigned(0, &ok);
-  if (!ok)
+  if (!ok || map_size == 0)
     return lldb::eRefetch;
 
   uint64_t size = size_sp->GetValueAsUnsigned(0, &ok);

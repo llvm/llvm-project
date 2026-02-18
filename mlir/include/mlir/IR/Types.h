@@ -116,6 +116,9 @@ public:
   bool isF64() const;
   bool isF80() const;
   bool isF128() const;
+  bool isF8E4M3FN() const;
+  bool isF8E5M2() const;
+
   /// Return true if this is an float type (with the specified width).
   bool isFloat() const;
   bool isFloat(unsigned width) const;

@@ -216,7 +216,7 @@ public:
   /// Looks for a constant offset from the given GEP index without extracting
   /// it. It returns the numeric value of the extracted constant offset (0 if
   /// failed). The meaning of the arguments are the same as Extract.
-  static int64_t Find(Value *Idx, GetElementPtrInst *GEP);
+  static APInt Find(Value *Idx, GetElementPtrInst *GEP);
 
 private:
   ConstantOffsetExtractor(BasicBlock::iterator InsertionPt)
@@ -294,10 +294,6 @@ private:
   ///                array index.
   bool CanTraceInto(bool SignExtended, bool ZeroExtended, BinaryOperator *BO,
                     bool NonNegative);
-
-  /// Analyze XOR instruction to extract disjoint constant bits that behave
-  /// like addition operations for improved address mode folding.
-  APInt extractDisjointBitsFromXor(BinaryOperator *XorInst);
 
   /// The path from the constant offset to the old GEP index. e.g., if the GEP
   /// index is "a * b + (c + 5)". After running function find, UserChain[0] will
@@ -384,14 +380,14 @@ private:
   /// \p Variadic                  The variadic part of the original GEP.
   /// \p AccumulativeByteOffset    The constant offset.
   void lowerToSingleIndexGEPs(GetElementPtrInst *Variadic,
-                              int64_t AccumulativeByteOffset);
+                              const APInt &AccumulativeByteOffset);
 
   /// Finds the constant offset within each index and accumulates them. If
   /// LowerGEP is true, it finds in indices of both sequential and structure
   /// types, otherwise it only finds in sequential indices. The output
   /// NeedsExtraction indicates whether we successfully find a non-zero constant
   /// offset.
-  int64_t accumulateByteOffset(GetElementPtrInst *GEP, bool &NeedsExtraction);
+  APInt accumulateByteOffset(GetElementPtrInst *GEP, bool &NeedsExtraction);
 
   /// Canonicalize array indices to pointer-size integers. This helps to
   /// simplify the logic of splitting a GEP. For example, if a + b is a
@@ -601,9 +597,6 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
     // Trace into subexpressions for more hoisting opportunities.
     if (CanTraceInto(SignExtended, ZeroExtended, BO, NonNegative))
       ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
-    // Handle XOR with disjoint bits that can be treated as addition.
-    else if (BO->getOpcode() == Instruction::Xor)
-      ConstantOffset = extractDisjointBitsFromXor(BO);
   } else if (isa<TruncInst>(V)) {
     ConstantOffset =
         find(U->getOperand(0), SignExtended, ZeroExtended, NonNegative)
@@ -723,20 +716,11 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   Value *NextInChain = removeConstOffset(ChainIndex - 1);
   Value *TheOther = BO->getOperand(1 - OpNo);
 
+  // If NextInChain is 0 and not the LHS of a sub, we can simplify the
+  // sub-expression to be just TheOther.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(NextInChain)) {
-    if (CI->isZero()) {
-      // Custom XOR handling for disjoint bits - preserves original XOR
-      // with non-disjoint constant bits.
-      // TODO: The design should be updated to support partial constant
-      // extraction.
-      if (BO->getOpcode() == Instruction::Xor)
-        return BO;
-
-      // If NextInChain is 0 and not the LHS of a sub, we can simplify the
-      // sub-expression to be just TheOther.
-      if (!(BO->getOpcode() == Instruction::Sub && OpNo == 0))
-        return TheOther;
-    }
+    if (CI->isZero() && !(BO->getOpcode() == Instruction::Sub && OpNo == 0))
+      return TheOther;
   }
 
   BinaryOperator::BinaryOps NewOp = BO->getOpcode();
@@ -765,67 +749,6 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   }
   NewBO->takeName(BO);
   return NewBO;
-}
-
-/// Analyze XOR instruction to extract disjoint constant bits for address
-/// folding
-///
-/// This function identifies bits in an XOR constant operand that are disjoint
-/// from the base operand's known set bits. For these disjoint bits, XOR behaves
-/// identically to addition, allowing us to extract them as constant offsets
-/// that can be folded into addressing modes.
-///
-/// Transformation: `Base ^ Const` becomes `(Base ^ NonDisjointBits) +
-/// DisjointBits` where DisjointBits = Const & KnownZeros(Base)
-///
-/// Example with ptr having known-zero low bit:
-///   Original: `xor %ptr, 3`    ; 3 = 0b11
-///   Analysis: DisjointBits = 3 & KnownZeros(%ptr) = 0b11 & 0b01 = 0b01
-///   Result:   `(xor %ptr, 2) + 1` where 1 can be folded into address mode
-///
-/// \param XorInst The XOR binary operator to analyze
-/// \return APInt containing the disjoint bits that can be extracted as offset,
-///         or zero if no disjoint bits exist
-APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
-    BinaryOperator *XorInst) {
-  assert(XorInst && XorInst->getOpcode() == Instruction::Xor &&
-         "Expected XOR instruction");
-
-  const unsigned BitWidth = XorInst->getType()->getScalarSizeInBits();
-  Value *BaseOperand;
-  ConstantInt *XorConstant;
-
-  // Match pattern: xor BaseOperand, Constant.
-  if (!match(XorInst, m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConstant))))
-    return APInt::getZero(BitWidth);
-
-  // Compute known bits for the base operand.
-  const SimplifyQuery SQ(DL);
-  const KnownBits BaseKnownBits = computeKnownBits(BaseOperand, SQ);
-  const APInt &ConstantValue = XorConstant->getValue();
-
-  // Identify disjoint bits: constant bits that are known zero in base.
-  const APInt DisjointBits = ConstantValue & BaseKnownBits.Zero;
-
-  // Early exit if no disjoint bits found.
-  if (DisjointBits.isZero())
-    return APInt::getZero(BitWidth);
-
-  // Compute the remaining non-disjoint bits that stay in the XOR.
-  const APInt NonDisjointBits = ConstantValue & ~DisjointBits;
-
-  // FIXME: Enhance XOR constant extraction to handle nested binary operations.
-  // Currently we only extract disjoint bits from the immediate XOR constant,
-  // but we could recursively process cases like:
-  //   xor (add %base, C1), C2  ->  add %base, (C1 ^ disjoint_bits(C2))
-  // This requires careful analysis to ensure the transformation preserves
-  // semantics, particularly around sign extension and overflow behavior.
-
-  // Add the non-disjoint constant to the user chain for later transformation
-  // This will replace the original constant in the XOR with the new
-  // constant.
-  UserChain.push_back(ConstantInt::get(XorInst->getType(), NonDisjointBits));
-  return DisjointBits;
 }
 
 /// A helper function to check if reassociating through an entry in the user
@@ -874,12 +797,11 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
   return IdxWithoutConstOffset;
 }
 
-int64_t ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP) {
+APInt ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP) {
   // If Idx is an index of an inbound GEP, Idx is guaranteed to be non-negative.
   return ConstantOffsetExtractor(GEP->getIterator())
       .find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
-            GEP->isInBounds())
-      .getSExtValue();
+            GEP->isInBounds());
 }
 
 bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
@@ -901,11 +823,11 @@ bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
   return Changed;
 }
 
-int64_t
-SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
-                                                 bool &NeedsExtraction) {
+APInt SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
+                                                       bool &NeedsExtraction) {
   NeedsExtraction = false;
-  int64_t AccumulativeByteOffset = 0;
+  unsigned IdxWidth = DL->getIndexTypeSizeInBits(GEP->getType());
+  APInt AccumulativeByteOffset(IdxWidth, 0);
   gep_type_iterator GTI = gep_type_begin(*GEP);
   for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I, ++GTI) {
     if (GTI.isSequential()) {
@@ -914,15 +836,18 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
         continue;
 
       // Tries to extract a constant offset from this GEP index.
-      int64_t ConstantOffset =
-          ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP);
+      APInt ConstantOffset =
+          ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP)
+              .sextOrTrunc(IdxWidth);
       if (ConstantOffset != 0) {
         NeedsExtraction = true;
         // A GEP may have multiple indices.  We accumulate the extracted
         // constant offset to a byte offset, and later offset the remainder of
         // the original GEP with this byte offset.
         AccumulativeByteOffset +=
-            ConstantOffset * GTI.getSequentialElementStride(*DL);
+            ConstantOffset * APInt(IdxWidth,
+                                   GTI.getSequentialElementStride(*DL),
+                                   /*IsSigned=*/true, /*ImplicitTrunc=*/true);
       }
     } else if (LowerGEP) {
       StructType *StTy = GTI.getStructType();
@@ -931,7 +856,8 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
       if (Field != 0) {
         NeedsExtraction = true;
         AccumulativeByteOffset +=
-            DL->getStructLayout(StTy)->getElementOffset(Field);
+            APInt(IdxWidth, DL->getStructLayout(StTy)->getElementOffset(Field),
+                  /*IsSigned=*/true, /*ImplicitTrunc=*/true);
       }
     }
   }
@@ -939,7 +865,7 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
 }
 
 void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
-    GetElementPtrInst *Variadic, int64_t AccumulativeByteOffset) {
+    GetElementPtrInst *Variadic, const APInt &AccumulativeByteOffset) {
   IRBuilder<> Builder(Variadic);
   Type *PtrIndexTy = DL->getIndexType(Variadic->getType());
 
@@ -983,7 +909,7 @@ void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
 
   // Create a GEP with the constant offset index.
   if (AccumulativeByteOffset != 0) {
-    Value *Offset = ConstantInt::getSigned(PtrIndexTy, AccumulativeByteOffset);
+    Value *Offset = ConstantInt::get(PtrIndexTy, AccumulativeByteOffset);
     ResultPtr = Builder.CreatePtrAdd(ResultPtr, Offset, "uglygep");
   } else
     isSwapCandidate = false;
@@ -1007,14 +933,14 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
     return false;
 
   bool NestedNeedsExtraction;
-  int64_t NestedByteOffset =
-      accumulateByteOffset(PtrGEP, NestedNeedsExtraction);
+  APInt NestedByteOffset = accumulateByteOffset(PtrGEP, NestedNeedsExtraction);
   if (!NestedNeedsExtraction)
     return false;
 
   unsigned AddrSpace = PtrGEP->getPointerAddressSpace();
   if (!TTI.isLegalAddressingMode(GEP->getResultElementType(),
-                                 /*BaseGV=*/nullptr, NestedByteOffset,
+                                 /*BaseGV=*/nullptr,
+                                 NestedByteOffset.getSExtValue(),
                                  /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace))
     return false;
 
@@ -1053,11 +979,12 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // offset from each is accumulated.
   Value *NewBase;
   const APInt *BaseOffset;
-  const bool ExtractBase =
-      match(GEP->getPointerOperand(),
-            m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
+  bool ExtractBase = match(GEP->getPointerOperand(),
+                           m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
 
-  const int64_t BaseByteOffset = ExtractBase ? BaseOffset->getSExtValue() : 0;
+  unsigned IdxWidth = DL->getIndexTypeSizeInBits(GEP->getType());
+  APInt BaseByteOffset =
+      ExtractBase ? BaseOffset->sextOrTrunc(IdxWidth) : APInt(IdxWidth, 0);
 
   // The backend can already nicely handle the case where all indices are
   // constant.
@@ -1067,8 +994,8 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   bool Changed = canonicalizeArrayIndicesToIndexSize(GEP);
 
   bool NeedsExtraction;
-  int64_t AccumulativeByteOffset =
-      BaseByteOffset + accumulateByteOffset(GEP, NeedsExtraction);
+  APInt NonBaseByteOffset = accumulateByteOffset(GEP, NeedsExtraction);
+  APInt AccumulativeByteOffset = BaseByteOffset + NonBaseByteOffset;
 
   TargetTransformInfo &TTI = GetTTI(*GEP->getFunction());
 
@@ -1086,16 +1013,30 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // case.
   if (!LowerGEP) {
     unsigned AddrSpace = GEP->getPointerAddressSpace();
-    if (!TTI.isLegalAddressingMode(GEP->getResultElementType(),
-                                   /*BaseGV=*/nullptr, AccumulativeByteOffset,
-                                   /*HasBaseReg=*/true, /*Scale=*/0,
-                                   AddrSpace)) {
-      return Changed;
+    if (!TTI.isLegalAddressingMode(
+            GEP->getResultElementType(),
+            /*BaseGV=*/nullptr, AccumulativeByteOffset.getSExtValue(),
+            /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace)) {
+      // If the addressing mode was not legal and the base byte offset was not
+      // 0, it could be a case where the total offset became too large for
+      // the addressing mode. Try again without extracting the base offset.
+      if (!ExtractBase)
+        return Changed;
+      ExtractBase = false;
+      BaseByteOffset = APInt(IdxWidth, 0);
+      AccumulativeByteOffset = NonBaseByteOffset;
+      if (!TTI.isLegalAddressingMode(
+              GEP->getResultElementType(),
+              /*BaseGV=*/nullptr, AccumulativeByteOffset.getSExtValue(),
+              /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace))
+        return Changed;
+      // We can proceed with just extracting the other (non-base) offsets.
+      NeedsExtraction = true;
     }
   }
 
   // Track information for preserving GEP flags.
-  bool AllOffsetsNonNegative = AccumulativeByteOffset >= 0;
+  bool AllOffsetsNonNegative = AccumulativeByteOffset.isNonNegative();
   bool AllNUWPreserved = GEP->hasNoUnsignedWrap();
   bool NewGEPInBounds = GEP->isInBounds();
   bool NewGEPNUSW = GEP->hasNoUnsignedSignedWrap();
@@ -1140,7 +1081,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
     AllNUWPreserved &= Base->hasNoUnsignedWrap();
     NewGEPInBounds &= Base->isInBounds();
     NewGEPNUSW &= Base->hasNoUnsignedSignedWrap();
-    AllOffsetsNonNegative &= BaseByteOffset >= 0;
+    AllOffsetsNonNegative &= BaseByteOffset.isNonNegative();
 
     GEP->setOperand(0, NewBase);
     RecursivelyDeleteTriviallyDeadInstructions(Base);
@@ -1225,7 +1166,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   Type *PtrIdxTy = DL->getIndexType(GEP->getType());
   IRBuilder<> Builder(GEP);
   NewGEP = cast<Instruction>(Builder.CreatePtrAdd(
-      NewGEP, ConstantInt::get(PtrIdxTy, AccumulativeByteOffset, true),
+      NewGEP, ConstantInt::get(PtrIdxTy, AccumulativeByteOffset),
       GEP->getName(), NewGEPFlags));
   NewGEP->copyMetadata(*GEP);
 

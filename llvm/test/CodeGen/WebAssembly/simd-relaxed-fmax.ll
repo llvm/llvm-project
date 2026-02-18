@@ -11,22 +11,176 @@ define <4 x float> @test_maxnum_f32x4(<4 x float> %a, <4 x float> %b) {
 ; CHECK:         .functype test_maxnum_f32x4 (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 3
+; CHECK-NEXT:    # fallthrough-return
+  %result = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %a, <4 x float> %b)
+  ret <4 x float> %result
+}
+
+define <4 x float> @test_maxnum_f32x4_nnan_nsz(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: test_maxnum_f32x4_nnan_nsz:
+; CHECK:         .functype test_maxnum_f32x4_nnan_nsz (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    f32x4.relaxed_max
 ; CHECK-NEXT:    # fallthrough-return
-  %result = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %a, <4 x float> %b)
+  %result = call nsz nnan <4 x float> @llvm.maxnum.v4f32(<4 x float> %a, <4 x float> %b)
   ret <4 x float> %result
 }
 
 define <4 x float> @test_maximumnum_f32x4(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: test_maximumnum_f32x4:
 ; CHECK:         .functype test_maximumnum_f32x4 (v128, v128) -> (v128)
+; CHECK-NEXT:    .local f32, f32, f32, f32, f32, f32, f32, f32
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    f32x4.splat
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    local.tee 5
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 5
+; CHECK-NEXT:    f32x4.replace_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    local.tee 6
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    local.tee 7
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 7
+; CHECK-NEXT:    f32x4.replace_lane 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    local.tee 8
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    local.tee 9
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 9
+; CHECK-NEXT:    f32x4.replace_lane 3
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f32.gt
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    f32x4.splat
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f32.gt
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    f32x4.replace_lane 1
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    local.get 6
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 7
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f32.gt
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    f32x4.replace_lane 2
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    local.get 8
+; CHECK-NEXT:    f32.ne
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 9
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f32.gt
+; CHECK-NEXT:    f32.select
+; CHECK-NEXT:    f32x4.replace_lane 3
+; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq
+; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    v128.const 0x0p0, 0x0p0, 0x0p0, 0x0p0
+; CHECK-NEXT:    f32x4.eq
+; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    # fallthrough-return
+  %result = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> %a, <4 x float> %b)
+  ret <4 x float> %result
+}
+
+define <4 x float> @test_maximumnum_f32x4_nsz_nnan(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: test_maximumnum_f32x4_nsz_nnan:
+; CHECK:         .functype test_maximumnum_f32x4_nsz_nnan (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    f32x4.relaxed_max
 ; CHECK-NEXT:    # fallthrough-return
-  %result = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> %a, <4 x float> %b)
+  %result = call nsz nnan <4 x float> @llvm.maximumnum.v4f32(<4 x float> %a, <4 x float> %b)
   ret <4 x float> %result
 }
 
@@ -35,22 +189,115 @@ define <2 x double> @test_maxnum_f64x2(<2 x double> %a, <2 x double> %b) {
 ; CHECK:         .functype test_maxnum_f64x2 (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    call fmax
+; CHECK-NEXT:    f64x2.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call fmax
+; CHECK-NEXT:    f64x2.replace_lane 1
 ; CHECK-NEXT:    # fallthrough-return
   %result = call <2 x double> @llvm.maxnum.v2f64(<2 x double> %a, <2 x double> %b)
   ret <2 x double> %result
 }
 
-define <2 x double> @test_minimumnum_f64x2(<2 x double> %a, <2 x double> %b) {
-; CHECK-LABEL: test_minimumnum_f64x2:
-; CHECK:         .functype test_minimumnum_f64x2 (v128, v128) -> (v128)
+define <2 x double> @test_maxnum_f64x2_nsz_nnan(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: test_maxnum_f64x2_nsz_nnan:
+; CHECK:         .functype test_maxnum_f64x2_nsz_nnan (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    f64x2.relaxed_max
 ; CHECK-NEXT:    # fallthrough-return
+  %result = call nsz nnan <2 x double> @llvm.maxnum.v2f64(<2 x double> %a, <2 x double> %b)
+  ret <2 x double> %result
+}
+
+
+define <2 x double> @test_maximumnum_f64x2(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: test_maximumnum_f64x2:
+; CHECK:         .functype test_maximumnum_f64x2 (v128, v128) -> (v128)
+; CHECK-NEXT:    .local f64, f64, f64, f64
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    f64.ne
+; CHECK-NEXT:    f64.select
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    f64x2.splat
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    local.tee 4
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    local.tee 5
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    f64.ne
+; CHECK-NEXT:    f64.select
+; CHECK-NEXT:    local.tee 5
+; CHECK-NEXT:    f64x2.replace_lane 1
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f64.ne
+; CHECK-NEXT:    f64.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f64.gt
+; CHECK-NEXT:    f64.select
+; CHECK-NEXT:    f64x2.splat
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    f64.ne
+; CHECK-NEXT:    f64.select
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 5
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    f64.gt
+; CHECK-NEXT:    f64.select
+; CHECK-NEXT:    f64x2.replace_lane 1
+; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.const 0, 0
+; CHECK-NEXT:    i64x2.eq
+; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    v128.const 0x0p0, 0x0p0
+; CHECK-NEXT:    f64x2.eq
+; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    # fallthrough-return
   %result = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> %a, <2 x double> %b)
+  ret <2 x double> %result
+}
+
+define <2 x double> @test_maximumnum_f64x2_nsz_nnan(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: test_maximumnum_f64x2_nsz_nnan:
+; CHECK:         .functype test_maximumnum_f64x2_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %result = call nsz nnan <2 x double> @llvm.maximumnum.v2f64(<2 x double> %a, <2 x double> %b)
   ret <2 x double> %result
 }
 
@@ -60,7 +307,7 @@ define <4 x float> @test_pmax_v4f32_olt(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    f32x4.pmax
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp olt <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -73,7 +320,7 @@ define <4 x float> @test_pmax_v4f32_ole(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    f32x4.pmax
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ole <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -86,7 +333,7 @@ define <4 x float> @test_pmax_v4f32_ogt(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    f32x4.pmax
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ogt <4 x float> %y, %x
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -99,7 +346,7 @@ define <4 x float> @test_pmax_v4f32_oge(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    f32x4.pmax
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp oge <4 x float> %y, %x
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -112,8 +359,29 @@ define <4 x float> @pmax_v4f32_fast_olt(<4 x float> %x, <4 x float> %y) {
 ; CHECK:         .functype pmax_v4f32_fast_olt (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 3
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast olt <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -127,7 +395,7 @@ define <4 x float> @test_pmax_v4f32_fast_ole(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    f32x4.pmax
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast ole <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -140,8 +408,29 @@ define <4 x float> @test_pmax_v4f32_fast_ogt(<4 x float> %x, <4 x float> %y) {
 ; CHECK:         .functype test_pmax_v4f32_fast_ogt (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 3
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast ogt <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %x, <4 x float> %y
@@ -155,16 +444,16 @@ define <4 x float> @test_pmax_v4f32_fast_oge(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    f32x4.pmax
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast oge <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %x, <4 x float> %y
   ret <4 x float> %a
 }
 
-define <4 x i32> @test_pmax_int_v4f32(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: test_pmax_int_v4f32:
-; CHECK:         .functype test_pmax_int_v4f32 (v128, v128) -> (v128)
+define <4 x i32> @test_pmax_int_v4f32_olt(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: test_pmax_int_v4f32_olt:
+; CHECK:         .functype test_pmax_int_v4f32_olt (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
@@ -183,7 +472,7 @@ define <2 x double> @test_pmax_v2f64_olt(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    f64x2.pmax
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp olt <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -196,7 +485,7 @@ define <2 x double> @test_pmax_v2f64_ole(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    f64x2.pmax
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ole <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -209,7 +498,7 @@ define <2 x double> @test_pmax_v2f64_ogt(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    f64x2.pmax
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ogt <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %x, <2 x double> %y
@@ -221,7 +510,7 @@ define <2 x double> @test_pmax_v2f64_oge(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    f64x2.pmax
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp oge <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %x, <2 x double> %y
@@ -234,8 +523,17 @@ define <2 x double> @pmax_v2f64_fast_olt(<2 x double> %x, <2 x double> %y) {
 ; CHECK:         .functype pmax_v2f64_fast_olt (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    call fmax
+; CHECK-NEXT:    f64x2.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call fmax
+; CHECK-NEXT:    f64x2.replace_lane 1
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast olt <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -249,7 +547,7 @@ define <2 x double> @test_pmax_v2f64_fast_ole(<2 x double> %x, <2 x double> %y) 
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    f64x2.pmax
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast ole <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -261,8 +559,17 @@ define <2 x double> @test_pmax_v2f64_fast_ogt(<2 x double> %x, <2 x double> %y) 
 ; CHECK:         .functype test_pmax_v2f64_fast_ogt (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    call fmax
+; CHECK-NEXT:    f64x2.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call fmax
+; CHECK-NEXT:    f64x2.replace_lane 1
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast ogt <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %x, <2 x double> %y
@@ -276,16 +583,16 @@ define <2 x double> @test_pmax_v2f64_fast_oge(<2 x double> %x, <2 x double> %y) 
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    f64x2.pmax
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast oge <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %x, <2 x double> %y
   ret <2 x double> %a
 }
 
-define <2 x i64> @test_pmax_int_v2f64(<2 x i64> %x, <2 x i64> %y) {
-; CHECK-LABEL: test_pmax_int_v2f64:
-; CHECK:         .functype test_pmax_int_v2f64 (v128, v128) -> (v128)
+define <2 x i64> @test_pmax_int_v2f64_olt(<2 x i64> %x, <2 x i64> %y) {
+; CHECK-LABEL: test_pmax_int_v2f64_olt:
+; CHECK:         .functype test_pmax_int_v2f64_olt (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
@@ -296,6 +603,643 @@ define <2 x i64> @test_pmax_int_v2f64(<2 x i64> %x, <2 x i64> %y) {
   %c = fcmp olt <2 x double> %fy, %fx
   %a = select <2 x i1> %c, <2 x i64> %x, <2 x i64> %y
   ret <2 x i64> %a
+}
+
+define <4 x float> @test_pmax_v4f32_ult(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_ult:
+; CHECK:         .functype test_pmax_v4f32_ult (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ult <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @test_pmax_v4f32_ule(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_ule:
+; CHECK:         .functype test_pmax_v4f32_ule (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ule <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @test_pmax_v4f32_ugt(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_ugt:
+; CHECK:         .functype test_pmax_v4f32_ugt (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ugt <4 x float> %y, %x
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @test_pmax_v4f32_uge(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_uge:
+; CHECK:         .functype test_pmax_v4f32_uge (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp uge <4 x float> %y, %x
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+; For setlt
+define <4 x float> @pmax_v4f32_fast_ult(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: pmax_v4f32_fast_ult:
+; CHECK:         .functype pmax_v4f32_fast_ult (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 3
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ult <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+; For setle
+define <4 x float> @test_pmax_v4f32_fast_ule(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_fast_ule:
+; CHECK:         .functype test_pmax_v4f32_fast_ule (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ule <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+; For setgt
+define <4 x float> @test_pmax_v4f32_fast_ugt(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_fast_ugt:
+; CHECK:         .functype test_pmax_v4f32_fast_ugt (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 0
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 1
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 2
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.extract_lane 3
+; CHECK-NEXT:    call fmaxf
+; CHECK-NEXT:    f32x4.replace_lane 3
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ugt <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %x, <4 x float> %y
+  ret <4 x float> %a
+}
+
+; For setge
+define <4 x float> @test_pmax_v4f32_fast_uge(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_fast_uge:
+; CHECK:         .functype test_pmax_v4f32_fast_uge (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast uge <4 x float> %x, %y
+  %a = select <4 x i1> %c, <4 x float> %x, <4 x float> %y
+  ret <4 x float> %a
+}
+
+define <4 x i32> @test_pmax_int_v4f32_ult(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: test_pmax_int_v4f32_ult:
+; CHECK:         .functype test_pmax_int_v4f32_ult (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.ge
+; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    # fallthrough-return
+  %fx = bitcast <4 x i32> %x to <4 x float>
+  %fy = bitcast <4 x i32> %y to <4 x float>
+  %c = fcmp ult <4 x float> %fy, %fx
+  %a = select <4 x i1> %c, <4 x i32> %x, <4 x i32> %y
+  ret <4 x i32> %a
+}
+
+define <2 x double> @test_pmax_v2f64_ult(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_ult:
+; CHECK:         .functype test_pmax_v2f64_ult (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ult <2 x double> %x, %y
+  %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
+  ret <2 x double> %a
+}
+
+define <2 x double> @test_pmax_v2f64_ule(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_ule:
+; CHECK:         .functype test_pmax_v2f64_ule (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ule <2 x double> %x, %y
+  %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
+  ret <2 x double> %a
+}
+
+define <2 x double> @test_pmax_v2f64_ugt(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_ugt:
+; CHECK:         .functype test_pmax_v2f64_ugt (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ugt <2 x double> %x, %y
+  %a = select <2 x i1> %c, <2 x double> %x, <2 x double> %y
+  ret <2 x double> %a
+}
+
+define <2 x double> @test_pmax_v2f64_uge(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_uge:
+; CHECK:         .functype test_pmax_v2f64_uge (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp uge <2 x double> %x, %y
+  %a = select <2 x i1> %c, <2 x double> %x, <2 x double> %y
+  ret <2 x double> %a
+}
+
+; For setlt
+define <2 x double> @pmax_v2f64_fast_ult(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: pmax_v2f64_fast_ult:
+; CHECK:         .functype pmax_v2f64_fast_ult (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    call fmax
+; CHECK-NEXT:    f64x2.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call fmax
+; CHECK-NEXT:    f64x2.replace_lane 1
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ult <2 x double> %x, %y
+  %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
+  ret <2 x double> %a
+}
+
+; For setle
+define <2 x double> @test_pmax_v2f64_fast_ule(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_fast_ule:
+; CHECK:         .functype test_pmax_v2f64_fast_ule (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ule <2 x double> %x, %y
+  %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
+  ret <2 x double> %a
+}
+; For setgt
+define <2 x double> @test_pmax_v2f64_fast_ugt(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_fast_ugt:
+; CHECK:         .functype test_pmax_v2f64_fast_ugt (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 0
+; CHECK-NEXT:    call fmax
+; CHECK-NEXT:    f64x2.splat
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.extract_lane 1
+; CHECK-NEXT:    call fmax
+; CHECK-NEXT:    f64x2.replace_lane 1
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ugt <2 x double> %x, %y
+  %a = select <2 x i1> %c, <2 x double> %x, <2 x double> %y
+  ret <2 x double> %a
+}
+
+; For setge
+define <2 x double> @test_pmax_v2f64_fast_uge(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_fast_uge:
+; CHECK:         .functype test_pmax_v2f64_fast_uge (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.pmax
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast uge <2 x double> %x, %y
+  %a = select <2 x i1> %c, <2 x double> %x, <2 x double> %y
+  ret <2 x double> %a
+}
+
+define <2 x i64> @test_pmax_int_v2f64_ult(<2 x i64> %x, <2 x i64> %y) {
+; CHECK-LABEL: test_pmax_int_v2f64_ult:
+; CHECK:         .functype test_pmax_int_v2f64_ult (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f64x2.ge
+; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    # fallthrough-return
+  %fx = bitcast <2 x i64> %x to <2 x double>
+  %fy = bitcast <2 x i64> %y to <2 x double>
+  %c = fcmp ult <2 x double> %fy, %fx
+  %a = select <2 x i1> %c, <2 x i64> %x, <2 x i64> %y
+  ret <2 x i64> %a
+}
+
+define <4 x float> @test_pmax_v4f32_olt_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_olt_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_olt_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp olt <4 x float> %x, %y
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @test_pmax_v4f32_ole_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_ole_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_ole_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ole <4 x float> %x, %y
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @test_pmax_v4f32_ogt_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_ogt_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_ogt_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ogt <4 x float> %y, %x
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @test_pmax_v4f32_oge_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_oge_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_oge_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp oge <4 x float> %y, %x
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+; For setlt
+define <4 x float> @pmax_v4f32_fast_olt_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: pmax_v4f32_fast_olt_nsz_nnan:
+; CHECK:         .functype pmax_v4f32_fast_olt_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast olt <4 x float> %x, %y
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+; For setle
+define <4 x float> @test_pmax_v4f32_fast_ole_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_fast_ole_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_fast_ole_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ole <4 x float> %x, %y
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+; For setgt
+define <4 x float> @test_pmax_v4f32_fast_ogt_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_fast_ogt_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_fast_ogt_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ogt <4 x float> %x, %y
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %x, <4 x float> %y
+  ret <4 x float> %a
+}
+
+; For setge
+define <4 x float> @test_pmax_v4f32_fast_oge_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_fast_oge_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_fast_oge_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast oge <4 x float> %x, %y
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %x, <4 x float> %y
+  ret <4 x float> %a
+}
+
+; For setlt
+define <2 x double> @pmax_v2f64_fast_olt_nsz_nnan(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: pmax_v2f64_fast_olt_nsz_nnan:
+; CHECK:         .functype pmax_v2f64_fast_olt_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast olt <2 x double> %x, %y
+  %a = select nsz nnan <2 x i1> %c, <2 x double> %y, <2 x double> %x
+  ret <2 x double> %a
+}
+
+; For setle
+define <2 x double> @test_pmax_v2f64_fast_ole_nsz_nnan(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_fast_ole_nsz_nnan:
+; CHECK:         .functype test_pmax_v2f64_fast_ole_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ole <2 x double> %x, %y
+  %a = select nsz nnan <2 x i1> %c, <2 x double> %y, <2 x double> %x
+  ret <2 x double> %a
+}
+; For setgt
+define <2 x double> @test_pmax_v2f64_fast_ogt_nsz_nnan(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_fast_ogt_nsz_nnan:
+; CHECK:         .functype test_pmax_v2f64_fast_ogt_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ogt <2 x double> %x, %y
+  %a = select nsz nnan <2 x i1> %c, <2 x double> %x, <2 x double> %y
+  ret <2 x double> %a
+}
+
+; For setge
+define <2 x double> @test_pmax_v2f64_fast_oge_nsz_nnan(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_fast_oge_nsz_nnan:
+; CHECK:         .functype test_pmax_v2f64_fast_oge_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast oge <2 x double> %x, %y
+  %a = select nsz nnan <2 x i1> %c, <2 x double> %x, <2 x double> %y
+  ret <2 x double> %a
+}
+
+define <4 x float> @test_pmax_v4f32_ult_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_ult_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_ult_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ult <4 x float> %x, %y
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @test_pmax_v4f32_ule_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_ule_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_ule_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ule <4 x float> %x, %y
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @test_pmax_v4f32_ugt_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_ugt_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_ugt_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp ugt <4 x float> %y, %x
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+define <4 x float> @test_pmax_v4f32_uge_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_uge_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_uge_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp uge <4 x float> %y, %x
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+; For setlt
+define <4 x float> @pmax_v4f32_fast_ult_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: pmax_v4f32_fast_ult_nsz_nnan:
+; CHECK:         .functype pmax_v4f32_fast_ult_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ult <4 x float> %x, %y
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+; For setle
+define <4 x float> @test_pmax_v4f32_fast_ule_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_fast_ule_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_fast_ule_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ule <4 x float> %x, %y
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %y, <4 x float> %x
+  ret <4 x float> %a
+}
+
+; For setgt
+define <4 x float> @test_pmax_v4f32_fast_ugt_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_fast_ugt_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_fast_ugt_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ugt <4 x float> %x, %y
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %x, <4 x float> %y
+  ret <4 x float> %a
+}
+
+; For setge
+define <4 x float> @test_pmax_v4f32_fast_uge_nsz_nnan(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: test_pmax_v4f32_fast_uge_nsz_nnan:
+; CHECK:         .functype test_pmax_v4f32_fast_uge_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f32x4.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast uge <4 x float> %x, %y
+  %a = select nsz nnan <4 x i1> %c, <4 x float> %x, <4 x float> %y
+  ret <4 x float> %a
+}
+
+; For setlt
+define <2 x double> @pmax_v2f64_fast_ult_nsz_nnan(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: pmax_v2f64_fast_ult_nsz_nnan:
+; CHECK:         .functype pmax_v2f64_fast_ult_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ult <2 x double> %x, %y
+  %a = select nsz nnan <2 x i1> %c, <2 x double> %y, <2 x double> %x
+  ret <2 x double> %a
+}
+
+; For setle
+define <2 x double> @test_pmax_v2f64_fast_ule_nsz_nnan(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_fast_ule_nsz_nnan:
+; CHECK:         .functype test_pmax_v2f64_fast_ule_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ule <2 x double> %x, %y
+  %a = select nsz nnan <2 x i1> %c, <2 x double> %y, <2 x double> %x
+  ret <2 x double> %a
+}
+; For setgt
+define <2 x double> @test_pmax_v2f64_fast_ugt_nsz_nnan(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_fast_ugt_nsz_nnan:
+; CHECK:         .functype test_pmax_v2f64_fast_ugt_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast ugt <2 x double> %x, %y
+  %a = select nsz nnan <2 x i1> %c, <2 x double> %x, <2 x double> %y
+  ret <2 x double> %a
+}
+
+; For setge
+define <2 x double> @test_pmax_v2f64_fast_uge_nsz_nnan(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: test_pmax_v2f64_fast_uge_nsz_nnan:
+; CHECK:         .functype test_pmax_v2f64_fast_uge_nsz_nnan (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    f64x2.relaxed_max
+; CHECK-NEXT:    # fallthrough-return
+  %c = fcmp fast uge <2 x double> %x, %y
+  %a = select nsz nnan <2 x i1> %c, <2 x double> %x, <2 x double> %y
+  ret <2 x double> %a
 }
 
 declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>)

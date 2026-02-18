@@ -70,19 +70,19 @@ static inline LogicalResult interleaveCommaWithError(const Container &c,
 /// imply higher precedence.
 static FailureOr<int> getOperatorPrecedence(Operation *operation) {
   return llvm::TypeSwitch<Operation *, FailureOr<int>>(operation)
-      .Case<emitc::AddressOfOp>([&](auto op) { return 15; })
-      .Case<emitc::AddOp>([&](auto op) { return 12; })
-      .Case<emitc::ApplyOp>([&](auto op) { return 15; })
-      .Case<emitc::BitwiseAndOp>([&](auto op) { return 7; })
-      .Case<emitc::BitwiseLeftShiftOp>([&](auto op) { return 11; })
-      .Case<emitc::BitwiseNotOp>([&](auto op) { return 15; })
-      .Case<emitc::BitwiseOrOp>([&](auto op) { return 5; })
-      .Case<emitc::BitwiseRightShiftOp>([&](auto op) { return 11; })
-      .Case<emitc::BitwiseXorOp>([&](auto op) { return 6; })
-      .Case<emitc::CallOp>([&](auto op) { return 16; })
-      .Case<emitc::CallOpaqueOp>([&](auto op) { return 16; })
-      .Case<emitc::CastOp>([&](auto op) { return 15; })
-      .Case<emitc::CmpOp>([&](auto op) -> FailureOr<int> {
+      .Case([&](emitc::AddressOfOp op) { return 15; })
+      .Case([&](emitc::AddOp op) { return 12; })
+      .Case([&](emitc::ApplyOp op) { return 15; })
+      .Case([&](emitc::BitwiseAndOp op) { return 7; })
+      .Case([&](emitc::BitwiseLeftShiftOp op) { return 11; })
+      .Case([&](emitc::BitwiseNotOp op) { return 15; })
+      .Case([&](emitc::BitwiseOrOp op) { return 5; })
+      .Case([&](emitc::BitwiseRightShiftOp op) { return 11; })
+      .Case([&](emitc::BitwiseXorOp op) { return 6; })
+      .Case([&](emitc::CallOp op) { return 16; })
+      .Case([&](emitc::CallOpaqueOp op) { return 16; })
+      .Case([&](emitc::CastOp op) { return 15; })
+      .Case([&](emitc::CmpOp op) -> FailureOr<int> {
         switch (op.getPredicate()) {
         case emitc::CmpPredicate::eq:
         case emitc::CmpPredicate::ne:
@@ -97,18 +97,18 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
         }
         return op->emitError("unsupported cmp predicate");
       })
-      .Case<emitc::ConditionalOp>([&](auto op) { return 2; })
-      .Case<emitc::ConstantOp>([&](auto op) { return 17; })
-      .Case<emitc::DivOp>([&](auto op) { return 13; })
-      .Case<emitc::LoadOp>([&](auto op) { return 16; })
-      .Case<emitc::LogicalAndOp>([&](auto op) { return 4; })
-      .Case<emitc::LogicalNotOp>([&](auto op) { return 15; })
-      .Case<emitc::LogicalOrOp>([&](auto op) { return 3; })
-      .Case<emitc::MulOp>([&](auto op) { return 13; })
-      .Case<emitc::RemOp>([&](auto op) { return 13; })
-      .Case<emitc::SubOp>([&](auto op) { return 12; })
-      .Case<emitc::UnaryMinusOp>([&](auto op) { return 15; })
-      .Case<emitc::UnaryPlusOp>([&](auto op) { return 15; })
+      .Case([&](emitc::ConditionalOp op) { return 2; })
+      .Case([&](emitc::ConstantOp op) { return 17; })
+      .Case([&](emitc::DivOp op) { return 13; })
+      .Case([&](emitc::LoadOp op) { return 16; })
+      .Case([&](emitc::LogicalAndOp op) { return 4; })
+      .Case([&](emitc::LogicalNotOp op) { return 15; })
+      .Case([&](emitc::LogicalOrOp op) { return 3; })
+      .Case([&](emitc::MulOp op) { return 13; })
+      .Case([&](emitc::RemOp op) { return 13; })
+      .Case([&](emitc::SubOp op) { return 12; })
+      .Case([&](emitc::UnaryMinusOp op) { return 15; })
+      .Case([&](emitc::UnaryPlusOp op) { return 15; })
       .Default([](auto op) { return op->emitError("unsupported operation"); });
 }
 
@@ -1835,7 +1835,7 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   LogicalResult status =
       llvm::TypeSwitch<Operation *, LogicalResult>(&op)
           // Builtin ops.
-          .Case<ModuleOp>([&](auto op) { return printOperation(*this, op); })
+          .Case([&](ModuleOp op) { return printOperation(*this, op); })
           // CF ops.
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })

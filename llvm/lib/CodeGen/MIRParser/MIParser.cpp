@@ -452,7 +452,7 @@ public:
   bool parseVirtualRegister(VRegInfo *&Info);
   bool parseNamedVirtualRegister(VRegInfo *&Info);
   bool parseRegister(Register &Reg, VRegInfo *&VRegInfo);
-  bool parseRegisterFlag(unsigned &Flags);
+  bool parseRegisterFlag(RegState &Flags);
   bool parseRegisterClassOrBank(VRegInfo &RegInfo);
   bool parseSubRegisterIndex(unsigned &SubReg);
   bool parseRegisterTiedDefIndex(unsigned &TiedDefIdx);
@@ -523,6 +523,7 @@ public:
   bool parsePreOrPostInstrSymbol(MCSymbol *&Symbol);
   bool parseHeapAllocMarker(MDNode *&Node);
   bool parsePCSections(MDNode *&Node);
+  bool parseMMRA(MDNode *&Node);
 
   bool parseTargetImmMnemonic(const unsigned OpCode, const unsigned OpIdx,
                               MachineOperand &Dest, const MIRFormatter &MF);
@@ -719,6 +720,7 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsLandingPad = false;
   bool IsInlineAsmBrIndirectTarget = false;
   bool IsEHFuncletEntry = false;
+  bool IsEHScopeEntry = false;
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
   std::optional<UniqueBBID> BBID;
@@ -746,6 +748,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_ehfunclet_entry:
         IsEHFuncletEntry = true;
+        lex();
+        break;
+      case MIToken::kw_ehscope_entry:
+        IsEHScopeEntry = true;
         lex();
         break;
       case MIToken::kw_align:
@@ -804,6 +810,7 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsEHPad(IsLandingPad);
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
+  MBB->setIsEHScopeEntry(IsEHScopeEntry);
   if (SectionID) {
     MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
@@ -952,8 +959,9 @@ bool MIParser::parseBasicBlock(MachineBasicBlock &MBB,
         return true;
     } else if (consumeIfPresent(MIToken::Newline)) {
       continue;
-    } else
+    } else {
       break;
+    }
     if (!Token.isNewlineOrEOF())
       return error("expected line break at the end of a list");
     lex();
@@ -1071,7 +1079,7 @@ bool MIParser::parse(MachineInstr *&MI) {
   while (!Token.isNewlineOrEOF() && Token.isNot(MIToken::kw_pre_instr_symbol) &&
          Token.isNot(MIToken::kw_post_instr_symbol) &&
          Token.isNot(MIToken::kw_heap_alloc_marker) &&
-         Token.isNot(MIToken::kw_pcsections) &&
+         Token.isNot(MIToken::kw_pcsections) && Token.isNot(MIToken::kw_mmra) &&
          Token.isNot(MIToken::kw_cfi_type) &&
          Token.isNot(MIToken::kw_deactivation_symbol) &&
          Token.isNot(MIToken::kw_debug_location) &&
@@ -1107,7 +1115,9 @@ bool MIParser::parse(MachineInstr *&MI) {
   if (Token.is(MIToken::kw_pcsections))
     if (parsePCSections(PCSections))
       return true;
-
+  MDNode *MMRA = nullptr;
+  if (Token.is(MIToken::kw_mmra) && parseMMRA(MMRA))
+    return true;
   unsigned CFIType = 0;
   if (Token.is(MIToken::kw_cfi_type)) {
     lex();
@@ -1153,8 +1163,9 @@ bool MIParser::parse(MachineInstr *&MI) {
     } else if (Token.is(MIToken::md_dilocation)) {
       if (parseDILocation(Node))
         return true;
-    } else
+    } else {
       return error("expected a metadata node after 'debug-location'");
+    }
     if (!isa<DILocation>(Node))
       return error("referenced metadata is not a DILocation");
     DebugLocation = DebugLoc(Node);
@@ -1204,6 +1215,8 @@ bool MIParser::parse(MachineInstr *&MI) {
     MI->setHeapAllocMarker(MF, HeapAllocMarker);
   if (PCSections)
     MI->setPCSections(MF, PCSections);
+  if (MMRA)
+    MI->setMMRAMetadata(MF, MMRA);
   if (CFIType)
     MI->setCFIType(MF, CFIType);
   if (DS)
@@ -1290,8 +1303,9 @@ bool MIParser::parseStandaloneMDNode(MDNode *&Node) {
   } else if (Token.is(MIToken::md_dilocation)) {
     if (parseDILocation(Node))
       return true;
-  } else
+  } else {
     return error("expected a metadata node");
+  }
   if (Token.isNot(MIToken::Eof))
     return error("expected end of string after the metadata node");
   return false;
@@ -1652,8 +1666,8 @@ bool MIParser::parseRegisterClassOrBank(VRegInfo &RegInfo) {
   llvm_unreachable("Unexpected register kind");
 }
 
-bool MIParser::parseRegisterFlag(unsigned &Flags) {
-  const unsigned OldFlags = Flags;
+bool MIParser::parseRegisterFlag(RegState &Flags) {
+  const RegState OldFlags = Flags;
   switch (Token.kind()) {
   case MIToken::kw_implicit:
     Flags |= RegState::Implicit;
@@ -1710,16 +1724,14 @@ bool MIParser::parseSubRegisterIndex(unsigned &SubReg) {
 }
 
 bool MIParser::parseRegisterTiedDefIndex(unsigned &TiedDefIdx) {
-  if (!consumeIfPresent(MIToken::kw_tied_def))
-    return true;
+  assert(Token.is(MIToken::kw_tied_def));
+  lex();
   if (Token.isNot(MIToken::IntegerLiteral))
     return error("expected an integer literal after 'tied-def'");
   if (getUnsigned(TiedDefIdx))
     return true;
   lex();
-  if (expectAndConsume(MIToken::rparen))
-    return true;
-  return false;
+  return expectAndConsume(MIToken::rparen);
 }
 
 bool MIParser::assignRegisterTies(MachineInstr &MI,
@@ -1762,11 +1774,13 @@ bool MIParser::assignRegisterTies(MachineInstr &MI,
 bool MIParser::parseRegisterOperand(MachineOperand &Dest,
                                     std::optional<unsigned> &TiedDefIdx,
                                     bool IsDef) {
-  unsigned Flags = IsDef ? RegState::Define : 0;
+  RegState Flags = getDefRegState(IsDef);
   while (Token.isRegisterFlag()) {
     if (parseRegisterFlag(Flags))
       return true;
   }
+  // Update IsDef as we may have read a def flag.
+  IsDef = hasRegState(Flags, RegState::Define);
   if (!Token.isRegister())
     return error("expected a register after register flags");
   Register Reg;
@@ -1788,68 +1802,61 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     if (parseRegisterClassOrBank(*RegInfo))
         return true;
   }
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  if ((Flags & RegState::Define) == 0) {
-    if (consumeIfPresent(MIToken::lparen)) {
+
+  if (consumeIfPresent(MIToken::lparen)) {
+    // For a def, we only expect a type. For use we expect either a type or a
+    // tied-def. Additionally, for physical registers, we don't expect a type.
+    if (Token.is(MIToken::kw_tied_def)) {
+      if (IsDef)
+        return error("tied-def not supported for defs");
       unsigned Idx;
-      if (!parseRegisterTiedDefIndex(Idx))
-        TiedDefIdx = Idx;
-      else {
-        // Try a redundant low-level type.
-        LLT Ty;
-        if (parseLowLevelType(Token.location(), Ty))
-          return error("expected tied-def or low-level type after '('");
+      if (parseRegisterTiedDefIndex(Idx))
+        return true;
+      TiedDefIdx = Idx;
+    } else {
+      if (!Reg.isVirtual())
+        return error("unexpected type on physical register");
 
-        if (expectAndConsume(MIToken::rparen))
-          return true;
+      LLT Ty;
+      // If type parsing fails, forwad the parse error for defs.
+      if (parseLowLevelType(Token.location(), Ty))
+        return IsDef ? true
+                     : error("expected tied-def or low-level type after '('");
 
-        if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
-          return error("inconsistent type for generic virtual register");
+      if (expectAndConsume(MIToken::rparen))
+        return true;
 
-        MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
-        MRI.setType(Reg, Ty);
-        MRI.noteNewVirtualRegister(Reg);
-      }
+      MachineRegisterInfo &MRI = MF.getRegInfo();
+      if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
+        return error("inconsistent type for generic virtual register");
+
+      MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
+      MRI.setType(Reg, Ty);
+      MRI.noteNewVirtualRegister(Reg);
     }
-  } else if (consumeIfPresent(MIToken::lparen)) {
-    // Virtual registers may have a tpe with GlobalISel.
-    if (!Reg.isVirtual())
-      return error("unexpected type on physical register");
-
-    LLT Ty;
-    if (parseLowLevelType(Token.location(), Ty))
-      return true;
-
-    if (expectAndConsume(MIToken::rparen))
-      return true;
-
-    if (MRI.getType(Reg).isValid() && MRI.getType(Reg) != Ty)
-      return error("inconsistent type for generic virtual register");
-
-    MRI.setRegClassOrRegBank(Reg, static_cast<RegisterBank *>(nullptr));
-    MRI.setType(Reg, Ty);
-  } else if (Reg.isVirtual()) {
-    // Generic virtual registers must have a type.
-    // If we end up here this means the type hasn't been specified and
-    // this is bad!
+  } else if (IsDef && Reg.isVirtual()) {
+    // Generic virtual registers defs must have a type.
     if (RegInfo->Kind == VRegInfo::GENERIC ||
         RegInfo->Kind == VRegInfo::REGBANK)
       return error("generic virtual registers must have a type");
   }
 
-  if (Flags & RegState::Define) {
-    if (Flags & RegState::Kill)
+  if (IsDef) {
+    if (hasRegState(Flags, RegState::Kill))
       return error("cannot have a killed def operand");
   } else {
-    if (Flags & RegState::Dead)
+    if (hasRegState(Flags, RegState::Dead))
       return error("cannot have a dead use operand");
   }
 
   Dest = MachineOperand::CreateReg(
-      Reg, Flags & RegState::Define, Flags & RegState::Implicit,
-      Flags & RegState::Kill, Flags & RegState::Dead, Flags & RegState::Undef,
-      Flags & RegState::EarlyClobber, SubReg, Flags & RegState::Debug,
-      Flags & RegState::InternalRead, Flags & RegState::Renamable);
+      Reg, IsDef, hasRegState(Flags, RegState::Implicit),
+      hasRegState(Flags, RegState::Kill), hasRegState(Flags, RegState::Dead),
+      hasRegState(Flags, RegState::Undef),
+      hasRegState(Flags, RegState::EarlyClobber), SubReg,
+      hasRegState(Flags, RegState::Debug),
+      hasRegState(Flags, RegState::InternalRead),
+      hasRegState(Flags, RegState::Renamable));
 
   return false;
 }
@@ -2024,8 +2031,9 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
       return error("invalid address space number");
 
     Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
-  } else
+  } else {
     return GetError();
+  }
   lex();
 
   if (Token.isNot(MIToken::greater))
@@ -2401,8 +2409,9 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
           } else if (Token.is(MIToken::md_dilocation)) {
             if (parseDILocation(InlinedAt))
               return true;
-          } else
+          } else {
             return error("expected metadata node");
+          }
           if (!isa<DILocation>(InlinedAt))
             return error("expected DILocation node");
           continue;
@@ -2793,8 +2802,9 @@ bool MIParser::parseShuffleMaskOperand(MachineOperand &Dest) {
     } else if (Token.is(MIToken::IntegerLiteral)) {
       const APSInt &Int = Token.integerValue();
       ShufMask.push_back(Int.getExtValue());
-    } else
+    } else {
       return error("expected integer constant");
+    }
 
     lex();
   } while (consumeIfPresent(MIToken::comma));
@@ -3032,8 +3042,9 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
       break;
     } else if (Token.stringValue() == "CustomRegMask") {
       return parseCustomRegisterMaskOperand(Dest);
-    } else
+    } else {
       return parseTypedImmediateOperand(Dest);
+    }
   case MIToken::dot: {
     const auto *TII = MF.getSubtarget().getInstrInfo();
     if (const auto *Formatter = TII->getMIRFormatter()) {
@@ -3320,8 +3331,9 @@ bool MIParser::parseMemoryPseudoSourceValue(const PseudoSourceValue *&PSV) {
                 return error(Loc, Msg);
               }))
         return true;
-    } else
+    } else {
       return error("unable to parse target custom pseudo source value");
+    }
     break;
   }
   default:
@@ -3595,6 +3607,20 @@ bool MIParser::parsePCSections(MDNode *&Node) {
     return true;
   if (!Node)
     return error("expected a MDNode after 'pcsections'");
+  if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
+      Token.is(MIToken::lbrace))
+    return false;
+  if (Token.isNot(MIToken::comma))
+    return error("expected ',' before the next machine operand");
+  lex();
+  return false;
+}
+
+bool MIParser::parseMMRA(MDNode *&Node) {
+  assert(Token.is(MIToken::kw_mmra) && "Invalid token for MMRA!");
+  lex();
+  if (parseMDNode(Node))
+    return true;
   if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
       Token.is(MIToken::lbrace))
     return false;

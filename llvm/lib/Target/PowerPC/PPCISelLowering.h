@@ -212,8 +212,6 @@ namespace llvm {
 
     bool useSoftFloat() const override;
 
-    bool softPromoteHalfType() const override { return true; }
-
     bool hasSPE() const;
 
     MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
@@ -354,10 +352,10 @@ namespace llvm {
     bool shouldInlineQuadwordAtomics() const;
 
     TargetLowering::AtomicExpansionKind
-    shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
     TargetLowering::AtomicExpansionKind
-    shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+    shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
     Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder,
                                         AtomicRMWInst *AI, Value *AlignedAddr,
@@ -494,8 +492,8 @@ namespace llvm {
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                            MachineFunction &MF,
+    void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                            const CallBase &I, MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
     /// It returns EVT::Other if the type should be determined using generic
@@ -537,8 +535,10 @@ namespace llvm {
 
     /// createFastISel - This method returns a target-specific FastISel object,
     /// or null if the target does not support "fast" instruction selection.
-    FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
-                             const TargetLibraryInfo *LibInfo) const override;
+    FastISel *
+    createFastISel(FunctionLoweringInfo &FuncInfo,
+                   const TargetLibraryInfo *LibInfo,
+                   const LibcallLoweringInfo *LibcallLowering) const override;
 
     /// Returns true if an argument of type Ty needs to be passed in a
     /// contiguous block of registers in calling convention CallConv.
@@ -890,7 +890,8 @@ namespace llvm {
     SDValue getRecipEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                              int &RefinementSteps) const override;
     SDValue getSqrtInputTest(SDValue Operand, SelectionDAG &DAG,
-                             const DenormalMode &Mode) const override;
+                             const DenormalMode &Mode,
+                             SDNodeFlags Flags = {}) const override;
     SDValue getSqrtResultForDenormInput(SDValue Operand,
                                         SelectionDAG &DAG) const override;
     unsigned combineRepeatedFPDivisors() const override;
@@ -937,8 +938,9 @@ namespace llvm {
 
   namespace PPC {
 
-    FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
-                             const TargetLibraryInfo *LibInfo);
+  FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
+                           const TargetLibraryInfo *LibInfo,
+                           const LibcallLoweringInfo *LibcallLowering);
 
   } // end namespace PPC
 

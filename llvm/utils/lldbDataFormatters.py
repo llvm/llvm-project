@@ -63,6 +63,11 @@ def __lldb_init_module(debugger, internal_dict):
         '-x "^llvm::PointerIntPair<.+>$"'
     )
     debugger.HandleCommand(
+        "type synthetic add -w llvm "
+        f"-l {__name__}.PointerUnionSynthProvider "
+        '-x "^llvm::PointerUnion<.+>$"'
+    )
+    debugger.HandleCommand(
         "type summary add -w llvm "
         f"-e -F {__name__}.DenseMapSummary "
         '-x "^llvm::DenseMap<.+>$"'
@@ -319,6 +324,56 @@ class PointerIntPairSynthProvider:
         )
 
 
+class PointerUnionSynthProvider:
+    def __init__(self, valobj, internal_dict):
+        self.valobj = valobj
+        self.update()
+
+    def num_children(self):
+        return 1
+
+    def get_child_index(self, name):
+        if name == "Pointer":
+            return 0
+        return None
+
+    def get_child_at_index(self, index):
+        if index != 0:
+            return None
+
+        return self.pointer_valobj
+
+    def update(self):
+        pointer_int_pair: SBValue = self.valobj.GetChildMemberWithName(
+            "Val"
+        ).GetSyntheticValue()
+
+        if not pointer_int_pair:
+            return
+
+        pointer: SBValue = pointer_int_pair.GetChildAtIndex(0)
+        if not pointer:
+            return
+
+        active_tag: SBValue = pointer_int_pair.GetChildAtIndex(1)
+        if not active_tag:
+            return
+
+        # Index into the parameter pack of llvm::PointerUnion to find the active type.
+        active_type: SBType = self.valobj.GetType().GetTemplateArgumentType(
+            active_tag.GetValueAsUnsigned()
+        )
+        if not active_type:
+            return
+
+        data = lldb.SBData()
+        data.SetDataFromUInt64Array([pointer.GetValueAsUnsigned()])
+
+        self.pointer_valobj = self.valobj.CreateValueFromData(
+            "Pointer", data, active_type
+        )
+
+
 def DenseMapSummary(valobj: lldb.SBValue, _) -> str:
     raw_value = valobj.GetNonSyntheticValue()
     num_entries = raw_value.GetChildMemberWithName("NumEntries").unsigned
@@ -433,8 +488,21 @@ class ExpectedSynthetic:
         # Anonymous union.
         union = self.expected.child[0]
         storage = union.GetChildMemberWithName(member)
-        stored_type = storage.type.template_args[0]
-        self.stored_value = storage.Cast(stored_type).Clone(name)
+        # For reference types, storage is std::reference_wrapper<T>, so we
+        # unwrap to get T. For non-reference types, storage is T directly.
+        # Use GetCanonicalType() to resolve the typedef to the underlying type.
+        canonical_type_name = storage.type.GetCanonicalType().name
+        if "reference_wrapper<" in canonical_type_name:
+            # reference_wrapper<T> stores a T* pointer to the referenced value.
+            # Get the first child (the pointer member) and dereference it.
+            ptr_member = storage.GetChildAtIndex(0)
+            if ptr_member and ptr_member.IsValid() and ptr_member.type.IsPointerType():
+                self.stored_value = ptr_member.Dereference().Clone(name)
+            else:
+                # Fallback: just use storage as-is.
+                self.stored_value = storage.Clone(name)
+        else:
+            self.stored_value = storage.Clone(name)
 
     def num_children(self) -> int:
         return 1

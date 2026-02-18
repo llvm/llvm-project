@@ -25,6 +25,7 @@
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
 using namespace clang;
@@ -395,6 +396,12 @@ struct PragmaMaxTokensTotalHandler : public PragmaHandler {
                     Token &FirstToken) override;
 };
 
+struct PragmaExportHandler : public PragmaHandler {
+  explicit PragmaExportHandler() : PragmaHandler("export") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
 struct PragmaRISCVHandler : public PragmaHandler {
   PragmaRISCVHandler(Sema &Actions)
       : PragmaHandler("riscv"), Actions(Actions) {}
@@ -558,6 +565,11 @@ void Parser::initializePragmaHandlers() {
   MaxTokensTotalPragmaHandler = std::make_unique<PragmaMaxTokensTotalHandler>();
   PP.AddPragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
 
+  if (getLangOpts().ZOSExt) {
+    ExportHandler = std::make_unique<PragmaExportHandler>();
+    PP.AddPragmaHandler(ExportHandler.get());
+  }
+
   if (getTargetInfo().getTriple().isRISCV()) {
     RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
     PP.AddPragmaHandler("clang", RISCVPragmaHandler.get());
@@ -691,6 +703,11 @@ void Parser::resetPragmaHandlers() {
 
   PP.RemovePragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
   MaxTokensTotalPragmaHandler.reset();
+
+  if (getLangOpts().ZOSExt) {
+    PP.RemovePragmaHandler(ExportHandler.get());
+    ExportHandler.reset();
+  }
 
   if (getTargetInfo().getTriple().isRISCV()) {
     PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
@@ -1384,6 +1401,74 @@ bool Parser::HandlePragmaMSAllocText(StringRef PragmaName,
 
   Actions.ActOnPragmaMSAllocText(FirstTok.getLocation(), Section, Functions);
   return true;
+}
+
+void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
+  assert(Tok.is(PragmaKind));
+
+  StringRef PragmaName = "export";
+
+  using namespace clang::charinfo;
+  auto *TheTokens = static_cast<std::pair<std::unique_ptr<Token[]>, size_t> *>(
+      Tok.getAnnotationValue());
+  PP.EnterTokenStream(std::move(TheTokens->first), TheTokens->second, true,
+                      /*IsReinject=*/true);
+  Tok.setAnnotationValue(nullptr);
+  ConsumeAnnotationToken();
+
+  llvm::scope_exit OnReturn([this]() {
+    while (Tok.isNot(tok::eof))
+      PP.Lex(Tok);
+    PP.Lex(Tok);
+  });
+
+  do {
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
+          << PragmaName;
+      return;
+    }
+
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::identifier)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+          << PragmaName;
+      return;
+    }
+
+    IdentifierInfo *IdentName = Tok.getIdentifierInfo();
+    SourceLocation IdentNameLoc = Tok.getLocation();
+    PP.Lex(Tok);
+
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen)
+          << PragmaName;
+      return;
+    }
+
+    PP.Lex(Tok);
+    Actions.ActOnPragmaExport(IdentName, IdentNameLoc, getCurScope());
+
+    // Because export is also a C++ keyword, we also check for that.
+    if (Tok.is(tok::identifier) || Tok.is(tok::kw_export)) {
+      PragmaName = Tok.getIdentifierInfo()->getName();
+      if (PragmaName != "export")
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+            << PragmaName;
+    } else if (Tok.isNot(tok::eof)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+          << PragmaName;
+      return;
+    }
+  } while (Tok.isNot(tok::eof));
+  return;
+}
+
+void Parser::HandlePragmaExport() {
+  assert(Tok.is(tok::annot_pragma_export));
+
+  zOSHandlePragmaHelper(tok::annot_pragma_export);
 }
 
 static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
@@ -4131,6 +4216,44 @@ void PragmaMaxTokensTotalHandler::HandlePragma(Preprocessor &PP,
   }
 
   PP.overrideMaxTokens(MaxTokens, Loc);
+}
+
+static void zOSPragmaHandlerHelper(Preprocessor &PP, Token &Tok,
+                                   tok::TokenKind TokKind) {
+  Token AnnotTok;
+  AnnotTok.startToken();
+  AnnotTok.setKind(TokKind);
+  AnnotTok.setLocation(Tok.getLocation());
+  AnnotTok.setAnnotationEndLoc(Tok.getLocation());
+  SmallVector<Token, 8> TokenVector;
+  // Suck up all of the tokens before the eod.
+  for (; Tok.isNot(tok::eod); PP.Lex(Tok)) {
+    TokenVector.push_back(Tok);
+    AnnotTok.setAnnotationEndLoc(Tok.getLocation());
+  }
+  // Add a sentinel EoF token to the end of the list.
+  Token EoF;
+  EoF.startToken();
+  EoF.setKind(tok::eof);
+  EoF.setLocation(Tok.getLocation());
+  TokenVector.push_back(EoF);
+  // We must allocate this array with new because EnterTokenStream is going to
+  // delete it later.
+  markAsReinjectedForRelexing(TokenVector);
+  auto TokenArray = std::make_unique<Token[]>(TokenVector.size());
+  std::copy(TokenVector.begin(), TokenVector.end(), TokenArray.get());
+  auto Value = new (PP.getPreprocessorAllocator())
+      std::pair<std::unique_ptr<Token[]>, size_t>(std::move(TokenArray),
+                                                  TokenVector.size());
+  AnnotTok.setAnnotationValue(Value);
+  PP.EnterToken(AnnotTok, /*IsReinject*/ false);
+}
+
+/// Handle #pragma export.
+void PragmaExportHandler::HandlePragma(Preprocessor &PP,
+                                       PragmaIntroducer Introducer,
+                                       Token &FirstToken) {
+  zOSPragmaHandlerHelper(PP, FirstToken, tok::annot_pragma_export);
 }
 
 // Handle '#pragma clang riscv intrinsic vector'.

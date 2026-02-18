@@ -67,6 +67,8 @@ static bool VerifyMemoryMapping(MemoryMappingLayout* mapping) {
   InternalMmapVector<LoadedModule::AddressRange> segments;
   for (uptr i = 0; i < modules.size(); ++i) {
     for (auto& range : modules[i].ranges()) {
+      if (range.beg == range.end)
+        continue;
       segments.push_back(range);
     }
   }

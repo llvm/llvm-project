@@ -357,6 +357,10 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
     bool isPacked() const;
     void pack(bool);
 
+    // The presence of SEQUENCE attribute.
+    bool isSequence() const;
+    void setSequence(bool);
+
     detail::RecordTypeStorage const *uniqueKey() const;
   }];
 }
@@ -597,6 +601,7 @@ def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,
     fir_LogicalType.predicate]>, "any logical">;
 def AnyRealLike : TypeConstraint<FloatLike.predicate, "any real">;
 def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
+def AnyLogicalType : Type<AnyLogicalLike.predicate, "any logical">;
 
 def AnyFirComplexLike :  TypeConstraint<CPred<"::fir::isa_complex($_self)">,
   "any floating point complex type">;

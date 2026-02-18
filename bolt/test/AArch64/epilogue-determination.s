@@ -48,7 +48,7 @@ _L2:
   .type _goo, %function
 _goo:
   ldr w8, [sp]
-  adr x10, _jmptbl
+  adr x10, _jmptbl2
   ldrsw x9, [x10, x9, lsl #2]
   add x10, x10, x9
   str x30, [sp, #-0x10]!
@@ -64,6 +64,11 @@ _goo:
   ret
   mov x0, 1
   ret
+
+  .balign 4
+_jmptbl2:
+  .long -16
+  .long -8
 
   .global _faz
   .type _faz, %function

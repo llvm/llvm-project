@@ -21,7 +21,7 @@
  */
 enum Color {
   // MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-  // HTML-INDEX-LINE-NOT: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+  // HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
   Red,   ///< Comment 1
   Green, ///< Comment 2
   Blue   ///< Comment 3
@@ -64,7 +64,7 @@ enum Color {
  */
 enum class Shapes {
   // MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-  // HTML-INDEX-LINE-NOT: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+  // HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 
   /// Comment 1
   Circle,
@@ -115,7 +115,7 @@ public:
    */
   enum AnimalType {
     // MD-ANIMAL-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-    // HTML-ANIMAL-LINE-NOT: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+    // HTML-ANIMAL-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
     Dog,   ///< Man's best friend
     Cat,   ///< Man's other best friend
     Iguana ///< A lizard
@@ -148,9 +148,12 @@ public:
 // HTML-ANIMAL-NEXT:                 </tr>
 // HTML-ANIMAL-NEXT:             </tbody>
 // HTML-ANIMAL-NEXT:         </table>
-// HTML-ANIMAL-NEXT:         <div>
-// HTML-ANIMAL-NEXT:             Defined at line 116 of file {{.*}}enum.cpp
+// HTML-ANIMAL-NEXT:         <div class="doc-card">
+// HTML-ANIMAL-NEXT:             <div class="nested-delimiter-container">
+// HTML-ANIMAL-NEXT:                 <p> specify what animal the class is</p>
+// HTML-ANIMAL-NEXT:             </div>
 // HTML-ANIMAL-NEXT:         </div>
+// HTML-ANIMAL-NEXT:         <p>Defined at line 116 of file {{.*}}enum.cpp</p>
 // HTML-ANIMAL-NEXT:     </div>
 // HTML-ANIMAL-NEXT: </section>
 

@@ -39,8 +39,7 @@ Implemented Papers
 ------------------
 
 - P2592R3: Hashing support for ``std::chrono`` value classes (`Github <https://llvm.org/PR105358>`__)
-- P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``,
-  ``adjacent_view``, and ``adjacent_transform_view`` are implemented in this release)
+- P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__)
 - P2988R12: ``std::optional<T&>`` (`Github <https://llvm.org/PR148131>`__)
 - P3044R2: sub-``string_view`` from ``string`` (`Github <https://llvm.org/PR148140>`__)
 - P3223R2: Making ``std::istream::ignore`` less surprising (`Github <https://llvm.org/PR148178>`__)
@@ -106,6 +105,8 @@ Improvements and New Features
 
 Deprecations and Removals
 -------------------------
+
+- The minimally supported deployment target on macOS has been increased to 11.0.
 
 Potentially breaking changes
 ----------------------------

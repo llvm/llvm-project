@@ -800,10 +800,12 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
   }
 
   for (const auto &[ArgIndex, Replacement] : ArgFixes) {
-    const SourceLocation AfterOtherSide =
+    const std::optional<Token> NextToken =
         utils::lexer::findNextTokenSkippingComments(Args[ArgIndex]->getEndLoc(),
-                                                    SM, LangOpts)
-            ->getLocation();
+                                                    SM, LangOpts);
+    if (!NextToken)
+      continue;
+    const SourceLocation AfterOtherSide = NextToken->getLocation();
 
     Diag << FixItHint::CreateInsertion(Args[ArgIndex]->getBeginLoc(),
                                        Replacement, true)

@@ -10,11 +10,8 @@
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // UNSUPPORTED: aarch64-unknown-linux-gnu
-// UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
 // UNSUPPORTED: x86_64-unknown-linux-gnu
-// UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 // UNSUPPORTED: s390x-ibm-linux-gnu
-// UNSUPPORTED: s390x-ibm-linux-gnu-LTO
 // XFAIL: intelgpu
 
 #include <omp.h>
@@ -36,7 +33,7 @@ int main(void) {
   }
 }
 // clang-format off
-// CHECK: OFFLOAD ERROR: Kernel 'omp target in main @ 30 (__omp_offloading_{{.*}}_main_l30)'
+// CHECK: OFFLOAD ERROR: Kernel 'omp target in main @ [[@LINE-9]] (__omp_offloading_{{.*}}_main_l[[@LINE-9]])'
 // CHECK: OFFLOAD ERROR: execution interrupted by hardware trap instruction
 // TRACE:     launchKernel
 // TRACE:     main

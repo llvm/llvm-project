@@ -33,7 +33,7 @@
 //
 // FINITEONLY-LABEL: @test_fma_f16(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef half @llvm.fma.f16(half nofpclass(nan inf) [[X:%.*]], half nofpclass(nan inf) [[Y:%.*]], half nofpclass(nan inf) [[Z:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) half @llvm.fma.f16(half nofpclass(nan inf) [[X:%.*]], half nofpclass(nan inf) [[Y:%.*]], half nofpclass(nan inf) [[Z:%.*]])
 // FINITEONLY-NEXT:    ret half [[TMP0]]
 //
 extern "C" __device__ _Float16 test_fma_f16(_Float16 x, _Float16 y,
@@ -62,7 +62,7 @@ extern "C" __device__ _Float16 test_pow_f16(_Float16 x, int y) {
 //
 // FINITEONLY-LABEL: @test_fabs_f32(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.fabs.f32(float nofpclass(nan inf) [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) float @llvm.fabs.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_fabs_f32(float x) {
@@ -159,12 +159,12 @@ namespace user_namespace {
 //
 // FINITEONLY-LABEL: @test_sqrt_f32(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.sqrt.f32(float nofpclass(nan inf) [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) float @llvm.sqrt.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // NO-CORRECT-DIV-SQRT-LABEL: @test_sqrt_f32(
 // NO-CORRECT-DIV-SQRT-NEXT:  entry:
-// NO-CORRECT-DIV-SQRT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[X:%.*]]), !fpmath [[META4:![0-9]+]]
+// NO-CORRECT-DIV-SQRT-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[X:%.*]]), !fpmath [[META8:![0-9]+]]
 // NO-CORRECT-DIV-SQRT-NEXT:    ret float [[TMP0]]
 //
 extern "C" __device__ float test_sqrt_f32(float x) {
@@ -178,7 +178,7 @@ extern "C" __device__ float test_sqrt_f32(float x) {
 //
 // FINITEONLY-LABEL: @test_sqrt_f64(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.sqrt.f64(double nofpclass(nan inf) [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef nofpclass(nan inf) double @llvm.sqrt.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 extern "C" __device__ double test_sqrt_f64(double x) {
