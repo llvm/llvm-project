@@ -46,6 +46,7 @@
 #include "UseOverrideCheck.h"
 #include "UseRangesCheck.h"
 #include "UseScopedLockCheck.h"
+#include "UseSpanParamCheck.h"
 #include "UseStartsEndsWithCheck.h"
 #include "UseStdFormatCheck.h"
 #include "UseStdNumbersCheck.h"
@@ -94,6 +95,7 @@ public:
     CheckFactories.registerCheck<UseRangesCheck>("modernize-use-ranges");
     CheckFactories.registerCheck<UseScopedLockCheck>(
         "modernize-use-scoped-lock");
+    CheckFactories.registerCheck<UseSpanParamCheck>("modernize-use-span-param");
     CheckFactories.registerCheck<UseStartsEndsWithCheck>(
         "modernize-use-starts-ends-with");
     CheckFactories.registerCheck<UseStdFormatCheck>("modernize-use-std-format");
