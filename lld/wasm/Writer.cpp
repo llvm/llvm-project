@@ -649,11 +649,13 @@ void Writer::populateTargetFeatures() {
               "' feature must be used in order to use shared memory");
   }
 
-  if (tlsUsed && !ctx.componentModelThreadContext) {
-    for (auto feature : {"atomics", "bulk-memory"})
-      if (!allowed.contains(feature))
-        error(StringRef("'") + feature +
-              "' feature must be used in order to use thread-local storage");
+  if (tlsUsed) {
+    if (!allowed.contains("bulk-memory")) {
+      error("bulk-memory feature must be used in order to use thread-local storage");
+    }
+    if (!ctx.componentModelThreadContext && !allowed.contains("atomics")) {
+      error("atomics feature must be used in order to use thread-local storage");
+    }
   }
 
   // Validate that used features are allowed in output
@@ -1185,11 +1187,7 @@ void Writer::createSyntheticInitFunctions() {
 
     auto hasTLSRelocs = [](const OutputSegment *segment) {
       if (segment->isTLS())
-<<<<<<< sy/wasip3
-        for (const auto* is : segment->inputSegments)
-=======
         for (const auto *is : segment->inputSegments)
->>>>>>> main
           if (is->getRelocations().size())
             return true;
       return false;
@@ -1644,13 +1642,8 @@ void Writer::createInitTLSFunction() {
         writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "global index");
       }
 
-<<<<<<< sy/wasip3
-      // FIXME(wvo): this local needs to be I64 in wasm64, or we need an
-      // extend op.
-=======
       // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend
       // op.
->>>>>>> main
       writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
       writeUleb128(os, 0, "local index");
 

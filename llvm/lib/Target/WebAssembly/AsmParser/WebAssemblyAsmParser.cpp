@@ -430,6 +430,7 @@ public:
       return Name;
     }
     error("Expected string or identifier, got: ", Lexer.getTok());
+    return StringRef();
   }
 
   bool parseRegTypeList(SmallVectorImpl<wasm::ValType> &Types) {
