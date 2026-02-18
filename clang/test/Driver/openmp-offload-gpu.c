@@ -410,3 +410,20 @@
 // RUN:   | FileCheck --check-prefix=SHOULD-EXTRACT %s
 //
 // SHOULD-EXTRACT: clang-linker-wrapper{{.*}}"--should-extract=gfx906"
+
+//
+// Check ompdevice is linked.
+//
+// RUN:   %clang -###  -fopenmp -fopenmp-targets=nvptx64 --offload-arch=sm_52 \
+// RUN:     --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
+// RUN:     --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=OMPDEVICE %s
+//
+// RUN:   %clang -###  -fopenmp -fopenmp-targets=amdgcn --offload-arch=gfx908 \
+// RUN:     --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=OMPDEVICE %s
+//
+// RUN:   %clang -###  -fopenmp -fopenmp-targets=spirv64 \
+// RUN:     --libomptarget-spirv-bc-path=%S/Inputs/spirv-openmp/lib/libomptarget-spirv.bc %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=OMPDEVICE %s
+// OMPDEVICE: clang-linker-wrapper{{.*}}--device-linker{{.*}}-lompdevice
