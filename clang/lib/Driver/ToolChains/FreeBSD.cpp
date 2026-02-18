@@ -511,3 +511,18 @@ SanitizerMask FreeBSD::getSupportedSanitizers() const {
   }
   return Res;
 }
+
+std::string FreeBSD::getCompilerRT(const llvm::opt::ArgList &Args,
+                                   StringRef Component, FileType Type,
+                                   bool IsFortran) const {
+  if (Component == "builtins") {
+    std::string DetectedPath =
+        ToolChain::getCompilerRT(Args, Component, Type, IsFortran);
+    if (getVFS().exists(DetectedPath))
+      return DetectedPath;
+    SmallString<128> Path(getDriver().SysRoot);
+    llvm::sys::path::append(Path, "/usr/lib/libgcc.a");
+    return std::string(Path);
+  }
+  return ToolChain::getCompilerRT(Args, Component, Type, IsFortran);
+}
