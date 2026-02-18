@@ -28897,7 +28897,7 @@ static SDValue performMINMAXCombine(SDNode *N, SelectionDAG &DAG,
           m_OneUse(m_ExtractElt(m_Specific(Vec), m_SpecificInt(1 - Idx)))))
     return SDValue();
 
-  return DAG.getNode(ReductionOpcode, SDLoc(N), MVT::i64, Vec);
+  return DAG.getNode(ReductionOpcode, SDLoc(N), N->getValueType(0), Vec);
 }
 
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
