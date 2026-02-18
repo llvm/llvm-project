@@ -445,6 +445,8 @@ public:
 
   bool GetMemoryTaggingSupported();
 
+  bool GetResumeWithoutDisablingBreakpointsSupported();
+
   bool UsesNativeSignals();
 
   lldb::DataBufferSP ReadMemoryTags(lldb::addr_t addr, size_t len,
@@ -577,6 +579,7 @@ protected:
   LazyBool m_supports_reverse_continue = eLazyBoolCalculate;
   LazyBool m_supports_reverse_step = eLazyBoolCalculate;
   LazyBool m_supports_multi_mem_read = eLazyBoolCalculate;
+  LazyBool m_supports_resume_without_disabling_breakpoints = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,

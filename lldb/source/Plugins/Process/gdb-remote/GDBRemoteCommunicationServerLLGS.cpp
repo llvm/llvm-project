@@ -4326,6 +4326,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
     ret.push_back("memory-tagging+");
   if (bool(plugin_features & Extension::savecore))
     ret.push_back("qSaveCore+");
+  if (bool(plugin_features & Extension::resume_without_disabling_breakpoints))
+    ret.push_back("resume-without-disabling-breakpoints+");
 
   // check for client features
   m_extensions_supported = {};
