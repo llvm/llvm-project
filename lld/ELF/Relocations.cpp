@@ -926,13 +926,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
   const bool isIfunc = sym.isGnuIFunc();
   if (!sym.isPreemptible && !isIfunc) {
     if (expr != R_GOT_PC) {
-      // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
-      // call __tls_get_addr even if the symbol is non-preemptible.
-      if (!(ctx.arg.emachine == EM_HEXAGON &&
-            (type == R_HEX_GD_PLT_B22_PCREL ||
-             type == R_HEX_GD_PLT_B22_PCREL_X ||
-             type == R_HEX_GD_PLT_B32_PCREL_X)))
-        expr = fromPlt(expr);
+      expr = fromPlt(expr);
     } else if (!isAbsoluteOrTls(sym)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
@@ -1204,14 +1198,12 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
        type == R_LARCH_TLS_DESC_LD || type == R_LARCH_TLS_DESC_CALL ||
        type == R_LARCH_TLS_DESC_PCREL20_S2);
 
-  // ARM, Hexagon, LoongArch and RISC-V do not support GD/LD to IE/LE
-  // optimizations.
+  // ARM, LoongArch and RISC-V do not support GD/LD to IE/LE optimizations.
   // RISC-V supports TLSDESC to IE/LE optimizations.
   // For PPC64, if the file has missing R_PPC64_TLSGD/R_PPC64_TLSLD, disable
   // optimization as well.
   bool execOptimize =
       !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
-      ctx.arg.emachine != EM_HEXAGON &&
       (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch) &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL);
 
@@ -1292,10 +1284,9 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
 
   if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, RE_AARCH64_GOT_PAGE_PC,
             RE_LOONGARCH_GOT_PAGE_PC, R_GOT_OFF, R_TLSIE_HINT>(expr)) {
-    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
     // Initial-Exec relocs can be optimized to Local-Exec if the symbol is
-    // locally defined.  This is not supported on SystemZ.
-    if (execOptimize && isLocalInExecutable && ctx.arg.emachine != EM_S390) {
+    // locally defined.
+    if (execOptimize && isLocalInExecutable) {
       sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     } else if (expr != R_TLSIE_HINT) {
       sym.setFlags(NEEDS_TLSIE);
@@ -1313,7 +1304,6 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
   // NEEDS_TLSIE shouldn't set. So we check independently.
   if (ctx.arg.emachine == EM_LOONGARCH && expr == RE_LOONGARCH_GOT &&
       execOptimize && isLocalInExecutable) {
-    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
     sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     return 1;
   }
@@ -1326,12 +1316,6 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   RelocScan rs(ctx, &sec);
   // Many relocations end up in sec.relocations.
   sec.relocations.reserve(rels.size());
-
-  // On SystemZ, all sections need to be sorted by r_offset, to allow TLS
-  // relaxation to be handled correctly - see SystemZ::getTlsGdRelaxSkip.
-  SmallVector<RelTy, 0> storage;
-  if (ctx.arg.emachine == EM_S390)
-    rels = sortRels(rels, storage);
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     auto type = it->getType(false);
@@ -1506,6 +1490,7 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
 }
 
 void elf::postScanRelocations(Ctx &ctx) {
+  bool needsTlsIe = false;
   auto fn = [&](Symbol &sym) {
     auto flags = sym.flags.load(std::memory_order_relaxed);
     if (handleNonPreemptibleIfunc(ctx, sym, flags))
@@ -1605,8 +1590,10 @@ void elf::postScanRelocations(Ctx &ctx) {
           {R_ABS, ctx.target->tlsOffsetRel, sym.getGotOffset(ctx), 0, &sym});
     }
 
-    if (flags & NEEDS_TLSIE)
+    if (flags & NEEDS_TLSIE) {
+      needsTlsIe = true;
       addTpOffsetGotEntry(ctx, sym);
+    }
   };
 
   GotSection *got = ctx.in.got.get();
@@ -1628,6 +1615,9 @@ void elf::postScanRelocations(Ctx &ctx) {
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       fn(*sym);
+
+  if (needsTlsIe)
+    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
 
   if (ctx.arg.branchToBranch)
     ctx.target->applyBranchToBranchOpt();

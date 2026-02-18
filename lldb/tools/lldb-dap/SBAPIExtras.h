@@ -55,6 +55,13 @@ using frame_iter =
 inline frame_iter begin(SBThread T) { return {T, 0}; }
 inline frame_iter end(SBThread T) { return {T, T.GetNumFrames()}; }
 
+/// SBValue value iterators.
+/// @{
+using value_iter = iter<SBValue, SBValue, uint32_t, &SBValue::GetChildAtIndex>;
+inline value_iter begin(SBValue &T) { return {T, 0}; }
+inline value_iter end(SBValue &T) { return {T, T.GetNumChildren()}; }
+/// @}
+
 // llvm::raw_ostream print helpers.
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, SBStream &stream) {
