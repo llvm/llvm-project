@@ -13,6 +13,11 @@
 #ifndef LLVM_TARGET_TARGETMACHINE_H
 #define LLVM_TARGET_TARGETMACHINE_H
 
+// Fix conflict with illumos FS macro in sys/regset.h.
+#ifdef __sun
+#undef FS
+#endif
+
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
