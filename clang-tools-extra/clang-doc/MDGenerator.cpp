@@ -156,10 +156,18 @@ static void writeNameLink(const StringRef &CurrentPath, const Reference &R,
 
 static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
                         llvm::raw_ostream &OS) {
-  if (I.Scoped)
-    writeLine("| enum class " + I.Name + " |", OS);
-  else
-    writeLine("| enum " + I.Name + " |", OS);
+  std::string Header = "| enum ";
+  if(I.Scoped)
+    Header += "class ";
+  Header += I.Name;
+  Header += " ";
+  if(I.BaseType && I.BaseType->Type.QualName != "") {
+    Header += ": ";
+    Header += I.BaseType->Type.QualName;
+    Header += " ";
+  }
+  Header += "|";
+  writeLine(Header, OS);
   writeLine("--", OS);
 
   std::string Buffer;
