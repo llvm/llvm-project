@@ -210,9 +210,9 @@
 # CHECK: sarw	%dx, %dx
 # CHECK: encoding: [0x62,0xf4,0x6d,0x18,0xd1,0xfa]
          sarw	%dx, %dx
-# CHECK: {nf}	sarw	%dx, %dx
+# CHECK: {nf}	sarw	$1, %dx, %dx
 # CHECK: encoding: [0x62,0xf4,0x6d,0x1c,0xd1,0xfa]
-         {nf}	sarw	%dx, %dx
+         {nf}	sarw	$1, %dx, %dx
 # CHECK: {evex}	sarl	%ecx
 # CHECK: encoding: [0x62,0xf4,0x7c,0x08,0xd1,0xf9]
          {evex}	sarl	%ecx
@@ -222,9 +222,9 @@
 # CHECK: sarl	%ecx, %ecx
 # CHECK: encoding: [0x62,0xf4,0x74,0x18,0xd1,0xf9]
          sarl	%ecx, %ecx
-# CHECK: {nf}	sarl	%ecx, %ecx
+# CHECK: {nf}	sarl	$1, %ecx, %ecx
 # CHECK: encoding: [0x62,0xf4,0x74,0x1c,0xd1,0xf9]
-         {nf}	sarl	%ecx, %ecx
+         {nf}	sarl	$1, %ecx, %ecx
 # CHECK: {evex}	sarq	%r9
 # CHECK: encoding: [0x62,0xd4,0xfc,0x08,0xd1,0xf9]
          {evex}	sarq	%r9
@@ -234,9 +234,9 @@
 # CHECK: sarq	%r9, %r9
 # CHECK: encoding: [0x62,0xd4,0xb4,0x18,0xd1,0xf9]
          sarq	%r9, %r9
-# CHECK: {nf}	sarq	%r9, %r9
+# CHECK: {nf}	sarq	$1, %r9, %r9
 # CHECK: encoding: [0x62,0xd4,0xb4,0x1c,0xd1,0xf9]
-         {nf}	sarq	%r9, %r9
+         {nf}	sarq	$1, %r9, %r9
 # CHECK: {evex}	sarb	291(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0x7c,0x08,0xd0,0xbc,0x80,0x23,0x01,0x00,0x00]
          {evex}	sarb	291(%r8,%rax,4)

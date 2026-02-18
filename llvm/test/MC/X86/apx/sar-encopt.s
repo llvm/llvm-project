@@ -36,16 +36,16 @@
 # CHECK: sarq	%rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x18,0xd1,0xf8]
          sarq	$1, %rax, %rbx
-# CHECK: {nf}	sarb	%al, %bl
+# CHECK: {nf}	sarb	$1, %al, %bl
 # CHECK: encoding: [0x62,0xf4,0x64,0x1c,0xd0,0xf8]
          {nf}	sarb	$1, %al, %bl
-# CHECK: {nf}	sarw	%ax, %bx
+# CHECK: {nf}	sarw	$1, %ax, %bx
 # CHECK: encoding: [0x62,0xf4,0x65,0x1c,0xd1,0xf8]
          {nf}	sarw	$1, %ax, %bx
-# CHECK: {nf}	sarl	%eax, %ebx
+# CHECK: {nf}	sarl	$1, %eax, %ebx
 # CHECK: encoding: [0x62,0xf4,0x64,0x1c,0xd1,0xf8]
          {nf}	sarl	$1, %eax, %ebx
-# CHECK: {nf}	sarq	%rax, %rbx
+# CHECK: {nf}	sarq	$1, %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x1c,0xd1,0xf8]
          {nf}	sarq	$1, %rax, %rbx
 # CHECK: {evex}	sarb	123(%r8,%rax,4)
