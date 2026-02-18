@@ -139,6 +139,13 @@ New checks
   Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view`` to
   ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
 
+- New :doc:`readability-pointer-to-ref
+  <clang-tidy/checks/readability/pointer-to-ref>` check.
+
+  Finds function parameters that are pointers but are always
+  dereferenced without null checks, suggesting they should be
+  references instead.
+
 - New :doc:`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check.
 

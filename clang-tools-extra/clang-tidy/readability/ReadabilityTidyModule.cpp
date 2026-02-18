@@ -39,6 +39,7 @@
 #include "NamedParameterCheck.h"
 #include "NonConstParameterCheck.h"
 #include "OperatorsRepresentationCheck.h"
+#include "PointerToRefCheck.h"
 #include "QualifiedAutoCheck.h"
 #include "RedundantAccessSpecifiersCheck.h"
 #include "RedundantCastingCheck.h"
@@ -134,6 +135,8 @@ public:
         "readability-misplaced-array-index");
     CheckFactories.registerCheck<OperatorsRepresentationCheck>(
         "readability-operators-representation");
+    CheckFactories.registerCheck<PointerToRefCheck>(
+        "readability-pointer-to-ref");
     CheckFactories.registerCheck<QualifiedAutoCheck>(
         "readability-qualified-auto");
     CheckFactories.registerCheck<RedundantAccessSpecifiersCheck>(
