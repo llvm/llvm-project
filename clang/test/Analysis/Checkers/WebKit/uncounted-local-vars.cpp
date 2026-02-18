@@ -544,3 +544,14 @@ namespace vardecl_in_if_condition {
   }
 
 }
+
+namespace delete_unresolved_type {
+
+  template <class T>
+  struct Foo {
+    static void bar(T& obj) {
+      delete &obj;
+    }
+  };
+
+}

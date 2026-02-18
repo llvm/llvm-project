@@ -517,7 +517,8 @@ class TrivialFunctionAnalysisVisitor
   }
 
   bool CanTriviallyDestruct(QualType Ty) {
-    assert(!Ty.isNull());
+    if (Ty.isNull())
+      return false;
 
     // T*, T& or T&& does not run its destructor.
     if (Ty->isPointerOrReferenceType())
