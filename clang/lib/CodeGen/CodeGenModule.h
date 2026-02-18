@@ -1549,8 +1549,6 @@ public:
                           SourceLocation Loc, QualType Ty,
                           StringRef Category = StringRef()) const;
 
-  bool userForcedSectionMemtag(llvm::GlobalVariable *GV) const;
-
   /// Imbue XRay attributes to a function, applying the always/never attribute
   /// lists in the process. Returns true if we did imbue attributes this way,
   /// false otherwise.

@@ -2662,6 +2662,10 @@ static uint64_t globalSize(const llvm::GlobalVariable &G) {
 }
 
 static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
+  auto Meta = G.getSanitizerMetadata();
+  if (Meta.ForceMemtag)
+    return true;
+
   // We used to do this in clang, but there are optimization passes that turn
   // non-constant globals into constants. So now, clang only tells us whether
   // it would *like* a global to be tagged, but we still make the decision here.
@@ -2690,8 +2694,7 @@ static bool shouldTagGlobal(const llvm::GlobalVariable &G) {
   // To mitigate both these cases, and because specifying a section is rare
   // outside of these two cases, disable MTE protection for globals in any
   // section.
-  bool ForceSectionMemtag = G.getMetadata("force_memtag") != nullptr;
-  if (G.hasSection() && !ForceSectionMemtag)
+  if (G.hasSection())
     return false;
 
   return globalSize(G) > 0;
