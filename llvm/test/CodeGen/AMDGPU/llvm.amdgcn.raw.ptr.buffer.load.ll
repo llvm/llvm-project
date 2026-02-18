@@ -440,9 +440,9 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_and(ptr addrspace(8) inreg %r
 ; PREGFX10-NEXT:    buffer_load_dwordx4 v[1:4], v0, s[0:3], 0 offen offset:4
 ; PREGFX10-NEXT:    buffer_load_dwordx2 v[5:6], v0, s[0:3], 0 offen offset:28
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(1)
-; PREGFX10-NEXT:    exp mrt0 v1, v2, v3, v4 done vm
+; PREGFX10-NEXT:    exp mrt0, v1, v2, v3, v4 done vm
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    exp mrt0 v5, v6, v0, v0 done vm
+; PREGFX10-NEXT:    exp mrt0, v5, v6, v0, v0 done vm
 ; PREGFX10-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: buffer_load_x1_offen_merged_and:
@@ -451,9 +451,9 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_and(ptr addrspace(8) inreg %r
 ; GFX10-NEXT:    buffer_load_dwordx4 v[1:4], v0, s[0:3], 0 offen offset:4
 ; GFX10-NEXT:    buffer_load_dwordx2 v[5:6], v0, s[0:3], 0 offen offset:28
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    exp mrt0 v1, v2, v3, v4 done vm
+; GFX10-NEXT:    exp mrt0, v1, v2, v3, v4 done vm
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    exp mrt0 v5, v6, v0, v0 done vm
+; GFX10-NEXT:    exp mrt0, v5, v6, v0, v0 done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: buffer_load_x1_offen_merged_and:
@@ -462,9 +462,9 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_and(ptr addrspace(8) inreg %r
 ; GFX11-NEXT:    buffer_load_b128 v[1:4], v0, s[0:3], 0 offen offset:4
 ; GFX11-NEXT:    buffer_load_b64 v[5:6], v0, s[0:3], 0 offen offset:28
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    exp mrt0 v1, v2, v3, v4 done
+; GFX11-NEXT:    exp mrt0, v1, v2, v3, v4 done
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    exp mrt0 v5, v6, v0, v0 done
+; GFX11-NEXT:    exp mrt0, v5, v6, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %a1 = add i32 %a, 4
@@ -491,9 +491,9 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_or(ptr addrspace(8) inreg %rs
 ; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v4, s[0:3], 0 offen offset:4
 ; PREGFX10-NEXT:    buffer_load_dwordx2 v[4:5], v4, s[0:3], 0 offen offset:28
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(1)
-; PREGFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; PREGFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    exp mrt0 v4, v5, v0, v0 done vm
+; PREGFX10-NEXT:    exp mrt0, v4, v5, v0, v0 done vm
 ; PREGFX10-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: buffer_load_x1_offen_merged_or:
@@ -503,9 +503,9 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_or(ptr addrspace(8) inreg %rs
 ; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v6, s[0:3], 0 offen offset:4
 ; GFX10-NEXT:    buffer_load_dwordx2 v[4:5], v6, s[0:3], 0 offen offset:28
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; GFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    exp mrt0 v4, v5, v0, v0 done vm
+; GFX10-NEXT:    exp mrt0, v4, v5, v0, v0 done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: buffer_load_x1_offen_merged_or:
@@ -515,9 +515,9 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_or(ptr addrspace(8) inreg %rs
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], v4, s[0:3], 0 offen offset:4
 ; GFX11-NEXT:    buffer_load_b64 v[4:5], v4, s[0:3], 0 offen offset:28
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    exp mrt0 v0, v1, v2, v3 done
+; GFX11-NEXT:    exp mrt0, v0, v1, v2, v3 done
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    exp mrt0 v4, v5, v0, v0 done
+; GFX11-NEXT:    exp mrt0, v4, v5, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %a = shl i32 %inp, 6
@@ -545,9 +545,9 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_glc_slc(ptr addrspace(8) inre
 ; PREGFX10-NEXT:    buffer_load_dwordx2 v[3:4], v0, s[0:3], 0 offen offset:12 glc
 ; PREGFX10-NEXT:    buffer_load_dwordx2 v[5:6], v0, s[0:3], 0 offen offset:28 glc slc
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(1)
-; PREGFX10-NEXT:    exp mrt0 v1, v2, v3, v4 done vm
+; PREGFX10-NEXT:    exp mrt0, v1, v2, v3, v4 done vm
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    exp mrt0 v5, v6, v0, v0 done vm
+; PREGFX10-NEXT:    exp mrt0, v5, v6, v0, v0 done vm
 ; PREGFX10-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: buffer_load_x1_offen_merged_glc_slc:
@@ -557,9 +557,9 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_glc_slc(ptr addrspace(8) inre
 ; GFX10-NEXT:    buffer_load_dwordx2 v[3:4], v0, s[0:3], 0 offen offset:12 glc
 ; GFX10-NEXT:    buffer_load_dwordx2 v[5:6], v0, s[0:3], 0 offen offset:28 glc slc
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    exp mrt0 v1, v2, v3, v4 done vm
+; GFX10-NEXT:    exp mrt0, v1, v2, v3, v4 done vm
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    exp mrt0 v5, v6, v0, v0 done vm
+; GFX10-NEXT:    exp mrt0, v5, v6, v0, v0 done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: buffer_load_x1_offen_merged_glc_slc:
@@ -569,9 +569,9 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_glc_slc(ptr addrspace(8) inre
 ; GFX11-NEXT:    buffer_load_b64 v[3:4], v0, s[0:3], 0 offen offset:12 glc
 ; GFX11-NEXT:    buffer_load_b64 v[5:6], v0, s[0:3], 0 offen offset:28 glc slc
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    exp mrt0 v1, v2, v3, v4 done
+; GFX11-NEXT:    exp mrt0, v1, v2, v3, v4 done
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    exp mrt0 v5, v6, v0, v0 done
+; GFX11-NEXT:    exp mrt0, v5, v6, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %a1 = add i32 %a, 4
@@ -596,21 +596,21 @@ define amdgpu_ps void @buffer_load_x2_offen_merged_and(ptr addrspace(8) inreg %r
 ; PREGFX10:       ; %bb.0: ; %main_body
 ; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; PREGFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; PREGFX10-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: buffer_load_x2_offen_merged_and:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; GFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: buffer_load_x2_offen_merged_and:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    exp mrt0 v0, v1, v2, v3 done
+; GFX11-NEXT:    exp mrt0, v0, v1, v2, v3 done
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %a1 = add i32 %a, 4
@@ -631,7 +631,7 @@ define amdgpu_ps void @buffer_load_x2_offen_merged_or(ptr addrspace(8) inreg %rs
 ; PREGFX10-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; PREGFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; PREGFX10-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: buffer_load_x2_offen_merged_or:
@@ -639,7 +639,7 @@ define amdgpu_ps void @buffer_load_x2_offen_merged_or(ptr addrspace(8) inreg %rs
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; GFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: buffer_load_x2_offen_merged_or:
@@ -647,7 +647,7 @@ define amdgpu_ps void @buffer_load_x2_offen_merged_or(ptr addrspace(8) inreg %rs
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    exp mrt0 v0, v1, v2, v3 done
+; GFX11-NEXT:    exp mrt0, v0, v1, v2, v3 done
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %a = shl i32 %inp, 4
@@ -669,9 +669,9 @@ define amdgpu_ps void @buffer_load_x1_offset_merged(ptr addrspace(8) inreg %rsrc
 ; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:4
 ; PREGFX10-NEXT:    buffer_load_dwordx2 v[4:5], off, s[0:3], 0 offset:28
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(1)
-; PREGFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; PREGFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    exp mrt0 v4, v5, v0, v0 done vm
+; PREGFX10-NEXT:    exp mrt0, v4, v5, v0, v0 done vm
 ; PREGFX10-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: buffer_load_x1_offset_merged:
@@ -680,9 +680,9 @@ define amdgpu_ps void @buffer_load_x1_offset_merged(ptr addrspace(8) inreg %rsrc
 ; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:4
 ; GFX10-NEXT:    buffer_load_dwordx2 v[4:5], off, s[0:3], 0 offset:28
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; GFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    exp mrt0 v4, v5, v0, v0 done vm
+; GFX10-NEXT:    exp mrt0, v4, v5, v0, v0 done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: buffer_load_x1_offset_merged:
@@ -691,9 +691,9 @@ define amdgpu_ps void @buffer_load_x1_offset_merged(ptr addrspace(8) inreg %rsrc
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0 offset:4
 ; GFX11-NEXT:    buffer_load_b64 v[4:5], off, s[0:3], 0 offset:28
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    exp mrt0 v0, v1, v2, v3 done
+; GFX11-NEXT:    exp mrt0, v0, v1, v2, v3 done
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    exp mrt0 v4, v5, v0, v0 done
+; GFX11-NEXT:    exp mrt0, v4, v5, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %r1 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 4, i32 0, i32 0)
@@ -712,21 +712,21 @@ define amdgpu_ps void @buffer_load_x2_offset_merged(ptr addrspace(8) inreg %rsrc
 ; PREGFX10:       ; %bb.0: ; %main_body
 ; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:4
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; PREGFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; PREGFX10-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: buffer_load_x2_offset_merged:
 ; GFX10:       ; %bb.0: ; %main_body
 ; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; GFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: buffer_load_x2_offset_merged:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0 offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    exp mrt0 v0, v1, v2, v3 done
+; GFX11-NEXT:    exp mrt0, v0, v1, v2, v3 done
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %vr1 = call <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.v2f32(ptr addrspace(8) %rsrc, i32 4, i32 0, i32 0)
@@ -1086,9 +1086,9 @@ define amdgpu_ps void @raw_ptr_buffer_load_x1_offset_merged(ptr addrspace(8) inr
 ; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:4
 ; PREGFX10-NEXT:    buffer_load_dwordx2 v[4:5], off, s[0:3], 0 offset:28
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(1)
-; PREGFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; PREGFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    exp mrt0 v4, v5, v0, v0 done vm
+; PREGFX10-NEXT:    exp mrt0, v4, v5, v0, v0 done vm
 ; PREGFX10-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: raw_ptr_buffer_load_x1_offset_merged:
@@ -1097,9 +1097,9 @@ define amdgpu_ps void @raw_ptr_buffer_load_x1_offset_merged(ptr addrspace(8) inr
 ; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 offset:4
 ; GFX10-NEXT:    buffer_load_dwordx2 v[4:5], off, s[0:3], 0 offset:28
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; GFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    exp mrt0 v4, v5, v0, v0 done vm
+; GFX10-NEXT:    exp mrt0, v4, v5, v0, v0 done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: raw_ptr_buffer_load_x1_offset_merged:
@@ -1108,9 +1108,9 @@ define amdgpu_ps void @raw_ptr_buffer_load_x1_offset_merged(ptr addrspace(8) inr
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0 offset:4
 ; GFX11-NEXT:    buffer_load_b64 v[4:5], off, s[0:3], 0 offset:28
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    exp mrt0 v0, v1, v2, v3 done
+; GFX11-NEXT:    exp mrt0, v0, v1, v2, v3 done
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    exp mrt0 v4, v5, v0, v0 done
+; GFX11-NEXT:    exp mrt0, v4, v5, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %r1 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 4, i32 0, i32 0)
@@ -1134,9 +1134,9 @@ define amdgpu_ps void @raw_ptr_buffer_load_x1_offset_swizzled_not_merged(ptr add
 ; PREGFX10-NEXT:    buffer_load_dword v4, off, s[0:3], 0 offset:28
 ; PREGFX10-NEXT:    buffer_load_dword v5, off, s[0:3], 0 offset:32
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(2)
-; PREGFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; PREGFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    exp mrt0 v4, v5, v0, v0 done vm
+; PREGFX10-NEXT:    exp mrt0, v4, v5, v0, v0 done vm
 ; PREGFX10-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: raw_ptr_buffer_load_x1_offset_swizzled_not_merged:
@@ -1149,9 +1149,9 @@ define amdgpu_ps void @raw_ptr_buffer_load_x1_offset_swizzled_not_merged(ptr add
 ; GFX10-NEXT:    buffer_load_dword v4, off, s[0:3], 0 offset:28
 ; GFX10-NEXT:    buffer_load_dword v5, off, s[0:3], 0 offset:32
 ; GFX10-NEXT:    s_waitcnt vmcnt(2)
-; GFX10-NEXT:    exp mrt0 v0, v1, v2, v3 done vm
+; GFX10-NEXT:    exp mrt0, v0, v1, v2, v3 done vm
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    exp mrt0 v4, v5, v0, v0 done vm
+; GFX10-NEXT:    exp mrt0, v4, v5, v0, v0 done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: raw_ptr_buffer_load_x1_offset_swizzled_not_merged:
@@ -1164,9 +1164,9 @@ define amdgpu_ps void @raw_ptr_buffer_load_x1_offset_swizzled_not_merged(ptr add
 ; GFX11-NEXT:    buffer_load_b32 v4, off, s[0:3], 0 offset:28
 ; GFX11-NEXT:    buffer_load_b32 v5, off, s[0:3], 0 offset:32
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-NEXT:    exp mrt0 v0, v1, v2, v3 done
+; GFX11-NEXT:    exp mrt0, v0, v1, v2, v3 done
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    exp mrt0 v4, v5, v0, v0 done
+; GFX11-NEXT:    exp mrt0, v4, v5, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %r1 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 4, i32 0, i32 8)

@@ -299,6 +299,15 @@ static cl::opt<bool>
                       cl::desc("exact handling of relational integer ICmp"),
                       cl::Hidden, cl::init(true));
 
+static cl::opt<int> ClSwitchPrecision(
+    "msan-switch-precision",
+    cl::desc("Controls the number of cases considered by MSan for LLVM switch "
+             "instructions. 0 means no UUMs detected. Higher values lead to "
+             "fewer false negatives but may impact compiler and/or "
+             "application performance. N.B. LLVM switch instructions do not "
+             "correspond exactly to C++ switch statements."),
+    cl::Hidden, cl::init(99));
+
 static cl::opt<bool> ClHandleLifetimeIntrinsics(
     "msan-handle-lifetime-intrinsics",
     cl::desc(
@@ -1347,7 +1356,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // ZExt cannot convert between vector and scalar
     Value *ConvertedShadow = convertShadowToScalar(Shadow, IRB);
     if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
-      if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
+      if (!ClCheckConstantShadow || ConstantShadow->isNullValue()) {
         // Origin is not needed: value is initialized or const shadow is
         // ignored.
         return;
@@ -1510,7 +1519,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Value *ConvertedShadow = ShadowData.Shadow;
 
       if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
-        if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
+        if (!ClCheckConstantShadow || ConstantShadow->isNullValue()) {
           // Skip, value is initialized or const shadow is ignored.
           continue;
         }
@@ -2458,6 +2467,64 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Si->setName("_msprop_icmp");
 
     return Si;
+  }
+
+  // Instrument:
+  //     switch i32 %Val, label %else [ i32 0, label %A
+  //                                    i32 1, label %B
+  //                                    i32 2, label %C ]
+  //
+  // Typically, the switch input value (%Val) is fully initialized.
+  //
+  // Sometimes the compiler may convert (icmp + br) into a switch statement.
+  // MSan allows icmp eq/ne with partly initialized inputs to still result in a
+  // fully initialized output, if there exists a bit that is initialized in
+  // both inputs with a differing value. For compatibility, we support this in
+  // the switch instrumentation as well. Note that this edge case only applies
+  // if the switch input value does not match *any* of the cases (matching any
+  // of the cases requires an exact, fully initialized match).
+  //
+  //     ShadowCases =   0
+  //                   | propagateEqualityComparison(Val, 0)
+  //                   | propagateEqualityComparison(Val, 1)
+  //                   | propagateEqualityComparison(Val, 2))
+  void visitSwitchInst(SwitchInst &SI) {
+    IRBuilder<> IRB(&SI);
+
+    Value *Val = SI.getCondition();
+    Value *ShadowVal = getShadow(Val);
+    // TODO: add fast path - if the condition is fully initialized, we know
+    // there is no UUM, without needing to consider the case values below.
+
+    // Some code (e.g., AMDGPUGenMCCodeEmitter.inc) has tens of thousands of
+    // cases. This results in an extremely long chained expression for MSan's
+    // switch instrumentation, which can cause the JumpThreadingPass to have a
+    // stack overflow or excessive runtime. We limit the number of cases
+    // considered, with the tradeoff of niche false negatives.
+    // TODO: figure out a better solution.
+    int casesToConsider = ClSwitchPrecision;
+
+    Value *ShadowCases = nullptr;
+    for (auto Case : SI.cases()) {
+      if (casesToConsider <= 0)
+        break;
+
+      Value *Comparator = Case.getCaseValue();
+      // TODO: some simplification is possible when comparing multiple cases
+      // simultaneously.
+      Value *ComparisonShadow = propagateEqualityComparison(
+          IRB, Val, Comparator, ShadowVal, getShadow(Comparator));
+
+      if (ShadowCases)
+        ShadowCases = IRB.CreateOr(ShadowCases, ComparisonShadow);
+      else
+        ShadowCases = ComparisonShadow;
+
+      casesToConsider--;
+    }
+
+    if (ShadowCases)
+      insertCheckShadow(ShadowCases, getOrigin(Val), &SI);
   }
 
   // Vector manipulation.
@@ -3455,7 +3522,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // If zero poison is requested, mix in with the shadow
     Constant *IsZeroPoison = cast<Constant>(I.getOperand(1));
-    if (!IsZeroPoison->isZeroValue()) {
+    if (!IsZeroPoison->isNullValue()) {
       Value *BoolZeroPoison = IRB.CreateIsNull(Src, "_mscz_bzp");
       OutputShadow = IRB.CreateOr(OutputShadow, BoolZeroPoison, "_mscz_bs");
     }

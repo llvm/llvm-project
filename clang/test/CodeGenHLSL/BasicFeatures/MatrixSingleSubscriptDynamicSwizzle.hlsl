@@ -115,7 +115,7 @@ int3 getMatrixSwizzle2x3(out int2x3 M, int index) {
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(24) [[M:%.*]], <6 x i32> noundef [[N:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [2 x <3 x i32>], align 4
+// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    [[INDEX_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store <6 x i32> [[N]], ptr [[N_ADDR]], align 4
