@@ -9,7 +9,7 @@ define void @partial_vec_invalid_cost() #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LSHR_1:%.*]] = lshr i96 0, 1
 ; CHECK-NEXT:    [[LSHR_2:%.*]] = lshr i96 0, 0
-; CHECK-NEXT:    [[ADD_1:%.*]] = add i96 0, 1
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i96 -1, 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i96> poison, i96 [[LSHR_1]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i96> [[TMP0]], i96 [[LSHR_2]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i96> [[TMP1]], i96 0, i32 2
@@ -26,7 +26,7 @@ entry:
   %lshr.1 = lshr i96 0, 1 ; These ops
   %lshr.2 = lshr i96 0, 0 ; return an
   %add.0 = add i96 0, 0   ; invalid
-  %add.1 = add i96 0, 1   ; vector cost.
+  %add.1 = add i96 -1, 1   ; vector cost.
 
   %trunc.i96.1 = trunc i96 %lshr.1 to i32 ; These ops
   %trunc.i96.2 = trunc i96 %lshr.2 to i32 ; return an

@@ -2224,6 +2224,12 @@ foreach vt = [v2f32, v2i32] in {
 
 def: Pat<(v2i16 (scalar_to_vector i16:$a)),
          (CVT_u32_u16 $a, CvtNONE)>;
+def: Pat<(v2i32 (scalar_to_vector i32:$a)),
+         (CVT_u64_u32 $a, CvtNONE)>;
+def: Pat<(v2f16 (scalar_to_vector f16:$a)),
+         (V2I16toI32 $a, 0)>;
+def: Pat<(v2f32 (scalar_to_vector f32:$a)),
+         (V2I32toI64 $a, (i32 0))>;
 
 // This node is similar to ISD::BUILD_VECTOR except that the output may be
 // implicitly bitcast to a scalar. This allows for the representation of
