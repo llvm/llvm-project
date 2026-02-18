@@ -57,7 +57,7 @@ static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
                                   llvm::SmallVector<mlir::Value> &ops,
                                   mlir::Location loc, cir::CmpOpKind pred,
                                   bool shouldInvert) {
-  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
   // TODO(cir): Add isSignaling boolean once emitConstrainedFPCall implemented
   assert(!cir::MissingFeatures::emitConstrainedFPCall());
   mlir::Value cmp = builder.createVecCompare(loc, pred, ops[0], ops[1]);
