@@ -199,13 +199,13 @@ public:
 /// ForExprAST - Expression class for for/in.
 class ForExprAST : public ExprAST {
   std::string VarName;
-  std::unique_ptr<ExprAST> Start, End, Step, Body;
+  std::unique_ptr<ExprAST> Start, Cond, Step, Body;
 
 public:
   ForExprAST(const std::string &VarName, std::unique_ptr<ExprAST> Start,
-             std::unique_ptr<ExprAST> End, std::unique_ptr<ExprAST> Step,
+             std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Step,
              std::unique_ptr<ExprAST> Body)
-      : VarName(VarName), Start(std::move(Start)), End(std::move(End)),
+      : VarName(VarName), Start(std::move(Start)), Cond(std::move(Cond)),
         Step(std::move(Step)), Body(std::move(Body)) {}
 
   Value *codegen() override;
@@ -387,8 +387,8 @@ static std::unique_ptr<ExprAST> ParseForExpr() {
     return LogError("expected ',' after for start value");
   getNextToken();
 
-  auto End = ParseExpression();
-  if (!End)
+  auto Cond = ParseExpression();
+  if (!Cond)
     return nullptr;
 
   // The step value is optional.
@@ -408,7 +408,7 @@ static std::unique_ptr<ExprAST> ParseForExpr() {
   if (!Body)
     return nullptr;
 
-  return std::make_unique<ForExprAST>(IdName, std::move(Start), std::move(End),
+  return std::make_unique<ForExprAST>(IdName, std::move(Start), std::move(Cond),
                                        std::move(Step), std::move(Body));
 }
 
@@ -682,53 +682,77 @@ Value *IfExprAST::codegen() {
 }
 
 // Output for-loop as:
+// entry:
 //   ...
 //   start = startexpr
-//   goto loop
+//   goto loopcond
+// loopcond:
+//   variable = phi [start, entry], [nextvariable, loop]
+//   endcond = endexpr
+//   br endcond, loop, endloop
 // loop:
-//   variable = phi [start, loopheader], [nextvariable, loopend]
 //   ...
 //   bodyexpr
 //   ...
-// loopend:
 //   step = stepexpr
 //   nextvariable = variable + step
-//   endcond = endexpr
-//   br endcond, loop, endloop
-// outloop:
+//   goto loopcond
+// endloop:
+//   ...
 Value *ForExprAST::codegen() {
   // Emit the start code first, without 'variable' in scope.
   Value *StartVal = Start->codegen();
   if (!StartVal)
     return nullptr;
 
-  // Make the new basic block for the loop header, inserting after current
-  // block.
+  // Make new basic blocks for loop condition, loop body, and end-loop code. 
   Function *TheFunction = Builder->GetInsertBlock()->getParent();
-  BasicBlock *PreheaderBB = Builder->GetInsertBlock();
-  BasicBlock *LoopBB = BasicBlock::Create(*TheContext, "loop", TheFunction);
+  BasicBlock *EntryBB = Builder->GetInsertBlock();
+  BasicBlock *LoopConditionBB = BasicBlock::Create(*TheContext, "loopcond",
+      TheFunction);
+  BasicBlock *LoopBB = BasicBlock::Create(*TheContext, "loop");
+  BasicBlock *EndLoopBB = BasicBlock::Create(*TheContext, "endloop");
 
-  // Insert an explicit fall through from the current block to the LoopBB.
-  Builder->CreateBr(LoopBB);
+  // Insert an explicit fall through from current block to LoopConditionBB.
+  Builder->CreateBr(LoopConditionBB);
 
-  // Start insertion in LoopBB.
-  Builder->SetInsertPoint(LoopBB);
+  // Start insertion in LoopConditionBB.
+  Builder->SetInsertPoint(LoopConditionBB);
 
   // Start the PHI node with an entry for Start.
   PHINode *Variable =
       Builder->CreatePHI(Type::getDoubleTy(*TheContext), 2, VarName);
-  Variable->addIncoming(StartVal, PreheaderBB);
+  Variable->addIncoming(StartVal, EntryBB);
 
-  // Within the loop, the variable is defined equal to the PHI node.  If it
+  // Within the loop, the variable is defined equal to the PHI node. If it
   // shadows an existing variable, we have to restore it, so save it now.
   Value *OldVal = NamedValues[VarName];
   NamedValues[VarName] = Variable;
 
-  // Emit the body of the loop.  This, like any other expr, can change the
-  // current BB.  Note that we ignore the value computed by the body, but don't
-  // allow an error.
-  if (!Body->codegen())
+  // Compute the end condition.
+  Value *EndCond = Cond->codegen();
+  if (!EndCond)
     return nullptr;
+
+  // Convert condition to a bool by comparing non-equal to 0.0.
+  EndCond = Builder->CreateFCmpONE(
+      EndCond, ConstantFP::get(*TheContext, APFloat(0.0)), "endcond");
+
+  // Insert the conditional branch that either continues the loop, or exits the
+  // loop.
+  Builder->CreateCondBr(EndCond, LoopBB, EndLoopBB);
+
+  // Attach the basic block that will soon hold the loop body to the end of the
+  // parent function.
+  TheFunction->insert(TheFunction->end(), LoopBB);
+
+  // Emit the loop body within the LoopBB. This, like any other expr, can change
+  // the current BB. Note that we ignore the value computed by the body, but
+  // don't allow an error.
+  Builder->SetInsertPoint(LoopBB);
+  if (!Body->codegen()) {
+    return nullptr;
+  }
 
   // Emit the step value.
   Value *StepVal = nullptr;
@@ -743,28 +767,20 @@ Value *ForExprAST::codegen() {
 
   Value *NextVar = Builder->CreateFAdd(Variable, StepVal, "nextvar");
 
-  // Compute the end condition.
-  Value *EndCond = End->codegen();
-  if (!EndCond)
-    return nullptr;
-
-  // Convert condition to a bool by comparing non-equal to 0.0.
-  EndCond = Builder->CreateFCmpONE(
-      EndCond, ConstantFP::get(*TheContext, APFloat(0.0)), "loopcond");
-
-  // Create the "after loop" block and insert it.
-  BasicBlock *LoopEndBB = Builder->GetInsertBlock();
-  BasicBlock *AfterBB =
-      BasicBlock::Create(*TheContext, "afterloop", TheFunction);
-
-  // Insert the conditional branch into the end of LoopEndBB.
-  Builder->CreateCondBr(EndCond, LoopBB, AfterBB);
-
-  // Any new code will be inserted in AfterBB.
-  Builder->SetInsertPoint(AfterBB);
-
   // Add a new entry to the PHI node for the backedge.
-  Variable->addIncoming(NextVar, LoopEndBB);
+  LoopBB = Builder->GetInsertBlock();
+  Variable->addIncoming(NextVar, LoopBB);
+
+  // Create the unconditional branch that returns to LoopConditionBB to
+  // determine if we should continue looping.
+  Builder->CreateBr(LoopConditionBB);
+
+  // Append EndLoopBB after the loop body. We go to this basic block if the
+  // loop condition says we should not loop anymore.
+  TheFunction->insert(TheFunction->end(), EndLoopBB);
+
+  // Any new code will be inserted after the loop.
+  Builder->SetInsertPoint(EndLoopBB);
 
   // Restore the unshadowed variable.
   if (OldVal)

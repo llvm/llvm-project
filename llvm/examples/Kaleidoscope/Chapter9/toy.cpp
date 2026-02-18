@@ -312,19 +312,19 @@ public:
 /// ForExprAST - Expression class for for/in.
 class ForExprAST : public ExprAST {
   std::string VarName;
-  std::unique_ptr<ExprAST> Start, End, Step, Body;
+  std::unique_ptr<ExprAST> Start, Cond, Step, Body;
 
 public:
   ForExprAST(const std::string &VarName, std::unique_ptr<ExprAST> Start,
-             std::unique_ptr<ExprAST> End, std::unique_ptr<ExprAST> Step,
+             std::unique_ptr<ExprAST> Cond, std::unique_ptr<ExprAST> Step,
              std::unique_ptr<ExprAST> Body)
-      : VarName(VarName), Start(std::move(Start)), End(std::move(End)),
+      : VarName(VarName), Start(std::move(Start)), Cond(std::move(Cond)),
         Step(std::move(Step)), Body(std::move(Body)) {}
   Value *codegen() override;
   raw_ostream &dump(raw_ostream &out, int ind) override {
     ExprAST::dump(out << "for", ind);
-    Start->dump(indent(out, ind) << "Cond:", ind + 1);
-    End->dump(indent(out, ind) << "End:", ind + 1);
+    Start->dump(indent(out, ind) << "Start:", ind + 1);
+    Cond->dump(indent(out, ind) << "Cond:", ind + 1);
     Step->dump(indent(out, ind) << "Step:", ind + 1);
     Body->dump(indent(out, ind) << "Body:", ind + 1);
     return out;
@@ -551,8 +551,8 @@ static std::unique_ptr<ExprAST> ParseForExpr() {
     return LogError("expected ',' after for start value");
   getNextToken();
 
-  auto End = ParseExpression();
-  if (!End)
+  auto Cond = ParseExpression();
+  if (!Cond)
     return nullptr;
 
   // The step value is optional.
@@ -572,7 +572,7 @@ static std::unique_ptr<ExprAST> ParseForExpr() {
   if (!Body)
     return nullptr;
 
-  return std::make_unique<ForExprAST>(IdName, std::move(Start), std::move(End),
+  return std::make_unique<ForExprAST>(IdName, std::move(Start), std::move(Cond),
                                        std::move(Step), std::move(Body));
 }
 
@@ -1063,20 +1063,21 @@ Value *IfExprAST::codegen() {
 //   ...
 //   start = startexpr
 //   store start -> var
-//   goto loop
+//   goto loopcond
+// loopcond:
+//   endcond = endexpr
+//   br endcond, loop, endloop
 // loop:
 //   ...
 //   bodyexpr
 //   ...
-// loopend:
 //   step = stepexpr
-//   endcond = endexpr
-//
 //   curvar = load var
 //   nextvar = curvar + step
 //   store nextvar -> var
-//   br endcond, loop, endloop
-// outloop:
+//   goto loopcond
+// endloop:
+//   ...
 Value *ForExprAST::codegen() {
   Function *TheFunction = Builder->GetInsertBlock()->getParent();
 
@@ -1093,26 +1094,47 @@ Value *ForExprAST::codegen() {
   // Store the value into the alloca.
   Builder->CreateStore(StartVal, Alloca);
 
-  // Make the new basic block for the loop header, inserting after current
-  // block.
-  BasicBlock *LoopBB = BasicBlock::Create(*TheContext, "loop", TheFunction);
-
-  // Insert an explicit fall through from the current block to the LoopBB.
-  Builder->CreateBr(LoopBB);
-
-  // Start insertion in LoopBB.
-  Builder->SetInsertPoint(LoopBB);
-
-  // Within the loop, the variable is defined equal to the PHI node.  If it
-  // shadows an existing variable, we have to restore it, so save it now.
+  // If the loop variable shadows an existing variable, we have to restore it,
+  // so save it now. Set VarName to refer to our recently created alloca.
   AllocaInst *OldVal = NamedValues[VarName];
   NamedValues[VarName] = Alloca;
 
-  // Emit the body of the loop.  This, like any other expr, can change the
-  // current BB.  Note that we ignore the value computed by the body, but don't
-  // allow an error.
-  if (!Body->codegen())
+  // Make new basic blocks for loop condition, loop body and end-loop code.
+  BasicBlock *LoopConditionBB = BasicBlock::Create(*TheContext, "loopcond",
+      TheFunction);
+  BasicBlock *LoopBB = BasicBlock::Create(*TheContext, "loop");
+  BasicBlock *EndLoopBB = BasicBlock::Create(*TheContext, "endloop");
+
+  // Insert an explicit fall through from current block to LoopConditionBB.
+  Builder->CreateBr(LoopConditionBB);
+
+  // Start insertion in LoopConditionBB.
+  Builder->SetInsertPoint(LoopConditionBB);
+
+  // Compute the end condition.
+  Value *EndCond = Cond->codegen();
+  if (!EndCond)
     return nullptr;
+
+  // Convert condition to a bool by comparing non-equal to 0.0.
+  EndCond = Builder->CreateFCmpONE(
+      EndCond, ConstantFP::get(*TheContext, APFloat(0.0)), "endcond");
+
+  // Insert the conditional branch that either continues the loop, or exits the
+  // loop.
+  Builder->CreateCondBr(EndCond, LoopBB, EndLoopBB);
+
+  // Attach the basic block that will soon hold the loop body to the end of the
+  // parent function.
+  TheFunction->insert(TheFunction->end(), LoopBB);
+
+  // Emit the loop body within the LoopBB. This, like any other expr, can change
+  // the current BB. Note that we ignore the value computed by the body, but
+  // don't allow an error.
+  Builder->SetInsertPoint(LoopBB);
+  if (!Body->codegen()) {
+    return nullptr;
+  }
 
   // Emit the step value.
   Value *StepVal = nullptr;
@@ -1125,31 +1147,22 @@ Value *ForExprAST::codegen() {
     StepVal = ConstantFP::get(*TheContext, APFloat(1.0));
   }
 
-  // Compute the end condition.
-  Value *EndCond = End->codegen();
-  if (!EndCond)
-    return nullptr;
-
-  // Reload, increment, and restore the alloca.  This handles the case where
-  // the body of the loop mutates the variable.
-  Value *CurVar = Builder->CreateLoad(Type::getDoubleTy(*TheContext), Alloca,
-                                      VarName.c_str());
+  // Load, increment and store the new loop variable.
+  Value *CurVar = Builder->CreateLoad(Alloca->getAllocatedType(), Alloca,
+                                      VarName);
   Value *NextVar = Builder->CreateFAdd(CurVar, StepVal, "nextvar");
   Builder->CreateStore(NextVar, Alloca);
 
-  // Convert condition to a bool by comparing non-equal to 0.0.
-  EndCond = Builder->CreateFCmpONE(
-      EndCond, ConstantFP::get(*TheContext, APFloat(0.0)), "loopcond");
+  // Create the unconditional branch that returns to LoopConditionBB to
+  // determine if we should continue looping.
+  Builder->CreateBr(LoopConditionBB);
 
-  // Create the "after loop" block and insert it.
-  BasicBlock *AfterBB =
-      BasicBlock::Create(*TheContext, "afterloop", TheFunction);
+  // Append EndLoopBB after the loop body. We go to this basic block if the
+  // loop condition says we should not loop anymore.
+  TheFunction->insert(TheFunction->end(), EndLoopBB);
 
-  // Insert the conditional branch into the end of LoopEndBB.
-  Builder->CreateCondBr(EndCond, LoopBB, AfterBB);
-
-  // Any new code will be inserted in AfterBB.
-  Builder->SetInsertPoint(AfterBB);
+  // Any new code will be inserted after the loop.
+  Builder->SetInsertPoint(EndLoopBB);
 
   // Restore the unshadowed variable.
   if (OldVal)
