@@ -208,6 +208,8 @@ Changes to BOLT
 Changes to Sanitizers
 ---------------------
 
+* Add a random delay into ThreadSanitizer to help find rare thread interleavings.
+
 Other Changes
 -------------
 
