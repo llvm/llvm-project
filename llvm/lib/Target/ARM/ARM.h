@@ -35,6 +35,7 @@ Pass *createMVETailPredicationPass();
 FunctionPass *createARMLowOverheadLoopsPass();
 FunctionPass *createARMBlockPlacementPass();
 Pass *createARMParallelDSPPass();
+FunctionPass *createARMConditionOptimizerPass();
 FunctionPass *createARMISelDag(ARMBaseTargetMachine &TM,
                                CodeGenOptLevel OptLevel);
 FunctionPass *createA15SDOptimizerPass();
@@ -64,6 +65,7 @@ void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
 void initializeARMAsmPrinterPass(PassRegistry &);
 void initializeARMBlockPlacementPass(PassRegistry &);
 void initializeARMBranchTargetsPass(PassRegistry &);
+void initializeARMConditionOptimizerPass(PassRegistry &);
 void initializeARMConstantIslandsPass(PassRegistry &);
 void initializeARMDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeARMExpandPseudoPass(PassRegistry &);
