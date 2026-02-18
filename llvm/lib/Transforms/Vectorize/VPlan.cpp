@@ -240,11 +240,9 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    ElementCount VF, LoopInfo *LI,
                                    DominatorTree *DT, AssumptionCache *AC,
                                    IRBuilderBase &Builder, VPlan *Plan,
-                                   Loop *CurrentParentLoop, Type *CanonicalIVTy,
-                                   VPValue *ClampedVF)
+                                   Loop *CurrentParentLoop, Type *CanonicalIVTy)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
-      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan),
-      ClampedVF(ClampedVF) {}
+      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (isa<VPIRValue, VPSymbolicValue>(Def))

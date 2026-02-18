@@ -7564,7 +7564,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
                          OrigLoop->getParentLoop(),
-                         Legal->getWidestInductionType(), ClampedVF);
+                         Legal->getWidestInductionType());
 
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
