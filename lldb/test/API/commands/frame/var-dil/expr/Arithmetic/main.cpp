@@ -4,8 +4,10 @@
 int main(int argc, char **argv) {
   short s = 10;
   unsigned short us = 1;
+  unsigned int ui = 4;
   long l = 5;
   unsigned long ul = 6;
+  long long ll = 7;
   float f = 1.0f;
   double d = 2.5;
 
@@ -31,11 +33,9 @@ int main(int argc, char **argv) {
   int int_max = std::numeric_limits<int>::max();
   int int_min = std::numeric_limits<int>::min();
   unsigned int uint_max = std::numeric_limits<unsigned int>::max();
-  unsigned int uint_zero = 0;
   long long ll_max = std::numeric_limits<long long>::max();
   long long ll_min = std::numeric_limits<long long>::min();
   unsigned long long ull_max = std::numeric_limits<unsigned long long>::max();
-  unsigned long long ull_zero = 0;
 
   return 0; // Set a breakpoint here
 }

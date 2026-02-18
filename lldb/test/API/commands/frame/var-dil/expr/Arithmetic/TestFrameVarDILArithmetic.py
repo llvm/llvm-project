@@ -67,15 +67,23 @@ class TestFrameVarDILArithmetic(TestBase):
         # Check limits and overflows
         frame = thread.GetFrameAtIndex(0)
         int_min = frame.GetValueForVariablePath("int_min").GetValue()
-        int_max = frame.GetValueForVariablePath("int_max").GetValue()
-        uint_max = frame.GetValueForVariablePath("uint_max").GetValue()
-        ll_max = frame.GetValueForVariablePath("ll_max").GetValue()
         ll_min = frame.GetValueForVariablePath("ll_min").GetValue()
-        ull_max = frame.GetValueForVariablePath("ull_max").GetValue()
         self.expect_var_path("int_max + 1", value=int_min)
         self.expect_var_path("uint_max + 1", value="0")
         self.expect_var_path("ll_max + 1", value=ll_min)
         self.expect_var_path("ull_max + 1", value="0")
+
+        # Check signed integer promotion when different types have the same size
+        uint = frame.GetValueForVariablePath("ui")
+        long = frame.GetValueForVariablePath("l")
+        if uint.GetByteSize() == long.GetByteSize():
+            self.expect_var_path("ui + l", value="9", type="unsigned long")
+            self.expect_var_path("l + ui", value="9", type="unsigned long")
+        ulong = frame.GetValueForVariablePath("ul")
+        longlong = frame.GetValueForVariablePath("ll")
+        if ulong.GetByteSize() == longlong.GetByteSize():
+            self.expect_var_path("ul + ll", value="13", type="unsigned long long")
+            self.expect_var_path("ll + ul", value="13", type="unsigned long long")
 
         # Check references and typedefs
         self.expect_var_path("ref + 1", value="3")

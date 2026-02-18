@@ -166,6 +166,55 @@ static size_t ConversionRank(CompilerType type) {
   return 0;
 }
 
+static lldb::BasicType BasicTypeToUnsigned(lldb::BasicType basic_type) {
+  switch (basic_type) {
+  case lldb::eBasicTypeChar:
+  case lldb::eBasicTypeSignedChar:
+    return lldb::eBasicTypeUnsignedChar;
+  case lldb::eBasicTypeShort:
+    return lldb::eBasicTypeUnsignedShort;
+  case lldb::eBasicTypeInt:
+    return lldb::eBasicTypeUnsignedInt;
+  case lldb::eBasicTypeLong:
+    return lldb::eBasicTypeUnsignedLong;
+  case lldb::eBasicTypeLongLong:
+    return lldb::eBasicTypeUnsignedLongLong;
+  case lldb::eBasicTypeInt128:
+    return lldb::eBasicTypeUnsignedInt128;
+  default:
+    return basic_type;
+  }
+}
+
+llvm::Expected<CompilerType>
+Interpreter::PromoteSignedInteger(CompilerType &lhs_type,
+                                  CompilerType &rhs_type) {
+  // This expects that Rank(lhs_type) < Rank(rhs_type).
+  if (!lhs_type.IsSigned() && rhs_type.IsSigned()) {
+    llvm::Expected<uint64_t> lhs_size =
+        lhs_type.GetBitSize(m_exe_ctx_scope.get());
+    if (!lhs_size)
+      return lhs_size.takeError();
+    llvm::Expected<uint64_t> rhs_size =
+        rhs_type.GetBitSize(m_exe_ctx_scope.get());
+    if (!rhs_size)
+      return rhs_size.takeError();
+
+    if (*rhs_size == *lhs_size) {
+      llvm::Expected<lldb::TypeSystemSP> type_system =
+          GetTypeSystemFromCU(m_exe_ctx_scope);
+      if (!type_system)
+        return type_system.takeError();
+      CompilerType r_type_unsigned = GetBasicType(
+          *type_system,
+          BasicTypeToUnsigned(
+              rhs_type.GetCanonicalType().GetBasicTypeEnumeration()));
+      return r_type_unsigned;
+    }
+  }
+  return rhs_type;
+}
+
 llvm::Expected<CompilerType>
 Interpreter::ArithmeticConversion(lldb::ValueObjectSP &lhs,
                                   lldb::ValueObjectSP &rhs, uint32_t location) {
@@ -182,7 +231,7 @@ Interpreter::ArithmeticConversion(lldb::ValueObjectSP &lhs,
   CompilerType lhs_type = lhs->GetCompilerType();
   CompilerType rhs_type = rhs->GetCompilerType();
 
-  // If types already match, no need for further conversions
+  // If types already match, no need for further conversions.
   if (lhs_type.CompareTypes(rhs_type))
     return lhs_type;
 
@@ -190,11 +239,33 @@ Interpreter::ArithmeticConversion(lldb::ValueObjectSP &lhs,
   if (!lhs_type.IsScalarType() || !rhs_type.IsScalarType())
     return CompilerType();
 
-  using Rank = std::tuple<size_t, bool>;
-  if (Rank{ConversionRank(lhs_type), !lhs_type.IsSigned()} >
-      Rank{ConversionRank(rhs_type), !rhs_type.IsSigned()})
+  size_t l_rank = ConversionRank(lhs_type);
+  size_t r_rank = ConversionRank(rhs_type);
+  // If both operands are integer, check if we need to promote
+  // the higher ranked signed type.
+  if (lhs_type.IsInteger() && rhs_type.IsInteger()) {
+    using Rank = std::tuple<size_t, bool>;
+    Rank int_l_rank = {l_rank, !lhs_type.IsSigned()};
+    Rank int_r_rank = {r_rank, !rhs_type.IsSigned()};
+    if (int_l_rank < int_r_rank) {
+      auto type_or_err = PromoteSignedInteger(lhs_type, rhs_type);
+      if (!type_or_err)
+        return type_or_err.takeError();
+      return *type_or_err;
+    }
+    if (int_l_rank > int_r_rank) {
+      auto type_or_err = PromoteSignedInteger(rhs_type, lhs_type);
+      if (!type_or_err)
+        return type_or_err.takeError();
+      return *type_or_err;
+    }
     return lhs_type;
-  return rhs_type;
+  }
+
+  // Handle other combinations of integer and floating point operands.
+  if (l_rank < r_rank)
+    return rhs_type;
+  return lhs_type;
 }
 
 static lldb::VariableSP DILFindVariable(ConstString name,
