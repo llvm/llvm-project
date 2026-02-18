@@ -13,26 +13,18 @@ define void @caller(ptr %p) {
 ; CHECK-NEXT:    [[I_I2:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[I_I1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[I_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[I_I3:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[I_I4:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I_I4]])
-; CHECK-NEXT:    call void @callee0(ptr [[I_I4]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I_I3]])
-; CHECK-NEXT:    call void @callee0(ptr [[I_I3]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I_I]])
 ; CHECK-NEXT:    call void @callee0(ptr [[I_I]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I_I1]])
 ; CHECK-NEXT:    call void @callee0(ptr [[I_I1]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[I_I2]])
 ; CHECK-NEXT:    call void @callee0(ptr [[I_I2]])
-; CHECK-NEXT:    call void @callee0(ptr [[I_I2]])
+; CHECK-NEXT:    call void @callee4(ptr [[P]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I_I2]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I_I1]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I_I3]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[I_I4]])
 ; CHECK-NEXT:    br label %[[LOOP]]
 ;
 header:
@@ -114,4 +106,5 @@ define void @callee5(ptr %p) {
 }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR1]] = { "function-inline-additional-cost"="6" }
 ;.

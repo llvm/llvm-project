@@ -225,6 +225,11 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
       Advice->recordUnattemptedInlining();
       continue;
     }
+    int CBInliningAdditionalCost =
+        getStringFnAttrAsInt(
+            *CB, InlineConstants::FunctionInlineAdditionalCostAttributeName)
+            .value_or(0);
+    std::optional<int> InliningCost = Advice->inliningCost();
 
     // Setup the data structure used to plumb customization into the
     // `InlineFunction` routine.
@@ -265,8 +270,22 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
               NewCallee = ICB->getCalledFunction();
         }
         if (NewCallee)
-          if (!NewCallee->isDeclaration())
+          if (!NewCallee->isDeclaration()) {
             Calls->push({ICB, NewHistoryID});
+            if (InliningCost && *InliningCost > 0) {
+              // The hot callsite threshold violates the inliner's bottom-up
+              // inlining assumption, as we end up inlining calls which we
+              // previously declined to inline with a higher threshold. This
+              // can result in exponential inlining, which is effectively
+              // unlimited without this additional cost.
+              Attribute NewCBAdditionalCost = Attribute::get(
+                  M.getContext(),
+                  InlineConstants::FunctionInlineAdditionalCostAttributeName,
+                  itostr(CBInliningAdditionalCost +
+                         (*InliningCost - CBInliningAdditionalCost) / 16));
+              ICB->addFnAttr(NewCBAdditionalCost);
+            }
+          }
       }
     }
 

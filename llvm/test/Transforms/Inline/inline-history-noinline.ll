@@ -29,4 +29,4 @@ define internal void @a() {
   ret void
 }
 
-; CHECK: [[NOINLINE]] = { noinline }
+; CHECK: [[NOINLINE]] = { noinline {{.*}}}
