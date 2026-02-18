@@ -6090,8 +6090,10 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
       if (!FirstMTE)
         OS << ", ";
       if (!Helper.handledStmt(MTE->getSubExpr(), OS)) {
+        PrintingPolicy Policy{Helper.getLangOpts()};
+        Policy.IncludeNewlines = false;
         // Pretty print the sub-expresion as a fallback
-        MTE->printPretty(OS, &Helper, PrintingPolicy(Helper.getLangOpts()));
+        MTE->printPretty(OS, &Helper, Policy);
       };
       FirstMTE = false;
     }

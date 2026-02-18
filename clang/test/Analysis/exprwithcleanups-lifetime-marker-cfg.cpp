@@ -9,7 +9,18 @@ struct NonTrivialDtor {
 
 void foo(const TrivialDtor&, const NonTrivialDtor&);
 
-// CHECK: (FullExprCleanup collected 2 MTEs: [B1.4], [B1.8])
+void bar(const TrivialDtor& = TrivialDtor());
+
+// CHECK:      4: [B1.3] (ImplicitCastExpr, NoOp, const TrivialDtor)
+// CHECK-NEXT: 5: [B1.4]
+// CHECK:      8: [B1.7] (ImplicitCastExpr, NoOp, const NonTrivialDtor)
+// CHECK-NEXT: 9: [B1.8]
+// CHECK:      (FullExprCleanup collected 2 MTEs: [B1.4], [B1.8])
 void f() {
   foo(TrivialDtor(), NonTrivialDtor());
+}
+
+// CHECK: (FullExprCleanup collected 1 MTE: TrivialDtor())
+void g() {
+  bar();
 }

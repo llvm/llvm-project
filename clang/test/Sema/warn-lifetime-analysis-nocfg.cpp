@@ -298,11 +298,11 @@ std::string_view danglingRefToOptionalFromTemp4() {
 void danglingReferenceFromTempOwner() {
   int &&r = *std::optional<int>();          // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                             // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
-  //https://github.com/llvm/llvm-project/issues/175893
+  // https://github.com/llvm/llvm-project/issues/175893
   int &&r2 = *std::optional<int>(5);        // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                               // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
-  //https://github.com/llvm/llvm-project/issues/175893
+  // https://github.com/llvm/llvm-project/issues/175893
   int &&r3 = std::optional<int>(5).value(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                               // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
