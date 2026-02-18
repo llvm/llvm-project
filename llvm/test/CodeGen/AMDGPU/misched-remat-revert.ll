@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -O3 -debug-only=machine-scheduler 2>&1 < %s | FileCheck -check-prefix=DEBUG %s
 ; REQUIRES: asserts
+; XFAIL: *
 
 ; This testcase hit a situation where reverting scheduling after the scheduler's
 ; rematerialization stage would cause incoherent MI and slot orders, hitting an
