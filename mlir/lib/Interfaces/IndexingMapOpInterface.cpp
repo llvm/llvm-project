@@ -17,7 +17,7 @@ namespace mlir {
 static LogicalResult verifyIndexingMapOperandType(Operation *op, Type t,
                                                   unsigned operandNumber) {
   // Scalars are allowed (treated as rank-0). verifyImpl checks the rank.
-  if (!isa<ShapedType>(t) && !isa<VectorType>(t))
+  if (t.isIntOrIndexOrFloat())
     return success();
 
   // Vectors are allowed.
@@ -68,7 +68,7 @@ LogicalResult mlir::IndexingMapOpInterface::verifyImpl() {
       return this->emitOpError("unexpected symbols in indexing_map #")
              << opOperand.getOperandNumber();
     // Handle scalars.
-    if (!isa<ShapedType>(ty) && !isa<VectorType>(ty)) {
+    if (ty.isIntOrIndexOrFloat()) {
       int64_t rank = 0;
       if (indexingMap.getNumResults() != rank)
         return this->emitOpError("expected operand #")
