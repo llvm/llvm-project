@@ -119,6 +119,7 @@
 #include "math/rsqrtf.h"
 #include "math/rsqrtf16.h"
 #include "math/sin.h"
+#include "math/sincos.h"
 #include "math/sincosf.h"
 #include "math/sinf.h"
 #include "math/sinf16.h"
