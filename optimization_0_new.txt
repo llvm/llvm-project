@@ -1,0 +1,676 @@
+ -- 'Expand large div/rem' is not preserving 'Pre-ISel Intrinsic Lowering'
+ -- 'Expand large div/rem' is not preserving 'Function Pass Manager'
+ -- 'Expand fp' is not preserving 'Expand large div/rem'
+ -- 'Expand Atomic instructions' is not preserving 'Expand fp'
+ -- 'Lower Garbage Collection Instructions' is not preserving 'Expand Atomic instructions'
+ -- 'Shadow Stack GC Lowering' is not preserving 'Lower Garbage Collection Instructions'
+ -- 'Remove unreachable blocks from the CFG' is not preserving 'Lower @llvm.global_dtors via `__cxa_atexit`'
+ -- 'Remove unreachable blocks from the CFG' is not preserving 'Function Pass Manager'
+ -- 'Instrument function entry/exit with calls to e.g. mcount() (post inlining)' is not preserving 'Remove unreachable blocks from the CFG'
+ -- 'Scalarize Masked Memory Intrinsics' is not preserving 'Instrument function entry/exit with calls to e.g. mcount() (post inlining)'
+ -- 'Expand reduction intrinsics' is not preserving 'Scalarize Masked Memory Intrinsics'
+ -- 'AArch64 Stack Tagging' is not preserving 'Expand reduction intrinsics'
+ -- 'AArch64 Stack Tagging' is not preserving 'Optimization Remark Emitter'
+ -- 'SME ABI Pass' is not preserving 'Lazy Branch Probability Analysis'
+ -- 'SME ABI Pass' is not preserving 'Lazy Block Frequency Analysis'
+ -- 'SME ABI Pass' is not preserving 'Natural Loop Information'
+ -- 'SME ABI Pass' is not preserving 'AArch64 Stack Tagging'
+ -- 'SME ABI Pass' is not preserving 'Dominator Tree Construction'
+ -- 'Exception handling preparation' is not preserving 'SME ABI Pass'
+ -- 'Prepare callbr' is not preserving 'Exception handling preparation'
+ -- 'Safe Stack instrumentation pass' is not preserving 'Prepare callbr'
+ -- 'Insert stack protectors' is not preserving 'Safe Stack instrumentation pass'
+ -- 'IRTranslator' is not preserving 'Analysis containing CSE Info'
+ -- 'AArch64O0PreLegalizerCombiner' is not preserving 'IRTranslator'
+ -- 'Localizer' is not preserving 'AArch64O0PreLegalizerCombiner'
+ -- 'Localizer' is not preserving 'Analysis for ComputingKnownBits'
+ -- 'Legalizer' is not preserving 'Localizer'
+ -- 'AArch64PostLegalizerLowering' is not preserving 'Legalizer'
+ -- 'AArch64PostLegalizerLowering' is not preserving 'Analysis containing CSE Info'
+ -- 'AArch64PostLegalizerLowering' is not preserving 'Analysis for ComputingKnownBits'
+ -- 'RegBankSelect' is not preserving 'AArch64PostLegalizerLowering'
+ -- 'InstructionSelect' is not preserving 'RegBankSelect'
+ -- 'ResetMachineFunction' is not preserving 'InstructionSelect'
+ -- 'ResetMachineFunction' is not preserving 'Analysis for ComputingKnownBits'
+ -- 'AArch64 Instruction Selection' is not preserving 'ResetMachineFunction'
+ -- 'AArch64 Instruction Selection' is not preserving 'Insert stack protectors'
+ -- 'Finalize ISel and expand pseudo-instructions' is not preserving 'Assignment Tracking Analysis'
+ -- 'Finalize ISel and expand pseudo-instructions' is not preserving 'AArch64 Instruction Selection'
+ -- 'Local Stack Slot Allocation' is not preserving 'Finalize ISel and expand pseudo-instructions'
+ -- 'Eliminate PHI nodes for register allocation' is not preserving 'Local Stack Slot Allocation'
+ -- 'Two-Address instruction pass' is not preserving 'Eliminate PHI nodes for register allocation'
+ -- 'Fast Register Allocator' is not preserving 'Two-Address instruction pass'
+ -- 'Remove Redundant DEBUG_VALUE analysis' is not preserving 'Fast Register Allocator'
+ -- 'Fixup Statepoint Caller Saved' is not preserving 'Remove Redundant DEBUG_VALUE analysis'
+ -- 'Prologue/Epilogue Insertion & Frame Finalization' is not preserving 'Fixup Statepoint Caller Saved'
+ -- 'Post-RA pseudo instruction expansion pass' is not preserving 'Prologue/Epilogue Insertion & Frame Finalization'
+ -- 'AArch64 pseudo instruction expansion pass' is not preserving 'Post-RA pseudo instruction expansion pass'
+ -- 'AArch64 pseudo instruction expansion pass' is not preserving 'Machine Optimization Remark Emitter'
+ -- 'AArch64 pseudo instruction expansion pass' is not preserving 'Lazy Machine Block Frequency Analysis'
+ -- 'Insert KCFI indirect call checks' is not preserving 'AArch64 pseudo instruction expansion pass'
+ -- 'AArch64 speculation hardening pass' is not preserving 'Insert KCFI indirect call checks'
+ -- 'Insert fentry calls' is not preserving 'Analyze Machine Code For Garbage Collection'
+ -- 'Insert fentry calls' is not preserving 'AArch64 speculation hardening pass'
+ -- 'Insert XRay ops' is not preserving 'Insert fentry calls'
+ -- 'Implement the 'patchable-function' attribute' is not preserving 'Insert XRay ops'
+ -- 'Workaround A53 erratum 835769 pass' is not preserving 'Implement the 'patchable-function' attribute'
+ -- 'Contiguously Lay Out Funclets' is not preserving 'Workaround A53 erratum 835769 pass'
+ -- 'Remove Loads Into Fake Uses' is not preserving 'Contiguously Lay Out Funclets'
+ -- 'Live DEBUG_VALUE analysis' is not preserving 'StackMap Liveness Analysis'
+ -- 'Live DEBUG_VALUE analysis' is not preserving 'Remove Loads Into Fake Uses'
+ -- 'Machine Sanitizer Binary Metadata' is not preserving 'Live DEBUG_VALUE analysis'
+ -- 'AArch64 sls hardening pass' is not preserving 'Machine Sanitizer Binary Metadata'
+ -- 'AArch64 Pointer Authentication' is not preserving 'AArch64 sls hardening pass'
+ -- 'AArch64 Branch Targets' is not preserving 'AArch64 Pointer Authentication'
+ -- 'Branch relaxation pass' is not preserving 'AArch64 Branch Targets'
+ -- 'Unpack machine instruction bundles' is not preserving 'Machine Optimization Remark Emitter'
+ -- 'Unpack machine instruction bundles' is not preserving 'Lazy Machine Block Frequency Analysis'
+ -- 'Unpack machine instruction bundles' is not preserving 'Stack Frame Layout Analysis'
+ -- 'Unpack machine instruction bundles' is not preserving 'Insert CFI remember/restore state instructions'
+ -- 'Unpack machine instruction bundles' is not preserving 'Branch relaxation pass'
+ -- 'Free MachineFunction' is not preserving 'Machine Optimization Remark Emitter'
+ -- 'Free MachineFunction' is not preserving 'Lazy Machine Block Frequency Analysis'
+ -- 'Free MachineFunction' is not preserving 'AArch64 Assembly Printer'
+ -- 'Free MachineFunction' is not preserving 'Unpack machine instruction bundles'
+Pass Arguments:  -tti -targetlibinfo -targetpassconfig -machinemoduleinfo -collector-metadata -profile-summary-info -assumption-cache-tracker -machine-branch-prob -pre-isel-intrinsic-lowering -expand-large-div-rem -expand-fp -atomic-expand -gc-lowering -shadow-stack-gc-lowering -lower-global-dtors -unreachableblockelim -post-inline-ee-instrument -scalarize-masked-mem-intrin -expand-reductions -domtree -loops -lazy-branch-prob -lazy-block-freq -opt-remark-emitter -aarch64-stack-tagging -aarch64-sme-abi -dwarf-eh-prepare -callbrprepare -safe-stack -stack-protector -cseinfo -irtranslator -gisel-known-bits -aarch64-O0-prelegalizer-combiner -localizer -cseinfo -gisel-known-bits -legalizer -aarch64-postlegalizer-lowering -regbankselect -gisel-known-bits -instruction-select -debug-ata -aarch64-isel -finalize-isel -localstackalloc -phi-node-elimination -twoaddressinstruction -regallocfast -removeredundantdebugvalues -fixup-statepoint-caller-saved -lazy-machine-block-freq -machine-opt-remark-emitter -prologepilog -postrapseudos -aarch64-expand-pseudo -kcfi -aarch64-speculation-hardening -gc-analysis -fentry-insert -xray-instrumentation -patchable-function -aarch64-fix-cortex-a53-835769-pass -funclet-layout -remove-loads-into-fake-uses -stackmap-liveness -livedebugvalues -machine-sanmd -aarch64-sls-hardening -aarch64-ptrauth -aarch64-branch-targets -branch-relaxation -cfi-fixup -lazy-machine-block-freq -machine-opt-remark-emitter -stack-frame-layout -unpack-mi-bundles -lazy-machine-block-freq -machine-opt-remark-emitter -aarch64-asm-printer
+Target Transform Information
+Target Library Information
+Target Pass Configuration
+Machine Module Information
+Create Garbage Collector Module Metadata
+Profile summary info
+Assumption Cache Tracker
+Machine Branch Probability Analysis
+  ModulePass Manager
+    Pre-ISel Intrinsic Lowering
+--    Pre-ISel Intrinsic Lowering
+    FunctionPass Manager
+      Expand large div/rem
+--      Expand large div/rem
+      Expand fp
+--      Expand fp
+      Expand Atomic instructions
+--      Expand Atomic instructions
+      Lower Garbage Collection Instructions
+--      Lower Garbage Collection Instructions
+      Shadow Stack GC Lowering
+--      Shadow Stack GC Lowering
+    Lower @llvm.global_dtors via `__cxa_atexit`
+--    Lower @llvm.global_dtors via `__cxa_atexit`
+    FunctionPass Manager
+      Remove unreachable blocks from the CFG
+--      Remove unreachable blocks from the CFG
+      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
+--      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
+      Scalarize Masked Memory Intrinsics
+--      Scalarize Masked Memory Intrinsics
+      Expand reduction intrinsics
+--      Expand reduction intrinsics
+      Dominator Tree Construction
+      Natural Loop Information
+      Lazy Branch Probability Analysis
+      Lazy Block Frequency Analysis
+      Optimization Remark Emitter
+      AArch64 Stack Tagging
+--      Optimization Remark Emitter
+--      Lazy Block Frequency Analysis
+--      Natural Loop Information
+--      Lazy Branch Probability Analysis
+--      Dominator Tree Construction
+--      AArch64 Stack Tagging
+      SME ABI Pass
+--      SME ABI Pass
+      Exception handling preparation
+--      Exception handling preparation
+      Prepare callbr
+--      Prepare callbr
+      Safe Stack instrumentation pass
+--      Safe Stack instrumentation pass
+      Insert stack protectors
+      Analysis containing CSE Info
+      IRTranslator
+--      IRTranslator
+--      Analysis containing CSE Info
+      Analysis for ComputingKnownBits
+      AArch64O0PreLegalizerCombiner
+--      Analysis for ComputingKnownBits
+--      AArch64O0PreLegalizerCombiner
+      Localizer
+--      Localizer
+      Analysis containing CSE Info
+      Analysis for ComputingKnownBits
+      Legalizer
+--      Analysis containing CSE Info
+--      Analysis for ComputingKnownBits
+--      Legalizer
+      AArch64PostLegalizerLowering
+--      AArch64PostLegalizerLowering
+      RegBankSelect
+--      RegBankSelect
+      Analysis for ComputingKnownBits
+      InstructionSelect
+--      Analysis for ComputingKnownBits
+--      InstructionSelect
+      ResetMachineFunction
+--      ResetMachineFunction
+      Assignment Tracking Analysis
+      AArch64 Instruction Selection
+--      Insert stack protectors
+--      Assignment Tracking Analysis
+--      AArch64 Instruction Selection
+      Finalize ISel and expand pseudo-instructions
+--      Finalize ISel and expand pseudo-instructions
+      Local Stack Slot Allocation
+--      Local Stack Slot Allocation
+      Eliminate PHI nodes for register allocation
+--      Eliminate PHI nodes for register allocation
+      Two-Address instruction pass
+--      Two-Address instruction pass
+      Fast Register Allocator
+--      Fast Register Allocator
+      Remove Redundant DEBUG_VALUE analysis
+--      Remove Redundant DEBUG_VALUE analysis
+      Fixup Statepoint Caller Saved
+--      Fixup Statepoint Caller Saved
+      Lazy Machine Block Frequency Analysis
+      Machine Optimization Remark Emitter
+      Prologue/Epilogue Insertion & Frame Finalization
+--      Machine Optimization Remark Emitter
+--      Lazy Machine Block Frequency Analysis
+--      Prologue/Epilogue Insertion & Frame Finalization
+      Post-RA pseudo instruction expansion pass
+--      Post-RA pseudo instruction expansion pass
+      AArch64 pseudo instruction expansion pass
+--      AArch64 pseudo instruction expansion pass
+      Insert KCFI indirect call checks
+--      Insert KCFI indirect call checks
+      AArch64 speculation hardening pass
+--      AArch64 speculation hardening pass
+      Analyze Machine Code For Garbage Collection
+--      Analyze Machine Code For Garbage Collection
+      Insert fentry calls
+--      Insert fentry calls
+      Insert XRay ops
+--      Insert XRay ops
+      Implement the 'patchable-function' attribute
+--      Implement the 'patchable-function' attribute
+      Workaround A53 erratum 835769 pass
+--      Workaround A53 erratum 835769 pass
+      Contiguously Lay Out Funclets
+--      Contiguously Lay Out Funclets
+      Remove Loads Into Fake Uses
+--      Remove Loads Into Fake Uses
+      StackMap Liveness Analysis
+--      StackMap Liveness Analysis
+      Live DEBUG_VALUE analysis
+--      Live DEBUG_VALUE analysis
+      Machine Sanitizer Binary Metadata
+--      Machine Sanitizer Binary Metadata
+      AArch64 sls hardening pass
+--      AArch64 sls hardening pass
+      AArch64 Pointer Authentication
+--      AArch64 Pointer Authentication
+      AArch64 Branch Targets
+--      AArch64 Branch Targets
+      Branch relaxation pass
+--      Branch relaxation pass
+      Insert CFI remember/restore state instructions
+--      Insert CFI remember/restore state instructions
+      Lazy Machine Block Frequency Analysis
+      Machine Optimization Remark Emitter
+      Stack Frame Layout Analysis
+--      Machine Optimization Remark Emitter
+--      Lazy Machine Block Frequency Analysis
+--      Stack Frame Layout Analysis
+      Unpack machine instruction bundles
+--      Unpack machine instruction bundles
+      Lazy Machine Block Frequency Analysis
+      Machine Optimization Remark Emitter
+      AArch64 Assembly Printer
+--      Machine Optimization Remark Emitter
+--      Lazy Machine Block Frequency Analysis
+--      AArch64 Assembly Printer
+      Free MachineFunction
+--      Free MachineFunction
+--    Target Transform Information
+--    Assumption Cache Tracker
+--    Target Pass Configuration
+--    Target Library Information
+--    Machine Branch Probability Analysis
+--    Profile summary info
+--    Create Garbage Collector Module Metadata
+--    Machine Module Information
+Running pass: Pre-ISel Intrinsic Lowering
+[2025-06-18 00:55:38.083744000] 0x1496492b0   Executing Pass 'Pre-ISel Intrinsic Lowering' on Module 'test.c'...
+0x149659060     Required Analyses: Target Transform Information, Target Library Information, Target Pass Configuration
+ -*- 'Pre-ISel Intrinsic Lowering' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.084290000] 0x1496492b0    Freeing Pass 'Pre-ISel Intrinsic Lowering' on Module 'test.c'...
+Running pass: Function Pass Manager
+[2025-06-18 00:55:38.084343000] 0x1496492b0   Executing Pass 'Function Pass Manager' on Module 'test.c'...
+Running pass: Expand large div/rem
+[2025-06-18 00:55:38.084395000] 0x1496590e0     Executing Pass 'Expand large div/rem' on Function 'main'...
+0x1496590a0       Required Analyses: Target Pass Configuration
+0x1496590a0       Preserved Analyses: Function Alias Analysis Results, Globals Alias Analysis
+ -*- 'Expand large div/rem' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.084520000] 0x1496590e0      Freeing Pass 'Expand large div/rem' on Function 'main'...
+Running pass: Expand fp
+[2025-06-18 00:55:38.084571000] 0x1496590e0     Executing Pass 'Expand fp' on Function 'main'...
+0x149659030       Required Analyses: Target Pass Configuration
+0x149659030       Preserved Analyses: Function Alias Analysis Results, Globals Alias Analysis
+ -*- 'Expand fp' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.084684000] 0x1496590e0      Freeing Pass 'Expand fp' on Function 'main'...
+Running pass: Expand Atomic instructions
+[2025-06-18 00:55:38.084735000] 0x1496590e0     Executing Pass 'Expand Atomic instructions' on Function 'main'...
+ -*- 'Expand Atomic instructions' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.084792000] 0x1496590e0      Freeing Pass 'Expand Atomic instructions' on Function 'main'...
+Running pass: Lower Garbage Collection Instructions
+[2025-06-18 00:55:38.084845000] 0x1496590e0     Executing Pass 'Lower Garbage Collection Instructions' on Function 'main'...
+0x1496592e0       Required Analyses: Create Garbage Collector Module Metadata
+0x1496592e0       Preserved Analyses: Dominator Tree Construction
+ -*- 'Lower Garbage Collection Instructions' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.084946000] 0x1496590e0      Freeing Pass 'Lower Garbage Collection Instructions' on Function 'main'...
+Running pass: Shadow Stack GC Lowering
+[2025-06-18 00:55:38.085017000] 0x1496590e0     Executing Pass 'Shadow Stack GC Lowering' on Function 'main'...
+0x1496593c0       Preserved Analyses: Dominator Tree Construction
+ -*- 'Shadow Stack GC Lowering' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.085095000] 0x1496590e0      Freeing Pass 'Shadow Stack GC Lowering' on Function 'main'...
+Running pass: Lower @llvm.global_dtors via `__cxa_atexit`
+[2025-06-18 00:55:38.085147000] 0x1496492b0   Executing Pass 'Lower @llvm.global_dtors via `__cxa_atexit`' on Module 'test.c'...
+0x149659430     Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information
+ -*- 'Lower @llvm.global_dtors via `__cxa_atexit`' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.085520000] 0x1496492b0    Freeing Pass 'Lower @llvm.global_dtors via `__cxa_atexit`' on Module 'test.c'...
+Running pass: Function Pass Manager
+[2025-06-18 00:55:38.085571000] 0x1496492b0   Executing Pass 'Function Pass Manager' on Module 'test.c'...
+Running pass: Remove unreachable blocks from the CFG
+[2025-06-18 00:55:38.085622000] 0x1496594b0     Executing Pass 'Remove unreachable blocks from the CFG' on Function 'main'...
+0x149659470       Preserved Analyses: Dominator Tree Construction
+ -*- 'Remove unreachable blocks from the CFG' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.085702000] 0x1496594b0      Freeing Pass 'Remove unreachable blocks from the CFG' on Function 'main'...
+Running pass: Instrument function entry/exit with calls to e.g. mcount() (post inlining)
+[2025-06-18 00:55:38.085753000] 0x1496594b0     Executing Pass 'Instrument function entry/exit with calls to e.g. mcount() (post inlining)' on Function 'main'...
+0x149659670       Preserved Analyses: Globals Alias Analysis, Dominator Tree Construction
+ -*- 'Instrument function entry/exit with calls to e.g. mcount() (post inlining)' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.085843000] 0x1496594b0      Freeing Pass 'Instrument function entry/exit with calls to e.g. mcount() (post inlining)' on Function 'main'...
+Running pass: Scalarize Masked Memory Intrinsics
+[2025-06-18 00:55:38.085894000] 0x1496594b0     Executing Pass 'Scalarize Masked Memory Intrinsics' on Function 'main'...
+0x149659720       Required Analyses: Target Transform Information
+0x149659720       Preserved Analyses: Dominator Tree Construction
+ -*- 'Scalarize Masked Memory Intrinsics' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.086515000] 0x1496594b0      Freeing Pass 'Scalarize Masked Memory Intrinsics' on Function 'main'...
+Running pass: Expand reduction intrinsics
+[2025-06-18 00:55:38.086569000] 0x1496594b0     Executing Pass 'Expand reduction intrinsics' on Function 'main'...
+0x1496598d0       Required Analyses: Target Transform Information
+0x1496598d0       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information
+ -*- 'Expand reduction intrinsics' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.086975000] 0x1496594b0      Freeing Pass 'Expand reduction intrinsics' on Function 'main'...
+Running pass: Dominator Tree Construction
+[2025-06-18 00:55:38.087026000] 0x1496594b0     Executing Pass 'Dominator Tree Construction' on Function 'main'...
+Running pass: Natural Loop Information
+[2025-06-18 00:55:38.087080000] 0x1496594b0     Executing Pass 'Natural Loop Information' on Function 'main'...
+0x149659de0       Required Analyses: Dominator Tree Construction
+Running pass: Lazy Branch Probability Analysis
+[2025-06-18 00:55:38.087159000] 0x1496594b0     Executing Pass 'Lazy Branch Probability Analysis' on Function 'main'...
+0x149659c70       Required Analyses: Dominator Tree Construction, Natural Loop Information, Target Library Information
+Running pass: Lazy Block Frequency Analysis
+[2025-06-18 00:55:38.087256000] 0x1496594b0     Executing Pass 'Lazy Block Frequency Analysis' on Function 'main'...
+0x149659e90       Required Analyses: Lazy Branch Probability Analysis, Natural Loop Information, Target Library Information, Dominator Tree Construction
+Running pass: Optimization Remark Emitter
+[2025-06-18 00:55:38.087369000] 0x1496594b0     Executing Pass 'Optimization Remark Emitter' on Function 'main'...
+0x149659c40       Required Analyses: Lazy Branch Probability Analysis, Natural Loop Information, Target Library Information, Lazy Block Frequency Analysis, Profile summary info
+Running pass: AArch64 Stack Tagging
+[2025-06-18 00:55:38.087487000] 0x1496594b0     Executing Pass 'AArch64 Stack Tagging' on Function 'main'...
+0x149659980       Required Analyses: Optimization Remark Emitter
+0x149659980       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information
+ -*- 'AArch64 Stack Tagging' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.087870000] 0x1496594b0      Freeing Pass 'Optimization Remark Emitter' on Function 'main'...
+[2025-06-18 00:55:38.087912000] 0x1496594b0      Freeing Pass 'Lazy Block Frequency Analysis' on Function 'main'...
+[2025-06-18 00:55:38.087952000] 0x1496594b0      Freeing Pass 'Natural Loop Information' on Function 'main'...
+[2025-06-18 00:55:38.087996000] 0x1496594b0      Freeing Pass 'Lazy Branch Probability Analysis' on Function 'main'...
+[2025-06-18 00:55:38.088417000] 0x1496594b0      Freeing Pass 'Dominator Tree Construction' on Function 'main'...
+[2025-06-18 00:55:38.088481000] 0x1496594b0      Freeing Pass 'AArch64 Stack Tagging' on Function 'main'...
+Running pass: SME ABI Pass
+[2025-06-18 00:55:38.088539000] 0x1496594b0     Executing Pass 'SME ABI Pass' on Function 'main'...
+ -*- 'SME ABI Pass' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.088598000] 0x1496594b0      Freeing Pass 'SME ABI Pass' on Function 'main'...
+Running pass: Exception handling preparation
+[2025-06-18 00:55:38.088649000] 0x1496594b0     Executing Pass 'Exception handling preparation' on Function 'main'...
+0x149659fa0       Required Analyses: Target Pass Configuration, Target Transform Information
+0x149659fa0       Preserved Analyses: Dominator Tree Construction
+ -*- 'Exception handling preparation' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.088771000] 0x1496594b0      Freeing Pass 'Exception handling preparation' on Function 'main'...
+Running pass: Prepare callbr
+[2025-06-18 00:55:38.088822000] 0x1496594b0     Executing Pass 'Prepare callbr' on Function 'main'...
+0x149659ff0       Preserved Analyses: Dominator Tree Construction
+ -*- 'Prepare callbr' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.088900000] 0x1496594b0      Freeing Pass 'Prepare callbr' on Function 'main'...
+Running pass: Safe Stack instrumentation pass
+[2025-06-18 00:55:38.088950000] 0x1496594b0     Executing Pass 'Safe Stack instrumentation pass' on Function 'main'...
+0x14965a030       Required Analyses: Target Pass Configuration, Target Library Information, Assumption Cache Tracker
+0x14965a030       Preserved Analyses: Dominator Tree Construction
+ -*- 'Safe Stack instrumentation pass' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.089071000] 0x1496594b0      Freeing Pass 'Safe Stack instrumentation pass' on Function 'main'...
+Running pass: Insert stack protectors
+[2025-06-18 00:55:38.089122000] 0x1496594b0     Executing Pass 'Insert stack protectors' on Function 'main'...
+0x14965a0e0       Required Analyses: Target Pass Configuration
+0x14965a0e0       Preserved Analyses: Dominator Tree Construction
+Running pass: Analysis containing CSE Info
+[2025-06-18 00:55:38.089222000] 0x1496594b0     Executing Pass 'Analysis containing CSE Info' on Function 'main'...
+0x14965a670       Required Analyses: Machine Module Information
+0x14965a670       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+Running pass: IRTranslator
+[2025-06-18 00:55:38.089442000] 0x1496594b0     Executing Pass 'IRTranslator' on Function 'main'...
+0x14991ce00       Required Analyses: Insert stack protectors, Target Pass Configuration, Analysis containing CSE Info, Assumption Cache Tracker, Target Library Information, Machine Module Information
+0x14991ce00       Preserved Analyses: Target Library Information, Insert stack protectors, Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'IRTranslator' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.097224000] 0x1496594b0      Freeing Pass 'IRTranslator' on Function 'main'...
+[2025-06-18 00:55:38.097268000] 0x1496594b0      Freeing Pass 'Analysis containing CSE Info' on Function 'main'...
+Running pass: Analysis for ComputingKnownBits
+[2025-06-18 00:55:38.097320000] 0x1496594b0     Executing Pass 'Analysis for ComputingKnownBits' on Function 'main'...
+0x14965ace0       Required Analyses: Machine Module Information
+0x14965ace0       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+Running pass: AArch64O0PreLegalizerCombiner
+[2025-06-18 00:55:38.097534000] 0x1496594b0     Executing Pass 'AArch64O0PreLegalizerCombiner' on Function 'main'...
+0x14965aa30       Required Analyses: Target Pass Configuration, Analysis for ComputingKnownBits, Machine Module Information
+[2025-06-18 00:55:38.099214000] 0x1496594b0     Made Modification 'AArch64O0PreLegalizerCombiner' on Function 'main'...
+0x14965aa30       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Insert stack protectors, Analysis for ComputingKnownBits, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -- 'AArch64O0PreLegalizerCombiner' is not preserving 'Function Pass Manager'
+ -*- 'AArch64O0PreLegalizerCombiner' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.099679000] 0x1496594b0      Freeing Pass 'Analysis for ComputingKnownBits' on Function 'main'...
+[2025-06-18 00:55:38.100005000] 0x1496594b0      Freeing Pass 'AArch64O0PreLegalizerCombiner' on Function 'main'...
+Running pass: Localizer
+[2025-06-18 00:55:38.100057000] 0x1496594b0     Executing Pass 'Localizer' on Function 'main'...
+0x14965ad20       Required Analyses: Target Transform Information, Machine Module Information
+[2025-06-18 00:55:38.100298000] 0x1496594b0     Made Modification 'Localizer' on Function 'main'...
+0x14965ad20       Preserved Analyses: Insert stack protectors, Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Localizer' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.100480000] 0x1496594b0      Freeing Pass 'Localizer' on Function 'main'...
+Running pass: Analysis containing CSE Info
+[2025-06-18 00:55:38.100531000] 0x1496594b0     Executing Pass 'Analysis containing CSE Info' on Function 'main'...
+0x14965b220       Required Analyses: Machine Module Information
+0x14965b220       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+Running pass: Analysis for ComputingKnownBits
+[2025-06-18 00:55:38.100720000] 0x1496594b0     Executing Pass 'Analysis for ComputingKnownBits' on Function 'main'...
+0x14965adb0       Required Analyses: Machine Module Information
+0x14965adb0       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+Running pass: Legalizer
+[2025-06-18 00:55:38.100935000] 0x1496594b0     Executing Pass 'Legalizer' on Function 'main'...
+0x14965afc0       Required Analyses: Target Pass Configuration, Analysis containing CSE Info, Analysis for ComputingKnownBits, Machine Module Information
+[2025-06-18 00:55:38.103362000] 0x1496594b0     Made Modification 'Legalizer' on Function 'main'...
+0x14965afc0       Preserved Analyses: Analysis containing CSE Info, Analysis for ComputingKnownBits, Insert stack protectors, Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Legalizer' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.103598000] 0x1496594b0      Freeing Pass 'Analysis containing CSE Info' on Function 'main'...
+[2025-06-18 00:55:38.103650000] 0x1496594b0      Freeing Pass 'Analysis for ComputingKnownBits' on Function 'main'...
+[2025-06-18 00:55:38.103692000] 0x1496594b0      Freeing Pass 'Legalizer' on Function 'main'...
+Running pass: AArch64PostLegalizerLowering
+[2025-06-18 00:55:38.103752000] 0x1496594b0     Executing Pass 'AArch64PostLegalizerLowering' on Function 'main'...
+0x14965adf0       Required Analyses: Target Pass Configuration, Machine Module Information
+0x14965adf0       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Insert stack protectors, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'AArch64PostLegalizerLowering' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.104866000] 0x1496594b0      Freeing Pass 'AArch64PostLegalizerLowering' on Function 'main'...
+Running pass: RegBankSelect
+[2025-06-18 00:55:38.104918000] 0x1496594b0     Executing Pass 'RegBankSelect' on Function 'main'...
+0x14965b610       Required Analyses: Target Pass Configuration, Machine Module Information
+0x14965b610       Preserved Analyses: Insert stack protectors, Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'RegBankSelect' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.106041000] 0x1496594b0      Freeing Pass 'RegBankSelect' on Function 'main'...
+Running pass: Analysis for ComputingKnownBits
+[2025-06-18 00:55:38.106114000] 0x1496594b0     Executing Pass 'Analysis for ComputingKnownBits' on Function 'main'...
+0x14965b9b0       Required Analyses: Machine Module Information
+0x14965b9b0       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+Running pass: InstructionSelect
+[2025-06-18 00:55:38.106310000] 0x1496594b0     Executing Pass 'InstructionSelect' on Function 'main'...
+0x14965b920       Required Analyses: Target Pass Configuration, Analysis for ComputingKnownBits, Machine Module Information
+[2025-06-18 00:55:38.110598000] 0x1496594b0     Made Modification 'InstructionSelect' on Function 'main'...
+0x14965b920       Preserved Analyses: Analysis for ComputingKnownBits, Insert stack protectors, Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'InstructionSelect' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.110798000] 0x1496594b0      Freeing Pass 'Analysis for ComputingKnownBits' on Function 'main'...
+[2025-06-18 00:55:38.110841000] 0x1496594b0      Freeing Pass 'InstructionSelect' on Function 'main'...
+Running pass: ResetMachineFunction
+[2025-06-18 00:55:38.110892000] 0x1496594b0     Executing Pass 'ResetMachineFunction' on Function 'main'...
+0x14965b830       Required Analyses: Machine Module Information
+0x14965b830       Preserved Analyses: Insert stack protectors, Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'ResetMachineFunction' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.111102000] 0x1496594b0      Freeing Pass 'ResetMachineFunction' on Function 'main'...
+Running pass: Assignment Tracking Analysis
+[2025-06-18 00:55:38.111154000] 0x1496594b0     Executing Pass 'Assignment Tracking Analysis' on Function 'main'...
+Running pass: AArch64 Instruction Selection
+[2025-06-18 00:55:38.111555000] 0x1496594b0     Executing Pass 'AArch64 Instruction Selection' on Function 'main'...
+0x14965b870       Required Analyses: Create Garbage Collector Module Metadata, Insert stack protectors, Target Library Information, Assumption Cache Tracker, Profile summary info, Assignment Tracking Analysis, Machine Module Information
+0x14965b870       Preserved Analyses: Create Garbage Collector Module Metadata, Assignment Tracking Analysis, Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'AArch64 Instruction Selection' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.111853000] 0x1496594b0      Freeing Pass 'Insert stack protectors' on Function 'main'...
+[2025-06-18 00:55:38.111896000] 0x1496594b0      Freeing Pass 'Assignment Tracking Analysis' on Function 'main'...
+[2025-06-18 00:55:38.111939000] 0x1496594b0      Freeing Pass 'AArch64 Instruction Selection' on Function 'main'...
+Running pass: Finalize ISel and expand pseudo-instructions
+[2025-06-18 00:55:38.111993000] 0x1496594b0     Executing Pass 'Finalize ISel and expand pseudo-instructions' on Function 'main'...
+0x14965d0c0       Required Analyses: Machine Module Information
+0x14965d0c0       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Finalize ISel and expand pseudo-instructions' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.112224000] 0x1496594b0      Freeing Pass 'Finalize ISel and expand pseudo-instructions' on Function 'main'...
+Running pass: Local Stack Slot Allocation
+[2025-06-18 00:55:38.112281000] 0x1496594b0     Executing Pass 'Local Stack Slot Allocation' on Function 'main'...
+0x14965d100       Required Analyses: Machine Module Information
+[2025-06-18 00:55:38.113098000] 0x1496594b0     Made Modification 'Local Stack Slot Allocation' on Function 'main'...
+0x14965d100       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Local Stack Slot Allocation' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.113543000] 0x1496594b0      Freeing Pass 'Local Stack Slot Allocation' on Function 'main'...
+Running pass: Eliminate PHI nodes for register allocation
+[2025-06-18 00:55:38.113595000] 0x1496594b0     Executing Pass 'Eliminate PHI nodes for register allocation' on Function 'main'...
+0x14965d010       Required Analyses: Machine Module Information
+0x14965d010       Preserved Analyses: Live Variable Analysis, Slot index numbering, Live Interval Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+0x14965d010       Used Analyses: Live Variable Analysis
+ -*- 'Eliminate PHI nodes for register allocation' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.113876000] 0x1496594b0      Freeing Pass 'Eliminate PHI nodes for register allocation' on Function 'main'...
+Running pass: Two-Address instruction pass
+[2025-06-18 00:55:38.113928000] 0x1496594b0     Executing Pass 'Two-Address instruction pass' on Function 'main'...
+0x14965d200       Required Analyses: Machine Module Information
+0x14965d200       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Live Variable Analysis, Slot index numbering, Live Interval Analysis, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+0x14965d200       Used Analyses: Function Alias Analysis Results, Live Variable Analysis
+ -*- 'Two-Address instruction pass' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.114514000] 0x1496594b0      Freeing Pass 'Two-Address instruction pass' on Function 'main'...
+Running pass: Fast Register Allocator
+[2025-06-18 00:55:38.114567000] 0x1496594b0     Executing Pass 'Fast Register Allocator' on Function 'main'...
+0x14991be00       Required Analyses: Machine Module Information
+[2025-06-18 00:55:38.115747000] 0x1496594b0     Made Modification 'Fast Register Allocator' on Function 'main'...
+0x14991be00       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Fast Register Allocator' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.116188000] 0x1496594b0      Freeing Pass 'Fast Register Allocator' on Function 'main'...
+Running pass: Remove Redundant DEBUG_VALUE analysis
+[2025-06-18 00:55:38.116239000] 0x1496594b0     Executing Pass 'Remove Redundant DEBUG_VALUE analysis' on Function 'main'...
+0x14965aba0       Required Analyses: Machine Module Information
+0x14965aba0       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Remove Redundant DEBUG_VALUE analysis' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.116719000] 0x1496594b0      Freeing Pass 'Remove Redundant DEBUG_VALUE analysis' on Function 'main'...
+Running pass: Fixup Statepoint Caller Saved
+[2025-06-18 00:55:38.116771000] 0x1496594b0     Executing Pass 'Fixup Statepoint Caller Saved' on Function 'main'...
+0x14965abe0       Required Analyses: Machine Module Information
+0x14965abe0       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Fixup Statepoint Caller Saved' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.117241000] 0x1496594b0      Freeing Pass 'Fixup Statepoint Caller Saved' on Function 'main'...
+Running pass: Lazy Machine Block Frequency Analysis
+[2025-06-18 00:55:38.117292000] 0x1496594b0     Executing Pass 'Lazy Machine Block Frequency Analysis' on Function 'main'...
+0x14965ded0       Required Analyses: Machine Branch Probability Analysis, Machine Module Information
+0x14965ded0       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+Running pass: Machine Optimization Remark Emitter
+[2025-06-18 00:55:38.117499000] 0x1496594b0     Executing Pass 'Machine Optimization Remark Emitter' on Function 'main'...
+0x14965d280       Required Analyses: Lazy Machine Block Frequency Analysis, Machine Module Information
+0x14965d280       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+Running pass: Prologue/Epilogue Insertion & Frame Finalization
+[2025-06-18 00:55:38.117703000] 0x1496594b0     Executing Pass 'Prologue/Epilogue Insertion & Frame Finalization' on Function 'main'...
+0x14965d240       Required Analyses: Machine Optimization Remark Emitter, Machine Module Information
+[2025-06-18 00:55:38.118257000] 0x1496594b0     Made Modification 'Prologue/Epilogue Insertion & Frame Finalization' on Function 'main'...
+0x14965d240       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Prologue/Epilogue Insertion & Frame Finalization' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.119138000] 0x1496594b0      Freeing Pass 'Machine Optimization Remark Emitter' on Function 'main'...
+[2025-06-18 00:55:38.119180000] 0x1496594b0      Freeing Pass 'Lazy Machine Block Frequency Analysis' on Function 'main'...
+[2025-06-18 00:55:38.119382000] 0x1496594b0      Freeing Pass 'Prologue/Epilogue Insertion & Frame Finalization' on Function 'main'...
+Running pass: Post-RA pseudo instruction expansion pass
+[2025-06-18 00:55:38.119435000] 0x1496594b0     Executing Pass 'Post-RA pseudo instruction expansion pass' on Function 'main'...
+0x14965d2c0       Required Analyses: Machine Module Information
+0x14965d2c0       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Post-RA pseudo instruction expansion pass' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.119896000] 0x1496594b0      Freeing Pass 'Post-RA pseudo instruction expansion pass' on Function 'main'...
+Running pass: AArch64 pseudo instruction expansion pass
+[2025-06-18 00:55:38.119947000] 0x1496594b0     Executing Pass 'AArch64 pseudo instruction expansion pass' on Function 'main'...
+0x14965d520       Required Analyses: Machine Module Information
+[2025-06-18 00:55:38.120514000] 0x1496594b0     Made Modification 'AArch64 pseudo instruction expansion pass' on Function 'main'...
+0x14965d520       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'AArch64 pseudo instruction expansion pass' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.120688000] 0x1496594b0      Freeing Pass 'AArch64 pseudo instruction expansion pass' on Function 'main'...
+Running pass: Insert KCFI indirect call checks
+[2025-06-18 00:55:38.120755000] 0x1496594b0     Executing Pass 'Insert KCFI indirect call checks' on Function 'main'...
+0x14965d560       Required Analyses: Machine Module Information
+0x14965d560       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Insert KCFI indirect call checks' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.120950000] 0x1496594b0      Freeing Pass 'Insert KCFI indirect call checks' on Function 'main'...
+Running pass: AArch64 speculation hardening pass
+[2025-06-18 00:55:38.121001000] 0x1496594b0     Executing Pass 'AArch64 speculation hardening pass' on Function 'main'...
+0x14965d5e0       Required Analyses: Machine Module Information
+0x14965d5e0       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'AArch64 speculation hardening pass' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.121197000] 0x1496594b0      Freeing Pass 'AArch64 speculation hardening pass' on Function 'main'...
+Running pass: Analyze Machine Code For Garbage Collection
+[2025-06-18 00:55:38.121249000] 0x1496594b0     Executing Pass 'Analyze Machine Code For Garbage Collection' on Function 'main'...
+0x14965d830       Required Analyses: Machine Module Information, Create Garbage Collector Module Metadata
+0x14965d830       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Analyze Machine Code For Garbage Collection' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.121587000] 0x1496594b0      Freeing Pass 'Analyze Machine Code For Garbage Collection' on Function 'main'...
+Running pass: Insert fentry calls
+[2025-06-18 00:55:38.121638000] 0x1496594b0     Executing Pass 'Insert fentry calls' on Function 'main'...
+0x14965d880       Required Analyses: Machine Module Information
+0x14965d880       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Insert fentry calls' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.121833000] 0x1496594b0      Freeing Pass 'Insert fentry calls' on Function 'main'...
+Running pass: Insert XRay ops
+[2025-06-18 00:55:38.121884000] 0x1496594b0     Executing Pass 'Insert XRay ops' on Function 'main'...
+0x14965d8f0       Required Analyses: Machine Module Information
+0x14965d8f0       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Insert XRay ops' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.122362000] 0x1496594b0      Freeing Pass 'Insert XRay ops' on Function 'main'...
+Running pass: Implement the 'patchable-function' attribute
+[2025-06-18 00:55:38.122415000] 0x1496594b0     Executing Pass 'Implement the 'patchable-function' attribute' on Function 'main'...
+0x14965e010       Required Analyses: Machine Module Information
+0x14965e010       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Implement the 'patchable-function' attribute' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.122614000] 0x1496594b0      Freeing Pass 'Implement the 'patchable-function' attribute' on Function 'main'...
+Running pass: Workaround A53 erratum 835769 pass
+[2025-06-18 00:55:38.122666000] 0x1496594b0     Executing Pass 'Workaround A53 erratum 835769 pass' on Function 'main'...
+0x14965e050       Required Analyses: Machine Module Information
+0x14965e050       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Workaround A53 erratum 835769 pass' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.123132000] 0x1496594b0      Freeing Pass 'Workaround A53 erratum 835769 pass' on Function 'main'...
+Running pass: Contiguously Lay Out Funclets
+[2025-06-18 00:55:38.123185000] 0x1496594b0     Executing Pass 'Contiguously Lay Out Funclets' on Function 'main'...
+0x14965d9d0       Required Analyses: Machine Module Information
+0x14965d9d0       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Contiguously Lay Out Funclets' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.123385000] 0x1496594b0      Freeing Pass 'Contiguously Lay Out Funclets' on Function 'main'...
+Running pass: Remove Loads Into Fake Uses
+[2025-06-18 00:55:38.123456000] 0x1496594b0     Executing Pass 'Remove Loads Into Fake Uses' on Function 'main'...
+0x14965e090       Required Analyses: Machine Module Information
+0x14965e090       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Remove Loads Into Fake Uses' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.123923000] 0x1496594b0      Freeing Pass 'Remove Loads Into Fake Uses' on Function 'main'...
+Running pass: StackMap Liveness Analysis
+[2025-06-18 00:55:38.123976000] 0x1496594b0     Executing Pass 'StackMap Liveness Analysis' on Function 'main'...
+0x14965e0f0       Required Analyses: Machine Module Information
+0x14965e0f0       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'StackMap Liveness Analysis' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.124442000] 0x1496594b0      Freeing Pass 'StackMap Liveness Analysis' on Function 'main'...
+Running pass: Live DEBUG_VALUE analysis
+[2025-06-18 00:55:38.124493000] 0x1496594b0     Executing Pass 'Live DEBUG_VALUE analysis' on Function 'main'...
+0x14965e650       Required Analyses: Target Pass Configuration, Machine Module Information
+0x14965e650       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Live DEBUG_VALUE analysis' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.125773000] 0x1496594b0      Freeing Pass 'Live DEBUG_VALUE analysis' on Function 'main'...
+Running pass: Machine Sanitizer Binary Metadata
+[2025-06-18 00:55:38.125824000] 0x1496594b0     Executing Pass 'Machine Sanitizer Binary Metadata' on Function 'main'...
+0x14965e6b0       Required Analyses: Machine Module Information
+0x14965e6b0       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Machine Sanitizer Binary Metadata' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.126020000] 0x1496594b0      Freeing Pass 'Machine Sanitizer Binary Metadata' on Function 'main'...
+Running pass: AArch64 sls hardening pass
+[2025-06-18 00:55:38.126071000] 0x1496594b0     Executing Pass 'AArch64 sls hardening pass' on Function 'main'...
+0x14965e190       Required Analyses: Machine Module Information
+0x14965e190       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'AArch64 sls hardening pass' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.126265000] 0x1496594b0      Freeing Pass 'AArch64 sls hardening pass' on Function 'main'...
+Running pass: AArch64 Pointer Authentication
+[2025-06-18 00:55:38.126315000] 0x1496594b0     Executing Pass 'AArch64 Pointer Authentication' on Function 'main'...
+0x14965e720       Required Analyses: Machine Module Information
+0x14965e720       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'AArch64 Pointer Authentication' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.126509000] 0x1496594b0      Freeing Pass 'AArch64 Pointer Authentication' on Function 'main'...
+Running pass: AArch64 Branch Targets
+[2025-06-18 00:55:38.126559000] 0x1496594b0     Executing Pass 'AArch64 Branch Targets' on Function 'main'...
+0x14965e790       Required Analyses: Machine Module Information
+0x14965e790       Preserved Analyses: Spill Code Placement Analysis, Dominator Tree Construction, Machine Cycle Info Analysis, MachineDominator Tree Construction, Machine Natural Loop Construction, Machine Optimization Remark Emitter, Machine Dominance Frontier Construction, Function register usage analysis, , Print Machine Cycle Info Analysis, MachinePostDominator Tree Construction, Detect single entry single exit regions, WebAssembly Exception Information, Assign reference type allocas to local address space, SPIRV module analysis, Cycle Info Analysis, Block Frequency Analysis, Basic Alias Analysis (stateless AA impl), Print Machine Uniformity Info Analysis, Analysis if a function is memory bound, Lazy Machine Block Frequency Analysis, Machine Block Frequency Analysis, Post-Dominator Tree Construction, Uniformity Analysis, SPIRV convergence regions analysis, Bundle Machine CFG Edges, Lazy Branch Probability Analysis, Lazy Block Frequency Analysis, Natural Loop Information, Machine Module Information, Uninitialized Pass, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'AArch64 Branch Targets' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.127033000] 0x1496594b0      Freeing Pass 'AArch64 Branch Targets' on Function 'main'...
+Running pass: Branch relaxation pass
+[2025-06-18 00:55:38.127086000] 0x1496594b0     Executing Pass 'Branch relaxation pass' on Function 'main'...
+0x14965e920       Required Analyses: Machine Module Information
+0x14965e920       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Branch relaxation pass' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.127285000] 0x1496594b0      Freeing Pass 'Branch relaxation pass' on Function 'main'...
+Running pass: Insert CFI remember/restore state instructions
+[2025-06-18 00:55:38.127336000] 0x1496594b0     Executing Pass 'Insert CFI remember/restore state instructions' on Function 'main'...
+0x14965e960       Required Analyses: Machine Module Information
+0x14965e960       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Insert CFI remember/restore state instructions' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.127534000] 0x1496594b0      Freeing Pass 'Insert CFI remember/restore state instructions' on Function 'main'...
+Running pass: Lazy Machine Block Frequency Analysis
+[2025-06-18 00:55:38.127586000] 0x1496594b0     Executing Pass 'Lazy Machine Block Frequency Analysis' on Function 'main'...
+0x14965ea20       Required Analyses: Machine Branch Probability Analysis, Machine Module Information
+0x14965ea20       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+Running pass: Machine Optimization Remark Emitter
+[2025-06-18 00:55:38.127791000] 0x1496594b0     Executing Pass 'Machine Optimization Remark Emitter' on Function 'main'...
+0x14965eae0       Required Analyses: Lazy Machine Block Frequency Analysis, Machine Module Information
+0x14965eae0       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+Running pass: Stack Frame Layout Analysis
+[2025-06-18 00:55:38.127991000] 0x1496594b0     Executing Pass 'Stack Frame Layout Analysis' on Function 'main'...
+0x14965e9e0       Required Analyses: Machine Module Information, Machine Optimization Remark Emitter
+0x14965e9e0       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Stack Frame Layout Analysis' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.128217000] 0x1496594b0      Freeing Pass 'Machine Optimization Remark Emitter' on Function 'main'...
+[2025-06-18 00:55:38.128260000] 0x1496594b0      Freeing Pass 'Lazy Machine Block Frequency Analysis' on Function 'main'...
+[2025-06-18 00:55:38.128303000] 0x1496594b0      Freeing Pass 'Stack Frame Layout Analysis' on Function 'main'...
+Running pass: Unpack machine instruction bundles
+[2025-06-18 00:55:38.128356000] 0x1496594b0     Executing Pass 'Unpack machine instruction bundles' on Function 'main'...
+0x14965bbb0       Required Analyses: Machine Module Information
+0x14965bbb0       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'Unpack machine instruction bundles' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.128557000] 0x1496594b0      Freeing Pass 'Unpack machine instruction bundles' on Function 'main'...
+Running pass: Lazy Machine Block Frequency Analysis
+[2025-06-18 00:55:38.128609000] 0x1496594b0     Executing Pass 'Lazy Machine Block Frequency Analysis' on Function 'main'...
+0x149707d40       Required Analyses: Machine Branch Probability Analysis, Machine Module Information
+0x149707d40       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+Running pass: Machine Optimization Remark Emitter
+[2025-06-18 00:55:38.128816000] 0x1496594b0     Executing Pass 'Machine Optimization Remark Emitter' on Function 'main'...
+0x149707d00       Required Analyses: Lazy Machine Block Frequency Analysis, Machine Module Information
+0x149707d00       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+Running pass: AArch64 Assembly Printer
+[2025-06-18 00:55:38.129025000] 0x1496594b0     Executing Pass 'AArch64 Assembly Printer' on Function 'main'...
+0x14965ed40       Required Analyses: Machine Module Information, Machine Optimization Remark Emitter, Create Garbage Collector Module Metadata, Lazy Machine Block Frequency Analysis, Machine Branch Probability Analysis
+0x14965ed40       Preserved Analyses: Machine Module Information, Basic Alias Analysis (stateless AA impl), Uninitialized Pass, Dominator Tree Construction, Function Alias Analysis Results, Globals Alias Analysis, Uninitialized Pass, Natural Loop Information, Memory Dependence Analysis, Scalar Evolution Analysis, ScalarEvolution-based Alias Analysis
+ -*- 'AArch64 Assembly Printer' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.132362000] 0x1496594b0      Freeing Pass 'Machine Optimization Remark Emitter' on Function 'main'...
+[2025-06-18 00:55:38.132404000] 0x1496594b0      Freeing Pass 'Lazy Machine Block Frequency Analysis' on Function 'main'...
+[2025-06-18 00:55:38.132447000] 0x1496594b0      Freeing Pass 'AArch64 Assembly Printer' on Function 'main'...
+Running pass: Free MachineFunction
+[2025-06-18 00:55:38.132499000] 0x1496594b0     Executing Pass 'Free MachineFunction' on Function 'main'...
+0x149707e70       Required Analyses: Machine Module Information
+[2025-06-18 00:55:38.132587000] 0x1496594b0     Made Modification 'Free MachineFunction' on Function 'main'...
+0x149707e70       Preserved Analyses: Machine Module Information
+ -*- 'Free MachineFunction' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.132666000] 0x1496594b0      Freeing Pass 'Free MachineFunction' on Function 'main'...
+[2025-06-18 00:55:38.132708000] 0x1496492b0   Made Modification 'Function Pass Manager' on Module 'test.c'...
+ -*- 'Function Pass Manager' is the last user of following pass instances. Free these instances
+[2025-06-18 00:55:38.132764000] 0x1496492b0    Freeing Pass 'Target Transform Information' on Module 'test.c'...
+[2025-06-18 00:55:38.132806000] 0x1496492b0    Freeing Pass 'Assumption Cache Tracker' on Module 'test.c'...
+[2025-06-18 00:55:38.132849000] 0x1496492b0    Freeing Pass 'Target Pass Configuration' on Module 'test.c'...
+[2025-06-18 00:55:38.132890000] 0x1496492b0    Freeing Pass 'Target Library Information' on Module 'test.c'...
+[2025-06-18 00:55:38.132931000] 0x1496492b0    Freeing Pass 'Machine Branch Probability Analysis' on Module 'test.c'...
+[2025-06-18 00:55:38.132973000] 0x1496492b0    Freeing Pass 'Profile summary info' on Module 'test.c'...
+[2025-06-18 00:55:38.133016000] 0x1496492b0    Freeing Pass 'Create Garbage Collector Module Metadata' on Module 'test.c'...
+[2025-06-18 00:55:38.133058000] 0x1496492b0    Freeing Pass 'Machine Module Information' on Module 'test.c'...

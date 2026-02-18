@@ -1,0 +1,566 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                     LLVM O2 vs O3 OPTIMIZATION COMPARISON                   ║
+║                              Pass Analysis Report                           ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Report Generated: Wed 18 Jun 2025 01:10:01 IST
+LLVM Version: clang version 21.0.0git (https://github.com/llvm/llvm-project.git fb07683bc2402a75f6a5c568cdab195b695cd322)
+Test File: test.c
+
+═══════════════════════════════════════════════════════════════════════════════
+                              EXECUTIVE SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+• O2 Optimization Level:      210 total passes
+• O3 Optimization Level:      220 total passes
+• Additional passes in O3: 10
+• Common passes:      210
+• O2-only passes:        0
+• O3-only passes:       10
+
+Key Finding: O3 adds 4.7% more optimization passes compared to O2
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              DETAILED ANALYSIS
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─ PASSES UNIQUE TO O3 (Additional Optimizations) ──────────────────────────┐
+│ These passes run only at O3 level, providing more aggressive optimization  │
+│                                                                            │
+│ 1     	AArch64 load / store optimization pass
+│ 2     	Block Frequency Analysis
+│ 3     	Branch Probability Analysis
+│ 4     	Lazy Block Frequency Analysis
+│ 5     	Lazy Branch Probability Analysis
+│ 6     	Machine Copy Propagation Pass
+│ 7     	Natural Loop Information
+│ 8     	Optimization Remark Emitter
+│ 9     	Optimize selects
+│ 10    	Post-Dominator Tree Construction
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ PASS FREQUENCY ANALYSIS ─────────────────────────────────────────────────┐
+│ How many times each pass runs (some passes may run multiple times)        │
+│                                                                            │
+│ O2 Pass Frequencies:                                                       │
+│   Lazy                                               7 times
+│   Dominator                                          7 times
+│   Natural                                            6 times
+│   MachineDominator                                   6 times
+│   Function                                           6 times
+│   Machine                                            5 times
+│   Lazy                                               5 times
+│   Lazy                                               5 times
+│   Function                                           5 times
+│   Basic                                              5 times
+│                                                                            │
+│ O3 Pass Frequencies:                                                       │
+│   Natural                                            7 times
+│   Lazy                                               7 times
+│   Dominator                                          7 times
+│   MachineDominator                                   6 times
+│   Lazy                                               6 times
+│   Lazy                                               6 times
+│   Function                                           6 times
+│   Machine                                            5 times
+│   Function                                           5 times
+│   Basic                                              5 times
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ PASS CATEGORIZATION (O3-only passes) ────────────────────────────────────┐
+│ Categorizing O3-specific passes by optimization type                       │
+│                                                                            │
+│ Loop Optimizations:
+│   Natural Loop Information
+│
+│ Memory Optimizations:
+│   AArch64 load / store optimization pass
+│
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌─ COMPLETE PASS EXECUTION ORDER ───────────────────────────────────────────┐
+│ Side-by-side comparison of pass execution order                            │
+│                                                                            │
+│ O2 Passes (in execution order):                                            │
+│ ════════════════════════════════                                           │
+│ 1     	Pre-ISel Intrinsic Lowering
+│ 2     	Function Pass Manager
+│ 3     	Expand large div/rem
+│ 4     	Expand fp
+│ 5     	Expand Atomic instructions
+│ 6     	SVE intrinsics optimizations
+│ 7     	Function Pass Manager
+│ 8     	Simplify the CFG
+│ 9     	Dominator Tree Construction
+│ 10    	Natural Loop Information
+│ 11    	Canonicalize natural loops
+│ 12    	Lazy Branch Probability Analysis
+│ 13    	Lazy Block Frequency Analysis
+│ 14    	Optimization Remark Emitter
+│ 15    	Scalar Evolution Analysis
+│ 16    	Loop Data Prefetch
+│ 17    	Falkor HW Prefetch Fix
+│ 18    	Basic Alias Analysis (stateless AA impl)
+│ 19    	Canonicalize natural loops
+│ 20    	Loop Pass Manager
+│ 21    	Basic Alias Analysis (stateless AA impl)
+│ 22    	Function Alias Analysis Results
+│ 23    	Merge contiguous icmps into a memcmp
+│ 24    	Natural Loop Information
+│ 25    	Lazy Branch Probability Analysis
+│ 26    	Lazy Block Frequency Analysis
+│ 27    	Expand memcmp() to load/stores
+│ 28    	Lower Garbage Collection Instructions
+│ 29    	Shadow Stack GC Lowering
+│ 30    	Lower @llvm.global_dtors via `__cxa_atexit`
+│ 31    	Function Pass Manager
+│ 32    	Remove unreachable blocks from the CFG
+│ 33    	Dominator Tree Construction
+│ 34    	Natural Loop Information
+│ 35    	Post-Dominator Tree Construction
+│ 36    	Branch Probability Analysis
+│ 37    	Block Frequency Analysis
+│ 38    	Constant Hoisting
+│ 39    	Replace intrinsics with calls to vector library
+│ 40    	Lazy Branch Probability Analysis
+│ 41    	Lazy Block Frequency Analysis
+│ 42    	Optimization Remark Emitter
+│ 43    	Partially inline calls to library functions
+│ 44    	Instrument function entry/exit with calls to e.g. mcount() (post inlining)
+│ 45    	Scalarize Masked Memory Intrinsics
+│ 46    	Expand reduction intrinsics
+│ 47    	Stack Safety Analysis
+│ 48    	Function Pass Manager
+│ 49    	Dominator Tree Construction
+│ 50    	Basic Alias Analysis (stateless AA impl)
+│ 51    	Function Alias Analysis Results
+│ 52    	Natural Loop Information
+│ 53    	Lazy Branch Probability Analysis
+│ 54    	Lazy Block Frequency Analysis
+│ 55    	Optimization Remark Emitter
+│ 56    	AArch64 Stack Tagging
+│ 57    	Complex Deinterleaving Pass
+│ 58    	Function Alias Analysis Results
+│ 59    	Memory SSA
+│ 60    	Interleaved Load Combine Pass
+│ 61    	Dominator Tree Construction
+│ 62    	Interleaved Access Pass
+│ 63    	SME ABI Pass
+│ 64    	Dominator Tree Construction
+│ 65    	Natural Loop Information
+│ 66    	Type Promotion
+│ 67    	CodeGen Prepare
+│ 68    	Dominator Tree Construction
+│ 69    	Exception handling preparation
+│ 70    	AArch64 Promote Constant
+│ 71    	Function Pass Manager
+│ 72    	Merge internal globals
+│ 73    	Dominator Tree Construction
+│ 74    	Basic Alias Analysis (stateless AA impl)
+│ 75    	Function Alias Analysis Results
+│ 76    	ObjC ARC contraction
+│ 77    	Prepare callbr
+│ 78    	Safe Stack instrumentation pass
+│ 79    	Insert stack protectors
+│ 80    	Basic Alias Analysis (stateless AA impl)
+│ 81    	Function Alias Analysis Results
+│ 82    	Natural Loop Information
+│ 83    	Post-Dominator Tree Construction
+│ 84    	Branch Probability Analysis
+│ 85    	Assignment Tracking Analysis
+│ 86    	Lazy Branch Probability Analysis
+│ 87    	Lazy Block Frequency Analysis
+│ 88    	AArch64 Instruction Selection
+│ 89    	Finalize ISel and expand pseudo-instructions
+│ 90    	SME Peephole Optimization pass
+│ 91    	Lazy Machine Block Frequency Analysis
+│ 92    	Early Tail Duplication
+│ 93    	Optimize machine instruction PHIs
+│ 94    	Slot index numbering
+│ 95    	Merge disjoint stack slots
+│ 96    	Local Stack Slot Allocation
+│ 97    	Remove dead machine instructions
+│ 98    	MachineDominator Tree Construction
+│ 99    	AArch64 Condition Optimizer
+│ 100   	Machine Natural Loop Construction
+│ 101   	Machine Trace Metrics
+│ 102   	AArch64 Conditional Compares
+│ 103   	Lazy Machine Block Frequency Analysis
+│ 104   	Machine InstCombiner
+│ 105   	AArch64 Conditional Branch Tuning
+│ 106   	Machine Trace Metrics
+│ 107   	Early If-Conversion
+│ 108   	AArch64 Store Pair Suppression
+│ 109   	AArch64 SIMD instructions optimization pass
+│ 110   	AArch64 Stack Tagging PreRA
+│ 111   	MachineDominator Tree Construction
+│ 112   	Machine Natural Loop Construction
+│ 113   	Machine Block Frequency Analysis
+│ 114   	Early Machine Loop Invariant Code Motion
+│ 115   	MachineDominator Tree Construction
+│ 116   	Machine Block Frequency Analysis
+│ 117   	Machine Common Subexpression Elimination
+│ 118   	MachinePostDominator Tree Construction
+│ 119   	Machine Cycle Info Analysis
+│ 120   	Machine code sinking
+│ 121   	Peephole Optimizations
+│ 122   	Remove dead machine instructions
+│ 123   	AArch64 MI Peephole Optimization pass
+│ 124   	AArch64 Dead register definitions
+│ 125   	Detect Dead Lanes
+│ 126   	Init Undef Pass
+│ 127   	Process Implicit Definitions
+│ 128   	Remove unreachable machine basic blocks
+│ 129   	Live Variable Analysis
+│ 130   	Eliminate PHI nodes for register allocation
+│ 131   	Two-Address instruction pass
+│ 132   	MachineDominator Tree Construction
+│ 133   	Slot index numbering
+│ 134   	Live Interval Analysis
+│ 135   	Register Coalescer
+│ 136   	Rename Disconnected Subregister Components
+│ 137   	Machine Instruction Scheduler
+│ 138   	AArch64 Post Coalescer pass
+│ 139   	Machine Block Frequency Analysis
+│ 140   	Debug Variable Analysis
+│ 141   	Live Stack Slot Analysis
+│ 142   	Virtual Register Map
+│ 143   	Live Register Matrix
+│ 144   	Bundle Machine CFG Edges
+│ 145   	Spill Code Placement Analysis
+│ 146   	Lazy Machine Block Frequency Analysis
+│ 147   	Machine Optimization Remark Emitter
+│ 148   	Greedy Register Allocator
+│ 149   	Virtual Register Rewriter
+│ 150   	Register Allocation Pass Scoring
+│ 151   	Stack Slot Coloring
+│ 152   	Machine Copy Propagation Pass
+│ 153   	Machine Loop Invariant Code Motion
+│ 154   	AArch64 Redundant Copy Elimination
+│ 155   	A57 FP Anti-dependency breaker
+│ 156   	Remove Redundant DEBUG_VALUE analysis
+│ 157   	Fixup Statepoint Caller Saved
+│ 158   	PostRA Machine Sink
+│ 159   	MachineDominator Tree Construction
+│ 160   	Machine Natural Loop Construction
+│ 161   	Machine Block Frequency Analysis
+│ 162   	MachinePostDominator Tree Construction
+│ 163   	Lazy Machine Block Frequency Analysis
+│ 164   	Machine Optimization Remark Emitter
+│ 165   	Shrink Wrapping analysis
+│ 166   	Prologue/Epilogue Insertion & Frame Finalization
+│ 167   	Machine Late Instructions Cleanup Pass
+│ 168   	Control Flow Optimizer
+│ 169   	Lazy Machine Block Frequency Analysis
+│ 170   	Tail Duplication
+│ 171   	Machine Copy Propagation Pass
+│ 172   	Post-RA pseudo instruction expansion pass
+│ 173   	AArch64 pseudo instruction expansion pass
+│ 174   	AArch64 load / store optimization pass
+│ 175   	Insert KCFI indirect call checks
+│ 176   	AArch64 speculation hardening pass
+│ 177   	MachineDominator Tree Construction
+│ 178   	Machine Natural Loop Construction
+│ 179   	Falkor HW Prefetch Fix Late Phase
+│ 180   	PostRA Machine Instruction Scheduler
+│ 181   	Analyze Machine Code For Garbage Collection
+│ 182   	Machine Block Frequency Analysis
+│ 183   	MachinePostDominator Tree Construction
+│ 184   	Branch Probability Basic Block Placement
+│ 185   	Insert fentry calls
+│ 186   	Insert XRay ops
+│ 187   	Implement the 'patchable-function' attribute
+│ 188   	Workaround A53 erratum 835769 pass
+│ 189   	AArch64 Collect Linker Optimization Hint (LOH)
+│ 190   	Contiguously Lay Out Funclets
+│ 191   	Remove Loads Into Fake Uses
+│ 192   	StackMap Liveness Analysis
+│ 193   	Live DEBUG_VALUE analysis
+│ 194   	Machine Sanitizer Binary Metadata
+│ 195   	Machine Outliner
+│ 196   	Function Pass Manager
+│ 197   	AArch64 sls hardening pass
+│ 198   	AArch64 Pointer Authentication
+│ 199   	AArch64 Branch Targets
+│ 200   	Branch relaxation pass
+│ 201   	AArch64 Compress Jump Tables
+│ 202   	Insert CFI remember/restore state instructions
+│ 203   	Lazy Machine Block Frequency Analysis
+│ 204   	Machine Optimization Remark Emitter
+│ 205   	Stack Frame Layout Analysis
+│ 206   	Unpack machine instruction bundles
+│ 207   	Lazy Machine Block Frequency Analysis
+│ 208   	Machine Optimization Remark Emitter
+│ 209   	AArch64 Assembly Printer
+│ 210   	Free MachineFunction
+│                                                                            │
+│ O3 Passes (in execution order):                                            │
+│ ════════════════════════════════                                           │
+│ 1     	Pre-ISel Intrinsic Lowering
+│ 2     	Function Pass Manager
+│ 3     	Expand large div/rem
+│ 4     	Expand fp
+│ 5     	Expand Atomic instructions
+│ 6     	SVE intrinsics optimizations
+│ 7     	Function Pass Manager
+│ 8     	Simplify the CFG
+│ 9     	Dominator Tree Construction
+│ 10    	Natural Loop Information
+│ 11    	Canonicalize natural loops
+│ 12    	Lazy Branch Probability Analysis
+│ 13    	Lazy Block Frequency Analysis
+│ 14    	Optimization Remark Emitter
+│ 15    	Scalar Evolution Analysis
+│ 16    	Loop Data Prefetch
+│ 17    	Falkor HW Prefetch Fix
+│ 18    	Basic Alias Analysis (stateless AA impl)
+│ 19    	Canonicalize natural loops
+│ 20    	Loop Pass Manager
+│ 21    	Basic Alias Analysis (stateless AA impl)
+│ 22    	Function Alias Analysis Results
+│ 23    	Merge contiguous icmps into a memcmp
+│ 24    	Natural Loop Information
+│ 25    	Lazy Branch Probability Analysis
+│ 26    	Lazy Block Frequency Analysis
+│ 27    	Expand memcmp() to load/stores
+│ 28    	Lower Garbage Collection Instructions
+│ 29    	Shadow Stack GC Lowering
+│ 30    	Lower @llvm.global_dtors via `__cxa_atexit`
+│ 31    	Function Pass Manager
+│ 32    	Remove unreachable blocks from the CFG
+│ 33    	Dominator Tree Construction
+│ 34    	Natural Loop Information
+│ 35    	Post-Dominator Tree Construction
+│ 36    	Branch Probability Analysis
+│ 37    	Block Frequency Analysis
+│ 38    	Constant Hoisting
+│ 39    	Replace intrinsics with calls to vector library
+│ 40    	Lazy Branch Probability Analysis
+│ 41    	Lazy Block Frequency Analysis
+│ 42    	Optimization Remark Emitter
+│ 43    	Partially inline calls to library functions
+│ 44    	Instrument function entry/exit with calls to e.g. mcount() (post inlining)
+│ 45    	Scalarize Masked Memory Intrinsics
+│ 46    	Expand reduction intrinsics
+│ 47    	Natural Loop Information
+│ 48    	Post-Dominator Tree Construction
+│ 49    	Branch Probability Analysis
+│ 50    	Block Frequency Analysis
+│ 51    	Lazy Branch Probability Analysis
+│ 52    	Lazy Block Frequency Analysis
+│ 53    	Optimization Remark Emitter
+│ 54    	Optimize selects
+│ 55    	Stack Safety Analysis
+│ 56    	Function Pass Manager
+│ 57    	Dominator Tree Construction
+│ 58    	Basic Alias Analysis (stateless AA impl)
+│ 59    	Function Alias Analysis Results
+│ 60    	Natural Loop Information
+│ 61    	Lazy Branch Probability Analysis
+│ 62    	Lazy Block Frequency Analysis
+│ 63    	Optimization Remark Emitter
+│ 64    	AArch64 Stack Tagging
+│ 65    	Complex Deinterleaving Pass
+│ 66    	Function Alias Analysis Results
+│ 67    	Memory SSA
+│ 68    	Interleaved Load Combine Pass
+│ 69    	Dominator Tree Construction
+│ 70    	Interleaved Access Pass
+│ 71    	SME ABI Pass
+│ 72    	Dominator Tree Construction
+│ 73    	Natural Loop Information
+│ 74    	Type Promotion
+│ 75    	CodeGen Prepare
+│ 76    	Dominator Tree Construction
+│ 77    	Exception handling preparation
+│ 78    	AArch64 Promote Constant
+│ 79    	Function Pass Manager
+│ 80    	Merge internal globals
+│ 81    	Dominator Tree Construction
+│ 82    	Basic Alias Analysis (stateless AA impl)
+│ 83    	Function Alias Analysis Results
+│ 84    	ObjC ARC contraction
+│ 85    	Prepare callbr
+│ 86    	Safe Stack instrumentation pass
+│ 87    	Insert stack protectors
+│ 88    	Basic Alias Analysis (stateless AA impl)
+│ 89    	Function Alias Analysis Results
+│ 90    	Natural Loop Information
+│ 91    	Post-Dominator Tree Construction
+│ 92    	Branch Probability Analysis
+│ 93    	Assignment Tracking Analysis
+│ 94    	Lazy Branch Probability Analysis
+│ 95    	Lazy Block Frequency Analysis
+│ 96    	AArch64 Instruction Selection
+│ 97    	Finalize ISel and expand pseudo-instructions
+│ 98    	SME Peephole Optimization pass
+│ 99    	Lazy Machine Block Frequency Analysis
+│ 100   	Early Tail Duplication
+│ 101   	Optimize machine instruction PHIs
+│ 102   	Slot index numbering
+│ 103   	Merge disjoint stack slots
+│ 104   	Local Stack Slot Allocation
+│ 105   	Remove dead machine instructions
+│ 106   	MachineDominator Tree Construction
+│ 107   	AArch64 Condition Optimizer
+│ 108   	Machine Natural Loop Construction
+│ 109   	Machine Trace Metrics
+│ 110   	AArch64 Conditional Compares
+│ 111   	Lazy Machine Block Frequency Analysis
+│ 112   	Machine InstCombiner
+│ 113   	AArch64 Conditional Branch Tuning
+│ 114   	Machine Trace Metrics
+│ 115   	Early If-Conversion
+│ 116   	AArch64 Store Pair Suppression
+│ 117   	AArch64 SIMD instructions optimization pass
+│ 118   	AArch64 Stack Tagging PreRA
+│ 119   	MachineDominator Tree Construction
+│ 120   	Machine Natural Loop Construction
+│ 121   	Machine Block Frequency Analysis
+│ 122   	Early Machine Loop Invariant Code Motion
+│ 123   	MachineDominator Tree Construction
+│ 124   	Machine Block Frequency Analysis
+│ 125   	Machine Common Subexpression Elimination
+│ 126   	MachinePostDominator Tree Construction
+│ 127   	Machine Cycle Info Analysis
+│ 128   	Machine code sinking
+│ 129   	Peephole Optimizations
+│ 130   	Remove dead machine instructions
+│ 131   	AArch64 MI Peephole Optimization pass
+│ 132   	AArch64 Dead register definitions
+│ 133   	Detect Dead Lanes
+│ 134   	Init Undef Pass
+│ 135   	Process Implicit Definitions
+│ 136   	Remove unreachable machine basic blocks
+│ 137   	Live Variable Analysis
+│ 138   	Eliminate PHI nodes for register allocation
+│ 139   	Two-Address instruction pass
+│ 140   	MachineDominator Tree Construction
+│ 141   	Slot index numbering
+│ 142   	Live Interval Analysis
+│ 143   	Register Coalescer
+│ 144   	Rename Disconnected Subregister Components
+│ 145   	Machine Instruction Scheduler
+│ 146   	AArch64 Post Coalescer pass
+│ 147   	Machine Block Frequency Analysis
+│ 148   	Debug Variable Analysis
+│ 149   	Live Stack Slot Analysis
+│ 150   	Virtual Register Map
+│ 151   	Live Register Matrix
+│ 152   	Bundle Machine CFG Edges
+│ 153   	Spill Code Placement Analysis
+│ 154   	Lazy Machine Block Frequency Analysis
+│ 155   	Machine Optimization Remark Emitter
+│ 156   	Greedy Register Allocator
+│ 157   	Virtual Register Rewriter
+│ 158   	Register Allocation Pass Scoring
+│ 159   	Stack Slot Coloring
+│ 160   	Machine Copy Propagation Pass
+│ 161   	Machine Loop Invariant Code Motion
+│ 162   	AArch64 Redundant Copy Elimination
+│ 163   	A57 FP Anti-dependency breaker
+│ 164   	Remove Redundant DEBUG_VALUE analysis
+│ 165   	Fixup Statepoint Caller Saved
+│ 166   	PostRA Machine Sink
+│ 167   	MachineDominator Tree Construction
+│ 168   	Machine Natural Loop Construction
+│ 169   	Machine Block Frequency Analysis
+│ 170   	MachinePostDominator Tree Construction
+│ 171   	Lazy Machine Block Frequency Analysis
+│ 172   	Machine Optimization Remark Emitter
+│ 173   	Shrink Wrapping analysis
+│ 174   	Prologue/Epilogue Insertion & Frame Finalization
+│ 175   	Machine Late Instructions Cleanup Pass
+│ 176   	Control Flow Optimizer
+│ 177   	Lazy Machine Block Frequency Analysis
+│ 178   	Tail Duplication
+│ 179   	Machine Copy Propagation Pass
+│ 180   	Post-RA pseudo instruction expansion pass
+│ 181   	AArch64 pseudo instruction expansion pass
+│ 182   	AArch64 load / store optimization pass
+│ 183   	Insert KCFI indirect call checks
+│ 184   	AArch64 speculation hardening pass
+│ 185   	MachineDominator Tree Construction
+│ 186   	Machine Natural Loop Construction
+│ 187   	Falkor HW Prefetch Fix Late Phase
+│ 188   	PostRA Machine Instruction Scheduler
+│ 189   	Analyze Machine Code For Garbage Collection
+│ 190   	Machine Block Frequency Analysis
+│ 191   	MachinePostDominator Tree Construction
+│ 192   	Branch Probability Basic Block Placement
+│ 193   	Insert fentry calls
+│ 194   	Insert XRay ops
+│ 195   	Implement the 'patchable-function' attribute
+│ 196   	AArch64 load / store optimization pass
+│ 197   	Machine Copy Propagation Pass
+│ 198   	Workaround A53 erratum 835769 pass
+│ 199   	AArch64 Collect Linker Optimization Hint (LOH)
+│ 200   	Contiguously Lay Out Funclets
+│ 201   	Remove Loads Into Fake Uses
+│ 202   	StackMap Liveness Analysis
+│ 203   	Live DEBUG_VALUE analysis
+│ 204   	Machine Sanitizer Binary Metadata
+│ 205   	Machine Outliner
+│ 206   	Function Pass Manager
+│ 207   	AArch64 sls hardening pass
+│ 208   	AArch64 Pointer Authentication
+│ 209   	AArch64 Branch Targets
+│ 210   	Branch relaxation pass
+│ 211   	AArch64 Compress Jump Tables
+│ 212   	Insert CFI remember/restore state instructions
+│ 213   	Lazy Machine Block Frequency Analysis
+│ 214   	Machine Optimization Remark Emitter
+│ 215   	Stack Frame Layout Analysis
+│ 216   	Unpack machine instruction bundles
+│ 217   	Lazy Machine Block Frequency Analysis
+│ 218   	Machine Optimization Remark Emitter
+│ 219   	AArch64 Assembly Printer
+│ 220   	Free MachineFunction
+└────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+                           PERFORMANCE IMPLICATIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+Based on the pass analysis:
+
+COMPILATION TIME:
+• O3 requires more compilation time due to additional optimization passes
+• The extra passes in O3 perform more complex analysis and transformations
+
+RUNTIME PERFORMANCE:
+• O3's additional passes typically result in better runtime performance
+• Common O3 improvements include:
+  - More aggressive function inlining
+  - Better loop optimizations (unrolling, vectorization)
+  - More sophisticated dead code elimination
+  - Enhanced constant propagation and folding
+
+TRADE-OFFS:
+• O2: Balanced optimization (good performance, reasonable compile time)
+• O3: Maximum optimization (best performance, longer compile time)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              RECOMMENDATIONS
+═══════════════════════════════════════════════════════════════════════════════
+
+FOR DEVELOPMENT:
+• Use O2 for faster compilation during development cycles
+• Switch to O3 for production builds where runtime performance is critical
+
+FOR PRODUCTION:
+• Use O3 when maximum runtime performance is required
+• Consider O2 if compilation time is a constraint in CI/CD pipelines
+
+FOR DEBUGGING:
+• Use this report to understand which optimizations are applied
+• Compare with -O0 and -O1 to see the full optimization progression
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                                 END OF REPORT
+═══════════════════════════════════════════════════════════════════════════════
+
+Generated by LLVM Pass Analysis Tool
