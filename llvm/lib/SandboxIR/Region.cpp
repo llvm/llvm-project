@@ -174,7 +174,7 @@ Region::createRegionsFromMD(Function &F, TargetTransformInfo &TTI) {
         auto Idx = cast<llvm::ConstantInt>(IdxC)->getSExtValue();
         if (R == nullptr) {
           errs() << "No region specified for Aux: '" << *LLVMI << "'\n";
-          exit(1);
+          reportFatalUsageError("No region specified for Aux!");
         }
         R->setAux(Idx, &Inst);
       }
