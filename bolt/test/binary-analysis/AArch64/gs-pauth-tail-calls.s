@@ -48,6 +48,8 @@ bad_direct_tailcall_not_auted:
 // CHECK-NEXT:  {{[0-9a-f]+}}:   b       callee # TAILCALL
         stp     x29, x30, [sp, #-0x10]!
         ldp     x29, x30, [sp], #0x10
+
+        // This tail call invokes the callee with completely unchecked value in LR!
         b       callee
         .size bad_direct_tailcall_not_auted, .-bad_direct_tailcall_not_auted
 

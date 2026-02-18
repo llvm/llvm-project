@@ -189,6 +189,23 @@ bad_store_to_memory_and_hang:
         ret
         .size bad_store_to_memory_and_hang, .-bad_store_to_memory_and_hang
 
+// FIXME: Known false negative: a worse and more real-life variant of
+//        bad_store_to_memory_and_hang, which models a top-level infinite loop
+//        that can be fed by an attacker via callee-saved registers.
+        .globl  bad_infinite_loop
+        .type   bad_infinite_loop,@function
+bad_infinite_loop:
+// CHECK-NOT: authentication oracle found in function bad_infinite_loop
+        mov     x20, x0
+        mov     x21, x1
+1:
+        autia   x20, x21
+        bl      callee
+        b       1b
+
+        // unreachable
+        .size bad_infinite_loop, .-bad_infinite_loop
+
         .globl  bad_unknown_usage_subreg_read
         .type   bad_unknown_usage_subreg_read,@function
 bad_unknown_usage_subreg_read:
