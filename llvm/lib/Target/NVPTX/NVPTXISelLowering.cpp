@@ -6910,6 +6910,9 @@ static unsigned getF16SubOpc(Intrinsic::ID AddIntrinsicID) {
   case Intrinsic::nvvm_add_rn_sat_f16:
   case Intrinsic::nvvm_add_rn_sat_v2f16:
     return NVPTXISD::SUB_RN_SAT;
+  case Intrinsic::nvvm_add_rn_ftz_f16:
+  case Intrinsic::nvvm_add_rn_ftz_v2f16:
+    return NVPTXISD::SUB_RN_FTZ;
   case Intrinsic::nvvm_add_rn_ftz_sat_f16:
   case Intrinsic::nvvm_add_rn_ftz_sat_v2f16:
     return NVPTXISD::SUB_RN_FTZ_SAT;
@@ -6948,8 +6951,10 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   default:
     break;
   case Intrinsic::nvvm_add_rn_sat_f16:
+  case Intrinsic::nvvm_add_rn_ftz_f16:
   case Intrinsic::nvvm_add_rn_ftz_sat_f16:
   case Intrinsic::nvvm_add_rn_sat_v2f16:
+  case Intrinsic::nvvm_add_rn_ftz_v2f16:
   case Intrinsic::nvvm_add_rn_ftz_sat_v2f16:
     return combineF16AddWithNeg(N, DCI.DAG, IID);
   }

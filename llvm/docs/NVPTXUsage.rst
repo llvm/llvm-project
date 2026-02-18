@@ -1201,9 +1201,11 @@ Syntax:
 .. code-block:: llvm
 
     declare half @llvm.nvvm.add.rn.sat.f16(half %a, half %b)
+    declare half @llvm.nvvm.add.rn.ftz.f16(half %a, half %b)
     declare <2 x half> @llvm.nvvm.add.rn.sat.v2f16(<2 x half> %a, <2 x half> %b)
 
     declare half @llvm.nvvm.add.rn.ftz.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.add.rn.ftz.v2f16(<2 x half> %a, <2 x half> %b)
     declare <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16(<2 x half> %a, <2 x half> %b)
 
 Overview:
@@ -1229,9 +1231,11 @@ Syntax:
 .. code-block:: llvm
 
     declare half @llvm.nvvm.mul.rn.sat.f16(half %a, half %b)
+    declare half @llvm.nvvm.mul.rn.ftz.f16(half %a, half %b)
     declare <2 x half> @llvm.nvvm.mul.rn.sat.v2f16(<2 x half> %a, <2 x half> %b)
 
     declare half @llvm.nvvm.mul.rn.ftz.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.mul.rn.ftz.v2f16(<2 x half> %a, <2 x half> %b)
     declare <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16(<2 x half> %a, <2 x half> %b)
 
 Overview:
