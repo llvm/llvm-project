@@ -1,0 +1,6 @@
+# REQUIRES: python
+
+# RUN: %lldb -b -o 'type synthetic add --python-class blah blah-name' 2>&1 | FileCheck %s
+
+# CHECK:      (lldb) type synthetic
+# CHECK-NEXT: The provided class 'blah' does not exist
