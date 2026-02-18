@@ -185,6 +185,8 @@ canonicalizeForCaching(const llvm::cas::ObjectStore &CAS,
   FrontendOpts.CompilationCachingServicePath.clear();
   Opts.WriteOutputAsCASID = FrontendOpts.WriteOutputAsCASID;
   FrontendOpts.WriteOutputAsCASID = false;
+  Opts.WriteOutputHashXAttr = FrontendOpts.WriteOutputHashXAttr;
+  FrontendOpts.WriteOutputHashXAttr = false;
   Opts.DisableCachedCompileJobReplay =
       FrontendOpts.DisableCachedCompileJobReplay;
   FrontendOpts.DisableCachedCompileJobReplay = false;

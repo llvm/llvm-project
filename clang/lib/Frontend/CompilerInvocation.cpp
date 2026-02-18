@@ -5532,7 +5532,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
                    Res.getFileSystemOpts(), Res.getFrontendOpts(),
                    Res.getCASOpts());
 
-  // BEGIN MCCAS
+  // BEGIN CAS
   if (!Res.getFrontendOpts().CompilationCachingServicePath.empty()) {
     if (Res.getCodeGenOpts().UseCASBackend)
       Diags.Report(diag::err_fe_incompatible_option_with_remote_cache)
@@ -5540,10 +5540,21 @@ bool CompilerInvocation::CreateFromArgsImpl(
     if (Res.getFrontendOpts().WriteOutputAsCASID)
       Diags.Report(diag::err_fe_incompatible_option_with_remote_cache)
           << "-fcasid-output";
+    if (Res.getFrontendOpts().WriteOutputHashXAttr)
+      Diags.Report(diag::err_fe_incompatible_option_with_remote_cache)
+          << "-fwrite-output-hash-xattr";
+  }
+  if (Res.getFrontendOpts().WriteOutputHashXAttr) {
+    if (Res.getCodeGenOpts().UseCASBackend)
+      Diags.Report(diag::err_fe_incompatible_option_with_write_xattr)
+          << "-fcas-backend";
+    if (Res.getFrontendOpts().WriteOutputAsCASID)
+      Diags.Report(diag::err_fe_incompatible_option_with_write_xattr)
+          << "-fcasid-output";
   }
   if (Res.getCodeGenOpts().UseCASBackend && !T.isOSBinFormatMachO())
     Diags.Report(diag::err_fe_mccas_incompatible_target) << T.str();
-  // END MCCAS
+  // END CAS
 
   // FIXME: Override value name discarding when asan or msan is used because the
   // backend passes depend on the name of the alloca in order to print out

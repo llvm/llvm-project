@@ -9434,6 +9434,12 @@ defm casid_output : BoolFOption<"casid-output",
                          " write a CASID for the output file.">,
     NegFlag<SetFalse>>;
 
+defm write_output_hash_xattr : BoolFOption<"write-output-hash-xattr",
+    FrontendOpts<"WriteOutputHashXAttr">, DefaultFalse,
+    PosFlag<SetTrue, [], [], "When caching, write the output file's "
+    "hash (as determined by the CAS hashing schema) as a file extended attribute.">,
+    NegFlag<SetFalse>>;
+
 defm include_tree_preserve_pch_path : BoolFOption<"include-tree-preserve-pch-path",
     FrontendOpts<"IncludeTreePreservePCHPath">, DefaultFalse,
     PosFlag<SetTrue, [], [], "Keep the original PCH path in include-tree rather than canonicalizing">,

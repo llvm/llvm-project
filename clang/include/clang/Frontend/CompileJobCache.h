@@ -87,6 +87,7 @@ public:
                      cas::CompileJobCacheResult &CachedResult,
                      SmallVectorImpl<char> &DiagText,
                      bool WriteOutputAsCASID = false,
+                     bool WriteOutputHashXAttr = false,
                      std::optional<llvm::cas::CASID> *MCOutputID = nullptr);
 
   class CachingOutputs;

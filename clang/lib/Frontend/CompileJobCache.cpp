@@ -39,7 +39,7 @@ public:
 
   CachingOutputs(CompilerInstance &Clang, StringRef Workingdir,
                  llvm::PrefixMapper Mapper, bool WriteOutputAsCASID,
-                 bool UseCASBackend);
+                 bool WriteOutputHashXAttr, bool UseCASBackend);
   virtual ~CachingOutputs() = default;
 
   /// \returns true if result was found and replayed, false otherwise.
@@ -75,6 +75,7 @@ protected:
   CompilerInstance &Clang;
   const llvm::PrefixMapper PrefixMapper;
   const bool WriteOutputAsCASID;
+  const bool WriteOutputHashXAttr;
   const bool UseCASBackend;
   clang::cas::CompileJobCacheResult::Builder CachedResultBuilder;
   std::string OutputFile;
@@ -90,12 +91,12 @@ class ObjectStoreCachingOutputs : public CompileJobCache::CachingOutputs {
 public:
   ObjectStoreCachingOutputs(CompilerInstance &Clang, StringRef WorkingDir,
                             llvm::PrefixMapper Mapper, bool WriteOutputAsCASID,
-                            bool UseCASBackend,
+                            bool WriteOutputHashXAttr, bool UseCASBackend,
                             std::optional<llvm::cas::CASID> &MCOutputID,
                             std::shared_ptr<llvm::cas::ObjectStore> DB,
                             std::shared_ptr<llvm::cas::ActionCache> Cache)
       : CachingOutputs(Clang, WorkingDir, std::move(Mapper), WriteOutputAsCASID,
-                       UseCASBackend),
+                       WriteOutputHashXAttr, UseCASBackend),
         ComputedJobNeedsReplay(WriteOutputAsCASID || UseCASBackend),
         MCOutputID(MCOutputID), CAS(std::move(DB)), Cache(std::move(Cache)) {
     if (CAS)
@@ -202,6 +203,7 @@ public:
                        llvm::cas::remote::ClientServices Clients)
       : CachingOutputs(Clang, WorkingDir, std::move(Mapper),
                        /*WriteOutputAsCASID*/ false,
+                       /*WriteOutputHashXAttr=*/false,
                        /*UseCASBackend*/ false) {
     RemoteKVClient = std::move(Clients.KVDB);
     RemoteCASClient = std::move(Clients.CASDB);
@@ -347,7 +349,9 @@ std::optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
     if (!Clients)
       return reportCachingBackendError(Clang.getDiagnostics(),
                                        Clients.takeError());
-    assert(!CacheOpts.WriteOutputAsCASID &&
+    assert(!CacheOpts.WriteOutputAsCASID && !CacheOpts.WriteOutputHashXAttr &&
+           "combination of options not rejected earlier?");
+    assert(!CacheOpts.WriteOutputHashXAttr &&
            "combination of options not rejected earlier?");
     assert(!UseCASBackend && "combination of options not rejected earlier?");
     CacheBackend = std::make_unique<RemoteCachingOutputs>(
@@ -355,7 +359,8 @@ std::optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   } else {
     CacheBackend = std::make_unique<ObjectStoreCachingOutputs>(
         Clang, /*WorkingDir=*/"", std::move(PrefixMapper),
-        CacheOpts.WriteOutputAsCASID, UseCASBackend, MCOutputID, CAS, Cache);
+        CacheOpts.WriteOutputAsCASID, CacheOpts.WriteOutputHashXAttr,
+        UseCASBackend, MCOutputID, CAS, Cache);
   }
 
   return std::nullopt;
@@ -365,9 +370,11 @@ CompileJobCache::CachingOutputs::CachingOutputs(CompilerInstance &Clang,
                                                 StringRef WorkingDir,
                                                 llvm::PrefixMapper Mapper,
                                                 bool WriteOutputAsCASID,
+                                                bool WriteOutputHashXAttr,
                                                 bool UseCASBackend)
     : Clang(Clang), PrefixMapper(std::move(Mapper)),
-      WriteOutputAsCASID(WriteOutputAsCASID), UseCASBackend(UseCASBackend) {
+      WriteOutputAsCASID(WriteOutputAsCASID),
+      WriteOutputHashXAttr(WriteOutputHashXAttr), UseCASBackend(UseCASBackend) {
   CompilerInvocation &Invocation = Clang.getInvocation();
   FrontendOptions &FrontendOpts = Invocation.getFrontendOpts();
   if (!Clang.hasFileManager())
@@ -613,7 +620,7 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
     std::shared_ptr<CompilerInvocation> Invok, StringRef WorkingDir,
     const llvm::cas::CASID &CacheKey, cas::CompileJobCacheResult &CachedResult,
     SmallVectorImpl<char> &DiagText, bool WriteOutputAsCASID,
-    std::optional<llvm::cas::CASID> *OutMCOutputID) {
+    bool WriteOutputHashXAttr, std::optional<llvm::cas::CASID> *OutMCOutputID) {
   CompilerInstance Clang(std::move(Invok));
   llvm::raw_svector_ostream DiagOS(DiagText);
   Clang.createVirtualFileSystem(llvm::vfs::getRealFileSystem());
@@ -647,6 +654,7 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
   std::optional<llvm::cas::CASID> MCOutputID;
   ObjectStoreCachingOutputs CachingOutputs(
       Clang, WorkingDir, std::move(PrefixMapper), WriteOutputAsCASID,
+      WriteOutputHashXAttr,
       Clang.getInvocation().getCodeGenOpts().UseCASBackend, MCOutputID,
       /*CAS*/ nullptr, /*Cache*/ nullptr);
   if (OutMCOutputID)
@@ -758,7 +766,7 @@ Error ObjectStoreCachingOutputs::finishComputedResult(
 std::optional<int> ObjectStoreCachingOutputs::replayCachedResult(
     const llvm::cas::CASID &ResultCacheKey, llvm::cas::ObjectRef ResultID,
     bool JustComputedResult) {
-  if (JustComputedResult && !WriteOutputAsCASID)
+  if (JustComputedResult && !WriteOutputAsCASID && !WriteOutputHashXAttr)
     return std::nullopt;
 
   // FIXME: Stop calling report_fatal_error().
@@ -779,7 +787,7 @@ std::optional<int> ObjectStoreCachingOutputs::replayCachedResult(
 Expected<std::optional<int>> ObjectStoreCachingOutputs::replayCachedResult(
     const llvm::cas::CASID &ResultCacheKey,
     clang::cas::CompileJobCacheResult &Result, bool JustComputedResult) {
-  if (JustComputedResult && !WriteOutputAsCASID)
+  if (JustComputedResult && !WriteOutputAsCASID && !WriteOutputHashXAttr)
     return std::nullopt;
 
   llvm::cas::ObjectStore &CAS = Result.getCAS();
@@ -847,21 +855,24 @@ Expected<std::optional<int>> ObjectStoreCachingOutputs::replayCachedResult(
       return Output->keep();
     }
 
-    if (JustComputedResult)
-      return Error::success(); // continue
-
-    auto Output = Backend.createFile(Path);
-    if (!Output)
-      return Output.takeError();
-    if (O.Kind == OutputKind::Dependencies) {
-      if (auto E = CASDependencyCollector::replay(
-              Clang.getDependencyOutputOpts(), CAS, *Obj, *Output))
+    if (!JustComputedResult) {
+      auto Output = Backend.createFile(Path);
+      if (!Output)
+        return Output.takeError();
+      if (O.Kind == OutputKind::Dependencies) {
+        if (auto E = CASDependencyCollector::replay(
+                Clang.getDependencyOutputOpts(), CAS, *Obj, *Output))
+          return E;
+      } else {
+        *Output << Obj->getData();
+      }
+      if (Error E = Output->keep())
         return E;
-    } else {
-      *Output << Obj->getData();
     }
 
-    return Output->keep();
+    if (IsOutputFile && WriteOutputHashXAttr)
+      return llvm::cas::writeCASHashXAttr(CAS.getID(O.Object), Path);
+    return Error::success();
   };
 
   if (auto Err = Result.forEachLoadedOutput(processOutput))

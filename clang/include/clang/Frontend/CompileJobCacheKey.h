@@ -46,6 +46,8 @@ struct CompileJobCachingOptions {
   bool DisableCachedCompileJobReplay;
   /// See \c FrontendOptions::WriteOutputAsCASID.
   bool WriteOutputAsCASID;
+  /// See \c FrontendOptions::WriteOutputHashXAttr.
+  bool WriteOutputHashXAttr;
   /// See \c FrontendOptions::PathPrefixMappings.
   std::vector<std::pair<std::string, std::string>> PathPrefixMappings;
 };
