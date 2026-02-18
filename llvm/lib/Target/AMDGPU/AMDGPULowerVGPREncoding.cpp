@@ -148,7 +148,7 @@ private:
   /// bit mapping. Optionally takes second array \p Ops2 for VOPD.
   /// If provided and an operand from \p Ops is not a VGPR, then \p Ops2
   /// is checked.
-  void computeMode(ModeTy &NewMode, MachineInstr &MI,
+  void computeMode(ModeTy &NewMode, const MachineInstr &MI,
                    const AMDGPU::OpName Ops[OpNum],
                    const AMDGPU::OpName *Ops2 = nullptr);
 
@@ -224,13 +224,14 @@ AMDGPULowerVGPREncoding::getMSBs(const MachineOperand &MO) const {
   return Idx >> 8;
 }
 
-void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, MachineInstr &MI,
+void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode,
+                                          const MachineInstr &MI,
                                           const AMDGPU::OpName Ops[OpNum],
                                           const AMDGPU::OpName *Ops2) {
   NewMode = {};
 
   for (unsigned I = 0; I < OpNum; ++I) {
-    MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
+    const MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
 
     std::optional<unsigned> MSBits;
     if (Op)
@@ -238,7 +239,7 @@ void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, MachineInstr &MI,
 
 #if !defined(NDEBUG)
     if (MSBits.has_value() && Ops2) {
-      auto Op2 = TII->getNamedOperand(MI, Ops2[I]);
+      const MachineOperand *Op2 = TII->getNamedOperand(MI, Ops2[I]);
       if (Op2) {
         std::optional<unsigned> MSBits2;
         MSBits2 = getMSBs(*Op2);
