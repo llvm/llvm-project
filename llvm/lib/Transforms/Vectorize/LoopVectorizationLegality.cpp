@@ -882,7 +882,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
 
     RecurrenceDescriptor RedDes;
     if (RecurrenceDescriptor::isReductionPHI(Phi, TheLoop, RedDes, DB, AC, DT,
-                                             PSE.getSE())) {
+                                             PSE.getSE()) &&
+        (RedDes.getRecurrenceKind() != RecurKind::FFindLast || !TTI ||
+         TTI->isLegalToVectorizeReduction(RedDes, ElementCount::getFixed(4)))) {
       Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
       AllowedExit.insert(RedDes.getLoopExitInstr());
       Reductions[Phi] = std::move(RedDes);

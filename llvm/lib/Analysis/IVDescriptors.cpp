@@ -55,7 +55,6 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::UMin:
   case RecurKind::AnyOf:
   case RecurKind::FindIV:
-  // TODO: Make type-agnostic.
   case RecurKind::FindLast:
     return true;
   }
@@ -510,6 +509,9 @@ bool RecurrenceDescriptor::AddReductionVar(
     if (!isIntegerRecurrenceKind(Kind))
       return false;
     Start = lookThroughAnd(Phi, RecurrenceType, VisitedInsts, CastInsts);
+  } else if (ScalarTy->isPointerTy()) {
+    if (Kind != RecurKind::FindLast)
+      return false;
   } else {
     // Pointer min/max may exist, but it is not supported as a reduction op.
     return false;
@@ -649,7 +651,7 @@ bool RecurrenceDescriptor::AddReductionVar(
         // "FindLast-like" phis are not supported see:
         // IVDescriptorsTest.UnsupportedFindLastPhi.
         FoundFindLastLikePhi =
-            Kind == RecurKind::FindLast && !FoundFindLastLikePhi &&
+            isFindLastRecurrenceKind(Kind) && !FoundFindLastLikePhi &&
             isFindLastLikePhi(cast<PHINode>(Cur), Phi, VisitedInsts);
         if (!FoundFindLastLikePhi)
           return false;
@@ -734,7 +736,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // We only expect to match a single "find-last-like" phi per find-last
   // reduction, with no non-phi operations in the reduction use chain.
   assert((!FoundFindLastLikePhi ||
-          (Kind == RecurKind::FindLast && NumNonPHIUsers == 0)) &&
+          (isFindLastRecurrenceKind(Kind) && NumNonPHIUsers == 0)) &&
          "Unexpectedly matched a 'find-last-like' phi");
 
   if (isAnyOfRecurrenceKind(Kind) && NumCmpSelectPatternInst != 1)
@@ -936,7 +938,9 @@ RecurrenceDescriptor::isFindPattern(Loop *TheLoop, PHINode *OrigPhi,
                                      m_Value(NonRdxPhi)))))
     return InstDesc(false, I);
 
-  return InstDesc(I, RecurKind::FindLast);
+  return OrigPhi->getType()->isFloatingPointTy()
+             ? InstDesc(I, RecurKind::FFindLast)
+             : InstDesc(I, RecurKind::FindLast);
 }
 
 /// Returns true if the select instruction has users in the compare-and-add
@@ -1119,6 +1123,11 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
     LLVM_DEBUG(dbgs() << "Found a Find reduction PHI." << *Phi << "\n");
     return true;
   }
+  if (AddReductionVar(Phi, RecurKind::FFindLast, TheLoop, FMF, RedDes, DB, AC,
+                      DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found a float Find reduction PHI." << *Phi << "\n");
+    return true;
+  }
   if (AddReductionVar(Phi, RecurKind::FMul, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
     LLVM_DEBUG(dbgs() << "Found an FMult reduction PHI." << *Phi << "\n");
@@ -1260,6 +1269,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMinimumNum:
     return Instruction::FCmp;
   case RecurKind::FindLast:
+  case RecurKind::FFindLast:
   case RecurKind::AnyOf:
   case RecurKind::FindIV:
     // TODO: Set AnyOf and FindIV to Instruction::Select once in-loop reductions

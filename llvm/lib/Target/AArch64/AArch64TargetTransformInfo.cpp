@@ -5562,6 +5562,7 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
   case RecurKind::FMulAdd:
   case RecurKind::AnyOf:
   case RecurKind::FindLast:
+  case RecurKind::FFindLast:
     return true;
   default:
     return false;
