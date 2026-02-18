@@ -3098,6 +3098,23 @@ static X86::CondCode TranslateIntegerX86CC(ISD::CondCode SetCCOpcode) {
   }
 }
 
+// TranslateX86CC() converts comparison with one or negative one to comparison
+// with 0. Note that this only works for signed comparisons because of how ANDS
+// works.
+static bool shouldBeAdjustedToZero(SDValue LHS, APInt C, ISD::CondCode &CC) {
+  if (C.isOne() && (CC == ISD::SETLT || CC == ISD::SETGE)) {
+    CC = (CC == ISD::SETLT) ? ISD::SETLE : ISD::SETGT;
+    return true;
+  }
+
+  if (C.isAllOnes() && (CC == ISD::SETLE || CC == ISD::SETGT)) {
+    CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
+    return true;
+  }
+
+  return false;
+}
+
 /// Do a one-to-one translation of a ISD::CondCode to the X86-specific
 /// condition code, returning the condition code and the LHS/RHS of the
 /// comparison to make.
@@ -3106,23 +3123,38 @@ static X86::CondCode TranslateX86CC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
                                     SelectionDAG &DAG) {
   if (!isFP) {
     if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS)) {
-      if (SetCCOpcode == ISD::SETGT && RHSC->isAllOnes()) {
-        // X > -1   -> X == 0, jump !sign.
+      // Attempt to canonicalize SGT/UGT -> SGE/UGE compares with constant which
+      // reduces the number of EFLAGs bit reads (the GE conditions don't read
+      // ZF), this may translate to less uops depending on uarch implementation.
+      // The equivalent for SLE/ULE -> SLT/ULT isn't likely to happen as we
+      // already canonicalize to that CondCode.
+
+      // NOTE: Only do this if incrementing the constant doesn't increase the
+      // bit encoding size - so it must either already be a i8 or i32 immediate,
+      // or it shrinks down to that. We don't do this for any i64's to avoid
+      // additional constant materializations.
+
+      // Note, when we are doing signed compare against 1, we can do it in
+      // reverse too, since 0 is better in general.
+
+      // We do not do this for unsigned since this will always just be =/!= 0.
+      const APInt &Op1Val = RHSC->getAPIntValue();
+      // We should try to go to 0 if and when we can.
+      // Always assume that 0 is better for encoding too.
+      if (shouldBeAdjustedToZero(LHS, Op1Val, SetCCOpcode)) {
+        // Adjust the constant to zero.
+        // CC has already been adjusted.
         RHS = DAG.getConstant(0, DL, RHS.getValueType());
-        return X86::COND_NS;
       }
-      if (SetCCOpcode == ISD::SETLT && RHSC->isZero()) {
+
+      if (SetCCOpcode == ISD::SETLT && isNullConstant(RHS)) {
         // X < 0   -> X == 0, jump on sign.
         return X86::COND_S;
       }
-      if (SetCCOpcode == ISD::SETGE && RHSC->isZero()) {
+
+      if (SetCCOpcode == ISD::SETGE && isNullConstant(RHS)) {
         // X >= 0   -> X == 0, jump on !sign.
         return X86::COND_NS;
-      }
-      if (SetCCOpcode == ISD::SETLT && RHSC->isOne()) {
-        // X < 1   -> X <= 0
-        RHS = DAG.getConstant(0, DL, RHS.getValueType());
-        return X86::COND_LE;
       }
     }
 
