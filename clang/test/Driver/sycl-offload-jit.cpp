@@ -32,7 +32,7 @@
 // Check if path to libsycl.so is passed to clang-linker-wrapper tool by default for SYCL compilation.
 // The test also checks if SYCL header include paths are added to the SYCL host and device compilation.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1    \
-// RUN:   | FileCheck -DDRIVER_DIR=$(basename $(dirname %clang)) -check-prefixes=CHECK-LSYCL,CHECK-SYCL-HEADERS-HOST,CHECK-SYCL-HEADERS-DEVICE %s
+// RUN:   | FileCheck -DDRIVER_DIR="$(basename $(dirname %clang))" -check-prefixes=CHECK-LSYCL,CHECK-SYCL-HEADERS-HOST,CHECK-SYCL-HEADERS-DEVICE %s
 // CHECK-SYCL-HEADERS-DEVICE: "-fsycl-is-device"{{.*}} "-internal-isystem" "{{.*}}[[DRIVER_DIR]]{{[/\\]+}}..{{[/\\]+}}include"
 // CHECK-SYCL-HEADERS-HOST: "-fsycl-is-host"{{.*}} "-internal-isystem" "{{.*}}[[DRIVER_DIR]]{{[/\\]+}}..{{[/\\]+}}include"
 // CHECK-LSYCL: clang-linker-wrapper{{.*}} "{{.*}}[[DRIVER_DIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}libsycl.so"
