@@ -12,6 +12,7 @@
 
 #include "clang/Driver/CreateASTUnitFromArgs.h"
 #include "clang/Driver/CreateInvocationFromArgs.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ModuleCache.h"
@@ -70,7 +71,8 @@ std::unique_ptr<ASTUnit> clang::CreateASTUnitFromCommandLine(
     bool UserFilesAreVolatile, bool ForSerialization,
     bool RetainExcludedConditionalBlocks, std::optional<StringRef> ModuleFormat,
     std::unique_ptr<ASTUnit> *ErrAST,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+    std::function<void(CompilerInstance &CI)> OnCompilerCreated) {
   assert(Diags.get() && "no DiagnosticsEngine was provided");
 
   // If no VFS was provided, create one that tracks the physical file system.
@@ -152,7 +154,8 @@ std::unique_ptr<ASTUnit> clang::CreateASTUnitFromCommandLine(
   llvm::CrashRecoveryContextCleanupRegistrar<ASTUnit> ASTUnitCleanup(AST.get());
 
   if (AST->LoadFromCompilerInvocation(std::move(PCHContainerOps),
-                                      PrecompilePreambleAfterNParses, VFS)) {
+                                      PrecompilePreambleAfterNParses, VFS,
+                                      OnCompilerCreated)) {
     // Some error occurred, if caller wants to examine diagnostics, pass it the
     // ASTUnit.
     if (ErrAST) {

@@ -14,8 +14,13 @@
 #define LLVM_CLANG_DRIVER_CREATEASTUNITFROMARGS_H
 
 #include "clang/Frontend/ASTUnit.h"
+#include "llvm/ADT/StringRef.h"
+#include <functional>
+#include <memory>
+#include <optional>
 
 namespace clang {
+class CompilerInstance;
 
 /// Create an ASTUnit from a vector of command line arguments, which must
 /// specify exactly one source file.
@@ -73,7 +78,8 @@ std::unique_ptr<ASTUnit> CreateASTUnitFromCommandLine(
     bool ForSerialization = false, bool RetainExcludedConditionalBlocks = false,
     std::optional<StringRef> ModuleFormat = std::nullopt,
     std::unique_ptr<ASTUnit> *ErrAST = nullptr,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr,
+    std::function<void(CompilerInstance &CI)> OnCompilerCreated = nullptr);
 
 } // namespace clang
 
