@@ -239,3 +239,35 @@ define i32 @popcount64_mask(i64 %x) {
   %13 = trunc nuw nsw i64 %12 to i32
   ret i32 %13
 }
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none) uwtable
+define dso_local noundef range(i32 0, 59) i32 @popcnt1(i32 noundef %uWord) local_unnamed_addr {
+; CHECK-LABEL: define dso_local noundef range(i32 0, 59) i32 @popcnt1(
+; CHECK-SAME: i32 noundef [[UWORD:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[UWORD]])
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %and = and i32 %uWord, 1431655765
+  %shr = lshr i32 %uWord, 1
+  %and1 = and i32 %shr, 1431655765
+  %add = add nuw i32 %and1, %and
+  %and2 = and i32 %add, 858993459
+  %shr3 = lshr i32 %add, 2
+  %and4 = and i32 %shr3, 858993459
+  %add5 = add nuw nsw i32 %and4, %and2
+  %and6 = and i32 %add5, 117901063
+  %shr7 = lshr i32 %add5, 4
+  %and8 = and i32 %shr7, 117901063
+  %add9 = add nuw nsw i32 %and8, %and6
+  %and10 = and i32 %add9, 983055
+  %shr11 = lshr i32 %add9, 8
+  %and12 = and i32 %shr11, 983055
+  %add13 = add nuw nsw i32 %and12, %and10
+  %and14 = and i32 %add13, 31
+  %shr15 = lshr i32 %add13, 16
+  %add16 = add nuw nsw i32 %and14, %shr15
+  ret i32 %add16
+}
+

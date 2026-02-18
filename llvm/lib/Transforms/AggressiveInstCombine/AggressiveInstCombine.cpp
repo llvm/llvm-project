@@ -372,6 +372,80 @@ static bool tryToRecognizePopCount(Instruction &I) {
   return false;
 }
 
+// Try to recognize below function as popcount intrinsic.
+// https://doc.lagout.org/security/Hackers%20Delight.pdf
+// Also used in TargetLowering::expandCTPOP().
+//
+// int popcount(unsigned int i) {
+// uWord = (uWord & 0x55555555) + ((uWord>>1) & 0x55555555);
+// uWord = (uWord & 0x33333333) + ((uWord>>2) & 0x33333333);
+// uWord = (uWord & 0x0F0F0F0F) + ((uWord>>4) & 0x0F0F0F0F);
+// uWord = (uWord & 0x00FF00FF) + ((uWord>>8) & 0x00FF00FF);
+// return  (uWord & 0x0000FFFF) + (uWord>>16);
+// }
+static bool tryToRecognizePopCount1(Instruction &I) {
+  if (I.getOpcode() != Instruction::Add)
+    return false;
+
+  Type *Ty = I.getType();
+  if (!Ty->isIntOrIntVectorTy())
+    return false;
+
+  unsigned Len = Ty->getScalarSizeInBits();
+  if (!(Len <= 128 && Len > 8 && Len % 8 == 0))
+    return false;
+
+  APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
+  APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  Value *LShrOp0;
+  // Matching "(uWord & 0x0000FFFF) + (uWord>>16)".
+  if ((match(Op1, m_LShr(m_Value(LShrOp0), m_SpecificInt(16)))) &&
+      match(Op0, m_And(m_Deferred(LShrOp0), m_SpecificInt(31)))) {
+    Value *ShiftOp0;
+    // Matching "uWord = (uWord & 0x00FF00FF) + ((uWord>>8) & 0x00FF00FF);".
+    if (match(LShrOp0,
+              m_c_Add(m_And(m_LShr(m_Value(ShiftOp0), m_SpecificInt(8)),
+                            m_SpecificInt(983055)),
+                      m_And(m_Deferred(ShiftOp0), m_SpecificInt(983055))))) {
+      Value *ShiftOp1;
+      // Matching "uWord = (uWord & 0x0F0F0F0F) + ((uWord>>4) & 0x0F0F0F0F)".
+      if (match(
+              ShiftOp0,
+              m_c_Add(m_And(m_LShr(m_Value(ShiftOp1), m_SpecificInt(4)),
+                            m_SpecificInt(117901063)),
+                      m_And(m_Deferred(ShiftOp1), m_SpecificInt(117901063))))) {
+        Value *ShiftOp2;
+        // Matching "uWord = (uWord & 0x33333333) + ((uWord>>2) & 0x33333333)".
+        if (match(
+                ShiftOp1,
+                m_c_Add(m_And(m_LShr(m_Value(ShiftOp2), m_SpecificInt(2)),
+                              m_SpecificInt(Mask33)),
+                        m_And(m_Deferred(ShiftOp2), m_SpecificInt(Mask33))))) {
+          Value *ShiftOp3;
+          // Matching "uWord = (uWord & 0x55555555) + ((uWord>>1) &
+          // 0x55555555)".
+          if (match(ShiftOp2,
+                    m_c_Add(
+                        m_And(m_LShr(m_Value(ShiftOp3), m_SpecificInt(1)),
+                              m_SpecificInt(Mask55)),
+                        m_And(m_Deferred(ShiftOp3), m_SpecificInt(Mask55))))) {
+            LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+            IRBuilder<> Builder(&I);
+            I.replaceAllUsesWith(Builder.CreateIntrinsic(
+                Intrinsic::ctpop, I.getType(), {ShiftOp3}));
+            ++NumPopCountRecognized;
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 /// Fold smin(smax(fptosi(x), C1), C2) to llvm.fptosi.sat(x), providing C1 and
 /// C2 saturate the value of the fp conversion. The transform is not reversable
 /// as the fptosi.sat is more defined than the input - all values produce a
@@ -1826,6 +1900,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldAnyOrAllBitsSet(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I);
+      MadeChange |= tryToRecognizePopCount1(I);
       MadeChange |= tryToFPToSat(I, TTI);
       MadeChange |= tryToRecognizeTableBasedCttz(I, DL);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
