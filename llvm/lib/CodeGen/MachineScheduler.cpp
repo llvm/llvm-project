@@ -249,6 +249,11 @@ static cl::opt<unsigned> SchedOnlyBlock("misched-only-block", cl::Hidden,
 static cl::opt<unsigned> ReadyListLimit("misched-limit", cl::Hidden,
   cl::desc("Limit ready list to N instructions"), cl::init(256));
 
+static cl::opt<unsigned> MaxRegionInstrs(
+    "misched-max-region-instrs", cl::Hidden,
+    cl::desc("Split regions larger than N instructions. 0 disables."),
+    cl::init(0));
+
 static cl::opt<bool> EnableRegPressure("misched-regpressure", cl::Hidden,
   cl::desc("Enable register pressure scheduling."), cl::init(true));
 
@@ -785,9 +790,8 @@ getSchedRegions(MachineBasicBlock *MBB,
 
     // Avoid decrementing RegionEnd for blocks with no terminator.
     if (RegionEnd != MBB->end() ||
-        isSchedBoundary(&*std::prev(RegionEnd), &*MBB, MF, TII)) {
+        isSchedBoundary(&*std::prev(RegionEnd), &*MBB, MF, TII))
       --RegionEnd;
-    }
 
     // The next region starts above the previous region. Look backward in the
     // instruction stream until we find the nearest boundary.
@@ -795,7 +799,8 @@ getSchedRegions(MachineBasicBlock *MBB,
     I = RegionEnd;
     for (;I != MBB->begin(); --I) {
       MachineInstr &MI = *std::prev(I);
-      if (isSchedBoundary(&MI, &*MBB, MF, TII))
+      if (isSchedBoundary(&MI, &*MBB, MF, TII) ||
+          (MaxRegionInstrs && NumRegionInstrs >= MaxRegionInstrs))
         break;
       if (!MI.isDebugOrPseudoInstr()) {
         // MBB::size() uses instr_iterator to count. Here we need a bundle to
