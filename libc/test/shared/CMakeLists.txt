@@ -27,6 +27,7 @@ add_fp_unittest(
     libc.src.__support.math.atanhf
     libc.src.__support.math.atanhf16
     libc.src.__support.math.bf16add
+    libc.src.__support.math.bf16addf
     libc.src.__support.math.bf16addf128
     libc.src.__support.math.canonicalize
     libc.src.__support.math.canonicalizebf16
