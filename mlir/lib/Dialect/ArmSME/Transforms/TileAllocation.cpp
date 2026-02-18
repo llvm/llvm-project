@@ -349,20 +349,19 @@ generateOperationNumbering(FunctionOpInterface function) {
   SetVector<Block *> blocks =
       getBlocksSortedByDominance(function.getFunctionBody());
   DenseMap<Operation *, unsigned> operationToIndexMap;
-  bool sawNestedArmSMEOp = false;
   for (Block *block : blocks) {
     index++; // We want block args to have their own number.
     for (Operation &op : block->getOperations()) {
-      op.walk([&](ArmSMETileOpInterface nestedOp) {
+      WalkResult walkResult = op.walk([&](ArmSMETileOpInterface nestedOp) -> WalkResult {
         if (&op == nestedOp.getOperation())
-          return;
+          return WalkResult::advance();
         nestedOp.emitError(
             "ArmSME tile allocation requires flattened control flow; run "
             "-convert-scf-to-cf before this pass (e.g. via "
             "convert-arm-sme-to-llvm pipeline)");
-        sawNestedArmSMEOp = true;
+        return WalkResult::interrupt();
       });
-      if (sawNestedArmSMEOp)
+      if (walkResult.wasInterrupted())
         return failure();
       operationToIndexMap.try_emplace(&op, index++);
     }
@@ -816,10 +815,10 @@ LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
 
   // 2. Gather live ranges for each ArmSME tile within the function.
   Liveness liveness(function);
-  auto operationToIndexMapOr = generateOperationNumbering(function);
-  if (failed(operationToIndexMapOr))
+  auto maybeOperationToIndexMap = generateOperationNumbering(function);
+  if (failed(maybeOperationToIndexMap))
     return failure();
-  auto &operationToIndexMap = *operationToIndexMapOr;
+  auto &operationToIndexMap = *maybeOperationToIndexMap;
   auto initialLiveRanges = gatherTileLiveRanges(
       operationToIndexMap, liveRangeAllocator, liveness, function);
   if (initialLiveRanges.empty())
