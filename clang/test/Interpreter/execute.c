@@ -17,4 +17,7 @@ run();
 // CHECK: i = 42
 // CHECK-NEXT: S[f=1.000000, m=0x0]
 
+const char* a = "test"; // expected-note {{previous definition is here}}
+const char* a = ""; // expected-error {{redefinition of 'a'}}
+
 %quit
