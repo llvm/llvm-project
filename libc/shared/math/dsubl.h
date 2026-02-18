@@ -1,4 +1,4 @@
-//===-- Implementation of dsubl function ----------------------------------===//
+//===-- Shared dsubl function -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/dsubl.h"
+#ifndef LLVM_LIBC_SHARED_MATH_DSUBL_H
+#define LLVM_LIBC_SHARED_MATH_DSUBL_H
+
 #include "src/__support/math/dsubl.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(double, dsubl, (long double x, long double y)) {
-  return math::dsubl(x, y);
-}
+using math::dsubl;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_DSUBL_H

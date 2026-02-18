@@ -2897,6 +2897,25 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_dsubf128",
+    hdrs = ["src/__support/math/dsubf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_dsubl",
+    hdrs = ["src/__support/math/dsubl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_exp10m1f",
     hdrs = ["src/__support/math/exp10m1f.h"],
     deps = [
@@ -4765,9 +4784,19 @@ libc_math_function(
     additional_deps = [":__support_fputil_sqrt"],
 )
 
-libc_math_function(name = "dsubl")
+libc_math_function(
+    name = "dsubl",
+    additional_deps = [
+        ":__support_math_dsubl",
+    ],
+)
 
-libc_math_function(name = "dsubf128")
+libc_math_function(
+    name = "dsubf128",
+    additional_deps = [
+        ":__support_math_dsubf128",
+    ],
+)
 
 libc_math_function(
     name = "erff",
