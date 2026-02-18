@@ -2561,15 +2561,10 @@ void PruneThreadPlans();
   /// When data is successfully read from the ConPTY, it is stored in
   /// m_stdout_data. There is no differentiation between stdout and stderr.
   ///
-  /// \param[in] pty
-  ///     The ConPTY to use for process STDIO communication. It's
-  ///     assumed to be valid.
-  ///
   /// \see lldb_private::Process::STDIOReadThreadBytesReceived()
   /// \see lldb_private::IOHandlerProcessSTDIOWindows
   /// \see lldb_private::PseudoConsole
-  virtual void
-  SetPseudoConsoleHandle(const std::shared_ptr<PseudoConsole> &pty) {};
+  virtual void SetPseudoConsoleHandle() {};
 #endif
 
   /// Associates a file descriptor with the process' STDIO handling

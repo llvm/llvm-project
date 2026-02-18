@@ -136,6 +136,15 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
   ];
 }
 
+def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mlir::ModuleOp"> {
+  let summary = "Copy globals with acc.declare into the GPU module";
+  let description = [{
+    Copies globals that have the `acc.declare` attribute into the GPU module so
+    that device code can reference them.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::gpu::GPUDialect"];
+}
+
 def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
   let summary = "Legalize OpenACC serial constructs";
   let description = [{
