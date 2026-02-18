@@ -54,8 +54,18 @@ struct S {
                                                expected-note {{does not refer to this declaration}} \
                                                expected-note@#mem-var {{refers to this declaration instead}}
 
+  void member_function_with_ns_var(int vla[S::v], int v); // no diagnostic expected
   void member_function_with_const_arr(int cla[y], int y); // no diagnostic expected
 };
+
+namespace abc {
+    int n; // #ns-var
+
+    void corge (int vla[::n], int n); // no diagnostic expected
+    void grualt(int vla[n], int n);   // expected-warning {{variable length array size expression refers to declaration from an outer scope}} \
+                                         expected-note {{does not refer to this declaration}} \
+                                         expected-note@#ns-var {{refers to this declaration instead}}
+}
 #endif
 
 #ifdef CARET

@@ -10120,7 +10120,9 @@ void Sema::DiagnoseVlaSizeParameter(
       DeclRefFinder(SmallVectorImpl<const DeclRefExpr *> &Found)
           : Found(Found) {}
       bool VisitDeclRefExpr(const DeclRefExpr *DRE) override {
-        Found.push_back(DRE);
+        // Do not warn if expr has a NestedNameSpecifier
+        if (!DRE->hasQualifier())
+          Found.push_back(DRE);
         return true;
       }
     } Finder(DRESizeExprs);
