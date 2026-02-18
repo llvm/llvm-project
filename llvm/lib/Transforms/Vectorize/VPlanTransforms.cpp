@@ -5719,6 +5719,9 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     if (!SE.isKnownNonZero(Step))
       continue;
 
+    if (IVSCEV->getType()->isPointerTy())
+      continue;
+
     // Positive step means we need UMax/SMax to find the last IV value, and
     // UMin/SMin otherwise.
     bool UseMax = SE.isKnownPositive(Step);
