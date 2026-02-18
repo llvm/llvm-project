@@ -1,0 +1,76 @@
+
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "artifacts": [
+        {
+          "length": -1,
+          "location": {
+            "index": 0,
+            "uri": "file:///[...]/sarif-legacy-stable-ids.c"
+          },
+          "mimeType": "text/plain",
+          "roles": [
+            "resultFile"
+          ]
+        }
+      ],
+      "columnKind": "unicodeCodePoints",
+      "results": [
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                  "uri": "file:///[...]/sarif-legacy-stable-ids.c"
+                },
+                "region": {
+                  "endColumn": 32,
+                  "startColumn": 32,
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "AVR 'interrupt' attribute only applies to functions that have a 'void' return type"
+          },
+          "ruleId": "warn_interrupt_signal_attribute_invalid",
+          "ruleIndex": 0
+        }
+      ],
+      "tool": {
+        "driver": {
+          "fullName": "",
+          "informationUri": "https://clang.llvm.org/docs/UsersManual.html",
+          "language": "en-US",
+          "name": "clang",
+          "rules": [
+            {
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning",
+                "rank": -1
+              },
+              "deprecatedIds": [
+                "warn_interrupt_attribute_invalid"
+              ],
+              "fullDescription": {
+                "text": ""
+              },
+              "id": "warn_interrupt_signal_attribute_invalid",
+              "name": ""
+            }
+          ],
+          "version": "[clang version]"
+        }
+      }
+    }
+  ],
+  "version": "[SARIF version]"
+}
+
+1 warning generated.

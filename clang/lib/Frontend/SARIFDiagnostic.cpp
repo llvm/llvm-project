@@ -46,7 +46,11 @@ void SARIFDiagnostic::emitDiagnosticMessage(
   if (!Diag)
     return;
 
-  SarifRule Rule = SarifRule::create().setRuleId(std::to_string(Diag->getID()));
+  const auto &DiagnosticIDs = *(Diag->getDiags()->getDiagnosticIDs());
+  std::string StableID = DiagnosticIDs.getStableID(Diag->getID());
+  auto LegacyStableIDs = DiagnosticIDs.getLegacyStableIDs(Diag->getID());
+  SarifRule Rule =
+      SarifRule::create().setRuleId(StableID).setDeprecatedIds(LegacyStableIDs);
 
   Rule = addDiagnosticLevelToRule(Rule, Level);
 
