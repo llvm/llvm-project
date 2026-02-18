@@ -12,6 +12,9 @@
 // RUN: cat %t/docs/html/GlobalNamespace/_ZTV5tuple.html | FileCheck %s --check-prefix=HTML-STRUCT
 // RUN: cat %t/docs/html/GlobalNamespace/index.html | FileCheck %s --check-prefix=HTML
 
+// RUN: clang-doc --doxygen --executor=standalone %s -output=%t/docs --format=md_mustache
+// RUN: cat %t/docs/md/GlobalNamespace/index.md | FileCheck %s --check-prefix=MD-MUSTACHE
+
 // YAML: ---
 // YAML-NEXT: USR:             '{{([0-9A-F]{40})}}'
 // YAML-NEXT: ChildRecords:
@@ -23,6 +26,9 @@
 
 // MD: # Global Namespace
 // MD: ## Functions
+
+// MD-MUSTACHE: # Global Namespace
+// MD-MUSTACHE: ## Functions
 
 template <class... T>
 void ParamPackFunction(T... args);
@@ -79,6 +85,9 @@ void ParamPackFunction(T... args);
 
 // HTML:        <pre><code class="language-cpp code-clang-doc">template &lt;class... T&gt;</code></pre>
 // HTML-NEXT:   <pre><code class="language-cpp code-clang-doc">void ParamPackFunction (T... args)</code></pre>
+
+// MD-MUSTACHE: ### ParamPackFunction
+// MD-MUSTACHE: *void ParamPackFunction(T... args)*
 
 template <typename T, int U = 1>
 void function(T x) {}
@@ -142,6 +151,10 @@ void function(T x) {}
 // HTML-NEXT:      <p>Defined at line [[# @LINE - 58]] of file {{.*}}templates.cpp</p>
 // HTML-NEXT:  </div>
 
+
+// MD-MUSTACHE: ### function
+// MD-MUSTACHE: *void function(T x)*
+// MD-MUSTACHE: *Defined at {{.*}}templates.cpp#[[# @LINE - 64]]*
 
 template <>
 void function<bool, 0>(bool x) {}
@@ -209,6 +222,10 @@ void function<bool, 0>(bool x) {}
 // HTML-NEXT:      <pre><code class="language-cpp code-clang-doc">void function&lt;bool, 0&gt; (bool x)</code></pre>
 // HTML-NEXT:      <p>Defined at line [[# @LINE - 64]] of file {{.*}}templates.cpp</p>
 // HTML-NEXT:  </div>
+
+// MD-MUSTACHE: ### function
+// MD-MUSTACHE: *void function(bool x)*
+// MD-MUSTACHE: *Defined at {{.*}}templates.cpp#[[# @LINE - 69]]*
 
 /// A Tuple type
 ///
@@ -317,3 +334,10 @@ tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t) { return t;
 // HTML-NEXT:          </div>
 // HTML-NEXT:      </div>
 // HTML-NEXT:      <p>Defined at line [[# @LINE - 81]] of file {{.*}}templates.cpp</p>
+// HTML-NEXT:  </div>
+
+// MD-MUSTACHE: ### func_with_tuple_param
+// MD-MUSTACHE: *tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t)*
+// MD-MUSTACHE: *Defined at {{.*}}templates.cpp#[[# @LINE - 86]]*
+// MD-MUSTACHE:  A function with a tuple parameter
+// MD-MUSTACHE: **t** The input to func_with_tuple_param

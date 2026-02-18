@@ -13,11 +13,13 @@ namespace inner {
 // CHECK-JSON-NEXT:    {
 // CHECK-JSON-NEXT:      "Name": "GlobalNamespace",
 // CHECK-JSON-NEXT:      "QualName": "GlobalNamespace",
+// CHECK-JSON-NEXT:      "Type": "namespace",
 // CHECK-JSON-NEXT:      "USR": "0000000000000000000000000000000000000000"
 // CHECK-JSON-NEXT:    },
 // CHECK-JSON-NEXT:    {
 // CHECK-JSON-NEXT:      "Name": "inner",
 // CHECK-JSON-NEXT:      "QualName": "inner",
+// CHECK-JSON-NEXT:      "Type": "namespace",
 // CHECK-JSON-NEXT:      "USR": "{{([0-9A-F]{40})}}"
 // CHECK-JSON-NEXT:    }
 // CHECK-JSON-NEXT:  ]
@@ -62,3 +64,5 @@ namespace inner {
 // CHECK-HTML-NEXT:            </div>
 // CHECK-HTML-NEXT:        </div>
 // CHECK-HTML-NEXT:    </main>
+
+// COM: TODO: Add Markdown index test

@@ -26,7 +26,7 @@ ClangDocContext ClangDocContextTest::getClangDocContext(
     StringRef RepositoryLinePrefix, StringRef Base) {
   return ClangDocContext(nullptr, "test-project", false, "", "", RepositoryUrl,
                          RepositoryLinePrefix, Base, UserStylesheets, Diags,
-                         false);
+                         "test", false);
 }
 
 NamespaceInfo *InfoAsNamespace(Info *I) {

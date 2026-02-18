@@ -77,3 +77,27 @@ void getHtmlFiles(StringRef AssetsPath, clang::doc::ClangDocContext &CDCtx) {
   CDCtx.MustacheTemplates.insert({"index-template", IndexTemplate.c_str()});
   CDCtx.MustacheTemplates.insert({"alias-template", AliasTemplate.c_str()});
 }
+
+void getMdFiles(llvm::StringRef AssetsPath,
+                clang::doc::ClangDocContext &CDCtx) {
+  assert(!AssetsPath.empty());
+  assert(sys::fs::is_directory(AssetsPath));
+
+  SmallString<128> ClassTemplate =
+      appendPathPosix(AssetsPath, "class-template.mustache");
+  SmallString<128> NamespaceTemplate =
+      appendPathPosix(AssetsPath, "namespace-template.mustache");
+  SmallString<128> AllFilesTemplate =
+      appendPathPosix(AssetsPath, "all-files-template.mustache");
+  SmallString<128> IndexTemplate =
+      appendPathPosix(AssetsPath, "index-template.mustache");
+  SmallString<128> CommentsTemplate =
+      appendPathPosix(AssetsPath, "comments-partial.mustache");
+
+  CDCtx.MustacheTemplates.insert({"class-template", ClassTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert(
+      {"namespace-template", NamespaceTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"all-files", AllFilesTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"index", IndexTemplate.c_str()});
+  CDCtx.MustacheTemplates.insert({"comments", CommentsTemplate.c_str()});
+}
