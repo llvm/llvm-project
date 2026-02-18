@@ -16,6 +16,16 @@ namespace LIBC_NAMESPACE_DECL {
 
 cpp::simd<float> expf(cpp::simd<float> x);
 
+// What plain C-type corresponds to cpp::simd<float>? Replace uint64_t with
+// that, then uncomment the static assert. We have to trust the callers to
+// build the type properly, which is type unsafe.
+using cpp_simd_float = uint64_t;
+// static_assert(sizeof(cpp_simd_float) == sizeof(cpp::simd<float>));
+static_assert(cpp::is_trivially_copyable<cpp::simd<float>>::value == true);
+static_assert(cpp::is_trivially_copyable<cpp_simd_float>::value == true);
+using expf_simd_float_ftype = cpp_simd_float (*)(cpp_simd_float);
 } // namespace LIBC_NAMESPACE_DECL
+
+extern LIBC_NAMESPACE::expf_simd_float_ftype __expf_cpp_simd_float;
 
 #endif // LLVM_LIBC_SRC_MATHVEC_EXPF_H
