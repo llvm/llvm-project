@@ -1,5 +1,4 @@
-// RUN: clang-check %s -- -Wdoes-not-exist --serialize-diagnostics %t.dia 2>&1 | FileCheck %s
-// RUN: ls %t.dia
+// RUN: clang-check %s -- -Wdoes-not-exist --serialize-diagnostics /dev/null 2>&1 | FileCheck %s
 
 // CHECK: warning: unknown warning option '-Wdoes-not-exist'
 

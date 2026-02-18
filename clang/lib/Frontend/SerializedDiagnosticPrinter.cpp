@@ -146,10 +146,7 @@ public:
     EmitPreamble();
   }
 
-  ~SDiagsWriter() override {
-    if (OriginalInstance && !IsFinishing)
-      finish();
-  }
+  ~SDiagsWriter() override {}
 
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const Diagnostic &Info) override;
