@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 
 class DebuggerAPITestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def test_debugger_api_boundary_condition(self):
         """Exercise SBDebugger APIs with boundary conditions."""

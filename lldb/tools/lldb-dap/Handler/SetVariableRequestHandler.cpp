@@ -54,8 +54,9 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
   if (!success)
     return llvm::make_error<DAPError>(error.GetCString());
 
+  const bool hex = args.format ? args.format->hex : false;
   VariableDescription desc(variable,
-                           dap.configuration.enableAutoVariableSummaries);
+                           dap.configuration.enableAutoVariableSummaries, hex);
 
   SetVariableResponseBody body;
   body.value = desc.display_value;

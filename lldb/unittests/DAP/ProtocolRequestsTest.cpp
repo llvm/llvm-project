@@ -11,6 +11,7 @@
 #include "TestingSupport/TestUtilities.h"
 #include "llvm/Testing/Support/Error.h"
 #include <gtest/gtest.h>
+#include <optional>
 
 using namespace llvm;
 using namespace lldb_dap::protocol;
@@ -412,4 +413,23 @@ TEST(ProtocolRequestsTest, StackTraceResponseBody) {
 
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
+}
+
+TEST(ProtocolRequestsTest, SetVariableArguments) {
+  llvm::Expected<SetVariableArguments> expected =
+      parse<SetVariableArguments>(R"({
+    "variablesReference": 42,
+    "name": "test",
+    "value": "12345"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->variablesReference.AsUInt32(), 42U);
+  EXPECT_EQ(expected->name, "test");
+  EXPECT_EQ(expected->value, "12345");
+  EXPECT_EQ(expected->format, std::nullopt);
+
+  // Check required keys.
+  EXPECT_THAT_EXPECTED(
+      parse<SetVariableArguments>(R"({})"),
+      FailedWithMessage("missing value at (root).variablesReference"));
 }

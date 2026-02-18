@@ -6,6 +6,7 @@ from lldbsuite.test_event.build_exception import BuildError
 
 class TestStepUntilAPI(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def setUp(self):
         super().setUp()

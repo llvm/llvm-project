@@ -1556,6 +1556,8 @@ public:
     return AMDGPU::isGFX11Plus(getSTI());
   }
 
+  bool isGFX1170() const { return AMDGPU::isGFX1170(getSTI()); }
+
   bool isGFX12() const { return AMDGPU::isGFX12(getSTI()); }
 
   bool isGFX12Plus() const { return AMDGPU::isGFX12Plus(getSTI()); }
