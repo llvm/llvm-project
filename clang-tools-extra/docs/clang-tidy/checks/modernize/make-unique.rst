@@ -42,7 +42,7 @@ Options
 .. option:: MakeSmartPtrType
 
    A string specifying the smart pointer type to match. Default is
-   ``::std::unique_ptr``.
+   `::std::unique_ptr`.
 
 .. option:: IncludeStyle
 
