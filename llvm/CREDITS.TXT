@@ -45,6 +45,12 @@ D: AArch64 backend improvements
 D: Added EarlyCSE MemorySSA support
 D: CodeGen improvements
 
+N: Rajveer Singh Bharadwaj
+E: rajveer.developer@icloud.com
+W: https://github.com/Rajveer100
+D: LLVM, Clang, ClangIR, LibC++, LibC, MLIR, AArch64, DAG, DebugInfo, InstCombine
+D: Bug Fixing, Feature Additions, lots more to come...
+
 N: David Blaikie
 E: dblaikie@gmail.com
 D: General bug fixing/fit & finish, mostly in Clang
