@@ -118,30 +118,6 @@ void populateVectorMultiReductionLoweringPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 1);
 
-/// Collect a set of patterns to unroll vector.multi_reduction ops by
-/// progressively reducing rank along the outermost dimension.
-///
-/// For OuterReduction (outermost dim is reduction):
-/// [UnrollMultiReductionOuterBaseCase]
-/// When the outermost dimension is the only reduction dimension, unroll to
-/// produce elementwise arithmetic operations.
-///
-/// [UnrollMultiReductionOuterGeneralCase]
-/// When the outermost dimension is one of multiple reduction dimensions,
-/// unroll to produce smaller multi_reduction operations.
-///
-/// For InnerReduction (innermost dim is reduction):
-/// [UnrollMultiReductionInnerBaseCase]
-/// When the innermost dimension is the only reduction dimension, unroll along
-/// the outermost parallel dimension.
-///
-/// [UnrollMultiReductionInnerGeneralCase]
-/// When the innermost dimension is one of multiple reduction dimensions,
-/// unroll along the outermost parallel dimension.
-void populateVectorUnrollMultiReduction(RewritePatternSet &patterns,
-                                        VectorMultiReductionLowering options,
-                                        PatternBenefit benefit = 1);
-
 /// Populate the pattern set with the following patterns:
 ///
 /// [TransferReadToVectorLoadLowering]
