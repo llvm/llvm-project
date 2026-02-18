@@ -11219,6 +11219,8 @@ struct IntRange {
 
     if (const auto *VT = dyn_cast<VectorType>(T))
       T = VT->getElementType().getTypePtr();
+    if (const auto *MT = dyn_cast<ConstantMatrixType>(T))
+      T = MT->getElementType().getTypePtr();
     if (const auto *CT = dyn_cast<ComplexType>(T))
       T = CT->getElementType().getTypePtr();
     if (const auto *AT = dyn_cast<AtomicType>(T))
@@ -11266,6 +11268,8 @@ struct IntRange {
 
     if (const VectorType *VT = dyn_cast<VectorType>(T))
       T = VT->getElementType().getTypePtr();
+    if (const auto *MT = dyn_cast<ConstantMatrixType>(T))
+      T = MT->getElementType().getTypePtr();
     if (const ComplexType *CT = dyn_cast<ComplexType>(T))
       T = CT->getElementType().getTypePtr();
     if (const AtomicType *AT = dyn_cast<AtomicType>(T))
@@ -11757,6 +11761,13 @@ static bool IsSameFloatAfterCast(const APValue &value,
   if (value.isVector()) {
     for (unsigned i = 0, e = value.getVectorLength(); i != e; ++i)
       if (!IsSameFloatAfterCast(value.getVectorElt(i), Src, Tgt))
+        return false;
+    return true;
+  }
+
+  if (value.isMatrix()) {
+    for (unsigned i = 0, e = value.getMatrixNumElements(); i != e; ++i)
+      if (!IsSameFloatAfterCast(value.getMatrixElt(i), Src, Tgt))
         return false;
     return true;
   }
@@ -12943,11 +12954,12 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   if (const auto *VecTy = dyn_cast<VectorType>(Target))
     Target = VecTy->getElementType().getTypePtr();
 
+  // Strip matrix types.
   if (isa<ConstantMatrixType>(Source)) {
     if (Target->isScalarType())
       return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_matrix_scalar);
 
-    if (getLangOpts().HLSL &&
+    if (getLangOpts().HLSL && isa<ConstantMatrixType>(Target) &&
         Target->castAs<ConstantMatrixType>()->getNumElementsFlattened() <
             Source->castAs<ConstantMatrixType>()->getNumElementsFlattened()) {
       // Diagnose Matrix truncation but don't return. We may also want to
@@ -12955,7 +12967,13 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       DiagnoseImpCast(*this, E, T, CC,
                       diag::warn_hlsl_impcast_matrix_truncation);
     }
+
+    Source = cast<ConstantMatrixType>(Source)->getElementType().getTypePtr();
+    Target = cast<ConstantMatrixType>(Target)->getElementType().getTypePtr();
   }
+  if (const auto *MatTy = dyn_cast<ConstantMatrixType>(Target))
+    Target = MatTy->getElementType().getTypePtr();
+
   // Strip complex types.
   if (isa<ComplexType>(Source)) {
     if (!isa<ComplexType>(Target)) {
