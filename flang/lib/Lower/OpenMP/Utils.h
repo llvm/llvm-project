@@ -189,6 +189,15 @@ void collectTileSizesFromOpenMPConstruct(
     llvm::SmallVectorImpl<int64_t> &tileSizes,
     Fortran::semantics::SemanticsContext &semaCtx);
 
+mlir::Value genAffinityAddr(Fortran::lower::AbstractConverter &converter,
+                            const omp::Object &object,
+                            Fortran::lower::StatementContext &stmtCtx,
+                            mlir::Location loc);
+
+mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
+                           const mlir::DataLayout &dl, mlir::Value addr,
+                           llvm::ArrayRef<mlir::Value> bounds, bool hasRef);
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

@@ -917,6 +917,109 @@ void collectLoopRelatedInfo(
   convertLoopBounds(converter, currentLocation, result, loopVarTypeSize);
 }
 
+mlir::Value genAffinityAddr(Fortran::lower::AbstractConverter &converter,
+                            const omp::Object &object,
+                            Fortran::lower::StatementContext &stmtCtx,
+                            mlir::Location loc) {
+  // Get address from expression if it exists: affinity(a(3)), affinity(a(1:10))
+  if (auto expr = object.ref()) {
+    fir::ExtendedValue exv =
+        converter.genExprAddr(toEvExpr(*expr), stmtCtx, &loc);
+    return fir::getBase(exv);
+  }
+
+  // Fallback to base symbol address: affinity(a)
+  const Fortran::semantics::Symbol *sym = object.sym();
+  assert(sym && "expected symbol in affinity object");
+  mlir::Value addr = converter.getSymbolAddress(*sym);
+
+  if (mlir::isa<fir::BoxType>(addr.getType())) {
+    addr = fir::BoxAddrOp::create(converter.getFirOpBuilder(), loc, addr);
+  }
+  return addr;
+}
+
+static mlir::Value buildNumElemsFromMapBound(fir::FirOpBuilder &builder,
+                                             mlir::Location loc,
+                                             mlir::omp::MapBoundsOp mb) {
+  mlir::Value lb = mb.getLowerBound();
+  mlir::Value ub = mb.getUpperBound();
+  mlir::Value stride = mb.getStride();
+
+  // ((ub - lb) / stride) + 1
+  mlir::Value diff = mlir::arith::SubIOp::create(builder, loc, ub, lb);
+  mlir::Value div = mlir::arith::DivUIOp::create(builder, loc, diff, stride);
+  mlir::Value one =
+      builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+  mlir::Value result = mlir::arith::AddIOp::create(builder, loc, div, one);
+
+  return mlir::arith::IndexCastOp::create(builder, loc, builder.getI64Type(),
+                                          result);
+}
+
+mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
+                           const mlir::DataLayout &dl, mlir::Value addr,
+                           llvm::ArrayRef<mlir::Value> bounds, bool hasRef) {
+  auto isDescriptorLike = [](mlir::Type t) -> bool {
+    t = fir::unwrapPassByRefType(t);
+    return mlir::isa<fir::BoxType, fir::ClassType>(t);
+  };
+
+  auto getElementBytesOrZero = [&](mlir::Type baseTy) -> int64_t {
+    if (isDescriptorLike(baseTy))
+      return 0;
+    mlir::Type eleTy = fir::unwrapPassByRefType(baseTy);
+    eleTy = fir::unwrapSequenceType(eleTy);
+    return static_cast<int64_t>(dl.getTypeSize(eleTy));
+  };
+
+  auto getWholeObjectBytesIfStaticOrZero = [&](mlir::Type addrTy) -> int64_t {
+    if (isDescriptorLike(addrTy))
+      return 0;
+
+    mlir::Type eleTy = fir::unwrapPassByRefType(addrTy);
+
+    // Scalar
+    if (!mlir::isa<fir::SequenceType>(eleTy))
+      return static_cast<int64_t>(dl.getTypeSize(eleTy));
+
+    // Array with static extents
+    auto seqTy = mlir::cast<fir::SequenceType>(eleTy);
+    int64_t elems = 1;
+    for (int64_t d : seqTy.getShape()) {
+      if (d < 0)
+        return 0; // dynamic extent => unknown here
+      elems *= d;
+    }
+
+    int64_t elemBytes = static_cast<int64_t>(dl.getTypeSize(seqTy.getEleTy()));
+    return elems * elemBytes;
+  };
+
+  // Return the length of the first dimension if bounds are available
+  if (!bounds.empty()) {
+    auto mb = bounds.front().getDefiningOp<mlir::omp::MapBoundsOp>();
+    mlir::Value numElems = buildNumElemsFromMapBound(builder, loc, mb);
+    int64_t elemBytes = getElementBytesOrZero(addr.getType());
+    if (elemBytes == 0)
+      return builder.createIntegerConstant(loc, builder.getI64Type(), 0);
+
+    return mlir::arith::MulIOp::create(
+        builder, loc, numElems,
+        builder.createIntegerConstant(loc, builder.getI64Type(), elemBytes));
+  }
+
+  // explicit ref => element size (a(3), a(i))
+  if (hasRef) {
+    int64_t elemBytes = getElementBytesOrZero(addr.getType());
+    return builder.createIntegerConstant(loc, builder.getI64Type(), elemBytes);
+  }
+
+  // whole object => whole size if static, else 0
+  int64_t wholeBytes = getWholeObjectBytesIfStaticOrZero(addr.getType());
+  return builder.createIntegerConstant(loc, builder.getI64Type(), wholeBytes);
+}
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

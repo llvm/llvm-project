@@ -3522,30 +3522,42 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
 }
 
 // CHECK-LABEL: func.func @task_affinity_single
-func.func @task_affinity_single() {
-  // CHECK:       %[[A:.*]] = memref.alloca() : memref<100xi32>
-  // CHECK:       omp.task affinity(%[[A]] : memref<100xi32>) {
-  // CHECK:         omp.terminator
-  // CHECK:       }
-  // CHECK:       return
-  %a = memref.alloca() : memref<100xi32>
-  omp.task affinity(%a : memref<100xi32>) {
+func.func @task_affinity_single(%ptr: !llvm.ptr) {
+  // CHECK:         %[[LEN:.*]] = llvm.mlir.constant(400 : i64) : i64
+  // CHECK:         %[[AE:.*]] = omp.affinity_entry %{{.*}}, %[[LEN]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  // CHECK:         omp.task affinity(%[[AE]] : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
+  // CHECK:           omp.terminator
+  // CHECK:         }
+  // CHECK:         return
+  %len = llvm.mlir.constant(400 : i64) : i64
+  %ae = omp.affinity_entry %ptr, %len 
+    : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  omp.task affinity(%ae : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
     omp.terminator
   }
   return
 }
 
-// CHECK-LABEL: func.func @task_affinity_multi
-func.func @task_affinity_multi() {
-  // CHECK:       %[[A:.*]] = memref.alloca() : memref<64xi32>
-  // CHECK:       %[[B:.*]] = memref.alloca() : memref<8xf64>
-  // CHECK:       omp.task affinity(%[[A]] : memref<64xi32>, %[[B]] : memref<8xf64>) {
-  // CHECK:         omp.terminator
-  // CHECK:       }
-  // CHECK:       return
-  %a = memref.alloca() : memref<64xi32>
-  %b = memref.alloca() : memref<8xf64>
-  omp.task affinity(%a : memref<64xi32>, %b : memref<8xf64>) {
+// CHECK-LABEL: func.func @task_affinity_multi(
+func.func @task_affinity_multi(%ptr1: !llvm.ptr, %ptr2: !llvm.ptr) {
+  // CHECK:         %[[LEN1:.*]] = llvm.mlir.constant(400 : i64) : i64
+  // CHECK:         %[[AE1:.*]] = omp.affinity_entry %{{.*}}, %[[LEN1]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  // CHECK:         %[[LEN2:.*]] = llvm.mlir.constant(800 : i64) : i64
+  // CHECK:         %[[AE2:.*]] = omp.affinity_entry %{{.*}}, %[[LEN2]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+  // CHECK:         omp.task affinity(%[[AE1]] : !omp.affinity_entry_ty<!llvm.ptr, i64>, %[[AE2]] : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
+  // CHECK:           omp.terminator
+  // CHECK:         }
+  // CHECK:         return
+  %len1 = llvm.mlir.constant(400 : i64) : i64
+  %ae1 = omp.affinity_entry %ptr1, %len1
+    : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+
+  %len2 = llvm.mlir.constant(800 : i64) : i64
+  %ae2 = omp.affinity_entry %ptr2, %len2
+    : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
+
+  omp.task affinity(%ae1 : !omp.affinity_entry_ty<!llvm.ptr, i64>,
+                    %ae2 : !omp.affinity_entry_ty<!llvm.ptr, i64>) {
     omp.terminator
   }
   return
