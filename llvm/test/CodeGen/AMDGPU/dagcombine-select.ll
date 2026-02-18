@@ -685,11 +685,11 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX942-NEXT:    v_frexp_exp_i32_f32_e32 v2, v1
 ; GFX942-NEXT:    v_sub_u32_e32 v1, 3, v2
 ; GFX942-NEXT:    v_fma_f32 v5, -v3, v4, 1.0
-; GFX942-NEXT:    v_fmac_f32_e32 v4, v5, v4
+; GFX942-NEXT:    v_fma_f32 v4, v5, v4, v4
 ; GFX942-NEXT:    v_div_scale_f32 v5, vcc, 1.0, v0, 1.0
 ; GFX942-NEXT:    v_mul_f32_e32 v6, v5, v4
 ; GFX942-NEXT:    v_fma_f32 v7, -v3, v6, v5
-; GFX942-NEXT:    v_fmac_f32_e32 v6, v7, v4
+; GFX942-NEXT:    v_fma_f32 v6, v7, v4, v6
 ; GFX942-NEXT:    v_fma_f32 v3, -v3, v6, v5
 ; GFX942-NEXT:    v_div_fmas_f32 v3, v3, v4, v6
 ; GFX942-NEXT:    v_cmp_gt_i32_e32 vcc, 13, v1
