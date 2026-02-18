@@ -895,6 +895,11 @@ int ScanServer::listen() {
     reportError("cannot create ActionCache");
 
   dependencies::DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [CAS] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::cas::createCASProvidingFileSystem(
+        CAS, llvm::vfs::createPhysicalFileSystem());
+  };
   Opts.Format = dependencies::ScanningOutputFormat::IncludeTree;
   Opts.CASOpts = CASOpts;
   Opts.CAS = CAS;
@@ -978,17 +983,8 @@ int ScanServer::listen() {
         OS << "\n";
       };
 
-      // Is this safe to reuse? Or does DependendencyScanningWorkerFileSystem
-      // make some bad assumptions about relative paths?
-      if (!Tool) {
-        auto UnderlyingFS = [] {
-          auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
-          return llvm::vfs::createPhysicalFileSystem();
-        }();
-        UnderlyingFS = llvm::cas::createCASProvidingFileSystem(
-            CAS, std::move(UnderlyingFS));
-        Tool.emplace(Service, std::move(UnderlyingFS));
-      }
+      if (!Tool)
+        Tool.emplace(Service);
 
       std::unique_ptr<DiagnosticOptions> DiagOpts =
           CreateAndPopulateDiagOpts(Args);
@@ -1118,18 +1114,17 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
     return 1;
 
   dependencies::DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [DB = DB] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::cas::createCASProvidingFileSystem(
+        DB, llvm::vfs::createPhysicalFileSystem());
+  };
   Opts.Format = dependencies::ScanningOutputFormat::IncludeTree;
   Opts.CASOpts = CASOpts;
   Opts.CAS = DB;
   Opts.Cache = Cache;
   dependencies::DependencyScanningService Service(std::move(Opts));
-  auto UnderlyingFS = [] {
-    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
-    return llvm::vfs::createPhysicalFileSystem();
-  }();
-  UnderlyingFS =
-      llvm::cas::createCASProvidingFileSystem(DB, std::move(UnderlyingFS));
-  tooling::DependencyScanningTool Tool(Service, std::move(UnderlyingFS));
+  tooling::DependencyScanningTool Tool(Service);
 
   std::unique_ptr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(InputArgs);

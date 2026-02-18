@@ -1136,10 +1136,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   std::atomic<size_t> NumIsLocalCalls = 0;
 
   auto ScanningTask = [&](DependencyScanningService &Service) {
-    std::unique_ptr<llvm::vfs::FileSystem> FS = llvm::vfs::createPhysicalFileSystem();
-    if (CAS)
-      FS = llvm::cas::createCASProvidingFileSystem(CAS, std::move(FS));
-    DependencyScanningTool WorkerTool(Service, std::move(FS));
+    DependencyScanningTool WorkerTool(Service);
 
     llvm::DenseSet<ModuleID> AlreadySeenModules;
     while (auto MaybeInputIndex = GetNextInputIndex()) {
@@ -1299,6 +1296,12 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   };
 
   DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [CAS] {
+    auto FS = llvm::vfs::createPhysicalFileSystem();
+    if (CAS)
+      FS = llvm::cas::createCASProvidingFileSystem(CAS, std::move(FS));
+    return FS;
+  };
   Opts.Mode = ScanMode;
   Opts.Format = Format;
   Opts.CASOpts = CASOpts;

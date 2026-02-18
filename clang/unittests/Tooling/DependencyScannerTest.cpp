@@ -233,9 +233,10 @@ TEST(DependencyScanner, ScanDepsWithFS) {
                llvm::MemoryBuffer::getMemBuffer("#include \"header.h\"\n"));
 
   DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [&] { return VFS; };
   Opts.Format = ScanningOutputFormat::Make;
   DependencyScanningService Service(std::move(Opts));
-  DependencyScanningTool ScanTool(Service, VFS);
+  DependencyScanningTool ScanTool(Service);
 
   TextDiagnosticBuffer DiagConsumer;
   std::optional<std::string> DepFile =
@@ -342,9 +343,10 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
   auto InterceptFS = llvm::makeIntrusiveRefCnt<InterceptorFS>(VFS);
 
   DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [&] { return InterceptFS; };
   Opts.Format = ScanningOutputFormat::Make;
   DependencyScanningService Service(std::move(Opts));
-  DependencyScanningTool ScanTool(Service, InterceptFS);
+  DependencyScanningTool ScanTool(Service);
 
   // This will fail with "fatal error: module 'Foo' not found" but it doesn't
   // matter, the point of the test is to check that files are not read
@@ -377,8 +379,10 @@ TEST(DependencyScanner, NoNegativeCache) {
   VFS->addFile(Test1Path, 0,
                llvm::MemoryBuffer::getMemBuffer("#include \"header.h\""));
 
-  DependencyScanningService Service({});
-  DependencyScanningTool ScanTool(Service, VFS);
+  DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [VFS] { return VFS; };
+  DependencyScanningService Service(std::move(Opts));
+  DependencyScanningTool ScanTool(Service);
 
   TextDiagnosticBuffer DiagConsumer;
 
@@ -431,11 +435,12 @@ TEST(DependencyScanner, NoNegativeCacheCAS) {
                llvm::MemoryBuffer::getMemBuffer("#include \"header.h\""));
 
   DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [VFS] { return VFS; };
   Opts.Format = ScanningOutputFormat::FullIncludeTree;
   Opts.CAS = DB;
   Opts.Cache = Cache;
   DependencyScanningService Service(std::move(Opts));
-  DependencyScanningTool ScanTool(Service, VFS);
+  DependencyScanningTool ScanTool(Service);
 
   TextDiagnosticBuffer DiagConsumer;
 
