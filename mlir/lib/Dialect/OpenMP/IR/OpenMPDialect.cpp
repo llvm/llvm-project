@@ -2358,8 +2358,8 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
           return !llvm::any_of(
               effects, [&](MemoryEffects::EffectInstance &effect) {
                 return isa<MemoryEffects::Write>(effect.getEffect()) &&
-                       isa<SideEffects::AutomaticAllocationScopeResource>(
-                           effect.getResource());
+                       isa<SideEffects::AutomaticAllocationScopeResource,
+                           SideEffects::DefaultResource>(effect.getResource());
               });
         }
         return true;
