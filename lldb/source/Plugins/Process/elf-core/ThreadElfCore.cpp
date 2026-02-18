@@ -30,7 +30,7 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
 #include "ProcessElfCore.h"
-#include "RegisterContextLinuxCore_x86_64.h"
+#include "RegisterContextLinuxCore_x86.h"
 #include "RegisterContextPOSIXCore_arm.h"
 #include "RegisterContextPOSIXCore_arm64.h"
 #include "RegisterContextPOSIXCore_loongarch64.h"
@@ -39,7 +39,7 @@
 #include "RegisterContextPOSIXCore_riscv32.h"
 #include "RegisterContextPOSIXCore_riscv64.h"
 #include "RegisterContextPOSIXCore_s390x.h"
-#include "RegisterContextPOSIXCore_x86_64.h"
+#include "RegisterContextPOSIXCore_x86.h"
 #include "ThreadElfCore.h"
 
 #include <memory>
@@ -216,10 +216,10 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       if (is_linux) {
-        m_thread_reg_ctx_sp = std::make_shared<RegisterContextLinuxCore_x86_64>(
+        m_thread_reg_ctx_sp = std::make_shared<RegisterContextLinuxCore_x86>(
               *this, reg_interface, m_gpregset_data, m_notes);
       } else {
-        m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86_64>(
+        m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_x86>(
               *this, reg_interface, m_gpregset_data, m_notes);
       }
       break;
@@ -260,6 +260,15 @@ bool ThreadElfCore::CalculateStopInfo() {
       return true;
     }
   }
+
+  // The above code references the siginfo_t bytes from the NT_SIGINFO note.
+  // This is not the only way to get a signo in an ELF core, and so
+  // ThreadELFCore has a m_signo variable for these cases, which is populated
+  // with a non-zero value when there is no NT_SIGINFO note. However if this is
+  // 0, it's the default value and we have no valid signal and should not report
+  // a stop info.
+  if (m_signo == 0 && m_siginfo_bytes.empty())
+    return false;
 
   SetStopInfo(StopInfo::CreateStopReasonWithSignal(*this, m_signo));
   return true;

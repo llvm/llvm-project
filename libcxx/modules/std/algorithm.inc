@@ -364,9 +364,11 @@ export namespace std {
 
   using std::shift_right;
 
+#if _LIBCPP_STD_VER >= 23
   namespace ranges {
-    // using std::ranges::shift_right;
+    using std::ranges::shift_right;
   }
+#endif // _LIBCPP_STD_VER >= 23
 
   // [alg.sorting], sorting and related operations
   // [alg.sort], sorting

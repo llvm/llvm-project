@@ -8,7 +8,10 @@
 
 #include "mlir/Bindings/Python/IRCore.h"
 
+#include <cstring>
 #include <optional>
+#include <sstream>
+#include <string_view>
 #include <vector>
 
 #include "mlir/Bindings/Python/Globals.h"
@@ -21,6 +24,18 @@
 
 namespace nb = nanobind;
 using namespace mlir;
+
+/// Local helper adapted from llvm::Regex::escape.
+static std::string escapeRegex(std::string_view String) {
+  static constexpr char RegexMetachars[] = "()^$|*+?.[]\\{}";
+  std::string RegexStr;
+  for (char C : String) {
+    if (std::strchr(RegexMetachars, C))
+      RegexStr += '\\';
+    RegexStr += C;
+  }
+  return RegexStr;
+}
 
 // -----------------------------------------------------------------------------
 // PyGlobals
@@ -161,7 +176,8 @@ PyGlobals::lookupAttributeBuilder(const std::string &attributeKind) {
 std::optional<nb::callable> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
                                                         MlirDialect dialect) {
   // Try to load dialect module.
-  (void)loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
+  MlirStringRef ns = mlirDialectGetNamespace(dialect);
+  (void)loadDialectModule(std::string_view(ns.data, ns.length));
   nb::ft_lock_guard lock(mutex);
   const auto foundIt = typeCasterMap.find(mlirTypeID);
   if (foundIt != typeCasterMap.end()) {
@@ -174,7 +190,8 @@ std::optional<nb::callable> PyGlobals::lookupTypeCaster(MlirTypeID mlirTypeID,
 std::optional<nb::callable> PyGlobals::lookupValueCaster(MlirTypeID mlirTypeID,
                                                          MlirDialect dialect) {
   // Try to load dialect module.
-  (void)loadDialectModule(unwrap(mlirDialectGetNamespace(dialect)));
+  MlirStringRef ns = mlirDialectGetNamespace(dialect);
+  (void)loadDialectModule(std::string_view(ns.data, ns.length));
   nb::ft_lock_guard lock(mutex);
   const auto foundIt = valueCasterMap.find(mlirTypeID);
   if (foundIt != valueCasterMap.end()) {
@@ -258,7 +275,7 @@ void PyGlobals::TracebackLoc::setLocTracebackFramesLimit(size_t value) {
 void PyGlobals::TracebackLoc::registerTracebackFileInclusion(
     const std::string &file) {
   nanobind::ft_lock_guard lock(mutex);
-  auto reg = "^" + llvm::Regex::escape(file);
+  auto reg = "^" + escapeRegex(file);
   if (userTracebackIncludeFiles.insert(reg).second)
     rebuildUserTracebackIncludeRegex = true;
   if (userTracebackExcludeFiles.count(reg)) {
@@ -270,7 +287,7 @@ void PyGlobals::TracebackLoc::registerTracebackFileInclusion(
 void PyGlobals::TracebackLoc::registerTracebackFileExclusion(
     const std::string &file) {
   nanobind::ft_lock_guard lock(mutex);
-  auto reg = "^" + llvm::Regex::escape(file);
+  auto reg = "^" + escapeRegex(file);
   if (userTracebackExcludeFiles.insert(reg).second)
     rebuildUserTracebackExcludeRegex = true;
   if (userTracebackIncludeFiles.count(reg)) {
@@ -282,15 +299,22 @@ void PyGlobals::TracebackLoc::registerTracebackFileExclusion(
 bool PyGlobals::TracebackLoc::isUserTracebackFilename(
     const std::string_view file) {
   nanobind::ft_lock_guard lock(mutex);
+  auto joinWithPipe = [](const std::unordered_set<std::string> &set) {
+    std::ostringstream os;
+    for (auto it = set.begin(); it != set.end(); ++it) {
+      if (it != set.begin())
+        os << "|";
+      os << *it;
+    }
+    return os.str();
+  };
   if (rebuildUserTracebackIncludeRegex) {
-    userTracebackIncludeRegex.assign(
-        llvm::join(userTracebackIncludeFiles, "|"));
+    userTracebackIncludeRegex.assign(joinWithPipe(userTracebackIncludeFiles));
     rebuildUserTracebackIncludeRegex = false;
     isUserTracebackFilenameCache.clear();
   }
   if (rebuildUserTracebackExcludeRegex) {
-    userTracebackExcludeRegex.assign(
-        llvm::join(userTracebackExcludeFiles, "|"));
+    userTracebackExcludeRegex.assign(joinWithPipe(userTracebackExcludeFiles));
     rebuildUserTracebackExcludeRegex = false;
     isUserTracebackFilenameCache.clear();
   }

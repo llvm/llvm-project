@@ -12,6 +12,7 @@ from lldbsuite.test_event.build_exception import BuildError
 
 class TestDumpDWO(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def get_dwos_from_json_output(self):
         """Returns a dictionary of `symfile` -> {`dwo_name` -> dwo_info object}."""

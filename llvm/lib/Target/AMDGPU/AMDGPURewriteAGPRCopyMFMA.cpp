@@ -480,14 +480,13 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
   SmallVector<LiveInterval *, 32> StackIntervals;
   StackIntervals.reserve(NumSlots);
 
-  for (auto [Idx, LI] : llvm::enumerate(LSS)) {
-    int Slot = Idx + LSS.getStartIdx();
+  for (auto &[Slot, LI] : LSS) {
     if (!MFI.isSpillSlotObjectIndex(Slot) || MFI.isDeadObjectIndex(Slot))
       continue;
 
     const TargetRegisterClass *RC = LSS.getIntervalRegClass(Slot);
     if (TRI.hasVGPRs(RC))
-      StackIntervals.push_back(LI);
+      StackIntervals.push_back(&LI);
   }
 
   sort(StackIntervals, [](const LiveInterval *A, const LiveInterval *B) {
