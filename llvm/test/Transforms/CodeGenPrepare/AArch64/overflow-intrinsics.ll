@@ -28,7 +28,7 @@ define i64 @uaddo1_math_overflow_used(i64 %a, i64 %b, ptr %res) nounwind ssp {
 ; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
-; CHECK-NEXT:    store i64 [[MATH]], ptr [[RES:%.*]]
+; CHECK-NEXT:    store i64 [[MATH]], ptr [[RES:%.*]], align 8
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
   %add = add i64 %b, %a
@@ -58,7 +58,7 @@ define i64 @uaddo2_math_overflow_used(i64 %a, i64 %b, ptr %res) nounwind ssp {
 ; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
-; CHECK-NEXT:    store i64 [[MATH]], ptr [[RES:%.*]]
+; CHECK-NEXT:    store i64 [[MATH]], ptr [[RES:%.*]], align 8
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
   %add = add i64 %b, %a
@@ -88,7 +88,7 @@ define i64 @uaddo3_math_overflow_used(i64 %a, i64 %b, ptr %res) nounwind ssp {
 ; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    [[Q:%.*]] = select i1 [[OV]], i64 [[B]], i64 42
-; CHECK-NEXT:    store i64 [[MATH]], ptr [[RES:%.*]]
+; CHECK-NEXT:    store i64 [[MATH]], ptr [[RES:%.*]], align 8
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
   %add = add i64 %b, %a
@@ -145,8 +145,9 @@ define i64 @uaddo6_xor_multi_use(i64 %a, i64 %b) {
 
 define i1 @usubo_ult_i64_overflow_used(i64 %x, i64 %y, ptr %p) {
 ; CHECK-LABEL: @usubo_ult_i64_overflow_used(
-; CHECK-NEXT:    [[S:%.*]] = sub i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[OV:%.*]] = icmp ult i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[OV]]
 ;
   %s = sub i64 %x, %y
@@ -156,9 +157,10 @@ define i1 @usubo_ult_i64_overflow_used(i64 %x, i64 %y, ptr %p) {
 
 define i1 @usubo_ult_i64_math_overflow_used(i64 %x, i64 %y, ptr %p) {
 ; CHECK-LABEL: @usubo_ult_i64_math_overflow_used(
-; CHECK-NEXT:    [[S:%.*]] = sub i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    store i64 [[S]], ptr [[P:%.*]]
-; CHECK-NEXT:    [[OV:%.*]] = icmp ult i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i64 [[MATH]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret i1 [[OV]]
 ;
   %s = sub i64 %x, %y
