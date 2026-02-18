@@ -77,6 +77,7 @@ private:
   MCDisasmInstance(std::unique_ptr<llvm::MCInstrInfo> &&instr_info_up,
                    std::unique_ptr<llvm::MCRegisterInfo> &&reg_info_up,
                    std::unique_ptr<llvm::MCSubtargetInfo> &&subtarget_info_up,
+                   llvm::MCTargetOptions mc_options,
                    std::unique_ptr<llvm::MCAsmInfo> &&asm_info_up,
                    std::unique_ptr<llvm::MCContext> &&context_up,
                    std::unique_ptr<llvm::MCDisassembler> &&disasm_up,
@@ -86,6 +87,7 @@ private:
   std::unique_ptr<llvm::MCInstrInfo> m_instr_info_up;
   std::unique_ptr<llvm::MCRegisterInfo> m_reg_info_up;
   std::unique_ptr<llvm::MCSubtargetInfo> m_subtarget_info_up;
+  llvm::MCTargetOptions m_mc_options;
   std::unique_ptr<llvm::MCAsmInfo> m_asm_info_up;
   std::unique_ptr<llvm::MCContext> m_context_up;
   std::unique_ptr<llvm::MCDisassembler> m_disasm_up;
@@ -1333,7 +1335,7 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple_name,
 
   return Instance(new MCDisasmInstance(
       std::move(instr_info_up), std::move(reg_info_up),
-      std::move(subtarget_info_up), std::move(asm_info_up),
+      std::move(subtarget_info_up), MCOptions, std::move(asm_info_up),
       std::move(context_up), std::move(disasm_up), std::move(instr_printer_up),
       std::move(instr_analysis_up)));
 }
@@ -1342,6 +1344,7 @@ DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
     std::unique_ptr<llvm::MCInstrInfo> &&instr_info_up,
     std::unique_ptr<llvm::MCRegisterInfo> &&reg_info_up,
     std::unique_ptr<llvm::MCSubtargetInfo> &&subtarget_info_up,
+    llvm::MCTargetOptions mc_options,
     std::unique_ptr<llvm::MCAsmInfo> &&asm_info_up,
     std::unique_ptr<llvm::MCContext> &&context_up,
     std::unique_ptr<llvm::MCDisassembler> &&disasm_up,
@@ -1350,7 +1353,7 @@ DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
     : m_instr_info_up(std::move(instr_info_up)),
       m_reg_info_up(std::move(reg_info_up)),
       m_subtarget_info_up(std::move(subtarget_info_up)),
-      m_asm_info_up(std::move(asm_info_up)),
+      m_mc_options(mc_options), m_asm_info_up(std::move(asm_info_up)),
       m_context_up(std::move(context_up)), m_disasm_up(std::move(disasm_up)),
       m_instr_printer_up(std::move(instr_printer_up)),
       m_instr_analysis_up(std::move(instr_analysis_up)) {

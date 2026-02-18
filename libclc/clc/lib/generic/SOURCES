@@ -166,6 +166,7 @@ relational/clc_isnan.cl
 relational/clc_isnormal.cl
 relational/clc_isnotequal.cl
 relational/clc_isordered.cl
+relational/clc_issubnormal.cl
 relational/clc_isunordered.cl
 relational/clc_select.cl
 relational/clc_signbit.cl
