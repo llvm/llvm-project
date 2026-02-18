@@ -1916,6 +1916,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // a linker-script-defined symbol is absolute.
     scanRelocations<ELFT>(ctx);
     reportUndefinedSymbols(ctx);
+    ctx.target->postScanRelocations();
     postScanRelocations(ctx);
 
     if (ctx.in.plt && ctx.in.plt->isNeeded())
@@ -2031,13 +2032,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     auto i = ctx.arg.sectionStartMap.find(sec->name);
     if (i != ctx.arg.sectionStartMap.end())
       sec->addrExpr = [=] { return i->second; };
-  }
-
-  // For Hexagon TLS GD, __tls_get_addr is created during relocation scanning
-  // in Hexagon::scanSectionImpl. Add it to the dynamic symbol table here.
-  if (ctx.arg.emachine == EM_HEXAGON) {
-    if (Symbol *sym = ctx.symtab->find("__tls_get_addr"))
-      ctx.partitions[0].dynSymTab->addSymbol(sym);
   }
 
   // This is a bit of a hack. A value of 0 means undef, so we set it
