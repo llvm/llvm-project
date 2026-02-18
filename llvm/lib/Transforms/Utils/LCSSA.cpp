@@ -41,6 +41,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -115,6 +116,13 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
         U.set(PoisonValue::get(I->getType()));
         continue;
       }
+
+      // Ignore lifetime intrinsics, instead of creating LCSSA phis for them.
+      // The intrinsics can be removed later by a call to
+      // cleanupDanglingLifetimeUsers.
+      if (auto *II = dyn_cast<IntrinsicInst>(User))
+        if (II->isLifetimeStartOrEnd())
+          continue;
 
       // For practical purposes, we consider that the use in a PHI
       // occurs in the respective predecessor block. For more info,
@@ -357,6 +365,48 @@ static void computeBlocksDominatingExits(
     if (BlocksDominatingExits.insert(IDomBB))
       BBWorklist.push_back(IDomBB);
   }
+}
+
+/// Ensure strict LCSSA form for the given loop, by removing lifetime
+/// intrinsics that cross the exit boundary, as well as their associated
+/// partners.
+///
+/// Returns true if any modifications are made.
+bool llvm::cleanupDanglingLifetimeUsers(Loop *L, const DominatorTree &DT) {
+  SmallVector<BasicBlock *, 8> ExitBlocks;
+  L->getExitBlocks(ExitBlocks);
+
+  if (ExitBlocks.empty())
+    return false;
+
+  // Look only at allocas in the loop, that dominate the loop exits.
+  SmallSetVector<BasicBlock *, 8> BlocksDominatingExits;
+  computeBlocksDominatingExits(*L, DT, ExitBlocks, BlocksDominatingExits);
+
+  SmallVector<AllocaInst *, 8> ToClean;
+
+  for (auto *BB : BlocksDominatingExits) {
+    for (auto &I : *BB) {
+      if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+        bool LifetimeOutsideLoop = llvm::any_of(AI->users(), [&](User *U) {
+          auto *Inst = cast<Instruction>(U);
+          return Inst->isLifetimeStartOrEnd() &&
+                 !L->contains(Inst->getParent());
+        });
+
+        if (LifetimeOutsideLoop)
+          ToClean.push_back(AI);
+      }
+    }
+  }
+
+  for (auto *AI : ToClean)
+    for (auto *U : make_early_inc_range(AI->users()))
+      if (auto *II = dyn_cast<IntrinsicInst>(U))
+        if (II->isLifetimeStartOrEnd())
+          II->eraseFromParent();
+
+  return !ToClean.empty();
 }
 
 static bool formLCSSAImpl(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
