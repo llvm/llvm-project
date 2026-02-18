@@ -321,10 +321,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
                           << " operation";
   };
 
-  auto checkAffinity = [&todo](auto op, LogicalResult &result) {
-    if (!op.getAffinityVars().empty())
-      result = todo("affinity");
-  };
   auto checkAllocate = [&todo](auto op, LogicalResult &result) {
     if (!op.getAllocateVars().empty() || !op.getAllocatorVars().empty())
       result = todo("allocate");
@@ -413,7 +409,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkThreadLimit(op, result);
       })
       .Case([&](omp::TaskOp op) {
-        checkAffinity(op, result);
         checkAllocate(op, result);
         checkInReduction(op, result);
       })
@@ -2308,6 +2303,53 @@ void TaskContextStructManager::freeStructPtr() {
   builder.CreateFree(structPtr);
 }
 
+static void buildTaskAffinityList(mlir::omp::TaskOp taskOp,
+                                  llvm::IRBuilderBase &builder,
+                                  LLVM::ModuleTranslation &moduleTranslation,
+                                  llvm::OpenMPIRBuilder::AffinityData &ad) {
+  auto &ctx = builder.getContext();
+  llvm::StructType *kmpTaskAffinityInfoTy = llvm::StructType::get(
+      llvm::Type::getInt64Ty(ctx), llvm::Type::getInt64Ty(ctx),
+      llvm::Type::getInt32Ty(ctx));
+
+  SmallVector<mlir::Value> affinityVars(taskOp.getAffinityVars().begin(),
+                                        taskOp.getAffinityVars().end());
+
+  // Allocate [N x kmp_task_affinity_info_t]
+  llvm::Value *count =
+      llvm::ConstantInt::get(builder.getInt64Ty(), affinityVars.size());
+  llvm::AllocaInst *affinityList =
+      builder.CreateAlloca(kmpTaskAffinityInfoTy, count, "omp.affinity_list");
+
+  for (unsigned i = 0; i < affinityVars.size(); ++i) {
+    auto entryOp = affinityVars[i].getDefiningOp<mlir::omp::AffinityEntryOp>();
+    assert(entryOp && "affinity item must be omp.affinity_entry");
+
+    llvm::Value *addr = moduleTranslation.lookupValue(entryOp.getAddr());
+    assert(addr && "expect affinity addr to be non-null");
+    llvm::Value *baseAddr = builder.CreatePtrToInt(addr, builder.getInt64Ty());
+    llvm::Value *len = moduleTranslation.lookupValue(entryOp.getLen());
+    llvm::Value *flags = builder.getInt32(0);
+
+    llvm::Value *entry =
+        builder.CreateInBoundsGEP(kmpTaskAffinityInfoTy, affinityList,
+                                  builder.getInt64(i), "omp.affinity.entry");
+
+    llvm::Value *gep0 =
+        builder.CreateStructGEP(kmpTaskAffinityInfoTy, entry, 0); // base_addr
+    llvm::Value *gep1 =
+        builder.CreateStructGEP(kmpTaskAffinityInfoTy, entry, 1); // len
+    llvm::Value *gep2 =
+        builder.CreateStructGEP(kmpTaskAffinityInfoTy, entry, 2); // flags (i32)
+
+    builder.CreateStore(baseAddr, gep0);
+    builder.CreateStore(len, gep1);
+    builder.CreateStore(flags, gep2);
+  }
+  ad.Info = affinityList;
+  ad.Count = builder.getInt32(static_cast<uint32_t>(affinityVars.size()));
+}
+
 /// Converts an OpenMP task construct into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
@@ -2520,12 +2562,16 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   buildDependData(taskOp.getDependKinds(), taskOp.getDependVars(),
                   moduleTranslation, dds);
 
+  llvm::OpenMPIRBuilder::AffinityData ad = {nullptr, nullptr};
+  if (!taskOp.getAffinityVars().empty())
+    buildTaskAffinityList(taskOp, builder, moduleTranslation, ad);
+
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTask(
           ompLoc, allocaIP, bodyCB, !taskOp.getUntied(),
           moduleTranslation.lookupValue(taskOp.getFinal()),
-          moduleTranslation.lookupValue(taskOp.getIfExpr()), dds,
+          moduleTranslation.lookupValue(taskOp.getIfExpr()), dds, ad,
           taskOp.getMergeable(),
           moduleTranslation.lookupValue(taskOp.getEventHandle()),
           moduleTranslation.lookupValue(taskOp.getPriority()));
@@ -7289,13 +7335,13 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           .Case([&](omp::LoopNestOp) {
             return convertOmpLoopNest(*op, builder, moduleTranslation);
           })
-          .Case<omp::MapInfoOp, omp::MapBoundsOp, omp::PrivateClauseOp>(
-              [&](auto op) {
-                // No-op, should be handled by relevant owning operations e.g.
-                // TargetOp, TargetEnterDataOp, TargetExitDataOp, TargetDataOp
-                // etc. and then discarded
-                return success();
-              })
+          .Case<omp::MapInfoOp, omp::MapBoundsOp, omp::PrivateClauseOp,
+                omp::AffinityEntryOp>([&](auto op) {
+            // No-op, should be handled by relevant owning operations e.g.
+            // TargetOp, TargetEnterDataOp, TargetExitDataOp, TargetDataOp
+            // etc. and then discarded
+            return success();
+          })
           .Case([&](omp::NewCliOp op) {
             // Meta-operation: Doesn't do anything by itself, but used to
             // identify a loop.

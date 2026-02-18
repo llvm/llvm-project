@@ -2433,8 +2433,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     BodyGenCallbackTy BodyGenCB, bool Tied, Value *Final, Value *IfCondition,
-    SmallVector<DependData> Dependencies, bool Mergeable, Value *EventHandle,
-    Value *Priority) {
+    SmallVector<DependData> Dependencies, AffinityData Affinity, bool Mergeable,
+    Value *EventHandle, Value *Priority) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -2480,7 +2480,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
   OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
-                      Mergeable, Priority, EventHandle, TaskAllocaBB,
+                      Affinity, Mergeable, Priority, EventHandle, TaskAllocaBB,
                       ToBeDeleted](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
@@ -2554,6 +2554,22 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
         TaskAllocFn, {/*loc_ref=*/Ident, /*gtid=*/ThreadID, /*flags=*/Flags,
                       /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
                       /*task_func=*/&OutlinedFn});
+
+    if (Affinity.Count && Affinity.Info) {
+      Function *RegAffFn = getOrCreateRuntimeFunctionPtr(
+          OMPRTL___kmpc_omp_reg_task_with_affinity);
+
+      // bitcast to i8*
+      Value *AffPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+          Affinity.Info, Builder.getPtrTy(0));
+
+      if (!Affinity.Count->getType()->isIntegerTy(32))
+        Affinity.Count =
+            Builder.CreateTruncOrBitCast(Affinity.Count, Builder.getInt32Ty());
+
+      createRuntimeFunctionCall(
+          RegAffFn, {Ident, ThreadID, TaskData, Affinity.Count, AffPtr});
+    }
 
     // Emit detach clause initialization.
     // evt = (typeof(evt))__kmpc_task_allow_completion_event(loc, tid,
