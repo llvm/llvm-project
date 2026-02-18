@@ -25,8 +25,6 @@ module attributes {omp.target_triples = ["dummy-target-triple"]} {
 // CHECK: %[[PTRS:.*]] = alloca [1 x ptr], align 8
 // CHECK: %[[MAPPERS:.*]] = alloca [1 x ptr], align 8
 
-// CHECK: getelementptr inbounds [1 x ptr], ptr %[[BASEPTRS]], i32 0, i32 0
-// CHECK: getelementptr inbounds [1 x ptr], ptr %[[PTRS]], i32 0, i32 0
 // CHECK: %[[BASEPTRS_GEP:.*]] = getelementptr inbounds [1 x ptr], ptr %[[BASEPTRS]], i32 0, i32 0
 // CHECK: %[[PTRS_GEP:.*]] = getelementptr inbounds [1 x ptr], ptr %[[PTRS]], i32 0, i32 0
 
@@ -40,9 +38,9 @@ module attributes {omp.target_triples = ["dummy-target-triple"]} {
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[SHAREDS_PTR]], ptr align 1 %[[STRUCTARG]], i64 8, i1 false)
 // CHECK: %[[VAL_50:.*]] = getelementptr inbounds nuw %struct.[[TSK_WTH_PRVTS]], ptr %[[TASK]], i32 0, i32 1
 // CHECK: %[[VAL_51:.*]] = getelementptr inbounds nuw %struct.[[PRVTS]], ptr %[[VAL_50]], i32 0, i32 0
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[VAL_51]], ptr align 1 %[[BASEPTRS_GEP]], i64 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[VAL_51]], ptr align 1 %[[BASEPTRS]], i64 8, i1 false)
 // CHECK: %[[VAL_53:.*]] = getelementptr inbounds nuw %struct.[[PRVTS]], ptr %[[VAL_50]], i32 0, i32 1
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[VAL_53]], ptr align 1 %[[PTRS_GEP]], i64 8, i1 false)
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[VAL_53]], ptr align 1 %[[PTRS]], i64 8, i1 false)
 // CHECK: call i32 @__kmpc_omp_task(ptr {{.*}}, i32 %{{.*}}, ptr %[[TASK]])
 // CHECK: }
 

@@ -85,31 +85,27 @@ int main() {
 // CHECK-NEXT:    store ptr [[ARRAYIDX]], ptr [[TMP9]], align 8
 // CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_MAPPERS]], i64 0, i64 1
 // CHECK-NEXT:    store ptr null, ptr [[TMP10]], align 8
-// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 2, ptr [[TMP11]], ptr [[TMP12]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 2, ptr [[DOTOFFLOAD_BASEPTRS]], ptr [[DOTOFFLOAD_PTRS]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
 // CHECK-NEXT:    br label [[OMP_IF_END:%.*]]
 // CHECK:       omp_if.else:
 // CHECK-NEXT:    br label [[OMP_IF_END]]
 // CHECK:       omp_if.end:
-// CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[TMP13]], i64 0
-// CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
-// CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP14]], 1
+// CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[P]], align 8
+// CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, ptr [[TMP11]], i64 0
+// CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX4]], align 4
+// CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP12]], 1
 // CHECK-NEXT:    store i32 [[INC]], ptr [[ARRAYIDX4]], align 4
 // CHECK-NEXT:    br i1 [[TMP2]], label [[OMP_IF_THEN5:%.*]], label [[OMP_IF_ELSE6:%.*]]
 // CHECK:       omp_if.then5:
-// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
-// CHECK-NEXT:    call void @__tgt_target_data_end_mapper(ptr @[[GLOB1]], i64 -1, i32 2, ptr [[TMP15]], ptr [[TMP16]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK-NEXT:    call void @__tgt_target_data_end_mapper(ptr @[[GLOB1]], i64 -1, i32 2, ptr [[DOTOFFLOAD_BASEPTRS]], ptr [[DOTOFFLOAD_PTRS]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
 // CHECK-NEXT:    br label [[OMP_IF_END7:%.*]]
 // CHECK:       omp_if.else6:
 // CHECK-NEXT:    br label [[OMP_IF_END7]]
 // CHECK:       omp_if.end7:
-// CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[P]], align 8
-// CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, ptr [[TMP17]], i64 0
-// CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
-// CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP18]], 0
+// CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[P]], align 8
+// CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, ptr [[TMP13]], i64 0
+// CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
+// CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    store i32 1, ptr [[RETVAL]], align 4
@@ -118,8 +114,8 @@ int main() {
 // CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    br label [[RETURN]]
 // CHECK:       return:
-// CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    ret i32 [[TMP19]]
+// CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    ret i32 [[TMP15]]
 //
 //
 // CHECK-LABEL: define dso_local noundef i32 @main(
