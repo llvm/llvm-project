@@ -117,10 +117,16 @@ defm : RIVPatBinaryVL_VV<ri_vunzip2b_vl, "PseudoRI_VUNZIP2B">;
 let Predicates = [HasVendorXRivosVisni], DecoderNamespace = "XRivos",
   mayLoad = false, mayStore = false, hasSideEffects = false in {
 
-let vm = 0, vs2=0, Inst<6-0> = OPC_CUSTOM_2.Value,
-    isReMaterializable = 1, isAsCheapAsAMove = 1 in
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def RI_VZERO : RVInstVUnary<0b000000, 0b00000, OPCFG, (outs VR:$vd),
-                            (ins), "ri.vzero.v", "$vd">;
+                            (ins), "ri.vzero.v", "$vd"> {
+  let vm = 0;
+  let vs2 = 0;
+
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+
+  let RVVConstraint = NoConstraint;
+}
 
 def RI_VINSERT : CustomRivosVXI<0b010000, OPMVX, (outs VR:$vd_wb),
                                 (ins VR:$vd, GPR:$rs1, uimm5:$imm),
