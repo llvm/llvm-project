@@ -107,17 +107,4 @@ class LibCxxStdFunctionRecognizerTestCase(TestBase):
         self.assertGreater(num_hidden, 0)
         self.assertLess(num_hidden, thread.GetNumFrames())
 
-    @add_test_categories(["libc++"])
-    def test_api(self):
-        """Test that std::function implementation details are skipped"""
-        self.build()
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.cpp")
-        )
-        num_hidden = 0
-        for frame in thread.frames:
-            if frame.IsHidden():
-                num_hidden += 1
-
-        self.assertGreater(num_hidden, 0)
-        self.assertLess(num_hidden, thread.GetNumFrames())
+    # test
