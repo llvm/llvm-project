@@ -1115,22 +1115,33 @@ enum class SymbolTag {
   Internal = 6,
   File = 7,
   Static = 8,
-  Abstract = 9,
-  Final = 10,
+  Abstract = 9, // In context of a class and method - this symbol indicates a
+                // pure virtual method.
+  Final = 10, // In context of a method - this symbol indicates that the method
+              // cannot be overridden in subclasses.
+              // In context of a class - this symbol indicates that the class is
+              // final and thus cannot be extended.
   Sealed = 11,
   Transient = 12,
   Volatile = 13,
   Synchronized = 14,
-  Virtual = 15,
+  Virtual =
+      15, // In context of a method - this symbol indicates a virtual
+          // method declared and implemented in same class, and thereby it is
+          // not implementing or overriding a method from any base class.
   Nullable = 16,
   NonNull = 17,
   Declaration = 18,
   Definition = 19,
   ReadOnly = 20,
+  Overrides = 21,  // In context of a method - this symbol indicates a method
+                   // overriding a virtual method, implemented in base class.
+  Implements = 22, // In context of a method - this symbol indicates a method
+                   // implementing a pure virtual method from a base class.
 
   // Update as needed
   FirstTag = Deprecated,
-  LastTag = ReadOnly
+  LastTag = Implements
 };
 llvm::json::Value toJSON(SymbolTag);
 /// Represents programming constructs like variables, classes, interfaces etc.
@@ -1547,6 +1558,9 @@ struct TypeHierarchyItem {
 
   /// The kind of this item.
   SymbolKind kind;
+
+  /// The symbol tags for this item.
+  std::vector<SymbolTag> tags;
 
   /// More detail for this item, e.g. the signature of a function.
   std::optional<std::string> detail;

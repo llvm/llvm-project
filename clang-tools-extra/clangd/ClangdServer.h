@@ -283,14 +283,14 @@ public:
                      TypeHierarchyDirection Direction,
                      Callback<std::vector<TypeHierarchyItem>> CB);
   /// Get direct parents of a type hierarchy item.
-  void superTypes(const TypeHierarchyItem &Item,
+  void superTypes(PathRef File, const TypeHierarchyItem &Item,
                   Callback<std::optional<std::vector<TypeHierarchyItem>>> CB);
   /// Get direct children of a type hierarchy item.
-  void subTypes(const TypeHierarchyItem &Item,
+  void subTypes(PathRef File, const TypeHierarchyItem &Item,
                 Callback<std::vector<TypeHierarchyItem>> CB);
 
   /// Resolve type hierarchy item in the given direction.
-  void resolveTypeHierarchy(TypeHierarchyItem Item, int Resolve,
+  void resolveTypeHierarchy(PathRef File, TypeHierarchyItem Item, int Resolve,
                             TypeHierarchyDirection Direction,
                             Callback<std::optional<TypeHierarchyItem>> CB);
 
@@ -299,11 +299,11 @@ public:
                             Callback<std::vector<CallHierarchyItem>> CB);
 
   /// Resolve incoming calls for a given call hierarchy item.
-  void incomingCalls(const CallHierarchyItem &Item,
-                     Callback<std::vector<CallHierarchyIncomingCall>>);
+  void incomingCalls(PathRef File, const CallHierarchyItem &Item,
+                     Callback<std::vector<CallHierarchyIncomingCall>> CB);
 
   /// Resolve outgoing calls for a given call hierarchy item.
-  void outgoingCalls(const CallHierarchyItem &Item,
+  void outgoingCalls(PathRef File, const CallHierarchyItem &Item,
                      Callback<std::vector<CallHierarchyOutgoingCall>>);
 
   /// Resolve inlay hints for a given document.
