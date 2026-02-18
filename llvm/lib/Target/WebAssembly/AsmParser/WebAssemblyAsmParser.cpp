@@ -426,7 +426,6 @@ public:
     if (Lexer.is(AsmToken::Identifier)) {
       auto Name = Lexer.getTok().getString();
       Parser.Lex();
-      llvm::outs() << "Parsed ident: " << Name << "\n";
       return Name;
     }
     error("Expected string or identifier, got: ", Lexer.getTok());
