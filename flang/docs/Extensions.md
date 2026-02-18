@@ -381,6 +381,9 @@ end
 * Legacy names `AND`, `OR`, and `XOR` are accepted as aliases for
   the standard intrinsic functions `IAND`, `IOR`, and `IEOR`
   respectively.
+* Legacy GNU intrinsics `IARGC` and `GETARG` are accepted as aliases for
+  the standard intrinsics `COMMAND_ARGUMENT_COUNT` and
+  `GET_COMMAND_ARGUMENT`, respectively.
 * A digit count of d=0 is accepted in Ew.0, Dw.0, and Gw.0 output
   editing if no nonzero scale factor (kP) is in effect.
 * The name `IMAG` is accepted as an alias for the generic intrinsic
