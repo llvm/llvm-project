@@ -28,4 +28,4 @@ public:
 };
 } // namespace clang::ssaf
 
-#endif
+#endif // LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_BUILDER_H
