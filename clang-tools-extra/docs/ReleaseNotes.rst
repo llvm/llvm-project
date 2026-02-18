@@ -216,8 +216,7 @@ Changes in existing checks
 
 - Improved :doc:`modernize-make-shared
   <clang-tidy/checks/modernize/make-shared>` check by adding a new option
-  ``MakeSmartPtrType`` to specify the smart pointer type to match, with a
-  default value of ``::std::shared_ptr``.
+  `MakeSmartPtrType` to specify the smart pointer type to match.
 
 - Improved :doc:`modernize-make-unique
   <clang-tidy/checks/modernize/make-unique>` check by adding a new option
