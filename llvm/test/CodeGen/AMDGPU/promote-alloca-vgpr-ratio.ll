@@ -16,10 +16,10 @@ define amdgpu_kernel void @i32_24_elements(ptr %out) #0 {
 ; DEFAULT-NEXT:    call void @llvm.memset.p5.i32(ptr addrspace(5) [[ALLOCA]], i8 0, i32 96, i1 false)
 ; DEFAULT-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds [24 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 0
 ; DEFAULT-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds [24 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 20
-; DEFAULT-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4
-; DEFAULT-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4
+; DEFAULT-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4, !amdgpu.non.volatile [[META0:![0-9]+]]
+; DEFAULT-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4, !amdgpu.non.volatile [[META0]]
 ; DEFAULT-NEXT:    [[GEP:%.*]] = getelementptr inbounds [24 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[SEL2]]
-; DEFAULT-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; DEFAULT-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4, !amdgpu.non.volatile [[META0]]
 ; DEFAULT-NEXT:    store i32 [[LOAD]], ptr [[OUT]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
@@ -48,10 +48,10 @@ define amdgpu_kernel void @i32_24_elements(ptr %out) #0 {
 ; RATIO8-NEXT:    call void @llvm.memset.p5.i32(ptr addrspace(5) [[ALLOCA]], i8 0, i32 96, i1 false)
 ; RATIO8-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds [24 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 0
 ; RATIO8-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds [24 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 20
-; RATIO8-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4
-; RATIO8-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4
+; RATIO8-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4, !amdgpu.non.volatile [[META0:![0-9]+]]
+; RATIO8-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4, !amdgpu.non.volatile [[META0]]
 ; RATIO8-NEXT:    [[GEP:%.*]] = getelementptr inbounds [24 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[SEL2]]
-; RATIO8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; RATIO8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4, !amdgpu.non.volatile [[META0]]
 ; RATIO8-NEXT:    store i32 [[LOAD]], ptr [[OUT]], align 4
 ; RATIO8-NEXT:    ret void
 ;
@@ -112,10 +112,10 @@ define amdgpu_kernel void @i32_24_elements_attrib(ptr %out) #1 {
 ; RATIO8-NEXT:    call void @llvm.memset.p5.i32(ptr addrspace(5) [[ALLOCA]], i8 0, i32 96, i1 false)
 ; RATIO8-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds [24 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 0
 ; RATIO8-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds [24 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 20
-; RATIO8-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4
-; RATIO8-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4
+; RATIO8-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4, !amdgpu.non.volatile [[META0]]
+; RATIO8-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4, !amdgpu.non.volatile [[META0]]
 ; RATIO8-NEXT:    [[GEP:%.*]] = getelementptr inbounds [24 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[SEL2]]
-; RATIO8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; RATIO8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4, !amdgpu.non.volatile [[META0]]
 ; RATIO8-NEXT:    store i32 [[LOAD]], ptr [[OUT]], align 4
 ; RATIO8-NEXT:    ret void
 ;
@@ -176,10 +176,10 @@ define amdgpu_kernel void @i32_16_elements(ptr %out) #0 {
 ; RATIO8-NEXT:    call void @llvm.memset.p5.i32(ptr addrspace(5) [[ALLOCA]], i8 0, i32 64, i1 false)
 ; RATIO8-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 0
 ; RATIO8-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 15
-; RATIO8-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4
-; RATIO8-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4
+; RATIO8-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4, !amdgpu.non.volatile [[META0]]
+; RATIO8-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4, !amdgpu.non.volatile [[META0]]
 ; RATIO8-NEXT:    [[GEP:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[SEL2]]
-; RATIO8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; RATIO8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4, !amdgpu.non.volatile [[META0]]
 ; RATIO8-NEXT:    store i32 [[LOAD]], ptr [[OUT]], align 4
 ; RATIO8-NEXT:    ret void
 ;
@@ -214,10 +214,10 @@ define amdgpu_kernel void @i32_16_elements_attrib(ptr %out) #2 {
 ; DEFAULT-NEXT:    call void @llvm.memset.p5.i32(ptr addrspace(5) [[ALLOCA]], i8 0, i32 64, i1 false)
 ; DEFAULT-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 0
 ; DEFAULT-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 15
-; DEFAULT-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4
-; DEFAULT-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4
+; DEFAULT-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4, !amdgpu.non.volatile [[META0]]
+; DEFAULT-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4, !amdgpu.non.volatile [[META0]]
 ; DEFAULT-NEXT:    [[GEP:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[SEL2]]
-; DEFAULT-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; DEFAULT-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4, !amdgpu.non.volatile [[META0]]
 ; DEFAULT-NEXT:    store i32 [[LOAD]], ptr [[OUT]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
@@ -246,10 +246,10 @@ define amdgpu_kernel void @i32_16_elements_attrib(ptr %out) #2 {
 ; RATIO8-NEXT:    call void @llvm.memset.p5.i32(ptr addrspace(5) [[ALLOCA]], i8 0, i32 64, i1 false)
 ; RATIO8-NEXT:    [[GEP_0:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 0
 ; RATIO8-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 15
-; RATIO8-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4
-; RATIO8-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4
+; RATIO8-NEXT:    store i32 42, ptr addrspace(5) [[GEP_0]], align 4, !amdgpu.non.volatile [[META0]]
+; RATIO8-NEXT:    store i32 43, ptr addrspace(5) [[GEP_1]], align 4, !amdgpu.non.volatile [[META0]]
 ; RATIO8-NEXT:    [[GEP:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[SEL2]]
-; RATIO8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4
+; RATIO8-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(5) [[GEP]], align 4, !amdgpu.non.volatile [[META0]]
 ; RATIO8-NEXT:    store i32 [[LOAD]], ptr [[OUT]], align 4
 ; RATIO8-NEXT:    ret void
 ;
@@ -278,5 +278,10 @@ declare void @llvm.memset.p5.i32(ptr addrspace(5) nocapture writeonly, i8, i32, 
 attributes #0 = { nounwind "amdgpu-promote-alloca-to-vector-max-regs"="24" "amdgpu-waves-per-eu"="4,4" }
 attributes #1 = { nounwind "amdgpu-promote-alloca-to-vector-max-regs"="24" "amdgpu-waves-per-eu"="4,4" "amdgpu-promote-alloca-to-vector-vgpr-ratio"="2" }
 attributes #2 = { nounwind "amdgpu-promote-alloca-to-vector-max-regs"="24" "amdgpu-waves-per-eu"="4,4" "amdgpu-promote-alloca-to-vector-vgpr-ratio"="8" }
+;.
+; DEFAULT: [[META0]] = !{}
+;.
+; RATIO8: [[META0]] = !{}
+;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; BASE: {{.*}}
