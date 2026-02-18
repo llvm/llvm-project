@@ -191,16 +191,6 @@ static void emitStoresForConstant(CIRGenModule &cgm, const VarDecl &d,
     return;
   assert(!cir::MissingFeatures::addAutoInitAnnotation());
   assert(!cir::MissingFeatures::vectorConstants());
-  assert(!cir::MissingFeatures::shouldUseBZeroPlusStoresToInitialize());
-  assert(!cir::MissingFeatures::shouldUseMemSetToInitialize());
-  assert(!cir::MissingFeatures::shouldSplitConstantStore());
-  assert(!cir::MissingFeatures::shouldCreateMemCpyFromGlobal());
-  // In CIR we want to emit a store for the whole thing, later lowering
-  // prepare to LLVM should unwrap this into the best policy (see asserts
-  // above).
-  //
-  // FIXME(cir): This is closer to memcpy behavior but less optimal, instead of
-  // copy from a global, we just create a cir.const out of it.
 
   if (addr.getElementType() != ty)
     addr = addr.withElementType(builder, ty);
@@ -218,6 +208,12 @@ static void emitStoresForConstant(CIRGenModule &cgm, const VarDecl &d,
   mlir::Location loc = builder.getUnknownLoc();
   if (d.getSourceRange().isValid())
     loc = cgm.getLoc(d.getSourceRange());
+
+  // Emit cir.const + cir.store, preserving source-level semantics. For
+  // aggregate types (arrays, records), LoweringPrepare implements the OG
+  // optimization tiers (shouldCreateMemCpyFromGlobal, shouldUseBZeroPlusStores,
+  // shouldUseMemSetToInitialize, shouldSplitConstantStore) by transforming
+  // into cir.global + cir.get_global + cir.copy when appropriate.
   builder.createStore(loc, builder.getConstant(loc, constant), addr);
 }
 

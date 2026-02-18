@@ -69,7 +69,7 @@ loop:                                             ; preds = %loop, %entry
   %i28 = shl i32 %n5, 1
   %p = getelementptr i8, ptr addrspace(3) %arg4, i32 %i28
   %i29 = load <4 x i8>, ptr addrspace(3) %p, align 4
-  %i30 = load <4 x i8>, ptr addrspace(3) null, align 8
+  %i30 = load <4 x i8>, ptr addrspace(3) zeroinitializer, align 8
   tail call void @llvm.amdgcn.sched.group.barrier(i32 0, i32 0, i32 0)
   br i1 %loopcond, label %loop, label %exit
 
@@ -93,7 +93,7 @@ exit:                                             ; preds = %loop
   %i44 = tail call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) null, i32 22528, i32 0, i32 0)
   %i45 = tail call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) null, i32 23552, i32 0, i32 0)
   %i46 = tail call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) null, i32 %arg0, i32 0, i32 0)
-  store <4 x i32> %i24, ptr addrspace(3) null, align 16
+  store <4 x i32> %i24, ptr addrspace(3) zeroinitializer, align 16
   %p18 = getelementptr %f8, ptr addrspace(3) @shared, i32 %arg2
   store <4 x i32> %i25, ptr addrspace(3) %p18, align 16
   %p17 = getelementptr %f8, ptr addrspace(3) %p18, i32 512
@@ -154,7 +154,7 @@ exit:                                             ; preds = %loop
   %be26 = extractelement <2 x i64> %bc11, i64 1
   %i75 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.fp8.fp8(i64 0, i64 %be26, <4 x float> %i74, i32 0, i32 0, i32 0)
   %i76 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.fp8.fp8(i64 0, i64 %be20, <4 x float> %i75, i32 0, i32 0, i32 0)
-  %i77 = load <4 x i8>, ptr addrspace(3) null, align 8
+  %i77 = load <4 x i8>, ptr addrspace(3) zeroinitializer, align 8
   %i78 = getelementptr i8, ptr addrspace(3) @shared, i32 %i28
   %p10 = getelementptr %f8, ptr addrspace(3) %i78, i32 %arg1
   %i79 = load <4 x i8>, ptr addrspace(3) %p10, align 4
@@ -293,11 +293,11 @@ exit:                                             ; preds = %loop
   %m2 = and i32 %i, 48
   %i124 = getelementptr float, ptr addrspace(3) @shared, i32 %m2
   %p21 = getelementptr float, ptr addrspace(3) %i124, i32 %n6
-  store float %ce4, ptr addrspace(3) null, align 4
+  store float %ce4, ptr addrspace(3) zeroinitializer, align 4
   %ce3 = extractelement <4 x float> %i120, i64 0
   store float %ce3, ptr addrspace(3) %p21, align 4
   %ce2 = extractelement <4 x float> %i106, i64 0
-  store float %ce2, ptr addrspace(3) null, align 4
+  store float %ce2, ptr addrspace(3) zeroinitializer, align 4
   %ce = extractelement <4 x float> %i123, i64 0
   store float %ce, ptr addrspace(3) %p15, align 4
   %sx = sext i32 %a6 to i64

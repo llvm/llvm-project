@@ -9,6 +9,7 @@
 #include "cuda_runtime.h"
 #include "gtest/gtest.h"
 #include "flang/Runtime/CUDA/allocator.h"
+#include "flang/Runtime/CUDA/stream.h"
 
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::cuda;
