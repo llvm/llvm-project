@@ -2616,33 +2616,44 @@ public:
                                struct MapperAllocas &MapperAllocas,
                                int64_t DeviceID, unsigned NumOperands);
 
+  /// A pointer value bundled with its array type, for typed offloading arrays.
+  /// \p t is the ArrayType of the alloca or GEP source; nullptr when the
+  /// pointer is a ConstantNull, a GlobalVariable, or otherwise type-unknown.
+  struct TypedPointerArray {
+    Value *Ptr = nullptr;
+    ArrayType *Ty = nullptr;
+  };
+
   /// Container for the arguments used to pass data to the runtime library.
   struct TargetDataRTArgs {
     /// The array of base pointer passed to the runtime library.
-    Value *BasePointersArray = nullptr;
+    TypedPointerArray BasePointersArray;
     /// The array of section pointers passed to the runtime library.
-    Value *PointersArray = nullptr;
+    TypedPointerArray PointersArray;
     /// The array of sizes passed to the runtime library.
-    Value *SizesArray = nullptr;
+    TypedPointerArray SizesArray;
     /// The array of map types passed to the runtime library for the beginning
     /// of the region or for the entire region if there are no separate map
     /// types for the region end.
-    Value *MapTypesArray = nullptr;
+    TypedPointerArray MapTypesArray;
     /// The array of map types passed to the runtime library for the end of the
     /// region, or nullptr if there are no separate map types for the region
     /// end.
-    Value *MapTypesArrayEnd = nullptr;
+    TypedPointerArray MapTypesArrayEnd;
     /// The array of user-defined mappers passed to the runtime library.
-    Value *MappersArray = nullptr;
+    TypedPointerArray MappersArray;
     /// The array of original declaration names of mapped pointers sent to the
     /// runtime library for debugging
-    Value *MapNamesArray = nullptr;
+    TypedPointerArray MapNamesArray;
 
     explicit TargetDataRTArgs() = default;
-    explicit TargetDataRTArgs(Value *BasePointersArray, Value *PointersArray,
-                              Value *SizesArray, Value *MapTypesArray,
-                              Value *MapTypesArrayEnd, Value *MappersArray,
-                              Value *MapNamesArray)
+    explicit TargetDataRTArgs(TypedPointerArray BasePointersArray,
+                              TypedPointerArray PointersArray,
+                              TypedPointerArray SizesArray,
+                              TypedPointerArray MapTypesArray,
+                              TypedPointerArray MapTypesArrayEnd,
+                              TypedPointerArray MappersArray,
+                              TypedPointerArray MapNamesArray)
         : BasePointersArray(BasePointersArray), PointersArray(PointersArray),
           SizesArray(SizesArray), MapTypesArray(MapTypesArray),
           MapTypesArrayEnd(MapTypesArrayEnd), MappersArray(MappersArray),
@@ -2769,9 +2780,9 @@ public:
     }
     /// Return true if the current target data information has valid arrays.
     bool isValid() {
-      return RTArgs.BasePointersArray && RTArgs.PointersArray &&
-             RTArgs.SizesArray && RTArgs.MapTypesArray &&
-             (!HasMapper || RTArgs.MappersArray) && NumberOfPtrs;
+      return RTArgs.BasePointersArray.Ptr && RTArgs.PointersArray.Ptr &&
+             RTArgs.SizesArray.Ptr && RTArgs.MapTypesArray.Ptr &&
+             (!HasMapper || RTArgs.MappersArray.Ptr) && NumberOfPtrs;
     }
     bool requiresDevicePointerInfo() { return RequiresDevicePointerInfo; }
     bool separateBeginEndCalls() { return SeparateBeginEndCalls; }

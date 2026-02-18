@@ -10878,16 +10878,16 @@ static void emitTargetCallKernelLaunch(
                               /*IsNonContiguous=*/true, /*ForEndCall=*/false);
 
   InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
-  InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray,
+  InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray.Ptr,
                                         CGF.VoidPtrTy, CGM.getPointerAlign());
-  InputInfo.PointersArray =
-      Address(Info.RTArgs.PointersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
+  InputInfo.PointersArray = Address(Info.RTArgs.PointersArray.Ptr,
+                                    CGF.VoidPtrTy, CGM.getPointerAlign());
   InputInfo.SizesArray =
-      Address(Info.RTArgs.SizesArray, CGF.Int64Ty, CGM.getPointerAlign());
-  InputInfo.MappersArray =
-      Address(Info.RTArgs.MappersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
-  MapTypesArray = Info.RTArgs.MapTypesArray;
-  MapNamesArray = Info.RTArgs.MapNamesArray;
+      Address(Info.RTArgs.SizesArray.Ptr, CGF.Int64Ty, CGM.getPointerAlign());
+  InputInfo.MappersArray = Address(Info.RTArgs.MappersArray.Ptr, CGF.VoidPtrTy,
+                                   CGM.getPointerAlign());
+  MapTypesArray = Info.RTArgs.MapTypesArray.Ptr;
+  MapNamesArray = Info.RTArgs.MapNamesArray.Ptr;
 
   auto &&ThenGen = [&OMPRuntime, OutlinedFn, &D, &CapturedVars,
                     RequiresOuterTask, &CS, OffloadingMandatory, Device,
@@ -11806,16 +11806,16 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
                              D.hasClausesOfKind<OMPNowaitClause>();
 
     InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
-    InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray,
+    InputInfo.BasePointersArray = Address(Info.RTArgs.BasePointersArray.Ptr,
                                           CGF.VoidPtrTy, CGM.getPointerAlign());
-    InputInfo.PointersArray = Address(Info.RTArgs.PointersArray, CGF.VoidPtrTy,
-                                      CGM.getPointerAlign());
+    InputInfo.PointersArray = Address(Info.RTArgs.PointersArray.Ptr,
+                                      CGF.VoidPtrTy, CGM.getPointerAlign());
     InputInfo.SizesArray =
-        Address(Info.RTArgs.SizesArray, CGF.Int64Ty, CGM.getPointerAlign());
-    InputInfo.MappersArray =
-        Address(Info.RTArgs.MappersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
-    MapTypesArray = Info.RTArgs.MapTypesArray;
-    MapNamesArray = Info.RTArgs.MapNamesArray;
+        Address(Info.RTArgs.SizesArray.Ptr, CGF.Int64Ty, CGM.getPointerAlign());
+    InputInfo.MappersArray = Address(Info.RTArgs.MappersArray.Ptr,
+                                     CGF.VoidPtrTy, CGM.getPointerAlign());
+    MapTypesArray = Info.RTArgs.MapTypesArray.Ptr;
+    MapNamesArray = Info.RTArgs.MapNamesArray.Ptr;
     if (RequiresOuterTask)
       CGF.EmitOMPTargetTaskBasedDirective(D, ThenGen, InputInfo);
     else
