@@ -37,7 +37,7 @@ Options
 .. option:: MakeSmartPtrFunctionHeader
 
    A string specifying the corresponding header of the factory function.
-   Default is empty.
+   Default is empty string.
 
 .. option:: MakeSmartPtrType
 
