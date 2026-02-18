@@ -21,11 +21,11 @@
 #include "gtest/gtest.h"
 #include <memory>
 
-namespace clang::ssaf {
+using namespace clang::ssaf;
+using namespace llvm;
 
 namespace {
 
-// Mock EntitySummaryEncoding for testing
 class MockEntitySummaryEncoding : public EntitySummaryEncoding {
 public:
   MockEntitySummaryEncoding() : Id(++Index) {}
@@ -52,22 +52,11 @@ size_t MockEntitySummaryEncoding::Index = 0;
 
 class EntityLinkerTest : public TestFixture {
 protected:
-  // Helper to create a TUSummaryEncoding with entities
   std::unique_ptr<TUSummaryEncoding>
   createTUSummaryEncoding(BuildNamespaceKind Kind, llvm::StringRef Name) {
     return std::make_unique<TUSummaryEncoding>(BuildNamespace(Kind, Name));
   }
 
-  // Helper to add an entity to a TUSummaryEncoding
-  EntityId addEntity(TUSummaryEncoding &TU, llvm::StringRef USR,
-                     EntityLinkage::LinkageType Linkage) {
-    EntityName Name(USR, "", NestedBuildNamespace(getTUNamespace(TU)));
-    EntityId Id = getIdTable(TU).getId(Name);
-    getLinkageTable(TU).insert({Id, EntityLinkage(Linkage)});
-    return Id;
-  }
-
-  // Helper to add summary data to a TUSummaryEncoding
   size_t addSummaryData(TUSummaryEncoding &TU, EntityId EId,
                         llvm::StringRef SummaryNameStr) {
     SummaryName SN(SummaryNameStr.str());
@@ -76,7 +65,130 @@ protected:
     getData(TU)[SN][EId] = std::move(Summary);
     return ESId;
   }
+
+  EntityId addEntity(TUSummaryEncoding &TU, llvm::StringRef USR,
+                     EntityLinkage::LinkageType Linkage) {
+    EntityName Name(USR, "", NestedBuildNamespace(getTUNamespace(TU)));
+    EntityId Id = getIdTable(TU).getId(Name);
+    getLinkageTable(TU).insert({Id, EntityLinkage(Linkage)});
+    return Id;
+  }
+
+  NestedBuildNamespace
+  makeLocalNamespace(const BuildNamespace &TUNamespace,
+                     const NestedBuildNamespace &LUNamespace) {
+    return NestedBuildNamespace(TUNamespace).makeQualified(LUNamespace);
+  }
 };
+
+// ============================================================================
+// Entity ID Table Matchers
+// ============================================================================
+
+MATCHER_P(ContainsEntity, entityName,
+          std::string(negation ? "does not contain" : "contains") +
+              " entity with name '" + ::testing::PrintToString(entityName) +
+              "'") {
+  return arg.contains(entityName);
+}
+
+MATCHER_P(IdTableHasSize, expectedCount,
+          std::string("has ") + ::testing::PrintToString(expectedCount) +
+              " entities") {
+  if (arg.count() != expectedCount) {
+    *result_listener << "has " << arg.count() << " entities";
+    return false;
+  }
+  return true;
+}
+
+// ============================================================================
+// Linkage Table Matchers
+// ============================================================================
+
+MATCHER_P2(EntityHasLinkage, entityId, expectedLinkage,
+           std::string("entity has ") +
+               ::testing::PrintToString(expectedLinkage) + " linkage") {
+  auto it = arg.find(entityId);
+  if (it == arg.end()) {
+    *result_listener << "entity " << ::testing::PrintToString(entityId)
+                     << " not found in linkage table";
+    return false;
+  }
+
+  auto actualLinkage = it->second.getLinkage();
+  if (actualLinkage != expectedLinkage) {
+    *result_listener << "entity " << ::testing::PrintToString(entityId)
+                     << " has linkage "
+                     << ::testing::PrintToString(actualLinkage);
+    return false;
+  }
+
+  return true;
+}
+
+MATCHER_P(LinkageTableHasSize, expectedSize,
+          std::string("linkage table has size ") +
+              ::testing::PrintToString(expectedSize)) {
+  if (arg.size() != expectedSize) {
+    *result_listener << "has size " << arg.size();
+    return false;
+  }
+  return true;
+}
+
+// ============================================================================
+// Summary Data Matchers
+// ============================================================================
+
+MATCHER_P3(HasSummaryData, entityId, expectedMockId, expectedResolutionMapping,
+           std::string("has summary data for entity with expected mock ID ") +
+               ::testing::PrintToString(expectedMockId)) {
+
+  auto it = arg.find(entityId);
+  if (it == arg.end()) {
+    *result_listener << "entity " << ::testing::PrintToString(entityId)
+                     << " not found in summary data";
+    return false;
+  }
+
+  auto *mock = static_cast<const MockEntitySummaryEncoding *>(it->second.get());
+
+  if (mock->getId() != expectedMockId) {
+    *result_listener << "entity " << ::testing::PrintToString(entityId)
+                     << " has mock ID " << mock->getId() << " (expected "
+                     << expectedMockId << ")";
+    return false;
+  }
+
+  if (mock->getPatchedIds() != expectedResolutionMapping) {
+    *result_listener << "entity " << ::testing::PrintToString(entityId)
+                     << " has different resolution mapping";
+    return false;
+  }
+
+  return true;
+}
+
+MATCHER_P(DoesNotContainSummaryFor, entityId,
+          std::string("does not contain summary data for entity")) {
+  if (arg.find(entityId) != arg.end()) {
+    *result_listener << "unexpectedly contains entity "
+                     << ::testing::PrintToString(entityId);
+    return false;
+  }
+  return true;
+}
+
+MATCHER_P(SummaryDataHasSize, expectedSize,
+          std::string("summary data has size ") +
+              ::testing::PrintToString(expectedSize)) {
+  if (arg.size() != expectedSize) {
+    *result_listener << "has size " << arg.size();
+    return false;
+  }
+  return true;
+}
 
 TEST_F(EntityLinkerTest, NoLink) {
   NestedBuildNamespace LUNamespace(
@@ -115,141 +227,104 @@ TEST_F(EntityLinkerTest, NonEmptyLink) {
 
   auto TU = createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU");
 
-  const auto EIdA = addEntity(*TU, "A", EntityLinkage::LinkageType::None);
-  const auto ESIdAS1 = addSummaryData(*TU, EIdA, "S1");
-  const auto ESIdAS2 = addSummaryData(*TU, EIdA, "S2");
+  const auto TU_A_Id = addEntity(*TU, "A", EntityLinkage::LinkageType::None);
+  const auto TU_A_S1_Data = addSummaryData(*TU, TU_A_Id, "S1");
+  const auto TU_A_S2_Data = addSummaryData(*TU, TU_A_Id, "S2");
 
-  const auto EIdB = addEntity(*TU, "B", EntityLinkage::LinkageType::Internal);
-  const auto ESIdBS1 = addSummaryData(*TU, EIdB, "S1");
-  const auto ESIdBS2 = addSummaryData(*TU, EIdB, "S2");
+  const auto TU_B_Id =
+      addEntity(*TU, "B", EntityLinkage::LinkageType::Internal);
+  const auto TU_B_S1_Data = addSummaryData(*TU, TU_B_Id, "S1");
+  const auto TU_B_S2_Data = addSummaryData(*TU, TU_B_Id, "S2");
 
-  const auto EIdC = addEntity(*TU, "C", EntityLinkage::LinkageType::External);
-  const auto ESIdCS1 = addSummaryData(*TU, EIdC, "S1");
+  const auto TU_C_Id =
+      addEntity(*TU, "C", EntityLinkage::LinkageType::External);
+  const auto TU_C_S1_Data = addSummaryData(*TU, TU_C_Id, "S1");
 
-  const auto EIdD = addEntity(*TU, "D", EntityLinkage::LinkageType::External);
-  const auto ESIdDS2 = addSummaryData(*TU, EIdD, "S2");
+  const auto TU_D_Id =
+      addEntity(*TU, "D", EntityLinkage::LinkageType::External);
+  const auto TU_D_S2_Data = addSummaryData(*TU, TU_D_Id, "S2");
 
   const BuildNamespace TUNamespace = getTUNamespace(*TU);
 
-  EXPECT_THAT_ERROR(Linker.link(std::move(TU)), llvm::Succeeded());
+  ASSERT_THAT_ERROR(Linker.link(std::move(TU)), llvm::Succeeded());
 
   const auto &Output = Linker.getOutput();
   const auto &IdTable = getIdTable(Output);
+  const auto &Entities = getEntities(IdTable);
   const auto &LinkageTable = getLinkageTable(Output);
   const auto &Data = getData(Output);
 
-  // Construct the nested namespace with TU inside LU
-  std::vector<BuildNamespace> NamespaceVec;
-  NamespaceVec.push_back(TUNamespace);
-  for (const auto &NS : getNamespaces(LUNamespace)) {
-    NamespaceVec.push_back(NS);
-  }
-  NestedBuildNamespace LocalNamespace(NamespaceVec);
+  NestedBuildNamespace LocalNamespace =
+      NestedBuildNamespace(TUNamespace).makeQualified(LUNamespace);
 
-  EntityName NameA("A", "", LocalNamespace);
-  EntityName NameB("B", "", LocalNamespace);
-  EntityName NameC("C", "", LUNamespace);
-  EntityName NameD("D", "", LUNamespace);
+  EntityName LU_A_Name("A", "", LocalNamespace);
+  EntityName LU_B_Name("B", "", LocalNamespace);
+  EntityName LU_C_Name("C", "", LUNamespace);
+  EntityName LU_D_Name("D", "", LUNamespace);
 
-  // EntityIDTable Tests.
+  // EntityIdTable Tests.
   {
-    const auto &Entities = getEntities(IdTable);
-
-    EXPECT_EQ(IdTable.count(), 4u);
-
-    EXPECT_TRUE(IdTable.contains(NameA));
-    EXPECT_EQ(Entities.at(NameA), EIdA);
-
-    EXPECT_TRUE(IdTable.contains(NameB));
-    EXPECT_EQ(Entities.at(NameB), EIdB);
-
-    EXPECT_TRUE(IdTable.contains(NameC));
-    EXPECT_EQ(Entities.at(NameC), EIdC);
-
-    EXPECT_TRUE(IdTable.contains(NameD));
-    EXPECT_EQ(Entities.at(NameD), EIdD);
+    ASSERT_THAT(IdTable, IdTableHasSize(4u));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_A_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_B_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_C_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_D_Name));
   }
+
+  // This is safe since we confirmed that these entities are present in the
+  // block above.
+  const auto LU_A_Id = Entities.at(LU_A_Name);
+  const auto LU_B_Id = Entities.at(LU_B_Name);
+  const auto LU_C_Id = Entities.at(LU_C_Name);
+  const auto LU_D_Id = Entities.at(LU_D_Name);
 
   // LinkageTable Tests.
   {
-    EXPECT_EQ(LinkageTable.size(), 4u);
-
-    ASSERT_NE(LinkageTable.find(EIdA), LinkageTable.end());
-    EXPECT_EQ(getLinkage(LinkageTable.at(EIdA)),
-              EntityLinkage::LinkageType::None);
-
-    ASSERT_NE(LinkageTable.find(EIdB), LinkageTable.end());
-    EXPECT_EQ(LinkageTable.at(EIdB).getLinkage(),
-              EntityLinkage::LinkageType::Internal);
-
-    ASSERT_NE(LinkageTable.find(EIdC), LinkageTable.end());
-    EXPECT_EQ(LinkageTable.at(EIdC).getLinkage(),
-              EntityLinkage::LinkageType::External);
-
-    ASSERT_NE(LinkageTable.find(EIdD), LinkageTable.end());
-    EXPECT_EQ(LinkageTable.at(EIdD).getLinkage(),
-              EntityLinkage::LinkageType::External);
+    ASSERT_THAT(LinkageTable, LinkageTableHasSize(4u));
+    ASSERT_THAT(LinkageTable,
+                EntityHasLinkage(LU_A_Id, EntityLinkage::LinkageType::None));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_B_Id, EntityLinkage::LinkageType::Internal));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_C_Id, EntityLinkage::LinkageType::External));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_D_Id, EntityLinkage::LinkageType::External));
   }
+
+  std::map<EntityId, EntityId> Resolution = {{TU_A_Id, LU_A_Id},
+                                             {TU_B_Id, LU_B_Id},
+                                             {TU_C_Id, LU_C_Id},
+                                             {TU_D_Id, LU_D_Id}};
 
   // Data Tests.
   {
-    EXPECT_EQ(Data.size(), 2u);
+    ASSERT_EQ(Data.size(), 2u);
 
-    std::map<EntityId, EntityId> ExpectedEntityResolutionMapping = {
-        {EIdA, EIdA}, {EIdB, EIdB}, {EIdC, EIdC}, {EIdD, EIdD}};
-
-    // S1 Tests.
+    // S1 Data Tests.
     {
       SummaryName S1("S1");
       ASSERT_NE(Data.find(S1), Data.end());
-
       const auto &S1Data = Data.at(S1);
-      EXPECT_EQ(S1Data.size(), 3u);
 
-      EXPECT_NE(S1Data.find(EIdA), S1Data.end());
-      auto *MockA =
-          static_cast<MockEntitySummaryEncoding *>(S1Data.at(EIdA).get());
-      EXPECT_EQ(MockA->getId(), ESIdAS1);
-      EXPECT_EQ(MockA->getPatchedIds(), ExpectedEntityResolutionMapping);
-
-      EXPECT_NE(S1Data.find(EIdB), S1Data.end());
-      auto *MockB =
-          static_cast<MockEntitySummaryEncoding *>(S1Data.at(EIdB).get());
-      EXPECT_EQ(MockB->getId(), ESIdBS1);
-      EXPECT_EQ(MockB->getPatchedIds(), ExpectedEntityResolutionMapping);
-
-      EXPECT_NE(S1Data.find(EIdC), S1Data.end());
-      auto *MockC =
-          static_cast<MockEntitySummaryEncoding *>(S1Data.at(EIdC).get());
-      EXPECT_EQ(MockC->getId(), ESIdCS1);
-      EXPECT_EQ(MockC->getPatchedIds(), ExpectedEntityResolutionMapping);
+      ASSERT_THAT(S1Data, SummaryDataHasSize(3u));
+      ASSERT_THAT(S1Data, HasSummaryData(LU_A_Id, TU_A_S1_Data, Resolution));
+      ASSERT_THAT(S1Data, HasSummaryData(LU_B_Id, TU_B_S1_Data, Resolution));
+      ASSERT_THAT(S1Data, HasSummaryData(TU_C_Id, TU_C_S1_Data, Resolution));
     }
 
-    // S2 Tests.
+    // S2 Data Tests.
     {
       SummaryName S2("S2");
       ASSERT_NE(Data.find(S2), Data.end());
-
       const auto &S2Data = Data.at(S2);
-      EXPECT_EQ(S2Data.size(), 3u);
 
-      EXPECT_NE(S2Data.find(EIdA), S2Data.end());
-      auto *MockA =
-          static_cast<MockEntitySummaryEncoding *>(S2Data.at(EIdA).get());
-      EXPECT_EQ(MockA->getId(), ESIdAS2);
-      EXPECT_EQ(MockA->getPatchedIds(), ExpectedEntityResolutionMapping);
-
-      EXPECT_NE(S2Data.find(EIdB), S2Data.end());
-      auto *MockB =
-          static_cast<MockEntitySummaryEncoding *>(S2Data.at(EIdB).get());
-      EXPECT_EQ(MockB->getId(), ESIdBS2);
-      EXPECT_EQ(MockB->getPatchedIds(), ExpectedEntityResolutionMapping);
-
-      EXPECT_NE(S2Data.find(EIdD), S2Data.end());
-      auto *MockD =
-          static_cast<MockEntitySummaryEncoding *>(S2Data.at(EIdD).get());
-      EXPECT_EQ(MockD->getId(), ESIdDS2);
-      EXPECT_EQ(MockD->getPatchedIds(), ExpectedEntityResolutionMapping);
+      ASSERT_THAT(S2Data, SummaryDataHasSize(3u));
+      ASSERT_THAT(S2Data, HasSummaryData(LU_A_Id, TU_A_S2_Data, Resolution));
+      ASSERT_THAT(S2Data, HasSummaryData(LU_B_Id, TU_B_S2_Data, Resolution));
+      ASSERT_THAT(S2Data, HasSummaryData(TU_D_Id, TU_D_S2_Data, Resolution));
     }
   }
 }
@@ -260,454 +335,328 @@ TEST_F(EntityLinkerTest, TwoTULinkWithAllCombinations) {
 
   EntityLinker Linker(LUNamespace);
 
-  // Create TU1 with entities covering all linkage types and summary
-  // distributions
   auto TU1 =
       createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU1");
 
   // None linkage entities in TU1
-  const auto EIdTU1_X_None =
-      addEntity(*TU1, "X", EntityLinkage::LinkageType::None);
-  const auto ESIdTU1_X_S1 = addSummaryData(*TU1, EIdTU1_X_None, "S1");
+  const auto TU1_X_Id = addEntity(*TU1, "X", EntityLinkage::LinkageType::None);
+  const auto TU1_X_S1_Data = addSummaryData(*TU1, TU1_X_Id, "S1");
 
-  const auto EIdTU1_Y_None =
-      addEntity(*TU1, "Y", EntityLinkage::LinkageType::None);
-  const auto ESIdTU1_Y_S2 = addSummaryData(*TU1, EIdTU1_Y_None, "S2");
+  const auto TU1_Y_Id = addEntity(*TU1, "Y", EntityLinkage::LinkageType::None);
+  const auto TU1_Y_S2_Data = addSummaryData(*TU1, TU1_Y_Id, "S2");
 
-  const auto EIdTU1_Z_None =
-      addEntity(*TU1, "Z", EntityLinkage::LinkageType::None);
-  const auto ESIdTU1_Z_S1 = addSummaryData(*TU1, EIdTU1_Z_None, "S1");
-  const auto ESIdTU1_Z_S2 = addSummaryData(*TU1, EIdTU1_Z_None, "S2");
+  const auto TU1_Z_Id = addEntity(*TU1, "Z", EntityLinkage::LinkageType::None);
+  const auto TU1_Z_S1_Data = addSummaryData(*TU1, TU1_Z_Id, "S1");
+  const auto TU1_Z_S2_Data = addSummaryData(*TU1, TU1_Z_Id, "S2");
 
   // Internal linkage entities in TU1
-  const auto EIdTU1_A_Internal =
+  const auto TU1_A_Id =
       addEntity(*TU1, "A", EntityLinkage::LinkageType::Internal);
-  const auto ESIdTU1_A_S1 = addSummaryData(*TU1, EIdTU1_A_Internal, "S1");
+  const auto TU1_A_S1_Data = addSummaryData(*TU1, TU1_A_Id, "S1");
 
-  const auto EIdTU1_B_Internal =
+  const auto TU1_B_Id =
       addEntity(*TU1, "B", EntityLinkage::LinkageType::Internal);
-  const auto ESIdTU1_B_S2 = addSummaryData(*TU1, EIdTU1_B_Internal, "S2");
+  const auto TU1_B_S2_Data = addSummaryData(*TU1, TU1_B_Id, "S2");
 
-  const auto EIdTU1_C_Internal =
+  const auto TU1_C_Id =
       addEntity(*TU1, "C", EntityLinkage::LinkageType::Internal);
-  const auto ESIdTU1_C_S1 = addSummaryData(*TU1, EIdTU1_C_Internal, "S1");
-  const auto ESIdTU1_C_S2 = addSummaryData(*TU1, EIdTU1_C_Internal, "S2");
+  const auto TU1_C_S1_Data = addSummaryData(*TU1, TU1_C_Id, "S1");
+  const auto TU1_C_S2_Data = addSummaryData(*TU1, TU1_C_Id, "S2");
 
   // External linkage entities in TU1
-  const auto EIdTU1_P_External =
+  const auto TU1_P_Id =
       addEntity(*TU1, "P", EntityLinkage::LinkageType::External);
-  const auto ESIdTU1_P_S1 = addSummaryData(*TU1, EIdTU1_P_External, "S1");
+  const auto TU1_P_S1_Data = addSummaryData(*TU1, TU1_P_Id, "S1");
 
-  const auto EIdTU1_Q_External =
+  const auto TU1_Q_Id =
       addEntity(*TU1, "Q", EntityLinkage::LinkageType::External);
-  const auto ESIdTU1_Q_S2 = addSummaryData(*TU1, EIdTU1_Q_External, "S2");
+  const auto TU1_Q_S2_Data = addSummaryData(*TU1, TU1_Q_Id, "S2");
 
-  const auto EIdTU1_R_External =
+  const auto TU1_R_Id =
       addEntity(*TU1, "R", EntityLinkage::LinkageType::External);
-  const auto ESIdTU1_R_S1 = addSummaryData(*TU1, EIdTU1_R_External, "S1");
-  const auto ESIdTU1_R_S2 = addSummaryData(*TU1, EIdTU1_R_External, "S2");
+  const auto TU1_R_S1_Data = addSummaryData(*TU1, TU1_R_Id, "S1");
+  const auto TU1_R_S2_Data = addSummaryData(*TU1, TU1_R_Id, "S2");
 
   const BuildNamespace TU1Namespace = getTUNamespace(*TU1);
 
-  // Link TU1
-  EXPECT_THAT_ERROR(Linker.link(std::move(TU1)), llvm::Succeeded());
+  ASSERT_THAT_ERROR(Linker.link(std::move(TU1)), llvm::Succeeded());
 
-  // Create TU2 with entities covering all combinations including duplicates
   auto TU2 =
       createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU2");
 
-  // None linkage entities in TU2 - includes duplicates and unique
-  const auto EIdTU2_X_None =
-      addEntity(*TU2, "X", EntityLinkage::LinkageType::None);
-  const auto ESIdTU2_X_S2 = addSummaryData(*TU2, EIdTU2_X_None, "S2");
+  // None linkage entities in TU2 - includes duplicates and uniques
+  const auto TU2_X_Id = addEntity(*TU2, "X", EntityLinkage::LinkageType::None);
+  const auto TU2_X_S2_Data = addSummaryData(*TU2, TU2_X_Id, "S2");
 
-  const auto EIdTU2_Y_None =
-      addEntity(*TU2, "Y", EntityLinkage::LinkageType::None);
-  const auto ESIdTU2_Y_S1 = addSummaryData(*TU2, EIdTU2_Y_None, "S1");
+  const auto TU2_Y_Id = addEntity(*TU2, "Y", EntityLinkage::LinkageType::None);
+  const auto TU2_Y_S1_Data = addSummaryData(*TU2, TU2_Y_Id, "S1");
 
-  const auto EIdTU2_W_None =
-      addEntity(*TU2, "W", EntityLinkage::LinkageType::None);
-  const auto ESIdTU2_W_S1 = addSummaryData(*TU2, EIdTU2_W_None, "S1");
-  const auto ESIdTU2_W_S2 = addSummaryData(*TU2, EIdTU2_W_None, "S2");
+  const auto TU2_W_Id = addEntity(*TU2, "W", EntityLinkage::LinkageType::None);
+  const auto TU2_W_S1_Data = addSummaryData(*TU2, TU2_W_Id, "S1");
+  const auto TU2_W_S2_Data = addSummaryData(*TU2, TU2_W_Id, "S2");
 
   // Internal linkage entities in TU2 - includes duplicates and unique
-  const auto EIdTU2_A_Internal =
+  const auto TU2_A_Id =
       addEntity(*TU2, "A", EntityLinkage::LinkageType::Internal);
-  const auto ESIdTU2_A_S2 = addSummaryData(*TU2, EIdTU2_A_Internal, "S2");
+  const auto TU2_A_S2_Data = addSummaryData(*TU2, TU2_A_Id, "S2");
 
-  const auto EIdTU2_B_Internal =
+  const auto TU2_B_Id =
       addEntity(*TU2, "B", EntityLinkage::LinkageType::Internal);
-  const auto ESIdTU2_B_S1 = addSummaryData(*TU2, EIdTU2_B_Internal, "S1");
+  const auto TU2_B_S1_Data = addSummaryData(*TU2, TU2_B_Id, "S1");
 
-  const auto EIdTU2_D_Internal =
+  const auto TU2_D_Id =
       addEntity(*TU2, "D", EntityLinkage::LinkageType::Internal);
-  const auto ESIdTU2_D_S1 = addSummaryData(*TU2, EIdTU2_D_Internal, "S1");
-  const auto ESIdTU2_D_S2 = addSummaryData(*TU2, EIdTU2_D_Internal, "S2");
+  const auto TU2_D_S1_Data = addSummaryData(*TU2, TU2_D_Id, "S1");
+  const auto TU2_D_S2_Data = addSummaryData(*TU2, TU2_D_Id, "S2");
 
   // External linkage entities in TU2 - includes duplicates (will be dropped)
-  // and unique
-  const auto EIdTU2_P_External =
+  // and uniques
+  const auto TU2_P_Id =
       addEntity(*TU2, "P", EntityLinkage::LinkageType::External);
-  const auto ESIdTU2_P_S2 = addSummaryData(*TU2, EIdTU2_P_External, "S2");
+  const auto TU2_P_S2_Data = addSummaryData(*TU2, TU2_P_Id, "S2");
 
-  const auto EIdTU2_Q_External =
+  const auto TU2_Q_Id =
       addEntity(*TU2, "Q", EntityLinkage::LinkageType::External);
-  const auto ESIdTU2_Q_S1 = addSummaryData(*TU2, EIdTU2_Q_External, "S1");
+  const auto TU2_Q_S1_Data = addSummaryData(*TU2, TU2_Q_Id, "S1");
 
-  const auto EIdTU2_S_External =
+  const auto TU2_S_Id =
       addEntity(*TU2, "S", EntityLinkage::LinkageType::External);
-  const auto ESIdTU2_S_S1 = addSummaryData(*TU2, EIdTU2_S_External, "S1");
-  const auto ESIdTU2_S_S2 = addSummaryData(*TU2, EIdTU2_S_External, "S2");
+  const auto TU2_S_S1_Data = addSummaryData(*TU2, TU2_S_Id, "S1");
+  const auto TU2_S_S2_Data = addSummaryData(*TU2, TU2_S_Id, "S2");
 
   const BuildNamespace TU2Namespace = getTUNamespace(*TU2);
 
-  // Link TU2
-  EXPECT_THAT_ERROR(Linker.link(std::move(TU2)), llvm::Succeeded());
+  ASSERT_THAT_ERROR(Linker.link(std::move(TU2)), llvm::Succeeded());
 
-  // Verify the output
   const auto &Output = Linker.getOutput();
   const auto &IdTable = getIdTable(Output);
+  const auto &Entities = getEntities(IdTable);
   const auto &LinkageTable = getLinkageTable(Output);
   const auto &Data = getData(Output);
 
-  // Construct the nested namespaces
-  std::vector<BuildNamespace> TU1NamespaceVec;
-  TU1NamespaceVec.push_back(TU1Namespace);
-  for (const auto &NS : getNamespaces(LUNamespace)) {
-    TU1NamespaceVec.push_back(NS);
-  }
-  NestedBuildNamespace TU1LocalNamespace(TU1NamespaceVec);
+  NestedBuildNamespace TU1LocalNamespace =
+      NestedBuildNamespace(TU1Namespace).makeQualified(LUNamespace);
 
-  std::vector<BuildNamespace> TU2NamespaceVec;
-  TU2NamespaceVec.push_back(TU2Namespace);
-  for (const auto &NS : getNamespaces(LUNamespace)) {
-    TU2NamespaceVec.push_back(NS);
-  }
-  NestedBuildNamespace TU2LocalNamespace(TU2NamespaceVec);
+  NestedBuildNamespace TU2LocalNamespace =
+      NestedBuildNamespace(TU2Namespace).makeQualified(LUNamespace);
 
-  // Create expected entity names
   // None linkage entities use local namespace (TU scoped)
-  EntityName NameTU1_X_None("X", "", TU1LocalNamespace);
-  EntityName NameTU1_Y_None("Y", "", TU1LocalNamespace);
-  EntityName NameTU1_Z_None("Z", "", TU1LocalNamespace);
-  EntityName NameTU2_X_None("X", "", TU2LocalNamespace);
-  EntityName NameTU2_Y_None("Y", "", TU2LocalNamespace);
-  EntityName NameTU2_W_None("W", "", TU2LocalNamespace);
+  EntityName LU_TU1_X_Name("X", "", TU1LocalNamespace);
+  EntityName LU_TU1_Y_Name("Y", "", TU1LocalNamespace);
+  EntityName LU_TU1_Z_Name("Z", "", TU1LocalNamespace);
+  EntityName LU_TU2_X_Name("X", "", TU2LocalNamespace);
+  EntityName LU_TU2_Y_Name("Y", "", TU2LocalNamespace);
+  EntityName LU_TU2_W_Name("W", "", TU2LocalNamespace);
 
   // Internal linkage entities use local namespace (TU scoped)
-  EntityName NameTU1_A_Internal("A", "", TU1LocalNamespace);
-  EntityName NameTU1_B_Internal("B", "", TU1LocalNamespace);
-  EntityName NameTU1_C_Internal("C", "", TU1LocalNamespace);
-  EntityName NameTU2_A_Internal("A", "", TU2LocalNamespace);
-  EntityName NameTU2_B_Internal("B", "", TU2LocalNamespace);
-  EntityName NameTU2_D_Internal("D", "", TU2LocalNamespace);
+  EntityName LU_TU1_A_Name("A", "", TU1LocalNamespace);
+  EntityName LU_TU1_B_Name("B", "", TU1LocalNamespace);
+  EntityName LU_TU1_C_Name("C", "", TU1LocalNamespace);
+  EntityName LU_TU2_A_Name("A", "", TU2LocalNamespace);
+  EntityName LU_TU2_B_Name("B", "", TU2LocalNamespace);
+  EntityName LU_TU2_D_Name("D", "", TU2LocalNamespace);
 
   // External linkage entities use LU namespace (shared across TUs)
-  EntityName NameP_External("P", "", LUNamespace);
-  EntityName NameQ_External("Q", "", LUNamespace);
-  EntityName NameR_External("R", "", LUNamespace);
-  EntityName NameS_External("S", "", LUNamespace);
+  EntityName LU_P_Name("P", "", LUNamespace);
+  EntityName LU_Q_Name("Q", "", LUNamespace);
+  EntityName LU_R_Name("R", "", LUNamespace);
+  EntityName LU_S_Name("S", "", LUNamespace);
 
-  // EntityIdTable Tests
+  // EntityIdTable Tests.
   {
-    const auto &Entities = getEntities(IdTable);
-
     // Should have 6 None + 6 Internal + 4 External = 16 entities total
-    EXPECT_EQ(IdTable.count(), 16u);
+    ASSERT_THAT(IdTable, IdTableHasSize(16u));
 
-    // TU1 None linkage entities
-    EXPECT_TRUE(IdTable.contains(NameTU1_X_None));
-    ASSERT_EQ(Entities.at(NameTU1_X_None), EIdTU1_X_None);
+    ASSERT_THAT(IdTable, ContainsEntity(LU_TU1_X_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_TU1_Y_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_TU1_Z_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_TU2_X_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_TU2_Y_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_TU2_W_Name));
 
-    EXPECT_TRUE(IdTable.contains(NameTU1_Y_None));
-    EXPECT_EQ(Entities.at(NameTU1_Y_None), EIdTU1_Y_None);
+    ASSERT_THAT(IdTable, ContainsEntity(LU_TU1_A_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_TU1_B_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_TU1_C_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_TU2_A_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_TU2_B_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_TU2_D_Name));
 
-    EXPECT_TRUE(IdTable.contains(NameTU1_Z_None));
-    EXPECT_EQ(Entities.at(NameTU1_Z_None), EIdTU1_Z_None);
-
-    // TU2 None linkage entities (different from TU1 due to namespace)
-    EXPECT_TRUE(IdTable.contains(NameTU2_X_None));
-    EXPECT_EQ(Entities.at(NameTU2_X_None), EIdTU2_X_None);
-
-    EXPECT_TRUE(IdTable.contains(NameTU2_Y_None));
-    EXPECT_EQ(Entities.at(NameTU2_Y_None), EIdTU2_Y_None);
-
-    EXPECT_TRUE(IdTable.contains(NameTU2_W_None));
-    EXPECT_EQ(Entities.at(NameTU2_W_None), EIdTU2_W_None);
-
-    // TU1 Internal linkage entities
-    EXPECT_TRUE(IdTable.contains(NameTU1_A_Internal));
-    EXPECT_EQ(Entities.at(NameTU1_A_Internal), EIdTU1_A_Internal);
-
-    EXPECT_TRUE(IdTable.contains(NameTU1_B_Internal));
-    EXPECT_EQ(Entities.at(NameTU1_B_Internal), EIdTU1_B_Internal);
-
-    EXPECT_TRUE(IdTable.contains(NameTU1_C_Internal));
-    EXPECT_EQ(Entities.at(NameTU1_C_Internal), EIdTU1_C_Internal);
-
-    // TU2 Internal linkage entities (different from TU1 due to namespace)
-    EXPECT_TRUE(IdTable.contains(NameTU2_A_Internal));
-    EXPECT_EQ(Entities.at(NameTU2_A_Internal), EIdTU2_A_Internal);
-
-    EXPECT_TRUE(IdTable.contains(NameTU2_B_Internal));
-    EXPECT_EQ(Entities.at(NameTU2_B_Internal), EIdTU2_B_Internal);
-
-    EXPECT_TRUE(IdTable.contains(NameTU2_D_Internal));
-    EXPECT_EQ(Entities.at(NameTU2_D_Internal), EIdTU2_D_Internal);
-
-    // External linkage entities (shared across TUs)
-    EXPECT_TRUE(IdTable.contains(NameP_External));
-    EXPECT_EQ(Entities.at(NameP_External), EIdTU1_P_External);
-
-    EXPECT_TRUE(IdTable.contains(NameQ_External));
-    EXPECT_EQ(Entities.at(NameQ_External), EIdTU1_Q_External);
-
-    EXPECT_TRUE(IdTable.contains(NameR_External));
-    EXPECT_EQ(Entities.at(NameR_External), EIdTU1_R_External);
-
-    EXPECT_TRUE(IdTable.contains(NameS_External));
-    EXPECT_EQ(Entities.at(NameS_External), EIdTU2_S_External);
+    ASSERT_THAT(IdTable, ContainsEntity(LU_P_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_Q_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_R_Name));
+    ASSERT_THAT(IdTable, ContainsEntity(LU_S_Name));
   }
 
-  // LinkageTable Tests
+  // This is safe since we confirmed that these entities are present in the
+  // block above.
+  const auto LU_TU1_X_Id = Entities.at(LU_TU1_X_Name);
+  const auto LU_TU1_Y_Id = Entities.at(LU_TU1_Y_Name);
+  const auto LU_TU1_Z_Id = Entities.at(LU_TU1_Z_Name);
+  const auto LU_TU2_X_Id = Entities.at(LU_TU2_X_Name);
+  const auto LU_TU2_Y_Id = Entities.at(LU_TU2_Y_Name);
+  const auto LU_TU2_W_Id = Entities.at(LU_TU2_W_Name);
+  const auto LU_TU1_A_Id = Entities.at(LU_TU1_A_Name);
+  const auto LU_TU1_B_Id = Entities.at(LU_TU1_B_Name);
+  const auto LU_TU1_C_Id = Entities.at(LU_TU1_C_Name);
+  const auto LU_TU2_A_Id = Entities.at(LU_TU2_A_Name);
+  const auto LU_TU2_B_Id = Entities.at(LU_TU2_B_Name);
+  const auto LU_TU2_D_Id = Entities.at(LU_TU2_D_Name);
+  const auto LU_P_Id = Entities.at(LU_P_Name);
+  const auto LU_Q_Id = Entities.at(LU_Q_Name);
+  const auto LU_R_Id = Entities.at(LU_R_Name);
+  const auto LU_S_Id = Entities.at(LU_S_Name);
+
+  // LinkageTable Tests.
   {
-    EXPECT_EQ(LinkageTable.size(), 16u);
+    ASSERT_THAT(LinkageTable, LinkageTableHasSize(16u));
 
-    // Verify None linkage entities
-    EXPECT_EQ(LinkageTable.at(EIdTU1_X_None).getLinkage(),
-              EntityLinkage::LinkageType::None);
-    EXPECT_EQ(LinkageTable.at(EIdTU1_Y_None).getLinkage(),
-              EntityLinkage::LinkageType::None);
-    EXPECT_EQ(LinkageTable.at(EIdTU1_Z_None).getLinkage(),
-              EntityLinkage::LinkageType::None);
-    EXPECT_EQ(LinkageTable.at(EIdTU2_X_None).getLinkage(),
-              EntityLinkage::LinkageType::None);
-    EXPECT_EQ(LinkageTable.at(EIdTU2_Y_None).getLinkage(),
-              EntityLinkage::LinkageType::None);
-    EXPECT_EQ(LinkageTable.at(EIdTU2_W_None).getLinkage(),
-              EntityLinkage::LinkageType::None);
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_TU1_X_Id, EntityLinkage::LinkageType::None));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_TU1_Y_Id, EntityLinkage::LinkageType::None));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_TU1_Z_Id, EntityLinkage::LinkageType::None));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_TU2_X_Id, EntityLinkage::LinkageType::None));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_TU2_Y_Id, EntityLinkage::LinkageType::None));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_TU2_W_Id, EntityLinkage::LinkageType::None));
 
-    // Verify Internal linkage entities
-    EXPECT_EQ(LinkageTable.at(EIdTU1_A_Internal).getLinkage(),
-              EntityLinkage::LinkageType::Internal);
-    EXPECT_EQ(LinkageTable.at(EIdTU1_B_Internal).getLinkage(),
-              EntityLinkage::LinkageType::Internal);
-    EXPECT_EQ(LinkageTable.at(EIdTU1_C_Internal).getLinkage(),
-              EntityLinkage::LinkageType::Internal);
-    EXPECT_EQ(LinkageTable.at(EIdTU2_A_Internal).getLinkage(),
-              EntityLinkage::LinkageType::Internal);
-    EXPECT_EQ(LinkageTable.at(EIdTU2_B_Internal).getLinkage(),
-              EntityLinkage::LinkageType::Internal);
-    EXPECT_EQ(LinkageTable.at(EIdTU2_D_Internal).getLinkage(),
-              EntityLinkage::LinkageType::Internal);
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_TU1_A_Id, EntityLinkage::LinkageType::Internal));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_TU1_B_Id, EntityLinkage::LinkageType::Internal));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_TU1_C_Id, EntityLinkage::LinkageType::Internal));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_TU2_A_Id, EntityLinkage::LinkageType::Internal));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_TU2_B_Id, EntityLinkage::LinkageType::Internal));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_TU2_D_Id, EntityLinkage::LinkageType::Internal));
 
-    // Verify External linkage entities
-    EXPECT_EQ(LinkageTable.at(EIdTU1_P_External).getLinkage(),
-              EntityLinkage::LinkageType::External);
-    EXPECT_EQ(LinkageTable.at(EIdTU1_Q_External).getLinkage(),
-              EntityLinkage::LinkageType::External);
-    EXPECT_EQ(LinkageTable.at(EIdTU1_R_External).getLinkage(),
-              EntityLinkage::LinkageType::External);
-    EXPECT_EQ(LinkageTable.at(EIdTU2_S_External).getLinkage(),
-              EntityLinkage::LinkageType::External);
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_P_Id, EntityLinkage::LinkageType::External));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_Q_Id, EntityLinkage::LinkageType::External));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_R_Id, EntityLinkage::LinkageType::External));
+    ASSERT_THAT(
+        LinkageTable,
+        EntityHasLinkage(LU_S_Id, EntityLinkage::LinkageType::External));
   }
 
-  // Data Tests
+  // Data Tests.
   {
-    EXPECT_EQ(Data.size(), 2u);
+    ASSERT_EQ(Data.size(), 2u);
 
-    // Build entity resolution mappings for each TU
-    std::map<EntityId, EntityId> TU1EntityResolutionMapping = {
-        {EIdTU1_X_None, EIdTU1_X_None},
-        {EIdTU1_Y_None, EIdTU1_Y_None},
-        {EIdTU1_Z_None, EIdTU1_Z_None},
-        {EIdTU1_A_Internal, EIdTU1_A_Internal},
-        {EIdTU1_B_Internal, EIdTU1_B_Internal},
-        {EIdTU1_C_Internal, EIdTU1_C_Internal},
-        {EIdTU1_P_External, EIdTU1_P_External},
-        {EIdTU1_Q_External, EIdTU1_Q_External},
-        {EIdTU1_R_External, EIdTU1_R_External}};
+    // Build entity resolution mappings for each TU.
+    std::map<EntityId, EntityId> TU1Resolution = {
+        {TU1_X_Id, LU_TU1_X_Id}, {TU1_Y_Id, LU_TU1_Y_Id},
+        {TU1_Z_Id, LU_TU1_Z_Id}, {TU1_A_Id, LU_TU1_A_Id},
+        {TU1_B_Id, LU_TU1_B_Id}, {TU1_C_Id, LU_TU1_C_Id},
+        {TU1_P_Id, LU_P_Id},     {TU1_Q_Id, LU_Q_Id},
+        {TU1_R_Id, LU_R_Id}};
 
-    std::map<EntityId, EntityId> TU2EntityResolutionMapping = {
-        {EIdTU2_X_None, EIdTU2_X_None},
-        {EIdTU2_Y_None, EIdTU2_Y_None},
-        {EIdTU2_W_None, EIdTU2_W_None},
-        {EIdTU2_A_Internal, EIdTU2_A_Internal},
-        {EIdTU2_B_Internal, EIdTU2_B_Internal},
-        {EIdTU2_D_Internal, EIdTU2_D_Internal},
-        // External linkage entities from TU2 resolve to TU1's IDs if duplicate
-        {EIdTU2_P_External, EIdTU1_P_External},
-        {EIdTU2_Q_External, EIdTU1_Q_External},
-        {EIdTU2_S_External, EIdTU2_S_External}};
+    std::map<EntityId, EntityId> TU2Resolution = {
+        {TU2_X_Id, LU_TU2_X_Id}, {TU2_Y_Id, LU_TU2_Y_Id},
+        {TU2_W_Id, LU_TU2_W_Id}, {TU2_A_Id, LU_TU2_A_Id},
+        {TU2_B_Id, LU_TU2_B_Id}, {TU2_D_Id, LU_TU2_D_Id},
+        {TU2_P_Id, LU_P_Id},     {TU2_Q_Id, LU_Q_Id},
+        {TU2_S_Id, LU_S_Id}};
 
-    // S1 Tests
+    // S1 Data Tests.
     {
       SummaryName S1("S1");
       ASSERT_NE(Data.find(S1), Data.end());
-
       const auto &S1Data = Data.at(S1);
-      // S1 should contain: TU1(X,Z,A,C,P,R) + TU2(Y,W,B,D,S) = 11 entities
-      // Note: TU2's P and Q external entities are dropped because TU1 already
-      // has them
-      EXPECT_EQ(S1Data.size(), 11u);
 
-      // Verify TU1 entities in S1
-      EXPECT_NE(S1Data.find(EIdTU1_X_None), S1Data.end());
-      auto *MockTU1_X = static_cast<MockEntitySummaryEncoding *>(
-          S1Data.at(EIdTU1_X_None).get());
-      EXPECT_EQ(MockTU1_X->getId(), ESIdTU1_X_S1);
-      EXPECT_EQ(MockTU1_X->getPatchedIds(), TU1EntityResolutionMapping);
+      // S1 should contain: TU1(X,Z,A,C,P,R) + TU2(Y,W,B,D,Q,S) = 12 entities.
+      ASSERT_THAT(S1Data, SummaryDataHasSize(12u));
 
-      EXPECT_NE(S1Data.find(EIdTU1_Z_None), S1Data.end());
-      auto *MockTU1_Z = static_cast<MockEntitySummaryEncoding *>(
-          S1Data.at(EIdTU1_Z_None).get());
-      EXPECT_EQ(MockTU1_Z->getId(), ESIdTU1_Z_S1);
-      EXPECT_EQ(MockTU1_Z->getPatchedIds(), TU1EntityResolutionMapping);
+      // TU1 entities in S1.
+      ASSERT_THAT(S1Data,
+                  HasSummaryData(LU_TU1_X_Id, TU1_X_S1_Data, TU1Resolution));
+      ASSERT_THAT(S1Data,
+                  HasSummaryData(LU_TU1_Z_Id, TU1_Z_S1_Data, TU1Resolution));
+      ASSERT_THAT(S1Data,
+                  HasSummaryData(LU_TU1_A_Id, TU1_A_S1_Data, TU1Resolution));
+      ASSERT_THAT(S1Data,
+                  HasSummaryData(LU_TU1_C_Id, TU1_C_S1_Data, TU1Resolution));
+      ASSERT_THAT(S1Data,
+                  HasSummaryData(LU_P_Id, TU1_P_S1_Data, TU1Resolution));
+      ASSERT_THAT(S1Data,
+                  HasSummaryData(LU_R_Id, TU1_R_S1_Data, TU1Resolution));
 
-      EXPECT_NE(S1Data.find(EIdTU1_A_Internal), S1Data.end());
-      auto *MockTU1_A = static_cast<MockEntitySummaryEncoding *>(
-          S1Data.at(EIdTU1_A_Internal).get());
-      EXPECT_EQ(MockTU1_A->getId(), ESIdTU1_A_S1);
-      EXPECT_EQ(MockTU1_A->getPatchedIds(), TU1EntityResolutionMapping);
-
-      EXPECT_NE(S1Data.find(EIdTU1_C_Internal), S1Data.end());
-      auto *MockTU1_C = static_cast<MockEntitySummaryEncoding *>(
-          S1Data.at(EIdTU1_C_Internal).get());
-      EXPECT_EQ(MockTU1_C->getId(), ESIdTU1_C_S1);
-      EXPECT_EQ(MockTU1_C->getPatchedIds(), TU1EntityResolutionMapping);
-
-      EXPECT_NE(S1Data.find(EIdTU1_P_External), S1Data.end());
-      auto *MockTU1_P = static_cast<MockEntitySummaryEncoding *>(
-          S1Data.at(EIdTU1_P_External).get());
-      EXPECT_EQ(MockTU1_P->getId(), ESIdTU1_P_S1);
-      EXPECT_EQ(MockTU1_P->getPatchedIds(), TU1EntityResolutionMapping);
-
-      EXPECT_NE(S1Data.find(EIdTU1_R_External), S1Data.end());
-      auto *MockTU1_R = static_cast<MockEntitySummaryEncoding *>(
-          S1Data.at(EIdTU1_R_External).get());
-      EXPECT_EQ(MockTU1_R->getId(), ESIdTU1_R_S1);
-      EXPECT_EQ(MockTU1_R->getPatchedIds(), TU1EntityResolutionMapping);
-
-      // Verify TU2 entities in S1
-      EXPECT_NE(S1Data.find(EIdTU2_Y_None), S1Data.end());
-      auto *MockTU2_Y = static_cast<MockEntitySummaryEncoding *>(
-          S1Data.at(EIdTU2_Y_None).get());
-      EXPECT_EQ(MockTU2_Y->getId(), ESIdTU2_Y_S1);
-      EXPECT_EQ(MockTU2_Y->getPatchedIds(), TU2EntityResolutionMapping);
-
-      EXPECT_NE(S1Data.find(EIdTU2_W_None), S1Data.end());
-      auto *MockTU2_W = static_cast<MockEntitySummaryEncoding *>(
-          S1Data.at(EIdTU2_W_None).get());
-      EXPECT_EQ(MockTU2_W->getId(), ESIdTU2_W_S1);
-      EXPECT_EQ(MockTU2_W->getPatchedIds(), TU2EntityResolutionMapping);
-
-      EXPECT_NE(S1Data.find(EIdTU2_B_Internal), S1Data.end());
-      auto *MockTU2_B = static_cast<MockEntitySummaryEncoding *>(
-          S1Data.at(EIdTU2_B_Internal).get());
-      EXPECT_EQ(MockTU2_B->getId(), ESIdTU2_B_S1);
-      EXPECT_EQ(MockTU2_B->getPatchedIds(), TU2EntityResolutionMapping);
-
-      EXPECT_NE(S1Data.find(EIdTU2_D_Internal), S1Data.end());
-      auto *MockTU2_D = static_cast<MockEntitySummaryEncoding *>(
-          S1Data.at(EIdTU2_D_Internal).get());
-      EXPECT_EQ(MockTU2_D->getId(), ESIdTU2_D_S1);
-      EXPECT_EQ(MockTU2_D->getPatchedIds(), TU2EntityResolutionMapping);
-
-      EXPECT_NE(S1Data.find(EIdTU2_S_External), S1Data.end());
-      auto *MockTU2_S = static_cast<MockEntitySummaryEncoding *>(
-          S1Data.at(EIdTU2_S_External).get());
-      EXPECT_EQ(MockTU2_S->getId(), ESIdTU2_S_S1);
-      EXPECT_EQ(MockTU2_S->getPatchedIds(), TU2EntityResolutionMapping);
-
-      // Verify TU2's duplicate external entities are NOT in S1
-      EXPECT_EQ(S1Data.find(EIdTU2_Q_External), S1Data.end());
+      // TU2 entities in S1.
+      ASSERT_THAT(S1Data,
+                  HasSummaryData(LU_TU2_Y_Id, TU2_Y_S1_Data, TU2Resolution));
+      ASSERT_THAT(S1Data,
+                  HasSummaryData(LU_TU2_W_Id, TU2_W_S1_Data, TU2Resolution));
+      ASSERT_THAT(S1Data,
+                  HasSummaryData(LU_TU2_B_Id, TU2_B_S1_Data, TU2Resolution));
+      ASSERT_THAT(S1Data,
+                  HasSummaryData(LU_TU2_D_Id, TU2_D_S1_Data, TU2Resolution));
+      ASSERT_THAT(S1Data,
+                  HasSummaryData(LU_Q_Id, TU2_Q_S1_Data, TU2Resolution));
+      ASSERT_THAT(S1Data,
+                  HasSummaryData(LU_S_Id, TU2_S_S1_Data, TU2Resolution));
     }
 
-    // S2 Tests
+    // S2 Data Tests.
     {
       SummaryName S2("S2");
       ASSERT_NE(Data.find(S2), Data.end());
-
       const auto &S2Data = Data.at(S2);
-      // S2 should contain: TU1(Y,Z,B,C,Q,R) + TU2(X,W,A,D,S) = 11 entities
-      // Note: TU2's P and Q external entities are dropped because TU1 already
-      // has them
-      EXPECT_EQ(S2Data.size(), 11u);
 
-      // Verify TU1 entities in S2
-      EXPECT_NE(S2Data.find(EIdTU1_Y_None), S2Data.end());
-      auto *MockTU1_Y = static_cast<MockEntitySummaryEncoding *>(
-          S2Data.at(EIdTU1_Y_None).get());
-      EXPECT_EQ(MockTU1_Y->getId(), ESIdTU1_Y_S2);
-      EXPECT_EQ(MockTU1_Y->getPatchedIds(), TU1EntityResolutionMapping);
+      // S2 should contain: TU1(Y,Z,B,C,Q,R) + TU2(X,W,A,D,P,S) = 12 entities.
+      ASSERT_THAT(S2Data, SummaryDataHasSize(12u));
 
-      EXPECT_NE(S2Data.find(EIdTU1_Z_None), S2Data.end());
-      auto *MockTU1_Z = static_cast<MockEntitySummaryEncoding *>(
-          S2Data.at(EIdTU1_Z_None).get());
-      EXPECT_EQ(MockTU1_Z->getId(), ESIdTU1_Z_S2);
-      EXPECT_EQ(MockTU1_Z->getPatchedIds(), TU1EntityResolutionMapping);
+      // TU1 entities in S2.
+      ASSERT_THAT(S2Data,
+                  HasSummaryData(LU_TU1_Y_Id, TU1_Y_S2_Data, TU1Resolution));
+      ASSERT_THAT(S2Data,
+                  HasSummaryData(LU_TU1_Z_Id, TU1_Z_S2_Data, TU1Resolution));
+      ASSERT_THAT(S2Data,
+                  HasSummaryData(LU_TU1_B_Id, TU1_B_S2_Data, TU1Resolution));
+      ASSERT_THAT(S2Data,
+                  HasSummaryData(LU_TU1_C_Id, TU1_C_S2_Data, TU1Resolution));
+      ASSERT_THAT(S2Data,
+                  HasSummaryData(LU_Q_Id, TU1_Q_S2_Data, TU1Resolution));
+      ASSERT_THAT(S2Data,
+                  HasSummaryData(LU_R_Id, TU1_R_S2_Data, TU1Resolution));
 
-      EXPECT_NE(S2Data.find(EIdTU1_B_Internal), S2Data.end());
-      auto *MockTU1_B = static_cast<MockEntitySummaryEncoding *>(
-          S2Data.at(EIdTU1_B_Internal).get());
-      EXPECT_EQ(MockTU1_B->getId(), ESIdTU1_B_S2);
-      EXPECT_EQ(MockTU1_B->getPatchedIds(), TU1EntityResolutionMapping);
-
-      EXPECT_NE(S2Data.find(EIdTU1_C_Internal), S2Data.end());
-      auto *MockTU1_C = static_cast<MockEntitySummaryEncoding *>(
-          S2Data.at(EIdTU1_C_Internal).get());
-      EXPECT_EQ(MockTU1_C->getId(), ESIdTU1_C_S2);
-      EXPECT_EQ(MockTU1_C->getPatchedIds(), TU1EntityResolutionMapping);
-
-      EXPECT_NE(S2Data.find(EIdTU1_Q_External), S2Data.end());
-      auto *MockTU1_Q = static_cast<MockEntitySummaryEncoding *>(
-          S2Data.at(EIdTU1_Q_External).get());
-      EXPECT_EQ(MockTU1_Q->getId(), ESIdTU1_Q_S2);
-      EXPECT_EQ(MockTU1_Q->getPatchedIds(), TU1EntityResolutionMapping);
-
-      EXPECT_NE(S2Data.find(EIdTU1_R_External), S2Data.end());
-      auto *MockTU1_R = static_cast<MockEntitySummaryEncoding *>(
-          S2Data.at(EIdTU1_R_External).get());
-      EXPECT_EQ(MockTU1_R->getId(), ESIdTU1_R_S2);
-      EXPECT_EQ(MockTU1_R->getPatchedIds(), TU1EntityResolutionMapping);
-
-      // Verify TU2 entities in S2
-      EXPECT_NE(S2Data.find(EIdTU2_X_None), S2Data.end());
-      auto *MockTU2_X = static_cast<MockEntitySummaryEncoding *>(
-          S2Data.at(EIdTU2_X_None).get());
-      EXPECT_EQ(MockTU2_X->getId(), ESIdTU2_X_S2);
-      EXPECT_EQ(MockTU2_X->getPatchedIds(), TU2EntityResolutionMapping);
-
-      EXPECT_NE(S2Data.find(EIdTU2_W_None), S2Data.end());
-      auto *MockTU2_W = static_cast<MockEntitySummaryEncoding *>(
-          S2Data.at(EIdTU2_W_None).get());
-      EXPECT_EQ(MockTU2_W->getId(), ESIdTU2_W_S2);
-      EXPECT_EQ(MockTU2_W->getPatchedIds(), TU2EntityResolutionMapping);
-
-      EXPECT_NE(S2Data.find(EIdTU2_A_Internal), S2Data.end());
-      auto *MockTU2_A = static_cast<MockEntitySummaryEncoding *>(
-          S2Data.at(EIdTU2_A_Internal).get());
-      EXPECT_EQ(MockTU2_A->getId(), ESIdTU2_A_S2);
-      EXPECT_EQ(MockTU2_A->getPatchedIds(), TU2EntityResolutionMapping);
-
-      EXPECT_NE(S2Data.find(EIdTU2_D_Internal), S2Data.end());
-      auto *MockTU2_D = static_cast<MockEntitySummaryEncoding *>(
-          S2Data.at(EIdTU2_D_Internal).get());
-      EXPECT_EQ(MockTU2_D->getId(), ESIdTU2_D_S2);
-      EXPECT_EQ(MockTU2_D->getPatchedIds(), TU2EntityResolutionMapping);
-
-      EXPECT_NE(S2Data.find(EIdTU2_S_External), S2Data.end());
-      auto *MockTU2_S = static_cast<MockEntitySummaryEncoding *>(
-          S2Data.at(EIdTU2_S_External).get());
-      EXPECT_EQ(MockTU2_S->getId(), ESIdTU2_S_S2);
-      EXPECT_EQ(MockTU2_S->getPatchedIds(), TU2EntityResolutionMapping);
-
-      // Verify TU2's duplicate external entities are NOT in S2
-      EXPECT_EQ(S2Data.find(EIdTU2_P_External), S2Data.end());
+      // TU2 entities in S2.
+      ASSERT_THAT(S2Data,
+                  HasSummaryData(LU_TU2_X_Id, TU2_X_S2_Data, TU2Resolution));
+      ASSERT_THAT(S2Data,
+                  HasSummaryData(LU_TU2_W_Id, TU2_W_S2_Data, TU2Resolution));
+      ASSERT_THAT(S2Data,
+                  HasSummaryData(LU_TU2_A_Id, TU2_A_S2_Data, TU2Resolution));
+      ASSERT_THAT(S2Data,
+                  HasSummaryData(LU_TU2_D_Id, TU2_D_S2_Data, TU2Resolution));
+      ASSERT_THAT(S2Data,
+                  HasSummaryData(LU_P_Id, TU2_P_S2_Data, TU2Resolution));
+      ASSERT_THAT(S2Data,
+                  HasSummaryData(LU_S_Id, TU2_S_S2_Data, TU2Resolution));
     }
   }
 }
 
 } // namespace
-
-} // namespace clang::ssaf

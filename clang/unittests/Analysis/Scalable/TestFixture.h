@@ -31,6 +31,7 @@ protected:
   static auto &get##FIELD_NAME(CLASS &X) { return X.FIELD_NAME; }
 #include "clang/Analysis/Scalable/Model/PrivateFieldNames.def"
 
+public:
   static void PrintTo(const EntityId &, std::ostream *);
   static void PrintTo(const SummaryName &, std::ostream *);
 };

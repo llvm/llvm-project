@@ -24,6 +24,20 @@ template <class T> static std::string asString(const T &Obj) {
 void TestFixture::PrintTo(const EntityId &E, std::ostream *OS) {
   *OS << "EntityId(" << E.Index << ")";
 }
+
 void TestFixture::PrintTo(const SummaryName &N, std::ostream *OS) {
   *OS << "SummaryName(" << N.Name << ")";
 }
+
+// Free functions for Google Test matchers
+namespace clang::ssaf {
+
+void PrintTo(const EntityId &E, std::ostream *OS) {
+  TestFixture::PrintTo(E, OS);
+}
+
+void PrintTo(const SummaryName &N, std::ostream *OS) {
+  TestFixture::PrintTo(N, OS);
+}
+
+} // namespace clang::ssaf
