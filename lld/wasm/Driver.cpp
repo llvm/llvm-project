@@ -1006,7 +1006,6 @@ static void createPostLTOSymbols() {
       ctx.sym.tlsBase->markLive();
       ctx.sym.tlsSize->markLive();
       ctx.sym.tlsAlign->markLive();
-      ctx.sym.initTLS->markLive();
       static WasmSignature contextSet1Signature{{}, {ValType::I32}};
       ctx.sym.contextSet1 = createUndefinedFunction(
           "__wasm_component_model_builtin_context_set_1", "[context-set-1]",
@@ -1376,7 +1375,7 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
  
   // If the ABI is undetermined at this point, default to the globals ABI
   ctx.componentModelThreadContext = (threadContextABI == ThreadContextABI::ComponentModelBuiltins);
-  
+
   if (ctx.arg.sharedMemory && ctx.componentModelThreadContext) {
     error("--shared-memory is currently incompatible with component model thread context intrinsics");
   }

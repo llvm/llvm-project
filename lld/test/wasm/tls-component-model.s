@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: wasm-ld -o %t.wasm %t.o
+# RUN: wasm-ld -no-gc-sections -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t.wasm | FileCheck %s --check-prefix=DIS
 
