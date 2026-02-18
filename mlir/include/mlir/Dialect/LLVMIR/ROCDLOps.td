@@ -1017,6 +1017,132 @@ def ROCDL_wmma_scale16_f32_16x16x128_f8f6f4 : ROCDL_WMMA_Scale_IntrOp<"wmma.scal
 def ROCDL_wmma_scale_f32_32x16x128_f4       : ROCDL_WMMA_Scale_F4_IntrOp<"wmma.scale.f32.32x16x128.f4", AnyInteger, F32, I32>;
 def ROCDL_wmma_scale16_f32_32x16x128_f4     : ROCDL_WMMA_Scale_F4_IntrOp<"wmma.scale16.f32.32x16x128.f4", AnyInteger, F32, I64>;
 
+
+//===---------------------------------------------------------------------===//
+// SWMMAC intrinsics
+class ROCDL_SWMMAC_V0_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
+    [0], [0, 1, 3], [], 1, 0, 0, 0, [], []>,
+  Arguments<(ins
+             LLVM_VectorOf<AB>:$a,
+             LLVM_VectorOf<AB>:$b,
+             LLVM_VectorOf<CD>:$c,
+             I32:$index)> {
+  let results = (outs LLVM_VectorOf<CD>:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `,` $index attr-dict `:` functional-type(operands, $res)
+  }];
+}
+
+class ROCDL_SWMMAC_V1_IntrOp<string mnemonic, Type A, Type B, Type CD> : ROCDL_IntrOp<mnemonic,
+    [0], [0, 1, 3], [], 1, 0, 0, 0, [], []>,
+  Arguments<(ins
+             LLVM_ScalarOrVectorOf<A>:$a,
+             LLVM_ScalarOrVectorOf<B>:$b,
+             LLVM_ScalarOrVectorOf<CD>:$c,
+             I32:$index)> {
+  let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `,` $index attr-dict `:` functional-type(operands, $res)
+  }];
+}
+
+class ROCDL_SWMMAC_V1_Reuse_IntrOp<string mnemonic, Type A, Type B, Type CD> : ROCDL_IntrOp<mnemonic,
+    [0], [0, 1, 3], [], 1, 0, 0, 0, [4, 5], ["reuseA", "reuseB"]>,
+  Arguments<(ins
+             LLVM_ScalarOrVectorOf<A>:$a,
+             LLVM_ScalarOrVectorOf<B>:$b,
+             LLVM_ScalarOrVectorOf<CD>:$c,
+             I32:$index,
+             DefaultValuedAttr<I1Attr, "0">:$reuseA,
+             DefaultValuedAttr<I1Attr, "0">:$reuseB
+             )> {
+  let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `,` $index attr-dict `:` functional-type(operands, $res)
+  }];
+}
+
+class ROCDL_SWMMAC_IU_IntrOp<string mnemonic, Type AB, Type CD> : ROCDL_IntrOp<mnemonic,
+    [0], [1, 3, 5], [], 1, 0, 0, 0, [0, 2, 6], ["signA", "signB", "clamp"]>,
+  Arguments<(ins
+             DefaultValuedAttr<I1Attr, "0">:$signA,
+             LLVM_ScalarOrVectorOf<AB>:$a,
+             DefaultValuedAttr<I1Attr, "0">:$signB,
+             LLVM_ScalarOrVectorOf<AB>:$b,
+             LLVM_ScalarOrVectorOf<CD>:$c,
+             I32:$index,
+             DefaultValuedAttr<I1Attr, "0">:$clamp)> {
+  let results = (outs LLVM_ScalarOrVectorOf<CD>:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `,` $index attr-dict `:` functional-type(operands, $res)
+  }];
+}
+
+class ROCDL_SWMMAC_ModsAB_IntrOp<string mnemonic, Type AB, Type C, Type D> : ROCDL_IntrOp<mnemonic,
+    [0], [1, 3, 5], [], 1, 0, 0, 0, [0, 2, 6, 7], ["signA", "signB", "reuseA", "reuseB"]>,
+  Arguments<(ins
+             DefaultValuedAttr<I1Attr, "0">:$signA,
+             LLVM_ScalarOrVectorOf<AB>:$a,
+             DefaultValuedAttr<I1Attr, "0">:$signB,
+             LLVM_ScalarOrVectorOf<AB>:$b,
+             LLVM_ScalarOrVectorOf<C>:$c,
+             I32:$index,
+             DefaultValuedAttr<I1Attr, "0">:$reuseA,
+             DefaultValuedAttr<I1Attr, "0">:$reuseB)> {
+  let results = (outs LLVM_ScalarOrVectorOf<D>:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `,` $index attr-dict `:` functional-type(operands, $res)
+  }];
+}
+
+class ROCDL_SWMMAC_ModsABClamp_IntrOp<string mnemonic, Type AB, Type C, Type D> : ROCDL_IntrOp<mnemonic,
+    [0], [1, 3, 5], [], 1, 0, 0, 0, [0, 2, 6, 7, 8], ["signA", "signB", "reuseA", "reuseB", "clamp"]>,
+  Arguments<(ins
+             DefaultValuedAttr<I1Attr, "0">:$signA,
+             LLVM_ScalarOrVectorOf<AB>:$a,
+             DefaultValuedAttr<I1Attr, "0">:$signB,
+             LLVM_ScalarOrVectorOf<AB>:$b,
+             LLVM_ScalarOrVectorOf<C>:$c,
+             I32:$index,
+             DefaultValuedAttr<I1Attr, "0">:$reuseA,
+             DefaultValuedAttr<I1Attr, "0">:$reuseB,
+             DefaultValuedAttr<I1Attr, "0">:$clamp)> {
+  let results = (outs LLVM_ScalarOrVectorOf<D>:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `,` $index attr-dict `:` functional-type(operands, $res)
+  }];
+}
+
+// Available from gfx12
+def ROCDL_swmmac_f32_16x16x32_f16 : ROCDL_SWMMAC_V0_IntrOp<"swmmac.f32.16x16x32.f16", F16, F32>;
+def ROCDL_swmmac_f32_16x16x32_bf16 : ROCDL_SWMMAC_V0_IntrOp<"swmmac.f32.16x16x32.bf16", AnyInteger, F32>;
+def ROCDL_swmmac_f16_16x16x32_f16 : ROCDL_SWMMAC_V0_IntrOp<"swmmac.f16.16x16x32.f16", F16, F16>;
+def ROCDL_swmmac_bf16_16x16x32_bf16 : ROCDL_SWMMAC_V0_IntrOp<"swmmac.bf16.16x16x32.bf16", AnyInteger, AnyInteger>;
+def ROCDL_swmmac_i32_16x16x32_iu8 : ROCDL_SWMMAC_IU_IntrOp<"swmmac.i32.16x16x32.iu8", AnyInteger, AnyInteger>;
+def ROCDL_swmmac_i32_16x16x32_iu4 : ROCDL_SWMMAC_IU_IntrOp<"swmmac.i32.16x16x32.iu4", AnyInteger, AnyInteger>;
+def ROCDL_swmmac_i32_16x16x64_iu4 : ROCDL_SWMMAC_IU_IntrOp<"swmmac.i32.16x16x64.iu4", AnyInteger, AnyInteger>;
+def ROCDL_swmmac_f32_16x16x32_fp8_fp8 : ROCDL_SWMMAC_V1_IntrOp<"swmmac.f32.16x16x32.fp8.fp8", AnyInteger, AnyInteger, F32>;
+def ROCDL_swmmac_f32_16x16x32_fp8_bf8 : ROCDL_SWMMAC_V1_IntrOp<"swmmac.f32.16x16x32.fp8.bf8", AnyInteger, AnyInteger, F32>;
+def ROCDL_swmmac_f32_16x16x32_bf8_fp8 : ROCDL_SWMMAC_V1_IntrOp<"swmmac.f32.16x16x32.bf8.fp8", AnyInteger, AnyInteger, F32>;
+def ROCDL_swmmac_f32_16x16x32_bf8_bf8 : ROCDL_SWMMAC_V1_IntrOp<"swmmac.f32.16x16x32.bf8.bf8", AnyInteger, AnyInteger, F32>;
+
+// Available from gfx1250
+def ROCDL_swmmac_f32_16x16x64_f16 : ROCDL_SWMMAC_ModsAB_IntrOp<"swmmac.f32.16x16x64.f16", F16, F32, F32>;
+def ROCDL_swmmac_f32_16x16x64_bf16 : ROCDL_SWMMAC_ModsAB_IntrOp<"swmmac.f32.16x16x64.bf16", BF16, F32, F32>;
+def ROCDL_swmmac_f16_16x16x64_f16 : ROCDL_SWMMAC_ModsAB_IntrOp<"swmmac.f16.16x16x64.f16", F16, F16, F16>;
+def ROCDL_swmmac_bf16_16x16x64_bf16 : ROCDL_SWMMAC_ModsAB_IntrOp<"swmmac.bf16.16x16x64.bf16", BF16, BF16, BF16>;
+def ROCDL_swmmac_bf16f32_16x16x64_bf16 : ROCDL_SWMMAC_ModsAB_IntrOp<"swmmac.bf16f32.16x16x64.bf16", BF16, BF16, BF16>;
+def ROCDL_swmmac_f32_16x16x128_fp8_fp8 : ROCDL_SWMMAC_V1_Reuse_IntrOp<"swmmac.f32.16x16x128.fp8.fp8", AnyInteger, AnyInteger, F32>;
+def ROCDL_swmmac_f32_16x16x128_fp8_bf8 : ROCDL_SWMMAC_V1_Reuse_IntrOp<"swmmac.f32.16x16x128.fp8.bf8", AnyInteger, AnyInteger, F32>;
+def ROCDL_swmmac_f32_16x16x128_bf8_fp8 : ROCDL_SWMMAC_V1_Reuse_IntrOp<"swmmac.f32.16x16x128.bf8.fp8", AnyInteger, AnyInteger, F32>;
+def ROCDL_swmmac_f32_16x16x128_bf8_bf8 : ROCDL_SWMMAC_V1_Reuse_IntrOp<"swmmac.f32.16x16x128.bf8.bf8", AnyInteger, AnyInteger, F32>;
+def ROCDL_swmmac_f16_16x16x128_fp8_fp8 : ROCDL_SWMMAC_V1_Reuse_IntrOp<"swmmac.f16.16x16x128.fp8.fp8", AnyInteger, AnyInteger, F16>;
+def ROCDL_swmmac_f16_16x16x128_fp8_bf8 : ROCDL_SWMMAC_V1_Reuse_IntrOp<"swmmac.f16.16x16x128.fp8.bf8", AnyInteger, AnyInteger, F16>;
+def ROCDL_swmmac_f16_16x16x128_bf8_fp8 : ROCDL_SWMMAC_V1_Reuse_IntrOp<"swmmac.f16.16x16x128.bf8.fp8", AnyInteger, AnyInteger, F16>;
+def ROCDL_swmmac_f16_16x16x128_bf8_bf8 : ROCDL_SWMMAC_V1_Reuse_IntrOp<"swmmac.f16.16x16x128.bf8.bf8", AnyInteger, AnyInteger, F16>;
+def ROCDL_swmmac_i32_16x16x128_iu8 : ROCDL_SWMMAC_ModsABClamp_IntrOp<"swmmac.i32.16x16x128.iu8", AnyInteger, AnyInteger, AnyInteger>;
+
+
 //===---------------------------------------------------------------------===//
 // LDS transpose intrinsics (available in GFX950)
 
