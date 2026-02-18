@@ -7,4 +7,5 @@ endfunction()
 
 add_subdirectory(Core)
 add_subdirectory(Profile)
+add_subdirectory(Target)
 add_subdirectory(Passes)

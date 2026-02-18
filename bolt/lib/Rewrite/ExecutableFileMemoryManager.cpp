@@ -12,7 +12,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Support/MemAlloc.h"
 
-#undef  DEBUG_TYPE
+#undef DEBUG_TYPE
 #define DEBUG_TYPE "efmm"
 
 using namespace llvm;
@@ -104,6 +104,8 @@ public:
 void ExecutableFileMemoryManager::updateSection(
     const jitlink::Section &JLSection, uint8_t *Contents, size_t Size,
     size_t Alignment) {
+  LLVM_DEBUG(dbgs() << "[sect] updateSection " << JLSection.getName() << "\n");
+
   auto SectionID = JLSection.getName();
   auto SectionName = sectionName(JLSection, BC);
   auto Prot = JLSection.getMemProt();
@@ -179,6 +181,24 @@ void ExecutableFileMemoryManager::updateSection(
            << " with size " << Size << ", alignment " << Alignment << " at "
            << Contents << ", ID = " << SectionID << "\n";
   });
+
+  LLVM_DEBUG({
+    dbgs() << "[sect] updateSection:"
+           << " JL=" << JLSection.getName() << " Name=" << SectionName
+           << " BS=" << Section->getName() << " IsCode=" << (IsCode ? "Y" : "N")
+           << " IsRO=" << (IsReadOnly ? "Y" : "N") << "\n";
+  });
+
+  static constexpr char kOrgPrefix[] = ".bolt.org";
+  const bool IsOrgByJL = JLSection.getName().starts_with(kOrgPrefix);
+  const bool IsOrgByName = SectionName.starts_with(OrgSecPrefix);
+
+  if (IsOrgByJL || IsOrgByName) {
+    LLVM_DEBUG(dbgs() << "[sect] skip setSectionID for backup section  JL='"
+                      << JLSection.getName() << "'  Name='" << SectionName
+                      << "'  BS='" << Section->getName() << "'\n");
+    return; // never assign a code SectionID to backups
+  }
 
   Section->setSectionID(SectionID);
 }
