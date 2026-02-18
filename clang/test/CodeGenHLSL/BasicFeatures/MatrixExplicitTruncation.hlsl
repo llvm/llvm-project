@@ -5,7 +5,7 @@
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
-// CHECK-NEXT:    [[I34:%.*]] = alloca [3 x <4 x i32>], align 4
+// CHECK-NEXT:    [[I34:%.*]] = alloca [4 x <3 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
@@ -22,7 +22,7 @@
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
-// CHECK-NEXT:    [[I43:%.*]] = alloca [4 x <3 x i32>], align 4
+// CHECK-NEXT:    [[I43:%.*]] = alloca [3 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 4, i32 5, i32 6, i32 8, i32 9, i32 10, i32 12, i32 13, i32 14>
@@ -56,7 +56,7 @@
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
-// CHECK-NEXT:    [[I32:%.*]] = alloca [3 x <2 x i32>], align 4
+// CHECK-NEXT:    [[I32:%.*]] = alloca [2 x <3 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <6 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9>
@@ -73,7 +73,7 @@
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
-// CHECK-NEXT:    [[I23:%.*]] = alloca [2 x <3 x i32>], align 4
+// CHECK-NEXT:    [[I23:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 4, i32 5, i32 6>
@@ -107,7 +107,7 @@
 // CHECK-SAME: <16 x i32> noundef [[I44:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[I44_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
-// CHECK-NEXT:    [[I21:%.*]] = alloca [2 x <1 x i32>], align 4
+// CHECK-NEXT:    [[I21:%.*]] = alloca [1 x <2 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[I44]], ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[I44_ADDR]], align 4
 // CHECK-NEXT:    [[TRUNC:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <2 x i32> <i32 0, i32 4>
