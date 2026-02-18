@@ -76,6 +76,10 @@ class DependencyActionController {
 public:
   virtual ~DependencyActionController();
 
+  /// Create a thread-safe copy of the controller.
+  virtual std::unique_ptr<DependencyActionController> clone() const = 0;
+
+  /// Provide output path for a given module dependency. Must be thread-safe.
   virtual std::string lookupModuleOutput(const ModuleDeps &MD,
                                          ModuleOutputKind Kind) = 0;
 

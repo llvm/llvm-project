@@ -33,6 +33,8 @@ public:
   Expected<cas::IncludeTreeRoot> getIncludeTree();
 
 private:
+  std::unique_ptr<DependencyActionController> clone() const override;
+
   Error initialize(CompilerInstance &ScanInstance,
                    CompilerInvocation &NewInvocation) override;
   Error finalize(CompilerInstance &ScanInstance,
@@ -295,6 +297,11 @@ Expected<cas::IncludeTreeRoot> IncludeTreeActionController::getIncludeTree() {
     return *IncludeTreeResult;
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "failed to produce include-tree");
+}
+
+std::unique_ptr<DependencyActionController>
+IncludeTreeActionController::clone() const {
+  return std::make_unique<IncludeTreeActionController>(DB, LookupModuleOutput);
 }
 
 Error IncludeTreeActionController::initialize(

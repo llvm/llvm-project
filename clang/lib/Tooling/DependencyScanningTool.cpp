@@ -328,6 +328,10 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
                                    ModuleOutputKind Kind) override {
       return "";
     }
+
+    std::unique_ptr<DependencyActionController> clone() const override {
+      return std::make_unique<P1689ActionController>();
+    }
   };
 
   P1689Rule Rule;
