@@ -1,4 +1,4 @@
-# Hunting down symbols with Scripted Symbol Locator
+# Scripted Symbol Locator Tutorial
 
 The **Scripted Symbol Locator** lets you write a Python class that tells LLDB
 where to find executables, symbol files, and source files for your debug
