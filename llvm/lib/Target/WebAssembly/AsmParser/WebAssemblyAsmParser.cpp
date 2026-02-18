@@ -1058,7 +1058,7 @@ public:
         return ParseStatus::Failure;
       if (expect(AsmToken::Comma, ","))
         return ParseStatus::Failure;
-      auto ExportName = expectIdent();
+      auto ExportName = expectStringOrIdent();
       if (ExportName.empty())
         return ParseStatus::Failure;
       auto *WasmSym =
@@ -1074,8 +1074,7 @@ public:
         return ParseStatus::Failure;
       if (expect(AsmToken::Comma, ","))
         return ParseStatus::Failure;
-
-      StringRef ImportModule = expectStringOrIdent();
+      auto ImportModule = expectStringOrIdent();
       if (ImportModule.empty())
         return ParseStatus::Failure;
       auto *WasmSym =
