@@ -691,12 +691,11 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
     failIfError(FlagsOrErr);
     uint32_t Flags = FlagsOrErr.get();
 
-    StringRef EffectiveName = Name;
-    
-    if (isa<object::XCOFFObjectFile>(&O) && Name.starts_with(".")) { 
-      EffectiveName = Name.drop_front(1);
-    }
-
+    // XCOFF uses "." prefix for function entry point symbols.
+    StringRef EffectiveName =
+        (isa<object::XCOFFObjectFile>(&O) && Name.starts_with("."))
+            ? Name.drop_front(1)
+            : Name;
     if (!(Flags & object::BasicSymbolRef::SF_Undefined) &&
         isCoveragePointSymbol(EffectiveName)) {
       Result.insert(Address);
@@ -720,7 +719,7 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
   if (const auto *MO = dyn_cast<object::MachOObjectFile>(&O)) {
     findMachOIndirectCovFunctions(*MO, &Result);
   }
-   
+
   return Result;
 }
 
