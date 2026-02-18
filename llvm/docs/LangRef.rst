@@ -27678,6 +27678,119 @@ The '``llvm.masked.compressstore``' intrinsic is designed for compressing data i
 Other targets may support this intrinsic differently, for example, by lowering it into a sequence of branches that guard scalar store operations.
 
 
+Speculative Load Intrinsics
+---------------------------
+
+LLVM provides intrinsics for speculatively loading memory that may be
+out-of-bounds. These intrinsics enable optimizations like early-exit loop
+vectorization where the vectorized loop may read beyond the end of an array,
+provided the access is guaranteed to not trap by target-specific checks.
+
+.. _int_speculative_load:
+
+'``llvm.speculative.load``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x float>  @llvm.speculative.load.v4f32.p0(ptr <ptr>)
+      declare <8 x i32>    @llvm.speculative.load.v8i32.p0(ptr <ptr>)
+      declare i64          @llvm.speculative.load.i64.p0(ptr <ptr>)
+
+Overview:
+"""""""""
+
+The '``llvm.speculative.load``' intrinsic loads a value from memory. Unlike a
+regular load, the memory access may extend beyond the bounds of the allocated
+object, provided the pointer has been verified by
+:ref:`llvm.can.load.speculatively <int_can_load_speculatively>` to ensure the
+access cannot fault.
+
+Arguments:
+""""""""""
+
+The argument is a pointer to the memory location to load from. The return type
+must have a power-of-2 size in bytes.
+
+Semantics:
+""""""""""
+
+The '``llvm.speculative.load``' intrinsic performs a load that may access
+memory beyond the allocated object. It must be used in combination with
+:ref:`llvm.can.load.speculatively <int_can_load_speculatively>` to ensure
+the access cannot fault.
+
+For bytes that are within the bounds of the allocated object, the intrinsic
+returns the stored value. For bytes that are beyond the bounds of the
+allocated object, the intrinsic returns ``poison`` for those bytes. At least the
+first accessed byte must be within the bounds of an allocated object the pointer is
+based on.
+
+The behavior is undefined if this intrinsic is used to load from a pointer
+for which ``llvm.can.load.speculatively`` would return false.
+
+.. _int_can_load_speculatively:
+
+'``llvm.can.load.speculatively``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare i1 @llvm.can.load.speculatively.p0(ptr <ptr>, i64 <num_bytes>)
+      declare i1 @llvm.can.load.speculatively.p1(ptr addrspace(1) <ptr>, i64 <num_bytes>)
+
+Overview:
+"""""""""
+
+The '``llvm.can.load.speculatively``' intrinsic returns true if it is safe
+to speculatively load ``num_bytes`` bytes starting from ``ptr``,
+even if the memory may be beyond the bounds of an allocated object.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to the memory location.
+
+The second argument is an i64 specifying the size in bytes of the load.
+The size must be a positive power of 2.  If the size is not a power-of-2, the
+result is ``poison``.
+
+Semantics:
+""""""""""
+
+This intrinsic has **target-dependent** semantics. It returns ``true`` if
+``num_bytes`` bytes starting at ``ptr`` can be loaded speculatively, even
+if the memory is beyond the bounds of an allocated object. It returns
+``false`` otherwise.
+
+The specific conditions under which this intrinsic returns ``true`` are
+determined by the target. For example, a target may check whether the pointer
+alignment guarantees the load cannot cross a page boundary.
+
+.. code-block:: llvm
+
+    ; Check if we can safely load 16 bytes from %ptr
+    %can_load = call i1 @llvm.can.load.speculatively.p0(ptr %ptr, i64 16)
+    br i1 %can_load, label %speculative_path, label %safe_path
+
+    speculative_path:
+      ; Safe to speculatively load from %ptr
+      %vec = call <4 x i32> @llvm.speculative.load.v4i32.p0(ptr %ptr)
+      ...
+
+    safe_path:
+      ; Fall back to masked load or scalar operations
+      ...
+
+
 Memory Use Markers
 ------------------
 
