@@ -121,6 +121,13 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`modernize-use-init-statement
+  <clang-tidy/checks/modernize/use-init-statement>` check.
+
+  Finds variable declarations immediately before ``if`` or ``switch``
+  statements where the variable is only used inside the conditional,
+  and suggests moving it into the C++17 init-statement.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 

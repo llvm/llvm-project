@@ -39,6 +39,7 @@
 #include "UseEmplaceCheck.h"
 #include "UseEqualsDefaultCheck.h"
 #include "UseEqualsDeleteCheck.h"
+#include "UseInitStatementCheck.h"
 #include "UseIntegerSignComparisonCheck.h"
 #include "UseNodiscardCheck.h"
 #include "UseNoexceptCheck.h"
@@ -128,6 +129,8 @@ public:
         "modernize-use-equals-default");
     CheckFactories.registerCheck<UseEqualsDeleteCheck>(
         "modernize-use-equals-delete");
+    CheckFactories.registerCheck<UseInitStatementCheck>(
+        "modernize-use-init-statement");
     CheckFactories.registerCheck<UseNodiscardCheck>("modernize-use-nodiscard");
     CheckFactories.registerCheck<UseNoexceptCheck>("modernize-use-noexcept");
     CheckFactories.registerCheck<UseNullptrCheck>("modernize-use-nullptr");
