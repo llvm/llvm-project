@@ -1107,7 +1107,11 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB:
     case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB:
     case wasm::R_WASM_MEMORY_ADDR_LOCREL_I32:
-      if (!isValidDataSymbol(Reloc.Index))
+      // Allow table symbols in debug sections (for debug info referencing
+      // tables)
+      if (!isValidDataSymbol(Reloc.Index) &&
+          !(Section.Type == wasm::WASM_SEC_CUSTOM &&
+            isValidTableSymbol(Reloc.Index)))
         return badReloc("invalid data relocation");
       Reloc.Addend = readVarint32(Ctx);
       break;
@@ -1116,7 +1120,11 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_MEMORY_ADDR_I64:
     case wasm::R_WASM_MEMORY_ADDR_REL_SLEB64:
     case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB64:
-      if (!isValidDataSymbol(Reloc.Index))
+      // Allow table symbols in debug sections (for debug info referencing
+      // tables)
+      if (!isValidDataSymbol(Reloc.Index) &&
+          !(Section.Type == wasm::WASM_SEC_CUSTOM &&
+            isValidTableSymbol(Reloc.Index)))
         return badReloc("invalid data relocation");
       Reloc.Addend = readVarint64(Ctx);
       break;

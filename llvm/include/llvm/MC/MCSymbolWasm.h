@@ -116,6 +116,10 @@ public:
     return isTable() && hasTableType() &&
            getTableType().ElemType == wasm::ValType::FUNCREF;
   }
+  bool isExternrefTable() const {
+    return isTable() && hasTableType() &&
+           getTableType().ElemType == wasm::ValType::EXTERNREF;
+  }
   void setFunctionTable(bool is64) {
     setType(wasm::WASM_SYMBOL_TYPE_TABLE);
     uint8_t flags =

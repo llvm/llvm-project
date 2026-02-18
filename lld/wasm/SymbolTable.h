@@ -85,6 +85,7 @@ public:
                           InputFile *file, const WasmSignature *sig);
 
   TableSymbol *resolveIndirectFunctionTable(bool required);
+  TableSymbol *resolveExternrefTable();
 
   void addLazy(StringRef name, InputFile *f);
 
@@ -116,6 +117,8 @@ private:
 
   TableSymbol *createDefinedIndirectFunctionTable(StringRef name);
   TableSymbol *createUndefinedIndirectFunctionTable(StringRef name);
+  TableSymbol *createDefinedExternrefTable(StringRef name);
+  TableSymbol *createUndefinedExternrefTable(StringRef name);
 
   // Maps symbol names to index into the symVector.  -1 means that symbols
   // is to not yet in the vector but it should have tracing enabled if it is
