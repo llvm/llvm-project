@@ -201,7 +201,7 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
 
 static FileSpecList LoadExecutableScriptingResourceFromDSYM(
     Stream &feedback_stream, FileSpec module_spec, const Target &target,
-    const FileSpec &symfile_spec, ) {
+    const FileSpec &symfile_spec) {
   FileSpecList file_list;
   while (module_spec.GetFilename()) {
     std::string module_basename(module_spec.GetFilename().GetCString());
@@ -209,14 +209,12 @@ static FileSpecList LoadExecutableScriptingResourceFromDSYM(
 
     bool was_keyword = false;
 
-    // FIXME: for Python, we cannot allow certain characters in
-    // module
-    // filenames we import. Theoretically, different scripting
-    // languages may have different sets of forbidden tokens in
-    // filenames, and that should be dealt with by each
-    // ScriptInterpreter. For now, we just replace dots with
-    // underscores, but if we ever support anything other than
-    // Python we will need to rework this
+    // FIXME: for Python, don't allow certain characters in imported module
+    // filenames. Theoretically, different scripting languages may have
+    // different sets of forbidden tokens in filenames, and that should
+    // be dealt with by each ScriptInterpreter. For now, just replace dots
+    // with underscores. In order to support anything other than Python
+    // this will need to be reworked.
     llvm::replace(module_basename, '.', '_');
     llvm::replace(module_basename, ' ', '_');
     llvm::replace(module_basename, '-', '_');
