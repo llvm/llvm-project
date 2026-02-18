@@ -21,8 +21,8 @@ define amdgpu_gs <4 x float> @_amdgpu_gs_main() {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
 bb:
-  %i = load <1 x float>, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) null, i32 16), align 4
-  %i1 = load <1 x float>, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) null, i32 20), align 4
+  %i = load <1 x float>, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) zeroinitializer, i32 16), align 4
+  %i1 = load <1 x float>, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) zeroinitializer, i32 20), align 4
   %i2 = shufflevector <1 x float> %i, <1 x float> zeroinitializer, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
   call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %i2, <4 x i32> zeroinitializer, i32 0, i32 0, i32 0, i32 0)
   %i3 = shufflevector <1 x float> %i1, <1 x float> zeroinitializer, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>

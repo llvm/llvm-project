@@ -13,7 +13,7 @@ define void @tail_call_uniform_vgpr_value() {
 ; CHECK-NEXT:    v_readfirstlane_b32 s17, v1
 ; CHECK-NEXT:    v_readfirstlane_b32 s16, v0
 ; CHECK-NEXT:    s_setpc_b64 s[16:17]
-  %fptr = load ptr, ptr addrspace(3) null, align 8
+  %fptr = load ptr, ptr addrspace(3) zeroinitializer, align 8
   tail call void %fptr()
   ret void
 }

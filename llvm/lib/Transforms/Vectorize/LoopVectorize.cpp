@@ -374,6 +374,11 @@ cl::opt<bool> llvm::VPlanPrintAfterAll(
 cl::list<std::string> llvm::VPlanPrintAfterPasses(
     "vplan-print-after", cl::Hidden,
     cl::desc("Print VPlans after specified VPlan transformations (regexp)."));
+
+cl::opt<bool> llvm::VPlanPrintVectorRegionScope(
+    "vplan-print-vector-region-scope", cl::init(false), cl::Hidden,
+    cl::desc("Limit VPlan printing to vector loop region in "
+             "`-vplan-print-after*` if the plan has one."));
 #endif
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the
@@ -4134,10 +4139,10 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPReplicateSC:
       case VPRecipeBase::VPInstructionSC:
       case VPRecipeBase::VPCanonicalIVPHISC:
+      case VPRecipeBase::VPCurrentIterationPHISC:
       case VPRecipeBase::VPVectorPointerSC:
       case VPRecipeBase::VPVectorEndPointerSC:
       case VPRecipeBase::VPExpandSCEVSC:
-      case VPRecipeBase::VPEVLBasedIVPHISC:
       case VPRecipeBase::VPPredInstPHISC:
       case VPRecipeBase::VPBranchOnMaskSC:
         continue;
@@ -4667,8 +4672,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
-             IsaPred<VPEVLBasedIVPHIRecipe>)) {
-    LLVM_DEBUG(dbgs() << "LV: Preference for VP intrinsics indicated. "
+             IsaPred<VPCurrentIterationPHIRecipe>)) {
+    LLVM_DEBUG(dbgs() << "LV: Loop requires variable-length step. "
                          "Unroll factor forced to be 1.\n");
     return 1;
   }
@@ -7456,8 +7461,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Expand BranchOnTwoConds after dissolution, when latch has direct access to
   // its successors.
   VPlanTransforms::expandBranchOnTwoConds(BestVPlan);
-  // Canonicalize EVL loops after regions are dissolved.
-  VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
+  // Convert loops with variable-length stepping after regions are dissolved.
+  VPlanTransforms::convertToVariableLengthStep(BestVPlan);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
@@ -8231,7 +8236,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  VPlanTransforms::introduceMasksAndLinearize(*Plan, CM.foldTailByMasking());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize, *Plan,
+                           CM.foldTailByMasking());
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
