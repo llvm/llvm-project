@@ -14,7 +14,43 @@
 
 namespace clang::tidy::readability {
 
+static StringRef getConditionText(SourceLocation Loc, const SourceManager &SM,
+                                  const LangOptions &LangOpts) {
+  bool Invalid = false;
+  const FileID FID = SM.getFileID(Loc);
+  const StringRef Buffer = SM.getBufferData(FID, &Invalid);
+  if (Invalid)
+    return {};
+
+  // Initialize a raw lexer starting exactly at the condition's location
+  Lexer RawLexer(SM.getLocForStartOfFile(FID), LangOpts, Buffer.begin(),
+                 SM.getCharacterData(Loc), Buffer.end());
+  RawLexer.SetCommentRetentionState(true);
+
+  Token Tok;
+  // Lex the 'if' token itself
+  RawLexer.LexFromRawLexer(Tok);
+
+  const unsigned StartOffset = SM.getFileOffset(Tok.getEndLoc());
+  unsigned EndOffset = StartOffset;
+
+  // Lex tokens until we hit the start of a new line or EOF.
+  // The lexer handles backslash line continuations automatically.
+  while (!RawLexer.LexFromRawLexer(Tok)) {
+    if (Tok.isAtStartOfLine() || Tok.is(tok::eof))
+      break;
+    EndOffset = SM.getFileOffset(Tok.getLocation()) + Tok.getLength();
+  }
+
+  if (EndOffset <= StartOffset)
+    return {};
+
+  // Extract the raw text from the buffer to preserve original spacing
+  return Buffer.substr(StartOffset, EndOffset - StartOffset).trim();
+}
+
 namespace {
+
 /// Information about an opening preprocessor directive.
 struct PreprocessorEntry {
   SourceLocation Loc;
@@ -36,13 +72,9 @@ public:
 
   void If(SourceLocation Loc, SourceRange ConditionRange,
           ConditionValueKind ConditionValue) override {
-    // ConditionRange is unreliable for builtin preprocessor expressions like
-    // __has_builtin(...) because ExpandBuiltinMacro replaces the entire
-    // expression with a single token, collapsing the range. Extract the
-    // condition text directly from source instead.
-    const StringRef Condition = getConditionText(Loc);
-    if (!Condition.empty())
-      checkMacroRedundancy(Loc, Condition, IfStack, DK_If, DK_If, true);
+    const StringRef Condition =
+        getConditionText(Loc, PP.getSourceManager(), PP.getLangOpts());
+    checkMacroRedundancy(Loc, Condition, IfStack, DK_If, DK_If, true);
   }
 
   void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
@@ -72,44 +104,6 @@ public:
   }
 
 private:
-  /// Extract the condition text following the 'if' keyword from source.
-  /// Loc points to the 'if' keyword token, so we find its end and read
-  /// forward through the source buffer to the end of the directive,
-  /// handling backslash line continuations.
-  StringRef getConditionText(SourceLocation Loc) {
-    const SourceManager &SM = PP.getSourceManager();
-    const SourceLocation SpellingLoc = SM.getSpellingLoc(Loc);
-
-    const SourceLocation AfterIf =
-        Lexer::getLocForEndOfToken(SpellingLoc, 0, SM, PP.getLangOpts());
-    if (AfterIf.isInvalid())
-      return {};
-
-    bool Invalid = false;
-    auto [FID, Offset] = SM.getDecomposedLoc(AfterIf);
-    const StringRef Buffer = SM.getBufferData(FID, &Invalid);
-    if (Invalid || Offset >= Buffer.size())
-      return {};
-
-    // Read to end-of-line, handling backslash line continuations.
-    size_t End = Offset;
-    while (End < Buffer.size()) {
-      const char C = Buffer[End];
-      if (C == '\r' || C == '\n') {
-        if (End > Offset && Buffer[End - 1] == '\\') {
-          ++End;
-          if (C == '\r' && End < Buffer.size() && Buffer[End] == '\n')
-            ++End;
-          continue;
-        }
-        break;
-      }
-      ++End;
-    }
-
-    return Buffer.slice(Offset, End).trim();
-  }
-
   void checkMacroRedundancy(SourceLocation Loc, StringRef MacroName,
                             SmallVector<PreprocessorEntry, 4> &Stack,
                             DirectiveKind WarningKind, DirectiveKind NoteKind,
