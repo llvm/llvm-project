@@ -5129,6 +5129,23 @@ LogicalResult acc::WaitOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// ReductionCombineOp
+//===----------------------------------------------------------------------===//
+void acc::ReductionCombineOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Read::get(), &getSrcMemrefMutable(),
+                       mlir::SideEffects::DefaultResource::get());
+  effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                       &getDestMemrefMutable(),
+                       mlir::SideEffects::DefaultResource::get());
+  effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                       &getDestMemrefMutable(),
+                       mlir::SideEffects::DefaultResource::get());
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOps.cpp.inc"
 

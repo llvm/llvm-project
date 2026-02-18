@@ -22,11 +22,16 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/FPEnv.h"
 
 namespace clang::CIRGen {
 
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
+  bool isFPConstrained = false;
+  llvm::fp::ExceptionBehavior defaultConstrainedExcept = llvm::fp::ebStrict;
+  llvm::RoundingMode defaultConstrainedRounding = llvm::RoundingMode::Dynamic;
+
   llvm::StringMap<unsigned> recordNames;
   llvm::StringMap<unsigned> globalsVersioning;
 
@@ -104,6 +109,43 @@ public:
     }
 
     return baseName + "." + std::to_string(recordNames[baseName]++);
+  }
+
+  //
+  // Floating point specific helpers
+  // -------------------------------
+  //
+
+  /// Enable/Disable use of constrained floating point math. When enabled the
+  /// CreateF<op>() calls instead create constrained floating point intrinsic
+  /// calls. Fast math flags are unaffected by this setting.
+  void setIsFPConstrained(bool isCon) { isFPConstrained = isCon; }
+
+  /// Query for the use of constrained floating point math
+  bool getIsFPConstrained() const { return isFPConstrained; }
+
+  /// Set the exception handling to be used with constrained floating point
+  void setDefaultConstrainedExcept(llvm::fp::ExceptionBehavior newExcept) {
+    assert(llvm::convertExceptionBehaviorToStr(newExcept) &&
+           "Garbage strict exception behavior!");
+    defaultConstrainedExcept = newExcept;
+  }
+
+  /// Get the exception handling used with constrained floating point
+  llvm::fp::ExceptionBehavior getDefaultConstrainedExcept() const {
+    return defaultConstrainedExcept;
+  }
+
+  /// Set the rounding mode handling to be used with constrained floating point
+  void setDefaultConstrainedRounding(llvm::RoundingMode newRounding) {
+    assert(llvm::convertRoundingModeToStr(newRounding) &&
+           "Garbage strict rounding mode!");
+    defaultConstrainedRounding = newRounding;
+  }
+
+  /// Get the rounding mode handling used with constrained floating point
+  llvm::RoundingMode getDefaultConstrainedRounding() const {
+    return defaultConstrainedRounding;
   }
 
   cir::LongDoubleType getLongDoubleTy(const llvm::fltSemantics &format) const {
