@@ -54,6 +54,7 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("1UL + 1L", value="2", type="unsigned long")
         self.expect_var_path("s + x", value="12", type="int")
         self.expect_var_path("s + l", value="15", type="long")
+        self.expect_var_path("l + ul", value="11", type="unsigned long")
         self.expect_var_path("1.0 + 2.5", value="3.5", type="double")
         self.expect_var_path("1 + 2.5f", value="3.5", type="float")
         self.expect_var_path("2. + .5", value="2.5", type="double")

@@ -5,6 +5,7 @@ int main(int argc, char **argv) {
   short s = 10;
   unsigned short us = 1;
   long l = 5;
+  unsigned long ul = 6;
   float f = 1.0f;
   double d = 2.5;
 

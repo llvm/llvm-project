@@ -127,7 +127,9 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
   return valobj;
 }
 
-static size_t IntegerConversionRank(CompilerType type) {
+/// Basic types with a lower rank are converted to the basic type
+/// with a higher rank.
+static size_t ConversionRank(CompilerType type) {
   switch (type.GetCanonicalType().GetBasicTypeEnumeration()) {
   case lldb::eBasicTypeBool:
     return 1;
@@ -150,6 +152,14 @@ static size_t IntegerConversionRank(CompilerType type) {
   case lldb::eBasicTypeInt128:
   case lldb::eBasicTypeUnsignedInt128:
     return 7;
+  case lldb::eBasicTypeHalf:
+    return 8;
+  case lldb::eBasicTypeFloat:
+    return 9;
+  case lldb::eBasicTypeDouble:
+    return 10;
+  case lldb::eBasicTypeLongDouble:
+    return 11;
   default:
     break;
   }
@@ -172,6 +182,7 @@ Interpreter::ArithmeticConversion(lldb::ValueObjectSP &lhs,
   CompilerType lhs_type = lhs->GetCompilerType();
   CompilerType rhs_type = rhs->GetCompilerType();
 
+  // If types already match, no need for further conversions
   if (lhs_type.CompareTypes(rhs_type))
     return lhs_type;
 
@@ -179,32 +190,10 @@ Interpreter::ArithmeticConversion(lldb::ValueObjectSP &lhs,
   if (!lhs_type.IsScalarType() || !rhs_type.IsScalarType())
     return CompilerType();
 
-  // Handle conversions for floating types (float, double).
-  if (lhs_type.IsRealFloatingPointType() ||
-      rhs_type.IsRealFloatingPointType()) {
-    // If both are floats, convert the smaller operand to the bigger.
-    if (lhs_type.IsRealFloatingPointType() &&
-        rhs_type.IsRealFloatingPointType()) {
-      if (lhs_type.GetBasicTypeEnumeration() >
-          rhs_type.GetBasicTypeEnumeration())
-        return lhs_type;
-      return rhs_type;
-    }
-    if (lhs_type.IsRealFloatingPointType() && rhs_type.IsInteger())
-      return lhs_type;
-    return rhs_type;
-  }
-
-  if (lhs_type.IsInteger() && rhs_type.IsInteger()) {
-    using Rank = std::tuple<size_t, bool>;
-    Rank l_rank = {IntegerConversionRank(lhs_type), !lhs_type.IsSigned()};
-    Rank r_rank = {IntegerConversionRank(rhs_type), !rhs_type.IsSigned()};
-
-    if (l_rank < r_rank)
-      return rhs_type;
-    if (l_rank > r_rank)
-      return lhs_type;
-  }
+  using Rank = std::tuple<size_t, bool>;
+  if (Rank{ConversionRank(lhs_type), !lhs_type.IsSigned()} >
+      Rank{ConversionRank(rhs_type), !rhs_type.IsSigned()})
+    return lhs_type;
   return rhs_type;
 }
 
@@ -517,7 +506,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
   std::string errMsg =
       llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
                     orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
-  return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  return llvm::make_error<DILDiagnosticError>(m_expr, std::move(errMsg),
+                                              location);
 }
 
 llvm::Expected<lldb::ValueObjectSP>
