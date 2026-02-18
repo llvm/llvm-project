@@ -368,7 +368,7 @@ RPC_ATTRS uint32_t get_num_lanes() {
 #endif
 }
 
-/// Returns the id of the thread inside of an AMD wavefront executing together.
+/// Returns a bitmask of the currently active lanes.
 RPC_ATTRS uint64_t get_lane_mask() {
 #ifdef RPC_TARGET_IS_GPU
   return __gpu_lane_mask();
