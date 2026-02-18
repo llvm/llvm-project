@@ -23,12 +23,6 @@ example illustrates how the construction of the value happens:
       foo(get_str()); // prvalue -> move construction
     }
 
-.. note::
-
-   Currently, only constructors are transformed to make use of pass-by-value.
-   Contributions that handle other situations are welcome!
-
-
 Pass-by-value in constructors
 -----------------------------
 
@@ -85,11 +79,43 @@ untouched:
   };
 
 
+Pass-by-value in function bodies
+---------------------------------
+
+Replaces ``const T&`` function parameters that are unconditionally copied into
+a local variable with pass-by-value and ``std::move()``. This applies to free
+functions, member functions, and constructors (for copies in the body rather
+than the initializer list).
+
+.. code-block:: c++
+
+     #include <string>
+
+    -void process(const std::string &S) {
+    -  std::string Local = S;
+    +void process(std::string S) {
+    +  std::string Local = std::move(S);
+       // use Local...
+     }
+
+The check only triggers when:
+
+- The parameter type is a non-trivially-copyable class or struct.
+- The type has a non-deleted move constructor.
+- The parameter is used exactly once (in the copy).
+- There is no overload taking an rvalue reference for the same parameter.
+
+.. note::
+
+   This transformation is not applied when ``ValuesOnly`` is set to `true`,
+   or in dependent (template) contexts.
+
 Limitations
 -----------
 
-A situation where the generated code can be wrong is when the object referenced
-is modified before the assignment in the init-list through a "hidden" reference.
+A situation where the generated code can be wrong is when the object
+referenced is modified before the assignment in the init-list through a
+"hidden" reference.
 
 Example:
 

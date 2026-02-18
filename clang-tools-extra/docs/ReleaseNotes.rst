@@ -207,7 +207,9 @@ Changes in existing checks
 
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
-  option to suppress warnings in macros.
+  option to suppress warnings in macros. Also extended the check to handle
+  ``const T&`` function parameters that are copied into local variables in
+  function bodies, not just constructor member initializer lists.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
