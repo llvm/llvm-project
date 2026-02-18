@@ -70,6 +70,10 @@
 #include "math/expm1.h"
 #include "math/expm1f.h"
 #include "math/expm1f16.h"
+#include "math/f16add.h"
+#include "math/f16addf.h"
+#include "math/f16addf128.h"
+#include "math/f16addl.h"
 #include "math/f16fma.h"
 #include "math/f16fmaf.h"
 #include "math/f16fmaf128.h"
@@ -134,7 +138,9 @@
 #include "math/sqrtf16.h"
 #include "math/tan.h"
 #include "math/tanf.h"
+#include "math/tanf16.h"
 #include "math/tanhf.h"
 #include "math/tanhf16.h"
+#include "math/tanpif.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H
