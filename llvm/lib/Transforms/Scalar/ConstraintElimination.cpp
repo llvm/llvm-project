@@ -64,6 +64,11 @@ static cl::opt<bool> DumpReproducers(
     "constraint-elimination-dump-reproducers", cl::init(false), cl::Hidden,
     cl::desc("Dump IR to reproduce successful transformations."));
 
+static cl::opt<bool> UseConstantRangeFacts(
+    "constraint-elimination-use-constant-range-facts", cl::init(true),
+    cl::Hidden,
+    cl::desc("Use constant range facts from computeConstantRange."));
+
 static int64_t MaxConstraintValue = std::numeric_limits<int64_t>::max();
 static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
 
@@ -1172,7 +1177,7 @@ void State::addInfoFor(BasicBlock &BB) {
       // Target operands feeding into comparisons for computeConstantRange.
       // Only explore two levels deep, and exclude eq and ne because of
       // outsized compile time impact and marginal benefit.
-      if (!Cmp->isEquality()) {
+      if (UseConstantRangeFacts && !Cmp->isEquality()) {
         for (Value *Op : Cmp->operands()) {
           if (auto *OpI = dyn_cast<Instruction>(Op)) {
             addConstantRangeFact(OpI, DT.getNode(OpI->getParent()));
@@ -1884,11 +1889,12 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
 
-  // Add range facts for function parameters
-  DomTreeNode *EntryDTN = DT.getNode(&F.getEntryBlock());
-  if (EntryDTN) {
-    for (Argument &Arg : F.args())
-      S.addConstantRangeFact(&Arg, EntryDTN);
+  // Add range facts for function parameters.
+  if (UseConstantRangeFacts) {
+    DomTreeNode *EntryDTN = DT.getNode(&F.getEntryBlock());
+    if (EntryDTN)
+      for (Argument &Arg : F.args())
+        S.addConstantRangeFact(&Arg, EntryDTN);
   }
 
   // Collect conditions implied by branches and blocks with their
