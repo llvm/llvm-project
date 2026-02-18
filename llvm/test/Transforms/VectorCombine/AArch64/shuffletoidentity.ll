@@ -1026,9 +1026,8 @@ define <4 x i64> @bitcast_smax_v8i32_v4i32(<4 x i64> %a, <4 x i64> %b) {
 define void @bitcast_srcty_mismatch() {
 ; CHECK-LABEL: @bitcast_srcty_mismatch(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <2 x i64> zeroinitializer, <2 x i64> zeroinitializer, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> zeroinitializer to <4 x float>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SHUFFLE_I_I]] to <4 x float>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> zeroinitializer to <4 x float>
 ; CHECK-NEXT:    [[SHUFP_I196:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> [[TMP1]], <4 x i32> <i32 2, i32 1, i32 4, i32 7>
 ; CHECK-NEXT:    store <4 x float> [[SHUFP_I196]], ptr null, align 16
 ; CHECK-NEXT:    ret void
@@ -1064,8 +1063,8 @@ entry:
 define <16 x i64> @operandbundles(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c) {
 ; CHECK-LABEL: @operandbundles(
 ; CHECK-NEXT:    [[CALL:%.*]] = call <4 x i64> @llvm.fshl.v4i64(<4 x i64> [[A:%.*]], <4 x i64> [[B:%.*]], <4 x i64> [[C:%.*]]) [ "jl_roots"(ptr addrspace(10) null, ptr addrspace(10) null) ]
-; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <4 x i64> [[CALL]], <4 x i64> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[SHUFFLEVECTOR1:%.*]] = shufflevector <16 x i64> [[SHUFFLEVECTOR]], <16 x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <4 x i64> [[CALL]], <4 x i64> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[SHUFFLEVECTOR1:%.*]] = shufflevector <12 x i64> [[TMP1]], <12 x i64> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    ret <16 x i64> [[SHUFFLEVECTOR1]]
 ;
   %call = call <4 x i64> @llvm.fshl.v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c) [ "jl_roots"(ptr addrspace(10) null, ptr addrspace(10) null) ]
