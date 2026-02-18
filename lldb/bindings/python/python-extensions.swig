@@ -269,13 +269,13 @@
 %pythoncode %{
 
 def command(command_name=None, doc=None):
-    import lldb
     """A decorator function that registers an LLDB command line
         command that is bound to the function it is attached to."""
     def callable(function):
         """Registers an lldb command for the decorated function."""
         command = "command script add -f %s.%s %s" % (function.__module__, function.__name__, command_name or function.__name__)
-        lldb.debugger.HandleCommand(command)
+        global debugger
+        debugger.HandleCommand(command)
         if doc:
             function.__doc__ = doc
         return function
