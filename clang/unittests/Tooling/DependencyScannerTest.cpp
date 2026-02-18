@@ -379,8 +379,10 @@ TEST(DependencyScanner, NoNegativeCache) {
   VFS->addFile(Test1Path, 0,
                llvm::MemoryBuffer::getMemBuffer("#include \"header.h\""));
 
-  DependencyScanningService Service({});
-  DependencyScanningTool ScanTool(Service, VFS);
+  DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [VFS] { return VFS; };
+  DependencyScanningService Service(std::move(Opts));
+  DependencyScanningTool ScanTool(Service);
 
   TextDiagnosticBuffer DiagConsumer;
 
@@ -433,11 +435,12 @@ TEST(DependencyScanner, NoNegativeCacheCAS) {
                llvm::MemoryBuffer::getMemBuffer("#include \"header.h\""));
 
   DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [VFS] { return VFS; };
   Opts.Format = ScanningOutputFormat::FullIncludeTree;
   Opts.CAS = DB;
   Opts.Cache = Cache;
   DependencyScanningService Service(std::move(Opts));
-  DependencyScanningTool ScanTool(Service, VFS);
+  DependencyScanningTool ScanTool(Service);
 
   TextDiagnosticBuffer DiagConsumer;
 

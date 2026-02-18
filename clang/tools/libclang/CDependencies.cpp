@@ -190,6 +190,14 @@ clang_experimental_DependencyScannerService_create_v1(
   Opts.CASOpts = unwrap(WrappedOpts)->CASOpts;
   Opts.CAS = unwrap(WrappedOpts)->CAS;
   Opts.Cache = unwrap(WrappedOpts)->Cache;
+  Opts.MakeVFS = [Format = Opts.Format, CAS = Opts.CAS] {
+    bool IsIncludeTreeOutput = Format == ScanningOutputFormat::IncludeTree ||
+                               Format == ScanningOutputFormat::FullIncludeTree;
+    auto FS = llvm::vfs::createPhysicalFileSystem();
+    if (IsIncludeTreeOutput)
+      FS = llvm::cas::createCASProvidingFileSystem(CAS, std::move(FS));
+    return FS;
+  };
   Opts.OptimizeArgs = unwrap(WrappedOpts)->OptimizeArgs;
   if (unwrap(WrappedOpts)->CacheNegativeStats)
     Opts.CacheNegativeStats = *unwrap(WrappedOpts)->CacheNegativeStats;
@@ -203,16 +211,7 @@ void clang_experimental_DependencyScannerService_dispose_v0(
 
 CXDependencyScannerWorker clang_experimental_DependencyScannerWorker_create_v0(
     CXDependencyScannerService S) {
-  ScanningOutputFormat Format = unwrap(S)->getOpts().Format;
-  bool IsIncludeTreeOutput = Format == ScanningOutputFormat::IncludeTree ||
-                             Format == ScanningOutputFormat::FullIncludeTree;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
-      llvm::vfs::createPhysicalFileSystem();
-  if (IsIncludeTreeOutput)
-    FS = llvm::cas::createCASProvidingFileSystem(unwrap(S)->getOpts().CAS,
-                                                 std::move(FS));
-
-  return wrap(new DependencyScanningWorker(*unwrap(S), FS));
+  return wrap(new DependencyScanningWorker(*unwrap(S)));
 }
 
 void clang_experimental_DependencyScannerWorker_dispose_v0(
@@ -793,17 +792,17 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
   bool IsReproducerCASBased{UpstreamCAS};
   DependencyScanningServiceOptions ServiceOpts;
   if (IsReproducerCASBased) {
+    ServiceOpts.MakeVFS = [UpstreamCAS] {
+      return llvm::cas::createCASProvidingFileSystem(
+          UpstreamCAS, llvm::vfs::createPhysicalFileSystem());
+    };
     ServiceOpts.Format = ScanningOutputFormat::FullIncludeTree;
     ServiceOpts.CASOpts = Opts.CASOpts;
     ServiceOpts.CAS = UpstreamCAS;
     ServiceOpts.Cache = Opts.Cache;
   }
   DependencyScanningService DepsService(std::move(ServiceOpts));
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
-      llvm::vfs::createPhysicalFileSystem();
-  if (UpstreamCAS)
-    FS = llvm::cas::createCASProvidingFileSystem(UpstreamCAS, std::move(FS));
-  DependencyScanningTool DepsTool(DepsService, FS);
+  DependencyScanningTool DepsTool(DepsService);
 
   llvm::SmallString<128> ReproScriptPath;
   int ScriptFD;
