@@ -459,52 +459,54 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   if (typeConverter.isEmptyArray(firMemref.getType()))
     return failure();
 
-  if (auto blockArg = dyn_cast<BlockArgument>(firMemref)) {
-    Value elemRef = arrayCoorOp.getResult();
-    rewriter.setInsertionPointAfter(arrayCoorOp);
-    Location loc = arrayCoorOp->getLoc();
-    Type elemMemrefTy = typeConverter.convertMemrefType(elemRef.getType());
-    Value converted =
-        fir::ConvertOp::create(rewriter, loc, elemMemrefTy, elemRef);
-    SmallVector<Value> indices;
-    return std::pair{converted, indices};
-  }
-
-  Operation *memref = firMemref.getDefiningOp();
-
-  FailureOr<Value> converted;
-  if (enableFIRConvertOptimizations && isMarshalLike(memref) &&
-      !fir::isa_fir_type(firMemref.getType())) {
-    converted = firMemref;
-    rewriter.setInsertionPoint(arrayCoorOp);
-  } else {
-    Operation *arrayCoorOperation = arrayCoorOp.getOperation();
-    rewriter.setInsertionPoint(arrayCoorOp);
-    if (memrefIsOptional(memref)) {
-      auto ifOp = arrayCoorOperation->getParentOfType<scf::IfOp>();
-      if (ifOp) {
-        Operation *condition = ifOp.getCondition().getDefiningOp();
-        if (condition && isa<fir::IsPresentOp>(condition))
-          if (condition->getOperand(0) == firMemref) {
-            if (arrayCoorOperation->getParentRegion() == &ifOp.getThenRegion())
-              rewriter.setInsertionPointToStart(
-                  &(ifOp.getThenRegion().front()));
-            else if (arrayCoorOperation->getParentRegion() ==
-                     &ifOp.getElseRegion())
-              rewriter.setInsertionPointToStart(
-                  &(ifOp.getElseRegion().front()));
-          }
-      }
-    }
-
-    converted = getFIRConvert(memOp, memref, rewriter, typeConverter);
-    if (failed(converted))
-      return failure();
-
-    rewriter.setInsertionPointAfter(arrayCoorOp);
-  }
-
   Location loc = arrayCoorOp->getLoc();
+
+  // Prefer lowering the array-coordinates computation to a memref + indices.
+  // This allows erasing fir.array_coor when it is only used by load/store even
+  // if the base address is a block argument (e.g. region arguments).
+  Operation *memref = nullptr;
+  FailureOr<Value> converted;
+  if (auto blockArg = dyn_cast<BlockArgument>(firMemref)) {
+    rewriter.setInsertionPoint(arrayCoorOp);
+    Type memrefTy = typeConverter.convertMemrefType(blockArg.getType());
+    converted =
+        fir::ConvertOp::create(rewriter, loc, memrefTy, blockArg).getResult();
+    rewriter.setInsertionPointAfter(arrayCoorOp);
+  } else {
+    memref = firMemref.getDefiningOp();
+    if (enableFIRConvertOptimizations && isMarshalLike(memref) &&
+        !fir::isa_fir_type(firMemref.getType())) {
+      converted = firMemref;
+      rewriter.setInsertionPoint(arrayCoorOp);
+    } else {
+      Operation *arrayCoorOperation = arrayCoorOp.getOperation();
+      rewriter.setInsertionPoint(arrayCoorOp);
+      if (memrefIsOptional(memref)) {
+        auto ifOp = arrayCoorOperation->getParentOfType<scf::IfOp>();
+        if (ifOp) {
+          Operation *condition = ifOp.getCondition().getDefiningOp();
+          if (condition && isa<fir::IsPresentOp>(condition))
+            if (condition->getOperand(0) == firMemref) {
+              if (arrayCoorOperation->getParentRegion() ==
+                  &ifOp.getThenRegion())
+                rewriter.setInsertionPointToStart(
+                    &(ifOp.getThenRegion().front()));
+              else if (arrayCoorOperation->getParentRegion() ==
+                       &ifOp.getElseRegion())
+                rewriter.setInsertionPointToStart(
+                    &(ifOp.getElseRegion().front()));
+            }
+        }
+      }
+
+      converted = getFIRConvert(memOp, memref, rewriter, typeConverter);
+      if (failed(converted))
+        return failure();
+
+      rewriter.setInsertionPointAfter(arrayCoorOp);
+    }
+  }
+
   Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
   FailureOr<SmallVector<Value>> failureOrIndices =
       getMemrefIndices(arrayCoorOp, memref, rewriter, *converted, one);
