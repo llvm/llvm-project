@@ -619,15 +619,10 @@ std::string Thread::GetStopDescriptionRaw() {
 }
 
 void Thread::WillStop() {
-  ThreadPlan *current_plan = GetCurrentPlan();
-
   // FIXME: I may decide to disallow threads with no plans.  In which
   // case this should go to an assert.
-
-  if (!current_plan)
-    return;
-
-  current_plan->WillStop();
+  if (ThreadPlanSP current_plan = GetCurrentPlan())
+    current_plan->WillStop();
 }
 
 bool Thread::SetupToStepOverBreakpointIfNeeded(RunDirection direction) {
@@ -662,12 +657,12 @@ bool Thread::SetupToStepOverBreakpointIfNeeded(RunDirection direction) {
         // Note, don't assume there's a ThreadPlanStepOverBreakpoint, the
         // target may not require anything special to step over a breakpoint.
 
-        ThreadPlan *cur_plan = GetCurrentPlan();
+        ThreadPlanSP cur_plan_sp = GetCurrentPlan();
 
         bool push_step_over_bp_plan = false;
-        if (cur_plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
+        if (cur_plan_sp->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
           ThreadPlanStepOverBreakpoint *bp_plan =
-              (ThreadPlanStepOverBreakpoint *)cur_plan;
+              (ThreadPlanStepOverBreakpoint *)cur_plan_sp.get();
           if (bp_plan->GetBreakpointLoadAddress() != thread_pc)
             push_step_over_bp_plan = true;
         } else
@@ -730,12 +725,12 @@ bool Thread::ShouldResume(StateType resume_state) {
   // runs.
 
   bool need_to_resume = false;
-  ThreadPlan *plan_ptr = GetCurrentPlan();
-  if (plan_ptr) {
-    need_to_resume = plan_ptr->WillResume(resume_state, true);
+  ThreadPlanSP plan_sp = GetCurrentPlan();
+  if (plan_sp) {
+    need_to_resume = plan_sp->WillResume(resume_state, true);
 
-    while ((plan_ptr = GetPreviousPlan(plan_ptr)) != nullptr) {
-      plan_ptr->WillResume(resume_state, false);
+    while ((plan_sp = GetPreviousPlan(plan_sp.get()))) {
+      plan_sp->WillResume(resume_state, false);
     }
 
     // If the WillResume for the plan says we are faking a resume, then it will
@@ -774,7 +769,7 @@ void Thread::DidResume() {
 void Thread::DidStop() { SetState(eStateStopped); }
 
 bool Thread::ShouldStop(Event *event_ptr) {
-  ThreadPlan *current_plan = GetCurrentPlan();
+  ThreadPlanSP current_plan = GetCurrentPlan();
 
   bool should_stop = true;
 
@@ -873,34 +868,34 @@ bool Thread::ShouldStop(Event *event_ptr) {
 
       // If the current plan doesn't explain the stop, then find one that does
       // and let it handle the situation.
-      ThreadPlan *plan_ptr = current_plan;
-      while ((plan_ptr = GetPreviousPlan(plan_ptr)) != nullptr) {
-        if (plan_ptr->PlanExplainsStop(event_ptr)) {
-          LLDB_LOGF(log, "Plan %s explains stop.", plan_ptr->GetName());
+      ThreadPlanSP plan_sp = current_plan;
+      while ((plan_sp = GetPreviousPlan(plan_sp.get())) != nullptr) {
+        if (plan_sp->PlanExplainsStop(event_ptr)) {
+          LLDB_LOGF(log, "Plan %s explains stop.", plan_sp->GetName());
 
-          should_stop = plan_ptr->ShouldStop(event_ptr);
+          should_stop = plan_sp->ShouldStop(event_ptr);
 
           // plan_ptr explains the stop, next check whether plan_ptr is done,
           // if so, then we should take it and all the plans below it off the
           // stack.
 
-          if (plan_ptr->MischiefManaged()) {
+          if (plan_sp->MischiefManaged()) {
             // We're going to pop the plans up to and including the plan that
             // explains the stop.
-            ThreadPlan *prev_plan_ptr = GetPreviousPlan(plan_ptr);
+            ThreadPlanSP prev_plan_sp = GetPreviousPlan(plan_sp.get());
 
             do {
               if (should_stop)
                 current_plan->WillStop();
               PopPlan();
-            } while ((current_plan = GetCurrentPlan()) != prev_plan_ptr);
+            } while ((current_plan = GetCurrentPlan()) != prev_plan_sp);
             // Now, if the responsible plan was not "Okay to discard" then
             // we're done, otherwise we forward this to the next plan in the
             // stack below.
             done_processing_current_plan =
-                (plan_ptr->IsControllingPlan() && !plan_ptr->OkayToDiscard());
+                (plan_sp->IsControllingPlan() && !plan_sp->OkayToDiscard());
           } else {
-            bool should_force_run = plan_ptr->ShouldRunBeforePublicStop();
+            bool should_force_run = plan_sp->ShouldRunBeforePublicStop();
             if (should_force_run) {
               SetShouldRunBeforePublicStop(true);
               should_stop = false;
@@ -971,14 +966,14 @@ bool Thread::ShouldStop(Event *event_ptr) {
   // original plan on the stack, This code clears stale plans off the stack.
 
   if (should_stop) {
-    ThreadPlan *plan_ptr = GetCurrentPlan();
+    ThreadPlanSP plan_sp = GetCurrentPlan();
 
     // Discard the stale plans and all plans below them in the stack, plus move
     // the completed plans to the completed plan stack
-    while (!plan_ptr->IsBasePlan()) {
-      bool stale = plan_ptr->IsPlanStale();
-      ThreadPlan *examined_plan = plan_ptr;
-      plan_ptr = GetPreviousPlan(examined_plan);
+    while (!plan_sp->IsBasePlan()) {
+      bool stale = plan_sp->IsPlanStale();
+      ThreadPlanSP examined_plan = plan_sp;
+      plan_sp = GetPreviousPlan(examined_plan.get());
 
       if (stale) {
         LLDB_LOGF(
@@ -1053,16 +1048,16 @@ Vote Thread::ShouldReportStop(Event *event_ptr) {
     return GetPlans().GetCompletedPlan(false)->ShouldReportStop(event_ptr);
   } else {
     Vote thread_vote = eVoteNoOpinion;
-    ThreadPlan *plan_ptr = GetCurrentPlan();
+    ThreadPlanSP plan_sp = GetCurrentPlan();
     while (true) {
-      if (plan_ptr->PlanExplainsStop(event_ptr)) {
-        thread_vote = plan_ptr->ShouldReportStop(event_ptr);
+      if (plan_sp->PlanExplainsStop(event_ptr)) {
+        thread_vote = plan_sp->ShouldReportStop(event_ptr);
         break;
       }
-      if (plan_ptr->IsBasePlan())
+      if (plan_sp->IsBasePlan())
         break;
       else
-        plan_ptr = GetPreviousPlan(plan_ptr);
+        plan_sp = GetPreviousPlan(plan_sp.get());
     }
     LLDB_LOGF(log,
               "Thread::ShouldReportStop() tid = 0x%4.4" PRIx64
@@ -1173,8 +1168,8 @@ void Thread::AutoCompleteThreadPlans(CompletionRequest &request) const {
   }
 }
 
-ThreadPlan *Thread::GetCurrentPlan() const {
-  return GetPlans().GetCurrentPlan().get();
+ThreadPlanSP Thread::GetCurrentPlan() const {
+  return GetPlans().GetCurrentPlan();
 }
 
 ThreadPlanSP Thread::GetCompletedPlan() const {
@@ -1201,7 +1196,7 @@ bool Thread::CompletedPlanOverridesBreakpoint() const {
   return GetPlans().AnyCompletedPlans();
 }
 
-ThreadPlan *Thread::GetPreviousPlan(ThreadPlan *current_plan) const{
+lldb::ThreadPlanSP Thread::GetPreviousPlan(ThreadPlan *current_plan) const {
   return GetPlans().GetPreviousPlan(current_plan);
 }
 

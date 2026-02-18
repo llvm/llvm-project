@@ -1024,7 +1024,7 @@ public:
   ///
   /// \return
   ///     A pointer to the next executed plan.
-  ThreadPlan *GetCurrentPlan() const;
+  lldb::ThreadPlanSP GetCurrentPlan() const;
 
   /// Unwinds the thread stack for the innermost expression plan currently
   /// on the thread plan stack.
@@ -1336,7 +1336,7 @@ protected:
 
   void DiscardPlan();
 
-  ThreadPlan *GetPreviousPlan(ThreadPlan *plan) const;
+  lldb::ThreadPlanSP GetPreviousPlan(ThreadPlan *plan) const;
 
   virtual Unwind &GetUnwinder();
 

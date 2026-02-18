@@ -355,7 +355,7 @@ bool ThreadPlanStack::WasPlanDiscarded(ThreadPlan *in_plan) const {
   return false;
 }
 
-ThreadPlan *ThreadPlanStack::GetPreviousPlan(ThreadPlan *current_plan) const {
+ThreadPlanSP ThreadPlanStack::GetPreviousPlan(ThreadPlan *current_plan) const {
   llvm::sys::ScopedReader guard(m_stack_mutex);
   if (current_plan == nullptr)
     return nullptr;
@@ -365,20 +365,20 @@ ThreadPlan *ThreadPlanStack::GetPreviousPlan(ThreadPlan *current_plan) const {
   int stack_size = m_completed_plans.size();
   for (int i = stack_size - 1; i > 0; i--) {
     if (current_plan == m_completed_plans[i].get())
-      return m_completed_plans[i - 1].get();
+      return m_completed_plans[i - 1];
   }
 
   // If this is the first completed plan, the previous one is the
   // bottom of the regular plan stack.
   if (stack_size > 0 && m_completed_plans[0].get() == current_plan) {
-    return GetCurrentPlanNoLock().get();
+    return GetCurrentPlanNoLock();
   }
 
   // Otherwise look for it in the regular plans.
   stack_size = m_plans.size();
   for (int i = stack_size - 1; i > 0; i--) {
     if (current_plan == m_plans[i].get())
-      return m_plans[i - 1].get();
+      return m_plans[i - 1];
   }
   return nullptr;
 }
