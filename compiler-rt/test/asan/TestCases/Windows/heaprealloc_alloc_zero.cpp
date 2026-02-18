@@ -40,8 +40,9 @@ int main() {
   if (!ptr2)
     return 1;
   size_t heapsize = HeapSize(GetProcessHeap(), 0, ptr2);
-  if (heapsize != 1) { // will be 0 without ASAN turned on
-    std::cerr << "HeapAlloc size failure! " << heapsize << " != 1\n";
+  // HeapSize will retrieve the user-defined size, not the ASan-allocated size of 1
+  if (heapsize != 0) {
+    std::cerr << "HeapAlloc size failure! " << heapsize << " != 0\n";
     return 1;
   }
   void *ptr3 = HeapReAlloc(GetProcessHeap(), 0, ptr2, 3);

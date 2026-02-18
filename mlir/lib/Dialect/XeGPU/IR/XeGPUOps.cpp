@@ -186,8 +186,8 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
       return success();
   }
 
-  if (mdescTy.getRank() != 2)
-    return emitError() << "mem_desc must be 2D.";
+  if (mdescTy.getRank() < 2)
+    return emitError() << "mem_desc must be 2D or greater.";
 
   ArrayRef<int64_t> dataShape = dataTy.getShape();
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();

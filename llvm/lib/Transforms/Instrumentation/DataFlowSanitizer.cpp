@@ -2363,7 +2363,7 @@ DFSanFunction::loadShadowOrigin(Value *Addr, uint64_t Size, Align InstAlignment,
     if (ClTrackOrigins == 2) {
       IRBuilder<> IRB(Pos->getParent(), Pos);
       auto *ConstantShadow = dyn_cast<Constant>(PrimitiveShadow);
-      if (!ConstantShadow || !ConstantShadow->isZeroValue())
+      if (!ConstantShadow || !ConstantShadow->isNullValue())
         Origin = updateOriginIfTainted(PrimitiveShadow, Origin, IRB);
     }
   }
@@ -2552,7 +2552,7 @@ void DFSanFunction::storeOrigin(BasicBlock::iterator Pos, Value *Addr,
   Value *CollapsedShadow = collapseToPrimitiveShadow(Shadow, Pos);
   IRBuilder<> IRB(Pos->getParent(), Pos);
   if (auto *ConstantShadow = dyn_cast<Constant>(CollapsedShadow)) {
-    if (!ConstantShadow->isZeroValue())
+    if (!ConstantShadow->isNullValue())
       paintOrigin(IRB, updateOrigin(Origin, IRB), StoreOriginAddr, Size,
                   OriginAlignment);
     return;

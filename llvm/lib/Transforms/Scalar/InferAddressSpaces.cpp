@@ -276,7 +276,7 @@ static Type *getPtrOrVecOfPtrsWithNewAS(Type *Ty, unsigned NewAddrSpace) {
   return Ty->getWithNewType(NPT);
 }
 
-// Check whether that's no-op pointer bicast using a pair of
+// Check whether that's no-op pointer bitcast using a pair of
 // `ptrtoint`/`inttoptr` due to the missing no-op pointer bitcast over
 // different address spaces.
 static bool isNoopPtrIntCastPair(const Operator *I2P, const DataLayout &DL,

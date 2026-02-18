@@ -303,7 +303,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::LLRINT,            MVT::f32, Custom);
     setOperationAction(ISD::LLRINT,            MVT::f64, Custom);
 
-    if (!Subtarget.is64Bit()) {
+    if (!Subtarget.is64Bit() && Subtarget.hasX87()) {
       setOperationAction(ISD::LRINT,  MVT::i64, Custom);
       setOperationAction(ISD::LLRINT, MVT::i64, Custom);
     }
@@ -22587,6 +22587,7 @@ SDValue X86TargetLowering::LowerLRINT_LLRINT(SDValue Op,
 
 SDValue X86TargetLowering::LRINT_LLRINTHelper(SDNode *N,
                                               SelectionDAG &DAG) const {
+  assert(DAG.getSubtarget<X86Subtarget>().hasX87() && "Expected X87");
   EVT DstVT = N->getValueType(0);
   SDValue Src = N->getOperand(0);
   EVT SrcVT = Src.getValueType();
@@ -24364,55 +24365,42 @@ X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 /// Returns the BT node and the condition code needed to use it.
 static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
                             SelectionDAG &DAG, X86::CondCode &X86CC) {
+  using namespace SDPatternMatch;
   assert(And.getOpcode() == ISD::AND && "Expected AND node!");
-  SDValue Op0 = And.getOperand(0);
-  SDValue Op1 = And.getOperand(1);
-  if (Op0.getOpcode() == ISD::TRUNCATE)
-    Op0 = Op0.getOperand(0);
-  if (Op1.getOpcode() == ISD::TRUNCATE)
-    Op1 = Op1.getOperand(0);
+  assert(And.getValueType().isScalarInteger() && "Scalar type expected");
 
-  SDValue Src, BitNo;
-  if (Op1.getOpcode() == ISD::SHL)
-    std::swap(Op0, Op1);
-  if (Op0.getOpcode() == ISD::SHL) {
-    if (isOneConstant(Op0.getOperand(0))) {
-      // If we looked past a truncate, check that it's only truncating away
-      // known zeros.
-      unsigned BitWidth = Op0.getValueSizeInBits();
-      unsigned AndBitWidth = And.getValueSizeInBits();
-      if (BitWidth > AndBitWidth) {
-        KnownBits Known = DAG.computeKnownBits(Op0);
-        if (Known.countMinLeadingZeros() < BitWidth - AndBitWidth)
-          return SDValue();
-      }
-      Src = Op1;
-      BitNo = Op0.getOperand(1);
+  APInt AndRHSVal;
+  SDValue Shl, Src, BitNo;
+  if (sd_match(And,
+               m_And(m_TruncOrSelf(m_Value(Src)),
+                     m_TruncOrSelf(m_AllOf(m_Value(Shl),
+                                           m_Shl(m_One(), m_Value(BitNo))))))) {
+    // If we looked past a truncate, check that it's only truncating away known
+    // zeros.
+    unsigned BitWidth = Shl.getValueSizeInBits();
+    unsigned AndBitWidth = And.getValueSizeInBits();
+    if (BitWidth > AndBitWidth) {
+      KnownBits Known = DAG.computeKnownBits(Shl);
+      if (Known.countMinLeadingZeros() < (BitWidth - AndBitWidth))
+        return SDValue();
     }
-  } else if (Op1.getOpcode() == ISD::Constant) {
-    ConstantSDNode *AndRHS = cast<ConstantSDNode>(Op1);
-    uint64_t AndRHSVal = AndRHS->getZExtValue();
-    SDValue AndLHS = Op0;
-
-    if (AndRHSVal == 1 && AndLHS.getOpcode() == ISD::SRL) {
-      Src = AndLHS.getOperand(0);
-      BitNo = AndLHS.getOperand(1);
-    } else {
-      // Use BT if the immediate can't be encoded in a TEST instruction or we
-      // are optimizing for size and the immedaite won't fit in a byte.
-      bool OptForSize = DAG.shouldOptForSize();
-      if ((!isUInt<32>(AndRHSVal) || (OptForSize && !isUInt<8>(AndRHSVal))) &&
-          isPowerOf2_64(AndRHSVal)) {
-        Src = AndLHS;
-        BitNo = DAG.getConstant(Log2_64_Ceil(AndRHSVal), dl,
-                                Src.getValueType());
-      }
-    }
-  }
-
-  // No patterns found, give up.
-  if (!Src.getNode())
+  } else if (sd_match(And,
+                      m_And(m_TruncOrSelf(m_Srl(m_Value(Src), m_Value(BitNo))),
+                            m_One()))) {
+    // ((Src >> BitNo) & 1) ==/!= 0
+  } else if (sd_match(And, m_And(m_TruncOrSelf(m_Value(Src)),
+                                 m_ConstInt(AndRHSVal)))) {
+    // Use BT if the immediate can't be encoded in a TEST instruction or we
+    // are optimizing for size and the immediate won't fit in a byte.
+    bool OptForSize = DAG.shouldOptForSize();
+    if (!AndRHSVal.isPowerOf2() || AndRHSVal.isIntN(OptForSize ? 8 : 32))
+      return SDValue();
+    // (Src & ConstPow2) ==/!= 0
+    BitNo = DAG.getConstant(AndRHSVal.ceilLogBase2(), dl, Src.getValueType());
+  } else {
+    // No patterns found, give up.
     return SDValue();
+  }
 
   // Remove any bit flip.
   if (isBitwiseNot(Src)) {
@@ -57498,6 +57486,7 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   const SDValue LHS = N->getOperand(0);
   const SDValue RHS = N->getOperand(1);
@@ -57590,7 +57579,6 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
         EVT SrcVT = LHS.getOperand(0).getValueType();
         APInt UpperBits = APInt::getBitsSetFrom(SrcVT.getScalarSizeInBits(),
                                                 OpVT.getScalarSizeInBits());
-        const TargetLowering &TLI = DAG.getTargetLoweringInfo();
         if (DAG.MaskedValueIsZero(LHS.getOperand(0), UpperBits) &&
             TLI.isTypeLegal(LHS.getOperand(0).getValueType()))
           return DAG.getSetCC(DL, VT, LHS.getOperand(0),
@@ -57772,7 +57760,7 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
       // current form has a slight latency cost, but it probably worth saving a
       // constant.
       if (ISD::isConstantSplatVectorAllOnes(AddC.getNode()) &&
-          DAG.getTargetLoweringInfo().isOperationLegal(ISD::UMIN, OpVT)) {
+          TLI.isOperationLegal(ISD::UMIN, OpVT)) {
         // Pass
       }
       // Normal Cases
@@ -58937,8 +58925,8 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
   //               (extract_elt Mul, 3),
   //               (extract_elt Mul, 5),
   //                   ...
-  // and identify Mul. Mul must be either ISD::MUL, or can be ISD::SIGN_EXTEND
-  // in which case we add a trivial multiplication by 1.
+  // and identify Mul. Mul must be either ISD::MUL, ISD::SHL, or can be
+  // ISD::SIGN_EXTEND in which case we add a trivial multiplication by 1.
   SDValue Mul;
   for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; i += 2) {
     SDValue Op0L = Op0->getOperand(i), Op1L = Op1->getOperand(i),
@@ -58969,7 +58957,7 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
       // with 2X number of vector elements than the BUILD_VECTOR.
       // Both extracts must be from same MUL.
       Mul = Vec0L;
-      if ((Mul.getOpcode() != ISD::MUL &&
+      if ((Mul.getOpcode() != ISD::MUL && Mul.getOpcode() != ISD::SHL &&
            Mul.getOpcode() != ISD::SIGN_EXTEND) ||
           Mul.getValueType().getVectorNumElements() != 2 * e)
         return SDValue();
@@ -58992,6 +58980,38 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
 
     N0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(0));
     N1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(1));
+  } else if (Mul.getOpcode() == ISD::SHL) {
+    SDValue ShVal = Mul.getOperand(0);
+    if (ShVal.getOpcode() != ISD::SIGN_EXTEND)
+      return SDValue();
+
+    N0 = ShVal.getOperand(0);
+    if (N0.getValueType() != TruncVT)
+      return SDValue();
+
+    unsigned NumElts = TruncVT.getVectorNumElements();
+    SmallVector<SDValue, 32> MulConsts;
+    MulConsts.reserve(NumElts);
+
+    auto *BV = dyn_cast<BuildVectorSDNode>(Mul.getOperand(1));
+    if (!BV || BV->getNumOperands() != NumElts)
+      return SDValue();
+
+    for (unsigned i = 0; i != NumElts; ++i) {
+      SDValue E = BV->getOperand(i);
+      if (E.isUndef())
+        return SDValue();
+      auto *C = dyn_cast<ConstantSDNode>(E);
+      if (!C)
+        return SDValue();
+      unsigned ShiftAmount = C->getZExtValue();
+      // A shift by more than 15 would overflow an i16.
+      if (ShiftAmount > 15)
+        return SDValue();
+      MulConsts.push_back(DAG.getConstant(1u << ShiftAmount, DL, MVT::i16));
+    }
+
+    N1 = DAG.getBuildVector(TruncVT, DL, MulConsts);
   } else {
     assert(Mul.getOpcode() == ISD::SIGN_EXTEND);
 
