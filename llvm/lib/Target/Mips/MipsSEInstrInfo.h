@@ -120,6 +120,10 @@ private:
                           bool FP64) const;
   void expandEhReturn(MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator I) const;
+  void expandWriteFCSR(MachineBasicBlock &MBB,
+                       MachineBasicBlock::iterator I, unsigned Opc) const;
+  void expandReadFCSR(MachineBasicBlock &MBB,
+                      MachineBasicBlock::iterator I, unsigned Opc) const;
 };
 
 }

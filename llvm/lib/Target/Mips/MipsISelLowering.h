@@ -359,6 +359,8 @@ class TargetRegisterClass;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFSETCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerVAARG(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
