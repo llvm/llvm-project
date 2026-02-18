@@ -1807,7 +1807,6 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureBackOffBarrier,
    FeatureLDSBankCount32,
    FeatureDLInsts,
-   FeatureDot5Insts,
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureDot9Insts,
@@ -1840,6 +1839,7 @@ def FeatureISAVersion11_Generic: FeatureSet<
      FeaturePrivEnabledTrap2NopBug,
      FeatureRequiresCOV6,
      FeatureRequiredExportPriority,
+     FeatureDot5Insts,
      FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
@@ -1848,6 +1848,7 @@ def FeatureISAVersion11_0_Common : FeatureSet<
      FeatureVALUTransUseHazard,
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
+     FeatureDot5Insts,
      FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
@@ -1872,6 +1873,7 @@ def FeatureISAVersion11_5_Common : FeatureSet<
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
+     FeatureDot5Insts,
      FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_5_0 : FeatureSet<

@@ -25,9 +25,9 @@ Target &getTheWebAssemblyTarget64();
 
 namespace WebAssembly {
 
-int64_t getStackOpcode(uint32_t Opcode);
-int64_t getRegisterOpcode(uint32_t Opcode);
-int64_t getWasm64Opcode(uint32_t Opcode);
+int32_t getStackOpcode(uint32_t Opcode);
+int32_t getRegisterOpcode(uint32_t Opcode);
+int32_t getWasm64Opcode(uint32_t Opcode);
 
 } // namespace WebAssembly
 

@@ -287,7 +287,8 @@ public:
       return success();
     }
 
-    // 8. Creates shape cast for the output n-D -> 2-D.
+    // 8. Shape cast the flattened result back to the original n-D parallel
+    // shape.
     VectorType outputCastedType = VectorType::get(
         parallelShapes, multiReductionOp.getSourceVectorType().getElementType(),
         parallelScalableDims);

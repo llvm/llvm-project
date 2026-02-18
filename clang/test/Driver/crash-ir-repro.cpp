@@ -1,5 +1,5 @@
 // RUN: %clang -S -emit-llvm -o %t.ll %s
-// RUN: not %clang -S -DCRASH %s -o %t.ll 2>&1 | FileCheck %s
+// RUN: not %crash_opt %clang -S -DCRASH %s -o %t.ll 2>&1 | FileCheck %s
 
 // TODO(boomanaiden154): This test case causes clang to raise a signal when
 // running under ubsan, but not in normal build configurations. This should

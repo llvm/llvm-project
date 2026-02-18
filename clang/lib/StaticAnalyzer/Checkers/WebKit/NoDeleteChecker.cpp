@@ -92,7 +92,11 @@ public:
       return;
 
     auto Body = FD->getBody();
-    if (!Body || TFA.isTrivial(Body))
+    if (!Body)
+      return;
+
+    auto hasTrivialDtor = [&](VarDecl *D) { return TFA.hasTrivialDtor(D); };
+    if (llvm::all_of(FD->parameters(), hasTrivialDtor) && TFA.isTrivial(Body))
       return;
 
     SmallString<100> Buf;

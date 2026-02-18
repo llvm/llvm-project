@@ -520,7 +520,6 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     break;
   case GK_GFX1170:
     Features["ci-insts"] = true;
-    Features["dot5-insts"] = true;
     Features["dot7-insts"] = true;
     Features["dot8-insts"] = true;
     Features["dot9-insts"] = true;

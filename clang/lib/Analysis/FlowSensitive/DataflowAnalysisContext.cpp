@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
+#include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
@@ -43,7 +44,7 @@ static llvm::cl::opt<std::string> DataflowLog(
 namespace clang {
 namespace dataflow {
 
-FieldSet DataflowAnalysisContext::getModeledFields(QualType Type) {
+FieldSet DataflowAnalysisContext::computeModeledFields(QualType Type) {
   // During context-sensitive analysis, a struct may be allocated in one
   // function, but its field accessed in a function lower in the stack than
   // the allocation. Since we only collect fields used in the function where
@@ -57,8 +58,17 @@ FieldSet DataflowAnalysisContext::getModeledFields(QualType Type) {
   return llvm::set_intersection(getObjectFields(Type), ModeledFields);
 }
 
+const FieldSet &DataflowAnalysisContext::getModeledFields(QualType Type) {
+  QualType CanonicalType = Type.getCanonicalType().getUnqualifiedType();
+  std::unique_ptr<FieldSet> &Fields = CachedModeledFields[CanonicalType];
+  if (Fields == nullptr)
+    Fields = std::make_unique<FieldSet>(computeModeledFields(CanonicalType));
+  return *Fields;
+}
+
 void DataflowAnalysisContext::addModeledFields(const FieldSet &Fields) {
   ModeledFields.set_union(Fields);
+  CachedModeledFields.clear();
 }
 
 StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
