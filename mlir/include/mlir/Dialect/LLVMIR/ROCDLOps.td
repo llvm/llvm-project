@@ -1663,7 +1663,7 @@ foreach bitsVal = [8, 32, 64, 128] in {
 
       Example:
       ```mlir
-      // Async }] # bitsStr # [{ load from global to LDS.
+      // Async }] # !cast<string>(bitsVal) # [{-bit load from global to LDS.
       rocdl.global.load.async.to.lds.}] # bitsStr # [{ %src, %dst, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
       ```
     }];
@@ -1697,7 +1697,7 @@ foreach bitsVal = [8, 32, 64, 128] in {
 
       Example:
       ```mlir
-      // Cluster broadcast }] # bitsStr # [{ load to LDS.
+      // Cluster broadcast }] # !cast<string>(bitsVal) # [{-bit load to LDS.
       rocdl.cluster.load.async.to.lds.}] # bitsStr # [{ %src, %dst, 0, 0, %mask : !llvm.ptr<1>, !llvm.ptr<3>
       ```
     }];
