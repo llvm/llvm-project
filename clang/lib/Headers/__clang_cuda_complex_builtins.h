@@ -16,19 +16,25 @@
 // to work with CUDA and OpenMP target offloading [in C and C++ mode].)
 
 #pragma push_macro("__DEVICE__")
-#if defined(__OPENMP_NVPTX__) || defined(__OPENMP_AMDGCN__)
+#if defined(__OPENMP_NVPTX__) || defined(__OPENMP_AMDGCN__) ||                 \
+    defined(__OPENMP_SPIRV__)
 #pragma omp declare target
 #define __DEVICE__ __attribute__((noinline, nothrow, cold, weak))
 #else
 #define __DEVICE__ __device__ inline
 #endif
 
-#ifdef __NVPTX__
+#if defined(__NVPTX__)
 // FIXME: NVPTX should use generic builtins.
 #define _SCALBNd __nv_scalbn
 #define _SCALBNf __nv_scalbnf
 #define _LOGBd __nv_logb
 #define _LOGBf __nv_logbf
+#elif defined(__OPENMP_SPIRV__)
+#define _SCALBNd __spirv_ocl_ldexp
+#define _SCALBNf __spirv_ocl_ldexp
+#define _LOGBd __spirv_ocl_logb
+#define _LOGBf __spirv_ocl_logb
 #else
 #define _SCALBNd __builtin_scalbn
 #define _SCALBNf __builtin_scalbnf
@@ -250,7 +256,8 @@ __DEVICE__ _Complex float cexpf(_Complex float _a){
 #undef _LOGBd
 #undef _LOGBf
 
-#if defined(__OPENMP_NVPTX__) || defined(__OPENMP_AMDGCN__)
+#if defined(__OPENMP_NVPTX__) || defined(__OPENMP_AMDGCN__) ||                 \
+    defined(__OPENMP_SPIRV__)
 #pragma omp end declare target
 #endif
 

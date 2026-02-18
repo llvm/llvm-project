@@ -1131,7 +1131,7 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStream(
   mlir::Value stream = fir::getBase(args[0]);
   mlir::Type i64Ty = builder.getI64Type();
   auto ctx = builder.getContext();
-  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {});
+  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {resTy});
   auto funcOp =
       builder.createFunction(loc, RTNAME_STRING(CUFSetDefaultStream), ftype);
   auto call = fir::CallOp::create(builder, loc, funcOp, {stream});

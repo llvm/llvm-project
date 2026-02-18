@@ -100,6 +100,8 @@ static bool checkWaveOps(Intrinsic::ID IID) {
     // Wave Prefix Op Variants
   case Intrinsic::dx_wave_prefix_sum:
   case Intrinsic::dx_wave_prefix_usum:
+  case Intrinsic::dx_wave_prefix_product:
+  case Intrinsic::dx_wave_prefix_uproduct:
     return true;
   }
 }

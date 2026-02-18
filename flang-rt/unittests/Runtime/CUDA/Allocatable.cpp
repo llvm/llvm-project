@@ -16,6 +16,7 @@
 #include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
+#include "flang/Runtime/CUDA/stream.h"
 #include "flang/Support/Fortran.h"
 
 using namespace Fortran::runtime;

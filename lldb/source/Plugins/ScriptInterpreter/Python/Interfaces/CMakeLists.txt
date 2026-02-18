@@ -26,7 +26,6 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces PLUGIN
   ScriptedFrameProviderPythonInterface.cpp
   ScriptedPlatformPythonInterface.cpp
   ScriptedProcessPythonInterface.cpp
-  ScriptedSymbolLocatorPythonInterface.cpp
   ScriptedPythonInterface.cpp
   ScriptedStopHookPythonInterface.cpp
   ScriptedBreakpointPythonInterface.cpp
@@ -43,3 +42,5 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces PLUGIN
     ${Python3_LIBRARIES}
     ${LLDB_LIBEDIT_LIBS}
   )
+
+

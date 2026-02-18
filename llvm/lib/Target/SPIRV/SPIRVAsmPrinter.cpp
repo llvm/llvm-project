@@ -194,7 +194,7 @@ void SPIRVAsmPrinter::emitOpLabel(const MachineBasicBlock &MBB) {
 
 void SPIRVAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   // Do not emit anything if it's an internal service function.
-  if (MBB.empty())
+  if (MBB.empty() || isHidden())
     return;
 
   // If it's the first MBB in MF, it has OpFunction and OpFunctionParameter, so

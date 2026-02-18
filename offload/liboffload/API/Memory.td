@@ -140,11 +140,12 @@ def olMemFill : Function {
 def olMemRegister : Function {
   let desc = "Register and page-lock host memory so it can be accessible by the device.";
   let details = [
-        "Pins host memory to optimize transfers and returns the device accessible",
-        "stable pointer that devices should use for memory transfers involving the host",
-        "pinned allocation. If the buffer intersects with other existing buffer,",
-        "a new user will be registered. A partial overlapping is not allowed.",
-        "The pinned pointer can be accessed both on host and device and",
+        "Registers host memory and optionally page-locks it to optimize transfers and returns",
+        "the device accessible stable pointer that devices should use for memory transfers",
+        "involving the host pinned allocation. If the buffer intersects with other existing buffer,",
+        "if the buffer is locked outside of this API, or Flags doesn't contain LOCK_MEMORY",
+        "flag a new user will be registered. Partial overlapping with an already registered range is",
+        "not allowed. The pinned pointer can be accessed both on host and device and",
         "no guarantees are made about consistency.",
         "The pinned pointer should be used to execute memory transfers",
         "as it is a stable pointer for memory access."  
