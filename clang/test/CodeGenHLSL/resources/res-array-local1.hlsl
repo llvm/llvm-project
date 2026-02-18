@@ -22,11 +22,11 @@ void main() {
   RWBuffer<float> Second[4];
 
 // Verify initialization of First array from an initialization list
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %First, ptr align 4 @_ZL1A, i32 4, i1 false)
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %First, ptr {{.*}} @_ZL1A)
 // CHECK-NEXT: %[[Ptr1:.*]] = getelementptr inbounds %"class.hlsl::RWBuffer", ptr %First, i32 1
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[Ptr1]], ptr align 4 @_ZL1B, i32 4, i1 false)
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[Ptr1]], ptr {{.*}} @_ZL1B)
 // CHECK-NEXT: %[[Ptr2:.*]] = getelementptr inbounds %"class.hlsl::RWBuffer", ptr %First, i32 2
-// CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[Ptr2]], ptr align 4 @_ZL1C, i32 4, i1 false)
+// CHECK-NEXT: call void @_ZN4hlsl8RWBufferIfEC1ERKS1_(ptr {{.*}} %[[Ptr2]], ptr {{.*}} @_ZL1C)
 
 // Verify default initialization of Second array, which means there is a loop iterating
 // over the array elements and calling the default constructor for each
@@ -43,7 +43,7 @@ void main() {
 
 // Initialize First[2] with C
 // CHECK: %[[Ptr3:.*]] = getelementptr inbounds [4 x %"class.hlsl::RWBuffer"], ptr %Second, i32 0, i32 2
-// CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[Ptr3]], ptr align 4 @_ZL1C, i32 4, i1 false)
+// CHECK: call {{.*}} @_ZN4hlsl8RWBufferIfEaSERKS1_(ptr {{.*}} %[[Ptr3]], ptr {{.*}} @_ZL1C)
   Second[2] = C;
 
   // NOTE: _ZN4hlsl8RWBufferIfEixEj is the subscript operator for RWBuffer<float>

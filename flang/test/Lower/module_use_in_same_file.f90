@@ -35,7 +35,7 @@ end function
 ! Module modEq2 defines data that is equivalenced
 module modEq2
   ! Equivalence, no initialization
-  real :: x1(10), x2(10), x3(10) 
+  real :: x1(10), x2(10), x3(10)
   ! Equivalence with initialization
   real :: y1 = 42.
   real :: y2(10)
@@ -109,7 +109,7 @@ real function test_no_equiv_conflicts()
   use modEq2
   ! Same equivalences as in modEq2. Test that lowering does not mixes
   ! up the equivalence based on the similar offset inside the scope.
-  real :: x1l(10), x2l(10), x3l(10) 
+  real :: x1l(10), x2l(10), x3l(10)
   real :: y1l = 42.
   real :: y2l(10)
   save :: x1l, x2l, x3l, y1l, y2l

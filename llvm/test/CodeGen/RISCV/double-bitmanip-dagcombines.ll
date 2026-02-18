@@ -61,8 +61,6 @@ define double @fneg(double %a) nounwind {
   ret double %1
 }
 
-declare double @llvm.fabs.f64(double)
-
 define double @fabs(double %a) nounwind {
 ; RV32I-LABEL: fabs:
 ; RV32I:       # %bb.0:
@@ -100,8 +98,6 @@ define double @fabs(double %a) nounwind {
   %1 = call double @llvm.fabs.f64(double %a)
   ret double %1
 }
-
-declare double @llvm.copysign.f64(double, double)
 
 ; DAGTypeLegalizer::SoftenFloatRes_FCOPYSIGN will convert to bitwise
 ; operations if floating point isn't supported. A combine could be written to

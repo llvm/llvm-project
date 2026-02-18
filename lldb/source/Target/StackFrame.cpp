@@ -45,6 +45,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
+// LLVM RTTI support.
+char StackFrame::ID;
+
 // The first bits in the flags are reserved for the SymbolContext::Scope bits
 // so we know if we have tried to look up information in our internal symbol
 // context (m_sc) already.
@@ -57,14 +60,14 @@ using namespace lldb_private;
 StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        user_id_t unwind_frame_index, addr_t cfa,
                        bool cfa_is_valid, addr_t pc, StackFrame::Kind kind,
-                       bool behaves_like_zeroth_frame,
+                       bool artificial, bool behaves_like_zeroth_frame,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index), m_reg_context_sp(),
       m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
-      m_stack_frame_kind(kind),
+      m_stack_frame_kind(kind), m_artificial(artificial),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
       m_recognized_frame_sp(), m_disassembly(), m_mutex() {
@@ -92,7 +95,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
-      m_stack_frame_kind(StackFrame::Kind::Regular),
+      m_stack_frame_kind(StackFrame::Kind::Regular), m_artificial(false),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
       m_recognized_frame_sp(), m_disassembly(), m_mutex() {
@@ -120,7 +123,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
            nullptr, thread_sp->GetProcess().get()),
       m_frame_code_addr(pc_addr), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
-      m_stack_frame_kind(StackFrame::Kind::Regular),
+      m_stack_frame_kind(StackFrame::Kind::Regular), m_artificial(false),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
       m_recognized_frame_sp(), m_disassembly(), m_mutex() {
@@ -328,6 +331,13 @@ StackFrame::GetSymbolContext(SymbolContextItem resolve_scope) {
     // following the function call instruction...
     Address lookup_addr(GetFrameCodeAddressForSymbolication());
 
+    // For PC-less frames (e.g., scripted frames), skip PC-based symbol
+    // resolution and preserve any already-populated SymbolContext fields.
+    if (!lookup_addr.IsValid()) {
+      m_flags.Set(resolve_scope | resolved);
+      return m_sc;
+    }
+
     if (m_sc.module_sp) {
       // We have something in our stack frame symbol context, lets check if we
       // haven't already tried to lookup one of those things. If we haven't
@@ -514,13 +524,13 @@ StackFrame::GetInScopeVariableList(bool get_file_globals,
 
 ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
-    VariableSP &var_sp, Status &error) {
+    VariableSP &var_sp, Status &error, lldb::DILMode mode) {
   ExecutionContext exe_ctx;
   CalculateExecutionContext(exe_ctx);
   bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
   if (use_DIL)
     return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
-                                                var_sp, error);
+                                                var_sp, error, mode);
 
   return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
                                                  var_sp, error);
@@ -528,7 +538,8 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 
 ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-    uint32_t options, lldb::VariableSP &var_sp, Status &error) {
+    uint32_t options, lldb::VariableSP &var_sp, Status &error,
+    lldb::DILMode mode) {
 
   const bool check_ptr_vs_member =
       (options & eExpressionPathOptionCheckPtrVsMember) != 0;
@@ -538,7 +549,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
       (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
 
   // Lex the expression.
-  auto lex_or_err = dil::DILLexer::Create(var_expr);
+  auto lex_or_err = dil::DILLexer::Create(var_expr, mode);
   if (!lex_or_err) {
     error = Status::FromError(lex_or_err.takeError());
     return ValueObjectConstResult::Create(nullptr, std::move(error));
@@ -559,7 +570,7 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
                                use_dynamic, !no_synth_child, !no_fragile_ivar,
                                check_ptr_vs_member);
 
-  auto valobj_or_error = interpreter.Evaluate((*tree_or_error).get());
+  auto valobj_or_error = interpreter.Evaluate(**tree_or_error);
   if (!valobj_or_error) {
     error = Status::FromError(valobj_or_error.takeError());
     return ValueObjectConstResult::Create(nullptr, std::move(error));
@@ -1264,9 +1275,11 @@ bool StackFrame::IsHistorical() const {
   return m_stack_frame_kind == StackFrame::Kind::History;
 }
 
-bool StackFrame::IsArtificial() const {
-  return m_stack_frame_kind == StackFrame::Kind::Artificial;
+bool StackFrame::IsSynthetic() const {
+  return m_stack_frame_kind == StackFrame::Kind::Synthetic;
 }
+
+bool StackFrame::IsArtificial() const { return m_artificial; }
 
 bool StackFrame::IsHidden() {
   if (auto recognized_frame_sp = GetRecognizedFrame())
@@ -1342,18 +1355,18 @@ const char *StackFrame::GetDisplayFunctionName() {
 SourceLanguage StackFrame::GetLanguage() {
   CompileUnit *cu = GetSymbolContext(eSymbolContextCompUnit).comp_unit;
   if (cu)
-    return cu->GetLanguage();
+    return SourceLanguage{cu->GetLanguage()};
   return {};
 }
 
 SourceLanguage StackFrame::GuessLanguage() {
   SourceLanguage lang_type = GetLanguage();
 
-  if (lang_type == eLanguageTypeUnknown) {
+  if (!lang_type) {
     SymbolContext sc =
         GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol);
     if (sc.function)
-      lang_type = LanguageType(sc.function->GetMangled().GuessLanguage());
+      lang_type = SourceLanguage(sc.function->GetMangled().GuessLanguage());
     else if (sc.symbol)
       lang_type = SourceLanguage(sc.symbol->GetMangled().GuessLanguage());
   }
@@ -1924,8 +1937,8 @@ bool StackFrame::DumpUsingFormat(Stream &strm,
   StreamString s;
   s.PutCString(frame_marker);
 
-  if (format && FormatEntity::Format(*format, s, &m_sc, &exe_ctx, nullptr,
-                                     nullptr, false, false)) {
+  if (format && FormatEntity::Formatter(&m_sc, &exe_ctx, nullptr, false, false)
+                    .Format(*format, s)) {
     strm.PutCString(s.GetString());
     return true;
   }
@@ -1933,7 +1946,7 @@ bool StackFrame::DumpUsingFormat(Stream &strm,
 }
 
 void StackFrame::DumpUsingSettingsFormat(Stream *strm, bool show_unique,
-                                         const char *frame_marker) {
+                                         const llvm::StringRef frame_marker) {
   if (strm == nullptr)
     return;
 
@@ -2032,7 +2045,8 @@ bool StackFrame::HasCachedData() const {
 }
 
 bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
-                           bool show_unique, const char *frame_marker) {
+                           bool show_unique,
+                           const llvm::StringRef frame_marker) {
   if (show_frame_info) {
     strm.Indent();
     DumpUsingSettingsFormat(&strm, show_unique, frame_marker);
@@ -2052,10 +2066,10 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
       disasm_display = debugger.GetStopDisassemblyDisplay();
 
       GetSymbolContext(eSymbolContextCompUnit | eSymbolContextLineEntry);
-      if (m_sc.comp_unit && m_sc.line_entry.IsValid()) {
+      if (m_sc.comp_unit || m_sc.line_entry.IsValid()) {
         have_debuginfo = true;
         if (source_lines_before > 0 || source_lines_after > 0) {
-          SupportFileSP source_file_sp = m_sc.line_entry.file_sp;
+          SupportFileNSP source_file_sp = m_sc.line_entry.file_sp;
           uint32_t start_line = m_sc.line_entry.line;
           if (!start_line && m_sc.function) {
             m_sc.function->GetStartLineSourceInfo(source_file_sp, start_line);
@@ -2064,7 +2078,8 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
           size_t num_lines =
               target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
                   source_file_sp, start_line, m_sc.line_entry.column,
-                  source_lines_before, source_lines_after, "->", &strm);
+                  source_lines_before, source_lines_after, "->", &strm,
+                  /*bp_locs=*/nullptr, GetLanguage().AsLanguageType());
           if (num_lines != 0)
             have_source = true;
           // TODO: Give here a one time warning if source file is missing.

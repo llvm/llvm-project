@@ -6,6 +6,11 @@ tablegen("LLGSOptions") {
   args = [ "-gen-opt-parser-defs" ]
 }
 
+tablegen("PlatformOptions") {
+  visibility = [ ":lldb-server" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
 executable("lldb-server") {
   configs += [
     "//llvm/utils/gn/build:clang_code",
@@ -13,6 +18,7 @@ executable("lldb-server") {
   ]
   deps = [
     ":LLGSOptions",
+    ":PlatformOptions",
 
     #"//lldb/include/lldb/Host:Config",
     "//lldb/source/Host",

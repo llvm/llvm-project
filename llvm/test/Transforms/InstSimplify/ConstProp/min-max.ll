@@ -97,7 +97,8 @@ define float @minnum_float_qnan_p0() {
 
 define float @minnum_float_p0_snan() {
 ; CHECK-LABEL: @minnum_float_p0_snan(
-; CHECK-NEXT:    ret float 0x7FFC000000000000
+; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float 0.000000e+00, float 0x7FF4000000000000)
+; CHECK-NEXT:    ret float [[MIN]]
 ;
   %min = call float @llvm.minnum.f32(float 0.0, float 0x7FF4000000000000)
   ret float %min
@@ -105,7 +106,8 @@ define float @minnum_float_p0_snan() {
 
 define float @minnum_float_snan_p0() {
 ; CHECK-LABEL: @minnum_float_snan_p0(
-; CHECK-NEXT:    ret float 0x7FFC000000000000
+; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float 0x7FF4000000000000, float 0.000000e+00)
+; CHECK-NEXT:    ret float [[MIN]]
 ;
   %min = call float @llvm.minnum.f32(float 0x7FF4000000000000, float 0.0)
   ret float %min
@@ -205,7 +207,8 @@ define float @maxnum_float_qnan_p0() {
 
 define float @maxnum_float_p0_snan() {
 ; CHECK-LABEL: @maxnum_float_p0_snan(
-; CHECK-NEXT:    ret float 0x7FFC000000000000
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float 0.000000e+00, float 0x7FF4000000000000)
+; CHECK-NEXT:    ret float [[MAX]]
 ;
   %max = call float @llvm.maxnum.f32(float 0.0, float 0x7FF4000000000000)
   ret float %max
@@ -213,7 +216,8 @@ define float @maxnum_float_p0_snan() {
 
 define float @maxnum_float_snan_p0() {
 ; CHECK-LABEL: @maxnum_float_snan_p0(
-; CHECK-NEXT:    ret float 0x7FFC000000000000
+; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float 0x7FF4000000000000, float 0.000000e+00)
+; CHECK-NEXT:    ret float [[MAX]]
 ;
   %max = call float @llvm.maxnum.f32(float 0x7FF4000000000000, float 0.0)
   ret float %max

@@ -10,6 +10,11 @@ _CLC_DECL _CLC_OVERLOAD __CLC_FLOATN __clc_sinf_piby4(__CLC_FLOATN x,
                                                       __CLC_FLOATN y);
 _CLC_DECL _CLC_OVERLOAD __CLC_FLOATN __clc_cosf_piby4(__CLC_FLOATN x,
                                                       __CLC_FLOATN y);
+
+_CLC_DECL _CLC_OVERLOAD void __clc_sincos_piby4(__CLC_FLOATN x,
+                                                private __CLC_FLOATN *sinval,
+                                                private __CLC_FLOATN *cosval);
+
 _CLC_DECL _CLC_OVERLOAD __CLC_FLOATN __clc_tanf_piby4(__CLC_FLOATN x,
                                                       __CLC_INTN regn);
 

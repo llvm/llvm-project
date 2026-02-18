@@ -15,7 +15,7 @@
 //  template<class T, class U> complex<__promote_t<T, U>> pow(const T&, const complex<U>&);
 
 // Test that these additional overloads are free from catching std::complex<non-floating-point>,
-// which is expected by several 3rd party libraries, see https://github.com/llvm/llvm-project/issues/109858.
+// which is expected by several 3rd party libraries, see https://llvm.org/PR109858.
 //
 // Note that we reserve the right to break this in the future if we have a reason to, but for the time being,
 // make sure we don't break this property unintentionally.

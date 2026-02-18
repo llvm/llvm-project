@@ -10,12 +10,12 @@
 
 %opencl.event_t = type opaque
 
-define dso_local spir_kernel void @test_fn(i8 addrspace(1)* noundef %src) {
+define dso_local spir_kernel void @test_fn(ptr addrspace(1) noundef %src) {
 entry:
-  %src.addr = alloca i8 addrspace(1)*, align 8
-  store i8 addrspace(1)* %src, i8 addrspace(1)** %src.addr, align 8
-  call spir_func void @_Z17wait_group_eventsiPU3AS49ocl_event(i32 noundef 0, %opencl.event_t* addrspace(4)* noundef null)
+  %src.addr = alloca ptr addrspace(1), align 8
+  store ptr addrspace(1) %src, ptr %src.addr, align 8
+  call spir_func void @_Z17wait_group_eventsiPU3AS49ocl_event(i32 noundef 0, ptr addrspace(4) noundef null)
   ret void
 }
 
-declare spir_func void @_Z17wait_group_eventsiPU3AS49ocl_event(i32 noundef, %opencl.event_t* addrspace(4)* noundef)
+declare spir_func void @_Z17wait_group_eventsiPU3AS49ocl_event(i32 noundef, ptr addrspace(4) noundef)

@@ -537,7 +537,7 @@ entry:
   %a.sext = sext <4 x i8> %a to <4 x i32>
   %b.sext = sext <4 x i8> %b to <4 x i32>
   %mul = mul <4 x i32> %a.sext, %b.sext
-  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  %res = call <1 x i32> @llvm.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
   ret <1 x i32> %res
 }
 
@@ -570,7 +570,7 @@ entry:
   %a.sext = zext <4 x i8> %a to <4 x i32>
   %b.sext = zext <4 x i8> %b to <4 x i32>
   %mul = mul <4 x i32> %a.sext, %b.sext
-  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  %res = call <1 x i32> @llvm.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
   ret <1 x i32> %res
 }
 
@@ -605,7 +605,7 @@ define <1 x i32> @vqdotu_vx_partial_reduce(<4 x i8> %a, <4 x i8> %b) {
 entry:
   %a.ext = zext <4 x i8> %a to <4 x i32>
   %mul = mul <4 x i32> %a.ext, splat (i32 128)
-  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  %res = call <1 x i32> @llvm.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
   ret <1 x i32> %res
 }
 
@@ -641,7 +641,7 @@ define <1 x i32> @vqdot_vx_partial_reduce(<4 x i8> %a, <4 x i8> %b) {
 entry:
   %a.ext = sext <4 x i8> %a to <4 x i32>
   %mul = mul <4 x i32> %a.ext, splat (i32 -128)
-  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  %res = call <1 x i32> @llvm.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
   ret <1 x i32> %res
 }
 
@@ -675,7 +675,7 @@ entry:
   %a.sext = sext <4 x i8> %a to <4 x i32>
   %b.sext = zext <4 x i8> %b to <4 x i32>
   %mul = mul <4 x i32> %a.sext, %b.sext
-  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  %res = call <1 x i32> @llvm.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
   ret <1 x i32> %res
 }
 
@@ -709,7 +709,7 @@ entry:
   %a.ext = sext <4 x i8> %a to <4 x i32>
   %b.ext = zext <4 x i8> %b to <4 x i32>
   %mul = mul <4 x i32> %b.ext, %a.ext
-  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  %res = call <1 x i32> @llvm.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
   ret <1 x i32> %res
 }
 
@@ -732,7 +732,7 @@ define <1 x i32> @vqdotsu_vx_partial_reduce(<4 x i8> %a, <4 x i8> %b) {
 entry:
   %a.ext = sext <4 x i8> %a to <4 x i32>
   %mul = mul <4 x i32> %a.ext, splat (i32 128)
-  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
+  %res = call <1 x i32> @llvm.vector.partial.reduce.add(<1 x i32> zeroinitializer, <4 x i32> %mul)
   ret <1 x i32> %res
 }
 
@@ -768,7 +768,7 @@ entry:
   %a.sext = sext <8 x i8> %a to <8 x i32>
   %b.sext = sext <8 x i8> %b to <8 x i32>
   %mul = mul <8 x i32> %a.sext, %b.sext
-  %res = call <2 x i32> @llvm.experimental.vector.partial.reduce.add(<2 x i32> zeroinitializer, <8 x i32> %mul)
+  %res = call <2 x i32> @llvm.vector.partial.reduce.add(<2 x i32> zeroinitializer, <8 x i32> %mul)
   ret <2 x i32> %res
 }
 
@@ -945,7 +945,7 @@ entry:
   %a.sext = sext <64 x i8> %a to <64 x i32>
   %b.sext = sext <64 x i8> %b to <64 x i32>
   %mul = mul <64 x i32> %a.sext, %b.sext
-  %res = call <2 x i32> @llvm.experimental.vector.partial.reduce.add(<2 x i32> zeroinitializer, <64 x i32> %mul)
+  %res = call <2 x i32> @llvm.vector.partial.reduce.add(<2 x i32> zeroinitializer, <64 x i32> %mul)
   ret <2 x i32> %res
 }
 
@@ -980,7 +980,7 @@ entry:
   %a.sext = sext <16 x i8> %a to <16 x i32>
   %b.sext = sext <16 x i8> %b to <16 x i32>
   %mul = mul <16 x i32> %a.sext, %b.sext
-  %res = call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> zeroinitializer, <16 x i32> %mul)
+  %res = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> zeroinitializer, <16 x i32> %mul)
   ret <4 x i32> %res
 }
 
@@ -1023,7 +1023,7 @@ entry:
   %a.sext = sext <64 x i8> %a to <64 x i32>
   %b.sext = sext <64 x i8> %b to <64 x i32>
   %mul = mul <64 x i32> %a.sext, %b.sext
-  %res = call <16 x i32> @llvm.experimental.vector.partial.reduce.add(<16 x i32> zeroinitializer, <64 x i32> %mul)
+  %res = call <16 x i32> @llvm.vector.partial.reduce.add(<16 x i32> zeroinitializer, <64 x i32> %mul)
   ret <16 x i32> %res
 }
 
@@ -1059,7 +1059,7 @@ entry:
   %a.sext = sext <16 x i8> %a to <16 x i32>
   %b.sext = sext <16 x i8> %b to <16 x i32>
   %mul = mul <16 x i32> %a.sext, %b.sext
-  %res = call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> %accum, <16 x i32> %mul)
+  %res = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %accum, <16 x i32> %mul)
   ret <4 x i32> %res
 }
 
@@ -1075,7 +1075,7 @@ entry:
   %a.sext = sext <16 x i8> %a to <16 x i32>
   %b.sext = sext <16 x i8> %b to <16 x i32>
   %mul = mul <16 x i32> %a.sext, %b.sext
-  %res = call <16 x i32> @llvm.experimental.vector.partial.reduce.add.nvx8i32.nvx16i32.nvx16i32(<16 x i32> %mul, <16 x i32> zeroinitializer)
+  %res = call <16 x i32> @llvm.vector.partial.reduce.add.nvx8i32.nvx16i32.nvx16i32(<16 x i32> %mul, <16 x i32> zeroinitializer)
   ret <16 x i32> %res
 }
 
@@ -1370,7 +1370,7 @@ entry:
   %a.ext = sext <256 x i8> %a to <256 x i32>
   %b.ext = zext <256 x i8> %b to <256 x i32>
   %mul = mul <256 x i32> %b.ext, %a.ext
-  %res = call <64 x i32> @llvm.experimental.vector.partial.reduce.add(<64 x i32> zeroinitializer, <256 x i32> %mul)
+  %res = call <64 x i32> @llvm.vector.partial.reduce.add(<64 x i32> zeroinitializer, <256 x i32> %mul)
   ret <64 x i32> %res
 }
 
@@ -1419,7 +1419,7 @@ entry:
   %a.ext = sext <16 x i7> %a to <16 x i31>
   %b.ext = zext <16 x i7> %b to <16 x i31>
   %mul = mul <16 x i31> %b.ext, %a.ext
-  %res = call <4 x i31> @llvm.experimental.vector.partial.reduce.add(<4 x i31> zeroinitializer, <16 x i31> %mul)
+  %res = call <4 x i31> @llvm.vector.partial.reduce.add(<4 x i31> zeroinitializer, <16 x i31> %mul)
   ret <4 x i31> %res
 }
 
@@ -1441,7 +1441,7 @@ entry:
   %a.ext = sext <2 x i8> %a to <2 x i32>
   %b.ext = zext <2 x i8> %b to <2 x i32>
   %mul = mul <2 x i32> %b.ext, %a.ext
-  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <2 x i32> %mul)
+  %res = call <1 x i32> @llvm.vector.partial.reduce.add(<1 x i32> zeroinitializer, <2 x i32> %mul)
   ret <1 x i32> %res
 }
 
@@ -1482,7 +1482,7 @@ entry:
   %a.ext = sext <8 x i8> %a to <8 x i32>
   %b.ext = zext <8 x i8> %b to <8 x i32>
   %mul = mul <8 x i32> %b.ext, %a.ext
-  %res = call <1 x i32> @llvm.experimental.vector.partial.reduce.add(<1 x i32> zeroinitializer, <8 x i32> %mul)
+  %res = call <1 x i32> @llvm.vector.partial.reduce.add(<1 x i32> zeroinitializer, <8 x i32> %mul)
   ret <1 x i32> %res
 }
 
@@ -1516,7 +1516,7 @@ define <4 x i32> @partial_of_sext(<16 x i8> %a) {
 ; DOT-NEXT:    ret
 entry:
   %a.ext = sext <16 x i8> %a to <16 x i32>
-  %res = call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> zeroinitializer, <16 x i32> %a.ext)
+  %res = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> zeroinitializer, <16 x i32> %a.ext)
   ret <4 x i32> %res
 }
 
@@ -1549,9 +1549,136 @@ define <4 x i32> @partial_of_zext(<16 x i8> %a) {
 ; DOT-NEXT:    ret
 entry:
   %a.ext = zext <16 x i8> %a to <16 x i32>
-  %res = call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> zeroinitializer, <16 x i32> %a.ext)
+  %res = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> zeroinitializer, <16 x i32> %a.ext)
   ret <4 x i32> %res
 }
+
+define i32 @vqdot_vv_accum_disjoint_or(<16 x i8> %a, <16 x i8> %b, <16 x i32> %x) {
+; NODOT-LABEL: vqdot_vv_accum_disjoint_or:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; NODOT-NEXT:    vsext.vf2 v16, v8
+; NODOT-NEXT:    vsext.vf2 v18, v9
+; NODOT-NEXT:    vwmul.vv v8, v16, v18
+; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT-NEXT:    vor.vv v8, v8, v12
+; NODOT-NEXT:    vmv.s.x v12, zero
+; NODOT-NEXT:    vredsum.vs v8, v8, v12
+; NODOT-NEXT:    vmv.x.s a0, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: vqdot_vv_accum_disjoint_or:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; DOT-NEXT:    vmv1r.v v16, v12
+; DOT-NEXT:    vqdot.vv v16, v8, v9
+; DOT-NEXT:    vsetivli zero, 4, e32, m4, tu, ma
+; DOT-NEXT:    vmv.v.v v12, v16
+; DOT-NEXT:    vmv.s.x v8, zero
+; DOT-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; DOT-NEXT:    vredsum.vs v8, v12, v8
+; DOT-NEXT:    vmv.x.s a0, v8
+; DOT-NEXT:    ret
+entry:
+  %a.sext = sext <16 x i8> %a to <16 x i32>
+  %b.sext = sext <16 x i8> %b to <16 x i32>
+  %mul = mul <16 x i32> %a.sext, %b.sext
+  %add = or disjoint <16 x i32> %mul, %x
+  %sum = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %add)
+  ret i32 %sum
+}
+
+define i32 @vqdot_vv_accum_or(<16 x i8> %a, <16 x i8> %b, <16 x i32> %x) {
+; CHECK-LABEL: vqdot_vv_accum_or:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vsext.vf2 v16, v8
+; CHECK-NEXT:    vsext.vf2 v18, v9
+; CHECK-NEXT:    vwmul.vv v8, v16, v18
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vor.vv v8, v8, v12
+; CHECK-NEXT:    vmv.s.x v12, zero
+; CHECK-NEXT:    vredsum.vs v8, v8, v12
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+entry:
+  %a.sext = sext <16 x i8> %a to <16 x i32>
+  %b.sext = sext <16 x i8> %b to <16 x i32>
+  %mul = mul <16 x i32> %a.sext, %b.sext
+  %add = or <16 x i32> %mul, %x
+  %sum = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %add)
+  ret i32 %sum
+}
+
+define i32 @vqdotu_vv_accum_disjoint_or(<16 x i8> %a, <16 x i8> %b, <16 x i32> %x) {
+; NODOT-LABEL: vqdotu_vv_accum_disjoint_or:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; NODOT-NEXT:    vwmulu.vv v10, v8, v9
+; NODOT-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; NODOT-NEXT:    vwaddu.wv v12, v12, v10
+; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT-NEXT:    vmv.s.x v8, zero
+; NODOT-NEXT:    vredsum.vs v8, v12, v8
+; NODOT-NEXT:    vmv.x.s a0, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: vqdotu_vv_accum_disjoint_or:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; DOT-NEXT:    vmv1r.v v16, v12
+; DOT-NEXT:    vqdotu.vv v16, v8, v9
+; DOT-NEXT:    vsetivli zero, 4, e32, m4, tu, ma
+; DOT-NEXT:    vmv.v.v v12, v16
+; DOT-NEXT:    vmv.s.x v8, zero
+; DOT-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; DOT-NEXT:    vredsum.vs v8, v12, v8
+; DOT-NEXT:    vmv.x.s a0, v8
+; DOT-NEXT:    ret
+entry:
+  %a.zext = zext <16 x i8> %a to <16 x i32>
+  %b.zext = zext <16 x i8> %b to <16 x i32>
+  %mul = mul <16 x i32> %a.zext, %b.zext
+  %add = or disjoint <16 x i32> %mul, %x
+  %sum = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %add)
+  ret i32 %sum
+}
+
+define i32 @vqdotsu_vv_accum_disjoint_or(<16 x i8> %a, <16 x i8> %b, <16 x i32> %x) {
+; NODOT-LABEL: vqdotsu_vv_accum_disjoint_or:
+; NODOT:       # %bb.0: # %entry
+; NODOT-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; NODOT-NEXT:    vsext.vf2 v16, v8
+; NODOT-NEXT:    vzext.vf2 v18, v9
+; NODOT-NEXT:    vwmulsu.vv v8, v16, v18
+; NODOT-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; NODOT-NEXT:    vor.vv v8, v8, v12
+; NODOT-NEXT:    vmv.s.x v12, zero
+; NODOT-NEXT:    vredsum.vs v8, v8, v12
+; NODOT-NEXT:    vmv.x.s a0, v8
+; NODOT-NEXT:    ret
+;
+; DOT-LABEL: vqdotsu_vv_accum_disjoint_or:
+; DOT:       # %bb.0: # %entry
+; DOT-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; DOT-NEXT:    vmv1r.v v16, v12
+; DOT-NEXT:    vqdotsu.vv v16, v8, v9
+; DOT-NEXT:    vsetivli zero, 4, e32, m4, tu, ma
+; DOT-NEXT:    vmv.v.v v12, v16
+; DOT-NEXT:    vmv.s.x v8, zero
+; DOT-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; DOT-NEXT:    vredsum.vs v8, v12, v8
+; DOT-NEXT:    vmv.x.s a0, v8
+; DOT-NEXT:    ret
+entry:
+  %a.sext = sext <16 x i8> %a to <16 x i32>
+  %b.zext = zext <16 x i8> %b to <16 x i32>
+  %mul = mul <16 x i32> %a.sext, %b.zext
+  %add = or disjoint <16 x i32> %mul, %x
+  %sum = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %add)
+  ret i32 %sum
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; DOT32: {{.*}}
 ; DOT64: {{.*}}

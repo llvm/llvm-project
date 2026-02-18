@@ -20,7 +20,7 @@ scalar.ph:
 
 for.body:
   %mul16 = phi i8 [ 0, %scalar.ph ], [ %mul, %for.body ]              ; <------- i8 induction var.
-  %c.015 = phi i8 [ undef, %scalar.ph ], [ %conv8, %for.body ]
+  %c.015 = phi i8 [ 0, %scalar.ph ], [ %conv8, %for.body ]
   %conv2 = sext i8 %c.015 to i32
   %tobool = icmp ne i8 %c.015, 0
   %.sink = select i1 %tobool, i8 %c.015, i8 %0

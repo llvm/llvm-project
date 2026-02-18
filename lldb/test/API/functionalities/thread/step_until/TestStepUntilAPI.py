@@ -1,7 +1,7 @@
-import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test_event.build_exception import BuildError
 
 
 class TestStepUntilAPI(TestBase):
@@ -74,15 +74,20 @@ class TestStepUntilAPI(TestBase):
 
     @skipIf(oslist=lldbplatformutil.getDarwinOSTriples() + ["windows"])
     @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @skipIf(compiler=no_match(["clang"]))
     def test_hitting_discontinuous(self):
         """Test SBThread.StepOverUntil - targeting a line and hitting it -- with
         discontinuous functions"""
-        self._do_until(
-            self._build_dict_for_discontinuity(),
-            None,
-            self.less_than_two,
-            self.less_than_two,
-        )
+        try:
+            self._do_until(
+                self._build_dict_for_discontinuity(),
+                None,
+                self.less_than_two,
+                self.less_than_two,
+            )
+        except BuildError as ex:
+            self.skipTest(f"failed to build with linker script.")
+
         self._assertDiscontinuity()
 
     def test_missing(self):
@@ -93,15 +98,20 @@ class TestStepUntilAPI(TestBase):
 
     @skipIf(oslist=lldbplatformutil.getDarwinOSTriples() + ["windows"])
     @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @skipIf(compiler=no_match(["clang"]))
     def test_missing_discontinuous(self):
         """Test SBThread.StepOverUntil - targeting a line and missing it by
         stepping out to call site -- with discontinuous functions"""
-        self._do_until(
-            self._build_dict_for_discontinuity(),
-            ["foo", "bar", "baz"],
-            self.less_than_two,
-            self.back_out_in_main,
-        )
+        try:
+            self._do_until(
+                self._build_dict_for_discontinuity(),
+                ["foo", "bar", "baz"],
+                self.less_than_two,
+                self.back_out_in_main,
+            )
+        except BuildError as ex:
+            self.skipTest(f"failed to build with linker script.")
+
         self._assertDiscontinuity()
 
     def test_bad_line(self):
@@ -120,13 +130,19 @@ class TestStepUntilAPI(TestBase):
 
     @skipIf(oslist=lldbplatformutil.getDarwinOSTriples() + ["windows"])
     @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @skipIf(compiler=no_match(["clang"]))
     def test_bad_line_discontinuous(self):
         """Test that we get an error if attempting to step outside the current
         function -- and the function is discontinuous"""
-        self.build(dictionary=self._build_dict_for_discontinuity())
-        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
-            self, "At the start", self.main_spec
-        )
+
+        try:
+            self.build(dictionary=self._build_dict_for_discontinuity())
+            _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+                self, "At the start", self.main_spec
+            )
+        except BuildError as ex:
+            self.skipTest(f"failed to build with linker script.")
+
         self.assertIn(
             "step until target not in current function",
             thread.StepOverUntil(

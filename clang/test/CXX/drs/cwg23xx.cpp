@@ -270,7 +270,7 @@ namespace cwg2352 { // cwg2352: 10
   // lvalue of type 'const int *const * const'?
   const int * const * r;
   void *y = &(true ? p : r);
-  // expected-error@-1 {{rvalue of type 'const int *const *'}}
+  // expected-error@-1 {{cannot take the address of an rvalue of type 'const int *const *'}}
 
   // FIXME: We order these as a speculative defect resolution.
   void f(const int * const * const &r);
@@ -440,7 +440,7 @@ template <> struct tuple_size<cwg2386::Bad2> {
 namespace cwg2386 {
 void no_value() { auto [x, y] = Bad1(); }
 void wrong_value() { auto [x, y] = Bad2(); }
-// since-cxx17-error@-1 {{type 'Bad2' decomposes into 42 elements, but only 2 names were provided}}
+// since-cxx17-error@-1 {{type 'Bad2' binds to 42 elements, but only 2 names were provided}}
 #endif
 } // namespace cwg2386
 

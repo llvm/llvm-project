@@ -137,7 +137,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   InlineAdvisor &Advisor = getAdvisor(MAM, FAM, M);
   Advisor.onPassEntry();
 
-  auto AdvisorOnExit = make_scope_exit([&] { Advisor.onPassExit(); });
+  llvm::scope_exit AdvisorOnExit([&] { Advisor.onPassExit(); });
 
   // In the module inliner, a priority-based worklist is used for calls across
   // the entire Module. With this module inliner, the inline order is not

@@ -14,10 +14,12 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 #include "ConstantsContext.h"
 
-namespace llvm {
+using namespace llvm;
+
 bool Operator::hasPoisonGeneratingFlags() const {
   switch (getOpcode()) {
   case Instruction::Add:
@@ -52,6 +54,16 @@ bool Operator::hasPoisonGeneratingFlags() const {
     return false;
   case Instruction::ICmp:
     return cast<ICmpInst>(this)->hasSameSign();
+  case Instruction::Call:
+    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::ctlz:
+      case Intrinsic::cttz:
+      case Intrinsic::abs:
+        return cast<ConstantInt>(II->getArgOperand(1))->isOneValue();
+      }
+    }
+    [[fallthrough]];
   default:
     if (const auto *FP = dyn_cast<FPMathOperator>(this))
       return FP->hasNoNaNs() || FP->hasNoInfs();
@@ -288,4 +300,3 @@ void FastMathFlags::print(raw_ostream &O) const {
       O << " afn";
   }
 }
-} // namespace llvm

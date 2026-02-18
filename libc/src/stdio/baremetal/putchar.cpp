@@ -1,4 +1,4 @@
-//===-- Baremetal Implementation of putchar -------------------------------===//
+//===-- Implementation of putchar for baremetal -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,17 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/putchar.h"
-#include "src/__support/CPP/string_view.h"
-#include "src/__support/OSUtil/io.h"
+
+#include "hdr/stdio_macros.h" // for EOF
+#include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/baremetal/file_internal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
-  char uc = static_cast<char>(c);
-
-  write_to_stdout(cpp::string_view(&uc, 1));
-
+  unsigned char uc = static_cast<unsigned char>(c);
+  auto result = write_internal(reinterpret_cast<char *>(&uc), 1, stdout);
+  if (result.has_error())
+    libc_errno = result.error;
+  size_t written = result.value;
+  if (written != 1) {
+    // The stream should be in an error state in this case.
+    return EOF;
+  }
   return 0;
 }
 

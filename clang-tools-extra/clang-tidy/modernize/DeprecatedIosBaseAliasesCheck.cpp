@@ -1,4 +1,4 @@
-//===--- DeprecatedIosBaseAliasesCheck.cpp - clang-tidy--------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -36,10 +36,10 @@ void DeprecatedIosBaseAliasesCheck::registerMatchers(MatchFinder *Finder) {
 
 void DeprecatedIosBaseAliasesCheck::check(
     const MatchFinder::MatchResult &Result) {
-  SourceManager &SM = *Result.SourceManager;
+  const SourceManager &SM = *Result.SourceManager;
 
   const auto *Typedef = Result.Nodes.getNodeAs<TypedefDecl>("TypeDecl");
-  StringRef TypeName = Typedef->getName();
+  const StringRef TypeName = Typedef->getName();
   auto Replacement = getReplacementType(TypeName);
 
   TypeLoc TL = *Result.Nodes.getNodeAs<TypeLoc>("TypeLoc");
@@ -55,7 +55,8 @@ void DeprecatedIosBaseAliasesCheck::check(
     Fix = false;
   }
 
-  SourceLocation EndLoc = IoStateLoc.getLocWithOffset(TypeName.size() - 1);
+  const SourceLocation EndLoc =
+      IoStateLoc.getLocWithOffset(TypeName.size() - 1);
 
   if (Replacement) {
     const char *FixName = *Replacement;

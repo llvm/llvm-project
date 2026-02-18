@@ -82,11 +82,11 @@ offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
   return {EntryInitializer, Str};
 }
 
-void offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
-                                     Constant *Addr, StringRef Name,
-                                     uint64_t Size, uint32_t Flags,
-                                     uint64_t Data, Constant *AuxAddr,
-                                     StringRef SectionName) {
+GlobalVariable *
+offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
+                                Constant *Addr, StringRef Name, uint64_t Size,
+                                uint32_t Flags, uint64_t Data,
+                                Constant *AuxAddr, StringRef SectionName) {
   const llvm::Triple &Triple = M.getTargetTriple();
 
   auto [EntryInitializer, NameGV] = getOffloadingEntryInitializer(
@@ -106,6 +106,7 @@ void offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
   else
     Entry->setSection(SectionName);
   Entry->setAlignment(Align(object::OffloadBinary::getAlignment()));
+  return Entry;
 }
 
 std::pair<GlobalVariable *, GlobalVariable *>
@@ -423,9 +424,7 @@ Error offloading::intel::containerizeOpenMPSPIRVImage(
   Header.Class = ELF::ELFCLASS64;
   Header.Data = ELF::ELFDATA2LSB;
   Header.Type = ELF::ET_DYN;
-  // Use an existing Intel machine type as there is not one specifically for
-  // Intel GPUs.
-  Header.Machine = ELF::EM_IA_64;
+  Header.Machine = ELF::EM_INTELGT;
 
   // Create a section with notes.
   ELFYAML::NoteSection Section{};

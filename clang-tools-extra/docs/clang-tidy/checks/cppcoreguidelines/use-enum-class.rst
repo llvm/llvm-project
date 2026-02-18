@@ -7,7 +7,7 @@ Finds unscoped (non-class) ``enum`` declarations and suggests using
 ``enum class`` instead.
 
 This check implements `Enum.3
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Renum-class>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#renum-class>`_
 from the C++ Core Guidelines."
 
 Example:

@@ -73,6 +73,13 @@ protected:
   /// is guaranteed to be loaded.
   virtual void Activate() = 0;
 
+  /// \return true if `CheckIfRuntimeIsValid` should be called on all modules.
+  /// In this case the return value of `GetPatternForRuntimeLibrary` will be
+  /// ignored. Return false if `CheckIfRuntimeIsValid` should only be called
+  /// for modules whose name matches `GetPatternForRuntimeLibrary`.
+  ///
+  virtual bool MatchAllModules() { return false; }
+
 public:
   static void ModulesDidLoad(lldb_private::ModuleList &module_list,
                              Process *process,

@@ -235,7 +235,7 @@ class MockSlabAllocator {
   static size_t LastSlabSize;
 
 public:
-  ~MockSlabAllocator() { }
+  ~MockSlabAllocator() = default;
 
   void *Allocate(size_t Size, size_t /*Alignment*/) {
     // Allocate space for the alignment, the slab, and a void* that goes right

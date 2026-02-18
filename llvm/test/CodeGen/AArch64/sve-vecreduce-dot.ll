@@ -36,10 +36,9 @@ define i32 @test(<vscale x 32 x i8> %bin.rdx, <vscale x 32 x i8> %bin.rdx2)  {
 ; CHECK-NEXT:    mla z0.s, p0/m, z25.s, z24.s
 ; CHECK-NEXT:    mad z2.s, p0/m, z6.s, z4.s
 ; CHECK-NEXT:    mad z1.s, p0/m, z3.s, z26.s
-; CHECK-NEXT:    movprfx z3, z5
-; CHECK-NEXT:    mla z3.s, p0/m, z28.s, z7.s
+; CHECK-NEXT:    mla z5.s, p0/m, z28.s, z7.s
 ; CHECK-NEXT:    add z0.s, z2.s, z0.s
-; CHECK-NEXT:    add z1.s, z3.s, z1.s
+; CHECK-NEXT:    add z1.s, z5.s, z1.s
 ; CHECK-NEXT:    add z0.s, z1.s, z0.s
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0

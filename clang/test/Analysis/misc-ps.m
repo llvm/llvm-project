@@ -1047,18 +1047,6 @@ void r8360854(int n) {
   *p = 0xDEADBEEF; // expected-warning{{null pointer}}
 }
 
-// PR 8050 - crash in CastSizeChecker when pointee is an incomplete type
-typedef long unsigned int __darwin_size_t;
-typedef __darwin_size_t size_t;
-void *malloc(size_t);
-
-struct PR8050;
-
-void pr8050(struct PR8050 **arg)
-{
-    *arg = malloc(1);
-}
-
 // Switch on enum should not consider default case live if all enum values are
 // covered.
 enum Cases { C1, C2, C3, C4 };

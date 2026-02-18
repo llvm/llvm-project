@@ -35,7 +35,7 @@ using namespace fuzzer;
 #define WIN_SYM_PREFIX
 #endif
 
-// Declare external functions as having alternativenames, so that we can
+// Declare external functions as having alternative names, so that we can
 // determine if they are not defined.
 #define EXTERNAL_FUNC(Name, Default)                                           \
   __pragma(comment(linker, "/alternatename:" WIN_SYM_PREFIX STRINGIFY(         \

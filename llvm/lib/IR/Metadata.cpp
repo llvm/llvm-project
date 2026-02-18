@@ -46,8 +46,11 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ModRef.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -56,6 +59,10 @@
 #include <vector>
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 MetadataAsValue::MetadataAsValue(Type *Ty, Metadata *MD)
     : Value(Ty, MetadataAsValueVal), MD(MD) {
@@ -614,6 +621,14 @@ MDString *MDString::get(LLVMContext &Context, StringRef Str) {
   return &MapEntry;
 }
 
+MDString *MDString::getIfExists(LLVMContext &Context, StringRef Str) {
+  auto &Store = Context.pImpl->MDStringCache;
+  auto I = Store.find(Str);
+  if (I == Store.end())
+    return nullptr;
+  return &I->getValue();
+}
+
 StringRef MDString::getString() const {
   assert(Entry && "Expected to find string map entry");
   return Entry->first();
@@ -986,15 +1001,11 @@ static T *uniquifyImpl(T *N, DenseSet<T *, InfoT> &Store) {
 }
 
 template <class NodeTy> struct MDNode::HasCachedHash {
-  using Yes = char[1];
-  using No = char[2];
-  template <class U, U Val> struct SFINAE {};
-
   template <class U>
-  static Yes &check(SFINAE<void (U::*)(unsigned), &U::setHash> *);
-  template <class U> static No &check(...);
+  static std::true_type check(SameType<void (U::*)(unsigned), &U::setHash> *);
+  template <class U> static std::false_type check(...);
 
-  static const bool value = sizeof(check<NodeTy>(nullptr)) == sizeof(Yes);
+  static constexpr bool value = decltype(check<NodeTy>(nullptr))::value;
 };
 
 MDNode *MDNode::uniquify() {
@@ -1007,9 +1018,7 @@ MDNode *MDNode::uniquify() {
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   case CLASS##Kind: {                                                          \
     CLASS *SubclassThis = cast<CLASS>(this);                                   \
-    std::integral_constant<bool, HasCachedHash<CLASS>::value>                  \
-        ShouldRecalculateHash;                                                 \
-    dispatchRecalculateHash(SubclassThis, ShouldRecalculateHash);              \
+    dispatchRecalculateHash(SubclassThis);                                     \
     return uniquifyImpl(SubclassThis, getContext().pImpl->CLASS##s);           \
   }
 #include "llvm/IR/Metadata.def"
@@ -1065,8 +1074,7 @@ void MDNode::storeDistinctInContext() {
     llvm_unreachable("Invalid subclass of MDNode");
 #define HANDLE_MDNODE_LEAF(CLASS)                                              \
   case CLASS##Kind: {                                                          \
-    std::integral_constant<bool, HasCachedHash<CLASS>::value> ShouldResetHash; \
-    dispatchResetHash(cast<CLASS>(this), ShouldResetHash);                     \
+    dispatchResetHash(cast<CLASS>(this));                                      \
     break;                                                                     \
   }
 #include "llvm/IR/Metadata.def"
@@ -1261,6 +1269,9 @@ MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
       BCall->getCalledFunction())
     return mergeDirectCallProfMetadata(A, B, AInstr, BInstr);
 
+  if (A == B && !ProfcheckDisableMetadataFixes)
+    return A;
+
   // The rest of the cases are not implemented but could be added
   // when there are use cases.
   return nullptr;
@@ -1394,6 +1405,23 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
   return MDNode::get(A->getContext(), MDs);
 }
 
+MDNode *MDNode::getMostGenericNoFPClass(MDNode *A, MDNode *B) {
+  if (!A || !B)
+    return nullptr;
+
+  if (A == B)
+    return A;
+
+  ConstantInt *AVal = mdconst::extract<ConstantInt>(A->getOperand(0));
+  ConstantInt *BVal = mdconst::extract<ConstantInt>(B->getOperand(0));
+  unsigned Intersect = AVal->getZExtValue() & BVal->getZExtValue();
+  if (Intersect == 0)
+    return nullptr;
+
+  return MDNode::get(A->getContext(), ConstantAsMetadata::get(ConstantInt::get(
+                                          AVal->getType(), Intersect)));
+}
+
 MDNode *MDNode::getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B) {
   if (!A || !B)
     return nullptr;
@@ -1440,6 +1468,40 @@ MDNode *MDNode::getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B) {
   if (AVal->getZExtValue() < BVal->getZExtValue())
     return A;
   return B;
+}
+
+CaptureComponents MDNode::toCaptureComponents(const MDNode *MD) {
+  if (!MD)
+    return CaptureComponents::All;
+
+  CaptureComponents CC = CaptureComponents::None;
+  for (Metadata *Op : MD->operands()) {
+    CaptureComponents Component =
+        StringSwitch<CaptureComponents>(cast<MDString>(Op)->getString())
+            .Case("address", CaptureComponents::Address)
+            .Case("address_is_null", CaptureComponents::AddressIsNull)
+            .Case("provenance", CaptureComponents::Provenance)
+            .Case("read_provenance", CaptureComponents::ReadProvenance);
+    CC |= Component;
+  }
+  return CC;
+}
+
+MDNode *MDNode::fromCaptureComponents(LLVMContext &Ctx, CaptureComponents CC) {
+  assert(!capturesNothing(CC) && "Can't encode captures(none)");
+  if (capturesAll(CC))
+    return nullptr;
+
+  SmallVector<Metadata *> Components;
+  if (capturesAddressIsNullOnly(CC))
+    Components.push_back(MDString::get(Ctx, "address_is_null"));
+  else if (capturesAddress(CC))
+    Components.push_back(MDString::get(Ctx, "address"));
+  if (capturesReadProvenanceOnly(CC))
+    Components.push_back(MDString::get(Ctx, "read_provenance"));
+  else if (capturesFullProvenance(CC))
+    Components.push_back(MDString::get(Ctx, "provenance"));
+  return MDNode::get(Ctx, Components);
 }
 
 //===----------------------------------------------------------------------===//

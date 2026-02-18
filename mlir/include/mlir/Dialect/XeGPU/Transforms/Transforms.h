@@ -9,9 +9,11 @@
 #ifndef MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
-#include "mlir/IR/Operation.h"
 
 #include <functional>
 #include <optional>
@@ -47,9 +49,11 @@ struct UnrollOptions {
 
   /// Function that converts a ShapedType (TensorDescType or VectorType)
   /// into the unrolled type based on the tileShape. It returns a vector of
-  /// types representing the unrolled types for simplicity.
+  /// types representing the unrolled types for simplicity. When
+  /// `returnSingleType` is true, it returns a vector containing only one single
+  /// unrolled type.
   using UnrolledTypeFnType = std::function<SmallVector<Type>(
-      ShapedType type, ArrayRef<int64_t> tileShape)>;
+      ShapedType type, ArrayRef<int64_t> tileShape, bool returnSingleType)>;
   UnrolledTypeFnType getUnrolledTypes = nullptr;
   UnrollOptions &setUnrolledTypesFn(UnrolledTypeFnType fn) {
     getUnrolledTypes = std::move(fn);
@@ -59,10 +63,33 @@ struct UnrollOptions {
 
 /// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
 void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
-
+/// Appends patterns for optimizing block load operations into `patterns`.
+void populateXeGPUPeepHoleOptimizerPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU SIMT distribution into `patterns`.
 void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
+/// Appends patterns for moving function body into gpu.warp_execute_on_lane0 op.
+void populateXeGPUMoveFuncBodyToWarpOpPatterns(RewritePatternSet &patterns);
+/// Appends patterns for XeGPU workgroup to subgroup distribution into
+/// `patterns`.
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
+/// Define only the type conversions needed for XeGPU subgroup to workitem
+/// distribution.
+void populateXeGPUSgToWiDistributeTypeConversions(TypeConverter &typeConverter);
+/// Defines type conversions and legality for XeGPU subgroup to workitem
+/// distribution and appends the required conversion patterns into `patterns`.
+/// Appends patterns for XeGPU subgroup to workitem distribution into
+/// `patterns`.
+void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target);
+/// Appends patterns to rewrite vector::MultiDimReductionOp in terms of
+/// vector::ReductionOps if the multi-reduction involves cross-lane data
+/// movement. This pattern is used as pre-processing step before applying
+/// subgroup to workitem distribution patterns. This pattern will rewrite a
+/// multi reduction in terms of a series of simpler extract, reduction and
+/// insert ops if the reduction require cross-lane data movement.
+void populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
+    RewritePatternSet &patterns, ConversionTarget &target);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
 /// Users can control whether an operation to be unrolled or not, as well as
@@ -74,7 +101,7 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
 ///   1. the unrolled type `unrolledType` and number of unrolled instances
 ///   `numUnrolledInstances` are computed from the `targetShape`.
 ///   2. pack each operand. ExtractStridedSlice are created to break-up the
-///   vector operands. And BuiltinUnrealizedCastop are created to break-up
+///   vector operands. And BuiltinUnrealizedCastOp are created to break-up
 ///    the TensorDesc operands.
 ///   3. the original op is cloned `numUnrolledInstances` times, once for each
 ///   result.

@@ -137,6 +137,7 @@ size_t StableFunctionMap::size(SizeType Type) const {
 const StableFunctionMap::StableFunctionEntries &
 StableFunctionMap::at(HashFuncsMapType::key_type FunctionHash) const {
   auto It = HashToFuncs.find(FunctionHash);
+  assert(It != HashToFuncs.end() && "FunctionHash not found!");
   if (isLazilyLoaded())
     deserializeLazyLoadingEntry(It);
   return It->second.Entries;

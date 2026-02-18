@@ -102,6 +102,19 @@ namespace PointerArithmeticOverflow {
                                                        // both-note {{cannot refer to element 3402}}
 }
 
+namespace BitfieldWidth {
+  struct S {
+    __int128 foo : 1234;
+#if !defined(_WIN32)
+    // both-warning@-2 {{width of bit-field 'foo' (1'234 bits) exceeds the width of its type; value will be truncated to 128 bits}}
+#else
+    // both-error@-4 {{width of bit-field 'foo' (1234 bits) exceeds the size of its type (128 bits)}}
+#endif
+  };
+  constexpr S s{100};
+  static_assert(s.foo == 100, "");
+}
+
 namespace i128 {
 
   constexpr int128_t I128_1 = 12;
@@ -305,6 +318,46 @@ namespace UnderlyingInt128 {
   static_assert(foo() == 0, ""); // both-error {{not an integral constant expression}} \
                                  // both-note {{in call to}}
 }
+
+namespace CompoundAssignOperators {
+  constexpr unsigned __int128 foo() {
+    long b = 10;
+
+    b += (__int128)1;
+    b -= (__int128)1;
+    b *= (__int128)1;
+    b /= (__int128)1;
+
+    b += (unsigned __int128)1;
+    b -= (unsigned __int128)1;
+    b *= (unsigned __int128)1;
+    b /= (unsigned __int128)1;
+
+    __int128 i = 10;
+    i += (__int128)1;
+    i -= (__int128)1;
+    i *= (__int128)1;
+    i /= (__int128)1;
+    i += (unsigned __int128)1;
+    i -= (unsigned __int128)1;
+    i *= (unsigned __int128)1;
+    i /= (unsigned __int128)1;
+
+    unsigned __int128 i2 = 10;
+    i2 += (__int128)1;
+    i2 -= (__int128)1;
+    i2 *= (__int128)1;
+    i2 /= (__int128)1;
+    i2 += (unsigned __int128)1;
+    i2 -= (unsigned __int128)1;
+    i2 *= (unsigned __int128)1;
+    i2 /= (unsigned __int128)1;
+
+    return (int)b;
+  }
+  static_assert(foo() == 10);
+}
+
 #endif
 
 #endif

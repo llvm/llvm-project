@@ -536,7 +536,7 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   Elf_Chdr_Impl<ELFT> Chdr = {};
   switch (Sec.CompressionType) {
   case DebugCompressionType::None:
-    std::copy(Sec.OriginalData.begin(), Sec.OriginalData.end(), Buf);
+    llvm::copy(Sec.OriginalData, Buf);
     return Error::success();
   case DebugCompressionType::Zlib:
     Chdr.ch_type = ELF::ELFCOMPRESS_ZLIB;
@@ -550,7 +550,7 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   memcpy(Buf, &Chdr, sizeof(Chdr));
   Buf += sizeof(Chdr);
 
-  std::copy(Sec.CompressedData.begin(), Sec.CompressedData.end(), Buf);
+  llvm::copy(Sec.CompressedData, Buf);
   return Error::success();
 }
 
@@ -1306,6 +1306,9 @@ Error BasicELFBuilder::initSections() {
 
   return Error::success();
 }
+
+BasicELFBuilder::BasicELFBuilder() : Obj(std::make_unique<Object>()) {}
+BasicELFBuilder::~BasicELFBuilder() = default;
 
 void BinaryELFBuilder::addData(SymbolTableSection *SymTab) {
   auto Data = ArrayRef<uint8_t>(
@@ -2168,12 +2171,19 @@ Error Object::updateSectionData(SecPtr &Sec, ArrayRef<uint8_t> Data) {
                              Data.size(), Sec->Name.c_str(), Sec->Size);
 
   if (!Sec->ParentSegment) {
-    Sec = std::make_unique<OwnedDataSection>(*Sec, Data);
-  } else {
-    // The segment writer will be in charge of updating these contents.
-    Sec->Size = Data.size();
-    UpdatedSections[Sec.get()] = Data;
+    // addSection modifies the container that Sec is stored in, potentially
+    // invalidating the Sec reference. We obtain the raw pointer Sec owns before
+    // calling addSection, so that it can be safely passed into replaceSections.
+    SectionBase *Replaced = Sec.get();
+    SectionBase *Modified = &addSection<OwnedDataSection>(*Sec, Data);
+    // replaceSections deletes the replaced section internally,
+    // so we don't need to do so here.
+    return replaceSections({{Replaced, Modified}});
   }
+
+  // The segment writer will be in charge of updating these contents.
+  Sec->Size = Data.size();
+  UpdatedSections[Sec.get()] = Data;
 
   return Error::success();
 }

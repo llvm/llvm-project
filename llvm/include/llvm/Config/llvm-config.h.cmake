@@ -126,6 +126,9 @@
  * in non assert builds */
 #cmakedefine01 LLVM_UNREACHABLE_OPTIMIZE
 
+/* Define if building LLVM with LLVM_ENABLE_IO_SANDBOX */
+#cmakedefine01 LLVM_ENABLE_IO_SANDBOX
+
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
 #cmakedefine01 LLVM_ENABLE_DIA_SDK
 
@@ -145,5 +148,8 @@
 /* Define to 1 to enable expensive tracking of the origin of debug location
    coverage bugs, and to 0 otherwise. */
 #cmakedefine01 LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+
+/* Define to 1 to enable LLVM OnDisk Content Addressable Storage */
+#cmakedefine01 LLVM_ENABLE_ONDISK_CAS
 
 #endif

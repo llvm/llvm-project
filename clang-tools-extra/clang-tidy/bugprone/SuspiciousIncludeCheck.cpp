@@ -1,4 +1,4 @@
-//===--- SuspiciousIncludeCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,13 +40,19 @@ SuspiciousIncludeCheck::SuspiciousIncludeCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       HeaderFileExtensions(Context->getHeaderFileExtensions()),
-      ImplementationFileExtensions(Context->getImplementationFileExtensions()) {
-}
+      ImplementationFileExtensions(Context->getImplementationFileExtensions()),
+      IgnoredRegexString(Options.get("IgnoredRegex").value_or(StringRef{})),
+      IgnoredRegex(IgnoredRegexString) {}
 
 void SuspiciousIncludeCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   PP->addPPCallbacks(
       ::std::make_unique<SuspiciousIncludePPCallbacks>(*this, SM, PP));
+}
+
+void SuspiciousIncludeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  if (!IgnoredRegexString.empty())
+    Options.store(Opts, "IgnoredRegex", IgnoredRegexString);
 }
 
 void SuspiciousIncludePPCallbacks::InclusionDirective(
@@ -57,7 +63,10 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
   if (IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import)
     return;
 
-  SourceLocation DiagLoc = FilenameRange.getBegin().getLocWithOffset(1);
+  if (!Check.IgnoredRegexString.empty() && Check.IgnoredRegex.match(FileName))
+    return;
+
+  const SourceLocation DiagLoc = FilenameRange.getBegin().getLocWithOffset(1);
 
   const std::optional<StringRef> IFE =
       utils::getFileExtension(FileName, Check.ImplementationFileExtensions);
@@ -72,7 +81,7 @@ void SuspiciousIncludePPCallbacks::InclusionDirective(
     llvm::sys::path::replace_extension(GuessedFileName,
                                        (!HFE.empty() ? "." : "") + HFE);
 
-    OptionalFileEntryRef File =
+    const OptionalFileEntryRef File =
         PP->LookupFile(DiagLoc, GuessedFileName, IsAngled, nullptr, nullptr,
                        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     if (File) {

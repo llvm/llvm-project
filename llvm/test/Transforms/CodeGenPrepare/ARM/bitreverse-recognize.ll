@@ -4,7 +4,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv7--linux-gnueabihf"
 
 ; CHECK-LABEL: @f
-define i32 @f(i32 %a) #0 {
+define i32 @f(i32 %a) {
 ; CHECK: call i32 @llvm.bitreverse.i32
 entry:
   br label %for.body
@@ -24,8 +24,6 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %inc, 32
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !3
 }
-
-attributes #0 = { norecurse nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a8" "target-features"="+dsp,+neon,+vfp3" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}

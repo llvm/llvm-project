@@ -33,6 +33,7 @@ set(supported_sources
   edit-input.cpp
   edit-output.cpp
   environment.cpp
+  exceptions.cpp
   external-unit.cpp
   extrema.cpp
   file.cpp
@@ -112,7 +113,6 @@ set(gpu_sources
   format.cpp
   inquiry.cpp
   internal-unit.cpp
-  io-error.cpp
   iostat.cpp
   matmul-transpose.cpp
   matmul.cpp
@@ -177,6 +177,8 @@ endif ()
 
 if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
   set(sources ${gpu_sources})
+elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
+  set(sources ${supported_sources})
 else ()
   set(sources ${supported_sources} ${host_sources} ${f128_sources})
 endif ()

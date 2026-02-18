@@ -24,7 +24,7 @@ attributes #0 = {
   "less-precise-fpmad"="false" "frame-pointer"="none"
   "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false"
   "no-signed-zeros-fp-math"="false" "no-trapping-math"="false"
-  "stack-protector-buffer-size"="8" "unsafe-fp-math"="false"
+  "stack-protector-buffer-size"="8"
   "use-soft-float"="false"
 }
 
@@ -34,6 +34,6 @@ attributes #1 = {
   "less-precise-fpmad"="false" "frame-pointer"="none"
   "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false"
   "no-signed-zeros-fp-math"="false" "no-trapping-math"="false"
-  "stack-protector-buffer-size"="8" "unsafe-fp-math"="false"
+  "stack-protector-buffer-size"="8"
   "use-soft-float"="false"
 }

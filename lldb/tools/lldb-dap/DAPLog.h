@@ -11,33 +11,28 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
 #include <string>
-#include <system_error>
 
 // Write a message to log, if logging is enabled.
 #define DAP_LOG(log, ...)                                                      \
   do {                                                                         \
-    ::lldb_dap::Log *log_private = (log);                                      \
-    if (log_private) {                                                         \
-      log_private->WriteMessage(::llvm::formatv(__VA_ARGS__).str());           \
-    }                                                                          \
+    ::lldb_dap::Log &log_private = (log);                                      \
+    log_private.Emit(::llvm::formatv(__VA_ARGS__).str(), __FILE__, __LINE__);  \
   } while (0)
 
 // Write message to log, if error is set. In the log message refer to the error
 // with {0}. Error is cleared regardless of whether logging is enabled.
 #define DAP_LOG_ERROR(log, error, ...)                                         \
   do {                                                                         \
-    ::lldb_dap::Log *log_private = (log);                                      \
+    ::lldb_dap::Log &log_private = (log);                                      \
     ::llvm::Error error_private = (error);                                     \
-    if (log_private && error_private) {                                        \
-      log_private->WriteMessage(                                               \
-          ::lldb_dap::FormatError(::std::move(error_private), __VA_ARGS__));   \
-    } else                                                                     \
-      ::llvm::consumeError(::std::move(error_private));                        \
+    if (error_private)                                                         \
+      log_private.Emit(                                                        \
+          ::lldb_dap::FormatError(::std::move(error_private), __VA_ARGS__),    \
+          __FILE__, __LINE__);                                                 \
   } while (0)
 
 namespace lldb_dap {
@@ -46,14 +41,32 @@ namespace lldb_dap {
 /// `DAP_LOG_ERROR` helpers.
 class Log final {
 public:
-  /// Creates a log file with the given filename.
-  Log(llvm::StringRef filename, std::error_code &EC);
+  using Mutex = std::mutex;
 
-  void WriteMessage(llvm::StringRef message);
+  Log(llvm::raw_ostream &stream, Mutex &mutex)
+      : m_stream(stream), m_mutex(mutex) {}
+  Log(llvm::StringRef prefix, const Log &log)
+      : m_prefix(prefix), m_stream(log.m_stream), m_mutex(log.m_mutex) {}
+
+  /// Retuns a new Log instance with the associated prefix for all messages.
+  inline Log WithPrefix(llvm::StringRef prefix) const {
+    std::string full_prefix =
+        m_prefix.empty() ? prefix.str() : m_prefix + prefix.str();
+    full_prefix += " ";
+    return Log(full_prefix, *this);
+  }
+
+  /// Emit writes a message to the underlying stream.
+  void Emit(llvm::StringRef message);
+
+  /// Emit writes a message to the underlying stream, including the file and
+  /// line the message originated from.
+  void Emit(llvm::StringRef message, llvm::StringRef file, size_t line);
 
 private:
-  std::mutex m_mutex;
-  llvm::raw_fd_ostream m_stream;
+  std::string m_prefix;
+  llvm::raw_ostream &m_stream;
+  Mutex &m_mutex;
 };
 
 template <typename... Args>

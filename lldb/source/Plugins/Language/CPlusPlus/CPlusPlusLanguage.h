@@ -14,7 +14,6 @@
 
 #include "llvm/ADT/StringRef.h"
 
-#include "Plugins/Language/ClangCommon/ClangHighlighter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
@@ -22,8 +21,6 @@
 namespace lldb_private {
 
 class CPlusPlusLanguage : public Language {
-  ClangHighlighter m_highlighter;
-
 public:
   class CxxMethodName : public Language::MethodName {
   public:
@@ -81,8 +78,6 @@ public:
 
   bool IsSourceFile(llvm::StringRef file_path) const override;
 
-  const Highlighter *GetHighlighter() const override { return &m_highlighter; }
-
   // Static Functions
   static void Initialize();
 
@@ -92,7 +87,7 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "cplusplus"; }
 
-  bool SymbolNameFitsToLanguage(Mangled mangled) const override;
+  bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
 
   bool DemangledNameContainsPath(llvm::StringRef path,
                                  ConstString demangled) const override;
@@ -154,7 +149,7 @@ public:
   // C/C++ identifier, then it will return false
   // and identifier and context will be unchanged.
 
-  static bool ExtractContextAndIdentifier(const char *name,
+  static bool ExtractContextAndIdentifier(llvm::StringRef name,
                                           llvm::StringRef &context,
                                           llvm::StringRef &identifier);
 

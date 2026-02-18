@@ -10,6 +10,6 @@
 
 #--- a.fdata
 no_lbr
-main 1
+1 main 1
 #--- b.fdata
-main 1
+1 main 1

@@ -136,7 +136,7 @@ public:
   static char ID;
 
   ObjectLayer(ExecutionSession &ES);
-  virtual ~ObjectLayer();
+  ~ObjectLayer() override;
 
   /// Returns the execution session for this layer.
   ExecutionSession &getExecutionSession() { return ES; }

@@ -22,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(size_t, wcsrtombs,
                    (char *__restrict s, const wchar_t **__restrict pwcs,
-                    size_t n, mbstate_t *ps)) {
+                    size_t n, mbstate_t *__restrict ps)) {
   LIBC_CRASH_ON_NULLPTR(pwcs);
   static internal::mbstate internal_mbstate;
   auto result = internal::wcsnrtombs(

@@ -380,6 +380,20 @@ This attribute may not be
 supported by other compilers, so consider using it together with
 ``#if defined(__clang__)``.
 
+Interaction of Inlining with Disabling Sanitizer Instrumentation
+-----------------------------------------------------------------
+
+Unlike many of the other sanitizers (e.g., ASan/MSan, TSan), UBSan is largely
+compatible with inlining, both the compiler's heuristic inlining as well as
+``__attribute__((always_inline))``.
+
+There are (at least) two exceptions:
+
+* inlining may change the layout of variables, which can affect whether
+  the `alignment` check detects an under-aligned variable
+* combining `__attribute((no_sanitize("local-bounds")))` with
+  `__attribute((always_inline))` is not supported
+
 Suppressing Errors in Recompiled Code (Ignorelist)
 --------------------------------------------------
 

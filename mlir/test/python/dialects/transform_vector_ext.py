@@ -48,6 +48,8 @@ def non_configurable_patterns():
     vector.ApplyLowerGatherPatternsOp()
     # CHECK: transform.apply_patterns.vector.unroll_from_elements
     vector.ApplyUnrollFromElementsPatternsOp()
+    # CHECK: transform.apply_patterns.vector.unroll_to_elements
+    vector.ApplyUnrollToElementsPatternsOp()
     # CHECK: transform.apply_patterns.vector.lower_scan
     vector.ApplyLowerScanPatternsOp()
     # CHECK: transform.apply_patterns.vector.lower_shape_cast
@@ -65,6 +67,9 @@ def configurable_patterns():
     # CHECK-SAME: max_transfer_rank = 3
     # CHECK-SAME: full_unroll = true
     vector.ApplyTransferToScfPatternsOp(max_transfer_rank=3, full_unroll=True)
+    # CHECK: transform.apply_patterns.vector.flatten_vector_transfer_ops
+    # CHECK-SAME: target_vector_bitwidth = 1
+    vector.ApplyFlattenVectorTransferOpsPatternsOp(target_vector_bitwidth=1)
 
 
 @run_apply_patterns
@@ -72,9 +77,9 @@ def enum_configurable_patterns():
     # CHECK: transform.apply_patterns.vector.lower_contraction
     vector.ApplyLowerContractionPatternsOp()
     # CHECK: transform.apply_patterns.vector.lower_contraction
-    # CHECK-SAME: lowering_strategy = matmulintrinsics
+    # CHECK-SAME: lowering_strategy = llvmintr
     vector.ApplyLowerContractionPatternsOp(
-        lowering_strategy=vector.VectorContractLowering.Matmul
+        lowering_strategy=vector.VectorContractLowering.LLVMIntr
     )
     # CHECK: transform.apply_patterns.vector.lower_contraction
     # CHECK-SAME: lowering_strategy = parallelarith
@@ -95,6 +100,14 @@ def enum_configurable_patterns():
         lowering_strategy=vector.VectorMultiReductionLowering.InnerReduction
     )
 
+    # CHECK: transform.apply_patterns.vector.reorder_and_expand_multi_reduction_dims
+    vector.ApplyReorderAndExpandMultiReductionPatternsOp()
+    # CHECK: transform.apply_patterns.vector.reorder_and_expand_multi_reduction_dims
+    # CHECK-SAME: lowering_strategy = innerreduction
+    vector.ApplyReorderAndExpandMultiReductionPatternsOp(
+        lowering_strategy=vector.VectorMultiReductionLowering.InnerReduction
+    )
+
     # CHECK: transform.apply_patterns.vector.lower_transpose
     vector.ApplyLowerTransposePatternsOp()
     # CHECK: transform.apply_patterns.vector.lower_transpose
@@ -103,9 +116,9 @@ def enum_configurable_patterns():
         lowering_strategy=vector.VectorTransposeLowering.EltWise
     )
     # CHECK: transform.apply_patterns.vector.lower_transpose
-    # CHECK-SAME: lowering_strategy = flat_transpose
+    # CHECK-SAME: lowering_strategy = llvmintr
     vector.ApplyLowerTransposePatternsOp(
-        lowering_strategy=vector.VectorTransposeLowering.Flat
+        lowering_strategy=vector.VectorTransposeLowering.LLVMIntr
     )
     # CHECK: transform.apply_patterns.vector.lower_transpose
     # CHECK-SAME: lowering_strategy = shuffle_1d
@@ -118,10 +131,10 @@ def enum_configurable_patterns():
         lowering_strategy=vector.VectorTransposeLowering.Shuffle16x16
     )
     # CHECK: transform.apply_patterns.vector.lower_transpose
-    # CHECK-SAME: lowering_strategy = flat_transpose
+    # CHECK-SAME: lowering_strategy = llvmintr
     # CHECK-SAME: avx2_lowering_strategy = true
     vector.ApplyLowerTransposePatternsOp(
-        lowering_strategy=vector.VectorTransposeLowering.Flat,
+        lowering_strategy=vector.VectorTransposeLowering.LLVMIntr,
         avx2_lowering_strategy=True,
     )
 

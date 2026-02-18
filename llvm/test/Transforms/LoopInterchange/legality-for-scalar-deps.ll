@@ -21,13 +21,13 @@
 ; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        issue46867
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:  - String:       Cannot interchange loops due to dependences.
+; CHECK-NEXT:  - String:          All loops have dependencies in all directions.
 ; CHECK:      --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
 ; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        issue46867
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:  - String:       Cannot interchange loops due to dependences.
+; CHECK-NEXT:  - String:          All loops have dependencies in all directions.
 define void @issue46867(ptr noundef captures(none) %s, i32 noundef %c, ptr noundef readonly captures(none) %ff) {
 entry:
   %tobool7.not = icmp eq i32 %c, 0
@@ -121,7 +121,7 @@ land.end:
 ; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        issue47401
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:  - String:       Cannot interchange loops due to dependences.
+; CHECK-NEXT:  - String:          All loops have dependencies in all directions.
 define void @issue47401(ptr noundef writeonly captures(none) %e, ptr noundef readonly captures(none) %bb) {
 entry:
   br label %for.cond1.preheader
@@ -175,7 +175,7 @@ land.end:
 ; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        issue47295
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:  - String:       Cannot interchange loops due to dependences.
+; CHECK-NEXT:  - String:          All loops have dependencies in all directions.
 define void @issue47295(ptr noundef captures(none) %f, ptr noundef writeonly captures(none) %cc) {
 entry:
   br label %for.cond1.preheader
@@ -221,7 +221,7 @@ for.body4:
 ; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        issue54176
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:  - String:       Cannot interchange loops due to dependences.
+; CHECK-NEXT:  - String:          All loops have dependencies in all directions.
 define void @issue54176(i32 noundef %n, i32 noundef %m, ptr noundef captures(none) %aa, ptr noundef readonly captures(none) %bb, ptr noundef writeonly captures(none) %cc) {
 
 entry:

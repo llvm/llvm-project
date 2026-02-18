@@ -66,11 +66,7 @@ define float @exp10_f32(float %x) #0 {
 ; CHECK-LABEL: exp10_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call exp10f
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump exp10f
 ; CHECK-NEXT:    }
   %r = call float @llvm.exp10.f32(float %x)
   ret float %r
@@ -103,11 +99,7 @@ define double @exp10_f64(double %x) #0 {
 ; CHECK-LABEL: exp10_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     call exp10
-; CHECK-NEXT:     allocframe(r29,#0):raw
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT:     jump exp10
 ; CHECK-NEXT:    }
   %r = call double @llvm.exp10.f64(double %x)
   ret double %r

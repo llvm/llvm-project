@@ -1017,7 +1017,7 @@ private:
     // First, for any types that have a declaration, extract the declaration and
     // match on it.
     if (const auto *S = dyn_cast<TagType>(&Node)) {
-      return matchesDecl(S->getOriginalDecl(), Finder, Builder);
+      return matchesDecl(S->getDecl(), Finder, Builder);
     }
     if (const auto *S = dyn_cast<TemplateTypeParmType>(&Node)) {
       return matchesDecl(S->getDecl(), Finder, Builder);

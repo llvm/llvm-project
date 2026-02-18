@@ -19,13 +19,38 @@ function(get_subproject_title outvar)
   endif ()
 endfunction(get_subproject_title)
 
-function(llvm_update_compile_flags name)
-  get_property(sources TARGET ${name} PROPERTY SOURCES)
-  if("${sources}" MATCHES "\\.c(;|$)")
-    set(update_src_props ON)
-  endif()
+# Determine required flags to enable/disable RTTI.
+set(LLVM_CXXFLAGS_RTTI_DISABLE "")
+set(LLVM_CXXFLAGS_RTTI_ENABLE "")
+if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  set(LLVM_CXXFLAGS_RTTI_DISABLE "-fno-rtti")
+elseif(MSVC)
+  set(LLVM_CXXFLAGS_RTTI_DISABLE "/GR-")
+  set(LLVM_CXXFLAGS_RTTI_ENABLE "/GR")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "XL")
+  set(LLVM_CXXFLAGS_RTTI_DISABLE "-qnortti")
+endif()
 
-  list(APPEND LLVM_COMPILE_CFLAGS " ${LLVM_COMPILE_FLAGS}")
+# Determine required flags to enable/disable EH.
+set(LLVM_CXXFLAGS_EH_DISABLE "")
+set(LLVM_CXXFLAGS_EH_ENABLE "")
+if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  set(LLVM_CXXFLAGS_EH_DISABLE "-fno-exceptions")
+  if(LLVM_ENABLE_UNWIND_TABLES)
+    list(APPEND LLVM_CXXFLAGS_EH_DISABLE "-funwind-tables")
+  else()
+    list(APPEND LLVM_CXXFLAGS_EH_DISABLE "-fno-unwind-tables")
+    list(APPEND LLVM_CXXFLAGS_EH_DISABLE "-fno-asynchronous-unwind-tables")
+  endif()
+elseif(MSVC)
+  set(LLVM_CXXFLAGS_EH_ENABLE "/EHsc")
+  set(LLVM_CXXFLAGS_EH_DISABLE "/EHs-c-")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
+  set(LLVM_CXXFLAGS_EH_DISABLE "-qnoeh")
+endif()
+
+function(llvm_update_compile_flags name)
+  set(LLVM_COMPILE_CXXFLAGS "")
 
   # LLVM_REQUIRES_EH is an internal flag that individual targets can use to
   # force EH
@@ -34,68 +59,24 @@ function(llvm_update_compile_flags name)
       message(AUTHOR_WARNING "Exception handling requires RTTI. Enabling RTTI for ${name}")
       set(LLVM_REQUIRES_RTTI ON)
     endif()
-    if(MSVC)
-      list(APPEND LLVM_COMPILE_FLAGS "/EHsc")
-    endif()
+    list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_EH_ENABLE})
   else()
-    if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
-      list(APPEND LLVM_COMPILE_FLAGS "-fno-exceptions")
-      if(LLVM_ENABLE_UNWIND_TABLES)
-        list(APPEND LLVM_COMPILE_FLAGS "-funwind-tables")
-      else()
-        list(APPEND LLVM_COMPILE_FLAGS "-fno-unwind-tables")
-        list(APPEND LLVM_COMPILE_FLAGS "-fno-asynchronous-unwind-tables")
-      endif()
-    elseif(MSVC)
+    if(MSVC)
       list(APPEND LLVM_COMPILE_DEFINITIONS _HAS_EXCEPTIONS=0)
-      list(APPEND LLVM_COMPILE_FLAGS "/EHs-c-")
-    elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
-      list(APPEND LLVM_COMPILE_FLAGS "-qnoeh")
     endif()
+    list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_EH_DISABLE})
   endif()
 
   # LLVM_REQUIRES_RTTI is an internal flag that individual
   # targets can use to force RTTI
-  set(LLVM_CONFIG_HAS_RTTI YES CACHE INTERNAL "")
   if(NOT (LLVM_REQUIRES_RTTI OR LLVM_ENABLE_RTTI))
-    set(LLVM_CONFIG_HAS_RTTI NO CACHE INTERNAL "")
-    list(APPEND LLVM_COMPILE_DEFINITIONS GTEST_HAS_RTTI=0)
-    if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-      list(APPEND LLVM_COMPILE_FLAGS "-fno-rtti")
-    elseif (MSVC)
-      list(APPEND LLVM_COMPILE_FLAGS "/GR-")
-    elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
-      list(APPEND LLVM_COMPILE_FLAGS "-qnortti")
-    endif ()
-  elseif(MSVC)
-    list(APPEND LLVM_COMPILE_FLAGS "/GR")
-  endif()
-
-  # Assume that;
-  #   - LLVM_COMPILE_FLAGS is list.
-  #   - PROPERTY COMPILE_FLAGS is string.
-  string(REPLACE ";" " " target_compile_flags " ${LLVM_COMPILE_FLAGS}")
-  string(REPLACE ";" " " target_compile_cflags " ${LLVM_COMPILE_CFLAGS}")
-
-  if(update_src_props)
-    foreach(fn ${sources})
-      get_filename_component(suf ${fn} EXT)
-      if("${suf}" STREQUAL ".cpp")
-        set_property(SOURCE ${fn} APPEND_STRING PROPERTY
-          COMPILE_FLAGS "${target_compile_flags}")
-      endif()
-      if("${suf}" STREQUAL ".c")
-        set_property(SOURCE ${fn} APPEND_STRING PROPERTY
-          COMPILE_FLAGS "${target_compile_cflags}")
-      endif()
-    endforeach()
+    list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_RTTI_DISABLE})
   else()
-    # Update target props, since all sources are C++.
-    set_property(TARGET ${name} APPEND_STRING PROPERTY
-      COMPILE_FLAGS "${target_compile_flags}")
+    list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_RTTI_ENABLE})
   endif()
 
-  set_property(TARGET ${name} APPEND PROPERTY COMPILE_DEFINITIONS ${LLVM_COMPILE_DEFINITIONS})
+  target_compile_options(${name} PRIVATE ${LLVM_COMPILE_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${LLVM_COMPILE_CXXFLAGS}>)
+  target_compile_definitions(${name} PRIVATE ${LLVM_COMPILE_DEFINITIONS})
 endfunction()
 
 function(add_llvm_symbol_exports target_name export_file)
@@ -1359,6 +1340,14 @@ function(export_executable_symbols target)
     while(NOT "${new_libs}" STREQUAL "")
       foreach(lib ${new_libs})
         if(TARGET ${lib})
+          # If this is a ALIAS target, continue with its aliasee instead.
+          get_target_property(aliased_lib ${lib} ALIASED_TARGET)
+          if(aliased_lib)
+             set(new_libs ${lib_aliased_target})
+             list(APPEND newer_libs ${aliased_lib})
+             continue()
+          endif()
+
           get_target_property(lib_type ${lib} TYPE)
           if("${lib_type}" STREQUAL "STATIC_LIBRARY")
             list(APPEND static_libs ${lib})
@@ -1442,6 +1431,7 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-lib
     llvm-mca
     llvm-ml
+    llvm-ml64
     llvm-nm
     llvm-objcopy
     llvm-objdump
@@ -1746,6 +1736,31 @@ function(add_llvm_implicit_projects)
   llvm_add_implicit_projects(LLVM)
 endfunction(add_llvm_implicit_projects)
 
+function(set_unittest_link_flags target_name)
+  # The runtime benefits of LTO don't outweight the compile time costs for
+  # tests.
+  if(LLVM_ENABLE_LTO)
+    if((UNIX OR MINGW) AND LINKER_IS_LLD)
+      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
+        # When using FatLTO, just use relocatable linking.
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--no-fat-lto-objects")
+      else()
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                      LINK_FLAGS " -Wl,--lto-O0")
+      endif()
+    elseif(LINKER_IS_LLD_LINK)
+      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                    LINK_FLAGS " /opt:lldlto=0")
+    elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
+      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+                    LINK_FLAGS " -Wl,-mllvm,-O0")
+    endif()
+  endif()
+
+  target_link_options(${target_name} PRIVATE "${LLVM_UNITTEST_LINK_FLAGS}")
+endfunction(set_unittest_link_flags)
+
 # Generic support for adding a unittest.
 function(add_unittest test_suite test_name)
   if( NOT LLVM_BUILD_TESTS )
@@ -1769,34 +1784,20 @@ function(add_unittest test_suite test_name)
   get_subproject_title(subproject_title)
   set_target_properties(${test_name} PROPERTIES FOLDER "${subproject_title}/Tests/Unit")
 
-  # The runtime benefits of LTO don't outweight the compile time costs for tests.
-  if(LLVM_ENABLE_LTO)
-    if((UNIX OR MINGW) AND LINKER_IS_LLD)
-      if(LLVM_ENABLE_FATLTO AND NOT APPLE)
-        # When using FatLTO, just use relocatable linking.
-        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " -Wl,--no-fat-lto-objects")
-      else()
-        set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                      LINK_FLAGS " -Wl,--lto-O0")
-      endif()
-    elseif(LINKER_IS_LLD_LINK)
-      set_property(TARGET ${test_name} APPEND_STRING PROPERTY
-                    LINK_FLAGS " /opt:lldlto=0")
-    elseif(APPLE AND NOT uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
-      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                    LINK_FLAGS " -Wl,-mllvm,-O0")
-    endif()
-  endif()
-
-  target_link_options(${test_name} PRIVATE "${LLVM_UNITTEST_LINK_FLAGS}")
+  set_unittest_link_flags(${test_name})
 
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${test_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
   # libpthreads overrides some standard library symbols, so main
   # executable must be linked with it in order to provide consistent
   # API for all shared libaries loaded by this executable.
-  target_link_libraries(${test_name} PRIVATE llvm_gtest_main llvm_gtest ${LLVM_PTHREAD_LIB})
+  # default_gtest should be an alias to either llvm_gtest or runtimes_gtest.
+  # If it is not defined, fall back to llvm_gtest.
+  if(TARGET default_gtest)
+    target_link_libraries(${test_name} PRIVATE default_gtest_main default_gtest ${LLVM_PTHREAD_LIB})
+  else ()
+    target_link_libraries(${test_name} PRIVATE llvm_gtest_main llvm_gtest ${LLVM_PTHREAD_LIB})
+  endif ()
 
   add_dependencies(${test_suite} ${test_name})
 endfunction()
@@ -2192,7 +2193,12 @@ endfunction()
 
 function(add_lit_testsuites project directory)
   if (NOT LLVM_ENABLE_IDE)
-    cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "FOLDER;BINARY_DIR" "PARAMS;DEPENDS;ARGS" ${ARGN})
+    cmake_parse_arguments(ARG
+      "EXCLUDE_FROM_CHECK_ALL"
+      "FOLDER;BINARY_DIR"
+      "PARAMS;DEPENDS;ARGS;SKIP"
+      ${ARGN}
+      )
 
     if (NOT ARG_FOLDER)
       get_subproject_title(subproject_title)
@@ -2214,6 +2220,16 @@ function(add_lit_testsuites project directory)
 
       # Create a check- target for the directory.
       string(REPLACE "${directory}/" "" name_slash ${lit_suite})
+      set(_should_skip FALSE)
+      foreach(skip IN LISTS ARG_SKIP)
+        if(name_slash MATCHES "${skip}")
+          set(_should_skip TRUE)
+          break()
+        endif()
+      endforeach()
+      if (_should_skip)
+        continue()
+      endif()
       if (name_slash)
         set(filter ${name_slash})
         string(REPLACE "/" "-" name_slash ${name_slash})

@@ -346,18 +346,6 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
   return symbol;
 }
 
-const Symbol &GetCrayPointer(const Symbol &crayPointee) {
-  const Symbol *found{nullptr};
-  const Symbol &ultimate{crayPointee.GetUltimate()};
-  for (const auto &[pointee, pointer] : ultimate.owner().crayPointers()) {
-    if (pointee == ultimate.name()) {
-      found = &pointer.get();
-      break;
-    }
-  }
-  return DEREF(found);
-}
-
 bool ExprHasTypeCategory(
     const SomeExpr &expr, const common::TypeCategory &type) {
   auto dynamicType{expr.GetType()};
@@ -576,6 +564,18 @@ bool IsOrContainsEventOrLockComponent(const Symbol &original) {
       if (const DerivedTypeSpec * derived{type->AsDerived()}) {
         return IsEventTypeOrLockType(derived) ||
             FindEventOrLockPotentialComponent(*derived);
+      }
+    }
+  }
+  return false;
+}
+
+bool IsOrContainsNotifyComponent(const Symbol &original) {
+  const Symbol &symbol{ResolveAssociations(original, /*stopAtTypeGuard=*/true)};
+  if (evaluate::IsVariable(symbol)) {
+    if (const DeclTypeSpec *type{symbol.GetType()}) {
+      if (const DerivedTypeSpec *derived{type->AsDerived()}) {
+        return IsNotifyType(derived) || FindNotifyPotentialComponent(*derived);
       }
     }
   }
@@ -941,13 +941,13 @@ public:
     return false;
   }
   bool operator()(const parser::CallStmt &stmt) {
+    const auto &call{std::get<parser::Call>(stmt.t)};
     const auto &procedureDesignator{
-        std::get<parser::ProcedureDesignator>(stmt.call.t)};
+        std::get<parser::ProcedureDesignator>(call.t)};
     if (auto *name{std::get_if<parser::Name>(&procedureDesignator.u)}) {
       // TODO: also ensure that the procedure is, in fact, an intrinsic
       if (name->source == "move_alloc") {
-        const auto &args{
-            std::get<std::list<parser::ActualArgSpec>>(stmt.call.t)};
+        const auto &args{std::get<std::list<parser::ActualArgSpec>>(call.t)};
         if (!args.empty()) {
           const parser::ActualArg &actualArg{
               std::get<parser::ActualArg>(args.front().t)};
@@ -1170,7 +1170,7 @@ bool IsAccessible(const Symbol &original, const Scope &scope) {
 }
 
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
-    const Scope &scope, const Symbol &symbol) {
+    const Scope &scope, const Symbol &symbol, bool inStructureConstructor) {
   if (IsAccessible(symbol, scope)) {
     return std::nullopt;
   } else if (FindModuleFileContaining(scope)) {
@@ -1179,10 +1179,20 @@ std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     // whose structure constructors reference private components.
     return std::nullopt;
   } else {
+    const Scope &module{DEREF(FindModuleContaining(symbol.owner()))};
+    // Subtlety: Sometimes we want to be able to convert a generated
+    // module file back into Fortran, perhaps to convert it into a
+    // hermetic module file.  Don't emit a fatal error for things like
+    // "__builtin_c_ptr(__address=0)" that came from expansions of
+    // "cptr_null()"; specifically, just warn about structure constructor
+    // component names from intrinsic modules when in a module.
+    parser::MessageFixedText text{FindModuleContaining(scope) &&
+                module.parent().IsIntrinsicModules() &&
+                inStructureConstructor && symbol.owner().IsDerivedType()
+            ? "PRIVATE name '%s' is accessible only within module '%s'"_warn_en_US
+            : "PRIVATE name '%s' is accessible only within module '%s'"_err_en_US};
     return parser::MessageFormattedText{
-        "PRIVATE name '%s' is accessible only within module '%s'"_err_en_US,
-        symbol.name(),
-        DEREF(FindModuleContaining(symbol.owner())).GetName().value()};
+        std::move(text), symbol.name(), module.GetName().value()};
   }
 }
 
@@ -1462,6 +1472,32 @@ PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
     if (const auto *object{component.detailsIf<ObjectEntityDetails>()}) {
       if (const DeclTypeSpec * type{object->type()}) {
         if (IsEventTypeOrLockType(type->AsDerived())) {
+          if (!ignoreCoarrays) {
+            break; // found one
+          }
+          auto path{iter.GetComponentPath()};
+          path.pop_back();
+          if (std::find_if(path.begin(), path.end(), [](const Symbol &sym) {
+                return evaluate::IsCoarray(sym);
+              }) == path.end()) {
+            break; // found one not in a coarray
+          }
+        }
+      }
+    }
+  }
+  return iter;
+}
+
+PotentialComponentIterator::const_iterator FindNotifyPotentialComponent(
+    const DerivedTypeSpec &derived, bool ignoreCoarrays) {
+  PotentialComponentIterator potentials{derived};
+  auto iter{potentials.begin()};
+  for (auto end{potentials.end()}; iter != end; ++iter) {
+    const Symbol &component{*iter};
+    if (const auto *object{component.detailsIf<ObjectEntityDetails>()}) {
+      if (const DeclTypeSpec *type{object->type()}) {
+        if (IsNotifyType(type->AsDerived())) {
           if (!ignoreCoarrays) {
             break; // found one
           }
@@ -1860,4 +1896,9 @@ bool HadUseError(
   }
 }
 
+bool AreSameModuleSymbol(const Symbol &symbol, const Symbol &other) {
+  return symbol.name() == other.name() && symbol.owner().IsModule() &&
+      other.owner().IsModule() && symbol.owner().GetName() &&
+      symbol.owner().GetName() == other.owner().GetName();
+}
 } // namespace Fortran::semantics

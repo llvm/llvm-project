@@ -20,8 +20,7 @@ print *, 0u + 1u ! ok
 print *, 0u - 1u ! ok
 print *, 0u * 1u ! ok
 print *, 0u / 1u ! ok
-!ERROR: Operands must not be UNSIGNED
-print *, 0u ** 1u
+print *, 0u ** 1u ! ok
 
 print *, uint((0.,0.)) ! ok
 print *, uint(z'123') ! ok

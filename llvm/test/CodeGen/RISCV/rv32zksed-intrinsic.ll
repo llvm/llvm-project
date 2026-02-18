@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zksed -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZKSED
 
-declare i32 @llvm.riscv.sm4ks(i32, i32, i32);
-
 define i32 @sm4ks_i32(i32 %a, i32 %b) nounwind {
 ; RV32ZKSED-LABEL: sm4ks_i32:
 ; RV32ZKSED:       # %bb.0:
@@ -12,8 +10,6 @@ define i32 @sm4ks_i32(i32 %a, i32 %b) nounwind {
   %val = call i32 @llvm.riscv.sm4ks(i32 %a, i32 %b, i32 2)
   ret i32 %val
 }
-
-declare i32 @llvm.riscv.sm4ed(i32, i32, i32);
 
 define i32 @sm4ed_i32(i32 %a, i32 %b) nounwind {
 ; RV32ZKSED-LABEL: sm4ed_i32:

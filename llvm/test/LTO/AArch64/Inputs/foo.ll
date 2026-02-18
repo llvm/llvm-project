@@ -1,12 +1,34 @@
+;; This file contains the previous semantic of the branch-target-enforcement, sign-return-address.
+;; Used for test mixing a mixed link case and also verify the import too in llc.
+
+; RUN: llc -mattr=+pauth -mattr=+bti %s -o - | FileCheck %s
+
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
-define dso_local i32 @foo() #0 {
+define i32 @foo_on() #0 {
 entry:
   ret i32 42
 }
 
+; CHECK-LABEL: foo_on:
+; CHECK:           pacibsp
+; CHECK:           mov
+; CHECK:           retab
+
+define i32 @foo_off() #1 {
+entry:
+  ret i32 43
+}
+
+; CHECK-LABEL: foo_off:
+; CHECK-NOT:       pac
+; CHECK-NOT:       hint
+; CHECK-NOT:       bti
+; CHECK:           ret
+
 attributes #0 = { noinline nounwind optnone uwtable }
+attributes #1 = { noinline nounwind optnone uwtable "branch-target-enforcement"="false" "sign-return-address"="none" }
 
 !llvm.module.flags = !{!0, !1, !2, !3}
 

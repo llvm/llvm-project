@@ -18,6 +18,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaInternal.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
@@ -56,23 +57,6 @@ static void checkModuleImportContext(Sema &S, Module *M,
       << M->getFullModuleName();
     S.Diag(ExternCLoc, diag::note_extern_c_begins_here);
   }
-}
-
-// We represent the primary and partition names as 'Paths' which are sections
-// of the hierarchical access path for a clang module.  However for C++20
-// the periods in a name are just another character, and we will need to
-// flatten them into a string.
-static std::string stringFromPath(ModuleIdPath Path) {
-  std::string Name;
-  if (Path.empty())
-    return Name;
-
-  for (auto &Piece : Path) {
-    if (!Name.empty())
-      Name += ".";
-    Name += Piece.getIdentifierInfo()->getName();
-  }
-  return Name;
 }
 
 /// Helper function for makeTransitiveImportsVisible to decide whether
@@ -305,7 +289,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     // We were asked to compile a module interface unit but this is a module
     // implementation unit.
     Diag(ModuleLoc, diag::err_module_interface_implementation_mismatch)
-      << FixItHint::CreateInsertion(ModuleLoc, "export ");
+        << FixItHint::CreateInsertion(ModuleLoc, "export ");
     MDK = ModuleDeclKind::Interface;
     break;
 
@@ -372,10 +356,10 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // Flatten the dots in a module name. Unlike Clang's hierarchical module map
   // modules, the dots here are just another character that can appear in a
   // module name.
-  std::string ModuleName = stringFromPath(Path);
+  std::string ModuleName = ModuleLoader::getFlatNameFromPath(Path);
   if (IsPartition) {
     ModuleName += ":";
-    ModuleName += stringFromPath(Partition);
+    ModuleName += ModuleLoader::getFlatNameFromPath(Partition);
   }
   // If a module name was explicitly specified on the command line, it must be
   // correct.
@@ -388,7 +372,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
         << getLangOpts().CurrentModule;
     return nullptr;
   }
-  const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
+  const_cast<LangOptions &>(getLangOpts()).CurrentModule = ModuleName;
 
   auto &Map = PP.getHeaderSearchInfo().getModuleMap();
   Module *Mod;                 // The module we are creating.
@@ -433,7 +417,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     Interface = getModuleLoader().loadModule(ModuleLoc, {ModuleNameLoc},
                                              Module::AllVisible,
                                              /*IsInclusionDirective=*/false);
-    const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
+    const_cast<LangOptions &>(getLangOpts()).CurrentModule = ModuleName;
 
     if (!Interface) {
       Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
@@ -596,12 +580,12 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     // otherwise, the name of the importing named module.
     ModuleName = NamedMod->getPrimaryModuleInterfaceName().str();
     ModuleName += ":";
-    ModuleName += stringFromPath(Path);
+    ModuleName += ModuleLoader::getFlatNameFromPath(Path);
     ModuleNameLoc =
         IdentifierLoc(Path[0].getLoc(), PP.getIdentifierInfo(ModuleName));
     Path = ModuleIdPath(ModuleNameLoc);
   } else if (getLangOpts().CPlusPlusModules) {
-    ModuleName = stringFromPath(Path);
+    ModuleName = ModuleLoader::getFlatNameFromPath(Path);
     ModuleNameLoc =
         IdentifierLoc(Path[0].getLoc(), PP.getIdentifierInfo(ModuleName));
     Path = ModuleIdPath(ModuleNameLoc);
@@ -772,7 +756,12 @@ void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
     Module *ThisModule = PP.getHeaderSearchInfo().lookupModule(
         getLangOpts().CurrentModule, DirectiveLoc, false, false);
     (void)ThisModule;
-    assert(ThisModule && "was expecting a module if building one");
+    // For named modules, the current module name is not known while parsing the
+    // global module fragment and lookupModule may return null.
+    assert((getLangOpts().getCompilingModule() ==
+                LangOptionsBase::CMK_ModuleInterface ||
+            ThisModule) &&
+           "was expecting a module if building a Clang module");
   }
 }
 
@@ -1135,6 +1124,7 @@ public:
 private:
   llvm::DenseSet<const NamedDecl *> ExposureSet;
   llvm::DenseSet<const NamedDecl *> KnownNonExposureSet;
+  llvm::DenseSet<const NamedDecl *> CheckingDecls;
 };
 
 bool ExposureChecker::isTULocal(QualType Ty) {
@@ -1221,6 +1211,12 @@ bool ExposureChecker::isTULocal(const NamedDecl *D) {
     }
   }
 
+  // Avoid recursions.
+  if (CheckingDecls.count(D))
+    return false;
+  CheckingDecls.insert(D);
+  llvm::scope_exit RemoveCheckingDecls([&] { CheckingDecls.erase(D); });
+
   // [basic.link]p15.5
   // - a specialization of a template whose (possibly instantiated) declaration
   // is an exposure.
@@ -1277,7 +1273,16 @@ bool ExposureChecker::isExposureCandidate(const NamedDecl *D) {
   //   (outside the private-module-fragment, if any) or
   //   module partition is an exposure, the program is ill-formed.
   Module *M = D->getOwningModule();
-  if (!M || !M->isInterfaceOrPartition())
+  if (!M)
+    return false;
+  // If M is implicit global module, the declaration must be in the purview of
+  // a module unit.
+  if (M->isImplicitGlobalModule()) {
+    M = M->Parent;
+    assert(M && "Implicit global module must have a parent");
+  }
+
+  if (!M->isInterfaceOrPartition())
     return false;
 
   if (D->isImplicit())
@@ -1490,6 +1495,16 @@ bool ExposureChecker::checkExposure(const Stmt *S, bool Diag) {
 
 void ExposureChecker::checkExposureInContext(const DeclContext *DC) {
   for (auto *TopD : DC->noload_decls()) {
+    if (auto *Export = dyn_cast<ExportDecl>(TopD)) {
+      checkExposureInContext(Export);
+      continue;
+    }
+
+    if (auto *LinkageSpec = dyn_cast<LinkageSpecDecl>(TopD)) {
+      checkExposureInContext(LinkageSpec);
+      continue;
+    }
+
     auto *TopND = dyn_cast<NamedDecl>(TopD);
     if (!TopND)
       continue;

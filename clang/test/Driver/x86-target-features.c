@@ -304,13 +304,6 @@
 // AMX-COMPLEX: "-target-feature" "+amx-complex"
 // NO-AMX-COMPLEX: "-target-feature" "-amx-complex"
 
-// RUN: %clang --target=x86_64-unknown-linux-gnu -mamx-transpose %s \
-// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-TRANSPOSE %s
-// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-amx-transpose %s \
-// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-TRANSPOSE %s
-// AMX-TRANSPOSE: "-target-feature" "+amx-transpose"
-// NO-AMX-TRANSPOSE: "-target-feature" "-amx-transpose"
-
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mamx-avx512 %s \
 // RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-AVX512 %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mno-amx-avx512 %s \
@@ -390,41 +383,15 @@
 // AVXVNNIINT16: "-target-feature" "+avxvnniint16"
 // NO-AVXVNNIINT16: "-target-feature" "-avxvnniint16"
 
-// RUN: %clang --target=i386 -mevex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=EVEX512,WARN-EVEX512 %s
-// RUN: %clang --target=i386 -mno-evex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=NO-EVEX512,WARN-EVEX512 %s
-// RUN: %clang --target=i386 -march=i386 -mavx10.1 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=AVX10_1_512 %s
-// RUN: %clang --target=i386 -march=i386 -mno-avx10.1 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=NO-AVX10_1 %s
-// RUN: %clang --target=i386 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_1_256,WARN-AVX10-256 %s
-// RUN: %clang --target=i386 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_1_512,WARN-AVX10-512 %s
-// RUN: %clang --target=i386 -mavx10.1-256 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_512 %s
-// RUN: %clang --target=i386 -mavx10.1-512 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10_1_256 %s
-// RUN: not %clang --target=i386 -march=i386 -mavx10.1-128 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-AVX10 %s
-// RUN: not %clang --target=i386 -march=i386 -mavx10.a-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-AVX10 %s
-// RUN: not %clang --target=i386 -march=i386 -mavx10.1024-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-AVX10 %s
-// RUN: %clang --target=i386 -march=i386 -mavx10.1-256 -mavx512f %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-AVX512 %s
-// RUN: %clang --target=i386 -march=i386 -mavx10.1-256 -mno-avx512f %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVX10-AVX512 %s
-// RUN: %clang --target=i386 -march=i386 -mavx10.1-256 -mevex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10-EVEX512,WARN-EVEX512 %s
-// RUN: %clang --target=i386 -march=i386 -mavx10.1-256 -mno-evex512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10-EVEX512,WARN-EVEX512 %s
-// RUN: %clang --target=i386 -mavx10.2 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=AVX10_2_512 %s
+// RUN: %clang --target=i386 -mavx10.1 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=AVX10_1 %s
+// RUN: %clang --target=i386 -mno-avx10.1 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=NO-AVX10_1 %s
+// AVX10_1: "-target-feature" "+avx10.1"
+// NO-AVX10_1: "-target-feature" "-avx10.1"
+
+// RUN: %clang --target=i386 -mavx10.2 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=AVX10_2 %s
 // RUN: %clang --target=i386 -mno-avx10.2 %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=NO-AVX10_2 %s
-// RUN: %clang --target=i386 -mavx10.2-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_256,WARN-AVX10-256 %s
-// RUN: %clang --target=i386 -mavx10.2-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_512,WARN-AVX10-512 %s
-// RUN: %clang --target=i386 -mavx10.2-256 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_256,AVX10_1_512 %s
-// RUN: %clang --target=i386 -mavx10.2-512 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_512,AVX10_1_256 %s
-// WARN-EVEX512: warning: argument '{{.*}}evex512' is deprecated, no alternative argument provided because AVX10/256 is not supported and will be removed [-Wdeprecated]
-// WARN-AVX10-256: warning: argument 'avx10.{{.*}}-256' is deprecated, no alternative argument provided because AVX10/256 is not supported and will be removed [-Wdeprecated]
-// WARN-AVX10-512: warning: argument 'avx10.{{.*}}-512' is deprecated, use 'avx10.{{.*}}' instead [-Wdeprecated]
-// EVEX512: "-target-feature" "+evex512"
-// NO-EVEX512: "-target-feature" "-evex512"
-// NO-AVX10_1: "-target-feature" "-avx10.1-256"
-// NO-AVX10_2: "-target-feature" "-avx10.2-256"
-// AVX10_2_256: "-target-feature" "+avx10.2-256"
-// AVX10_2_512: "-target-feature" "+avx10.2-512"
-// AVX10_1_256: "-target-feature" "+avx10.1-256"
-// AVX10_1_512: "-target-feature" "+avx10.1-512"
-// BAD-AVX10: error: unknown argument{{:?}} '-mavx10.{{.*}}'
-// AVX10-AVX512: "-target-feature" "+avx10.1-256" "-target-feature" "{{.}}avx512f"
-// AVX10-EVEX512: "-target-feature" "+avx10.1-256" "-target-feature" "{{.}}evex512"
+// AVX10_2: "-target-feature" "+avx10.2"
+// NO-AVX10_2: "-target-feature" "-avx10.2"
 
 // RUN: %clang --target=i386 -musermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=USERMSR %s
 // RUN: %clang --target=i386 -mno-usermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-USERMSR %s
@@ -450,11 +417,12 @@
 
 // RUN: not %clang -### --target=i386 -muintr %s 2>&1 | FileCheck --check-prefix=NON-UINTR %s
 // RUN: %clang -### --target=i386 -mno-uintr %s 2>&1 > /dev/null
-// RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefix=NON-APX %s
-// RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefixes=NON-APX,NON-APXFS %s
+// RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefixes=NON-APX,NON-APXF %s
 // RUN: %clang -### --target=i386 -mno-apxf %s 2>&1 > /dev/null
 // NON-UINTR:    error: unsupported option '-muintr' for target 'i386'
-// NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386'
+// NON-APXF:     error: unsupported option '-mapxf' for target 'i386'
+// NON-APXFS:    error: unsupported option '-mapx-features=' for target 'i386'
 // NON-APX-NOT:  error: {{.*}} -mapx-features=
 
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=return %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-RET,NO-SLS %s
@@ -476,8 +444,8 @@
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mno-apxf -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapxf -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
 //
-// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+zu"
-// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-zu"
+// APXF: "-target-feature" "+egpr" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+zu" "-target-feature" "+push2pop2" "-target-feature" "+ppx"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-zu" "-target-feature" "-push2pop2" "-target-feature" "-ppx"
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=push2pop2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PUSH2POP2 %s

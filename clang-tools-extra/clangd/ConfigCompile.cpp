@@ -131,7 +131,7 @@ struct FragmentCompiler {
       return std::nullopt;
     }
     llvm::SmallString<256> AbsPath = llvm::StringRef(*Path);
-    llvm::sys::fs::make_absolute(FragmentDirectory, AbsPath);
+    llvm::sys::path::make_absolute(FragmentDirectory, AbsPath);
     llvm::sys::path::native(AbsPath, Style);
     return AbsPath.str().str();
   }
@@ -564,10 +564,10 @@ struct FragmentCompiler {
       auto Fast = isFastTidyCheck(Str);
       if (!Fast.has_value()) {
         diag(Warning,
-             llvm::formatv(
-                 "Latency of clang-tidy check '{0}' is not known. "
-                 "It will only run if ClangTidy.FastCheckFilter is Loose or None",
-                 Str)
+             llvm::formatv("Latency of clang-tidy check '{0}' is not known. "
+                           "It will only run if ClangTidy.FastCheckFilter is "
+                           "Loose or None",
+                           Str)
                  .str(),
              Arg.Range);
       } else if (!*Fast) {
@@ -717,6 +717,18 @@ struct FragmentCompiler {
                          .value())
         Out.Apply.push_back([Val](const Params &, Config &C) {
           C.Completion.CodePatterns = *Val;
+        });
+    }
+
+    if (F.MacroFilter) {
+      if (auto Val =
+              compileEnum<Config::MacroFilterPolicy>("MacroFilter",
+                                                     *F.MacroFilter)
+                  .map("ExactPrefix", Config::MacroFilterPolicy::ExactPrefix)
+                  .map("FuzzyMatch", Config::MacroFilterPolicy::FuzzyMatch)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.MacroFilter = *Val;
         });
     }
   }

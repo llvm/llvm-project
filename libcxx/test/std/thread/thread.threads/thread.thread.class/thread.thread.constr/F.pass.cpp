@@ -103,6 +103,15 @@ public:
     }
 };
 
+class CopyOnly {
+public:
+  CopyOnly() {}
+  CopyOnly(const CopyOnly&) = default;
+  CopyOnly(CopyOnly&&)      = delete;
+
+  void operator()(const CopyOnly&) const {}
+};
+
 #endif
 
 // Test throwing std::bad_alloc
@@ -211,6 +220,11 @@ int main(int, char**)
     {
         std::thread t = std::thread(MoveOnly(), MoveOnly());
         t.join();
+    }
+    {
+      CopyOnly c;
+      std::thread t(c, c);
+      t.join();
     }
 #endif
 

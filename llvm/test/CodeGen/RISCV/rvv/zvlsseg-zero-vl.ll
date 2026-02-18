@@ -5,9 +5,6 @@
 ; Make sure we don't select a 0 vl to X0 in the custom isel handlers we use
 ; for these intrinsics.
 
-declare target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, i64, i64)
-declare target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlseg2.mask.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i1>, i64, i64, i64)
-
 define <vscale x 16 x i16> @test_vlseg2_mask_nxv16i16(ptr %base, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: test_vlseg2_mask_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
@@ -15,14 +12,11 @@ define <vscale x 16 x i16> @test_vlseg2_mask_nxv16i16(ptr %base, <vscale x 16 x 
 ; CHECK-NEXT:    vlseg2e16.v v4, (a0)
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr %base, i64 0, i64 4)
+  %0 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr %base, i64 0, i64 4)
   %1 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlseg2.mask.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %0, ptr %base, <vscale x 16 x i1> %mask, i64 0, i64 1, i64 4)
   %2 = call <vscale x 16 x i16> @llvm.riscv.tuple.extract.nxv16i16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %0, i32 1)
   ret <vscale x 16 x i16> %2
 }
-
-declare target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlsseg2.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, i64, i64, i64)
-declare target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlsseg2.mask.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, i64, <vscale x 16 x i1>, i64, i64, i64)
 
 define <vscale x 16 x i16> @test_vlsseg2_mask_nxv16i16(ptr %base, i64 %offset, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: test_vlsseg2_mask_nxv16i16:
@@ -32,13 +26,11 @@ define <vscale x 16 x i16> @test_vlsseg2_mask_nxv16i16(ptr %base, i64 %offset, <
 ; CHECK-NEXT:    vlsseg2e16.v v4, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlsseg2.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr %base, i64 %offset, i64 0, i64 4)
+  %0 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlsseg2.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr %base, i64 %offset, i64 0, i64 4)
   %1 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlsseg2.mask.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %0, ptr %base, i64 %offset, <vscale x 16 x i1> %mask, i64 0, i64 1, i64 4)
   %2 = call <vscale x 16 x i16> @llvm.riscv.tuple.extract.nxv16i16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %1, i32 1)
   ret <vscale x 16 x i16> %2
 }
-declare target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vloxseg2.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i16>, i64, i64)
-declare target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vloxseg2.mask.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64, i64)
 
 define <vscale x 16 x i16> @test_vloxseg2_mask_nxv16i16_nxv16i16(ptr %base, <vscale x 16 x i16> %index, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: test_vloxseg2_mask_nxv16i16_nxv16i16:
@@ -49,14 +41,11 @@ define <vscale x 16 x i16> @test_vloxseg2_mask_nxv16i16_nxv16i16(ptr %base, <vsc
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vloxseg2.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr %base, <vscale x 16 x i16> %index, i64 0, i64 4)
+  %0 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vloxseg2.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr %base, <vscale x 16 x i16> %index, i64 0, i64 4)
   %1 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vloxseg2.mask.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %0, ptr %base, <vscale x 16 x i16> %index, <vscale x 16 x i1> %mask, i64 0, i64 1, i64 4)
   %2 = call <vscale x 16 x i16> @llvm.riscv.tuple.extract.nxv16i16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %1, i32 1)
   ret <vscale x 16 x i16> %2
 }
-
-declare target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vluxseg2.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i16>, i64, i64)
-declare target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vluxseg2.mask.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64, i64)
 
 define <vscale x 16 x i16> @test_vluxseg2_mask_nxv16i16_nxv16i16(ptr %base, <vscale x 16 x i16> %index, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: test_vluxseg2_mask_nxv16i16_nxv16i16:
@@ -67,14 +56,11 @@ define <vscale x 16 x i16> @test_vluxseg2_mask_nxv16i16_nxv16i16(ptr %base, <vsc
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vluxseg2.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr %base, <vscale x 16 x i16> %index, i64 0, i64 4)
+  %0 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vluxseg2.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr %base, <vscale x 16 x i16> %index, i64 0, i64 4)
   %1 = tail call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vluxseg2.mask.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %0, ptr %base, <vscale x 16 x i16> %index, <vscale x 16 x i1> %mask, i64 0, i64 1, i64 4)
   %2 = call <vscale x 16 x i16> @llvm.riscv.tuple.extract.nxv16i16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %1, i32 1)
   ret <vscale x 16 x i16> %2
 }
-
-declare {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr , i64, i64)
-declare {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} @llvm.riscv.vlseg2ff.mask.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i1>, i64, i64, i64)
 
 define <vscale x 16 x i16> @test_vlseg2ff_nxv16i16(ptr %base, ptr %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv16i16:
@@ -85,7 +71,7 @@ define <vscale x 16 x i16> @test_vlseg2ff_nxv16i16(ptr %base, ptr %outvl) {
 ; CHECK-NEXT:    sd a0, 0(a1)
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr %base, i64 0, i64 4)
+  %0 = tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr %base, i64 0, i64 4)
   %1 = extractvalue {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} %0, 0
   %2 = call <vscale x 16 x i16> @llvm.riscv.tuple.extract.nxv16i16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %1, i32 0)
   %3 = extractvalue {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} %0, 1
@@ -110,9 +96,6 @@ entry:
   ret <vscale x 16 x i16> %2
 }
 
-declare void @llvm.riscv.vsseg2.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr , i64, i64)
-declare void @llvm.riscv.vsseg2.mask.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i1>, i64, i64)
-
 define void @test_vsseg2_nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %val, ptr %base) {
 ; CHECK-LABEL: test_vsseg2_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
@@ -134,9 +117,6 @@ entry:
   tail call void @llvm.riscv.vsseg2.mask.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %val, ptr %base, <vscale x 16 x i1> %mask, i64 0, i64 4)
   ret void
 }
-
-declare void @llvm.riscv.vssseg2.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, i64, i64, i64)
-declare void @llvm.riscv.vssseg2.mask.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, i64, <vscale x 16 x i1>, i64, i64)
 
 define void @test_vssseg2_nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %val, ptr %base, i64 %offset) {
 ; CHECK-LABEL: test_vssseg2_nxv16i16:
@@ -160,9 +140,6 @@ entry:
   ret void
 }
 
-declare void @llvm.riscv.vsoxseg2.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i16>, i64, i64)
-declare void @llvm.riscv.vsoxseg2.mask.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64)
-
 define void @test_vsoxseg2_nxv16i16_nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %val, ptr %base, <vscale x 16 x i16> %index) {
 ; CHECK-LABEL: test_vsoxseg2_nxv16i16_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
@@ -184,9 +161,6 @@ entry:
   tail call void @llvm.riscv.vsoxseg2.mask.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %val, ptr %base, <vscale x 16 x i16> %index, <vscale x 16 x i1> %mask, i64 0, i64 4)
   ret void
 }
-
-declare void @llvm.riscv.vsuxseg2.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i16>, i64, i64)
-declare void @llvm.riscv.vsuxseg2.mask.triscv.vector.tuple_nxv32i8_2t.nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2), ptr, <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64)
 
 define void @test_vsuxseg2_nxv16i16_nxv16i16(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %val, ptr %base, <vscale x 16 x i16> %index) {
 ; CHECK-LABEL: test_vsuxseg2_nxv16i16_nxv16i16:

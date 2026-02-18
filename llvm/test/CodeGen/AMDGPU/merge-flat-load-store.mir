@@ -172,9 +172,10 @@ body:             |
 
     ; GCN-LABEL: name: no_merge_flat_load_dword_agpr_with_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; GCN-NEXT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[DEF]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr poison`)
-    ; GCN-NEXT: [[FLAT_LOAD_DWORD1:%[0-9]+]]:agpr_32 = FLAT_LOAD_DWORD [[DEF]], 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr poison`)
-    ; GCN-NEXT: S_NOP 0, implicit [[FLAT_LOAD_DWORD]], implicit [[FLAT_LOAD_DWORD1]]
+    ; GCN-NEXT: [[FLAT_LOAD_DWORDX2_:%[0-9]+]]:vreg_64_align2 = FLAT_LOAD_DWORDX2 [[DEF]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s64) from `ptr poison`, align 4)
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[FLAT_LOAD_DWORDX2_]].sub0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:agpr_32 = COPY killed [[FLAT_LOAD_DWORDX2_]].sub1
+    ; GCN-NEXT: S_NOP 0, implicit [[COPY]], implicit [[COPY1]]
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr poison`, align 4)
     %2:agpr_32 = FLAT_LOAD_DWORD %0, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from `ptr poison`, align 4)
@@ -398,8 +399,8 @@ body:             |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; GCN-NEXT: FLAT_STORE_DWORD [[DEF]], killed [[DEF1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
-    ; GCN-NEXT: FLAT_STORE_DWORD killed [[DEF]], killed [[DEF2]], 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:areg_64_align2 = REG_SEQUENCE killed [[DEF1]], %subreg.sub0, killed [[DEF2]], %subreg.sub1
+    ; GCN-NEXT: FLAT_STORE_DWORDX2 [[DEF]], killed [[REG_SEQUENCE]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s64) into `ptr poison`, align 4)
     %0:vreg_64_align2 = IMPLICIT_DEF
     %1:agpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF

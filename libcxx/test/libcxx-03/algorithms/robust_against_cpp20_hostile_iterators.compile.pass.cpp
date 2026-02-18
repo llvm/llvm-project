@@ -99,10 +99,6 @@ void test() {
   (void) std::equal_range(it, it, 0, pred);
   (void) std::equal(it, it, it);
   (void) std::equal(it, it, it, pred);
-#if TEST_STD_VER > 11
-  (void) std::equal(it, it, it, it);
-  (void) std::equal(it, it, it, it, pred);
-#endif
   (void) std::fill_n(it, 0, 0);
   (void) std::fill(it, it, 0);
   (void) std::find_end(it, it, it, it);
@@ -112,9 +108,6 @@ void test() {
   (void) std::find_if_not(it, it, pred);
   (void) std::find_if(it, it, pred);
   (void) std::find(it, it, 0);
-#if TEST_STD_VER > 14
-  (void) std::for_each_n(it, 0, pred);
-#endif
   (void) std::for_each(it, it, pred);
   (void) std::generate_n(it, 0, pred);
   (void) std::generate(it, it, pred);
@@ -129,20 +122,12 @@ void test() {
   (void) std::is_partitioned(it, it, pred);
   (void) std::is_permutation(it, it, it);
   (void) std::is_permutation(it, it, it, pred);
-#if TEST_STD_VER > 11
-  (void) std::is_permutation(it, it, it, it);
-  (void) std::is_permutation(it, it, it, it, pred);
-#endif
   (void) std::is_sorted_until(it, it);
   (void) std::is_sorted_until(it, it, pred);
   (void) std::is_sorted(it, it);
   (void) std::is_sorted(it, it, pred);
   (void) std::lexicographical_compare(it, it, it, it);
   (void) std::lexicographical_compare(it, it, it, it, pred);
-#if TEST_STD_VER > 17
-  (void)std::lexicographical_compare_three_way(it, it, it, it);
-  (void)std::lexicographical_compare_three_way(it, it, it, it, std::compare_three_way());
-#endif
   (void) std::lower_bound(it, it, 0);
   (void) std::lower_bound(it, it, 0, pred);
   (void) std::make_heap(it, it);
@@ -189,14 +174,8 @@ void test() {
   (void) std::reverse(it, it);
   (void) std::rotate_copy(it, it, it, it);
   (void) std::rotate(it, it, it);
-#if TEST_STD_VER > 14
-  (void) std::sample(it, it, it, 0, rng);
-#endif
   (void) std::search(it, it, it, it);
   (void) std::search(it, it, it, it, pred);
-#if TEST_STD_VER > 14
-  (void) std::search(it, it, std::default_searcher<Cpp20HostileIterator<int*>>(it, it));
-#endif
   (void) std::set_difference(it, it, it, it, it);
   (void) std::set_difference(it, it, it, it, it, pred);
   (void) std::set_intersection(it, it, it, it, it);
@@ -205,10 +184,6 @@ void test() {
   (void) std::set_symmetric_difference(it, it, it, it, it, pred);
   (void) std::set_union(it, it, it, it, it);
   (void) std::set_union(it, it, it, it, it, pred);
-#if TEST_STD_VER > 17
-  (void) std::shift_left(it, it, 0);
-  (void) std::shift_right(it, it, 0);
-#endif
   (void) std::shuffle(it, it, rng);
   (void) std::sort_heap(it, it);
   (void) std::sort_heap(it, it, pred);

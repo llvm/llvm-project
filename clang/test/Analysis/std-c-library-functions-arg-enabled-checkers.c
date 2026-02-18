@@ -20,7 +20,6 @@
 // CHECK-NEXT: apiModeling.llvm.CastValue
 // CHECK-NEXT: apiModeling.llvm.ReturnValue
 // CHECK-NEXT: core.BitwiseShift
-// CHECK-NEXT: core.CallAndMessageModeling
 // CHECK-NEXT: core.CallAndMessage
 // CHECK-NEXT: core.DivideZero
 // CHECK-NEXT: core.DynamicTypePropagation
@@ -28,6 +27,7 @@
 // CHECK-NEXT: core.NonNullParamChecker
 // CHECK-NEXT: core.NonnilStringConstants
 // CHECK-NEXT: core.NullDereference
+// CHECK-NEXT: core.NullPointerArithm
 // CHECK-NEXT: core.StackAddressEscape
 // CHECK-NEXT: core.UndefinedBinaryOperatorResult
 // CHECK-NEXT: core.VLASize

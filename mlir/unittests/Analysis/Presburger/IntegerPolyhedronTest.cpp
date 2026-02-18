@@ -1087,14 +1087,15 @@ TEST(IntegerPolyhedronTest, negativeDividends) {
   checkDivisionRepresentation(poly1, divisions, denoms);
 }
 
-void expectRationalLexMin(const IntegerPolyhedron &poly,
-                          ArrayRef<Fraction> min) {
+static void expectRationalLexMin(const IntegerPolyhedron &poly,
+                                 ArrayRef<Fraction> min) {
   auto lexMin = poly.findRationalLexMin();
   ASSERT_TRUE(lexMin.isBounded());
   EXPECT_EQ(ArrayRef<Fraction>(*lexMin), min);
 }
 
-void expectNoRationalLexMin(OptimumKind kind, const IntegerPolyhedron &poly) {
+static void expectNoRationalLexMin(OptimumKind kind,
+                                   const IntegerPolyhedron &poly) {
   ASSERT_NE(kind, OptimumKind::Bounded)
       << "Use expectRationalLexMin for bounded min";
   EXPECT_EQ(poly.findRationalLexMin().getKind(), kind);
@@ -1167,13 +1168,15 @@ TEST(IntegerPolyhedronTest, findRationalLexMin) {
       parseIntegerPolyhedron("(x) : (2*x >= 0, -x - 1 >= 0)"));
 }
 
-void expectIntegerLexMin(const IntegerPolyhedron &poly, ArrayRef<int64_t> min) {
+static void expectIntegerLexMin(const IntegerPolyhedron &poly,
+                                ArrayRef<int64_t> min) {
   MaybeOptimum<SmallVector<DynamicAPInt, 8>> lexMin = poly.findIntegerLexMin();
   ASSERT_TRUE(lexMin.isBounded());
   EXPECT_EQ(*lexMin, getDynamicAPIntVec(min));
 }
 
-void expectNoIntegerLexMin(OptimumKind kind, const IntegerPolyhedron &poly) {
+static void expectNoIntegerLexMin(OptimumKind kind,
+                                  const IntegerPolyhedron &poly) {
   ASSERT_NE(kind, OptimumKind::Bounded)
       << "Use expectRationalLexMin for bounded min";
   EXPECT_EQ(poly.findRationalLexMin().getKind(), kind);
@@ -1191,7 +1194,7 @@ TEST(IntegerPolyhedronTest, findIntegerLexMin) {
                              ">= 0, -11*z + 5*y - 3*x + 7 >= 0)"));
 }
 
-void expectSymbolicIntegerLexMin(
+static void expectSymbolicIntegerLexMin(
     StringRef polyStr,
     ArrayRef<std::pair<StringRef, StringRef>> expectedLexminRepr,
     ArrayRef<StringRef> expectedUnboundedDomainRepr) {
@@ -1218,8 +1221,9 @@ void expectSymbolicIntegerLexMin(
   }
 }
 
-void expectSymbolicIntegerLexMin(
-    StringRef polyStr, ArrayRef<std::pair<StringRef, StringRef>> result) {
+static void
+expectSymbolicIntegerLexMin(StringRef polyStr,
+                            ArrayRef<std::pair<StringRef, StringRef>> result) {
   expectSymbolicIntegerLexMin(polyStr, result, {});
 }
 
@@ -1463,8 +1467,8 @@ TEST(IntegerPolyhedronTest, computeVolume) {
       /*trueVolume=*/{}, /*resultBound=*/{});
 }
 
-bool containsPointNoLocal(const IntegerPolyhedron &poly,
-                          ArrayRef<int64_t> point) {
+static bool containsPointNoLocal(const IntegerPolyhedron &poly,
+                                 ArrayRef<int64_t> point) {
   return poly.containsPointNoLocal(getDynamicAPIntVec(point)).has_value();
 }
 

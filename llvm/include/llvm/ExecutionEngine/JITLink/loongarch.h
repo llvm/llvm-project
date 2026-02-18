@@ -170,6 +170,30 @@ enum EdgeKind_loongarch : Edge::Kind {
   ///
   PageOffset12,
 
+  /// The upper 20 bits of the offset from the fixup to the target.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target + Addend - Fixup + 0x800) >> 12 : int20
+  ///
+  /// Notes:
+  ///   For PCADDU12I fixups.
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int20 otherwise an
+  ///     out-of-range error will be returned.
+  ///
+  PCAddHi20,
+
+  /// The lower 12 bits of the offset from the paired PCADDU12I (the initial
+  /// target) to the final target it points to.
+  ///
+  /// Typically used to fix up ADDI/LD_W/LD_D immediates.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (FinalTarget - InitialTarget) & 0xfff : int12
+  ///
+  PCAddLo12,
+
   /// A GOT entry getter/constructor, transformed to Page20 pointing at the GOT
   /// entry for the original target.
   ///
@@ -205,6 +229,49 @@ enum EdgeKind_loongarch : Edge::Kind {
   ///   NONE
   ///
   RequestGOTAndTransformToPageOffset12,
+
+  /// A GOT entry getter/constructor, transformed to PCAddHi20 pointing at the
+  /// GOT entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a PCAddHi20 targeting
+  /// the GOT entry for the edge's current target, maintaining the same addend.
+  /// A GOT entry for the target should be created if one does not already
+  /// exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT/PLT builder pass inserted
+  /// by default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToPCAddHi20,
+
+  /// A 30-bit PC-relative call.
+  ///
+  /// Represents a PC-relative call to a target within [-2G, +2G)
+  /// The target must be 4-byte aligned. For adjacent pcaddu12i+jirl
+  /// instruction pairs.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target - Fixup + Addend) >> 2 : int30
+  ///
+  /// Notes:
+  ///   The '30' in the name refers to the number operand bits and follows the
+  /// naming convention used by the corresponding ELF relocations. Since the low
+  /// two bits must be zero (because of the 4-byte alignment of the target) the
+  /// operand is effectively a signed 32-bit number.
+  ///
+  /// Errors:
+  ///   - The result of the unshifted part of the fixup expression must be
+  ///     4-byte aligned otherwise an alignment error will be returned.
+  ///   - The result of the fixup expression must fit into an int30 otherwise an
+  ///     out-of-range error will be returned.
+  ///
+  Call30PCRel,
 
   /// A 36-bit PC-relative call.
   ///
@@ -330,238 +397,6 @@ inline uint32_t extractBits(uint64_t Val, unsigned Hi, unsigned Lo) {
   return Hi == 63 ? Val >> Lo : (Val & ((((uint64_t)1 << (Hi + 1)) - 1))) >> Lo;
 }
 
-/// Apply fixup expression for edge to block content.
-inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
-  using namespace support;
-
-  char *BlockWorkingMem = B.getAlreadyMutableContent().data();
-  char *FixupPtr = BlockWorkingMem + E.getOffset();
-  uint64_t FixupAddress = (B.getAddress() + E.getOffset()).getValue();
-  uint64_t TargetAddress = E.getTarget().getAddress().getValue();
-  int64_t Addend = E.getAddend();
-
-  switch (E.getKind()) {
-  case Pointer64:
-    *(ulittle64_t *)FixupPtr = TargetAddress + Addend;
-    break;
-  case Pointer32: {
-    uint64_t Value = TargetAddress + Addend;
-    if (Value > std::numeric_limits<uint32_t>::max())
-      return makeTargetOutOfRangeError(G, B, E);
-    *(ulittle32_t *)FixupPtr = Value;
-    break;
-  }
-  case Branch16PCRel: {
-    int64_t Value = TargetAddress - FixupAddress + Addend;
-
-    if (!isInt<18>(Value))
-      return makeTargetOutOfRangeError(G, B, E);
-
-    if (!isShiftedInt<16, 2>(Value))
-      return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
-
-    uint32_t RawInstr = *(little32_t *)FixupPtr;
-    uint32_t Imm = static_cast<uint32_t>(Value >> 2);
-    uint32_t Imm15_0 = extractBits(Imm, /*Hi=*/15, /*Lo=*/0) << 10;
-    *(little32_t *)FixupPtr = RawInstr | Imm15_0;
-    break;
-  }
-  case Branch21PCRel: {
-    int64_t Value = TargetAddress - FixupAddress + Addend;
-
-    if (!isInt<23>(Value))
-      return makeTargetOutOfRangeError(G, B, E);
-
-    if (!isShiftedInt<21, 2>(Value))
-      return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
-
-    uint32_t RawInstr = *(little32_t *)FixupPtr;
-    uint32_t Imm = static_cast<uint32_t>(Value >> 2);
-    uint32_t Imm15_0 = extractBits(Imm, /*Hi=*/15, /*Lo=*/0) << 10;
-    uint32_t Imm20_16 = extractBits(Imm, /*Hi=*/20, /*Lo=*/16);
-    *(little32_t *)FixupPtr = RawInstr | Imm15_0 | Imm20_16;
-    break;
-  }
-  case Branch26PCRel: {
-    int64_t Value = TargetAddress - FixupAddress + Addend;
-
-    if (!isInt<28>(Value))
-      return makeTargetOutOfRangeError(G, B, E);
-
-    if (!isShiftedInt<26, 2>(Value))
-      return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
-
-    uint32_t RawInstr = *(little32_t *)FixupPtr;
-    uint32_t Imm = static_cast<uint32_t>(Value >> 2);
-    uint32_t Imm15_0 = extractBits(Imm, /*Hi=*/15, /*Lo=*/0) << 10;
-    uint32_t Imm25_16 = extractBits(Imm, /*Hi=*/25, /*Lo=*/16);
-    *(little32_t *)FixupPtr = RawInstr | Imm15_0 | Imm25_16;
-    break;
-  }
-  case Delta32: {
-    int64_t Value = TargetAddress - FixupAddress + Addend;
-
-    if (!isInt<32>(Value))
-      return makeTargetOutOfRangeError(G, B, E);
-    *(little32_t *)FixupPtr = Value;
-    break;
-  }
-  case NegDelta32: {
-    int64_t Value = FixupAddress - TargetAddress + Addend;
-    if (!isInt<32>(Value))
-      return makeTargetOutOfRangeError(G, B, E);
-    *(little32_t *)FixupPtr = Value;
-    break;
-  }
-  case Delta64:
-    *(little64_t *)FixupPtr = TargetAddress - FixupAddress + Addend;
-    break;
-  case Page20: {
-    uint64_t Target = TargetAddress + Addend;
-    uint64_t TargetPage =
-        (Target + (Target & 0x800)) & ~static_cast<uint64_t>(0xfff);
-    uint64_t PCPage = FixupAddress & ~static_cast<uint64_t>(0xfff);
-
-    int64_t PageDelta = TargetPage - PCPage;
-    if (!isInt<32>(PageDelta))
-      return makeTargetOutOfRangeError(G, B, E);
-
-    uint32_t RawInstr = *(little32_t *)FixupPtr;
-    uint32_t Imm31_12 = extractBits(PageDelta, /*Hi=*/31, /*Lo=*/12) << 5;
-    *(little32_t *)FixupPtr = RawInstr | Imm31_12;
-    break;
-  }
-  case PageOffset12: {
-    uint64_t TargetOffset = (TargetAddress + Addend) & 0xfff;
-
-    uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
-    uint32_t Imm11_0 = TargetOffset << 10;
-    *(ulittle32_t *)FixupPtr = RawInstr | Imm11_0;
-    break;
-  }
-  case Call36PCRel: {
-    int64_t Value = TargetAddress - FixupAddress + Addend;
-
-    if ((Value + 0x20000) != llvm::SignExtend64(Value + 0x20000, 38))
-      return makeTargetOutOfRangeError(G, B, E);
-
-    if (!isShiftedInt<36, 2>(Value))
-      return makeAlignmentError(orc::ExecutorAddr(FixupAddress), Value, 4, E);
-
-    uint32_t Pcaddu18i = *(little32_t *)FixupPtr;
-    uint32_t Hi20 = extractBits(Value + (1 << 17), /*Hi=*/37, /*Lo=*/18) << 5;
-    *(little32_t *)FixupPtr = Pcaddu18i | Hi20;
-    uint32_t Jirl = *(little32_t *)(FixupPtr + 4);
-    uint32_t Lo16 = extractBits(Value, /*Hi=*/17, /*Lo=*/2) << 10;
-    *(little32_t *)(FixupPtr + 4) = Jirl | Lo16;
-    break;
-  }
-  case Add6: {
-    int64_t Value = *(reinterpret_cast<const int8_t *>(FixupPtr));
-    Value += ((TargetAddress + Addend) & 0x3f);
-    *FixupPtr = (*FixupPtr & 0xc0) | (static_cast<int8_t>(Value) & 0x3f);
-    break;
-  }
-  case Add8: {
-    int64_t Value =
-        TargetAddress + *(reinterpret_cast<const int8_t *>(FixupPtr)) + Addend;
-    *FixupPtr = static_cast<int8_t>(Value);
-    break;
-  }
-  case Add16: {
-    int64_t Value =
-        TargetAddress + support::endian::read16le(FixupPtr) + Addend;
-    *(little16_t *)FixupPtr = static_cast<int16_t>(Value);
-    break;
-  }
-  case Add32: {
-    int64_t Value =
-        TargetAddress + support::endian::read32le(FixupPtr) + Addend;
-    *(little32_t *)FixupPtr = static_cast<int32_t>(Value);
-    break;
-  }
-  case Add64: {
-    int64_t Value =
-        TargetAddress + support::endian::read64le(FixupPtr) + Addend;
-    *(little64_t *)FixupPtr = static_cast<int64_t>(Value);
-    break;
-  }
-  case AddUleb128: {
-    const uint32_t Maxcount = 1 + 64 / 7;
-    uint32_t Count;
-    const char *Error = nullptr;
-    uint64_t Orig = decodeULEB128((reinterpret_cast<const uint8_t *>(FixupPtr)),
-                                  &Count, nullptr, &Error);
-
-    if (Count > Maxcount || (Count == Maxcount && Error))
-      return make_error<JITLinkError>(
-          "0x" + llvm::utohexstr(orc::ExecutorAddr(FixupAddress).getValue()) +
-          ": extra space for uleb128");
-
-    uint64_t Mask = Count < Maxcount ? (1ULL << 7 * Count) - 1 : -1ULL;
-    encodeULEB128((Orig + TargetAddress + Addend) & Mask,
-                  (reinterpret_cast<uint8_t *>(FixupPtr)), Count);
-    break;
-  }
-  case Sub6: {
-    int64_t Value = *(reinterpret_cast<const int8_t *>(FixupPtr));
-    Value -= ((TargetAddress + Addend) & 0x3f);
-    *FixupPtr = (*FixupPtr & 0xc0) | (static_cast<int8_t>(Value) & 0x3f);
-    break;
-  }
-  case Sub8: {
-    int64_t Value =
-        *(reinterpret_cast<const int8_t *>(FixupPtr)) - TargetAddress - Addend;
-    *FixupPtr = static_cast<int8_t>(Value);
-    break;
-  }
-  case Sub16: {
-    int64_t Value =
-        support::endian::read16le(FixupPtr) - TargetAddress - Addend;
-    *(little16_t *)FixupPtr = static_cast<int16_t>(Value);
-    break;
-  }
-  case Sub32: {
-    int64_t Value =
-        support::endian::read32le(FixupPtr) - TargetAddress - Addend;
-    *(little32_t *)FixupPtr = static_cast<int32_t>(Value);
-    break;
-  }
-  case Sub64: {
-    int64_t Value =
-        support::endian::read64le(FixupPtr) - TargetAddress - Addend;
-    *(little64_t *)FixupPtr = static_cast<int64_t>(Value);
-    break;
-  }
-  case SubUleb128: {
-    const uint32_t Maxcount = 1 + 64 / 7;
-    uint32_t Count;
-    const char *Error = nullptr;
-    uint64_t Orig = decodeULEB128((reinterpret_cast<const uint8_t *>(FixupPtr)),
-                                  &Count, nullptr, &Error);
-
-    if (Count > Maxcount || (Count == Maxcount && Error))
-      return make_error<JITLinkError>(
-          "0x" + llvm::utohexstr(orc::ExecutorAddr(FixupAddress).getValue()) +
-          ": extra space for uleb128");
-
-    uint64_t Mask = Count < Maxcount ? (1ULL << 7 * Count) - 1 : -1ULL;
-    encodeULEB128((Orig - TargetAddress - Addend) & Mask,
-                  (reinterpret_cast<uint8_t *>(FixupPtr)), Count);
-    break;
-  }
-  case AlignRelaxable:
-    // Ignore when the relaxation pass did not run
-    break;
-  default:
-    return make_error<JITLinkError>(
-        "In graph " + G.getName() + ", section " + B.getSection().getName() +
-        " unsupported edge kind " + getEdgeKindName(E.getKind()));
-  }
-
-  return Error::success();
-}
-
 /// loongarch null pointer content.
 LLVM_ABI extern const char NullPointerContent[8];
 inline ArrayRef<char> getGOTEntryBlockContent(LinkGraph &G) {
@@ -612,9 +447,14 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
                                               Symbol &PointerSymbol) {
   Block &StubContentBlock = G.createContentBlock(
       StubSection, getStubBlockContent(G), orc::ExecutorAddr(), 4, 0);
-  StubContentBlock.addEdge(Page20, 0, PointerSymbol, 0);
-  StubContentBlock.addEdge(PageOffset12, 4, PointerSymbol, 0);
-  return G.addAnonymousSymbol(StubContentBlock, 0, StubEntrySize, true, false);
+  Symbol &StubSymbol =
+      G.addAnonymousSymbol(StubContentBlock, 0, StubEntrySize, true, false);
+  StubContentBlock.addEdge(G.getPointerSize() == 8 ? Page20 : PCAddHi20, 0,
+                           PointerSymbol, 0);
+  StubContentBlock.addEdge(
+      G.getPointerSize() == 8 ? PageOffset12 : PCAddLo12, 4,
+      G.getPointerSize() == 8 ? PointerSymbol : StubSymbol, 0);
+  return StubSymbol;
 }
 
 /// Global Offset Table Builder.
@@ -630,6 +470,9 @@ public:
       break;
     case RequestGOTAndTransformToPageOffset12:
       KindToSet = PageOffset12;
+      break;
+    case RequestGOTAndTransformToPCAddHi20:
+      KindToSet = PCAddHi20;
       break;
     default:
       return false;
@@ -669,7 +512,8 @@ public:
   static StringRef getSectionName() { return "$__STUBS"; }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
-    if ((E.getKind() == Branch26PCRel || E.getKind() == Call36PCRel) &&
+    if ((E.getKind() == Branch26PCRel || E.getKind() == Call36PCRel ||
+         E.getKind() == Call30PCRel) &&
         !E.getTarget().isDefined()) {
       DEBUG_WITH_TYPE("jitlink", {
         dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "

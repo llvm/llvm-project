@@ -1841,7 +1841,7 @@ mlir::Value fir::runtime::genReduce(fir::FirOpBuilder &builder,
 
   assert((fir::isa_real(eleTy) || fir::isa_integer(eleTy) ||
           mlir::isa<fir::LogicalType>(eleTy)) &&
-         "expect real, interger or logical");
+         "expect real, integer or logical");
 
   auto [cat, kind] = fir::mlirTypeToCategoryKind(loc, eleTy);
   mlir::func::FuncOp func;

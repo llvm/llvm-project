@@ -3665,10 +3665,9 @@ define i1 @icmp_neg_cst_slt(i32 %a) {
 define i1 @icmp_and_or_lshr(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @icmp_and_or_lshr(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHF1:%.*]] = shl nuw i32 1, [[Y]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[SHF1]], 1
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[X]], [[OR2]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[AND3]], 0
+; CHECK-NEXT:    [[SHF:%.*]] = lshr i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHF]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[OR]] to i1
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %shf = lshr i32 %x, %y
@@ -3681,10 +3680,9 @@ define i1 @icmp_and_or_lshr(i32 %x, i32 %y) {
 define i1 @icmp_and_or_lshr_samesign(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @icmp_and_or_lshr_samesign(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHF1:%.*]] = shl nuw i32 1, [[Y]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[SHF1]], 1
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[X]], [[OR2]]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne i32 [[AND3]], 0
+; CHECK-NEXT:    [[SHF:%.*]] = lshr i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHF]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[OR]] to i1
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %shf = lshr i32 %x, %y
@@ -5217,8 +5215,7 @@ define <2 x i1> @zext_bool_and_eq0_commute(<2 x i1> %x, <2 x i8> %p) {
 define i1 @zext_bool_and_ne0(i1 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @zext_bool_and_ne0(
 ; CHECK-SAME: i1 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y]], 1
-; CHECK-NEXT:    [[R1:%.*]] = icmp ne i8 [[TMP1]], 0
+; CHECK-NEXT:    [[R1:%.*]] = trunc i8 [[Y]] to i1
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i1 [[R1]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -6053,4 +6050,190 @@ define i1 @icmp_samesign_logical_or(i32 %In) {
   %c2 = icmp samesign ne i32 %In, 1
   %V = select i1 %c1, i1 true, i1 %c2
   ret i1 %V
+}
+
+define i1 @non_zero_ptrdiff_implies_icmp_eq(ptr %p0, ptr %p1) {
+; CHECK-LABEL: define i1 @non_zero_ptrdiff_implies_icmp_eq(
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[I0:%.*]] = ptrtoint ptr [[P0]] to i64
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[P1]] to i64
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[I0]], [[I1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[DIFF]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %i0 = ptrtoint ptr %p0 to i64
+  %i1 = ptrtoint ptr %p1 to i64
+  %diff = sub i64 %i0, %i1
+  %cond = icmp eq i64 %diff, 12
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq ptr %p0, %p1
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrdiff_implies_icmp_eq_commuted(ptr %p0, ptr %p1) {
+; CHECK-LABEL: define i1 @non_zero_ptrdiff_implies_icmp_eq_commuted(
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[I0:%.*]] = ptrtoint ptr [[P0]] to i64
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[P1]] to i64
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[I0]], [[I1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[DIFF]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %i0 = ptrtoint ptr %p0 to i64
+  %i1 = ptrtoint ptr %p1 to i64
+  %diff = sub i64 %i0, %i1
+  %cond = icmp eq i64 %diff, 12
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq ptr %p1, %p0
+  ret i1 %cmp
+}
+
+define i1 @non_zero_ptrdiff_implies_icmp_ne(ptr %p0, ptr %p1) {
+; CHECK-LABEL: define i1 @non_zero_ptrdiff_implies_icmp_ne(
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[I0:%.*]] = ptrtoint ptr [[P0]] to i64
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[P1]] to i64
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[I0]], [[I1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[DIFF]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  %i0 = ptrtoint ptr %p0 to i64
+  %i1 = ptrtoint ptr %p1 to i64
+  %diff = sub i64 %i0, %i1
+  %cond = icmp eq i64 %diff, 12
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp ne ptr %p0, %p1
+  ret i1 %cmp
+}
+
+; TODO: Handle this case if it is shown in real code.
+define i1 @non_zero_truncated_ptrdiff_implies_icmp_ne(ptr %p0, ptr %p1) {
+; CHECK-LABEL: define i1 @non_zero_truncated_ptrdiff_implies_icmp_ne(
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[P0]] to i64
+; CHECK-NEXT:    [[I0:%.*]] = trunc i64 [[TMP0]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P1]] to i64
+; CHECK-NEXT:    [[I1:%.*]] = trunc i64 [[TMP1]] to i8
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i8 [[I0]], [[I1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[DIFF]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[P0]], [[P1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %i0 = ptrtoint ptr %p0 to i8
+  %i1 = ptrtoint ptr %p1 to i8
+  %diff = sub i8 %i0, %i1
+  %cond = icmp eq i8 %diff, 12
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp ne ptr %p0, %p1
+  ret i1 %cmp
+}
+
+define i1 @non_zero_diff_implies_icmp_eq(i8 %p0, i8 %p1) {
+; CHECK-LABEL: define i1 @non_zero_diff_implies_icmp_eq(
+; CHECK-SAME: i8 [[P0:%.*]], i8 [[P1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[DIFF]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %diff = sub i8 %p0, %p1
+  %cond = icmp eq i8 %diff, 12
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq i8 %p0, %p1
+  ret i1 %cmp
+}
+
+define i1 @non_zero_diff_implies_icmp_eq_commuted(i8 %p0, i8 %p1) {
+; CHECK-LABEL: define i1 @non_zero_diff_implies_icmp_eq_commuted(
+; CHECK-SAME: i8 [[P0:%.*]], i8 [[P1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[DIFF]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %diff = sub i8 %p0, %p1
+  %cond = icmp eq i8 %diff, 12
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq i8 %p1, %p0
+  ret i1 %cmp
+}
+
+; Negative tests
+
+define i1 @unknown_ptrdiff_implies_icmp_eq1(ptr %p0, ptr %p1) {
+; CHECK-LABEL: define i1 @unknown_ptrdiff_implies_icmp_eq1(
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[I0:%.*]] = ptrtoint ptr [[P0]] to i64
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[P1]] to i64
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[I0]], [[I1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i64 [[DIFF]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P0]], [[P1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %i0 = ptrtoint ptr %p0 to i64
+  %i1 = ptrtoint ptr %p1 to i64
+  %diff = sub i64 %i0, %i1
+  %cond = icmp ne i64 %diff, 12
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq ptr %p0, %p1
+  ret i1 %cmp
+}
+
+define i1 @unknown_ptrdiff_implies_icmp_eq2(ptr %p0, ptr %p1, i64 %x) {
+; CHECK-LABEL: define i1 @unknown_ptrdiff_implies_icmp_eq2(
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[I0:%.*]] = ptrtoint ptr [[P0]] to i64
+; CHECK-NEXT:    [[I1:%.*]] = ptrtoint ptr [[P1]] to i64
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i64 [[I0]], [[I1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[DIFF]], [[X]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P0]], [[P1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %i0 = ptrtoint ptr %p0 to i64
+  %i1 = ptrtoint ptr %p1 to i64
+  %diff = sub i64 %i0, %i1
+  %cond = icmp eq i64 %diff, %x
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp eq ptr %p0, %p1
+  ret i1 %cmp
+}
+
+define i1 @non_zero_diff_implies_icmp_ult(i8 %p0, i8 %p1) {
+; CHECK-LABEL: define i1 @non_zero_diff_implies_icmp_ult(
+; CHECK-SAME: i8 [[P0:%.*]], i8 [[P1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DIFF:%.*]] = sub i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[DIFF]], 12
+; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[P0]], [[P1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %diff = sub i8 %p0, %p1
+  %cond = icmp eq i8 %diff, 12
+  call void @llvm.assume(i1 %cond)
+  %cmp = icmp ult i8 %p0, %p1
+  ret i1 %cmp
 }

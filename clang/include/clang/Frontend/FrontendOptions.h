@@ -241,6 +241,8 @@ class FrontendInputFile {
   /// Whether we're dealing with a 'system' input (vs. a 'user' input).
   bool IsSystem = false;
 
+  friend class CompilerInvocationBase;
+
 public:
   FrontendInputFile() = default;
   FrontendInputFile(StringRef File, InputKind Kind, bool IsSystem = false)

@@ -70,7 +70,7 @@ static cl::opt<int> LanaiLowerConstantMulThreshold(
 
 LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
                                          const LanaiSubtarget &STI)
-    : TargetLowering(TM) {
+    : TargetLowering(TM, STI) {
   // Set up the register classes.
   addRegisterClass(MVT::i32, &Lanai::GPRRegClass);
 

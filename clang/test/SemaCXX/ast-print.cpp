@@ -176,6 +176,98 @@ float test15() {
   return __builtin_asinf(1.0F);
 }
 
+// CHECK: void test_atomic_loads(int *ptr, int *ret, int memorder) {
+// CHECK:   __atomic_load_n(ptr, memorder);
+// CHECK:   __atomic_load(ptr, ret, memorder);
+// CHECK: }
+void test_atomic_loads(int *ptr, int *ret, int memorder) {
+  __atomic_load_n(ptr, memorder);
+  __atomic_load(ptr, ret, memorder);
+}
+
+// CHECK: void test_atomic_stores(int *ptr, int val, int memorder) {
+// CHECK:   __atomic_store_n(ptr, val, memorder);
+// CHECK:   __atomic_store(ptr, &val, memorder);
+// CHECK: }
+void test_atomic_stores(int *ptr, int val, int memorder) {
+  __atomic_store_n(ptr, val, memorder);
+  __atomic_store(ptr, &val, memorder);
+}
+
+// CHECK: void test_atomic_exchanges(int *ptr, int val, int *ret, int memorder) {
+// CHECK:   __atomic_exchange_n(ptr, val, memorder);
+// CHECK:   __atomic_exchange(ptr, &val, ret, memorder);
+// CHECK: }
+void test_atomic_exchanges(int *ptr, int val, int *ret, int memorder) {
+  __atomic_exchange_n(ptr, val, memorder);
+  __atomic_exchange(ptr, &val, ret, memorder);
+}
+
+// CHECK: void test_atomic_cmpxchgs(int *ptr, int *expected, int desired, bool weak, int success_memorder, int failure_memorder) {
+// CHECK:   __atomic_compare_exchange_n(ptr, expected, desired, weak, success_memorder, failure_memorder);
+// CHECK:   __atomic_compare_exchange(ptr, expected, &desired, weak, success_memorder, failure_memorder);
+// CHECK: }
+void test_atomic_cmpxchgs(int *ptr, int *expected, int desired, bool weak, int success_memorder, int failure_memorder) {
+  __atomic_compare_exchange_n(ptr, expected, desired, weak, success_memorder, failure_memorder);
+  __atomic_compare_exchange(ptr, expected, &desired, weak, success_memorder, failure_memorder);
+}
+
+// CHECK: void test_atomic_fetch_ops(int *ptr, int val, int memorder) {
+// CHECK:   __atomic_add_fetch(ptr, val, memorder);
+// CHECK:   __atomic_sub_fetch(ptr, val, memorder);
+// CHECK:   __atomic_and_fetch(ptr, val, memorder);
+// CHECK:   __atomic_xor_fetch(ptr, val, memorder);
+// CHECK:   __atomic_or_fetch(ptr, val, memorder);
+// CHECK:   __atomic_nand_fetch(ptr, val, memorder);
+// CHECK:   __atomic_fetch_add(ptr, val, memorder);
+// CHECK:   __atomic_fetch_sub(ptr, val, memorder);
+// CHECK:   __atomic_fetch_and(ptr, val, memorder);
+// CHECK:   __atomic_fetch_xor(ptr, val, memorder);
+// CHECK:   __atomic_fetch_or(ptr, val, memorder);
+// CHECK:   __atomic_fetch_nand(ptr, val, memorder);
+// CHECK: }
+void test_atomic_fetch_ops(int *ptr, int val, int memorder) {
+  __atomic_add_fetch(ptr, val, memorder);
+  __atomic_sub_fetch(ptr, val, memorder);
+  __atomic_and_fetch(ptr, val, memorder);
+  __atomic_xor_fetch(ptr, val, memorder);
+  __atomic_or_fetch(ptr, val, memorder);
+  __atomic_nand_fetch(ptr, val, memorder);
+  __atomic_fetch_add(ptr, val, memorder);
+  __atomic_fetch_sub(ptr, val, memorder);
+  __atomic_fetch_and(ptr, val, memorder);
+  __atomic_fetch_xor(ptr, val, memorder);
+  __atomic_fetch_or(ptr, val, memorder);
+  __atomic_fetch_nand(ptr, val, memorder);
+}
+
+// CHECK: void test_atomic_setclear(void *ptr, int memorder) {
+// CHECK:   __atomic_test_and_set(ptr, memorder);
+// CHECK:   __atomic_clear(ptr, memorder);
+// CHECK: }
+void test_atomic_setclear(void *ptr, int memorder) {
+  __atomic_test_and_set(ptr, memorder);
+  __atomic_clear(ptr, memorder);
+}
+
+// CHECK: void test_atomic_fences(int memorder) {
+// CHECK:   __atomic_thread_fence(memorder);
+// CHECK:   __atomic_signal_fence(memorder);
+// CHECK: }
+void test_atomic_fences(int memorder) {
+  __atomic_thread_fence(memorder);
+  __atomic_signal_fence(memorder);
+}
+
+// CHECK: void test_atomic_lockfree(unsigned long size, void *ptr) {
+// CHECK:   __atomic_always_lock_free(size, ptr);
+// CHECK:   __atomic_is_lock_free(size, ptr);
+// CHECK: }
+void test_atomic_lockfree(unsigned long size, void *ptr) {
+  __atomic_always_lock_free(size, ptr);
+  __atomic_is_lock_free(size, ptr);
+}
+
 namespace PR18776 {
 struct A {
   operator void *();

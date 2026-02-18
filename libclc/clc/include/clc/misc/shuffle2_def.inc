@@ -18,22 +18,22 @@
 // The return type is same base type as the input type, with the same vector
 // size as the mask. Elements in the mask must be the same size (number of bits)
 // as the input value., e.g. char8 ret = shuffle(char2 x, uchar8 mask);
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE
 __CLC_FUNCTION(__CLC_XCONCAT(__CLC_SCALAR_GENTYPE, 2) x,
                __CLC_XCONCAT(__CLC_SCALAR_GENTYPE, 2) y, __CLC_U_GENTYPE mask) {
   return __CLC_IMPL_FUNCTION(__CLC_FUNCTION)(x, y, mask);
 }
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE
 __CLC_FUNCTION(__CLC_XCONCAT(__CLC_SCALAR_GENTYPE, 4) x,
                __CLC_XCONCAT(__CLC_SCALAR_GENTYPE, 4) y, __CLC_U_GENTYPE mask) {
   return __CLC_IMPL_FUNCTION(__CLC_FUNCTION)(x, y, mask);
 }
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE
 __CLC_FUNCTION(__CLC_XCONCAT(__CLC_SCALAR_GENTYPE, 8) x,
                __CLC_XCONCAT(__CLC_SCALAR_GENTYPE, 8) y, __CLC_U_GENTYPE mask) {
   return __CLC_IMPL_FUNCTION(__CLC_FUNCTION)(x, y, mask);
 }
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __CLC_FUNCTION(
     __CLC_XCONCAT(__CLC_SCALAR_GENTYPE, 16) x,
     __CLC_XCONCAT(__CLC_SCALAR_GENTYPE, 16) y, __CLC_U_GENTYPE mask) {
   return __CLC_IMPL_FUNCTION(__CLC_FUNCTION)(x, y, mask);

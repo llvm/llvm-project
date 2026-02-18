@@ -20,7 +20,7 @@ interface
     !$acc routine worker bind(sub2)
     real :: a(:)
   end subroutine
- 
+
   subroutine sub2(a)
     !$acc routine worker nohost
     real :: a(:)

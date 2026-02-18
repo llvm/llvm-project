@@ -1,8 +1,7 @@
+// UNSUPPORTED: system-windows
+
 // FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
 // XFAIL: android
-
-// The globs below do not work in the lit shell.
-// REQUIRES: shell
 
 // RUN: %clangxx -fsanitize=undefined %s -O1 -o %t
 
@@ -25,9 +24,6 @@
 // FIXME: log_path is not supported on Windows yet.
 // XFAIL: target={{.*windows-msvc.*}}
 
-// Issue #41838
-// XFAIL: sparc-target-arch && target={{.*solaris.*}}
-
 #include <stdio.h>
 #include <stdlib.h>
 int main(int argc, char *argv[]) {
@@ -38,4 +34,3 @@ int main(int argc, char *argv[]) {
 }
 
 // CHECK-ERROR: runtime error: -4 is outside the range of representable values of type 'unsigned int'
-

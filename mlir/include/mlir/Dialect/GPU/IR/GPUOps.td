@@ -348,8 +348,14 @@ def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [
 }
 
 def GPU_OptionalDimSizeHintAttr : ConfinedAttr<OptionalAttr<DenseI32ArrayAttr>,
-  [AttrConstraint<Or<[IsNullAttr.predicate, DenseArrayCount<3>.predicate]>,
-    "with 3 elements (if present)">]>;
+  [AttrConstraint<Or<[IsNullAttr.predicate, And<[DenseArrayCount<3>.predicate,
+      CPred<"([](mlir::Attribute a) { "
+            "  auto arr = ::llvm::cast<::mlir::DenseI32ArrayAttr>(a).asArrayRef();"
+            "  return ::llvm::all_of(arr, [](int32_t v) { return v >= 1; });"
+            "})($_self)">]>]>,
+    "with 3 elements (if present) and all elements >= 1"
+  >]
+>;
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
     HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
@@ -431,7 +437,8 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
                        OptionalAttr<DictArrayAttr>:$workgroup_attrib_attrs,
                        OptionalAttr<DictArrayAttr>:$private_attrib_attrs,
                        GPU_OptionalDimSizeHintAttr:$known_block_size,
-                       GPU_OptionalDimSizeHintAttr:$known_grid_size);
+                       GPU_OptionalDimSizeHintAttr:$known_grid_size,
+                       GPU_OptionalDimSizeHintAttr:$known_cluster_size);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
@@ -455,7 +462,12 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     unsigned getNumWorkgroupAttributions() {
       auto attr = (*this)->getAttrOfType<IntegerAttr>(
           getNumWorkgroupAttributionsAttrName());
-      return attr ? attr.getInt() : 0;
+      if (!attr)
+        return 0;
+      int64_t value = attr.getInt();
+      assert(value >= 0 && value < std::numeric_limits<uint32_t>::max() &&
+             "invalid workgroup attribution count");
+      return value;
     }
 
     /// Return the index of the first workgroup attribution in the block argument
@@ -584,7 +596,7 @@ def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", [Pure]>
     This operation provides a memref pointer to the start of dynamic shared
     memory, often referred to as workgroup memory. It's important to note that
     this dynamic shared memory needs to be allocated at kernel launch. One can
-    conveniently utilize `the dynamic_shared_memory_size` parameter of
+    conveniently utilize the `dynamic_shared_memory_size` parameter of
     `gpu.launch` for this purpose.
 
     Examples:
@@ -1005,7 +1017,12 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     unsigned getNumWorkgroupAttributions() {
       auto attr = (*this)->getAttrOfType<IntegerAttr>(
           getNumWorkgroupAttributionsAttrName());
-      return attr ? attr.getInt() : 0;
+      if (!attr)
+        return 0;
+      int64_t value = attr.getInt();
+      assert(value >= 0 && value < std::numeric_limits<uint32_t>::max() &&
+             "invalid workgroup attribution count");
+      return value;
     }
 
     /// Returns a list of block arguments that correspond to buffers located in
@@ -1215,7 +1232,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
 def AnyIntegerOrFloatOr1DVector :
   AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
 
-def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
+def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType, NoMemoryEffect]> {
   let summary = "Reduce values among subgroup.";
   let description = [{
     The `subgroup_reduce` op reduces the values of lanes (work items) across a
@@ -1421,7 +1438,8 @@ def GPU_RotateOp : GPU_Op<
   let hasVerifier = 1;
 }
 
-def GPU_BarrierOp : GPU_Op<"barrier"> {
+def GPU_BarrierOp : GPU_Op<"barrier">,
+    Arguments<(ins OptionalAttr<GPU_AddressSpaceAttrArray> :$address_spaces)> {
   let summary = "Synchronizes all work items of a workgroup.";
   let description = [{
     The `barrier` op synchronizes all work items of a workgroup. It is used
@@ -1431,17 +1449,39 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
     gpu.barrier
     ```
 
-    waits until all work items in the workgroup have reached this point
+    waits until all work items in the workgroup have reached the operation
     and all memory accesses made by these work items prior to the op are
     visible to all work items in the workgroup. Data hazards between work items
     accessing the same memory can be avoided by synchronizing work items
     in-between these accesses.
 
+    If the `memfence` attribute is specified, the set of memory accesses that must
+    by completed after the barrier resolves is limited to only those accesses that
+    read from or write to the specified address spaces (though accesses to other
+    address spaces may be completed as well, especially if a particular combination
+    of address spaces is not supported on a given backend). In particular,
+    specifying `memfence []` creates a barrier that is not required to affect
+    the visibility of any memory operations and is purely used for synchronizing
+    work items.
+
+    ```mlir
+    // Only workgroup address spaces accesses required to be visible.
+    gpu.barrier memfence [#gpu.address_space<workgroup>]
+    // No memory accesses required to be visible.
+    gpu.barrier memfence []
+    // All memory accesses required to be visible.
+    gpu.barrier
+    ```
+
     Either none or all work items of a workgroup need to execute this op
     in convergence.
   }];
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "(`memfence` $address_spaces^)? attr-dict";
   let hasCanonicalizer = 1;
+  let builders = [OpBuilder<(
+                      ins CArg<"std::optional<::mlir::gpu::AddressSpace>",
+                               "std::nullopt">:$addressSpace)>,
+                  OpBuilder<(ins "Value":$memrefToFence)>];
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
@@ -1517,7 +1557,7 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     /// Sets the targets of the module.
     void setTargets(ArrayRef<TargetAttrInterface> targets);
   }];
-  
+
   let hasVerifier = 1;
 }
 
@@ -1872,7 +1912,7 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
     ```
   }];
 
-  let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, I32, F16, F32]>>:$src,
+  let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, I32, F16, F32, F64]>>:$src,
                   Arg<GPU_MMAMemRef, "",[MemWriteAt<0, FullEffect>]>:$dstMemref,
                   Variadic<Index>:$indices,
                   IndexAttr:$leadDimension,
@@ -1919,9 +1959,9 @@ def GPU_SubgroupMmaComputeOp
     ```
   }];
 
-  let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, F16, F32]>>:$opA,
-                  Arg<MMAMatrixOf<[SI8, UI8, F16, F32]>>:$opB,
-                  Arg<MMAMatrixOf<[I32, F16, F32]>>:$opC,
+  let arguments = (ins Arg<MMAMatrixOf<[SI8, UI8, F16, F32, F64]>>:$opA,
+                  Arg<MMAMatrixOf<[SI8, UI8, F16, F32, F64]>>:$opB,
+                  Arg<MMAMatrixOf<[I32, F16, F32, F64]>>:$opC,
                   OptionalAttr<UnitAttr>:$a_transpose,
                   OptionalAttr<UnitAttr>:$b_transpose);
 
@@ -3079,7 +3119,8 @@ def GPU_SetCsrPointersOp : GPU_Op<"set_csr_pointers", [GPU_AsyncOpInterface]> {
 }
 
 def GPU_WarpExecuteOnLane0Op : GPU_Op<"warp_execute_on_lane_0",
-      [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["areTypesCompatible"]>,
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
+          "areTypesCompatible", "getSuccessorInputs"]>,
        SingleBlockImplicitTerminator<"gpu::YieldOp">,
        RecursiveMemoryEffects]> {
   let summary = "Executes operations in the associated region on thread #0 of a"
@@ -3213,6 +3254,47 @@ def GPU_WarpExecuteOnLane0Op : GPU_Op<"warp_execute_on_lane_0",
     /// Get the terminator of the warp region.
     gpu::YieldOp getTerminator();
   }];
+}
+
+def GPU_BroadcastType : I32EnumAttr<"BroadcastType",
+    "a lane to broadcast from",
+    [
+      I32EnumAttrCase<"first_active_lane", 0>,
+      I32EnumAttrCase<"specific_lane", 1>
+    ]>{
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::gpu";
+}
+def GPU_BroadcastTypeAttr : EnumAttr<GPU_Dialect, GPU_BroadcastType, "broadcast">;
+
+def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
+    [NoMemoryEffect, AllTypesMatch<["result", "src"]>,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+    DeclareOpInterfaceMethods<ConditionallySpeculatable, ["getSpeculatability"]>] #
+    ElementwiseMappable.traits>,
+  Arguments<(ins AnyType:$src,
+                 Optional<I32>:$lane,
+                 GPU_BroadcastTypeAttr:$broadcast_type)> {
+  let summary = "Broadcasts a value from the specific lane across subgroup";
+  let description = [{
+      Broadcasts a value from one lane to all active lanes in a subgroup. The
+      result is guaranteed to be uniform across the active lanes in subgroup.
+
+      The possible broadcast types are:
+
+      * `first_active_lane` - broadcasts the value from the first active lane
+      in the subgroup.
+      * `specific_lane` - broadcasts from the specified lane. The lane index
+      must be uniform and within the subgroup size. The result is poison if the
+      lane index is invalid, non subgroup-uniform, or if the source lane is not
+      active.
+  }];
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{
+    $src `,` $broadcast_type ($lane^)? attr-dict `:` type($result)
+  }];
+  let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 #endif // GPU_OPS

@@ -75,7 +75,7 @@ define void @store64_align8(ptr %p, i64 %a) {
   ; COMBINE_STORE_PTR-NEXT: %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
 
   ; CHECK-NEXT:  %[[#AO:]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
-  ; CHECK-NEXT:  %[[#AS:]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN]]
+  ; CHECK-NEXT:  %[[#AS:]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN]]
 
   ; COMBINE_STORE_PTR-NEXT: %[[#AS:]] = or i8 %[[#AS]], %[[#PS]]
   ; COMBINE_STORE_PTR-NEXT: %[[#NE:]] = icmp ne i8 %[[#PS]], 0
@@ -104,7 +104,7 @@ define void @store64_align2(ptr %p, i64 %a) {
   ; COMBINE_STORE_PTR-NEXT: %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
 
   ; CHECK-NEXT: %[[#AO:]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
-  ; CHECK-NEXT: %[[#AS:]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN]]
+  ; CHECK-NEXT: %[[#AS:]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN]]
 
   ; COMBINE_STORE_PTR-NEXT: %[[#AS:]] = or i8 %[[#AS]], %[[#PS]]
   ; COMBINE_STORE_PTR-NEXT: %[[#NE:]] = icmp ne i8 %[[#PS]], 0
@@ -131,7 +131,7 @@ define void @store96_align8(ptr %p, i96 %a) {
   ; COMBINE_STORE_PTR-NEXT: %[[#PS:]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
 
   ; CHECK-NEXT: %[[#AO:]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
-  ; CHECK-NEXT: %[[#AS:]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN]]
+  ; CHECK-NEXT: %[[#AS:]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN]]
 
   ; COMBINE_STORE_PTR-NEXT: %[[#AS:]] = or i8 %[[#AS]], %[[#PS]]
   ; COMBINE_STORE_PTR-NEXT: %[[#NE:]] = icmp ne i8 %[[#PS]], 0

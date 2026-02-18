@@ -69,9 +69,9 @@ body: |
   bb.0:
     ; GCN-LABEL: name: merge_s_load_x1_x1_imm_no_scale_offset
     ; GCN: [[DEF:%[0-9]+]]:sgpr_64 = IMPLICIT_DEF
-    ; GCN-NEXT: [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[DEF]], 0, 0 :: (dereferenceable invariant load (s64), align 4)
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[S_LOAD_DWORDX2_IMM]].sub0
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0_xexec = COPY killed [[S_LOAD_DWORDX2_IMM]].sub1
+    ; GCN-NEXT: early-clobber %3:sreg_64_xexec = S_LOAD_DWORDX2_IMM_ec [[DEF]], 0, 0 :: (dereferenceable invariant load (s64), align 4)
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32_xm0_xexec = COPY %3.sub0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0_xexec = COPY killed %3.sub1
     %0:sgpr_64 = IMPLICIT_DEF
     %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0:sgpr_64, 0, 0 :: (dereferenceable invariant load (s32))
     %2:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0:sgpr_64, 4, 0 :: (dereferenceable invariant load (s32))

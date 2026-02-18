@@ -1,0 +1,3 @@
+## test whether the UTC generates CHECK-EMPTY for blank lines
+# RUN: cp -f %S/Inputs/check_empty.ll %t.ll && %update_test_checks %t.ll --version 7
+# RUN: diff -u %t.ll %S/Inputs/check_empty.ll.expected

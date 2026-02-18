@@ -40,22 +40,22 @@ using namespace llvm;
 
 namespace {
 
-  struct QuotRemPair {
-    Value *Quotient;
-    Value *Remainder;
+struct QuotRemPair {
+  Value *Quotient;
+  Value *Remainder;
 
-    QuotRemPair(Value *InQuotient, Value *InRemainder)
-        : Quotient(InQuotient), Remainder(InRemainder) {}
-  };
+  QuotRemPair(Value *InQuotient, Value *InRemainder)
+      : Quotient(InQuotient), Remainder(InRemainder) {}
+};
 
-  /// A quotient and remainder, plus a BB from which they logically "originate".
-  /// If you use Quotient or Remainder in a Phi node, you should use BB as its
-  /// corresponding predecessor.
-  struct QuotRemWithBB {
-    BasicBlock *BB = nullptr;
-    Value *Quotient = nullptr;
-    Value *Remainder = nullptr;
-  };
+/// A quotient and remainder, plus a BB from which they logically "originate".
+/// If you use Quotient or Remainder in a Phi node, you should use BB as its
+/// corresponding predecessor.
+struct QuotRemWithBB {
+  BasicBlock *BB = nullptr;
+  Value *Quotient = nullptr;
+  Value *Remainder = nullptr;
+};
 
 using DivCacheTy = DenseMap<DivRemMapKey, QuotRemPair>;
 using BypassWidthsTy = DenseMap<unsigned, unsigned>;
@@ -335,10 +335,10 @@ Value *FastDivInsertionTask::insertOperandRuntimeCheck(Value *Op1, Value *Op2) {
   else
     OrV = Op1 ? Op1 : Op2;
 
-  // BitMask is inverted to check if the operands are
-  // larger than the bypass type
-  uint64_t BitMask = ~BypassType->getBitMask();
-  Value *AndV = Builder.CreateAnd(OrV, BitMask);
+  // Check whether the operands are larger than the bypass type.
+  Value *AndV = Builder.CreateAnd(
+      OrV, APInt::getBitsSetFrom(OrV->getType()->getIntegerBitWidth(),
+                                 BypassType->getBitWidth()));
 
   // Compare operand values
   Value *ZeroV = ConstantInt::getSigned(getSlowType(), 0);

@@ -6,7 +6,7 @@
 ! Test a FORALL construct with a nested WHERE construct where the mask
 ! contains temporary array expressions.
 
-subroutine test_nested_forall_where_with_temp_in_mask(a,b)  
+subroutine test_nested_forall_where_with_temp_in_mask(a,b)
   interface
     function temp_foo(i, j)
       integer :: i, j
@@ -28,10 +28,10 @@ end subroutine
 
 ! CHECK:  func @_QPtest_nested_forall_where_with_temp_in_mask({{.*}}) {
 ! CHECK:   %[[tempResultBox:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = ".result"}
-           ! Where condition pre-evaluation 
+           ! Where condition pre-evaluation
 ! CHECK:   fir.do_loop {{.*}} {
 ! CHECK:      fir.do_loop {{.*}} {
-                ! Evaluation of mask for iteration (i,j) into ragged array temp 
+                ! Evaluation of mask for iteration (i,j) into ragged array temp
 ! CHECK:        %[[tempResult:.*]] = fir.call @_QPtemp_foo
 ! CHECK:        fir.save_result %[[tempResult]] to %[[tempResultBox]] : !fir.box<!fir.heap<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:        fir.if {{.*}} {
@@ -52,7 +52,7 @@ end subroutine
 ! CHECK:      fir.do_loop {{.*}} {
                 ! Array assignment at iteration (i, j)
 ! CHECK:        fir.do_loop {{.*}} {
-! CHECK:          fir.if {{.*}} {  
+! CHECK:          fir.if {{.*}} {
 ! CHECK:            arith.divf
 ! CHECK:          } else {
 ! CHECK:          }
@@ -64,7 +64,7 @@ end subroutine
 ! CHECK:      fir.do_loop {{.*}} {
                 ! Array assignment at iteration (i, j)
 ! CHECK:        fir.do_loop {{.*}} {
-! CHECK:          fir.if {{.*}} {  
+! CHECK:          fir.if {{.*}} {
 ! CHECK:          } else {
 ! CHECK:            arith.negf
 ! CHECK:          }

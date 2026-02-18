@@ -30,7 +30,11 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAPDLType(MlirType type);
 
 MLIR_CAPI_EXPORTED bool mlirTypeIsAPDLAttributeType(MlirType type);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirPDLAttributeTypeGetTypeID(void);
+
 MLIR_CAPI_EXPORTED MlirType mlirPDLAttributeTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirPDLAttributeTypeGetName(void);
 
 //===---------------------------------------------------------------------===//
 // OperationType
@@ -38,7 +42,11 @@ MLIR_CAPI_EXPORTED MlirType mlirPDLAttributeTypeGet(MlirContext ctx);
 
 MLIR_CAPI_EXPORTED bool mlirTypeIsAPDLOperationType(MlirType type);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirPDLOperationTypeGetTypeID(void);
+
 MLIR_CAPI_EXPORTED MlirType mlirPDLOperationTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirPDLOperationTypeGetName(void);
 
 //===---------------------------------------------------------------------===//
 // RangeType
@@ -46,7 +54,11 @@ MLIR_CAPI_EXPORTED MlirType mlirPDLOperationTypeGet(MlirContext ctx);
 
 MLIR_CAPI_EXPORTED bool mlirTypeIsAPDLRangeType(MlirType type);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirPDLRangeTypeGetTypeID(void);
+
 MLIR_CAPI_EXPORTED MlirType mlirPDLRangeTypeGet(MlirType elementType);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirPDLRangeTypeGetName(void);
 
 MLIR_CAPI_EXPORTED MlirType mlirPDLRangeTypeGetElementType(MlirType type);
 
@@ -56,7 +68,11 @@ MLIR_CAPI_EXPORTED MlirType mlirPDLRangeTypeGetElementType(MlirType type);
 
 MLIR_CAPI_EXPORTED bool mlirTypeIsAPDLTypeType(MlirType type);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirPDLTypeTypeGetTypeID(void);
+
 MLIR_CAPI_EXPORTED MlirType mlirPDLTypeTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirPDLTypeTypeGetName(void);
 
 //===---------------------------------------------------------------------===//
 // ValueType
@@ -64,7 +80,11 @@ MLIR_CAPI_EXPORTED MlirType mlirPDLTypeTypeGet(MlirContext ctx);
 
 MLIR_CAPI_EXPORTED bool mlirTypeIsAPDLValueType(MlirType type);
 
+MLIR_CAPI_EXPORTED MlirTypeID mlirPDLValueTypeGetTypeID(void);
+
 MLIR_CAPI_EXPORTED MlirType mlirPDLValueTypeGet(MlirContext ctx);
+
+MLIR_CAPI_EXPORTED MlirStringRef mlirPDLValueTypeGetName(void);
 
 #ifdef __cplusplus
 }

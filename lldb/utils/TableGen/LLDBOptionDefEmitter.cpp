@@ -23,6 +23,33 @@ using namespace llvm;
 using namespace lldb_private;
 
 namespace {
+/// Parses curly braces and replaces them with ANSI underline formatting.
+std::string underline(llvm::StringRef Str) {
+  llvm::StringRef OpeningHead, OpeningTail, ClosingHead, ClosingTail;
+  std::string Result;
+  llvm::raw_string_ostream Stream(Result);
+  while (!Str.empty()) {
+    // Find the opening brace.
+    std::tie(OpeningHead, OpeningTail) = Str.split("${");
+    Stream << OpeningHead;
+
+    // No opening brace: we're done.
+    if (OpeningHead == Str)
+      break;
+
+    assert(!OpeningTail.empty());
+
+    // Find the closing brace.
+    std::tie(ClosingHead, ClosingTail) = OpeningTail.split('}');
+    assert(!ClosingTail.empty() &&
+           "unmatched curly braces in command option description");
+
+    Stream << "${ansi.underline}" << ClosingHead << "${ansi.normal}";
+    Str = ClosingTail;
+  }
+  return Result;
+}
+
 struct CommandOption {
   std::vector<std::string> GroupsArg;
   bool Required = false;
@@ -68,7 +95,7 @@ struct CommandOption {
       Completions = Option->getValueAsListOfStrings("Completions");
 
     if (auto D = Option->getValue("Description"))
-      Description = D->getValue()->getAsUnquotedString();
+      Description = underline(D->getValue()->getAsUnquotedString());
   }
 };
 } // namespace

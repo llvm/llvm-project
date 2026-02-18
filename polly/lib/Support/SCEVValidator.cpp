@@ -156,6 +156,10 @@ public:
     return ValidatorResult(SCEVType::PARAM, Expr);
   }
 
+  ValidatorResult visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
+    return visit(Expr->getOperand());
+  }
+
   ValidatorResult visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
     return visit(Expr->getOperand());
   }
@@ -423,7 +427,7 @@ public:
 
     auto *Divisor = SRem->getOperand(1);
     auto *CI = dyn_cast<ConstantInt>(Divisor);
-    if (!CI || CI->isZeroValue())
+    if (!CI || CI->isNullValue())
       return visitGenericInst(SRem, S);
 
     auto *Dividend = SRem->getOperand(0);

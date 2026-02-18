@@ -23,6 +23,7 @@
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
@@ -109,6 +110,7 @@ protected:
   LVLines CULines;
 
   std::unique_ptr<const MCRegisterInfo> MRI;
+  MCTargetOptions MCOptions;
   std::unique_ptr<const MCAsmInfo> MAI;
   std::unique_ptr<const MCSubtargetInfo> STI;
   std::unique_ptr<const MCInstrInfo> MII;
@@ -192,7 +194,7 @@ public:
       : LVReader(Filename, FileFormatName, W, BinaryType) {}
   LVBinaryReader(const LVBinaryReader &) = delete;
   LVBinaryReader &operator=(const LVBinaryReader &) = delete;
-  virtual ~LVBinaryReader() = default;
+  ~LVBinaryReader() override = default;
 
   void addInlineeLines(LVScope *Scope, LVLines &Lines) {
     CUInlineeLines.emplace(Scope, std::make_unique<LVLines>(std::move(Lines)));

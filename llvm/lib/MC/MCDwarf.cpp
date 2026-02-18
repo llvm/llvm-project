@@ -181,7 +181,7 @@ void MCDwarfLineTable::emitOne(
 
   unsigned FileNum, LastLine, Column, Flags, Isa, Discriminator;
   bool IsAtStartSeq;
-  MCSymbol *LastLabel;
+  MCSymbol *PrevLabel;
   auto init = [&]() {
     FileNum = 1;
     LastLine = 1;
@@ -189,21 +189,31 @@ void MCDwarfLineTable::emitOne(
     Flags = DWARF2_LINE_DEFAULT_IS_STMT ? DWARF2_FLAG_IS_STMT : 0;
     Isa = 0;
     Discriminator = 0;
-    LastLabel = nullptr;
+    PrevLabel = nullptr;
     IsAtStartSeq = true;
   };
   init();
 
   // Loop through each MCDwarfLineEntry and encode the dwarf line number table.
   bool EndEntryEmitted = false;
-  for (const MCDwarfLineEntry &LineEntry : LineEntries) {
-    MCSymbol *Label = LineEntry.getLabel();
+  for (auto It = LineEntries.begin(); It != LineEntries.end(); ++It) {
+    auto LineEntry = *It;
+    MCSymbol *CurrLabel = LineEntry.getLabel();
     const MCAsmInfo *asmInfo = MCOS->getContext().getAsmInfo();
 
     if (LineEntry.LineStreamLabel) {
       if (!IsAtStartSeq) {
-        MCOS->emitDwarfLineEndEntry(Section, LastLabel,
-                                    /*EndLabel =*/LastLabel);
+        auto *Label = CurrLabel;
+        auto NextIt = It + 1;
+        // LineEntry with a null Label is probably a fake LineEntry we added
+        // when `-emit-func-debug-line-table-offsets` in order to terminate the
+        // sequence. Look for the next Label if possible, otherwise we will set
+        // the PC to the end of the section.
+        if (!Label && NextIt != LineEntries.end()) {
+          Label = NextIt->getLabel();
+        }
+        MCOS->emitDwarfLineEndEntry(Section, PrevLabel,
+                                    /*EndLabel =*/Label);
         init();
       }
       MCOS->emitLabel(LineEntry.LineStreamLabel, LineEntry.StreamLabelDefLoc);
@@ -211,7 +221,7 @@ void MCDwarfLineTable::emitOne(
     }
 
     if (LineEntry.IsEndEntry) {
-      MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, Label,
+      MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, PrevLabel, CurrLabel,
                                      asmInfo->getCodePointerSize());
       init();
       EndEntryEmitted = true;
@@ -258,12 +268,12 @@ void MCDwarfLineTable::emitOne(
     // At this point we want to emit/create the sequence to encode the delta in
     // line numbers and the increment of the address from the previous Label
     // and the current Label.
-    MCOS->emitDwarfAdvanceLineAddr(LineDelta, LastLabel, Label,
+    MCOS->emitDwarfAdvanceLineAddr(LineDelta, PrevLabel, CurrLabel,
                                    asmInfo->getCodePointerSize());
 
     Discriminator = 0;
     LastLine = LineEntry.getLine();
-    LastLabel = Label;
+    PrevLabel = CurrLabel;
     IsAtStartSeq = false;
   }
 
@@ -273,7 +283,7 @@ void MCDwarfLineTable::emitOne(
   // does not track ranges nor terminate the line table. In that case,
   // conservatively use the section end symbol to end the line table.
   if (!EndEntryEmitted && !IsAtStartSeq)
-    MCOS->emitDwarfLineEndEntry(Section, LastLabel);
+    MCOS->emitDwarfLineEndEntry(Section, PrevLabel);
 }
 
 void MCDwarfLineTable::endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS,
@@ -735,7 +745,6 @@ static uint64_t SpecialAddr(MCDwarfLineTableParams Params, uint64_t op) {
 void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
                              int64_t LineDelta, uint64_t AddrDelta,
                              SmallVectorImpl<char> &Out) {
-  uint8_t Buf[16];
   uint64_t Temp, Opcode;
   bool NeedCopy = false;
 
@@ -753,7 +762,7 @@ void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
       Out.push_back(dwarf::DW_LNS_const_add_pc);
     else if (AddrDelta) {
       Out.push_back(dwarf::DW_LNS_advance_pc);
-      Out.append(Buf, Buf + encodeULEB128(AddrDelta, Buf));
+      appendLEB128<LEB128Sign::Unsigned>(Out, AddrDelta);
     }
     Out.push_back(dwarf::DW_LNS_extended_op);
     Out.push_back(1);
@@ -769,7 +778,7 @@ void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
   if (Temp >= Params.DWARF2LineRange ||
       Temp + Params.DWARF2LineOpcodeBase > 255) {
     Out.push_back(dwarf::DW_LNS_advance_line);
-    Out.append(Buf, Buf + encodeSLEB128(LineDelta, Buf));
+    appendLEB128<LEB128Sign::Signed>(Out, LineDelta);
 
     LineDelta = 0;
     Temp = 0 - Params.DWARF2LineBase;
@@ -805,7 +814,7 @@ void MCDwarfLineAddr::encode(MCContext &Context, MCDwarfLineTableParams Params,
 
   // Otherwise use DW_LNS_advance_pc.
   Out.push_back(dwarf::DW_LNS_advance_pc);
-  Out.append(Buf, Buf + encodeULEB128(AddrDelta, Buf));
+  appendLEB128<LEB128Sign::Unsigned>(Out, AddrDelta);
 
   if (NeedCopy)
     Out.push_back(dwarf::DW_LNS_copy);
@@ -1893,8 +1902,7 @@ struct CIEKey {
 
 } // end anonymous namespace
 
-void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
-                               bool IsEH) {
+void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
   MCContext &Context = Streamer.getContext();
   const MCObjectFileInfo *MOFI = Context.getObjectFileInfo();
   const MCAsmInfo *AsmInfo = Context.getAsmInfo();
@@ -1904,7 +1912,7 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   // Emit the compact unwind info if available.
   bool NeedsEHFrameSection = !MOFI->getSupportsCompactUnwindWithoutEHFrame();
   if (IsEH && MOFI->getCompactUnwindSection()) {
-    Streamer.generateCompactUnwindEncodings(MAB);
+    Streamer.generateCompactUnwindEncodings();
     bool SectionEmitted = false;
     for (const MCDwarfFrameInfo &Frame : FrameArray) {
       if (Frame.CompactUnwindEncoding == 0) continue;

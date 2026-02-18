@@ -12,16 +12,15 @@ define <4 x i32> @test_compress_v4i32(<4 x i32> %vec, <4 x i1> %mask) {
 ; CHECK-NEXT:    shl.4s v1, v1, #31
 ; CHECK-NEXT:    cmlt.4s v1, v1, #0
 ; CHECK-NEXT:    mov.s w9, v1[1]
-; CHECK-NEXT:    mov.s w10, v1[2]
 ; CHECK-NEXT:    fmov w11, s1
+; CHECK-NEXT:    mov.s w10, v1[2]
+; CHECK-NEXT:    and x12, x11, #0x1
 ; CHECK-NEXT:    bfi x8, x11, #2, #1
-; CHECK-NEXT:    and x11, x11, #0x1
-; CHECK-NEXT:    and x9, x9, #0x1
-; CHECK-NEXT:    and w10, w10, #0x1
-; CHECK-NEXT:    add x9, x11, x9
 ; CHECK-NEXT:    mov x11, sp
+; CHECK-NEXT:    and x9, x9, #0x1
+; CHECK-NEXT:    add x9, x12, x9
 ; CHECK-NEXT:    st1.s { v0 }[1], [x8]
-; CHECK-NEXT:    add w10, w9, w10
+; CHECK-NEXT:    sub w10, w9, w10
 ; CHECK-NEXT:    orr x9, x11, x9, lsl #2
 ; CHECK-NEXT:    bfi x11, x10, #2, #2
 ; CHECK-NEXT:    st1.s { v0 }[2], [x9]
@@ -93,7 +92,8 @@ define <2 x double> @test_compress_v2f64(<2 x double> %vec, <2 x i1> %mask) {
 ; CHECK-NEXT:    shl.2d v1, v1, #63
 ; CHECK-NEXT:    cmlt.2d v1, v1, #0
 ; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    bfi x8, x9, #3, #1
+; CHECK-NEXT:    and x9, x9, #0x8
+; CHECK-NEXT:    orr x8, x8, x9
 ; CHECK-NEXT:    st1.d { v0 }[1], [x8]
 ; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
@@ -420,16 +420,15 @@ define <3 x i32> @test_compress_narrow(<3 x i32> %vec, <3 x i1> %mask) {
 ; CHECK-NEXT:    shl.4s v1, v1, #31
 ; CHECK-NEXT:    cmlt.4s v1, v1, #0
 ; CHECK-NEXT:    mov.s w8, v1[1]
-; CHECK-NEXT:    mov.s w9, v1[2]
 ; CHECK-NEXT:    fmov w10, s1
+; CHECK-NEXT:    mov.s w9, v1[2]
+; CHECK-NEXT:    and x12, x10, #0x1
 ; CHECK-NEXT:    bfi x11, x10, #2, #1
-; CHECK-NEXT:    and x10, x10, #0x1
-; CHECK-NEXT:    and x8, x8, #0x1
-; CHECK-NEXT:    and w9, w9, #0x1
-; CHECK-NEXT:    add x8, x10, x8
 ; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    and x8, x8, #0x1
+; CHECK-NEXT:    add x8, x12, x8
 ; CHECK-NEXT:    st1.s { v0 }[1], [x11]
-; CHECK-NEXT:    add w9, w8, w9
+; CHECK-NEXT:    sub w9, w8, w9
 ; CHECK-NEXT:    orr x8, x10, x8, lsl #2
 ; CHECK-NEXT:    bfi x10, x9, #2, #2
 ; CHECK-NEXT:    st1.s { v0 }[2], [x8]
@@ -463,12 +462,124 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ; CHECK-NEXT:    orr x8, x9, x8, lsl #1
 ; CHECK-NEXT:    strh w1, [x10]
 ; CHECK-NEXT:    strh w2, [x8]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    umov.h w0, v0[0]
-; CHECK-NEXT:    umov.h w1, v0[1]
-; CHECK-NEXT:    umov.h w2, v0[2]
+; CHECK-NEXT:    ldrh w0, [sp, #8]
+; CHECK-NEXT:    ldrh w1, [sp, #10]
+; CHECK-NEXT:    ldrh w2, [sp, #12]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
     %out = call <3 x i3> @llvm.experimental.vector.compress(<3 x i3> %vec, <3 x i1> %mask, <3 x i3> undef)
     ret <3 x i3> %out
+}
+
+define <4 x i32> @test_compress_knownbits_zext_v4i16_4i32(<4 x i16> %vec, <4 x i1>  %mask, <4 x i32> %passthru) nounwind {
+; CHECK-LABEL: test_compress_knownbits_zext_v4i16_4i32:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    ushll.4s v1, v1, #0
+; CHECK-NEXT:    movi.4s v3, #1
+; CHECK-NEXT:    mov x14, sp
+; CHECK-NEXT:    movi.4s v4, #3
+; CHECK-NEXT:    ushll.4s v0, v0, #0
+; CHECK-NEXT:    mov x13, sp
+; CHECK-NEXT:    mov x12, sp
+; CHECK-NEXT:    mov x15, sp
+; CHECK-NEXT:    shl.4s v1, v1, #31
+; CHECK-NEXT:    and.16b v2, v2, v4
+; CHECK-NEXT:    cmlt.4s v1, v1, #0
+; CHECK-NEXT:    str q2, [sp]
+; CHECK-NEXT:    and.16b v3, v1, v3
+; CHECK-NEXT:    mov.s w8, v1[1]
+; CHECK-NEXT:    mov.s w9, v1[2]
+; CHECK-NEXT:    mov.s w10, v1[3]
+; CHECK-NEXT:    fmov w11, s1
+; CHECK-NEXT:    addv.4s s1, v3
+; CHECK-NEXT:    and x16, x11, #0x1
+; CHECK-NEXT:    and x8, x8, #0x1
+; CHECK-NEXT:    bfi x14, x11, #2, #1
+; CHECK-NEXT:    add x8, x16, x8
+; CHECK-NEXT:    and x9, x9, #0x1
+; CHECK-NEXT:    and x10, x10, #0x1
+; CHECK-NEXT:    fmov w11, s1
+; CHECK-NEXT:    add x9, x8, x9
+; CHECK-NEXT:    mov w16, #3 ; =0x3
+; CHECK-NEXT:    add x10, x9, x10
+; CHECK-NEXT:    orr x8, x12, x8, lsl #2
+; CHECK-NEXT:    bfi x15, x9, #2, #2
+; CHECK-NEXT:    cmp x10, #3
+; CHECK-NEXT:    bfi x13, x11, #2, #2
+; CHECK-NEXT:    mov.s w11, v0[3]
+; CHECK-NEXT:    csel x9, x10, x16, lo
+; CHECK-NEXT:    ldr w13, [x13]
+; CHECK-NEXT:    str s0, [sp]
+; CHECK-NEXT:    st1.s { v0 }[1], [x14]
+; CHECK-NEXT:    st1.s { v0 }[2], [x8]
+; CHECK-NEXT:    orr x8, x12, x9, lsl #2
+; CHECK-NEXT:    csel w9, w11, w13, hi
+; CHECK-NEXT:    st1.s { v0 }[3], [x15]
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr q0, [sp], #16
+; CHECK-NEXT:    ret
+entry:
+  %xvec = zext <4 x i16> %vec to <4 x i32>
+  %xpassthru = and <4 x i32> %passthru, splat (i32 3)
+  %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %xvec, <4 x i1> %mask, <4 x i32> %xpassthru)
+  %res = and <4 x i32> %out, splat (i32 65535)
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @test_compress_numsignbits_sext_v4i16_4i32(<4 x i16> %vec, <4 x i1> %mask, <4 x i32> %passthru) nounwind {
+; CHECK-LABEL: test_compress_numsignbits_sext_v4i16_4i32:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    ushll.4s v1, v1, #0
+; CHECK-NEXT:    movi.4s v3, #1
+; CHECK-NEXT:    mov x14, sp
+; CHECK-NEXT:    movi.4s v4, #3
+; CHECK-NEXT:    sshll.4s v0, v0, #0
+; CHECK-NEXT:    mov x13, sp
+; CHECK-NEXT:    mov x12, sp
+; CHECK-NEXT:    mov x15, sp
+; CHECK-NEXT:    shl.4s v1, v1, #31
+; CHECK-NEXT:    and.16b v2, v2, v4
+; CHECK-NEXT:    cmlt.4s v1, v1, #0
+; CHECK-NEXT:    str q2, [sp]
+; CHECK-NEXT:    and.16b v3, v1, v3
+; CHECK-NEXT:    mov.s w8, v1[1]
+; CHECK-NEXT:    mov.s w9, v1[2]
+; CHECK-NEXT:    mov.s w10, v1[3]
+; CHECK-NEXT:    fmov w11, s1
+; CHECK-NEXT:    addv.4s s1, v3
+; CHECK-NEXT:    and x16, x11, #0x1
+; CHECK-NEXT:    and x8, x8, #0x1
+; CHECK-NEXT:    bfi x14, x11, #2, #1
+; CHECK-NEXT:    add x8, x16, x8
+; CHECK-NEXT:    and x9, x9, #0x1
+; CHECK-NEXT:    and x10, x10, #0x1
+; CHECK-NEXT:    fmov w11, s1
+; CHECK-NEXT:    add x9, x8, x9
+; CHECK-NEXT:    mov w16, #3 ; =0x3
+; CHECK-NEXT:    add x10, x9, x10
+; CHECK-NEXT:    orr x8, x12, x8, lsl #2
+; CHECK-NEXT:    bfi x15, x9, #2, #2
+; CHECK-NEXT:    cmp x10, #3
+; CHECK-NEXT:    bfi x13, x11, #2, #2
+; CHECK-NEXT:    mov.s w11, v0[3]
+; CHECK-NEXT:    csel x9, x10, x16, lo
+; CHECK-NEXT:    ldr w13, [x13]
+; CHECK-NEXT:    str s0, [sp]
+; CHECK-NEXT:    st1.s { v0 }[1], [x14]
+; CHECK-NEXT:    st1.s { v0 }[2], [x8]
+; CHECK-NEXT:    orr x8, x12, x9, lsl #2
+; CHECK-NEXT:    csel w9, w11, w13, hi
+; CHECK-NEXT:    st1.s { v0 }[3], [x15]
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    ldr q0, [sp], #16
+; CHECK-NEXT:    ret
+entry:
+  %xvec = sext <4 x i16> %vec to <4 x i32>
+  %xpassthru = and <4 x i32> %passthru, splat(i32 3)
+  %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %xvec, <4 x i1> %mask, <4 x i32> %xpassthru)
+  %shl = shl <4 x i32> %out, splat(i32 16)
+  %res = ashr <4 x i32> %shl, splat(i32 16)
+  ret <4 x i32> %res
 }

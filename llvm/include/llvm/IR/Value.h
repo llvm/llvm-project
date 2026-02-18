@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CBindingWrapping.h"
@@ -50,7 +51,6 @@ class ModuleSlotTracker;
 class raw_ostream;
 template<typename ValueTy> class StringMapEntry;
 class Twine;
-class Type;
 class User;
 
 using ValueName = StringMapEntry<Value *>;
@@ -256,7 +256,7 @@ public:
   Type *getType() const { return VTy; }
 
   /// All values hold a context through their type.
-  LLVM_ABI LLVMContext &getContext() const;
+  LLVMContext &getContext() const { return VTy->getContext(); }
 
   // All values can potentially be named.
   bool hasName() const { return HasName; }
@@ -484,8 +484,8 @@ public:
   /// Remove every uses that can safely be removed.
   ///
   /// This will remove for example uses in llvm.assume.
-  /// This should be used when performing want to perform a tranformation but
-  /// some Droppable uses pervent it.
+  /// This should be used when performing want to perform a transformation but
+  /// some Droppable uses prevent it.
   /// This function optionally takes a filter to only remove some droppable
   /// uses.
   LLVM_ABI void
@@ -732,9 +732,10 @@ public:
   ///
   /// Note that this function will never return a nullptr. It will also never
   /// manipulate the \p Offset in a way that would not match the difference
-  /// between the underlying value and the returned one. Thus, if no constant
-  /// offset was found, the returned value is the underlying one and \p Offset
-  /// is unchanged.
+  /// between the underlying value and the returned one. Thus, if a variable
+  /// offset is encountered during traversal, the returned value is the first
+  /// traversed Value that introduces a non-constant offset and \p Offset is the
+  /// accumulated constant offset up to that point.
   LLVM_ABI const Value *stripAndAccumulateConstantOffsets(
       const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
       bool AllowInvariantGroup = false,

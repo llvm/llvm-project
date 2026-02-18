@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fdebug-dump-parse-tree -fopenmp -fopenmp-version=45 %s | FileCheck %s
+! RUN: %flang_fc1 -fdebug-dump-parse-tree-no-sema -fopenmp -fopenmp-version=45 %s | FileCheck %s
 
 ! Check that standalone ORDERED is successfully distinguished form block associated ORDERED
 
@@ -11,8 +11,8 @@ subroutine standalone
       ! CHECK:      OpenMPConstruct -> OpenMPStandaloneConstruct
       ! CHECK-NEXT: | OmpDirectiveName -> llvm::omp::Directive = ordered
       ! CHECK-NEXT: | OmpClauseList ->
-      ! CHECK-NEXT: | Flags = None
-      !$omp ordered
+      ! CHECK-NEXT: | Flags = {}
+      !$omp ordered depend(source)
       x(i, j) = i + j
     end do
   end do
@@ -25,11 +25,11 @@ subroutine strict_block
   integer :: tmp
   do i = 1, 10
     do j = 1,10
-      ! CHECK:      OpenMPConstruct -> OpenMPBlockConstruct
+      ! CHECK:      OpenMPConstruct -> OmpBlockConstruct
       ! CHECK-NEXT: | OmpBeginDirective
       ! CHECK-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = ordered
       ! CHECK-NEXT: | | OmpClauseList ->
-      ! CHECK-NEXT: | | Flags = None
+      ! CHECK-NEXT: | | Flags = {}
       !$omp ordered
       block
         tmp = i + j
@@ -46,11 +46,11 @@ subroutine loose_block
   integer :: tmp
   do i = 1, 10
     do j = 1,10
-      ! CHECK:      OpenMPConstruct -> OpenMPBlockConstruct
+      ! CHECK:      OpenMPConstruct -> OmpBlockConstruct
       ! CHECK-NEXT: | OmpBeginDirective
       ! CHECK-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = ordered
       ! CHECK-NEXT: | | OmpClauseList ->
-      ! CHECK-NEXT: | | Flags = None
+      ! CHECK-NEXT: | | Flags = {}
       !$omp ordered
         tmp = i + j
         x(i, j) = tmp

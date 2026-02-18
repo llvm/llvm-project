@@ -42,8 +42,7 @@ public:
   ARMBaseTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                        StringRef FS, const TargetOptions &Options,
                        std::optional<Reloc::Model> RM,
-                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
-                       bool isLittle);
+                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL);
   ~ARMBaseTargetMachine() override;
 
   const ARMSubtarget *getSubtargetImpl(const Function &F) const override;
@@ -97,6 +96,20 @@ public:
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
     // Addrspacecasts are always noops.
     return true;
+  }
+
+  bool isGVIndirectSymbol(const GlobalValue *GV) const {
+    if (!shouldAssumeDSOLocal(GV))
+      return true;
+
+    // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
+    // the section that is being relocated. This means we have to use o load
+    // even for GVs that are known to be local to the dso.
+    if (getTargetTriple().isOSBinFormatMachO() && isPositionIndependent() &&
+        (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
+      return true;
+
+    return false;
   }
 
   yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;

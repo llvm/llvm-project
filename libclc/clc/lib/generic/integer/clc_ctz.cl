@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/integer/clc_ctz.h>
 #include <clc/internal/clc.h>
 

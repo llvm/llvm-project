@@ -195,6 +195,13 @@ InliningInfo getInliningInfo(const BinaryFunction &BF) {
         if (BC.MIB->isPush(Inst) || BC.MIB->isPop(Inst))
           continue;
 
+        // Pointer signing and authenticatin instructions are used around
+        // Push and Pop. These are also straightforward to handle.
+        if (BC.isAArch64() &&
+            (BC.MIB->isPSignOnLR(Inst) || BC.MIB->isPAuthOnLR(Inst) ||
+             BC.MIB->isPAuthAndRet(Inst)))
+          continue;
+
         DirectSP |= BC.MIB->hasDefOfPhysReg(Inst, SPReg) ||
                     BC.MIB->hasUseOfPhysReg(Inst, SPReg);
       }
@@ -338,6 +345,18 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
                                 BC.Ctx.get());
       }
 
+      // Handling fused authentication and return instructions (Armv8.3-A):
+      // if the Callee does not end in a tailcall, the return will be removed
+      // from the inlined block. If that return is RETA(A|B), we have to keep
+      // the authentication part.
+      // RETAA -> AUTIASP
+      // RETAB -> AUTIBSP
+      if (!CSIsTailCall && BC.isAArch64() && BC.MIB->isPAuthAndRet(Inst)) {
+        MCInst Auth;
+        BC.MIB->createMatchingAuth(Inst, Auth);
+        InsertII =
+            std::next(InlinedBB->insertInstruction(InsertII, std::move(Auth)));
+      }
       if (CSIsTailCall || (!MIB.isCall(Inst) && !MIB.isReturn(Inst))) {
         InsertII =
             std::next(InlinedBB->insertInstruction(InsertII, std::move(Inst)));
@@ -472,6 +491,32 @@ bool Inliner::inlineCallsInFunction(BinaryFunction &Function) {
         }
       }
 
+      // AArch64 BTI:
+      // If the callee has an indirect tailcall (BR), we would transform it to
+      // an indirect call (BLR) in InlineCall. Because of this, we would have to
+      // update the BTI at the target of the tailcall. However, these targets
+      // are not known. Instead, we skip inlining blocks with indirect
+      // tailcalls.
+      auto HasIndirectTailCall = [&](const BinaryFunction &BF) -> bool {
+        for (const auto &BB : BF) {
+          for (const auto &II : BB) {
+            if (BC.MIB->isIndirectBranch(II) && BC.MIB->isTailCall(II)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+
+      if (BC.isAArch64() && BC.usesBTI() &&
+          HasIndirectTailCall(*TargetFunction)) {
+        ++InstIt;
+        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: Skipping inlining block with tailcall"
+                          << " in " << Function << " : " << BB->getName()
+                          << " to keep BTIs consistent.\n");
+        continue;
+      }
+
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: inlining call to " << *TargetFunction
                         << " in " << Function << " : " << BB->getName()
                         << ". Count: " << BB->getKnownExecutionCount()
@@ -526,7 +571,7 @@ Error Inliner::runOnFunctions(BinaryContext &BC) {
     InliningCandidates.clear();
     findInliningCandidates(BC);
 
-    std::vector<BinaryFunction *> ConsideredFunctions;
+    BinaryFunctionListType ConsideredFunctions;
     for (auto &BFI : BC.getBinaryFunctions()) {
       BinaryFunction &Function = BFI.second;
       if (!shouldOptimize(Function))

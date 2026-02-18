@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s cppcoreguidelines-pro-bounds-constant-array-index %t
+// RUN: %check_clang_tidy %s cppcoreguidelines-pro-bounds-constant-array-index %t
 
 typedef __SIZE_TYPE__ size_t;
 
@@ -151,7 +151,6 @@ void g() {
   for (int i = 0; i < 10; ++i) {
     a[i] = i;
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use array subscript when the index is not an integer constant expression
-    // CHECK-FIXES: gsl::at(a, i) = i;
     gsl::at(a, i) = i; // OK, gsl::at() instead of []
   }
 

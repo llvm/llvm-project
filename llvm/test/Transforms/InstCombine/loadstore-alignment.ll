@@ -34,7 +34,7 @@ define <2 x i64> @hem_2d(i32 %i, i32 %j) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[J:%.*]] to i64
 ; CHECK-NEXT:    [[T_SPLIT:%.*]] = getelementptr [13 x <2 x i64>], ptr @xx, i64 [[TMP1]]
-; CHECK-NEXT:    [[T:%.*]] = getelementptr [13 x <2 x i64>], ptr [[T_SPLIT]], i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, ptr [[T_SPLIT]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr [[T]], align 1
 ; CHECK-NEXT:    ret <2 x i64> [[L]]
 ;
@@ -92,7 +92,7 @@ define void @hem_2d_store(i32 %i, i32 %j, <2 x i64> %y) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[J:%.*]] to i64
 ; CHECK-NEXT:    [[T_SPLIT:%.*]] = getelementptr [13 x <2 x i64>], ptr @xx, i64 [[TMP1]]
-; CHECK-NEXT:    [[T:%.*]] = getelementptr [13 x <2 x i64>], ptr [[T_SPLIT]], i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, ptr [[T_SPLIT]], i64 [[TMP2]]
 ; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr [[T]], align 1
 ; CHECK-NEXT:    ret void
 ;

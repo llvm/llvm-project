@@ -5,7 +5,7 @@
   target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
   target triple = "powerpc64le-unknown-linux-gnu"
   
-  define dso_local void @test() local_unnamed_addr #0 {
+  define dso_local void @test() local_unnamed_addr {
   test_entry:
     %_val_domain_ = load i32, ptr undef, align 4
     %_conv765 = sext i32 %_val_domain_ to i64
@@ -53,7 +53,6 @@
   ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
   declare i1 @llvm.loop.decrement.i64(i64) #2
   
-  attributes #0 = { "unsafe-fp-math"="true" }
   attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
   attributes #2 = { nocallback noduplicate nofree nosync nounwind willreturn }
   

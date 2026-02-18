@@ -63,7 +63,7 @@ public:
     if (singleWord())
       return APInt(BitWidth, Val, Signed);
     unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
-    return llvm::APInt(BitWidth, NumWords, Memory);
+    return llvm::APInt(BitWidth, llvm::ArrayRef(Memory, NumWords));
   }
 
 public:

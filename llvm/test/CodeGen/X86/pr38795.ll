@@ -260,7 +260,6 @@ define void @verifier_error_reduced_issue38788(i1 %cmp11) {
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    .cfi_offset %ebx, -8
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    jmp .LBB1_1
@@ -272,10 +271,9 @@ define void @verifier_error_reduced_issue38788(i1 %cmp11) {
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    movl %edx, %ebx
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:  .LBB1_1: # %for.cond
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    je .LBB1_3
 ; CHECK-NEXT:  # %bb.2: # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -283,12 +281,11 @@ define void @verifier_error_reduced_issue38788(i1 %cmp11) {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_3: # %if.end
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB1_4
 ; CHECK-NEXT:  # %bb.9: # %if.then13
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    movl $0, %ebx
 ; CHECK-NEXT:    jne .LBB1_8

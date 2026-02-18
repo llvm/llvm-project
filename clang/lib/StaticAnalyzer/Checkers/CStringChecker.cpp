@@ -163,6 +163,7 @@ public:
       {{CDM::CLibrary, {"strcasecmp"}, 2}, &CStringChecker::evalStrcasecmp},
       {{CDM::CLibrary, {"strncasecmp"}, 3}, &CStringChecker::evalStrncasecmp},
       {{CDM::CLibrary, {"strsep"}, 2}, &CStringChecker::evalStrsep},
+      {{CDM::CLibrary, {"strxfrm"}, 3}, &CStringChecker::evalStrxfrm},
       {{CDM::CLibrary, {"bcopy"}, 3}, &CStringChecker::evalBcopy},
       {{CDM::CLibrary, {"bcmp"}, 3},
        std::bind(&CStringChecker::evalMemcmp, _1, _2, _3, CK_Regular)},
@@ -211,6 +212,8 @@ public:
                         bool ReturnEnd, bool IsBounded, ConcatFnKind appendK,
                         bool returnPtr = true) const;
 
+  void evalStrxfrm(CheckerContext &C, const CallEvent &Call) const;
+
   void evalStrcat(CheckerContext &C, const CallEvent &Call) const;
   void evalStrncat(CheckerContext &C, const CallEvent &Call) const;
   void evalStrlcat(CheckerContext &C, const CallEvent &Call) const;
@@ -248,6 +251,8 @@ public:
                                         const Expr *Ex,
                                         const MemRegion *MR,
                                         bool hypothetical);
+  static const StringLiteral *getStringLiteralFromRegion(const MemRegion *MR);
+
   SVal getCStringLength(CheckerContext &C,
                         ProgramStateRef &state,
                         const Expr *Ex,
@@ -669,6 +674,10 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
 
   ProgramStateRef stateTrue, stateFalse;
 
+  if (!First.Expression->getType()->isAnyPointerType() ||
+      !Second.Expression->getType()->isAnyPointerType())
+    return state;
+
   // Assume different address spaces cannot overlap.
   if (First.Expression->getType()->getPointeeType().getAddressSpace() !=
       Second.Expression->getType()->getPointeeType().getAddressSpace())
@@ -976,6 +985,21 @@ SVal CStringChecker::getCStringLengthForRegion(CheckerContext &C,
   return strLength;
 }
 
+const StringLiteral *
+CStringChecker::getStringLiteralFromRegion(const MemRegion *MR) {
+  switch (MR->getKind()) {
+  case MemRegion::StringRegionKind:
+    return cast<StringRegion>(MR)->getStringLiteral();
+  case MemRegion::NonParamVarRegionKind:
+    if (const VarDecl *Decl = cast<NonParamVarRegion>(MR)->getDecl();
+        Decl->getType().isConstQualified() && Decl->hasGlobalStorage())
+      return dyn_cast_or_null<StringLiteral>(Decl->getInit());
+    return nullptr;
+  default:
+    return nullptr;
+  }
+}
+
 SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
                                       const Expr *Ex, SVal Buf,
                                       bool hypothetical) const {
@@ -1006,30 +1030,19 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
   // its length. For anything we can't figure out, just return UnknownVal.
   MR = MR->StripCasts();
 
-  switch (MR->getKind()) {
-  case MemRegion::StringRegionKind: {
-    // Modifying the contents of string regions is undefined [C99 6.4.5p6],
-    // so we can assume that the byte length is the correct C string length.
-    SValBuilder &svalBuilder = C.getSValBuilder();
-    QualType sizeTy = svalBuilder.getContext().getSizeType();
-    const StringLiteral *strLit = cast<StringRegion>(MR)->getStringLiteral();
-    return svalBuilder.makeIntVal(strLit->getLength(), sizeTy);
-  }
-  case MemRegion::NonParamVarRegionKind: {
+  if (const StringLiteral *StrLit = getStringLiteralFromRegion(MR)) {
     // If we have a global constant with a string literal initializer,
     // compute the initializer's length.
-    const VarDecl *Decl = cast<NonParamVarRegion>(MR)->getDecl();
-    if (Decl->getType().isConstQualified() && Decl->hasGlobalStorage()) {
-      if (const Expr *Init = Decl->getInit()) {
-        if (auto *StrLit = dyn_cast<StringLiteral>(Init)) {
-          SValBuilder &SvalBuilder = C.getSValBuilder();
-          QualType SizeTy = SvalBuilder.getContext().getSizeType();
-          return SvalBuilder.makeIntVal(StrLit->getLength(), SizeTy);
-        }
-      }
-    }
-    [[fallthrough]];
+    // Modifying the contents of string regions is undefined [C99 6.4.5p6],
+    // so we can assume that the byte length is the correct C string length.
+    // FIXME: Embedded null characters are not handled.
+    SValBuilder &SVB = C.getSValBuilder();
+    return SVB.makeIntVal(StrLit->getLength(), SVB.getContext().getSizeType());
   }
+
+  switch (MR->getKind()) {
+  case MemRegion::StringRegionKind:
+  case MemRegion::NonParamVarRegionKind:
   case MemRegion::SymbolicRegionKind:
   case MemRegion::AllocaRegionKind:
   case MemRegion::ParamVarRegionKind:
@@ -1039,10 +1052,28 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
   case MemRegion::CompoundLiteralRegionKind:
     // FIXME: Can we track this? Is it necessary?
     return UnknownVal();
-  case MemRegion::ElementRegionKind:
-    // FIXME: How can we handle this? It's not good enough to subtract the
-    // offset from the base string length; consider "123\x00567" and &a[5].
+  case MemRegion::ElementRegionKind: {
+    // If an offset into the string literal is used, use the original length
+    // minus the offset.
+    // FIXME: Embedded null characters are not handled.
+    const ElementRegion *ER = cast<ElementRegion>(MR);
+    const SubRegion *SuperReg =
+        cast<SubRegion>(ER->getSuperRegion()->StripCasts());
+    const StringLiteral *StrLit = getStringLiteralFromRegion(SuperReg);
+    if (!StrLit)
+      return UnknownVal();
+    SValBuilder &SVB = C.getSValBuilder();
+    NonLoc Idx = ER->getIndex();
+    QualType SizeTy = SVB.getContext().getSizeType();
+    NonLoc LengthVal =
+        SVB.makeIntVal(StrLit->getLength(), SizeTy).castAs<NonLoc>();
+    if (state->assume(SVB.evalBinOpNN(state, BO_LE, Idx, LengthVal,
+                                      SVB.getConditionType())
+                          .castAs<DefinedOrUnknownSVal>(),
+                      true))
+      return SVB.evalBinOp(state, BO_Sub, LengthVal, Idx, SizeTy);
     return UnknownVal();
+  }
   default:
     // Other regions (mostly non-data) can't have a reliable C string length.
     // In this case, an error is emitted and UndefinedVal is returned.
@@ -1067,6 +1098,7 @@ SVal CStringChecker::getCStringLength(CheckerContext &C, ProgramStateRef &state,
 
 const StringLiteral *CStringChecker::getCStringLiteral(CheckerContext &C,
   ProgramStateRef &state, const Expr *expr, SVal val) const {
+  // FIXME: use getStringLiteralFromRegion (and remove unused parameters)?
 
   // Get the memory region pointed to by the val.
   const MemRegion *bufRegion = val.getAsRegion();
@@ -2241,6 +2273,106 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
   // Set the return value.
   state = state->BindExpr(Call.getOriginExpr(), LCtx, Result);
   C.addTransition(state);
+}
+
+void CStringChecker::evalStrxfrm(CheckerContext &C,
+                                 const CallEvent &Call) const {
+  // size_t strxfrm(char *dest, const char *src, size_t n);
+  CurrentFunctionDescription = "locale transformation function";
+
+  ProgramStateRef State = C.getState();
+  const LocationContext *LCtx = C.getLocationContext();
+  SValBuilder &SVB = C.getSValBuilder();
+
+  // Get arguments
+  DestinationArgExpr Dest = {{Call.getArgExpr(0), 0}};
+  SourceArgExpr Source = {{Call.getArgExpr(1), 1}};
+  SizeArgExpr Size = {{Call.getArgExpr(2), 2}};
+
+  // `src` can never be null
+  SVal SrcVal = State->getSVal(Source.Expression, LCtx);
+  State = checkNonNull(C, State, Source, SrcVal);
+  if (!State)
+    return;
+
+  // Buffer must not overlap
+  State = CheckOverlap(C, State, Size, Dest, Source, CK_Regular);
+  if (!State)
+    return;
+
+  // The function returns an implementation-defined length needed for
+  // transformation
+  SVal RetVal = SVB.conjureSymbolVal(Call, C.blockCount());
+
+  auto BindReturnAndTransition = [&RetVal, &Call, LCtx,
+                                  &C](ProgramStateRef State) {
+    if (State) {
+      State = State->BindExpr(Call.getOriginExpr(), LCtx, RetVal);
+      C.addTransition(State);
+    }
+  };
+
+  // Check if size is zero
+  SVal SizeVal = State->getSVal(Size.Expression, LCtx);
+  QualType SizeTy = Size.Expression->getType();
+
+  auto [StateZeroSize, StateSizeNonZero] =
+      assumeZero(C, State, SizeVal, SizeTy);
+
+  // We can't assume anything about size, just bind the return value and be done
+  if (!StateZeroSize && !StateSizeNonZero)
+    return BindReturnAndTransition(State);
+
+  // If `n` is 0, we just return the implementation defined length
+  if (StateZeroSize && !StateSizeNonZero)
+    return BindReturnAndTransition(StateZeroSize);
+
+  // If `n` is not 0, `dest` can not be null.
+  SVal DestVal = StateSizeNonZero->getSVal(Dest.Expression, LCtx);
+  StateSizeNonZero = checkNonNull(C, StateSizeNonZero, Dest, DestVal);
+  if (!StateSizeNonZero)
+    return;
+
+  // Check that we can write to the destination buffer
+  StateSizeNonZero = CheckBufferAccess(C, StateSizeNonZero, Dest, Size,
+                                       AccessKind::write, CK_Regular);
+  if (!StateSizeNonZero)
+    return;
+
+  // Success: return value < `n`
+  // Failure: return value >= `n`
+  auto ComparisonVal = SVB.evalBinOp(StateSizeNonZero, BO_LT, RetVal, SizeVal,
+                                     SVB.getConditionType())
+                           .getAs<DefinedOrUnknownSVal>();
+  if (!ComparisonVal) {
+    // Fallback: invalidate the buffer.
+    StateSizeNonZero = invalidateDestinationBufferBySize(
+        C, StateSizeNonZero, Dest.Expression, Call.getCFGElementRef(), DestVal,
+        SizeVal, Size.Expression->getType());
+    return BindReturnAndTransition(StateSizeNonZero);
+  }
+
+  auto [StateSuccess, StateFailure] = StateSizeNonZero->assume(*ComparisonVal);
+
+  if (StateSuccess) {
+    // The transformation invalidated the buffer.
+    StateSuccess = invalidateDestinationBufferBySize(
+        C, StateSuccess, Dest.Expression, Call.getCFGElementRef(), DestVal,
+        SizeVal, Size.Expression->getType());
+    BindReturnAndTransition(StateSuccess);
+    // Fallthrough: We also want to add a transition to the failure state below.
+  }
+
+  if (StateFailure) {
+    // `dest` buffer content is undefined
+    if (auto DestLoc = DestVal.getAs<loc::MemRegionVal>()) {
+      StateFailure = StateFailure->killBinding(*DestLoc);
+      StateFailure =
+          StateFailure->bindDefaultInitial(*DestLoc, UndefinedVal{}, LCtx);
+    }
+
+    BindReturnAndTransition(StateFailure);
+  }
 }
 
 void CStringChecker::evalStrcmp(CheckerContext &C,

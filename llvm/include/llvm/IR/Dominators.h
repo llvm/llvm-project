@@ -32,7 +32,6 @@
 #include "llvm/Support/CFGUpdate.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericDomTree.h"
-#include <algorithm>
 #include <utility>
 
 namespace llvm {

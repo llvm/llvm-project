@@ -490,22 +490,93 @@ define i1 @extract_last_i1_scalable(<vscale x 16 x i1> %data, <vscale x 16 x i1>
   ret i1 %res
 }
 
-declare i8 @llvm.experimental.vector.extract.last.active.v16i8(<16 x i8>, <16 x i1>, i8)
-declare i16 @llvm.experimental.vector.extract.last.active.v8i16(<8 x i16>, <8 x i1>, i16)
-declare i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32>, <4 x i1>, i32)
-declare i64 @llvm.experimental.vector.extract.last.active.v2i64(<2 x i64>, <2 x i1>, i64)
-declare half @llvm.experimental.vector.extract.last.active.v8f16(<8 x half>, <8 x i1>, half)
-declare bfloat @llvm.experimental.vector.extract.last.active.v8bf16(<8 x bfloat>, <8 x i1>, bfloat)
-declare float @llvm.experimental.vector.extract.last.active.v4f32(<4 x float>, <4 x i1>, float)
-declare double @llvm.experimental.vector.extract.last.active.v2f64(<2 x double>, <2 x i1>, double)
-declare i8 @llvm.experimental.vector.extract.last.active.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i1>, i8)
-declare i16 @llvm.experimental.vector.extract.last.active.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i1>, i16)
-declare i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i1>, i32)
-declare i64 @llvm.experimental.vector.extract.last.active.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, i64)
-declare half @llvm.experimental.vector.extract.last.active.nxv8f16(<vscale x 8 x half>, <vscale x 8 x i1>, half)
-declare bfloat @llvm.experimental.vector.extract.last.active.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x i1>, bfloat)
-declare float @llvm.experimental.vector.extract.last.active.nxv4f32(<vscale x 4 x float>, <vscale x 4 x i1>, float)
-declare double @llvm.experimental.vector.extract.last.active.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, double)
-declare i1 @llvm.experimental.vector.extract.last.active.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, i1)
+; Test v3i32 - non-power-of-2 element count that requires mask widening
+; (v3i1 -> v4i1) via WidenVecOp_VECTOR_FIND_LAST_ACTIVE.
+define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) {
+; NEON-FIXED-LABEL: extract_last_active_v3i32:
+; NEON-FIXED:       // %bb.0:
+; NEON-FIXED-NEXT:    sub sp, sp, #16
+; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
+; NEON-FIXED-NEXT:    movi v1.2d, #0000000000000000
+; NEON-FIXED-NEXT:    adrp x9, .LCPI18_0
+; NEON-FIXED-NEXT:    mov x11, sp
+; NEON-FIXED-NEXT:    ldr d2, [x9, :lo12:.LCPI18_0]
+; NEON-FIXED-NEXT:    str q0, [sp]
+; NEON-FIXED-NEXT:    mov v1.h[0], w0
+; NEON-FIXED-NEXT:    mov v1.h[1], w1
+; NEON-FIXED-NEXT:    fmov x8, d1
+; NEON-FIXED-NEXT:    mov v1.h[2], w2
+; NEON-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
+; NEON-FIXED-NEXT:    fmov x9, d1
+; NEON-FIXED-NEXT:    umaxv h2, v2.4h
+; NEON-FIXED-NEXT:    lsr x9, x9, #32
+; NEON-FIXED-NEXT:    orr w9, w8, w9
+; NEON-FIXED-NEXT:    orr w8, w9, w8, lsr #16
+; NEON-FIXED-NEXT:    fmov w10, s2
+; NEON-FIXED-NEXT:    tst w8, #0x1
+; NEON-FIXED-NEXT:    bfi x11, x10, #2, #2
+; NEON-FIXED-NEXT:    ldr w9, [x11]
+; NEON-FIXED-NEXT:    csinv w0, w9, wzr, ne
+; NEON-FIXED-NEXT:    add sp, sp, #16
+; NEON-FIXED-NEXT:    ret
+;
+; SVE-FIXED-LABEL: extract_last_active_v3i32:
+; SVE-FIXED:       // %bb.0:
+; SVE-FIXED-NEXT:    sub sp, sp, #16
+; SVE-FIXED-NEXT:    .cfi_def_cfa_offset 16
+; SVE-FIXED-NEXT:    movi v1.2d, #0000000000000000
+; SVE-FIXED-NEXT:    index z2.h, #0, #1
+; SVE-FIXED-NEXT:    mov x11, sp
+; SVE-FIXED-NEXT:    str q0, [sp]
+; SVE-FIXED-NEXT:    mov v1.h[0], w0
+; SVE-FIXED-NEXT:    mov v1.h[1], w1
+; SVE-FIXED-NEXT:    fmov x8, d1
+; SVE-FIXED-NEXT:    mov v1.h[2], w2
+; SVE-FIXED-NEXT:    and v2.8b, v1.8b, v2.8b
+; SVE-FIXED-NEXT:    fmov x9, d1
+; SVE-FIXED-NEXT:    umaxv h2, v2.4h
+; SVE-FIXED-NEXT:    lsr x9, x9, #32
+; SVE-FIXED-NEXT:    orr w9, w8, w9
+; SVE-FIXED-NEXT:    orr w8, w9, w8, lsr #16
+; SVE-FIXED-NEXT:    fmov w10, s2
+; SVE-FIXED-NEXT:    tst w8, #0x1
+; SVE-FIXED-NEXT:    bfi x11, x10, #2, #2
+; SVE-FIXED-NEXT:    ldr w9, [x11]
+; SVE-FIXED-NEXT:    csinv w0, w9, wzr, ne
+; SVE-FIXED-NEXT:    add sp, sp, #16
+; SVE-FIXED-NEXT:    ret
+  %res = call i32 @llvm.experimental.vector.extract.last.active.v3i32(<3 x i32> %a, <3 x i1> %c, i32 -1)
+  ret i32 %res
+}
 
-attributes #0 = { "target-features"="+sve" vscale_range(1, 16) }
+define i8 @extract_last_active_split(<vscale x 32 x i8> %data, <vscale x 32 x i1> %mask, i8 %passthru) #0 {
+; CHECK-LABEL: extract_last_active_split:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    index z2.b, #0, #1
+; CHECK-NEXT:    ptest p1, p1.b
+; CHECK-NEXT:    rdvl x10, #1
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    lastb w8, p1, z2.b
+; CHECK-NEXT:    lastb w9, p0, z2.b
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    add x8, x8, x10
+; CHECK-NEXT:    rdvl x10, #2
+; CHECK-NEXT:    csel x8, x8, x9, ne
+; CHECK-NEXT:    sub x9, x10, #1
+; CHECK-NEXT:    cmp x8, x9
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ptest p0, p0.b
+; CHECK-NEXT:    ldrb w8, [x9, x8]
+; CHECK-NEXT:    csel w0, w8, w0, ne
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %res = call i8 @llvm.experimental.vector.extract.last.active.nxv32i8(<vscale x 32 x i8> %data, <vscale x 32 x i1> %mask, i8 %passthru)
+  ret i8 %res
+}
+
+attributes #0 = { nounwind "target-features"="+sve" vscale_range(1, 16) }

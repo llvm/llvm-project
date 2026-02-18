@@ -69,14 +69,14 @@ define double @add_sub_su64(<2 x i64> %a, <2 x i64> %b) nounwind readnone {
 ; CHECK-LABEL: add_sub_su64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add d0, d1, d0
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    sub d0, d1, d0
 ; CHECK-NEXT:    ret
 ;
 ; GENERIC-LABEL: add_sub_su64:
 ; GENERIC:       // %bb.0:
 ; GENERIC-NEXT:    add d0, d1, d0
-; GENERIC-NEXT:    fmov d1, xzr
+; GENERIC-NEXT:    movi d1, #0000000000000000
 ; GENERIC-NEXT:    sub d0, d1, d0
 ; GENERIC-NEXT:    ret
   %vecext = extractelement <2 x i64> %a, i32 0

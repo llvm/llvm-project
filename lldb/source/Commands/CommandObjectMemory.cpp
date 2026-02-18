@@ -365,6 +365,8 @@ protected:
       return;
     }
 
+    ExecutionContextScope *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
+
     CompilerType compiler_type;
     Status error;
 
@@ -520,7 +522,7 @@ protected:
         --pointer_count;
       }
 
-      auto size_or_err = compiler_type.GetByteSize(nullptr);
+      auto size_or_err = compiler_type.GetByteSize(exe_scope);
       if (!size_or_err) {
         result.AppendErrorWithFormat(
             "unable to get the byte size of the type '%s'\n%s",
@@ -640,7 +642,7 @@ protected:
       if (!m_format_options.GetFormatValue().OptionWasSet())
         m_format_options.GetFormatValue().SetCurrentValue(eFormatDefault);
 
-      auto size_or_err = compiler_type.GetByteSize(nullptr);
+      auto size_or_err = compiler_type.GetByteSize(exe_scope);
       if (!size_or_err) {
         result.AppendError(llvm::toString(size_or_err.takeError()));
         return;
@@ -800,7 +802,6 @@ protected:
       output_stream_p = &result.GetOutputStream();
     }
 
-    ExecutionContextScope *exe_scope = m_exe_ctx.GetBestExecutionContextScope();
     if (compiler_type.GetOpaqueQualType()) {
       for (uint32_t i = 0; i < item_count; ++i) {
         addr_t item_addr = addr + (i * item_byte_size);
@@ -1650,12 +1651,18 @@ public:
   };
 
   CommandObjectMemoryRegion(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "memory region",
-                            "Get information on the memory region containing "
-                            "an address in the current target process.",
-                            "memory region <address-expression> (or --all)",
-                            eCommandRequiresProcess | eCommandTryTargetAPILock |
-                                eCommandProcessMustBeLaunched) {
+      : CommandObjectParsed(
+            interpreter, "memory region",
+            "Get information on the memory region containing "
+            "an address in the current target process.\n"
+            "If this command is given an <address-expression> once "
+            "and then repeated without options, it will try to print "
+            "the memory region that follows the previously printed "
+            "region. The command can be repeated until the end of "
+            "the address range is reached.",
+            "memory region <address-expression> (or --all)",
+            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                eCommandProcessMustBeLaunched) {
     // Address in option set 1.
     m_arguments.push_back(CommandArgumentEntry{CommandArgumentData(
         eArgTypeAddressOrExpression, eArgRepeatPlain, LLDB_OPT_SET_1)});
@@ -1734,7 +1741,25 @@ protected:
     const size_t argc = command.GetArgumentCount();
     const lldb::ABISP &abi = process_sp->GetABI();
 
-    if (argc == 1) {
+    if (argc == 0) {
+      if (!m_memory_region_options.m_all) {
+        if ( // When we're repeating the command, the previous end
+             // address is used for load_addr. If that was 0xF...F then
+             // we must have reached the end of memory.
+            (load_addr == LLDB_INVALID_ADDRESS) ||
+            // If the target has non-address bits (tags, limited virtual
+            // address size, etc.), the end of mappable memory will be
+            // lower than that. So if we find any non-address bit set,
+            // we must be at the end of the mappable range.
+            (abi && (abi->FixAnyAddress(load_addr) != load_addr))) {
+          result.AppendErrorWithFormat(
+              "No next region address set: one address expression argument or "
+              "\"--all\" option required:\nUsage: %s\n",
+              m_cmd_syntax.c_str());
+          return;
+        }
+      }
+    } else if (argc == 1) {
       if (m_memory_region_options.m_all) {
         result.AppendError(
             "The \"--all\" option cannot be used when an address "
@@ -1750,17 +1775,8 @@ protected:
                                      command[0].c_str(), error.AsCString());
         return;
       }
-    } else if (argc > 1 ||
-               // When we're repeating the command, the previous end address is
-               // used for load_addr. If that was 0xF...F then we must have
-               // reached the end of memory.
-               (argc == 0 && !m_memory_region_options.m_all &&
-                load_addr == LLDB_INVALID_ADDRESS) ||
-               // If the target has non-address bits (tags, limited virtual
-               // address size, etc.), the end of mappable memory will be lower
-               // than that. So if we find any non-address bit set, we must be
-               // at the end of the mappable range.
-               (abi && (abi->FixAnyAddress(load_addr) != load_addr))) {
+    } else {
+      // argc > 1
       result.AppendErrorWithFormat(
           "'%s' takes one argument or \"--all\" option:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());

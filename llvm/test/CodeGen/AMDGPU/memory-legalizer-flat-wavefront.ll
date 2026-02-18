@@ -191,13 +191,14 @@ define amdgpu_kernel void @flat_wavefront_unordered_load(
 ;
 ; GFX1250-LABEL: flat_wavefront_unordered_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
@@ -384,13 +385,14 @@ define amdgpu_kernel void @flat_wavefront_monotonic_load(
 ;
 ; GFX1250-LABEL: flat_wavefront_monotonic_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
@@ -577,13 +579,14 @@ define amdgpu_kernel void @flat_wavefront_acquire_load(
 ;
 ; GFX1250-LABEL: flat_wavefront_acquire_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
@@ -770,13 +773,14 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_load(
 ;
 ; GFX1250-LABEL: flat_wavefront_seq_cst_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
@@ -931,12 +935,14 @@ define amdgpu_kernel void @flat_wavefront_unordered_store(
 ;
 ; GFX1250-LABEL: flat_wavefront_unordered_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
@@ -1090,12 +1096,14 @@ define amdgpu_kernel void @flat_wavefront_monotonic_store(
 ;
 ; GFX1250-LABEL: flat_wavefront_monotonic_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
@@ -1249,12 +1257,14 @@ define amdgpu_kernel void @flat_wavefront_release_store(
 ;
 ; GFX1250-LABEL: flat_wavefront_release_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
@@ -1408,12 +1418,14 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_store(
 ;
 ; GFX1250-LABEL: flat_wavefront_seq_cst_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
@@ -1567,11 +1579,13 @@ define amdgpu_kernel void @flat_wavefront_monotonic_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_monotonic_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
@@ -1726,11 +1740,13 @@ define amdgpu_kernel void @flat_wavefront_acquire_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_acquire_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
@@ -1885,11 +1901,13 @@ define amdgpu_kernel void @flat_wavefront_release_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_release_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
@@ -2044,11 +2062,13 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_acq_rel_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
@@ -2203,11 +2223,13 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_seq_cst_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
@@ -2406,14 +2428,16 @@ define amdgpu_kernel void @flat_wavefront_acquire_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_acquire_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
@@ -2612,14 +2636,16 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_acq_rel_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
@@ -2818,14 +2844,16 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_seq_cst_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
@@ -3068,6 +3096,7 @@ define amdgpu_kernel void @flat_wavefront_monotonic_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_monotonic_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -3077,11 +3106,12 @@ define amdgpu_kernel void @flat_wavefront_monotonic_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") monotonic monotonic
   ret void
 }
@@ -3320,6 +3350,7 @@ define amdgpu_kernel void @flat_wavefront_acquire_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_acquire_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -3329,11 +3360,12 @@ define amdgpu_kernel void @flat_wavefront_acquire_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") acquire monotonic
   ret void
 }
@@ -3572,6 +3604,7 @@ define amdgpu_kernel void @flat_wavefront_release_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_release_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -3581,11 +3614,12 @@ define amdgpu_kernel void @flat_wavefront_release_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") release monotonic
   ret void
 }
@@ -3824,6 +3858,7 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_acq_rel_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -3833,11 +3868,12 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") acq_rel monotonic
   ret void
 }
@@ -4076,6 +4112,7 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_seq_cst_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -4085,11 +4122,12 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") seq_cst monotonic
   ret void
 }
@@ -4328,6 +4366,7 @@ define amdgpu_kernel void @flat_wavefront_monotonic_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_monotonic_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -4337,11 +4376,12 @@ define amdgpu_kernel void @flat_wavefront_monotonic_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") monotonic acquire
   ret void
 }
@@ -4580,6 +4620,7 @@ define amdgpu_kernel void @flat_wavefront_acquire_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_acquire_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -4589,11 +4630,12 @@ define amdgpu_kernel void @flat_wavefront_acquire_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") acquire acquire
   ret void
 }
@@ -4832,6 +4874,7 @@ define amdgpu_kernel void @flat_wavefront_release_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_release_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -4841,11 +4884,12 @@ define amdgpu_kernel void @flat_wavefront_release_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") release acquire
   ret void
 }
@@ -5084,6 +5128,7 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_acq_rel_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -5093,11 +5138,12 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") acq_rel acquire
   ret void
 }
@@ -5336,6 +5382,7 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_seq_cst_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -5345,11 +5392,12 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") seq_cst acquire
   ret void
 }
@@ -5588,6 +5636,7 @@ define amdgpu_kernel void @flat_wavefront_monotonic_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_monotonic_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -5597,11 +5646,12 @@ define amdgpu_kernel void @flat_wavefront_monotonic_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") monotonic seq_cst
   ret void
 }
@@ -5840,6 +5890,7 @@ define amdgpu_kernel void @flat_wavefront_acquire_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_acquire_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -5849,11 +5900,12 @@ define amdgpu_kernel void @flat_wavefront_acquire_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") acquire seq_cst
   ret void
 }
@@ -6092,6 +6144,7 @@ define amdgpu_kernel void @flat_wavefront_release_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_release_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -6101,11 +6154,12 @@ define amdgpu_kernel void @flat_wavefront_release_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") release seq_cst
   ret void
 }
@@ -6344,6 +6398,7 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_acq_rel_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -6353,11 +6408,12 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") acq_rel seq_cst
   ret void
 }
@@ -6596,6 +6652,7 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_seq_cst_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -6605,11 +6662,12 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") seq_cst seq_cst
   ret void
 }
@@ -6892,6 +6950,7 @@ define amdgpu_kernel void @flat_wavefront_monotonic_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_monotonic_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -6901,13 +6960,14 @@ define amdgpu_kernel void @flat_wavefront_monotonic_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") monotonic monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -7192,6 +7252,7 @@ define amdgpu_kernel void @flat_wavefront_acquire_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_acquire_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -7201,13 +7262,14 @@ define amdgpu_kernel void @flat_wavefront_acquire_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") acquire monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -7492,6 +7554,7 @@ define amdgpu_kernel void @flat_wavefront_release_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_release_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -7501,13 +7564,14 @@ define amdgpu_kernel void @flat_wavefront_release_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") release monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -7792,6 +7856,7 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_acq_rel_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -7801,13 +7866,14 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") acq_rel monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -8092,6 +8158,7 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_seq_cst_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -8101,13 +8168,14 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") seq_cst monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -8392,6 +8460,7 @@ define amdgpu_kernel void @flat_wavefront_monotonic_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_monotonic_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -8401,13 +8470,14 @@ define amdgpu_kernel void @flat_wavefront_monotonic_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") monotonic acquire
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -8692,6 +8762,7 @@ define amdgpu_kernel void @flat_wavefront_acquire_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_acquire_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -8701,13 +8772,14 @@ define amdgpu_kernel void @flat_wavefront_acquire_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") acquire acquire
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -8992,6 +9064,7 @@ define amdgpu_kernel void @flat_wavefront_release_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_release_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -9001,13 +9074,14 @@ define amdgpu_kernel void @flat_wavefront_release_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") release acquire
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -9292,6 +9366,7 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_acq_rel_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -9301,13 +9376,14 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") acq_rel acquire
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -9592,6 +9668,7 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_seq_cst_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -9601,13 +9678,14 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") seq_cst acquire
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -9892,6 +9970,7 @@ define amdgpu_kernel void @flat_wavefront_monotonic_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_monotonic_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -9901,13 +9980,14 @@ define amdgpu_kernel void @flat_wavefront_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") monotonic seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -10192,6 +10272,7 @@ define amdgpu_kernel void @flat_wavefront_acquire_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_acquire_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -10201,13 +10282,14 @@ define amdgpu_kernel void @flat_wavefront_acquire_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") acquire seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -10492,6 +10574,7 @@ define amdgpu_kernel void @flat_wavefront_release_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_release_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -10501,13 +10584,14 @@ define amdgpu_kernel void @flat_wavefront_release_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") release seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -10792,6 +10876,7 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_acq_rel_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -10801,13 +10886,14 @@ define amdgpu_kernel void @flat_wavefront_acq_rel_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") acq_rel seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -11092,6 +11178,7 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_seq_cst_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -11101,13 +11188,14 @@ define amdgpu_kernel void @flat_wavefront_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront") seq_cst seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -11292,13 +11380,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_unordered_load(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_unordered_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
@@ -11485,13 +11574,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_load(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_monotonic_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
@@ -11678,13 +11768,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_load(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acquire_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
@@ -11871,13 +11962,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_load(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_seq_cst_load:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
@@ -12032,12 +12124,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_unordered_store(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_unordered_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
@@ -12191,12 +12285,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_store(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_monotonic_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
@@ -12350,12 +12446,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_release_store(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_release_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
@@ -12509,12 +12607,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_store(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_seq_cst_store:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     i32 %in, ptr %out) {
 entry:
@@ -12668,11 +12768,13 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_monotonic_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
@@ -12827,11 +12929,13 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acquire_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
@@ -12986,11 +13090,13 @@ define amdgpu_kernel void @flat_wavefront_one_as_release_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_release_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
@@ -13145,11 +13251,13 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_rel_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acq_rel_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
@@ -13304,11 +13412,13 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_seq_cst_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
@@ -13507,14 +13617,16 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acquire_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
@@ -13713,14 +13825,16 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_rel_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acq_rel_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
@@ -13919,14 +14033,16 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_ret_atomicrmw(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_seq_cst_ret_atomicrmw:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_swap_b32 v1, v0, v1, s[0:1] th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in) {
 entry:
@@ -14169,6 +14285,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_monotonic_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -14178,11 +14295,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") monotonic monotonic
   ret void
 }
@@ -14421,6 +14539,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acquire_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -14430,11 +14549,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") acquire monotonic
   ret void
 }
@@ -14673,6 +14793,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_release_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_release_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -14682,11 +14803,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_release_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") release monotonic
   ret void
 }
@@ -14925,6 +15047,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_rel_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acq_rel_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -14934,11 +15057,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_rel_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") acq_rel monotonic
   ret void
 }
@@ -15177,6 +15301,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_monotonic_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_seq_cst_monotonic_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -15186,11 +15311,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_monotonic_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") seq_cst monotonic
   ret void
 }
@@ -15429,6 +15555,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_monotonic_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -15438,11 +15565,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") monotonic acquire
   ret void
 }
@@ -15681,6 +15809,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acquire_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -15690,11 +15819,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") acquire acquire
   ret void
 }
@@ -15933,6 +16063,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_release_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_release_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -15942,11 +16073,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_release_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") release acquire
   ret void
 }
@@ -16185,6 +16317,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_rel_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acq_rel_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -16194,11 +16327,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_rel_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") acq_rel acquire
   ret void
 }
@@ -16437,6 +16571,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_acquire_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_seq_cst_acquire_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -16446,11 +16581,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_acquire_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") seq_cst acquire
   ret void
 }
@@ -16689,6 +16825,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_monotonic_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -16698,11 +16835,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") monotonic seq_cst
   ret void
 }
@@ -16941,6 +17079,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acquire_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -16950,11 +17089,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") acquire seq_cst
   ret void
 }
@@ -17193,6 +17333,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_release_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_release_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -17202,11 +17343,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_release_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") release seq_cst
   ret void
 }
@@ -17445,6 +17587,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_rel_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acq_rel_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -17454,11 +17597,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_rel_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") acq_rel seq_cst
   ret void
 }
@@ -17697,6 +17841,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_seq_cst_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_seq_cst_seq_cst_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -17706,11 +17851,12 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_seq_cst_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v0, v[2:3], s[0:1] offset:16
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") seq_cst seq_cst
   ret void
 }
@@ -17993,6 +18139,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_monotonic_ret_cmpxchg
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_monotonic_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -18002,13 +18149,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_monotonic_ret_cmpxchg
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") monotonic monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -18293,6 +18441,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acquire_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -18302,13 +18451,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") acquire monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -18593,6 +18743,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_rel_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acq_rel_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -18602,13 +18753,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_rel_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") acq_rel monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -18893,6 +19045,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_monotonic_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_seq_cst_monotonic_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -18902,13 +19055,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_monotonic_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") seq_cst monotonic
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -19193,6 +19347,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_monotonic_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -19202,13 +19357,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") monotonic acquire
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -19493,6 +19649,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acquire_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -19502,13 +19659,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") acquire acquire
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -19793,6 +19951,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_release_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_release_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -19802,13 +19961,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_release_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") release acquire
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -20093,6 +20253,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_rel_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acq_rel_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -20102,13 +20263,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_rel_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") acq_rel acquire
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -20393,6 +20555,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_acquire_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_seq_cst_acquire_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -20402,13 +20565,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_acquire_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") seq_cst acquire
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -20693,6 +20857,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_monotonic_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -20702,13 +20867,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_monotonic_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
    ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") monotonic seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -20993,6 +21159,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acquire_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -21002,13 +21169,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_acquire_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
    ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") acquire seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -21293,6 +21461,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_release_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_release_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -21302,13 +21471,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_release_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
    ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") release seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -21593,6 +21763,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_relc_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_acq_relc_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -21602,13 +21773,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_acq_relc_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
    ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") acq_rel seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4
@@ -21893,6 +22065,7 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ;
 ; GFX1250-LABEL: flat_wavefront_one_as_seq_cst_seq_cst_ret_cmpxchg:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x8
@@ -21902,13 +22075,14 @@ define amdgpu_kernel void @flat_wavefront_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    flat_atomic_cmpswap_b32 v1, v0, v[2:3], s[0:1] offset:16 th:TH_ATOMIC_RETURN
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
     ptr %out, i32 %in, i32 %old) {
 entry:
-  %gep = getelementptr i32, ptr %out, i32 4
+  %gep = getelementptr inbounds i32, ptr %out, i32 4
   %val = cmpxchg volatile ptr %gep, i32 %old, i32 %in syncscope("wavefront-one-as") seq_cst seq_cst
   %val0 = extractvalue { i32, i1 } %val, 0
   store i32 %val0, ptr %out, align 4

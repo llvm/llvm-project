@@ -4,7 +4,7 @@
 
 # UNSUPPORTED: system-windows
 #
-# RUN: %clang_host -g -O0 %S/Inputs/verbose_trap-in-stl-max-depth.cpp -o %t.out
+# RUN: %clangxx_host -g -O0 %S/Inputs/verbose_trap-in-stl-max-depth.cpp -o %t.out
 # RUN: %lldb -b -s %s %t.out | FileCheck %s --check-prefixes=CHECK
 
 run

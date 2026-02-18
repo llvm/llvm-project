@@ -13,12 +13,15 @@
 #ifndef LLVM_CLANG_LEX_CODECOMPLETIONHANDLER_H
 #define LLVM_CLANG_LEX_CODECOMPLETIONHANDLER_H
 
+#include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
 
 class IdentifierInfo;
 class MacroInfo;
+using ModuleIdPath = ArrayRef<IdentifierLoc>;
 
 /// Callback handler that receives notifications when performing code
 /// completion within the preprocessor.
@@ -70,6 +73,11 @@ public:
   /// file where we expect natural language, e.g., a comment, string, or
   /// \#error directive.
   virtual void CodeCompleteNaturalLanguage() { }
+
+  /// Callback invoked when performing code completion inside the module name
+  /// part of an import directive.
+  virtual void CodeCompleteModuleImport(SourceLocation ImportLoc,
+                                        ModuleIdPath Path) {}
 };
 
 }

@@ -10,7 +10,7 @@
 // VINTERP encoding
 //===----------------------------------------------------------------------===//
 
-class VINTERPe <VOPProfile P> : Enc64 {
+class VINTERPe : Enc64 {
   bits<11> vdst;
   bits<4> src0_modifiers;
   bits<11> src0;
@@ -27,10 +27,10 @@ class VINTERPe <VOPProfile P> : Enc64 {
   let Inst{7-0}   = vdst{7-0};
   let Inst{10-8}  = waitexp;
   // Fields for hi/lo 16-bits of register selection
-  let Inst{11} = !if(P.HasSrc0, src0_modifiers{2}, 0);
-  let Inst{12} = !if(P.HasSrc1, src1_modifiers{2}, 0);
-  let Inst{13} = !if(P.HasSrc2, src2_modifiers{2}, 0);
-  let Inst{14} = !if(P.HasDst, src0_modifiers{3}, 0);
+  let Inst{11}    = src0_modifiers{2};
+  let Inst{12}    = src1_modifiers{2};
+  let Inst{13}    = src2_modifiers{2};
+  let Inst{14}    = src0_modifiers{3};
   let Inst{15}    = clamp;
   let Inst{40-32} = src0{8-0};
   let Inst{49-41} = src1{8-0};
@@ -40,11 +40,11 @@ class VINTERPe <VOPProfile P> : Enc64 {
   let Inst{63}    = src2_modifiers{0}; // neg(2)
 }
 
-class VINTERPe_gfx11 <bits<7> op, VOPProfile P> : VINTERPe<P> {
+class VINTERPe_gfx11 <bits<7> op> : VINTERPe {
   let Inst{22-16} = op;
 }
 
-class VINTERPe_gfx12 <bits<7> op, VOPProfile P> : VINTERPe<P> {
+class VINTERPe_gfx12 <bits<7> op> : VINTERPe {
   let Inst{20-16} = op{4-0};
 }
 
@@ -243,7 +243,7 @@ multiclass VINTERP_Real_gfx11 <bits<7> op, string asmName> {
                            !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
     def _gfx11 :
       VINTERP_Real<ps, SIEncodingFamily.GFX11, asmName>,
-      VINTERPe_gfx11<op, ps.Pfl>;
+      VINTERPe_gfx11<op>;
   }
 }
 
@@ -253,7 +253,7 @@ multiclass VINTERP_Real_gfx12 <bits<7> op, string asmName> {
                            !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
     def _gfx12 :
       VINTERP_Real<ps, SIEncodingFamily.GFX12, asmName>,
-      VINTERPe_gfx12<op, ps.Pfl>;
+      VINTERPe_gfx12<op>;
   }
 }
 

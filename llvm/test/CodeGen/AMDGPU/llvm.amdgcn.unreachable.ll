@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn %s -filetype=obj -o /dev/null
+; RUN: llc -mtriple=amdgcn %s -filetype=obj -filetype=null
 ; RUN: llc -mtriple=amdgcn < %s | FileCheck %s
 define amdgpu_kernel void @f() {
   ; CHECK: ; divergent unreachable

@@ -27,7 +27,7 @@ end
 
 !PARSE-TREE-LABEL: ProgramUnit -> SubroutineSubprogram
 !PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE: | OmpLoopDirective -> llvm::omp::Directive = do
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Ordered -> Scalar -> Integer -> Constant -> Expr = '2_4'
 !PARSE-TREE: | | LiteralConstant -> IntLiteralConstant = '2'
 ![...]
@@ -61,7 +61,7 @@ end
 
 !PARSE-TREE-LABEL: ProgramUnit -> SubroutineSubprogram
 !PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE: | OmpLoopDirective -> llvm::omp::Directive = do
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Ordered -> Scalar -> Integer -> Constant -> Expr = '2_4'
 !PARSE-TREE: | | LiteralConstant -> IntLiteralConstant = '2'
 ![...]

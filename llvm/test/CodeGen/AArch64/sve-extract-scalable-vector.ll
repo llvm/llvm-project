@@ -3,12 +3,199 @@
 
 ; Extracting illegal subvectors
 
-define <vscale x 1 x i32> @extract_nxv1i32_nxv4i32(<vscale x 4 x i32> %vec) nounwind {
-; CHECK-LABEL: extract_nxv1i32_nxv4i32:
+; NOTE: Insert sub-vector into a legal type to avoid relying on an undefined
+; calling convention.
+define <vscale x 4 x i32> @extract_nxv1i32_nxv4i32_0(<vscale x 4 x i32> %vec) nounwind {
+; CHECK-LABEL: extract_nxv1i32_nxv4i32_0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ret
-  %retval = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %vec, i64 0)
-  ret <vscale x 1 x i32> %retval
+  %e = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %vec, i64 0)
+  %retval = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> poison, <vscale x 1 x i32> %e, i64 0)
+  ret <vscale x 4 x i32> %retval
+}
+
+; NOTE: Insert sub-vector into a legal type to avoid relying on an undefined
+; calling convention.
+define <vscale x 4 x i32> @extract_nxv1i32_nxv4i32_1(<vscale x 4 x i32> %vec) nounwind {
+; CHECK-LABEL: extract_nxv1i32_nxv4i32_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    cntw x8
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %e = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %vec, i64 1)
+  %retval = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> poison, <vscale x 1 x i32> %e, i64 0)
+  ret <vscale x 4 x i32> %retval
+}
+
+; NOTE: Insert sub-vector into a legal type to avoid relying on an undefined
+; calling convention.
+define <vscale x 4 x i32> @extract_nxv1i32_nxv4i32_2(<vscale x 4 x i32> %vec) nounwind {
+; CHECK-LABEL: extract_nxv1i32_nxv4i32_2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    cnth x8
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %e = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %vec, i64 2)
+  %retval = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> poison, <vscale x 1 x i32> %e, i64 0)
+  ret <vscale x 4 x i32> %retval
+}
+
+; NOTE: Insert sub-vector into a legal type to avoid relying on an undefined
+; calling convention.
+define <vscale x 4 x i32> @extract_nxv1i32_nxv4i32_3(<vscale x 4 x i32> %vec) nounwind {
+; CHECK-LABEL: extract_nxv1i32_nxv4i32_3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    cntw x8, all, mul #3
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %e = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %vec, i64 3)
+  %retval = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> poison, <vscale x 1 x i32> %e, i64 0)
+  ret <vscale x 4 x i32> %retval
+}
+
+; NOTE: Insert sub-vector into a legal type to avoid relying on an undefined
+; calling convention.
+define <vscale x 2 x float> @extract_nxv1f32_nxv2f32_0(<vscale x 2 x float> %vec) nounwind {
+; CHECK-LABEL: extract_nxv1f32_nxv2f32_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %e = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv2f32(<vscale x 2 x float> %vec, i64 0)
+  %retval = call <vscale x 2 x float> @llvm.vector.insert.nxv2f32.nxv1f32(<vscale x 2 x float> poison, <vscale x 1 x float> %e, i64 0)
+  ret <vscale x 2 x float> %retval
+}
+
+; NOTE: Insert sub-vector into a legal type to avoid relying on an undefined
+; calling convention.
+define <vscale x 2 x float> @extract_nxv1f32_nxv2f32_1(<vscale x 2 x float> %vec) nounwind {
+; CHECK-LABEL: extract_nxv1f32_nxv2f32_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    addpl x9, sp, #4
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    st1w { z0.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    whilelo p1.d, xzr, x8
+; CHECK-NEXT:    cntw x8
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    ld1w { z0.d }, p1/z, [x8]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %e = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv2f32(<vscale x 2 x float> %vec, i64 1)
+  %retval = call <vscale x 2 x float> @llvm.vector.insert.nxv2f32.nxv1f32(<vscale x 2 x float> poison, <vscale x 1 x float> %e, i64 0)
+  ret <vscale x 2 x float> %retval
+}
+
+; NOTE: Insert sub-vector into a legal type to avoid relying on an undefined
+; calling convention.
+define <vscale x 4 x float> @extract_nxv1f32_nxv4f32_0(<vscale x 4 x float> %vec) nounwind {
+; CHECK-LABEL: extract_nxv1f32_nxv4f32_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+  %e = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv4f32(<vscale x 4 x float> %vec, i64 0)
+  %retval = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float> poison, <vscale x 1 x float> %e, i64 0)
+  ret <vscale x 4 x float> %retval
+}
+
+; NOTE: Insert sub-vector into a legal type to avoid relying on an undefined
+; calling convention.
+define <vscale x 4 x float> @extract_nxv1f32_nxv4f32_1(<vscale x 4 x float> %vec) nounwind {
+; CHECK-LABEL: extract_nxv1f32_nxv4f32_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    cntw x8
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %e = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv4f32(<vscale x 4 x float> %vec, i64 1)
+  %retval = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float> poison, <vscale x 1 x float> %e, i64 0)
+  ret <vscale x 4 x float> %retval
+}
+
+; NOTE: Insert sub-vector into a legal type to avoid relying on an undefined
+; calling convention.
+define <vscale x 4 x float> @extract_nxv1f32_nxv4f32_2(<vscale x 4 x float> %vec) nounwind {
+; CHECK-LABEL: extract_nxv1f32_nxv4f32_2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [sp, #1, mul vl]
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %e = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv4f32(<vscale x 4 x float> %vec, i64 2)
+  %retval = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float> poison, <vscale x 1 x float> %e, i64 0)
+  ret <vscale x 4 x float> %retval
+}
+
+; NOTE: Insert sub-vector into a legal type to avoid relying on an undefined
+; calling convention.
+define <vscale x 4 x float> @extract_nxv1f32_nxv4f32_3(<vscale x 4 x float> %vec) nounwind {
+; CHECK-LABEL: extract_nxv1f32_nxv4f32_3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    lsr x8, x8, #4
+; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    cntw x8, all, mul #3
+; CHECK-NEXT:    add x8, x9, x8
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x8]
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %e = call <vscale x 1 x float> @llvm.vector.extract.nxv1f32.nxv4f32(<vscale x 4 x float> %vec, i64 3)
+  %retval = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float> poison, <vscale x 1 x float> %e, i64 0)
+  ret <vscale x 4 x float> %retval
 }
 
 define <vscale x 1 x i16> @extract_nxv1i16_nxv6i16(<vscale x 6 x i16> %vec) nounwind {
@@ -18,9 +205,6 @@ define <vscale x 1 x i16> @extract_nxv1i16_nxv6i16(<vscale x 6 x i16> %vec) noun
   %retval = call <vscale x 1 x i16> @llvm.vector.extract.nxv1i16.nxv6i16(<vscale x 6 x i16> %vec, i64 0)
   ret <vscale x 1 x i16> %retval
 }
-
-declare <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32>, i64)
-declare <vscale x 1 x i16> @llvm.vector.extract.nxv1i16.nxv6i16(<vscale x 6 x i16>, i64)
 
 ;
 ; Extract half i1 vector that needs promotion from legal type.
@@ -43,8 +227,6 @@ define <vscale x 8 x i1> @extract_nxv8i1_nxv16i1_8(<vscale x 16 x i1> %in) {
   ret <vscale x 8 x i1> %res
 }
 
-declare <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv16i1(<vscale x 16 x i1>, i64)
-
 ;
 ; Extract i1 vector that needs widening from one that needs widening.
 ;
@@ -65,9 +247,9 @@ define <vscale x 14 x i1> @extract_nxv14i1_nxv28i1_14(<vscale x 28 x i1> %in) uw
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    punpkhi p2.h, p1.b
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p3.h, p1.b
 ; CHECK-NEXT:    punpkhi p4.h, p2.b
@@ -83,10 +265,10 @@ define <vscale x 14 x i1> @extract_nxv14i1_nxv28i1_14(<vscale x 28 x i1> %in) uw
 ; CHECK-NEXT:    punpklo p1.h, p1.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p3.s, p5.s, p3.s
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    uzp1 p0.s, p0.s, p1.s
 ; CHECK-NEXT:    uzp1 p1.h, p2.h, p4.h
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p3.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    addvl sp, sp, #1
@@ -98,8 +280,6 @@ define <vscale x 14 x i1> @extract_nxv14i1_nxv28i1_14(<vscale x 28 x i1> %in) uw
   %res = call <vscale x 14 x i1> @llvm.vector.extract.nxv14i1.nxv28i1(<vscale x 28 x i1> %in, i64 14)
   ret <vscale x 14 x i1> %res
 }
-
-declare <vscale x 14 x i1> @llvm.vector.extract.nxv14i1.nxv28i1(<vscale x 28 x i1>, i64)
 
 ;
 ; Extract half i1 vector that needs promotion from one that needs splitting.
@@ -139,8 +319,6 @@ define <vscale x 8 x i1> @extract_nxv8i1_nxv32i1_24(<vscale x 32 x i1> %in) {
   %res = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv32i1(<vscale x 32 x i1> %in, i64 24)
   ret <vscale x 8 x i1> %res
 }
-
-declare <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv32i1(<vscale x 32 x i1>, i64)
 
 ;
 ; Extract 1/4th i1 vector that needs promotion from legal type.
@@ -184,8 +362,6 @@ define <vscale x 4 x i1> @extract_nxv4i1_nxv16i1_12(<vscale x 16 x i1> %in) {
   %res = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> %in, i64 12)
   ret <vscale x 4 x i1> %res
 }
-
-declare <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1>, i64)
 
 ;
 ; Extract 1/8th i1 vector that needs promotion from legal type.
@@ -278,8 +454,6 @@ define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_14(<vscale x 16 x i1> %in) {
   ret <vscale x 2 x i1> %res
 }
 
-declare <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1>, i64)
-
 ;
 ; Extract i1 vector that needs promotion from one that needs widening.
 ;
@@ -312,8 +486,6 @@ define <vscale x 4 x i1> @extract_nxv4i1_nxv12i1_8(<vscale x 12 x i1> %in) {
   %res = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv12i1(<vscale x 12 x i1> %in, i64 8)
   ret <vscale x 4 x i1> %res
 }
-
-declare <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv12i1(<vscale x 12 x i1>, i64)
 
 ;
 ; Extract 1/8th i8 vector that needs promotion from legal type.
@@ -406,8 +578,6 @@ define <vscale x 2 x i8> @extract_nxv2i8_nxv16i8_14(<vscale x 16 x i8> %in) {
   ret <vscale x 2 x i8> %res
 }
 
-declare <vscale x 2 x i8> @llvm.vector.extract.nxv2i8.nxv16i8(<vscale x 16 x i8>, i64)
-
 ;
 ; Extract i8 vector that needs promotion from one that needs widening.
 ;
@@ -441,8 +611,6 @@ define <vscale x 4 x i8> @extract_nxv4i8_nxv12i8_8(<vscale x 12 x i8> %in) {
   ret <vscale x 4 x i8> %res
 }
 
-declare <vscale x 4 x i8> @llvm.vector.extract.nxv4i8.nxv12i8(<vscale x 12 x i8>, i64)
-
 ;
 ; Extract i8 vector that needs both widening + promotion from one that needs widening.
 ; (nxv6i8 -> nxv8i8 -> nxv8i16)
@@ -473,8 +641,6 @@ define <vscale x 6 x i8> @extract_nxv6i8_nxv12i8_6(<vscale x 12 x i8> %in) {
   %res = call <vscale x 6 x i8> @llvm.vector.extract.nxv6i8.nxv12i8(<vscale x 12 x i8> %in, i64 6)
   ret <vscale x 6 x i8> %res
 }
-
-declare <vscale x 6 x i8> @llvm.vector.extract.nxv6i8.nxv12i8(<vscale x 12 x i8>, i64)
 
 ;
 ; Extract half i8 vector that needs promotion from one that needs splitting.
@@ -515,8 +681,6 @@ define <vscale x 8 x i8> @extract_nxv8i8_nxv32i8_24(<vscale x 32 x i8> %in) {
   ret <vscale x 8 x i8> %res
 }
 
-declare <vscale x 8 x i8> @llvm.vector.extract.nxv8i8.nxv32i8(<vscale x 32 x i8>, i64)
-
 ;
 ; Extract half i8 vector that needs promotion from legal type.
 ;
@@ -537,8 +701,6 @@ define <vscale x 8 x i8> @extract_nxv8i8_nxv16i8_8(<vscale x 16 x i8> %in) {
   %res = call <vscale x 8 x i8> @llvm.vector.extract.nxv8i8.nxv16i8(<vscale x 16 x i8> %in, i64 8)
   ret <vscale x 8 x i8> %res
 }
-
-declare <vscale x 8 x i8> @llvm.vector.extract.nxv8i8.nxv16i8(<vscale x 16 x i8>, i64)
 
 ;
 ; Extract i8 vector that needs widening from one that needs widening.
@@ -612,20 +774,11 @@ define <vscale x 14 x i8> @extract_nxv14i8_nxv28i8_14(<vscale x 28 x i8> %in) {
 ; CHECK-NEXT:    uunpkhi z3.d, z3.s
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z3.s
 ; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    uzp1 z1.b, z0.b, z1.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEXT:    uzp1 z2.s, z2.s, z0.s
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    ret
   %res = call <vscale x 14 x i8> @llvm.vector.extract.nxv14i8.nxv28i8(<vscale x 28 x i8> %in, i64 14)
   ret <vscale x 14 x i8> %res
 }
-
-declare <vscale x 14 x i8> @llvm.vector.extract.nxv14i8.nxv28i8(<vscale x 28 x i8>, i64)
 
 ;
 ; Extract 1/4th i8 vector that needs promotion from legal type.
@@ -670,8 +823,6 @@ define <vscale x 4 x i8> @extract_nxv4i8_nxv16i8_12(<vscale x 16 x i8> %in) {
   ret <vscale x 4 x i8> %res
 }
 
-declare <vscale x 4 x i8> @llvm.vector.extract.nxv4i8.nxv16i8(<vscale x 16 x i8>, i64)
-
 ;
 ; Extract f16 vector that needs promotion from one that needs widening.
 ;
@@ -705,8 +856,6 @@ define <vscale x 2 x half> @extract_nxv2f16_nxv6f16_4(<vscale x 6 x half> %in) {
   ret <vscale x 2 x half> %res
 }
 
-declare <vscale x 2 x half> @llvm.vector.extract.nxv2f16.nxv6f16(<vscale x 6 x half>, i64)
-
 ;
 ; Extract half f16 vector that needs promotion from legal type.
 ;
@@ -727,8 +876,6 @@ define <vscale x 4 x half> @extract_nxv4f16_nxv8f16_4(<vscale x 8 x half> %in) {
   %res = call <vscale x 4 x half> @llvm.vector.extract.nxv4f16.nxv8f16(<vscale x 8 x half> %in, i64 4)
   ret <vscale x 4 x half> %res
 }
-
-declare <vscale x 4 x half> @llvm.vector.extract.nxv4f16.nxv8f16(<vscale x 8 x half>, i64)
 
 ;
 ; Extract f16 vector that needs widening from one that needs widening.
@@ -756,8 +903,6 @@ define <vscale x 6 x half> @extract_nxv6f16_nxv12f16_6(<vscale x 12 x half> %in)
   %res = call <vscale x 6 x half> @llvm.vector.extract.nxv6f16.nxv12f16(<vscale x 12 x half> %in, i64 6)
   ret <vscale x 6 x half> %res
 }
-
-declare <vscale x 6 x half> @llvm.vector.extract.nxv6f16.nxv12f16(<vscale x 12 x half>, i64)
 
 ;
 ; Extract half f16 vector that needs promotion from one that needs splitting.
@@ -797,8 +942,6 @@ define <vscale x 4 x half> @extract_nxv4f16_nxv16f16_12(<vscale x 16 x half> %in
   %res = call <vscale x 4 x half> @llvm.vector.extract.nxv4f16.nxv16f16(<vscale x 16 x half> %in, i64 12)
   ret <vscale x 4 x half> %res
 }
-
-declare <vscale x 4 x half> @llvm.vector.extract.nxv4f16.nxv16f16(<vscale x 16 x half>, i64)
 
 ;
 ; Extract 1/4th f16 vector that needs promotion from legal type.
@@ -843,8 +986,6 @@ define <vscale x 2 x half> @extract_nxv2f16_nxv8f16_6(<vscale x 8 x half> %in) {
   ret <vscale x 2 x half> %res
 }
 
-declare <vscale x 2 x half> @llvm.vector.extract.nxv2f16.nxv8f16(<vscale x 8 x half>, i64)
-
 ;
 ; Extract half bf16 vector that needs promotion from legal type.
 ;
@@ -865,8 +1006,6 @@ define <vscale x 4 x bfloat> @extract_nxv4bf16_nxv8bf16_4(<vscale x 8 x bfloat> 
   %res = call <vscale x 4 x bfloat> @llvm.vector.extract.nxv4bf16.nxv8bf16(<vscale x 8 x bfloat> %in, i64 4)
   ret <vscale x 4 x bfloat> %res
 }
-
-declare <vscale x 4 x bfloat> @llvm.vector.extract.nxv4bf16.nxv8bf16(<vscale x 8 x bfloat>, i64)
 
 ;
 ; Extract bf16 vector that needs widening from one that needs widening.
@@ -894,8 +1033,6 @@ define <vscale x 6 x bfloat> @extract_nxv6bf16_nxv12bf16_6(<vscale x 12 x bfloat
   %res = call <vscale x 6 x bfloat> @llvm.vector.extract.nxv6bf16.nxv12bf16(<vscale x 12 x bfloat> %in, i64 6)
   ret <vscale x 6 x bfloat> %res
 }
-
-declare <vscale x 6 x bfloat> @llvm.vector.extract.nxv6bf16.nxv12bf16(<vscale x 12 x bfloat>, i64)
 
 ;
 ; Extract bf16 vector that needs promotion from one that needs widening.
@@ -929,8 +1066,6 @@ define <vscale x 2 x bfloat> @extract_nxv2bf16_nxv6bf16_4(<vscale x 6 x bfloat> 
   %res = call <vscale x 2 x bfloat> @llvm.vector.extract.nxv2bf16.nxv6bf16(<vscale x 6 x bfloat> %in, i64 4)
   ret <vscale x 2 x bfloat> %res
 }
-
-declare <vscale x 2 x bfloat> @llvm.vector.extract.nxv2bf16.nxv6bf16(<vscale x 6 x bfloat>, i64)
 
 ;
 ; Extract 1/4th bf16 vector that needs promotion from legal type.
@@ -975,8 +1110,6 @@ define <vscale x 2 x bfloat> @extract_nxv2bf16_nxv8bf16_6(<vscale x 8 x bfloat> 
   ret <vscale x 2 x bfloat> %res
 }
 
-declare <vscale x 2 x bfloat> @llvm.vector.extract.nxv2bf16.nxv8bf16(<vscale x 8 x bfloat>, i64)
-
 ;
 ; Extract half bf16 vector that needs promotion from one that needs splitting.
 ;
@@ -1015,9 +1148,6 @@ define <vscale x 4 x bfloat> @extract_nxv4bf16_nxv16bf16_12(<vscale x 16 x bfloa
   %res = call <vscale x 4 x bfloat> @llvm.vector.extract.nxv4bf16.nxv16bf16(<vscale x 16 x bfloat> %in, i64 12)
   ret <vscale x 4 x bfloat> %res
 }
-
-declare <vscale x 4 x bfloat> @llvm.vector.extract.nxv4bf16.nxv16bf16(<vscale x 16 x bfloat>, i64)
-
 
 ;
 ; Extract from a splat
@@ -1069,9 +1199,6 @@ define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_all_zero() {
   %ext = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> zeroinitializer, i64 0)
   ret <vscale x 2 x i1> %ext
 }
-
-declare <vscale x 2 x float> @llvm.vector.extract.nxv2f32.nxv4f32(<vscale x 4 x float>, i64)
-declare <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32>, i64)
 
 ;
 ; Extract nxv1i1 type from: nxv2i1
@@ -1427,8 +1554,3 @@ define <vscale x 1 x i1> @extract_nxv1i1_nxv16i1_15(<vscale x 16 x i1> %in) {
   %res = call <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv16i1(<vscale x 16 x i1> %in, i64 15)
   ret <vscale x 1 x i1> %res
 }
-
-declare <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv2i1(<vscale x 2 x i1>, i64)
-declare <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv4i1(<vscale x 4 x i1>, i64)
-declare <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv8i1(<vscale x 8 x i1>, i64)
-declare <vscale x 1 x i1> @llvm.vector.extract.nxv1i1.nxv16i1(<vscale x 16 x i1>, i64)

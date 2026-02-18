@@ -50,7 +50,7 @@ public:
 protected:
   void UnregisterReadObject(IOObject::WaitableHandle handle) override;
 
-  void Interrupt() override;
+  bool Interrupt() override;
 
 private:
   llvm::Expected<size_t> Poll();

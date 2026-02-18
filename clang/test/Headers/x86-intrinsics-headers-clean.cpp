@@ -10,4 +10,6 @@
 
 // expected-no-diagnostics
 
+#include "system_reserved_names.h"
+
 #include <x86intrin.h>

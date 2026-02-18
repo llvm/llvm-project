@@ -25,7 +25,7 @@ static void addOperands(Operation *op, SetVector<Value> &operandSet) {
   if (!op)
     return;
   TypeSwitch<Operation *, void>(op)
-      .Case<linalg::LinalgOp>([&](linalg::LinalgOp linalgOp) {
+      .Case([&](linalg::LinalgOp linalgOp) {
         SmallVector<Value> inputOperands = linalgOp.getDpsInputs();
         operandSet.insert_range(inputOperands);
       })
@@ -252,7 +252,9 @@ struct TestLinalgElementwiseFusion
     if (fuseMultiUseProducer) {
       RewritePatternSet patterns(context);
       patterns.insert<TestMultiUseProducerFusion>(context);
-      if (failed(applyPatternsGreedily(funcOp.getBody(), std::move(patterns))))
+      if (failed(applyPatternsGreedily(
+              funcOp.getBody(), std::move(patterns),
+              GreedyRewriteConfig().setUseTopDownTraversal(true))))
         return signalPassFailure();
       return;
     }

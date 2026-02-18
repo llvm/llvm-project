@@ -29,7 +29,7 @@ lbl4:
 
 ; CHECK-LABEL: func:
 ; CHECK-NEXT: .seh_proc func
-; CHECK-NEXT: // %bb.0:
+; CHECK:     // %bb.0: // %entry
 ; CHECK-NEXT: hint #34
 ; CHECK-NEXT: .seh_nop
 ; CHECK-NEXT: str x19, [sp, #-16]!

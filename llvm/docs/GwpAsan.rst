@@ -31,7 +31,7 @@ Unlike `AddressSanitizer <https://clang.llvm.org/docs/AddressSanitizer.html>`_,
 GWP-ASan does not induce a significant performance overhead. ASan often requires
 the use of dedicated canaries to be viable in production environments, and as
 such is often impractical. Moreover, ASan's runtime is not developed with
-security consideration in mind, making compiled binaries more vulnerable to
+security considerations in mind, making compiled binaries more vulnerable to
 exploits.
 
 However, GWP-ASan is only capable of finding a subset of the memory issues

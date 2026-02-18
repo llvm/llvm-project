@@ -11,12 +11,14 @@
 #include "TestTypes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/CommonFolders.h"
+#include "mlir/Dialect/ControlFlow/Transforms/StructuralTypeConversions.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -69,6 +71,16 @@ static Attribute opMTest(PatternRewriter &rewriter, Value val) {
   return rewriter.getIntegerAttr(rewriter.getIntegerType(32), i);
 }
 
+static bool assertBinOpEqualArgsAndReturnTrue(Value v) {
+  Operation *operation = v.getDefiningOp();
+  if (operation->getOperand(0) != operation->getOperand(1)) {
+    // Name binding equality check must happen before user-defined constraints,
+    // thus this must not be triggered.
+    llvm::report_fatal_error("Arguments are not equal");
+  }
+  return true;
+}
+
 namespace {
 #include "TestPatterns.inc"
 } // namespace
@@ -114,7 +126,8 @@ public:
 struct FolderInsertBeforePreviouslyFoldedConstantPattern
     : public OpRewritePattern<TestCastOp> {
 public:
-  using OpRewritePattern<TestCastOp>::OpRewritePattern;
+  static_assert(std::is_same_v<Base, OpRewritePattern<TestCastOp>>);
+  using Base::Base;
 
   LogicalResult matchAndRewrite(TestCastOp op,
                                 PatternRewriter &rewriter) const override {
@@ -952,19 +965,25 @@ struct TestCreateIllegalBlock : public RewritePattern {
   }
 };
 
-/// A simple pattern that tests the "replaceUsesOfBlockArgument" API.
-struct TestBlockArgReplace : public ConversionPattern {
-  TestBlockArgReplace(MLIRContext *ctx, const TypeConverter &converter)
-      : ConversionPattern(converter, "test.block_arg_replace", /*benefit=*/1,
-                          ctx) {}
+/// A simple pattern that tests the "replaceAllUsesWith" API.
+struct TestValueReplace : public ConversionPattern {
+  TestValueReplace(MLIRContext *ctx, const TypeConverter &converter)
+      : ConversionPattern(converter, "test.value_replace", /*benefit=*/1, ctx) {
+  }
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    // Replace the first block argument with 2x the second block argument.
-    Value repl = op->getRegion(0).getArgument(1);
-    rewriter.replaceUsesOfBlockArgument(op->getRegion(0).getArgument(0),
-                                        {repl, repl});
+    // Replace the first operand with 2x the second operand.
+    Value from = op->getOperand(0);
+    Value repl = op->getOperand(1);
+    if (op->hasAttr("conditional")) {
+      rewriter.replaceUsesWithIf(from, {repl, repl}, [=](OpOperand &use) {
+        return use.getOwner()->hasAttr("replace_uses");
+      });
+    } else {
+      rewriter.replaceAllUsesWith(from, {repl, repl});
+    }
     rewriter.modifyOpInPlace(op, [&] {
       // If the "trigger_rollback" attribute is set, keep the op illegal, so
       // that a rollback is triggered.
@@ -1019,6 +1038,38 @@ struct TestUndoPropertiesModification : public ConversionPattern {
       return failure();
     rewriter.modifyOpInPlace(
         op, [&]() { cast<TestOpWithProperties>(op).getProperties().setA(42); });
+    return success();
+  }
+};
+
+/// A pattern that tests the undo mechanism for a block move if the block was
+/// moved to a detached region. The block is first moved to a detached region
+/// and then a new operation is created with that region. During rollback, first
+/// the `CreateOperationRewrite` is rolled back, causing the block to be
+/// orphaned, i.e., removed from the region. Only then the `MoveBlockRewrite` is
+/// rolled back, which now can't access the region anymore. The test ensures
+/// that the rollback still works and doesn't try to access the orphaned block's
+/// containing region, leading to segfault.
+struct TestUndoMoveDetachedBlock : public ConversionPattern {
+  TestUndoMoveDetachedBlock(MLIRContext *ctx)
+      : ConversionPattern("test.undo_detached_block_move", /*benefit=*/1, ctx) {
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (op->getNumRegions() != 1)
+      return failure();
+    // Create an illegal operation to trigger rollback.
+    OperationState state(op->getLoc(), "test.illegal_op_created_after_move",
+                         operands, op->getResultTypes(), {}, BlockRange());
+    // Create detached region.
+    Region *newRegion = state.addRegion();
+    // Move blocks to the still detached region
+    rewriter.inlineRegionBefore(op->getRegion(0), *newRegion,
+                                newRegion->begin());
+    Operation *newOp = rewriter.create(state);
+    rewriter.replaceOp(op, newOp->getResults());
     return success();
   }
 };
@@ -1306,7 +1357,8 @@ public:
 /// b) or: drops all block arguments and replaces each with 2x the first
 ///    operand.
 class TestConvertBlockArgs : public OpConversionPattern<ConvertBlockArgsOp> {
-  using OpConversionPattern<ConvertBlockArgsOp>::OpConversionPattern;
+  static_assert(std::is_same_v<Base, OpConversionPattern<ConvertBlockArgsOp>>);
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(ConvertBlockArgsOp op, OpAdaptor adaptor,
@@ -1404,6 +1456,22 @@ public:
   }
 };
 
+class TestPostOrderLegalization : public ConversionPattern {
+public:
+  TestPostOrderLegalization(MLIRContext *ctx, const TypeConverter &converter)
+      : ConversionPattern(converter, "test.post_order_legalization", 1, ctx) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<ValueRange> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    for (Region &r : op->getRegions())
+      if (failed(rewriter.legalize(&r)))
+        return failure();
+    rewriter.modifyOpInPlace(
+        op, [&]() { op->setAttr("is_legal", rewriter.getUnitAttr()); });
+    return success();
+  }
+};
+
 /// Test unambiguous overload resolution of replaceOpWithMultiple. This
 /// function is just to trigger compiler errors. It is never executed.
 [[maybe_unused]] void testReplaceOpWithMultipleOverloads(
@@ -1431,7 +1499,9 @@ public:
 
 namespace {
 struct TestTypeConverter : public TypeConverter {
-  using TypeConverter::TypeConverter;
+  static_assert(std::is_same_v<Base, TypeConverter>);
+  using Base::Base;
+
   TestTypeConverter() {
     addConversion(convertType);
     addSourceMaterialization(materializeCast);
@@ -1510,13 +1580,14 @@ struct TestLegalizePatternDriver
         TestUpdateConsumerType, TestNonRootReplacement,
         TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
         TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
-        TestUndoPropertiesModification, TestEraseOp,
+        TestUndoPropertiesModification, TestUndoMoveDetachedBlock, TestEraseOp,
         TestReplaceWithValidProducer, TestReplaceWithValidConsumer,
         TestRepetitive1ToNConsumer>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement,
-                 TestBlockArgReplace, TestReplaceWithValidConsumer,
-                 TestTypeConsumerOpPattern>(&getContext(), converter);
+                 TestValueReplace, TestReplaceWithValidConsumer,
+                 TestTypeConsumerOpPattern, TestPostOrderLegalization>(
+        &getContext(), converter);
     patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
@@ -1537,13 +1608,15 @@ struct TestLegalizePatternDriver
                            [](Type type) { return type.isF32(); });
     });
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
-      return converter.isSignatureLegal(op.getFunctionType()) &&
-             converter.isLegal(&op.getBody());
+      return converter.isSignatureLegal(op.getFunctionType());
     });
     target.addDynamicallyLegalOp<func::CallOp>(
         [&](func::CallOp op) { return converter.isLegal(op); });
     target.addDynamicallyLegalOp(
-        OperationName("test.block_arg_replace", &getContext()),
+        OperationName("test.value_replace", &getContext()),
+        [](Operation *op) { return op->hasAttr("is_legal"); });
+    target.addDynamicallyLegalOp(
+        OperationName("test.post_order_legalization", &getContext()),
         [](Operation *op) { return op->hasAttr("is_legal"); });
 
     // TestCreateUnregisteredOp creates `arith.constant` operation,
@@ -2027,6 +2100,10 @@ struct TestTypeConversionDriver
     });
     converter.addConversion([](IndexType type) { return type; });
     converter.addConversion([](IntegerType type, SmallVectorImpl<Type> &types) {
+      if (type.isInteger(1)) {
+        // i1 is legal.
+        types.push_back(type);
+      }
       if (type.isInteger(38)) {
         // i38 is legal.
         types.push_back(type);
@@ -2047,7 +2124,7 @@ struct TestTypeConversionDriver
           }
 
           conversionCallStack.push_back(type);
-          auto popConversionCallStack = llvm::make_scope_exit(
+          llvm::scope_exit popConversionCallStack(
               [&conversionCallStack]() { conversionCallStack.pop_back(); });
 
           // If the type is on the call stack more than once (it is there at
@@ -2121,7 +2198,7 @@ struct TestTypeConversionDriver
                                           Location loc) -> Value {
       if (inputs.size() != 1 || !inputs[0].getType().isInteger(37))
         return Value();
-      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
           .getResult(0);
     });
 
@@ -2136,8 +2213,7 @@ struct TestTypeConversionDriver
               recursiveType.getName() == "outer_converted_type");
     });
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
-      return converter.isSignatureLegal(op.getFunctionType()) &&
-             converter.isLegal(&op.getBody());
+      return converter.isSignatureLegal(op.getFunctionType());
     });
     target.addDynamicallyLegalOp<TestCastOp>([&](TestCastOp op) {
       // Allow casts from F64 to F32.
@@ -2160,6 +2236,8 @@ struct TestTypeConversionDriver
                                                               converter);
     mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
         converter, patterns, target);
+    mlir::cf::populateCFStructuralTypeConversionsAndLegality(converter,
+                                                             patterns, target);
 
     ConversionConfig config;
     config.allowPatternRollback = allowPatternRollback;

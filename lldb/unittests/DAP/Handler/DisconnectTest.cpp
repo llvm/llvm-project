@@ -31,9 +31,11 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminated) {
   DisconnectRequestHandler handler(*dap);
   ASSERT_THAT_ERROR(handler.Run(std::nullopt), Succeeded());
   EXPECT_CALL(client, Received(IsEvent("terminated", _)));
-  RunOnce();
+  Run();
 }
 
+// Is flaky on Linux, see https://github.com/llvm/llvm-project/issues/154763.
+#ifndef __linux__
 TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
   CreateDebugger();
 
@@ -53,5 +55,6 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
   EXPECT_CALL(client, Received(Output("(lldb) script print(2)\n")));
   EXPECT_CALL(client, Received(Output("Running terminateCommands:\n")));
   EXPECT_CALL(client, Received(IsEvent("terminated", _)));
-  RunOnce();
+  Run();
 }
+#endif

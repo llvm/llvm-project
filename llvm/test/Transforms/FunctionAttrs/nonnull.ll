@@ -1032,7 +1032,7 @@ define  ptr @g1() {
 declare void @use_i32_ptr(ptr) readnone nounwind willreturn
 define internal void @called_by_weak(ptr %a) {
 ; FNATTRS-LABEL: define internal void @called_by_weak(
-; FNATTRS-SAME: ptr readnone captures(none) [[A:%.*]]) #[[ATTR10:[0-9]+]] {
+; FNATTRS-SAME: ptr readnone captures(address) [[A:%.*]]) #[[ATTR10:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @use_i32_ptr(ptr [[A]])
 ; FNATTRS-NEXT:    ret void
 ;
@@ -1064,7 +1064,7 @@ define weak_odr void @weak_caller(ptr nonnull %a) {
 ; Expect nonnull
 define internal void @control(ptr dereferenceable(4) %a) {
 ; FNATTRS-LABEL: define internal void @control(
-; FNATTRS-SAME: ptr readnone captures(none) dereferenceable(4) [[A:%.*]]) #[[ATTR10]] {
+; FNATTRS-SAME: ptr readnone captures(address) dereferenceable(4) [[A:%.*]]) #[[ATTR10]] {
 ; FNATTRS-NEXT:    call void @use_i32_ptr(ptr [[A]])
 ; FNATTRS-NEXT:    ret void
 ;

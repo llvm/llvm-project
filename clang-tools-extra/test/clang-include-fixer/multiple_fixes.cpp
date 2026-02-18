@@ -1,4 +1,3 @@
-// REQUIRES: shell
 // RUN: sed -e 's#//.*$##' %s > %t.cpp
 // RUN: mkdir -p %t.dir/clang-include-fixer/multiple-fixes
 // RUN: echo 'foo f;' > %t.dir/clang-include-fixer/multiple-fixes/foo.cpp

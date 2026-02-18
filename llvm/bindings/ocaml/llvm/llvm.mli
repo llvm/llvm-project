@@ -464,9 +464,6 @@ val create_context : unit -> llcontext
     [llvm::LLVMContext::~LLVMContext]. *)
 val dispose_context : llcontext -> unit
 
-(** See the function [LLVMGetGlobalContext]. *)
-val global_context : unit -> llcontext
-
 (** [mdkind_id context name] returns the MDKind ID that corresponds to the
     name [name] in the context [context].  See the function
     [llvm::LLVMContext::getMDKindID]. *)
@@ -560,7 +557,7 @@ val get_module_identifier : llmodule -> string
 
 (** [set_module_identifier m id] sets the module identifier of [m]
     to [id]. See the method [llvm::Module::setModuleIdentifier] *)
-val set_module_identifer : llmodule -> string -> unit
+val set_module_identifier : llmodule -> string -> unit
 
 (** [get_module_flag m k] Return the corresponding value if key [k] appears in
     the module flags of [m], otherwise return None
@@ -1096,11 +1093,6 @@ val const_neg : llvalue -> llvalue
     See the method [llvm::ConstantExpr::getNSWNeg]. *)
 val const_nsw_neg : llvalue -> llvalue
 
-(** [const_nuw_neg c] returns the arithmetic negation of the constant [c] with
-    no unsigned wrapping. The result is undefined if the negation overflows.
-    See the method [llvm::ConstantExpr::getNUWNeg]. *)
-val const_nuw_neg : llvalue -> llvalue
-
 (** [const_not c] returns the bitwise inverse of the constant [c].
     See the method [llvm::ConstantExpr::getNot]. *)
 val const_not : llvalue -> llvalue
@@ -1478,9 +1470,42 @@ val rev_iter_functions : (llvalue -> unit) -> llmodule -> unit
     [f1,...,fN] are the functions of module [m]. Tail recursive. *)
 val fold_right_functions : (llvalue -> 'a -> 'a) -> llmodule -> 'a -> 'a
 
+(** [lookup_intrinsic_id name] obtains the intrinsic ID number for the given
+    function name. See the method [llvm::Intrinsic::lookupIntrinsicID].*)
+val lookup_intrinsic_id : string -> int
+
+(** [intrinsic_id] returns the ID of intrinsic function [f]. If [f] is not
+    an intrinsic, returns [0]. See the method
+    [llvm::Function::getIntrinsicID]. *)
+val intrinsic_id : llvalue -> int
+
 (** [is_intrinsic f] returns true if the function [f] is an intrinsic.
     See the method [llvm::Function::isIntrinsic]. *)
 val is_intrinsic : llvalue -> bool
+
+(** [intrinsic_declaration m id overload_types] gets or inserts the
+    declaration of an intrinsic. For overloaded intrinsics, types must be
+    provided to uniquely identify an overload. See the method
+    [llvm::Intrinsic::getOrInsertDeclaration]. *)
+val intrinsic_declaration : llmodule -> int -> lltype array -> llvalue
+
+(** [intrinsic_type c id overload_types] returns the type of intrinsic [id] in
+    context [c]. For overloaded intrinsics, types must be provided to uniquely
+    identify an overload. See the method [llvm::Intrinsic::getType]. *)
+val intrinsic_type : llcontext -> int -> lltype array -> lltype
+
+(** [intrinsic_name id] returns the name of intrinsic [id]. See the method
+    [llvm::Intrinsic::getName()]. *)
+val intrinsic_name : int -> string
+
+(** [intrinsic_overloaded_name m id overload_types] returns the name of an
+    overloaded intrinsic [id] identified by the overload types
+    [overload_types]. See the method [llvm::Intrinsic::getName]. *)
+val intrinsic_overloaded_name : llmodule -> int -> lltype array -> string
+
+(** [intrinsic_is_overloaded id] returns if intrinsic [id] is overloaded. See
+    the method [llvm::Intrinsic::isOverloaded]. *)
+val intrinsic_is_overloaded : int -> bool
 
 (** [function_call_conv f] returns the calling convention of the function [f].
     See the method [llvm::Function::getCallingConv]. *)
@@ -2211,13 +2236,6 @@ val build_neg : llvalue -> string -> llbuilder -> llvalue
     [-0.0] is used for floating point types to compute the correct sign.
     See the method [llvm::LLVMBuilder::CreateNeg]. *)
 val build_nsw_neg : llvalue -> string -> llbuilder -> llvalue
-
-(** [build_nuw_neg x name b] creates a
-    [%name = nuw sub 0, %x]
-    instruction at the position specified by the instruction builder [b].
-    [-0.0] is used for floating point types to compute the correct sign.
-    See the method [llvm::LLVMBuilder::CreateNeg]. *)
-val build_nuw_neg : llvalue -> string -> llbuilder -> llvalue
 
 (** [build_fneg x name b] creates a
     [%name = fsub 0, %x]

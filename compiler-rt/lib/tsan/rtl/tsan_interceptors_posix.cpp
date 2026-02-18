@@ -31,6 +31,10 @@
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_fd.h"
+#if SANITIZER_APPLE && !SANITIZER_GO
+#  include "tsan_flags.h"
+#endif
+#include "tsan_adaptive_delay.h"
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
 #include "tsan_mman.h"
@@ -1062,6 +1066,9 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
     ThreadStart(thr, p->tid, GetTid(), ThreadType::Regular);
     p->started.Post();
   }
+
+  AdaptiveDelay::BeforeChildThreadRuns();
+
   void *res = callback(param);
   // Prevent the callback from being tail called,
   // it mixes up stack traces.
@@ -1125,11 +1132,28 @@ TSAN_INTERCEPTOR(int, pthread_create,
   }
   if (attr == &myattr)
     pthread_attr_destroy(&myattr);
+  AdaptiveDelay::AfterThreadCreation();
   return res;
 }
 
 TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   SCOPED_INTERCEPTOR_RAW(pthread_join, th, ret);
+#if SANITIZER_ANDROID
+  {
+    // In Bionic, if the target thread has already exited when pthread_detach is
+    // called, pthread_detach will call pthread_join internally to clean it up.
+    // In that case, the thread has already been consumed by the pthread_detach
+    // interceptor.
+    Tid tid = ctx->thread_registry.FindThread(
+        [](ThreadContextBase* tctx, void* arg) {
+          return tctx->user_id == (uptr)arg;
+        },
+        th);
+    if (tid == kInvalidTid) {
+      return REAL(pthread_join)(th, ret);
+    }
+  }
+#endif
   Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
   ThreadIgnoreBegin(thr, pc);
   int res = BLOCK_REAL(pthread_join)(th, ret);
@@ -1404,6 +1428,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_destroy, void *m) {
 TSAN_INTERCEPTOR(int, pthread_mutex_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
   int res = BLOCK_REAL(pthread_mutex_lock)(m);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
@@ -1416,6 +1441,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_lock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_mutex_trylock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_trylock, m);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_mutex_trylock)(m);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
@@ -1427,6 +1453,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_trylock, void *m) {
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, pthread_mutex_timedlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_timedlock, m, abstime);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_mutex_timedlock)(m, abstime);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
@@ -1439,6 +1466,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_unlock, m);
   MutexUnlock(thr, pc, (uptr)m);
   int res = REAL(pthread_mutex_unlock)(m);
+  AdaptiveDelay::SyncOp();
   if (res == errno_EINVAL)
     MutexInvalidAccess(thr, pc, (uptr)m);
   return res;
@@ -1449,6 +1477,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_clocklock, void *m,
                  __sanitizer_clockid_t clock, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_clocklock, m, clock, abstime);
   MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
   int res = BLOCK_REAL(pthread_mutex_clocklock)(m, clock, abstime);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
@@ -1467,6 +1496,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_clocklock, void *m,
 TSAN_INTERCEPTOR(int, __pthread_mutex_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(__pthread_mutex_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
   int res = BLOCK_REAL(__pthread_mutex_lock)(m);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
@@ -1481,6 +1511,7 @@ TSAN_INTERCEPTOR(int, __pthread_mutex_unlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(__pthread_mutex_unlock, m);
   MutexUnlock(thr, pc, (uptr)m);
   int res = REAL(__pthread_mutex_unlock)(m);
+  AdaptiveDelay::SyncOp();
   if (res == errno_EINVAL)
     MutexInvalidAccess(thr, pc, (uptr)m);
   return res;
@@ -1510,6 +1541,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_destroy, void *m) {
 TSAN_INTERCEPTOR(int, pthread_spin_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
   int res = BLOCK_REAL(pthread_spin_lock)(m);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m);
@@ -1519,6 +1551,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_lock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_spin_trylock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_trylock, m);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_spin_trylock)(m);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
@@ -1530,6 +1563,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_unlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_unlock, m);
   MutexUnlock(thr, pc, (uptr)m);
   int res = REAL(pthread_spin_unlock)(m);
+  AdaptiveDelay::SyncOp();
   return res;
 }
 #endif
@@ -1555,6 +1589,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_destroy, void *m) {
 TSAN_INTERCEPTOR(int, pthread_rwlock_rdlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_rdlock, m);
   MutexPreReadLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_rdlock)(m);
   if (res == 0) {
     MutexPostReadLock(thr, pc, (uptr)m);
@@ -1564,6 +1599,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_rdlock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_tryrdlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_tryrdlock, m);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_tryrdlock)(m);
   if (res == 0) {
     MutexPostReadLock(thr, pc, (uptr)m, MutexFlagTryLock);
@@ -1574,6 +1610,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_tryrdlock, void *m) {
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_timedrdlock, m, abstime);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_timedrdlock)(m, abstime);
   if (res == 0) {
     MutexPostReadLock(thr, pc, (uptr)m);
@@ -1585,6 +1622,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
 TSAN_INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_wrlock, m);
   MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
   int res = BLOCK_REAL(pthread_rwlock_wrlock)(m);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m);
@@ -1594,6 +1632,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_trywrlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_trywrlock, m);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_trywrlock)(m);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
@@ -1604,6 +1643,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_trywrlock, void *m) {
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, pthread_rwlock_timedwrlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_timedwrlock, m, abstime);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_timedwrlock)(m, abstime);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
@@ -1616,6 +1656,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_unlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_unlock, m);
   MutexReadOrWriteUnlock(thr, pc, (uptr)m);
   int res = REAL(pthread_rwlock_unlock)(m);
+  AdaptiveDelay::SyncOp();
   return res;
 }
 
@@ -1649,6 +1690,14 @@ TSAN_INTERCEPTOR(int, pthread_barrier_wait, void *b) {
 
 TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   SCOPED_INTERCEPTOR_RAW(pthread_once, o, f);
+#if SANITIZER_APPLE && !SANITIZER_GO
+  if (flags()->lock_during_write != kLockDuringAllWrites &&
+      cur_thread_init()->in_internal_write_call) {
+    // This is needed to make it through process launch without hanging
+    f();
+    return 0;
+  }
+#endif
   if (o == 0 || f == 0)
     return errno_EINVAL;
   atomic_uint32_t *a;
@@ -2412,7 +2461,11 @@ TSAN_INTERCEPTOR(int, vfork, int fake) {
 }
 #endif
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
+// Bionic's pthread_create internally calls clone. When the CLONE_THREAD flag is
+// set, clone does not create a new process but a new thread. This is a
+// workaround for Android. Disabling the interception of clone solves the
+// problem in most scenarios.
 TSAN_INTERCEPTOR(int, clone, int (*fn)(void *), void *stack, int flags,
                  void *arg, int *parent_tid, void *tls, pid_t *child_tid) {
   SCOPED_INTERCEPTOR_RAW(clone, fn, stack, flags, arg, parent_tid, tls,
@@ -3135,7 +3188,7 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(fork);
   TSAN_INTERCEPT(vfork);
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   TSAN_INTERCEPT(clone);
 #endif
 #if !SANITIZER_ANDROID

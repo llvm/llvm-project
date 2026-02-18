@@ -192,7 +192,7 @@ b:
 	.seh_save_fplr_x 256
 	stp	x19, x20, [sp, #240]
 	.seh_save_regp x19, 240
-	mov	x29, fp
+	mov	x29, sp
 	.seh_set_fp
 	.seh_endprologue
         .rept 600000

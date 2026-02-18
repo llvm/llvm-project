@@ -28,12 +28,10 @@ namespace arith {
 /// is set, values outside the range of the destination type are clamped
 /// to the largest value of that type instead of being rewritten to Inf (aka
 /// NaN).
-void populateArithToAMDGPUConversionPatterns(RewritePatternSet &patterns,
-                                             bool convertFP8Arithmetic,
-                                             bool saturateFP8Truncf,
-                                             bool allowPackedF16Rtz,
-                                             amdgpu::Chipset chipset,
-                                             PatternBenefit benefit = 1);
+void populateArithToAMDGPUConversionPatterns(
+    RewritePatternSet &patterns, bool convertFP8Arithmetic,
+    bool saturateFP8Truncf, bool allowPackedF16Rtz, bool supportsScaledExtTrunc,
+    amdgpu::Chipset chipset, PatternBenefit benefit = 1);
 } // namespace arith
 } // namespace mlir
 

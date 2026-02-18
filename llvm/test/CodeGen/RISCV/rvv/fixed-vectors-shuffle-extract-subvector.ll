@@ -6,7 +6,7 @@ define <8 x i8> @v8i8_from_v16xi8_low(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: v8i8_from_v16xi8_low:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
-  %ret = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32>  <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %ret = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32>  <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i8> %ret
 }
 
@@ -16,7 +16,7 @@ define <8 x i8> @v8i8_from_v16xi8_high(<16 x i8> %a) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %ret = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32>  <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %ret = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32>  <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i8> %ret
 }
 
@@ -26,7 +26,7 @@ define <8 x i8> @v8i8_from_v16xi8_mid(<16 x i8> %a) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 5
 ; CHECK-NEXT:    ret
-  %ret = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32>  <i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12>
+  %ret = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32>  <i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12>
   ret <8 x i8> %ret
 }
 
@@ -36,7 +36,7 @@ define <4 x i8> @v4i8_from_v16xi8_high(<16 x i8> %a) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %ret = shufflevector <16 x i8> %a, <16 x i8> undef, <4 x i32>  <i32 8, i32 9, i32 10, i32 11>
+  %ret = shufflevector <16 x i8> %a, <16 x i8> poison, <4 x i32>  <i32 8, i32 9, i32 10, i32 11>
   ret <4 x i8> %ret
 }
 
@@ -46,7 +46,7 @@ define <4 x i16> @v4i16_from_v8i16_high(<8 x i16> %a) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 4
 ; CHECK-NEXT:    ret
-  %ret = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32>  <i32 4, i32 5, i32 6, i32 7>
+  %ret = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32>  <i32 4, i32 5, i32 6, i32 7>
   ret <4 x i16> %ret
 }
 
@@ -57,7 +57,7 @@ define <8 x i32> @v8i32_from_v16xi32_high(<16 x i32> %a) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %ret = shufflevector <16 x i32> %a, <16 x i32> undef, <8 x i32>  <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %ret = shufflevector <16 x i32> %a, <16 x i32> poison, <8 x i32>  <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i32> %ret
 }
 
@@ -68,6 +68,6 @@ define <8 x i64> @v8i64_from_v16xi64_high(<16 x i64> %a) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 8
 ; CHECK-NEXT:    ret
-  %ret = shufflevector <16 x i64> %a, <16 x i64> undef, <8 x i32>  <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %ret = shufflevector <16 x i64> %a, <16 x i64> poison, <8 x i32>  <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i64> %ret
 }

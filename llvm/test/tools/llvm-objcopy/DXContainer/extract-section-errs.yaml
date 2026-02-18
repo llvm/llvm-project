@@ -1,0 +1,40 @@
+## Check that llvm-objcopy reports a suitable error when it can't find the
+## section to extract.
+
+## We can't extract a part that doesn't exist.
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: not llvm-objcopy %t1 --extract-section=UNKNOWN=%t.unknown.out 2>&1 | FileCheck %s -DFILE=%t1 --check-prefix=ERROR1
+
+# ERROR1: error: '[[FILE]]': part 'UNKNOWN' not found
+
+--- !dxcontainer
+Header:
+  Hash:      [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+               0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:   1
+    Minor:   0
+  PartCount: 1
+Parts:
+  - Name:    FKE0
+    Size:    8
+...
+
+## We can't extract a part that is specified incorrectly.
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: not llvm-objcopy %t2 --extract-section=FKE0,%t.fke0.out 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=ERROR2
+
+# ERROR2: error: bad format for --extract-section, expected section=file
+
+--- !dxcontainer
+Header:
+  Hash:      [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+               0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:   1
+    Minor:   0
+  PartCount: 1
+Parts:
+  - Name:    FKE0
+    Size:    8
+...

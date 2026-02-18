@@ -406,6 +406,14 @@ uint64_t InputChunk::getVA(uint64_t offset) const {
   return (outputSeg ? outputSeg->startVA : 0) + getChunkOffset(offset);
 }
 
+bool isValidRuntimeRelocation(WasmRelocType type) {
+  // TODO(https://github.com/llvm/llvm-project/issues/146923): Currently
+  // this means that R_WASM_FUNCTION_INDEX_I32 is not valid in `-pie` data
+  // sections.
+  return type == R_WASM_TABLE_INDEX_I32 || type == R_WASM_TABLE_INDEX_I64 ||
+         type == R_WASM_MEMORY_ADDR_I32 || type == R_WASM_MEMORY_ADDR_I64;
+}
+
 // Generate code to apply relocations to the data section at runtime.
 // This is only called when generating shared libraries (PIC) where address are
 // not known at static link time.
@@ -415,17 +423,12 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
 
   bool is64 = ctx.arg.is64.value_or(false);
   bool generated = false;
-  unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
-                                   : WASM_OPCODE_I32_CONST;
-  unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD
-                                 : WASM_OPCODE_I32_ADD;
+  unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
 
   uint64_t tombstone = getTombstone();
   // TODO(sbc): Encode the relocations in the data section and write a loop
   // here to apply them.
   for (const WasmRelocation &rel : relocations) {
-    uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
-
     Symbol *sym = file->getSymbol(rel);
     // Runtime relocations are needed when we don't know the address of
     // a symbol statically.
@@ -433,13 +436,19 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     if (!requiresRuntimeReloc)
       continue;
 
+    if (!isValidRuntimeRelocation(rel.getType())) {
+      error("invalid runtime relocation type in data section: " +
+            relocTypetoString(rel.Type));
+      continue;
+    }
+
+    uint64_t offset = getVA(rel.Offset) - getInputSectionOffset();
     LLVM_DEBUG(dbgs() << "gen reloc: type=" << relocTypeToString(rel.Type)
                       << " addend=" << rel.Addend << " index=" << rel.Index
                       << " output offset=" << offset << "\n");
 
     // Calculate the address at which to apply the relocation
-    writeU8(os, opcode_ptr_const, "CONST");
-    writeSleb128(os, offset, "offset");
+    writePtrConst(os, offset, is64, "offset");
 
     // In PIC mode we need to add the __memory_base
     if (ctx.isPic) {
@@ -453,8 +462,6 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
 
     // Now figure out what we want to store at this location
     bool is64 = relocIs64(rel.Type);
-    unsigned opcode_reloc_const =
-        is64 ? WASM_OPCODE_I64_CONST : WASM_OPCODE_I32_CONST;
     unsigned opcode_reloc_add =
         is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
     unsigned opcode_reloc_store =
@@ -464,8 +471,7 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, sym->getGOTIndex(), "global index");
       if (rel.Addend) {
-        writeU8(os, opcode_reloc_const, "CONST");
-        writeSleb128(os, rel.Addend, "addend");
+        writePtrConst(os, rel.Addend, is64, "addend");
         writeU8(os, opcode_reloc_add, "ADD");
       }
     } else {
@@ -478,8 +484,8 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
         baseSymbol = ctx.sym.tlsBase;
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, baseSymbol->getGlobalIndex(), "base");
-      writeU8(os, opcode_reloc_const, "CONST");
-      writeSleb128(os, file->calcNewValue(rel, tombstone, this), "offset");
+      writePtrConst(os, file->calcNewValue(rel, tombstone, this), is64,
+                    "offset");
       writeU8(os, opcode_reloc_add, "ADD");
     }
 
@@ -578,12 +584,12 @@ uint64_t InputSection::getTombstoneForSection(StringRef name) {
     return UINT64_C(-2);
   if (name.starts_with(".debug_"))
     return UINT64_C(-1);
-  // If the function occurs in an function attribute section change it to -1 since
-  // 0 is a valid function index.
+  // If the function occurs in an function attribute section change it to -1
+  // since 0 is a valid function index.
   if (name.starts_with("llvm.func_attr."))
     return UINT64_C(-1);
-  // Returning 0 means there is no tombstone value for this section, and relocation
-  // will just use the addend.
+  // Returning 0 means there is no tombstone value for this section, and
+  // relocation will just use the addend.
   return 0;
 }
 

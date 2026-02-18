@@ -58,6 +58,22 @@ mlir::reifyResultShapes(OpBuilder &b, Operation *op,
   return status;
 }
 
+FailureOr<SmallVector<OpFoldResult>>
+mlir::reifyShapeOfResult(OpBuilder &b, Operation *op, int resultIndex) {
+  auto reifiableOp = dyn_cast<ReifyRankedShapedTypeOpInterface>(op);
+  if (!reifiableOp)
+    return failure();
+  return reifiableOp.reifyShapeOfResult(b, resultIndex);
+}
+
+FailureOr<OpFoldResult> mlir::reifyDimOfResult(OpBuilder &b, Operation *op,
+                                               int resultIndex, int dim) {
+  auto reifiableOp = dyn_cast<ReifyRankedShapedTypeOpInterface>(op);
+  if (!reifiableOp)
+    return failure();
+  return reifiableOp.reifyDimOfResult(b, resultIndex, dim);
+}
+
 bool ShapeAdaptor::hasRank() const {
   if (val.isNull())
     return false;

@@ -64,7 +64,7 @@ define void @sve_16_vector(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-16
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x80, 0x01, 0x1e, 0x22 // sp + 16 + 128 * VG
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    addvl sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -111,7 +111,7 @@ define void @sve_17_vector(ptr %out) #0 {
 ; CHECK-NEXT:    b.le .LBB3_3
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    // in Loop: Header=BB3_1 Depth=1
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB3_1
 ; CHECK-NEXT:  .LBB3_3: // %entry
 ; CHECK-NEXT:    mov sp, x9
@@ -218,7 +218,7 @@ define void @sve_16v_csr(<vscale x 4 x float> %a) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-16
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x80, 0x01, 0x1e, 0x22 // sp + 16 + 128 * VG
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    str z23, [sp] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z22, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z21, [sp, #2, mul vl] // 16-byte Folded Spill
@@ -288,10 +288,10 @@ define void @sve_1p_csr(<vscale x 4 x float> %a) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -311,16 +311,16 @@ define void @sve_4p_csr(<vscale x 4 x float> %a) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    str p11, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p10, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p9, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p10, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p9, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
-; CHECK-NEXT:    ldr p11, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p10, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #4, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p10, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p9, [sp, #6, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -347,13 +347,13 @@ define void @sve_16v_1p_csr(<vscale x 4 x float> %a) #0 {
 ; CHECK-NEXT:    b.le .LBB9_3
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    // in Loop: Header=BB9_1 Depth=1
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB9_1
 ; CHECK-NEXT:  .LBB9_3: // %entry
 ; CHECK-NEXT:    mov sp, x9
 ; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    .cfi_def_cfa_register wsp
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
@@ -396,7 +396,7 @@ define void @sve_16v_1p_csr(<vscale x 4 x float> %a) #0 {
 ; CHECK-NEXT:    ldr z10, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #15, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #16, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #17
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    .cfi_restore z8
@@ -463,7 +463,7 @@ define void @sve_1_vector_4096_arr(ptr %out) #0 {
 ; CHECK-NEXT:    b.le .LBB11_3
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    // in Loop: Header=BB11_1 Depth=1
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB11_1
 ; CHECK-NEXT:  .LBB11_3: // %entry
 ; CHECK-NEXT:    mov sp, x9
@@ -512,7 +512,7 @@ define void @sve_1_vector_16_arr_align_8192(ptr %out) #0 {
 ; CHECK-NEXT:    b.le .LBB12_3
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    // in Loop: Header=BB12_1 Depth=1
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB12_1
 ; CHECK-NEXT:  .LBB12_3: // %entry
 ; CHECK-NEXT:    mov sp, x9
@@ -553,7 +553,7 @@ define void @sve_1024_64k_guard(ptr %out) #0 "stack-probe-size"="65536" {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x80, 0x0e, 0x1e, 0x22 // sp + 16 + 1792 * VG
 ; CHECK-NEXT:    addvl sp, sp, #-32
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x80, 0x10, 0x1e, 0x22 // sp + 16 + 2048 * VG
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    addvl sp, sp, #31
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x88, 0x0e, 0x1e, 0x22 // sp + 16 + 1800 * VG
 ; CHECK-NEXT:    addvl sp, sp, #31
@@ -612,7 +612,7 @@ define void @sve_1028_64k_guard(ptr %out) #0 "stack-probe-size"="65536" {
 ; CHECK-NEXT:    b.le .LBB14_3
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    // in Loop: Header=BB14_1 Depth=1
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    b .LBB14_1
 ; CHECK-NEXT:  .LBB14_3: // %entry
 ; CHECK-NEXT:    mov sp, x9
@@ -657,7 +657,7 @@ define void @sve_5_vector(ptr %out) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-5
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x28, 0x1e, 0x22 // sp + 16 + 40 * VG
-; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr xzr, [sp]
 ; CHECK-NEXT:    addvl sp, sp, #5
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -683,8 +683,8 @@ define void @sve_unprobed_area(<vscale x 4 x float> %a, i32 %n) #0 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
-; CHECK-NEXT:    str xzr, [sp]
-; CHECK-NEXT:    str p9, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    ldr xzr, [sp]
+; CHECK-NEXT:    str p9, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z10, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z9, [sp, #2, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z8, [sp, #3, mul vl] // 16-byte Folded Spill
@@ -700,7 +700,7 @@ define void @sve_unprobed_area(<vscale x 4 x float> %a, i32 %n) #0 {
 ; CHECK-NEXT:    ldr z10, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #3, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p9, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 16
 ; CHECK-NEXT:    .cfi_restore z8

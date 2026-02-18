@@ -29,11 +29,11 @@ udot z0.s, z0.h, z0.h[-1]
 // Invalid vector suffix
 
 udot z0.h, z0.s, z0.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: udot z0.h, z0.s, z0.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 udot z0.h, z0.s, z0.s[1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: udot z0.h, z0.s, z0.s[1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

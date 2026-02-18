@@ -11,6 +11,7 @@ void __attribute__((naked)) branch_cas(int *a, int *b) {
                "xor a5, a2, a5\n\t"
                "sc.w a5, a1, (a3)\n\t"
                "beqz a5, 1b\n\t"
+               "nop\n\t"
                "2:\n\t"
                "ret\n\t");
 }

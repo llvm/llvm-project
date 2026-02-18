@@ -91,6 +91,8 @@ struct EvictionCost {
     return std::tie(BrokenHints, MaxWeight) <
            std::tie(O.BrokenHints, O.MaxWeight);
   }
+
+  bool operator>=(const EvictionCost &O) const { return !(*this < O); }
 };
 
 /// Interface to the eviction advisor, which is responsible for making a

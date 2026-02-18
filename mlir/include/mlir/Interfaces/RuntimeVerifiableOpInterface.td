@@ -32,15 +32,11 @@ def RuntimeVerifiableOpInterface : OpInterface<"RuntimeVerifiableOpInterface"> {
       /*retTy=*/"void",
       /*methodName=*/"generateRuntimeVerification",
       /*args=*/(ins "::mlir::OpBuilder &":$builder,
-                    "::mlir::Location":$loc)
+                    "::mlir::Location":$loc,
+                    "function_ref<std::string(Operation *, StringRef)>":$generateErrorMessage)
     >,
   ];
 
-  let extraClassDeclaration = [{
-    /// Generate the error message that will be printed to the user when 
-    /// verification fails.
-    static std::string generateErrorMessage(Operation *op, const std::string &msg);
-  }];
 }
 
 #endif // MLIR_INTERFACES_RUNTIMEVERIFIABLEOPINTERFACE

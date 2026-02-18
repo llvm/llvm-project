@@ -91,12 +91,14 @@ bool ObjectFilePDB::initPDBFile() {
   return true;
 }
 
-ObjectFile *
-ObjectFilePDB::CreateInstance(const ModuleSP &module_sp, DataBufferSP data_sp,
-                              offset_t data_offset, const FileSpec *file,
-                              offset_t file_offset, offset_t length) {
+ObjectFile *ObjectFilePDB::CreateInstance(const ModuleSP &module_sp,
+                                          DataExtractorSP extractor_sp,
+                                          offset_t data_offset,
+                                          const FileSpec *file,
+                                          offset_t file_offset,
+                                          offset_t length) {
   auto objfile_up = std::make_unique<ObjectFilePDB>(
-      module_sp, data_sp, data_offset, file, file_offset, length);
+      module_sp, extractor_sp, data_offset, file, file_offset, length);
   if (!objfile_up->initPDBFile())
     return nullptr;
   return objfile_up.release();
@@ -110,7 +112,7 @@ ObjectFile *ObjectFilePDB::CreateMemoryInstance(const ModuleSP &module_sp,
 }
 
 size_t ObjectFilePDB::GetModuleSpecifications(
-    const FileSpec &file, DataBufferSP &data_sp, offset_t data_offset,
+    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
     offset_t file_offset, offset_t length, ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
   ModuleSpec module_spec(file);
@@ -158,10 +160,11 @@ size_t ObjectFilePDB::GetModuleSpecifications(
   return specs.GetSize() - initial_count;
 }
 
-ObjectFilePDB::ObjectFilePDB(const ModuleSP &module_sp, DataBufferSP &data_sp,
+ObjectFilePDB::ObjectFilePDB(const ModuleSP &module_sp,
+                             DataExtractorSP &extractor_sp,
                              offset_t data_offset, const FileSpec *file,
                              offset_t offset, offset_t length)
-    : ObjectFile(module_sp, file, offset, length, data_sp, data_offset) {}
+    : ObjectFile(module_sp, file, offset, length, extractor_sp, data_offset) {}
 
 std::unique_ptr<PDBFile>
 ObjectFilePDB::loadPDBFile(std::string PdbPath,

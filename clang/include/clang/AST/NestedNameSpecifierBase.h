@@ -361,6 +361,9 @@ public:
   /// Retrieve the source range covering just the last part of
   /// this nested-name-specifier, not including the prefix.
   ///
+  /// Note that this is the source range of this NestedNameSpecifier chunk,
+  /// and for a type this includes the prefix of that type.
+  ///
   /// For example, if this instance refers to a nested-name-specifier
   /// \c \::std::vector<int>::, the returned source range would cover
   /// from "vector" to the last '::'.

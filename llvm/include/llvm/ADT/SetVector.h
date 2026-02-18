@@ -28,7 +28,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
-#include <iterator>
 
 namespace llvm {
 
@@ -40,8 +39,7 @@ namespace llvm {
 ///
 /// The key and value types are derived from the Set and Vector types
 /// respectively. This allows the vector-type operations and set-type operations
-/// to have different types. In particular, this is useful when storing pointers
-/// as "Foo *" values but looking them up as "const Foo *" keys.
+/// to have different types.
 ///
 /// No constraint is placed on the key and value types, although it is assumed
 /// that value_type can be converted into key_type for insertion. Users must be
@@ -60,6 +58,9 @@ class SetVector {
   // Much like in SmallPtrSet, this value should not be too high to prevent
   // excessively long linear scans from occuring.
   static_assert(N <= 32, "Small size should be less than or equal to 32!");
+
+  using const_arg_type =
+      typename const_pointer_or_const_ref<typename Set::key_type>::type;
 
 public:
   using value_type = typename Vector::value_type;
@@ -87,72 +88,54 @@ public:
   SetVector(llvm::from_range_t, Range &&R)
       : SetVector(adl_begin(R), adl_end(R)) {}
 
-  ArrayRef<value_type> getArrayRef() const { return vector_; }
+  [[nodiscard]] ArrayRef<value_type> getArrayRef() const { return vector_; }
 
   /// Clear the SetVector and return the underlying vector.
-  Vector takeVector() {
+  [[nodiscard]] Vector takeVector() {
     set_.clear();
     return std::move(vector_);
   }
 
   /// Determine if the SetVector is empty or not.
-  bool empty() const {
-    return vector_.empty();
-  }
+  [[nodiscard]] bool empty() const { return vector_.empty(); }
 
   /// Determine the number of elements in the SetVector.
-  size_type size() const {
-    return vector_.size();
-  }
+  [[nodiscard]] size_type size() const { return vector_.size(); }
 
   /// Get an iterator to the beginning of the SetVector.
-  iterator begin() {
-    return vector_.begin();
-  }
+  [[nodiscard]] iterator begin() { return vector_.begin(); }
 
   /// Get a const_iterator to the beginning of the SetVector.
-  const_iterator begin() const {
-    return vector_.begin();
-  }
+  [[nodiscard]] const_iterator begin() const { return vector_.begin(); }
 
   /// Get an iterator to the end of the SetVector.
-  iterator end() {
-    return vector_.end();
-  }
+  [[nodiscard]] iterator end() { return vector_.end(); }
 
   /// Get a const_iterator to the end of the SetVector.
-  const_iterator end() const {
-    return vector_.end();
-  }
+  [[nodiscard]] const_iterator end() const { return vector_.end(); }
 
   /// Get an reverse_iterator to the end of the SetVector.
-  reverse_iterator rbegin() {
-    return vector_.rbegin();
-  }
+  [[nodiscard]] reverse_iterator rbegin() { return vector_.rbegin(); }
 
   /// Get a const_reverse_iterator to the end of the SetVector.
-  const_reverse_iterator rbegin() const {
+  [[nodiscard]] const_reverse_iterator rbegin() const {
     return vector_.rbegin();
   }
 
   /// Get a reverse_iterator to the beginning of the SetVector.
-  reverse_iterator rend() {
-    return vector_.rend();
-  }
+  [[nodiscard]] reverse_iterator rend() { return vector_.rend(); }
 
   /// Get a const_reverse_iterator to the beginning of the SetVector.
-  const_reverse_iterator rend() const {
-    return vector_.rend();
-  }
+  [[nodiscard]] const_reverse_iterator rend() const { return vector_.rend(); }
 
   /// Return the first element of the SetVector.
-  const value_type &front() const {
+  [[nodiscard]] const value_type &front() const {
     assert(!empty() && "Cannot call front() on empty SetVector!");
     return vector_.front();
   }
 
   /// Return the last element of the SetVector.
-  const value_type &back() const {
+  [[nodiscard]] const value_type &back() const {
     assert(!empty() && "Cannot call back() on empty SetVector!");
     return vector_.back();
   }
@@ -266,17 +249,17 @@ public:
   }
 
   /// Check if the SetVector contains the given key.
-  [[nodiscard]] bool contains(const key_type &key) const {
+  [[nodiscard]] bool contains(const_arg_type key) const {
     if constexpr (canBeSmall())
       if (isSmall())
         return is_contained(vector_, key);
 
-    return set_.find(key) != set_.end();
+    return is_contained(set_, key);
   }
 
   /// Count the number of elements of a given key in the SetVector.
   /// \returns 0 if the element is not in the SetVector, 1 if it is.
-  [[nodiscard]] size_type count(const key_type &key) const {
+  [[nodiscard]] size_type count(const_arg_type key) const {
     return contains(key) ? 1 : 0;
   }
 
@@ -299,11 +282,11 @@ public:
     return Ret;
   }
 
-  bool operator==(const SetVector &that) const {
+  [[nodiscard]] bool operator==(const SetVector &that) const {
     return vector_ == that.vector_;
   }
 
-  bool operator!=(const SetVector &that) const {
+  [[nodiscard]] bool operator!=(const SetVector &that) const {
     return vector_ != that.vector_;
   }
 
