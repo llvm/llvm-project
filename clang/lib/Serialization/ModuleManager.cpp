@@ -41,12 +41,10 @@ using namespace clang;
 using namespace serialization;
 
 ModuleFile *ModuleManager::lookupByFileName(StringRef Name) const {
-  auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
-                                          /*CacheFailure=*/false);
-  if (Entry)
-    return lookup(*Entry);
-
-  return nullptr;
+  SmallString<128> NormalizedFileName = Name;
+  llvm::sys::fs::make_absolute(NormalizedFileName);
+  llvm::sys::path::make_preferred(NormalizedFileName);
+  return Modules.lookup(NormalizedFileName);
 }
 
 ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
@@ -57,17 +55,33 @@ ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
   return nullptr;
 }
 
-ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
-  return Modules.lookup(File);
+ModuleFile *ModuleManager::lookup(FileEntryRef File) const {
+  llvm::SmallString<128> NormalizedFileName = File.getName();
+  llvm::sys::fs::make_absolute(NormalizedFileName);
+  llvm::sys::path::make_preferred(NormalizedFileName);
+  return Modules.lookup(NormalizedFileName);
 }
 
 std::unique_ptr<llvm::MemoryBuffer>
 ModuleManager::lookupBuffer(StringRef Name) {
-  auto Entry = FileMgr.getOptionalFileRef(Name, /*OpenFile=*/false,
-                                          /*CacheFailure=*/false);
-  if (!Entry)
-    return nullptr;
-  return std::move(InMemoryBuffers[*Entry]);
+  return std::move(InMemoryBuffers[Name]);
+}
+
+static bool checkModuleFile(const FileEntry *File, off_t ExpectedSize,
+                            time_t ExpectedModTime, std::string &ErrorStr) {
+  assert(File && "Checking expectations of a non-existent module file");
+
+  if (ExpectedSize && ExpectedSize != File->getSize()) {
+    ErrorStr = "module file has a different size than expected";
+    return true;
+  }
+
+  if (ExpectedModTime && ExpectedModTime != File->getModificationTime()) {
+    ErrorStr = "module file has a different modification time than expected";
+    return true;
+  }
+
+  return false;
 }
 
 static bool checkSignature(ASTFileSignature Signature,
@@ -105,13 +119,16 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
                          std::string &ErrorStr) {
   Module = nullptr;
 
+  // FIXME: Only call this after we figure out we have not loaded this module
+  // before to avoid unnecessary IO.
   uint64_t InputFilesValidationTimestamp = 0;
   if (Type == MK_ImplicitModule)
     InputFilesValidationTimestamp = ModCache.getModuleTimestamp(FileName);
 
-  // Look for the file entry. This only fails if the expected size or
-  // modification time differ.
-  OptionalFileEntryRef Entry;
+  SmallString<128> NormalizedFileName = FileName;
+  llvm::sys::fs::make_absolute(NormalizedFileName);
+  llvm::sys::path::make_preferred(NormalizedFileName);
+
   bool IgnoreModTime = Type == MK_ExplicitModule || Type == MK_PrebuiltModule;
   if (ImportedBy)
     IgnoreModTime &= ImportedBy->Kind == MK_ExplicitModule ||
@@ -123,91 +140,65 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     // contents, but we can't check that.)
     ExpectedModTime = 0;
   }
-  // Note: ExpectedSize and ExpectedModTime will be 0 for MK_ImplicitModule
-  // when using an ASTFileSignature.
-  if (lookupModuleFile(FileName, ExpectedSize, ExpectedModTime, Entry)) {
-    ErrorStr = IgnoreModTime ? "module file has a different size than expected"
-                             : "module file has a different size or "
-                               "modification time than expected";
-    return OutOfDate;
-  }
-
-  if (!Entry) {
-    ErrorStr = "module file not found";
-    return Missing;
-  }
-
-  // The ModuleManager's use of FileEntry nodes as the keys for its map of
-  // loaded modules is less than ideal. Uniqueness for FileEntry nodes is
-  // maintained by FileManager, which in turn uses inode numbers on hosts
-  // that support that. When coupled with the module cache's proclivity for
-  // turning over and deleting stale PCMs, this means entries for different
-  // module files can wind up reusing the same underlying inode. When this
-  // happens, subsequent accesses to the Modules map will disagree on the
-  // ModuleFile associated with a given file. In general, it is not sufficient
-  // to resolve this conundrum with a type like FileEntryRef that stores the
-  // name of the FileEntry node on first access because of path canonicalization
-  // issues. However, the paths constructed for implicit module builds are
-  // fully under Clang's control. We *can*, therefore, rely on their structure
-  // being consistent across operating systems and across subsequent accesses
-  // to the Modules map.
-  auto implicitModuleNamesMatch = [](ModuleKind Kind, const ModuleFile *MF,
-                                     FileEntryRef Entry) -> bool {
-    if (Kind != MK_ImplicitModule)
-      return true;
-    return Entry.getName() == MF->FileName;
-  };
 
   // Check whether we already loaded this module, before
-  if (ModuleFile *ModuleEntry = Modules.lookup(*Entry)) {
-    if (implicitModuleNamesMatch(Type, ModuleEntry, *Entry)) {
-      // Check the stored signature.
-      if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
-        return OutOfDate;
+  if (ModuleFile *ModuleEntry = Modules.lookup(NormalizedFileName)) {
+    // Check file properties.
+    if (checkModuleFile(ModuleEntry->File, ExpectedSize, ExpectedModTime,
+                        ErrorStr))
+      return OutOfDate;
 
-      Module = ModuleEntry;
-      updateModuleImports(*ModuleEntry, ImportedBy, ImportLoc);
-      return AlreadyLoaded;
-    }
+    // Check the stored signature.
+    if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
+      return OutOfDate;
+
+    Module = ModuleEntry;
+    updateModuleImports(*ModuleEntry, ImportedBy, ImportLoc);
+    return AlreadyLoaded;
   }
 
-  // Allocate a new module.
-  auto NewModule = std::make_unique<ModuleFile>(Type, *Entry, Generation);
-  NewModule->Index = Chain.size();
-  NewModule->FileName = FileName.str();
-  NewModule->ImportLoc = ImportLoc;
-  NewModule->InputFilesValidationTimestamp = InputFilesValidationTimestamp;
-
   // Load the contents of the module
+  OptionalFileEntryRef Entry;
+  llvm::MemoryBuffer *ModuleBuffer = nullptr;
   std::unique_ptr<llvm::MemoryBuffer> NewFileBuffer = nullptr;
-  if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
+  if (std::unique_ptr<llvm::MemoryBuffer> Buffer =
+          lookupBuffer(NormalizedFileName)) {
     // The buffer was already provided for us.
-    NewModule->Buffer = &getModuleCache().getInMemoryModuleCache().addBuiltPCM(
+    ModuleBuffer = &getModuleCache().getInMemoryModuleCache().addBuiltPCM(
         FileName, std::move(Buffer));
-    // Since the cached buffer is reused, it is safe to close the file
-    // descriptor that was opened while stat()ing the PCM in
-    // lookupModuleFile() above, it won't be needed any longer.
-    Entry->closeFile();
   } else if (llvm::MemoryBuffer *Buffer =
                  getModuleCache().getInMemoryModuleCache().lookupPCM(
                      FileName)) {
-    NewModule->Buffer = Buffer;
-    // As above, the file descriptor is no longer needed.
-    Entry->closeFile();
+    ModuleBuffer = Buffer;
   } else if (getModuleCache().getInMemoryModuleCache().shouldBuildPCM(
                  FileName)) {
     // Report that the module is out of date, since we tried (and failed) to
     // import it earlier.
-    Entry->closeFile();
     return OutOfDate;
   } else {
+    Entry = FileName == "-"
+                ? expectedToOptional(FileMgr.getSTDIN())
+                : FileMgr.getOptionalFileRef(FileName, /*OpenFile=*/true,
+                                             /*CacheFailure=*/false);
+    if (!Entry) {
+      ErrorStr = "module file not found";
+      return Missing;
+    }
+
+    // FIXME: Consider moving this after this else branch so that we check
+    // size/mtime expectations even when pulling the module file out of the
+    // in-memory module cache or the provided in-memory buffers.
+    // Check file properties.
+    if (checkModuleFile(*Entry, ExpectedSize, ExpectedModTime, ErrorStr))
+      return OutOfDate;
+
     // Get a buffer of the file and close the file descriptor when done.
     // The file is volatile because in a parallel build we expect multiple
     // compiler processes to use the same module file rebuilding it if needed.
     //
     // RequiresNullTerminator is false because module files don't need it, and
     // this allows the file to still be mmapped.
-    auto Buf = FileMgr.getBufferForFile(NewModule->File,
+    auto Buf = FileMgr.getBufferForFile(*Entry,
                                         /*IsVolatile=*/true,
                                         /*RequiresNullTerminator=*/false);
 
@@ -217,9 +208,23 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     }
 
     NewFileBuffer = std::move(*Buf);
-    NewModule->Buffer = NewFileBuffer.get();
+    ModuleBuffer = NewFileBuffer.get();
   }
 
+  if (!Entry) {
+    // Unless we loaded the buffer from a freshly open file (else branch above),
+    // we don't have any FileEntry for this ModuleFile. Make one up.
+    // FIXME: Make it so that ModuleFile is not tied to a FileEntry.
+    Entry = FileMgr.getVirtualFileRef(FileName, ExpectedSize, ExpectedModTime);
+  }
+
+  // Allocate a new module.
+  auto NewModule = std::make_unique<ModuleFile>(Type, *Entry, Generation);
+  NewModule->Index = Chain.size();
+  NewModule->FileName = FileName.str();
+  NewModule->ImportLoc = ImportLoc;
+  NewModule->InputFilesValidationTimestamp = InputFilesValidationTimestamp;
+  NewModule->Buffer = ModuleBuffer;
   // Initialize the stream.
   NewModule->Data = PCHContainerRdr.ExtractPCH(*NewModule->Buffer);
 
@@ -234,7 +239,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
                                                      std::move(NewFileBuffer));
 
   // We're keeping this module.  Store it everywhere.
-  Module = Modules[*Entry] = NewModule.get();
+  Module = Modules[NormalizedFileName] = NewModule.get();
 
   updateModuleImports(*NewModule, ImportedBy, ImportLoc);
 
@@ -280,7 +285,7 @@ void ModuleManager::removeModules(ModuleIterator First) {
 
   // Delete the modules.
   for (ModuleIterator victim = First; victim != Last; ++victim)
-    Modules.erase(victim->File);
+    Modules.erase(victim->File.getName());
 
   Chain.erase(Chain.begin() + (First - begin()), Chain.end());
 }
@@ -288,9 +293,10 @@ void ModuleManager::removeModules(ModuleIterator First) {
 void
 ModuleManager::addInMemoryBuffer(StringRef FileName,
                                  std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  FileEntryRef Entry =
-      FileMgr.getVirtualFileRef(FileName, Buffer->getBufferSize(), 0);
-  InMemoryBuffers[Entry] = std::move(Buffer);
+  SmallString<128> NormalizedFileName = FileName;
+  llvm::sys::fs::make_absolute(NormalizedFileName);
+  llvm::sys::path::make_preferred(NormalizedFileName);
+  InMemoryBuffers[NormalizedFileName] = std::move(Buffer);
 }
 
 std::unique_ptr<ModuleManager::VisitState> ModuleManager::allocateVisitState() {
@@ -437,29 +443,6 @@ void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
   }
 
   returnVisitState(std::move(State));
-}
-
-bool ModuleManager::lookupModuleFile(StringRef FileName, off_t ExpectedSize,
-                                     time_t ExpectedModTime,
-                                     OptionalFileEntryRef &File) {
-  if (FileName == "-") {
-    File = expectedToOptional(FileMgr.getSTDIN());
-    return false;
-  }
-
-  // Open the file immediately to ensure there is no race between stat'ing and
-  // opening the file.
-  File = FileMgr.getOptionalFileRef(FileName, /*OpenFile=*/true,
-                                    /*CacheFailure=*/false);
-
-  if (File &&
-      ((ExpectedSize && ExpectedSize != File->getSize()) ||
-       (ExpectedModTime && ExpectedModTime != File->getModificationTime())))
-    // Do not destroy File, as it may be referenced. If we need to rebuild it,
-    // it will be destroyed by removeModules.
-    return true;
-
-  return false;
 }
 
 #ifndef NDEBUG

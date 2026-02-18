@@ -7,13 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang;
 
 InMemoryModuleCache::State
 InMemoryModuleCache::getPCMState(llvm::StringRef Filename) const {
-  auto I = PCMs.find(Filename);
+  llvm::SmallString<128> NormalizedFilename = Filename;
+  llvm::sys::fs::make_absolute(NormalizedFilename);
+  llvm::sys::path::make_preferred(NormalizedFilename);
+  auto I = PCMs.find(NormalizedFilename);
   if (I == PCMs.end())
     return Unknown;
   if (I->second.IsFinal)
@@ -24,7 +30,11 @@ InMemoryModuleCache::getPCMState(llvm::StringRef Filename) const {
 llvm::MemoryBuffer &
 InMemoryModuleCache::addPCM(llvm::StringRef Filename,
                             std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  auto Insertion = PCMs.insert(std::make_pair(Filename, std::move(Buffer)));
+  llvm::SmallString<128> NormalizedFilename = Filename;
+  llvm::sys::fs::make_absolute(NormalizedFilename);
+  llvm::sys::path::make_preferred(NormalizedFilename);
+  auto Insertion =
+      PCMs.insert(std::make_pair(NormalizedFilename, std::move(Buffer)));
   assert(Insertion.second && "Already has a PCM");
   return *Insertion.first->second.Buffer;
 }
@@ -32,7 +42,10 @@ InMemoryModuleCache::addPCM(llvm::StringRef Filename,
 llvm::MemoryBuffer &
 InMemoryModuleCache::addBuiltPCM(llvm::StringRef Filename,
                                  std::unique_ptr<llvm::MemoryBuffer> Buffer) {
-  auto &PCM = PCMs[Filename];
+  llvm::SmallString<128> NormalizedFilename = Filename;
+  llvm::sys::fs::make_absolute(NormalizedFilename);
+  llvm::sys::path::make_preferred(NormalizedFilename);
+  auto &PCM = PCMs[NormalizedFilename];
   assert(!PCM.IsFinal && "Trying to override finalized PCM?");
   assert(!PCM.Buffer && "Trying to override tentative PCM?");
   PCM.Buffer = std::move(Buffer);
@@ -42,7 +55,10 @@ InMemoryModuleCache::addBuiltPCM(llvm::StringRef Filename,
 
 llvm::MemoryBuffer *
 InMemoryModuleCache::lookupPCM(llvm::StringRef Filename) const {
-  auto I = PCMs.find(Filename);
+  llvm::SmallString<128> NormalizedFilename = Filename;
+  llvm::sys::fs::make_absolute(NormalizedFilename);
+  llvm::sys::path::make_preferred(NormalizedFilename);
+  auto I = PCMs.find(NormalizedFilename);
   if (I == PCMs.end())
     return nullptr;
   return I->second.Buffer.get();
@@ -57,7 +73,10 @@ bool InMemoryModuleCache::shouldBuildPCM(llvm::StringRef Filename) const {
 }
 
 bool InMemoryModuleCache::tryToDropPCM(llvm::StringRef Filename) {
-  auto I = PCMs.find(Filename);
+  llvm::SmallString<128> NormalizedFilename = Filename;
+  llvm::sys::fs::make_absolute(NormalizedFilename);
+  llvm::sys::path::make_preferred(NormalizedFilename);
+  auto I = PCMs.find(NormalizedFilename);
   assert(I != PCMs.end() && "PCM to remove is unknown...");
 
   auto &PCM = I->second;
@@ -71,7 +90,10 @@ bool InMemoryModuleCache::tryToDropPCM(llvm::StringRef Filename) {
 }
 
 void InMemoryModuleCache::finalizePCM(llvm::StringRef Filename) {
-  auto I = PCMs.find(Filename);
+  llvm::SmallString<128> NormalizedFilename = Filename;
+  llvm::sys::fs::make_absolute(NormalizedFilename);
+  llvm::sys::path::make_preferred(NormalizedFilename);
+  auto I = PCMs.find(NormalizedFilename);
   assert(I != PCMs.end() && "PCM to finalize is unknown...");
 
   auto &PCM = I->second;
