@@ -187,7 +187,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
 
     // All block arguments are non-successor-inputs.
     return visitNonControlFlowArgumentsImpl(block->getParentOp(),
-                                            RegionSuccessor(block->getParent()),
+                                            block->getParent(),
                                             block->getArguments(), argLattices);
   }
 

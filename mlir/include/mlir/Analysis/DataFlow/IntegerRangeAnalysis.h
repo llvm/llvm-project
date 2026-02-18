@@ -63,13 +63,19 @@ public:
 
   /// Visit block arguments or operation results of an operation with region
   /// control-flow for which values are not defined by region control-flow. This
-  /// function calls `InferIntRangeInterface` to provide values for block
-  /// arguments or tries to reduce the range on loop induction variables with
+  /// function tries to reduce the range on loop induction variables with
   /// known bounds.
   void visitNonControlFlowArguments(
       Operation *op, const RegionSuccessor &successor,
       ValueRange nonSuccessorInputs,
       ArrayRef<IntegerValueRangeLattice *> nonSuccessorInputLattices) override;
+
+  /// This function calls `InferIntRangeInterface` to provide values for entry
+  /// block arguments where the parentOp does not implement
+  /// `RegionBranchOpInterface` (e.g., gpu.launch).
+  void visitNonControlFlowArguments(
+      Operation *op, Region *const region, ValueRange arguments,
+      ArrayRef<IntegerValueRangeLattice *> argLattices) override;
 };
 
 /// Succeeds if an op can be converted to its unsigned equivalent without
