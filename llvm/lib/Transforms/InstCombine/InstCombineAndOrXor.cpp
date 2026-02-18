@@ -5130,7 +5130,21 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   if (match(NotOp, m_BinOp(NotVal))) {
     // ~((-X) | Y) --> (X - 1) & (~Y)
     if (match(NotVal,
+              m_OneUse(m_c_Or(m_OneUse(m_NSWNeg(m_Value(X))), m_Value(Y))))) {
+      // If -X is nsw, then X - 1 must be too.
+      // This is because -X can only be nsw if X is any number that is not
+      // INT_MIN. And if X is not INT_MIN, then X - 1 must be nsw.
+      Value *DecX = Builder.CreateAdd(X, ConstantInt::getAllOnesValue(Ty), "",
+                                      /*HasNUW=*/false, /*HasNSW=*/true);
+      Value *NotY = Builder.CreateNot(Y);
+      return BinaryOperator::CreateAnd(DecX, NotY);
+    }
+
+    if (match(NotVal,
               m_OneUse(m_c_Or(m_OneUse(m_Neg(m_Value(X))), m_Value(Y))))) {
+      // If -X is nsw, then X - 1 must be too.
+      // This is because -X can only be nsw if X is any number that is not
+      // INT_MIN. And if X is not INT_MIN, then X - 1 must be nsw.
       Value *DecX = Builder.CreateAdd(X, ConstantInt::getAllOnesValue(Ty));
       Value *NotY = Builder.CreateNot(Y);
       return BinaryOperator::CreateAnd(DecX, NotY);
