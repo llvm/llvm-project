@@ -47,7 +47,7 @@ static void normalizeCacheKey(StringRef &Path,
   if (Path.size() > 1 && root_path(Path) != Path && is_separator(Path.back()))
     Path = Path.drop_back();
 
-  // A bare drive path like "[A-Z:" is drive-relative (current directory on the
+  // A bare drive path like "[A-Z]:" is drive-relative (current directory on the
   // drive).  As `[A-Z]:` is not a path specification, we must canonicalise it
   // to `[A-Z]:.`.
   if (is_style_windows(Style::native)) {
