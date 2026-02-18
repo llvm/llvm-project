@@ -1011,7 +1011,8 @@ except ImportError:
         return 4096
 
 
-config.available_features.add(f"page-size-{target_page_size()}")
+if config.target_os != "Generic":
+    config.available_features.add(f"page-size-{target_page_size()}")
 
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
