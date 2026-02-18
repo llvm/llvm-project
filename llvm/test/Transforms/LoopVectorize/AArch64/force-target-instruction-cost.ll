@@ -165,6 +165,8 @@ exit:
   ret void
 }
 
+; TODO: The branch condition could be reassociated to be simplified further, see
+; the diff in 3482a9c6cba57b4e605c2b99fb6d90a023439f9b
 define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.ptr, ptr noalias %dst.1, i1 %c.4, ptr %src, ptr noalias %dst.3, i1 %c.3, ptr noalias %dst.2) {
 ; COMMON-LABEL: define void @test_exit_branch_cost(
 ; COMMON-SAME: ptr [[DST:%.*]], ptr noalias [[X_PTR:%.*]], ptr noalias [[Y_PTR:%.*]], ptr noalias [[DST_1:%.*]], i1 [[C_4:%.*]], ptr [[SRC:%.*]], ptr noalias [[DST_3:%.*]], i1 [[C_3:%.*]], ptr noalias [[DST_2:%.*]]) {
@@ -184,9 +186,7 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; COMMON-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT2]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; COMMON-NEXT:    [[TMP0:%.*]] = select i1 [[C_4]], <2 x i1> [[BROADCAST_SPLAT]], <2 x i1> zeroinitializer
 ; COMMON-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[TMP0]], splat (i1 true)
-; COMMON-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i1> [[BROADCAST_SPLAT3]], <2 x i1> zeroinitializer
 ; COMMON-NEXT:    [[TMP3:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT3]], splat (i1 true)
-; COMMON-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i1> [[TMP3]], <2 x i1> zeroinitializer
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE17:.*]] ]
@@ -219,7 +219,8 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; COMMON-NEXT:    store i64 0, ptr [[DST_3]], align 8
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE9]]
 ; COMMON:       [[PRED_STORE_CONTINUE9]]:
-; COMMON-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP7]], <2 x i1> [[TMP2]], <2 x i1> zeroinitializer
+; COMMON-NEXT:    [[TMP22:%.*]] = select <2 x i1> [[TMP7]], <2 x i1> [[BROADCAST_SPLAT]], <2 x i1> zeroinitializer
+; COMMON-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP22]], <2 x i1> [[BROADCAST_SPLAT3]], <2 x i1> zeroinitializer
 ; COMMON-NEXT:    [[TMP14:%.*]] = or <2 x i1> [[TMP6]], [[TMP13]]
 ; COMMON-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP13]], <2 x i64> zeroinitializer, <2 x i64> splat (i64 1)
 ; COMMON-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP14]], i32 0
@@ -236,20 +237,20 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; COMMON-NEXT:    store i64 [[TMP18]], ptr [[DST_2]], align 8
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE13]]
 ; COMMON:       [[PRED_STORE_CONTINUE13]]:
-; COMMON-NEXT:    [[TMP19:%.*]] = select <2 x i1> [[TMP7]], <2 x i1> [[TMP4]], <2 x i1> zeroinitializer
+; COMMON-NEXT:    [[TMP19:%.*]] = select <2 x i1> [[TMP22]], <2 x i1> [[TMP3]], <2 x i1> zeroinitializer
 ; COMMON-NEXT:    [[TMP20:%.*]] = or <2 x i1> [[TMP14]], [[TMP19]]
 ; COMMON-NEXT:    [[TMP21:%.*]] = extractelement <2 x i1> [[TMP20]], i32 0
 ; COMMON-NEXT:    br i1 [[TMP21]], label %[[PRED_STORE_IF14:.*]], label %[[PRED_STORE_CONTINUE15:.*]]
 ; COMMON:       [[PRED_STORE_IF14]]:
-; COMMON-NEXT:    [[TMP22:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META7:![0-9]+]]
-; COMMON-NEXT:    store i64 [[TMP22]], ptr [[DST]], align 8, !alias.scope [[META10:![0-9]+]], !noalias [[META7]]
+; COMMON-NEXT:    [[TMP24:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META7:![0-9]+]]
+; COMMON-NEXT:    store i64 [[TMP24]], ptr [[DST]], align 8, !alias.scope [[META10:![0-9]+]], !noalias [[META7]]
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE15]]
 ; COMMON:       [[PRED_STORE_CONTINUE15]]:
 ; COMMON-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP20]], i32 1
 ; COMMON-NEXT:    br i1 [[TMP23]], label %[[PRED_STORE_IF16:.*]], label %[[PRED_STORE_CONTINUE17]]
 ; COMMON:       [[PRED_STORE_IF16]]:
-; COMMON-NEXT:    [[TMP24:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META7]]
-; COMMON-NEXT:    store i64 [[TMP24]], ptr [[DST]], align 8, !alias.scope [[META10]], !noalias [[META7]]
+; COMMON-NEXT:    [[TMP26:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META7]]
+; COMMON-NEXT:    store i64 [[TMP26]], ptr [[DST]], align 8, !alias.scope [[META10]], !noalias [[META7]]
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE17]]
 ; COMMON:       [[PRED_STORE_CONTINUE17]]:
 ; COMMON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -584,6 +585,84 @@ loop:
   store i8 0, ptr %gep.0, align 1
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @forced_scalar_instr(ptr %gep.dst) {
+; COMMON-LABEL: define void @forced_scalar_instr(
+; COMMON-SAME: ptr [[GEP_DST:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    br label %[[VECTOR_PH:.*]]
+; COMMON:       [[VECTOR_PH]]:
+; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COMMON:       [[VECTOR_BODY]]:
+; COMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
+; COMMON-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
+; COMMON-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
+; COMMON-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 4)
+; COMMON-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
+; COMMON-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; COMMON:       [[PRED_STORE_IF]]:
+; COMMON-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
+; COMMON-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 0
+; COMMON-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP3]]
+; COMMON-NEXT:    [[TMP6:%.*]] = or i32 [[TMP4]], 1
+; COMMON-NEXT:    store i32 [[TMP6]], ptr [[TMP5]], align 4
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; COMMON:       [[PRED_STORE_CONTINUE]]:
+; COMMON-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
+; COMMON-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; COMMON:       [[PRED_STORE_IF1]]:
+; COMMON-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 1
+; COMMON-NEXT:    [[TMP9:%.*]] = add i32 [[TMP0]], 1
+; COMMON-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP8]]
+; COMMON-NEXT:    [[TMP11:%.*]] = or i32 [[TMP9]], 1
+; COMMON-NEXT:    store i32 [[TMP11]], ptr [[TMP10]], align 4
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; COMMON:       [[PRED_STORE_CONTINUE2]]:
+; COMMON-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
+; COMMON-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; COMMON:       [[PRED_STORE_IF3]]:
+; COMMON-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 2
+; COMMON-NEXT:    [[TMP14:%.*]] = add i32 [[TMP0]], 2
+; COMMON-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP13]]
+; COMMON-NEXT:    [[TMP16:%.*]] = or i32 [[TMP14]], 1
+; COMMON-NEXT:    store i32 [[TMP16]], ptr [[TMP15]], align 4
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; COMMON:       [[PRED_STORE_CONTINUE4]]:
+; COMMON-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP1]], i32 3
+; COMMON-NEXT:    br i1 [[TMP17]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
+; COMMON:       [[PRED_STORE_IF5]]:
+; COMMON-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 3
+; COMMON-NEXT:    [[TMP19:%.*]] = add i32 [[TMP0]], 3
+; COMMON-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP18]]
+; COMMON-NEXT:    [[TMP21:%.*]] = or i32 [[TMP19]], 1
+; COMMON-NEXT:    store i32 [[TMP21]], ptr [[TMP20]], align 4
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; COMMON:       [[PRED_STORE_CONTINUE6]]:
+; COMMON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; COMMON-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
+; COMMON-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
+; COMMON-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; COMMON:       [[MIDDLE_BLOCK]]:
+; COMMON-NEXT:    br label %[[EXIT:.*]]
+; COMMON:       [[EXIT]]:
+; COMMON-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i32, ptr %gep.dst, i64 %iv
+  %t = trunc i64 %iv to i32
+  %o = or i32 %t, 1
+  store i32 %o, ptr %gep, align 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 4
   br i1 %ec, label %exit, label %loop
 
 exit:

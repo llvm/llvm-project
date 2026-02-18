@@ -399,10 +399,10 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
      Set an attribute for the vscale range on functions, to allow scalable
      vector operations to be used on processors with variable vector length.
   }];
-  let options = [
-    Option<"vscaleRange", "vscale-range",
-           "std::pair<unsigned, unsigned>", /*default=*/"std::pair<unsigned, unsigned>{}",
-           "vector scale range">,
+  let options = [Option<"vscaleMin", "vscale-min", "unsigned", /*default=*/"1",
+                        "vector scale minimum value. Defaults to \"1\"">,
+                 Option<"vscaleMax", "vscale-max", "unsigned", /*default=*/"0",
+                        "vector scale maximum value. Defaults to \"0\"">,
   ];
 }
 
@@ -426,7 +426,8 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::None, "None", ""),
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf, "NonLeaf", ""),
             clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::All, "All", ""),
-            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", "")
+            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::Reserved, "Reserved", ""),
+            clEnumValN(mlir::LLVM::framePointerKind::FramePointerKind::NonLeafNoReserve, "NonLeafNoReserve", "")
           )}]>,
        Option<"instrumentFunctionEntry", "instrument-function-entry",
               "std::string", /*default=*/"",

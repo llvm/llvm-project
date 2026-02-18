@@ -57,6 +57,20 @@ mlir::Value genCharCompare(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value lhsLen, mlir::Value rhsBuff,
                            mlir::Value rhsLen);
 
+/// Generate call to F_C_STRING intrinsic runtime routine
+/// This appends a null character to a Fortran character string to create
+/// a C-compatible null-terminated string.
+///
+/// \p resultBox must be an unallocated allocatable used for the temporary
+/// result. \p stringBox must be a fir.box describing the F_C_STRING string
+/// argument. \p asis must be a boxed logical value (fir.box<i1>) or an
+/// AbsentOp: if true, trailing blanks are kept; if false or absent (default),
+/// trailing blanks are trimmed before appending the null.
+/// The runtime will always allocate the resultBox.
+void genFCString(fir::FirOpBuilder &builder, mlir::Location loc,
+                 mlir::Value resultBox, mlir::Value stringBox,
+                 mlir::Value asis);
+
 /// Generate call to INDEX runtime.
 /// This calls the simple runtime entry points based on the KIND of the string.
 /// No descriptors are used.

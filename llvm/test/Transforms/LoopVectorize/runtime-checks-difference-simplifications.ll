@@ -213,8 +213,8 @@ exit:
 define void @check_creation_order(ptr %a, ptr %b, i32 %m) {
 ; CHECK-LABEL: @check_creation_order(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B:%.*]] to i64
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A:%.*]] to i64
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B:%.*]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr [[A:%.*]] to i64
 ; CHECK-NEXT:    [[M_EXT:%.*]] = sext i32 [[M:%.*]] to i64
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr double, ptr [[A]], i64 [[M_EXT]]
 ; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]

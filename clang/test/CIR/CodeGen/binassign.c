@@ -89,8 +89,8 @@ void binary_assign_struct() {
 // LLVM: define {{.*}}void @binary_assign_struct()
 // LLVM:   %[[LS_PTR:.*]] = alloca %struct.S
 // LLVM:   %[[LSV_PTR:.*]] = alloca %struct.SV
-// LLVM:   call void @llvm.memcpy.p0.p0.i32(ptr %[[LS_PTR]], ptr @gs, i32 8, i1 false)
-// LLVM:   call void @llvm.memcpy.p0.p0.i32(ptr %[[LSV_PTR]], ptr @gsv, i32 8, i1 true)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[LS_PTR]], ptr @gs, i64 8, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[LSV_PTR]], ptr @gsv, i64 8, i1 true)
 // LLVM:   ret void
 
 // OGCG: define {{.*}}void @binary_assign_struct()
