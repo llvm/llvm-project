@@ -73,12 +73,6 @@ protected:
     getLinkageTable(TU).insert({Id, EntityLinkage(Linkage)});
     return Id;
   }
-
-  NestedBuildNamespace
-  makeLocalNamespace(const BuildNamespace &TUNamespace,
-                     const NestedBuildNamespace &LUNamespace) {
-    return NestedBuildNamespace(TUNamespace).makeQualified(LUNamespace);
-  }
 };
 
 // ============================================================================
@@ -190,7 +184,7 @@ MATCHER_P(SummaryDataHasSize, expectedSize,
   return true;
 }
 
-TEST_F(EntityLinkerTest, NoLink) {
+TEST_F(EntityLinkerTest, CreatesEmptyLinker) {
   NestedBuildNamespace LUNamespace(
       {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
 
@@ -202,7 +196,7 @@ TEST_F(EntityLinkerTest, NoLink) {
   EXPECT_EQ(getData(Output).size(), 0u);
 }
 
-TEST_F(EntityLinkerTest, EmptyLink) {
+TEST_F(EntityLinkerTest, LinksEmptyTranslationUnit) {
   NestedBuildNamespace LUNamespace(
       {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
 
@@ -219,7 +213,7 @@ TEST_F(EntityLinkerTest, EmptyLink) {
   EXPECT_EQ(getData(Output).size(), 0u);
 }
 
-TEST_F(EntityLinkerTest, NonEmptyLink) {
+TEST_F(EntityLinkerTest, LinksOneTranslationUnit) {
   NestedBuildNamespace LUNamespace(
       {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
 
@@ -329,7 +323,7 @@ TEST_F(EntityLinkerTest, NonEmptyLink) {
   }
 }
 
-TEST_F(EntityLinkerTest, TwoTULinkWithAllCombinations) {
+TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
   NestedBuildNamespace LUNamespace(
       {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
 
