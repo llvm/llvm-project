@@ -32,7 +32,7 @@ Options
 .. option:: MakeSmartPtrFunction
 
    A string specifying the name of the factory function. This option must be
-   set for the check to work. Default is empty.
+   set for the check to work. Default is empty string.
 
 .. option:: MakeSmartPtrFunctionHeader
 
