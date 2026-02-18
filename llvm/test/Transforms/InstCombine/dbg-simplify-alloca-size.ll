@@ -8,7 +8,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 ; CHECK-LABEL: @toplevel(
 ; CHECK:  entry:
 ; CHECK-NEXT:    %pixels1 = alloca [3 x i8], align 1
-; CHECK-NEXT:    #dbg_declare(ptr %pixels1, ![[MD:[0-9]+]], !DIExpression(), ![[DBG:[0-9]+]]
+; CHECK-NEXT:    #dbg_value(ptr %pixels1, ![[MD:[0-9]+]], !DIExpression(DW_OP_deref), ![[DBG:[0-9]+]]
 ; CHECK-NEXT:    call void @foo(ptr nonnull %pixels1)
 ; CHECK-NEXT:    ret void
 define dso_local void @toplevel() {
@@ -34,6 +34,6 @@ entry:
 !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 ; CHECK: ![[MD]] = !DILocalVariable(name: "pixels"
 !11 = !DILocalVariable(name: "pixels", arg: 1, scope: !7, file: !1, line: 9, type: !10)
-; CHECK: ![[DBG]] = !DILocation(line: 9, column: 16,
+; CHECK: ![[DBG]] = !DILocation(line: 0,
 !12 = !DILocation(line: 9, column: 16, scope: !7)
 
