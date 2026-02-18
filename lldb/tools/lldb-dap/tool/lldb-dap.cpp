@@ -411,7 +411,7 @@ validateConnection(llvm::StringRef conn) {
 static llvm::Error serveConnection(
     const Socket::SocketProtocol &protocol, llvm::StringRef name, Log &log,
     const ReplMode default_repl_mode,
-    const std::vector<std::string> &pre_init_commands, bool no_lldbinit,
+    const std::vector<protocol::String> &pre_init_commands, bool no_lldbinit,
     std::optional<std::chrono::seconds> connection_timeout_seconds) {
   Status status;
   static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
@@ -705,7 +705,7 @@ int main(int argc, char *argv[]) {
     lldb::SBDebugger::Terminate();
   });
 
-  std::vector<std::string> pre_init_commands;
+  std::vector<protocol::String> pre_init_commands;
   for (const std::string &arg :
        input_args.getAllArgValues(OPT_pre_init_command)) {
     pre_init_commands.push_back(arg);

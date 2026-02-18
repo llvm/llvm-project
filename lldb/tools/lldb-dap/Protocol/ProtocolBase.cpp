@@ -57,6 +57,22 @@ bool fromJSON(const json::Value &Params, MessageType &M, json::Path P) {
   return true;
 }
 
+json::Value toJSON(const String &S) {
+  if (LLVM_LIKELY(llvm::json::isUTF8(std::string(S))))
+    return std::string(S);
+  return llvm::json::fixUTF8(std::string(S));
+}
+
+bool fromJSON(const llvm::json::Value &Param, String &Str,
+              llvm::json::Path Path) {
+  if (auto s = Param.getAsString()) {
+    Str = *std::move(s);
+    return true;
+  }
+  Path.report("expected string");
+  return false;
+}
+
 json::Value toJSON(const Request &R) {
   assert(R.seq != kCalculateSeq && "invalid seq");
 
@@ -124,8 +140,7 @@ json::Value toJSON(const Response &R) {
         Result.insert({"message", "notStopped"});
         break;
       }
-    } else if (const auto *messageString =
-                   std::get_if<std::string>(&*R.message)) {
+    } else if (const auto *messageString = std::get_if<String>(&*R.message)) {
       Result.insert({"message", *messageString});
     }
   }
@@ -137,8 +152,7 @@ json::Value toJSON(const Response &R) {
 }
 
 static bool fromJSON(json::Value const &Params,
-                     std::variant<ResponseMessage, std::string> &M,
-                     json::Path P) {
+                     std::variant<ResponseMessage, String> &M, json::Path P) {
   auto rawMessage = Params.getAsString();
   if (!rawMessage) {
     P.report("expected a string");
@@ -188,31 +202,46 @@ bool operator==(const Response &a, const Response &b) {
 json::Value toJSON(const ErrorMessage &EM) {
   json::Object Result{{"id", EM.id}, {"format", EM.format}};
 
-  if (EM.variables) {
+  if (!EM.variables.empty()) {
     json::Object variables;
-    for (auto &var : *EM.variables)
-      variables[var.first] = var.second;
+    for (auto &var : EM.variables)
+      variables[var.first.str()] = var.second;
     Result.insert({"variables", std::move(variables)});
   }
   if (EM.sendTelemetry)
     Result.insert({"sendTelemetry", EM.sendTelemetry});
   if (EM.showUser)
     Result.insert({"showUser", EM.showUser});
-  if (EM.url)
+  if (!EM.url.empty())
     Result.insert({"url", EM.url});
-  if (EM.urlLabel)
+  if (!EM.urlLabel.empty())
     Result.insert({"urlLabel", EM.urlLabel});
 
   return std::move(Result);
 }
 
+bool fromJSON(json::Value const &Params, std::map<String, String> &M,
+              json::Path P) {
+  const auto *const O = Params.getAsObject();
+  if (!O) {
+    P.report("expected object");
+    return false;
+  }
+  for (auto [k, v] : *O) {
+    auto str = v.getAsString();
+    if (str)
+      M[k.str()] = *std::move(str);
+  }
+  return true;
+}
+
 bool fromJSON(json::Value const &Params, ErrorMessage &EM, json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("id", EM.id) && O.map("format", EM.format) &&
-         O.map("variables", EM.variables) &&
-         O.map("sendTelemetry", EM.sendTelemetry) &&
-         O.map("showUser", EM.showUser) && O.map("url", EM.url) &&
-         O.map("urlLabel", EM.urlLabel);
+         O.mapOptional("variables", EM.variables) &&
+         O.mapOptional("sendTelemetry", EM.sendTelemetry) &&
+         O.mapOptional("showUser", EM.showUser) &&
+         O.mapOptional("url", EM.url) && O.mapOptional("urlLabel", EM.urlLabel);
 }
 
 json::Value toJSON(const Event &E) {
