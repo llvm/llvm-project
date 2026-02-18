@@ -47,7 +47,7 @@ public:
   // Return a usable general-purpose reg after point P. Return 0 if no reg is
   // available.
   MCPhysReg scavengeRegAfter(ProgramPoint P) {
-    BitVector BV = *this->getStateAt(P);
+    BitVector BV = *this->getStateBefore(P);
     BV.flip();
     BitVector GPRegs(NumRegs, false);
     this->BC.MIB->getGPRegs(GPRegs, /*IncludeAlias=*/false);
