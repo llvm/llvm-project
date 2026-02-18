@@ -1,6 +1,6 @@
-# RUN: not llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.a1.o %s 2>&1 | FileCheck %s --check-prefix=MVP
+# RUN: not llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mcpu=mvp -o %t.a1.o %s 2>&1 | FileCheck %s --check-prefix=MVP
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mattr=+reference-types -o %t.a1.rt.o %s
-# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/call-indirect.s -o %t.a2.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mcpu=mvp %p/Inputs/call-indirect.s -o %t.a2.o
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mattr=+reference-types %p/Inputs/call-indirect.s -o %t.a2.rt.o
 # RUN: not wasm-ld --allow-undefined --export-dynamic --no-entry -o %t.wasm %t.a1.rt.o %t.a2.o 2>&1 | FileCheck %s --check-prefix=RT-MVP
 # RUN: wasm-ld --allow-undefined --export-dynamic --no-entry -o- %t.a1.rt.o %t.a2.rt.o | obj2yaml | FileCheck %s
