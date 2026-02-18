@@ -1314,12 +1314,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
        << " = {\n";
     for (unsigned M = 0; M < NumModes; ++M) {
       unsigned EV = 0;
-      OS << "  // Mode = " << M << " (";
-      if (M == 0)
-        OS << "Default";
-      else
-        OS << CGH.getMode(M).Name;
-      OS << ")\n";
+      OS << "  // Mode = " << M << " ("
+         << CGH.getModeName(M, /*IncludeDefault=*/true) << ")\n";
       for (const auto &RC : RegisterClasses) {
         assert(RC.EnumValue == EV && "Unexpected order of register classes");
         ++EV;
@@ -1894,7 +1890,7 @@ Printable RegisterInfoEmitter::printByHwMode(const InfoByHwMode<InfoTy> &Info,
 
     OS << "{";
     for (unsigned M = 0, E = CGH.getNumModeIds(); M != E; ++M)
-      OS << ' ' << (M ? CGH.getModeName(M, true) : "Default") << ':'
+      OS << ' ' << CGH.getModeName(M, /*IncludeDefault=*/true) << ':'
          << Func(Info.get(M));
     OS << " }";
   });
