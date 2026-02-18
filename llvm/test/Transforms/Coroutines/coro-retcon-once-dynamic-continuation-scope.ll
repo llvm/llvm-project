@@ -26,7 +26,7 @@ entry:
   br label %coro.end, !dbg !54
 
 coro.end:
-  %8 = call ptr @llvm.coro.end(ptr %4, i1 false, token none) #5, !dbg !54
+  call void @llvm.coro.end(ptr %4, i1 false, token none) #5, !dbg !54
   unreachable, !dbg !54
 }
 
@@ -40,7 +40,6 @@ declare swiftcc void @"$s4test1SVSiIetMIlYl_TC"(ptr noalias, ptr swiftcoro)
 declare token @llvm.coro.id.retcon.once.dynamic(i32, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i64) #4
 declare ptr @llvm.coro.begin(token, ptr writeonly) #4
 declare ptr @llvm.coro.suspend.retcon.p0(...) #4
-declare ptr @llvm.coro.end(ptr, i1, token) #4
 
 attributes #0 = { noinline presplitcoroutine }
 attributes #3 = { noinline nounwind }
