@@ -436,6 +436,14 @@ its enabled sub-projects. Nearly all of these variable names begin with
   of the machine where LLVM is being built. If you are building a cross-compiler,
   set it to the target triple of your desired architecture.
 
+**LLVM_DISABLE_PROJECTS**:STRING
+  Semicolon-separated list of projects to exclude from the build. Sometimes it is
+  more convenient to exclude a few projects than to have to enumerate all other
+  projects. This flag can be combined with ``LLVM_ENABLE_PROJECTS`` to easily
+  select projects of interest in the build. For example, the command:
+  ``cmake ... -DLLVM_ENABLE_PROJECTS=all -DLLVM_DISABLE_PROJECTS=libclc ...``
+  allows to build all projects but ``libclc``.
+
 **LLVM_DOXYGEN_QCH_FILENAME**:STRING
   The filename of the Qt Compressed Help file that will be generated when
   ``-DLLVM_ENABLE_DOXYGEN=ON`` and
