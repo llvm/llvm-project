@@ -9,6 +9,10 @@
 #ifndef LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_TESTFIXTURE_H
 #define LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_TESTFIXTURE_H
 
+#include "clang/Analysis/Scalable/EntityLinker/EntityLinker.h"
+#include "clang/Analysis/Scalable/EntityLinker/LUSummary.h"
+#include "clang/Analysis/Scalable/EntityLinker/LUSummaryEncoding.h"
+#include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"

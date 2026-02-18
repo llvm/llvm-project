@@ -14,6 +14,10 @@
 #ifndef CLANG_ANALYSIS_SCALABLE_SERIALIZATION_SERIALIZATION_FORMAT_H
 #define CLANG_ANALYSIS_SCALABLE_SERIALIZATION_SERIALIZATION_FORMAT_H
 
+#include "clang/Analysis/Scalable/EntityLinker/EntityLinker.h"
+#include "clang/Analysis/Scalable/EntityLinker/LUSummary.h"
+#include "clang/Analysis/Scalable/EntityLinker/LUSummaryEncoding.h"
+#include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
@@ -24,10 +28,14 @@ namespace clang::ssaf {
 
 class EntityId;
 class EntityIdTable;
+class EntityLinker;
 class EntityName;
 class EntitySummary;
+class LUSummary;
+class LUSummaryEncoding;
 class SummaryName;
 class TUSummary;
+class TUSummaryEncoding;
 
 /// Abstract base class for serialization formats.
 class SerializationFormat {

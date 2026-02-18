@@ -57,6 +57,11 @@ public:
   ///          deduplicated and patched entity summaries.
   const LUSummaryEncoding &getOutput() const { return Output; }
 
+  /// Returns the accumulated link unit summary.
+  ///
+  /// \returns A mutable reference to the linked output.
+  LUSummaryEncoding &getOutput() { return Output; }
+
 private:
   llvm::Expected<EntityId> resolve(const EntityName &OldName,
                                    const EntityLinkage &Linkage);

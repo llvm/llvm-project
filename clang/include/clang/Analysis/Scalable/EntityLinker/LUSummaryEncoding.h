@@ -36,6 +36,7 @@ class SerializationFormat;
 class LUSummaryEncoding {
   friend class EntityLinker;
   friend class SerializationFormat;
+  friend class TestFixture;
 
   /// The namespace identifying this link unit.
   NestedBuildNamespace LUNamespace;

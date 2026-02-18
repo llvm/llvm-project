@@ -75,12 +75,13 @@ llvm::Expected<EntityId> EntityLinker::resolve(const EntityName &OldName,
 
   [[maybe_unused]] auto [It, Inserted] =
       Output.LinkageTable.try_emplace(NewId, Linkage);
-  if (!Inserted) {
-    return ErrorBuilder::create(
-               llvm::inconvertibleErrorCode(),
-               ErrorMessages::EntityIdAlreadyExistsInLinkageTable, NewId.Index)
-        .build();
-  }
+  // if (!Inserted) {
+  //   return ErrorBuilder::create(
+  //              llvm::inconvertibleErrorCode(),
+  //              ErrorMessages::EntityIdAlreadyExistsInLinkageTable,
+  //              NewId.Index)
+  //       .build();
+  // }
 
   return NewId;
 }

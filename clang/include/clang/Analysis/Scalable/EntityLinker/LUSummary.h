@@ -36,6 +36,7 @@ class SummaryViewBuilder;
 class LUSummary {
   friend class SerializationFormat;
   friend class SummaryViewBuilder;
+  friend class TestFixture;
 
   NestedBuildNamespace LUNamespace;
 

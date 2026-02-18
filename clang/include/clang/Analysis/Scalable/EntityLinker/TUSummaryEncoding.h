@@ -37,6 +37,7 @@ class SerializationFormat;
 class TUSummaryEncoding {
   friend class EntityLinker;
   friend class SerializationFormat;
+  friend class TestFixture;
 
   /// The namespace identifying this translation unit.
   BuildNamespace TUNamespace;
