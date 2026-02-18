@@ -239,3 +239,51 @@ define i32 @popcount64_mask(i64 %x) {
   %13 = trunc nuw nsw i64 %12 to i32
   ret i32 %13
 }
+
+define dso_local noundef range(i32 0, 64) i32 @popcnt2(i32 noundef %0) local_unnamed_addr {
+; CHECK-LABEL: define dso_local noundef range(i32 0, 64) i32 @popcnt2(
+; CHECK-SAME: i32 noundef [[TMP0:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP0]])
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %2 = lshr i32 %0, 1
+  %3 = and i32 %2, 1431655765
+  %4 = sub i32 %0, %3
+  %5 = and i32 %4, 858993459
+  %6 = lshr i32 %4, 2
+  %7 = and i32 %6, 858993459
+  %8 = add nuw nsw i32 %7, %5
+  %9 = lshr i32 %8, 4
+  %10 = add nuw nsw i32 %9, %8
+  %11 = and i32 %10, 252645135
+  %12 = lshr i32 %11, 8
+  %13 = add nuw nsw i32 %12, %11
+  %14 = lshr i32 %13, 16
+  %15 = add nuw nsw i32 %14, %13
+  %16 = and i32 %15, 63
+  ret i32 %16
+}
+
+define dso_local noundef range(i32 0, 64) i32 @popcnt3(i32 noundef %0) local_unnamed_addr {
+; CHECK-LABEL: define dso_local noundef range(i32 0, 64) i32 @popcnt3(
+; CHECK-SAME: i32 noundef [[TMP0:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP0]])
+; CHECK-NEXT:    ret i32 [[TMP16]]
+;
+  %2 = lshr i32 %0, 1
+  %3 = and i32 %2, 1431655765
+  %4 = sub i32 %0, %3
+  %5 = lshr i32 %4, 2
+  %6 = and i32 %5, 858993459
+  %7 = mul i32 %6, -3
+  %8 = add i32 %7, %4
+  %9 = lshr i32 %8, 4
+  %10 = add i32 %9, %8
+  %11 = and i32 %10, 252645135
+  %12 = lshr i32 %11, 8
+  %13 = add nuw nsw i32 %12, %11
+  %14 = lshr i32 %13, 16
+  %15 = add nuw nsw i32 %14, %13
+  %16 = and i32 %15, 63
+  ret i32 %16
+}
