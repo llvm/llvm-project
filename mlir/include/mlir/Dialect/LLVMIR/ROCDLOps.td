@@ -105,7 +105,9 @@ def ROCDL_Dialect : Dialect {
     (sometimes known as shader programming guides).
 
     If an operation doesn't provide usage examples, it is likely that they
-    can be found in `mlir/test/Dialect/LLVMIR/rocdl.td`.
+    can be found in `mlir/test/Dialect/LLVMIR/rocdl.mlir` (op syntax and
+    verification) or `mlir/test/Target/LLVMIR/rocdl.mlir` (translation
+    to LLVM IR).
   }];
 
   let extraClassDeclaration = [{
