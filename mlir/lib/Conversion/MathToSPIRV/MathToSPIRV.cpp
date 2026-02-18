@@ -450,11 +450,12 @@ struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
 
     Location loc = roundOp.getLoc();
     auto ty = getTypeConverter()->convertType(adaptor.getOperand().getType());
-    if (!ty)
+    if (!ty) {
       return rewriter.notifyMatchFailure(
           roundOp->getLoc(),
           llvm::formatv("failed to convert type {0} for SPIR-V",
                         roundOp.getType()));
+    }
 
     Type ety = getElementTypeOrSelf(ty);
 
