@@ -1806,7 +1806,7 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   index::SymbolInfo SymInfo = index::getSymbolInfo(&ND);
   // FIXME: This is not classifying constructors, destructors and operators
   // correctly.
-  SymbolKind SK = indexSymbolKindToSymbolKind(SymInfo.Kind);
+  SymbolKind SK = indexSymbolKindToSymbolKind(SymInfo);
 
   HierarchyItem HI;
   HI.name = printName(Ctx, ND);
@@ -1863,7 +1863,7 @@ static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   HierarchyItem HI;
   HI.name = std::string(S.Name);
   HI.detail = (S.Scope + S.Name).str();
-  HI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
+  HI.kind = indexSymbolKindToSymbolKind(S.SymInfo);
   HI.selectionRange = Loc->range;
   // FIXME: Populate 'range' correctly
   // (https://github.com/clangd/clangd/issues/59).
