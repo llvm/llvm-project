@@ -196,7 +196,7 @@ void DAGISelEmitter::run(raw_ostream &OS) {
   SmallVector<MatcherList, 0> PatternMatchers;
   for (const PatternToMatch *PTM : Patterns) {
     for (unsigned Variant = 0;; ++Variant) {
-      MatcherList ML = ConvertPatternToMatcher(*PTM, Variant, CGP);
+      MatcherList ML = ConvertPatternToMatcherList(*PTM, Variant, CGP);
       if (ML.empty())
         break;
       PatternMatchers.push_back(std::move(ML));
@@ -209,7 +209,7 @@ void DAGISelEmitter::run(raw_ostream &OS) {
   Timer.startTimer("Optimize matchers");
   OptimizeMatcher(Matchers, CGP);
 
-  // Matcher->dump();
+  // Matchers->dump();
 
   Timer.startTimer("Emit matcher table");
   EmitMatcherTable(Matchers, CGP, OS);

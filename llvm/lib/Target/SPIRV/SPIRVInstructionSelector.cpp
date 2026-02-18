@@ -258,6 +258,9 @@ private:
   bool selectWaveExclusiveScanSum(Register ResVReg, SPIRVTypeInst ResType,
                                   MachineInstr &I) const;
 
+  bool selectWaveExclusiveScanProduct(Register ResVReg, SPIRVTypeInst ResType,
+                                      MachineInstr &I) const;
+
   bool selectConst(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
 
@@ -2958,6 +2961,18 @@ bool SPIRVInstructionSelector::selectWaveExclusiveScanSum(
                                  });
 }
 
+bool SPIRVInstructionSelector::selectWaveExclusiveScanProduct(
+    Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I) const {
+  return selectWaveExclusiveScan(ResVReg, ResType, I, /*IsUnsigned*/ false,
+                                 [&](Register InputRegister, bool IsUnsigned) {
+                                   bool IsFloatTy = GR.isScalarOrVectorOfType(
+                                       InputRegister, SPIRV::OpTypeFloat);
+                                   return IsFloatTy
+                                              ? SPIRV::OpGroupNonUniformFMul
+                                              : SPIRV::OpGroupNonUniformIMul;
+                                 });
+}
+
 template <typename PickOpcodeFn>
 bool SPIRVInstructionSelector::selectWaveExclusiveScan(
     Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I, bool IsUnsigned,
@@ -4093,6 +4108,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                             SPIRV::OpGroupNonUniformShuffle);
   case Intrinsic::spv_wave_prefix_sum:
     return selectWaveExclusiveScanSum(ResVReg, ResType, I);
+  case Intrinsic::spv_wave_prefix_product:
+    return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:

@@ -42,7 +42,7 @@ struct Bar varargs_aggregate(int count, ...) {
 // LLVM:   %[[VA_PTR1:.+]] = getelementptr %struct.__va_list_tag, ptr %{{.*}}, i32 0
 // LLVM:   %[[VA_ARG:.+]] = va_arg ptr %[[VA_PTR1]], %struct.Bar
 // LLVM:   store %struct.Bar %[[VA_ARG]], ptr %{{.*}}
-// LLVM:   call void @llvm.memcpy.p0.p0.i32(ptr %{{.*}}, ptr %{{.*}}, i32 12, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %{{.*}}, ptr %{{.*}}, i64 12, i1 false)
 
 // OGCG-LABEL: define dso_local { <2 x float>, i32 } @varargs_aggregate
 // OGCG:   call void @llvm.va_start.p0(ptr %{{.*}})

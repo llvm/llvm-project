@@ -34,8 +34,8 @@ entry:
   %ld.c = load ptr addrspace(3), ptr addrspace(3) %b, align 4
   %ld.c.idx.1 = load ptr addrspace(3), ptr addrspace(3) %b.1, align 4
 
-  store ptr addrspace(3) null, ptr addrspace(3) %a, align 4
-  store ptr addrspace(3) null, ptr addrspace(3) %a.1, align 4
+  store ptr addrspace(3) zeroinitializer, ptr addrspace(3) %a, align 4
+  store ptr addrspace(3) zeroinitializer, ptr addrspace(3) %a.1, align 4
 
   ret void
 }
@@ -58,7 +58,7 @@ entry:
   %ld.2 = load <2 x i32>, ptr addrspace(3) %b.2, align 8
 
   store i32 0, ptr addrspace(3) %a.0, align 16
-  store ptr addrspace(3) null, ptr addrspace(3) %a.1, align 4
+  store ptr addrspace(3) zeroinitializer, ptr addrspace(3) %a.1, align 4
   store <2 x i32> <i32 0, i32 0>, ptr addrspace(3) %a.2, align 8
 
   ret void
@@ -82,7 +82,7 @@ entry:
   %ld.2 = load i32, ptr addrspace(3) %b.2, align 4
 
   store <2 x i32> <i32 0, i32 0>, ptr addrspace(3) %a.0, align 16
-  store ptr addrspace(3) null, ptr addrspace(3) %a.1, align 8
+  store ptr addrspace(3) zeroinitializer, ptr addrspace(3) %a.1, align 8
   store i32 0, ptr addrspace(3) %a.2, align 4
 
   ret void
