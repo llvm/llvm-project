@@ -1257,7 +1257,7 @@ public:
           break;
         }
         if (CIValue.isPowerOf2())
-	  InterchangeableMask = MulBIT | ShlBIT;
+          InterchangeableMask = MulBIT | ShlBIT;
         break;
       case Instruction::UDiv:
         if (CIValue.isOne()) {
@@ -1265,15 +1265,15 @@ public:
           break;
         }
         if (CIValue.isPowerOf2())
-	  InterchangeableMask = UDivBIT | LShrBIT;
+          InterchangeableMask = UDivBIT | LShrBIT;
         break;
       case Instruction::Add:
       case Instruction::Sub:
         InterchangeableMask = CIValue.isZero() ? CanBeAll : SubBIT | AddBIT;
         break;
       case Instruction::And:
-	if (CIValue.isAllOnes())
-	  InterchangeableMask = CanBeAll;
+        if (CIValue.isAllOnes())
+          InterchangeableMask = CanBeAll;
         break;
       case Instruction::Xor:
         if (CIValue.isZero())
