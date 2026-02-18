@@ -31,13 +31,20 @@
 
 namespace __hwasan {
 
+enum AllocType {
+  FROM_MALLOC = 1,  // Memory block came from malloc, calloc, realloc, etc.
+  FROM_NEW = 2,     // Memory block came from operator new.
+  FROM_NEW_BR = 3   // Memory block came from operator new [ ]
+};
+
 struct Metadata {
  private:
   atomic_uint64_t alloc_context_id;
   u32 requested_size_low;
   u16 requested_size_high;
   atomic_uint8_t chunk_state;
-  u8 lsan_tag;
+  u8 lsan_tag : 2;
+  u8 alloc_type : 2;
 
  public:
   inline void SetAllocated(u32 stack, u64 size);
@@ -49,6 +56,8 @@ struct Metadata {
   inline u32 GetAllocThreadId() const;
   inline void SetLsanTag(__lsan::ChunkTag tag);
   inline __lsan::ChunkTag GetLsanTag() const;
+  inline void SetAllocType(AllocType type);
+  inline AllocType GetAllocType() const;
 };
 static_assert(sizeof(Metadata) == 16);
 
