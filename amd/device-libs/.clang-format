@@ -3,4 +3,5 @@ BraceWrapping:
   AfterFunction:   true
 BreakBeforeBraces: Custom
 IndentWidth:     4
+ColumnLimit: 120
 PenaltyBreakBeforeFirstCallParameter: 300
