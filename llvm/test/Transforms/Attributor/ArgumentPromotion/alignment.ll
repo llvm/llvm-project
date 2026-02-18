@@ -27,7 +27,7 @@ define internal void @g(ptr %a) {
 ; CHECK-SAME: (i32 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[A_PRIV]], align 4
-; CHECK-NEXT:    [[AA:%.*]] = load i32, ptr [[A_PRIV]], align 1
+; CHECK-NEXT:    [[AA:%.*]] = load i32, ptr [[A_PRIV]], align 1, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    call void @z(i32 [[AA]])
 ; CHECK-NEXT:    ret void
 ;
@@ -47,7 +47,7 @@ define internal i32 @test(ptr %X, ptr %Y) {
 ; CGSCC-NEXT:    [[Y_PRIV:%.*]] = alloca i64, align 8
 ; CGSCC-NEXT:    store i64 [[TMP0]], ptr [[Y_PRIV]], align 4
 ; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[X]], align 4
-; CGSCC-NEXT:    [[B:%.*]] = load i64, ptr [[Y_PRIV]], align 8
+; CGSCC-NEXT:    [[B:%.*]] = load i64, ptr [[Y_PRIV]], align 8, !invariant.load [[META0]]
 ; CGSCC-NEXT:    [[C:%.*]] = add i32 [[A]], 1
 ; CGSCC-NEXT:    [[D:%.*]] = add i64 [[B]], 1
 ; CGSCC-NEXT:    [[COND:%.*]] = icmp sgt i64 [[D]], -1
@@ -111,4 +111,8 @@ define i32 @callercaller() {
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR3]] = { nofree willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR4]] = { nofree nosync willreturn }
+;.
+; TUNIT: [[META0]] = !{}
+;.
+; CGSCC: [[META0]] = !{}
 ;.

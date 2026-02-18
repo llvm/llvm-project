@@ -431,8 +431,7 @@ define i32 @malloc_in_loop(i32 %arg) {
 ; CHECK-SAME: (i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
-; CHECK-NEXT:    [[I1:%.*]] = alloca ptr, align 8, addrspace(5)
-; CHECK-NEXT:    [[I11:%.*]] = alloca i8, i32 0, align 8, addrspace(5)
+; CHECK-NEXT:    [[I11:%.*]] = alloca [0 x i8], align 8, addrspace(5)
 ; CHECK-NEXT:    store i32 [[ARG]], ptr addrspace(5) [[I]], align 4
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
