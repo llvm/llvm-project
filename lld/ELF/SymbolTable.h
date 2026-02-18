@@ -12,6 +12,7 @@
 #include "Symbols.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Compiler.h"
 
 namespace lld::elf {
@@ -68,6 +69,12 @@ public:
   // same name, only one of them is linked, and the other is ignored. This map
   // is used to uniquify them.
   llvm::DenseMap<llvm::CachedHashStringRef, const InputFile *> comdatGroups;
+
+  // Tracks comdat groups where the currently selected version has sections with
+  // SHF_X86_64_LARGE flag. When a small version is encountered, the entry is
+  // removed and the small version takes over. This ensures compatibility when
+  // mixing small and medium/large code models.
+  llvm::DenseSet<llvm::CachedHashStringRef> largeComdatGroups;
 
   // The Map of __acle_se_<sym>, <sym> pairs found in the input objects.
   // Key is the <sym> name.

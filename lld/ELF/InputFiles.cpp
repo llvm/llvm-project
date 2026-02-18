@@ -604,10 +604,42 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       if (flag && flag != GRP_COMDAT)
         Fatal(ctx) << this << ": unsupported SHT_GROUP format";
 
-      bool keepGroup = !flag || ignoreComdats ||
-                       ctx.symtab->comdatGroups
-                           .try_emplace(CachedHashStringRef(signature), this)
-                           .second;
+      // Check if any section in the group has SHF_X86_64_LARGE flag.
+      // Only relevant for x86_64 targets.
+      bool hasLarge = false;
+      if (emachine == EM_X86_64) {
+        for (uint32_t secIndex : entries.slice(1)) {
+          if (secIndex < size &&
+              (objSections[secIndex].sh_flags & SHF_X86_64_LARGE))
+            hasLarge = true;
+        }
+      }
+
+      bool keepGroup = false;
+      if (!flag || ignoreComdats) {
+        keepGroup = true;
+        ctx.symtab->comdatGroups.try_emplace(CachedHashStringRef(signature),
+                                             this);
+      } else {
+        auto key = CachedHashStringRef(signature);
+        auto [it, inserted] = ctx.symtab->comdatGroups.try_emplace(key, this);
+        if (inserted) {
+          // First time seeing this comdat.
+          if (hasLarge)
+            ctx.symtab->largeComdatGroups.insert(key);
+          keepGroup = true;
+        } else if (!hasLarge && ctx.symtab->largeComdatGroups.erase(key)) {
+          // Existing comdat has large sections, but this one doesn't.
+          // Prefer the small one to ensure compatibility with small code model.
+          it->second = this;
+          // Track which sections belong to this replaced comdat so we can
+          // properly take over symbols during symbol resolution.
+          for (uint32_t secIndex : entries.slice(1))
+            if (secIndex < size)
+              replacedComdatSectionIndices.insert(secIndex);
+          keepGroup = true;
+        }
+      }
       if (keepGroup) {
         if (!ctx.arg.resolveGroups)
           sections[i] = createInputSection(
@@ -837,8 +869,17 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
           cantFail(obj.template getSectionContentsAsArray<Elf_Word>(sec));
       if ((entries[0] & GRP_COMDAT) == 0 || ignoreComdats ||
           ctx.symtab->comdatGroups.find(CachedHashStringRef(signature))
-                  ->second == this)
+                  ->second == this) {
         selectedGroups.push_back(entries);
+      } else {
+        // This file doesn't own this comdat group (another file's version was
+        // selected, possibly due to preferring small over large sections).
+        // Discard the member sections.
+        for (uint32_t secIndex : entries.slice(1)) {
+          if (secIndex < size)
+            this->sections[secIndex] = &InputSection::discarded;
+        }
+      }
       break;
     }
     case SHT_SYMTAB_SHNDX:
@@ -1235,6 +1276,18 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     // Handle global defined symbols. Defined::section will be set in postParse.
     sym->resolve(ctx, Defined{ctx, this, StringRef(), binding, stOther, type,
                               value, size, nullptr});
+
+    // If this symbol's section belongs to a replaced comdat (large -> small),
+    // take over the symbol. This ensures all symbols in the comdat group point
+    // to the new owner's definition.
+    if (!replacedComdatSectionIndices.empty()) {
+      uint32_t resolvedSecIdx = secIdx;
+      if (secIdx == SHN_XINDEX)
+        resolvedSecIdx =
+            check(getExtendedSymbolTableIndex<ELFT>(eSym, i, shndxTable));
+      if (replacedComdatSectionIndices.count(resolvedSecIdx))
+        cast<Defined>(*sym).file = this;
+    }
   }
 
   // Undefined symbols (excluding those defined relative to non-prevailing
