@@ -1,5 +1,6 @@
 include(CMakePushCheckState)
 include(CheckSymbolExists)
+include(GetToolchainDirs)
 
 # Because compiler-rt spends a lot of time setting up custom compile flags,
 # define a handy helper function for it. The compile flags setting in CMake
@@ -460,59 +461,17 @@ function(filter_builtin_sources inout_var name)
 endfunction()
 
 function(get_compiler_rt_target arch variable)
-  string(FIND ${COMPILER_RT_DEFAULT_TARGET_TRIPLE} "-" dash_index)
-  string(SUBSTRING ${COMPILER_RT_DEFAULT_TARGET_TRIPLE} ${dash_index} -1 triple_suffix)
-  string(SUBSTRING ${COMPILER_RT_DEFAULT_TARGET_TRIPLE} 0 ${dash_index} triple_cpu)
   if(COMPILER_RT_DEFAULT_TARGET_ONLY)
     # Use exact spelling when building only for the target specified to CMake.
     set(target "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
-  elseif(ANDROID AND ${arch} STREQUAL "i386")
-    set(target "i686${triple_suffix}")
-  elseif(${arch} STREQUAL "amd64")
-    set(target "x86_64${triple_suffix}")
-  elseif(${arch} STREQUAL "sparc64")
-    set(target "sparcv9${triple_suffix}")
-  elseif("${arch}" MATCHES "mips64|mips64el")
-    string(REGEX REPLACE "-gnu.*" "-gnuabi64" triple_suffix_gnu "${triple_suffix}")
-    string(REGEX REPLACE "mipsisa32" "mipsisa64" triple_cpu_mips "${triple_cpu}")
-    string(REGEX REPLACE "^mips$" "mips64" triple_cpu_mips "${triple_cpu_mips}")
-    string(REGEX REPLACE "^mipsel$" "mips64el" triple_cpu_mips "${triple_cpu_mips}")
-    set(target "${triple_cpu_mips}${triple_suffix_gnu}")
-  elseif("${arch}" MATCHES "mips|mipsel")
-    string(REGEX REPLACE "-gnuabi.*" "-gnu" triple_suffix_gnu "${triple_suffix}")
-    string(REGEX REPLACE "mipsisa64" "mipsisa32" triple_cpu_mips "${triple_cpu}")
-    string(REGEX REPLACE "mips64" "mips" triple_cpu_mips "${triple_cpu_mips}")
-    set(target "${triple_cpu_mips}${triple_suffix_gnu}")
-  elseif("${arch}" MATCHES "^arm")
-    # Arch is arm, armhf, armv6m (anything else would come from using
-    # COMPILER_RT_DEFAULT_TARGET_ONLY, which is checked above).
-    if (${arch} STREQUAL "armhf")
-      # If we are building for hard float but our ABI is soft float.
-      if ("${triple_suffix}" MATCHES ".*eabi$")
-        # Change "eabi" -> "eabihf"
-        set(triple_suffix "${triple_suffix}hf")
-      endif()
-      # ABI is already set in the triple, don't repeat it in the architecture.
-      set(arch "arm")
-    else ()
-      # If we are building for soft float, but the triple's ABI is hard float.
-      if ("${triple_suffix}" MATCHES ".*eabihf$")
-        # Change "eabihf" -> "eabi"
-        string(REGEX REPLACE "hf$" "" triple_suffix "${triple_suffix}")
-      endif()
-    endif()
-    set(target "${arch}${triple_suffix}")
-  elseif("${arch}" MATCHES "^amdgcn")
-    set(target "amdgcn-amd-amdhsa")
-  elseif("${arch}" MATCHES "^nvptx")
-    set(target "nvptx64-nvidia-cuda")
   else()
-    set(target "${arch}${triple_suffix}")
+    get_runtimes_target_libdir_common("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" "${arch}" target)
   endif()
-  set(${variable} ${target} PARENT_SCOPE)
+  set(${variable} "${target}" PARENT_SCOPE)
 endfunction()
 
 function(get_compiler_rt_install_dir arch install_dir)
+  # TODO: Use RUNTIMES_INSTALL_RESOURCE_LIB_PATH instead
   if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
     get_compiler_rt_target(${arch} target)
     set(${install_dir} ${COMPILER_RT_INSTALL_LIBRARY_DIR}/${target} PARENT_SCOPE)
@@ -522,6 +481,7 @@ function(get_compiler_rt_install_dir arch install_dir)
 endfunction()
 
 function(get_compiler_rt_output_dir arch output_dir)
+  # TODO: Use RUNTIMES_OUTPUT_RESOURCE_LIB_DIR instead
   if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
     get_compiler_rt_target(${arch} target)
     set(${output_dir} ${COMPILER_RT_OUTPUT_LIBRARY_DIR}/${target} PARENT_SCOPE)

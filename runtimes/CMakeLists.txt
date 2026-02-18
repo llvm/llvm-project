@@ -85,7 +85,8 @@ include(CheckLibraryExists)
 include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
-
+include(GetToolchainDirs)
+include(ExtendPath)
 
 # Determine whether we are in the runtimes/runtimes-bins directory of a
 # bootstrap build.
@@ -235,6 +236,36 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
   endif()
 endif()
+
+# Determine output and install paths based on LLVM_TARGET_TRIPLE
+if(LLVM_TREE_AVAILABLE)
+  # Despite Clang in the name, get_clang_resource_dir does not depend on Clang
+  # being added to the build. Flang uses the same resource dir as Clang.
+  include(GetClangResourceDir)
+  get_clang_resource_dir(RUNTIMES_OUTPUT_RESOURCE_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
+  get_clang_resource_dir(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT)
+else()
+  # For the install prefix, still use the resource dir assuming the compilers
+  # looking for it (Clang, Flang) will be installed there using the same prefix.
+  # This is to not have a difference between bootstrapping and default/standalone runtimes
+  # builds.
+  set(RUNTIMES_OUTPUT_RESOURCE_DIR "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+  set(RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+endif()
+
+# Determine build and install paths. The output paths are absolute, but the
+# install dirs are relative to CMAKE_INSTALL_PREFIX to be resolved by CMake.
+get_toolchain_library_subdir(toolchain_lib_subdir)
+extend_path(RUNTIMES_OUTPUT_RESOURCE_LIB_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
+
+set(RUNTIMES_INSTALL_RESOURCE_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH_DEFAULT}" CACHE PATH "Path to install headers, runtime libraries, and Fortran modules to (default: Clang resource dir)")
+extend_path(RUNTIMES_INSTALL_RESOURCE_LIB_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_lib_subdir}")
+
+cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_DIR)
+cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_PATH)
+cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_LIB_DIR)
+cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
+
 
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)
 option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation." ON)
