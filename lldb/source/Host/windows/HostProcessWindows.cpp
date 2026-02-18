@@ -84,16 +84,10 @@ llvm::Expected<HostThread> HostProcessWindows::StartMonitoring(
   // can have ownership over its own copy of the handle.
   if (::DuplicateHandle(GetCurrentProcess(), m_process, GetCurrentProcess(),
                         &process_handle, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
-    auto host_thread = ThreadLauncher::LaunchThread(
+    return ThreadLauncher::LaunchThread(
         "ChildProcessMonitor", [callback, process_handle] {
           return MonitorThread(callback, process_handle);
         });
-    if (!host_thread)
-      return host_thread;
-
-    auto &native_thread = host_thread->GetNativeThread();
-    native_thread.Reset();
-    return host_thread;
   } else {
     return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
   }

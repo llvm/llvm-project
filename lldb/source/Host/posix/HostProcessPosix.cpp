@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/posix/HostProcessPosix.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/posix/HostThreadPosix.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/posix/HostProcessPosix.h"
 
 #include "llvm/ADT/STLExtras.h"
 
@@ -62,11 +61,5 @@ bool HostProcessPosix::IsRunning() const {
 
 llvm::Expected<HostThread> HostProcessPosix::StartMonitoring(
     const Host::MonitorChildProcessCallback &callback) {
-  auto host_thread = Host::StartMonitoringChildProcess(callback, m_process);
-  if (!host_thread)
-    return host_thread;
-
-  auto &native_thread = host_thread->GetNativeThread();
-  native_thread.Detach();
-  return host_thread;
+  return Host::StartMonitoringChildProcess(callback, m_process);
 }
