@@ -99,8 +99,12 @@ using SignalHandlerCallback = void (*)(void *);
 
 /// Add a function to be called when an abort/kill signal is delivered to the
 /// process. The handler can have a cookie passed to it to identify what
-/// instance of the handler it is.
-LLVM_ABI void AddSignalHandler(SignalHandlerCallback FnPtr, void *Cookie);
+/// instance of the handler it is. The NeedsPOSIXUtilitySignalHandling
+/// argument indicates whether POSIX signal handling semantics are followed,
+/// so that the signal handler resignals itself to terminate after handling
+/// the signal.
+LLVM_ABI void AddSignalHandler(SignalHandlerCallback FnPtr, void *Cookie,
+                               bool NeedsPOSIXUtilitySignalHandling = false);
 
 /// This function registers a function to be called when the user "interrupts"
 /// the program (typically by pressing ctrl-c).  When the user interrupts the
