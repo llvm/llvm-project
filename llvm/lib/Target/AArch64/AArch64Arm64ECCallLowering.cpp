@@ -160,7 +160,8 @@ void AArch64Arm64ECCallLowering::getThunkArgTypes(
     // x4 is the address of the arguments on the stack.
     // x5 is the size of the arguments on the stack.
     //
-    // On the x64 side, it's the same except that x5 isn't set.
+    // On the x64 side, x4 and x5 are not set, and the remaining variadic
+    // arguments are passed on the stack.
     //
     // If both the ARM and X64 sides are sret, there are only three
     // arguments in registers.
@@ -179,16 +180,12 @@ void AArch64Arm64ECCallLowering::getThunkArgTypes(
 
     // x4
     Arm64ArgTypes.push_back(PtrTy);
-    X64ArgTypes.push_back(PtrTy);
-    ArgTranslations.push_back(ThunkArgTranslation::Direct);
-    // x5
-    Arm64ArgTypes.push_back(I64Ty);
-    if (TT != Arm64ECThunkType::Entry) {
-      // FIXME: x5 isn't actually used by the x64 side; revisit once we
-      // have proper isel for varargs
-      X64ArgTypes.push_back(I64Ty);
+    if (TT == Arm64ECThunkType::Entry) {
+      X64ArgTypes.push_back(PtrTy);
       ArgTranslations.push_back(ThunkArgTranslation::Direct);
     }
+    // x5
+    Arm64ArgTypes.push_back(I64Ty);
     return;
   }
 
@@ -453,7 +450,8 @@ Function *AArch64Arm64ECCallLowering::buildExitThunk(FunctionType *FT,
   }
 
   for (auto [Arg, X64ArgType, ArgTranslation] : llvm::zip_equal(
-           make_range(F->arg_begin() + 1, F->arg_end()),
+           make_range(F->arg_begin() + 1,
+                      F->arg_begin() + 1 + ArgTranslations.size()),
            make_range(X64Ty->param_begin() + X64TyOffset, X64Ty->param_end()),
            ArgTranslations)) {
     // Translate arguments from AArch64 calling convention to x86 calling
@@ -485,6 +483,25 @@ Function *AArch64Arm64ECCallLowering::buildExitThunk(FunctionType *FT,
     }
     assert(Args.back()->getType() == X64ArgType);
   }
+
+  // For variadic functions, the remaining arguments need to be passed on the
+  // stack. Allocate stack space for them and emit a memcpy call to copy
+  // arguments passed via x4/x5.
+  //
+  // This matches what MSVC does, except MSVC does not use x4. Instead, it
+  // assumes the arguments can be accessed from the stack pointer and uses that,
+  // together with x5, for the memcpy call.
+  //
+  // FIXME: We assume here that the argument memory will be at the top of the
+  // stack when performing the call. This assumption holds in practice, but it
+  // is not expressed in IR.
+  if (FT->isVarArg()) {
+    Value *SizeVal = F->getArg(6);
+    Value *VarArgs =
+        IRB.CreateAlloca(Type::getInt8Ty(M->getContext()), SizeVal);
+    IRB.CreateMemCpy(VarArgs, Align(1), F->getArg(5), Align(1), SizeVal);
+  }
+
   // FIXME: Transfer necessary attributes? sret? anything else?
 
   CallInst *Call = IRB.CreateCall(X64Ty, Callee, Args);
