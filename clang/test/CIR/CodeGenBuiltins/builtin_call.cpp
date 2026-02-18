@@ -164,41 +164,35 @@ void expect(int x, int y) {
   __builtin_expect(x, y);
 }
 
+// At -O0, __builtin_expect is a passthrough (no cir.expect / llvm.expect).
+// See pred-info-builtins.c for -O2 tests that verify cir.expect emission.
 // CIR-LABEL: cir.func{{.*}} @_Z6expectii
-// CIR:         %[[X:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast integral %[[X]] : !s32i -> !s64i
-// CIR-NEXT:    %[[Y:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast integral %[[Y]] : !s32i -> !s64i
-// CIR-NEXT:    %{{.+}} = cir.expect(%[[X_LONG]], %[[Y_LONG]]) : !s64i
+// CIR-NOT:     cir.expect
 // CIR:       }
 
 // LLVM-LABEL: define{{.*}} void @_Z6expectii
-// LLVM:         %[[X:.+]] = load i32, ptr %{{.+}}, align 4
-// LLVM-NEXT:    %[[X_LONG:.+]] = sext i32 %[[X]] to i64
-// LLVM-NEXT:    %[[Y:.+]] = load i32, ptr %{{.+}}, align 4
-// LLVM-NEXT:    %[[Y_LONG:.+]] = sext i32 %[[Y]] to i64
-// LLVM-NEXT:    %{{.+}} = call i64 @llvm.expect.i64(i64 %[[X_LONG]], i64 %[[Y_LONG]])
+// LLVM-NOT:     call i64 @llvm.expect
 // LLVM:       }
+
+// OGCG-LABEL: define{{.*}} void @_Z6expectii
+// OGCG-NOT:     call i64 @llvm.expect
+// OGCG:       }
 
 void expect_prob(int x, int y) {
   __builtin_expect_with_probability(x, y, 0.25);
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z11expect_probii
-// CIR:         %[[X:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast integral %[[X]] : !s32i -> !s64i
-// CIR-NEXT:    %[[Y:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast integral %[[Y]] : !s32i -> !s64i
-// CIR-NEXT:    %{{.+}} = cir.expect(%[[X_LONG]], %[[Y_LONG]], 2.500000e-01) : !s64i
+// CIR-NOT:     cir.expect
 // CIR:       }
 
-// LLVM:       define{{.*}} void @_Z11expect_probii
-// LLVM:         %[[X:.+]] = load i32, ptr %{{.+}}, align 4
-// LLVM-NEXT:    %[[X_LONG:.+]] = sext i32 %[[X]] to i64
-// LLVM-NEXT:    %[[Y:.+]] = load i32, ptr %{{.+}}, align 4
-// LLVM-NEXT:    %[[Y_LONG:.+]] = sext i32 %[[Y]] to i64
-// LLVM-NEXT:    %{{.+}} = call i64 @llvm.expect.with.probability.i64(i64 %[[X_LONG]], i64 %[[Y_LONG]], double 2.500000e-01)
+// LLVM-LABEL: define{{.*}} void @_Z11expect_probii
+// LLVM-NOT:     call i64 @llvm.expect
 // LLVM:       }
+
+// OGCG-LABEL: define{{.*}} void @_Z11expect_probii
+// OGCG-NOT:     call i64 @llvm.expect
+// OGCG:       }
 
 void unreachable() {
   __builtin_unreachable();

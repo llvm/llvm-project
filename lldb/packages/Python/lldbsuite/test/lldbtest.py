@@ -1809,6 +1809,9 @@ class LLDBTestCaseFactory(type):
         if original_testcase.NO_DEBUG_INFO_TESTCASE:
             return original_testcase
 
+        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+            original_testcase.SHARED_BUILD_TESTCASE = False
+
         # Default implementation for skip/xfail reason based on the debug category,
         # where "None" means to run the test as usual.
         def no_reason(_):

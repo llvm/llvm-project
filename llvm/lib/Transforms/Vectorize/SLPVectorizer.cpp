@@ -1690,7 +1690,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     MainOp = findInstructionWithOpcode(VL, BinOpHelper.getMainOpcode());
     assert(MainOp && "Cannot find MainOp with Opcode from BinOpHelper.");
     AltOp = findInstructionWithOpcode(VL, BinOpHelper.getAltOpcode());
-    assert(MainOp && "Cannot find AltOp with Opcode from BinOpHelper.");
+    assert(AltOp && "Cannot find AltOp with Opcode from BinOpHelper.");
   }
   assert((MainOp == AltOp || !allSameOpcode(VL)) &&
          "Incorrect implementation of allSameOpcode.");

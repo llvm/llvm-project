@@ -3877,7 +3877,7 @@ void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   Value value2 = helper.buildTypeFn(castVal, block.getArgument(2).getType(),
                                     block.getArgument(1));
   Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2, emitError);
-  if (!value3)
+  if (!value1 || !value2 || !value3)
     return;
   Value value4 = helper.buildBinaryFn(BinaryFn::add, block.getArgument(2),
                                       value3, emitError);
@@ -4648,9 +4648,14 @@ void BatchMatmulOp::regionBuilder(
   auto toType = block.getArgument(2).getType();
   Value castValA = helper.buildTypeFn(castVal, toType, block.getArgument(0));
   Value castValB = helper.buildTypeFn(castVal, toType, block.getArgument(1));
-  Value mulVal = helper.buildBinaryFn(BinaryFn::mul, castValA, castValB);
-  Value addVal =
-      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), mulVal);
+  Value mulVal =
+      helper.buildBinaryFn(BinaryFn::mul, castValA, castValB, emitError);
+  if (!castValA || !castValB || !mulVal)
+    return;
+  Value addVal = helper.buildBinaryFn(BinaryFn::add, block.getArgument(2),
+                                      mulVal, emitError);
+  if (!addVal)
+    return;
   yields.push_back(addVal);
   helper.yieldOutputs(yields);
 }
@@ -6586,9 +6591,14 @@ void BatchReduceMatmulOp::regionBuilder(
       helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(0));
   Value castValB =
       helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(1));
-  Value mulVal = helper.buildBinaryFn(BinaryFn::mul, castValA, castValB);
+  Value mulVal =
+      helper.buildBinaryFn(BinaryFn::mul, castValA, castValB, emitError);
+  if (!castValA || !castValB || !mulVal)
+    return;
   Value addVal =
       helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), mulVal);
+  if (!addVal)
+    return;
   yields.push_back(addVal);
   helper.yieldOutputs(yields);
 }
