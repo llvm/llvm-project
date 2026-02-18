@@ -905,8 +905,19 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   initializeLibCalls(TLI, T, StandardNames, VecLib);
 }
 
+static bool initializeIsErrnoFunctionCall(const Triple &T) {
+  // Assume errno is implemented as a function call on the following
+  // known environments.
+  // TODO: Could refine them.
+  return T.isOSDarwin() || T.isAndroid() || T.isGNUEnvironment() ||
+         T.isMusl() || T.getEnvironment() == Triple::LLVM ||
+         T.getEnvironment() == Triple::Mlibc ||
+         T.getEnvironment() == Triple::MSVC;
+}
+
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T,
-                                             VectorLibrary VecLib) {
+                                             VectorLibrary VecLib)
+    : IsErrnoFunctionCall(initializeIsErrnoFunctionCall(T)) {
   // Default to everything being available.
   memset(AvailableArray, -1, sizeof(AvailableArray));
 
@@ -918,7 +929,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
-      SizeOfInt(TLI.SizeOfInt) {
+      SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall) {
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
@@ -930,7 +941,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
       ShouldExtI32Return(TLI.ShouldExtI32Return),
       ShouldSignExtI32Param(TLI.ShouldSignExtI32Param),
       ShouldSignExtI32Return(TLI.ShouldSignExtI32Return),
-      SizeOfInt(TLI.SizeOfInt) {
+      SizeOfInt(TLI.SizeOfInt), IsErrnoFunctionCall(TLI.IsErrnoFunctionCall) {
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   VectorDescs = TLI.VectorDescs;
@@ -944,6 +955,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
+  IsErrnoFunctionCall = TLI.IsErrnoFunctionCall;
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   return *this;
 }
@@ -955,6 +967,7 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
   ShouldSignExtI32Param = TLI.ShouldSignExtI32Param;
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
+  IsErrnoFunctionCall = TLI.IsErrnoFunctionCall;
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
   return *this;
