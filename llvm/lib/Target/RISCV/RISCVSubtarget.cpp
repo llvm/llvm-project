@@ -246,7 +246,6 @@ void RISCVSubtarget::mirFileLoaded(MachineFunction &MF) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
   if (!MFI.isMaxCallFrameSizeComputed()) {
     MFI.computeMaxCallFrameSize(MF);
-    dbgs() << "ctopper " << MFI.getMaxCallFrameSize() << "\n";
   }
 }
 
