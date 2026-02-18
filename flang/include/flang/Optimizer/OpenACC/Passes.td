@@ -80,7 +80,7 @@ def ACCDeclareActionConversion
     that allocate or deallocate the object; this pass finds those operations
     and inserts calls to the corresponding recipes.
   }];
-  let dependentDialects = ["mlir::func::FuncDialect"];
+  let dependentDialects = ["fir::FIROpsDialect"];
 }
 
 def ACCOptimizeFirstprivateMap

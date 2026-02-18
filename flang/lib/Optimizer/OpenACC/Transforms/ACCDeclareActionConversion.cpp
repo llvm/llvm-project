@@ -47,7 +47,7 @@
 //   func.func @_QMmmPsub() {
 //     ...
 //     fir.store %box to %desc ...
-//     call @_QMmmEarr_acc_declare_update_desc_post_alloc()
+//     fir.call @_QMmmEarr_acc_declare_update_desc_post_alloc()
 //   }
 //
 //===----------------------------------------------------------------------===//
@@ -198,9 +198,7 @@ public:
             }
             argVec.push_back(varRef);
           }
-          func::CallOp::create(builder, op->getLoc(),
-                               funcOp.getFunctionType().getResults(),
-                               funcOp.getSymName(), argVec);
+          fir::CallOp::create(builder, op->getLoc(), funcOp, argVec);
         }
       }
     });

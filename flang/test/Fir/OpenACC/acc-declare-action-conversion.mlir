@@ -35,7 +35,7 @@ module {
     return
   }
 // CHECK: fir.store
-// CHECK: call @_QMmmEarr_acc_declare_update_desc_post_alloc
+// CHECK: fir.call @_QMmmEarr_acc_declare_update_desc_post_alloc
 }
 
 
@@ -59,7 +59,7 @@ module {
 // CHECK: %[[DECL:.*]] = fir.declare %{{.*}} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 // CHECK: %[[CVT:.*]] = fir.convert %[[DECL]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK: fir.call @_FortranAPointerAllocate(%[[CVT]],
-// CHECK-NEXT: call @_QFdeclareAp_acc_declare_post_alloc(%[[DECL]])
+// CHECK-NEXT: fir.call @_QFdeclareAp_acc_declare_post_alloc(%[[DECL]])
   func.func private @_FortranAPointerAllocate(!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 }
 
@@ -93,5 +93,5 @@ module {
   }
 // CHECK: %[[DECLARE:.*]] = fir.declare {{.*}}
 // CHECK: fir.store
-// CHECK: call @_QMmmFsubEarr_acc_declare_update_desc_post_alloc(%[[DECLARE]])
+// CHECK: fir.call @_QMmmFsubEarr_acc_declare_update_desc_post_alloc(%[[DECLARE]])
 }
