@@ -49954,8 +49954,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
       SDValue NewLd = DAG.getLoad(
           VT, DL, FalseLd->getChain(), NewPtr,
           MachinePointerInfo(FalseLd->getPointerInfo().getAddrSpace()),
-          Align(MinAlign(FalseLd->getAlign().value(),
-                         TrueLd->getAlign().value())),
+          std::min(FalseLd->getAlign(), TrueLd->getAlign()),
           FalseLd->getMemOperand()->getFlags());
       DAG.makeEquivalentMemoryOrdering(TrueLd, NewLd);
       DAG.makeEquivalentMemoryOrdering(FalseLd, NewLd);
