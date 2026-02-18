@@ -722,7 +722,7 @@ private:
   /// Holds both the predicate and fast-math flags for floating-point
   /// comparisons.
   struct FCmpFlagsTy {
-    uint8_t PredStorage;
+    uint8_t CmpPredStorage;
     FastMathFlagsTy FMFs;
   };
   /// Holds reduction-specific flags: RecurKind, IsOrdered, IsInLoop, and FMFs.
@@ -762,13 +762,15 @@ public:
   VPIRFlags(Instruction &I) {
     if (auto *FCmp = dyn_cast<FCmpInst>(&I)) {
       OpType = OperationType::FCmp;
-      Bitfield::set<CmpInst::PredicateField>(FCmpFlags.PredStorage,
+      Bitfield::set<CmpInst::PredicateField>(FCmpFlags.CmpPredStorage,
                                              FCmp->getPredicate());
+      assert(getPredicate() == FCmp->getPredicate() && "predicate truncated");
       FCmpFlags.FMFs = FCmp->getFastMathFlags();
     } else if (auto *Op = dyn_cast<CmpInst>(&I)) {
       OpType = OperationType::Cmp;
       Bitfield::set<CmpInst::PredicateField>(CmpPredStorage,
                                              Op->getPredicate());
+      assert(getPredicate() == Op->getPredicate() && "predicate truncated");
     } else if (auto *Op = dyn_cast<PossiblyDisjointInst>(&I)) {
       OpType = OperationType::DisjointOp;
       DisjointFlags.IsDisjoint = Op->isDisjoint();
@@ -784,6 +786,8 @@ public:
     } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
       OpType = OperationType::GEPOp;
       GEPFlagsStorage = GEP->getNoWrapFlags().getRaw();
+      assert(getGEPNoWrapFlags() == GEP->getNoWrapFlags() &&
+             "wrap flags truncated");
     } else if (auto *PNNI = dyn_cast<PossiblyNonNegInst>(&I)) {
       OpType = OperationType::NonNegOp;
       NonNegFlags.NonNeg = PNNI->hasNonNeg();
@@ -798,11 +802,13 @@ public:
 
   VPIRFlags(CmpInst::Predicate Pred) : OpType(OperationType::Cmp) {
     Bitfield::set<CmpInst::PredicateField>(CmpPredStorage, Pred);
+    assert(getPredicate() == Pred && "predicate truncated");
   }
 
   VPIRFlags(CmpInst::Predicate Pred, FastMathFlags FMFs)
       : OpType(OperationType::FCmp) {
-    Bitfield::set<CmpInst::PredicateField>(FCmpFlags.PredStorage, Pred);
+    Bitfield::set<CmpInst::PredicateField>(FCmpFlags.CmpPredStorage, Pred);
+    assert(getPredicate() == Pred && "predicate truncated");
     FCmpFlags.FMFs = FMFs;
   }
 
@@ -920,8 +926,8 @@ public:
   CmpInst::Predicate getPredicate() const {
     assert((OpType == OperationType::Cmp || OpType == OperationType::FCmp) &&
            "recipe doesn't have a compare predicate");
-    uint8_t Storage =
-        OpType == OperationType::FCmp ? FCmpFlags.PredStorage : CmpPredStorage;
+    uint8_t Storage = OpType == OperationType::FCmp ? FCmpFlags.CmpPredStorage
+                                                    : CmpPredStorage;
     return Bitfield::get<CmpInst::PredicateField>(Storage);
   }
 
@@ -929,9 +935,10 @@ public:
     assert((OpType == OperationType::Cmp || OpType == OperationType::FCmp) &&
            "recipe doesn't have a compare predicate");
     if (OpType == OperationType::FCmp)
-      Bitfield::set<CmpInst::PredicateField>(FCmpFlags.PredStorage, Pred);
+      Bitfield::set<CmpInst::PredicateField>(FCmpFlags.CmpPredStorage, Pred);
     else
       Bitfield::set<CmpInst::PredicateField>(CmpPredStorage, Pred);
+    assert(getPredicate() == Pred && "predicate truncated");
   }
 
   GEPNoWrapFlags getGEPNoWrapFlags() const {
