@@ -13574,6 +13574,8 @@ bool BoUpSLP::matchesInversedZExtSelect(
 bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
   assert(SelectTE.hasState() && SelectTE.getOpcode() == Instruction::Select &&
          "Expected select node.");
+  if (DL->isBigEndian())
+    return false;
   if (!SelectTE.ReorderIndices.empty() || !SelectTE.ReuseShuffleIndices.empty())
     return false;
   if (!UserIgnoreList)
@@ -13595,14 +13597,13 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
     return false;
   // Check that second operand is all zeroes.
   if (any_of(Op2TE->Scalars, [](Value *V) {
-        return !isa<UndefValue>(V) && !match(V, m_ZeroInt());
+        return !match(V, m_ZeroInt());
       }))
     return false;
   // Check that first operand is 1,2,4,...
   if (any_of(enumerate(Op1TE->Scalars), [](const auto &P) {
         uint64_t V;
-        return !isa<UndefValue>(P.value()) &&
-               !(match(P.value(), m_ConstantInt(V)) && isPowerOf2_64(V) &&
+        return !(match(P.value(), m_ConstantInt(V)) && isPowerOf2_64(V) &&
                  Log2_64(V) == P.index());
       }))
     return false;
@@ -13612,6 +13613,12 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
   VectorType *OpTy = getWidenedType(DstTy, SelectTE.getVectorFactor());
   Type *CmpTy = CmpInst::makeCmpResultType(OpTy);
   VectorType *VecTy = getWidenedType(ScalarTy, SelectTE.getVectorFactor());
+  auto It = MinBWs.find(&SelectTE);
+  if (It != MinBWs.end()) {
+    auto *EffectiveScalarTy =
+        IntegerType::get(F->getContext(), It->second.first);
+    VecTy = getWidenedType(EffectiveScalarTy, SelectTE.getVectorFactor());
+  }
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost BitcastCost = TTI->getCastInstrCost(
       Instruction::BitCast, DstTy, CmpTy, TTI::CastContextHint::None, CostKind);
@@ -13621,7 +13628,7 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
   }
   FastMathFlags FMF;
   InstructionCost SelectCost =
-      TTI->getCmpSelInstrCost(Instruction::Select, OpTy, CmpTy,
+      TTI->getCmpSelInstrCost(Instruction::Select, VecTy, CmpTy,
                               CmpInst::BAD_ICMP_PREDICATE, CostKind,
                               getOperandInfo(Op1TE->Scalars),
                               getOperandInfo(Op2TE->Scalars)) +
