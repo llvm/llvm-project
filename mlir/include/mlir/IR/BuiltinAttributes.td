@@ -239,29 +239,48 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
     "DenseElementsAttr"
   > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
-                "integer or floating-point values";
+                "values";
   let description = [{
-    Syntax:
+    A dense elements attribute stores one or multiple elements of the same type.
+    The term "dense" refers to the fact that elements are not stored as
+    individual MLIR attributes, but in a raw buffer. The attribute provides a
+    covenience API to access elements in the form of MLIR attributes, but users
+    should avoid that API in performance-critical code and utilize APIs that
+    operate on raw bytes instead.
 
-    ```
-    tensor-literal ::= integer-literal | float-literal | bool-literal | [] | [tensor-literal (, tensor-literal)* ]
-    dense-intorfloat-elements-attribute ::= `dense` `<` tensor-literal `>` `:`
-                                            ( tensor-type | vector-type )
-    ```
+    The number of elements is determined by the `type` shaped type. (Unranked
+    shaped types are not supported.) The element type of the shaped type must
+    implement the `DenseElementType` interface. This type interface defines the
+    bitwidth of an element and provides a serializer/deserializer to/from MLIR
+    attributes.
 
-    A dense int-or-float elements attribute is an elements attribute containing
-    a densely packed vector or tensor of integer or floating-point values. The
-    element type of this attribute is required to be either an `IntegerType` or
-    a `FloatType`.
+    Storage format: Given an element bitwidth "w", element "i" starts at byte
+    offset "i * ceildiv(w, 8)". In other words, each element starts at a full
+    byte offset.
+
+    TODO: The name `DenseIntOrFPElements` is no longer accurate. The attribute
+    will be renamed in the future.
 
     Examples:
 
     ```
-    // A splat tensor of integer values.
+    // Literal-first syntax: A splat tensor of integer values.
     dense<10> : tensor<2xi32>
-    // A tensor of 2 float32 elements.
+
+    // Literal-first syntax: A tensor of 2 float32 elements.
     dense<[10.0, 11.0]> : tensor<2xf32>
+
+    // Type-first syntax: A splat tensor of integer values.
+    dense<tensor<2xi32> : 10 : i32>
+
+    // Type-first syntax: A tensor of 2 float32 elements.
+    dense<tensor<2xf32> : [10.0, 11.0]>
     ```
+
+    Note: The literal-first syntax is supported only for complex, float, index,
+    int element types. The parser/print have special casing for these types.
+    Dense element attributes with other element types must use the type-first
+    syntax.
   }];
   let parameters = (ins AttributeSelfTypeParameter<"", "ShapedType">:$type,
                         "ArrayRef<char>":$rawData);
