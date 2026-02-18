@@ -45,6 +45,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
@@ -2347,6 +2348,236 @@ OptimizeGlobalAliases(Module &M,
   return Changed;
 }
 
+struct AccessPattern {
+  Type *Ty;
+
+  APInt Stride;
+  APInt Offset;
+};
+
+template <> struct DenseMapInfo<AccessPattern> {
+  static inline AccessPattern getEmptyKey() {
+    return {(Type *)1, APInt(), APInt()};
+  }
+  static inline AccessPattern getTombstoneKey() {
+    return {(Type *)2, APInt(), APInt()};
+  }
+  static unsigned getHashValue(const AccessPattern &AP) {
+    return hash_combine(AP.Ty, AP.Stride, AP.Offset);
+  }
+  static bool isEqual(const AccessPattern &LHS, const AccessPattern &RHS) {
+    return LHS.Ty == RHS.Ty && LHS.Stride == RHS.Stride &&
+           LHS.Offset == RHS.Offset;
+  }
+};
+
+// return (gcd, x, y) such that a*x + b*y = gcd
+std::tuple<APInt, APInt, APInt> ExtendedSignedGCD(APInt a, APInt b) {
+  unsigned BW = a.getBitWidth();
+  APInt x = APInt(BW, 1);
+  APInt y = APInt(BW, 0);
+  APInt x1 = APInt(BW, 0);
+  APInt y1 = APInt(BW, 1);
+
+  while (b != 0) {
+    APInt q = APInt(BW, 0);
+    APInt r = APInt(BW, 0);
+    APInt::sdivrem(a, b, q, r);
+    a = std::move(b);
+    b = std::move(r);
+
+    std::swap(x, x1);
+    std::swap(y, y1);
+    x1 -= q * x;
+    y1 -= q * y;
+  }
+  return {a, x, y};
+}
+
+// Build if possible a new pair of Stride and Offset that are part of the
+// original but are also aligned.
+std::optional<std::pair<APInt, APInt>>
+AlignStrideAndOffset(const APInt &Stride, const APInt &Offset,
+                     const APInt &Align) {
+  // Here Offset * Align is added only to make sure Missing is positive or zero
+  APInt Missing = ((Offset * Align) - Offset).urem(Align);
+
+  // fast path for common case,
+  if (Missing == 0)
+    return {
+        {(Stride * Align).udiv(APIntOps::GreatestCommonDivisor(Stride, Align)),
+         Offset}};
+
+  auto [GCD, X, Y] = ExtendedSignedGCD(Stride, Align);
+  assert(APIntOps::GreatestCommonDivisor(Stride, Align) == GCD);
+  assert((X * Stride + Y * Align) == GCD);
+
+  if (Missing.urem(GCD) != 0) {
+    // The new Stride + Offset cannot be created because there is no elements in
+    // the original that would be properly aligned
+    return std::nullopt;
+  }
+
+  APInt StrideAlign = Stride * Align;
+  // X could be negative, so we need to use sdiv
+  // Here + Offset * Align is added only to make sure Missing is positive
+  APInt NumStride =
+      (((Missing * X).sdiv(GCD)) + (StrideAlign * Align)).urem(Align);
+
+  APInt NewStride = StrideAlign.udiv(GCD);
+  APInt NewOffset = (Offset + (NumStride * Stride)).urem(NewStride);
+  return {{std::move(NewStride), std::move(NewOffset)}};
+}
+
+static bool addRangeMetadata(Module &M) {
+  const DataLayout &DL = M.getDataLayout();
+  bool Changed = false;
+
+  for (GlobalValue &Global : M.global_values()) {
+
+    auto *GV = dyn_cast<GlobalVariable>(&Global);
+    if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
+      continue;
+
+    // To be able to go to the next GlobalVariable with a return
+    [&] {
+      unsigned IndexBW = DL.getIndexTypeSizeInBits(GV->getType());
+
+      struct PointerInfo {
+        Value *Ptr;
+
+        // Zero denotes not set
+        APInt Stride;
+        APInt Offset;
+      };
+
+      // GEPs only take one pointer operand, the one we will come from, so we
+      // dont need to do uniqueing during the DFS
+      SmallVector<PointerInfo> Stack;
+
+      // All loads of the global that this code can analyze grouped by access
+      // pattern. Loads with the same access pattern can access the same offsets
+      // in the global, so they can be treated the same.
+      SmallDenseMap<AccessPattern, SmallVector<LoadInst *>> LoadsByAccess;
+
+      Stack.push_back({GV, APInt(IndexBW, 0), APInt(IndexBW, 0)});
+
+      while (!Stack.empty()) {
+        PointerInfo Curr = Stack.pop_back_val();
+
+        if (!isa<GlobalVariable>(Curr.Ptr)) {
+          if (auto *LI = dyn_cast<LoadInst>(Curr.Ptr)) {
+
+            if (!LI->getType()->isIntegerTy())
+              continue;
+
+            if (LI->hasMetadata(LLVMContext::MD_range))
+              continue;
+
+            // This is an access at a fixed offset, I expect this is handled
+            // elsewhere so we skip it.
+            if (Curr.Stride == 0)
+              continue;
+
+            // This case is very rare, but what it means is that we
+            // dont know at compile-time what offsets into the Global arrays are
+            // safe to access with this load. So we give-up.
+            if (LI->getAlign() > GV->getAlign().valueOrOne())
+              continue;
+
+            auto NewStrideAndOffset =
+                AlignStrideAndOffset(Curr.Stride, Curr.Offset,
+                                     APInt(IndexBW, LI->getAlign().value()));
+
+            if (!NewStrideAndOffset) {
+              // This load cannot access an offset with the correct alignment
+              LI->replaceAllUsesWith(PoisonValue::get(LI->getType()));
+              continue;
+            }
+
+            AccessPattern AP{LI->getType(), NewStrideAndOffset->first,
+                             NewStrideAndOffset->second};
+            assert(AP.Stride != 0);
+            LoadsByAccess[AP].push_back(LI);
+            continue;
+          }
+          auto *GEP = dyn_cast<GetElementPtrInst>(Curr.Ptr);
+          if (!GEP)
+            continue;
+
+          SmallMapVector<Value *, APInt, 4> VarOffsets;
+          if (!GEP->collectOffset(DL, IndexBW, VarOffsets, Curr.Offset))
+            continue;
+
+          for (auto [V, Scale] : VarOffsets) {
+
+            // Commented out because I dont understand why we would need this
+            // But it was part of getStrideAndModOffsetOfGEP
+            // // Only keep a power of two factor for non-inbounds
+            // if (!GEP->isInBounds())
+            //   Scale =
+            //       APInt::getOneBitSet(Scale.getBitWidth(),
+            //       Scale.countr_zero());
+
+            if (Curr.Stride == 0)
+              Curr.Stride = Scale;
+            else
+              Curr.Stride = APIntOps::GreatestCommonDivisor(Curr.Stride, Scale);
+          }
+        }
+
+        for (User *U : Curr.Ptr->users()) {
+          if (isa<LoadInst, GetElementPtrInst>(U)) {
+            Curr.Ptr = U;
+            Stack.push_back(Curr);
+          }
+        }
+      }
+
+      for (auto [AP, Loads] : LoadsByAccess) {
+        {
+          APInt SMin = APInt::getSignedMaxValue(AP.Ty->getIntegerBitWidth());
+          APInt SMax = APInt::getSignedMinValue(AP.Ty->getIntegerBitWidth());
+
+          APInt LastValidOffset =
+              APInt(IndexBW, DL.getTypeAllocSize(GV->getValueType()) -
+                                 DL.getTypeStoreSize(AP.Ty));
+          for (APInt Offset = AP.Offset; Offset.ule(LastValidOffset);
+               Offset += AP.Stride) {
+            assert(Offset.isAligned(Loads[0]->getAlign()));
+            Constant *Cst = ConstantFoldLoadFromConstPtr(GV, AP.Ty, Offset, DL);
+
+            if (!isa_and_nonnull<ConstantInt>(Cst))
+              // Lambda captures of a struct binding is only available starting
+              // in C++20, so we skip to the next element with goto
+              goto NextGroup;
+
+            // MD_range is order agnostics
+            SMin = APIntOps::smin(SMin, Cst->getUniqueInteger());
+            SMax = APIntOps::smax(SMax, Cst->getUniqueInteger());
+          }
+
+          MDBuilder MDHelper(M.getContext());
+
+          Changed = true;
+          if (SMin == SMax) {
+            for (LoadInst *LI : Loads)
+              LI->replaceAllUsesWith(ConstantInt::get(AP.Ty, SMin));
+          } else {
+            // The Range is allowed to wrap
+            MDNode *RNode = MDHelper.createRange(SMin, SMax + 1);
+            for (LoadInst *LI : Loads)
+              LI->setMetadata(LLVMContext::MD_range, RNode);
+          }
+        }
+      NextGroup:
+        (void)0; // Label expect statements
+      }
+    }();
+  }
+  return Changed;
+}
+
 static Function *
 FindAtExitLibFunc(Module &M,
                   function_ref<TargetLibraryInfo &(Function &)> GetTLI,
@@ -2819,6 +3050,10 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
 
     Changed |= LocalChange;
   }
+
+  // Add range metadata to loads from constant global variables based on the
+  // values that could be loaded from the variable
+  Changed |= addRangeMetadata(M);
 
   // TODO: Move all global ctors functions to the end of the module for code
   // layout.
