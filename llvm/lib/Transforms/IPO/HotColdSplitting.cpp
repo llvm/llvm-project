@@ -61,6 +61,8 @@
 
 STATISTIC(NumColdRegionsFound, "Number of cold regions found.");
 STATISTIC(NumColdRegionsOutlined, "Number of cold regions outlined.");
+STATISTIC(NumFunctionsSkippedByNoOutlineAttr,
+          "Number of functions skipped due to nooutline attribute.");
 
 using namespace llvm;
 
@@ -276,6 +278,12 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
   if (F.hasPersonalityFn())
     if (isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
       return false;
+
+  // Do not split functions marked with the nooutline attribute.
+  if (F.hasFnAttribute("nooutline")) {
+    ++NumFunctionsSkippedByNoOutlineAttr;
+    return false;
+  }
 
   return true;
 }
