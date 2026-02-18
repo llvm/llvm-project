@@ -2439,10 +2439,8 @@ def lookupPHintByName : SearchIndex {
   let Key = ["Name"];
 }
 
-let Requires = [{ {AArch64::FeaturePCDPHINT} }] in {
-  def KEEP : PHint<0b00, 0b000, 0b0000, 0b0000, 0b000, "keep">;
-  def STRM : PHint<0b00, 0b000, 0b0000, 0b0000, 0b001, "strm">;
-}
+def KEEP : PHint<0b00, 0b000, 0b0000, 0b0000, 0b000, "keep">;
+def STRM : PHint<0b00, 0b000, 0b0000, 0b0000, 0b001, "strm">;
 
 // v9.6a Realm management extension enhancements
 def : RWSysReg<"GPCBW_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b101>;
