@@ -5089,7 +5089,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       Data.RLoc = Tok.getLocation();
       if (!T.consumeClose())
         Data.RLoc = T.getCloseLocation();
-      return false;
+      return true;
     }
 
     if (Tok.is(tok::colon)) {
@@ -5098,14 +5098,17 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       ExprResult UpperBound = ParseAssignmentExpression();
       if (UpperBound.isInvalid()) {
         SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
-      } else {
-        Vars.push_back(FirstExpr.get());  // lower-bound
-        Vars.push_back(UpperBound.get()); // upper-bound
+        Data.RLoc = Tok.getLocation();
+        if (!T.consumeClose())
+          Data.RLoc = T.getCloseLocation();
+        return true;
       }
+      Vars.push_back(FirstExpr.get());  // lower-bound
+      Vars.push_back(UpperBound.get()); // upper-bound
       Data.RLoc = Tok.getLocation();
       if (!T.consumeClose())
         Data.RLoc = T.getCloseLocation();
-      return false;
+      return false; //Success
     } else if (Tok.is(tok::comma)) {
       Vars.push_back(FirstExpr.get());
       while (Tok.is(tok::comma)) {
@@ -5120,16 +5123,18 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
         }
       }
       Data.RLoc = Tok.getLocation();
-      if (!T.consumeClose())
+      bool HadError = T.consumeClose();
+      if (!HadError)
         Data.RLoc = T.getCloseLocation();
-      return false;
+      return HadError;
     }
-    // Single value or error - parse closing paren
+
+    // Single value - parse closing paren
     Vars.push_back(FirstExpr.get());
     Data.RLoc = Tok.getLocation();
     if (!T.consumeClose())
       Data.RLoc = T.getCloseLocation();
-    return false;
+    return false; //Success
   }
 
   bool IsComma =
