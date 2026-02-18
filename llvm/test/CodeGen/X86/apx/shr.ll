@@ -13,7 +13,7 @@ define i8 @shr8m1(ptr %ptr) {
 ;
 ; MEM-LABEL: shr8m1:
 ; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    shrb (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0x2f]
+; MEM-NEXT:    shrb $1, (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0x2f]
 ; MEM-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr8m1:
@@ -36,7 +36,7 @@ define i16 @shr16m1(ptr %ptr) {
 ;
 ; MEM-LABEL: shr16m1:
 ; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    shrw (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0x2f]
+; MEM-NEXT:    shrw $1, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0x2f]
 ; MEM-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr16m1:
@@ -59,7 +59,7 @@ define i32 @shr32m1(ptr %ptr) {
 ;
 ; MEM-LABEL: shr32m1:
 ; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    shrl (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0x2f]
+; MEM-NEXT:    shrl $1, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0x2f]
 ; MEM-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr32m1:
@@ -82,7 +82,7 @@ define i64 @shr64m1(ptr %ptr) {
 ;
 ; MEM-LABEL: shr64m1:
 ; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    shrq (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0x2f]
+; MEM-NEXT:    shrq $1, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0x2f]
 ; MEM-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr64m1:
@@ -427,12 +427,12 @@ entry:
 define i8 @shr8r1(i8 noundef %a) {
 ; CHECK-LABEL: shr8r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    shrb %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0xef]
+; CHECK-NEXT:    shrb $1, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0xef]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr8r1:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} shrb %dil, %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0xd0,0xef]
+; NF-NEXT:    {nf} shrb $1, %dil, %al # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0xd0,0xef]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %shr = lshr i8 %a, 1
@@ -442,12 +442,12 @@ entry:
 define i16 @shr16r1(i16 noundef %a) {
 ; CHECK-LABEL: shr16r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    shrw %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0xef]
+; CHECK-NEXT:    shrw $1, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0xef]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr16r1:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} shrw %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0xd1,0xef]
+; NF-NEXT:    {nf} shrw $1, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0xd1,0xef]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %shr = lshr i16 %a, 1
@@ -457,12 +457,12 @@ entry:
 define i32 @shr32r1(i32 noundef %a) {
 ; CHECK-LABEL: shr32r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    shrl %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0xef]
+; CHECK-NEXT:    shrl $1, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0xef]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr32r1:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} shrl %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0xd1,0xef]
+; NF-NEXT:    {nf} shrl $1, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0xd1,0xef]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %shr = lshr i32 %a, 1
@@ -472,12 +472,12 @@ entry:
 define i64 @shr64r1(i64 noundef %a) {
 ; CHECK-LABEL: shr64r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    shrq %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0xef]
+; CHECK-NEXT:    shrq $1, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0xef]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: shr64r1:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} shrq %rdi, %rax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0xfc,0x1c,0xd1,0xef]
+; NF-NEXT:    {nf} shrq $1, %rdi, %rax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0xfc,0x1c,0xd1,0xef]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %shr = lshr i64 %a, 1

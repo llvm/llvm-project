@@ -12,16 +12,16 @@
 # CHECK: {evex}	rcrq	%rax
 # CHECK: encoding: [0x62,0xf4,0xfc,0x08,0xd1,0xd8]
          {evex}	rcrq	$1, %rax
-# CHECK: rcrb	%al, %bl
+# CHECK: rcrb	$1, %al, %bl
 # CHECK: encoding: [0x62,0xf4,0x64,0x18,0xd0,0xd8]
          rcrb	$1, %al, %bl
-# CHECK: rcrw	%ax, %bx
+# CHECK: rcrw	$1, %ax, %bx
 # CHECK: encoding: [0x62,0xf4,0x65,0x18,0xd1,0xd8]
          rcrw	$1, %ax, %bx
-# CHECK: rcrl	%eax, %ebx
+# CHECK: rcrl	$1, %eax, %ebx
 # CHECK: encoding: [0x62,0xf4,0x64,0x18,0xd1,0xd8]
          rcrl	$1, %eax, %ebx
-# CHECK: rcrq	%rax, %rbx
+# CHECK: rcrq	$1, %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x18,0xd1,0xd8]
          rcrq	$1, %rax, %rbx
 # CHECK: {evex}	rcrb	123(%r8,%rax,4)
@@ -36,15 +36,15 @@
 # CHECK: {evex}	rcrq	123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xfc,0x08,0xd1,0x5c,0x80,0x7b]
          {evex}	rcrq	$1, 123(%r8,%rax,4)
-# CHECK: rcrb	123(%r8,%rax,4), %bl
+# CHECK: rcrb	$1, 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x64,0x18,0xd0,0x5c,0x80,0x7b]
          rcrb	$1, 123(%r8,%rax,4), %bl
-# CHECK: rcrw	123(%r8,%rax,4), %bx
+# CHECK: rcrw	$1, 123(%r8,%rax,4), %bx
 # CHECK: encoding: [0x62,0xd4,0x65,0x18,0xd1,0x5c,0x80,0x7b]
          rcrw	$1, 123(%r8,%rax,4), %bx
-# CHECK: rcrl	123(%r8,%rax,4), %ebx
+# CHECK: rcrl	$1, 123(%r8,%rax,4), %ebx
 # CHECK: encoding: [0x62,0xd4,0x64,0x18,0xd1,0x5c,0x80,0x7b]
          rcrl	$1, 123(%r8,%rax,4), %ebx
-# CHECK: rcrq	123(%r8,%rax,4), %rbx
+# CHECK: rcrq	$1, 123(%r8,%rax,4), %rbx
 # CHECK: encoding: [0x62,0xd4,0xe4,0x18,0xd1,0x5c,0x80,0x7b]
          rcrq	$1, 123(%r8,%rax,4), %rbx

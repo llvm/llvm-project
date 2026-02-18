@@ -109,7 +109,7 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ;
 ; X64-NDD-LABEL: cnt16:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrw %di, %ax
+; X64-NDD-NEXT:    shrw $1, %di, %ax
 ; X64-NDD-NEXT:    andw $21845, %ax # imm = 0x5555
 ; X64-NDD-NEXT:    subw %ax, %di, %ax
 ; X64-NDD-NEXT:    andw $13107, %ax, %cx # imm = 0x3333
@@ -180,7 +180,7 @@ define i32 @cnt32(i32 %x) nounwind readnone {
 ;
 ; X64-NDD-LABEL: cnt32:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrl %edi, %eax
+; X64-NDD-NEXT:    shrl $1, %edi, %eax
 ; X64-NDD-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; X64-NDD-NEXT:    subl %eax, %edi
 ; X64-NDD-NEXT:    andl $858993459, %edi, %eax # imm = 0x33333333
@@ -274,7 +274,7 @@ define i64 @cnt64(i64 %x) nounwind readnone {
 ;
 ; X64-NDD-LABEL: cnt64:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrq %rdi, %rax
+; X64-NDD-NEXT:    shrq $1, %rdi, %rax
 ; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
 ; X64-NDD-NEXT:    andq %rcx, %rax
 ; X64-NDD-NEXT:    subq %rax, %rdi
@@ -503,7 +503,7 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ;
 ; X64-NDD-LABEL: cnt128:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrq %rsi, %rax
+; X64-NDD-NEXT:    shrq $1, %rsi, %rax
 ; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
 ; X64-NDD-NEXT:    andq %rcx, %rax
 ; X64-NDD-NEXT:    subq %rax, %rsi
@@ -519,7 +519,7 @@ define i128 @cnt128(i128 %x) nounwind readnone {
 ; X64-NDD-NEXT:    movabsq $72340172838076673, %r8 # imm = 0x101010101010101
 ; X64-NDD-NEXT:    imulq %r8, %rdx
 ; X64-NDD-NEXT:    shrq $56, %rdx
-; X64-NDD-NEXT:    shrq %rdi, %r9
+; X64-NDD-NEXT:    shrq $1, %rdi, %r9
 ; X64-NDD-NEXT:    andq %r9, %rcx
 ; X64-NDD-NEXT:    subq %rcx, %rdi
 ; X64-NDD-NEXT:    andq %rax, %rdi, %rcx
@@ -721,7 +721,7 @@ define i64 @cnt64_noimplicitfloat(i64 %x) nounwind readnone noimplicitfloat  {
 ;
 ; X64-NDD-LABEL: cnt64_noimplicitfloat:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrq %rdi, %rax
+; X64-NDD-NEXT:    shrq $1, %rdi, %rax
 ; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
 ; X64-NDD-NEXT:    andq %rcx, %rax
 ; X64-NDD-NEXT:    subq %rax, %rdi
@@ -796,7 +796,7 @@ define i32 @cnt32_optsize(i32 %x) nounwind readnone optsize {
 ;
 ; X64-NDD-LABEL: cnt32_optsize:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrl %edi, %eax
+; X64-NDD-NEXT:    shrl $1, %edi, %eax
 ; X64-NDD-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; X64-NDD-NEXT:    subl %eax, %edi
 ; X64-NDD-NEXT:    movl $858993459, %eax # imm = 0x33333333
@@ -900,7 +900,7 @@ define i64 @cnt64_optsize(i64 %x) nounwind readnone optsize {
 ;
 ; X64-NDD-LABEL: cnt64_optsize:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrq %rdi, %rax
+; X64-NDD-NEXT:    shrq $1, %rdi, %rax
 ; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
 ; X64-NDD-NEXT:    andq %rcx, %rax
 ; X64-NDD-NEXT:    subq %rax, %rdi
@@ -1140,7 +1140,7 @@ define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ;
 ; X64-NDD-LABEL: cnt128_optsize:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrq %rsi, %rax
+; X64-NDD-NEXT:    shrq $1, %rsi, %rax
 ; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
 ; X64-NDD-NEXT:    andq %rcx, %rax
 ; X64-NDD-NEXT:    subq %rax, %rsi
@@ -1156,7 +1156,7 @@ define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ; X64-NDD-NEXT:    movabsq $72340172838076673, %r8 # imm = 0x101010101010101
 ; X64-NDD-NEXT:    imulq %r8, %rdx
 ; X64-NDD-NEXT:    shrq $56, %rdx
-; X64-NDD-NEXT:    shrq %rdi, %r9
+; X64-NDD-NEXT:    shrq $1, %rdi, %r9
 ; X64-NDD-NEXT:    andq %r9, %rcx
 ; X64-NDD-NEXT:    subq %rcx, %rdi
 ; X64-NDD-NEXT:    andq %rax, %rdi, %rcx
@@ -1335,7 +1335,7 @@ define i32 @cnt32_pgso(i32 %x) nounwind readnone !prof !14 {
 ;
 ; X64-NDD-LABEL: cnt32_pgso:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrl %edi, %eax
+; X64-NDD-NEXT:    shrl $1, %edi, %eax
 ; X64-NDD-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; X64-NDD-NEXT:    subl %eax, %edi
 ; X64-NDD-NEXT:    andl $858993459, %edi, %eax # imm = 0x33333333
@@ -1429,7 +1429,7 @@ define i64 @cnt64_pgso(i64 %x) nounwind readnone !prof !14 {
 ;
 ; X64-NDD-LABEL: cnt64_pgso:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrq %rdi, %rax
+; X64-NDD-NEXT:    shrq $1, %rdi, %rax
 ; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
 ; X64-NDD-NEXT:    andq %rcx, %rax
 ; X64-NDD-NEXT:    subq %rax, %rdi
@@ -1660,7 +1660,7 @@ define i128 @cnt128_pgso(i128 %x) nounwind readnone !prof !14 {
 ;
 ; X64-NDD-LABEL: cnt128_pgso:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrq %rsi, %rax
+; X64-NDD-NEXT:    shrq $1, %rsi, %rax
 ; X64-NDD-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
 ; X64-NDD-NEXT:    andq %rcx, %rax
 ; X64-NDD-NEXT:    subq %rax, %rsi
@@ -1676,7 +1676,7 @@ define i128 @cnt128_pgso(i128 %x) nounwind readnone !prof !14 {
 ; X64-NDD-NEXT:    movabsq $72340172838076673, %r8 # imm = 0x101010101010101
 ; X64-NDD-NEXT:    imulq %r8, %rdx
 ; X64-NDD-NEXT:    shrq $56, %rdx
-; X64-NDD-NEXT:    shrq %rdi, %r9
+; X64-NDD-NEXT:    shrq $1, %rdi, %r9
 ; X64-NDD-NEXT:    andq %r9, %rcx
 ; X64-NDD-NEXT:    subq %rcx, %rdi
 ; X64-NDD-NEXT:    andq %rax, %rdi, %rcx
@@ -1860,7 +1860,7 @@ define i32 @popcount_zext_i32(i16 zeroext %x) {
 ;
 ; X64-NDD-LABEL: popcount_zext_i32:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrl %edi, %eax
+; X64-NDD-NEXT:    shrl $1, %edi, %eax
 ; X64-NDD-NEXT:    andl $21845, %eax # imm = 0x5555
 ; X64-NDD-NEXT:    subl %eax, %edi
 ; X64-NDD-NEXT:    andl $858993459, %edi, %eax # imm = 0x33333333
@@ -1936,7 +1936,7 @@ define i32 @popcount_i16_zext(i16 zeroext %x) {
 ;
 ; X64-NDD-LABEL: popcount_i16_zext:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrw %di, %ax
+; X64-NDD-NEXT:    shrw $1, %di, %ax
 ; X64-NDD-NEXT:    andw $21845, %ax # imm = 0x5555
 ; X64-NDD-NEXT:    subw %ax, %di, %ax
 ; X64-NDD-NEXT:    andw $13107, %ax, %cx # imm = 0x3333

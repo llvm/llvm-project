@@ -11,7 +11,7 @@ define i8 @rol8m1(ptr %ptr) {
 ;
 ; MEM-LABEL: rol8m1:
 ; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    rolb (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0x07]
+; MEM-NEXT:    rolb $1, (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0x07]
 ; MEM-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i8, ptr %ptr
@@ -30,7 +30,7 @@ define i8 @rol8m1_intrinsic(ptr %ptr)  {
 ;
 ; MEM-LABEL: rol8m1_intrinsic:
 ; MEM:       # %bb.0:
-; MEM-NEXT:    rolb (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0x07]
+; MEM-NEXT:    rolb $1, (%rdi), %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0x07]
 ; MEM-NEXT:    retq # encoding: [0xc3]
   %a = load i8, ptr %ptr
   %f = call i8 @llvm.fshr.i8(i8 %a, i8 %a, i8 7)
@@ -46,7 +46,7 @@ define i16 @rol16m1(ptr %ptr) {
 ;
 ; MEM-LABEL: rol16m1:
 ; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    rolw (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0x07]
+; MEM-NEXT:    rolw $1, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0x07]
 ; MEM-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i16, ptr %ptr
@@ -65,7 +65,7 @@ define i16 @rol16m1_intrinsic(ptr %ptr)  {
 ;
 ; MEM-LABEL: rol16m1_intrinsic:
 ; MEM:       # %bb.0:
-; MEM-NEXT:    rolw (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0x07]
+; MEM-NEXT:    rolw $1, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0x07]
 ; MEM-NEXT:    retq # encoding: [0xc3]
   %a = load i16, ptr %ptr
   %f = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 15)
@@ -81,7 +81,7 @@ define i32 @rol32m1(ptr %ptr) {
 ;
 ; MEM-LABEL: rol32m1:
 ; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    roll (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0x07]
+; MEM-NEXT:    roll $1, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0x07]
 ; MEM-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i32, ptr %ptr
@@ -100,7 +100,7 @@ define i32 @rol32m1_intrinsic(ptr %ptr)  {
 ;
 ; MEM-LABEL: rol32m1_intrinsic:
 ; MEM:       # %bb.0:
-; MEM-NEXT:    roll (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0x07]
+; MEM-NEXT:    roll $1, (%rdi), %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0x07]
 ; MEM-NEXT:    retq # encoding: [0xc3]
   %a = load i32, ptr %ptr
   %f = call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 31)
@@ -116,7 +116,7 @@ define i64 @rol64m1(ptr %ptr) {
 ;
 ; MEM-LABEL: rol64m1:
 ; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    rolq (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0x07]
+; MEM-NEXT:    rolq $1, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0x07]
 ; MEM-NEXT:    retq # encoding: [0xc3]
 entry:
   %a = load i64, ptr %ptr
@@ -135,7 +135,7 @@ define i64 @rol64m1_intrinsic(ptr %ptr)  {
 ;
 ; MEM-LABEL: rol64m1_intrinsic:
 ; MEM:       # %bb.0:
-; MEM-NEXT:    rolq (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0x07]
+; MEM-NEXT:    rolq $1, (%rdi), %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0x07]
 ; MEM-NEXT:    retq # encoding: [0xc3]
   %a = load i64, ptr %ptr
   %f = call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 63)
@@ -317,7 +317,7 @@ entry:
 define i8 @rol8r1(i8 noundef %a) {
 ; CHECK-LABEL: rol8r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rolb %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0xc7]
+; CHECK-NEXT:    rolb $1, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0xc7]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = shl i8 %a, 1
@@ -329,7 +329,7 @@ entry:
 define i8 @rol8r1_intrinsic(i8 noundef %a)  {
 ; CHECK-LABEL: rol8r1_intrinsic:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rolb %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0xc7]
+; CHECK-NEXT:    rolb $1, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0xd0,0xc7]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %f = call i8 @llvm.fshr.i8(i8 %a, i8 %a, i8 7)
   ret i8 %f
@@ -338,7 +338,7 @@ define i8 @rol8r1_intrinsic(i8 noundef %a)  {
 define i16 @rol16r1(i16 noundef %a) {
 ; CHECK-LABEL: rol16r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rolw %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0xc7]
+; CHECK-NEXT:    rolw $1, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0xc7]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = shl i16 %a, 1
@@ -350,7 +350,7 @@ entry:
 define i16 @rol16r1_intrinsic(i16 noundef %a)  {
 ; CHECK-LABEL: rol16r1_intrinsic:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rolw %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0xc7]
+; CHECK-NEXT:    rolw $1, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xd1,0xc7]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %f = call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 15)
   ret i16 %f
@@ -359,7 +359,7 @@ define i16 @rol16r1_intrinsic(i16 noundef %a)  {
 define i32 @rol32r1(i32 noundef %a) {
 ; CHECK-LABEL: rol32r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    roll %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0xc7]
+; CHECK-NEXT:    roll $1, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0xc7]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = shl i32 %a, 1
@@ -371,7 +371,7 @@ entry:
 define i32 @rol32r1_intrinsic(i32 noundef %a)  {
 ; CHECK-LABEL: rol32r1_intrinsic:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    roll %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0xc7]
+; CHECK-NEXT:    roll $1, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xd1,0xc7]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %f = call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 31)
   ret i32 %f
@@ -380,7 +380,7 @@ define i32 @rol32r1_intrinsic(i32 noundef %a)  {
 define i64 @rol64r1(i64 noundef %a) {
 ; CHECK-LABEL: rol64r1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    rolq %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0xc7]
+; CHECK-NEXT:    rolq $1, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0xc7]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = shl i64 %a, 1
@@ -392,7 +392,7 @@ entry:
 define i64 @rol64r1_intrinsic(i64 noundef %a)  {
 ; CHECK-LABEL: rol64r1_intrinsic:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rolq %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0xc7]
+; CHECK-NEXT:    rolq $1, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0xd1,0xc7]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %f = call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 63)
   ret i64 %f
