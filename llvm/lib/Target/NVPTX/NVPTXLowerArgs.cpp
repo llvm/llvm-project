@@ -440,38 +440,21 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
       : PtrUseVisitor(DL), IsGridConstant(IsGridConstant) {}
 
   PtrInfo visitArgPtr(Argument &A) {
-    assert(A.getType()->isPointerTy());
-    IntegerType *IntIdxTy = cast<IntegerType>(DL.getIndexType(A.getType()));
-    IsOffsetKnown = false;
-    Offset = APInt(IntIdxTy->getBitWidth(), 0);
-    PI.reset();
+    LLVM_DEBUG(dbgs() << "Checking Argument " << A << "\n");
     Conditionals.clear();
 
-    LLVM_DEBUG(dbgs() << "Checking Argument " << A << "\n");
-    // Enqueue the uses of this pointer.
-    enqueueUsers(A);
+    // Visit without offset tracking - we only care how the pointer is used
+    PtrInfo Result = visitPtr(A, /*TrackOffsets=*/false);
 
-    // Visit all the uses off the worklist until it is empty.
-    // Note that unlike PtrUseVisitor we intentionally do not track offsets.
-    // We're only interested in how we use the pointer.
-    while (!(Worklist.empty() || PI.isAborted())) {
-      UseToVisit ToVisit = Worklist.pop_back_val();
-      U = ToVisit.UseAndIsOffsetKnown.getPointer();
-      Instruction *I = cast<Instruction>(U->getUser());
-      if (isa<PHINode>(I) || isa<SelectInst>(I))
-        Conditionals.insert(I);
-      LLVM_DEBUG(dbgs() << "Processing " << *I << "\n");
-      Base::visit(I);
-    }
-    if (PI.isEscaped())
-      LLVM_DEBUG(dbgs() << "Argument pointer escaped: " << *PI.getEscapingInst()
-                        << "\n");
-    else if (PI.isAborted())
-      LLVM_DEBUG(dbgs() << "Pointer use needs a copy: " << *PI.getAbortingInst()
-                        << "\n");
+    if (Result.isEscaped())
+      LLVM_DEBUG(dbgs() << "Argument pointer escaped: "
+                        << *Result.getEscapingInst() << "\n");
+    else if (Result.isAborted())
+      LLVM_DEBUG(dbgs() << "Pointer use needs a copy: "
+                        << *Result.getAbortingInst() << "\n");
     LLVM_DEBUG(dbgs() << "Traversed " << Conditionals.size()
                       << " conditionals\n");
-    return PI;
+    return Result;
   }
 
   void visitStoreInst(StoreInst &SI) {
@@ -498,10 +481,12 @@ struct ArgUseChecker : PtrUseVisitor<ArgUseChecker> {
   }
   void visitPHINodeOrSelectInst(Instruction &I) {
     assert(isa<PHINode>(I) || isa<SelectInst>(I));
+    Conditionals.insert(&I);
+    enqueueUsers(I);
   }
   // PHI and select just pass through the pointers.
-  void visitPHINode(PHINode &PN) { enqueueUsers(PN); }
-  void visitSelectInst(SelectInst &SI) { enqueueUsers(SI); }
+  void visitPHINode(PHINode &PN) { visitPHINodeOrSelectInst(PN); }
+  void visitSelectInst(SelectInst &SI) { visitPHINodeOrSelectInst(SI); }
 
   void visitMemTransferInst(MemTransferInst &II) {
     if (*U == II.getRawDest() && !IsGridConstant)

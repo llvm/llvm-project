@@ -19,13 +19,32 @@ using namespace llvm;
 
 void detail::PtrUseVisitorBase::enqueueUsers(Value &I) {
   for (Use &U : I.uses()) {
-    if (VisitedUses.insert(&U).second) {
-      UseToVisit NewU = {
-        UseToVisit::UseAndIsOffsetKnownPair(&U, IsOffsetKnown),
-        Offset
-      };
-      Worklist.push_back(std::move(NewU));
+    bool OffsetKnown = IsOffsetKnown;
+    APInt OffsetCopy = Offset;
+
+    if (OffsetKnown) {
+      // If we're about to visit a PHI that's already in our path,
+      // we hit a possibly-infinite cycle. If it had the same value as before,
+      // then we are at the fixed point. Otherwise, widen this offset to
+      // unknown.
+      auto I = cast<Instruction>(U.getUser());
+      auto It = InstsInPath.find(I);
+      if (It != InstsInPath.end()) {
+        if (It->second == OffsetCopy)
+          // Same offset as when we first encountered this PHI, skip
+          continue;
+        // Different offset, mark as unknown
+        OffsetKnown = false;
+        OffsetCopy = APInt();
+      }
     }
+
+    UseWithOffset Key = {{&U, OffsetKnown}, OffsetCopy};
+    if (!Visited.insert(std::move(Key)).second)
+      continue;
+
+    UseToVisit NewU = {{{&U, OffsetKnown}, false}, std::move(OffsetCopy)};
+    Worklist.push_back(std::move(NewU));
   }
 }
 

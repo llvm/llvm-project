@@ -23,6 +23,8 @@
 #define LLVM_ANALYSIS_PTRUSEVISITOR_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -127,20 +129,23 @@ protected:
 
   /// A struct of the data needed to visit a particular use.
   ///
-  /// This is used to maintain a worklist fo to-visit uses. This is used to
+  /// This is used to maintain a worklist of to-visit uses. This is used to
   /// make the visit be iterative rather than recursive.
   struct UseToVisit {
-    using UseAndIsOffsetKnownPair = PointerIntPair<Use *, 1, bool>;
+    using UseAndIsOffsetKnownPair = PointerIntPair<Use *, 1, unsigned>;
+    using UseAndPassInfo = PointerIntPair<UseAndIsOffsetKnownPair, 1, unsigned>;
 
-    UseAndIsOffsetKnownPair UseAndIsOffsetKnown;
+    UseAndPassInfo UseInfo;
     APInt Offset;
   };
 
   /// The worklist of to-visit uses.
   SmallVector<UseToVisit, 8> Worklist;
 
-  /// A set of visited uses to break cycles in unreachable code.
-  SmallPtrSet<Use *, 8> VisitedUses;
+  /// Set of (Use, (IsOffsetKnown & Offset)) pairs that have been fully visited.
+  /// Used to prevent duplicate visits in post-order traversal.
+  using UseWithOffset = std::pair<UseToVisit::UseAndIsOffsetKnownPair, APInt>;
+  llvm::DenseSet<UseWithOffset> Visited;
 
   /// @}
 
@@ -157,6 +162,10 @@ protected:
 
   /// The constant offset of the use if that is known.
   APInt Offset;
+
+  /// Path-dependency of walk to first DFS encounter.
+  /// Used for detecting (and avoiding) possible cycles.
+  llvm::DenseMap<Instruction *, APInt> InstsInPath;
 
   /// @}
 
@@ -196,9 +205,9 @@ protected:
 /// visited! This is because users can be visited multiple times due to
 /// multiple, different uses of pointers derived from the same base.
 ///
-/// A particular Use will only be visited once, but a User may be visited
-/// multiple times, once per Use. This visits may notably have different
-/// offsets.
+/// A particular Use may be visited multiple times if reached with different
+/// offsets. A User may be visited multiple times, once per Use, and each
+/// Use may be visited multiple times with different offsets.
 ///
 /// All visit methods on the underlying InstVisitor return a boolean. This
 /// return short-circuits the visit, stopping it immediately.
@@ -221,32 +230,43 @@ public:
   /// \returns An info struct about the pointer. See \c PtrInfo for details.
   /// We may also need to process Argument pointers, so the input uses is
   /// a common Value type.
-  PtrInfo visitPtr(Value &I) {
+  PtrInfo visitPtr(Value &I, bool TrackOffsets = true) {
     // This must be a pointer type. Get an integer type suitable to hold
     // offsets on this pointer.
     // FIXME: Support a vector of pointers.
     assert(I.getType()->isPointerTy());
     assert(isa<Instruction>(I) || isa<Argument>(I));
     IntegerType *IntIdxTy = cast<IntegerType>(DL.getIndexType(I.getType()));
-    IsOffsetKnown = true;
-    Offset = APInt(IntIdxTy->getBitWidth(), 0);
+    IsOffsetKnown = TrackOffsets;
+    Offset = TrackOffsets ? APInt(IntIdxTy->getBitWidth(), 0) : APInt();
     PI.reset();
 
     // Enqueue the uses of this pointer.
     enqueueUsers(I);
 
     // Visit all the uses off the worklist until it is empty.
+    // We use revisit in post-order to pop the element from InstsInPath after
+    // processing all children.
     while (!Worklist.empty()) {
       UseToVisit ToVisit = Worklist.pop_back_val();
-      U = ToVisit.UseAndIsOffsetKnown.getPointer();
-      IsOffsetKnown = ToVisit.UseAndIsOffsetKnown.getInt();
-      if (IsOffsetKnown)
-        Offset = std::move(ToVisit.Offset);
-
+      bool SecondPass = ToVisit.UseInfo.getInt();
+      U = ToVisit.UseInfo.getPointer().getPointer();
       Instruction *I = cast<Instruction>(U->getUser());
-      static_cast<DerivedT*>(this)->visit(I);
-      if (PI.isAborted())
-        break;
+
+      if (SecondPass) {
+        InstsInPath.erase(I);
+      } else {
+        IsOffsetKnown = ToVisit.UseInfo.getPointer().getInt();
+        Offset = std::move(ToVisit.Offset);
+        // Re-enqueue for visiting after users are processed
+        ToVisit.Offset = APInt();
+        ToVisit.UseInfo.setInt(true);
+        Worklist.push_back(std::move(ToVisit));
+        InstsInPath[I] = Offset;
+        static_cast<DerivedT *>(this)->visit(I);
+        if (PI.isAborted())
+          break;
+      }
     }
     return PI;
   }
