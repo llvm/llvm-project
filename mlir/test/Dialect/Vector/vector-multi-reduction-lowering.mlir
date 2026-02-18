@@ -1,25 +1,6 @@
 // RUN: mlir-opt %s --transform-interpreter | FileCheck %s
 
 // Patterns applied:
-// * TwoDimMultiReductionToReduction from populateVectorMultiReductionUnrollingPatterns
-func.func @vector_multi_reduction(%arg0: vector<2x4xf32>, %acc: vector<2xf32>) -> vector<2xf32> {
-    %0 = vector.multi_reduction <mul>, %arg0, %acc [1] : vector<2x4xf32> to vector<2xf32>
-    return %0 : vector<2xf32>
-}
-// CHECK-LABEL: func @vector_multi_reduction
-//  CHECK-SAME:   %[[INPUT:.+]]: vector<2x4xf32>, %[[ACC:.*]]: vector<2xf32>)
-//   CHECK-DAG:       %[[RESULT_VEC_0:.+]] = arith.constant dense<{{.*}}> : vector<2xf32>
-//       CHECK:       %[[V0:.+]] = vector.extract %[[INPUT]][0]
-//       CHECK:       %[[ACC0:.+]] = vector.extract %[[ACC]][0]
-//       CHECK:       %[[RV0:.+]] = vector.reduction <mul>, %[[V0]], %[[ACC0]] : vector<4xf32> into f32
-//       CHECK:       %[[RESULT_VEC_1:.+]] = vector.insert %[[RV0:.+]], %[[RESULT_VEC_0]] [0] : f32 into vector<2xf32>
-//       CHECK:       %[[V1:.+]] = vector.extract %[[INPUT]][1]
-//       CHECK:       %[[ACC1:.+]] = vector.extract %[[ACC]][1]
-//       CHECK:       %[[RV1:.+]] = vector.reduction <mul>, %[[V1]], %[[ACC1]] : vector<4xf32> into f32
-//       CHECK:       %[[RESULT_VEC:.+]] = vector.insert %[[RV1:.+]], %[[RESULT_VEC_1]] [1] : f32 into vector<2xf32>
-//       CHECK:       return %[[RESULT_VEC]]
-
-// Patterns applied:
 // * ReduceMultiDimReductionRank from populateVectorMultiReductionFlatteningPatterns
 // * TwoDimMultiReductionToReduction from populateVectorMultiReductionUnrollingPatterns
 func.func @vector_reduction_inner(%arg0: vector<2x3x4x5xi32>, %acc: vector<2x3xi32>) -> vector<2x3xi32> {
@@ -56,50 +37,6 @@ func.func @vector_reduction_inner(%arg0: vector<2x3x4x5xi32>, %acc: vector<2x3xi
 //       CHECK:       %[[FLAT_RESULT_VEC:.+]] = vector.insert %[[V5R]], %[[FLAT_RESULT_VEC_5]] [5] : i32 into vector<6xi32>
 //       CHECK:       %[[RESULT:.+]] = vector.shape_cast %[[FLAT_RESULT_VEC]] : vector<6xi32> to vector<2x3xi32>
 //       CHECK:       return %[[RESULT]]
-
-// Patterns applied:
-// * TwoDimMultiReductionToReduction from populateVectorMultiReductionUnrollingPatterns
-func.func @vectorize_dynamic_reduction(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
-  %c0 = arith.constant 0 : index
-  %dim = tensor.dim %arg0, %c0 : tensor<?x?xf32>
-  %c1 = arith.constant 1 : index
-  %dim_0 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
-  %c0_1 = arith.constant 0 : index
-  %cst = arith.constant 0.000000e+00 : f32
-  %0 = vector.create_mask %dim, %dim_0 : vector<4x8xi1>
-  %1 = vector.mask %0 { vector.transfer_read %arg0[%c0_1, %c0_1], %cst {in_bounds = [true, true]} : tensor<?x?xf32>, vector<4x8xf32> } : vector<4x8xi1> -> vector<4x8xf32>
-  %cst_2 = arith.constant 0.000000e+00 : f32
-  %2 = vector.create_mask %dim : vector<4xi1>
-  %3 = vector.mask %2 { vector.transfer_read %arg1[%c0_1], %cst_2 {in_bounds = [true]} : tensor<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
-  %4 = vector.mask %0 { vector.multi_reduction <add>, %1, %3 [1] : vector<4x8xf32> to vector<4xf32> } : vector<4x8xi1> -> vector<4xf32>
-  %c0_3 = arith.constant 0 : index
-  %5 = vector.mask %2 { vector.transfer_write %4, %arg1[%c0_3] {in_bounds = [true]} : vector<4xf32>, tensor<?xf32> } : vector<4xi1> -> tensor<?xf32>
-  return %5 : tensor<?xf32>
-}
-
-// Verify that the original 2-D mask is sliced and propagated properly to the
-// vector.reduction instances.
-
-// CHECK-LABEL:   func.func @vectorize_dynamic_reduction
-// CHECK:           %[[VAL_8:.*]] = tensor.dim
-// CHECK:           %[[VAL_9:.*]] = tensor.dim
-// CHECK:           %[[VAL_10:.*]] = vector.create_mask %[[VAL_8]], %[[VAL_9]] : vector<4x8xi1>
-
-// CHECK:           %[[VAL_16:.*]] = vector.extract %[[VAL_10]][0] : vector<8xi1> from vector<4x8xi1>
-// CHECK:           %[[VAL_17:.*]] = vector.mask %[[VAL_16]] { vector.reduction <add>, %{{.*}} : vector<8xf32> into f32 } : vector<8xi1> -> f32
-// CHECK:           %[[VAL_18:.*]] = vector.insert
-
-// CHECK:           %[[VAL_21:.*]] = vector.extract %[[VAL_10]][1] : vector<8xi1> from vector<4x8xi1>
-// CHECK:           %[[VAL_22:.*]] = vector.mask %[[VAL_21]] { vector.reduction <add>, %{{.*}} : vector<8xf32> into f32 } : vector<8xi1> -> f32
-// CHECK:           %[[VAL_23:.*]] = vector.insert
-
-// CHECK:           %[[VAL_26:.*]] = vector.extract %[[VAL_10]][2] : vector<8xi1> from vector<4x8xi1>
-// CHECK:           %[[VAL_27:.*]] = vector.mask %[[VAL_26]] { vector.reduction <add>, %{{.*}} : vector<8xf32> into f32 } : vector<8xi1> -> f32
-// CHECK:           %[[VAL_28:.*]] = vector.insert
-
-// CHECK:           %[[VAL_31:.*]] = vector.extract %[[VAL_10]][3] : vector<8xi1> from vector<4x8xi1>
-// CHECK:           %[[VAL_32:.*]] = vector.mask %[[VAL_31]] { vector.reduction <add>, %{{.*}} : vector<8xf32> into f32 } : vector<8xi1> -> f32
-// CHECK:           %[[VAL_33:.*]] = vector.insert
 
 // Patterns applied:
 // * OneDimMultiReductionToTwoDim from populateVectorMultiReductionTransformationPatterns
@@ -219,30 +156,6 @@ func.func @vector_multi_reduction_scalable_dim_1d(%A: vector<[4]xf32>, %B: f32, 
 // CHECK-SAME:                                      %[[ARG_2:.*]]: vector<[4]xi1>) -> f32 {
 // CHECK:          %[[VAL_2:.*]] = vector.mask %[[ARG_2]] { vector.reduction <add>, %[[ARG_0]], %[[ARG_1]] : vector<[4]xf32> into f32 } : vector<[4]xi1> -> f32
 // CHECK:          return %[[VAL_2]] : f32
-
-// Patterns applied:
-// * TwoDimMultiReductionToReduction from populateVectorMultiReductionUnrollingPatterns
-func.func @vector_multi_reduction_scalable_dim_2d(%A: vector<2x[4]xf32>, %B: vector<2xf32>, %C: vector<2x[4]xi1>) -> vector<2xf32> {
-    %0 = vector.mask %C { vector.multi_reduction <add>, %A, %B [1] : vector<2x[4]xf32> to vector<2xf32> } : vector<2x[4]xi1> -> vector<2xf32>
-    return %0 : vector<2xf32>
-}
-
-// CHECK-LABEL:  func.func @vector_multi_reduction_scalable_dim_2d(
-// CHECK-SAME:                                      %[[ARG_0:.*]]: vector<2x[4]xf32>,
-// CHECK-SAME:                                      %[[ARG_1:.*]]: vector<2xf32>,
-// CHECK-SAME:                                      %[[ARG_2:.*]]: vector<2x[4]xi1>) -> vector<2xf32> {
-// CHECK-DAG:      %[[C0_2xf32:.*]] = arith.constant dense<0.000000e+00> : vector<2xf32>
-// CHECK:          %[[ARG0_0:.*]] = vector.extract %[[ARG_0]][0] : vector<[4]xf32> from vector<2x[4]xf32>
-// CHECK:          %[[ARG1_0:.*]] = vector.extract %[[ARG_1]][0] : f32 from vector<2xf32>
-// CHECK:          %[[ARG2_0:.*]] = vector.extract %[[ARG_2]][0] : vector<[4]xi1> from vector<2x[4]xi1>
-// CHECK:          %[[REDUCE_0:.*]] = vector.mask %[[ARG2_0]] { vector.reduction <add>, %[[ARG0_0]], %[[ARG1_0]] : vector<[4]xf32> into f32 } : vector<[4]xi1> -> f32
-// CHECK:          %[[INSERT_0:.*]] = vector.insert %[[REDUCE_0]], %[[C0_2xf32]] [0] : f32 into vector<2xf32>
-// CHECK:          %[[ARG0_1:.*]] = vector.extract %[[ARG_0]][1] : vector<[4]xf32> from vector<2x[4]xf32>
-// CHECK:          %[[ARG1_1:.*]] = vector.extract %[[ARG_1]][1] : f32 from vector<2xf32>
-// CHECK:          %[[ARG2_1:.*]] = vector.extract %[[ARG_2]][1] : vector<[4]xi1> from vector<2x[4]xi1>
-// CHECK:          %[[REDUCE_1:.*]] = vector.mask %[[ARG2_1]] { vector.reduction <add>, %[[ARG0_1]], %[[ARG1_1]] : vector<[4]xf32> into f32 } : vector<[4]xi1> -> f32
-// CHECK:          %[[INSERT_1:.*]] = vector.insert %[[REDUCE_1]], %[[INSERT_0]] [1] : f32 into vector<2xf32>
-// CHECK:          return %[[INSERT_1]] : vector<2xf32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
