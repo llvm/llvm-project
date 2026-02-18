@@ -11362,20 +11362,22 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                          : (OpVT == MVT::f64 ? PPC::XSTSTDCDP
                                                              : PPC::XSTSTDCSP);
     // Lower __builtin_ppc_test_data_class(value, mask) to XSTSTDC* instruction.
-    // The XSTSTDC* instructions test if a floating-point value matches any of the
-    // data classes specified in the mask, setting CR field bits accordingly.
-    // We need to extract the EQ bit (bit 2) from the CR field and convert it to
-    // an integer result (1 if match, 0 if no match).
+    // The XSTSTDC* instructions test if a floating-point value matches any of
+    // the data classes specified in the mask, setting CR field bits
+    // accordingly. We need to extract the EQ bit (bit 2) from the CR field and
+    // convert it to an integer result (1 if match, 0 if no match).
     //
     // Note: Operands are swapped because XSTSTDC* expects (mask, value) but the
-    // intrinsic provides (value, mask) as Op.getOperand(1) and Op.getOperand(2).
+    // intrinsic provides (value, mask) as Op.getOperand(1) and
+    // Op.getOperand(2).
     SDValue TestDataClass =
         SDValue(DAG.getMachineNode(CmprOpc, dl, MVT::i32,
                                    {Op.getOperand(2), Op.getOperand(1)}),
                 0);
     if (Subtarget.isISA3_1()) {
       // ISA 3.1+: Use SETBC instruction to directly convert CR bit to integer.
-      // This is more efficient than the SELECT_CC approach used in earlier ISAs.
+      // This is more efficient than the SELECT_CC approach used in earlier
+      // ISAs.
       SDValue SubRegIdx = DAG.getTargetConstant(PPC::sub_eq, dl, MVT::i32);
       SDValue CRBit =
           SDValue(DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::i1,
@@ -11386,12 +11388,12 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
 
     // Pre-ISA 3.1: Use SELECT_CC to convert CR field to integer (1 or 0).
-    return SDValue(DAG.getMachineNode(
-                       PPC::SELECT_CC_I4, dl, MVT::i32,
-                       {TestDataClass, DAG.getConstant(1, dl, MVT::i32),
-                        DAG.getConstant(0, dl, MVT::i32),
-                        DAG.getTargetConstant(PPC::PRED_EQ, dl, MVT::i32)}),
-                   0);
+    return SDValue(
+        DAG.getMachineNode(PPC::SELECT_CC_I4, dl, MVT::i32,
+                           {TestDataClass, DAG.getConstant(1, dl, MVT::i32),
+                            DAG.getConstant(0, dl, MVT::i32),
+                            DAG.getTargetConstant(PPC::PRED_EQ, dl, MVT::i32)}),
+        0);
   }
   case Intrinsic::ppc_fnmsub: {
     EVT VT = Op.getOperand(1).getValueType();
@@ -17363,20 +17365,20 @@ static SDValue combineXorSelectCC(SDNode *N, SelectionDAG &DAG) {
         (TrueOp->isZero() && FalseOp->isOne())))
     return SDValue();
 
-  // Pattern matched! Create new SELECT_CC with swapped 0/1 operands to eliminate XOR.
-  // If original was SELECT_CC(cond, 1, 0, pred), create SELECT_CC(cond, 0, 1, pred).
-  // If original was SELECT_CC(cond, 0, 1, pred), create SELECT_CC(cond, 1, 0, pred).
+  // Pattern matched! Create new SELECT_CC with swapped 0/1 operands to
+  // eliminate XOR. If original was SELECT_CC(cond, 1, 0, pred), create
+  // SELECT_CC(cond, 0, 1, pred). If original was SELECT_CC(cond, 0, 1, pred),
+  // create SELECT_CC(cond, 1, 0, pred).
   SDLoc DL(N);
   MachineOpc = (XorVT == MVT::i32) ? PPC::SELECT_CC_I4 : PPC::SELECT_CC_I8;
-  
+
   bool TrueOpIsOne = TrueOp->isOne();
   return SDValue(
-      DAG.getMachineNode(
-          MachineOpc, DL, XorVT,
-          {SelectNode.getOperand(0),
-           DAG.getConstant(TrueOpIsOne ? 0 : 1, DL, XorVT),
-           DAG.getConstant(TrueOpIsOne ? 1 : 0, DL, XorVT),
-           SelectNode.getOperand(3)}),
+      DAG.getMachineNode(MachineOpc, DL, XorVT,
+                         {SelectNode.getOperand(0),
+                          DAG.getConstant(TrueOpIsOne ? 0 : 1, DL, XorVT),
+                          DAG.getConstant(TrueOpIsOne ? 1 : 0, DL, XorVT),
+                          SelectNode.getOperand(3)}),
       0);
 }
 
