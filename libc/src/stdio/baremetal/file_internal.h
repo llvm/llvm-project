@@ -32,35 +32,11 @@ struct FileIOResult {
   constexpr operator size_t() { return value; }
 };
 
-// ungetc handling.
-int push_ungetc_value(::FILE *stream, int c);
-bool pop_ungetc_value(::FILE *stream, unsigned char &out);
-
-LIBC_INLINE int ungetc_internal(int c, ::FILE *stream) {
-  return push_ungetc_value(stream, c);
-}
-
 LIBC_INLINE FileIOResult read_internal(char *buf, size_t size, ::FILE *stream) {
-  if (size == 0)
-    return 0;
-
-  unsigned char ungetc_value = 0;
-  size_t ungetc_value_copied = 0;
-
-  if (pop_ungetc_value(stream, ungetc_value)) {
-    buf[0] = static_cast<char>(ungetc_value);
-    ungetc_value_copied = 1;
-
-    if (size == 1)
-      return 1;
-  }
-
-  ssize_t ret = __llvm_libc_stdio_read(stream, buf + ungetc_value_copied,
-                                       size - ungetc_value_copied);
+  ssize_t ret = __llvm_libc_stdio_read(stream, buf, size);
   if (ret < 0)
-    return {ungetc_value_copied, static_cast<int>(-ret)};
-
-  return ret + ungetc_value_copied;
+    return {0, static_cast<int>(-ret)};
+  return ret;
 }
 
 LIBC_INLINE FileIOResult write_internal(const char *buf, size_t size,

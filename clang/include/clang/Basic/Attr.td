@@ -852,7 +852,7 @@ def AbiTag : Attr {
 def AddressSpace : TypeAttr {
   let Spellings = [Clang<"address_space">];
   let Args = [IntArgument<"AddressSpace">];
-  let Documentation = [Undocumented];
+  let Documentation = [AddressSpaceDocs];
 }
 
 def Alias : Attr {
@@ -2369,6 +2369,13 @@ def NoInline : DeclOrStmtAttr {
   let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
   let SimpleHandler = 1;
+}
+
+def NoOutline : DeclOrStmtAttr {
+  let Spellings = [Clang<"no_outline">];
+  let Subjects = SubjectList<[Function, ObjCMethod, Block], ErrorDiag>;
+  let Documentation = [NoOutlineDocs];
+  let SimpleHandler = true;
 }
 
 def NoMips16 : InheritableAttr, TargetSpecificAttr<TargetMips32> {

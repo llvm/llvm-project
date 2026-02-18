@@ -381,7 +381,7 @@ unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
         OutStr += ", ";
         OutStr += ColInstr->getName();
       } else {
-        OutStr += ", (uint32_t)-1U";
+        OutStr += ", INSTRUCTION_LIST_END";
       }
     }
 
@@ -455,7 +455,7 @@ void MapTableEmitter::emitMapFuncBody(raw_ostream &OS, unsigned TableSize) {
       OS << ")\n";
       OS << "    return Table[mid][" << I + 1 << "];\n";
     }
-    OS << "  return (uint32_t)-1U;";
+    OS << "  llvm_unreachable(\"Unrecognized column value!\");\n";
   } else {
     OS << "  return Table[mid][1];\n";
   }
@@ -474,7 +474,7 @@ void MapTableEmitter::emitTablesWithFunc(raw_ostream &OS) {
   const ListInit *ColFields = InstrMapDesc.getColFields();
   ArrayRef<const ListInit *> ValueCols = InstrMapDesc.getValueCols();
   OS << "// " << InstrMapDesc.getName() << "\nLLVM_READONLY\n";
-  OS << "int64_t " << InstrMapDesc.getName() << "(uint32_t Opcode";
+  OS << "int32_t " << InstrMapDesc.getName() << "(uint32_t Opcode";
   if (ValueCols.size() > 1) {
     for (const Init *CF : ColFields->getElements()) {
       std::string ColName = CF->getAsUnquotedString();

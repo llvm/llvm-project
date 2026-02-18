@@ -281,6 +281,9 @@ public:
       const ArraySubscriptExpr *E, CodeGenFunction &CGF,
       llvm::function_ref<llvm::Value *(bool Promote)> EmitIdxAfterBase);
 
+  RawAddress createBufferMatrixTempAddress(const LValue &LV, SourceLocation Loc,
+                                           CodeGenFunction &CGF);
+
   bool emitBufferCopy(CodeGenFunction &CGF, Address DestPtr, Address SrcPtr,
                       QualType CType);
 

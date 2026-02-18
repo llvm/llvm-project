@@ -18,6 +18,7 @@
 #include <functional>
 #include <ranges>
 #include <tuple>
+#include <utility>
 
 #include "../types.h"
 #include "../../range_adaptor_types.h"
