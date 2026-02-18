@@ -641,19 +641,8 @@ define i64 @ivopt_widen_ptr_indvar_3(ptr noalias %a, i64 %stride, i64 %n) {
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; STRIDED:       vector.body:
 ; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; STRIDED-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], [[TMP1]]
-; STRIDED-NEXT:    [[TMP4:%.*]] = mul i64 0, [[TMP1]]
-; STRIDED-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], [[TMP4]]
-; STRIDED-NEXT:    [[TMP6:%.*]] = mul i64 1, [[TMP1]]
-; STRIDED-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], [[TMP6]]
-; STRIDED-NEXT:    [[TMP8:%.*]] = mul i64 2, [[TMP1]]
-; STRIDED-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], [[TMP8]]
-; STRIDED-NEXT:    [[TMP10:%.*]] = mul i64 3, [[TMP1]]
-; STRIDED-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], [[TMP10]]
-; STRIDED-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr null, i64 [[TMP11]]
 ; STRIDED-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP12]], align 8
-; STRIDED-NEXT:    [[TMP14:%.*]] = getelementptr i64, ptr [[NEXT_GEP3]], i64 [[STRIDE]]
 ; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; STRIDED-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; STRIDED-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
@@ -676,7 +665,7 @@ define i64 @ivopt_widen_ptr_indvar_3(ptr noalias %a, i64 %stride, i64 %n) {
 ; STRIDED-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; STRIDED:       exit:
 ; STRIDED-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[TMP17]], [[FOR_BODY]] ], [ [[TMP16]], [[MIDDLE_BLOCK]] ]
-; STRIDED-NEXT:    [[PTR_IV_NEXT_LCSSA:%.*]] = phi ptr [ [[PTR_IV_NEXT]], [[FOR_BODY]] ], [ [[TMP14]], [[MIDDLE_BLOCK]] ]
+; STRIDED-NEXT:    [[PTR_IV_NEXT_LCSSA:%.*]] = phi ptr [ [[PTR_IV_NEXT]], [[FOR_BODY]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
 ; STRIDED-NEXT:    [[CAST_PTR:%.*]] = ptrtoint ptr [[PTR_IV_NEXT_LCSSA]] to i64
 ; STRIDED-NEXT:    [[RESULT:%.*]] = add i64 [[CAST_PTR]], [[DOTLCSSA]]
 ; STRIDED-NEXT:    ret i64 [[RESULT]]

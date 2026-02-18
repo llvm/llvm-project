@@ -760,14 +760,12 @@ define i1 @pow2_and(i32 %x, i32 %y) {
 ; CHECK-LABEL: pow2_and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    movl $4, %eax
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    negl %ecx
-; CHECK-NEXT:    andl %eax, %ecx
-; CHECK-NEXT:    testl %ecx, %edi
-; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    shrl %cl, %eax
+; CHECK-NEXT:    andl $4, %eax
+; CHECK-NEXT:    shrl $2, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %yy = shl nuw nsw i32 4, %y
   %nyy = sub i32 0, %yy
@@ -804,13 +802,11 @@ define i1 @pow2_and_fail1(i32 %x, i32 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shll %cl, %edx
-; CHECK-NEXT:    subl %edx, %eax
-; CHECK-NEXT:    andl %edx, %eax
+; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    testl %edi, %eax
+; CHECK-NEXT:    andl %eax, %edi
+; CHECK-NEXT:    testl $-2, %edi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %yy = shl i32 1, %y

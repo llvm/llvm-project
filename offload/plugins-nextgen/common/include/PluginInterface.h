@@ -879,8 +879,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// in notifyDataMapped, this function should unlock it.
   Error notifyDataUnmapped(void *HstPtr) {
     auto Err = PinnedAllocs.unregisterMemory(HstPtr, LockMappedBuffers);
-    if (IgnoreLockMappedFailures)
+    if (IgnoreLockMappedFailures) {
+      consumeError(std::move(Err));
       return Plugin::success();
+    }
     return Err;
   }
 
