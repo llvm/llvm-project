@@ -55192,7 +55192,7 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   bool IsConj;
-  SDValue FAddOp1, MulOp0, MulOp1;
+  SDValue FAddOp0, FAddOp1, MulOp0, MulOp1;
   auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj, &IsVectorAllNegativeZero,
                        &HasNoSignedZero](SDValue N) -> bool {
     if (!N.hasOneUse() || N.getOpcode() != ISD::BITCAST)
@@ -55219,20 +55219,22 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
     return false;
   };
 
-  if (GetCFmulFrom(LHS))
+  if (GetCFmulFrom(LHS)) {
+    FAddOp0 = LHS;
     FAddOp1 = RHS;
-  else if (GetCFmulFrom(RHS))
+  }
+  else if (GetCFmulFrom(RHS)) {
+    FAddOp0 = RHS;
     FAddOp1 = LHS;
+  }
   else
     return SDValue();
 
   MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);
   FAddOp1 = DAG.getBitcast(CVT, FAddOp1);
   unsigned NewOp = IsConj ? X86ISD::VFCMADDC : X86ISD::VFMADDC;
-  // FIXME: How do we handle when fast math flags of FADD are different from
-  // CFMUL's?
-  SDValue CFmul =
-      DAG.getNode(NewOp, SDLoc(N), CVT, MulOp0, MulOp1, FAddOp1, N->getFlags());
+  SDValue CFmul = DAG.getNode(NewOp, SDLoc(N), CVT, MulOp0, MulOp1, FAddOp1,
+                              N->getFlags() & FAddOp0.getOperand(0)->getFlags());
   return DAG.getBitcast(VT, CFmul);
 }
 
@@ -55901,14 +55903,17 @@ static SDValue combineFneg(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isTypeLegal(VT))
     return SDValue();
 
+  SDNodeFlags Flags = N->getFlags() & Arg->getFlags();
+
   // If we're negating a FMUL node on a target with FMA, then we can avoid the
   // use of a constant by performing (-0 - A*B) instead.
   // FIXME: Check rounding control flags as well once it becomes available.
   if (Arg.getOpcode() == ISD::FMUL && (SVT == MVT::f32 || SVT == MVT::f64) &&
-      Arg->getFlags().hasNoSignedZeros() && Subtarget.hasAnyFMA()) {
+      Arg->getFlags().hasNoSignedZeros() && Subtarget.hasAnyFMA() &&
+      Flags.hasAllowContract()) {
     SDValue Zero = DAG.getConstantFP(0.0, DL, VT);
     SDValue NewNode = DAG.getNode(X86ISD::FNMSUB, DL, VT, Arg.getOperand(0),
-                                  Arg.getOperand(1), Zero);
+                                  Arg.getOperand(1), Zero, Flags);
     return DAG.getBitcast(OrigVT, NewNode);
   }
 

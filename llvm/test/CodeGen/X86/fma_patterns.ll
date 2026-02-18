@@ -1934,6 +1934,29 @@ define <4 x double> @test_v4f64_fneg_fmul_no_nsz(<4 x double> %x, <4 x double> %
   ret <4 x double> %n
 }
 
+define <4 x double> @test_v4f64_fneg_fmul_missing_contract(<4 x double> %x, <4 x double> %y) {
+; FMA-LABEL: test_v4f64_fneg_fmul_missing_contract:
+; FMA:       # %bb.0:
+; FMA-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
+; FMA-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: test_v4f64_fneg_fmul_missing_contract:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
+; FMA4-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; FMA4-NEXT:    retq
+;
+; AVX512-LABEL: test_v4f64_fneg_fmul_missing_contract:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
+; AVX512-NEXT:    retq
+  %m = fmul contract nsz <4 x double> %x, %y
+  %n = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m
+  ret <4 x double> %n
+}
+
 ; ((a*b) + (c*d)) + n1 --> (a*b) + ((c*d) + n1)
 
 define double @fadd_fma_fmul_1(double %a, double %b, double %c, double %d, double %n1) nounwind {
