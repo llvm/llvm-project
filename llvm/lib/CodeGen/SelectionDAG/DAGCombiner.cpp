@@ -633,6 +633,7 @@ namespace {
 
     SDValue foldAddToAvg(SDNode *N, const SDLoc &DL);
     SDValue foldSubToAvg(SDNode *N, const SDLoc &DL);
+    SDValue foldLogicSetCCToMul(SDNode *N, const SDLoc &DL);
 
     SDValue foldCTLZToCTLS(SDValue Src, const SDLoc &DL);
 
@@ -6770,6 +6771,60 @@ static unsigned getMinMaxOpcodeForCompareFold(
   return ISD::DELETED_NODE;
 }
 
+// Fold the following patterns for small integers in -Oz mode.
+// (X == 0) || (Y == 0) --> (X * Y) == 0
+// (X != 0) && (Y != 0) --> (X * Y) != 0
+SDValue DAGCombiner::foldLogicSetCCToMul(SDNode *N, const SDLoc &DL) {
+  if (!DAG.getMachineFunction().getFunction().hasMinSize())
+    return SDValue();
+
+  unsigned Opcode = N->getOpcode();
+  ISD::CondCode ExpectedCC;
+  if (Opcode == ISD::OR)
+    ExpectedCC = ISD::SETEQ;
+  else if (Opcode == ISD::AND)
+    ExpectedCC = ISD::SETNE;
+  else
+    return SDValue();
+
+  SDValue X, Y;
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  if (!N0.hasOneUse() || !N1.hasOneUse())
+    return SDValue();
+
+  if (!sd_match(
+          N0, m_SetCC(m_Value(X), m_Zero(), m_SpecificCondCode(ExpectedCC))) ||
+      !sd_match(N1,
+                m_SetCC(m_Value(Y), m_Zero(), m_SpecificCondCode(ExpectedCC))))
+    return SDValue();
+
+  EVT VT = X.getValueType();
+  if (!VT.isInteger() || VT != Y.getValueType())
+    return SDValue();
+
+  if (!hasOperation(ISD::MUL, VT))
+    return SDValue();
+
+  unsigned BitWidth = X.getScalarValueSizeInBits();
+  KnownBits KnownX = DAG.computeKnownBits(X);
+
+  if (KnownX.countMaxActiveBits() >= BitWidth)
+    return SDValue();
+
+  KnownBits KnownY = DAG.computeKnownBits(Y);
+
+  if (KnownX.countMaxActiveBits() + KnownY.countMaxActiveBits() > BitWidth)
+    return SDValue();
+
+  SDValue Mul =
+      DAG.getNode(ISD::MUL, DL, VT, X, Y, SDNodeFlags::NoUnsignedWrap);
+
+  return DAG.getSetCC(DL, N->getValueType(0), Mul, DAG.getConstant(0, DL, VT),
+                      ExpectedCC);
+}
+
 static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   using AndOrSETCCFoldKind = TargetLowering::AndOrSETCCFoldKind;
   assert(
@@ -7678,6 +7733,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   ConstantSDNode *N1C = isConstOrConstSplat(N1);
   if (N1C && DAG.MaskedValueIsZero(SDValue(N, 0), APInt::getAllOnes(BitWidth)))
     return DAG.getConstant(0, DL, VT);
+
+  if (SDValue R = foldLogicSetCCToMul(N, DL))
+    return R;
 
   if (SDValue R = foldAndOrOfSETCC(N, DAG))
     return R;
@@ -8668,6 +8726,9 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
   if (N1C && DAG.MaskedValueIsZero(N0, ~N1C->getAPIntValue()))
     return N1;
+
+  if (SDValue R = foldLogicSetCCToMul(N, DL))
+    return R;
 
   if (SDValue R = foldAndOrOfSETCC(N, DAG))
     return R;
