@@ -241,6 +241,10 @@ Interpreter::ArithmeticConversion(lldb::ValueObjectSP &lhs,
 
   size_t l_rank = ConversionRank(lhs_type);
   size_t r_rank = ConversionRank(rhs_type);
+  if (l_rank == 0 || r_rank == 0)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "unexpected basic type in arithmetic operation", location);
+
   // If both operands are integer, check if we need to promote
   // the higher ranked signed type.
   if (lhs_type.IsInteger() && rhs_type.IsInteger()) {
