@@ -218,3 +218,24 @@ define <8 x i64> @variable_srl3_load(<8 x i64> %x, ptr %y) {
   %k = lshr <8 x i64> %x, %y1
   ret <8 x i64> %k
 }
+
+define i512 @lshr_i512(ptr %x, ptr %shift) {
+  %shiftval = load i512, ptr %x
+  %shiftamt = load i512, ptr %shift
+  %res = lshr i512 %shiftval, %shiftamt
+  ret i512 %res
+}
+
+define i512 @ashr_i512(ptr %x, ptr %shift) {
+  %shiftval = load i512, ptr %x
+  %shiftamt = load i512, ptr %shift
+  %res = ashr i512 %shiftval, %shiftamt
+  ret i512 %res
+}
+
+define i512 @shl_i512(ptr %x, ptr %shift) {
+  %shiftval = load i512, ptr %x
+  %shiftamt = load i512, ptr %shift
+  %res = shl i512 %shiftval, %shiftamt
+  ret i512 %res
+}
