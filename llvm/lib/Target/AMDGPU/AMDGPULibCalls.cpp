@@ -82,8 +82,8 @@ private:
   bool sincosUseNative(CallInst *aCI, const FuncInfo &FInfo);
 
   // evaluate calls if calls' arguments are constants.
-  bool evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0, double &Res1,
-                              Constant *copr0, Constant *copr1);
+  bool evaluateScalarMathFunc(const FuncInfo &FInfo, APFloat &Res0,
+                              APFloat &Res1, Constant *copr0, Constant *copr1);
   bool evaluateCall(CallInst *aCI, const FuncInfo &FInfo);
 
   /// Insert a value to sincos function \p Fsincos. Returns (value of sin, value
@@ -771,6 +771,21 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
   return false;
 }
 
+static Constant *getConstantFloatVector(const ArrayRef<APFloat> Values,
+                                        const Type *Ty) {
+  Type *ElemTy = Ty->getScalarType();
+  const fltSemantics &FltSem = ElemTy->getFltSemantics();
+
+  SmallVector<Constant *, 4> ConstValues;
+  ConstValues.reserve(Values.size());
+  for (APFloat APF : Values) {
+    bool Unused;
+    APF.convert(FltSem, APFloat::rmNearestTiesToEven, &Unused);
+    ConstValues.push_back(ConstantFP::get(ElemTy, APF));
+  }
+  return ConstantVector::get(ConstValues);
+}
+
 bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
   // Table-Driven optimization
   const TableRef tr = getOptTable(FInfo.getId());
@@ -780,40 +795,27 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
   int const sz = (int)tr.size();
   Value *opr0 = CI->getArgOperand(0);
 
-  if (getVecSize(FInfo) > 1) {
-    if (ConstantDataVector *CV = dyn_cast<ConstantDataVector>(opr0)) {
-      SmallVector<double, 0> DVal;
-      for (int eltNo = 0; eltNo < getVecSize(FInfo); ++eltNo) {
-        ConstantFP *eltval = dyn_cast<ConstantFP>(
-                               CV->getElementAsConstant((unsigned)eltNo));
-        assert(eltval && "Non-FP arguments in math function!");
-        bool found = false;
-        for (int i=0; i < sz; ++i) {
-          if (eltval->isExactlyValue(tr[i].input)) {
-            DVal.push_back(tr[i].result);
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          // This vector constants not handled yet.
+  int vecSize = getVecSize(FInfo);
+  if (vecSize > 1) {
+    // Vector version
+    Constant *CV = dyn_cast<Constant>(opr0);
+    if (CV && CV->getType()->isVectorTy()) {
+      SmallVector<APFloat, 4> Values;
+      Values.reserve(vecSize);
+      for (int eltNo = 0; eltNo < vecSize; ++eltNo) {
+        ConstantFP *eltval =
+            cast<ConstantFP>(CV->getAggregateElement((unsigned)eltNo));
+        auto MatchingRow = std::find_if(
+            tr.begin(), tr.end(), [eltval](const TableEntry &entry) {
+              return eltval->isExactlyValue(entry.input);
+            });
+        if (MatchingRow == tr.end())
           return false;
-        }
+        Values.push_back(APFloat(MatchingRow->result));
       }
-      LLVMContext &context = CI->getContext();
-      Constant *nval;
-      if (getArgType(FInfo) == AMDGPULibFunc::F32) {
-        SmallVector<float, 0> FVal;
-        for (double D : DVal)
-          FVal.push_back((float)D);
-        ArrayRef<float> tmp(FVal);
-        nval = ConstantDataVector::get(context, tmp);
-      } else { // F64
-        ArrayRef<double> tmp(DVal);
-        nval = ConstantDataVector::get(context, tmp);
-      }
-      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *nval << "\n");
-      replaceCall(CI, nval);
+      Constant *NewValues = getConstantFloatVector(Values, CI->getType());
+      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *NewValues << "\n");
+      replaceCall(CI, NewValues);
       return true;
     }
   } else {
@@ -1672,9 +1674,9 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   return true;
 }
 
-bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
-                                            double &Res1, Constant *copr0,
-                                            Constant *copr1) {
+bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
+                                            APFloat &Res0, APFloat &Res1,
+                                            Constant *copr0, Constant *copr1) {
   // By default, opr0/opr1/opr3 holds values of float/double type.
   // If they are not float/double, each function has to its
   // operand separately.
@@ -1694,125 +1696,127 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
   }
 
   switch (FInfo.getId()) {
-  default : return false;
+  default:
+    return false;
 
   case AMDGPULibFunc::EI_ACOS:
-    Res0 = acos(opr0);
+    Res0 = APFloat{acos(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_ACOSH:
     // acosh(x) == log(x + sqrt(x*x - 1))
-    Res0 = log(opr0 + sqrt(opr0*opr0 - 1.0));
+    Res0 = APFloat{log(opr0 + sqrt(opr0 * opr0 - 1.0))};
     return true;
 
   case AMDGPULibFunc::EI_ACOSPI:
-    Res0 = acos(opr0) / MATH_PI;
+    Res0 = APFloat{acos(opr0) / MATH_PI};
     return true;
 
   case AMDGPULibFunc::EI_ASIN:
-    Res0 = asin(opr0);
+    Res0 = APFloat{asin(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_ASINH:
     // asinh(x) == log(x + sqrt(x*x + 1))
-    Res0 = log(opr0 + sqrt(opr0*opr0 + 1.0));
+    Res0 = APFloat{log(opr0 + sqrt(opr0 * opr0 + 1.0))};
     return true;
 
   case AMDGPULibFunc::EI_ASINPI:
-    Res0 = asin(opr0) / MATH_PI;
+    Res0 = APFloat{asin(opr0) / MATH_PI};
     return true;
 
   case AMDGPULibFunc::EI_ATAN:
-    Res0 = atan(opr0);
+    Res0 = APFloat{atan(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_ATANH:
     // atanh(x) == (log(x+1) - log(x-1))/2;
-    Res0 = (log(opr0 + 1.0) - log(opr0 - 1.0))/2.0;
+    Res0 = APFloat{(log(opr0 + 1.0) - log(opr0 - 1.0)) / 2.0};
     return true;
 
   case AMDGPULibFunc::EI_ATANPI:
-    Res0 = atan(opr0) / MATH_PI;
+    Res0 = APFloat{atan(opr0) / MATH_PI};
     return true;
 
   case AMDGPULibFunc::EI_CBRT:
-    Res0 = (opr0 < 0.0) ? -pow(-opr0, 1.0/3.0) : pow(opr0, 1.0/3.0);
+    Res0 =
+        APFloat{(opr0 < 0.0) ? -pow(-opr0, 1.0 / 3.0) : pow(opr0, 1.0 / 3.0)};
     return true;
 
   case AMDGPULibFunc::EI_COS:
-    Res0 = cos(opr0);
+    Res0 = APFloat{cos(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_COSH:
-    Res0 = cosh(opr0);
+    Res0 = APFloat{cosh(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_COSPI:
-    Res0 = cos(MATH_PI * opr0);
+    Res0 = APFloat{cos(MATH_PI * opr0)};
     return true;
 
   case AMDGPULibFunc::EI_EXP:
-    Res0 = exp(opr0);
+    Res0 = APFloat{exp(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_EXP2:
-    Res0 = pow(2.0, opr0);
+    Res0 = APFloat{pow(2.0, opr0)};
     return true;
 
   case AMDGPULibFunc::EI_EXP10:
-    Res0 = pow(10.0, opr0);
+    Res0 = APFloat{pow(10.0, opr0)};
     return true;
 
   case AMDGPULibFunc::EI_LOG:
-    Res0 = log(opr0);
+    Res0 = APFloat{log(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_LOG2:
-    Res0 = log(opr0) / log(2.0);
+    Res0 = APFloat{log(opr0) / log(2.0)};
     return true;
 
   case AMDGPULibFunc::EI_LOG10:
-    Res0 = log(opr0) / log(10.0);
+    Res0 = APFloat{log(opr0) / log(10.0)};
     return true;
 
   case AMDGPULibFunc::EI_RSQRT:
-    Res0 = 1.0 / sqrt(opr0);
+    Res0 = APFloat{1.0 / sqrt(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_SIN:
-    Res0 = sin(opr0);
+    Res0 = APFloat{sin(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_SINH:
-    Res0 = sinh(opr0);
+    Res0 = APFloat{sinh(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_SINPI:
-    Res0 = sin(MATH_PI * opr0);
+    Res0 = APFloat{sin(MATH_PI * opr0)};
     return true;
 
   case AMDGPULibFunc::EI_TAN:
-    Res0 = tan(opr0);
+    Res0 = APFloat{tan(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_TANH:
-    Res0 = tanh(opr0);
+    Res0 = APFloat{tanh(opr0)};
     return true;
 
   case AMDGPULibFunc::EI_TANPI:
-    Res0 = tan(MATH_PI * opr0);
+    Res0 = APFloat{tan(MATH_PI * opr0)};
     return true;
 
   // two-arg functions
   case AMDGPULibFunc::EI_POW:
   case AMDGPULibFunc::EI_POWR:
-    Res0 = pow(opr0, opr1);
+    Res0 = APFloat{pow(opr0, opr1)};
     return true;
 
   case AMDGPULibFunc::EI_POWN: {
     if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
       double val = (double)iopr1->getSExtValue();
-      Res0 = pow(opr0, val);
+      Res0 = APFloat{pow(opr0, val)};
       return true;
     }
     return false;
@@ -1821,7 +1825,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
   case AMDGPULibFunc::EI_ROOTN: {
     if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
       double val = (double)iopr1->getSExtValue();
-      Res0 = pow(opr0, 1.0 / val);
+      Res0 = APFloat{pow(opr0, 1.0 / val)};
       return true;
     }
     return false;
@@ -1829,8 +1833,8 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
 
   // with ptr arg
   case AMDGPULibFunc::EI_SINCOS:
-    Res0 = sin(opr0);
-    Res1 = cos(opr0);
+    Res0 = APFloat{sin(opr0)};
+    Res1 = APFloat{cos(opr0)};
     return true;
   }
 
@@ -1859,11 +1863,12 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
   // At this point, all arguments to aCI are constants.
 
   // max vector size is 16, and sincos will generate two results.
-  double DVal0[16], DVal1[16];
+  SmallVector<APFloat, 16> Val0, Val1;
   int FuncVecSize = getVecSize(FInfo);
   bool hasTwoResults = (FInfo.getId() == AMDGPULibFunc::EI_SINCOS);
   if (FuncVecSize == 1) {
-    if (!evaluateScalarMathFunc(FInfo, DVal0[0], DVal1[0], copr0, copr1)) {
+    if (!evaluateScalarMathFunc(FInfo, Val0.emplace_back(0.0),
+                                Val1.emplace_back(0.0), copr0, copr1)) {
       return false;
     }
   } else {
@@ -1872,39 +1877,22 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     for (int i = 0; i < FuncVecSize; ++i) {
       Constant *celt0 = CDV0 ? CDV0->getElementAsConstant(i) : nullptr;
       Constant *celt1 = CDV1 ? CDV1->getElementAsConstant(i) : nullptr;
-      if (!evaluateScalarMathFunc(FInfo, DVal0[i], DVal1[i], celt0, celt1)) {
+      if (!evaluateScalarMathFunc(FInfo, Val0.emplace_back(0.0),
+                                  Val1.emplace_back(0.0), celt0, celt1)) {
         return false;
       }
     }
   }
 
-  LLVMContext &context = aCI->getContext();
   Constant *nval0, *nval1;
   if (FuncVecSize == 1) {
-    nval0 = ConstantFP::get(aCI->getType(), DVal0[0]);
+    nval0 = ConstantFP::get(aCI->getType(), Val0[0]);
     if (hasTwoResults)
-      nval1 = ConstantFP::get(aCI->getType(), DVal1[0]);
+      nval1 = ConstantFP::get(aCI->getType(), Val1[0]);
   } else {
-    if (getArgType(FInfo) == AMDGPULibFunc::F32) {
-      SmallVector <float, 0> FVal0, FVal1;
-      for (int i = 0; i < FuncVecSize; ++i)
-        FVal0.push_back((float)DVal0[i]);
-      ArrayRef<float> tmp0(FVal0);
-      nval0 = ConstantDataVector::get(context, tmp0);
-      if (hasTwoResults) {
-        for (int i = 0; i < FuncVecSize; ++i)
-          FVal1.push_back((float)DVal1[i]);
-        ArrayRef<float> tmp1(FVal1);
-        nval1 = ConstantDataVector::get(context, tmp1);
-      }
-    } else {
-      ArrayRef<double> tmp0(DVal0);
-      nval0 = ConstantDataVector::get(context, tmp0);
-      if (hasTwoResults) {
-        ArrayRef<double> tmp1(DVal1);
-        nval1 = ConstantDataVector::get(context, tmp1);
-      }
-    }
+    nval0 = getConstantFloatVector(Val0, aCI->getType());
+    if (hasTwoResults)
+      nval1 = getConstantFloatVector(Val1, aCI->getType());
   }
 
   if (hasTwoResults) {
