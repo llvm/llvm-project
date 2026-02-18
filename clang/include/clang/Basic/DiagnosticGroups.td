@@ -69,9 +69,13 @@ def CoroNonAlignedAllocationFunction :
   DiagGroup<"coro-non-aligned-allocation-function">;
 def CoroTypeAwareAllocationFunction :
   DiagGroup<"coro-type-aware-allocation-function">;
-def Coroutine : DiagGroup<"coroutine", [CoroutineMissingUnhandledException, DeprecatedCoroutine,
-                                        AlwaysInlineCoroutine, CoroNonAlignedAllocationFunction,
-                                        CoroTypeAwareAllocationFunction]>;
+def InitialSuspendThrowing : DiagGroup<"initial-suspend-throw">;
+def Coroutine
+    : DiagGroup<"coroutine", [CoroutineMissingUnhandledException,
+                              DeprecatedCoroutine, AlwaysInlineCoroutine,
+                              CoroNonAlignedAllocationFunction,
+                              CoroTypeAwareAllocationFunction,
+                              InitialSuspendThrowing]>;
 def ObjCBoolConstantConversion : DiagGroup<"objc-bool-constant-conversion">;
 def ConstantConversion : DiagGroup<"constant-conversion",
                                    [BitFieldConstantConversion,

@@ -19,7 +19,7 @@ struct coro_t {
       std::coroutine_handle<promise_type>{};
       return {};
     }
-    std::suspend_never initial_suspend() { return {}; }
+    std::suspend_never initial_suspend() noexcept { return {}; }
     std::suspend_never final_suspend() noexcept { return {}; }
     void return_void() {}
     static void unhandled_exception() {}

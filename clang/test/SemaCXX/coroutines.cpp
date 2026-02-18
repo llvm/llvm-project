@@ -128,7 +128,7 @@ struct not_awaitable {};
 
 struct promise {
   void get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   awaitable yield_value(int); // expected-note 2{{candidate}}
   awaitable yield_value(yielded_thing); // expected-note 2{{candidate}}
@@ -139,7 +139,7 @@ struct promise {
 
 struct promise_void {
   void get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void return_void();
   void unhandled_exception();
@@ -511,9 +511,9 @@ namespace dependent_operator_co_await_lookup {
   struct transform_promise {
     typedef transform_awaitable await_arg;
     coro<transform_promise> get_return_object();
-    transformed initial_suspend();
+    transformed initial_suspend() noexcept;
     ::adl_ns::coawait_arg_type final_suspend() noexcept;
-    transformed await_transform(transform_awaitable);
+    transformed await_transform(transform_awaitable) noexcept;
     void unhandled_exception();
     void return_void();
   };
@@ -521,7 +521,7 @@ namespace dependent_operator_co_await_lookup {
   struct basic_promise {
     typedef AwaitArg await_arg;
     coro<basic_promise> get_return_object();
-    awaitable initial_suspend();
+    awaitable initial_suspend() noexcept;
     awaitable final_suspend() noexcept;
     void unhandled_exception();
     void return_void();
@@ -576,7 +576,7 @@ namespace dependent_operator_co_await_lookup {
   }
 
   void operator co_await(transform_awaitable) = delete;
-  awaitable operator co_await(transformed);
+  awaitable operator co_await(transformed) noexcept;
 
   template coro<transform_promise>
       dependent_member<long>::dep_mem_fn<transform_promise>(transform_awaitable);
@@ -606,7 +606,7 @@ struct std::coroutine_traits<void, yield_fn_tag> {
     awaitable yield_value(int());
     void return_value(int());
 
-    suspend_never initial_suspend();
+    suspend_never initial_suspend() noexcept;
     suspend_never final_suspend() noexcept;
     void get_return_object();
     void unhandled_exception();
@@ -640,7 +640,7 @@ namespace placeholder {
 }
 
 struct bad_promise_1 {
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void unhandled_exception();
   void return_void();
@@ -662,7 +662,7 @@ coro<bad_promise_2> missing_initial_suspend() { // expected-error {{no member na
 
 struct bad_promise_3 {
   coro<bad_promise_3> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   void unhandled_exception();
   void return_void();
 };
@@ -672,7 +672,7 @@ coro<bad_promise_3> missing_final_suspend() noexcept { // expected-error {{no me
 
 struct bad_promise_4 {
   coro<bad_promise_4> get_return_object();
-  not_awaitable initial_suspend();
+  not_awaitable initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void return_void();
 };
@@ -684,7 +684,7 @@ coro<bad_promise_4> bad_initial_suspend() { // expected-error {{no member named 
 
 struct bad_promise_5 {
   coro<bad_promise_5> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   not_awaitable final_suspend() noexcept;
   void return_void();
 };
@@ -696,7 +696,7 @@ coro<bad_promise_5> bad_final_suspend() { // expected-error {{no member named 'a
 
 struct bad_promise_6 {
   coro<bad_promise_6> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void unhandled_exception();
   void return_void();           // expected-note 2 {{member 'return_void' first declared here}}
@@ -715,7 +715,7 @@ template coro<bad_promise_6> bad_implicit_return_dependent(bad_promise_6); // ex
 
 struct bad_promise_7 { // expected-note 2 {{defined here}}
   coro<bad_promise_7> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void return_void();
 };
@@ -735,7 +735,7 @@ private:
 };
 struct bad_promise_8 : bad_promise_base {
   coro<bad_promise_8> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void unhandled_exception() __attribute__((unavailable)); // expected-note 2 {{marked unavailable here}}
   void unhandled_exception() const;
@@ -757,7 +757,7 @@ template coro<bad_promise_8> calls_unhandled_exception_dependent(bad_promise_8);
 
 struct bad_promise_9 {
   coro<bad_promise_9> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void await_transform(void *);
   awaitable await_transform(int) __attribute__((unavailable)); // expected-note {{explicitly marked unavailable}}
@@ -770,7 +770,7 @@ coro<bad_promise_9> calls_await_transform() {
 
 struct bad_promise_10 {
   coro<bad_promise_10> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   int await_transform;
   void return_void();
@@ -789,7 +789,7 @@ struct call_operator {
 void ret_void();
 struct good_promise_1 {
   coro<good_promise_1> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void unhandled_exception();
   static const call_operator await_transform;
@@ -826,7 +826,7 @@ int main(int, const char**) {
 
 struct good_promise_2 {
   float get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void return_void();
   void unhandled_exception();
@@ -858,7 +858,7 @@ template <>
 struct std::coroutine_traits<int, promise_on_alloc_failure_tag> {
   struct promise_type {
     int get_return_object() {}
-    suspend_always initial_suspend() { return {}; }
+    suspend_always initial_suspend() noexcept { return {}; }
     suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
     int get_return_object_on_allocation_failure(); // expected-error{{'promise_type': 'get_return_object_on_allocation_failure()' must be a static member function}}
@@ -872,7 +872,7 @@ extern "C" int f(promise_on_alloc_failure_tag) {
 
 struct bad_promise_11 {
   coro<bad_promise_11> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void unhandled_exception();
   void return_void();
@@ -895,7 +895,7 @@ template coro<bad_promise_11> dependent_private_alloc_failure_handler(bad_promis
 
 struct bad_promise_12 {
   coro<bad_promise_12> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void unhandled_exception();
   void return_void();
@@ -917,7 +917,7 @@ template coro<bad_promise_12> dependent_throwing_in_class_new(bad_promise_12); /
 
 struct good_promise_13 {
   coro<good_promise_13> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void unhandled_exception();
   void return_void();
@@ -935,7 +935,7 @@ template coro<good_promise_13> dependent_uses_nothrow_new(good_promise_13);
 
 struct good_promise_custom_new_operator {
   coro<good_promise_custom_new_operator> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void return_void();
   void unhandled_exception();
@@ -951,7 +951,7 @@ struct coroutine_nonstatic_member_struct;
 
 struct good_promise_nonstatic_member_custom_new_operator {
   coro<good_promise_nonstatic_member_custom_new_operator> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void return_void();
   void unhandled_exception();
@@ -961,7 +961,7 @@ struct good_promise_nonstatic_member_custom_new_operator {
 struct good_promise_noexcept_custom_new_operator {
   static coro<good_promise_noexcept_custom_new_operator> get_return_object_on_allocation_failure();
   coro<good_promise_noexcept_custom_new_operator> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void return_void();
   void unhandled_exception();
@@ -978,7 +978,7 @@ template <>
 struct std::coroutine_traits<int, mismatch_gro_type_tag1> {
   struct promise_type {
     void get_return_object() {} //expected-note {{member 'get_return_object' declared here}}
-    suspend_always initial_suspend() { return {}; }
+    suspend_always initial_suspend() noexcept { return {}; }
     suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
     void unhandled_exception();
@@ -995,7 +995,7 @@ template <>
 struct std::coroutine_traits<int, mismatch_gro_type_tag2> {
   struct promise_type {
     void *get_return_object() {} //expected-note {{member 'get_return_object' declared here}}
-    suspend_always initial_suspend() { return {}; }
+    suspend_always initial_suspend() noexcept { return {}; }
     suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
     void unhandled_exception();
@@ -1014,7 +1014,7 @@ struct std::coroutine_traits<int, mismatch_gro_type_tag3> {
   struct promise_type {
     int get_return_object() {}
     static void get_return_object_on_allocation_failure() {} //expected-note {{member 'get_return_object_on_allocation_failure' declared here}}
-    suspend_always initial_suspend() { return {}; }
+    suspend_always initial_suspend() noexcept { return {}; }
     suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
     void unhandled_exception();
@@ -1033,7 +1033,7 @@ struct std::coroutine_traits<int, mismatch_gro_type_tag4> {
   struct promise_type {
     int get_return_object() {}
     static char *get_return_object_on_allocation_failure() {} //expected-note {{member 'get_return_object_on_allocation_failure' declared}}
-    suspend_always initial_suspend() { return {}; }
+    suspend_always initial_suspend() noexcept { return {}; }
     suspend_always final_suspend() noexcept { return {}; }
     void return_void() {}
     void unhandled_exception();
@@ -1047,7 +1047,7 @@ extern "C" int f(mismatch_gro_type_tag4) {
 
 struct promise_no_return_func {
   coro<promise_no_return_func> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void unhandled_exception();
 };
@@ -1177,7 +1177,7 @@ struct CoroMemberPromise {
   using AwaitTestT = AwaitReturnsType<TypeTestT>;
 
   CoroMemberTag get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
 
   AwaitTestT yield_value(int);
@@ -1388,7 +1388,7 @@ struct bad_promise_deleted_constructor {
   // expected-note@+1 {{'bad_promise_deleted_constructor' has been explicitly marked deleted here}}
   bad_promise_deleted_constructor() = delete;
   coro<bad_promise_deleted_constructor> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void return_void();
   void unhandled_exception();
@@ -1410,7 +1410,7 @@ struct good_promise_default_constructor {
   good_promise_default_constructor(double, float, int);
   good_promise_default_constructor() = default;
   coro<good_promise_default_constructor> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void return_void();
   void unhandled_exception();
@@ -1428,7 +1428,7 @@ struct good_promise_custom_constructor {
   good_promise_custom_constructor(double, float, int);
   good_promise_custom_constructor() = delete;
   coro<good_promise_custom_constructor> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void return_void();
   void unhandled_exception();
@@ -1455,7 +1455,7 @@ struct bad_promise_no_matching_constructor {
   // expected-note@+1 2 {{'bad_promise_no_matching_constructor' has been explicitly marked deleted here}}
   bad_promise_no_matching_constructor() = delete;
   coro<bad_promise_no_matching_constructor> get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void return_void();
   void unhandled_exception();
@@ -1497,7 +1497,7 @@ public:
 template <class Await>
 struct check_warning_promise {
   coro<check_warning_promise> get_return_object();
-  Await initial_suspend();
+  Await initial_suspend() noexcept;
   Await final_suspend() noexcept;
   Await yield_value(int);
   void return_void();

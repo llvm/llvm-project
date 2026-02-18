@@ -52,7 +52,7 @@ struct NoCopyNoMove {
 template <typename T>
 struct task {
   struct promise_type {
-    auto initial_suspend() { return suspend_never{}; }
+    auto initial_suspend() noexcept { return suspend_never{}; }
     auto final_suspend() noexcept { return suspend_never{}; }
     auto get_return_object() { return task{}; }
     static void unhandled_exception() {}
@@ -128,7 +128,7 @@ struct is_same<T, T> { static constexpr bool value = true; };
 template <typename T>
 struct generic_task {
   struct promise_type {
-    auto initial_suspend() { return suspend_never{}; }
+    auto initial_suspend() noexcept { return suspend_never{}; }
     auto final_suspend() noexcept { return suspend_never{}; }
     auto get_return_object() { return generic_task{}; }
     static void unhandled_exception();

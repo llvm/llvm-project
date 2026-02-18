@@ -69,7 +69,7 @@ struct NoexceptResumeTask {
     struct promise_type {
         void return_void() {}
         void unhandled_exception() {}
-        initial_suspend_awaiter initial_suspend() { return {}; }
+        initial_suspend_awaiter initial_suspend() noexcept { return {}; }
         std::suspend_never final_suspend() noexcept { return {}; }
         NoexceptResumeTask get_return_object() {
             return NoexceptResumeTask{handle_type::from_promise(*this)};

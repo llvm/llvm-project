@@ -6,7 +6,7 @@ extern void abort(void) __attribute__((__noreturn__));
 
 struct task {
   struct promise_type {
-    std::suspend_always initial_suspend();
+    std::suspend_always initial_suspend() noexcept;
     std::suspend_always final_suspend() noexcept;
     void return_void();
     std::suspend_always yield_value(int) { return {}; }

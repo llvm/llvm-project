@@ -20,6 +20,12 @@ struct coroutine_handle<void> {
   void *address() const noexcept;
 };
 
+struct suspend_always_noexcept {
+  bool await_ready() noexcept { return false; }
+  void await_suspend(coroutine_handle<>) noexcept {}
+  void await_resume() noexcept {}
+};
+
 struct suspend_always {
   bool await_ready() { return false; }      // expected-note 2 {{must be declared with 'noexcept'}}
   void await_suspend(coroutine_handle<>) {} // expected-note 2 {{must be declared with 'noexcept'}}
@@ -41,7 +47,7 @@ struct A {
 struct coro_t {
   struct promise_type {
     coro_t get_return_object();
-    suspend_always initial_suspend();
+    suspend_always_noexcept initial_suspend() noexcept;
     suspend_always final_suspend(); // expected-note 2 {{must be declared with 'noexcept'}}
     void return_void();
     static void unhandled_exception();
@@ -72,7 +78,7 @@ struct PositiveFinalSuspend {
 struct correct_coro {
   struct promise_type {
     correct_coro get_return_object();
-    suspend_always initial_suspend();
+    suspend_always_noexcept initial_suspend() noexcept;
     PositiveFinalSuspend final_suspend() noexcept;
     void return_void();
     static void unhandled_exception();
@@ -93,7 +99,7 @@ struct NegativeFinalSuspend {
 struct incorrect_coro {
   struct promise_type {
     incorrect_coro get_return_object();
-    suspend_always initial_suspend();
+    suspend_always_noexcept initial_suspend() noexcept;
     NegativeFinalSuspend final_suspend() noexcept;
     void return_void();
     static void unhandled_exception();

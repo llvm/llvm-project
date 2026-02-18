@@ -22,7 +22,7 @@ template <typename T> struct [[clang::coro_return_type]] Gen {
     static Gen<T> get_return_object_on_allocation_failure() {
       return {};
     }
-    suspend_always initial_suspend();
+    suspend_always initial_suspend() noexcept;
     suspend_always final_suspend() noexcept;
     void unhandled_exception();
     void return_value(T t);

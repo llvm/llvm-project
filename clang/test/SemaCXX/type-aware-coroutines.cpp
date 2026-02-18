@@ -21,7 +21,7 @@ struct resumable {
     template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t sz, std::align_val_t) = delete; // #resumable_tad2
 
     resumable get_return_object() { return {}; }
-    auto initial_suspend() { return std::suspend_always(); }
+    auto initial_suspend() noexcept { return std::suspend_always(); }
     auto final_suspend() noexcept { return std::suspend_always(); }
     void unhandled_exception() {}
     void return_void(){};
@@ -35,7 +35,7 @@ struct resumable2 {
     void operator delete(std::type_identity<promise_type>, void *, std::size_t sz, std::align_val_t); // #resumable2_tad2
 
     resumable2 get_return_object() { return {}; }
-    auto initial_suspend() { return std::suspend_always(); }
+    auto initial_suspend() noexcept { return std::suspend_always(); }
     auto final_suspend() noexcept { return std::suspend_always(); }
     void unhandled_exception() {}
     void return_void(){};
@@ -53,7 +53,7 @@ struct resumable3 {
     void operator delete(void *);
 
     resumable3 get_return_object() { return {}; }
-    auto initial_suspend() { return std::suspend_always(); }
+    auto initial_suspend() noexcept { return std::suspend_always(); }
     auto final_suspend() noexcept { return std::suspend_always(); }
     void unhandled_exception() {}
     void return_void(){};
@@ -68,7 +68,7 @@ struct resumable4 {
     template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t, std::align_val_t); // #resumable4_tad
 
     resumable4 get_return_object() { return {}; }
-    auto initial_suspend() { return std::suspend_always(); }
+    auto initial_suspend() noexcept { return std::suspend_always(); }
     auto final_suspend() noexcept { return std::suspend_always(); }
     void unhandled_exception() {}
     void return_void(){};
@@ -84,7 +84,7 @@ struct resumable5 {
     template <typename T> void operator delete(std::type_identity<T>, void *, std::size_t, std::align_val_t); // #resumable5_tad
 
     resumable5 get_return_object() { return {}; }
-    auto initial_suspend() { return std::suspend_always(); }
+    auto initial_suspend() noexcept { return std::suspend_always(); }
     auto final_suspend() noexcept { return std::suspend_always(); }
     void unhandled_exception() {}
     void return_void(){};
