@@ -249,6 +249,10 @@ Improvements to Clang's diagnostics
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
+ - Reworded the ``-Wimplicit-function-declaration`` diagnostic to make it more
+   clear that the type selected for the implicit declaration is based on the
+   signature of a standard (C, C++, POSIX) library function. (#GH146924)
+
 Improvements to Clang's time-trace
 ----------------------------------
 

@@ -2444,9 +2444,11 @@ NamedDecl *Sema::LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
   if (!ForRedeclaration &&
       (Context.BuiltinInfo.isPredefinedLibFunction(ID) ||
        Context.BuiltinInfo.isHeaderDependentFunction(ID))) {
+    bool IsStandardsMandated =
+        Context.BuiltinInfo.isDeclaredInStandardHeader(ID);
     Diag(Loc, LangOpts.C99 ? diag::ext_implicit_lib_function_decl_c99
                            : diag::ext_implicit_lib_function_decl)
-        << Context.BuiltinInfo.getName(ID) << R;
+        << Context.BuiltinInfo.getName(ID) << R << IsStandardsMandated;
     if (const char *Header = Context.BuiltinInfo.getHeaderName(ID))
       Diag(Loc, diag::note_include_header_or_declare)
           << Header << Context.BuiltinInfo.getName(ID);

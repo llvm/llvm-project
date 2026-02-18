@@ -383,6 +383,33 @@ public:
     return getInfo(ID).Header.getName();
   }
 
+  /// Returns true if a library function is declared within a C or C++ standard
+  /// header (like stdio.h) or POSIX header (like malloc.h), false if the
+  /// function is not declared within a header or is declared in a non-standard
+  /// header (like Microsoft or Objective-C headers).
+  bool isDeclaredInStandardHeader(unsigned ID) const {
+    switch (getInfo(ID).Header.ID) {
+    default:
+      return false;
+    case HeaderDesc::COMPLEX_H: // C99
+    case HeaderDesc::CTYPE_H:   // C89
+    case HeaderDesc::MATH_H:    // C89
+    case HeaderDesc::MALLOC_H:  // POSIX
+    case HeaderDesc::MEMORY:    // C++98
+    case HeaderDesc::PTHREAD_H: // POSIX
+    case HeaderDesc::SETJMP_H:  // C89
+    case HeaderDesc::STDARG_H:  // C89
+    case HeaderDesc::STDIO_H:   // C89
+    case HeaderDesc::STDLIB_H:  // C89
+    case HeaderDesc::STRING_H:  // C89
+    case HeaderDesc::STRINGS_H: // POSIX
+    case HeaderDesc::UNISTD_H:  // POSIX
+    case HeaderDesc::UTILITY:   // C++98
+    case HeaderDesc::WCHAR_H:   // C99
+      return true;
+    }
+  }
+
   /// Determine whether this builtin is like printf in its
   /// formatting rules and, if so, set the index to the format string
   /// argument and whether this function as a va_list argument.
