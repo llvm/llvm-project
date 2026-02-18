@@ -49947,7 +49947,9 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
             FalseLd->getPointerInfo().getAddrSpace() &&
         TrueLd->getMemOperand()->getFlags() ==
             FalseLd->getMemOperand()->getFlags() &&
-        TrueLd->isSimple() && FalseLd->isSimple()) {
+        TrueLd->isSimple() && FalseLd->isSimple() &&
+        !TrueLd->isPredecessorOf(Cond.getNode()) &&
+        !FalseLd->isPredecessorOf(Cond.getNode())) {
       SDValue Ops[] = {FalseLd->getBasePtr(), TrueLd->getBasePtr(),
                        DAG.getTargetConstant(CC, DL, MVT::i8), Cond};
       SDValue NewPtr = DAG.getNode(X86ISD::CMOV, DL, PtrVT, Ops);
