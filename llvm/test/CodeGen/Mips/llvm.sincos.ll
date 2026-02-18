@@ -8,9 +8,8 @@ define { half, half } @test_sincos_f16(half %a) #0 {
 ; MIPSEL:       # %bb.0:
 ; MIPSEL-NEXT:    addiu $sp, $sp, -32
 ; MIPSEL-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
-; MIPSEL-NEXT:    sw $16, 24($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:    jal __extendhfsf2
-; MIPSEL-NEXT:    nop
+; MIPSEL-NEXT:    sw $16, 24($sp)
 ; MIPSEL-NEXT:    addiu $5, $sp, 20
 ; MIPSEL-NEXT:    addiu $6, $sp, 16
 ; MIPSEL-NEXT:    jal sincosf
@@ -31,9 +30,8 @@ define { half, half } @test_sincos_f16(half %a) #0 {
 ; SOFT-FLOAT-32:       # %bb.0:
 ; SOFT-FLOAT-32-NEXT:    addiu $sp, $sp, -32
 ; SOFT-FLOAT-32-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
-; SOFT-FLOAT-32-NEXT:    sw $16, 24($sp) # 4-byte Folded Spill
 ; SOFT-FLOAT-32-NEXT:    jal __extendhfsf2
-; SOFT-FLOAT-32-NEXT:    nop
+; SOFT-FLOAT-32-NEXT:    sw $16, 24($sp)
 ; SOFT-FLOAT-32-NEXT:    addiu $5, $sp, 20
 ; SOFT-FLOAT-32-NEXT:    addiu $6, $sp, 16
 ; SOFT-FLOAT-32-NEXT:    jal sincosf
