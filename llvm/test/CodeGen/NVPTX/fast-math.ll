@@ -549,4 +549,4 @@ define double @frem_f64(double %a, double %b) {
   ret double %rem
 }
 
-attributes #1 = { "denormal-fp-math-f32" = "preserve-sign" }
+attributes #1 = { denormal_fpenv(float: preservesign) }

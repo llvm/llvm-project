@@ -39,6 +39,7 @@
 // CHECK-NEXT:     zaamo                1.0       'Zaamo' (Atomic Memory Operations)
 // CHECK-NEXT:     zabha                1.0       'Zabha' (Byte and Halfword Atomic Memory Operations)
 // CHECK-NEXT:     zacas                1.0       'Zacas' (Atomic Compare-And-Swap Instructions)
+// CHECK-NEXT:     zalasr               1.0       'Zalasr' (Load-Acquire and Store-Release Instructions)
 // CHECK-NEXT:     zalrsc               1.0       'Zalrsc' (Load-Reserved/Store-Conditional)
 // CHECK-NEXT:     zama16b              1.0       'Zama16b' (Atomic 16-byte misaligned loads, stores and AMOs)
 // CHECK-NEXT:     zawrs                1.0       'Zawrs' (Wait on Reservation Set)
@@ -239,11 +240,12 @@
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
-// CHECK-NEXT:     p                    0.18      'P' ('Base P' (Packed SIMD))
+// CHECK-NEXT:     p                    0.19      'P' ('Base P' (Packed SIMD))
+// CHECK-NEXT:     y                    0.96      'Y' ('Base Y' (CHERI))
 // CHECK-NEXT:     zibi                 0.1       'Zibi' (Branch with Immediate)
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
-// CHECK-NEXT:     zalasr               0.9       'Zalasr' (Load-Acquire and Store-Release Instructions)
+// CHECK-NEXT:     zvabd                0.7       'Zvabd' (Vector Absolute Difference)
 // CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
 // CHECK-NEXT:     zvfbfa               0.1       'Zvfbfa' (Additional BF16 vector compute support)
 // CHECK-NEXT:     zvfofp8min           0.2       'Zvfofp8min' (Vector OFP8 Converts)

@@ -68,6 +68,9 @@ public:
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
   bool processSizes(StatementContext &stmtCtx,
                     mlir::omp::SizesClauseOps &result) const;
+  bool processLooprange(StatementContext &stmtCtx,
+                        mlir::omp::LooprangeClauseOps &result,
+                        int64_t &count) const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
@@ -86,6 +89,7 @@ public:
       mlir::omp::HasDeviceAddrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceSyms) const;
   bool processHint(mlir::omp::HintClauseOps &result) const;
+  bool processInbranch(mlir::omp::InbranchClauseOps &result) const;
   bool processInclusive(mlir::Location currentLocation,
                         mlir::omp::InclusiveClauseOps &result) const;
   bool processInitializer(
@@ -93,6 +97,7 @@ public:
       ReductionProcessor::GenInitValueCBTy &genInitValueCB) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
+  bool processNotinbranch(mlir::omp::NotinbranchClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
   bool processNumTasks(lower::StatementContext &stmtCtx,
                        mlir::omp::NumTasksClauseOps &result) const;
@@ -117,6 +122,7 @@ public:
 
   bool processDetach(mlir::omp::DetachClauseOps &result) const;
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
+  bool processAffinity(mlir::omp::AffinityClauseOps &result) const;
   bool processAligned(mlir::omp::AlignedClauseOps &result) const;
   bool processAllocate(mlir::omp::AllocateClauseOps &result) const;
   bool processCopyin() const;

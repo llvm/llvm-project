@@ -2398,6 +2398,30 @@ void MachOObjectFile::getRelocationTypeName(
         res = Table[RType];
       break;
     }
+    case Triple::riscv32: {
+      static const char *const Table[] = {
+          "RISCV_RELOC_UNSIGNED", "RISCV_RELOC_SUBTRACTOR",
+          "RISCV_RELOC_BRANCH21", "RISCV_RELOC_HI20",
+          "RISCV_RELOC_LO12",     "RISCV_RELOC_GOT_HI20",
+          "RISCV_RELOC_GOT_LO12", "RISCV_RELOC_POINTER_TO_GOT",
+          "RISCV_RELOC_ADDEND",
+      };
+
+      if (RType >= std::size(Table))
+        res = "Unknown";
+      else
+        res = Table[RType];
+      Result.append(res.begin(), res.end());
+      if ((RType == MachO::RISCV_RELOC_HI20 ||
+           RType == MachO::RISCV_RELOC_GOT_HI20 ||
+           RType == MachO::RISCV_RELOC_LO12 ||
+           RType == MachO::RISCV_RELOC_GOT_LO12) &&
+          getAnyRelocationPCRel(getRelocation(Rel))) {
+        StringRef PCRel("(pcrel)");
+        Result.append(PCRel.begin(), PCRel.end());
+      }
+      return;
+    }
     case Triple::UnknownArch:
       res = "Unknown";
       break;

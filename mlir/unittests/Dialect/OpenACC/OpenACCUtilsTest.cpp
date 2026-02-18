@@ -488,6 +488,30 @@ TEST_F(OpenACCUtilsTest, getVariableNameFromCopyin) {
   EXPECT_EQ(varName, name);
 }
 
+TEST_F(OpenACCUtilsTest, getVariableNameConstantInt) {
+  // Create a constant integer value
+  OwningOpRef<arith::ConstantOp> constOp =
+      arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(42));
+
+  Value constVal = constOp->getResult();
+
+  // Test that getVariableName returns the constant value as a string
+  std::string varName = getVariableName(constVal);
+  EXPECT_EQ(varName, "42");
+}
+
+TEST_F(OpenACCUtilsTest, getVariableNameNegativeConstantInt) {
+  // Create a negative constant integer value
+  OwningOpRef<arith::ConstantOp> constOp =
+      arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(-123));
+
+  Value constVal = constOp->getResult();
+
+  // Test that getVariableName returns the negative constant value as a string
+  std::string varName = getVariableName(constVal);
+  EXPECT_EQ(varName, "-123");
+}
+
 //===----------------------------------------------------------------------===//
 // getRecipeName Tests
 //===----------------------------------------------------------------------===//

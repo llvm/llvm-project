@@ -133,7 +133,7 @@ void bar() {
 // CLANG21: arraydestroy.body:
 // CLANG21-NEXT:   %arraydestroy.elementPast = phi ptr [ %delete.end, %delete.notnull ], [ %arraydestroy.element, %arraydestroy.body ]
 // CLANG21-NEXT:   %arraydestroy.element = getelementptr inbounds %struct.Bird, ptr %arraydestroy.elementPast, i64 -1
-// CLANG21-NEXT:   call void @"??1Bird@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %arraydestroy.element)
+// CLANG21-NEXT:   call void @"??1Bird@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %arraydestroy.element)
 // CLANG21-NEXT:   %arraydestroy.done = icmp eq ptr %arraydestroy.element, %0
 // CLANG21-NEXT:   br i1 %arraydestroy.done, label %arraydestroy.done1, label %arraydestroy.body
 // CLANG21: arraydestroy.done1:

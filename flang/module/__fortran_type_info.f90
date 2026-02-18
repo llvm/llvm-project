@@ -75,7 +75,11 @@ module __fortran_type_info
   end type
 
   enum, bind(c) ! Component::Genre
-    enumerator :: Data = 1, Pointer = 2, Allocatable = 3, Automatic = 4, PointerDevice = 5, AllocatableDevice = 6
+    enumerator :: Data = 1, Pointer = 2, Allocatable = 3, Automatic = 4
+  end enum
+
+  enum, bind(c) ! Component::MemorySpace
+    enumerator :: Host = 0, Device = 1, Managed = 2, Unified = 3
   end enum
 
   enum, bind(c) ! common::TypeCategory
@@ -90,7 +94,8 @@ module __fortran_type_info
     integer(1) :: category
     integer(1) :: kind
     integer(1) :: rank
-    integer(1) :: __padding0(4)
+    integer(1) :: memorySpace ! Component::MemorySpace
+    integer(1) :: __padding0(3)
     integer(kind=int64) :: offset
     type(Value) :: characterLen ! for category == Character
     type(DerivedType), pointer :: derived ! for category == Derived

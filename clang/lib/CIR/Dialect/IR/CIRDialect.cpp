@@ -18,6 +18,7 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
@@ -301,7 +302,6 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::BreakOp::verify() {
-  assert(!cir::MissingFeatures::switchOp());
   if (!getOperation()->getParentOfType<LoopOpInterface>() &&
       !getOperation()->getParentOfType<SwitchOp>())
     return emitOpError("must be within a loop");
@@ -885,13 +885,12 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
-static void printCallCommon(mlir::Operation *op,
-                            mlir::FlatSymbolRefAttr calleeSym,
-                            mlir::Value indirectCallee,
-                            mlir::OpAsmPrinter &printer, bool isNothrow,
-                            cir::SideEffect sideEffect,
-                            mlir::Block *normalDest = nullptr,
-                            mlir::Block *unwindDest = nullptr) {
+static void
+printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
+                mlir::Value indirectCallee, mlir::OpAsmPrinter &printer,
+                bool isNothrow, cir::SideEffect sideEffect, ArrayAttr argAttrs,
+                ArrayAttr resAttrs, mlir::Block *normalDest = nullptr,
+                mlir::Block *unwindDest = nullptr) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
@@ -927,13 +926,17 @@ static void printCallCommon(mlir::Operation *op,
   }
 
   llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
-      CIRDialect::getCalleeAttrName(), CIRDialect::getNoThrowAttrName(),
+      CIRDialect::getCalleeAttrName(),
+      CIRDialect::getNoThrowAttrName(),
       CIRDialect::getSideEffectAttrName(),
-      CIRDialect::getOperandSegmentSizesAttrName()};
+      CIRDialect::getOperandSegmentSizesAttrName(),
+      llvm::StringRef("res_attrs"),
+      llvm::StringRef("arg_attrs")};
   printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   printer << " : ";
-  printer.printFunctionalType(op->getOperands().getTypes(),
-                              op->getResultTypes());
+  call_interface_impl::printFunctionSignature(
+      printer, op->getOperands().getTypes(), argAttrs,
+      /*isVariadic=*/false, op->getResultTypes(), resAttrs);
 }
 
 mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
@@ -945,7 +948,7 @@ void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect);
+                  sideEffect, getArgAttrsAttr(), getResAttrsAttr());
 }
 
 static LogicalResult
@@ -1061,7 +1064,8 @@ void cir::TryCallOp::print(::mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect, getNormalDest(), getUnwindDest());
+                  sideEffect, getArgAttrsAttr(), getResAttrsAttr(),
+                  getNormalDest(), getUnwindDest());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1306,8 +1310,82 @@ LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
 }
 
 //===----------------------------------------------------------------------===//
+// CleanupScopeOp
+//===----------------------------------------------------------------------===//
+
+void cir::CleanupScopeOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor::parent());
+    return;
+  }
+
+  // Execution always proceeds from the body region to the cleanup region.
+  regions.push_back(RegionSuccessor(&getBodyRegion()));
+  regions.push_back(RegionSuccessor(&getCleanupRegion()));
+}
+
+mlir::ValueRange
+cir::CleanupScopeOp::getSuccessorInputs(RegionSuccessor successor) {
+  return ValueRange();
+}
+
+void cir::CleanupScopeOp::build(
+    OpBuilder &builder, OperationState &result, CleanupKind cleanupKind,
+    function_ref<void(OpBuilder &, Location)> bodyBuilder,
+    function_ref<void(OpBuilder &, Location)> cleanupBuilder) {
+  result.addAttribute(getCleanupKindAttrName(result.name),
+                      CleanupKindAttr::get(builder.getContext(), cleanupKind));
+
+  OpBuilder::InsertionGuard guard(builder);
+
+  // Build body region.
+  Region *bodyRegion = result.addRegion();
+  builder.createBlock(bodyRegion);
+  if (bodyBuilder)
+    bodyBuilder(builder, result.location);
+
+  // Build cleanup region.
+  Region *cleanupRegion = result.addRegion();
+  builder.createBlock(cleanupRegion);
+  if (cleanupBuilder)
+    cleanupBuilder(builder, result.location);
+}
+
+//===----------------------------------------------------------------------===//
 // BrOp
 //===----------------------------------------------------------------------===//
+
+/// Merges blocks connected by a unique unconditional branch.
+///
+///   ^bb0:              ^bb0:
+///     ...                ...
+///     cir.br ^bb1  =>    ...
+///   ^bb1:                cir.return
+///     ...
+///     cir.return
+LogicalResult cir::BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
+  Block *src = op->getBlock();
+  Block *dst = op.getDest();
+
+  // Do not fold self-loops.
+  if (src == dst)
+    return failure();
+
+  // Only merge when this is the unique edge between the blocks.
+  if (src->getNumSuccessors() != 1 || dst->getSinglePredecessor() != src)
+    return failure();
+
+  // Don't merge blocks that start with LabelOp or IndirectBrOp.
+  // This is to avoid merging blocks that have an indirect predecessor.
+  if (isa<cir::LabelOp, cir::IndirectBrOp>(dst->front()))
+    return failure();
+
+  auto operands = op.getDestOperands();
+  rewriter.eraseOp(op);
+  rewriter.mergeBlocks(dst, src, operands);
+  return success();
+}
 
 mlir::SuccessorOperands cir::BrOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
@@ -1780,6 +1858,15 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     // be marked with tls bits.
     if (getTls() && !g.getTlsModel())
       return emitOpError("access to global not marked thread local");
+
+    // Verify that the static_local attribute on GetGlobalOp matches the
+    // static_local_guard attribute on GlobalOp. GetGlobalOp uses a UnitAttr,
+    // GlobalOp uses StaticLocalGuardAttr. Both should be present, or neither.
+    bool getGlobalIsStaticLocal = getStaticLocal();
+    bool globalIsStaticLocal = g.getStaticLocalGuard().has_value();
+    if (getGlobalIsStaticLocal != globalIsStaticLocal &&
+        !getOperation()->getParentOfType<cir::GlobalOp>())
+      return emitOpError("static_local attribute mismatch");
   } else if (auto f = dyn_cast<FuncOp>(op)) {
     symTy = f.getFunctionType();
   } else {
@@ -2054,6 +2141,18 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       }).failed())
     return failure();
 
+  if (parser.parseOptionalKeyword("side_effect").succeeded()) {
+    cir::SideEffect sideEffect;
+
+    if (parser.parseLParen().failed() ||
+        parseCIRKeyword<cir::SideEffect>(parser, sideEffect).failed() ||
+        parser.parseRParen().failed())
+      return failure();
+
+    auto attr = cir::SideEffectAttr::get(parser.getContext(), sideEffect);
+    state.addAttribute(CIRDialect::getSideEffectAttrName(), attr);
+  }
+
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
@@ -2223,6 +2322,13 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << " global_dtor";
     if (globalDtorPriority.value() != 65535)
       p << "(" << globalDtorPriority.value() << ")";
+  }
+
+  if (std::optional<cir::SideEffect> sideEffect = getSideEffect();
+      sideEffect && *sideEffect != cir::SideEffect::All) {
+    p << " side_effect(";
+    p << stringifySideEffect(*sideEffect);
+    p << ")";
   }
 
   function_interface_impl::printFunctionAttributes(
@@ -2614,6 +2720,18 @@ LogicalResult cir::DerivedDataMemberOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// BaseMethodOp & DerivedMethodOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BaseMethodOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
+LogicalResult cir::DerivedMethodOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
+//===----------------------------------------------------------------------===//
 // AwaitOp
 //===----------------------------------------------------------------------===//
 
@@ -2788,6 +2906,22 @@ LogicalResult cir::ExtractMemberOp::verify() {
     return emitError() << "member index out of bounds";
   if (recordTy.getMembers()[getIndex()] != getType())
     return emitError() << "member type mismatch";
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// InsertMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::InsertMemberOp::verify() {
+  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
+  if (recordTy.getKind() == cir::RecordType::Union)
+    return emitError() << "cir.insert_member currently does not support unions";
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of bounds";
+  if (recordTy.getMembers()[getIndex()] != getValue().getType())
+    return emitError() << "member type mismatch";
+  // The op trait already checks that the types of $result and $record match.
   return mlir::success();
 }
 
@@ -3640,6 +3774,38 @@ mlir::ValueRange cir::TryOp::getSuccessorInputs(RegionSuccessor successor) {
                               : ValueRange();
 }
 
+LogicalResult cir::TryOp::verify() {
+  mlir::ArrayAttr handlerTypes = getHandlerTypes();
+  if (!handlerTypes) {
+    if (!getHandlerRegions().empty())
+      return emitOpError(
+          "handler regions must be empty when no handler types are present");
+    return success();
+  }
+
+  mlir::MutableArrayRef<mlir::Region> handlerRegions = getHandlerRegions();
+
+  // The parser and builder won't allow this to happen, but the loop below
+  // relies on the sizes being the same, so we check it here.
+  if (handlerRegions.size() != handlerTypes.size())
+    return emitOpError(
+        "number of handler regions and handler types must match");
+
+  for (const auto &[typeAttr, handlerRegion] :
+       llvm::zip(handlerTypes, handlerRegions)) {
+    // The unwind region does not require a cir.catch_param.
+    if (mlir::isa<cir::UnwindAttr>(typeAttr))
+      continue;
+
+    mlir::Block &entryBlock = handlerRegion.front();
+    if (entryBlock.empty() || !mlir::isa<cir::CatchParamOp>(entryBlock.front()))
+      return emitOpError(
+          "catch handler region must start with 'cir.catch_param'");
+  }
+
+  return success();
+}
+
 static void
 printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
                        mlir::MutableArrayRef<mlir::Region> handlerRegions,
@@ -3757,6 +3923,148 @@ cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitOpError("'")
            << getTypeSym() << "' does not reference a valid cir.global";
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// EhDispatchOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult
+parseEhDispatchDestinations(OpAsmParser &parser, mlir::ArrayAttr &catchTypes,
+                            SmallVectorImpl<Block *> &catchDestinations,
+                            Block *&defaultDestination,
+                            mlir::UnitAttr &defaultIsCatchAll) {
+  // Parse: [ ... ]
+  if (parser.parseLSquare())
+    return failure();
+
+  SmallVector<Attribute> handlerTypes;
+  bool hasCatchAll = false;
+  bool hasUnwind = false;
+
+  // Parse handler list.
+  auto parseHandler = [&]() -> ParseResult {
+    // Check for 'catch_all' or 'unwind' keywords.
+    if (succeeded(parser.parseOptionalKeyword("catch_all"))) {
+      if (hasCatchAll)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate 'catch_all' handler");
+      if (hasUnwind)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "cannot have both 'catch_all' and 'unwind'");
+      hasCatchAll = true;
+
+      if (parser.parseColon().failed())
+        return failure();
+
+      if (parser.parseSuccessor(defaultDestination).failed())
+        return failure();
+
+      return success();
+    }
+
+    if (succeeded(parser.parseOptionalKeyword("unwind"))) {
+      if (hasUnwind)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate 'unwind' handler");
+      if (hasCatchAll)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "cannot have both 'catch_all' and 'unwind'");
+      hasUnwind = true;
+
+      if (parser.parseColon().failed())
+        return failure();
+
+      if (parser.parseSuccessor(defaultDestination).failed())
+        return failure();
+      return success();
+    }
+
+    // Otherwise, expect 'catch(<attr> : <type>) : ^block'.
+    // The 'catch(...)' wrapper allows the attribute to include its type
+    // without conflicting with the ':' used for the block destination.
+    if (parser.parseKeyword("catch").failed())
+      return failure();
+
+    if (parser.parseLParen().failed())
+      return failure();
+
+    mlir::Attribute catchTypeAttr;
+    if (parser.parseAttribute(catchTypeAttr).failed())
+      return failure();
+    handlerTypes.push_back(catchTypeAttr);
+
+    if (parser.parseRParen().failed())
+      return failure();
+
+    if (parser.parseColon().failed())
+      return failure();
+
+    Block *dest;
+    if (parser.parseSuccessor(dest).failed())
+      return failure();
+    catchDestinations.push_back(dest);
+    return success();
+  };
+
+  if (parser.parseCommaSeparatedList(parseHandler).failed())
+    return failure();
+
+  if (parser.parseRSquare().failed())
+    return failure();
+
+  // Verify we have catch_all or unwind.
+  if (!hasCatchAll && !hasUnwind)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "must have either 'catch_all' or 'unwind' handler");
+
+  // Add attributes and successors.
+  if (!handlerTypes.empty())
+    catchTypes = parser.getBuilder().getArrayAttr(handlerTypes);
+
+  if (hasCatchAll)
+    defaultIsCatchAll = parser.getBuilder().getUnitAttr();
+
+  return success();
+}
+
+static void printEhDispatchDestinations(OpAsmPrinter &p, cir::EhDispatchOp op,
+                                        mlir::ArrayAttr catchTypes,
+                                        SuccessorRange catchDestinations,
+                                        Block *defaultDestination,
+                                        mlir::UnitAttr defaultIsCatchAll) {
+  p << " [";
+  p.printNewline();
+
+  // If we have at least one catch type, print them.
+  if (catchTypes) {
+    // Print type handlers using 'catch(<attr>) : ^block' syntax.
+    llvm::interleave(
+        llvm::zip(catchTypes, catchDestinations),
+        [&](auto i) {
+          p << "  catch(";
+          p.printAttribute(std::get<0>(i));
+          p << ") : ";
+          p.printSuccessor(std::get<1>(i));
+        },
+        [&] {
+          p << ',';
+          p.printNewline();
+        });
+
+    p << ", ";
+    p.printNewline();
+  }
+
+  // Print catch_all or unwind handler.
+  if (defaultIsCatchAll)
+    p << "  catch_all : ";
+  else
+    p << "  unwind : ";
+  p.printSuccessor(defaultDestination);
+  p.printNewline();
+
+  p << "]";
 }
 
 //===----------------------------------------------------------------------===//

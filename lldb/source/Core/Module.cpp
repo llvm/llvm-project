@@ -149,16 +149,17 @@ Module::Module(const ModuleSpec &module_spec)
               module_spec.GetObjectName().AsCString(""),
               module_spec.GetObjectName().IsEmpty() ? "" : ")");
 
-  auto data_sp = module_spec.GetData();
+  auto extractor_sp = module_spec.GetExtractor();
   lldb::offset_t file_size = 0;
-  if (data_sp)
-    file_size = data_sp->GetByteSize();
+  if (extractor_sp)
+    file_size = extractor_sp->GetByteSize();
 
   // First extract all module specifications from the file using the local file
   // path. If there are no specifications, then don't fill anything in
   ModuleSpecList modules_specs;
-  if (ObjectFile::GetModuleSpecifications(
-          module_spec.GetFileSpec(), 0, file_size, modules_specs, data_sp) == 0)
+  if (ObjectFile::GetModuleSpecifications(module_spec.GetFileSpec(), 0,
+                                          file_size, modules_specs,
+                                          extractor_sp) == 0)
     return;
 
   // Now make sure that one of the module specifications matches what we just
@@ -177,11 +178,11 @@ Module::Module(const ModuleSpec &module_spec)
     return;
   }
 
-  // Set m_data_sp if it was initially provided in the ModuleSpec. Note that
-  // we cannot use the data_sp variable here, because it will have been
-  // modified by GetModuleSpecifications().
-  if (auto module_spec_data_sp = module_spec.GetData()) {
-    m_data_sp = module_spec_data_sp;
+  // Set m_extractor_sp if it was initially provided in the ModuleSpec. Note
+  // that we cannot use the extractor_sp variable here, because it will have
+  // been modified by GetModuleSpecifications().
+  if (auto module_spec_extractor_sp = module_spec.GetExtractor()) {
+    m_extractor_sp = module_spec_extractor_sp;
     m_mod_time = {};
   } else {
     if (module_spec.GetFileSpec())
@@ -359,16 +360,6 @@ const lldb_private::UUID &Module::GetUUID() {
   return m_uuid;
 }
 
-void Module::SetUUID(const lldb_private::UUID &uuid) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (!m_did_set_uuid) {
-    m_uuid = uuid;
-    m_did_set_uuid = true;
-  } else {
-    lldbassert(0 && "Attempting to overwrite the existing module UUID");
-  }
-}
-
 llvm::Expected<TypeSystemSP>
 Module::GetTypeSystemForLanguage(LanguageType language) {
   return m_type_system_map.GetTypeSystemForLanguage(language, this, true);
@@ -514,15 +505,6 @@ uint32_t Module::ResolveSymbolContextForAddress(
         }
 
         sc.symbol = matching_symbol;
-        if (!sc.symbol && resolve_scope & eSymbolContextFunction &&
-            !(resolved_flags & eSymbolContextFunction)) {
-          bool verify_unique = false; // No need to check again since
-                                      // ResolveSymbolContext failed to find a
-                                      // symbol at this address.
-          if (ObjectFile *obj_file = sc.module_sp->GetObjectFile())
-            sc.symbol =
-                obj_file->ResolveSymbolForAddress(so_addr, verify_unique);
-        }
 
         if (sc.symbol) {
           if (sc.symbol->IsSynthetic()) {
@@ -1080,9 +1062,9 @@ void Module::GetDescription(llvm::raw_ostream &s,
 }
 
 bool Module::FileHasChanged() const {
-  // We have provided the DataBuffer for this module to avoid accessing the
+  // We have provided the DataExtractor for this module to avoid accessing the
   // filesystem. We never want to reload those files.
-  if (m_data_sp)
+  if (m_extractor_sp)
     return false;
   if (!m_file_has_changed)
     m_file_has_changed =
@@ -1212,18 +1194,18 @@ ObjectFile *Module::GetObjectFile() {
       lldb::offset_t data_offset = 0;
       lldb::offset_t file_size = 0;
 
-      if (m_data_sp)
-        file_size = m_data_sp->GetByteSize();
+      if (m_extractor_sp)
+        file_size = m_extractor_sp->GetByteSize();
       else if (m_file)
         file_size = FileSystem::Instance().GetByteSize(m_file);
 
       if (file_size > m_object_offset) {
         m_did_load_objfile = true;
-        // FindPlugin will modify its data_sp argument. Do not let it
-        // modify our m_data_sp member.
+        // FindPlugin will modify its extractor_sp argument. Do not let it
+        // modify our m_extractor_sp member.
         DataExtractorSP extractor_sp;
-        if (m_data_sp)
-          extractor_sp = std::make_shared<DataExtractor>(m_data_sp);
+        if (m_extractor_sp)
+          extractor_sp = m_extractor_sp;
         m_objfile_sp = ObjectFile::FindPlugin(
             shared_from_this(), &m_file, m_object_offset,
             file_size - m_object_offset, extractor_sp, data_offset);

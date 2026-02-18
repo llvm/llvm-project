@@ -13,7 +13,7 @@ define void @test() {
 ; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP8:%.*]], %[[BB6]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 poison, i32 poison>, <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 5, i32 4>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>, <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 5, i32 4>
 ; CHECK-NEXT:    [[TMP4]] = mul <4 x i32> [[TMP3]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP8]] = mul <2 x i32> zeroinitializer, [[TMP7]]

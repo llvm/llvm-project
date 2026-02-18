@@ -139,14 +139,30 @@ def ol_dimensions_t : Struct {
   ];
 }
 
+def ol_init_args_t : Struct {
+  let desc = "Configuration arguments for olInit.";
+  let members = [
+    StructMember<"size_t", "Size", "Size of this struct, used for ABI compatibility. Must be set to sizeof(ol_init_args_t) by the caller.">,
+    StructMember<"uint32_t", "NumPlatforms", "Number of entries in the Platforms array.">,
+    StructMember<"const ol_platform_backend_t*", "Platforms", "Pointer to an array of platform backends to initialize.">
+  ];
+}
+
+def OL_INIT_ARGS_INIT : Macro {
+  let desc = "Default initializer for ol_init_args_t. Sets Size to the correct value and all other fields to zero/NULL.";
+  let value = "{ sizeof(ol_init_args_t), 0, NULL }";
+}
+
 def olInit : Function {
   let desc = "Perform initialization of the Offload library";
   let details = [
     "This must be the first API call made by a user of the Offload library",
-    "The underlying platforms are lazily initialized on their first use"
-    "Each call will increment an internal reference count that is decremented by `olShutDown`"
+    "Each call will increment an internal reference count that is decremented by `olShutDown`",
+    "If InitArgs is NULL, default configuration is used which initializes all available platforms"
   ];
-  let params = [];
+  let params = [
+    Param<"const ol_init_args_t*", "InitArgs", "Optional pointer to initialization configuration. NULL uses defaults.", PARAM_IN_OPTIONAL>
+  ];
   let returns = [];
 }
 

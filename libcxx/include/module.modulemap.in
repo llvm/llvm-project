@@ -4,6 +4,7 @@ module std_config [system] {
   @LIBCXX_CONFIG_SITE_MODULE_ENTRY@ // generated via CMake
   textual header "__config"
   textual header "__configuration/abi.h"
+  textual header "__configuration/attributes.h"
   textual header "__configuration/availability.h"
   textual header "__configuration/compiler.h"
   textual header "__configuration/experimental.h"
@@ -468,6 +469,7 @@ module std [system] {
     module mismatch {
       header "__algorithm/mismatch.h"
       export std.utility.pair // return type
+      export std.iterator.aliasing_iterator
     }
     module move_backward                          { header "__algorithm/move_backward.h" }
     module move                                   { header "__algorithm/move.h" }
@@ -759,6 +761,12 @@ module std [system] {
       header "__algorithm/ranges_set_union.h"
       export std.functional.ranges_operations
       export std.algorithm.in_in_out_result
+    }
+    module ranges_shift_left {
+      header "__algorithm/ranges_shift_left.h"
+    }
+    module ranges_shift_right {
+      header "__algorithm/ranges_shift_right.h"
     }
     module ranges_shuffle {
       header "__algorithm/ranges_shuffle.h"
@@ -1545,6 +1553,7 @@ module std [system] {
     module sortable                   { header "__iterator/sortable.h" }
     module static_bounded_iter        { header "__iterator/static_bounded_iter.h" }
     module unreachable_sentinel       { header "__iterator/unreachable_sentinel.h" }
+    module capacity_aware_iterator    { header "__iterator/capacity_aware_iterator.h" }
     module wrap_iter                  { header "__iterator/wrap_iter.h" }
 
     header "iterator"
