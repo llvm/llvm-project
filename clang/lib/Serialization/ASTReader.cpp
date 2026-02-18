@@ -3162,8 +3162,8 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
   }
 }
 
-ASTReader::RelocationCheckResult
-ASTReader::checkIfModuleRelocated(ModuleFile &F, bool DirectoryCheck) {
+ASTReader::RelocationResult
+ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   // Don't emit module relocation errors if we have -fno-validate-pch.
   const bool IgnoreError =
       bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
@@ -3606,7 +3606,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       F.BaseDirectory = std::string(Blob);
 
       auto [MaybeM, IgnoreError] =
-          checkIfModuleRelocated(F, /*DirectoryCheck=*/true);
+          getModuleForRelocationChecks(F, /*DirectoryCheck=*/true);
       if (!MaybeM.has_value())
         break;
 
@@ -4627,7 +4627,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   assert(!F.ModuleName.empty() &&
          "MODULE_NAME should come before MODULE_MAP_FILE");
   auto [MaybeM, IgnoreError] =
-      checkIfModuleRelocated(F, /*DirectoryCheck=*/false);
+      getModuleForRelocationChecks(F, /*DirectoryCheck=*/false);
   if (MaybeM.has_value()) {
     // An implicitly-loaded module file should have its module listed in some
     // module map file that we've already loaded.
