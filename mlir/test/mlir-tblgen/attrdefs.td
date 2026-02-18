@@ -4,6 +4,13 @@
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
 
+// DECL: namespace test {
+// DECL: class IndexAttr;
+// DECL: class SimpleAAttr;
+// DECL: class CompoundAAttr;
+// DECL: class SingleParameterAttr;
+// DECL: } // namespace test
+
 // DECL: #ifdef GET_ATTRDEF_CLASSES
 // DECL: #undef GET_ATTRDEF_CLASSES
 
