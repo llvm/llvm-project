@@ -25624,9 +25624,6 @@ static SDValue combineStoreValueFPToInt(StoreSDNode *ST,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         SelectionDAG &DAG,
                                         const AArch64Subtarget *Subtarget) {
-  // Limit to post-legalization in order to avoid peeling truncating stores.
-  if (DCI.isBeforeLegalize())
-    return SDValue();
   if (!Subtarget->isNeonAvailable())
     return SDValue();
   // Source operand is already a vector.
