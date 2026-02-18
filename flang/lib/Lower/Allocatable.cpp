@@ -18,6 +18,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/OpenACC.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
@@ -29,6 +30,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -325,11 +327,12 @@ private:
   struct Allocation {
     const Fortran::parser::Allocation &alloc;
     const Fortran::semantics::DeclTypeSpec &type;
-    bool hasCoarraySpec() const {
+    const std::optional<Fortran::parser::AllocateCoarraySpec> &
+    getCoarraySpec() const {
       return std::get<std::optional<Fortran::parser::AllocateCoarraySpec>>(
-                 alloc.t)
-          .has_value();
+          alloc.t);
     }
+    bool hasCoarraySpec() const { return getCoarraySpec().has_value(); }
     const Fortran::parser::AllocateObject &getAllocObj() const {
       return std::get<Fortran::parser::AllocateObject>(alloc.t);
     }
@@ -478,6 +481,29 @@ private:
                             !box.isPointer();
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
 
+    const Fortran::lower::SomeExpr *expr =
+        Fortran::semantics::GetExpr(alloc.getAllocObj());
+    std::optional<Fortran::evaluate::DataRef> dataRef =
+        !expr ? std::nullopt : Fortran::evaluate::ExtractDataRef(expr);
+    bool isCoarrayAllocate = alloc.hasCoarraySpec();
+
+    if (isCoarrayAllocate) {
+      errorManager.genStatCheck(builder, loc);
+      genAllocateObjectInit(box, allocatorIdx);
+      Fortran::lower::StatementContext stmtCtx;
+      genSetType(alloc, box, loc);
+      genSetDeferredLengthParameters(alloc, box);
+      genAllocateObjectBounds(alloc, box);
+      mlir::Value stat;
+      stat = Fortran::lower::genAllocateCoarray(
+          converter, loc, alloc.getSymbol(), box.getAddr(),
+          alloc.getCoarraySpec(), errorManager.errMsgAddr);
+      fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
+      postAllocationAction(alloc, box);
+      errorManager.assignStat(builder, loc, stat);
+      return;
+    }
+
     if (inlineAllocation &&
         ((isCudaAllocate && isCudaDeviceContext) || !isCudaAllocate)) {
       // Pointers must use PointerAllocate so that their deallocations
@@ -501,8 +527,6 @@ private:
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
     genAllocateObjectInit(box, allocatorIdx);
-    if (alloc.hasCoarraySpec())
-      TODO(loc, "coarray: allocation of a coarray object");
     if (alloc.type.IsPolymorphic())
       genSetType(alloc, box, loc);
     genSetDeferredLengthParameters(alloc, box);
@@ -884,13 +908,32 @@ genDeallocate(fir::FirOpBuilder &builder,
               Fortran::lower::AbstractConverter &converter, mlir::Location loc,
               const fir::MutableBoxValue &box, ErrorManager &errorManager,
               mlir::Value declaredTypeDesc = {},
-              const Fortran::semantics::Symbol *symbol = nullptr) {
+              const Fortran::semantics::Symbol *symbol = nullptr,
+              const Fortran::lower::SomeExpr *allocExpr = nullptr) {
   bool isCudaSymbol = symbol && Fortran::semantics::HasCUDAAttr(*symbol);
   bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
   bool inlineDeallocation =
       !box.isDerived() && !box.isPolymorphic() && !box.hasAssumedRank() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
       !useAllocateRuntime && !box.isPointer();
+
+  std::optional<Fortran::evaluate::DataRef> dataRef =
+      !allocExpr ? std::nullopt : Fortran::evaluate::ExtractDataRef(allocExpr);
+  bool isCoarraySymbol = symbol && Fortran::evaluate::IsCoarray(*symbol);
+
+  // Deallocate coarray
+  if (isCoarraySymbol) {
+    mlir::Value ret = builder.createTemporary(loc, builder.getI32Type());
+    mif::DeallocCoarrayOp::create(builder, loc, box.getAddr(), ret,
+                                  errorManager.errMsgAddr);
+    ret = fir::LoadOp::create(builder, loc, ret);
+    fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
+    if (symbol)
+      postDeallocationAction(converter, builder, *symbol);
+    errorManager.assignStat(builder, loc, ret);
+    return ret;
+  }
+
   // Deallocate intrinsic types inline.
   if (inlineDeallocation &&
       ((isCudaSymbol && isCudaDeviceContext) || !isCudaSymbol)) {
@@ -975,6 +1018,8 @@ void Fortran::lower::genDeallocateStmt(
   for (const Fortran::parser::AllocateObject &allocateObject :
        std::get<std::list<Fortran::parser::AllocateObject>>(stmt.t)) {
     const Fortran::semantics::Symbol &symbol = unwrapSymbol(allocateObject);
+    const Fortran::lower::SomeExpr *allocExpr =
+        Fortran::semantics::GetExpr(allocateObject);
     fir::MutableBoxValue box =
         genMutableBoxValue(converter, loc, allocateObject);
     mlir::Value declaredTypeDesc = {};
@@ -987,8 +1032,9 @@ void Fortran::lower::genDeallocateStmt(
               Fortran::lower::getTypeDescAddr(converter, loc, *derivedTypeSpec);
         }
     }
-    mlir::Value beginOpValue = genDeallocate(
-        builder, converter, loc, box, errorManager, declaredTypeDesc, &symbol);
+    mlir::Value beginOpValue =
+        genDeallocate(builder, converter, loc, box, errorManager,
+                      declaredTypeDesc, &symbol, allocExpr);
     preDeallocationAction(converter, builder, beginOpValue, symbol);
   }
   builder.restoreInsertionPoint(insertPt);
