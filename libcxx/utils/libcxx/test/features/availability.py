@@ -13,6 +13,13 @@ from lit.BooleanExpression import BooleanExpression
 # Those are used for backdeployment features below, do not use directly in tests.
 features = [
     Feature(
+        name="_target-has-llvm-23",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "TBD",
+            cfg.available_features,
+        ),
+    ),
+    Feature(
         name="_target-has-llvm-22",
         when=lambda cfg: BooleanExpression.evaluate(
             "TBD",
@@ -128,7 +135,7 @@ features = [
 # a libc++ flavor that enables availability markup. Similarly, a test could fail when
 # run against the system library of an older version of FreeBSD, even though FreeBSD
 # doesn't provide availability markup at the time of writing this.
-for version in ("12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22"):
+for version in ("12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"):
     features.append(
         Feature(
             name="using-built-library-before-llvm-{}".format(version),

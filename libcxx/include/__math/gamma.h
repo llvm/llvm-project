@@ -57,6 +57,35 @@ inline _LIBCPP_HIDE_FROM_ABI double tgamma(_A1 __x) _NOEXCEPT {
 
 } // namespace __math
 
+// __lgamma_r
+
+struct __lgamma_result {
+  double __result;
+  int __sign;
+};
+
+#if _LIBCPP_AVAILABILITY_HAS_THREAD_SAFE_LGAMMA
+_LIBCPP_EXPORTED_FROM_ABI __lgamma_result __lgamma_thread_safe_impl(double) _NOEXCEPT;
+
+inline _LIBCPP_HIDE_FROM_ABI __lgamma_result __lgamma_thread_safe(double __d) _NOEXCEPT {
+  return std::__lgamma_thread_safe_impl(__d);
+}
+#else
+// When deploying to older targets, call `lgamma_r` directly but avoid declaring the actual
+// function since different platforms declare the function slightly differently.
+#  if defined(_LIBCPP_OBJECT_FORMAT_MACHO)
+double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("_lgamma_r");
+#  else
+double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("lgamma_r");
+#  endif
+
+inline _LIBCPP_HIDE_FROM_ABI __lgamma_result __lgamma_thread_safe(double __d) _NOEXCEPT {
+  int __sign;
+  double __res = std::__lgamma_r_shim(__d, &__sign);
+  return __lgamma_result{__res, __sign};
+}
+#endif
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___MATH_GAMMA_H
