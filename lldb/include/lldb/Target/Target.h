@@ -1976,13 +1976,6 @@ protected:
 
   bool m_did_display_scratch_fallback_warning = false;
 
-  /// Per-target scripted symbol locator.
-  /// @{
-  lldb::ScriptedMetadataSP m_scripted_symbol_locator_metadata_sp;
-  lldb::ScriptedSymbolLocatorInterfaceSP m_scripted_symbol_locator_interface_sp;
-  llvm::StringMap<std::optional<FileSpec>> m_scripted_source_file_cache;
-  /// @}
-
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);
 
