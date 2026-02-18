@@ -177,10 +177,8 @@ const MemRegion *VAListChecker::getVAListAsRegion(SVal SV, const Expr *E,
   if (!Reg)
     return nullptr;
 
-  return C.getAnalysisManager()
-      .getRegionStore()
-      .getMemRegionManager()
-      .getVAListRegion(Reg);
+  MemRegionManager &MRMgr = Reg->getMemRegionManager();
+  return MRMgr.getVAListRegion(Reg);
 }
 
 void VAListChecker::checkPreStmt(const VAArgExpr *VAA,
