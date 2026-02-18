@@ -1190,19 +1190,23 @@ define arm_aapcs_vfpcc <4 x i1> @test_unsigned_v4f32_v4i1(<4 x float> %f) {
 ; CHECK-LABEL: test_unsigned_v4f32_v4i1:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr s4, .LCPI22_0
+; CHECK-NEXT:    vmaxnm.f32 s0, s0, s0
 ; CHECK-NEXT:    vmov.f32 s6, #1.000000e+00
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vmaxnm.f32 s8, s3, s3
 ; CHECK-NEXT:    vmaxnm.f32 s0, s0, s4
-; CHECK-NEXT:    vmaxnm.f32 s8, s3, s4
+; CHECK-NEXT:    vmaxnm.f32 s2, s2, s2
 ; CHECK-NEXT:    vminnm.f32 s0, s0, s6
-; CHECK-NEXT:    vmaxnm.f32 s2, s2, s4
+; CHECK-NEXT:    vmaxnm.f32 s10, s1, s1
 ; CHECK-NEXT:    vcvt.u32.f32 s0, s0
-; CHECK-NEXT:    vmaxnm.f32 s4, s1, s4
+; CHECK-NEXT:    vmaxnm.f32 s8, s8, s4
+; CHECK-NEXT:    vmaxnm.f32 s2, s2, s4
+; CHECK-NEXT:    vmaxnm.f32 s4, s10, s4
 ; CHECK-NEXT:    vminnm.f32 s4, s4, s6
-; CHECK-NEXT:    vminnm.f32 s2, s2, s6
+; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    vcvt.u32.f32 s4, s4
-; CHECK-NEXT:    vminnm.f32 s8, s8, s6
+; CHECK-NEXT:    vminnm.f32 s2, s2, s6
 ; CHECK-NEXT:    vcvt.u32.f32 s2, s2
+; CHECK-NEXT:    vminnm.f32 s8, s8, s6
 ; CHECK-NEXT:    vcvt.u32.f32 s8, s8
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    and r2, r2, #1
@@ -1233,16 +1237,20 @@ define arm_aapcs_vfpcc <4 x i1> @test_unsigned_v4f32_v4i1(<4 x float> %f) {
 define arm_aapcs_vfpcc <4 x i8> @test_unsigned_v4f32_v4i8(<4 x float> %f) {
 ; CHECK-MVE-LABEL: test_unsigned_v4f32_v4i8:
 ; CHECK-MVE:       @ %bb.0:
-; CHECK-MVE-NEXT:    vldr s4, .LCPI23_0
 ; CHECK-MVE-NEXT:    vldr s6, .LCPI23_1
-; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s2, s4
-; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s0, s4
-; CHECK-MVE-NEXT:    vmaxnm.f32 s8, s3, s4
-; CHECK-MVE-NEXT:    vminnm.f32 s2, s2, s6
-; CHECK-MVE-NEXT:    vminnm.f32 s0, s0, s6
-; CHECK-MVE-NEXT:    vmaxnm.f32 s4, s1, s4
-; CHECK-MVE-NEXT:    vminnm.f32 s8, s8, s6
-; CHECK-MVE-NEXT:    vminnm.f32 s4, s4, s6
+; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s2, s2
+; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s0, s0
+; CHECK-MVE-NEXT:    vldr s4, .LCPI23_0
+; CHECK-MVE-NEXT:    vmaxnm.f32 s8, s3, s3
+; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s2, s6
+; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s0, s6
+; CHECK-MVE-NEXT:    vmaxnm.f32 s10, s1, s1
+; CHECK-MVE-NEXT:    vmaxnm.f32 s8, s8, s6
+; CHECK-MVE-NEXT:    vminnm.f32 s2, s2, s4
+; CHECK-MVE-NEXT:    vminnm.f32 s0, s0, s4
+; CHECK-MVE-NEXT:    vmaxnm.f32 s6, s10, s6
+; CHECK-MVE-NEXT:    vminnm.f32 s8, s8, s4
+; CHECK-MVE-NEXT:    vminnm.f32 s4, s6, s4
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s2, s2
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s0, s0
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s8
@@ -1257,9 +1265,9 @@ define arm_aapcs_vfpcc <4 x i8> @test_unsigned_v4f32_v4i8(<4 x float> %f) {
 ; CHECK-MVE-NEXT:    .p2align 2
 ; CHECK-MVE-NEXT:  @ %bb.1:
 ; CHECK-MVE-NEXT:  .LCPI23_0:
-; CHECK-MVE-NEXT:    .long 0x00000000 @ float 0
-; CHECK-MVE-NEXT:  .LCPI23_1:
 ; CHECK-MVE-NEXT:    .long 0x437f0000 @ float 255
+; CHECK-MVE-NEXT:  .LCPI23_1:
+; CHECK-MVE-NEXT:    .long 0x00000000 @ float 0
 ;
 ; CHECK-MVEFP-LABEL: test_unsigned_v4f32_v4i8:
 ; CHECK-MVEFP:       @ %bb.0:
@@ -1274,16 +1282,20 @@ define arm_aapcs_vfpcc <4 x i8> @test_unsigned_v4f32_v4i8(<4 x float> %f) {
 define arm_aapcs_vfpcc <4 x i13> @test_unsigned_v4f32_v4i13(<4 x float> %f) {
 ; CHECK-MVE-LABEL: test_unsigned_v4f32_v4i13:
 ; CHECK-MVE:       @ %bb.0:
-; CHECK-MVE-NEXT:    vldr s4, .LCPI24_0
 ; CHECK-MVE-NEXT:    vldr s6, .LCPI24_1
-; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s2, s4
-; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s0, s4
-; CHECK-MVE-NEXT:    vmaxnm.f32 s8, s3, s4
-; CHECK-MVE-NEXT:    vminnm.f32 s2, s2, s6
-; CHECK-MVE-NEXT:    vminnm.f32 s0, s0, s6
-; CHECK-MVE-NEXT:    vmaxnm.f32 s4, s1, s4
-; CHECK-MVE-NEXT:    vminnm.f32 s8, s8, s6
-; CHECK-MVE-NEXT:    vminnm.f32 s4, s4, s6
+; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s2, s2
+; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s0, s0
+; CHECK-MVE-NEXT:    vldr s4, .LCPI24_0
+; CHECK-MVE-NEXT:    vmaxnm.f32 s8, s3, s3
+; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s2, s6
+; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s0, s6
+; CHECK-MVE-NEXT:    vmaxnm.f32 s10, s1, s1
+; CHECK-MVE-NEXT:    vmaxnm.f32 s8, s8, s6
+; CHECK-MVE-NEXT:    vminnm.f32 s2, s2, s4
+; CHECK-MVE-NEXT:    vminnm.f32 s0, s0, s4
+; CHECK-MVE-NEXT:    vmaxnm.f32 s6, s10, s6
+; CHECK-MVE-NEXT:    vminnm.f32 s8, s8, s4
+; CHECK-MVE-NEXT:    vminnm.f32 s4, s6, s4
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s2, s2
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s0, s0
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s8
@@ -1298,9 +1310,9 @@ define arm_aapcs_vfpcc <4 x i13> @test_unsigned_v4f32_v4i13(<4 x float> %f) {
 ; CHECK-MVE-NEXT:    .p2align 2
 ; CHECK-MVE-NEXT:  @ %bb.1:
 ; CHECK-MVE-NEXT:  .LCPI24_0:
-; CHECK-MVE-NEXT:    .long 0x00000000 @ float 0
-; CHECK-MVE-NEXT:  .LCPI24_1:
 ; CHECK-MVE-NEXT:    .long 0x45fff800 @ float 8191
+; CHECK-MVE-NEXT:  .LCPI24_1:
+; CHECK-MVE-NEXT:    .long 0x00000000 @ float 0
 ;
 ; CHECK-MVEFP-LABEL: test_unsigned_v4f32_v4i13:
 ; CHECK-MVEFP:       @ %bb.0:
@@ -1315,16 +1327,20 @@ define arm_aapcs_vfpcc <4 x i13> @test_unsigned_v4f32_v4i13(<4 x float> %f) {
 define arm_aapcs_vfpcc <4 x i16> @test_unsigned_v4f32_v4i16(<4 x float> %f) {
 ; CHECK-MVE-LABEL: test_unsigned_v4f32_v4i16:
 ; CHECK-MVE:       @ %bb.0:
-; CHECK-MVE-NEXT:    vldr s4, .LCPI25_0
 ; CHECK-MVE-NEXT:    vldr s6, .LCPI25_1
-; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s2, s4
-; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s0, s4
-; CHECK-MVE-NEXT:    vmaxnm.f32 s8, s3, s4
-; CHECK-MVE-NEXT:    vminnm.f32 s2, s2, s6
-; CHECK-MVE-NEXT:    vminnm.f32 s0, s0, s6
-; CHECK-MVE-NEXT:    vmaxnm.f32 s4, s1, s4
-; CHECK-MVE-NEXT:    vminnm.f32 s8, s8, s6
-; CHECK-MVE-NEXT:    vminnm.f32 s4, s4, s6
+; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s2, s2
+; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s0, s0
+; CHECK-MVE-NEXT:    vldr s4, .LCPI25_0
+; CHECK-MVE-NEXT:    vmaxnm.f32 s8, s3, s3
+; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s2, s6
+; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s0, s6
+; CHECK-MVE-NEXT:    vmaxnm.f32 s10, s1, s1
+; CHECK-MVE-NEXT:    vmaxnm.f32 s8, s8, s6
+; CHECK-MVE-NEXT:    vminnm.f32 s2, s2, s4
+; CHECK-MVE-NEXT:    vminnm.f32 s0, s0, s4
+; CHECK-MVE-NEXT:    vmaxnm.f32 s6, s10, s6
+; CHECK-MVE-NEXT:    vminnm.f32 s8, s8, s4
+; CHECK-MVE-NEXT:    vminnm.f32 s4, s6, s4
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s2, s2
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s0, s0
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s8
@@ -1339,9 +1355,9 @@ define arm_aapcs_vfpcc <4 x i16> @test_unsigned_v4f32_v4i16(<4 x float> %f) {
 ; CHECK-MVE-NEXT:    .p2align 2
 ; CHECK-MVE-NEXT:  @ %bb.1:
 ; CHECK-MVE-NEXT:  .LCPI25_0:
-; CHECK-MVE-NEXT:    .long 0x00000000 @ float 0
-; CHECK-MVE-NEXT:  .LCPI25_1:
 ; CHECK-MVE-NEXT:    .long 0x477fff00 @ float 65535
+; CHECK-MVE-NEXT:  .LCPI25_1:
+; CHECK-MVE-NEXT:    .long 0x00000000 @ float 0
 ;
 ; CHECK-MVEFP-LABEL: test_unsigned_v4f32_v4i16:
 ; CHECK-MVEFP:       @ %bb.0:
@@ -1356,16 +1372,20 @@ define arm_aapcs_vfpcc <4 x i16> @test_unsigned_v4f32_v4i16(<4 x float> %f) {
 define arm_aapcs_vfpcc <4 x i19> @test_unsigned_v4f32_v4i19(<4 x float> %f) {
 ; CHECK-MVE-LABEL: test_unsigned_v4f32_v4i19:
 ; CHECK-MVE:       @ %bb.0:
-; CHECK-MVE-NEXT:    vldr s4, .LCPI26_0
 ; CHECK-MVE-NEXT:    vldr s6, .LCPI26_1
-; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s2, s4
-; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s0, s4
-; CHECK-MVE-NEXT:    vmaxnm.f32 s8, s3, s4
-; CHECK-MVE-NEXT:    vminnm.f32 s2, s2, s6
-; CHECK-MVE-NEXT:    vminnm.f32 s0, s0, s6
-; CHECK-MVE-NEXT:    vmaxnm.f32 s4, s1, s4
-; CHECK-MVE-NEXT:    vminnm.f32 s8, s8, s6
-; CHECK-MVE-NEXT:    vminnm.f32 s4, s4, s6
+; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s2, s2
+; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s0, s0
+; CHECK-MVE-NEXT:    vldr s4, .LCPI26_0
+; CHECK-MVE-NEXT:    vmaxnm.f32 s8, s3, s3
+; CHECK-MVE-NEXT:    vmaxnm.f32 s2, s2, s6
+; CHECK-MVE-NEXT:    vmaxnm.f32 s0, s0, s6
+; CHECK-MVE-NEXT:    vmaxnm.f32 s10, s1, s1
+; CHECK-MVE-NEXT:    vmaxnm.f32 s8, s8, s6
+; CHECK-MVE-NEXT:    vminnm.f32 s2, s2, s4
+; CHECK-MVE-NEXT:    vminnm.f32 s0, s0, s4
+; CHECK-MVE-NEXT:    vmaxnm.f32 s6, s10, s6
+; CHECK-MVE-NEXT:    vminnm.f32 s8, s8, s4
+; CHECK-MVE-NEXT:    vminnm.f32 s4, s6, s4
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s2, s2
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s0, s0
 ; CHECK-MVE-NEXT:    vcvt.u32.f32 s8, s8
@@ -1380,9 +1400,9 @@ define arm_aapcs_vfpcc <4 x i19> @test_unsigned_v4f32_v4i19(<4 x float> %f) {
 ; CHECK-MVE-NEXT:    .p2align 2
 ; CHECK-MVE-NEXT:  @ %bb.1:
 ; CHECK-MVE-NEXT:  .LCPI26_0:
-; CHECK-MVE-NEXT:    .long 0x00000000 @ float 0
-; CHECK-MVE-NEXT:  .LCPI26_1:
 ; CHECK-MVE-NEXT:    .long 0x48ffffe0 @ float 524287
+; CHECK-MVE-NEXT:  .LCPI26_1:
+; CHECK-MVE-NEXT:    .long 0x00000000 @ float 0
 ;
 ; CHECK-MVEFP-LABEL: test_unsigned_v4f32_v4i19:
 ; CHECK-MVEFP:       @ %bb.0:
