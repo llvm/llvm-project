@@ -15,6 +15,7 @@ cc_library(
     name = "lib",
     srcs = glob(["*.cpp"]),
     hdrs = glob(["*.h"]),
+    includes = ["."],
     deps = [
         "//clang:ast",
         "//clang:ast_matchers",
