@@ -8,11 +8,11 @@
 // RUN: FileCheck %s -input-file=%t/docs/html/GlobalNamespace/_ZTV6Circle.html -check-prefix=HTML-CIRCLE
 
 HTML-SHAPE-LABEL:<html lang="en-US">
-HTML-SHAPE-LABEL:<head>
-HTML-SHAPE-LABEL:</head>
+HTML-SHAPE-NEXT: <head>
+HTML-SHAPE:      </head>
 HTML-SHAPE-LABEL:<body>
 HTML-SHAPE-NEXT: <header>
-HTML-SHAPE-LABEL: <nav class="navbar">
+HTML-SHAPE-NEXT:  <nav class="navbar">
 HTML-SHAPE-NEXT:      <div class="navbar__container">
 HTML-SHAPE-NEXT:             <div class="navbar__logo">
 HTML-SHAPE:                  <div class="navbar__menu">
@@ -98,18 +98,19 @@ HTML-SHAPE-NEXT:                             </div>
 HTML-SHAPE-NEXT:                         <p>Defined at line {{[0-9]+}} of file {{.*}}include{{[/\\]}}Shape.h</p>
 HTML-SHAPE-NEXT:                         </div>
 HTML-SHAPE-NEXT:             </section>
-HTML-SHAPE-NEXT:     </div> 
-HTML-SHAPE-LABEL:</main>
-HTML-SHAPE-LABEL:</body>
-HTML-SHAPE-LABEL:</html>
+HTML-SHAPE-NEXT:         </div>   
+HTML-SHAPE-NEXT:    </div> 
+HTML-SHAPE-NEXT: </main>
+HTML-SHAPE-NEXT: </body>
+HTML-SHAPE-NEXT: </html>
 
 
 HTML-CALC-LABEL:<html lang="en-US">
-HTML-CALC-LABEL:<head>
-HTML-CALC-LABEL:</head>
+HTML-CALC-NEXT: <head>
+HTML-CALC:      </head>
 HTML-CALC-LABEL:<body>
 HTML-CALC-NEXT: <header>
-HTML-CALC-LABEL: <nav class="navbar">
+HTML-CALC-NEXT:  <nav class="navbar">
 HTML-CALC-NEXT:      <div class="navbar__container">
 HTML-CALC-NEXT:             <div class="navbar__logo">
 HTML-CALC:                  <div class="navbar__menu">
@@ -305,16 +306,16 @@ HTML-CALC-NEXT:             </section>
 HTML-CALC-NEXT:         </div>
 HTML-CALC-NEXT:    </div>
 HTML-CALC-NEXT: </main>
-HTML-CALC-LABEL:</body>
-HTML-CALC-LABEL:</html>
+HTML-CALC-NEXT: </body>
+HTML-CALC-NEXT: </html>
 
 
 HTML-RECTANGLE-LABEL:<html lang="en-US">
-HTML-RECTANGLE-LABEL:<head>
-HTML-RECTANGLE-LABEL:</head>
+HTML-RECTANGLE-NEXT: <head>
+HTML-RECTANGLE:      </head>
 HTML-RECTANGLE-LABEL:<body>
 HTML-RECTANGLE-NEXT: <header>
-HTML-RECTANGLE-LABEL: <nav class="navbar">
+HTML-RECTANGLE-NEXT:  <nav class="navbar">
 HTML-RECTANGLE-NEXT:      <div class="navbar__container">
 HTML-RECTANGLE-NEXT:             <div class="navbar__logo">
 HTML-RECTANGLE:                  <div class="navbar__menu">
@@ -410,16 +411,16 @@ HTML-RECTANGLE-NEXT:             </section>
 HTML-RECTANGLE-NEXT:         </div>
 HTML-RECTANGLE-NEXT:    </div>
 HTML-RECTANGLE-NEXT: </main>
-HTML-RECTANGLE-LABEL:</body>
-HTML-RECTANGLE-LABEL:</html>
+HTML-RECTANGLE-NEXT: </body>
+HTML-RECTANGLE-NEXT: </html>
 
 
 HTML-CIRCLE-LABEL:<html lang="en-US">
-HTML-CIRCLE-LABEL:<head>
-HTML-CIRCLE-LABEL:</head>
+HTML-CIRCLE-NEXT: <head>
+HTML-CIRCLE:      </head>
 HTML-CIRCLE-LABEL:<body>
 HTML-CIRCLE-NEXT: <header>
-HTML-CIRCLE-LABEL: <nav class="navbar">
+HTML-CIRCLE-NEXT: <nav class="navbar">
 HTML-CIRCLE-NEXT:      <div class="navbar__container">
 HTML-CIRCLE-NEXT:             <div class="navbar__logo">
 HTML-CIRCLE:                  <div class="navbar__menu">
@@ -521,5 +522,5 @@ HTML-CIRCLE-NEXT:             </section>
 HTML-CIRCLE-NEXT:         </div>
 HTML-CIRCLE-NEXT:     </div>
 HTML-CIRCLE-NEXT: </main>
-HTML-CIRCLE-LABEL:</body>
-HTML-CIRCLE-LABEL:</html>
+HTML-CIRCLE-NEXT: </body>
+HTML-CIRCLE-NEXT: </html>
