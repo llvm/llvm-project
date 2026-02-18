@@ -46,7 +46,7 @@ static bool allowPromotionAlias(const std::string &Name) {
 // Promote each local-linkage entity defined by ExportM and used by ImportM by
 // changing visibility and appending the given ModuleId.
 void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
-                      SetVector<GlobalValue *> &PromoteExtra) {
+                      const SetVector<GlobalValue *> &PromoteExtra) {
   DenseMap<const Comdat *, Comdat *> RenamedComdats;
   for (auto &ExportGV : ExportM.global_values()) {
     if (!ExportGV.hasLocalLinkage())
