@@ -51,7 +51,6 @@ LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
     port.send_n(str, size);
   }
 
-  port.close();
   return ret;
 }
 
