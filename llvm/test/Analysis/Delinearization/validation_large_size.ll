@@ -26,7 +26,7 @@ define void @large_size_fixed(ptr %A) {
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][256] with elements of 1 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j>]
-; CHECK-NEXT:  Delinearization validation: Failed
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ;
 entry:
   br label %for.i.header
@@ -151,7 +151,7 @@ define void @elementsize_cause_ovfl(ptr %A) {
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][256] with elements of 8 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j>]
-; CHECK-NEXT:  Delinearization validation: Failed
+; CHECK-NEXT:  Delinearization validation: Succeeded
 ;
 entry:
   br label %for.i.header
