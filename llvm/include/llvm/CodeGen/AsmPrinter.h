@@ -947,11 +947,12 @@ private:
   void emitFunctionPrefix(ArrayRef<const Constant *> Prefix);
 
   /// Emit a blob of inline asm to the output streamer.
-  void emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
-                     const MCTargetOptions &MCOptions,
-                     const MDNode *LocMDNode = nullptr,
-                     InlineAsm::AsmDialect AsmDialect = InlineAsm::AD_ATT,
-                     const MachineInstr *MI = nullptr);
+  virtual void
+  emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+                const MCTargetOptions &MCOptions,
+                const MDNode *LocMDNode = nullptr,
+                InlineAsm::AsmDialect AsmDialect = InlineAsm::AD_ATT,
+                const MachineInstr *MI = nullptr);
 
   /// This method formats and emits the specified machine instruction that is an
   /// inline asm.
