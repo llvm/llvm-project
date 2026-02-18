@@ -4926,10 +4926,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Floating_Integral: {
     QualType ElTy = ToType;
     QualType StepTy = ToType;
-    if (FromType->isVectorType() || ToType->isVectorType())
-      StepTy =
-          adjustVectorOrConstantMatrixType(Context, FromType, ToType, &ElTy);
-    else if (FromType->isConstantMatrixType() || ToType->isConstantMatrixType())
+    if (FromType->isVectorType() || ToType->isVectorType() ||
+        FromType->isConstantMatrixType() || ToType->isConstantMatrixType())
       StepTy =
           adjustVectorOrConstantMatrixType(Context, FromType, ToType, &ElTy);
     if (ElTy->isRealFloatingType())
