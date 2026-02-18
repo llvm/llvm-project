@@ -1345,6 +1345,27 @@ add_header_library(
 )
 
 add_header_library(
+  sincos
+  HDRS
+    sincos.h
+  DEPENDS
+    .range_reduction_double
+    .sincos_eval
+    libc.hdr.errno_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
   sincos_eval
   HDRS
     sincos_eval.h
