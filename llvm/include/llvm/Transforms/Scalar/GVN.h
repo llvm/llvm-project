@@ -263,17 +263,22 @@ private:
   /// have that value number.  Use findLeader to query it.
   class LeaderMap {
   public:
-    struct LeaderTableEntry {
-      Value *Val;
+    class LeaderTableEntry {
+    public:
+      AssertingVH<Value> Val;
       const BasicBlock *BB;
+      LeaderTableEntry(Value *V, const BasicBlock *BB) : Val(V), BB(BB) {}
     };
 
   private:
-    struct LeaderListNode {
+    class LeaderListNode {
+    public:
       LeaderTableEntry Entry;
       LeaderListNode *Next;
+      LeaderListNode(Value *V, const BasicBlock *BB, LeaderListNode *Next)
+          : Entry(V, BB), Next(Next) {}
     };
-    DenseMap<uint32_t, LeaderListNode> NumToLeaders;
+    DenseMap<uint32_t, LeaderListNode *> NumToLeaders;
     BumpPtrAllocator TableAllocator;
 
   public:
@@ -309,14 +314,22 @@ private:
                               leader_iterator(nullptr));
       }
 
-      return iterator_range(leader_iterator(&I->second),
+      return iterator_range(leader_iterator(I->second),
                             leader_iterator(nullptr));
     }
 
     LLVM_ABI void insert(uint32_t N, Value *V, const BasicBlock *BB);
     LLVM_ABI void erase(uint32_t N, Instruction *I, const BasicBlock *BB);
-    LLVM_ABI void verifyRemoved(const Value *Inst) const;
     void clear() {
+      // Manually destroy all nodes to properly clean up AssertingVH
+      for (auto &[_, Node] : NumToLeaders) {
+        while (Node) {
+          auto *Next = Node->Next;
+          Node->~LeaderListNode();
+          TableAllocator.Deallocate<LeaderListNode>(Node);
+          Node = Next;
+        }
+      }
       NumToLeaders.clear();
       TableAllocator.Reset();
     }
