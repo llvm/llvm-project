@@ -67,6 +67,9 @@ public:
   uint32_t
   GetPermissions() const;
 
+  LLDB_DEPRECATED("Always returns 1.")
+  uint32_t GetTargetByteSize();
+
   /// Return the alignment of the section in bytes
   ///
   /// \return

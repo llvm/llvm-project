@@ -397,6 +397,12 @@ public:
   /// The maximum size in 8-bit (host) bytes of an opcode.
   uint32_t GetMaximumOpcodeByteSize() const;
 
+  LLDB_DEPRECATED("Always returns 1.")
+  uint32_t GetDataByteSize();
+
+  LLDB_DEPRECATED("Always returns 1.")
+  uint32_t GetCodeByteSize();
+
   /// Gets the target.max-children-count value
   /// It should be used to limit the number of
   /// children of large data structures to be displayed.

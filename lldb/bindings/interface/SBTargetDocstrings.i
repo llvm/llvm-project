@@ -250,6 +250,12 @@ produces: ::
     :rtype: SBSymbolContextList"
 ) lldb::SBTarget::FindCompileUnits;
 
+%feature("docstring", "Deprecated. Always returns 1."
+) lldb::SBTarget::GetDataByteSize;
+
+%feature("docstring", "Deprecated. Always returns 1."
+) lldb::SBTarget::GetCodeByteSize;
+
 %feature("docstring", "
     Find functions by name.
 

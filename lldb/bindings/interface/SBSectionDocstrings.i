@@ -25,3 +25,6 @@ produces: ::
 
 See also :py:class:`SBModule` ."
 ) lldb::SBSection;
+
+%feature("docstring", "Deprecated. Always returns 1."
+) lldb::SBSection::GetTargetByteSize;
