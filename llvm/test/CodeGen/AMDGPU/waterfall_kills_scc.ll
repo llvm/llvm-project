@@ -71,7 +71,7 @@ define amdgpu_kernel void  @foo(i1 %cmp1) {
 entry:
   %wbr = alloca <4 x i32>, align 16, addrspace(5)
   store ptr null, ptr addrspace(5) %wbr, align 16
-  %wbr_1 = load <4 x i32>, ptr addrspace(5) null, align 16
+  %wbr_1 = load <4 x i32>, ptr addrspace(5) zeroinitializer, align 16
   %call1 = tail call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %wbr_1, i32 0, i32 0, i32 0)
   %0 = fpext float %call1 to double
   %sel1 = select i1 %cmp1, double 1.000000e+00, double 0.000000e+00

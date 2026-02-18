@@ -531,8 +531,9 @@ static Register buildBuiltinVariableLoad(
   return LoadedRegister;
 }
 
-/// Helper external function for assigning SPIRVType to a register, ensuring the
-/// register class and type are set in MRI. Defined in SPIRVPreLegalizer.cpp.
+/// Helper external function for assigning a SPIRV type to a register, ensuring
+/// the register class and type are set in MRI. Defined in
+/// SPIRVPreLegalizer.cpp.
 extern void updateRegType(Register Reg, Type *Ty, SPIRVTypeInst SpirvTy,
                           SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
                           MachineRegisterInfo &MRI);
@@ -2888,10 +2889,21 @@ static bool generateConvertInst(const StringRef DemangledCall,
   if (Builtin->IsSaturated)
     buildOpDecorate(Call->ReturnRegister, MIRBuilder,
                     SPIRV::Decoration::SaturatedConversion, {});
-  if (Builtin->IsRounded)
-    buildOpDecorate(Call->ReturnRegister, MIRBuilder,
-                    SPIRV::Decoration::FPRoundingMode,
-                    {(unsigned)Builtin->RoundingMode});
+
+  if (Builtin->IsRounded) {
+    bool AnyTypeIsFloat =
+        GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeFloat) ||
+        GR->isScalarOrVectorOfType(Call->Arguments[0], SPIRV::OpTypeFloat);
+
+    // Rounding mode decorations are only valid for floating point types.
+    // Conversion builtins from integer to integer are equivalent to their
+    // non-rounded counterparts.
+    if (AnyTypeIsFloat) {
+      buildOpDecorate(Call->ReturnRegister, MIRBuilder,
+                      SPIRV::Decoration::FPRoundingMode,
+                      {(unsigned)Builtin->RoundingMode});
+    }
+  }
 
   std::string NeedExtMsg;              // no errors if empty
   bool IsRightComponentsNumber = true; // check if input/output accepts vectors
@@ -3606,7 +3618,7 @@ lowerBuiltinType(const Type *OpaqueType,
     // "Lower" the BuiltinType into TargetType. The following get<...>Type
     // methods use the implementation details from TableGen records or
     // TargetExtType parameters to either create a new OpType<...> machine
-    // instruction or get an existing equivalent SPIRVType from
+    // instruction or get an existing equivalent SPIRV type from
     // GlobalRegistry.
 
     switch (TypeRecord->Opcode) {

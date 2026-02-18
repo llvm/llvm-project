@@ -14,7 +14,7 @@ int if0(bool a) {
 
 }
 
-// CIR: cir.func{{.*}} @_Z3if0b(%arg0: !cir.bool loc({{.*}})) -> !s32i
+// CIR: cir.func{{.*}} @_Z3if0b(%arg0: !cir.bool loc({{.*}})) -> (!s32i{{.*}})
 // CIR: cir.scope {
 // CIR:   %4 = cir.load{{.*}} %0 : !cir.ptr<!cir.bool>, !cir.bool
 // CIR-NEXT: cir.if %4 {
@@ -260,7 +260,7 @@ int if_init() {
   }
 }
 
-// CIR: cir.func{{.*}} @_Z7if_initv() -> !s32i
+// CIR: cir.func{{.*}} @_Z7if_initv() -> (!s32i{{.*}})
 // CIR: %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>
 // CIR: cir.scope {
 // CIR:   %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>,

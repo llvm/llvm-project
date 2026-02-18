@@ -8,6 +8,7 @@ target triple = "i686-apple-darwin9"
 %1 = type { i32, i32 }
 
 @C = external constant [0 x i8]
+@undef = private constant [4000 x i8] undef, align 4
 
 declare void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) nocapture, ptr nocapture, i64, i1) nounwind
 declare void @llvm.memcpy.p0.p1.i64(ptr nocapture, ptr addrspace(1) nocapture, i64, i1) nounwind
@@ -923,6 +924,23 @@ define void @test(ptr noalias writable dereferenceable(4) %p) {
   call void @llvm.memcpy(ptr align 4 %p, ptr %a, i64 4, i1 false)
   ret void
 }
+
+; MemCpyOptimizer need not merge a store into a memset of undef value since
+; it will be removed by subsequent passes.
+define void @prevent_memsetting_a_undef_store(ptr %result) {
+; CHECK-LABEL: @prevent_memsetting_a_undef_store(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[RESULT:%.*]], i8 undef, i64 4000, i1 false)
+; CHECK-NEXT:    [[RESULT_4000:%.*]] = getelementptr inbounds nuw i8, ptr [[RESULT]], i64 4000
+; CHECK-NEXT:    store i64 0, ptr [[RESULT_4000]], align 8
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memcpy.p0.p0.i64(ptr %result, ptr @undef, i64 4000, i1 false)
+  %result.4000 = getelementptr inbounds nuw i8, ptr %result, i64 4000
+  store i64 0, ptr %result.4000, align 8
+  ret void
+}
+
+
 
 !0 = !{!0}
 !1 = !{!1, !0}

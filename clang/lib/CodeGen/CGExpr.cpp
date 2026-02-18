@@ -1706,14 +1706,6 @@ LValue CodeGenFunction::EmitLValue(const Expr *E,
   return LV;
 }
 
-static QualType getConstantExprReferredType(const FullExpr *E,
-                                            const ASTContext &Ctx) {
-  const Expr *SE = E->getSubExpr()->IgnoreImplicit();
-  if (isa<OpaqueValueExpr>(SE))
-    return SE->getType();
-  return cast<CallExpr>(SE)->getCallReturnType(Ctx)->getPointeeType();
-}
-
 LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
                                          KnownNonNull_t IsKnownNonNull) {
   ApplyDebugLocation DL(*this, E);
@@ -1751,10 +1743,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitDeclRefLValue(cast<DeclRefExpr>(E));
   case Expr::ConstantExprClass: {
     const ConstantExpr *CE = cast<ConstantExpr>(E);
-    if (llvm::Value *Result = ConstantEmitter(*this).tryEmitConstantExpr(CE)) {
-      QualType RetType = getConstantExprReferredType(CE, getContext());
-      return MakeNaturalAlignAddrLValue(Result, RetType);
-    }
+    if (llvm::Value *Result = ConstantEmitter(*this).tryEmitConstantExpr(CE))
+      return MakeNaturalAlignPointeeAddrLValue(Result, CE->getType());
     return EmitLValue(cast<ConstantExpr>(E)->getSubExpr(), IsKnownNonNull);
   }
   case Expr::ParenExprClass:
@@ -4448,12 +4438,6 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
                                     bool NoMerge, const TrapReason *TR) {
-  if (CGM.getCodeGenOpts().SanitizeTrapLoop) {
-    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::cond_loop),
-                       Builder.CreateNot(Checked));
-    return;
-  }
-
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per
@@ -4505,9 +4489,14 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
     ApplyDebugLocation applyTrapDI(*this, TrapLocation);
 
-    llvm::CallInst *TrapCall =
-        Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-                           llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
+    llvm::CallInst *TrapCall;
+    if (CGM.getCodeGenOpts().SanitizeTrapLoop)
+      TrapCall =
+          Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::looptrap));
+    else
+      TrapCall = Builder.CreateCall(
+          CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
+          llvm::ConstantInt::get(CGM.Int8Ty, CheckHandlerID));
 
     if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
       auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
@@ -7181,8 +7170,6 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
   while (!WorkList.empty()) {
     auto [LVal, T, IdxList] = WorkList.pop_back_val();
     T = T.getCanonicalType().getUnqualifiedType();
-    assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
-
     if (const auto *CAT = dyn_cast<ConstantArrayType>(T)) {
       uint64_t Size = CAT->getZExtSize();
       for (int64_t I = Size - 1; I > -1; I--) {
@@ -7255,6 +7242,35 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
             LValue::MakeVectorElt(Base.getAddress(), Idx, VT->getElementType(),
                                   Base.getBaseInfo(), TBAAAccessInfo());
         AccessList.emplace_back(LV);
+      }
+    } else if (const auto *MT = dyn_cast<ConstantMatrixType>(T)) {
+      // Matrices are represented as flat arrays in memory, but has a vector
+      // value type. So we use ConvertMatrixAddress to convert the address from
+      // array to vector, and extract elements similar to the vector case above.
+      // The matrix elements are iterated over in row-major order regardless of
+      // the memory layout of the matrix.
+      llvm::Type *LLVMT = ConvertTypeForMem(T);
+      CharUnits Align = getContext().getTypeAlignInChars(T);
+      Address GEP = Builder.CreateInBoundsGEP(LVal.getAddress(), IdxList, LLVMT,
+                                              Align, "matrix.gep");
+      LValue Base = MakeAddrLValue(GEP, T);
+      Address MatAddr = MaybeConvertMatrixAddress(Base.getAddress(), *this);
+      unsigned NumRows = MT->getNumRows();
+      unsigned NumCols = MT->getNumColumns();
+      bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                              LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      llvm::MatrixBuilder MB(Builder);
+      for (unsigned Row = 0; Row < MT->getNumRows(); Row++) {
+        for (unsigned Col = 0; Col < MT->getNumColumns(); Col++) {
+          llvm::Value *RowIdx = llvm::ConstantInt::get(IdxTy, Row);
+          llvm::Value *ColIdx = llvm::ConstantInt::get(IdxTy, Col);
+          llvm::Value *Idx = MB.CreateIndex(RowIdx, ColIdx, NumRows, NumCols,
+                                            IsMatrixRowMajor);
+          LValue LV =
+              LValue::MakeMatrixElt(MatAddr, Idx, MT->getElementType(),
+                                    Base.getBaseInfo(), TBAAAccessInfo());
+          AccessList.emplace_back(LV);
+        }
       }
     } else { // a scalar/builtin type
       if (!IdxList.empty()) {
