@@ -152,7 +152,7 @@ def olMemRegister : Function {
         "Registers host memory and optionally page-locks it to optimize transfers and returns",
         "the device accessible stable pointer that devices should use for memory transfers",
         "involving the host pinned allocation. If the buffer intersects with other existing buffer,",
-        "if the buffer is locked outside of this API, or Flags doesn't contain LOCK_MEMORY 
+        "if the buffer is locked outside of this API, or Flags doesn't contain LOCK_MEMORY",
         "flag a new user will be registered. Partial overlapping with an already registered range is",
         "not allowed. The pinned pointer can be accessed both on host and device and",
         "no guarantees are made about consistency.",
