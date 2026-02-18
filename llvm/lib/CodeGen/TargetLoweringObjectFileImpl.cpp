@@ -1493,6 +1493,26 @@ MCSection *TargetLoweringObjectFileMachO::getSectionForCommandLines() const {
                                       SectionKind::getReadOnly());
 }
 
+MCSection *TargetLoweringObjectFileMachO::getSectionForMachineBasicBlock(
+    const Function &F, const MachineBasicBlock &MBB,
+    const TargetMachine &TM) const {
+  assert(MBB.isBeginSection() && "Basic block does not start a section!");
+
+  if (MBB.getSectionID() == MBBSectionID::ColdSectionID) {
+    return getContext().getMachOSection("__TEXT", "__text_cold",
+                                        MachO::S_REGULAR |
+                                            MachO::S_ATTR_PURE_INSTRUCTIONS,
+                                        SectionKind::getText());
+  }
+
+  return SectionForGlobal(&F, TM);
+}
+
+MCSection *TargetLoweringObjectFileMachO::getUniqueSectionForFunction(
+    const Function &F, const TargetMachine &TM) const {
+  return SectionForGlobal(&F, TM);
+}
+
 const MCExpr *TargetLoweringObjectFileMachO::getTTypeGlobalReference(
     const GlobalValue *GV, unsigned Encoding, const TargetMachine &TM,
     MachineModuleInfo *MMI, MCStreamer &Streamer) const {
