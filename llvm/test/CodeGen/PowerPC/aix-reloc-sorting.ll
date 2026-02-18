@@ -6,6 +6,10 @@
 ; RUN:   -data-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck %s
 
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
+; RUN:   -data-sections=true -function-sections=true -filetype=obj -o %t.o < %s
+; RUN: llvm-objdump -D -r --symbol-description %t.o | FileCheck %s --check-prefix=SEC
+
 @a = global i32 1
 @b = dso_local constant i32 2
 @p = dso_local global ptr @a, !implicit.ref !0
@@ -52,3 +56,22 @@ entry:
 ; CHECK:      [[DATA_P:[0-9a-f]+]] (idx: {{[0-9]+}}) p:
 ; CHECK:      [[DATA_P]]:  R_POS	(idx: {{[0-9]+}}) a
 ; CHECK:      {{[0-9a-f]+}} (idx: {{[0-9]+}}) c:
+
+; SEC: Disassembly of section .text
+; SEC-EMPTY:
+; SEC-NEXT: .foo[PR]:
+; SEC:      R_RBR        (idx: {{[0-9]+}}) .extern_func1[PR]
+; SEC:      .bar[PR]:
+; SEC:      R_TOC        (idx: {{[0-9]+}}) a[TC]
+; SEC:      R_RBR        (idx: {{[0-9]+}}) .extern_func2[PR]
+; SEC:      .baz[PR]:
+; SEC:      R_REF        (idx: {{[0-9]+}}) b[RO]
+; SEC:      R_TOC        (idx: {{[0-9]+}}) c[TC]
+
+; SEC: Disassembly of section .data:
+; SEC-EMPTY:
+; SEC-NEXT: a[RW]:
+; SEC:      p[RW]:
+; SEC:      R_REF        (idx: {{[0-9]+}}) b[RO]
+; SEC:      R_POS        (idx: {{[0-9]+}}) a[RW]
+; SEC:      c[RW]:
