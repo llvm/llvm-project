@@ -126,7 +126,7 @@ bool ProcessFreeBSDKernel::CanDebug(lldb::TargetSP target_sp,
 
 void ProcessFreeBSDKernel::RefreshStateAfterStop() {
   if (!m_displayed_crash_info) {
-    ShowCrashInfo();
+    PrintUnreadMessageBuffer();
     m_displayed_crash_info = true;
   }
 }
@@ -298,7 +298,7 @@ lldb::addr_t ProcessFreeBSDKernel::FindSymbol(const char *name) {
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
 }
 
-void ProcessFreeBSDKernel::ShowCrashInfo() {
+void ProcessFreeBSDKernel::PrintUnreadMessageBuffer() {
   Target &target = GetTarget();
   Debugger &debugger = target.GetDebugger();
 

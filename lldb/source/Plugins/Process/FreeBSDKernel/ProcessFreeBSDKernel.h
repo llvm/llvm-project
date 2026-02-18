@@ -51,7 +51,7 @@ protected:
   lldb::addr_t FindSymbol(const char *name);
 
 private:
-  void ShowCrashInfo();
+  void PrintUnreadMessageBuffer();
 
   bool m_displayed_crash_info = false;
 };
