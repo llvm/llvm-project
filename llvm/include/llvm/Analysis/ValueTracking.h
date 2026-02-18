@@ -33,6 +33,7 @@ class AddOperator;
 class AssumptionCache;
 class DominatorTree;
 class GEPOperator;
+class IRBuilderBase;
 class WithOverflowInst;
 struct KnownBits;
 struct KnownFPClass;
@@ -1049,6 +1050,63 @@ LLVM_ABI bool
 collectPossibleValues(const Value *V,
                       SmallPtrSetImpl<const Constant *> &Constants,
                       unsigned MaxCount, bool AllowUndefOrPoison = true);
+
+/// Extract ConstantInt from value, looking through IntToPtr
+/// and PointerNullValue. Return NULL if value is not a constant int.
+ConstantInt *getConstantInt(Value *V, const DataLayout &DL);
+
+/// Given a chain of or (||) or and (&&) comparison of a value against a
+/// constant, this will try to recover the information required for a switch
+/// structure.
+/// It will depth-first traverse the chain of comparison, seeking for patterns
+/// like %a == 12 or %a < 4 and combine them to produce a set of integer
+/// representing the different cases for the switch.
+/// Note that if the chain is composed of '||' it will build the set of elements
+/// that matches the comparisons (i.e. any of this value validate the chain)
+/// while for a chain of '&&' it will build the set elements that make the test
+/// fail.
+struct ConstantComparesGatherer {
+  const DataLayout &DL;
+
+  /// Value found for the switch comparison
+  Value *CompValue = nullptr;
+
+  /// Extra clause to be checked before the switch
+  Value *Extra = nullptr;
+
+  /// Set of integers to match in switch
+  SmallVector<ConstantInt *, 8> Vals;
+
+  /// Number of comparisons matched in the and/or chain
+  unsigned UsedICmps = 0;
+
+  /// If the elements in Vals matches the comparisons
+  bool IsEq = false;
+
+  // At least on match was of an existing bit extract sequence
+  bool ExpansionCase = false;
+
+  // Used to check if the first matched CompValue shall be the Extra check.
+  bool IgnoreFirstMatch = false;
+  bool MultipleMatches = false;
+
+  /// Construct and compute the result for the comparison instruction Cond
+  ConstantComparesGatherer(Instruction *Cond, const DataLayout &DL,
+                           const bool OneUseOnly = false);
+
+  ConstantComparesGatherer(const ConstantComparesGatherer &) = delete;
+  ConstantComparesGatherer &
+  operator=(const ConstantComparesGatherer &) = delete;
+
+  static Value *createBitMapSeq(ConstantInt *BitMap, Value *Index,
+                                IRBuilderBase &Builder,
+                                IntegerType *BitMapElementTy);
+
+private:
+  bool setValueOnce(Value *NewVal);
+  bool matchInstruction(Instruction *I, bool isEQ, const bool OneUseOnly);
+  void gather(Value *V, const bool OneUseOnly);
+};
 
 } // end namespace llvm
 

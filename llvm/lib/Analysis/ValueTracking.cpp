@@ -51,6 +51,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -10520,4 +10521,353 @@ bool llvm::collectPossibleValues(const Value *V,
     }
   }
   return true;
+}
+
+ConstantInt *llvm::getConstantInt(Value *V, const DataLayout &DL) {
+  // Normal constant int.
+  ConstantInt *CI = dyn_cast<ConstantInt>(V);
+  if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy())
+    return CI;
+
+  // It is not safe to look through inttoptr or ptrtoint when using unstable
+  // pointer types.
+  if (DL.hasUnstableRepresentation(V->getType()))
+    return nullptr;
+
+  // This is some kind of pointer constant. Turn it into a pointer-sized
+  // ConstantInt if possible.
+  IntegerType *IntPtrTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
+
+  // Null pointer means 0, see SelectionDAGBuilder::getValue(const Value*).
+  if (isa<ConstantPointerNull>(V))
+    return ConstantInt::get(IntPtrTy, 0);
+
+  // IntToPtr const int, we can look through this if the semantics of
+  // inttoptr for this address space are a simple (truncating) bitcast.
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V))
+    if (CE->getOpcode() == Instruction::IntToPtr)
+      if (ConstantInt *CI = dyn_cast<ConstantInt>(CE->getOperand(0))) {
+        // The constant is very likely to have the right type already.
+        if (CI->getType() == IntPtrTy)
+          return CI;
+        else
+          return cast<ConstantInt>(
+              ConstantFoldIntegerCast(CI, IntPtrTy, /*isSigned=*/false, DL));
+      }
+  return nullptr;
+}
+
+/// Construct and compute the result for the comparison instruction Cond
+ConstantComparesGatherer::ConstantComparesGatherer(Instruction *Cond,
+                                                   const DataLayout &DL,
+                                                   const bool OneUseOnly)
+    : DL(DL) {
+  assert(!Cond->getType()->isVectorTy() &&
+         "ConstantComparesGatherer only supports scalars.");
+  gather(Cond, OneUseOnly);
+  if (CompValue || !MultipleMatches)
+    return;
+  Extra = nullptr;
+  Vals.clear();
+  UsedICmps = 0;
+  IgnoreFirstMatch = true;
+  gather(Cond, OneUseOnly);
+}
+
+/// Try to set the current value used for the comparison, it succeeds only if
+/// it wasn't set before or if the new value is the same as the old one
+bool ConstantComparesGatherer::setValueOnce(Value *NewVal) {
+  if (IgnoreFirstMatch) {
+    IgnoreFirstMatch = false;
+    return false;
+  }
+  if (CompValue && CompValue != NewVal) {
+    MultipleMatches = true;
+    return false;
+  }
+  CompValue = NewVal;
+  return true;
+}
+
+/// Try to match Instruction "I" as a comparison against a constant and
+/// populates the array Vals with the set of values that match (or do not
+/// match depending on isEQ).
+/// Return false on failure. On success, the Value the comparison matched
+/// against is placed in CompValue.
+/// If CompValue is already set, the function is expected to fail if a match
+/// is found but the value compared to is different.
+bool ConstantComparesGatherer::matchInstruction(Instruction *I, bool isEQ,
+                                                const bool OneUseOnly) {
+  if (match(I, m_Not(m_Instruction(I)))) {
+    isEQ = !isEQ;
+    if (OneUseOnly && !I->hasOneUse())
+      return false;
+  }
+
+  Value *Val;
+  if (match(I, m_NUWTrunc(m_Value(Val)))) {
+    // If we already have a value for the switch, it has to match!
+    if (!setValueOnce(Val))
+      return false;
+    UsedICmps++;
+    Vals.push_back(ConstantInt::get(cast<IntegerType>(Val->getType()), isEQ));
+    return true;
+  }
+
+  // Expand an already existing BitMap sequence
+  // Match: (or (%BitMapSeq(X)), (icmp eq X, Imm))
+  ConstantInt *BitMap, *Bound;
+  if (match(I, m_Select(m_OneUse(m_SpecificICmp(ICmpInst::ICMP_ULT,
+                                                m_ZExtOrSelf(m_Value(Val)),
+                                                m_ConstantInt(Bound))),
+                        m_Trunc(m_OneUse(
+                            m_Shr(m_ConstantInt(BitMap),
+                                  m_ZExtOrTruncOrSelf(m_Deferred(Val))))),
+                        m_Zero()))) {
+
+    // If Or-tree, then cannot have leading Not
+    // If And-tree, must have leading Not
+    if (!isEQ)
+      return false;
+
+    // If we already have a value for the switch, it has to match!
+    if (!setValueOnce(Val))
+      return false;
+
+    APInt BitMapAP = BitMap->getValue();
+    APInt BoundAP = Bound->getValue();
+    unsigned BitMapWidth = BitMapAP.getBitWidth();
+    if (BoundAP != BitMapWidth)
+      return false;
+    for (unsigned I = 0; I < BitMapWidth; ++I)
+      if ((BitMapAP.lshr(I) & APInt(BitMapWidth, 1)).isOne())
+        Vals.push_back(ConstantInt::get(cast<IntegerType>(Val->getType()), I));
+    ++UsedICmps;
+    ExpansionCase = true;
+    return true;
+  }
+
+  // If this is an icmp against a constant, handle this as one of the cases.
+  ICmpInst *ICI;
+  ConstantInt *C;
+  if (!((ICI = dyn_cast<ICmpInst>(I)) &&
+        (C = getConstantInt(I->getOperand(1), DL)))) {
+    return false;
+  }
+
+  Value *RHSVal;
+  const APInt *RHSC;
+
+  // Pattern match a special case
+  // (x & ~2^z) == y --> x == y || x == y|2^z
+  // This undoes a transformation done by instcombine to fuse 2 compares.
+  if (ICI->getPredicate() == (isEQ ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE)) {
+    // It's a little bit hard to see why the following transformations are
+    // correct. Here is a CVC3 program to verify them for 64-bit values:
+
+    /*
+      ONE  : BITVECTOR(64) = BVZEROEXTEND(0bin1, 63);
+      x    : BITVECTOR(64);
+      y    : BITVECTOR(64);
+      z    : BITVECTOR(64);
+      mask : BITVECTOR(64) = BVSHL(ONE, z);
+      QUERY( (y & ~mask = y) =>
+      ((x & ~mask = y) <=> (x = y OR x = (y |  mask)))
+      );
+      QUERY( (y |  mask = y) =>
+      ((x |  mask = y) <=> (x = y OR x = (y & ~mask)))
+      );
+    */
+
+    // Please note that each pattern must be a dual implication (<--> or
+    // iff). One directional implication can create spurious matches. If the
+    // implication is only one-way, an unsatisfiable condition on the left
+    // side can imply a satisfiable condition on the right side. Dual
+    // implication ensures that satisfiable conditions are transformed to
+    // other satisfiable conditions and unsatisfiable conditions are
+    // transformed to other unsatisfiable conditions.
+
+    // Here is a concrete example of a unsatisfiable condition on the left
+    // implying a satisfiable condition on the right:
+    //
+    // mask = (1 << z)
+    // (x & ~mask) == y  --> (x == y || x == (y | mask))
+    //
+    // Substituting y = 3, z = 0 yields:
+    // (x & -2) == 3 --> (x == 3 || x == 2)
+
+    // Pattern match a special case:
+    /*
+      QUERY( (y & ~mask = y) =>
+      ((x & ~mask = y) <=> (x = y OR x = (y |  mask)))
+      );
+    */
+    if (match(ICI->getOperand(0), m_And(m_Value(RHSVal), m_APInt(RHSC)))) {
+      APInt Mask = ~*RHSC;
+      if (Mask.isPowerOf2() && (C->getValue() & ~Mask) == C->getValue()) {
+        // If we already have a value for the switch, it has to match!
+        if (!setValueOnce(RHSVal))
+          return false;
+
+        Vals.push_back(C);
+        Vals.push_back(ConstantInt::get(C->getContext(), C->getValue() | Mask));
+        UsedICmps++;
+        return true;
+      }
+    }
+
+    // Pattern match a special case:
+    /*
+      QUERY( (y |  mask = y) =>
+      ((x |  mask = y) <=> (x = y OR x = (y & ~mask)))
+      );
+    */
+    if (match(ICI->getOperand(0), m_Or(m_Value(RHSVal), m_APInt(RHSC)))) {
+      APInt Mask = *RHSC;
+      if (Mask.isPowerOf2() && (C->getValue() | Mask) == C->getValue()) {
+        // If we already have a value for the switch, it has to match!
+        if (!setValueOnce(RHSVal))
+          return false;
+
+        Vals.push_back(C);
+        Vals.push_back(
+            ConstantInt::get(C->getContext(), C->getValue() & ~Mask));
+        UsedICmps++;
+        return true;
+      }
+    }
+
+    // If we already have a value for the switch, it has to match!
+    if (!setValueOnce(ICI->getOperand(0)))
+      return false;
+
+    UsedICmps++;
+    Vals.push_back(C);
+    return true;
+  }
+
+  // If we have "x ult 3", for example, then we can add 0,1,2 to the set.
+  ConstantRange Span =
+      ConstantRange::makeExactICmpRegion(ICI->getPredicate(), C->getValue());
+
+  // Shift the range if the compare is fed by an add. This is the range
+  // compare idiom as emitted by instcombine.
+  Value *CandidateVal = I->getOperand(0);
+  if (match(I->getOperand(0), m_Add(m_Value(RHSVal), m_APInt(RHSC)))) {
+    Span = Span.subtract(*RHSC);
+    CandidateVal = RHSVal;
+    if (OneUseOnly && !CandidateVal->hasOneUse())
+      return false;
+  }
+
+  // If this is an and/!= check, then we are looking to build the set of
+  // value that *don't* pass the and chain. I.e. to turn "x ugt 2" into
+  // x != 0 && x != 1.
+  if (!isEQ)
+    Span = Span.inverse();
+
+  // If there are a ton of values, we don't want to make a ginormous switch.
+  // In the InstCombine case, we know this will be convered to bitmask so
+  // there is no added cost of having more values. Limit to the max register
+  // size since that's the largest BitMap we can handle anyways
+  uint64_t MaxSpan =
+      OneUseOnly ? (uint64_t)DL.getLargestLegalIntTypeSizeInBits() : 8;
+  if (Span.isSizeLargerThan(MaxSpan) || Span.isEmptySet()) {
+    return false;
+  }
+
+  // If we already have a value for the switch, it has to match!
+  if (!setValueOnce(CandidateVal))
+    return false;
+
+  // Add all values from the range to the set
+  APInt Tmp = Span.getLower();
+  do
+    Vals.push_back(ConstantInt::get(I->getContext(), Tmp));
+  while (++Tmp != Span.getUpper());
+
+  UsedICmps++;
+  return true;
+}
+
+/// Given a potentially 'or'd or 'and'd together collection of icmp
+/// eq/ne/lt/gt instructions that compare a value against a constant, extract
+/// the value being compared, and stick the list constants into the Vals
+/// vector.
+/// One "Extra" case is allowed to differ from the other.
+void ConstantComparesGatherer::gather(Value *V, const bool OneUseOnly) {
+  if (OneUseOnly && !V->hasOneUse())
+    return;
+  Value *Op0, *Op1;
+  if (match(V, m_LogicalOr(m_Value(Op0), m_Value(Op1))))
+    IsEq = true;
+  else if (match(V, m_LogicalAnd(m_Value(Op0), m_Value(Op1))))
+    IsEq = false;
+  else
+    return;
+  // Keep a stack (SmallVector for efficiency) for depth-first traversal
+  SmallVector<Value *, 8> DFT{Op0, Op1};
+  SmallPtrSet<Value *, 8> Visited{V, Op0, Op1};
+
+  while (!DFT.empty()) {
+    V = DFT.pop_back_val();
+    if (OneUseOnly && !V->hasOneUse()) {
+      CompValue = nullptr;
+      return;
+    }
+
+    if (Instruction *I = dyn_cast<Instruction>(V)) {
+      // If it is a || (or && depending on isEQ), process the operands.
+      if (IsEq ? match(I, m_LogicalOr(m_Value(Op0), m_Value(Op1)))
+               : match(I, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
+        if (Visited.insert(Op1).second)
+          DFT.push_back(Op1);
+        if (Visited.insert(Op0).second)
+          DFT.push_back(Op0);
+
+        continue;
+      }
+
+      // Try to match the current instruction
+      if (matchInstruction(I, IsEq, OneUseOnly))
+        // Match succeed, continue the loop
+        continue;
+    }
+
+    // One element of the sequence of || (or &&) could not be match as a
+    // comparison against the same value as the others.
+    // We allow only one "Extra" case to be checked before the switch
+    if (!Extra) {
+      Extra = V;
+      continue;
+    }
+    // Failed to parse a proper sequence, abort now
+    CompValue = nullptr;
+    break;
+  }
+}
+
+Value *ConstantComparesGatherer::createBitMapSeq(ConstantInt *BitMap,
+                                                 Value *Index,
+                                                 IRBuilderBase &Builder,
+                                                 IntegerType *BitMapElementTy) {
+  // Type of the bitmap (e.g. i59).
+  IntegerType *MapTy = BitMap->getIntegerType();
+
+  // Cast Index to the same type as the bitmap.
+  // Note: The Index is <= the number of elements in the table, so
+  // truncating it to the width of the bitmask is safe.
+  Value *ShiftAmt = Builder.CreateZExtOrTrunc(Index, MapTy, "switch.cast");
+
+  // Multiply the shift amount by the element width. NUW/NSW can always be
+  // set, because wouldFitInRegister guarantees Index * ShiftAmt is in
+  // BitMap's bit width.
+  ShiftAmt = Builder.CreateMul(
+      ShiftAmt, ConstantInt::get(MapTy, BitMapElementTy->getBitWidth()),
+      "switch.shiftamt", /*HasNUW =*/true, /*HasNSW =*/true);
+
+  // Shift down.
+  Value *DownShifted = Builder.CreateLShr(BitMap, ShiftAmt, "switch.downshift");
+  // Mask off.
+  return Builder.CreateTrunc(DownShifted, BitMapElementTy, "switch.masked");
 }

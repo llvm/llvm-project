@@ -2411,6 +2411,64 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
   return nullptr;
 }
 
+static Value *combineAndOrOfImmCmpToBitExtract(Instruction &I,
+                                               InstCombiner::BuilderTy &Builder,
+                                               const DataLayout &DL) {
+  // Currently only support scalars
+  if (!I.getType()->isIntegerTy(1))
+    return nullptr;
+
+  ConstantComparesGatherer ConstantCompare(&I, DL, /*OneUse=*/true);
+  // Unpack the result
+  SmallVectorImpl<ConstantInt *> &Values = ConstantCompare.Vals;
+  Value *Index = ConstantCompare.CompValue;
+
+  // TODO: Handle ConstantCompare.Extra case
+  // If expanding an existing case, only adding one extra case is still good
+  if (!Index || !isGuaranteedNotToBeUndef(Index) ||
+      (ConstantCompare.UsedICmps + ConstantCompare.ExpansionCase) < 3 ||
+      ConstantCompare.Extra)
+    return nullptr;
+
+  uint64_t MaxRegWidth = DL.getLargestLegalIntTypeSizeInBits();
+  uint64_t MaxVal = 0;
+  // TODO: Handle case where some values are too large for map but some are not.
+  for (auto *CI : Values) {
+    uint64_t Val = CI->getValue().getLimitedValue();
+    if (Val >= MaxRegWidth)
+      return nullptr;
+    if (Val > MaxVal)
+      MaxVal = Val;
+  }
+  LLVMContext &Context = I.getContext();
+  APInt BitMapAP(MaxVal + 1, 0);
+  for (auto *CI : Values) {
+    uint64_t Val = CI->getValue().getLimitedValue();
+    BitMapAP.setBit(Val);
+  }
+  if (!ConstantCompare.IsEq)
+    BitMapAP = ~BitMapAP;
+  ConstantInt *BitMap = ConstantInt::get(Context, BitMapAP);
+  Value *Result = ConstantComparesGatherer::createBitMapSeq(
+      BitMap, Index, Builder, /*BitMapElementTy=*/Type::getInt1Ty(Context));
+
+  // If the maximum value in the bitmap is larger than can be stored
+  // in Index, don't have to worry about overflow on the shift
+  unsigned IndexBits = Index->getType()->getScalarSizeInBits();
+  if (isUIntN(IndexBits, MaxVal + 1)) {
+    Value *MaxValue = ConstantInt::get(Context, APInt(IndexBits, MaxVal + 1));
+    // %icmp = icmp ult %Index, %max_value
+    Value *BoundsCheck =
+        Builder.CreateICmp(ICmpInst::ICMP_ULT, Index, MaxValue);
+
+    Result = Builder.CreateSelect(
+        BoundsCheck, Result,
+        ConstantInt::getBool(Context, !ConstantCompare.IsEq));
+  }
+
+  return Result;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -2441,6 +2499,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   if (Instruction *X = foldComplexAndOrPatterns(I, Builder))
     return X;
+
+  if (Value *V = combineAndOrOfImmCmpToBitExtract(I, Builder, DL))
+    return replaceInstUsesWith(I, V);
 
   // (A|B)&(A|C) -> A|(B&C) etc
   if (Value *V = foldUsingDistributiveLaws(I))
@@ -4123,6 +4184,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Instruction *X = foldIntegerPackFromVector(I, Builder, DL))
     return X;
+
+  if (Value *V = combineAndOrOfImmCmpToBitExtract(I, Builder, DL))
+    return replaceInstUsesWith(I, V);
 
   // (A & B) | (C & D) -> A ^ D where A == ~C && B == ~D
   // (A & B) | (C & D) -> A ^ C where A == ~D && B == ~C
