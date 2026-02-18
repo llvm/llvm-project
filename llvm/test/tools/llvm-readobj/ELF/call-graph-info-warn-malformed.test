@@ -354,13 +354,22 @@ Symbols:
     Value:    0x1790
 
 ## Check warning when the relocation section linked to SHT_LLVM_CALL_GRAPH has an invalid sh_link.
-# RUN: yaml2obj --docnum=8 %s -o %t13
+# RUN: yaml2obj --docnum=8 -DLINK=255 -DINFO=.llvm_call_graph %s -o %t13
 # RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t13 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t13 --check-prefix=INVALID-RELA-LINK
 # RUN: llvm-readobj --elf-output-style=JSON --call-graph-info %t13 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t13 --check-prefix=INVALID-RELA-LINK
 
-# INVALID-RELA-LINK: warning: '[[FILE]]': invalid section linked to SHT_RELA section with index 3: invalid section index: 255
+# INVALID-RELA-LINK: warning: '[[FILE]]': invalid section linked to SHT_RELA section with index 2: invalid section index: 255
+
+## Check warning when getSectionAndRelocations fails to read sections.
+# RUN: yaml2obj --docnum=8 -DLINK=0 -DINFO=255 %s -o %t14
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t14 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t14 --check-prefix=ERR-READ-SECTION
+# RUN: llvm-readobj --elf-output-style=JSON --call-graph-info %t14 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t14 --check-prefix=ERR-READ-SECTION
+
+# ERR-READ-SECTION: warning: '[[FILE]]': unable to read SHT_LLVM_CALL_GRAPH section: SHT_RELA section with index 2: failed to get a relocated section: invalid section index: 255
 
 --- !ELF
 FileHeader:
@@ -369,8 +378,6 @@ FileHeader:
   Type:     ET_REL
   Machine:  EM_X86_64
 Sections:
-  - Name: .text
-    Type: SHT_PROGBITS
   - Name: .llvm_call_graph
     Type: SHT_LLVM_CALL_GRAPH
     ContentArray: [
@@ -381,8 +388,8 @@ Sections:
       ]
   - Name: .rela.llvm_call_graph
     Type: SHT_RELA
-    Link: 255
-    Info: .llvm_call_graph
+    Link: [[LINK]]
+    Info: [[INFO]]
     Relocations:
       - Offset: 0x2
         Symbol: foo
