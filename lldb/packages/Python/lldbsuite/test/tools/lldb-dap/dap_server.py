@@ -1581,7 +1581,7 @@ class DebugCommunication(object):
         return response
 
     def request_variables(
-        self, variablesReference, start=None, count=None, is_hex=None
+        self, variablesReference, start=None, count=None, is_hex: Optional[bool] = None
     ):
         args_dict = {"variablesReference": variablesReference}
         if start is not None:

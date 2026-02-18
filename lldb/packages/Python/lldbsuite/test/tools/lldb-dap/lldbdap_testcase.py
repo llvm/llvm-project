@@ -375,7 +375,7 @@ class DAPTestCaseBase(TestBase):
         else:
             return int(value)
 
-    def set_variable(self, varRef, name, value, id=None, is_hex=None):
+    def set_variable(self, varRef, name, value, id=None, is_hex: Optional[bool] = None):
         """Set a variable."""
         response = self.dap_server.request_setVariable(
             varRef, name, str(value), id=id, is_hex=is_hex
@@ -385,7 +385,7 @@ class DAPTestCaseBase(TestBase):
             self.verify_memory_event(response["body"].get("memoryReference"))
         return response
 
-    def set_local(self, name, value, id=None, is_hex=None):
+    def set_local(self, name, value, id=None, is_hex: Optional[bool] = None):
         """Set a top level local variable only."""
         # Get the locals scope reference dynamically
         locals_ref = self.get_locals_scope_reference()
