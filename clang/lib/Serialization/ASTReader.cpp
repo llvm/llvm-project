@@ -2985,8 +2985,9 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       StringRef TopLevelASTFileName(ImportStack.back()->FileName);
       Diag(diag::err_fe_ast_file_modified)
           << *Filename << moduleKindForDiagnostic(ImportStack.back()->Kind)
-          << TopLevelASTFileName << FileChange.Kind
-          << (FileChange.Old && FileChange.New)
+          << TopLevelASTFileName;
+      Diag(diag::note_fe_ast_file_modified)
+          << FileChange.Kind << (FileChange.Old && FileChange.New)
           << llvm::itostr(FileChange.Old.value_or(0))
           << llvm::itostr(FileChange.New.value_or(0));
 

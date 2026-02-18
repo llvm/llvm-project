@@ -115,6 +115,7 @@ define void @uscmp() {
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %uv16i8 = call <16 x i8> @llvm.ucmp.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %uv8i16 = call <8 x i16> @llvm.ucmp.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %uv4i32 = call <4 x i32> @llvm.ucmp.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %uv2i64 = call <2 x i64> @llvm.ucmp.v2i64.v2i64(<2 x i64> undef, <2 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %s8 = call i8 @llvm.scmp.i8.i8(i8 undef, i8 undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %s16 = call i16 @llvm.scmp.i16.i16(i16 undef, i16 undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 4 for: %s32 = call i32 @llvm.scmp.i32.i32(i32 undef, i32 undef)
@@ -122,6 +123,7 @@ define void @uscmp() {
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %sv16i8 = call <16 x i8> @llvm.scmp.v16i8.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %sv8i16 = call <8 x i16> @llvm.scmp.v8i16.v8i16(<8 x i16> undef, <8 x i16> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of 5 for: %sv4i32 = call <4 x i32> @llvm.scmp.v4i32.v4i32(<4 x i32> undef, <4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 5 for: %sv2i64 = call <2 x i64> @llvm.scmp.v2i64.v2i64(<2 x i64> undef, <2 x i64> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %u8 = call i8 @llvm.ucmp(i8 undef, i8 undef)
@@ -131,6 +133,7 @@ define void @uscmp() {
   %uv16i8 = call <16 x i8> @llvm.ucmp(<16 x i8> undef, <16 x i8> undef)
   %uv8i16 = call <8 x i16> @llvm.ucmp(<8 x i16> undef, <8 x i16> undef)
   %uv4i32 = call <4 x i32> @llvm.ucmp(<4 x i32> undef, <4 x i32> undef)
+  %uv2i64 = call <2 x i64> @llvm.ucmp(<2 x i64> undef, <2 x i64> undef)
   %s8 = call i8 @llvm.scmp(i8 undef, i8 undef)
   %s16 = call i16 @llvm.scmp(i16 undef, i16 undef)
   %s32 = call i32 @llvm.scmp(i32 undef, i32 undef)
@@ -138,5 +141,6 @@ define void @uscmp() {
   %sv16i8 = call <16 x i8> @llvm.scmp(<16 x i8> undef, <16 x i8> undef)
   %sv8i16 = call <8 x i16> @llvm.scmp(<8 x i16> undef, <8 x i16> undef)
   %sv4i32 = call <4 x i32> @llvm.scmp(<4 x i32> undef, <4 x i32> undef)
+  %sv2i64 = call <2 x i64> @llvm.scmp(<2 x i64> undef, <2 x i64> undef)
   ret void
 }
