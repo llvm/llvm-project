@@ -311,7 +311,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
                           options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fno-use-init-array");
 
-  // '-pthread' implies bulk-memory, and shared memory is also used,
+  // '-pthread' implies bulk-memory, and, if shared memory is also used,
   // also implies atomics, mutable-globals, and sign-ext.
   if (WantsPthread(getTriple(), DriverArgs)) {
     if (DriverArgs.hasFlag(options::OPT_mno_bulk_memory,
@@ -321,6 +321,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
           << "-mno-bulk-memory";
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+bulk-memory");
+    
     if (WantsSharedMemory(getTriple(), DriverArgs)) {
       if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
                              false))
