@@ -81,6 +81,9 @@ add_fp_unittest(
     libc.src.__support.math.f16sqrtl
     libc.src.__support.math.ffma
     libc.src.__support.math.ffmal
+    libc.src.__support.math.fmaximum_mag_num
+    libc.src.__support.math.fmaximum_mag_numbf16
+    libc.src.__support.math.fmaximum_mag_numf
     libc.src.__support.math.frexpf
     libc.src.__support.math.frexpf128
     libc.src.__support.math.frexpf16

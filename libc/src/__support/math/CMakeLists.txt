@@ -800,6 +800,31 @@ add_header_library(
     libc.src.__support.FPUtil.fma
     libc.src.__support.macros.config
 )
+add_header_library(
+  fmaximum_mag_num
+  HDRS
+    fmaximum_mag_num.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+add_header_library(
+  fmaximum_mag_numbf16
+  HDRS
+    fmaximum_mag_numbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+)
+add_header_library(
+  fmaximum_mag_numf
+  HDRS
+    fmaximum_mag_numf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
 
 add_header_library(
   frexpf128
