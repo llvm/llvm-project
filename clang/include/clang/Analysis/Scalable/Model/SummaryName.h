@@ -31,6 +31,7 @@ public:
 
 private:
   std::string Name;
+  friend class TestFixture;
 };
 
 } // namespace clang::ssaf
