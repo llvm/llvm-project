@@ -25,6 +25,7 @@ add_clang_library(clangTidyMiscModule STATIC
   ConfusableIdentifierCheck.cpp
   HeaderIncludeCycleCheck.cpp
   IncludeCleanerCheck.cpp
+  MakeSmartPtrCheck.cpp
   MiscTidyModule.cpp
   MisleadingBidirectionalCheck.cpp
   MisleadingIdentifierCheck.cpp
@@ -49,6 +50,7 @@ add_clang_library(clangTidyMiscModule STATIC
 
   LINK_LIBS
   clangTidy
+  clangTidyModernizeModule
   clangTidyUtils
 
   DEPENDS
