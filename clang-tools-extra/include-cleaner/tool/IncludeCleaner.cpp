@@ -12,6 +12,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -147,6 +148,8 @@ private:
     // in-development code.
     CI.getLangOpts().ModulesDeclUse = false;
     CI.getLangOpts().ModulesStrictDeclUse = false;
+    // Explicitly ask to define __clang_analyzer__ macro.
+    CI.getPreprocessorOpts().SetUpStaticAnalyzer = true;
     return true;
   }
 
