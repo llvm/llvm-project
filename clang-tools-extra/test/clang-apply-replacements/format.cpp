@@ -12,4 +12,4 @@
 // RUN: FileCheck --strict-whitespace -input-file=%t.dir/Inputs/format/yes.cpp %S/Inputs/format/yes.cpp
 // RUN: FileCheck --strict-whitespace -input-file=%t.dir/Inputs/format/no.cpp %S/Inputs/format/no.cpp
 //
-// RUN not clang-apply-replacements -format=blah %t.dir/Inputs/format
+// RUN: not clang-apply-replacements -format=blah %t.dir/Inputs/format

@@ -8,8 +8,8 @@
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fsyntax-only -verify=off -Wno-openmp-51-extensions %s
 
 // RUN: %clang_cc1 -fopenmp -fsyntax-only -verify=pre -Wpre-openmp-51-compat -x c -std=c2x %s
-// RUN-: %clang_cc1 -fopenmp -fsyntax-only -verify=off -x c -std=c2x %s
-// RUN-: %clang_cc1 -fopenmp -fopenmp-version=50 -fsyntax-only -verify=ext -Wopenmp -x c -std=c2x %s
+// RUN: %clang_cc1 -fopenmp -fsyntax-only -verify=off -x c -std=c2x %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -fsyntax-only -verify=ext -Wopenmp -x c -std=c2x %s
 
 // off-no-diagnostics
 

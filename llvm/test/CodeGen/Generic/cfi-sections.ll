@@ -1,6 +1,6 @@
 ; When using Itanium ABI, do not emit .debug_frame.
-; RUNT: llc -mtriple=i386--linux -o - < %s | FileCheck %s -check-prefix=WITHOUT
-; RUNT: llc -mtriple=armv7-netbsd-eabi -o - < %s | FileCheck %s -check-prefix=WITHOUT
+; RUN: llc -mtriple=i386--linux -o - < %s | FileCheck %s -check-prefix=WITHOUT
+; RUN: llc -mtriple=armv7-netbsd-eabi -o - < %s | FileCheck %s -check-prefix=WITHOUT
 
 ; When using EHABI, do emit .debug_frame.
 ; RUN: llc -mtriple=arm-linux -mcpu=cortex-a7 -mattr=v7 -o - < %s | FileCheck %s -check-prefix=WITH

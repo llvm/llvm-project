@@ -146,7 +146,7 @@
 ## Check error when the value is invalid in the argument value.
 # RUN: not llvm-objcopy --change-section-address .anotherone+0c50 %ti1 2>&1 | FileCheck %s --check-prefix=ERR-NOT-INTEGER
 ## Check error when the value does not fit in uint64_t.
-# RUN  not llvm-objcopy --change-section-address .text1=0x10000000000000000 %ti1 %to 2>&1 | FileCheck %s --chack-prefix=ERR-NOT-INTEGER
+# RUN: not llvm-objcopy --change-section-address .text1=0x10000000000000000 %ti1 %to 2>&1 | FileCheck %s --check-prefix=ERR-NOT-UINT64
 ## Check error when the section pattern is missing.
 # RUN: not llvm-objcopy --change-section-address =0x10 %ti1 2>&1 | FileCheck %s --check-prefix=ERR-MISSING-SECTION
 ## Check error when the negative adjustment value is missing.
@@ -162,6 +162,7 @@
 # ERR-UNDERFLOW: address 0x200 cannot be decreased by 0x201. The result would underflow
 # ERR-IVALID-VAL: error: bad format for --change-section-address: argument value 0 is invalid. See --help
 # ERR-NOT-INTEGER: error: bad format for --change-section-address: value after + is 0c50 when it should be a 64-bit integer
+# ERR-NOT-UINT64: error: bad format for --change-section-address: value after = is 0x10000000000000000 when it should be a 64-bit integer
 # ERR-MISSING-SECTION: error: bad format for --change-section-address: missing section pattern to apply address change to
 # ERR-MISSING-VALUE-MINUS: error: bad format for --change-section-address: missing value of offset after '-'
 # ERR-MISSING-VALUE-PLUS: error: bad format for --change-section-address: missing value of offset after '+'
