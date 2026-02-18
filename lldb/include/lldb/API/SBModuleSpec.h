@@ -102,7 +102,6 @@ private:
   friend class SBModule;
   friend class SBPlatform;
   friend class SBTarget;
-  friend class lldb_private::ScriptInterpreter;
 
   SBModuleSpec(const lldb_private::ModuleSpec &module_spec);
 
