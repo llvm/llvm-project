@@ -381,7 +381,7 @@ unsigned MapTableEmitter::emitBinSearchTable(raw_ostream &OS) {
         OutStr += ", ";
         OutStr += ColInstr->getName();
       } else {
-        OutStr += ", (uint32_t)-1U";
+        OutStr += ", INSTRUCTION_LIST_END";
       }
     }
 
