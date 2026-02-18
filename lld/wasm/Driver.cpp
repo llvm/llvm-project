@@ -1347,7 +1347,7 @@ static void determineThreadContextABI(ArrayRef<ObjFile *> files) {
       if (!sym || sym->kind() != Symbol::UndefinedGlobalKind || sym->importModule != "env") {
         // No __stack_pointer import, so this is probably an object file compiled from assembly or
         // some other source that doesn't care about the thread context ABI. As such, we let it pass.
-        break;
+        continue;
       }
     }
 
