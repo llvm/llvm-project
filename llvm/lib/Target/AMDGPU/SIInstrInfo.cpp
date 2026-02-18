@@ -8348,8 +8348,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
           // NewDstReg (e.g., VGPR_32_Lo256 for WMMA scale operands), emit
           // a COPY to a new register with the correct class.
           unsigned OpIdx = UseMI.getOperandNo(&UseMO);
-          const TargetRegisterClass *OpRC =
-              getRegClass(UseMI.getDesc(), OpIdx);
+          const TargetRegisterClass *OpRC = getRegClass(UseMI.getDesc(), OpIdx);
           if (!OpRC)
             continue;
           const TargetRegisterClass *NarrowRC =
