@@ -102,6 +102,7 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          (A == LangAS::Default && B == LangAS::hlsl_device) ||
          (A == LangAS::Default && B == LangAS::hlsl_input) ||
          (A == LangAS::Default && B == LangAS::hlsl_push_constant) ||
+         (A == LangAS::Default && B == LangAS::hlsl_groupshared) ||
          // Conversions from target specific address spaces may be legal
          // depending on the target information.
          Ctx.getTargetInfo().isAddressSpaceSupersetOf(A, B);

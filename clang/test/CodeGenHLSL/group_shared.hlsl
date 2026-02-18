@@ -12,8 +12,20 @@
 
  groupshared float a[10];
 
+ struct S {
+   uint4 x;
+ };
+// CHECK: @b = hidden addrspace(3) global %struct.S zeroinitializer, align 1
+ groupshared S b;
+
+ template<typename T>
+ struct R {
+   T t;
+ };
+// CHECK: @c = hidden addrspace(3) global %struct.R zeroinitializer, align 1
+ groupshared R<int> c;
+
  [numthreads(8,8,1)]
  void main() {
    a[0] = 1;
  }
-
