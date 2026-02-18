@@ -2824,10 +2824,9 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       if (!DRC)
         break;
 
-      // If SubIdx is used, validate that RC with SubIdx can be used for an
+      // If SubIdx is used, verify that RC with SubIdx can be used for an
       // operand of class DRC. This is valid if for every register in RC, the
-      // register obtained by applying SubIdx to it is in DRC, i.e.,
-      // getMatchingSuperRegClass(RC, DRC, SubIdx) returns RC.
+      // register obtained by applying SubIdx to it is in DRC.
       if (SubIdx && TRI->getMatchingSuperRegClass(RC, DRC, SubIdx) != RC) {
         report("Illegal virtual register for instruction", MO, MONum);
         OS << TRI->getRegClassName(RC) << "." << TRI->getSubRegIndexName(SubIdx)
@@ -2835,7 +2834,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
            << " operands.";
       }
 
-      // If no SubIdx is used, just that that RC is a sub-class of DRC.
+      // If no SubIdx is used, verify that RC is a sub-class of DRC.
       if (!SubIdx && !RC->hasSuperClassEq(DRC)) {
         report("Illegal virtual register for instruction", MO, MONum);
         OS << "Expected a " << TRI->getRegClassName(DRC)
