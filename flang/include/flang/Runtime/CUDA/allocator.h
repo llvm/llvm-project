@@ -22,7 +22,7 @@ extern "C" {
 void RTDECL(CUFRegisterAllocator)();
 cudaStream_t RTDECL(CUFGetAssociatedStream)(void *);
 int RTDECL(CUFSetAssociatedStream)(void *, cudaStream_t);
-void RTDECL(CUFSetDefaultStream)(cudaStream_t);
+int RTDECL(CUFSetDefaultStream)(cudaStream_t);
 cudaStream_t RTDECL(CUFGetDefaultStream)();
 }
 
