@@ -271,12 +271,8 @@ void RegisterBankEmitter::emitBaseClassImplementation(
   unsigned NumModeIds = CGH.getNumModeIds();
   OS << "const unsigned " << TargetName << "GenRegisterBankInfo::Sizes[] = {\n";
   for (unsigned M = 0; M < NumModeIds; ++M) {
-    OS << "    // Mode = " << M << " (";
-    if (M == DefaultMode)
-      OS << "Default";
-    else
-      OS << CGH.getMode(M).Name;
-    OS << ")\n";
+    OS << "    // Mode = " << M << " ("
+       << CGH.getModeName(M, /*IncludeDefault=*/true) << ")\n";
     for (const auto &Bank : Banks) {
       const CodeGenRegisterClass &RC = *Bank.getRCWithLargestRegSize(M);
       unsigned Size = RC.RSI.get(M).SpillSize;
