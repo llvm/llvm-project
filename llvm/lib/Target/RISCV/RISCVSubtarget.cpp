@@ -244,9 +244,8 @@ void RISCVSubtarget::mirFileLoaded(MachineFunction &MF) const {
   // bogus values after PEI has eliminated the callframe setup/destroy pseudo
   // instructions, specify explicitly if you need it to be correct.
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (!MFI.isMaxCallFrameSizeComputed()) {
+  if (!MFI.isMaxCallFrameSizeComputed())
     MFI.computeMaxCallFrameSize(MF);
-  }
 }
 
   /// Enable use of alias analysis during code generation (during MI
