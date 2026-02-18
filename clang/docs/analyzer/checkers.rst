@@ -891,7 +891,7 @@ the pointee is ``volatile`` or not.
 .. code-block:: c
 
  void volatile_pointee() {
-   *(volatile int *)0x404 = 1;// no warning: fixed non-null "volatile" pointee
+   *(volatile int *)0x404 = 1; // no warning: fixed non-null "volatile" pointee
  }
 
  void deref_volatile_nullptr() {
