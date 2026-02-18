@@ -229,6 +229,13 @@ def build_variant_suffix: Separate<["--", "-"], "build-variant-suffix">,
   Group<grp_general>;
 def: Joined<["--", "-"], "build-variant-suffix=">, Alias<build_variant_suffix>;
 
+def allowed_debug_map_objects: Separate<["--", "-"], "allowed-debug-map-objects">,
+  MetaVarName<"<path>">,
+  HelpText<"Only process debug map objects listed in <path> (one object path "
+  "per line; exact match; only filters N_OSO entries).">,
+  Group<grp_general>;
+def: Joined<["--", "-"], "allowed-debug-map-objects=">, Alias<allowed_debug_map_objects>;
+
 def dsym_search_path: Separate<["-", "--"], "D">,
   MetaVarName<"<path>">,
   HelpText<"Specify a directory that contain dSYM files to search for.">,

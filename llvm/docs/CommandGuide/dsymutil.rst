@@ -23,6 +23,11 @@ OPTIONS
  Specify the desired type of accelerator table. Valid options are 'Apple',
  'Dwarf', 'Default' and 'None'.
 
+.. option:: --allowed-debug-map-objects <path>
+
+ Only process debug map objects listed in <path> (one object path per line;
+ exact match; only filters N_OSO entries).
+
 .. option:: --arch <arch>
 
  Link DWARF debug information only for specified CPU architecture types.

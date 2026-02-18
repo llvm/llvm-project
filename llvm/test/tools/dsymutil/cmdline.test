@@ -6,6 +6,7 @@ HELP: USAGE: {{.*}}dsymutil{{[^ ]*}} [options] <input files>
 HELP-NOT: -reverse-iterate
 HELP: Dsymutil Options:
 CHECK: -accelerator
+CHECK: -allowed-debug-map-objects <path>
 CHECK: -arch <arch>
 CHECK: -build-variant-suffix <suffix=buildvariant>
 CHECK: -dump-debug-map
@@ -52,3 +53,6 @@ BOGUS: warning: ignoring unknown option: -bogus
 
 RUN: not dsymutil --quiet --verbose 2>&1 | FileCheck --check-prefix=CONFLICT %s
 CONFLICT: error: --quiet and --verbose cannot be specified together
+
+RUN: not dsymutil -y file1 --allowed-debug-map-objects file2 2>&1 | FileCheck --check-prefix=CONFLICT2 %s
+CONFLICT2: error: -y and --allowed-debug-map-objects cannot be specified together
