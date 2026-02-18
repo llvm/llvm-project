@@ -130,6 +130,12 @@ add_fp_unittest(
     libc.src.__support.math.f16subf
     libc.src.__support.math.f16subf128
     libc.src.__support.math.f16subl
+    libc.src.__support.math.fabs
+    libc.src.__support.math.fabsbf16
+    libc.src.__support.math.fabsf
+    libc.src.__support.math.fabsf128
+    libc.src.__support.math.fabsf16
+    libc.src.__support.math.fabsl
     libc.src.__support.math.fadd
     libc.src.__support.math.faddf128
     libc.src.__support.math.faddl
