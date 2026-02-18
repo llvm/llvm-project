@@ -106,11 +106,10 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; FORCED-TF-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FORCED-TF:       vector.body:
 ; FORCED-TF-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE11:%.*]] ]
-; FORCED-TF-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; FORCED-TF-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; FORCED-TF-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
 ; FORCED-TF-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 3
-; FORCED-TF-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[TMP0]]
+; FORCED-TF-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[INDEX]]
 ; FORCED-TF-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP1]]
 ; FORCED-TF-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP2]]
 ; FORCED-TF-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP3]]
@@ -185,11 +184,10 @@ define void @metadata(ptr nocapture readonly %ptr, i32 %size, ptr %pos) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE11:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 3
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[TMP0]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PTR]], i32 [[TMP3]]

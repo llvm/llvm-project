@@ -4943,9 +4943,9 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
   for (VPBasicBlock *VPBB :
        concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!isa<VPReplicateRecipe, VPInstruction>(&R))
+      if (!isa<VPScalarIVStepsRecipe, VPReplicateRecipe, VPInstruction>(&R))
         continue;
-      auto *DefR = cast<VPRecipeWithIRFlags>(&R);
+      auto *DefR = cast<VPSingleDefRecipe>(&R);
       auto UsesVectorOrInsideReplicateRegion = [DefR, LoopRegion](VPUser *U) {
         VPRegionBlock *ParentRegion = cast<VPRecipeBase>(U)->getRegion();
         return !U->usesScalars(DefR) || ParentRegion != LoopRegion;
