@@ -85,8 +85,12 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString("--dependent-lib=amath"));
   }
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles) &&
-      !C.getDriver().IsCLMode() && !C.getDriver().IsFlangMode()) {
+  StringRef msrtlib = Args.getLastArgValue(options::OPT_fms_runtime_lib_EQ, "");
+  bool dllmsrt = msrtlib.equals_insensitive("dll") ||
+                 msrtlib.equals_insensitive("dll_dbg");
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
+                   options::OPT__SLASH_MD, options::OPT__SLASH_MDd) &&
+      !dllmsrt && !C.getDriver().IsCLMode() && !C.getDriver().IsFlangMode()) {
     CmdArgs.push_back("-defaultlib:libcmt");
     CmdArgs.push_back("-defaultlib:oldnames");
   }
