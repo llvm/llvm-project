@@ -12177,6 +12177,33 @@ SDValue DAGCombiner::visitCTPOP(SDNode *N) {
   return SDValue();
 }
 
+static unsigned getBestMinMaxOpc(const TargetLowering &TLI, EVT VT, bool Max) {
+  unsigned IEEE2019NumOpcode = Max ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
+  unsigned IEEE2019Opcode = Max ? ISD::FMAXIMUM : ISD::FMINIMUM;
+  unsigned IEEE2008Opcode = Max ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+  unsigned Opcode = Max ? ISD::FMAXNUM : ISD::FMINNUM;
+
+  if (TLI.isOperationLegal(IEEE2008Opcode, VT))
+    return IEEE2008Opcode;
+  if (TLI.isOperationLegal(IEEE2019Opcode, VT))
+    return IEEE2019Opcode;
+  if (TLI.isOperationLegal(IEEE2019NumOpcode, VT))
+    return IEEE2019NumOpcode;
+  if (TLI.isOperationLegal(Opcode, VT))
+    return Opcode;
+
+  if (TLI.isOperationCustom(IEEE2008Opcode, VT))
+    return IEEE2008Opcode;
+  if (TLI.isOperationCustom(IEEE2019Opcode, VT))
+    return IEEE2019Opcode;
+  if (TLI.isOperationCustom(IEEE2019NumOpcode, VT))
+    return IEEE2019NumOpcode;
+  if (TLI.isOperationCustom(Opcode, VT))
+    return Opcode;
+
+  return ISD::DELETED_NODE;
+}
+
 static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
                                          SDValue RHS, const SDNodeFlags Flags,
                                          const TargetLowering &TLI) {
@@ -12196,6 +12223,8 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
                                        const TargetLowering &TLI,
                                        SelectionDAG &DAG) {
   EVT TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  unsigned Opcode = ISD::DELETED_NODE;
+  bool Max = true;
   switch (CC) {
   case ISD::SETOLT:
   case ISD::SETOLE:
@@ -12203,31 +12232,32 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETLE:
   case ISD::SETULT:
   case ISD::SETULE: {
-    // Since it's known never nan to get here already, either fminnum or
-    // fminnum_ieee are OK. Try the ieee version first, since it's fminnum is
-    // expanded in terms of it.
-    unsigned IEEEOpcode = (LHS == True) ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
-    if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
-      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
-
-    unsigned Opcode = (LHS == True) ? ISD::FMINNUM : ISD::FMAXNUM;
-    if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
-      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
-    return SDValue();
+    Max = LHS != True;
+    Opcode = Max ? ISD::FMAXNUM : ISD::FMINNUM;
   }
+    [[fallthrough]];
   case ISD::SETOGT:
   case ISD::SETOGE:
   case ISD::SETGT:
   case ISD::SETGE:
   case ISD::SETUGT:
   case ISD::SETUGE: {
-    unsigned IEEEOpcode = (LHS == True) ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
-    if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
-      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
-
-    unsigned Opcode = (LHS == True) ? ISD::FMAXNUM : ISD::FMINNUM;
+    if (Opcode == ISD::DELETED_NODE) {
+      // Since it's known never nan to get here already, either fminimumnum,
+      // fminimum, fminnum, or fminnum_ieee are OK. Try Legal first and then
+      // Custom.
+      Max = LHS == True;
+      Opcode = Max ? ISD::FMAXNUM : ISD::FMINNUM;
+    }
+    unsigned MinMaxOpc = getBestMinMaxOpc(TLI, VT, Max);
+    SDNodeFlags Flags;
+    Flags.setNoNaNs(true);
+    Flags.setNoSignedZeros(true);
+    if (MinMaxOpc != ISD::DELETED_NODE)
+      return DAG.getNode(MinMaxOpc, DL, VT, LHS, RHS, Flags);
     if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
-      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
+      return DAG.getNode(Opcode, DL, VT, LHS, RHS, Flags);
+
     return SDValue();
   }
   default:
