@@ -41,6 +41,12 @@ add_fp_unittest(
     libc.src.__support.math.canonicalizel
     libc.src.__support.math.cbrt
     libc.src.__support.math.cbrtf
+    libc.src.__support.math.copysign
+    libc.src.__support.math.copysignbf16
+    libc.src.__support.math.copysignf
+    libc.src.__support.math.copysignf128
+    libc.src.__support.math.copysignf16
+    libc.src.__support.math.copysignl
     libc.src.__support.math.cos
     libc.src.__support.math.cosf
     libc.src.__support.math.cosf16

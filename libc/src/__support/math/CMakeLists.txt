@@ -484,6 +484,57 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.number_pair
 )
+add_header_library(
+  copysign
+  HDRS
+    copysign.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+add_header_library(
+  copysignbf16
+  HDRS
+    copysignbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+add_header_library(
+  copysignf
+  HDRS
+    copysignf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+add_header_library(
+  copysignf128
+  HDRS
+    copysignf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+add_header_library(
+  copysignf16
+  HDRS
+    copysignf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+add_header_library(
+  copysignl
+  HDRS
+    copysignl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
 
 add_header_library(
   cos
