@@ -164,9 +164,7 @@ FileHeader:
 Sections:
   - Name:   .text
     Type:   SHT_PROGBITS
-    Flags:  [ SHF_ALLOC, SHF_EXECINSTR ]
   - Type:   SHT_LLVM_CALL_GRAPH
-    Flags:  [ SHF_LINK_ORDER ]
     Link:   .text
     ContentArray: [
       ## --- foo ---
@@ -362,7 +360,6 @@ Sections:
     Type:   SHT_PROGBITS
   - Name:   .llvm.callgraph
     Type:   SHT_LLVM_CALL_GRAPH
-    Flags:  [ SHF_LINK_ORDER ]
     Link:   .text
     ContentArray: [
       ## --- foo ---
@@ -489,7 +486,6 @@ Sections:
     Type:   SHT_PROGBITS
   - Name:   .llvm.callgraph
     Type:   SHT_LLVM_CALL_GRAPH
-    Flags:  [ SHF_LINK_ORDER ]
     Link:   .text
     ContentArray: [
       ## --- foo+1 (Thumb address) ---
@@ -560,9 +556,7 @@ FileHeader:
 Sections:
   - Name:   .text
     Type:   SHT_PROGBITS
-    Flags:  [ SHF_ALLOC, SHF_EXECINSTR ]
   - Type:   SHT_LLVM_CALL_GRAPH
-    Flags:  [ SHF_LINK_ORDER ]
     Link:   .text
     ContentArray: [
       ## --- foo/alias ---

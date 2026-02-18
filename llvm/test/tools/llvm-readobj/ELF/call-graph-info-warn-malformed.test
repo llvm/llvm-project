@@ -325,9 +325,7 @@ FileHeader:
 Sections:
   - Name:   .text
     Type:   SHT_PROGBITS
-    Flags:  [ SHF_ALLOC, SHF_EXECINSTR ]
   - Type:   SHT_LLVM_CALL_GRAPH
-    Flags:  [ SHF_LINK_ORDER ]
     Link:   .text
     ContentArray: [
       ## --- foo ---
@@ -338,7 +336,6 @@ Sections:
     ]
   ## This following second call graph section will be completely ignored.
   - Type:   SHT_LLVM_CALL_GRAPH
-    Flags:  [ SHF_LINK_ORDER ]
     Link:   .text
     ContentArray: [
       ## --- bar ---
