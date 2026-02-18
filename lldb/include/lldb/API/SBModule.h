@@ -311,7 +311,6 @@ private:
   friend class SBType;
 
   friend class lldb_private::python::SWIGBridge;
-  friend class lldb_private::ScriptInterpreter;
 
   explicit SBModule(const lldb::ModuleSP &module_sp);
 
