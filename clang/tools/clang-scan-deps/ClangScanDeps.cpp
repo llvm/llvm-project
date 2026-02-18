@@ -1142,6 +1142,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.Mode = ScanMode;
   Opts.Format = Format;
   Opts.OptimizeArgs = OptimizeArgs;
+  // Within P1689 format, we don't want all the paths to be absolute path
+  // since it may violate the traditional make style dependencies info.
+  Opts.ReportAbsolutePaths = Format != ScanningOutputFormat::P1689;
   Opts.EagerLoadModules = EagerLoadModules;
   Opts.TraceVFS = Verbose;
   Opts.AsyncScanModules = AsyncScanModules;
