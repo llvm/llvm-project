@@ -7370,8 +7370,10 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
           VPlanPatternMatch::m_Select(VPlanPatternMatch::m_VPValue(),
                                       VPlanPatternMatch::m_VPValue(BackedgeVal),
                                       VPlanPatternMatch::m_VPValue()));
-    EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
+    EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
         vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+    if (!EpiRedHeaderPhi)
+      return;
   }
 
   Value *MainResumeValue;
@@ -9342,12 +9344,22 @@ static void fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, Loop *L,
   // Fix induction resume values from the additional bypass block.
   IRBuilder<> BypassBuilder(BypassBlock, BypassBlock->getFirstInsertionPt());
   for (const auto &[IVPhi, II] : LVL.getInductionVars()) {
-    auto *Inc = cast<PHINode>(IVPhi->getIncomingValueForBlock(PH));
+    Value *IncomingFromPH = IVPhi->getIncomingValueForBlock(PH);
     Value *V = createInductionAdditionalBypassValues(
         IVPhi, II, BypassBuilder, ExpandedSCEVs, MainVectorTripCount,
         LVL.getPrimaryInduction());
-    // TODO: Directly add as extra operand to the VPResumePHI recipe.
-    Inc->setIncomingValueForBlock(BypassBlock, V);
+
+    if (auto *Inc = dyn_cast<PHINode>(IncomingFromPH)) {
+      // TODO: Directly add as extra operand to the VPResumePHI recipe.
+      Inc->setIncomingValueForBlock(BypassBlock, V);
+    } else {
+      // If the incoming value from preheader is not a PHI node (e.g., a
+      // constant in functions with GC statepoint), directly add an incoming
+      // value from BypassBlock to IVPhi. The incoming value from PH remains
+      // unchanged (IncomingFromPH).
+      if (IVPhi->getBasicBlockIndex(BypassBlock) == -1)
+        IVPhi->addIncoming(V, BypassBlock);
+    }
   }
 }
 
