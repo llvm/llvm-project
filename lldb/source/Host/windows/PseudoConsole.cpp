@@ -129,6 +129,7 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
 }
 
 void PseudoConsole::Close() {
+  Sleep(50);
   if (m_conpty_handle != INVALID_HANDLE_VALUE)
     kernel32.ClosePseudoConsole(m_conpty_handle);
   if (m_conpty_input != INVALID_HANDLE_VALUE)
