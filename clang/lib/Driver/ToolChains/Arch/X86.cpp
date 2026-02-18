@@ -332,4 +332,18 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (A->getOption().matches(options::OPT_m3dnow))
       D.Diag(diag::warn_drv_clang_unsupported) << A->getAsString(Args);
   }
+
+  // Handle features corresponding to "-ffixed-X" options
+#define RESERVE_REG(REG)                                                       \
+  if (Args.hasArg(options::OPT_ffixed_##REG))                                  \
+    Features.push_back("+reserve-" #REG);
+  RESERVE_REG(r8)
+  RESERVE_REG(r9)
+  RESERVE_REG(r10)
+  RESERVE_REG(r11)
+  RESERVE_REG(r12)
+  RESERVE_REG(r13)
+  RESERVE_REG(r14)
+  RESERVE_REG(r15)
+#undef RESERVE_REG
 }

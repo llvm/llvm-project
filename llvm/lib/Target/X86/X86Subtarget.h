@@ -17,6 +17,7 @@
 #include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
 #include "X86SelectionDAGInfo.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/TargetParser/Triple.h"
@@ -65,6 +66,9 @@ class X86Subtarget final : public X86GenSubtargetInfo {
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
 #include "X86GenSubtargetInfo.inc"
+  /// ReservedRReg R#i is not available as a general purpose register.
+  BitVector ReservedRReg;
+
   /// The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   Align stackAlignment = Align(4);
@@ -154,6 +158,10 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
+
+  bool isRegisterReservedByUser(Register i) const override {
+    return ReservedRReg[i.id()];
+  }
 
 private:
   /// Initialize the full set of dependencies so we can use an initializer

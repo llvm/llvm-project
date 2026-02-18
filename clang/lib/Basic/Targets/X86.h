@@ -807,6 +807,13 @@ public:
       return true;
     }
 
+    StringRef Reg64 = RegName;
+    if (Reg64.back() == 'd' || Reg64.back() == 'w' || Reg64.back() == 'b') {
+      Reg64 = Reg64.substr(0, Reg64.size() - 1);
+    }
+    if (getTargetOpts().FeatureMap.lookup(("reserve-" + Reg64).str()))
+      return true;
+
     // Check if the register is a 32-bit register the backend can handle.
     return X86TargetInfo::validateGlobalRegisterVariable(RegName, RegSize,
                                                          HasSizeMismatch);
