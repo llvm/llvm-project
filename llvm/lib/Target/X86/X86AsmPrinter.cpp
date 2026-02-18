@@ -1105,7 +1105,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
       Align Alignment(1);
       MCSection *ReadOnlySection = getObjFileLowering().getSectionForConstant(
           getDataLayout(), SectionKind::getReadOnly(),
-          /*C=*/nullptr, Alignment);
+          /*C=*/nullptr, Alignment, /*F=*/nullptr);
       OutStreamer->switchSection(ReadOnlySection);
       OutStreamer->emitLabel(AddrSymbol);
 
