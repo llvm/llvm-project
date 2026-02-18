@@ -272,7 +272,7 @@ void writeExport(raw_ostream &os, const WasmExport &export_) {
 }
 
 void writeGetTLSBase(const Ctx &ctx, raw_ostream &os) {
-  if (ctx.componentModelThreadContext()) {
+  if (ctx.componentModelThreadContext) {
     writeU8(os, WASM_OPCODE_CALL, "call");
     writeUleb128(os, ctx.sym.contextGet1->getFunctionIndex(), "function index");
   } else {
@@ -282,7 +282,7 @@ void writeGetTLSBase(const Ctx &ctx, raw_ostream &os) {
 }
 
 void writeSetTLSBase(const Ctx &ctx, raw_ostream &os) {
-  if (ctx.componentModelThreadContext()) {
+  if (ctx.componentModelThreadContext) {
     writeU8(os, WASM_OPCODE_CALL, "call");
     writeUleb128(os, ctx.sym.contextSet1->getFunctionIndex(), "function index");
   } else {

@@ -282,19 +282,12 @@ struct Ctx {
                     0>
       whyExtractRecords;
 
-  ThreadContextAbi threadContextAbi = ThreadContextAbi::Undetermined;
+  // Whether to use component model thread context intrinsics for the stack pointer and TLS base.
+  bool componentModelThreadContext = false;
 
   Ctx();
   void reset();
-  bool componentModelThreadContext() const {
-    return threadContextAbi == ThreadContextAbi::ComponentModelBuiltins;
-  }
-  bool globalsThreadContext() const {
-    // Use the global thread context ABI by default, even if we can't determine
-    // the ABI from the object files passed.
-    return !componentModelThreadContext();
-  }
-  bool isMultithreaded() const { return componentModelThreadContext() || arg.sharedMemory; }
+  bool isMultithreaded() const { return componentModelThreadContext || arg.sharedMemory; }
 };
 
 extern Ctx ctx;

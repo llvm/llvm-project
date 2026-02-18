@@ -69,7 +69,6 @@ void SymbolTable::addFile(InputFile *file, StringRef symName) {
   auto *f = cast<ObjFile>(file);
   f->parse(false);
   ctx.objectFiles.push_back(f);
-  validateThreadContextAbi(f);
 }
 
 // This function is where all the optimizations of link-time
@@ -92,57 +91,6 @@ void SymbolTable::compileBitcodeFiles() {
     auto *obj = cast<ObjFile>(file);
     obj->parse(true);
     ctx.objectFiles.push_back(obj);
-    validateThreadContextAbi(obj);
-  }
-}
-
-void SymbolTable::validateThreadContextAbi(const ObjFile *obj) {
-  // Check for the component-model-thread-context feature and validate that all
-  // files are consistent in whether they use it or disallow it. 
-
-  // A complication is that a user may attempt to link together object files
-  // compiled with different versions of LLVM, where one does not specifiy
-  // -component-model-thread-context when using the global thread context ABI.
-  // They may also attempt to link object files with the global ABI compiled with
-  // older LLVM versions, but link them with a newer wasm-ld. To ensure the correct behavior
-  // in both of these cases, we treat the presence of an __stack_pointer global as an indication 
-  // that the global thread context ABI is being used, even if the component-model-thread-context 
-  // feature is not disallowed. 
-
-  auto targetFeatures = obj->getWasmObj()->getTargetFeatures();
-  auto threadContextFeature = llvm::find_if(targetFeatures,
-                            [](const auto &f) {
-                              return f.Name == "component-model-thread-context";
-                            });
-
-  bool usesComponentModelThreadContext = threadContextFeature != targetFeatures.end() &&
-                                  threadContextFeature->Prefix == WASM_FEATURE_PREFIX_USED;
-
-  if (threadContextFeature == targetFeatures.end()) {
-    // If the feature is not explicitly used or disallowed, check for the presence of __stack_pointer
-    // to determine if the global thread context ABI is being used.
-    auto sym = find("__stack_pointer");
-    if (!sym || !sym->isDefined()) {
-      // No __stack_pointer global, so this is probably an object file compiled from assembly or
-      // some other source that doesn't care about the thread context ABI. As such, we let it pass.
-      return;
-    }
-  }
-
-  if (usesComponentModelThreadContext) {
-    if (ctx.threadContextAbi == ThreadContextAbi::Undetermined) {
-      ctx.threadContextAbi = ThreadContextAbi::ComponentModelBuiltins;
-    } else if (ctx.threadContextAbi != ThreadContextAbi::ComponentModelBuiltins) {
-      error("thread context ABI mismatch: " + obj->getName() +
-            " uses component-model-thread-context but other files disallow it");
-    }
-  } else {
-    if (ctx.threadContextAbi == ThreadContextAbi::Undetermined) {
-      ctx.threadContextAbi = ThreadContextAbi::Globals;
-    } else if (ctx.threadContextAbi != ThreadContextAbi::Globals) {
-      error("thread context ABI mismatch: " + obj->getName() +
-            " disallows component-model-thread-context but other files use it"); 
-    }
   }
 }
 

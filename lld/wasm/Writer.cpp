@@ -647,7 +647,7 @@ void Writer::populateTargetFeatures() {
               "' feature must be used in order to use shared memory");
   }
 
-  if (tlsUsed && !ctx.componentModelThreadContext()) {
+  if (tlsUsed && !ctx.componentModelThreadContext) {
     for (auto feature : {"atomics", "bulk-memory"})
       if (!allowed.contains(feature))
         error(StringRef("'") + feature +
@@ -1630,7 +1630,7 @@ void Writer::createInitTLSFunction() {
     if (tlsSeg) {
       // When using component model thread context intrinsics, we don't set the TLS base
       //inside __init_tls; this should be done as part of the thread startup stub.
-      if (!ctx.componentModelThreadContext()) {
+      if (!ctx.componentModelThreadContext) {
         writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
         writeUleb128(os, 0, "local index");
 

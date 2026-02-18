@@ -81,6 +81,16 @@ _start:
 #      IMPORT:        Field:           foo
 # IMPORT-NEXT:        Kind:            FUNCTION
 # IMPORT-NEXT:        SigIndex:        0
+# IMPORT-NEXT:      - Module:          env
+# IMPORT-NEXT:        Field:           __memory_base
+# IMPORT-NEXT:        Kind:            GLOBAL
+# IMPORT-NEXT:        GlobalType:      I32
+# IMPORT-NEXT:        GlobalMutable:   false
+# IMPORT-NEXT:      - Module:          env
+# IMPORT-NEXT:        Field:           __table_base
+# IMPORT-NEXT:        Kind:            GLOBAL
+# IMPORT-NEXT:        GlobalType:      I32
+# IMPORT-NEXT:        GlobalMutable:   false
 # IMPORT-NEXT:      - Module:          GOT.func
 # IMPORT-NEXT:        Field:           foo
 # IMPORT-NEXT:        Kind:            GLOBAL

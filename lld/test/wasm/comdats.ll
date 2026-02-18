@@ -35,9 +35,6 @@ entry:
 ; CHECK-NEXT:      - Name:            memory
 ; CHECK-NEXT:        Kind:            MEMORY
 ; CHECK-NEXT:        Index:           0
-; CHECK-NEXT:      - Name:            __stack_pointer
-; CHECK-NEXT:        Kind:            GLOBAL
-; CHECK-NEXT:        Index:           0
 ; CHECK-NEXT:      - Name:            _start
 ; CHECK-NEXT:        Kind:            FUNCTION
 ; CHECK-NEXT:        Index:           1
@@ -53,6 +50,9 @@ entry:
 ; CHECK-NEXT:      - Name:            callComdatFn2
 ; CHECK-NEXT:        Kind:            FUNCTION
 ; CHECK-NEXT:        Index:           5
+; CHECK-NEXT:      - Name:            __stack_pointer
+; CHECK-NEXT:        Kind:            GLOBAL
+; CHECK-NEXT:        Index:           0
 ; CHECK-NEXT:  - Type:            ELEM
 ; CHECK-NEXT:    Segments:
 ; CHECK-NEXT:      - Offset:
