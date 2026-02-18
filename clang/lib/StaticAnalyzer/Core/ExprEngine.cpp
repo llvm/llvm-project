@@ -3114,8 +3114,8 @@ void ExprEngine::processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
   SwitchNodeBuilder Builder(Dst, BC);
   ExplodedNodeSet CheckersOutSet;
 
-  getCheckerManager().runCheckersForBranchCondition(Condition->IgnoreParens(), CheckersOutSet,
-                                                    Pred, *this);
+  getCheckerManager().runCheckersForBranchCondition(
+      Condition->IgnoreParens(), CheckersOutSet, Pred, *this);
 
   for (ExplodedNode *Node : CheckersOutSet) {
     ProgramStateRef State = Node->getState();
@@ -3137,7 +3137,8 @@ void ExprEngine::processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
 
       // Evaluate the LHS of the case value.
       llvm::APSInt V1 = Case->getLHS()->EvaluateKnownConstInt(getContext());
-      assert(V1.getBitWidth() == getContext().getIntWidth(Condition->getType()));
+      assert(V1.getBitWidth() ==
+             getContext().getIntWidth(Condition->getType()));
 
       // Get the RHS of the case, if it exists.
       llvm::APSInt V2;
