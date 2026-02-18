@@ -5036,8 +5036,14 @@ reifyResultShapesImpl(OpTy op, OpBuilder &builder,
                 "applies to only pack or unpack operations");
   int64_t destRank = op.getDestRank();
   reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(destRank));
-  reifiedReturnShapes[0] =
-      tensor::getMixedSizes(builder, op.getLoc(), op.getDest());
+  if (op.hasPureTensorSemantics()) {
+    reifiedReturnShapes[0] =
+        tensor::getMixedSizes(builder, op.getLoc(), op.getDest());
+  }
+  if (op.hasPureBufferSemantics()) {
+    reifiedReturnShapes[0] =
+        memref::getMixedSizes(builder, op.getLoc(), op.getDest());
+  }
   return success();
 }
 
@@ -5435,8 +5441,6 @@ void PackOp::build(OpBuilder &builder, OperationState &state, Value source,
 LogicalResult
 PackOp::reifyResultShapes(OpBuilder &builder,
                           ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
-  if (!hasPureTensorSemantics())
-    return failure();
   return reifyResultShapesImpl(*this, builder, reifiedReturnShapes);
 }
 
