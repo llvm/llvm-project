@@ -19,12 +19,6 @@ namespace llvm {
 class MachineInstr;
 class MachineRegisterInfo;
 
-/// @deprecated Use SPIRVTypeInst instead
-/// SPIRVType is supposed to represent a MachineInstr that defines a SPIRV Type
-/// (e.g. an OpTypeInt intruction). It is misused in several places and we're
-/// getting rid of it.
-using SPIRVType = const MachineInstr;
-
 class SPIRVTypeInst {
   const MachineInstr *MI;
 
