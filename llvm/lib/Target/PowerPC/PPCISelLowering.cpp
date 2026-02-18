@@ -17261,10 +17261,10 @@ static SDValue combineZextSetccWithZero(SDNode *N, SelectionDAG &DAG) {
   SDValue RHS = Src.getOperand(1);
   ISD::CondCode CC = cast<CondCodeSDNode>(Src.getOperand(2))->get();
 
-  if(!isNullConstant(RHS) && !isNullConstant(LHS))
+  if (!isNullConstant(RHS) && !isNullConstant(LHS))
     return SDValue();
 
-  SDValue NonNullConstant = isNullConstant(RHS) ? LHS : RHS ;
+  SDValue NonNullConstant = isNullConstant(RHS) ? LHS : RHS;
 
   auto isZeroOrOne = [=](SDValue &V) {
     if (V.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
