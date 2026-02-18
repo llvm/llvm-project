@@ -228,6 +228,7 @@ LANGOPT(OpenMPExtensions  , 1, 1, NotCompatible, "Enable all Clang extensions fo
 LANGOPT(OpenMPSimd        , 1, 0, NotCompatible, "Use SIMD only OpenMP support.")
 LANGOPT(OpenMPUseTLS      , 1, 0, NotCompatible, "Use TLS for threadprivates or runtime calls")
 LANGOPT(OpenMPIsTargetDevice    , 1, 0, NotCompatible, "Generate code only for OpenMP target device")
+LANGOPT(UseEmissaryPrint  , 1, 0, NotCompatible, "Enables use of certain IO functions with Emissary rather than LIBC")
 LANGOPT(OpenMPCUDAMode    , 1, 0, NotCompatible, "Generate code for OpenMP pragmas in SIMT/SPMD mode")
 LANGOPT(OpenMPIRBuilder   , 1, 0, NotCompatible, "Use the experimental OpenMP-IR-Builder codegen path.")
 LANGOPT(OpenMPCUDANumSMs  , 32, 0, NotCompatible, "Number of SMs for CUDA devices.")

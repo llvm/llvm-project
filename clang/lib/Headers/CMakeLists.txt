@@ -41,6 +41,8 @@ set(core_files
   tgmath.h
   unwind.h
   varargs.h
+  EmissaryIds.h
+  EmissaryMPI.h
   )
 
 set(arm_common_files
