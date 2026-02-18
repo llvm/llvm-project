@@ -21,6 +21,8 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -28,6 +30,7 @@
 #include "llvm/IR/VFABIDemangler.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -99,6 +102,99 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
   Replacement->setCallingConv(TLIVecFunc->getCallingConv());
 }
 
+static bool optimizeCallToVeclib(const TargetLibraryInfo &TargetLibInfo,
+                                 const TargetLowering *TargetLoweringInfo,
+                                 CallInst *CI) {
+  const Function *F = CI->getCalledFunction();
+  if (!F)
+    return false;
+
+  // Don't bother checking any further if the return type is not a vector of
+  // floats or doubles to avoid lookups in the database.
+  Type *RetTy = CI->getType();
+  assert(isa<VectorType>(RetTy) && "Unexpected return type");
+  Type *ScalarRetTy = RetTy->getScalarType();
+  bool IsFloat = ScalarRetTy->isFloatTy();
+  if (!IsFloat && !ScalarRetTy->isDoubleTy())
+    return false;
+
+  SmallVector<const VecDesc *, 2> VecDescs;
+  TargetLibInfo.getVectorDescs(F->getName(), VecDescs);
+  if (VecDescs.empty())
+    return false;
+
+  // TODO: Should there realistically only be one entry?
+  const VecDesc *Found = nullptr;
+  LibFunc LF;
+  for (auto *I : VecDescs) {
+    if (TargetLibInfo.getLibFunc(I->getScalarFnName(), LF) &&
+        (LF == LibFunc_powf || LF == LibFunc_pow)) {
+      Found = I;
+      break;
+    }
+  }
+
+  // TODO: Is it even possible to look have a mapping from a float vector math
+  // function to a double scalar pow function?
+  if (!Found || (LF == LibFunc_powf && !IsFloat) ||
+      (LF == LibFunc_pow && IsFloat))
+    return false;
+
+  // NOTE: We deliberately ignore the mask argument here because the ABI says
+  // we don't care what the contents of the inactive lanes are and we also
+  // know that the FSQRT DAG operation does not touch memory.
+  Value *Op0 = CI->getArgOperand(0);
+  auto *Op1C = dyn_cast<Constant>(CI->getArgOperand(1));
+  if (!Op1C)
+    return false;
+
+  Type *Op1Ty = Op1C->getType();
+  // TODO: Can we simply assert that this is the correct vector type?
+  if (Op1Ty != RetTy || Op0->getType() != RetTy)
+    return false;
+
+  auto *Op1SplatVal = Op1C->getSplatValue();
+  if (!Op1SplatVal)
+    return false;
+
+  ConstantFP *ExpC = cast<ConstantFP>(Op1SplatVal);
+  bool ExponentIs025 = ExpC->getValueAPF().isExactlyValue(0.25);
+  bool ExponentIs075 = ExpC->getValueAPF().isExactlyValue(0.75);
+  if (!ExponentIs025 && !ExponentIs075)
+    return false;
+
+  // See DAGCombiner::visitFPOW for the equivalent DAG implementation.
+  if ((!ExponentIs025 || CI->hasNoSignedZeros()) && CI->hasNoInfs() &&
+      CI->hasApproxFunc()) {
+    EVT VT = TargetLoweringInfo->getValueType(CI->getDataLayout(), RetTy);
+    if (TargetLoweringInfo->isOperationLegalOrCustom(ISD::FSQRT, VT)) {
+      // Generate successive calls to sqrt. These are safe to speculatively
+      // execute so I think we can just drop the mask and execute all lanes.
+      // TODO: Do we need to provide an identity value for the inactive lanes?
+      IRBuilder<> Builder(CI);
+      Value *Sqrt = Builder.CreateUnaryIntrinsic(Intrinsic::sqrt,
+                                                 CI->getArgOperand(0), CI);
+      Value *SqrtSqrt = Builder.CreateUnaryIntrinsic(Intrinsic::sqrt, Sqrt, CI);
+      if (ExponentIs025) {
+        CI->replaceAllUsesWith(SqrtSqrt);
+        LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": Optimized call to `"
+                          << CI->getCalledFunction()->getName()
+                          << "` with llvm.sqrt(llvm.sqrt(x)).\n");
+      } else {
+        Value *Res = Builder.CreateFMulFMF(SqrtSqrt, Sqrt, CI);
+        CI->replaceAllUsesWith(Res);
+        LLVM_DEBUG(
+            dbgs() << DEBUG_TYPE << ": Optimized call to `"
+                   << CI->getCalledFunction()->getName()
+                   << "` with llvm.sqrt(x) * llvm.sqrt(llvm.sqrt(x)).\n");
+      }
+      ++NumCallsReplaced;
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Returns true when successfully replaced \p II, which is a call to a
 /// vectorized intrinsic, with a suitable function taking vector arguments,
 /// based on available mappings in the \p TLI.
@@ -148,6 +244,8 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
 
   // Try to reconstruct the name for the scalar version of the instruction,
   // using scalar argument types.
+  // TODO: We can also optimise the vector llvm.pow intrinsic in the same way
+  // as optimizeCallToVeclib if there is a need for it.
   std::string ScalarName =
       Intrinsic::isOverloaded(IID)
           ? Intrinsic::getName(IID, OloadTys, II->getModule())
@@ -208,7 +306,8 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   return true;
 }
 
-static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
+static bool runImpl(const TargetLibraryInfo &TLI, const TargetMachine *TM,
+                    Function &F) {
   SmallVector<Instruction *> ReplacedCalls;
   for (auto &I : instructions(F)) {
     // Process only intrinsic calls that return void or a vector.
@@ -219,6 +318,13 @@ static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
         continue;
 
       if (replaceWithCallToVeclib(TLI, II))
+        ReplacedCalls.push_back(&I);
+    } else if (auto *CI = dyn_cast<CallInst>(&I)) {
+      if (!CI->getType()->isVectorTy())
+        continue;
+
+      if (optimizeCallToVeclib(
+              TLI, TM->getSubtargetImpl(F)->getTargetLowering(), CI))
         ReplacedCalls.push_back(&I);
     }
   }
@@ -234,7 +340,7 @@ static bool runImpl(const TargetLibraryInfo &TLI, Function &F) {
 PreservedAnalyses ReplaceWithVeclib::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   const TargetLibraryInfo &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  auto Changed = runImpl(TLI, F);
+  auto Changed = runImpl(TLI, TM, F);
   if (Changed) {
     LLVM_DEBUG(dbgs() << "Intrinsic calls replaced with vector libraries: "
                       << NumCallsReplaced << "\n");
@@ -259,13 +365,17 @@ PreservedAnalyses ReplaceWithVeclib::run(Function &F,
 bool ReplaceWithVeclibLegacy::runOnFunction(Function &F) {
   const TargetLibraryInfo &TLI =
       getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  return runImpl(TLI, F);
+  const TargetMachine &TM =
+      getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  return runImpl(TLI, &TM, F);
 }
 
 void ReplaceWithVeclibLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
+  AU.addRequired<TargetPassConfig>();
   AU.addPreserved<TargetLibraryInfoWrapperPass>();
+  AU.addPreserved<TargetPassConfig>();
   AU.addPreserved<ScalarEvolutionWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
   AU.addPreserved<OptimizationRemarkEmitterWrapperPass>();

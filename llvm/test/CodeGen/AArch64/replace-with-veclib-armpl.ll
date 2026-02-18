@@ -777,8 +777,9 @@ define <vscale x 4 x float> @llvm_tanh_vscale_f32(<vscale x 4 x float> %in) #0 {
 define <vscale x 4 x float> @armpl_svpow_f32_0p25(<vscale x 4 x float> %in) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @armpl_svpow_f32_0p25
 ; CHECK-SAME: (<vscale x 4 x float> [[IN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @armpl_svpow_f32_x(<vscale x 4 x float> [[IN]], <vscale x 4 x float> splat (float 2.500000e-01), <vscale x 4 x i1> splat (i1 true))
-; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[IN]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[TMP1]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP2]]
 ;
   %1 = tail call fast <vscale x 4 x float> @armpl_svpow_f32_x(<vscale x 4 x float> %in, <vscale x 4 x float> splat (float 2.500000e-01), <vscale x 4 x i1> splat (i1 true))
   ret <vscale x 4 x float> %1
@@ -797,8 +798,9 @@ define <vscale x 4 x float> @armpl_svpow_f32_0p25_no_sve(<vscale x 4 x float> %i
 define <4 x float> @armpl_vpow_f32_0p25(<4 x float> %in) #0 {
 ; CHECK-LABEL: define <4 x float> @armpl_vpow_f32_0p25
 ; CHECK-SAME: (<4 x float> [[IN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast aarch64_vector_pcs <4 x float> @armpl_vpowq_f32(<4 x float> [[IN]], <4 x float> splat (float 2.500000e-01))
-; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[IN]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP1]])
+; CHECK-NEXT:    ret <4 x float> [[TMP2]]
 ;
   %1 = tail call fast aarch64_vector_pcs <4 x float> @armpl_vpowq_f32(<4 x float> %in, <4 x float> splat (float 2.500000e-01))
   ret <4 x float> %1
@@ -807,8 +809,9 @@ define <4 x float> @armpl_vpow_f32_0p25(<4 x float> %in) #0 {
 define <vscale x 2 x double> @armpl_svpow_f64_0p25(<vscale x 2 x double> %in) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @armpl_svpow_f64_0p25
 ; CHECK-SAME: (<vscale x 2 x double> [[IN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @armpl_svpow_f64_x(<vscale x 2 x double> [[IN]], <vscale x 2 x double> splat (double 2.500000e-01), <vscale x 2 x i1> splat (i1 true))
-; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[IN]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[TMP1]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP2]]
 ;
   %1 = tail call fast <vscale x 2 x double> @armpl_svpow_f64_x(<vscale x 2 x double> %in, <vscale x 2 x double> splat (double 2.500000e-01), <vscale x 2 x i1> splat (i1 true))
   ret <vscale x 2 x double> %1
@@ -817,8 +820,9 @@ define <vscale x 2 x double> @armpl_svpow_f64_0p25(<vscale x 2 x double> %in) #0
 define <2 x double> @armpl_vpow_f64_0p25(<2 x double> %in) #0 {
 ; CHECK-LABEL: define <2 x double> @armpl_vpow_f64_0p25
 ; CHECK-SAME: (<2 x double> [[IN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast aarch64_vector_pcs <2 x double> @armpl_vpowq_f64(<2 x double> [[IN]], <2 x double> splat (double 2.500000e-01))
-; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[IN]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP1]])
+; CHECK-NEXT:    ret <2 x double> [[TMP2]]
 ;
   %1 = tail call fast aarch64_vector_pcs <2 x double> @armpl_vpowq_f64(<2 x double> %in, <2 x double> splat (double 2.500000e-01))
   ret <2 x double> %1
@@ -829,8 +833,10 @@ define <2 x double> @armpl_vpow_f64_0p25(<2 x double> %in) #0 {
 define <vscale x 4 x float> @armpl_svpow_f32_0p75(<vscale x 4 x float> %in) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @armpl_svpow_f32_0p75
 ; CHECK-SAME: (<vscale x 4 x float> [[IN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @armpl_svpow_f32_x(<vscale x 4 x float> [[IN]], <vscale x 4 x float> splat (float 7.500000e-01), <vscale x 4 x i1> splat (i1 true))
-; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[IN]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <vscale x 4 x float> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP3]]
 ;
   %1 = tail call fast <vscale x 4 x float> @armpl_svpow_f32_x(<vscale x 4 x float> %in, <vscale x 4 x float> splat (float 7.500000e-01), <vscale x 4 x i1> splat (i1 true))
   ret <vscale x 4 x float> %1
@@ -839,8 +845,10 @@ define <vscale x 4 x float> @armpl_svpow_f32_0p75(<vscale x 4 x float> %in) #0 {
 define <4 x float> @armpl_vpow_f32_0p75(<4 x float> %in) #0 {
 ; CHECK-LABEL: define <4 x float> @armpl_vpow_f32_0p75
 ; CHECK-SAME: (<4 x float> [[IN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast aarch64_vector_pcs <4 x float> @armpl_vpowq_f32(<4 x float> [[IN]], <4 x float> splat (float 7.500000e-01))
-; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[IN]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret <4 x float> [[TMP3]]
 ;
   %1 = tail call fast aarch64_vector_pcs <4 x float> @armpl_vpowq_f32(<4 x float> %in, <4 x float> splat (float 7.500000e-01))
   ret <4 x float> %1
@@ -849,8 +857,10 @@ define <4 x float> @armpl_vpow_f32_0p75(<4 x float> %in) #0 {
 define <vscale x 2 x double> @armpl_svpow_f64_0p75(<vscale x 2 x double> %in) #0 {
 ; CHECK-LABEL: define <vscale x 2 x double> @armpl_svpow_f64_0p75
 ; CHECK-SAME: (<vscale x 2 x double> [[IN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @armpl_svpow_f64_x(<vscale x 2 x double> [[IN]], <vscale x 2 x double> splat (double 7.500000e-01), <vscale x 2 x i1> splat (i1 true))
-; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[IN]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <vscale x 2 x double> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP3]]
 ;
   %1 = tail call fast <vscale x 2 x double> @armpl_svpow_f64_x(<vscale x 2 x double> %in, <vscale x 2 x double> splat (double 7.500000e-01), <vscale x 2 x i1> splat (i1 true))
   ret <vscale x 2 x double> %1
@@ -859,8 +869,10 @@ define <vscale x 2 x double> @armpl_svpow_f64_0p75(<vscale x 2 x double> %in) #0
 define <2 x double> @armpl_vpow_f64_0p75(<2 x double> %in) #0 {
 ; CHECK-LABEL: define <2 x double> @armpl_vpow_f64_0p75
 ; CHECK-SAME: (<2 x double> [[IN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast aarch64_vector_pcs <2 x double> @armpl_vpowq_f64(<2 x double> [[IN]], <2 x double> splat (double 7.500000e-01))
-; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[IN]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x double> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[TMP3]]
 ;
   %1 = tail call fast aarch64_vector_pcs <2 x double> @armpl_vpowq_f64(<2 x double> %in, <2 x double> splat (double 7.500000e-01))
   ret <2 x double> %1

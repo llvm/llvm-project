@@ -532,7 +532,8 @@ define <4 x float> @llvm_trunc_f32(<4 x float> %in) {
 
 define <vscale x 4 x float> @armpl_svpow_f32_0p25(<vscale x 4 x float> %in) #0 {
 ; CHECK-LABEL: @armpl_svpow_f32_0p25(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float> [[IN:%.*]], <vscale x 4 x float> splat (float 2.500000e-01), <vscale x 4 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float> %in, <vscale x 4 x float> splat (float 2.500000e-01), <vscale x 4 x i1> splat (i1 true))
@@ -541,7 +542,8 @@ define <vscale x 4 x float> @armpl_svpow_f32_0p25(<vscale x 4 x float> %in) #0 {
 
 define <4 x float> @armpl_vpow_f32_0p25(<4 x float> %in) #0 {
 ; CHECK-LABEL: @armpl_vpow_f32_0p25(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast aarch64_vector_pcs <4 x float> @_ZGVnN4vv_powf(<4 x float> [[IN:%.*]], <4 x float> splat (float 2.500000e-01))
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = tail call fast aarch64_vector_pcs <4 x float> @_ZGVnN4vv_powf(<4 x float> %in, <4 x float> splat (float 2.500000e-01))
@@ -550,7 +552,8 @@ define <4 x float> @armpl_vpow_f32_0p25(<4 x float> %in) #0 {
 
 define <vscale x 2 x double> @armpl_svpow_f64_0p25(<vscale x 2 x double> %in) #0 {
 ; CHECK-LABEL: @armpl_svpow_f64_0p25(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double> [[IN:%.*]], <vscale x 2 x double> splat (double 2.500000e-01), <vscale x 2 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[TMP2]])
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double> %in, <vscale x 2 x double> splat (double 2.500000e-01), <vscale x 2 x i1> splat (i1 true))
@@ -559,7 +562,8 @@ define <vscale x 2 x double> @armpl_svpow_f64_0p25(<vscale x 2 x double> %in) #0
 
 define <2 x double> @armpl_vpow_f64_0p25(<2 x double> %in) #0 {
 ; CHECK-LABEL: @armpl_vpow_f64_0p25(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double> [[IN:%.*]], <2 x double> splat (double 2.500000e-01))
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP2]])
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = tail call fast aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double> %in, <2 x double> splat (double 2.500000e-01))
@@ -570,7 +574,9 @@ define <2 x double> @armpl_vpow_f64_0p25(<2 x double> %in) #0 {
 
 define <vscale x 4 x float> @armpl_svpow_f32_0p75(<vscale x 4 x float> %in) #0 {
 ; CHECK-LABEL: @armpl_svpow_f32_0p75(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float> [[IN:%.*]], <vscale x 4 x float> splat (float 7.500000e-01), <vscale x 4 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <vscale x 4 x float> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float> %in, <vscale x 4 x float> splat (float 7.500000e-01), <vscale x 4 x i1> splat (i1 true))
@@ -579,7 +585,9 @@ define <vscale x 4 x float> @armpl_svpow_f32_0p75(<vscale x 4 x float> %in) #0 {
 
 define <4 x float> @armpl_vpow_f32_0p75(<4 x float> %in) #0 {
 ; CHECK-LABEL: @armpl_vpow_f32_0p75(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast aarch64_vector_pcs <4 x float> @_ZGVnN4vv_powf(<4 x float> [[IN:%.*]], <4 x float> splat (float 7.500000e-01))
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = tail call fast aarch64_vector_pcs <4 x float> @_ZGVnN4vv_powf(<4 x float> %in, <4 x float> splat (float 7.500000e-01))
@@ -588,7 +596,9 @@ define <4 x float> @armpl_vpow_f32_0p75(<4 x float> %in) #0 {
 
 define <vscale x 2 x double> @armpl_svpow_f64_0p75(<vscale x 2 x double> %in) #0 {
 ; CHECK-LABEL: @armpl_svpow_f64_0p75(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double> [[IN:%.*]], <vscale x 2 x double> splat (double 7.500000e-01), <vscale x 2 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[TMP3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <vscale x 2 x double> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
 ;
   %1 = tail call fast <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double> %in, <vscale x 2 x double> splat (double 7.500000e-01), <vscale x 2 x i1> splat (i1 true))
@@ -597,7 +607,9 @@ define <vscale x 2 x double> @armpl_svpow_f64_0p75(<vscale x 2 x double> %in) #0
 
 define <2 x double> @armpl_vpow_f64_0p75(<2 x double> %in) #0 {
 ; CHECK-LABEL: @armpl_vpow_f64_0p75(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double> [[IN:%.*]], <2 x double> splat (double 7.500000e-01))
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <2 x double> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %1 = tail call fast aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double> %in, <2 x double> splat (double 7.500000e-01))
