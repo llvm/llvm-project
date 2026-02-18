@@ -1052,13 +1052,13 @@ struct DOTGraphTraits<const CompilationGraph *> : DefaultDOTGraphTraits {
 
   static std::string getNodeIdentifier(NodeRef N, GraphRef) {
     return llvm::TypeSwitch<NodeRef, std::string>(N)
-        .Case([](const ClangModuleJobNode *ClangModNode) {
-          const auto &ID = ClangModNode->MD.ID;
+        .Case([](const ClangModuleJobNode *ClangModuleNode) {
+          const auto &ID = ClangModuleNode->MD.ID;
           return llvm::formatv("{0}-{1}", ID.ModuleName, ID.ContextHash).str();
         })
-        .Case([](const NamedModuleJobNode *NamedModNode) {
-          return llvm::formatv("{0}-{1}", NamedModNode->InputDeps.ModuleName,
-                               getTriple(*NamedModNode->Job))
+        .Case([](const NamedModuleJobNode *NamedModuleNode) {
+          return llvm::formatv("{0}-{1}", NamedModuleNode->InputDeps.ModuleName,
+                               getTriple(*NamedModuleNode->Job))
               .str();
         })
         .Case([](const NonModuleTUJobNode *NonModTUNode) {
@@ -1072,20 +1072,20 @@ struct DOTGraphTraits<const CompilationGraph *> : DefaultDOTGraphTraits {
 
   static std::string getNodeLabel(NodeRef N, GraphRef) {
     return llvm::TypeSwitch<NodeRef, std::string>(N)
-        .Case([](const ClangModuleJobNode *ClangModNode) {
-          const auto &ID = ClangModNode->MD.ID;
+        .Case([](const ClangModuleJobNode *ClangModuleNode) {
+          const auto &ID = ClangModuleNode->MD.ID;
           return llvm::formatv("Module type: Clang module \\| Module name: {0} "
                                "\\| Hash: {1}",
                                ID.ModuleName, ID.ContextHash)
               .str();
         })
-        .Case([](const NamedModuleJobNode *NamedModNode) {
-          const auto &Job = *NamedModNode->Job;
+        .Case([](const NamedModuleJobNode *NamedModuleNode) {
+          const auto &Job = *NamedModuleNode->Job;
           return llvm::formatv(
                      "Filename: {0} \\| Module type: Named module \\| "
                      "Module name: {1} \\| Triple: {2}",
                      getFirstInputFilename(Job),
-                     NamedModNode->InputDeps.ModuleName, getTriple(Job))
+                     NamedModuleNode->InputDeps.ModuleName, getTriple(Job))
               .str();
         })
         .Case([](const NonModuleTUJobNode *NonModTUNode) {
@@ -1326,15 +1326,16 @@ static bool createModuleDependencyEdges(CompilationGraph &Graph,
   bool HasDuplicateModuleError = false;
   for (auto &Node : Graph) {
     llvm::TypeSwitch<CGNode *>(Node)
-        .Case([&](ClangModuleJobNode *ClangModNode) {
+        .Case([&](ClangModuleJobNode *ClangModuleNode) {
           const bool Inserted =
-              ClangModuleNodeByID.try_emplace(ClangModNode->MD.ID, Node).second;
+              ClangModuleNodeByID.try_emplace(ClangModuleNode->MD.ID, Node)
+                  .second;
           assert(Inserted &&
                  "Multiple Clang module nodes with the same module ID!");
         })
-        .Case([&](NamedModuleJobNode *NamedModNode) {
-          StringRef ModuleName = NamedModNode->InputDeps.ModuleName;
-          ModuleNameAndTriple ID{ModuleName, getTriple(*NamedModNode->Job)};
+        .Case([&](NamedModuleJobNode *NamedModuleNode) {
+          StringRef ModuleName = NamedModuleNode->InputDeps.ModuleName;
+          ModuleNameAndTriple ID{ModuleName, getTriple(*NamedModuleNode->Job)};
           const auto [It, Inserted] = NamedModuleNodeByID.try_emplace(ID, Node);
           if (!Inserted) {
             // For scan input jobs, their first input is always a filename and
@@ -1344,7 +1345,7 @@ static bool createModuleDependencyEdges(CompilationGraph &Graph,
             // canonical absolute path.
             StringRef PrevFile =
                 getFirstInputFilename(*cast<JobNode>(It->second)->Job);
-            StringRef CurFile = getFirstInputFilename(*NamedModNode->Job);
+            StringRef CurFile = getFirstInputFilename(*NamedModuleNode->Job);
             Diags.Report(diag::err_modules_driver_named_module_redefinition)
                 << ModuleName << PrevFile << CurFile;
             HasDuplicateModuleError = true;
@@ -1357,9 +1358,9 @@ static bool createModuleDependencyEdges(CompilationGraph &Graph,
   // Create edges from the module nodes to their importers.
   for (auto &Node : Graph) {
     llvm::TypeSwitch<CGNode *>(Node)
-        .Case([&](ClangModuleJobNode *ClangModNode) {
-          connectEdgesViaLookup(Graph, *ClangModNode, ClangModuleNodeByID,
-                                ClangModNode->MD.ClangModuleDeps,
+        .Case([&](ClangModuleJobNode *ClangModuleNode) {
+          connectEdgesViaLookup(Graph, *ClangModuleNode, ClangModuleNodeByID,
+                                ClangModuleNode->MD.ClangModuleDeps,
                                 CGEdge::EdgeKind::ModuleDependency);
         })
         .Case([&](ScannedJobNode *NodeWithInputDeps) {
