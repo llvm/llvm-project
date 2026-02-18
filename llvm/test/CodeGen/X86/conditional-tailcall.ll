@@ -596,3 +596,104 @@ cleanup.thread:                                   ; preds = %cleanup.thread.loop
   %6 = phi i1 [ %cmp37, %5 ], [ %call34, %if.else28 ], [ false, %cleanup.thread.loopexit ]
   ret i1 %6
 }
+
+define void @true_likely(i1 noundef zeroext %0) {
+; CHECK32-LABEL: true_likely:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    cmpb $0, {{[0-9]+}}(%esp) # encoding: [0x80,0x7c,0x24,0x04,0x00]
+; CHECK32-NEXT:    je func_false # TAILCALL
+; CHECK32-NEXT:    # encoding: [0x74,A]
+; CHECK32-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+; CHECK32-NEXT:  # %bb.1:
+; CHECK32-NEXT:    jmp func_true # TAILCALL
+; CHECK32-NEXT:    # encoding: [0xeb,A]
+; CHECK32-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+;
+; CHECK64-LABEL: true_likely:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
+; CHECK64-NEXT:    je func_false # TAILCALL
+; CHECK64-NEXT:    # encoding: [0x74,A]
+; CHECK64-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+; CHECK64-NEXT:  # %bb.1:
+; CHECK64-NEXT:    jmp func_true # TAILCALL
+; CHECK64-NEXT:    # encoding: [0xeb,A]
+; CHECK64-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+;
+; WIN64-LABEL: true_likely:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    testb %cl, %cl # encoding: [0x84,0xc9]
+; WIN64-NEXT:    je func_false # TAILCALL
+; WIN64-NEXT:    # encoding: [0x74,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+; WIN64-NEXT:  # %bb.1:
+; WIN64-NEXT:    jmp func_true # TAILCALL
+; WIN64-NEXT:    # encoding: [0xeb,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+  br i1 %0, label %2, label %3, !prof !6
+
+2:
+  tail call void @func_true()
+  br label %4
+
+3:
+  tail call void @func_false()
+  br label %4
+
+4:
+  ret void
+}
+
+define void @false_likely(i1 noundef zeroext %0) {
+; CHECK32-LABEL: false_likely:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    cmpb $0, {{[0-9]+}}(%esp) # encoding: [0x80,0x7c,0x24,0x04,0x00]
+; CHECK32-NEXT:    jne func_true # TAILCALL
+; CHECK32-NEXT:    # encoding: [0x75,A]
+; CHECK32-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+; CHECK32-NEXT:  # %bb.1:
+; CHECK32-NEXT:    jmp func_false # TAILCALL
+; CHECK32-NEXT:    # encoding: [0xeb,A]
+; CHECK32-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+;
+; CHECK64-LABEL: false_likely:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    testl %edi, %edi # encoding: [0x85,0xff]
+; CHECK64-NEXT:    jne func_true # TAILCALL
+; CHECK64-NEXT:    # encoding: [0x75,A]
+; CHECK64-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+; CHECK64-NEXT:  # %bb.1:
+; CHECK64-NEXT:    jmp func_false # TAILCALL
+; CHECK64-NEXT:    # encoding: [0xeb,A]
+; CHECK64-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+;
+; WIN64-LABEL: false_likely:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    testb %cl, %cl # encoding: [0x84,0xc9]
+; WIN64-NEXT:    jne func_true # TAILCALL
+; WIN64-NEXT:    # encoding: [0x75,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: func_true, kind: FK_PCRel_1
+; WIN64-NEXT:  # %bb.1:
+; WIN64-NEXT:    jmp func_false # TAILCALL
+; WIN64-NEXT:    # encoding: [0xeb,A]
+; WIN64-NEXT:    # fixup A - offset: 1, value: func_false, kind: FK_PCRel_1
+  br i1 %0, label %2, label %3, !prof !7
+
+2:
+  tail call void @func_true()
+  br label %4
+
+3:
+  tail call void @func_false()
+  br label %4
+
+4:
+  ret void
+}
+
+!6 = !{!"branch_weights", !"expected", i32 2000, i32 1}
+!7 = !{!"branch_weights", !"expected", i32 1, i32 2000}
+
+
+declare dso_local void @func_true()
+declare dso_local void @func_false()
