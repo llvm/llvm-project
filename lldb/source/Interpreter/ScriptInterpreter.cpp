@@ -191,6 +191,12 @@ lldb::ModuleSP ScriptInterpreter::GetOpaqueTypeFromSBModule(
   return module.m_opaque_sp;
 }
 
+std::unique_ptr<lldb::SBModuleSpec>
+ScriptInterpreter::MakeSBModuleSpec(const ModuleSpec &module_spec) const {
+  return std::unique_ptr<lldb::SBModuleSpec>(
+      new lldb::SBModuleSpec(module_spec));
+}
+
 lldb::ScriptLanguage
 ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
   if (language.equals_insensitive(LanguageToString(eScriptLanguageNone)))
