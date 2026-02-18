@@ -139,9 +139,13 @@ TEST(AnsiTerminal, OutputWordWrappedLines) {
   TestLines("abc", 0, 4, "abc\n");
   TestLines("abc", 1, 5, " abc\n");
   TestLines("abc", 2, 5, "  abc\n");
+  // If the indent uses up all the columns, print the word on the same line
+  // anyway. This prevents us outputting indent only lines forever.
+  TestLines("abcdefghij", 4, 2, "    abcdefghij\n");
 
   // Leading whitespace is ignored because we're going to indent using the
   // stream.
+  TestLines("       ", 3, 10, "");
   TestLines("  abc", 0, 4, "abc\n");
   TestLines("        abc", 2, 6, "  abc\n");
 
@@ -168,6 +172,25 @@ TEST(AnsiTerminal, OutputWordWrappedLines) {
   TestLines(fox_str_ansi, 0, 30, "\x1B[4mT\x1B[0mhe quick brown fox.\n");
   TestLines(fox_str_ansi, 5, 30, "     \x1B[4mT\x1B[0mhe quick brown fox.\n");
   TestLines(fox_str_ansi, 0, 15, "\x1B[4mT\x1B[0mhe quick\nbrown fox.\n");
+
+  // This should be the same when it applies to >1 character.
+  const char *fox_str_ansi_2 = "\x1B[4mTh\x1B[0me quick brown fox.";
+  TestLines(fox_str_ansi_2, 0, 30, "\x1B[4mTh\x1B[0me quick brown fox.\n");
+  TestLines(fox_str_ansi_2, 5, 30, "     \x1B[4mTh\x1B[0me quick brown fox.\n");
+  TestLines(fox_str_ansi_2, 0, 15, "\x1B[4mTh\x1B[0me quick\nbrown fox.\n");
+
+  // Or when the ANSI code is at the end of the string.
+  const char *fox_str_ansi_3 = "The quick brown fox\x1B[4m.\x1B[0m";
+  TestLines(fox_str_ansi_3, 0, 30, "The quick brown fox\x1B[4m.\x1B[0m\n");
+  TestLines(fox_str_ansi_3, 5, 30, "     The quick brown fox\x1B[4m.\x1B[0m\n");
+  // FIXME: Missing the closing ANSI code.
+  TestLines(fox_str_ansi_3, 0, 15, "The quick\nbrown fox\x1B[4m.\n");
+
+  // FIXME: ANSI codes applied to > 1 word end up applying to all those words
+  // and the indent if those words are split up. We should use cursor
+  // positioning to do the indentation instead.
+  // FIXME: Closing ANSI code is missing.
+  TestLines("\x1B[4mabc def\x1B[0m ghi", 2, 6, "  \x1B[4mabc\n  def\n  ghi\n");
 
   const std::string fox_str_emoji = "🦊 The quick brown fox. 🦊";
   TestLines(fox_str_emoji, 0, 30, "🦊 The quick brown fox. 🦊\n");
