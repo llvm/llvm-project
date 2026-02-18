@@ -394,6 +394,7 @@ clang-format
 
 libclang
 --------
+- Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 
 Code Completion
 ---------------
