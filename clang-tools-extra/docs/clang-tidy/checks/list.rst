@@ -302,6 +302,7 @@ Clang-Tidy Checks
    :doc:`modernize-make-unique <modernize/make-unique>`, "Yes"
    :doc:`modernize-min-max-use-initializer-list <modernize/min-max-use-initializer-list>`, "Yes"
    :doc:`modernize-pass-by-value <modernize/pass-by-value>`, "Yes"
+   :doc:`modernize-pointer-to-span <modernize/pointer-to-span>`,
    :doc:`modernize-raw-string-literal <modernize/raw-string-literal>`, "Yes"
    :doc:`modernize-redundant-void-arg <modernize/redundant-void-arg>`, "Yes"
    :doc:`modernize-replace-auto-ptr <modernize/replace-auto-ptr>`, "Yes"
