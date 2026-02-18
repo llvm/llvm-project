@@ -1912,7 +1912,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   PredictableSelectIsExpensive = Subtarget.predictableSelectIsExpensive();
 
   MaxStoresPerMemsetOptSize = Subtarget.getMaxStoresPerMemset(/*OptSize=*/true);
-  MaxStoresPerMemset = Subtarget.getMaxStoresPerMemset(/*OptSize=*/false);
+  MaxStoresPerMemset = Subtarget.hasVInstructions()
+                           ? (Subtarget.getRealMinVLen() / 8 *
+                              Subtarget.getMaxLMULForFixedLengthVectors() /
+                              (Subtarget.is64Bit() ? 8 : 4))
+                           : Subtarget.getMaxStoresPerMemset(/*OptSize=*/false);
 
   MaxGluedStoresPerMemcpy = Subtarget.getMaxGluedStoresPerMemcpy();
   MaxStoresPerMemcpyOptSize = Subtarget.getMaxStoresPerMemcpy(/*OptSize=*/true);
@@ -25988,8 +25992,24 @@ EVT RISCVTargetLowering::getOptimalMemOpType(
   // a large scalar constant and instead use vmv.v.x/i to do the
   // broadcast.  For everything else, prefer ELenVT to minimize VL and thus
   // maximize the chance we can encode the size in the vsetvli.
-  MVT ELenVT = MVT::getIntegerVT(Subtarget.getELen());
-  MVT PreferredVT = (Op.isMemset() && !Op.isZeroMemset()) ? MVT::i8 : ELenVT;
+  // If Op size is greater than LMUL8 memory operation, we don't support inline
+  // of memset. Return EVT based on Op size to avoid redundant splitting and
+  // merging operations if Op size is no greater than LMUL8 memory operation.
+
+  MVT PreferredVT = MVT::getIntegerVT(Subtarget.getELen());
+
+  if (Op.isMemset()) {
+    if (Op.size() >
+        Subtarget.getMaxLMULForFixedLengthVectors() * MinVLenInBytes)
+      return MVT::Other;
+    PreferredVT = MVT::i8;
+    if (Op.size() % 4 == 0)
+      PreferredVT = MVT::i32;
+    if (Op.size() % 8 == 0 && isTypeLegal(MVT::i64))
+      PreferredVT = MVT::i64;
+    if (!Op.isZeroMemset())
+      PreferredVT = MVT::i8;
+  }
 
   // Do we have sufficient alignment for our preferred VT?  If not, revert
   // to largest size allowed by our alignment criteria.
@@ -26001,6 +26021,11 @@ EVT RISCVTargetLowering::getOptimalMemOpType(
       RequiredAlign = std::min(RequiredAlign, Op.getSrcAlign());
     PreferredVT = MVT::getIntegerVT(RequiredAlign.value() * 8);
   }
+
+  if (Op.isMemset())
+    return EVT::getVectorVT(Context, PreferredVT,
+                            Op.size() / PreferredVT.getStoreSize());
+
   return MVT::getVectorVT(PreferredVT, MinVLenInBytes/PreferredVT.getStoreSize());
 }
 
