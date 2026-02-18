@@ -13941,7 +13941,7 @@ void BoUpSLP::transformNodes() {
         }
         break;
       }
-      // Check for zext + selects, which can be reorered.
+      // Check for zext + selects, which can be reordered.
       SmallVector<unsigned> InversedCmpsIndices;
       if (matchesInversedZExtSelect(E, InversedCmpsIndices)) {
         auto *CmpTE = getOperandEntry(&E, 0);
