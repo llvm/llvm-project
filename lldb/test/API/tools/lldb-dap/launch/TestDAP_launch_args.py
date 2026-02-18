@@ -11,9 +11,6 @@ class TestDAP_launch_args(lldbdap_testcase.DAPTestCaseBase):
     Tests launch of a simple program with arguments
     """
 
-    @expectedFailureWindows(
-        bugnumber="https://github.com/llvm/llvm-project/issues/137599"
-    )
     def test(self):
         program = self.getBuildArtifact("a.out")
         args = ["one", "with space", "'with single quotes'", '"with double quotes"']

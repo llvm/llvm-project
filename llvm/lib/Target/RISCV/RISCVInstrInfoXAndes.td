@@ -380,6 +380,8 @@ class NDSRVInstVSINTLN<bits<5> funct5, string opcodestr>
   let mayLoad = 1;
   let mayStore = 0;
   let Uses = [VL, VTYPE];
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstVSINTCvt<bits<5> fucnt5, string opcodestr>
@@ -401,6 +403,8 @@ class NDSRVInstVSINTCvt<bits<5> fucnt5, string opcodestr>
   let mayStore = 0;
   let Uses = [FRM, VL, VTYPE];
   let RVVConstraint = VMConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstBFHCvt<bits<7> funct7, bits<5> rs1val, DAGOperand rdty,
@@ -435,6 +439,8 @@ class NDSRVInstVFPMAD<bits<6> funct6, string opcodestr>
   let mayStore = 0;
 
   let RVVConstraint = VMConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
@@ -458,6 +464,8 @@ class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
   let mayStore = 0;
 
   let RVVConstraint = VMConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstVBFHCvt<bits<5> vs1, string opcodestr>
@@ -477,6 +485,8 @@ class NDSRVInstVBFHCvt<bits<5> vs1, string opcodestr>
   let mayStore = 0;
 
   let Uses = [VL, VTYPE];
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstVLN<bits<5> funct5, string opcodestr>
@@ -500,6 +510,8 @@ class NDSRVInstVLN<bits<5> funct5, string opcodestr>
 
   let Uses = [VL, VTYPE];
   let RVVConstraint = VMConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 class VPseudoVLN8NoMask<VReg RetClass, bit U> :

@@ -3829,68 +3829,63 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   if (!(MCID.TSFlags & RISCVII::RVVConstraintMask))
     return false;
 
-  if (Opcode == RISCV::SF_VC_V_XVW || Opcode == RISCV::SF_VC_V_IVW ||
-      Opcode == RISCV::SF_VC_V_FVW || Opcode == RISCV::SF_VC_V_VVW) {
-    // Operands Opcode, Dst, uimm, Dst, Rs2, Rs1 for SF_VC_V_XVW.
-    MCRegister VCIXDst = Inst.getOperand(0).getReg();
-    SMLoc VCIXDstLoc = Operands[2]->getStartLoc();
-    if (MCID.TSFlags & RISCVII::VS1Constraint) {
-      MCRegister VCIXRs1 = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
-      if (VCIXDst == VCIXRs1)
-        return Error(VCIXDstLoc, "the destination vector register group cannot"
-                                 " overlap the source vector register group");
-    }
-    if (MCID.TSFlags & RISCVII::VS2Constraint) {
-      MCRegister VCIXRs2 = Inst.getOperand(Inst.getNumOperands() - 2).getReg();
-      if (VCIXDst == VCIXRs2)
-        return Error(VCIXDstLoc, "the destination vector register group cannot"
-                                 " overlap the source vector register group");
-    }
-    return false;
+  int DestIdx = RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vd);
+  MCRegister DestReg = Inst.getOperand(DestIdx).getReg();
+
+  // Operands[1] or Operands[2] will be the first operand, DestReg.
+  const MCParsedAsmOperand *ParsedOp = Operands[1].get();
+  if (!ParsedOp->isReg()) {
+    // XSfvcp instructions may have an immediate before vd.
+    // FIXME: Is there a better way to do this?
+    ParsedOp = Operands[2].get();
   }
+  assert(ParsedOp->getReg() == DestReg && "Can't find parsed dest operand");
+  SMLoc Loc = ParsedOp->getStartLoc();
 
-  MCRegister DestReg = Inst.getOperand(0).getReg();
-  unsigned Offset = 0;
-  int TiedOp = MCID.getOperandConstraint(1, MCOI::TIED_TO);
-  if (TiedOp == 0)
-    Offset = 1;
-
-  // Operands[1] will be the first operand, DestReg.
-  SMLoc Loc = Operands[1]->getStartLoc();
   if (MCID.TSFlags & RISCVII::VS2Constraint) {
-    MCRegister CheckReg = Inst.getOperand(Offset + 1).getReg();
+    int VS2Idx =
+        RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vs2);
+    assert(VS2Idx >= 0 && "No vs2 operand?");
+    MCRegister CheckReg = Inst.getOperand(VS2Idx).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "the destination vector register group cannot overlap"
                         " the source vector register group");
   }
-  if ((MCID.TSFlags & RISCVII::VS1Constraint) && Inst.getOperand(Offset + 2).isReg()) {
-    MCRegister CheckReg = Inst.getOperand(Offset + 2).getReg();
-    if (DestReg == CheckReg)
-      return Error(Loc, "the destination vector register group cannot overlap"
-                        " the source vector register group");
+  if (MCID.TSFlags & RISCVII::VS1Constraint) {
+    int VS1Idx =
+        RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vs1);
+    // FIXME: The vs1 constraint is used on scalar and imm instructions so we
+    // need to check that the operand exists.
+    if (VS1Idx >= 0) {
+      MCRegister CheckReg = Inst.getOperand(VS1Idx).getReg();
+      if (DestReg == CheckReg)
+        return Error(Loc, "the destination vector register group cannot overlap"
+                          " the source vector register group");
+    }
   }
-  if ((MCID.TSFlags & RISCVII::VMConstraint) && (DestReg == RISCV::V0)) {
-    // vadc, vsbc are special cases. These instructions have no mask register.
-    // The destination register could not be V0.
-    if (Opcode == RISCV::VADC_VVM || Opcode == RISCV::VADC_VXM ||
-        Opcode == RISCV::VADC_VIM || Opcode == RISCV::VSBC_VVM ||
-        Opcode == RISCV::VSBC_VXM || Opcode == RISCV::VFMERGE_VFM ||
-        Opcode == RISCV::VMERGE_VIM || Opcode == RISCV::VMERGE_VVM ||
-        Opcode == RISCV::VMERGE_VXM)
-      return Error(Loc, "the destination vector register group cannot be V0");
 
-    // Regardless masked or unmasked version, the number of operands is the
-    // same. For example, "viota.m v0, v2" is "viota.m v0, v2, NoRegister"
-    // actually. We need to check the last operand to ensure whether it is
-    // masked or not.
-    MCRegister CheckReg = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
-    assert((CheckReg == RISCV::V0 || !CheckReg) &&
-           "Unexpected register for mask operand");
+  if (MCID.TSFlags & RISCVII::VMConstraint) {
+    int VMIdx = RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vm);
+    assert(VMIdx >= 0 && "No vm operand?");
 
-    if (DestReg == CheckReg)
-      return Error(Loc, "the destination vector register group cannot overlap"
-                        " the mask register");
+    if (DestReg == RISCV::V0) {
+      if (MCID.operands()[Inst.getNumOperands() - 1].OperandType !=
+          RISCVOp::OPERAND_VMASK)
+        return Error(Loc, "the destination vector register group cannot be V0");
+
+      // Regardless masked or unmasked version, the number of operands is the
+      // same. For example, "viota.m v0, v2" is "viota.m v0, v2, NoRegister"
+      // actually. We need to check the operand to see whether it is masked or
+      // not.
+      MCRegister CheckReg = Inst.getOperand(VMIdx).getReg();
+      assert((!CheckReg.isValid() || CheckReg == RISCV::V0) &&
+             "Unexpected mask operand register");
+      if (CheckReg.isValid())
+        return Error(Loc, "the destination vector register group cannot overlap"
+                          " the mask register");
+    }
   }
+
   return false;
 }
 

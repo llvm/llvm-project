@@ -13,9 +13,6 @@ class TestDAP_launch_version(lldbdap_testcase.DAPTestCaseBase):
     as the one returned by "version" command.
     """
 
-    @expectedFailureWindows(
-        bugnumber="https://github.com/llvm/llvm-project/issues/137599"
-    )
     def test(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)

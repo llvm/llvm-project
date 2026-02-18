@@ -53,6 +53,7 @@ void updateCZceFeatureImplications(MCSubtargetInfo &STI);
 // Defines symbolic names for RISC-V instructions.
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_MC_HELPER_DECLS
+#define GET_INSTRINFO_OPERAND_ENUM
 #include "RISCVGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM
