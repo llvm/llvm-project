@@ -1159,7 +1159,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 }
 
 int SIInstrInfo::commuteOpcode(unsigned Opcode) const {
-  int64_t NewOpc;
+  int32_t NewOpc;
 
   // Try to map original to commuted opcode
   NewOpc = AMDGPU::getCommuteRev(Opcode);
@@ -10377,9 +10377,9 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
       Opcode = MFMAOp;
   }
 
-  int64_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+  int32_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 
-  if (MCOp == (uint32_t)-1 && ST.hasGFX1250Insts())
+  if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX1250Insts())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);
 
   // -1 means that Opcode is already a native instruction.
@@ -10387,20 +10387,20 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
     return Opcode;
 
   if (ST.hasGFX90AInsts()) {
-    uint32_t NMCOp = (uint32_t)-1;
+    uint32_t NMCOp = AMDGPU::INSTRUCTION_LIST_END;
     if (ST.hasGFX940Insts())
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX940);
-    if (NMCOp == (uint32_t)-1)
+    if (NMCOp == AMDGPU::INSTRUCTION_LIST_END)
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX90A);
-    if (NMCOp == (uint32_t)-1)
+    if (NMCOp == AMDGPU::INSTRUCTION_LIST_END)
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX9);
-    if (NMCOp != (uint32_t)-1)
+    if (NMCOp != AMDGPU::INSTRUCTION_LIST_END)
       MCOp = NMCOp;
   }
 
-  // (uint32_t)-1 means that Opcode is a pseudo instruction that has
-  // no encoding in the given subtarget generation.
-  if (MCOp == (uint32_t)-1)
+  // INSTRUCTION_LIST_END means that Opcode is a pseudo instruction that has no
+  // encoding in the given subtarget generation.
+  if (MCOp == AMDGPU::INSTRUCTION_LIST_END)
     return -1;
 
   if (isAsmOnlyOpcode(MCOp))
