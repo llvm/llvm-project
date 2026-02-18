@@ -6,8 +6,8 @@ define amdgpu_ps void @test_export_zeroes_f32() #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_setprio 2
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    exp mrt0 off, off, off, off
-; GCN-NEXT:    exp mrt0 off, off, off, off done
+; GCN-NEXT:    exp mrt0, off, off, off, off
+; GCN-NEXT:    exp mrt0, off, off, off, off done
 ; GCN-NEXT:    s_setprio 0
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_nop 0
@@ -25,7 +25,7 @@ define amdgpu_ps void @test_export_en_src0_f32() #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0.5
 ; GCN-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1.0
-; GCN-NEXT:    exp mrt0 v3, off, off, off done
+; GCN-NEXT:    exp mrt0, v3, off, off, off done
 ; GCN-NEXT:    s_setprio 0
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_nop 0
@@ -42,7 +42,7 @@ define amdgpu_gs void @test_export_gs() #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0.5
 ; GCN-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1.0
-; GCN-NEXT:    exp mrt0 off, v2, off, off done
+; GCN-NEXT:    exp mrt0, off, v2, off, off done
 ; GCN-NEXT:    s_setprio 0
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_nop 0
@@ -59,7 +59,7 @@ define amdgpu_hs void @test_export_hs() #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0.5
 ; GCN-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1.0
-; GCN-NEXT:    exp mrt0 off, v2, off, off done
+; GCN-NEXT:    exp mrt0, off, v2, off, off done
 ; GCN-NEXT:    s_setprio 0
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_nop 0
@@ -75,7 +75,7 @@ define amdgpu_gfx void @test_export_gfx(float %v) #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v1, 4.0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0.5
 ; GCN-NEXT:    v_mov_b32_e32 v3, 2.0
-; GCN-NEXT:    exp mrt0 off, v3, off, off done
+; GCN-NEXT:    exp mrt0, off, v3, off, off done
 ; GCN-NEXT:    s_setprio 0
 ; GCN-NEXT:    s_waitcnt_expcnt null, 0x0
 ; GCN-NEXT:    s_nop 0
@@ -94,7 +94,7 @@ define amdgpu_cs void @test_export_cs() #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0.5
 ; GCN-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1.0
-; GCN-NEXT:    exp mrt0 off, v2, off, off done
+; GCN-NEXT:    exp mrt0, off, v2, off, off done
 ; GCN-NEXT:    s_endpgm
   call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
   ret void
@@ -107,7 +107,7 @@ define amdgpu_kernel void @test_export_kernel() #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0.5
 ; GCN-NEXT:    v_mov_b32_e32 v2, 2.0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1.0
-; GCN-NEXT:    exp mrt0 off, v2, off, off done
+; GCN-NEXT:    exp mrt0, off, v2, off, off done
 ; GCN-NEXT:    s_endpgm
   call void @llvm.amdgcn.exp.f32(i32 0, i32 2, float 1.0, float 2.0, float 0.5, float 4.0, i1 true, i1 false)
   ret void
@@ -136,7 +136,7 @@ define amdgpu_ps void @test_if_export_f32(i32 %flag, float %x, float %y, float %
 ; GCN-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; GCN-NEXT:    s_cbranch_execz .LBB9_2
 ; GCN-NEXT:  ; %bb.1: ; %exp
-; GCN-NEXT:    exp mrt0 v1, v2, v3, v4
+; GCN-NEXT:    exp mrt0, v1, v2, v3, v4
 ; GCN-NEXT:    s_setprio 0
 ; GCN-NEXT:    s_waitcnt_expcnt null, 0x0
 ; GCN-NEXT:    s_nop 0
@@ -163,7 +163,7 @@ define amdgpu_ps void @test_if_export_vm_f32(i32 %flag, float %x, float %y, floa
 ; GCN-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; GCN-NEXT:    s_cbranch_execz .LBB10_2
 ; GCN-NEXT:  ; %bb.1: ; %exp
-; GCN-NEXT:    exp mrt0 v1, v2, v3, v4
+; GCN-NEXT:    exp mrt0, v1, v2, v3, v4
 ; GCN-NEXT:    s_setprio 0
 ; GCN-NEXT:    s_waitcnt_expcnt null, 0x0
 ; GCN-NEXT:    s_nop 0
@@ -190,7 +190,7 @@ define amdgpu_ps void @test_if_export_done_f32(i32 %flag, float %x, float %y, fl
 ; GCN-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; GCN-NEXT:    s_cbranch_execz .LBB11_2
 ; GCN-NEXT:  ; %bb.1: ; %exp
-; GCN-NEXT:    exp mrt0 v1, v2, v3, v4 done
+; GCN-NEXT:    exp mrt0, v1, v2, v3, v4 done
 ; GCN-NEXT:    s_setprio 0
 ; GCN-NEXT:    s_waitcnt_expcnt null, 0x0
 ; GCN-NEXT:    s_nop 0
@@ -217,7 +217,7 @@ define amdgpu_ps void @test_if_export_vm_done_f32(i32 %flag, float %x, float %y,
 ; GCN-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; GCN-NEXT:    s_cbranch_execz .LBB12_2
 ; GCN-NEXT:  ; %bb.1: ; %exp
-; GCN-NEXT:    exp mrt0 v1, v2, v3, v4 done
+; GCN-NEXT:    exp mrt0, v1, v2, v3, v4 done
 ; GCN-NEXT:    s_setprio 0
 ; GCN-NEXT:    s_waitcnt_expcnt null, 0x0
 ; GCN-NEXT:    s_nop 0
@@ -245,9 +245,9 @@ define amdgpu_ps void @test_export_pos_before_param_across_load(i32 %idx) #0 {
 ; GCN-NEXT:    v_mov_b32_e32 v2, 1.0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0.5
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    exp pos0 v1, v1, v1, v0 done
-; GCN-NEXT:    exp invalid_target_32 v2, v2, v2, v2
-; GCN-NEXT:    exp invalid_target_33 v2, v2, v2, v3
+; GCN-NEXT:    exp pos0, v1, v1, v1, v0 done
+; GCN-NEXT:    exp invalid_target_32, v2, v2, v2, v2
+; GCN-NEXT:    exp invalid_target_33, v2, v2, v2, v3
 ; GCN-NEXT:    s_setprio 0
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_nop 0
@@ -271,15 +271,15 @@ define amdgpu_ps void @test_export_across_store_load(i32 %idx, float %v) #0 {
 ; GCN-NEXT:    scratch_store_b32 v0, v1, off
 ; GCN-NEXT:    scratch_load_b32 v0, off, off
 ; GCN-NEXT:    v_mov_b32_e32 v1, 1.0
-; GCN-NEXT:    exp pos0 v2, v2, v2, v1 done
+; GCN-NEXT:    exp pos0, v2, v2, v2, v1 done
 ; GCN-NEXT:    s_setprio 0
 ; GCN-NEXT:    s_waitcnt_expcnt null, 0x0
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_setprio 2
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    exp invalid_target_32 v0, v2, v1, v2
-; GCN-NEXT:    exp invalid_target_33 v0, v2, v1, v2
+; GCN-NEXT:    exp invalid_target_32, v0, v2, v1, v2
+; GCN-NEXT:    exp invalid_target_33, v0, v2, v1, v2
 ; GCN-NEXT:    s_setprio 0
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_nop 0

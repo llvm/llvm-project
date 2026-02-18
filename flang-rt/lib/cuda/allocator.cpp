@@ -140,6 +140,19 @@ cudaStream_t RTDECL(CUFGetAssociatedStream)(void *p) {
   }
   return nullptr;
 }
+
+int RTDECL(CUFSetAssociatedStream)(void *p, cudaStream_t stream) {
+  if (p == nullptr) {
+    return StatBaseNull;
+  }
+  int pos = findAllocation(p);
+  if (pos >= 0) {
+    deviceAllocations[pos].stream = stream;
+  } else {
+    insertAllocation(p, 0, stream);
+  }
+  return StatOk;
+}
 }
 
 void *CUFAllocPinned(

@@ -79,6 +79,14 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
+  void scanSection(InputSectionBase &sec) override {
+    if (ctx.arg.ekind == ELF64BEKind)
+      elf::scanSection1<AArch64, ELF64BE>(*this, sec);
+    else
+      elf::scanSection1<AArch64, ELF64LE>(*this, sec);
+  }
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -89,10 +97,6 @@ public:
                 uint64_t val) const override;
   void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   void applyBranchToBranchOpt() const override;
-
-  template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
-  void scanSection(InputSectionBase &sec) override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -203,7 +207,7 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_AARCH64_NONE:
       continue;
 
-      // Absolute relocations:
+    // Absolute relocations:
     case R_AARCH64_ABS16:
     case R_AARCH64_ABS32:
     case R_AARCH64_ABS64:
@@ -240,7 +244,7 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       expr = R_ABS;
       break;
 
-      // PC-relative relocations:
+    // PC-relative relocations:
     case R_AARCH64_PREL16:
     case R_AARCH64_PREL32:
     case R_AARCH64_PREL64:
@@ -256,13 +260,13 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       rs.processR_PC(type, offset, addend, sym);
       continue;
 
-      // Page-PC relocations:
+    // Page-PC relocations:
     case R_AARCH64_ADR_PREL_PG_HI21:
     case R_AARCH64_ADR_PREL_PG_HI21_NC:
       expr = RE_AARCH64_PAGE_PC;
       break;
 
-      // PLT-generating relocations:
+    // PLT-generating relocations:
     case R_AARCH64_PLT32:
       sym.thunkAccessed = true;
       [[fallthrough]];
@@ -273,7 +277,7 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       rs.processR_PLT_PC(type, offset, addend, sym);
       continue;
 
-      // GOT relocations:
+    // GOT relocations:
     case R_AARCH64_ADR_GOT_PAGE:
       expr = RE_AARCH64_GOT_PAGE_PC;
       break;
@@ -288,8 +292,8 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       expr = R_GOT_PC;
       break;
 
-      // AUTH GOT relocations. Set NEEDS_GOT_AUTH to detect incompatibility with
-      // NEEDS_GOT_NONAUTH. rs.process does not set the flag.
+    // AUTH GOT relocations. Set NEEDS_GOT_AUTH to detect incompatibility with
+    // NEEDS_GOT_NONAUTH. rs.process does not set the flag.
     case R_AARCH64_AUTH_LD64_GOT_LO12_NC:
     case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
       sym.setFlags(NEEDS_GOT | NEEDS_GOT_AUTH);
@@ -305,7 +309,7 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       rs.processAux(RE_AARCH64_GOT_PAGE_PC, type, offset, sym, addend);
       continue;
 
-      // TLS LE relocations:
+    // TLS LE relocations:
     case R_AARCH64_TLSLE_ADD_TPREL_HI12:
     case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
     case R_AARCH64_TLSLE_LDST8_TPREL_LO12_NC:
@@ -323,7 +327,7 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       expr = R_TPREL;
       break;
 
-      // TLS IE relocations:
+    // TLS IE relocations:
     case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
       rs.handleTlsIe(RE_AARCH64_GOT_PAGE_PC, type, offset, addend, sym);
       continue;
@@ -331,7 +335,7 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       rs.handleTlsIe(R_GOT, type, offset, addend, sym);
       continue;
 
-      // TLSDESC relocations:
+    // TLSDESC relocations:
     case R_AARCH64_TLSDESC_ADR_PAGE21:
       rs.handleTlsDesc(RE_AARCH64_TLSDESC_PAGE, RE_AARCH64_GOT_PAGE_PC, type,
                        offset, addend, sym);
@@ -346,9 +350,9 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
       continue;
 
-      // AUTH TLSDESC relocations. Do not optimize to LE/IE because PAUTHELF64
-      // only supports the descriptor based TLS (TLSDESC).
-      // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
+    // AUTH TLSDESC relocations. Do not optimize to LE/IE because PAUTHELF64
+    // only supports the descriptor based TLS (TLSDESC).
+    // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
     case R_AARCH64_AUTH_TLSDESC_ADR_PAGE21:
       sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
       sec.addReloc({RE_AARCH64_TLSDESC_PAGE, type, offset, addend, &sym});
@@ -371,13 +375,6 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   if (ctx.arg.branchToBranch)
     llvm::stable_sort(sec.relocs(),
                       [](auto &l, auto &r) { return l.offset < r.offset; });
-}
-
-void AArch64::scanSection(InputSectionBase &sec) {
-  if (ctx.arg.ekind == ELF64BEKind)
-    elf::scanSection1<AArch64, ELF64BE>(*this, sec);
-  else
-    elf::scanSection1<AArch64, ELF64LE>(*this, sec);
 }
 
 RelType AArch64::getDynRel(RelType type) const {

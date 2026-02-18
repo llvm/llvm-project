@@ -103,13 +103,13 @@ public:
   }
 
   // Handle TLS Initial-Exec relocation.
+  template <bool enableIeToLe = true>
   void handleTlsIe(RelExpr ieExpr, RelType type, uint64_t offset,
                    int64_t addend, Symbol &sym) {
-    if (!ctx.arg.shared && !sym.isPreemptible) {
+    if (enableIeToLe && !ctx.arg.shared && !sym.isPreemptible) {
       // Optimize to Local Exec.
       sec->addReloc({R_TPREL, type, offset, addend, &sym});
     } else {
-      ctx.hasTlsIe.store(true, std::memory_order_relaxed);
       sym.setFlags(NEEDS_TLSIE);
       // R_GOT (absolute GOT address) needs a RELATIVE dynamic relocation in
       // PIC when the relocation uses the full address (not just low page bits).
@@ -147,7 +147,6 @@ public:
     }
     if (sym.isPreemptible) {
       // Optimize to Initial Exec.
-      ctx.hasTlsIe.store(true, std::memory_order_relaxed);
       sym.setFlags(NEEDS_TLSIE);
       sec->addReloc({ieExpr, type, offset, addend, &sym});
     } else {
@@ -167,7 +166,6 @@ public:
       sec->addReloc({sharedExpr, type, offset, addend, &sym});
     } else if (sym.isPreemptible) {
       // Optimize to Initial Exec.
-      ctx.hasTlsIe.store(true, std::memory_order_relaxed);
       sym.setFlags(NEEDS_TLSIE);
       sec->addReloc({ieExpr, type, offset, addend, &sym});
     } else {
