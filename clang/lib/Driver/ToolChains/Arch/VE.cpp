@@ -8,7 +8,7 @@
 
 #include "VE.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 
 using namespace clang::driver;

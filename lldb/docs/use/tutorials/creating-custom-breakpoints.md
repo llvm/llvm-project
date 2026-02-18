@@ -20,7 +20,7 @@ happens when a location triggers and includes the commands, conditions, ignore
 counts, etc. Stop options are common between all breakpoint types, so for our
 purposes only the Searcher and Resolver are relevant.
 
-### Breakpoint Searcher
+## Breakpoint Searcher
 
 The Searcher's job is to traverse in a structured way the code in the current
 target. It proceeds from the Target, to search all the Modules in the Target,
@@ -36,7 +36,7 @@ based search filter. If neither of these is specified, the breakpoint will have
 a no-op search filter, so all parts of the program are searched and all
 locations accepted.
 
-### Breakpoint Resolver
+## Breakpoint Resolver
 
 The Resolver has two functions:
 
@@ -72,7 +72,7 @@ you add to the breakpoint yourself. Note that the Breakpoint takes care of
 deduplicating equal addresses in AddLocation, so you shouldn't need to worry
 about that anyway.
 
-### Scripted Breakpoint Resolver
+## Scripted Breakpoint Resolver
 
 At present, when adding a ScriptedBreakpoint type, you can only provide a
 custom Resolver, not a custom SearchFilter.
@@ -127,7 +127,7 @@ of Modules and the list of CompileUnits that will make up the SearchFilter. If
 you pass in empty lists, the breakpoint will use the default "search
 everywhere,accept everything" filter.
 
-### Providing Facade Locations:
+## Providing Facade Locations:
 
 The breakpoint resolver interface also allows you to present a separate set
 of locations for the breakpoint than the ones that actually implement the

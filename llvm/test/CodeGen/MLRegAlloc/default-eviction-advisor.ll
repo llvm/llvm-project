@@ -10,9 +10,9 @@
 ; regalloc-enable-advisor is not enabled for NVPTX
 ; UNSUPPORTED: target=nvptx{{.*}}
 
-define void @f2(i64 %lhs, i64 %rhs, i64* %addr) {
+define void @f2(i64 %lhs, i64 %rhs, ptr %addr) {
   %sum = add i64 %lhs, %rhs
-  store i64 %sum, i64* %addr
+  store i64 %sum, ptr %addr
   ret void
 }
 

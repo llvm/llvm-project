@@ -602,6 +602,15 @@ namespace Destructors {
   }
   static_assert(testS() == 1); // both-error {{not an integral constant expression}} \
                                // both-note {{in call to 'testS()'}}
+
+  struct A { int n; };
+  constexpr void double_destroy() {
+    A a;
+    a.~A();
+    a.~A(); // both-note {{destruction of object outside its lifetime}}
+  }
+  static_assert((double_destroy(), true)); // both-error {{not an integral constant expression}} \
+                                           // both-note {{in call to}}
 }
 
 namespace BaseToDerived {
@@ -1860,4 +1869,36 @@ namespace PrimitiveInitializedByInitList {
     int b{this->a};
   } c{ 17 };
   static_assert(c.b == 17, "");
+}
+
+namespace MethodWillHaveBody {
+  class A {
+  public:
+    static constexpr int get_value2() { return 1 + get_value(); }
+    static constexpr int get_value() { return 1; }
+  };
+  static_assert(A::get_value2() == 2, "");
+
+  template<typename T> constexpr T f(T);
+  template<typename T> constexpr T g(T t) {
+    typedef int arr[f(T())]; // both-warning {{variable length array}} \
+                             // both-note {{undefined function 'f<int>'}}
+    return t;
+  }
+  template<typename T> constexpr T f(T t) { // both-note {{declared here}}
+    typedef int arr[g(T())]; // both-note {{instantiation of}}
+    return t;
+  }
+  int n = f(0); // both-note {{instantiation of}}
+}
+
+namespace StaticRedecl {
+  struct T {
+    static T tt;
+    constexpr T() : p(&tt) {}
+    T *p;
+  };
+  T T::tt;
+  constexpr T t;
+  static_assert(t.p == &T::tt, "");
 }

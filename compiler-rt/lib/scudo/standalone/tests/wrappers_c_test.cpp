@@ -588,8 +588,13 @@ TEST_F(ScudoWrappersCTest, MallocInfo) {
   EXPECT_EQ(errno, 0);
   fclose(F);
   EXPECT_EQ(strncmp(Buffer, "<malloc version=\"scudo-", 23), 0);
-  EXPECT_NE(nullptr, strstr(Buffer, "<alloc size=\"1234\" count=\""));
-  EXPECT_NE(nullptr, strstr(Buffer, "<alloc size=\"4321\" count=\""));
+  std::string expected;
+  expected =
+      "<alloc size=\"" + std::to_string(malloc_usable_size(P1)) + "\" count=\"";
+  EXPECT_NE(nullptr, strstr(Buffer, expected.c_str()));
+  expected =
+      "<alloc size=\"" + std::to_string(malloc_usable_size(P2)) + "\" count=\"";
+  EXPECT_NE(nullptr, strstr(Buffer, expected.c_str()));
 
   free(P1);
   free(P2);

@@ -81,7 +81,7 @@ public:
   StringRef suffix() const { return Pattern.take_back(SuffixSize); }
   // Returns the longest plain substring of the pattern between prefix and
   // suffix.
-  StringRef longest_substr() const;
+  LLVM_ABI_FOR_TEST StringRef longest_substr() const;
 
 private:
   StringRef Pattern;

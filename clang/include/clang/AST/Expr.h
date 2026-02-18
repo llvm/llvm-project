@@ -291,6 +291,7 @@ public:
     LV_NotObjectType,
     LV_IncompleteVoidType,
     LV_DuplicateVectorComponents,
+    LV_DuplicateMatrixComponents,
     LV_InvalidExpression,
     LV_InvalidMessageExpression,
     LV_MemberFunction,
@@ -306,8 +307,9 @@ public:
     MLV_NotObjectType,
     MLV_IncompleteVoidType,
     MLV_DuplicateVectorComponents,
+    MLV_DuplicateMatrixComponents,
     MLV_InvalidExpression,
-    MLV_LValueCast,           // Specialized form of MLV_InvalidExpression.
+    MLV_LValueCast, // Specialized form of MLV_InvalidExpression.
     MLV_IncompleteType,
     MLV_ConstQualified,
     MLV_ConstQualifiedField,
@@ -340,16 +342,17 @@ public:
     enum Kinds {
       CL_LValue,
       CL_XValue,
-      CL_Function, // Functions cannot be lvalues in C.
-      CL_Void, // Void cannot be an lvalue in C.
+      CL_Function,        // Functions cannot be lvalues in C.
+      CL_Void,            // Void cannot be an lvalue in C.
       CL_AddressableVoid, // Void expression whose address can be taken in C.
       CL_DuplicateVectorComponents, // A vector shuffle with dupes.
+      CL_DuplicateMatrixComponents, // A matrix shuffle with dupes.
       CL_MemberFunction, // An expression referring to a member function
       CL_SubObjCPropertySetting,
-      CL_ClassTemporary, // A temporary of class type, or subobject thereof.
-      CL_ArrayTemporary, // A temporary of array type.
+      CL_ClassTemporary,    // A temporary of class type, or subobject thereof.
+      CL_ArrayTemporary,    // A temporary of array type.
       CL_ObjCMessageRValue, // ObjC message is an rvalue
-      CL_PRValue // A prvalue for any other reason, of any other type
+      CL_PRValue            // A prvalue for any other reason, of any other type
     };
     /// The results of modification testing.
     enum ModifiableType {
@@ -774,14 +777,14 @@ public:
   ///
   /// \param Type - How to evaluate the size of the Expr, as defined by the
   /// "type" parameter of __builtin_object_size
-  bool tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
-                             unsigned Type) const;
+  std::optional<uint64_t> tryEvaluateObjectSize(const ASTContext &Ctx,
+                                                unsigned Type) const;
 
   /// If the current Expr is a pointer, this will try to statically
   /// determine the strlen of the string pointed to.
   /// Returns true if all of the above holds and we were able to figure out the
   /// strlen, false otherwise.
-  bool tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const;
+  std::optional<uint64_t> tryEvaluateStrLen(const ASTContext &Ctx) const;
 
   bool EvaluateCharRangeAsString(std::string &Result,
                                  const Expr *SizeExpression,
@@ -2784,6 +2787,72 @@ public:
   // Iterators
   child_range children() {
     return child_range(&SubExprs[0], &SubExprs[0]+END_EXPR);
+  }
+  const_child_range children() const {
+    return const_child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
+  }
+};
+
+/// MatrixSingleSubscriptExpr - Matrix single subscript expression for the
+/// MatrixType extension when you want to get\set a vector from a Matrix.
+class MatrixSingleSubscriptExpr : public Expr {
+  enum { BASE, ROW_IDX, END_EXPR };
+  Stmt *SubExprs[END_EXPR];
+
+public:
+  /// matrix[row]
+  ///
+  /// \param Base        The matrix expression.
+  /// \param RowIdx      The row index expression.
+  /// \param T           The type of the row (usually a vector type).
+  /// \param RBracketLoc Location of the closing ']'.
+  MatrixSingleSubscriptExpr(Expr *Base, Expr *RowIdx, QualType T,
+                            SourceLocation RBracketLoc)
+      : Expr(MatrixSingleSubscriptExprClass, T,
+             Base->getValueKind(), // lvalue/rvalue follows the matrix base
+             OK_MatrixComponent) {
+    SubExprs[BASE] = Base;
+    SubExprs[ROW_IDX] = RowIdx;
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = RBracketLoc;
+    setDependence(computeDependence(this));
+  }
+
+  /// Create an empty matrix single-subscript expression.
+  explicit MatrixSingleSubscriptExpr(EmptyShell Shell)
+      : Expr(MatrixSingleSubscriptExprClass, Shell) {}
+
+  Expr *getBase() { return cast<Expr>(SubExprs[BASE]); }
+  const Expr *getBase() const { return cast<Expr>(SubExprs[BASE]); }
+  void setBase(Expr *E) { SubExprs[BASE] = E; }
+
+  Expr *getRowIdx() { return cast<Expr>(SubExprs[ROW_IDX]); }
+  const Expr *getRowIdx() const { return cast<Expr>(SubExprs[ROW_IDX]); }
+  void setRowIdx(Expr *E) { SubExprs[ROW_IDX] = E; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getBase()->getBeginLoc();
+  }
+
+  SourceLocation getEndLoc() const { return getRBracketLoc(); }
+
+  SourceLocation getExprLoc() const LLVM_READONLY {
+    return getBase()->getExprLoc();
+  }
+
+  SourceLocation getRBracketLoc() const {
+    return ArrayOrMatrixSubscriptExprBits.RBracketLoc;
+  }
+  void setRBracketLoc(SourceLocation L) {
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = L;
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == MatrixSingleSubscriptExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
   }
   const_child_range children() const {
     return const_child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
@@ -6488,30 +6557,24 @@ public:
 // Clang Extensions
 //===----------------------------------------------------------------------===//
 
-/// ExtVectorElementExpr - This represents access to specific elements of a
-/// vector, and may occur on the left hand side or right hand side.  For example
-/// the following is legal:  "V.xy = V.zw" if V is a 4 element extended vector.
-///
-/// Note that the base may have either vector or pointer to vector type, just
-/// like a struct field reference.
-///
-class ExtVectorElementExpr : public Expr {
+template <class Derived> class ElementAccessExprBase : public Expr {
+protected:
   Stmt *Base;
   IdentifierInfo *Accessor;
   SourceLocation AccessorLoc;
-public:
-  ExtVectorElementExpr(QualType ty, ExprValueKind VK, Expr *base,
-                       IdentifierInfo &accessor, SourceLocation loc)
-      : Expr(ExtVectorElementExprClass, ty, VK,
-             (VK == VK_PRValue ? OK_Ordinary : OK_VectorComponent)),
-        Base(base), Accessor(&accessor), AccessorLoc(loc) {
-    setDependence(computeDependence(this));
+
+  ElementAccessExprBase(StmtClass SC, QualType Ty, ExprValueKind VK, Expr *Base,
+                        IdentifierInfo &Accessor, SourceLocation Loc,
+                        ExprObjectKind OK)
+      : Expr(SC, Ty, VK, OK), Base(Base), Accessor(&Accessor),
+        AccessorLoc(Loc) {
+    setDependence(computeDependence(static_cast<Derived *>(this)));
   }
 
-  /// Build an empty vector element expression.
-  explicit ExtVectorElementExpr(EmptyShell Empty)
-    : Expr(ExtVectorElementExprClass, Empty) { }
+  explicit ElementAccessExprBase(StmtClass SC, EmptyShell Empty)
+      : Expr(SC, Empty) {}
 
+public:
   const Expr *getBase() const { return cast<Expr>(Base); }
   Expr *getBase() { return cast<Expr>(Base); }
   void setBase(Expr *E) { Base = E; }
@@ -6521,6 +6584,37 @@ public:
 
   SourceLocation getAccessorLoc() const { return AccessorLoc; }
   void setAccessorLoc(SourceLocation L) { AccessorLoc = L; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getBase()->getBeginLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return AccessorLoc; }
+
+  child_range children() { return child_range(&Base, &Base + 1); }
+  const_child_range children() const {
+    return const_child_range(&Base, &Base + 1);
+  }
+};
+
+/// ExtVectorElementExpr - This represents access to specific elements of a
+/// vector, and may occur on the left hand side or right hand side.  For example
+/// the following is legal:  "V.xy = V.zw" if V is a 4 element extended vector.
+///
+/// Note that the base may have either vector or pointer to vector type, just
+/// like a struct field reference.
+///
+class ExtVectorElementExpr
+    : public ElementAccessExprBase<ExtVectorElementExpr> {
+public:
+  ExtVectorElementExpr(QualType Ty, ExprValueKind VK, Expr *Base,
+                       IdentifierInfo &Accessor, SourceLocation Loc)
+      : ElementAccessExprBase(
+            ExtVectorElementExprClass, Ty, VK, Base, Accessor, Loc,
+            (VK == VK_PRValue ? OK_Ordinary : OK_VectorComponent)) {}
+
+  /// Build an empty vector element expression.
+  explicit ExtVectorElementExpr(EmptyShell Empty)
+      : ElementAccessExprBase(ExtVectorElementExprClass, Empty) {}
 
   /// getNumElements - Get the number of components being selected.
   unsigned getNumElements() const;
@@ -6533,11 +6627,6 @@ public:
   /// aggregate Constant of ConstantInt(s).
   void getEncodedElementAccess(SmallVectorImpl<uint32_t> &Elts) const;
 
-  SourceLocation getBeginLoc() const LLVM_READONLY {
-    return getBase()->getBeginLoc();
-  }
-  SourceLocation getEndLoc() const LLVM_READONLY { return AccessorLoc; }
-
   /// isArrow - Return true if the base expression is a pointer to vector,
   /// return false if the base expression is a vector.
   bool isArrow() const;
@@ -6545,11 +6634,33 @@ public:
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ExtVectorElementExprClass;
   }
+};
 
-  // Iterators
-  child_range children() { return child_range(&Base, &Base+1); }
-  const_child_range children() const {
-    return const_child_range(&Base, &Base + 1);
+class MatrixElementExpr : public ElementAccessExprBase<MatrixElementExpr> {
+public:
+  MatrixElementExpr(QualType Ty, ExprValueKind VK, Expr *Base,
+                    IdentifierInfo &Accessor, SourceLocation Loc)
+      : ElementAccessExprBase(
+            MatrixElementExprClass, Ty, VK, Base, Accessor, Loc,
+            OK_Ordinary /*TODO: Should we add a new OK_MatrixComponent?*/) {}
+
+  /// Build an empty matrix element expression.
+  explicit MatrixElementExpr(EmptyShell Empty)
+      : ElementAccessExprBase(MatrixElementExprClass, Empty) {}
+
+  /// getNumElements - Get the number of components being selected.
+  unsigned getNumElements() const;
+
+  /// containsDuplicateElements - Return true if any element access is
+  /// repeated.
+  bool containsDuplicateElements() const;
+
+  /// getEncodedElementAccess - Encode the elements accessed into an llvm
+  /// aggregate Constant of ConstantInt(s).
+  void getEncodedElementAccess(SmallVectorImpl<uint32_t> &Elts) const;
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == MatrixElementExprClass;
   }
 };
 

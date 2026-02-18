@@ -84,10 +84,14 @@ public:
 
   /// Hook for derived dialect interfaces to publish the supported metadata
   /// kinds. As every metadata kind has a unique integer identifier, the
-  /// function returns the list of supported metadata identifiers. `ctx` can be
-  /// used to obtain IDs of metadata kinds that do not have a fixed static one.
-  virtual ArrayRef<unsigned>
-  getSupportedMetadata(llvm::LLVMContext &ctx) const {
+  /// function returns the list of supported metadata identifiers. The
+  /// `llvmContext` parameter is used to obtain identifiers for metadata kinds
+  /// that do not have a fixed static identifier. Since different LLVM contexts
+  /// can assign different identifiers to these non-static metadata kinds, the
+  /// function must recompute the list of supported metadata identifiers on each
+  /// call.
+  virtual SmallVector<unsigned>
+  getSupportedMetadata(llvm::LLVMContext &llvmContext) const {
     return {};
   }
 };

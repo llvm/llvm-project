@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/geometric/clc_fast_distance.h>
-#include <clc/opencl/geometric/fast_distance.h>
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION fast_distance

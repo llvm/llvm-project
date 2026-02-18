@@ -1,0 +1,25 @@
+# Verify if `--print-only` and `--print-only-files` work fine.
+
+# REQUIRES: system-linux
+
+# RUN: %clang %cflags -x c %p/Inputs/bolt_icf.cpp -o %t -Wl,-q
+# RUN: llvm-bolt %t -o %t.bolt --icf=none --print-cfg \
+# RUN:     --print-only=foo.*,bar.*,main.* 2>&1 | FileCheck %s
+
+# RUN: echo "bar.*" > %t.pof
+# RUN: echo "main.*" >> %t.pof
+# RUN: llvm-bolt %t -o %t.bolt --icf=none --print-cfg \
+# RUN:     --print-only=foo.* --print-only-file=%t.pof \
+# RUN:     2>&1 | FileCheck %s
+
+# RUN: echo "foo.*" >> %t.pof
+# RUN: llvm-bolt %t -o %t.bolt --icf=none --print-cfg \
+# RUN:     --print-only-file=%t.pof 2>&1 | FileCheck %s
+
+# CHECK-NOT: Binary Function "fiz" after building cfg
+# CHECK-NOT: Binary Function "faz" after building cfg
+# CHECK-NOT: Binary Function "zip" after building cfg
+# CHECK-NOT: Binary Function "zap" after building cfg
+# CHECK: Binary Function "foo" after building cfg
+# CHECK: Binary Function "bar" after building cfg
+# CHECK: Binary Function "main" after building cfg

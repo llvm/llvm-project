@@ -46,6 +46,7 @@ static const unsigned DirectXAddrSpaceMap[] = {
     0, // hlsl_private
     0, // hlsl_device
     0, // hlsl_input
+    0, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -64,11 +65,7 @@ public:
     NoAsmVariants = true;
     PlatformMinVersion = Triple.getOSVersion();
     PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
-    // TODO: We need to align vectors on the element size generally, but for now
-    // we hard code this for 3-element 32- and 64-bit vectors as a workaround.
-    // See https://github.com/llvm/llvm-project/issues/123968
-    resetDataLayout("e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:"
-                    "32-f64:64-n8:16:32:64-v48:16:16-v96:32:32-v192:64:64");
+    resetDataLayout();
     TheCXXABI.set(TargetCXXABI::GenericItanium);
   }
   bool useFP16ConversionIntrinsics() const override { return false; }

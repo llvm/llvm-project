@@ -93,6 +93,29 @@ void TestRecipePopulatePass::runOnOperation() {
       if (!recipe) {
         op->emitError("Failed to create firstprivate recipe for ") << varName;
       }
+    } else if (recipeType == "private_from_firstprivate") {
+      // First create a firstprivate recipe, then use it to drive creation of a
+      // matching private recipe via the convenience overload. Give each recipe
+      // a stable, predictable name so tests can check both.
+      std::string firstprivName = "first_firstprivate_" + varName;
+      std::string privName = "private_from_firstprivate_" + varName;
+
+      auto firstpriv = FirstprivateRecipeOp::createAndPopulate(
+          builder, loc, firstprivName, var.getType(), varName, bounds);
+
+      if (!firstpriv) {
+        op->emitError("Failed to create firstprivate recipe for ") << varName;
+        return;
+      }
+
+      auto priv = PrivateRecipeOp::createAndPopulate(builder, loc, privName,
+                                                     *firstpriv);
+
+      if (!priv) {
+        op->emitError(
+            "Failed to create private recipe (from firstprivate) for ")
+            << varName;
+      }
     }
   }
 }

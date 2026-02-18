@@ -21,7 +21,7 @@ namespace llvm {
 /// a start and an end address: [Start, End).
 class AddressRange {
 public:
-  AddressRange() {}
+  AddressRange() = default;
   AddressRange(uint64_t S, uint64_t E) : Start(S), End(E) {
     assert(Start <= End);
   }

@@ -126,15 +126,9 @@ Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
   // semantic index. The semantic index is the number at the end of
   // the semantic, including leading zeroes. Digits located before
   // the last letter are part of the semantic name.
-  bool Invalid = false;
   SmallString<256> Buffer;
   Buffer.resize(Tok.getLength() + 1);
   StringRef Identifier = PP.getSpelling(Tok, Buffer);
-  if (Invalid) {
-    Diag(Tok.getLocation(), diag::err_expected_semantic_identifier);
-    return {};
-  }
-
   assert(Identifier.size() > 0);
   // Determine the start of the semantic index.
   unsigned IndexIndex = Identifier.find_last_not_of("0123456789") + 1;

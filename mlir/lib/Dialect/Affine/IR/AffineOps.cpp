@@ -2716,8 +2716,9 @@ LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
   return success(folded);
 }
 
-OperandRange AffineForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert((point.isParent() || point == getRegion()) && "invalid region point");
+OperandRange AffineForOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert((successor.isParent() || successor.getSuccessor() == &getRegion()) &&
+         "invalid region point");
 
   // The initial operands map to the loop arguments after the induction
   // variable or are forwarded to the results when the trip count is zero.
@@ -2726,34 +2727,47 @@ OperandRange AffineForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
 
 void AffineForOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  assert((point.isParent() || point == getRegion()) && "expected loop region");
+  assert((point.isParent() ||
+          point.getTerminatorPredecessorOrNull()->getParentRegion() ==
+              &getRegion()) &&
+         "expected loop region");
   // The loop may typically branch back to its body or to the parent operation.
   // If the predecessor is the parent op and the trip count is known to be at
   // least one, branch into the body using the iterator arguments. And in cases
   // we know the trip count is zero, it can only branch back to its parent.
   std::optional<uint64_t> tripCount = getTrivialConstantTripCount(*this);
-  if (point.isParent() && tripCount.has_value()) {
-    if (tripCount.value() > 0) {
-      regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
-      return;
+  if (tripCount.has_value()) {
+    if (!point.isParent()) {
+      // From the loop body, if the trip count is one, we can only branch back
+      // to the parent.
+      if (tripCount == 1) {
+        regions.push_back(RegionSuccessor::parent());
+        return;
+      }
+      if (tripCount == 0)
+        return;
+    } else {
+      if (tripCount.value() > 0) {
+        regions.push_back(RegionSuccessor(&getRegion()));
+        return;
+      }
+      if (tripCount.value() == 0) {
+        regions.push_back(RegionSuccessor::parent());
+        return;
+      }
     }
-    if (tripCount.value() == 0) {
-      regions.push_back(RegionSuccessor(getResults()));
-      return;
-    }
-  }
-
-  // From the loop body, if the trip count is one, we can only branch back to
-  // the parent.
-  if (!point.isParent() && tripCount == 1) {
-    regions.push_back(RegionSuccessor(getResults()));
-    return;
   }
 
   // In all other cases, the loop may branch back to itself or the parent
   // operation.
-  regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
-  regions.push_back(RegionSuccessor(getResults()));
+  regions.push_back(RegionSuccessor(&getRegion()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange AffineForOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getRegionIterArgs();
 }
 
 AffineBound AffineForOp::getLowerBound() {
@@ -3138,21 +3152,29 @@ void AffineIfOp::getSuccessorRegions(
   // `else` region is valid.
   if (point.isParent()) {
     regions.reserve(2);
-    regions.push_back(
-        RegionSuccessor(&getThenRegion(), getThenRegion().getArguments()));
+    regions.push_back(RegionSuccessor(&getThenRegion()));
     // If the "else" region is empty, branch bach into parent.
     if (getElseRegion().empty()) {
-      regions.push_back(getResults());
+      regions.push_back(RegionSuccessor::parent());
     } else {
-      regions.push_back(
-          RegionSuccessor(&getElseRegion(), getElseRegion().getArguments()));
+      regions.push_back(RegionSuccessor(&getElseRegion()));
     }
     return;
   }
 
   // If the predecessor is the `else`/`then` region, then branching into parent
   // op is valid.
-  regions.push_back(RegionSuccessor(getResults()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange AffineIfOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  if (successor == &getThenRegion())
+    return getThenRegion().getArguments();
+  if (successor == &getElseRegion())
+    return getElseRegion().getArguments();
+  llvm_unreachable("invalid region successor");
 }
 
 LogicalResult AffineIfOp::verify() {
@@ -3456,11 +3478,8 @@ OpFoldResult AffineLoadOp::fold(FoldAdaptor adaptor) {
   if (!getGlobalOp)
     return {};
   // Get to the memref.global defining the symbol.
-  auto *symbolTableOp = getGlobalOp->getParentWithTrait<OpTrait::SymbolTable>();
-  if (!symbolTableOp)
-    return {};
-  auto global = dyn_cast_or_null<memref::GlobalOp>(
-      SymbolTable::lookupSymbolIn(symbolTableOp, getGlobalOp.getNameAttr()));
+  auto global = SymbolTable::lookupNearestSymbolFrom<memref::GlobalOp>(
+      getGlobalOp, getGlobalOp.getNameAttr());
   if (!global)
     return {};
 
@@ -3475,9 +3494,9 @@ OpFoldResult AffineLoadOp::fold(FoldAdaptor adaptor) {
   // Otherwise, we can fold only if we know the indices.
   if (!getAffineMap().isConstant())
     return {};
-  auto indices = llvm::to_vector<4>(
-      llvm::map_range(getAffineMap().getConstantResults(),
-                      [](int64_t v) -> uint64_t { return v; }));
+  auto indices =
+      llvm::map_to_vector<4>(getAffineMap().getConstantResults(),
+                             [](int64_t v) -> uint64_t { return v; });
   return cstAttr.getValues<Attribute>()[indices];
 }
 
@@ -4036,9 +4055,9 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
                              ArrayRef<arith::AtomicRMWKind> reductions,
                              ArrayRef<int64_t> ranges) {
   SmallVector<AffineMap> lbs(ranges.size(), builder.getConstantAffineMap(0));
-  auto ubs = llvm::to_vector<4>(llvm::map_range(ranges, [&](int64_t value) {
+  auto ubs = llvm::map_to_vector<4>(ranges, [&](int64_t value) {
     return builder.getConstantAffineMap(value);
-  }));
+  });
   SmallVector<int64_t> steps(ranges.size(), 1);
   build(builder, result, resultTypes, reductions, lbs, /*lbArgs=*/{}, ubs,
         /*ubArgs=*/{}, steps);
@@ -5413,7 +5432,7 @@ struct DropLinearizeUnitComponentsIfDisjointOrZero final
       return rewriter.notifyMatchFailure(op,
                                          "no unit basis entries to replace");
 
-    if (newIndices.size() == 0) {
+    if (newIndices.empty()) {
       rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, 0);
       return success();
     }

@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CheckExprLifetime.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
@@ -289,7 +289,7 @@ void Sema::inferLifetimeCaptureByAttribute(FunctionDecl *FD) {
       // We only apply the lifetime_capture_by attribute to parameters of
       // pointer-like reference types (`const T&`, `T&&`).
       if (PVD->getType()->isReferenceType() &&
-          sema::isGLSPointerType(PVD->getType().getNonReferenceType())) {
+          lifetimes::isGslPointerType(PVD->getType().getNonReferenceType())) {
         int CaptureByThis[] = {LifetimeCaptureByAttr::This};
         PVD->addAttr(
             LifetimeCaptureByAttr::CreateImplicit(Context, CaptureByThis, 1));
@@ -1325,6 +1325,66 @@ void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
                            MSFunctionNoBuiltins.end());
   if (!MSFunctionNoBuiltins.empty())
     FD->addAttr(NoBuiltinAttr::CreateImplicit(Context, V.data(), V.size()));
+}
+
+NamedDecl *Sema::lookupExternCFunctionOrVariable(IdentifierInfo *IdentId,
+                                                 SourceLocation NameLoc,
+                                                 Scope *curScope) {
+  LookupResult Result(*this, IdentId, NameLoc, LookupOrdinaryName);
+  LookupName(Result, curScope);
+  if (!getLangOpts().CPlusPlus)
+    return Result.getAsSingle<NamedDecl>();
+  for (NamedDecl *D : Result) {
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      if (FD->isExternC())
+        return D;
+    if (isa<VarDecl>(D))
+      return D;
+  }
+  return nullptr;
+}
+
+void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc,
+                             Scope *curScope) {
+  if (!CurContext->getRedeclContext()->isFileContext()) {
+    Diag(NameLoc, diag::err_pragma_expected_file_scope) << "export";
+    return;
+  }
+
+  PendingPragmaInfo Info;
+  Info.NameLoc = NameLoc;
+  Info.Used = false;
+
+  NamedDecl *PrevDecl =
+      lookupExternCFunctionOrVariable(IdentId, NameLoc, curScope);
+  if (!PrevDecl) {
+    PendingExportedNames[IdentId] = Info;
+    return;
+  }
+
+  if (auto *FD = dyn_cast<FunctionDecl>(PrevDecl->getCanonicalDecl())) {
+    if (!FD->hasExternalFormalLinkage()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
+      return;
+    }
+    if (FD->hasBody()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
+          << "export";
+      return;
+    }
+  } else if (auto *VD = dyn_cast<VarDecl>(PrevDecl->getCanonicalDecl())) {
+    if (!VD->hasExternalFormalLinkage()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
+      return;
+    }
+    if (VD->hasDefinition() == VarDecl::Definition) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
+          << "export";
+      return;
+    }
+  }
+  mergeVisibilityType(PrevDecl->getCanonicalDecl(), NameLoc,
+                      VisibilityAttr::Default);
 }
 
 typedef std::vector<std::pair<unsigned, SourceLocation> > VisStack;

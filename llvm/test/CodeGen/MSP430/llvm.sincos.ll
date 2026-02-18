@@ -17,7 +17,7 @@ define { half, half } @test_sincos_f16(half %a) #0 {
 ; CHECK-NEXT:    mov r9, r13
 ; CHECK-NEXT:    call #cosf
 ; CHECK-NEXT:    call #__truncsfhf2
-; CHECK-NEXT:    mov r12, r14
+; CHECK-NEXT:    mov r12, r13
 ; CHECK-NEXT:    mov r8, r12
 ; CHECK-NEXT:    pop r10
 ; CHECK-NEXT:    pop r9
@@ -60,34 +60,33 @@ define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) #0 {
 ; CHECK-NEXT:    push r8
 ; CHECK-NEXT:    push r9
 ; CHECK-NEXT:    push r10
-; CHECK-NEXT:    mov r12, r7
-; CHECK-NEXT:    mov r13, r12
+; CHECK-NEXT:    mov r13, r7
 ; CHECK-NEXT:    call #__extendhfsf2
-; CHECK-NEXT:    mov r12, r10
-; CHECK-NEXT:    mov r13, r9
+; CHECK-NEXT:    mov r12, r9
+; CHECK-NEXT:    mov r13, r8
 ; CHECK-NEXT:    call #sinf
 ; CHECK-NEXT:    call #__truncsfhf2
-; CHECK-NEXT:    mov r12, r8
+; CHECK-NEXT:    mov r12, r10
 ; CHECK-NEXT:    mov r7, r12
 ; CHECK-NEXT:    call #__extendhfsf2
-; CHECK-NEXT:    mov r12, r6
-; CHECK-NEXT:    mov r13, r5
-; CHECK-NEXT:    call #cosf
-; CHECK-NEXT:    call #__truncsfhf2
 ; CHECK-NEXT:    mov r12, r7
-; CHECK-NEXT:    mov r6, r12
-; CHECK-NEXT:    mov r5, r13
+; CHECK-NEXT:    mov r13, r6
 ; CHECK-NEXT:    call #sinf
 ; CHECK-NEXT:    call #__truncsfhf2
-; CHECK-NEXT:    mov r12, r6
-; CHECK-NEXT:    mov r10, r12
-; CHECK-NEXT:    mov r9, r13
+; CHECK-NEXT:    mov r12, r5
+; CHECK-NEXT:    mov r9, r12
+; CHECK-NEXT:    mov r8, r13
+; CHECK-NEXT:    call #cosf
+; CHECK-NEXT:    call #__truncsfhf2
+; CHECK-NEXT:    mov r12, r9
+; CHECK-NEXT:    mov r7, r12
+; CHECK-NEXT:    mov r6, r13
 ; CHECK-NEXT:    call #cosf
 ; CHECK-NEXT:    call #__truncsfhf2
 ; CHECK-NEXT:    mov r12, r15
-; CHECK-NEXT:    mov r6, r12
-; CHECK-NEXT:    mov r8, r13
-; CHECK-NEXT:    mov r7, r14
+; CHECK-NEXT:    mov r10, r12
+; CHECK-NEXT:    mov r5, r13
+; CHECK-NEXT:    mov r9, r14
 ; CHECK-NEXT:    pop r10
 ; CHECK-NEXT:    pop r9
 ; CHECK-NEXT:    pop r8

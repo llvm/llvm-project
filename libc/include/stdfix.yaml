@@ -8,7 +8,19 @@ macros:
   - macro_name: roundfx
     macro_header: stdfix-macros.h
 types:
-  - type_name: stdfix-types
+  - type_name: int_hk_t
+  - type_name: int_hr_t
+  - type_name: int_k_t
+  - type_name: int_lk_t
+  - type_name: int_lr_t
+  - type_name: int_r_t
+  - type_name: uint_uhk_t
+  - type_name: uint_uhr_t
+  - type_name: uint_uk_t
+  - type_name: uint_ulk_t
+  - type_name: uint_ulr_t
+  - type_name: uint_ur_t
+
 enums: []
 objects: []
 functions:

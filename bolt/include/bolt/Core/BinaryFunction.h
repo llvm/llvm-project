@@ -281,6 +281,14 @@ private:
   /// goto labels.
   std::set<uint64_t> ExternallyReferencedOffsets;
 
+  /// Relocations from data sections targeting internals of this function, i.e.
+  /// some code not at an entry point. These include, but are not limited to,
+  /// jump table relocations and computed goto tables.
+  ///
+  /// Since relocations can be removed/deallocated, we store relocation offsets
+  /// instead of pointers.
+  DenseSet<uint64_t> InternalRefDataRelocations;
+
   /// Offsets of indirect branches with unknown destinations.
   std::set<uint64_t> UnknownIndirectBranchOffsets;
 
@@ -377,6 +385,10 @@ private:
   /// True if the function should not have an associated symbol table entry.
   bool IsAnonymous{false};
 
+  /// Indicates whether branch validation has already been performed,
+  /// to avoid redundant processing.
+  bool NeedBranchValidation{true};
+
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -388,7 +400,8 @@ private:
   FragmentsSetTy ParentFragments;
 
   /// Indicate if the function body was folded into another function.
-  /// Used by ICF optimization.
+  /// Used by ICF optimization. Always points to the root parent function
+  /// (i.e., a function that is not itself folded).
   BinaryFunction *FoldedIntoFunction{nullptr};
 
   /// All fragments for a parent function.
@@ -620,13 +633,11 @@ private:
   }
 
   /// Return a label at a given \p Address in the function. If the label does
-  /// not exist - create it. Assert if the \p Address does not belong to
-  /// the function. If \p CreatePastEnd is true, then return the function
-  /// end label when the \p Address points immediately past the last byte
-  /// of the function.
+  /// not exist - create it.
+  ///
   /// NOTE: the function always returns a local (temp) symbol, even if there's
   ///       a global symbol that corresponds to an entry at this address.
-  MCSymbol *getOrCreateLocalLabel(uint64_t Address, bool CreatePastEnd = false);
+  MCSymbol *getOrCreateLocalLabel(uint64_t Address);
 
   /// Register an data entry at a given \p Offset into the function.
   void markDataAtOffset(uint64_t Offset) {
@@ -640,6 +651,20 @@ private:
     if (!Islands)
       Islands = std::make_unique<IslandInfo>();
     Islands->CodeOffsets.emplace(Offset);
+  }
+
+  /// Register a relocation from data section referencing code at a non-zero
+  /// offset in this function.
+  void registerInternalRefDataRelocation(uint64_t FuncOffset,
+                                         uint64_t RelOffset) {
+    assert(FuncOffset != 0 && "Relocation should reference function internals");
+    registerReferencedOffset(FuncOffset);
+    InternalRefDataRelocations.insert(RelOffset);
+    const MCSymbol *ReferencedSymbol =
+        getOrCreateLocalLabel(getAddress() + FuncOffset);
+
+    // Track the symbol mapping since it's used in relocation handling.
+    BC.setSymbolToFunctionMap(ReferencedSymbol, this);
   }
 
   /// Register an internal offset in a function referenced from outside.
@@ -711,11 +736,12 @@ private:
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
   }
 
-  /// This constructor is used to create an injected function
+  /// This constructor is used to create an injected function, i.e. a function
+  /// that didn't originate in the input file.
   BinaryFunction(const std::string &Name, BinaryContext &BC, bool IsSimple)
       : Address(0), Size(0), BC(BC), IsSimple(IsSimple),
-        CodeSectionName(buildCodeSectionName(Name, BC)),
-        ColdCodeSectionName(buildColdCodeSectionName(Name, BC)),
+        CodeSectionName(BC.getInjectedCodeSectionName()),
+        ColdCodeSectionName(BC.getInjectedColdCodeSectionName()),
         FunctionNumber(++Count) {
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
     IsInjected = true;
@@ -745,6 +771,9 @@ private:
   /// Clear state of the function that could not be disassembled or if its
   /// disassembled state was later invalidated.
   void clearDisasmState();
+
+  /// Reset the function state into Empty state, i.e. pre-disassembly form.
+  void resetState();
 
   /// Release memory allocated for CFG and instructions.
   /// We still keep basic blocks for address translation/mapping purposes.
@@ -1300,6 +1329,12 @@ public:
   /// Assert if the \p Address is not inside this function.
   void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t RelType,
                      uint64_t Addend, uint64_t Value);
+
+  /// Return locations (offsets) of data section relocations targeting internals
+  /// of this functions.
+  const DenseSet<uint64_t> &getInternalRefDataRelocations() const {
+    return InternalRefDataRelocations;
+  }
 
   /// Return the name of the section this function originated from.
   std::optional<StringRef> getOriginSectionName() const {
@@ -2294,6 +2329,11 @@ public:
   /// zero-value bytes.
   bool isZeroPaddingAt(uint64_t Offset) const;
 
+  /// Validate if the target of any internal direct branch/call is a valid
+  /// executable instruction.
+  /// Return true if all the targets are valid, false otherwise.
+  bool validateInternalBranches();
+
   /// Check that entry points have an associated instruction at their
   /// offsets after disassembly.
   void postProcessEntryPoints();
@@ -2330,10 +2370,9 @@ public:
   bool postProcessIndirectBranches(MCPlusBuilder::AllocatorIdTy AllocId);
 
   /// Validate that all data references to function offsets are claimed by
-  /// recognized jump tables. Register externally referenced blocks as entry
-  /// points. Returns true if there are no unclaimed externally referenced
-  /// offsets.
-  bool validateExternallyReferencedOffsets();
+  /// recognized jump tables. Returns true if there are no unclaimed externally
+  /// referenced offsets.
+  bool validateInternalRefDataRelocations();
 
   /// Return all call site profile info for this function.
   IndirectCallSiteProfile &getAllCallSites() { return AllCallSites; }
@@ -2547,6 +2586,10 @@ public:
 
   /// Return true if the function is an AArch64 linker inserted veneer
   bool isAArch64Veneer() const;
+
+  /// Return true if the function signature matches veneer or it was established
+  /// to be a veneer.
+  bool isPossibleVeneer() const;
 
   virtual ~BinaryFunction();
 };

@@ -20,10 +20,9 @@ AST_MATCHER(CXXRecordDecl, hasDirectVirtualBaseClass) {
     return false;
   if (!Node.getNumVBases())
     return false;
-  for (const CXXBaseSpecifier &Base : Node.bases())
-    if (Base.isVirtual())
-      return true;
-  return false;
+  return llvm::any_of(Node.bases(), [](const CXXBaseSpecifier &Base) {
+    return Base.isVirtual();
+  });
 }
 } // namespace
 

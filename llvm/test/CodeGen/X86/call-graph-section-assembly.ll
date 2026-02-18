@@ -11,7 +11,6 @@ declare !type !1 i32 @direct_bar(i8)
 declare !type !2 ptr @direct_baz(ptr)
 
 ; CHECK: ball:
-; CHECK-NEXT: [[LABEL_FUNC:\.Lfunc_begin[0-9]+]]:
 define ptr @ball() {
 entry:
   call void @direct_foo()
@@ -42,7 +41,7 @@ entry:
 ;; Flags
 ; CHECK-NEXT: .byte   7
 ;; Function Entry PC
-; CHECK-NEXT: .quad   [[LABEL_FUNC]]
+; CHECK-NEXT: .quad ball
 ;; Function type ID -- set to 0 as no type metadata attached to function.
 ; CHECK-NEXT: .quad   0
 ;; Number of unique direct callees.

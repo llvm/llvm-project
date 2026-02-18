@@ -71,7 +71,6 @@ def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
-                                      shuffle_to_extract,
                                       ext_addv_to_udot_addv,
                                       ext_uaddv_to_uaddlv,
                                       push_sub_through_zext,
@@ -243,6 +242,16 @@ def extmultomull : GICombineRule<
   (apply [{ applyExtMulToMULL(*${root}, MRI, B, Observer, ${matchinfo}); }])
 >;
 
+// The mid end will reassociate sub(sub(x, m1), m2) to sub(x, add(m1, m2))
+// This reassociates it back to allow the creation of more mls instructions.
+def subaddmulreassoc : GICombineRule<
+  (defs root:$dst),
+  (match (G_ADD $tmp, $src1, $src2):$sub,
+         (G_SUB $dst, $src3, $tmp):$root,
+         [{ return matchSubAddMulReassoc(${src1}.getReg(), ${src2}.getReg(),
+                                         ${tmp}.getReg(), ${src3}.getReg(), MRI); }]),
+  (apply [{ applySubAddMulReassoc(*${root}, *${sub}, MRI, B, Observer); }])>;
+
 def lower_mulv2s64 : GICombineRule<
   (defs root:$root),
   (match (G_MUL $dst, $src1, $src2):$root,
@@ -367,6 +376,8 @@ def AArch64PostLegalizerCombiner
                         select_to_minmax, or_to_bsp, combine_concat_vector,
                         commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
-                        combine_mul_cmlt, combine_use_vector_truncate, 
-                        extmultomull, truncsat_combines, lshr_of_trunc_of_lshr]> {
+                        combine_mul_cmlt, combine_use_vector_truncate,
+                        extmultomull, subaddmulreassoc, truncsat_combines,
+                        lshr_of_trunc_of_lshr,
+                        funnel_shift_from_or_shift_constants_are_legal]> {
 }

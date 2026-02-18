@@ -15,7 +15,6 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Mutex.h"
 #include <cassert>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -209,6 +208,7 @@ class TimerGroup {
   std::string Description;
   Timer *FirstTimer = nullptr; ///< First timer in the group.
   std::vector<PrintRecord> TimersToPrint;
+  bool PrintOnExit;
 
   TimerGroup **Prev; ///< Pointer to Next field of previous timergroup in list.
   TimerGroup *Next;  ///< Pointer to next timergroup in list.
@@ -217,13 +217,15 @@ class TimerGroup {
 
   friend class TimerGlobals;
   explicit TimerGroup(StringRef Name, StringRef Description,
-                      sys::SmartMutex<true> &lock);
+                      sys::SmartMutex<true> &lock, bool PrintOnExit);
 
 public:
-  LLVM_ABI explicit TimerGroup(StringRef Name, StringRef Description);
+  LLVM_ABI explicit TimerGroup(StringRef Name, StringRef Description,
+                               bool PrintOnExit = true);
 
   LLVM_ABI explicit TimerGroup(StringRef Name, StringRef Description,
-                               const StringMap<TimeRecord> &Records);
+                               const StringMap<TimeRecord> &Records,
+                               bool PrintOnExit = true);
 
   LLVM_ABI ~TimerGroup();
 

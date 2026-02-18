@@ -175,9 +175,8 @@ class X86FoldTablesEmitter {
     }
   };
 
-  typedef std::map<const CodeGenInstruction *, X86FoldTableEntry,
-                   CompareInstrsByEnum>
-      FoldTable;
+  using FoldTable = std::map<const CodeGenInstruction *, X86FoldTableEntry,
+                             CompareInstrsByEnum>;
   // Table2Addr - Holds instructions which their memory form performs
   //              load+store.
   //

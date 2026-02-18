@@ -116,6 +116,13 @@ LLVM_ABI void adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
                                           const SimplifyQuery &Q,
                                           unsigned Depth = 0);
 
+/// Adjust \p Known for the given select \p Arm to include information from the
+/// select \p Cond.
+LLVM_ABI void adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
+                                             Value *Arm, bool Invert,
+                                             const SimplifyQuery &Q,
+                                             unsigned Depth = 0);
+
 /// Return true if LHS and RHS have no common bits set.
 LLVM_ABI bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                                   const WithCache<const Value *> &RHSCache,
@@ -231,6 +238,10 @@ LLVM_ABI Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 LLVM_ABI bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
                              bool &TrueIfSigned);
 
+LLVM_ABI KnownFPClass analyzeKnownFPClassFromSelect(
+    const Instruction *I, const KnownFPClass &KnownLHS,
+    const KnownFPClass &KnownRHS, const SimplifyQuery &SQ, unsigned Depth = 0);
+
 /// Determine which floating-point classes are valid for \p V, and return them
 /// in KnownFPClass bit sets.
 ///
@@ -317,6 +328,11 @@ LLVM_ABI bool canIgnoreSignBitOfZero(const Use &U);
 /// Return true if the sign bit of the FP value can be ignored by the user when
 /// the value is NaN.
 LLVM_ABI bool canIgnoreSignBitOfNaN(const Use &U);
+
+/// Return true if the floating-point value \p V is known to be an integer
+/// value.
+LLVM_ABI bool isKnownIntegral(const Value *V, const SimplifyQuery &SQ,
+                              FastMathFlags FMF);
 
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8
@@ -1023,6 +1039,16 @@ findValuesAffectedByCondition(Value *Cond, bool IsAssume,
 /// where f(X) == 0 if and only if X == 0, otherwise returns nullptr.
 LLVM_ABI Value *stripNullTest(Value *V);
 LLVM_ABI const Value *stripNullTest(const Value *V);
+
+/// Enumerates all possible immediate values of V and inserts them into the set
+/// \p Constants. If \p AllowUndefOrPoison is false, it fails when V may contain
+/// undef/poison elements. Returns true if the result is complete. Otherwise,
+/// the result is incomplete (more than MaxCount values).
+/// NOTE: The constant values are not distinct.
+LLVM_ABI bool
+collectPossibleValues(const Value *V,
+                      SmallPtrSetImpl<const Constant *> &Constants,
+                      unsigned MaxCount, bool AllowUndefOrPoison = true);
 
 } // end namespace llvm
 

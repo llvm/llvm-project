@@ -1,0 +1,34 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!void = !cir.void
+
+module {
+  cir.func @block_address(){
+    %0 = cir.block_address <@block_address, "label"> : !cir.ptr<!void>
+    cir.br ^bb1
+  ^bb1:
+    cir.label "label"
+    cir.return
+  }
+// CHECK: cir.func @block_address
+// CHECK: %0 = cir.block_address <@block_address, "label"> : !cir.ptr<!void>
+// CHECK:   cir.br ^bb1
+// CHECK: ^bb1:
+// CHECK:   cir.label "label"
+// CHECK:   cir.return
+
+cir.func @block_address_inside_scope() -> () {
+  cir.scope{
+    %0 = cir.block_address <@block_address_inside_scope, "label"> : !cir.ptr<!void>
+  }
+  cir.br ^bb1
+^bb1:
+  cir.label "label"
+  cir.return
+}
+// CHECK: cir.func @block_address_inside_scope
+// CHECK: cir.scope
+// CHECK:  %0 = cir.block_address <@block_address_inside_scope, "label"> : !cir.ptr<!void>
+// CHECK:  cir.label "label"
+// CHECK: cir.return
+}

@@ -192,7 +192,7 @@ public:
       : LVReader(Filename, FileFormatName, W, BinaryType) {}
   LVBinaryReader(const LVBinaryReader &) = delete;
   LVBinaryReader &operator=(const LVBinaryReader &) = delete;
-  virtual ~LVBinaryReader() = default;
+  ~LVBinaryReader() override = default;
 
   void addInlineeLines(LVScope *Scope, LVLines &Lines) {
     CUInlineeLines.emplace(Scope, std::make_unique<LVLines>(std::move(Lines)));

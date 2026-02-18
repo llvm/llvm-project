@@ -49,11 +49,10 @@ void NSDateFormatterCheck::check(const MatchFinder::MatchResult &Result) {
   // Callback implementation.
   const auto *StrExpr = Result.Nodes.getNodeAs<ObjCStringLiteral>("str_lit");
   const StringLiteral *SL = cast<ObjCStringLiteral>(StrExpr)->getString();
-  StringRef SR = SL->getString();
+  const StringRef SR = SL->getString();
 
-  if (!isValidDatePattern(SR)) {
+  if (!isValidDatePattern(SR))
     diag(StrExpr->getExprLoc(), "invalid date format specifier");
-  }
 
   if (SR.contains('y') && SR.contains('w') && !SR.contains('Y')) {
     diag(StrExpr->getExprLoc(),

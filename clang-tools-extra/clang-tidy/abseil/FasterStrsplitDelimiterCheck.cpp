@@ -29,7 +29,7 @@ makeCharacterLiteral(const StringLiteral *Literal, const ASTContext &Context) {
   assert(Literal->getCharByteWidth() == 1 &&
          "StrSplit doesn't support wide char");
   std::string Result = clang::tooling::fixit::getText(*Literal, Context).str();
-  bool IsRawStringLiteral = StringRef(Result).starts_with(R"(R")");
+  const bool IsRawStringLiteral = StringRef(Result).starts_with(R"(R")");
   // Since raw string literal might contain unescaped non-printable characters,
   // we normalize them using `StringLiteral::outputString`.
   if (IsRawStringLiteral) {

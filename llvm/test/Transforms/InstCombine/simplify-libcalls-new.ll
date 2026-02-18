@@ -610,6 +610,16 @@ define void @size_returning_aligned_update_test() {
   ret void
 }
 
+;; Check that !alloc_token is preserved.
+; HOTCOLD-LABEL: @new_alloc_token()
+define void @new_alloc_token() {
+  ;; Attribute cold converted to __hot_cold_t cold value.
+  ; HOTCOLD: @_Znwm12__hot_cold_t(i64 10, i8 [[COLD]]), !alloc_token ![[ALLOC_TOKEN:[0-9]+]]
+  %call = call ptr @_Znwm(i64 10) #0, !alloc_token !0
+  call void @dummy(ptr %call)
+  ret void
+}
+
 ;; So that instcombine doesn't optimize out the call.
 declare void @dummy(ptr)
 
@@ -649,3 +659,6 @@ attributes #5 = { "memprof" = "hot" }
 attributes #8 = { "memprof" = "ambiguous" }
 
 attributes #6 = { nobuiltin allocsize(0) "memprof"="cold" }
+
+; CHECK: [[ALLOC_TOKEN]] = !{!"MyType", i1 false}
+!0 = !{!"MyType", i1 false}

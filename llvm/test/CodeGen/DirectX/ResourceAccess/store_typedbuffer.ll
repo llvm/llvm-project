@@ -37,7 +37,7 @@ define void @store_float4(<4 x float> %data, i32 %index, i32 %elemindex) {
   ; CHECK: %[[VEC:.*]] = extractvalue { <4 x float>, i1 } %[[LOAD]], 0
   ; CHECK: %[[INSERT:.*]] = insertelement <4 x float> %[[VEC]], float %scalar, i32 %elemindex
   ; CHECK: call void @llvm.dx.resource.store.typedbuffer.tdx.TypedBuffer_v4f32_1_0_0t.v4f32(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %buffer, i32 %index, <4 x float> %[[INSERT]])
-  %dynamic = getelementptr inbounds <4 x float>, ptr %ptr, i32 0, i32 %elemindex
+  %dynamic = getelementptr inbounds float, ptr %ptr, i32 %elemindex
   store float %scalar, ptr %dynamic
 
   ret void

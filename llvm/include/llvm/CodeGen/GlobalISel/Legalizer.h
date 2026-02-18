@@ -33,6 +33,7 @@ class LegalizerInfo;
 class MachineIRBuilder;
 class MachineInstr;
 class GISelChangeObserver;
+class LibcallLoweringInfo;
 class LostDebugLocObserver;
 
 class LLVM_ABI Legalizer : public MachineFunctionPass {
@@ -70,11 +71,11 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  static MFResult
-  legalizeMachineFunction(MachineFunction &MF, const LegalizerInfo &LI,
-                          ArrayRef<GISelChangeObserver *> AuxObservers,
-                          LostDebugLocObserver &LocObserver,
-                          MachineIRBuilder &MIRBuilder, GISelValueTracking *VT);
+  static MFResult legalizeMachineFunction(
+      MachineFunction &MF, const LegalizerInfo &LI,
+      ArrayRef<GISelChangeObserver *> AuxObservers,
+      LostDebugLocObserver &LocObserver, MachineIRBuilder &MIRBuilder,
+      const LibcallLoweringInfo *Libcalls, GISelValueTracking *VT);
 };
 } // End namespace llvm.
 

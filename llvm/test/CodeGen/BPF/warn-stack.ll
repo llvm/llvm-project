@@ -1,42 +1,36 @@
 ; RUN: not llc -mtriple=bpfel < %s 2>&1 >/dev/null | FileCheck %s
 
 ;; CHECK-NOT: nowarn
-define void @nowarn() local_unnamed_addr #0 !dbg !6 {
+define void @nowarn() local_unnamed_addr !dbg !6 {
   %1 = alloca [504 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 504, ptr nonnull %1) #4, !dbg !15
+  call void @llvm.lifetime.start.p0(i64 504, ptr nonnull %1), !dbg !15
   tail call void @llvm.dbg.declare(metadata ptr %1, metadata !10, metadata !16), !dbg !17
-  call void @doit(ptr nonnull %1) #4, !dbg !18
-  call void @llvm.lifetime.end.p0(i64 504, ptr nonnull %1) #4, !dbg !19
+  call void @doit(ptr nonnull %1), !dbg !18
+  call void @llvm.lifetime.end.p0(i64 504, ptr nonnull %1), !dbg !19
   ret void, !dbg !19
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-declare void @doit(ptr) local_unnamed_addr #3
+declare void @doit(ptr) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 ; CHECK: error: warn_stack.c
 ; CHECK: BPF stack limit
-define void @warn() local_unnamed_addr #0 !dbg !20 {
+define void @warn() local_unnamed_addr !dbg !20 {
   %1 = alloca [512 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 512, ptr nonnull %1) #4, !dbg !26
+  call void @llvm.lifetime.start.p0(i64 512, ptr nonnull %1), !dbg !26
   tail call void @llvm.dbg.declare(metadata ptr %1, metadata !22, metadata !16), !dbg !27
-  call void @doit(ptr nonnull %1) #4, !dbg !28
-  call void @llvm.lifetime.end.p0(i64 512, ptr nonnull %1) #4, !dbg !29
+  call void @doit(ptr nonnull %1), !dbg !28
+  call void @llvm.lifetime.end.p0(i64 512, ptr nonnull %1), !dbg !29
   ret void, !dbg !29
 }
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind }
-attributes #2 = { nounwind readnone }
-attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

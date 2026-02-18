@@ -15,7 +15,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <type_traits>
 
 namespace llvm {
 

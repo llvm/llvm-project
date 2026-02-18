@@ -6,9 +6,9 @@ define void @test(ptr %0, i64 %1, i64 %2) {
 ; CHECK-SAME: ptr [[TMP0:%.*]], i64 [[TMP1:%.*]], i64 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x ptr> [[TMP4]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint <4 x ptr> [[TMP5]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint <4 x ptr> [[TMP5]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 2, i32 2, i32 1, i32 3, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint <4 x ptr> [[TMP5]] to <4 x i64>
 ; CHECK-NEXT:    br [[DOTPREHEADER_LR_PH:label %.*]]
 ; CHECK:       [[_PREHEADER_LR_PH:.*:]]
 ; CHECK-NEXT:    br [[DOTPREHEADER_US_US_PREHEADER:label %.*]]

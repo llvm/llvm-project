@@ -893,7 +893,7 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 /// result of this function is undefined.
 LLVM_ABI std::optional<int64_t>
 getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-             const Loop *Lp,
+             const Loop *Lp, const DominatorTree &DT,
              const DenseMap<Value *, const SCEV *> &StridesMap =
                  DenseMap<Value *, const SCEV *>(),
              bool Assume = false, bool ShouldCheckWrap = true);

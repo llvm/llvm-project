@@ -1465,13 +1465,19 @@ void ELFState<ELFT>::writeSectionContent(
   for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
     // Write version and feature values.
     if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 4)
+      if (E.Version > 5)
         WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
                              << static_cast<int>(E.Version)
                              << "; encoding using the most recent version";
       CBA.write(E.Version);
-      CBA.write(E.Feature);
-      SHeader.sh_size += 2;
+      SHeader.sh_size += 1;
+      if (E.Version < 5) {
+        CBA.write(static_cast<uint8_t>(E.Feature));
+        SHeader.sh_size += 1;
+      } else {
+        CBA.write<uint16_t>(E.Feature, ELFT::Endianness);
+        SHeader.sh_size += 2;
+      }
     }
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(E.Feature);
     bool MultiBBRangeFeatureEnabled = false;
@@ -1556,11 +1562,15 @@ void ELFState<ELFT>::writeSectionContent(
     for (const auto &PGOBBE : PGOBBEntries) {
       if (PGOBBE.BBFreq)
         SHeader.sh_size += CBA.writeULEB128(*PGOBBE.BBFreq);
+      if (FeatureOrErr->PostLinkCfg || PGOBBE.PostLinkBBFreq.has_value())
+        SHeader.sh_size += CBA.writeULEB128(PGOBBE.PostLinkBBFreq.value_or(0));
       if (PGOBBE.Successors) {
         SHeader.sh_size += CBA.writeULEB128(PGOBBE.Successors->size());
-        for (const auto &[ID, BrProb] : *PGOBBE.Successors) {
+        for (const auto &[ID, BrProb, PostLinkBrFreq] : *PGOBBE.Successors) {
           SHeader.sh_size += CBA.writeULEB128(ID);
           SHeader.sh_size += CBA.writeULEB128(BrProb);
+          if (FeatureOrErr->PostLinkCfg || PostLinkBrFreq.has_value())
+            SHeader.sh_size += CBA.writeULEB128(PostLinkBrFreq.value_or(0));
         }
       }
     }

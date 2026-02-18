@@ -12643,7 +12643,7 @@ uint64_t test_vqrshld_u64(uint64_t a, int64_t b) {
 // CHECK-LABEL: define dso_local i64 @test_vpaddd_s64(
 // CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VPADDD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> [[A]])
+// CHECK-NEXT:    [[VPADDD_S64_I:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[A]])
 // CHECK-NEXT:    ret i64 [[VPADDD_S64_I]]
 //
 int64_t test_vpaddd_s64(int64x2_t a) {
@@ -17242,17 +17242,6 @@ uint64_t test_vceqd_u64(uint64_t a, uint64_t b) {
   return (int64_t)vceqd_u64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vceqzd_s64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[A]], 0
-// CHECK-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i64
-// CHECK-NEXT:    ret i64 [[VCEQZ_I]]
-//
-uint64_t test_vceqzd_s64(int64_t a) {
-  return (uint64_t)vceqzd_s64(a);
-}
-
 // CHECK-LABEL: define dso_local i64 @test_vceqzd_u64(
 // CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -17472,16 +17461,6 @@ int32_t test_vqabss_s32(int32_t a) {
 //
 int64_t test_vqabsd_s64(int64_t a) {
   return (int64_t)vqabsd_s64(a);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vnegd_s64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VNEGD_I:%.*]] = sub i64 0, [[A]]
-// CHECK-NEXT:    ret i64 [[VNEGD_I]]
-//
-int64_t test_vnegd_s64(int64_t a) {
-  return (int64_t)vnegd_s64(a);
 }
 
 // CHECK-LABEL: define dso_local i8 @test_vqnegb_s8(
@@ -23227,7 +23206,7 @@ uint64x2_t test_vpaddq_u64(uint64x2_t a, uint64x2_t b) {
 // CHECK-LABEL: define dso_local i64 @test_vpaddd_u64(
 // CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VPADDD_U64_I:%.*]] = call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> [[A]])
+// CHECK-NEXT:    [[VPADDD_U64_I:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[A]])
 // CHECK-NEXT:    ret i64 [[VPADDD_U64_I]]
 //
 uint64_t test_vpaddd_u64(uint64x2_t a) {
@@ -23237,7 +23216,7 @@ uint64_t test_vpaddd_u64(uint64x2_t a) {
 // CHECK-LABEL: define dso_local i64 @test_vaddvq_s64(
 // CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDVQ_S64_I:%.*]] = call i64 @llvm.aarch64.neon.saddv.i64.v2i64(<2 x i64> [[A]])
+// CHECK-NEXT:    [[VADDVQ_S64_I:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[A]])
 // CHECK-NEXT:    ret i64 [[VADDVQ_S64_I]]
 //
 int64_t test_vaddvq_s64(int64x2_t a) {
@@ -23247,7 +23226,7 @@ int64_t test_vaddvq_s64(int64x2_t a) {
 // CHECK-LABEL: define dso_local i64 @test_vaddvq_u64(
 // CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDVQ_U64_I:%.*]] = call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> [[A]])
+// CHECK-NEXT:    [[VADDVQ_U64_I:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[A]])
 // CHECK-NEXT:    ret i64 [[VADDVQ_U64_I]]
 //
 uint64_t test_vaddvq_u64(uint64x2_t a) {
@@ -23878,7 +23857,7 @@ float64x1_t test_vrsqrts_f64(float64x1_t a, float64x1_t b) {
 // CHECK-LABEL: define dso_local i32 @test_vminv_s32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMINV_S32_I:%.*]] = call i32 @llvm.aarch64.neon.sminv.i32.v2i32(<2 x i32> [[A]])
+// CHECK-NEXT:    [[VMINV_S32_I:%.*]] = call i32 @llvm.vector.reduce.smin.v2i32(<2 x i32> [[A]])
 // CHECK-NEXT:    ret i32 [[VMINV_S32_I]]
 //
 int32_t test_vminv_s32(int32x2_t a) {
@@ -23888,7 +23867,7 @@ int32_t test_vminv_s32(int32x2_t a) {
 // CHECK-LABEL: define dso_local i32 @test_vminv_u32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMINV_U32_I:%.*]] = call i32 @llvm.aarch64.neon.uminv.i32.v2i32(<2 x i32> [[A]])
+// CHECK-NEXT:    [[VMINV_U32_I:%.*]] = call i32 @llvm.vector.reduce.umin.v2i32(<2 x i32> [[A]])
 // CHECK-NEXT:    ret i32 [[VMINV_U32_I]]
 //
 uint32_t test_vminv_u32(uint32x2_t a) {
@@ -23898,7 +23877,7 @@ uint32_t test_vminv_u32(uint32x2_t a) {
 // CHECK-LABEL: define dso_local i32 @test_vmaxv_s32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMAXV_S32_I:%.*]] = call i32 @llvm.aarch64.neon.smaxv.i32.v2i32(<2 x i32> [[A]])
+// CHECK-NEXT:    [[VMAXV_S32_I:%.*]] = call i32 @llvm.vector.reduce.smax.v2i32(<2 x i32> [[A]])
 // CHECK-NEXT:    ret i32 [[VMAXV_S32_I]]
 //
 int32_t test_vmaxv_s32(int32x2_t a) {
@@ -23908,7 +23887,7 @@ int32_t test_vmaxv_s32(int32x2_t a) {
 // CHECK-LABEL: define dso_local i32 @test_vmaxv_u32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMAXV_U32_I:%.*]] = call i32 @llvm.aarch64.neon.umaxv.i32.v2i32(<2 x i32> [[A]])
+// CHECK-NEXT:    [[VMAXV_U32_I:%.*]] = call i32 @llvm.vector.reduce.umax.v2i32(<2 x i32> [[A]])
 // CHECK-NEXT:    ret i32 [[VMAXV_U32_I]]
 //
 uint32_t test_vmaxv_u32(uint32x2_t a) {
@@ -23918,7 +23897,7 @@ uint32_t test_vmaxv_u32(uint32x2_t a) {
 // CHECK-LABEL: define dso_local i32 @test_vaddv_s32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDV_S32_I:%.*]] = call i32 @llvm.aarch64.neon.saddv.i32.v2i32(<2 x i32> [[A]])
+// CHECK-NEXT:    [[VADDV_S32_I:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[A]])
 // CHECK-NEXT:    ret i32 [[VADDV_S32_I]]
 //
 int32_t test_vaddv_s32(int32x2_t a) {
@@ -23928,7 +23907,7 @@ int32_t test_vaddv_s32(int32x2_t a) {
 // CHECK-LABEL: define dso_local i32 @test_vaddv_u32(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDV_U32_I:%.*]] = call i32 @llvm.aarch64.neon.uaddv.i32.v2i32(<2 x i32> [[A]])
+// CHECK-NEXT:    [[VADDV_U32_I:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[A]])
 // CHECK-NEXT:    ret i32 [[VADDV_U32_I]]
 //
 uint32_t test_vaddv_u32(uint32x2_t a) {

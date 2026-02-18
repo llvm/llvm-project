@@ -21,16 +21,11 @@ import html
 import json
 import mmap
 import os
+import pathlib
 import re
 import struct
 import subprocess
 import sys
-
-if sys.version_info.major < 3:
-  # Simulate Python 3.x behaviour of defaulting to UTF-8 for print. This is
-  # important in case any symbols are non-ASCII.
-  import codecs
-  sys.stdout = codecs.getwriter("utf-8")(sys.stdout)
 
 # Below, a parser for a subset of ELF. It only supports 64 bit, little-endian,
 # and only parses what is necessary to find the build ids. It uses a memoryview
@@ -476,7 +471,7 @@ def main():
   # Source location.
   paths_to_cut = args.source or []
   if not paths_to_cut:
-    paths_to_cut.append(os.getcwd() + '/')
+    paths_to_cut.append(pathlib.Path.cwd().as_posix() + '/')
     if 'ANDROID_BUILD_TOP' in os.environ:
       paths_to_cut.append(os.environ['ANDROID_BUILD_TOP'] + '/')
 

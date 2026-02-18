@@ -21,6 +21,9 @@ public:
   M68kSelectionDAGInfo();
 
   ~M68kSelectionDAGInfo() override;
+
+  void verifyTargetNode(const SelectionDAG &DAG,
+                        const SDNode *N) const override;
 };
 
 } // namespace llvm

@@ -1,7 +1,7 @@
 # Xqcia - Qualcomm uC Arithmetic Extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqcia < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+xqcia < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcia < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=-xqcia < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+2]]:20: error: register must be a GPR excluding zero (x0)

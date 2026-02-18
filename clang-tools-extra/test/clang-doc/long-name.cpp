@@ -1,9 +1,9 @@
 // FIXME: This test seems to break on windows, so disable it for now.
 // UNSUPPORTED: system-windows
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --output=%t --format=mustache --executor=standalone %s
-// RUN: ls %t/json | FileCheck %s -check-prefix=CHECK-JSON
-// RUN: ls %t/html | FileCheck %s -check-prefix=CHECK-HTML
+// RUN: clang-doc --output=%t --format=html --executor=standalone %s
+// RUN: ls %t/json/GlobalNamespace | FileCheck %s -check-prefix=CHECK-JSON
+// RUN: ls %t/html/GlobalNamespace | FileCheck %s -check-prefix=CHECK-HTML
 
 struct ThisStructHasANameThatResultsInAMangledNameThatIsExactly250CharactersLongThatIsSupposedToTestTheFilenameLengthLimitsWithinClangDocInOrdertoSeeifclangdocwillcrashornotdependingonthelengthofthestructIfTheLengthIsTooLongThenClangDocWillCrashAnd12 {};
 

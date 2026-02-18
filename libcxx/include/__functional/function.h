@@ -540,7 +540,7 @@ public:
 #    if __has_feature(objc_arc)
       : __f_(__f)
 #    else
-      : __f_(reinterpret_cast<__block_type>(__f ? _Block_copy(__f) : nullptr))
+      : __f_(reinterpret_cast<__block_type>(__f ? __function::_Block_copy(__f) : nullptr))
 #    endif
   {
   }
@@ -563,7 +563,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void destroy() _NOEXCEPT {
 #    if !__has_feature(objc_arc)
     if (__f_)
-      _Block_release(__f_);
+      __function::_Block_release(__f_);
 #    endif
     __f_ = 0;
   }
@@ -672,11 +672,11 @@ public:
 
 #  if _LIBCPP_HAS_RTTI
   // function target access:
-  _LIBCPP_HIDE_FROM_ABI const std::type_info& target_type() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const std::type_info& target_type() const _NOEXCEPT;
   template <typename _Tp>
-  _LIBCPP_HIDE_FROM_ABI _Tp* target() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Tp* target() _NOEXCEPT;
   template <typename _Tp>
-  _LIBCPP_HIDE_FROM_ABI const _Tp* target() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Tp* target() const _NOEXCEPT;
 #  endif // _LIBCPP_HAS_RTTI
 };
 

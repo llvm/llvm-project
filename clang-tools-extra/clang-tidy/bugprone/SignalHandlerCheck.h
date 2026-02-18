@@ -48,10 +48,10 @@ private:
   /// The bool parameter is used like \c SkipPathEnd in \c reportHandlerChain .
   /// \return Returns true if a diagnostic was emitted for this function.
   bool checkFunction(const FunctionDecl *FD, const Expr *CallOrRef,
-                     std::function<void(bool)> ChainReporter);
+                     llvm::function_ref<void(bool)> ChainReporter);
   /// Similar as \c checkFunction but only check for C++14 rules.
   bool checkFunctionCPP14(const FunctionDecl *FD, const Expr *CallOrRef,
-                          std::function<void(bool)> ChainReporter);
+                          llvm::function_ref<void(bool)> ChainReporter);
   /// Returns true if a standard library function is considered
   /// asynchronous-safe.
   bool isStandardFunctionAsyncSafe(const FunctionDecl *FD) const;
@@ -65,8 +65,9 @@ private:
   /// registered as signal handler.
   /// @param SkipPathEnd If true the last item of the call chain (farthest away
   /// from the \c signal call) is omitted from note generation.
-  void reportHandlerChain(const llvm::df_iterator<clang::CallGraphNode *> &Itr,
-                          const DeclRefExpr *HandlerRef, bool SkipPathEnd);
+  void
+  reportHandlerChain(const llvm::df_iterator<const clang::CallGraphNode *> &Itr,
+                     const DeclRefExpr *HandlerRef, bool SkipPathEnd);
 
   clang::CallGraph CG;
 

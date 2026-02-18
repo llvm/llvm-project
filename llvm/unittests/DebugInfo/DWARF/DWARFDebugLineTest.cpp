@@ -864,7 +864,7 @@ TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
 }
 
 struct AdjustAddressFixtureBase : public CommonFixture {
-  virtual ~AdjustAddressFixtureBase() {}
+  virtual ~AdjustAddressFixtureBase() = default;
 
   // Create and update the prologue as specified by the subclass, then return
   // the length of the table.

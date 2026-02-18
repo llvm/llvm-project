@@ -1,0 +1,11 @@
+// RUN: cir-opt %s -verify-diagnostics
+
+module {
+  cir.func @l0() {
+    cir.return
+  }
+
+  cir.func @disallowedAttr() attributes {comdat} { // expected-error{{custom op 'cir.func' attribute 'comdat' should not be specified in the explicit attribute list}}
+    cir.return
+  }
+}

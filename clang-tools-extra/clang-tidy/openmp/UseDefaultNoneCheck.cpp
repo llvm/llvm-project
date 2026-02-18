@@ -37,8 +37,9 @@ void UseDefaultNoneCheck::check(const MatchFinder::MatchResult &Result) {
          "OpenMP directive '%0' specifies 'default(%1)' clause, consider using "
          "'default(none)' clause instead")
         << getOpenMPDirectiveName(Directive->getDirectiveKind())
-        << getOpenMPSimpleClauseTypeName(Clause->getClauseKind(),
-                                         unsigned(Clause->getDefaultKind()));
+        << getOpenMPSimpleClauseTypeName(
+               Clause->getClauseKind(),
+               llvm::to_underlying(Clause->getDefaultKind()));
     diag(Clause->getBeginLoc(), "existing 'default' clause specified here",
          DiagnosticIDs::Note);
     return;

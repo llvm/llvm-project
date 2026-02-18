@@ -84,7 +84,7 @@ private:
 template <typename T, typename RangeType>
 std::pair<size_t, MutableArrayRef<T>>
 BlobAllocator::allocateNewArray(const iterator_range<RangeType> &Range) {
-  size_t Num = std::distance(Range.begin(), Range.end());
+  size_t Num = llvm::size(Range);
   MutableArrayRef<T> Array(Temporaries.Allocate<T>(Num), Num);
   llvm::uninitialized_copy(Range, Array.begin());
   return {allocateArray(Array), Array};

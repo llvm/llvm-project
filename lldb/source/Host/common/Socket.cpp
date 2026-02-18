@@ -500,13 +500,13 @@ Socket::GetProtocolAndMode(llvm::StringRef scheme) {
   return llvm::StringSwitch<std::optional<ProtocolModePair>>(scheme)
       .Case("listen", ProtocolModePair{SocketProtocol::ProtocolTcp,
                                        SocketMode::ModeAccept})
-      .Cases("accept", "unix-accept",
+      .Cases({"accept", "unix-accept"},
              ProtocolModePair{SocketProtocol::ProtocolUnixDomain,
                               SocketMode::ModeAccept})
       .Case("unix-abstract-accept",
             ProtocolModePair{SocketProtocol::ProtocolUnixAbstract,
                              SocketMode::ModeAccept})
-      .Cases("connect", "tcp-connect", "connection",
+      .Cases({"connect", "tcp-connect", "connection"},
              ProtocolModePair{SocketProtocol::ProtocolTcp,
                               SocketMode::ModeConnect})
       .Case("udp", ProtocolModePair{SocketProtocol::ProtocolTcp,

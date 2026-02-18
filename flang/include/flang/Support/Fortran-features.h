@@ -53,10 +53,11 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
     SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
-    IgnoreIrrelevantAttributes, Unsigned, AmbiguousStructureConstructor,
-    ContiguousOkForSeqAssociation, ForwardRefExplicitTypeDummy,
-    InaccessibleDeferredOverride, CudaWarpMatchFunction, DoConcurrentOffload,
-    TransferBOZ, Coarray)
+    IgnoreIrrelevantAttributes, Unsigned, ContiguousOkForSeqAssociation,
+    ForwardRefExplicitTypeDummy, InaccessibleDeferredOverride,
+    CudaWarpMatchFunction, DoConcurrentOffload, TransferBOZ, Coarray,
+    PointerPassObject, MultipleIdenticalDATA,
+    DefaultStructConstructorNullPointer)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -73,13 +74,15 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     ZeroDoStep, UnusedForallIndex, OpenMPUsage, DataLength, IgnoredDirective,
     HomonymousSpecific, HomonymousResult, IgnoredIntrinsicFunctionType,
     PreviousScalarUse, RedeclaredInaccessibleComponent, ImplicitShared,
-    IndexVarRedefinition, IncompatibleImplicitInterfaces, CdefinedInit,
+    IndexVarRedefinition, IncompatibleImplicitInterfaces,
     VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
     MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation,
     CompatibleDeclarationsFromDistinctModules, ConstantIsContiguous,
     NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram,
     HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile,
-    RealConstantWidening, VolatileOrAsynchronousTemporary)
+    RealConstantWidening, VolatileOrAsynchronousTemporary, UnusedVariable,
+    UsedUndefinedVariable, BadValueInDeadCode, AssumedTypeSizeDummy,
+    MisplacedIgnoreTKR)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

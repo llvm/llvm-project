@@ -25,7 +25,7 @@ template <typename, bool> class DominatorTreeBase;
 template <typename> class SmallVectorImpl;
 
 namespace Intrinsic {
-typedef unsigned ID;
+using ID = unsigned;
 }
 
 // Specializations of this template should provide the types used by the

@@ -15,6 +15,7 @@
 #include "XtensaConstantPoolValue.h"
 #include "XtensaInstrInfo.h"
 #include "XtensaMachineFunctionInfo.h"
+#include "XtensaSelectionDAGInfo.h"
 #include "XtensaSubtarget.h"
 #include "XtensaTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
@@ -53,7 +54,7 @@ static unsigned toCallerWindow(unsigned Reg) {
 
 XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
                                            const XtensaSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
   MVT PtrVT = MVT::i32;
   // Set up the register classes.
   addRegisterClass(MVT::i32, &Xtensa::ARRegClass);
@@ -216,7 +217,7 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSQRT, VT, Expand);
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FCOS, VT, Expand);
-      setOperationAction(ISD::FREM, VT, Expand);
+      setOperationAction(ISD::FREM, VT, LibCall);
       setOperationAction(ISD::FDIV, VT, Expand);
       setOperationAction(ISD::FPOW, VT, Expand);
       setOperationAction(ISD::FSQRT, VT, Expand);
@@ -963,7 +964,7 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
         isShiftedInt<8, 8>(Value))
       return Op;
     Type *Ty = Type::getInt32Ty(*DAG.getContext());
-    Constant *CV = ConstantInt::get(Ty, Value);
+    Constant *CV = ConstantInt::getSigned(Ty, Value);
     SDValue CP = DAG.getConstantPool(CV, MVT::i32);
     SDValue Res =
         DAG.getLoad(MVT::i32, DL, DAG.getEntryNode(), CP, MachinePointerInfo());
@@ -1510,60 +1511,8 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
   }
 }
 
-const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (Opcode) {
-  case XtensaISD::BR_JT:
-    return "XtensaISD::BR_JT";
-  case XtensaISD::CALL:
-    return "XtensaISD::CALL";
-  case XtensaISD::CALLW8:
-    return "XtensaISD::CALLW8";
-  case XtensaISD::EXTUI:
-    return "XtensaISD::EXTUI";
-  case XtensaISD::MOVSP:
-    return "XtensaISD::MOVSP";
-  case XtensaISD::PCREL_WRAPPER:
-    return "XtensaISD::PCREL_WRAPPER";
-  case XtensaISD::RET:
-    return "XtensaISD::RET";
-  case XtensaISD::RETW:
-    return "XtensaISD::RETW";
-  case XtensaISD::RUR:
-    return "XtensaISD::RUR";
-  case XtensaISD::SELECT_CC:
-    return "XtensaISD::SELECT_CC";
-  case XtensaISD::SELECT_CC_FP:
-    return "XtensaISD::SELECT_CC_FP";
-  case XtensaISD::SRCL:
-    return "XtensaISD::SRCL";
-  case XtensaISD::SRCR:
-    return "XtensaISD::SRCR";
-  case XtensaISD::CMPUO:
-    return "XtensaISD::CMPUO";
-  case XtensaISD::CMPUEQ:
-    return "XtensaISD::CMPUEQ";
-  case XtensaISD::CMPULE:
-    return "XtensaISD::CMPULE";
-  case XtensaISD::CMPULT:
-    return "XtensaISD::CMPULT";
-  case XtensaISD::CMPOEQ:
-    return "XtensaISD::CMPOEQ";
-  case XtensaISD::CMPOLE:
-    return "XtensaISD::CMPOLE";
-  case XtensaISD::CMPOLT:
-    return "XtensaISD::CMPOLT";
-  case XtensaISD::MADD:
-    return "XtensaISD::MADD";
-  case XtensaISD::MSUB:
-    return "XtensaISD::MSUB";
-  case XtensaISD::MOVS:
-    return "XtensaISD::MOVS";
-  }
-  return nullptr;
-}
-
 TargetLowering::AtomicExpansionKind
-XtensaTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+XtensaTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   return AtomicExpansionKind::CmpXChg;
 }
 

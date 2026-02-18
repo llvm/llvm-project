@@ -73,7 +73,7 @@ are always accessed in a safe way by separating them in a dedicated safe stack
 region. The safe stack is automatically protected against stack-based buffer
 overflows, since it is disjoint from the unsafe stack in memory, and it itself
 is always accessed in a safe way. In the current implementation, the safe stack
-is protected against arbitrary memory write vulnerabilities though
+is protected against arbitrary memory write vulnerabilities through
 randomization and information hiding: the safe stack is allocated at a random
 address and the instrumentation ensures that no pointers to the safe stack are
 ever stored outside of the safe stack itself (see limitations below).

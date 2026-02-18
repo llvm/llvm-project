@@ -383,7 +383,7 @@ class AsmPrinterHandlerTest : public AsmPrinterFixtureBase {
 
   public:
     TestHandler(AsmPrinterHandlerTest &Test) : Test(Test) {}
-    ~TestHandler() override {}
+    ~TestHandler() override = default;
     void setSymbolSize(const MCSymbol *Sym, uint64_t Size) override {}
     void beginModule(Module *M) override { Test.BeginCount++; }
     void endModule() override { Test.EndCount++; }

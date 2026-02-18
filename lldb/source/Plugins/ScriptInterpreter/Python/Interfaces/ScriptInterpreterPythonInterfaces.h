@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONINTERFACES_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONINTERFACES_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTINTERPRETERPYTHONINTERFACES_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTINTERPRETERPYTHONINTERFACES_H
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Host/Config.h"
@@ -17,6 +17,7 @@
 
 #include "OperatingSystemPythonInterface.h"
 #include "ScriptedBreakpointPythonInterface.h"
+#include "ScriptedFrameProviderPythonInterface.h"
 #include "ScriptedFramePythonInterface.h"
 #include "ScriptedPlatformPythonInterface.h"
 #include "ScriptedProcessPythonInterface.h"
@@ -36,4 +37,4 @@ public:
 } // namespace lldb_private
 
 #endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHONINTERFACES_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTINTERPRETERPYTHONINTERFACES_H

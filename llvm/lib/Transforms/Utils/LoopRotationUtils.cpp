@@ -100,7 +100,7 @@ static void RewriteUsesOfClonedInstructions(BasicBlock *OrigHeader,
   // Remove PHI node entries that are no longer live.
   BasicBlock::iterator I, E = OrigHeader->end();
   for (I = OrigHeader->begin(); PHINode *PN = dyn_cast<PHINode>(I); ++I)
-    PN->removeIncomingValue(PN->getBasicBlockIndex(OrigPreheader));
+    PN->removeIncomingValue(OrigPreheader);
 
   // Now fix up users of the instructions in OrigHeader, inserting PHI nodes
   // as necessary.

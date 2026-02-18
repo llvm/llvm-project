@@ -250,7 +250,7 @@ namespace subobject {
 namespace lifetime {
   constexpr int &&id(int &&n) { return static_cast<int&&>(n); }
   constexpr int &&dead() { return id(0); } // expected-note {{temporary created here}}
-  constexpr int bad() { int &&n = dead(); n = 1; return n; } // expected-note {{assignment to temporary whose lifetime has ended}}
+  constexpr int bad() { int &&n = dead(); n = 1; return n; } // expected-note {{assignment to object outside its lifetime}}
   static_assert(bad(), ""); // expected-error {{constant expression}} expected-note {{in call}}
 }
 
@@ -1449,4 +1449,10 @@ static_assert(test_member_null(), "");
 namespace GH149500 {
   unsigned int * p = &(*(unsigned int *)0x400);
   static const void *q = &(*(const struct sysrq_key_op *)0);
+}
+
+constexpr bool missingCase() {
+  switch (1) {
+    1u: return false; // expected-error {{expected 'case' keyword before expression}}
+  }
 }

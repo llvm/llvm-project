@@ -110,13 +110,17 @@ enum GPUKind : uint32_t {
   GK_GFX1152,
   GK_GFX1153,
 
+  GK_GFX1170,
+
   GK_GFX1200,
   GK_GFX1201,
   GK_GFX1250,
   GK_GFX1251,
 
+  GK_GFX1310,
+
   GK_AMDGCN_FIRST = GK_GFX600,
-  GK_AMDGCN_LAST = GK_GFX1251,
+  GK_AMDGCN_LAST = GK_GFX1310,
 
   GK_GFX9_GENERIC,
   GK_GFX10_1_GENERIC,
@@ -161,6 +165,9 @@ enum ArchFeatureKind : uint32_t {
 
   // WGP mode is supported.
   FEATURE_WGP = 1 << 9,
+
+  // Xnack is available by default
+  FEATURE_XNACK_ALWAYS = 1 << 10
 };
 
 enum FeatureError : uint32_t {

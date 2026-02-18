@@ -15,25 +15,28 @@
 using namespace llvm;
 using namespace llvm::hlsl;
 
-static size_t getMemberOffset(GlobalVariable *Handle, size_t Index) {
+static SmallVector<size_t>
+getMemberOffsets(const DataLayout &DL, GlobalVariable *Handle,
+                 llvm::function_ref<bool(Type *)> IsPadding) {
+  SmallVector<size_t> Offsets;
+
   auto *HandleTy = cast<TargetExtType>(Handle->getValueType());
   assert((HandleTy->getName().ends_with(".CBuffer") ||
           HandleTy->getName() == "spirv.VulkanBuffer") &&
          "Not a cbuffer type");
   assert(HandleTy->getNumTypeParameters() == 1 && "Expected layout type");
+  auto *LayoutTy = cast<StructType>(HandleTy->getTypeParameter(0));
 
-  auto *LayoutTy = cast<TargetExtType>(HandleTy->getTypeParameter(0));
-  assert(LayoutTy->getName().ends_with(".Layout") && "Not a layout type");
+  const StructLayout *SL = DL.getStructLayout(LayoutTy);
+  for (int I = 0, E = LayoutTy->getNumElements(); I < E; ++I)
+    if (!IsPadding(LayoutTy->getElementType(I)))
+      Offsets.push_back(SL->getElementOffset(I));
 
-  // Skip the "size" parameter.
-  size_t ParamIndex = Index + 1;
-  assert(LayoutTy->getNumIntParameters() > ParamIndex &&
-         "Not enough parameters");
-
-  return LayoutTy->getIntParameter(ParamIndex);
+  return Offsets;
 }
 
-std::optional<CBufferMetadata> CBufferMetadata::get(Module &M) {
+std::optional<CBufferMetadata>
+CBufferMetadata::get(Module &M, llvm::function_ref<bool(Type *)> IsPadding) {
   NamedMDNode *CBufMD = M.getNamedMetadata("hlsl.cbs");
   if (!CBufMD)
     return std::nullopt;
@@ -52,13 +55,16 @@ std::optional<CBufferMetadata> CBufferMetadata::get(Module &M) {
         cast<GlobalVariable>(cast<ValueAsMetadata>(OpMD)->getValue());
     CBufferMapping &Mapping = Result->Mappings.emplace_back(Handle);
 
+    SmallVector<size_t> MemberOffsets =
+        getMemberOffsets(M.getDataLayout(), Handle, IsPadding);
+
     for (int I = 1, E = MD->getNumOperands(); I < E; ++I) {
       Metadata *OpMD = MD->getOperand(I);
       // Some members may be null if they've been optimized out.
       if (!OpMD)
         continue;
       auto *V = cast<GlobalVariable>(cast<ValueAsMetadata>(OpMD)->getValue());
-      Mapping.Members.emplace_back(V, getMemberOffset(Handle, I - 1));
+      Mapping.Members.emplace_back(V, MemberOffsets[I - 1]);
     }
   }
 
@@ -68,11 +74,4 @@ std::optional<CBufferMetadata> CBufferMetadata::get(Module &M) {
 void CBufferMetadata::eraseFromModule() {
   // Remove the cbs named metadata
   MD->eraseFromParent();
-}
-
-APInt hlsl::translateCBufArrayOffset(const DataLayout &DL, APInt Offset,
-                                     ArrayType *Ty) {
-  int64_t TypeSize = DL.getTypeSizeInBits(Ty->getElementType()) / 8;
-  int64_t RoundUp = alignTo(TypeSize, Align(CBufferRowSizeInBytes));
-  return Offset.udiv(TypeSize) * RoundUp;
 }

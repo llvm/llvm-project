@@ -230,7 +230,7 @@ public:
       O << "Token " << Tok;
       break;
     case k_Reg:
-      O << "Register " << Reg;
+      O << "Register " << Reg.id();
       break;
     case k_Imm:
       O << "Immediate ";
@@ -241,10 +241,10 @@ public:
       MAI.printExpr(O, *Mem.Offset);
       break;
     case k_IndReg:
-      O << "RegInd " << Reg;
+      O << "RegInd " << Reg.id();
       break;
     case k_PostIndReg:
-      O << "PostInc " << Reg;
+      O << "PostInc " << Reg.id();
       break;
     }
   }

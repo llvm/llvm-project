@@ -64,7 +64,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __bind_back(_Fn&& __f, _Args&&... __args) n
 
 #  if _LIBCPP_STD_VER >= 23
 template <class _Fn, class... _Args>
-_LIBCPP_HIDE_FROM_ABI constexpr auto bind_back(_Fn&& __f, _Args&&... __args) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto bind_back(_Fn&& __f, _Args&&... __args) {
   static_assert(is_constructible_v<decay_t<_Fn>, _Fn>, "bind_back requires decay_t<F> to be constructible from F");
   static_assert(is_move_constructible_v<decay_t<_Fn>>, "bind_back requires decay_t<F> to be move constructible");
   static_assert((is_constructible_v<decay_t<_Args>, _Args> && ...),

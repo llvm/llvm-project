@@ -13,6 +13,7 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/simple_ilist.h"
@@ -25,6 +26,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -196,11 +198,18 @@ private:
   Expected<ObjectPair> getOrCreateObjectPair(const std::string &Path,
                                              const std::string &ArchName);
 
-  /// Return a pointer to object file at specified path, for a specified
-  /// architecture (e.g. if path refers to a Mach-O universal binary, only one
-  /// object file from it will be returned).
-  Expected<ObjectFile *> getOrCreateObject(const std::string &Path,
-                                           const std::string &ArchName);
+  /// Return a pointer to the object file with the specified name, for a
+  /// specified architecture (e.g. if path refers to a Mach-O universal
+  /// binary, only one object file from it will be returned).
+  Expected<ObjectFile *> getOrCreateObject(const std::string &InputPath,
+                                           const std::string &DefaultArchName);
+
+  /// Return a pointer to the object file with the specified name, for a
+  /// specified architecture that is present inside an archive file.
+  Expected<ObjectFile *> getOrCreateObjectFromArchive(StringRef ArchivePath,
+                                                      StringRef MemberName,
+                                                      StringRef ArchName,
+                                                      StringRef FullPath);
 
   /// Update the LRU cache order when a binary is accessed.
   void recordAccess(CachedBinary &Bin);
@@ -216,15 +225,39 @@ private:
   /// Contains parsed binary for each path, or parsing error.
   std::map<std::string, CachedBinary, std::less<>> BinaryForPath;
 
+  /// Store the archive path for the object file.
+  DenseMap<const object::ObjectFile *, std::string> ObjectToArchivePath;
+
   /// A list of cached binaries in LRU order.
   simple_ilist<CachedBinary> LRUBinaries;
   /// Sum of the sizes of the cached binaries.
   size_t CacheSize = 0;
 
-  /// Parsed object file for path/architecture pair, where "path" refers
-  /// to Mach-O universal binary.
-  std::map<std::pair<std::string, std::string>, std::unique_ptr<ObjectFile>>
-      ObjectForUBPathAndArch;
+  struct ContainerCacheKey {
+    std::string Path;
+    std::string MemberName;
+    std::string ArchName;
+
+    // Required for map comparison.
+    bool operator<(const ContainerCacheKey &Other) const {
+      return std::tie(Path, MemberName, ArchName) <
+             std::tie(Other.Path, Other.MemberName, Other.ArchName);
+    }
+  };
+
+  /// Parsed object file for each path/member/architecture triple.
+  /// Used to cache objects extracted from containers (e.g., Mach-O
+  /// universal binaries, archives).
+  std::map<ContainerCacheKey, std::unique_ptr<ObjectFile>> ObjectFileCache;
+
+  Expected<object::Binary *>
+  loadOrGetBinary(const std::string &ArchivePathKey,
+                  std::optional<StringRef> FullPathKey = std::nullopt);
+
+  Expected<ObjectFile *> findOrCacheObject(
+      const ContainerCacheKey &Key,
+      llvm::function_ref<Expected<std::unique_ptr<ObjectFile>>()> Loader,
+      const std::string &PathForBinaryCache);
 
   Options Opts;
 

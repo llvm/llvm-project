@@ -300,6 +300,12 @@ def AVX512_512_SET0 : I<0, Pseudo, (outs VR512:$dst), (ins), "",
                [(set VR512:$dst, (v16i32 immAllZerosV))]>;
 def AVX512_512_SETALLONES : I<0, Pseudo, (outs VR512:$dst), (ins), "",
                [(set VR512:$dst, (v16i32 immAllOnesV))]>;
+let AddedComplexity = 1, Predicates = [HasVLX] in {
+  def AVX512_128_SETALLONES : I<0, Pseudo, (outs VR128X:$dst), (ins),
+                                "", [(set VR128X:$dst, (v4i32 immAllOnesV))]>;
+  def AVX512_256_SETALLONES : I<0, Pseudo, (outs VR256X:$dst), (ins),
+                                "", [(set VR256X:$dst, (v8i32 immAllOnesV))]>;
+}
 }
 
 let Predicates = [HasAVX512] in {
@@ -2718,7 +2724,7 @@ def : Pat<(i8 (bitconvert (v8i1 VK8:$src))),
 def : Pat<(i32 (zext (i16 (bitconvert (v16i1 VK16:$src))))),
           (KMOVWrk VK16:$src)>;
 def : Pat<(i64 (zext (i16 (bitconvert (v16i1 VK16:$src))))),
-          (SUBREG_TO_REG (i64 0), (KMOVWrk VK16:$src), sub_32bit)>;
+          (SUBREG_TO_REG (KMOVWrk VK16:$src), sub_32bit)>;
 def : Pat<(i32 (anyext (i16 (bitconvert (v16i1 VK16:$src))))),
           (COPY_TO_REGCLASS VK16:$src, GR32)>;
 def : Pat<(i64 (anyext (i16 (bitconvert (v16i1 VK16:$src))))),
@@ -2727,7 +2733,7 @@ def : Pat<(i64 (anyext (i16 (bitconvert (v16i1 VK16:$src))))),
 def : Pat<(i32 (zext (i8 (bitconvert (v8i1 VK8:$src))))),
           (KMOVBrk VK8:$src)>, Requires<[HasDQI]>;
 def : Pat<(i64 (zext (i8 (bitconvert (v8i1 VK8:$src))))),
-          (SUBREG_TO_REG (i64 0), (KMOVBrk VK8:$src), sub_32bit)>, Requires<[HasDQI]>;
+          (SUBREG_TO_REG (KMOVBrk VK8:$src), sub_32bit)>, Requires<[HasDQI]>;
 def : Pat<(i32 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
           (COPY_TO_REGCLASS VK8:$src, GR32)>;
 def : Pat<(i64 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
@@ -3161,6 +3167,12 @@ multiclass avx512_mask_setop_w<SDPatternOperator Val> {
 defm KSET0 : avx512_mask_setop_w<immAllZerosV>;
 defm KSET1 : avx512_mask_setop_w<immAllOnesV>;
 
+// 8-bit mask set operations for AVX512DQ
+let Predicates = [HasDQI] in {
+  defm KSET0B : avx512_mask_setop<VK8, v8i1, immAllZerosV>;
+  defm KSET1B : avx512_mask_setop<VK8, v8i1, immAllOnesV>;
+}
+
 // With AVX-512 only, 8-bit mask is promoted to 16-bit mask.
 let Predicates = [HasAVX512] in {
   def : Pat<(v8i1 immAllZerosV), (COPY_TO_REGCLASS (KSET0W), VK8)>;
@@ -3171,6 +3183,34 @@ let Predicates = [HasAVX512] in {
   def : Pat<(v4i1 immAllOnesV),  (COPY_TO_REGCLASS (KSET1W), VK4)>;
   def : Pat<(v2i1 immAllOnesV),  (COPY_TO_REGCLASS (KSET1W), VK2)>;
   def : Pat<(v1i1 immAllOnesV),  (COPY_TO_REGCLASS (KSET1W), VK1)>;
+}
+
+// With AVX512DQ, use 8-bit operations for 8-bit masks to avoid setting upper
+// bits
+let Predicates = [HasDQI] in {
+  def : Pat<(v8i1 immAllZerosV), (KSET0B)>;
+  def : Pat<(v8i1 immAllOnesV), (KSET1B)>;
+}
+
+// Optimize bitconvert of all-ones constants to use kxnor instructions
+let Predicates = [HasDQI] in {
+  def : Pat<(v8i1(bitconvert(i8 255))), (KSET1B)>;
+  def : Pat<(v16i1(bitconvert(i16 255))), (COPY_TO_REGCLASS(KSET1B), VK16)>;
+}
+let Predicates = [HasBWI] in {
+  def : Pat<(v32i1(bitconvert(i32 -1))), (KSET1D)>;
+  def : Pat<(v64i1(bitconvert(i64 -1))), (KSET1Q)>;
+}
+// Submask patterns: lower N bits set in larger mask registers
+let Predicates = [HasBWI, HasDQI] in {
+  // v32i1 submasks
+  def : Pat<(v32i1(bitconvert(i32 255))), (COPY_TO_REGCLASS(KSET1B), VK32)>;
+  def : Pat<(v32i1(bitconvert(i32 65535))), (COPY_TO_REGCLASS(KSET1W), VK32)>;
+  // v64i1 submasks
+  def : Pat<(v64i1(bitconvert(i64 255))), (COPY_TO_REGCLASS(KSET1B), VK64)>;
+  def : Pat<(v64i1(bitconvert(i64 65535))), (COPY_TO_REGCLASS(KSET1W), VK64)>;
+  def : Pat<(v64i1(bitconvert(i64 4294967295))), (COPY_TO_REGCLASS(KSET1D),
+                                                     VK64)>;
 }
 
 // Patterns for kmask insert_subvector/extract_subvector to/from index=0
@@ -4415,20 +4455,20 @@ let Predicates = [HasAVX512, OptForSize] in {
 
   // Move low f32 and clear high bits.
   def : Pat<(v8f32 (X86vzmovl (v8f32 VR256X:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v4f32 (VMOVSSZrr (v4f32 (AVX512_128_SET0)),
               (v4f32 (EXTRACT_SUBREG (v8f32 VR256X:$src), sub_xmm)))), sub_xmm)>;
   def : Pat<(v8i32 (X86vzmovl (v8i32 VR256X:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v4i32 (VMOVSSZrr (v4i32 (AVX512_128_SET0)),
               (v4i32 (EXTRACT_SUBREG (v8i32 VR256X:$src), sub_xmm)))), sub_xmm)>;
 
   def : Pat<(v16f32 (X86vzmovl (v16f32 VR512:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v4f32 (VMOVSSZrr (v4f32 (AVX512_128_SET0)),
               (v4f32 (EXTRACT_SUBREG (v16f32 VR512:$src), sub_xmm)))), sub_xmm)>;
   def : Pat<(v16i32 (X86vzmovl (v16i32 VR512:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v4i32 (VMOVSSZrr (v4i32 (AVX512_128_SET0)),
               (v4i32 (EXTRACT_SUBREG (v16i32 VR512:$src), sub_xmm)))), sub_xmm)>;
 }
@@ -4437,12 +4477,12 @@ let Predicates = [HasAVX512, OptForSize] in {
 // VMOVSS/SD. Unfortunately, loses the ability to use XMM16-31.
 let Predicates = [HasAVX512, OptForSpeed] in {
   def : Pat<(v16f32 (X86vzmovl (v16f32 VR512:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v4f32 (VBLENDPSrri (v4f32 (V_SET0)),
                           (v4f32 (EXTRACT_SUBREG (v16f32 VR512:$src), sub_xmm)),
                           (i8 1))), sub_xmm)>;
   def : Pat<(v16i32 (X86vzmovl (v16i32 VR512:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v4i32 (VPBLENDWrri (v4i32 (V_SET0)),
                           (v4i32 (EXTRACT_SUBREG (v16i32 VR512:$src), sub_xmm)),
                           (i8 3))), sub_xmm)>;
@@ -4457,16 +4497,16 @@ let Predicates = [HasAVX512] in {
   // Represent the same patterns above but in the form they appear for
   // 256-bit types
   def : Pat<(v8f32 (X86vzload32 addr:$src)),
-            (SUBREG_TO_REG (i32 0), (VMOVSSZrm addr:$src), sub_xmm)>;
+            (SUBREG_TO_REG (VMOVSSZrm addr:$src), sub_xmm)>;
   def : Pat<(v4f64 (X86vzload64 addr:$src)),
-            (SUBREG_TO_REG (i32 0), (VMOVSDZrm addr:$src), sub_xmm)>;
+            (SUBREG_TO_REG (VMOVSDZrm addr:$src), sub_xmm)>;
 
   // Represent the same patterns above but in the form they appear for
   // 512-bit types
   def : Pat<(v16f32 (X86vzload32 addr:$src)),
-            (SUBREG_TO_REG (i32 0), (VMOVSSZrm addr:$src), sub_xmm)>;
+            (SUBREG_TO_REG (VMOVSSZrm addr:$src), sub_xmm)>;
   def : Pat<(v8f64 (X86vzload64 addr:$src)),
-            (SUBREG_TO_REG (i32 0), (VMOVSDZrm addr:$src), sub_xmm)>;
+            (SUBREG_TO_REG (VMOVSDZrm addr:$src), sub_xmm)>;
 }
 let Predicates = [HasFP16] in {
   def : Pat<(v8f16 (X86vzmovl (v8f16 VR128X:$src))),
@@ -4476,21 +4516,21 @@ let Predicates = [HasFP16] in {
 
   // FIXME we need better canonicalization in dag combine
   def : Pat<(v16f16 (X86vzmovl (v16f16 VR256X:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v8f16 (VMOVSHZrr (v8f16 (AVX512_128_SET0)),
               (v8f16 (EXTRACT_SUBREG (v16f16 VR256X:$src), sub_xmm)))), sub_xmm)>;
   def : Pat<(v16i16 (X86vzmovl (v16i16 VR256X:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v8i16 (VMOVSHZrr (v8i16 (AVX512_128_SET0)),
               (v8i16 (EXTRACT_SUBREG (v16i16 VR256X:$src), sub_xmm)))), sub_xmm)>;
 
   // FIXME we need better canonicalization in dag combine
   def : Pat<(v32f16 (X86vzmovl (v32f16 VR512:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v8f16 (VMOVSHZrr (v8f16 (AVX512_128_SET0)),
               (v8f16 (EXTRACT_SUBREG (v32f16 VR512:$src), sub_xmm)))), sub_xmm)>;
   def : Pat<(v32i16 (X86vzmovl (v32i16 VR512:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v8i16 (VMOVSHZrr (v8i16 (AVX512_128_SET0)),
               (v8i16 (EXTRACT_SUBREG (v32i16 VR512:$src), sub_xmm)))), sub_xmm)>;
 
@@ -4498,10 +4538,10 @@ let Predicates = [HasFP16] in {
             (VMOVSHZrm addr:$src)>;
 
   def : Pat<(v16f16 (X86vzload16 addr:$src)),
-            (SUBREG_TO_REG (i32 0), (VMOVSHZrm addr:$src), sub_xmm)>;
+            (SUBREG_TO_REG (VMOVSHZrm addr:$src), sub_xmm)>;
 
   def : Pat<(v32f16 (X86vzload16 addr:$src)),
-            (SUBREG_TO_REG (i32 0), (VMOVSHZrm addr:$src), sub_xmm)>;
+            (SUBREG_TO_REG (VMOVSHZrm addr:$src), sub_xmm)>;
 }
 
 let ExeDomain = SSEPackedInt, SchedRW = [SchedWriteVecLogic.XMM] in {
@@ -4527,38 +4567,38 @@ let Predicates = [HasAVX512] in {
   def : Pat<(v4i32 (X86vzload32 addr:$src)),
             (VMOVDI2PDIZrm addr:$src)>;
   def : Pat<(v8i32 (X86vzload32 addr:$src)),
-            (SUBREG_TO_REG (i32 0), (v4i32 (VMOVDI2PDIZrm addr:$src)), sub_xmm)>;
+            (SUBREG_TO_REG (v4i32 (VMOVDI2PDIZrm addr:$src)), sub_xmm)>;
   def : Pat<(v2f64 (X86vzmovl (v2f64 VR128X:$src))),
             (VMOVZPQILo2PQIZrr VR128X:$src)>;
   def : Pat<(v2i64 (X86vzload64 addr:$src)),
             (VMOVQI2PQIZrm addr:$src)>;
   def : Pat<(v4i64 (X86vzload64 addr:$src)),
-            (SUBREG_TO_REG (i64 0), (v2i64 (VMOVQI2PQIZrm addr:$src)), sub_xmm)>;
+            (SUBREG_TO_REG (v2i64 (VMOVQI2PQIZrm addr:$src)), sub_xmm)>;
 
   // Use regular 128-bit instructions to match 512-bit scalar_to_vec+zext.
   def : Pat<(v16i32 (X86vzload32 addr:$src)),
-            (SUBREG_TO_REG (i32 0), (v4i32 (VMOVDI2PDIZrm addr:$src)), sub_xmm)>;
+            (SUBREG_TO_REG (v4i32 (VMOVDI2PDIZrm addr:$src)), sub_xmm)>;
   def : Pat<(v8i64 (X86vzload64 addr:$src)),
-            (SUBREG_TO_REG (i64 0), (v2i64 (VMOVQI2PQIZrm addr:$src)), sub_xmm)>;
+            (SUBREG_TO_REG (v2i64 (VMOVQI2PQIZrm addr:$src)), sub_xmm)>;
 
   def : Pat<(v4f64 (X86vzmovl (v4f64 VR256X:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v2f64 (VMOVZPQILo2PQIZrr
                      (v2f64 (EXTRACT_SUBREG (v4f64 VR256X:$src), sub_xmm)))),
              sub_xmm)>;
   def : Pat<(v4i64 (X86vzmovl (v4i64 VR256X:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v2i64 (VMOVZPQILo2PQIZrr
                      (v2i64 (EXTRACT_SUBREG (v4i64 VR256X:$src), sub_xmm)))),
              sub_xmm)>;
 
   def : Pat<(v8f64 (X86vzmovl (v8f64 VR512:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v2f64 (VMOVZPQILo2PQIZrr
                      (v2f64 (EXTRACT_SUBREG (v8f64 VR512:$src), sub_xmm)))),
              sub_xmm)>;
   def : Pat<(v8i64 (X86vzmovl (v8i64 VR512:$src))),
-            (SUBREG_TO_REG (i32 0),
+            (SUBREG_TO_REG
              (v2i64 (VMOVZPQILo2PQIZrr
                      (v2i64 (EXTRACT_SUBREG (v8i64 VR512:$src), sub_xmm)))),
              sub_xmm)>;
@@ -12312,6 +12352,25 @@ defm : AVX512_scalar_unary_math_patterns<any_fsqrt, "SQRTSS", X86Movss, v4f32x_i
 defm : AVX512_scalar_unary_math_patterns<any_fsqrt, "SQRTSD", X86Movsd, v2f64x_info>;
 defm : AVX512_scalar_unary_math_patterns<any_fsqrt, "SQRTSH", X86Movsh, v8f16x_info>;
 
+multiclass AVX512_scalar_unary_math_patterns_with_immediate<
+    SDPatternOperator OpNode, string OpcPrefix, SDNode Move,
+    X86VectorVTInfo _> {
+  let Predicates = [HasAVX512] in {
+    def : Pat<(_.VT(Move _.VT:$dst, (scalar_to_vector(OpNode
+                                        (extractelt _.VT:$src, (i64 0)),
+                                        i32:$imm)))),
+              (!cast<Instruction>("V"#OpcPrefix#"Zrri_Int") _.VT:$dst,
+                  _.VT:$src, i32:$imm)>;
+  }
+}
+
+defm : AVX512_scalar_unary_math_patterns_with_immediate<
+           X86any_VRndScale, "RNDSCALESS", X86Movss, v4f32x_info>;
+defm : AVX512_scalar_unary_math_patterns_with_immediate<
+           X86any_VRndScale, "RNDSCALESD", X86Movsd, v2f64x_info>;
+defm : AVX512_scalar_unary_math_patterns_with_immediate<
+           X86any_VRndScale, "RNDSCALESH", X86Movsh, v8f16x_info>;
+
 //===----------------------------------------------------------------------===//
 // AES instructions
 //===----------------------------------------------------------------------===//
@@ -12344,15 +12403,15 @@ defm VAESDECLAST  : avx512_vaes<0xDF, "vaesdeclast", "int_x86_aesni_aesdeclast">
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasAVX512, HasVPCLMULQDQ] in
-defm VPCLMULQDQZ : vpclmulqdq<VR512, i512mem, loadv8i64, int_x86_pclmulqdq_512>,
+defm VPCLMULQDQZ : vpclmulqdq<VR512, i512mem, loadv8i64, v8i64>,
                               EVEX, VVVV, EVEX_V512, EVEX_CD8<64, CD8VF>, WIG;
 
 let Predicates = [HasVLX, HasVPCLMULQDQ] in {
-defm VPCLMULQDQZ128 : vpclmulqdq<VR128X, i128mem, loadv2i64, int_x86_pclmulqdq>,
+defm VPCLMULQDQZ128 : vpclmulqdq<VR128X, i128mem, loadv2i64, v2i64>,
                               EVEX, VVVV, EVEX_V128, EVEX_CD8<64, CD8VF>, WIG;
 
-defm VPCLMULQDQZ256: vpclmulqdq<VR256X, i256mem, loadv4i64,
-                                int_x86_pclmulqdq_256>, EVEX, VVVV, EVEX_V256,
+defm VPCLMULQDQZ256: vpclmulqdq<VR256X, i256mem, loadv4i64, v4i64>,
+                                EVEX, VVVV, EVEX_V256,
                                 EVEX_CD8<64, CD8VF>, WIG;
 }
 
@@ -12974,13 +13033,13 @@ def : Pat<(v8i32 (X86vzmovl
                                     (v4i32 (scalar_to_vector
                                             (and GR32:$src, 0xffff))),
                                     (iPTR 0)))),
-          (SUBREG_TO_REG (i32 0), (VMOVW2SHrr GR32:$src), sub_xmm)>;
+          (SUBREG_TO_REG (VMOVW2SHrr GR32:$src), sub_xmm)>;
 def : Pat<(v16i32 (X86vzmovl
                    (insert_subvector undef,
                                      (v4i32 (scalar_to_vector
                                              (and GR32:$src, 0xffff))),
                                      (iPTR 0)))),
-          (SUBREG_TO_REG (i32 0), (VMOVW2SHrr GR32:$src), sub_xmm)>;
+          (SUBREG_TO_REG (VMOVW2SHrr GR32:$src), sub_xmm)>;
 
 def : Pat<(v8i16 (X86vzmovl (scalar_to_vector (i16 GR16:$src)))),
           (VMOVW2SHrr (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit))>;
@@ -12989,11 +13048,11 @@ def : Pat<(v8i16 (X86vzmovl (scalar_to_vector (i16 GR16:$src)))),
 def : Pat<(v8i16 (X86vzload16 addr:$src)),
           (VMOVWrm addr:$src)>;
 def : Pat<(v16i16 (X86vzload16 addr:$src)),
-          (SUBREG_TO_REG (i32 0), (v8i16 (VMOVWrm addr:$src)), sub_xmm)>;
+          (SUBREG_TO_REG (v8i16 (VMOVWrm addr:$src)), sub_xmm)>;
 
 // Use regular 128-bit instructions to match 512-bit scalar_to_vec+zext.
 def : Pat<(v32i16 (X86vzload16 addr:$src)),
-          (SUBREG_TO_REG (i32 0), (v8i16 (VMOVWrm addr:$src)), sub_xmm)>;
+          (SUBREG_TO_REG (v8i16 (VMOVWrm addr:$src)), sub_xmm)>;
 
 def : Pat<(v4i32 (scalar_to_vector (i32 (extloadi16 addr:$src)))),
           (VMOVWrm addr:$src)>;
@@ -13004,13 +13063,13 @@ def : Pat<(v8i32 (X86vzmovl
                                     (v4i32 (scalar_to_vector
                                             (i32 (zextloadi16 addr:$src)))),
                                     (iPTR 0)))),
-          (SUBREG_TO_REG (i32 0), (VMOVWrm addr:$src), sub_xmm)>;
+          (SUBREG_TO_REG (VMOVWrm addr:$src), sub_xmm)>;
 def : Pat<(v16i32 (X86vzmovl
                    (insert_subvector undef,
                                      (v4i32 (scalar_to_vector
                                              (i32 (zextloadi16 addr:$src)))),
                                      (iPTR 0)))),
-          (SUBREG_TO_REG (i32 0), (VMOVWrm addr:$src), sub_xmm)>;
+          (SUBREG_TO_REG (VMOVWrm addr:$src), sub_xmm)>;
 
 // Move word from xmm register to r/m16
 def VMOVSH2Wrr  : AVX512<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR128X:$src),

@@ -24,8 +24,6 @@
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <set>
-#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -75,12 +73,10 @@ void DominanceFrontierBase<BlockT, IsPostDom>::dump() const {
 }
 #endif
 
-template <class BlockT>
-const typename ForwardDominanceFrontierBase<BlockT>::DomSetType &
-ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
-                                                const DomTreeNodeT *Node) {
+template <class BlockT, bool IsPostDom>
+void DominanceFrontierBase<BlockT, IsPostDom>::calculate(
+    const DomTreeT &DT, const DomTreeNodeT *Node) {
   BlockT *BB = Node->getBlock();
-  DomSetType *Result = nullptr;
 
   std::vector<DFCalculateWorkObject<BlockT>> workList;
   SmallPtrSet<BlockT *, 32> visited;
@@ -101,10 +97,10 @@ ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
     // Visit each block only once.
     if (visited.insert(currentBB).second) {
       // Loop over CFG successors to calculate DFlocal[currentNode]
-      for (const auto Succ : children<BlockT *>(currentBB)) {
+      for (const auto Child : children<GraphTy>(currentBB)) {
         // Does Node immediately dominate this successor?
-        if (DT[Succ]->getIDom() != currentNode)
-          S.insert(Succ);
+        if (DT[Child]->getIDom() != currentNode)
+          S.insert(Child);
       }
     }
 
@@ -128,7 +124,6 @@ ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
     // from the workList.
     if (!visitChild) {
       if (!parentBB) {
-        Result = &S;
         break;
       }
 
@@ -142,8 +137,6 @@ ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
     }
 
   } while (!workList.empty());
-
-  return *Result;
 }
 
 } // end namespace llvm

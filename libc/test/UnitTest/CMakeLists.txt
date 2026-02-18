@@ -83,7 +83,7 @@ add_unittest_framework_library(
 )
 
 set(libc_death_test_srcs LibcDeathTestExecutors.cpp)
-if(${LIBC_TARGET_OS} STREQUAL "linux")
+if(${LIBC_TARGET_OS} STREQUAL "linux" OR ${LIBC_TARGET_OS} STREQUAL "darwin")
   list(APPEND libc_death_test_srcs ExecuteFunctionUnix.cpp)
 endif()
 
@@ -204,5 +204,6 @@ add_header_library(
     ErrnoCheckingTest.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.macros.properties.architectures
     libc.src.errno.errno
 )

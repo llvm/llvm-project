@@ -487,7 +487,7 @@ The 'Erlang' and 'OCaml' GCs
 LLVM ships with two example collectors which leverage the ``gcroot``
 mechanisms.  To our knowledge, these are not actually used by any language
 runtime, but they do provide a reasonable starting point for someone interested
-in writing an ``gcroot`` compatible GC plugin.  In particular, these are the
+in writing a ``gcroot`` compatible GC plugin.  In particular, these are the
 only in-tree examples of how to produce a custom binary stack map format using
 a ``gcroot`` strategy.
 

@@ -45,7 +45,6 @@
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/InlineAdvisor.h"
-#include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
 #include "llvm/Analysis/InstCount.h"
 #include "llvm/Analysis/KernelInfo.h"
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
@@ -67,6 +66,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionDivision.h"
@@ -83,7 +83,6 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
-#include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -91,21 +90,23 @@
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
-#include "llvm/CodeGen/ExpandFp.h"
-#include "llvm/CodeGen/ExpandLargeDivRem.h"
+#include "llvm/CodeGen/ExpandIRInsts.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
+#include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/CodeGen/GCMetadata.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InitUndef.h"
+#include "llvm/CodeGen/InlineAsmPrepare.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
@@ -123,6 +124,7 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
+#include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineLICM.h"
@@ -899,6 +901,11 @@ Expected<bool> parseEntryExitInstrumenterPassOptions(StringRef Params) {
                                             "EntryExitInstrumenter");
 }
 
+Expected<bool> parseDropUnnecessaryAssumesPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "drop-deref",
+                                            "DropUnnecessaryAssumes");
+}
+
 Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "single", "LoopExtractor");
 }
@@ -1585,24 +1592,31 @@ parseBoundsCheckingOptions(StringRef Params) {
       Options.Rt = {
           /*MinRuntime=*/false,
           /*MayReturn=*/true,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "rt-abort") {
       Options.Rt = {
           /*MinRuntime=*/false,
           /*MayReturn=*/false,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "min-rt") {
       Options.Rt = {
           /*MinRuntime=*/true,
           /*MayReturn=*/true,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "min-rt-abort") {
       Options.Rt = {
           /*MinRuntime=*/true,
           /*MayReturn=*/false,
+          /*HandlerPreserveAllRegs=*/false,
       };
     } else if (ParamName == "merge") {
       Options.Merge = true;
+    } else if (ParamName == "handler-preserve-all-regs") {
+      if (Options.Rt)
+        Options.Rt->HandlerPreserveAllRegs = true;
     } else {
       StringRef ParamEQ;
       StringRef Val;
@@ -1621,7 +1635,7 @@ parseBoundsCheckingOptions(StringRef Params) {
   return Options;
 }
 
-Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Param) {
+Expected<CodeGenOptLevel> parseExpandIRInstsOptions(StringRef Param) {
   if (Param.empty())
     return CodeGenOptLevel::None;
 
@@ -1630,13 +1644,13 @@ Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Param) {
 
   uint8_t N;
   if (!Prefix.empty() || Digit.getAsInteger(10, N))
-    return createStringError("invalid expand-fp pass parameter '%s'",
+    return createStringError("invalid expand-ir-insts pass parameter '%s'",
                              Param.str().c_str());
 
   std::optional<CodeGenOptLevel> Level = CodeGenOpt::getLevel(N);
   if (!Level.has_value())
     return createStringError(
-        "invalid optimization level for expand-fp pass: %s",
+        "invalid optimization level for expand-ir-insts pass: %s",
         Digit.str().c_str());
 
   return *Level;

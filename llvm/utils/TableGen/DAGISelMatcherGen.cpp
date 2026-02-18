@@ -11,8 +11,8 @@
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
-#include "Common/DAGISelMatcher.h"
 #include "Common/InfoByHwMode.h"
+#include "DAGISelMatcher.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TableGen/Error.h"
@@ -23,10 +23,9 @@ using namespace llvm;
 /// getRegisterValueType - Look up and return the ValueType of the specified
 /// register. If the register is a member of multiple register classes, they
 /// must all have the same type.
-static MVT::SimpleValueType getRegisterValueType(const Record *R,
-                                                 const CodeGenTarget &T) {
+static MVT getRegisterValueType(const Record *R, const CodeGenTarget &T) {
   bool FoundRC = false;
-  MVT::SimpleValueType VT = MVT::Other;
+  MVT VT = MVT::Other;
   const CodeGenRegister *Reg = T.getRegBank().getReg(R);
 
   for (const auto &RC : T.getRegBank().getRegClasses()) {
@@ -37,14 +36,14 @@ static MVT::SimpleValueType getRegisterValueType(const Record *R,
       FoundRC = true;
       const ValueTypeByHwMode &VVT = RC.getValueTypeNum(0);
       assert(VVT.isSimple());
-      VT = VVT.getSimple().SimpleTy;
+      VT = VVT.getSimple();
       continue;
     }
 
 #ifndef NDEBUG
     // If this occurs in multiple register classes, they all have to agree.
     const ValueTypeByHwMode &VVT = RC.getValueTypeNum(0);
-    assert(VVT.isSimple() && VVT.getSimple().SimpleTy == VT &&
+    assert(VVT.isSimple() && VVT.getSimple() == VT &&
            "ValueType mismatch between register classes for this register");
 #endif
   }
@@ -93,12 +92,12 @@ class MatcherGen {
   /// second is the recorded slot number the input pattern match saved it in.
   SmallVector<std::pair<const Record *, unsigned>, 2> PhysRegInputs;
 
-  /// Matcher - This is the top level of the generated matcher, the result.
-  Matcher *TheMatcher = nullptr;
+  /// This is the top level of the generated matcher, the result.
+  MatcherList TheMatcherList;
 
-  /// CurPredicate - As we emit matcher nodes, this points to the latest check
-  /// which should have future checks stuck into its Next position.
-  Matcher *CurPredicate = nullptr;
+  /// As we emit matcher nodes, this points to the latest check which should
+  /// have future checks inserted after it.
+  MatcherList::iterator InsertPt;
 
 public:
   MatcherGen(const PatternToMatch &pattern, const CodeGenDAGPatterns &cgp);
@@ -106,7 +105,7 @@ public:
   bool EmitMatcherCode(unsigned Variant);
   void EmitResultCode();
 
-  Matcher *GetMatcher() const { return TheMatcher; }
+  MatcherList GetMatcherList() { return std::move(TheMatcherList); }
 
 private:
   void AddMatcher(Matcher *NewNode);
@@ -147,7 +146,7 @@ private:
 
 MatcherGen::MatcherGen(const PatternToMatch &pattern,
                        const CodeGenDAGPatterns &cgp)
-    : Pattern(pattern), CGP(cgp) {
+    : Pattern(pattern), CGP(cgp), InsertPt(TheMatcherList.before_begin()) {
   // We need to produce the matcher tree for the patterns source pattern.  To
   // do this we need to match the structure as well as the types.  To do the
   // type matching, we want to figure out the fewest number of type checks we
@@ -185,11 +184,7 @@ void MatcherGen::InferPossibleTypes() {
 
 /// AddMatcher - Add a matcher node to the current graph we're building.
 void MatcherGen::AddMatcher(Matcher *NewNode) {
-  if (CurPredicate)
-    CurPredicate->setNext(NewNode);
-  else
-    TheMatcher = NewNode;
-  CurPredicate = NewNode;
+  InsertPt = TheMatcherList.insert_after(InsertPt, NewNode);
 }
 
 //===----------------------------------------------------------------------===//
@@ -240,7 +235,6 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode &N) {
   if ( // Handle register references.  Nothing to do here, they always match.
       LeafRec->isSubClassOf("RegisterClassLike") ||
       LeafRec->isSubClassOf("RegisterOperand") ||
-      LeafRec->isSubClassOf("PointerLikeRegClass") ||
       LeafRec->isSubClassOf("SubRegIndex") ||
       // Place holder for SRCVALUE nodes. Nothing to do here.
       LeafRec->getName() == "srcvalue")
@@ -538,7 +532,7 @@ void MatcherGen::EmitMatchCode(const TreePatternNode &N,
   }
 
   for (unsigned I : ResultsToTypeCheck)
-    AddMatcher(new CheckTypeMatcher(N.getSimpleType(I), I));
+    AddMatcher(new CheckTypeMatcher(N.getType(I), I));
 }
 
 /// EmitMatcherCode - Generate the code that matches the predicate of this
@@ -662,7 +656,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
   assert(N.isLeaf() && "Must be a leaf");
 
   if (const IntInit *II = dyn_cast<IntInit>(N.getLeafValue())) {
-    AddMatcher(new EmitIntegerMatcher(II->getValue(), N.getSimpleType(0),
+    AddMatcher(new EmitIntegerMatcher(II->getValue(), N.getType(0),
                                       NextRecordedOperandNo));
     ResultOps.push_back(NextRecordedOperandNo++);
     return;
@@ -673,24 +667,24 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
     const Record *Def = DI->getDef();
     if (Def->isSubClassOf("Register")) {
       const CodeGenRegister *Reg = CGP.getTargetInfo().getRegBank().getReg(Def);
-      AddMatcher(new EmitRegisterMatcher(Reg, N.getSimpleType(0),
-                                         NextRecordedOperandNo));
+      AddMatcher(
+          new EmitRegisterMatcher(Reg, N.getType(0), NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
 
     if (Def->getName() == "zero_reg") {
-      AddMatcher(new EmitRegisterMatcher(nullptr, N.getSimpleType(0),
+      AddMatcher(new EmitRegisterMatcher(nullptr, N.getType(0),
                                          NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
 
     if (Def->getName() == "undef_tied_input") {
-      MVT::SimpleValueType ResultVT = N.getSimpleType(0);
+      ValueTypeByHwMode ResultVT = N.getType(0);
       auto IDOperandNo = NextRecordedOperandNo++;
       const Record *ImpDef = Def->getRecords().getDef("IMPLICIT_DEF");
-      CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(ImpDef);
+      const CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(ImpDef);
       AddMatcher(new EmitNodeMatcher(II, ResultVT, {}, false, false, false,
                                      false, -1, IDOperandNo));
       ResultOps.push_back(IDOperandNo);
@@ -707,14 +701,9 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
       // StringIntegerMatcher. In this case, fallback to using IntegerMatcher.
       const CodeGenRegisterClass &RC =
           CGP.getTargetInfo().getRegisterClass(Def);
-      if (RC.EnumValue <= 127) {
-        std::string Value = RC.getQualifiedIdName();
-        AddMatcher(new EmitStringIntegerMatcher(Value, MVT::i32,
-                                                NextRecordedOperandNo));
-      } else {
-        AddMatcher(new EmitIntegerMatcher(RC.EnumValue, MVT::i32,
-                                          NextRecordedOperandNo));
-      }
+      std::string Name = RC.getQualifiedIdName();
+      AddMatcher(new EmitIntegerMatcher(Name, RC.EnumValue, MVT::i32,
+                                        NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
@@ -722,20 +711,10 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
     // Handle a subregister index. This is used for INSERT_SUBREG etc.
     if (Def->isSubClassOf("SubRegIndex")) {
       const CodeGenRegBank &RB = CGP.getTargetInfo().getRegBank();
-      // If we have more than 127 subreg indices the encoding can overflow
-      // 7 bit and we cannot use StringInteger.
-      if (RB.getSubRegIndices().size() > 127) {
-        const CodeGenSubRegIndex *I = RB.findSubRegIdx(Def);
-        if (I->EnumValue > 127) {
-          AddMatcher(new EmitIntegerMatcher(I->EnumValue, MVT::i32,
-                                            NextRecordedOperandNo));
-          ResultOps.push_back(NextRecordedOperandNo++);
-          return;
-        }
-      }
-      std::string Value = getQualifiedName(Def);
-      AddMatcher(
-          new EmitStringIntegerMatcher(Value, MVT::i32, NextRecordedOperandNo));
+      const CodeGenSubRegIndex *I = RB.findSubRegIdx(Def);
+      std::string Name = getQualifiedName(Def);
+      AddMatcher(new EmitIntegerMatcher(Name, I->EnumValue, MVT::i32,
+                                        NextRecordedOperandNo));
       ResultOps.push_back(NextRecordedOperandNo++);
       return;
     }
@@ -749,7 +728,7 @@ static bool mayInstNodeLoadOrStore(const TreePatternNode &N,
                                    const CodeGenDAGPatterns &CGP) {
   const Record *Op = N.getOperator();
   const CodeGenTarget &CGT = CGP.getTargetInfo();
-  CodeGenInstruction &II = CGT.getInstruction(Op);
+  const CodeGenInstruction &II = CGT.getInstruction(Op);
   return II.mayLoad || II.mayStore;
 }
 
@@ -776,7 +755,7 @@ void MatcherGen::EmitResultInstructionAsOperand(
     const TreePatternNode &N, SmallVectorImpl<unsigned> &OutputOps) {
   const Record *Op = N.getOperator();
   const CodeGenTarget &CGT = CGP.getTargetInfo();
-  CodeGenInstruction &II = CGT.getInstruction(Op);
+  const CodeGenInstruction &II = CGT.getInstruction(Op);
   const DAGInstruction &Inst = CGP.getInstruction(Op);
 
   bool isRoot = &N == &Pattern.getDstPattern();
@@ -896,9 +875,9 @@ void MatcherGen::EmitResultInstructionAsOperand(
   // Result order: node results, chain, glue
 
   // Determine the result types.
-  SmallVector<MVT::SimpleValueType, 4> ResultVTs;
+  SmallVector<ValueTypeByHwMode, 4> ResultVTs;
   for (unsigned i = 0, e = N.getNumTypes(); i != e; ++i)
-    ResultVTs.push_back(N.getSimpleType(i));
+    ResultVTs.push_back(N.getType(i));
 
   // If this is the root instruction of a pattern that has physical registers in
   // its result pattern, add output VTs for them.  For example, X86 has:
@@ -973,8 +952,9 @@ void MatcherGen::EmitResultInstructionAsOperand(
                                  NumFixedArityOperands, NextRecordedOperandNo));
 
   // The non-chain and non-glue results of the newly emitted node get recorded.
-  for (MVT::SimpleValueType ResultVT : ResultVTs) {
-    if (ResultVT == MVT::Other || ResultVT == MVT::Glue)
+  for (const ValueTypeByHwMode &ResultVT : ResultVTs) {
+    if (ResultVT.isSimple() && (ResultVT.getSimple() == MVT::Other ||
+                                ResultVT.getSimple() == MVT::Glue))
       break;
     OutputOps.push_back(NextRecordedOperandNo++);
   }
@@ -1046,7 +1026,7 @@ void MatcherGen::EmitResultCode() {
     const TreePatternNode &DstPat = Pattern.getDstPattern();
     if (!DstPat.isLeaf() && DstPat.getOperator()->isSubClassOf("Instruction")) {
       const CodeGenTarget &CGT = CGP.getTargetInfo();
-      CodeGenInstruction &II = CGT.getInstruction(DstPat.getOperator());
+      const CodeGenInstruction &II = CGT.getInstruction(DstPat.getOperator());
 
       if (II.HasOneImplicitDefWithKnownVT(CGT) != MVT::Other)
         HandledReg = II.ImplicitDefs[0];
@@ -1071,16 +1051,16 @@ void MatcherGen::EmitResultCode() {
   AddMatcher(new CompleteMatchMatcher(Results, Pattern));
 }
 
-/// ConvertPatternToMatcher - Create the matcher for the specified pattern with
-/// the specified variant.  If the variant number is invalid, this returns null.
-Matcher *llvm::ConvertPatternToMatcher(const PatternToMatch &Pattern,
-                                       unsigned Variant,
-                                       const CodeGenDAGPatterns &CGP) {
+/// Create the matcher for the specified pattern with the specified variant.
+/// If the variant number is invalid, this returns an empty MatcherList.
+MatcherList llvm::ConvertPatternToMatcherList(const PatternToMatch &Pattern,
+                                              unsigned Variant,
+                                              const CodeGenDAGPatterns &CGP) {
   MatcherGen Gen(Pattern, CGP);
 
   // Generate the code for the matcher.
   if (Gen.EmitMatcherCode(Variant))
-    return nullptr;
+    return MatcherList();
 
   // FIXME2: Kill extra MoveParent commands at the end of the matcher sequence.
   // FIXME2: Split result code out to another table, and make the matcher end
@@ -1091,5 +1071,5 @@ Matcher *llvm::ConvertPatternToMatcher(const PatternToMatch &Pattern,
   Gen.EmitResultCode();
 
   // Unconditional match.
-  return Gen.GetMatcher();
+  return Gen.GetMatcherList();
 }

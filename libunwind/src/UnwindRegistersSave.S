@@ -18,6 +18,8 @@
 
 #if defined(_AIX)
     .toc
+#elif defined(__aarch64__) && defined(__ELF__) && defined(_LIBUNWIND_EXECUTE_ONLY_CODE)
+    .section .text,"axy",@progbits,unique,0
 #else
     .text
 #endif
@@ -821,6 +823,68 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #endif
   mov    x0, #0                   // return UNW_ESUCCESS
 
+#if __has_feature(ptrauth_calls)
+  retab
+#else
+  ret
+#endif
+
+//
+// extern "C" int64_t __libunwind_Registers_arm64_za_disable()
+//
+//   This function implements the requirements of the __arm_za_disable ABI
+//   routine, except that it will not abort; it will return a non-zero value
+//   to signify the routine failed.
+//
+//   Note: This function uses SME instructions. It must only be called if SME
+//   has been confirmed to be available.
+//
+// On return:
+//
+//   A status is placed in x0. A zero value indicates success; any non-zero
+//   value indicates failure.
+//
+  .p2align 2
+DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_za_disable)
+  .variant_pcs __libunwind_Registers_arm64_za_disable
+#if __has_feature(ptrauth_calls)
+  pacibsp
+#endif
+  // If TPIDR2_EL0 is null, the subroutine just disables ZA.
+  .inst 0xd53bd0b0 // mrs x16, TPIDR2_EL0
+  cbz x16, 1f
+
+  // If any of the reserved bytes in the first 16 bytes of the TPIDR2 block are
+  // nonzero, return a non-zero value (libunwind will then abort).
+  ldrh w0, [x16, #10]
+  cbnz w0, 2f
+  ldr w0, [x16, #12]
+  cbnz w0, 2f
+
+  // If num_za_save_slices is zero, the subroutine just disables ZA.
+  ldrh w0, [x16, #8]
+  cbz x0, 1f
+
+  // If za_save_buffer is NULL, the subroutine just disables ZA.
+  ldr x16, [x16]
+  cbz x16, 1f
+
+  // Store ZA to za_save_buffer.
+  mov x15, xzr
+0:
+  .inst 0xe1206200 // str za[w15,0], [x16]
+  .inst 0x04305830 // addsvl x16, x16, #1
+  add x15, x15, #1
+  cmp x0, x15
+  b.ne 0b
+1:
+  // * Set TPIDR2_EL0 to null.
+  .inst 0xd51bd0bf // msr TPIDR2_EL0, xzr
+  // * Set PSTATE.ZA to 0.
+  .inst 0xd503447f // smstop za
+  // * Return zero (success)
+  mov x0, xzr
+2:
 #if __has_feature(ptrauth_calls)
   retab
 #else

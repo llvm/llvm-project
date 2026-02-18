@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCHISELDAGTODAG_H
 
 #include "LoongArch.h"
+#include "LoongArchSelectionDAGInfo.h"
 #include "LoongArchTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 

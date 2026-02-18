@@ -17,13 +17,13 @@ TEST(OptionsTest, CreateOptionParsingError) {
   ASSERT_THAT_ERROR(
       CreateOptionParsingError("yippee", 'f', "fun",
                                "unable to convert 'yippee' to boolean"),
-      llvm::FailedWithMessage("Invalid value ('yippee') for -f (fun): unable "
+      llvm::FailedWithMessage("invalid value ('yippee') for -f (fun): unable "
                               "to convert 'yippee' to boolean"));
 
   ASSERT_THAT_ERROR(
       CreateOptionParsingError("52", 'b', "bean-count"),
-      llvm::FailedWithMessage("Invalid value ('52') for -b (bean-count)"));
+      llvm::FailedWithMessage("invalid value ('52') for -b (bean-count)"));
 
   ASSERT_THAT_ERROR(CreateOptionParsingError("c", 'm'),
-                    llvm::FailedWithMessage("Invalid value ('c') for -m"));
+                    llvm::FailedWithMessage("invalid value ('c') for -m"));
 }

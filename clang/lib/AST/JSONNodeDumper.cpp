@@ -272,15 +272,13 @@ void JSONNodeDumper::writeIncludeStack(PresumedLoc Loc, bool JustFirst) {
   JOS.attributeEnd();
 }
 
-void JSONNodeDumper::writeBareSourceLocation(SourceLocation Loc,
-                                             bool IsSpelling) {
+void JSONNodeDumper::writeBareSourceLocation(SourceLocation Loc) {
   PresumedLoc Presumed = SM.getPresumedLoc(Loc);
-  unsigned ActualLine = IsSpelling ? SM.getSpellingLineNumber(Loc)
-                                   : SM.getExpansionLineNumber(Loc);
-  StringRef ActualFile = SM.getBufferName(Loc);
-
   if (Presumed.isValid()) {
-    JOS.attribute("offset", SM.getDecomposedLoc(Loc).second);
+    StringRef ActualFile = SM.getBufferName(Loc);
+    auto [FID, FilePos] = SM.getDecomposedLoc(Loc);
+    unsigned ActualLine = SM.getLineNumber(FID, FilePos);
+    JOS.attribute("offset", FilePos);
     if (LastLocFilename != ActualFile) {
       JOS.attribute("file", ActualFile);
       JOS.attribute("line", ActualLine);
@@ -318,18 +316,17 @@ void JSONNodeDumper::writeSourceLocation(SourceLocation Loc) {
   if (Expansion != Spelling) {
     // If the expansion and the spelling are different, output subobjects
     // describing both locations.
-    JOS.attributeObject("spellingLoc", [Spelling, this] {
-      writeBareSourceLocation(Spelling, /*IsSpelling*/ true);
-    });
+    JOS.attributeObject(
+        "spellingLoc", [Spelling, this] { writeBareSourceLocation(Spelling); });
     JOS.attributeObject("expansionLoc", [Expansion, Loc, this] {
-      writeBareSourceLocation(Expansion, /*IsSpelling*/ false);
+      writeBareSourceLocation(Expansion);
       // If there is a macro expansion, add extra information if the interesting
       // bit is the macro arg expansion.
       if (SM.isMacroArgExpansion(Loc))
         JOS.attribute("isMacroArgExpansion", true);
     });
   } else
-    writeBareSourceLocation(Spelling, /*IsSpelling*/ true);
+    writeBareSourceLocation(Spelling);
 }
 
 void JSONNodeDumper::writeSourceRange(SourceRange R) {
@@ -597,6 +594,27 @@ void JSONNodeDumper::VisitVisibilityAttr(const VisibilityAttr *VA) {
 
 void JSONNodeDumper::VisitTLSModelAttr(const TLSModelAttr *TA) {
   JOS.attribute("tls_model", TA->getModel());
+}
+
+void JSONNodeDumper::VisitAvailabilityAttr(const AvailabilityAttr *AA) {
+  if (const IdentifierInfo *Platform = AA->getPlatform())
+    JOS.attribute("platform", Platform->getName());
+  if (!AA->getIntroduced().empty())
+    JOS.attribute("introduced", AA->getIntroduced().getAsString());
+  if (!AA->getDeprecated().empty())
+    JOS.attribute("deprecated", AA->getDeprecated().getAsString());
+  if (!AA->getObsoleted().empty())
+    JOS.attribute("obsoleted", AA->getObsoleted().getAsString());
+  attributeOnlyIfTrue("unavailable", AA->getUnavailable());
+  if (!AA->getMessage().empty())
+    JOS.attribute("message", AA->getMessage());
+  attributeOnlyIfTrue("strict", AA->getStrict());
+  if (!AA->getReplacement().empty())
+    JOS.attribute("replacement", AA->getReplacement());
+  if (AA->getPriority() != 0)
+    JOS.attribute("priority", AA->getPriority());
+  if (const IdentifierInfo *Env = AA->getEnvironment())
+    JOS.attribute("environment", Env->getName());
 }
 
 void JSONNodeDumper::VisitTypedefType(const TypedefType *TT) {
@@ -1608,6 +1626,10 @@ void JSONNodeDumper::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
 
 void JSONNodeDumper::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
   attributeOnlyIfTrue("hasRewrittenInit", Node->hasRewrittenInit());
+}
+
+void JSONNodeDumper::VisitLambdaExpr(const LambdaExpr *LE) {
+  JOS.attribute("hasExplicitParameters", LE->hasExplicitParameters());
 }
 
 void JSONNodeDumper::VisitCXXDependentScopeMemberExpr(

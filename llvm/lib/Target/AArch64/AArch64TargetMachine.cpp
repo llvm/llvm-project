@@ -53,8 +53,6 @@
 #include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <memory>
-#include <optional>
-#include <string>
 
 using namespace llvm;
 
@@ -227,7 +225,13 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableNewSMEABILowering("aarch64-new-sme-abi",
                             cl::desc("Enable new lowering for the SME ABI"),
-                            cl::init(false), cl::Hidden);
+                            cl::init(true), cl::Hidden);
+
+static cl::opt<bool> EnableSRLTSubregToRegMitigation(
+    "aarch64-srlt-mitigate-sr2r",
+    cl::desc("Enable SUBREG_TO_REG mitigation by adding 'implicit-def' for "
+             "super-regs when using Subreg Liveness Tracking"),
+    cl::init(true), cl::Hidden);
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64Target() {
@@ -262,6 +266,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PostSelectOptimizePass(PR);
   initializeAArch64PromoteConstantPass(PR);
   initializeAArch64RedundantCopyEliminationPass(PR);
+  initializeAArch64RedundantCondBranchPass(PR);
   initializeAArch64StorePairSuppressPass(PR);
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
@@ -269,6 +274,7 @@ LLVMInitializeAArch64Target() {
   initializeKCFIPass(PR);
   initializeSMEABIPass(PR);
   initializeMachineSMEABIPass(PR);
+  initializeAArch64SRLTDefineSuperRegsPass(PR);
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
@@ -381,12 +387,19 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     // for the tiny code model, the maximum TLS size is 1MiB (< 16MiB)
     this->Options.TLSSize = 24;
 
-  // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
-  // MachO/CodeModel::Large, which GlobalISel does not support.
-  if (static_cast<int>(getOptLevel()) <= EnableGlobalISelAtO &&
+  const bool TargetSupportsGISel =
       TT.getArch() != Triple::aarch64_32 &&
       TT.getEnvironment() != Triple::GNUILP32 &&
-      !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO())) {
+      !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO());
+
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+
+  // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
+  // MachO/CodeModel::Large, which GlobalISel does not support.
+  if (TargetSupportsGISel &&
+      (static_cast<int>(getOptLevel()) <= EnableGlobalISelAtO ||
+       (!GlobalISelFlag && !Options.EnableGlobalISel))) {
     setGlobalISel(true);
     setGlobalISelAbort(GlobalISelAbortMode::Disable);
   }
@@ -403,6 +416,10 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   // AArch64 supports fixing up the DWARF unwind information.
   if (!getMCAsmInfo()->usesWindowsCFI())
     setCFIFixup(true);
+}
+
+unsigned AArch64TargetMachine::getEnableGlobalISelAtO() const {
+  return EnableGlobalISelAtO;
 }
 
 AArch64TargetMachine::~AArch64TargetMachine() = default;
@@ -463,7 +480,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
-        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize);
+        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize,
+        EnableSRLTSubregToRegMitigation);
   }
 
   if (IsStreaming && !I->hasSME())
@@ -551,6 +569,7 @@ public:
   void addMachineSSAOptimization() override;
   bool addILPOpts() override;
   void addPreRegAlloc() override;
+  void addPostRewrite() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -559,6 +578,9 @@ public:
   bool addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
+
+private:
+  bool isGlobalISelOptNone() const;
 };
 
 } // end anonymous namespace
@@ -588,6 +610,21 @@ TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
 
 std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
   return getStandardCSEConfigForOpt(TM->getOptLevel());
+}
+
+// This function checks whether the opt level is explictly set to none,
+// or whether GlobalISel was enabled due to SDAG encountering an optnone
+// function. If the opt level is greater than the level we automatically enable
+// globalisel at, and it wasn't enabled via CLI, we know that it must be because
+// of an optnone function.
+bool AArch64PassConfig::isGlobalISelOptNone() const {
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+
+  return getOptLevel() == CodeGenOptLevel::None ||
+         (static_cast<unsigned>(getOptLevel()) >
+              getAArch64TargetMachine().getEnableGlobalISelAtO() &&
+          !GlobalISelFlag);
 }
 
 void AArch64PassConfig::addIRPasses() {
@@ -725,7 +762,7 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  if (getOptLevel() == CodeGenOptLevel::None) {
+  if (isGlobalISelOptNone()) {
     addPass(createAArch64O0PreLegalizerCombiner());
     addPass(new Localizer());
   } else {
@@ -742,9 +779,8 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 }
 
 void AArch64PassConfig::addPreRegBankSelect() {
-  bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  if (!IsOptNone) {
-    addPass(createAArch64PostLegalizerCombiner(IsOptNone));
+  if (!isGlobalISelOptNone()) {
+    addPass(createAArch64PostLegalizerCombiner(isGlobalISelOptNone()));
     if (EnableGISelLoadStoreOptPostLegal)
       addPass(new LoadStoreOpt());
   }
@@ -758,14 +794,14 @@ bool AArch64PassConfig::addRegBankSelect() {
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
-  if (getOptLevel() != CodeGenOptLevel::None)
+  if (!isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
   return false;
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
-  if (EnableNewSMEABILowering && TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createMachineSMEABIPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableNewSMEABILowering)
+    addPass(createMachineSMEABIPass(TM->getOptLevel()));
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableSMEPeepholeOpt)
     addPass(createSMEPeepholeOptPass());
@@ -798,7 +834,7 @@ bool AArch64PassConfig::addILPOpts() {
 
 void AArch64PassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() == CodeGenOptLevel::None && EnableNewSMEABILowering)
-    addPass(createMachineSMEABIPass());
+    addPass(createMachineSMEABIPass(CodeGenOptLevel::None));
 
   // Change dead register definitions to refer to the zero register.
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
@@ -814,6 +850,11 @@ void AArch64PassConfig::addPreRegAlloc() {
   }
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);
+}
+
+void AArch64PassConfig::addPostRewrite() {
+  if (EnableSRLTSubregToRegMitigation)
+    addPass(createAArch64SRLTDefineSuperRegsPass());
 }
 
 void AArch64PassConfig::addPostRegAlloc() {
@@ -864,6 +905,8 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() >= CodeGenOptLevel::Aggressive &&
       EnableAArch64CopyPropagation)
     addPass(createMachineCopyPropagationPass(true));
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64RedundantCondBranchPass());
 
   addPass(createAArch64A53Fix835769());
 

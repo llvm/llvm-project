@@ -83,15 +83,31 @@ def SDT_PPCsetbc : SDTypeProfile<1, 1, [
 // ISA 3.1 specific PPCISD nodes.
 //
 
+// XXSPLTI32DX - The PPC XXSPLTI32DX instruction.
 def PPCxxsplti32dx : SDNode<"PPCISD::XXSPLTI32DX", SDT_PPCSplat32, []>;
+
+// ACC_BUILD = Build an accumulator register from 4 VSX registers.
 def PPCAccBuild : SDNode<"PPCISD::ACC_BUILD", SDT_PPCAccBuild, []>;
+
+// PAIR_BUILD = Build a vector pair register from 2 VSX registers.
 def PPCPairBuild : SDNode<"PPCISD::PAIR_BUILD", SDT_PPCPairBuild, []>;
+
+// EXTRACT_VSX_REG = Extract one of the underlying vsx registers of
+// an accumulator or pair register. This node is needed because
+// EXTRACT_SUBVECTOR expects the input and output vectors to have the same
+// element type.
 def PPCAccExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCAccExtractVsx,
                        []>;
 def PPCPairExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCPairExtractVsx,
                         []>;
+
+// XXMFACC = This corresponds to the xxmfacc instruction.
 def PPCxxmfacc : SDNode<"PPCISD::XXMFACC", SDT_PPCxxmfacc, []>;
+
+// SETBC - The ISA 3.1 (P10) SETBC instruction.
 def PPCsetbc  : SDNode<"PPCISD::SETBC",   SDT_PPCsetbc, []>;
+
+// SETBCR - The ISA 3.1 (P10) SETBCR instruction.
 def PPCsetbcr : SDNode<"PPCISD::SETBCR",  SDT_PPCsetbc, []>;
 
 //===----------------------------------------------------------------------===//
@@ -105,7 +121,10 @@ def SDT_PPCLXVRZX : SDTypeProfile<1, 2, [
   SDTCisVT<0, v1i128>, SDTCisPtrTy<1>, SDTCisPtrTy<2>
 ]>;
 
-// PPC Specific DAG Nodes.
+// LXVRZX - Load VSX Vector Rightmost and Zero Extend
+// This node represents v1i128 BUILD_VECTOR of a zero extending load
+// instruction from <byte, halfword, word, or doubleword> to i128.
+// Allows utilization of the Load VSX Vector Rightmost Instructions.
 def PPClxvrzx : SDNode<"PPCISD::LXVRZX", SDT_PPCLXVRZX,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
@@ -1322,7 +1341,7 @@ let Predicates = [PCRelativeMemops, HasFPU] in {
             (PSTFDpc $FRS, $ga, 0)>;
 
   def : Pat<(v4f32 (PPCldvsxlh (PPCmatpcreladdr PCRelForm:$addr))),
-            (SUBREG_TO_REG (i64 1), (PLFDpc $addr, 0), sub_64)>;
+            (SUBREG_TO_REG (PLFDpc $addr, 0), sub_64)>;
 }
 
 let Predicates = [PCRelativeMemops, HasP10Vector] in {
@@ -2824,7 +2843,7 @@ let Predicates = [PrefixInstrs, HasFPU] in {
   def : Pat<(store f64:$FRS, PDForm:$dst), (PSTFD $FRS, memri34:$dst)>;
   // Prefixed fpext to v2f64
   def : Pat<(v4f32 (PPCldvsxlh PDForm:$src)),
-            (SUBREG_TO_REG (i64 1), (PLFD PDForm:$src), sub_64)>;
+            (SUBREG_TO_REG (PLFD PDForm:$src), sub_64)>;
 
 }
 

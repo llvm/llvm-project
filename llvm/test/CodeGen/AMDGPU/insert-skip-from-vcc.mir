@@ -652,3 +652,59 @@ body:             |
     S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
     S_ENDPGM 0
 ...
+
+---
+# GCN-LABEL: name: issue176578_src0_nonreg
+# GCN: bb.2:
+# GCN-NOT: S_
+# GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            issue176578_src0_nonreg
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $vcc = S_AND_B64 -1, $exec, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
+...
+
+---
+# GCN-LABEL: name: issue176578_src1_nonreg
+# GCN: bb.2:
+# GCN-NOT: S_
+# GCN: S_CBRANCH_EXECZ %bb.1, implicit $exec
+name:            issue176578_src1_nonreg
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
+...
+
+---
+# GCN-LABEL: name: issue176578_nonregs
+# GCN: $vcc = S_AND_B64
+# GCN-NEXT: S_CBRANCH_VCCZ %bb.1
+name:            issue176578_nonregs
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $vcc = S_AND_B64 0, -1, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
+...

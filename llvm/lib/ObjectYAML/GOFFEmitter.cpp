@@ -71,7 +71,7 @@ public:
     SetBufferSize(GOFF::PayloadLength);
   }
 
-  ~GOFFOstream() { finalize(); }
+  ~GOFFOstream() override { finalize(); }
 
   void makeNewRecord(GOFF::RecordType Type, size_t Size) {
     fillRecord();

@@ -491,7 +491,7 @@ namespace X86_MC {
 class X86MCInstrAnalysis : public MCInstrAnalysis {
   X86MCInstrAnalysis(const X86MCInstrAnalysis &) = delete;
   X86MCInstrAnalysis &operator=(const X86MCInstrAnalysis &) = delete;
-  virtual ~X86MCInstrAnalysis() = default;
+  ~X86MCInstrAnalysis() override = default;
 
 public:
   X86MCInstrAnalysis(const MCInstrInfo *MCII) : MCInstrAnalysis(MCII) {}
@@ -535,7 +535,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   const MCRegisterClass &VR128XRC = MRI.getRegClass(X86::VR128XRegClassID);
   const MCRegisterClass &VR256XRC = MRI.getRegClass(X86::VR256XRegClassID);
 
-  auto ClearsSuperReg = [=](unsigned RegID) {
+  auto ClearsSuperReg = [=](MCRegister RegID) {
     // On X86-64, a general purpose integer register is viewed as a 64-bit
     // register internal to the processor.
     // An update to the lower 32 bits of a 64 bit integer register is

@@ -37,7 +37,7 @@ __attribute__((availability(shadermodel, introduced = 6.0, environment = mesh)))
 unsigned f8();
 
 [numthreads(4,1,1)]
-int main() {
+void main() {
     // expected-error@#f1_call {{'f1' is only available on Shader Model 6.0 or newer}}
     // expected-note@#f1 {{'f1' has been marked as being introduced in Shader Model 6.0 here, but the deployment target is Shader Model 5.0}}
     unsigned A = f1(); // #f1_call
@@ -63,6 +63,4 @@ int main() {
     unsigned G = f7(); // #f7_call
 
     unsigned H = f8();
-
-    return 0;
 }

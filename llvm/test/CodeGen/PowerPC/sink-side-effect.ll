@@ -23,7 +23,7 @@ define double @zot(ptr %arg, ptr %arg1, ptr %arg2) {
 ; CHECK-NEXT:    cmpw 4, 3
 ; CHECK-NEXT:    bge 0, .LBB0_3
 ; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    xsmuldp 1, 1, 0
+; CHECK-NEXT:    xsmuldp 0, 0, 1
 ; CHECK-NEXT:    b .LBB0_3
 bb:
   %tmp = load i32, ptr %arg, align 8

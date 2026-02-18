@@ -9,7 +9,7 @@
 // https://github.com/llvm/llvm-project/issues/30023
 // compare exchange does not work with types of which the size is not a power of 2
 
-// XFAIL: clang-19, clang-20, clang-21, apple-clang-15, apple-clang-16, apple-clang-17
+// XFAIL: clang-20, clang-21, apple-clang-17
 // UNSUPPORTED: c++03
 
 // TODO: remove the UNSUPPORTED clang-22 once libc++ CI's clang is updated to include

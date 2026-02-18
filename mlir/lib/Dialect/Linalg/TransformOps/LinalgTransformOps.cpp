@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
 
 #include "mlir/AsmParser/AsmParser.h"
-
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -43,6 +42,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/LogicalResult.h"
@@ -176,7 +176,8 @@ static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
     if (auto attr = dyn_cast<Attribute>(paramOrHandle)) {
       reified.push_back(cast<IntegerAttr>(attr).getInt());
       continue;
-    } else if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
+    }
+    if (isa<ParamType>(cast<Value>(paramOrHandle).getType())) {
       ArrayRef<Attribute> params = state.getParams(cast<Value>(paramOrHandle));
       if (params.size() != 1)
         return transformOp.emitSilenceableError() << "expected a single param";
@@ -309,8 +310,8 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   // Attach listener to keep track of newly created ops.
   OpBuilder::Listener *previousListener = rewriter.getListener();
-  auto resetListener =
-      llvm::make_scope_exit([&]() { rewriter.setListener(previousListener); });
+  llvm::scope_exit resetListener(
+      [&]() { rewriter.setListener(previousListener); });
   NewOpsListener newOpsListener(previousListener);
   rewriter.setListener(&newOpsListener);
 
@@ -875,8 +876,8 @@ static Operation *replaceForAllWithNewSignature(
 
   // Fix terminator
   scf::InParallelOp terminatorOp = newforallOp.getTerminator();
-  SmallVector<Operation *> yieldingOps = llvm::to_vector<4>(llvm::map_range(
-      terminatorOp.getYieldingOps(), [](Operation &op) { return &op; }));
+  SmallVector<Operation *> yieldingOps = llvm::map_to_vector<4>(
+      terminatorOp.getYieldingOps(), [](Operation &op) { return &op; });
   Operation *firstYieldOp = yieldingOps.front();
   rewriter.setInsertionPoint(firstYieldOp);
   Value src = tileAndFuseResult.tiledValues[0];
@@ -997,8 +998,11 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       // Iterate over the outputs of the producer and over the loop bbArgs and
       // check if any bbArg points to the same value as the producer output. In
       // such case, make the producer output point to the bbArg directly.
-      for (OpOperand &initOperandPtr :
-           cast<DestinationStyleOpInterface>(clone).getDpsInitsMutable()) {
+      auto dpsInterface = dyn_cast<DestinationStyleOpInterface>(clone);
+      if (!dpsInterface)
+        return;
+
+      for (OpOperand &initOperandPtr : dpsInterface.getDpsInitsMutable()) {
         Value producerOperand =
             clone->getOperand(initOperandPtr.getOperandNumber());
         for (BlockArgument containerIterArg :
@@ -1060,7 +1064,7 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       resultNumber, offsets, sizes);
 
   // Cleanup clone.
-  if (dyn_cast<LoopLikeOpInterface>(containingOp))
+  if (isa<LoopLikeOpInterface>(containingOp))
     rewriter.eraseOp(tileableProducer);
 
   return std::make_tuple(tileAndFuseResult->tiledOps, newContainingOp);
@@ -1145,8 +1149,8 @@ tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
   bvm.map(destinationTensors[resultNumber], bbArg);
   auto tileableProducerClone =
       cast<TilingInterface>(rewriter.clone(*tileableProducer, bvm));
-  auto scopeGuard =
-      llvm::make_scope_exit([&]() { rewriter.eraseOp(tileableProducerClone); });
+  llvm::scope_exit scopeGuard(
+      [&]() { rewriter.eraseOp(tileableProducerClone); });
 
   // Tile the producer.
   FailureOr<TilingResult> tileAndFuseResult =
@@ -1958,7 +1962,7 @@ enum class OuterOrInnerPerm { Outer = 0, Inner = 1 };
 /// Return true if either `op` or `permutation` are empty to allow a simpler
 /// polymorphic implementation.
 template <typename RelayoutOpTy>
-bool isValidPackingPermutation(
+static bool isValidPackingPermutation(
     RelayoutOpTy op, ArrayRef<int64_t> permutation,
     OuterOrInnerPerm outerOrInnerPerm = OuterOrInnerPerm::Outer) {
   static_assert(
@@ -2464,6 +2468,8 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
         .setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPointAfter(targetOp);
     auto maybePadOps = rewriteAsPaddedOp(
         rewriter, cast<TilingInterface>(targetOp.getOperation()), options);
     if (failed(maybePadOps)) {
@@ -2835,7 +2841,7 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
   if (getDynamicChunkSizes()) {
     auto diag = DiagnosedSilenceableFailure::success();
     if (isa<TransformHandleTypeInterface>(getDynamicChunkSizes().getType())) {
-      chunkSizes = llvm::to_vector(llvm::map_range(
+      chunkSizes = llvm::map_to_vector(
           state.getPayloadOps(getDynamicChunkSizes()), [&](Operation *op) {
             if (op->getNumResults() != 1 ||
                 !op->getResult(0).getType().isIndex()) {
@@ -2845,11 +2851,11 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
               diag.attachNote(op->getLoc()) << "dynamic split point";
             }
             return OpFoldResult(op->getResult(0));
-          }));
+          });
     } else {
-      chunkSizes = llvm::to_vector(
-          llvm::map_range(state.getParams(getDynamicChunkSizes()),
-                          [](Attribute attr) { return OpFoldResult(attr); }));
+      chunkSizes = llvm::map_to_vector(
+          state.getParams(getDynamicChunkSizes()),
+          [](Attribute attr) { return OpFoldResult(attr); });
     }
     if (diag.isSilenceableFailure())
       return diag;
@@ -3523,10 +3529,9 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
     if (isa<ParamType>(transformValue.getType())) {
       dynamicSizeProducers.push_back({});
       ArrayRef<Attribute> params = state.getParams(transformValue);
-      paramSizes.push_back(
-          llvm::to_vector(llvm::map_range(params, [](Attribute attr) {
-            return cast<IntegerAttr>(attr).getValue().getSExtValue();
-          })));
+      paramSizes.push_back(llvm::map_to_vector(params, [](Attribute attr) {
+        return cast<IntegerAttr>(attr).getValue().getSExtValue();
+      }));
 
       if (paramSizes.back().size() != targets.size()) {
         DiagnosedSilenceableFailure diag =
@@ -4308,7 +4313,7 @@ DiagnosedSilenceableFailure transform::TransposeMatmulOp::applyToOne(
           .Case([&](linalg::BatchMatmulOp op) {
             return transposeBatchMatmul(rewriter, op, transposeLHS);
           })
-          .Default([&](Operation *op) { return failure(); });
+          .Default(failure());
   if (failed(maybeTransformed))
     return emitSilenceableFailure(target->getLoc()) << "not supported";
   // Handle to the new Matmul operation with transposed filters
@@ -4320,9 +4325,10 @@ DiagnosedSilenceableFailure transform::TransposeMatmulOp::applyToOne(
 // InsertSliceToCopyOp
 //===----------------------------------------------------------------------===//
 template <typename OpTy>
-DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
-                                 transform::ApplyToEachResultList &results,
-                                 transform::TransformState &state) {
+static DiagnosedSilenceableFailure
+doit(RewriterBase &rewriter, OpTy target,
+     transform::ApplyToEachResultList &results,
+     transform::TransformState &state) {
   static_assert(llvm::is_one_of<OpTy, tensor::InsertSliceOp,
                                 tensor::ParallelInsertSliceOp>() &&
                 "wrong op type");
@@ -4497,7 +4503,7 @@ DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
             maybeTransformed = decomposeWinogradOutputTransformOp(rewriter, op);
             return true;
           })
-          .Default([&](Operation *op) { return false; });
+          .Default(false);
 
   if (!supported) {
     DiagnosedSilenceableFailure diag =

@@ -25,12 +25,12 @@ define void @loadv4f32_byte(i32 %offset) {
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
           i32 0, i32 0, i32 1, i32 0, ptr null)
 
-  ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle %{{.*}}, i32 %offset, i32 0)
+  ; CHECK: [[DATA:%.*]] = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle %{{.*}}, i32 %offset, i32 undef)
   %load = call {<4 x float>, i1}
       @llvm.dx.resource.load.rawbuffer.f32.tdx.RawBuffer_i8_0_0_0t(
           target("dx.RawBuffer", i8, 0, 0, 0) %buffer,
           i32 %offset,
-          i32 0)
+          i32 poison)
 
   ret void
 }

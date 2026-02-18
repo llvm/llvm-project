@@ -66,6 +66,26 @@ define void @masked_store_nxv4i32(<vscale x 4 x i32> %x, ptr %a, <vscale x 4 x i
   ret void
 }
 
+define <vscale x 4 x i32> @all_active_load_nxv4i32(ptr %a) nounwind {
+; CHECK-LABEL: all_active_load_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ldnt1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ret
+  %load = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr %a, i32 1, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison), !nontemporal !0
+  ret <vscale x 4 x i32> %load
+}
+
+define void @all_active_store_nxv4i32(<vscale x 4 x i32> %x, ptr %a) nounwind {
+; CHECK-LABEL: all_active_store_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    stnt1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %x, ptr %a, i32 1, <vscale x 4 x i1> splat (i1 true)), !nontemporal !0
+  ret void
+}
+
 declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32(ptr, i32, <vscale x 4 x i1>, <vscale x 4 x i32>)
 declare void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32>, ptr, i32, <vscale x 4 x i1>)
 declare <4 x i32> @llvm.masked.load.v4i32(ptr, i32, <4 x i1>, <4 x i32>)

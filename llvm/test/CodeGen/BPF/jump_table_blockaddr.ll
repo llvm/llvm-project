@@ -84,8 +84,8 @@ llc -march=bpf -mcpu=v4 < test.ll \
 ; CHECK: 	.cfi_endproc
 ; CHECK: 	.section	.jumptables,"",@progbits
 ; CHECK: BPF.JT.0.0:
-; CHECK: 	.quad	LBB0_3
+; CHECK: 	.quad	LBB0_3-.text
 ; CHECK: 	.size	BPF.JT.0.0, 8
 ; CHECK: BPF.JT.0.1:
-; CHECK: 	.quad	LBB0_4
+; CHECK: 	.quad	LBB0_4-.text
 ; CHECK: 	.size	BPF.JT.0.1, 8

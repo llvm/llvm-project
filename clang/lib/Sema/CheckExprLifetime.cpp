@@ -17,6 +17,9 @@
 #include "llvm/ADT/PointerIntPair.h"
 
 namespace clang::sema {
+using lifetimes::isGslOwnerType;
+using lifetimes::isGslPointerType;
+
 namespace {
 enum LifetimeKind {
   /// The lifetime of a temporary bound to this entity ends at the end of the
@@ -155,6 +158,7 @@ getEntityLifetime(const InitializedEntity *Entity,
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
   case InitializedEntity::EK_LambdaCapture:
   case InitializedEntity::EK_VectorElement:
+  case InitializedEntity::EK_MatrixElement:
   case InitializedEntity::EK_ComplexElement:
     return {nullptr, LK_FullExpression};
 
@@ -256,58 +260,6 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
                                                   Expr *Init, ReferenceKind RK,
                                                   LocalVisitor Visit);
 
-template <typename T> static bool isRecordWithAttr(QualType Type) {
-  auto *RD = Type->getAsCXXRecordDecl();
-  if (!RD)
-    return false;
-  // Generally, if a primary template class declaration is annotated with an
-  // attribute, all its specializations generated from template instantiations
-  // should inherit the attribute.
-  //
-  // However, since lifetime analysis occurs during parsing, we may encounter
-  // cases where a full definition of the specialization is not required. In
-  // such cases, the specialization declaration remains incomplete and lacks the
-  // attribute. Therefore, we fall back to checking the primary template class.
-  //
-  // Note: it is possible for a specialization declaration to have an attribute
-  // even if the primary template does not.
-  //
-  // FIXME: What if the primary template and explicit specialization
-  // declarations have conflicting attributes? We should consider diagnosing
-  // this scenario.
-  bool Result = RD->hasAttr<T>();
-
-  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-    Result |= CTSD->getSpecializedTemplate()->getTemplatedDecl()->hasAttr<T>();
-
-  return Result;
-}
-
-// Tells whether the type is annotated with [[gsl::Pointer]].
-bool isGLSPointerType(QualType QT) { return isRecordWithAttr<PointerAttr>(QT); }
-
-static bool isPointerLikeType(QualType QT) {
-  return isGLSPointerType(QT) || QT->isPointerType() || QT->isNullPtrType();
-}
-
-// Decl::isInStdNamespace will return false for iterators in some STL
-// implementations due to them being defined in a namespace outside of the std
-// namespace.
-static bool isInStlNamespace(const Decl *D) {
-  const DeclContext *DC = D->getDeclContext();
-  if (!DC)
-    return false;
-  if (const auto *ND = dyn_cast<NamespaceDecl>(DC))
-    if (const IdentifierInfo *II = ND->getIdentifier()) {
-      StringRef Name = II->getName();
-      if (Name.size() >= 2 && Name.front() == '_' &&
-          (Name[1] == '_' || isUppercase(Name[1])))
-        return true;
-    }
-
-  return DC->isStdNamespace();
-}
-
 // Returns true if the given Record decl is a form of `GSLOwner<Pointer>`
 // type, e.g. std::vector<string_view>, std::optional<string_view>.
 static bool isContainerOfPointer(const RecordDecl *Container) {
@@ -317,7 +269,7 @@ static bool isContainerOfPointer(const RecordDecl *Container) {
       return false;
     const auto &TAs = CTSD->getTemplateArgs();
     return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
-           isPointerLikeType(TAs[0].getAsType());
+           lifetimes::isPointerLikeType(TAs[0].getAsType());
   }
   return false;
 }
@@ -330,7 +282,7 @@ static bool isContainerOfOwner(const RecordDecl *Container) {
     return false;
   const auto &TAs = CTSD->getTemplateArgs();
   return TAs.size() > 0 && TAs[0].getKind() == TemplateArgument::Type &&
-         isRecordWithAttr<OwnerAttr>(TAs[0].getAsType());
+         isGslOwnerType(TAs[0].getAsType());
 }
 
 // Returns true if the given Record is `std::initializer_list<pointer>`.
@@ -338,71 +290,10 @@ static bool isStdInitializerListOfPointer(const RecordDecl *RD) {
   if (const auto *CTSD =
           dyn_cast_if_present<ClassTemplateSpecializationDecl>(RD)) {
     const auto &TAs = CTSD->getTemplateArgs();
-    return isInStlNamespace(RD) && RD->getIdentifier() &&
+    return lifetimes::isInStlNamespace(RD) && RD->getIdentifier() &&
            RD->getName() == "initializer_list" && TAs.size() > 0 &&
            TAs[0].getKind() == TemplateArgument::Type &&
-           isPointerLikeType(TAs[0].getAsType());
-  }
-  return false;
-}
-
-static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
-  if (auto *Conv = dyn_cast_or_null<CXXConversionDecl>(Callee))
-    if (isRecordWithAttr<PointerAttr>(Conv->getConversionType()) &&
-        Callee->getParent()->hasAttr<OwnerAttr>())
-      return true;
-  if (!isInStlNamespace(Callee->getParent()))
-    return false;
-  if (!isRecordWithAttr<PointerAttr>(
-          Callee->getFunctionObjectParameterType()) &&
-      !isRecordWithAttr<OwnerAttr>(Callee->getFunctionObjectParameterType()))
-    return false;
-  if (isPointerLikeType(Callee->getReturnType())) {
-    if (!Callee->getIdentifier())
-      return false;
-    return llvm::StringSwitch<bool>(Callee->getName())
-        .Cases({"begin", "rbegin", "cbegin", "crbegin"}, true)
-        .Cases({"end", "rend", "cend", "crend"}, true)
-        .Cases({"c_str", "data", "get"}, true)
-        // Map and set types.
-        .Cases({"find", "equal_range", "lower_bound", "upper_bound"}, true)
-        .Default(false);
-  }
-  if (Callee->getReturnType()->isReferenceType()) {
-    if (!Callee->getIdentifier()) {
-      auto OO = Callee->getOverloadedOperator();
-      if (!Callee->getParent()->hasAttr<OwnerAttr>())
-        return false;
-      return OO == OverloadedOperatorKind::OO_Subscript ||
-             OO == OverloadedOperatorKind::OO_Star;
-    }
-    return llvm::StringSwitch<bool>(Callee->getName())
-        .Cases({"front", "back", "at", "top", "value"}, true)
-        .Default(false);
-  }
-  return false;
-}
-
-static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
-  if (!FD->getIdentifier() || FD->getNumParams() != 1)
-    return false;
-  const auto *RD = FD->getParamDecl(0)->getType()->getPointeeCXXRecordDecl();
-  if (!FD->isInStdNamespace() || !RD || !RD->isInStdNamespace())
-    return false;
-  if (!RD->hasAttr<PointerAttr>() && !RD->hasAttr<OwnerAttr>())
-    return false;
-  if (FD->getReturnType()->isPointerType() ||
-      isRecordWithAttr<PointerAttr>(FD->getReturnType())) {
-    return llvm::StringSwitch<bool>(FD->getName())
-        .Cases({"begin", "rbegin", "cbegin", "crbegin"}, true)
-        .Cases({"end", "rend", "cend", "crend"}, true)
-        .Case("data", true)
-        .Default(false);
-  }
-  if (FD->getReturnType()->isReferenceType()) {
-    return llvm::StringSwitch<bool>(FD->getName())
-        .Cases({"get", "any_cast"}, true)
-        .Default(false);
+           lifetimes::isPointerLikeType(TAs[0].getAsType());
   }
   return false;
 }
@@ -454,7 +345,7 @@ shouldTrackFirstArgumentForConstructor(const CXXConstructExpr *Ctor) {
   // patterns.
   auto RHSArgType = Ctor->getArg(0)->getType();
   const auto *RHSRD = RHSArgType->getAsRecordDecl();
-  // LHS is constructed from an intializer_list.
+  // LHS is constructed from an initializer_list.
   //
   // std::initializer_list is a proxy object that provides access to the backing
   // array. We perform analysis on it to determine if there are any dangling
@@ -464,7 +355,7 @@ shouldTrackFirstArgumentForConstructor(const CXXConstructExpr *Ctor) {
     return true;
 
   // RHS must be an owner.
-  if (!isRecordWithAttr<OwnerAttr>(RHSArgType))
+  if (!isGslOwnerType(RHSArgType))
     return false;
 
   // Bail out if the RHS is Owner<Pointer>.
@@ -546,7 +437,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     // Once we initialized a value with a non gsl-owner reference, it can no
     // longer dangle.
     if (ReturnType->isReferenceType() &&
-        !isRecordWithAttr<OwnerAttr>(ReturnType->getPointeeType())) {
+        !isGslOwnerType(ReturnType->getPointeeType())) {
       for (const IndirectLocalPathEntry &PE : llvm::reverse(Path)) {
         if (PE.Kind == IndirectLocalPathEntry::GslReferenceInit ||
             PE.Kind == IndirectLocalPathEntry::LifetimeBoundCall)
@@ -591,7 +482,8 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       VisitLifetimeBoundArg(Callee, ObjectArg);
     else if (EnableGSLAnalysis) {
       if (auto *CME = dyn_cast<CXXMethodDecl>(Callee);
-          CME && shouldTrackImplicitObjectArg(CME))
+          CME && lifetimes::shouldTrackImplicitObjectArg(
+                     CME, /*RunningUnderLifetimeSafety=*/false))
         VisitGSLPointerArg(Callee, ObjectArg);
     }
   }
@@ -632,7 +524,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
       VisitLifetimeBoundArg(CanonCallee->getParamDecl(I), Arg);
     else if (EnableGSLAnalysis && I == 0) {
       // Perform GSL analysis for the first argument
-      if (shouldTrackFirstArgument(CanonCallee)) {
+      if (lifetimes::shouldTrackFirstArgument(CanonCallee)) {
         VisitGSLPointerArg(CanonCallee, Arg);
       } else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Call);
                  Ctor && shouldTrackFirstArgumentForConstructor(Ctor)) {
@@ -1157,8 +1049,7 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
       //   auto p2 = Temp().owner; // Here p2 is dangling.
       if (const auto *FD = llvm::dyn_cast_or_null<FieldDecl>(E.D);
           FD && !FD->getType()->isReferenceType() &&
-          isRecordWithAttr<OwnerAttr>(FD->getType()) &&
-          LK != LK_MemInitializer) {
+          isGslOwnerType(FD->getType()) && LK != LK_MemInitializer) {
         return Report;
       }
       return Abandon;
@@ -1190,10 +1081,9 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
     //   const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
     //   GSLOwner* func(cosnt Foo& foo [[clang::lifetimebound]])
     //   GSLPointer func(const Foo& foo [[clang::lifetimebound]])
-    if (FD &&
-        ((FD->getReturnType()->isPointerOrReferenceType() &&
-          isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType())) ||
-         isGLSPointerType(FD->getReturnType())))
+    if (FD && ((FD->getReturnType()->isPointerOrReferenceType() &&
+                isGslOwnerType(FD->getReturnType()->getPointeeType())) ||
+               isGslPointerType(FD->getReturnType())))
       return Report;
 
     return Abandon;
@@ -1205,7 +1095,7 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
     //   int &p = *localUniquePtr;
     //   someContainer.add(std::move(localUniquePtr));
     //   return p;
-    if (!pathContainsInit(Path) && isRecordWithAttr<OwnerAttr>(L->getType()))
+    if (!pathContainsInit(Path) && isGslOwnerType(L->getType()))
       return Report;
     return Abandon;
   }
@@ -1214,8 +1104,7 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
   auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
 
   bool IsGslPtrValueFromGslTempOwner =
-      MTE && !MTE->getExtendingDecl() &&
-      isRecordWithAttr<OwnerAttr>(MTE->getType());
+      MTE && !MTE->getExtendingDecl() && isGslOwnerType(MTE->getType());
   // Skipping a chain of initializing gsl::Pointer annotated objects.
   // We are looking only for the final source to find out if it was
   // a local or temporary owner or the address of a local
@@ -1230,7 +1119,7 @@ static bool shouldRunGSLAssignmentAnalysis(const Sema &SemaRef,
   bool EnableGSLAssignmentWarnings = !SemaRef.getDiagnostics().isIgnored(
       diag::warn_dangling_lifetime_pointer_assignment, SourceLocation());
   return (EnableGSLAssignmentWarnings &&
-          (isRecordWithAttr<PointerAttr>(Entity.LHS->getType()) ||
+          (isGslPointerType(Entity.LHS->getType()) ||
            lifetimes::isAssignmentOperatorLifetimeBound(
                Entity.AssignmentOperator)));
 }
@@ -1399,7 +1288,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         // Suppress false positives for code like the one below:
         //   Ctor(unique_ptr<T> up) : pointer(up.get()), owner(move(up)) {}
         // FIXME: move this logic to analyzePathForGSLPointer.
-        if (DRE && isRecordWithAttr<OwnerAttr>(DRE->getType()))
+        if (DRE && isGslOwnerType(DRE->getType()))
           return false;
 
         auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
@@ -1562,7 +1451,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     break;
   }
   case LK_LifetimeCapture: {
-    if (isPointerLikeType(Init->getType()))
+    if (lifetimes::isPointerLikeType(Init->getType()))
       Path.push_back({IndirectLocalPathEntry::GslPointerInit, Init});
     break;
   }
@@ -1576,7 +1465,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
   else
     visitLocalsRetainedByInitializer(
         Path, Init, TemporaryVisitor,
-        // Don't revisit the sub inits for the intialization case.
+        // Don't revisit the sub inits for the initialization case.
         /*RevisitSubinits=*/!InitEntity);
 }
 

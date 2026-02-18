@@ -1,17 +1,14 @@
 ; Adapted from https://github.com/KhronosGroup/SPIRV-LLVM-Translator/tree/main/test/extensions/INTEL/SPV_INTEL_cache_controls
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_cache_controls %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_cache_controls %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_cache_controls %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV: Capability CacheControlsINTEL
 ; CHECK-SPIRV: Extension "SPV_INTEL_cache_controls"
 
-; CHECK-SPIRV-DAG: OpName %[[#Ptr1:]] "ptr1"
-; CHECK-SPIRV-DAG: OpName %[[#Ptr2:]] "ptr2"
-; CHECK-SPIRV-DAG: OpName %[[#Ptr3:]] "ptr3"
-; CHECK-SPIRV-DAG: OpDecorate %[[#Ptr1]] CacheControlLoadINTEL 0 1
-; CHECK-SPIRV-DAG: OpDecorate %[[#Ptr2]] CacheControlLoadINTEL 1 1
-; CHECK-SPIRV-DAG: OpDecorate %[[#Ptr3]] CacheControlStoreINTEL 2 3
+; CHECK-SPIRV-DAG: OpDecorate %[[#Ptr1:]] CacheControlLoadINTEL 0 1
+; CHECK-SPIRV-DAG: OpDecorate %[[#Ptr2:]] CacheControlLoadINTEL 1 1
+; CHECK-SPIRV-DAG: OpDecorate %[[#Ptr3:]] CacheControlStoreINTEL 2 3
 ; CHECK-SPIRV: OpExtInst %[[#]] %[[#]] prefetch %[[#Ptr1]] %[[#]]
 ; CHECK-SPIRV: OpExtInst %[[#]] %[[#]] prefetch %[[#Ptr2]] %[[#]]
 ; CHECK-SPIRV: OpExtInst %[[#]] %[[#]] prefetch %[[#Ptr3]] %[[#]]

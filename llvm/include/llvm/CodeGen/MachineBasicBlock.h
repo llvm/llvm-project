@@ -129,8 +129,10 @@ public:
     MCRegister PhysReg;
     LaneBitmask LaneMask;
 
-    RegisterMaskPair(MCPhysReg PhysReg, LaneBitmask LaneMask)
-        : PhysReg(PhysReg), LaneMask(LaneMask) {}
+    RegisterMaskPair(MCRegister PhysReg, LaneBitmask LaneMask)
+        : PhysReg(PhysReg), LaneMask(LaneMask) {
+      assert(PhysReg.isPhysical());
+    }
 
     bool operator==(const RegisterMaskPair &other) const {
       return PhysReg == other.PhysReg && LaneMask == other.LaneMask;
@@ -228,6 +230,12 @@ private:
   /// since getSymbol is a relatively heavy-weight operation, the symbol
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
+
+  /// Contains the callsite indices in this block that are targets of code
+  /// prefetching. The index `i` specifies the `i`th call, with zero
+  /// representing the beginning of the block and 1 representing the first call.
+  /// Must be in ascending order and without duplicates.
+  SmallVector<unsigned> PrefetchTargetCallsiteIndexes;
 
   /// Cached MCSymbol for this block (used if IsEHContTarget).
   mutable MCSymbol *CachedEHContMCSymbol = nullptr;
@@ -547,8 +555,8 @@ public:
     using pointer = const RegisterMaskPair *;
     using reference = const RegisterMaskPair &;
 
-    liveout_iterator(const MachineBasicBlock &MBB, MCPhysReg ExceptionPointer,
-                     MCPhysReg ExceptionSelector, bool End)
+    liveout_iterator(const MachineBasicBlock &MBB, MCRegister ExceptionPointer,
+                     MCRegister ExceptionSelector, bool End)
         : ExceptionPointer(ExceptionPointer),
           ExceptionSelector(ExceptionSelector), BlockI(MBB.succ_begin()),
           BlockEnd(MBB.succ_end()) {
@@ -613,7 +621,7 @@ public:
       return true;
     }
 
-    MCPhysReg ExceptionPointer, ExceptionSelector;
+    MCRegister ExceptionPointer, ExceptionSelector;
     const_succ_iterator BlockI;
     const_succ_iterator BlockEnd;
     livein_iterator LiveRegI;
@@ -709,6 +717,14 @@ public:
   void setIsEndSection(bool V = true) { IsEndSection = V; }
 
   std::optional<UniqueBBID> getBBID() const { return BBID; }
+
+  const SmallVector<unsigned> &getPrefetchTargetCallsiteIndexes() const {
+    return PrefetchTargetCallsiteIndexes;
+  }
+
+  void setPrefetchTargetCallsiteIndexes(const SmallVector<unsigned> &V) {
+    PrefetchTargetCallsiteIndexes = V;
+  }
 
   /// Returns the section ID of this basic block.
   MBBSectionID getSectionID() const { return SectionID; }

@@ -1,12 +1,10 @@
 // Test TBAA tags for common and equivalence.
-// RUN: fir-opt --fir-add-alias-tags --split-input-file %s | FileCheck --check-prefixes=ALL,DEFAULT %s
-// RUN: fir-opt --fir-add-alias-tags --local-alloc-tbaa --split-input-file %s | FileCheck --check-prefixes=ALL,LOCAL %s
+// RUN: fir-opt --fir-add-alias-tags --split-input-file %s | FileCheck --check-prefixes=ALL %s
 
 // ALL: #[[ROOT:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest_common">
 // ALL: #[[ANY:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
 // ALL: #[[ANYDATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY]], 0>}>
-// ALL: #[[TARGETDATA:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[ANYDATA]], 0>}>
-// ALL: #[[GLOBALDATA:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[TARGETDATA]], 0>}>
+// ALL: #[[GLOBALDATA:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[ANYDATA]], 0>}>
 // ALL: #[[BLK:.+]] = #llvm.tbaa_type_desc<id = "global data/blk_", members = {<#[[GLOBALDATA]], 0>}>
 // ALL: #[[BLK_A:.+]] = #llvm.tbaa_type_desc<id = "global data/blk_/bytes_0_to_3", members = {<#[[BLK]], 0>}>
 // ALL: #[[BLK_C:.+]] = #llvm.tbaa_type_desc<id = "global data/blk_/bytes_8_to_47", members = {<#[[BLK]], 0>}>
@@ -54,19 +52,17 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 
 // -----
 
-// LOCAL: #[[ROOT:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest_local_equiv">
-// LOCAL: #[[ANY:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
-// LOCAL: #[[ANYDATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY]], 0>}>
-// LOCAL: #[[TARGETDATA:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[ANYDATA]], 0>}>
-// LOCAL: #[[ALLOCATEDDATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {<#[[TARGETDATA]], 0>}>
-// LOCAL: #[[EQUIV:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFtest_local_equivEa", members = {<#[[ALLOCATEDDATA]], 0>}>
-// LOCAL: #[[TAG:.+]] = #llvm.tbaa_tag<base_type = #[[EQUIV]], access_type = #[[EQUIV]], offset = 0>
+// ALL: #[[ROOT:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest_local_equiv">
+// ALL: #[[ANY:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
+// ALL: #[[ANYDATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY]], 0>}>
+// ALL: #[[ALLOCATEDDATA:.+]] = #llvm.tbaa_type_desc<id = "allocated data", members = {<#[[ANYDATA]], 0>}>
+// ALL: #[[EQUIV:.+]] = #llvm.tbaa_type_desc<id = "allocated data/_QFtest_local_equivEa", members = {<#[[ALLOCATEDDATA]], 0>}>
+// ALL: #[[TAG:.+]] = #llvm.tbaa_tag<base_type = #[[EQUIV]], access_type = #[[EQUIV]], offset = 0>
 
 // ALL-LABEL:   func.func @_QPtest_local_equiv() {
-// LOCAL:         fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
-// LOCAL:         fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ref<i32>
-// LOCAL:         fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
-// DEFAULT-NOT:   fir.store{{.}}tbaa
+// ALL:         fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
+// ALL:         fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ref<i32>
+// ALL:         fir.store{{.*}}{tbaa = [#[[TAG]]]} : !fir.ptr<f32>
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 func.func @_QPtest_local_equiv() {
   %c1 = arith.constant 1 : index
@@ -98,8 +94,7 @@ func.func @_QPtest_local_equiv() {
 // ALL: #[[ROOT:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest_save_equiv">
 // ALL: #[[ANY:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
 // ALL: #[[ANYDATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY]], 0>}>
-// ALL: #[[TARGETDATA:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[ANYDATA]], 0>}>
-// ALL: #[[GLOBALDATA:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[TARGETDATA]], 0>}>
+// ALL: #[[GLOBALDATA:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[ANYDATA]], 0>}>
 // ALL: #[[EQUIV:.+]] = #llvm.tbaa_type_desc<id = "global data/_QFtest_save_equivEa", members = {<#[[GLOBALDATA]], 0>}>
 // ALL: #[[TAG:.+]] = #llvm.tbaa_tag<base_type = #[[EQUIV]], access_type = #[[EQUIV]], offset = 0>
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
@@ -143,8 +138,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 // ALL: #[[ROOT:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest_global_equiv">
 // ALL: #[[ANY:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>
 // ALL: #[[ANYDATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[ANY]], 0>}>
-// ALL: #[[TARGETDATA:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[ANYDATA]], 0>}>
-// ALL: #[[GLOBALDATA:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[TARGETDATA]], 0>}>
+// ALL: #[[GLOBALDATA:.+]] = #llvm.tbaa_type_desc<id = "global data", members = {<#[[ANYDATA]], 0>}>
 // ALL: #[[EQUIV:.+]] = #llvm.tbaa_type_desc<id = "global data/_QMdataEa", members = {<#[[GLOBALDATA]], 0>}>
 // ALL: #[[TAG:.+]] = #llvm.tbaa_tag<base_type = #[[EQUIV]], access_type = #[[EQUIV]], offset = 0>
 

@@ -29,9 +29,10 @@ static_library("performance") {
     "NoexceptMoveConstructorCheck.cpp",
     "NoexceptSwapCheck.cpp",
     "PerformanceTidyModule.cpp",
+    "StringViewConversionsCheck.cpp",
     "TriviallyDestructibleCheck.cpp",
     "TypePromotionInMathFnCheck.cpp",
-    "UnnecessaryCopyInitialization.cpp",
+    "UnnecessaryCopyInitializationCheck.cpp",
     "UnnecessaryValueParamCheck.cpp",
   ]
 }

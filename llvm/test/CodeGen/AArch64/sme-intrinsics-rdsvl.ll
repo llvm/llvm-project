@@ -86,4 +86,111 @@ define i64 @sme_cntsd_mul() {
   ret i64 %res
 }
 
-declare i64 @llvm.aarch64.sme.cntsd()
+define i64 @sme_cntsb_mul_pos() {
+; CHECK-LABEL: sme_cntsb_mul_pos:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #24
+; CHECK-NEXT:    lsl x0, x8, #2
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsd()
+  %shl = shl nuw nsw i64 %v, 3
+  %res = mul nuw nsw i64 %shl, 96
+  ret i64 %res
+}
+
+define i64 @sme_cntsh_mul_pos() {
+; CHECK-LABEL: sme_cntsh_mul_pos:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #3
+; CHECK-NEXT:    lsr x0, x8, #1
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsd()
+  %shl = shl nuw nsw i64 %v, 2
+  %res = mul nuw nsw i64 %shl, 3
+  ret i64 %res
+}
+
+define i64 @sme_cntsw_mul_pos() {
+; CHECK-LABEL: sme_cntsw_mul_pos:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #31
+; CHECK-NEXT:    lsr x0, x8, #1
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsd()
+  %shl = shl nuw nsw i64 %v, 1
+  %res = mul nuw nsw i64 %shl, 62
+  ret i64 %res
+}
+
+define i64 @sme_cntsd_mul_pos() {
+; CHECK-LABEL: sme_cntsd_mul_pos:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #31
+; CHECK-NEXT:    lsl x0, x8, #2
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsd()
+  %res = mul nuw nsw i64 %v, 992
+  ret i64 %res
+}
+
+define i64 @sme_cntsb_mul_neg() {
+; CHECK-LABEL: sme_cntsb_mul_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #-24
+; CHECK-NEXT:    lsl x0, x8, #2
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsd()
+  %shl = shl nuw nsw i64 %v, 3
+  %res = mul nuw nsw i64 %shl, -96
+  ret i64 %res
+}
+
+define i64 @sme_cntsh_mul_neg() {
+; CHECK-LABEL: sme_cntsh_mul_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #-3
+; CHECK-NEXT:    lsr x0, x8, #1
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsd()
+  %shl = shl nuw nsw i64 %v, 2
+  %res = mul nuw nsw i64 %shl, -3
+  ret i64 %res
+}
+
+define i64 @sme_cntsw_mul_neg() {
+; CHECK-LABEL: sme_cntsw_mul_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #-31
+; CHECK-NEXT:    lsl x0, x8, #3
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsd()
+  %shl = shl nuw nsw i64 %v, 1
+  %res = mul nuw nsw i64 %shl, -992
+  ret i64 %res
+}
+
+define i64 @sme_cntsd_mul_neg() {
+; CHECK-LABEL: sme_cntsd_mul_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #-3
+; CHECK-NEXT:    lsr x0, x8, #3
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsd()
+  %res = mul nuw nsw  i64 %v, -3
+  ret i64 %res
+}
+
+; Negative test for optimization failure
+define i64 @sme_cntsd_mul_fail() {
+; CHECK-LABEL: sme_cntsd_mul_fail:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov w9, #993 // =0x3e1
+; CHECK-NEXT:    lsr x8, x8, #3
+; CHECK-NEXT:    mul x0, x8, x9
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsd()
+  %res = mul nuw nsw i64 %v, 993
+  ret i64 %res
+}
+

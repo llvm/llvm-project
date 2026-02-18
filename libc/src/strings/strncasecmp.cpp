@@ -18,8 +18,8 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, strncasecmp,
                    (const char *left, const char *right, size_t n)) {
   auto case_cmp = [](char a, char b) {
-    return LIBC_NAMESPACE::internal::tolower(a) -
-           LIBC_NAMESPACE::internal::tolower(b);
+    return static_cast<int>(LIBC_NAMESPACE::internal::tolower(a)) -
+           static_cast<int>(LIBC_NAMESPACE::internal::tolower(b));
   };
   return inline_strncmp(left, right, n, case_cmp);
 }

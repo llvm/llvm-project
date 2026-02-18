@@ -236,7 +236,7 @@ define void @has_aligned_sret(ptr align 32 sret(%TSRet), i32) nounwind {
 ; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
 ; CHECK-NEXT:     stp     q14, q15, [sp, #128]            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
-; CHECK-NEXT:     str     x19, [sp, #160]                 // 8-byte Folded Spill
+; CHECK-NEXT:     str     x19, [sp, #160]                 // 8-byte Spill
 ; CHECK-NEXT:     .seh_save_reg   x19, 160
 ; CHECK-NEXT:     stp     x29, x30, [sp, #168]            // 16-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_fplr  168
@@ -253,7 +253,7 @@ define void @has_aligned_sret(ptr align 32 sret(%TSRet), i32) nounwind {
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldp     x29, x30, [sp, #168]            // 16-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_fplr  168
-; CHECK-NEXT:     ldr     x19, [sp, #160]                 // 8-byte Folded Reload
+; CHECK-NEXT:     ldr     x19, [sp, #160]                 // 8-byte Reload
 ; CHECK-NEXT:     .seh_save_reg   x19, 160
 ; CHECK-NEXT:     ldp     q14, q15, [sp, #128]            // 32-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
@@ -339,7 +339,7 @@ define [3 x i64] @large_array([3 x i64] %0, [2 x double], [2 x [2 x i64]]) nounw
 ; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
 ; CHECK-NEXT:     stp     q14, q15, [sp, #128]            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
-; CHECK-NEXT:     str     x19, [sp, #160]                 // 8-byte Folded Spill
+; CHECK-NEXT:     str     x19, [sp, #160]                 // 8-byte Spill
 ; CHECK-NEXT:     .seh_save_reg   x19, 160
 ; CHECK-NEXT:     stp     x29, x30, [sp, #168]            // 16-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_fplr  168
@@ -362,7 +362,7 @@ define [3 x i64] @large_array([3 x i64] %0, [2 x double], [2 x [2 x i64]]) nounw
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldp     x29, x30, [sp, #168]            // 16-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_fplr  168
-; CHECK-NEXT:     ldr     x19, [sp, #160]                 // 8-byte Folded Reload
+; CHECK-NEXT:     ldr     x19, [sp, #160]                 // 8-byte Reload
 ; CHECK-NEXT:     .seh_save_reg   x19, 160
 ; CHECK-NEXT:     ldp     q14, q15, [sp, #128]            // 32-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
@@ -508,8 +508,8 @@ define <4 x i8> @small_vector(<4 x i8> %0) {
 ; CHECK-NEXT:     add	x29, sp, #176
 ; CHECK-NEXT:     .seh_add_fp	176
 ; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     fmov s0, w0
 ; CHECK-NEXT:     str	w0, [sp, #12]
-; CHECK-NEXT:     ldr	s0, [sp, #12]
 ; CHECK-NEXT:     ushll	v0.8h, v0.8b, #0
 ; CHECK-NEXT:                                           // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:     blr	x9
@@ -555,7 +555,7 @@ define <8 x i16> @large_vector(<8 x i16> %0) {
 ; CHECK-NEXT:     .seh_save_any_reg_p	q12, 96
 ; CHECK-NEXT:     stp	q14, q15, [sp, #128]            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_p	q14, 128
-; CHECK-NEXT:     str	x19, [sp, #160]                 // 8-byte Folded Spill
+; CHECK-NEXT:     str	x19, [sp, #160]                 // 8-byte Spill
 ; CHECK-NEXT:     .seh_save_reg	x19, 160
 ; CHECK-NEXT:     stp	x29, x30, [sp, #168]            // 16-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_fplr	168
@@ -571,7 +571,7 @@ define <8 x i16> @large_vector(<8 x i16> %0) {
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldp	x29, x30, [sp, #168]            // 16-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_fplr	168
-; CHECK-NEXT:     ldr	x19, [sp, #160]                 // 8-byte Folded Reload
+; CHECK-NEXT:     ldr	x19, [sp, #160]                 // 8-byte Reload
 ; CHECK-NEXT:     .seh_save_reg	x19, 160
 ; CHECK-NEXT:     ldp	q14, q15, [sp, #128]            // 32-byte Folded Reload
 ; CHECK-NEXT:     .seh_save_any_reg_p	q14, 128

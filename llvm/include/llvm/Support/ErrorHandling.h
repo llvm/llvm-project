@@ -21,8 +21,8 @@ class StringRef;
 class Twine;
 
 /// An error handler callback.
-typedef void (*fatal_error_handler_t)(void *user_data, const char *reason,
-                                      bool gen_crash_diag);
+using fatal_error_handler_t = void (*)(void *user_data, const char *reason,
+                                       bool gen_crash_diag);
 
 /// install_fatal_error_handler - Installs a new error handler to be used
 /// whenever a serious (non-recoverable) error is encountered by LLVM.

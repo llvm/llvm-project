@@ -59,7 +59,7 @@ public:
   UsageKind Usage = Unused;
 
   template <class T> const T *getParent(const Expr *E) {
-    DynTypedNodeList Parents = Ctxt.getParents(*E);
+    const DynTypedNodeList Parents = Ctxt.getParents(*E);
     if (Parents.size() != 1)
       return nullptr;
 
@@ -178,9 +178,8 @@ public:
 
     // Look through deref of this.
     if (const auto *UnOp = dyn_cast_or_null<UnaryOperator>(Parent)) {
-      if (UnOp->getOpcode() == UO_Deref) {
+      if (UnOp->getOpcode() == UO_Deref)
         Parent = getParentExprIgnoreParens(UnOp);
-      }
     }
 
     // It's okay to
@@ -241,7 +240,7 @@ void MakeMemberFunctionConstCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static SourceLocation getConstInsertionPoint(const CXXMethodDecl *M) {
-  TypeSourceInfo *TSI = M->getTypeSourceInfo();
+  const TypeSourceInfo *TSI = M->getTypeSourceInfo();
   if (!TSI)
     return {};
 

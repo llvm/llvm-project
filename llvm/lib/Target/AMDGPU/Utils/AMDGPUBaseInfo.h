@@ -98,7 +98,7 @@ struct GcnBufferFormatInfo {
 };
 
 struct MAIInstInfo {
-  uint16_t Opcode;
+  uint32_t Opcode;
   bool is_dgemm;
   bool is_gfx940_xdl;
 };
@@ -121,7 +121,7 @@ struct True16D16Info {
 };
 
 struct WMMAInstInfo {
-  uint16_t Opcode;
+  uint32_t Opcode;
   bool is_wmma_xdl;
 };
 
@@ -416,7 +416,7 @@ inline bool hasNamedOperand(uint64_t Opcode, OpName NamedIdx) {
 }
 
 LLVM_READONLY
-int getSOPPWithRelaxation(uint16_t Opcode);
+int64_t getSOPPWithRelaxation(uint32_t Opcode);
 
 struct MIMGBaseOpcodeInfo {
   MIMGBaseOpcode BaseOpcode;
@@ -522,8 +522,8 @@ unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
                            bool IsG16Supported);
 
 struct MIMGInfo {
-  uint16_t Opcode;
-  uint16_t BaseOpcode;
+  uint32_t Opcode;
+  uint32_t BaseOpcode;
   uint8_t MIMGEncoding;
   uint8_t VDataDwords;
   uint8_t VAddrDwords;
@@ -646,7 +646,7 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                                   const MCSubtargetInfo &STI);
 
 LLVM_READONLY
-int getMCOpcode(uint16_t Opcode, unsigned Gen);
+int64_t getMCOpcode(uint32_t Opcode, unsigned Gen);
 
 LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3);
@@ -909,7 +909,7 @@ private:
   const ComponentInfo CompInfo[COMPONENTS_NUM];
 
 public:
-  using RegIndices = std::array<unsigned, Component::MAX_OPR_NUM>;
+  using RegIndices = std::array<MCRegister, Component::MAX_OPR_NUM>;
 
   InstInfo(const MCInstrDesc &OpX, const MCInstrDesc &OpY)
       : CompInfo{OpX, OpY} {}
@@ -932,9 +932,10 @@ public:
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
-  bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
-                         const MCRegisterInfo &MRI, bool SkipSrc = false,
-                         bool AllowSameVGPR = false, bool VOPD3 = false) const {
+  bool
+  hasInvalidOperand(std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
+                    const MCRegisterInfo &MRI, bool SkipSrc = false,
+                    bool AllowSameVGPR = false, bool VOPD3 = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
                                       VOPD3)
         .has_value();
@@ -949,14 +950,14 @@ public:
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
   // or even and instruction may have real src2 as opposed to tied accumulator.
   std::optional<unsigned> getInvalidCompOperandIndex(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+      std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
       const MCRegisterInfo &MRI, bool SkipSrc = false,
       bool AllowSameVGPR = false, bool VOPD3 = false) const;
 
 private:
   RegIndices
   getRegIndices(unsigned ComponentIdx,
-                std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                std::function<MCRegister(unsigned, unsigned)> GetRegIdx,
                 bool VOPD3) const;
 };
 
@@ -1075,6 +1076,37 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
+enum InstCounterType {
+  LOAD_CNT = 0, // VMcnt prior to gfx12.
+  DS_CNT,       // LKGMcnt prior to gfx12.
+  EXP_CNT,      //
+  STORE_CNT,    // VScnt in gfx10/gfx11.
+  NUM_NORMAL_INST_CNTS,
+  SAMPLE_CNT = NUM_NORMAL_INST_CNTS, // gfx12+ only.
+  BVH_CNT,                           // gfx12+ only.
+  KM_CNT,                            // gfx12+ only.
+  X_CNT,                             // gfx1250.
+  NUM_EXTENDED_INST_CNTS,
+  VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
+  VM_VSRC,                          // gfx12+ expert mode only.
+  NUM_EXPERT_INST_CNTS,
+  NUM_INST_CNTS = NUM_EXPERT_INST_CNTS
+};
+
+// Return an iterator over all counters between LOAD_CNT (the first counter)
+// and \c MaxCounter (exclusive, default value yields an enumeration over
+// all counters).
+iota_range<InstCounterType>
+inst_counter_types(InstCounterType MaxCounter = NUM_INST_CNTS);
+
+} // namespace AMDGPU
+
+template <> struct enum_iteration_traits<AMDGPU::InstCounterType> {
+  static constexpr bool is_iterable = true;
+};
+
+namespace AMDGPU {
+
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
 /// Large values (including the maximum possible integer) can be used to
@@ -1088,6 +1120,71 @@ struct Waitcnt {
   unsigned BvhCnt = ~0u;    // gfx12+ only.
   unsigned KmCnt = ~0u;     // gfx12+ only.
   unsigned XCnt = ~0u;      // gfx1250.
+  unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
+  unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
+
+  unsigned get(InstCounterType T) const {
+    switch (T) {
+    case LOAD_CNT:
+      return LoadCnt;
+    case EXP_CNT:
+      return ExpCnt;
+    case DS_CNT:
+      return DsCnt;
+    case STORE_CNT:
+      return StoreCnt;
+    case SAMPLE_CNT:
+      return SampleCnt;
+    case BVH_CNT:
+      return BvhCnt;
+    case KM_CNT:
+      return KmCnt;
+    case X_CNT:
+      return XCnt;
+    case VA_VDST:
+      return VaVdst;
+    case VM_VSRC:
+      return VmVsrc;
+    default:
+      llvm_unreachable("bad InstCounterType");
+    }
+  }
+  void set(InstCounterType T, unsigned Val) {
+    switch (T) {
+    case LOAD_CNT:
+      LoadCnt = Val;
+      break;
+    case EXP_CNT:
+      ExpCnt = Val;
+      break;
+    case DS_CNT:
+      DsCnt = Val;
+      break;
+    case STORE_CNT:
+      StoreCnt = Val;
+      break;
+    case SAMPLE_CNT:
+      SampleCnt = Val;
+      break;
+    case BVH_CNT:
+      BvhCnt = Val;
+      break;
+    case KM_CNT:
+      KmCnt = Val;
+      break;
+    case X_CNT:
+      XCnt = Val;
+      break;
+    case VA_VDST:
+      VaVdst = Val;
+      break;
+    case VM_VSRC:
+      VmVsrc = Val;
+      break;
+    default:
+      llvm_unreachable("bad InstCounterType");
+    }
+  }
 
   Waitcnt() = default;
   // Pre-gfx12 constructor.
@@ -1096,18 +1193,23 @@ struct Waitcnt {
 
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
-          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt)
+          unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
+          unsigned VaVdst, unsigned VmVsrc)
       : LoadCnt(LoadCnt), ExpCnt(ExpCnt), DsCnt(DsCnt), StoreCnt(StoreCnt),
-        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), XCnt(XCnt) {}
+        SampleCnt(SampleCnt), BvhCnt(BvhCnt), KmCnt(KmCnt), XCnt(XCnt),
+        VaVdst(VaVdst), VmVsrc(VmVsrc) {}
 
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
   bool hasWaitExceptStoreCnt() const {
     return LoadCnt != ~0u || ExpCnt != ~0u || DsCnt != ~0u ||
-           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || XCnt != ~0u;
+           SampleCnt != ~0u || BvhCnt != ~0u || KmCnt != ~0u || XCnt != ~0u ||
+           VaVdst != ~0u || VmVsrc != ~0u;
   }
 
   bool hasWaitStoreCnt() const { return StoreCnt != ~0u; }
+
+  bool hasWaitDepctr() const { return VaVdst != ~0u || VmVsrc != ~0u; }
 
   Waitcnt combined(const Waitcnt &Other) const {
     // Does the right thing provided self and Other are either both pre-gfx12
@@ -1116,8 +1218,30 @@ struct Waitcnt {
         std::min(LoadCnt, Other.LoadCnt), std::min(ExpCnt, Other.ExpCnt),
         std::min(DsCnt, Other.DsCnt), std::min(StoreCnt, Other.StoreCnt),
         std::min(SampleCnt, Other.SampleCnt), std::min(BvhCnt, Other.BvhCnt),
-        std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt));
+        std::min(KmCnt, Other.KmCnt), std::min(XCnt, Other.XCnt),
+        std::min(VaVdst, Other.VaVdst), std::min(VmVsrc, Other.VmVsrc));
   }
+
+  friend raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait);
+};
+
+/// Represents the hardware counter limits for different wait count types.
+struct HardwareLimits {
+  unsigned LoadcntMax; // Corresponds to Vmcnt prior to gfx12.
+  unsigned ExpcntMax;
+  unsigned DscntMax;     // Corresponds to LGKMcnt prior to gfx12.
+  unsigned StorecntMax;  // Corresponds to VScnt in gfx10/gfx11.
+  unsigned SamplecntMax; // gfx12+ only.
+  unsigned BvhcntMax;    // gfx12+ only.
+  unsigned KmcntMax;     // gfx12+ only.
+  unsigned XcntMax;      // gfx1250.
+  unsigned VaVdstMax;    // gfx12+ expert mode only.
+  unsigned VmVsrcMax;    // gfx12+ expert mode only.
+
+  HardwareLimits() = default;
+
+  /// Initializes hardware limits from ISA version.
+  HardwareLimits(const IsaVersion &IV);
 };
 
 // The following methods are only meaningful on targets that support
@@ -1278,6 +1402,27 @@ bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
 bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
                   bool &IsDefault, const MCSubtargetInfo &STI);
 
+/// \returns Maximum VaVdst value that can be encoded.
+unsigned getVaVdstBitMask();
+
+/// \returns Maximum VaSdst value that can be encoded.
+unsigned getVaSdstBitMask();
+
+/// \returns Maximum VaSsrc value that can be encoded.
+unsigned getVaSsrcBitMask();
+
+/// \returns Maximum HoldCnt value that can be encoded.
+unsigned getHoldCntBitMask(const IsaVersion &Version);
+
+/// \returns Maximum VmVsrc value that can be encoded.
+unsigned getVmVsrcBitMask();
+
+/// \returns Maximum VaVcc value that can be encoded.
+unsigned getVaVccBitMask();
+
+/// \returns Maximum SaSdst value that can be encoded.
+unsigned getSaSdstBitMask();
+
 /// \returns Decoded VaVdst from given immediate \p Encoded.
 unsigned decodeFieldVaVdst(unsigned Encoded);
 
@@ -1297,46 +1442,47 @@ unsigned decodeFieldVaVcc(unsigned Encoded);
 unsigned decodeFieldVaSsrc(unsigned Encoded);
 
 /// \returns Decoded HoldCnt from given immediate \p Encoded.
-unsigned decodeFieldHoldCnt(unsigned Encoded);
+unsigned decodeFieldHoldCnt(unsigned Encoded, const IsaVersion &Version);
 
 /// \returns \p VmVsrc as an encoded Depctr immediate.
-unsigned encodeFieldVmVsrc(unsigned VmVsrc);
+unsigned encodeFieldVmVsrc(unsigned VmVsrc, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VmVsrc.
 unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc);
 
 /// \returns \p VaVdst as an encoded Depctr immediate.
-unsigned encodeFieldVaVdst(unsigned VaVdst);
+unsigned encodeFieldVaVdst(unsigned VaVdst, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VaVdst.
 unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst);
 
 /// \returns \p SaSdst as an encoded Depctr immediate.
-unsigned encodeFieldSaSdst(unsigned SaSdst);
+unsigned encodeFieldSaSdst(unsigned SaSdst, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p SaSdst.
 unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst);
 
 /// \returns \p VaSdst as an encoded Depctr immediate.
-unsigned encodeFieldVaSdst(unsigned VaSdst);
+unsigned encodeFieldVaSdst(unsigned VaSdst, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VaSdst.
 unsigned encodeFieldVaSdst(unsigned Encoded, unsigned VaSdst);
 
 /// \returns \p VaVcc as an encoded Depctr immediate.
-unsigned encodeFieldVaVcc(unsigned VaVcc);
+unsigned encodeFieldVaVcc(unsigned VaVcc, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VaVcc.
 unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
 
 /// \returns \p HoldCnt as an encoded Depctr immediate.
-unsigned encodeFieldHoldCnt(unsigned HoldCnt);
+unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p HoldCnt.
-unsigned encodeFieldHoldCnt(unsigned HoldCnt, unsigned Encoded);
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt,
+                            const IsaVersion &Version);
 
 /// \returns \p VaSsrc as an encoded Depctr immediate.
-unsigned encodeFieldVaSsrc(unsigned VaSsrc);
+unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p VaSsrc.
 unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc);
@@ -1513,6 +1659,8 @@ constexpr inline bool isKernel(CallingConv::ID CC) {
   }
 }
 
+inline bool isKernel(const Function &F) { return isKernel(F.getCallingConv()); }
+
 LLVM_READNONE
 constexpr bool canGuaranteeTCO(CallingConv::ID CC) {
   return CC == CallingConv::Fast;
@@ -1561,6 +1709,9 @@ bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
 bool isGFX1250(const MCSubtargetInfo &STI);
+bool isGFX1250Plus(const MCSubtargetInfo &STI);
+bool isGFX13(const MCSubtargetInfo &STI);
+bool isGFX13Plus(const MCSubtargetInfo &STI);
 bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
@@ -1599,7 +1750,7 @@ LLVM_READNONE
 MCRegister mc2PseudoReg(MCRegister Reg);
 
 LLVM_READNONE
-bool isInlineValue(unsigned Reg);
+bool isInlineValue(MCRegister Reg);
 
 /// Is this an AMDGPU specific source operand? These include registers,
 /// inline constants, literals and mandatory literals (KImm).
@@ -1663,6 +1814,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     return 2;
 
@@ -1709,6 +1861,10 @@ LLVM_READNONE
 std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal);
 
 LLVM_READNONE
+std::optional<unsigned> getPKFMACF16InlineEncoding(uint32_t Literal,
+                                                   bool IsGFX11Plus);
+
+LLVM_READNONE
 bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType);
 
 LLVM_READNONE
@@ -1719,6 +1875,9 @@ bool isInlinableLiteralV2BF16(uint32_t Literal);
 
 LLVM_READNONE
 bool isInlinableLiteralV2F16(uint32_t Literal);
+
+LLVM_READNONE
+bool isPKFMACF16InlineConstant(uint32_t Literal, bool IsGFX11Plus);
 
 LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
@@ -1798,16 +1957,16 @@ bool isIntrinsicAlwaysUniform(unsigned IntrID);
 
 /// \returns a register class for the physical register \p Reg if it is a VGPR
 /// or nullptr otherwise.
-const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
+const MCRegisterClass *getVGPRPhysRegClass(MCRegister Reg,
                                            const MCRegisterInfo &MRI);
 
 /// \returns the MODE bits which have to be set by the S_SET_VGPR_MSB for the
 /// physical register \p Reg.
-unsigned getVGPREncodingMSBs(MCPhysReg Reg, const MCRegisterInfo &MRI);
+unsigned getVGPREncodingMSBs(MCRegister Reg, const MCRegisterInfo &MRI);
 
 /// If \p Reg is a low VGPR return a corresponding high VGPR with \p MSBs set.
-MCPhysReg getVGPRWithMSBs(MCPhysReg Reg, unsigned MSBs,
-                          const MCRegisterInfo &MRI);
+MCRegister getVGPRWithMSBs(MCRegister Reg, unsigned MSBs,
+                           const MCRegisterInfo &MRI);
 
 // Returns a table for the opcode with a given \p Desc to map the VGPR MSB
 // set by the S_SET_VGPR_MSB to one of 4 sources. In case of VOPD returns 2
@@ -1867,7 +2026,7 @@ private:
   Kind AttrKind = Kind::Unknown;
 };
 
-} // end namespace AMDGPU
+} // namespace AMDGPU
 
 raw_ostream &operator<<(raw_ostream &OS,
                         const AMDGPU::IsaInfo::TargetIDSetting S);

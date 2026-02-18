@@ -245,6 +245,16 @@ cl::opt<bool> PrintCacheMetrics(
     cl::desc("calculate and print various metrics for instruction cache"),
     cl::cat(BoltOptCategory));
 
+cl::list<std::string> PrintOnly("print-only", cl::CommaSeparated,
+                                cl::desc("list of functions to print"),
+                                cl::value_desc("func1,func2,func3,..."),
+                                cl::Hidden, cl::cat(BoltCategory));
+
+cl::opt<std::string>
+    PrintOnlyFile("print-only-file",
+                  cl::desc("file with list of functions to print"), cl::Hidden,
+                  cl::cat(BoltCategory));
+
 cl::opt<bool> PrintSections("print-sections",
                             cl::desc("print all registered sections"),
                             cl::Hidden, cl::cat(BoltCategory));

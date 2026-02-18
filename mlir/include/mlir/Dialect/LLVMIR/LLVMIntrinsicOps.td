@@ -181,6 +181,18 @@ def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
 def LLVM_UMinOp : LLVM_BinarySameArgsIntrOpI<"umin">;
 
+class LLVM_CmpIntrOp<string func>
+    : LLVM_OneResultIntrOp<func, [0], [0], [Pure, SameTypeOperands]> {
+  let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$a,
+      LLVM_ScalarOrVectorOf<AnySignlessInteger>:$b);
+  let results = (outs LLVM_ScalarOrVectorOf<AnySignlessInteger>:$res);
+  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+                       "functional-type(operands, results)";
+}
+
+def LLVM_SCmpOp : LLVM_CmpIntrOp<"scmp">;
+def LLVM_UCmpOp : LLVM_CmpIntrOp<"ucmp">;
+
 def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
 def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
 def LLVM_TanOp : LLVM_UnaryIntrOpF<"tan">;

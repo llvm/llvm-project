@@ -24,7 +24,7 @@ define i32 @linear_transform_with_default(i32 %x) {
 ; TTINOLUT-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i32 [[SWITCH_IDX_MULT]], 1
 ; TTINOLUT-NEXT:    br label %[[END]]
 ; TTINOLUT:       [[END]]:
-; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ 13, %[[ENTRY]] ], [ [[SWITCH_OFFSET]], %[[SWITCH_LOOKUP]] ]
+; TTINOLUT-NEXT:    [[IDX:%.*]] = phi i32 [ [[SWITCH_OFFSET]], %[[SWITCH_LOOKUP]] ], [ 13, %[[ENTRY]] ]
 ; TTINOLUT-NEXT:    ret i32 [[IDX]]
 ;
 entry:
@@ -182,7 +182,7 @@ define i4 @bitmap_no_default(i32 %x) {
 ; OPTNOLUT:       [[DEFAULT]]:
 ; OPTNOLUT-NEXT:    unreachable
 ; OPTNOLUT:       [[END]]:
-; OPTNOLUT-NEXT:    [[SWITCH_MASKED:%.*]] = phi i4 [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ 0, %[[ENTRY]] ]
+; OPTNOLUT-NEXT:    [[SWITCH_MASKED:%.*]] = phi i4 [ -8, %[[CASE3]] ], [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ 0, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i4 [[SWITCH_MASKED]]
 ;
 ; TTINOLUT-LABEL: define i4 @bitmap_no_default(
@@ -237,7 +237,7 @@ define i4 @bitmap_with_default(i32 %x) {
 ; OPTNOLUT:       [[DEFAULT]]:
 ; OPTNOLUT-NEXT:    br label %[[END]]
 ; OPTNOLUT:       [[END]]:
-; OPTNOLUT-NEXT:    [[IDX:%.*]] = phi i4 [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ -1, %[[DEFAULT]] ], [ 0, %[[ENTRY]] ]
+; OPTNOLUT-NEXT:    [[IDX:%.*]] = phi i4 [ -1, %[[DEFAULT]] ], [ 2, %[[CASE1]] ], [ 4, %[[CASE2]] ], [ -8, %[[CASE3]] ], [ 0, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i4 [[IDX]]
 ;
 ; TTINOLUT-LABEL: define i4 @bitmap_with_default(
@@ -410,13 +410,12 @@ define i1 @single_value_with_mask(i32 %x) {
 ; OPTNOLUT-NEXT:      i32 21, label %[[END]]
 ; OPTNOLUT-NEXT:      i32 48, label %[[END]]
 ; OPTNOLUT-NEXT:      i32 16, label %[[END]]
+; OPTNOLUT-NEXT:      i32 80, label %[[END]]
 ; OPTNOLUT-NEXT:    ]
 ; OPTNOLUT:       [[DEFAULT]]:
-; OPTNOLUT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 80
-; OPTNOLUT-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i1 false, i1 true
 ; OPTNOLUT-NEXT:    br label %[[END]]
 ; OPTNOLUT:       [[END]]:
-; OPTNOLUT-NEXT:    [[RES:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ [[SEL]], %[[DEFAULT]] ]
+; OPTNOLUT-NEXT:    [[RES:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ true, %[[DEFAULT]] ], [ false, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i1 [[RES]]
 ;
 ; TTINOLUT-LABEL: define i1 @single_value_with_mask(

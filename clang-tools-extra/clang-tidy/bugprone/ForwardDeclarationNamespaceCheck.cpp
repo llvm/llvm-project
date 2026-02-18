@@ -46,7 +46,7 @@ void ForwardDeclarationNamespaceCheck::check(
     const MatchFinder::MatchResult &Result) {
   if (const auto *RecordDecl =
           Result.Nodes.getNodeAs<CXXRecordDecl>("record_decl")) {
-    StringRef DeclName = RecordDecl->getName();
+    const StringRef DeclName = RecordDecl->getName();
     if (RecordDecl->isThisDeclarationADefinition()) {
       DeclNameToDefinitions[DeclName].push_back(RecordDecl);
     } else {
@@ -98,9 +98,8 @@ static bool haveSameNamespaceOrTranslationUnit(const CXXRecordDecl *Decl1,
 
 static std::string getNameOfNamespace(const CXXRecordDecl *Decl) {
   const auto *ParentDecl = Decl->getLexicalParent();
-  if (ParentDecl->getDeclKind() == Decl::TranslationUnit) {
+  if (ParentDecl->getDeclKind() == Decl::TranslationUnit)
     return "(global)";
-  }
   const auto *NsDecl = cast<NamespaceDecl>(ParentDecl);
   std::string Ns;
   llvm::raw_string_ostream OStream(Ns);
@@ -115,9 +114,8 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
     // If more than 1 declaration exists, we check if all are in the same
     // namespace.
     for (const auto *CurDecl : Declarations) {
-      if (CurDecl->hasDefinition() || CurDecl->isReferenced()) {
+      if (CurDecl->hasDefinition() || CurDecl->isReferenced())
         continue; // Skip forward declarations that are used/referenced.
-      }
       if (FriendTypes.contains(CurDecl->getASTContext()
                                    .getCanonicalTagType(CurDecl)
                                    ->getTypePtr())) {
@@ -129,9 +127,8 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
       }
       // Compare with all other declarations with the same name.
       for (const auto *Decl : Declarations) {
-        if (Decl == CurDecl) {
+        if (Decl == CurDecl)
           continue; // Don't compare with self.
-        }
         if (!CurDecl->hasDefinition() &&
             !haveSameNamespaceOrTranslationUnit(CurDecl, Decl)) {
           diag(CurDecl->getLocation(),
@@ -147,9 +144,8 @@ void ForwardDeclarationNamespaceCheck::onEndOfTranslationUnit() {
       // Check if a definition in another namespace exists.
       const auto DeclName = CurDecl->getName();
       auto It = DeclNameToDefinitions.find(DeclName);
-      if (It == DeclNameToDefinitions.end()) {
+      if (It == DeclNameToDefinitions.end())
         continue; // No definition in this translation unit, we can skip it.
-      }
       // Make a warning for each definition with the same name (in other
       // namespaces).
       const auto &Definitions = It->second;

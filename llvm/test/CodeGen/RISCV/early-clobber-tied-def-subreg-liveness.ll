@@ -95,16 +95,3 @@ entry:
   ret void
 }
 
-declare <vscale x 8 x i16> @llvm.riscv.vle.nxv8i16.i64(<vscale x 8 x i16>, ptr nocapture, i64)
-
-declare <vscale x 8 x i8> @llvm.riscv.vle.nxv8i8.i64(<vscale x 8 x i8>, ptr nocapture, i64)
-
-declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
-
-declare <vscale x 8 x i1> @llvm.riscv.vmsbc.nxv8i16.i16.i64(<vscale x 8 x i16>, i16, i64)
-
-declare <vscale x 8 x i16> @llvm.riscv.vsext.mask.nxv8i16.nxv8i8.i64(<vscale x 8 x i16>, <vscale x 8 x i8>, <vscale x 8 x i1>, i64, i64 immarg)
-
-declare target("riscv.vector.tuple", <vscale x 16 x i8>, 4) @llvm.riscv.tuple.insert.triscv.vector.tuple_nxv16i8_4t.nxv8i16(target("riscv.vector.tuple", <vscale x 16 x i8>, 4), <vscale x 8 x i16>, i32)
-
-declare void @llvm.riscv.vsseg4.nxv8i16.i64(target("riscv.vector.tuple", <vscale x 16 x i8>, 4), ptr nocapture, i64, i64)

@@ -66,11 +66,11 @@ void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
 
   lldb::IOObjectSP io_sp = std::move(socket);
   auto transport_up = std::make_unique<lldb_protocol::mcp::Transport>(
-      io_sp, io_sp, [client_name](llvm::StringRef message) {
+      m_loop, io_sp, io_sp, [client_name](llvm::StringRef message) {
         LLDB_LOG(GetLog(LLDBLog::Host), "{0}: {1}", client_name, message);
       });
 
-  if (auto error = m_server->Accept(m_loop, std::move(transport_up)))
+  if (auto error = m_server->Accept(std::move(transport_up)))
     LLDB_LOG_ERROR(log, std::move(error), "{0}:");
 }
 
@@ -133,11 +133,12 @@ llvm::Error ProtocolServerMCP::Stop() {
   }
 
   // Stop the main loop.
-  m_loop.AddPendingCallback(
+  bool addition_succeeded = m_loop.AddPendingCallback(
       [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
 
-  // Wait for the main loop to exit.
-  if (m_loop_thread.joinable())
+  // Wait for the main loop to exit, but not if we didn't succeed in inserting
+  // our pending callback or we'll wait forever.
+  if (addition_succeeded && m_loop_thread.joinable())
     m_loop_thread.join();
 
   m_accept_handles.clear();

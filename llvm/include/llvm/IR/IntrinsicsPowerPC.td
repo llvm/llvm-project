@@ -387,6 +387,12 @@ class PowerPC_VSX_Sca_DDD_Intrinsic<string GCCIntSuffix>
                           [llvm_double_ty], [llvm_double_ty, llvm_double_ty],
                           [IntrNoMem]>;
 
+/// PowerPC_VSX_WWW_Intrinsic - A PowerPC intrinsic that takes two v4i32
+/// vectors and returns one.  These intrinsics have no side effects.
+class PowerPC_VSX_WWW_Intrinsic<string GCCIntSuffix>
+  : PowerPC_VSX_Intrinsic<GCCIntSuffix,
+                          [llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty],
+                          [IntrNoMem]>;
 //===----------------------------------------------------------------------===//
 // PowerPC Altivec Intrinsic Definitions.
 
@@ -682,6 +688,31 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_bcdsetsign : ClangBuiltin<"__builtin_ppc_bcdsetsign">,
     DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty], 
     [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+  def int_ppc_bcdshift : ClangBuiltin<"__builtin_ppc_bcdshift">,
+		DefaultAttrsIntrinsic<
+		[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty, llvm_i32_ty],
+		[IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+	def int_ppc_bcdshiftround : ClangBuiltin<"__builtin_ppc_bcdshiftround">,
+		DefaultAttrsIntrinsic<
+    [llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty, llvm_i32_ty],
+		[IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+	def int_ppc_bcdtruncate : ClangBuiltin<"__builtin_ppc_bcdtruncate">,
+		DefaultAttrsIntrinsic<
+		[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty, llvm_i32_ty],
+		[IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+	def int_ppc_bcdunsignedtruncate : ClangBuiltin<"__builtin_ppc_bcdunsignedtruncate">,
+		DefaultAttrsIntrinsic<
+		[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty],
+		[IntrNoMem]>;
+
+	def int_ppc_bcdunsignedshift : ClangBuiltin<"__builtin_ppc_bcdunsignedshift">,
+		DefaultAttrsIntrinsic<
+		[llvm_v16i8_ty], [llvm_v16i8_ty, llvm_i32_ty],
+		[IntrNoMem]>;
 
   def int_ppc_bcdadd : ClangBuiltin<"__builtin_ppc_bcdadd">,
     DefaultAttrsIntrinsic<
@@ -1214,6 +1245,7 @@ def int_ppc_altivec_vsraw : PowerPC_Vec_WWW_Intrinsic<"vsraw">;
 def int_ppc_altivec_vrlb  : PowerPC_Vec_BBB_Intrinsic<"vrlb">;
 def int_ppc_altivec_vrlh  : PowerPC_Vec_HHH_Intrinsic<"vrlh">;
 def int_ppc_altivec_vrlw  : PowerPC_Vec_WWW_Intrinsic<"vrlw">;
+def int_ppc_vsx_xvrlw     : PowerPC_VSX_WWW_Intrinsic<"xvrlw">;
 def int_ppc_altivec_vrld  : PowerPC_Vec_DDD_Intrinsic<"vrld">;
 
 let TargetPrefix = "ppc" in {  // All PPC intrinsics start with "llvm.ppc.".
@@ -2131,4 +2163,33 @@ let TargetPrefix = "ppc" in {
   def int_ppc_atomic_store_i128 :
     Intrinsic<[], [llvm_i64_ty, llvm_i64_ty, llvm_ptr_ty],
               [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<2>>]>;
+}
+
+// AMO intrisics
+let TargetPrefix = "ppc" in {
+ def int_ppc_amo_lwat : ClangBuiltin<"__builtin_amo_lwat">,
+    DefaultAttrsIntrinsic<[llvm_i32_ty],[llvm_ptr_ty,
+                           llvm_i32_ty, llvm_i32_ty],
+                          [IntrArgMemOnly, ImmArg<ArgIndex<2>>]>;
+ def int_ppc_amo_ldat : ClangBuiltin<"__builtin_amo_ldat">,
+    DefaultAttrsIntrinsic<[llvm_i64_ty],[llvm_ptr_ty,
+                           llvm_i64_ty, llvm_i32_ty],
+                          [IntrArgMemOnly, ImmArg<ArgIndex<2>>]>;
+  def int_ppc_amo_lwat_cond : ClangBuiltin<"__builtin_amo_lwat_cond">,
+    DefaultAttrsIntrinsic<[llvm_i32_ty],[llvm_ptr_ty,
+                           llvm_i32_ty],
+                          [IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
+ def int_ppc_amo_ldat_cond : ClangBuiltin<"__builtin_amo_ldat_cond">,
+    DefaultAttrsIntrinsic<[llvm_i64_ty],[llvm_ptr_ty,
+                           llvm_i32_ty],
+                          [IntrArgMemOnly, ImmArg<ArgIndex<1>>]>;
+
+  def int_ppc_amo_stwat : ClangBuiltin<"__builtin_amo_stwat">,
+    DefaultAttrsIntrinsic<[],[llvm_ptr_ty,
+                           llvm_i32_ty, llvm_i32_ty],
+                          [IntrArgMemOnly, ImmArg<ArgIndex<2>>]>;
+ def int_ppc_amo_stdat : ClangBuiltin<"__builtin_amo_stdat">,
+    DefaultAttrsIntrinsic<[],[llvm_ptr_ty,
+                           llvm_i64_ty, llvm_i32_ty],
+                          [IntrArgMemOnly, ImmArg<ArgIndex<2>>]>;
 }

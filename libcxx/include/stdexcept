@@ -91,7 +91,7 @@ public:
 
   ~logic_error() _NOEXCEPT override;
 
-  const char* what() const _NOEXCEPT override;
+  [[__nodiscard__]] const char* what() const _NOEXCEPT override;
 #  else
 
 public:
@@ -115,7 +115,7 @@ public:
 
   ~runtime_error() _NOEXCEPT override;
 
-  const char* what() const _NOEXCEPT override;
+  [[__nodiscard__]] const char* what() const _NOEXCEPT override;
 #  else
 
 public:

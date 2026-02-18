@@ -374,9 +374,6 @@ TEST(SSAUpdaterBulk, SimplifyPHIs) {
   EXPECT_EQ(Phi, Cmp->getOperand(1));
 }
 
-bool EliminateNewDuplicatePHINodes(BasicBlock *BB,
-                                   BasicBlock::phi_iterator FirstExistingPN);
-
 // Helper to run both versions on the same input.
 static void RunEliminateNewDuplicatePHINode(
     const char *AsmText,
@@ -393,9 +390,8 @@ static void RunEliminateNewDuplicatePHINode(
   }
 
   Function *F = M->getFunction("main");
-  auto BBIt = std::find_if(F->begin(), F->end(), [](const BasicBlock &Block) {
-    return Block.getName() == "testbb";
-  });
+  auto BBIt = llvm::find_if(
+      *F, [](const BasicBlock &Block) { return Block.getName() == "testbb"; });
   ASSERT_NE(BBIt, F->end());
   Check(*BBIt, EliminateNewDuplicatePHINodes);
 }

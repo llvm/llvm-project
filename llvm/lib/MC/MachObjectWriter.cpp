@@ -28,12 +28,12 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <string>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -570,8 +570,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
     //
     // FIXME: Do not hardcode.
     if (Asm.registerSymbol(*ISD.Symbol))
-      static_cast<MCSymbolMachO *>(ISD.Symbol)
-          ->setReferenceTypeUndefinedLazy(true);
+      ISD.Symbol->setReferenceTypeUndefinedLazy(true);
   }
 }
 
@@ -585,7 +584,12 @@ void MachObjectWriter::computeSymbolTable(
   unsigned Index = 1;
   for (MCSection &Sec : Asm)
     SectionIndexMap[&Sec] = Index++;
-  assert(Index <= 256 && "Too many sections!");
+
+  // Section indices begin from 1 in MachO. Only sections 1-255 can be indexed
+  // into section symbols. Referencing a section with index larger than 255 will
+  // not set n_sect for these symbols.
+  if (Index > 255)
+    getContext().reportError(SMLoc(), "Too many sections!");
 
   // Build the string table.
   for (const MCSymbol &Symbol : Asm.symbols()) {
@@ -622,7 +626,8 @@ void MachObjectWriter::computeSymbolTable(
       ExternalSymbolData.push_back(MSD);
     } else {
       MSD.SectionIndex = SectionIndexMap.lookup(&Symbol.getSection());
-      assert(MSD.SectionIndex && "Invalid section index!");
+      if (!MSD.SectionIndex)
+        getContext().reportError(SMLoc(), "Invalid section index!");
       ExternalSymbolData.push_back(MSD);
     }
   }
@@ -646,7 +651,8 @@ void MachObjectWriter::computeSymbolTable(
       LocalSymbolData.push_back(MSD);
     } else {
       MSD.SectionIndex = SectionIndexMap.lookup(&Symbol.getSection());
-      assert(MSD.SectionIndex && "Invalid section index!");
+      if (!MSD.SectionIndex)
+        getContext().reportError(SMLoc(), "Invalid section index!");
       LocalSymbolData.push_back(MSD);
     }
   }

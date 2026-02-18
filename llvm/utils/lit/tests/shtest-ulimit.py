@@ -8,7 +8,7 @@
 # RUN: %{python} %S/Inputs/shtest-ulimit/print_limits.py | grep RLIMIT_NOFILE \
 # RUN:   | sed -n -e 's/.*=//p' | tr -d '\n' > %t.nofile_limit
 
-# RUN: not %{lit} -a -v %{inputs}/shtest-ulimit --order=lexical \
+# RUN: not %{lit} -v %{inputs}/shtest-ulimit --order=lexical \
 # RUN:   | FileCheck -DBASE_NOFILE_LIMIT=%{readfile:%t.nofile_limit} %s
 
 # CHECK: -- Testing: 3 tests{{.*}}
@@ -19,7 +19,9 @@
 
 # CHECK-LABEL: FAIL: shtest-ulimit :: ulimit_okay.txt ({{[^)]*}})
 # CHECK: ulimit -n 50
+# CHECK: ulimit -f 5
 # CHECK: RLIMIT_NOFILE=50
+# CHECK: RLIMIT_FSIZE=5
 
 # CHECK-LABEL: FAIL: shtest-ulimit :: ulimit_reset.txt ({{[^)]*}})
 # CHECK: RLIMIT_NOFILE=[[BASE_NOFILE_LIMIT]]

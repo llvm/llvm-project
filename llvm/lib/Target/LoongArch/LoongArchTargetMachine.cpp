@@ -62,8 +62,12 @@ static cl::opt<bool>
                           cl::desc("Enable the merge base offset pass"),
                           cl::init(true), cl::Hidden);
 
-static Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                           std::optional<Reloc::Model> RM) {
+static cl::opt<bool>
+    EnableSinkFold("loongarch-enable-sink-fold",
+                   cl::desc("Enable sinking and folding of instruction copies"),
+                   cl::init(true), cl::Hidden);
+
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
@@ -75,11 +79,11 @@ getEffectiveLoongArchCodeModel(const Triple &TT,
 
   switch (*CM) {
   case CodeModel::Small:
-    return *CM;
   case CodeModel::Medium:
+    return *CM;
   case CodeModel::Large:
     if (!TT.isArch64Bit())
-      report_fatal_error("Medium/Large code model requires LA64");
+      report_fatal_error("Large code model requires LA64");
     return *CM;
   default:
     report_fatal_error(
@@ -92,7 +96,7 @@ LoongArchTargetMachine::LoongArchTargetMachine(
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
     std::optional<CodeModel::Model> CM, CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
-                               getEffectiveRelocModel(TT, RM),
+                               getEffectiveRelocModel(RM),
                                getEffectiveLoongArchCodeModel(TT, CM), OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
   initAsmInfo();
@@ -147,7 +151,9 @@ namespace {
 class LoongArchPassConfig : public TargetPassConfig {
 public:
   LoongArchPassConfig(LoongArchTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {
+    setEnableSinkAndFold(EnableSinkFold);
+  }
 
   LoongArchTargetMachine &getLoongArchTargetMachine() const {
     return getTM<LoongArchTargetMachine>();

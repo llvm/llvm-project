@@ -81,7 +81,7 @@ private:
   void initAvailableCapabilitiesForVulkan(const SPIRVSubtarget &ST);
 
 public:
-  RequirementHandler() {}
+  RequirementHandler() = default;
   void clear() {
     MinimalCaps.clear();
     AllCaps.clear();

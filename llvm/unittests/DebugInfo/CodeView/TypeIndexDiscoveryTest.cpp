@@ -21,7 +21,7 @@ using namespace llvm::codeview;
 
 class TypeIndexIteratorTest : public testing::Test {
 public:
-  TypeIndexIteratorTest() {}
+  TypeIndexIteratorTest() = default;
 
   void SetUp() override {
     Refs.clear();

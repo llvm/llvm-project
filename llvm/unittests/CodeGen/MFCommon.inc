@@ -2,7 +2,8 @@
 // depending on a real target.
 class BogusTargetLowering : public TargetLowering {
 public:
-  BogusTargetLowering(TargetMachine &TM) : TargetLowering(TM) {}
+  BogusTargetLowering(const TargetMachine &TM, const TargetSubtargetInfo &STI)
+      : TargetLowering(TM, STI) {}
 };
 
 class BogusFrameLowering : public TargetFrameLowering {
@@ -45,7 +46,7 @@ public:
     static RegClassWeight Bogus{1, 16};
     return Bogus;
   }
-  unsigned getRegUnitWeight(unsigned RegUnit) const override { return 1; }
+  unsigned getRegUnitWeight(MCRegUnit RegUnit) const override { return 1; }
   unsigned getNumRegPressureSets() const override { return 0; }
   const char *getRegPressureSetName(unsigned Idx) const override {
     return "bogus";
@@ -59,7 +60,7 @@ public:
     static const int Bogus[] = {0, -1};
     return &Bogus[0];
   }
-  const int *getRegUnitPressureSets(unsigned RegUnit) const override {
+  const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override {
     static const int Bogus[] = {0, -1};
     return &Bogus[0];
   }
@@ -76,8 +77,10 @@ public:
 };
 
 class BogusTargetInstrInfo : public TargetInstrInfo {
+  BogusRegisterInfo RegInfo;
+
 public:
-  BogusTargetInstrInfo() : TargetInstrInfo() {}
+  BogusTargetInstrInfo() : TargetInstrInfo(RegInfo) {}
 };
 
 class BogusSubtarget : public TargetSubtargetInfo {
@@ -85,8 +88,8 @@ public:
   BogusSubtarget(TargetMachine &TM)
       : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
                             nullptr, nullptr, nullptr, nullptr, nullptr),
-        FL(), TL(TM) {}
-  ~BogusSubtarget() override {}
+        FL(), TL(TM, *this) {}
+  ~BogusSubtarget() override = default;
 
   const TargetFrameLowering *getFrameLowering() const override { return &FL; }
 
@@ -117,7 +120,7 @@ public:
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {}
 
-  ~BogusTargetMachine() override {}
+  ~BogusTargetMachine() override = default;
 
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override {
     return &ST;

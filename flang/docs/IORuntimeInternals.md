@@ -15,7 +15,7 @@ local:
 ```
 
 This note is meant to be an overview of the design of the *implementation*
-of the f18 Fortran compiler's runtime support library for I/O statements.
+of Flang's runtime support library for I/O statements.
 
 The *interface* to the I/O runtime support library is defined in the
 C++ header file `runtime/io-api.h`.
@@ -66,7 +66,7 @@ modified with optional template arguments that override their
 allocators and deallocators.
 
 Conversions between the many binary floating-point formats supported
-by f18 and their decimal representations are performed with the same
+by Flang and their decimal representations are performed with the same
 template library of fast conversion algorithms used to interpret
 floating-point values in Fortran source programs and to emit them
 to module files.
@@ -245,7 +245,7 @@ for this purpose.
 
 ### `IoStatementState`
 
-F18's Fortran I/O runtime support library defines and implements an API
+Flang's Fortran I/O runtime support library defines and implements an API
 that uses a sequence of function calls to implement each Fortran I/O
 statement.
 The state of each I/O statement in progress is maintained in some

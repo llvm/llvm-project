@@ -10,7 +10,7 @@
 # CHECK: workForFun:
 .macro fun1 number
   .if \number=5
-    lableNotWork:
+    labelNotWork:
   .else
     workForFun:
   .endif

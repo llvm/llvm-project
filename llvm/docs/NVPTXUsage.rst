@@ -21,7 +21,7 @@ LLVM IR.
    This document assumes a basic familiarity with CUDA and the PTX
    assembly language. Information about the CUDA Driver API and the PTX assembly
    language can be found in the `CUDA documentation
-   <http://docs.nvidia.com/cuda/index.html>`_.
+   <http://docs.nvidia.com/cuda/index.html>`__.
 
 
 
@@ -106,10 +106,10 @@ Function Attributes
     a runtime error or kernel launch failure. Only supported for Hopper+.
 
 ``"nvvm.blocksareclusters"``
-    This attribute implies that the grid launch configuration for the corresponding
-    kernel function is specifying the number of clusters instead of the number of thread
-    blocks. This attribute is only allowed for kernel functions and requires
-    ``nvvm.reqntid`` and ``nvvm.cluster_dim`` attributes.
+    This attribute implies that the grid launch configuration for the
+    corresponding kernel function is specifying the number of clusters instead
+    of the number of thread blocks. This attribute is only allowed for kernel
+    functions and requires ``nvvm.reqntid`` and ``nvvm.cluster_dim`` attributes.
 
 .. _address_spaces:
 
@@ -172,37 +172,43 @@ NVPTX Architecture Hierarchy and Ordering
 =========================================
 
 GPU architectures: sm_2Y/sm_3Y/sm_5Y/sm_6Y/sm_7Y/sm_8Y/sm_9Y/sm_10Y/sm_12Y
-('Y' represents version within the architecture)
-The architectures have name of form ``sm_XYz`` where ``X`` represent the generation
-number, ``Y`` represents the version within the architecture, and ``z`` represents
-the optional feature suffix.
-If ``X1Y1 <= X2Y2``, then GPU capabilities of ``sm_X1Y1`` are included in ``sm_X2Y2``.
-For example, take ``sm_90`` (9 represents ``X``, 0 represents ``Y``, and no feature
-suffix) and ``sm_103`` architectures (10 represents ``X``, 3 represents ``Y``, and no
-feature suffix). Since 90 <= 103, ``sm_90`` is compatible with ``sm_103``.
+('Y' represents version within the architecture). The architectures have name of
+the form ``sm_XYz`` where:
+
+* ``X`` represent the generation number
+* ``Y`` represents the version within the architecture, and
+* ``z`` represents the optional feature suffix.
+
+If ``X1Y1 <= X2Y2``, then GPU capabilities of ``sm_X1Y1`` are included in
+``sm_X2Y2``. For example, take ``sm_90`` (9 represents ``X``, 0 represents
+``Y``, and no feature suffix) and ``sm_103`` architectures (10 represents ``X``,
+3 represents ``Y``, and no feature suffix). Since 90 <= 103, ``sm_90`` is
+compatible with ``sm_103``.
 
 The family-specific variants have ``f`` feature suffix and they follow
 following order:
 ``sm_X{Y2}f > sm_X{Y1}f`` iff ``Y2 > Y1``
 ``sm_XY{f} > sm_{XY}{}``
 
-For example, take ``sm_100f`` (10 represents ``X``, 0 represents ``Y``, and ``f``
-represents ``z``) and ``sm_103f`` (10 represents ``X``, 3 represents ``Y``, and ``f``
-represents ``z``) architecture variants. Since ``Y1 < Y2``, ``sm_100f`` is compatible with
-``sm_103f``. Similarly based on the second rule, ``sm_90`` is compatible with ``sm_103f``.
+For example, take ``sm_100f`` (10 represents ``X``, 0 represents ``Y``, and
+``f`` represents ``z``) and ``sm_103f`` (10 represents ``X``, 3 represents
+``Y``, and ``f`` represents ``z``) architecture variants. Since ``Y1 < Y2``,
+``sm_100f`` is compatible with ``sm_103f``. Similarly based on the second rule,
+``sm_90`` is compatible with ``sm_103f``.
 
 Some counter examples, take ``sm_100f`` and ``sm_120f`` (12 represents ``X``, 0
 represents ``Y``, and ``f`` represents ``z``) architecture variants. Since both
-belongs to different family i.e. ``X1 != X2``, ``sm_100f`` is not compatible with
-``sm_120f``.
+belongs to different family i.e. ``X1 != X2``, ``sm_100f`` is not compatible
+with ``sm_120f``.
 
 The architecture-specific variants have ``a`` feature suffix and they follow
 following order:
 ``sm_XY{a} > sm_XY{f} > sm_{XY}{}``
 
-For example, take ``sm_103a`` (10 represents ``X``, 3 represents ``Y``, and ``a``
-represents ``z``), ``sm_103f``, and ``sm_103`` architecture variants. The ``sm_103`` is
-compatible with ``sm_103a`` and ``sm_103f``, and ``sm_103f`` is compatible with ``sm_103a``.
+For example, take ``sm_103a`` (10 represents ``X``, 3 represents ``Y``, and
+``a`` represents ``z``), ``sm_103f``, and ``sm_103`` architecture variants. The
+``sm_103`` is compatible with ``sm_103a`` and ``sm_103f``, and ``sm_103f`` is
+compatible with ``sm_103a``.
 
 Encoding := Arch * 10 + 2 (for 'f') + 1 (for 'a')
 Arch := X * 10 + Y
@@ -264,6 +270,35 @@ map in the following way to CUDA builtins:
    ``gridDim``  ``@llvm.nvvm.read.ptx.sreg.nctaid.*``
    ============ =====================================
 
+'``llvm.nvvm.read.ptx.sreg.*_smem_size``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.read.ptx.sreg.total_smem_size()
+    declare i32 @llvm.nvvm.read.ptx.sreg.aggr_smem_size()
+    declare i32 @llvm.nvvm.read.ptx.sreg.dynamic_smem_size()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.read.ptx.sreg.total_smem_size``' intrinsic reads the PTX
+special register that holds the total amount of shared memory allocated per CTA
+for the kernel at launch.
+
+The reported value includes both statically allocated and dynamically requested
+shared memory, but excludes any shared memory reserved for system use. The size
+is expressed in units of the architecture-specific shared memory allocation
+granularity. For targets sm_8x and newer, this granularity is 128 bytes.
+
+The '``aggr_smem_size``' variant returns the aggregate shared memory size,
+including the portion reserved for system software use.
+
+The '``dynamic_smem_size``' variant returns the amount of dynamic shared
+memory allocated per CTA for the kernel at launch time.
 
 Barriers
 --------
@@ -278,11 +313,24 @@ Syntax:
 
   declare void @llvm.nvvm.barrier.cta.sync.count(i32 %id, i32 %n)
   declare void @llvm.nvvm.barrier.cta.sync.all(i32 %id)
-  declare void @llvm.nvvm.barrier.cta.arrive.count(i32 %id, i32 %n)
-
   declare void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %id, i32 %n)
   declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %id)
+
+  declare void @llvm.nvvm.barrier.cta.arrive.count(i32 %id, i32 %n)
   declare void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32 %id, i32 %n)
+
+  declare i32 @llvm.nvvm.barrier.cta.red.popc.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.popc.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.popc.aligned.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.popc.aligned.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.and.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.and.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.and.aligned.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.and.aligned.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.or.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.or.all(i32 %id, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.or.aligned.count(i32 %id, i32 %n, i1 %pred)
+  declare i32 @llvm.nvvm.barrier.cta.red.or.aligned.all(i32 %id, i1 %pred)
 
 Overview:
 """""""""
@@ -304,15 +352,27 @@ the threads specified by the %n operand should participate in the barrier.
 
 All forms of the '``@llvm.nvvm.barrier.cta.*``' intrinsic cause the executing
 thread to wait for all non-exited threads from its warp and then marks the
-warp's arrival at the barrier. In addition to signaling its arrival at the 
-barrier, the '``@llvm.nvvm.barrier.cta.sync.*``' intrinsics cause the executing
-thread to wait for non-exited threads of all other warps participating in the
-barrier to arrive. On the other hand, the '``@llvm.nvvm.barrier.cta.arrive.*``'
-intrinsic does not cause the executing thread to wait for threads of other
-participating warps.
+warp's arrival at the barrier. In addition to signaling its arrival at the
+barrier, the '``@llvm.nvvm.barrier.cta.red.*``' and
+'``@llvm.nvvm.barrier.cta.sync.*``' intrinsics cause the executing thread to
+wait for non-exited threads of all other warps participating in the barrier to
+arrive. On the other hand, the '``@llvm.nvvm.barrier.cta.arrive.*``' intrinsic
+does not cause the executing thread to wait for threads of other participating
+warps.
 
 When a barrier completes, the waiting threads are restarted without delay,
 and the barrier is reinitialized so that it can be immediately reused.
+
+The '``@llvm.nvvm.barrier.cta.red.*``' intrinsics perform a reduction operation
+across threads. The %pred operands from all threads in the CTA are combined
+using the specified reduction operator. Once the barrier count is reached, the
+final value is returned in all threads waiting at the barrier.
+
+The reduction operations for '``@llvm.nvvm.barrier.cta.red.*``' are
+population-count ('``.popc``'), all-threads-true ('``.and``'),
+and any-thread-true ('``.or``'). The result of '``.popc``' is the number of
+threads with a true predicate, while '``.and``' and '``.or``' indicate if all
+the threads had a true predicate or if any of the threads had a true predicate.
 
 The '``@llvm.nvvm.barrier.cta.*``' intrinsic has an optional '``.aligned``'
 modifier to indicate textual alignment of the barrier. When specified, it
@@ -321,6 +381,450 @@ indicates that all threads in the CTA will execute the same
 aligned '``@llvm.nvvm.barrier.cta.*``' instruction should only be used if it is
 known that all threads in the CTA evaluate the condition identically, otherwise
 behavior is undefined.
+
+MBarrier family of Intrinsics
+-----------------------------
+
+Overview:
+^^^^^^^^^
+
+An ``mbarrier`` is a barrier created in shared memory that supports:
+
+* Synchronizing any subset of threads within a CTA.
+* One-way synchronization of threads across CTAs of a cluster.
+  Threads can perform only ``arrive`` operations but not ``*_wait`` on an
+  mbarrier located in shared::cluster space.
+* Waiting for completion of asynchronous memory operations initiated by a
+  thread and making them visible to other threads.
+
+Unlike ``bar{.cta}/barrier{.cta}`` instructions which can access a limited
+number of barriers per CTA, ``mbarrier`` objects are user-defined and are
+only limited by the total shared memory size available.
+
+An mbarrier object is an opaque object in shared memory with an
+alignment of 8-bytes. It keeps track of:
+
+* Current phase of the mbarrier object
+* Count of pending arrivals for the current phase of the mbarrier object
+* Count of expected arrivals for the next phase of the mbarrier object
+* Count of pending asynchronous memory operations (or transactions)
+  tracked by the current phase of the mbarrier object. This is also
+  referred to as ``tx-count``. The unit of ``tx-count`` is specified
+  by the asynchronous memory operation (for example,
+  ``llvm.nvvm.cp.async.bulk.tensor.g2s.*``).
+
+The ``phase`` of an mbarrier object is the number of times the mbarrier
+object has been used to synchronize threads/track async operations.
+In each phase, threads perform:
+
+* arrive/expect-tx/complete-tx operations to progress the current phase.
+* test_wait/try_wait operations to check for completion of the current phase.
+
+An mbarrier object completes the current phase when:
+
+* The count of the pending arrivals has reached zero AND
+* The tx-count has reached zero.
+
+When an mbarrier object completes the current phase, below
+actions are performed ``atomically``:
+
+* The mbarrier object transitions to the next phase.
+* The pending arrival count is reinitialized to the expected arrival count.
+
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier>`__.
+
+'``llvm.nvvm.mbarrier.init``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.mbarrier.init(ptr %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3) %addr, i32 %count)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.mbarrier.init.*``' intrinsics are used to initialize
+an mbarrier object located at ``addr`` with the value ``count``.
+``count`` is a 32-bit unsigned integer value and must be within
+the range [1...2^20-1]. During initialization:
+
+* The tx-count and the current phase of the mbarrier object are set to 0.
+* The expected and pending arrival counts are set to ``count``.
+
+Semantics:
+""""""""""
+
+The ``.shared`` variant explicitly uses shared memory address space for
+the ``addr`` operand. If the ``addr`` does not fall within the
+shared::cta space, then the behavior of this intrinsic is undefined.
+Performing ``mbarrier.init`` on a valid mbarrier object is undefined;
+use ``mbarrier.inval`` before reusing the memory for another mbarrier
+or any other purpose.
+
+'``llvm.nvvm.mbarrier.inval``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.mbarrier.inval(ptr %addr)
+  declare void @llvm.nvvm.mbarrier.inval.shared(ptr addrspace(3) %addr)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.mbarrier.inval.*``' intrinsics invalidate the mbarrier
+object at the address specified by ``addr``.
+
+Semantics:
+""""""""""
+
+The ``.shared`` variant explicitly uses shared memory address space for
+the ``addr`` operand. If the ``addr`` does not fall within the
+shared::cta space, then the behavior of this intrinsic is undefined.
+It is expected that ``addr`` was previously initialized using
+``mbarrier.init``; otherwise, the behavior is undefined.
+
+'``llvm.nvvm.mbarrier.expect.tx``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.mbarrier.expect.tx.*``' intrinsics increase the transaction
+count of the mbarrier object at ``%addr`` by ``%tx_count``. The ``%tx_count``
+is a 32-bit unsigned integer value.
+
+Semantics:
+""""""""""
+
+The ``.space.{cta/cluster}`` indicates the address space where the mbarrier
+object resides.
+
+The ``.scope.{cta/cluster}`` denotes the set of threads that can directly
+observe the synchronizing effect of the mbarrier operation. When scope is
+"cta", all threads executing in the same CTA (as the current thread) can
+directly observe the effect of the ``expect.tx`` operation. Similarly,
+when scope is "cluster", all threads executing in the same Cluster
+(as the current thread) can directly observe the effect of the operation.
+
+If the ``addr`` does not fall within shared::cta or shared::cluster space,
+then the behavior of this intrinsic is undefined. This intrinsic has
+``relaxed`` semantics and hence does not provide any memory ordering
+or visibility guarantees.
+
+'``llvm.nvvm.mbarrier.complete.tx``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.complete.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.complete.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.mbarrier.complete.tx.*``' intrinsics decrease the transaction
+count of the mbarrier object at ``%addr`` by ``%tx_count``. The ``%tx_count``
+is a 32-bit unsigned integer value. As a result of this decrement,
+the mbarrier can potentially complete its current phase and transition
+to the next phase.
+
+Semantics:
+""""""""""
+
+The semantics of these intrinsics are identical to those of the
+``llvm.nvvm.mbarrier.expect.tx.*`` intrinsics described above.
+
+'``llvm.nvvm.mbarrier.arrive``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.arrive.*`` intrinsics signal the arrival of the
+executing thread or completion of an asynchronous instruction associated with
+an arrive operation on the mbarrier object at ``%addr``. This operation
+decrements the pending arrival count by ``%count``, a 32-bit unsigned integer,
+potentially completing the current phase and triggering a transition to the
+next phase.
+
+Semantics:
+""""""""""
+
+The ``.space.{cta/cluster}`` indicates the address space where the mbarrier
+object resides. When the mbarrier is in shared::cta space, the intrinsics
+return an opaque 64-bit value capturing the phase of the mbarrier object
+_prior_ to this arrive operation. This value can be used with a try_wait
+or test_wait operation to check for the completion of the mbarrier.
+
+The ``.scope.{cta/cluster}`` denotes the set of threads that can directly
+observe the synchronizing effect of the mbarrier operation. When scope is
+"cta", all threads executing in the same CTA (as the current thread) can
+directly observe the effect of the ``arrive`` operation. Similarly,
+when scope is "cluster", all threads executing in the same Cluster
+(as the current thread) can directly observe the effect of the operation.
+
+If the ``addr`` does not fall within shared::cta or shared::cluster space,
+then the behavior of this intrinsic is undefined.
+
+These intrinsics have ``release`` semantics by default. The release semantics
+ensure ordering of operations that occur in program order _before_ this arrive
+instruction, making their effects visible to subsequent operations in other
+threads of the CTA (or cluster, depending on scope). Threads performing
+corresponding acquire operations (such as mbarrier.test.wait) synchronize
+with this release. The ``relaxed`` variants of these intrinsics do not
+provide any memory ordering or visibility guarantees.
+
+'``llvm.nvvm.mbarrier.arrive.expect.tx``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.arrive.expect.tx.*`` intrinsics are similar to
+the ``@llvm.nvvm.mbarrier.arrive`` intrinsics except that they also
+perform an ``expect-tx`` operation _prior_ to the ``arrive`` operation.
+The ``%tx_count`` specifies the transaction count for the ``expect-tx``
+operation and the count for the ``arrive`` operation is assumed to be 1.
+
+Semantics:
+""""""""""
+
+The semantics of these intrinsics are identical to those of the
+``llvm.nvvm.mbarrier.arrive.*`` intrinsics described above.
+
+'``llvm.nvvm.mbarrier.arrive.drop``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %count)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.arrive.drop.*`` intrinsics decrement the
+expected arrival count of the mbarrier object at ``%addr`` by
+``%count`` and then perform an ``arrive`` operation with ``%count``.
+The ``%count`` is a 32-bit integer.
+
+Semantics:
+""""""""""
+
+The semantics of these intrinsics are identical to those of the
+``llvm.nvvm.mbarrier.arrive.*`` intrinsics described above.
+
+'``llvm.nvvm.mbarrier.arrive.drop.expect.tx``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare i64  @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cta.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+  declare void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %addr, i32 %tx_count)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.arrive.drop.expect.tx.*`` intrinsics perform
+the below operations on the mbarrier located at ``%addr``.
+
+* Perform an ``expect-tx`` operation i.e. increase the transaction count
+  of the mbarrier by ``%tx_count``, a 32-bit unsigned integer value.
+* Decrement the expected arrival count of the mbarrier by 1.
+* Perform an ``arrive`` operation on the mbarrier with a value of 1.
+
+Semantics:
+""""""""""
+
+The semantics of these intrinsics are identical to those of the
+``llvm.nvvm.mbarrier.arrive.*`` intrinsics described above.
+
+'``llvm.nvvm.mbarrier.test.wait``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i1 @llvm.nvvm.mbarrier.test.wait.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.parity.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.parity.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+
+  declare i1 @llvm.nvvm.mbarrier.test.wait.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.parity.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+  declare i1 @llvm.nvvm.mbarrier.test.wait.parity.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.test.wait.*`` intrinsics test for the completion
+of the current or the immediately preceding phase of an mbarrier object at
+``%addr``. The test for completion can be done with either the ``state`` or
+the ``phase-parity`` of the mbarrier object.
+
+* When done through the ``i64 %state`` operand, the state must be
+  returned by an ``llvm.nvvm.mbarrier.arrive.*`` on the _same_
+  mbarrier object.
+* The ``.parity`` variant of these intrinsics test for completion
+  of the phase indicated by the operand ``i32 %phase``, which is
+  the integer parity of either the current phase or the immediately
+  preceding phase of the mbarrier object. An even phase has integer
+  parity 0 and an odd phase has integer parity of 1. So the valid
+  values for phase-parity are 0 and 1.
+
+Semantics:
+""""""""""
+
+The ``.scope.{cta/cluster}`` denotes the set of threads that the
+test_wait operation can directly synchronize with.
+
+If the ``addr`` does not fall within shared::cta space, then the
+the behavior of this intrinsic is undefined.
+
+These intrinsics have ``acquire`` semantics by default. This acquire
+pattern establishes memory ordering for operations occurring in program
+order after this ``test_wait`` instruction by making operations from
+other threads in the CTA (or cluster, depending on scope) visible to
+subsequent operations in the current thread. When this wait completes,
+it synchronizes with the corresponding release pattern from the
+``mbarrier.arrive`` operation. The ``relaxed`` variants of these intrinsics
+do not provide any memory ordering or visibility guarantees.
+
+This ``test.wait`` intrinsic is non-blocking and immediately returns
+the completion status without suspending the executing thread.
+
+The boolean return value indicates:
+
+* True: The immediately preceding phase has completed
+* False: The current phase is still incomplete
+
+When this wait returns true, the following ordering guarantees hold:
+
+* All memory accesses (except async operations) requested prior to
+  ``mbarrier.arrive`` having release semantics by participating
+  threads of a CTA (or cluster, depending on scope) are visible to
+  the executing thread.
+* All ``cp.async`` operations requested prior to ``cp.async.mbarrier.arrive``
+  by participating threads of a CTA are visible to the executing thread.
+* All ``cp.async.bulk`` operations using the same mbarrier object requested
+  prior to ``mbarrier.arrive`` having release semantics by participating CTA
+  threads are visible to the executing thread.
+* Memory accesses requested after this wait are not visible to memory
+  accesses performed prior to ``mbarrier.arrive`` by other participating
+  threads.
+* No ordering guarantee exists for memory accesses by the same thread
+  between an ``mbarrier.arrive`` and this wait.
+
+'``llvm.nvvm.mbarrier.try.wait``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i1 @llvm.nvvm.mbarrier.try.wait{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+  declare i1 @llvm.nvvm.mbarrier.try.wait{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+
+  declare i1 @llvm.nvvm.mbarrier.try.wait.parity{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+  declare i1 @llvm.nvvm.mbarrier.try.wait.parity{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+
+  declare i1 @llvm.nvvm.mbarrier.try.wait.tl{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state, i32 %timelimit)
+  declare i1 @llvm.nvvm.mbarrier.try.wait.tl{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state, i32 %timelimit)
+
+  declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+  declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+
+Overview:
+"""""""""
+
+The ``@llvm.nvvm.mbarrier.try.wait.*`` intrinsics test for the completion of
+the current or immediately preceding phase of an mbarrier object at ``%addr``.
+Unlike the ``test.wait`` intrinsics, which perform a non-blocking test, these
+intrinsics may block the executing thread until the specified phase completes
+or a system-dependent time limit expires. Suspended threads resume execution
+when the phase completes or the time limit elapses. This time limit is
+configurable through the ``.tl`` variants of these intrinsics, where the
+``%timelimit`` operand (an unsigned integer) specifies the limit in
+nanoseconds. Other semantics are identical to those of the ``test.wait``
+intrinsics described above.
 
 Electing a thread
 -----------------
@@ -346,11 +850,121 @@ elected thread is captured in the i32 return value. The i1 return
 value is set to ``True`` for the leader thread and ``False`` for all
 the other threads. Election of a leader thread happens deterministically,
 i.e. the same leader thread is elected for the same ``membermask``
-every time. For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync>`_.
+every time. For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync>`__.
 
 Membar/Fences
 -------------
+
+'``llvm.nvvm.fence.acquire/release.sync_restrict.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.acquire.sync_restrict.space.cluster.scope.cluster()
+  declare void @llvm.nvvm.fence.release.sync_restrict.space.cta.scope.cluster()
+
+Overview:
+"""""""""
+
+The `nvvm.fence.{semantics}.sync_restrict.*` restrict the class of memory
+operations for which the fence instruction provides the memory ordering
+guarantees. When `.sync_restrict` is restricted to `shared_cta`, then memory
+semantics must be `release` and the effect of the fence operation only applies
+to operations performed on objects in `shared_cta` space. Likewise, when
+`sync_restrict` is restricted to `shared_cluster`, then memory semantics must be
+`acquire` and the effect of the fence operation only applies to operations
+performed on objects in `shared_cluster` memory space. The scope for both
+operations is `cluster`. For more details, please refer the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__.
+
+'``llvm.nvvm.fence.mbarrier_init.release.cluster``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.mbarrier_init.release.cluster()
+
+Overview:
+"""""""""
+
+`nvvm.fence.mbarrier_init.release.cluster` intrinsic restrict the class of
+memory operations for which the fence instruction provides the memory ordering
+guarantees. The `mbarrier_init` modifiers restricts the synchronizing effect to
+the prior `mbarrier_init` operation executed by the same thread on mbarrier
+objects in `shared_cta` memory space. For more details, please refer the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.proxy.async_generic.acquire/release.sync_restrict``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.async_generic.acquire.sync_restrict.space.cluster.scope.cluster()
+  declare void @llvm.nvvm.fence.proxy.async_generic.release.sync_restrict.space.cta.scope.cluster()
+
+Overview:
+"""""""""
+
+`nvvm.fence.proxy.async_generic.{semantics}.sync_restrict` are used to establish
+ordering between a prior memory access performed via the `async proxy
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>`__
+and a subsequent memory access performed via the generic proxy.
+``nvvm.fence.proxy.async_generic.release.sync_restrict`` can form a release
+sequence that synchronizes with an acquire sequence that contains the
+``nvvm.fence.proxy.async_generic.acquire.sync_restrict`` proxy fence. When
+`.sync_restrict` is restricted to `shared_cta`, then memory semantics must
+be `release` and the effect of the fence operation only applies to operations
+performed on objects in `shared_cta` space. Likewise, when `sync_restrict` is
+restricted to `shared_cluster`, then memory semantics must be `acquire` and the
+effect of the fence operation only applies to operations performed on objects in
+`shared_cluster` memory space. The scope for both operations is `cluster`.
+For more details, please refer the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
+
+'``llvm.nvvm.fence.proxy.<proxykind>``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.fence.proxy.alias()
+  declare void @llvm.nvvm.fence.proxy.async()
+  declare void @llvm.nvvm.fence.proxy.async.global()
+  declare void @llvm.nvvm.fence.proxy.async.shared_cluster()
+  declare void @llvm.nvvm.fence.proxy.async.shared_cta()
+
+Overview:
+"""""""""
+
+`nvvm.fence.proxy.{proxykind}` intrinsics represent a fence with bi-directional
+proxy ordering that is established between the memory accesses done between the
+`generic proxy <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>`__
+and the proxy specified by `proxykind`. A `bi-directional proxy` ordering between
+two proxykinds establishes two `uni-directional` proxy orderings: one from the
+first proxykind to the second proxykind and the other from the second proxykind
+to the first proxykind.
+
+`alias` proxykind refers to memory accesses performed using virtually aliased
+addresses to the same memory location
+
+`async` proxykind specifies that the memory ordering is established between the
+`async proxy` and the `generic proxy`. The memory ordering is limited only to
+operations performed on objects in the state space specified (`generic`, `global`,
+`shared_cluster`, `shared_cta`). If no state space is specified, then the memory
+ordering applies on all state spaces. For more details, please refer the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar>`__
 
 '``llvm.nvvm.fence.proxy.tensormap_generic.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -373,7 +987,14 @@ Syntax:
 Overview:
 """""""""
 
-The ``@llvm.nvvm.fence.proxy.tensormap_generic.*`` is a uni-directional fence used to establish ordering between a prior memory access performed via the generic `proxy<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>_` and a subsequent memory access performed via the tensormap proxy. ``nvvm.fence.proxy.tensormap_generic.release`` can form a release sequence that synchronizes with an acquire sequence that contains the ``nvvm.fence.proxy.tensormap_generic.acquire`` proxy fence. The following table describes the mapping between LLVM Intrinsic and the PTX instruction:
+The ``@llvm.nvvm.fence.proxy.tensormap_generic.*`` is a uni-directional fence
+used to establish ordering between a prior memory access performed via the
+generic `proxy <https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#proxies>`_
+and a subsequent memory access performed via the tensormap proxy.
+``nvvm.fence.proxy.tensormap_generic.release`` can form a release sequence that
+synchronizes with an acquire sequence that contains the
+``nvvm.fence.proxy.tensormap_generic.acquire`` proxy fence. The following table
+describes the mapping between LLVM Intrinsic and the PTX instruction:
 
   ====================================================== =========================================================
   NVVM Intrinsic                                         PTX Instruction
@@ -382,7 +1003,13 @@ The ``@llvm.nvvm.fence.proxy.tensormap_generic.*`` is a uni-directional fence us
   ``@llvm.nvvm.fence.proxy.tensormap_generic.acquire.*`` ``fence.proxy.tensormap::generic.acquire.* [addr], size``
   ====================================================== =========================================================
 
-The address operand ``addr`` and the operand ``size`` together specify the memory range ``[addr, addr+size)`` on which the ordering guarantees on the memory accesses across the proxies is to be provided. The only supported value for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing is used unconditionally, and the address specified by the operand addr must fall within the ``.global`` state space. Otherwise, the behavior is undefined. For more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`_.
+The address operand ``addr`` and the operand ``size`` together specify the
+memory range ``[addr, addr+size)`` on which the ordering guarantees on the
+memory accesses across the proxies is to be provided. The only supported value
+for the ``size`` operand is ``128`` and must be an immediate. Generic Addressing
+is used unconditionally, and the address specified by the operand addr must fall
+within the ``.global`` state space. Otherwise, the behavior is undefined. For
+more information, see `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar>`__.
 
 Address Space Intrinsics
 ------------------------
@@ -428,10 +1055,13 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.nvvm.mapa.*``' intrinsics map a shared memory pointer ``p`` of another CTA with ``%rank`` to the current CTA.
-The ``llvm.nvvm.mapa`` form expects a generic pointer to shared memory and returns a generic pointer to shared cluster memory.
-The ``llvm.nvvm.mapa.shared.cluster`` form expects a pointer to shared memory and returns a pointer to shared cluster memory.
-They corresponds directly to the ``mapa`` and ``mapa.shared.cluster`` PTX instructions.
+The '``llvm.nvvm.mapa.*``' intrinsics map a shared memory pointer ``p`` of
+another CTA with ``%rank`` to the current CTA. The ``llvm.nvvm.mapa`` form
+expects a generic pointer to shared memory and returns a generic pointer to
+shared cluster memory. The ``llvm.nvvm.mapa.shared.cluster`` form expects a
+pointer to shared memory and returns a pointer to shared cluster memory. They
+corresponds directly to the ``mapa`` and ``mapa.shared.cluster`` PTX
+instructions.
 
 Semantics:
 """"""""""
@@ -467,7 +1097,7 @@ Semantics:
 """"""""""
 
 Unlike, '``llvm.fabs.*``', these intrinsics do not perfectly preserve NaN
-values. Instead, a NaN input yeilds an unspecified NaN output.
+values. Instead, a NaN input yields an unspecified NaN output.
 
 
 '``llvm.nvvm.fabs.ftz.*``' Intrinsic
@@ -514,7 +1144,7 @@ Overview:
 """""""""
 
 The '``llvm.nvvm.idp2a.[us].[us]``' intrinsics performs a 2-element vector dot
-product followed by addition. They corresponds directly to the ``dp2a`` PTX 
+product followed by addition. They corresponds directly to the ``dp2a`` PTX
 instruction.
 
 Semantics:
@@ -561,6 +1191,106 @@ forming 2 ``<4 x i32>``. For ``%a``, zero-extension is used in the
 used in the '``llvm.nvvm.idp4a.[us].u``' variants, while sign-extension is used
 with '``llvm.nvvm.idp4a.[us].s``' variants. The dot product of these 4-element
 vectors is added to ``%c`` to produce the return.
+
+'``llvm.nvvm.add.*``' Half-precision Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare half @llvm.nvvm.add.rn.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.add.rn.sat.v2f16(<2 x half> %a, <2 x half> %b)
+
+    declare half @llvm.nvvm.add.rn.ftz.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16(<2 x half> %a, <2 x half> %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.add.*``' intrinsics perform an addition operation with the 
+specified rounding mode and modifiers. 
+
+Semantics:
+""""""""""
+
+The '``.sat``' modifier performs a saturating addition where the result is 
+clamped to ``[0.0, 1.0]`` and ``NaN`` results are flushed to ``+0.0f``. 
+The '``.ftz``' modifier flushes subnormal inputs and results to sign-preserving 
+zero.
+
+'``llvm.nvvm.mul.*``' Half-precision Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare half @llvm.nvvm.mul.rn.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.mul.rn.sat.v2f16(<2 x half> %a, <2 x half> %b)
+
+    declare half @llvm.nvvm.mul.rn.ftz.sat.f16(half %a, half %b)
+    declare <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16(<2 x half> %a, <2 x half> %b)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.mul.*``' intrinsics perform a multiplication operation with 
+the specified rounding mode and modifiers. 
+
+Semantics:
+""""""""""
+
+The '``.sat``' modifier performs a saturating multiplication where the result is 
+clamped to ``[0.0, 1.0]`` and ``NaN`` results are flushed to ``+0.0f``. 
+The '``.ftz``' modifier flushes subnormal inputs and results to sign-preserving 
+zero.
+
+'``llvm.nvvm.fma.*``' Half-precision Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare half @llvm.nvvm.fma.rn{.ftz}.f16(half %a, half %b, half %c)
+    declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
+    declare bfloat @llvm.nvvm.fma.rn.bf16(bfloat %a, bfloat %b, bfloat %c)
+    declare <2 x bfloat> @llvm.nvvm.fma.rn.bf16x2(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+
+    declare half @llvm.nvvm.fma.rn{.ftz}.sat.f16(half %a, half %b, half %c)
+    declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.sat.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
+
+    declare half @llvm.nvvm.fma.rn{.ftz}.relu.f16(half %a, half %b, half %c)
+    declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.relu.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
+    declare bfloat @llvm.nvvm.fma.rn.relu.bf16(bfloat %a, bfloat %b, bfloat %c)
+    declare <2 x bfloat> @llvm.nvvm.fma.rn.relu.bf16x2(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+
+    declare half @llvm.nvvm.fma.rn.oob{.relu}.f16(half %a, half %b, half %c)
+    declare <2 x half> @llvm.nvvm.fma.rn.oob{.relu}.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
+    declare bfloat @llvm.nvvm.fma.rn.oob{.relu}.bf16(bfloat %a, bfloat %b, bfloat %c)
+    declare <2 x bfloat> @llvm.nvvm.fma.rn.oob{.relu}.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.fma.*``' intrinsics perform a fused multiply-add with no loss 
+of precision in the intermediate product and addition.
+
+Semantics:
+""""""""""
+
+The '``.sat``' modifier performs a saturating operation where the result is 
+clamped to ``[0.0, 1.0]`` and ``NaN`` results are flushed to ``+0.0f``. 
+The '``.ftz``' modifier flushes subnormal inputs and results to sign-preserving 
+zero.
+The '``.relu``' modifier clamps the result to ``0`` if negative and ``NaN`` 
+results are flushed to canonical ``NaN``.
+The '``.oob``' modifier clamps the result to ``0`` if either of the operands is 
+an ``OOB NaN`` (defined under `Tensors <https://docs.nvidia.com/cuda/parallel-thread-execution/#tensors>`__) value.
 
 Bit Manipulation Intrinsics
 ---------------------------
@@ -635,8 +1365,9 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.nvvm.flo.u``' family of intrinsics identifies the bit position of the
-leading one, returning either it's offset from the most or least significant bit.
+The '``llvm.nvvm.flo.u``' family of intrinsics identifies the bit position of
+the leading one, returning either it's offset from the most or least significant
+bit.
 
 Semantics:
 """"""""""
@@ -661,8 +1392,8 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.nvvm.flo.s``' family of intrinsics identifies the bit position of the
-leading non-sign bit, returning either it's offset from the most or least
+The '``llvm.nvvm.flo.s``' family of intrinsics identifies the bit position of
+the leading non-sign bit, returning either it's offset from the most or least
 significant bit.
 
 Semantics:
@@ -868,27 +1599,51 @@ Overview:
 """""""""
 
 The '``@llvm.nvvm.cp.async.bulk.global.to.shared.cluster``' intrinsic
-corresponds to the ``cp.async.bulk.shared::cluster.global.*`` family
-of PTX instructions. These instructions initiate an asynchronous
-copy of bulk data from global memory to shared::cluster memory.
-The 32-bit operand ``%size`` specifies the amount of memory to be
-copied and it must be a multiple of 16.
+corresponds to the ``cp.async.bulk.shared::cluster.global.*`` family of PTX
+instructions. These instructions initiate an asynchronous copy of bulk data from
+global memory to shared::cluster memory. The 32-bit operand ``%size`` specifies
+the amount of memory to be copied and it must be a multiple of 16.
 
-* The last two arguments to these intrinsics are boolean flags
-  indicating support for cache_hint and/or multicast modifiers.
-  These flag arguments must be compile-time constants. The backend
-  looks through these flags and lowers the intrinsics appropriately.
+* The last two arguments to these intrinsics are boolean flags indicating
+  support for cache_hint and/or multicast modifiers. These flag arguments must
+  be compile-time constants. The backend looks through these flags and lowers
+  the intrinsics appropriately.
 
-* The Nth argument (denoted by ``i1 %flag_ch``) when set, indicates
-  a valid cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
-  variant of the PTX instruction.
+* The Nth argument (denoted by ``i1 %flag_ch``) when set, indicates a valid
+  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint`` variant of the
+  PTX instruction.
 
-* The [N-1]th argument (denoted by ``i1 %flag_mc``) when set, indicates
-  the presence of a multicast mask (``i16 %mc``) and generates the PTX
-  instruction with the ``.multicast::cluster`` modifier.
+* The [N-1]th argument (denoted by ``i1 %flag_mc``) when set, indicates the
+  presence of a multicast mask (``i16 %mc``) and generates the PTX instruction
+  with the ``.multicast::cluster`` modifier.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`__.
+
+'``llvm.nvvm.cp.async.bulk.global.to.shared.cta``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i64 %ch, i1 %flag_ch)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.cp.async.bulk.global.to.shared.cta``' intrinsic corresponds to
+the ``cp.async.bulk.shared::cta.global.*`` family of PTX instructions. These
+instructions initiate an asynchronous copy of bulk data from global memory to
+shared::cta memory. The 32-bit operand ``%size`` specifies the amount of memory
+to be copied and it must be a multiple of 16. The last argument (denoted by
+``i1 %flag_ch``) is a compile-time constant. When set, it indicates a valid
+cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint`` variant of the
+PTX instruction.
+
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`__.
 
 '``llvm.nvvm.cp.async.bulk.shared.cta.to.global``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -904,23 +1659,21 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.cp.async.bulk.shared.cta.to.global``' intrinsic
-corresponds to the ``cp.async.bulk.global.shared::cta.*`` set of PTX
-instructions. These instructions initiate an asynchronous copy from
-shared::cta to global memory. The 32-bit operand ``%size`` specifies
-the amount of memory to be copied (in bytes) and it must be a multiple
-of 16. For the ``.bytemask`` variant, the 16-bit wide mask operand
-specifies whether the i-th byte of each 16-byte wide chunk of source
-data is copied to the destination.
+The '``@llvm.nvvm.cp.async.bulk.shared.cta.to.global``' intrinsic corresponds to
+the ``cp.async.bulk.global.shared::cta.*`` set of PTX instructions. These
+instructions initiate an asynchronous copy from shared::cta to global memory.
+The 32-bit operand ``%size`` specifies the amount of memory to be copied
+(in bytes) and it must be a multiple of 16. For the ``.bytemask`` variant, the
+16-bit wide mask operand specifies whether the i-th byte of each 16-byte wide
+chunk of source data is copied to the destination.
 
-* The ``i1 %flag_ch`` argument to these intrinsics is a boolean
-  flag indicating support for cache_hint. This flag argument must
-  be a compile-time constant. When set, it indicates a valid
-  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
-  variant of the PTX instruction.
+* The ``i1 %flag_ch`` argument to these intrinsics is a boolean flag indicating
+  support for cache_hint. This flag argument must be a compile-time constant.
+  When set, it indicates a valid cache_hint (``i64 %ch``) and generates the
+  ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`__.
 
 '``llvm.nvvm.cp.async.bulk.shared.cta.to.cluster``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -935,16 +1688,15 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.cp.async.bulk.shared.cta.to.cluster``' intrinsic
-corresponds to the ``cp.async.bulk.shared::cluster.shared::cta.*``
-PTX instruction. This instruction initiates an asynchronous copy from
-shared::cta to shared::cluster memory. The destination has to be in
-the shared memory of a different CTA within the cluster. The 32-bit
-operand ``%size`` specifies the amount of memory to be copied and
-it must be a multiple of 16.
+The '``@llvm.nvvm.cp.async.bulk.shared.cta.to.cluster``' intrinsic corresponds
+to the ``cp.async.bulk.shared::cluster.shared::cta.*`` PTX instruction. This
+instruction initiates an asynchronous copy from shared::cta to shared::cluster
+memory. The destination has to be in the shared memory of a different CTA within
+the cluster. The 32-bit operand ``%size`` specifies the amount of memory to be
+copied and it must be a multiple of 16.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk>`__.
 
 '``llvm.nvvm.cp.async.bulk.prefetch.L2``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -959,20 +1711,19 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.cp.async.bulk.prefetch.L2``' intrinsic
-corresponds to the ``cp.async.bulk.prefetch.L2.*`` family
-of PTX instructions. These instructions initiate an asynchronous
-prefetch of bulk data from global memory to the L2 cache.
-The 32-bit operand ``%size`` specifies the amount of memory to be
+The '``@llvm.nvvm.cp.async.bulk.prefetch.L2``' intrinsic corresponds to the
+``cp.async.bulk.prefetch.L2.*`` family of PTX instructions. These instructions
+initiate an asynchronous prefetch of bulk data from global memory to the L2
+cache. The 32-bit operand ``%size`` specifies the amount of memory to be
 prefetched in terms of bytes and it must be a multiple of 16.
 
-* The last argument to these intrinsics is boolean flag indicating
-  support for cache_hint. These flag argument must be compile-time
-  constant. When set, it indicates a valid cache_hint (``i64 %ch``)
-  and generates the ``.L2::cache_hint`` variant of the PTX instruction.
+* The last argument to these intrinsics is boolean flag indicating support for
+  cache_hint. These flag argument must be compile-time constant. When set, it
+  indicates a valid cache_hint (``i64 %ch``) and generates the
+  ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch>`__.
 
 '``llvm.nvvm.prefetch.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1003,23 +1754,24 @@ Overview:
 """""""""
 
 The '``@llvm.nvvm.prefetch.*``' and '``@llvm.nvvm.prefetchu.*``' intrinsic
-correspond to the '``prefetch.*``;' and '``prefetchu.*``' family of PTX instructions. 
-The '``prefetch.*``' instructions bring the cache line containing the
-specified address in global or local memory address space into the 
-specified cache level (L1 or L2). If the '``.tensormap``' qualifier is specified then the 
-prefetch instruction brings the cache line containing the specified address in the 
-'``.const``' or '``.param memory``' state space for subsequent use by the '``cp.async.bulk.tensor``' 
-instruction. The '`prefetchu.*``' instruction brings the cache line 
-containing the specified generic address into the specified uniform cache level.
-If no address space is specified, it is assumed to be generic address. The intrinsic 
-uses and eviction priority which can be accessed by the '``.level::eviction_priority``' modifier.
+correspond to the '``prefetch.*``;' and '``prefetchu.*``' family of PTX
+instructions. The '``prefetch.*``' instructions bring the cache line containing
+the specified address in global or local memory address space into the specified
+cache level (L1 or L2). If the '``.tensormap``' qualifier is specified then the
+prefetch instruction brings the cache line containing the specified address in
+the  '``.const``' or '``.param memory``' state space for subsequent use by the
+'``cp.async.bulk.tensor``' instruction. The '``prefetchu.*``' instruction brings
+the cache line containing the specified generic address into the specified
+uniform cache level. If no address space is specified, it is assumed to be
+generic address. The intrinsic uses and eviction priority which can be accessed
+by the '``.level::eviction_priority``' modifier.
 
 * A prefetch to a shared memory location performs no operation.
-* A prefetch into the uniform cache requires a generic address, 
-  and no operation occurs if the address maps to a const, local, or shared memory location.
+* A prefetch into the uniform cache requires a generic address, and no operation
+  occurs if the address maps to a const, local, or shared memory location.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu>`__.
 
 '``llvm.nvvm.applypriority.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1035,15 +1787,17 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.applypriority.*``'  applies the cache eviction priority specified by the
-.level::eviction_priority qualifier to the address range [a..a+size) in the specified cache 
-level. If no state space is specified then Generic Addressing is used. If the specified address 
-does not fall within the address window of .global state space then the behavior is undefined.
-The operand size is an integer constant that specifies the amount of data, in bytes, in the specified cache
-level on which the priority is to be applied. The only supported value for the size operand is 128.
+The '``@llvm.nvvm.applypriority.*``'  applies the cache eviction priority
+specified by the .level::eviction_priority qualifier to the address range
+[a..a+size) in the specified cache level. If no state space is specified then
+generic addressing is used. If the specified address does not fall within the
+address window of .global state space then the behavior is undefined. The
+operand size is an integer constant that specifies the amount of data, in bytes,
+in the specified cache level on which the priority is to be applied. The only
+supported value for the size operand is 128.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-applypriority>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-applypriority>`__.
 
 ``llvm.nvvm.discard.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1059,18 +1813,18 @@ Syntax:
 Overview:
 """""""""
 
-The *effects* of the ``@llvm.nvvm.discard.L2*`` intrinsics are those of a non-atomic 
-non-volatile ``llvm.memset`` that writes ``undef`` to the destination 
-address range ``[%ptr, %ptr + immarg)``. The ``%ptr`` must be aligned by 128 bytes.
-Subsequent reads from the address range may read ``undef`` until the memory is overwritten 
-with a different value.
-These operations *hint* the implementation that data in the L2 cache can be destructively 
-discarded without writing it back to memory. 
-The operand ``immarg`` is an integer constant that specifies the length in bytes of the 
-address range ``[%ptr, %ptr + immarg)`` to write ``undef`` into. 
-The only supported value for the ``immarg`` operand is ``128``. 
-If generic addressing is used and the specified address does not fall within the 
-address window of global memory (``addrspace(1)``) the behavior is undefined.
+The *effects* of the ``@llvm.nvvm.discard.L2*`` intrinsics are those of a
+non-atomic non-volatile ``llvm.memset`` that writes ``undef`` to the destination
+address range ``[%ptr, %ptr + immarg)``. The ``%ptr`` must be aligned by 128
+bytes. Subsequent reads from the address range may read ``undef`` until the
+memory is overwritten with a different value. These operations *hint* the
+implementation that data in the L2 cache can be destructively discarded without
+writing it back to memory. The operand ``immarg`` is an integer constant that
+specifies the length in bytes of the address range ``[%ptr, %ptr + immarg)`` to
+write ``undef`` into. The only supported value for the ``immarg`` operand is
+``128``.  If generic addressing is used and the specified address does not fall
+within the address window of global memory (``addrspace(1)``) the behavior is
+undefined.
 
 .. code-block:: llvm
  
@@ -1082,7 +1836,10 @@ address window of global memory (``addrspace(1)``) the behavior is undefined.
    %fb = freeze i64 %b  ;; freezes undef to stable bit-pattern
    ;; %fa may compare different to %fb!
    
-For more information, refer to the  `CUDA C++ discard documentation <https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_access_properties/discard_memory.html>`__ and to the `PTX ISA discard documentation <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-discard>`__ .
+For more information, refer to the  `CUDA C++ discard documentation
+<https://nvidia.github.io/cccl/libcudacxx/extended_api/memory_access_properties/discard_memory.html>`__
+and to the `PTX ISA discard documentation
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-discard>`__ .
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1103,44 +1860,42 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``' intrinsics
-correspond to the ``cp.async.bulk.tensor.[1-5]d.*`` set of PTX instructions.
-These instructions initiate an asynchronous copy of tensor data from
-global memory to shared::cluster memory (indicated by the ``g2s`` prefix)
-in ``tile`` mode. In tile mode, the multi-dimensional layout of the
-source tensor is preserved at the destination. The dimension of the
-tensor data ranges from 1d to 5d with the coordinates specified
-by the ``i32 %d0 ... i32 %d4`` arguments. In ``tile.gather4`` mode,
-four rows in a 2D tensor are combined to form a single 2D destination
-tensor. The first coordinate ``i32 %x0`` denotes the column index
-followed by four coordinates indicating the four row-indices.
-So, this mode takes a total of 5 coordinates as input arguments.
-For more information on ``gather4`` mode, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+The '``@llvm.nvvm.cp.async.bulk.tensor.g2s.tile.[1-5]d``' intrinsics correspond
+to the ``cp.async.bulk.tensor.[1-5]d.*`` set of PTX instructions. These
+instructions initiate an asynchronous copy of tensor data from global memory to
+shared::cluster memory (indicated by the ``g2s`` prefix) in ``tile`` mode. In
+tile mode, the multi-dimensional layout of the source tensor is preserved at the
+destination. The dimension of the tensor data ranges from 1d to 5d with the
+coordinates specified by the ``i32 %d0 ... i32 %d4`` arguments. In
+``tile.gather4`` mode, four rows in a 2D tensor are combined to form a single 2D
+destination tensor. The first coordinate ``i32 %x0`` denotes the column index
+followed by four coordinates indicating the four row-indices. So, this mode
+takes a total of 5 coordinates as input arguments. For more information on
+``gather4`` mode, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`__.
 
-* The last three arguments to these intrinsics are flags
-  indicating support for multicast, cache_hint and cta_group::1/2
-  modifiers. These flag arguments must be compile-time constants.
-  The backend looks through these flags and lowers the intrinsics
-  appropriately.
+* The last three arguments to these intrinsics are flags indicating support for
+  multicast, cache_hint and cta_group::1/2 modifiers. These flag arguments must
+  be compile-time constants. The backend looks through these flags and lowers
+  the intrinsics appropriately.
 
-* The argument denoted by ``i1 %flag_ch`` when set, indicates
-  a valid cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
-  variant of the PTX instruction.
+* The argument denoted by ``i1 %flag_ch`` when set, indicates a valid cache_hint
+  (``i64 %ch``) and generates the ``.L2::cache_hint`` variant of the PTX
+  instruction.
 
-* The argument denoted by ``i1 %flag_mc`` when set, indicates
-  the presence of a multicast mask (``i16 %mc``) and generates
-  the PTX instruction with the ``.multicast::cluster`` modifier.
+* The argument denoted by ``i1 %flag_mc`` when set, indicates the presence of a
+  multicast mask (``i16 %mc``) and generates the PTX instruction with the
+  ``.multicast::cluster`` modifier.
 
-* The argument denoted by ``i32 %flag_cta_group`` takes values within
-  the range [0, 3) i.e. {0,1,2}. When the value of ``%flag_cta_group``
-  is not within the range, it may raise an error from the Verifier.
-  The default value is '0' with no cta_group modifier in the
-  instruction. The values of '1' and '2' lower to ``cta_group::1``
-  and ``cta_group::2`` variants of the PTX instruction respectively.
+* The argument denoted by ``i32 %flag_cta_group`` takes values within the range
+  [0, 3) i.e. {0,1,2}. When the value of ``%flag_cta_group`` is not within the
+  range, it may raise an error from the Verifier. The default value is '0' with
+  no cta_group modifier in the instruction. The values of '1' and '2' lower to
+  ``cta_group::1`` and ``cta_group::2`` variants of the PTX instruction
+  respectively.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1167,24 +1922,24 @@ Overview:
 
 The '``@llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.[3-5]d``' intrinsics
 correspond to the ``cp.async.bulk.tensor.[1-5]d.*`` set of PTX instructions.
-These instructions initiate an asynchronous copy of tensor data from
-global memory to shared::cluster memory (indicated by the ``g2s`` prefix)
-in ``im2col`` mode. In im2col mode, some dimensions of the source tensor
-are unrolled into a single dimensional column at the destination. In this
-mode, the tensor has to be at least three-dimensional. Along with the tensor
-coordinates, im2col offsets are also specified (denoted by
-``i16 im2col0...i16 %im2col2``). For the ``im2col`` mode, the number of offsets
-is two less than the number of dimensions of the tensor operation. For the
-``im2col.w`` and ``im2col.w.128`` mode, the number of offsets is always 2,
-denoted by ``i16 %wHalo`` and ``i16 %wOffset`` arguments. For more information
-on ``im2col.w`` and ``im2col.w.128`` modes, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`_.
+These instructions initiate an asynchronous copy of tensor data from global
+memory to shared::cluster memory (indicated by the ``g2s`` prefix) in ``im2col``
+mode. In im2col mode, some dimensions of the source tensor are unrolled into a
+single dimensional column at the destination. In this mode, the tensor has to be
+at least three-dimensional. Along with the tensor coordinates, im2col offsets
+are also specified (denoted by ``i16 im2col0...i16 %im2col2``). For the
+``im2col`` mode, the number of offsets is two less than the number of dimensions
+of the tensor operation. For the ``im2col.w`` and ``im2col.w.128`` mode, the
+number of offsets is always 2, denoted by ``i16 %wHalo`` and ``i16 %wOffset``
+arguments. For more information on ``im2col.w`` and ``im2col.w.128`` modes,
+refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`__.
 
-The last three arguments to these intrinsics are flags, with the same functionality
-as described in the ``tile`` mode intrinsics above.
+The last three arguments to these intrinsics are flags, with the same
+functionality as described in the ``tile`` mode intrinsics above.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1206,28 +1961,26 @@ Overview:
 """""""""
 
 The '``@llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.[1-5]d``' intrinsics
-correspond to the ``cp.async.bulk.tensor.[1-5]d.shared::cta.global.*``
-set of PTX instructions. These instructions initiate an asynchronous
-copy of tensor data from global memory to shared::cta memory in
-``tile`` mode. In tile mode, the multi-dimensional layout of the
-source tensor is preserved at the destination. The dimension of the
-tensor data ranges from 1d to 5d with the coordinates specified
-by the ``i32 %d0 ... i32 %d4`` arguments. In ``tile.gather4`` mode,
-four rows in a 2D tensor are combined to form a single 2D destination
-tensor. The first coordinate ``i32 %x0`` denotes the column index
-followed by four coordinates indicating the four row-indices.
-So, this mode takes a total of 5 coordinates as input arguments.
-For more information on ``gather4`` mode, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+correspond to the ``cp.async.bulk.tensor.[1-5]d.shared::cta.global.*`` set of
+PTX instructions. These instructions initiate an asynchronous copy of tensor
+data from global memory to shared::cta memory in ``tile`` mode. In tile mode,
+the multi-dimensional layout of the source tensor is preserved at the
+destination. The dimension of the tensor data ranges from 1d to 5d with the
+coordinates specified by the ``i32 %d0 ... i32 %d4`` arguments. In
+``tile.gather4`` mode, four rows in a 2D tensor are combined to form a single 2D
+destination tensor. The first coordinate ``i32 %x0`` denotes the column index
+followed by four coordinates indicating the four row-indices. So, this mode
+takes a total of 5 coordinates as input arguments. For more information on
+``gather4`` mode, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`__.
 
-* The last argument to these intrinsics is a boolean flag
-  indicating support for cache_hint. This flag argument must
-  be a compile-time constant. When set, it indicates a valid
-  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
-  variant of the PTX instruction.
+* The last argument to these intrinsics is a boolean flag indicating support for
+  cache_hint. This flag argument must be a compile-time constant. When set, it
+  indicates a valid cache_hint (``i64 %ch``) and generates the
+  ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1253,28 +2006,26 @@ Overview:
 """""""""
 
 The '``@llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.[3-5]d``' intrinsics
-correspond to the ``cp.async.bulk.tensor.[1-5]d.shared::cta.global.*``
-set of PTX instructions. These instructions initiate an asynchronous copy
-of tensor data from global memory to shared::cta memory in ``im2col`` mode.
-In im2col mode, some dimensions of the source tensor are unrolled into a
-single dimensional column at the destination. In this mode, the tensor has
-to be at least three-dimensional. Along with the tensor coordinates, im2col
-offsets are also specified (denoted by ``i16 im2col0...i16 %im2col2``).
-For the ``im2col`` mode, the number of offsets is two less than the number
-of dimensions of the tensor operation. For the ``im2col.w`` and ``im2col.w.128``
-mode, the number of offsets is always 2, denoted by ``i16 %wHalo`` and
-``i16 %wOffset`` arguments. For more information on ``im2col.w`` and
-``im2col.w.128`` modes, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`_.
+correspond to the ``cp.async.bulk.tensor.[1-5]d.shared::cta.global.*`` set of
+PTX instructions. These instructions initiate an asynchronous copy of tensor
+data from global memory to shared::cta memory in ``im2col`` mode. In im2col
+mode, some dimensions of the source tensor are unrolled into a single
+dimensional column at the destination. In this mode, the tensor has to be at
+least three-dimensional. Along with the tensor coordinates, im2col offsets are
+also specified (denoted by ``i16 im2col0...i16 %im2col2``). For the ``im2col``
+mode, the number of offsets is two less than the number of dimensions of the
+tensor operation. For the ``im2col.w`` and ``im2col.w.128`` mode, the number of
+offsets is always 2, denoted by ``i16 %wHalo`` and ``i16 %wOffset`` arguments.
+For more information on ``im2col.w`` and ``im2col.w.128`` modes, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`__.
 
-* The last argument to these intrinsics is a boolean flag
-  indicating support for cache_hint. This flag argument must
-  be a compile-time constant. When set, it indicates a valid
-  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
-  variant of the PTX instruction.
+* The last argument to these intrinsics is a boolean flag  indicating support
+  for cache_hint. This flag argument must be a compile-time constant. When set,
+  it indicates a valid cache_hint (``i64 %ch``) and generates the
+  ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.s2g.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1295,27 +2046,25 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.cp.async.bulk.tensor.s2g.tile.[1-5]d``' intrinsics
-correspond to the ``cp.async.bulk.tensor.[1-5]d.*`` set of PTX instructions.
-These instructions initiate an asynchronous copy of tensor data from
-shared::cta to global memory (indicated by the ``s2g`` prefix)
-in ``tile`` mode. The dimension of the tensor data ranges from 1d to 5d
-with the coordinates specified by the ``i32 %d0 ... i32 %d4`` arguments.
-In ``tile.scatter4`` mode, a single 2D source tensor is divided into
-four rows in the 2D destination tensor. The first coordinate ``i32 %x0``
-denotes the column index followed by four coordinates indicating the
-four row-indices. So, this mode takes a total of 5 coordinates as input arguments.
-For more information on ``scatter4`` mode, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+The '``@llvm.nvvm.cp.async.bulk.tensor.s2g.tile.[1-5]d``' intrinsics correspond
+to the ``cp.async.bulk.tensor.[1-5]d.*`` set of PTX instructions. These
+instructions initiate an asynchronous copy of tensor data from shared::cta to
+global memory (indicated by the ``s2g`` prefix) in ``tile`` mode. The dimension
+of the tensor data ranges from 1d to 5d with the coordinates specified by the
+``i32 %d0 ... i32 %d4`` arguments. In ``tile.scatter4`` mode, a single 2D source
+tensor is divided into four rows in the 2D destination tensor. The first
+coordinate ``i32 %x0`` denotes the column index followed by four coordinates
+indicating the four row-indices. So, this mode takes a total of 5 coordinates as
+input arguments. For more information on ``scatter4`` mode, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`__.
 
-* The last argument to these intrinsics is a boolean flag
-  indicating support for cache_hint. This flag argument must
-  be a compile-time constant. When set, it indicates a valid
-  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
-  variant of the PTX instruction.
+* The last argument to these intrinsics is a boolean flag indicating support for
+  cache_hint. This flag argument must be a compile-time constant. When set, it
+  indicates a valid cache_hint (``i64 %ch``) and generates the
+  ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1335,15 +2084,14 @@ Overview:
 The '``@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.[1-5]d``' intrinsics
 correspond to the ``cp.async.bulk.tensor.[1-5]d.*`` set of PTX instructions.
 These instructions initiate an asynchronous copy of tensor data from
-shared::cta to global memory (indicated by the ``s2g`` prefix)
-in ``im2col`` mode. In this mode, the tensor has to be at least
-three-dimensional. Unlike the ``g2s`` variants, there are no
-im2col_offsets for these intrinsics. The last argument to these
-intrinsics is a boolean flag, with the same functionality as
+shared::cta to global memory (indicated by the ``s2g`` prefix) in ``im2col``
+mode. In this mode, the tensor has to be at least three-dimensional. Unlike the
+``g2s`` variants, there are no im2col_offsets for these intrinsics. The last
+argument to these intrinsics is a boolean flag, with the same functionality as
 described in the ``s2g.tile`` mode intrinsics above.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1365,28 +2113,27 @@ Overview:
 """""""""
 
 The '``@llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.[1-5]d``' intrinsics
-correspond to the ``cp.async.bulk.prefetch.tensor.[1-5]d.L2.global*`` set
-of PTX instructions. These instructions initiate an asynchronous prefetch
-of tensor data from global memory to the L2 cache. In tile mode, the
-multi-dimensional layout of the source tensor is preserved at the destination.
-The dimension of the tensor data ranges from 1d to 5d with the coordinates
-specified by the ``i32 %d0 ... i32 %d4`` arguments.
+correspond to the ``cp.async.bulk.prefetch.tensor.[1-5]d.L2.global*`` set of
+PTX instructions. These instructions initiate an asynchronous prefetch of tensor
+data from global memory to the L2 cache. In tile mode, the multi-dimensional
+layout of the source tensor is preserved at the destination. The dimension of
+the tensor data ranges from 1d to 5d with the coordinates specified by the
+``i32 %d0 ... i32 %d4`` arguments.
 
 In ``tile.gather4`` mode, four rows in the 2-dimnesional source tensor are
-fetched to the L2 cache. The first coordinate ``i32 %x0`` denotes the column index
-followed by four coordinates indicating the four row-indices. So, this mode takes
-a total of 5 coordinates as input arguments.
-For more information on ``gather4`` mode, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`_.
+fetched to the L2 cache. The first coordinate ``i32 %x0`` denotes the column
+index followed by four coordinates indicating the four row-indices. So, this
+mode takes a total of 5 coordinates as input arguments. For more information
+on ``gather4`` mode, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes>`__.
 
-* The last argument to these intrinsics is a boolean flag
-  indicating support for cache_hint. This flag argument must
-  be a compile-time constant. When set, it indicates a valid
-  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
-  variant of the PTX instruction.
+* The last argument to these intrinsics is a boolean flag indicating support
+  for cache_hint. This flag argument must be a compile-time constant. When set,
+  it indicates a valid cache_hint (``i64 %ch``) and generates the
+  ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1412,26 +2159,25 @@ Overview:
 """""""""
 
 The '``@llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.[3-5]d``' intrinsics
-correspond to the ``cp.async.bulk.prefetch.tensor.[1-5]d.L2.global*`` set
-of PTX instructions. These instructions initiate an asynchronous prefetch
-of tensor data from global memory to the L2 cache. In im2col mode, some
-dimensions of the source tensor are unrolled into a single dimensional
-column at the destination. In this mode, the tensor has to be at least
-three-dimensional. Along with the tensor coordinates, im2col offsets are
-also specified (denoted by ``i16 im2col0...i16 %im2col2``). For ``im2col``
-mode, the number of offsets is two less than the number of dimensions of
-the tensor operation. For the ``im2col.w`` and ``im2col.w.128`` modes,
-the number of offsets is always 2, denoted by ``i16 %wHalo`` and
-``i16 %wOffset`` arguments. For more information on ``im2col.w`` and
-``im2col.w.128`` modes, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`_.
+correspond to the ``cp.async.bulk.prefetch.tensor.[1-5]d.L2.global*`` set of PTX
+instructions. These instructions initiate an asynchronous prefetch of tensor
+data from global memory to the L2 cache. In im2col mode, some dimensions of the
+source tensor are unrolled into a single dimensional column at the destination.
+In this mode, the tensor has to be at least three-dimensional. Along with the
+tensor coordinates, im2col offsets are also specified (denoted by
+``i16 im2col0...i16 %im2col2``). For ``im2col`` mode, the number of offsets is
+two less than the number of dimensions of the tensor operation. For the
+``im2col.w`` and ``im2col.w.128`` modes, the number of offsets is always 2,
+denoted by ``i16 %wHalo`` and ``i16 %wOffset`` arguments. For more information
+on ``im2col.w`` and ``im2col.w.128`` modes, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes>`__.
 
 
-The last argument to these intrinsics is a boolean flag, with
-the same functionality as described in the ``tile`` mode intrinsics above.
+The last argument to these intrinsics is a boolean flag, with the same
+functionality as described in the ``tile`` mode intrinsics above.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.reduce.[red_op].tile.[1-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1459,22 +2205,21 @@ Overview:
 """""""""
 
 The '``@llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.tile.[1-5]d``' intrinsics
-correspond to the ``cp.reduce.async.bulk.tensor.[1-5]d.*`` set of PTX instructions.
-These instructions initiate an asynchronous reduction operation of tensor data
-in global memory with the tensor data in shared{::cta} memory, using ``tile`` mode.
-The dimension of the tensor data ranges from 1d to 5d with the coordinates
-specified by the ``i32 %d0 ... i32 %d4`` arguments. The supported reduction
-operations are {add, min, max, inc, dec, and, or, xor} as described in the
-``tile.1d`` intrinsics.
+correspond to the ``cp.reduce.async.bulk.tensor.[1-5]d.*`` set of PTX
+instructions. These instructions initiate an asynchronous reduction operation of
+tensor data in global memory with the tensor data in shared{::cta} memory, using
+``tile`` mode. The dimension of the tensor data ranges from 1d to 5d with the
+coordinates specified by the ``i32 %d0 ... i32 %d4`` arguments. The supported
+reduction operations are {add, min, max, inc, dec, and, or, xor} as described in
+the ``tile.1d`` intrinsics.
 
-* The last argument to these intrinsics is a boolean flag
-  indicating support for cache_hint. This flag argument must
-  be a compile-time constant. When set, it indicates a valid
-  cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
-  variant of the PTX instruction.
+* The last argument to these intrinsics is a boolean flag indicating support for
+  cache_hint. This flag argument must be a compile-time constant. When set, it
+  indicates a valid cache_hint (``i64 %ch``) and generates the
+  ``.L2::cache_hint`` variant of the PTX instruction.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`__.
 
 '``llvm.nvvm.cp.async.bulk.tensor.reduce.[red_op].im2col.[3-5]d``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1491,17 +2236,17 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.im2col.[3-5]d``' intrinsics
-correspond to the ``cp.reduce.async.bulk.tensor.[3-5]d.*`` set of PTX instructions.
-These instructions initiate an asynchronous reduction operation of tensor data
-in global memory with the tensor data in shared{::cta} memory, using ``im2col`` mode.
-In this mode, the tensor has to be at least three-dimensional. The supported reduction
-operations supported are the same as the ones in the tile mode. The last argument to
-these intrinsics is a boolean flag, with the same functionality as described in the
-``tile`` mode intrinsics above.
+The '``@llvm.nvvm.cp.async.bulk.tensor.reduce.<red_op>.im2col.[3-5]d``'
+intrinsics correspond to the ``cp.reduce.async.bulk.tensor.[3-5]d.*`` set of PTX
+instructions. These instructions initiate an asynchronous reduction operation of
+tensor data in global memory with the tensor data in shared{::cta} memory, using
+``im2col`` mode. In this mode, the tensor has to be at least three-dimensional.
+The supported reduction operations supported are the same as the ones in the
+tile mode. The last argument to these intrinsics is a boolean flag, with the
+same functionality as described in the ``tile`` mode intrinsics above.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor>`__.
 
 Warp Group Intrinsics
 ---------------------
@@ -1534,8 +2279,8 @@ the following locations:
   instructions of the same shape in which case an ordering guarantee is
   provided by default.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-fence>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-fence>`__.
 
 '``llvm.nvvm.wgmma.commit_group.sync.aligned``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1561,8 +2306,8 @@ wgmma-group.
 An executing thread can wait for the completion of all ``wgmma.mma_async``
 operations in a wgmma-group by using ``wgmma.wait_group``.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-commit-group>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-commit-group>`__.
 
 '``llvm.nvvm.wgmma.wait_group.sync.aligned``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1590,8 +2335,8 @@ fragments of matrix A of a ``wgmma.mma_async`` instruction without first
 performing a ``wgmma.wait_group`` instruction that waits on a wgmma-group
 including that ``wgmma.mma_async`` instruction is undefined behavior.
 
-For more information, refer PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group>`_.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group>`__.
 
 '``llvm.nvvm.griddepcontrol.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1607,14 +2352,309 @@ Syntax:
 Overview:
 """""""""
 
-The ``griddepcontrol`` intrinsics allows the dependent grids and prerequisite grids as defined by the runtime, to control execution in the following way:
+The ``griddepcontrol`` intrinsics allows the dependent grids and prerequisite
+grids as defined by the runtime, to control execution in the following way:
 
-``griddepcontrol.launch_dependents`` intrinsic signals that the dependents can be scheduled, before the current grid completes. The intrinsic can be invoked by multiple threads in the current CTA and repeated invocations of the intrinsic will have no additional side effects past that of the first invocation.
+``griddepcontrol.launch_dependents`` intrinsic signals that the dependents can
+be scheduled, before the current grid completes. The intrinsic can be invoked by
+multiple threads in the current CTA and repeated invocations of the intrinsic
+will have no additional side effects past that of the first invocation.
 
-``griddepcontrol.wait`` intrinsic causes the executing thread to wait until all prerequisite grids in flight have completed and all the memory operations from the prerequisite grids are performed and made visible to the current grid.
+``griddepcontrol.wait`` intrinsic causes the executing thread to wait until all
+prerequisite grids in flight have completed and all the memory operations from
+the prerequisite grids are performed and made visible to the current grid.
 
 For more information, refer 
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol>`__.
+
+Tensormap Replace Intrinsics
+----------------------------
+
+These intrinsics modify the fields of the tensor-map object at ``%addr`` in 
+``tile`` mode.
+
+For more information, refer to the 
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-replace>`__.
+
+'``llvm.nvvm.tensormap.replace.global.address``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.global.address.p1(ptr addrspace(1) %addr, i64 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.global.address.p3(ptr addrspace(3) %addr, i64 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.global.address.*``' intrinsics replace the 
+``global_address`` field of the tensor-map object with ``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.rank``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.rank.p1(ptr addrspace(1) %addr, i32 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.rank.p3(ptr addrspace(3) %addr, i32 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.rank.*``' intrinsics replace the ``rank`` 
+field of the tensor-map object with ``%new_value`` which must be one less than 
+the desired tensor rank as this field uses zero-based numbering.
+
+'``llvm.nvvm.tensormap.replace.global.stride``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.global.stride.p1(ptr addrspace(1) %addr, i32 immarg %ord, i64 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.global.stride.p3(ptr addrspace(3) %addr, i32 immarg %ord, i64 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.global.stride.*``' intrinsics replace the 
+``%ord``-th element of the ``global_stride`` field of the tensor-map object 
+with ``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.element.stride``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.element.stride.p1(ptr addrspace(1) %addr, i32 immarg %ord, i32 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.element.stride.p3(ptr addrspace(3) %addr, i32 immarg %ord, i32 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.element.stride.*``' intrinsics replace the 
+``%ord``-th element of the ``element_stride`` field of the tensor-map object 
+with ``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.global.dim``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.global.dim.p1(ptr addrspace(1) %addr, i32 immarg %ord, i32 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.global.dim.p3(ptr addrspace(3) %addr, i32 immarg %ord, i32 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.global.dim.*``' intrinsics replace the 
+``%ord``-th element of the ``global_dim`` field of the tensor-map object 
+with ``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.box.dim``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.box.dim.p1(ptr addrspace(1) %addr, i32 immarg %ord, i32 %new_value)
+  declare void @llvm.nvvm.tensormap.replace.box.dim.p3(ptr addrspace(3) %addr, i32 immarg %ord, i32 %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.box.dim.*``' intrinsics replace the 
+``%ord``-th element of the ``box_dim`` field of the tensor-map object with 
+``%new_value``.
+
+'``llvm.nvvm.tensormap.replace.elemtype``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.elemtype.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.elemtype.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.elemtype.*``' intrinsics replace the 
+``elemtype`` field of the tensor-map object with the type specified by 
+``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual element 
+type:
+
+  ============================ =====
+  Element Type                 Value
+  ============================ =====
+  ``u8``                       0
+  ``u16``                      1
+  ``u32``                      2
+  ``s32``                      3
+  ``u64``                      4
+  ``s64``                      5
+  ``f16``                      6
+  ``f32``                      7
+  ``f32.ftz``                  8
+  ``f64``                      9
+  ``bf16``                     10
+  ``tf32``                     11
+  ``tf32.ftz``                 12
+  ``b4x16``                    13
+  ``b4x16_p64``                14
+  ``b6x16_p32`` or ``b6p2x16`` 15
+  ============================ =====
+
+'``llvm.nvvm.tensormap.replace.interleave.layout``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.interleave.layout.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.interleave.layout.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.interleave.layout.*``' intrinsics replace 
+the ``interleave_layout`` field of the tensor-map object with the layout 
+specified by ``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual layout:
+
+  ================== =====
+  Interleave Layout  Value
+  ================== =====
+  ``No interleave``  0
+  ``16B interleave`` 1
+  ``32B interleave`` 2
+  ================== =====
+
+'``llvm.nvvm.tensormap.replace.swizzle_mode``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.swizzle.mode.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.swizzle.mode.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.swizzle.mode.*``' intrinsics replace the 
+``swizzle_mode`` field of the tensor-map object with the swizzle mode specified 
+by ``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual swizzle 
+mode:
+
+  ================ =====
+  Swizzle Mode     Value
+  ================ =====
+  ``No swizzle``   0
+  ``32B swizzle``  1
+  ``64B swizzle``  2
+  ``128B swizzle`` 3
+  ``96B swizzle``  4
+  ================ =====
+  
+'``llvm.nvvm.tensormap.replace.swizzle_atomicity``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.swizzle.atomicity.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.swizzle.atomicity.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.swizzle.atomicity.*``' intrinsics replace 
+the ``swizzle_atomicity`` field of the tensor-map object with the swizzle 
+atomicity specified by ``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual swizzle 
+atomicity:
+
+  ================= =====
+  Swizzle Atomicity Value
+  ================= =====
+  ``16B``           0
+  ``32B``           1
+  ``32B + 8B flip`` 2
+  ``64B``           3
+  ================= =====
+
+'``llvm.nvvm.tensormap.replace.fill_mode``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tensormap.replace.fill.mode.p1(ptr addrspace(1) %addr, i32 immarg %new_value)
+  declare void @llvm.nvvm.tensormap.replace.fill.mode.p3(ptr addrspace(3) %addr, i32 immarg %new_value)
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.tensormap.replace.fill.mode.*``' intrinsics replace the 
+``fill_mode`` field of the tensor-map object with the fill mode specified by
+``%new_value``.
+
+Semantics:
+""""""""""
+
+The following table shows the mapping of ``%new_value`` to the actual fill mode:
+
+  ================ =====
+  Fill Mode        Value
+  ================ =====
+  ``Zero fill``    0
+  ``OOB-NaN fill`` 1
+  ================ =====
 
 TCGEN05 family of Intrinsics
 ----------------------------
@@ -1623,15 +2663,15 @@ The llvm.nvvm.tcgen05.* intrinsics model the TCGEN05 family of instructions
 exposed by PTX. These intrinsics use 'Tensor Memory' (henceforth ``tmem``).
 NVPTX represents this memory using ``addrspace(6)`` and is always 32-bits.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory>`__.
 
 The tensor-memory pointers may only be used with the tcgen05 intrinsics.
 There are specialized load/store instructions provided (tcgen05.ld/st) to
 work with tensor-memory.
 
-See the PTX ISA for more information on tensor-memory load/store instructions
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-and-register-load-store-instructions>`_.
+For more information on tensor-memory load/store instructions, refer to `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-and-register-load-store-instructions>`__.
 
 '``llvm.nvvm.tcgen05.alloc``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1652,16 +2692,16 @@ Overview:
 The '``@llvm.nvvm.tcgen05.alloc.*``' intrinsics correspond to the
 ``tcgen05.alloc.cta_group*.sync.aligned.b32`` family of PTX instructions.
 The ``tcgen05.alloc`` is a potentially blocking instruction which dynamically
-allocates the specified number of columns in the Tensor Memory and writes
-the address of the allocated Tensor Memory into shared memory at the
-location specified by ``%dst``. The 32-bit operand ``%ncols`` specifies
-the number of columns to be allocated and it must be a power-of-two.
-The ``.shared`` variant explicitly uses shared memory address space for
-the ``%dst`` operand. The ``.cg1`` and ``.cg2`` variants generate
-``cta_group::1`` and ``cta_group::2`` variants of the instruction respectively.
+allocates the specified number of columns in the Tensor Memory and writes the
+address of the allocated Tensor Memory into shared memory at the location
+specified by ``%dst``. The 32-bit operand ``%ncols`` specifies the number of
+columns to be allocated and it must be a power-of-two. The ``.shared`` variant
+explicitly uses shared memory address space for the ``%dst`` operand. The
+``.cg1`` and ``.cg2`` variants generate ``cta_group::1`` and ``cta_group::2``
+variants of the instruction respectively.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`__.
 
 '``llvm.nvvm.tcgen05.dealloc``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1685,8 +2725,8 @@ Tensor Memory allocation. The 32-bit operand ``%ncols`` specifies the number
 of columns to be de-allocated. The ``.cg1`` and ``.cg2`` variants generate
 ``cta_group::1`` and ``cta_group::2`` variants of the instruction respectively.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`__.
 
 '``llvm.nvvm.tcgen05.relinq.alloc.permit``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1702,17 +2742,16 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.tcgen05.relinq.alloc.permit.*``' intrinsics correspond
-to the ``tcgen05.relinquish_alloc_permit.*`` set of PTX instructions.
-This instruction specifies that the CTA of the executing thread is
-relinquishing the right to allocate Tensor Memory. So, it is illegal
-for a CTA to perform ``tcgen05.alloc`` after any of its constituent
-threads execute ``tcgen05.relinquish_alloc_permit``. The ``.cg1``
-and ``.cg2`` variants generate ``cta_group::1`` and ``cta_group::2``
-flavors of the instruction respectively.
+The '``@llvm.nvvm.tcgen05.relinq.alloc.permit.*``' intrinsics correspond to the
+``tcgen05.relinquish_alloc_permit.*`` set of PTX instructions. This instruction
+specifies that the CTA of the executing thread is relinquishing the right to
+allocate Tensor Memory. So, it is illegal for a CTA to perform ``tcgen05.alloc``
+after any of its constituent threads execute
+``tcgen05.relinquish_alloc_permit``. The ``.cg1`` and ``.cg2`` variants generate
+``cta_group::1`` and ``cta_group::2`` flavors of the instruction respectively.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions>`__.
 
 '``llvm.nvvm.tcgen05.commit``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1733,13 +2772,14 @@ Overview:
 The '``@llvm.nvvm.tcgen05.commit.*``' intrinsics correspond to the
 ``tcgen05.commit.{cg1/cg2}.mbarrier::arrive::one.*`` set of PTX instructions.
 The ``tcgen05.commit`` is an asynchronous instruction which makes the mbarrier
-object (``%mbar``) track the completion of all prior asynchronous tcgen05 operations.
-The ``.mc`` variants allow signaling on the mbarrier objects of multiple CTAs
-(specified by ``%mc``) in the cluster. The ``.cg1`` and ``.cg2`` variants generate
-``cta_group::1`` and ``cta_group::2`` flavors of the instruction respectively.
+object (``%mbar``) track the completion of all prior asynchronous tcgen05
+operations. The ``.mc`` variants allow signaling on the mbarrier objects of
+multiple CTAs (specified by ``%mc``) in the cluster. The ``.cg1`` and ``.cg2``
+variants generate ```cta_group::1`` and ``cta_group::2`` flavors of the
+instruction respectively.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit>`__.
 
 '``llvm.nvvm.tcgen05.wait``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1755,16 +2795,15 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.tcgen05.wait.ld/st``' intrinsics correspond to
-the ``tcgen05.wait::{ld/st}.sync.aligned`` pair of PTX instructions.
-The ``tcgen05.wait::ld`` causes the executing thread to block until
-all prior ``tcgen05.ld`` operations issued by the executing thread
-have completed. The ``tcgen05.wait::st`` causes the executing thread
-to block until all prior ``tcgen05.st`` operations issued by the
-executing thread have completed.
+The '``@llvm.nvvm.tcgen05.wait.ld/st``' intrinsics correspond to the
+``tcgen05.wait::{ld/st}.sync.aligned`` pair of PTX instructions. The
+``tcgen05.wait::ld`` causes the executing thread to block until all prior
+``tcgen05.ld`` operations issued by the executing thread have completed. The
+``tcgen05.wait::st`` causes the executing thread to block until all prior
+``tcgen05.st`` operations issued by the executing thread have completed.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-wait>`__.
 
 '``llvm.nvvm.tcgen05.fence``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1780,13 +2819,12 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.tcgen05.fence.*``' intrinsics correspond to
-the ``tcgen05.fence::{before/after}_thread_sync`` pair of PTX instructions.
-These instructions act as code motion fences for asynchronous tcgen05
-operations.
+The '``@llvm.nvvm.tcgen05.fence.*``' intrinsics correspond to the
+``tcgen05.fence::{before/after}_thread_sync`` pair of PTX instructions. These
+instructions act as code motion fences for asynchronous tcgen05 operations.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-fence>`__.
 
 '``llvm.nvvm.tcgen05.shift``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1802,15 +2840,15 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.tcgen05.shift.{cg1/cg2}``' intrinsics correspond to
-the ``tcgen05.shift.{cg1/cg2}`` PTX instructions. The ``tcgen05.shift``
-is an asynchronous instruction which initiates the shifting of 32-byte
-elements downwards across all the rows, except the last, by one row.
-The address operand ``%tmem_addr`` specifies the base address of the
-matrix in the Tensor Memory whose rows must be down shifted.
+The '``@llvm.nvvm.tcgen05.shift.{cg1/cg2}``' intrinsics correspond to the
+``tcgen05.shift.{cg1/cg2}`` PTX instructions. The ``tcgen05.shift`` is an
+asynchronous instruction which initiates the shifting of 32-byte elements
+downwards across all the rows, except the last, by one row. The address operand
+``%tmem_addr`` specifies the base address of the matrix in the Tensor Memory
+whose rows must be down shifted.
 
-For more information, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-shift>`_.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-shift>`__.
 
 '``llvm.nvvm.tcgen05.cp``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1844,37 +2882,38 @@ Syntax:
 Overview:
 """""""""
 
-The '``@llvm.nvvm.tcgen05.cp.{shape}.{src_fmt}.{cg1/cg2}``' intrinsics
-correspond to the ``tcgen05.cp.*`` family of PTX instructions.
-The ``tcgen05.cp`` instruction initiates an asynchronous copy operation from
-shared memory to the location specified by ``%tmem_addr`` in Tensor Memory.
-The 64-bit register operand ``%sdesc`` is the matrix descriptor representing
-the source matrix in shared memory that needs to be copied.
+The '``@llvm.nvvm.tcgen05.cp.{shape}.{src_fmt}.{cg1/cg2}``' intrinsics 
+correspond to the ``tcgen05.cp.*`` family of PTX instructions. The
+``tcgen05.cp`` instruction initiates an asynchronous copy operation from shared
+memory to the location specified by ``%tmem_addr`` in Tensor Memory. The 64-bit
+register operand ``%sdesc`` is the matrix descriptor representing the source
+matrix in shared memory that needs to be copied.
 
 The valid shapes for the copy operation are:
-{128x256b, 4x256b, 128x128b, 64x128b_warpx2_02_13, 64x128b_warpx2_01_23, 32x128b_warpx4}.
+{128x256b, 4x256b, 128x128b, 64x128b_warpx2_02_13, 64x128b_warpx2_01_23,
+32x128b_warpx4}.
 
 Shapes ``64x128b`` and ``32x128b`` require dedicated multicast qualifiers,
 which are appended to the corresponding intrinsic names.
 
-Optionally, the data can be decompressed from the source format in the shared memory
-to the destination format in Tensor Memory during the copy operation. Currently,
-only ``.b8x16`` is supported as destination format. The valid source formats are
-``.b6x16_p32`` and ``.b4x16_p64``.
+Optionally, the data can be decompressed from the source format in the shared
+memory to the destination format in Tensor Memory during the copy operation.
+Currently, only ``.b8x16`` is supported as destination format. The valid source
+formats are ``.b6x16_p32`` and ``.b4x16_p64``.
 
-When the source format is ``.b6x16_p32``, a contiguous set of 16 elements of 6-bits
-each followed by four bytes of padding (``_p32``) in shared memory is decompressed
-into 16 elements of 8-bits (``.b8x16``) each in the Tensor Memory.
+When the source format is ``.b6x16_p32``, a contiguous set of 16 elements of
+6-bits each followed by four bytes of padding (``_p32``) in shared memory is
+decompressed into 16 elements of 8-bits (``.b8x16``) each in the Tensor Memory.
 
-When the source format is ``.b4x16_p64``, a contiguous set of 16 elements of 4-bits
-each followed by eight bytes of padding (``_p64``) in shared memory is decompressed
-into 16 elements of 8-bits (``.b8x16``) each in the Tensor Memory.
+When the source format is ``.b4x16_p64``, a contiguous set of 16 elements of
+4-bits each followed by eight bytes of padding (``_p64``) in shared memory is
+decompressed into 16 elements of 8-bits (``.b8x16``) each in the Tensor Memory.
 
-For more information on the decompression schemes, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#optional-decompression>`_.
+For more information on the decompression schemes, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#optional-decompression>`__.
 
-For more information on the tcgen05.cp instruction, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-cp>`_.
+For more information on the tcgen05.cp instruction, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-cp>`__.
 
 '``llvm.nvvm.tcgen05.ld.*``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1886,30 +2925,43 @@ Syntax:
 
   declare <n x i32> @llvm.nvvm.tcgen05.ld.<shape>.<num>(ptr addrspace(6) %tmem_addr, i1 %pack)
 
+  declare <n x i32> @llvm.nvvm.tcgen05.ld.red.32x32b.<num>.i32(ptr addrspace(6) %tmem_addr, i32 %redOp)
+
+  declare <n x i32> @llvm.nvvm.tcgen05.ld.red.32x32b.<num>.f32(ptr addrspace(6) %tmem_addr, i32 %redOp, i1 %abs, i1 %nan)
+
   declare <n x i32> @llvm.nvvm.tcgen05.ld.16x32bx2.<num>(ptr addrspace(6) %tmem_addr, i64 %offset, i1 %pack)
+
+  declare <n x i32> @llvm.nvvm.tcgen05.ld.red.16x32bx2.<num>.i32(ptr addrspace(6) %tmem_addr, i64 %offset, i32 %redOp)
+
+  declare <n x i32> @llvm.nvvm.tcgen05.ld.red.16x32bx2.<num>.f32(ptr addrspace(6) %tmem_addr, i64 %offset, i32 %redOp, i1 %abs, i1 %nan)
 
 Overview:
 """""""""
 
-This group of intrinsics asynchronously load data from the Tensor Memory at the location specified
-by the 32-bit address operand `tmem_addr` into the destination registers, collectively across all threads
-of the warps.
+This group of intrinsics asynchronously load data from the Tensor Memory at the
+ocation specified by the 32-bit address operand `tmem_addr` into the destination
+registers, collectively across all threads of the warps.
 
-All the threads in the warp must specify the same value of `tmem_addr`, which must be the base address
-of the collective load operation. Otherwise, the behavior is undefined.
+All the threads in the warp must specify the same value of `tmem_addr`, which
+must be the base address of the collective load operation. Otherwise, the
+behavior is undefined.
 
-The `shape` qualifier and the `num` qualifier together determines the total dimension of the data ('n') which
-is loaded from the Tensor Memory. The `shape` qualifier indicates the base dimension of data. The `num` qualifier
-indicates the repeat factor on the base dimension resulting in the total dimension of the data that is accessed.
+The `shape` qualifier and the `num` qualifier together determines the total
+dimension of the data ('n') which is loaded from the Tensor Memory. The `shape`
+qualifier indicates the base dimension of data. The `num` qualifier indicates
+the repeat factor on the base dimension resulting in the total dimension of the
+data that is accessed.
 
-Allowed values for the 'num' are `x1, x2, x4, x8, x16, x32, x64, x128`.
+Allowed values for the `num` are `x1, x2, x4, x8, x16, x32, x64, x128` except
+for `tcgen05.ld.red` which does not support `x1`
 
-Allowed values for the 'shape' in the first intrinsic are `16x64b, 16x128b, 16x256b, 32x32b`.
+Allowed values for the 'shape' in the first intrinsic are
+`16x64b, 16x128b, 16x256b, 32x32b`.
 
 Allowed value for the 'shape' in the second intrinsic is `16x32bx2`.
 
-The result of the intrinsic is a vector consisting of one or more 32-bit registers derived from `shape` and
-`num` as shown below.
+The result of the intrinsic is a vector consisting of one or more 32-bit
+registers derived from `shape` and `num` as shown below.
 
 =========== =========================  ==========  ==========
  num/shape     16x32bx2/16x64b/32x32b    16x128b    16x256b
@@ -1924,10 +2976,25 @@ The result of the intrinsic is a vector consisting of one or more 32-bit registe
  x128               128                    NA          NA
 =========== =========================  ==========  ==========
 
-The last argument `i1 %pack` is a compile-time constant which when set, indicates that the adjacent columns are packed into a single 32-bit element during the load
+The last argument `i1 %pack` is a compile-time constant which when set,
+indicates that the adjacent columns are packed into a single 32-bit element
+during the load
 
-For more information, refer to the
-`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-ld>`__.
+`tcgen05.ld.red` contains `%redOp` flag to specify the load reduction operation
+and the f32 variant supports `%abs` and `%nan` bit flags for abs and nan
+respectively
+
+`%redOp` flag:
+
+=========== =============
+   value      operation
+=========== =============
+    0           min
+    1           max
+=========== =============
+
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-ld>`__.
 
 
 '``llvm.nvvm.tcgen05.st.*``'
@@ -1945,31 +3012,42 @@ Syntax:
 Overview:
 """""""""
 
-This group of intrinsics asynchronously store data from the source vector into the Tensor Memory at the location
-specified by the 32-bit address operand 'tmem_addr` collectively across all threads of the warps.
+This group of intrinsics asynchronously store data from the source vector into
+the Tensor Memory at the location specified by the 32-bit address operand
+'tmem_addr` collectively across all threads of the warps.
 
-All the threads in the warp must specify the same value of `tmem_addr`, which must be the base address of the
-collective load operation. Otherwise, the behavior is undefined.
+All the threads in the warp must specify the same value of `tmem_addr`, which
+must be the base address of the collective load operation. Otherwise, the
+behavior is undefined.
 
-The `shape` qualifier and the `num` qualifier together determines the total dimension of the data ('n') which
-is loaded from the Tensor Memory. The `shape` qualifier indicates the base dimension of data. The `num` qualifier
-indicates the repeat factor on the base dimension resulting in the total dimension of the data that is accessed.
+The `shape` qualifier and the `num` qualifier together determines the total
+dimension of the data ('n') which is loaded from the Tensor Memory. The `shape`
+qualifier indicates the base dimension of data. The `num` qualifier indicates
+the repeat factor on the base dimension resulting in the total dimension of the
+data that is accessed.
 
 Allowed values for the 'num' are `x1, x2, x4, x8, x16, x32, x64, x128`.
 
-Allowed values for the 'shape' in the first intrinsic are `16x64b, 16x128b, 16x256b, 32x32b`.
+Allowed values for the 'shape' in the first intrinsic are
+`16x64b, 16x128b, 16x256b, 32x32b`.
 
 Allowed value for the 'shape' in the second intrinsic is `16x32bx2`.
 
-`args` argument is a vector consisting of one or more 32-bit registers derived from `shape` and
-`num` as listed in the table listed in the `tcgen05.ld` section.
+`args` argument is a vector consisting of one or more 32-bit registers derived
+from `shape` and `num` as listed in the table listed in the `tcgen05.ld`
+section.
 
-Each shape support an `unpack` mode to allow a 32-bit element in the register to be unpacked into two 16-bit elements and store them in adjacent columns. `unpack` mode can be enabled by setting the `%unpack` operand to 1 and can be disabled by setting it to 0.
+Each shape support an `unpack` mode to allow a 32-bit element in the register to
+be unpacked into two 16-bit elements and store them in adjacent columns.
+`unpack` mode can be enabled by setting the `%unpack` operand to 1 and can be
+disabled by setting it to 0.
 
-The last argument `i1 %unpack` is a compile-time constant which when set, indicates that a 32-bit element in the register to be unpacked into two 16-bit elements and store them in adjacent columns.
+The last argument `i1 %unpack` is a compile-time constant which when set,
+indicates that a 32-bit element in the register to be unpacked into two 16-bit
+elements and store them in adjacent columns.
 
-For more information, refer to the
-`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st>`__.
+For more information, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st>`__.
 
 tcgen05.mma Intrinsics
 ----------------------
@@ -1985,11 +3063,13 @@ accumulation of the form: `D =  A * B + D` where:
   - the `D` matrix is of the shape `M x N`, in `Tensor Memory`
 
 Optionally an input predicate can be used to disable the input (`%enable_inp_d`)
-from the accumulator matrix and the following operation can be performed as `D = A * B`
+from the accumulator matrix and the following operation can be performed as
+`D = A * B`
 
-The matrix multiplication and accumulation operations are categorized into various
-kinds based on input types and the throughput of the multiplication operation.
-The following table shows the different kinds of MMA operations that are supported:
+The matrix multiplication and accumulation operations are categorized into
+various kinds based on input types and the throughput of the multiplication
+operation. The following table shows the different kinds of MMA operations
+that are supported:
 
 +------------+--------------------------------------------+
 | .kind      | Supported Input Types                      |
@@ -2010,26 +3090,30 @@ The following table shows the different kinds of MMA operations that are support
 |            | (with common scaling factor)               |
 +------------+--------------------------------------------+
 
-`tcgen05.mma.sp` supports sparse variant of `A` with shape `M x K` stored in packed
-form as `M X (K / 2)` in memory. The `%spmetadata` specifies the mapping of the
-`K / 2` non-zero elements to the `K` elements before performing the MMA operation.
+`tcgen05.mma.sp` supports sparse variant of `A` with shape `M x K` stored in
+packed form as `M X (K / 2)` in memory. The `%spmetadata` specifies the mapping
+of the `K / 2` non-zero elements to the `K` elements before performing the MMA
+operation.
 
 `tcgen05.mma.block_scale` perform matrix multiplication with block scaling
 `D = (A * scale_A)  * (B * scale_B) + D` where scaling of input matrices from
-memory to form the matrix `A` and matrix `B` before performing the MMA operation.
-Scale factors for `A` and `B` matrices need to be duplicated to all 32 lane partitions
-of tensor memory. The shape of `%scale_a` and `%scale_b` matrices depend on the
-`.scale_vectorsize` described in `here <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-scale-valid-comb>`__
+memory to form the matrix `A` and matrix `B` before performing the MMA
+operation. Scale factors for `A` and `B` matrices need to be duplicated to all
+32 lane partitions of tensor memory. The shape of `%scale_a` and `%scale_b`
+matrices depend on the `.scale_vectorsize` described in
+`here <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-scale-valid-comb>`__
 
-The sparsity metadata (`%spmetadata`) as well as the block-scale inputs for `A / B`
-matrices (`%scale_a` and `%scale_b`) reside in Tensor Memory.
+The sparsity metadata (`%spmetadata`) as well as the block-scale inputs for
+`A / B` matrices (`%scale_a` and `%scale_b`) reside in Tensor Memory.
 
-To facilitate opportunistic re-use of `A / B` matrix data across a sequence of MMA
-operations, the `A/B` matrices are loaded into a collector buffer
-(`%collector_usage_a_op_flag`, `%collector_usage_b_buffer_flag`, and `%collector_usage_b_op_flag`).
-The flag value of the collector_usage flag in the intrinsic specifies the nature of the re-use
+To facilitate opportunistic re-use of `A / B` matrix data across a sequence of
+MMA operations, the `A/B` matrices are loaded into a collector buffer
+(`%collector_usage_a_op_flag`, `%collector_usage_b_buffer_flag`, and
+`%collector_usage_b_op_flag`). The flag value of the collector_usage flag in the
+intrinsic specifies the nature of the re-use
 
-There are three kinds of matrix descriptors used by the tcgen05 family of instructions:
+There are three kinds of matrix descriptors used by the tcgen05 family of
+instructions:
 
 +----------------------------+-----------------------------------------------------------------------------------------------------------+-------------+
 | Descriptor                 | Description                                                                                               | Size (bits) |
@@ -2050,38 +3134,40 @@ There are three kinds of matrix descriptors used by the tcgen05 family of instru
 |                            | `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__      |             |
 +----------------------------+-----------------------------------------------+-------------+---------------------------------------------+-------------+
 
-`tcgen05.mma` can be used for general matrix multiplication or for convolution operations.
-In case of convolutions, the `activations` can be stored in either matrix `A` or matrix `B`
-while the `weights` will be stored in the other matrix
+`tcgen05.mma` can be used for general matrix multiplication or for convolution
+operations. In case of convolutions, the `activations` can be stored in either
+matrix `A` or matrix `B` while the `weights` will be stored in the other matrix
 
-`tcgen05.mma` has an optional collector qualifier to specify when an `A` or `B` matrix
-is new to the sequence and should be loaded, unchanged within the sequence and,
-should be reused, or the last use in the sequence and should be discarded.
-The collector qualifier is used to give the TensorCore permission to reuse a
-previously loaded `A` or `B` matrix; however reuse is opportunistic in that the
-TensorCore may reload a matrix even when it has permission to reuse that matrix.
-Thus, the source memory of an A or B matrix must not be modified while the MMA
-instruction using those matrices has not completed - regardless of collector
-qualifier permissions.
+`tcgen05.mma` has an optional collector qualifier to specify when an `A` or `B`
+matrix is new to the sequence and should be loaded, unchanged within the
+sequence and, should be reused, or the last use in the sequence and should be
+discarded. The collector qualifier is used to give the TensorCore permission to
+reuse a previously loaded `A` or `B` matrix; however reuse is opportunistic in
+that the TensorCore may reload a matrix even when it has permission to reuse
+that matrix. Thus, the source memory of an A or B matrix must not be modified
+while the MMA instruction using those matrices has not completed - regardless of
+collector qualifier permissions.
 
-The `cta_group::1` specifies that the operation is performed on the Tensor Memory
-of the executing thread’s CTA only. The `cta_group::2` specifies that the MMA
-operation is performed on the Tensor Memory of the executing thread’s CTA and its peer CTA.
+The `cta_group::1` specifies that the operation is performed on the Tensor
+Memory of the executing thread’s CTA only. The `cta_group::2` specifies that the
+MMA operation is performed on the Tensor Memory of the executing thread’s CTA
+and its peer CTA.
 
-The vector operand `%disable_output_lane` specifies the lane(s) in the Tensor Memory
-that should be not be updated with the resultant matrix D. Elements of the vector operand
-disable-output-lane forms a mask where each bit corresponds to a lane of the Tensor Memory,
-with least significant bit of the first element of the vector (leftmost in syntax)
-corresponding to the lane 0 of the Tensor Memory. If a bit in the mask is 1, then
-the corresponding lane in the Tensor Memory for the resultant matrix D will not be
-updated
+The vector operand `%disable_output_lane` specifies the lane(s) in the Tensor
+Memory that should be not be updated with the resultant matrix D. Elements of
+the vector operand disable-output-lane forms a mask where each bit corresponds
+to a lane of the Tensor Memory, with least significant bit of the first element
+of the vector (leftmost in syntax) corresponding to the lane 0 of the Tensor
+Memory. If a bit in the mask is 1, then the corresponding lane in the Tensor
+Memory for the resultant matrix D will not be updated
 
 Intrinsic Design:
 ^^^^^^^^^^^^^^^^^
 
 Given the broad feature set of `tcgen05.mma` instruction modeling these
 through intrinsics is highly complex, and the following table outlines the large
-number of intrinsics required to fully support the `tcgen05.mma` instruction set.
+number of intrinsics required to fully support the `tcgen05.mma` instruction
+set.
 
 +------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
 | variant                            | Configuration                                                                                     | Total Variants |
@@ -2110,10 +3196,10 @@ number of intrinsics required to fully support the `tcgen05.mma` instruction set
 +------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
 
 
-To reduce the number of possible intrinsic variations, we've modeled the `tcgen05.mma`
-instructions using flag operands. We've added range checks to these flags to prevent
-invalid values. We also expanded some flags back into intrinsic modifiers to avoid
-supporting invalid combinations of features.
+To reduce the number of possible intrinsic variations, we've modeled the
+`tcgen05.mma` instructions using flag operands. We've added range checks to
+these flags to prevent invalid values. We also expanded some flags back into
+intrinsic modifiers to avoid supporting invalid combinations of features.
 
 
 '``llvm.nvvm.tcgen05.mma.*``'
@@ -2142,34 +3228,36 @@ Syntax:
 Overview:
 """""""""
 
-`nvvm.tcgen05.mma` is an asynchronous intrinsic which initiates an `M x N x K` matrix
-multiply and accumulate operation, `D = A * B + D` where the `A` matrix is `M x K`,
-the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The operation of the form
-`D = A*B` is issued when the input predicate argument `%enable_inp_d` is false.
-The optional immediate argument `%scale_d_imm` can be specified to scale the input
-matrix `D` as follows: `D = A * B + D * (2 ^ - %scale_d_imm)`. The valid range of
-values for argument `%scale_d_imm` is `[0, 15]`. The 32-bit register operand idesc
-is the instruction descriptor as described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
+`nvvm.tcgen05.mma` is an asynchronous intrinsic which initiates an `M x N x K`
+matrix multiply and accumulate operation, `D = A * B + D` where the `A` matrix
+is `M x K`, the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The
+operation of the form `D = A*B` is issued when the input predicate argument
+`%enable_inp_d` is false. The optional immediate argument `%scale_d_imm` can be
+specified to scale the input matrix `D` as follows:
+`D = A * B + D * (2 ^ - %scale_d_imm)`. The valid range of values for argument
+`%scale_d_imm` is `[0, 15]`. The 32-bit register operand idesc is the
+instruction descriptor as described in
+`Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
 
-`nvvm.tcgen05.mma` has single thread semantics, unlike the collective instructions
-`nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing
-the `nvvm.tcgen05.mma` will result in the initiation of the whole matrix and accumulate
-operation
+`nvvm.tcgen05.mma` has single thread semantics, unlike the collective
+instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a
+single thread issuing the `nvvm.tcgen05.mma` will result in the initiation of
+the whole matrix and accumulate operation
 
 When `.sp` is specifed, the dimension of A matrix is `M x (K/2)` and requires
-specifiying an additional `%spmetadata` argument
+specifying an additional `%spmetadata` argument
 
-`.ashift` shifts the rows of the A matrix down by one row, except for the last row
-in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
+`.ashift` shifts the rows of the A matrix down by one row, except for the last
+row in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
 
-The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for
-matrix `A`. It is illegal to specify either of `USE` or `FILL` for `%collector_usage_a_op_flag`
-along with `.ashift`
+The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer
+for matrix `A`. It is illegal to specify either of `USE` or `FILL` for
+`%collector_usage_a_op_flag` along with `.ashift`
 
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
 
-The following tables describes the possible values of the flag arguments
+The following tables describe the possible values of the flag arguments
 
 `%kind_flag` flag:
 
@@ -2242,18 +3330,31 @@ Syntax:
 
 Overview:
 """""""""
-`nvvm.tcgen05.mma.block_scale` is an asynchronous intrinsic which initiates an `M x N x K` matrix multiply and accumulate operation, `D = (A * scale_a)  * (B * scale_b) + D` where the `A` matrix is `M x K`, the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The matrices `A` and `B` are scaled with `%scale_A` and `%scale_B` matrices respectively before performing the matrix multiply and accumulate operation. The operation of the form `D = A*B` is issued when the input predicate argument `%enable_inp_d` is false. The 32-bit register operand idesc is the instruction descriptor as described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
+`nvvm.tcgen05.mma.block_scale` is an asynchronous intrinsic which initiates
+an `M x N x K` matrix multiply and accumulate operation
+`D = (A * scale_a)  * (B * scale_b) + D` where the `A` matrix is `M x K`, the
+`B` matrix is `K x N`, and the `D` matrix is `M x N`. The matrices `A` and `B`
+are scaled with `%scale_A` and `%scale_B` matrices respectively before
+performing the matrix multiply and accumulate operation. The operation of the
+form `D = A*B` is issued when the input predicate argument `%enable_inp_d` is
+false. The 32-bit register operand idesc is the instruction descriptor as
+described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
 
-`nvvm.tcgen05.mma.block_scale` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma.block_scale` will result in the initiation of the whole matrix multiply and accumulate operation
+`nvvm.tcgen05.mma.block_scale` has single thread semantics, unlike the
+collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async`
+instruction. So, a single thread issuing the `nvvm.tcgen05.mma.block_scale` will
+result in the initiation of the whole matrix multiply and accumulate operation.
 
-When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires specifiying an additional `%spmetadata` argument
+When `.sp` is specified, the dimension of A matrix is `M x (K / 2)` and requires
+specifying an additional `%spmetadata` argument
 
-The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for matrix `A`
+The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer
+for matrix `A`
 
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
 
-The following tables describes the possible values of the flag arguments
+The following tables describe the possible values of the flag arguments
 
 `%cta_group`:
 
@@ -2309,17 +3410,40 @@ Syntax:
 Overview:
 """""""""
 
-`nvvm.tcgen05.mma.disable_output_lane` is an asynchronous intrinsic which initiates an `M x N x K` matrix multiply and accumulate operation, `D = A * B + D` where the `A` matrix is `M x K`, the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The operation of the form `D = A*B` is issued when the input predicate argument `%enable_inp_d` is false. The optional immediate argument `%scale_d_imm` can be specified to scale the input matrix `D` as follows: `D = A*B+D * (2 ^ - %scale_d_imm)`. The valid range of values for argument `%scale_d_imm` is `[0, 15]`. The 32-bit register operand idesc is the instruction descriptor as described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
+`nvvm.tcgen05.mma.disable_output_lane` is an asynchronous intrinsic which
+initiates an `M x N x K` matrix multiply and accumulate operation
+`D = A * B + D` where the `A` matrix is `M x K`, the `B` matrix is `K x N`, and
+the `D` matrix is `M x N`. The operation of the form `D = A*B` is issued when
+the input predicate argument `%enable_inp_d` is false. The optional immediate
+argument `%scale_d_imm` can be specified to scale the input matrix `D` as
+follows: `D = A*B+D * (2 ^ - %scale_d_imm)`. The valid range of values for
+argument `%scale_d_imm` is `[0, 15]`. The 32-bit register operand idesc is the
+instruction descriptor as described in
+`Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
 
-The vector operand `%disable_output_lane` specifies the lane(s) in the Tensor Memory that should be not be updated with the resultant matrix `D`. Elements of the vector operand `%disable_output_lane` forms a mask where each bit corresponds to a lane of the Tensor Memory, with least significant bit of the first element of the vector corresponding to the `lane 0` of the Tensor Memory. If a bit in the mask is 1, then the corresponding lane in the Tensor Memory for the resultant matrix `D` will not be updated
+The vector operand `%disable_output_lane` specifies the lane(s) in the Tensor
+Memory that should be not be updated with the resultant matrix `D`. Elements of
+the vector operand `%disable_output_lane` forms a mask where each bit
+corresponds to a lane of the Tensor Memory, with least significant bit of the
+first element of the vector corresponding to the `lane 0` of the Tensor Memory.
+If a bit in the mask is 1, then the corresponding lane in the Tensor Memory for
+the resultant matrix `D` will not be updated
 
-`nvvm.tcgen05.mma.disable_output_lane` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma.disable_output_lane` will result in the initiation of the whole matrix multiply and accumulate operation
+`nvvm.tcgen05.mma.disable_output_lane` has single thread semantics, unlike the
+collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async`
+instruction. So, a single thread issuing the
+`nvvm.tcgen05.mma.disable_output_lane` will result in the initiation of the
+whole matrix multiply and accumulate operation
 
-When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires specifiying an additional `%spmetadata` argument
+When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires
+specifiying an additional `%spmetadata` argument.
 
-`.ashift` shifts the rows of the A matrix down by one row, except for the last row in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
+ `.ashift` shifts the rows of the A matrix down by one row, except for the last
+ row in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
 
-The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for matrix `A`. It is illegal to specify either of `USE` or `FILL` for `%collector_usage_a_op_flag` along with `.ashift`
+The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer
+for matrix `A`. It is illegal to specify either of `USE` or `FILL` for
+`%collector_usage_a_op_flag` along with `.ashift`
 
 For more information, refer to the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
 
@@ -2381,15 +3505,33 @@ Syntax:
 Overview:
 """""""""
 
-`nvvm.tcgen05.mma.ws` is an asynchronous intrinsic which initiates an `M x N x K` weight stationary convolution matrix multiply and accumulate operation, `D = A * B + D` where the `A` matrix is `M x K`, the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The operation of the form `D = A*B` is issued when the input predicate argument `%enable_inp_d` is false. The optional immediate argument `%scale_d_imm` can be specified to scale the input matrix `D` as follows: `D = A*B+D * (2 ^ - %scale_d_imm)`. The valid range of values for argument `%scale_d_imm` is `[0, 15]`. The 32-bit register operand idesc is the instruction descriptor as described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
+`nvvm.tcgen05.mma.ws` is an asynchronous intrinsic which initiates an
+`M x N x K` weight stationary convolution matrix multiply and accumulate
+operation, `D = A * B + D` where the `A` matrix is `M x K`, the `B` matrix is
+`K x N`, and the `D` matrix is `M x N`. The operation of the form `D = A*B` is
+issued when the input predicate argument `%enable_inp_d` is false. The optional
+immediate argument `%scale_d_imm` can be specified to scale the input matrix `D`
+as follows: `D = A*B+D * (2 ^ - %scale_d_imm)`. The valid range of values for
+argument `%scale_d_imm` is `[0, 15]`. The 32-bit register operand idesc is the
+instruction descriptor as described in
+`Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
 
-`nvvm.tcgen05.mma` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma` will result in the initiation of the whole matrix multiply and accumulate operation
+`nvvm.tcgen05.mma` has single thread semantics, unlike the collective
+instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a
+single thread issuing the `nvvm.tcgen05.mma` will result in the initiation of
+the whole matrix multiply and accumulate operation
 
-When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires specifiying an additional `%spmetadata` argument
+When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires
+specifiying an additional `%spmetadata` argument
 
-The operand `%zero_col_mask` is a 64-bit register which specifies the `Zero-Column Mask Descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-zero-column-mask-descriptor>`__. The zero-column mask descriptor is used to generate a mask that specifies which columns of `B` matrix will have zero value for the matrix multiply and accumulate operation regardless of the values present in the shared memory.
+The operand `%zero_col_mask` is a 64-bit register which specifies the
+`Zero-Column Mask Descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-zero-column-mask-descriptor>`__.
+The zero-column mask descriptor is used to generate a mask that specifies which
+columns of `B` matrix will have zero value for the matrix multiply and
+accumulate operation regardless of the values present in the shared memory.
 
-The `%collector_usage_b_buffer_flag` and `%collector_usage_b_op_flag` together flag specifies the usage of collector buffer for Matrix `B`
+The `%collector_usage_b_buffer_flag` and `%collector_usage_b_op_flag` together
+flag specifies the usage of collector buffer for Matrix `B`.
 
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma-ws>`__
@@ -2457,9 +3599,11 @@ The integer immediate operand `%initval` specifies the initialization value for
 the memory locations. The only numeric value allowed is 0.
 
 The ``@llvm.nvvm.st.bulk.shared.cta`` and ``@llvm.nvvm.st.bulk`` intrinsics are 
-similar but the latter uses generic addressing (see `Generic Addressing <https://docs.nvidia.com/cuda/parallel-thread-execution/#generic-addressing>`__).
+similar but the latter uses generic addressing (see `Generic Addressing
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#generic-addressing>`__).
 
-For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk>`__.
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk>`__.
 
 
 clusterlaunchcontrol Intrinsics
@@ -2480,21 +3624,22 @@ Overview:
 """""""""
 
 The ``clusterlaunchcontrol.try_cancel`` intrinsics requests atomically cancelling
-the launch of a cluster that has not started running yet. It asynchronously non-atomically writes
-a 16-byte opaque response to shared memory, pointed to by 16-byte-aligned ``addr`` indicating whether the
-operation succeeded or failed. ``addr`` and 8-byte-aligned ``mbar`` must refer to ``shared::cta``
-otherwise the behavior is undefined. The completion of the asynchronous operation
-is tracked using the mbarrier completion mechanism at ``.cluster`` scope referenced
-by the shared memory pointer, ``mbar``. On success, the opaque response contains
-the CTA id of the first CTA of the canceled cluster; no other successful response
-from other ``clusterlaunchcontrol.try_cancel`` operations from the same grid will
-contain that id.
+the launch of a cluster that has not started running yet. It asynchronously
+non-atomically writes a 16-byte opaque response to shared memory, pointed to by
+16-byte-aligned ``addr`` indicating whether the operation succeeded or failed.
+``addr`` and 8-byte-aligned ``mbar`` must refer to ``shared::cta`` otherwise the
+behavior is undefined. The completion of the asynchronous operation is tracked
+using the mbarrier completion mechanism at ``.cluster`` scope referenced by the
+shared memory pointer, ``mbar``. On success, the opaque response contains the
+CTA id of the first CTA of the canceled cluster; no other successful response
+from other ``clusterlaunchcontrol.try_cancel`` operations from the same grid
+will contain that id.
 
-The ``multicast`` variant specifies that the response is asynchronously non-atomically written to
-the corresponding shared memory location of each CTA in the requesting cluster.
-The completion of the write of each local response is tracked by independent
-mbarriers at the corresponding shared memory location of each CTA in the
-cluster.
+The ``multicast`` variant specifies that the response is asynchronously
+non-atomically written to the corresponding shared memory location of each CTA
+in the requesting cluster. The completion of the write of each local response is
+tracked by independent mbarriers at the corresponding shared memory location of
+each CTA in theccluster.
 
 For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-try-cancel>`__.
 
@@ -2511,16 +3656,17 @@ Syntax:
 Overview:
 """""""""
 
-The ``llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled`` intrinsic decodes the opaque response written by the
+The ``llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled`` intrinsic
+decodes the opaque response written by the
 ``llvm.nvvm.clusterlaunchcontrol.try_cancel`` operation.
 
-The intrinsic returns ``0`` (false) if the request failed. If the request succeeded,
-it returns ``1`` (true). A true result indicates that:
+The intrinsic returns ``0`` (false) if the request failed. If the request
+succeeded, it returns ``1`` (true). A true result indicates that:
 
 - the thread block cluster whose first CTA id matches that of the response
   handle will not run, and
-- no other successful response of another ``try_cancel`` request in the grid will contain
-  the first CTA id of that cluster
+- no other successful response of another ``try_cancel`` request in the grid
+  will contain the first CTA id of that cluster
 
 For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel>`__.
 
@@ -2546,8 +3692,9 @@ used to decode the successful opaque response written by the
 
 If the request succeeded:
 
-- ``llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.{x,y,z}`` returns
-  the coordinate of the first CTA in the canceled cluster, either x, y, or z.
+- ``llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.{x,y,z}``
+  returns the coordinate of the first CTA in the canceled cluster, either x, y,
+  or z.
 
 If the request failed, the behavior of these intrinsics is undefined.
 
@@ -2569,12 +3716,12 @@ Syntax:
 Overview:
 """""""""
 
-The '``llvm.nvvm.pm.event.mask``' intrinsic triggers one or more
-performance monitor events. Each bit in the 16-bit immediate operand
-``%mask_val`` controls an event.
+The '``llvm.nvvm.pm.event.mask``' intrinsic triggers one or more performance
+monitor events. Each bit in the 16-bit immediate operand `%mask_val`` controls
+an event.
 
-For more information on the pmevent instructions, refer to the PTX ISA
-`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent>`_.
+For more information on the pmevent instructions, refer to the `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent>`__.
 
 Other Intrinsics
 ----------------
@@ -2595,7 +3742,7 @@ The library can be found under ``nvvm/libdevice/`` in the CUDA Toolkit and
 there is a separate version for each compute architecture.
 
 For a list of all math functions implemented in libdevice, see
-`libdevice Users Guide <http://docs.nvidia.com/cuda/libdevice-users-guide/index.html>`_.
+`libdevice Users Guide <http://docs.nvidia.com/cuda/libdevice-users-guide/index.html>`__.
 
 To accommodate various math-related compiler flags that can affect code
 generation of libdevice code, the library code depends on a special LLVM IR

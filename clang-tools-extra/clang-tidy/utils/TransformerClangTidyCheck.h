@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_TRANSFORMER_CLANG_TIDY_CHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_TRANSFORMER_CLANG_TIDY_CHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_TRANSFORMERCLANGTIDYCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_TRANSFORMERCLANGTIDYCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "IncludeInserter.h"
@@ -48,8 +48,9 @@ public:
   ///
   /// See \c setRule for constraints on the rule.
   TransformerClangTidyCheck(
-      std::function<std::optional<transformer::RewriteRuleWith<std::string>>(
-          const LangOptions &, const OptionsView &)>
+      llvm::function_ref<
+          std::optional<transformer::RewriteRuleWith<std::string>>(
+              const LangOptions &, const OptionsView &)>
           MakeRule,
       StringRef Name, ClangTidyContext *Context);
 
@@ -83,4 +84,4 @@ private:
 
 } // namespace clang::tidy::utils
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_TRANSFORMER_CLANG_TIDY_CHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_TRANSFORMERCLANGTIDYCHECK_H

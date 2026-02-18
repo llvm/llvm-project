@@ -229,12 +229,12 @@ public:
   recursive_mutex& operator=(const recursive_mutex&) = delete;
 
   void lock();
-  bool try_lock() _NOEXCEPT;
+  [[__nodiscard__]] bool try_lock() _NOEXCEPT;
   void unlock() _NOEXCEPT;
 
   typedef __libcpp_recursive_mutex_t* native_handle_type;
 
-  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() { return &__m_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() { return &__m_; }
 };
 
 class _LIBCPP_EXPORTED_FROM_ABI timed_mutex {
@@ -251,14 +251,14 @@ public:
 
 public:
   void lock();
-  bool try_lock() _NOEXCEPT;
+  [[__nodiscard__]] bool try_lock() _NOEXCEPT;
   template <class _Rep, class _Period>
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_for(const chrono::duration<_Rep, _Period>& __d) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool try_lock_for(const chrono::duration<_Rep, _Period>& __d) {
     return try_lock_until(chrono::steady_clock::now() + __d);
   }
 
   template <class _Clock, class _Duration>
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __t) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __t) {
     using namespace chrono;
     unique_lock<mutex> __lk(__m_);
     bool __no_timeout = _Clock::now() < __t;
@@ -288,14 +288,14 @@ public:
   recursive_timed_mutex& operator=(const recursive_timed_mutex&) = delete;
 
   void lock();
-  bool try_lock() _NOEXCEPT;
+  [[__nodiscard__]] bool try_lock() _NOEXCEPT;
   template <class _Rep, class _Period>
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_for(const chrono::duration<_Rep, _Period>& __d) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool try_lock_for(const chrono::duration<_Rep, _Period>& __d) {
     return try_lock_until(chrono::steady_clock::now() + __d);
   }
 
   template <class _Clock, class _Duration>
-  _LIBCPP_HIDE_FROM_ABI bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __t) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool try_lock_until(const chrono::time_point<_Clock, _Duration>& __t) {
     using namespace chrono;
     __thread_id __id = this_thread::get_id();
     unique_lock<mutex> __lk(__m_);
@@ -320,7 +320,7 @@ public:
 };
 
 template <class _L0, class _L1>
-_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1) {
+[[__nodiscard__]] _LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1) {
   unique_lock<_L0> __u0(__l0, try_to_lock_t());
   if (__u0.owns_lock()) {
     if (__l1.try_lock()) {
@@ -335,7 +335,8 @@ _LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, 
 #    ifndef _LIBCPP_CXX03_LANG
 
 template <class _L0, class _L1, class _L2, class... _L3>
-_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
+[[__nodiscard__]] _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
+    _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
   int __r = 0;
   unique_lock<_L0> __u0(__l0, try_to_lock);
   if (__u0.owns_lock()) {

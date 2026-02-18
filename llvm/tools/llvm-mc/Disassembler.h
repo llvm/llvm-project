@@ -14,8 +14,6 @@
 #ifndef LLVM_TOOLS_LLVM_MC_DISASSEMBLER_H
 #define LLVM_TOOLS_LLVM_MC_DISASSEMBLER_H
 
-#include <string>
-
 namespace llvm {
 
 class MemoryBuffer;

@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-MCDXContainerTargetWriter::~MCDXContainerTargetWriter() {}
+MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
 
 uint64_t DXContainerObjectWriter::writeObject() {
   auto &Asm = *this->Asm;

@@ -33,6 +33,10 @@ class MappingConfig {
   MappingConfig() {
     BoolEnvar ForceAtomic = BoolEnvar("LIBOMPTARGET_MAP_FORCE_ATOMIC", true);
     UseEventsForAtomicTransfers = ForceAtomic;
+
+    BoolEnvar TreatAttachAutoAsAlwaysEnvar(
+        "LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS", false);
+    TreatAttachAutoAsAlways = TreatAttachAutoAsAlwaysEnvar;
   }
 
 public:
@@ -44,6 +48,13 @@ public:
   /// Flag to indicate if we use events to ensure the atomicity of
   /// map clauses or not. Can be modified with an environment variable.
   bool UseEventsForAtomicTransfers = true;
+
+  /// Flag to indicate if attach(auto) should be treated as attach(always).
+  /// This forces pointer attachments to occur between a pointer an a pointee,
+  /// for something like `map(p[:])` even when both were already present on the
+  /// device before encountering the construct. Can be modified with
+  /// an environment variable.
+  bool TreatAttachAutoAsAlways = false;
 };
 
 /// Information about shadow pointers.

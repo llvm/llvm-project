@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Printable.h"
@@ -43,6 +44,10 @@ class PostDominatorTree;
 class ReturnInst;
 class TargetLibraryInfo;
 class Value;
+
+/// Check if the given basic block contains any loop or entry convergent
+/// intrinsic instructions.
+LLVM_ABI bool HasLoopOrEntryConvergenceToken(const BasicBlock *BB);
 
 /// Replace contents of every block in \p BBs with single unreachable
 /// instruction. If \p Updates is specified, collect all necessary DT updates
@@ -262,6 +267,34 @@ LLVM_ABI BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
                                MemorySSAUpdater *MSSAU = nullptr,
                                const Twine &BBName = "");
 
+/// \brief Create a new intermediate target block for a callbr edge.
+///
+/// Create a new basic block between a callbr instruction and one of its
+/// successors. The new block replaces the original successor in the callbr
+/// instruction and unconditionally branches to the original successor. This
+/// is useful for normalizing control flow, e.g., when transforming
+/// irreducible loops.
+///
+/// \param CallBrBlock    block containing the callbr instruction
+/// \param Succ           original successor block
+/// \param SuccIdx        index of the original successor in the callbr
+///                       instruction
+/// \param DTU            optional \p DomTreeUpdater for updating the
+///                       dominator tree
+/// \param CI             optional \p CycleInfo for updating cycle membership
+/// \param LI             optional \p LoopInfo for updating loop membership
+/// \param UpdatedLI      optional output flag indicating if \p LoopInfo has
+///                       been updated
+///
+/// \returns newly created intermediate target block
+///
+/// \note This function updates PHI nodes, dominator tree, loop info, and
+/// cycle info as needed.
+LLVM_ABI BasicBlock *
+SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ, unsigned SuccIdx,
+                DomTreeUpdater *DTU = nullptr, CycleInfo *CI = nullptr,
+                LoopInfo *LI = nullptr, bool *UpdatedLI = nullptr);
+
 /// Sets the unwind edge of an instruction to a particular successor.
 LLVM_ABI void setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ);
 
@@ -282,9 +315,6 @@ ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
 
 /// Split the specified block at the specified instruction.
 ///
-/// If \p Before is true, splitBlockBefore handles the block
-/// splitting. Otherwise, execution proceeds as described below.
-///
 /// Everything before \p SplitPt stays in \p Old and everything starting with \p
 /// SplitPt moves to a new block. The two blocks are joined by an unconditional
 /// branch. The new block with name \p BBName is returned.
@@ -293,18 +323,15 @@ ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
 LLVM_ABI BasicBlock *SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                                 DominatorTree *DT, LoopInfo *LI = nullptr,
                                 MemorySSAUpdater *MSSAU = nullptr,
-                                const Twine &BBName = "", bool Before = false);
-inline BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt, DominatorTree *DT,
-                       LoopInfo *LI = nullptr,
-                       MemorySSAUpdater *MSSAU = nullptr,
-                       const Twine &BBName = "", bool Before = false) {
-  return SplitBlock(Old, SplitPt->getIterator(), DT, LI, MSSAU, BBName, Before);
+                                const Twine &BBName = "");
+inline BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
+                              DominatorTree *DT, LoopInfo *LI = nullptr,
+                              MemorySSAUpdater *MSSAU = nullptr,
+                              const Twine &BBName = "") {
+  return SplitBlock(Old, SplitPt->getIterator(), DT, LI, MSSAU, BBName);
 }
 
 /// Split the specified block at the specified instruction.
-///
-/// If \p Before is true, splitBlockBefore handles the block
-/// splitting. Otherwise, execution proceeds as described below.
 ///
 /// Everything before \p SplitPt stays in \p Old and everything starting with \p
 /// SplitPt moves to a new block. The two blocks are joined by an unconditional
@@ -313,12 +340,13 @@ LLVM_ABI BasicBlock *SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                                 DomTreeUpdater *DTU = nullptr,
                                 LoopInfo *LI = nullptr,
                                 MemorySSAUpdater *MSSAU = nullptr,
-                                const Twine &BBName = "", bool Before = false);
+                                const Twine &BBName = "");
 inline BasicBlock *SplitBlock(BasicBlock *Old, Instruction *SplitPt,
-                       DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr,
-                       MemorySSAUpdater *MSSAU = nullptr,
-                       const Twine &BBName = "", bool Before = false) {
-  return SplitBlock(Old, SplitPt->getIterator(), DTU, LI, MSSAU, BBName, Before);
+                              DomTreeUpdater *DTU = nullptr,
+                              LoopInfo *LI = nullptr,
+                              MemorySSAUpdater *MSSAU = nullptr,
+                              const Twine &BBName = "") {
+  return SplitBlock(Old, SplitPt->getIterator(), DTU, LI, MSSAU, BBName);
 }
 
 /// Split the specified block at the specified instruction \p SplitPt.

@@ -21,7 +21,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 
@@ -41,7 +40,7 @@ ObjDumper::ObjDumper(ScopedPrinter &Writer, StringRef ObjName) : W(Writer) {
   };
 }
 
-ObjDumper::~ObjDumper() {}
+ObjDumper::~ObjDumper() = default;
 
 void ObjDumper::reportUniqueWarning(Error Err) const {
   reportUniqueWarning(toString(std::move(Err)));

@@ -15,8 +15,10 @@
 #define CLANG_LIB_CIR_CODEGEN_CIRGENCLEANUP_H
 
 #include "Address.h"
+#include "CIRGenModule.h"
 #include "EHScopeStack.h"
 #include "mlir/IR/Value.h"
+#include "clang/AST/StmtCXX.h"
 
 namespace clang::CIRGen {
 
@@ -29,19 +31,17 @@ struct CatchTypeInfo {
 
 /// A protected scope for zero-cost EH handling.
 class EHScope {
+  EHScopeStack::stable_iterator enclosingEHScope;
+
   class CommonBitFields {
     friend class EHScope;
     unsigned kind : 3;
   };
   enum { NumCommonBits = 3 };
 
-protected:
-  class CatchBitFields {
-    friend class EHCatchScope;
-    unsigned : NumCommonBits;
-    unsigned numHandlers : 32 - NumCommonBits;
-  };
+  bool scopeMayThrow;
 
+protected:
   class CleanupBitFields {
     friend class EHCleanupScope;
     unsigned : NumCommonBits;
@@ -71,14 +71,16 @@ protected:
 
   union {
     CommonBitFields commonBits;
-    CatchBitFields catchBits;
     CleanupBitFields cleanupBits;
   };
 
 public:
-  enum Kind { Cleanup, Catch, Terminate, Filter };
+  enum Kind { Cleanup, Terminate, Filter };
 
-  EHScope(Kind kind) { commonBits.kind = kind; }
+  EHScope(Kind kind, EHScopeStack::stable_iterator enclosingEHScope)
+      : enclosingEHScope(enclosingEHScope) {
+    commonBits.kind = kind;
+  }
 
   Kind getKind() const { return static_cast<Kind>(commonBits.kind); }
 
@@ -86,65 +88,13 @@ public:
     // Traditional LLVM codegen also checks for `!block->use_empty()`, but
     // in CIRGen the block content is not important, just used as a way to
     // signal `hasEHBranches`.
-    assert(!cir::MissingFeatures::ehstackBranches());
-    return false;
-  }
-};
-
-/// A scope which attempts to handle some, possibly all, types of
-/// exceptions.
-///
-/// Objective C \@finally blocks are represented using a cleanup scope
-/// after the catch scope.
-
-class EHCatchScope : public EHScope {
-  // In effect, we have a flexible array member
-  //   Handler Handlers[0];
-  // But that's only standard in C99, not C++, so we have to do
-  // annoying pointer arithmetic instead.
-
-public:
-  struct Handler {
-    /// A type info value, or null MLIR attribute for a catch-all
-    CatchTypeInfo type;
-
-    /// The catch handler for this type.
-    mlir::Region *region;
-  };
-
-private:
-  friend class EHScopeStack;
-
-  Handler *getHandlers() { return reinterpret_cast<Handler *>(this + 1); }
-
-public:
-  static size_t getSizeForNumHandlers(unsigned n) {
-    return sizeof(EHCatchScope) + n * sizeof(Handler);
+    return scopeMayThrow;
   }
 
-  EHCatchScope(unsigned numHandlers) : EHScope(Catch) {
-    catchBits.numHandlers = numHandlers;
-    assert(catchBits.numHandlers == numHandlers && "NumHandlers overflow?");
-  }
+  void setMayThrow(bool mayThrow) { scopeMayThrow = mayThrow; }
 
-  unsigned getNumHandlers() const { return catchBits.numHandlers; }
-
-  void setHandler(unsigned i, CatchTypeInfo type, mlir::Region *region) {
-    assert(i < getNumHandlers());
-    getHandlers()[i].type = type;
-    getHandlers()[i].region = region;
-  }
-
-  // Clear all handler blocks.
-  // FIXME: it's better to always call clearHandlerBlocks in DTOR and have a
-  // 'takeHandler' or some such function which removes ownership from the
-  // EHCatchScope object if the handlers should live longer than EHCatchScope.
-  void clearHandlerBlocks() {
-    // The blocks are owned by TryOp, nothing to delete.
-  }
-
-  static bool classof(const EHScope *scope) {
-    return scope->getKind() == Catch;
+  EHScopeStack::stable_iterator getEnclosingEHScope() const {
+    return enclosingEHScope;
   }
 };
 
@@ -174,14 +124,14 @@ public:
     return sizeof(EHCleanupScope) + cleanupBits.cleanupSize;
   }
 
-  EHCleanupScope(unsigned cleanupSize, unsigned fixupDepth,
-                 EHScopeStack::stable_iterator enclosingNormal)
-      : EHScope(EHScope::Cleanup), enclosingNormal(enclosingNormal),
-        fixupDepth(fixupDepth) {
-    // TODO(cir): When exception handling is upstreamed, isNormalCleanup and
-    // isEHCleanup will be arguments to the constructor.
-    cleanupBits.isNormalCleanup = true;
-    cleanupBits.isEHCleanup = false;
+  EHCleanupScope(bool isNormal, bool isEH, unsigned cleanupSize,
+                 unsigned fixupDepth,
+                 EHScopeStack::stable_iterator enclosingNormal,
+                 EHScopeStack::stable_iterator enclosingEH)
+      : EHScope(EHScope::Cleanup, enclosingEH),
+        enclosingNormal(enclosingNormal), fixupDepth(fixupDepth) {
+    cleanupBits.isNormalCleanup = isNormal;
+    cleanupBits.isEHCleanup = isEH;
     cleanupBits.isActive = true;
     cleanupBits.isLifetimeMarker = false;
     cleanupBits.testFlagInNormalCleanup = false;
@@ -199,9 +149,12 @@ public:
   void setNormalBlock(mlir::Block *bb) { normalBlock = bb; }
 
   bool isNormalCleanup() const { return cleanupBits.isNormalCleanup; }
+  bool isEHCleanup() const { return cleanupBits.isEHCleanup; }
 
   bool isActive() const { return cleanupBits.isActive; }
   void setActive(bool isActive) { cleanupBits.isActive = isActive; }
+
+  bool isLifetimeMarker() const { return cleanupBits.isLifetimeMarker; }
 
   unsigned getFixupDepth() const { return fixupDepth; }
   EHScopeStack::stable_iterator getEnclosingNormalCleanup() const {
@@ -234,11 +187,38 @@ public:
 
   EHScope *get() const { return reinterpret_cast<EHScope *>(ptr); }
 
+  EHScope *operator->() const { return get(); }
   EHScope &operator*() const { return *get(); }
+
+  iterator &operator++() {
+    size_t size;
+    switch (get()->getKind()) {
+    case EHScope::Filter:
+      llvm_unreachable("EHScopeStack::iterator Filter");
+      break;
+
+    case EHScope::Cleanup:
+      size = static_cast<const EHCleanupScope *>(get())->getAllocatedSize();
+      break;
+
+    case EHScope::Terminate:
+      llvm_unreachable("EHScopeStack::iterator Terminate");
+      break;
+    }
+    ptr += llvm::alignTo(size, ScopeStackAlignment);
+    return *this;
+  }
+
+  bool operator==(iterator other) const { return ptr == other.ptr; }
+  bool operator!=(iterator other) const { return ptr != other.ptr; }
 };
 
 inline EHScopeStack::iterator EHScopeStack::begin() const {
   return iterator(startOfData);
+}
+
+inline EHScopeStack::iterator EHScopeStack::end() const {
+  return iterator(endOfBuffer);
 }
 
 inline EHScopeStack::iterator
@@ -249,13 +229,53 @@ EHScopeStack::find(stable_iterator savePoint) const {
   return iterator(endOfBuffer - savePoint.size);
 }
 
-inline void EHScopeStack::popCatch() {
-  assert(!empty() && "popping exception stack when not empty");
+/// The exceptions personality for a function.
+struct EHPersonality {
+  const char *personalityFn = nullptr;
 
-  EHCatchScope &scope = llvm::cast<EHCatchScope>(*begin());
-  assert(!cir::MissingFeatures::innermostEHScope());
-  deallocate(EHCatchScope::getSizeForNumHandlers(scope.getNumHandlers()));
-}
+  // If this is non-null, this personality requires a non-standard
+  // function for rethrowing an exception after a catchall cleanup.
+  // This function must have prototype void(void*).
+  const char *catchallRethrowFn = nullptr;
+
+  static const EHPersonality &get(CIRGenModule &cgm,
+                                  const clang::FunctionDecl *fd);
+  static const EHPersonality &get(CIRGenFunction &cgf);
+
+  static const EHPersonality GNU_C;
+  static const EHPersonality GNU_C_SJLJ;
+  static const EHPersonality GNU_C_SEH;
+  static const EHPersonality GNU_ObjC;
+  static const EHPersonality GNU_ObjC_SJLJ;
+  static const EHPersonality GNU_ObjC_SEH;
+  static const EHPersonality GNUstep_ObjC;
+  static const EHPersonality GNU_ObjCXX;
+  static const EHPersonality NeXT_ObjC;
+  static const EHPersonality GNU_CPlusPlus;
+  static const EHPersonality GNU_CPlusPlus_SJLJ;
+  static const EHPersonality GNU_CPlusPlus_SEH;
+  static const EHPersonality MSVC_except_handler;
+  static const EHPersonality MSVC_C_specific_handler;
+  static const EHPersonality MSVC_CxxFrameHandler3;
+  static const EHPersonality GNU_Wasm_CPlusPlus;
+  static const EHPersonality XL_CPlusPlus;
+  static const EHPersonality ZOS_CPlusPlus;
+
+  /// Does this personality use landingpads or the family of pad instructions
+  /// designed to form funclets?
+  bool usesFuncletPads() const {
+    return isMSVCPersonality() || isWasmPersonality();
+  }
+
+  bool isMSVCPersonality() const {
+    return this == &MSVC_except_handler || this == &MSVC_C_specific_handler ||
+           this == &MSVC_CxxFrameHandler3;
+  }
+
+  bool isWasmPersonality() const { return this == &GNU_Wasm_CPlusPlus; }
+
+  bool isMSVCXXPersonality() const { return this == &MSVC_CxxFrameHandler3; }
+};
 
 } // namespace clang::CIRGen
 #endif // CLANG_LIB_CIR_CODEGEN_CIRGENCLEANUP_H

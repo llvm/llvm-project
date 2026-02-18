@@ -76,7 +76,7 @@ protected:
 // number of a different type. e.g.:
 //   ExtractSecondType<Foo..., int>::type
 template <typename Ty1, typename Ty2> struct ExtractSecondType {
-  typedef Ty2 type;
+  using type = Ty2;
 };
 
 // TrailingObjectsImpl is somewhat complicated, because it is a
@@ -101,8 +101,8 @@ class TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, PrevTy, NextTy,
     : public TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, NextTy,
                                  MoreTys...> {
 
-  typedef TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, NextTy, MoreTys...>
-      ParentType;
+  using ParentType =
+      TrailingObjectsImpl<Align, BaseTy, TopTrailingObj, NextTy, MoreTys...>;
 
   struct RequiresRealignment {
     static const bool value = alignof(PrevTy) < alignof(NextTy);

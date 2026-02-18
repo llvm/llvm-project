@@ -118,9 +118,10 @@ The passes to generate DXIL IR follow the flow:
 Each of these passes has a defined responsibility:
 
 #. DXILOpLowering translates LLVM intrinsic calls to dx.op calls.
-#. DXILPrepare transforms the DXIL IR to be compatible with LLVM 3.7, and
-   inserts bitcasts to allow typed pointers to be inserted.
-#. DXILTranslateMetadata emits the DXIL Metadata structures.
+#. DXILPrepare updates functions in the DXIL IR to be compatible with LLVM 3.7,
+   namely removing attributes, and inserting bitcasts to allow typed pointers
+   to be inserted.
+#. DXILTranslateMetadata transforms and emits all recognized DXIL Metadata.
 
 The passes to encode DXIL to binary in the DX Container follow the flow:
 

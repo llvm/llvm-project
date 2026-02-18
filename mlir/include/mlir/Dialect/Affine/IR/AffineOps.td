@@ -16,6 +16,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -35,7 +36,8 @@ class Affine_Op<string mnemonic, list<Trait> traits = []> :
 def ImplicitAffineTerminator
     : SingleBlockImplicitTerminator<"AffineYieldOp">;
 
-def AffineApplyOp : Affine_Op<"apply", [Pure]> {
+def AffineApplyOp : Affine_Op<"apply",
+    [Pure, DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
   let summary = "affine apply operation";
   let description = [{
     The `affine.apply` operation applies an [affine mapping](#affine-maps)
@@ -126,7 +128,7 @@ def AffineForOp : Affine_Op<"for",
       "getLoopUpperBounds", "getYieldedValuesMutable",
       "replaceWithAdditionalYields"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
-     ["getEntrySuccessorOperands"]>]> {
+     ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
   let summary = "for operation";
   let description = [{
     Syntax:
@@ -338,7 +340,8 @@ def AffineForOp : Affine_Op<"for",
 def AffineIfOp : Affine_Op<"if",
                            [ImplicitAffineTerminator, RecursivelySpeculatable,
                             RecursiveMemoryEffects, NoRegionArguments,
-                            DeclareOpInterfaceMethods<RegionBranchOpInterface>
+                            DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                ["getSuccessorInputs"]>
                            ]> {
   let summary = "if-then-else operation";
   let description = [{
@@ -714,7 +717,7 @@ def AffineParallelOp : Affine_Op<"parallel",
     operand_range getUpperBoundsOperands();
     AffineValueMap getUpperBoundsValueMap();
 
-    /// Sets elements fo the loop upper bound.
+    /// Sets elements of the loop upper bound.
     void setUpperBounds(ValueRange operands, AffineMap map);
 
     void setSteps(ArrayRef<int64_t> newSteps);
@@ -999,7 +1002,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
     elemental type, supplied as its second operand.
     The index for each memref dimension is an affine expression of loop
     induction variables and symbols. These indices determine the start position
-    of the write within the memref. The shape of th input vector determines the
+    of the write within the memref. The shape of the input vector determines the
     shape of the slice written to the memref. This slice is contiguous along the
     respective dimensions of the shape. Strided vector stores will be supported
     in the future.
@@ -1188,7 +1191,7 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     If all `N` basis elements are provided, the linearize_index operation is said to
     "have an outer bound".
 
-    As a convenience, and for symmetry with `getPaddedBasis()`, ifg the first
+    As a convenience, and for symmetry with `getPaddedBasis()`, if the first
     element of a set of `OpFoldResult`s passed to the builders of this operation is
     `nullptr`, that element is ignored.
 

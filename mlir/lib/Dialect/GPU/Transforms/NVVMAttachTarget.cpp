@@ -53,6 +53,8 @@ DictionaryAttr NVVMAttachTarget::getFlags(OpBuilder &builder) const {
     addFlag("fast");
   if (ftzFlag)
     addFlag("ftz");
+  if (compilerDiagnosticsFlag)
+    addFlag("collect-compiler-diagnostics");
 
   // Tokenize and set the optional command line options.
   if (!cmdOptions.empty()) {
@@ -80,7 +82,8 @@ void NVVMAttachTarget::runOnOperation() {
   SmallVector<StringRef> filesToLink(libs);
   auto target = builder.getAttr<NVVMTargetAttr>(
       optLevel, triple, chip, features, getFlags(builder),
-      filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink));
+      filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink),
+      verifyTarget);
   llvm::Regex matcher(moduleMatcher);
   for (Region &region : getOperation()->getRegions())
     for (Block &block : region.getBlocks())

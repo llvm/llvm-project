@@ -379,6 +379,19 @@ emitc.func @test_expression_op_outside_expression() {
 
 // -----
 
+func.func @test_expression_recurring_operands(%arg0: i32, %arg1: i32) -> i32 {
+  // expected-error @+1 {{'emitc.expression' with recurring operands expected block arguments}}
+  %r = emitc.expression %arg0, %arg1, %arg0 : (i32, i32, i32) -> i32 {
+    %a = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
+    %b = emitc.add %a, %arg0 : (i32, i32) -> i32
+    %c = emitc.mul %b, %a : (i32, i32) -> i32
+    emitc.yield %c : i32
+  }
+  return %r : i32
+}
+
+// -----
+
 // expected-error @+1 {{'emitc.func' op requires zero or exactly one result, but has 2}}
 emitc.func @multiple_results(%0: i32) -> (i32, i32) {
   emitc.return %0 : i32
@@ -874,5 +887,59 @@ func.func @test_do(%arg0 : !emitc.ptr<i32>) {
     emitc.yield %r: i1
   }
 
+  return
+}
+
+// -----
+
+func.func @test_for_none_block_argument(%arg0: index) {
+  // expected-error@+1 {{expected body to have a single block argument for the induction variable}}
+  "emitc.for"(%arg0, %arg0, %arg0) (
+    {
+      emitc.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @test_for_more_than_one_block_argument(%arg0: index) {
+  // expected-error@+1 {{expected body to have a single block argument for the induction variable}}
+  "emitc.for"(%arg0, %arg0, %arg0) (
+    {
+    ^bb0(%i0 : index, %i1 : index):
+      emitc.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @test_for_unmatch_type(%arg0: index) {
+  // expected-error@+1 {{expected induction variable to be same type as bounds}}
+  "emitc.for"(%arg0, %arg0, %arg0) (
+    {
+    ^bb0(%i0 : f32):
+      emitc.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @address_of(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.address_of"(%arg0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i8>
+  return
+}
+
+// -----
+
+func.func @dereference(%arg0: !emitc.ptr<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.dereference"(%arg0) : (!emitc.ptr<i32>) -> !emitc.lvalue<i8>
   return
 }

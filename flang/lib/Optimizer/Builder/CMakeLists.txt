@@ -5,6 +5,7 @@ add_flang_library(FIRBuilder
   BoxValue.cpp
   Character.cpp
   Complex.cpp
+  CUDAIntrinsicCall.cpp
   CUFCommon.cpp
   DoLoopHelper.cpp
   FIRBuilder.cpp
@@ -46,6 +47,7 @@ add_flang_library(FIRBuilder
   LINK_LIBS
   CUFAttrs
   CUFDialect
+  FIRAnalysis
   FIRDialect
   FIRDialectSupport
   FIRSupport

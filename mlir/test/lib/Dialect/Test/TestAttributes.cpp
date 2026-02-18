@@ -224,6 +224,25 @@ LogicalResult TestCopyCountAttr::verify(
 }
 
 //===----------------------------------------------------------------------===//
+// TestSymbolRefAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+TestSymbolRefAttr::verifySymbolUses(Operation *op,
+                                    SymbolTableCollection &symbolTable) const {
+  // Verify that the referenced symbol exists
+  if (!symbolTable.lookupNearestSymbolFrom<SymbolOpInterface>(op, getSymbol()))
+    return op->emitOpError()
+           << "TestSymbolRefAttr::verifySymbolUses: '" << getSymbol()
+           << "' does not reference a valid symbol";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Generated Attribute Definitions
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
 // CopyCountAttr Implementation
 //===----------------------------------------------------------------------===//
 
@@ -432,6 +451,30 @@ bool TestConstMemorySpaceAttr::isValidPtrIntCast(
   if (emitError)
     emitError() << "memory space doesn't allow int-ptr casts";
   return false;
+}
+
+//===----------------------------------------------------------------------===//
+// TestAttrNewlineAndIndent
+//===----------------------------------------------------------------------===//
+
+Attribute TestAttrNewlineAndIndentAttr::parse(::mlir::AsmParser &parser,
+                                              ::mlir::Type type) {
+  Type indentType;
+  if (parser.parseLess() || parser.parseType(indentType) ||
+      parser.parseGreater()) {
+    return Attribute();
+  }
+  return get(parser.getContext(), indentType);
+}
+
+void TestAttrNewlineAndIndentAttr::print(::mlir::AsmPrinter &printer) const {
+  printer << "<";
+  printer.increaseIndent();
+  printer.printNewline();
+  printer << getIndentType();
+  printer.decreaseIndent();
+  printer.printNewline();
+  printer << ">";
 }
 
 //===----------------------------------------------------------------------===//

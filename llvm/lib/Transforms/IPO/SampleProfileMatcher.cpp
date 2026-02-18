@@ -18,6 +18,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/LongestCommonSequence.h"
 
+#include <unordered_set>
+
 using namespace llvm;
 using namespace sampleprof;
 

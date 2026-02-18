@@ -38,6 +38,7 @@ public:
   Definition(const std::vector<std::string> &argNames, const TokenSequence &,
       std::size_t firstToken, std::size_t tokens, bool isVariadic = false);
   Definition(const std::string &predefined, AllSources &);
+  Definition(const TokenSequence &predefined);
 
   bool isFunctionLike() const { return isFunctionLike_; }
   std::size_t argumentCount() const { return argNames_.size(); }

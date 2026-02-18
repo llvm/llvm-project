@@ -182,6 +182,11 @@ def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
   let methods = [
     InterfaceMethod<"Get alloca block", "::mlir::Block*", "getAllocaBlock",
       (ins), [{
+      // For taskloop: put the allocas inside of the wrapped loop. Loop wrappers
+      // are expected to contain only the wrapped loop (or another loop wrapper)
+      if (LoopWrapperInterface loopWrapper =
+              mlir::dyn_cast<LoopWrapperInterface>($_op.getOperation()))
+        return &loopWrapper.getWrappedLoop()->getRegion(0).front();
       return &$_op.getRegion().front();
       }]>,
   ];

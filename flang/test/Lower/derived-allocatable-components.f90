@@ -241,9 +241,9 @@ subroutine ref_scalar_def_char_a(a0_0, a1_0, a0_1, a1_1)
   ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box]]
   ! CHECK-DAG: %[[base:.*]] = fir.box_addr %[[box]]
   ! CHECK: %[[cast:.*]] = fir.convert %[[base]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
-  ! CHECK: %[[c7:.*]] = fir.convert %c7{{.*}} : (i64) -> index 
-  ! CHECK: %[[sub:.*]] = arith.subi %[[c7]], %[[dims]]#0 : index 
-  ! CHECK: %[[mul:.*]] = arith.muli %[[len]], %[[sub]] : index 
+  ! CHECK: %[[c7:.*]] = fir.convert %c7{{.*}} : (i64) -> index
+  ! CHECK: %[[sub:.*]] = arith.subi %[[c7]], %[[dims]]#0 : index
+  ! CHECK: %[[mul:.*]] = arith.muli %[[len]], %[[sub]] : index
   ! CHECK: %[[offset:.*]] = arith.addi %[[mul]], %c0{{.*}} : index
   ! CHECK: %[[cnvt:.*]] = fir.convert %[[cast]]
   ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[cnvt]], %[[offset]]
@@ -260,9 +260,9 @@ subroutine ref_scalar_def_char_a(a0_0, a1_0, a0_1, a1_1)
   ! CHECK-DAG: %[[len:.*]] = fir.box_elesize %[[box]]
   ! CHECK-DAG: %[[base:.*]] = fir.box_addr %[[box]]
   ! CHECK: %[[cast:.*]] = fir.convert %[[base]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
-  ! CHECK: %[[c7:.*]] = fir.convert %c7{{.*}} : (i64) -> index 
-  ! CHECK: %[[sub:.*]] = arith.subi %[[c7]], %[[dims]]#0 : index 
-  ! CHECK: %[[mul:.*]] = arith.muli %[[len]], %[[sub]] : index 
+  ! CHECK: %[[c7:.*]] = fir.convert %c7{{.*}} : (i64) -> index
+  ! CHECK: %[[sub:.*]] = arith.subi %[[c7]], %[[dims]]#0 : index
+  ! CHECK: %[[mul:.*]] = arith.muli %[[len]], %[[sub]] : index
   ! CHECK: %[[offset:.*]] = arith.addi %[[mul]], %c0{{.*}} : index
   ! CHECK: %[[cnvt:.*]] = fir.convert %[[cast]]
   ! CHECK: %[[addr:.*]] = fir.coordinate_of %[[cnvt]], %[[offset]]

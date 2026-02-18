@@ -36,9 +36,6 @@ using namespace llvm;
 #define DEBUG_TYPE "bugpoint"
 
 bool llvm::DisableSimplifyCFG = false;
-namespace llvm {
-extern cl::opt<std::string> OutputPrefix;
-} // namespace llvm
 
 static cl::opt<bool>
     NoDCE("disable-dce",

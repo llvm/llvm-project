@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @sum = dso_local local_unnamed_addr global i32 0, align 4
 
 declare i32 @bar(i32 %i) #0
-declare void @work(i32 %i) #2
+declare void @work(i32 %i)
 
 define dso_local void @foo() #0 !dbg !29 {
 ; CHECK: Printing analysis {{.*}} for function 'foo':
@@ -141,7 +141,7 @@ if.end9.3:
 ; CHECK: edge %if.end9.3 -> %for.cond1.preheader probability is 0x7f7cb227 / 0x80000000 = 99.60% [HOT edge]
 }
 
-define dso_local i32 @main() #3 !dbg !52 {
+define dso_local i32 @main() !dbg !52 {
 entry:
   br label %for.body, !dbg !53
 
@@ -157,10 +157,8 @@ for.end:
 }
 
 
-attributes #0 = { noinline nounwind uwtable "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile"}
+attributes #0 = { noinline nounwind uwtable "use-sample-profile"}
 attributes #1 = { argmemonly nounwind willreturn }
-attributes #2 = { nofree noinline norecurse nounwind uwtable "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind uwtable "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

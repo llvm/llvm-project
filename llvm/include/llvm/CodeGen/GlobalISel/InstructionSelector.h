@@ -35,9 +35,6 @@ public:
   ///       !isPreISelGenericOpcode(I.getOpcode())
   virtual bool select(MachineInstr &I) = 0;
 
-  // FIXME: Eliminate dependency on TargetPassConfig for NewPM transition
-  const TargetPassConfig *TPC = nullptr;
-
   MachineOptimizationRemarkEmitter *MORE = nullptr;
 
   /// Note: InstructionSelect does not track changed instructions.

@@ -34,7 +34,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #ifdef _WIN32
-#include "llvm/Support/Windows/WindowsSupport.h"
+#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
 #endif
 
 #include <algorithm>
@@ -433,47 +433,6 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   return error;
 }
 
-#if defined(_WIN32) && defined(LLDB_PYTHON_DLL_RELATIVE_PATH)
-/// Returns the full path to the lldb.exe executable.
-inline std::wstring GetPathToExecutableW() {
-  // Iterate until we reach the Windows API maximum path length (32,767).
-  std::vector<WCHAR> buffer;
-  buffer.resize(MAX_PATH /*=260*/);
-  while (buffer.size() < 32767) {
-    if (GetModuleFileNameW(NULL, buffer.data(), buffer.size()) < buffer.size())
-      return std::wstring(buffer.begin(), buffer.end());
-    buffer.resize(buffer.size() * 2);
-  }
-  return L"";
-}
-
-/// Resolve the full path of the directory defined by
-/// LLDB_PYTHON_DLL_RELATIVE_PATH. If it exists, add it to the list of DLL
-/// search directories.
-void AddPythonDLLToSearchPath() {
-  std::wstring modulePath = GetPathToExecutableW();
-  if (modulePath.empty()) {
-    llvm::errs() << "error: unable to find python.dll." << '\n';
-    return;
-  }
-
-  SmallVector<char, MAX_PATH> utf8Path;
-  if (sys::windows::UTF16ToUTF8(modulePath.c_str(), modulePath.length(),
-                                utf8Path))
-    return;
-  sys::path::remove_filename(utf8Path);
-  sys::path::append(utf8Path, LLDB_PYTHON_DLL_RELATIVE_PATH);
-  sys::fs::make_absolute(utf8Path);
-
-  SmallVector<wchar_t, 1> widePath;
-  if (sys::windows::widenPath(utf8Path.data(), widePath))
-    return;
-
-  if (sys::fs::exists(utf8Path))
-    SetDllDirectoryW(widePath.data());
-}
-#endif
-
 std::string EscapeString(std::string arg) {
   std::string::size_type pos = 0;
   while ((pos = arg.find_first_of("\"\\", pos)) != std::string::npos) {
@@ -591,7 +550,7 @@ int Driver::MainLoop() {
   // Check if we have any data in the commands stream, and if so, save it to a
   // temp file
   // so we can then run the command interpreter using the file contents.
-  bool go_interactive = true;
+  bool go_interactive = !m_option_data.m_batch;
   if ((commands_stream.GetData() != nullptr) &&
       (commands_stream.GetSize() != 0u)) {
     SBError error = m_debugger.SetInputString(commands_stream.GetData());
@@ -629,6 +588,7 @@ int Driver::MainLoop() {
     if (m_option_data.m_batch &&
         results.GetResult() == lldb::eCommandInterpreterResultInferiorCrash &&
         !m_option_data.m_after_crash_commands.empty()) {
+      go_interactive = true;
       SBStream crash_commands_stream;
       WriteCommandsForSourcing(eCommandPlacementAfterCrash,
                                crash_commands_stream);
@@ -776,8 +736,11 @@ int main(int argc, char const *argv[]) {
                         "~/Library/Logs/DiagnosticReports/.\n");
 #endif
 
-#if defined(_WIN32) && defined(LLDB_PYTHON_DLL_RELATIVE_PATH)
-  AddPythonDLLToSearchPath();
+#ifdef _WIN32
+  auto python_path_or_err = SetupPythonRuntimeLibrary();
+  if (!python_path_or_err)
+    llvm::WithColor::error()
+        << llvm::toString(python_path_or_err.takeError()) << '\n';
 #endif
 
   // Parse arguments.
@@ -902,9 +865,10 @@ int main(int argc, char const *argv[]) {
   }
 
 #if !defined(_WIN32)
-  signal_loop.AddPendingCallback(
-      [](MainLoopBase &loop) { loop.RequestTermination(); });
-  signal_thread.join();
+  // Try to interrupt the signal thread.  If that succeeds, wait for it to exit.
+  if (signal_loop.AddPendingCallback(
+          [](MainLoopBase &loop) { loop.RequestTermination(); }))
+    signal_thread.join();
 #endif
 
   return exit_code;

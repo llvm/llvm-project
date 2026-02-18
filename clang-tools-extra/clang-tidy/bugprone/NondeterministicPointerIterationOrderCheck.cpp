@@ -15,7 +15,6 @@ namespace clang::tidy::bugprone {
 
 void NondeterministicPointerIterationOrderCheck::registerMatchers(
     MatchFinder *Finder) {
-
   auto LoopVariable = varDecl(hasType(
       qualType(hasCanonicalType(anyOf(referenceType(), pointerType())))));
 
@@ -60,7 +59,7 @@ void NondeterministicPointerIterationOrderCheck::check(
           TemplateArgs[0].getAsType()->isPointerType();
 
       if (IsAlgoArgPointer) {
-        SourceRange R = RangeInit->getSourceRange();
+        const SourceRange R = RangeInit->getSourceRange();
         diag(R.getBegin(), "iteration of pointers is nondeterministic") << R;
       }
     }
@@ -69,7 +68,7 @@ void NondeterministicPointerIterationOrderCheck::check(
   const auto *SortPointers = Result.Nodes.getNodeAs<Stmt>("sortsemantic");
 
   if ((SortPointers) && !(SortPointers->getBeginLoc().isMacroID())) {
-    SourceRange R = SortPointers->getSourceRange();
+    const SourceRange R = SortPointers->getSourceRange();
     diag(R.getBegin(), "sorting pointers is nondeterministic") << R;
   }
 }

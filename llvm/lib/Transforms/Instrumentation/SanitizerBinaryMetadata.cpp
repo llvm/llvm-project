@@ -481,15 +481,18 @@ StringRef SanitizerBinaryMetadata::getSectionEnd(StringRef SectionSuffix) {
 } // namespace
 
 SanitizerBinaryMetadataPass::SanitizerBinaryMetadataPass(
-    SanitizerBinaryMetadataOptions Opts, ArrayRef<std::string> IgnorelistFiles)
-    : Options(std::move(Opts)), IgnorelistFiles(std::move(IgnorelistFiles)) {}
+    SanitizerBinaryMetadataOptions Opts,
+    IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+    ArrayRef<std::string> IgnorelistFiles)
+    : Options(std::move(Opts)),
+      VFS(VFS ? std::move(VFS) : vfs::getRealFileSystem()),
+      IgnorelistFiles(std::move(IgnorelistFiles)) {}
 
 PreservedAnalyses
 SanitizerBinaryMetadataPass::run(Module &M, AnalysisManager<Module> &AM) {
   std::unique_ptr<SpecialCaseList> Ignorelist;
   if (!IgnorelistFiles.empty()) {
-    Ignorelist = SpecialCaseList::createOrDie(IgnorelistFiles,
-                                              *vfs::getRealFileSystem());
+    Ignorelist = SpecialCaseList::createOrDie(IgnorelistFiles, *VFS);
     if (Ignorelist->inSection("metadata", "src", M.getSourceFileName()))
       return PreservedAnalyses::all();
   }

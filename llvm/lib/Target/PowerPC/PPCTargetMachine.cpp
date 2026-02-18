@@ -145,6 +145,7 @@ LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
   initializePPCCTRLoopsPass(PR);
   initializePPCDAGToDAGISelLegacyPass(PR);
+  initializePPCPrepareIFuncsOnAIXPass(PR);
   initializePPCLinuxAsmPrinterPass(PR);
   initializePPCAIXAsmPrinterPass(PR);
 }
@@ -296,8 +297,9 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU,
-                               computeFSAdditions(FS, OL, TT), Options,
+    : CodeGenTargetMachineImpl(T,
+                               TT.computeDataLayout(Options.MCOptions.ABIName),
+                               TT, CPU, computeFSAdditions(FS, OL, TT), Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
@@ -436,6 +438,9 @@ void PPCPassConfig::addIRPasses() {
     // invariant.
     addPass(createLICMPass());
   }
+
+  if (TM->getTargetTriple().isOSAIX())
+    addPass(createPPCPrepareIFuncsOnAIXPass());
 
   TargetPassConfig::addIRPasses();
 }

@@ -94,6 +94,7 @@ int get_value(int *p) SHARED_LOCKS_REQUIRED(foo_.mu_){
 }
 
 void unlock_scope(struct Mutex *const *mu) __attribute__((release_capability(**mu)));
+void unlock_scope_type_erased(int **priv) __attribute__((release_capability(*(struct Mutex **)priv)));
 
 // Verify late parsing:
 #ifdef LATE_PARSING
@@ -191,6 +192,19 @@ int main(void) {
     struct Mutex* const __attribute__((unused, cleanup(unlock_scope))) scope = &mu1;
     mutex_exclusive_lock(&mu1);  // With basic alias analysis lock through mu1 also works.
   }
+  {
+    int i = 0;
+    mutex_exclusive_lock(&mu1);
+    struct Mutex* const __attribute__((unused, cleanup(unlock_scope))) scope = &mu1;
+    i++;
+  }
+  // Cleanup through cast alias pointer in a for-loop; a variant of this pattern
+  // appears in the Linux kernel for generic scoped guard macros.
+  for (int i = (mutex_exclusive_lock(foo_.mu_), 0),
+       *priv __attribute__((cleanup(unlock_scope_type_erased))) = (int *)(__UINTPTR_TYPE__)(foo_.mu_);
+       !i; i++) {
+    a_ = 42;
+  }
 
   foo_.a_value = 0; // expected-warning {{writing variable 'a_value' requires holding mutex 'mu_' exclusively}}
   *foo_.a_ptr = 1; // expected-warning {{writing the value pointed to by 'a_ptr' requires holding mutex 'bar.other_mu' exclusively}}
@@ -238,6 +252,34 @@ void test_reentrant(void) {
   r_ = 1;
   reentrant_mutex_unlock(&rmu);
   r_ = 1; // expected-warning{{writing variable 'r_' requires holding mutex 'rmu' exclusively}}
+}
+
+// In C code, object construction may want to initialize guarded members
+// alongside a capability (initialization implies exclusive access); to do so,
+// we can assert a capability as part of its initialization. To permit immediate
+// use of the capability, it is necessarily to "promote" the type to a reentrant
+// capability for the rest of the scope. While this avoids the false positive
+// warning on member initialization and immediate use, it does pose the danger
+// of false negatives (no warning on actual double-lock in the same function).
+void mutex_init(struct Mutex *mu) ASSERT_EXCLUSIVE_LOCK((struct ReentrantMutex *)mu);
+
+struct TestInit {
+  struct Mutex mu;
+  int a GUARDED_BY(&mu);
+};
+
+struct TestInit test_init(void) {
+  struct TestInit foo;
+
+  mutex_init(&foo.mu); // initialize capability before guarded members
+  foo.a = 0;           // initialize guarded members normally
+
+  // It should be allowed to immediately use the capability in the same
+  // function, such as after spawning a thread.
+  mutex_exclusive_lock(&foo.mu);
+  mutex_exclusive_unlock(&foo.mu);
+
+  return foo;
 }
 
 // We had a problem where we'd skip all attributes that follow a late-parsed

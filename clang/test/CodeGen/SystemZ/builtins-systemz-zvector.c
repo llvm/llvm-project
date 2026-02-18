@@ -3584,13 +3584,13 @@ void test_integer(void) {
   // CHECK-ASM: vsrlb
 
   vsc = vec_abs(vsc);
-  // CHECK-ASM: vlcb
+  // CHECK-ASM: vlpb
   vss = vec_abs(vss);
-  // CHECK-ASM: vlch
+  // CHECK-ASM: vlph
   vsi = vec_abs(vsi);
-  // CHECK-ASM: vlcf
+  // CHECK-ASM: vlpf
   vsl = vec_abs(vsl);
-  // CHECK-ASM: vlcg
+  // CHECK-ASM: vlpg
 
   vsc = vec_max(vsc, vsc);
   // CHECK-ASM: vmxb
@@ -4812,19 +4812,19 @@ void test_float(void) {
   // (emulated)
   vd = vec_ctd(vsl, 1);
   // CHECK: [[VAL:%[^ ]+]] = sitofp <2 x i64> %{{.*}} to <2 x double>
-  // CHECK: fmul <2 x double> [[VAL]], splat (double 5.000000e-01)
+  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double 5.000000e-01)
   // (emulated)
   vd = vec_ctd(vul, 1);
   // CHECK: [[VAL:%[^ ]+]] = uitofp <2 x i64> %{{.*}} to <2 x double>
-  // CHECK: fmul <2 x double> [[VAL]], splat (double 5.000000e-01)
+  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double 5.000000e-01)
   // (emulated)
   vd = vec_ctd(vsl, 31);
   // CHECK: [[VAL:%[^ ]+]] = sitofp <2 x i64> %{{.*}} to <2 x double>
-  // CHECK: fmul <2 x double> [[VAL]], splat (double 0x3E00000000000000)
+  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double 0x3E00000000000000)
   // (emulated)
   vd = vec_ctd(vul, 31);
   // CHECK: [[VAL:%[^ ]+]] = uitofp <2 x i64> %{{.*}} to <2 x double>
-  // CHECK: fmul <2 x double> [[VAL]], splat (double 0x3E00000000000000)
+  // CHECK: fmul nnan <2 x double> [[VAL]], splat (double 0x3E00000000000000)
   // (emulated)
 
   vsl = vec_ctsl(vd, 0);

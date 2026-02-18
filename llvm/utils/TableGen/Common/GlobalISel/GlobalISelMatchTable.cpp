@@ -440,9 +440,7 @@ bool LLTCodeGen::operator<(const LLTCodeGen &Other) const {
 
 //===- LLTCodeGen Helpers -------------------------------------------------===//
 
-std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT::SimpleValueType SVT) {
-  MVT VT(SVT);
-
+std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT VT) {
   if (VT.isVector() && !VT.getVectorElementCount().isScalar())
     return LLTCodeGen(
         LLT::vector(VT.getVectorElementCount(), VT.getScalarSizeInBits()));
@@ -457,7 +455,7 @@ std::optional<LLTCodeGen> llvm::gi::MVTToLLT(MVT::SimpleValueType SVT) {
 
 void Matcher::optimize() {}
 
-Matcher::~Matcher() {}
+Matcher::~Matcher() = default;
 
 //===- GroupMatcher -------------------------------------------------------===//
 
@@ -1150,11 +1148,11 @@ void RuleMatcher::insnmatchers_pop_front() { Matchers.erase(Matchers.begin()); }
 
 //===- PredicateMatcher ---------------------------------------------------===//
 
-PredicateMatcher::~PredicateMatcher() {}
+PredicateMatcher::~PredicateMatcher() = default;
 
 //===- OperandPredicateMatcher --------------------------------------------===//
 
-OperandPredicateMatcher::~OperandPredicateMatcher() {}
+OperandPredicateMatcher::~OperandPredicateMatcher() = default;
 
 bool OperandPredicateMatcher::isHigherPriorityThan(
     const OperandPredicateMatcher &B) const {
@@ -1941,7 +1939,7 @@ bool InstructionOperandMatcher::isHigherPriorityThan(
 
 //===- OperandRenderer ----------------------------------------------------===//
 
-OperandRenderer::~OperandRenderer() {}
+OperandRenderer::~OperandRenderer() = default;
 
 //===- CopyRenderer -------------------------------------------------------===//
 
@@ -2074,7 +2072,8 @@ void AddRegisterRenderer::emitRenderOpcodes(MatchTable &Table,
   // register and flags in a single field.
   if (IsDef) {
     Table << MatchTable::NamedValue(
-        2, IsDead ? "RegState::Define | RegState::Dead" : "RegState::Define");
+        2, IsDead ? "static_cast<uint16_t>(RegState::Define|RegState::Dead)"
+                  : "static_cast<uint16_t>(RegState::Define)");
   } else {
     assert(!IsDead && "A use cannot be dead");
     Table << MatchTable::IntValue(2, 0);
@@ -2107,9 +2106,10 @@ void TempRegRenderer::emitRenderOpcodes(MatchTable &Table,
   Table << MatchTable::Comment("TempRegFlags");
   if (IsDef) {
     SmallString<32> RegFlags;
-    RegFlags += "RegState::Define";
+    RegFlags += "static_cast<uint16_t>(RegState::Define";
     if (IsDead)
       RegFlags += "|RegState::Dead";
+    RegFlags += ")";
     Table << MatchTable::NamedValue(2, RegFlags);
   } else {
     Table << MatchTable::IntValue(2, 0);
@@ -2302,7 +2302,8 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
               << MatchTable::Comment("InsnID")
               << MatchTable::ULEB128Value(InsnID)
               << MatchTable::NamedValue(2, Namespace, Def->getName())
-              << (IsDead ? MatchTable::NamedValue(2, "RegState", "Dead")
+              << (IsDead ? MatchTable::NamedValue(
+                               2, "static_cast<unsigned>(RegState::Dead)")
                          : MatchTable::IntValue(2, 0))
               << MatchTable::LineBreak;
       }

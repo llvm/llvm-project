@@ -156,23 +156,23 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(Ctx &ctx,
 
   std::pair<ELFKind, uint16_t> ret =
       StringSwitch<std::pair<ELFKind, uint16_t>>(s)
-          .Cases("aarch64elf", "aarch64linux", {ELF64LEKind, EM_AARCH64})
-          .Cases("aarch64elfb", "aarch64linuxb", {ELF64BEKind, EM_AARCH64})
-          .Cases("armelf", "armelf_linux_eabi", {ELF32LEKind, EM_ARM})
-          .Cases("armelfb", "armelfb_linux_eabi", {ELF32BEKind, EM_ARM})
+          .Cases({"aarch64elf", "aarch64linux"}, {ELF64LEKind, EM_AARCH64})
+          .Cases({"aarch64elfb", "aarch64linuxb"}, {ELF64BEKind, EM_AARCH64})
+          .Cases({"armelf", "armelf_linux_eabi"}, {ELF32LEKind, EM_ARM})
+          .Cases({"armelfb", "armelfb_linux_eabi"}, {ELF32BEKind, EM_ARM})
           .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
-          .Cases("elf32btsmip", "elf32btsmipn32", {ELF32BEKind, EM_MIPS})
-          .Cases("elf32ltsmip", "elf32ltsmipn32", {ELF32LEKind, EM_MIPS})
+          .Cases({"elf32btsmip", "elf32btsmipn32"}, {ELF32BEKind, EM_MIPS})
+          .Cases({"elf32ltsmip", "elf32ltsmipn32"}, {ELF32LEKind, EM_MIPS})
           .Case("elf32lriscv", {ELF32LEKind, EM_RISCV})
-          .Cases("elf32ppc", "elf32ppclinux", {ELF32BEKind, EM_PPC})
-          .Cases("elf32lppc", "elf32lppclinux", {ELF32LEKind, EM_PPC})
+          .Cases({"elf32ppc", "elf32ppclinux"}, {ELF32BEKind, EM_PPC})
+          .Cases({"elf32lppc", "elf32lppclinux"}, {ELF32LEKind, EM_PPC})
           .Case("elf32loongarch", {ELF32LEKind, EM_LOONGARCH})
           .Case("elf64btsmip", {ELF64BEKind, EM_MIPS})
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
           .Case("elf64lriscv", {ELF64LEKind, EM_RISCV})
           .Case("elf64ppc", {ELF64BEKind, EM_PPC64})
           .Case("elf64lppc", {ELF64LEKind, EM_PPC64})
-          .Cases("elf_amd64", "elf_x86_64", {ELF64LEKind, EM_X86_64})
+          .Cases({"elf_amd64", "elf_x86_64"}, {ELF64LEKind, EM_X86_64})
           .Case("elf_i386", {ELF32LEKind, EM_386})
           .Case("elf_iamcu", {ELF32LEKind, EM_IAMCU})
           .Case("elf64_sparc", {ELF64BEKind, EM_SPARCV9})
@@ -236,8 +236,10 @@ bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
       IRObjectFile::findBitcodeInMemBuffer(mb);
   if (errorToBool(fatLTOData.takeError()))
     return false;
-  files.push_back(std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
-                                                offsetInArchive, lazy));
+  auto file = std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
+                                            offsetInArchive, lazy);
+  file->obj->fatLTOObject(true);
+  files.push_back(std::move(file));
   return true;
 }
 
@@ -1155,7 +1157,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
 
   SmallSetVector<StringRef, 0> vtableSymbolsWithNoRTTI;
   for (StringRef s : vtableSymbols)
-    if (!typeInfoSymbols.count(s))
+    if (!typeInfoSymbols.contains(s))
       vtableSymbolsWithNoRTTI.insert(s);
 
   // Remove known safe symbols.
@@ -2315,11 +2317,11 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &args) {
 // This is not a popular option, but some programs such as bionic libc use it.
 static void excludeLibs(Ctx &ctx, opt::InputArgList &args) {
   DenseSet<StringRef> libs = getExcludeLibs(args);
-  bool all = libs.count("ALL");
+  bool all = libs.contains("ALL");
 
   auto visit = [&](InputFile *file) {
     if (file->archiveName.empty() ||
-        !(all || libs.count(path::filename(file->archiveName))))
+        !(all || libs.contains(path::filename(file->archiveName))))
       return;
     ArrayRef<Symbol *> symbols = file->getSymbols();
     if (isa<ELFFileBase>(file))
@@ -2687,7 +2689,7 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
   for (BitcodeFile *file : ctx.lazyBitcodeFiles)
     bufs.insert(file->mb.getBufferStart());
   for (MemoryBuffer &mb : llvm::make_pointee_range(ctx.memoryBuffers))
-    if (bufs.count(mb.getBufferStart()))
+    if (bufs.contains(mb.getBufferStart()))
       mb.dontNeedIfMmap();
 }
 

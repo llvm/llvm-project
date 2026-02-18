@@ -1,10 +1,9 @@
-# RUN: not --crash llc -o - -mtriple=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
+
 ---
-name:            g_merge_values
-tracksRegLiveness: true
-liveins:
-body:             |
+name: g_merge_values
+body: |
   bb.0:
     %0:_(s32) = IMPLICIT_DEF
     %1:_(s32) = IMPLICIT_DEF
@@ -24,5 +23,4 @@ body:             |
 
     ; CHECK: Bad machine code: G_MERGE_VALUES source types do not match
     %8:_(s64) = G_MERGE_VALUES %0, %7
-
 ...
