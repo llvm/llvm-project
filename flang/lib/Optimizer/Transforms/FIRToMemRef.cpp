@@ -472,39 +472,36 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     converted =
         fir::ConvertOp::create(rewriter, loc, memrefTy, blockArg).getResult();
     rewriter.setInsertionPointAfter(arrayCoorOp);
+  } else if ((memref = firMemref.getDefiningOp()) &&
+             enableFIRConvertOptimizations && isMarshalLike(memref) &&
+             !fir::isa_fir_type(firMemref.getType())) {
+    converted = firMemref;
+    rewriter.setInsertionPoint(arrayCoorOp);
   } else {
-    memref = firMemref.getDefiningOp();
-    if (enableFIRConvertOptimizations && isMarshalLike(memref) &&
-        !fir::isa_fir_type(firMemref.getType())) {
-      converted = firMemref;
-      rewriter.setInsertionPoint(arrayCoorOp);
-    } else {
-      Operation *arrayCoorOperation = arrayCoorOp.getOperation();
-      rewriter.setInsertionPoint(arrayCoorOp);
-      if (memrefIsOptional(memref)) {
-        auto ifOp = arrayCoorOperation->getParentOfType<scf::IfOp>();
-        if (ifOp) {
-          Operation *condition = ifOp.getCondition().getDefiningOp();
-          if (condition && isa<fir::IsPresentOp>(condition))
-            if (condition->getOperand(0) == firMemref) {
-              if (arrayCoorOperation->getParentRegion() ==
-                  &ifOp.getThenRegion())
-                rewriter.setInsertionPointToStart(
-                    &(ifOp.getThenRegion().front()));
-              else if (arrayCoorOperation->getParentRegion() ==
-                       &ifOp.getElseRegion())
-                rewriter.setInsertionPointToStart(
-                    &(ifOp.getElseRegion().front()));
-            }
-        }
+    Operation *arrayCoorOperation = arrayCoorOp.getOperation();
+    rewriter.setInsertionPoint(arrayCoorOp);
+    if (memrefIsOptional(memref)) {
+      auto ifOp = arrayCoorOperation->getParentOfType<scf::IfOp>();
+      if (ifOp) {
+        Operation *condition = ifOp.getCondition().getDefiningOp();
+        if (condition && isa<fir::IsPresentOp>(condition))
+          if (condition->getOperand(0) == firMemref) {
+            if (arrayCoorOperation->getParentRegion() == &ifOp.getThenRegion())
+              rewriter.setInsertionPointToStart(
+                  &(ifOp.getThenRegion().front()));
+            else if (arrayCoorOperation->getParentRegion() ==
+                     &ifOp.getElseRegion())
+              rewriter.setInsertionPointToStart(
+                  &(ifOp.getElseRegion().front()));
+          }
       }
-
-      converted = getFIRConvert(memOp, memref, rewriter, typeConverter);
-      if (failed(converted))
-        return failure();
-
-      rewriter.setInsertionPointAfter(arrayCoorOp);
     }
+
+    converted = getFIRConvert(memOp, memref, rewriter, typeConverter);
+    if (failed(converted))
+      return failure();
+
+    rewriter.setInsertionPointAfter(arrayCoorOp);
   }
 
   Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
