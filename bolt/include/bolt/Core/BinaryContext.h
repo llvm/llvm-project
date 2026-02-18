@@ -39,6 +39,7 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
@@ -677,6 +678,8 @@ public:
   std::unique_ptr<MCCodeEmitter> MCE;
 
   std::unique_ptr<MCObjectFileInfo> MOFI;
+
+  MCTargetOptions MCOptions;
 
   std::unique_ptr<const MCAsmInfo> AsmInfo;
 

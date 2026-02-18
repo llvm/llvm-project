@@ -23,6 +23,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+xsfmm64a64f %s -o - | FileCheck --check-prefixes=CHECK,RV64XSFMM64A64F %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xsfmm64t %s -o - | FileCheck --check-prefixes=CHECK,RV64XSFMM64T %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xsfmmbase %s -o - | FileCheck --check-prefixes=CHECK,RV64XSFMMBASE %s
+; RUN: llc -mtriple=riscv64 -mattr=+xsfmm32a %s -o - | FileCheck --check-prefixes=CHECK,RV64XSFMM32A %s
+; RUN: llc -mtriple=riscv64 -mattr=+xsfmm32a8i,+xsfmm32a16f,+xsfmm32a32f %s -o - | FileCheck --check-prefixes=CHECK,RV64COMBINEINTOXSFMM32A %s
 
 ; CHECK: .attribute 4, 16
 
@@ -49,6 +51,8 @@
 ; RV64XSFMM64A64F: .attribute 5, "rv64i2p1_f2p2_d2p2_zicsr2p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl32b1p0_zvl64b1p0_xsfmm64a64f0p6_xsfmmbase0p6"
 ; RV64XSFMM64T: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl128b1p0_zvl256b1p0_zvl32b1p0_zvl64b1p0_xsfmm64t0p6_xsfmmbase0p6"
 ; RV64XSFMMBASE: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_xsfmmbase0p6"
+; RV64XSFMM32A: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvl32b1p0_xsfmm32a0p6_xsfmm32a16f0p6_xsfmm32a32f0p6_xsfmm32a8i0p6_xsfmmbase0p6"
+; RV64COMBINEINTOXSFMM32A: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvl32b1p0_xsfmm32a0p6_xsfmm32a16f0p6_xsfmm32a32f0p6_xsfmm32a8i0p6_xsfmmbase0p6"
 
 define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1
