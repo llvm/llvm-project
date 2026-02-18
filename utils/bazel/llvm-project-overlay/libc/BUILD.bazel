@@ -3240,6 +3240,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
     ],
 )
 
