@@ -75,6 +75,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPActiveLaneMaskPHISC:
   case VPCanonicalIVPHISC:
+  case VPCurrentIterationPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
@@ -449,7 +450,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Load:
   case VPInstruction::BranchOnCond:
   case VPInstruction::Broadcast:
-  case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractLastPart:
@@ -472,6 +472,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
+  case VPInstruction::CalculateTripCountMinusVF:
     return 2;
   case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
@@ -627,11 +628,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateVectorSpliceRight(V1, V2, 1, Name);
   }
   case VPInstruction::CalculateTripCountMinusVF: {
-    unsigned UF = getParent()->getPlan()->getConcreteUF();
     Value *ScalarTC = State.get(getOperand(0), VPLane(0));
-    Value *Step = createStepForVF(Builder, ScalarTC->getType(), State.VF, UF);
-    Value *Sub = Builder.CreateSub(ScalarTC, Step);
-    Value *Cmp = Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, Step);
+    Value *VFxUF = State.get(getOperand(1), VPLane(0));
+    Value *Sub = Builder.CreateSub(ScalarTC, VFxUF);
+    Value *Cmp =
+        Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, VFxUF);
     Value *Zero = ConstantInt::getNullValue(ScalarTC->getType());
     return Builder.CreateSelect(Cmp, Sub, Zero);
   }
@@ -652,13 +653,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return EVL;
   }
   case VPInstruction::CanonicalIVIncrementForPart: {
-    unsigned Part = getUnrollPart(*this);
     auto *IV = State.get(getOperand(0), VPLane(0));
-    assert(Part != 0 && "Must have a positive part");
+    auto *VFxPart = State.get(getOperand(1), VPLane(0));
     // The canonical IV is incremented by the vectorization factor (num of
     // SIMD elements) times the unroll part.
-    Value *Step = createStepForVF(Builder, IV->getType(), State.VF, Part);
-    return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(),
+    return Builder.CreateAdd(IV, VFxPart, Name, hasNoUnsignedWrap(),
                              hasNoSignedWrap());
   }
   case VPInstruction::BranchOnCond: {
@@ -4673,9 +4672,9 @@ void VPActiveLaneMaskPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPEVLBasedIVPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
-                                        VPSlotTracker &SlotTracker) const {
-  O << Indent << "EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI ";
+void VPCurrentIterationPHIRecipe::printRecipe(
+    raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
+  O << Indent << "CURRENT-ITERATION-PHI ";
 
   printAsOperand(O, SlotTracker);
   O << " = phi ";
