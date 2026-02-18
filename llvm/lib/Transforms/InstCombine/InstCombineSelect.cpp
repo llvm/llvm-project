@@ -2773,8 +2773,8 @@ static Value *foldSelectCmpXchg(SelectInst &SI) {
     //   %success = extractvalue { i32, i1 } %cmpxchg, 1
     //   %val.bc = bitcast i32 %val to float
     //   %sel = select i1 %success, float %compare, float %val.bc
-    if (I == 0 && isa<BitCastInst>(V))
-      V = cast<BitCastInst>(V)->getOperand(0);
+    if (auto *BI = dyn_cast<BitCastInst>(V); BI && I == 0)
+      V = BI->getOperand(0);
     auto *Extract = dyn_cast<ExtractValueInst>(V);
     if (!Extract)
       return nullptr;
@@ -2784,13 +2784,14 @@ static Value *foldSelectCmpXchg(SelectInst &SI) {
   };
 
   // Check if the compare value of a cmpxchg matches another value.
-  auto isCompareSameAsValue = [](Value *C, Value *V) {
-    // The values match if they are the same or %C = bitcast %V (see above).
-    if (C == V || match(C, m_BitCast(m_Specific(V))))
+  auto isCompareSameAsValue = [](Value *CmpVal, Value *SelVal) {
+    // The values match if they are the same or %CmpVal = bitcast %SelVal (see
+    // above).
+    if (CmpVal == SelVal || match(CmpVal, m_BitCast(m_Specific(SelVal))))
       return true;
     // For FP constants, the value may have been bitcast to Int directly.
-    auto *IntC = dyn_cast<ConstantInt>(C);
-    auto *FpC = dyn_cast<ConstantFP>(V);
+    auto *IntC = dyn_cast<ConstantInt>(CmpVal);
+    auto *FpC = dyn_cast<ConstantFP>(SelVal);
     return IntC && FpC && IntC->getValue() == FpC->getValue().bitcastToAPInt();
   };
 
