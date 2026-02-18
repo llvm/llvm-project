@@ -17,6 +17,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Compiler.h"
@@ -498,6 +499,41 @@ private:
   IntrusiveRefCntPtr<FileSystem> FS;
 
   void anchor() override;
+};
+
+class LLVM_ABI CaseInsensitiveFileSystem
+    : public RTTIExtends<CaseInsensitiveFileSystem, FileSystem> {
+  IntrusiveRefCntPtr<FileSystem> FS;
+
+  /// Map from directory to map from lowercase to real-case filename.
+  StringMap<StringMap<std::string>> Maps;
+
+public:
+  static const char ID;
+  CaseInsensitiveFileSystem(IntrusiveRefCntPtr<FileSystem> FS)
+      : FS(std::move(FS)) {}
+
+  llvm::ErrorOr<Status> status(const Twine &Path) override;
+  llvm::ErrorOr<std::unique_ptr<File>>
+  openFileForRead(const Twine &Path) override;
+  directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
+  llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
+    return FS->getCurrentWorkingDirectory();
+  }
+  std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
+    Maps.clear();
+    return FS->setCurrentWorkingDirectory(Path);
+  }
+
+protected:
+  /// Attempt to exclude the possibility that File exists in Dir based on
+  /// previous information.
+  bool exclude(StringRef Dir, uint32_t DirHash, StringRef File);
+
+  /// Try to find Path by means of case-insensitive lookup. Stores the result in
+  /// FoundPath on success, or returns an error code otherwise.
+  std::error_code findCaseInsensitivePath(StringRef Path,
+                                          SmallVectorImpl<char> &FoundPath);
 };
 
 namespace detail {

@@ -1523,24 +1523,28 @@ std::optional<std::string> getReproduceFile(const opt::InputArgList &args) {
 
 static std::unique_ptr<llvm::vfs::FileSystem>
 getVFS(COFFLinkerContext &ctx, const opt::InputArgList &args) {
-  using namespace llvm::vfs;
+  auto overlayFs = [&]() -> std::unique_ptr<vfs::FileSystem> {
+    const opt::Arg *arg = args.getLastArg(OPT_vfsoverlay);
+    if (!arg)
+      return nullptr;
 
-  const opt::Arg *arg = args.getLastArg(OPT_vfsoverlay);
-  if (!arg)
+    auto bufOrErr = llvm::MemoryBuffer::getFile(arg->getValue());
+    if (!bufOrErr) {
+      checkError(errorCodeToError(bufOrErr.getError()));
+      return nullptr;
+    }
+
+    if (auto ret = vfs::getVFSFromYAML(
+            std::move(*bufOrErr), /*DiagHandler*/ nullptr, arg->getValue()))
+      return ret;
+
+    Err(ctx) << "Invalid vfs overlay";
     return nullptr;
-
-  auto bufOrErr = llvm::MemoryBuffer::getFile(arg->getValue());
-  if (!bufOrErr) {
-    checkError(errorCodeToError(bufOrErr.getError()));
-    return nullptr;
-  }
-
-  if (auto ret = vfs::getVFSFromYAML(std::move(*bufOrErr),
-                                     /*DiagHandler*/ nullptr, arg->getValue()))
-    return ret;
-
-  Err(ctx) << "Invalid vfs overlay";
-  return nullptr;
+  }();
+  if (args.hasArg(OPT_case_insensitive_paths))
+    return std::make_unique<vfs::CaseInsensitiveFileSystem>(
+        overlayFs ? std::move(overlayFs) : vfs::getRealFileSystem());
+  return overlayFs;
 }
 
 static StringRef DllDefaultEntryPoint(MachineTypes machine, bool mingw) {
