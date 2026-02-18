@@ -2,6 +2,7 @@
 #include <OffloadAPI.h>
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
@@ -54,25 +55,27 @@ Error deinit() {
   return Error::success();
 }
 
-int dumpBuffer(StringRef Base, StringRef Label, int BufferId, StringRef Ext,
-               const char *Buffer, size_t Size) {
-  std::string Filename =
-      formatv("{0}_{1}_{2}.{3}", Base.str(), Label.str(), BufferId, Ext.str());
+int dumpBuffer(StringRef Filename, const char *Buffer, size_t Size) {
   std::error_code EC;
   raw_fd_ostream FS(Filename, EC, llvm::sys::fs::OF_None);
   if (EC) {
-    std::cout << "Error saving " << Label.str() << " image : " << EC.message();
+    std::cout << "Error saving " << Filename.str()
+              << " image : " << EC.message();
     return 1;
   }
   FS.write(Buffer, Size);
   FS.close();
-  std::cout << "Saved " << Filename << "\n";
+  std::cout << "Saved " << Filename.str() << "\n";
   return 0;
 }
 
-int dumpBuffer(StringRef Base, StringRef Label, int BufferId, StringRef Ext,
-               StringRef Buffer) {
-  return dumpBuffer(Base, Label, BufferId, Ext, Buffer.data(), Buffer.size());
+int dumpBuffer(StringRef Filename, StringRef Buffer) {
+  return dumpBuffer(Filename, Buffer.data(), Buffer.size());
+}
+
+template <typename... Args>
+std::string makeFilename(StringRef ext, Args &&...args) {
+  return join_items("_", std::forward<Args>(args)...) + "." + ext.str();
 }
 
 #define NT_INTEL_ONEOMP_OFFLOAD_VERSION 1
@@ -219,8 +222,10 @@ Error processIntelBinary(const OffloadEnvTy &OffloadEnv, const BinEnvTy &BinEnv,
       continue;
 
     for (size_t I = 0; I < NumParts; I++)
-      dumpBuffer(BinEnv.Name, "kernels", Idx * 10 + I,
-                 supportedImages[ImageInfo.Format].Ext, ImageInfo.Parts[I]);
+      dumpBuffer(makeFilename(supportedImages[ImageInfo.Format].Ext,
+                              BinEnv.Name, "kernels", std::to_string(Idx),
+                              std::to_string(I)),
+                 ImageInfo.Parts[I]);
   }
 
   return Error::success();
@@ -230,14 +235,15 @@ Error processOffloadBinary(const OffloadEnvTy &OffloadEnv,
                            const BinEnvTy &BinEnv, size_t FileId,
                            const object::OffloadBinary &Binary) {
   StringRef Image = Binary.getImage();
-  const char *Data = Image.data();
-  size_t Size = Image.size();
 
-  dumpBuffer(BinEnv.Name, "image", FileId, "bin", Data, Size);
+  dumpBuffer(makeFilename("bin", BinEnv.Name, "image", std::to_string(FileId)), Image);
 
   if (Binary.getTriple() == "spirv64-intel")
     if (auto Err = processIntelBinary(OffloadEnv, BinEnv, FileId, Binary))
       return Err;
+
+  const char *Data = Image.data();
+  const size_t Size = Image.size();
 
   for (auto &D : OffloadEnv.FoundDevices) {
     bool isValid = false;
@@ -252,7 +258,9 @@ Error processOffloadBinary(const OffloadEnvTy &OffloadEnv,
     const char *ImageData;
     size_t ImageSize;
     OFFLOAD_ERR(olGetProgramDeviceImage(Program, &ImageData, &ImageSize));
-    dumpBuffer(BinEnv.Name, "device", FileId, "bin", ImageData, ImageSize);
+    dumpBuffer(
+        makeFilename("bin", BinEnv.Name, "device", std::to_string(FileId)),
+        ImageData, ImageSize);
     OFFLOAD_ERR(olDestroyProgram(Program));
     return Error::success();
   }
