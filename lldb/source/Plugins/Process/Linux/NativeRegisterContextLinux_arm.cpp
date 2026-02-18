@@ -296,10 +296,8 @@ bool NativeRegisterContextLinux_arm::IsFPR(unsigned reg) const {
 }
 
 bool NativeRegisterContextLinux_arm::IsTLS(unsigned reg) const {
-  if (GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm::TLSRegSet)
-    return true;
-  return false;
+  return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
+         RegisterInfoPOSIX_arm::TLSRegSet;
 }
 
 llvm::Error NativeRegisterContextLinux_arm::ReadHardwareDebugInfo() {
