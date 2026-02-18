@@ -2657,6 +2657,7 @@ cc_library(
         ":IR",
         ":LinalgDialect",
         ":LinalgInterfaces",
+        ":SCFDialect",
         ":Support",
         ":VectorDialect",
         ":X86VectorDialect",
