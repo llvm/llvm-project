@@ -62,6 +62,20 @@ func.func @pow_cube_fast(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf3
   return %0, %1 : f32, vector<4xf32>
 }
 
+// CHECK-LABEL: @pow_4_int
+func.func @pow_4_int(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
+  // CHECK: %[[TMP_S:.*]] = arith.mulf %arg0, %arg0
+  // CHECK: %[[SCALAR:.*]] = arith.mulf %[[TMP_S]], %[[TMP_S]]
+  // CHECK: %[[TMP_V:.*]] = arith.mulf %arg1, %arg1
+  // CHECK: %[[VECTOR:.*]] = arith.mulf %[[TMP_V]], %[[TMP_V]]
+  // CHECK: return %[[SCALAR]], %[[VECTOR]]
+  %c = arith.constant 4 : i32
+  %v = arith.constant dense <4> : vector<4xi32>
+  %0 = math.fpowi %arg0, %c : f32, i32
+  %1 = math.fpowi %arg1, %v : vector<4xf32>, vector<4xi32>
+  return %0, %1 : f32, vector<4xf32>
+}
+
 // CHECK-LABEL: @pow_recip
 func.func @pow_recip(%arg0: f32, %arg1 : vector<4xf32>) -> (f32, vector<4xf32>) {
   // CHECK-DAG: %[[CST_S:.*]] = arith.constant 1.0{{.*}} : f32
