@@ -530,7 +530,7 @@ TYPE_PARSER(construct<AltReturnSpec>(star >> label))
 
 // R1527 prefix-spec ->
 //         declaration-type-spec | ELEMENTAL | IMPURE | MODULE |
-//         NON_RECURSIVE | PURE | RECURSIVE |
+//         NON_RECURSIVE | PURE | RECURSIVE | SIMPLE |
 // (CUDA)  ATTRIBUTES ( (DEVICE | GLOBAL | GRID_GLOBAL | HOST)... ) |
 //         LAUNCH_BOUNDS(expr-list) | CLUSTER_DIMS(expr-list)
 TYPE_PARSER(withMessage(
@@ -547,6 +547,7 @@ TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
         construct<PrefixSpec::Non_Recursive>("NON_RECURSIVE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Pure>("PURE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Recursive>("RECURSIVE"_tok)),
+    construct<PrefixSpec>(construct<PrefixSpec::Simple>("SIMPLE"_tok)),
     extension<LanguageFeature::CUDA>(
         construct<PrefixSpec>(construct<PrefixSpec::Attributes>(
             localRecovery("expected valid ATTRIBUTES specification"_err_en_US,

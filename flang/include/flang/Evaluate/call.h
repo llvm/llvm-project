@@ -220,6 +220,7 @@ struct ProcedureDesignator {
   int Rank() const;
   bool IsElemental() const;
   bool IsPure() const;
+  bool IsSimple() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 
