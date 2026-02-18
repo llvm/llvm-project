@@ -708,27 +708,6 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_negzero_nsz_nxv8bf16(<vscale x 8 x b
 }
 
 define <vscale x 4 x float> @partial_reduce_to_nxv4f32(<vscale x 4 x float> %acc, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
-; SVE2-LABEL: fdot_wide_nxv4f32:
-; SVE2:       // %bb.0: // %entry
-; SVE2-NEXT:    uunpklo z3.s, z1.h
-; SVE2-NEXT:    uunpklo z4.s, z2.h
-; SVE2-NEXT:    ptrue p0.s
-; SVE2-NEXT:    uunpkhi z1.s, z1.h
-; SVE2-NEXT:    uunpkhi z2.s, z2.h
-; SVE2-NEXT:    fcvt z3.s, p0/m, z3.h
-; SVE2-NEXT:    fcvt z4.s, p0/m, z4.h
-; SVE2-NEXT:    fcvt z1.s, p0/m, z1.h
-; SVE2-NEXT:    fcvt z2.s, p0/m, z2.h
-; SVE2-NEXT:    fmul z3.s, z3.s, z4.s
-; SVE2-NEXT:    fmul z1.s, z1.s, z2.s
-; SVE2-NEXT:    fadd z0.s, z0.s, z3.s
-; SVE2-NEXT:    fadd z0.s, z0.s, z1.s
-; SVE2-NEXT:    ret
-;
-; SVE2P1-LABEL: fdot_wide_nxv4f32:
-; SVE2P1:       // %bb.0: // %entry
-; SVE2P1-NEXT:    fdot z0.s, z1.h, z2.h
-; SVE2P1-NEXT:    ret
 ; SVE-LABEL: partial_reduce_to_nxv4f32:
 ; SVE:       // %bb.0: // %entry
 ; SVE-NEXT:    bfmlalb z0.s, z1.h, z2.h
