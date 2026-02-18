@@ -685,7 +685,9 @@ void privatizeSymbol(
 
   const semantics::Symbol *sym =
       isDoConcurrent ? &symToPrivatize->GetUltimate() : symToPrivatize;
-  const lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
+  lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
+  if (!hsb)
+    hsb = symTable.lookupSymbol(*sym);
   assert(hsb && "Host symbol box not found");
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
@@ -780,6 +782,9 @@ void privatizeSymbol(
     if (needsInitialization) {
       lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(
           isDoConcurrent ? symToPrivatize->GetUltimate() : *symToPrivatize);
+      if (!hsb)
+        hsb = symTable.lookupSymbol(
+            isDoConcurrent ? symToPrivatize->GetUltimate() : *symToPrivatize);
 
       assert(hsb && "Host symbol box not found");
       hlfir::Entity entity{hsb.getAddr()};
