@@ -27,9 +27,9 @@ define void @interchange_01(i64 %k, i64 %N) {
 ; CHECK-NEXT:    br label [[FOR1_HEADER_PREHEADER]]
 ; CHECK:       for2.split1:
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x [100 x i64]], ptr @A, i64 0, i64 [[J]], i64 [[J23]]
-; CHECK-NEXT:    [[LV:%.*]] = load i64, ptr [[ARRAYIDX5]]
+; CHECK-NEXT:    [[LV:%.*]] = load i64, ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[LV]], [[K:%.*]]
-; CHECK-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX5]]
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[J]], 99
 ; CHECK-NEXT:    br label [[FOR1_INC10]]
@@ -90,9 +90,9 @@ define void @interchange_02(i64 %k) {
 ; CHECK-NEXT:    br label [[FOR1_HEADER_PREHEADER]]
 ; CHECK:       for3.split1:
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x [100 x i64]], ptr @A, i64 0, i64 [[J]], i64 [[J19]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX5]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[TMP0]], [[K:%.*]]
-; CHECK-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX5]]
+; CHECK-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add nsw i64 [[J]], -1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[J]], 0
 ; CHECK-NEXT:    br label [[FOR1_INC10]]
@@ -160,9 +160,9 @@ define void @interchange_10() {
 ; CHECK:       for2.split1:
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x [100 x i64]], ptr @A, i64 0, i64 [[J]], i64 [[J23]]
-; CHECK-NEXT:    store i64 [[J]], ptr [[ARRAYIDX5]]
+; CHECK-NEXT:    store i64 [[J]], ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [100 x [100 x i64]], ptr @A, i64 0, i64 [[J]], i64 [[J_NEXT24]]
-; CHECK-NEXT:    store i64 [[J23]], ptr [[ARRAYIDX10]]
+; CHECK-NEXT:    store i64 [[J23]], ptr [[ARRAYIDX10]], align 8
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[J]], 99
 ; CHECK-NEXT:    br label [[FOR1_INC10]]
 ; CHECK:       for2.split:
