@@ -29,8 +29,7 @@ protected:
   VariableReferenceStorage vars;
 
   static const protocol::Scope *
-  FindScope(const std::vector<protocol::Scope> &scopes,
-            const protocol::String &name) {
+  FindScope(const std::vector<protocol::Scope> &scopes, llvm::StringRef name) {
     for (const auto &scope : scopes) {
       if (scope.name == name)
         return &scope;

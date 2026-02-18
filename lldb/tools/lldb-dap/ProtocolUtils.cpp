@@ -203,9 +203,10 @@ protocol::Thread CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
         queue_kind_label = " (concurrent)";
 
       name = llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
-                           queue_name, queue_kind_label);
+                           queue_name, queue_kind_label)
+                 .str();
     } else {
-      name = llvm::formatv("Thread {0}", thread.GetIndexID());
+      name = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
     }
   }
   return protocol::Thread{thread.GetThreadID(), name};
