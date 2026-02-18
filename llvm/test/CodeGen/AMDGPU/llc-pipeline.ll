@@ -146,7 +146,6 @@
 ; GCN-O0-NEXT:        SI insert wait instructions
 ; GCN-O0-NEXT:        Insert required mode register values
 ; GCN-O0-NEXT:        SI Final Branch Preparation
-; GCN-O0-NEXT:        Machine Natural Loop Construction
 ; GCN-O0-NEXT:        Post RA hazard recognizer
 ; GCN-O0-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O0-NEXT:        AMDGPU Lower VGPR Encoding
@@ -439,8 +438,6 @@
 ; GCN-O1-NEXT:        SI Insert Hard Clauses
 ; GCN-O1-NEXT:        SI Final Branch Preparation
 ; GCN-O1-NEXT:        SI peephole optimizations
-; GCN-O1-NEXT:        MachineDominator Tree Construction
-; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        Post RA hazard recognizer
 ; GCN-O1-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O1-NEXT:        AMDGPU Lower VGPR Encoding
@@ -761,8 +758,6 @@
 ; GCN-O1-OPTS-NEXT:        SI Insert Hard Clauses
 ; GCN-O1-OPTS-NEXT:        SI Final Branch Preparation
 ; GCN-O1-OPTS-NEXT:        SI peephole optimizations
-; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        Post RA hazard recognizer
 ; GCN-O1-OPTS-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O1-OPTS-NEXT:        AMDGPU Lower VGPR Encoding
@@ -1088,8 +1083,6 @@
 ; GCN-O2-NEXT:        SI Insert Hard Clauses
 ; GCN-O2-NEXT:        SI Final Branch Preparation
 ; GCN-O2-NEXT:        SI peephole optimizations
-; GCN-O2-NEXT:        MachineDominator Tree Construction
-; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        Post RA hazard recognizer
 ; GCN-O2-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O2-NEXT:        AMDGPU Lower VGPR Encoding
@@ -1428,8 +1421,6 @@
 ; GCN-O3-NEXT:        SI Insert Hard Clauses
 ; GCN-O3-NEXT:        SI Final Branch Preparation
 ; GCN-O3-NEXT:        SI peephole optimizations
-; GCN-O3-NEXT:        MachineDominator Tree Construction
-; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        Post RA hazard recognizer
 ; GCN-O3-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O3-NEXT:        AMDGPU Lower VGPR Encoding
