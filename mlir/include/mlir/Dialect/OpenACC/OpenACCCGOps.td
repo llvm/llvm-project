@@ -21,6 +21,48 @@
 // types and definitions from that file.
 
 //===----------------------------------------------------------------------===//
+// acc.reduction_combine
+//===----------------------------------------------------------------------===//
+
+def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine", 
+    [SameTypeOperands, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "Combine a reduction partial sum with its original value";
+  let description = [{
+    This operation is a composite to do a typical update of a reduction
+    variable. The intention of this operator is to facilitate codegen
+    decisions (such as generate an atomic update). E.g.
+
+    ```
+      acc.reduction_combine %src into %dest <addi> : memref<i32>
+    ```
+
+    Might lower to something similar to
+
+    ```
+      %loadSrc = memref.load %src[] : memref<i32>
+      %loadDest = memref.load %dest[] : memref<i32>
+      %combine = arith.addi %loadSrc, %loadDest : i32
+      memref.store %combine, %dest[] : memref<i32>
+    ```
+    
+    The $destMemref operand is a "pointer" to the original reduction 
+    variable (typically shared). The $srcMemref operand is a "pointer"
+    to the partial sum of the reduction (typically private).
+
+    The $kind is the OpenACC reduction operator that determines how to 
+    accumulate the two values.
+  }];
+
+  let arguments = (ins OpenACC_AnyPointerOrMappableType:$destMemref,
+                       OpenACC_AnyPointerOrMappableType:$srcMemref,
+                       OpenACC_ReductionOperatorAttr:$reductionOperator);
+  
+  let assemblyFormat = [{
+    $srcMemref `into` $destMemref $reductionOperator `:` type($destMemref) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // acc.kernel_environment
 //===----------------------------------------------------------------------===//
 
