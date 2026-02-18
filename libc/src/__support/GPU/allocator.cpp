@@ -61,7 +61,6 @@ static void *rpc_allocate(uint64_t size) {
       [&](rpc::Buffer *buffer, uint32_t) {
         ptr = reinterpret_cast<void *>(buffer->data[0]);
       });
-  port.close();
   return ptr;
 }
 
@@ -71,7 +70,6 @@ static void rpc_free(void *ptr) {
   port.send([=](rpc::Buffer *buffer, uint32_t) {
     buffer->data[0] = reinterpret_cast<uintptr_t>(ptr);
   });
-  port.close();
 }
 
 // Convert a potentially disjoint bitmask into an increasing integer per-lane

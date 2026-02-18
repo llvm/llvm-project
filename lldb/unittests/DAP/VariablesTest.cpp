@@ -7,18 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "Variables.h"
+#include "DAPLog.h"
+#include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
-#include "lldb/API/SBValueList.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_dap;
+using namespace lldb_dap::protocol;
 
 class VariablesTest : public ::testing::Test {
+
+public:
+  VariablesTest() : log(llvm::nulls(), mutex), vars(log) {}
+
 protected:
   enum : bool { Permanent = true, Temporary = false };
-  Variables vars;
+  Log::Mutex mutex;
+  Log log;
+  VariableReferenceStorage vars;
 
   static const protocol::Scope *
   FindScope(const std::vector<protocol::Scope> &scopes, llvm::StringRef name) {
@@ -31,20 +39,19 @@ protected:
 };
 
 TEST_F(VariablesTest, GetNewVariableReference_UniqueAndRanges) {
-  const int64_t temp1 = vars.GetNewVariableReference(Temporary);
-  const int64_t temp2 = vars.GetNewVariableReference(Temporary);
-  const int64_t perm1 = vars.GetNewVariableReference(Permanent);
-  const int64_t perm2 = vars.GetNewVariableReference(Permanent);
-
-  EXPECT_NE(temp1, temp2);
-  EXPECT_NE(perm1, perm2);
-  EXPECT_LT(temp1, perm1);
-  EXPECT_LT(temp2, perm1);
+  const var_ref_t temp1 = vars.InsertVariable(lldb::SBValue(), Temporary);
+  const var_ref_t temp2 = vars.InsertVariable(lldb::SBValue(), Temporary);
+  const var_ref_t perm1 = vars.InsertVariable(lldb::SBValue(), Permanent);
+  const var_ref_t perm2 = vars.InsertVariable(lldb::SBValue(), Permanent);
+  EXPECT_NE(temp1.AsUInt32(), temp2.AsUInt32());
+  EXPECT_NE(perm1.AsUInt32(), perm2.AsUInt32());
+  EXPECT_LT(temp1.AsUInt32(), perm1.AsUInt32());
+  EXPECT_LT(temp2.AsUInt32(), perm1.AsUInt32());
 }
 
 TEST_F(VariablesTest, InsertAndGetVariable_Temporary) {
   lldb::SBValue dummy;
-  const int64_t ref = vars.InsertVariable(dummy, Temporary);
+  const var_ref_t ref = vars.InsertVariable(dummy, Temporary);
   lldb::SBValue out = vars.GetVariable(ref);
 
   EXPECT_EQ(out.IsValid(), dummy.IsValid());
@@ -52,35 +59,34 @@ TEST_F(VariablesTest, InsertAndGetVariable_Temporary) {
 
 TEST_F(VariablesTest, InsertAndGetVariable_Permanent) {
   lldb::SBValue dummy;
-  const int64_t ref = vars.InsertVariable(dummy, Permanent);
+  const var_ref_t ref = vars.InsertVariable(dummy, Permanent);
   lldb::SBValue out = vars.GetVariable(ref);
 
   EXPECT_EQ(out.IsValid(), dummy.IsValid());
 }
 
 TEST_F(VariablesTest, IsPermanentVariableReference) {
-  const int64_t perm = vars.GetNewVariableReference(Permanent);
-  const int64_t temp = vars.GetNewVariableReference(Temporary);
+  const var_ref_t perm = vars.InsertVariable(lldb::SBValue(), Permanent);
+  const var_ref_t temp = vars.InsertVariable(lldb::SBValue(), Temporary);
 
-  EXPECT_TRUE(Variables::IsPermanentVariableReference(perm));
-  EXPECT_FALSE(Variables::IsPermanentVariableReference(temp));
+  EXPECT_EQ(perm.Kind(), eReferenceKindPermanent);
+  EXPECT_EQ(temp.Kind(), eReferenceKindTemporary);
 }
 
 TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
   lldb::SBValue dummy;
-  const int64_t temp = vars.InsertVariable(dummy, Temporary);
-  const int64_t perm = vars.InsertVariable(dummy, Permanent);
+  const var_ref_t temp = vars.InsertVariable(dummy, Temporary);
+  const var_ref_t perm = vars.InsertVariable(dummy, Permanent);
   vars.Clear();
 
   EXPECT_FALSE(vars.GetVariable(temp).IsValid());
   EXPECT_EQ(vars.GetVariable(perm).IsValid(), dummy.IsValid());
 }
 
-TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
+TEST_F(VariablesTest, VariablesStore) {
   lldb::SBFrame frame;
-  uint32_t frame_id = 0;
 
-  std::vector<protocol::Scope> scopes = vars.CreateScopes(frame_id, frame);
+  std::vector<protocol::Scope> scopes = vars.CreateScopes(frame);
 
   const protocol::Scope *locals_scope = FindScope(scopes, "Locals");
   const protocol::Scope *globals_scope = FindScope(scopes, "Globals");
@@ -90,27 +96,30 @@ TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
   ASSERT_NE(globals_scope, nullptr);
   ASSERT_NE(registers_scope, nullptr);
 
-  auto locals_data = vars.GetTopLevelScope(locals_scope->variablesReference);
-  auto globals_data = vars.GetTopLevelScope(globals_scope->variablesReference);
-  auto registers_data =
-      vars.GetTopLevelScope(registers_scope->variablesReference);
+  auto *locals_store = vars.GetVariableStore(locals_scope->variablesReference);
+  auto *globals_store =
+      vars.GetVariableStore(globals_scope->variablesReference);
+  auto *registers_store =
+      vars.GetVariableStore(registers_scope->variablesReference);
 
-  ASSERT_TRUE(locals_data.has_value());
-  ASSERT_TRUE(globals_data.has_value());
-  ASSERT_TRUE(registers_data.has_value());
+  ASSERT_NE(locals_store, nullptr);
+  ASSERT_NE(globals_store, nullptr);
+  ASSERT_NE(registers_store, nullptr);
 
-  EXPECT_EQ(locals_data->kind, eScopeKindLocals);
-  EXPECT_EQ(globals_data->kind, eScopeKindGlobals);
-  EXPECT_EQ(registers_data->kind, eScopeKindRegisters);
+  const var_ref_t local_ref = locals_scope->variablesReference;
+  const var_ref_t global_ref = globals_scope->variablesReference;
+  const var_ref_t register_ref = registers_scope->variablesReference;
+  ASSERT_EQ(global_ref.Kind(), eReferenceKindScope);
+  ASSERT_EQ(local_ref.Kind(), eReferenceKindScope);
+  ASSERT_EQ(register_ref.Kind(), eReferenceKindScope);
 
-  EXPECT_FALSE(vars.GetTopLevelScope(9999).has_value());
+  EXPECT_EQ(vars.GetVariableStore(var_ref_t(9999)), nullptr);
 }
 
 TEST_F(VariablesTest, FindVariable_LocalsByName) {
   lldb::SBFrame frame;
-  uint32_t frame_id = 0;
 
-  std::vector<protocol::Scope> scopes = vars.CreateScopes(frame_id, frame);
+  std::vector<protocol::Scope> scopes = vars.CreateScopes(frame);
 
   const protocol::Scope *locals_scope = FindScope(scopes, "Locals");
   ASSERT_NE(locals_scope, nullptr);

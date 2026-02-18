@@ -15,7 +15,10 @@
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
 #include "CIRGenFunctionInfo.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "clang/CIR/ABIArgInfo.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/TypeSize.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -309,13 +312,11 @@ void CIRGenModule::addDefaultFunctionAttributes(StringRef name,
 }
 
 /// Construct the CIR attribute list of a function or call.
-void CIRGenModule::constructAttributeList(llvm::StringRef name,
-                                          const CIRGenFunctionInfo &info,
-                                          CIRGenCalleeInfo calleeInfo,
-                                          mlir::NamedAttrList &attrs,
-                                          cir::CallingConv &callingConv,
-                                          cir::SideEffect &sideEffect,
-                                          bool attrOnCallSite, bool isThunk) {
+void CIRGenModule::constructAttributeList(
+    llvm::StringRef name, const CIRGenFunctionInfo &info,
+    CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
+    mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
+    cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk) {
   assert(!cir::MissingFeatures::opCallCallConv());
   sideEffect = cir::SideEffect::All;
 
@@ -477,11 +478,149 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
 
   // TODO(cir): Add loader-replaceable attribute here.
 
-  // TODO(cir): Ret attrs.
-  //
+  constructFunctionReturnAttributes(info, targetDecl, isThunk, retAttrs);
+  constructFunctionArgumentAttributes();
+
   // TODO(cir): Arg attrs.
 
   assert(!cir::MissingFeatures::opCallAttrs());
+}
+
+bool CIRGenModule::hasStrictReturn(QualType retTy, const Decl *targetDecl) {
+  // As-is msan can not tolerate noundef mismatch between caller and
+  // implementation. Mismatch is possible for e.g. indirect calls from C-caller
+  // into C++. Such mismatches lead to confusing false reports. To avoid
+  // expensive workaround on msan we enforce initialization event in uncommon
+  // cases where it's allowed.
+  if (getLangOpts().Sanitize.has(SanitizerKind::Memory))
+    return true;
+  // C++ explicitly makes returning undefined values UB. C's rule only applies
+  // to used values, so we never mark them noundef for now.
+  if (!getLangOpts().CPlusPlus)
+    return false;
+  if (targetDecl) {
+    if (const FunctionDecl *func = dyn_cast<FunctionDecl>(targetDecl)) {
+      if (func->isExternC())
+        return false;
+    } else if (const VarDecl *var = dyn_cast<VarDecl>(targetDecl)) {
+      // Function pointer.
+      if (var->isExternC())
+        return false;
+    }
+  }
+
+  // We don't want to be too aggressive with the return checking, unless
+  // it's explicit in the code opts or we're using an appropriate sanitizer.
+  // Try to respect what the programmer intended.
+  return getCodeGenOpts().StrictReturn ||
+         !mayDropFunctionReturn(getASTContext(), retTy) ||
+         getLangOpts().Sanitize.has(SanitizerKind::Return);
+}
+
+bool CIRGenModule::mayDropFunctionReturn(const ASTContext &context,
+                                         QualType retTy) {
+  // We can't just discard the return value for a record type with a
+  // complex destructor or a non-trivially copyable type.
+  if (const RecordType *recTy =
+          retTy.getCanonicalType()->getAsCanonical<RecordType>()) {
+    if (const auto *record = dyn_cast<CXXRecordDecl>(recTy->getDecl()))
+      return record->hasTrivialDestructor();
+  }
+  return retTy.isTriviallyCopyableType(context);
+}
+
+static bool determineNoUndef(QualType clangTy, CIRGenTypes &types,
+                             const cir::CIRDataLayout &layout,
+                             const cir::ABIArgInfo &argInfo) {
+  mlir::Type ty = types.convertTypeForMem(clangTy);
+  assert(!cir::MissingFeatures::abiArgInfo());
+  if (argInfo.isIndirect() || argInfo.isIndirectAliased())
+    return true;
+  if (argInfo.isExtend() && !argInfo.isNoExt())
+    return true;
+
+  if (cir::isSized(ty) && !layout.typeSizeEqualsStoreSize(ty))
+    // TODO: This will result in a modest amount of values not marked noundef
+    // when they could be. We care about values that *invisibly* contain undef
+    // bits from the perspective of LLVM IR.
+    return false;
+
+  assert(!cir::MissingFeatures::opCallCallConv());
+  // TODO(cir): The calling convention code needs to figure if the
+  // coerced-to-type is larger than the actual type, and remove the noundef
+  // attribute. Classic compiler did it here.
+  if (clangTy->isBitIntType())
+    return true;
+  if (clangTy->isReferenceType())
+    return true;
+  if (clangTy->isNullPtrType())
+    return false;
+  if (clangTy->isMemberPointerType())
+    // TODO: Some member pointers are `noundef`, but it depends on the ABI. For
+    // now, never mark them.
+    return false;
+  if (clangTy->isScalarType()) {
+    if (const ComplexType *Complex = dyn_cast<ComplexType>(clangTy))
+      return determineNoUndef(Complex->getElementType(), types, layout,
+                              argInfo);
+    return true;
+  }
+  if (const VectorType *Vector = dyn_cast<VectorType>(clangTy))
+    return determineNoUndef(Vector->getElementType(), types, layout, argInfo);
+  if (const MatrixType *Matrix = dyn_cast<MatrixType>(clangTy))
+    return determineNoUndef(Matrix->getElementType(), types, layout, argInfo);
+  if (const ArrayType *Array = dyn_cast<ArrayType>(clangTy))
+    return determineNoUndef(Array->getElementType(), types, layout, argInfo);
+
+  // TODO: Some structs may be `noundef`, in specific situations.
+  return false;
+}
+
+void CIRGenModule::constructFunctionReturnAttributes(
+    const CIRGenFunctionInfo &info, const Decl *targetDecl, bool isThunk,
+    mlir::NamedAttrList &retAttrs) {
+  // Collect attributes from arguments and return values.
+  QualType retTy = info.getReturnType();
+  const cir::ABIArgInfo retInfo = info.getReturnInfo();
+  const cir::CIRDataLayout &layout = getDataLayout();
+
+  if (codeGenOpts.EnableNoundefAttrs && hasStrictReturn(retTy, targetDecl) &&
+      !retTy->isVoidType() &&
+      determineNoUndef(retTy, getTypes(), layout, retInfo))
+    retAttrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
+                 mlir::UnitAttr::get(&getMLIRContext()));
+
+  // TODO(cir): classic codegen adds a bunch of attributes based on
+  // calling-convention lowering results.  However, since calling conventions
+  // haven't happened yet, this work likely has to happen there.
+
+  if (!isThunk) {
+    // TODO(cir): following comment taken from classic codegen, so if anything
+    // happens there, we should reflect it here.
+    // FIXME: fix this properly, https://reviews.llvm.org/D100388
+    if (const auto *refTy = retTy->getAs<ReferenceType>()) {
+      QualType pointeeTy = refTy->getPointeeType();
+      if (!pointeeTy->isIncompleteType() && pointeeTy->isConstantSizeType())
+        retAttrs.set(mlir::LLVM::LLVMDialect::getDereferenceableAttrName(),
+                     builder.getI64IntegerAttr(
+                         getMinimumObjectSize(pointeeTy).getQuantity()));
+
+      if (getTypes().getTargetAddressSpace(pointeeTy) == 0 &&
+          !codeGenOpts.NullPointerIsValid)
+        retAttrs.set(mlir::LLVM::LLVMDialect::getNonNullAttrName(),
+                     mlir::UnitAttr::get(&getMLIRContext()));
+
+      if (pointeeTy->isObjectType())
+        retAttrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
+                     builder.getI64IntegerAttr(
+                         getNaturalTypeAlignment(pointeeTy).getQuantity()));
+    }
+  }
+}
+
+void CIRGenModule::constructFunctionArgumentAttributes() {
+  assert(!cir::MissingFeatures::functionArgumentAttrs());
+  // TODO(cir): This needs implementation.
 }
 
 /// Returns the canonical formal type of the given C++ method.
@@ -794,51 +933,14 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
   return arrangeFreeFunctionType(funcTy.castAs<FunctionProtoType>());
 }
 
-static cir::CIRCallOpInterface
-emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
-               cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
-               cir::FuncOp directFuncOp,
-               const SmallVectorImpl<mlir::Value> &cirCallArgs, bool isInvoke,
-               const mlir::NamedAttrList &attrs) {
+static cir::CIRCallOpInterface emitCallLikeOp(
+    CIRGenFunction &cgf, mlir::Location callLoc, cir::FuncType indirectFuncTy,
+    mlir::Value indirectFuncVal, cir::FuncOp directFuncOp,
+    const SmallVectorImpl<mlir::Value> &cirCallArgs, bool isInvoke,
+    const mlir::NamedAttrList &attrs, const mlir::NamedAttrList &retAttrs) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   assert(!cir::MissingFeatures::opCallSurroundingTry());
-
-  if (isInvoke) {
-    // This call may throw and requires catch and/or cleanup handling.
-    // If this call does not appear within the `try` region of an existing
-    // TryOp, we must create a synthetic TryOp to contain the call. This
-    // happens when a call that may throw appears within a cleanup
-    // scope.
-
-    // In OG, we build the landing pad for this scope. In CIR, we emit a
-    // synthetic cir.try because this didn't come from code generating from a
-    // try/catch in C++.
-    assert(cgf.curLexScope && "expected scope");
-    cir::TryOp tryOp = cgf.curLexScope->getClosestTryParent();
-    if (!tryOp) {
-      cgf.cgm.errorNYI(
-          "emitCallLikeOp: call does not have an associated cir.try");
-      return {};
-    }
-
-    if (tryOp.getSynthetic()) {
-      cgf.cgm.errorNYI("emitCallLikeOp: tryOp synthetic");
-      return {};
-    }
-
-    cir::CallOp callOpWithExceptions;
-    if (indirectFuncTy) {
-      cgf.cgm.errorNYI("emitCallLikeOp: indirect function type");
-      return {};
-    }
-
-    callOpWithExceptions =
-        builder.createCallOp(callLoc, directFuncOp, cirCallArgs);
-
-    cgf.populateCatchHandlersIfRequired(tryOp);
-    return callOpWithExceptions;
-  }
 
   assert(builder.getInsertionBlock() && "expected valid basic block");
 
@@ -847,9 +949,10 @@ emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
     // TODO(cir): Set calling convention for indirect calls.
     assert(!cir::MissingFeatures::opCallCallConv());
     op = builder.createIndirectCallOp(callLoc, indirectFuncVal, indirectFuncTy,
-                                      cirCallArgs, attrs);
+                                      cirCallArgs, attrs, retAttrs);
   } else {
-    op = builder.createCallOp(callLoc, directFuncOp, cirCallArgs, attrs);
+    op = builder.createCallOp(callLoc, directFuncOp, cirCallArgs, attrs,
+                              retAttrs);
   }
 
   return op;
@@ -962,6 +1065,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   assert(!cir::MissingFeatures::opCallInAlloca());
 
   mlir::NamedAttrList attrs;
+  mlir::NamedAttrList retAttrs;
   StringRef funcName;
   if (auto calleeFuncOp = dyn_cast<cir::FuncOp>(calleePtr))
     funcName = calleeFuncOp.getName();
@@ -971,7 +1075,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   cir::CallingConv callingConv;
   cir::SideEffect sideEffect;
   cgm.constructAttributeList(funcName, funcInfo, callee.getAbstractInfo(),
-                             attrs, callingConv, sideEffect,
+                             attrs, retAttrs, callingConv, sideEffect,
                              /*attrOnCallSite=*/true, /*isThunk=*/false);
 
   cir::FuncType indirectFuncTy;
@@ -1009,7 +1113,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   mlir::Location callLoc = loc;
   cir::CIRCallOpInterface theCall =
       emitCallLikeOp(*this, loc, indirectFuncTy, indirectFuncVal, directFuncOp,
-                     cirCallArgs, isInvoke, attrs);
+                     cirCallArgs, isInvoke, attrs, retAttrs);
 
   if (callOp)
     *callOp = theCall;

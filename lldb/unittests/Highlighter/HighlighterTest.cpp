@@ -16,6 +16,10 @@
 #include "lldb/Core/Highlighter.h"
 #include "lldb/Host/FileSystem.h"
 
+#if LLDB_ENABLE_TREESITTER
+#include "Plugins/Highlighter/TreeSitter/Swift/SwiftTreeSitterHighlighter.h"
+#endif
+
 #include "TestingSupport/SubsystemRAII.h"
 #include <optional>
 
@@ -25,8 +29,12 @@ namespace {
 class HighlighterTest : public testing::Test {
   // We need the language plugins for detecting the language based on the
   // filename.
-  SubsystemRAII<FileSystem, ClangHighlighter, DefaultHighlighter,
-                CPlusPlusLanguage, ObjCLanguage, ObjCPlusPlusLanguage>
+  SubsystemRAII<FileSystem, ClangHighlighter,
+#if LLDB_ENABLE_TREESITTER
+                SwiftTreeSitterHighlighter,
+#endif
+                DefaultHighlighter, CPlusPlusLanguage, ObjCLanguage,
+                ObjCPlusPlusLanguage>
       subsystems;
 };
 } // namespace
@@ -48,6 +56,10 @@ TEST_F(HighlighterTest, HighlighterSelectionType) {
   EXPECT_EQ(getName(lldb::eLanguageTypeC_plus_plus_14), "clang");
   EXPECT_EQ(getName(lldb::eLanguageTypeObjC), "clang");
   EXPECT_EQ(getName(lldb::eLanguageTypeObjC_plus_plus), "clang");
+
+#if LLDB_ENABLE_TREESITTER
+  EXPECT_EQ(getName(lldb::eLanguageTypeSwift), "tree-sitter-swift");
+#endif
 
   EXPECT_EQ(getName(lldb::eLanguageTypeUnknown), "none");
   EXPECT_EQ(getName(lldb::eLanguageTypeJulia), "none");
@@ -322,3 +334,110 @@ TEST_F(HighlighterTest, ClangCursorPosInOtherToken) {
   EXPECT_EQ(" <id><c>foo</c></id> <id>c</id> = <id>bar</id>(); return 1;",
             highlightC(" foo c = bar(); return 1;", s, 3));
 }
+
+#if LLDB_ENABLE_TREESITTER
+static std::string
+highlightSwift(llvm::StringRef code, HighlightStyle style,
+               std::optional<size_t> cursor = std::optional<size_t>()) {
+  HighlighterManager mgr;
+  const Highlighter &h =
+      mgr.getHighlighterFor(lldb::eLanguageTypeSwift, "main.swift");
+  return h.Highlight(style, code, cursor);
+}
+
+TEST_F(HighlighterTest, SwiftComments) {
+  HighlightStyle s;
+  s.comment.Set("<cc>", "</cc>");
+
+  EXPECT_EQ(" <cc>// I'm feeling lucky today</cc>",
+            highlightSwift(" // I'm feeling lucky today", s));
+  EXPECT_EQ(" <cc>/* This is a\nmultiline comment */</cc>",
+            highlightSwift(" /* This is a\nmultiline comment */", s));
+  EXPECT_EQ(" <cc>/* nested /* comment */ works */</cc>",
+            highlightSwift(" /* nested /* comment */ works */", s));
+}
+
+TEST_F(HighlighterTest, SwiftKeywords) {
+  HighlightStyle s;
+  s.keyword.Set("<k>", "</k>");
+
+  EXPECT_EQ(" <k>let</k> x = 5;", highlightSwift(" let x = 5;", s));
+  EXPECT_EQ(" <k>var</k> y = 10;", highlightSwift(" var y = 10;", s));
+  EXPECT_EQ(" func foo() { return 42; }",
+            highlightSwift(" func foo() { return 42; }", s));
+  EXPECT_EQ(" class <k>MyClass</k> {}", highlightSwift(" class MyClass {}", s));
+  EXPECT_EQ(" struct <k>Point</k> {}", highlightSwift(" struct Point {}", s));
+  EXPECT_EQ(" enum <k>Color</k> {}", highlightSwift(" enum Color {}", s));
+  EXPECT_EQ(" if x { }", highlightSwift(" if x { }", s));
+  EXPECT_EQ(" for i in 0...10 { }", highlightSwift(" for i in 0...10 { }", s));
+  EXPECT_EQ(" guard <k>let</k> x = optional <k>else</k> { }",
+            highlightSwift(" guard let x = optional else { }", s));
+}
+
+TEST_F(HighlighterTest, SwiftStringLiterals) {
+  HighlightStyle s;
+  s.string_literal.Set("<str>", "</str>");
+
+  EXPECT_EQ(" let s = <str>\"</str><str>Hello, World!</str><str>\"</str>;",
+            highlightSwift(" let s = \"Hello, World!\";", s));
+  EXPECT_EQ(" let multi = <str>\"\"\"</str><str>\nLine 1\nLine "
+            "2\n</str><str>\"\"\"</str>;",
+            highlightSwift(" let multi = \"\"\"\nLine 1\nLine 2\n\"\"\";", s));
+}
+
+TEST_F(HighlighterTest, SwiftScalarLiterals) {
+  HighlightStyle s;
+  s.scalar_literal.Set("<scalar>", "</scalar>");
+
+  EXPECT_EQ(" let i = <scalar>42</scalar>;", highlightSwift(" let i = 42;", s));
+  EXPECT_EQ(" let hex = <scalar>0xFF</scalar>;",
+            highlightSwift(" let hex = 0xFF;", s));
+}
+
+TEST_F(HighlighterTest, SwiftIdentifiers) {
+  HighlightStyle s;
+  s.identifier.Set("<id>", "</id>");
+
+  EXPECT_EQ(" let <id>foo</id> = <id>bar</id>();",
+            highlightSwift(" let foo = bar();", s));
+  EXPECT_EQ(" <id>myVariable</id> = 10;",
+            highlightSwift(" myVariable = 10;", s));
+  EXPECT_EQ(" optional?.<id>property</id>",
+            highlightSwift(" optional?.property", s));
+  EXPECT_EQ(" @available(*, <id>deprecated</id>)",
+            highlightSwift(" @available(*, deprecated)", s));
+  EXPECT_EQ(" @objc func <id>foo</id>() { }",
+            highlightSwift(" @objc func foo() { }", s));
+  EXPECT_EQ(" let <id>x</id>: Int = 5", highlightSwift(" let x: Int = 5", s));
+  EXPECT_EQ(" func <id>foo</id>() -> String { }",
+            highlightSwift(" func foo() -> String { }", s));
+}
+
+TEST_F(HighlighterTest, SwiftOperators) {
+  HighlightStyle s;
+  s.operators.Set("[", "]");
+
+  EXPECT_EQ(" 1[+]2[-]3[*]4[/]5", highlightSwift(" 1+2-3*4/5", s));
+  EXPECT_EQ(" x [&&] y [||] z", highlightSwift(" x && y || z", s));
+  EXPECT_EQ(" a [==] b [!=] c", highlightSwift(" a == b != c", s));
+}
+
+TEST_F(HighlighterTest, SwiftCursorPosition) {
+  HighlightStyle s;
+  s.selected.Set("<c>", "</c>");
+
+  EXPECT_EQ("<c> </c>let x = 5;", highlightSwift(" let x = 5;", s, 0));
+  EXPECT_EQ(" <c>l</c>et x = 5;", highlightSwift(" let x = 5;", s, 1));
+  EXPECT_EQ(" l<c>e</c>t x = 5;", highlightSwift(" let x = 5;", s, 2));
+  EXPECT_EQ(" le<c>t</c> x = 5;", highlightSwift(" let x = 5;", s, 3));
+  EXPECT_EQ(" let<c> </c>x = 5;", highlightSwift(" let x = 5;", s, 4));
+}
+
+TEST_F(HighlighterTest, SwiftClosures) {
+  HighlightStyle s;
+  s.keyword.Set("<k>", "</k>");
+
+  EXPECT_EQ(" <k>let</k> closure = { (x: <k>Int</k>) in return x * 2 }",
+            highlightSwift(" let closure = { (x: Int) in return x * 2 }", s));
+}
+#endif

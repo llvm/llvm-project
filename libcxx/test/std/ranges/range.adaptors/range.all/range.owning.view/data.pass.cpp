@@ -16,6 +16,7 @@
 #include <array>
 #include <cassert>
 #include <concepts>
+#include <utility>
 
 #include "test_iterators.h"
 #include "test_macros.h"

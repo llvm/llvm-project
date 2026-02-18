@@ -514,6 +514,8 @@ class VALUVVNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                (ins VR:$vs2, VR:$vs1),
                opcodestr, "$vd, $vs2, $vs1"> {
   let vm = 1;
+
+  let RVVConstraint = NoConstraint;
 }
 
 // op vd, vs2, rs1, vm
@@ -546,6 +548,8 @@ class VALUVXNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                (ins VR:$vs2, GPR:$rs1),
                opcodestr, "$vd, $vs2, $rs1"> {
   let vm = 1;
+
+  let RVVConstraint = NoConstraint;
 }
 
 // op vd, vs2, imm, vm
@@ -568,6 +572,8 @@ class VALUVINoVm<bits<6> funct6, string opcodestr, Operand optype = simm5>
                 (ins VR:$vs2, optype:$imm),
                 opcodestr, "$vd, $vs2, $imm"> {
   let vm = 1;
+
+  let RVVConstraint = NoConstraint;
 }
 
 // op vd, vs2, rs1, vm (Float)
@@ -679,10 +685,9 @@ multiclass VWMAC_MV_V_X<string opcodestr, bits<6> funct6>
                          "ReadVIWMulAddV">;
 }
 
-multiclass VALU_MV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPMVV, opcodestr>,
-           SchedUnaryMC<"WriteVExtV", "ReadVExtV">;
-}
+class VEXT_MV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPMVV, opcodestr>,
+      SchedUnaryMC<"WriteVExtV", "ReadVExtV">;
 
 multiclass VMRG_IV_V_X_I<string opcodestr, bits<6> funct6> {
   def VM : VALUmVV<funct6, OPIVV, opcodestr # ".vvm">,
@@ -804,15 +809,13 @@ multiclass VWMAC_FV_V_F<string opcodestr, bits<6> funct6> {
   }
 }
 
-multiclass VSQR_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
-           SchedUnaryMC<"WriteVFSqrtV", "ReadVFSqrtV">;
-}
+class VSQR_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
+      SchedUnaryMC<"WriteVFSqrtV", "ReadVFSqrtV">;
 
-multiclass VRCP_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
-           SchedUnaryMC<"WriteVFRecpV", "ReadVFRecpV">;
-}
+class VRCP_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
+      SchedUnaryMC<"WriteVFRecpV", "ReadVFRecpV">;
 
 multiclass VMINMAX_FV_V_F<string opcodestr, bits<6> funct6> {
   def V : VALUVV<funct6, OPFVV, opcodestr # ".vv">,
@@ -839,50 +842,41 @@ multiclass VSGNJ_FV_V_F<string opcodestr, bits<6> funct6> {
           SchedBinaryMC<"WriteVFSgnjF", "ReadVFSgnjV", "ReadVFSgnjF">;
 }
 
-multiclass VCLS_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
-           SchedUnaryMC<"WriteVFClassV", "ReadVFClassV">;
-}
+class VCLS_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
+      SchedUnaryMC<"WriteVFClassV", "ReadVFClassV">;
 
-multiclass VCVTF_IV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
-           SchedUnaryMC<"WriteVFCvtIToFV", "ReadVFCvtIToFV">;
-}
+class VCVTF_IV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
+      SchedUnaryMC<"WriteVFCvtIToFV", "ReadVFCvtIToFV">;
 
-multiclass VCVTI_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
-           SchedUnaryMC<"WriteVFCvtFToIV", "ReadVFCvtFToIV">;
-}
+class VCVTI_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
+      SchedUnaryMC<"WriteVFCvtFToIV", "ReadVFCvtFToIV">;
 
-multiclass VWCVTF_IV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
-           SchedUnaryMC<"WriteVFWCvtIToFV", "ReadVFWCvtIToFV">;
-}
+class VWCVTF_IV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
+      SchedUnaryMC<"WriteVFWCvtIToFV", "ReadVFWCvtIToFV">;
 
-multiclass VWCVTI_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
-           SchedUnaryMC<"WriteVFWCvtFToIV", "ReadVFWCvtFToIV">;
-}
+class VWCVTI_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
+      SchedUnaryMC<"WriteVFWCvtFToIV", "ReadVFWCvtFToIV">;
 
-multiclass VWCVTF_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
-           SchedUnaryMC<"WriteVFWCvtFToFV", "ReadVFWCvtFToFV">;
-}
+class VWCVTF_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
+      SchedUnaryMC<"WriteVFWCvtFToFV", "ReadVFWCvtFToFV">;
 
-multiclass VNCVTF_IV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
-           SchedUnaryMC<"WriteVFNCvtIToFV", "ReadVFNCvtIToFV">;
-}
+class VNCVTF_IV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
+      SchedUnaryMC<"WriteVFNCvtIToFV", "ReadVFNCvtIToFV">;
 
-multiclass VNCVTI_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
-           SchedUnaryMC<"WriteVFNCvtFToIV", "ReadVFNCvtFToIV">;
-}
+class VNCVTI_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
+      SchedUnaryMC<"WriteVFNCvtFToIV", "ReadVFNCvtFToIV">;
 
-multiclass VNCVTF_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
-           SchedUnaryMC<"WriteVFNCvtFToFV", "ReadVFNCvtFToFV">;
-}
+class VNCVTF_FV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPFVV, opcodestr>,
+      SchedUnaryMC<"WriteVFNCvtFToFV", "ReadVFNCvtFToFV">;
 
 multiclass VRED_MV_V<string opcodestr, bits<6> funct6> {
   def _VS : VALUVV<funct6, OPMVV, opcodestr # ".vs">,
@@ -930,15 +924,13 @@ multiclass VMALU_MV_Mask<string opcodestr, bits<6> funct6, string vm = "v"> {
                         forceMasked=0>;
 }
 
-multiclass VMSFS_MV_V<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPMVV, opcodestr>,
-           SchedUnaryMC<"WriteVMSFSV", "ReadVMSFSV">;
-}
+class VMSFS_MV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPMVV, opcodestr>,
+      SchedUnaryMC<"WriteVMSFSV", "ReadVMSFSV">;
 
-multiclass VIOTA_MV_V<string opcodestr, bits<6> funct6, bits<5> vs1> {
-  def "" : VALUVs2<funct6, vs1, OPMVV, opcodestr>,
-           SchedUnaryMC<"WriteVIotaV", "ReadVIotaV">;
-}
+class VIOTA_MV_VS2<string opcodestr, bits<6> funct6, bits<5> vs1>
+    : VALUVs2<funct6, vs1, OPMVV, opcodestr>,
+      SchedUnaryMC<"WriteVIotaV", "ReadVIotaV">;
 
 multiclass VSHT_IV_V_X_I<string opcodestr, bits<6> funct6> {
   def V  : VALUVV<funct6, OPIVV, opcodestr # ".vv">,
@@ -1215,12 +1207,12 @@ def : InstAlias<"vwcvtu.x.x.v $vd, $vs",
                 (VWADDU_VX VR:$vd, VR:$vs, X0, zero_reg)>;
 
 // Vector Integer Extension
-defm VZEXT_VF8 : VALU_MV_VS2<"vzext.vf8", 0b010010, 0b00010>;
-defm VSEXT_VF8 : VALU_MV_VS2<"vsext.vf8", 0b010010, 0b00011>;
-defm VZEXT_VF4 : VALU_MV_VS2<"vzext.vf4", 0b010010, 0b00100>;
-defm VSEXT_VF4 : VALU_MV_VS2<"vsext.vf4", 0b010010, 0b00101>;
-defm VZEXT_VF2 : VALU_MV_VS2<"vzext.vf2", 0b010010, 0b00110>;
-defm VSEXT_VF2 : VALU_MV_VS2<"vsext.vf2", 0b010010, 0b00111>;
+def VZEXT_VF8 : VEXT_MV_VS2<"vzext.vf8", 0b010010, 0b00010>;
+def VSEXT_VF8 : VEXT_MV_VS2<"vsext.vf8", 0b010010, 0b00011>;
+def VZEXT_VF4 : VEXT_MV_VS2<"vzext.vf4", 0b010010, 0b00100>;
+def VSEXT_VF4 : VEXT_MV_VS2<"vsext.vf4", 0b010010, 0b00101>;
+def VZEXT_VF2 : VEXT_MV_VS2<"vzext.vf2", 0b010010, 0b00110>;
+def VSEXT_VF2 : VEXT_MV_VS2<"vsext.vf2", 0b010010, 0b00111>;
 
 // Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
 defm VADC_V : VALUm_IV_V_X_I<"vadc", 0b010000>;
@@ -1464,12 +1456,12 @@ defm VFWNMSAC_V : VWMAC_FV_V_F<"vfwnmsac", 0b111111>;
 
 // Vector Floating-Point Square-Root Instruction
 let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
-defm VFSQRT_V : VSQR_FV_VS2<"vfsqrt.v", 0b010011, 0b00000>;
-defm VFREC7_V : VRCP_FV_VS2<"vfrec7.v", 0b010011, 0b00101>;
+def VFSQRT_V : VSQR_FV_VS2<"vfsqrt.v", 0b010011, 0b00000>;
+def VFREC7_V : VRCP_FV_VS2<"vfrec7.v", 0b010011, 0b00101>;
 }
 
 let mayRaiseFPException = true in
-defm VFRSQRT7_V : VRCP_FV_VS2<"vfrsqrt7.v", 0b010011, 0b00100>;
+def VFRSQRT7_V : VRCP_FV_VS2<"vfrsqrt7.v", 0b010011, 0b00100>;
 
 // Vector Floating-Point MIN/MAX Instructions
 let mayRaiseFPException = true in {
@@ -1507,7 +1499,7 @@ def : InstAlias<"vmfge.vv $vd, $va, $vb$vm",
                 (VMFLE_VV VR:$vd, VR:$vb, VR:$va, VMaskOp:$vm), 0>;
 
 // Vector Floating-Point Classify Instruction
-defm VFCLASS_V : VCLS_FV_VS2<"vfclass.v", 0b010011, 0b10000>;
+def VFCLASS_V : VCLS_FV_VS2<"vfclass.v", 0b010011, 0b10000>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
@@ -1534,14 +1526,14 @@ def VFMV_V_F : RVInstVX<0b010111, OPFVF, (outs VR:$vd),
 // Single-Width Floating-Point/Integer Type-Convert Instructions
 let mayRaiseFPException = true in {
 let Uses = [FRM, VL, VTYPE] in {
-defm VFCVT_XU_F_V : VCVTI_FV_VS2<"vfcvt.xu.f.v", 0b010010, 0b00000>;
-defm VFCVT_X_F_V : VCVTI_FV_VS2<"vfcvt.x.f.v", 0b010010, 0b00001>;
+def VFCVT_XU_F_V : VCVTI_FV_VS2<"vfcvt.xu.f.v", 0b010010, 0b00000>;
+def VFCVT_X_F_V : VCVTI_FV_VS2<"vfcvt.x.f.v", 0b010010, 0b00001>;
 }
-defm VFCVT_RTZ_XU_F_V : VCVTI_FV_VS2<"vfcvt.rtz.xu.f.v", 0b010010, 0b00110>;
-defm VFCVT_RTZ_X_F_V : VCVTI_FV_VS2<"vfcvt.rtz.x.f.v", 0b010010, 0b00111>;
+def VFCVT_RTZ_XU_F_V : VCVTI_FV_VS2<"vfcvt.rtz.xu.f.v", 0b010010, 0b00110>;
+def VFCVT_RTZ_X_F_V : VCVTI_FV_VS2<"vfcvt.rtz.x.f.v", 0b010010, 0b00111>;
 let Uses = [FRM, VL, VTYPE] in {
-defm VFCVT_F_XU_V : VCVTF_IV_VS2<"vfcvt.f.xu.v", 0b010010, 0b00010>;
-defm VFCVT_F_X_V : VCVTF_IV_VS2<"vfcvt.f.x.v", 0b010010, 0b00011>;
+def VFCVT_F_XU_V : VCVTF_IV_VS2<"vfcvt.f.xu.v", 0b010010, 0b00010>;
+def VFCVT_F_X_V : VCVTF_IV_VS2<"vfcvt.f.x.v", 0b010010, 0b00011>;
 }
 } // mayRaiseFPException = true
 
@@ -1549,30 +1541,30 @@ defm VFCVT_F_X_V : VCVTF_IV_VS2<"vfcvt.f.x.v", 0b010010, 0b00011>;
 let Constraints = "@earlyclobber $vd", RVVConstraint = WidenCvt,
     mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
 let Uses = [FRM, VL, VTYPE] in {
-defm VFWCVT_XU_F_V : VWCVTI_FV_VS2<"vfwcvt.xu.f.v", 0b010010, 0b01000>;
-defm VFWCVT_X_F_V : VWCVTI_FV_VS2<"vfwcvt.x.f.v", 0b010010, 0b01001>;
+def VFWCVT_XU_F_V : VWCVTI_FV_VS2<"vfwcvt.xu.f.v", 0b010010, 0b01000>;
+def VFWCVT_X_F_V : VWCVTI_FV_VS2<"vfwcvt.x.f.v", 0b010010, 0b01001>;
 }
-defm VFWCVT_RTZ_XU_F_V : VWCVTI_FV_VS2<"vfwcvt.rtz.xu.f.v", 0b010010, 0b01110>;
-defm VFWCVT_RTZ_X_F_V : VWCVTI_FV_VS2<"vfwcvt.rtz.x.f.v", 0b010010, 0b01111>;
-defm VFWCVT_F_XU_V : VWCVTF_IV_VS2<"vfwcvt.f.xu.v", 0b010010, 0b01010>;
-defm VFWCVT_F_X_V : VWCVTF_IV_VS2<"vfwcvt.f.x.v", 0b010010, 0b01011>;
-defm VFWCVT_F_F_V : VWCVTF_FV_VS2<"vfwcvt.f.f.v", 0b010010, 0b01100>;
+def VFWCVT_RTZ_XU_F_V : VWCVTI_FV_VS2<"vfwcvt.rtz.xu.f.v", 0b010010, 0b01110>;
+def VFWCVT_RTZ_X_F_V : VWCVTI_FV_VS2<"vfwcvt.rtz.x.f.v", 0b010010, 0b01111>;
+def VFWCVT_F_XU_V : VWCVTF_IV_VS2<"vfwcvt.f.xu.v", 0b010010, 0b01010>;
+def VFWCVT_F_X_V : VWCVTF_IV_VS2<"vfwcvt.f.x.v", 0b010010, 0b01011>;
+def VFWCVT_F_F_V : VWCVTF_FV_VS2<"vfwcvt.f.f.v", 0b010010, 0b01100>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = WidenCvt, DestEEW = EEWSEWx2
 
 // Narrowing Floating-Point/Integer Type-Convert Instructions
 let Constraints = "@earlyclobber $vd", mayRaiseFPException = true in {
 let Uses = [FRM, VL, VTYPE] in {
-defm VFNCVT_XU_F_W : VNCVTI_FV_VS2<"vfncvt.xu.f.w", 0b010010, 0b10000>;
-defm VFNCVT_X_F_W : VNCVTI_FV_VS2<"vfncvt.x.f.w", 0b010010, 0b10001>;
+def VFNCVT_XU_F_W : VNCVTI_FV_VS2<"vfncvt.xu.f.w", 0b010010, 0b10000>;
+def VFNCVT_X_F_W : VNCVTI_FV_VS2<"vfncvt.x.f.w", 0b010010, 0b10001>;
 }
-defm VFNCVT_RTZ_XU_F_W : VNCVTI_FV_VS2<"vfncvt.rtz.xu.f.w", 0b010010, 0b10110>;
-defm VFNCVT_RTZ_X_F_W : VNCVTI_FV_VS2<"vfncvt.rtz.x.f.w", 0b010010, 0b10111>;
+def VFNCVT_RTZ_XU_F_W : VNCVTI_FV_VS2<"vfncvt.rtz.xu.f.w", 0b010010, 0b10110>;
+def VFNCVT_RTZ_X_F_W : VNCVTI_FV_VS2<"vfncvt.rtz.x.f.w", 0b010010, 0b10111>;
 let Uses = [FRM, VL, VTYPE] in {
-defm VFNCVT_F_XU_W : VNCVTF_IV_VS2<"vfncvt.f.xu.w", 0b010010, 0b10010>;
-defm VFNCVT_F_X_W : VNCVTF_IV_VS2<"vfncvt.f.x.w", 0b010010, 0b10011>;
-defm VFNCVT_F_F_W : VNCVTF_FV_VS2<"vfncvt.f.f.w", 0b010010, 0b10100>;
+def VFNCVT_F_XU_W : VNCVTF_IV_VS2<"vfncvt.f.xu.w", 0b010010, 0b10010>;
+def VFNCVT_F_X_W : VNCVTF_IV_VS2<"vfncvt.f.x.w", 0b010010, 0b10011>;
+def VFNCVT_F_F_W : VNCVTF_FV_VS2<"vfncvt.f.f.w", 0b010010, 0b10100>;
 }
-defm VFNCVT_ROD_F_F_W : VNCVTF_FV_VS2<"vfncvt.rod.f.f.w", 0b010010, 0b10101>;
+def VFNCVT_ROD_F_F_W : VNCVTF_FV_VS2<"vfncvt.rod.f.f.w", 0b010010, 0b10101>;
 } // Constraints = "@earlyclobber $vd", mayRaiseFPException = true
 } // Predicates = HasVInstructionsAnyF]
 
@@ -1680,14 +1672,14 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = 
 
 let DestEEW = EEW1 in {
 // vmsbf.m set-before-first mask bit
-defm VMSBF_M : VMSFS_MV_V<"vmsbf.m", 0b010100, 0b00001>;
+def VMSBF_M : VMSFS_MV_VS2<"vmsbf.m", 0b010100, 0b00001>;
 // vmsif.m set-including-first mask bit
-defm VMSIF_M : VMSFS_MV_V<"vmsif.m", 0b010100, 0b00011>;
+def VMSIF_M : VMSFS_MV_VS2<"vmsif.m", 0b010100, 0b00011>;
 // vmsof.m set-only-first mask bit
-defm VMSOF_M : VMSFS_MV_V<"vmsof.m", 0b010100, 0b00010>;
+def VMSOF_M : VMSFS_MV_VS2<"vmsof.m", 0b010100, 0b00010>;
 } // DestEEW = EEW1
 // Vector Iota Instruction
-defm VIOTA_M : VIOTA_MV_V<"viota.m", 0b010100, 0b10000>;
+def VIOTA_M : VIOTA_MV_VS2<"viota.m", 0b010100, 0b10000>;
 
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsMask
 
@@ -1778,8 +1770,7 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress, ElementsDepend
 defm VCOMPRESS_V : VCPR_MV_Mask<"vcompress", 0b010111>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress, ElementsDependOn = EltDepsVLMask
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isMoveReg = 1,
-    RVVConstraint = NoConstraint in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isMoveReg = 1 in {
 // A future extension may relax the vector register alignment restrictions.
 foreach n = [1, 2, 4, 8] in {
   defvar vrc = !cast<VReg>(!if(!eq(n, 1), "VR", "VRM"#n));
@@ -1788,6 +1779,8 @@ foreach n = [1, 2, 4, 8] in {
                    VMVRSched<n> {
     let Uses = [VTYPE];
     let vm = 1;
+
+    let RVVConstraint = NoConstraint;
   }
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0

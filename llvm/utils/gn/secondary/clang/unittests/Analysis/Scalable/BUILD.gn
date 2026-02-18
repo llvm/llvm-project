@@ -10,6 +10,7 @@ unittest("ClangScalableAnalysisTests") {
     "//clang/lib/Serialization",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
   ]
   include_dirs = [ "." ]
   sources = [

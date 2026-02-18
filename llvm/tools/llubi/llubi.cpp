@@ -91,9 +91,12 @@ public:
     errs() << "Immediate UB detected: " << Msg << '\n';
   }
 
+  void onError(StringRef Msg) override { errs() << "Error: " << Msg << '\n'; }
+
   bool onBBJump(Instruction &I, BasicBlock &To) override {
     errs() << I << " jump to ";
     To.printAsOperand(errs(), /*PrintType=*/false);
+    errs() << '\n';
     return true;
   }
 
@@ -161,6 +164,12 @@ int main(int argc, char **argv) {
   Ctx.setVScale(VScale);
   Ctx.setMaxSteps(MaxSteps);
   Ctx.setMaxStackDepth(MaxStackDepth);
+
+  if (!Ctx.initGlobalValues()) {
+    WithColor::error() << "Failed to initialize global values (e.g., the "
+                          "memory limit may be too low).\n";
+    return 1;
+  }
 
   // Call the main function from M as if its signature were:
   //   int main (int argc, char **argv)

@@ -2121,7 +2121,7 @@ private:
     if (!hasNonZeroOffset())
       return C;
 
-    return llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, C, getOffset());
+    return llvm::ConstantExpr::getPtrAdd(C, getOffset());
   }
 };
 

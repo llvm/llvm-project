@@ -64,6 +64,8 @@ class PALUVVNoVmTernary<bits<6> funct6, RISCVVFormat opv, string opcodestr>
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
   let Inst{6-0} = OPC_OP_VE.Value;
+
+  let RVVConstraint = NoConstraint;
 }
 
 // op vd, vs2, imm
@@ -82,6 +84,8 @@ class PALUVINoVmBinary<bits<6> funct6, string opcodestr, Operand optype>
   let vm = 1;
   let Inst{6-0} = OPC_OP_VE.Value;
   let Inst{14-12} = OPMVV.Value;
+
+  let RVVConstraint = NoConstraint;
 }
 
 // op vd, vs2 (use vs1 as instruction encoding) where vd is also a source
@@ -93,11 +97,12 @@ class PALUVs2NoVmBinary<bits<6> funct6, bits<5> vs1, RISCVVFormat opv,
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
   let Inst{6-0} = OPC_OP_VE.Value;
+
+  let RVVConstraint = NoConstraint;
 }
 
 multiclass VAES_MV_V_S<bits<6> funct6_vv, bits<6> funct6_vs, bits<5> vs1,
                          RISCVVFormat opv, string opcodestr> {
-  let RVVConstraint = NoConstraint in
   def NAME # _VV : PALUVs2NoVmBinary<funct6_vv, vs1, opv, opcodestr # ".vv">,
                    SchedBinaryMC<"WriteVAESMVV", "ReadVAESMVV", "ReadVAESMVV">;
   let RVVConstraint = VS2Constraint in
@@ -135,7 +140,7 @@ let Predicates = [HasStdExtZvkb] in {
 
 let ElementsDependOn = EltDepsVLMask in {
 
-let Predicates = [HasStdExtZvkg], RVVConstraint = NoConstraint in {
+let Predicates = [HasStdExtZvkg] in {
   def VGHSH_VV : PALUVVNoVmTernary<0b101100, OPMVV, "vghsh.vv">,
                  SchedTernaryMC<"WriteVGHSHV", "ReadVGHSHV", "ReadVGHSHV",
                                 "ReadVGHSHV">;
@@ -178,7 +183,6 @@ let Predicates = [HasStdExtZvkned] in {
 } // Predicates = [HasStdExtZvkned]
 
 let Predicates = [HasStdExtZvksed] in {
-  let RVVConstraint = NoConstraint in
   def  VSM4K_VI : PALUVINoVm<0b100001, "vsm4k.vi", uimm5>,
                   SchedUnaryMC<"WriteVSM4KV", "ReadVSM4KV">;
   defm VSM4R    : VAES_MV_V_S<0b101000, 0b101001, 0b10000, OPMVV, "vsm4r">;

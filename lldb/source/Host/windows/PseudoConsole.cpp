@@ -72,8 +72,8 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
     return llvm::make_error<llvm::StringError>("ConPTY is not available",
                                                llvm::errc::io_error);
 
-  // close any previously opened handles
-  Close();
+  assert(m_conpty_handle == INVALID_HANDLE_VALUE &&
+         "ConPTY has already been opened");
 
   HRESULT hr;
   HANDLE hInputRead = INVALID_HANDLE_VALUE;

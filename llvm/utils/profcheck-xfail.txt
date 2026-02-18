@@ -12,8 +12,6 @@ CodeGen/WinEH/wineh-statenumbering-cleanups.ll
 CodeGen/WinEH/wineh-statenumbering.ll
 CodeGen/ARM/loopvectorize_pr33804.ll
 CodeGen/ARM/sjljeh-swifterror.ll
-CodeGen/X86/AMX/amx-low-intrinsics.ll
-CodeGen/X86/masked_gather_scatter.ll
 DebugInfo/AArch64/ir-outliner.ll
 DebugInfo/assignment-tracking/X86/hotcoldsplit.ll
 DebugInfo/Generic/block-asan.ll
@@ -183,14 +181,6 @@ Transforms/LowerConstantIntrinsics/objectsize_basic.ll
 Transforms/LowerGlobalDestructors/lower-global-dtors-existing-dos_handle.ll
 Transforms/LowerGlobalDestructors/lower-global-dtors.ll
 Transforms/LowerGlobalDestructors/non-literal-type.ll
-Transforms/LowerMatrixIntrinsics/data-layout-multiply-fused.ll
-Transforms/LowerMatrixIntrinsics/multiply-fused-dominance.ll
-Transforms/LowerMatrixIntrinsics/multiply-fused.ll
-Transforms/LowerMatrixIntrinsics/multiply-fused-loops.ll
-Transforms/LowerMatrixIntrinsics/multiply-fused-loops-large-matrixes.ll
-Transforms/LowerMatrixIntrinsics/multiply-fused-multiple-blocks.ll
-Transforms/LowerMatrixIntrinsics/multiply-fused-volatile.ll
-Transforms/LowerMatrixIntrinsics/select.ll
 Transforms/LowerSwitch/2003-05-01-PHIProblem.ll
 Transforms/LowerSwitch/2004-03-13-SwitchIsDefaultCrash.ll
 Transforms/LowerSwitch/2014-06-10-SwitchContiguousOpt.ll
