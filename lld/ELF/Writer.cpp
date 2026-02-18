@@ -1842,15 +1842,29 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     addRelIpltSymbols();
 
     // RISC-V's gp can address +/- 2 KiB, set it to .sdata + 0x800. This symbol
-    // should only be defined in an executable. If .sdata does not exist, its
+    // should only be defined in an executable. If .sdata does not exist, look
+    // for other section anchors. If none of them exists (very unusual), its
     // value/section does not matter but it has to be relative, so set its
     // st_shndx arbitrarily to 1 (ctx.out.elfHeader).
     if (ctx.arg.emachine == EM_RISCV) {
       if (!ctx.arg.shared) {
-        OutputSection *sec = findSection(ctx, ".sdata");
-        addOptionalRegular(ctx, "__global_pointer$",
-                           sec ? sec : ctx.out.elfHeader.get(), 0x800,
-                           STV_DEFAULT);
+        // Try to put the global pointer at the beginning of some anchor
+        // sections, by the order of `secAnchors` below.
+        bool foundSecAnchor = false;
+        std::array<StringRef, 4> secAnchors = {".sdata", ".data", ".sbss",
+                                               ".bss"};
+        for (auto secName : secAnchors) {
+          OutputSection *sec = findSection(ctx, secName);
+          if (sec) {
+            addOptionalRegular(ctx, "__global_pointer$", sec, 0x800,
+                               STV_DEFAULT);
+            foundSecAnchor = true;
+            break;
+          }
+        }
+        if (!foundSecAnchor)
+          addOptionalRegular(ctx, "__global_pointer$", ctx.out.elfHeader.get(),
+                             0x800, STV_DEFAULT);
         // Set riscvGlobalPointer to be used by the optional global pointer
         // relaxation.
         if (ctx.arg.relaxGP) {
