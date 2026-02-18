@@ -820,7 +820,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case RE_ARM_SBREL:
     return r.sym->getVA(ctx, a) - getARMStaticBase(*r.sym);
   case R_GOT:
-  case RE_AARCH64_AUTH_GOT:
   case R_RELAX_TLS_GD_TO_IE_ABS:
     return r.sym->getGotVA(ctx) + a;
   case RE_LOONGARCH_GOT:
@@ -847,13 +846,10 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     return r.sym->getGotOffset(ctx) + a;
   case RE_AARCH64_GOT_PAGE_PC:
-  case RE_AARCH64_AUTH_GOT_PAGE_PC:
-  case RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
     return getAArch64Page(r.sym->getGotVA(ctx) + a) - getAArch64Page(p);
   case RE_AARCH64_GOT_PAGE:
     return r.sym->getGotVA(ctx) + a - getAArch64Page(ctx.in.got->getVA());
   case R_GOT_PC:
-  case RE_AARCH64_AUTH_GOT_PC:
   case R_RELAX_TLS_GD_TO_IE:
     return r.sym->getGotVA(ctx) + a - p;
   case R_GOTPLT_GOTREL:
@@ -1012,14 +1008,12 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_SIZE:
     return r.sym->getSize() + a;
   case R_TLSDESC:
-  case RE_AARCH64_AUTH_TLSDESC:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a;
   case R_TLSDESC_PC:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a - p;
   case R_TLSDESC_GOTPLT:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a - ctx.in.gotPlt->getVA();
   case RE_AARCH64_TLSDESC_PAGE:
-  case RE_AARCH64_AUTH_TLSDESC_PAGE:
     return getAArch64Page(ctx.in.got->getTlsDescAddr(*r.sym) + a) -
            getAArch64Page(p);
   case RE_LOONGARCH_TLSDESC_PAGE_PC:

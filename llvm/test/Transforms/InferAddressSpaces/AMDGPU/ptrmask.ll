@@ -36,7 +36,7 @@ define i8 @ptrmask_cast_local_null_to_flat(i64 %mask) {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
-  %masked = call ptr @llvm.ptrmask.p0.i64(ptr addrspacecast (ptr addrspace(3) null to ptr), i64 %mask)
+  %masked = call ptr @llvm.ptrmask.p0.i64(ptr addrspacecast (ptr addrspace(3) zeroinitializer to ptr), i64 %mask)
   %load = load i8, ptr %masked
   ret i8 %load
 }
@@ -47,7 +47,7 @@ define <3 x ptr addrspace(3)> @ptrmask_vector_cast_local_null_to_flat(<3 x i64> 
 ; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast <3 x ptr> [[MASKED]] to <3 x ptr addrspace(3)>
 ; CHECK-NEXT:    ret <3 x ptr addrspace(3)> [[CAST]]
 ;
-  %masked = call <3 x ptr> @llvm.ptrmask.v3p0.v3i64(<3 x ptr> addrspacecast (<3 x ptr addrspace(3)> <ptr addrspace(3) null, ptr addrspace(3) null, ptr addrspace(3) null> to <3 x ptr>), <3 x i64> %mask)
+  %masked = call <3 x ptr> @llvm.ptrmask.v3p0.v3i64(<3 x ptr> addrspacecast (<3 x ptr addrspace(3)> <ptr addrspace(3) zeroinitializer, ptr addrspace(3) zeroinitializer, ptr addrspace(3) zeroinitializer> to <3 x ptr>), <3 x i64> %mask)
   %cast = addrspacecast <3 x ptr> %masked to <3 x ptr addrspace(3)>
   ret <3 x ptr addrspace(3)> %cast
 }
@@ -330,7 +330,7 @@ define i8 @ptrmask_cast_local_null_to_flat_const_mask_7fffffffffffffff() {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
-  %cast = addrspacecast ptr addrspace(3) null to ptr
+  %cast = addrspacecast ptr addrspace(3) zeroinitializer to ptr
   %masked = call ptr @llvm.ptrmask.p0.i64(ptr %cast, i64 9223372036854775807)
   %load = load i8, ptr %masked
   ret i8 %load
@@ -364,7 +364,7 @@ define i8 @ptrmask_cast_local_null_to_flat_const_mask_ffffffff00000000() {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) null, align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
-  %cast = addrspacecast ptr addrspace(3) null to ptr
+  %cast = addrspacecast ptr addrspace(3) zeroinitializer to ptr
   %masked = call ptr @llvm.ptrmask.p0.i64(ptr %cast, i64 -4294967296)
   %load = load i8, ptr %masked
   ret i8 %load

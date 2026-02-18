@@ -514,6 +514,8 @@ class VALUVVNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                (ins VR:$vs2, VR:$vs1),
                opcodestr, "$vd, $vs2, $vs1"> {
   let vm = 1;
+
+  let RVVConstraint = NoConstraint;
 }
 
 // op vd, vs2, rs1, vm
@@ -546,6 +548,8 @@ class VALUVXNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                (ins VR:$vs2, GPR:$rs1),
                opcodestr, "$vd, $vs2, $rs1"> {
   let vm = 1;
+
+  let RVVConstraint = NoConstraint;
 }
 
 // op vd, vs2, imm, vm
@@ -568,6 +572,8 @@ class VALUVINoVm<bits<6> funct6, string opcodestr, Operand optype = simm5>
                 (ins VR:$vs2, optype:$imm),
                 opcodestr, "$vd, $vs2, $imm"> {
   let vm = 1;
+
+  let RVVConstraint = NoConstraint;
 }
 
 // op vd, vs2, rs1, vm (Float)
@@ -1764,8 +1770,7 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress, ElementsDepend
 defm VCOMPRESS_V : VCPR_MV_Mask<"vcompress", 0b010111>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress, ElementsDependOn = EltDepsVLMask
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isMoveReg = 1,
-    RVVConstraint = NoConstraint in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isMoveReg = 1 in {
 // A future extension may relax the vector register alignment restrictions.
 foreach n = [1, 2, 4, 8] in {
   defvar vrc = !cast<VReg>(!if(!eq(n, 1), "VR", "VRM"#n));
@@ -1774,6 +1779,8 @@ foreach n = [1, 2, 4, 8] in {
                    VMVRSched<n> {
     let Uses = [VTYPE];
     let vm = 1;
+
+    let RVVConstraint = NoConstraint;
   }
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
