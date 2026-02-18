@@ -21,9 +21,9 @@
 using namespace llvm;
 
 BasicBlock *TileInfo::CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
-                                 Value *Bound, Value *Step, StringRef Name,
-                                 IRBuilderBase &B, DomTreeUpdater &DTU, Loop *L,
-                                 LoopInfo &LI) {
+                                 ConstantInt *Bound, ConstantInt *Step,
+                                 StringRef Name, IRBuilderBase &B,
+                                 DomTreeUpdater &DTU, Loop *L, LoopInfo &LI) {
   LLVMContext &Ctx = Preheader->getContext();
   BasicBlock *Header = BasicBlock::Create(
       Preheader->getContext(), Name + ".header", Preheader->getParent(), Exit);
