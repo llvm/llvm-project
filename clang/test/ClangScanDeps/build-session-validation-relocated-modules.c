@@ -12,19 +12,22 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/compile-commands.json.in > %t/compile-commands.json
 
-
 // RUN: touch %t/session.timestamp
 // RUN: clang-scan-deps -format experimental-full -j 1 \
-// RUN:   -compilation-database %t/compile-commands.json 2>&1 | FileCheck %s --check-prefix=DEPS1 
+// RUN:   -compilation-database %t/compile-commands.json -o %t/deps1.json 
+// RUN: cat %t/deps1.json | FileCheck %s --check-prefix=DEPS1 
 
 // Model update where same framework appears in earlier search path.
 // This can occur on an incremental build where dependency relationships are updated.
+// RUN: touch %t/session.timestamp
+// RUN: sleep 1
 // RUN: mkdir %t/preferred_frameworks/
 // RUN: cp -r %t/fallback_frameworks/MovedDep.framework %t/preferred_frameworks/
 // RUN: touch %t/fallback_frameworks/InvalidatedDep.framework/Modules/module.modulemap
 
 // RUN: clang-scan-deps -format experimental-full -j 1 \
-// RUN:   -compilation-database %t/compile-commands.json 2>&1 | FileCheck %s --check-prefix=DEPS2
+// RUN:   -compilation-database %t/compile-commands.json -o %t/deps2.json
+// RUN: cat %t/deps2.json | FileCheck %s --check-prefix=DEPS2
 
 // DEPS1: "clang-module-deps": [],
 // DEPS1-NEXT: "clang-modulemap-file": "{{.*}}fallback_frameworks{{.*}}MovedDep.framework
