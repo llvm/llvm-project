@@ -84,7 +84,7 @@ define float @test_powr_afn_f32_nnan(float %x, float %y) {
 ; CHECK-SAME: (float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan afn olt float [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP2:%.*]] = select nnan afn i1 [[TMP1]], float 0x7FF8000000000000, float [[X]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call nnan afn float @llvm.fabs.f32(float [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call nnan afn float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = call nnan afn float @llvm.log2.f32(float [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul nnan afn float [[Y]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call nnan afn float @llvm.exp2.f32(float [[TMP5]])
