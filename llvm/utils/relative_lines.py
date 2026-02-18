@@ -17,8 +17,8 @@ line number reference.
 USAGE = """Example usage:
     find -type f clang/test/CodeCompletion | grep -v /Inputs/ | \\
     xargs relative_lines.py --dry-run --verbose --near=100 \\
-    --pattern='-code-completion-at[ =]%s:(\d+)' \\
-    --pattern='requires fix-it: {(\d+):\d+-(\d+):\d+}'
+    --pattern='-code-completion-at[ =]%s:(\\d+)' \\
+    --pattern='requires fix-it: {(\\d+):\\d+-(\\d+):\\d+}'
 """
 
 import argparse

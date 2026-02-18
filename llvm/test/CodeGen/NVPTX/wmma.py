@@ -1720,7 +1720,7 @@ def gen_check_unsupported_ops(items):
     )
     print("; INTRINSICS: {{^; INTRINSICS_LIST_BEGIN}}")
     print(
-        """
+        r"""
 
 ; NOEXTGEOM-NOT: {{m8n32|m32n8}}
 ; NOINT-NOT: .{{s32|s8}}
