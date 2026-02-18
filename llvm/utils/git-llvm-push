@@ -202,7 +202,7 @@ class GitHubAPI:
         title: str,
         body: str,
         draft: bool,
-    ) -> int:
+    ) -> tuple:
         if self.runner.dry_run:
             self.runner.print(f"[Dry Run] Would create pull request for '{head_branch}'...")
             return 0
@@ -219,7 +219,7 @@ class GitHubAPI:
             "POST", f"/repos/{LLVM_REPO}/pulls", json_payload=data
         )
         self.runner.print(f"Pull request created: {response_data.get("html_url")}")
-        return response_data.get("number")
+        return (response_data.get("node_id"), response_data.get("number"))
 
     def get_repo_settings(self) -> dict:
         return self._request_and_parse_json("GET", f"/repos/{LLVM_REPO}")
@@ -291,19 +291,12 @@ class GitHubAPI:
 
         raise LlvmPrError(f"PR was not mergeable after {MERGE_MAX_RETRIES} attempts.")
 
-    def _get_node_id(self, pr_number: int) -> str:
-        pr_data = self._request_and_parse_json(
-            "GET", f"/repos/{LLVM_REPO}/pulls/{pr_number}"
-        )
-        return pr_data["node_id"]
-
-    def enable_auto_merge(self, pr_number: int) -> None:
+    def enable_auto_merge(self, pr_number: int, node_id: str) -> None:
         if self.runner.dry_run:
             self.runner.print(f"[Dry Run] Would enable auto-merge for #{pr_number}")
             return
 
         self.runner.print(f"Enabling auto-merge for #{pr_number}...")
-        node_id = self._get_node_id(pr_number)
         # Use the enablePullRequestAutoMerge mutation to enable auto merge
         # through the GraphQL API as this cannot be done through the REST
         # API. Documented in
@@ -509,7 +502,7 @@ class LLVMPRAutomator:
         temp_branch = self._create_and_push_branch_for_commit(
             commit_hash, base_branch_name, index
         )
-        pr_number = self.github_api.create_pr(
+        pr_nodeid, pr_number = self.github_api.create_pr(
             head_branch=f"{self.config.user_login}:{temp_branch}",
             base_branch=self.config.base_branch,
             title=commit_title,
@@ -528,7 +521,7 @@ class LLVMPRAutomator:
             return
 
         if self.config.auto_merge:
-            self.github_api.enable_auto_merge(pr_number)
+            self.github_api.enable_auto_merge(pr_number, pr_nodeid)
         else:
             merged_branch = self.github_api.merge_pr(pr_number)
             if merged_branch and not self.repo_settings.get("delete_branch_on_merge"):
