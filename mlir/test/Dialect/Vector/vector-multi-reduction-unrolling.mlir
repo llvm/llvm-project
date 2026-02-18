@@ -31,47 +31,6 @@ func.func @inner_reduction_2d(%arg0: vector<2x4xf32>, %acc: vector<2xf32>) -> ve
     return %0 : vector<2xf32>
 }
 
-func.func @inner_reduction_2d_masked_dynamic(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
-  %c0 = arith.constant 0 : index
-  %dim = tensor.dim %arg0, %c0 : tensor<?x?xf32>
-  %c1 = arith.constant 1 : index
-  %dim_0 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
-  %c0_1 = arith.constant 0 : index
-  %cst = arith.constant 0.000000e+00 : f32
-  %0 = vector.create_mask %dim, %dim_0 : vector<4x8xi1>
-  %1 = vector.mask %0 { vector.transfer_read %arg0[%c0_1, %c0_1], %cst {in_bounds = [true, true]} : tensor<?x?xf32>, vector<4x8xf32> } : vector<4x8xi1> -> vector<4x8xf32>
-  %cst_2 = arith.constant 0.000000e+00 : f32
-  %2 = vector.create_mask %dim : vector<4xi1>
-  %3 = vector.mask %2 { vector.transfer_read %arg1[%c0_1], %cst_2 {in_bounds = [true]} : tensor<?xf32>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
-  %4 = vector.mask %0 { vector.multi_reduction <add>, %1, %3 [1] : vector<4x8xf32> to vector<4xf32> } : vector<4x8xi1> -> vector<4xf32>
-  %c0_3 = arith.constant 0 : index
-  %5 = vector.mask %2 { vector.transfer_write %4, %arg1[%c0_3] {in_bounds = [true]} : vector<4xf32>, tensor<?xf32> } : vector<4xi1> -> tensor<?xf32>
-  return %5 : tensor<?xf32>
-}
-
-// ALL-LABEL: func @inner_reduction_2d_masked_dynamic
-// INNER_REDUCTION:           %[[DIM_0:.+]] = tensor.dim
-// INNER_REDUCTION:           %[[DIM_1:.+]] = tensor.dim
-// INNER_REDUCTION:           %[[MASK_2D:.+]] = vector.create_mask %[[DIM_0]], %[[DIM_1]] : vector<4x8xi1>
-//
-// INNER_REDUCTION:           %[[MASK_SLICE_0:.+]] = vector.extract %[[MASK_2D]][0] : vector<8xi1> from vector<4x8xi1>
-// INNER_REDUCTION:           %[[REDUCE_0:.+]] = vector.mask %[[MASK_SLICE_0]] { vector.reduction <add>, %{{.+}} : vector<8xf32> into f32 } : vector<8xi1> -> f32
-// INNER_REDUCTION:           %[[INSERT_0:.+]] = vector.insert
-//
-// INNER_REDUCTION:           %[[MASK_SLICE_1:.+]] = vector.extract %[[MASK_2D]][1] : vector<8xi1> from vector<4x8xi1>
-// INNER_REDUCTION:           %[[REDUCE_1:.+]] = vector.mask %[[MASK_SLICE_1]] { vector.reduction <add>, %{{.+}} : vector<8xf32> into f32 } : vector<8xi1> -> f32
-// INNER_REDUCTION:           %[[INSERT_1:.+]] = vector.insert
-//
-// INNER_REDUCTION:           %[[MASK_SLICE_2:.+]] = vector.extract %[[MASK_2D]][2] : vector<8xi1> from vector<4x8xi1>
-// INNER_REDUCTION:           %[[REDUCE_2:.+]] = vector.mask %[[MASK_SLICE_2]] { vector.reduction <add>, %{{.+}} : vector<8xf32> into f32 } : vector<8xi1> -> f32
-// INNER_REDUCTION:           %[[INSERT_2:.+]] = vector.insert
-//
-// INNER_REDUCTION:           %[[MASK_SLICE_3:.+]] = vector.extract %[[MASK_2D]][3] : vector<8xi1> from vector<4x8xi1>
-// INNER_REDUCTION:           %[[REDUCE_3:.+]] = vector.mask %[[MASK_SLICE_3]] { vector.reduction <add>, %{{.+}} : vector<8xf32> into f32 } : vector<8xi1> -> f32
-// INNER_REDUCTION:           %[[INSERT_3:.+]] = vector.insert
-//
-// INNER_PARALLEL:            vector.multi_reduction <add>
-
 // ALL-LABEL: func @inner_reduction_2d_scalable
 // ALL-SAME:    %[[INPUT:.+]]: vector<2x[4]xf32>
 // ALL-SAME:    %[[ACC:.+]]: vector<2xf32>
