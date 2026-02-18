@@ -192,7 +192,7 @@ static void* mmap_interceptor(Mmap real_mmap, void* addr, SIZE_T length,
     return (void*)-1;
   }
   if (flags & map_fixed) {
-  // TODO: shadow gap may need to be checked	  
+    // TODO: shadow gap may need to be checked
     if (__asan::IntersectsShadow(start, end_excl)) {
       errno = errno_EINVAL;
       return (void*)-1;
