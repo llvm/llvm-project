@@ -99,100 +99,54 @@ LIBC_INLINE constexpr float asinpif(float x) {
       -0x1.f6df98438aef4p-9, // x^20
       0x1.4b50c2eb13708p-7   // x^22
   };
-  // polynomial evaluation using horner's method
-  // work only for |x| in [0, 0.5]
-  // Returns v * P(v2) where P(v2) = c0 + c1*v2 + c2*v2^2 + ...
-  auto asinpi_polyeval = [&](double v, double v2) -> double {
-    return v * fputil::polyeval(v2, ASINPI_POLY_COEFFS[0],
-                                ASINPI_POLY_COEFFS[1], ASINPI_POLY_COEFFS[2],
-                                ASINPI_POLY_COEFFS[3], ASINPI_POLY_COEFFS[4],
-                                ASINPI_POLY_COEFFS[5], ASINPI_POLY_COEFFS[6],
-                                ASINPI_POLY_COEFFS[7], ASINPI_POLY_COEFFS[8],
-                                ASINPI_POLY_COEFFS[9], ASINPI_POLY_COEFFS[10],
-                                ASINPI_POLY_COEFFS[11]);
-  };
-
-  // Returns P(v2) - c0 = c1*v2 + c2*v2^2 + ...
-  // This is the "tail" of the polynomial, used to avoid cancellation
-  // in the range reduction path.
-  auto asinpi_polyeval_tail = [&](double v2) -> double {
-    return v2 * fputil::polyeval(v2, ASINPI_POLY_COEFFS[1],
-                                 ASINPI_POLY_COEFFS[2], ASINPI_POLY_COEFFS[3],
-                                 ASINPI_POLY_COEFFS[4], ASINPI_POLY_COEFFS[5],
-                                 ASINPI_POLY_COEFFS[6], ASINPI_POLY_COEFFS[7],
-                                 ASINPI_POLY_COEFFS[8], ASINPI_POLY_COEFFS[9],
-                                 ASINPI_POLY_COEFFS[10],
-                                 ASINPI_POLY_COEFFS[11]);
+  // Evaluates P1(v2) = c1 + c2*v2 + c3*v2^2 + ... (tail of P without c0)
+  auto asinpi_polyeval = [&](double v2) -> double {
+    return fputil::polyeval(
+        v2, ASINPI_POLY_COEFFS[1], ASINPI_POLY_COEFFS[2], ASINPI_POLY_COEFFS[3],
+        ASINPI_POLY_COEFFS[4], ASINPI_POLY_COEFFS[5], ASINPI_POLY_COEFFS[6],
+        ASINPI_POLY_COEFFS[7], ASINPI_POLY_COEFFS[8], ASINPI_POLY_COEFFS[9],
+        ASINPI_POLY_COEFFS[10], ASINPI_POLY_COEFFS[11]);
   };
 
   // if |x| <= 0.5:
+  //   asinpi(x) = x * (c0 + x^2 * P1(x^2))
   if (LIBC_UNLIKELY(x_abs <= 0.5)) {
     double x_d = fputil::cast<double>(x);
-    double result = asinpi_polyeval(x_d, x_d * x_d);
+    double v2 = x_d * x_d;
+    double result = x_d * fputil::multiply_add(v2, asinpi_polyeval(v2),
+                                               ASINPI_POLY_COEFFS[0]);
     return fputil::cast<float>(result);
   }
 
-  // If |x| > 0.5, we need to use the range reduction method:
-  //    y = asin(x) => x = sin(y)
-  //      because: sin(a) = cos(pi/2 - a)
-  //      therefore:
-  //    x = cos(pi/2 - y)
-  //      let z = pi/2 - y,
-  //    x = cos(z)
-  //      because: cos(2a) = 1 - 2 * sin^2(a), z = 2a, a = z/2
-  //      therefore:
-  //    cos(z) = 1 - 2 * sin^2(z/2)
-  //    sin(z/2) = sqrt((1 - cos(z))/2)
-  //    sin(z/2) = sqrt((1 - x)/2)
-  //      let u = (1 - x)/2
-  //      then:
-  //    sin(z/2) = sqrt(u)
-  //    z/2 = asin(sqrt(u))
-  //    z = 2 * asin(sqrt(u))
-  //    pi/2 - y = 2 * asin(sqrt(u))
-  //    y = pi/2 - 2 * asin(sqrt(u))
-  //    y/pi = 1/2 - 2 * asin(sqrt(u))/pi
+  // If |x| > 0.5:
+  //   asinpi(x) = 0.5 - 2 * sqrt(u) * P(u)
+  //             = 0.5 - 2 * sqrt(u) * (c0 + u * P1(u))
+  //             = (0.5 - 2*sqrt(u)*ONE_OVER_PI_HI)
+  //               - 2*sqrt(u) * (ONE_OVER_PI_LO + DELTA_C0 + u * P1(u))
   //
-  // Finally, we can write:
-  //   asinpi(x) = 1/2 - 2 * asinpi(sqrt(u))
-  //     where u = (1 - x) /2
-  //             = 0.5 - 0.5 * x
-  //             = multiply_add(-0.5, x, 0.5)
+  // where u = (1 - |x|) / 2, and
+  //   ONE_OVER_PI_HI + ONE_OVER_PI_LO = 1/pi to ~106 bits
+  //   DELTA_C0 = c0 - ONE_OVER_PI_HI
   //
-  // asinpi(x) = 0.5 - 2 * sqrt(u) * P(u)
-  //
-  // To avoid cancellation when |x| is near 0.5 (where 2*sqrt(u)*P(u) ~ 0.5),
-  // we split P(u) into its leading term c0 and the tail:
-  //   P(u) = c0 + tail(u)
-  //
-  // We further split the constant 1/pi into high and low parts for precision:
-  //   1/pi = ONE_OVER_PI_HI + ONE_OVER_PI_LO
-  //
-  // And rewrite the expression as:
-  //   0.5 - 2*sqrt(u) * (1/pi + (c0 - 1/pi) + tail(u))
-  //
-  // The term (0.5 - 2*sqrt(u)*ONE_OVER_PI_HI) is computed exactly using FMA.
-  // The remaining small terms are added separately:
-  //   - 2*sqrt(u) * ONE_OVER_PI_LO
-  //   - 2*sqrt(u) * (c0 - 1/pi)      [absorbed into tail sum]
-  //   - 2*sqrt(u) * tail(u)
-
+  // ONE_OVER_PI_LO + DELTA_C0 is a single precomputed constant:
+  //   = ONE_OVER_PI_LO + (c0 - ONE_OVER_PI_HI)
+  //   = c0 - (ONE_OVER_PI_HI - ONE_OVER_PI_LO)
+  //   = c0 - 1/pi  (to ~106 bits)
   constexpr double ONE_OVER_PI_HI = 0x1.45f306dc9c883p-2;
   constexpr double ONE_OVER_PI_LO = -0x1.6b01ec5417056p-56;
-  // Verify: ONE_OVER_PI_HI + ONE_OVER_PI_LO ≈ 1/pi to ~106 bits
-
-  // DELTA_C0 = c0 - ONE_OVER_PI_HI (difference between Sollya c0 and 1/pi hi)
-  constexpr double DELTA_C0 = ASINPI_POLY_COEFFS[0] - ONE_OVER_PI_HI;
+  // C0_MINUS_1OVERPI = c0 - 1/pi = DELTA_C0 + ONE_OVER_PI_LO
+  constexpr double C0_MINUS_1OVERPI =
+      (ASINPI_POLY_COEFFS[0] - ONE_OVER_PI_HI) + ONE_OVER_PI_LO;
 
   double u = fputil::multiply_add(-0.5, x_abs, 0.5);
   double sqrt_u = fputil::sqrt<double>(u);
-
-  // compute the tail: P(u) - c0
-  double tail = asinpi_polyeval_tail(u);
-
   double neg2_sqrt_u = -2.0 * sqrt_u;
+
+  // tail = (c0 - 1/pi) + u * P1(u)
+  double tail = fputil::multiply_add(u, asinpi_polyeval(u), C0_MINUS_1OVERPI);
+
   double result_hi = fputil::multiply_add(neg2_sqrt_u, ONE_OVER_PI_HI, 0.5);
-  double result = result_hi + neg2_sqrt_u * (ONE_OVER_PI_LO + DELTA_C0 + tail);
+  double result = fputil::multiply_add(tail, neg2_sqrt_u, result_hi);
 
   return fputil::cast<float>(signed_result(result));
 }
