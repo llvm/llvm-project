@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+
+# Example usage:
+#
+# $ cd llvm-project.git
+# $ gh-pr-diff --color-words 171453
+# $ gh-pr-diff --color-words 174293 llvm/docs/LangRef.rst
+
+import argparse
+import requests
+import shlex
+import subprocess
+import sys
+
+PROG = "gh-pr-diff"
+GITHUB_WEB = "https://github.com"
+GITHUB_SSH = "git@github.com"
+GITHUB_API = "https://api.github.com/repos"
+DEFAULT_REMOTE = "origin"
+
+
+def _fail(msg):
+    print(f"{PROG}: error: {msg}", file=sys.stderr)
+    exit(1)
+
+
+def _pr_number(arg):
+    try:
+        n = int(arg)
+        if n < 1:
+            raise ValueError
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"value is not a positive integer: {arg}")
+    return n
+
+
+def _run(*cmd):
+    print(" ".join(shlex.quote(tk) for tk in cmd), file=sys.stderr)
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError:
+        exit(1)
+
+
+# Parse arguments.
+parser = argparse.ArgumentParser(
+    prog=PROG,
+    description="Examine a GitHub PR using 'git diff' and any of its options",
+    epilog=f"""
+Example usage:
+
+  $ cd llvm-project.git
+  $ {PROG} --color-words 174293 llvm/docs/LangRef.rst
+
+From the remote 'origin' for 'llvm-project.git', that fetches the <base> and
+<head> commits for GitHub PR #174293 and then calls:
+
+  $ git diff --color-words <base>...<head> llvm/docs/LangRef.rst
+
+If instead the only argument is the PR number, then the full diff will be
+printed, but GitHub's web UI already provides that.
+
+In general, the arguments to 'git diff' are the arguments to {PROG} except:
+- The PR number is replaced with '<base>...<head>'.
+- {PROG} options are removed according to their above documentation.
+- Any other option starting with '--gh-' is an error.""",
+    formatter_class=argparse.RawDescriptionHelpFormatter,
+)
+parser.add_argument(
+    "--gh-remote",
+    help="git remote (default: %(default)s)",
+    default=DEFAULT_REMOTE,
+)
+parser.add_argument(
+    # If the user specifies a `git diff` option like `--output 123456` before
+    # the PR number, then `123456` is parsed as the PR number.  Here are some
+    # workarounds:
+    # - `--output=123456`
+    # - `--output --gh-x=123456`
+    "pr",
+    type=_pr_number,
+    help="GitHub pull request number and 'git diff' arguments",
+)
+parser.add_argument(
+    # An argument can look like an argument to this script if it is the first
+    # positional argument according to argparse (see above), it starts with
+    # `--gh-`, or it is `-h` or `--help`.  The latter cases seem unlikely, but
+    # we have a general workaround.
+    "--gh-x",
+    metavar="ARG",
+    help=f"pass ARG through to 'git diff' even if it looks like an argument to {PROG}",
+    action="append",
+)
+parser.add_argument(
+    "--",
+    help=f"end options in both the {PROG} and 'git diff' command lines",
+    action="count",
+    dest="sep",
+)
+args, unknown_args = parser.parse_known_args()
+unknown_args = set(unknown_args)
+
+# Separate the `git diff` arguments before and after the PR number, remove known
+# `--gh-` options, and report any unknown ones.
+args_pre_pr = []
+args_post_pr = []
+found_pr = None
+end_opts = False
+i = 1
+while i < len(sys.argv):
+    arg = sys.argv[i]
+    i += 1
+    if not end_opts and arg.startswith("-"):
+        # It is an option.
+        xarg = arg.removeprefix("--gh-x=")
+        if arg != xarg:
+            arg = xarg
+        elif arg == "--gh-x":
+            arg = sys.argv[i]
+            i += 1
+        elif arg == "--":
+            end_opts = True
+        elif arg.startswith("--gh-"):
+            if arg in unknown_args:
+                parser.error(f"unrecognized option reserved for {PROG}: {arg}")
+            # Skip the `--gh-` option and any arg it has.
+            if "=" not in arg:
+                i += 1
+            continue
+    else:
+        # It is a positional argument.  If it is the first one, it is the PR,
+        # which we will replace with commits hashes.
+        if not found_pr:
+            found_pr = True
+            continue
+    if found_pr:
+        args_post_pr.append(arg)
+    else:
+        args_pre_pr.append(arg)
+
+# Determine the GitHub project.
+try:
+    remote_url = subprocess.check_output(
+        ["git", "config", "--get", f"remote.{args.gh_remote}.url"], text=True
+    ).strip()
+except subprocess.CalledProcessError as e:
+    _fail(f"failure getting URL for remote {repr(args.gh_remote)}: {e}")
+remote_url_base = remote_url.removesuffix(".git")
+if remote_url_base == remote_url:
+    _fail(f"remote {repr(args.gh_remote)} URL is missing '.git': {remote_url}")
+for prefix in (f"{GITHUB_WEB}/", f"{GITHUB_SSH}:"):
+    project = remote_url_base.removeprefix(prefix)
+    if project != remote_url_base:
+        break
+else:
+    _fail(f"unrecognized remote {repr(args.gh_remote)} URL prefix: {remote_url}")
+
+# Determine base and head commits.
+pr_url = f"{GITHUB_API}/{project}/pulls/{args.pr}"
+try:
+    pr_response = requests.get(pr_url)
+    pr_response.raise_for_status()
+    pr_json = pr_response.json()
+    pr_base = pr_json["base"]["sha"]
+    pr_head = pr_json["head"]["sha"]
+except Exception as e:
+    _fail(f"failure looking up GitHUB PR commits: {e}")
+
+# Run `git fetch` and `git diff`.  As usual, if the output is not piped, the
+# pager configured for `git diff` will handle output.
+_run("git", "fetch", f"{GITHUB_WEB}/{project}", pr_base, pr_head)
+_run("git", "diff", *args_pre_pr, f"{pr_base}...{pr_head}", *args_post_pr)
