@@ -4716,23 +4716,22 @@ std::optional<const DeclBindingInfo *> SemaHLSL::inferGlobalBinding(Expr *E) {
   return nullptr;
 }
 
-bool SemaHLSL::trackLocalResource(VarDecl *VD, Expr *E) {
+void SemaHLSL::trackLocalResource(VarDecl *VD, Expr *E) {
   std::optional<const DeclBindingInfo *> ExprBinding = inferGlobalBinding(E);
   if (!ExprBinding) {
     SemaRef.Diag(E->getBeginLoc(),
                  diag::warn_hlsl_assigning_local_resource_is_not_unique)
         << E << VD;
-    return false;
   }
 
   if (*ExprBinding == nullptr)
-    return true; // No binding could be inferred to track, return without error
+    return; // No binding could be inferred to track, return without error
 
   auto PrevBinding = Assigns.find(VD);
   if (PrevBinding == Assigns.end()) {
     // No previous binding recorded, simply record the new assignment
     Assigns.insert({VD, *ExprBinding});
-    return true;
+    return;
   }
 
   // Otherwise, warn if the assignment implies different resource bindings
@@ -4741,10 +4740,10 @@ bool SemaHLSL::trackLocalResource(VarDecl *VD, Expr *E) {
                  diag::warn_hlsl_assigning_local_resource_is_not_unique)
         << E << VD;
     SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
-    return false;
+    return;
   }
 
-  return true;
+  return;
 }
 
 bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,

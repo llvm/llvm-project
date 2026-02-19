@@ -329,8 +329,7 @@ private:
   // a reference to the global binding info.
   std::optional<const DeclBindingInfo *> inferGlobalBinding(Expr *E);
 
-  // Returns true if no diagnostic is reported
-  bool trackLocalResource(VarDecl *VDecl, Expr *E);
+  void trackLocalResource(VarDecl *VDecl, Expr *E);
 };
 
 } // namespace clang
