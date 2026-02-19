@@ -976,7 +976,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                    CU.getDwarf5OrGNUAttr(dwarf::DW_AT_LLVM_virtual_call_origin),
                    *CalleeDIE);
     // Add DW_AT_linkage_name to the method declaration if needed.
-    CU.addLinkageNamesToDeclarations(this, CalleeSP, CalleeDIE);
+    CU.addLinkageNamesToDeclarations(*this, *CalleeSP, *CalleeDIE);
   };
 
   // Emit call site entries for each call or tail call in the function.

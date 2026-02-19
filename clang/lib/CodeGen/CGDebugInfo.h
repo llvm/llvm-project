@@ -683,7 +683,7 @@ public:
   llvm::DINode::DIFlags getCallSiteRelatedAttrs() const;
 
   /// Add call target information.
-  void addCallTarget(const FunctionDecl *FD, llvm::CallBase *CI);
+  void addCallTargetIfVirtual(const FunctionDecl *FD, llvm::CallBase *CI);
 
 private:
   /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
@@ -910,8 +910,8 @@ private:
   /// (non-null) \c Method. Returns empty string otherwise.
   llvm::StringRef GetMethodLinkageName(const CXXMethodDecl *Method) const;
 
-  /// Generate call target information.
-  bool generateVirtualCallSite() const {
+  /// Returns true if we should generate call target information.
+  bool shouldGenerateVirtualCallSite() const {
     // Check general conditions for call site generation.
     return (getCallSiteRelatedAttrs() != llvm::DINode::FlagZero);
   }

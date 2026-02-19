@@ -6323,7 +6323,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           CI, DI->getFunctionType(CalleeDecl, ResTy, Args), CalleeGlobalDecl);
     }
     // Generate call site target information.
-    DI->addCallTarget(CalleeDecl, CI);
+    DI->addCallTargetIfVirtual(CalleeDecl, CI);
   }
 
   return Ret;

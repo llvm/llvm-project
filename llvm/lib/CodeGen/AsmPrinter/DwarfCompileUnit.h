@@ -437,9 +437,9 @@ public:
 
   MDNodeSetVector &getDeferredLocalDecls() { return DeferredLocalDecls; }
 
-  void addLinkageNamesToDeclarations(const DwarfDebug *DD,
-                                     const DISubprogram *CalleeSP,
-                                     DIE *CalleeDIE);
+  void addLinkageNamesToDeclarations(const DwarfDebug &DD,
+                                     const DISubprogram &CalleeSP,
+                                     DIE &CalleeDIE);
 };
 
 } // end namespace llvm

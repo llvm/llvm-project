@@ -3342,7 +3342,6 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Call site info for function parameters tracking and call base type info.
   MachineFunction::CallSiteInfo CSInfo;
-
   // Set type id for call site info.
   setTypeIdForCallsiteInfo(CB, MF, CSInfo);
 

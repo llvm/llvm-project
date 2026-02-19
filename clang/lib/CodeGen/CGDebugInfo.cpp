@@ -4978,21 +4978,20 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
     Fn->setSubprogram(SP);
 }
 
-void CGDebugInfo::addCallTarget(const FunctionDecl *FD, llvm::CallBase *CI) {
-  if (!generateVirtualCallSite())
+void CGDebugInfo::addCallTargetIfVirtual(const FunctionDecl *FD,
+                                         llvm::CallBase *CI) {
+  if (!shouldGenerateVirtualCallSite())
     return;
 
   if (!FD)
     return;
 
-  // Record only indirect calls.
   assert(CI && "Invalid Call Instruction.");
   if (!CI->isIndirectCall())
     return;
 
-  // Always get method definition.
+  // Always get the method declaration.
   if (llvm::DISubprogram *MD = getFunctionDeclaration(FD))
-    // Attach the target metadata
     CI->setMetadata(llvm::LLVMContext::MD_call_target, MD);
 }
 

@@ -6,6 +6,9 @@
 // corresponds to the 'call_target' metadata added to the indirect call
 // instruction.
 
+// Note: We should add a test case inside LLDB that make use of the
+//       virtuality call-site target information in DWARF.
+
 struct CBaseOne {
   virtual void foo(int &);
 };
