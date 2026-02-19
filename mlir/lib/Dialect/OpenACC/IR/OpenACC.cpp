@@ -465,16 +465,6 @@ ValueRange SerialOp::getSuccessorInputs(RegionSuccessor successor) {
   return getSingleRegionSuccessorInputs(getOperation(), successor);
 }
 
-void KernelEnvironmentOp::getSuccessorRegions(
-    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
-                                    regions);
-}
-
-ValueRange KernelEnvironmentOp::getSuccessorInputs(RegionSuccessor successor) {
-  return getSingleRegionSuccessorInputs(getOperation(), successor);
-}
-
 void DataOp::getSuccessorRegions(RegionBranchPoint point,
                                  SmallVectorImpl<RegionSuccessor> &regions) {
   getSingleRegionOpSuccessorRegions(getOperation(), getRegion(), point,
@@ -872,20 +862,6 @@ LogicalResult acc::FirstprivateOp::verify() {
     return failure();
   if (failed(checkRecipe<acc::FirstprivateOp, acc::FirstprivateRecipeOp>(
           *this, "firstprivate")))
-    return failure();
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// FirstprivateMapInitialOp
-//===----------------------------------------------------------------------===//
-LogicalResult acc::FirstprivateMapInitialOp::verify() {
-  if (getDataClause() != acc::DataClause::acc_firstprivate)
-    return emitError("data clause associated with firstprivate operation must "
-                     "match its intent");
-  if (failed(checkVarAndVarType(*this)))
-    return failure();
-  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -1289,16 +1265,6 @@ void acc::FirstprivateOp::getEffects(
   addResultEffect<MemoryEffects::Write>(effects, getAccVar());
 }
 
-// FirstprivateMapInitialOp: var read, accVar result write.
-void acc::FirstprivateMapInitialOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(),
-                       acc::CurrentDeviceIdResource::get());
-  addOperandEffect<MemoryEffects::Read>(effects, getVarMutable());
-  addResultEffect<MemoryEffects::Write>(effects, getAccVar());
-}
-
 // ReductionOp: var read, accVar result write.
 void acc::ReductionOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
@@ -1568,65 +1534,6 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
       rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
     else
       replaceOpWithRegion(rewriter, op, op.getRegion());
-
-    return success();
-  }
-};
-
-/// Remove empty acc.kernel_environment operations. If the operation has wait
-/// operands, create a acc.wait operation to preserve synchronization.
-struct RemoveEmptyKernelEnvironment
-    : public OpRewritePattern<acc::KernelEnvironmentOp> {
-  using OpRewritePattern<acc::KernelEnvironmentOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(acc::KernelEnvironmentOp op,
-                                PatternRewriter &rewriter) const override {
-    assert(op->getNumRegions() == 1 && "expected op to have one region");
-
-    Block &block = op.getRegion().front();
-    if (!block.empty())
-      return failure();
-
-    // Conservatively disable canonicalization of empty acc.kernel_environment
-    // operations if the wait operands in the kernel_environment cannot be fully
-    // represented by acc.wait operation.
-
-    // Disable canonicalization if device type is not the default
-    if (auto deviceTypeAttr = op.getWaitOperandsDeviceTypeAttr()) {
-      for (auto attr : deviceTypeAttr) {
-        if (auto dtAttr = mlir::dyn_cast<acc::DeviceTypeAttr>(attr)) {
-          if (dtAttr.getValue() != mlir::acc::DeviceType::None)
-            return failure();
-        }
-      }
-    }
-
-    // Disable canonicalization if any wait segment has a devnum
-    if (auto hasDevnumAttr = op.getHasWaitDevnumAttr()) {
-      for (auto attr : hasDevnumAttr) {
-        if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(attr)) {
-          if (boolAttr.getValue())
-            return failure();
-        }
-      }
-    }
-
-    // Disable canonicalization if there are multiple wait segments
-    if (auto segmentsAttr = op.getWaitOperandsSegmentsAttr()) {
-      if (segmentsAttr.size() > 1)
-        return failure();
-    }
-
-    // Remove empty kernel environment.
-    // Preserve synchronization by creating acc.wait operation if needed.
-    if (!op.getWaitOperands().empty() || op.getWaitOnlyAttr())
-      rewriter.replaceOpWithNewOp<acc::WaitOp>(op, op.getWaitOperands(),
-                                               /*asyncOperand=*/Value(),
-                                               /*waitDevnum=*/Value(),
-                                               /*async=*/nullptr,
-                                               /*ifCond=*/Value());
-    else
-      rewriter.eraseOp(op);
 
     return success();
   }
@@ -3219,15 +3126,6 @@ LogicalResult acc::HostDataOp::verify() {
 void acc::HostDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<RemoveConstantIfConditionWithRegion<HostDataOp>>(context);
-}
-
-//===----------------------------------------------------------------------===//
-// KernelEnvironmentOp
-//===----------------------------------------------------------------------===//
-
-void acc::KernelEnvironmentOp::getCanonicalizationPatterns(
-    RewritePatternSet &results, MLIRContext *context) {
-  results.add<RemoveEmptyKernelEnvironment>(context);
 }
 
 //===----------------------------------------------------------------------===//

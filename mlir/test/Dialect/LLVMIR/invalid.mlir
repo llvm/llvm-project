@@ -2065,3 +2065,10 @@ llvm.func @invalid_sincos_gt_2_element_struct_return_type(%f: f32) -> () {
   // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
 }
+
+// -----
+
+module {
+  // expected-error@+1 {{'llvm.blockaddress' op expects an existing block label target in the referenced function}}
+  %0 = llvm.blockaddress <function = @missing_func, tag = <id = 1>> : !llvm.ptr
+}
