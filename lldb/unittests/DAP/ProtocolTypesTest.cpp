@@ -707,7 +707,7 @@ TEST(ProtocolTypesTest, SetExceptionBreakpointsArguments) {
                                   /*filterOptions=*/testing::IsEmpty())));
   EXPECT_THAT_EXPECTED(
       parse<SetExceptionBreakpointsArguments>(R"({"filters":["abc"]})"),
-      HasValue(testing::FieldsAre(/*filters=*/std::vector<std::string>{"abc"},
+      HasValue(testing::FieldsAre(/*filters=*/std::vector<String>{"abc"},
                                   /*filterOptions=*/testing::IsEmpty())));
   EXPECT_THAT_EXPECTED(
       parse<SetExceptionBreakpointsArguments>(
