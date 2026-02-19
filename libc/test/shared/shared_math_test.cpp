@@ -195,6 +195,7 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0.0, canonicalize_cx);
 
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::ceil(0.0));
+  EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::shared::fdiv(1.0, 1.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::fmax(0.0, 0.0));
 }
 
@@ -214,6 +215,7 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_FP_EQ(0x0p+0L, canonicalizel_cx);
 
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::ceill(0.0L));
+  EXPECT_FP_EQ(1.0L, LIBC_NAMESPACE::shared::fdivl(1.0L, 1.0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::fmaxl(0.0L, 0.0L));
 }
 
@@ -252,6 +254,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_FP_EQ(float128(0.0), canonicalizef128_cx);
 
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::ceilf128(float128(0.0)));
+  EXPECT_FP_EQ(float128(1.0),
+               LIBC_NAMESPACE::shared::fdivf128(float128(1.0), float128(1.0)));
   EXPECT_FP_EQ(float128(0.0),
                LIBC_NAMESPACE::shared::fmaxf128(float128(0.0), float128(0.0)));
 }
