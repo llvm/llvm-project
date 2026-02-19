@@ -17,6 +17,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
@@ -226,6 +227,20 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
   }
 }
 
+static bool containsConstantPtrAuth(const Constant *C) {
+  if (isa<ConstantPtrAuth>(C))
+    return true;
+
+  if (isa<BlockAddress>(C) || isa<GlobalValue>(C))
+    return false;
+
+  for (const Value *Op : C->operands())
+    if (containsConstantPtrAuth(cast<Constant>(Op)))
+      return true;
+
+  return false;
+}
+
 /// getKindForGlobal - This is a top-level target-independent classifier for
 /// a global object.  Given a global variable and information from the TM, this
 /// function classifies the global in a target independent manner. This function
@@ -327,6 +342,10 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       }
 
     } else {
+      // The dynamic linker always needs to fix PtrAuth relocations up.
+      if (containsConstantPtrAuth(C))
+        return SectionKind::getReadOnlyWithRel();
+
       // In static, ROPI and RWPI relocation models, the linker will resolve
       // all addresses, so the relocation entries will actually be constants by
       // the time the app starts up.  However, we can't put this into a

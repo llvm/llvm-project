@@ -12,7 +12,7 @@ _start:
   // BOLT removes this nop so the label difference is initially 8 but should be
   // 4 after BOLT processes it.
   nop
-  beq x0, x0, _test_end
+  li x0, _test_end-.
 _test_end:
   ret
   .size _start, .-_start

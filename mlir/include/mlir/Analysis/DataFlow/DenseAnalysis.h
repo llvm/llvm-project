@@ -505,7 +505,7 @@ private:
 
 /// A dense backward dataflow analysis propagating lattices after and before the
 /// execution of every operation across the IR by implementing transfer
-/// functions for opreations.
+/// functions for operations.
 ///
 /// `LatticeT` is expected to be a subclass of `AbstractDenseLattice`.
 template <typename LatticeT>

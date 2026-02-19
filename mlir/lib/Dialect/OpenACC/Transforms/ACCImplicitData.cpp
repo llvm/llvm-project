@@ -198,6 +198,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
@@ -285,16 +286,17 @@ static bool isCandidateForImplicitData(Value val, Region &accRegion,
       !acc::isMappableType(val.getType()))
     return false;
 
-  if (accSupport.isValidValueUse(val, accRegion))
-    return false;
-
   // If this is already coming from a data clause, we do not need to generate
   // another.
   if (isa_and_nonnull<ACC_DATA_ENTRY_OPS>(val.getDefiningOp()))
     return false;
 
-  // If this is only used by private clauses, it is not a real live-in.
-  if (acc::isOnlyUsedByPrivateClauses(val, accRegion))
+  // Device data is a candidate - it will get a deviceptr clause.
+  if (acc::isDeviceValue(val))
+    return true;
+
+  // If it is otherwise valid, skip it.
+  if (accSupport.isValidValueUse(val, accRegion))
     return false;
 
   return true;
@@ -400,14 +402,13 @@ void ACCImplicitData::generateRecipes(ModuleOp &module, OpBuilder &builder,
   auto &accSupport = this->getAnalysis<acc::OpenACCSupport>();
   for (auto var : newOperands) {
     auto loc{var.getLoc()};
-    if (auto privateOp = dyn_cast<acc::PrivateOp>(var.getDefiningOp())) {
+    if (auto privateOp = var.getDefiningOp<acc::PrivateOp>()) {
       auto recipe = generatePrivateRecipe(
           module, acc::getVar(var.getDefiningOp()), loc, builder, accSupport);
       if (recipe)
         privateOp.setRecipeAttr(
             SymbolRefAttr::get(module->getContext(), recipe.getSymName()));
-    } else if (auto firstprivateOp =
-                   dyn_cast<acc::FirstprivateOp>(var.getDefiningOp())) {
+    } else if (auto firstprivateOp = var.getDefiningOp<acc::FirstprivateOp>()) {
       auto recipe = generateFirstprivateRecipe(
           module, acc::getVar(var.getDefiningOp()), loc, builder, accSupport);
       if (recipe)
@@ -473,7 +474,16 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                   /*structured=*/true, /*implicit=*/true,
                                   accSupport.getVariableName(var),
                                   acc::getBounds(op));
-  } else if (isScalar) {
+  }
+
+  if (acc::isDeviceValue(var)) {
+    // If the variable is device data, use deviceptr clause.
+    return acc::DevicePtrOp::create(builder, loc, var,
+                                    /*structured=*/true, /*implicit=*/true,
+                                    accSupport.getVariableName(var));
+  }
+
+  if (isScalar) {
     if (enableImplicitReductionCopy &&
         acc::isOnlyUsedByReductionClauses(var,
                                           computeConstructOp->getRegion(0))) {
@@ -707,8 +717,7 @@ void ACCImplicitData::generateImplicitDataOps(
   auto isCandidate{[&](Value val) -> bool {
     return isCandidateForImplicitData(val, accRegion, accSupport);
   }};
-  auto candidateVars(
-      llvm::to_vector(llvm::make_filter_range(liveInValues, isCandidate)));
+  auto candidateVars(llvm::filter_to_vector(liveInValues, isCandidate));
   if (candidateVars.empty())
     return;
 

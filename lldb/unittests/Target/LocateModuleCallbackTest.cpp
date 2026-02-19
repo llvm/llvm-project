@@ -896,3 +896,104 @@ TEST_F(LocateModuleCallbackTest,
   CheckUnstrippedSymbol(m_module_sp);
   ModuleList::RemoveSharedModule(m_module_sp);
 }
+
+TEST_F(LocateModuleCallbackTest,
+       GetSharedModuleWithPlatformFallbackWhenTargetNotAvailable) {
+  // Test that when a Target is not available but Platform is set on ModuleSpec,
+  // the locate module callback is still invoked via the Platform fallback.
+  // This is the key functionality added for launch mode support where the
+  // Target is not yet created but we need to resolve the main executable.
+  BuildEmptyCacheDir(m_test_dir);
+
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        module_file_spec.SetPath(GetInputFilePath(k_module_file));
+        return Status();
+      });
+
+  // Create a ModuleSpec without Target but with Platform set
+  ModuleSpec module_spec_with_platform = m_module_spec;
+  module_spec_with_platform.SetPlatform(m_platform_sp);
+
+  // Call GetSharedModule directly (simulating the path taken during
+  // target creation in launch mode)
+  bool always_create = true;
+  Status error = ModuleList::GetSharedModule(
+      module_spec_with_platform, m_module_sp, nullptr, nullptr, always_create);
+
+  ASSERT_TRUE(error.Success());
+  ASSERT_EQ(callback_call_count, 1);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(),
+            FileSpec(GetInputFilePath(k_module_file)));
+  ModuleList::RemoveSharedModule(m_module_sp);
+}
+
+TEST_F(LocateModuleCallbackTest,
+       GetSharedModulePreferTargetPlatformOverModuleSpecPlatform) {
+  // Test that when both Target and Platform are available on ModuleSpec,
+  // the Target's platform is preferred. This ensures backward compatibility
+  // and that the existing behavior is maintained for cases where Target
+  // is available.
+  FileSpec uuid_view = BuildCacheDir(m_test_dir);
+
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        return Status();
+      });
+
+  // Set both Target and Platform on ModuleSpec
+  ModuleSpec module_spec_with_both = m_module_spec;
+  module_spec_with_both.SetTarget(m_target_sp);
+  module_spec_with_both.SetPlatform(m_platform_sp);
+
+  m_module_sp =
+      m_target_sp->GetOrCreateModule(module_spec_with_both, /*notify=*/false);
+  ASSERT_EQ(callback_call_count, 3);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
+  ModuleList::RemoveSharedModule(m_module_sp);
+}
+
+TEST_F(LocateModuleCallbackTest,
+       GetSharedModuleWithPlatformFallbackNoCallback) {
+  // Test that when Platform is set on ModuleSpec but no callback is
+  // registered, GetSharedModule still works and finds the module through
+  // normal resolution (using the file path in ModuleSpec).
+  // This verifies the no-callback case is handled gracefully and
+  // doesn't break normal module resolution.
+  BuildEmptyCacheDir(m_test_dir);
+
+  CheckNoCallback();
+
+  // Create a ModuleSpec with an actual file path that exists, and Platform set
+  ModuleSpec module_spec_with_platform(
+      FileSpec(GetInputFilePath(k_module_file)), ArchSpec(k_arch));
+  module_spec_with_platform.GetUUID().SetFromStringRef(k_module_uuid);
+  module_spec_with_platform.SetObjectSize(k_module_size);
+  module_spec_with_platform.SetPlatform(m_platform_sp);
+
+  Status error = ModuleList::GetSharedModule(
+      module_spec_with_platform, m_module_sp, nullptr, nullptr, false);
+
+  // Without a callback, the module should still be found via the file path
+  // in the ModuleSpec. The platform fallback code path is exercised (checking
+  // for callback) but since there's none, it falls through to normal
+  // resolution.
+  ASSERT_TRUE(error.Success());
+  ASSERT_TRUE(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetUUID().GetAsString(), k_module_uuid);
+  ASSERT_EQ(m_module_sp->GetFileSpec(),
+            FileSpec(GetInputFilePath(k_module_file)));
+  ModuleList::RemoveSharedModule(m_module_sp);
+}

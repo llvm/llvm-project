@@ -1114,6 +1114,55 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_NestedIfWithBinaryCondition) {
       )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, While_ReassignValueInLoop) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor = 3;
+      while (Make<bool>()) sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor = 3;
+      while (Make<bool>()) {
+        sor.value();  // [[unsafe]]
+
+        sor = Make<STATUSOR_INT>();
+      }
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor = 3;
+      while (Make<bool>()) {
+        sor.value();
+
+        sor = Make<STATUSOR_INT>();
+        if (!sor.ok()) return;
+      }
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor = 3;
+      while (Make<bool>()) {
+        sor.value();  // [[unsafe]]
+
+        sor = Make<STATUSOR_INT>();
+        if (!sor.ok()) continue;
+      }
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, BuiltinExpect) {
   ExpectDiagnosticsFor(
       R"cc(
@@ -1127,6 +1176,102 @@ TEST_P(UncheckedStatusOrAccessModelTest, BuiltinExpect) {
           }
         }
       )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, CopyConstructor) {
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target() {
+          STATUSOR_INT sor1 = Make<STATUSOR_INT>();
+          auto sor2 = sor1;
+          auto sor3 = sor2;
+          if (sor1.ok()) {
+            sor1.value();
+
+            sor2.value();
+
+            sor3.value();
+          } else {
+            sor1.value();  // [[unsafe]]
+
+            sor2.value();  // [[unsafe]]
+
+            sor3.value();  // [[unsafe]]
+          }
+        }
+      )cc");
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target() {
+          STATUSOR_INT sor1 = Make<STATUSOR_INT>();
+          auto sor2 = sor1;
+          auto sor3 = sor2;
+
+          STATUS s = sor1.status();
+          if (s.ok()) {
+            sor1.value();
+
+            sor2.value();
+
+            sor3.value();
+          } else {
+            sor1.value();  // [[unsafe]]
+
+            sor2.value();  // [[unsafe]]
+
+            sor3.value();  // [[unsafe]]
+          }
+        }
+      )cc");
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target() {
+          STATUSOR_INT x = Make<STATUSOR_INT>();
+          if (!x.ok()) return;
+
+          STATUSOR_INT y = x;
+          y.value();
+        }
+      )cc");
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target() {
+          STATUSOR_INT x = Make<STATUSOR_INT>();
+          if (x.ok()) {
+            STATUSOR_INT y = x;
+            y.value();
+          }
+        }
+      )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, MoveConstructor) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor1(42);
+      STATUSOR_INT sor2(std::move(sor1));
+      sor2.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor1 = Make<STATUSOR_INT>();
+      STATUSOR_INT sor2(std::move(sor1));
+      sor2.value();  // [[unsafe]]
+    }
+  )cc");
 }
 
 TEST_P(UncheckedStatusOrAccessModelTest, CopyAssignment) {
@@ -1197,6 +1342,29 @@ TEST_P(UncheckedStatusOrAccessModelTest, CopyAssignment) {
         foo.bar = Make<STATUSOR_INT>();
         foo.bar.value();  // [[unsafe]]
       }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, MoveAssignment) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor1(42);
+      STATUSOR_INT sor2;
+      sor2 = std::move(sor1);
+      sor2.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor1 = Make<STATUSOR_INT>();
+      STATUSOR_INT sor2;
+      sor2 = std::move(sor1);
+      sor2.value();  // [[unsafe]]
     }
   )cc");
 }
@@ -1831,6 +1999,119 @@ TEST_P(UncheckedStatusOrAccessModelTest, QcheckNeMacro) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, Member) {
+  // The following examples are not sound as there could be member calls between
+  // the ok() and the value() calls that change the StatusOr value.
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT bar;
+    };
+
+    void target() {
+      Foo foo;
+      if (foo.bar.ok()) foo.bar.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor;
+    };
+
+    void target(Foo foo) {
+      foo.sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor;
+    };
+
+    void target(Foo foo) {
+      if (foo.sor.ok())
+        foo.sor.value();
+      else
+        foo.sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor;
+    };
+
+    void target(Foo foo) {
+      if (foo.sor.status().ok())
+        foo.sor.value();
+      else
+        foo.sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor;
+
+      void target() {
+        if (sor.ok())
+          sor.value();
+        else
+          sor.value();  // [[unsafe]]
+      }
+    };
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor;
+
+      void target(bool b) {
+        if (b) {
+          if (!sor.ok()) return;
+        } else {
+          if (!sor.ok()) return;
+        }
+        sor.value();
+      }
+    };
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      struct Bar {
+        STATUSOR_INT sor;
+
+        void target() {
+          if (sor.ok())
+            sor.value();
+          else
+            sor.value();  // [[unsafe]]
+        }
+      };
+    };
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor;
+    };
+
+    void target() {
+      Foo().sor.value();  // [[unsafe]]
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, GlobalVars) {
   // The following examples are not sound as there could be opaque calls between
   // the ok() and the value() calls that change the StatusOr value.
@@ -2111,6 +2392,26 @@ TEST_P(UncheckedStatusOrAccessModelTest, Status) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, StatusBranches) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_VOIDPTR sor;
+      STATUS s;
+      if (Make<bool>()) {
+        s = absl::InvalidArgumentError("foo");
+      } else {
+        sor = Make<STATUSOR_VOIDPTR>();
+        if (!sor.ok()) {
+          s = sor.status();
+        }
+      }
+      if (s.ok()) *sor;
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, ExpectThatMacro) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
@@ -2169,6 +2470,286 @@ TEST_P(UncheckedStatusOrAccessModelTest, ExpectOkMacro) {
       EXPECT_OK(sor);
 
       sor.value();  // [[unsafe]]
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, AssertThatMacro) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_THAT(sor, testing::status::IsOk());
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_THAT(sor, absl_testing::IsOk());
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_THAT(sor.status(), testing::status::IsOk());
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+    void target() {
+      STATUSOR_INT sor = Make<STATUSOR_INT>();
+      ASSERT_THAT(sor, testing::status::IsOk());
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      using absl::StatusCode::kOk;
+      ASSERT_THAT(sor, testing::status::StatusIs(kOk));
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_THAT(sor, testing::status::StatusIs(absl::StatusCode::kOk));
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_THAT(sor, testing::status::CanonicalStatusIs(absl::StatusCode::kOk));
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_THAT(sor, absl_testing::CanonicalStatusIs(absl::StatusCode::kOk));
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      auto matcher = testing::status::StatusIs(absl::StatusCode::kOk);
+      ASSERT_THAT(sor, matcher);
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      auto matcher = absl_testing::StatusIs(absl::StatusCode::kOk);
+      ASSERT_THAT(sor, matcher);
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_THAT(
+          sor, testing::status::StatusIs(absl::StatusCode::kInvalidArgument));
+
+      sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_THAT(sor, absl_testing::StatusIs(absl::StatusCode::kInvalidArgument));
+
+      sor.value();  // [[unsafe]]
+    }
+  )cc");
+
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_THAT(sor, testing::status::IsOkAndHolds(testing::IsTrue()));
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_THAT(sor, absl_testing::IsOkAndHolds(testing::IsTrue()));
+
+      sor.value();
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, AssertTrueMacro) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_TRUE(sor.ok());
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_TRUE(sor.status().ok());
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_TRUE(!sor.ok());
+      sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      bool flag = true;
+
+      ASSERT_TRUE(flag);
+      "nop";
+    }
+  )cc");
+
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_BOOL flag = true;
+
+      ASSERT_TRUE(flag.value());
+      "nop";
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, ExpectTrueMacro) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      EXPECT_TRUE(sor.ok());
+
+      sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      EXPECT_TRUE(sor.status().ok());
+
+      sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      EXPECT_TRUE(!sor.ok());
+
+      sor.value();  // [[unsafe]]
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, AssertFalseMacro) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_FALSE(!sor.ok());
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_FALSE(!sor.status().ok());
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_FALSE(sor.ok());
+      sor.value();  // [[unsafe]]
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, AssertOkMacro) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_OK(sor);
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_OK(sor.status());
+
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+    void target() {
+      STATUSOR_INT sor = Make<STATUSOR_INT>();
+      ASSERT_OK(sor);
+
+      sor.value();
+    }
+  )cc");
+
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(std::optional<STATUSOR_INT> sor_opt) {
+      STATUSOR_INT sor = *sor_opt;
+      ASSERT_OK(sor);
+
+      sor.value();
     }
   )cc");
 }
@@ -3196,6 +3777,15 @@ TEST_P(UncheckedStatusOrAccessModelTest, NestedStatusOr) {
       result.value();
     }
   )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      absl::StatusOr<STATUSOR_INT> result = Make<STATUSOR_INT>();
+      if (result.value().ok())
+        result.value().value();
+    }
+  )cc");
 }
 
 TEST_P(UncheckedStatusOrAccessModelTest, PtrConstruct) {
@@ -3443,6 +4033,134 @@ TEST_P(UncheckedStatusOrAccessModelTest, AccessorCall) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, PointerReceivers) {
+  // The following examples are not sound as there could be opaque calls between
+  // the ok() and the value() calls that change the StatusOr value. However,
+  // this is the behavior that users expect so it is here to stay.
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT* sor) {
+      sor->value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT* sor) {
+      sor->emplace(1);
+      sor->value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT* sor) {
+      if (sor->ok())
+        sor->value();
+      else
+        sor->value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUS* s) {
+      STATUSOR_INT* sor = Make<STATUSOR_INT*>();
+      if (!s->ok()) return;
+      if (*s == sor->status())
+        sor->value();
+      else
+        sor->value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT* sor;
+    };
+
+    void target(Foo foo) {
+      if (foo.sor->ok())
+        foo.sor->value();
+      else
+        foo.sor->value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT* sor;
+    };
+
+    void target(Foo foo) {
+      if (foo.sor->status().ok())
+        foo.sor->value();
+      else
+        foo.sor->value();  // [[unsafe]]
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, PointerReceiversWithSelfReferentials) {
+  // Same as PointerReceivers, but with a self-referential pointer.
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Bar;
+    struct Foo {
+      STATUSOR_INT* sor;
+      Bar* bar;
+    };
+    struct Bar {
+      Foo* foo;
+    };
+
+    void target(Bar* bar) {
+      if (bar->foo->sor->status().ok())
+        bar->foo->sor->value();
+      else
+        bar->foo->sor->value();  // [[unsafe]]
+    }
+  )cc");
+
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      Foo* next;
+      STATUSOR_INT* sor;
+    };
+
+    void target(Foo* foo) {
+      if (foo->next->sor->status().ok())
+        // False positive, should be safe.
+        foo->next->sor->value();  // [[unsafe]]
+      else
+        foo->next->sor->value();  // [[unsafe]]
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, PointerReceiversWithUnion) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    union Foo {
+      STATUSOR_INT* sor;
+    };
+
+    void target(Foo foo) {
+      if (foo.sor->ok())
+        foo.sor->value();
+      else
+        foo.sor->value();  // [[unsafe]]
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, PointerLike) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
@@ -3512,6 +4230,288 @@ TEST_P(UncheckedStatusOrAccessModelTest, UniquePtrReset) {
             sor_up.reset(Make<STATUSOR_INT*>());
             sor_up->value();  // [[unsafe]]
           }
+        }
+      )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, NestedStatusOrInStatusOrStruct) {
+  // Non-standard assignment with a nested StatusOr.
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Inner {
+          absl::StatusOr<std::string> sor;
+        };
+
+        struct Outer {
+          absl::StatusOr<Inner> inner;
+        };
+
+        void target() {
+          Outer foo = Make<Outer>();
+          foo.inner->sor = "a";  // [[unsafe]]
+        }
+      )cc");
+
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          absl::StatusOr<std::string> sor;
+        };
+
+        void target(const absl::StatusOr<Foo>& foo) {
+          if (foo.ok() && foo->sor.ok()) foo->sor.value();
+        }
+      )cc");
+
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          absl::StatusOr<std::string> sor;
+        };
+
+        void target(const absl::StatusOr<Foo>& foo) {
+          if (foo.ok() && foo.value().sor.ok()) foo->sor.value();
+        }
+      )cc");
+
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          absl::StatusOr<std::string> sor;
+        };
+
+        void target(const absl::StatusOr<Foo>& foo) {
+          if (foo.ok() && (*foo).sor.ok()) (*foo).sor.value();
+        }
+      )cc");
+
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          absl::StatusOr<std::string> sor;
+        };
+
+        void target(absl::StatusOr<Foo>& foo) {
+          if (foo.ok() && foo->sor.ok()) *foo->sor;
+        }
+      )cc");
+  // With assignment.
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          absl::StatusOr<std::string> sor;
+        };
+
+        void target(absl::StatusOr<Foo>& foo) {
+          if (foo.ok() && foo->sor.ok()) {
+            foo->sor = Make<absl::StatusOr<std::string>>();
+            foo->sor.value();  // [[unsafe]]
+          }
+        }
+      )cc");
+
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          absl::StatusOr<std::string> sor;
+        };
+
+        void target(absl::StatusOr<Foo>& foo) {
+          if (foo.ok() && foo->sor.ok()) {
+            auto n = Make<absl::StatusOr<std::string>>();
+            if (n.ok()) foo->sor = n;
+            foo->sor.value();
+          }
+        }
+      )cc");
+
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          absl::StatusOr<std::string> sor;
+        };
+
+        void target(absl::StatusOr<Foo>& foo) {
+          if (foo.ok() && foo->sor.ok()) {
+            auto n = Make<absl::StatusOr<std::string>>();
+            if (n.ok()) foo->sor = std::move(n);
+            foo->sor.value();
+          }
+        }
+      )cc");
+
+  // More complicated conditionals.
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          absl::StatusOr<std::string> sor;
+        };
+
+        void target(absl::StatusOr<Foo>& foo) {
+          if (!foo.ok()) return;
+          if (!foo->sor.ok())
+            foo->sor.value();  // [[unsafe]]
+          else
+            foo->sor.value();
+        }
+      )cc");
+
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        struct Foo {
+          absl::StatusOr<std::string> sor;
+        };
+
+        void target(absl::StatusOr<Foo>& foo, bool b) {
+          if (!foo.ok()) return;
+          if (b) {
+            if (!foo->sor.ok()) return;
+            foo->sor.value();
+          } else {
+            if (!foo->sor.ok()) return;
+            foo->sor.value();
+          }
+          foo->sor.value();
+        }
+      )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, StatusOrPtrReference) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    const STATUSOR_INT* foo();
+
+    void target() {
+      const auto& sor = foo();
+      if (sor->ok()) sor->value();
+    }
+  )cc");
+
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    using StatusOrPtr = const STATUSOR_INT*;
+    StatusOrPtr foo();
+
+    void target() {
+      const auto& sor = foo();
+      if (sor->ok()) sor->value();
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, StatusPtrReference) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    const STATUS* foo();
+
+    void target(STATUSOR_INT sor) {
+      const auto& s = foo();
+      if (s->ok() && *s == sor.status()) sor.value();
+    }
+  )cc");
+
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    using StatusPtr = const STATUS*;
+    StatusPtr foo();
+
+    void target(STATUSOR_INT sor) {
+      const auto& s = foo();
+      if (s->ok() && *s == sor.status()) sor.value();
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, PairIterator) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    class iterator {
+     public:
+      const std::pair<int, absl::StatusOr<int>>* operator->() const;
+    };
+    void target() {
+      if (auto it = Make<iterator>(); it->second.ok()) {
+        it->second.value();
+      }
+    }
+)cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, PairIteratorRef) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    class iterator {
+     public:
+      const std::pair<int, absl::StatusOr<int>>& operator*() const;
+    };
+    void target() {
+      if (auto it = Make<iterator>(); (*it).second.ok()) {
+        (*it).second.value();
+      }
+    }
+)cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, NestedStatusOrInOptional) {
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target(std::optional<STATUSOR_INT> opt) {
+          if (!opt.has_value()) return;
+          if (!opt->ok()) return;
+          **opt;
+        }
+      )cc");
+
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target() {
+          auto opt = Make<std::optional<STATUSOR_INT>>();
+          if (opt.has_value() && opt->ok()) opt->value();
+        }
+      )cc");
+
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target() {
+          auto opt = Make<std::optional<STATUSOR_INT>>();
+          if (!opt.has_value()) return;
+
+          if (opt->ok())
+            opt->value();
+          else
+            opt->value();  // [[unsafe]]
         }
       )cc");
 }

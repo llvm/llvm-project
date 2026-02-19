@@ -133,6 +133,11 @@ PPKEYWORD(pragma)
 // C23 & C++26 #embed
 PPKEYWORD(embed)
 
+// C++20 Module Directive
+PPKEYWORD(module)
+PPKEYWORD(__preprocessed_module)
+PPKEYWORD(__preprocessed_import)
+
 // GNU Extensions.
 PPKEYWORD(import)
 PPKEYWORD(include_next)
@@ -233,6 +238,7 @@ PUNCTUATOR(greatergreater,      ">>")
 PUNCTUATOR(greaterequal,        ">=")
 PUNCTUATOR(greatergreaterequal, ">>=")
 PUNCTUATOR(caret,               "^")
+PUNCTUATOR(caretcaret,          "^^")
 PUNCTUATOR(caretequal,          "^=")
 PUNCTUATOR(pipe,                "|")
 PUNCTUATOR(pipepipe,            "||")
@@ -293,6 +299,7 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 //   CHAR8SUPPORT - This is a keyword if 'char8_t' is a built-in type
 //   KEYFIXEDPOINT - This is a keyword according to the N1169 fixed point
 //                   extension.
+//   KEYDEFERTS - This is a keyword if the C '_Defer' TS is enabled
 //   KEYZOS - This is a keyword in C/C++ on z/OS
 //
 KEYWORD(auto                        , KEYALL)
@@ -441,6 +448,9 @@ KEYWORD(_Float16                    , KEYALL)
 C23_KEYWORD(typeof                  , KEYGNU)
 C23_KEYWORD(typeof_unqual           , 0)
 
+// '_Defer' TS
+KEYWORD(_Defer                      , KEYDEFERTS)
+
 // ISO/IEC JTC1 SC22 WG14 N1169 Extension
 KEYWORD(_Accum                      , KEYFIXEDPOINT)
 KEYWORD(_Fract                      , KEYFIXEDPOINT)
@@ -564,7 +574,6 @@ TYPE_TRAIT_2(/*EmptySpellingName*/, IsDeducible, KEYCXX)
 TYPE_TRAIT_1(__builtin_is_cpp_trivially_relocatable, IsCppTriviallyRelocatable, KEYCXX)
 TYPE_TRAIT_1(__is_trivially_relocatable, IsTriviallyRelocatable, KEYCXX)
 TYPE_TRAIT_1(__is_bitwise_cloneable, IsBitwiseCloneable, KEYALL)
-TYPE_TRAIT_1(__builtin_is_replaceable, IsReplaceable, KEYCXX)
 TYPE_TRAIT_1(__builtin_structured_binding_size, StructuredBindingSize, KEYCXX)
 
 
@@ -1019,6 +1028,9 @@ PRAGMA_ANNOTATION(pragma_fp)
 // Annotation for the attribute pragma directives - #pragma clang attribute ...
 PRAGMA_ANNOTATION(pragma_attribute)
 
+// Annotation for C/C++ #pragma export(ident)
+PRAGMA_ANNOTATION(pragma_export)
+
 // Annotation for the riscv pragma directives - #pragma clang riscv intrinsic ...
 PRAGMA_ANNOTATION(pragma_riscv)
 
@@ -1026,6 +1038,9 @@ PRAGMA_ANNOTATION(pragma_riscv)
 ANNOTATION(module_include)
 ANNOTATION(module_begin)
 ANNOTATION(module_end)
+
+// Annotations for C++, Clang and Objective-C named modules.
+ANNOTATION(module_name)
 
 // Annotation for a header_name token that has been looked up and transformed
 // into the name of a header unit.

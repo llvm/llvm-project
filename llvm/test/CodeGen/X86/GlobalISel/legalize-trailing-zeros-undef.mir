@@ -18,9 +18,7 @@ body:             |
     ; X64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 34359738368
     ; X64-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[COPY]], [[C]]
     ; X64-NEXT: [[CTTZ_ZERO_UNDEF:%[0-9]+]]:_(s64) = G_CTTZ_ZERO_UNDEF [[OR]](s64)
-    ; X64-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 34359738367
-    ; X64-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[CTTZ_ZERO_UNDEF]], [[C1]]
-    ; X64-NEXT: RET 0, implicit [[AND]](s64)
+    ; X64-NEXT: RET 0, implicit [[CTTZ_ZERO_UNDEF]](s64)
     ;
     ; X86-LABEL: name: test_cttz35
     ; X86: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
@@ -40,11 +38,7 @@ body:             |
     ; X86-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C3]]
     ; X86-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[UADDO]], [[CTTZ_ZERO_UNDEF1]]
     ; X86-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[UADDE]], [[C]]
-    ; X86-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; X86-NEXT: [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-    ; X86-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SELECT]], [[C4]]
-    ; X86-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SELECT1]], [[C5]]
-    ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[AND1]](s32), [[AND2]](s32)
+    ; X86-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     ; X86-NEXT: RET 0, implicit [[MV]](s64)
     %0(s64) = COPY $rdx
     %1:_(s35) = G_TRUNC %0(s64)

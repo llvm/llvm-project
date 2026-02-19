@@ -2921,7 +2921,9 @@ private:
     if (!AfterRParen->Next)
       return false;
 
-    if (AfterRParen->is(tok::l_brace) &&
+    // A pair of parentheses before an l_brace in C starts a compound literal
+    // and is not a cast.
+    if (Style.Language != FormatStyle::LK_C && AfterRParen->is(tok::l_brace) &&
         AfterRParen->getBlockKind() == BK_BracedInit) {
       return true;
     }
@@ -3037,10 +3039,8 @@ private:
     auto *NextToken = Tok.getNextNonComment();
     if (!NextToken)
       return TT_PointerOrReference;
-    if (NextToken->is(tok::greater)) {
-      NextToken->setFinalizedType(TT_TemplateCloser);
+    if (NextToken->is(tok::greater))
       return TT_PointerOrReference;
-    }
 
     if (InTemplateArgument && NextToken->is(tok::kw_noexcept))
       return TT_BinaryOperator;
@@ -3711,7 +3711,7 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
     if (Tok->is(TT_AttributeLSquare)) {
       Tok = Tok->MatchingParen;
       if (!Tok)
-        break;
+        return nullptr;
       continue;
     }
 
@@ -3743,6 +3743,8 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
         return nullptr;
 
       Tok = Tok->MatchingParen;
+      if (!Tok)
+        return nullptr;
 
       continue;
     }
@@ -3751,26 +3753,23 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
     if (Tok->is(tok::coloncolon)) {
       Tok = Tok->Next;
       if (!Tok)
-        break;
+        return nullptr;
     }
 
     // Skip to the unqualified part of the name.
     while (auto *Next = skipNameQualifier(Tok))
       Tok = Next;
 
-    if (!Tok)
-      return nullptr;
-
     // Skip the `~` if a destructor name.
     if (Tok->is(tok::tilde)) {
       Tok = Tok->Next;
       if (!Tok)
-        break;
+        return nullptr;
     }
 
     // Make sure the name is not already annotated, e.g. as NamespaceMacro.
     if (Tok->isNot(tok::identifier) || Tok->isNot(TT_Unknown))
-      break;
+      return nullptr;
 
     Name = Tok;
   }
@@ -5494,7 +5493,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return Right.hasWhitespaceBefore();
   if (Line.Type == LT_ObjCMethodDecl) {
     if (Left.is(TT_ObjCMethodSpecifier))
-      return true;
+      return Style.ObjCSpaceAfterMethodDeclarationPrefix;
     if (Left.is(tok::r_paren) && Left.isNot(TT_AttributeRParen) &&
         canBeObjCSelectorComponent(Right)) {
       // Don't space between ')' and <id> or ')' and 'new'. 'new' is not a
@@ -5963,6 +5962,11 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
 
     if (Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon &&
         Left.isOneOf(TT_CtorInitializerColon, TT_CtorInitializerComma)) {
+      return true;
+    }
+
+    if (Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterComma &&
+        Left.is(TT_CtorInitializerComma)) {
       return true;
     }
   }
@@ -6510,11 +6514,16 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return true;
 
   if (Left.is(TT_CtorInitializerColon)) {
-    return Style.BreakConstructorInitializers == FormatStyle::BCIS_AfterColon &&
+    return (Style.BreakConstructorInitializers ==
+                FormatStyle::BCIS_AfterColon ||
+            Style.BreakConstructorInitializers ==
+                FormatStyle::BCIS_AfterComma) &&
            (!Right.isTrailingComment() || Right.NewlinesBefore > 0);
   }
-  if (Right.is(TT_CtorInitializerColon))
-    return Style.BreakConstructorInitializers != FormatStyle::BCIS_AfterColon;
+  if (Right.is(TT_CtorInitializerColon)) {
+    return Style.BreakConstructorInitializers != FormatStyle::BCIS_AfterColon &&
+           Style.BreakConstructorInitializers != FormatStyle::BCIS_AfterComma;
+  }
   if (Left.is(TT_CtorInitializerComma) &&
       Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma) {
     return false;

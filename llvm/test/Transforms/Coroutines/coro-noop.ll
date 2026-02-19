@@ -1,5 +1,5 @@
-; Tests that CoroEarly pass correctly lowers coro.noop
-; RUN: opt < %s -S -passes=coro-early | FileCheck %s
+; Tests that CoroCleanup pass correctly lowers coro.noop
+; RUN: opt < %s -S -passes=coro-cleanup | FileCheck %s
 
 ; CHECK: %NoopCoro.Frame = type { ptr, ptr }
 ; CHECK: @NoopCoro.Frame.Const = private constant %NoopCoro.Frame { ptr @__NoopCoro_ResumeDestroy, ptr @__NoopCoro_ResumeDestroy }

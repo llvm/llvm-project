@@ -1156,7 +1156,7 @@ static ld_plugin_status allSymbolsReadHook() {
     llvm::timeTraceProfilerInitialize(options::time_trace_granularity,
                                       options::extra.size() ? options::extra[0]
                                                             : "LLVMgold");
-  auto FinalizeTimeTrace = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FinalizeTimeTrace([&]() {
     if (!llvm::timeTraceProfilerEnabled())
       return;
     assert(!options::time_trace_file.empty());

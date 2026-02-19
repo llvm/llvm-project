@@ -10,7 +10,7 @@
 export namespace std {
   // [optional.optional], class template optional
   using std::optional;
-#if _LIBCPP_STD_VER >= 26
+#if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
   // [optional.iterators], iterator support
   namespace ranges {
     using std::ranges::enable_borrowed_range;
@@ -24,7 +24,7 @@ export namespace std {
   // [optional.bad.access], class bad_optional_access
   using std::bad_optional_access;
 
-#if _LIBCPP_STD_VER >= 26
+#if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
   using std::format_kind;
 #endif
 

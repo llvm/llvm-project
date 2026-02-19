@@ -1168,18 +1168,18 @@ def : Pat<(v1i128 (vselect v1i128:$vA, v1i128:$vB, v1i128:$vC)),
           (VSEL $vC, $vB, $vA)>;
 
 // Vector Integer Average Instructions
-def : Pat<(v4i32 (sra (sub v4i32:$vA, (vnot v4i32:$vB)),
-          (v4i32 (immEQOneV)))), (v4i32 (VAVGSW $vA, $vB))>;
-def : Pat<(v8i16 (sra (sub v8i16:$vA, (v8i16 (bitconvert(vnot v4i32:$vB)))),
-          (v8i16 (immEQOneV)))), (v8i16 (VAVGSH $vA, $vB))>;
-def : Pat<(v16i8 (sra (sub v16i8:$vA, (v16i8 (bitconvert(vnot v4i32:$vB)))),
-          (v16i8 (immEQOneV)))), (v16i8 (VAVGSB $vA, $vB))>;
-def : Pat<(v4i32 (srl (sub v4i32:$vA, (vnot v4i32:$vB)),
-          (v4i32 (immEQOneV)))), (v4i32 (VAVGUW $vA, $vB))>;
-def : Pat<(v8i16 (srl (sub v8i16:$vA, (v8i16 (bitconvert(vnot v4i32:$vB)))),
-          (v8i16 (immEQOneV)))), (v8i16 (VAVGUH $vA, $vB))>;
-def : Pat<(v16i8 (srl (sub v16i8:$vA, (v16i8 (bitconvert(vnot v4i32:$vB)))),
-          (v16i8 (immEQOneV)))), (v16i8 (VAVGUB $vA, $vB))>;
+def : Pat<(v4i32 (avgceils v4i32:$src1, v4i32:$src2)),
+          (v4i32 (VAVGSW $src1, $src2))>;
+def : Pat<(v8i16 (avgceils v8i16:$src1, v8i16:$src2)),
+          (v8i16 (VAVGSH $src1, $src2))>;
+def : Pat<(v16i8 (avgceils v16i8:$src1, v16i8:$src2)),
+          (v16i8 (VAVGSB $src1, $src2))>;
+def : Pat<(v4i32 (avgceilu v4i32:$src1, v4i32:$src2)),
+          (v4i32 (VAVGUW $src1, $src2))>;
+def : Pat<(v8i16 (avgceilu v8i16:$src1, v8i16:$src2)),
+          (v8i16 (VAVGUH $src1, $src2))>;
+def : Pat<(v16i8 (avgceilu v16i8:$src1, v16i8:$src2)),
+          (v16i8 (VAVGUB $src1, $src2))>;
 
 def : Pat<(v16i8 (shl v16i8:$vA, (v16i8 (immEQOneV)))),
           (v16i8 (VADDUBM $vA, $vA))>;
@@ -1661,6 +1661,22 @@ def BCDSR_rec : VX_VT5_VA5_VB5_PS1_XO9_o<449, "bcdsr.", []>;
 // Decimal (Unsigned) Truncate
 def BCDTRUNC_rec :  VX_VT5_VA5_VB5_PS1_XO9_o<257, "bcdtrunc." , []>;
 def BCDUTRUNC_rec : VX_VT5_VA5_VB5_XO9_o    <321, "bcdutrunc.", []>;
+
+// Patterns mapping BCD PPCISD nodes to machine instructions
+def : Pat<(PPCbcds v4i32:$Shift, v16i8:$Src, i32:$PS),
+          (BCDS_rec $Shift, $Src, $PS)>;
+
+def : Pat<(PPCbcdsr v4i32:$ShiftRound, v16i8:$Src, i32:$PS),
+          (BCDSR_rec $ShiftRound, $Src, $PS)>;
+
+def : Pat<(PPCbcdtrunc v4i32:$Trunc, v16i8:$Src, i32:$PS),
+          (BCDTRUNC_rec $Trunc, $Src, $PS)>;
+
+def : Pat<(PPCbcdutrunc v4i32:$Trunc, v16i8:$Src),
+          (BCDUTRUNC_rec $Trunc, $Src)>;
+
+def : Pat<(PPCbcdus v4i32:$Shift, v16i8:$Src),
+          (BCDUS_rec $Shift, $Src)>;
 
 // Absolute Difference
 def VABSDUB : VXForm_1<1027, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB),

@@ -1,4 +1,4 @@
-; RUN: opt -hexagon-vc -S < %s | FileCheck %s
+; RUN: opt -march=hexagon -hexagon-vc -hvc-ld-min-group-size-for-alignment=2 -S < %s | FileCheck %s
 
 ; Test that the HexagonVectorCombine pass identifies instruction
 ; pairs whose difference in pointers is zero. This creates a vector

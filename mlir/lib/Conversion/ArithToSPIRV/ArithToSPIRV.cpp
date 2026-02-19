@@ -170,11 +170,6 @@ getTypeConversionFailure(ConversionPatternRewriter &rewriter, Operation *op) {
   return getTypeConversionFailure(rewriter, op, op->getResultTypes().front());
 }
 
-// TODO: Move to some common place?
-static std::string getDecorationString(spirv::Decoration decor) {
-  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decor));
-}
-
 namespace {
 
 /// Converts elementwise unary, binary and ternary arith operations to SPIR-V
@@ -267,8 +262,7 @@ struct ConstantCompositeOpPattern final
 
       // Check that the buffer meets the requirements to get converted to a
       // DenseElementsAttr
-      bool detectedSplat = false;
-      if (!DenseElementsAttr::isValidRawBuffer(srcType, ptr, detectedSplat))
+      if (!DenseElementsAttr::isValidRawBuffer(srcType, ptr))
         return constOp->emitError("resource is not a valid buffer");
 
       dstElementsAttr =

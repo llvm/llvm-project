@@ -36,7 +36,7 @@ define amdgpu_kernel void @test_fmax_v2f32(ptr addrspace(1) %out, <2 x float> %a
 ; GCN: v_max_f32_e32
 ; GCN-NOT: v_max_f32
 define amdgpu_kernel void @test_fmax_v3f32(ptr addrspace(1) %out, <3 x float> %a, <3 x float> %b) nounwind {
-  %val = call <3 x float> @llvm.maxnum.v3f32(<3 x float> %a, <3 x float> %b) #0
+  %val = call <3 x float> @llvm.maxnum.v3f32(<3 x float> %a, <3 x float> %b)
   store <3 x float> %val, ptr addrspace(1) %out, align 16
   ret void
 }
@@ -173,14 +173,14 @@ define amdgpu_kernel void @constant_fold_fmax_f32_n0_n0(ptr addrspace(1) %out) #
 ; GCN-LABEL: {{^}}fmax_var_immediate_f32_no_ieee:
 ; GCN: v_max_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, 2.0
 define amdgpu_ps float @fmax_var_immediate_f32_no_ieee(float inreg %a) #0 {
-  %val = call float @llvm.maxnum.f32(float %a, float 2.0) #0
+  %val = call float @llvm.maxnum.f32(float %a, float 2.0)
   ret float %val
 }
 
 ; GCN-LABEL: {{^}}fmax_immediate_var_f32_no_ieee:
 ; GCN: v_max_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, 2.0
 define amdgpu_ps float @fmax_immediate_var_f32_no_ieee(float inreg %a) #0 {
-  %val = call float @llvm.maxnum.f32(float 2.0, float %a) #0
+  %val = call float @llvm.maxnum.f32(float 2.0, float %a)
   ret float %val
 }
 
@@ -188,7 +188,7 @@ define amdgpu_ps float @fmax_immediate_var_f32_no_ieee(float inreg %a) #0 {
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x42c60000
 ; GCN: v_max_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, [[REG]]
 define amdgpu_ps float @fmax_var_literal_f32_no_ieee(float inreg %a) #0 {
-  %val = call float @llvm.maxnum.f32(float %a, float 99.0) #0
+  %val = call float @llvm.maxnum.f32(float %a, float 99.0)
   ret float %val
 }
 
@@ -196,7 +196,7 @@ define amdgpu_ps float @fmax_var_literal_f32_no_ieee(float inreg %a) #0 {
 ; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x42c60000
 ; GCN: v_max_f32_e32 {{v[0-9]+}}, {{s[0-9]+}}, [[REG]]
 define amdgpu_ps float @fmax_literal_var_f32_no_ieee(float inreg %a) #0 {
-  %val = call float @llvm.maxnum.f32(float 99.0, float %a) #0
+  %val = call float @llvm.maxnum.f32(float 99.0, float %a)
   ret float %val
 }
 
@@ -206,7 +206,7 @@ define amdgpu_ps float @fmax_literal_var_f32_no_ieee(float inreg %a) #0 {
 ; GCN: v_max_f32_e32
 ; GCN-NOT: v_max_f32
 define <3 x float> @test_func_fmax_v3f32(<3 x float> %a, <3 x float> %b) #0 {
-  %val = call <3 x float> @llvm.maxnum.v3f32(<3 x float> %a, <3 x float> %b) #0
+  %val = call <3 x float> @llvm.maxnum.v3f32(<3 x float> %a, <3 x float> %b)
   ret <3 x float> %val
 }
 
@@ -218,5 +218,5 @@ declare <8 x float> @llvm.maxnum.v8f32(<8 x float>, <8 x float>) #1
 declare <16 x float> @llvm.maxnum.v16f32(<16 x float>, <16 x float>) #1
 declare double @llvm.maxnum.f64(double, double)
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone }

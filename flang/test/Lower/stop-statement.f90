@@ -1,6 +1,6 @@
-! RUN: bbc %s -emit-fir -hlfir=false --canonicalize -o - | FileCheck %s
+! RUN: bbc -emit-hlfir --canonicalize %s -o - | FileCheck %s
 
-! CHECK-LABEL: stop_test
+! CHECK-LABEL: func.func @_QPstop_test() {
 subroutine stop_test()
  ! CHECK-DAG: %[[c0:.*]] = arith.constant 0 : i32
  ! CHECK-DAG: %[[false:.*]] = arith.constant false
@@ -9,7 +9,7 @@ subroutine stop_test()
  stop
 end subroutine
 
-! CHECK-LABEL: stop_code
+! CHECK-LABEL: func.func @_QPstop_code() {
 subroutine stop_code()
   stop 42
  ! CHECK-DAG: %[[c42:.*]] = arith.constant 42 : i32
@@ -18,7 +18,7 @@ subroutine stop_code()
  ! CHECK-NEXT: fir.unreachable
 end subroutine
 
-! CHECK-LABEL: stop_error
+! CHECK-LABEL: func.func @_QPstop_error() {
 subroutine stop_error()
   error stop
  ! CHECK-DAG: %[[c_1:.*]] = arith.constant 1 : i32
@@ -28,20 +28,21 @@ subroutine stop_error()
  ! CHECK-NEXT: fir.unreachable
 end subroutine
 
-! CHECK-LABEL: stop_quiet
+! CHECK-LABEL: func.func @_QPstop_quiet() {
 subroutine stop_quiet()
   logical :: b
   stop, quiet = b
  ! CHECK-DAG: %[[c0:.*]] = arith.constant 0 : i32
  ! CHECK-DAG: %[[false:.*]] = arith.constant false
- ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.logical<4> {bindc_name = "b", uniq_name = "_QFstop_quietEb"}
- ! CHECK: %[[b:.*]] = fir.load %[[ALLOCA]]
+ ! CHECK-DAG: %[[ALLOCA:.*]] = fir.alloca !fir.logical<4> {bindc_name = "b", uniq_name = "_QFstop_quietEb"}
+ ! CHECK-DAG: %[[DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFstop_quietEb"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+ ! CHECK: %[[b:.*]] = fir.load %[[DECL]]#0
  ! CHECK: %[[bi1:.*]] = fir.convert %[[b]] : (!fir.logical<4>) -> i1
  ! CHECK: fir.call @_Fortran{{.*}}StopStatement(%[[c0]], %[[false]], %[[bi1]])
  ! CHECK-NEXT: fir.unreachable
 end subroutine
 
-! CHECK-LABEL: stop_quiet_constant
+! CHECK-LABEL: func.func @_QPstop_quiet_constant() {
 subroutine stop_quiet_constant()
   stop, quiet = .true.
  ! CHECK-DAG: %[[true:.*]] = arith.constant true
@@ -51,29 +52,31 @@ subroutine stop_quiet_constant()
  ! CHECK-NEXT: fir.unreachable
 end subroutine
 
-! CHECK-LABEL: stop_error_code_quiet
+! CHECK-LABEL: func.func @_QPstop_error_code_quiet(
 subroutine stop_error_code_quiet(b)
   logical :: b
   error stop 66, quiet = b
  ! CHECK-DAG: %[[c66:.*]] = arith.constant 66 : i32
  ! CHECK-DAG: %[[true:.*]] = arith.constant true
- ! CHECK-DAG: %[[b:.*]] = fir.load %arg0
- ! CHECK-DAG: %[[bi1:.*]] = fir.convert %[[b]] : (!fir.logical<4>) -> i1
+ ! CHECK-DAG: %[[DECL:.*]]:2 = hlfir.declare %arg0 {{.*}}
+ ! CHECK: %[[b:.*]] = fir.load %[[DECL]]#0
+ ! CHECK: %[[bi1:.*]] = fir.convert %[[b]] : (!fir.logical<4>) -> i1
  ! CHECK: fir.call @_Fortran{{.*}}StopStatement(%[[c66]], %[[true]], %[[bi1]])
  ! CHECK-NEXT: fir.unreachable
 end subroutine
 
-! CHECK-LABEL: stop_char_lit
+! CHECK-LABEL: func.func @_QPstop_char_lit() {
 subroutine stop_char_lit
   ! CHECK-DAG: %[[false:.*]] = arith.constant false
   ! CHECK-DAG: %[[five:.*]] = arith.constant 5 : index
   ! CHECK-DAG: %[[lit:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,5>>
-  ! CHECK-DAG: %[[buff:.*]] = fir.convert %[[lit]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
+  ! CHECK-DAG: %[[lit_decl:.*]]:2 = hlfir.declare %[[lit]] {{.*}}
+  ! CHECK-DAG: %[[buff:.*]] = fir.convert %[[lit_decl]]#0 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK-DAG: %[[len:.*]] = fir.convert %[[five]] : (index) -> i64
   ! CHECK: fir.call @{{.*}}StopStatementText(%[[buff]], %[[len]], %[[false]], %[[false]]) {{.*}}:
   ! CHECK-NEXT: fir.unreachable
   stop 'crash'
 end subroutine stop_char_lit
 
-! CHECK-DAG: func private @_Fortran{{.*}}StopStatement(i32, i1, i1)
-! CHECK-DAG: func private @_Fortran{{.*}}StopStatementText(!fir.ref<i8>, i64, i1, i1)
+! CHECK-DAG: func.func private @_Fortran{{.*}}StopStatement(i32, i1, i1)
+! CHECK-DAG: func.func private @_Fortran{{.*}}StopStatementText(!fir.ref<i8>, i64, i1, i1)

@@ -61,9 +61,10 @@
 #ifndef _LIBCPP___FORMAT_WIDTH_ESTIMATION_TABLE_H
 #define _LIBCPP___FORMAT_WIDTH_ESTIMATION_TABLE_H
 
-#include <__algorithm/ranges_upper_bound.h>
+#include <__algorithm/upper_bound.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
+#include <__iterator/access.h>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -255,7 +256,8 @@ inline constexpr uint32_t __table_upper_bound = 0x0003fffd;
   if (__code_point < (__entries[0] >> 14))
     return 1;
 
-  ptrdiff_t __i = std::ranges::upper_bound(__entries, (__code_point << 14) | 0x3fffu) - __entries;
+  ptrdiff_t __i =
+      std::upper_bound(std::begin(__entries), std::end(__entries), (__code_point << 14) | 0x3fffu) - __entries;
   if (__i == 0)
     return 1;
 

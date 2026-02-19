@@ -62,6 +62,7 @@ jobs:
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
       build-runs-on: ${{ steps.vars.outputs.build-runs-on }}
       test-runs-on: ${{ steps.vars.outputs.build-runs-on }}
+      attestation-name: ${{ steps.vars.outputs.attestation-name }}
 
     steps:
     # It's good practice to use setup-python, but this is also required on macos-14
@@ -69,6 +70,13 @@ jobs:
     - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       with:
         python-version: '3.14'
+
+    - name: Install Windows ARM64 dependencies
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      run: |
+        # Some of the python modules we install require this package to be installed on the system.
+        vcpkg install openssl:arm64-windows-static-md
+        echo "OPENSSL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
 
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -87,8 +95,16 @@ jobs:
       run: |
         ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
 
+    # The name of the Windows binaries uses the version from source, so we need
+    # to fetch it here.
+    - id: version-from-source
+      if: runner.os == 'Windows'
+      uses: ./.github/workflows/get-llvm-version
+
     - name: Collect Variables
       id: vars
+      env:
+        LLVM_VERSION_FROM_SOURCE: ${{ steps.version-from-source.outputs.full-no-suffix }}
       shell: bash
       # In order for the test-release.sh script to run correctly, the LLVM
       # source needs to be at the following location relative to the build dir:
@@ -104,7 +120,11 @@ jobs:
           release_version="$trimmed"
           ref="llvmorg-$release_version"
         else
-          release_version="${{ (github.event_name == 'pull_request' && format('PR{0}', github.event.pull_request.number)) || 'CI'}}-$GITHUB_SHA"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            release_version="$LLVM_VERSION_FROM_SOURCE"
+          else
+            release_version="${{ (github.event_name == 'pull_request' && format('PR{0}', github.event.pull_request.number)) || 'CI'}}-$GITHUB_SHA"
+          fi
           ref="$GITHUB_SHA"
         fi
         if [ -n "${{ inputs.upload }}" ]; then
@@ -116,7 +136,19 @@ jobs:
         echo "ref=$ref" >> $GITHUB_OUTPUT
         echo "upload=$upload" >> $GITHUB_OUTPUT
 
-        release_binary_basename="LLVM-$release_version-$RUNNER_OS-$RUNNER_ARCH"
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          case $RUNNER_ARCH in
+            "X64" )
+              tar_arch="x86_64"
+              ;;
+            "ARM64" )
+              tar_arch="aarch64"
+              ;;
+          esac
+          release_binary_basename="clang+llvm-$release_version-$tar_arch-pc-windows-msvc"
+        else
+          release_binary_basename="LLVM-$release_version-$RUNNER_OS-$RUNNER_ARCH"
+        fi
         echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
         echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
 
@@ -139,8 +171,16 @@ jobs:
         fi
 
         case "${{ inputs.runs-on }}" in
-          ubuntu-22.04*)
+          ubuntu-22.04* | windows-2022)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
+            test_runs_on=$build_runs_on
+            ;;
+          windows-11-arm)
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ] || [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+              build_runs_on="${{ inputs.runs-on }}"
+            else
+              build_runs_on="windows-11-arm-16core"
+            fi
             test_runs_on=$build_runs_on
             ;;
           macos-14)
@@ -175,6 +215,7 @@ jobs:
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
         echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
+        echo "attestation-name=$RUNNER_OS-$RUNNER_ARCH-release-binary-attestation" >> $GITHUB_OUTPUT
 
   build-release-package:
     name: "Build Release Package"
@@ -185,6 +226,24 @@ jobs:
       digest: ${{ steps.digest.outputs.digest }}
       artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
     steps:
+    # We need to hard code the python library path for Windows, so in order
+    # to do that we need to specify a specific python version.  It's also
+    # good practice to do this on other OSes so the version of python doesn't
+    # get changed unexpectedly.
+    - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+      with:
+        python-version: '3.11.9'
+
+    # For some reason this is needed on Windows or else the build system can't find python3.lib.
+    - name: Setup Python library path
+      if: runner.os == 'Windows'
+      run: |
+        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.11.9\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
+
+    - name: Setup crlf
+      if: runner.os == 'Windows'
+      run: |
+        git config --global core.autocrlf false
 
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -202,8 +261,9 @@ jobs:
         fi
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
-    - name: Configure
+    - name: Configure Linux/MacOS
       id: build
+      if: runner.os != 'Windows'
       shell: bash
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
@@ -212,32 +272,60 @@ jobs:
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -C clang/cmake/caches/Release.cmake
 
-    - name: Build
+    - name: Build Linux/MacOS
+      if: runner.os != 'Windows'
       shell: bash
       run: |
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
 
+    - name: Build Windows
+      id: build-windows
+      if: runner.os == 'Windows'
+      env:
+        LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
+      run: |
+        subst S: ${{ github.workspace }}
+        cd S:\llvm\utils\release\
+        .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout
+        $installer = (Get-ChildItem -Recurse -Filter "*.exe" | Select-Object -First 1).fullName
+        $tarball = (Get-ChildItem -Recurse -Filter "*.tar.xz" | Select-Object -First 1).fullName
+        # Move installer to top-level directory so it is easier to upload.
+        mv $installer $env:GITHUB_WORKSPACE
+        mv $tarball $env:GITHUB_WORKSPACE
+        echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
+
     - name: Generate sha256 digest for binaries
       id: digest
       shell: bash
       env:
         RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
+        # This will be empty on non-Windows builds.
+        WINDOWS_INSTALLER_FILENAME: ${{ steps.build-windows.outputs.windows-installer-filename }}
       run: |
-          echo "digest=$(cat $RELEASE_BINARY_FILENAME | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            # Mac runners don't have sha256sum.
+            sha256sum="shasum -a 256"
+          else
+            sha256sum="sha256sum"
+          fi
+          echo "digest=$(cat $WINDOWS_INSTALLER_FILENAME $RELEASE_BINARY_FILENAME | $sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
-    - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       id: artifact-upload
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
         # Due to path differences on Windows when running in bash vs running on node,
         # we need to search for files in the current workspace.
+        # The steps.build-windows.* variables will be empty on Linux/MacOS.
         path: |
           ${{ needs.prepare.outputs.release-binary-filename }}
+          ${{ steps.build-windows.outputs.windows-installer-filename }}
 
     - name: Run Tests
       # These almost always fail so don't let them fail the build and prevent the uploads.
+      if : runner.os != 'Windows'
       continue-on-error: true
       run: |
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
@@ -268,7 +356,9 @@ jobs:
       - name: Upload Artifacts
         uses: ./.github/workflows/upload-release-artifact
         with:
+          release-version: ${{ needs.prepare.outputs.release-version }}
           artifact-id: ${{ needs.build-release-package.outputs.artifact-id }}
-          attestation-name: ${{ runner.os }}-${{ runner.arch }}-release-binary-attestation
+          attestation-name: ${{ needs.prepare.outputs.attestation-name }}
           digest: ${{ needs.build-release-package.outputs.digest }}
           upload: ${{ needs.prepare.outputs.upload }}
+          user-token: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}

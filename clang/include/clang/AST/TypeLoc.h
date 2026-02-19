@@ -1096,7 +1096,8 @@ public:
   void setSourceRange(const SourceRange &R) { getLocalData()->Range = R; }
   SourceRange getLocalSourceRange() const { return getLocalData()->Range; }
   void initializeLocal(ASTContext &Context, SourceLocation loc) {
-    setSourceRange(SourceRange());
+    setSourceRange(SourceRange(loc));
+    setContainedTypeSourceInfo(nullptr);
   }
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
   unsigned getLocalDataSize() const {

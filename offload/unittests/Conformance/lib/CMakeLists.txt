@@ -3,7 +3,7 @@ add_library(MathTest STATIC
 
 target_include_directories(MathTest PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../include")
 
-if(NOT LLVM_REQUIRES_RTTI)
+if(NOT LLVM_ENABLE_RTTI)
   target_compile_options(MathTest PUBLIC -fno-rtti)
 endif()
 

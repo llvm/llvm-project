@@ -30,4 +30,6 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Arith, arith);
 }
 #endif
 
+#include "mlir/Dialect/Arith/Transforms/Passes.capi.h.inc"
+
 #endif // MLIR_C_DIALECT_ARITH_H

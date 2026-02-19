@@ -25,6 +25,21 @@ RUN:   --data - >%t/abc.casid
 
 RUN: llvm-cas --cas %t/ac --put-cache-key @%t/abc.casid @%t/empty.casid
 RUN: llvm-cas --cas %t/ac --validate
+
+# Check that validation passes in an upstream db.
+RUN: mkdir %t/ac/v1.2
+RUN: llvm-cas --cas %t/ac --validate
+# Fault in from upstream DB.
+RUN: llvm-cas --cas %t/ac --get-cache-result @%t/abc.casid
+RUN: llvm-cas --cas %t/ac --validate
+
+# Check that validation fails if the objects referenced are missing.
+RUN: mv %t/ac/v1.1/index.v1 %t/tmp.index.v1
+RUN: not llvm-cas --cas %t/ac --validate
+
+RUN: mv %t/tmp.index.v1 %t/ac/v1.1/index.v1
+RUN: llvm-cas --cas %t/ac --validate
+
 # Note: records are 40 bytes (32 hash bytes + 8 byte value), so trim the last
 # allocated record, leaving it invalid.
 RUN: truncate -s -40 %t/ac/v1.1/actions.v1

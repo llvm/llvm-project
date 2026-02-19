@@ -13,7 +13,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_LINK_LLVM_DYLIB
   LLVM_TOOL_LTO_BUILD
   LLVM_USE_INTEL_JITEVENTS
-  LLVM_BUILD_EXAMPLES
+  LLVM_INCLUDE_EXAMPLES
   LLVM_ENABLE_PLUGINS
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_EXAMPLEIRTRANSFORMS_LINK_INTO_TOOLS
@@ -76,6 +76,7 @@ set(LLVM_TEST_DEPENDS
   llc
   lli
   lli-child-target
+  llubi
   llvm-addr2line
   llvm-ar
   llvm-as
@@ -186,7 +187,7 @@ if (TARGET llvm-mt)
   list(APPEND LLVM_TEST_DEPENDS llvm-mt)
 endif ()
 
-if(LLVM_BUILD_EXAMPLES)
+if(LLVM_INCLUDE_EXAMPLES)
   list(APPEND LLVM_TEST_DEPENDS
     Kaleidoscope-Ch3
     Kaleidoscope-Ch4
@@ -200,12 +201,12 @@ if(LLVM_BUILD_EXAMPLES)
     OrcV2CBindingsLazy
     OrcV2CBindingsVeryLazy
     )
-  if(CMAKE_HOST_UNIX)
+  if(CMAKE_HOST_UNIX AND LLVM_ENABLE_THREADS)
     list(APPEND LLVM_TEST_DEPENDS
       LLJITWithRemoteDebugging
       )
   endif()
-  if (NOT WIN32)
+  if (NOT WIN32 AND NOT CYGWIN)
     list(APPEND LLVM_TEST_DEPENDS
       Bye
       ExampleIRTransforms

@@ -61,13 +61,11 @@ define amdgpu_kernel void @issue155902(i64 %arg, i64 %arg1, i64 %arg2, i64 %arg3
 ; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x188
 ; GFX950-NEXT:    v_mov_b64_e32 v[0:1], 0
-; GFX950-NEXT:    v_mov_b32_e32 v3, 0x4008
-; GFX950-NEXT:    buffer_wbl2 sc0 sc1
-; GFX950-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    scratch_store_dwordx2 v3, v[0:1], off sc0 sc1
+; GFX950-NEXT:    scratch_store_dwordx2 off, v[0:1], s33 offset:8
 ; GFX950-NEXT:    scratch_store_dwordx2 off, v[0:1], s33
 ; GFX950-NEXT:    v_mov_b64_e32 v[0:1], 0x384
 ; GFX950-NEXT:    scratch_store_dwordx2 off, v[0:1], s33 offset:16
+; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX950-NEXT:    v_readlane_b32 s0, v2, 0
 ; GFX950-NEXT:    s_nop 4
@@ -295,8 +293,7 @@ define amdgpu_kernel void @issue155902_fp(i64 %arg, i64 %arg1, i64 %arg2, i64 %a
 ; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x188
 ; GFX950-NEXT:    v_mov_b64_e32 v[0:1], 0
-; GFX950-NEXT:    s_add_i32 s1, s33, 0x4008
-; GFX950-NEXT:    scratch_store_dwordx2 off, v[0:1], s1 offset:8
+; GFX950-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:8
 ; GFX950-NEXT:    scratch_store_dwordx2 off, v[0:1], s0
 ; GFX950-NEXT:    v_mov_b64_e32 v[0:1], 0x384
 ; GFX950-NEXT:    scratch_store_dwordx2 off, v[0:1], s0 offset:16

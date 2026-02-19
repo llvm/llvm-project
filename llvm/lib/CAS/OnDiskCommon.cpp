@@ -9,6 +9,7 @@
 #include "OnDiskCommon.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include <mutex>
 #include <thread>
@@ -109,6 +110,8 @@ cas::ondisk::tryLockFileThreadSafe(int FD, std::chrono::milliseconds Timeout,
       return std::error_code();
     int Error = errno;
     if (Error == EWOULDBLOCK) {
+      if (Timeout.count() == 0)
+        break;
       // Match sys::fs::tryLockFile, which sleeps for 1 ms per attempt.
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
       continue;
@@ -211,4 +214,41 @@ Expected<uint64_t> cas::ondisk::getBootTime() {
 #else
   return 0;
 #endif
+}
+
+Expected<StringRef>
+cas::ondisk::UniqueTempFile::createAndCopyFrom(StringRef ParentPath,
+                                               StringRef CopyFromPath) {
+  // \c clonefile requires that the destination path doesn't exist. We create
+  // a "placeholder" temporary file, then modify its path a bit and use that
+  // for \c clonefile to write to.
+  // FIXME: Instead of creating a dummy file, add a new file system API for
+  // copying to a unique path that can loop while checking EEXIST.
+  SmallString<256> UniqueTmpPath;
+  SmallString<256> Model;
+  Model += ParentPath;
+  sys::path::append(Model, "%%%%%%%.tmp");
+  if (std::error_code EC = sys::fs::createUniqueFile(Model, UniqueTmpPath))
+    return createFileError(Model, EC);
+  TmpPath = UniqueTmpPath;
+  TmpPath += ".tmp"; // modify so that there's no file at that path.
+  // \c copy_file will use \c clonefile when applicable.
+  if (std::error_code EC = sys::fs::copy_file(CopyFromPath, TmpPath))
+    return createFileError(TmpPath, EC);
+
+  return TmpPath;
+}
+
+Error cas::ondisk::UniqueTempFile::renameTo(StringRef RenameToPath) {
+  if (std::error_code EC = sys::fs::rename(TmpPath, RenameToPath))
+    return createFileError(RenameToPath, EC);
+  TmpPath.clear();
+  return Error::success();
+}
+
+cas::ondisk::UniqueTempFile::~UniqueTempFile() {
+  if (!TmpPath.empty())
+    sys::fs::remove(TmpPath);
+  if (!UniqueTmpPath.empty())
+    sys::fs::remove(UniqueTmpPath);
 }

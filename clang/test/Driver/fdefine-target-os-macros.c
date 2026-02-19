@@ -19,7 +19,8 @@
 // RUN:                -DSIMULATOR=0   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=arm64-apple-ios %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
@@ -35,7 +36,8 @@
 // RUN:                -DSIMULATOR=0   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=arm64-apple-ios-macabi %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
@@ -51,7 +53,8 @@
 // RUN:                -DSIMULATOR=0   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=arm64-apple-ios-simulator %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
@@ -67,7 +70,8 @@
 // RUN:                -DSIMULATOR=1   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=arm64-apple-tvos %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
@@ -83,7 +87,8 @@
 // RUN:                -DSIMULATOR=0   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=arm64-apple-tvos-simulator %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
@@ -99,7 +104,8 @@
 // RUN:                -DSIMULATOR=1   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=arm64-apple-watchos %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
@@ -115,7 +121,8 @@
 // RUN:                -DSIMULATOR=0   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=arm64-apple-watchos-simulator %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
@@ -131,7 +138,8 @@
 // RUN:                -DSIMULATOR=1   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=arm64-apple-xros %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
@@ -147,7 +155,8 @@
 // RUN:                -DSIMULATOR=0   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=arm64-apple-xros-simulator %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
@@ -163,7 +172,8 @@
 // RUN:                -DSIMULATOR=1   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=arm64-apple-driverkit %s 2>&1 \
 // RUN: | FileCheck %s -DMAC=1         \
@@ -179,7 +189,25 @@
 // RUN:                -DSIMULATOR=0   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
+
+// RUN: %clang -dM -E --target=arm64-apple-firmware %s 2>&1 \
+// RUN: | FileCheck %s -DMAC=1         \
+// RUN:                -DOSX=0         \
+// RUN:                -DIPHONE=0      \
+// RUN:                -DIOS=0         \
+// RUN:                -DTV=0          \
+// RUN:                -DWATCH=0       \
+// RUN:                -DVISION=0      \
+// RUN:                -DDRIVERKIT=0   \
+// RUN:                -DMACCATALYST=0 \
+// RUN:                -DEMBEDDED=0    \
+// RUN:                -DSIMULATOR=0   \
+// RUN:                -DWINDOWS=0     \
+// RUN:                -DLINUX=0       \
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=1
 
 // RUN: %clang -dM -E --target=x86_64-pc-linux-gnu \
 // RUN:        -fdefine-target-os-macros %s 2>&1 \
@@ -196,7 +224,8 @@
 // RUN:                -DSIMULATOR=0   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=1       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=x86_64-pc-win32 \
 // RUN:        -fdefine-target-os-macros %s 2>&1 \
@@ -213,7 +242,8 @@
 // RUN:                -DSIMULATOR=0   \
 // RUN:                -DWINDOWS=1     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=x86_64-pc-windows-gnu \
 // RUN:        -fdefine-target-os-macros %s 2>&1 \
@@ -230,7 +260,8 @@
 // RUN:                -DSIMULATOR=0   \
 // RUN:                -DWINDOWS=1     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=0
+// RUN:                -DUNIX=0        \
+// RUN:                -DFIRMWARE=0
 
 // RUN: %clang -dM -E --target=sparc-none-solaris \
 // RUN:        -fdefine-target-os-macros %s 2>&1 \
@@ -247,7 +278,11 @@
 // RUN:                -DSIMULATOR=0   \
 // RUN:                -DWINDOWS=0     \
 // RUN:                -DLINUX=0       \
-// RUN:                -DUNIX=1
+// RUN:                -DUNIX=1        \
+// RUN:                -DFIRMWARE=0
+
+// If the firmware OS was valid for a non-Apple vendor,
+// it would be TARGET_OS_MAC=0, TARGET_OS_FIRMWARE=1.
 
 // RUN: %clang -dM -E --target=arm64-apple-macos \
 // RUN:        -fno-define-target-os-macros %s 2>&1 \
@@ -285,3 +320,4 @@
 // CHECK-DAG: #define TARGET_OS_WINDOWS [[WINDOWS]]
 // CHECK-DAG: #define TARGET_OS_LINUX [[LINUX]]
 // CHECK-DAG: #define TARGET_OS_UNIX [[UNIX]]
+// CHECK-DAG: #define TARGET_OS_FIRMWARE [[FIRMWARE]]

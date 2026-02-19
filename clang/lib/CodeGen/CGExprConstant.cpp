@@ -1224,13 +1224,11 @@ public:
     }
 
     case CK_AddressSpaceConversion: {
-      auto C = Emitter.tryEmitPrivate(subExpr, subExpr->getType());
+      llvm::Constant *C = Emitter.tryEmitPrivate(subExpr, subExpr->getType());
       if (!C)
         return nullptr;
-      LangAS srcAS = subExpr->getType()->getPointeeType().getAddressSpace();
       llvm::Type *destTy = ConvertType(E->getType());
-      return CGM.getTargetCodeGenInfo().performAddrSpaceCast(CGM, C, srcAS,
-                                                             destTy);
+      return CGM.performAddrSpaceCast(C, destTy);
     }
 
     case CK_LValueToRValue: {
@@ -2123,7 +2121,7 @@ private:
     if (!hasNonZeroOffset())
       return C;
 
-    return llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, C, getOffset());
+    return llvm::ConstantExpr::getPtrAdd(C, getOffset());
   }
 };
 

@@ -38,6 +38,8 @@ public:
       m_thread_name.clear();
   }
 
+  void SetIsCrashedThread(bool is_crashed) { m_is_crashed = is_crashed; }
+
 protected:
   bool CalculateStopInfo() override;
 
@@ -45,6 +47,7 @@ private:
   std::string m_thread_name;
   lldb::RegisterContextSP m_thread_reg_ctx_sp;
   lldb::addr_t m_pcb_addr;
+  bool m_is_crashed = false;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_THREADFREEBSDKERNEL_H

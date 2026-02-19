@@ -21,6 +21,7 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
@@ -37,40 +38,101 @@ static bool overrideBuffer(Operation *op, Value buffer) {
   return copyOp.getTarget() == buffer;
 }
 
-/// Replace the uses of `oldOp` with the given `val` and for subview uses
+/// Replace the uses of `oldOp` with the given `val` and for view-like uses
 /// propagate the type change. Changing the memref type may require propagating
-/// it through subview ops so we cannot just do a replaceAllUse but need to
-/// propagate the type change and erase old subview ops.
-static void replaceUsesAndPropagateType(RewriterBase &rewriter,
-                                        Operation *oldOp, Value val) {
+/// it through view-like ops (subview, expand_shape, collapse_shape, cast) so
+/// we need to propagate the type change and erase old view ops.
+///
+/// Only view-like ops whose result type can be recomputed from the new source
+/// type and existing op attributes are handled here. Other ops fall back to
+/// operand replacement without type propagation.
+static LogicalResult replaceUsesAndPropagateType(RewriterBase &rewriter,
+                                                 Operation *oldOp, Value val) {
+  SmallVector<Operation *> opsToErase;
   // Iterate with early_inc to erase current user inside the loop.
   for (OpOperand &use : llvm::make_early_inc_range(oldOp->getUses())) {
     Operation *user = use.getOwner();
-    if (auto subviewUse = dyn_cast<memref::SubViewOp>(user)) {
-      // `subview(old_op)` is replaced by a new `subview(val)`.
-      OpBuilder::InsertionGuard g(rewriter);
-      rewriter.setInsertionPoint(subviewUse);
-      MemRefType newType = memref::SubViewOp::inferRankReducedResultType(
-          subviewUse.getType().getShape(), cast<MemRefType>(val.getType()),
-          subviewUse.getStaticOffsets(), subviewUse.getStaticSizes(),
-          subviewUse.getStaticStrides());
-      Value newSubview = memref::SubViewOp::create(
-          rewriter, subviewUse->getLoc(), newType, val,
-          subviewUse.getMixedOffsets(), subviewUse.getMixedSizes(),
-          subviewUse.getMixedStrides());
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(user);
+    MemRefType srcType = cast<MemRefType>(val.getType());
 
-      // Ouch recursion ... is this really necessary?
-      replaceUsesAndPropagateType(rewriter, subviewUse, newSubview);
+    // Try to create a new view-like op with updated result type.
+    // Each view-like op has its own method to compute the result type.
+    bool typeInferenceFailed = false;
+    Value replacement =
+        llvm::TypeSwitch<Operation *, Value>(user)
+            .Case([&](memref::SubViewOp subview) -> Value {
+              MemRefType newType =
+                  memref::SubViewOp::inferRankReducedResultType(
+                      subview.getType().getShape(), srcType,
+                      subview.getStaticOffsets(), subview.getStaticSizes(),
+                      subview.getStaticStrides());
+              return memref::SubViewOp::create(
+                  rewriter, subview->getLoc(), newType, val,
+                  subview.getMixedOffsets(), subview.getMixedSizes(),
+                  subview.getMixedStrides());
+            })
+            .Case([&](memref::ExpandShapeOp expand) -> Value {
+              FailureOr<MemRefType> newType =
+                  memref::ExpandShapeOp::computeExpandedType(
+                      srcType, expand.getResultType().getShape(),
+                      expand.getReassociationIndices());
+              if (failed(newType)) {
+                typeInferenceFailed = true;
+                return Value();
+              }
+              return memref::ExpandShapeOp::create(
+                  rewriter, expand->getLoc(), *newType, val,
+                  expand.getReassociationIndices(),
+                  expand.getMixedOutputShape());
+            })
+            .Case([&](memref::CollapseShapeOp collapse) -> Value {
+              FailureOr<MemRefType> newType =
+                  memref::CollapseShapeOp::computeCollapsedType(
+                      srcType, collapse.getReassociationIndices());
+              if (failed(newType)) {
+                typeInferenceFailed = true;
+                return Value();
+              }
+              return memref::CollapseShapeOp::create(
+                  rewriter, collapse->getLoc(), *newType, val,
+                  collapse.getReassociationIndices());
+            })
+            .Case([&](memref::CastOp cast) -> Value {
+              if (!memref::CastOp::areCastCompatible(srcType, cast.getType())) {
+                typeInferenceFailed = true;
+                return Value();
+              }
+              return memref::CastOp::create(rewriter, cast->getLoc(),
+                                            cast.getType(), val);
+            })
+            .Default([&](Operation *) -> Value { return Value(); });
 
-      // Safe to erase.
-      rewriter.eraseOp(subviewUse);
-      continue;
+    if (typeInferenceFailed) {
+      user->emitOpError(
+          "failed to compute view-like result type after multi-buffering");
+      return failure();
     }
-    // Non-subview: replace with new value.
-    rewriter.startOpModification(user);
-    use.set(val);
-    rewriter.finalizeOpModification(user);
+
+    if (replacement) {
+      // Recursively propagate through view-like ops and mark old op for
+      // erasure.
+      if (failed(replaceUsesAndPropagateType(rewriter, user, replacement)))
+        return failure();
+      opsToErase.push_back(user);
+    } else {
+      // Not a view-like op: just replace operand.
+      rewriter.startOpModification(user);
+      use.set(val);
+      rewriter.finalizeOpModification(user);
+    }
   }
+
+  for (Operation *op : opsToErase) {
+    rewriter.eraseOp(op);
+  }
+
+  return success();
 }
 
 // Transformation to do multi-buffering/array expansion to remove dependencies
@@ -216,7 +278,8 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   }
 
   // 6. RAUW with the particular slice, taking modular rotation into account.
-  replaceUsesAndPropagateType(rewriter, allocOp, subview);
+  if (failed(replaceUsesAndPropagateType(rewriter, allocOp, subview)))
+    return failure();
 
   // 7. Finally, erase the old allocOp.
   rewriter.eraseOp(allocOp);

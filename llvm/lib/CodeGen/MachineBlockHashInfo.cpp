@@ -47,9 +47,7 @@ INITIALIZE_PASS(MachineBlockHashInfo, "machine-block-hash",
 
 char MachineBlockHashInfo::ID = 0;
 
-MachineBlockHashInfo::MachineBlockHashInfo() : MachineFunctionPass(ID) {
-  initializeMachineBlockHashInfoPass(*PassRegistry::getPassRegistry());
-}
+MachineBlockHashInfo::MachineBlockHashInfo() : MachineFunctionPass(ID) {}
 
 void MachineBlockHashInfo::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();

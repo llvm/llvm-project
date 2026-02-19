@@ -16,8 +16,9 @@
 
 include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
-include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
+include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.td"
+include "flang/Optimizer/Dialect/FIRTypes.td"
 include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
@@ -100,8 +101,9 @@ def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments,
       Optional<fir_ReferenceType>:$stream,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
       Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
-      cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat,
-      UnitAttr:$hasDoubleDescriptor, UnitAttr:$pointer);
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr, UnitAttr:$hasStat,
+      UnitAttr:$hasDoubleDescriptor, UnitAttr:$pointer,
+      UnitAttr:$device_source);
 
   let results = (outs AnyIntegerType:$stat);
 
@@ -242,8 +244,10 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
   let hasVerifier = 1;
 }
 
-def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+def cuf_KernelOp
+    : cuf_Op<"kernel", [AttrSizedOperandSegments,
+                        DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+                        DeclareOpInterfaceMethods<OperationMoveOpInterface>]> {
 
   let description = [{
     Represent the CUDA Fortran kernel directive. The operation is a loop like

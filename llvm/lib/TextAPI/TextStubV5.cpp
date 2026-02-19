@@ -642,13 +642,13 @@ Expected<IFPtr> parseToInterfaceFile(const Object *File) {
   auto UmbrellasOrErr = getUmbrellaSection(File, Targets);
   if (!UmbrellasOrErr)
     return UmbrellasOrErr.takeError();
-  AttrToTargets Umbrellas = *UmbrellasOrErr;
+  const AttrToTargets &Umbrellas = *UmbrellasOrErr;
 
   auto ClientsOrErr =
       getLibSection(File, TBDKey::AllowableClients, TBDKey::Clients, Targets);
   if (!ClientsOrErr)
     return ClientsOrErr.takeError();
-  AttrToTargets Clients = *ClientsOrErr;
+  const AttrToTargets &Clients = *ClientsOrErr;
 
   auto RLOrErr =
       getLibSection(File, TBDKey::ReexportLibs, TBDKey::Names, Targets);

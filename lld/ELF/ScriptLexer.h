@@ -44,6 +44,8 @@ protected:
   enum class State {
     Script,
     Expr,
+    // Used by version node and dynamic list parsing.
+    VersionNode,
   };
 
   struct Token {

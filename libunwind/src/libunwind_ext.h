@@ -26,6 +26,7 @@ extern "C" {
 extern int __unw_getcontext(unw_context_t *);
 extern int __unw_init_local(unw_cursor_t *, unw_context_t *);
 extern int __unw_step(unw_cursor_t *);
+extern int __unw_step_stage2(unw_cursor_t *);
 extern int __unw_get_reg(unw_cursor_t *, unw_regnum_t, unw_word_t *);
 extern int __unw_get_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t *);
 extern int __unw_set_reg(unw_cursor_t *, unw_regnum_t, unw_word_t);
@@ -119,10 +120,10 @@ typedef int (*unw_find_dynamic_unwind_sections)(
 extern int __unw_add_find_dynamic_unwind_sections(
     unw_find_dynamic_unwind_sections find_dynamic_unwind_sections);
 
-// Deregister a dynacim unwind-info lookup callback.
+// Deregister a dynamic unwind-info lookup callback.
 //
 // Returns UNW_ESUCCESS for successful deregistrations. If the given callback
-// has already been registered then UNW_EINVAL will be returned.
+// is not present then UNW_EINVAL will be returned.
 extern int __unw_remove_find_dynamic_unwind_sections(
     unw_find_dynamic_unwind_sections find_dynamic_unwind_sections);
 

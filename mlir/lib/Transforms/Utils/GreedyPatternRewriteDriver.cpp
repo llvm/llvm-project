@@ -612,8 +612,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     if (config.getScope()) {
       expensiveChecks.computeFingerPrints(config.getScope()->getParentOp());
     }
-    auto clearFingerprints =
-        llvm::make_scope_exit([&]() { expensiveChecks.clear(); });
+    llvm::scope_exit clearFingerprints([&]() { expensiveChecks.clear(); });
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
     LogicalResult matchResult =

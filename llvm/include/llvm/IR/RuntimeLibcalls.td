@@ -227,7 +227,7 @@ foreach S = !listconcat(F32VectorSuffixes, F64VectorSuffixes) in {
   def FMA_#S : RuntimeLibcall;
   def FMAX_#S : RuntimeLibcall;
   def FMIN_#S : RuntimeLibcall;
-  def FMOD_#S : RuntimeLibcall;
+  def REM_#S : RuntimeLibcall; // "fmod"
   def HYPOT_#S : RuntimeLibcall;
   def ILOGB_#S : RuntimeLibcall;
   def LDEXP_#S : RuntimeLibcall;
@@ -480,6 +480,7 @@ def STACK_SMASH_HANDLER : RuntimeLibcall;
 // Safe stack
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall;
 
+def STACK_PROBE : RuntimeLibcall;
 def SECURITY_CHECK_COOKIE : RuntimeLibcall;
 
 // Deoptimization
@@ -539,6 +540,10 @@ def AEABI_MEMSET8 : RuntimeLibcall;
 def AEABI_MEMCLR : RuntimeLibcall;
 def AEABI_MEMCLR4 : RuntimeLibcall;
 def AEABI_MEMCLR8 : RuntimeLibcall;
+def AEABI_UREAD4 : RuntimeLibcall;
+def AEABI_UREAD8 : RuntimeLibcall;
+def AEABI_UWRITE4 : RuntimeLibcall;
+def AEABI_UWRITE8 : RuntimeLibcall;
 
 // Hexagon calls
 def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
@@ -1840,6 +1845,13 @@ def __stack_smash_handler : RuntimeLibcallImpl<STACK_SMASH_HANDLER>;
 
 def __riscv_flush_icache : RuntimeLibcallImpl<RISCV_FLUSH_ICACHE>;
 
+def _chkstk : RuntimeLibcallImpl<STACK_PROBE>;
+def _alloca : RuntimeLibcallImpl<STACK_PROBE>;
+
+def __chkstk : RuntimeLibcallImpl<STACK_PROBE>;
+def ___chkstk_ms : RuntimeLibcallImpl<STACK_PROBE>;
+def __chkstk_arm64ec : RuntimeLibcallImpl<STACK_PROBE, "#__chkstk_arm64ec">;
+
 def __security_check_cookie : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE>;
 def __security_check_cookie_arm64ec : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE,
   "#__security_check_cookie_arm64ec">;
@@ -2150,6 +2162,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        DefaultLibmExp10,
        DefaultStackProtector,
        SecurityCheckCookieIfWinMSVC,
+       LibcallImpls<(add __chkstk), isOSWindows>,
        SMEABI_LibCalls_PreserveMost_From_X0,
        SMEABI_LibCalls_PreserveMost_From_X1,
        SMEABI_LibCalls_PreserveMost_From_X2)
@@ -2197,6 +2210,7 @@ def WindowsARM64ECSystemLibrary
                                 LibcallImpls<(add __security_check_cookie_arm64ec,
                                                   __security_cookie),
                                               isWindowsMSVCEnvironment>,
+                                __chkstk_arm64ec,
                                 ExceptionModelCallsArm64EC)>;
 
 //===----------------------------------------------------------------------===//
@@ -2285,6 +2299,13 @@ def __aeabi_dadd : RuntimeLibcallImpl<ADD_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_ddiv : RuntimeLibcallImpl<DIV_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_dmul : RuntimeLibcallImpl<MUL_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_dsub : RuntimeLibcallImpl<SUB_F64>; // CallingConv::ARM_AAPCS
+
+// Unaligned memory access helper functions
+// RTABI chapter 5.3.3
+def __aeabi_uread4  : RuntimeLibcallImpl<AEABI_UREAD4>;  // CallingConv::ARM_AAPCS
+def __aeabi_uread8  : RuntimeLibcallImpl<AEABI_UREAD8>;  // CallingConv::ARM_AAPCS
+def __aeabi_uwrite4 : RuntimeLibcallImpl<AEABI_UWRITE4>; // CallingConv::ARM_AAPCS
+def __aeabi_uwrite8 : RuntimeLibcallImpl<AEABI_UWRITE8>; // CallingConv::ARM_AAPCS
 
 defvar AEABIOverrides = [
   __eqsf2, __eqdf2,
@@ -2453,8 +2474,8 @@ def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
 // non-watchos platforms, but are needed for some targets which use a
 // hard-float calling convention by default.
 def ARMHalfConvertLibcallCallingConv : LibcallCallingConv<
-  [{TT.isWatchABI() ? DefaultCC :
-    (isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
+  [{TT.isWatchABI() ? static_cast<CallingConv::ID>(DefaultCC) :
+    static_cast<CallingConv::ID>(isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
 >;
 
 def ARMLibgccHalfConvertCalls :
@@ -2600,6 +2621,15 @@ def AEABI45MemCalls : LibcallImpls<
   let CallingConv = ARM_AAPCS;
 }
 
+// Unaligned Memory read/write operations
+// RTABI chapter 5.3.3
+def AEABIUnalignedMemCalls : LibcallImpls<
+  (add __aeabi_uread4,  __aeabi_uread8,
+       __aeabi_uwrite4, __aeabi_uwrite8),
+  RuntimeLibcallPredicate<[{hasAEABILibcalls(TT) && isAAPCS_ABI(TT, ABIName)}]>> {
+  let CallingConv = ARM_AAPCS;
+}
+
 def isARMOrThumb : RuntimeLibcallPredicate<"TT.isARM() || TT.isThumb()">;
 
 def ARMSystemLibrary
@@ -2614,6 +2644,7 @@ def ARMSystemLibrary
            WindowARMDivRemCalls,
            WindowARMFPIntCasts,
            SecurityCheckCookieIfWinMSVC,
+           LibcallImpls<(add __chkstk), isOSWindows>,
            AEABIDivRemCalls,
            DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
@@ -2621,6 +2652,7 @@ def ARMSystemLibrary
 
            AEABICalls,
            AEABI45MemCalls,
+           AEABIUnalignedMemCalls,
            ARMLibgccHalfConvertCalls,
            EABIHalfConvertCalls,
            GNUEABIHalfConvertCalls,
@@ -3114,7 +3146,10 @@ defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
   def ___memmove64 : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
+  def ___strcmp64 : RuntimeLibcallImpl<STRCMP>;
+  def ___strcpy64 : RuntimeLibcallImpl<STRCPY>;
   def ___strlen64 : RuntimeLibcallImpl<STRLEN>;
+  def ___strstr64 : RuntimeLibcallImpl<STRSTR>;
 }
 
 defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
@@ -3122,7 +3157,10 @@ defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;
   def ___bzero : RuntimeLibcallImpl<BZERO>;
+  def ___strcmp : RuntimeLibcallImpl<STRCMP>;
+  def ___strcpy : RuntimeLibcallImpl<STRCPY>;
   def ___strlen : RuntimeLibcallImpl<STRLEN>;
+  def ___strstr : RuntimeLibcallImpl<STRSTR>;
 }
 
 defvar PPCOverrides = !foreach(entry, PPCRuntimeLibcalls, entry.Provides);
@@ -3288,6 +3326,19 @@ def isX86_32 : RuntimeLibcallPredicate<"TT.getArch() == Triple::x86">;
 def isX86_64 : RuntimeLibcallPredicate<"TT.getArch() == Triple::x86_64">;
 def isX86 : RuntimeLibcallPredicate<"TT.isX86()">;
 
+def isCygwinMinGW64 : RuntimeLibcallPredicate<
+  [{TT.isOSCygMing() && TT.getArch() == Triple::x86_64}]>;
+def isCygwinMinGW32 : RuntimeLibcallPredicate<
+  [{TT.isOSCygMing() && TT.getArch() == Triple::x86}]>;
+
+def isWin32NotCygMing : RuntimeLibcallPredicate<
+  [{TT.getArch() == Triple::x86 &&
+     (TT.isOSWindows() || TT.isUEFI()) && !TT.isOSCygMing()}]>;
+def isWin64NotCygMing : RuntimeLibcallPredicate<
+  [{TT.getArch() == Triple::x86_64 &&
+    (TT.isOSWindows() || TT.isUEFI()) && !TT.isOSCygMing()}]>;
+
+
 // Some darwins have an optimized __bzero/bzero function.
 def darwinHas__bzero : RuntimeLibcallPredicate<"TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6)">;
 
@@ -3320,8 +3371,12 @@ defvar X86CommonLibcalls =
        // hack for one test relying on it.
        __powitf2_f128,
        DefaultStackProtector,
-       LibcallImpls<(add MemChkLibcalls), isNotPS>
-     );
+       LibcallImpls<(add MemChkLibcalls), isNotPS>,
+       LibcallImpls<(add ___chkstk_ms), isCygwinMinGW64>,
+       LibcallImpls<(add __chkstk), isWin64NotCygMing>,
+       LibcallImpls<(add _alloca), isCygwinMinGW32>,
+       LibcallImpls<(add _chkstk), isWin32NotCygMing>
+);
 
 defvar Windows32DivRemMulCalls =
   LibcallsWithCC<(add WindowsDivRemMulLibcalls), X86_STDCALL,
@@ -3919,7 +3974,7 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_VF2_VECFUNCS = {
   def _ZGVnN2vv_fdim : RuntimeLibcallImpl<FDIM_V2F64>;
   def _ZGVnN2vv_fmax : RuntimeLibcallImpl<FMAX_V2F64>;
   def _ZGVnN2vv_fmin : RuntimeLibcallImpl<FMIN_V2F64>;
-  def _ZGVnN2vv_fmod : RuntimeLibcallImpl<FMOD_V2F64>;
+  def _ZGVnN2vv_fmod : RuntimeLibcallImpl<REM_V2F64>;
   def _ZGVnN2vv_hypot : RuntimeLibcallImpl<HYPOT_V2F64>;
   def _ZGVnN2vv_ldexp : RuntimeLibcallImpl<LDEXP_V2F64>;
   def _ZGVnN2vv_nextafter : RuntimeLibcallImpl<NEXTAFTER_V2F64>;
@@ -3965,7 +4020,7 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_VF4_VECFUNCS = {
   def _ZGVnN4vv_fdimf : RuntimeLibcallImpl<FDIM_V4F32>;
   def _ZGVnN4vv_fmaxf : RuntimeLibcallImpl<FMAX_V4F32>;
   def _ZGVnN4vv_fminf : RuntimeLibcallImpl<FMIN_V4F32>;
-  def _ZGVnN4vv_fmodf : RuntimeLibcallImpl<FMOD_V4F32>;
+  def _ZGVnN4vv_fmodf : RuntimeLibcallImpl<REM_V4F32>;
   def _ZGVnN4vv_hypotf : RuntimeLibcallImpl<HYPOT_V4F32>;
   def _ZGVnN4vv_ldexpf : RuntimeLibcallImpl<LDEXP_V4F32>;
   def _ZGVnN4vv_nextafterf : RuntimeLibcallImpl<NEXTAFTER_V4F32>;
@@ -4042,8 +4097,8 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS = {
   def _ZGVsMxvv_fmaxf : RuntimeLibcallImpl<FMAX_NXV4F32>;
   def _ZGVsMxvv_fmin : RuntimeLibcallImpl<FMIN_NXV2F64>;
   def _ZGVsMxvv_fminf : RuntimeLibcallImpl<FMIN_NXV4F32>;
-  def _ZGVsMxvv_fmod : RuntimeLibcallImpl<FMOD_NXV2F64>;
-  def _ZGVsMxvv_fmodf : RuntimeLibcallImpl<FMOD_NXV4F32>;
+  def _ZGVsMxvv_fmod : RuntimeLibcallImpl<REM_NXV2F64>;
+  def _ZGVsMxvv_fmodf : RuntimeLibcallImpl<REM_NXV4F32>;
   def _ZGVsMxvv_hypot : RuntimeLibcallImpl<HYPOT_NXV2F64>;
   def _ZGVsMxvv_hypotf : RuntimeLibcallImpl<HYPOT_NXV4F32>;
   def _ZGVsMxvv_ldexp : RuntimeLibcallImpl<LDEXP_NXV2F64>;
@@ -4107,8 +4162,8 @@ defset list<RuntimeLibcallImpl> SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV = {
   def Sleef_fmaxfx_rvvm2 : RuntimeLibcallImpl<FMAX_NXV4F32>;
   def Sleef_fmindx_u10rvvm2 : RuntimeLibcallImpl<FMIN_NXV2F64>;
   def Sleef_fminfx_u10rvvm2 : RuntimeLibcallImpl<FMIN_NXV4F32>;
-  def Sleef_fmoddx_rvvm2 : RuntimeLibcallImpl<FMOD_NXV2F64>;
-  def Sleef_fmodfx_rvvm2 : RuntimeLibcallImpl<FMOD_NXV4F32>;
+  def Sleef_fmoddx_rvvm2 : RuntimeLibcallImpl<REM_NXV2F64>;
+  def Sleef_fmodfx_rvvm2 : RuntimeLibcallImpl<REM_NXV4F32>;
   def Sleef_hypotdx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV2F64>;
   def Sleef_hypotfx_u05rvvm2 : RuntimeLibcallImpl<HYPOT_NXV4F32>;
   def Sleef_ilogbdx_rvvm2 : RuntimeLibcallImpl<ILOGB_NXV2F64>;
@@ -4200,8 +4255,8 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
   def armpl_svfmax_f64_x : RuntimeLibcallImpl<FMAX_NXV2F64>;
   def armpl_svfmin_f32_x : RuntimeLibcallImpl<FMIN_NXV4F32>;
   def armpl_svfmin_f64_x : RuntimeLibcallImpl<FMIN_NXV2F64>;
-  def armpl_svfmod_f32_x : RuntimeLibcallImpl<FMOD_NXV4F32>;
-  def armpl_svfmod_f64_x : RuntimeLibcallImpl<FMOD_NXV2F64>;
+  def armpl_svfmod_f32_x : RuntimeLibcallImpl<REM_NXV4F32>;
+  def armpl_svfmod_f64_x : RuntimeLibcallImpl<REM_NXV2F64>;
   def armpl_svhypot_f32_x : RuntimeLibcallImpl<HYPOT_NXV4F32>;
   def armpl_svhypot_f64_x : RuntimeLibcallImpl<HYPOT_NXV2F64>;
   def armpl_svilogb_f32_x : RuntimeLibcallImpl<ILOGB_NXV4F32>;
@@ -4286,8 +4341,8 @@ defset list<RuntimeLibcallImpl> ARMPL_VECFUNCS = {
   def armpl_vfmaxq_f64 : RuntimeLibcallImpl<FMAX_V2F64>;
   def armpl_vfminq_f32 : RuntimeLibcallImpl<FMIN_V4F32>;
   def armpl_vfminq_f64 : RuntimeLibcallImpl<FMIN_V2F64>;
-  def armpl_vfmodq_f32 : RuntimeLibcallImpl<FMOD_V4F32>;
-  def armpl_vfmodq_f64 : RuntimeLibcallImpl<FMOD_V2F64>;
+  def armpl_vfmodq_f32 : RuntimeLibcallImpl<REM_V4F32>;
+  def armpl_vfmodq_f64 : RuntimeLibcallImpl<REM_V2F64>;
   def armpl_vhypotq_f32 : RuntimeLibcallImpl<HYPOT_V4F32>;
   def armpl_vhypotq_f64 : RuntimeLibcallImpl<HYPOT_V2F64>;
   def armpl_vilogbq_f32 : RuntimeLibcallImpl<ILOGB_V4F32>;

@@ -32,16 +32,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-subtarget"
 
-AMDGPUSubtarget::AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
-
-bool AMDGPUSubtarget::useRealTrue16Insts() const {
-  return hasTrue16BitInsts() && EnableRealTrue16Insts;
-}
-
-bool AMDGPUSubtarget::hasD16Writes32BitVgpr() const {
-  return EnableD16Writes32BitVgpr;
-}
-
 // Returns the maximum per-workgroup LDS allocation size (in bytes) that still
 // allows the given function to achieve an occupancy of NWaves waves per
 // SIMD / EU, taking into account only the function's *maximum* workgroup size.

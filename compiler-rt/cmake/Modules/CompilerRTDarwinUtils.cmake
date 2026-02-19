@@ -287,7 +287,7 @@ macro(darwin_add_builtin_library name suffix)
   
   # Write out the sources that were used to compile the builtins so that tests can be run in
   # an independent compiler-rt build (see: compiler-rt/test/builtins/CMakeLists.txt)
-  file(WRITE "${CMAKE_BINARY_DIR}/${libname}.sources.txt" "${LIB_SOURCES}")
+  file(WRITE "${COMPILER_RT_OUTPUT_LIBRARY_DIR}/${libname}.sources.txt" "${LIB_SOURCES}")
 
   if(DARWIN_${LIB_OS}_SYSROOT)
     set(sysroot_flag -isysroot ${DARWIN_${LIB_OS}_SYSROOT})

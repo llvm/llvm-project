@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefixes=GFX908,NOT-GFX90A --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=GFX1010,NOT-GFX90A --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx908 %s -filetype=null 2>&1 | FileCheck --check-prefixes=GFX908,NOT-GFX90A --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 %s -filetype=null 2>&1 | FileCheck --check-prefixes=GFX1010,NOT-GFX90A --implicit-check-not=error: %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx90a -show-encoding %s | FileCheck --check-prefix=GFX90A %s
 
 // NOT-GFX90A: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU

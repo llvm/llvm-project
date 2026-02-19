@@ -854,13 +854,6 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
   bool NeedsMemMove = false;
   IRBuilder<> IRB(BB, IP);
 
-  auto GetAllocaSize = [&](AllocaInst *AI) {
-    return IRB.CreateMul(
-        IRB.CreateZExtOrTrunc(AI->getArraySize(), IntptrTy),
-        ConstantInt::get(IntptrTy,
-                         DL.getTypeAllocSize(AI->getAllocatedType())));
-  };
-
   if (auto *A = dyn_cast<Argument>(V)) {
     assert(A->hasByValAttr() && "Type reset for non-byval argument?");
 
@@ -887,7 +880,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
       if (!AI)
         return false;
 
-      Size = GetAllocaSize(AI);
+      Size = IRB.CreateAllocationSize(IntptrTy, AI);
       Dest = II->getArgOperand(0);
     } else if (auto *AI = dyn_cast<AllocaInst>(I)) {
       // We need to clear the types for new stack allocations (or else we might
@@ -896,7 +889,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
       IRB.SetInsertPoint(&*std::next(BasicBlock::iterator(I)));
       IRB.SetInstDebugLocation(I);
 
-      Size = GetAllocaSize(AI);
+      Size = IRB.CreateAllocationSize(IntptrTy, AI);
       Dest = I;
     } else {
       return false;

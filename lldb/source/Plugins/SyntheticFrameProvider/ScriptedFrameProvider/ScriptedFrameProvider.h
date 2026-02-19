@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SYNTHETICFRAMEPROVIDER_SCRIPTEDFRAMEPROVIDER_SCRIPTEDFRAMEPROVIDER_H
-#define LLDB_PLUGINS_SYNTHETICFRAMEPROVIDER_SCRIPTEDFRAMEPROVIDER_SCRIPTEDFRAMEPROVIDER_H
+#ifndef LLDB_SOURCE_PLUGINS_SYNTHETICFRAMEPROVIDER_SCRIPTEDFRAMEPROVIDER_SCRIPTEDFRAMEPROVIDER_H
+#define LLDB_SOURCE_PLUGINS_SYNTHETICFRAMEPROVIDER_SCRIPTEDFRAMEPROVIDER_SCRIPTEDFRAMEPROVIDER_H
 
 #include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Utility/ScriptedMetadata.h"
@@ -40,6 +40,8 @@ public:
 
   std::string GetDescription() const override;
 
+  std::optional<uint32_t> GetPriority() const override;
+
   /// Get a single stack frame at the specified index.
   llvm::Expected<lldb::StackFrameSP> GetFrameAtIndex(uint32_t idx) override;
 
@@ -50,4 +52,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_PLUGINS_SYNTHETICFRAMEPROVIDER_SCRIPTEDFRAMEPROVIDER_SCRIPTEDFRAMEPROVIDER_H
+#endif // LLDB_SOURCE_PLUGINS_SYNTHETICFRAMEPROVIDER_SCRIPTEDFRAMEPROVIDER_SCRIPTEDFRAMEPROVIDER_H

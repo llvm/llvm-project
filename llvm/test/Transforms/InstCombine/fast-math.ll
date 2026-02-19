@@ -18,7 +18,7 @@ define float @fold(float %a) {
 define float @notfold(float %a) {
 ; CHECK-LABEL: @notfold(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[A:%.*]], 0x3FF3333340000000
-; CHECK-NEXT:    [[MUL1:%.*]] = fmul float [[MUL]], 0x4002666660000000
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul nnan float [[MUL]], 0x4002666660000000
 ; CHECK-NEXT:    ret float [[MUL1]]
 ;
   %mul = fmul fast float %a, 0x3FF3333340000000
@@ -728,7 +728,7 @@ define double @sqrt_intrinsic_three_args6(double %x, ptr %yp) {
 
 define double @sqrt_intrinsic_not_so_fast(double %x, double %y) {
 ; CHECK-LABEL: @sqrt_intrinsic_not_so_fast(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf double [[X:%.*]], [[X]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = fmul fast double [[MUL]], [[Y:%.*]]
 ; CHECK-NEXT:    [[SQRT:%.*]] = call fast double @llvm.sqrt.f64(double [[MUL2]])
 ; CHECK-NEXT:    ret double [[SQRT]]
@@ -739,7 +739,7 @@ define double @sqrt_intrinsic_not_so_fast(double %x, double %y) {
   ret double %sqrt
 }
 
-define double @sqrt_intrinsic_arg_4th(double %x) {
+define double @sqrt_intrinsic_arg_4th(double noundef %x) {
 ; CHECK-LABEL: @sqrt_intrinsic_arg_4th(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X:%.*]], [[X]]
 ; CHECK-NEXT:    ret double [[MUL]]
@@ -750,7 +750,7 @@ define double @sqrt_intrinsic_arg_4th(double %x) {
   ret double %sqrt
 }
 
-define double @sqrt_intrinsic_arg_5th(double %x) {
+define double @sqrt_intrinsic_arg_5th(double noundef %x) {
 ; CHECK-LABEL: @sqrt_intrinsic_arg_5th(
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[X:%.*]], [[X]]
 ; CHECK-NEXT:    [[SQRT1:%.*]] = call fast double @llvm.sqrt.f64(double [[X]])

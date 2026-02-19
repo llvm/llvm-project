@@ -17,6 +17,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 
@@ -182,9 +183,12 @@ public:
     Mask = AMDGPU::DepCtr::encodeFieldVaVdst(
         Mask, std::min(AMDGPU::DepCtr::decodeFieldVaVdst(Mask1),
                        AMDGPU::DepCtr::decodeFieldVaVdst(Mask2)));
+    const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(ST->getCPU());
     Mask = AMDGPU::DepCtr::encodeFieldHoldCnt(
-        Mask, std::min(AMDGPU::DepCtr::decodeFieldHoldCnt(Mask1),
-                       AMDGPU::DepCtr::decodeFieldHoldCnt(Mask2)));
+        Mask,
+        std::min(AMDGPU::DepCtr::decodeFieldHoldCnt(Mask1, Version),
+                 AMDGPU::DepCtr::decodeFieldHoldCnt(Mask2, Version)),
+        Version);
     Mask = AMDGPU::DepCtr::encodeFieldVaSsrc(
         Mask, std::min(AMDGPU::DepCtr::decodeFieldVaSsrc(Mask1),
                        AMDGPU::DepCtr::decodeFieldVaSsrc(Mask2)));
@@ -556,6 +560,6 @@ PreservedAnalyses
 AMDGPUWaitSGPRHazardsPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
   if (AMDGPUWaitSGPRHazards().run(MF))
-    return PreservedAnalyses::none();
+    return getMachineFunctionPassPreservedAnalyses();
   return PreservedAnalyses::all();
 }

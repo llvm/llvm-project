@@ -125,7 +125,7 @@ inline bool operator==(const ImportKey<T> &lhs, const ImportKey<T> &rhs) {
          lhs.importName == rhs.importName && lhs.type == rhs.type;
 }
 
-} // namespace wasm::lld
+} // namespace lld::wasm
 
 // `ImportKey<T>` can be used as a key in a `DenseMap` if `T` can be used as a
 // key in a `DenseMap`.
@@ -324,8 +324,7 @@ public:
 
 class ElemSection : public SyntheticSection {
 public:
-  ElemSection()
-      : SyntheticSection(llvm::wasm::WASM_SEC_ELEM) {}
+  ElemSection() : SyntheticSection(llvm::wasm::WASM_SEC_ELEM) {}
   bool isNeeded() const override { return indirectFunctions.size() > 0; };
   void writeBody() override;
   void addEntry(FunctionSymbol *sym);
@@ -373,7 +372,7 @@ public:
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "name"),
         segments(segments) {}
   bool isNeeded() const override {
-    if (ctx.arg.stripAll && !ctx.arg.keepSections.count(name))
+    if (ctx.arg.stripAll && !ctx.arg.keepSections.contains(name))
       return false;
     return numNames() > 0;
   }
@@ -396,7 +395,7 @@ public:
   ProducersSection()
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "producers") {}
   bool isNeeded() const override {
-    if (ctx.arg.stripAll && !ctx.arg.keepSections.count(name))
+    if (ctx.arg.stripAll && !ctx.arg.keepSections.contains(name))
       return false;
     return fieldCount() > 0;
   }
@@ -417,7 +416,7 @@ public:
   TargetFeaturesSection()
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, "target_features") {}
   bool isNeeded() const override {
-    if (ctx.arg.stripAll && !ctx.arg.keepSections.count(name))
+    if (ctx.arg.stripAll && !ctx.arg.keepSections.contains(name))
       return false;
     return features.size() > 0;
   }

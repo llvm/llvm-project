@@ -75,7 +75,7 @@ Constant *llvm::getPredForFCmpCode(unsigned Code, Type *OpTy,
 
 std::optional<DecomposedBitTest>
 llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
-                           bool LookThruTrunc, bool AllowNonZeroC,
+                           bool LookThroughTrunc, bool AllowNonZeroC,
                            bool DecomposeAnd) {
   using namespace PatternMatch;
 
@@ -162,6 +162,14 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
       break;
     }
 
+    // Try to convert (trunc X) eq/ne C into (X & Mask) eq/ne C
+    if (LookThroughTrunc && isa<TruncInst>(LHS)) {
+      Result.Pred = Pred;
+      Result.Mask = APInt::getAllOnes(C.getBitWidth());
+      Result.C = C;
+      break;
+    }
+
     return std::nullopt;
   }
   }
@@ -173,7 +181,7 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
     Result.Pred = ICmpInst::getInversePredicate(Result.Pred);
 
   Value *X;
-  if (LookThruTrunc && match(LHS, m_Trunc(m_Value(X)))) {
+  if (LookThroughTrunc && match(LHS, m_Trunc(m_Value(X)))) {
     Result.X = X;
     Result.Mask = Result.Mask.zext(X->getType()->getScalarSizeInBits());
     Result.C = Result.C.zext(X->getType()->getScalarSizeInBits());
@@ -185,7 +193,7 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
 }
 
 std::optional<DecomposedBitTest> llvm::decomposeBitTest(Value *Cond,
-                                                        bool LookThruTrunc,
+                                                        bool LookThroughTrunc,
                                                         bool AllowNonZeroC,
                                                         bool DecomposeAnd) {
   using namespace PatternMatch;
@@ -194,7 +202,7 @@ std::optional<DecomposedBitTest> llvm::decomposeBitTest(Value *Cond,
     if (!ICmp->getOperand(0)->getType()->isIntOrIntVectorTy())
       return std::nullopt;
     return decomposeBitTestICmp(ICmp->getOperand(0), ICmp->getOperand(1),
-                                ICmp->getPredicate(), LookThruTrunc,
+                                ICmp->getPredicate(), LookThroughTrunc,
                                 AllowNonZeroC, DecomposeAnd);
   }
   Value *X;

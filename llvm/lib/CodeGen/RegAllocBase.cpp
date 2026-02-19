@@ -155,6 +155,10 @@ void RegAllocBase::allocatePhysRegs() {
 
 void RegAllocBase::postOptimization() {
   spiller().postOptimization();
+
+  // Verify LiveRegMatrix after spilling (no dangling pointers).
+  assert(Matrix->isValid() && "LiveRegMatrix validation failed");
+
   for (auto *DeadInst : DeadRemats) {
     LIS->RemoveMachineInstrFromMaps(*DeadInst);
     DeadInst->eraseFromParent();

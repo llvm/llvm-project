@@ -14,7 +14,6 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
-#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -64,6 +63,14 @@ enum class IndirectBranchType : char {
   POSSIBLE_FIXED_BRANCH,   /// Possibly an indirect branch to a fixed location.
   POSSIBLE_PIC_FIXED_BRANCH, /// Possibly an indirect jump to a fixed entry in a
                              /// PIC jump table.
+};
+
+/// Enum used for readability when describing different BTI instruction
+/// variants. The variant is encoded as an immediate of the instruction in LLVM.
+enum BTIKind {
+  C, /// Accepting calls, and jumps using x16/x17.
+  J, /// Accepting jumps.
+  JC /// Accepting both.
 };
 
 class MCPlusBuilder {
@@ -535,6 +542,11 @@ public:
 
   virtual void createDirectCall(MCInst &Inst, const MCSymbol *Target,
                                 MCContext *Ctx, bool IsTailCall) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void createDirectBranch(MCInst &Inst, const MCSymbol *Target,
+                                  MCContext *Ctx) {
     llvm_unreachable("not implemented");
   }
 
@@ -1740,6 +1752,12 @@ public:
     return false;
   }
 
+  /// AArch64 uses this to perform diagnostics in the LongJmp pass.
+  virtual bool isShortRangeBranch(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Receives a list of MCInst of the basic block to analyze and interpret the
   /// terminators of this basic block. TBB must be initialized with the original
   /// fall-through for this BB.
@@ -1774,6 +1792,25 @@ public:
                                    uint64_t BeginPC) const {
     llvm_unreachable("not implemented");
     return 0;
+  }
+
+  virtual void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupToTarget(BinaryBasicBlock &StubBB) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupToSymbol(BinaryContext &BC, const MCSymbol *Symbol,
+                                     MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
+  virtual void applyBTIFixupCommon(const MCSymbol *RealTargetSym,
+                                   BinaryFunction *TgtFunction,
+                                   BinaryBasicBlock *TgtBB, MCInst &Call) {
+    llvm_unreachable("not implemented");
   }
 
   virtual bool analyzeVirtualMethodCall(InstructionIterator Begin,
@@ -1871,8 +1908,7 @@ public:
 
   /// Check if an Instruction is a BTI landing pad with the required properties.
   /// Takes both explicit and implicit BTIs into account.
-  virtual bool isBTILandingPad(MCInst &Inst, bool CallTarget,
-                               bool JumpTarget) const {
+  virtual bool isBTILandingPad(MCInst &Inst, BTIKind BTI) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1884,13 +1920,20 @@ public:
   }
 
   /// Create a BTI landing pad instruction.
-  virtual void createBTI(MCInst &Inst, bool CallTarget, bool JumpTarget) const {
+  virtual void createBTI(MCInst &Inst, BTIKind BTI) const {
     llvm_unreachable("not implemented");
   }
 
-  /// Update operand of BTI instruction.
-  virtual void updateBTIVariant(MCInst &Inst, bool CallTarget,
-                                bool JumpTarget) const {
+  /// Checks if the indirect call / jump is accepted by the landing pad at the
+  /// start of the target BasicBlock.
+  virtual bool isCallCoveredByBTI(MCInst &Call, MCInst &Pad) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  /// Inserts a BTI landing pad to the start of the BB, that matches the
+  /// indirect call inst used to call the BB.
+  virtual void insertBTI(BinaryBasicBlock &BB, MCInst &Call) const {
     llvm_unreachable("not implemented");
   }
 
@@ -2028,7 +2071,7 @@ public:
   /// targets).
   virtual std::optional<uint64_t>
   findMemcpySizeInBytes(const BinaryBasicBlock &BB,
-                        BinaryBasicBlock::iterator CallInst) const {
+                        InstructionListType::iterator CallInst) const {
     return std::nullopt;
   }
 
@@ -2361,7 +2404,7 @@ public:
 
   virtual InstructionListType
   createInstrumentedIndirectCall(MCInst &&CallInst, MCSymbol *HandlerFuncAddr,
-                                 int CallSiteID, MCContext *Ctx) {
+                                 size_t CallSiteID, MCContext *Ctx) {
     llvm_unreachable("not implemented");
     return InstructionListType();
   }

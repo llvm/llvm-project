@@ -97,6 +97,8 @@ private:
   RISCVProcFamilyEnum RISCVProcFamily = Others;
   RISCVVRGatherCostModelEnum RISCVVRGatherCostModel = Quadratic;
 
+  bool IsLittleEndian = true;
+
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
   bool ATTRIBUTE = DEFAULT;
 #include "RISCVGenSubtargetInfo.inc"
@@ -145,6 +147,8 @@ public:
     return &TLInfo;
   }
 
+  void mirFileLoaded(MachineFunction &MF) const override;
+
   bool enableMachineScheduler() const override { return true; }
 
   bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
@@ -168,12 +172,10 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
-  LLVM_DEPRECATED("Now Equivalent to hasStdExtZca", "hasStdExtZca")
-  bool hasStdExtCOrZca() const { return HasStdExtZca; }
-  bool hasStdExtCOrZcd() const { return HasStdExtC || HasStdExtZcd; }
-  bool hasStdExtCOrZcfOrZce() const {
-    return HasStdExtC || HasStdExtZcf || HasStdExtZce;
-  }
+  LLVM_DEPRECATED("Now Equivalent to hasStdExtZcd", "hasStdExtZcd")
+  bool hasStdExtCOrZcd() const { return HasStdExtZcd; }
+  LLVM_DEPRECATED("Now Equivalent to hasStdExtZcf", "hasStdExtZcf")
+  bool hasStdExtCOrZcfOrZce() const { return HasStdExtZcf; }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
@@ -220,6 +222,7 @@ public:
   }
 
   bool is64Bit() const { return IsRV64; }
+  bool isLittleEndian() const { return IsLittleEndian; }
   MVT getXLenVT() const {
     return is64Bit() ? MVT::i64 : MVT::i32;
   }
@@ -328,7 +331,8 @@ public:
     }
   }
 
-  bool enablePExtCodeGen() const;
+  bool enablePExtSIMDCodeGen() const;
+  bool isPExtPackedType(MVT VT) const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.

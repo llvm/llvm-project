@@ -8,7 +8,7 @@
 
 ### Pre-requisites
 
-*   A relatively recent Python3 installation
+*   A [non-EOL](https://devguide.python.org/versions/) Python3 installation
 *   Installation of Python dependencies as specified in
     `mlir/python/requirements.txt`
 
@@ -24,6 +24,25 @@
     determining header/link flags for the Python bindings. On systems with
     multiple Python implementations, setting this explicitly to the preferred
     `python3` executable is strongly recommended.
+
+*   **`CMAKE_C_VISIBILITY_PRESET`**: `STRING`
+*   **`CMAKE_CXX_VISIBILITY_PRESET`**: `STRING`
+*   **`CMAKE_VISIBILITY_INLINES_HIDDEN`**: `BOOL`
+
+    It is **highly** recommended these are set to `hidden`, `hidden`, and `ON` (respectively) if the final built package
+    is intended to be used in a context/use-case where multiple bindings packages will be used simultaneously
+    (i.e., multiple bindings packages loaded in the same Python interpreter session). Failing to do so can lead
+    to incorrect/ambiguous symbol resolution; the symptom of this is an `LLVM ERROR` like:
+    ```
+    LLVM ERROR: ... unregistered/uninitialized dialect/type/pass ...`
+    ```
+
+*   **`MLIR_BINDINGS_PYTHON_NB_DOMAIN`**: `STRING`
+
+    nanobind (and MLIR) domain within which extensions will be compiled. 
+    This determines whether this package will share nanobind types with other bindings packages. 
+    Expected to be unique per project (and per specific set of bindings, for projects with multiple bindings packages).
+    Can also be passed explicitly to `add_mlir_python_modules`.
 
 ### Recommended development practices
 
@@ -525,9 +544,9 @@ attribute = <...>
 type = <...>
 
 # No need to handle errors here.
-if ConcreteAttr.isinstance(attribute):
+if isinstance(attribute, ConcreteAttr):
   concrete_attr = ConcreteAttr(attribute)
-if ConcreteType.isinstance(type):
+if isinstance(type, ConcreteType):
   concrete_type = ConcreteType(type)
 ```
 
@@ -1164,19 +1183,66 @@ mlir.dialects.<dialect-namespace>` in Python.
 ### Attributes and Types
 
 Dialect attributes and types are provided in Python as subclasses of the
-`mlir.ir.Attribute` and `mlir.ir.Type` classes, respectively. Python APIs for
+`mlir.ir.Attribute` and `mlir.ir.Type` classes, respectively. Bindings APIs for
 attributes and types must connect to the relevant C APIs for building and
-inspection, which must be provided first. Bindings for `Attribute` and `Type`
-subclasses can be defined using
-[`include/mlir/Bindings/Python/PybindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h)
-or
-[`include/mlir/Bindings/Python/NanobindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/NanobindAdaptors.h)
-utilities that mimic pybind11/nanobind APIs for defining functions and
-properties. These bindings are to be included in a separate module. The
-utilities also provide automatic casting between C API handles `MlirAttribute`
-and `MlirType` and their Python counterparts so that the C API handles can be
-used directly in binding implementations. The methods and properties provided by
-the bindings should follow the principles discussed above.
+inspection, which must be provided first. Bindings for downstream/dialect `Attribute` and `Type`
+subclasses can be defined using exactly the same patterns as in the “core” extension:
+
+```c++
+#include "mlir/Bindings/Python/IRCore.h"
+#include "mlir/Bindings/Python/IRTypes.h"
+
+using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
+
+struct PyTestType : PyConcreteType<PyTestType> {
+  // Required
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsAPythonTestTestType;
+  // Optional but recommended
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPythonTestTestTypeGetTypeID;
+  static constexpr const char *pyClassName = "TestType";
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static("get",
+      [](DefaultingPyMlirContext context) {
+        return PyTestType(context->getRef(), mlirPythonTestTestTypeGet(context.get()->get()));
+      },
+      nb::arg("context").none() = nb::none());
+  }
+};
+
+class PyTestAttr : public PyConcreteAttribute<PyTestAttr> {
+public:
+  // Required
+  static constexpr IsAFunctionTy isaFunction =
+      mlirAttributeIsAPythonTestTestAttribute;
+  static constexpr const char *pyClassName = "TestAttr";
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirPythonTestTestAttributeGetTypeID;
+  using Base::Base;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+      "get",
+      [](DefaultingPyMlirContext context) {
+        return PyTestAttr(context->getRef(), mlirPythonTestTestAttributeGet(context.get()->get()));
+      },
+      nb::arg("context").none() = nb::none());
+  }
+};
+
+NB_MODULE(_mlirPythonTestNanobind, m) {
+  PyTestAttr::bind(m);
+  PyTestType::bind(m);
+}
+```
+
+See [`mlir/test/python/lib/PythonTestModuleNanobind.cpp`] for more examples.
+
+**Note**: if you are defining such types/attributes in a downstream project, it is critical you define 
+`MLIR_BINDINGS_PYTHON_NB_DOMAIN` (which is used to determine `MLIR_BINDINGS_PYTHON_DOMAIN`) such that it is unique to
+your project and for every set of bindings built/distributed by your project. See **CMake variables** above.
 
 The attribute and type bindings for a dialect can be located in
 `lib/Bindings/Python/Dialect<Name>.cpp` and should be compiled into a separate
@@ -1227,7 +1293,42 @@ The following sections outline how each of these can be implemented.
 
 ### Dialects
 
-Dialects can be defined through the IRDL dialect bindings in Python.
+The `mlir.dialects.ext` module provides support for defining Python-defined dialects.
+Users can define a new dialect (e.g., `MyDialect`) by subclassing the `Dialect` class,
+and define operations in that dialect by subclassing `MyDialect.Operation`.
+The dialect can then be loaded into MLIR by calling `MyDialect.load()` within a valid `Context`.
+After loading, these operations can be used just like other `OpView` subclasses.
+
+The following example shows how to define a dialect and construct IR using the newly defined ops.
+
+```python
+class MyInt(Dialect, name="myint"):
+    pass
+
+class ConstantOp(MyInt.Operation, name="constant"):
+    value: IntegerAttr
+    cst: Result[IntegerType[32]]
+
+class AddOp(MyInt.Operation, name="add"):
+    lhs: Operand[IntegerType[32]]
+    rhs: Operand[IntegerType[32]]
+    res: Result[IntegerType[32]]
+
+# The code below requires an available MLIR context and location.
+
+MyInt.load()
+
+module = Module.create()
+i32 = IntegerType.get(32)
+with InsertionPoint(module.body):
+    two = ConstantOp(IntegerAttr.get(i32, 2))
+    three = ConstantOp(IntegerAttr.get(i32, 3))
+    add1 = AddOp(two, three)
+    add2 = AddOp(add1, two)
+    add3 = AddOp(add2, three)
+```
+
+Dialects can also be defined through the IRDL dialect bindings in Python.
 The IRDL bindings offer a `load_dialects` function that
 converts an MLIR module containing `irdl.dialect` ops into MLIR dialects.
 For further details, see the documentation of [the IRDL dialect](../Dialects/IRDL.md).

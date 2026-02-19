@@ -70,7 +70,7 @@ bool isDynamicLDS(const GlobalVariable &GV) {
   const DataLayout &DL = M->getDataLayout();
   if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
     return false;
-  return DL.getTypeAllocSize(GV.getValueType()) == 0;
+  return GV.getGlobalSize(DL) == 0;
 }
 
 bool isLDSVariableToLower(const GlobalVariable &GV) {

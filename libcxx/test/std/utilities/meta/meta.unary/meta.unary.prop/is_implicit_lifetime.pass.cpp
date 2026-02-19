@@ -9,7 +9,7 @@
 // REQUIRES: std-at-least-c++23
 
 // These compilers don't support __builtin_is_implicit_lifetime yet.
-// UNSUPPORTED: clang-19, gcc-15, apple-clang-17
+// UNSUPPORTED: gcc-15, apple-clang-17
 
 // <type_traits>
 

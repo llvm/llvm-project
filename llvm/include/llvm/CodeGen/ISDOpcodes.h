@@ -121,6 +121,11 @@ enum NodeType {
   /// function calling this intrinsic.
   SPONENTRY,
 
+  /// STACKADDRESS - Represents the llvm.stackaddress intrinsic. Takes no
+  /// argument and returns the starting address of the stack region that may be
+  /// used by called functions.
+  STACKADDRESS,
+
   /// LOCAL_RECOVER - Represents the llvm.localrecover intrinsic.
   /// Materializes the offset from the local object pointer of another
   /// function to a particular local object passed to llvm.localescape. The
@@ -371,11 +376,13 @@ enum NodeType {
 
   /// RESULT = [US]SHLSAT(LHS, RHS) - Perform saturation left shift. The first
   /// operand is the value to be shifted, and the second argument is the amount
-  /// to shift by. Both must be integers of the same bit width (W). If the true
-  /// value of LHS << RHS exceeds the largest value that can be represented by
-  /// W bits, the resulting value is this maximum value, Otherwise, if this
-  /// value is less than the smallest value that can be represented by W bits,
-  /// the resulting value is this minimum value.
+  /// to shift by. Both must be integers. After legalization the type of the
+  /// shift amount is known to be TLI.getShiftAmountTy(). Before legalization
+  /// the shift amount can be any type, but care must be taken to ensure it is
+  /// large enough. If the true value of LHS << RHS exceeds the largest value
+  /// that can be represented by W bits, the resulting value is this maximum
+  /// value, Otherwise, if this value is less than the smallest value that can
+  /// be represented by W bits, the resulting value is this minimum value.
   SSHLSAT,
   USHLSAT,
 
@@ -641,17 +648,13 @@ enum NodeType {
   /// in terms of the element size of VEC1/VEC2, not in terms of bytes.
   VECTOR_SHUFFLE,
 
-  /// VECTOR_SPLICE(VEC1, VEC2, IMM) - Returns a subvector of the same type as
-  /// VEC1/VEC2 from CONCAT_VECTORS(VEC1, VEC2), based on the IMM in two ways.
-  /// Let the result type be T, if IMM is positive it represents the starting
-  /// element number (an index) from which a subvector of type T is extracted
-  /// from CONCAT_VECTORS(VEC1, VEC2). If IMM is negative it represents a count
-  /// specifying the number of trailing elements to extract from VEC1, where the
-  /// elements of T are selected using the following algorithm:
-  ///   RESULT[i] = CONCAT_VECTORS(VEC1,VEC2)[VEC1.ElementCount - ABS(IMM) + i]
-  /// If IMM is not in the range [-VL, VL-1] the result vector is undefined. IMM
-  /// is a constant integer.
-  VECTOR_SPLICE,
+  /// VECTOR_SPLICE_LEFT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
+  /// left by OFFSET elements and returns the lower half.
+  VECTOR_SPLICE_LEFT,
+  /// VECTOR_SPLICE_RIGHT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1,
+  /// VEC2)
+  /// right by OFFSET elements and returns the upper half.
+  VECTOR_SPLICE_RIGHT,
 
   /// SCALAR_TO_VECTOR(VAL) - This represents the operation of loading a
   /// scalar value into element 0 of the resultant vector type.  The top
@@ -767,6 +770,11 @@ enum NodeType {
   FSHL,
   FSHR,
 
+  /// Carry-less multiplication operations.
+  CLMUL,
+  CLMULR,
+  CLMULH,
+
   /// Byte Swap and Counting operators.
   BSWAP,
   CTTZ,
@@ -778,6 +786,10 @@ enum NodeType {
   /// Bit counting operators with an undefined result for zero inputs.
   CTTZ_ZERO_UNDEF,
   CTLZ_ZERO_UNDEF,
+
+  /// Count leading redundant sign bits. Equivalent to
+  /// (sub (ctlz (x < 0 ? ~x : x)), 1).
+  CTLS,
 
   /// Select(COND, TRUEVAL, FALSEVAL).  If the type of the boolean COND is not
   /// i1 then the high bits must conform to getBooleanContents.
@@ -959,7 +971,7 @@ enum NodeType {
 
   /// Set rounding mode.
   /// The first operand is a chain pointer. The second specifies the required
-  /// rounding mode, encoded in the same way as used in '``GET_ROUNDING``'.
+  /// rounding mode, encoded in the same way as used in GET_ROUNDING.
   SET_ROUNDING,
 
   /// X = FP_EXTEND(Y) - Extend a smaller FP type into a larger FP type.
@@ -1429,6 +1441,10 @@ enum NodeType {
   /// debugging purposes.
   FAKE_USE,
 
+  /// COND_LOOP is a conditional branch to self, used for implementing efficient
+  /// conditional traps.
+  COND_LOOP,
+
   /// GC_TRANSITION_START/GC_TRANSITION_END - These operators mark the
   /// beginning and end of GC transition  sequence, and carry arbitrary
   /// information that target might need for lowering.  The first operand is
@@ -1498,89 +1514,102 @@ enum NodeType {
   VECREDUCE_UMAX,
   VECREDUCE_UMIN,
 
-  // PARTIAL_REDUCE_[U|S]MLA(Accumulator, Input1, Input2)
-  // The partial reduction nodes sign or zero extend Input1 and Input2
-  // (with the extension kind noted below) to the element type of
-  // Accumulator before multiplying their results.
-  // This result is concatenated to the Accumulator, and this is then reduced,
-  // using addition, to the result type.
-  // The output is only expected to either be given to another partial reduction
-  // operation or an equivalent vector reduce operation, so the order in which
-  // the elements are reduced is deliberately not specified.
-  // Input1 and Input2 must be the same type. Accumulator and the output must be
-  // the same type.
-  // The number of elements in Input1 and Input2 must be a positive integer
-  // multiple of the number of elements in the Accumulator / output type.
-  // Input1 and Input2 must have an element type which is the same as or smaller
-  // than the element type of the Accumulator and output.
+  /// PARTIAL_REDUCE_[U|S]MLA(Accumulator, Input1, Input2)
+  /// The partial reduction nodes sign or zero extend Input1 and Input2
+  /// (with the extension kind noted below) to the element type of
+  /// Accumulator before multiplying their results.
+  /// This result is concatenated to the Accumulator, and this is then reduced,
+  /// using addition, to the result type.
+  /// The output is only expected to either be given to another partial
+  /// reduction operation or an equivalent vector reduce operation, so the order
+  /// in which the elements are reduced is deliberately not specified.
+  /// Input1 and Input2 must be the same type. Accumulator and the output must
+  /// be the same type.
+  /// The number of elements in Input1 and Input2 must be a positive integer
+  /// multiple of the number of elements in the Accumulator / output type.
+  /// Input1 and Input2 must have an element type which is the same as or
+  /// smaller than the element type of the Accumulator and output.
   PARTIAL_REDUCE_SMLA,  // sext, sext
   PARTIAL_REDUCE_UMLA,  // zext, zext
   PARTIAL_REDUCE_SUMLA, // sext, zext
   PARTIAL_REDUCE_FMLA,  // fpext, fpext
 
-  // The `llvm.experimental.stackmap` intrinsic.
-  // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
-  // Outputs: output chain, glue
+  /// The `llvm.experimental.stackmap` intrinsic.
+  /// Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
+  /// Outputs: output chain, glue
   STACKMAP,
 
-  // The `llvm.experimental.patchpoint.*` intrinsic.
-  // Operands: input chain, [glue], reg-mask, <id>, <numShadowBytes>, callee,
-  //   <numArgs>, cc, ...
-  // Outputs: [rv], output chain, glue
+  /// The `llvm.experimental.patchpoint.*` intrinsic.
+  /// Operands: input chain, [glue], reg-mask, <id>, <numShadowBytes>, callee,
+  ///   <numArgs>, cc, ...
+  /// Outputs: [rv], output chain, glue
   PATCHPOINT,
 
-  // PTRADD represents pointer arithmetic semantics, for targets that opt in
-  // using shouldPreservePtrArith().
-  // ptr = PTRADD ptr, offset
+  /// PTRADD represents pointer arithmetic semantics, for targets that opt in
+  /// using shouldPreservePtrArith().
+  /// ptr = PTRADD ptr, offset
   PTRADD,
 
 // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
 #include "llvm/IR/VPIntrinsics.def"
 
-  // Issue a no-op relocation against a given symbol at the current location.
+  /// Issue a no-op relocation against a given symbol at the current location.
   RELOC_NONE,
 
-  // The `llvm.experimental.convergence.*` intrinsics.
+  /// The `llvm.experimental.convergence.*` intrinsics.
   CONVERGENCECTRL_ANCHOR,
   CONVERGENCECTRL_ENTRY,
   CONVERGENCECTRL_LOOP,
-  // This does not correspond to any convergence control intrinsic. It is used
-  // to glue a convergence control token to a convergent operation in the DAG,
-  // which is later translated to an implicit use in the MIR.
+  /// This does not correspond to any convergence control intrinsic. It is used
+  /// to glue a convergence control token to a convergent operation in the DAG,
+  /// which is later translated to an implicit use in the MIR.
   CONVERGENCECTRL_GLUE,
 
-  // Experimental vector histogram intrinsic
-  // Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
-  // Output: Output Chain
+  /// Experimental vector histogram intrinsic
+  /// Operands: Input Chain, Inc, Mask, Base, Index, Scale, ID
+  /// Output: Output Chain
   EXPERIMENTAL_VECTOR_HISTOGRAM,
 
-  // Finds the index of the last active mask element
-  // Operands: Mask
+  /// Finds the index of the last active mask element
+  /// Operands: Mask
   VECTOR_FIND_LAST_ACTIVE,
 
-  // GET_ACTIVE_LANE_MASK - this corrosponds to the llvm.get.active.lane.mask
-  // intrinsic. It creates a mask representing active and inactive vector
-  // lanes, active while Base + index < Trip Count. As with the intrinsic,
-  // the operands Base and Trip Count have the same scalar integer type and
-  // the internal addition of Base + index cannot overflow. However, the ISD
-  // node supports result types which are wider than i1, where the high
-  // bits conform to getBooleanContents similar to the SETCC operator.
+  /// GET_ACTIVE_LANE_MASK - this corrosponds to the llvm.get.active.lane.mask
+  /// intrinsic. It creates a mask representing active and inactive vector
+  /// lanes, active while Base + index < Trip Count. As with the intrinsic,
+  /// the operands Base and Trip Count have the same scalar integer type and
+  /// the internal addition of Base + index cannot overflow. However, the ISD
+  /// node supports result types which are wider than i1, where the high
+  /// bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
 
-  // The `llvm.loop.dependence.{war, raw}.mask` intrinsics
-  // Operands: Load pointer, Store pointer, Element size
-  // Output: Mask
+  /// The `llvm.loop.dependence.{war, raw}.mask` intrinsics
+  /// Operands: Load pointer, Store pointer, Element size, Lane offset
+  /// Output: Mask
+  ///
+  /// Note: The semantics of these opcodes differ slightly from the intrinsics.
+  /// Wherever "lane" (meaning lane index) occurs in the intrinsic definition,
+  /// it is replaced with (lane + lane_offset) for the ISD opcode.
+  ///
+  ///  E.g., for LOOP_DEPENDENCE_WAR_MASK:
+  ///    `elementSize * lane < (ptrB - ptrA)`
+  ///  Becomes:
+  ///    `elementSize * (lane + lane_offset) < (ptrB - ptrA)`
+  ///
+  /// This is done to allow for trivial splitting of the operation. Note: The
+  /// lane offset is always a constant, for scalable masks, it is implicitly
+  /// multiplied by vscale.
   LOOP_DEPENDENCE_WAR_MASK,
   LOOP_DEPENDENCE_RAW_MASK,
 
-  // llvm.clear_cache intrinsic
-  // Operands: Input Chain, Start Addres, End Address
-  // Outputs: Output Chain
+  /// llvm.clear_cache intrinsic
+  /// Operands: Input Chain, Start Addres, End Address
+  /// Outputs: Output Chain
   CLEAR_CACHE,
 
-  // Untyped node storing deactivation symbol reference
-  // (DeactivationSymbolSDNode).
+  /// Untyped node storing deactivation symbol reference
+  /// (DeactivationSymbolSDNode).
   DEACTIVATION_SYMBOL,
 
   /// BUILTIN_OP_END - This must be the last enum value in this list.
@@ -1596,6 +1625,11 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
 /// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
 LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
+
+/// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns the
+/// corresponding opcode with the opposite signedness:
+/// ISD::SMIN <-> ISD::UMIN, ISD::SMAX <-> ISD::UMAX.
+LLVM_ABI NodeType getOppositeSignednessMinMaxOpcode(unsigned MinMaxOpc);
 
 /// Get underlying scalar opcode for VECREDUCE opcode.
 /// For example ISD::AND for ISD::VECREDUCE_AND.

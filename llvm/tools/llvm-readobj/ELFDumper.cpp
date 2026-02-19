@@ -295,6 +295,7 @@ protected:
                   const Elf_Shdr &Sec, const Elf_Shdr *SymTab);
   void printDynamicReloc(const Relocation<ELFT> &R);
   void printDynamicRelocationsHelper();
+  StringRef getRelocTypeName(uint32_t Type, SmallString<32> &RelocName);
   void printRelocationsHelper(const Elf_Shdr &Sec);
   void forEachRelocationDo(
       const Elf_Shdr &Sec,
@@ -401,6 +402,15 @@ protected:
   const Elf_Shdr *SymbolVersionSection = nullptr;   // .gnu.version
   const Elf_Shdr *SymbolVersionNeedSection = nullptr; // .gnu.version_r
   const Elf_Shdr *SymbolVersionDefSection = nullptr; // .gnu.version_d
+
+  // Used for tracking the current RISCV vendor name when printing relocations.
+  // When an R_RISCV_VENDOR relocation is encountered, we record the symbol name
+  // and offset so that the immediately following R_RISCV_CUSTOM* relocation at
+  // the same offset can be resolved to its vendor-specific name. Per RISC-V
+  // psABI, R_RISCV_VENDOR must be placed immediately before the vendor-specific
+  // relocation and both must be at the same offset.
+  std::string CurrentRISCVVendorSymbol;
+  uint64_t CurrentRISCVVendorOffset = 0;
 
   std::string getFullSymbolName(const Elf_Sym &Symbol, unsigned SymIndex,
                                 DataRegion<Elf_Word> ShndxTable,
@@ -1654,10 +1664,12 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1152, "gfx1152"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1153, "gfx1153"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1170, "gfx1170"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1250, "gfx1250"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1251, "gfx1251"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1310, "gfx1310"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic"),            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
@@ -3316,6 +3328,7 @@ MipsGOTParser<ELFT>::getPltSym(const Entry *E) const {
   }
 }
 
+// clang-format off
 const EnumEntry<unsigned> ElfMipsISAExtType[] = {
   {"None",                    Mips::AFL_EXT_NONE},
   {"Broadcom SB-1",           Mips::AFL_EXT_SB1},
@@ -3328,7 +3341,6 @@ const EnumEntry<unsigned> ElfMipsISAExtType[] = {
   {"Loongson 2F",             Mips::AFL_EXT_LOONGSON_2F},
   {"Loongson 3A",             Mips::AFL_EXT_LOONGSON_3A},
   {"MIPS R4650",              Mips::AFL_EXT_4650},
-  {"MIPS R5900",              Mips::AFL_EXT_5900},
   {"MIPS R10000",             Mips::AFL_EXT_10000},
   {"NEC VR4100",              Mips::AFL_EXT_4100},
   {"NEC VR4111/VR4181",       Mips::AFL_EXT_4111},
@@ -3336,8 +3348,10 @@ const EnumEntry<unsigned> ElfMipsISAExtType[] = {
   {"NEC VR5400",              Mips::AFL_EXT_5400},
   {"NEC VR5500",              Mips::AFL_EXT_5500},
   {"RMI Xlr",                 Mips::AFL_EXT_XLR},
-  {"Toshiba R3900",           Mips::AFL_EXT_3900}
+  {"Toshiba R3900",           Mips::AFL_EXT_3900},
+  {"Toshiba R5900",           Mips::AFL_EXT_5900},
 };
+// clang-format on
 
 const EnumEntry<unsigned> ElfMipsASEFlags[] = {
   {"DSP",                Mips::AFL_ASE_DSP},
@@ -3532,12 +3546,58 @@ template <class ELFT>
 void ELFDumper<ELFT>::printReloc(const Relocation<ELFT> &R, unsigned RelIndex,
                                  const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
   Expected<RelSymbol<ELFT>> Target = getRelocationTarget(R, SymTab);
-  if (!Target)
+  if (!Target) {
     reportUniqueWarning("unable to print relocation " + Twine(RelIndex) +
                         " in " + describe(Sec) + ": " +
                         toString(Target.takeError()));
-  else
-    printRelRelaReloc(R, *Target);
+    return;
+  }
+
+  // Track RISCV vendor symbol for resolving vendor-specific relocations.
+  // Per RISC-V psABI, R_RISCV_VENDOR must be placed immediately before the
+  // vendor-specific relocation at the same offset.
+  if (Obj.getHeader().e_machine == ELF::EM_RISCV) {
+    if (R.Type == ELF::R_RISCV_VENDOR) {
+      // Store vendor symbol name and offset for the next relocation.
+      CurrentRISCVVendorSymbol = Target->Name;
+      CurrentRISCVVendorOffset = R.Offset;
+    } else if (!CurrentRISCVVendorSymbol.empty()) {
+      // We have a pending vendor symbol. Clear it if this relocation doesn't
+      // form a valid pair: either the offset doesn't match or this is not a
+      // vendor-specific (CUSTOM) relocation.
+      if (R.Offset != CurrentRISCVVendorOffset ||
+          R.Type < ELF::R_RISCV_CUSTOM192 || R.Type > ELF::R_RISCV_CUSTOM255) {
+        CurrentRISCVVendorSymbol.clear();
+      }
+      // If it IS a valid CUSTOM relocation at matching offset,
+      // getRelocTypeName will use and clear the vendor symbol.
+    }
+  }
+
+  printRelRelaReloc(R, *Target);
+}
+
+template <class ELFT>
+StringRef ELFDumper<ELFT>::getRelocTypeName(uint32_t Type,
+                                            SmallString<32> &RelocName) {
+  Obj.getRelocationTypeName(Type, RelocName);
+
+  // For RISCV vendor-specific relocations, use the vendor-specific name
+  // if we have a vendor symbol from a preceding R_RISCV_VENDOR relocation.
+  // Per RISC-V psABI, R_RISCV_VENDOR must be placed immediately before the
+  // vendor-specific relocation, so we consume the vendor symbol after use.
+  if (Obj.getHeader().e_machine == ELF::EM_RISCV &&
+      Type >= ELF::R_RISCV_CUSTOM192 && Type <= ELF::R_RISCV_CUSTOM255 &&
+      !CurrentRISCVVendorSymbol.empty()) {
+    StringRef VendorRelocName =
+        getRISCVVendorRelocationTypeName(Type, CurrentRISCVVendorSymbol);
+    CurrentRISCVVendorSymbol.clear();
+    // Only use the vendor-specific name if the vendor is known.
+    // Otherwise, keep the generic R_RISCV_CUSTOM* name.
+    if (VendorRelocName != "Unknown")
+      return VendorRelocName;
+  }
+  return RelocName;
 }
 
 template <class ELFT>
@@ -3907,8 +3967,7 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
   Fields[1].Str = to_string(format_hex_no_prefix(R.Info, Width));
 
   SmallString<32> RelocName;
-  this->Obj.getRelocationTypeName(R.Type, RelocName);
-  Fields[2].Str = RelocName.c_str();
+  Fields[2].Str = this->getRelocTypeName(R.Type, RelocName);
 
   if (RelSym.Sym)
     Fields[3].Str =
@@ -6150,6 +6209,8 @@ const NoteType CoreNoteTypes[] = {
     {ELF::NT_ARM_ZA, "NT_ARM_ZA (AArch64 SME ZA registers)"},
     {ELF::NT_ARM_ZT, "NT_ARM_ZT (AArch64 SME ZT registers)"},
     {ELF::NT_ARM_FPMR, "NT_ARM_FPMR (AArch64 Floating Point Mode Register)"},
+    {ELF::NT_ARM_POE,
+     "NT_ARM_POE (AArch64 Permission Overlay Extension Registers)"},
     {ELF::NT_ARM_GCS, "NT_ARM_GCS (AArch64 Guarded Control Stack state)"},
 
     {ELF::NT_FILE, "NT_FILE (mapped files)"},
@@ -7576,12 +7637,12 @@ void LLVMELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
   if (RelSym.Sym && RelSym.Name.empty())
     SymbolName = "<null>";
   SmallString<32> RelocName;
-  this->Obj.getRelocationTypeName(R.Type, RelocName);
+  StringRef RelocTypeName = this->getRelocTypeName(R.Type, RelocName);
 
   if (opts::ExpandRelocs) {
-    printExpandedRelRelaReloc(R, SymbolName, RelocName);
+    printExpandedRelRelaReloc(R, SymbolName, RelocTypeName);
   } else {
-    printDefaultRelRelaReloc(R, SymbolName, RelocName);
+    printDefaultRelRelaReloc(R, SymbolName, RelocTypeName);
   }
 }
 

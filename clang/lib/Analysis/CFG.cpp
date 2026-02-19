@@ -52,6 +52,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
@@ -655,6 +656,7 @@ private:
                   bool ExternallyDestructed = false);
   CFGBlock *VisitStmt(Stmt *S, AddStmtChoice asc);
   CFGBlock *VisitChildren(Stmt *S);
+  CFGBlock *VisitCallExprChildren(CallExpr *C);
   CFGBlock *VisitNoRecurse(Expr *E, AddStmtChoice asc);
   CFGBlock *VisitOMPExecutableDirective(OMPExecutableDirective *D,
                                         AddStmtChoice asc);
@@ -730,6 +732,8 @@ private:
   CFGBlock *VisitBinaryOperatorForTemporaryDtors(BinaryOperator *E,
                                                  bool ExternallyDestructed,
                                                  TempDtorContext &Context);
+  CFGBlock *VisitCXXOperatorCallExprForTemporaryDtors(CXXOperatorCallExpr *E,
+                                                      TempDtorContext &Context);
   CFGBlock *VisitCXXBindTemporaryExprForTemporaryDtors(
       CXXBindTemporaryExpr *E, bool ExternallyDestructed, TempDtorContext &Context);
   CFGBlock *VisitConditionalOperatorForTemporaryDtors(
@@ -1666,12 +1670,20 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
   assert(Succ == &cfg->getExit());
   Block = nullptr;  // the EXIT block is empty.  Create all other blocks lazily.
 
-  // Add parameters to the initial scope to handle their dtos and lifetime ends.
-  LocalScope *paramScope = nullptr;
-  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D))
-    for (ParmVarDecl *PD : FD->parameters())
-      paramScope = addLocalScopeForVarDecl(PD, paramScope);
-
+  if (BuildOpts.AddLifetime && BuildOpts.AddParameterLifetimes) {
+    // Add parameters to the initial scope to handle lifetime ends.
+    LocalScope *paramScope = nullptr;
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D))
+      for (ParmVarDecl *PD : FD->parameters()) {
+        paramScope = addLocalScopeForVarDecl(PD, paramScope);
+      }
+    if (auto *C = dyn_cast<CompoundStmt>(Statement))
+      if (C->body_empty() || !isa<ReturnStmt>(*C->body_rbegin()))
+        // If the body ends with a ReturnStmt, the dtors will be added in
+        // VisitReturnStmt.
+        addAutomaticObjHandling(ScopePos, LocalScope::const_iterator(),
+                                Statement);
+  }
   if (BuildOpts.AddImplicitDtors)
     if (const CXXDestructorDecl *DD = dyn_cast_or_null<CXXDestructorDecl>(D))
       addImplicitDtorsForDestructor(DD);
@@ -2533,6 +2545,19 @@ CFGBlock *CFGBuilder::VisitChildren(Stmt *S) {
   return B;
 }
 
+CFGBlock *CFGBuilder::VisitCallExprChildren(CallExpr *C) {
+  // For overloaded assignment operators, visit arguments in reverse order (LHS
+  // then RHS) so that RHS is sequenced before LHS in the CFG, matching C++17
+  // sequencing rules.
+  if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(C);
+      OCE && OCE->isAssignmentOp()) {
+    Visit(OCE->getArg(0));
+    Visit(OCE->getArg(1));
+    return Visit(OCE->getCallee());
+  }
+  return VisitChildren(C);
+}
+
 CFGBlock *CFGBuilder::VisitInitListExpr(InitListExpr *ILE, AddStmtChoice asc) {
   if (asc.alwaysAdd(*this, ILE)) {
     autoCreateBlock();
@@ -2870,7 +2895,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     autoCreateBlock();
     appendCall(Block, C);
 
-    return VisitChildren(C);
+    return VisitCallExprChildren(C);
   }
 
   if (Block) {
@@ -2894,7 +2919,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
       addSuccessor(Block, &cfg->getExit());
   }
 
-  return VisitChildren(C);
+  return VisitCallExprChildren(C);
 }
 
 CFGBlock *CFGBuilder::VisitChooseExpr(ChooseExpr *C,
@@ -4739,11 +4764,19 @@ CFGBlock *CFGBuilder::VisitCXXTryStmt(CXXTryStmt *Terminator) {
 
   // Save the current "try" context.
   SaveAndRestore SaveTry(TryTerminatedBlock, NewTryTerminatedBlock);
-  cfg->addTryDispatchBlock(TryTerminatedBlock);
+  cfg->addTryDispatchBlock(NewTryTerminatedBlock);
 
   assert(Terminator->getTryBlock() && "try must contain a non-NULL body");
   Block = nullptr;
-  return addStmt(Terminator->getTryBlock());
+
+  if (CFGBlock *TryBodyEntry = addStmt(Terminator->getTryBlock())) {
+    addSuccessor(NewTryTerminatedBlock, TryBodyEntry);
+  } else {
+    CFGBlock *EmptyTryBody = createBlock(/*add_successor=*/false);
+    addSuccessor(NewTryTerminatedBlock, EmptyTryBody);
+    addSuccessor(EmptyTryBody, TrySuccessor);
+  }
+  return NewTryTerminatedBlock;
 }
 
 CFGBlock *CFGBuilder::VisitCXXCatchStmt(CXXCatchStmt *CS) {
@@ -4806,7 +4839,10 @@ CFGBlock *CFGBuilder::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   // Save local scope position before the addition of the implicit variables.
   SaveAndRestore save_scope_pos(ScopePos);
 
-  // Create local scopes and destructors for range, begin and end variables.
+  // Create local scopes and destructors for init, range, begin and end
+  // variables.
+  if (Stmt *Init = S->getInit())
+    addLocalScopeForStmt(Init);
   if (Stmt *Range = S->getRangeStmt())
     addLocalScopeForStmt(Range);
   if (Stmt *Begin = S->getBeginStmt())
@@ -5083,6 +5119,10 @@ tryAgain:
                                                   ExternallyDestructed,
                                                   Context);
 
+    case Stmt::CXXOperatorCallExprClass:
+      return VisitCXXOperatorCallExprForTemporaryDtors(
+          cast<CXXOperatorCallExpr>(E), Context);
+
     case Stmt::CXXBindTemporaryExprClass:
       return VisitCXXBindTemporaryExprForTemporaryDtors(
           cast<CXXBindTemporaryExpr>(E), ExternallyDestructed, Context);
@@ -5223,6 +5263,18 @@ CFGBlock *CFGBuilder::VisitBinaryOperatorForTemporaryDtors(
   return VisitChildrenForTemporaryDtors(E, ExternallyDestructed, Context);
 }
 
+CFGBlock *CFGBuilder::VisitCXXOperatorCallExprForTemporaryDtors(
+    CXXOperatorCallExpr *E, TempDtorContext &Context) {
+  if (E->isAssignmentOp()) {
+    // For assignment operators, the RHS expression is evaluated before the LHS
+    // expression, so prepend temporary destructors for the RHS first.
+    CFGBlock *RHSBlock = VisitForTemporaryDtors(E->getArg(1), false, Context);
+    CFGBlock *LHSBlock = VisitForTemporaryDtors(E->getArg(0), false, Context);
+    return LHSBlock ? LHSBlock : RHSBlock;
+  }
+  return VisitChildrenForTemporaryDtors(E, false, Context);
+}
+
 CFGBlock *CFGBuilder::VisitCXXBindTemporaryExprForTemporaryDtors(
     CXXBindTemporaryExpr *E, bool ExternallyDestructed, TempDtorContext &Context) {
   // First add destructors for temporaries in subexpression.
@@ -5359,6 +5411,7 @@ CFGBlock *CFG::createBlock() {
 /// buildCFG - Constructs a CFG from an AST.
 std::unique_ptr<CFG> CFG::buildCFG(const Decl *D, Stmt *Statement,
                                    ASTContext *C, const BuildOptions &BO) {
+  llvm::TimeTraceScope TimeProfile("BuildCFG");
   CFGBuilder Builder(C, BO);
   return Builder.buildCFG(D, Statement);
 }
@@ -6396,12 +6449,12 @@ const Expr *CFGBlock::getLastCondition() const {
   return cast<Expr>(Cond)->IgnoreParens();
 }
 
-Stmt *CFGBlock::getTerminatorCondition(bool StripParens) {
-  Stmt *Terminator = getTerminatorStmt();
+const Stmt *CFGBlock::getTerminatorCondition(bool StripParens) const {
+  const Stmt *Terminator = getTerminatorStmt();
   if (!Terminator)
     return nullptr;
 
-  Expr *E = nullptr;
+  const Expr *E = nullptr;
 
   switch (Terminator->getStmtClass()) {
     default:

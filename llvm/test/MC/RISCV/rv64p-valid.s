@@ -1,7 +1,7 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-p -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-p -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj --triple=riscv64 -mattr=+experimental-p < %s \
-# RUN:     | llvm-objdump --triple=riscv64 --mattr=+experimental-p -M no-aliases --no-print-imm-hex -d -r - \
+# RUN:     | llvm-objdump --triple=riscv64 --mattr=+experimental-p --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: cls a1, a2
@@ -169,24 +169,36 @@ psrl.hs a6, a7, a1
 # CHECK-ASM-AND-OBJ: psrl.bs a1, a2, a3
 # CHECK-ASM: encoding: [0x9b,0x45,0xd6,0x8c]
 psrl.bs a1, a2, a3
+# CHECK-ASM-AND-OBJ: psrl.ws a4, a5, a6
+# CHECK-ASM: encoding: [0x1b,0xc7,0x07,0x8b]
+psrl.ws a4, a5, a6
 # CHECK-ASM-AND-OBJ: predsum.hs a4, a5, a6
 # CHECK-ASM: encoding: [0x1b,0xc7,0x07,0x99]
 predsum.hs a4, a5, a6
 # CHECK-ASM-AND-OBJ: predsum.bs a7, a1, a1
 # CHECK-ASM: encoding: [0x9b,0xc8,0xb5,0x9c]
 predsum.bs a7, a1, a1
+# CHECK-ASM-AND-OBJ: predsum.ws t0, t1, t2
+# CHECK-ASM: encoding: [0x9b,0x42,0x73,0x9a]
+predsum.ws t0, t1, t2
 # CHECK-ASM-AND-OBJ: predsumu.hs t0, t1, t2
 # CHECK-ASM: encoding: [0x9b,0x42,0x73,0xb8]
 predsumu.hs t0, t1, t2
 # CHECK-ASM-AND-OBJ: predsumu.bs t3, t4, t5
 # CHECK-ASM: encoding: [0x1b,0xce,0xee,0xbd]
 predsumu.bs t3, t4, t5
+# CHECK-ASM-AND-OBJ: predsumu.ws a0, a1, a2
+# CHECK-ASM: encoding: [0x1b,0xc5,0xc5,0xba]
+predsumu.ws a0, a1, a2
 # CHECK-ASM-AND-OBJ: psra.hs ra, a1, a2
 # CHECK-ASM: encoding: [0x9b,0xc0,0xc5,0xc8]
 psra.hs ra, a1, a2
 # CHECK-ASM-AND-OBJ: psra.bs sp, a2, a3
 # CHECK-ASM: encoding: [0x1b,0x41,0xd6,0xcc]
 psra.bs sp, a2, a3
+# CHECK-ASM-AND-OBJ: psra.ws a3, a4, a5
+# CHECK-ASM: encoding: [0x9b,0x46,0xf7,0xca]
+psra.ws a3, a4, a5
 # CHECK-ASM-AND-OBJ: padd.h t1, t5, s2
 # CHECK-ASM: encoding: [0x3b,0x03,0x2f,0x81]
 padd.h t1, t5, s2
@@ -472,6 +484,9 @@ ppaire.b s0, s0, s2
 # CHECK-ASM-AND-OBJ: ppaire.h t5, a2, a4
 # CHECK-ASM: encoding: [0x3b,0x4f,0xe6,0x82]
 ppaire.h t5, a2, a4
+# CHECK-ASM-AND-OBJ: pack s0, s1, s2
+# CHECK-ASM: encoding: [0x33,0xc4,0x24,0x09]
+ppaire.w s0, s1, s2
 # CHECK-ASM-AND-OBJ: ppaireo.b a4, s2, t3
 # CHECK-ASM: encoding: [0x3b,0x47,0xc9,0x91]
 ppaireo.b a4, s2, t3

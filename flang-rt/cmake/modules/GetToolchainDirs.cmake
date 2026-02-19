@@ -62,14 +62,6 @@ endfunction ()
 
 # Corresponds to Clang's ToolChain::getRuntimePath(). Adapted from Compiler-RT.
 function (get_toolchain_arch_dirname outvar)
-  string(REPLACE "-" ";" triple_list ${LLVM_TARGET_TRIPLE})
-  list(GET triple_list 0 arch)
-
-  if("${arch}" MATCHES "^i.86$")
-    # Android uses i686, but that's remapped at a later stage.
-    set(arch "i386")
-  endif()
-
   string(FIND ${LLVM_TARGET_TRIPLE} "-" dash_index)
   string(SUBSTRING ${LLVM_TARGET_TRIPLE} ${dash_index} -1 triple_suffix)
   string(SUBSTRING ${LLVM_TARGET_TRIPLE} 0 ${dash_index} triple_cpu)

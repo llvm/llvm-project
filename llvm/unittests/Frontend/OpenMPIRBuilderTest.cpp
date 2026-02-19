@@ -77,10 +77,6 @@ static CallInst *createPrintfCall(IRBuilder<> &Builder, StringRef FormatStr,
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
 
   GlobalVariable *GV = Builder.CreateGlobalString(FormatStr, "", 0, M);
-  Constant *Zero = ConstantInt::get(Type::getInt32Ty(M->getContext()), 0);
-  Constant *Indices[] = {Zero, Zero};
-  Constant *FormatStrConst =
-      ConstantExpr::getInBoundsGetElementPtr(GV->getValueType(), GV, Indices);
 
   Function *PrintfDecl = M->getFunction("printf");
   if (!PrintfDecl) {
@@ -90,7 +86,7 @@ static CallInst *createPrintfCall(IRBuilder<> &Builder, StringRef FormatStr,
   }
 
   SmallVector<Value *, 4> Args;
-  Args.push_back(FormatStrConst);
+  Args.push_back(GV);
   Args.append(Values.begin(), Values.end());
   return Builder.CreateCall(PrintfDecl, Args);
 }
@@ -1446,9 +1442,9 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopTripCount) {
                            bool IsSigned, bool InclusiveStop) -> int64_t {
     OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
     Type *LCTy = Type::getInt16Ty(Ctx);
-    Value *StartVal = ConstantInt::get(LCTy, Start);
-    Value *StopVal = ConstantInt::get(LCTy, Stop);
-    Value *StepVal = ConstantInt::get(LCTy, Step);
+    Value *StartVal = ConstantInt::get(LCTy, Start, IsSigned);
+    Value *StopVal = ConstantInt::get(LCTy, Stop, IsSigned);
+    Value *StepVal = ConstantInt::get(LCTy, Step, IsSigned);
     Value *TripCount = OMPBuilder.calculateCanonicalLoopTripCount(
         Loc, StartVal, StopVal, StepVal, IsSigned, InclusiveStop);
     return cast<ConstantInt>(TripCount)->getValue().getZExtValue();
@@ -1884,9 +1880,9 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoopCounts) {
                            int64_t TileSize) -> uint64_t {
     OpenMPIRBuilder::LocationDescription Loc(Builder.saveIP(), DL);
     Type *LCTy = Type::getInt16Ty(Ctx);
-    Value *StartVal = ConstantInt::get(LCTy, Start);
-    Value *StopVal = ConstantInt::get(LCTy, Stop);
-    Value *StepVal = ConstantInt::get(LCTy, Step);
+    Value *StartVal = ConstantInt::get(LCTy, Start, IsSigned);
+    Value *StopVal = ConstantInt::get(LCTy, Stop, IsSigned);
+    Value *StepVal = ConstantInt::get(LCTy, Step, IsSigned);
 
     // Generate a loop.
     auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, llvm::Value *LC) {
@@ -1916,7 +1912,7 @@ TEST_F(OpenMPIRBuilderTest, TileSingleLoopCounts) {
 
   // Empty iteration domain.
   EXPECT_EQ(GetFloorCount(0, 0, 1, false, false, 7), 0u);
-  EXPECT_EQ(GetFloorCount(0, -1, 1, false, true, 7), 0u);
+  EXPECT_EQ(GetFloorCount(0, -1, 1, true, true, 7), 0u);
   EXPECT_EQ(GetFloorCount(-1, -1, -1, true, false, 7), 0u);
   EXPECT_EQ(GetFloorCount(-1, 0, -1, true, true, 7), 0u);
   EXPECT_EQ(GetFloorCount(-1, -1, 3, true, false, 7), 0u);
@@ -6369,27 +6365,6 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
   EXPECT_TRUE(TargetDataCall->getOperand(2)->getType()->isIntegerTy(32));
   EXPECT_TRUE(TargetDataCall->getOperand(8)->getType()->isPointerTy());
 
-  // Check that BodyGenCB is still made when IsTargetDevice is set to true.
-  OMPBuilder.Config.setIsTargetDevice(true);
-  bool CheckDevicePassBodyGen = false;
-  auto BodyTargetCB = [&](InsertPointTy CodeGenIP, BodyGenTy BodyGenType) {
-    CheckDevicePassBodyGen = true;
-    Builder.restoreIP(CodeGenIP);
-    CallInst *TargetDataCall =
-        dyn_cast<CallInst>(BB->back().getPrevNode()->getPrevNode());
-    // Make sure no begin_mapper call is present for device pass.
-    EXPECT_EQ(TargetDataCall, nullptr);
-    return Builder.saveIP();
-  };
-  ASSERT_EXPECTED_INIT(
-      OpenMPIRBuilder::InsertPointTy, TargetDataIP2,
-      OMPBuilder.createTargetData(Loc, AllocaIP, Builder.saveIP(),
-                                  Builder.getInt64(DeviceID),
-                                  /* IfCond= */ nullptr, Info, GenMapInfoCB,
-                                  CustomMapperCB, nullptr, BodyTargetCB));
-  Builder.restoreIP(TargetDataIP2);
-  EXPECT_TRUE(CheckDevicePassBodyGen);
-
   Builder.CreateRetVoid();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
@@ -6501,6 +6476,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   RuntimeAttrs.TargetThreadLimit[0] = Builder.getInt32(20);
   RuntimeAttrs.TeamsThreadLimit[0] = Builder.getInt32(30);
   RuntimeAttrs.MaxThreads = Builder.getInt32(40);
+  RuntimeAttrs.DeviceID = Builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
 
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, AfterIP,
@@ -6834,6 +6810,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionSPMD) {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD,
       /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
   RuntimeAttrs.LoopTripCount = Builder.getInt64(1000);
+  RuntimeAttrs.DeviceID = Builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);

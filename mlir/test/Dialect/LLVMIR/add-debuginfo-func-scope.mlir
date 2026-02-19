@@ -160,3 +160,15 @@ module {
   } loc(#loc)
 } loc(unknown)
 
+
+// -----
+
+// Test that operations with CallSiteLoc outside of an llvm.func do not crash.
+llvm.func @dummy()
+func.func @test_func() {
+  return
+} loc(#loc2)
+
+#loc = loc("a.py":1150:34)
+#loc1 = loc("b.py":321:17)
+#loc2 = loc(callsite(#loc at #loc1))

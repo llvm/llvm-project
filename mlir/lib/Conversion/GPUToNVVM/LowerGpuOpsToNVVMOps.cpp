@@ -19,6 +19,7 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -60,31 +61,31 @@ static NVVM::ShflKind convertShflKind(gpu::ShuffleMode mode) {
   llvm_unreachable("unknown shuffle mode");
 }
 
-static std::optional<NVVM::ReduxKind>
-convertReduxKind(gpu::AllReduceOperation mode) {
+static std::optional<NVVM::ReductionKind>
+convertToNVVMReductionKind(gpu::AllReduceOperation mode) {
   switch (mode) {
   case gpu::AllReduceOperation::ADD:
-    return NVVM::ReduxKind::ADD;
+    return NVVM::ReductionKind::ADD;
   case gpu::AllReduceOperation::MUL:
     return std::nullopt;
   case gpu::AllReduceOperation::MINSI:
-    return NVVM::ReduxKind::MIN;
+    return NVVM::ReductionKind::MIN;
   case gpu::AllReduceOperation::MINUI:
     return std::nullopt;
   case gpu::AllReduceOperation::MINNUMF:
-    return NVVM::ReduxKind::MIN;
+    return NVVM::ReductionKind::MIN;
   case gpu::AllReduceOperation::MAXSI:
-    return NVVM::ReduxKind::MAX;
+    return NVVM::ReductionKind::MAX;
   case gpu::AllReduceOperation::MAXUI:
     return std::nullopt;
   case gpu::AllReduceOperation::MAXNUMF:
-    return NVVM::ReduxKind::MAX;
+    return NVVM::ReductionKind::MAX;
   case gpu::AllReduceOperation::AND:
-    return NVVM::ReduxKind::AND;
+    return NVVM::ReductionKind::AND;
   case gpu::AllReduceOperation::OR:
-    return NVVM::ReduxKind::OR;
+    return NVVM::ReductionKind::OR;
   case gpu::AllReduceOperation::XOR:
-    return NVVM::ReduxKind::XOR;
+    return NVVM::ReductionKind::XOR;
   case gpu::AllReduceOperation::MINIMUMF:
   case gpu::AllReduceOperation::MAXIMUMF:
     return std::nullopt;
@@ -112,7 +113,8 @@ struct GPUSubgroupReduceOpLowering
     if (!op.getValue().getType().isInteger(32))
       return rewriter.notifyMatchFailure(op, "unsupported data type");
 
-    std::optional<NVVM::ReduxKind> mode = convertReduxKind(op.getOp());
+    std::optional<NVVM::ReductionKind> mode =
+        convertToNVVMReductionKind(op.getOp());
     if (!mode.has_value())
       return rewriter.notifyMatchFailure(
           op, "unsupported reduction mode for redux");
@@ -446,23 +448,8 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
 }
 
 void mlir::configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter) {
-  // NVVM uses alloca in the default address space to represent private
-  // memory allocations, so drop private annotations. NVVM uses address
-  // space 3 for shared memory. NVVM uses the default address space to
-  // represent global memory.
-  populateGpuMemorySpaceAttributeConversions(
-      converter, [](gpu::AddressSpace space) -> unsigned {
-        switch (space) {
-        case gpu::AddressSpace::Global:
-          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
-        case gpu::AddressSpace::Workgroup:
-          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
-        case gpu::AddressSpace::Private:
-          return 0;
-        }
-        llvm_unreachable("unknown address space enum value");
-        return static_cast<unsigned>(NVVM::NVVMMemorySpace::Generic);
-      });
+  nvgpu::populateCommonGPUTypeAndAttributeConversions(converter);
+
   // Lowering for MMAMatrixType.
   converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
     return convertMMAToLLVMType(type);
@@ -722,11 +709,11 @@ void mlir::populateGpuToNVVMConversionPatterns(
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::ClusterBlockIdOp, NVVM::BlockInClusterIdXOp,
       NVVM::BlockInClusterIdYOp, NVVM::BlockInClusterIdZOp>>(
-      converter, IndexKind::Other, IntrType::Id, benefit);
+      converter, IndexKind::Cluster, IntrType::Id, benefit);
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::ClusterDimBlocksOp, NVVM::ClusterDimBlocksXOp,
       NVVM::ClusterDimBlocksYOp, NVVM::ClusterDimBlocksZOp>>(
-      converter, IndexKind::Other, IntrType::Dim, benefit);
+      converter, IndexKind::Cluster, IntrType::Dim, benefit);
   patterns.add<gpu::index_lowering::OpLowering<
       gpu::BlockIdOp, NVVM::BlockIdXOp, NVVM::BlockIdYOp, NVVM::BlockIdZOp>>(
       converter, IndexKind::Grid, IntrType::Id, benefit);
@@ -751,7 +738,9 @@ void mlir::populateGpuToNVVMConversionPatterns(
           StringAttr::get(&converter.getContext(),
                           NVVM::NVVMDialect::getKernelFuncAttrName()),
           StringAttr::get(&converter.getContext(),
-                          NVVM::NVVMDialect::getMaxntidAttrName())},
+                          NVVM::NVVMDialect::getMaxntidAttrName()),
+          StringAttr::get(&converter.getContext(),
+                          NVVM::NVVMDialect::getClusterDimAttrName())},
       benefit);
 
   populateLibDeviceConversionPatterns(converter, patterns, benefit);

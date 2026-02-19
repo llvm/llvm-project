@@ -277,7 +277,7 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         )
 
         # You may write up to the end of a tagged region
-        # (mte_buf_2's intial tags will all be 0)
+        # (mte_buf_2's initial tags will all be 0)
         self.expect("memory tag write mte_buf_2+page_size-16 0xe")
         self.expect(
             "memory tag read mte_buf_2+page_size-16 mte_buf_2+page_size",
@@ -416,7 +416,7 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         )
 
         # If we do the same with a misaligned end, it also moves but upward.
-        # The intial range is 2 granules but the final range is mte_buf_2 -> mte_buf_2+48
+        # The initial range is 2 granules but the final range is mte_buf_2 -> mte_buf_2+48
         self.expect("memory tag write mte_buf_2+8 3 -end-addr mte_buf_2+32+8")
         self.expect(
             "memory tag read mte_buf_2 mte_buf_2+64",

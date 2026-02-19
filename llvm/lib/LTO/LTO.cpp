@@ -47,6 +47,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
@@ -392,6 +393,9 @@ static void thinLTOResolvePrevailingGUID(
     // FIXME: We may want to split the compile time and correctness
     // aspects into separate routines.
     if (isPrevailing(VI.getGUID(), S.get())) {
+      assert(!S->wasPromoted() &&
+             "promoted symbols used to be internal linkage and shouldn't have "
+             "a prevailing variant");
       if (GlobalValue::isLinkOnceLinkage(OriginalLinkage)) {
         S->setLinkage(GlobalValue::getWeakLinkage(
             GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
@@ -414,8 +418,11 @@ static void thinLTOResolvePrevailingGUID(
     // When force-import-all is used, it indicates that object linking is not
     // supported by the target. In this case, we can't change the linkage as
     // well in case the global is converted to declaration.
+    // Also, if the symbol was promoted, it wouldn't have a prevailing variant,
+    // but also its linkage is set correctly (to External) already.
     else if (!isa<AliasSummary>(S.get()) &&
-             !GlobalInvolvedWithAlias.count(S.get()) && !ForceImportAll)
+             !GlobalInvolvedWithAlias.count(S.get()) && !ForceImportAll &&
+             !S->wasPromoted())
       S->setLinkage(GlobalValue::AvailableExternallyLinkage);
 
     // For ELF, set visibility to the computed visibility from summaries. We
@@ -484,7 +491,7 @@ static void thinLTOInternalizeAndPromoteGUID(
     // exported.
     if (isExported(S->modulePath(), VI)) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
-        S->setLinkage(GlobalValue::ExternalLinkage);
+        S->promote();
       continue;
     }
 
@@ -577,6 +584,8 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   File->COFFLinkerOpts = FOrErr->TheReader.getCOFFLinkerOpts();
   File->DependentLibraries = FOrErr->TheReader.getDependentLibraries();
   File->ComdatTable = FOrErr->TheReader.getComdatTable();
+  File->MbRef =
+      Object; // Save a memory buffer reference to an input file object.
 
   for (unsigned I = 0; I != FOrErr->Mods.size(); ++I) {
     size_t Begin = File->Symbols.size();
@@ -594,6 +603,11 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   return std::move(File);
 }
 
+bool InputFile::Symbol::isLibcall(
+    const RTLIB::RuntimeLibcallsInfo &Libcalls) const {
+  return Libcalls.getSupportedLibcallImpl(IRName) != RTLIB::Unsupported;
+}
+
 StringRef InputFile::getName() const {
   return Mods[0].getModuleIdentifier();
 }
@@ -602,6 +616,8 @@ BitcodeModule &InputFile::getSingleBitcodeModule() {
   assert(Mods.size() == 1 && "Expect only one bitcode module");
   return Mods[0];
 }
+
+BitcodeModule &InputFile::getPrimaryBitcodeModule() { return Mods[0]; }
 
 LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                                       const Config &Conf)
@@ -637,11 +653,13 @@ LTO::~LTO() = default;
 // their partitions.
 void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                                ArrayRef<SymbolResolution> Res,
-                               unsigned Partition, bool InSummary) {
+                               unsigned Partition, bool InSummary,
+                               const Triple &TT) {
   llvm::TimeTraceScope timeScope("LTO add module to global resolution");
   auto *ResI = Res.begin();
   auto *ResE = Res.end();
   (void)ResE;
+  RTLIB::RuntimeLibcallsInfo Libcalls(TT);
   for (const InputFile::Symbol &Sym : Syms) {
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
@@ -684,11 +702,14 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
       GlobalRes.VisibleOutsideSummary = true;
     }
 
+    bool IsLibcall = Sym.isLibcall(Libcalls);
+
     // Set the partition to external if we know it is re-defined by the linker
     // with -defsym or -wrap options, used elsewhere, e.g. it is visible to a
     // regular object, is referenced from llvm.compiler.used/llvm.used, or was
     // already recorded as being referenced from a different partition.
     if (Res.LinkerRedefined || Res.VisibleToRegularObj || Sym.isUsed() ||
+        IsLibcall ||
         (GlobalRes.Partition != GlobalResolution::Unknown &&
          GlobalRes.Partition != Partition)) {
       GlobalRes.Partition = GlobalResolution::External;
@@ -699,7 +720,7 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     // Flag as visible outside of summary if visible from a regular object or
     // from a module that does not have a summary.
     GlobalRes.VisibleOutsideSummary |=
-        (Res.VisibleToRegularObj || Sym.isUsed() || !InSummary);
+        (Res.VisibleToRegularObj || Sym.isUsed() || IsLibcall || !InSummary);
 
     GlobalRes.ExportDynamic |= Res.ExportDynamic;
   }
@@ -737,13 +758,19 @@ static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
   assert(ResI == Res.end());
 }
 
-Error LTO::add(std::unique_ptr<InputFile> Input,
+Error LTO::add(std::unique_ptr<InputFile> InputPtr,
                ArrayRef<SymbolResolution> Res) {
-  llvm::TimeTraceScope timeScope("LTO add input", Input->getName());
+  llvm::TimeTraceScope timeScope("LTO add input", InputPtr->getName());
   assert(!CalledGetMaxTasks);
 
+  Expected<std::shared_ptr<InputFile>> InputOrErr =
+      addInput(std::move(InputPtr));
+  if (!InputOrErr)
+    return InputOrErr.takeError();
+  InputFile *Input = (*InputOrErr).get();
+
   if (Conf.ResolutionFile)
-    writeToResolutionFile(*Conf.ResolutionFile, Input.get(), Res);
+    writeToResolutionFile(*Conf.ResolutionFile, Input, Res);
 
   if (RegularLTO.CombinedModule->getTargetTriple().empty()) {
     Triple InputTriple(Input->getTargetTriple());
@@ -792,11 +819,15 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
     LTOMode = LTOK_UnifiedThin;
 
   bool IsThinLTO = LTOInfo->IsThinLTO && (LTOMode != LTOK_UnifiedRegular);
+  // If any of the modules inside of a input bitcode file was compiled with
+  // ThinLTO, we assume that the whole input file also was compiled with
+  // ThinLTO.
+  Input.IsThinLTO |= IsThinLTO;
 
   auto ModSyms = Input.module_symbols(ModI);
   addModuleToGlobalRes(ModSyms, Res,
                        IsThinLTO ? ThinLTO.ModuleMap.size() + 1 : 0,
-                       LTOInfo->HasSummary);
+                       LTOInfo->HasSummary, Triple(Input.getTargetTriple()));
 
   if (IsThinLTO)
     return addThinLTO(BM, ModSyms, Res);
@@ -1202,6 +1233,11 @@ Error LTO::checkPartiallySplit() {
 }
 
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
+  llvm::scope_exit CleanUp([this]() { cleanup(); });
+
+  if (Error EC = serializeInputsForDistribution())
+    return EC;
+
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
   DenseMap<GlobalValue::GUID, PrevailingType> GUIDPrevailingResolutions;
@@ -1295,7 +1331,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       // Don't do anything if no instance of this common was prevailing.
       continue;
     GlobalVariable *OldGV = RegularLTO.CombinedModule->getNamedGlobal(I.first);
-    if (OldGV && DL.getTypeAllocSize(OldGV->getValueType()) == I.second.Size) {
+    if (OldGV && OldGV->getGlobalSize(DL) == I.second.Size) {
       // Don't create a new global if the type is already correct, just make
       // sure the alignment is correct.
       OldGV->setAlignment(I.second.Alignment);
@@ -1899,7 +1935,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   ThinLTO.CombinedIndex.releaseTemporaryMemory();
   timeTraceProfilerBegin("ThinLink", StringRef(""));
-  auto TimeTraceScopeExit = llvm::make_scope_exit([]() {
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (llvm::timeTraceProfilerEnabled())
       llvm::timeTraceProfilerEnd();
   });
@@ -2288,13 +2324,13 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
           &ResolvedODR) {
-
-    llvm::TimeTraceScope timeScope(
-        "Run ThinLTO backend thread (out-of-process)", J.ModuleID);
-
-    if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
-                           J.SummaryIndexPath, J.ImportsFiles))
-      return E;
+    {
+      TimeTraceScope TimeScope("Emit individual index for DTLTO",
+                               J.SummaryIndexPath);
+      if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
+                             J.SummaryIndexPath, J.ImportsFiles))
+        return E;
+    }
 
     if (!Cache.isValid() || !CombinedIndex.modulePaths().count(J.ModuleID) ||
         all_of(CombinedIndex.getModuleHash(J.ModuleID),
@@ -2303,6 +2339,7 @@ public:
       // no module hash.
       return Error::success();
 
+    TimeTraceScope TimeScope("Check cache for DTLTO", J.SummaryIndexPath);
     const GVSummaryMapTy &DefinedGlobals =
         ModuleToDefinedGVSummaries.find(J.ModuleID)->second;
 
@@ -2353,6 +2390,13 @@ public:
          nullptr,
          false};
 
+    // Cleanup per-job temporary files on abnormal process exit.
+    if (!SaveTemps) {
+      llvm::sys::RemoveFileOnSignal(J.NativeObjectPath);
+      if (!ShouldEmitIndexFiles)
+        llvm::sys::RemoveFileOnSignal(J.SummaryIndexPath);
+    }
+
     assert(ModuleToDefinedGVSummaries.count(ModulePath));
 
     // The BackendThreadPool is only used here to write the sharded index files
@@ -2362,6 +2406,10 @@ public:
             const FunctionImporter::ExportSetTy &ExportList,
             const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
                 &ResolvedODR) {
+          if (LLVM_ENABLE_THREADS && Conf.TimeTraceEnabled)
+            timeTraceProfilerInitialize(
+                Conf.TimeTraceGranularity,
+                "Emit individual index and check cache for DTLTO");
           Error E =
               runThinLTOBackendThread(J, ImportList, ExportList, ResolvedODR);
           if (E) {
@@ -2371,6 +2419,8 @@ public:
             else
               Err = std::move(E);
           }
+          if (LLVM_ENABLE_THREADS && Conf.TimeTraceEnabled)
+            timeTraceProfilerFinishThread();
         },
         std::ref(J), std::ref(ImportList), std::ref(ExportList),
         std::ref(ResolvedODR));
@@ -2518,7 +2568,8 @@ public:
     if (Err)
       return std::move(*Err);
 
-    auto CleanPerJobFiles = llvm::make_scope_exit([&] {
+    llvm::scope_exit CleanPerJobFiles([&] {
+      llvm::TimeTraceScope TimeScope("Remove DTLTO temporary files");
       if (!SaveTemps)
         for (auto &Job : Jobs) {
           removeFile(Job.NativeObjectPath);
@@ -2532,76 +2583,90 @@ public:
     buildCommonRemoteCompilerOptions();
 
     SString JsonFile = sys::path::parent_path(LinkerOutputFile);
-    sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." + UID +
-                                    ".dist-file.json");
-    if (!emitDistributorJson(JsonFile))
-      return make_error<StringError>(
-          BCError + "failed to generate distributor JSON script: " + JsonFile,
-          inconvertibleErrorCode());
-    auto CleanJson = llvm::make_scope_exit([&] {
+    {
+      llvm::TimeTraceScope TimeScope("Emit DTLTO JSON");
+      sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." +
+                                      UID + ".dist-file.json");
+      // Cleanup DTLTO JSON file on abnormal process exit.
+      if (!SaveTemps)
+        llvm::sys::RemoveFileOnSignal(JsonFile);
+      if (!emitDistributorJson(JsonFile))
+        return make_error<StringError>(
+            BCError + "failed to generate distributor JSON script: " + JsonFile,
+            inconvertibleErrorCode());
+    }
+    llvm::scope_exit CleanJson([&] {
       if (!SaveTemps)
         removeFile(JsonFile);
     });
 
-    // Checks if we have any jobs that don't have corresponding cache entries.
-    if (CachedJobs.load() < Jobs.size()) {
-      SmallVector<StringRef, 3> Args = {DistributorPath};
-      llvm::append_range(Args, DistributorArgs);
-      Args.push_back(JsonFile);
-      std::string ErrMsg;
-      if (sys::ExecuteAndWait(Args[0], Args,
-                              /*Env=*/std::nullopt, /*Redirects=*/{},
-                              /*SecondsToWait=*/0, /*MemoryLimit=*/0,
-                              &ErrMsg)) {
-        return make_error<StringError>(
-            BCError + "distributor execution failed" +
-                (!ErrMsg.empty() ? ": " + ErrMsg + Twine(".") : Twine(".")),
-            inconvertibleErrorCode());
+    {
+      llvm::TimeTraceScope TimeScope("Execute DTLTO distributor",
+                                     DistributorPath);
+      // Checks if we have any jobs that don't have corresponding cache entries.
+      if (CachedJobs.load() < Jobs.size()) {
+        SmallVector<StringRef, 3> Args = {DistributorPath};
+        llvm::append_range(Args, DistributorArgs);
+        Args.push_back(JsonFile);
+        std::string ErrMsg;
+        if (sys::ExecuteAndWait(Args[0], Args,
+                                /*Env=*/std::nullopt, /*Redirects=*/{},
+                                /*SecondsToWait=*/0, /*MemoryLimit=*/0,
+                                &ErrMsg)) {
+          return make_error<StringError>(
+              BCError + "distributor execution failed" +
+                  (!ErrMsg.empty() ? ": " + ErrMsg + Twine(".") : Twine(".")),
+              inconvertibleErrorCode());
+        }
       }
     }
 
-    for (auto &Job : Jobs) {
-      if (!Job.CacheKey.empty() && Job.Cached) {
-        assert(Cache.isValid());
-        continue;
-      }
-      // Load the native object from a file into a memory buffer
-      // and store its contents in the output buffer.
-      auto ObjFileMbOrErr =
-          MemoryBuffer::getFile(Job.NativeObjectPath, /*IsText=*/false,
-                                /*RequiresNullTerminator=*/false);
-      if (std::error_code EC = ObjFileMbOrErr.getError())
-        return make_error<StringError>(
-            BCError + "cannot open native object file: " +
-                Job.NativeObjectPath + ": " + EC.message(),
-            inconvertibleErrorCode());
+    {
+      llvm::TimeTraceScope FilesScope("Add DTLTO files to the link");
+      for (auto &Job : Jobs) {
+        if (!Job.CacheKey.empty() && Job.Cached) {
+          assert(Cache.isValid());
+          continue;
+        }
+        // Load the native object from a file into a memory buffer
+        // and store its contents in the output buffer.
+        auto ObjFileMbOrErr =
+            MemoryBuffer::getFile(Job.NativeObjectPath, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false);
+        if (std::error_code EC = ObjFileMbOrErr.getError())
+          return make_error<StringError>(
+              BCError + "cannot open native object file: " +
+                  Job.NativeObjectPath + ": " + EC.message(),
+              inconvertibleErrorCode());
 
-      MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
-      if (Cache.isValid()) {
-        // Cache hits are taken care of earlier. At this point, we could only
-        // have cache misses.
-        assert(Job.CacheAddStream);
-        // Obtain a file stream for a storing a cache entry.
-        auto CachedFileStreamOrErr = Job.CacheAddStream(Job.Task, Job.ModuleID);
-        if (!CachedFileStreamOrErr)
-          return joinErrors(
-              CachedFileStreamOrErr.takeError(),
-              createStringError(inconvertibleErrorCode(),
-                                "Cannot get a cache file stream: %s",
-                                Job.NativeObjectPath.data()));
-        // Store a file buffer into the cache stream.
-        auto &CacheStream = *(CachedFileStreamOrErr->get());
-        *(CacheStream.OS) << ObjFileMbRef.getBuffer();
-        if (Error Err = CacheStream.commit())
-          return Err;
-      } else {
-        auto StreamOrErr = AddStream(Job.Task, Job.ModuleID);
-        if (Error Err = StreamOrErr.takeError())
-          report_fatal_error(std::move(Err));
-        auto &Stream = *StreamOrErr->get();
-        *Stream.OS << ObjFileMbRef.getBuffer();
-        if (Error Err = Stream.commit())
-          report_fatal_error(std::move(Err));
+        MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
+        if (Cache.isValid()) {
+          // Cache hits are taken care of earlier. At this point, we could only
+          // have cache misses.
+          assert(Job.CacheAddStream);
+          // Obtain a file stream for a storing a cache entry.
+          auto CachedFileStreamOrErr =
+              Job.CacheAddStream(Job.Task, Job.ModuleID);
+          if (!CachedFileStreamOrErr)
+            return joinErrors(
+                CachedFileStreamOrErr.takeError(),
+                createStringError(inconvertibleErrorCode(),
+                                  "Cannot get a cache file stream: %s",
+                                  Job.NativeObjectPath.data()));
+          // Store a file buffer into the cache stream.
+          auto &CacheStream = *(CachedFileStreamOrErr->get());
+          *(CacheStream.OS) << ObjFileMbRef.getBuffer();
+          if (Error Err = CacheStream.commit())
+            return Err;
+        } else {
+          auto StreamOrErr = AddStream(Job.Task, Job.ModuleID);
+          if (Error Err = StreamOrErr.takeError())
+            report_fatal_error(std::move(Err));
+          auto &Stream = *StreamOrErr->get();
+          *Stream.OS << ObjFileMbRef.getBuffer();
+          if (Error Err = Stream.commit())
+            report_fatal_error(std::move(Err));
+        }
       }
     }
     return Error::success();

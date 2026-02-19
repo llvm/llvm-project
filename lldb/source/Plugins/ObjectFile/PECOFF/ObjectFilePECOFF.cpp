@@ -86,7 +86,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_objectfilepecoff_properties);
+    m_collection_sp->Initialize(g_objectfilepecoff_properties_def);
   }
 
   llvm::Triple::EnvironmentType ABI() const {
@@ -203,29 +203,31 @@ llvm::StringRef ObjectFilePECOFF::GetPluginDescriptionStatic() {
 }
 
 ObjectFile *ObjectFilePECOFF::CreateInstance(
-    const lldb::ModuleSP &module_sp, DataBufferSP data_sp,
+    const lldb::ModuleSP &module_sp, DataExtractorSP extractor_sp,
     lldb::offset_t data_offset, const lldb_private::FileSpec *file_p,
     lldb::offset_t file_offset, lldb::offset_t length) {
   FileSpec file = file_p ? *file_p : FileSpec();
-  if (!data_sp) {
-    data_sp = MapFileData(file, length, file_offset);
+  if (!extractor_sp || !extractor_sp->HasData()) {
+    DataBufferSP data_sp = MapFileData(file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
   }
 
-  if (!ObjectFilePECOFF::MagicBytesMatch(data_sp))
+  if (!ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
     return nullptr;
 
   // Update the data to contain the entire file if it doesn't already
-  if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(file, length, file_offset);
+  if (extractor_sp->GetByteSize() < length) {
+    DataBufferSP data_sp = MapFileData(file, length, file_offset);
     if (!data_sp)
       return nullptr;
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
   }
 
   auto objfile_up = std::make_unique<ObjectFilePECOFF>(
-      module_sp, data_sp, data_offset, file_p, file_offset, length);
+      module_sp, extractor_sp, data_offset, file_p, file_offset, length);
   if (!objfile_up || !objfile_up->ParseHeader())
     return nullptr;
 
@@ -238,7 +240,11 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(
 ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t header_addr) {
-  if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
+  if (!data_sp)
+    return nullptr;
+  DataExtractorSP extractor_sp =
+      std::make_shared<DataExtractor>(data_sp, eByteOrderLittle, 4);
+  if (!ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
     return nullptr;
   auto objfile_up = std::make_unique<ObjectFilePECOFF>(
       module_sp, data_sp, process_sp, header_addr);
@@ -249,20 +255,22 @@ ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
 }
 
 size_t ObjectFilePECOFF::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
-  if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
+  if (!extractor_sp || !extractor_sp->HasData() ||
+      !ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
     return initial_count;
 
   Log *log = GetLog(LLDBLog::Object);
 
-  if (data_sp->GetByteSize() < length)
+  if (extractor_sp->GetByteSize() < length)
     if (DataBufferSP full_sp = MapFileData(file, -1, file_offset))
-      data_sp = std::move(full_sp);
+      extractor_sp->SetData(std::move(full_sp));
   auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
-      toStringRef(data_sp->GetData()), file.GetFilename().GetStringRef()));
+      toStringRef(extractor_sp->GetSharedDataBuffer()->GetData()),
+      file.GetFilename().GetStringRef()));
 
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
@@ -364,10 +372,9 @@ bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
   return SaveMiniDump(process_sp, options, error);
 }
 
-bool ObjectFilePECOFF::MagicBytesMatch(DataBufferSP data_sp) {
-  DataExtractor data(data_sp, eByteOrderLittle, 4);
+bool ObjectFilePECOFF::MagicBytesMatch(DataExtractorSP extractor_sp) {
   lldb::offset_t offset = 0;
-  uint16_t magic = data.GetU16(&offset);
+  uint16_t magic = extractor_sp->GetU16(&offset);
   return magic == IMAGE_DOS_SIGNATURE;
 }
 
@@ -416,12 +423,13 @@ bool ObjectFilePECOFF::CreateBinary() {
 }
 
 ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
-                                   DataBufferSP data_sp,
+                                   DataExtractorSP extractor_sp,
                                    lldb::offset_t data_offset,
                                    const FileSpec *file,
                                    lldb::offset_t file_offset,
                                    lldb::offset_t length)
-    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
+    : ObjectFile(module_sp, file, file_offset, length, extractor_sp,
+                 data_offset),
       m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
       m_image_base(LLDB_INVALID_ADDRESS), m_entry_point_address(),
       m_deps_filespec() {}
@@ -430,7 +438,8 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    WritableDataBufferSP header_data_sp,
                                    const lldb::ProcessSP &process_sp,
                                    addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
+    : ObjectFile(module_sp, process_sp, header_addr,
+                 std::make_shared<DataExtractor>(header_data_sp)),
       m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
       m_image_base(LLDB_INVALID_ADDRESS), m_entry_point_address(),
       m_deps_filespec() {}
@@ -445,12 +454,12 @@ bool ObjectFilePECOFF::ParseHeader() {
     m_data_nsp->SetByteOrder(eByteOrderLittle);
     lldb::offset_t offset = 0;
 
-    if (ParseDOSHeader(*m_data_nsp.get(), m_dos_header)) {
+    if (ParseDOSHeader(*m_data_nsp, m_dos_header)) {
       offset = m_dos_header.e_lfanew;
       uint32_t pe_signature = m_data_nsp->GetU32(&offset);
       if (pe_signature != IMAGE_NT_SIGNATURE)
         return false;
-      if (ParseCOFFHeader(*m_data_nsp.get(), &offset, m_coff_header)) {
+      if (ParseCOFFHeader(*m_data_nsp, &offset, m_coff_header)) {
         if (m_coff_header.hdrsize > 0)
           ParseCOFFOptionalHeader(&offset);
         ParseSectionHeaders(offset);
@@ -691,7 +700,7 @@ DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
     return {};
 
   if (m_data_nsp->ValidOffsetForDataOfSize(offset, size))
-    return DataExtractor(*m_data_nsp.get(), offset, size);
+    return DataExtractor(*m_data_nsp, offset, size);
 
   ProcessSP process_sp(m_process_wp.lock());
   DataExtractor data;

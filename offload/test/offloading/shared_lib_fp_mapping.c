@@ -3,6 +3,7 @@
 // RUN: %clang-generic -fPIC -shared %S/../Inputs/declare_indirect_func.c -o %t.testdir/libslfm.so  -fopenmp-version=51
 // RUN: %libomptarget-compile-generic -rpath %t.testdir -L %t.testdir -l slfm -o %t  -fopenmp-version=51
 // RUN: env LIBOMPTARGET_INFO=32 %t 2>&1 | %fcheck-generic
+// XFAIL: intelgpu
 // clang-format on
 
 #include <stdio.h>

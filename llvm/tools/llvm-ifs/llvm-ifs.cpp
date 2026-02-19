@@ -259,7 +259,6 @@ static Error writeIFS(StringRef FilePath, IFSStub &Stub, bool WriteIfChanged) {
   Error YAMLErr = writeIFSToOutputStream(OutStr, Stub);
   if (YAMLErr)
     return YAMLErr;
-  OutStr.flush();
 
   if (WriteIfChanged) {
     if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrError =

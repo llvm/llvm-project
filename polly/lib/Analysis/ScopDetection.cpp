@@ -1204,6 +1204,17 @@ bool ScopDetection::isValidMemoryAccess(MemAccInst Inst,
   return isValidAccess(Inst, AccessFunction, BasePointer, Context);
 }
 
+bool ScopDetection::isCompatibleType(Instruction *Inst, Type *Ty,
+                                     DetectionContext &Context) {
+  if (!Ty)
+    return false;
+
+  if (isa<ScalableVectorType>(Ty))
+    return invalid<ReportIncompatibleType>(Context, /*Assert=*/true, Inst, Ty);
+
+  return true;
+}
+
 bool ScopDetection::isValidInstruction(Instruction &Inst,
                                        DetectionContext &Context) {
   for (auto &Op : Inst.operands()) {
@@ -1211,6 +1222,9 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
 
     if (!OpInst)
       continue;
+
+    if (!isCompatibleType(&Inst, Op->getType(), Context))
+      return false;
 
     if (isErrorBlock(*OpInst->getParent(), Context.CurRegion)) {
       auto *PHI = dyn_cast<PHINode>(OpInst);
@@ -1227,6 +1241,9 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
   }
 
   if (isa<LandingPadInst>(&Inst) || isa<ResumeInst>(&Inst))
+    return false;
+
+  if (!isCompatibleType(&Inst, Inst.getType(), Context))
     return false;
 
   // We only check the call instruction but not invoke instruction.

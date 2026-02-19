@@ -135,12 +135,8 @@ public:
   void cleanup() {
     ClonedCastMap.clear();
     ConstIntCandVec.clear();
-    for (auto MapEntry : ConstGEPCandMap)
-      MapEntry.second.clear();
     ConstGEPCandMap.clear();
     ConstIntInfoVec.clear();
-    for (auto MapEntry : ConstGEPInfoMap)
-      MapEntry.second.clear();
     ConstGEPInfoMap.clear();
   }
 

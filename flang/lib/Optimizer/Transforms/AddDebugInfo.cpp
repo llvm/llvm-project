@@ -54,6 +54,12 @@ class AddDebugInfoPass : public fir::impl::AddDebugInfoBase<AddDebugInfoPass> {
                        mlir::LLVM::DIScopeAttr scopeAttr,
                        fir::DebugTypeGenerator &typeGen,
                        mlir::SymbolTable *symbolTable, mlir::Value dummyScope);
+  void handleDeclareValueOp(fir::DeclareValueOp declOp,
+                            mlir::LLVM::DIFileAttr fileAttr,
+                            mlir::LLVM::DIScopeAttr scopeAttr,
+                            fir::DebugTypeGenerator &typeGen,
+                            mlir::SymbolTable *symbolTable,
+                            mlir::Value dummyScope);
 
 public:
   AddDebugInfoPass(fir::AddDebugInfoOptions options) : Base(options) {}
@@ -84,6 +90,24 @@ private:
                     mlir::LLVM::DICompileUnitAttr cuAttr,
                     fir::DebugTypeGenerator &typeGen,
                     mlir::SymbolTable *symbolTable);
+  void handleOnlyClause(
+      fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
+      mlir::LLVM::DIFileAttr fileAttr, mlir::SymbolTable *symbolTable,
+      llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules);
+  void handleRenamesWithoutOnly(
+      fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
+      mlir::LLVM::DIModuleAttr modAttr, mlir::LLVM::DIFileAttr fileAttr,
+      mlir::SymbolTable *symbolTable,
+      llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules);
+  void handleUseStatements(
+      mlir::func::FuncOp funcOp, mlir::LLVM::DISubprogramAttr spAttr,
+      mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
+      mlir::SymbolTable *symbolTable,
+      llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities);
+  std::optional<mlir::LLVM::DIImportedEntityAttr> createImportedDeclForGlobal(
+      llvm::StringRef symbolName, mlir::LLVM::DISubprogramAttr spAttr,
+      mlir::LLVM::DIFileAttr fileAttr, mlir::StringAttr localNameAttr,
+      mlir::SymbolTable *symbolTable);
   bool createCommonBlockGlobal(fir::cg::XDeclareOp declOp,
                                const std::string &name,
                                mlir::LLVM::DIFileAttr fileAttr,
@@ -94,6 +118,14 @@ private:
   getModuleAttrFromGlobalOp(fir::GlobalOp globalOp,
                             mlir::LLVM::DIFileAttr fileAttr,
                             mlir::LLVM::DIScopeAttr scope);
+
+  template <typename Op>
+  void handleLocalVariable(Op declOp, llvm::StringRef name,
+                           mlir::LLVM::DIFileAttr fileAttr,
+                           mlir::LLVM::DIScopeAttr scopeAttr,
+                           fir::DebugTypeGenerator &typeGen,
+                           mlir::Value dummyScope, mlir::Type typeToConvert,
+                           fir::cg::XDeclareOp typeGenDeclOp);
 };
 
 bool debugInfoIsAlreadySet(mlir::Location loc) {
@@ -137,6 +169,34 @@ mlir::StringAttr getTargetFunctionName(mlir::MLIRContext *context,
 }
 
 } // namespace
+
+// Check if a global represents a module variable
+static bool isModuleVariable(fir::GlobalOp globalOp) {
+  std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
+  return result.first == fir::NameUniquer::NameKind::VARIABLE &&
+         result.second.procs.empty() && !result.second.modules.empty();
+}
+
+// Look up DIGlobalVariable from a global symbol
+static std::optional<mlir::LLVM::DIGlobalVariableAttr>
+lookupDIGlobalVariable(llvm::StringRef symbolName,
+                       mlir::SymbolTable *symbolTable) {
+  if (auto globalOp = symbolTable->lookup<fir::GlobalOp>(symbolName)) {
+    if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(globalOp.getLoc())) {
+      if (auto metadata = fusedLoc.getMetadata()) {
+        if (auto arrayAttr = mlir::dyn_cast<mlir::ArrayAttr>(metadata)) {
+          for (auto elem : arrayAttr) {
+            if (auto gvExpr =
+                    mlir::dyn_cast<mlir::LLVM::DIGlobalVariableExpressionAttr>(
+                        elem))
+              return gvExpr.getVar();
+          }
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
 
 bool AddDebugInfoPass::createCommonBlockGlobal(
     fir::cg::XDeclareOp declOp, const std::string &name,
@@ -220,14 +280,40 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
   return true;
 }
 
+template <typename Op>
+void AddDebugInfoPass::handleLocalVariable(Op declOp, llvm::StringRef name,
+                                           mlir::LLVM::DIFileAttr fileAttr,
+                                           mlir::LLVM::DIScopeAttr scopeAttr,
+                                           fir::DebugTypeGenerator &typeGen,
+                                           mlir::Value dummyScope,
+                                           mlir::Type typeToConvert,
+                                           fir::cg::XDeclareOp typeGenDeclOp) {
+  mlir::MLIRContext *context = &getContext();
+  mlir::OpBuilder builder(context);
+
+  // Get the dummy argument position from the explicit attribute.
+  unsigned argNo = 0;
+  if (dummyScope && declOp.getDummyScope() == dummyScope) {
+    if (auto argNoOpt = declOp.getDummyArgNo())
+      argNo = *argNoOpt;
+  }
+
+  auto tyAttr =
+      typeGen.convertType(typeToConvert, fileAttr, scopeAttr, typeGenDeclOp);
+
+  auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
+      context, scopeAttr, mlir::StringAttr::get(context, name), fileAttr,
+      getLineFromLoc(declOp.getLoc()), argNo, /* alignInBits*/ 0, tyAttr,
+      mlir::LLVM::DIFlags::Zero);
+  declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
+}
+
 void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
                                        mlir::LLVM::DIFileAttr fileAttr,
                                        mlir::LLVM::DIScopeAttr scopeAttr,
                                        fir::DebugTypeGenerator &typeGen,
                                        mlir::SymbolTable *symbolTable,
                                        mlir::Value dummyScope) {
-  mlir::MLIRContext *context = &getContext();
-  mlir::OpBuilder builder(context);
   auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
 
   if (result.first != fir::NameUniquer::NameKind::VARIABLE)
@@ -247,21 +333,23 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
     }
   }
 
-  // Get the dummy argument position from the explicit attribute.
-  unsigned argNo = 0;
-  if (dummyScope && declOp.getDummyScope() == dummyScope) {
-    if (auto argNoOpt = declOp.getDummyArgNo())
-      argNo = *argNoOpt;
-  }
+  handleLocalVariable(declOp, result.second.name, fileAttr, scopeAttr, typeGen,
+                      dummyScope, fir::unwrapRefType(declOp.getType()), declOp);
+}
 
-  auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
-                                    fileAttr, scopeAttr, declOp);
+void AddDebugInfoPass::handleDeclareValueOp(fir::DeclareValueOp declOp,
+                                            mlir::LLVM::DIFileAttr fileAttr,
+                                            mlir::LLVM::DIScopeAttr scopeAttr,
+                                            fir::DebugTypeGenerator &typeGen,
+                                            mlir::SymbolTable *symbolTable,
+                                            mlir::Value dummyScope) {
+  auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
 
-  auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
-      context, scopeAttr, mlir::StringAttr::get(context, result.second.name),
-      fileAttr, getLineFromLoc(declOp.getLoc()), argNo, /* alignInBits*/ 0,
-      tyAttr, mlir::LLVM::DIFlags::Zero);
-  declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
+  if (result.first != fir::NameUniquer::NameKind::VARIABLE)
+    return;
+
+  handleLocalVariable(declOp, result.second.name, fileAttr, scopeAttr, typeGen,
+                      dummyScope, declOp.getValue().getType(), nullptr);
 }
 
 mlir::LLVM::DICommonBlockAttr AddDebugInfoPass::getOrCreateCommonBlockAttr(
@@ -380,6 +468,18 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
       globalOp.getContext(), gvAttr, nullptr);
   auto arrayAttr = mlir::ArrayAttr::get(context, {dbgExpr});
   globalOp->setLoc(builder.getFusedLoc({globalOp.getLoc()}, arrayAttr));
+}
+
+static mlir::LLVM::DISubprogramAttr
+getScope(mlir::Operation *op, mlir::LLVM::DISubprogramAttr defaultScope) {
+  if (auto tOp = op->getParentOfType<mlir::omp::TargetOp>()) {
+    if (auto fusedLoc = llvm::dyn_cast<mlir::FusedLoc>(tOp.getLoc())) {
+      if (auto sp = llvm::dyn_cast<mlir::LLVM::DISubprogramAttr>(
+              fusedLoc.getMetadata()))
+        return sp;
+    }
+  }
+  return defaultScope;
 }
 
 void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
@@ -526,7 +626,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
       CC = llvm::dwarf::getCallingConvention("DW_CC_normal");
       mlir::LLVM::DISubroutineTypeAttr spTy =
           mlir::LLVM::DISubroutineTypeAttr::get(context, CC, types);
-      if (lineTableOnly) {
+      if (lineTableOnly || entities.empty()) {
         auto spAttr = mlir::LLVM::DISubprogramAttr::get(
             context, id, compilationUnit, Scope, name, name, funcFileAttr, line,
             line, flags, spTy, /*retainedNodes=*/{}, /*annotations=*/{});
@@ -546,9 +646,9 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
       for (mlir::LLVM::DINodeAttr N : entities) {
         if (auto entity = mlir::dyn_cast<mlir::LLVM::DIImportedEntityAttr>(N)) {
           auto importedEntity = mlir::LLVM::DIImportedEntityAttr::get(
-              context, llvm::dwarf::DW_TAG_imported_module, spAttr,
-              entity.getEntity(), fileAttr, /*line=*/1, /*name=*/nullptr,
-              /*elements*/ {});
+              context, entity.getTag(), spAttr, entity.getEntity(),
+              entity.getFile(), entity.getLine(), entity.getName(),
+              entity.getElements());
           opEntities.push_back(importedEntity);
         }
       }
@@ -573,61 +673,57 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
     return;
   }
 
-  mlir::DistinctAttr recId =
-      mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
-
-  // The debug attribute in MLIR are readonly once created. But in case of
-  // imported entities, we have a circular dependency. The
-  // DIImportedEntityAttr requires scope information (DISubprogramAttr in this
-  // case) and DISubprogramAttr requires the list of imported entities. The
-  // MLIR provides a way where a DISubprogramAttr an be created with a certain
-  // recID and be used in places like DIImportedEntityAttr. After that another
-  // DISubprogramAttr can be created with same recID but with list of entities
-  // now available. The MLIR translation code takes care of updating the
-  // references. Note that references will be updated only in the things that
-  // are part of DISubprogramAttr (like DIImportedEntityAttr) so we have to
-  // create the final DISubprogramAttr before we process local variables.
-  // Look at DIRecursiveTypeAttrInterface for more details.
-
-  auto spAttr = mlir::LLVM::DISubprogramAttr::get(
-      context, recId, /*isRecSelf=*/true, id, compilationUnit, Scope, funcName,
-      fullName, funcFileAttr, line, line, subprogramFlags, subTypeAttr,
-      /*retainedNodes=*/{}, /*annotations=*/{});
-
-  // There is no direct information in the IR for any 'use' statement in the
-  // function. We have to extract that information from the DeclareOp. We do
-  // a pass on the DeclareOp and generate ModuleAttr and corresponding
-  // DIImportedEntityAttr for that module.
-  // FIXME: As we are depending on the variables to see which module is being
-  // 'used' in the function, there are certain limitations.
-  // For things like 'use mod1, only: v1', whole module will be brought into the
-  // namespace in the debug info. It is not a problem as such unless there is a
-  // clash of names.
-  // There is no information about module variable renaming
-  llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> importedModules;
-  funcOp.walk([&](fir::cg::XDeclareOp declOp) {
-    if (&funcOp.front() == declOp->getBlock())
-      if (auto global =
-              symbolTable->lookup<fir::GlobalOp>(declOp.getUniqName())) {
-        std::optional<mlir::LLVM::DIModuleAttr> modOpt =
-            getModuleAttrFromGlobalOp(global, fileAttr, cuAttr);
-        if (modOpt) {
-          auto importedEntity = mlir::LLVM::DIImportedEntityAttr::get(
-              context, llvm::dwarf::DW_TAG_imported_module, spAttr, *modOpt,
-              fileAttr, /*line=*/1, /*name=*/nullptr, /*elements*/ {});
-          importedModules.insert(importedEntity);
-        }
-      }
+  // Check if there are any USE statements
+  bool hasUseStmts = false;
+  funcOp.walk([&](fir::UseStmtOp useOp) {
+    hasUseStmts = true;
+    return mlir::WalkResult::interrupt();
   });
-  llvm::SmallVector<mlir::LLVM::DINodeAttr> entities(importedModules.begin(),
-                                                     importedModules.end());
-  // We have the imported entities now. Generate the final DISubprogramAttr.
-  spAttr = mlir::LLVM::DISubprogramAttr::get(
-      context, recId, /*isRecSelf=*/false, id2, compilationUnit, Scope,
-      funcName, fullName, funcFileAttr, line, line, subprogramFlags,
-      subTypeAttr, entities, /*annotations=*/{});
+
+  mlir::LLVM::DISubprogramAttr spAttr;
+  llvm::SmallVector<mlir::LLVM::DINodeAttr> retainedNodes;
+
+  if (hasUseStmts) {
+    mlir::DistinctAttr recId =
+        mlir::DistinctAttr::create(mlir::UnitAttr::get(context));
+    // The debug attribute in MLIR are readonly once created. But in case of
+    // imported entities, we have a circular dependency. The
+    // DIImportedEntityAttr requires scope information (DISubprogramAttr in this
+    // case) and DISubprogramAttr requires the list of imported entities. The
+    // MLIR provides a way where a DISubprogramAttr an be created with a certain
+    // recID and be used in places like DIImportedEntityAttr. After that another
+    // DISubprogramAttr can be created with same recID but with list of entities
+    // now available. The MLIR translation code takes care of updating the
+    // references. Note that references will be updated only in the things that
+    // are part of DISubprogramAttr (like DIImportedEntityAttr) so we have to
+    // create the final DISubprogramAttr before we process local variables.
+    // Look at DIRecursiveTypeAttrInterface for more details.
+    spAttr = mlir::LLVM::DISubprogramAttr::get(
+        context, recId, /*isRecSelf=*/true, id, compilationUnit, Scope,
+        funcName, fullName, funcFileAttr, line, line, subprogramFlags,
+        subTypeAttr, /*retainedNodes=*/{}, /*annotations=*/{});
+
+    // Process USE statements (module globals are already processed)
+    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> importedEntities;
+    handleUseStatements(funcOp, spAttr, fileAttr, cuAttr, symbolTable,
+                        importedEntities);
+
+    retainedNodes.append(importedEntities.begin(), importedEntities.end());
+
+    // Create final DISubprogramAttr with imported entities and same recId
+    spAttr = mlir::LLVM::DISubprogramAttr::get(
+        context, recId, /*isRecSelf=*/false, id2, compilationUnit, Scope,
+        funcName, fullName, funcFileAttr, line, line, subprogramFlags,
+        subTypeAttr, retainedNodes, /*annotations=*/{});
+  } else
+    // No USE statements - create final DISubprogramAttr directly
+    spAttr = mlir::LLVM::DISubprogramAttr::get(
+        context, id, compilationUnit, Scope, funcName, fullName, funcFileAttr,
+        line, line, subprogramFlags, subTypeAttr, /*retainedNodes=*/{},
+        /*annotations=*/{});
+
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
-  addTargetOpDISP(/*lineTableOnly=*/false, entities);
+  addTargetOpDISP(/*lineTableOnly=*/false, retainedNodes);
 
   // Find the first dummy_scope definition. This is the one of the current
   // function. The other ones may come from inlined calls. The variables inside
@@ -645,21 +741,123 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   });
 
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
-    mlir::LLVM::DISubprogramAttr spTy = spAttr;
-    if (auto tOp = declOp->getParentOfType<mlir::omp::TargetOp>()) {
-      if (auto fusedLoc = llvm::dyn_cast<mlir::FusedLoc>(tOp.getLoc())) {
-        if (auto sp = llvm::dyn_cast<mlir::LLVM::DISubprogramAttr>(
-                fusedLoc.getMetadata()))
-          spTy = sp;
-      }
-    }
+    mlir::LLVM::DISubprogramAttr spTy = getScope(declOp, spAttr);
     handleDeclareOp(declOp, fileAttr, spTy, typeGen, symbolTable, dummyScope);
+  });
+  funcOp.walk([&](fir::DeclareValueOp declOp) {
+    mlir::LLVM::DISubprogramAttr spTy = getScope(declOp, spAttr);
+    handleDeclareValueOp(declOp, fileAttr, spTy, typeGen, symbolTable,
+                         dummyScope);
   });
   // commonBlockMap ensures that we don't create multiple DICommonBlockAttr of
   // the same name in one function. But it is ok (rather required) to create
   // them in different functions if common block of the same name has been used
   // there.
   commonBlockMap.clear();
+}
+
+// Helper function to create a DIImportedEntityAttr for an imported declaration.
+// Looks up the DIGlobalVariable for the given symbol and creates an imported
+// declaration with the optional local name (for renames).
+// Returns std::nullopt if the symbol's DIGlobalVariable is not found.
+std::optional<mlir::LLVM::DIImportedEntityAttr>
+AddDebugInfoPass::createImportedDeclForGlobal(
+    llvm::StringRef symbolName, mlir::LLVM::DISubprogramAttr spAttr,
+    mlir::LLVM::DIFileAttr fileAttr, mlir::StringAttr localNameAttr,
+    mlir::SymbolTable *symbolTable) {
+  mlir::MLIRContext *context = &getContext();
+  if (auto gvAttr = lookupDIGlobalVariable(symbolName, symbolTable)) {
+    return mlir::LLVM::DIImportedEntityAttr::get(
+        context, llvm::dwarf::DW_TAG_imported_declaration, spAttr, *gvAttr,
+        fileAttr, /*line=*/1, /*name=*/localNameAttr, /*elements*/ {});
+  }
+  return std::nullopt;
+}
+
+// Process USE with ONLY clause
+void AddDebugInfoPass::handleOnlyClause(
+    fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
+    mlir::LLVM::DIFileAttr fileAttr, mlir::SymbolTable *symbolTable,
+    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
+  // Process ONLY symbols (without renames)
+  if (auto onlySymbols = useOp.getOnlySymbols()) {
+    for (mlir::Attribute attr : *onlySymbols) {
+      auto symbolRef = mlir::cast<mlir::FlatSymbolRefAttr>(attr);
+      if (auto importedDecl = createImportedDeclForGlobal(
+              symbolRef.getValue(), spAttr, fileAttr, mlir::StringAttr(),
+              symbolTable))
+        importedModules.insert(*importedDecl);
+    }
+  }
+
+  // Process renames within ONLY clause
+  if (auto renames = useOp.getRenames()) {
+    for (auto attr : *renames) {
+      auto renameAttr = mlir::cast<fir::UseRenameAttr>(attr);
+      if (auto importedDecl = createImportedDeclForGlobal(
+              renameAttr.getSymbol().getValue(), spAttr, fileAttr,
+              renameAttr.getLocalName(), symbolTable))
+        importedModules.insert(*importedDecl);
+    }
+  }
+}
+
+// Process USE with renames but no ONLY clause
+void AddDebugInfoPass::handleRenamesWithoutOnly(
+    fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
+    mlir::LLVM::DIModuleAttr modAttr, mlir::LLVM::DIFileAttr fileAttr,
+    mlir::SymbolTable *symbolTable,
+    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedModules) {
+  mlir::MLIRContext *context = &getContext();
+  llvm::SmallVector<mlir::LLVM::DINodeAttr> childDeclarations;
+
+  if (auto renames = useOp.getRenames()) {
+    for (auto attr : *renames) {
+      auto renameAttr = mlir::cast<fir::UseRenameAttr>(attr);
+      if (auto importedDecl = createImportedDeclForGlobal(
+              renameAttr.getSymbol().getValue(), spAttr, fileAttr,
+              renameAttr.getLocalName(), symbolTable))
+        childDeclarations.push_back(*importedDecl);
+    }
+  }
+
+  // Create module import with renamed declarations as children
+  auto moduleImport = mlir::LLVM::DIImportedEntityAttr::get(
+      context, llvm::dwarf::DW_TAG_imported_module, spAttr, modAttr, fileAttr,
+      /*line=*/1, /*name=*/nullptr, childDeclarations);
+  importedModules.insert(moduleImport);
+}
+
+// Process all USE statements in a function and collect imported entities
+void AddDebugInfoPass::handleUseStatements(
+    mlir::func::FuncOp funcOp, mlir::LLVM::DISubprogramAttr spAttr,
+    mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
+    mlir::SymbolTable *symbolTable,
+    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> &importedEntities) {
+  mlir::MLIRContext *context = &getContext();
+
+  funcOp.walk([&](fir::UseStmtOp useOp) {
+    mlir::LLVM::DIModuleAttr modAttr = getOrCreateModuleAttr(
+        useOp.getModuleName().str(), fileAttr, cuAttr, /*line=*/1,
+        /*decl=*/true);
+
+    llvm::DenseSet<mlir::LLVM::DIImportedEntityAttr> importedModules;
+
+    if (useOp.hasOnlyClause())
+      handleOnlyClause(useOp, spAttr, fileAttr, symbolTable, importedModules);
+    else if (useOp.hasRenames())
+      handleRenamesWithoutOnly(useOp, spAttr, modAttr, fileAttr, symbolTable,
+                               importedModules);
+    else {
+      // Simple module import
+      auto importedEntity = mlir::LLVM::DIImportedEntityAttr::get(
+          context, llvm::dwarf::DW_TAG_imported_module, spAttr, modAttr,
+          fileAttr, /*line=*/1, /*name=*/nullptr, /*elements*/ {});
+      importedModules.insert(importedEntity);
+    }
+
+    importedEntities.insert(importedModules.begin(), importedModules.end());
+  });
 }
 
 void AddDebugInfoPass::runOnOperation() {
@@ -724,6 +922,26 @@ void AddDebugInfoPass::runOnOperation() {
       /*nameTableKind=*/mlir::LLVM::DINameTableKind::Default,
       splitDwarfFile.empty() ? mlir::StringAttr()
                              : mlir::StringAttr::get(context, splitDwarfFile));
+
+  // Process module globals early.
+  // Walk through all DeclareOps in functions and process globals that are
+  // module variables. This ensures that when we process USE statements,
+  // the DIGlobalVariable lookups will succeed.
+  if (debugLevel == mlir::LLVM::DIEmissionKind::Full) {
+    module.walk([&](fir::cg::XDeclareOp declOp) {
+      mlir::Operation *defOp = declOp.getMemref().getDefiningOp();
+      if (defOp && llvm::isa<fir::AddrOfOp>(defOp)) {
+        if (auto globalOp =
+                symbolTable.lookup<fir::GlobalOp>(declOp.getUniqName())) {
+          // Only process module variables here, not SAVE variables
+          if (isModuleVariable(globalOp)) {
+            handleGlobalOp(globalOp, fileAttr, cuAttr, typeGen, &symbolTable,
+                           declOp);
+          }
+        }
+      }
+    });
+  }
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     handleFuncOp(funcOp, fileAttr, cuAttr, typeGen, &symbolTable);

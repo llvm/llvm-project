@@ -60,7 +60,6 @@
 // as "not reading" and/or "not writing".
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
-
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
@@ -71,6 +70,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -99,9 +99,9 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
   SmallVector<int64_t> equivBbArgs;
   if (op->hasAttr(kEquivalentArgsAttr)) {
     auto attr = cast<ArrayAttr>(op->getAttr(kEquivalentArgsAttr));
-    equivBbArgs = llvm::to_vector<4>(llvm::map_range(attr, [](Attribute a) {
+    equivBbArgs = llvm::map_to_vector<4>(attr, [](Attribute a) {
       return cast<IntegerAttr>(a).getValue().getSExtValue();
-    }));
+    });
   } else {
     equivBbArgs.append(op->getNumOperands(), -1);
   }
@@ -136,7 +136,11 @@ aliasingFuncOpBBArgsAnalysis(FuncOp funcOp, OneShotAnalysisState &state,
 
   // Find all func.return ops.
   SmallVector<func::ReturnOp> returnOps = getReturnOps(funcOp);
-  assert(!returnOps.empty() && "expected at least one ReturnOp");
+  // TODO: throw error when there is any non-func.return op that has the
+  // ReturnLike trait
+  if (returnOps.empty()) {
+    return funcOp.emitError("cannot bufferize func.func without func.return");
+  }
 
   // Build alias sets. Merge all aliases from all func.return ops.
   for (BlockArgument bbArg : funcOp.getArguments()) {

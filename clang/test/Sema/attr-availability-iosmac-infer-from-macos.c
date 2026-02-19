@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 "-triple" "x86_64-apple-ios13.1-macabi" -isysroot %S/Inputs/MacOSX11.0.sdk -fsyntax-only -verify %s
-// RUN: %clang_cc1 "-triple" "x86_64-apple-ios14-macabi" -isysroot %S/Inputs/MacOSX11.0.sdk -DIOS14 -fsyntax-only -verify %s
+// RUN: %clang_cc1 "-triple" "x86_64-apple-ios14.2-macabi" -isysroot %S/Inputs/MacOSX11.0.sdk -DIOS14 -fsyntax-only -verify %s
 
 void f0(void) __attribute__((availability(macOS, introduced = 10.11)));
 void f1(void) __attribute__((availability(macOS, introduced = 10.15)));
@@ -35,7 +35,7 @@ void usage(void) {
   fAvail();
   f16();
 #ifndef IOS14
-  // expected-warning@-2 {{'f16' is only available on macCatalyst 14.0 or newer}} expected-note@-2 {{enclose}}
+  // expected-warning@-2 {{'f16' is only available on macCatalyst 14.2 or newer}} expected-note@-2 {{enclose}}
 #endif
   fObs(); // expected-error {{'fObs' is unavailable: obsoleted in macCatalyst 13.1}}
   fAPItoDepr();

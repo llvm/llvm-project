@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WasmAddressSpaces.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
@@ -194,8 +195,10 @@ private:
 public:
   // Backend specific FastISel code.
   WebAssemblyFastISel(FunctionLoweringInfo &FuncInfo,
-                      const TargetLibraryInfo *LibInfo)
-      : FastISel(FuncInfo, LibInfo, /*SkipTargetIndependentISel=*/true) {
+                      const TargetLibraryInfo *LibInfo,
+                      const LibcallLoweringInfo *LibcallLowering)
+      : FastISel(FuncInfo, LibInfo, LibcallLowering,
+                 /*SkipTargetIndependentISel=*/true) {
     Subtarget = &FuncInfo.MF->getSubtarget<WebAssemblySubtarget>();
     Context = &FuncInfo.Fn->getContext();
   }
@@ -475,8 +478,8 @@ unsigned WebAssemblyFastISel::zeroExtendToI32(unsigned Reg, const Value *V,
       .addImm(~(~uint64_t(0) << MVT(From).getSizeInBits()));
 
   Register Result = createResultReg(&WebAssembly::I32RegClass);
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(WebAssembly::AND_I32), Result)
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(WebAssembly::AND_I32),
+          Result)
       .addReg(Reg)
       .addReg(Imm);
 
@@ -499,14 +502,26 @@ unsigned WebAssemblyFastISel::signExtendToI32(unsigned Reg, const Value *V,
     return 0;
   }
 
+  if (Subtarget->hasSignExt()) {
+    if (From == MVT::i8 || From == MVT::i16) {
+      Register Result = createResultReg(&WebAssembly::I32RegClass);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+              TII.get(From == MVT::i16 ? WebAssembly::I32_EXTEND16_S_I32
+                                       : WebAssembly::I32_EXTEND8_S_I32),
+              Result)
+          .addReg(Reg);
+      return Result;
+    }
+  }
+
   Register Imm = createResultReg(&WebAssembly::I32RegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
           TII.get(WebAssembly::CONST_I32), Imm)
       .addImm(32 - MVT(From).getSizeInBits());
 
   Register Left = createResultReg(&WebAssembly::I32RegClass);
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(WebAssembly::SHL_I32), Left)
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(WebAssembly::SHL_I32),
+          Left)
       .addReg(Reg)
       .addReg(Imm);
 
@@ -548,12 +563,45 @@ unsigned WebAssemblyFastISel::signExtend(unsigned Reg, const Value *V,
     if (From == MVT::i64)
       return copyValue(Reg);
 
-    Reg = signExtendToI32(Reg, V, From);
-
     Register Result = createResultReg(&WebAssembly::I64RegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
-        .addReg(Reg);
+
+    if (Subtarget->hasSignExt()) {
+      if (From != MVT::i32) {
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                TII.get(WebAssembly::I64_EXTEND_U_I32), Result)
+            .addReg(Reg);
+
+        Reg = Result;
+        Result = createResultReg(&WebAssembly::I64RegClass);
+      }
+
+      switch (From) {
+      case MVT::i8:
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                TII.get(WebAssembly::I64_EXTEND8_S_I64), Result)
+            .addReg(Reg);
+        return Result;
+      case MVT::i16:
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                TII.get(WebAssembly::I64_EXTEND16_S_I64), Result)
+            .addReg(Reg);
+        return Result;
+      case MVT::i32:
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
+            .addReg(Reg);
+        return Result;
+      default:
+        break;
+      }
+    } else {
+      Reg = signExtendToI32(Reg, V, From);
+
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+              TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
+          .addReg(Reg);
+    }
+
     return Result;
   }
 
@@ -594,8 +642,8 @@ unsigned WebAssemblyFastISel::notValue(unsigned Reg) {
   assert(MRI.getRegClass(Reg) == &WebAssembly::I32RegClass);
 
   Register NotReg = createResultReg(&WebAssembly::I32RegClass);
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(WebAssembly::EQZ_I32), NotReg)
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(WebAssembly::EQZ_I32),
+          NotReg)
       .addReg(Reg);
   return NotReg;
 }
@@ -769,6 +817,11 @@ bool WebAssemblyFastISel::fastLowerArguments() {
 
 bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   const auto *Call = cast<CallInst>(I);
+
+  // FastISel does not support calls through funcref
+  if (Call->getCalledOperand()->getType()->getPointerAddressSpace() !=
+      WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_DEFAULT)
+    return false;
 
   // TODO: Support tail calls in FastISel
   if (Call->isMustTailCall() || Call->isInlineAsm() ||
@@ -1202,8 +1255,8 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
     return true;
   }
 
-  Register Reg = fastEmit_ISD_BITCAST_r(VT.getSimpleVT(), RetVT.getSimpleVT(),
-                                        In);
+  Register Reg =
+      fastEmit_ISD_BITCAST_r(VT.getSimpleVT(), RetVT.getSimpleVT(), In);
   if (!Reg)
     return false;
   MachineBasicBlock::iterator Iter = FuncInfo.InsertPt;
@@ -1265,8 +1318,8 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   materializeLoadStoreOperands(Addr);
 
   Register ResultReg = createResultReg(RC);
-  auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc),
-                     ResultReg);
+  auto MIB =
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), ResultReg);
 
   addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Load));
 
@@ -1414,8 +1467,7 @@ bool WebAssemblyFastISel::selectRet(const Instruction *I) {
   if (Reg == 0)
     return false;
 
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(WebAssembly::RETURN))
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(WebAssembly::RETURN))
       .addReg(Reg);
   return true;
 }
@@ -1464,7 +1516,9 @@ bool WebAssemblyFastISel::fastSelectInstruction(const Instruction *I) {
   return selectOperator(I, I->getOpcode());
 }
 
-FastISel *WebAssembly::createFastISel(FunctionLoweringInfo &FuncInfo,
-                                      const TargetLibraryInfo *LibInfo) {
-  return new WebAssemblyFastISel(FuncInfo, LibInfo);
+FastISel *
+WebAssembly::createFastISel(FunctionLoweringInfo &FuncInfo,
+                            const TargetLibraryInfo *LibInfo,
+                            const LibcallLoweringInfo *LibcallLowering) {
+  return new WebAssemblyFastISel(FuncInfo, LibInfo, LibcallLowering);
 }

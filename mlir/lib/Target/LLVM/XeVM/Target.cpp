@@ -39,6 +39,13 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+// From llvm/lib/Target/SPIRV
+#if LLVM_HAS_SPIRV_TARGET
+#include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "SPIRVCommandLine.h"
+#include "SPIRVSubtarget.h"
+#include "SPIRVTargetMachine.h"
+#endif
 
 #include <cstdint>
 #include <cstdlib>
@@ -51,12 +58,12 @@ namespace {
 class XeVMTargetAttrImpl
     : public gpu::TargetAttrInterface::FallbackModel<XeVMTargetAttrImpl> {
 public:
-  std::optional<SmallVector<char, 0>>
+  std::optional<mlir::gpu::SerializedObject>
   serializeToObject(Attribute attribute, Operation *module,
                     const gpu::TargetOptions &options) const;
 
   Attribute createObject(Attribute attribute, Operation *module,
-                         const SmallVector<char, 0> &object,
+                         const mlir::gpu::SerializedObject &object,
                          const gpu::TargetOptions &options) const;
 };
 } // namespace
@@ -107,51 +114,49 @@ gpu::GPUModuleOp SerializeGPUModuleBase::getGPUModuleOp() {
 // There are 2 ways to access IGC: AOT (ocloc) and JIT (L0 runtime).
 // - L0 runtime consumes IL and is external to MLIR codebase (rt wrappers).
 // - `ocloc` tool can be "queried" from within MLIR.
-std::optional<SmallVector<char, 0>>
-SerializeGPUModuleBase::compileToBinary(const std::string &asmStr,
+FailureOr<SmallVector<char, 0>>
+SerializeGPUModuleBase::compileToBinary(StringRef asmStr,
                                         StringRef inputFormat) {
   using TmpFile = std::pair<llvm::SmallString<128>, llvm::FileRemover>;
   // Find the `ocloc` tool.
   std::optional<std::string> oclocCompiler = findTool("ocloc");
   if (!oclocCompiler)
-    return std::nullopt;
+    return failure();
   Location loc = getGPUModuleOp().getLoc();
   std::string basename = llvm::formatv(
       "mlir-{0}-{1}-{2}", getGPUModuleOp().getNameAttr().getValue(),
       getTarget().getTriple(), getTarget().getChip());
 
   auto createTemp = [&](StringRef name,
-                        StringRef suffix) -> std::optional<TmpFile> {
+                        StringRef suffix) -> FailureOr<TmpFile> {
     llvm::SmallString<128> filePath;
-    if (auto ec = llvm::sys::fs::createTemporaryFile(name, suffix, filePath)) {
-      getGPUModuleOp().emitError()
-          << "Couldn't create the temp file: `" << filePath
-          << "`, error message: " << ec.message();
-      return std::nullopt;
-    }
+    if (auto ec = llvm::sys::fs::createTemporaryFile(name, suffix, filePath))
+      return getGPUModuleOp().emitError()
+             << "Couldn't create the temp file: `" << filePath
+             << "`, error message: " << ec.message();
+
     return TmpFile(filePath, llvm::FileRemover(filePath.c_str()));
   };
   // Create temp file
-  std::optional<TmpFile> asmFile = createTemp(basename, "asm");
-  std::optional<TmpFile> binFile = createTemp(basename, "");
-  std::optional<TmpFile> logFile = createTemp(basename, "log");
-  if (!logFile || !asmFile || !binFile)
-    return std::nullopt;
+  FailureOr<TmpFile> asmFile = createTemp(basename, "asm");
+  FailureOr<TmpFile> binFile = createTemp(basename, "");
+  FailureOr<TmpFile> logFile = createTemp(basename, "log");
+  if (failed(logFile) || failed(asmFile) || failed(binFile))
+    return failure();
   // Dump the assembly to a temp file
   std::error_code ec;
   {
     llvm::raw_fd_ostream asmStream(asmFile->first, ec);
-    if (ec) {
-      emitError(loc) << "Couldn't open the file: `" << asmFile->first
-                     << "`, error message: " << ec.message();
-      return std::nullopt;
-    }
+    if (ec)
+      return emitError(loc) << "Couldn't open the file: `" << asmFile->first
+                            << "`, error message: " << ec.message();
+
     asmStream << asmStr;
-    if (asmStream.has_error()) {
-      emitError(loc) << "An error occurred while writing the assembly to: `"
-                     << asmFile->first << "`.";
-      return std::nullopt;
-    }
+    if (asmStream.has_error())
+      return emitError(loc)
+             << "An error occurred while writing the assembly to: `"
+             << asmFile->first << "`.";
+
     asmStream.flush();
   }
   // Set cmd options
@@ -176,20 +181,18 @@ SerializeGPUModuleBase::compileToBinary(const std::string &asmStr,
   // Helper function for printing tool error logs.
   std::string message;
   auto emitLogError =
-      [&](StringRef toolName) -> std::optional<SmallVector<char, 0>> {
+      [&](StringRef toolName) -> FailureOr<SmallVector<char, 0>> {
     if (message.empty()) {
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> toolStderr =
           llvm::MemoryBuffer::getFile(logFile->first);
       if (toolStderr)
-        emitError(loc) << toolName << " invocation failed. Log:\n"
-                       << toolStderr->get()->getBuffer();
+        return emitError(loc) << toolName << " invocation failed. Log:\n"
+                              << toolStderr->get()->getBuffer();
       else
-        emitError(loc) << toolName << " invocation failed.";
-      return std::nullopt;
+        return emitError(loc) << toolName << " invocation failed.";
     }
-    emitError(loc) << toolName
-                   << " invocation failed, error message: " << message;
-    return std::nullopt;
+    return emitError(loc) << toolName
+                          << " invocation failed, error message: " << message;
   };
   std::optional<StringRef> redirects[] = {
       std::nullopt,
@@ -203,11 +206,11 @@ SerializeGPUModuleBase::compileToBinary(const std::string &asmStr,
   binFile->first.append(".bin");
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> binaryBuffer =
       llvm::MemoryBuffer::getFile(binFile->first);
-  if (!binaryBuffer) {
-    emitError(loc) << "Couldn't open the file: `" << binFile->first
-                   << "`, error message: " << binaryBuffer.getError().message();
-    return std::nullopt;
-  }
+  if (!binaryBuffer)
+    return emitError(loc) << "Couldn't open the file: `" << binFile->first
+                          << "`, error message: "
+                          << binaryBuffer.getError().message();
+
   StringRef bin = (*binaryBuffer)->getBuffer();
   return SmallVector<char, 0>(bin.begin(), bin.end());
 }
@@ -243,9 +246,13 @@ public:
 
   static void init();
 
+  /// Runs the serialization pipeline, returning `std::nullopt` on error.
+  std::optional<SmallVector<char, 0>> run() override;
+
+protected:
   /// Serializes the LLVM module to an object format, depending on the
   /// compilation target selected in target options.
-  std::optional<SmallVector<char, 0>>
+  FailureOr<SmallVector<char, 0>>
   moduleToObject(llvm::Module &llvmModule) override;
 
 private:
@@ -269,45 +276,117 @@ void SPIRVSerializer::init() {
   });
 }
 
-std::optional<SmallVector<char, 0>>
-SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
+#if LLVM_HAS_SPIRV_TARGET
+static const std::vector<std::string> getDefaultSPIRVExtensions() {
+  return {
+      "SPV_EXT_relaxed_printf_string_address_space",
+      "SPV_INTEL_cache_controls",
+      "SPV_INTEL_variable_length_array",
+  };
+}
+#endif
+
+std::optional<SmallVector<char, 0>> SPIRVSerializer::run() {
+  // Translate the module to LLVM IR.
+  llvm::LLVMContext llvmContext;
+  std::unique_ptr<llvm::Module> llvmModule = translateToLLVMIR(llvmContext);
+  if (!llvmModule) {
+    getOperation().emitError() << "Failed creating the llvm::Module.";
+    return std::nullopt;
+  }
+
 #define DEBUG_TYPE "serialize-to-llvm"
   LLVM_DEBUG({
     llvm::dbgs() << "LLVM IR for module: " << getGPUModuleOp().getNameAttr()
                  << "\n";
-    llvm::dbgs() << llvmModule << "\n";
+    llvm::dbgs() << *llvmModule << "\n";
     llvm::dbgs().flush();
   });
 #undef DEBUG_TYPE
 
   // Return LLVM IR if the compilation target is `offload`.
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
-    return SerializeGPUModuleBase::moduleToObject(llvmModule);
+    return SerializeGPUModuleBase::moduleToObject(*llvmModule);
 
-#if !LLVM_HAS_SPIRV_TARGET
-  getGPUModuleOp()->emitError("The `SPIRV` target was not built. Please enable "
-                              "it when building LLVM.");
-  return std::nullopt;
-#endif // LLVM_HAS_SPIRV_TARGET
+#if LLVM_HAS_SPIRV_TARGET
+  setDataLayoutAndTriple(*llvmModule);
 
-  std::optional<llvm::TargetMachine *> targetMachine =
-      getOrCreateTargetMachine();
-  if (!targetMachine) {
-    getGPUModuleOp().emitError() << "Target Machine unavailable for triple "
-                                 << triple << ", can't optimize with LLVM\n";
+  // Create the target machine.
+  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+  if (failed(targetMachine)) {
+    getOperation().emitError()
+        << "Target Machine unavailable for triple " << triple
+        << ", can't output compilation target.\n";
     return std::nullopt;
   }
+  // Setup allowed SPIR-V extensions.
+  std::set<llvm::SPIRV::Extension::Extension> AllowedExtIds;
+  llvm::StringRef UnknownExt = llvm::SPIRVExtensionsParser::checkExtensions(
+      getDefaultSPIRVExtensions(), AllowedExtIds);
+  if (!UnknownExt.empty()) {
+    std::string ErrMsg{"Unknown SPIR-V extension: "};
+    ErrMsg.append(UnknownExt.str());
+    getOperation().emitError() << ErrMsg;
+    return std::nullopt;
+  }
+
+  llvm::SPIRVTargetMachine *STM =
+      static_cast<llvm::SPIRVTargetMachine *>(*targetMachine);
+  const_cast<llvm::SPIRVSubtarget *>(STM->getSubtargetImpl())
+      ->initAvailableExtensions(AllowedExtIds);
+
+  if (initialLlvmIRCallback)
+    initialLlvmIRCallback(*llvmModule);
+
+  // Link bitcode files.
+  handleModulePreLink(*llvmModule);
+  {
+    auto libs = loadBitcodeFiles(*llvmModule);
+    if (!libs)
+      return std::nullopt;
+    if (!libs->empty())
+      if (failed(linkFiles(*llvmModule, std::move(*libs))))
+        return std::nullopt;
+    handleModulePostLink(*llvmModule);
+  }
+
+  if (linkedLlvmIRCallback)
+    linkedLlvmIRCallback(*llvmModule);
+
+  // Optimize the module.
+  if (failed(optimizeModule(*llvmModule, optLevel)))
+    return std::nullopt;
+
+  if (optimizedLlvmIRCallback)
+    optimizedLlvmIRCallback(*llvmModule);
+
+  // Return the serialized object.
+  return moduleToObject(*llvmModule);
+#else
+  getOperation().emitError("The `SPIRV` target was not built. Please enable "
+                           "it when building LLVM.");
+  return std::nullopt;
+#endif // LLVM_HAS_SPIRV_TARGET
+}
+
+FailureOr<SmallVector<char, 0>>
+SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
+  FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
+  if (failed(targetMachine))
+    return getGPUModuleOp().emitError()
+           << "Target Machine unavailable for triple " << triple
+           << ", can't optimize with LLVM\n";
 
   // Return SPIRV if the compilation target is `assembly`.
   if (targetOptions.getCompilationTarget() ==
       gpu::CompilationTarget::Assembly) {
-    std::optional<std::string> serializedISA =
-        translateToISA(llvmModule, **targetMachine);
-    if (!serializedISA) {
-      getGPUModuleOp().emitError() << "Failed translating the module to ISA."
-                                   << triple << ", can't compile with LLVM\n";
-      return std::nullopt;
-    }
+    FailureOr<SmallString<0>> serializedISA =
+        translateModuleToISA(llvmModule, **targetMachine,
+                             [&]() { return getGPUModuleOp().emitError(); });
+    if (failed(serializedISA))
+      return getGPUModuleOp().emitError()
+             << "Failed translating the module to ISA." << triple
+             << ", can't compile with LLVM\n";
 
 #define DEBUG_TYPE "serialize-to-isa"
     LLVM_DEBUG({
@@ -330,14 +409,14 @@ SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
   // implementation switches to native XeVM binary format.
   std::optional<std::string> serializedSPIRVBinary =
       translateToSPIRVBinary(llvmModule, **targetMachine);
-  if (!serializedSPIRVBinary) {
-    getGPUModuleOp().emitError() << "Failed translating the module to Binary.";
-    return std::nullopt;
-  }
-  if (serializedSPIRVBinary->size() % 4) {
-    getGPUModuleOp().emitError() << "SPIRV code size must be a multiple of 4.";
-    return std::nullopt;
-  }
+  if (!serializedSPIRVBinary)
+    return getGPUModuleOp().emitError()
+           << "Failed translating the module to Binary.";
+
+  if (serializedSPIRVBinary->size() % 4)
+    return getGPUModuleOp().emitError()
+           << "SPIRV code size must be a multiple of 4.";
+
   StringRef bin(serializedSPIRVBinary->c_str(), serializedSPIRVBinary->size());
   return SmallVector<char, 0>(bin.begin(), bin.end());
 }
@@ -360,7 +439,7 @@ SPIRVSerializer::translateToSPIRVBinary(llvm::Module &llvmModule,
   return targetISA;
 }
 
-std::optional<SmallVector<char, 0>>
+std::optional<mlir::gpu::SerializedObject>
 XeVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
                                       const gpu::TargetOptions &options) const {
   if (!module)
@@ -389,7 +468,10 @@ XeVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
                       "without having the target built.");
 #endif
 
-    return serializer.run();
+    std::optional<SmallVector<char, 0>> binary = serializer.run();
+    if (!binary)
+      return std::nullopt;
+    return gpu::SerializedObject{std::move(*binary)};
   }
   module->emitError("Unsupported XeVM target triple: ") << xeTarget.getTriple();
   return std::nullopt;
@@ -397,7 +479,7 @@ XeVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
 
 Attribute
 XeVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
-                                 const SmallVector<char, 0> &object,
+                                 const mlir::gpu::SerializedObject &object,
                                  const gpu::TargetOptions &options) const {
   Builder builder(attribute.getContext());
   gpu::CompilationTarget format = options.getCompilationTarget();
@@ -413,6 +495,7 @@ XeVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
 
   return builder.getAttr<gpu::ObjectAttr>(
       attribute, format,
-      builder.getStringAttr(StringRef(object.data(), object.size())),
+      builder.getStringAttr(
+          StringRef(object.getObject().data(), object.getObject().size())),
       objectProps, /*kernels=*/nullptr);
 }

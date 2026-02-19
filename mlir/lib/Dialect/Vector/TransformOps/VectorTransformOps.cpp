@@ -130,7 +130,27 @@ void transform::ApplyLowerMultiReductionPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::VectorTransformsOptions vectorTransformOptions;
   vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
-  vector::populateVectorMultiReductionLoweringPatterns(
+  vector::populateVectorMultiReductionReorderAndExpandPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
+  vector::populateVectorMultiReductionFlatteningPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
+  vector::populateVectorMultiReductionUnrollingPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
+}
+
+void transform::ApplyReorderAndExpandMultiReductionPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::VectorTransformsOptions vectorTransformOptions;
+  vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
+  vector::populateVectorMultiReductionReorderAndExpandPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
+}
+
+void transform::ApplyMultiReductionFlatteningPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::VectorTransformsOptions vectorTransformOptions;
+  vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
+  vector::populateVectorMultiReductionFlatteningPatterns(
       patterns, vectorTransformOptions.vectorMultiReductionLowering);
 }
 
@@ -225,6 +245,12 @@ void transform::ApplySinkVectorPatternsOp::populatePatterns(
 void transform::ApplySinkVectorMemPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateSinkVectorMemOpsPatterns(patterns);
+}
+
+void transform::ApplyFlattenVectorTransferOpsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateFlattenVectorTransferPatterns(patterns,
+                                                getTargetVectorBitwidth());
 }
 
 //===----------------------------------------------------------------------===//

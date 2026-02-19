@@ -21,7 +21,7 @@
  */
 enum Color {
   // MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-  // HTML-INDEX-LINE-NOT: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+  // HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
   Red,   ///< Comment 1
   Green, ///< Comment 2
   Blue   ///< Comment 3
@@ -64,7 +64,7 @@ enum Color {
  */
 enum class Shapes {
   // MD-INDEX-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-  // HTML-INDEX-LINE-NOT: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+  // HTML-INDEX-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 
   /// Comment 1
   Circle,
@@ -115,25 +115,47 @@ public:
    */
   enum AnimalType {
     // MD-ANIMAL-LINE: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#[[@LINE-1]]*
-    // HTML-ANIMAL-LINE-NOT: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
+    // HTML-ANIMAL-LINE: <p>Defined at line [[@LINE-2]] of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
     Dog,   ///< Man's best friend
     Cat,   ///< Man's other best friend
     Iguana ///< A lizard
   };
 };
 
-// HTML-ANIMAL-NOT: <h1>class Animals</h1>
-// HTML-ANIMAL-NOT: <h2 id="Enums">Enums</h2>
-// HTML-ANIMAL-NOT: <th colspan="3">enum AnimalType</th>
-// HTML-ANIMAL-NOT: <td>Dog</td>
-// HTML-ANIMAL-NOT: <td>0</td>
-// HTML-ANIMAL-NOT: <p> Man&apos;s best friend</p>
-// HTML-ANIMAL-NOT: <td>Cat</td>
-// HTML-ANIMAL-NOT: <td>1</td>
-// HTML-ANIMAL-NOT: <p> Man&apos;s other best friend</p>
-// HTML-ANIMAL-NOT: <td>Iguana</td>
-// HTML-ANIMAL-NOT: <td>2</td>
-// HTML-ANIMAL-NOT: <p> A lizard</p>
+// HTML-ANIMAL:      <section id="Enums" class="section-container">
+// HTML-ANIMAL-NEXT:     <h2>Enumerations</h2>
+// HTML-ANIMAL-NEXT:     <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
+// HTML-ANIMAL-NEXT:         <div>
+// HTML-ANIMAL-NEXT:             <pre><code class="language-cpp code-clang-doc">enum AnimalType</code></pre>
+// HTML-ANIMAL-NEXT:         </div>
+// HTML-ANIMAL-NEXT:         <table class="table-wrapper">
+// HTML-ANIMAL-NEXT:             <tbody>
+// HTML-ANIMAL-NEXT:                 <tr>
+// HTML-ANIMAL-NEXT:                     <th>Name</th>
+// HTML-ANIMAL-NEXT:                     <th>Value</th>
+// HTML-ANIMAL-NEXT:                 </tr>
+// HTML-ANIMAL-NEXT:                 <tr>
+// HTML-ANIMAL-NEXT:                     <td>Dog</td>
+// HTML-ANIMAL-NEXT:                     <td>0</td>
+// HTML-ANIMAL-NEXT:                 </tr>
+// HTML-ANIMAL-NEXT:                 <tr>
+// HTML-ANIMAL-NEXT:                     <td>Cat</td>
+// HTML-ANIMAL-NEXT:                     <td>1</td>
+// HTML-ANIMAL-NEXT:                 </tr>
+// HTML-ANIMAL-NEXT:                 <tr>
+// HTML-ANIMAL-NEXT:                     <td>Iguana</td>
+// HTML-ANIMAL-NEXT:                     <td>2</td>
+// HTML-ANIMAL-NEXT:                 </tr>
+// HTML-ANIMAL-NEXT:             </tbody>
+// HTML-ANIMAL-NEXT:         </table>
+// HTML-ANIMAL-NEXT:         <div class="doc-card">
+// HTML-ANIMAL-NEXT:             <div class="nested-delimiter-container">
+// HTML-ANIMAL-NEXT:                 <p> specify what animal the class is</p>
+// HTML-ANIMAL-NEXT:             </div>
+// HTML-ANIMAL-NEXT:         </div>
+// HTML-ANIMAL-NEXT:         <p>Defined at line 116 of file {{.*}}enum.cpp</p>
+// HTML-ANIMAL-NEXT:     </div>
+// HTML-ANIMAL-NEXT: </section>
 
 // MD-ANIMAL: # class Animals
 // MD-ANIMAL: ## Enums

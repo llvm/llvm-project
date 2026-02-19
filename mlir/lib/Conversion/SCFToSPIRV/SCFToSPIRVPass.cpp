@@ -19,6 +19,7 @@
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/IR/BuiltinOps.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFTOSPIRV
@@ -40,6 +41,7 @@ void SCFToSPIRVPass::runOnOperation() {
   auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
   std::unique_ptr<ConversionTarget> target =
       SPIRVConversionTarget::get(targetAttr);
+  target->addLegalOp<UnrealizedConversionCastOp>();
 
   SPIRVTypeConverter typeConverter(targetAttr);
   ScfToSPIRVContext scfContext;

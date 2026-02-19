@@ -92,16 +92,47 @@ def SDTVecLeaf:
 def SDTVecVecIntOp:
   SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1,2>,
                        SDTCisVT<3,i32>]>;
+def SDTIntBinOpWithCarryInOut:
+  SDTypeProfile<2, 3, [SDTCisInt<0>, SDTCisVT<1, i1>, SDTCisSameAs<2, 0>,
+                       SDTCisSameAs<3, 0>, SDTCisVT<4, i1>]>;
+
+// Add with carry: (X, Y, Cin) -> (X+Y, Cout).
+def HexagonADDC: SDNode<"HexagonISD::ADDC", SDTIntBinOpWithCarryInOut>;
+
+// Sub with carry: (X, Y, Cin) -> (X+~Y+Cin, Cout).
+def HexagonSUBC: SDNode<"HexagonISD::SUBC", SDTIntBinOpWithCarryInOut>;
+
+// Same as ISD::SMUL_LOHI, but opaque to the combiner.
+// We want to legalize MULH[SU] to [SU]MUL_LOHI, but the
+// combiner will keep rewriting it back to MULH[SU].
+def HexagonSMUL_LOHI: SDNode<"HexagonISD::SMUL_LOHI", SDTIntBinHiLoOp>;
+
+// Same as ISD::UMUL_LOHI, but opaque to the combiner.
+def HexagonUMUL_LOHI: SDNode<"HexagonISD::UMUL_LOHI", SDTIntBinHiLoOp>;
+
+// Like SMUL_LOHI, but unsigned*signed.
+def HexagonUSMUL_LOHI: SDNode<"HexagonISD::USMUL_LOHI", SDTIntBinHiLoOp>;
 
 def HexagonPTRUE:      SDNode<"HexagonISD::PTRUE",      SDTVecLeaf>;
 def HexagonPFALSE:     SDNode<"HexagonISD::PFALSE",     SDTVecLeaf>;
+
+// Align two vectors (in Op0, Op1) to one that would have
+// been loaded from address in Op2.
 def HexagonVALIGN:     SDNode<"HexagonISD::VALIGN",     SDTVecVecIntOp>;
+
+// Align vector address: Op0 & -Op1, except when it is
+// an address in a vector load, then it's a no-op.
 def HexagonVALIGNADDR: SDNode<"HexagonISD::VALIGNADDR", SDTIntUnaryOp>;
+
 def HexagonMULHUS:     SDNode<"HexagonISD::MULHUS",     SDTIntBinOp>;
 
 def SDTSaturate:
   SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>, SDTCisVT<2, OtherVT>]>;
+
+// Signed saturate.
 def HexagonSSAT: SDNode<"HexagonISD::SSAT", SDTSaturate>;
+
+// Unsigned saturate.
 def HexagonUSAT: SDNode<"HexagonISD::USAT", SDTSaturate>;
 
 def ptrue:  PatFrag<(ops), (HexagonPTRUE)>;
@@ -380,6 +411,7 @@ multiclass NopCast_pat<ValueType Ty1, ValueType Ty2, RegisterClass RC> {
 def Add: pf2<add>;    def And: pf2<and>;    def Sra: pf2<sra>;
 def Sub: pf2<sub>;    def Or:  pf2<or>;     def Srl: pf2<srl>;
 def Mul: pf2<mul>;    def Xor: pf2<xor>;    def Shl: pf2<shl>;
+def Sext: pf1<sext>;  def Zext: pf1<zext>;
 
 def Smin: pf2<smin>;  def Smax: pf2<smax>;
 def Umin: pf2<umin>;  def Umax: pf2<umax>;
@@ -407,9 +439,15 @@ def Imm64Hi: SDNodeXForm<imm, [{
 def SDTHexagonCONST32
   : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisPtrTy<0>]>;
 
+// Jump table.
 def HexagonJT:          SDNode<"HexagonISD::JT",          SDTIntUnaryOp>;
+
+// Constant pool.
 def HexagonCP:          SDNode<"HexagonISD::CP",          SDTIntUnaryOp>;
+
 def HexagonCONST32:     SDNode<"HexagonISD::CONST32",     SDTHexagonCONST32>;
+
+// For marking data present in GP.
 def HexagonCONST32_GP:  SDNode<"HexagonISD::CONST32_GP",  SDTHexagonCONST32>;
 
 def TruncI64ToI32: SDNodeXForm<imm, [{
@@ -1441,6 +1479,7 @@ let AddedComplexity = 200 in {
 def SDTHexagonVShift
   : SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>, SDTCisVec<0>, SDTCisVT<2, i32>]>;
 
+// Vector shifts by a scalar value
 def HexagonVASL: SDNode<"HexagonISD::VASL", SDTHexagonVShift>;
 def HexagonVASR: SDNode<"HexagonISD::VASR", SDTHexagonVShift>;
 def HexagonVLSR: SDNode<"HexagonISD::VLSR", SDTHexagonVShift>;
@@ -3302,8 +3341,12 @@ def SDT_SPCall: SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 
 def HexagonTCRet: SDNode<"HexagonISD::TC_RETURN", SDT_SPCall,
                          [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
+
+// Function call.
 def callv3: SDNode<"HexagonISD::CALL", SDT_SPCall,
                    [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
+
+// Function call that does not return.
 def callv3nr: SDNode<"HexagonISD::CALLnr", SDT_SPCall,
                      [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 
@@ -3325,8 +3368,10 @@ def: Pat<(callv3nr I32:$dst),               (PS_callr_nr I32:$dst)>;
 def: Pat<(callv3nr tglobaladdr:$dst),       (PS_call_nr tglobaladdr:$dst)>;
 def: Pat<(callv3nr texternalsym:$dst),      (PS_call_nr texternalsym:$dst)>;
 
+// Return with a glue operand.
 def retglue : SDNode<"HexagonISD::RET_GLUE", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
 def eh_return: SDNode<"HexagonISD::EH_RETURN", SDTNone, [SDNPHasChain]>;
 
 def: Pat<(retglue),   (PS_jmpret (i32 R31))>;
@@ -3406,7 +3451,9 @@ def HexagonALLOCA
 def: Pat<(HexagonALLOCA I32:$Rs, (i32 imm:$A)),
          (PS_alloca IntRegs:$Rs, imm:$A)>;
 
+// Memory barrier.
 def HexagonBARRIER: SDNode<"HexagonISD::BARRIER", SDTNone, [SDNPHasChain]>;
+
 def: Pat<(HexagonBARRIER), (Y2_barrier)>;
 
 def: Pat<(trap), (PS_crash)>;

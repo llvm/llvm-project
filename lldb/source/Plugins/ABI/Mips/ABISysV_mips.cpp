@@ -708,7 +708,6 @@ Status ABISysV_mips::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
@@ -749,13 +748,6 @@ Status ABISysV_mips::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(is_complex)) {
-    if (is_complex)
-      error = Status::FromErrorString(
-          "We don't support returning complex values at present");
-    else
-      error = Status::FromErrorString(
-          "We don't support returning float values at present");
   }
 
   if (!set_it_simple)
@@ -795,7 +787,6 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
     return return_valobj_sp;
 
   bool is_signed = false;
-  bool is_complex = false;
 
   // In MIPS register "r2" (v0) holds the integer function return values
   const RegisterInfo *r2_reg_info = reg_ctx->GetRegisterInfoByName("r2", 0);
@@ -858,11 +849,9 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
     return_valobj_sp = ValueObjectMemory::Create(
         &thread, "", Address(mem_address, nullptr), return_compiler_type);
     return return_valobj_sp;
-  } else if (return_compiler_type.IsFloatingPointType(is_complex)) {
+  } else if (return_compiler_type.IsRealFloatingPointType()) {
     if (IsSoftFloat(fp_flag)) {
       uint64_t raw_value = reg_ctx->ReadRegisterAsUnsigned(r2_reg_info, 0);
-      if (is_complex)
-        return return_valobj_sp;
       switch (*bit_width) {
       default:
         return return_valobj_sp;
@@ -894,51 +883,46 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
       f0_value.GetData(f0_data);
       lldb::offset_t offset = 0;
 
-      if (!return_compiler_type.IsVectorType() && !is_complex) {
-        switch (*bit_width) {
-        default:
-          return return_valobj_sp;
-        case 64: {
-          static_assert(sizeof(double) == sizeof(uint64_t));
-          const RegisterInfo *f1_info = reg_ctx->GetRegisterInfoByName("f1", 0);
-          RegisterValue f1_value;
-          DataExtractor f1_data;
-          reg_ctx->ReadRegister(f1_info, f1_value);
-          DataExtractor *copy_from_extractor = nullptr;
-          WritableDataBufferSP data_sp(new DataBufferHeap(8, 0));
-          DataExtractor return_ext(
-              data_sp, target_byte_order,
-              target->GetArchitecture().GetAddressByteSize());
-
-          if (target_byte_order == eByteOrderLittle) {
-            copy_from_extractor = &f0_data;
-            copy_from_extractor->CopyByteOrderedData(
-                offset, 4, data_sp->GetBytes(), 4, target_byte_order);
-            f1_value.GetData(f1_data);
-            copy_from_extractor = &f1_data;
-            copy_from_extractor->CopyByteOrderedData(
-                offset, 4, data_sp->GetBytes() + 4, 4, target_byte_order);
-          } else {
-            copy_from_extractor = &f0_data;
-            copy_from_extractor->CopyByteOrderedData(
-                offset, 4, data_sp->GetBytes() + 4, 4, target_byte_order);
-            f1_value.GetData(f1_data);
-            copy_from_extractor = &f1_data;
-            copy_from_extractor->CopyByteOrderedData(
-                offset, 4, data_sp->GetBytes(), 4, target_byte_order);
-          }
-          value.GetScalar() = (double)return_ext.GetDouble(&offset);
-          break;
-        }
-        case 32: {
-          static_assert(sizeof(float) == sizeof(uint32_t));
-          value.GetScalar() = (float)f0_data.GetFloat(&offset);
-          break;
-        }
-        }
-      } else {
-        // not handled yet
+      switch (*bit_width) {
+      default:
         return return_valobj_sp;
+      case 64: {
+        static_assert(sizeof(double) == sizeof(uint64_t));
+        const RegisterInfo *f1_info = reg_ctx->GetRegisterInfoByName("f1", 0);
+        RegisterValue f1_value;
+        DataExtractor f1_data;
+        reg_ctx->ReadRegister(f1_info, f1_value);
+        DataExtractor *copy_from_extractor = nullptr;
+        WritableDataBufferSP data_sp(new DataBufferHeap(8, 0));
+        DataExtractor return_ext(
+            data_sp, target_byte_order,
+            target->GetArchitecture().GetAddressByteSize());
+
+        if (target_byte_order == eByteOrderLittle) {
+          copy_from_extractor = &f0_data;
+          copy_from_extractor->CopyByteOrderedData(
+              offset, 4, data_sp->GetBytes(), 4, target_byte_order);
+          f1_value.GetData(f1_data);
+          copy_from_extractor = &f1_data;
+          copy_from_extractor->CopyByteOrderedData(
+              offset, 4, data_sp->GetBytes() + 4, 4, target_byte_order);
+        } else {
+          copy_from_extractor = &f0_data;
+          copy_from_extractor->CopyByteOrderedData(
+              offset, 4, data_sp->GetBytes() + 4, 4, target_byte_order);
+          f1_value.GetData(f1_data);
+          copy_from_extractor = &f1_data;
+          copy_from_extractor->CopyByteOrderedData(
+              offset, 4, data_sp->GetBytes(), 4, target_byte_order);
+        }
+        value.GetScalar() = (double)return_ext.GetDouble(&offset);
+        break;
+      }
+      case 32: {
+        static_assert(sizeof(float) == sizeof(uint32_t));
+        value.GetScalar() = (float)f0_data.GetFloat(&offset);
+        break;
+      }
       }
     }
   } else {

@@ -16,7 +16,6 @@
 #include "Quality.h"
 #include "Selection.h"
 #include "SourceCode.h"
-#include "URI.h"
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Types.h"
 #include "index/Index.h"
@@ -43,7 +42,6 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
@@ -60,7 +58,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -309,25 +306,33 @@ std::vector<LocatedSymbol> findImplementors(llvm::DenseSet<SymbolID> IDs,
 
   RelationsRequest Req;
   Req.Predicate = Predicate;
-  Req.Subjects = std::move(IDs);
+  llvm::DenseSet<SymbolID> SeenIDs;
+  llvm::DenseSet<SymbolID> Queue = std::move(IDs);
   std::vector<LocatedSymbol> Results;
-  Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
-    auto DeclLoc =
-        indexToLSPLocation(Object.CanonicalDeclaration, MainFilePath);
-    if (!DeclLoc) {
-      elog("Find overrides: {0}", DeclLoc.takeError());
-      return;
-    }
-    Results.emplace_back();
-    Results.back().Name = Object.Name.str();
-    Results.back().PreferredDeclaration = *DeclLoc;
-    auto DefLoc = indexToLSPLocation(Object.Definition, MainFilePath);
-    if (!DefLoc) {
-      elog("Failed to convert location: {0}", DefLoc.takeError());
-      return;
-    }
-    Results.back().Definition = *DefLoc;
-  });
+  while (!Queue.empty()) {
+    Req.Subjects = std::move(Queue);
+    Queue = {};
+    Index->relations(Req, [&](const SymbolID &Subject, const Symbol &Object) {
+      if (!SeenIDs.insert(Object.ID).second)
+        return;
+      Queue.insert(Object.ID);
+      auto DeclLoc =
+          indexToLSPLocation(Object.CanonicalDeclaration, MainFilePath);
+      if (!DeclLoc) {
+        elog("Find overrides: {0}", DeclLoc.takeError());
+        return;
+      }
+      Results.emplace_back();
+      Results.back().Name = Object.Name.str();
+      Results.back().PreferredDeclaration = *DeclLoc;
+      auto DefLoc = indexToLSPLocation(Object.Definition, MainFilePath);
+      if (!DefLoc) {
+        elog("Failed to convert location: {0}", DefLoc.takeError());
+        return;
+      }
+      Results.back().Definition = *DefLoc;
+    });
+  }
   return Results;
 }
 
@@ -929,12 +934,15 @@ public:
     }
   };
 
-  ReferenceFinder(const ParsedAST &AST,
+  ReferenceFinder(ParsedAST &AST,
                   const llvm::ArrayRef<const NamedDecl *> Targets,
                   bool PerToken)
       : PerToken(PerToken), AST(AST) {
-    for (const NamedDecl *ND : Targets)
+    for (const NamedDecl *ND : Targets) {
       TargetDecls.insert(ND->getCanonicalDecl());
+      if (auto *Constructor = llvm::dyn_cast<clang::CXXConstructorDecl>(ND))
+        TargetConstructors.insert(Constructor);
+    }
   }
 
   std::vector<Reference> take() && {
@@ -955,12 +963,41 @@ public:
     return std::move(References);
   }
 
+  bool forwardsToConstructor(const Decl *D) {
+    if (TargetConstructors.empty())
+      return false;
+    auto *FD = llvm::dyn_cast<clang::FunctionDecl>(D);
+    if (FD == nullptr || !FD->isTemplateInstantiation())
+      return false;
+
+    SmallVector<const CXXConstructorDecl *, 1> *Constructors = nullptr;
+    if (auto Entry = AST.ForwardingToConstructorCache.find(FD);
+        Entry != AST.ForwardingToConstructorCache.end())
+      Constructors = &Entry->getSecond();
+    if (Constructors == nullptr) {
+      if (auto *PT = FD->getPrimaryTemplate();
+          PT == nullptr || !isLikelyForwardingFunction(PT))
+        return false;
+
+      SmallVector<const CXXConstructorDecl *, 1> FoundConstructors =
+          searchConstructorsInForwardingFunction(FD);
+      auto Iter = AST.ForwardingToConstructorCache.try_emplace(
+          FD, std::move(FoundConstructors));
+      Constructors = &Iter.first->getSecond();
+    }
+    for (auto *Constructor : *Constructors)
+      if (TargetConstructors.contains(Constructor))
+        return true;
+    return false;
+  }
+
   bool
   handleDeclOccurrence(const Decl *D, index::SymbolRoleSet Roles,
                        llvm::ArrayRef<index::SymbolRelation> Relations,
                        SourceLocation Loc,
                        index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
-    if (!TargetDecls.contains(D->getCanonicalDecl()))
+    if (!TargetDecls.contains(D->getCanonicalDecl()) &&
+        !forwardsToConstructor(ASTNode.OrigD))
       return true;
     const SourceManager &SM = AST.getSourceManager();
     if (!isInsideMainFile(Loc, SM))
@@ -1000,8 +1037,10 @@ public:
 private:
   bool PerToken; // If true, report 3 references for split ObjC selector names.
   std::vector<Reference> References;
-  const ParsedAST &AST;
+  ParsedAST &AST;
   llvm::DenseSet<const Decl *> TargetDecls;
+  // Constructors need special handling since they can be hidden behind forwards
+  llvm::DenseSet<const CXXConstructorDecl *> TargetConstructors;
 };
 
 std::vector<ReferenceFinder::Reference>
@@ -1066,7 +1105,7 @@ class FindControlFlow : public RecursiveASTVisitor<FindControlFlow> {
   // Traverses the subtree using Delegate() if any targets remain.
   template <typename Func>
   bool filterAndTraverse(DynTypedNode D, const Func &Delegate) {
-    auto RestoreIgnore = llvm::make_scope_exit(
+    llvm::scope_exit RestoreIgnore(
         [OldIgnore(Ignore), this] { Ignore = OldIgnore; });
     if (getFunctionBody(D))
       Ignore = All;
@@ -1775,7 +1814,7 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
   index::SymbolInfo SymInfo = index::getSymbolInfo(&ND);
   // FIXME: This is not classifying constructors, destructors and operators
   // correctly.
-  SymbolKind SK = indexSymbolKindToSymbolKind(SymInfo.Kind);
+  SymbolKind SK = indexSymbolKindToSymbolKind(SymInfo);
 
   HierarchyItem HI;
   HI.name = printName(Ctx, ND);
@@ -1832,7 +1871,7 @@ static std::optional<HierarchyItem> symbolToHierarchyItem(const Symbol &S,
   HierarchyItem HI;
   HI.name = std::string(S.Name);
   HI.detail = (S.Scope + S.Name).str();
-  HI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
+  HI.kind = indexSymbolKindToSymbolKind(S.SymInfo);
   HI.selectionRange = Loc->range;
   // FIXME: Populate 'range' correctly
   // (https://github.com/clangd/clangd/issues/59).

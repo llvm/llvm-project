@@ -237,6 +237,11 @@ static llvm::cl::opt<std::string>
     enableGPUMode("gpu", llvm::cl::desc("Enable GPU Mode managed|unified"),
                   llvm::cl::init(""));
 
+static llvm::cl::opt<std::string>
+    compilerDirectiveSentinel("sentinel-test",
+                              llvm::cl::desc("Test additional sentinel"),
+                              llvm::cl::init("dir$"));
+
 static llvm::cl::opt<bool> fixedForm("ffixed-form",
                                      llvm::cl::desc("enable fixed form"),
                                      llvm::cl::init(false));
@@ -369,6 +374,9 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
   // prep for prescan and parse
   Fortran::parser::Parsing parsing{semanticsContext.allCookedSources()};
+  if (!compilerDirectiveSentinel.empty()) {
+    options.compilerDirectiveSentinels.push_back(compilerDirectiveSentinel);
+  }
   parsing.Prescan(path, options);
   if (!parsing.messages().empty() && (parsing.messages().AnyFatalError())) {
     llvm::errs() << programPrefix << "could not scan " << path << '\n';
@@ -418,7 +426,10 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   }
 
   if (pftDumpTest) {
-    if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext)) {
+    // Use default lowering options for PFT dump test
+    Fortran::lower::LoweringOptions loweringOptions{};
+    if (auto ast = Fortran::lower::createPFT(parseTree, semanticsContext,
+                                             loweringOptions)) {
       Fortran::lower::dumpPFT(llvm::outs(), *ast);
       return mlir::success();
     }
@@ -635,11 +646,10 @@ int main(int argc, char **argv) {
         Fortran::common::LanguageFeature::CudaWarpMatchFunction, false);
   }
 
-  if (enableGPUMode == "managed") {
+  if (enableGPUMode == "managed")
     options.features.Enable(Fortran::common::LanguageFeature::CudaManaged);
-  } else if (enableGPUMode == "unified") {
+  else if (enableGPUMode == "unified")
     options.features.Enable(Fortran::common::LanguageFeature::CudaUnified);
-  }
 
   if (fixedForm) {
     options.isFixedForm = fixedForm;

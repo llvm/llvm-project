@@ -50,9 +50,21 @@ define void @f4(<2 x i64> %val, ptr %ptr) {
   ret void
 }
 
-; Test v4f32 stores.
-define void @f5(<4 x float> %val, ptr %ptr) {
+; Test v8f16 stores.
+define void @f5(<8 x half> %val, ptr %ptr) {
 ; CHECK-LABEL: f5:
+; CHECK: vsterh %v24, 0(%r2)
+; CHECK: br %r14
+  %swap = shufflevector <8 x half> %val, <8 x half> undef,
+                        <8 x i32> <i32 7, i32 6, i32 5, i32 4,
+                                   i32 3, i32 2, i32 1, i32 0>
+  store <8 x half> %swap, ptr %ptr
+  ret void
+}
+
+; Test v4f32 stores.
+define void @f6(<4 x float> %val, ptr %ptr) {
+; CHECK-LABEL: f6:
 ; CHECK: vsterf %v24, 0(%r2)
 ; CHECK: br %r14
   %swap = shufflevector <4 x float> %val, <4 x float> undef,
@@ -62,8 +74,8 @@ define void @f5(<4 x float> %val, ptr %ptr) {
 }
 
 ; Test v2f64 stores.
-define void @f6(<2 x double> %val, ptr %ptr) {
-; CHECK-LABEL: f6:
+define void @f7(<2 x double> %val, ptr %ptr) {
+; CHECK-LABEL: f7:
 ; CHECK: vsterg %v24, 0(%r2)
 ; CHECK: br %r14
   %swap = shufflevector <2 x double> %val, <2 x double> undef,
@@ -73,8 +85,8 @@ define void @f6(<2 x double> %val, ptr %ptr) {
 }
 
 ; Test the highest aligned in-range offset.
-define void @f7(<4 x i32> %val, ptr %base) {
-; CHECK-LABEL: f7:
+define void @f8(<4 x i32> %val, ptr %base) {
+; CHECK-LABEL: f8:
 ; CHECK: vsterf %v24, 4080(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr <4 x i32>, ptr %base, i64 255
@@ -85,8 +97,8 @@ define void @f7(<4 x i32> %val, ptr %base) {
 }
 
 ; Test the highest unaligned in-range offset.
-define void @f8(<4 x i32> %val, ptr %base) {
-; CHECK-LABEL: f8:
+define void @f9(<4 x i32> %val, ptr %base) {
+; CHECK-LABEL: f9:
 ; CHECK: vsterf %v24, 4095(%r2)
 ; CHECK: br %r14
   %addr = getelementptr i8, ptr %base, i64 4095
@@ -97,8 +109,8 @@ define void @f8(<4 x i32> %val, ptr %base) {
 }
 
 ; Test the next offset up, which requires separate address logic,
-define void @f9(<4 x i32> %val, ptr %base) {
-; CHECK-LABEL: f9:
+define void @f10(<4 x i32> %val, ptr %base) {
+; CHECK-LABEL: f10:
 ; CHECK: aghi %r2, 4096
 ; CHECK: vsterf %v24, 0(%r2)
 ; CHECK: br %r14
@@ -110,8 +122,8 @@ define void @f9(<4 x i32> %val, ptr %base) {
 }
 
 ; Test negative offsets, which also require separate address logic,
-define void @f10(<4 x i32> %val, ptr %base) {
-; CHECK-LABEL: f10:
+define void @f11(<4 x i32> %val, ptr %base) {
+; CHECK-LABEL: f11:
 ; CHECK: aghi %r2, -16
 ; CHECK: vsterf %v24, 0(%r2)
 ; CHECK: br %r14
@@ -123,8 +135,8 @@ define void @f10(<4 x i32> %val, ptr %base) {
 }
 
 ; Check that indexes are allowed.
-define void @f11(<4 x i32> %val, ptr %base, i64 %index) {
-; CHECK-LABEL: f11:
+define void @f12(<4 x i32> %val, ptr %base, i64 %index) {
+; CHECK-LABEL: f12:
 ; CHECK: vsterf %v24, 0(%r3,%r2)
 ; CHECK: br %r14
   %addr = getelementptr i8, ptr %base, i64 %index
@@ -133,4 +145,3 @@ define void @f11(<4 x i32> %val, ptr %base, i64 %index) {
   store <4 x i32> %swap, ptr %addr, align 1
   ret void
 }
-

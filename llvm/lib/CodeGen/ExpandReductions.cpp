@@ -156,9 +156,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
 class ExpandReductions : public FunctionPass {
 public:
   static char ID;
-  ExpandReductions() : FunctionPass(ID) {
-    initializeExpandReductionsPass(*PassRegistry::getPassRegistry());
-  }
+  ExpandReductions() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     const auto *TTI =&getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);

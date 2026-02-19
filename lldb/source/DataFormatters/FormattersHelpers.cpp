@@ -10,6 +10,7 @@
 
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -148,6 +149,6 @@ void lldb_private::formatters::DumpCxxSmartPtrPointerSummary(
 
 bool lldb_private::formatters::ContainerSizeSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  return FormatEntity::FormatStringRef("size=${svar%#}", stream, nullptr,
-                                       nullptr, nullptr, &valobj, false, false);
+  return FormatEntity::Formatter(nullptr, nullptr, nullptr, false, false)
+      .FormatStringRef("size=${svar%#}", stream, &valobj);
 }

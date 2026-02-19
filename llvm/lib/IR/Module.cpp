@@ -98,6 +98,11 @@ Module &Module::operator=(Module &&Other) {
 
   NamedMDList.clear();
   NamedMDList.splice(NamedMDList.begin(), Other.NamedMDList);
+  for (NamedMDNode &NMD : NamedMDList)
+    NMD.setParent(this);
+
+  NamedMDSymTab = std::move(Other.NamedMDSymTab);
+  ComdatSymTab = std::move(Other.ComdatSymTab);
   GlobalScopeAsm = std::move(Other.GlobalScopeAsm);
   OwnedMemoryBuffer = std::move(Other.OwnedMemoryBuffer);
   Materializer = std::move(Other.Materializer);
@@ -934,4 +939,11 @@ WinX64EHUnwindV2Mode Module::getWinX64EHUnwindV2Mode() const {
   if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
     return static_cast<WinX64EHUnwindV2Mode>(CI->getZExtValue());
   return WinX64EHUnwindV2Mode::Disabled;
+}
+
+ControlFlowGuardMode Module::getControlFlowGuardMode() const {
+  Metadata *MD = getModuleFlag("cfguard");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return static_cast<ControlFlowGuardMode>(CI->getZExtValue());
+  return ControlFlowGuardMode::Disabled;
 }

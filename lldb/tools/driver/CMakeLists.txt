@@ -16,6 +16,16 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_definitions("-D_ALL_SOURCE")                                             
 endif()
 
+set(LLDB_DRIVER_LINK_LIBS
+  liblldb
+  lldbHost
+  lldbUtility
+)
+
+if(WIN32)
+  list(APPEND LLDB_DRIVER_LINK_LIBS lldbHostPythonPathSetup)
+endif()
+
 add_lldb_tool(lldb
   Driver.cpp
   Platform.cpp
@@ -24,22 +34,13 @@ add_lldb_tool(lldb
     Option
     Support
   LINK_LIBS
-    liblldb
-    lldbHost
-    lldbUtility
+    ${LLDB_DRIVER_LINK_LIBS}
   )
 
 add_dependencies(lldb
   LLDBOptionsTableGen
   ${tablegen_deps}
 )
-
-if(DEFINED LLDB_PYTHON_DLL_RELATIVE_PATH)
-  target_compile_definitions(lldb PRIVATE LLDB_PYTHON_DLL_RELATIVE_PATH="${LLDB_PYTHON_DLL_RELATIVE_PATH}")
-endif()
-if(DEFINED LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME)
-  target_compile_definitions(lldb PRIVATE LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME="${LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME}")
-endif()
 
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.

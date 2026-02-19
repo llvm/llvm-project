@@ -42,7 +42,8 @@ _Bool e (void) {
 }
 
 int f (void) {
-  return a0; // all-warning {{implicit conversion from 'unsigned long' to 'int' changes value from 18446744073709551615 to -1}}
+  return a0; // expected-warning {{implicit conversion from 'enum a' to 'int' changes value from 18446744073709551615 to -1}}
+             // pedantic-warning@-1 {{implicit conversion from 'unsigned long' to 'int' changes value from 18446744073709551615 to -1}}
 }
 
 unsigned long g (void) {

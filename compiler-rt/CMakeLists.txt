@@ -312,6 +312,8 @@ option(COMPILER_RT_USE_BUILTINS_LIBRARY
 
 option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
 
+option(COMPILER_RT_PROFILE_BAREMETAL "Build minimal baremetal profile library" OFF)
+
 include(config-ix)
 
 #================================
@@ -558,6 +560,10 @@ append_list_if(COMPILER_RT_HAS_Z_TEXT -Wl,-z,text SANITIZER_COMMON_LINK_FLAGS)
 # natively, but supports --as-needed/--no-as-needed for GNU ld compatibility.
 if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "sparc")
   list(APPEND SANITIZER_COMMON_LINK_LIBS -Wl,--as-needed atomic -Wl,--no-as-needed)
+endif()
+
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mips")
+  list(APPEND SANITIZER_COMMON_LINK_LIBS atomic)
 endif()
 
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)

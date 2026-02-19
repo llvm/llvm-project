@@ -40,6 +40,7 @@
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -48,7 +49,6 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -213,6 +213,9 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
+static cl::list<std::string> PassPlugins("load-pass-plugin",
+                                         cl::desc("Load plugin library"));
+
 static cl::opt<bool> EnableNewPassManager(
     "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
 
@@ -286,8 +289,8 @@ static void setPGOOptions(TargetMachine &TM) {
     TM.setPGOOption(PGOOpt);
 }
 
-static int compileModule(char **argv, LLVMContext &Context,
-                         std::string &OutputFilename);
+static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &,
+                         LLVMContext &Context, std::string &OutputFilename);
 
 [[noreturn]] static void reportError(Twine Msg, StringRef Filename = "") {
   SmallString<256> Prefix;
@@ -381,20 +384,25 @@ int main(int argc, char **argv) {
   initializeCore(*Registry);
   initializeCodeGen(*Registry);
   initializeLoopStrengthReducePass(*Registry);
-  initializeLowerIntrinsicsPass(*Registry);
   initializePostInlineEntryExitInstrumenterPass(*Registry);
   initializeUnreachableBlockElimLegacyPassPass(*Registry);
   initializeConstantHoistingLegacyPassPass(*Registry);
   initializeScalarOpts(*Registry);
+  initializeIPO(*Registry);
   initializeVectorization(*Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(*Registry);
-  initializeExpandReductionsPass(*Registry);
-  initializeHardwareLoopsLegacyPass(*Registry);
   initializeTransformUtils(*Registry);
-  initializeReplaceWithVeclibLegacyPass(*Registry);
 
   // Initialize debugging passes.
   initializeScavengerTestPass(*Registry);
+
+  SmallVector<PassPlugin, 1> PluginList;
+  PassPlugins.setCallback([&](const std::string &PluginPath) {
+    auto Plugin = PassPlugin::Load(PluginPath);
+    if (!Plugin)
+      reportFatalUsageError(Plugin.takeError());
+    PluginList.emplace_back(Plugin.get());
+  });
 
   // Register the Target and CPU printer for --version.
   cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
@@ -412,7 +420,7 @@ int main(int argc, char **argv) {
 
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
-  auto TimeTraceScopeExit = make_scope_exit([]() {
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (TimeTrace) {
       if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
         handleAllErrors(std::move(E), [&](const StringError &SE) {
@@ -447,7 +455,7 @@ int main(int argc, char **argv) {
   // Compile the module TimeCompilations times to give better compile time
   // metrics.
   for (unsigned I = TimeCompilations; I; --I)
-    if (int RetVal = compileModule(argv, Context, OutputFilename))
+    if (int RetVal = compileModule(argv, PluginList, Context, OutputFilename))
       return RetVal;
 
   if (RemarksFile)
@@ -485,8 +493,8 @@ static bool addPass(PassManagerBase &PM, const char *argv0, StringRef PassName,
   return false;
 }
 
-static int compileModule(char **argv, LLVMContext &Context,
-                         std::string &OutputFilename) {
+static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
+                         LLVMContext &Context, std::string &OutputFilename) {
   // Load the module to be compiled...
   SMDiagnostic Err;
   std::unique_ptr<Module> M;
@@ -707,6 +715,17 @@ static int compileModule(char **argv, LLVMContext &Context,
   // flags.
   codegen::setFunctionAttributes(CPUStr, FeaturesStr, *M);
 
+  for (auto &Plugin : PluginList) {
+    CodeGenFileType CGFT = codegen::getFileType();
+    if (Plugin.invokePreCodeGenCallback(*M, *Target, CGFT, Out->os())) {
+      // TODO: Deduplicate code with below and the NewPMDriver.
+      if (Context.getDiagHandlerPtr()->HasErrors)
+        exit(1);
+      Out->keep();
+      return 0;
+    }
+  }
+
   if (mc::getExplicitRelaxAll() &&
       codegen::getFileType() != CodeGenFileType::ObjectFile)
     WithColor::warning(errs(), argv[0])
@@ -729,9 +748,9 @@ static int compileModule(char **argv, LLVMContext &Context,
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   PM.add(new RuntimeLibraryInfoWrapper(
-      M->getTargetTriple(), Target->Options.ExceptionModel,
-      Target->Options.FloatABIType, Target->Options.EABIVersion,
-      Options.MCOptions.ABIName, Target->Options.VecLib));
+      TheTriple, Target->Options.ExceptionModel, Target->Options.FloatABIType,
+      Target->Options.EABIVersion, Options.MCOptions.ABIName,
+      Target->Options.VecLib));
 
   {
     raw_pwrite_stream *OS = &Out->os();

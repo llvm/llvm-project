@@ -94,6 +94,9 @@ constexpr void for_all_iterators_and_allocators(Func f) {
       f.template operator()<Iter, Iter, safe_allocator<T>>();
     }
   });
+  // This is added because otherwise there would be no input-only sized range, which has fewer guarantees than a
+  // forward and sized range. We don't want to put it in the for_each above to avoid a combinatorial explosion.
+  f.template operator()<cpp20_input_iterator<PtrT>, sized_sentinel<cpp20_input_iterator<PtrT>>, std::allocator<T>>();
 }
 
 // Uses a shorter list of iterator types for use in `constexpr` mode for cases when running the full set in would take

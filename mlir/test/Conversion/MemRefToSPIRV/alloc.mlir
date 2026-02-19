@@ -195,3 +195,29 @@ module attributes {
 
 // Zero-sized allocations are not handled yet. Just make sure we do not crash.
 // CHECK-LABEL: func @zero_size()
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+  }
+{
+  func.func @alloc_dealloc_workgroup_mem_complex_f32(%arg0 : index, %arg1 : index) {
+    %0 = memref.alloc() : memref<4x5xcomplex<f32>, #spirv.storage_class<Workgroup>>
+    %1 = memref.load %0[%arg0, %arg1] : memref<4x5xcomplex<f32>, #spirv.storage_class<Workgroup>>
+    memref.store %1, %0[%arg0, %arg1] : memref<4x5xcomplex<f32>, #spirv.storage_class<Workgroup>>
+    memref.dealloc %0 : memref<4x5xcomplex<f32>, #spirv.storage_class<Workgroup>>
+    return
+  }
+}
+
+//       CHECK: spirv.GlobalVariable @[[$VAR:.+]] : !spirv.ptr<!spirv.struct<(!spirv.array<20 x vector<2xf32>>)>, Workgroup>
+// CHECK-LABEL: func @alloc_dealloc_workgroup_mem_complex_f32
+//   CHECK-NOT:   memref.alloc
+//       CHECK:   %[[PTR:.+]] = spirv.mlir.addressof @[[$VAR]]
+//       CHECK:   %[[LOADPTR:.+]] = spirv.AccessChain %[[PTR]]
+//       CHECK:   %[[VAL:.+]] = spirv.Load "Workgroup" %[[LOADPTR]] : vector<2xf32>
+//       CHECK:   %[[STOREPTR:.+]] = spirv.AccessChain %[[PTR]]
+//       CHECK:   spirv.Store "Workgroup" %[[STOREPTR]], %[[VAL]] : vector<2xf32>
+//   CHECK-NOT:   memref.dealloc

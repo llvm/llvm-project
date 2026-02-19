@@ -351,6 +351,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
                                                   : "--lto=full");
 
+  if (Args.hasFlag(options::OPT_ffat_lto_objects,
+                   options::OPT_fno_fat_lto_objects, false))
+    CmdArgs.push_back("--fat-lto-objects");
+
   AddLTOFlag("-emit-jump-table-sizes-section");
 
   if (UseJMC)

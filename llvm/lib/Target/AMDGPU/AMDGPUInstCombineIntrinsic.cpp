@@ -553,6 +553,89 @@ static CallInst *rewriteCall(IRBuilderBase &B, CallInst &Old,
   return NewCall;
 }
 
+// Return true for sequences of instructions that effectively assign
+// each lane to its thread ID
+static bool isThreadID(const GCNSubtarget &ST, Value *V) {
+  // Case 1:
+  //   wave32: mbcnt_lo(-1, 0)
+  //   wave64: mbcnt_hi(-1, mbcnt_lo(-1, 0))
+  auto W32Pred = m_Intrinsic<Intrinsic::amdgcn_mbcnt_lo>(m_ConstantInt<-1>(),
+                                                         m_ConstantInt<0>());
+  auto W64Pred = m_Intrinsic<Intrinsic::amdgcn_mbcnt_hi>(
+      m_ConstantInt<-1>(), m_Intrinsic<Intrinsic::amdgcn_mbcnt_lo>(
+                               m_ConstantInt<-1>(), m_ConstantInt<0>()));
+  if (ST.isWave32() && match(V, W32Pred))
+    return true;
+  if (ST.isWave64() && match(V, W64Pred))
+    return true;
+
+  return false;
+}
+
+// Attempt to capture situations where the index argument matches
+// a DPP pattern, and convert to a DPP-based mov
+static std::optional<Instruction *>
+tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
+  Value *Val = II.getArgOperand(0);
+  Value *Idx = II.getArgOperand(1);
+  auto &B = IC.Builder;
+
+  // DPP16 Row Share requires known wave size, architecture support
+  if (!ST.isWaveSizeKnown() || !ST.hasDPPRowShare())
+    return std::nullopt;
+
+  Value *Tid;
+  uint64_t Mask;
+  uint64_t RowIdx;
+  bool CanDPP16RowShare = false;
+
+  // wave32 requires Mask & 0x1F == 0x10
+  // wave64 requires Mask & 0x3F == 0x30
+  uint64_t MaskCheck = (1UL << ST.getWavefrontSizeLog2()) - 1;
+  uint64_t MaskTarget = MaskCheck & 0xF0;
+
+  // DPP16 Row Share 0: Idx = Tid & Mask
+  auto RowShare0Pred = m_And(m_Value(Tid), m_ConstantInt(Mask));
+
+  // DPP16 Row Share (0 < Row < 15): Idx = (Tid & Mask) | RowIdx
+  auto RowSharePred =
+      m_Or(m_And(m_Value(Tid), m_ConstantInt(Mask)), m_ConstantInt(RowIdx));
+
+  // DPP16 Row Share 15: Idx = Tid | 0xF
+  auto RowShare15Pred = m_Or(m_Value(Tid), m_ConstantInt<0xF>());
+
+  if (match(Idx, RowShare0Pred) && isThreadID(ST, Tid)) {
+    if ((Mask & MaskCheck) != MaskTarget)
+      return std::nullopt;
+
+    RowIdx = 0;
+    CanDPP16RowShare = true;
+  } else if (match(Idx, RowSharePred) && isThreadID(ST, Tid) && RowIdx < 15 &&
+             RowIdx > 0) {
+    if ((Mask & MaskCheck) != MaskTarget)
+      return std::nullopt;
+
+    CanDPP16RowShare = true;
+  } else if (match(Idx, RowShare15Pred) && isThreadID(ST, Tid)) {
+    RowIdx = 15;
+    CanDPP16RowShare = true;
+  }
+
+  if (CanDPP16RowShare) {
+    CallInst *UpdateDPP =
+        B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Val->getType(),
+                          {PoisonValue::get(Val->getType()), Val,
+                           B.getInt32(AMDGPU::DPP::ROW_SHARE0 | RowIdx),
+                           B.getInt32(0xF), B.getInt32(0xF), B.getFalse()});
+    UpdateDPP->takeName(&II);
+    UpdateDPP->copyMetadata(II);
+    return IC.replaceInstUsesWith(II, UpdateDPP);
+  }
+
+  // No valid DPP detected
+  return std::nullopt;
+}
+
 Instruction *
 GCNTTIImpl::hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
                                              IntrinsicInst &II) const {
@@ -788,7 +871,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if (Exp == APFloat::IEK_NaN || Exp == APFloat::IEK_Inf)
         Exp = 0;
 
-      return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Exp));
+      return IC.replaceInstUsesWith(II,
+                                    ConstantInt::getSigned(II.getType(), Exp));
     }
 
     if (isa<PoisonValue>(Src))
@@ -1370,7 +1454,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     auto *BC = cast<ConstantInt>(II.getArgOperand(5));
     auto *RM = cast<ConstantInt>(II.getArgOperand(3));
     auto *BM = cast<ConstantInt>(II.getArgOperand(4));
-    if (BC->isZeroValue() || RM->getZExtValue() != 0xF ||
+    if (BC->isNullValue() || RM->getZExtValue() != 0xF ||
         BM->getZExtValue() != 0xF || isa<PoisonValue>(Old))
       break;
 
@@ -1458,30 +1542,35 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (isa<PoisonValue>(Src) || isa<PoisonValue>(Segment))
       return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
 
-    if (isa<UndefValue>(Src)) {
-      auto *QNaN = ConstantFP::get(
-          II.getType(), APFloat::getQNaN(II.getType()->getFltSemantics()));
-      return IC.replaceInstUsesWith(II, QNaN);
-    }
+    if (isa<UndefValue>(Segment))
+      return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
 
-    const ConstantFP *Csrc = dyn_cast<ConstantFP>(Src);
-    if (!Csrc)
-      break;
+    // Sign bit is not used.
+    Value *StrippedSign = InstCombiner::stripSignOnlyFPOps(Src);
+    if (StrippedSign != Src)
+      return IC.replaceOperand(II, 0, StrippedSign);
 
     if (II.isStrictFP())
       break;
 
-    const APFloat &Fsrc = Csrc->getValueAPF();
-    if (Fsrc.isNaN()) {
-      auto *Quieted = ConstantFP::get(II.getType(), Fsrc.makeQuiet());
-      return IC.replaceInstUsesWith(II, Quieted);
-    }
-
-    const ConstantInt *Cseg = dyn_cast<ConstantInt>(Segment);
-    if (!Cseg)
+    const ConstantFP *CSrc = dyn_cast<ConstantFP>(Src);
+    if (!CSrc && !isa<UndefValue>(Src))
       break;
 
-    unsigned Exponent = (Fsrc.bitcastToAPInt().getZExtValue() >> 52) & 0x7ff;
+    // The instruction ignores special cases, and literally just extracts the
+    // exponents. Fold undef to nan, and index the table as normal.
+    APInt FSrcInt = CSrc ? CSrc->getValueAPF().bitcastToAPInt()
+                         : APFloat::getQNaN(II.getType()->getFltSemantics())
+                               .bitcastToAPInt();
+
+    const ConstantInt *Cseg = dyn_cast<ConstantInt>(Segment);
+    if (!Cseg) {
+      if (isa<UndefValue>(Src))
+        return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
+      break;
+    }
+
+    unsigned Exponent = FSrcInt.extractBitsAsZExtValue(11, 52);
     unsigned SegmentVal = Cseg->getValue().trunc(5).getZExtValue();
     unsigned Shift = SegmentVal * 53;
     if (Exponent > 1077)
@@ -1736,6 +1825,33 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         Args, &II);
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
+  }
+  case Intrinsic::amdgcn_tensor_load_to_lds:
+  case Intrinsic::amdgcn_tensor_store_from_lds: {
+    Value *D2 = II.getArgOperand(2);
+    Value *D3 = II.getArgOperand(3);
+    // We know that not passing the second and third tensor DMA groups is
+    // equivalent to passing zeroes for those registers, so we rewrite to the
+    // shorter form here. Undef or poison are replaced by 0.
+    auto Pred = m_CombineOr(m_Zero(), m_Undef());
+    if (!match(D2, Pred) || !match(D3, Pred))
+      return std::nullopt;
+
+    auto ShortIntrinsic = IID == Intrinsic::amdgcn_tensor_load_to_lds
+                              ? Intrinsic::amdgcn_tensor_load_to_lds_d2
+                              : Intrinsic::amdgcn_tensor_store_from_lds_d2;
+    CallInst *NewII = IC.Builder.CreateIntrinsic(
+        ShortIntrinsic,
+        {II.getArgOperand(0), II.getArgOperand(1), II.getArgOperand(4)});
+    NewII->takeName(&II);
+    NewII->copyMetadata(II);
+    return IC.eraseInstFromFunction(II);
+  }
+  case Intrinsic::amdgcn_wave_shuffle: {
+    if (!ST->hasDPP())
+      return std::nullopt;
+
+    return tryWaveShuffleDPP(*ST, IC, II);
   }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

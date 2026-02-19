@@ -85,7 +85,7 @@ static int test_mem_space(void) {
   // * omp_get_devices_memspace
   // * omp_get_devices_and_host_memspace
   // Test if runtime returns the same memory space handle for the same input.
-  // Test if we can use the memory space to intialize allocator.
+  // Test if we can use the memory space to initialize allocator.
   for (i = 0; i < num_devices; i++) {
     ms1 = omp_get_device_memspace(i, predef);
     CHECK_OR_RET_FAIL(ms1 != omp_null_mem_space);

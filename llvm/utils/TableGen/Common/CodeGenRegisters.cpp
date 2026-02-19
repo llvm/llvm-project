@@ -755,8 +755,7 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   GlobalPriority = R->getValueAsBit("GlobalPriority");
 
   const BitsInit *TSF = R->getValueAsBitsInit("TSFlags");
-  for (auto [Idx, Bit] : enumerate(TSF->getBits()))
-    TSFlags |= uint8_t(cast<BitInit>(Bit)->getValue()) << Idx;
+  TSFlags = uint8_t(*TSF->convertInitializerToInt());
 
   // Saturate negative costs to the maximum
   if (CopyCostParsed < 0)
@@ -986,8 +985,11 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     // register class.
     if (A == B)
       return false;
-    if (A->getMembers().size() == B->getMembers().size())
+    if (A->getMembers().size() == B->getMembers().size()) {
+      if (A->getBaseClassOrder() != B->getBaseClassOrder())
+        return A->getBaseClassOrder() > B->getBaseClassOrder();
       return A == this;
+    }
     return A->getMembers().size() > B->getMembers().size();
   };
 
@@ -1005,7 +1007,9 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
       SuperRegRCs.emplace_back(&RC);
   llvm::stable_sort(SuperRegRCs, WeakSizeOrder);
 
-  assert(SuperRegRCs.front() == BiggestSuperRegRC &&
+  assert((SuperRegRCs.front() == BiggestSuperRegRC ||
+          SuperRegRCs.front()->getBaseClassOrder() >
+              BiggestSuperRegRC->getBaseClassOrder()) &&
          "Biggest class wasn't first");
 
   // Find all the subreg classes and order them by size too.
@@ -1125,8 +1129,10 @@ CodeGenRegisterCategory::CodeGenRegisterCategory(CodeGenRegBank &RegBank,
 //===----------------------------------------------------------------------===//
 
 CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
-                               const CodeGenHwModes &Modes)
-    : Records(Records), CGH(Modes) {
+                               const CodeGenHwModes &Modes,
+                               const bool RegistersAreIntervals)
+    : Records(Records), CGH(Modes),
+      RegistersAreIntervals(RegistersAreIntervals) {
   // Configure register Sets to understand register classes and tuples.
   Sets.addFieldExpander("RegisterClass", "MemberList");
   Sets.addFieldExpander("CalleeSavedRegs", "SaveList");
@@ -1929,6 +1935,97 @@ void CodeGenRegBank::computeRegUnitWeights() {
   }
 }
 
+// isContiguous is a enforceRegUnitIntervals helper that returns true if all
+// units in Units form a contiguous interval.
+static bool isContiguous(const CodeGenRegister::RegUnitList &Units) {
+  unsigned LastUnit = Units.find_first();
+  for (auto ThisUnit : llvm::make_range(++Units.begin(), Units.end())) {
+    if (ThisUnit != LastUnit + 1)
+      return false;
+    LastUnit = ThisUnit;
+  }
+  return true;
+}
+
+// Enforce that all registers are intervals of regunits if the target
+// requests this property. This will renumber regunits to ensure the
+// interval property holds, or error out if it cannot be satisfied.
+void CodeGenRegBank::enforceRegUnitIntervals() {
+  if (!RegistersAreIntervals)
+    return;
+
+  LLVM_DEBUG(dbgs() << "Enforcing regunit intervals for target\n");
+  std::vector<unsigned> RegUnitRenumbering(RegUnits.size(), ~0u);
+
+  // RegUnits that have been renumbered from X -> Y. Y is what is marked so that
+  // it doesn't create a chain of swaps.
+  SparseBitVector<> DontRenumberUnits;
+
+  auto GetRenumberedUnit = [&](unsigned RegUnit) -> unsigned {
+    if (unsigned RenumberedUnit = RegUnitRenumbering[RegUnit];
+        RenumberedUnit != ~0u)
+      return RenumberedUnit;
+    return RegUnit;
+  };
+
+  // Process registers in definition order
+  for (CodeGenRegister &Reg : Registers) {
+    LLVM_DEBUG(dbgs() << "Processing register " << Reg.getName() << "\n");
+    const auto &Units = Reg.getNativeRegUnits();
+    if (Units.empty())
+      continue;
+    SparseBitVector<> RenumberedUnits;
+    // First renumber all the units for this register according to previous
+    // renumbering.
+    LLVM_DEBUG(dbgs() << "  Original (Renumbered) units:");
+    for (unsigned U : Units) {
+      LLVM_DEBUG(dbgs() << " " << U << "(" << GetRenumberedUnit(U) << "), ");
+      RenumberedUnits.set(GetRenumberedUnit(U));
+    }
+    LLVM_DEBUG(dbgs() << "\n");
+
+    unsigned LastUnit = RenumberedUnits.find_first();
+    for (auto ThisUnit :
+         llvm::make_range(++RenumberedUnits.begin(), RenumberedUnits.end())) {
+      if (ThisUnit != LastUnit + 1) {
+        if (DontRenumberUnits.test(LastUnit + 1)) {
+          PrintFatalError(
+              "cannot enforce regunit intervals for register " + Reg.getName() +
+              ": unit " + Twine(LastUnit + 1) +
+              " (root: " + RegUnits[LastUnit + 1].Roots[0]->getName() +
+              ") has already been renumbered and cannot be swapped");
+        }
+        LLVM_DEBUG(dbgs() << "  Renumbering unit " << ThisUnit << " to "
+                          << (LastUnit + 1) << "\n");
+        RegUnitRenumbering[LastUnit + 1] = ThisUnit;
+        RegUnitRenumbering[ThisUnit] = LastUnit + 1;
+        DontRenumberUnits.set(LastUnit + 1);
+        ThisUnit = LastUnit + 1;
+      }
+      LastUnit = ThisUnit;
+    }
+  }
+
+  // Apply the renumbering to all registers
+  for (CodeGenRegister &Reg : Registers) {
+    CodeGenRegister::RegUnitList NewRegUnits;
+    for (unsigned OldUnit : Reg.getRegUnits())
+      NewRegUnits.set(GetRenumberedUnit(OldUnit));
+    Reg.setNewRegUnits(NewRegUnits);
+
+    CodeGenRegister::RegUnitList NewNativeUnits;
+    for (unsigned OldUnit : Reg.getNativeRegUnits())
+      NewNativeUnits.set(GetRenumberedUnit(OldUnit));
+    if (!isContiguous(NewNativeUnits)) {
+      PrintFatalError("cannot enforce regunit intervals, final "
+                      "renumbering did not produce contiguous units "
+                      "for register " +
+                      Reg.getName() + "\n");
+    }
+    Reg.NativeRegUnits = NewNativeUnits;
+  }
+}
+
 // Find a set in UniqueSets with the same elements as Set.
 // Return an iterator into UniqueSets.
 static std::vector<RegUnitSet>::const_iterator
@@ -2207,6 +2304,11 @@ void CodeGenRegBank::computeDerivedInfo() {
   // This may create adopted register units (with unit # >= NumNativeRegUnits).
   Records.getTimer().startTimer("Compute reg unit weights");
   computeRegUnitWeights();
+  Records.getTimer().stopTimer();
+
+  // Enforce regunit intervals if requested by the target.
+  Records.getTimer().startTimer("Enforce regunit intervals");
+  enforceRegUnitIntervals();
   Records.getTimer().stopTimer();
 
   // Compute a unique set of RegUnitSets. One for each RegClass and inferred
@@ -2546,6 +2648,37 @@ CodeGenRegBank::getRegClassForRegister(const Record *R) {
     return nullptr;
   }
   return FoundRC;
+}
+
+bool CodeGenRegBank::regClassContainsReg(const Record *RegClassDef,
+                                         const Record *RegDef,
+                                         ArrayRef<SMLoc> Loc) {
+  // Check all four combinations of Register[ByHwMode] X RegClass[ByHwMode],
+  // starting with the two RegClassByHwMode cases.
+  unsigned NumModes = CGH.getNumModeIds();
+  std::optional<RegisterByHwMode> RegByMode;
+  CodeGenRegister *Reg = nullptr;
+  if (RegDef->isSubClassOf("RegisterByHwMode"))
+    RegByMode = RegisterByHwMode(RegDef, *this);
+  else
+    Reg = getReg(RegDef);
+  if (RegClassDef->isSubClassOf("RegClassByHwMode")) {
+    RegClassByHwMode RC(RegClassDef, *this);
+    for (unsigned M = 0; M < NumModes; ++M) {
+      if (RC.hasMode(M) && !RC.get(M)->contains(Reg ? Reg : RegByMode->get(M)))
+        return false;
+    }
+    return true;
+  }
+  // Otherwise we have a plain register class, check Register[ByHwMode]
+  CodeGenRegisterClass *RC = getRegClass(RegClassDef, Loc);
+  if (Reg)
+    return RC->contains(Reg);
+  for (unsigned M = 0; M < NumModes; ++M) {
+    if (RegByMode->hasMode(M) && !RC->contains(RegByMode->get(M)))
+      return false;
+  }
+  return true; // RegByMode contained for all possible modes.
 }
 
 const CodeGenRegisterClass *

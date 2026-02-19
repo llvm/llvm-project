@@ -44,7 +44,6 @@
 #include <limits>
 #include <optional>
 #include <string>
-#include <tuple>
 
 #ifdef __SSE4_2__
 #include <nmmintrin.h>
@@ -71,6 +70,17 @@ tok::ObjCKeywordKind Token::getObjCKeywordID() const {
     return tok::objc_not_keyword;
   const IdentifierInfo *specId = getIdentifierInfo();
   return specId ? specId->getObjCKeywordID() : tok::objc_not_keyword;
+}
+
+bool Token::isModuleContextualKeyword(bool AllowExport) const {
+  if (AllowExport && is(tok::kw_export))
+    return true;
+  if (isOneOf(tok::kw_import, tok::kw_module))
+    return true;
+  if (isNot(tok::identifier))
+    return false;
+  const auto *II = getIdentifierInfo();
+  return II->isImportKeyword() || II->isModuleKeyword();
 }
 
 /// Determine whether the token kind starts a simple-type-specifier.
@@ -2024,7 +2034,8 @@ bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
 
   // Finally, now that we know we have an identifier, pass this off to the
   // preprocessor, which may macro expand it or something.
-  if (II->isHandleIdentifierCase())
+  if (II->isHandleIdentifierCase() || II->isModuleKeyword() ||
+      II->isImportKeyword() || II->getTokenID() == tok::kw_export)
     return PP->HandleIdentifier(Result);
 
   return true;
@@ -2505,8 +2516,7 @@ bool Lexer::LexCharConstant(Token &Result, const char *CurPtr,
 /// Update BufferPtr to point to the next non-whitespace character and return.
 ///
 /// This method forms a token and returns true if KeepWhitespaceMode is enabled.
-bool Lexer::SkipWhitespace(Token &Result, const char *CurPtr,
-                           bool &TokAtPhysicalStartOfLine) {
+bool Lexer::SkipWhitespace(Token &Result, const char *CurPtr) {
   // Whitespace - Skip it, then return the token after the whitespace.
   bool SawNewline = isVerticalWhitespace(CurPtr[-1]);
 
@@ -2562,7 +2572,7 @@ bool Lexer::SkipWhitespace(Token &Result, const char *CurPtr,
   Result.setFlagValue(Token::LeadingSpace, HasLeadingSpace);
   if (SawNewline) {
     Result.setFlag(Token::StartOfLine);
-    TokAtPhysicalStartOfLine = true;
+    Result.setFlag(Token::PhysicalStartOfLine);
 
     if (NewLinePtr && lastNewLine && NewLinePtr != lastNewLine && PP) {
       if (auto *Handler = PP->getEmptylineHandler())
@@ -2581,8 +2591,7 @@ bool Lexer::SkipWhitespace(Token &Result, const char *CurPtr,
 ///
 /// If we're in KeepCommentMode or any CommentHandler has inserted
 /// some tokens, this will store the first token and return true.
-bool Lexer::SkipLineComment(Token &Result, const char *CurPtr,
-                            bool &TokAtPhysicalStartOfLine) {
+bool Lexer::SkipLineComment(Token &Result, const char *CurPtr) {
   // If Line comments aren't explicitly enabled for this language, emit an
   // extension warning.
   if (!LineComment) {
@@ -2738,7 +2747,7 @@ bool Lexer::SkipLineComment(Token &Result, const char *CurPtr,
 
   // The next returned token is at the start of the line.
   Result.setFlag(Token::StartOfLine);
-  TokAtPhysicalStartOfLine = true;
+  Result.setFlag(Token::PhysicalStartOfLine);
   // No leading whitespace seen so far.
   Result.clearFlag(Token::LeadingSpace);
   BufferPtr = CurPtr;
@@ -2863,8 +2872,7 @@ static bool isEndOfBlockCommentWithEscapedNewLine(const char *CurPtr, Lexer *L,
 ///
 /// If we're in KeepCommentMode or any CommentHandler has inserted
 /// some tokens, this will store the first token and return true.
-bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr,
-                             bool &TokAtPhysicalStartOfLine) {
+bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr) {
   // Scan one character past where we should, looking for a '/' character.  Once
   // we find it, check to see if it was preceded by a *.  This common
   // optimization helps people who like to put a lot of * characters in their
@@ -3067,7 +3075,7 @@ bool Lexer::SkipBlockComment(Token &Result, const char *CurPtr,
   // efficiently now.  This is safe even in KeepWhitespaceMode because we would
   // have already returned above with the comment as a token.
   if (isHorizontalWhitespace(*CurPtr)) {
-    SkipWhitespace(Result, CurPtr+1, TokAtPhysicalStartOfLine);
+    SkipWhitespace(Result, CurPtr + 1);
     return false;
   }
 
@@ -3712,6 +3720,11 @@ bool Lexer::Lex(Token &Result) {
     IsAtStartOfLine = false;
   }
 
+  if (IsAtPhysicalStartOfLine) {
+    Result.setFlag(Token::PhysicalStartOfLine);
+    IsAtPhysicalStartOfLine = false;
+  }
+
   if (HasLeadingSpace) {
     Result.setFlag(Token::LeadingSpace);
     HasLeadingSpace = false;
@@ -3722,11 +3735,9 @@ bool Lexer::Lex(Token &Result) {
     HasLeadingEmptyMacro = false;
   }
 
-  bool atPhysicalStartOfLine = IsAtPhysicalStartOfLine;
-  IsAtPhysicalStartOfLine = false;
   bool isRawLex = isLexingRawMode();
   (void) isRawLex;
-  bool returnedToken = LexTokenInternal(Result, atPhysicalStartOfLine);
+  bool returnedToken = LexTokenInternal(Result);
   // (After the LexTokenInternal call, the lexer might be destroyed.)
   assert((returnedToken || !isRawLex) && "Raw lex must succeed");
   return returnedToken;
@@ -3737,7 +3748,7 @@ bool Lexer::Lex(Token &Result) {
 /// has a null character at the end of the file.  This returns a preprocessing
 /// token, not a normal token, as such, it is an internal interface.  It assumes
 /// that the Flags of result have been cleared before calling this.
-bool Lexer::LexTokenInternal(Token &Result, bool TokAtPhysicalStartOfLine) {
+bool Lexer::LexTokenInternal(Token &Result) {
 LexStart:
   assert(!Result.needsCleaning() && "Result needs cleaning");
   assert(!Result.hasPtrData() && "Result has not been reset");
@@ -3790,7 +3801,7 @@ LexStart:
     if (!isLexingRawMode())
       Diag(CurPtr-1, diag::null_in_file);
     Result.setFlag(Token::LeadingSpace);
-    if (SkipWhitespace(Result, CurPtr, TokAtPhysicalStartOfLine))
+    if (SkipWhitespace(Result, CurPtr))
       return true; // KeepWhitespaceMode
 
     // We know the lexer hasn't changed, so just try again with this lexer.
@@ -3836,7 +3847,7 @@ LexStart:
     // No leading whitespace seen so far.
     Result.clearFlag(Token::LeadingSpace);
 
-    if (SkipWhitespace(Result, CurPtr, TokAtPhysicalStartOfLine))
+    if (SkipWhitespace(Result, CurPtr))
       return true; // KeepWhitespaceMode
 
     // We only saw whitespace, so just try again with this lexer.
@@ -3848,7 +3859,7 @@ LexStart:
   case '\v':
   SkipHorizontalWhitespace:
     Result.setFlag(Token::LeadingSpace);
-    if (SkipWhitespace(Result, CurPtr, TokAtPhysicalStartOfLine))
+    if (SkipWhitespace(Result, CurPtr))
       return true; // KeepWhitespaceMode
 
   SkipIgnoredUnits:
@@ -3858,11 +3869,11 @@ LexStart:
     // too (without going through the big switch stmt).
     if (CurPtr[0] == '/' && CurPtr[1] == '/' && !inKeepCommentMode() &&
         LineComment && (LangOpts.CPlusPlus || !LangOpts.TraditionalCPP)) {
-      if (SkipLineComment(Result, CurPtr+2, TokAtPhysicalStartOfLine))
+      if (SkipLineComment(Result, CurPtr + 2))
         return true; // There is a token to return.
       goto SkipIgnoredUnits;
     } else if (CurPtr[0] == '/' && CurPtr[1] == '*' && !inKeepCommentMode()) {
-      if (SkipBlockComment(Result, CurPtr+2, TokAtPhysicalStartOfLine))
+      if (SkipBlockComment(Result, CurPtr + 2))
         return true; // There is a token to return.
       goto SkipIgnoredUnits;
     } else if (isHorizontalWhitespace(*CurPtr)) {
@@ -4024,7 +4035,6 @@ LexStart:
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
     return LexIdentifierContinue(Result, CurPtr);
-
   case '$':   // $ in identifiers.
     if (LangOpts.DollarIdents) {
       if (!isLexingRawMode())
@@ -4174,8 +4184,7 @@ LexStart:
           TreatAsComment = getCharAndSize(CurPtr+SizeTmp, SizeTmp2) != '*';
 
       if (TreatAsComment) {
-        if (SkipLineComment(Result, ConsumeChar(CurPtr, SizeTmp, Result),
-                            TokAtPhysicalStartOfLine))
+        if (SkipLineComment(Result, ConsumeChar(CurPtr, SizeTmp, Result)))
           return true; // There is a token to return.
 
         // It is common for the tokens immediately after a // comment to be
@@ -4186,8 +4195,7 @@ LexStart:
     }
 
     if (Char == '*') {  // /**/ comment.
-      if (SkipBlockComment(Result, ConsumeChar(CurPtr, SizeTmp, Result),
-                           TokAtPhysicalStartOfLine))
+      if (SkipBlockComment(Result, ConsumeChar(CurPtr, SizeTmp, Result)))
         return true; // There is a token to return.
 
       // We only saw whitespace, so just try again with this lexer.
@@ -4227,7 +4235,8 @@ LexStart:
         // it's actually the start of a preprocessing directive.  Callback to
         // the preprocessor to handle it.
         // TODO: -fpreprocessed mode??
-        if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer)
+        if (Result.isAtPhysicalStartOfLine() && !LexingRawMode &&
+            !Is_PragmaLexer)
           goto HandleDirective;
 
         Kind = tok::hash;
@@ -4348,6 +4357,9 @@ LexStart:
     if (Char == '=') {
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::caretequal;
+    } else if (LangOpts.Reflection && Char == '^') {
+      CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
+      Kind = tok::caretcaret;
     } else {
       if (LangOpts.OpenCL && Char == '^')
         Diag(CurPtr, diag::err_opencl_logical_exclusive_or);
@@ -4415,7 +4427,7 @@ LexStart:
       // it's actually the start of a preprocessing directive.  Callback to
       // the preprocessor to handle it.
       // TODO: -fpreprocessed mode??
-      if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer)
+      if (Result.isAtPhysicalStartOfLine() && !LexingRawMode && !Is_PragmaLexer)
         goto HandleDirective;
 
       Kind = tok::hash;
@@ -4435,7 +4447,7 @@ LexStart:
     if (!LangOpts.AsmPreprocessor) {
       if (uint32_t CodePoint = tryReadUCN(CurPtr, BufferPtr, &Result)) {
         if (CheckUnicodeWhitespace(Result, CodePoint, CurPtr)) {
-          if (SkipWhitespace(Result, CurPtr, TokAtPhysicalStartOfLine))
+          if (SkipWhitespace(Result, CurPtr))
             return true; // KeepWhitespaceMode
 
           // We only saw whitespace, so just try again with this lexer.
@@ -4468,7 +4480,7 @@ LexStart:
                                   llvm::strictConversion);
     if (Status == llvm::conversionOK) {
       if (CheckUnicodeWhitespace(Result, CodePoint, CurPtr)) {
-        if (SkipWhitespace(Result, CurPtr, TokAtPhysicalStartOfLine))
+        if (SkipWhitespace(Result, CurPtr))
           return true; // KeepWhitespaceMode
 
         // We only saw whitespace, so just try again with this lexer.
@@ -4506,8 +4518,8 @@ LexStart:
   return true;
 
 HandleDirective:
-  // We parsed a # character and it's the start of a preprocessing directive.
 
+  // We parsed a # character and it's the start of a preprocessing directive.
   FormTokenWithChars(Result, CurPtr, tok::hash);
   PP->HandleDirective(Result);
 
@@ -4531,6 +4543,10 @@ const char *Lexer::convertDependencyDirectiveToken(
   Result.setKind(DDTok.Kind);
   Result.setFlag((Token::TokenFlags)DDTok.Flags);
   Result.setLength(DDTok.Length);
+  if (Result.is(tok::raw_identifier))
+    Result.setRawIdentifierData(TokPtr);
+  else if (Result.isLiteral())
+    Result.setLiteralData(TokPtr);
   BufferPtr = TokPtr + DDTok.Length;
   return TokPtr;
 }
@@ -4588,15 +4604,18 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     Result.setRawIdentifierData(TokPtr);
     if (!isLexingRawMode()) {
       const IdentifierInfo *II = PP->LookUpIdentifierInfo(Result);
+      if (LangOpts.CPlusPlusModules && Result.isModuleContextualKeyword() &&
+          PP->HandleModuleContextualKeyword(Result)) {
+        PP->HandleDirective(Result);
+        return false;
+      }
       if (II->isHandleIdentifierCase())
         return PP->HandleIdentifier(Result);
     }
     return true;
   }
-  if (Result.isLiteral()) {
-    Result.setLiteralData(TokPtr);
+  if (Result.isLiteral())
     return true;
-  }
   if (Result.is(tok::colon)) {
     // Convert consecutive colons to 'tok::coloncolon'.
     if (*BufferPtr == ':') {

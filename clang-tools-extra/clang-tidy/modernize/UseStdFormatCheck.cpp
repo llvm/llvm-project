@@ -50,7 +50,7 @@ void UseStdFormatCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(argumentCountAtLeast(1),
                hasArgument(0, stringLiteral(isOrdinary())),
-               callee(functionDecl(matchers::matchesAnyListedName(
+               callee(functionDecl(matchers::matchesAnyListedRegexName(
                                        StrFormatLikeFunctions))
                           .bind("func_decl")))
           .bind("strformat"),

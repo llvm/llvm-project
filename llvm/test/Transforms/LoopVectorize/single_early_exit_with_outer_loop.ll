@@ -6,7 +6,8 @@ declare void @init_mem(ptr, i64);
 ; uncountable early exits is correctly adding to the outer loop at depth 1.
 define void @early_exit_in_outer_loop1() {
 ; CHECK-LABEL: Loop info for function 'early_exit_in_outer_loop1':
-; CHECK: Loop at depth 1 containing: %loop.outer<header>,%loop.inner.found,%loop.inner.end<latch>,%loop.inner.end.loopexit,%vector.ph,%vector.body,%middle.split,%middle.block,%vector.early.exit
+; CHECK: Loop at depth 1 containing: %loop.outer<header>,%loop.inner.found,%loop.inner.end<latch>,%loop.inner.end.loopexit,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit
+; CHECK:    Loop at depth 2 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -45,8 +46,9 @@ loop.inner.end:
 ; loops at depths 1 and 2, respectively.
 define void @early_exit_in_outer_loop2() {
 ; CHECK-LABEL: Loop info for function 'early_exit_in_outer_loop2':
-; CHECK: Loop at depth 1 containing: %loop.outer<header>,%loop.middle,%loop.inner.found,%loop.inner.end,%loop.middle.end,%loop.outer.latch<latch>,%vector.ph,%vector.body,%middle.split,%middle.block,%vector.early.exit
-; CHECK:    Loop at depth 2 containing: %loop.middle<header>,%loop.inner.end<latch><exiting>,%vector.ph,%vector.body,%middle.split<exiting>,%middle.block
+; CHECK: Loop at depth 1 containing: %loop.outer<header>,%loop.middle,%loop.inner.found,%loop.inner.end,%loop.middle.end,%loop.outer.latch<latch>,%vector.ph,%vector.body,%vector.body.interim,%middle.block,%vector.early.exit
+; CHECK:    Loop at depth 2 containing: %loop.middle<header>,%loop.inner.end<latch><exiting>,%vector.ph,%vector.body<exiting>,%vector.body.interim,%middle.block
+; CHECK:        Loop at depth 3 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -92,8 +94,8 @@ loop.outer.latch:
 
 define i32 @early_exit_branch_to_outer_header() {
 ; CHECK-LABEL: Loop info for function 'early_exit_branch_to_outer_header':
-; CHECK-NEXT:  Loop at depth 1 containing: %outer.header<header>,%outer.header.loopexit<latch>,%vector.ph,%vector.body,%middle.split<exiting>,%vector.early.exit
-; CHECK-NEXT:    Loop at depth 2 containing: %vector.body<header><latch><exiting>
+; CHECK-NEXT:  Loop at depth 1 containing: %outer.header<header>,%outer.header.loopexit<latch>,%vector.ph,%vector.body,%vector.body.interim<exiting>,%vector.early.exit
+; CHECK-NEXT:    Loop at depth 2 containing: %vector.body<header><exiting>,%vector.body.interim<latch><exiting>
 entry:
   %src = alloca [1024 x i8]
   call void @init_mem(ptr %src, i64 1024)

@@ -52,54 +52,54 @@
 define spir_kernel void @testBitRev() {
 entry:
   %call2 = call i2 @llvm.bitreverse.i2(i2 0)
-  store i2 %call2, i2* @G_i2_res
+  store i2 %call2, ptr @G_i2_res
   %call4 = call i4 @llvm.bitreverse.i4(i4 0)
-  store i4 %call4, i4* @G_i4_res
+  store i4 %call4, ptr @G_i4_res
   ret void
 }
 
 define spir_kernel void @testBitRevV2(<2 x i2> %a, <2 x i4> %b) {
 entry:
   %call2 = call <2 x i2> @llvm.bitreverse.v2i2(<2 x i2> %a)
-  store <2 x i2> %call2, <2 x i2>* @G_v2i2_res
+  store <2 x i2> %call2, ptr @G_v2i2_res
   %call4 = call <2 x i4> @llvm.bitreverse.v2i4(<2 x i4> %b)
-  store <2 x i4> %call4, <2 x i4>* @G_v2i4_res
+  store <2 x i4> %call4, ptr @G_v2i4_res
   ret void
 }
 
 define spir_kernel void @testBitRevV3(<3 x i2> %a, <3 x i4> %b) {
 entry:
   %call2 = call <3 x i2> @llvm.bitreverse.v3i2(<3 x i2> %a)
-  store <3 x i2> %call2, <3 x i2>* @G_v3i2_res
+  store <3 x i2> %call2, ptr @G_v3i2_res
   %call4 = call <3 x i4> @llvm.bitreverse.v3i4(<3 x i4> %b)
-  store <3 x i4> %call4, <3 x i4>* @G_v3i4_res
+  store <3 x i4> %call4, ptr @G_v3i4_res
   ret void
 }
 
 define spir_kernel void @testBitRevV4(<4 x i2> %a, <4 x i4> %b) {
 entry:
   %call2 = call <4 x i2> @llvm.bitreverse.v4i2(<4 x i2> %a)
-  store <4 x i2> %call2, <4 x i2>* @G_v4i2_res
+  store <4 x i2> %call2, ptr @G_v4i2_res
   %call4 = call <4 x i4> @llvm.bitreverse.v4i4(<4 x i4> %b)
-  store <4 x i4> %call4, <4 x i4>* @G_v4i4_res
+  store <4 x i4> %call4, ptr @G_v4i4_res
   ret void
 }
 
 define spir_kernel void @testBitRevV8(<8 x i2> %a, <8 x i4> %b) {
 entry:
   %call2 = call <8 x i2> @llvm.bitreverse.v8i2(<8 x i2> %a)
-  store <8 x i2> %call2, <8 x i2>* @G_v8i2_res
+  store <8 x i2> %call2, ptr @G_v8i2_res
   %call4 = call <8 x i4> @llvm.bitreverse.v8i4(<8 x i4> %b)
-  store <8 x i4> %call4, <8 x i4>* @G_v8i4_res
+  store <8 x i4> %call4, ptr @G_v8i4_res
   ret void
 }
 
 define spir_kernel void @testBitRevV16(<16 x i2> %a, <16 x i4> %b) {
 entry:
   %call2 = call <16 x i2> @llvm.bitreverse.v16i2(<16 x i2> %a)
-  store <16 x i2> %call2, <16 x i2>* @G_v16i2_res
+  store <16 x i2> %call2, ptr @G_v16i2_res
   %call4 = call <16 x i4> @llvm.bitreverse.v16i4(<16 x i4> %b)
-  store <16 x i4> %call4, <16 x i4>* @G_v16i4_res
+  store <16 x i4> %call4, ptr @G_v16i4_res
   ret void
 }
 

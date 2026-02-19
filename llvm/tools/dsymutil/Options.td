@@ -108,6 +108,13 @@ def fat64: F<"fat64">,
 def update: F<"update">,
   HelpText<"Updates existing dSYM files to contain the latest accelerator tables and other DWARF optimizations.">,
   Group<grp_general>;
+
+def allow_section_header_offset_overflow : F<"allow-section-header-offset-overflow">,
+  HelpText<"Allow emitting a 32-bit section offset that, when applied, may exceed the Mach-O 4 GB limit. "
+           "This leverages the fact that the offset can be computed as a 64-bit value when sections are ordered (which is always the case for dsymutil). "
+           "Note that this produces an invalid Mach-O and requires explicit support from the tools that consume it.">,
+  Group<grp_general>;
+
 def: Flag<["-"], "u">,
   Alias<update>,
   HelpText<"Alias for --update">,

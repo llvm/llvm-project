@@ -24,7 +24,6 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   opencl/lib/clspv/SOURCES;
   opencl/lib/generic/SOURCES;
   opencl/lib/ptx-nvidiacl/SOURCES;
-  opencl/lib/r600/SOURCES;
   opencl/lib/spirv/SOURCES;
   # CLC internal libraries
   clc/lib/generic/SOURCES;
@@ -32,16 +31,16 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   clc/lib/amdgpu/SOURCES;
   clc/lib/clspv/SOURCES;
   clc/lib/ptx-nvidiacl/SOURCES;
-  clc/lib/r600/SOURCES;
   clc/lib/spirv/SOURCES;
 )
 
-set( LIBCLC_MIN_LLVM 3.9.0 )
-
-set( LIBCLC_TARGETS_TO_BUILD "all"
+# A runtimes cross-build should only use the requested target.
+set( LIBCLC_DEFAULT_TARGET "all" )
+if( LLVM_RUNTIMES_BUILD AND LLVM_DEFAULT_TARGET_TRIPLE MATCHES "^nvptx|^amdgcn" )
+  set( LIBCLC_DEFAULT_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE} )
+endif()
+set( LIBCLC_TARGETS_TO_BUILD ${LIBCLC_DEFAULT_TARGET}
     CACHE STRING "Semicolon-separated list of libclc targets to build, or 'all'." )
-
-option( ENABLE_RUNTIME_SUBNORMAL "Enable runtime linking of subnormal support." OFF )
 
 option(
   LIBCLC_USE_SPIRV_BACKEND "Build SPIR-V targets with the SPIR-V backend." OFF
@@ -62,10 +61,6 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
 
   message( STATUS "libclc LLVM version: ${LLVM_PACKAGE_VERSION}" )
 
-  if( LLVM_PACKAGE_VERSION VERSION_LESS LIBCLC_MIN_LLVM )
-    message( FATAL_ERROR "libclc needs at least LLVM ${LIBCLC_MIN_LLVM}" )
-  endif()
-
   # Import required tools
   if( NOT EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
     foreach( tool IN ITEMS clang llvm-as llvm-link opt )
@@ -82,7 +77,10 @@ else()
   # In-tree configuration
   set( LIBCLC_STANDALONE_BUILD FALSE )
 
-  set( LLVM_PACKAGE_VERSION ${LLVM_VERSION} )
+  if( NOT LLVM_PACKAGE_VERSION )
+    set( LLVM_PACKAGE_VERSION ${LLVM_VERSION} )
+  endif()
+  set( PACKAGE_VERSION ${LLVM_PACKAGE_VERSION} )
 
   # Note that we check this later (for both build types) but we can provide a
   # more useful error message when built in-tree. We assume that LLVM tools are
@@ -102,12 +100,10 @@ else()
   # in-tree build we place the libraries in clang's resource driectory.
   include(GetClangResourceDir)
   get_clang_resource_dir( LIBCLC_INSTALL_DIR )
-  cmake_path( APPEND LIBCLC_INSTALL_DIR "lib" "libclc" )
+  cmake_path( APPEND LIBCLC_INSTALL_DIR "lib" )
 
-  # Note we do not adhere to LLVM_ENABLE_PER_TARGET_RUNTIME_DIR.
   cmake_path( GET LLVM_LIBRARY_OUTPUT_INTDIR PARENT_PATH LIBCLC_OUTPUT_LIBRARY_DIR )
   cmake_path( APPEND LIBCLC_OUTPUT_LIBRARY_DIR ${LIBCLC_INSTALL_DIR} )
-  file( MAKE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR} )
 endif()
 
 if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
@@ -148,14 +144,12 @@ endif()
 # List of all targets. Note that some are added dynamically below.
 set( LIBCLC_TARGETS_ALL
   amdgcn--
-  amdgcn--amdhsa
+  amdgcn-amd-amdhsa-llvm
   clspv--
   clspv64--
-  r600--
-  nvptx--
   nvptx64--
-  nvptx--nvidiacl
   nvptx64--nvidiacl
+  nvptx64-nvidia-cuda
 )
 
 # The mesa3d environment is only available since LLVM 4.0
@@ -198,20 +192,15 @@ list( SORT LIBCLC_TARGETS_TO_BUILD )
 # headers are not $build/include/ which is what LLVM_INCLUDE_DIR is set to.
 include_directories( ${LLVM_INCLUDE_DIRS} )
 
-# Configure prepare_builtins
-add_subdirectory( utils )
-
 # Setup arch devices
-set( r600--_devices cedar cypress barts cayman )
-set( amdgcn--_devices tahiti )
-set( amdgcn-mesa-mesa3d_devices ${amdgcn--_devices} )
-set( amdgcn--amdhsa_devices none )
+set( amdgcn--_devices none )
+set( amdgcn-mesa-mesa3d_devices none )
+set( amdgcn-amd-amdhsa-llvm_devices none )
 set( clspv--_devices none )
 set( clspv64--_devices none )
-set( nvptx--_devices none )
 set( nvptx64--_devices none )
-set( nvptx--nvidiacl_devices none )
 set( nvptx64--nvidiacl_devices none )
+set( nvptx64-nvidia-cuda_devices none )
 set( spirv-mesa3d-_devices none )
 set( spirv64-mesa3d-_devices none )
 
@@ -220,58 +209,10 @@ set( cedar_aliases palm sumo sumo2 redwood juniper )
 set( cypress_aliases hemlock )
 set( barts_aliases turks caicos )
 set( cayman_aliases aruba )
-set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
-  mullins tonga tongapro iceland carrizo fiji stoney polaris10 polaris11
-  gfx602 gfx705 gfx805
-  gfx900 gfx902 gfx904 gfx906 gfx908 gfx909 gfx90a gfx90c gfx942 gfx950
-  gfx1010 gfx1011 gfx1012 gfx1013
-  gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036
-  gfx1100 gfx1101 gfx1102 gfx1103
-  gfx1150 gfx1151 gfx1152 gfx1153
-  gfx1200 gfx1201 gfx1250 gfx1251
-)
 
 # pkg-config file
 configure_file( libclc.pc.in libclc.pc @ONLY )
 install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
-
-if( ENABLE_RUNTIME_SUBNORMAL )
-  foreach( file IN ITEMS subnormal_use_default subnormal_disable )
-    link_bc(
-       TARGET ${file}
-       INPUTS ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/${file}.ll
-    )
-    install(
-      FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
-      DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
-    )
-  endforeach()
-endif()
-
-find_package( Python3 REQUIRED COMPONENTS Interpreter )
-file( TO_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/utils/gen_convert.py script_loc )
-add_custom_command(
-  OUTPUT convert.cl
-  COMMAND ${Python3_EXECUTABLE} ${script_loc} > convert.cl
-  DEPENDS ${script_loc} )
-add_custom_target( generate-convert.cl DEPENDS convert.cl )
-set_target_properties( generate-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
-
-add_custom_command(
-  OUTPUT clc-convert.cl
-  COMMAND ${Python3_EXECUTABLE} ${script_loc} --clc > clc-convert.cl
-  DEPENDS ${script_loc} )
-add_custom_target( generate-clc-convert.cl DEPENDS clc-convert.cl )
-set_target_properties( generate-clc-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
-
-if ( clspv-- IN_LIST LIBCLC_TARGETS_TO_BUILD OR clspv64-- IN_LIST LIBCLC_TARGETS_TO_BUILD )
-  add_custom_command(
-    OUTPUT clspv-convert.cl
-    COMMAND ${Python3_EXECUTABLE} ${script_loc} --clspv > clspv-convert.cl
-    DEPENDS ${script_loc} )
-  add_custom_target( generate-clspv-convert.cl DEPENDS clspv-convert.cl )
-  set_target_properties( generate-clspv-convert.cl PROPERTIES FOLDER "libclc/Sourcegenning" )
-endif()
 
 set_source_files_properties(
   # CLC builtins
@@ -293,7 +234,6 @@ set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp2.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_exp.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/amdgpu/math/clc_native_log10.cl
-  ${CMAKE_CURRENT_SOURCE_DIR}/clc/lib/r600/math/clc_native_rsqrt.cl
   # OpenCL builtins
   ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_cos.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_divide.cl
@@ -323,12 +263,12 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
   set( opencl_dirs )
 
-  if( ${ARCH} STREQUAL r600 OR ${ARCH} STREQUAL amdgcn )
+  if( ${ARCH} STREQUAL amdgcn )
     list( APPEND opencl_dirs amdgpu )
   endif()
 
   # Some targets' directories alias others
-  if( ${ARCH} STREQUAL nvptx OR ${ARCH} STREQUAL nvptx64 )
+  if( ${ARCH} STREQUAL nvptx64 )
     set( DARCH ptx )
   elseif( ${ARCH} STREQUAL clspv OR ${ARCH} STREQUAL clspv64 )
     set( DARCH clspv )
@@ -338,6 +278,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( DARCH amdgcn-amdhsa )
   else()
     set( DARCH ${ARCH} )
+  endif()
+  if ( "${OS}" STREQUAL cuda )
+    set( OS nvidiacl )
   endif()
 
   # Append a variety of target- and triple-based directories to search,
@@ -359,7 +302,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   endif()
 
   set( clc_lib_files )
-  set( clc_gen_files clc-convert.cl )
 
   libclc_configure_lib_source(
     clc_lib_files
@@ -368,18 +310,6 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
   )
 
   set( opencl_lib_files )
-  set( opencl_gen_files )
-
-  if( NOT ARCH STREQUAL spirv AND NOT ARCH STREQUAL spirv64 )
-    if( ARCH STREQUAL clspv OR ARCH STREQUAL clspv64 )
-      list( APPEND opencl_gen_files clspv-convert.cl )
-    else()
-      list( APPEND opencl_gen_files convert.cl )
-      if ( NOT ENABLE_RUNTIME_SUBNORMAL )
-        list( APPEND opencl_lib_files opencl/lib/generic/subnormal_use_default.ll )
-      endif()
-    endif()
-  endif()
 
   libclc_configure_lib_source(
     opencl_lib_files
@@ -414,6 +344,9 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       if( ARCH STREQUAL clspv64 )
         set( MACRO_ARCH CLSPV64 )
       endif()
+    elseif( ARCH STREQUAL amdgcn )
+      set( build_flags "-Xclang" "-mcode-object-version=none" )
+      set( opt_flags -O3 )
     else()
       set( build_flags )
       set( opt_flags -O3 )
@@ -431,9 +364,11 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
+      -include opencl-c-base.h
       # Error on undefined macros
       -Werror=undef
       -fdiscard-value-names
+      -ffp-contract=fast-honor-pragmas
     )
 
     if( NOT "${cpu}" STREQUAL "" )
@@ -454,7 +389,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     # maps to the private address space.
     set ( private_addrspace_val 0 )
     set ( generic_addrspace_val 0 )
-    if( ARCH STREQUAL amdgcn OR ARCH STREQUAL r600 OR ARCH STREQUAL amdgcn-amdhsa )
+    if( ARCH STREQUAL amdgcn-amdhsa )
       set ( private_addrspace_val 5 )
     endif()
     if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
@@ -468,28 +403,29 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     add_libclc_builtin_set(
       CLC_INTERNAL
       ARCH ${ARCH}
+      DEVICE ${d}
       ARCH_SUFFIX clc-${arch_suffix}
       TRIPLE ${clang_triple}
       COMPILE_FLAGS ${build_flags}
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${clc_lib_files}
-      GEN_FILES ${clc_gen_files}
     )
 
     list( APPEND build_flags
-      -Xclang -fdeclare-opencl-builtins -Xclang -finclude-default-header
+      -Xclang -fdeclare-opencl-builtins
       -I${CMAKE_CURRENT_SOURCE_DIR}/opencl/include
     )
 
     add_libclc_builtin_set(
       ARCH ${ARCH}
+      DEVICE ${d}
       ARCH_SUFFIX ${arch_suffix}
       TRIPLE ${clang_triple}
       COMPILE_FLAGS ${build_flags}
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${opencl_lib_files}
-      GEN_FILES ${opencl_gen_files}
       ALIASES ${${d}_aliases}
+      OUTPUT_FILENAME libclc
       PARENT_TARGET libclc-opencl-builtins
       # Link in the CLC builtins and internalize their symbols
       INTERNAL_LINK_DEPENDENCIES builtins.link.clc-${arch_suffix}

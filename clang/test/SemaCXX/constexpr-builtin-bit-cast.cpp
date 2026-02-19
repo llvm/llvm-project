@@ -262,7 +262,7 @@ constexpr int ttn = test_to_nullptr();
 constexpr const long &returns_local() { return 0L; }
 
 // expected-error@+2 {{constexpr variable 'test_nullptr_bad' must be initialized by a constant expression}}
-// expected-note@+1 {{read of temporary whose lifetime has ended}}
+// expected-note@+1 {{read of object outside its lifetime}}
 constexpr nullptr_t test_nullptr_bad = __builtin_bit_cast(nullptr_t, returns_local());
 
 constexpr int test_indeterminate(bool read_indet) {

@@ -591,7 +591,7 @@ bool LazyCallGraph::RefSCC::switchInternalEdgeToCall(
 
 #ifdef EXPENSIVE_CHECKS
   verify();
-  auto VerifyOnExit = make_scope_exit([&]() { verify(); });
+  llvm::scope_exit VerifyOnExit([&]() { verify(); });
 #endif
 
   SCC &SourceSCC = *G->lookupSCC(SourceN);
@@ -736,7 +736,7 @@ void LazyCallGraph::RefSCC::switchTrivialInternalEdgeToRef(Node &SourceN,
 
 #ifdef EXPENSIVE_CHECKS
   verify();
-  auto VerifyOnExit = make_scope_exit([&]() { verify(); });
+  llvm::scope_exit VerifyOnExit([&]() { verify(); });
 #endif
 
   assert(G->lookupRefSCC(SourceN) == this && "Source must be in this RefSCC.");
@@ -754,7 +754,7 @@ LazyCallGraph::RefSCC::switchInternalEdgeToRef(Node &SourceN, Node &TargetN) {
 
 #ifdef EXPENSIVE_CHECKS
   verify();
-  auto VerifyOnExit = make_scope_exit([&]() { verify(); });
+  llvm::scope_exit VerifyOnExit([&]() { verify(); });
 #endif
 
   assert(G->lookupRefSCC(SourceN) == this && "Source must be in this RefSCC.");
@@ -1016,7 +1016,7 @@ LazyCallGraph::RefSCC::insertIncomingRefEdge(Node &SourceN, Node &TargetN) {
 
 #ifdef EXPENSIVE_CHECKS
   verify();
-  auto VerifyOnExit = make_scope_exit([&]() { verify(); });
+  llvm::scope_exit VerifyOnExit([&]() { verify(); });
 #endif
 
   int SourceIdx = G->RefSCCIndices[&SourceC];
@@ -1152,7 +1152,7 @@ void LazyCallGraph::RefSCC::removeOutgoingEdge(Node &SourceN, Node &TargetN) {
 
 #ifdef EXPENSIVE_CHECKS
   verify();
-  auto VerifyOnExit = make_scope_exit([&]() { verify(); });
+  llvm::scope_exit VerifyOnExit([&]() { verify(); });
 #endif
 
   // First remove it from the node.
@@ -1172,7 +1172,7 @@ LazyCallGraph::RefSCC::removeInternalRefEdges(
   // list of result RefSCCs and this RefSCC remains valid, or we return new
   // RefSCCs and this RefSCC is dead.
   verify();
-  auto VerifyOnExit = make_scope_exit([&]() {
+  llvm::scope_exit VerifyOnExit([&]() {
     // If we didn't replace our RefSCC with new ones, check that this one
     // remains valid.
     if (G)
@@ -1395,7 +1395,7 @@ LazyCallGraph::RefSCC::removeInternalRefEdges(
 void LazyCallGraph::RefSCC::insertTrivialCallEdge(Node &SourceN,
                                                   Node &TargetN) {
 #ifdef EXPENSIVE_CHECKS
-  auto ExitVerifier = make_scope_exit([this] { verify(); });
+  llvm::scope_exit ExitVerifier([this] { verify(); });
 
   // Check that we aren't breaking some invariants of the SCC graph. Note that
   // this is quadratic in the number of edges in the call graph!
@@ -1423,7 +1423,7 @@ void LazyCallGraph::RefSCC::insertTrivialCallEdge(Node &SourceN,
 
 void LazyCallGraph::RefSCC::insertTrivialRefEdge(Node &SourceN, Node &TargetN) {
 #ifdef EXPENSIVE_CHECKS
-  auto ExitVerifier = make_scope_exit([this] { verify(); });
+  llvm::scope_exit ExitVerifier([this] { verify(); });
 
   // Check that we aren't breaking some invariants of the RefSCC graph.
   RefSCC &SourceRC = *G->lookupRefSCC(SourceN);
@@ -1449,7 +1449,7 @@ void LazyCallGraph::RefSCC::replaceNodeFunction(Node &N, Function &NewF) {
   Function &OldF = N.getFunction();
 
 #ifdef EXPENSIVE_CHECKS
-  auto ExitVerifier = make_scope_exit([this] { verify(); });
+  llvm::scope_exit ExitVerifier([this] { verify(); });
 
   assert(G->lookupRefSCC(N) == this &&
          "Cannot replace the function of a node outside this RefSCC.");
@@ -1629,7 +1629,7 @@ void LazyCallGraph::addSplitFunction(Function &OriginalFunction,
 
 #ifdef EXPENSIVE_CHECKS
   OriginalRC->verify();
-  auto VerifyOnExit = make_scope_exit([&]() { OriginalRC->verify(); });
+  llvm::scope_exit VerifyOnExit([&]() { OriginalRC->verify(); });
 #endif
 
   assert(!lookup(NewFunction) &&
@@ -1708,7 +1708,7 @@ void LazyCallGraph::addSplitRefRecursiveFunctions(
 
 #ifdef EXPENSIVE_CHECKS
   OriginalRC->verify();
-  auto VerifyOnExit = make_scope_exit([&]() {
+  llvm::scope_exit VerifyOnExit([&]() {
     OriginalRC->verify();
     for (Function *NewFunction : NewFunctions)
       lookupRefSCC(get(*NewFunction))->verify();

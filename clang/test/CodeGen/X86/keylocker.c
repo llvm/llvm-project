@@ -89,14 +89,14 @@ void test_loadiwkey(unsigned int ctl, __m128i intkey, __m128i enkey_lo, __m128i 
 // CHECK64-NEXT:    [[TMP6:%.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32 [[TMP3]], <2 x i64> [[TMP4]])
 // CHECK64-NEXT:    [[TMP7:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 1
 // CHECK64-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP5]], align 1
-// CHECK64-NEXT:    [[TMP9:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 2
-// CHECK64-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP5]], i32 16
-// CHECK64-NEXT:    store <2 x i64> [[TMP9]], ptr [[TMP10]], align 1
-// CHECK64-NEXT:    [[TMP12:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 3
-// CHECK64-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP5]], i32 32
-// CHECK64-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP13]], align 1
-// CHECK64-NEXT:    [[TMP15:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 0
-// CHECK64-NEXT:    ret i32 [[TMP15]]
+// CHECK64-NEXT:    [[TMP8:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 2
+// CHECK64-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP5]], i32 16
+// CHECK64-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP9]], align 1
+// CHECK64-NEXT:    [[TMP10:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 3
+// CHECK64-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP5]], i32 32
+// CHECK64-NEXT:    store <2 x i64> [[TMP10]], ptr [[TMP11]], align 1
+// CHECK64-NEXT:    [[TMP12:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 0
+// CHECK64-NEXT:    ret i32 [[TMP12]]
 //
 // CHECK32-LABEL: @test_encodekey128_u32(
 // CHECK32-NEXT:  entry:
@@ -121,14 +121,14 @@ void test_loadiwkey(unsigned int ctl, __m128i intkey, __m128i enkey_lo, __m128i 
 // CHECK32-NEXT:    [[TMP6:%.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32 [[TMP3]], <2 x i64> [[TMP4]])
 // CHECK32-NEXT:    [[TMP7:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 1
 // CHECK32-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP5]], align 1
-// CHECK32-NEXT:    [[TMP9:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 2
-// CHECK32-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP5]], i32 16
-// CHECK32-NEXT:    store <2 x i64> [[TMP9]], ptr [[TMP10]], align 1
-// CHECK32-NEXT:    [[TMP12:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 3
-// CHECK32-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP5]], i32 32
-// CHECK32-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP13]], align 1
-// CHECK32-NEXT:    [[TMP15:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 0
-// CHECK32-NEXT:    ret i32 [[TMP15]]
+// CHECK32-NEXT:    [[TMP8:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 2
+// CHECK32-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP5]], i32 16
+// CHECK32-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP9]], align 1
+// CHECK32-NEXT:    [[TMP10:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 3
+// CHECK32-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP5]], i32 32
+// CHECK32-NEXT:    store <2 x i64> [[TMP10]], ptr [[TMP11]], align 1
+// CHECK32-NEXT:    [[TMP12:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP6]], 0
+// CHECK32-NEXT:    ret i32 [[TMP12]]
 //
 unsigned int test_encodekey128_u32(unsigned int htype, __m128i key, void *h) {
   return _mm_encodekey128_u32(htype, key, h);
@@ -163,17 +163,17 @@ unsigned int test_encodekey128_u32(unsigned int htype, __m128i key, void *h) {
 // CHECK64-NEXT:    [[TMP8:%.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32 [[TMP4]], <2 x i64> [[TMP5]], <2 x i64> [[TMP6]])
 // CHECK64-NEXT:    [[TMP9:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 1
 // CHECK64-NEXT:    store <2 x i64> [[TMP9]], ptr [[TMP7]], align 1
-// CHECK64-NEXT:    [[TMP11:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 2
-// CHECK64-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP7]], i32 16
-// CHECK64-NEXT:    store <2 x i64> [[TMP11]], ptr [[TMP12]], align 1
-// CHECK64-NEXT:    [[TMP14:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 3
-// CHECK64-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP7]], i32 32
+// CHECK64-NEXT:    [[TMP10:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 2
+// CHECK64-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP7]], i32 16
+// CHECK64-NEXT:    store <2 x i64> [[TMP10]], ptr [[TMP11]], align 1
+// CHECK64-NEXT:    [[TMP12:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 3
+// CHECK64-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP7]], i32 32
+// CHECK64-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP13]], align 1
+// CHECK64-NEXT:    [[TMP14:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 4
+// CHECK64-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP7]], i32 48
 // CHECK64-NEXT:    store <2 x i64> [[TMP14]], ptr [[TMP15]], align 1
-// CHECK64-NEXT:    [[TMP17:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 4
-// CHECK64-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP7]], i32 48
-// CHECK64-NEXT:    store <2 x i64> [[TMP17]], ptr [[TMP18]], align 1
-// CHECK64-NEXT:    [[TMP20:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 0
-// CHECK64-NEXT:    ret i32 [[TMP20]]
+// CHECK64-NEXT:    [[TMP16:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 0
+// CHECK64-NEXT:    ret i32 [[TMP16]]
 //
 // CHECK32-LABEL: @test_encodekey256_u32(
 // CHECK32-NEXT:  entry:
@@ -204,17 +204,17 @@ unsigned int test_encodekey128_u32(unsigned int htype, __m128i key, void *h) {
 // CHECK32-NEXT:    [[TMP8:%.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32 [[TMP4]], <2 x i64> [[TMP5]], <2 x i64> [[TMP6]])
 // CHECK32-NEXT:    [[TMP9:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 1
 // CHECK32-NEXT:    store <2 x i64> [[TMP9]], ptr [[TMP7]], align 1
-// CHECK32-NEXT:    [[TMP11:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 2
-// CHECK32-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP7]], i32 16
-// CHECK32-NEXT:    store <2 x i64> [[TMP11]], ptr [[TMP12]], align 1
-// CHECK32-NEXT:    [[TMP14:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 3
-// CHECK32-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP7]], i32 32
+// CHECK32-NEXT:    [[TMP10:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 2
+// CHECK32-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP7]], i32 16
+// CHECK32-NEXT:    store <2 x i64> [[TMP10]], ptr [[TMP11]], align 1
+// CHECK32-NEXT:    [[TMP12:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 3
+// CHECK32-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP7]], i32 32
+// CHECK32-NEXT:    store <2 x i64> [[TMP12]], ptr [[TMP13]], align 1
+// CHECK32-NEXT:    [[TMP14:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 4
+// CHECK32-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP7]], i32 48
 // CHECK32-NEXT:    store <2 x i64> [[TMP14]], ptr [[TMP15]], align 1
-// CHECK32-NEXT:    [[TMP17:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 4
-// CHECK32-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP7]], i32 48
-// CHECK32-NEXT:    store <2 x i64> [[TMP17]], ptr [[TMP18]], align 1
-// CHECK32-NEXT:    [[TMP20:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 0
-// CHECK32-NEXT:    ret i32 [[TMP20]]
+// CHECK32-NEXT:    [[TMP16:%.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP8]], 0
+// CHECK32-NEXT:    ret i32 [[TMP16]]
 //
 unsigned int test_encodekey256_u32(unsigned int htype, __m128i key_lo, __m128i key_hi, void *h) {
   return _mm_encodekey256_u32(htype, key_lo, key_hi, h);
@@ -581,33 +581,25 @@ unsigned char test_mm_aesdec128kl_u8(__m128i *odata, __m128i idata, const void *
 // CHECK64-NEXT:    store <2 x i64> [[TMP37]], ptr [[TMP38]], align 16
 // CHECK64-NEXT:    br label [[_MM_AESENCWIDE128KL_U8_EXIT:%.*]]
 // CHECK64:       aesencwide128kl_error.i:
-// CHECK64-NEXT:    [[TMP39:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 1
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP3]], align 16
-// CHECK64-NEXT:    [[TMP40:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 2
-// CHECK64-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK64-NEXT:    [[TMP39:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP39]], align 16
+// CHECK64-NEXT:    [[TMP40:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP40]], align 16
+// CHECK64-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP41]], align 16
-// CHECK64-NEXT:    [[TMP42:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 3
-// CHECK64-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK64-NEXT:    [[TMP42:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP42]], align 16
+// CHECK64-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP43]], align 16
-// CHECK64-NEXT:    [[TMP44:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 4
-// CHECK64-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
+// CHECK64-NEXT:    [[TMP44:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP44]], align 16
+// CHECK64-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP45]], align 16
-// CHECK64-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 5
-// CHECK64-NEXT:    [[TMP47:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP47]], align 16
-// CHECK64-NEXT:    [[TMP48:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 6
-// CHECK64-NEXT:    [[TMP49:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP49]], align 16
-// CHECK64-NEXT:    [[TMP50:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 7
-// CHECK64-NEXT:    [[TMP51:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP51]], align 16
-// CHECK64-NEXT:    [[TMP52:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 8
-// CHECK64-NEXT:    [[TMP53:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP53]], align 16
 // CHECK64-NEXT:    br label [[_MM_AESENCWIDE128KL_U8_EXIT]]
 // CHECK64:       _mm_aesencwide128kl_u8.exit:
-// CHECK64-NEXT:    [[TMP54:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
-// CHECK64-NEXT:    ret i8 [[TMP54]]
+// CHECK64-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
+// CHECK64-NEXT:    ret i8 [[TMP46]]
 //
 // CHECK32-LABEL: @test__mm_aesencwide128kl_u8(
 // CHECK32-NEXT:  entry:
@@ -674,33 +666,25 @@ unsigned char test_mm_aesdec128kl_u8(__m128i *odata, __m128i idata, const void *
 // CHECK32-NEXT:    store <2 x i64> [[TMP37]], ptr [[TMP38]], align 16
 // CHECK32-NEXT:    br label [[_MM_AESENCWIDE128KL_U8_EXIT:%.*]]
 // CHECK32:       aesencwide128kl_error.i:
-// CHECK32-NEXT:    [[TMP39:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 1
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP3]], align 16
-// CHECK32-NEXT:    [[TMP40:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 2
-// CHECK32-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK32-NEXT:    [[TMP39:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP39]], align 16
+// CHECK32-NEXT:    [[TMP40:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP40]], align 16
+// CHECK32-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP41]], align 16
-// CHECK32-NEXT:    [[TMP42:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 3
-// CHECK32-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK32-NEXT:    [[TMP42:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP42]], align 16
+// CHECK32-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP43]], align 16
-// CHECK32-NEXT:    [[TMP44:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 4
-// CHECK32-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
+// CHECK32-NEXT:    [[TMP44:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP44]], align 16
+// CHECK32-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP45]], align 16
-// CHECK32-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 5
-// CHECK32-NEXT:    [[TMP47:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP47]], align 16
-// CHECK32-NEXT:    [[TMP48:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 6
-// CHECK32-NEXT:    [[TMP49:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP49]], align 16
-// CHECK32-NEXT:    [[TMP50:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 7
-// CHECK32-NEXT:    [[TMP51:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP51]], align 16
-// CHECK32-NEXT:    [[TMP52:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 8
-// CHECK32-NEXT:    [[TMP53:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP53]], align 16
 // CHECK32-NEXT:    br label [[_MM_AESENCWIDE128KL_U8_EXIT]]
 // CHECK32:       _mm_aesencwide128kl_u8.exit:
-// CHECK32-NEXT:    [[TMP54:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
-// CHECK32-NEXT:    ret i8 [[TMP54]]
+// CHECK32-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
+// CHECK32-NEXT:    ret i8 [[TMP46]]
 //
 unsigned char test__mm_aesencwide128kl_u8(__m128i odata[8], const __m128i idata[8], const void* h) {
   return _mm_aesencwide128kl_u8(odata, idata, h);
@@ -771,33 +755,25 @@ unsigned char test__mm_aesencwide128kl_u8(__m128i odata[8], const __m128i idata[
 // CHECK64-NEXT:    store <2 x i64> [[TMP37]], ptr [[TMP38]], align 16
 // CHECK64-NEXT:    br label [[_MM_AESDECWIDE128KL_U8_EXIT:%.*]]
 // CHECK64:       aesdecwide128kl_error.i:
-// CHECK64-NEXT:    [[TMP39:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 1
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP3]], align 16
-// CHECK64-NEXT:    [[TMP40:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 2
-// CHECK64-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK64-NEXT:    [[TMP39:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP39]], align 16
+// CHECK64-NEXT:    [[TMP40:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP40]], align 16
+// CHECK64-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP41]], align 16
-// CHECK64-NEXT:    [[TMP42:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 3
-// CHECK64-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK64-NEXT:    [[TMP42:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP42]], align 16
+// CHECK64-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP43]], align 16
-// CHECK64-NEXT:    [[TMP44:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 4
-// CHECK64-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
+// CHECK64-NEXT:    [[TMP44:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP44]], align 16
+// CHECK64-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP45]], align 16
-// CHECK64-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 5
-// CHECK64-NEXT:    [[TMP47:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP47]], align 16
-// CHECK64-NEXT:    [[TMP48:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 6
-// CHECK64-NEXT:    [[TMP49:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP49]], align 16
-// CHECK64-NEXT:    [[TMP50:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 7
-// CHECK64-NEXT:    [[TMP51:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP51]], align 16
-// CHECK64-NEXT:    [[TMP52:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 8
-// CHECK64-NEXT:    [[TMP53:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP53]], align 16
 // CHECK64-NEXT:    br label [[_MM_AESDECWIDE128KL_U8_EXIT]]
 // CHECK64:       _mm_aesdecwide128kl_u8.exit:
-// CHECK64-NEXT:    [[TMP54:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
-// CHECK64-NEXT:    ret i8 [[TMP54]]
+// CHECK64-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
+// CHECK64-NEXT:    ret i8 [[TMP46]]
 //
 // CHECK32-LABEL: @test__mm_aesdecwide128kl_u8(
 // CHECK32-NEXT:  entry:
@@ -864,33 +840,25 @@ unsigned char test__mm_aesencwide128kl_u8(__m128i odata[8], const __m128i idata[
 // CHECK32-NEXT:    store <2 x i64> [[TMP37]], ptr [[TMP38]], align 16
 // CHECK32-NEXT:    br label [[_MM_AESDECWIDE128KL_U8_EXIT:%.*]]
 // CHECK32:       aesdecwide128kl_error.i:
-// CHECK32-NEXT:    [[TMP39:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 1
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP3]], align 16
-// CHECK32-NEXT:    [[TMP40:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 2
-// CHECK32-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK32-NEXT:    [[TMP39:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP39]], align 16
+// CHECK32-NEXT:    [[TMP40:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP40]], align 16
+// CHECK32-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP41]], align 16
-// CHECK32-NEXT:    [[TMP42:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 3
-// CHECK32-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK32-NEXT:    [[TMP42:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP42]], align 16
+// CHECK32-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP43]], align 16
-// CHECK32-NEXT:    [[TMP44:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 4
-// CHECK32-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
+// CHECK32-NEXT:    [[TMP44:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP44]], align 16
+// CHECK32-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP45]], align 16
-// CHECK32-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 5
-// CHECK32-NEXT:    [[TMP47:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP47]], align 16
-// CHECK32-NEXT:    [[TMP48:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 6
-// CHECK32-NEXT:    [[TMP49:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP49]], align 16
-// CHECK32-NEXT:    [[TMP50:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 7
-// CHECK32-NEXT:    [[TMP51:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP51]], align 16
-// CHECK32-NEXT:    [[TMP52:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 8
-// CHECK32-NEXT:    [[TMP53:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP53]], align 16
 // CHECK32-NEXT:    br label [[_MM_AESDECWIDE128KL_U8_EXIT]]
 // CHECK32:       _mm_aesdecwide128kl_u8.exit:
-// CHECK32-NEXT:    [[TMP54:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
-// CHECK32-NEXT:    ret i8 [[TMP54]]
+// CHECK32-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
+// CHECK32-NEXT:    ret i8 [[TMP46]]
 //
 unsigned char test__mm_aesdecwide128kl_u8(__m128i odata[8], const __m128i idata[8], const void* h) {
   return _mm_aesdecwide128kl_u8(odata, idata, h);
@@ -961,33 +929,25 @@ unsigned char test__mm_aesdecwide128kl_u8(__m128i odata[8], const __m128i idata[
 // CHECK64-NEXT:    store <2 x i64> [[TMP37]], ptr [[TMP38]], align 16
 // CHECK64-NEXT:    br label [[_MM_AESENCWIDE256KL_U8_EXIT:%.*]]
 // CHECK64:       aesencwide256kl_error.i:
-// CHECK64-NEXT:    [[TMP39:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 1
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP3]], align 16
-// CHECK64-NEXT:    [[TMP40:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 2
-// CHECK64-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK64-NEXT:    [[TMP39:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP39]], align 16
+// CHECK64-NEXT:    [[TMP40:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP40]], align 16
+// CHECK64-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP41]], align 16
-// CHECK64-NEXT:    [[TMP42:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 3
-// CHECK64-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK64-NEXT:    [[TMP42:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP42]], align 16
+// CHECK64-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP43]], align 16
-// CHECK64-NEXT:    [[TMP44:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 4
-// CHECK64-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
+// CHECK64-NEXT:    [[TMP44:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP44]], align 16
+// CHECK64-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP45]], align 16
-// CHECK64-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 5
-// CHECK64-NEXT:    [[TMP47:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP47]], align 16
-// CHECK64-NEXT:    [[TMP48:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 6
-// CHECK64-NEXT:    [[TMP49:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP49]], align 16
-// CHECK64-NEXT:    [[TMP50:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 7
-// CHECK64-NEXT:    [[TMP51:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP51]], align 16
-// CHECK64-NEXT:    [[TMP52:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 8
-// CHECK64-NEXT:    [[TMP53:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP53]], align 16
 // CHECK64-NEXT:    br label [[_MM_AESENCWIDE256KL_U8_EXIT]]
 // CHECK64:       _mm_aesencwide256kl_u8.exit:
-// CHECK64-NEXT:    [[TMP54:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
-// CHECK64-NEXT:    ret i8 [[TMP54]]
+// CHECK64-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
+// CHECK64-NEXT:    ret i8 [[TMP46]]
 //
 // CHECK32-LABEL: @test__mm_aesencwide256kl_u8(
 // CHECK32-NEXT:  entry:
@@ -1054,33 +1014,25 @@ unsigned char test__mm_aesdecwide128kl_u8(__m128i odata[8], const __m128i idata[
 // CHECK32-NEXT:    store <2 x i64> [[TMP37]], ptr [[TMP38]], align 16
 // CHECK32-NEXT:    br label [[_MM_AESENCWIDE256KL_U8_EXIT:%.*]]
 // CHECK32:       aesencwide256kl_error.i:
-// CHECK32-NEXT:    [[TMP39:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 1
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP3]], align 16
-// CHECK32-NEXT:    [[TMP40:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 2
-// CHECK32-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK32-NEXT:    [[TMP39:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP39]], align 16
+// CHECK32-NEXT:    [[TMP40:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP40]], align 16
+// CHECK32-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP41]], align 16
-// CHECK32-NEXT:    [[TMP42:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 3
-// CHECK32-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK32-NEXT:    [[TMP42:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP42]], align 16
+// CHECK32-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP43]], align 16
-// CHECK32-NEXT:    [[TMP44:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 4
-// CHECK32-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
+// CHECK32-NEXT:    [[TMP44:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP44]], align 16
+// CHECK32-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP45]], align 16
-// CHECK32-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 5
-// CHECK32-NEXT:    [[TMP47:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP47]], align 16
-// CHECK32-NEXT:    [[TMP48:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 6
-// CHECK32-NEXT:    [[TMP49:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP49]], align 16
-// CHECK32-NEXT:    [[TMP50:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 7
-// CHECK32-NEXT:    [[TMP51:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP51]], align 16
-// CHECK32-NEXT:    [[TMP52:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 8
-// CHECK32-NEXT:    [[TMP53:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP53]], align 16
 // CHECK32-NEXT:    br label [[_MM_AESENCWIDE256KL_U8_EXIT]]
 // CHECK32:       _mm_aesencwide256kl_u8.exit:
-// CHECK32-NEXT:    [[TMP54:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
-// CHECK32-NEXT:    ret i8 [[TMP54]]
+// CHECK32-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
+// CHECK32-NEXT:    ret i8 [[TMP46]]
 //
 unsigned char test__mm_aesencwide256kl_u8(__m128i odata[8], const __m128i idata[8], const void* h) {
   return _mm_aesencwide256kl_u8(odata, idata, h);
@@ -1151,33 +1103,25 @@ unsigned char test__mm_aesencwide256kl_u8(__m128i odata[8], const __m128i idata[
 // CHECK64-NEXT:    store <2 x i64> [[TMP37]], ptr [[TMP38]], align 16
 // CHECK64-NEXT:    br label [[_MM_AESDECWIDE256KL_U8_EXIT:%.*]]
 // CHECK64:       aesdecwide256kl_error.i:
-// CHECK64-NEXT:    [[TMP39:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 1
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP3]], align 16
-// CHECK64-NEXT:    [[TMP40:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 2
-// CHECK64-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK64-NEXT:    [[TMP39:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP39]], align 16
+// CHECK64-NEXT:    [[TMP40:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP40]], align 16
+// CHECK64-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP41]], align 16
-// CHECK64-NEXT:    [[TMP42:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 3
-// CHECK64-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK64-NEXT:    [[TMP42:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP42]], align 16
+// CHECK64-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP43]], align 16
-// CHECK64-NEXT:    [[TMP44:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 4
-// CHECK64-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
+// CHECK64-NEXT:    [[TMP44:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
+// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP44]], align 16
+// CHECK64-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
 // CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP45]], align 16
-// CHECK64-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 5
-// CHECK64-NEXT:    [[TMP47:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP47]], align 16
-// CHECK64-NEXT:    [[TMP48:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 6
-// CHECK64-NEXT:    [[TMP49:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP49]], align 16
-// CHECK64-NEXT:    [[TMP50:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 7
-// CHECK64-NEXT:    [[TMP51:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP51]], align 16
-// CHECK64-NEXT:    [[TMP52:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 8
-// CHECK64-NEXT:    [[TMP53:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
-// CHECK64-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP53]], align 16
 // CHECK64-NEXT:    br label [[_MM_AESDECWIDE256KL_U8_EXIT]]
 // CHECK64:       _mm_aesdecwide256kl_u8.exit:
-// CHECK64-NEXT:    [[TMP54:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
-// CHECK64-NEXT:    ret i8 [[TMP54]]
+// CHECK64-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
+// CHECK64-NEXT:    ret i8 [[TMP46]]
 //
 // CHECK32-LABEL: @test__mm_aesdecwide256kl_u8(
 // CHECK32-NEXT:  entry:
@@ -1244,33 +1188,25 @@ unsigned char test__mm_aesencwide256kl_u8(__m128i odata[8], const __m128i idata[
 // CHECK32-NEXT:    store <2 x i64> [[TMP37]], ptr [[TMP38]], align 16
 // CHECK32-NEXT:    br label [[_MM_AESDECWIDE256KL_U8_EXIT:%.*]]
 // CHECK32:       aesdecwide256kl_error.i:
-// CHECK32-NEXT:    [[TMP39:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 1
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP3]], align 16
-// CHECK32-NEXT:    [[TMP40:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 2
-// CHECK32-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK32-NEXT:    [[TMP39:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 1
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP39]], align 16
+// CHECK32-NEXT:    [[TMP40:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP40]], align 16
+// CHECK32-NEXT:    [[TMP41:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP41]], align 16
-// CHECK32-NEXT:    [[TMP42:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 3
-// CHECK32-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 2
+// CHECK32-NEXT:    [[TMP42:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP42]], align 16
+// CHECK32-NEXT:    [[TMP43:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP43]], align 16
-// CHECK32-NEXT:    [[TMP44:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 4
-// CHECK32-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 3
+// CHECK32-NEXT:    [[TMP44:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
+// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP44]], align 16
+// CHECK32-NEXT:    [[TMP45:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
 // CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP45]], align 16
-// CHECK32-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 5
-// CHECK32-NEXT:    [[TMP47:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 4
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP47]], align 16
-// CHECK32-NEXT:    [[TMP48:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 6
-// CHECK32-NEXT:    [[TMP49:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 5
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP49]], align 16
-// CHECK32-NEXT:    [[TMP50:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 7
-// CHECK32-NEXT:    [[TMP51:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 6
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP51]], align 16
-// CHECK32-NEXT:    [[TMP52:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 8
-// CHECK32-NEXT:    [[TMP53:%.*]] = getelementptr <2 x i64>, ptr [[TMP3]], i32 7
-// CHECK32-NEXT:    store <2 x i64> zeroinitializer, ptr [[TMP53]], align 16
 // CHECK32-NEXT:    br label [[_MM_AESDECWIDE256KL_U8_EXIT]]
 // CHECK32:       _mm_aesdecwide256kl_u8.exit:
-// CHECK32-NEXT:    [[TMP54:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
-// CHECK32-NEXT:    ret i8 [[TMP54]]
+// CHECK32-NEXT:    [[TMP46:%.*]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } [[TMP21]], 0
+// CHECK32-NEXT:    ret i8 [[TMP46]]
 //
 unsigned char test__mm_aesdecwide256kl_u8(__m128i odata[8], const __m128i idata[8], const void* h) {
   return _mm_aesdecwide256kl_u8(odata, idata, h);
