@@ -104,7 +104,7 @@ void test_array_destructor() {
 
 
 // LLVM: define{{.*}} void @_Z21test_array_destructorv()
-// LLVM:   %[[ARR_CUR:.*]] = alloca ptr, i64 1
+// LLVM:   %[[ARR_CUR:.*]] = alloca ptr
 // LLVM:   %[[ARR:.*]] = alloca [5 x %struct.array_element]
 // LLVM:   %[[TMP:.*]] = alloca ptr
 // LLVM:   %[[ARR_PTR:.*]] = getelementptr %struct.array_element, ptr %[[ARR]], i32 0

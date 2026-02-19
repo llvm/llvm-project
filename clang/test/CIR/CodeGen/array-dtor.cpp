@@ -45,7 +45,7 @@ void test_cleanup_array() {
 // CIR:   cir.return
 
 // LLVM: define{{.*}} void @_Z18test_cleanup_arrayv()
-// LLVM:   %[[ITER:.*]] = alloca ptr, i64 1
+// LLVM:   %[[ITER:.*]] = alloca ptr
 // LLVM:   %[[ARRAY:.*]] = alloca [42 x %struct.S]
 // LLVM:   %[[START:.*]] = getelementptr %struct.S, ptr %[[ARRAY]], i32 0
 // LLVM:   %[[END:.*]] = getelementptr %struct.S, ptr %[[START]], i64 41

@@ -271,9 +271,11 @@ static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
   cleanup->emit(cgf, flags);
   assert(cgf.haveInsertPoint() && "cleanup ended with no insertion point?");
 
-  if (block.empty() || !block.back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+  mlir::Block &cleanupRegionLastBlock = cleanupScope.getCleanupRegion().back();
+  if (cleanupRegionLastBlock.empty() ||
+      !cleanupRegionLastBlock.back().hasTrait<mlir::OpTrait::IsTerminator>()) {
     mlir::OpBuilder::InsertionGuard guardCase(builder);
-    builder.setInsertionPointToEnd(&block);
+    builder.setInsertionPointToEnd(&cleanupRegionLastBlock);
     builder.createYield(cleanupScope.getLoc());
   }
 }
