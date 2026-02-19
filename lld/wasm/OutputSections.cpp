@@ -59,10 +59,6 @@ void CodeSection::finalizeContents() {
     bodySize += func->getSize();
   }
 
-  if (bodySize > UINT32_MAX) {
-    error("section too large to encode: " + Twine(bodySize) + " bytes");
-  }
-
   createHeader(bodySize);
 }
 
@@ -161,10 +157,6 @@ void DataSection::finalizeContents() {
     }
   }
 
-  if (bodySize > UINT32_MAX) {
-    error("section too large to encode: " + Twine(bodySize) + " bytes");
-  }
-
   createHeader(bodySize);
 }
 
@@ -255,11 +247,6 @@ void CustomSection::finalizeContents() {
     payloadSize = alignTo(payloadSize, section->alignment);
     section->outSecOff = payloadSize;
     payloadSize += section->getSize();
-  }
-
-  if (payloadSize > UINT32_MAX) {
-    error("section '" + name + "' too large to encode: " + Twine(payloadSize) +
-          " bytes");
   }
 
   createHeader(payloadSize + nameData.size());

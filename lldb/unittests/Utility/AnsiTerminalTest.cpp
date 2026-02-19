@@ -128,28 +128,24 @@ static void TestLines(const std::string &input, int indent,
 }
 
 TEST(AnsiTerminal, OutputWordWrappedLines) {
-  TestLines("", 0, 0, "\n");
-  TestLines("", 0, 1, "\n");
-  TestLines("", 2, 1, "\n");
+  TestLines("", 0, 0, "");
+  TestLines("", 0, 1, "");
+  TestLines("", 2, 1, "");
 
-  // FIXME: crashes
-  // TestLines("abc", 0, 1, "\n");
-  // FIXME: crashes
-  // TestLines("abc", 0, 2, "\n");
-  // FIXME: should be "ab\nc\n"
-  TestLines("abc", 0, 3, "\n\nc\n");
+  // When it is a single word, we ignore the max columns and do not split it.
+  TestLines("abc", 0, 1, "abc\n");
+  TestLines("abc", 0, 2, "abc\n");
+  TestLines("abc", 0, 3, "abc\n");
   TestLines("abc", 0, 4, "abc\n");
-  // Indent is counted as using up columns.
   TestLines("abc", 1, 5, " abc\n");
-  // FIXME: This output is correctly indented but the content
-  // is mangled.
-  TestLines("abc", 2, 5, "  \n  \n  c\n");
+  TestLines("abc", 2, 5, "  abc\n");
 
-  // FIXME: Should skip leading whitespace and result in "abc\n".
-  TestLines("  abc", 0, 4, "\n\nbc\n");
+  // Leading whitespace is ignored because we're going to indent using the
+  // stream.
+  TestLines("  abc", 0, 4, "abc\n");
+  TestLines("        abc", 2, 6, "  abc\n");
 
-  // FIXME: Should be "abc\ndef\n".
-  TestLines("abc def", 0, 4, "abc\n\nef\n");
+  TestLines("abc def", 0, 4, "abc\ndef\n");
   TestLines("abc def", 0, 5, "abc\ndef\n");
   // Length is 6, 7 required. Has to split at whitespace.
   TestLines("abc def", 0, 6, "abc\ndef\n");
@@ -182,5 +178,5 @@ TEST(AnsiTerminal, OutputWordWrappedLines) {
   // FIXME: Final fox is missing.
   TestLines(fox_str_emoji, 0, 15, "🦊 The quick\nbrown fox. \n");
   // FIXME: should not split the middle of an emoji.
-  TestLines("🦊🦊🦊 🦊🦊", 0, 5, "\n\n\n\n\n\n\n\n\xF0\x9F\xA6\n");
+  TestLines("🦊🦊🦊 🦊🦊", 0, 5, "\n\n\n\n\n\n\n\x8A\xF0\x9F\xA6\n");
 }

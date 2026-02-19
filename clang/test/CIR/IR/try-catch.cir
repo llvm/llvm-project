@@ -1,6 +1,8 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
 
 module {
 
@@ -12,6 +14,7 @@ cir.func dso_local @empty_try_block_with_catch_all() {
     cir.try {
       cir.yield
     } catch all {
+      %0 = cir.catch_param : !cir.ptr<!void>
       cir.yield
     }
   }
@@ -23,6 +26,7 @@ cir.func dso_local @empty_try_block_with_catch_all() {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
 // CHECK:     } catch all {
+// CHECK:       %[[CP:.*]] = cir.catch_param : !cir.ptr<!void>
 // CHECK:       cir.yield
 // CHECK:     }
 // CHECK:   }
@@ -56,8 +60,10 @@ cir.func dso_local @empty_try_block_with_catch_ist() {
     cir.try {
       cir.yield
     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
+      %0 = cir.catch_param : !cir.ptr<!s32i>
       cir.yield
     } catch [type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] {
+      %0 = cir.catch_param : !cir.ptr<!cir.ptr<!u8i>>
       cir.yield
     } unwind {
       cir.yield
@@ -71,8 +77,10 @@ cir.func dso_local @empty_try_block_with_catch_ist() {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
 // CHECK:     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
+// CHECK:       %[[CP1:.*]] = cir.catch_param : !cir.ptr<!s32i>
 // CHECK:       cir.yield
 // CHECK:     } catch [type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] {
+// CHECK:       %[[CP2:.*]] = cir.catch_param : !cir.ptr<!cir.ptr<!u8i>>
 // CHECK:       cir.yield
 // CHECK:     } unwind {
 // CHECK:       cir.yield
