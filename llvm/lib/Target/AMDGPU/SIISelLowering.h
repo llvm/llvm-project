@@ -289,7 +289,7 @@ private:
   /// Returns true if the first real instruction in MBB is 8 bytes and could
   /// be split by a 32-byte fetch window boundary. Used on GFX950 to avoid
   /// instruction fetch delays.
-  bool needsFetchWindowAlignment(const MachineBasicBlock *MBB) const;
+  bool needsFetchWindowAlignment(const MachineBasicBlock &MBB) const;
 
   // Analyze a combined offset from an amdgcn_s_buffer_load intrinsic and store
   // the three offsets (voffset, soffset and instoffset) into the SDValue[3]

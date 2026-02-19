@@ -18751,7 +18751,7 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
     // Respect user-specified or previously set alignment.
     if (Header->getAlignment() != PrefAlign)
       return Header->getAlignment();
-    if (needsFetchWindowAlignment(Header))
+    if (needsFetchWindowAlignment(*Header))
       return Align(32);
   }
 
@@ -18830,17 +18830,17 @@ unsigned SITargetLowering::getMaxPermittedBytesForAlignment(
   // GFX950: Limit padding to 4 bytes (one s_nop) for blocks where an 8-byte
   // instruction could be split by the 32-byte fetch window boundary.
   // See getPrefLoopAlignment() for context.
-  if (needsFetchWindowAlignment(MBB))
+  if (needsFetchWindowAlignment(*MBB))
     return 4;
   return TargetLowering::getMaxPermittedBytesForAlignment(MBB);
 }
 
 bool SITargetLowering::needsFetchWindowAlignment(
-    const MachineBasicBlock *MBB) const {
-  if (!getSubtarget()->hasLoopHeadInstSplitSensitivity() || !MBB)
+    const MachineBasicBlock &MBB) const {
+  if (!getSubtarget()->hasLoopHeadInstSplitSensitivity())
     return false;
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
-  for (const MachineInstr &MI : *MBB) {
+  for (const MachineInstr &MI : MBB) {
     if (MI.isMetaInstruction())
       continue;
     // Instructions larger than 4 bytes can be split by a 32-byte boundary.
