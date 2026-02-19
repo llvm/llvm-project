@@ -8,7 +8,7 @@ foo:
     .export_name foo, bar
     end_function
 
-# CHECK: .export_name foo, bar
+# CHECK: .export_name foo, "bar"
 
 # CHECK-OBJ:        - Type:            EXPORT
 # CHECK-OBJ-NEXT:     Exports:

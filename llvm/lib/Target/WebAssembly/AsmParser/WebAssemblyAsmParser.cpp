@@ -415,6 +415,16 @@ public:
     return Name;
   }
 
+  StringRef expectIdentOrString() {
+    if (Lexer.isNot(AsmToken::Identifier) && Lexer.isNot(AsmToken::String)) {
+      error("Expected identifier or string, got: ", Lexer.getTok());
+      return StringRef();
+    }
+    auto Name = Lexer.getTok().getString();
+    Parser.Lex();
+    return Name;
+  }
+
   bool parseRegTypeList(SmallVectorImpl<wasm::ValType> &Types) {
     while (Lexer.is(AsmToken::Identifier)) {
       auto Type = WebAssembly::parseType(Lexer.getTok().getString());
@@ -1041,7 +1051,7 @@ public:
         return ParseStatus::Failure;
       if (expect(AsmToken::Comma, ","))
         return ParseStatus::Failure;
-      auto ExportName = expectIdent();
+      auto ExportName = expectIdentOrString();
       if (ExportName.empty())
         return ParseStatus::Failure;
       auto *WasmSym =
@@ -1057,7 +1067,7 @@ public:
         return ParseStatus::Failure;
       if (expect(AsmToken::Comma, ","))
         return ParseStatus::Failure;
-      auto ImportModule = expectIdent();
+      auto ImportModule = expectIdentOrString();
       if (ImportModule.empty())
         return ParseStatus::Failure;
       auto *WasmSym =
@@ -1073,7 +1083,7 @@ public:
         return ParseStatus::Failure;
       if (expect(AsmToken::Comma, ","))
         return ParseStatus::Failure;
-      auto ImportName = expectIdent();
+      auto ImportName = expectIdentOrString();
       if (ImportName.empty())
         return ParseStatus::Failure;
       auto *WasmSym =

@@ -13,8 +13,8 @@ test:
   .import_module  foo, bar
   .import_name  foo, qux
 
-# CHECK-ASM: .import_module  foo, bar
-# CHECK-ASM: .import_name  foo, qux
+# CHECK-ASM: .import_module  foo, "bar"
+# CHECK-ASM: .import_name  foo, "qux"
 
 # CHECK:        - Type:            IMPORT
 # CHECK-NEXT:     Imports:
