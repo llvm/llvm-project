@@ -2431,7 +2431,7 @@ void ComplexDeinterleavingGraph::processReductionSingle(
 
   Value *NewInit = nullptr;
   if (auto *C = dyn_cast<Constant>(Init)) {
-    if (C->isZeroValue())
+    if (C->isNullValue())
       NewInit = Constant::getNullValue(NewVTy);
   }
 

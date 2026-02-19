@@ -12,20 +12,18 @@
 ; CHECK: @llvm.amdgcn.kernel.k1_f0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1_f0.lds.t poison, align 2, !absolute_symbol [[META0]]
 ; CHECK: @llvm.amdgcn.kernel.kernel_lds.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_lds.lds.t poison, align 2, !absolute_symbol [[META0]]
 ; CHECK: @llvm.amdgcn.kernel.kernel_lds_recursion.lds = internal addrspace(3) global %llvm.amdgcn.kernel.kernel_lds_recursion.lds.t poison, align 2, !absolute_symbol [[META0]]
-; CHECK: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [3 x [2 x i32]]
+; CHECK: @llvm.amdgcn.lds.offset.table = internal addrspace(4) constant [3 x [2 x ptr addrspace(3)]]
 ;.
 define internal void @lds_use_through_indirect() {
 ; CHECK-LABEL: define internal void @lds_use_through_indirect(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[FUNCTION_LDS2:%.*]] = getelementptr inbounds [3 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[FUNCTION_LDS2]], align 4
-; CHECK-NEXT:    [[FUNCTION_LDS3:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; CHECK-NEXT:    [[FUNCTION_LDS2:%.*]] = getelementptr inbounds [3 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[FUNCTION_LDS3:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[FUNCTION_LDS2]], align 4
 ; CHECK-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) [[FUNCTION_LDS3]], align 2
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 7
-; CHECK-NEXT:    [[FUNCTION_LDS:%.*]] = getelementptr inbounds [3 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[FUNCTION_LDS]], align 4
-; CHECK-NEXT:    [[FUNCTION_LDS1:%.*]] = inttoptr i32 [[TMP3]] to ptr addrspace(3)
+; CHECK-NEXT:    [[FUNCTION_LDS:%.*]] = getelementptr inbounds [3 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[FUNCTION_LDS1:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[FUNCTION_LDS]], align 4
 ; CHECK-NEXT:    store i16 [[MUL]], ptr addrspace(3) [[FUNCTION_LDS1]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -71,14 +69,12 @@ define internal void @f0() {
 ; CHECK-LABEL: define internal void @f0(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[FUNCTION_LDS2:%.*]] = getelementptr inbounds [3 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[FUNCTION_LDS2]], align 4
-; CHECK-NEXT:    [[FUNCTION_LDS3:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; CHECK-NEXT:    [[FUNCTION_LDS2:%.*]] = getelementptr inbounds [3 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[FUNCTION_LDS3:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[FUNCTION_LDS2]], align 4
 ; CHECK-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) [[FUNCTION_LDS3]], align 2
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 4
-; CHECK-NEXT:    [[FUNCTION_LDS:%.*]] = getelementptr inbounds [3 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[FUNCTION_LDS]], align 4
-; CHECK-NEXT:    [[FUNCTION_LDS1:%.*]] = inttoptr i32 [[TMP3]] to ptr addrspace(3)
+; CHECK-NEXT:    [[FUNCTION_LDS:%.*]] = getelementptr inbounds [3 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[FUNCTION_LDS1:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[FUNCTION_LDS]], align 4
 ; CHECK-NEXT:    store i16 [[MUL]], ptr addrspace(3) [[FUNCTION_LDS1]], align 2
 ; CHECK-NEXT:    call void @no_lds_global_use_leaf()
 ; CHECK-NEXT:    ret void
@@ -150,9 +146,8 @@ define internal i16 @mutual_recursion_0(i16 %arg) {
 ; CHECK-LABEL: define internal i16 @mutual_recursion_0(
 ; CHECK-SAME: i16 [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[RECURSIVE_KERNEL_LDS:%.*]] = getelementptr inbounds [3 x [2 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[RECURSIVE_KERNEL_LDS]], align 4
-; CHECK-NEXT:    [[RECURSIVE_KERNEL_LDS1:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; CHECK-NEXT:    [[RECURSIVE_KERNEL_LDS:%.*]] = getelementptr inbounds [3 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
+; CHECK-NEXT:    [[RECURSIVE_KERNEL_LDS1:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[RECURSIVE_KERNEL_LDS]], align 4
 ; CHECK-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) [[RECURSIVE_KERNEL_LDS1]], align 2
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 7
 ; CHECK-NEXT:    [[RET:%.*]] = call i16 @mutual_recursion_1(i16 [[LD]])

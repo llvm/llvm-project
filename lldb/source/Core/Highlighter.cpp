@@ -26,30 +26,6 @@ void HighlightStyle::ColorStyle::Set(llvm::StringRef prefix,
   m_suffix = FormatAnsiTerminalCodes(suffix);
 }
 
-void DefaultHighlighter::Highlight(const HighlightStyle &options,
-                                   llvm::StringRef line,
-                                   std::optional<size_t> cursor_pos,
-                                   llvm::StringRef previous_lines,
-                                   Stream &s) const {
-  // If we don't have a valid cursor, then we just print the line as-is.
-  if (!cursor_pos || *cursor_pos >= line.size()) {
-    s << line;
-    return;
-  }
-
-  // If we have a valid cursor, we have to apply the 'selected' style around
-  // the character below the cursor.
-
-  // Split the line around the character which is below the cursor.
-  size_t column = *cursor_pos;
-  // Print the characters before the cursor.
-  s << line.substr(0, column);
-  // Print the selected character with the defined color codes.
-  options.selected.Apply(s, line.substr(column, 1));
-  // Print the rest of the line.
-  s << line.substr(column + 1U);
-}
-
 static HighlightStyle::ColorStyle GetColor(const char *c) {
   return HighlightStyle::ColorStyle(c, "${ansi.normal}");
 }
@@ -65,10 +41,27 @@ HighlightStyle HighlightStyle::MakeVimStyle() {
 const Highlighter &
 HighlighterManager::getHighlighterFor(lldb::LanguageType language_type,
                                       llvm::StringRef path) const {
-  Language *language = lldb_private::Language::FindPlugin(language_type, path);
-  if (language && language->GetHighlighter())
-    return *language->GetHighlighter();
-  return m_default;
+  // The language may be able to provide a language type based on the path.
+  if (Language *language =
+          lldb_private::Language::FindPlugin(language_type, path))
+    language_type = language->GetLanguageType();
+
+  std::lock_guard<std::mutex> guard(m_mutex);
+  auto it = m_highlighters.find(language_type);
+  if (it != m_highlighters.end())
+    return *it->second;
+
+  uint32_t idx = 0;
+  while (HighlighterCreateInstance create_instance =
+             PluginManager::GetHighlighterCreateCallbackAtIndex(idx++)) {
+    if (Highlighter *highlighter = create_instance(language_type))
+      m_highlighters.try_emplace(language_type,
+                                 std::unique_ptr<Highlighter>(highlighter));
+  }
+
+  assert(m_highlighters.contains(language_type) &&
+         "we should always find the default highlighter");
+  return *m_highlighters[language_type];
 }
 
 std::string Highlighter::Highlight(const HighlightStyle &options,

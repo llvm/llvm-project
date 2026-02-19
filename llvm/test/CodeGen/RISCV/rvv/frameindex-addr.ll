@@ -12,7 +12,7 @@ define i64 @test(<vscale x 1 x i64> %0) nounwind {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vr = COPY $v8
   ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI %stack.0.a, 0
-  ; CHECK-NEXT:   PseudoVSE64_V_M1 [[COPY]], killed [[ADDI]], 1, 6 /* e64 */
+  ; CHECK-NEXT:   PseudoVSE64_V_M1 [[COPY]], killed [[ADDI]], 1 /* vl */, 6 /* e64 */ :: (store unknown-size into %ir.b, align 8)
   ; CHECK-NEXT:   [[LD:%[0-9]+]]:gpr = LD %stack.0.a, 0 :: (dereferenceable load (s64) from %ir.a)
   ; CHECK-NEXT:   $x10 = COPY [[LD]]
   ; CHECK-NEXT:   PseudoRET implicit $x10

@@ -869,10 +869,64 @@ def unmerge_merge : GICombineRule<
 
 // Fold merge(unmerge).
 def merge_unmerge : GICombineRule<
-  (defs root:$d, register_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_MERGE_VALUES):$d,
-  [{ return Helper.matchCombineMergeUnmerge(*${d}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceSingleDefInstWithReg(*${d}, ${matchinfo}); }])
+  (defs root:$dst, register_matchinfo:$src),
+  (match (G_MERGE_VALUES $dst, GIVariadic<1>:$merge_srcs):$merge,
+         [{
+           // Check if first source comes from G_UNMERGE_VALUES.
+           Register FirstMergeSrc = ${merge_srcs}[0].getReg();
+           MachineInstr *UnmergeMI = MRI.getVRegDef(FirstMergeSrc);
+           if (!UnmergeMI || UnmergeMI->getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
+             return false;
+
+           // Check counts match.
+           unsigned NumMergeSrcs = ${merge_srcs}.size();
+           unsigned NumUnmergeDefs = UnmergeMI->getNumDefs();
+           if (NumMergeSrcs != NumUnmergeDefs)
+             return false;
+
+           // Verify all merge sources match unmerge defs in order.
+           for (unsigned I = 0; I < NumMergeSrcs; ++I) {
+             Register MergeSrc = ${merge_srcs}[I].getReg();
+             Register UnmergeDef = UnmergeMI->getOperand(I).getReg();
+
+             if (MergeSrc != UnmergeDef)
+               return false;
+
+             if (!MRI.hasOneNonDBGUse(MergeSrc))
+               return false;
+           }
+
+           // Check size compatibility.
+           ${src} = UnmergeMI->getOperand(NumUnmergeDefs).getReg();
+           LLT SrcTy = MRI.getType(${src});
+           LLT DstTy = MRI.getType(${dst}.getReg());
+           if (SrcTy.getSizeInBits() != DstTy.getSizeInBits())
+             return false;
+
+           // Check bitcast legality.
+           if (SrcTy != DstTy) {
+             std::array<LLT, 2> Types = {{DstTy, SrcTy}};
+             LegalityQuery Query(TargetOpcode::G_BITCAST, Types);
+             if (!Helper.isLegalOrBeforeLegalizer(Query))
+               return false;
+           }
+
+           return true;
+         }]),
+  (apply [{
+           LLT SrcTy = MRI.getType(${src});
+           LLT DstTy = MRI.getType(${dst}.getReg());
+
+           Helper.getBuilder().setInstrAndDebugLoc(*${merge});
+
+           if (SrcTy == DstTy) {
+             Helper.replaceRegWith(MRI, ${dst}.getReg(), ${src});
+           } else {
+             Helper.getBuilder().buildBitcast(${dst}.getReg(), ${src});
+           }
+
+           ${merge}->eraseFromParent();
+         }])
 >;
 
 // Fold (fabs (fneg x)) -> (fabs x).
@@ -1892,6 +1946,14 @@ def APlusBMinusCPlusA : GICombineRule<
           (G_SUB $sub1, $B, $add1),
           (G_ADD $root, $A, $sub1)),
    (apply (G_SUB $root, $B, $C))>;
+   
+// fold (not (add X, -1)) -> (sub 0, X)
+def NotAPlusNegOne: GICombineRule<
+   (defs root:$root),
+   (match (G_ADD $add, $A, -1),
+          (G_XOR $root, $add, -1),
+          [{ return MRI.hasOneNonDBGUse(${add}.getReg()); }]),
+   (apply (G_SUB $root, 0, $A))>;
 
 // fold (A+C1)-C2 -> A+(C1-C2)
 def APlusC1MinusC2: GICombineRule<
@@ -1954,12 +2016,38 @@ def integer_reassoc_combines: GICombineGroup<[
   AMinusBPlusBMinusC,
   APlusBMinusAplusC,
   APlusBMinusCPlusA,
+  NotAPlusNegOne,
   APlusC1MinusC2,
   C2MinusAPlusC1,
   AMinusC1MinusC2,
   C1Minus2MinusC2,
   AMinusC1PlusC2
 ]>;
+
+// fold (A+(shl (0-B), C)) -> (A-(shl B, C))
+// fold ((shl (0-B), C)+A) -> (A-(shl B, C))
+def add_shl_neg_frags : GICombinePatFrag<
+  (outs root:$dst), (ins $x, $y, $n),
+  [
+    (pattern (G_CONSTANT $zero, 0),
+             (G_SUB $neg_y, $zero, $y),
+             (G_SHL $shl_neg, $neg_y, $n),
+             (G_ADD $dst, $x, $shl_neg),
+             [{ return MRI.hasOneNonDBGUse(${shl_neg}.getReg()) &&
+                       MRI.hasOneNonDBGUse(${neg_y}.getReg()); }]),
+    (pattern (G_CONSTANT $zero, 0),
+             (G_SUB $neg_y, $zero, $y),
+             (G_SHL $shl_neg, $neg_y, $n),
+             (G_ADD $dst, $shl_neg, $x),
+             [{ return MRI.hasOneNonDBGUse(${shl_neg}.getReg()) &&
+                       MRI.hasOneNonDBGUse(${neg_y}.getReg()); }])
+  ]>;
+
+def add_shift : GICombineRule<
+  (defs root:$dst),
+  (match (add_shl_neg_frags $dst, $x, $y, $n)),
+  (apply (G_SHL $new_shl, $y, $n),
+         (G_SUB $dst, $x, $new_shl))>;
 
 def freeze_of_non_undef_non_poison : GICombineRule<
    (defs root:$root),
@@ -2217,7 +2305,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines, 
-    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines]>;
+    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

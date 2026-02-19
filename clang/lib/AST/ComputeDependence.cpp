@@ -256,6 +256,10 @@ ExprDependence clang::computeDependence(ExtVectorElementExpr *E) {
   return E->getBase()->getDependence();
 }
 
+ExprDependence clang::computeDependence(MatrixElementExpr *E) {
+  return E->getBase()->getDependence();
+}
+
 ExprDependence clang::computeDependence(BlockExpr *E,
                                         bool ContainsUnexpandedParameterPack) {
   auto D = toExprDependenceForImpliedType(E->getType()->getDependence());

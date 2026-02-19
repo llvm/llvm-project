@@ -111,7 +111,7 @@ void test() {
       // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
       std::async([]() {});
       // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-      std::async(std::launch::any, []() {});
+      std::async(std::launch::async | std::launch::deferred, []() {});
     }
 #endif
 

@@ -522,7 +522,13 @@ struct SampleContextFrame {
   }
 
   uint64_t getHashCode() const {
-    uint64_t NameHash = Func.getHashCode();
+    // Context frame hash is heavily used in llvm-profgen context-sensitive
+    // pre-inliner. Use a lightweight hashing here to avoid speed regression.
+    uint64_t NameHash = 0;
+    if (Func.isStringRef())
+      NameHash = std::hash<std::string>{}(Func.str());
+    else
+      NameHash = Func.getHashCode();
     uint64_t LocId = Location.getHashCode();
     return NameHash + (LocId << 5) + LocId;
   }

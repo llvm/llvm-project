@@ -123,8 +123,7 @@ PlatformFreeBSD::PlatformFreeBSD(bool is_host)
   } else {
     m_supported_architectures = CreateArchList(
         {llvm::Triple::x86_64, llvm::Triple::x86, llvm::Triple::aarch64,
-         llvm::Triple::arm, llvm::Triple::mips64, llvm::Triple::ppc64,
-         llvm::Triple::ppc},
+         llvm::Triple::arm, llvm::Triple::ppc64, llvm::Triple::ppc},
         llvm::Triple::FreeBSD);
   }
 }

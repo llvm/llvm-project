@@ -528,8 +528,7 @@ public:
     return ConstantInt::get(getInt64Ty(), C);
   }
 
-  /// Get a constant N-bit value, zero extended or truncated from
-  /// a 64-bit value.
+  /// Get a constant N-bit value, zero extended from a 64-bit value.
   ConstantInt *getIntN(unsigned N, uint64_t C) {
     return ConstantInt::get(getIntNTy(N), C);
   }
@@ -2295,6 +2294,13 @@ public:
   /// not specified.
   LLVM_ABI Value *CreateAggregateCast(Value *V, Type *DestTy);
 
+  /// Create a chain of casts to convert V to NewTy, preserving the bit pattern
+  /// of V. This may involve multiple casts (e.g., ptr -> i64 -> <2 x i32>).
+  /// The created cast instructions are inserted into the current basic block.
+  /// If no casts are needed, V is returned.
+  LLVM_ABI Value *CreateBitPreservingCastChain(const DataLayout &DL, Value *V,
+                                               Type *NewTy);
+
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Compare Instructions
   //===--------------------------------------------------------------------===//
@@ -2647,8 +2653,13 @@ public:
                          Name);
   }
 
-  /// Return the i64 difference between two pointer values, dividing out
-  /// the size of the pointed-to objects.
+  /// Return the difference between two pointer values. The returned value
+  /// type is the address type of the pointers.
+  LLVM_ABI Value *CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name = "");
+
+  /// Return the difference between two pointer values, dividing out the size
+  /// of the pointed-to objects. The returned value type is the address type
+  /// of the pointers.
   ///
   /// This is intended to implement C-style pointer subtraction. As such, the
   /// pointers must be appropriately aligned for their element types and

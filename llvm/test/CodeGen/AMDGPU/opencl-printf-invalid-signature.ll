@@ -47,7 +47,7 @@ define i32 @test_null_argument(i32 %n) {
 ; CHECK-NEXT:    ret i32 [[CALL1]]
 ;
   %str = alloca [9 x i8], align 1, addrspace(5)
-  %call1 = call i32 (ptr addrspace(5), ...) @printf(ptr addrspace(5) null, ptr addrspace(5) %str, i32 %n)
+  %call1 = call i32 (ptr addrspace(5), ...) @printf(ptr addrspace(5) zeroinitializer, ptr addrspace(5) %str, i32 %n)
   ret i32 %call1
 }
 

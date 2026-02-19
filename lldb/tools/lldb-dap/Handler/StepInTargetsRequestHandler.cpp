@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPError.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/lldb-defines.h"
+#include "llvm/Support/Error.h"
 
 using namespace lldb_dap::protocol;
 namespace lldb_dap {
@@ -22,6 +24,9 @@ namespace lldb_dap {
 // `supportsStepInTargetsRequest` is true.
 llvm::Expected<StepInTargetsResponseBody>
 StepInTargetsRequestHandler::Run(const StepInTargetsArguments &args) const {
+  if (dap.ProcessIsNotStopped())
+    return llvm::make_error<NotStoppedError>();
+
   dap.step_in_targets.clear();
   const lldb::SBFrame frame = dap.GetLLDBFrame(args.frameId);
   if (!frame.IsValid())

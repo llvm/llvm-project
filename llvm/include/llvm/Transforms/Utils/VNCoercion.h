@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
 /// \file / This file provides routines used by LLVM's value numbering passes to
 /// perform various forms of value extraction from memory when the types are not
 /// identical.  For example, given
@@ -17,6 +18,8 @@
 /// These routines know how to tell whether they can do that (the analyze*
 /// routines), and can also insert the necessary IR to do it (the get*
 /// routines).
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_UTILS_VNCOERCION_H
 #define LLVM_TRANSFORMS_UTILS_VNCOERCION_H
@@ -32,6 +35,7 @@ class IRBuilderBase;
 class Value;
 class Type;
 class DataLayout;
+
 namespace VNCoercion {
 /// Return true if CoerceAvailableValueToLoadType would succeed if it was
 /// called.
@@ -93,6 +97,7 @@ Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
 // It returns nullptr if it cannot produce a constant.
 Constant *getConstantMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
                                          Type *LoadTy, const DataLayout &DL);
-}
-}
-#endif
+} // namespace VNCoercion
+} // namespace llvm
+
+#endif // LLVM_TRANSFORMS_UTILS_VNCOERCION_H

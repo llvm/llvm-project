@@ -394,9 +394,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// table for the same directory as DW_AT_comp_dir.
   StringRef CompilationDir;
 
-  /// Holder for the file specific debug information.
-  DwarfFile InfoHolder;
-
   /// Holders for the various debug information flags that we might need to
   /// have exposed. See accessor functions below for description.
 
@@ -531,10 +528,6 @@ private:
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
   MCDwarfDwoLineTable *getDwoLineTable(const DwarfCompileUnit &);
-
-  const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
-    return InfoHolder.getUnits();
-  }
 
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
 
@@ -711,6 +704,8 @@ private:
   void computeKeyInstructions(const MachineFunction *MF);
 
 protected:
+  /// Holder for the file specific debug information.
+  DwarfFile InfoHolder;
   /// Gather pre-function debug information.
   void beginFunctionImpl(const MachineFunction *MF) override;
 
@@ -721,6 +716,17 @@ protected:
   unsigned getDwarfCompileUnitIDForLineTable(const DwarfCompileUnit &CU);
 
   void skippedNonDebugFunction() override;
+
+  /// Target-specific debug info initialization at function start.
+  /// Default implementation is empty, overridden by NVPTX target.
+  virtual void initializeTargetDebugInfo(const MachineFunction &MF) {}
+
+  /// Target-specific source line recording.
+  virtual void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags);
+
+  const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
+    return InfoHolder.getUnits();
+  }
 
 public:
   //===--------------------------------------------------------------------===//

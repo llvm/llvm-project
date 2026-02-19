@@ -114,8 +114,10 @@ define i32 @mul_32(i32 %a, i32 %b) {
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -16
-; CHECK-NEXT:    move.l (20,%sp), (4,%sp)
-; CHECK-NEXT:    move.l (16,%sp), (%sp)
+; CHECK-NEXT:    move.l (20,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (4,%sp)
+; CHECK-NEXT:    move.l (16,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    jsr __mulsi3
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
@@ -158,10 +160,14 @@ define i64 @mul_64(i64 %a, i64 %b) {
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    suba.l #20, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -24
-; CHECK-NEXT:    move.l (36,%sp), (12,%sp)
-; CHECK-NEXT:    move.l (32,%sp), (8,%sp)
-; CHECK-NEXT:    move.l (28,%sp), (4,%sp)
-; CHECK-NEXT:    move.l (24,%sp), (%sp)
+; CHECK-NEXT:    move.l (36,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (12,%sp)
+; CHECK-NEXT:    move.l (32,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (8,%sp)
+; CHECK-NEXT:    move.l (28,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (4,%sp)
+; CHECK-NEXT:    move.l (24,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    jsr __muldi3
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
@@ -175,10 +181,12 @@ define i64 @mul3_64(i64 %A) {
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    suba.l #20, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -24
+; CHECK-NEXT:    move.l (28,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (4,%sp)
+; CHECK-NEXT:    move.l (24,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    move.l #3, (12,%sp)
 ; CHECK-NEXT:    move.l #0, (8,%sp)
-; CHECK-NEXT:    move.l (28,%sp), (4,%sp)
-; CHECK-NEXT:    move.l (24,%sp), (%sp)
 ; CHECK-NEXT:    jsr __muldi3
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
@@ -192,10 +200,12 @@ define i64 @mul40_64(i64 %A) {
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    suba.l #20, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -24
+; CHECK-NEXT:    move.l (28,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (4,%sp)
+; CHECK-NEXT:    move.l (24,%sp), %d0
+; CHECK-NEXT:    move.l %d0, (%sp)
 ; CHECK-NEXT:    move.l #40, (12,%sp)
 ; CHECK-NEXT:    move.l #0, (8,%sp)
-; CHECK-NEXT:    move.l (28,%sp), (4,%sp)
-; CHECK-NEXT:    move.l (24,%sp), (%sp)
 ; CHECK-NEXT:    jsr __muldi3
 ; CHECK-NEXT:    adda.l #20, %sp
 ; CHECK-NEXT:    rts
