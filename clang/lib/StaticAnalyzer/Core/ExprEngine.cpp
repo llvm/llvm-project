@@ -3156,8 +3156,8 @@ void ExprEngine::processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
       if (StateMatching)
         Builder.generateCaseStmtNode(Block, StateMatching, Node);
 
-      // If _not_ entering the current case is infeasible, we are done with
-      // processing the paths through the current Node.
+      // If _not_ entering the current case is infeasible, then we are done
+      // with processing the paths through the current Node.
       if (!State)
         break;
     }
