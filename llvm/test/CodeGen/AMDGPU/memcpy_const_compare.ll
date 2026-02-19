@@ -4,65 +4,84 @@
 ; Test mempcy lowering where length is given by a complex but constant expression.
 ; Loop guard should not be necessary since length is positive.
 
-define amdgpu_kernel void @_start(ptr %ptrDst, ptr addrspace(4) %ptrSrc) {
+@src_array = global [128 x i8] zeroinitializer, align 1
+@dst_array = global [128 x i8] zeroinitializer, align 1
+
+define amdgpu_kernel void @_start() {
 ; CHECK-LABEL: _start:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:  ; %bb.1: ; %dynamic-memcpy-expansion-main-body.preheader
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:  .LBB0_2: ; %dynamic-memcpy-expansion-main-body
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:  .LBB0_1: ; %dynamic-memcpy-expansion-main-body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    s_getpc_b64 s[2:3]
+; CHECK-NEXT:    s_add_u32 s2, s2, src_array@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s3, s3, src_array@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_add_u32 s6, s2, s4
-; CHECK-NEXT:    s_addc_u32 s7, s3, s5
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v0, s[6:7]
-; CHECK-NEXT:    s_add_u32 s6, s0, s4
-; CHECK-NEXT:    s_addc_u32 s7, s1, s5
-; CHECK-NEXT:    s_add_u32 s4, s4, 16
-; CHECK-NEXT:    s_addc_u32 s5, s5, 0
-; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[6:7], s[6:7] op_sel:[0,1]
-; CHECK-NEXT:    v_cmp_lt_u64_e64 s[6:7], s[4:5], 16
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[6:7]
+; CHECK-NEXT:    s_add_u32 s2, s2, s0
+; CHECK-NEXT:    s_addc_u32 s3, s3, s1
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
+; CHECK-NEXT:    flat_load_dwordx4 v[2:5], v[0:1]
+; CHECK-NEXT:    s_getpc_b64 s[2:3]
+; CHECK-NEXT:    s_add_u32 s2, s2, dst_array@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s3, s3, dst_array@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_add_u32 s2, s2, s0
+; CHECK-NEXT:    s_addc_u32 s3, s3, s1
+; CHECK-NEXT:    s_add_u32 s0, s0, 16
+; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
+; CHECK-NEXT:    v_cmp_lt_u64_e64 s[2:3], s[0:1], 16
+; CHECK-NEXT:    s_and_b64 vcc, exec, s[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_dwordx4 v[2:3], v[4:7]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_2
-; CHECK-NEXT:  ; %bb.3: ; %dynamic-memcpy-expansion-residual-cond
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
+; CHECK-NEXT:  ; %bb.2: ; %dynamic-memcpy-expansion-residual-cond
 ; FIXME: Compare should be evaluated at compile time
 ; CHECK-NEXT:    s_cmp_eq_u64 13, 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB0_6
-; CHECK-NEXT:  ; %bb.4: ; %dynamic-memcpy-expansion-residual-body.preheader
+; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
+; CHECK-NEXT:  ; %bb.3: ; %dynamic-memcpy-expansion-residual-body.preheader
 ; CHECK-NEXT:    s_sub_u32 s4, 29, 13
 ; CHECK-NEXT:    s_subb_u32 s5, 0, 0
+; CHECK-NEXT:    s_getpc_b64 s[0:1]
+; CHECK-NEXT:    s_add_u32 s0, s0, src_array@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s1, s1, src_array@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_add_u32 s2, s0, s4
+; CHECK-NEXT:    s_addc_u32 s3, s1, s5
+; CHECK-NEXT:    s_getpc_b64 s[0:1]
+; CHECK-NEXT:    s_add_u32 s0, s0, dst_array@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s1, s1, dst_array@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_add_u32 s4, s0, s4
 ; CHECK-NEXT:    s_addc_u32 s5, s1, s5
-; CHECK-NEXT:    s_sub_u32 s6, 0, 13
-; CHECK-NEXT:    s_subb_u32 s7, 0, 0
-; CHECK-NEXT:    s_add_u32 s2, s2, s6
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
-; CHECK-NEXT:    s_addc_u32 s3, s3, s7
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:  .LBB0_5: ; %dynamic-memcpy-expansion-residual-body
+; CHECK-NEXT:  .LBB0_4: ; %dynamic-memcpy-expansion-residual-body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_add_u32 s6, s2, s0
 ; CHECK-NEXT:    s_addc_u32 s7, s3, s1
-; CHECK-NEXT:    global_load_ubyte v1, v0, s[6:7] offset:29
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[6:7], s[6:7] op_sel:[0,1]
+; CHECK-NEXT:    flat_load_ubyte v2, v[0:1]
 ; CHECK-NEXT:    s_add_u32 s6, s4, s0
 ; CHECK-NEXT:    s_addc_u32 s7, s5, s1
 ; CHECK-NEXT:    s_add_u32 s0, s0, 1
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
-; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[6:7], s[6:7] op_sel:[0,1]
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[6:7], s[6:7] op_sel:[0,1]
 ; CHECK-NEXT:    v_cmp_lt_u64_e64 s[6:7], s[0:1], 13
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[6:7]
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    flat_store_byte v[2:3], v1
-; CHECK-NEXT:    s_cbranch_vccnz .LBB0_5
-; CHECK-NEXT:  .LBB0_6: ; %dynamic-memcpy-post-expansion
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    flat_store_byte v[0:1], v2
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_4
+; CHECK-NEXT:  .LBB0_5: ; %dynamic-memcpy-post-expansion
 ; CHECK-NEXT:    s_endpgm
-  call void @llvm.memcpy.p0.p4.i64(ptr %ptrDst, ptr addrspace(4) %ptrSrc, i64 add (i64 sub (i64 16, i64 ptrtoint (ptr addrspacecast (ptr addrspace(4) null to ptr) to i64)), i64 13), i1 false)
+  %src_ptr = getelementptr inbounds [4 x i8], [4 x i8]* @src_array, i64 0, i64 0
+  %dst_ptr = getelementptr inbounds [4 x i8], [4 x i8]* @dst_array, i64 0, i64 0
+  call void @llvm.memcpy.p0.p0.i64(ptr %dst_ptr, ptr %src_ptr, i64 add (i64 sub (i64 16, i64 ptrtoint (ptr addrspacecast (ptr addrspace(4) null to ptr) to i64)), i64 13), i1 false)
   ret void
 }
 
