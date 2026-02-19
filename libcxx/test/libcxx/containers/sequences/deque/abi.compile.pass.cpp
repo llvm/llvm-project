@@ -18,6 +18,9 @@
 template <class T>
 class small_pointer {
   std::uint16_t offset;
+
+public:
+  T& operator*() const;
 };
 
 template <class T>
