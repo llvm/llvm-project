@@ -90,6 +90,7 @@ message(STATUS "Clang-tidy tests are enabled.")
 
 set(SOURCES
     abi_tag_on_virtual.cpp
+    empty_namespaces.cpp
     header_exportable_declarations.cpp
     hide_from_abi.cpp
     internal_ftm_use.cpp

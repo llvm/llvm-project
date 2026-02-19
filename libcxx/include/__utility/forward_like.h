@@ -21,9 +21,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Ap, class _Bp>
 using _CopyConst _LIBCPP_NODEBUG = _If<is_const_v<_Ap>, const _Bp, _Bp>;
@@ -56,8 +56,8 @@ __forward_as(_LIBCPP_LIFETIMEBOUND _Up&& __val) noexcept {
   return static_cast<_ForwardLike<_Tp, _As>>(__val);
 }
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___UTILITY_FORWARD_LIKE_H

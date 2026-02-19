@@ -19,9 +19,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Comp>
 struct __debug_three_way_comp {
@@ -67,8 +67,8 @@ template <class _Comp>
 using __three_way_comp_ref_type _LIBCPP_NODEBUG = _Comp&;
 #  endif
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ALGORITHM_THREE_WAY_COMP_REF_TYPE_H

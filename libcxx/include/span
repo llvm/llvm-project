@@ -198,9 +198,9 @@ template<class R>
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 struct __is_std_span : false_type {};
@@ -644,9 +644,9 @@ span(const array<_Tp, _Sz>&) -> span<const _Tp, _Sz>;
 template <ranges::contiguous_range _Range>
 span(_Range&&) -> span<remove_reference_t<ranges::range_reference_t<_Range>>>;
 
-#  endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

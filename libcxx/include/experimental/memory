@@ -70,9 +70,9 @@ public:
 
 #  ifdef _LIBCPP_ENABLE_EXPERIMENTAL
 
-_LIBCPP_BEGIN_NAMESPACE_LFTS_V2
-
 #    if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_LFTS_V2
 
 template <class _Wp>
 class observer_ptr {
@@ -175,24 +175,22 @@ _LIBCPP_HIDE_FROM_ABI bool operator>=(observer_ptr<_W1> __a, observer_ptr<_W2> _
   return !(__a < __b);
 }
 
-#    endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_LFTS_V2
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // hash
 
-#    if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 struct hash<experimental::observer_ptr<_Tp>> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const experimental::observer_ptr<_Tp>& __ptr) const noexcept {
     return hash<_Tp*>()(__ptr.get());
   }
 };
-#    endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
+
+#    endif // _LIBCPP_STD_VER >= 17
 
 #  endif // _LIBCPP_ENABLE_EXPERIMENTAL
 

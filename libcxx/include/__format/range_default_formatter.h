@@ -32,9 +32,9 @@
 #include <__utility/pair.h>
 #include <string_view>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Rp, class _CharT>
 concept __const_formattable_range =
@@ -168,8 +168,8 @@ template <ranges::input_range _Rp, class _CharT>
   requires(format_kind<_Rp> != range_format::disabled && formattable<ranges::range_reference_t<_Rp>, _CharT>)
 struct formatter<_Rp, _CharT> : __range_default_formatter<format_kind<_Rp>, _Rp, _CharT> {};
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___FORMAT_RANGE_DEFAULT_FORMATTER_H

@@ -18,17 +18,17 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 26
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <size_t _Alignment, class _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_sufficiently_aligned(_Tp* __ptr) {
   return reinterpret_cast<uintptr_t>(__ptr) % _Alignment == 0;
 }
 
-#endif // _LIBCPP_STD_VER >= 26
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 26
 
 #endif // _LIBCPP___MEMORY_IS_SUFFICIENTLY_ALIGNED_H

@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHARCONV_TO_CHARS
-#define _LIBCPP___CHARCONV_TO_CHARS
+#include "clang-tidy/ClangTidyCheck.h"
 
-#include <__charconv/to_chars_floating_point.h>
-#include <__charconv/to_chars_integral.h>
-#include <__config>
-
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
-
-#endif // _LIBCPP___CHARCONV_TO_CHARS
+namespace libcpp {
+class empty_namespaces : public clang::tidy::ClangTidyCheck {
+public:
+  empty_namespaces(llvm::StringRef, clang::tidy::ClangTidyContext*);
+  void registerMatchers(clang::ast_matchers::MatchFinder*) override;
+  void check(const clang::ast_matchers::MatchFinder::MatchResult&) override;
+};
+} // namespace libcpp

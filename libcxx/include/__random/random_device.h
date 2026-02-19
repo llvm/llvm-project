@@ -19,9 +19,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_HAS_RANDOM_DEVICE
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 class _LIBCPP_EXPORTED_FROM_ABI random_device {
 #  ifdef _LIBCPP_USING_DEV_RANDOM
@@ -72,9 +72,9 @@ public:
   void operator=(const random_device&) = delete;
 };
 
-#endif // _LIBCPP_HAS_RANDOM_DEVICE
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_HAS_RANDOM_DEVICE
 
 _LIBCPP_POP_MACROS
 

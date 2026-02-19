@@ -22,9 +22,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __stop_callback_base : __intrusive_node_base<__stop_callback_base> {
   using __callback_fn_t _LIBCPP_NODEBUG = void(__stop_callback_base*) noexcept;
@@ -229,8 +229,8 @@ struct __intrusive_shared_ptr_traits<__stop_state> {
   }
 };
 
-#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 
 #endif // _LIBCPP___STOP_TOKEN_STOP_STATE_H

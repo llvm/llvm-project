@@ -19,9 +19,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp __bit_ceil(_Tp __t) noexcept {
@@ -47,8 +47,9 @@ template <__unsigned_integer _Tp>
 }
 
 #  endif // _LIBCPP_STD_VER >= 20
-#endif   // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___BIT_BIT_CEIL_H

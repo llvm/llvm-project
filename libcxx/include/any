@@ -126,9 +126,9 @@ public:
 };
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 [[noreturn]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_any_cast() {
 #    if _LIBCPP_HAS_EXCEPTIONS
@@ -550,9 +550,9 @@ template <class _ValueType>
   return nullptr;
 }
 
-#  endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
 
