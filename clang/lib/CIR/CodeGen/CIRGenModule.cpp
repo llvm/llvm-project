@@ -1163,7 +1163,7 @@ void CIRGenModule::replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF) {
 
 void CIRGenModule::applyReplacements() {
   for (auto &i : replacements) {
-    StringRef mangledName = i.first();
+    StringRef mangledName = i.first;
     mlir::Operation *replacement = i.second;
     mlir::Operation *entry = getGlobalValue(mangledName);
     if (!entry)

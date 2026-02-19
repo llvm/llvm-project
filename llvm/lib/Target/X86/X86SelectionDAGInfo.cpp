@@ -83,14 +83,9 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     // invalid number of operands; expected 1, got 2
   case X86ISD::CMPMM_SAE:
     // invalid number of operands; expected 4, got 5
-  case X86ISD::CMPMM:
-  case X86ISD::FSETCCM:
-    // operand #2 must have type i8, but has type i32
   case X86ISD::CALL:
   case X86ISD::NT_BRIND:
     // operand #1 must have type i32 (iPTR), but has type i64
-  case X86ISD::ADD:
-    // result #1 must have type i32, but has type i128
   case X86ISD::INSERTQI:
   case X86ISD::EXTRQI:
     // result #0 must have type v2i64, but has type v16i8/v8i16

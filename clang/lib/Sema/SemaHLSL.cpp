@@ -218,8 +218,8 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
 
 static unsigned calculateLegacyCbufferFieldAlign(const ASTContext &Context,
                                                  QualType T) {
-  // Arrays and Structs are always aligned to new buffer rows
-  if (T->isArrayType() || T->isStructureType())
+  // Arrays, Matrices, and Structs are always aligned to new buffer rows
+  if (T->isArrayType() || T->isStructureType() || T->isConstantMatrixType())
     return 16;
 
   // Vectors are aligned to the type they contain

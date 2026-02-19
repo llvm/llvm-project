@@ -245,10 +245,7 @@ class DebugCommunication(object):
         self.terminated: bool = False
         self.events: List[Event] = []
         self.progress_events: List[Event] = []
-        self.invalidated_event: Optional[Event] = None
-        self.memory_event: Optional[Event] = None
         self.reverse_requests: List[Request] = []
-        self.module_events: List[Dict] = []
         self.sequence: int = 1
         self.output: Dict[str, str] = {}
         self.reverse_process: Optional[subprocess.Popen] = None
@@ -513,10 +510,6 @@ class DebugCommunication(object):
         elif event == "capabilities" and body:
             # Update the capabilities with new ones from the event.
             self.capabilities.update(body["capabilities"])
-        elif event == "invalidated":
-            self.invalidated_event = packet
-        elif event == "memory":
-            self.memory_event = packet
 
     def _handle_reverse_request(self, request: Request) -> None:
         if request in self.reverse_requests:
@@ -702,6 +695,18 @@ class DebugCommunication(object):
         event_dict = self.wait_for_event(["terminated"])
         if event_dict is None:
             raise ValueError("didn't get terminated event")
+        return event_dict
+
+    def wait_for_invalidated(self):
+        event_dict = self.wait_for_event(["invalidated"])
+        if event_dict is None:
+            raise ValueError("didn't get invalidated event")
+        return event_dict
+
+    def wait_for_memory(self):
+        event_dict = self.wait_for_event(["memory"])
+        if event_dict is None:
+            raise ValueError("didn't get memory event")
         return event_dict
 
     def get_capability(self, key: str):
@@ -1581,7 +1586,7 @@ class DebugCommunication(object):
         return response
 
     def request_variables(
-        self, variablesReference, start=None, count=None, is_hex=None
+        self, variablesReference, start=None, count=None, is_hex: Optional[bool] = None
     ):
         args_dict = {"variablesReference": variablesReference}
         if start is not None:
@@ -1597,7 +1602,7 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_setVariable(self, containingVarRef, name, value, id=None):
+    def request_setVariable(self, containingVarRef, name, value, id=None, is_hex=None):
         args_dict = {
             "variablesReference": containingVarRef,
             "name": name,
@@ -1605,6 +1610,8 @@ class DebugCommunication(object):
         }
         if id is not None:
             args_dict["id"] = id
+        if is_hex is not None:
+            args_dict["format"] = {"hex": is_hex}
         command_dict = {
             "command": "setVariable",
             "type": "request",

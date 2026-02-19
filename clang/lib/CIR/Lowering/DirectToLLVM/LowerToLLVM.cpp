@@ -2278,6 +2278,17 @@ mlir::LogicalResult CIRToLLVMFAbsOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMAbsOpLowering::matchAndRewrite(
+    cir::AbsOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  auto absOp = mlir::LLVM::AbsOp::create(rewriter, op.getLoc(), resTy,
+                                         adaptor.getOperands()[0],
+                                         adaptor.getMinIsPoison());
+  rewriter.replaceOp(op, absOp);
+  return mlir::success();
+}
+
 /// Convert the `cir.func` attributes to `llvm.func` attributes.
 /// Only retain those attributes that are not constructed by
 /// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out

@@ -897,6 +897,16 @@ add_header_library(
 )
 
 add_header_library(
+  bf16fmal
+  HDRS
+    bf16fmal.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_header_library(
   ilogb
   HDRS
     ilogb.h
