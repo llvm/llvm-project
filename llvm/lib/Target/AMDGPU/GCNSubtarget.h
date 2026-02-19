@@ -400,8 +400,6 @@ public:
     return getGeneration() == GFX11 && hasWMMA128bInsts();
   }
 
-  bool isGFX1170Plus() const { return getGeneration() >= GFX12 || isGFX1170(); }
-
   bool hasMad64_32() const { return getGeneration() >= SEA_ISLANDS; }
 
   bool hasAtomicFaddInsts() const {
