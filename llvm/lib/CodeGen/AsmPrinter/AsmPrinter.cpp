@@ -5094,8 +5094,8 @@ void AsmPrinter::emitCOFFFeatureSymbol(Module &M) {
     Feat00Value |= COFF::Feat00Flags::SafeSEH;
   }
 
-  if (M.getControlFlowGuardMode() != ControlFlowGuardMode::Disabled) {
-    // Object is CFG-aware.
+  if (M.getControlFlowGuardMode() == ControlFlowGuardMode::Enabled) {
+    // Object is CFG-aware. Only set if we actually inserted the checks.
     Feat00Value |= COFF::Feat00Flags::GuardCF;
   }
 
