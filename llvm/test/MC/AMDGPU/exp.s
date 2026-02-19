@@ -5,6 +5,7 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s | FileCheck -check-prefix=GFX12 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1310 -show-encoding %s | FileCheck -check-prefix=GFX12 %s
 
 // Check format without comma between target export and first data
 exp mrt0 off, off, off, off
