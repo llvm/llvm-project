@@ -183,10 +183,9 @@ static ParseResult parseProcessorValue(AsmParser &parser,
   if (failed(parser.parseKeywordOrString(&keyword)))
     return failure();
   auto maybeProcessor = gpu::symbolizeProcessor(keyword);
-  if (!maybeProcessor) {
+  if (!maybeProcessor)
     return parser.emitError(loc)
            << "expected one of ::mlir::gpu::Processor enum names";
-  }
   dim = intToParDim(parser.getContext(), gpuProcessorIndex(*maybeProcessor));
   return success();
 }
