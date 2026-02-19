@@ -1,4 +1,4 @@
-#include "DataFormatters/FormatterBytecode.h"
+#include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "gtest/gtest.h"
@@ -14,8 +14,8 @@ class FormatterBytecodeTest : public ::testing::Test {};
 bool Interpret(std::vector<uint8_t> code, DataStack &data) {
   auto buf =
       StringRef(reinterpret_cast<const char *>(code.data()), code.size());
-  std::vector<ControlStackElement> control({buf});
-  if (auto error = Interpret(control, data, sel_summary)) {
+  ControlStack control({buf});
+  if (auto error = Interpret(control, data, sig_summary)) {
 #ifndef NDEBUG
     llvm::errs() << llvm::toString(std::move(error)) << '\n';
 #else

@@ -111,6 +111,7 @@ public:
   Instruction *visitSDiv(BinaryOperator &I);
   Instruction *visitFDiv(BinaryOperator &I);
   Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted);
+  Instruction *FoldOrOfLogicalAnds(Value *Op0, Value *Op1);
   Instruction *visitAnd(BinaryOperator &I);
   Instruction *visitOr(BinaryOperator &I);
   bool sinkNotIntoLogicalOp(Instruction &I);
@@ -623,6 +624,8 @@ public:
                                FPClassTest DemandedMask, KnownFPClass &Known,
                                unsigned Depth = 0);
 
+  bool SimplifyDemandedInstructionFPClass(Instruction &Inst);
+
   /// Common transforms for add / disjoint or
   Instruction *foldAddLikeCommutative(Value *LHS, Value *RHS, bool NSW,
                                       bool NUW);
@@ -805,6 +808,7 @@ public:
   Instruction *foldSelectExtConst(SelectInst &Sel);
   Instruction *foldSelectEqualityTest(SelectInst &SI);
   Instruction *foldSelectOpOp(SelectInst &SI, Instruction *TI, Instruction *FI);
+  Instruction *foldSelectIntrinsic(SelectInst &SI);
   Instruction *foldSelectIntoOp(SelectInst &SI, Value *, Value *);
   Instruction *foldSPFofSPF(Instruction *Inner, SelectPatternFlavor SPF1,
                             Value *A, Value *B, Instruction &Outer,

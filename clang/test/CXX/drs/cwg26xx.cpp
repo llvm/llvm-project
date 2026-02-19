@@ -142,8 +142,8 @@ struct foo {
 
 void f() {
   foo fooable; // #cwg2628-fooable
-  // since-cxx20-error@#cwg2628-fooable {{call to deleted}}
-  //   since-cxx20-note@#cwg2628-ctor {{marked deleted here}}
+  // since-cxx20-error@#cwg2628-fooable {{call to deleted constructor of 'foo<>' (aka 'cwg2628::foo<>')}}
+  //   since-cxx20-note@#cwg2628-ctor {{'foo' has been explicitly marked deleted here}}
 }
 #endif
 } // namespace cwg2628
@@ -244,7 +244,7 @@ class X {
 };
 int i0 = f<X>(0);
 // since-cxx23-error@-1 {{no matching function for call to 'f'}}
-//   since-cxx23-note@#cwg2650-f {{type 'X' of non-type template parameter is not a structural type}}
+//   since-cxx23-note@#cwg2650-f {{candidate template ignored: substitution failure [with T = X]: type 'X' of non-type template parameter is not a structural type}}
 #endif
 } // namespace cwg2650
 
@@ -290,7 +290,7 @@ static_assert(__is_same(decltype(h), H<char, 4>));  // Not H<const char, 4>
 static_assert(__is_same(decltype(i), I<char, 4>));
 
 J j = { "ghi" };
-// since-cxx20-error@-1 {{no viable constructor or deduction guide}}
+// since-cxx20-error@-1 {{no viable constructor or deduction guide for deduction of template arguments of 'J'}}
 //   since-cxx20-note@#cwg2681-J {{candidate template ignored: could not match 'cwg2681::J<N>' against 'const char *'}}
 //   since-cxx20-note@#cwg2681-J {{implicit deduction guide declared as 'template <size_t N> J(cwg2681::J<N>) -> cwg2681::J<N>'}}
 //   since-cxx20-note@#cwg2681-J {{candidate template ignored: could not match 'const unsigned char' against 'const char'}}
@@ -370,8 +370,8 @@ void A::test() {
 
     (&A::g)(A());
     // since-cxx23-error@-1 {{call to 'g' is ambiguous}}
-    //   since-cxx23-note@#cwg2692-3 {{candidate function}}
-    //   since-cxx23-note@#cwg2692-4 {{candidate function}}
+    //   since-cxx23-note@#cwg2692-3 {{candidate function [with T = cwg2692::A]}}
+    //   since-cxx23-note@#cwg2692-4 {{candidate function [with T = cwg2692::A]}}
     (&A::g<A>)();
     // since-cxx23-error@-1 {{no matching function for call to 'g'}}
     //   since-cxx23-note@#cwg2692-3 {{candidate function template not viable: requires 1 argument, but 0 were provided}}

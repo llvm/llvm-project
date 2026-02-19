@@ -1769,6 +1769,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::aarch64_prefetch_ir: {
+    auto &AddrVal = MI.getOperand(1);
+    MIB.buildInstr(AArch64::G_AARCH64_PREFETCH).addImm(24).add(AddrVal);
+    MI.eraseFromParent();
+    return true;
+  }
   case Intrinsic::aarch64_neon_uaddv:
   case Intrinsic::aarch64_neon_saddv:
   case Intrinsic::aarch64_neon_umaxv:
@@ -2015,6 +2021,10 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerUnaryOp(TargetOpcode::G_TRUNC_SSAT_U);
   case Intrinsic::aarch64_neon_uqxtn:
     return LowerUnaryOp(TargetOpcode::G_TRUNC_USAT_U);
+  case Intrinsic::aarch64_neon_fcvtzu:
+    return LowerUnaryOp(TargetOpcode::G_FPTOUI_SAT);
+  case Intrinsic::aarch64_neon_fcvtzs:
+    return LowerUnaryOp(TargetOpcode::G_FPTOSI_SAT);
 
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse

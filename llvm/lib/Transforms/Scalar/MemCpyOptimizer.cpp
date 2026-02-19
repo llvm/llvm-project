@@ -411,8 +411,10 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
 
       // Check to see if this stored value is of the same byte-splattable value.
       Value *StoredByte = isBytewiseValue(StoredVal, DL);
-      if (isa<UndefValue>(ByteVal) && StoredByte)
-        ByteVal = StoredByte;
+      // We can blindly merge this store into `StartInst` if it's being filled
+      // with an undef value but we don't because:
+      // 1. `StartInst` can be removed since it's storing an `undef`.
+      // 2. The resulting memset will be much larger than it needs to be.
       if (ByteVal != StoredByte)
         break;
 
@@ -1427,7 +1429,6 @@ static bool overreadUndefContents(MemorySSA *MSSA, MemCpyInst *MemCpy,
 ///   memset(dst1, c, dst1_size);
 ///   memset(dst2, c, dst2_size);
 /// \endcode
-/// When dst2_size <= dst1_size.
 bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
                                                MemSetInst *MemSet,
                                                BatchAAResults &BAA) {
@@ -1441,42 +1442,61 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   if (MemCpy->getSource() != MemSet->getDest()) {
     std::optional<int64_t> Offset =
         MemCpy->getSource()->getPointerOffsetFrom(MemSet->getDest(), DL);
-    if (!Offset || *Offset < 0)
+    if (!Offset)
       return false;
+    // On positive offsets, the memcpy source is at a offset into the memset'd
+    // region. On negative offsets, the copy starts at a offset prior to the
+    // previously memset'd area, namely, we memcpy from a partially initialized
+    // region.
     MOffset = *Offset;
   }
 
   if (MOffset != 0 || MemSetSize != CopySize) {
     // Make sure the memcpy doesn't read any more than what the memset wrote,
-    // other than undef. Don't worry about sizes larger than i64.
+    // other than undef. Likewise, the memcpy should not read from an area not
+    // covered by the memset unless undef bytes. Don't worry about sizes larger
+    // than i64.
     auto *CMemSetSize = dyn_cast<ConstantInt>(MemSetSize);
     auto *CCopySize = dyn_cast<ConstantInt>(CopySize);
-    if (!CMemSetSize || !CCopySize ||
+    if (!CMemSetSize || !CCopySize || MOffset < 0 ||
         CCopySize->getZExtValue() + MOffset > CMemSetSize->getZExtValue()) {
       if (!overreadUndefContents(MSSA, MemCpy, MemSet, BAA))
         return false;
 
       if (CMemSetSize && CCopySize) {
-        // If both have constant sizes and offsets, clip the memcpy to the
-        // bounds of the memset if applicable.
-        assert(CCopySize->getZExtValue() + MOffset >
-               CMemSetSize->getZExtValue());
-        if (MOffset == 0)
-          CopySize = MemSetSize;
-        else
-          CopySize =
-              ConstantInt::get(CopySize->getType(),
-                               CMemSetSize->getZExtValue() <= (uint64_t)MOffset
-                                   ? 0
-                                   : CMemSetSize->getZExtValue() - MOffset);
+        uint64_t MemSetSizeVal = CMemSetSize->getZExtValue();
+        uint64_t MemCpySizeVal = CCopySize->getZExtValue();
+        uint64_t NewSize;
+
+        if (MOffset < 0) {
+          // Offset from beginning of the initialized region.
+          uint64_t Offset = -MOffset;
+          NewSize = MemCpySizeVal <= Offset ? 0 : MemCpySizeVal - Offset;
+        } else if (MOffset == 0) {
+          NewSize = MemSetSizeVal;
+        } else {
+          NewSize =
+              MemSetSizeVal <= (uint64_t)MOffset ? 0 : MemSetSizeVal - MOffset;
+        }
+        CopySize = ConstantInt::get(CopySize->getType(), NewSize);
+      } else {
+        if (MOffset < 0)
+          return false;
       }
     }
   }
 
   IRBuilder<> Builder(MemCpy);
+  Value *DestPtr = MemCpy->getRawDest();
+  MaybeAlign Align = MemCpy->getDestAlign();
+  if (MOffset < 0) {
+    DestPtr = Builder.CreatePtrAdd(DestPtr, Builder.getInt64(-MOffset));
+    if (Align)
+      Align = commonAlignment(*Align, -MOffset);
+  }
+
   Instruction *NewM =
-      Builder.CreateMemSet(MemCpy->getRawDest(), MemSet->getOperand(1),
-                           CopySize, MemCpy->getDestAlign());
+      Builder.CreateMemSet(DestPtr, MemSet->getOperand(1), CopySize, Align);
   auto *LastDef = cast<MemoryDef>(MSSA->getMemoryAccess(MemCpy));
   auto *NewAccess = MSSAU->createMemoryAccessAfter(NewM, nullptr, LastDef);
   MSSAU->insertDef(cast<MemoryDef>(NewAccess), /*RenameUses=*/true);

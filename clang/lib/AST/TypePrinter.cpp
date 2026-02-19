@@ -286,6 +286,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::PackExpansion:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
+    case Type::OverflowBehavior:
     case Type::CountAttributed:
       CanPrefixQualifiers = false;
       break;
@@ -1972,6 +1973,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLRawBuffer:
   case attr::HLSLContainedType:
   case attr::HLSLIsCounter:
+  case attr::HLSLResourceDimension:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -2024,6 +2026,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::PreserveAll:
   case attr::PreserveMost:
   case attr::PreserveNone:
+  case attr::OverflowBehavior:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
@@ -2101,6 +2104,24 @@ void TypePrinter::printBTFTagAttributedAfter(const BTFTagAttributedType *T,
   printAfter(T->getWrappedType(), OS);
 }
 
+void TypePrinter::printOverflowBehaviorBefore(const OverflowBehaviorType *T,
+                                              raw_ostream &OS) {
+  switch (T->getBehaviorKind()) {
+  case clang::OverflowBehaviorType::OverflowBehaviorKind::Wrap:
+    OS << "__ob_wrap ";
+    break;
+  case clang::OverflowBehaviorType::OverflowBehaviorKind::Trap:
+    OS << "__ob_trap ";
+    break;
+  }
+  printBefore(T->getUnderlyingType(), OS);
+}
+
+void TypePrinter::printOverflowBehaviorAfter(const OverflowBehaviorType *T,
+                                             raw_ostream &OS) {
+  printAfter(T->getUnderlyingType(), OS);
+}
+
 void TypePrinter::printHLSLAttributedResourceBefore(
     const HLSLAttributedResourceType *T, raw_ostream &OS) {
   printBefore(T->getWrappedType(), OS);
@@ -2127,6 +2148,12 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     printAfter(ContainedTy, OS);
     OS << ")]]";
   }
+
+  if (Attrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
+    OS << " [[hlsl::resource_dimension("
+       << HLSLResourceDimensionAttr::ConvertResourceDimensionToStr(
+              Attrs.ResourceDimension)
+       << ")]]";
 }
 
 void TypePrinter::printHLSLInlineSpirvBefore(const HLSLInlineSpirvType *T,

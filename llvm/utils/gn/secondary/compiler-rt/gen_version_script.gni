@@ -2,6 +2,7 @@ import("//compiler-rt/target.gni")
 
 template("gen_version_script") {
   if (current_os != "mac" && current_os != "win") {
+    nm = "//llvm/tools/llvm-nm($host_toolchain)"
     action(target_name) {
       script = "//compiler-rt/lib/sanitizer_common/scripts/gen_dynamic_list.py"
       sources = [ invoker.extra ]
@@ -19,7 +20,8 @@ template("gen_version_script") {
       }
       args += [
         "--nm-executable",
-        "nm",
+        rebase_path(get_label_info(nm, "root_out_dir") + "/bin/llvm-nm",
+                    root_build_dir),
         "-o",
         rebase_path(invoker.output, root_build_dir),
       ]

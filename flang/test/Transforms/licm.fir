@@ -1979,3 +1979,84 @@ acc.reduction.recipe @reduction_add_ref_f32 : !fir.ref<f32> reduction_operator <
 ^bb0(%arg0: !fir.ref<f32>, %arg1: !fir.ref<f32>):
   acc.yield %arg0 : !fir.ref<f32>
 }
+
+// -----
+// CHECK-LABEL: func.func @test_acc_loop_private2_hoisting(
+// CHECK: %[[CLAUSE_VAL1:.*]] = acc.private
+// CHECK: %[[CLAUSE_VAL2:.*]] = acc.private
+// CHECK-NOT: %[[CLAUSE_VAL1]]
+// CHECK-NOT: %[[CLAUSE_VAL2]]
+// CHECK: acc.loop{{.*}}private(%[[CLAUSE_VAL1]], %[[CLAUSE_VAL2]] : !fir.ref<f32>, !fir.ref<f32>)
+func.func @test_acc_loop_private2_hoisting() {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
+  %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %3 = fir.alloca f32 {bindc_name = "a", uniq_name = "_QFtestEa"}
+  %4 = fir.declare %3 {uniq_name = "_QFtestEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  acc.parallel combined(loop) {
+    %5 = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
+    %6 = acc.private varPtr(%4 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "a"}
+    acc.loop combined(parallel) private(%5, %6 : !fir.ref<f32>, !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
+      %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
+      %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      fir.store %cst to %7 : !fir.ref<f32>
+      %cvt2 = fir.convert %6 : (!fir.ref<f32>) -> !fir.ref<f32>
+      %8 = fir.declare %cvt2 {uniq_name = "_QFtestEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      fir.store %cst to %8 : !fir.ref<f32>
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  return
+}
+
+// -----
+// Test hoisting of fir.field_index and fir.coordinate_of.
+// CHECK-LABEL:   func.func @_QMmPtest(
+// CHECK-SAME:      %[[ARG0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
+// CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMmEglob) : !fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ADDRESS_OF_0]] {uniq_name = "_QMmEglob"} : (!fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+// CHECK:           %[[FIELD_INDEX_0:.*]] = fir.field_index a, !fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
+// CHECK:           %[[COORDINATE_OF_0:.*]] = fir.coordinate_of %[[DECLARE_0]], a : (!fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:           %[[LOAD_1:.*]] = fir.load %[[COORDINATE_OF_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 0 : index
+// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_2]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
+// CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
+// CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop
+func.func @_QMmPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.address_of(@_QMmEglob) : !fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+  %2 = fir.declare %1 {uniq_name = "_QMmEglob"} : (!fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+  %3 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QMmFtestEi"}
+  %4 = fir.declare %3 {uniq_name = "_QMmFtestEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %5 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QMmFtestEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %6 = fir.load %5 : !fir.ref<i32>
+  %7 = fir.convert %6 : (i32) -> index
+  %8 = fir.convert %c1 : (index) -> i32
+  %9 = fir.do_loop %arg1 = %c1 to %7 step %c1 iter_args(%arg2 = %8) -> (i32) {
+    fir.store %arg2 to %4 : !fir.ref<i32>
+    %10 = fir.field_index a, !fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
+    %11 = fir.coordinate_of %2, a : (!fir.ref<!fir.type<_QMmTt{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %12 = fir.load %11 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %13 = fir.load %4 : !fir.ref<i32>
+    %14 = fir.convert %13 : (i32) -> i64
+    %15 = fir.box_addr %12 : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+    %c0 = arith.constant 0 : index
+    %16:3 = fir.box_dims %12, %c0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
+    %17 = fir.shape_shift %16#0, %16#1 : (index, index) -> !fir.shapeshift<1>
+    %18 = fir.array_coor %15(%17) %14 : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, i64) -> !fir.ref<f32>
+    fir.store %cst to %18 : !fir.ref<f32>
+    %19 = fir.load %4 : !fir.ref<i32>
+    %20 = arith.addi %19, %8 overflow<nsw> : i32
+    fir.result %20 : i32
+  }
+  fir.store %9 to %4 : !fir.ref<i32>
+  return
+}

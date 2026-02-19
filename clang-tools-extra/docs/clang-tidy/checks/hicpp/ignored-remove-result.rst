@@ -5,7 +5,7 @@ hicpp-ignored-remove-result
 
 Ensure that the result of ``std::remove``, ``std::remove_if`` and ``std::unique``
 are not ignored according to
-`rule 17.5.1 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-standard/standard-library>`_.
+`rule 17.5.1 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-rules>`_.
 
 The mutating algorithms ``std::remove``, ``std::remove_if`` and both overloads
 of ``std::unique`` operate by swapping or moving elements of the range they are

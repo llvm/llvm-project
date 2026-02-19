@@ -17,6 +17,11 @@
 // HOST: @_Z4Fourv = weak alias i32 (), ptr @_Z6__Fourv
 // HOST: @_Z5Four_v = alias i32 (), ptr @_Z6__Fourv
 //.
+// DEVICE: @__omp_rtl_debug_kind = weak_odr hidden addrspace(1) constant i32 0
+// DEVICE: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden addrspace(1) constant i32 0
+// DEVICE: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden addrspace(1) constant i32 0
+// DEVICE: @__omp_rtl_assume_no_thread_state = weak_odr hidden addrspace(1) constant i32 0
+// DEVICE: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden addrspace(1) constant i32 0
 // DEVICE: @_Z3Twov = weak hidden alias i32 (), ptr @_Z5__Twov
 // DEVICE: @_Z3Twof = weak hidden alias float (float), ptr @_Z5__Twof
 // DEVICE: @_Z4Two_v = hidden alias i32 (), ptr @_Z5__Twov
@@ -54,8 +59,6 @@ float One_(float f) __attribute__((alias("_Z5__Onef")));
 // DEVICE-LABEL: define hidden noundef i32 @_Z5__Twov(
 // DEVICE-SAME: ) #[[ATTR0:[0-9]+]] {
 // DEVICE-NEXT:  [[ENTRY:.*:]]
-// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // DEVICE-NEXT:    ret i32 2
 //
 int __Two(void) { return 2; }
@@ -71,9 +74,7 @@ int __Two(void) { return 2; }
 // DEVICE-LABEL: define hidden noundef float @_Z5__Twof(
 // DEVICE-SAME: float noundef [[F:%.*]]) #[[ATTR0]] {
 // DEVICE-NEXT:  [[ENTRY:.*:]]
-// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
 // DEVICE-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4, addrspace(5)
-// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // DEVICE-NEXT:    [[F_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F_ADDR]] to ptr
 // DEVICE-NEXT:    store float [[F]], ptr [[F_ADDR_ASCAST]], align 4
 // DEVICE-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR_ASCAST]], align 4
@@ -96,8 +97,6 @@ float Two_(float f) __attribute__((alias("_Z5__Twof")));
 // DEVICE-LABEL: define linkonce_odr hidden noundef i32 @_Z7__Threev(
 // DEVICE-SAME: ) #[[ATTR0]] comdat {
 // DEVICE-NEXT:  [[ENTRY:.*:]]
-// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // DEVICE-NEXT:    ret i32 3
 //
 constexpr int __Three(void) { return 3; }
@@ -113,3 +112,18 @@ int Three_(void) __attribute__((alias("_Z7__Threev")));
 constexpr int __Four(void) { return 4; }
 int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
 int Four_(void) __attribute__((alias("_Z6__Fourv")));
+//.
+// HOST: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+//.
+// DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+//.
+// HOST: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// HOST: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 51}
+// HOST: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+//.
+// DEVICE: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
+// DEVICE: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// DEVICE: [[META2:![0-9]+]] = !{i32 7, !"openmp", i32 51}
+// DEVICE: [[META3:![0-9]+]] = !{i32 7, !"openmp-device", i32 51}
+// DEVICE: [[META4:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+//.

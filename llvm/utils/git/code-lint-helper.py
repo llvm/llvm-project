@@ -111,7 +111,7 @@ View the output from {self.name} here.
 
     def update_pr(self, comment_text: str, args: LintArgs, create_new: bool) -> None:
         assert args.repo is not None
-        repo = github.Github(args.token).get_repo(args.repo)
+        repo = github.Github(auth=github.Auth.Token(args.token)).get_repo(args.repo)
         pr = repo.get_issue(args.issue_number).as_pull_request()
 
         comment_text = f"{self.comment_tag}\n\n{comment_text}"
