@@ -19,7 +19,7 @@
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace lldb_private {
 
@@ -445,7 +445,7 @@ public:
   ///     otherwise.
   bool GetContextAtIndex(size_t idx, SymbolContext &sc) const;
 
-  /// Direct reference accessor for a symbol context at index \a idx.
+  /// Direct const reference accessor for a symbol context at index \a idx.
   ///
   /// The index \a idx must be a valid index, no error checking will be done
   /// to ensure that it is valid.
@@ -454,11 +454,18 @@ public:
   ///     The zero based index into the symbol context list.
   ///
   /// \return
-  ///     A const reference to the symbol context to fill in.
-  SymbolContext &operator[](size_t idx) { return m_symbol_contexts[idx]; }
-
+  ///     A const reference to the symbol context.
   const SymbolContext &operator[](size_t idx) const {
     return m_symbol_contexts[idx];
+  }
+
+  /// Replace the symbol in the symbol context at index \a idx.
+  ///
+  /// The symbol field is excluded from the hash and equality used by the
+  /// internal set, so this is the only mutation that is safe to perform on
+  /// an element that is already in the list.
+  void SetSymbolAtIndex(size_t idx, Symbol *symbol) {
+    const_cast<SymbolContext &>(m_symbol_contexts[idx]).symbol = symbol;
   }
 
   bool RemoveContextAtIndex(size_t idx);
@@ -476,14 +483,6 @@ public:
   void GetDescription(Stream *s, lldb::DescriptionLevel level,
                       Target *target) const;
 
-protected:
-  typedef std::vector<SymbolContext>
-      collection; ///< The collection type for the list.
-  typedef collection::const_iterator const_iterator;
-
-  // Member variables.
-  collection m_symbol_contexts; ///< The list of symbol contexts.
-
 private:
   struct SymbolContextInfo {
     static SymbolContext getEmptyKey();
@@ -492,11 +491,12 @@ private:
     static bool isEqual(const SymbolContext &lhs, const SymbolContext &rhs);
   };
 
-  /// Threshold above which we switch from linear scan to hash-set lookup
-  /// for uniqueness checks.
-  static constexpr size_t kSetThreshold = 1024;
+  using set_type = llvm::DenseSet<SymbolContext, SymbolContextInfo>;
+  using collection =
+      llvm::SetVector<SymbolContext, std::vector<SymbolContext>, set_type>;
 
-  llvm::SmallDenseSet<SymbolContext, 1, SymbolContextInfo> m_lookup_set;
+  // Member variables.
+  collection m_symbol_contexts; ///< The list of symbol contexts.
 
 public:
   const_iterator begin() const { return m_symbol_contexts.begin(); }

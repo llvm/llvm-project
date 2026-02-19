@@ -1242,25 +1242,19 @@ SymbolContextList::SymbolContextList() : m_symbol_contexts() {}
 SymbolContextList::~SymbolContextList() = default;
 
 void SymbolContextList::Append(const SymbolContext &sc) {
-  m_symbol_contexts.push_back(sc);
-  if (!m_lookup_set.empty())
-    m_lookup_set.insert(sc);
+  m_symbol_contexts.insert(sc);
 }
 
 void SymbolContextList::Append(const SymbolContextList &sc_list) {
-  for (const auto &sc : sc_list.m_symbol_contexts) {
-    m_symbol_contexts.push_back(sc);
-    if (!m_lookup_set.empty())
-      m_lookup_set.insert(sc);
-  }
+  for (const auto &sc : sc_list.m_symbol_contexts)
+    m_symbol_contexts.insert(sc);
 }
 
 uint32_t SymbolContextList::AppendIfUnique(const SymbolContextList &sc_list,
                                            bool merge_symbol_into_function) {
   uint32_t unique_sc_add_count = 0;
-  collection::const_iterator pos, end = sc_list.m_symbol_contexts.end();
-  for (pos = sc_list.m_symbol_contexts.begin(); pos != end; ++pos) {
-    if (AppendIfUnique(*pos, merge_symbol_into_function))
+  for (const auto &sc : sc_list.m_symbol_contexts) {
+    if (AppendIfUnique(sc, merge_symbol_into_function))
       ++unique_sc_add_count;
   }
   return unique_sc_add_count;
@@ -1268,25 +1262,8 @@ uint32_t SymbolContextList::AppendIfUnique(const SymbolContextList &sc_list,
 
 bool SymbolContextList::AppendIfUnique(const SymbolContext &sc,
                                        bool merge_symbol_into_function) {
-
-  // Look in the set if it's populated, otherwise, fall back to linear scan.
-  if (!m_lookup_set.empty()) {
-    if (m_lookup_set.count(sc))
-      return false;
-  } else if (m_symbol_contexts.size() < kSetThreshold) {
-    for (const auto &existing : m_symbol_contexts) {
-      if (SymbolContext::CompareConsideringPossiblyNullSymbol(existing, sc))
-        return false;
-    }
-  } else {
-    // We've just crossed the threshold. Populate the set from existing items.
-    // Since the set won't be empty after this every new append operation will
-    // keep the set in sync with the vector.
-    for (const auto &existing : m_symbol_contexts)
-      m_lookup_set.insert(existing);
-    if (m_lookup_set.count(sc))
-      return false;
-  }
+  if (m_symbol_contexts.contains(sc))
+    return false;
 
   // This path is only taken when sc is an "isolated symbol" (only symbol field
   // is set), so it's not the hot path.
@@ -1294,7 +1271,8 @@ bool SymbolContextList::AppendIfUnique(const SymbolContext &sc,
       sc.comp_unit == nullptr && sc.function == nullptr &&
       sc.block == nullptr && !sc.line_entry.IsValid()) {
     if (sc.symbol->ValueIsAddress()) {
-      for (auto &pos : m_symbol_contexts) {
+      for (size_t i = 0, e = m_symbol_contexts.size(); i != e; ++i) {
+        const auto &pos = m_symbol_contexts[i];
         // Don't merge symbols into inlined function symbol contexts
         if (pos.block && pos.block->GetContainingInlinedBlock())
           continue;
@@ -1305,7 +1283,7 @@ bool SymbolContextList::AppendIfUnique(const SymbolContext &sc,
             if (pos.symbol == sc.symbol)
               return false;
             if (pos.symbol == nullptr) {
-              pos.symbol = sc.symbol;
+              SetSymbolAtIndex(i, sc.symbol);
               return false;
             }
           }
@@ -1314,16 +1292,11 @@ bool SymbolContextList::AppendIfUnique(const SymbolContext &sc,
     }
   }
 
-  m_symbol_contexts.push_back(sc);
-  if (!m_lookup_set.empty())
-    m_lookup_set.insert(sc);
+  m_symbol_contexts.insert(sc);
   return true;
 }
 
-void SymbolContextList::Clear() {
-  m_symbol_contexts.clear();
-  m_lookup_set.clear();
-}
+void SymbolContextList::Clear() { m_symbol_contexts.clear(); }
 
 void SymbolContextList::Dump(Stream *s, Target *target) const {
 
@@ -1333,10 +1306,9 @@ void SymbolContextList::Dump(Stream *s, Target *target) const {
   s->EOL();
   s->IndentMore();
 
-  collection::const_iterator pos, end = m_symbol_contexts.end();
-  for (pos = m_symbol_contexts.begin(); pos != end; ++pos) {
-    // pos->Dump(s, target);
-    pos->GetDescription(s, eDescriptionLevelVerbose, target);
+  for (const auto &sc : m_symbol_contexts) {
+    // sc.Dump(s, target);
+    sc.GetDescription(s, eDescriptionLevelVerbose, target);
   }
   s->IndentLess();
 }
@@ -1351,8 +1323,6 @@ bool SymbolContextList::GetContextAtIndex(size_t idx, SymbolContext &sc) const {
 
 bool SymbolContextList::RemoveContextAtIndex(size_t idx) {
   if (idx < m_symbol_contexts.size()) {
-    if (!m_lookup_set.empty())
-      m_lookup_set.erase(m_symbol_contexts[idx]);
     m_symbol_contexts.erase(m_symbol_contexts.begin() + idx);
     return true;
   }
