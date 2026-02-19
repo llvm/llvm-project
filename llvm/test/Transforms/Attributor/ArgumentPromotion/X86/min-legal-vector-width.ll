@@ -43,9 +43,9 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(ptr %arg) 
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; TUNIT-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5:[0-9]+]]
+; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4:[0-9]+]]
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; TUNIT-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR6:[0-9]+]]
+; TUNIT-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5:[0-9]+]]
 ; TUNIT-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
@@ -56,9 +56,9 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(ptr %arg) 
 ; CGSCC-NEXT:  bb:
 ; CGSCC-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CGSCC-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5:[0-9]+]]
+; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4:[0-9]+]]
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; CGSCC-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR6:[0-9]+]]
+; CGSCC-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5:[0-9]+]]
 ; CGSCC-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; CGSCC-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CGSCC-NEXT:    ret void
@@ -110,9 +110,9 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(ptr %arg) 
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; TUNIT-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
+; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; TUNIT-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR6]]
+; TUNIT-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; TUNIT-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
@@ -123,9 +123,9 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(ptr %arg) 
 ; CGSCC-NEXT:  bb:
 ; CGSCC-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CGSCC-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
+; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; CGSCC-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR6]]
+; CGSCC-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; CGSCC-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; CGSCC-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CGSCC-NEXT:    ret void
@@ -177,9 +177,9 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(ptr %arg) 
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; TUNIT-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
+; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; TUNIT-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR6]]
+; TUNIT-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; TUNIT-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
@@ -190,9 +190,9 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(ptr %arg) 
 ; CGSCC-NEXT:  bb:
 ; CGSCC-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CGSCC-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
+; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; CGSCC-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR6]]
+; CGSCC-NEXT:    call fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; CGSCC-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; CGSCC-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CGSCC-NEXT:    ret void
@@ -244,9 +244,9 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(ptr %arg) 
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; TUNIT-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
+; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; TUNIT-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR6]]
+; TUNIT-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; TUNIT-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
@@ -257,9 +257,9 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(ptr %arg) 
 ; CGSCC-NEXT:  bb:
 ; CGSCC-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CGSCC-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
+; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; CGSCC-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR6]]
+; CGSCC-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; CGSCC-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; CGSCC-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CGSCC-NEXT:    ret void
@@ -279,17 +279,21 @@ define internal fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal5
 ;
 ; TUNIT: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256
-; TUNIT-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], ptr noalias nofree noundef nonnull readonly align 64 captures(none) dereferenceable(64) [[ARG1:%.*]]) #[[ATTR1]] {
+; TUNIT-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:  bb:
-; TUNIT-NEXT:    [[TMP:%.*]] = load <8 x i64>, ptr [[ARG1]], align 64
+; TUNIT-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; TUNIT-NEXT:    store <8 x i64> [[TMP0]], ptr [[ARG1_PRIV]], align 64
+; TUNIT-NEXT:    [[TMP:%.*]] = load <8 x i64>, ptr [[ARG1_PRIV]], align 64
 ; TUNIT-NEXT:    store <8 x i64> [[TMP]], ptr [[ARG]], align 64
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256
-; CGSCC-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], ptr noalias nofree noundef nonnull readonly align 64 captures(none) dereferenceable(64) [[ARG1:%.*]]) #[[ATTR1]] {
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  bb:
-; CGSCC-NEXT:    [[TMP:%.*]] = load <8 x i64>, ptr [[ARG1]], align 64, !invariant.load [[META0]]
+; CGSCC-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; CGSCC-NEXT:    store <8 x i64> [[TMP0]], ptr [[ARG1_PRIV]], align 64
+; CGSCC-NEXT:    [[TMP:%.*]] = load <8 x i64>, ptr [[ARG1_PRIV]], align 64, !invariant.load [[META0]]
 ; CGSCC-NEXT:    store <8 x i64> [[TMP]], ptr [[ARG]], align 64
 ; CGSCC-NEXT:    ret void
 ;
@@ -303,24 +307,26 @@ define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(ptr %arg) 
 ;
 ; TUNIT: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@avx512_legal256_prefer256_call_avx512_legal512_prefer256
-; TUNIT-SAME: (ptr nofree writeonly captures(none) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree writeonly captures(none) [[ARG:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; TUNIT-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
-; TUNIT-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], ptr noalias nofree noundef nonnull readonly align 64 captures(none) dereferenceable(64) [[TMP]]) #[[ATTR6]]
+; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
+; TUNIT-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
+; TUNIT-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; TUNIT-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@avx512_legal256_prefer256_call_avx512_legal512_prefer256
-; CGSCC-SAME: (ptr nofree noundef nonnull writeonly align 2 captures(none) dereferenceable(64) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree noundef nonnull writeonly align 2 captures(none) dereferenceable(64) [[ARG:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  bb:
 ; CGSCC-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CGSCC-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
-; CGSCC-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], ptr noalias nofree noundef nonnull readonly align 64 captures(none) dereferenceable(64) [[TMP]]) #[[ATTR6]]
+; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
+; CGSCC-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
+; CGSCC-NEXT:    call fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; CGSCC-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; CGSCC-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CGSCC-NEXT:    ret void
@@ -340,17 +346,21 @@ define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal2
 ;
 ; TUNIT: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256
-; TUNIT-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], ptr noalias nofree noundef nonnull readonly align 64 captures(none) dereferenceable(64) [[ARG1:%.*]]) #[[ATTR2]] {
+; TUNIT-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:  bb:
-; TUNIT-NEXT:    [[TMP:%.*]] = load <8 x i64>, ptr [[ARG1]], align 64
+; TUNIT-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; TUNIT-NEXT:    store <8 x i64> [[TMP0]], ptr [[ARG1_PRIV]], align 64
+; TUNIT-NEXT:    [[TMP:%.*]] = load <8 x i64>, ptr [[ARG1_PRIV]], align 64
 ; TUNIT-NEXT:    store <8 x i64> [[TMP]], ptr [[ARG]], align 64
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256
-; CGSCC-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], ptr noalias nofree noundef nonnull readonly align 64 captures(none) dereferenceable(64) [[ARG1:%.*]]) #[[ATTR2]] {
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  bb:
-; CGSCC-NEXT:    [[TMP:%.*]] = load <8 x i64>, ptr [[ARG1]], align 64, !invariant.load [[META0]]
+; CGSCC-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
+; CGSCC-NEXT:    store <8 x i64> [[TMP0]], ptr [[ARG1_PRIV]], align 64
+; CGSCC-NEXT:    [[TMP:%.*]] = load <8 x i64>, ptr [[ARG1_PRIV]], align 64, !invariant.load [[META0]]
 ; CGSCC-NEXT:    store <8 x i64> [[TMP]], ptr [[ARG]], align 64
 ; CGSCC-NEXT:    ret void
 ;
@@ -368,8 +378,9 @@ define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(ptr %arg) 
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; TUNIT-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
-; TUNIT-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], ptr noalias nofree noundef nonnull readonly align 64 captures(none) dereferenceable(64) [[TMP]]) #[[ATTR6]]
+; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
+; TUNIT-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
+; TUNIT-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; TUNIT-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
@@ -380,8 +391,9 @@ define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(ptr %arg) 
 ; CGSCC-NEXT:  bb:
 ; CGSCC-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CGSCC-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
-; CGSCC-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], ptr noalias nofree noundef nonnull readonly align 64 captures(none) dereferenceable(64) [[TMP]]) #[[ATTR6]]
+; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
+; CGSCC-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
+; CGSCC-NEXT:    call fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; CGSCC-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; CGSCC-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CGSCC-NEXT:    ret void
@@ -401,7 +413,7 @@ define internal fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_p
 ;
 ; TUNIT: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
-; TUNIT-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
+; TUNIT-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] {
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
 ; TUNIT-NEXT:    store <8 x i64> [[TMP0]], ptr [[ARG1_PRIV]], align 64
@@ -411,7 +423,7 @@ define internal fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_p
 ;
 ; CGSCC: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
-; CGSCC-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  bb:
 ; CGSCC-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
 ; CGSCC-NEXT:    store <8 x i64> [[TMP0]], ptr [[ARG1_PRIV]], align 64
@@ -429,26 +441,26 @@ define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(ptr %arg) #4 {
 ;
 ; TUNIT: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@avx2_legal256_prefer256_call_avx2_legal512_prefer256
-; TUNIT-SAME: (ptr nofree writeonly captures(none) [[ARG:%.*]]) #[[ATTR3]] {
+; TUNIT-SAME: (ptr nofree writeonly captures(none) [[ARG:%.*]]) #[[ATTR2]] {
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; TUNIT-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
+; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; TUNIT-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR6]]
+; TUNIT-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; TUNIT-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@avx2_legal256_prefer256_call_avx2_legal512_prefer256
-; CGSCC-SAME: (ptr nofree noundef nonnull writeonly align 2 captures(none) dereferenceable(64) [[ARG:%.*]]) #[[ATTR3]] {
+; CGSCC-SAME: (ptr nofree noundef nonnull writeonly align 2 captures(none) dereferenceable(64) [[ARG:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:  bb:
 ; CGSCC-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CGSCC-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
+; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; CGSCC-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR6]]
+; CGSCC-NEXT:    call fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; CGSCC-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; CGSCC-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CGSCC-NEXT:    ret void
@@ -468,7 +480,7 @@ define internal fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_p
 ;
 ; TUNIT: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
-; TUNIT-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR3]] {
+; TUNIT-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR2]] {
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
 ; TUNIT-NEXT:    store <8 x i64> [[TMP0]], ptr [[ARG1_PRIV]], align 64
@@ -478,7 +490,7 @@ define internal fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_p
 ;
 ; CGSCC: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
-; CGSCC-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR3]] {
+; CGSCC-SAME: (ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:  bb:
 ; CGSCC-NEXT:    [[ARG1_PRIV:%.*]] = alloca <8 x i64>, align 64
 ; CGSCC-NEXT:    store <8 x i64> [[TMP0]], ptr [[ARG1_PRIV]], align 64
@@ -496,26 +508,26 @@ define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(ptr %arg) #3 {
 ;
 ; TUNIT: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@avx2_legal512_prefer256_call_avx2_legal256_prefer256
-; TUNIT-SAME: (ptr nofree writeonly captures(none) [[ARG:%.*]]) #[[ATTR3]] {
+; TUNIT-SAME: (ptr nofree writeonly captures(none) [[ARG:%.*]]) #[[ATTR2]] {
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; TUNIT-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
+; TUNIT-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 32 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; TUNIT-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR6]]
+; TUNIT-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; TUNIT-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@avx2_legal512_prefer256_call_avx2_legal256_prefer256
-; CGSCC-SAME: (ptr nofree noundef nonnull writeonly align 2 captures(none) dereferenceable(64) [[ARG:%.*]]) #[[ATTR3]] {
+; CGSCC-SAME: (ptr nofree noundef nonnull writeonly align 2 captures(none) dereferenceable(64) [[ARG:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:  bb:
 ; CGSCC-NEXT:    [[TMP:%.*]] = alloca <8 x i64>, align 32
 ; CGSCC-NEXT:    [[TMP2:%.*]] = alloca <8 x i64>, align 32
-; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR5]]
+; CGSCC-NEXT:    call void @llvm.memset.p0.i64(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP]], i8 noundef 0, i64 noundef 32, i1 noundef false) #[[ATTR4]]
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[TMP]], align 64
-; CGSCC-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR6]]
+; CGSCC-NEXT:    call fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(ptr noalias nofree noundef nonnull writeonly align 64 captures(none) dereferenceable(64) [[TMP2]], <8 x i64> [[TMP0]]) #[[ATTR5]]
 ; CGSCC-NEXT:    [[TMP4:%.*]] = load <8 x i64>, ptr [[TMP2]], align 64
 ; CGSCC-NEXT:    store <8 x i64> [[TMP4]], ptr [[ARG]], align 2
 ; CGSCC-NEXT:    ret void
@@ -542,19 +554,17 @@ attributes #5 = { argmemonly nounwind }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="512" "target-features"="+avx512vl" }
 ; CGSCC: attributes #[[ATTR1]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
-; CGSCC: attributes #[[ATTR2]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
-; CGSCC: attributes #[[ATTR3]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
-; CGSCC: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; CGSCC: attributes #[[ATTR5]] = { nofree willreturn memory(write) }
-; CGSCC: attributes #[[ATTR6]] = { nofree nounwind willreturn }
+; CGSCC: attributes #[[ATTR2]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
+; CGSCC: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CGSCC: attributes #[[ATTR4]] = { nofree willreturn memory(write) }
+; CGSCC: attributes #[[ATTR5]] = { nofree nounwind willreturn }
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="512" "target-features"="+avx512vl" }
 ; TUNIT: attributes #[[ATTR1]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
-; TUNIT: attributes #[[ATTR2]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
-; TUNIT: attributes #[[ATTR3]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
-; TUNIT: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; TUNIT: attributes #[[ATTR5]] = { nofree willreturn memory(write) }
-; TUNIT: attributes #[[ATTR6]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR2]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
+; TUNIT: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR4]] = { nofree willreturn memory(write) }
+; TUNIT: attributes #[[ATTR5]] = { nofree nosync nounwind willreturn }
 ;.
 ; CGSCC: [[META0]] = !{}
 ;.

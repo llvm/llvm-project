@@ -2654,12 +2654,8 @@ define dso_local void @test_nested_memory(ptr %dst, ptr %src) {
 ; TUNIT-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[CALL_H2S]], i64 8
 ; TUNIT-NEXT:    store ptr [[SRC]], ptr [[SRC2]], align 8
 ; TUNIT-NEXT:    store ptr [[CALL_H2S]], ptr getelementptr inbounds ([[STRUCT_STY]], ptr @global, i64 0, i32 2), align 8
-; TUNIT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[LOCAL]], align 8
-; TUNIT-NEXT:    [[LOCAL_B8:%.*]] = getelementptr i8, ptr [[LOCAL]], i64 8
-; TUNIT-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[LOCAL_B8]], align 8
-; TUNIT-NEXT:    [[LOCAL_B16:%.*]] = getelementptr i8, ptr [[LOCAL]], i64 16
-; TUNIT-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[LOCAL_B16]], align 8
-; TUNIT-NEXT:    call fastcc void @nested_memory_callee(ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]]) #[[ATTR21:[0-9]+]]
+; TUNIT-NEXT:    [[TMP0:%.*]] = load <3 x i64>, ptr [[LOCAL]], align 8
+; TUNIT-NEXT:    call fastcc void @nested_memory_callee(<3 x i64> [[TMP0]]) #[[ATTR21:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define dso_local void @test_nested_memory(
@@ -2667,12 +2663,14 @@ define dso_local void @test_nested_memory(ptr %dst, ptr %src) {
 ; CGSCC-NEXT:  [[ENTRY:.*:]]
 ; CGSCC-NEXT:    [[LOCAL:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
 ; CGSCC-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[LOCAL]], i64 0, i32 2
+; CGSCC-NEXT:    store ptr @global, ptr [[INNER]], align 8
 ; CGSCC-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(24) ptr @malloc(i64 noundef 24)
 ; CGSCC-NEXT:    store ptr [[DST]], ptr [[CALL]], align 8
 ; CGSCC-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 8
 ; CGSCC-NEXT:    store ptr [[SRC]], ptr [[SRC2]], align 8
 ; CGSCC-NEXT:    store ptr [[CALL]], ptr getelementptr inbounds ([[STRUCT_STY]], ptr @global, i64 0, i32 2), align 8
-; CGSCC-NEXT:    call fastcc void @nested_memory_callee(ptr nofree align 4294967296 undef, ptr nofree align 4294967296 undef, ptr nofree noundef nonnull align 8 dereferenceable(24) @global) #[[ATTR24:[0-9]+]]
+; CGSCC-NEXT:    [[TMP0:%.*]] = load <3 x i64>, ptr [[LOCAL]], align 8
+; CGSCC-NEXT:    call fastcc void @nested_memory_callee(<3 x i64> [[TMP0]]) #[[ATTR24:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -2689,17 +2687,13 @@ entry:
 }
 
 define internal fastcc void @nested_memory_callee(ptr nocapture readonly %S) nofree norecurse nounwind uwtable {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn uwtable
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none) uwtable
 ; TUNIT-LABEL: define internal fastcc void @nested_memory_callee(
-; TUNIT-SAME: ptr [[TMP0:%.*]], ptr [[TMP1:%.*]], ptr [[TMP2:%.*]]) #[[ATTR11:[0-9]+]] {
+; TUNIT-SAME: <3 x i64> [[TMP0:%.*]]) #[[ATTR11:[0-9]+]] {
 ; TUNIT-NEXT:  [[ENTRY:.*:]]
-; TUNIT-NEXT:    [[S_PRIV:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
-; TUNIT-NEXT:    store ptr [[TMP0]], ptr [[S_PRIV]], align 8
-; TUNIT-NEXT:    [[S_PRIV_B8:%.*]] = getelementptr i8, ptr [[S_PRIV]], i64 8
-; TUNIT-NEXT:    store ptr [[TMP1]], ptr [[S_PRIV_B8]], align 8
-; TUNIT-NEXT:    [[S_PRIV_B16:%.*]] = getelementptr i8, ptr [[S_PRIV]], i64 16
-; TUNIT-NEXT:    store ptr [[TMP2]], ptr [[S_PRIV_B16]], align 8
-; TUNIT-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 2
+; TUNIT-NEXT:    [[S_PRIV:%.*]] = alloca <3 x i64>, align 32
+; TUNIT-NEXT:    store <3 x i64> [[TMP0]], ptr [[S_PRIV]], align 32
+; TUNIT-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY:%.*]], ptr [[S_PRIV]], i64 0, i32 2
 ; TUNIT-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[INNER]], align 8, !invariant.load [[META32:![0-9]+]]
 ; TUNIT-NEXT:    [[INNER1:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[TMP3]], i64 0, i32 2
 ; TUNIT-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[INNER1]], align 8, !invariant.load [[META32]]
@@ -2711,17 +2705,13 @@ define internal fastcc void @nested_memory_callee(ptr nocapture readonly %S) nof
 ; TUNIT-NEXT:    store float [[CONV]], ptr [[TMP7]], align 4
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn uwtable
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none) uwtable
 ; CGSCC-LABEL: define internal fastcc void @nested_memory_callee(
-; CGSCC-SAME: ptr nofree [[TMP0:%.*]], ptr nofree [[TMP1:%.*]], ptr nofree [[TMP2:%.*]]) #[[ATTR12:[0-9]+]] {
+; CGSCC-SAME: <3 x i64> [[TMP0:%.*]]) #[[ATTR12:[0-9]+]] {
 ; CGSCC-NEXT:  [[ENTRY:.*:]]
-; CGSCC-NEXT:    [[S_PRIV:%.*]] = alloca [[STRUCT_STY:%.*]], align 8
-; CGSCC-NEXT:    store ptr [[TMP0]], ptr [[S_PRIV]], align 8
-; CGSCC-NEXT:    [[S_PRIV_B8:%.*]] = getelementptr i8, ptr [[S_PRIV]], i64 8
-; CGSCC-NEXT:    store ptr [[TMP1]], ptr [[S_PRIV_B8]], align 8
-; CGSCC-NEXT:    [[S_PRIV_B16:%.*]] = getelementptr i8, ptr [[S_PRIV]], i64 16
-; CGSCC-NEXT:    store ptr [[TMP2]], ptr [[S_PRIV_B16]], align 8
-; CGSCC-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[S_PRIV]], i64 0, i32 2
+; CGSCC-NEXT:    [[S_PRIV:%.*]] = alloca <3 x i64>, align 32
+; CGSCC-NEXT:    store <3 x i64> [[TMP0]], ptr [[S_PRIV]], align 32
+; CGSCC-NEXT:    [[INNER:%.*]] = getelementptr inbounds [[STRUCT_STY:%.*]], ptr [[S_PRIV]], i64 0, i32 2
 ; CGSCC-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[INNER]], align 8, !invariant.load [[META32:![0-9]+]]
 ; CGSCC-NEXT:    [[INNER1:%.*]] = getelementptr inbounds [[STRUCT_STY]], ptr [[TMP3]], i64 0, i32 2
 ; CGSCC-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[INNER1]], align 8, !invariant.load [[META32]]
@@ -3630,7 +3620,7 @@ declare void @llvm.assume(i1 noundef)
 ; TUNIT: attributes #[[ATTR8:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; TUNIT: attributes #[[ATTR9:[0-9]+]] = { allockind("free") "alloc-family"="malloc" }
 ; TUNIT: attributes #[[ATTR10:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
-; TUNIT: attributes #[[ATTR11]] = { mustprogress nofree norecurse nosync nounwind willreturn uwtable }
+; TUNIT: attributes #[[ATTR11]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none) uwtable }
 ; TUNIT: attributes #[[ATTR12]] = { nofree nosync nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR13]] = { nofree norecurse nosync nounwind memory(none) }
 ; TUNIT: attributes #[[ATTR14]] = { nofree nosync nounwind }
@@ -3656,7 +3646,7 @@ declare void @llvm.assume(i1 noundef)
 ; CGSCC: attributes #[[ATTR9:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; CGSCC: attributes #[[ATTR10:[0-9]+]] = { allockind("free") "alloc-family"="malloc" }
 ; CGSCC: attributes #[[ATTR11:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
-; CGSCC: attributes #[[ATTR12]] = { mustprogress nofree norecurse nosync nounwind willreturn uwtable }
+; CGSCC: attributes #[[ATTR12]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: none) uwtable }
 ; CGSCC: attributes #[[ATTR13]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR14]] = { nofree nosync nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR15]] = { nofree nosync nounwind memory(none) }

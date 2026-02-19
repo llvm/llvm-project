@@ -78,17 +78,15 @@ define internal i64 @AccessPaddingOfStruct(ptr byval(%struct.Foo) %a) {
 define internal i64 @CaptureAStruct(ptr byval(%struct.Foo) %a) {
 ; CGSCC: Function Attrs: nofree norecurse noreturn nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@CaptureAStruct
-; CGSCC-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+; CGSCC-SAME: (<2 x i64> [[TMP0:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
-; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[A_PRIV]], align 4
-; CGSCC-NEXT:    [[A_PRIV_B8:%.*]] = getelementptr i8, ptr [[A_PRIV]], i64 8
-; CGSCC-NEXT:    store i64 [[TMP1]], ptr [[A_PRIV_B8]], align 8
+; CGSCC-NEXT:    [[A_PRIV:%.*]] = alloca <2 x i64>, align 16
+; CGSCC-NEXT:    store <2 x i64> [[TMP0]], ptr [[A_PRIV]], align 16
 ; CGSCC-NEXT:    [[A_PTR:%.*]] = alloca ptr, align 8
 ; CGSCC-NEXT:    br label [[LOOP:%.*]]
 ; CGSCC:       loop:
 ; CGSCC-NEXT:    [[PHI:%.*]] = phi ptr [ null, [[ENTRY:%.*]] ], [ [[A_PRIV]], [[LOOP]] ]
-; CGSCC-NEXT:    [[TMP2:%.*]] = phi ptr [ [[A_PRIV]], [[ENTRY]] ], [ [[TMP2]], [[LOOP]] ]
+; CGSCC-NEXT:    [[TMP1:%.*]] = phi ptr [ [[A_PRIV]], [[ENTRY]] ], [ [[TMP1]], [[LOOP]] ]
 ; CGSCC-NEXT:    br label [[LOOP]]
 ;
 entry:
