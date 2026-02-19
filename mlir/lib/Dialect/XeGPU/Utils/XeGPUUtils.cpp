@@ -121,13 +121,36 @@ xegpu::getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
   // dimensions are not distributed.
   unsigned distributionStart =
       originalType.getRank() - effectiveLaneLayout.size();
+
+  // Print original shape and lane layout for debugging
+  std::string shapeStr = "[";
+  for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
+    if (i > 0)
+      shapeStr += ", ";
+    shapeStr += std::to_string(dim);
+  }
+  shapeStr += "]";
+  LDBG() << "original shape: " << shapeStr;
+
+  std::string layoutStr = "[";
+  for (auto [i, dim] : llvm::enumerate(effectiveLaneLayout)) {
+    if (i > 0)
+      layoutStr += ", ";
+    layoutStr += std::to_string(dim);
+  }
+  layoutStr += "]";
+  LDBG() << "effective lane layout: " << layoutStr;
+
   for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
     if (i < distributionStart)
       continue;
     // Check if the dimension can be distributed evenly.
-    if (dim % effectiveLaneLayout[i - distributionStart] != 0)
-      return failure();
-    distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
+    if (dim % effectiveLaneLayout[i - distributionStart] != 0) {
+      assert( effectiveLaneLayout[i - distributionStart] % dim == 0 &&
+              "The dimension size must be able evenly distributed to all lanes in round-robin manner.");
+      distributedShape[i] = 1;
+    } else
+      distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
   }
   return VectorType::get(distributedShape, originalType.getElementType());
 }
@@ -682,10 +705,10 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
-  auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
-  auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
-  // Reduction result should have the same layout as the accumulator.
-  xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
+  // auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
+  // auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
+  // // Reduction result should have the same layout as the accumulator.
+  // xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
   for (int i = 0; i < nSlices; ++i) {
@@ -702,7 +725,7 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
         vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
                                               sliceSizes, {1, 1});
     // Extract strided slice has the same layout as src.
-    xegpu::setTemporaryLayout(extractOp->getOpResult(0), srcLayout);
+    // xegpu::setTemporaryLayout(extractOp->getOpResult(0), srcLayout);
 
     int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
 
@@ -713,8 +736,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
 
     // Shape cast output has the same layout as the accumulator. Shape cast
     // source has the same layout as the original reduction source.
-    xegpu::setTemporaryLayout(slice->getOpOperand(0), srcLayout);
-    xegpu::setTemporaryLayout(slice->getOpResult(0), accLayout);
+    // xegpu::setTemporaryLayout(slice->getOpOperand(0), srcLayout);
+    // xegpu::setTemporaryLayout(slice->getOpResult(0), accLayout);
     // Extract and reduction results in scalars, so no result layout is needed.
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
     Value reduction = vector::ReductionOp::create(
@@ -722,7 +745,84 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
     reductionResult =
         vector::InsertOp::create(rewriter, loc, reduction, reductionResult, i);
     // Insert op should have the same layout as the accumulator.
-    xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
+    // xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
+  }
+  return reductionResult;
+}
+
+Value xegpu::lowerToVectorReductionsCrossLane(
+    TypedValue<VectorType> src, TypedValue<VectorType> acc,
+    vector::CombiningKind kind, int64_t reductionDim, int64_t reductionSize,
+    Location loc, PatternRewriter &rewriter) {
+  // Expecting a 2D source vector.
+  assert(src.getType().getRank() == 2 && "expected a 2D source vector");
+  VectorType sourceType = src.getType();
+  int64_t sourceH = sourceType.getShape()[0];
+  int64_t sourceW = sourceType.getShape()[1];
+  int nSlices = (reductionDim == 0) ? sourceW : sourceH;
+  // Create a constant vector to hold the result of the reduction.
+  TypedAttr zeroAttr = rewriter.getZeroAttr(sourceType.getElementType());
+  Value reductionResult = arith::ConstantOp::create(
+      rewriter, loc, acc.getType(),
+      DenseElementsAttr::get(acc.getType(), zeroAttr));
+  // auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
+  // auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
+  // // Reduction result should have the same layout as the accumulator.
+  // xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
+
+  // print source shape, reduction dim and reduction size for debugging
+  std::string shapeStr = "[";
+  for (auto [i, dim] : llvm::enumerate(sourceType.getShape())) {
+    if (i > 0)
+      shapeStr += ", ";
+    shapeStr += std::to_string(dim);
+  }
+  shapeStr += "]";
+  LDBG() << "source shape: " << shapeStr;
+  LDBG() << "reduction dim: " << reductionDim;
+  LDBG() << "reduction size: " << reductionSize;
+
+  // For each slice of the source, extract the slice vector, do a reduction
+  // and, insert the reduced value back to the result vector.
+  for (int i = 0; i < nSlices; ++i) {
+    SmallVector<int64_t, 2> sliceOffsets, sliceSizes;
+    if (reductionDim == 1) {
+      sliceOffsets = {i, 0};
+      sliceSizes = {1, sourceW};
+    } else {
+      sliceOffsets = {0, i};
+      sliceSizes = {sourceH, 1};
+    }
+
+    // print src, sliceOffsets, sliceSizes for debugging
+    LDBG() << "src: " << src;
+    LDBG() << "sliceOffsets: [" << sliceOffsets[0] << ", " << sliceOffsets[1]
+           << "]";
+    LDBG() << "sliceSizes: [" << sliceSizes[0] << ", " << sliceSizes[1] << "]";
+
+    vector::ExtractStridedSliceOp extractOp =
+        vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
+                                              sliceSizes, {1, 1});
+
+    int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
+
+    vector::ShapeCastOp slice = vector::ShapeCastOp::create(
+        rewriter, loc,
+        VectorType::get({nSliceElements}, sourceType.getElementType()),
+        extractOp.getResult());
+
+    // Extract and reduction results in scalars, so no result layout is needed.
+    Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
+
+    // Distribute and reduce across work-items in the subgroup.
+    Value fullReduce =
+        xegpu::subgroupReduction(loc, rewriter, slice, kind, reductionSize);
+
+    fullReduce =
+        vector::makeArithReduction(rewriter, loc, kind, fullReduce, accExtract);
+
+    reductionResult =
+        vector::InsertOp::create(rewriter, loc, fullReduce, reductionResult, i);
   }
   return reductionResult;
 }
