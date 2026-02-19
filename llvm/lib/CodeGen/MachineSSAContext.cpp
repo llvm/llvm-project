@@ -59,6 +59,8 @@ static bool isUndef(const MachineInstr &MI) {
          MI.getOpcode() == TargetOpcode::IMPLICIT_DEF;
 }
 
+template <> bool MachineSSAContext::isNeverDivergent(Register) { return false; }
+
 /// MachineInstr equivalent of PHINode::hasConstantOrUndefValue() for G_PHI.
 template <>
 bool MachineSSAContext::isConstantOrUndefValuePhi(const MachineInstr &Phi) {
