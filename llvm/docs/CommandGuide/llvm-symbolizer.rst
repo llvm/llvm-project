@@ -442,6 +442,11 @@ OPTIONS
       }
     ]
 
+.. option:: --pdb <path>
+
+  Use the specified PDB file at ``<path>``, overriding the PDB info
+  contained in the COFF object.
+
 .. option:: --pretty-print, -p
 
   Print human-readable output. If :option:`--inlining` is specified, the
