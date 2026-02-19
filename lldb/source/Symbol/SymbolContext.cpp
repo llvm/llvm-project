@@ -1307,7 +1307,6 @@ void SymbolContextList::Dump(Stream *s, Target *target) const {
   s->IndentMore();
 
   for (const auto &sc : m_symbol_contexts) {
-    // sc.Dump(s, target);
     sc.GetDescription(s, eDescriptionLevelVerbose, target);
   }
   s->IndentLess();
