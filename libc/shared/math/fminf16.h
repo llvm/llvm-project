@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_SHARED_MATH_FMINF16_H
 #define LLVM_LIBC_SHARED_MATH_FMINF16_H
 
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "shared/libc_common.h"
 #include "src/__support/math/fminf16.h"
 
@@ -19,5 +23,7 @@ using math::fminf16;
 
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SHARED_MATH_FMINF16_H
