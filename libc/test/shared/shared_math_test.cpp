@@ -137,6 +137,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::sqrtf(0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::tanf(0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::tanhf(0.0f));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::tanpif(0.0f));
 
   float canonicalizef_cx = 0.0f;
   float canonicalizef_x = 0.0f;
