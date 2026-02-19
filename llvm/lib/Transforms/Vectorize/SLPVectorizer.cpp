@@ -2988,17 +2988,20 @@ public:
         case ReorderingMode::Load:
         case ReorderingMode::Opcode: {
           bool LeftToRight = Lane > LastLane;
-          Value *OpLeft = (LeftToRight) ? OpLastLane : Op;
-          Value *OpRight = (LeftToRight) ? Op : OpLastLane;
-          int Score = getLookAheadScore(OpLeft, OpRight, MainAltOps, Lane,
-                                        OpIdx, Idx, IsUsed, UsedLanes);
-          if (Score > static_cast<int>(BestOp.Score) ||
-              (Score > 0 && Score == static_cast<int>(BestOp.Score) &&
-               Idx == OpIdx)) {
-            BestOp.Idx = Idx;
-            BestOp.Score = Score;
-            BestScoresPerLanes[std::make_pair(OpIdx, Lane)] = Score;
-          }
+          auto ScoreLoadOpcode = [&](Value *Op, Value *OpLastLane) -> void {
+            Value *OpLeft = (LeftToRight) ? OpLastLane : Op;
+            Value *OpRight = (LeftToRight) ? Op : OpLastLane;
+            int Score = getLookAheadScore(OpLeft, OpRight, MainAltOps, Lane,
+                                          OpIdx, Idx, IsUsed, UsedLanes);
+            if (Score > static_cast<int>(BestOp.Score) ||
+                (Score > 0 && Score == static_cast<int>(BestOp.Score) &&
+                 Idx == OpIdx)) {
+              BestOp.Idx = Idx;
+              BestOp.Score = Score;
+              BestScoresPerLanes[std::make_pair(OpIdx, Lane)] = Score;
+            }
+          };
+          ScoreLoadOpcode(Op, OpLastLane);
           break;
         }
         case ReorderingMode::Constant:
