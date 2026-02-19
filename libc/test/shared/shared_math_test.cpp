@@ -189,6 +189,8 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalize(&canonicalize_cx,
                                                     &canonicalize_x));
   EXPECT_FP_EQ(0.0, canonicalize_cx);
+
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::bf16mul(0.0, 0.0));
 }
 
 TEST(LlvmLibcSharedMathTest, AllLongDouble) {
@@ -205,8 +207,6 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizel(&canonicalizel_cx,
                                                      &canonicalizel_x));
   EXPECT_FP_EQ(0x0p+0L, canonicalizel_cx);
-
-  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::bf16mul(0.0L, 0.0L));
 
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::bf16mull(0.0L, 0.0L));
 }

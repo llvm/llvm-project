@@ -2742,6 +2742,7 @@ libc_support_library(
     deps = [
         ":__support_fputil_basic_operations",
         ":__support_fputil_bfloat16",
+        ":__support_macros_config",
     ],
 )
 

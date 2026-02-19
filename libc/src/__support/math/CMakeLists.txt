@@ -381,6 +381,7 @@ add_header_library(
     libc.src.__support.FPUtil.fma
     libc.src.__support.macros.config
 )
+
 add_header_library(
   bf16mul
   HDRS
@@ -390,6 +391,7 @@ add_header_library(
     libc.src.__support.FPUtil.generic.mul
     libc.src.__support.macros.config
 )
+
 add_header_library(
   bf16mulf
   HDRS
@@ -399,6 +401,7 @@ add_header_library(
     libc.src.__support.FPUtil.generic.mul
     libc.src.__support.macros.config
 )
+
 add_header_library(
   bf16mulf128
   HDRS
@@ -409,6 +412,7 @@ add_header_library(
     libc.src.__support.FPUtil.generic.mul
     libc.src.__support.macros.config
 )
+
 add_header_library(
   bf16mull
   HDRS

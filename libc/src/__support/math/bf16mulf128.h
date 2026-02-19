@@ -18,10 +18,9 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace math {
 
-LIBC_INLINE constexpr bfloat16 bf16mulf128(float128 x, float128 y) {
+LIBC_INLINE bfloat16 bf16mulf128(float128 x, float128 y) {
   return fputil::generic::mul<bfloat16>(x, y);
 }
 
