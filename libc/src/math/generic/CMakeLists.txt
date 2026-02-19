@@ -4777,8 +4777,7 @@ add_entrypoint_object(
   HDRS
     ../f16add.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.math.f16add
 )
 
 add_entrypoint_object(
@@ -4788,19 +4787,7 @@ add_entrypoint_object(
   HDRS
     ../f16addf.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.generic.add_sub
-)
-
-add_entrypoint_object(
-  f16addl
-  SRCS
-    f16addl.cpp
-  HDRS
-    ../f16addl.h
-  DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.math.f16addf
 )
 
 add_entrypoint_object(
@@ -4810,8 +4797,17 @@ add_entrypoint_object(
   HDRS
     ../f16addf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.math.f16addf128
+)
+
+add_entrypoint_object(
+  f16addl
+  SRCS
+    f16addl.cpp
+  HDRS
+    ../f16addl.h
+  DEPENDS
+    libc.src.__support.math.f16addl
 )
 
 add_entrypoint_object(
