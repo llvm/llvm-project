@@ -3943,6 +3943,12 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
       EstimatedWidthB *= *VScale;
   }
 
+  // When there is a hint to always prefer scalable vectors,
+  // honour that hint.
+  if (Hints.isScalableVectorizationAlwaysPreferred())
+    if (A.Width.isScalable() && A.Cost.isValid() && !B.Width.isScalable())
+      return true;
+
   // When optimizing for size choose whichever is smallest, which will be the
   // one with the smallest cost for the whole loop. On a tie pick the larger
   // vector width, on the assumption that throughput will be greater.
