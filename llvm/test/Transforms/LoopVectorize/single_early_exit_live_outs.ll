@@ -1549,13 +1549,11 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT4:%.*]], [[VECTOR_BODY_INTERIM:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 -3
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 -3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[REVERSE3:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD2]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i8> [[REVERSE]], [[REVERSE3]]

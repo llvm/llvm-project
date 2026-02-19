@@ -539,3 +539,43 @@ define <4 x i32> @PR41512_loads(ptr %p1, ptr %p2) {
   %r = shufflevector <4 x i32> %ins1, <4 x i32> %ins2, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x i32> %r
 }
+
+; Reproducer for bugs in DAGCombiner and SimplifyDemandedVectorElts.
+;
+; Problem was that DAGCombiner replaced INSERT_VECTOR_ELT by AND, without
+; considering that %i has poison elements.  So instead of overwriting those
+; poison elements by inserting zeroes, we got "AND poison, 0" which is poison
+; and not guaranteed to be folded as zero.
+;
+; When solving the above by inserting a FREEZE another bug
+; surfaced. SimplifyDemandedVectorElts was not demanding elements that were
+; known to be AND:ed by zero. So the FREEZE ended up being removed and we
+; still got "AND poison, 0".
+;
+; Expected result is that the add reduction computes the sum 0+0+0+0+0+77+0+77 = 154.
+define i64 @fold_insertelement_to_and(i32 noundef %arg) {
+; SSE-LABEL: fold_insertelement_to_and:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl $154, %eax
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: fold_insertelement_to_and:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movl $154, %eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: fold_insertelement_to_and:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [0,77]
+; AVX2-NEXT:    vpaddq %xmm0, %xmm0, %xmm1
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    retq
+  %i = shufflevector <8 x i64> zeroinitializer, <8 x i64> splat (i64 77), <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 4, i32 8, i32 6, i32 10>
+  %i1 = insertelement <8 x i64> %i, i64 0, i64 0
+  %i2 = insertelement <8 x i64> %i1, i64 0, i64 2
+  %i3 = shufflevector <8 x i64> %i2, <8 x i64> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 5, i32 6, i32 7>
+  %i4 = tail call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %i3)
+  ret i64 %i4
+}

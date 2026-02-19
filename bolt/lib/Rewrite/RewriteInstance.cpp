@@ -5162,9 +5162,7 @@ void RewriteInstance::updateELFSymbolTable(
   auto addExtraSymbols = [&](const BinaryFunction &Function,
                              const ELFSymTy &FunctionSymbol) {
     if (Function.isFolded()) {
-      BinaryFunction *ICFParent = Function.getFoldedIntoFunction();
-      while (ICFParent->isFolded())
-        ICFParent = ICFParent->getFoldedIntoFunction();
+      const BinaryFunction *ICFParent = Function.getFoldedIntoFunction();
       ELFSymTy ICFSymbol = FunctionSymbol;
       SmallVector<char, 256> Buf;
       ICFSymbol.st_name =
@@ -5276,6 +5274,12 @@ void RewriteInstance::updateELFSymbolTable(
 
     const BinaryFunction *Function =
         BC->getBinaryFunctionAtAddress(Symbol.st_value);
+    // In relocation mode, if this is a folded function, use the parent function
+    // instead so that the symbol gets updated to the parent's output address.
+    // In non-relocation mode, folded functions are emitted at their original
+    // location, so we keep the original function reference.
+    if (BC->HasRelocations && Function && Function->isFolded())
+      Function = Function->getFoldedIntoFunction();
     // Ignore false function references, e.g. when the section address matches
     // the address of the function.
     if (Function && Symbol.getType() == ELF::STT_SECTION)
@@ -6075,6 +6079,11 @@ uint64_t RewriteInstance::getNewFunctionAddress(uint64_t OldAddress) {
   const BinaryFunction *Function = BC->getBinaryFunctionAtAddress(OldAddress);
   if (!Function)
     return 0;
+
+  // If this function was folded, its output address is 0 since it wasn't
+  // emitted. Get the parent function's address.
+  if (Function->isFolded())
+    Function = Function->getFoldedIntoFunction();
 
   return Function->getOutputAddress();
 }

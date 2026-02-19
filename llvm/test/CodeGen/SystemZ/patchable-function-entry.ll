@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=s390x-ibm-linux %s -o - | FileCheck %s
 ; RUN: llc -mtriple=s390x-ibm-linux -function-sections %s -o - | FileCheck %s
-; RUN: llc -mtriple=s390x-ibm-linux -function-sections %s -o - | FileCheck %s
 ; RUN: llc -mtriple=s390x-ibm-linux -no-integrated-as -binutils-version=2.35 %s -o - | FileCheck --check-prefix=NOLINK %s
 ; RUN: llc -mtriple=s390x-ibm-linux -no-integrated-as -binutils-version=2.36 %s -o - | FileCheck %s
 

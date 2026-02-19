@@ -36,14 +36,20 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
   if (!opts::ForcePatch) {
     // Mark the binary for patching if we did not create external references
     // for original code in any of functions we are not going to emit.
-    bool NeedsPatching = llvm::any_of(
-        llvm::make_second_range(BC.getBinaryFunctions()),
-        [&](BinaryFunction &BF) {
-          return (!BC.shouldEmit(BF) && !BF.hasExternalRefRelocations()) ||
-                 BF.needsPatch();
-        });
+    auto needsPatching = [&](const BinaryFunction &BF) {
+      // FIXME: keep compatibility for NFC testing.
+      if (BF.isFolded())
+        return false;
 
-    if (!NeedsPatching)
+      // Patching is always needed if explicitly requested.
+      if (BF.needsPatch())
+        return true;
+
+      return !BC.shouldEmit(BF) && !BF.hasExternalRefRelocations();
+    };
+
+    if (!llvm::any_of(llvm::make_second_range(BC.getBinaryFunctions()),
+                      needsPatching))
       return Error::success();
   }
 
@@ -114,6 +120,9 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       BinaryFunction *PatchFunction = BC.createInstructionPatch(
           Patch.Address, Instructions,
           NameResolver::append(Patch.Symbol->getName(), ".org.0"));
+      if (BC.usesBTI())
+        BC.MIB->applyBTIFixupToSymbol(BC, Patch.Symbol,
+                                      *(Instructions.end() - 1));
 
       // Verify the size requirements.
       uint64_t HotSize, ColdSize;

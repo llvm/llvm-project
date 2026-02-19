@@ -2372,6 +2372,10 @@ def : RWSysReg<"MPAMVIDCR_EL2", 0b11, 0b100, 0b1010, 0b0111, 0b000>;
 def : RWSysReg<"MPAMVIDSR_EL2", 0b11, 0b100, 0b1010, 0b0111, 0b001>;
 def : RWSysReg<"MPAMVIDSR_EL3", 0b11, 0b110, 0b1010, 0b0111, 0b001>;
 
+// v9.7a General Improvements
+//                                        Op0   Op1    CRn     CRm     Op2
+def : RWSysReg<"SCR2_EL3",                0b11, 0b110, 0b0001, 0b0010, 0b010>;
+
 //===----------------------------------------------------------------------===//
 // FEAT_SRMASK v9.6a registers
 //===----------------------------------------------------------------------===//
@@ -2435,10 +2439,8 @@ def lookupPHintByName : SearchIndex {
   let Key = ["Name"];
 }
 
-let Requires = [{ {AArch64::FeaturePCDPHINT} }] in {
-  def KEEP : PHint<0b00, 0b000, 0b0000, 0b0000, 0b000, "keep">;
-  def STRM : PHint<0b00, 0b000, 0b0000, 0b0000, 0b001, "strm">;
-}
+def KEEP : PHint<0b00, 0b000, 0b0000, 0b0000, 0b000, "keep">;
+def STRM : PHint<0b00, 0b000, 0b0000, 0b0000, 0b001, "strm">;
 
 // v9.6a Realm management extension enhancements
 def : RWSysReg<"GPCBW_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b101>;

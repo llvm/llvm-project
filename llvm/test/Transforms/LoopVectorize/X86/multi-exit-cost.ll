@@ -31,10 +31,8 @@ define i64 @test_value_in_exit_compare_chain_used_outside(ptr %src, i64 %x, i64 
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i8> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP17:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP10]], 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP18]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP26]], i64 0
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP12]], i64 -3
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP26]], i64 -4
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP14]], i64 -3
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP26]], i64 -3
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP26]], i64 -7
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP13]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i8>, ptr [[TMP15]], align 1
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -116,8 +114,7 @@ define i1 @test_exit_compare_other_users() #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 79, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [1 x i8], ptr @gg, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -24
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -7
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -31
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
@@ -136,8 +133,7 @@ define i1 @test_exit_compare_other_users() #0 {
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT4:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 79, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [1 x i8], ptr @gg, i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 -3
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP7]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT4]] = add nuw i64 [[INDEX1]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 76

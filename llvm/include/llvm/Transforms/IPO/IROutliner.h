@@ -312,6 +312,22 @@ private:
                                     std::vector<Function *> &FuncsToRemove,
                                     unsigned &OutlinedFunctionNum);
 
+  /// Fill the new function that will serve as the replacement function for all
+  /// of the extracted regions of a certain structure from the first region in
+  /// the list of regions.  Replace this first region's extracted function with
+  /// the new overall function.
+  ///
+  /// \param [in] M - The module we are outlining from.
+  /// \param [in] CurrentGroup - The group of regions to be outlined.
+  /// \param [in,out] OutputStoreBBs - The output blocks for each different
+  /// set of stores needed for the different functions.
+  /// \param [in,out] FuncsToRemove - Extracted functions to erase from module
+  /// once outlining is complete.
+  void fillOverallFunction(
+      Module &M, OutlinableGroup &CurrentGroup,
+      std::vector<DenseMap<Value *, BasicBlock *>> &OutputStoreBBs,
+      std::vector<Function *> &FuncsToRemove);
+
   /// If true, enables us to outline from functions that have LinkOnceFromODR
   /// linkages.
   bool OutlineFromLinkODRs = false;

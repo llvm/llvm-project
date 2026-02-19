@@ -342,6 +342,8 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
     // Options that cause the output of C++20 compiled module interfaces or
     // header units have the same effect.
   } else if ((PhaseArg = DAL.getLastArg(options::OPT__precompile)) ||
+             (PhaseArg =
+                  DAL.getLastArg(options::OPT__precompile_reduced_bmi)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_extract_api)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_fmodule_header,
                                         options::OPT_fmodule_header_EQ))) {
@@ -419,8 +421,8 @@ Driver::executeProgram(llvm::ArrayRef<llvm::StringRef> Args) const {
   return std::move(*OutputBuf);
 }
 
-static Arg *MakeInputArg(DerivedArgList &Args, const OptTable &Opts,
-                         StringRef Value, bool Claim = true) {
+Arg *clang::driver::makeInputArg(DerivedArgList &Args, const OptTable &Opts,
+                                 StringRef Value, bool Claim) {
   Arg *A = new Arg(Opts.getOption(options::OPT_INPUT), Value,
                    Args.getBaseArgs().MakeIndex(Value), Value.data());
   Args.AddSynthesizedArg(A);
@@ -509,7 +511,7 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
     if (A->getOption().matches(options::OPT__DASH_DASH)) {
       A->claim();
       for (StringRef Val : A->getValues())
-        DAL->append(MakeInputArg(*DAL, Opts, Val, false));
+        DAL->append(makeInputArg(*DAL, Opts, Val, false));
       continue;
     }
 
@@ -2316,7 +2318,14 @@ int Driver::ExecuteCompilation(
 
     if (!FailingCommand->getCreator().hasGoodDiagnostics() || CommandRes != 1) {
       // FIXME: See FIXME above regarding result code interpretation.
+#if LLVM_ON_UNIX
+      // On Unix, signals are represented by return codes of 128 plus the
+      // signal number. Return code 255 is excluded because some tools,
+      // such as llvm-ifs, exit with code 255 (-1) on failure.
+      if (CommandRes > 128 && CommandRes != 255)
+#else
       if (CommandRes < 0)
+#endif
         Diag(clang::diag::err_drv_command_signalled)
             << FailingTool.getShortName();
       else
@@ -3129,7 +3138,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       StringRef Value = A->getValue();
       if (DiagnoseInputExistence(Value, types::TY_C,
                                  /*TypoCorrect=*/false)) {
-        Arg *InputArg = MakeInputArg(Args, Opts, A->getValue());
+        Arg *InputArg = makeInputArg(Args, Opts, A->getValue());
         Inputs.push_back(std::make_pair(types::TY_C, InputArg));
       }
       A->claim();
@@ -3137,7 +3146,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       StringRef Value = A->getValue();
       if (DiagnoseInputExistence(Value, types::TY_CXX,
                                  /*TypoCorrect=*/false)) {
-        Arg *InputArg = MakeInputArg(Args, Opts, A->getValue());
+        Arg *InputArg = makeInputArg(Args, Opts, A->getValue());
         Inputs.push_back(std::make_pair(types::TY_CXX, InputArg));
       }
       A->claim();
@@ -3176,7 +3185,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
   if (CCCIsCPP() && Inputs.empty()) {
     // If called as standalone preprocessor, stdin is processed
     // if no other input is present.
-    Arg *A = MakeInputArg(Args, Opts, "-");
+    Arg *A = makeInputArg(Args, Opts, "-");
     Inputs.push_back(std::make_pair(types::TY_C, A));
   }
 }
@@ -3224,14 +3233,14 @@ class OffloadingActionBuilder final {
     DerivedArgList &Args;
 
     /// The inputs associated with this builder.
-    const Driver::InputList &Inputs;
+    const InputList &Inputs;
 
     /// The associated offload kind.
     Action::OffloadKind AssociatedOffloadKind = Action::OFK_None;
 
   public:
     DeviceActionBuilder(Compilation &C, DerivedArgList &Args,
-                        const Driver::InputList &Inputs,
+                        const InputList &Inputs,
                         Action::OffloadKind AssociatedOffloadKind)
         : C(C), Args(Args), Inputs(Inputs),
           AssociatedOffloadKind(AssociatedOffloadKind) {}
@@ -3328,8 +3337,7 @@ class OffloadingActionBuilder final {
 
   public:
     CudaActionBuilderBase(Compilation &C, DerivedArgList &Args,
-                          const Driver::InputList &Inputs,
-                          Action::OffloadKind OFKind)
+                          const InputList &Inputs, Action::OffloadKind OFKind)
         : DeviceActionBuilder(C, Args, Inputs, OFKind),
           CUIDOpts(C.getDriver().getCUIDOpts()) {
 
@@ -3500,7 +3508,7 @@ class OffloadingActionBuilder final {
   class CudaActionBuilder final : public CudaActionBuilderBase {
   public:
     CudaActionBuilder(Compilation &C, DerivedArgList &Args,
-                      const Driver::InputList &Inputs)
+                      const InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_Cuda) {
       DefaultOffloadArch = OffloadArch::CudaDefault;
     }
@@ -3629,7 +3637,7 @@ class OffloadingActionBuilder final {
 
   public:
     HIPActionBuilder(Compilation &C, DerivedArgList &Args,
-                     const Driver::InputList &Inputs)
+                     const InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_HIP) {
 
       DefaultOffloadArch = OffloadArch::HIPDefault;
@@ -3890,7 +3898,7 @@ class OffloadingActionBuilder final {
 
 public:
   OffloadingActionBuilder(Compilation &C, DerivedArgList &Args,
-                          const Driver::InputList &Inputs)
+                          const InputList &Inputs)
       : C(C) {
     // Create a specialized builder for each device toolchain.
 
@@ -5125,13 +5133,16 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<ExtractAPIJobAction>(Input, types::TY_API_INFO);
 
     // With 'fmodules-reduced-bmi', we don't want to run the
-    // precompile phase unless the user specified '--precompile'. In the case
-    // the '--precompile' flag is enabled, we will try to emit the reduced BMI
-    // as a by product in GenerateModuleInterfaceAction.
+    // precompile phase unless the user specified '--precompile' or
+    // '--precompile-reduced-bmi'. If '--precompile' is specified, we will try
+    // to emit the reduced BMI as a by product in
+    // GenerateModuleInterfaceAction. If '--precompile-reduced-bmi' is
+    // specified, we will generate the reduced BMI directly.
     if (!Args.hasArg(options::OPT_fno_modules_reduced_bmi) &&
         (Input->getType() == driver::types::TY_CXXModule ||
          Input->getType() == driver::types::TY_PP_CXXModule) &&
-        !Args.getLastArg(options::OPT__precompile))
+        !Args.getLastArg(options::OPT__precompile) &&
+        !Args.getLastArg(options::OPT__precompile_reduced_bmi))
       return Input;
 
     types::ID OutputTy = getPrecompiledType(Input->getType());

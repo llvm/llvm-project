@@ -20,10 +20,6 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
-#include "mlir/CAPI/Support.h"
-
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Regex.h"
 
 namespace mlir {
 namespace python {

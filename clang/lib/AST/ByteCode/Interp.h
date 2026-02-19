@@ -217,6 +217,12 @@ bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
 bool InvalidDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR,
                     bool InitializerFailed);
 
+/// DerivedToBaseMemberPointer
+bool CastMemberPtrBasePop(InterpState &S, CodePtr OpPC, int32_t Off,
+                          const RecordDecl *BaseDecl);
+/// BaseToDerivedMemberPointer
+bool CastMemberPtrDerivedPop(InterpState &S, CodePtr OpPC, int32_t Off,
+                             const RecordDecl *BaseDecl);
 enum class ArithOp { Add, Sub };
 
 //===----------------------------------------------------------------------===//
@@ -475,10 +481,8 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     const T &RHSR = RHS.elem<T>(0);
     const T &RHSI = RHS.elem<T>(1);
     unsigned Bits = LHSR.bitWidth();
-    const T Zero = T::from(0, Bits);
 
-    if (Compare(RHSR, Zero) == ComparisonCategoryResult::Equal &&
-        Compare(RHSI, Zero) == ComparisonCategoryResult::Equal) {
+    if (RHSR.isZero() && RHSI.isZero()) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_expr_divide_by_zero);
       return false;
@@ -501,7 +505,7 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     if (T::add(A, B, Bits, &Den))
       return false;
 
-    if (Compare(Den, Zero) == ComparisonCategoryResult::Equal) {
+    if (Den.isZero()) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_expr_divide_by_zero);
       return false;
@@ -1544,6 +1548,14 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
       Val.take(NewMemory);
     }
 
+  } else if constexpr (std::is_same_v<T, MemberPointer>) {
+    auto &Val = P.deref<MemberPointer>();
+    unsigned PathLength = Val.getPathLength();
+    auto *NewPath = new (S.P) const CXXRecordDecl *[PathLength];
+    for (unsigned I = 0; I != PathLength; ++I) {
+      NewPath[I] = Val.getPathEntry(I);
+    }
+    Val.takePath(NewPath);
   } else if constexpr (needsAlloc<T>()) {
     auto &Val = P.deref<T>();
     if (!Val.singleWord()) {
@@ -1864,12 +1876,6 @@ inline bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off,
   if (Result.isPastEnd() || !Result.isBaseClass())
     return false;
   S.Stk.push<Pointer>(Result);
-  return true;
-}
-
-inline bool GetMemberPtrBasePop(InterpState &S, CodePtr OpPC, int32_t Off) {
-  const auto &Ptr = S.Stk.pop<MemberPointer>();
-  S.Stk.push<MemberPointer>(Ptr.atInstanceBase(Off));
   return true;
 }
 

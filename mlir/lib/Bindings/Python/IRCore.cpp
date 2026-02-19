@@ -10,7 +10,6 @@
 #include "mlir/Bindings/Python/Globals.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 // clang-format on
 #include "mlir-c/BuiltinAttributes.h"
@@ -20,6 +19,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
+#include <array>
 #include <functional>
 #include <optional>
 #include <string>
@@ -54,13 +54,6 @@ operations.
 template <typename T>
 static size_t hash(const T &value) {
   return std::hash<T>{}(value);
-}
-
-/// Helper for creating an @classmethod.
-template <class Func, typename... Args>
-static nb::object classmethod(Func f, Args... args) {
-  nb::object cf = nb::cpp_function(f, args...);
-  return nb::borrow<nb::object>((PyClassMethod_New(cf.ptr())));
 }
 
 static nb::object
@@ -440,13 +433,20 @@ void PyOpOperandIterator::bind(nb::module_ &m) {
 // PyThreadPool
 //------------------------------------------------------------------------------
 
-PyThreadPool::PyThreadPool() {
-  ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
+PyThreadPool::PyThreadPool() { threadPool = mlirLlvmThreadPoolCreate(); }
+
+PyThreadPool::~PyThreadPool() {
+  if (threadPool.ptr)
+    mlirLlvmThreadPoolDestroy(threadPool);
+}
+
+int PyThreadPool::getMaxConcurrency() const {
+  return mlirLlvmThreadPoolGetMaxConcurrency(threadPool);
 }
 
 std::string PyThreadPool::_mlir_thread_pool_ptr() const {
   std::stringstream ss;
-  ss << ownedThreadPool.get();
+  ss << threadPool.ptr;
   return ss.str();
 }
 
@@ -2281,6 +2281,44 @@ PyOpOperandList PyOpOperandList::slice(intptr_t startIndex, intptr_t length,
   return PyOpOperandList(operation, startIndex, length, step);
 }
 
+/// A list of OpOperands. Internally, these are stored as consecutive elements,
+/// random access is cheap. The (returned) OpOperand list is associated with the
+/// operation whose operands these are, and thus extends the lifetime of this
+/// operation.
+class PyOpOperands : public Sliceable<PyOpOperands, PyOpOperand> {
+public:
+  static constexpr const char *pyClassName = "OpOperands";
+  using SliceableT = Sliceable<PyOpOperandList, PyOpOperand>;
+
+  PyOpOperands(PyOperationRef operation, intptr_t startIndex = 0,
+               intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirOperationGetNumOperands(operation->get())
+                               : length,
+                  step),
+        operation(operation) {}
+
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyOpOperands, PyOpOperand>;
+
+  intptr_t getRawNumElements() {
+    operation->checkValid();
+    return mlirOperationGetNumOperands(operation->get());
+  }
+
+  PyOpOperand getRawElement(intptr_t pos) {
+    MlirOpOperand opOperand = mlirOperationGetOpOperand(operation->get(), pos);
+    return PyOpOperand(opOperand);
+  }
+
+  PyOpOperands slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+    return PyOpOperands(operation, startIndex, length, step);
+  }
+
+  PyOperationRef operation;
+};
+
 PyOpSuccessors::PyOpSuccessors(PyOperationRef operation, intptr_t startIndex,
                                intptr_t length, intptr_t step)
     : Sliceable(startIndex,
@@ -2543,10 +2581,11 @@ static bool attachOpTrait(const nb::object &opName, MlirDynamicOpTrait trait,
 bool PyDynamicOpTrait::attach(const nb::object &opName,
                               const nb::object &target,
                               PyMlirContext &context) {
-  if (!nb::hasattr(target, "verify") && !nb::hasattr(target, "verify_region"))
+  if (!nb::hasattr(target, "verify_invariants") &&
+      !nb::hasattr(target, "verify_region_invariants"))
     throw nb::type_error(
-        "the target object must have at least one of 'verify' or "
-        "'verify_region' methods");
+        "the target object must have at least one of 'verify_invariants' or "
+        "'verify_region_invariants' methods");
 
   MlirDynamicOpTraitCallbacks callbacks;
   callbacks.construct = [](void *userData) {
@@ -2558,11 +2597,11 @@ bool PyDynamicOpTrait::attach(const nb::object &opName,
 
   callbacks.verifyTrait = [](MlirOperation op,
                              void *userData) -> MlirLogicalResult {
-    return verifyTraitByMethod(op, userData, "verify");
+    return verifyTraitByMethod(op, userData, "verify_invariants");
   };
   callbacks.verifyRegionTrait = [](MlirOperation op,
                                    void *userData) -> MlirLogicalResult {
-    return verifyTraitByMethod(op, userData, "verify_region");
+    return verifyTraitByMethod(op, userData, "verify_region_invariants");
   };
 
   // To ensure that the same dynamic trait gets the same TypeID despite how many
@@ -2733,8 +2772,9 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_name));
     std::string_view funcName(name);
     int startLine = PyFrame_GetLineNumber(pyFrame);
-    MlirLocation loc =
-        mlirLocationFileLineColGet(ctx, wrap(fileName), startLine, 0);
+    MlirLocation loc = mlirLocationFileLineColGet(
+        ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
+        0);
 #else
     std::string name =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_qualname));
@@ -2746,10 +2786,12 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
       throw nb::python_error();
     }
     MlirLocation loc = mlirLocationFileLineColRangeGet(
-        ctx, wrap(fileName), startLine, startCol, endLine, endCol);
+        ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
+        startCol, endLine, endCol);
 #endif
 
-    frames[count] = mlirLocationNameGet(ctx, wrap(funcName), loc);
+    frames[count] = mlirLocationNameGet(
+        ctx, mlirStringRefCreate(funcName.data(), funcName.size()), loc);
     ++count;
   }
   // When the loop breaks (after the last iter), current frame (if non-null)
@@ -3660,6 +3702,12 @@ void populateIRCore(nb::module_ &m) {
             return PyOpOperandList(self.getOperation().getRef());
           },
           "Returns the list of operation operands.")
+      .def_prop_ro(
+          "op_operands",
+          [](PyOperationBase &self) {
+            return PyOpOperands(self.getOperation().getRef());
+          },
+          "Returns the list of op operands.")
       .def_prop_ro(
           "regions",
           [](PyOperationBase &self) {
@@ -4941,6 +4989,7 @@ void populateIRCore(nb::module_ &m) {
   PyOpAttributeMap::bind(m);
   PyOpOperandIterator::bind(m);
   PyOpOperandList::bind(m);
+  PyOpOperands::bind(m);
   PyOpResultList::bind(m);
   PyOpSuccessors::bind(m);
   PyRegionIterator::bind(m);

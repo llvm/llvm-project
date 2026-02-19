@@ -1735,11 +1735,11 @@ float my_fmaxf(float x, float y) {
   // CHECK:   %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define dso_local float @my_fmaxf
-  // LLVM:   %{{.+}} = call float @llvm.maxnum.f32(float %{{.+}}, float %{{.+}})
+  // LLVM:   %{{.+}} = call nsz float @llvm.maxnum.f32(float %{{.+}}, float %{{.+}})
   // LLVM: }
 
   // OGCG: define{{.*}}@my_fmaxf(
-  // OGCG: call float @llvm.maxnum.f32(
+  // OGCG: call nsz float @llvm.maxnum.f32(
 }
 
 double my_fmax(double x, double y) {
@@ -1748,11 +1748,11 @@ double my_fmax(double x, double y) {
   // CHECK:   %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define dso_local double @my_fmax
-  // LLVM:   %{{.+}} = call double @llvm.maxnum.f64(double %{{.+}}, double %{{.+}})
+  // LLVM:   %{{.+}} = call nsz double @llvm.maxnum.f64(double %{{.+}}, double %{{.+}})
   // LLVM: }
 
   // OGCG: define{{.*}}@my_fmax(
-  // OGCG: call double @llvm.maxnum.f64(
+  // OGCG: call nsz double @llvm.maxnum.f64(
 }
 
 long double my_fmaxl(long double x, long double y) {
@@ -1762,11 +1762,11 @@ long double my_fmaxl(long double x, long double y) {
   // AARCH64: %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @my_fmaxl
-  // LLVM:   %{{.+}} = call x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
   // LLVM: }
 
   // OGCG: define{{.*}}@my_fmaxl(
-  // OGCG: call x86_fp80 @llvm.maxnum.f80(
+  // OGCG: call nsz x86_fp80 @llvm.maxnum.f80(
 }
 
 float fmaxf(float, float);
@@ -1779,11 +1779,11 @@ float call_fmaxf(float x, float y) {
   // CHECK:   %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define dso_local float @call_fmaxf
-  // LLVM:   %{{.+}} = call float @llvm.maxnum.f32(float %{{.+}}, float %{{.+}})
+  // LLVM:   %{{.+}} = call nsz float @llvm.maxnum.f32(float %{{.+}}, float %{{.+}})
   // LLVM: }
 
   // OGCG: define{{.*}}@call_fmaxf(
-  // OGCG: call float @llvm.maxnum.f32(
+  // OGCG: call nsz float @llvm.maxnum.f32(
 }
 
 double call_fmax(double x, double y) {
@@ -1792,11 +1792,11 @@ double call_fmax(double x, double y) {
   // CHECK:   %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define dso_local double @call_fmax
-  // LLVM:   %{{.+}} = call double @llvm.maxnum.f64(double %{{.+}}, double %{{.+}})
+  // LLVM:   %{{.+}} = call nsz double @llvm.maxnum.f64(double %{{.+}}, double %{{.+}})
   // LLVM: }
 
   // OGCG: define{{.*}}@call_fmax(
-  // OGCG: call double @llvm.maxnum.f64(
+  // OGCG: call nsz double @llvm.maxnum.f64(
 }
 
 long double call_fmaxl(long double x, long double y) {
@@ -1806,11 +1806,11 @@ long double call_fmaxl(long double x, long double y) {
   // AARCH64: %{{.+}} = cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @call_fmaxl
-  // LLVM:   %{{.+}} = call x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
   // LLVM: }
 
   // OGCG: define{{.*}}@call_fmaxl(
-  // OGCG: call x86_fp80 @llvm.maxnum.f80(
+  // OGCG: call nsz x86_fp80 @llvm.maxnum.f80(
 }
 
 // fmin
@@ -1821,11 +1821,11 @@ float my_fminf(float x, float y) {
   // CHECK:   %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define dso_local float @my_fminf
-  // LLVM:   %{{.+}} = call float @llvm.minnum.f32(float %{{.+}}, float %{{.+}})
+  // LLVM:   %{{.+}} = call nsz float @llvm.minnum.f32(float %{{.+}}, float %{{.+}})
   // LLVM: }
 
   // OGCG: define{{.*}}@my_fminf(
-  // OGCG: call float @llvm.minnum.f32(
+  // OGCG: call nsz float @llvm.minnum.f32(
 }
 
 double my_fmin(double x, double y) {
@@ -1834,11 +1834,11 @@ double my_fmin(double x, double y) {
   // CHECK:   %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define dso_local double @my_fmin
-  // LLVM:   %{{.+}} = call double @llvm.minnum.f64(double %{{.+}}, double %{{.+}})
+  // LLVM:   %{{.+}} = call nsz double @llvm.minnum.f64(double %{{.+}}, double %{{.+}})
   // LLVM: }
 
   // OGCG: define{{.*}}@my_fmin(
-  // OGCG: call double @llvm.minnum.f64(
+  // OGCG: call nsz double @llvm.minnum.f64(
 }
 
 long double my_fminl(long double x, long double y) {
@@ -1848,11 +1848,11 @@ long double my_fminl(long double x, long double y) {
   // AARCH64: %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @my_fminl
-  // LLVM:   %{{.+}} = call x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call nsz x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
   // LLVM: }
 
   // OGCG: define{{.*}}@my_fminl(
-  // OGCG: call x86_fp80 @llvm.minnum.f80(
+  // OGCG: call nsz x86_fp80 @llvm.minnum.f80(
 }
 
 float fminf(float, float);
@@ -1865,11 +1865,11 @@ float call_fminf(float x, float y) {
   // CHECK:   %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define dso_local float @call_fminf
-  // LLVM:   %{{.+}} = call float @llvm.minnum.f32(float %{{.+}}, float %{{.+}})
+  // LLVM:   %{{.+}} = call nsz float @llvm.minnum.f32(float %{{.+}}, float %{{.+}})
   // LLVM: }
 
   // OGCG: define{{.*}}@call_fminf(
-  // OGCG: call float @llvm.minnum.f32(
+  // OGCG: call nsz float @llvm.minnum.f32(
 }
 
 double call_fmin(double x, double y) {
@@ -1878,11 +1878,11 @@ double call_fmin(double x, double y) {
   // CHECK:   %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define dso_local double @call_fmin
-  // LLVM:   %{{.+}} = call double @llvm.minnum.f64(double %{{.+}}, double %{{.+}})
+  // LLVM:   %{{.+}} = call nsz double @llvm.minnum.f64(double %{{.+}}, double %{{.+}})
   // LLVM: }
 
   // OGCG: define{{.*}}@call_fmin(
-  // OGCG: call double @llvm.minnum.f64(
+  // OGCG: call nsz double @llvm.minnum.f64(
 }
 
 long double call_fminl(long double x, long double y) {
@@ -1892,11 +1892,11 @@ long double call_fminl(long double x, long double y) {
   // AARCH64: %{{.+}} = cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @call_fminl
-  // LLVM:   %{{.+}} = call x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call nsz x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
   // LLVM: }
 
   // OGCG: define{{.*}}@call_fminl(
-  // OGCG: call x86_fp80 @llvm.minnum.f80(
+  // OGCG: call nsz x86_fp80 @llvm.minnum.f80(
 }
 
 // fmod

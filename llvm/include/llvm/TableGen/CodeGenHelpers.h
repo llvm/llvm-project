@@ -108,8 +108,8 @@ private:
 // namespace scope.
 class NamespaceEmitter {
 public:
-  NamespaceEmitter(raw_ostream &OS, StringRef NameUntrimmed)
-      : Name(trim(NameUntrimmed).str()), OS(OS) {
+  NamespaceEmitter(raw_ostream &OS, const Twine &NameUntrimmed)
+      : Name(trim(NameUntrimmed.str()).str()), OS(OS) {
     if (!Name.empty())
       OS << "namespace " << Name << " {\n\n";
   }

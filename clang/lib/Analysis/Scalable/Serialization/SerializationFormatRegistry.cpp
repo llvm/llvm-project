@@ -12,11 +12,7 @@
 using namespace clang;
 using namespace ssaf;
 
-// FIXME: LLVM_INSTANTIATE_REGISTRY can't be used here because it drops extra
-// type parameters.
-template class CLANG_EXPORT_TEMPLATE
-    llvm::Registry<clang::ssaf::SerializationFormat,
-                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>>;
+LLVM_INSTANTIATE_REGISTRY(SerializationFormatRegistry)
 
 bool ssaf::isFormatRegistered(llvm::StringRef FormatName) {
   for (const auto &Entry : SerializationFormatRegistry::entries())
@@ -26,11 +22,10 @@ bool ssaf::isFormatRegistered(llvm::StringRef FormatName) {
 }
 
 std::unique_ptr<SerializationFormat>
-ssaf::makeFormat(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                 llvm::StringRef FormatName) {
+ssaf::makeFormat(llvm::StringRef FormatName) {
   for (const auto &Entry : SerializationFormatRegistry::entries())
     if (Entry.getName() == FormatName)
-      return Entry.instantiate(std::move(FS));
+      return Entry.instantiate();
   assert(false && "Unknown SerializationFormat name");
   return nullptr;
 }

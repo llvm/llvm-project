@@ -277,7 +277,11 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_pow_half
-; GCN-POSTLINK: call fast float @_Z3powff(float %tmp, float 5.000000e-01)
+; GCN-POSTLINK: call fast float @llvm.fabs.f32
+; GCN-POSTLINK: call fast float @llvm.log2.f32
+; GCN-POSTLINK: fmul fast float
+; GCN-POSTLINK: call fast float @llvm.exp2.f32
+
 ; GCN-PRELINK: %__pow2sqrt = tail call fast float @llvm.sqrt.f32(float %tmp)
 define amdgpu_kernel void @test_pow_half(ptr addrspace(1) nocapture %a) {
 entry:
@@ -289,7 +293,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_pow_mhalf
-; GCN-POSTLINK: call fast float @_Z3powff(float %tmp, float -5.000000e-01)
+; GCN-POSTLINK: call fast float @llvm.fabs.f32
+; GCN-POSTLINK: call fast float @llvm.log2.f32
+; GCN-POSTLINK: fmul fast float
+; GCN-POSTLINK: call fast float @llvm.exp2.f32
 ; GCN-PRELINK: %__pow2rsqrt = tail call fast float @_Z5rsqrtf(float %tmp)
 define amdgpu_kernel void @test_pow_mhalf(ptr addrspace(1) nocapture %a) {
 entry:
@@ -473,7 +480,12 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_rootn_3
-; GCN-POSTLINK: call fast float @_Z5rootnfi(float %tmp, i32 3)
+; GCN-POSTLINK: call fast float @llvm.log2.f32
+; GCN-POSTLINK: fmul
+; GCN-POSTLINK: call fast float @llvm.exp2.f32
+; GCN-POSTLINK: select fast i1
+; GCN-POSTLINK: call fast float @llvm.copysign.f32
+
 ; GCN-PRELINK: %__rootn2cbrt = tail call fast float @_Z4cbrtf(float %tmp)
 define amdgpu_kernel void @test_rootn_3(ptr addrspace(1) nocapture %a) {
 entry:

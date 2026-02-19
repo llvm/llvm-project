@@ -41,6 +41,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -68,9 +69,10 @@ static cl::opt<unsigned> TileSize(
     "fuse-matrix-tile-size", cl::init(4), cl::Hidden,
     cl::desc(
         "Tile size for matrix instruction fusion using square-shaped tiles."));
-static cl::opt<bool> TileUseLoops("fuse-matrix-use-loops", cl::init(false),
-                                  cl::Hidden,
-                                  cl::desc("Generate loop nest for tiling."));
+static cl::opt<unsigned>
+    TileLoopsThreshold("fuse-matrix-loops-threshold", cl::init(200), cl::Hidden,
+                       cl::desc("Generate loop nests for tiling when expected "
+                                "number of operations exceeds threshold."));
 static cl::opt<bool> ForceFusion(
     "force-fuse-matrix", cl::init(false), cl::Hidden,
     cl::desc("Force matrix instruction fusion even if not profitable."));
@@ -102,6 +104,10 @@ static cl::opt<unsigned> SplitMatmulRemainderOverThreshold(
     cl::desc("Illegal remainder vectors over this size in bits should be split "
              "in the inner loop of matmul"),
     cl::init(0));
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
 
 /// Helper function to either return Scope, if it is a subprogram or the
 /// attached subprogram for a local scope.
@@ -610,6 +616,24 @@ public:
                      double(TTI.getRegisterBitWidth(
                                    TargetTransformInfo::RGK_FixedWidthVector)
                                 .getFixedValue()));
+  }
+
+  /// Estimate the number of native vector operations for a multiply of matrices
+  /// with dimensions \p R x \p M and \p M x \p C. Native ops are computed as
+  /// ceil(ElementCount * ElementBits / RegisterBits).
+  ///
+  /// Native vector ops per operation type (VF = native vector elements):
+  ///   FMAs:    C * ceil(R/VF) * M (one FMA per VF output elements)
+  ///   A loads: ceil(R/VF) * M (A has M columns, ceil(R/VF) native loads each)
+  ///   B loads: ceil(M/VF) * C (B has C columns, ceil(M/VF) native loads each)
+  ///   Stores:  C * ceil(R/VF) (one store per VF output elements)
+  unsigned getNumNativeVectorOps(Type *EltType, unsigned R, unsigned M,
+                                 unsigned C) {
+    unsigned NumFMAs = C * getNumOps(EltType, R) * M;
+    unsigned NumALoads = getNumOps(EltType, R) * M;
+    unsigned NumBLoads = getNumOps(EltType, M) * C;
+    unsigned NumStores = getNumOps(EltType, R) * C;
+    return NumFMAs + NumALoads + NumBLoads + NumStores;
   }
 
   /// Return the set of vectors that a matrix value is lowered to.
@@ -1894,8 +1918,9 @@ public:
         "store.end", true, true);
     Value *LoadBegin = Builder.CreatePtrToInt(const_cast<Value *>(LoadLoc.Ptr),
                                               IntPtrTy, "load.begin");
-    Builder.CreateCondBr(Builder.CreateICmpULT(LoadBegin, StoreEnd), Check1,
-                         Fusion);
+    BranchInst *BR1 = Builder.CreateCondBr(
+        Builder.CreateICmpULT(LoadBegin, StoreEnd), Check1, Fusion);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*BR1, DEBUG_TYPE);
 
     // Check if the store begins before the end of the load location. If the
     // condition holds, they alias, otherwise they are guaranteed to not
@@ -1905,8 +1930,9 @@ public:
     Value *LoadEnd = Builder.CreateAdd(
         LoadBegin, ConstantInt::get(IntPtrTy, LoadLoc.Size.getValue()),
         "load.end", true, true);
-    Builder.CreateCondBr(Builder.CreateICmpULT(StoreBegin, LoadEnd), Copy,
-                         Fusion);
+    BranchInst *BR2 = Builder.CreateCondBr(
+        Builder.CreateICmpULT(StoreBegin, LoadEnd), Copy, Fusion);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*BR2, DEBUG_TYPE);
 
     // Copy load operand to new alloca.
     Builder.SetInsertPoint(Copy, Copy->begin());
@@ -2057,7 +2083,12 @@ public:
     Value *BPtr = getNonAliasingPointer(LoadOp1, Store, MatMul);
     Value *CPtr = Store->getPointerOperand();
 
-    if (TileUseLoops && (R % TileSize == 0 && C % TileSize == 0))
+    // Use loop-based tiling when the number of expected operations exceeds
+    // threshold.
+    unsigned NumOps = getNumNativeVectorOps(EltType, R, M, C);
+    bool UseLoops =
+        (NumOps > TileLoopsThreshold) && R % TileSize == 0 && C % TileSize == 0;
+    if (UseLoops)
       createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store);
     else {
       IRBuilder<> Builder(Store);
@@ -2435,16 +2466,23 @@ public:
     MatrixTy B = getMatrix(OpB, Shape, Builder);
 
     SmallVector<Value*> CondV;
+    Instruction *MDFrom = nullptr;
     if (isa<FixedVectorType>(Cond->getType())) {
       MatrixTy C = getMatrix(Cond, Shape, Builder);
       llvm::copy(C.vectors(), std::back_inserter(CondV));
     } else {
       CondV.resize(A.getNumVectors());
       llvm::fill(CondV, Cond);
+      if (!ProfcheckDisableMetadataFixes)
+        MDFrom = Inst;
     }
 
-    for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))
-      Result.addVector(Builder.CreateSelect(CV, AV, BV));
+    for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors())) {
+      assert(!(isa<VectorType>(CV->getType()) && static_cast<bool>(MDFrom)) &&
+             "If we have a vector conditional, we should be propagating "
+             "profile information.");
+      Result.addVector(Builder.CreateSelect(CV, AV, BV, "", MDFrom));
+    }
 
     return Result.addNumComputeOps(getNumOps(Result.getVectorTy()) *
                                    Result.getNumVectors());
