@@ -52,6 +52,8 @@
 #include "math/coshf16.h"
 #include "math/cospif.h"
 #include "math/cospif16.h"
+#include "math/daddf128.h"
+#include "math/daddl.h"
 #include "math/dfmaf128.h"
 #include "math/dfmal.h"
 #include "math/dsqrtl.h"
