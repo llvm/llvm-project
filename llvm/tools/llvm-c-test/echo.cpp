@@ -380,7 +380,85 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
   // Try float literal
   if (LLVMIsAConstantFP(Cst)) {
     check_value_kind(Cst, LLVMConstantFPValueKind);
-    report_fatal_error("ConstantFP is not supported");
+    char *Printed = LLVMPrintValueToString(Cst);
+    std::string Text(Printed);
+    LLVMDisposeMessage(Printed);
+
+    size_t SpacePos = Text.find(' ');
+    if (SpacePos == std::string::npos || SpacePos + 1 >= Text.size())
+      report_fatal_error("Could not parse ConstantFP literal");
+
+    std::string Literal = Text.substr(SpacePos + 1);
+    while (!Literal.empty() &&
+           isspace(static_cast<unsigned char>(Literal.front())))
+      Literal.erase(Literal.begin());
+    while (!Literal.empty() &&
+           isspace(static_cast<unsigned char>(Literal.back())))
+      Literal.pop_back();
+    LLVMTypeRef DstTy = TypeCloner(M).Clone(Cst);
+    LLVMTypeKind DstKind = LLVMGetTypeKind(DstTy);
+
+    auto cloneFromBitPattern =
+        [&](unsigned BitWidth, const std::string &HexDigits) -> LLVMValueRef {
+      LLVMContextRef Ctx = LLVMGetModuleContext(M);
+      LLVMTypeRef IntTy = LLVMIntTypeInContext(Ctx, BitWidth);
+      LLVMValueRef Bits = LLVMConstIntOfStringAndSize(IntTy, HexDigits.c_str(),
+                                                      HexDigits.size(), 16);
+      return LLVMConstBitCast(Bits, DstTy);
+    };
+
+    auto isPlainHex = [](const std::string &S) {
+      if (S.empty())
+        return false;
+      for (char C : S) {
+        if (!isxdigit(static_cast<unsigned char>(C)))
+          return false;
+      }
+      return true;
+    };
+
+    if (Literal.rfind("0xH", 0) == 0)
+      return cloneFromBitPattern(16, Literal.substr(3));
+    if (Literal.rfind("0xR", 0) == 0)
+      return cloneFromBitPattern(16, Literal.substr(3));
+    if (Literal.rfind("0xK", 0) == 0)
+      return cloneFromBitPattern(80, Literal.substr(3));
+    if (Literal.rfind("0xL", 0) == 0)
+      return cloneFromBitPattern(128, Literal.substr(3));
+    if (Literal.rfind("0xM", 0) == 0)
+      return cloneFromBitPattern(128, Literal.substr(3));
+
+    if (Literal.rfind("0x", 0) == 0) {
+      std::string Body = Literal.substr(2);
+      if (isPlainHex(Body)) {
+        unsigned BitWidth = 0;
+        switch (DstKind) {
+        case LLVMHalfTypeKind:
+        case LLVMBFloatTypeKind:
+          BitWidth = 16;
+          break;
+        case LLVMFloatTypeKind:
+          BitWidth = 32;
+          break;
+        case LLVMDoubleTypeKind:
+          BitWidth = 64;
+          break;
+        case LLVMX86_FP80TypeKind:
+          BitWidth = 80;
+          break;
+        case LLVMFP128TypeKind:
+        case LLVMPPC_FP128TypeKind:
+          BitWidth = 128;
+          break;
+        default:
+          break;
+        }
+        if (BitWidth != 0)
+          return cloneFromBitPattern(BitWidth, Body);
+      }
+    }
+
+    return LLVMConstRealOfStringAndSize(DstTy, Literal.c_str(), Literal.size());
   }
 
   // Try ConstantVector or ConstantDataVector
