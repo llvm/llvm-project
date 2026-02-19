@@ -892,7 +892,9 @@ LogicalResult LaunchOp::verifyRegions() {
   // Kernel launch takes kNumConfigOperands leading operands for grid/block
   // sizes and transforms them into kNumConfigRegionAttributes region arguments
   // for block/thread identifiers and grid/block sizes.
-  if (!getBody().empty()) {
+  if (getBody().empty()) {
+    return emitOpError("expected a non-empty body region");
+  } else {
     if (getBody().getNumArguments() <
         kNumConfigRegionAttributes + getNumWorkgroupAttributions())
       return emitOpError("unexpected number of region arguments");
