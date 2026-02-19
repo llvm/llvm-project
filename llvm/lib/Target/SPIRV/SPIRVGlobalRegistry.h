@@ -102,14 +102,14 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
                         SPIRV::AccessQualifier::AccessQualifier AccessQual,
                         bool ExplicitLayoutRequired, bool EmitIR);
 
-  // Internal function creating the an Types/Constants at the correct position
+  // Internal function creating the Types/Constants at the correct position
   // in the function by tweaking the passed "MIRBuilder" insertion point and
   // restoring it to the correct position. "Op" should be the function creating
   // the specific operation you need, and should return the newly created
   // instruction.
-  const MachineInstr *
-  createOpAtFunctionEntry(MachineIRBuilder &MIRBuilder,
-                          std::function<MachineInstr *(MachineIRBuilder &)> Op);
+  const MachineInstr *createConstOrTypeAtFunctionEntry(
+      MachineIRBuilder &MIRBuilder,
+      std::function<MachineInstr *(MachineIRBuilder &)> Op);
 
 public:
   SPIRVGlobalRegistry(unsigned PointerSize);
