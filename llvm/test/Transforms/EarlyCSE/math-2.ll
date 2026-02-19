@@ -83,7 +83,8 @@ define double @f_pow() {
 declare float @powf(float, float) #0
 define float @f_powf_inf_nofold() {
 ; CHECK-LABEL: @f_powf_inf_nofold(
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    [[RES:%.*]] = tail call fast float @powf(float 1.000000e+01, float 1.000000e+02)
+; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = tail call fast float @powf(float 10., float 100.)
   ret float %res

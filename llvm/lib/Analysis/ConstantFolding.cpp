@@ -2176,6 +2176,18 @@ Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double),
   return GetConstantFoldFPValue(Result, Ty);
 }
 
+Constant *ConstantFoldBinaryFP32(float (*NativeFP)(float, float),
+                                 const APFloat &V, const APFloat &W, Type *Ty) {
+  llvm_fenv_clearexcept();
+  float Result = NativeFP(V.convertToFloat(), W.convertToFloat());
+  if (llvm_fenv_testexcept()) {
+    llvm_fenv_clearexcept();
+    return nullptr;
+  }
+
+  return GetConstantFoldFPValue(Result, Ty);
+}
+
 Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
   auto *OpVT = cast<VectorType>(Op->getType());
 
@@ -3197,10 +3209,13 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   switch (Func) {
   default:
     break;
-  case LibFunc_pow:
   case LibFunc_powf:
-  case LibFunc_pow_finite:
   case LibFunc_powf_finite:
+    if (TLI->has(Func))
+      return ConstantFoldBinaryFP32(powf, Op1V, Op2V, Ty);
+    break;
+  case LibFunc_pow:
+  case LibFunc_pow_finite:
     if (TLI->has(Func))
       return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
     break;
