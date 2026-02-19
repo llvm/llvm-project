@@ -147,6 +147,8 @@ public:
     return &TLInfo;
   }
 
+  void mirFileLoaded(MachineFunction &MF) const override;
+
   bool enableMachineScheduler() const override { return true; }
 
   bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
