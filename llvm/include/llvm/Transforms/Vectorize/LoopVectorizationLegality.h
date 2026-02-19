@@ -300,9 +300,17 @@ public:
   /// masking.
   bool canFoldTailByMasking() const;
 
+  /// Returns true if all instructions in the loop support masking or
+  /// speculation.
+  ///
+  /// The mask may be loop-invariant if it represents a maximum safe dependence
+  /// distance (alias mask) or loop-variant if it is based on the induction
+  /// variable (e.g. tail-folding).
+  bool canMaskLoop() const;
+
   /// Mark all respective loads/stores for masking. Must only be called when
-  /// tail-folding is possible.
-  void prepareToFoldTailByMasking();
+  /// masking is possible.
+  void prepareToMaskLoop();
 
   /// Returns the primary induction variable.
   PHINode *getPrimaryInduction() { return PrimaryInduction; }

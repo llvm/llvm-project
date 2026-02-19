@@ -151,6 +151,10 @@ VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 /// the header-mask pattern manually.
 VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
 
+/// Finds the mask for the loop body. This differs from `findHeaderMask` as it
+/// will include the alias-mask (if present).
+VPValue *findLoopBodyMask(VPlan &Plan);
+
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//

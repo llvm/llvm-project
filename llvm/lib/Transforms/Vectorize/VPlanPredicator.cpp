@@ -74,7 +74,8 @@ public:
   }
 
   /// Compute and return the mask for the vector loop header block.
-  void createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail);
+  void createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail,
+                        bool MaskAliasing);
 
   /// Compute the predicate of \p VPBB, assuming that the header block of the
   /// loop is set to True, or to the loop mask when tail folding.
@@ -153,25 +154,38 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   setBlockInMask(VPBB, BlockMask);
 }
 
-void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
-  if (!FoldTail) {
+void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail,
+                                    bool MaskAliasing) {
+  if (!FoldTail && !MaskAliasing) {
     setBlockInMask(HeaderVPBB, nullptr);
     return;
   }
 
-  // Introduce the early-exit compare IV <= BTC to form header block mask.
-  // This is used instead of IV < TC because TC may wrap, unlike BTC. Start by
-  // constructing the desired canonical IV in the header block as its first
-  // non-phi instructions.
-
+  VPValue *BlockMask = nullptr;
   auto &Plan = *HeaderVPBB->getPlan();
-  auto *IV =
-      new VPWidenCanonicalIVRecipe(HeaderVPBB->getParent()->getCanonicalIV());
-  Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
-  Builder.insert(IV);
 
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  VPValue *BlockMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
+  if (FoldTail) {
+    // Introduce the early-exit compare IV <= BTC to form header block mask.
+    // This is used instead of IV < TC because TC may wrap, unlike BTC. Start by
+    // constructing the desired canonical IV in the header block as its first
+    // non-phi instructions.
+
+    auto *IV =
+        new VPWidenCanonicalIVRecipe(HeaderVPBB->getParent()->getCanonicalIV());
+    Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
+    Builder.insert(IV);
+
+    VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
+    BlockMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
+  }
+
+  if (MaskAliasing) {
+    if (BlockMask)
+      BlockMask = Builder.createAnd(BlockMask, &Plan.getAliasMask());
+    else
+      BlockMask = &Plan.getAliasMask();
+  }
+
   setBlockInMask(HeaderVPBB, BlockMask);
 }
 
@@ -265,7 +279,8 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   }
 }
 
-void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
+void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail,
+                                                 bool MaskAliasing) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
@@ -280,7 +295,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     // convert all phi recipes of VPBB to blend recipes unless VPBB is the
     // header.
     if (VPBB == Header) {
-      Predicator.createHeaderMask(Header, FoldTail);
+      Predicator.createHeaderMask(Header, FoldTail, MaskAliasing);
     } else {
       Predicator.createBlockInMask(VPBB);
       Predicator.convertPhisToBlends(VPBB);
@@ -314,11 +329,11 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     PrevVPBB = VPBB;
   }
 
-  // If we folded the tail and introduced a header mask, any extract of the
-  // last element must be updated to extract from the last active lane of the
-  // header mask instead (i.e., the lane corresponding to the last active
-  // iteration).
-  if (FoldTail) {
+  // If we folded the  and introduced a header mask, or have partial alias
+  // masking, any extract of the last element must be updated to extract from
+  // the last active lane of the header mask instead (i.e., the lane
+  // corresponding to the last active iteration).
+  if (FoldTail || MaskAliasing) {
     assert(Plan.getExitBlocks().size() == 1 &&
            "only a single-exit block is supported currently");
     assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
