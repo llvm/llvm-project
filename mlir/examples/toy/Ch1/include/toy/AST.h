@@ -77,11 +77,11 @@ public:
 
 /// Expression class for a literal value.
 class LiteralExprAST : public ExprAST {
-  std::vector<std::unique_ptr<ExprAST>> values;
+  ExprASTList values;
   std::vector<int64_t> dims;
 
 public:
-  LiteralExprAST(Location loc, std::vector<std::unique_ptr<ExprAST>> values,
+  LiteralExprAST(Location loc, ExprASTList values,
                  std::vector<int64_t> dims)
       : ExprAST(Expr_Literal, std::move(loc)), values(std::move(values)),
         dims(std::move(dims)) {}
@@ -167,11 +167,11 @@ public:
 /// Expression class for function calls.
 class CallExprAST : public ExprAST {
   std::string callee;
-  std::vector<std::unique_ptr<ExprAST>> args;
+  ExprASTList args;
 
 public:
   CallExprAST(Location loc, const std::string &callee,
-              std::vector<std::unique_ptr<ExprAST>> args)
+              ExprASTList args)
       : ExprAST(Expr_Call, std::move(loc)), callee(callee),
         args(std::move(args)) {}
 
