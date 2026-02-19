@@ -26,4 +26,4 @@ for.end:
   ret void
 }
 
-!0 = !{!0, !{!"llvm.loop.disable_nonforced"}, !{!"llvm.loop.vectorize.enable", i32 1}}
+!0 = !{!0, !{!"llvm.loop.disable_nonforced"}, !{!"llvm.loop.vectorize.enable", i1 true}}

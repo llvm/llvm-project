@@ -90,4 +90,4 @@ for.end:
 !45 = !DILocation(line: 27, column: 21, scope: !37)
 !46 = distinct !DISubprogram(name: "test_multiple_failures", line: 26, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: true, unit: !0, scopeLine: 26, file: !1, scope: !5, type: !6, retainedNodes: !2)
 
-!50 = !{!50, !{!"llvm.loop.distribute.enable"}}
+!50 = !{!50, !{!"llvm.loop.distribute.enable", i1 true}}

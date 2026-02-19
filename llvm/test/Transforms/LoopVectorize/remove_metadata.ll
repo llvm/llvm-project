@@ -25,7 +25,7 @@ for.end:
   ret void
 }
 
-!0 = !{!0, !{!"llvm.loop.vectorize.some_property"}, !{!"llvm.loop.vectorize.enable", i32 1}}
+!0 = !{!0, !{!"llvm.loop.vectorize.some_property"}, !{!"llvm.loop.vectorize.enable", i1 true}}
 
 ; CHECK-NOT: llvm.loop.vectorize.
 ; CHECK: {!"llvm.loop.isvectorized", i32 1}
