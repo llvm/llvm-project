@@ -11505,6 +11505,48 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   return Flags;
 }
 
+SDValue PPCTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  unsigned IntrinsicID = Op.getConstantOperandVal(1);
+  SDLoc dl(Op);
+  switch (IntrinsicID) {
+  case Intrinsic::ppc_amo_lwat_csne:
+  case Intrinsic::ppc_amo_ldat_csne:
+    SDValue Chain = Op.getOperand(0);
+    SDValue Ptr = Op.getOperand(2);
+    SDValue CmpVal = Op.getOperand(3);
+    SDValue NewVal = Op.getOperand(4);
+
+    EVT VT = IntrinsicID == Intrinsic::ppc_amo_ldat_csne ? MVT::i64 : MVT::i32;
+    Type *Ty = VT.getTypeForEVT(*DAG.getContext());
+    Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+
+    TargetLowering::ArgListTy Args;
+    Args.emplace_back(DAG.getUNDEF(VT), Ty);
+    Args.emplace_back(CmpVal, Ty);
+    Args.emplace_back(NewVal, Ty);
+    Args.emplace_back(Ptr, IntPtrTy);
+
+    // Lower to dummy call to use ABI for consecutive register allocation.
+    // Places return value, compare value, and new value in X3/X4/X5 as required
+    // by lwat/ldat FC=16, avoiding a new register class for 3 adjacent
+    // registers.
+    const char *SymName = IntrinsicID == Intrinsic::ppc_amo_ldat_csne
+                              ? "__ldat_csne_dummy"
+                              : "__lwat_csne_dummy";
+    SDValue Callee =
+        DAG.getExternalSymbol(SymName, getPointerTy(DAG.getDataLayout()));
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(dl).setChain(Chain).setLibCallee(CallingConv::C, Ty, Callee,
+                                                     std::move(Args));
+
+    auto Result = LowerCallTo(CLI);
+    return DAG.getMergeValues({Result.first, Result.second}, dl);
+  }
+  return SDValue();
+}
+
 SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                                SelectionDAG &DAG) const {
   // SelectionDAGBuilder::visitTargetIntrinsic may insert one extra chain to
@@ -12707,7 +12749,7 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
   // For counter-based loop handling.
   case ISD::INTRINSIC_W_CHAIN:
-    return SDValue();
+    return LowerINTRINSIC_W_CHAIN(Op, DAG);
 
   case ISD::BITCAST:            return LowerBITCAST(Op, DAG);
 

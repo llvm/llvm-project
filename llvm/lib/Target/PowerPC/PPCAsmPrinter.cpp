@@ -1729,6 +1729,27 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::EnforceIEIO));
     return;
   }
+  case PPC::BL8:
+  case PPC::BL8_NOP: {
+    const MachineOperand &MO = MI->getOperand(0);
+    if (MO.isSymbol()) {
+      StringRef Name = MO.getSymbolName();
+      Name.consume_front(".");
+      Name.consume_back("[PR]");
+      bool IsLWAT = Name == "__lwat_csne_dummy";
+      bool IsLDAT = Name == "__ldat_csne_dummy";
+      if (IsLWAT || IsLDAT) {
+        EmitToStreamer(*OutStreamer,
+                       MCInstBuilder(IsLWAT ? PPC::LWAT : PPC::LDAT)
+                           .addReg(PPC::X3)
+                           .addReg(PPC::X3)
+                           .addReg(PPC::X6)
+                           .addImm(16));
+        return;
+      }
+    }
+    break;
+  }
   }
 
   LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);

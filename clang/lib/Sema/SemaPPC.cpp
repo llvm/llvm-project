@@ -99,6 +99,10 @@ static bool isPPC_64Builtin(unsigned BuiltinID) {
   case PPC::BI__builtin_amo_stdat:
   case PPC::BI__builtin_amo_stwat_s:
   case PPC::BI__builtin_amo_stdat_s:
+  case PPC::BI__builtin_amo_lwat_csne:
+  case PPC::BI__builtin_amo_ldat_csne:
+  case PPC::BI__builtin_amo_lwat_csne_s:
+  case PPC::BI__builtin_amo_ldat_csne_s:
     return true;
   }
   return false;

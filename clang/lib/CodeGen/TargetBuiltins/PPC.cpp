@@ -1386,6 +1386,20 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_ldat_cond),
                               {Op0, Op1});
   }
+  case PPC::BI__builtin_amo_lwat_csne_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_lwat_csne),
+                              {Op0, Op1, Op2});
+  }
+  case PPC::BI__builtin_amo_ldat_csne_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_ldat_csne),
+                              {Op0, Op1, Op2});
+  }
   case PPC::BI__builtin_amo_stwat_s: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
