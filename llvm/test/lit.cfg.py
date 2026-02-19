@@ -233,6 +233,7 @@ tools = [
     ToolSubst("%llvm-strip", FindTool("llvm-strip")),
     ToolSubst("%llvm-install-name-tool", FindTool("llvm-install-name-tool")),
     ToolSubst("%llvm-bitcode-strip", FindTool("llvm-bitcode-strip")),
+    ToolSubst("%llvm-extract-bundle-entry", FindTool("llvm-extract-bundle-entry")),
     ToolSubst("%split-file", FindTool("split-file")),
 ]
 
@@ -265,6 +266,7 @@ tools.extend(
         "llvm-dlltool",
         "llvm-exegesis",
         "llvm-extract",
+        "llvm-extract-bundle-entry",
         "llvm-ir2vec",
         "llvm-isel-fuzzer",
         "llvm-ifs",

@@ -16,6 +16,7 @@
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/OffloadBundle.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CRC.h"
@@ -160,6 +161,41 @@ public:
   StripOptTable()
       : GenericOptTable(strip::OptionStrTable, strip::OptionPrefixesTable,
                         strip::StripInfoTable) {
+    setGroupedShortOptions(true);
+  }
+};
+
+enum ExtractBundleEntryID {
+  EXTRACT_BUNDLE_ENTRY_INVALID = 0, // This is not an option ID.
+#define OPTION(...)                                                            \
+  LLVM_MAKE_OPT_ID_WITH_ID_PREFIX(EXTRACT_BUNDLE_ENTRY_, __VA_ARGS__),
+#include "ExtractBundleEntryOpts.inc"
+#undef OPTION
+};
+
+namespace extract_bundle_entry {
+#define OPTTABLE_STR_TABLE_CODE
+#include "ExtractBundleEntryOpts.inc"
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "ExtractBundleEntryOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
+
+static constexpr opt::OptTable::Info ExtractBundleEntryInfoTable[] = {
+#define OPTION(...)                                                            \
+  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(EXTRACT_BUNDLE_ENTRY_, __VA_ARGS__),
+#include "ExtractBundleEntryOpts.inc"
+#undef OPTION
+};
+} // namespace extract_bundle_entry
+
+class ExtractBundleEntryOptTable : public opt::GenericOptTable {
+public:
+  ExtractBundleEntryOptTable()
+      : GenericOptTable(extract_bundle_entry::OptionStrTable,
+                        extract_bundle_entry::OptionPrefixesTable,
+                        extract_bundle_entry::ExtractBundleEntryInfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -418,7 +454,13 @@ template <class T> static ErrorOr<T> getAsInteger(StringRef Val) {
 
 namespace {
 
-enum class ToolType { Objcopy, Strip, InstallNameTool, BitcodeStrip };
+enum class ToolType {
+  Objcopy,
+  Strip,
+  InstallNameTool,
+  BitcodeStrip,
+  ExtractBundleEntry
+};
 
 } // anonymous namespace
 
@@ -441,6 +483,10 @@ static void printHelp(const opt::OptTable &OptTable, raw_ostream &OS,
   case ToolType::BitcodeStrip:
     ToolName = "llvm-bitcode-strip";
     HelpText = " [options] input";
+    break;
+  case ToolType::ExtractBundleEntry:
+    ToolName = "llvm-extract-bundle-entry";
+    HelpText = " URI";
     break;
   }
   OptTable.printHelp(OS, (ToolName + HelpText).str().c_str(),
@@ -1667,6 +1713,48 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
                                InputArgs.getLastArgValue(STRIP_output) == "-"))
     return createStringError(errc::invalid_argument,
                              "--preserve-dates requires a file");
+
+  return std::move(DC);
+}
+
+Expected<DriverConfig> objcopy::parseExtractBundleEntryOptions(
+    ArrayRef<const char *> ArgsArr, function_ref<Error(Error)> ErrorCallback) {
+  DriverConfig DC;
+  ExtractBundleEntryOptTable T;
+  unsigned MissingArgumentIndex, MissingArgumentCount;
+  opt::InputArgList InputArgs =
+      T.ParseArgs(ArgsArr, MissingArgumentIndex, MissingArgumentCount);
+
+  if (InputArgs.size() == 0) {
+    printHelp(T, errs(), ToolType::ExtractBundleEntry);
+    exit(1);
+  }
+
+  if (InputArgs.hasArg(EXTRACT_BUNDLE_ENTRY_help)) {
+    printHelp(T, outs(), ToolType::ExtractBundleEntry);
+    exit(0);
+  }
+
+  if (InputArgs.hasArg(EXTRACT_BUNDLE_ENTRY_version)) {
+    outs() << "llvm-extract-bundle-entry, compatible with roc-obj-ls\n";
+    cl::PrintVersionMessage();
+    exit(0);
+  }
+
+  for (auto *Arg : InputArgs.filtered(EXTRACT_BUNDLE_ENTRY_UNKNOWN))
+    return createStringError(errc::invalid_argument, "unknown argument '%s'",
+                             Arg->getAsString(InputArgs).c_str());
+
+  SmallVector<StringRef, 256> Positional;
+
+  for (auto *Arg : InputArgs.filtered(EXTRACT_BUNDLE_ENTRY_INPUT))
+    Positional.push_back(Arg->getValue());
+  assert(!Positional.empty());
+
+  // Iterate over all input arguments.
+  for (StringRef Input : Positional)
+    if (Error Err = object::extractOffloadBundleByURI(Input))
+      return std::move(Err);
 
   return std::move(DC);
 }

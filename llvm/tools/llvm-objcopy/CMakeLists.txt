@@ -24,6 +24,10 @@ set(LLVM_TARGET_DEFINITIONS StripOpts.td)
 tablegen(LLVM StripOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(StripOptsTableGen)
 
+set(LLVM_TARGET_DEFINITIONS ExtractBundleEntryOpts.td)
+tablegen(LLVM ExtractBundleEntryOpts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(ExtractBundleEntryOptsTableGen)
+
 add_llvm_tool(llvm-objcopy
   ObjcopyOptions.cpp
   llvm-objcopy.cpp
@@ -37,6 +41,7 @@ add_llvm_tool(llvm-objcopy
 add_llvm_tool_symlink(llvm-install-name-tool llvm-objcopy)
 add_llvm_tool_symlink(llvm-bitcode-strip llvm-objcopy)
 add_llvm_tool_symlink(llvm-strip llvm-objcopy)
+add_llvm_tool_symlink(llvm-extract-bundle-entry llvm-objcopy)
 
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)
   add_llvm_tool_symlink(objcopy llvm-objcopy)
