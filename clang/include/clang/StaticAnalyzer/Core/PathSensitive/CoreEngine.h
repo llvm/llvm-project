@@ -273,9 +273,7 @@ public:
   ExplodedNode *generateNode(const ProgramPoint &PP,
                              ProgramStateRef State,
                              ExplodedNode *Pred) {
-    return generateNodeImpl(
-        PP, State, Pred,
-        /*MarkAsSink=*/State->isPosteriorlyOverconstrained());
+    return generateNodeImpl(PP, State, Pred);
   }
 
   /// Generates a sink in the ExplodedGraph.

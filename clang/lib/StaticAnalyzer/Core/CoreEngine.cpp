@@ -706,6 +706,8 @@ ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
                                             ProgramStateRef State,
                                             ExplodedNode *FromN,
                                             bool MarkAsSink) {
+  MarkAsSink = MarkAsSink || State->isPosteriorlyOverconstrained();
+
   HasGeneratedNodes = true;
   Frontier.erase(FromN);
   ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
