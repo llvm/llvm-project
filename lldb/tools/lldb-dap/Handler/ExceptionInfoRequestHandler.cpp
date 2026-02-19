@@ -278,7 +278,7 @@ static std::optional<ExceptionDetails> FormatException(lldb::SBThread &thread) {
   raw_string_ostream OS(message);
   OS << exception;
 
-  details.message = message;
+  details.message = std::move(message);
 
   if (lldb::SBThread exception_backtrace =
           thread.GetCurrentExceptionBacktrace())
