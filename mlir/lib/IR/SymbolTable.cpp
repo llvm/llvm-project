@@ -357,14 +357,10 @@ void SymbolTable::walkSymbolTables(
     Operation *op, bool allSymUsesVisible,
     function_ref<void(Operation *, bool)> callback) {
   bool isSymbolTable = op->hasTrait<OpTrait::SymbolTable>();
-  if (isSymbolTable) {
-    SymbolOpInterface symbol = dyn_cast<SymbolOpInterface>(op);
-    allSymUsesVisible |= !symbol || symbol.isPrivate();
-  } else {
-    // Otherwise if 'op' is not a symbol table, any nested symbols are
-    // guaranteed to be hidden.
-    allSymUsesVisible = true;
-  }
+  // If the current op is not a symbol table, or if it is a symbol table but
+  // does not itself define a symbol, outside ops cannot reference symbols
+  // defined inside it, so all their uses are visible.
+  allSymUsesVisible |= !isSymbolTable || !isa<SymbolOpInterface>(op);
 
   for (Region &region : op->getRegions())
     for (Block &block : region)
