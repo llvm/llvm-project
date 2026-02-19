@@ -2203,10 +2203,21 @@ let Predicates = [HasPAuth] in {
     let Uses = [X16];
   }
 
+  // AArch64AsmPrinter can clobber the $AddrDisc register as long as it is
+  // marked "killed", otherwise an assertion in emitPtrauthDiscriminator checks
+  // that $Scratch != $AddrDisc. The problem is that it is always correct to
+  // *omit* the "killed" flag, thus an instruction like this is valid:
+  //
+  //     $x8, $x9 = AUTxMxN $x8, 0, 12345, /* is actually killed */ $x9, implicit-def $nzcv
+  //     // $x9 is dead past this point
+  //
+  // While it is possible to allow emitPtrauthDiscriminator to clobber $Scratch
+  // iff ($AddrDisc is killed OR $Scratch == $AddrDisc), it is easier and more
+  // straightforward to mark $Scratch as @earlyclobber.
   def AUTxMxN : Pseudo<(outs GPR64:$AuthVal, GPR64common:$Scratch),
                        (ins GPR64:$Val, i32imm:$Key,
                             i64imm:$Disc, GPR64:$AddrDisc),
-                       [], "$AuthVal = $Val">, Sched<[WriteI, ReadI]> {
+                       [], "$AuthVal = $Val,@earlyclobber $Scratch">, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
