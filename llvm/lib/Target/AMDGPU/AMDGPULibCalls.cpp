@@ -1488,6 +1488,7 @@ bool AMDGPULibCalls::expandFastPow(FPMathOperator *FPOp, IRBuilder<> &B,
     return true;
   }
   }
+  llvm_unreachable("Unhandled PowKind enum");
 }
 
 bool AMDGPULibCalls::tryOptimizePow(FPMathOperator *FPOp, IRBuilder<> &B,
