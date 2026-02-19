@@ -1330,11 +1330,11 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
   if (!initHeuristics(RewriteCands, CopyForUse, CopyForDef))
     return false;
 
-  double Cost = getRewriteCost(RewriteCands, CopyForUse, CopyForDef);
+  int64_t Cost = getRewriteCost(RewriteCands, CopyForUse, CopyForDef);
 
   // If we haven't found the beneficial conditions, prefer the VGPR form which
   // may result in less cross RC copies.
-  if (Cost > 0.0)
+  if (Cost > 0)
     return false;
 
   return rewrite(RewriteCands);
@@ -2233,17 +2233,11 @@ bool RewriteMFMAFormStage::initHeuristics(
       }
 
       // Do the rewrite to allow for updated RP calculation.
-      const TargetRegisterClass *VDefRC = DAG.MRI.getRegClass(Dst.getReg());
-      const TargetRegisterClass *ADefRC = SRI->getEquivalentAGPRClass(VDefRC);
-      DAG.MRI.setRegClass(Dst.getReg(), ADefRC);
-      if (Src2->isReg()) {
-        // Have to get src types separately since subregs may cause C and D
-        // registers to be different types even though the actual operand is
-        // the same size.
-        const TargetRegisterClass *VUseRC = DAG.MRI.getRegClass(Src2->getReg());
-        const TargetRegisterClass *AUseRC = SRI->getEquivalentAGPRClass(VUseRC);
-        DAG.MRI.setRegClass(Src2->getReg(), AUseRC);
-      }
+      const TargetRegisterClass *VGPRRC = DAG.MRI.getRegClass(Dst.getReg());
+      const TargetRegisterClass *AGPRRC = SRI->getEquivalentAGPRClass(VGPRRC);
+      DAG.MRI.setRegClass(Dst.getReg(), AGPRRC);
+      if (Src2->isReg())
+        DAG.MRI.setRegClass(Src2->getReg(), AGPRRC);
       Changed = true;
     }
   }
@@ -2251,14 +2245,15 @@ bool RewriteMFMAFormStage::initHeuristics(
   return Changed;
 }
 
-double RewriteMFMAFormStage::getRewriteCost(
+int64_t RewriteMFMAFormStage::getRewriteCost(
     const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
     const DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
     const SmallPtrSetImpl<MachineInstr *> &CopyForDef) {
   MachineBlockFrequencyInfo *MBFI = DAG.MBFI;
 
-  double BestSpillCost = 0.0;
-  double Cost = 0.0;
+  int64_t BestSpillCost = 0;
+  int64_t Cost = 0;
+  uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
 
   std::pair<unsigned, unsigned> MaxVectorRegs =
       ST.getMaxNumVectorRegs(MF.getFunction());
@@ -2273,8 +2268,6 @@ double RewriteMFMAFormStage::getRewriteCost(
     GCNRegPressure &PressureBefore = DAG.Pressure[Region];
     unsigned SpillCostBefore = PressureBefore.getVGPRSpills(
         MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
-    LLVM_DEBUG(dbgs() << "RewriteMFMA: Region " << Region
-                      << " spill cost before: " << SpillCostBefore << "\n");
 
     // For the cases we care about (i.e. ArchVGPR usage is greater than the
     // addressable limit), rewriting alone should bring pressure to manageable
@@ -2283,21 +2276,29 @@ double RewriteMFMAFormStage::getRewriteCost(
     GCNRegPressure PressureAfter = DAG.getRealRegPressure(Region);
     unsigned SpillCostAfter = PressureAfter.getVGPRSpills(
         MF, ArchVGPRThreshold, AGPRThreshold, CombinedThreshold);
-    LLVM_DEBUG(dbgs() << "RewriteMFMA: Region " << Region
-                      << " spill cost after: " << SpillCostAfter << "\n");
 
-    MachineBasicBlock *MBB = DAG.Regions[Region].first->getParent();
-    double BlockFreq = MBFI->getBlockFreqRelativeToEntryBlock(MBB);
+    uint64_t BlockFreq =
+        MBFI->getBlockFreq(DAG.Regions[Region].first->getParent())
+            .getFrequency();
+
+    bool RelativeFreqIsDenom = EntryFreq > BlockFreq;
+    uint64_t RelativeFreq = EntryFreq && BlockFreq
+                                ? (RelativeFreqIsDenom ? EntryFreq / BlockFreq
+                                                       : BlockFreq / EntryFreq)
+                                : 1;
 
     // This assumes perfect spilling / splitting -- using one spill / copy
     // instruction and one restoreFrom / copy for each excess register,
-    double SpillCost = ((double)SpillCostAfter - (double)SpillCostBefore) * 2;
+    int64_t SpillCost = ((int)SpillCostAfter - (int)SpillCostBefore) * 2;
 
     // Also account for the block frequency.
-    SpillCost *= BlockFreq;
+    if (RelativeFreqIsDenom)
+      SpillCost /= (int64_t)RelativeFreq;
+    else
+      SpillCost *= (int64_t)RelativeFreq;
 
     // If we have increased spilling in any block, just bail.
-    if (SpillCost > 0.0)
+    if (SpillCost > 0)
       return SpillCost;
 
     if (SpillCost < BestSpillCost)
@@ -2306,36 +2307,34 @@ double RewriteMFMAFormStage::getRewriteCost(
 
   // Set the cost to the largest decrease in spill cost in order to not double
   // count spill reductions.
-  LLVM_DEBUG(dbgs() << "RewriteMFMA: BestSpillCost: " << BestSpillCost << "\n");
   Cost = BestSpillCost;
-  assert(Cost <= 0.0);
+  assert(Cost <= 0);
+
+  unsigned CopyCost = 0;
 
   // For each CopyForDef, increase the cost by the register size while
   // accounting for block frequency.
-  double DefCopyCost = 0.0;
   for (MachineInstr *DefMI : CopyForDef) {
     Register DefReg = DefMI->getOperand(0).getReg();
-    MachineBasicBlock *DefMBB = DefMI->getParent();
-    double DefFreq = MBFI->getBlockFreqRelativeToEntryBlock(DefMBB);
+    uint64_t DefFreq =
+        EntryFreq
+            ? MBFI->getBlockFreq(DefMI->getParent()).getFrequency() / EntryFreq
+            : 1;
 
     const TargetRegisterClass *RC = DAG.MRI.getRegClass(DefReg);
-    DefCopyCost += (double)RC->getCopyCost() * DefFreq;
+    CopyCost += RC->getCopyCost() * DefFreq;
   }
-  LLVM_DEBUG(dbgs() << "RewriteMFMA: Def copy Costs: " << DefCopyCost << "\n");
 
   // Account for CopyForUse copies in each block that the register is used.
-  double UseCopyCost = 0.0;
   for (auto &[UseBlock, UseRegs] : CopyForUse) {
-    uint64_t UseFreq = MBFI->getBlockFreqRelativeToEntryBlock(UseBlock);
+    uint64_t UseFreq =
+        EntryFreq ? MBFI->getBlockFreq(UseBlock).getFrequency() / EntryFreq : 1;
 
     for (Register UseReg : UseRegs) {
       const TargetRegisterClass *RC = DAG.MRI.getRegClass(UseReg);
-      UseCopyCost += (double)RC->getCopyCost() * UseFreq;
+      CopyCost += RC->getCopyCost() * UseFreq;
     }
   }
-
-  LLVM_DEBUG(dbgs() << "RewriteMFMA: Use copy Costs: " << UseCopyCost << "\n");
-  double CopyCost = UseCopyCost + DefCopyCost;
 
   // Reset the classes that were changed to AGPR for better RB analysis.
   // We must do rewriting after copy-insertion, as some defs of the register
@@ -2343,23 +2342,17 @@ double RewriteMFMAFormStage::getRewriteCost(
   // rewrite then these need to be restored anyway.
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
     assert(TII->isMAI(*MI));
-    const TargetRegisterClass *ADefRC =
+    const TargetRegisterClass *AGPRRC =
         DAG.MRI.getRegClass(MI->getOperand(0).getReg());
-    const TargetRegisterClass *VDefRC = SRI->getEquivalentVGPRClass(ADefRC);
-    DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VDefRC);
-    MI->setDesc(TII->get(OriginalOpcode));
+    const TargetRegisterClass *VGPRRC = SRI->getEquivalentVGPRClass(AGPRRC);
 
     MachineOperand *Src2 = TII->getNamedOperand(*MI, AMDGPU::OpName::src2);
     assert(Src2);
-    if (!Src2->isReg())
-      continue;
 
-    // Have to get src types separately since subregs may cause C and D
-    // registers to be different types even though the actual operand is
-    // the same size.
-    const TargetRegisterClass *AUseRC = DAG.MRI.getRegClass(Src2->getReg());
-    const TargetRegisterClass *VUseRC = SRI->getEquivalentVGPRClass(AUseRC);
-    DAG.MRI.setRegClass(Src2->getReg(), VUseRC);
+    if (Src2->isReg())
+      DAG.MRI.setRegClass(Src2->getReg(), VGPRRC);
+    DAG.MRI.setRegClass(MI->getOperand(0).getReg(), VGPRRC);
+    MI->setDesc(TII->get(OriginalOpcode));
   }
 
   return Cost + CopyCost;
