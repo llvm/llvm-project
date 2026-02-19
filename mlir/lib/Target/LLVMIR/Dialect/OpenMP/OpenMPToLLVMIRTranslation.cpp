@@ -3146,27 +3146,9 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                                                 loopInfo->getLastIter());
     if (failed(handleError(afterBarrierIP, *loopOp)))
       return failure();
-
-    // Check if this worksharing loop contains ordered regions (with SIMD)
-    bool hasOrderedRegions = false;
-    wsloopOp.getRegion().walk([&](omp::OrderedRegionOp orderedOp) {
-      hasOrderedRegions = true;
-      return WalkResult::interrupt();
-    });
-
-    for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++) {
+    for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
       linearClauseProcessor.rewriteInPlace(builder, "omp.loop_nest.region",
                                            index);
-      // Only do extra rewrites if we have both SIMD and ordered regions
-      if (isSimd && hasOrderedRegions) {
-        // Also rewrite uses in ordered regions so they read the current value
-        linearClauseProcessor.rewriteInPlace(builder, "omp.ordered.region",
-                                             index);
-        // Also rewrite uses in finalize blocks (code after ordered regions)
-        linearClauseProcessor.rewriteInPlace(builder, "omp_region.finalize",
-                                             index);
-      }
-    }
     builder.restoreIP(oldIP);
   }
 

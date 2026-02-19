@@ -15,16 +15,9 @@
 //     c(i) = a(i) * 2
 // end do
 // !$omp end simd
-// !$omp end do simd
 
 module {
   omp.private {type = private} @i_private_i32 : i32
-
-  llvm.func @_FortranAioBeginExternalListOutput(i32, !llvm.ptr, i32) -> !llvm.ptr
-  llvm.func @_FortranAioOutputInteger32(!llvm.ptr, i32) -> i1
-  llvm.func @_FortranAioEndIoStatement(!llvm.ptr) -> i32
-
-  llvm.mlir.global internal constant @str("test.f90\00") {addr_space = 0 : i32}
 
   // CHECK-LABEL: define void @simd_ordered_linear
   llvm.func @simd_ordered_linear() {
@@ -34,8 +27,6 @@ module {
     %c10_i32 = llvm.mlir.constant(10 : i32) : i32
     %c10_val = llvm.mlir.constant(10 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
-    %c6 = llvm.mlir.constant(6 : i32) : i32
-    %c18 = llvm.mlir.constant(18 : i32) : i32
 
     // Allocate arrays and loop variable
     %c100_i64 = llvm.mlir.constant(100 : i64) : i64
@@ -72,11 +63,6 @@ module {
           %i_ord_off = llvm.sub %i_ord_idx, %c1_i64 : i64
           %a_ord_ptr = llvm.getelementptr %a[%i_ord_off] : (!llvm.ptr, i64) -> !llvm.ptr, i32
           %a_ord_val = llvm.load %a_ord_ptr : !llvm.ptr -> i32
-
-          %str_ptr = llvm.mlir.addressof @str : !llvm.ptr
-          %io = llvm.call @_FortranAioBeginExternalListOutput(%c6, %str_ptr, %c18) : (i32, !llvm.ptr, i32) -> !llvm.ptr
-          %result = llvm.call @_FortranAioOutputInteger32(%io, %a_ord_val) : (!llvm.ptr, i32) -> i1
-          %end = llvm.call @_FortranAioEndIoStatement(%io) : (!llvm.ptr) -> i32
           omp.terminator
         }
 

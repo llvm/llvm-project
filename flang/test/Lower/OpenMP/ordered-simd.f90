@@ -1,5 +1,6 @@
 ! This test checks lowering of SIMD constructs with ordered regions.
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 ! Test that ordered regions inside SIMD have par_level_simd attribute
 subroutine ordered_simd(n)
