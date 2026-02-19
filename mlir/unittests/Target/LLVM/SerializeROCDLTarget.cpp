@@ -20,6 +20,7 @@
 
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
@@ -51,6 +52,27 @@ protected:
   bool hasROCMTools() {
     StringRef rocmPath = ROCDL::getROCMPath();
     if (rocmPath.empty())
+      return false;
+    llvm::SmallString<128> rocmVerPath(rocmPath);
+    llvm::sys::path::append(rocmVerPath, ".info", "version");
+    auto bufOrErr = llvm::MemoryBuffer::getFile(rocmVerPath, /*IsText=*/true);
+    if (!bufOrErr)
+      return false;
+    SmallVector<StringRef, 2> majorMinorRest;
+    bufOrErr.get()->getBuffer().split(majorMinorRest, '.', /*MaxSplit=*/2);
+    if (majorMinorRest.size() != 3)
+      return false;
+    auto asInt = [](StringRef s) -> int {
+      unsigned i;
+      if (s.getAsInteger(/*Radix=*/10, i))
+        return -1;
+      return i;
+    };
+    int major = asInt(majorMinorRest[0]);
+    int minor = asInt(majorMinorRest[1]);
+    if (major < 6)
+      return false;
+    if (major == 6 && minor < 4)
       return false;
     llvm::SmallString<128> lldPath(rocmPath);
     llvm::sys::path::append(lldPath, "llvm", "bin", "ld.lld");
@@ -189,7 +211,7 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(SerializeROCDLToPTX)) {
 // Test ROCDL serialization to Binary.
 TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(SerializeROCDLToBinary)) {
   if (!hasROCMTools())
-    GTEST_SKIP() << "ROCm installation not found, skipping test.";
+    GTEST_SKIP() << "Compatible ROCm installation not found, skipping test.";
 
   MLIRContext context(registry);
 
@@ -216,7 +238,7 @@ TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(SerializeROCDLToBinary)) {
 // Test ROCDL metadata.
 TEST_F(MLIRTargetLLVMROCDL, SKIP_WITHOUT_AMDGPU(GetELFMetadata)) {
   if (!hasROCMTools())
-    GTEST_SKIP() << "ROCm installation not found, skipping test.";
+    GTEST_SKIP() << "Compatible ROCm installation not found, skipping test.";
 
   MLIRContext context(registry);
 
