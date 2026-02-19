@@ -494,6 +494,7 @@ private:
   using set_type = llvm::DenseSet<SymbolContext, SymbolContextInfo>;
   using collection =
       llvm::SetVector<SymbolContext, std::vector<SymbolContext>, set_type>;
+  using const_iterator = collection::const_iterator;
 
   // Member variables.
   collection m_symbol_contexts; ///< The list of symbol contexts.
@@ -502,10 +503,10 @@ public:
   const_iterator begin() const { return m_symbol_contexts.begin(); }
   const_iterator end() const { return m_symbol_contexts.end(); }
 
-  typedef llvm::iterator_range<collection::const_iterator>
-      SymbolContextIterable;
+  typedef llvm::iterator_range<const_iterator> SymbolContextIterable;
   SymbolContextIterable SymbolContexts() {
-    return SymbolContextIterable(m_symbol_contexts);
+    return SymbolContextIterable(m_symbol_contexts.begin(),
+                                 m_symbol_contexts.end());
   }
 };
 
