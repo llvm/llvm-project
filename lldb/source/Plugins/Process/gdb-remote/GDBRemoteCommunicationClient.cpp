@@ -480,7 +480,9 @@ bool GDBRemoteCommunicationClient::GetThreadSuffixSupported() {
   }
   return m_supports_thread_suffix;
 }
-bool GDBRemoteCommunicationClient::GetVContSupported(char flavor) {
+
+bool GDBRemoteCommunicationClient::GetVContSupported(llvm::StringRef flavor) {
+  assert(flavor.size() > 0);
   if (m_supports_vCont_c == eLazyBoolCalculate) {
     StringExtractorGDBRemote response;
     m_supports_vCont_any = eLazyBoolNo;
@@ -491,17 +493,18 @@ bool GDBRemoteCommunicationClient::GetVContSupported(char flavor) {
     m_supports_vCont_S = eLazyBoolNo;
     if (SendPacketAndWaitForResponse("vCont?", response) ==
         PacketResult::Success) {
-      const char *response_cstr = response.GetStringRef().data();
-      if (::strstr(response_cstr, ";c"))
+      std::string response_str(response.GetStringRef());
+      response_str += ';';
+      if (response_str.find(";c;") != std::string::npos)
         m_supports_vCont_c = eLazyBoolYes;
 
-      if (::strstr(response_cstr, ";C"))
+      if (response_str.find(";C;") != std::string::npos)
         m_supports_vCont_C = eLazyBoolYes;
 
-      if (::strstr(response_cstr, ";s"))
+      if (response_str.find(";s;") != std::string::npos)
         m_supports_vCont_s = eLazyBoolYes;
 
-      if (::strstr(response_cstr, ";S"))
+      if (response_str.find(";S;") != std::string::npos)
         m_supports_vCont_S = eLazyBoolYes;
 
       if (m_supports_vCont_c == eLazyBoolYes &&
@@ -520,23 +523,14 @@ bool GDBRemoteCommunicationClient::GetVContSupported(char flavor) {
     }
   }
 
-  switch (flavor) {
-  case 'a':
-    return m_supports_vCont_any;
-  case 'A':
-    return m_supports_vCont_all;
-  case 'c':
-    return m_supports_vCont_c;
-  case 'C':
-    return m_supports_vCont_C;
-  case 's':
-    return m_supports_vCont_s;
-  case 'S':
-    return m_supports_vCont_S;
-  default:
-    break;
-  }
-  return false;
+  return llvm::StringSwitch<bool>(flavor)
+      .Case("a", m_supports_vCont_any)
+      .Case("A", m_supports_vCont_all)
+      .Case("c", m_supports_vCont_c)
+      .Case("C", m_supports_vCont_C)
+      .Case("s", m_supports_vCont_s)
+      .Case("S", m_supports_vCont_S)
+      .Default(false);
 }
 
 GDBRemoteCommunication::PacketResult
