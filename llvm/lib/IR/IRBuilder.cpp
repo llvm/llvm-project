@@ -1129,15 +1129,22 @@ Value *IRBuilderBase::CreateSelectFMF(Value *C, Value *True, Value *False,
   return Insert(Sel, Name);
 }
 
-Value *IRBuilderBase::CreatePtrDiff(Type *ElemTy, Value *LHS, Value *RHS,
-                                    const Twine &Name) {
+Value *IRBuilderBase::CreatePtrDiff(Value *LHS, Value *RHS, const Twine &Name) {
   assert(LHS->getType() == RHS->getType() &&
          "Pointer subtraction operand types must match!");
-  Value *LHS_int = CreatePtrToInt(LHS, Type::getInt64Ty(Context));
-  Value *RHS_int = CreatePtrToInt(RHS, Type::getInt64Ty(Context));
-  Value *Difference = CreateSub(LHS_int, RHS_int);
-  return CreateExactSDiv(Difference, ConstantExpr::getSizeOf(ElemTy),
-                         Name);
+  Value *LHSAddr = CreatePtrToAddr(LHS);
+  Value *RHSAddr = CreatePtrToAddr(RHS);
+  return CreateSub(LHSAddr, RHSAddr, Name);
+}
+Value *IRBuilderBase::CreatePtrDiff(Type *ElemTy, Value *LHS, Value *RHS,
+                                    const Twine &Name) {
+  const DataLayout &DL = BB->getDataLayout();
+  TypeSize ElemSize = DL.getTypeAllocSize(ElemTy);
+  if (ElemSize == TypeSize::getFixed(1))
+    return CreatePtrDiff(LHS, RHS, Name);
+
+  Value *Diff = CreatePtrDiff(LHS, RHS);
+  return CreateExactSDiv(Diff, CreateTypeSize(Diff->getType(), ElemSize), Name);
 }
 
 Value *IRBuilderBase::CreateLaunderInvariantGroup(Value *Ptr) {

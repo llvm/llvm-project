@@ -181,13 +181,6 @@ func.func @vector_reduction_1D(%arg0 : vector<2xf32>, %acc: f32) -> f32 {
 // CHECK-LABEL: func @vector_reduction_1D
 //       CHECK:   return %{{.+}}
 
-func.func @vector_multi_reduction_to_scalar(%arg0: vector<2x3xf32>, %acc: f32) -> f32 {
-  %0 = vector.multi_reduction <add>, %arg0, %acc [0, 1] : vector<2x3xf32> to f32
-  return %0 : f32
-}
-// CHECK-LABEL: func @vector_multi_reduction_to_scalar
-//       CHECK:   return %{{.+}}
-
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">

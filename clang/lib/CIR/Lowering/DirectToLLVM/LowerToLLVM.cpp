@@ -181,7 +181,7 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
   const mlir::Value length = mlir::LLVM::ConstantOp::create(
-      rewriter, op.getLoc(), rewriter.getI32Type(), op.getLength(layout));
+      rewriter, op.getLoc(), rewriter.getI64Type(), op.getLength(layout));
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
       op, adaptor.getDst(), adaptor.getSrc(), length, op.getIsVolatile());
@@ -2275,6 +2275,17 @@ mlir::LogicalResult CIRToLLVMFAbsOpLowering::matchAndRewrite(
   mlir::Type resTy = typeConverter->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::FAbsOp>(op, resTy,
                                                   adaptor.getOperands()[0]);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMAbsOpLowering::matchAndRewrite(
+    cir::AbsOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  auto absOp = mlir::LLVM::AbsOp::create(rewriter, op.getLoc(), resTy,
+                                         adaptor.getOperands()[0],
+                                         adaptor.getMinIsPoison());
+  rewriter.replaceOp(op, absOp);
   return mlir::success();
 }
 

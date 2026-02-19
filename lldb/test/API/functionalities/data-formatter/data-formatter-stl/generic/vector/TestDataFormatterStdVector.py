@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 class StdVectorDataFormatterTestCase(TestBase):
     TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
 
     def check_numbers(self, var_name, show_ptr=False):
         patterns = []

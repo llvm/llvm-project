@@ -988,6 +988,11 @@ private:
 
   // State of all counters at each async mark encountered so far.
   SmallVector<CounterValueArray> AsyncMarks;
+
+  // But in the rare pathological case, a nest of loops that pushes marks
+  // without waiting on any mark can cause AsyncMarks to grow very large. We cap
+  // it to a reasonable limit. We can tune this later or potentially introduce a
+  // user option to control the value.
   static constexpr unsigned MaxAsyncMarks = 16;
 
   // Track the upper bound score for async operations that are not part of a
@@ -1242,7 +1247,8 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
     // counters too, so will need a map from instruction or event types to
     // counter types.
     if (Context->isAsyncLdsDmaWrite(Inst) && T == LOAD_CNT) {
-      assert(!SIInstrInfo::usesASYNC_CNT(Inst));
+      assert(!SIInstrInfo::usesASYNC_CNT(Inst) &&
+             "unexpected GFX1250 instruction");
       AsyncScore[T] = CurrScore;
     }
 
@@ -1525,7 +1531,6 @@ AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N) {
     }
   });
 
-  AMDGPU::Waitcnt Wait;
   if (AsyncMarks.size() == MaxAsyncMarks) {
     // Enforcing MaxAsyncMarks here is unnecessary work because the size of
     // MaxAsyncMarks is linear when traversing straightline code. But we do
@@ -1535,6 +1540,7 @@ AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N) {
     N = std::min(N, (unsigned)MaxAsyncMarks - 1);
   }
 
+  AMDGPU::Waitcnt Wait;
   if (AsyncMarks.size() <= N) {
     LLVM_DEBUG(dbgs() << "No additional wait for async mark.\n");
     return Wait;
@@ -2938,15 +2944,6 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
 
   // Determine maximum length needed after merging
   auto MaxSize = (unsigned)std::max(AsyncMarks.size(), OtherMarks.size());
-
-  // For each backedge in isolation, the algorithm reachs a fixed point after
-  // the first call to merge(). This is unchanged even with the AsyncMarks
-  // array because we call mergeScore just like the other cases.
-  //
-  // But in the rare pathological case, a nest of loops that pushes marks
-  // without waiting on any mark can cause AsyncMarks to grow very large. We cap
-  // it to a reasonable limit. We can tune this later or potentially introduce a
-  // user option to control the value.
   MaxSize = std::min(MaxSize, MaxAsyncMarks);
 
   // Keep only the most recent marks within our limit.
@@ -2958,7 +2955,7 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   // pending async operations at this checkpoint" and acts as the identity
   // element for max() during merging. We pad at the beginning since the marks
   // need to be aligned in most-recent order.
-  CounterValueArray ZeroMark{};
+  constexpr CounterValueArray ZeroMark{};
   AsyncMarks.insert(AsyncMarks.begin(), MaxSize - AsyncMarks.size(), ZeroMark);
 
   LLVM_DEBUG({
@@ -2967,9 +2964,6 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
       llvm::interleaveComma(Mark, dbgs());
       dbgs() << '\n';
     }
-  });
-
-  LLVM_DEBUG({
     dbgs() << "Other marks:\n";
     for (const auto &Mark : OtherMarks) {
       llvm::interleaveComma(Mark, dbgs());
@@ -2983,8 +2977,7 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   unsigned OtherSize = OtherMarks.size();
   unsigned OurSize = AsyncMarks.size();
   unsigned MergeCount = std::min(OtherSize, OurSize);
-  assert(OurSize == MaxSize);
-  for (unsigned Idx = 1; Idx <= MergeCount; ++Idx) {
+  for (auto Idx : seq_inclusive<unsigned>(1, MergeCount)) {
     for (auto T : inst_counter_types(Context->MaxCounter)) {
       StrictDom |= mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T],
                               OtherMarks[OtherSize - Idx][T]);
@@ -3380,7 +3373,6 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   PreheaderFlushFlags Flags;
   bool HasVMemLoad = false;
   bool HasVMemStore = false;
-  bool SeenDSStoreInLoop = false;
   bool UsesVgprLoadedOutsideVMEM = false;
   bool UsesVgprLoadedOutsideDS = false;
   bool VMemInvalidated = false;
@@ -3391,20 +3383,20 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   DenseSet<MCRegUnit> VgprDefDS;
 
   for (MachineBasicBlock *MBB : ML->blocks()) {
-    bool SeenDSStoreInCurrMBB = false;
     for (MachineInstr &MI : *MBB) {
       if (isVMEMOrFlatVMEM(MI)) {
         HasVMemLoad |= MI.mayLoad();
         HasVMemStore |= MI.mayStore();
       }
-      if (mayStoreIncrementingDSCNT(MI))
-        SeenDSStoreInCurrMBB = true;
-      // Stores postdominated by a barrier will have a wait at the barrier
-      // and thus no need to be waited at the loop header. Barrier found
-      // later in the same MBB during in-order traversal is used here as a
-      // cheaper alternative to postdomination check.
-      if (MI.getOpcode() == AMDGPU::S_BARRIER)
-        SeenDSStoreInCurrMBB = false;
+      // TODO: Can we relax DSStore check? There may be cases where
+      // these DS stores are drained prior to the end of MBB (or loop).
+      if (mayStoreIncrementingDSCNT(MI)) {
+        // Early exit if both optimizations are invalidated.
+        // Otherwise, set invalid status and continue.
+        if (VMemInvalidated)
+          return Flags;
+        DSInvalidated = true;
+      }
       for (const MachineOperand &Op : MI.all_uses()) {
         if (Op.isDebug() || !TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;
@@ -3470,8 +3462,6 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
         }
       }
     }
-    // Accumulate unprotected DS stores from this MBB
-    SeenDSStoreInLoop |= SeenDSStoreInCurrMBB;
   }
 
   // VMEM flush decision
@@ -3485,7 +3475,7 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   // are not used in the loop.
   // DSInvalidated is pre-set to true on non-GFX12+ targets where DS_CNT
   // is LGKM_CNT which also tracks FLAT/SMEM.
-  if (!DSInvalidated && !SeenDSStoreInLoop && UsesVgprLoadedOutsideDS)
+  if (!DSInvalidated && UsesVgprLoadedOutsideDS)
     Flags.FlushDsCnt = true;
 
   return Flags;
