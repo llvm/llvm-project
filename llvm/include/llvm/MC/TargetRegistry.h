@@ -351,6 +351,8 @@ private:
   /// InstrumentManager, if registered (default = nullptr).
   InstrumentManagerCtorTy InstrumentManagerCtorFn = nullptr;
 
+  bool isValidFeatureListFormat(StringRef FeaturesString) const;
+
 public:
   Target() = default;
 
@@ -451,6 +453,8 @@ public:
   MCSubtargetInfo *createMCSubtargetInfo(const Triple &TheTriple, StringRef CPU,
                                          StringRef Features) const {
     if (!MCSubtargetInfoCtorFn)
+      return nullptr;
+    if (!isValidFeatureListFormat(Features))
       return nullptr;
     return MCSubtargetInfoCtorFn(TheTriple, CPU, Features);
   }

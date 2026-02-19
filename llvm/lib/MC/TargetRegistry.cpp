@@ -23,6 +23,28 @@ using namespace llvm;
 // Clients are responsible for avoid race conditions in registration.
 static Target *FirstTarget = nullptr;
 
+bool Target::isValidFeatureListFormat(StringRef FeaturesString) const {
+  if (FeaturesString.empty())
+    return true;
+
+  SmallVector<llvm::StringRef, 8> Features;
+  FeaturesString.split(Features, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+
+  if (Features.empty())
+    return false;
+
+  for (llvm::StringRef Feature : Features) {
+    char C = Feature.front();
+    if (C != '+' && C != '-')
+      return false;
+
+    if (Feature.size() == 1)
+      return false;
+  }
+
+  return true;
+}
+
 MCStreamer *Target::createMCObjectStreamer(
     const Triple &T, MCContext &Ctx, std::unique_ptr<MCAsmBackend> TAB,
     std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
