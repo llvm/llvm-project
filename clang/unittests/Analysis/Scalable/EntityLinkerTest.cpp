@@ -653,4 +653,211 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
   }
 }
 
+// ============================================================================
+// Fatal Error Tests
+//
+// These tests verify that corrupted TU summary data triggers fatal errors.
+// Each test constructs a TUSummaryEncoding that violates an invariant by
+// directly manipulating internal state via TestFixture accessors, then
+// asserts that link() terminates the process.
+// ============================================================================
+
+TEST_F(EntityLinkerTest, FatalOnEntityMissingLinkageInformation) {
+  // An entity that is in IdTable but has no entry in LinkageTable indicates
+  // a corrupted TUSummary and triggers a fatal error.
+  NestedBuildNamespace LUNamespace(
+      {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
+  EntityLinker Linker(LUNamespace);
+
+  auto TU = createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU");
+
+  // Use addEntity to get a valid EntityId, then remove its linkage entry to
+  // simulate a TUSummary where the IdTable and LinkageTable are out of sync.
+  const auto Id = addEntity(*TU, "A", EntityLinkage::LinkageType::External);
+  getLinkageTable(*TU).erase(Id);
+
+  EXPECT_DEATH(
+      { (void)Linker.link(std::move(TU)); },
+      "EntityLinker: Entity .* is missing linkage information in TU summary");
+}
+
+TEST_F(EntityLinkerTest, FatalOnDuplicateEntityIdInTUSummary) {
+  // Two different EntityNames mapping to the same EntityId indicates corrupted
+  // TUSummary data and triggers a fatal error.
+  NestedBuildNamespace LUNamespace(
+      {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
+  EntityLinker Linker(LUNamespace);
+
+  auto TU = createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU");
+
+  // Insert first entity normally.
+  const auto Id = addEntity(*TU, "A", EntityLinkage::LinkageType::External);
+
+  // Directly insert a second EntityName that maps to the same EntityId,
+  // bypassing the normal getId() uniqueness guarantee.
+  NestedBuildNamespace TUNested(getTUNamespace(*TU));
+  EntityName SecondName("B", "", TUNested);
+  getEntities(getIdTable(*TU)).insert({SecondName, Id});
+
+  EXPECT_DEATH(
+      { (void)Linker.link(std::move(TU)); },
+      "EntityLinker: Duplicate entity ID .* in TU summary");
+}
+
+TEST_F(EntityLinkerTest, FatalOnEntityNotFoundInResolutionTable) {
+  // Summary data that references an EntityId not present in
+  // IdTable/LinkageTable will not appear in the resolution table, triggering a
+  // fatal error in merge.
+  NestedBuildNamespace LUNamespace(
+      {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
+  EntityLinker Linker(LUNamespace);
+
+  auto TU = createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU");
+
+  // Register one entity normally so resolution succeeds for it.
+  addEntity(*TU, "A", EntityLinkage::LinkageType::External);
+
+  // Obtain a second EntityId from a separate table — it will never appear in
+  // the TU's resolution table because it is not in TU's IdTable or
+  // LinkageTable.
+  EntityIdTable AuxTable;
+  NestedBuildNamespace TUNested(getTUNamespace(*TU));
+  EntityName AuxName("B", "", TUNested);
+  const auto OrphanId = AuxTable.getId(AuxName);
+
+  // Insert summary data keyed on the orphan ID.
+  SummaryName SN("S1");
+  getData(*TU)[SN][OrphanId] = std::make_unique<MockEntitySummaryEncoding>();
+
+  EXPECT_DEATH(
+      { (void)Linker.link(std::move(TU)); },
+      "EntityLinker: Entity .* not found in EntityResolutionTable");
+}
+
+TEST_F(EntityLinkerTest, FatalOnEntityAlreadyExistsInLinkageTableForNone) {
+  // If the output LinkageTable already contains the LU EntityId that a None
+  // linkage entity resolves to, a fatal error is triggered. This can only
+  // happen due to data corruption or a bug in resolve logic, so we simulate
+  // it by pre-populating the output.
+  NestedBuildNamespace LUNamespace(
+      {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
+  EntityLinker Linker(LUNamespace);
+
+  // Link a first TU so the output already has an entry for entity "A"/None.
+  auto TU1 = createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU");
+  addEntity(*TU1, "A", EntityLinkage::LinkageType::None);
+  const BuildNamespace TUNamespace = getTUNamespace(*TU1);
+  ASSERT_THAT_ERROR(Linker.link(std::move(TU1)), llvm::Succeeded());
+
+  // Determine the LU EntityId that was assigned to A.
+  NestedBuildNamespace LocalNS =
+      NestedBuildNamespace(TUNamespace).makeQualified(LUNamespace);
+  EntityName LU_A_Name("A", "", LocalNS);
+  const auto LU_A_Id =
+      getEntities(getIdTable(Linker.getOutput())).at(LU_A_Name);
+
+  // Inject the resolved LU name -> LU_A_Id mapping into the output IdTable so
+  // that getId() returns LU_A_Id when TU2's "A"/None entity is resolved. Since
+  // LU_A_Id is already in OutLinkage (from TU1), the try_emplace in
+  // resolveEntity() will fail, triggering the fatal.
+  auto &OutEntities = getEntities(getIdTable(Linker.getOutput()));
+  auto &OutLinkage = getLinkageTable(Linker.getOutput());
+
+  // Inject a second name -> same id mapping in the output IdTable so the next
+  // getId() call returns LU_A_Id for a new name that a fresh TU entity resolves
+  // to — and the LinkageTable already has that id, triggering the fatal.
+  NestedBuildNamespace FakeTUNested(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "TU2"));
+  NestedBuildNamespace FakeLocalNS = FakeTUNested.makeQualified(LUNamespace);
+  EntityName FakeA("A", "", FakeLocalNS);
+  OutEntities.insert({FakeA, LU_A_Id});
+  // LU_A_Id is already in OutLinkage from linking TU1 with None linkage.
+  ASSERT_NE(OutLinkage.find(LU_A_Id), OutLinkage.end());
+
+  // Now link a TU2 whose "A" entity resolves to FakeLocalNS, which maps to
+  // LU_A_Id (already in LinkageTable) — triggering the fatal.
+  auto TU2 =
+      createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU2");
+  addEntity(*TU2, "A", EntityLinkage::LinkageType::None);
+
+  EXPECT_DEATH(
+      { (void)Linker.link(std::move(TU2)); },
+      "EntityLinker: Entity .* with .* linkage already exists in LinkageTable");
+}
+
+TEST_F(EntityLinkerTest, FatalOnInternalEntityAlreadyExistsInLinkageTable) {
+  // Same as above but for Internal linkage.
+  NestedBuildNamespace LUNamespace(
+      {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
+  EntityLinker Linker(LUNamespace);
+
+  auto TU1 = createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU");
+  addEntity(*TU1, "A", EntityLinkage::LinkageType::Internal);
+  const BuildNamespace TUNamespace = getTUNamespace(*TU1);
+  ASSERT_THAT_ERROR(Linker.link(std::move(TU1)), llvm::Succeeded());
+
+  NestedBuildNamespace LocalNS =
+      NestedBuildNamespace(TUNamespace).makeQualified(LUNamespace);
+  EntityName LU_A_Name("A", "", LocalNS);
+  const auto LU_A_Id =
+      getEntities(getIdTable(Linker.getOutput())).at(LU_A_Name);
+
+  auto &OutEntities = getEntities(getIdTable(Linker.getOutput()));
+  auto &OutLinkage = getLinkageTable(Linker.getOutput());
+
+  NestedBuildNamespace FakeTUNested(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "TU2"));
+  NestedBuildNamespace FakeLocalNS = FakeTUNested.makeQualified(LUNamespace);
+  EntityName FakeA("A", "", FakeLocalNS);
+  OutEntities.insert({FakeA, LU_A_Id});
+  ASSERT_NE(OutLinkage.find(LU_A_Id), OutLinkage.end());
+
+  auto TU2 =
+      createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU2");
+  addEntity(*TU2, "A", EntityLinkage::LinkageType::Internal);
+
+  EXPECT_DEATH(
+      { (void)Linker.link(std::move(TU2)); },
+      "EntityLinker: Entity .* with .* linkage already exists in LinkageTable");
+}
+
+TEST_F(EntityLinkerTest,
+       FatalOnFailedInsertNoneLinkageEntityIntoOutputSummary) {
+  // If a None linkage entity's summary data cannot be inserted into the output
+  // (because its LU EntityId is already present for the same SummaryName), a
+  // fatal error is triggered. We simulate this by pre-populating the output's
+  // data map with the target LU EntityId while keeping that ID absent from
+  // OutLinkage, so resolveEntity() succeeds (first insertion into LinkageTable)
+  // but merge() then finds the data slot already occupied.
+  NestedBuildNamespace LUNamespace(
+      {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
+  EntityLinker Linker(LUNamespace);
+
+  // Compute the LU namespace that TU2's None entity "A" will resolve to.
+  BuildNamespace TU2NS(BuildNamespaceKind::CompilationUnit, "TU2");
+  NestedBuildNamespace TU2LocalNS =
+      NestedBuildNamespace(TU2NS).makeQualified(LUNamespace);
+  EntityName LU_A_Name("A", "", TU2LocalNS);
+
+  // Allocate the LU EntityId for A by registering the name in the output
+  // IdTable, then pre-insert summary data for it — but do NOT insert into
+  // LinkageTable, so resolveEntity's try_emplace will succeed.
+  const auto LU_A_Id = getIdTable(Linker.getOutput()).getId(LU_A_Name);
+  SummaryName SN("S1");
+  getData(Linker.getOutput())[SN].try_emplace(
+      LU_A_Id, std::make_unique<MockEntitySummaryEncoding>());
+
+  // Link TU2: its "A"/None entity resolves to LU_A_Id (already in IdTable),
+  // resolveEntity inserts it into LinkageTable (succeeds), then merge fails
+  // because Data[S1][LU_A_Id] is already occupied.
+  auto TU2 =
+      createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU2");
+  const auto TU2_A_Id = addEntity(*TU2, "A", EntityLinkage::LinkageType::None);
+  addSummaryData(*TU2, TU2_A_Id, "S1");
+
+  EXPECT_DEATH(
+      { (void)Linker.link(std::move(TU2)); },
+      "EntityLinker: Failed to insert data against SummaryName");
+}
+
 } // namespace

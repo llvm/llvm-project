@@ -21,6 +21,7 @@
 #include "llvm/Support/Error.h"
 #include <map>
 #include <memory>
+#include <set>
 #include <vector>
 
 namespace clang::ssaf {
@@ -32,6 +33,7 @@ class TUSummaryEncoding;
 
 class EntityLinker {
   LUSummaryEncoding Output;
+  std::set<BuildNamespace> ProcessedTUNamespaces;
 
 public:
   /// Constructs an EntityLinker for a link unit.
@@ -47,8 +49,9 @@ public:
   /// data. The provided TU summary is consumed by this operation.
   ///
   /// \param Summary The TU summary to link. Ownership is transferred.
-  /// \returns Error if linking fails (e.g., duplicate internal entities,
-  ///          missing linkage information), success otherwise.
+  /// \returns Error if the TU namespace has already been linked, success
+  ///          otherwise. Corrupted summary data (missing linkage information,
+  ///          duplicate entity IDs) triggers a fatal error.
   llvm::Error link(std::unique_ptr<TUSummaryEncoding> Summary);
 
   /// Returns the accumulated link unit summary.
@@ -63,20 +66,67 @@ public:
   LUSummaryEncoding &getOutput() { return Output; }
 
 private:
-  llvm::Expected<EntityId> resolve(const EntityName &OldName,
-                                   const EntityLinkage &Linkage);
+  /// Resolves a TU entity name to an LU entity name and ID.
+  ///
+  /// Determines the appropriate namespace for the entity based on its linkage
+  /// type. Entities with None or Internal linkage are scoped to their TU,
+  /// while External linkage entities are scoped to the LU. Creates or retrieves
+  /// the corresponding EntityId in the output LinkageTable.
+  ///
+  /// For None and Internal linkage entities, duplicate insertion in the
+  /// LinkageTable triggers a fatal error (indicates corrupted data).
+  /// For External linkage entities, duplicate insertion is allowed (expected
+  /// for multiple definitions of the same entity).
+  ///
+  /// \param OldName The entity name in the TU namespace.
+  /// \param Linkage The linkage type determining namespace resolution strategy.
+  /// \returns The resolved LU EntityId.
+  EntityId resolveEntity(const EntityName &OldName,
+                         const EntityLinkage &Linkage);
 
-  llvm::Error
-  merge(std::map<SummaryName,
-                 std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
-            &InputData,
-        std::map<SummaryName,
-                 std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
-            &OutputData,
-        const EntityId OldId, const EntityId NewId,
-        const EntityLinkage &Linkage,
-        std::vector<EntitySummaryEncoding *> &PatchTargets);
+  /// Builds a map from each TU EntityId to its corresponding LU EntityId.
+  ///
+  /// Iterates over all entities in Summary's IdTable, looks up their linkage,
+  /// and calls resolveEntity() to obtain the LU-scoped EntityId. The resulting
+  /// map is used by merge() and patch() to translate TU IDs into LU IDs.
+  ///
+  /// Corrupted input triggers a fatal error: missing linkage for an entity in
+  /// IdTable, or a duplicate EntityId appearing under two different names.
+  ///
+  /// \param Summary The TU summary whose entities are being resolved.
+  /// \returns A map from TU EntityIds to their corresponding LU EntityIds.
+  std::map<EntityId, EntityId> resolve(TUSummaryEncoding &Summary);
 
+  /// Merges all summary data from a TU into the LU output.
+  ///
+  /// Iterates over every (SummaryName, EntityId, data) entry in Summary.
+  /// Each TU EntityId is translated to its LU EntityId via
+  /// EntityResolutionTable, then the data is moved into the corresponding
+  /// output map entry.
+  ///
+  /// For External linkage entities, a duplicate entry (same LU EntityId already
+  /// present for a given SummaryName) is silently dropped — first occurrence
+  /// wins. For None and Internal linkage entities, a duplicate entry indicates
+  /// corrupted data and triggers a fatal error.
+  ///
+  /// \param Summary The TU summary whose data is being merged (data is moved
+  ///        out).
+  /// \param EntityResolutionTable Map from TU EntityIds to LU EntityIds,
+  ///        as produced by resolve().
+  /// \returns Pointers to each EntitySummaryEncoding successfully inserted into
+  ///          the output, which must subsequently be patched via patch().
+  std::vector<EntitySummaryEncoding *>
+  merge(TUSummaryEncoding &Summary,
+        std::map<EntityId, EntityId> EntityResolutionTable);
+
+  /// Patches EntityId references in merged summary data.
+  ///
+  /// Calls the patch() method on each EntitySummaryEncoding that was
+  /// successfully merged into the LU output, updating all embedded EntityId
+  /// references from TU IDs to LU IDs using the provided resolution table.
+  ///
+  /// \param PatchTargets Vector of summary encodings that need patching.
+  /// \param EntityResolutionTable Map from TU EntityIds to LU EntityIds.
   void patch(std::vector<EntitySummaryEncoding *> &PatchTargets,
              const std::map<EntityId, EntityId> &EntityResolutionTable);
 };

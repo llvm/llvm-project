@@ -182,6 +182,15 @@ TEST_F(ErrorBuilderTest, TriggersAssertionOnWrappingSuccessError) {
 }
 #endif // !NDEBUG
 
+TEST_F(ErrorBuilderTest, FatalTerminatesExecution) {
+  EXPECT_DEATH(
+      {
+        ErrorBuilder::fatal("Entity {0} with {1} linkage already exists", 42,
+                            "Internal");
+      },
+      "Entity 42 with Internal linkage already exists");
+}
+
 } // namespace
 
 } // namespace clang::ssaf

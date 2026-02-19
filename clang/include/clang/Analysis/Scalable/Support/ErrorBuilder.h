@@ -48,10 +48,13 @@ private:
   }
 
   template <typename... Args>
+  static std::string formatErrorMessage(const char *Fmt, Args &&...ArgVals) {
+    return llvm::formatv(Fmt, std::forward<Args>(ArgVals)...).str();
+  }
+
+  template <typename... Args>
   void addFormattedContext(const char *Fmt, Args &&...ArgVals) {
-    std::string Message =
-        llvm::formatv(Fmt, std::forward<Args>(ArgVals)...).str();
-    pushContext(std::move(Message));
+    pushContext(formatErrorMessage(Fmt, std::forward<Args>(ArgVals)...));
   }
 
 public:
@@ -170,6 +173,26 @@ public:
   ///   //  value is 42"
   /// \endcode
   llvm::Error build() const;
+
+  /// Report a fatal error with formatted message and terminate execution.
+  ///
+  /// Combines llvm::formatv and llvm::report_fatal_error. This is a static
+  /// utility method for reporting unrecoverable errors that indicate bugs
+  /// or corrupted data.
+  ///
+  /// \param Fmt Format string for the error message (using llvm::formatv).
+  /// \param ArgVals Arguments for the format string.
+  ///
+  /// Example:
+  /// \code
+  ///   ErrorBuilder::fatal("Entity {0} with {1} linkage already exists",
+  ///                       entityId, linkageType);
+  /// \endcode
+  template <typename... Args>
+  [[noreturn]] static void fatal(const char *Fmt, Args &&...ArgVals) {
+    llvm::report_fatal_error(llvm::StringRef(
+        formatErrorMessage(Fmt, std::forward<Args>(ArgVals)...)));
+  }
 };
 
 } // namespace clang::ssaf

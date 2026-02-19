@@ -62,6 +62,7 @@ public:
   bool operator!=(const BuildNamespace &Other) const;
   bool operator<(const BuildNamespace &Other) const;
 
+  friend class EntityLinker;
   friend class SerializationFormat;
   friend class TestFixture;
 };
