@@ -9228,15 +9228,20 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         if (auto *VPI = dyn_cast<VPInstruction>(PhiR->getStartValue())) {
           assert(VPI->getOpcode() == VPInstruction::ReductionStartVector &&
                  "unexpected start value");
-          // For partial sub-reductions the start value is already set to '0'
-          // by `transformToPartialReduction`. That means we only need to
-          // update the final sub in the middle block, to subtract from the
-          // partial reduction result computed in the middle block of the main
-          // vector loop.
+          // Partial sub-reductions always start at 0 and account for the
+          // reduction start value in a final subtraction. Update it to use the
+          // resume value from the main vector loop.
           if (PhiR->getVFScaleFactor() > 1 &&
               PhiR->getRecurrenceKind() == RecurKind::Sub) {
             auto *Sub = cast<VPInstruction>(RdxResult->getSingleUser());
             assert(Sub->getOpcode() == Instruction::Sub && "Unexpected opcode");
+            assert(isa<VPIRValue>(Sub->getOperand(0)) &&
+                   "Expected operand to match the original start value of the "
+                   "reduction");
+            assert(VPlanPatternMatch::match(VPI->getOperand(0),
+                                            VPlanPatternMatch::m_ZeroInt()) &&
+                   "Expected start value for partial sub-reduction to start at "
+                   "zero");
             Sub->setOperand(0, StartVal);
           } else
             VPI->setOperand(0, StartVal);
