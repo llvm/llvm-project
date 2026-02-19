@@ -2057,7 +2057,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     GuardWithBTI = AFI->branchTargetEnforcement();
 
   // Set type id for call site info.
-  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
+  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
+    CSInfo = MachineFunction::CallSiteInfo(*CB);
 
   // Determine whether this is a non-secure function call.
   if (CLI.CB && CLI.CB->getAttributes().hasFnAttr("cmse_nonsecure_call"))

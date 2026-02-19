@@ -9936,7 +9936,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   RetCCInfo.AnalyzeCallResult(Ins, RetCC);
 
   // Set type id for call site info.
-  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
+  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
+    CSInfo = MachineFunction::CallSiteInfo(*CB);
 
   // Check callee args/returns for SVE registers and set calling convention
   // accordingly.

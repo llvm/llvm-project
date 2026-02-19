@@ -459,22 +459,22 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   if (typeConverter.isEmptyArray(firMemref.getType()))
     return failure();
 
-  Location loc = arrayCoorOp->getLoc();
-
-  // Prefer lowering the array-coordinates computation to a memref + indices.
-  // This allows erasing fir.array_coor when it is only used by load/store even
-  // if the base address is a block argument (e.g. region arguments).
-  Operation *memref = nullptr;
-  FailureOr<Value> converted;
   if (auto blockArg = dyn_cast<BlockArgument>(firMemref)) {
-    rewriter.setInsertionPoint(arrayCoorOp);
-    Type memrefTy = typeConverter.convertMemrefType(blockArg.getType());
-    converted =
-        fir::ConvertOp::create(rewriter, loc, memrefTy, blockArg).getResult();
+    Value elemRef = arrayCoorOp.getResult();
     rewriter.setInsertionPointAfter(arrayCoorOp);
-  } else if ((memref = firMemref.getDefiningOp()) &&
-             enableFIRConvertOptimizations && isMarshalLike(memref) &&
-             !fir::isa_fir_type(firMemref.getType())) {
+    Location loc = arrayCoorOp->getLoc();
+    Type elemMemrefTy = typeConverter.convertMemrefType(elemRef.getType());
+    Value converted =
+        fir::ConvertOp::create(rewriter, loc, elemMemrefTy, elemRef);
+    SmallVector<Value> indices;
+    return std::pair{converted, indices};
+  }
+
+  Operation *memref = firMemref.getDefiningOp();
+
+  FailureOr<Value> converted;
+  if (enableFIRConvertOptimizations && isMarshalLike(memref) &&
+      !fir::isa_fir_type(firMemref.getType())) {
     converted = firMemref;
     rewriter.setInsertionPoint(arrayCoorOp);
   } else {
@@ -504,6 +504,7 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     rewriter.setInsertionPointAfter(arrayCoorOp);
   }
 
+  Location loc = arrayCoorOp->getLoc();
   Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
   FailureOr<SmallVector<Value>> failureOrIndices =
       getMemrefIndices(arrayCoorOp, memref, rewriter, *converted, one);

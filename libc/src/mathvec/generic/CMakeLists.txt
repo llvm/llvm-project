@@ -1,0 +1,12 @@
+add_entrypoint_object(
+  expf
+  SRCS
+    expf.cpp
+  HDRS
+    ../expf.h
+  DEPENDS
+    libc.src.__support.mathvec.expf
+  FLAGS
+    ROUND_OPT
+    FMA_OPT
+)
