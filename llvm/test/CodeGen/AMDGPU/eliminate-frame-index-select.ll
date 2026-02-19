@@ -4,7 +4,7 @@
 %struct.wobble = type { %struct.quux }
 %struct.quux = type { float, float, float }
 
-declare %struct.wobble @foo(%struct.quux)
+declare hidden %struct.wobble @foo(%struct.quux)
 
 ; s_cselect_b32 does not allow vreg & should use the sreg frameindex generated
 ; by v_readfirstlane_b32 in eliminateFrameIndex
