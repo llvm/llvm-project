@@ -318,6 +318,8 @@ struct VisibleActualPositionPair {
 /// to a position that does not exist. If the hint is for the exact requested
 /// visible position, it will return the hint, without checking the string at
 /// all.
+///
+/// FIXME: This function is not Unicode aware.
 inline VisibleActualPositionPair
 VisiblePositionToActualPosition(llvm::StringRef text, size_t visible_position,
                                 std::optional<VisibleActualPositionPair> hint) {
@@ -342,6 +344,8 @@ VisiblePositionToActualPosition(llvm::StringRef text, size_t visible_position,
   while (remaining_text.size()) {
     auto [left, escape, right] = ansi::FindNextAnsiSequence(remaining_text);
 
+    // FIXME: We are assuming left.size() ==  the number of visible characters
+    // on the left. This is not true for Unicode.
     for (unsigned i = 0; i < left.size(); ++i) {
       if (visible_position == wanted_visible_position)
         return {wanted_visible_position, actual_position};
@@ -444,7 +448,13 @@ inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
     const size_t start_actual = conversion_hint->actual;
     conversion_hint =
         ansi::VisiblePositionToActualPosition(text, end, conversion_hint);
-    const size_t end_actual = conversion_hint->actual;
+    size_t end_actual = conversion_hint->actual;
+
+    // If the end is proceeded by an ANSI code, include that code.
+    llvm::StringRef end_of_line = text.substr(end_actual);
+    auto [left, escape, right] = ansi::FindNextAnsiSequence(end_of_line);
+    if (left.size() == 0)
+      end_actual += escape.size();
 
     const int sub_len_actual = end_actual - start_actual;
     strm << text.substr(start_actual, sub_len_actual);

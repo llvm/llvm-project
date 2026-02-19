@@ -183,14 +183,13 @@ TEST(AnsiTerminal, OutputWordWrappedLines) {
   const char *fox_str_ansi_3 = "The quick brown fox\x1B[4m.\x1B[0m";
   TestLines(fox_str_ansi_3, 0, 30, "The quick brown fox\x1B[4m.\x1B[0m\n");
   TestLines(fox_str_ansi_3, 5, 30, "     The quick brown fox\x1B[4m.\x1B[0m\n");
-  // FIXME: Missing the closing ANSI code.
-  TestLines(fox_str_ansi_3, 0, 15, "The quick\nbrown fox\x1B[4m.\n");
+  TestLines(fox_str_ansi_3, 0, 15, "The quick\nbrown fox\x1B[4m.\x1B[0m\n");
 
   // FIXME: ANSI codes applied to > 1 word end up applying to all those words
   // and the indent if those words are split up. We should use cursor
   // positioning to do the indentation instead.
-  // FIXME: Closing ANSI code is missing.
-  TestLines("\x1B[4mabc def\x1B[0m ghi", 2, 6, "  \x1B[4mabc\n  def\n  ghi\n");
+  TestLines("\x1B[4mabc def\x1B[0m ghi", 2, 6,
+            "  \x1B[4mabc\n  def\x1B[0m\n  ghi\n");
 
   const std::string fox_str_emoji = "🦊 The quick brown fox. 🦊";
   TestLines(fox_str_emoji, 0, 30, "🦊 The quick brown fox. 🦊\n");
