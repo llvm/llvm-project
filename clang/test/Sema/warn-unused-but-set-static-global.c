@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -I %S -verify %S/Inputs/warn-unused-but-set-static-global-header-test.c
+// RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -I %S/Inputs -verify %s
+
+// Test that header-defined static globals don't warn.
+#include "warn-unused-but-set-static-global-header.h"
 
 #define NULL (void*)0
 
