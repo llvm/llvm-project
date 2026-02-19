@@ -809,8 +809,8 @@ public:
   // Users might provide custom allocators, and prior to C++20 we have no existing way to detect whether the allocator's
   // pointer type is contiguous (though it has to be by the Standard). Using the wrapper type ensures the iterator is
   // considered contiguous.
-  using iterator       = __bounded_iter<__wrap_iter<pointer> >;
-  using const_iterator = __bounded_iter<__wrap_iter<const_pointer> >;
+  using iterator       = __bounded_iter<pointer>;
+  using const_iterator = __bounded_iter<const_pointer>;
 #  else
   using iterator       = __wrap_iter<pointer>;
   using const_iterator = __wrap_iter<const_pointer>;
@@ -955,10 +955,7 @@ private:
     // regardless of whether reallocation occurs. This allows us to check for out-of-bounds accesses using logical size,
     // a stricter check, since correct code can never rely on being able to access newly-added elements via an existing
     // iterator.
-    return std::__make_bounded_iter(
-        std::__wrap_iter<pointer>(__p),
-        std::__wrap_iter<pointer>(__get_pointer()),
-        std::__wrap_iter<pointer>(__get_pointer() + size()));
+    return std::__make_bounded_iter(__p, __get_pointer(), __get_pointer() + size());
 #  else
     return iterator(__p);
 #  endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
@@ -967,10 +964,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_iterator __make_const_iterator(const_pointer __p) const {
 #  ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
     // Bound the iterator according to the size (and not the capacity, unlike vector).
-    return std::__make_bounded_iter(
-        std::__wrap_iter<const_pointer>(__p),
-        std::__wrap_iter<const_pointer>(__get_pointer()),
-        std::__wrap_iter<const_pointer>(__get_pointer() + size()));
+    return std::__make_bounded_iter(__p, __get_pointer(), __get_pointer() + size());
 #  else
     return const_iterator(__p);
 #  endif                    // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
