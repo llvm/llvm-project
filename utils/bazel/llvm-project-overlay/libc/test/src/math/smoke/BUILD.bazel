@@ -640,6 +640,14 @@ math_test(
 )
 
 math_test(
+    name = "fminbf16",
+    hdrs = ["FMinTest.h"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_test(
     name = "fminimum",
     hdrs = ["FMinimumTest.h"],
 )
