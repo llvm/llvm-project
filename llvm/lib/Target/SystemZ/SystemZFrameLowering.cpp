@@ -1298,8 +1298,8 @@ void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
           .addReg(0);
     }
 
-    emitIncrement(MBB, InsertPt, DL, Regs.getStackPointerRegister(), Delta,
-                  ZII, /* Align = */32);
+    emitIncrement(MBB, InsertPt, DL, Regs.getStackPointerRegister(), Delta, ZII,
+                  /* Align = */ 32);
 
     // If the requested stack size is larger than the guard page, then we need
     // to check if we need to call the stack extender. This requires adding a
@@ -1369,7 +1369,7 @@ void SystemZXPLINKFrameLowering::emitEpilogue(MachineFunction &MF,
     unsigned SPReg = Regs.getStackPointerRegister();
     if (ZFI->getRestoreGPRRegs().LowGPR != SPReg) {
       DebugLoc DL = MBBI->getDebugLoc();
-      emitIncrement(MBB, MBBI, DL, SPReg, StackSize, ZII, /* Align = */32);
+      emitIncrement(MBB, MBBI, DL, SPReg, StackSize, ZII, /* Align = */ 32);
     }
   }
 }
