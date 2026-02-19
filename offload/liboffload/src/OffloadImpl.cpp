@@ -378,6 +378,12 @@ Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
   case OL_PLATFORM_INFO_BACKEND: {
     return Info.write<ol_platform_backend_t>(Platform->BackendType);
   }
+  case OL_PLATFORM_INFO_IS_INITIALIZED: {
+    return Info.write<bool>(Platform->Plugin->is_initialized());
+  }
+  case OL_PLATFORM_INFO_NUMBER_OF_DEVICES: {
+    return Info.write<int32_t>(Platform->Plugin->number_of_devices());
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getPlatformInfo enum '%i' is invalid", PropName);
