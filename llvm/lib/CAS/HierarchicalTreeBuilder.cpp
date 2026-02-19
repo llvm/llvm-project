@@ -264,7 +264,7 @@ Expected<ObjectProxy> HierarchicalTreeBuilder::create(ObjectStore &CAS) {
   }
 
   Expected<ObjectProxy> Obj = cantFail(CAS.getProxy(*Root.Ref));
-#ifndef NDEBUG
+#ifdef EXPENSIVE_CHECKS
   if (Obj) {
     if (Error E = CAS.validateTree(Obj->getRef()))
       return std::move(E);
