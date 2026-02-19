@@ -44,7 +44,13 @@ static cl::opt<bool> UseMD5(
 
 static cl::opt<bool> PopulateProfileSymbolList(
     "populate-profile-symbol-list", cl::init(false), cl::Hidden,
-    cl::desc("Populate profile symbol list (only meaningful for -extbinary)"));
+    cl::desc("Populate profile symbol list from DWARF "
+             "(only meaningful for -extbinary)"));
+
+static cl::opt<bool> PopulateProfileSymbolListFromProbes(
+    "populate-profile-symbol-list-from-probes", cl::init(false), cl::Hidden,
+    cl::desc("Populate profile symbol list from pseudo probe descriptors "
+             "(only meaningful for -extbinary)"));
 
 static cl::opt<bool> FillZeroForAllFuncs(
     "fill-zero-for-all-funcs", cl::init(false), cl::Hidden,
@@ -164,9 +170,14 @@ void ProfileGeneratorBase::write(std::unique_ptr<SampleProfileWriter> Writer,
   // Populate profile symbol list if extended binary format is used.
   ProfileSymbolList SymbolList;
 
-  if (PopulateProfileSymbolList && OutputFormat == SPF_Ext_Binary) {
-    Binary->populateSymbolListFromDWARF(SymbolList);
-    Writer->setProfileSymbolList(&SymbolList);
+  if (OutputFormat == SPF_Ext_Binary) {
+    if (PopulateProfileSymbolListFromProbes) {
+      Binary->populateSymbolListFromProbes(SymbolList);
+      Writer->setProfileSymbolList(&SymbolList);
+    } else if (PopulateProfileSymbolList) {
+      Binary->populateSymbolListFromDWARF(SymbolList);
+      Writer->setProfileSymbolList(&SymbolList);
+    }
   }
 
   if (std::error_code EC = Writer->write(ProfileMap))

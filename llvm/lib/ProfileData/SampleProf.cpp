@@ -19,6 +19,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
@@ -399,22 +401,35 @@ LLVM_DUMP_METHOD void FunctionSamples::dump() const { print(dbgs(), 0); }
 #endif
 
 std::error_code ProfileSymbolList::read(const uint8_t *Data,
-                                        uint64_t ListSize) {
-  // Scan forward to see how many elements we expect.
-  reserve(std::min<uint64_t>(ProfileSymbolListCutOff,
-                             std::count(Data, Data + ListSize, 0)));
+                                        uint64_t ListSize, bool IsMD5) {
+  if (IsMD5) {
+    // New format: array of little-endian uint64_t hashes.
+    UseMD5 = true;
+    if (ListSize % 8 != 0)
+      return sampleprof_error::malformed;
+    uint64_t Count = ListSize / 8;
+    for (uint64_t I = 0; I < Count && I < ProfileSymbolListCutOff; I++) {
+      uint64_t Hash = support::endian::read64le(Data + I * 8);
+      HashSyms.insert(Hash);
+    }
+  } else {
+    // Original format: null-terminated strings.
+    // Scan forward to see how many elements we expect.
+    reserve(std::min<uint64_t>(ProfileSymbolListCutOff,
+                               std::count(Data, Data + ListSize, 0)));
 
-  const char *ListStart = reinterpret_cast<const char *>(Data);
-  uint64_t Size = 0;
-  uint64_t StrNum = 0;
-  while (Size < ListSize && StrNum < ProfileSymbolListCutOff) {
-    StringRef Str(ListStart + Size);
-    add(Str);
-    Size += Str.size() + 1;
-    StrNum++;
+    const char *ListStart = reinterpret_cast<const char *>(Data);
+    uint64_t Size = 0;
+    uint64_t StrNum = 0;
+    while (Size < ListSize && StrNum < ProfileSymbolListCutOff) {
+      StringRef Str(ListStart + Size);
+      add(Str);
+      Size += Str.size() + 1;
+      StrNum++;
+    }
+    if (Size != ListSize && StrNum != ProfileSymbolListCutOff)
+      return sampleprof_error::malformed;
   }
-  if (Size != ListSize && StrNum != ProfileSymbolListCutOff)
-    return sampleprof_error::malformed;
   return sampleprof_error::success;
 }
 
@@ -476,28 +491,41 @@ void SampleContextTrimmer::trimAndMergeColdContextProfiles(
 }
 
 std::error_code ProfileSymbolList::write(raw_ostream &OS) {
-  // Sort the symbols before output. If doing compression.
-  // It will make the compression much more effective.
-  std::vector<StringRef> SortedList(Syms.begin(), Syms.end());
-  llvm::sort(SortedList);
+  if (UseMD5) {
+    // MD5 format: sorted array of little-endian uint64_t hashes.
+    std::vector<uint64_t> SortedList(HashSyms.begin(), HashSyms.end());
+    llvm::sort(SortedList);
+    for (uint64_t Hash : SortedList)
+      support::endian::write(OS, Hash, llvm::endianness::little);
+  } else {
+    // Sort the symbols before output. If doing compression.
+    // It will make the compression much more effective.
+    std::vector<StringRef> SortedList(Syms.begin(), Syms.end());
+    llvm::sort(SortedList);
 
-  std::string OutputString;
-  for (auto &Sym : SortedList) {
-    OutputString.append(Sym.str());
-    OutputString.append(1, '\0');
+    std::string OutputString;
+    for (auto &Sym : SortedList) {
+      OutputString.append(Sym.str());
+      OutputString.append(1, '\0');
+    }
+    OS << OutputString;
   }
-
-  OS << OutputString;
   return sampleprof_error::success;
 }
 
 void ProfileSymbolList::dump(raw_ostream &OS) const {
   OS << "======== Dump profile symbol list ========\n";
-  std::vector<StringRef> SortedList(Syms.begin(), Syms.end());
-  llvm::sort(SortedList);
-
-  for (auto &Sym : SortedList)
-    OS << Sym << "\n";
+  if (UseMD5) {
+    std::vector<uint64_t> SortedList(HashSyms.begin(), HashSyms.end());
+    llvm::sort(SortedList);
+    for (uint64_t Hash : SortedList)
+      OS << "0x" << Twine::utohexstr(Hash) << "\n";
+  } else {
+    std::vector<StringRef> SortedList(Syms.begin(), Syms.end());
+    llvm::sort(SortedList);
+    for (auto &Sym : SortedList)
+      OS << Sym << "\n";
+  }
 }
 
 ProfileConverter::FrameNode *

@@ -429,6 +429,9 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   // The setting of SecFlagCompress should happen before markSectionStart.
   if (Type == SecProfileSymbolList && ProfSymList && ProfSymList->toCompress())
     setToCompressSection(SecProfileSymbolList);
+  if (Type == SecProfileSymbolList && ProfSymList && ProfSymList->useMD5())
+    addSectionFlag(SecProfileSymbolList,
+                   SecProfileSymbolListFlags::SecFlagMD5);
   if (Type == SecFuncMetadata && FunctionSamples::ProfileIsProbeBased)
     addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagIsProbeBased);
   if (Type == SecFuncMetadata &&
