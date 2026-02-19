@@ -5109,7 +5109,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       if (!T.consumeClose())
         Data.RLoc = T.getCloseLocation();
       return false; // Success
-    } else if (Tok.is(tok::comma)) {
+    } 
+    if (Tok.is(tok::comma)) {
       Vars.push_back(FirstExpr.get());
       while (Tok.is(tok::comma)) {
         ConsumeToken();
