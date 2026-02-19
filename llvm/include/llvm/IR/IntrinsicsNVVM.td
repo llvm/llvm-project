@@ -3450,4 +3450,25 @@ def int_nvvm_tensormap_replace_fill_mode :
      ArgInfo<ArgIndex<1>, [ArgName<"fill_mode">, 
                            ImmArgPrinter<"printTensormapFillMode">]>]>;
 
+// Test intrinsic - TODO: Add the feature to existing intrinsics and remove these test intrinsics.
+// IIT_LongEncodingTable entry:  /* 16662 */ 4, 15, 0, 93, 2, 3, 4, 15, 7, 15, 8, 93, 2, 15, 9, 7, 15, 16, 93, 2, 14, 24, 3, 15, 24, 94, 2, 5, 8, 15, 32, 93, 3, 3, 10, 4, 10, 7, 0,
+def int_nvvm_test_type : Intrinsic<[llvm_i32_ty],
+   [AnyTypeOf<[llvm_i16_ty, llvm_i32_ty]>, LLVMMatchType<0>, AnyTypeOf<[llvm_anyint_ty, llvm_float_ty]>, AnyTypeOf<[llvm_ptr_ty, llvm_shared_ptr_ty]>, NoneTypeOf<[llvm_i64_ty, llvm_double_ty]>, AnyTypeOf<[llvm_i16_ty, llvm_v4i32_ty, llvm_v4f32_ty]>],
+   [IntrNoMem]>;
+
+// IIT_LongEncodingTable entry:  /* 15435 */ 21, 1, 4, 15, 0, 93, 3, 2, 3, 4, 5, 4, 15, 8, 93, 2, 7, 8, 95, 1, 2, 2, 7, 0,
+def int_nvvm_test_return_type : IntrinsicWithExcept<[llvm_i32_ty, AnyTypeOf<[llvm_i8_ty, llvm_i16_ty, llvm_i32_ty]>, llvm_i64_ty],
+  [llvm_i32_ty, AnyTypeOf<[llvm_float_ty, llvm_double_ty]>],
+  [IntrNoMem], 
+  [Except<[[llvm_i8_ty, llvm_float_ty]]>]>;
+
+// IIT_LongEncodingTable entry:  /* 16724 */ 3, 7, 15, 0, 93, 3, 3, 10, 4, 10, 7, 15, 8, 93, 2, 4, 7, 95, 2, 2, 10, 4, 7, 10, 7, 7, 0,
+def int_nvvm_except : IntrinsicWithExcept<[llvm_i16_ty],
+  [llvm_float_ty,
+   AnyTypeOf<[llvm_i16_ty, llvm_v4i32_ty, llvm_v4f32_ty]>,
+   AnyTypeOf<[llvm_i32_ty, llvm_float_ty]>],
+  [IntrNoMem],
+  [Except<[[llvm_v4i32_ty, llvm_float_ty],
+           [llvm_v4f32_ty, llvm_float_ty]]>]>;
+
 } // let TargetPrefix = "nvvm"
