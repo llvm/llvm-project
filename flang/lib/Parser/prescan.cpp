@@ -952,6 +952,7 @@ bool Prescanner::HandleKindSuffix(TokenSequence &tokens) {
   if (*at_ != '_') {
     return false;
   }
+  auto underscore = *at_;
   TokenSequence withUnderscore, separate;
   EmitChar(withUnderscore, '_');
   EmitCharAndAdvance(separate, '_');
@@ -975,6 +976,13 @@ bool Prescanner::HandleKindSuffix(TokenSequence &tokens) {
   }
   withUnderscore.CloseToken();
   separate.CloseToken();
+  // If we only saw "_" and nothing else, we have handled enough but we do not
+  // want to close the token here, or we will generate an extra token of length
+  // zero.
+  if (separate.SizeInTokens() == 1) {
+    EmitChar(tokens, underscore);
+    return true;
+  }
   tokens.CloseToken();
   if (separate.SizeInTokens() == 2 &&
       preprocessor_.IsNameDefined(separate.TokenAt(1)) &&
