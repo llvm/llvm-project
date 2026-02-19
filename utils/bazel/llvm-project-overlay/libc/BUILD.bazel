@@ -2797,6 +2797,63 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_copysign",
+    hdrs = ["src/__support/math/copysign.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_copysignbf16",
+    hdrs = ["src/__support/math/copysignbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_copysignf",
+    hdrs = ["src/__support/math/copysignf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_copysignf128",
+    hdrs = ["src/__support/math/copysignf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_copysignf16",
+    hdrs = ["src/__support/math/copysignf16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_copysignl",
+    hdrs = ["src/__support/math/copysignl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_cos",
     hdrs = ["src/__support/math/cos.h"],
     deps = [
@@ -4685,15 +4742,47 @@ libc_math_function(name = "ceilf128")
 
 libc_math_function(name = "ceilf16")
 
-libc_math_function(name = "copysign")
+libc_math_function(
+    name = "copysign",
+    additional_deps = [
+        ":__support_math_copysign",
+    ],
+)
 
-libc_math_function(name = "copysignf")
+libc_math_function(
+    name = "copysignbf16",
+    additional_deps = [
+        ":__support_math_copysignbf16",
+    ],
+)
 
-libc_math_function(name = "copysignl")
+libc_math_function(
+    name = "copysignf",
+    additional_deps = [
+        ":__support_math_copysignf",
+    ],
+)
 
-libc_math_function(name = "copysignf128")
+libc_math_function(
+    name = "copysignl",
+    additional_deps = [
+        ":__support_math_copysignl",
+    ],
+)
 
-libc_math_function(name = "copysignf16")
+libc_math_function(
+    name = "copysignf128",
+    additional_deps = [
+        ":__support_math_copysignf128",
+    ],
+)
+
+libc_math_function(
+    name = "copysignf16",
+    additional_deps = [
+        ":__support_math_copysignf16",
+    ],
+)
 
 libc_math_function(
     name = "cos",

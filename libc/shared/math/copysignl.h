@@ -1,4 +1,4 @@
-//===-- Implementation of copysignf16 function ----------------------------===//
+//===-- Shared copysignl function -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/copysignf16.h"
-#include "src/__support/math/copysignf16.h"
+#ifndef LLVM_LIBC_SHARED_MATH_COPYSIGNL_H
+#define LLVM_LIBC_SHARED_MATH_COPYSIGNL_H
+
+#include "src/__support/math/copysignl.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float16, copysignf16, (float16 x, float16 y)) {
-  return math::copysignf16(x, y);
-}
+using math::copysignl;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_COPYSIGNL_H
