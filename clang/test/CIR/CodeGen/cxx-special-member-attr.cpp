@@ -41,10 +41,10 @@ void trivial_func() {
   // CIR: @_ZN4FlubC1EOS_(%arg0: !cir.ptr<!rec_Flub> loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> loc({{.*}})) special_member<#cir.cxx_ctor<!rec_Flub, move, trivial true>
 
   f2 = f1;
-  // CIR: @_ZN4FlubaSERKS_(%arg0: !cir.ptr<!rec_Flub> loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> loc({{.*}})) -> !cir.ptr<!rec_Flub> special_member<#cir.cxx_assign<!rec_Flub, copy, trivial true>>
+  // CIR: @_ZN4FlubaSERKS_(%arg0: !cir.ptr<!rec_Flub> loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> loc({{.*}})) -> (!cir.ptr<!rec_Flub>{{.*}}) special_member<#cir.cxx_assign<!rec_Flub, copy, trivial true>>
 
   f1 = static_cast<Flub&&>(f3);
-  // CIR: @_ZN4FlubaSEOS_(%arg0: !cir.ptr<!rec_Flub> loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> loc({{.*}})) -> !cir.ptr<!rec_Flub> special_member<#cir.cxx_assign<!rec_Flub, move, trivial true>>
+  // CIR: @_ZN4FlubaSEOS_(%arg0: !cir.ptr<!rec_Flub> loc({{.*}}), %arg1: !cir.ptr<!rec_Flub> loc({{.*}})) -> (!cir.ptr<!rec_Flub>{{.*}}) special_member<#cir.cxx_assign<!rec_Flub, move, trivial true>>
 }
 
 void non_trivial_func() {
@@ -58,9 +58,9 @@ void non_trivial_func() {
   // CIR: @_ZN3FooC2EOS_(%arg0: !cir.ptr<!rec_Foo> loc({{.*}}), %arg1: !cir.ptr<!rec_Foo> loc({{.*}})) special_member<#cir.cxx_ctor<!rec_Foo, move>>
 
   f2 = f1;
-  // CIR: @_ZN3FooaSERKS_(%arg0: !cir.ptr<!rec_Foo> loc({{.*}}), %arg1: !cir.ptr<!rec_Foo> loc({{.*}})) -> !cir.ptr<!rec_Foo> special_member<#cir.cxx_assign<!rec_Foo, copy>>
+  // CIR: @_ZN3FooaSERKS_(%arg0: !cir.ptr<!rec_Foo> loc({{.*}}), %arg1: !cir.ptr<!rec_Foo> loc({{.*}})) -> (!cir.ptr<!rec_Foo>{{.*}}) special_member<#cir.cxx_assign<!rec_Foo, copy>>
 
   f1 = static_cast<Foo&&>(f3);
-  // CIR: @_ZN3FooaSEOS_(%arg0: !cir.ptr<!rec_Foo> loc({{.*}}), %arg1: !cir.ptr<!rec_Foo> loc({{.*}})) -> !cir.ptr<!rec_Foo> special_member<#cir.cxx_assign<!rec_Foo, move>>
+  // CIR: @_ZN3FooaSEOS_(%arg0: !cir.ptr<!rec_Foo> loc({{.*}}), %arg1: !cir.ptr<!rec_Foo> loc({{.*}})) -> (!cir.ptr<!rec_Foo>{{.*}}) special_member<#cir.cxx_assign<!rec_Foo, move>>
   // CIR: @_ZN3FooD1Ev(!cir.ptr<!rec_Foo>) special_member<#cir.cxx_dtor<!rec_Foo>>
 }

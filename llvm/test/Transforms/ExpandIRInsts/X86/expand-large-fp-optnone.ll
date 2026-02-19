@@ -9,11 +9,12 @@ define double @main(i224 %0) #0 {
 ; CHECK-LABEL: define double @main(
 ; CHECK-SAME: i224 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRYITOFP_ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i224 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP59:%.*]] = freeze i224 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i224 [[TMP59]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[ITOFP_RETURN:.*]], label %[[ITOFP_IF_END:.*]]
 ; CHECK:       [[ITOFP_IF_END]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i224 [[TMP0]], 223
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i224 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i224 [[TMP59]], 223
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i224 [[TMP2]], [[TMP59]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i224 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i224 @llvm.ctlz.i224(i224 [[TMP4]], i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i224 [[TMP5]] to i32

@@ -29,12 +29,12 @@ namespace math {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
-static constexpr size_t N_EXP10F16_EXCEPTS = 5;
+LIBC_INLINE_VAR constexpr size_t N_EXP10F16_EXCEPTS = 5;
 #else
-static constexpr size_t N_EXP10F16_EXCEPTS = 8;
+LIBC_INLINE_VAR constexpr size_t N_EXP10F16_EXCEPTS = 8;
 #endif
 
-static constexpr fputil::ExceptValues<float16, N_EXP10F16_EXCEPTS>
+LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_EXP10F16_EXCEPTS>
     EXP10F16_EXCEPTS = {{
         // x = 0x1.8f4p-2, exp10f16(x) = 0x1.3ap+1 (RZ)
         {0x363dU, 0x40e8U, 1U, 0U, 1U},
@@ -57,7 +57,7 @@ static constexpr fputil::ExceptValues<float16, N_EXP10F16_EXCEPTS>
     }};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-LIBC_INLINE static constexpr float16 exp10f16(float16 x) {
+LIBC_INLINE constexpr float16 exp10f16(float16 x) {
   using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
 

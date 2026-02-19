@@ -27,6 +27,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestTemplateWithSameArg(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         TestBase.setUp(self)
         self.build()

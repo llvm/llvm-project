@@ -667,8 +667,7 @@ define <1 x i64> @ashr_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d1
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    asr x8, x9, x8
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = ashr <1 x i64> %op1, %op2
@@ -1403,8 +1402,7 @@ define <1 x i64> @lshr_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d1
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    lsr x8, x9, x8
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = lshr <1 x i64> %op1, %op2
@@ -2137,8 +2135,7 @@ define <1 x i64> @shl_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d1
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    lsl x8, x9, x8
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = shl <1 x i64> %op1, %op2

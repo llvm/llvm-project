@@ -486,8 +486,8 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_nxv8bf16(<vscale x 8 x bfloat> %a, <
 define <vscale x 8 x bfloat> @fadd_sel_fmul_nsz_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, <vscale x 8 x i1> %mask) {
 ; SVE-LABEL: fadd_sel_fmul_nsz_nxv8bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    mov z3.s, #0x80000000
-; SVE-NEXT:    mov z4.s, #0x80000000
+; SVE-NEXT:    movi v3.2d, #0000000000000000
+; SVE-NEXT:    movi v4.2d, #0000000000000000
 ; SVE-NEXT:    ptrue p1.s
 ; SVE-NEXT:    bfmlalb z3.s, z1.h, z2.h
 ; SVE-NEXT:    bfmlalt z4.s, z1.h, z2.h
@@ -522,8 +522,8 @@ define <vscale x 8 x bfloat> @fadd_sel_fmul_nsz_nxv8bf16(<vscale x 8 x bfloat> %
 define <vscale x 8 x bfloat> @fsub_sel_fmul_nsz_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, <vscale x 8 x i1> %mask) {
 ; SVE-LABEL: fsub_sel_fmul_nsz_nxv8bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    mov z3.s, #0x80000000
-; SVE-NEXT:    mov z4.s, #0x80000000
+; SVE-NEXT:    movi v3.2d, #0000000000000000
+; SVE-NEXT:    movi v4.2d, #0000000000000000
 ; SVE-NEXT:    ptrue p1.s
 ; SVE-NEXT:    bfmlalb z3.s, z1.h, z2.h
 ; SVE-NEXT:    bfmlalt z4.s, z1.h, z2.h
@@ -636,8 +636,8 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_negzero_nxv8bf16(<vscale x 8 x bfloa
 define <vscale x 8 x bfloat> @fadd_sel_fmul_negzero_nsz_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, <vscale x 8 x i1> %mask) {
 ; SVE-LABEL: fadd_sel_fmul_negzero_nsz_nxv8bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    mov z3.s, #0x80000000
-; SVE-NEXT:    mov z4.s, #0x80000000
+; SVE-NEXT:    movi v3.2d, #0000000000000000
+; SVE-NEXT:    movi v4.2d, #0000000000000000
 ; SVE-NEXT:    ptrue p1.s
 ; SVE-NEXT:    bfmlalb z3.s, z1.h, z2.h
 ; SVE-NEXT:    bfmlalt z4.s, z1.h, z2.h
@@ -673,8 +673,8 @@ define <vscale x 8 x bfloat> @fadd_sel_fmul_negzero_nsz_nxv8bf16(<vscale x 8 x b
 define <vscale x 8 x bfloat> @fsub_sel_fmul_negzero_nsz_nxv8bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c, <vscale x 8 x i1> %mask) {
 ; SVE-LABEL: fsub_sel_fmul_negzero_nsz_nxv8bf16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    mov z3.s, #0x80000000
-; SVE-NEXT:    mov z4.s, #0x80000000
+; SVE-NEXT:    movi v3.2d, #0000000000000000
+; SVE-NEXT:    movi v4.2d, #0000000000000000
 ; SVE-NEXT:    ptrue p1.s
 ; SVE-NEXT:    bfmlalb z3.s, z1.h, z2.h
 ; SVE-NEXT:    bfmlalt z4.s, z1.h, z2.h

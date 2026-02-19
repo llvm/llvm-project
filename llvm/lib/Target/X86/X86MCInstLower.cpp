@@ -2616,6 +2616,15 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
         EmitAndCountInstruction(MCInstBuilder(X86::DS_PREFIX));
     }
     break;
+
+  case X86::JCC_SELF:
+    MCSymbol *Sym = OutContext.createTempSymbol();
+    OutStreamer->emitLabel(Sym);
+    EmitAndCountInstruction(
+        MCInstBuilder(X86::JCC_1)
+            .addExpr(MCSymbolRefExpr::create(Sym, OutContext))
+            .addImm(MI->getOperand(0).getImm()));
+    return;
   }
 
   MCInst TmpInst;

@@ -4,7 +4,7 @@
 // CHECK-LABEL: define hidden void @_Z13ConstantSplatv(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> splat (i32 1), ptr [[M]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -15,7 +15,7 @@ void ConstantSplat() {
 // CHECK-LABEL: define hidden void @_Z18ConstantFloatSplatv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M:%.*]] = alloca [4 x float], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [2 x <2 x float>], align 4
 // CHECK-NEXT:    store <4 x float> splat (float 3.250000e+00), ptr [[M]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -26,7 +26,7 @@ void ConstantFloatSplat() {
 // CHECK-LABEL: define hidden void @_Z21ConstantTrueBoolSplatv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M:%.*]] = alloca [9 x i32], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [3 x <3 x i32>], align 4
 // CHECK-NEXT:    store <9 x i32> splat (i32 1), ptr [[M]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -37,7 +37,7 @@ void ConstantTrueBoolSplat() {
 // CHECK-LABEL: define hidden void @_Z22ConstantFalseBoolSplatv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M:%.*]] = alloca [9 x i32], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [3 x <3 x i32>], align 4
 // CHECK-NEXT:    store <9 x i32> zeroinitializer, ptr [[M]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -49,7 +49,7 @@ void ConstantFalseBoolSplat() {
 // CHECK-SAME: float noundef nofpclass(nan inf) [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    [[M:%.*]] = alloca [9 x float], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [3 x <3 x float>], align 4
 // CHECK-NEXT:    store float [[VALUE]], ptr [[VALUE_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[VALUE_ADDR]], align 4
 // CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <9 x float> poison, float [[TMP0]], i64 0
@@ -65,7 +65,7 @@ void DynamicSplat(float Value) {
 // CHECK-SAME: i1 noundef [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[M:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[VALUE]] to i32
 // CHECK-NEXT:    store i32 [[STOREDV]], ptr [[VALUE_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VALUE_ADDR]], align 4
@@ -84,7 +84,7 @@ void DynamicBoolSplat(bool Value) {
 // CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <4 x float>, align 16
-// CHECK-NEXT:    [[M:%.*]] = alloca [9 x float], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [3 x <3 x float>], align 4
 // CHECK-NEXT:    store <4 x float> [[VALUE]], ptr [[VALUE_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[VALUE_ADDR]], align 16
 // CHECK-NEXT:    [[CAST_VTRUNC:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
@@ -101,7 +101,7 @@ void CastThenSplat(float4 Value) {
 // CHECK-SAME: <3 x i32> noundef [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <3 x i32>, align 16
-// CHECK-NEXT:    [[M:%.*]] = alloca [4 x i32], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    store <3 x i32> [[VALUE]], ptr [[VALUE_ADDR]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[VALUE_ADDR]], align 16
 // CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne <3 x i32> [[TMP0]], zeroinitializer
@@ -120,7 +120,7 @@ void ExplicitIntToBoolCastThenSplat(int3 Value) {
 // CHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca <2 x float>, align 8
-// CHECK-NEXT:    [[M:%.*]] = alloca [6 x i32], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [3 x <2 x i32>], align 4
 // CHECK-NEXT:    store <2 x float> [[VALUE]], ptr [[VALUE_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[VALUE_ADDR]], align 8
 // CHECK-NEXT:    [[TOBOOL:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une <2 x float> [[TMP0]], zeroinitializer
@@ -139,7 +139,7 @@ void ExplicitFloatToBoolCastThenSplat(float2 Value) {
 // CHECK-SAME: i1 noundef [[VALUE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VALUE_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[M:%.*]] = alloca [6 x float], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [2 x <3 x float>], align 4
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[VALUE]] to i32
 // CHECK-NEXT:    store i32 [[STOREDV]], ptr [[VALUE_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VALUE_ADDR]], align 4

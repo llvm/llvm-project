@@ -776,16 +776,6 @@ public:
   /// Return the last cycle in the finalized schedule.
   int getFinalCycle() const { return FirstCycle + InitiationInterval - 1; }
 
-  /// Return the cycle of the earliest scheduled instruction in the dependence
-  /// chain.
-  int earliestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                           const SwingSchedulerDDG *DDG);
-
-  /// Return the cycle of the latest scheduled instruction in the dependence
-  /// chain.
-  int latestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                         const SwingSchedulerDDG *DDG);
-
   void computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart, int II,
                     SwingSchedulerDAG *DAG);
   bool insert(SUnit *SU, int StartCycle, int EndCycle, int II);

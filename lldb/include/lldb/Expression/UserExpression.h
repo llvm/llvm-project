@@ -313,6 +313,16 @@ protected:
                            lldb::ProcessSP &process_sp,
                            lldb::StackFrameSP &frame_sp);
 
+  /// Called by expression evaluator when a parse error occurs. Gives this
+  /// UserExpression object a chance to inspect and adjust the error diagnostics
+  /// contained in the specified \c diagnostic_manager.
+  ///
+  /// \param[in,out] diagnostic_manager DiagnosticManager manager holding the
+  /// parse error diagnostics. This function may mutate the diagnostics.
+  ///
+  virtual void
+  FixupParseErrorDiagnostics(DiagnosticManager &diagnostic_manager) const {}
+
   /// The address the process is stopped in.
   Address m_address;
   /// The text of the expression, as typed by the user.

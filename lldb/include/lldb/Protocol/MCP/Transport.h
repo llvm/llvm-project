@@ -83,8 +83,8 @@ using LogCallback = llvm::unique_function<void(llvm::StringRef message)>;
 class Transport final
     : public lldb_private::transport::JSONRPCTransport<ProtocolDescriptor> {
 public:
-  Transport(lldb::IOObjectSP in, lldb::IOObjectSP out,
-            LogCallback log_callback = {});
+  Transport(lldb_private::MainLoop &loop, lldb::IOObjectSP in,
+            lldb::IOObjectSP out, LogCallback log_callback = {});
   virtual ~Transport() = default;
 
   /// Transport is not copyable.

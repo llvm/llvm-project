@@ -50,12 +50,8 @@ Status HostThreadPosix::Cancel() {
   return error;
 }
 
-Status HostThreadPosix::Detach() {
-  Status error;
-  if (IsJoinable()) {
-    int err = ::pthread_detach(m_thread);
-    error = Status(err, eErrorTypePOSIX);
-  }
-  Reset();
-  return error;
+void HostThreadPosix::Reset() {
+  if (IsJoinable())
+    ::pthread_detach(m_thread);
+  HostNativeThreadBase::Reset();
 }

@@ -352,22 +352,21 @@ define i1 @is_posnormal_f80(x86_fp80 %x) nounwind {
 ; X86-LABEL: is_posnormal_f80:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    shll $16, %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $32767, %ecx # imm = 0x7FFF
-; X86-NEXT:    decl %ecx
-; X86-NEXT:    movzwl %cx, %ecx
+; X86-NEXT:    andl $32767, %edx # imm = 0x7FFF
+; X86-NEXT:    decl %edx
+; X86-NEXT:    movzwl %dx, %edx
 ; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    cmpl $32766, %ecx # imm = 0x7FFE
+; X86-NEXT:    cmpl $32766, %edx # imm = 0x7FFE
 ; X86-NEXT:    sbbl %esi, %esi
-; X86-NEXT:    setb %cl
-; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    setns %dl
+; X86-NEXT:    setb %dl
+; X86-NEXT:    testl $32768, %ecx # imm = 0x8000
+; X86-NEXT:    sete %cl
 ; X86-NEXT:    shrl $31, %eax
-; X86-NEXT:    andb %dl, %al
 ; X86-NEXT:    andb %cl, %al
+; X86-NEXT:    andb %dl, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -397,22 +396,21 @@ define i1 @is_negnormal_f80(x86_fp80 %x) nounwind {
 ; X86-LABEL: is_negnormal_f80:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    shll $16, %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $32767, %ecx # imm = 0x7FFF
-; X86-NEXT:    decl %ecx
-; X86-NEXT:    movzwl %cx, %ecx
+; X86-NEXT:    andl $32767, %edx # imm = 0x7FFF
+; X86-NEXT:    decl %edx
+; X86-NEXT:    movzwl %dx, %edx
 ; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    cmpl $32766, %ecx # imm = 0x7FFE
+; X86-NEXT:    cmpl $32766, %edx # imm = 0x7FFE
 ; X86-NEXT:    sbbl %esi, %esi
-; X86-NEXT:    setb %cl
-; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    sets %dl
+; X86-NEXT:    setb %dl
+; X86-NEXT:    testl $32768, %ecx # imm = 0x8000
+; X86-NEXT:    setne %cl
 ; X86-NEXT:    shrl $31, %eax
-; X86-NEXT:    andb %dl, %al
 ; X86-NEXT:    andb %cl, %al
+; X86-NEXT:    andb %dl, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -518,24 +516,23 @@ define i1 @is_negsubnormal_f80(x86_fp80 %x) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    andl $32767, %ecx # imm = 0x7FFF
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    addl $-1, %esi
-; X86-NEXT:    adcl $-1, %edi
-; X86-NEXT:    adcl $-1, %ecx
+; X86-NEXT:    xorl %esi, %esi
+; X86-NEXT:    addl $-1, %edi
 ; X86-NEXT:    adcl $-1, %edx
-; X86-NEXT:    cmpl $-1, %esi
-; X86-NEXT:    sbbl $2147483647, %edi # imm = 0x7FFFFFFF
+; X86-NEXT:    adcl $-1, %ecx
+; X86-NEXT:    adcl $-1, %esi
+; X86-NEXT:    cmpl $-1, %edi
+; X86-NEXT:    sbbl $2147483647, %edx # imm = 0x7FFFFFFF
 ; X86-NEXT:    sbbl $0, %ecx
-; X86-NEXT:    sbbl $0, %edx
+; X86-NEXT:    sbbl $0, %esi
 ; X86-NEXT:    setb %cl
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    sets %al
+; X86-NEXT:    testl $32768, %eax # imm = 0x8000
+; X86-NEXT:    setne %al
 ; X86-NEXT:    andb %cl, %al
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
@@ -544,19 +541,18 @@ define i1 @is_negsubnormal_f80(x86_fp80 %x) nounwind {
 ; X64-LABEL: is_negsubnormal_f80:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movq %rax, %rcx
-; X64-NEXT:    shlq $48, %rcx
-; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
-; X64-NEXT:    andl $32767, %eax # imm = 0x7FFF
-; X64-NEXT:    addq $-1, %rdx
-; X64-NEXT:    adcq $-1, %rax
+; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; X64-NEXT:    movl %eax, %edx
+; X64-NEXT:    andl $32767, %edx # imm = 0x7FFF
+; X64-NEXT:    addq $-1, %rcx
+; X64-NEXT:    adcq $-1, %rdx
 ; X64-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; X64-NEXT:    cmpq %rsi, %rdx
-; X64-NEXT:    sbbq $0, %rax
-; X64-NEXT:    setb %dl
-; X64-NEXT:    testq %rcx, %rcx
-; X64-NEXT:    sets %al
-; X64-NEXT:    andb %dl, %al
+; X64-NEXT:    cmpq %rsi, %rcx
+; X64-NEXT:    sbbq $0, %rdx
+; X64-NEXT:    setb %cl
+; X64-NEXT:    testl $32768, %eax # imm = 0x8000
+; X64-NEXT:    setne %al
+; X64-NEXT:    andb %cl, %al
 ; X64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f80(x86_fp80 %x, i32 16)  ; 0x10 = "-subnormal"

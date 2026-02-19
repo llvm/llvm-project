@@ -290,6 +290,18 @@ add_libc_test(
     libc.src.__support.weak_avl
 )
 
+add_libc_test(
+  wctype_utils_test
+  SUITE
+    libc-support-tests
+  SRCS
+    wctype_utils_test.cpp
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.src.__support.wctype.wctype_classification_utils
+    libc.src.__support.macros.properties.os
+)
+
 add_subdirectory(CPP)
 add_subdirectory(File)
 add_subdirectory(RPC)

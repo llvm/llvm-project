@@ -1,0 +1,53 @@
+<!--===- docs/MeetingNotes/2025/2025-12-17.md
+
+   Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+   See https://llvm.org/LICENSE.txt for license information.
+   SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+-->
+# Combined Call 2025-12-17
+
+## Agenda
+
+* No meeting on 12/31  
+* Update on meeting notes document  
+  * What will protect the data if something should happen to Discourse?  
+  * RFC is a good idea  
+* Design docs and/or RFCs  
+  * [Changes to builtin modules](https://discourse.llvm.org/t/changes-to-builtin-modules/89072)   
+    * PR was reverted due to buildbot failure involving Windows  
+    * Undergoing another review process, will not try landing again until after the first of the year  
+  * [\[RFC\] Proposing an Interactive Fortran Workflow with Flang using Jupyter Notebooks](https://discourse.llvm.org/t/rfc-proposing-an-interactive-fortran-workflow-with-flang-using-jupyter-notebooks/89116/5)   
+    * Intention is to build a flang-repl in the context of Jupyter Notebooks  
+    * Seems unclear what the authors expect from the greater Flang community  
+    * Looking for assistance with making changes to flang to make the repl work and/or for info about what barriers exist to creating it in the first place (possibly also looking for funding)  
+    * Unsure why they are choosing to use Flang instead of continue the LFortran work  
+      * Possibly to do with level of standards compliance  
+  * [\[RFC\] Support \-fstrict-aliasing and \-fno-strict-aliasing](https://discourse.llvm.org/t/rfc-support-fstrict-aliasing-and-fno-strict-aliasing/89135)   
+    * Related to an issue that came in, these flags are supported in both gcc and clang  
+    * Would affect type-based alias analysis  
+    * Does this have any implications for Fortran code specifically? Does it violate the standard?  
+    * Michael Klemm can ask some gfortran developers directly  
+    * Related issue: [https://github.com/llvm/llvm-project/issues/171912](https://github.com/llvm/llvm-project/issues/171912)   
+  * [\`-ffp-contract=fast\` Violates the Fortran Standard](https://discourse.llvm.org/t/ffp-contract-fast-violates-the-fortran-standard/88897)  
+    * Still under debate  
+* PRs of Note  
+  *  [\[flang\]\[driver\] Do not allow \-module-dir to be joined to the value \#168748](https://github.com/llvm/llvm-project/pull/168748)    
+    * Currently, although it is a long-form option, the value is joined to it  
+    * Likely, we will not be able to add options that start with \-module-dir given the current implementation  
+    * Changing this will affect CMake usage (CMake PR to use the \-J option has been accepted, but not backported to older versions)  
+    * Potential compatibility problem with gfortran  
+  * [\[Flang\]\[FIR\] Introduce FIRToCoreMLIR pass. \#168703](https://github.com/llvm/llvm-project/pull/168703)    
+* Issues of Note  
+  * [Building Flang with offload support](https://discourse.llvm.org/t/building-flang-with-offload-support/89100)   
+* FYI  
+  * LLVM \- [Document the community RFC process](https://github.com/llvm/llvm-project/pull/116386)   
+  * [2026 EuroLLVM Developers' Meeting \- Call for Proposals](https://discourse.llvm.org/t/2026-eurollvm-developers-meeting-call-for-proposals/89059)     
+* Other topics as time allows  
+  * Flang-tidy update next time  
+  * Fujitsu test suite discussion next time (how to make it easier for people to use)
+
+## Details
+
+* Consists of over **707,000** lines of code, documentation, build files, and test  
+* To date, over **11,511** commits have been made to Flang

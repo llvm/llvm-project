@@ -465,10 +465,10 @@ public:
 
 protected:
   // Called at the start of run().
-  virtual Error handleArchiveInputs() { return Error::success(); }
+  virtual Error serializeInputsForDistribution() { return Error::success(); }
 
   // Called before returning from run().
-  virtual void cleanup() {}
+  virtual void cleanup();
 
 private:
   Config Conf;
@@ -642,7 +642,14 @@ private:
   // Diagnostic optimization remarks file
   LLVMRemarkFileHandle DiagnosticOutputFile;
 
+  // Setup optimization remarks according to the provided configuration.
+  Error setupOptimizationRemarks();
+
 public:
+  /// Helper to emit an optimization remark during the LTO link when outside of
+  /// the standard optimization pass pipeline.
+  void emitRemark(OptimizationRemark &Remark);
+
   virtual Expected<std::shared_ptr<lto::InputFile>>
   addInput(std::unique_ptr<lto::InputFile> InputPtr) {
     return std::shared_ptr<lto::InputFile>(InputPtr.release());
