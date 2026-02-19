@@ -21,7 +21,7 @@ define i16 @test(i64 %0) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i1> [[TMP5]], i1 [[CMP160]], i32 5
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i1> [[TMP6]], i1 [[CMP176]], i32 6
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i1> [[TMP7]], i1 [[CMP12_NOT_NOT]], i32 7
-; CHECK-NEXT:    [[TMP9:%.*]] = select <8 x i1> [[TMP8]], <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 2>, <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 1>
+; CHECK-NEXT:    [[TMP9:%.*]] = select <8 x i1> [[TMP8]], <8 x i16> splat (i16 1), <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 2>
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP9]])
 ; CHECK-NEXT:    ret i16 [[TMP10]]
 ;
