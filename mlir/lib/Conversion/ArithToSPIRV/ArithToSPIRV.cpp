@@ -122,6 +122,24 @@ static bool isBoolScalarOrVector(Type type) {
   return false;
 }
 
+/// Returns true if `type` is a SPIR-V scalar type or a vector of SPIR-V scalar.
+/// If `excludeBool` is true, i1/bool types are excluded.
+static bool isScalarOrVectorOfScalar(Type type, bool excludeBool = false) {
+  auto isScalarOk = [&](Type t) {
+    if (excludeBool && t.isInteger(1))
+      return false;
+    return isa<mlir::spirv::ScalarType>(t);
+  };
+
+  if (isScalarOk(type))
+    return true;
+
+  if (auto vecTy = dyn_cast<VectorType>(type))
+    return isScalarOk(vecTy.getElementType());
+
+  return false;
+}
+
 /// Creates a scalar/vector integer constant.
 static Value getScalarOrVectorConstInt(Type type, uint64_t value,
                                        OpBuilder &builder, Location loc) {
@@ -707,12 +725,19 @@ struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
   matchAndRewrite(arith::ExtSIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type srcType = adaptor.getIn().getType();
-    if (isBoolScalarOrVector(srcType))
-      return failure();
+
+    // extSI is only meaningful for integer scalar/vector types in SPIR-V.
+    if (!isScalarOrVectorOfScalar(srcType, /*excludeBool=*/true))
+      return rewriter.notifyMatchFailure(
+          op, "expected integer scalar or vector input type");
 
     Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
+
+    if (!isScalarOrVectorOfScalar(dstType, /*excludeBool=*/true))
+      return rewriter.notifyMatchFailure(
+          op, "expected integer scalar or vector result type");
 
     if (dstType == srcType) {
       // We can have the same source and destination type due to type emulation.
@@ -783,12 +808,18 @@ struct ExtUIPattern final : public OpConversionPattern<arith::ExtUIOp> {
   matchAndRewrite(arith::ExtUIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type srcType = adaptor.getIn().getType();
-    if (isBoolScalarOrVector(srcType))
-      return failure();
+
+    if (!isScalarOrVectorOfScalar(srcType, /*excludeBool=*/true))
+      return rewriter.notifyMatchFailure(
+          op, "expected integer scalar or vector input type");
 
     Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
+
+    if (!isScalarOrVectorOfScalar(dstType, /*excludeBool=*/true))
+      return rewriter.notifyMatchFailure(
+          op, "expected integer scalar or vector result type");
 
     if (dstType == srcType) {
       // We can have the same source and destination type due to type emulation.
@@ -831,6 +862,10 @@ struct TruncII1Pattern final : public OpConversionPattern<arith::TruncIOp> {
 
     Location loc = op.getLoc();
     auto srcType = adaptor.getOperands().front().getType();
+    if (!isScalarOrVectorOfScalar(srcType, /*excludeBool=*/true))
+      return rewriter.notifyMatchFailure(
+          op, "expected integer scalar or vector source type");
+
     // Check if (x & 1) == 1.
     Value mask = spirv::ConstantOp::getOne(srcType, loc, rewriter);
     Value maskedSrc = spirv::BitwiseAndOp::create(
@@ -852,15 +887,39 @@ struct TruncIPattern final : public OpConversionPattern<arith::TruncIOp> {
   LogicalResult
   matchAndRewrite(arith::TruncIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type srcType = adaptor.getIn().getType();
     Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
 
+    // Trunc-to-i1 case is handled in a separate pattern.
     if (isBoolScalarOrVector(dstType))
       return failure();
 
-    if (dstType == srcType) {
+    Type convertedSrcType = adaptor.getIn().getType();
+    if (!convertedSrcType)
+      return getTypeConversionFailure(rewriter, op);
+
+    auto isIntScalarOrVectorNotI1 = [](Type type) {
+      Type elt = getElementTypeOrSelf(type);
+      if (!elt || !isa<IntegerType>(elt))
+        return false;
+      if (elt.isInteger(1))
+        return false;
+      return (type == elt) || isa<VectorType>(type);
+    };
+    // Ensure we are only lowering scalar/vector integer truncs.
+    // This prevents trying to build SPIR-V ops on tensors.
+    if (!isIntScalarOrVectorNotI1(convertedSrcType) ||
+        !isIntScalarOrVectorNotI1(dstType))
+      return rewriter.notifyMatchFailure(
+          op, "only int scalar or vector type (non-i1) types for SPIR-V");
+
+    // Ensure the adaptor operand type matches the converted source type.
+    if (adaptor.getIn().getType() != convertedSrcType)
+      return rewriter.notifyMatchFailure(
+          op, "adaptor operand type does not match converted source type");
+
+    if (dstType == convertedSrcType) {
       // We can have the same source and destination type due to type emulation.
       // Perform bit masking to make sure we don't pollute downstream consumers
       // with unwanted bits. Here we need to use the original result type's
@@ -917,6 +976,25 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
 
     if (isBoolScalarOrVector(srcType) || isBoolScalarOrVector(dstType))
       return failure();
+
+    auto isIntOrFloatScalarOrVectorNotI1 = [](Type type) {
+      Type elt = getElementTypeOrSelf(type);
+      if (!elt || (!elt.isIntOrFloat()))
+        return false;
+      if (elt.isInteger(1))
+        return false;
+      return (type == elt) || isa<VectorType>(type);
+    };
+
+    if (!isIntOrFloatScalarOrVectorNotI1(srcType) ||
+        !isIntOrFloatScalarOrVectorNotI1(dstType)) {
+      Type srcOrigTy = llvm::getSingleElement(op->getOperands()).getType();
+      Type dstOrigTy = op.getType();
+      return rewriter.notifyMatchFailure(
+          op, llvm::formatv(
+                  "expected int/float scalar or vector types, got {0} -> {1}",
+                  srcOrigTy, dstOrigTy));
+    }
 
     if (dstType == srcType) {
       // Due to type conversion, we are seeing the same source and target type.
