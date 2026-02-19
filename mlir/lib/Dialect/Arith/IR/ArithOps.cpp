@@ -456,13 +456,15 @@ arith::AddUIExtendedOp::fold(FoldAdaptor adaptor,
   // Let the `constFoldBinaryOp` utility attempt to fold the sum of both
   // operands. If that succeeds, calculate the overflow bit based on the sum
   // and the first (constant) operand, `lhs`.
-  if (Attribute sumAttr = constFoldBinaryOp<IntegerAttr>(
+  if (auto sumAttr = dyn_cast_if_present<TypedAttr>(constFoldBinaryOp<IntegerAttr>(
           adaptor.getOperands(),
           [](APInt a, const APInt &b) { return std::move(a) + b; })) {
+    auto typedSumAttr = llvm::dyn_cast<TypedAttr>(sumAttr);
+    if (!typedSumAttr)
+      return failure();
     Attribute overflowAttr = constFoldBinaryOp<IntegerAttr>(
         ArrayRef({sumAttr, adaptor.getLhs()}),
-        getI1SameShape(llvm::cast<TypedAttr>(sumAttr).getType()),
-        calculateUnsignedOverflow);
+        getI1SameShape(typedSumAttr.getType()), calculateUnsignedOverflow);
     if (!overflowAttr)
       return failure();
 

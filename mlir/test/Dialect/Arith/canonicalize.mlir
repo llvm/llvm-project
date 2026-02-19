@@ -1471,6 +1471,16 @@ func.func @adduiExtendedConstantsSplatVector() -> (vector<4xi32>, vector<4xi1>) 
   return %sum, %overflow : vector<4xi32>, vector<4xi1>
 }
 
+// CHECK-LABEL: @adduiExtendedDoesNotAssertOnPoison
+// CHECK: %[[SUM:.+]], %[[OV:.+]] = arith.addui_extended %{{.+}}, %{{.+}} : tensor<1xi32>, tensor<1xi1>
+// CHECK: return %[[SUM]], %[[OV]] : tensor<1xi32>, tensor<1xi1>
+func.func @adduiExtendedDoesNotAssertOnPoison() -> (tensor<1xi32>, tensor<1xi1>) {
+  %c0 = arith.constant dense<0> : tensor<1xi32>
+  %p = ub.poison : tensor<1xi32>
+  %sum, %overflow = arith.addui_extended %c0, %p : tensor<1xi32>, tensor<1xi1>
+  return %sum, %overflow : tensor<1xi32>, tensor<1xi1>
+}
+
 // CHECK-LABEL: @mulsiExtendedZeroRhs
 //  CHECK-NEXT:   %[[zero:.+]] = arith.constant 0 : i32
 //  CHECK-NEXT:   return %[[zero]], %[[zero]]
