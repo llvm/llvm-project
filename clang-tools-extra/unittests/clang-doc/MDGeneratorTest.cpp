@@ -199,7 +199,7 @@ TEST_F(MDGeneratorTest, emitEnumMD) {
 
 --
 
-| X |
+| X | 0 |
 
 
 *Defined at test.cpp#10*
