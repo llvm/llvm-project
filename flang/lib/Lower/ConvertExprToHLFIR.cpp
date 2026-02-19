@@ -1594,6 +1594,19 @@ public:
 private:
   hlfir::EntityWithAttributes
   gen(const Fortran::evaluate::BOZLiteralConstant &expr) {
+    mlir::Location loc = getLoc();
+    using Type =
+        Fortran::evaluate::Type<Fortran::evaluate::TypeCategory::Integer, 16>;
+    auto constant = Fortran::evaluate::Constant<Type>{
+        Fortran::evaluate::Scalar<Type>::ConvertUnsigned(std::move(expr))
+            .value};
+
+    fir::ExtendedValue exv = Fortran::lower::convertConstant(
+        converter, loc, constant, /*outlineBigConstantInReadOnlyMemory=*/true);
+    if (const auto *scalarBox = exv.getUnboxed())
+      if (fir::isa_trivial(scalarBox->getType()))
+        return hlfir::EntityWithAttributes(*scalarBox);
+
     TODO(getLoc(), "BOZ");
   }
 
