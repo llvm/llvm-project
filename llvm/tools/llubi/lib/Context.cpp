@@ -103,6 +103,267 @@ const AnyValue &Context::getConstantValue(Constant *C) {
   return ConstCache.emplace(C, getConstantValueImpl(C)).first->second;
 }
 
+AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
+                            uint32_t &OffsetInBits, bool CheckPaddingBits) {
+  if (Ty->isIntegerTy() || Ty->isFloatingPointTy() || Ty->isPointerTy()) {
+    uint32_t NumBits = DL.getTypeSizeInBits(Ty).getFixedValue();
+    uint32_t NewOffsetInBits = OffsetInBits + NumBits;
+    if (CheckPaddingBits)
+      NewOffsetInBits = alignTo(NewOffsetInBits, 8);
+    bool NeedsPadding = NewOffsetInBits != OffsetInBits + NumBits;
+    uint32_t NumBitsToExtract = NewOffsetInBits - OffsetInBits;
+    SmallVector<uint64_t> BitsData(alignTo(NumBitsToExtract, 8));
+    for (uint32_t I = 0; I < NumBitsToExtract; I += 8) {
+      uint32_t NumBitsInByte = std::min(8U, NumBitsToExtract - I);
+      uint32_t BitsStart =
+          OffsetInBits +
+          (DL.isLittleEndian() ? I : (NumBitsToExtract - NumBitsInByte - I));
+      uint32_t BitsEnd = BitsStart + NumBitsInByte - 1;
+      Byte LogicalByte;
+      if (((BitsStart ^ BitsEnd) & ~7) == 0)
+        LogicalByte = Bytes[BitsStart / 8].lshr(BitsStart % 8);
+      else
+        LogicalByte =
+            Bytes[BitsStart / 8].fshr(Bytes[BitsEnd / 8], BitsStart % 8);
+
+      uint32_t Mask = (1U << NumBitsInByte) - 1;
+      // If any of the bits in the byte is poison, the whole value is poison.
+      if (~LogicalByte.ConcreteMask & ~LogicalByte.Value & Mask)
+        return AnyValue::poison();
+      uint8_t RandomBits = 0;
+      if (UndefBehavior == UndefValueBehavior::NonDeterministic &&
+          (~LogicalByte.ConcreteMask & Mask)) {
+        // This byte contains undef bits.
+        std::uniform_int_distribution<uint8_t> Distrib;
+        RandomBits = Distrib(Rng);
+      }
+      uint8_t ActualBits = ((LogicalByte.Value & LogicalByte.ConcreteMask) |
+                            (RandomBits & ~LogicalByte.ConcreteMask)) &
+                           Mask;
+      BitsData[I / 64] |= static_cast<APInt::WordType>(ActualBits) << (I % 64);
+    }
+    OffsetInBits = NewOffsetInBits;
+
+    APInt Bits(NumBitsToExtract, BitsData);
+
+    // Padding bits for non-byte-sized scalar types must be zero.
+    if (NeedsPadding) {
+      if (!Bits.isIntN(NumBits))
+        return AnyValue::poison();
+      Bits = Bits.trunc(NumBits);
+    }
+
+    if (Ty->isIntegerTy())
+      return Bits;
+    if (Ty->isFloatingPointTy())
+      return APFloat(Ty->getFltSemantics(), Bits);
+    assert(Ty->isPointerTy() && "Expect a pointer type");
+    // TODO: recover provenance
+    return Pointer(Bits);
+  }
+
+  assert(OffsetInBits % 8 == 0 && "Missing padding bits.");
+  if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
+    Type *ElemTy = VecTy->getElementType();
+    std::vector<AnyValue> ValVec;
+    uint32_t NumElements = getEVL(VecTy->getElementCount());
+    ValVec.reserve(NumElements);
+    for (uint32_t I = 0; I != NumElements; ++I)
+      ValVec.push_back(
+          fromBytes(Bytes, ElemTy, OffsetInBits, /*CheckPaddingBits=*/false));
+    if (DL.isBigEndian())
+      std::reverse(ValVec.begin(), ValVec.end());
+    return AnyValue(std::move(ValVec));
+  }
+  if (auto *ArrTy = dyn_cast<ArrayType>(Ty)) {
+    Type *ElemTy = ArrTy->getElementType();
+    std::vector<AnyValue> ValVec;
+    uint32_t NumElements = ArrTy->getNumElements();
+    ValVec.reserve(NumElements);
+    for (uint32_t I = 0; I != NumElements; ++I)
+      ValVec.push_back(
+          fromBytes(Bytes, ElemTy, OffsetInBits, /*CheckPaddingBits=*/true));
+    return AnyValue(std::move(ValVec));
+  }
+  if (auto *StructTy = dyn_cast<StructType>(Ty)) {
+    auto *Layout = DL.getStructLayout(StructTy);
+    uint32_t BaseOffsetInBits = OffsetInBits;
+    std::vector<AnyValue> ValVec;
+    uint32_t NumElements = StructTy->getNumElements();
+    ValVec.reserve(NumElements);
+    for (uint32_t I = 0; I != NumElements; ++I) {
+      Type *ElemTy = StructTy->getElementType(I);
+      TypeSize ElemOffset = Layout->getElementOffset(I);
+      OffsetInBits =
+          BaseOffsetInBits + (ElemOffset.isScalable()
+                                  ? ElemOffset.getKnownMinValue() * VScale
+                                  : ElemOffset.getFixedValue()) *
+                                 8;
+      ValVec.push_back(
+          fromBytes(Bytes, ElemTy, OffsetInBits, /*CheckPaddingBits=*/true));
+    }
+    OffsetInBits =
+        BaseOffsetInBits +
+        static_cast<uint32_t>(getEffectiveTypeStoreSize(StructTy)) * 8;
+    return AnyValue(std::move(ValVec));
+  }
+  llvm_unreachable("Unsupported first class type.");
+}
+
+void Context::toBytes(const AnyValue &Val, Type *Ty, uint32_t &OffsetInBits,
+                      MutableArrayRef<Byte> Bytes, bool PaddingBits) {
+  if (Val.isPoison() || Ty->isIntegerTy() || Ty->isFloatingPointTy() ||
+      Ty->isPointerTy()) {
+    uint32_t NumBits = DL.getTypeSizeInBits(Ty).getFixedValue();
+    uint32_t NewOffsetInBits = OffsetInBits + NumBits;
+    if (PaddingBits)
+      NewOffsetInBits = alignTo(NewOffsetInBits, 8);
+    bool NeedsPadding = NewOffsetInBits != OffsetInBits + NumBits;
+    auto WriteBits = [&](const APInt &Bits) {
+      for (uint32_t I = 0, E = Bits.getBitWidth(); I < E; I += 8) {
+        uint32_t NumBitsInByte = std::min(8U, E - I);
+        uint32_t BitsStart =
+            OffsetInBits + (DL.isLittleEndian() ? I : (E - NumBitsInByte - I));
+        uint32_t BitsEnd = BitsStart + NumBitsInByte - 1;
+        uint8_t BitsVal =
+            static_cast<uint8_t>(Bits.extractBitsAsZExtValue(NumBitsInByte, I));
+
+        Bytes[BitsStart / 8].writeBits(
+            static_cast<uint8_t>(((1U << NumBitsInByte) - 1)
+                                 << (BitsStart % 8)),
+            static_cast<uint8_t>(BitsVal << (BitsStart % 8)));
+        // Crosses the byte boundary.
+        if (((BitsStart ^ BitsEnd) & ~7) != 0)
+          Bytes[BitsEnd / 8].writeBits(
+              static_cast<uint8_t>((1U << (BitsEnd % 8 + 1)) - 1),
+              static_cast<uint8_t>(BitsVal >> (8 - (BitsStart % 8))));
+      }
+    };
+    if (Val.isPoison()) {
+      for (uint32_t I = 0, E = NewOffsetInBits - OffsetInBits; I < E;) {
+        uint32_t NumBitsInByte = std::min(8 - (OffsetInBits + I) % 8, E - I);
+        assert(((OffsetInBits ^ (OffsetInBits + NumBitsInByte - 1)) & ~7) ==
+                   0 &&
+               "Across byte boundary.");
+        Bytes[(OffsetInBits + I) / 8].poisonBits(static_cast<uint8_t>(
+            ((1U << NumBitsInByte) - 1) << ((OffsetInBits + I) % 8)));
+        I += NumBitsInByte;
+      }
+    } else if (Ty->isIntegerTy()) {
+      auto &Bits = Val.asInteger();
+      WriteBits(NeedsPadding ? Bits.zext(NewOffsetInBits - OffsetInBits)
+                             : Bits);
+    } else if (Ty->isFloatingPointTy()) {
+      auto Bits = Val.asFloat().bitcastToAPInt();
+      WriteBits(NeedsPadding ? Bits.zext(NewOffsetInBits - OffsetInBits)
+                             : Bits);
+    } else if (Ty->isPointerTy()) {
+      auto &Bits = Val.asPointer().address();
+      WriteBits(NeedsPadding ? Bits.zext(NewOffsetInBits - OffsetInBits)
+                             : Bits);
+      // TODO: save metadata of the pointer.
+    } else {
+      llvm_unreachable("Unsupported scalar type.");
+    }
+    OffsetInBits = NewOffsetInBits;
+    return;
+  }
+
+  assert(OffsetInBits % 8 == 0 && "Missing padding bits.");
+  if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
+    Type *ElemTy = VecTy->getElementType();
+    auto &ValVec = Val.asAggregate();
+    uint32_t NewOffsetInBits =
+        alignTo(OffsetInBits + DL.getTypeSizeInBits(ElemTy).getFixedValue() *
+                                   ValVec.size(),
+                8);
+    if (DL.isLittleEndian()) {
+      for (const auto &SubVal : ValVec)
+        toBytes(SubVal, ElemTy, OffsetInBits, Bytes,
+                /*PaddingBits=*/false);
+    } else {
+      for (const auto &SubVal : reverse(ValVec))
+        toBytes(SubVal, ElemTy, OffsetInBits, Bytes,
+                /*PaddingBits=*/false);
+    }
+    if (NewOffsetInBits != OffsetInBits) {
+      assert(OffsetInBits % 8 != 0 && NewOffsetInBits - OffsetInBits < 8 &&
+             "Unexpected offset.");
+      // Fill remaining bits with undef.
+      Bytes[OffsetInBits / 8].undefBits(
+          static_cast<uint8_t>(~0U << (OffsetInBits % 8)));
+    }
+    OffsetInBits = NewOffsetInBits;
+    return;
+  }
+  if (auto *ArrTy = dyn_cast<ArrayType>(Ty)) {
+    Type *ElemTy = ArrTy->getElementType();
+    for (const auto &SubVal : Val.asAggregate())
+      toBytes(SubVal, ElemTy, OffsetInBits, Bytes, /*PaddingBits=*/true);
+    return;
+  }
+  if (auto *StructTy = dyn_cast<StructType>(Ty)) {
+    auto *Layout = DL.getStructLayout(StructTy);
+    uint32_t BaseOffsetInBits = OffsetInBits;
+    auto FillUndefBytes = [&](uint32_t NewOffsetInBits) {
+      if (OffsetInBits == NewOffsetInBits)
+        return;
+      // Fill padding bits due to alignment requirement.
+      assert(NewOffsetInBits > OffsetInBits &&
+             "Unexpected negative padding bits!");
+      fill(Bytes.slice(OffsetInBits / 8, (NewOffsetInBits - OffsetInBits) / 8),
+           Byte::undef());
+      OffsetInBits = NewOffsetInBits;
+    };
+    for (uint32_t I = 0, E = Val.asAggregate().size(); I != E; ++I) {
+      Type *ElemTy = StructTy->getElementType(I);
+      TypeSize ElemOffset = Layout->getElementOffset(I);
+      uint32_t NewOffsetInBits =
+          BaseOffsetInBits + (ElemOffset.isScalable()
+                                  ? ElemOffset.getKnownMinValue() * VScale
+                                  : ElemOffset.getFixedValue()) *
+                                 8;
+      FillUndefBytes(NewOffsetInBits);
+      toBytes(Val.asAggregate()[I], ElemTy, OffsetInBits, Bytes,
+              /*PaddingBits=*/true);
+    }
+    uint32_t NewOffsetInBits =
+        BaseOffsetInBits + getEffectiveTypeStoreSize(StructTy) * 8;
+    FillUndefBytes(NewOffsetInBits);
+    return;
+  }
+
+  llvm_unreachable("Unsupported first class type.");
+}
+
+AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
+  uint32_t OffsetInBits = 0;
+  return fromBytes(Bytes, Ty, OffsetInBits, /*CheckPaddingBits=*/true);
+}
+
+void Context::toBytes(const AnyValue &Val, Type *Ty,
+                      MutableArrayRef<Byte> Bytes) {
+  uint32_t OffsetInBits = 0;
+  toBytes(Val, Ty, OffsetInBits, Bytes, /*PaddingBits=*/true);
+}
+
+AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy) {
+  return fromBytes(
+      MO.getBytes().slice(Offset, getEffectiveTypeStoreSize(ValTy)), ValTy);
+}
+
+void Context::store(MemoryObject &MO, uint64_t Offset, const AnyValue &Val,
+                    Type *ValTy) {
+  toBytes(Val, ValTy,
+          MO.getBytes().slice(Offset, getEffectiveTypeStoreSize(ValTy)));
+}
+
+void Context::storeRawBytes(MemoryObject &MO, uint64_t Offset, const void *Data,
+                            uint64_t Size) {
+  for (uint64_t I = 0; I != Size; ++I)
+    MO[Offset + I] = Byte::concrete(static_cast<const uint8_t *>(Data)[I]);
+}
+
 MemoryObject::~MemoryObject() = default;
 MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
                            unsigned AS, MemInitKind InitKind)
@@ -111,13 +372,13 @@ MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
                                               : MemoryObjectState::Dead) {
   switch (InitKind) {
   case MemInitKind::Zeroed:
-    Bytes.resize(Size, Byte{0, ByteKind::Concrete});
+    Bytes.resize(Size, Byte::concrete(0));
     break;
   case MemInitKind::Uninitialized:
-    Bytes.resize(Size, Byte{0, ByteKind::Undef});
+    Bytes.resize(Size, Byte::undef());
     break;
   case MemInitKind::Poisoned:
-    Bytes.resize(Size, Byte{0, ByteKind::Poison});
+    Bytes.resize(Size, Byte::poison());
     break;
   }
 }
@@ -175,38 +436,22 @@ BasicBlock *Context::getTargetBlock(const Pointer &Ptr) {
   return It->second.first;
 }
 
+uint64_t Context::getEffectiveTypeAllocSize(Type *Ty) {
+  TypeSize Size = DL.getTypeAllocSize(Ty);
+  if (Size.isScalable())
+    return Size.getKnownMinValue() * VScale;
+  return Size.getFixedValue();
+}
+uint64_t Context::getEffectiveTypeStoreSize(Type *Ty) {
+  TypeSize Size = DL.getTypeStoreSize(Ty);
+  if (Size.isScalable())
+    return Size.getKnownMinValue() * VScale;
+  return Size.getFixedValue();
+}
+
 void MemoryObject::markAsFreed() {
   State = MemoryObjectState::Freed;
   Bytes.clear();
-}
-
-void MemoryObject::writeRawBytes(uint64_t Offset, const void *Data,
-                                 uint64_t Length) {
-  assert(SaturatingAdd(Offset, Length) <= Size && "Write out of bounds");
-  const uint8_t *ByteData = static_cast<const uint8_t *>(Data);
-  for (uint64_t I = 0; I < Length; ++I)
-    Bytes[Offset + I].set(ByteData[I]);
-}
-
-void MemoryObject::writeInteger(uint64_t Offset, const APInt &Int,
-                                const DataLayout &DL) {
-  uint64_t BitWidth = Int.getBitWidth();
-  uint64_t IntSize = divideCeil(BitWidth, 8);
-  assert(SaturatingAdd(Offset, IntSize) <= Size && "Write out of bounds");
-  for (uint64_t I = 0; I < IntSize; ++I) {
-    uint64_t ByteIndex = DL.isLittleEndian() ? I : (IntSize - 1 - I);
-    uint64_t Bits = std::min(BitWidth - ByteIndex * 8, uint64_t(8));
-    Bytes[Offset + I].set(Int.extractBitsAsZExtValue(Bits, ByteIndex * 8));
-  }
-}
-void MemoryObject::writeFloat(uint64_t Offset, const APFloat &Float,
-                              const DataLayout &DL) {
-  writeInteger(Offset, Float.bitcastToAPInt(), DL);
-}
-void MemoryObject::writePointer(uint64_t Offset, const Pointer &Ptr,
-                                const DataLayout &DL) {
-  writeInteger(Offset, Ptr.address(), DL);
-  // TODO: provenance
 }
 
 } // namespace llvm::ubi
