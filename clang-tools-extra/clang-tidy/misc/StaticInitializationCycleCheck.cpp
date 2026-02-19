@@ -17,27 +17,64 @@
 using namespace clang;
 using namespace clang::ast_matchers;
 
-// Compute (for the purpose of this check) if the value of a DeclRefExpr is used
-// (at runtime).
-// The value is not used if it appears at LHS of an assignment or it appears
+// Check if a reference to a static variable (that was reached while traversal
+// of a function declaration) should be ignored by the check. This returns true
+// if the value of the variable has no effect on the return value of the
+// function, or the reference is ignored for other reason to eliminate FP
+// results.
+// Ignore happens if the variable appears at LHS of an assignment or it appears
 // inside a compile-time constant expression (like 'sizeof').
-static bool isUnusedValue(const DeclRefExpr *DRE, ASTContext &ACtx) {
+// Additional condition is if the reference appears in a not immediately called
+// lambda function.
+static bool shouldIgnoreRef(const DeclRefExpr *DRE, const Decl *ParentD) {
+  ASTContext &ACtx = ParentD->getASTContext();
   ParentMapContext &PMC = ACtx.getParentMapContext();
   DynTypedNodeList Parents = PMC.getParents(*DRE);
-  const BinaryOperator *ParentBO = nullptr;
+  // While going upwards on the parent graph, this stores the last encountered
+  // lambda expression that did not appear (until now) as a callee of a
+  // 'operator ()'.
+  const LambdaExpr *ParentLambda = nullptr;
   while (!Parents.empty()) {
+    if (Parents.size() > 1)
+      return true;
     if (const Expr *E = Parents[0].get<Expr>()) {
-      if (E->isIntegerConstantExpr(ACtx))
+      if (!E->isValueDependent() && E->isIntegerConstantExpr(ACtx))
         return true;
-      if ((ParentBO = dyn_cast<BinaryOperator>(E)))
-        break;
+      if (const auto *ParentBO = dyn_cast<BinaryOperator>(E)) {
+        if (ParentBO->isAssignmentOp() &&
+            ParentBO->getLHS()->IgnoreParenCasts() == DRE)
+          return true;
+      } else if (const auto *LambdaE = dyn_cast<LambdaExpr>(E)) {
+        // Found another lambda while the last found do not appear to be called
+        // by '()'.
+        if (ParentLambda)
+          return true;
+        ParentLambda = LambdaE;
+      } else if (const auto *OpCallE = dyn_cast<CXXOperatorCallExpr>(E)) {
+        // Check if the last found lambda is called with this 'operator ()'.
+        if (ParentLambda &&
+            OpCallE->getOperator() == OverloadedOperatorKind::OO_Call &&
+            OpCallE->getCalleeDecl() == ParentLambda->getCallOperator())
+          ParentLambda = nullptr;
+      }
+    } else if (const Decl *D = Parents[0].get<Decl>()) {
+      // Check if we reached the root of the context (variable or function
+      // declaration) to check.
+      if ([D, ParentD]() {
+            if (const auto *ParentF = dyn_cast<FunctionDecl>(ParentD)) {
+              if (const auto *FD = dyn_cast<FunctionDecl>(D))
+                return FD == ParentF->getDefinition();
+              return false;
+            } else {
+              return D->getCanonicalDecl() == ParentD->getCanonicalDecl();
+            }
+          }())
+        return ParentLambda != nullptr;
     }
     Parents = PMC.getParents(Parents[0]);
   }
-  if (!ParentBO)
-    return false;
-  return ParentBO->isAssignmentOp() &&
-         ParentBO->getLHS()->IgnoreParenCasts() == DRE;
+  llvm_unreachable("declaration of ParentD should be reached");
+  return false;
 }
 
 namespace {
@@ -163,7 +200,7 @@ public:
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     if (const auto *VarD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (!isUnusedValue(DRE, VarD->getASTContext()) &&
+      if (!shouldIgnoreRef(DRE, Node->getDecl()) &&
           (VarD->hasGlobalStorage() || VarD->isStaticLocal()))
         Node->Uses.emplace_back(DRE, G.addNode(VarD->getCanonicalDecl()));
     }
@@ -279,7 +316,7 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
     return;
 
   Chk.diag((*VarNode)->getDecl()->getLocation(),
-           "Static variable initialization cycle detected involving %0")
+           "static variable initialization cycle detected involving %0")
       << (*VarNode)->getDecl();
 
   // SCC may contain multiple cycles.
@@ -314,7 +351,7 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
   for (const VarUseNode *N : FoundPath) {
     const VarUseRecord &U = *NextNode[N];
     // 'U' is the source of the value, 'N->getDecl()' is the destination
-    const char *VarFuncUseStr = U.Node->isVar() ? "Value" : "Result";
+    const char *VarFuncUseStr = U.Node->isVar() ? "value" : "result";
     if (N->isVar())
       Chk.diag(U.Ref->getBeginLoc(),
                "%0 of %1 may be used to initialize variable %2 here",

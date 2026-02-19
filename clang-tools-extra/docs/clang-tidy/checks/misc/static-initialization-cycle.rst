@@ -3,10 +3,11 @@
 misc-static-initialization-cycle
 ================================
 
-Finds cyclical initialization of static variables. The cycle can come from
-reference to static variables or from (static) function calls during
-initialization. Such cycles can cause undefined behavior. In this context
-"static" means C++ ``static`` class members, global variables, global
+Finds cyclical initialization of static variables.
+
+The cycle can come from reference to static variables or from (static) function
+calls during initialization. Such cycles can cause undefined behavior. In this
+context "static" means C++ ``static`` class members, global variables, global
 functions, and ``static`` variables inside functions.
 
 For the purpose of this check, the initialization of a static variable
