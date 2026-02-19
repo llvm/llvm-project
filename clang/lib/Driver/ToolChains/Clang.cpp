@@ -6366,6 +6366,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_ffixed_point,
                     options::OPT_fno_fixed_point);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_overflow_behavior_types,
+                    options::OPT_fno_experimental_overflow_behavior_types);
+
   if (Arg *A = Args.getLastArg(options::OPT_fcxx_abi_EQ))
     A->render(Args, CmdArgs);
 
@@ -7733,6 +7736,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     else
       CmdArgs.push_back(Args.MakeArgString(
           Twine("-funique-source-file-identifier=") + Input.getBaseInput()));
+  }
+
+  if (Args.hasFlag(
+          options::OPT_fexperimental_allow_pointer_field_protection_attr,
+          options::OPT_fno_experimental_allow_pointer_field_protection_attr,
+          false) ||
+      Args.hasFlag(options::OPT_fexperimental_pointer_field_protection_abi,
+                   options::OPT_fno_experimental_pointer_field_protection_abi,
+                   false))
+    CmdArgs.push_back("-fexperimental-allow-pointer-field-protection-attr");
+
+  if (!IsCudaDevice) {
+    Args.addOptInFlag(
+        CmdArgs, options::OPT_fexperimental_pointer_field_protection_abi,
+        options::OPT_fno_experimental_pointer_field_protection_abi);
+    Args.addOptInFlag(
+        CmdArgs, options::OPT_fexperimental_pointer_field_protection_tagged,
+        options::OPT_fno_experimental_pointer_field_protection_tagged);
   }
 
   // Setup statistics file output.

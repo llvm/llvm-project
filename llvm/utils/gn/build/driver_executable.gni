@@ -4,11 +4,20 @@ import("//llvm/utils/gn/build/write_cmake_config.gni")
 # llvm/cmake/modules/AddLLVM.cmake).
 template("driver_executable") {
   tool_name = string_replace(target_name, "-", "_")
+  if (defined(invoker.needs_posix_utility_signal_handling) &&
+      invoker.needs_posix_utility_signal_handling) {
+    initllvm_args = ", /*InstallPipeSignalExitHandler=*/true, /*NeedsPOSIXUtilitySignalHandling=*/true"
+  } else {
+    initllvm_args = ""
+  }
 
   write_cmake_config("${tool_name}-driver") {
     input = "//llvm/cmake/modules/llvm-driver-template.cpp.in"
     output = "$target_gen_dir/${tool_name}-driver.cpp"
-    values = [ "TOOL_NAME=$tool_name" ]
+    values = [
+      "TOOL_NAME=$tool_name",
+      "INITLLVM_ARGS=$initllvm_args",
+    ]
   }
 
   executable(target_name) {
