@@ -50,9 +50,11 @@ defm : RemapAllTargetPseudoPointerOperands<GP>;
 
 def SDTSC32cmp : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>]>;
 def SDTSC32jmp : SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>, SDTCisVT<1, OtherVT>]>;
+def SDTSC32select : SDTypeProfile<1, 3, [SDTCisVT<1, OtherVT>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>]>;
 
 def SC32cmp : SDNode<"SC32ISD::CMP", SDTSC32cmp, [SDNPOutGlue]>;
 def SC32jmp : SDNode<"SC32ISD::JMP", SDTSC32jmp, [SDNPHasChain, SDNPInGlue]>;
+def SC32select : SDNode<"SC32ISD::SELECT", SDTSC32select, [SDNPInGlue]>;
 
 def SDT_SC32Call : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 def SDT_SC32Ret : SDTypeProfile<0, 0, []>;
@@ -80,7 +82,7 @@ def uimm20 : PatLeaf<(imm), [{
   return isUInt<20>(N->getZExtValue());
 }]>;
 
-def brtarget : Operand<OtherVT>;
+def jmptarget : Operand<OtherVT>;
 def calltarget : Operand<i32>;
 
 multiclass Operator<string OpStr, SDNode OpNode> {
@@ -121,11 +123,18 @@ multiclass AUXOperator<string OpStr, SDNode OpNode> {
 
 class Jump<string OpStr, CondCode OpCC> : Instruction {
   let OutOperandList = (outs);
-  let InOperandList = (ins brtarget:$tgt);
+  let InOperandList = (ins jmptarget:$tgt);
   let Pattern = [(SC32jmp OpCC, bb:$tgt)];
   let AsmString = !strconcat(OpStr, " $tgt");
   let Uses = [FLAGS];
   let isTerminator = 1;
+}
+
+class Select<CondCode OpCC> : Instruction {
+  let OutOperandList = (outs GP:$dst);
+  let InOperandList = (ins GP:$t, GP:$f);
+  let Pattern = [(set i32:$dst, (SC32select OpCC, i32:$t, i32:$f))];
+  let usesCustomInserter = 1;
 }
 
 let Namespace = "SC32" in {
@@ -150,6 +159,17 @@ let Namespace = "SC32" in {
   def JLTU : Jump<"JLTU", SETULT>;
   def JGTU : Jump<"JGTU", SETUGT>;
   def JGEU : Jump<"JGEU", SETUGE>;
+
+  def SELECTEQ : Select<SETEQ>;
+  def SELECTNE : Select<SETNE>;
+  def SELECTLE : Select<SETLE>;
+  def SELECTLT : Select<SETLT>;
+  def SELECTGT : Select<SETGT>;
+  def SELECTGE : Select<SETGE>;
+  def SELECTLEU : Select<SETULE>;
+  def SELECTLTU : Select<SETULT>;
+  def SELECTGTU : Select<SETUGT>;
+  def SELECTGEU : Select<SETUGE>;
 
   def ST : Instruction {
     let OutOperandList = (outs);
@@ -212,7 +232,7 @@ let Namespace = "SC32" in {
 
   def JMP : Instruction {
     let OutOperandList = (outs);
-    let InOperandList = (ins brtarget:$tgt);
+    let InOperandList = (ins jmptarget:$tgt);
     let Pattern = [(br bb:$tgt)];
     let AsmString = "JMP $tgt";
     let isTerminator = 1;

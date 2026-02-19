@@ -3,6 +3,7 @@
 #include "SC32RegisterInfo.h"
 #include "SC32SelectionDAGInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 
 using namespace llvm;
 
@@ -19,6 +20,7 @@ SC32TargetLowering::SC32TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::MUL, MVT::i32, Expand);
 
   setOperationAction(ISD::BR_CC, MVT::i32, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8, Expand);
 
@@ -113,8 +115,8 @@ SDValue SC32TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   Ops[0] = Chain;
 
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  const uint32_t *Mask = TRI.getCallPreservedMask(MF, CallConv);
 
   Ops.push_back(DAG.getRegisterMask(Mask));
 
@@ -148,9 +150,21 @@ static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) {
 
   SDLoc DL(Op);
 
-  SDValue CompareFlag = DAG.getNode(SC32ISD::CMP, DL, MVT::Glue, LHS, RHS);
-  return DAG.getNode(SC32ISD::JMP, DL, MVT::Other, Chain, CC, Dest,
-                     CompareFlag);
+  SDValue Glue = DAG.getNode(SC32ISD::CMP, DL, MVT::Glue, LHS, RHS);
+  return DAG.getNode(SC32ISD::JMP, DL, MVT::Other, Chain, CC, Dest, Glue);
+}
+
+static SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) {
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue True = Op.getOperand(2);
+  SDValue False = Op.getOperand(3);
+  SDValue CC = Op.getOperand(4);
+
+  SDLoc DL(Op);
+
+  SDValue Glue = DAG.getNode(SC32ISD::CMP, DL, MVT::Glue, LHS, RHS);
+  return DAG.getNode(SC32ISD::SELECT, DL, MVT::i32, CC, True, False, Glue);
 }
 
 SDValue SC32TargetLowering::LowerOperation(SDValue Op,
@@ -160,5 +174,74 @@ SDValue SC32TargetLowering::LowerOperation(SDValue Op,
     llvm_unreachable("Should not custom lower this!");
   case ISD::BR_CC:
     return LowerBR_CC(Op, DAG);
+  case ISD::SELECT_CC:
+    return LowerSELECT_CC(Op, DAG);
+  }
+}
+
+static MachineBasicBlock *expandSelect(MachineInstr &MI, MachineBasicBlock *MBB,
+                                       unsigned Jmp) {
+  MachineFunction &MF = *MBB->getParent();
+  MachineFunction::iterator I = std::next(MBB->getIterator());
+  DebugLoc DL = MI.getDebugLoc();
+
+  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+
+  MachineBasicBlock *FalseMBB = MF.CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *SinkMBB = MF.CreateMachineBasicBlock(LLVM_BB);
+
+  MF.insert(I, FalseMBB);
+  MF.insert(I, SinkMBB);
+
+  SinkMBB->splice(SinkMBB->begin(), MBB,
+                  std::next(MachineBasicBlock::iterator(MI)), MBB->end());
+  SinkMBB->transferSuccessorsAndUpdatePHIs(MBB);
+
+  MBB->addSuccessor(FalseMBB);
+  MBB->addSuccessor(SinkMBB);
+  FalseMBB->addSuccessor(SinkMBB);
+
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+
+  BuildMI(MBB, DL, TII.get(Jmp)).addMBB(SinkMBB);
+
+  BuildMI(*SinkMBB, SinkMBB->begin(), DL, TII.get(SC32::PHI),
+          MI.getOperand(0).getReg())
+      .addReg(MI.getOperand(1).getReg())
+      .addMBB(MBB)
+      .addReg(MI.getOperand(2).getReg())
+      .addMBB(FalseMBB);
+
+  MI.eraseFromParent();
+
+  return SinkMBB;
+}
+
+MachineBasicBlock *
+SC32TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
+                                                MachineBasicBlock *MBB) const {
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Should not custom insert this!");
+  case SC32::SELECTEQ:
+    return expandSelect(MI, MBB, SC32::JEQ);
+  case SC32::SELECTNE:
+    return expandSelect(MI, MBB, SC32::JNE);
+  case SC32::SELECTLE:
+    return expandSelect(MI, MBB, SC32::JLE);
+  case SC32::SELECTLT:
+    return expandSelect(MI, MBB, SC32::JLT);
+  case SC32::SELECTGT:
+    return expandSelect(MI, MBB, SC32::JGT);
+  case SC32::SELECTGE:
+    return expandSelect(MI, MBB, SC32::JGE);
+  case SC32::SELECTLEU:
+    return expandSelect(MI, MBB, SC32::JLEU);
+  case SC32::SELECTLTU:
+    return expandSelect(MI, MBB, SC32::JLTU);
+  case SC32::SELECTGTU:
+    return expandSelect(MI, MBB, SC32::JGTU);
+  case SC32::SELECTGEU:
+    return expandSelect(MI, MBB, SC32::JGEU);
   }
 }
