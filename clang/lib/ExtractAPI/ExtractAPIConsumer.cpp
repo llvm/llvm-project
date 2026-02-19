@@ -419,7 +419,8 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
   // Do not include location in anonymous decls.
   PrintingPolicy Policy = CI.getASTContext().getPrintingPolicy();
-  Policy.AnonymousTagLocations = false;
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   CI.getASTContext().setPrintingPolicy(Policy);
 
   if (!CI.getFrontendOpts().ExtractAPIIgnoresFileList.empty()) {
@@ -522,7 +523,8 @@ WrappingExtractAPIAction::CreateASTConsumer(CompilerInstance &CI,
 
   // Do not include location in anonymous decls.
   PrintingPolicy Policy = CI.getASTContext().getPrintingPolicy();
-  Policy.AnonymousTagLocations = false;
+  Policy.AnonymousTagNameStyle =
+      llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
   CI.getASTContext().setPrintingPolicy(Policy);
 
   if (!CI.getFrontendOpts().ExtractAPIIgnoresFileList.empty()) {
