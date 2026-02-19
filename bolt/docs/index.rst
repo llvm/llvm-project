@@ -75,7 +75,7 @@ Start with cloning LLVM repo:
     > ninja bolt
 
 ``llvm-bolt`` will be available under ``bin/``. Add this directory to
-your path to ensure the rest of the commands in this tutorial work.
+your path ensuring the rest of the commands in this tutorial work.
 
 Optimizing BOLT’s Performance
 -----------------------------
@@ -150,7 +150,7 @@ running on the server for the next 3 minutes use:
     $ perf record -e cycles:u -j any,u -a -o perf.data -- sleep 180
 
 Depending on the application, you may need more samples to be included
-with your profile. It’s hard to tell upfront what would be a sweet spot
+with your profile. It’s often hard to tell upfront what would be a sweet spot
 for your application. We recommend the profile to cover 1B instructions
 as reported by BOLT ``-dyno-stats`` option. If you need to increase the
 number of samples in the profile, you can either run the ``sleep``
@@ -219,7 +219,7 @@ execute ``llvm-bolt``:
 
     $ llvm-bolt <executable> -o <executable>.bolt -data=perf.fdata -reorder-blocks=ext-tsp -reorder-functions=hfsort -split-functions -split-all-cold -split-eh -dyno-stats
 
-If you do need an updated debug info, then add
+If you need updated debug info, then add
 ``-update-debug-sections`` option to the command above. The processing
 time will be slightly longer.
 
