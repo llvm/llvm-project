@@ -146,9 +146,14 @@ static bool isKnownMonotonic(VPValue *V) {
   if (match(V, m_StepVector()))
     return true;
   if (auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(V))
-    return match(WidenIV->getStepValue(), m_One());
-  if (auto *WidenIV = dyn_cast<VPScalarIVStepsRecipe>(V))
-    return match(WidenIV->getStepValue(), m_One());
+    return match(WidenIV->getStartValue(), m_ZeroInt()) &&
+           match(WidenIV->getStepValue(), m_One());
+  if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(V))
+    return match(Steps->getOperand(0),
+                 m_CombineOr(
+                     m_CanonicalIV(),
+                     m_DerivedIV(m_ZeroInt(), m_CanonicalIV(), m_One()))) &&
+           match(Steps->getStepValue(), m_One());
   if (isa<VPWidenCanonicalIVRecipe>(V))
     return true;
   return vputils::isUniformAcrossVFsAndUFs(V);
