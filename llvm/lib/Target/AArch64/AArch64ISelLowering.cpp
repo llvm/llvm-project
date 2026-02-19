@@ -16164,23 +16164,16 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     return isNullConstant(V) || isNullFPConstant(V);
   };
   bool MaybeLowHalfZeroHigh =
-      VT.isFixedLengthVector() && VT.getSizeInBits() == 128 && NumElts != 0;
+      VT.isFixedLengthVector() && VT.getSizeInBits() == 128;
   unsigned HalfElts = MaybeLowHalfZeroHigh ? (NumElts >> 1) : 0;
   SDValue LowHalfFirstVal = MaybeLowHalfZeroHigh ? Op.getOperand(0) : SDValue();
   for (unsigned i = 0; i < NumElts; ++i) {
     SDValue V = Op.getOperand(i);
-    if (MaybeLowHalfZeroHigh) {
-      if (i < HalfElts) {
-        if (V != LowHalfFirstVal)
-          MaybeLowHalfZeroHigh = false;
-      } else if (!IsZero(V)) {
-        MaybeLowHalfZeroHigh = false;
-      }
-    }
     if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       AllLanesExtractElt = false;
     if (V.isUndef()) {
       ++NumUndefLanes;
+      MaybeLowHalfZeroHigh = false;
       continue;
     }
     if (i > 0)
@@ -16206,6 +16199,14 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     if (PrevVal != V) {
       ConsecutiveValCount = 0;
       PrevVal = V;
+    }
+      if (MaybeLowHalfZeroHigh) {
+      if (i < HalfElts) {
+        if (V != LowHalfFirstVal)
+          MaybeLowHalfZeroHigh = false;
+      } else if (!IsZero(V)) {
+        MaybeLowHalfZeroHigh = false;
+      }
     }
 
     // Keep different values and its last consecutive count. For example,
