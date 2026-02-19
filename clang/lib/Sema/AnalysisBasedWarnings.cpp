@@ -546,6 +546,47 @@ static bool areAllValuesNoReturn(const VarDecl *VD, const CFGBlock &VarBlk,
 }
 
 //===----------------------------------------------------------------------===//
+// Check for SEH __try in a function with C++ objects that have destructors.
+//===----------------------------------------------------------------------===//
+
+static void emitDiagForSehTryUnwind(Sema &S, CFGElement &E) {
+  if (auto AD = E.getAs<CFGAutomaticObjDtor>()) {
+    const auto *VD = AD->getVarDecl();
+    S.Diag(VD->getLocation(), diag::err_seh_try_dtor);
+  } else if (auto TD = E.getAs<CFGTemporaryDtor>()) {
+    const auto *E = TD->getBindTemporaryExpr();
+    S.Diag(E->getBeginLoc(), diag::err_seh_try_dtor);
+  } else
+    llvm_unreachable("emitDiagForSehTryUnwind should only be used with "
+                     "AutomaticObjectDtor or TemporaryDtor");
+}
+
+static void checkSehTryNeedsUnwind(Sema &S, const FunctionDecl *FD,
+                                   AnalysisDeclContext &AC) {
+  if (!FD->usesSEHTry())
+    return;
+  CFG *BodyCFG = AC.getCFG();
+  if (!BodyCFG)
+    return;
+  if (BodyCFG->getExit().pred_empty())
+    return;
+
+  llvm::BitVector Reachable(BodyCFG->getNumBlockIDs());
+  clang::reachable_code::ScanReachableFromBlock(&BodyCFG->getEntry(),
+                                                Reachable);
+  for (CFGBlock *B : *BodyCFG) {
+    if (!Reachable[B->getBlockID()])
+      continue;
+    for (CFGElement &E : *B) {
+      auto Kind = E.getKind();
+      if (Kind == CFGElement::AutomaticObjectDtor ||
+          Kind == CFGElement::TemporaryDtor)
+        emitDiagForSehTryUnwind(S, E);
+    }
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Check for missing return value.
 //===----------------------------------------------------------------------===//
 
@@ -3326,6 +3367,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
       if (S.getLangOpts().CPlusPlus && !fscope->isCoroutine() && isNoexcept(FD))
         checkThrowInNonThrowingFunc(S, FD, AC);
+
+  if (S.getLangOpts().CPlusPlus)
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
+      checkSehTryNeedsUnwind(S, FD, AC);
 
   // If none of the previous checks caused a CFG build, trigger one here
   // for the logical error handler.

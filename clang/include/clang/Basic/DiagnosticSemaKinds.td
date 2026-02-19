@@ -8658,6 +8658,8 @@ def err_mixing_cxx_try_seh_try : Error<
   "in the same function as SEH '__try'">;
 def err_seh_try_unsupported : Error<
   "SEH '__try' is not supported on this target">;
+def err_seh_try_dtor : Error<"cannot use C++ object with a destructor "
+                             "in the same function as SEH '__try'">;
 def note_conflicting_try_here : Note<
   "conflicting %0 here">;
 def warn_jump_out_of_seh_finally : Warning<
