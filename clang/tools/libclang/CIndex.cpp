@@ -5735,12 +5735,9 @@ void clang_PrintingPolicy_setProperty(CXPrintingPolicy Policy,
     P->ConstantArraySizeAsWritten = Value;
     return;
   case CXPrintingPolicy_AnonymousTagLocations:
-    if (Value)
-      P->AnonymousTagNameStyle =
-          llvm::to_underlying(PrintingPolicy::AnonymousTagMode::SourceLocation);
-    else
-      P->AnonymousTagNameStyle =
-          llvm::to_underlying(PrintingPolicy::AnonymousTagMode::Plain);
+    P->AnonymousTagNameStyle = llvm::to_underlying(
+        Value ? PrintingPolicy::AnonymousTagMode::SourceLocation
+              : PrintingPolicy::AnonymousTagMode::Plain);
     return;
   case CXPrintingPolicy_SuppressStrongLifetime:
     P->SuppressStrongLifetime = Value;
