@@ -1614,7 +1614,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     llvm::sort(DeclDiags,
               [](const LocAndDiag &LHS, const LocAndDiag &RHS) -> bool {
                 // Sorting purely for determinism; matches behavior in
-                // SemaDecl.cpp.
+                // Sema::ActOnPopScope.
                 return LHS.Loc.getRawEncoding() < RHS.Loc.getRawEncoding();
               });
     for (const LocAndDiag &D : DeclDiags)
