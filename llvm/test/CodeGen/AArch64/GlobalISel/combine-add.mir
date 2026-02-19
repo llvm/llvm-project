@@ -545,6 +545,15 @@ body: |
     liveins: $x0
 
 
+    ; CHECK-LABEL: name: NotAPlusNegOne_multi
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %xor:_(s64) = G_SUB [[C]], %x
+    ; CHECK-NEXT: %mul:_(s64) = G_MUL %xor, %mul
+    ; CHECK-NEXT: $x0 = COPY %mul(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(s64) = COPY $x0
     %neg_one:_(s64) = G_CONSTANT i64 -1
     %add:_(s64) = G_ADD %x, %neg_one
@@ -553,23 +562,4 @@ body: |
     $x0 = COPY %mul
     RET_ReallyLR implicit $x0
 ...
----
-name:            NotAPlusNegOne_vec
-alignment:       4
-tracksRegLiveness: true
-frameInfo:
-  maxAlignment:    1
-machineFunctionInfo: {}
-body:             |
-  bb.0:
-    liveins: $x0
 
-
-    %x:_(<4 x s16>) = COPY $x0
-    %neg_one:_(s16) = G_CONSTANT i16 -1
-    %neg_one_vec:_(<4 x s16>) = G_BUILD_VECTOR %neg_one(s16), %neg_one(s16), %neg_one(s16), %neg_one(s16)
-    %add:_(<4 x s16>) = G_ADD %x, %neg_one_vec
-    %xor:_(s64) = G_XOR %add, %neg_one_vec
-    $x0 = COPY %xor
-...
-    
