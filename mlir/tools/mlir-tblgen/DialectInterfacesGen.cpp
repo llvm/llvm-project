@@ -113,6 +113,11 @@ static void emitInterfaceMethodsDef(const DialectInterface &interface,
       continue;
     }
 
+    if (method.isPureVirtual()) {
+      ios << " = 0;\n";
+      continue;
+    }
+
     // if it is not a method declaration, then it's a normal interface method.
     ios << " {";
 
@@ -126,6 +131,27 @@ static void emitInterfaceMethodsDef(const DialectInterface &interface,
   }
 }
 
+static void emitConstructor(const DialectInterface &interface,
+                            raw_ostream &os) {
+
+  raw_indented_ostream ios(os);
+
+  // We consider a constructor protected if interface has at least one pure
+  // virtual method
+  auto hasProtectedConstructor =
+      llvm::any_of(interface.getMethods(), [](const InterfaceMethod &method) {
+        return method.isPureVirtual();
+      });
+
+  ios.indent(0);
+  if (hasProtectedConstructor)
+    ios << "protected:\n";
+
+  ios.indent(2);
+  ios << llvm::formatv("{0}(::mlir::Dialect *dialect) : Base(dialect) {{}\n",
+                       interface.getName());
+}
+
 void DialectInterfaceGenerator::emitInterfaceDecl(
     const DialectInterface &interface) {
   llvm::NamespaceEmitter ns(os, interface.getCppNamespace());
@@ -135,9 +161,8 @@ void DialectInterfaceGenerator::emitInterfaceDecl(
 
   // Emit the main interface class declaration.
   os << llvm::formatv(
-      "class {0} : public ::mlir::DialectInterface::Base<{0}> {\n"
-      "public:\n"
-      "  {0}(::mlir::Dialect *dialect) : Base(dialect) {{}\n",
+      "class {0} : public ::mlir::DialectInterface::Base<{0}> {{\n"
+      "public:\n",
       interface.getName());
 
   emitInterfaceMethodsDef(interface, os);
@@ -150,6 +175,10 @@ void DialectInterfaceGenerator::emitInterfaceDecl(
     ios.printReindented(extraDecls.value());
     ios << "\n";
   }
+
+  os << "\n";
+
+  emitConstructor(interface, os);
 
   os << "};\n";
 }

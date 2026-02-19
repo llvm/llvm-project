@@ -1088,7 +1088,7 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
   // For each node in CheckedSet, generate CleanedNodes that have the
   // environment, the store, and the constraints cleaned up but have the
   // user-supplied states as the predecessors.
-  StmtNodeBuilder Bldr(CheckedSet, Out, *currBldrCtx);
+  NodeBuilder Bldr(CheckedSet, Out, *currBldrCtx);
   for (const auto I : CheckedSet) {
     ProgramStateRef CheckerState = I->getState();
 
@@ -1599,8 +1599,8 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
   }
 
   ExplodedNodeSet CleanDtorState;
-  StmtNodeBuilder StmtBldr(Pred, CleanDtorState, *currBldrCtx);
-  StmtBldr.generateNode(D.getBindTemporaryExpr(), Pred, State);
+  NodeBuilder Builder(Pred, CleanDtorState, *currBldrCtx);
+  Builder.generateNode(D.getBindTemporaryExpr(), Pred, State);
 
   QualType T = D.getBindTemporaryExpr()->getSubExpr()->getType();
   // FIXME: Currently CleanDtorState can be empty here due to temporaries being
@@ -1650,7 +1650,7 @@ void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
                                                ExplodedNodeSet &Dst,
                                                const CFGBlock *DstT,
                                                const CFGBlock *DstF) {
-  BranchNodeBuilder TempDtorBuilder(Pred, Dst, BldCtx, DstT, DstF);
+  BranchNodeBuilder TempDtorBuilder(Dst, BldCtx, DstT, DstF);
   ProgramStateRef State = Pred->getState();
   const LocationContext *LC = Pred->getLocationContext();
   if (getObjectUnderConstruction(State, BTE, LC)) {
@@ -1672,7 +1672,7 @@ void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
     Dst = PreVisit;
     return;
   }
-  StmtNodeBuilder StmtBldr(PreVisit, Dst, *currBldrCtx);
+  NodeBuilder Builder(PreVisit, Dst, *currBldrCtx);
   for (ExplodedNode *Node : PreVisit) {
     ProgramStateRef State = Node->getState();
     const LocationContext *LC = Node->getLocationContext();
@@ -1683,7 +1683,7 @@ void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
       // temporary destructor nodes.
       State = addObjectUnderConstruction(State, BTE, LC, UnknownVal());
     }
-    StmtBldr.generateNode(BTE, Node, State);
+    Builder.generateNode(BTE, Node, State);
   }
 }
 
@@ -1719,7 +1719,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 S->getBeginLoc(), "Error evaluating statement");
   ExplodedNodeSet Dst;
-  StmtNodeBuilder Bldr(Pred, DstTop, *currBldrCtx);
+  NodeBuilder Bldr(Pred, DstTop, *currBldrCtx);
 
   assert(!isa<Expr>(S) || S == cast<Expr>(S)->IgnoreParens());
 
@@ -2002,7 +2002,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
 
       ExplodedNodeSet Tmp;
-      StmtNodeBuilder Bldr2(PreVisit, Tmp, *currBldrCtx);
+      NodeBuilder Bldr2(PreVisit, Tmp, *currBldrCtx);
 
       const Expr *ArgE;
       if (const auto *DefE = dyn_cast<CXXDefaultArgExpr>(S))
@@ -2049,7 +2049,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       getCheckerManager().runCheckersForPreStmt(preVisit, Pred, S, *this);
 
       ExplodedNodeSet Tmp;
-      StmtNodeBuilder Bldr2(preVisit, Tmp, *currBldrCtx);
+      NodeBuilder Bldr2(preVisit, Tmp, *currBldrCtx);
 
       const auto *Ex = cast<Expr>(S);
       QualType resultType = Ex->getType();
@@ -2850,7 +2850,7 @@ void ExprEngine::processBranch(
 
   // Check for NULL conditions; e.g. "for(;;)"
   if (!Condition) {
-    BranchNodeBuilder NullCondBldr(Pred, Dst, BldCtx, DstT, DstF);
+    BranchNodeBuilder NullCondBldr(Dst, BldCtx, DstT, DstF);
     NullCondBldr.generateNode(Pred->getState(), true, Pred);
     return;
   }
@@ -2870,7 +2870,7 @@ void ExprEngine::processBranch(
   if (CheckersOutSet.empty())
     return;
 
-  BranchNodeBuilder Builder(CheckersOutSet, Dst, BldCtx, DstT, DstF);
+  BranchNodeBuilder Builder(Dst, BldCtx, DstT, DstF);
   for (ExplodedNode *PredN : CheckersOutSet) {
     if (PredN->isSink())
       continue;
@@ -2979,7 +2979,7 @@ void ExprEngine::processStaticInitializer(
   const auto *VD = cast<VarDecl>(DS->getSingleDecl());
   ProgramStateRef state = Pred->getState();
   bool initHasRun = state->contains<InitializedGlobalsSet>(VD);
-  BranchNodeBuilder Builder(Pred, Dst, BuilderCtx, DstT, DstF);
+  BranchNodeBuilder Builder(Dst, BuilderCtx, DstT, DstF);
 
   if (!initHasRun) {
     state = state->add<InitializedGlobalsSet>(VD);
@@ -3108,7 +3108,7 @@ void ExprEngine::processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
                                ExplodedNode *Pred, ExplodedNodeSet &Dst) {
   const Expr *Condition = Switch->getCond();
 
-  SwitchNodeBuilder Builder(Pred, Dst, BC);
+  SwitchNodeBuilder Builder(Dst, BC);
 
   ProgramStateRef State = Pred->getState();
   SVal CondV = State->getSVal(Condition, Pred->getLocationContext());
@@ -3179,7 +3179,7 @@ void ExprEngine::processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
 void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
                                         ExplodedNode *Pred,
                                         ExplodedNodeSet &Dst) {
-  StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
 
   ProgramStateRef state = Pred->getState();
   const LocationContext *LCtx = Pred->getLocationContext();
@@ -3344,7 +3344,7 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, Ex, *this);
 
   ExplodedNodeSet EvalSet;
-  StmtNodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
+  NodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
 
   const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
 
@@ -3445,7 +3445,7 @@ void ExprEngine::VisitArraySubscriptExpr(const ArraySubscriptExpr *A,
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
 
   ExplodedNodeSet EvalSet;
-  StmtNodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
+  NodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
 
   bool IsVectorType = A->getBase()->getType()->isVectorType();
 
@@ -3501,7 +3501,7 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
     for (const auto I : CheckedSet)
       VisitCommonDeclRefExpr(M, Member, I, EvalSet);
   } else {
-    StmtNodeBuilder Bldr(CheckedSet, EvalSet, *currBldrCtx);
+    NodeBuilder Bldr(CheckedSet, EvalSet, *currBldrCtx);
     ExplodedNodeSet Tmp;
 
     for (const auto I : CheckedSet) {
@@ -3583,7 +3583,7 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
   // FIXME: Ideally we should model the behavior of the atomics precisely here.
 
   ExplodedNodeSet AfterInvalidateSet;
-  StmtNodeBuilder Bldr(AfterPreSet, AfterInvalidateSet, *currBldrCtx);
+  NodeBuilder Bldr(AfterPreSet, AfterInvalidateSet, *currBldrCtx);
 
   for (const auto I : AfterPreSet) {
     ProgramStateRef State = I->getState();
@@ -3725,7 +3725,7 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
   getCheckerManager().runCheckersForBind(CheckedSet, Pred, location, Val,
                                          StoreE, AtDeclInit, *this, *PP);
 
-  StmtNodeBuilder Bldr(CheckedSet, Dst, *currBldrCtx);
+  NodeBuilder Bldr(CheckedSet, Dst, *currBldrCtx);
 
   // If the location is not a 'Loc', it will already be handled by
   // the checkers.  There is nothing left to do.
@@ -3808,7 +3808,7 @@ void ExprEngine::evalLoad(ExplodedNodeSet &Dst,
   if (Tmp.empty())
     return;
 
-  StmtNodeBuilder Bldr(Tmp, Dst, *currBldrCtx);
+  NodeBuilder Bldr(Tmp, Dst, *currBldrCtx);
   if (location.isUndef())
     return;
 
@@ -3836,7 +3836,7 @@ void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
                               ProgramStateRef state,
                               SVal location,
                               bool isLoad) {
-  StmtNodeBuilder BldrTop(Pred, Dst, *currBldrCtx);
+  NodeBuilder BldrTop(Pred, Dst, *currBldrCtx);
   // Early checks for performance reason.
   if (location.isUnknown()) {
     return;
@@ -3844,7 +3844,7 @@ void ExprEngine::evalLocation(ExplodedNodeSet &Dst,
 
   ExplodedNodeSet Src;
   BldrTop.takeNodes(Pred);
-  StmtNodeBuilder Bldr(Pred, Src, *currBldrCtx);
+  NodeBuilder Bldr(Pred, Src, *currBldrCtx);
   if (Pred->getState() != state) {
     // Associate this new state with an ExplodedNode.
     // FIXME: If I pass null tag, the graph is incorrect, e.g for
@@ -3881,7 +3881,7 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(LastEagerlyAssumeExprIfSuccessful,
 void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
                                               ExplodedNodeSet &Src,
                                               const Expr *Ex) {
-  StmtNodeBuilder Bldr(Src, Dst, *currBldrCtx);
+  NodeBuilder Bldr(Src, Dst, *currBldrCtx);
 
   for (ExplodedNode *Pred : Src) {
     // Test if the previous node was as the same expression.  This can happen
@@ -3930,7 +3930,7 @@ bool ExprEngine::didEagerlyAssumeBifurcateAt(ProgramStateRef State,
 
 void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-  StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   // We have processed both the inputs and the outputs.  All of the outputs
   // should evaluate to Locs.  Nuke all of their values.
 
@@ -3967,7 +3967,7 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
 
 void ExprEngine::VisitMSAsmStmt(const MSAsmStmt *A, ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst) {
-  StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   Bldr.generateNode(A, Pred, Pred->getState());
 }
 
@@ -4134,7 +4134,7 @@ void ExprEngine::ConstructInitList(const Expr *E, ArrayRef<Expr *> Args,
 
   const LocationContext *LC = Pred->getLocationContext();
 
-  StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
+  NodeBuilder B(Pred, Dst, *currBldrCtx);
   ProgramStateRef S = Pred->getState();
   QualType T = E->getType().getCanonicalType();
 

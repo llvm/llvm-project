@@ -23,22 +23,23 @@ constexpr extern long double cx_var_ld = __builtin_huge_vall();
 // LLVM: @cx_var_ld = {{.*}} x86_fp80 0xK7FFF8000000000000000
 // OGCG: @cx_var_ld = {{.*}} x86_fp80 0xK7FFF8000000000000000
 
-int is_constant_evaluated() {
+bool is_constant_evaluated() {
   return __builtin_is_constant_evaluated();
 }
 
-// CIR: cir.func{{.*}} @_Z21is_constant_evaluatedv() -> (!s32i{{.*}})
-// CIR: %[[ZERO:.+]] = cir.const #cir.int<0>
+// CIR: cir.func{{.*}} @_Z21is_constant_evaluatedv() -> (!cir.bool{{.*}})
+// CIR: %[[FALSE:.+]] = cir.const #false
 
-// LLVM: define {{.*}}i32 @_Z21is_constant_evaluatedv()
-// LLVM: %[[MEM:.+]] = alloca i32
-// LLVM: store i32 0, ptr %[[MEM]]
-// LLVM: %[[RETVAL:.+]] = load i32, ptr %[[MEM]]
-// LLVM: ret i32 %[[RETVAL]]
+// LLVM: define {{.*}}i1 @_Z21is_constant_evaluatedv()
+// LLVM: %[[MEM:.+]] = alloca i8
+// LLVM: store i8 0, ptr %[[MEM]]
+// LLVM: %[[RETVAL:.+]] = load i8, ptr %[[MEM]]
+// LLVM: %[[BOOL:.+]] = trunc i8 %[[RETVAL]] to i1
+// LLVM: ret i1 %[[BOOL]]
 // LLVM: }
 
-// OGCG: define {{.*}}i32 @_Z21is_constant_evaluatedv()
-// OGCG: ret i32 0
+// OGCG: define {{.*}}i1 @_Z21is_constant_evaluatedv()
+// OGCG: ret i1 false
 // OGCG: }
 
 long double constant_fp_builtin_ld() {
@@ -163,41 +164,35 @@ void expect(int x, int y) {
   __builtin_expect(x, y);
 }
 
+// At -O0, __builtin_expect is a passthrough (no cir.expect / llvm.expect).
+// See pred-info-builtins.c for -O2 tests that verify cir.expect emission.
 // CIR-LABEL: cir.func{{.*}} @_Z6expectii
-// CIR:         %[[X:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast integral %[[X]] : !s32i -> !s64i
-// CIR-NEXT:    %[[Y:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast integral %[[Y]] : !s32i -> !s64i
-// CIR-NEXT:    %{{.+}} = cir.expect(%[[X_LONG]], %[[Y_LONG]]) : !s64i
+// CIR-NOT:     cir.expect
 // CIR:       }
 
 // LLVM-LABEL: define{{.*}} void @_Z6expectii
-// LLVM:         %[[X:.+]] = load i32, ptr %{{.+}}, align 4
-// LLVM-NEXT:    %[[X_LONG:.+]] = sext i32 %[[X]] to i64
-// LLVM-NEXT:    %[[Y:.+]] = load i32, ptr %{{.+}}, align 4
-// LLVM-NEXT:    %[[Y_LONG:.+]] = sext i32 %[[Y]] to i64
-// LLVM-NEXT:    %{{.+}} = call i64 @llvm.expect.i64(i64 %[[X_LONG]], i64 %[[Y_LONG]])
+// LLVM-NOT:     call i64 @llvm.expect
 // LLVM:       }
+
+// OGCG-LABEL: define{{.*}} void @_Z6expectii
+// OGCG-NOT:     call i64 @llvm.expect
+// OGCG:       }
 
 void expect_prob(int x, int y) {
   __builtin_expect_with_probability(x, y, 0.25);
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z11expect_probii
-// CIR:         %[[X:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast integral %[[X]] : !s32i -> !s64i
-// CIR-NEXT:    %[[Y:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast integral %[[Y]] : !s32i -> !s64i
-// CIR-NEXT:    %{{.+}} = cir.expect(%[[X_LONG]], %[[Y_LONG]], 2.500000e-01) : !s64i
+// CIR-NOT:     cir.expect
 // CIR:       }
 
-// LLVM:       define{{.*}} void @_Z11expect_probii
-// LLVM:         %[[X:.+]] = load i32, ptr %{{.+}}, align 4
-// LLVM-NEXT:    %[[X_LONG:.+]] = sext i32 %[[X]] to i64
-// LLVM-NEXT:    %[[Y:.+]] = load i32, ptr %{{.+}}, align 4
-// LLVM-NEXT:    %[[Y_LONG:.+]] = sext i32 %[[Y]] to i64
-// LLVM-NEXT:    %{{.+}} = call i64 @llvm.expect.with.probability.i64(i64 %[[X_LONG]], i64 %[[Y_LONG]], double 2.500000e-01)
+// LLVM-LABEL: define{{.*}} void @_Z11expect_probii
+// LLVM-NOT:     call i64 @llvm.expect
 // LLVM:       }
+
+// OGCG-LABEL: define{{.*}} void @_Z11expect_probii
+// OGCG-NOT:     call i64 @llvm.expect
+// OGCG:       }
 
 void unreachable() {
   __builtin_unreachable();
