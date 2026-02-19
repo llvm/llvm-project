@@ -23,24 +23,13 @@
 ;     @f) that appear within each unrolled iteration.
 ; - Branch weight metadata
 ;   - Checking frequencies already checks whether the branch weights have the
-;     expected effect, but we also want to check the following.
-;   - We get uniform probabilities/weights (same !prof) across the unrolled
-;     iteration latches if either:
-;     - Every iteration's latch remains conditional, so their original
-;       probabilities are not contradicted.
-;     - The original loop body frequency is 1, and then probabilities are all 0
-;       because only the first iteration is expected to execute.
-;     - The number of remaining conditional latches is <= 2, so the
-;       implementation computes uniform branch weights by solving a linear or
-;       quadratic equation.
-;     - -unroll-uniform-weights.
-;   - Otherwise, the earliest branch weights (starting with !prof !0) are
-;     adjusted as needed to produce the original loop body frequency, and the
-;     rest are left as they were in the original loop.
+;     expected effect, but we also want to check that we get uniform
+;     probabilities/weights (same !prof) across the unrolled iteration latches
+;     when expected.
 ; - llvm.loop.estimated_trip_count
-;   - Must be the number of iterations of the unrolled loop required for the
+;   - It must be the number of iterations of the unrolled loop required for the
 ;     original loop body to reach its original frequency.
-;   - Must not be blindly computed from any new latch branch weights.
+;   - It must not be blindly computed from any new latch branch weights.
 
 ; ------------------------------------------------------------------------------
 ; Define LIT substitutions.
@@ -78,7 +67,6 @@
 ; their original probabilities are not contradicted.  That is, the original loop
 ; latch's branch weights remain on all unrolled iterations' latches.
 ;
-;   RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} MULT3
 ;   RUN: %{ur-bf} -unroll-count=3 | %{fc} MULT3
 ;
 ;   Sums to approximately the original loop body frequency, 10.
@@ -103,9 +91,7 @@
 ;
 ;   -unroll-count=2, so there is 1 remaining conditional latch, so the
 ;   implementation can compute uniform weights by solving a linear equation.
-;   Thus, -unroll-uniform-weights has no effect.
 ;
-;     RUN: %{ur-bf} -unroll-count=2 -unroll-uniform-weights | %{fc} MULT2
 ;     RUN: %{ur-bf} -unroll-count=2 | %{fc} MULT2
 ;
 ;     Multiply by 2 to get the original loop body frequency, 10.
@@ -125,9 +111,7 @@
 ;
 ;   -unroll-count=4, so there are 2 remaining conditional latches, so the
 ;   implementation can compute uniform weights using the quadratic formula.
-;   Thus, -unroll-uniform-weights has no effect.
 ;
-;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} MULT4
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} MULT4
 ;
 ;     Multiply by 2 and sum to get the original loop body frequency, 10.
@@ -149,56 +133,6 @@
 ;     MULT4: !1 = distinct !{!1, !2, !3}
 ;     MULT4: !2 = !{!"llvm.loop.estimated_trip_count", i32 3}
 ;     MULT4: !3 = !{!"llvm.loop.unroll.disable"}
-;
-;   -unroll-count=6, so there are 3 remaining conditional latches, the lowest
-;   number where the implementation cannot compute uniform weights using a
-;   simple formula.  Thus, this is our first case where -unroll-uniform-weights
-;   matters.
-;
-;     RUN: %{ur-bf} -unroll-count=6 -unroll-uniform-weights | %{fc} MULT6,MUNIF6
-;     RUN: %{ur-bf} -unroll-count=6 | %{fc} MULT6,MFAST6
-;
-;     For either MUNIF or MFAST, multiply by 2 and sum to get the original loop
-;     body frequency, 10.
-;     MUNIF6: - do.body: float = 2.0492,
-;     MUNIF6: - do.body.2: float = 1.6393,
-;     MUNIF6: - do.body.4: float = 1.3115,
-;     MFAST6: - do.body: float = 2.1956,
-;     MFAST6: - do.body.2: float = 1.476,
-;     MFAST6: - do.body.4: float = 1.3284,
-;
-;     MULT6:       call void @f
-;     MULT6-NOT:   br
-;     MULT6:       call void @f
-;     MULT6:       br i1 %{{.*}}, label %do.body.2, label %do.end, !prof !0
-;     MULT6:       call void @f
-;     MULT6-NOT:   br
-;     MULT6:       call void @f
-;     MULT6:       br i1 %{{.*}}, label %do.body.4, label %do.end,
-;     MUNIF6-SAME:   !prof !0
-;     MFAST6-SAME:   !prof !1
-;     MULT6:       call void @f
-;     MULT6-NOT:   br
-;     MULT6:       call void @f
-;     MULT6:       br i1 %{{.*}}, label %do.body, label %do.end,
-;     MUNIF6-SAME:   !prof !0, !llvm.loop !1
-;     MFAST6-SAME:   !prof !1, !llvm.loop !2
-;
-;     MUNIF6 is like applying -unroll-count=3 to MULT2 without converting any
-;     additional conditional latches to unconditional, so (approximately)
-;     MULT2's branch weights make sense.
-;     MUNIF6: !0 = !{!"branch_weights", i32 1717986944, i32 429496704}
-;     MUNIF6: !1 = distinct !{!1, !2, !3}
-;     MUNIF6: !2 = !{!"llvm.loop.estimated_trip_count", i32 2}
-;     MUNIF6: !3 = !{!"llvm.loop.unroll.disable"}
-;
-;     There are 3 conditional latches remaining, so MFAST6 adjusts the first and
-;     leaves the second two with the original loop's branch weights.
-;     MFAST6: !0 = !{!"branch_weights", i32 1443686486, i32 703797162}
-;     MFAST6: !1 = !{!"branch_weights", i32 9, i32 1}
-;     MFAST6: !2 = distinct !{!2, !3, !4}
-;     MFAST6: !3 = !{!"llvm.loop.estimated_trip_count", i32 2}
-;     MFAST6: !4 = !{!"llvm.loop.unroll.disable"}
 
 ; ------------------------------------------------------------------------------
 ; Check case when the original loop's number of iterations is a run-time
@@ -219,7 +153,6 @@
 ; implementation tries to compute uniform weights by solving a linear equation
 ; but ultimately sets the latch's probability to zero.
 ;
-;   RUN: %{ur-bf} -unroll-count=2 -unroll-uniform-weights | %{fc} LOW2
 ;   RUN: %{ur-bf} -unroll-count=2 | %{fc} LOW2
 ;
 ;   Multiply by 2, but the result is greater than the original loop body
@@ -240,7 +173,6 @@
 ; implementation tries to compute uniform weights using the quadratic formula
 ; but ultimately sets both latches' probabilities to zero.
 ;
-;   RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} LOW4
 ;   RUN: %{ur-bf} -unroll-count=4 | %{fc} LOW4
 ;
 ;   Multiply by 2 and sum, but the result is greater than the original loop body
@@ -261,41 +193,6 @@
 ;   LOW4: !1 = distinct !{!1, !2, !3}
 ;   LOW4: !2 = !{!"llvm.loop.estimated_trip_count", i32 1}
 ;   LOW4: !3 = !{!"llvm.loop.unroll.disable"}
-;
-; -unroll-count=6, so there are 3 remaining conditional latches.  The
-; implementation cannot compute uniform weights using a simple formula, and
-; ultimately it must set all those latches' probabilities to zero.  If not
-; -unroll-uniform-weights, then the implementation will face a new stumbling
-; block starting at the second latch: reaching the remaining iterations already
-; has a zero probability due to the zero probability set at the first latch, so
-; the required probability could accidentally be computed as negative infinity.
-;
-;   RUN: %{ur-bf} -unroll-count=6 -unroll-uniform-weights | %{fc} LOW6
-;   RUN: %{ur-bf} -unroll-count=6 | %{fc} LOW6
-;
-;   Multiply by 2 and sum, but the result is greater than the original loop body
-;   frequency, 1, which is impossibly low.
-;   LOW6: - do.body: float = 1.0,
-;   LOW6: - do.body.2: float = 0.0{{(0000[0-9]*)?}},
-;   LOW6: - do.body.4: float = 0.0{{(0000[0-9]*)?}},
-;
-;   LOW6:     call void @f
-;   LOW6-NOT: br
-;   LOW6:     call void @f
-;   LOW6:     br i1 %{{.*}}, label %do.body.2, label %do.end, !prof !0
-;   LOW6:     call void @f
-;   LOW6-NOT: br
-;   LOW6:     call void @f
-;   LOW6:     br i1 %{{.*}}, label %do.body.4, label %do.end, !prof !0
-;   LOW6:     call void @f
-;   LOW6-NOT: br
-;   LOW6:     call void @f
-;   LOW6:     br i1 %{{.*}}, label %do.body, label %do.end, !prof !0, !llvm.loop !1
-;
-;   LOW6: !0 = !{!"branch_weights", i32 0, i32 -2147483648}
-;   LOW6: !1 = distinct !{!1, !2, !3}
-;   LOW6: !2 = !{!"llvm.loop.estimated_trip_count", i32 1}
-;   LOW6: !3 = !{!"llvm.loop.unroll.disable"}
 
 ; ------------------------------------------------------------------------------
 ; Check cases when the original loop's number of iterations is a constant 10 and
@@ -306,7 +203,7 @@
 ; Because we test only partial unrolling, there is always exactly one unrolled
 ; iteration that can possibly exit, so only its latch can remain conditional.
 ; Because there is only one, its branch weights can be computed with a simple
-; formula, and -unroll-uniform-weights does not matter.
+; formula.
 ;
 ; Check the original loop body frequency.
 ;
@@ -315,7 +212,6 @@
 ;
 ; Check when the unrolled loop's backedge remains conditional.
 ;
-;   RUN: %{ur-bf} -unroll-count=2 -unroll-uniform-weights | %{fc} CONST2
 ;   RUN: %{ur-bf} -unroll-count=2 | %{fc} CONST2
 ;
 ;   Multiply by 2 to get the original loop body frequency, 10.
@@ -334,7 +230,6 @@
 ;
 ; Check when the unrolled loop's backedge unconditionally continues.
 ;
-;   RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} CONST4
 ;   RUN: %{ur-bf} -unroll-count=4 | %{fc} CONST4
 ;
 ;   Multiply by 2 and sum to get the original loop body frequency, 10.

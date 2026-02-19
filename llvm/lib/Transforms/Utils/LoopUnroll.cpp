@@ -89,11 +89,6 @@ UnrollRuntimeEpilog("unroll-runtime-epilog", cl::init(false), cl::Hidden,
                     cl::desc("Allow runtime unrolled loops to be unrolled "
                              "with epilog instead of prolog."));
 
-static cl::opt<bool> UnrollUniformWeights(
-    "unroll-uniform-weights", cl::init(false), cl::Hidden,
-    cl::desc("If new branch weights must be found, work harder to keep them "
-             "uniform."));
-
 static cl::opt<bool>
 UnrollVerifyDomtree("unroll-verify-domtree", cl::Hidden,
                     cl::desc("Verify domtree after unrolling"),
@@ -497,10 +492,9 @@ static bool canHaveUnrollRemainder(const Loop *L) {
 // original loop iterations.
 //
 // There are often many sets of latch probabilities that can produce the
-// original total loop body frequency.  If there are many remaining conditional
-// latches and !UnrollUniformWeights, this function just quickly hacks a few of
-// their probabilities to restore the original total loop body frequency.
-// Otherwise, it tries harder to determine less arbitrary probabilities.
+// original total loop body frequency.  For now, this function computes uniform
+// probabilities when the number of remaining conditional latches is <= 2 and
+// does not handle other cases.
 static void fixProbContradiction(UnrollLoopOptions ULO,
                                  BranchProbability OriginalLoopProb,
                                  bool CompletelyUnroll,
@@ -546,8 +540,8 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
   // can adjust.  That should mean that the actual trip count is always exactly
   // the number of remaining unrolled iterations, and so OriginalLoopProb should
   // have yielded that trip count as the original loop body frequency.  Of
-  // course, OriginalLoopProb could be based on bad profile data, but there is
-  // nothing we can do about that here.
+  // course, OriginalLoopProb could be based on inaccurate profile data, but
+  // there is nothing we can do about that here.
   if (CondLatches.empty())
     return;
 
@@ -562,13 +556,6 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
 
   // FreqDesired is the frequency implied by the original loop probability.
   double FreqDesired = 1 / (1 - OriginalLoopProb.toDouble());
-
-  // Get the probability at CondLatches[I].
-  auto GetProb = [&](unsigned I) {
-    BranchInst *B = cast<BranchInst>(CondLatches[I]->getTerminator());
-    bool FirstTargetIsNext = B->getSuccessor(0) == CondLatchNexts[I];
-    return getBranchProbability(B, FirstTargetIsNext).toDouble();
-  };
 
   // Set the probability at CondLatches[I] to Prob.
   auto SetProb = [&](unsigned I, double Prob) {
@@ -585,11 +572,10 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
       SetProb(I, Prob);
   };
 
-  // If UnrollUniformWeights or n <= 2, we choose the simplest probability model
-  // we can think of: every remaining conditional branch instruction has the
-  // same probability, Prob, of continuing to the next iteration.  This model
-  // has several helpful properties:
-  // - There is only one search parameter, Prob.
+  // If n <= 2, we choose the simplest probability model we can think of: every
+  // remaining conditional branch instruction has the same probability, Prob,
+  // of continuing to the next iteration.  This model has several helpful
+  // properties:
   // - We have no reason to think one latch branch's probability should be
   //   higher or lower than another, and so this model makes them all the same.
   //   In the worst cases, we thus avoid setting just some probabilities to 0 or
@@ -602,224 +588,51 @@ static void fixProbContradiction(UnrollLoopOptions ULO,
   //
   //     FreqOne = Sum(i=0..n)(c_i * p^i)
   //
-  // - If the backedge has been eliminated:
-  //   - FreqOne is the total frequency of the original loop body in the
-  //     unrolled loop.
-  //   - If Prob == 1, the total frequency of the original loop body is exactly
-  //     the number of remaining loop iterations, as expected because every
-  //     remaining loop iteration always then executes.
-  // - If the backedge remains:
-  //   - Sum(i=0..inf)(FreqOne * p^(n*i)) = FreqOne / (1 - p^n) is the total
-  //     frequency of the original loop body in the unrolled loop, regardless of
-  //     whether the backedge is conditional or unconditional.
-  //   - As Prob approaches 1, the total frequency of the original loop body
-  //     approaches infinity, as expected because the loop approaches never
-  //     exiting.
+  // - If the backedge has been eliminated, FreqOne is the total frequency of
+  //   the original loop body in the unrolled loop.
+  // - If the backedge remains, Sum(i=0..inf)(FreqOne * p^(n*i)) =
+  //   FreqOne / (1 - p^n) is the total frequency of the original loop body in
+  //   the unrolled loop, regardless of whether the backedge is conditional or
+  //   unconditional.
   // - For n <= 2, we can use simple formulas to solve the above polynomial
-  //   equation exactly for p without performing a search.   For n == 2, we use
-  //   ComputeProbForQuadratic below.  For n == 1, we use ComputeProb below.
-  // - For n > 2, evaluating each point in the search space, using ComputeFreq
-  //   below, requires about as few instructions as we could hope for.  That is,
-  //   the probability is constant across the conditional branches, so the only
-  //   computation is across conditional branches and any backedge, as required
-  //   for any model for Prob.
-  // - Prob == 1 produces the maximum possible total frequency for the original
-  //   loop body, as described above.  Prob == 0 produces the minimum, 0.
-  //   Increasing or decreasing Prob monotonically increases or decreases the
-  //   frequency, respectively.  Thus, for every possible frequency, there
-  //   exists some Prob that can produce it, and we can easily use bisection to
-  //   search the problem space.
+  //   equations exactly for p without performing a search.
 
-  // When iterating for a solution, we stop early if we find probabilities
-  // that produce a Freq whose difference from FreqDesired is small
-  // (FreqPrec).  Otherwise, we expect to compute a solution at least that
-  // accurate (but surely far more accurate).
-  const double FreqPrec = 1e-6;
-
-  // Compute the new frequency produced by using Prob throughout CondLatches.
-  auto ComputeFreq = [&](double Prob) {
-    double ProbReaching = 1;        // p^0
-    double FreqOne = IterCounts[0]; // c_0*p^0
-    for (unsigned I = 0, E = CondLatches.size(); I < E; ++I) {
-      ProbReaching *= Prob;                        // p^(I+1)
-      FreqOne += IterCounts[I + 1] * ProbReaching; // c_(I+1)*p^(I+1)
-    }
-    double ProbReachingBackedge = CompletelyUnroll ? 0 : ProbReaching;
-    assert(FreqOne > 0 && "Expected at least one iteration before first latch");
-    if (ProbReachingBackedge == 1)
-      return std::numeric_limits<double>::infinity();
-    return FreqOne / (1 - ProbReachingBackedge);
-  };
-
-  // Compute the probability that, used throughout CondLatches where
-  // CondLatches.size() == 2, gets as close as possible to FreqDesired.
-  auto ComputeProbForQuadratic = [&]() {
-    // The polynomial is quadratic, so just solve it.
-    double A = IterCounts[2] + (CompletelyUnroll ? 0 : FreqDesired);
-    double B = IterCounts[1];
-    double C = IterCounts[0] - FreqDesired;
+  // Compute the probability that, used at CondLaches[0] where
+  // CondLatches.size() == 1, gets as close as possible to FreqDesired.
+  auto ComputeProbForLinear = [&]() {
+    // The polynomial is linear (0 = A*p + B), so just solve it.
+    double A = IterCounts[1] + (CompletelyUnroll ? 0 : FreqDesired);
+    double B = IterCounts[0] - FreqDesired;
     assert(A > 0 && "Expected iterations after last conditional latch");
-    double Prob = (-B + sqrt(B * B - 4 * A * C)) / (2 * A);
-    // If it computes an invalid Prob, FreqDesired is impossibly low or high.
-    // Otherwise, Prob should produce nearly FreqDesired.
-    assert((Prob < 0 || Prob > 1 ||
-            fabs(ComputeFreq(Prob) - FreqDesired) < FreqPrec) &&
-           "Expected accurate frequency when quadratic case is possible");
+    double Prob = -B / A;
     Prob = std::max(Prob, 0.);
     Prob = std::min(Prob, 1.);
     return Prob;
   };
 
-  // Compute the probability required at CondLatches[ComputeIdx] to get as close
-  // as possible to FreqDesired without replacing probabilities elsewhere in
-  // CondLatches.  Return {Prob, Freq} where 0 <= Prob <= 1 and Freq is the new
-  // frequency.
-  auto ComputeProb = [&](unsigned ComputeIdx) -> std::pair<double, double> {
-    assert(ComputeIdx < CondLatches.size());
-
-    // Accumulate the frequency from before ComputeIdx into FreqBeforeCompute,
-    // and accumulate the rest in Freq without yet multiplying the latter by any
-    // probability for ComputeIdx (i.e., treat it as 1 for now).
-    double ProbReaching = 1;     // p^0
-    double Freq = IterCounts[0]; // c_0*p^0
-    double FreqBeforeCompute;
-    for (unsigned I = 0, E = CondLatches.size(); I < E; ++I) {
-      // Get the branch probability for CondLatches[I].
-      double Prob;
-      if (I == ComputeIdx) {
-        FreqBeforeCompute = Freq;
-        Freq = 0;
-        Prob = 1;
-      } else {
-        Prob = GetProb(I);
-      }
-      ProbReaching *= Prob;                     // p^(I+1)
-      Freq += IterCounts[I + 1] * ProbReaching; // c_(I+1)*p^(I+1)
-    }
-
-    // Compute the required probability, and limit it to a valid probability (0
-    // <= p <= 1).  See the Freq formula below for how to derive the ProbCompute
-    // formula.
-    double ProbReachingBackedge = CompletelyUnroll ? 0 : ProbReaching;
-    double ProbComputeNumerator = FreqDesired - FreqBeforeCompute;
-    double ProbComputeDenominator = Freq + FreqDesired * ProbReachingBackedge;
-    double ProbCompute;
-    if (ProbComputeNumerator <= 0) {
-      // FreqBeforeCompute has already reached or surpassed FreqDesired, so add
-      // no more frequency.  It is possible that ProbComputeDenominator == 0
-      // here because some latch probability (maybe the original) was set to
-      // zero, so this check avoids setting ProbCompute=1 (in the else if below)
-      // and division by zero where the numerator <= 0 (in the else below).
-      ProbCompute = 0;
-    } else if (ProbComputeDenominator == 0) {
-      // Analytically, this case seems impossible.  It would occur if either:
-      // - Both Freq and FreqDesired are zero.  But the latter would cause
-      //   ProbComputeNumerator < 0, which we catch above, and FreqDesired
-      //   should always be >= 1 anyway.
-      // - There are no iterations after CondLatches[ComputeIdx], not even via
-      //   a backedge, so that both Freq and ProbReachingBackedge are zero.
-      //   But iterations should exist after even the last conditional latch.
-      // - Some latch probability (maybe the original) was set to zero so that
-      //   both Freq and ProbReachingBackedge are zero.  But that should not
-      //   have happened because, according to the above ProbComputeNumerator
-      //   check, we have not yet reached FreqDesired (which, if the original
-      //   latch probability is zero, is just 1 and thus always reached or
-      //   surpassed).
-      //
-      // Numerically, perhaps this case is possible.  We interpret it to mean we
-      // need more frequency (ProbComputeNumerator > 0) but have no way to get
-      // any (ProbComputeDenominator is analytically too small to distinguish it
-      // from 0 in floating point), suggesting infinite probability is needed,
-      // but 1 is the maximum valid probability and thus the best we can do.
-      //
-      // TODO: Cover this case in the test suite if you can.
-      ProbCompute = 1;
-    } else {
-      ProbCompute = ProbComputeNumerator / ProbComputeDenominator;
-      ProbCompute = std::max(ProbCompute, 0.);
-      ProbCompute = std::min(ProbCompute, 1.);
-    }
-
-    // Compute the resulting total frequency.
-    if (ProbReachingBackedge * ProbCompute == 1) {
-      // Analytically, this case seems impossible.  It requires that there is a
-      // backedge and that FreqDesired == infinity so that every conditional
-      // latch's probability had to be set to 1.  But FreqDesired == infinity
-      // means OriginalLoopProb.isOne(), which we guarded against earlier.
-      //
-      // Numerically, perhaps this case is possible.  We interpret it to mean
-      // that analytically the probability has to be so near 1 that, in floating
-      // point, the frequency is computed as infinite.
-      //
-      // TODO: Cover this case in the test suite if you can.
-      Freq = std::numeric_limits<double>::infinity();
-    } else {
-      assert(FreqBeforeCompute > 0 &&
-             "Expected at least one iteration before first latch");
-      // In this equation, if we replace the left-hand side with FreqDesired and
-      // then solve for ProbCompute, we get the ProbCompute formula above.
-      Freq = (FreqBeforeCompute + Freq * ProbCompute) /
-             (1 - ProbReachingBackedge * ProbCompute);
-    }
-    return {ProbCompute, Freq};
+  // Compute the probability that, used throughout CondLatches where
+  // CondLatches.size() == 2, gets as close as possible to FreqDesired.
+  auto ComputeProbForQuadratic = [&]() {
+    // The polynomial is quadratic (0 = A*p^2 + B*p + C), so just solve it.
+    double A = IterCounts[2] + (CompletelyUnroll ? 0 : FreqDesired);
+    double B = IterCounts[1];
+    double C = IterCounts[0] - FreqDesired;
+    assert(A > 0 && "Expected iterations after last conditional latch");
+    double Prob = (-B + sqrt(B * B - 4 * A * C)) / (2 * A);
+    Prob = std::max(Prob, 0.);
+    Prob = std::min(Prob, 1.);
+    return Prob;
   };
 
   // Determine and set branch weights.
-  //
-  // Prob < 0 and Prob > 1 cannot be represented as branch weights.  We might
-  // compute such a Prob if FreqDesired is impossible (e.g., due to bad profile
-  // data) for the maximum trip count we have determined when completely
-  // unrolling.  In that case, so just go with whichever is closest.
-  if (CondLatches.size() == 2) {
-    // The polynomial is quadratic, so just solve it.
+  if (CondLatches.size() == 1) {
+    SetAllProbs(ComputeProbForLinear());
+  } else if (CondLatches.size() == 2) {
     SetAllProbs(ComputeProbForQuadratic());
-  } else if (CondLatches.size() == 1 || !UnrollUniformWeights) {
-    // Either:
-    // - There's just one conditional latch, so just compute the probability
-    //   it requires to produce the original total frequency.
-    // - The polynomial is too complex for a simple formula and the quick and
-    //   dirty fix has been selected.  Adjust probabilities starting from the
-    //   first latch, which has the most influence on the total frequency, so
-    //   starting there should minimize the number of latches that have to be
-    //   visited.  We do have to iterate because the first latch alone might
-    //   not be enough.  For example, we might need to set all probabilities
-    //   to 1 if the frequency is the unroll factor.
-    for (unsigned I = 0; I != CondLatches.size(); ++I) {
-      double Prob, Freq;
-      std::tie(Prob, Freq) = ComputeProb(I);
-      SetProb(I, Prob);
-      if (fabs(Freq - FreqDesired) < FreqPrec)
-        break;
-    }
   } else {
-    // The polynomial is more complex, and uniform branch weights have been
-    // selected, so bisect.
-    double ProbMin, ProbMax, ProbPrev;
-    auto TryProb = [&](double Prob) {
-      ProbPrev = Prob;
-      double FreqDelta = ComputeFreq(Prob) - FreqDesired;
-      if (fabs(FreqDelta) < FreqPrec)
-        return 0;
-      if (FreqDelta < 0) {
-        ProbMin = Prob;
-        return -1;
-      }
-      ProbMax = Prob;
-      return 1;
-    };
-    // If Prob == 0 is too small and Prob == 1 is too large, bisect between
-    // them.  To place a hard upper limit on the search time, stop bisecting
-    // when Prob stops changing (ProbDelta) by much (ProbPrec).
-    if (TryProb(0.) < 0 && TryProb(1.) > 0) {
-      const double ProbPrec = 1e-12;
-      double Prob, ProbDelta;
-      do {
-        Prob = (ProbMin + ProbMax) / 2;
-        ProbDelta = Prob - ProbPrev;
-      } while (TryProb(Prob) != 0 && fabs(ProbDelta) > ProbPrec);
-    }
-    SetAllProbs(ProbPrev);
+    // FIXME: Handle CondLatches.size() > 2.
   }
+
   // FIXME: We have not considered non-latch loop exits:
   // - Their original probabilities are not considered in our calculation of
   //   FreqDesired.
