@@ -27677,6 +27677,55 @@ The '``llvm.masked.compressstore``' intrinsic is designed for compressing data i
 
 Other targets may support this intrinsic differently, for example, by lowering it into a sequence of branches that guard scalar store operations.
 
+.. _int_mloadff:
+
+'``llvm.masked.load.ff.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. The loaded data is a vector of any integer,
+floating-point or pointer data type.
+
+::
+
+      declare { <16 x float>, <16 x i1> } @llvm.masked.load.ff.v16f32.p0(ptr <ptr>, <16 x i1> <mask>)
+      declare { <2 x double>, <2 x i1> } @llvm.masked.load.ff.v2f64.p0(ptr <ptr>, <2 x i1> <mask>)
+      ;; The data is a vector of pointers
+      declare { <8 x ptr>, <8 x i1> } @llvm.masked.load.ff.v8p0.p0(ptr align 8 <ptr>, <8 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Reads a vector from memory according to the provided mask, suppressing faults
+for any lane beyond the first. The mask holds a bit for each vector lane, and
+is used to prevent memory accesses to the masked-off lanes.
+
+Returns the loaded data and a mask indicating which lanes are valid, which may
+not be the same as the input mask depending on whether the processor encountered
+a reason to avoid loading from that address. Invalid lanes contain poison
+values.
+
+Arguments:
+""""""""""
+
+The first argument is the base pointer for the load. The second argument, mask,
+is a vector of boolean values with the same number of elements as the return
+type.
+
+The :ref:`align <attr_align>` parameter attribute can be provided for the first
+argument.
+
+Semantics:
+""""""""""
+
+The '``llvm.masked.load.ff``' intrinsic is very similar to the
+'``llvm.vp.load.ff``' intrinsic, with the differences being the lack of an EVL
+parameter and the second returned value being a mask instead of an updated EVL
+value.
+
+If the processor suppresses a fault for any lane, then the returned mask will
+indicate that lane and all subsequent lanes are inactive.
 
 Memory Use Markers
 ------------------
