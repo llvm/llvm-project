@@ -26,7 +26,6 @@
 
 # CHECK: montmul
 0x0f 0xa6 0xc0
-# RUN: llvm-mc --disassemble %s -triple=x86_64-apple-darwin9 | FileCheck %s
 
 # CHECK: xstore
 0x0f 0xa7 0xc0

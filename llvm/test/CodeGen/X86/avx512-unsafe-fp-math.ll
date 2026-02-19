@@ -3,7 +3,6 @@
 ; RUN: llc < %s -mtriple=x86_64 -enable-no-nans-fp-math -mattr=+avx512f | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64 -enable-no-signed-zeros-fp-math -mattr=+avx512f | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64 -mattr=+avx512f | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64 -mattr=+avx512f | FileCheck %s
 
 define <16 x float> @test_max_v16f32(ptr %a_ptr, <16 x float> %b)  {
 ; CHECK_UNSAFE-LABEL: test_max_v16f32:
