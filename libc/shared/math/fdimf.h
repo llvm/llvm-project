@@ -1,4 +1,4 @@
-//===-- Implementation of fdim function -----------------------------------===//
+//===-- Shared fdimf function -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fdim.h"
-#include "src/__support/math/fdim.h"
+#ifndef LLVM_LIBC_SHARED_MATH_FDIMF_H
+#define LLVM_LIBC_SHARED_MATH_FDIMF_H
+
+#include "src/__support/math/fdimf.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(double, fdim, (double x, double y)) {
-  return math::fdim(x, y);
-}
+using math::fdimf;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_FDIMF_H
