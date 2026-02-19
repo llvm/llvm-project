@@ -207,7 +207,7 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
                 ModuleList::GetGlobalModuleListProperties()
                     .GetSharedCacheBinaryLoading();
             SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
-                module_spec.GetFileSpec().GetPath(), sc_mode);
+                module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
 
             // If we found it and it has the correct UUID, let's proceed with
             // creating a module from the memory contents.
@@ -653,7 +653,7 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                 ModuleList::GetGlobalModuleListProperties()
                     .GetSharedCacheBinaryLoading();
             SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
-                module_spec.GetFileSpec().GetPath(), sc_mode);
+                module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
 
             // If we found it and it has the correct UUID, let's proceed with
             // creating a module from the memory contents.

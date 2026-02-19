@@ -25,7 +25,9 @@ namespace llvm {
 
 class InductionDescriptor;
 class Instruction;
+class Loop;
 class LoopVersioning;
+class OptimizationRemarkEmitter;
 class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
@@ -41,6 +43,7 @@ LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintAfterAll;
 LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintAfterPasses;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintVectorRegionScope;
 #endif
 
 struct VPlanTransforms {
@@ -63,7 +66,10 @@ struct VPlanTransforms {
             << "VPlan for loop in '"
             << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
             << "' after " << PassName << '\n';
-        dbgs() << Plan << '\n';
+        if (VPlanPrintVectorRegionScope && Plan.getVectorLoopRegion())
+          Plan.getVectorLoopRegion()->print(dbgs());
+        else
+          dbgs() << Plan << '\n';
       }
 #endif
       if (VerifyEachVPlan && EnableVerify)
@@ -185,9 +191,12 @@ struct VPlanTransforms {
                                         const TargetLibraryInfo &TLI);
 
   /// Try to legalize reductions with multiple in-loop uses. Currently only
-  /// min/max reductions used by FindLastIV reductions are supported. Otherwise
-  /// return false.
-  static bool handleMultiUseReductions(VPlan &Plan);
+  /// strict and non-strict min/max reductions used by FindLastIV reductions are
+  /// supported, corresponding to computing the first and last argmin/argmax,
+  /// respectively. Otherwise return false.
+  static bool handleMultiUseReductions(VPlan &Plan,
+                                       OptimizationRemarkEmitter *ORE,
+                                       Loop *TheLoop);
 
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes
@@ -281,9 +290,9 @@ struct VPlanTransforms {
       VPlan &Plan,
       const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
 
-  /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
+  /// Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
   /// replaces all uses except the canonical IV increment of
-  /// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
+  /// VPCanonicalIVPHIRecipe with a VPCurrentIterationPHIRecipe.
   /// VPCanonicalIVPHIRecipe is only used to control the loop after
   /// this transformation.
   static void
@@ -332,14 +341,14 @@ struct VPlanTransforms {
   /// BranchOnCond instructions. Should be called after dissolveLoopRegions.
   static void expandBranchOnTwoConds(VPlan &Plan);
 
-  /// Transform EVL loops to use variable-length stepping after region
+  /// Transform loops with variable-length stepping after region
   /// dissolution.
   ///
-  /// Once loop regions are replaced with explicit CFG, EVL loops can step with
+  /// Once loop regions are replaced with explicit CFG, loops can step with
   /// variable vector lengths instead of fixed lengths. This transformation:
-  ///  * Makes EVL-Phi concrete.
+  ///  * Makes CurrentIteration-Phi concrete.
   //   * Removes CanonicalIV and increment.
-  static void canonicalizeEVLLoops(VPlan &Plan);
+  static void convertToVariableLengthStep(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
@@ -413,9 +422,10 @@ struct VPlanTransforms {
   /// needed.
   static void materializePacksAndUnpacks(VPlan &Plan);
 
-  /// Materialize VF and VFxUF to be computed explicitly using VPInstructions.
-  static void materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
-                                    ElementCount VF);
+  /// Materialize UF, VF and VFxUF to be computed explicitly using
+  /// VPInstructions.
+  static void materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
+                                 ElementCount VF);
 
   /// Expand VPExpandSCEVRecipes in \p Plan's entry block. Each
   /// VPExpandSCEVRecipe is replaced with a live-in wrapping the expanded IR
@@ -424,14 +434,20 @@ struct VPlanTransforms {
   static DenseMap<const SCEV *, Value *> expandSCEVs(VPlan &Plan,
                                                      ScalarEvolution &SE);
 
-  /// Try to convert a plan with interleave groups with VF elements to a plan
-  /// with the interleave groups replaced by wide loads and stores processing VF
-  /// elements, if all transformed interleave groups access the full vector
-  /// width (checked via \o VectorRegWidth). This effectively is a very simple
-  /// form of loop-aware SLP, where we use interleave groups to identify
-  /// candidates.
-  static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
-                                     TypeSize VectorRegWidth);
+  /// Try to find a single VF among \p Plan's VFs for which all interleave
+  /// groups (with known minimum VF elements) can be replaced by wide loads and
+  /// stores processing VF elements, if all transformed interleave groups access
+  /// the full vector width (checked via the maximum vector register width). If
+  /// the transformation can be applied, the original \p Plan will be split in
+  /// 2:
+  ///  1. The original Plan with the single VF containing the optimized recipes
+  ///  using wide loads instead of interleave groups.
+  ///  2. A new clone which contains all VFs of Plan except the optimized VF.
+  ///
+  /// This effectively is a very simple form of loop-aware SLP, where we use
+  /// interleave groups to identify candidates.
+  static std::unique_ptr<VPlan>
+  narrowInterleaveGroups(VPlan &Plan, const TargetTransformInfo &TTI);
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, create a mask guarding the loop

@@ -465,6 +465,14 @@ public:
         "dialect blob");
   }
 
+  void writeUnownedBlob(ArrayRef<char> blob) override {
+    emitter.emitVarInt(blob.size(), "dialect blob");
+    emitter.emitBytes(
+        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(blob.data()),
+                          blob.size()),
+        "dialect blob");
+  }
+
   void writeOwnedBool(bool value) override {
     emitter.emitByte(value, "dialect bool");
   }

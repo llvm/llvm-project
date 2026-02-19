@@ -103,6 +103,8 @@ What's New in Clang |release|?
 C++ Language Changes
 --------------------
 
+- ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -158,6 +160,8 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 - The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
+- The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
+  `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
 
 Removed Compiler Flags
 ----------------------
@@ -169,6 +173,9 @@ Attribute Changes in Clang
   the analysis which determines if a function should get a stack protector.  A function
   will still generate a stack protector if other local variables or command line flags
   require it.
+
+- Added a new attribute, ``[[clang::no_outline]]`` to suppress outlining from
+  annotated functions. This uses the LLVM `nooutline` attribute.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -266,6 +273,7 @@ Bug Fixes in This Version
 - Fixed an assertion failure when evaluating ``_Countof`` on invalid ``void``-typed operands. (#GH180893)
 - Fixed a ``-Winvalid-noreturn`` false positive for unreachable ``try`` blocks following an unconditional ``throw``. (#GH174822)
 - Fixed an assertion failure in the serialized diagnostic printer when it is destroyed without calling ``finish()``. (#GH140433)
+- Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -279,6 +287,8 @@ Bug Fixes to C++ Support
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
 - Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable 
+  when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)
 
 Bug Fixes to AST Handling
@@ -296,6 +306,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed a crash when using loop hint with a value dependent argument inside a
   generic lambda. (#GH172289)
 - Fixed a crash in C++ overload resolution with ``_Atomic``-qualified argument types. (#GH170433)
+- Fixed a crash when initializing a ``constexpr`` pointer with a floating-point literal in C23. (#GH180313)
 - Fixed an assertion when diagnosing address-space qualified ``new``/``delete`` in language-defined address spaces such as OpenCL ``__local``. (#GH178319)
 - Fixed an assertion failure in ObjC++ ARC when binding a rvalue reference to reference with different lifetimes (#GH178524)
 
@@ -380,14 +391,19 @@ AST Matchers
 
 clang-format
 ------------
-- Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the 
+- Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the
   '-'/'+' and the return type in Objective-C method declarations
+- Add ``AfterComma`` value to ``BreakConstructorInitializers`` to allow breaking
+  constructor initializers after commas, keeping the colon on the same line.
 
 libclang
 --------
 
 Code Completion
 ---------------
+
+- Fixed a crash in code completion when using a C-Style cast with a parenthesized
+  operand in Objective-C++ mode. (#GH180125)
 
 Static Analyzer
 ---------------

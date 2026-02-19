@@ -435,8 +435,8 @@ public:
     // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
     // VPHeaderPHIRecipe need to be kept together.
     VPCanonicalIVPHISC,
+    VPCurrentIterationPHISC,
     VPActiveLaneMaskPHISC,
-    VPEVLBasedIVPHISC,
     VPFirstOrderRecurrencePHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
@@ -598,7 +598,6 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPRecipeID()) {
     case VPRecipeBase::VPDerivedIVSC:
-    case VPRecipeBase::VPEVLBasedIVPHISC:
     case VPRecipeBase::VPExpandSCEVSC:
     case VPRecipeBase::VPExpressionSC:
     case VPRecipeBase::VPInstructionSC:
@@ -617,6 +616,7 @@ public:
     case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
     case VPRecipeBase::VPCanonicalIVPHISC:
+    case VPRecipeBase::VPCurrentIterationPHISC:
     case VPRecipeBase::VPActiveLaneMaskPHISC:
     case VPRecipeBase::VPFirstOrderRecurrencePHISC:
     case VPRecipeBase::VPWidenPHISC:
@@ -1152,8 +1152,7 @@ public:
 /// opcodes can take an optional mask. Masks may be assigned during
 /// predication.
 class LLVM_ABI_FOR_TEST VPInstruction : public VPRecipeWithIRFlags,
-                                        public VPIRMetadata,
-                                        public VPUnrollPartAccessor<1> {
+                                        public VPIRMetadata {
   friend class VPlanSlp;
 
 public:
@@ -2068,9 +2067,10 @@ protected:
 
 /// A recipe to compute a pointer to the last element of each part of a widened
 /// memory access for widened memory accesses of SourceElementTy. Used for
-/// VPWidenMemoryRecipes or VPInterleaveRecipes that are reversed.
-class VPVectorEndPointerRecipe : public VPRecipeWithIRFlags,
-                                 public VPUnrollPartAccessor<2> {
+/// VPWidenMemoryRecipes or VPInterleaveRecipes that are reversed. An extra
+/// Offset operand is added by convertToConcreteRecipes when UF = 1, and by the
+/// unroller otherwise.
+class VPVectorEndPointerRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
   /// The constant stride of the pointer computed by this recipe, expressed in
@@ -2089,8 +2089,16 @@ public:
   VP_CLASSOF_IMPL(VPRecipeBase::VPVectorEndPointerSC)
 
   Type *getSourceElementType() const { return SourceElementTy; }
-  VPValue *getVFValue() { return getOperand(1); }
-  const VPValue *getVFValue() const { return getOperand(1); }
+  int64_t getStride() const { return Stride; }
+  VPValue *getPointer() const { return getOperand(0); }
+  VPValue *getVFValue() const { return getOperand(1); }
+  VPValue *getOffset() const {
+    return getNumOperands() == 3 ? getOperand(2) : nullptr;
+  }
+
+  /// Adds the offset operand to the recipe.
+  /// Offset = Stride * (VF - 1) + Part * Stride * VF.
+  void materializeOffset(unsigned Part = 0);
 
   void execute(VPTransformState &State) override;
 
@@ -2116,9 +2124,12 @@ public:
   }
 
   VPVectorEndPointerRecipe *clone() override {
-    return new VPVectorEndPointerRecipe(getOperand(0), getVFValue(),
-                                        getSourceElementType(), Stride,
-                                        getGEPNoWrapFlags(), getDebugLoc());
+    auto *VEPR = new VPVectorEndPointerRecipe(
+        getPointer(), getVFValue(), getSourceElementType(), getStride(),
+        getGEPNoWrapFlags(), getDebugLoc());
+    if (auto *Offset = getOffset())
+      VEPR->addOperand(Offset);
+    return VEPR;
   }
 
 protected:
@@ -2203,14 +2214,13 @@ protected:
 ///  * VPWidenIntOrFpInductionRecipe: Generates vector values for integer and
 ///    floating point inductions with arbitrary start and step values. Produces
 ///    a vector PHI per-part.
-///  * VPDerivedIVRecipe: Converts the canonical IV value to the corresponding
-///    value of an IV with different start and step values. Produces a single
-///    scalar value per iteration
-///  * VPScalarIVStepsRecipe: Generates scalar values per-lane based on a
-///    canonical or derived induction.
 ///  * VPWidenPointerInductionRecipe: Generate vector and scalar values for a
 ///    pointer induction. Produces either a vector PHI per-part or scalar values
 ///    per-lane based on the canonical induction.
+///  * VPFirstOrderRecurrencePHIRecipe
+///  * VPReductionPHIRecipe
+///  * VPActiveLaneMaskPHIRecipe
+///  * VPEVLBasedIVPHIRecipe
 class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
                                             public VPPhiAccessors {
 protected:
@@ -2323,7 +2333,10 @@ public:
   /// incoming value, its start value.
   unsigned getNumIncoming() const override { return 1; }
 
-  PHINode *getPHINode() const { return cast<PHINode>(getUnderlyingValue()); }
+  /// Returns the underlying PHINode if one exists, or null otherwise.
+  PHINode *getPHINode() const {
+    return cast_if_present<PHINode>(getUnderlyingValue());
+  }
 
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
@@ -2602,7 +2615,7 @@ inline ReductionStyle getReductionStyle(bool InLoop, bool Ordered,
 /// A recipe for handling reduction phis. The start value is the first operand
 /// of the recipe and the incoming value from the backedge is the second
 /// operand.
-class VPReductionPHIRecipe : public VPHeaderPHIRecipe {
+class VPReductionPHIRecipe : public VPHeaderPHIRecipe, public VPIRFlags {
   /// The recurrence kind of the reduction.
   const RecurKind Kind;
 
@@ -2618,9 +2631,10 @@ public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
                        VPValue &BackedgeValue, ReductionStyle Style,
+                       const VPIRFlags &Flags,
                        bool HasUsesOutsideReductionChain = false)
       : VPHeaderPHIRecipe(VPRecipeBase::VPReductionPHISC, Phi, &Start),
-        Kind(Kind), Style(Style),
+        VPIRFlags(Flags), Kind(Kind), Style(Style),
         HasUsesOutsideReductionChain(HasUsesOutsideReductionChain) {
     addOperand(&BackedgeValue);
   }
@@ -2630,7 +2644,7 @@ public:
   VPReductionPHIRecipe *clone() override {
     return new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *getOperand(0), *getBackedgeValue(), Style,
+        *getOperand(0), *getBackedgeValue(), Style, *this,
         HasUsesOutsideReductionChain);
   }
 
@@ -3818,30 +3832,30 @@ protected:
 #endif
 };
 
-/// A recipe for generating the phi node for the current index of elements,
-/// adjusted in accordance with EVL value. It starts at the start value of the
-/// canonical induction and gets incremented by EVL in each iteration of the
-/// vector loop.
-class VPEVLBasedIVPHIRecipe : public VPHeaderPHIRecipe {
+/// A recipe for generating the phi node tracking the current scalar iteration
+/// index. It starts at the start value of the canonical induction and gets
+/// incremented by the number of scalar iterations processed by the vector loop
+/// iteration. The increment does not have to be loop invariant.
+class VPCurrentIterationPHIRecipe : public VPHeaderPHIRecipe {
 public:
-  VPEVLBasedIVPHIRecipe(VPValue *StartIV, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPRecipeBase::VPEVLBasedIVPHISC, nullptr, StartIV,
-                          DL) {}
+  VPCurrentIterationPHIRecipe(VPValue *StartIV, DebugLoc DL)
+      : VPHeaderPHIRecipe(VPRecipeBase::VPCurrentIterationPHISC, nullptr,
+                          StartIV, DL) {}
 
-  ~VPEVLBasedIVPHIRecipe() override = default;
+  ~VPCurrentIterationPHIRecipe() override = default;
 
-  VPEVLBasedIVPHIRecipe *clone() override {
+  VPCurrentIterationPHIRecipe *clone() override {
     llvm_unreachable("cloning not implemented yet");
   }
 
-  VP_CLASSOF_IMPL(VPRecipeBase::VPEVLBasedIVPHISC)
+  VP_CLASSOF_IMPL(VPRecipeBase::VPCurrentIterationPHISC)
 
   void execute(VPTransformState &State) override {
     llvm_unreachable("cannot execute this recipe, should be replaced by a "
                      "scalar phi recipe");
   }
 
-  /// Return the cost of this VPEVLBasedIVPHIRecipe.
+  /// Return the cost of this VPCurrentIterationPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {
     // For now, match the behavior of the legacy cost model.
@@ -3998,10 +4012,9 @@ public:
   ~VPScalarIVStepsRecipe() override = default;
 
   VPScalarIVStepsRecipe *clone() override {
-    return new VPScalarIVStepsRecipe(
-        getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
-        hasFastMathFlags() ? getFastMathFlags() : FastMathFlags(),
-        getDebugLoc());
+    return new VPScalarIVStepsRecipe(getOperand(0), getOperand(1),
+                                     getOperand(2), InductionOpcode,
+                                     getFastMathFlags(), getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPScalarIVStepsSC)
@@ -4519,6 +4532,9 @@ class VPlan {
   /// Represents the vectorization factor of the loop.
   VPSymbolicValue VF;
 
+  /// Represents the unroll factor of the loop.
+  VPSymbolicValue UF;
+
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPSymbolicValue VFxUF;
 
@@ -4658,6 +4674,9 @@ public:
   VPValue &getVF() { return VF; };
   const VPValue &getVF() const { return VF; };
 
+  /// Returns the UF of the vector loop region.
+  VPValue &getUF() { return UF; };
+
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
 
@@ -4671,6 +4690,12 @@ public:
     assert(hasVF(VF) && "Cannot set VF not already in plan");
     VFs.clear();
     VFs.insert(VF);
+  }
+
+  /// Remove \p VF from the plan.
+  void removeVF(ElementCount VF) {
+    assert(hasVF(VF) && "tried to remove VF not present in plan");
+    VFs.remove(VF);
   }
 
   bool hasVF(ElementCount VF) const { return VFs.count(VF); }
@@ -4693,7 +4718,8 @@ public:
 
   bool hasUF(unsigned UF) const { return UFs.empty() || UFs.contains(UF); }
 
-  unsigned getUF() const {
+  /// Returns the concrete UF of the plan, after unrolling.
+  unsigned getConcreteUF() const {
     assert(UFs.size() == 1 && "Expected a single UF");
     return UFs[0];
   }

@@ -25,6 +25,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "SPIRVTypeInst.h"
+
 namespace llvm {
 class MCInst;
 class MachineFunction;
@@ -37,6 +39,7 @@ class StringRef;
 class SPIRVInstrInfo;
 class SPIRVSubtarget;
 class SPIRVGlobalRegistry;
+class SPIRVTypeInst;
 
 // This class implements a partial ordering visitor, which visits a cyclic graph
 // in natural topological-like ordering. Topological ordering is not defined for
@@ -529,15 +532,13 @@ void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
                      MachineIRBuilder &MIRBuilder,
                      SPIRV::AccessQualifier::AccessQualifier AccessQual,
                      bool EmitIR, bool Force = false);
-void setRegClassType(Register Reg, const MachineInstr *SpvType,
+void setRegClassType(Register Reg, SPIRVTypeInst SpvType,
                      SPIRVGlobalRegistry *GR, MachineRegisterInfo *MRI,
                      const MachineFunction &MF, bool Force = false);
-Register createVirtualRegister(const MachineInstr *SpvType,
-                               SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineRegisterInfo *MRI,
                                const MachineFunction &MF);
-Register createVirtualRegister(const MachineInstr *SpvType,
-                               SPIRVGlobalRegistry *GR,
+Register createVirtualRegister(SPIRVTypeInst SpvType, SPIRVGlobalRegistry *GR,
                                MachineIRBuilder &MIRBuilder);
 Register createVirtualRegister(
     const Type *Ty, SPIRVGlobalRegistry *GR, MachineIRBuilder &MIRBuilder,
