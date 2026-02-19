@@ -16385,7 +16385,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     for (unsigned i = 0, e = BVN->getNumOperands(); i != e; ++i) {
       const SDValue &LaneOp = BVN->getOperand(i);
       APInt LaneBits;
-      if (isa<UndefValue>(LaneOp))
+      if (LaneOp.getOpcode() == ISD::UNDEF)
         LaneBits = APInt(EltSizeInBits, 0);
       else if (auto *C = dyn_cast<ConstantSDNode>(LaneOp))
         LaneBits = C->getAPIntValue();
