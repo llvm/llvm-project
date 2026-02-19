@@ -88,6 +88,9 @@ private:
   /// Peform a fast math expansion of pow, powr, pown or rootn.
   bool expandFastPow(FPMathOperator *FPOp, IRBuilder<> &B, PowKind Kind);
 
+  bool tryOptimizePow(FPMathOperator *FPOp, IRBuilder<> &B,
+                      const FuncInfo &FInfo);
+
   // rootn
   bool fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
 
@@ -710,74 +713,8 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
       return true;
     }
     case AMDGPULibFunc::EI_POW:
-    case AMDGPULibFunc::EI_POW_FAST: {
-      Module *M = Callee->getParent();
-      CallInst *Call = cast<CallInst>(FPOp);
-
-      FuncInfo PowrInfo;
-      AMDGPULibFunc::EFuncId FastPowrFuncId =
-          FMF.approxFunc() || FInfo.getId() == AMDGPULibFunc::EI_POW_FAST
-              ? AMDGPULibFunc::EI_POWR_FAST
-              : AMDGPULibFunc::EI_NONE;
-      FunctionCallee PowrFunc = getFloatFastVariant(
-          M, FInfo, PowrInfo, AMDGPULibFunc::EI_POWR, FastPowrFuncId);
-
-      // TODO: Prefer fast pown to fast powr, but slow powr to slow pown.
-
-      // pow(x, y) -> powr(x, y) for x >= -0.0
-      // TODO: Account for flags on current call
-      if (PowrFunc && cannotBeOrderedLessThanZero(
-                          FPOp->getOperand(0), SQ.getWithInstruction(Call))) {
-        Call->setCalledFunction(PowrFunc);
-        return fold_pow(FPOp, B, PowrInfo) || true;
-      }
-
-      // pow(x, y) -> pown(x, y) for known integral y
-      if (isKnownIntegral(FPOp->getOperand(1), SQ.getWithInstruction(CI),
-                          FPOp->getFastMathFlags())) {
-        FunctionType *PownType = getPownType(CI->getFunctionType());
-
-        FuncInfo PownInfo;
-        AMDGPULibFunc::EFuncId FastPownFuncId =
-            FMF.approxFunc() || FInfo.getId() == AMDGPULibFunc::EI_POW_FAST
-                ? AMDGPULibFunc::EI_POWN_FAST
-                : AMDGPULibFunc::EI_NONE;
-        FunctionCallee PownFunc = getFloatFastVariant(
-            M, FInfo, PownInfo, AMDGPULibFunc::EI_POWN, FastPownFuncId);
-
-        if (PownFunc) {
-          // TODO: If the incoming integral value is an sitofp/uitofp, it won't
-          // fold out without a known range. We can probably take the source
-          // value directly.
-          Value *CastedArg =
-              B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
-          // Have to drop any nofpclass attributes on the original call site.
-          Call->removeParamAttrs(
-              1, AttributeFuncs::typeIncompatible(CastedArg->getType(),
-                                                  Call->getParamAttributes(1)));
-          Call->setCalledFunction(PownFunc);
-          Call->setArgOperand(1, CastedArg);
-          return fold_pow(FPOp, B, PownInfo) || true;
-        }
-      }
-
-      if (fold_pow(FPOp, B, FInfo))
-        return true;
-
-      if (!FMF.approxFunc())
-        return false;
-
-      if (FInfo.getId() == AMDGPULibFunc::EI_POW && FMF.approxFunc() &&
-          getArgType(FInfo) == AMDGPULibFunc::F32) {
-        AMDGPULibFunc PowFastInfo(AMDGPULibFunc::EI_POW_FAST, FInfo);
-        if (FunctionCallee PowFastFunc = getFunction(M, PowFastInfo)) {
-          Call->setCalledFunction(PowFastFunc);
-          return fold_pow(FPOp, B, PowFastInfo) || true;
-        }
-      }
-
-      return expandFastPow(FPOp, B, PowKind::Pow);
-    }
+    case AMDGPULibFunc::EI_POW_FAST:
+      return tryOptimizePow(FPOp, B, FInfo);
     case AMDGPULibFunc::EI_POWR:
     case AMDGPULibFunc::EI_POWR_FAST: {
       if (fold_pow(FPOp, B, FInfo))
@@ -1551,6 +1488,77 @@ bool AMDGPULibCalls::expandFastPow(FPMathOperator *FPOp, IRBuilder<> &B,
     return true;
   }
   }
+}
+
+bool AMDGPULibCalls::tryOptimizePow(FPMathOperator *FPOp, IRBuilder<> &B,
+                                    const FuncInfo &FInfo) {
+  FastMathFlags FMF = FPOp->getFastMathFlags();
+  CallInst *Call = cast<CallInst>(FPOp);
+  Module *M = Call->getModule();
+
+  FuncInfo PowrInfo;
+  AMDGPULibFunc::EFuncId FastPowrFuncId =
+      FMF.approxFunc() || FInfo.getId() == AMDGPULibFunc::EI_POW_FAST
+          ? AMDGPULibFunc::EI_POWR_FAST
+          : AMDGPULibFunc::EI_NONE;
+  FunctionCallee PowrFunc = getFloatFastVariant(
+      M, FInfo, PowrInfo, AMDGPULibFunc::EI_POWR, FastPowrFuncId);
+
+  // TODO: Prefer fast pown to fast powr, but slow powr to slow pown.
+
+  // pow(x, y) -> powr(x, y) for x >= -0.0
+  // TODO: Account for flags on current call
+  if (PowrFunc && cannotBeOrderedLessThanZero(FPOp->getOperand(0),
+                                              SQ.getWithInstruction(Call))) {
+    Call->setCalledFunction(PowrFunc);
+    return fold_pow(FPOp, B, PowrInfo) || true;
+  }
+
+  // pow(x, y) -> pown(x, y) for known integral y
+  if (isKnownIntegral(FPOp->getOperand(1), SQ.getWithInstruction(Call),
+                      FPOp->getFastMathFlags())) {
+    FunctionType *PownType = getPownType(Call->getFunctionType());
+
+    FuncInfo PownInfo;
+    AMDGPULibFunc::EFuncId FastPownFuncId =
+        FMF.approxFunc() || FInfo.getId() == AMDGPULibFunc::EI_POW_FAST
+            ? AMDGPULibFunc::EI_POWN_FAST
+            : AMDGPULibFunc::EI_NONE;
+    FunctionCallee PownFunc = getFloatFastVariant(
+        M, FInfo, PownInfo, AMDGPULibFunc::EI_POWN, FastPownFuncId);
+
+    if (PownFunc) {
+      // TODO: If the incoming integral value is an sitofp/uitofp, it won't
+      // fold out without a known range. We can probably take the source
+      // value directly.
+      Value *CastedArg =
+          B.CreateFPToSI(FPOp->getOperand(1), PownType->getParamType(1));
+      // Have to drop any nofpclass attributes on the original call site.
+      Call->removeParamAttrs(
+          1, AttributeFuncs::typeIncompatible(CastedArg->getType(),
+                                              Call->getParamAttributes(1)));
+      Call->setCalledFunction(PownFunc);
+      Call->setArgOperand(1, CastedArg);
+      return fold_pow(FPOp, B, PownInfo) || true;
+    }
+  }
+
+  if (fold_pow(FPOp, B, FInfo))
+    return true;
+
+  if (!FMF.approxFunc())
+    return false;
+
+  if (FInfo.getId() == AMDGPULibFunc::EI_POW && FMF.approxFunc() &&
+      getArgType(FInfo) == AMDGPULibFunc::F32) {
+    AMDGPULibFunc PowFastInfo(AMDGPULibFunc::EI_POW_FAST, FInfo);
+    if (FunctionCallee PowFastFunc = getFunction(M, PowFastInfo)) {
+      Call->setCalledFunction(PowFastFunc);
+      return fold_pow(FPOp, B, PowFastInfo) || true;
+    }
+  }
+
+  return expandFastPow(FPOp, B, PowKind::Pow);
 }
 
 // Get a scalar native builtin single argument FP function
