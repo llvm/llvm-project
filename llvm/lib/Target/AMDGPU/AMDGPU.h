@@ -91,6 +91,7 @@ public:
   SILowerI1CopiesPass() = default;
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 
 void initializeAMDGPUDAGToDAGISelLegacyPass(PassRegistry &);
@@ -388,6 +389,7 @@ class SIModeRegisterPass : public PassInfoMixin<SIModeRegisterPass> {
 public:
   SIModeRegisterPass() = default;
   PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 class SIMemoryLegalizerPass : public PassInfoMixin<SIMemoryLegalizerPass> {
@@ -496,6 +498,7 @@ private:
 public:
   SIAnnotateControlFlowPass(const AMDGPUTargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 void initializeSIAnnotateControlFlowLegacyPass(PassRegistry &);
