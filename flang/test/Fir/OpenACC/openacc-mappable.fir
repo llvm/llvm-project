@@ -89,4 +89,56 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB3:.*]] : index) upperbound(%[[UB3:.*]] : index) extent(%c10{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
   // CHECK: Lower bound: %[[LB3]] = arith.constant 0 : index
   // CHECK: Upper bound: %[[UB3]] = arith.subi %[[EXTENT3]], %c1{{.*}} : index
+
+  // Test the bounds generation for an opaque box.
+  func.func @_QPtest_opaque_box_hlfir(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
+    %0 = fir.dummy_scope : !fir.dscope
+    %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_opaque_boxEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+    %2 = acc.copyin var(%1#0 : !fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>> {name = "x", structured = false}
+    acc.enter_data dataOperands(%2 : !fir.box<!fir.array<?x?xf32>>)
+    return
+  }
+  // CHECK: Visiting: %{{.*}} = acc.copyin var(%[[VAR:.*]]#0 : !fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>> {name = "x", structured = false}
+  // CHECK: Var: %[[VAR]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {uniq_name = "_QFtest_opaque_boxEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  // CHECK: Mappable: !fir.box<!fir.array<?x?xf32>>
+  // CHECK: Type category: array
+  // CHECK: Has unknown dimensions: false
+  // CHECK: Shape: <<NULL VALUE>>
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB0:.*]] : index) upperbound(%[[UB0:.*]] : index) extent(%[[DIM0:.*]]#1 : index)
+  // CHECK-SAME: stride(%[[DIM0]]#2 : index) startIdx(%c1{{.*}} : index) {strideInBytes = true}
+  // CHECK: Lower bound: %[[LB0]] = arith.constant 0 : index
+  // CHECK: Upper bound: %[[UB0]] = arith.subi %[[DIM0]]#1, %c1{{.*}} : index
+  // CHECK: Bound[1]: %{{.*}} = acc.bounds lowerbound(%[[LB1:.*]] : index) upperbound(%[[UB1:.*]] : index) extent(%[[DIM1:.*]]#1 : index)
+  // CHECK-SAME: stride(%{{.*}} : index) startIdx(%c1{{.*}} : index) {strideInBytes = true}
+  // CHECK: Lower bound: %[[LB1]] = arith.constant 0 : index
+  // CHECK: Upper bound: %[[UB1]] = arith.subi %[[DIM1]]#1, %c1{{.*}} : index
+
+  func.func @_QPtest_optional(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.optional}) {
+    %0 = fir.dummy_scope : !fir.dscope
+    %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_optionalEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+    %2 = acc.copyin var(%1#0 : !fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>> {name = "x", structured = false}
+    acc.enter_data dataOperands(%2 : !fir.box<!fir.array<?xf32>>)
+    return
+  }
+  // CHECK: Visiting: %{{.*}} = acc.copyin var(%[[VAR:.*]]#0 : !fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>> {name = "x", structured = false}
+  // CHECK: Var: %[[VAR]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_optionalEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  // CHECK: Mappable: !fir.box<!fir.array<?xf32>>
+  // CHECK: Type category: array
+  // CHECK: Has unknown dimensions: false
+  // CHECK: Shape: <<NULL VALUE>>
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[IF:.*]]#0 : index) upperbound(%[[IF]]#1 : index) extent(%[[IF]]#2 : index) stride(%[[IF]]#3 : index) startIdx(%[[IF]]#4 : index) {strideInBytes = true}
+  // CHECK: Lower bound: %[[IF]]:5 = fir.if %[[PRESENT:.*]] -> (index, index, index, index, index) {
+  // CHECK: %[[ONE:.*]] = arith.constant 1 : index
+  // CHECK: %[[ZERO1:.*]] = arith.constant 0 : index
+  // CHECK: %[[DIM0:.*]]:3 = fir.box_dims %[[VAR]]#0, %[[ZERO1]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+  // CHECK: %[[ZERO2:.*]] = arith.constant 0 : index
+  // CHECK: %[[UB:.*]] = arith.subi %[[DIM0]]#1, %[[ONE]] : index
+  // CHECK: %[[NEXTSTRIDE:.*]] = arith.muli %[[DIM0]]#2, %[[DIM0]]#1 : index
+  // CHECK: fir.result %[[ZERO2]], %[[UB]], %[[DIM0]]#1, %[[DIM0]]#2, %[[ONE]] : index, index, index, index, index
+  // CHECK: } else {
+  // CHECK: %[[ZERO:.*]] = arith.constant 0 : index
+  // CHECK: %[[MINUSONE:.*]] = arith.constant -1 : index
+  // CHECK: fir.result %[[ZERO]], %[[MINUSONE]], %[[ZERO]], %[[ZERO]], %[[ZERO]] : index, index, index, index, index
+  // CHECK: }
+  // CHECK: Upper bound: %[[IF]]:5 = fir.if %[[PRESENT]] -> (index, index, index, index, index) {
 }

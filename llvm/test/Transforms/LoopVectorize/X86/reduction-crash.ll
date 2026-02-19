@@ -89,3 +89,50 @@ exit:
   %ret = phi double [ 0.0, %ph ], [ %fadd, %loop ]
   ret void
 }
+
+define i32 @replicating_loads_and_reduction(ptr %A, ptr %B) #0 {
+; CHECK-LABEL: define i32 @replicating_loads_and_reduction(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i32 [[IV]]
+; CHECK-NEXT:    [[L_A:%.*]] = load i8, ptr [[GEP_A]], align 1
+; CHECK-NEXT:    [[A_EXT:%.*]] = sext i8 [[L_A]] to i32
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[A_EXT]]
+; CHECK-NEXT:    [[L_B:%.*]] = load i8, ptr [[GEP_B]], align 1
+; CHECK-NEXT:    [[B_EXT:%.*]] = sext i8 [[L_B]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[RED]], [[A_EXT]]
+; CHECK-NEXT:    [[RED_NEXT]] = add i32 [[ADD]], [[B_EXT]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i32 [ [[RED_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[RED_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i32 [ 0, %entry ], [ %red.next, %loop ]
+  %gep.A = getelementptr inbounds nuw i8, ptr %A, i32 %iv
+  %l.A = load i8, ptr %gep.A, align 1
+  %A.ext = sext i8 %l.A to i32
+  %gep.B = getelementptr inbounds i8, ptr %B, i32 %A.ext
+  %l.B = load i8, ptr %gep.B, align 1
+  %b.ext = sext i8 %l.B to i32
+  %add = add i32 %red, %A.ext
+  %red.next = add i32 %add, %b.ext
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %red.next
+}
+
+attributes #0 = { "target-cpu"="pentium4" }

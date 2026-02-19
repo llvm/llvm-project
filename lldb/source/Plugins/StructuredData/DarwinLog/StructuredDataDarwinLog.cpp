@@ -126,7 +126,7 @@ public:
 
   StructuredDataDarwinLogProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_darwinlog_properties);
+    m_collection_sp->Initialize(g_darwinlog_properties_def);
   }
 
   ~StructuredDataDarwinLogProperties() override = default;

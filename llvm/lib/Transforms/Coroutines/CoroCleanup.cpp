@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Coroutines/CoroCleanup.h"
 #include "CoroInternal.h"
+#include "llvm/Analysis/PtrUseVisitor.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -15,6 +16,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -30,8 +32,27 @@ struct Lowerer : coro::LowererBase {
   bool lower(Function &F);
 
 private:
-  void elideCoroNoop(IntrinsicInst *II);
   void lowerCoroNoop(IntrinsicInst *II);
+};
+
+// Recursively walk and eliminate resume/destroy call on noop coro
+class NoopCoroElider : public PtrUseVisitor<NoopCoroElider> {
+  using Base = PtrUseVisitor<NoopCoroElider>;
+
+  IRBuilder<> Builder;
+
+public:
+  NoopCoroElider(const DataLayout &DL, LLVMContext &C) : Base(DL), Builder(C) {}
+
+  void run(IntrinsicInst *II);
+
+  void visitLoadInst(LoadInst &I) { enqueueUsers(I); }
+  void visitCallBase(CallBase &CB);
+  void visitIntrinsicInst(IntrinsicInst &II);
+
+private:
+  bool tryEraseCallInvoke(Instruction *I);
+  void eraseFromWorklist(Instruction *I);
 };
 }
 
@@ -73,6 +94,7 @@ bool Lowerer::lower(Function &F) {
   bool IsPrivateAndUnprocessed = F.isPresplitCoroutine() && F.hasLocalLinkage();
   bool Changed = false;
 
+  NoopCoroElider NCE(F.getDataLayout(), F.getContext());
   SmallPtrSet<Instruction *, 8> DeadInsts{};
   for (Instruction &I : instructions(F)) {
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
@@ -100,7 +122,7 @@ bool Lowerer::lower(Function &F) {
         II->replaceAllUsesWith(ConstantTokenNone::get(Context));
         break;
       case Intrinsic::coro_noop:
-        elideCoroNoop(II);
+        NCE.run(II);
         if (!II->user_empty())
           lowerCoroNoop(II);
         break;
@@ -142,28 +164,6 @@ bool Lowerer::lower(Function &F) {
   return Changed;
 }
 
-void Lowerer::elideCoroNoop(IntrinsicInst *II) {
-  for (User *U : make_early_inc_range(II->users())) {
-    auto *Fn = dyn_cast<CoroSubFnInst>(U);
-    if (Fn == nullptr)
-      continue;
-
-    auto *User = Fn->getUniqueUndroppableUser();
-    if (auto *Call = dyn_cast<CallInst>(User)) {
-      Call->eraseFromParent();
-      Fn->eraseFromParent();
-      continue;
-    }
-
-    if (auto *I = dyn_cast<InvokeInst>(User)) {
-      Builder.SetInsertPoint(I);
-      Builder.CreateBr(I->getNormalDest());
-      I->eraseFromParent();
-      Fn->eraseFromParent();
-    }
-  }
-}
-
 void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
   if (!NoopCoro) {
     LLVMContext &C = Builder.getContext();
@@ -198,6 +198,60 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
   Builder.SetInsertPoint(II);
   auto *NoopCoroVoidPtr = Builder.CreateBitCast(NoopCoro, Int8Ptr);
   II->replaceAllUsesWith(NoopCoroVoidPtr);
+}
+
+void NoopCoroElider::run(IntrinsicInst *II) {
+  visitPtr(*II);
+
+  Worklist.clear();
+  VisitedUses.clear();
+}
+
+void NoopCoroElider::visitCallBase(CallBase &CB) {
+  auto *V = U->get();
+  bool ResumeOrDestroy = V == CB.getCalledOperand();
+  if (ResumeOrDestroy) {
+    [[maybe_unused]] bool Success = tryEraseCallInvoke(&CB);
+    assert(Success && "Unexpected CallBase");
+
+    auto AboutToDeleteCallback = [this](Value *V) {
+      eraseFromWorklist(cast<Instruction>(V));
+    };
+    RecursivelyDeleteTriviallyDeadInstructions(V, nullptr, nullptr,
+                                               AboutToDeleteCallback);
+  }
+}
+
+void NoopCoroElider::visitIntrinsicInst(IntrinsicInst &II) {
+  if (auto *SubFn = dyn_cast<CoroSubFnInst>(&II)) {
+    auto *User = SubFn->getUniqueUndroppableUser();
+    if (!tryEraseCallInvoke(cast<Instruction>(User)))
+      return;
+    SubFn->eraseFromParent();
+  }
+}
+
+bool NoopCoroElider::tryEraseCallInvoke(Instruction *I) {
+  if (auto *Call = dyn_cast<CallInst>(I)) {
+    eraseFromWorklist(Call);
+    Call->eraseFromParent();
+    return true;
+  }
+
+  if (auto *II = dyn_cast<InvokeInst>(I)) {
+    Builder.SetInsertPoint(II);
+    Builder.CreateBr(II->getNormalDest());
+    eraseFromWorklist(II);
+    II->eraseFromParent();
+    return true;
+  }
+  return false;
+}
+
+void NoopCoroElider::eraseFromWorklist(Instruction *I) {
+  erase_if(Worklist, [I](UseToVisit &U) {
+    return I == U.UseAndIsOffsetKnown.getPointer()->getUser();
+  });
 }
 
 static bool declaresCoroCleanupIntrinsics(const Module &M) {

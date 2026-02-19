@@ -55,6 +55,10 @@ VerboseDAGDumping("dag-dump-verbose", cl::Hidden,
                   cl::desc("Display more information when dumping selection "
                            "DAG nodes."));
 
+static cl::opt<bool>
+    PrintSDNodeAddrs("print-sdnode-addrs", cl::Hidden,
+                     cl::desc("Print addresses of SDNodes when dumping"));
+
 std::string SDNode::getOperationName(const SelectionDAG *G) const {
   switch (getOpcode()) {
   default:
@@ -479,6 +483,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "fake_use";
   case ISD::RELOC_NONE:
     return "reloc_none";
+  case ISD::COND_LOOP:
+    return "cond_loop";
   case ISD::PSEUDO_PROBE:
     return "pseudoprobe";
   case ISD::GC_TRANSITION_START:        return "gc_transition.start";
@@ -729,6 +735,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   if (getFlags().hasNoFPExcept())
     OS << " nofpexcept";
 
+  if (getFlags().hasNoConvergent())
+    OS << " noconvergent";
+
   if (const MachineSDNode *MN = dyn_cast<MachineSDNode>(this)) {
     if (!MN->memoperands_empty()) {
       OS << "<";
@@ -929,7 +938,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
     OS << ">";
   } else if (const MemSDNode *M = dyn_cast<MemSDNode>(this)) {
     OS << "<";
-    printMemOperand(OS, *M->getMemOperand(), G);
+    interleaveComma(M->memoperands(), OS, [&](const MachineMemOperand *MMO) {
+      printMemOperand(OS, *MMO, G);
+    });
     if (auto *A = dyn_cast<AtomicSDNode>(M))
       if (A->getOpcode() == ISD::ATOMIC_LOAD) {
         bool doExt = true;
@@ -1237,4 +1248,6 @@ void SDNode::print(raw_ostream &OS, const SelectionDAG *G) const {
     OS << ", ";
     DL.print(OS);
   }
+  if (PrintSDNodeAddrs)
+    OS << " ; " << this;
 }

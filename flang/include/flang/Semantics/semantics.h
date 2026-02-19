@@ -332,6 +332,7 @@ public:
   void NoteDefinedSymbol(const Symbol &);
   bool IsSymbolDefined(const Symbol &) const;
   void NoteUsedSymbol(const Symbol &);
+  void NoteUsedSymbols(const UnorderedSymbolSet &);
   bool IsSymbolUsed(const Symbol &) const;
 
   void DumpSymbols(llvm::raw_ostream &);

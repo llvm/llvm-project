@@ -393,7 +393,6 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
@@ -422,42 +421,37 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(is_complex)) {
-    if (is_complex)
-      error = Status::FromErrorString(
-          "We don't support returning complex values at present");
-    else {
-      std::optional<uint64_t> bit_width =
-          llvm::expectedToOptional(compiler_type.GetBitSize(frame_sp.get()));
-      if (!bit_width) {
-        error = Status::FromErrorString("can't get type size");
+  } else if (compiler_type.IsRealFloatingPointType()) {
+    std::optional<uint64_t> bit_width =
+        llvm::expectedToOptional(compiler_type.GetBitSize(frame_sp.get()));
+    if (!bit_width) {
+      error = Status::FromErrorString("can't get type size");
+      return error;
+    }
+    if (*bit_width <= 64) {
+      const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
+      RegisterValue f0_value;
+      DataExtractor data;
+      Status data_error;
+      size_t num_bytes = new_value_sp->GetData(data, data_error);
+      if (data_error.Fail()) {
+        error = Status::FromErrorStringWithFormat(
+            "Couldn't convert return value to raw data: %s",
+            data_error.AsCString());
         return error;
       }
-      if (*bit_width <= 64) {
-        const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
-        RegisterValue f0_value;
-        DataExtractor data;
-        Status data_error;
-        size_t num_bytes = new_value_sp->GetData(data, data_error);
-        if (data_error.Fail()) {
-          error = Status::FromErrorStringWithFormat(
-              "Couldn't convert return value to raw data: %s",
-              data_error.AsCString());
-          return error;
-        }
 
-        unsigned char buffer[8];
-        ByteOrder byte_order = data.GetByteOrder();
+      unsigned char buffer[8];
+      ByteOrder byte_order = data.GetByteOrder();
 
-        data.CopyByteOrderedData(0, num_bytes, buffer, 8, byte_order);
-        f0_value.SetBytes(buffer, 8, byte_order);
-        reg_ctx->WriteRegister(f0_info, f0_value);
-        set_it_simple = true;
-      } else {
-        // FIXME - don't know how to do long doubles yet.
-        error = Status::FromErrorString(
-            "We don't support returning float values > 64 bits at present");
-      }
+      data.CopyByteOrderedData(0, num_bytes, buffer, 8, byte_order);
+      f0_value.SetBytes(buffer, 8, byte_order);
+      reg_ctx->WriteRegister(f0_info, f0_value);
+      set_it_simple = true;
+    } else {
+      // FIXME - don't know how to do long doubles yet.
+      error = Status::FromErrorString(
+          "We don't support returning float values > 64 bits at present");
     }
   }
 

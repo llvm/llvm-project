@@ -321,6 +321,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
                           << " operation";
   };
 
+  auto checkAffinity = [&todo](auto op, LogicalResult &result) {
+    if (!op.getAffinityVars().empty())
+      result = todo("affinity");
+  };
   auto checkAllocate = [&todo](auto op, LogicalResult &result) {
     if (!op.getAllocateVars().empty() || !op.getAllocatorVars().empty())
       result = todo("allocate");
@@ -328,10 +332,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   auto checkBare = [&todo](auto op, LogicalResult &result) {
     if (op.getBare())
       result = todo("ompx_bare");
-  };
-  auto checkCollapse = [&todo](auto op, LogicalResult &result) {
-    if (op.getCollapseNumLoops() > 1)
-      result = todo("collapse");
   };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
     if (!op.getDependVars().empty() || op.getDependKinds())
@@ -396,10 +396,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkOrder(op, result);
       })
-      .Case([&](omp::LoopNestOp op) {
-        if (mlir::isa<omp::TaskloopOp>(op.getOperation()->getParentOp()))
-          checkCollapse(op, result);
-      })
       .Case([&](omp::OrderedRegionOp op) { checkParLevelSimd(op, result); })
       .Case([&](omp::SectionsOp op) {
         checkAllocate(op, result);
@@ -417,6 +413,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkThreadLimit(op, result);
       })
       .Case([&](omp::TaskOp op) {
+        checkAffinity(op, result);
         checkAllocate(op, result);
         checkInReduction(op, result);
       })
@@ -2800,6 +2797,84 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     return loopInfo;
   };
 
+  Operation::operand_range lowerBounds = loopOp.getLoopLowerBounds();
+  Operation::operand_range upperBounds = loopOp.getLoopUpperBounds();
+  Operation::operand_range steps = loopOp.getLoopSteps();
+  llvm::Type *boundType =
+      moduleTranslation.lookupValue(lowerBounds[0])->getType();
+  llvm::Value *lbVal = nullptr;
+  llvm::Value *ubVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
+  llvm::Value *stepVal = nullptr;
+  if (loopOp.getCollapseNumLoops() > 1) {
+    // In cases where Collapse is used with Taskloop, the upper bound of the
+    // iteration space needs to be recalculated to cater for the collapsed loop.
+    // The Collapsed Loop UpperBound is the product of all collapsed
+    // loop's tripcount.
+    // The LowerBound for collapsed loops is always 1. When the loops are
+    // collapsed, it will reset the bounds and introduce processing to ensure
+    // the index's are presented as expected. As this happens after creating
+    // Taskloop, these bounds need predicting. Example:
+    // !$omp taskloop collapse(2)
+    //   do i = 1, 10
+    //     do j = 1, 5
+    //       ..
+    //     end do
+    //   end do
+    // This loop above has a total of 50 iterations, so the lb will be 1, and
+    // the ub will be 50. collapseLoops in OMPIRBuilder then handles ensuring
+    // that i and j are properly presented when used in the loop.
+    for (uint64_t i = 0; i < loopOp.getCollapseNumLoops(); i++) {
+      llvm::Value *loopLb = moduleTranslation.lookupValue(lowerBounds[i]);
+      llvm::Value *loopUb = moduleTranslation.lookupValue(upperBounds[i]);
+      llvm::Value *loopStep = moduleTranslation.lookupValue(steps[i]);
+      // In some cases, such as where the ub is less than the lb so the loop
+      // steps down, the calculation for the loopTripCount is swapped. To ensure
+      // the correct value is found, calculate both UB - LB and LB - UB then
+      // select which value to use depending on how the loop has been
+      // configured.
+      llvm::Value *loopLbMinusOne = builder.CreateSub(
+          loopLb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
+      llvm::Value *loopUbMinusOne = builder.CreateSub(
+          loopUb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
+      llvm::Value *boundsCmp = builder.CreateICmpSLT(loopLb, loopUb);
+      llvm::Value *ubMinusLb = builder.CreateSub(loopUb, loopLbMinusOne);
+      llvm::Value *lbMinusUb = builder.CreateSub(loopLb, loopUbMinusOne);
+      llvm::Value *loopTripCount =
+          builder.CreateSelect(boundsCmp, ubMinusLb, lbMinusUb);
+      loopTripCount = builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, loopTripCount, builder.getFalse());
+      // For loops that have a step value not equal to 1, we need to adjust the
+      // trip count to ensure the correct number of iterations for the loop is
+      // captured.
+      llvm::Value *loopTripCountDivStep =
+          builder.CreateSDiv(loopTripCount, loopStep);
+      loopTripCountDivStep = builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, loopTripCountDivStep, builder.getFalse());
+      llvm::Value *loopTripCountRem =
+          builder.CreateSRem(loopTripCount, loopStep);
+      loopTripCountRem = builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, loopTripCountRem, builder.getFalse());
+      llvm::Value *needsRoundUp = builder.CreateICmpNE(
+          loopTripCountRem,
+          builder.getIntN(loopTripCountRem->getType()->getIntegerBitWidth(),
+                          0));
+      loopTripCount =
+          builder.CreateAdd(loopTripCountDivStep,
+                            builder.CreateZExtOrTrunc(
+                                needsRoundUp, loopTripCountDivStep->getType()));
+      ubVal = builder.CreateMul(ubVal, loopTripCount);
+    }
+    lbVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
+    stepVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
+  } else {
+    lbVal = moduleTranslation.lookupValue(lowerBounds[0]);
+    ubVal = moduleTranslation.lookupValue(upperBounds[0]);
+    stepVal = moduleTranslation.lookupValue(steps[0]);
+  }
+  assert(lbVal != nullptr && "Expected value for lbVal");
+  assert(ubVal != nullptr && "Expected value for ubVal");
+  assert(stepVal != nullptr && "Expected value for stepVal");
+
   llvm::Value *ifCond = nullptr;
   llvm::Value *grainsize = nullptr;
   int sched = 0; // default
@@ -2832,15 +2907,13 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTaskloop(
-          ompLoc, allocaIP, bodyCB, loopInfo,
-          moduleTranslation.lookupValue(loopOp.getLoopLowerBounds()[0]),
-          moduleTranslation.lookupValue(loopOp.getLoopUpperBounds()[0]),
-          moduleTranslation.lookupValue(loopOp.getLoopSteps()[0]),
+          ompLoc, allocaIP, bodyCB, loopInfo, lbVal, ubVal, stepVal,
           taskloopOp.getUntied(), ifCond, grainsize, taskloopOp.getNogroup(),
           sched, moduleTranslation.lookupValue(taskloopOp.getFinal()),
           taskloopOp.getMergeable(),
           moduleTranslation.lookupValue(taskloopOp.getPriority()),
-          taskDupOrNull, taskStructMgr.getStructPtr());
+          loopOp.getCollapseNumLoops(), taskDupOrNull,
+          taskStructMgr.getStructPtr());
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
@@ -3712,6 +3785,51 @@ static LogicalResult applyTile(omp::TileOp op, llvm::IRBuilderBase &builder,
     for (auto [mlirLoop, genLoop] :
          zip_equal(op.getGeneratees(), generatedLoops))
       moduleTranslation.mapOmpLoop(mlirLoop, genLoop);
+  }
+
+  // CLIs can only be consumed once
+  for (Value applyee : op.getApplyees())
+    moduleTranslation.invalidateOmpLoop(applyee);
+
+  return success();
+}
+
+/// Apply a `#pragma omp fuse` / `!$omp fuse` transformation using the
+/// OpenMPIRBuilder.
+static LogicalResult applyFuse(omp::FuseOp op, llvm::IRBuilderBase &builder,
+                               LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::LocationDescription loc(builder);
+
+  // Select what CLIs are going to be fused
+  SmallVector<llvm::CanonicalLoopInfo *> beforeFuse, toFuse, afterFuse;
+  for (size_t i = 0; i < op.getApplyees().size(); i++) {
+    Value applyee = op.getApplyees()[i];
+    llvm::CanonicalLoopInfo *consBuilderCLI =
+        moduleTranslation.lookupOMPLoop(applyee);
+    assert(applyee && "Canonical loop must already been translated");
+    if (op.getFirst().has_value() && i < op.getFirst().value() - 1)
+      beforeFuse.push_back(consBuilderCLI);
+    else if (op.getCount().has_value() &&
+             i >= op.getFirst().value() + op.getCount().value() - 1)
+      afterFuse.push_back(consBuilderCLI);
+    else
+      toFuse.push_back(consBuilderCLI);
+  }
+  assert(
+      (op.getGeneratees().empty() ||
+       beforeFuse.size() + afterFuse.size() + 1 == op.getGeneratees().size()) &&
+      "Wrong number of generatees");
+
+  // do the fuse
+  auto generatedLoop = ompBuilder->fuseLoops(loc.DL, toFuse);
+  if (!op.getGeneratees().empty()) {
+    size_t i = 0;
+    for (; i < beforeFuse.size(); i++)
+      moduleTranslation.mapOmpLoop(op.getGeneratees()[i], beforeFuse[i]);
+    moduleTranslation.mapOmpLoop(op.getGeneratees()[i++], generatedLoop);
+    for (; i < afterFuse.size(); i++)
+      moduleTranslation.mapOmpLoop(op.getGeneratees()[i], afterFuse[i]);
   }
 
   // CLIs can only be consumed once
@@ -5386,7 +5504,7 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
       genMapInfoCB, varType, mapperFuncName, customMapperCB);
   if (!newFn)
     return newFn.takeError();
-  if (llvm::Function *mappedFunc =
+  if ([[maybe_unused]] llvm::Function *mappedFunc =
           moduleTranslation.lookupFunction(mapperFuncName)) {
     assert(mappedFunc == *newFn &&
            "mapper function mapping disagrees with emitted function");
@@ -6370,6 +6488,7 @@ static LogicalResult
 convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
   auto targetOp = cast<omp::TargetOp>(opInst);
+
   // The current debug location already has the DISubprogram for the outlined
   // function that will be created for the target op. We save it here so that
   // we can set it on the outlined function.
@@ -7196,6 +7315,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::TileOp op) {
             return applyTile(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::FuseOp op) {
+            return applyFuse(op, builder, moduleTranslation);
           })
           .Case([&](omp::TargetAllocMemOp) {
             return convertTargetAllocMemOp(*op, builder, moduleTranslation);

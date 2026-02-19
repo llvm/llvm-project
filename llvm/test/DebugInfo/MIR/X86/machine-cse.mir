@@ -107,7 +107,7 @@ body:             |
 
     %2:gr32 = COPY $edi
     %3:gr32 = MOV32rr %2
-    %0:gr64 = SUBREG_TO_REG 0, killed %3, %subreg.sub_32bit
+    %0:gr64 = SUBREG_TO_REG killed %3, %subreg.sub_32bit
     %4:gr64_nosp = SHL64ri %0, 9, implicit-def dead $eflags
     %1:gr64 = LEA64r %4, 4, %4, 0, $noreg
     %5:gr32 = MOV32r0 implicit-def dead $eflags
@@ -171,7 +171,7 @@ body:             |
 
     %2:gr32 = COPY $edi
     %3:gr32 = MOV32rr %2
-    %0:gr64 = SUBREG_TO_REG 0, killed %3, %subreg.sub_32bit
+    %0:gr64 = SUBREG_TO_REG killed %3, %subreg.sub_32bit
     %4:gr64_nosp = SHL64ri %0, 9, implicit-def dead $eflags
     %1:gr64 = LEA64r %4, 4, %4, 0, $noreg
     %5:gr32 = MOV32r0 implicit-def dead $eflags

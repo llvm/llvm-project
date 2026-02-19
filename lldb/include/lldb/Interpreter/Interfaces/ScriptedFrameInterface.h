@@ -10,6 +10,7 @@
 #define LLDB_INTERPRETER_INTERFACES_SCRIPTEDFRAMEINTERFACE_H
 
 #include "ScriptedInterface.h"
+#include "lldb/API/SBValueList.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/lldb-private.h"
@@ -48,6 +49,14 @@ public:
 
   virtual std::optional<std::string> GetRegisterContext() {
     return std::nullopt;
+  }
+
+  virtual lldb::ValueObjectListSP GetVariables() { return nullptr; }
+
+  virtual lldb::ValueObjectSP
+  GetValueObjectForVariableExpression(llvm::StringRef expr, uint32_t options,
+                                      Status &error) {
+    return nullptr;
   }
 };
 } // namespace lldb_private

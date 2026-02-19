@@ -1343,17 +1343,17 @@ let Predicates = [BPFHasALU32] in {
   }
 
   def : Pat<(i64 (zextloadi8  ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDB32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDB32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (zextloadi16 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDH32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDH32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (zextloadi32 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDW32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDW32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (extloadi8  ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDB32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDB32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (extloadi16 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDH32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDH32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (extloadi32 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDW32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDW32 ADDRri:$src), sub_32)>;
 
   let Predicates = [BPFHasLoadAcqStoreRel] in {
     foreach P = [[relaxed_load<atomic_load_nonext_32>, LDW32],

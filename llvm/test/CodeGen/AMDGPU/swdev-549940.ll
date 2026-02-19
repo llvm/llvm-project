@@ -96,11 +96,11 @@ bb:
   %and = and i32 %call, 31
   %icmp = icmp eq i32 %and, 0
   %lshr = lshr i32 %call, 5
-  %getelementptr67 = getelementptr inbounds nuw %struct.snork, ptr addrspace(3) null, i32 %call
+  %getelementptr67 = getelementptr inbounds nuw %struct.snork, ptr addrspace(3) zeroinitializer, i32 %call
   %addrspacecast68 = addrspacecast ptr addrspace(3) %getelementptr67 to ptr
-  %getelementptr69 = getelementptr inbounds nuw i8, ptr addrspace(3) null, i32 %lshr
+  %getelementptr69 = getelementptr inbounds nuw i8, ptr addrspace(3) zeroinitializer, i32 %lshr
   %addrspacecast70 = addrspacecast ptr addrspace(3) %getelementptr69 to ptr
-  %getelementptr71 = getelementptr inbounds nuw i32, ptr addrspace(3) null, i32 %lshr
+  %getelementptr71 = getelementptr inbounds nuw i32, ptr addrspace(3) zeroinitializer, i32 %lshr
   %addrspacecast72 = addrspacecast ptr addrspace(3) %getelementptr71 to ptr
   %load73 = load ptr, ptr addrspace(4) @global, align 8
   %addrspacecast74 = addrspacecast ptr %load73 to ptr addrspace(4)

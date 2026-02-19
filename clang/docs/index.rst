@@ -42,6 +42,7 @@ Using Clang as a Compiler
    SanitizerStats
    SanitizerSpecialCaseList
    AllocToken
+   OverflowBehaviorTypes
    BoundsSafety
    BoundsSafetyAdoptionGuide
    BoundsSafetyImplPlans
@@ -122,7 +123,9 @@ Design Documents
    ControlFlowIntegrityDesign
    HardwareAssistedAddressSanitizerDesign.rst
    ConstantInterpreter
+   LLVMExceptionHandlingCodeGen
    ClangIRCodeDuplication
+   ClangIRCleanupAndEHDesign
 
 Indices and tables
 ==================
