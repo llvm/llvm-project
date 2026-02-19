@@ -197,12 +197,11 @@ OCML_MANGLE_F64(cvtrtn_f32)(double a)
     v = e == 1151 ? i : v;
     return as_float(s | v);
 #else
-    float r = (float)a;
-    float p = OCML_MANGLE_F32(pred)(r);
-    r = (double)r > a ? p : r;
+    float fa = (float)a;
+    float p = OCML_MANGLE_F32(pred)(fa);
+    float r = (double)fa > a ? p : fa;
     if (DAZ_OPT()) {
-        float z = BUILTIN_COPYSIGN_F32(0.0f, r);
-        r = a >= -0x1.fffffcp-127 && a < 0x1.0p-126 ? z : r;
+        r = fa == 0.0f ? fa : r;
     }
     return r;
 #endif
@@ -229,12 +228,11 @@ OCML_MANGLE_F64(cvtrtp_f32)(double a)
     v = e == 1151 ? i : v;
     return as_float(s | v);
 #else
-    float r = (float)a;
-    float s = OCML_MANGLE_F32(succ)(r);
-    r = (double)r < a ? s : r;
+    float fa = (float)a;
+    float s = OCML_MANGLE_F32(succ)(fa);
+    float r = (double)fa < a ? s : fa;
     if (DAZ_OPT()) {
-        float z = BUILTIN_COPYSIGN_F32(0.0f, r);
-        r = a <= 0x1.fffffcp-127 && a > -0x1.0p-126 ? z : r;
+        r = fa == 0.0f ? fa : r;
     }
     return r;
 #endif
