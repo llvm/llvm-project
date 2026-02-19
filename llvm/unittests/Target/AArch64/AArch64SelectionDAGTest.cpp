@@ -920,39 +920,39 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Constants) {
 
 TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_SHL) {
   SDLoc Loc;
-  auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);
-  auto Cst1 = DAG->getConstant(1, Loc, MVT::i32);
-  auto Cst3 = DAG->getConstant(3, Loc, MVT::i32);
-  auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
-  auto Cst16 = DAG->getConstant(16, Loc, MVT::i32);
+  SDValue Cst0 = DAG->getConstant(0, Loc, MVT::i32);
+  SDValue Cst1 = DAG->getConstant(1, Loc, MVT::i32);
+  SDValue Cst3 = DAG->getConstant(3, Loc, MVT::i32);
+  SDValue Cst4 = DAG->getConstant(4, Loc, MVT::i32);
+  SDValue Cst16 = DAG->getConstant(16, Loc, MVT::i32);
 
-  auto Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::i32);
-  auto ShlConst1 = DAG->getNode(ISD::SHL, Loc, MVT::i32, Cst1, Cond);
+  SDValue Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::i32);
+  SDValue ShlConst1 = DAG->getNode(ISD::SHL, Loc, MVT::i32, Cst1, Cond);
 
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlConst1));
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlConst1, /*OrZero=*/true));
 
-  auto And16 = DAG->getNode(ISD::AND, Loc, MVT::i32, Cond, Cst16);
-  auto ShlMaybeZero = DAG->getNode(ISD::SHL, Loc, MVT::i32, And16, Cst1);
+  SDValue And16 = DAG->getNode(ISD::AND, Loc, MVT::i32, Cond, Cst16);
+  SDValue ShlMaybeZero = DAG->getNode(ISD::SHL, Loc, MVT::i32, And16, Cst1);
 
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(ShlMaybeZero));
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(ShlMaybeZero, /*OrZero=*/true));
 
-  auto ShlUnknown = DAG->getNode(ISD::SHL, Loc, MVT::i32, Cond, Cst1);
+  SDValue ShlUnknown = DAG->getNode(ISD::SHL, Loc, MVT::i32, Cond, Cst1);
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(ShlUnknown));
 
-  auto Neg3 = DAG->getNode(ISD::SUB, Loc, MVT::i32, Cst0, Cst3);
-  auto AndPow2 = DAG->getNode(ISD::AND, Loc, MVT::i32, Cst3, Neg3);
-  auto ShlPow2 = DAG->getNode(ISD::SHL, Loc, MVT::i32, AndPow2, Cst1);
+  SDValue Neg3 = DAG->getNode(ISD::SUB, Loc, MVT::i32, Cst0, Cst3);
+  SDValue AndPow2 = DAG->getNode(ISD::AND, Loc, MVT::i32, Cst3, Neg3);
+  SDValue ShlPow2 = DAG->getNode(ISD::SHL, Loc, MVT::i32, AndPow2, Cst1);
 
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlPow2));
 
-  auto VecVT = MVT::v2i32;
-  auto Vec13 = DAG->getBuildVector(VecVT, Loc, {Cst1, Cst3});
-  auto Vec04 = DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4});
-  auto VecShift = DAG->getBuildVector(VecVT, Loc, {Cst1, Cst1});
-  auto VecShl13 = DAG->getNode(ISD::SHL, Loc, VecVT, Vec13, VecShift);
-  auto VecShl04 = DAG->getNode(ISD::SHL, Loc, VecVT, Vec04, VecShift);
+  MVT::SimpleValueType VecVT = MVT::v2i32;
+  SDValue Vec13 = DAG->getBuildVector(VecVT, Loc, {Cst1, Cst3});
+  SDValue Vec04 = DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4});
+  SDValue VecShift = DAG->getBuildVector(VecVT, Loc, {Cst1, Cst1});
+  SDValue VecShl13 = DAG->getNode(ISD::SHL, Loc, VecVT, Vec13, VecShift);
+  SDValue VecShl04 = DAG->getNode(ISD::SHL, Loc, VecVT, Vec04, VecShift);
 
   APInt DemandLo(2, 1);
   APInt DemandHi(2, 2);
