@@ -541,11 +541,11 @@ subroutine iostat_in_io_loop(k, j, stat)
 ! CHECK:   fir.call @_FortranAioEnableHandlers(%[[VAL_378]], %[[VAL_369]], %[[VAL_370]], %[[VAL_370]], %[[VAL_370]], %[[VAL_370]]) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> ()
 ! CHECK:   cf.br ^bb1(%[[VAL_371]], %[[VAL_369]] : index, i1)
 ! CHECK: ^bb1(%[[VAL_380:.*]]: index, %[[VAL_381:.*]]: i1):
+! CHECK:   %[[VAL_384:.*]] = fir.convert %[[VAL_380]] : (index) -> i32
 ! CHECK:   %[[VAL_382:.*]] = arith.cmpi sle, %[[VAL_380]], %[[VAL_368]] : index
 ! CHECK:   %[[VAL_383:.*]] = arith.andi %[[VAL_381]], %[[VAL_382]] : i1
 ! CHECK:   cf.cond_br %[[VAL_383]], ^bb2, ^bb7
 ! CHECK: ^bb2:
-! CHECK:   %[[VAL_384:.*]] = fir.convert %[[VAL_380]] : (index) -> i32
 ! CHECK:   fir.store %[[VAL_384]] to %[[VAL_375]] : !fir.ref<i32>
 ! CHECK:   cf.cond_br %[[VAL_381]], ^bb3, ^bb6(%[[VAL_370]] : i1)
 ! CHECK: ^bb3:
@@ -573,8 +573,7 @@ subroutine iostat_in_io_loop(k, j, stat)
 ! CHECK:   %[[VAL_405:.*]] = arith.addi %[[VAL_380]], %[[VAL_371]] overflow<nsw> : index
 ! CHECK:   cf.br ^bb1(%[[VAL_405]], %[[VAL_404]] : index, i1)
 ! CHECK: ^bb7:
-! CHECK:   %[[VAL_406:.*]] = fir.convert %[[VAL_380]] : (index) -> i32
-! CHECK:   fir.store %[[VAL_406]] to %[[VAL_375]] : !fir.ref<i32>
+! CHECK:   fir.store %[[VAL_384]] to %[[VAL_375]] : !fir.ref<i32>
 ! CHECK:   %[[VAL_407:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_378]]) {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:   fir.store %[[VAL_407]] to %[[VAL_408]] : !fir.ref<i32>
 ! CHECK:   return

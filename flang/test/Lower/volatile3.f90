@@ -237,8 +237,8 @@ end program
 
 ! CHECK-LABEL:   func.func private @_QFPsub_select_rank(
 ! CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<*:i32>> {fir.bindc_name = "arr"}) {{.*}} {
-! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 5 : i32
+! CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 4 : i8
 ! CHECK:           %[[CONSTANT_3:.*]] = arith.constant 1 : i8
 ! CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope

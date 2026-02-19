@@ -6,8 +6,8 @@ subroutine sub1()
   implicit none
   integer :: i
   external foo
-! CHECK:    %[[C2:.*]] = arith.constant 2 : i32
 ! CHECK:    %[[C0:.*]] = arith.constant 0 : i32
+! CHECK:    %[[C2:.*]] = arith.constant 2 : i32
 ! CHECK:    %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK:    %[[TRIP:.*]] = fir.alloca i32
 ! CHECK:    %[[I_REF:.*]] = fir.alloca i32 {bindc_name = "i", {{.*}}}
@@ -57,8 +57,8 @@ subroutine sub2()
   external foo
 ! CHECK:    %[[C_7:.*]] = arith.constant -7 : i32
 ! CHECK:    %[[C8:.*]] = arith.constant 8 : i32
-! CHECK:    %[[C2:.*]] = arith.constant 2 : i32
 ! CHECK:    %[[C0:.*]] = arith.constant 0 : i32
+! CHECK:    %[[C2:.*]] = arith.constant 2 : i32
 ! CHECK:    %[[C3:.*]] = arith.constant 3 : i32
 ! CHECK:    %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK:    %[[TRIP:.*]] = fir.alloca i32

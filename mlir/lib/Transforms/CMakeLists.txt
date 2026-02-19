@@ -32,6 +32,7 @@ add_mlir_library(MLIRTransforms
   LINK_LIBS PUBLIC
   MLIRAnalysis
   MLIRFunctionInterfaces
+  MLIRHoistingContainerOpInterface
   MLIRLoopLikeInterface
   MLIRMemOpInterfaces
   MLIRMemorySlotInterfaces
