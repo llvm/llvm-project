@@ -676,7 +676,8 @@ private:
   // LibFuncs that could have been part of the LTO unit, but was not typically
   // because they weren't extracted from their libraries. Such functions cannot
   // safely be called, since they have already lost their only opportunity to be
-  // defined.
+  // defined. Before run(), this contains all libfuncs defined anywhere in
+  // bitcode; during run(), the ones defined in the LTO unit are filtered out.
   SmallVector<StringRef> BitcodeLibFuncs;
 
 public:

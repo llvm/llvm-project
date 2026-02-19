@@ -311,23 +311,8 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs); I != E;
        ++I) {
     LibFunc F = static_cast<LibFunc>(I);
-    StringRef Name = TLI.getName(F);
-    GlobalValue *Val = Mod.getNamedValue(Name);
-
-    // LibFuncs present in the current TU can always be referenced.
-    if (Val && !Val->isDeclaration())
-      continue;
-
-    // LibFuncs not implemented in bitcode can always be referenced, since they
-    // can safely be extracted from whatever library they reside in after LTO
-    // without changing the linker symbol table that LTO depends on.
-    if (!BitcodeLibFuncs.contains(Name))
-      continue;
-
-    // FIXME: Functions that are somewhere in a ThinLTO link (just not imported
-    // in this module) should not be disabled, as they have already been
-    // extracted.
-    TLII->setUnavailable(F);
+    if (BitcodeLibFuncs.contains(TLI.getName(F)))
+      TLII->setUnavailable(F);
   }
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
