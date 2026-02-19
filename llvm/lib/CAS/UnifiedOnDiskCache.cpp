@@ -86,7 +86,17 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+#include <chrono>
 #include <optional>
+
+#if __has_include(<sys/sysctl.h>)
+#include <sys/sysctl.h>
+#endif
+
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#endif
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -268,6 +278,38 @@ static Error validateInProcess(StringRef RootPath, StringRef HashName,
   if (Error E = UniDB->validateActionCache())
     return E;
   return Error::success();
+}
+
+static Expected<uint64_t> getBootTime() {
+#if __has_include(<sys/sysctl.h>) && defined(KERN_BOOTTIME)
+  // macOS/BSD: Use sysctl to get boot time
+  struct timeval TV;
+  size_t TVLen = sizeof(TV);
+  int KernBoot[2] = {CTL_KERN, KERN_BOOTTIME};
+  if (sysctl(KernBoot, 2, &TV, &TVLen, nullptr, 0) < 0)
+    return createStringError(llvm::errnoAsErrorCode(),
+                             "failed to get boottime");
+  if (TVLen != sizeof(TV))
+    return createStringError("sysctl kern.boottime unexpected format");
+  return TV.tv_sec;
+#elif defined(__linux__)
+  // Linux: Use the mtime for /proc, which is recreated during system boot.
+  // We could also read /proc/stat and search for 'btime'.
+  sys::fs::file_status Status;
+  if (std::error_code EC = sys::fs::status("/proc", Status))
+    return createFileError("/proc", EC);
+  return Status.getLastModificationTime().time_since_epoch().count();
+#elif defined(_WIN32)
+  // Windows: Calculate boot time from current time minus uptime
+  // GetTickCount64() returns milliseconds since boot
+  auto now = std::chrono::system_clock::now();
+  ULONGLONG uptimeMs = GetTickCount64();
+  auto bootTime = now - std::chrono::milliseconds(uptimeMs);
+  return std::chrono::duration_cast<std::chrono::seconds>(
+      bootTime.time_since_epoch()).count();
+#else
+  llvm::report_fatal_error("getBootTime unimplemented for this platform");
+#endif
 }
 
 Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(

@@ -1,5 +1,4 @@
-// TODO: Enable for Windows when cc1depscand is implemented
-// REQUIRES: !system-windows, clang-cc1daemon
+// REQUIRES: clang-cc1daemon
 
 // RUN: rm -rf %t
 
