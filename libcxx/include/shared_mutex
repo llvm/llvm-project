@@ -154,7 +154,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_EXPORTED_FROM_ABI __shared_mutex_base {
+struct __dual_cv_shared_mutex {
   mutex __mut_;
   condition_variable __gate1_;
   condition_variable __gate2_;
@@ -162,6 +162,26 @@ struct _LIBCPP_EXPORTED_FROM_ABI __shared_mutex_base {
 
   static const unsigned __write_entered_ = 1U << (sizeof(unsigned) * __CHAR_BIT__ - 1);
   static const unsigned __n_readers_     = ~__write_entered_;
+
+  _LIBCPP_HIDE_FROM_ABI __dual_cv_shared_mutex() : __state_(0) {}
+  _LIBCPP_HIDE_FROM_ABI ~__dual_cv_shared_mutex() = default;
+
+  __dual_cv_shared_mutex(const __dual_cv_shared_mutex&)            = delete;
+  __dual_cv_shared_mutex& operator=(const __dual_cv_shared_mutex&) = delete;
+
+  // Exclusive ownership
+  _LIBCPP_HIDE_FROM_ABI void lock();
+  _LIBCPP_HIDE_FROM_ABI bool try_lock();
+  _LIBCPP_HIDE_FROM_ABI void unlock();
+
+  // Shared ownership
+  _LIBCPP_HIDE_FROM_ABI void lock_shared();
+  _LIBCPP_HIDE_FROM_ABI bool try_lock_shared();
+  _LIBCPP_HIDE_FROM_ABI void unlock_shared();
+};
+
+struct _LIBCPP_EXPORTED_FROM_ABI __shared_mutex_base {
+  __dual_cv_shared_mutex __impl_;
 
   __shared_mutex_base();
   _LIBCPP_HIDE_FROM_ABI ~__shared_mutex_base() = default;
@@ -212,7 +232,7 @@ public:
 #      endif
 
 class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("shared_timed_mutex") shared_timed_mutex {
-  __shared_mutex_base __base_;
+  __dual_cv_shared_mutex __base_;
 
 public:
   shared_timed_mutex();
