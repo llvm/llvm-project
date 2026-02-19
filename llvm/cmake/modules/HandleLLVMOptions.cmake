@@ -135,6 +135,11 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
   # Enable assertions in libstdc++.
   add_compile_definitions(_GLIBCXX_ASSERTIONS)
+  # Enable extensive hardening mode in libc++ for the host build.
+  if (LLVM_ENABLE_LIBCXX AND NOT LLVM_ENABLE_EXPENSIVE_CHECKS)
+    append("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE"
+          CMAKE_CXX_FLAGS)
+  endif()
   # Cautiously enable the extensive hardening mode in libc++.
   if((DEFINED LIBCXX_HARDENING_MODE) AND
      (NOT LIBCXX_HARDENING_MODE STREQUAL "extensive"))
@@ -166,6 +171,11 @@ if(LLVM_ENABLE_EXPENSIVE_CHECKS)
     add_compile_definitions(_GLIBCXX_DEBUG)
   else()
     add_compile_definitions(_GLIBCXX_ASSERTIONS)
+  endif()
+  # Enable debug hardening mode in libc++ for the host build.
+  if (LLVM_ENABLE_LIBCXX)
+    append("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG"
+          CMAKE_CXX_FLAGS)
   endif()
 endif()
 
