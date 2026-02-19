@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL3.0
 
-// Check tjat returning a pointer to a local address space variable does not
+// Check that returning a pointer to a local address space variable does not
 // trigger -Wreturn-stack-address.
 
 // expected-no-diagnostics
