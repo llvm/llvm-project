@@ -16654,7 +16654,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       unsigned SizeRatio = ExTy.getSizeInBits() / TrTy.getSizeInBits();
       auto NewEltCnt = EltCnt * SizeRatio;
 
-      EVT NVT = EVT::getVectorVT(*DAG.getContext(), TrTy, NewEltCnt);
+      EVT NVT = TrTy.changeVectorElementCount(NewEltCnt);
       assert(NVT.getSizeInBits() == VecTy.getSizeInBits() && "Invalid Size");
 
       SDValue EltNo = Src->getOperand(1);
