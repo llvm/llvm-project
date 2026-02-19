@@ -26,7 +26,6 @@ set(SERIALIZED_LIT_PARAMS "# Lit parameters serialized here for llvm-lit to pick
 serialize_lit_string_param(SERIALIZED_LIT_PARAMS compiler "${CMAKE_CXX_COMPILER}")
 
 if (LIBCXX_INCLUDE_BENCHMARKS)
-  add_subdirectory(benchmarks)
   set(_libcxx_benchmark_mode "dry-run")
 else()
   serialize_lit_string_param(SERIALIZED_LIT_PARAMS enable_benchmarks "no")
