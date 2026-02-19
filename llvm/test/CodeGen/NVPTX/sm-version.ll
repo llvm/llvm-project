@@ -74,6 +74,64 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_121a | FileCheck %s --check-prefix=SM121a
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_121f | FileCheck %s --check-prefix=SM121f
 
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_21 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_30 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_32 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_35 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_37 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_50 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_52 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_53 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_60 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_61 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_62 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_70 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_75 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_80 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_86 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_90 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_90a | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_100 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_100a | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_101 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_101a | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_103 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_103a | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_120 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_120a | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_121 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx -mcpu=sm_121a | %ptxas-verify %}
+
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_21 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_30 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_32 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_37 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_50 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_52 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_53 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_60 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_61 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_62 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_75 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_80 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_86 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90a | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100a | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_101 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_101a | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_103 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_103a | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_120 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_120a | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_121 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_121a | %ptxas-verify %}
+
 ; SM20: .version 3.2
 ; SM21: .version 3.2
 ; SM30: .version 3.2
