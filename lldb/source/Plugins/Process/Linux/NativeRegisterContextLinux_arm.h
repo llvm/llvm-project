@@ -66,14 +66,14 @@ protected:
 
   size_t GetFPRSize() override { return sizeof(m_fpr); }
 
-  void *GetTLSBuffer() { return &m_tpidr; }
+  void *GetTLSBuffer() { return &m_tls; }
 
-  size_t GetTLSSize() { return sizeof(m_tpidr); }
+  size_t GetTLSSize() { return sizeof(m_tls); }
 
 private:
   uint32_t m_gpr_arm[k_num_gpr_registers_arm];
   RegisterInfoPOSIX_arm::FPU m_fpr;
-  uint32_t m_tpidr;
+  RegisterInfoPOSIX_arm::TLS m_tls;
 
   bool m_refresh_hwdebug_info;
 

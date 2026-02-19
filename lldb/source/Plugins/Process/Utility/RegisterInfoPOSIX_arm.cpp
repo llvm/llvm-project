@@ -24,13 +24,15 @@ using namespace lldb_private;
 #define FPSCR_OFFSET                                                           \
   (LLVM_EXTENSION offsetof(RegisterInfoPOSIX_arm::FPU, fpscr) +                \
    sizeof(RegisterInfoPOSIX_arm::GPR))
+#define TLS_OFFSET                                                             \
+  (sizeof(RegisterInfoPOSIX_arm::GPR) + sizeof(RegisterInfoPOSIX_arm::FPU))
 #define EXC_OFFSET(idx)                                                        \
-  ((idx)*4 + sizeof(RegisterInfoPOSIX_arm::GPR) +                              \
-   sizeof(RegisterInfoPOSIX_arm::FPU))
+  ((idx) * 4 + sizeof(RegisterInfoPOSIX_arm::GPR) +                            \
+   sizeof(RegisterInfoPOSIX_arm::FPU) + sizeof(RegisterInfoPOSIX_arm::TLS))
 #define DBG_OFFSET(reg)                                                        \
   ((LLVM_EXTENSION offsetof(RegisterInfoPOSIX_arm::DBG, reg) +                 \
     sizeof(RegisterInfoPOSIX_arm::GPR) + sizeof(RegisterInfoPOSIX_arm::FPU) +  \
-    sizeof(RegisterInfoPOSIX_arm::EXC)))
+    sizeof(RegisterInfoPOSIX_arm::TLS) + sizeof(RegisterInfoPOSIX_arm::EXC)))
 
 #define DEFINE_DBG(reg, i)                                                     \
   #reg, NULL, sizeof(((RegisterInfoPOSIX_arm::DBG *) NULL)->reg[i]),           \

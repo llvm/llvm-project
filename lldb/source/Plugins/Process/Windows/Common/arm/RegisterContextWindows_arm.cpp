@@ -25,6 +25,7 @@ using namespace lldb_private;
 #define GPR_OFFSET(idx) 0
 #define FPU_OFFSET(idx) 0
 #define FPSCR_OFFSET 0
+#define TLS_OFFSET 0
 #define EXC_OFFSET(reg) 0
 #define DBG_OFFSET_NAME(reg) 0
 

@@ -40,6 +40,10 @@ public:
     uint32_t far; /* Virtual Fault Address */
   };
 
+  struct TLS {
+    uint32_t tpidruro;
+  };
+
   struct DBG {
     uint32_t bvr[16];
     uint32_t bcr[16];

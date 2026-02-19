@@ -32,6 +32,10 @@ using namespace lldb_private;
 #error FPSCR_OFFSET must be defined before including this header file
 #endif
 
+#ifndef TLS_OFFSET
+#error TLS_OFFSET must be defined before including this header file
+#endif
+
 #ifndef EXC_OFFSET
 #error EXC_OFFSET_NAME must be defined before including this header file
 #endif
@@ -688,7 +692,7 @@ static RegisterInfo g_register_infos_arm[] = {
         "tpidruro",
         nullptr,
         4,
-        0,
+        TLS_OFFSET,
         eEncodingUint,
         eFormatHex,
         {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_REGNUM_GENERIC_TP,

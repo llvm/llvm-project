@@ -30,7 +30,7 @@
 #include "lldb/Host/linux/Ptrace.h"
 #include <asm/ptrace.h>
 
-#define REG_CONTEXT_SIZE (GetGPRSize() + sizeof(m_fpr))
+#define REG_CONTEXT_SIZE (GetGPRSize() + sizeof(m_fpr) + sizeof(m_tls))
 
 #ifndef PTRACE_GETVFPREGS
 #define PTRACE_GETVFPREGS 27
@@ -76,10 +76,10 @@ NativeRegisterContextLinux_arm::NativeRegisterContextLinux_arm(
   assert(target_arch.GetMachine() == llvm::Triple::arm);
 
   ::memset(&m_fpr, 0, sizeof(m_fpr));
+  ::memset(&m_tls, 0, sizeof(m_tls));
   ::memset(&m_gpr_arm, 0, sizeof(m_gpr_arm));
   ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
   ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
-  m_tpidr = 0;
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;
@@ -126,7 +126,7 @@ NativeRegisterContextLinux_arm::ReadRegister(const RegisterInfo *reg_info,
   } else if (IsTLS(reg)) {
     error = ReadTLS();
     if (error.Success())
-      reg_value.SetUInt32(m_tpidr);
+      reg_value.SetUInt32(m_tls.tpidruro);
     return error;
   } else {
     uint32_t full_reg = reg;
@@ -229,10 +229,16 @@ Status NativeRegisterContextLinux_arm::ReadAllRegisterValues(
   if (error.Fail())
     return error;
 
+  error = ReadTLS();
+  if (error.Fail())
+    return error;
+
   uint8_t *dst = data_sp->GetBytes();
   ::memcpy(dst, &m_gpr_arm, GetGPRSize());
   dst += GetGPRSize();
   ::memcpy(dst, &m_fpr, sizeof(m_fpr));
+  dst += sizeof(m_fpr);
+  ::memcpy(dst, &m_tls, sizeof(m_tls));
 
   return error;
 }
@@ -277,6 +283,8 @@ Status NativeRegisterContextLinux_arm::WriteAllRegisterValues(
   error = WriteFPR();
   if (error.Fail())
     return error;
+
+  // Note: writing to a thread pointer register is not implemented.
 
   return error;
 }
