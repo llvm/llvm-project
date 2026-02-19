@@ -482,11 +482,13 @@ struct OneDimMultiReductionToTwoDim
 /// vector<Mx...xf32> to vector<Ix...xf32>
 /// ```
 struct UnrollMultiReductionInnerParallelBaseCase
-    : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using Base::Base;
+    : public vector::MaskableOpRewritePattern<vector::MultiDimReductionOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(vector::MultiDimReductionOp multiReductionOp,
+                            vector::MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
     auto srcRank = multiReductionOp.getSourceVectorType().getRank();
     if (srcRank < 2)
       return rewriter.notifyMatchFailure(multiReductionOp,
@@ -514,19 +516,7 @@ struct UnrollMultiReductionInnerParallelBaseCase
         multiReductionOp.getSourceVectorType().getShape();
     int64_t numElementwiseOps = srcShape.front();
 
-    OpBuilder::InsertionGuard guard(rewriter);
-    auto maskableOp =
-        cast<vector::MaskableOpInterface>(multiReductionOp.getOperation());
-    bool isMasked = maskableOp.isMasked();
-    Operation *rootOp;
-    Value mask = nullptr;
-    if (isMasked) {
-      rewriter.setInsertionPoint(maskableOp.getMaskingOp());
-      rootOp = maskableOp.getMaskingOp();
-      mask = maskableOp.getMaskingOp().getMask();
-    } else {
-      rootOp = multiReductionOp;
-    }
+    Value mask = maskingOp ? maskingOp.getMask() : nullptr;
 
     SmallVector<Value> vectors;
     for (int64_t i = 0; i < numElementwiseOps; ++i)
@@ -534,7 +524,7 @@ struct UnrollMultiReductionInnerParallelBaseCase
 
     SmallVector<Value> masks;
     for (int64_t i = 0; i < numElementwiseOps; ++i)
-      if (isMasked)
+      if (mask)
         masks.push_back(vector::ExtractOp::create(rewriter, loc, mask, i));
       else
         masks.push_back(nullptr);
@@ -545,17 +535,18 @@ struct UnrollMultiReductionInnerParallelBaseCase
                                   innerVector, result, /*fastmath=*/nullptr,
                                   innerMask);
 
-    rewriter.replaceOp(rootOp, result);
-    return success();
+    return result;
   }
 };
 
 struct UnrollMultiReductionInnerParallelGeneralCase
-    : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using Base::Base;
+    : public vector::MaskableOpRewritePattern<vector::MultiDimReductionOp> {
+  using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
-                                PatternRewriter &rewriter) const override {
+  FailureOr<Value>
+  matchAndRewriteMaskableOp(vector::MultiDimReductionOp multiReductionOp,
+                            vector::MaskingOpInterface maskingOp,
+                            PatternRewriter &rewriter) const override {
     if (!multiReductionOp.isReducedDim(0))
       return rewriter.notifyMatchFailure(
           multiReductionOp,
@@ -578,19 +569,7 @@ struct UnrollMultiReductionInnerParallelGeneralCase
         multiReductionOp.getSourceVectorType().getShape();
     int64_t numElementwiseOps = srcShape.front();
 
-    OpBuilder::InsertionGuard guard(rewriter);
-    auto maskableOp =
-        cast<vector::MaskableOpInterface>(multiReductionOp.getOperation());
-    bool isMasked = maskableOp.isMasked();
-    Operation *rootOp;
-    Value mask = nullptr;
-    if (isMasked) {
-      rewriter.setInsertionPoint(maskableOp.getMaskingOp());
-      rootOp = maskableOp.getMaskingOp();
-      mask = maskableOp.getMaskingOp().getMask();
-    } else {
-      rootOp = multiReductionOp;
-    }
+    Value mask = maskingOp ? maskingOp.getMask() : nullptr;
 
     SmallVector<Value> vectors;
     for (int64_t i = 0; i < numElementwiseOps; ++i)
@@ -598,7 +577,7 @@ struct UnrollMultiReductionInnerParallelGeneralCase
 
     SmallVector<Value> masks;
     for (int64_t i = 0; i < numElementwiseOps; ++i)
-      if (isMasked)
+      if (mask)
         masks.push_back(vector::ExtractOp::create(rewriter, loc, mask, i));
       else
         masks.push_back(nullptr);
@@ -607,12 +586,11 @@ struct UnrollMultiReductionInnerParallelGeneralCase
         ArrayRef<bool>(multiReductionOp.getReductionMask()).drop_front();
     Value result = multiReductionOp.getAcc();
     for (auto [innerVector, innerMask] : llvm::zip(vectors, masks)) {
-
       auto reductionOp = vector::MultiDimReductionOp::create(
           rewriter, loc, innerVector, result, reductionMask,
           multiReductionOp.getKind());
 
-      if (isMasked) {
+      if (innerMask) {
         auto maskOp = vector::maskOperation(rewriter, reductionOp, innerMask);
         result = maskOp->getResult(0);
       } else {
@@ -620,8 +598,7 @@ struct UnrollMultiReductionInnerParallelGeneralCase
       }
     }
 
-    rewriter.replaceOp(rootOp, result);
-    return success();
+    return result;
   }
 };
 
