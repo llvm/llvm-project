@@ -4109,6 +4109,63 @@ def note_cannot_use_trivial_abi_reason : Note<
   "it has a __weak field|it has a field of a non-trivial class type|"
   "it has an address-discriminated '__ptrauth' field}1">;
 
+// OverflowBehavior attribute
+def err_overflow_behavior_unknown_ident
+    : Error<"'%0' is not a valid argument to attribute %1, only 'wrap' and "
+            "'trap' are supported">;
+def err_overflow_behavior_non_integer_type
+    : Error<"%0 %select{attribute|specifier}2 cannot be applied to "
+            "non-integer type '%1'">;
+def err_conflicting_overflow_behaviors
+    : Error<"conflicting %select{'overflow_behavior' attributes|overflow "
+            "behavior specification; specifier specifies '%1' but attribute "
+            "specifies "
+            "'%2'}0 on the same type">;
+def err_incompatible_obt_kinds_assignment
+    : Error<"assigning to %0 from %1 with incompatible overflow behavior types "
+            "('%2' and '%3')">;
+def warn_overflow_behavior_attribute_disabled
+    : Warning<"%0 attribute is ignored because it is not enabled; pass "
+              "-Xclang -fexperimental-overflow-behavior-types">,
+      InGroup<OverflowBehaviorAttributeIgnored>;
+def warn_overflow_behavior_keyword_disabled
+    : Warning<"'%0' specifier is ignored because overflow behavior types are "
+              "not enabled; pass -Xclang "
+              "-fexperimental-overflow-behavior-types">,
+      InGroup<OverflowBehaviorAttributeIgnored>;
+def warn_impcast_overflow_behavior
+    : Warning<"implicit conversion from %0 to %1 discards overflow behavior">,
+      InGroup<ImplicitOverflowBehaviorConversion>,
+      DefaultIgnore;
+def warn_redundant_overflow_behaviors_mixed
+    : Warning<"redundant overflow behavior specification; both specifier and "
+              "attribute specify '%0'">,
+      InGroup<OverflowBehaviorAttributeIgnored>;
+def warn_impcast_overflow_behavior_assignment
+    : Warning<"implicit conversion from %0 to %1 during assignment discards "
+              "overflow behavior">,
+      InGroup<ImplicitOverflowBehaviorConversionAssignment>,
+      DefaultIgnore;
+def warn_impcast_overflow_behavior_assignment_pedantic
+    : Warning<"implicit conversion from %0 to %1 during assignment discards "
+              "overflow behavior">,
+      InGroup<ImplicitOverflowBehaviorConversionAssignmentPedantic>,
+      DefaultIgnore;
+def warn_impcast_overflow_behavior_pedantic
+    : Warning<"implicit conversion from %0 to %1 discards overflow behavior">,
+      InGroup<ImplicitOverflowBehaviorConversionPedantic>,
+      DefaultIgnore;
+def warn_obt_discarded_at_function_boundary
+    : Warning<"passing argument of type %0 to parameter of type %1 discards "
+              "overflow behavior at function boundary">,
+      InGroup<ImplicitOverflowBehaviorConversionAtFunctionBoundary>,
+      DefaultIgnore;
+def warn_obt_discarded_at_function_boundary_pedantic
+    : Warning<"passing argument of type %0 to parameter of type %1 discards "
+              "overflow behavior at function boundary">,
+      InGroup<ImplicitOverflowBehaviorConversionAtFunctionBoundaryPedantic>,
+      DefaultIgnore;
+
 // Availability attribute
 def warn_availability_unknown_platform : Warning<
   "unknown platform %0 in availability macro">, InGroup<Availability>;
@@ -9216,6 +9273,21 @@ def ext_typecheck_convert_discards_qualifiers : ExtWarn<
   "|%diff{casting $ to type $|casting between types}0,1}2"
   " discards qualifiers">,
   InGroup<IncompatiblePointerTypesDiscardsQualifiers>;
+def ext_typecheck_convert_discards_overflow_behavior
+    : ExtWarn<
+          "%select{%diff{assigning to $ from $|assigning to different types}0,1"
+          "|%diff{passing $ to parameter of type $|"
+          "passing to parameter of different type}0,1"
+          "|%diff{returning $ from a function with result type $|"
+          "returning from function with different return type}0,1"
+          "|%diff{converting $ to type $|converting between types}0,1"
+          "|%diff{initializing $ with an expression of type $|"
+          "initializing with expression of different type}0,1"
+          "|%diff{sending $ to parameter of type $|"
+          "sending to parameter of different type}0,1"
+          "|%diff{casting $ to type $|casting between types}0,1}2"
+          " discards overflow behavior">,
+      InGroup<IncompatiblePointerTypesDiscardsOverflowBehavior>;
 def err_typecheck_convert_discards_qualifiers : Error<
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
   "|%diff{passing $ to parameter of type $|"

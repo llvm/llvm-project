@@ -154,6 +154,10 @@ New Compiler Flags
   can only generate the reduced BMI as a by-product, e.g, an object files or
   a full BMI.
 
+- New ``-cc1`` option ``-fexperimental-overflow-behavior-types`` added to
+  enable parsing of the experimental ``overflow_behavior`` type attribute and
+  type specifiers.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -176,6 +180,11 @@ Attribute Changes in Clang
 
 - Added a new attribute, ``[[clang::no_outline]]`` to suppress outlining from
   annotated functions. This uses the LLVM `nooutline` attribute.
+
+- Introduced a new type attribute ``__attribute__((overflow_behavior))`` which
+  currently accepts either ``wrap`` or ``trap`` as an argument, enabling
+  type-level control over overflow behavior. There is also an accompanying type
+  specifier for each behavior kind via `__ob_wrap` and `__ob_trap`.
 
 Improvements to Clang's diagnostics
 -----------------------------------

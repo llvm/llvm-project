@@ -176,6 +176,7 @@
 // CHECK-NEXT: OpenCLIntelReqdSubGroupSize (SubjectMatchRule_function)
 // CHECK-NEXT: OpenCLNoSVM (SubjectMatchRule_variable)
 // CHECK-NEXT: OptimizeNone (SubjectMatchRule_function, SubjectMatchRule_objc_method)
+// CHECK-NEXT: OverflowBehavior (SubjectMatchRule_variable, SubjectMatchRule_type_alias, SubjectMatchRule_field)
 // CHECK-NEXT: Overloadable (SubjectMatchRule_function)
 // CHECK-NEXT: Owner (SubjectMatchRule_record_not_is_union)
 // CHECK-NEXT: ParamTypestate (SubjectMatchRule_variable_is_parameter)

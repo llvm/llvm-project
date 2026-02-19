@@ -616,6 +616,18 @@ const char *DeclSpec::getSpecifierName(TQ T) {
   llvm_unreachable("Unknown typespec!");
 }
 
+const char *DeclSpec::getSpecifierName(OverflowBehaviorState S) {
+  switch (S) {
+  case OverflowBehaviorState::Unspecified:
+    return "unspecified";
+  case OverflowBehaviorState::Wrap:
+    return "__ob_wrap";
+  case OverflowBehaviorState::Trap:
+    return "__ob_trap";
+  }
+  llvm_unreachable("Unknown overflow behavior state!");
+}
+
 bool DeclSpec::SetStorageClassSpec(Sema &S, SCS SC, SourceLocation Loc,
                                    const char *&PrevSpec,
                                    unsigned &DiagID,
@@ -1001,6 +1013,25 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc) {
   }
 
   llvm_unreachable("Unknown type qualifier!");
+}
+
+bool DeclSpec::SetOverflowBehavior(
+    OverflowBehaviorType::OverflowBehaviorKind Kind, SourceLocation Loc,
+    const char *&PrevSpec, unsigned &DiagID) {
+  OverflowBehaviorState NewState =
+      (Kind == OverflowBehaviorType::OverflowBehaviorKind::Wrap)
+          ? OverflowBehaviorState::Wrap
+          : OverflowBehaviorState::Trap;
+
+  OverflowBehaviorState CurrentState = getOverflowBehaviorState();
+
+  if (CurrentState != OverflowBehaviorState::Unspecified) {
+    return BadSpecifier(NewState, CurrentState, PrevSpec, DiagID);
+  }
+
+  OB_state = static_cast<unsigned>(NewState);
+  OB_Loc = Loc;
+  return false;
 }
 
 bool DeclSpec::setFunctionSpecInline(SourceLocation Loc, const char *&PrevSpec,

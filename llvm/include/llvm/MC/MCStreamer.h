@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSection.h"
@@ -291,6 +292,8 @@ protected:
   /// Returns true if the .cv_loc directive is in the right section.
   bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
 
+  std::unique_ptr<MCLFIRewriter> LFIRewriter;
+
 public:
   MCStreamer(const MCStreamer &) = delete;
   MCStreamer &operator=(const MCStreamer &) = delete;
@@ -307,6 +310,12 @@ public:
   SMLoc getStartTokLoc() const {
     return StartTokLocPtr ? *StartTokLocPtr : SMLoc();
   }
+
+  void setLFIRewriter(std::unique_ptr<MCLFIRewriter> Rewriter) {
+    LFIRewriter = std::move(Rewriter);
+  }
+
+  MCLFIRewriter *getLFIRewriter() { return LFIRewriter.get(); }
 
   /// State management
   ///

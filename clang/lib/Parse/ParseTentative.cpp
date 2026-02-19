@@ -1252,6 +1252,11 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw___auto_type:
     return TPResult::True;
 
+    // OverflowBehaviorTypes
+  case tok::kw___ob_wrap:
+  case tok::kw___ob_trap:
+    return TPResult::True;
+
     // Microsoft
   case tok::kw___declspec:
   case tok::kw___cdecl:

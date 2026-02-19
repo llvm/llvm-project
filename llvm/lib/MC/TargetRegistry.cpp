@@ -13,6 +13,7 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -76,6 +77,8 @@ MCStreamer *Target::createMCObjectStreamer(
   }
   if (ObjectTargetStreamerCtorFn)
     ObjectTargetStreamerCtorFn(*S, STI);
+  if (T.isLFI())
+    initializeLFIMCStreamer(*S, Ctx, T);
   return S;
 }
 

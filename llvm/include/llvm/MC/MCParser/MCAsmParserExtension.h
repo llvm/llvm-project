@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
@@ -127,6 +128,7 @@ MCAsmParserExtension *createCOFFMasmParser();
 MCAsmParserExtension *createGOFFAsmParser();
 MCAsmParserExtension *createXCOFFAsmParser();
 MCAsmParserExtension *createWasmAsmParser();
+MCAsmParserExtension *createLFIAsmParser(MCLFIRewriter *Exp);
 
 } // end namespace llvm
 
