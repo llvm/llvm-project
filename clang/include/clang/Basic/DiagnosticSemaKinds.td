@@ -7080,6 +7080,9 @@ def err_builtin_counted_by_ref_invalid_use : Error<
   "value returned by '__builtin_counted_by_ref' cannot be used in "
   "%select{an array subscript|a binary}0 expression">;
 
+def err_counted_by_on_nested_pointer : Error<
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}0' attribute on nested pointer type is not allowed">;
+
 let CategoryName = "ARC Semantic Issue" in {
 
 // ARC-mode diagnostics.

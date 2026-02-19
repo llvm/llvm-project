@@ -1942,7 +1942,11 @@ Parser::DeclGroupPtrTy Parser::ParseSimpleDeclaration(
 
   ParsedTemplateInfo TemplateInfo;
   DeclSpecContext DSContext = getDeclSpecContextFromDeclaratorContext(Context);
-  ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none, DSContext);
+  // FIXME: Why is PSoon true?
+  LateParsedAttrList BoundsSafetyLateAttrs(
+      /*PSoon=*/true, /*LateAttrParseExperimentalExtOnly=*/true);
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS_none, DSContext,
+                             &BoundsSafetyLateAttrs);
 
   // If we had a free-standing type definition with a missing semicolon, we
   // may get this far before the problem becomes obvious.
@@ -2724,12 +2728,12 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
 
 void Parser::ParseSpecifierQualifierList(
     DeclSpec &DS, ImplicitTypenameContext AllowImplicitTypename,
-    AccessSpecifier AS, DeclSpecContext DSC) {
+    AccessSpecifier AS, DeclSpecContext DSC, LateParsedAttrList *LateAttrs) {
   ParsedTemplateInfo TemplateInfo;
   /// specifier-qualifier-list is a subset of declaration-specifiers.  Just
   /// parse declaration-specifiers and complain about extra stuff.
   /// TODO: diagnose attribute-specifiers and alignment-specifiers.
-  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, nullptr,
+  ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, LateAttrs,
                              AllowImplicitTypename);
 
   // Validate declspec for type-name.
@@ -3135,15 +3139,37 @@ void Parser::ParseAlignmentSpecifier(ParsedAttributes &Attrs,
   }
 }
 
-void Parser::DistributeCLateParsedAttrs(Decl *Dcl,
+void Parser::DistributeCLateParsedAttrs(Declarator &D, Decl *Dcl,
                                         LateParsedAttrList *LateAttrs) {
   if (!LateAttrs)
     return;
 
+  unsigned NestedTypeLevel = 0;
+  for (unsigned i = 0; i < D.getNumTypeObjects(); ++i) {
+    DeclaratorChunk &DC = D.getTypeObject(i);
+
+    switch (DC.Kind) {
+    case DeclaratorChunk::Pointer:
+    case DeclaratorChunk::Array:
+      break;
+    default:
+      continue;
+    }
+
+    // Extract `LateParsedAttribute *` from `DeclaratorChunk`.
+    for (auto *OpaqueLA : DC.LateAttrList) {
+      auto *LA = static_cast<LateParsedAttribute *>(OpaqueLA);
+      LA->NestedTypeLevel = NestedTypeLevel;
+      LateAttrs->push_back(LA);
+    }
+    NestedTypeLevel++;
+  }
+
+  // Attach `Decl *` to each `LateParsedAttribute *`.
   if (Dcl) {
-    for (auto *LateAttr : *LateAttrs) {
-      if (LateAttr->Decls.empty())
-        LateAttr->addDecl(Dcl);
+    for (auto *LA : *LateAttrs) {
+      if (LA->Decls.empty())
+        LA->addDecl(Dcl);
     }
   }
 }
@@ -3215,12 +3241,6 @@ void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
 
   ArgExprs.push_back(ArgExpr.get());
   Parens.consumeClose();
-
-  ASTContext &Ctx = Actions.getASTContext();
-
-  ArgExprs.push_back(IntegerLiteral::Create(
-      Ctx, llvm::APInt(Ctx.getTypeSize(Ctx.getSizeType()), 0),
-      Ctx.getSizeType(), SourceLocation()));
 
   Attrs.addNew(&AttrName, SourceRange(AttrNameLoc, Parens.getCloseLocation()),
                AttributeScopeInfo(), ArgExprs.data(), ArgExprs.size(), Form);
@@ -4709,7 +4729,8 @@ void Parser::ParseStructDeclaration(
   MaybeParseCXX11Attributes(Attrs);
 
   // Parse the common specifier-qualifiers-list piece.
-  ParseSpecifierQualifierList(DS);
+  ParseSpecifierQualifierList(DS, AS_none, DeclSpecContext::DSC_normal,
+                              LateFieldAttrs);
 
   // If there are no declarators, this is a free-standing declaration
   // specifier. Let the actions module cope with it.
@@ -4771,7 +4792,7 @@ void Parser::ParseStructDeclaration(
     // We're done with this declarator;  invoke the callback.
     Decl *Field = FieldsCallback(DeclaratorInfo);
     if (Field)
-      DistributeCLateParsedAttrs(Field, LateFieldAttrs);
+      DistributeCLateParsedAttrs(DeclaratorInfo.D, Field, LateFieldAttrs);
 
     // If we don't have a comma, it is either the end of the list (a ';')
     // or an error, bail out.
@@ -4828,7 +4849,8 @@ void Parser::ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
                         SourceLocation(), ParsedAttr::Form::GNU(), nullptr);
 
   for (auto *D : LA.Decls)
-    Actions.ActOnFinishDelayedAttribute(getCurScope(), D, Attrs);
+    Actions.ActOnFinishDelayedAttribute(getCurScope(), D, Attrs,
+                                        LA.NestedTypeLevel);
 
   // Due to a parsing error, we either went over the cached tokens or
   // there are still cached tokens left, so we skip the leftover tokens.
@@ -6132,7 +6154,8 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 
 void Parser::ParseTypeQualifierListOpt(
     DeclSpec &DS, unsigned AttrReqs, bool AtomicOrPtrauthAllowed,
-    bool IdentifierRequired, llvm::function_ref<void()> CodeCompletionHandler) {
+    bool IdentifierRequired, llvm::function_ref<void()> CodeCompletionHandler,
+    LateParsedAttrList *LateAttrs) {
   if ((AttrReqs & AR_CXX11AttributesParsed) &&
       isAllowedCXX11AttributeSpecifier()) {
     ParsedAttributes Attrs(AttrFactory);
@@ -6274,7 +6297,9 @@ void Parser::ParseTypeQualifierListOpt(
       // recovery is graceful.
       if (AttrReqs & AR_GNUAttributesParsed ||
           AttrReqs & AR_GNUAttributesParsedAndRejected) {
-        ParseGNUAttributes(DS.getAttributes());
+
+        assert(!LateAttrs || LateAttrs->lateAttrParseExperimentalExtOnly());
+        ParseGNUAttributes(DS.getAttributes(), LateAttrs);
         continue; // do *not* consume the next token!
       }
       // otherwise, FALL THROUGH!
@@ -6455,21 +6480,35 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                     ((D.getContext() != DeclaratorContext::CXXNew)
                          ? AR_GNUAttributesParsed
                          : AR_GNUAttributesParsedAndRejected);
+    LateParsedAttrList LateAttrs(/*PSoon=*/true,
+                                 /*LateAttrParseExperimentalExtOnly=*/true);
     ParseTypeQualifierListOpt(DS, Reqs, /*AtomicOrPtrauthAllowed=*/true,
-                              !D.mayOmitIdentifier());
+                              !D.mayOmitIdentifier(), {}, &LateAttrs);
     D.ExtendWithDeclSpec(DS);
 
     // Recursively parse the declarator.
     Actions.runWithSufficientStackSpace(
         D.getBeginLoc(), [&] { ParseDeclaratorInternal(D, DirectDeclParser); });
-    if (Kind == tok::star)
+    if (Kind == tok::star) {
+      DeclaratorChunk::LateAttrListTy OpaqueLateAttrList;
+      if (getLangOpts().ExperimentalLateParseAttributes && !LateAttrs.empty()) {
+        // TODO: Support `counted_by` in function parameters, return types, and
+        // other contexts (Issue #167365).
+        if (!D.isFunctionDeclarator()) {
+          for (LateParsedAttribute *LA : LateAttrs) {
+            OpaqueLateAttrList.push_back(LA);
+          }
+        }
+        LateAttrs.clear();
+      }
       // Remember that we parsed a pointer type, and remember the type-quals.
       D.AddTypeInfo(DeclaratorChunk::getPointer(
                         DS.getTypeQualifiers(), Loc, DS.getConstSpecLoc(),
                         DS.getVolatileSpecLoc(), DS.getRestrictSpecLoc(),
                         DS.getAtomicSpecLoc(), DS.getUnalignedSpecLoc()),
-                    std::move(DS.getAttributes()), SourceLocation());
-    else
+                    std::move(DS.getAttributes()), SourceLocation(),
+                    OpaqueLateAttrList);
+    } else
       // Remember that we parsed a Block type, and remember the type-quals.
       D.AddTypeInfo(
           DeclaratorChunk::getBlockPointer(DS.getTypeQualifiers(), Loc),

@@ -107,35 +107,25 @@ struct on_pointer_anon_count {
 //==============================================================================
 // __counted_by_or_null on struct member pointer in type attribute position
 //==============================================================================
-// TODO: Correctly parse counted_by_or_null as a type attribute. Currently it is parsed
-// as a declaration attribute and is **not** late parsed resulting in the `count`
-// field being unavailable.
 
 struct on_member_pointer_complete_ty_ty_pos {
-  // TODO: Allow this
-  // expected-error@+1{{use of undeclared identifier 'count'}}
   struct size_known *__counted_by_or_null(count) buf;
   int count;
 };
 
 struct on_member_pointer_incomplete_ty_ty_pos {
-  // TODO: Allow this
-  // expected-error@+1{{use of undeclared identifier 'count'}}
   struct size_unknown * __counted_by_or_null(count) buf;
   int count;
 };
 
 struct on_member_pointer_const_incomplete_ty_ty_pos {
-  // TODO: Allow this
-  // expected-error@+1{{use of undeclared identifier 'count'}}
   const struct size_unknown * __counted_by_or_null(count) buf;
   int count;
 };
 
 struct on_member_pointer_void_ty_ty_pos {
-  // TODO: This should fail because the attribute is
-  // on a pointer with the pointee being an incomplete type.
-  // expected-error@+1{{use of undeclared identifier 'count'}}
+  // expected-warning@+2{{'counted_by_or_null' on a pointer to void is a GNU extension, treated as 'sized_by_or_null'}}
+  // expected-note@+1{{use '__sized_by_or_null' to suppress this warning}}
   void *__counted_by_or_null(count) buf;
   int count;
 };
@@ -143,79 +133,57 @@ struct on_member_pointer_void_ty_ty_pos {
 // -
 
 struct on_member_pointer_fn_ptr_ty_pos {
-  // TODO: buffer of `count` function pointers should be allowed
-  // but fails because this isn't late parsed.
-  // expected-error@+1{{use of undeclared identifier 'count'}}
   void (** __counted_by_or_null(count) fn_ptr)(void);
   int count;
 };
 
 struct on_member_pointer_fn_ptr_ty_ptr_ty_pos {
-  // TODO: buffer of `count` function pointers should be allowed
-  // but fails because this isn't late parsed.
-  // expected-error@+1{{use of undeclared identifier 'count'}}
   fn_ptr_ty* __counted_by_or_null(count) fn_ptr;
   int count;
 };
 
 struct on_member_pointer_fn_ty_ty_pos {
-  // TODO: This should fail because the attribute is
-  // on a pointer with the pointee being a function type.
-  // expected-error@+1{{use of undeclared identifier 'count'}}
+  // expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'void (void)' is a function type}}
   void (* __counted_by_or_null(count) fn_ptr)(void);
   int count;
 };
 
 struct on_member_pointer_fn_ptr_ty_ty_pos {
-  // TODO: buffer of `count` function pointers should be allowed
-  // expected-error@+1{{use of undeclared identifier 'count'}}
   void (** __counted_by_or_null(count) fn_ptr)(void);
   int count;
 };
 
 struct on_member_pointer_fn_ptr_ty_typedef_ty_pos {
-  // TODO: This should fail because the attribute is
-  // on a pointer with the pointee being a function type.
-  // expected-error@+1{{use of undeclared identifier 'count'}}
+  // expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'void (void)' is a function type}}
   fn_ptr_ty __counted_by_or_null(count) fn_ptr;
   int count;
 };
 
 struct on_member_pointer_fn_ptr_ty_ty_pos_inner {
-  // TODO: This should fail because the attribute is
-  // on a pointer with the pointee being a function type.
-  // expected-error@+1{{use of undeclared identifier 'count'}}
+  // expected-error@+1{{'counted_by_or_null' attribute on nested pointer type is not allowed}}
   void (* __counted_by_or_null(count) * fn_ptr)(void);
   int count;
 };
 
 struct on_member_pointer_struct_with_vla_ty_pos {
-  // TODO: This should fail because the attribute is
-  // on a pointer with the pointee being a struct type with a VLA.
-  // expected-error@+1{{use of undeclared identifier 'count'}}
+  // expected-error@+1{{cannot be applied to a pointer with pointee of unknown size because 'struct has_unannotated_vla' is a struct type with a flexible array member}}
   struct has_unannotated_vla *__counted_by_or_null(count) objects;
   int count;
 };
 
 struct on_member_pointer_struct_with_annotated_vla_ty_pos {
-  // TODO: This should fail because the attribute is
-  // on a pointer with the pointee being a struct type with a VLA.
-  // expected-error@+1{{use of undeclared identifier 'count'}}
+  // expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'struct has_annotated_vla' is a struct type with a flexible array member}}
   struct has_annotated_vla* __counted_by_or_null(count) objects;
   int count;
 };
 
 struct on_nested_pointer_inner {
-  // TODO: This should be disallowed because in the `-fbounds-safety` model
-  // `__counted_by_or_null` can only be nested when used in function parameters.
-  // expected-error@+1{{use of undeclared identifier 'count'}}
+  // expected-error@+1{{'counted_by_or_null' attribute on nested pointer type is not allowed}}
   struct size_known *__counted_by_or_null(count) *buf;
   int count;
 };
 
 struct on_nested_pointer_outer {
-  // TODO: Allow this
-  // expected-error@+1{{use of undeclared identifier 'count'}}
   struct size_known **__counted_by_or_null(count) buf;
   int count;
 };
@@ -230,8 +198,6 @@ struct on_pointer_anon_buf_ty_pos {
 };
 
 struct on_pointer_anon_count_ty_pos {
-  // TODO: Allow this
-  // expected-error@+1{{use of undeclared identifier 'count'}}
   struct size_known *__counted_by_or_null(count) buf;
   struct {
     int count;

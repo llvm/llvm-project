@@ -6756,7 +6756,8 @@ static void handleZeroCallUsedRegsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(ZeroCallUsedRegsAttr::Create(S.Context, Kind, AL));
 }
 
-static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
+static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL,
+                                     unsigned Level) {
   auto *FD = dyn_cast<FieldDecl>(D);
   assert(FD);
 
@@ -6787,7 +6788,7 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
     llvm_unreachable("unexpected counted_by family attribute");
   }
 
-  if (S.CheckCountedByAttrOnField(FD, CountExpr, CountInBytes, OrNull))
+  if (S.CheckCountedByAttrOnField(FD, CountExpr, Level, CountInBytes, OrNull))
     return;
 
   QualType CAT = S.BuildCountAttributedArrayOrPointerType(
@@ -7230,7 +7231,8 @@ static bool MustDelayAttributeArguments(const ParsedAttr &AL) {
 /// silently ignore it if a GNU attribute.
 static void
 ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
-                     const Sema::ProcessDeclAttributeOptions &Options) {
+                     const Sema::ProcessDeclAttributeOptions &Options,
+                     unsigned NestedTypeLevel = 0) {
   if (AL.isInvalid() || AL.getKind() == ParsedAttr::IgnoredAttribute)
     return;
 
@@ -7860,7 +7862,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_CountedByOrNull:
   case ParsedAttr::AT_SizedBy:
   case ParsedAttr::AT_SizedByOrNull:
-    handleCountedByAttrField(S, D, AL);
+    handleCountedByAttrField(S, D, AL, NestedTypeLevel);
     break;
 
   // Microsoft attributes:
@@ -8155,14 +8157,15 @@ static bool isKernelDecl(Decl *D) {
          D->hasAttr<CUDAGlobalAttr>();
 }
 
-void Sema::ProcessDeclAttributeList(
-    Scope *S, Decl *D, const ParsedAttributesView &AttrList,
-    const ProcessDeclAttributeOptions &Options) {
+void Sema::ProcessDeclAttributeList(Scope *S, Decl *D,
+                                    const ParsedAttributesView &AttrList,
+                                    const ProcessDeclAttributeOptions &Options,
+                                    unsigned NestedTypeLevel) {
   if (AttrList.empty())
     return;
 
   for (const ParsedAttr &AL : AttrList)
-    ProcessDeclAttribute(*this, S, D, AL, Options);
+    ProcessDeclAttribute(*this, S, D, AL, Options, NestedTypeLevel);
 
   // FIXME: We should be able to handle these cases in TableGen.
   // GCC accepts
@@ -8495,11 +8498,22 @@ void Sema::ProcessDeclAttributes(Scope *S, Decl *D, const Declarator &PD) {
   // position to the decl itself.  This handles cases like:
   //   int *__attr__(x)** D;
   // when X is a decl attribute.
+  unsigned NestedTypeLevel = 0;
   for (unsigned i = 0, e = PD.getNumTypeObjects(); i != e; ++i) {
     ProcessDeclAttributeList(S, D, PD.getTypeObject(i).getAttrs(),
                              ProcessDeclAttributeOptions()
                                  .WithIncludeCXX11Attributes(false)
-                                 .WithIgnoreTypeAttributes(true));
+                                 .WithIgnoreTypeAttributes(true),
+                             NestedTypeLevel);
+
+    switch (PD.getTypeObject(i).Kind) {
+    case DeclaratorChunk::Pointer:
+    case DeclaratorChunk::Array:
+      NestedTypeLevel++;
+      break;
+    default:
+      break;
+    }
   }
 
   // Finally, apply any attributes on the decl itself.

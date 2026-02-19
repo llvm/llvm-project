@@ -16995,11 +16995,13 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
 /// When we finish delayed parsing of an attribute, we must attach it to the
 /// relevant Decl.
 void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
-                                       ParsedAttributes &Attrs) {
+                                       ParsedAttributes &Attrs,
+                                       unsigned NestedTypeLevel) {
   // Always attach attributes to the underlying decl.
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
     D = TD->getTemplatedDecl();
-  ProcessDeclAttributeList(S, D, Attrs);
+  ProcessDeclAttributeList(S, D, Attrs, ProcessDeclAttributeOptions(),
+                           NestedTypeLevel);
   ProcessAPINotes(D);
 
   if (CXXMethodDecl *Method = dyn_cast_or_null<CXXMethodDecl>(D))

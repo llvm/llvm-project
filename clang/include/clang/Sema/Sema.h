@@ -2472,6 +2472,8 @@ public:
   ///
   /// \param FD The FieldDecl to apply the attribute to
   /// \param E The count expression on the attribute
+  /// \param NestedTypeLevel The pointer indirection level where the attribute
+  ///                        applies
   /// \param CountInBytes If true the attribute is from the "sized_by" family of
   ///                     attributes. If the false the attribute is from
   ///                     "counted_by" family of attributes.
@@ -2484,7 +2486,8 @@ public:
   /// `counted_by_or_null` attribute.
   ///
   /// \returns false iff semantically valid.
-  bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
+  bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E,
+                                 unsigned NestedTypeLevel, bool CountInBytes,
                                  bool OrNull);
 
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
@@ -4233,7 +4236,8 @@ public:
 
   /// ActOnFinishDelayedAttribute - Invoked when we have finished parsing an
   /// attribute for which parsing is delayed.
-  void ActOnFinishDelayedAttribute(Scope *S, Decl *D, ParsedAttributes &Attrs);
+  void ActOnFinishDelayedAttribute(Scope *S, Decl *D, ParsedAttributes &Attrs,
+                                   unsigned NestedTypeLevel = 0);
 
   /// Diagnose any unused parameters in the given sequence of
   /// ParmVarDecl pointers.
@@ -5119,7 +5123,8 @@ public:
   void ProcessDeclAttributeList(Scope *S, Decl *D,
                                 const ParsedAttributesView &AttrList,
                                 const ProcessDeclAttributeOptions &Options =
-                                    ProcessDeclAttributeOptions());
+                                    ProcessDeclAttributeOptions(),
+                                unsigned NestedTypeLevel = 0);
 
   /// Annotation attributes are the only attributes allowed after an access
   /// specifier.
