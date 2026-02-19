@@ -178,7 +178,7 @@ TEST_F(ErrorBuilderTest, TriggersAssertionOnWrappingSuccessError) {
         auto SuccessErr = Error::success();
         ErrorBuilder::wrap(std::move(SuccessErr));
       },
-      "Cannot wrap a success error - check for success before calling wrap()");
+      "Cannot wrap a success error - check for success before calling wrap");
 }
 #endif // !NDEBUG
 
