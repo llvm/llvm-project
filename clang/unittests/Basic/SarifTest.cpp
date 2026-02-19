@@ -83,7 +83,7 @@ TEST_F(SarifDocumentWriterTest, canCreateEmptyDocument) {
   const llvm::json::Object &EmptyDoc = Writer.createDocument();
   std::vector<StringRef> Keys(EmptyDoc.size());
   std::transform(EmptyDoc.begin(), EmptyDoc.end(), Keys.begin(),
-                 [](auto Item) { return Item.getFirst(); });
+                 [](auto Item) { return Item.first; });
 
   // THEN:
   ASSERT_THAT(Keys, testing::UnorderedElementsAre("$schema", "version"));
