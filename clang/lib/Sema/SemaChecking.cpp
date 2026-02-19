@@ -12380,36 +12380,59 @@ static void DiagnoseImpCast(Sema &S, const Expr *E, QualType SourceType,
     return;
   }
 
-  // If the source type is a vector or a matrix, use its corresponding
-  // vector-specific or matrix-specific diag.
-  llvm::DenseMap<unsigned, unsigned> VectorDiagMap;
-  VectorDiagMap.insert({diag::warn_impcast_float_integer,
-                        diag::warn_impcast_vector_float_integer});
-  VectorDiagMap.insert({diag::warn_impcast_float_precision,
-                        diag::warn_impcast_vector_float_precision});
-  VectorDiagMap.insert({diag::warn_impcast_integer_precision,
-                        diag::warn_impcast_vector_integer_precision});
-  VectorDiagMap.insert({diag::warn_impcast_integer_float_precision,
-                        diag::warn_impcast_vector_integer_float_precision});
-  VectorDiagMap.insert({diag::warn_impcast_integer_sign,
-                        diag::warn_impcast_vector_integer_sign});
-  llvm::DenseMap<unsigned, unsigned> MatrixDiagMap;
-  MatrixDiagMap.insert({diag::warn_impcast_float_integer,
-                        diag::warn_impcast_matrix_float_integer});
-  MatrixDiagMap.insert({diag::warn_impcast_float_precision,
-                        diag::warn_impcast_matrix_float_precision});
-  MatrixDiagMap.insert({diag::warn_impcast_integer_precision,
-                        diag::warn_impcast_matrix_integer_precision});
-  MatrixDiagMap.insert({diag::warn_impcast_integer_float_precision,
-                        diag::warn_impcast_matrix_integer_float_precision});
-  MatrixDiagMap.insert({diag::warn_impcast_integer_sign,
-                        diag::warn_impcast_matrix_integer_sign});
-  const Type *Source =
-      S.getASTContext().getCanonicalType(E->getType()).getTypePtr();
-  if (isa<VectorType>(Source))
-    diag = VectorDiagMap.lookup_or(diag, diag);
-  else if (isa<ConstantMatrixType>(Source))
-    diag = MatrixDiagMap.lookup_or(diag, diag);
+  // In HLSL, some vector and matrix diagnostic warnings should not be ignored
+  // by default and should instead be using diagnostics from the group
+  // VectorConversions and MatrixConversions.
+  if (S.getLangOpts().HLSL) {
+    const Type *Source =
+        S.getASTContext().getCanonicalType(E->getType()).getTypePtr();
+
+    if (diag == diag::warn_impcast_vector_scalar)
+      diag = diag::warn_hlsl_impcast_vector_scalar;
+    else if (diag == diag::warn_impcast_matrix_scalar)
+      diag = diag::warn_hlsl_impcast_matrix_scalar;
+
+    if (isa<VectorType>(Source))
+      switch (diag) {
+      case diag::warn_impcast_float_integer:
+        diag = diag::warn_hlsl_impcast_vector_float_integer;
+        break;
+      case diag::warn_impcast_float_precision:
+        diag = diag::warn_hlsl_impcast_vector_float_precision;
+        break;
+      case diag::warn_impcast_integer_precision:
+        diag = diag::warn_hlsl_impcast_vector_integer_precision;
+        break;
+      case diag::warn_impcast_integer_float_precision:
+        diag = diag::warn_hlsl_impcast_vector_integer_float_precision;
+        break;
+      case diag::warn_impcast_integer_sign:
+        diag = diag::warn_hlsl_impcast_vector_integer_sign;
+        break;
+      default:
+        break;
+      }
+    else if (isa<ConstantMatrixType>(Source))
+      switch (diag) {
+      case diag::warn_impcast_float_integer:
+        diag = diag::warn_hlsl_impcast_matrix_float_integer;
+        break;
+      case diag::warn_impcast_float_precision:
+        diag = diag::warn_hlsl_impcast_matrix_float_precision;
+        break;
+      case diag::warn_impcast_integer_precision:
+        diag = diag::warn_hlsl_impcast_matrix_integer_precision;
+        break;
+      case diag::warn_impcast_integer_float_precision:
+        diag = diag::warn_hlsl_impcast_matrix_integer_float_precision;
+        break;
+      case diag::warn_impcast_integer_sign:
+        diag = diag::warn_hlsl_impcast_matrix_integer_sign;
+        break;
+      default:
+        break;
+      }
+  }
 
   S.Diag(E->getExprLoc(), diag)
     << SourceType << T << E->getSourceRange() << SourceRange(CContext);
@@ -12900,9 +12923,6 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     if (!isa<VectorType>(Target)) {
       if (SourceMgr.isInSystemMacro(CC))
         return;
-      if (getLangOpts().HLSL)
-        return DiagnoseImpCast(*this, E, T, CC,
-                               diag::warn_hlsl_impcast_vector_scalar);
       return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_vector_scalar);
     }
     if (getLangOpts().HLSL &&
