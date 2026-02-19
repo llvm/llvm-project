@@ -31,8 +31,8 @@ define void @test(i8* noalias nonnull align 1 %start, i8* %end) unnamed_addr {
 ; ROTATION-NEXT:    [[_12_I1:%.*]] = icmp eq ptr [[START]], [[END]]
 ; ROTATION-NEXT:    br i1 [[_12_I1]], label [[EXIT:%.*]], label [[LOOP_LATCH_PREHEADER:%.*]]
 ; ROTATION:       loop.latch.preheader:
-; ROTATION-NEXT:    [[END3:%.*]] = ptrtoint ptr [[END]] to i64
-; ROTATION-NEXT:    [[START4:%.*]] = ptrtoint ptr [[START]] to i64
+; ROTATION-NEXT:    [[END3:%.*]] = ptrtoaddr ptr [[END]] to i64
+; ROTATION-NEXT:    [[START4:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; ROTATION-NEXT:    [[TMP0:%.*]] = sub i64 [[END3]], [[START4]]
 ; ROTATION-NEXT:    tail call void @llvm.memset.p0.i64(ptr nonnull align 1 [[START]], i8 1, i64 [[TMP0]], i1 false)
 ; ROTATION-NEXT:    br label [[EXIT]]

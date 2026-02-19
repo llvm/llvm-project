@@ -6,11 +6,11 @@
 define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-LABEL: @widget(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[ARR1:%.*]] = ptrtoint ptr [[ARR:%.*]] to i64
+; CHECK-NEXT:    [[ARR1:%.*]] = ptrtoaddr ptr [[ARR:%.*]] to i64
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    [[T1_0:%.*]] = phi ptr [ [[ARR]], [[BB:%.*]] ], [ null, [[BB6]] ]
-; CHECK-NEXT:    [[T1_0_LCSSA2:%.*]] = ptrtoint ptr [[T1_0]] to i64
+; CHECK-NEXT:    [[T1_0_LCSSA2:%.*]] = ptrtoaddr ptr [[T1_0]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label [[FOR_PREHEADER:%.*]], label [[BB6]]
 ; CHECK:       for.preheader:

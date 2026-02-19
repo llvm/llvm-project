@@ -9,8 +9,8 @@ target triple = "x86_64-linux-gnu"
 define void @test_pr55375_interleave_opaque_ptr(ptr %start, ptr %end) {
 ; CHECK-LABEL: @test_pr55375_interleave_opaque_ptr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START:%.*]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -16
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4

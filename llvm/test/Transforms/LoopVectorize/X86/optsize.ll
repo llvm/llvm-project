@@ -329,8 +329,8 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK-LABEL: define void @tail_folded_store_avx512(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[END2:%.*]] = ptrtoint ptr [[END]] to i32
-; CHECK-NEXT:    [[START1:%.*]] = ptrtoint ptr [[START]] to i32
+; CHECK-NEXT:    [[END2:%.*]] = ptrtoaddr ptr [[END]] to i32
+; CHECK-NEXT:    [[START1:%.*]] = ptrtoaddr ptr [[START]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START1]], -72
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[END2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[TMP1]], 72
@@ -365,8 +365,8 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF-LABEL: define void @tail_folded_store_avx512(
 ; AUTOVF-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR3:[0-9]+]] {
 ; AUTOVF-NEXT:  [[ENTRY:.*:]]
-; AUTOVF-NEXT:    [[END2:%.*]] = ptrtoint ptr [[END]] to i32
-; AUTOVF-NEXT:    [[START1:%.*]] = ptrtoint ptr [[START]] to i32
+; AUTOVF-NEXT:    [[END2:%.*]] = ptrtoaddr ptr [[END]] to i32
+; AUTOVF-NEXT:    [[START1:%.*]] = ptrtoaddr ptr [[START]] to i32
 ; AUTOVF-NEXT:    [[TMP0:%.*]] = add i32 [[START1]], -72
 ; AUTOVF-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[END2]]
 ; AUTOVF-NEXT:    [[TMP2:%.*]] = udiv i32 [[TMP1]], 72

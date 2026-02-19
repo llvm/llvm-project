@@ -4,8 +4,8 @@
 define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START_22:%.*]] = ptrtoint ptr [[START_2:%.*]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64
+; CHECK-NEXT:    [[START_22:%.*]] = ptrtoaddr ptr [[START_2:%.*]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -8
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START_22]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3

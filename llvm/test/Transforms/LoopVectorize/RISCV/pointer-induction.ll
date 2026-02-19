@@ -7,8 +7,8 @@ define void @ptr_induction(ptr %p, ptr noalias %q, ptr noalias %p.end) #0 {
 ; CHECK-LABEL: define void @ptr_induction(
 ; CHECK-SAME: ptr [[P:%.*]], ptr noalias [[Q:%.*]], ptr noalias [[P_END:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P2:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[P_END1:%.*]] = ptrtoint ptr [[P_END]] to i64
+; CHECK-NEXT:    [[P2:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[P_END1:%.*]] = ptrtoaddr ptr [[P_END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[P_END1]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[P2]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
@@ -63,12 +63,10 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-LABEL: define i1 @scalarize_ptr_induction(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]], ptr noalias [[DST:%.*]], i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[START5:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END4:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END4]], -12
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START5]]
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END1]], -12
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP1]], 12
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]

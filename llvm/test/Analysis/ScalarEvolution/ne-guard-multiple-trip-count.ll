@@ -9,13 +9,13 @@ define void @test_guard_order_b_then_c_and_d(ptr %a, ptr %b, ptr %c, ptr %d) {
 ; CHECK-LABEL: 'test_guard_order_b_then_c_and_d'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_order_b_then_c_and_d
 ; CHECK-NEXT:    %iv = phi ptr [ %a, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%a,+,1}<%loop> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64) + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,1}<%loop> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64) + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr i8, ptr %iv, i64 1
-; CHECK-NEXT:    --> {(1 + %a),+,1}<%loop> U: full-set S: full-set Exits: ((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64) + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %a),+,1}<%loop> U: full-set S: full-set Exits: ((-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64) + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_order_b_then_c_and_d
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -2
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -42,13 +42,13 @@ define void @test_guard_order_d_then_c_and_b(ptr %a, ptr %b, ptr %c, ptr %d) {
 ; CHECK-LABEL: 'test_guard_order_d_then_c_and_b'
 ; CHECK-NEXT:  Classifying expressions for: @test_guard_order_d_then_c_and_b
 ; CHECK-NEXT:    %iv = phi ptr [ %a, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%a,+,1}<%loop> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64) + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,1}<%loop> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64) + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr i8, ptr %iv, i64 1
-; CHECK-NEXT:    --> {(1 + %a),+,1}<%loop> U: full-set S: full-set Exits: ((-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64) + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %a),+,1}<%loop> U: full-set S: full-set Exits: ((-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64) + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_guard_order_d_then_c_and_b
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -2
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64))
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
