@@ -1409,7 +1409,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   };
 
   // Fold branches for iterations where we know that they will exit or not
-  // exit.  In the case of an interation's latch, if we thus find
+  // exit.  In the case of an iteration's latch, if we thus find
   // *OriginalLoopProb is incorrect, set ProbUpdateRequired to true.
   bool ProbUpdateRequired = false;
   for (auto &Pair : ExitInfos) {
@@ -1619,7 +1619,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     if (!OriginalLoopProb.isUnknown() && ULO.Runtime && EpilogProfitability) {
       assert((CondLatches.size() == 1 &&
               (ProbUpdateRequired || OriginalLoopProb.isOne())) &&
-             "Expected ULO.Runtime to give unrolled loop one conditional latch,"
+             "Expected ULO.Runtime to give unrolled loop 1 conditional latch, "
              "the backedge, requiring a probability update unless infinite");
       // Where p is always the probability of executing at least 1 more
       // iteration, the probability for at least n more iterations is p^n.
