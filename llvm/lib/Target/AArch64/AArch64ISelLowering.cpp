@@ -16373,7 +16373,8 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
   // Handle 64-bit constant BUILD_VECTORs by packing them into an i64 immediate.
   // This is cheaper than a load if the immediate can be materialized in a few
-  // mov instructions. This optimization is disabled for big-endian targets for now.
+  // mov instructions. This optimization is disabled for big-endian targets for
+  // now.
   if (BVN->isConstant() && VT.isFixedLengthVector() &&
       VT.getSizeInBits() == 64 && !DAG.getDataLayout().isBigEndian()) {
     const SDLoc DL(Op);
@@ -16391,7 +16392,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       else if (auto *CFP = dyn_cast<ConstantFPSDNode>(LaneOp))
         LaneBits = CFP->getValueAPF().bitcastToAPInt();
       else
-          return SDValue();
+        return SDValue();
 
       PackedVal |= LaneBits.trunc(VT.getScalarSizeInBits()).zext(64) << BitPos;
       BitPos += EltSizeInBits;
