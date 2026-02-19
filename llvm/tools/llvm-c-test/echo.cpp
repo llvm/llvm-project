@@ -76,7 +76,7 @@ struct TypeCloner {
       case LLVMHalfTypeKind:
         return LLVMHalfTypeInContext(Ctx);
       case LLVMBFloatTypeKind:
-        return LLVMHalfTypeInContext(Ctx);
+        return LLVMBFloatTypeInContext(Ctx);
       case LLVMFloatTypeKind:
         return LLVMFloatTypeInContext(Ctx);
       case LLVMDoubleTypeKind:
