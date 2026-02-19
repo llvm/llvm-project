@@ -1004,6 +1004,13 @@ macro(generate_llvm_objects name)
 
   if (ARG_GENERATE_DRIVER)
     string(REPLACE "-" "_" TOOL_NAME ${name})
+
+    set(INITLLVM_ARGS "")
+
+    if(${name} STREQUAL "clang")
+      set(INITLLVM_ARGS ", /*InstallPipeSignalExitHandler=*/true, /*NeedsPOSIXUtilitySignalHandling=*/true")
+    endif()
+
     foreach(path ${CMAKE_MODULE_PATH})
       if(EXISTS ${path}/llvm-driver-template.cpp.in)
         configure_file(
