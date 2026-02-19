@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
+#include <functional>
 #include <memory>
 
 namespace {
@@ -239,9 +240,7 @@ buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
       // Filter out those invalid EntityPointerLevels associated with `&E`
       // pointers:
       auto FilteredTranslation = llvm::make_filter_range(
-          *Translation, [](const EntityPointerLevel &V) -> bool {
-            return V.getPointerLevel() > 0;
-          });
+          *Translation, std::mem_fn(&EntityPointerLevel::hasValidPointerLevel));
       Result.insert(FilteredTranslation.begin(), FilteredTranslation.end());
       continue;
     }
