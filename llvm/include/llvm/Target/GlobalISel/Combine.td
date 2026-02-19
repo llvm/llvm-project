@@ -1951,7 +1951,8 @@ def APlusBMinusCPlusA : GICombineRule<
 def NotAPlusNegOne: GICombineRule<
    (defs root:$root),
    (match (G_ADD $add, $A, -1),
-          (G_XOR $root, $add, -1)),
+          (G_XOR $root, $add, -1, 
+          [{ return MRI.hasOneNonDBGUse(${add}.getReg()) }])),
    (apply (G_SUB $root, 0, $A))>;
 
 // fold (A+C1)-C2 -> A+(C1-C2)
