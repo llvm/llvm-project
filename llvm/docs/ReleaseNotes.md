@@ -80,6 +80,9 @@ Changes to LLVM infrastructure
 
 * Removed TypePromoteFloat legalization from SelectionDAG
 
+* Removed `bugpoint`. Usage has been replaced by `llvm-reduce` and
+  `llvm/utils/reduce_pipeline.py`.
+
 Changes to building LLVM
 ------------------------
 
