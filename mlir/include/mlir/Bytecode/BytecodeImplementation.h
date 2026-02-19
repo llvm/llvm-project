@@ -398,6 +398,10 @@ public:
   /// written as-is, with no additional compression or compaction.
   virtual void writeOwnedBlob(ArrayRef<char> blob) = 0;
 
+  /// Write a blob to the bytecode, which is not owned by the caller. The blob
+  /// is copied into the bytecode, and need not strictly outlive the call.
+  virtual void writeUnownedBlob(ArrayRef<char> blob) = 0;
+
   /// Write a bool to the output stream.
   virtual void writeOwnedBool(bool value) = 0;
 
