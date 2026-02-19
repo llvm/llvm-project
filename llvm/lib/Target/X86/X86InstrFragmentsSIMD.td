@@ -765,17 +765,20 @@ def X86fgetexpSAEs  : SDNode<"X86ISD::FGETEXPS_SAE", SDTFPBinOp>;
 
 // FMA nodes.
 // We use the target independent ISD::FMA for the non-inverted case.
-def X86Fnmadd    : SDNode<"X86ISD::FNMADD",    SDTFPTernaryOp, [SDNPCommutative]>;
-def X86Fmsub     : SDNode<"X86ISD::FMSUB",     SDTFPTernaryOp, [SDNPCommutative]>;
-def X86Fnmsub    : SDNode<"X86ISD::FNMSUB",    SDTFPTernaryOp, [SDNPCommutative]>;
-def X86Fmaddsub  : SDNode<"X86ISD::FMADDSUB",  SDTFPTernaryOp, [SDNPCommutative]>;
-def X86Fmsubadd  : SDNode<"X86ISD::FMSUBADD",  SDTFPTernaryOp, [SDNPCommutative]>;
+def X86Fnmadd   : SDNode<"X86ISD::FNMADD",   SDTFPTernaryOp, [SDNPCommutative]>;
+def X86Fmsub    : SDNode<"X86ISD::FMSUB",    SDTFPTernaryOp, [SDNPCommutative]>;
+def X86Fnmsub   : SDNode<"X86ISD::FNMSUB",   SDTFPTernaryOp, [SDNPCommutative]>;
+def X86Fmaddsub : SDNode<"X86ISD::FMADDSUB", SDTFPTernaryOp, [SDNPCommutative]>;
+def X86Fmsubadd : SDNode<"X86ISD::FMSUBADD", SDTFPTernaryOp, [SDNPCommutative]>;
 
 let IsStrictFP = true in {
   // Strict FMA nodes.
-  def X86strict_Fnmadd : SDNode<"X86ISD::STRICT_FNMADD", SDTFPTernaryOp, [SDNPCommutative, SDNPHasChain]>;
-  def X86strict_Fmsub : SDNode<"X86ISD::STRICT_FMSUB",     SDTFPTernaryOp, [SDNPCommutative, SDNPHasChain]>;
-  def X86strict_Fnmsub : SDNode<"X86ISD::STRICT_FNMSUB",    SDTFPTernaryOp, [SDNPCommutative, SDNPHasChain]>;
+  def X86strict_Fnmadd : SDNode<"X86ISD::STRICT_FNMADD", SDTFPTernaryOp,
+                                [SDNPCommutative, SDNPHasChain]>;
+  def X86strict_Fmsub  : SDNode<"X86ISD::STRICT_FMSUB", SDTFPTernaryOp,
+                                [SDNPCommutative, SDNPHasChain]>;
+  def X86strict_Fnmsub : SDNode<"X86ISD::STRICT_FNMSUB", SDTFPTernaryOp,
+                                [SDNPCommutative, SDNPHasChain]>;
 }
 
 def X86any_Fnmadd : PatFrags<(ops node:$src1, node:$src2, node:$src3),
@@ -934,8 +937,10 @@ def X86cvttp2uiSAE   : SDNode<"X86ISD::CVTTP2UI_SAE", SDTFloatToInt>;
 
 let IsStrictFP = true in {
   // Vector float/double to signed/unsigned integer with truncation.
-  def X86strict_cvttp2si : SDNode<"X86ISD::STRICT_CVTTP2SI",  SDTFloatToInt, [SDNPHasChain]>;
-  def X86strict_cvttp2ui : SDNode<"X86ISD::STRICT_CVTTP2UI",  SDTFloatToInt, [SDNPHasChain]>;
+  def X86strict_cvttp2si
+      : SDNode<"X86ISD::STRICT_CVTTP2SI", SDTFloatToInt, [SDNPHasChain]>;
+  def X86strict_cvttp2ui
+      : SDNode<"X86ISD::STRICT_CVTTP2UI", SDTFloatToInt, [SDNPHasChain]>;
 }
 
 def X86any_cvttp2si : PatFrags<(ops node:$src),
@@ -951,8 +956,10 @@ def X86VUintToFP      : SDNode<"X86ISD::CVTUI2P",  SDTVintToFP>;
 
 let IsStrictFP = true in {
   // Vector signed/unsigned integer to float/double.
-  def X86strict_VSintToFP : SDNode<"X86ISD::STRICT_CVTSI2P", SDTVintToFP, [SDNPHasChain]>;
-  def X86strict_VUintToFP : SDNode<"X86ISD::STRICT_CVTUI2P", SDTVintToFP, [SDNPHasChain]>;
+  def X86strict_VSintToFP
+      : SDNode<"X86ISD::STRICT_CVTSI2P", SDTVintToFP, [SDNPHasChain]>;
+  def X86strict_VUintToFP
+      : SDNode<"X86ISD::STRICT_CVTUI2P", SDTVintToFP, [SDNPHasChain]>;
 }
 
 def X86any_VSintToFP : PatFrags<(ops node:$src),

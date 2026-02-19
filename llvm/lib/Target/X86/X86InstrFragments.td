@@ -156,8 +156,10 @@ def X86fcmp    : SDNode<"X86ISD::FCMP",     SDTX86FCmp>;
 
 let IsStrictFP = true in {
   /// X86 strict FP compare instructions.
-  def X86strict_fcmp  : SDNode<"X86ISD::STRICT_FCMP",  SDTX86FCmp, [SDNPHasChain]>;
-  def X86strict_fcmps : SDNode<"X86ISD::STRICT_FCMPS", SDTX86FCmp, [SDNPHasChain]>;
+  def X86strict_fcmp
+      : SDNode<"X86ISD::STRICT_FCMP",  SDTX86FCmp, [SDNPHasChain]>;
+  def X86strict_fcmps
+      : SDNode<"X86ISD::STRICT_FCMPS", SDTX86FCmp, [SDNPHasChain]>;
 }
 
 // X86 bit-test instructions.
