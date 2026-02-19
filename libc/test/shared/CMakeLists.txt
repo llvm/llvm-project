@@ -18,6 +18,9 @@ add_fp_unittest(
     libc.src.__support.math.asinf16
     libc.src.__support.math.asinhf
     libc.src.__support.math.asinhf16
+    libc.src.__support.math.asinpi
+    libc.src.__support.math.asinpif
+    libc.src.__support.math.asinpif16
     libc.src.__support.math.atan
     libc.src.__support.math.atan2
     libc.src.__support.math.atan2f
