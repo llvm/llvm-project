@@ -2387,6 +2387,13 @@ defm fixed_point : BoolFOption<"fixed-point",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [ClangOption], " fixed point types">>;
+defm experimental_overflow_behavior_types
+    : BoolFOption<"experimental-overflow-behavior-types",
+                  LangOpts<"OverflowBehaviorTypes">, DefaultFalse,
+                  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+                  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+                  BothFlags<[], [CC1Option],
+                            " the experimental overflow behavior types">>;
 def cxx_static_destructors_EQ : Joined<["-"], "fc++-static-destructors=">, Group<f_Group>,
   HelpText<"Controls which variables C++ static destructors are registered for">,
   Values<"all,thread-local,none">,
@@ -9871,6 +9878,13 @@ def fhlsl_spv_enable_maximal_reconvergence
                "module. This ensures that control flow reconverges at "
                "well-defined merge points as defined by the Vulkan spec.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvEnableMaximalReconvergence">>;
+
+def fexperimental_emit_sgep
+    : Flag<["-"], "fexperimental-emit-sgep">,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Emit structured GEP intrinsic instead of GEP instructions "
+               "(experimental).">,
+      MarshallingInfoFlag<LangOpts<"EmitStructuredGEP">>;
 
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,

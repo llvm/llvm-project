@@ -472,12 +472,6 @@ private:
   /// in LoopNest.
   bool isLoopInvariant(const SCEV *Expression, const Loop *LoopNest) const;
 
-  /// Makes sure all subscript pairs share the same integer type by
-  /// sign-extending as necessary.
-  /// Sign-extending a subscript is safe because getelementptr assumes the
-  /// array subscripts are signed.
-  void unifySubscriptType(ArrayRef<Subscript *> Pairs);
-
   /// collectCommonLoops - Finds the set of loops from the LoopNest that
   /// have a level <= CommonLevels and are referred to by the SCEV Expression.
   void collectCommonLoops(const SCEV *Expression, const Loop *LoopNest,
