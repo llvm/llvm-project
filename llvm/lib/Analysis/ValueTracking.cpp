@@ -3119,7 +3119,8 @@ static bool isNonZeroSub(const APInt &DemandedElts, const SimplifyQuery &Q,
   if (matchOpWithOpEqZero(X, Y))
     return true;
 
-  // TODO: Move this case into isKnownNonEqual().
+  // TODO: isKnownNonEqual() should catch these cases, but it is not, resulting
+  // in regressions.
   if (auto *C = dyn_cast<Constant>(X))
     if (C->isNullValue() && isKnownNonZero(Y, DemandedElts, Q, Depth))
       return true;
@@ -4136,6 +4137,12 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2,
 
   if (Depth >= MaxAnalysisRecursionDepth)
     return false;
+
+  // 0 vs known-non-zero
+  if (match(V1, m_Zero()) && isKnownNonZero(V2, DemandedElts, Q, Depth + 1))
+    return true;
+  if (match(V2, m_Zero()) && isKnownNonZero(V1, DemandedElts, Q, Depth + 1))
+    return true;
 
   // See if we can recurse through (exactly one of) our operands.  This
   // requires our operation be 1-to-1 and map every input value to exactly
