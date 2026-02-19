@@ -130,15 +130,14 @@ public:
 
   PTY &GetPTY() const { return *m_pty; }
 
-  std::shared_ptr<PTY> GetPTYSP() const { return m_pty; }
+  std::shared_ptr<PTY> TakePTY() { return std::move(m_pty); }
 
   /// Returns whether if lldb should read information from the PTY. This is
   /// always true on non Windows.
   bool ShouldUsePTY() const {
 #ifdef _WIN32
     return GetPTY().GetPseudoTerminalHandle() != ((HANDLE)(long long)-1) &&
-           GetNumFileActions() == 0 &&
-           GetFlags().Test(lldb::eLaunchFlagLaunchInTTY);
+           GetNumFileActions() == 0;
 #else
     return true;
 #endif

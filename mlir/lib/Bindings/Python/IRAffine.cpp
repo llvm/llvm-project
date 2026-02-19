@@ -24,7 +24,6 @@
 // clang-format on
 #include "mlir-c/IntegerSet.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir/Support/LLVM.h"
 
 namespace nb = nanobind;
 using namespace mlir;

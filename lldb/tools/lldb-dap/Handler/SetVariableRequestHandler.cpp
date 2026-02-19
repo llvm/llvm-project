@@ -9,7 +9,9 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolEvents.h"
+#include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
 
 using namespace lldb_dap::protocol;
@@ -27,9 +29,11 @@ llvm::Expected<SetVariableResponseBody>
 SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
   const auto args_name = llvm::StringRef(args.name);
 
-  if (args.variablesReference == UINT64_MAX) {
+  if (args.variablesReference.Kind() == eReferenceKindInvalid) {
     return llvm::make_error<DAPError>(
-        llvm::formatv("invalid reference {}", args.variablesReference).str(),
+        llvm::formatv("invalid reference {}",
+                      args.variablesReference.AsUInt32())
+            .str(),
         llvm::inconvertibleErrorCode(),
         /*show_user=*/false);
   }
@@ -40,7 +44,7 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
         "cannot change the value of the return value");
 
   lldb::SBValue variable =
-      dap.variables.FindVariable(args.variablesReference, args_name);
+      dap.reference_storage.FindVariable(args.variablesReference, args_name);
 
   if (!variable.IsValid())
     return llvm::make_error<DAPError>("could not find variable in scope");
@@ -50,8 +54,9 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
   if (!success)
     return llvm::make_error<DAPError>(error.GetCString());
 
+  const bool hex = args.format ? args.format->hex : false;
   VariableDescription desc(variable,
-                           dap.configuration.enableAutoVariableSummaries);
+                           dap.configuration.enableAutoVariableSummaries, hex);
 
   SetVariableResponseBody body;
   body.value = desc.display_value;
@@ -61,8 +66,8 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
   // so always insert a new one to get its variablesReference.
   // is_permanent is false because debug console does not support
   // setVariable request.
-  const int64_t new_var_ref =
-      dap.variables.InsertVariable(variable, /*is_permanent=*/false);
+  const var_ref_t new_var_ref =
+      dap.reference_storage.InsertVariable(variable, /*is_permanent=*/false);
   if (variable.MightHaveChildren()) {
     body.variablesReference = new_var_ref;
     if (desc.type_obj.IsArrayType())
@@ -76,7 +81,7 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
     body.memoryReference = addr;
 
   if (ValuePointsToCode(variable))
-    body.valueLocationReference = new_var_ref;
+    body.valueLocationReference = new_var_ref.AsUInt32();
 
   // Also send invalidated event to signal client that some variables
   // (e.g. references) can be changed.

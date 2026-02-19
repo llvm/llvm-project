@@ -27,6 +27,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/ConvertUTF.h"
 
 #include <memory>
 
@@ -947,11 +948,45 @@ StackFrameList::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
   return ret_sp;
 }
 
+bool StackFrameList::IsNextFrameHidden(lldb_private::StackFrame &frame) {
+  uint32_t frame_idx = frame.GetFrameIndex();
+  StackFrameSP frame_sp = GetFrameAtIndex(frame_idx + 1);
+  if (!frame_sp)
+    return false;
+  return frame_sp->IsHidden();
+}
+
+bool StackFrameList::IsPreviousFrameHidden(lldb_private::StackFrame &frame) {
+  uint32_t frame_idx = frame.GetFrameIndex();
+  if (frame_idx == 0)
+    return false;
+  StackFrameSP frame_sp = GetFrameAtIndex(frame_idx - 1);
+  if (!frame_sp)
+    return false;
+  return frame_sp->IsHidden();
+}
+
+std::string StackFrameList::GetFrameMarker(lldb::StackFrameSP frame_sp,
+                                           lldb::StackFrameSP selected_frame_sp,
+                                           bool show_hidden_marker) {
+  bool show_unicode_marker = Terminal::SupportsUnicode() && show_hidden_marker;
+  if (frame_sp == selected_frame_sp)
+    return show_unicode_marker ? " * " : "* ";
+  if (!show_unicode_marker)
+    return "  ";
+  if (IsPreviousFrameHidden(*frame_sp))
+    return reinterpret_cast<const char *>(u8"﹉ ");
+  if (IsNextFrameHidden(*frame_sp))
+    return reinterpret_cast<const char *>(u8"﹍ ");
+  return "   ";
+}
+
 size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
                                  uint32_t num_frames, bool show_frame_info,
                                  uint32_t num_frames_with_source,
                                  bool show_unique, bool show_hidden,
-                                 const char *selected_frame_marker) {
+                                 bool show_hidden_marker,
+                                 bool show_selected_frame) {
   size_t num_frames_displayed = 0;
 
   if (num_frames == 0)
@@ -969,25 +1004,18 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
 
   StackFrameSP selected_frame_sp =
       m_thread.GetSelectedFrame(DoNoSelectMostRelevantFrame);
-  const char *unselected_marker = nullptr;
   std::string buffer;
-  if (selected_frame_marker) {
-    size_t len = strlen(selected_frame_marker);
-    buffer.insert(buffer.begin(), len, ' ');
-    unselected_marker = buffer.c_str();
-  }
-  const char *marker = nullptr;
+  std::string marker;
   for (frame_idx = first_frame; frame_idx < last_frame; ++frame_idx) {
     frame_sp = GetFrameAtIndex(frame_idx);
     if (!frame_sp)
       break;
 
-    if (selected_frame_marker != nullptr) {
-      if (frame_sp == selected_frame_sp)
-        marker = selected_frame_marker;
-      else
-        marker = unselected_marker;
-    }
+    if (show_selected_frame)
+      marker = GetFrameMarker(frame_sp, selected_frame_sp, show_hidden_marker);
+    else
+      marker = GetFrameMarker(frame_sp, /*selected_frame_sp=*/nullptr,
+                              show_hidden_marker);
 
     // Hide uninteresting frames unless it's the selected frame.
     if (!show_hidden && frame_sp != selected_frame_sp && frame_sp->IsHidden())

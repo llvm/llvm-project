@@ -515,13 +515,37 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["qsad-insts"] = true;
     Features["cvt-pknorm-vop2-insts"] = true;
     Features["fp8-conversion-insts"] = true;
+    Features["wmma-128b-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     break;
   case GK_GFX1170:
-    // TODO-GFX1170: Update features map for gfx1170
+    Features["ci-insts"] = true;
+    Features["dot7-insts"] = true;
+    Features["dot8-insts"] = true;
+    Features["dot9-insts"] = true;
+    Features["dot10-insts"] = true;
+    Features["dot12-insts"] = true;
+    Features["dl-insts"] = true;
+    Features["16-bit-insts"] = true;
+    Features["dpp"] = true;
+    Features["gfx8-insts"] = true;
+    Features["gfx9-insts"] = true;
+    Features["gfx10-insts"] = true;
+    Features["gfx10-3-insts"] = true;
+    Features["gfx11-insts"] = true;
+    Features["atomic-fadd-rtn-insts"] = true;
+    Features["image-insts"] = true;
+    Features["cube-insts"] = true;
+    Features["lerp-inst"] = true;
+    Features["sad-insts"] = true;
+    Features["qsad-insts"] = true;
+    Features["cvt-pknorm-vop2-insts"] = true;
+    Features["gws"] = true;
     Features["dot11-insts"] = true;
     Features["fp8-conversion-insts"] = true;
-    [[fallthrough]];
+    Features["wmma-128b-insts"] = true;
+    Features["atomic-fmin-fmax-global-f32"] = true;
+    break;
   case GK_GFX1153:
   case GK_GFX1152:
   case GK_GFX1151:
@@ -554,6 +578,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["qsad-insts"] = true;
     Features["cvt-pknorm-vop2-insts"] = true;
     Features["gws"] = true;
+    Features["wmma-256b-insts"] = true;
     Features["atomic-fmin-fmax-global-f32"] = true;
     break;
   case GK_GFX1036:

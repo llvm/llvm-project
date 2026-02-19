@@ -112,12 +112,12 @@ body:             |
     ; RV64I-NEXT: [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[LSHR6]], [[ADD]]
     ; RV64I-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 3855
     ; RV64I-NEXT: [[AND9:%[0-9]+]]:_(s64) = G_AND [[ADD1]], [[C7]]
-    ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 257
-    ; RV64I-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[AND9]], [[C8]]
-    ; RV64I-NEXT: [[AND10:%[0-9]+]]:_(s64) = G_AND [[MUL]], [[C1]]
-    ; RV64I-NEXT: [[LSHR7:%[0-9]+]]:_(s64) = G_LSHR [[AND10]], [[C4]](s64)
+    ; RV64I-NEXT: [[LSHR7:%[0-9]+]]:_(s64) = G_LSHR [[AND9]], [[C4]](s64)
+    ; RV64I-NEXT: [[ADD2:%[0-9]+]]:_(s64) = G_ADD [[AND9]], [[LSHR7]]
+    ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; RV64I-NEXT: [[AND10:%[0-9]+]]:_(s64) = G_AND [[ADD2]], [[C8]]
     ; RV64I-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[C9]], [[LSHR7]]
+    ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[C9]], [[AND10]]
     ; RV64I-NEXT: $x10 = COPY [[SUB1]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
@@ -387,12 +387,12 @@ body:             |
     ; RV64I-NEXT: [[ADD1:%[0-9]+]]:_(s64) = G_ADD [[LSHR6]], [[ADD]]
     ; RV64I-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 3855
     ; RV64I-NEXT: [[AND9:%[0-9]+]]:_(s64) = G_AND [[ADD1]], [[C7]]
-    ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 257
-    ; RV64I-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[AND9]], [[C8]]
-    ; RV64I-NEXT: [[AND10:%[0-9]+]]:_(s64) = G_AND [[MUL]], [[C1]]
-    ; RV64I-NEXT: [[LSHR7:%[0-9]+]]:_(s64) = G_LSHR [[AND10]], [[C4]](s64)
+    ; RV64I-NEXT: [[LSHR7:%[0-9]+]]:_(s64) = G_LSHR [[AND9]], [[C4]](s64)
+    ; RV64I-NEXT: [[ADD2:%[0-9]+]]:_(s64) = G_ADD [[AND9]], [[LSHR7]]
+    ; RV64I-NEXT: [[C8:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; RV64I-NEXT: [[AND10:%[0-9]+]]:_(s64) = G_AND [[ADD2]], [[C8]]
     ; RV64I-NEXT: [[C9:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[C9]], [[LSHR7]]
+    ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(s64) = G_SUB [[C9]], [[AND10]]
     ; RV64I-NEXT: $x10 = COPY [[SUB1]](s64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;

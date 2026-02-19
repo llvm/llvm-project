@@ -21,7 +21,7 @@ define amdgpu_ps void @v_interp_f32(float inreg %i, float inreg %j, i32 inreg %m
 ; GFX11-NEXT:    v_interp_p2_f32 v5, v0, v4, v3 wait_exp:7
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_interp_p2_f32 v4, v1, v4, v5 wait_exp:7
-; GFX11-NEXT:    exp mrt0 v3, v2, v5, v4 done
+; GFX11-NEXT:    exp mrt0, v3, v2, v5, v4 done
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: v_interp_f32:
@@ -40,7 +40,7 @@ define amdgpu_ps void @v_interp_f32(float inreg %i, float inreg %j, i32 inreg %m
 ; GFX12-NEXT:    v_interp_p2_f32 v5, v0, v4, v3 wait_exp:7
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_interp_p2_f32 v4, v1, v4, v5 wait_exp:7
-; GFX12-NEXT:    export mrt0 v3, v2, v5, v4 done
+; GFX12-NEXT:    export mrt0, v3, v2, v5, v4 done
 ; GFX12-NEXT:    s_endpgm
 main_body:
   %p0 = call float @llvm.amdgcn.lds.param.load(i32 1, i32 0, i32 %m0)
@@ -76,7 +76,7 @@ define amdgpu_ps void @v_interp_f32_many(float inreg %i, float inreg %j, i32 inr
 ; GFX11-NEXT:    v_interp_p2_f32 v8, v2, v5, v8 wait_exp:7
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-NEXT:    v_interp_p2_f32 v4, v3, v5, v4 wait_exp:7
-; GFX11-NEXT:    exp mrt0 v6, v7, v8, v4 done
+; GFX11-NEXT:    exp mrt0, v6, v7, v8, v4 done
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: v_interp_f32_many:
@@ -101,7 +101,7 @@ define amdgpu_ps void @v_interp_f32_many(float inreg %i, float inreg %j, i32 inr
 ; GFX12-NEXT:    v_interp_p2_f32 v8, v2, v5, v8 wait_exp:7
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX12-NEXT:    v_interp_p2_f32 v4, v3, v5, v4 wait_exp:7
-; GFX12-NEXT:    export mrt0 v6, v7, v8, v4 done
+; GFX12-NEXT:    export mrt0, v6, v7, v8, v4 done
 ; GFX12-NEXT:    s_endpgm
 main_body:
   %p0 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 0, i32 %m0)
@@ -143,7 +143,7 @@ define amdgpu_ps void @v_interp_f32_many_vm(ptr addrspace(1) %ptr, i32 inreg %m0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_interp_p2_f32 v8, v4, v1, v8 wait_exp:7
 ; GFX11-NEXT:    v_interp_p2_f32 v0, v5, v1, v0 wait_exp:7
-; GFX11-NEXT:    exp mrt0 v6, v7, v8, v0 done
+; GFX11-NEXT:    exp mrt0, v6, v7, v8, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: v_interp_f32_many_vm:
@@ -168,7 +168,7 @@ define amdgpu_ps void @v_interp_f32_many_vm(ptr addrspace(1) %ptr, i32 inreg %m0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_interp_p2_f32 v8, v4, v1, v8 wait_exp:7
 ; GFX12-NEXT:    v_interp_p2_f32 v0, v5, v1, v0 wait_exp:7
-; GFX12-NEXT:    export mrt0 v6, v7, v8, v0 done
+; GFX12-NEXT:    export mrt0, v6, v7, v8, v0 done
 ; GFX12-NEXT:    s_endpgm
 main_body:
   %i.ptr = getelementptr float, ptr addrspace(1) %ptr, i32 1

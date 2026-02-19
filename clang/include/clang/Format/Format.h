@@ -2477,7 +2477,13 @@ struct FormatStyle {
     ///        initializer1(),
     ///        initializer2()
     /// \endcode
-    BCIS_AfterColon
+    BCIS_AfterColon,
+    /// Break constructor initializers only after the commas.
+    /// \code
+    ///    Constructor() : initializer1(),
+    ///                    initializer2()
+    /// \endcode
+    BCIS_AfterComma
   };
 
   /// The break constructor initializers style to use.

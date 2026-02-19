@@ -287,7 +287,8 @@ public:
       return success();
     }
 
-    // 8. Creates shape cast for the output n-D -> 2-D.
+    // 8. Shape cast the flattened result back to the original n-D parallel
+    // shape.
     VectorType outputCastedType = VectorType::get(
         parallelShapes, multiReductionOp.getSourceVectorType().getElementType(),
         parallelScalableDims);
@@ -497,7 +498,7 @@ struct LowerVectorMultiReductionPass
     MLIRContext *context = op->getContext();
 
     RewritePatternSet patterns(context);
-    mlir::vector::populateVectorMultiReductionTransformationPatterns(
+    mlir::vector::populateVectorMultiReductionReorderAndExpandPatterns(
         patterns, this->loweringStrategy);
     if (failed(applyPatternsGreedily(op, std::move(patterns))))
       signalPassFailure();
@@ -522,7 +523,7 @@ struct LowerVectorMultiReductionPass
 
 } // namespace
 
-void mlir::vector::populateVectorMultiReductionTransformationPatterns(
+void mlir::vector::populateVectorMultiReductionReorderAndExpandPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
   patterns.add<OneDimMultiReductionToTwoDim>(patterns.getContext(), benefit);
@@ -551,8 +552,8 @@ void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
 void mlir::vector::populateVectorMultiReductionLoweringPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
-  populateVectorMultiReductionTransformationPatterns(patterns, options,
-                                                     benefit);
+  populateVectorMultiReductionReorderAndExpandPatterns(patterns, options,
+                                                       benefit);
   populateVectorMultiReductionFlatteningPatterns(patterns, options, benefit);
   populateVectorMultiReductionUnrollingPatterns(patterns, options, benefit);
 }
