@@ -435,6 +435,9 @@ struct OneDimMultiReductionToTwoDim
 /// Matches when the outermost dimension is the only reduction
 /// dimension.
 ///
+/// In this case [0] refers to rank at position N, so it is the outermost
+/// dimension.
+///
 /// ```mlir
 /// %res = vector.multi_reduction <add> %src, %acc [0] : vector<NxMx...xf32> to
 /// vector<Mx...xf32>
