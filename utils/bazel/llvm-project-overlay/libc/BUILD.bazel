@@ -3107,6 +3107,63 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fmax",
+    hdrs = ["src/__support/math/fmax.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaxbf16",
+    hdrs = ["src/__support/math/fmaxbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaxf",
+    hdrs = ["src/__support/math/fmaxf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaxf128",
+    hdrs = ["src/__support/math/fmaxf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaxf16",
+    hdrs = ["src/__support/math/fmaxf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmaxl",
+    hdrs = ["src/__support/math/fmaxl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ffmal",
     hdrs = ["src/__support/math/ffmal.h"],
     deps = [
@@ -5033,15 +5090,47 @@ libc_math_function(
     additional_deps = [":__support_fputil_fma"],
 )
 
-libc_math_function(name = "fmax")
+libc_math_function(
+    name = "fmax",
+    additional_deps = [
+        ":__support_math_fmax",
+    ],
+)
 
-libc_math_function(name = "fmaxf")
+libc_math_function(
+    name = "fmaxf",
+    additional_deps = [
+        ":__support_math_fmaxf",
+    ],
+)
 
-libc_math_function(name = "fmaxl")
+libc_math_function(
+    name = "fmaxbf16",
+    additional_deps = [
+        ":__support_math_fmaxbf16",
+    ],
+)
 
-libc_math_function(name = "fmaxf128")
+libc_math_function(
+    name = "fmaxf128",
+    additional_deps = [
+        ":__support_math_fmaxf128",
+    ],
+)
 
-libc_math_function(name = "fmaxf16")
+libc_math_function(
+    name = "fmaxf16",
+    additional_deps = [
+        ":__support_math_fmaxf16",
+    ],
+)
+
+libc_math_function(
+    name = "fmaxl",
+    additional_deps = [
+        ":__support_math_fmaxl",
+    ],
+)
 
 libc_math_function(name = "fmaximum")
 

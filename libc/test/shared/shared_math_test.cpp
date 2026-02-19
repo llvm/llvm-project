@@ -88,6 +88,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef16(&canonicalizef16_cx,
                                                        &canonicalizef16_x));
   EXPECT_FP_EQ(0x0p+0f16, canonicalizef16_cx);
+
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::fmaxf16(0.0f16, 0.0f16));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
@@ -150,6 +152,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef(&canonicalizef_cx,
                                                      &canonicalizef_x));
   EXPECT_FP_EQ(0x0p+0f, canonicalizef_cx);
+
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fmaxf(0.0f, 0.0f));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -187,6 +191,8 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalize(&canonicalize_cx,
                                                     &canonicalize_x));
   EXPECT_FP_EQ(0.0, canonicalize_cx);
+
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::fmax(0.0, 0.0));
 }
 
 TEST(LlvmLibcSharedMathTest, AllLongDouble) {
@@ -203,6 +209,8 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizel(&canonicalizel_cx,
                                                      &canonicalizel_x));
   EXPECT_FP_EQ(0x0p+0L, canonicalizel_cx);
+
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::fmaxl(0.0L, 0.0L));
 }
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
@@ -238,6 +246,9 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef128(&canonicalizef128_cx,
                                                         &canonicalizef128_x));
   EXPECT_FP_EQ(float128(0.0), canonicalizef128_cx);
+
+  EXPECT_FP_EQ(float128(0.0),
+               LIBC_NAMESPACE::shared::fmaxf128(float128(0.0), float128(0.0)));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -257,4 +268,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16addf(2.0f, 3.0f));
   EXPECT_FP_EQ(bfloat16(10.0),
                LIBC_NAMESPACE::shared::bf16fmaf(2.0f, 3.0f, 4.0f));
+
+  EXPECT_FP_EQ(bfloat16(0.0),
+               LIBC_NAMESPACE::shared::fmaxbf16(bfloat16(0.0), bfloat16(0.0)));
 }
