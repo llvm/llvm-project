@@ -22,7 +22,7 @@ using namespace llvm::object;
 using namespace llvm::ELF;
 
 namespace opts {
-extern cl::opt<std::string> ReadPerfEvents;
+extern cl::opt<bool> ReadPerfTextData;
 extern cl::opt<bool> ArmSPE;
 } // namespace opts
 
@@ -92,10 +92,10 @@ protected:
 
   /// Parse and check SPE brstack as LBR.
   void parseAndCheckBrstackEvents(
-      uint64_t PID,
+      uint64_t PID, StringRef &Buffer,
       const std::vector<std::pair<Trace, TakenBranchInfo>> &ExpectedSamples) {
     DataAggregator DA("<pseudo input>");
-    DA.ParsingBuf = opts::ReadPerfEvents;
+    DA.ParsingBuf = Buffer;
     DA.BC = BC.get();
     DataAggregator::MMapInfo MMap;
     DA.BinaryMMapInfo.insert(std::make_pair(PID, MMap));
@@ -134,14 +134,15 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstack) {
   // ```
 
   opts::ArmSPE = true;
-  opts::ReadPerfEvents = "  1234  0xa001/0xa002/PN/-/-/10/COND/-\n"
-                         "  1234  0xb001/0xb002/P/-/-/4/RET/-\n"
-                         "  1234  0xc456/0xc789/P/-/-/13/-/-\n"
-                         "  1234  0xd123/0xd456/M/-/-/7/RET/-\n"
-                         "  1234  0xe001/0xe002/P/-/-/14/RET/-\n"
-                         "  1234  0xd123/0xd456/M/-/-/7/RET/-\n"
-                         "  1234  0xf001/0xf002/MN/-/-/8/COND/-\n"
-                         "  1234  0xc456/0xc789/M/-/-/13/-/-\n";
+  opts::ReadPerfTextData = true;
+  StringRef Buffer = "  1234  0xa001/0xa002/PN/-/-/10/COND/-\n"
+                     "  1234  0xb001/0xb002/P/-/-/4/RET/-\n"
+                     "  1234  0xc456/0xc789/P/-/-/13/-/-\n"
+                     "  1234  0xd123/0xd456/M/-/-/7/RET/-\n"
+                     "  1234  0xe001/0xe002/P/-/-/14/RET/-\n"
+                     "  1234  0xd123/0xd456/M/-/-/7/RET/-\n"
+                     "  1234  0xf001/0xf002/MN/-/-/8/COND/-\n"
+                     "  1234  0xc456/0xc789/M/-/-/13/-/-\n";
 
   // ExpectedSamples contains the aggregated information about
   // a branch {{Branch From, To}, {TakenCount, MispredCount}}.
@@ -158,7 +159,7 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstack) {
       {{0xe001, 0xe002, Trace::BR_ONLY}, {1, 0}},
       {{0xf001, 0xf002, Trace::BR_ONLY}, {1, 1}}};
 
-  parseAndCheckBrstackEvents(1234, ExpectedSamples);
+  parseAndCheckBrstackEvents(1234, Buffer, ExpectedSamples);
 }
 
 TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstackAndPbt) {
@@ -174,7 +175,8 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstackAndPbt) {
   // ```
 
   opts::ArmSPE = true;
-  opts::ReadPerfEvents =
+  opts::ReadPerfTextData = true;
+  StringRef Buffer =
       // "<PID> <SRC>/<DEST>/PN/-/-/10/COND/- <NULL>/<PBT>/-/-/-/0//-\n"
       "  4567  0xa002/0xa003/PN/-/-/10/COND/- 0x0/0xa001/-/-/-/0//-\n"
       "  4567  0xb002/0xb003/P/-/-/4/RET/- 0x0/0xb001/-/-/-/0//-\n"
@@ -246,7 +248,7 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstackAndPbt) {
       {{0xf002, 0xf003, Trace::BR_ONLY}, {1, 1}},
       {{0x0, 0xf001, 0xf002}, {1, 0}}};
 
-  parseAndCheckBrstackEvents(4567, ExpectedSamples);
+  parseAndCheckBrstackEvents(4567, Buffer, ExpectedSamples);
 }
 
 #endif
