@@ -948,7 +948,7 @@ func.func @bad_alloc_wrong_symbol_count() {
 func.func @load_invalid_memref_indexes() {
   %0 = memref.alloca() : memref<10xi32>
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{incorrect number of indices for load, expected 1 but got 2}}
+  // expected-error@+1 {{invalid number of indices for accessed memref, expected 1 but got 2}}
   %1 = memref.load %0[%c0, %c0] : memref<10xi32>
 }
 
@@ -1034,7 +1034,7 @@ func.func @illegal_num_offsets(%arg0 : memref<?x?x?xf32>, %arg1 : index, %arg2 :
 // -----
 
 func.func @atomic_rmw_idxs_rank_mismatch(%I: memref<16x10xf32>, %i : index, %val : f32) {
-  // expected-error@+1 {{expects the number of subscripts to be equal to memref rank}}
+  // expected-error@+1 {{invalid number of indices for accessed memref, expected 2 but got 1}}
   %x = memref.atomic_rmw addf %val, %I[%i] : (f32, memref<16x10xf32>) -> f32
   return
 }
