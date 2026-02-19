@@ -7326,8 +7326,8 @@ llvm::Error driver::expandResponseFiles(SmallVectorImpl<const char *> &Args,
   return llvm::Error::success();
 }
 
-bool driver::isClangCache(StringRef ModeSuffix) {
-  return ModeSuffix == "clang-cache";
+bool driver::isClangCache(StringRef ProgName) {
+  return ProgName == "clang-cache";
 }
 
 static const char *GetStableCStr(llvm::StringSet<> &SavedStrings, StringRef S) {

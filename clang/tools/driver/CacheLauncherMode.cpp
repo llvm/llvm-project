@@ -138,31 +138,35 @@ static void addCommonArgs(bool ForDriver, SmallVectorImpl<const char *> &Args,
 /// Arguments specific to \p clang-cache compiler launcher functionality.
 static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
                             llvm::StringSaver &Saver, bool SupportsMCCAS, bool IsCLMode) {
-  // Split the args at the end of option marker "--", if any.
+  // Split the args at the end of option (EOO) marker "--", if any.
   auto InsertPoint =
       llvm::find_if(AllArgs, [](const char *Elem) { return StringRef(Elem) == "--"; });
   SmallVector<const char *, 128> ArgsBeforeEOO(AllArgs.begin(), InsertPoint);
   SmallVector<const char *, 128> ArgsAfterEOO(InsertPoint, AllArgs.end());
-  auto AppendArgs = [&](ArrayRef<const char *> Args) {
-    bool RightAfterXClangOrMLLVM = false;
-    for (auto A : Args) {
-      StringRef Arg = A;
+  auto AppendArgs = [&](ArrayRef<StringRef> Args) {
+    bool Passthrough = false;
+    for (auto Arg : Args) {
       if (Arg == "-Xclang" || Arg == "-mllvm") {
         ArgsBeforeEOO.push_back(Saver.save(Arg).data());
-        RightAfterXClangOrMLLVM = true;
+        Passthrough = true;
       } else if (Arg.starts_with("-")) {
-        if (RightAfterXClangOrMLLVM || !IsCLMode) {
-          ArgsBeforeEOO.push_back(Saver.save(Arg).data());
-        } else {
+        // Arguments which are not passed through to clang-frontend or
+        // LLVM need to go through the driver. `clang-cl` takes non-CL
+        // options with a `/clang:` prefix to namespace and maintain
+        // compatibility.
+        if (IsCLMode && !Passthrough)
           ArgsBeforeEOO.push_back(Saver.save(llvm::Twine("/clang:") + Arg).data());
-        }
-        RightAfterXClangOrMLLVM = false;
+        else
+          ArgsBeforeEOO.push_back(Saver.save(Arg).data());
+        Passthrough = false;
       } else {
-        if (!RightAfterXClangOrMLLVM && IsCLMode) {
+        // We add -Xclang to flag arguments in cl mode because flags
+        // have a /clang: prefix. For example,
+        // /clang:-fdepscan-share-identifier -Xclang SessionId
+        if (!Passthrough && IsCLMode)
           ArgsBeforeEOO.push_back("-Xclang");
-        }
         ArgsBeforeEOO.push_back(Saver.save(Arg).data());
-        RightAfterXClangOrMLLVM = false;
+        Passthrough = false;
       }
     }
   };
@@ -171,8 +175,8 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
     // Instruct clang to connect to scanning daemon that is listening on the
     // provided socket path. The caller is responsible for ensuring the daemon
     // is compatible with the invoked clang.
-    AppendArgs("-fdepscan=daemon");
-    AppendArgs((Twine("-fdepscan-daemon=") + DaemonPath).str().data());
+    AppendArgs({"-fdepscan=daemon"});
+    AppendArgs({(Twine("-fdepscan-daemon=") + DaemonPath).str()});
   } else if (const char *SessionId = ::getenv("LLVM_CACHE_BUILD_SESSION_ID")) {
     // `LLVM_CACHE_BUILD_SESSION_ID` enables sharing of a depscan daemon
     // using the string it is set to. The clang invocations under the same
@@ -187,7 +191,7 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
     // started and shared for each unique clang version.
     AppendArgs({"-fdepscan=daemon", "-fdepscan-share-identifier", SessionId});
   } else {
-    AppendArgs("-fdepscan");
+    AppendArgs({"-fdepscan"});
   }
 
   addCommonArgs(/*ForDriver*/ true, ArgsBeforeEOO, Saver);
@@ -200,7 +204,7 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
       std::tie(PrefixMap, Remaining) = Remaining.split(';');
       if (PrefixMap.empty())
         break;
-      AppendArgs((Twine("-fdepscan-prefix-map=") + PrefixMap).str().data());
+      AppendArgs({(Twine("-fdepscan-prefix-map=") + PrefixMap).str()});
     }
   }
 
@@ -210,7 +214,7 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
     AppendArgs({"-Xclang", "-fcompilation-caching-service-path", "-Xclang",
         ServicePath});
   }
-  AppendArgs("-greproducible");
+  AppendArgs({"-greproducible"});
 
   if (SupportsMCCAS && !ServicePath &&
       !llvm::sys::Process::GetEnv("CLANG_CACHE_DISABLE_MCCAS")) {
@@ -223,9 +227,8 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
 
   // Put them back together at the end
   AllArgs = ArgsBeforeEOO;
-  if (!ArgsAfterEOO.empty()) {
-    AllArgs.append(ArgsAfterEOO);
-  }
+  std::copy(std::begin(ArgsAfterEOO), std::end(ArgsAfterEOO),
+            std::back_inserter(AllArgs));
 }
 
 static void addScanServerArgs(const char *SocketPath,

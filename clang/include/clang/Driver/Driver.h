@@ -879,8 +879,8 @@ llvm::Error expandResponseFiles(SmallVectorImpl<const char *> &Args,
                                 bool ClangCLMode, llvm::BumpPtrAllocator &Alloc,
                                 llvm::vfs::FileSystem *FS = nullptr);
 
-/// Checks whether a ParsedClangName::ModeSuffix value is for clang-cache mode.
-bool isClangCache(StringRef ModeSuffix);
+/// Checks whether a ProgName is for clang-cache mode.
+bool isClangCache(StringRef ProgName);
 
 /// Apply a space separated list of edits to the input argument lists.
 /// See applyOneOverrideOption.
