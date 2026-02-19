@@ -235,3 +235,15 @@ void test_multi_level_non_matching_delimiters() {
   #pragma omp teams num_teams(arr[0][1:arr[2][3)
   { }
 }
+
+template<int Lower, int Upper>
+void test_template_type_constants() {
+  // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
+  #pragma omp teams num_teams(Lower:Upper)
+  {}
+}
+
+void instantiate_template_invalid() {
+  test_template_type_constants<10, 5>(); // expected-note {{in instantiation of function template specialization 'test_template_type_constants<10, 5>' requested here}}
+}
+
