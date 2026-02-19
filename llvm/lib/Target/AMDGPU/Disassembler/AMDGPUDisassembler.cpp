@@ -2257,10 +2257,6 @@ bool AMDGPUDisassembler::isGFX11Plus() const {
 
 bool AMDGPUDisassembler::isGFX1170() const { return AMDGPU::isGFX1170(STI); }
 
-bool AMDGPUDisassembler::isGFX1170Plus() const {
-  return AMDGPU::isGFX1170Plus(STI);
-}
-
 bool AMDGPUDisassembler::isGFX12() const {
   return STI.hasFeature(AMDGPU::FeatureGFX12);
 }
