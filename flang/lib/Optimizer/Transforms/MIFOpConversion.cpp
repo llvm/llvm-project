@@ -108,9 +108,9 @@ mlir::Value getCoarrayHandle(fir::FirOpBuilder &builder, mlir::Location loc,
         fir::AddrOfOp::create(builder, loc, builder.getRefType(boxTy), symAttr);
     return fir::LoadOp::create(builder, loc, coarrayHandle);
   }
-
   mlir::emitError(coarray.getLoc(),
                   "Unable to locate the coarray handle for this argument.");
+  return mlir::Value{};
 }
 
 // Function to generate the PRIF runtime function call to retrieve
