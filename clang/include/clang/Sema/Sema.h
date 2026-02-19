@@ -11015,8 +11015,8 @@ public:
   void ActOnCaseStmtBody(Stmt *CaseStmt, Stmt *SubStmt);
 
   StmtResult ActOnDefaultStmt(SourceLocation DefaultLoc,
-                              SourceLocation ColonLoc, Stmt *SubStmt,
-                              Scope *CurScope);
+                              SourceLocation ColonLoc, Scope *CurScope);
+  void ActOnDefaultStmtBody(Stmt *S, Stmt *SubStmt);
   StmtResult ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
                             SourceLocation ColonLoc, Stmt *SubStmt);
 
