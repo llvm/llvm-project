@@ -435,12 +435,14 @@ void LazyReexportsManager::resolve(ResolveSendResultFn SendResult,
                           SendResult = std::move(SendResult)](
                              Expected<ExecutorSymbolDef> Result) mutable {
     if (Result) {
-      // FIXME: Make RedirectionManager operations async, then use the async
-      //        APIs here.
-      if (auto Err = RSMgr.redirect(*JD, ReentryName, *Result))
-        SendResult(std::move(Err));
-      else
-        SendResult(std::move(Result));
+      RSMgr.redirect(*JD, {{ReentryName, *Result}},
+                     [Result = std::move(Result),
+                      SendResult = std::move(SendResult)](Error Err) mutable {
+                       if (Err)
+                         SendResult(std::move(Err));
+                       else
+                         SendResult(std::move(Result));
+                     });
     } else
       SendResult(std::move(Result));
   });

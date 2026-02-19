@@ -54,7 +54,8 @@ public:
   void emitRedirectableSymbols(std::unique_ptr<MaterializationResponsibility> R,
                                SymbolMap InitialDests) override;
 
-  Error redirect(JITDylib &JD, const SymbolMap &NewDests) override;
+  void redirect(JITDylib &JD, SymbolMap NewDests,
+                unique_function<void(Error)> OnComplete) override;
 
 private:
   ObjectLinkingLayer &ObjLinkingLayer;

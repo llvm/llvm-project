@@ -112,11 +112,12 @@ JITCompileCallbackManager::executeCompileCallback(ExecutorAddr TrampolineAddr) {
   }
 }
 
-Error IndirectStubsManager::redirect(JITDylib &JD, const SymbolMap &NewDests) {
+void IndirectStubsManager::redirect(JITDylib &JD, SymbolMap NewDests,
+                                    unique_function<void(Error)> OnComplete) {
   for (auto &[Name, Dest] : NewDests)
     if (auto Err = updatePointer(*Name, Dest.getAddress()))
-      return Err;
-  return Error::success();
+      return OnComplete(std::move(Err));
+  OnComplete(Error::success());
 }
 
 void IndirectStubsManager::emitRedirectableSymbols(

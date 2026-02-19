@@ -63,8 +63,8 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
   ObjLinkingLayer.emit(std::move(R), std::move(G));
 }
 
-Error JITLinkRedirectableSymbolManager::redirect(JITDylib &JD,
-                                                 const SymbolMap &NewDests) {
+void JITLinkRedirectableSymbolManager::redirect(
+    JITDylib &JD, SymbolMap NewDests, unique_function<void(Error)> OnComplete) {
   auto &ES = ObjLinkingLayer.getExecutionSession();
   SymbolLookupSet LS;
   DenseMap<NonOwningSymbolStringPtr, SymbolStringPtr> PtrToStub;
@@ -73,21 +73,30 @@ Error JITLinkRedirectableSymbolManager::redirect(JITDylib &JD,
     PtrToStub[NonOwningSymbolStringPtr(PtrName)] = StubName;
     LS.add(std::move(PtrName));
   }
-  auto PtrSyms =
-      ES.lookup({{&JD, JITDylibLookupFlags::MatchAllSymbols}}, std::move(LS));
-  if (!PtrSyms)
-    return PtrSyms.takeError();
 
-  std::vector<tpctypes::PointerWrite> PtrWrites;
-  for (auto &[PtrName, PtrSym] : *PtrSyms) {
-    auto DestSymI = NewDests.find(PtrToStub[NonOwningSymbolStringPtr(PtrName)]);
-    assert(DestSymI != NewDests.end() && "Bad ptr -> stub mapping");
-    auto &DestSym = DestSymI->second;
-    PtrWrites.push_back({PtrSym.getAddress(), DestSym.getAddress()});
-  }
+  auto LookupComplete = [this, NewDests = std::move(NewDests),
+                         PtrToStub = std::move(PtrToStub),
+                         OnComplete = std::move(OnComplete)](
+                            Expected<SymbolMap> PtrSyms) mutable {
+    if (!PtrSyms)
+      return OnComplete(PtrSyms.takeError());
 
-  return ObjLinkingLayer.getExecutionSession()
-      .getExecutorProcessControl()
-      .getMemoryAccess()
-      .writePointers(PtrWrites);
+    std::vector<tpctypes::PointerWrite> PtrWrites;
+    for (auto &[PtrName, PtrSym] : *PtrSyms) {
+      auto DestSymI =
+          NewDests.find(PtrToStub.at(NonOwningSymbolStringPtr(PtrName)));
+      assert(DestSymI != NewDests.end() && "Bad ptr -> stub mapping");
+      auto &DestSym = DestSymI->second;
+      PtrWrites.push_back({PtrSym.getAddress(), DestSym.getAddress()});
+    }
+
+    OnComplete(ObjLinkingLayer.getExecutionSession()
+                   .getExecutorProcessControl()
+                   .getMemoryAccess()
+                   .writePointers(PtrWrites));
+  };
+
+  ES.lookup(LookupKind::Static, {{&JD, JITDylibLookupFlags::MatchAllSymbols}},
+            std::move(LS), SymbolState::Ready, std::move(LookupComplete),
+            NoDependenciesToRegister);
 }
