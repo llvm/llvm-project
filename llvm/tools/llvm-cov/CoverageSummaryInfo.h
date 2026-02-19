@@ -230,8 +230,7 @@ struct CoverageDataSummary {
   MCDCCoverageInfo MCDCCoverage;
 
   CoverageDataSummary() = default;
-  CoverageDataSummary(const coverage::CoverageData &CD,
-                      ArrayRef<coverage::CountedRegion> CodeRegions);
+  CoverageDataSummary(const coverage::CoverageData &CD);
 
   auto &operator+=(const CoverageDataSummary &RHS) {
     RegionCoverage += RHS.RegionCoverage;
