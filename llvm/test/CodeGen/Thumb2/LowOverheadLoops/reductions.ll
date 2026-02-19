@@ -630,7 +630,7 @@ for.cond.cleanup:                                 ; preds = %middle.block, %entr
 define i32 @wrongop(ptr nocapture readonly %pd) {
 ; CHECK-LABEL: wrongop:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    movw r12, #47184
 ; CHECK-NEXT:    movw r3, #23593
@@ -639,34 +639,34 @@ define i32 @wrongop(ptr nocapture readonly %pd) {
 ; CHECK-NEXT:    movt r3, #49807
 ; CHECK-NEXT:    mla r3, lr, r3, r12
 ; CHECK-NEXT:    movw r1, #55051
-; CHECK-NEXT:    movw r4, #23593
 ; CHECK-NEXT:    movt r1, #163
 ; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    movt r4, #655
 ; CHECK-NEXT:    ror.w r12, r3, #4
 ; CHECK-NEXT:    cmp r12, r1
+; CHECK-NEXT:    ror.w r12, r3, #2
+; CHECK-NEXT:    movw r3, #23593
 ; CHECK-NEXT:    cset r1, lo
-; CHECK-NEXT:    ror.w r3, r3, #2
-; CHECK-NEXT:    mov.w r12, #1
-; CHECK-NEXT:    cmp r3, r4
-; CHECK-NEXT:    csel r3, r1, r12, lo
-; CHECK-NEXT:    lsls.w r4, lr, #30
-; CHECK-NEXT:    csel r1, r1, r3, ne
+; CHECK-NEXT:    movt r3, #655
+; CHECK-NEXT:    cmp r12, r3
+; CHECK-NEXT:    csinc r12, r1, zr, hs
+; CHECK-NEXT:    lsls.w r3, lr, #30
+; CHECK-NEXT:    csel r1, r1, r12, ne
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    it lt
-; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:  .LBB8_1: @ %vector.ph
-; CHECK-NEXT:    movw r3, :lower16:days
-; CHECK-NEXT:    movs r4, #52
-; CHECK-NEXT:    movt r3, :upper16:days
-; CHECK-NEXT:    smlabb r1, r1, r4, r3
+; CHECK-NEXT:    movw r12, :lower16:days
+; CHECK-NEXT:    movs r3, #52
+; CHECK-NEXT:    movt r12, :upper16:days
+; CHECK-NEXT:    smlabb r1, r1, r3, r12
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q0, r3
+; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    vmov.32 q0[0], r0
 ; CHECK-NEXT:    adds r0, r2, #3
 ; CHECK-NEXT:    bic r0, r0, #3
 ; CHECK-NEXT:    subs r0, #4
-; CHECK-NEXT:    add.w r0, r12, r0, lsr #2
+; CHECK-NEXT:    add.w r0, r3, r0, lsr #2
 ; CHECK-NEXT:    dls lr, r0
 ; CHECK-NEXT:  .LBB8_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -680,7 +680,7 @@ define i32 @wrongop(ptr nocapture readonly %pd) {
 ; CHECK-NEXT:  @ %bb.3: @ %middle.block
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    vaddv.u32 r0, q0
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    pop {r7, pc}
 entry:
   %day1 = getelementptr inbounds %struct.date, ptr %pd, i32 0, i32 0
   %0 = load i32, ptr %day1, align 4

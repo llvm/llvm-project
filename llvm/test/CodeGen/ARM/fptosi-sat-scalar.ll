@@ -633,40 +633,74 @@ define i50 @test_signed_i50_f32(float %f) nounwind {
 ; SOFT-NEXT:  .LCPI6_2:
 ; SOFT-NEXT:    .long 131071 @ 0x1ffff
 ;
-; VFP-LABEL: test_signed_i50_f32:
-; VFP:       @ %bb.0:
-; VFP-NEXT:    .save {r4, lr}
-; VFP-NEXT:    push {r4, lr}
-; VFP-NEXT:    mov r4, r0
-; VFP-NEXT:    bl __aeabi_f2lz
-; VFP-NEXT:    vldr s0, .LCPI6_0
-; VFP-NEXT:    vmov s2, r4
-; VFP-NEXT:    vldr s4, .LCPI6_1
-; VFP-NEXT:    vcmp.f32 s2, s0
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    ittt lt
-; VFP-NEXT:    movlt r1, #0
-; VFP-NEXT:    movtlt r1, #65534
-; VFP-NEXT:    movlt r0, #0
-; VFP-NEXT:    vcmp.f32 s2, s4
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    it gt
-; VFP-NEXT:    movgt.w r0, #-1
-; VFP-NEXT:    vcmp.f32 s2, s2
-; VFP-NEXT:    itt gt
-; VFP-NEXT:    movwgt r1, #65535
-; VFP-NEXT:    movtgt r1, #1
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    itt vs
-; VFP-NEXT:    movvs r0, #0
-; VFP-NEXT:    movvs r1, #0
-; VFP-NEXT:    pop {r4, pc}
-; VFP-NEXT:    .p2align 2
-; VFP-NEXT:  @ %bb.1:
-; VFP-NEXT:  .LCPI6_0:
-; VFP-NEXT:    .long 0xd8000000 @ float -5.62949953E+14
-; VFP-NEXT:  .LCPI6_1:
-; VFP-NEXT:    .long 0x57ffffff @ float 5.6294992E+14
+; VFP2-LABEL: test_signed_i50_f32:
+; VFP2:       @ %bb.0:
+; VFP2-NEXT:    .save {r4, lr}
+; VFP2-NEXT:    push {r4, lr}
+; VFP2-NEXT:    mov r4, r0
+; VFP2-NEXT:    bl __aeabi_f2lz
+; VFP2-NEXT:    vldr s0, .LCPI6_0
+; VFP2-NEXT:    vmov s2, r4
+; VFP2-NEXT:    vldr s4, .LCPI6_1
+; VFP2-NEXT:    vcmp.f32 s2, s0
+; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    ittt lt
+; VFP2-NEXT:    movlt r1, #0
+; VFP2-NEXT:    movtlt r1, #65534
+; VFP2-NEXT:    movlt r0, #0
+; VFP2-NEXT:    vcmp.f32 s2, s4
+; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    it gt
+; VFP2-NEXT:    movgt.w r0, #-1
+; VFP2-NEXT:    vcmp.f32 s2, s2
+; VFP2-NEXT:    itt gt
+; VFP2-NEXT:    movwgt r1, #65535
+; VFP2-NEXT:    movtgt r1, #1
+; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    itt vs
+; VFP2-NEXT:    movvs r0, #0
+; VFP2-NEXT:    movvs r1, #0
+; VFP2-NEXT:    pop {r4, pc}
+; VFP2-NEXT:    .p2align 2
+; VFP2-NEXT:  @ %bb.1:
+; VFP2-NEXT:  .LCPI6_0:
+; VFP2-NEXT:    .long 0xd8000000 @ float -5.62949953E+14
+; VFP2-NEXT:  .LCPI6_1:
+; VFP2-NEXT:    .long 0x57ffffff @ float 5.6294992E+14
+;
+; FP16-LABEL: test_signed_i50_f32:
+; FP16:       @ %bb.0:
+; FP16-NEXT:    .save {r4, lr}
+; FP16-NEXT:    push {r4, lr}
+; FP16-NEXT:    mov r4, r0
+; FP16-NEXT:    bl __aeabi_f2lz
+; FP16-NEXT:    vldr s0, .LCPI6_0
+; FP16-NEXT:    vmov s2, r4
+; FP16-NEXT:    vldr s4, .LCPI6_1
+; FP16-NEXT:    vcmp.f32 s2, s0
+; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    vcmp.f32 s2, s4
+; FP16-NEXT:    ittt lt
+; FP16-NEXT:    movlt r1, #0
+; FP16-NEXT:    movtlt r1, #65534
+; FP16-NEXT:    movlt r0, #0
+; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    vcmp.f32 s2, s2
+; FP16-NEXT:    itt gt
+; FP16-NEXT:    movwgt r1, #65535
+; FP16-NEXT:    movtgt r1, #1
+; FP16-NEXT:    csinv r0, r0, zr, gt
+; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    itt vs
+; FP16-NEXT:    movvs r0, #0
+; FP16-NEXT:    movvs r1, #0
+; FP16-NEXT:    pop {r4, pc}
+; FP16-NEXT:    .p2align 2
+; FP16-NEXT:  @ %bb.1:
+; FP16-NEXT:  .LCPI6_0:
+; FP16-NEXT:    .long 0xd8000000 @ float -5.62949953E+14
+; FP16-NEXT:  .LCPI6_1:
+; FP16-NEXT:    .long 0x57ffffff @ float 5.6294992E+14
     %x = call i50 @llvm.fptosi.sat.i50.f32(float %f)
     ret i50 %x
 }
@@ -735,37 +769,69 @@ define i64 @test_signed_i64_f32(float %f) nounwind {
 ; SOFT-NEXT:  .LCPI7_1:
 ; SOFT-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
-; VFP-LABEL: test_signed_i64_f32:
-; VFP:       @ %bb.0:
-; VFP-NEXT:    .save {r4, lr}
-; VFP-NEXT:    push {r4, lr}
-; VFP-NEXT:    mov r4, r0
-; VFP-NEXT:    bl __aeabi_f2lz
-; VFP-NEXT:    vldr s0, .LCPI7_0
-; VFP-NEXT:    vmov s2, r4
-; VFP-NEXT:    vldr s4, .LCPI7_1
-; VFP-NEXT:    vcmp.f32 s2, s0
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    itt lt
-; VFP-NEXT:    movlt r0, #0
-; VFP-NEXT:    movlt.w r1, #-2147483648
-; VFP-NEXT:    vcmp.f32 s2, s4
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    itt gt
-; VFP-NEXT:    mvngt r1, #-2147483648
-; VFP-NEXT:    movgt.w r0, #-1
-; VFP-NEXT:    vcmp.f32 s2, s2
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    itt vs
-; VFP-NEXT:    movvs r0, #0
-; VFP-NEXT:    movvs r1, #0
-; VFP-NEXT:    pop {r4, pc}
-; VFP-NEXT:    .p2align 2
-; VFP-NEXT:  @ %bb.1:
-; VFP-NEXT:  .LCPI7_0:
-; VFP-NEXT:    .long 0xdf000000 @ float -9.22337203E+18
-; VFP-NEXT:  .LCPI7_1:
-; VFP-NEXT:    .long 0x5effffff @ float 9.22337149E+18
+; VFP2-LABEL: test_signed_i64_f32:
+; VFP2:       @ %bb.0:
+; VFP2-NEXT:    .save {r4, lr}
+; VFP2-NEXT:    push {r4, lr}
+; VFP2-NEXT:    mov r4, r0
+; VFP2-NEXT:    bl __aeabi_f2lz
+; VFP2-NEXT:    vldr s0, .LCPI7_0
+; VFP2-NEXT:    vmov s2, r4
+; VFP2-NEXT:    vldr s4, .LCPI7_1
+; VFP2-NEXT:    vcmp.f32 s2, s0
+; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    itt lt
+; VFP2-NEXT:    movlt r0, #0
+; VFP2-NEXT:    movlt.w r1, #-2147483648
+; VFP2-NEXT:    vcmp.f32 s2, s4
+; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    itt gt
+; VFP2-NEXT:    mvngt r1, #-2147483648
+; VFP2-NEXT:    movgt.w r0, #-1
+; VFP2-NEXT:    vcmp.f32 s2, s2
+; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    itt vs
+; VFP2-NEXT:    movvs r0, #0
+; VFP2-NEXT:    movvs r1, #0
+; VFP2-NEXT:    pop {r4, pc}
+; VFP2-NEXT:    .p2align 2
+; VFP2-NEXT:  @ %bb.1:
+; VFP2-NEXT:  .LCPI7_0:
+; VFP2-NEXT:    .long 0xdf000000 @ float -9.22337203E+18
+; VFP2-NEXT:  .LCPI7_1:
+; VFP2-NEXT:    .long 0x5effffff @ float 9.22337149E+18
+;
+; FP16-LABEL: test_signed_i64_f32:
+; FP16:       @ %bb.0:
+; FP16-NEXT:    .save {r4, lr}
+; FP16-NEXT:    push {r4, lr}
+; FP16-NEXT:    mov r4, r0
+; FP16-NEXT:    bl __aeabi_f2lz
+; FP16-NEXT:    vldr s0, .LCPI7_0
+; FP16-NEXT:    vmov s2, r4
+; FP16-NEXT:    vldr s4, .LCPI7_1
+; FP16-NEXT:    vcmp.f32 s2, s0
+; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    vcmp.f32 s2, s4
+; FP16-NEXT:    itt lt
+; FP16-NEXT:    movlt r0, #0
+; FP16-NEXT:    movlt.w r1, #-2147483648
+; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    it gt
+; FP16-NEXT:    mvngt r1, #-2147483648
+; FP16-NEXT:    vcmp.f32 s2, s2
+; FP16-NEXT:    csinv r0, r0, zr, gt
+; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    itt vs
+; FP16-NEXT:    movvs r0, #0
+; FP16-NEXT:    movvs r1, #0
+; FP16-NEXT:    pop {r4, pc}
+; FP16-NEXT:    .p2align 2
+; FP16-NEXT:  @ %bb.1:
+; FP16-NEXT:  .LCPI7_0:
+; FP16-NEXT:    .long 0xdf000000 @ float -9.22337203E+18
+; FP16-NEXT:  .LCPI7_1:
+; FP16-NEXT:    .long 0x5effffff @ float 9.22337149E+18
     %x = call i64 @llvm.fptosi.sat.i64.f32(float %f)
     ret i64 %x
 }
@@ -880,43 +946,81 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; SOFT-NEXT:  .LCPI8_0:
 ; SOFT-NEXT:    .long 1895825407 @ 0x70ffffff
 ;
-; VFP-LABEL: test_signed_i100_f32:
-; VFP:       @ %bb.0:
-; VFP-NEXT:    .save {r4, lr}
-; VFP-NEXT:    push {r4, lr}
-; VFP-NEXT:    mov r4, r0
-; VFP-NEXT:    bl __fixsfti
-; VFP-NEXT:    vldr s0, .LCPI8_0
-; VFP-NEXT:    vmov s2, r4
-; VFP-NEXT:    vldr s4, .LCPI8_1
-; VFP-NEXT:    vcmp.f32 s2, s0
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    itttt lt
-; VFP-NEXT:    movlt r0, #0
-; VFP-NEXT:    movlt r1, #0
-; VFP-NEXT:    movlt r2, #0
-; VFP-NEXT:    mvnlt r3, #7
-; VFP-NEXT:    vcmp.f32 s2, s4
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    itttt gt
-; VFP-NEXT:    movgt r3, #7
-; VFP-NEXT:    movgt.w r2, #-1
-; VFP-NEXT:    movgt.w r1, #-1
-; VFP-NEXT:    movgt.w r0, #-1
-; VFP-NEXT:    vcmp.f32 s2, s2
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    itttt vs
-; VFP-NEXT:    movvs r0, #0
-; VFP-NEXT:    movvs r1, #0
-; VFP-NEXT:    movvs r2, #0
-; VFP-NEXT:    movvs r3, #0
-; VFP-NEXT:    pop {r4, pc}
-; VFP-NEXT:    .p2align 2
-; VFP-NEXT:  @ %bb.1:
-; VFP-NEXT:  .LCPI8_0:
-; VFP-NEXT:    .long 0xf1000000 @ float -6.338253E+29
-; VFP-NEXT:  .LCPI8_1:
-; VFP-NEXT:    .long 0x70ffffff @ float 6.33825262E+29
+; VFP2-LABEL: test_signed_i100_f32:
+; VFP2:       @ %bb.0:
+; VFP2-NEXT:    .save {r4, lr}
+; VFP2-NEXT:    push {r4, lr}
+; VFP2-NEXT:    mov r4, r0
+; VFP2-NEXT:    bl __fixsfti
+; VFP2-NEXT:    vldr s0, .LCPI8_0
+; VFP2-NEXT:    vmov s2, r4
+; VFP2-NEXT:    vldr s4, .LCPI8_1
+; VFP2-NEXT:    vcmp.f32 s2, s0
+; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    itttt lt
+; VFP2-NEXT:    movlt r0, #0
+; VFP2-NEXT:    movlt r1, #0
+; VFP2-NEXT:    movlt r2, #0
+; VFP2-NEXT:    mvnlt r3, #7
+; VFP2-NEXT:    vcmp.f32 s2, s4
+; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    itttt gt
+; VFP2-NEXT:    movgt r3, #7
+; VFP2-NEXT:    movgt.w r2, #-1
+; VFP2-NEXT:    movgt.w r1, #-1
+; VFP2-NEXT:    movgt.w r0, #-1
+; VFP2-NEXT:    vcmp.f32 s2, s2
+; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    itttt vs
+; VFP2-NEXT:    movvs r0, #0
+; VFP2-NEXT:    movvs r1, #0
+; VFP2-NEXT:    movvs r2, #0
+; VFP2-NEXT:    movvs r3, #0
+; VFP2-NEXT:    pop {r4, pc}
+; VFP2-NEXT:    .p2align 2
+; VFP2-NEXT:  @ %bb.1:
+; VFP2-NEXT:  .LCPI8_0:
+; VFP2-NEXT:    .long 0xf1000000 @ float -6.338253E+29
+; VFP2-NEXT:  .LCPI8_1:
+; VFP2-NEXT:    .long 0x70ffffff @ float 6.33825262E+29
+;
+; FP16-LABEL: test_signed_i100_f32:
+; FP16:       @ %bb.0:
+; FP16-NEXT:    .save {r4, lr}
+; FP16-NEXT:    push {r4, lr}
+; FP16-NEXT:    mov r4, r0
+; FP16-NEXT:    bl __fixsfti
+; FP16-NEXT:    vldr s0, .LCPI8_0
+; FP16-NEXT:    vmov s2, r4
+; FP16-NEXT:    vldr s4, .LCPI8_1
+; FP16-NEXT:    vcmp.f32 s2, s0
+; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    vcmp.f32 s2, s4
+; FP16-NEXT:    itttt lt
+; FP16-NEXT:    movlt r0, #0
+; FP16-NEXT:    movlt r1, #0
+; FP16-NEXT:    movlt r2, #0
+; FP16-NEXT:    mvnlt r3, #7
+; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    it gt
+; FP16-NEXT:    movgt r3, #7
+; FP16-NEXT:    vcmp.f32 s2, s2
+; FP16-NEXT:    csinv r2, r2, zr, gt
+; FP16-NEXT:    csinv r1, r1, zr, gt
+; FP16-NEXT:    csinv r0, r0, zr, gt
+; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    itttt vs
+; FP16-NEXT:    movvs r0, #0
+; FP16-NEXT:    movvs r1, #0
+; FP16-NEXT:    movvs r2, #0
+; FP16-NEXT:    movvs r3, #0
+; FP16-NEXT:    pop {r4, pc}
+; FP16-NEXT:    .p2align 2
+; FP16-NEXT:  @ %bb.1:
+; FP16-NEXT:  .LCPI8_0:
+; FP16-NEXT:    .long 0xf1000000 @ float -6.338253E+29
+; FP16-NEXT:  .LCPI8_1:
+; FP16-NEXT:    .long 0x70ffffff @ float 6.33825262E+29
     %x = call i100 @llvm.fptosi.sat.i100.f32(float %f)
     ret i100 %x
 }
@@ -1033,43 +1137,81 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; SOFT-NEXT:  .LCPI9_1:
 ; SOFT-NEXT:    .long 2147483647 @ 0x7fffffff
 ;
-; VFP-LABEL: test_signed_i128_f32:
-; VFP:       @ %bb.0:
-; VFP-NEXT:    .save {r4, lr}
-; VFP-NEXT:    push {r4, lr}
-; VFP-NEXT:    mov r4, r0
-; VFP-NEXT:    bl __fixsfti
-; VFP-NEXT:    vldr s0, .LCPI9_0
-; VFP-NEXT:    vmov s2, r4
-; VFP-NEXT:    vldr s4, .LCPI9_1
-; VFP-NEXT:    vcmp.f32 s2, s0
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    itttt lt
-; VFP-NEXT:    movlt r0, #0
-; VFP-NEXT:    movlt r1, #0
-; VFP-NEXT:    movlt r2, #0
-; VFP-NEXT:    movlt.w r3, #-2147483648
-; VFP-NEXT:    vcmp.f32 s2, s4
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    itttt gt
-; VFP-NEXT:    mvngt r3, #-2147483648
-; VFP-NEXT:    movgt.w r2, #-1
-; VFP-NEXT:    movgt.w r1, #-1
-; VFP-NEXT:    movgt.w r0, #-1
-; VFP-NEXT:    vcmp.f32 s2, s2
-; VFP-NEXT:    vmrs APSR_nzcv, fpscr
-; VFP-NEXT:    itttt vs
-; VFP-NEXT:    movvs r0, #0
-; VFP-NEXT:    movvs r1, #0
-; VFP-NEXT:    movvs r2, #0
-; VFP-NEXT:    movvs r3, #0
-; VFP-NEXT:    pop {r4, pc}
-; VFP-NEXT:    .p2align 2
-; VFP-NEXT:  @ %bb.1:
-; VFP-NEXT:  .LCPI9_0:
-; VFP-NEXT:    .long 0xff000000 @ float -1.70141183E+38
-; VFP-NEXT:  .LCPI9_1:
-; VFP-NEXT:    .long 0x7effffff @ float 1.70141173E+38
+; VFP2-LABEL: test_signed_i128_f32:
+; VFP2:       @ %bb.0:
+; VFP2-NEXT:    .save {r4, lr}
+; VFP2-NEXT:    push {r4, lr}
+; VFP2-NEXT:    mov r4, r0
+; VFP2-NEXT:    bl __fixsfti
+; VFP2-NEXT:    vldr s0, .LCPI9_0
+; VFP2-NEXT:    vmov s2, r4
+; VFP2-NEXT:    vldr s4, .LCPI9_1
+; VFP2-NEXT:    vcmp.f32 s2, s0
+; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    itttt lt
+; VFP2-NEXT:    movlt r0, #0
+; VFP2-NEXT:    movlt r1, #0
+; VFP2-NEXT:    movlt r2, #0
+; VFP2-NEXT:    movlt.w r3, #-2147483648
+; VFP2-NEXT:    vcmp.f32 s2, s4
+; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    itttt gt
+; VFP2-NEXT:    mvngt r3, #-2147483648
+; VFP2-NEXT:    movgt.w r2, #-1
+; VFP2-NEXT:    movgt.w r1, #-1
+; VFP2-NEXT:    movgt.w r0, #-1
+; VFP2-NEXT:    vcmp.f32 s2, s2
+; VFP2-NEXT:    vmrs APSR_nzcv, fpscr
+; VFP2-NEXT:    itttt vs
+; VFP2-NEXT:    movvs r0, #0
+; VFP2-NEXT:    movvs r1, #0
+; VFP2-NEXT:    movvs r2, #0
+; VFP2-NEXT:    movvs r3, #0
+; VFP2-NEXT:    pop {r4, pc}
+; VFP2-NEXT:    .p2align 2
+; VFP2-NEXT:  @ %bb.1:
+; VFP2-NEXT:  .LCPI9_0:
+; VFP2-NEXT:    .long 0xff000000 @ float -1.70141183E+38
+; VFP2-NEXT:  .LCPI9_1:
+; VFP2-NEXT:    .long 0x7effffff @ float 1.70141173E+38
+;
+; FP16-LABEL: test_signed_i128_f32:
+; FP16:       @ %bb.0:
+; FP16-NEXT:    .save {r4, lr}
+; FP16-NEXT:    push {r4, lr}
+; FP16-NEXT:    mov r4, r0
+; FP16-NEXT:    bl __fixsfti
+; FP16-NEXT:    vldr s0, .LCPI9_0
+; FP16-NEXT:    vmov s2, r4
+; FP16-NEXT:    vldr s4, .LCPI9_1
+; FP16-NEXT:    vcmp.f32 s2, s0
+; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    vcmp.f32 s2, s4
+; FP16-NEXT:    itttt lt
+; FP16-NEXT:    movlt r0, #0
+; FP16-NEXT:    movlt r1, #0
+; FP16-NEXT:    movlt r2, #0
+; FP16-NEXT:    movlt.w r3, #-2147483648
+; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    it gt
+; FP16-NEXT:    mvngt r3, #-2147483648
+; FP16-NEXT:    vcmp.f32 s2, s2
+; FP16-NEXT:    csinv r2, r2, zr, gt
+; FP16-NEXT:    csinv r1, r1, zr, gt
+; FP16-NEXT:    csinv r0, r0, zr, gt
+; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    itttt vs
+; FP16-NEXT:    movvs r0, #0
+; FP16-NEXT:    movvs r1, #0
+; FP16-NEXT:    movvs r2, #0
+; FP16-NEXT:    movvs r3, #0
+; FP16-NEXT:    pop {r4, pc}
+; FP16-NEXT:    .p2align 2
+; FP16-NEXT:  @ %bb.1:
+; FP16-NEXT:  .LCPI9_0:
+; FP16-NEXT:    .long 0xff000000 @ float -1.70141183E+38
+; FP16-NEXT:  .LCPI9_1:
+; FP16-NEXT:    .long 0x7effffff @ float 1.70141173E+38
     %x = call i128 @llvm.fptosi.sat.i128.f32(float %f)
     ret i128 %x
 }
@@ -1993,10 +2135,10 @@ define i64 @test_signed_i64_f64(double %f) nounwind {
 ; FP16-NEXT:    movlt.w r1, #-2147483648
 ; FP16-NEXT:    vcmp.f64 d1, d2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
-; FP16-NEXT:    itt gt
+; FP16-NEXT:    it gt
 ; FP16-NEXT:    mvngt r1, #-2147483648
-; FP16-NEXT:    movgt.w r0, #-1
 ; FP16-NEXT:    vcmp.f64 d1, d1
+; FP16-NEXT:    csinv r0, r0, zr, gt
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    itt vs
 ; FP16-NEXT:    movvs r0, #0
@@ -2193,12 +2335,12 @@ define i100 @test_signed_i100_f64(double %f) nounwind {
 ; FP16-NEXT:    mvnlt r3, #7
 ; FP16-NEXT:    vcmp.f64 d1, d2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
-; FP16-NEXT:    itttt gt
+; FP16-NEXT:    it gt
 ; FP16-NEXT:    movgt r3, #7
-; FP16-NEXT:    movgt.w r2, #-1
-; FP16-NEXT:    movgt.w r1, #-1
-; FP16-NEXT:    movgt.w r0, #-1
 ; FP16-NEXT:    vcmp.f64 d1, d1
+; FP16-NEXT:    csinv r2, r2, zr, gt
+; FP16-NEXT:    csinv r1, r1, zr, gt
+; FP16-NEXT:    csinv r0, r0, zr, gt
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    itttt vs
 ; FP16-NEXT:    movvs r0, #0
@@ -2398,12 +2540,12 @@ define i128 @test_signed_i128_f64(double %f) nounwind {
 ; FP16-NEXT:    movlt.w r3, #-2147483648
 ; FP16-NEXT:    vcmp.f64 d1, d2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
-; FP16-NEXT:    itttt gt
+; FP16-NEXT:    it gt
 ; FP16-NEXT:    mvngt r3, #-2147483648
-; FP16-NEXT:    movgt.w r2, #-1
-; FP16-NEXT:    movgt.w r1, #-1
-; FP16-NEXT:    movgt.w r0, #-1
 ; FP16-NEXT:    vcmp.f64 d1, d1
+; FP16-NEXT:    csinv r2, r2, zr, gt
+; FP16-NEXT:    csinv r1, r1, zr, gt
+; FP16-NEXT:    csinv r0, r0, zr, gt
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    itttt vs
 ; FP16-NEXT:    movvs r0, #0
@@ -3147,18 +3289,17 @@ define i50 @test_signed_i50_f16(half %f) nounwind {
 ; FP16-NEXT:    vldr s2, .LCPI26_1
 ; FP16-NEXT:    vcmp.f32 s16, s0
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    vcmp.f32 s16, s2
 ; FP16-NEXT:    ittt lt
 ; FP16-NEXT:    movlt r1, #0
 ; FP16-NEXT:    movtlt r1, #65534
 ; FP16-NEXT:    movlt r0, #0
-; FP16-NEXT:    vcmp.f32 s16, s2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
-; FP16-NEXT:    it gt
-; FP16-NEXT:    movgt.w r0, #-1
 ; FP16-NEXT:    vcmp.f32 s16, s16
 ; FP16-NEXT:    itt gt
 ; FP16-NEXT:    movwgt r1, #65535
 ; FP16-NEXT:    movtgt r1, #1
+; FP16-NEXT:    csinv r0, r0, zr, gt
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    itt vs
 ; FP16-NEXT:    movvs r0, #0
@@ -3288,15 +3429,15 @@ define i64 @test_signed_i64_f16(half %f) nounwind {
 ; FP16-NEXT:    vldr s2, .LCPI27_1
 ; FP16-NEXT:    vcmp.f32 s16, s0
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    vcmp.f32 s16, s2
 ; FP16-NEXT:    itt lt
 ; FP16-NEXT:    movlt r0, #0
 ; FP16-NEXT:    movlt.w r1, #-2147483648
-; FP16-NEXT:    vcmp.f32 s16, s2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
-; FP16-NEXT:    itt gt
+; FP16-NEXT:    it gt
 ; FP16-NEXT:    mvngt r1, #-2147483648
-; FP16-NEXT:    movgt.w r0, #-1
 ; FP16-NEXT:    vcmp.f32 s16, s16
+; FP16-NEXT:    csinv r0, r0, zr, gt
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    itt vs
 ; FP16-NEXT:    movvs r0, #0
@@ -3478,19 +3619,19 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; FP16-NEXT:    vldr s2, .LCPI28_1
 ; FP16-NEXT:    vcmp.f32 s16, s0
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    vcmp.f32 s16, s2
 ; FP16-NEXT:    itttt lt
 ; FP16-NEXT:    movlt r0, #0
 ; FP16-NEXT:    movlt r1, #0
 ; FP16-NEXT:    movlt r2, #0
 ; FP16-NEXT:    mvnlt r3, #7
-; FP16-NEXT:    vcmp.f32 s16, s2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
-; FP16-NEXT:    itttt gt
+; FP16-NEXT:    it gt
 ; FP16-NEXT:    movgt r3, #7
-; FP16-NEXT:    movgt.w r2, #-1
-; FP16-NEXT:    movgt.w r1, #-1
-; FP16-NEXT:    movgt.w r0, #-1
 ; FP16-NEXT:    vcmp.f32 s16, s16
+; FP16-NEXT:    csinv r2, r2, zr, gt
+; FP16-NEXT:    csinv r1, r1, zr, gt
+; FP16-NEXT:    csinv r0, r0, zr, gt
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    itttt vs
 ; FP16-NEXT:    movvs r0, #0
@@ -3676,19 +3817,19 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; FP16-NEXT:    vldr s2, .LCPI29_1
 ; FP16-NEXT:    vcmp.f32 s16, s0
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; FP16-NEXT:    vcmp.f32 s16, s2
 ; FP16-NEXT:    itttt lt
 ; FP16-NEXT:    movlt r0, #0
 ; FP16-NEXT:    movlt r1, #0
 ; FP16-NEXT:    movlt r2, #0
 ; FP16-NEXT:    movlt.w r3, #-2147483648
-; FP16-NEXT:    vcmp.f32 s16, s2
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
-; FP16-NEXT:    itttt gt
+; FP16-NEXT:    it gt
 ; FP16-NEXT:    mvngt r3, #-2147483648
-; FP16-NEXT:    movgt.w r2, #-1
-; FP16-NEXT:    movgt.w r1, #-1
-; FP16-NEXT:    movgt.w r0, #-1
 ; FP16-NEXT:    vcmp.f32 s16, s16
+; FP16-NEXT:    csinv r2, r2, zr, gt
+; FP16-NEXT:    csinv r1, r1, zr, gt
+; FP16-NEXT:    csinv r0, r0, zr, gt
 ; FP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; FP16-NEXT:    itttt vs
 ; FP16-NEXT:    movvs r0, #0

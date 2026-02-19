@@ -665,8 +665,7 @@ define arm_aapcs_vfpcc void @usatmul_2_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    lsrl r0, r1, #31
 ; CHECK-NEXT:    subs.w r3, r0, #-1
 ; CHECK-NEXT:    sbcs r1, r1, #0
-; CHECK-NEXT:    it hs
-; CHECK-NEXT:    movhs.w r0, #-1
+; CHECK-NEXT:    csinv r0, r0, zr, hs
 ; CHECK-NEXT:    str r0, [r2], #4
 ; CHECK-NEXT:    le lr, .LBB3_7
 ; CHECK-NEXT:  .LBB3_8: @ %for.cond.cleanup
@@ -832,8 +831,7 @@ define arm_aapcs_vfpcc void @usatmul_4_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    lsrl r0, r1, #31
 ; CHECK-NEXT:    subs.w r2, r0, #-1
 ; CHECK-NEXT:    sbcs r1, r1, #0
-; CHECK-NEXT:    it hs
-; CHECK-NEXT:    movhs.w r0, #-1
+; CHECK-NEXT:    csinv r0, r0, zr, hs
 ; CHECK-NEXT:    str r0, [r11], #4
 ; CHECK-NEXT:    le lr, .LBB4_7
 ; CHECK-NEXT:  .LBB4_8: @ %for.cond.cleanup

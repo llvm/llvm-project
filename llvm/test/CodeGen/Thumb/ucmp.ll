@@ -26,8 +26,7 @@ define i8 @ucmp_8_8(i8 zeroext %x, i8 zeroext %y) nounwind {
 ; V81M:       @ %bb.0:
 ; V81M-NEXT:    cmp r0, r1
 ; V81M-NEXT:    cset r0, hi
-; V81M-NEXT:    it lo
-; V81M-NEXT:    movlo.w r0, #-1
+; V81M-NEXT:    csinv r0, r0, zr, lo
 ; V81M-NEXT:    bx lr
   %1 = call i8 @llvm.ucmp(i8 %x, i8 %y)
   ret i8 %1
@@ -56,8 +55,7 @@ define i8 @ucmp_8_16(i16 zeroext %x, i16 zeroext %y) nounwind {
 ; V81M:       @ %bb.0:
 ; V81M-NEXT:    cmp r0, r1
 ; V81M-NEXT:    cset r0, hi
-; V81M-NEXT:    it lo
-; V81M-NEXT:    movlo.w r0, #-1
+; V81M-NEXT:    csinv r0, r0, zr, lo
 ; V81M-NEXT:    bx lr
   %1 = call i8 @llvm.ucmp(i16 %x, i16 %y)
   ret i8 %1
@@ -86,8 +84,7 @@ define i8 @ucmp_8_32(i32 %x, i32 %y) nounwind {
 ; V81M:       @ %bb.0:
 ; V81M-NEXT:    cmp r0, r1
 ; V81M-NEXT:    cset r0, hi
-; V81M-NEXT:    it lo
-; V81M-NEXT:    movlo.w r0, #-1
+; V81M-NEXT:    csinv r0, r0, zr, lo
 ; V81M-NEXT:    bx lr
   %1 = call i8 @llvm.ucmp(i32 %x, i32 %y)
   ret i8 %1
@@ -259,8 +256,7 @@ define i32 @ucmp_32_32(i32 %x, i32 %y) nounwind {
 ; V81M:       @ %bb.0:
 ; V81M-NEXT:    cmp r0, r1
 ; V81M-NEXT:    cset r0, hi
-; V81M-NEXT:    it lo
-; V81M-NEXT:    movlo.w r0, #-1
+; V81M-NEXT:    csinv r0, r0, zr, lo
 ; V81M-NEXT:    bx lr
   %1 = call i32 @llvm.ucmp(i32 %x, i32 %y)
   ret i32 %1
