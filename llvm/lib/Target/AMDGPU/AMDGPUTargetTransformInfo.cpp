@@ -27,6 +27,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <optional>
 
 using namespace llvm;
@@ -271,6 +272,15 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
     if (L->isInnermost() && BB->size() < UnrollMaxBlockToAnalyze)
       UP.MaxIterationsCountToAnalyze = 32;
   }
+  const bool PragmaFullUnroll = hasUnrollFullPragma(L);
+  const unsigned PragmaCount = unrollCountPragmaValue(L);
+  const bool PragmaEnableUnroll = hasUnrollEnablePragma(L);
+
+  const bool ExplicitUnroll =
+      PragmaCount > 0 || PragmaFullUnroll || PragmaEnableUnroll;
+
+  if (ExplicitUnroll)
+    UP.AllowExpensiveTripCount = true;
 }
 
 void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,

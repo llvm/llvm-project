@@ -747,46 +747,6 @@ uint64_t UnrollCostEstimator::getUnrolledLoopSize(
     return static_cast<uint64_t>(LS - UP.BEInsns) * UP.Count + UP.BEInsns;
 }
 
-// Returns the loop hint metadata node with the given name (for example,
-// "llvm.loop.unroll.count").  If no such metadata node exists, then nullptr is
-// returned.
-static MDNode *getUnrollMetadataForLoop(const Loop *L, StringRef Name) {
-  if (MDNode *LoopID = L->getLoopID())
-    return GetUnrollMetadata(LoopID, Name);
-  return nullptr;
-}
-
-// Returns true if the loop has an unroll(full) pragma.
-static bool hasUnrollFullPragma(const Loop *L) {
-  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.full");
-}
-
-// Returns true if the loop has an unroll(enable) pragma. This metadata is used
-// for both "#pragma unroll" and "#pragma clang loop unroll(enable)" directives.
-static bool hasUnrollEnablePragma(const Loop *L) {
-  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.enable");
-}
-
-// Returns true if the loop has an runtime unroll(disable) pragma.
-static bool hasRuntimeUnrollDisablePragma(const Loop *L) {
-  return getUnrollMetadataForLoop(L, "llvm.loop.unroll.runtime.disable");
-}
-
-// If loop has an unroll_count pragma return the (necessarily
-// positive) value from the pragma.  Otherwise return 0.
-static unsigned unrollCountPragmaValue(const Loop *L) {
-  MDNode *MD = getUnrollMetadataForLoop(L, "llvm.loop.unroll.count");
-  if (MD) {
-    assert(MD->getNumOperands() == 2 &&
-           "Unroll count hint metadata should have two operands.");
-    unsigned Count =
-        mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-    assert(Count >= 1 && "Unroll count must be positive.");
-    return Count;
-  }
-  return 0;
-}
-
 // Computes the boosting factor for complete unrolling.
 // If fully unrolling the loop would save a lot of RolledDynamicCost, it would
 // be beneficial to fully unroll the loop even if unrolledcost is large. We
