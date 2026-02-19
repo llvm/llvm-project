@@ -59,7 +59,7 @@ struct PrintingPolicy {
   enum class SuppressInlineNamespaceMode : uint8_t { None, Redundant, All };
 
   /// Dictates how anonymous/unnamed entities are printed.
-  enum class AnonymousTagMode : uint8_t {
+  enum class AnonymousTagMode {
     /// E.g., (anonymous enum)/(unnamed struct)/etc.
     Plain,
 
