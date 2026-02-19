@@ -239,38 +239,29 @@ static bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
 }
 
 static bool fpExtendSupportsMMAMatrixType(arith::ExtFOp extOp) { return true; }
+static bool fpTruncSupportsMMAMatrixType(arith::TruncFOp extOp) { return true; }
 
 /// Return the MMA elementwise enum associated with `op` if it is supported.
 /// Return `std::nullopt` otherwise.
 static std::optional<gpu::MMAElementwiseOp>
 convertElementwiseOpToMMA(Operation *op) {
-  if (isa<arith::AddFOp>(op))
-    return gpu::MMAElementwiseOp::ADDF;
-  if (isa<arith::MulFOp>(op))
-    return gpu::MMAElementwiseOp::MULF;
-  if (isa<arith::SubFOp>(op))
-    return gpu::MMAElementwiseOp::SUBF;
-  if (isa<arith::MaximumFOp>(op))
-    return gpu::MMAElementwiseOp::MAXF;
-  if (isa<arith::MinimumFOp>(op))
-    return gpu::MMAElementwiseOp::MINF;
-  if (isa<arith::DivFOp>(op))
-    return gpu::MMAElementwiseOp::DIVF;
-  if (isa<arith::AddIOp>(op))
-    return gpu::MMAElementwiseOp::ADDI;
-  if (isa<arith::MulIOp>(op))
-    return gpu::MMAElementwiseOp::MULI;
-  if (isa<arith::SubIOp>(op))
-    return gpu::MMAElementwiseOp::SUBI;
-  if (isa<arith::DivSIOp>(op))
-    return gpu::MMAElementwiseOp::DIVS;
-  if (isa<arith::DivUIOp>(op))
-    return gpu::MMAElementwiseOp::DIVU;
-  if (isa<arith::NegFOp>(op))
-    return gpu::MMAElementwiseOp::NEGATEF;
-  if (isa<arith::ExtFOp>(op))
-    return gpu::MMAElementwiseOp::EXTF;
-  return std::nullopt;
+  using MMAEwO = gpu::MMAElementwiseOp;
+  return TypeSwitch<Operation *, std::optional<MMAEwO>>(op)
+      .Case<arith::AddFOp>([](auto) { return MMAEwO::ADDF; })
+      .Case<arith::AddIOp>([](auto) { return MMAEwO::ADDI; })
+      .Case<arith::DivFOp>([](auto) { return MMAEwO::DIVF; })
+      .Case<arith::DivSIOp>([](auto) { return MMAEwO::DIVS; })
+      .Case<arith::DivUIOp>([](auto) { return MMAEwO::DIVU; })
+      .Case<arith::ExtFOp>([](auto) { return MMAEwO::EXTF; })
+      .Case<arith::MaximumFOp>([](auto) { return MMAEwO::MAXF; })
+      .Case<arith::MinimumFOp>([](auto) { return MMAEwO::MINF; })
+      .Case<arith::MulFOp>([](auto) { return MMAEwO::MULF; })
+      .Case<arith::MulIOp>([](auto) { return MMAEwO::MULI; })
+      .Case<arith::NegFOp>([](auto) { return MMAEwO::NEGATEF; })
+      .Case<arith::SubFOp>([](auto) { return MMAEwO::SUBF; })
+      .Case<arith::SubIOp>([](auto) { return MMAEwO::SUBI; })
+      .Case<arith::TruncFOp>([](auto) { return MMAEwO::TRUNCF; })
+      .Default([](auto) { return std::nullopt; });
 }
 
 /// Return true if the op is supported as elementwise op on MMAMatrix type.
@@ -329,6 +320,8 @@ static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
     return integerExtendSupportsMMAMatrixType<arith::ExtUIOp>(unsignedExtend);
   if (auto fpExtend = dyn_cast<arith::ExtFOp>(op))
     return fpExtendSupportsMMAMatrixType(fpExtend);
+  if (auto fpTrunc = dyn_cast<arith::TruncFOp>(op))
+    return fpTruncSupportsMMAMatrixType(fpTrunc);
   return elementwiseSupportsMMAMatrixType(op);
 }
 
@@ -1246,8 +1239,9 @@ convertElementwiseOp(RewriterBase &rewriter, Operation *op,
     matrixOperands.push_back(it->second);
   }
   auto resultType = cast<gpu::MMAMatrixType>(matrixOperands[0].getType());
-  if (opType == gpu::MMAElementwiseOp::EXTF) {
-    // The floating point extension case has a different result type.
+  if (opType == gpu::MMAElementwiseOp::EXTF ||
+      opType == gpu::MMAElementwiseOp::TRUNCF) {
+    // The floating point extension and truncation has a different result type.
     auto vectorType = cast<VectorType>(op->getResultTypes()[0]);
     resultType = gpu::MMAMatrixType::get(resultType.getShape(),
                                          vectorType.getElementType(),
