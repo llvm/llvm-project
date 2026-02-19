@@ -486,15 +486,15 @@ void CommandObjectDisassemble::DoExecute(Args &command,
       m_options.arch, flavor_string, cpu_string, features_string, plugin_name);
 
   if (!disassembler) {
-    if (plugin_name) {
-      result.AppendErrorWithFormat(
-          "Unable to find Disassembler plug-in named '%s' that supports the "
-          "'%s' architecture.\n",
-          plugin_name, m_options.arch.GetArchitectureName());
-    } else
-      result.AppendErrorWithFormat(
-          "Unable to find Disassembler plug-in for the '%s' architecture.\n",
-          m_options.arch.GetArchitectureName());
+    result.AppendErrorWithFormat(
+        "Unable to find Disassembler plug-in with such parameters: name: '%s', "
+        "flavor: '%s', cpu: '%s', features: '%s' for the "
+        "'%s' architecture.\n",
+        plugin_name ? plugin_name : "None",
+        flavor_string ? flavor_string : "None",
+        cpu_string ? cpu_string : "None",
+        features_string ? features_string : "None",
+        m_options.arch.GetArchitectureName());
     return;
   } else if (flavor_string != nullptr && !disassembler->FlavorValidForArchSpec(
                                              m_options.arch, flavor_string))

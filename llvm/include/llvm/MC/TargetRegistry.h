@@ -351,6 +351,31 @@ private:
   /// InstrumentManager, if registered (default = nullptr).
   InstrumentManagerCtorTy InstrumentManagerCtorFn = nullptr;
 
+  bool isSignedFeatureList(StringRef FeaturesString) const {
+    if (FeaturesString.empty())
+      return true;
+
+    llvm::SmallVector<llvm::StringRef, 8> Features;
+    FeaturesString.split(Features, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+
+    if (Features.empty())
+      return false;
+
+    for (llvm::StringRef Feature : Features) {
+      if (Feature.empty())
+        return false;
+
+      char C = Feature.front();
+      if (C != '+' && C != '-')
+        return false;
+
+      if (Feature.size() == 1)
+        return false;
+    }
+
+    return true;
+  }
+
 public:
   Target() = default;
 
@@ -452,7 +477,9 @@ public:
                                          StringRef Features) const {
     if (!MCSubtargetInfoCtorFn)
       return nullptr;
-    return MCSubtargetInfoCtorFn(TheTriple, CPU, Features);
+    if (!isSignedFeatureList(Features))
+      return nullptr;
+    return MCSubtargetInfoCtorFn(Triple(TheTriple), CPU, Features);
   }
 
   /// createTargetMachine - Create a target specific machine implementation
