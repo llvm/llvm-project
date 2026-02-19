@@ -938,8 +938,11 @@ template <class ELFT> Error ELFFile<ELFT>::readShdrZero() {
   // which is valid for an ELF file.
   //
   // However, if e_phnum == PN_XNUM or e_shstrndx == SHN_XINDEX while
-  // e_shoff == 0, the file is inconsistent. In that case, an error will be
-  // triggered later when getSection() is called and detects that e_shoff == 0.
+  // e_shoff == 0, the file is inconsistent, because such entries indicate
+  // information should be stored in the index 0 section header, whereas e_shoff
+  // 0 indicates that there are no section headers. In that case, an error will
+  // be triggered later when getSection() is called and detects that e_shoff ==
+  // 0.
   if ((Header.e_phnum == ELF::PN_XNUM ||
        (Header.e_shnum == 0 && Header.e_shoff != 0) ||
        Header.e_shstrndx == ELF::SHN_XINDEX)) {
