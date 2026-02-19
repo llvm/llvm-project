@@ -27,8 +27,8 @@ using testing::UnorderedElementsAreArray;
 static void expectFailure(StringRef JSONDatabase, StringRef Explanation) {
   std::string ErrorMessage;
   EXPECT_EQ(nullptr,
-            JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
-                                                    JSONCommandLineSyntax::Gnu))
+            JSONCompilationDatabase::loadFromBuffer(
+                "", JSONDatabase, ErrorMessage, JSONCommandLineSyntax::Gnu))
       << "Expected an error because of: " << Explanation.str();
 }
 
@@ -56,7 +56,7 @@ static std::vector<std::string> getAllFiles(StringRef JSONDatabase,
                                             std::string &ErrorMessage,
                                             JSONCommandLineSyntax Syntax) {
   std::unique_ptr<CompilationDatabase> Database(
-      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+      JSONCompilationDatabase::loadFromBuffer("", JSONDatabase, ErrorMessage,
                                               Syntax));
   if (!Database) {
     ADD_FAILURE() << ErrorMessage;
@@ -71,7 +71,7 @@ static std::vector<CompileCommand>
 getAllCompileCommands(JSONCommandLineSyntax Syntax, StringRef JSONDatabase,
                       std::string &ErrorMessage) {
   std::unique_ptr<CompilationDatabase> Database(
-      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+      JSONCompilationDatabase::loadFromBuffer("", JSONDatabase, ErrorMessage,
                                               Syntax));
   if (!Database) {
     ADD_FAILURE() << ErrorMessage;
@@ -193,7 +193,7 @@ static CompileCommand findCompileArgsInJsonDatabase(StringRef FileName,
                                                     std::string JSONDatabase,
                                                     std::string &ErrorMessage) {
   std::unique_ptr<CompilationDatabase> Database(
-      JSONCompilationDatabase::loadFromBuffer(JSONDatabase, ErrorMessage,
+      JSONCompilationDatabase::loadFromBuffer("", JSONDatabase, ErrorMessage,
                                               JSONCommandLineSyntax::Gnu));
   if (!Database)
     return CompileCommand();
