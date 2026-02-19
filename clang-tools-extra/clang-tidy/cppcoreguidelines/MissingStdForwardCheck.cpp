@@ -85,21 +85,41 @@ AST_MATCHER(VarDecl, hasIdentifier) {
   return ID != nullptr && !ID->isPlaceholder();
 }
 
+AST_MATCHER_P(ValueDecl, refersToBoundParm, std::string, ParamID) {
+  return Builder->removeBindings(
+      [&](const ast_matchers::internal::BoundNodesMap &Nodes) {
+        const auto *Param = Nodes.getNodeAs<ParmVarDecl>(ParamID);
+        if (!Param)
+          return true;
+
+        for (const ValueDecl *V = &Node; V;) {
+          if (V == Param)
+            return false;
+
+          const auto *VD = dyn_cast<VarDecl>(V);
+          const Expr *Init = (VD && VD->getType()->isReferenceType())
+                                 ? VD->getInit()
+                                 : nullptr;
+          const auto *DRE =
+              Init ? dyn_cast<DeclRefExpr>(Init->IgnoreParenImpCasts())
+                   : nullptr;
+          V = DRE ? DRE->getDecl() : nullptr;
+        }
+        return true;
+      });
+}
+
 } // namespace
 
 void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
-  auto RefToParmImplicit = allOf(
-      equalsBoundNode("var"), hasInitializer(ignoringParenImpCasts(
-                                  declRefExpr(to(equalsBoundNode("param"))))));
-  auto RefToParm = capturesVar(
-      varDecl(anyOf(hasSameNameAsBoundNode("param"), RefToParmImplicit)));
+  auto CapturedVar = varDecl(
+      anyOf(refersToBoundParm("param"), hasSameNameAsBoundNode("param")));
 
   auto CaptureInRef =
       allOf(hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByRef),
-            unless(hasAnyCapture(
-                capturesVar(varDecl(hasSameNameAsBoundNode("param"))))));
-  auto CaptureByRefExplicit = hasAnyCapture(
-      allOf(hasCaptureKind(LambdaCaptureKind::LCK_ByRef), RefToParm));
+            unless(hasAnyCapture(capturesVar(CapturedVar))));
+  auto CaptureByRefExplicit = hasAnyCapture(allOf(
+      hasCaptureKind(LambdaCaptureKind::LCK_ByRef), capturesVar(CapturedVar)));
 
   auto CapturedInBody = lambdaExpr(anyOf(CaptureInRef, CaptureByRefExplicit));
   auto CapturedInCaptureList = hasAnyCapture(capturesVar(
@@ -112,21 +132,15 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
 
   auto ToParam = hasAnyParameter(parmVarDecl(equalsBoundNode("param")));
 
-  auto ForwardCallMatcher = callExpr(
-      callExpr().bind("call"), argumentCountIs(1),
-      hasArgument(
-          0, declRefExpr(to(
-                 varDecl(anyOf(equalsBoundNode("param"),
-                               hasSameNameAsBoundNode("param"),
-                               hasInitializer(ignoringParenImpCasts(
-                                   declRefExpr(to(equalsBoundNode("param")))))))
-                     .bind("var")))),
-      forCallable(anyOf(equalsBoundNode("func"), CapturedInLambda)),
-      callee(unresolvedLookupExpr(hasAnyDeclaration(
-          namedDecl(hasUnderlyingDecl(hasName(ForwardFunction)))))),
+  auto ForwardCallMatcher =
+      callExpr(callExpr().bind("call"), argumentCountIs(1),
+               hasArgument(0, declRefExpr(to(CapturedVar)).bind("var")),
+               forCallable(anyOf(equalsBoundNode("func"), CapturedInLambda)),
+               callee(unresolvedLookupExpr(hasAnyDeclaration(
+                   namedDecl(hasUnderlyingDecl(hasName(ForwardFunction)))))),
 
-      unless(anyOf(hasAncestor(typeLoc()),
-                   hasAncestor(expr(hasUnevaluatedContext())))));
+               unless(anyOf(hasAncestor(typeLoc()),
+                            hasAncestor(expr(hasUnevaluatedContext())))));
 
   Finder->addMatcher(
       parmVarDecl(
