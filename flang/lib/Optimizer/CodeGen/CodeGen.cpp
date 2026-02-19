@@ -237,6 +237,27 @@ public:
     return mlir::success();
   }
 };
+
+struct DeclareValueOpConversion
+    : public fir::FIROpConversion<fir::DeclareValueOp> {
+public:
+  using FIROpConversion::FIROpConversion;
+  llvm::LogicalResult
+  matchAndRewrite(fir::DeclareValueOp declareOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto value = adaptor.getOperands()[0];
+    if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(declareOp.getLoc())) {
+      if (auto varAttr =
+              mlir::dyn_cast_or_null<mlir::LLVM::DILocalVariableAttr>(
+                  fusedLoc.getMetadata())) {
+        mlir::LLVM::DbgValueOp::create(rewriter, value.getLoc(), value, varAttr,
+                                       nullptr);
+      }
+    }
+    rewriter.eraseOp(declareOp);
+    return mlir::success();
+  }
+};
 } // namespace
 
 namespace {
@@ -3750,6 +3771,14 @@ protected:
       defaultDestination = *convertedBlock;
     }
 
+    // Deal with the case where there is only a default destination.  Handle it
+    // now because emitting empty case values is not legal.
+    if (caseValues.empty()) {
+      rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(select, defaultOperands,
+                                                    defaultDestination);
+      return mlir::success();
+    }
+
     selector =
         this->integerCast(loc, rewriter, rewriter.getI64Type(), selector);
 
@@ -4520,7 +4549,7 @@ void fir::populateFIRToLLVMConversionPatterns(
       BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
       CmpcOpConversion, VolatileCastOpConversion, ConvertOpConversion,
       CoordinateOpConversion, CopyOpConversion, DTEntryOpConversion,
-      DeclareOpConversion,
+      DeclareOpConversion, DeclareValueOpConversion,
       DoConcurrentSpecifierOpConversion<fir::LocalitySpecifierOp>,
       DoConcurrentSpecifierOpConversion<fir::DeclareReductionOp>,
       DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,

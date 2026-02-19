@@ -226,3 +226,76 @@ def testRewriteWithGreedyRewriteConfig():
         # CHECK: %c2_i64 = arith.constant 2 : i64
         # CHECK: return %c2_i64, %c2_i64 : i64
         print(module)
+
+
+@run
+def testConversionPattern():
+    from mlir.dialects import smt
+
+    def convert_int(t):
+        if isinstance(t, IntegerType):
+            return smt.IntType.get()
+
+    converter = TypeConverter()
+    converter.add_conversion(convert_int)
+
+    def convert_constant(op, adaptor, type_converter, rewriter):
+        assert isinstance(op, arith.ConstantOp)
+        assert isinstance(adaptor, arith.ConstantOpAdaptor)
+        with rewriter.ip:
+            new_op = smt.IntConstantOp(op.value, loc=op.location)
+        rewriter.replace_op(op, new_op)
+
+    def convert_addi(op, adaptor, type_converter, rewriter):
+        assert isinstance(op, arith.AddIOp)
+        assert isinstance(adaptor, arith.AddIOpAdaptor)
+        with rewriter.ip:
+            new_op = smt.IntAddOp([adaptor.lhs, adaptor.rhs], loc=op.location)
+        rewriter.replace_op(op, new_op)
+
+    def convert_muli(op, adaptor, type_converter, rewriter):
+        assert isinstance(op, arith.MulIOp)
+        assert isinstance(adaptor, arith.MulIOpAdaptor)
+        with rewriter.ip:
+            new_op = smt.IntMulOp([adaptor.lhs, adaptor.rhs], loc=op.location)
+        rewriter.replace_op(op, new_op)
+
+    with Context():
+        patterns = RewritePatternSet()
+        patterns.add_conversion(arith.ConstantOp, convert_constant, converter)
+        patterns.add_conversion(arith.AddIOp, convert_addi, converter)
+        patterns.add_conversion(arith.MulIOp, convert_muli, converter)
+
+        module = ModuleOp.parse(
+            r"""
+            module {
+                func.func @f(%0: i64) -> i64 {
+                    %1 = arith.constant 3 : i64
+                    %2 = arith.addi %0, %1 : i64
+                    %3 = arith.muli %2, %1 : i64
+                    return %3 : i64
+                }
+            }
+            """
+        )
+
+        target = ConversionTarget()
+        target.add_legal_dialect(smt._Dialect)
+        target.add_illegal_op(arith.ConstantOp, arith.AddIOp, arith.MulIOp)
+
+        frozen = patterns.freeze()
+        config = ConversionConfig()
+        config.build_materializations = False
+
+        apply_partial_conversion(module, target, frozen, config)
+        assert module.operation.verify()
+
+        # CHECK: func.func @f(%arg0: i64) -> i64 {
+        # CHECK:     %0 = builtin.unrealized_conversion_cast %arg0 : i64 to !smt.int
+        # CHECK:     %c3 = smt.int.constant 3
+        # CHECK:     %1 = smt.int.add %0, %c3
+        # CHECK:     %2 = smt.int.mul %1, %c3
+        # CHECK:     %3 = builtin.unrealized_conversion_cast %2 : !smt.int to i64
+        # CHECK:     return %3 : i64
+        # CHECK: }
+        print(module)

@@ -218,5 +218,5 @@ declare <8 x float> @llvm.maxnum.v8f32(<8 x float>, <8 x float>) #1
 declare <16 x float> @llvm.maxnum.v16f32(<16 x float>, <16 x float>) #1
 declare double @llvm.maxnum.f64(double, double)
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone }

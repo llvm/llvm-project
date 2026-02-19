@@ -28,7 +28,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float16 acoshf16(float16 x) {
+LIBC_INLINE constexpr float16 acoshf16(float16 x) {
 
   using namespace acoshf_internal;
   constexpr size_t N_EXCEPTS = 2;

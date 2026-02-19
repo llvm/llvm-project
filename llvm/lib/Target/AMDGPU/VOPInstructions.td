@@ -1873,8 +1873,9 @@ multiclass VOP3_Real_with_name<GFXGen Gen, bits<10> op, string opName,
   }
 }
 
-multiclass VOP3_Real_with_name_gfx12_gfx13<
+multiclass VOP3_Real_with_name_gfx11_gfx12_gfx13<
     bits<10> op, string opName, string asmName, string pseudo_mnemonic = "", bit isSingle = 0> :
+  VOP3_Real_with_name<GFX11Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
   VOP3_Real_with_name<GFX12Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
   VOP3_Real_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 

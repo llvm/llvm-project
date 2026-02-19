@@ -21,6 +21,7 @@
 namespace llvm {
 class APFloat;
 struct fltSemantics;
+struct KnownBits;
 
 struct KnownFPClass {
   /// Floating-point classes the value could be one of.
@@ -327,6 +328,13 @@ struct KnownFPClass {
       KnownFPClasses &= (fcPositive | fcNan);
   }
 
+  static KnownFPClass copysign(const KnownFPClass &KnownMag,
+                               const KnownFPClass &KnownSign) {
+    KnownFPClass Known = KnownMag;
+    Known.copysign(KnownSign);
+    return Known;
+  }
+
   // Propagate knowledge that a non-NaN source implies the result can also not
   // be a NaN. For unconstrained operations, signaling nans are not guaranteed
   // to be quieted but cannot be introduced.
@@ -382,6 +390,15 @@ struct KnownFPClass {
   /// Propagate known class for mantissa component of frexp
   static LLVM_ABI KnownFPClass frexp_mant(
       const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for ldexp
+  static LLVM_ABI KnownFPClass
+  ldexp(const KnownFPClass &Src, const KnownBits &N, const fltSemantics &Flt,
+        DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Propagate known class for powi
+  static LLVM_ABI KnownFPClass powi(const KnownFPClass &Src,
+                                    const KnownBits &N);
 
   void resetAll() { *this = KnownFPClass(); }
 };

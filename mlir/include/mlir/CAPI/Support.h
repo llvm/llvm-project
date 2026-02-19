@@ -23,6 +23,7 @@
 
 namespace llvm {
 class ThreadPoolInterface;
+class raw_fd_ostream;
 } // namespace llvm
 
 /// Converts a StringRef into its MLIR C API equivalent.
@@ -46,6 +47,7 @@ inline llvm::LogicalResult unwrap(MlirLogicalResult res) {
 }
 
 DEFINE_C_API_PTR_METHODS(MlirLlvmThreadPool, llvm::ThreadPoolInterface)
+DEFINE_C_API_PTR_METHODS(MlirLlvmRawFdOStream, llvm::raw_fd_ostream)
 DEFINE_C_API_METHODS(MlirTypeID, mlir::TypeID)
 DEFINE_C_API_PTR_METHODS(MlirTypeIDAllocator, mlir::TypeIDAllocator)
 

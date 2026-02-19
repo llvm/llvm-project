@@ -8,10 +8,10 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr %src.1, ptr %src.2, i64 %n) {
 ; CHECK-LABEL: @min_trip_count_due_to_runtime_checks_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SRC_25:%.*]] = ptrtoint ptr [[SRC_2:%.*]] to i64
-; CHECK-NEXT:    [[SRC_13:%.*]] = ptrtoint ptr [[SRC_1:%.*]] to i64
-; CHECK-NEXT:    [[DST_12:%.*]] = ptrtoint ptr [[DST_1:%.*]] to i64
-; CHECK-NEXT:    [[DST_21:%.*]] = ptrtoint ptr [[DST_2:%.*]] to i64
+; CHECK-NEXT:    [[SRC_25:%.*]] = ptrtoaddr ptr [[SRC_2:%.*]] to i64
+; CHECK-NEXT:    [[SRC_13:%.*]] = ptrtoaddr ptr [[SRC_1:%.*]] to i64
+; CHECK-NEXT:    [[DST_12:%.*]] = ptrtoaddr ptr [[DST_1:%.*]] to i64
+; CHECK-NEXT:    [[DST_21:%.*]] = ptrtoaddr ptr [[DST_2:%.*]] to i64
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2

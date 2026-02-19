@@ -120,3 +120,73 @@ loop.end.early:
 loop.end:
   ret i64 0
 }
+
+; Test that early exit with a live-in condition (function argument) combined
+; with a dereferenceable load-based condition does not crash. The live-in
+; condition has no defining recipe in VPlan.
+define i64 @early_exit_with_live_in_condition(i1 %cond) {
+; CHECK-LABEL: define i64 @early_exit_with_live_in_condition(
+; CHECK-SAME: i1 [[COND:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[COND]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[LOOP]] ], [ [[INC:%.*]], [[VECTOR_BODY_INTERIM:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[INC]] = add nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], 1024
+; CHECK-NEXT:    br i1 [[TMP4]], label [[VECTOR_EARLY_EXIT_CHECK:%.*]], label [[VECTOR_BODY_INTERIM]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[LOOP_END:%.*]]
+; CHECK:       vector.early.exit.check:
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i32 0
+; CHECK-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT_0:%.*]], label [[VECTOR_EARLY_EXIT_1:%.*]]
+; CHECK:       vector.early.exit.1:
+; CHECK-NEXT:    br label [[LOOP_END]]
+; CHECK:       vector.early.exit.0:
+; CHECK-NEXT:    br label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 1, [[VECTOR_EARLY_EXIT_1]] ], [ 0, [[VECTOR_EARLY_EXIT_0]] ], [ 2, [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p = alloca [1024 x i8]
+  call void @init_mem(ptr %p, i64 1024)
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %inc, %latch ], [ 0, %entry ]
+  br i1 %cond, label %loop.end, label %search
+
+search:
+  %arrayidx = getelementptr inbounds i8, ptr %p, i64 %iv
+  %ld = load i8, ptr %arrayidx, align 1
+  %cmp = icmp eq i8 %ld, 0
+  br i1 %cmp, label %loop.end, label %latch
+
+latch:
+  %inc = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %inc, 1024
+  br i1 %exitcond, label %loop.end, label %loop
+
+loop.end:
+  %retval = phi i64 [ 0, %loop ], [ 1, %search ], [ 2, %latch ]
+  ret i64 %retval
+}
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+;.

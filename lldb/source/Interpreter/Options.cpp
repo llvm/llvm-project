@@ -274,57 +274,8 @@ void Options::OutputFormattedUsageText(Stream &strm,
   }
   actual_text.append(
       ansi::FormatAnsiTerminalCodes(option_def.usage_text, use_color));
-  const size_t visible_length = ansi::ColumnWidth(actual_text);
 
-  // Will it all fit on one line?
-  if (static_cast<uint32_t>(visible_length + strm.GetIndentLevel()) <
-      output_max_columns) {
-    // Output it as a single line.
-    strm.Indent(actual_text);
-    strm.EOL();
-    return;
-  }
-
-  // We need to break it up into multiple lines. We can do this based on the
-  // formatted text because we know that:
-  // * We only break lines on whitespace, therefore we will not break in the
-  //   middle of a Unicode character or escape code.
-  // * Escape codes are so far not applied to multiple words, so there is no
-  //   risk of breaking up a phrase and the escape code being incorrectly
-  //   applied to the indent too.
-
-  const int max_text_width = output_max_columns - strm.GetIndentLevel() - 1;
-  int start = 0;
-  int end = start;
-  const int final_end = visible_length;
-
-  while (end < final_end) {
-    // Don't start the 'text' on a space, since we're already outputting the
-    // indentation.
-    while ((start < final_end) && (actual_text[start] == ' '))
-      start++;
-
-    end = start + max_text_width;
-    if (end > final_end) {
-      end = final_end;
-    } else {
-      // If we're not at the end of the text, make sure we break the line on
-      // white space.
-      while (end > start && actual_text[end] != ' ' &&
-             actual_text[end] != '\t' && actual_text[end] != '\n')
-        end--;
-    }
-
-    const int sub_len = end - start;
-    if (start != 0)
-      strm.EOL();
-    strm.Indent();
-    assert(start < final_end);
-    assert(start + sub_len <= final_end);
-    strm.PutCString(llvm::StringRef(actual_text.c_str() + start, sub_len));
-    start = end + 1;
-  }
-  strm.EOL();
+  ansi::OutputWordWrappedLines(strm, actual_text, output_max_columns);
 }
 
 bool Options::SupportsLongOption(const char *long_option) {

@@ -1300,5 +1300,5 @@ define fp128 @hoo5_safe(fp128 %a) #1 {
 }
 
 attributes #0 = { nounwind "reciprocal-estimates"="sqrtf:0,sqrtd:0" }
-attributes #1 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #1 = { nounwind denormal_fpenv(preservesign) }
 attributes #2 = { nounwind readnone "target-features"="-crbits" }

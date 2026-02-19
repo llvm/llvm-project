@@ -1,0 +1,102 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
+# RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
+# RUN:   -mattr=+fusion-add-mem | FileCheck %s
+
+# Test add-mem fusion: ADD + load/store with offset 0
+# This fusion combines an address calculation (ADD) with a memory operation
+# that uses the calculated address with zero offset.
+
+# CHECK: add_lb
+# CHECK: Macro fuse: {{.*}}ADD - LB
+---
+name: add_lb
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11, $x12
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = COPY $x12
+    %4:gpr = ADD %1, %2
+    %5:gpr = LB %4, 0
+    %6:gpr = XORI %3, 3
+    $x10 = COPY %6
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: add_lh
+# CHECK: Macro fuse: {{.*}}ADD - LH
+---
+name: add_lh
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11, $x12
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = COPY $x12
+    %4:gpr = ADD %1, %2
+    %5:gpr = LH %4, 0
+    %6:gpr = XORI %3, 3
+    $x10 = COPY %6
+    $x11 = COPY %5
+    PseudoRET
+...
+
+# CHECK: add_sw
+# CHECK: Macro fuse: {{.*}}ADD - SW
+---
+name: add_sw
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11, $x12
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = COPY $x12
+    %4:gpr = ADD %1, %2
+    SW %3, %4, 0
+    %5:gpr = XORI %3, 3
+    $x10 = COPY %5
+    PseudoRET
+...
+
+# CHECK: add_sd
+# CHECK: Macro fuse: {{.*}}ADD - SD
+---
+name: add_sd
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11, $x12
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = COPY $x12
+    %4:gpr = ADD %1, %2
+    SD %3, %4, 0
+    %5:gpr = XORI %3, 3
+    $x10 = COPY %5
+    PseudoRET
+...
+
+# Test that add-mem fusion does not happen with non-zero offset
+# CHECK: add_lb_no_fusion
+# CHECK-NOT: Macro fuse: {{.*}}ADD - LB
+---
+name: add_lb_no_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11, $x12
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = COPY $x12
+    %4:gpr = ADD %1, %2
+    %5:gpr = LB %4, 8
+    %6:gpr = XORI %3, 3
+    $x10 = COPY %6
+    $x11 = COPY %5
+    PseudoRET
+...

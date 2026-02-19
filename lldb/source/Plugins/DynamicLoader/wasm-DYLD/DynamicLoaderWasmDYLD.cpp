@@ -72,7 +72,15 @@ lldb::ModuleSP DynamicLoaderWasmDYLD::LoadModuleAtAddress(
           file, link_map_addr, base_addr, base_addr_is_offset))
     return module_sp;
 
-  if (ModuleSP module_sp = m_process->ReadModuleFromMemory(file, base_addr)) {
+  llvm::Expected<ModuleSP> module_sp_or_err =
+      m_process->ReadModuleFromMemory(file, base_addr);
+  if (auto err = module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
+                   "Failed to read module from memory: {0}");
+    return nullptr;
+  }
+
+  if (ModuleSP module_sp = *module_sp_or_err) {
     UpdateLoadedSections(module_sp, link_map_addr, base_addr, false);
     m_process->GetTarget().GetImages().AppendIfNeeded(module_sp);
     return module_sp;
