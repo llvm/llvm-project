@@ -858,6 +858,14 @@ def warn_cxxstruct_memaccess : Warning<
   "first argument in call to "
   "%0 is a pointer to non-trivially copyable type %1">,
   InGroup<NonTrivialMemcall>;
+
+def warn_cxxstruct_memaccess_relocatable
+    : Warning<
+          "calling %0 with a pointer to a type %1 which is trivially "
+          "relocatable but not trivially copyable"
+          "%select{|; did you mean to call 'std::trivially_relocate'?}2">,
+      InGroup<NonTrivialMemcall>;
+
 def note_nontrivial_field : Note<
   "field is non-trivial to %select{copy|default-initialize}0">;
 def err_non_trivial_c_union_in_invalid_context : Error<

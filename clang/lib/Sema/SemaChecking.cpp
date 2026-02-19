@@ -56,6 +56,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h" // TODO: Extract static functions to fix layering.
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
@@ -10572,6 +10573,38 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
   QualType FirstArgTy = Call->getArg(0)->IgnoreParenImpCasts()->getType();
   if (BId == Builtin::BIbzero && !FirstArgTy->getAs<PointerType>())
     return;
+
+  // Try to detect a relocation operation
+  if (getLangOpts().CPlusPlus &&
+      (BId == Builtin::BImemmove || BId == Builtin::BImemcpy)) {
+    const Expr *Dest = Call->getArg(0)->IgnoreParenImpCasts();
+    const Expr *Src = Call->getArg(1)->IgnoreParenImpCasts();
+    QualType DestTy = Dest->getType();
+    QualType SrcTy = Src->getType();
+
+    QualType DestPointeeTy = DestTy->getPointeeType();
+    QualType SrcPointeeTy = SrcTy->getPointeeType();
+    bool HasSameTargetAndSource =
+        !DestPointeeTy.isNull() && !SrcPointeeTy.isNull() &&
+        Context.hasSameUnqualifiedType(DestPointeeTy, SrcPointeeTy);
+
+    if (HasSameTargetAndSource &&
+        !DestPointeeTy.getUnqualifiedType()->isIncompleteType() &&
+        !DestPointeeTy.isConstQualified() && !SrcPointeeTy.isConstQualified() &&
+        !DestPointeeTy.isTriviallyCopyableType(getASTContext()) &&
+        SemaRef.IsCXXTriviallyRelocatableType(DestPointeeTy)) {
+
+      bool SuggestReplacement =
+          getLangOpts().CPlusPlus26 ||
+          getPreprocessor().isMacroDefined("__cpp_lib_trivially_relocatable");
+
+      DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
+                          PDiag(diag::warn_cxxstruct_memaccess_relocatable)
+                              << Call->getCallee()->getSourceRange() << FnName
+                              << DestPointeeTy << SuggestReplacement);
+      return;
+    }
+  }
 
   for (unsigned ArgIdx = 0; ArgIdx != LastArg; ++ArgIdx) {
     const Expr *Dest = Call->getArg(ArgIdx)->IgnoreParenImpCasts();
