@@ -404,8 +404,9 @@ TEST(FormatAndFormatvTest, EquivalentHexFormatting) {
 
   // Here's the old format() way of printing a hex number with
   // dynamic width and precision, both being the same.
-  EXPECT_EQ("0x00000000ff",
-            printToString(100, format("0x%*.*x", HexDigits, HexDigits, N)));
+  EXPECT_EQ(
+      "0x00000000ff",
+      printToString(100, format("0x%*.*" PRIx64, HexDigits, HexDigits, N)));
 
   // Now, do the same with formatv()
   EXPECT_EQ("0x00000000ff",

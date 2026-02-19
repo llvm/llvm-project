@@ -193,9 +193,11 @@ private:
   void CheckStructureComponent(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool HasInvalidWorksharingNesting(
-      const parser::CharBlock &, const OmpDirectiveSet &);
+      const parser::OmpDirectiveName &name, const OmpDirectiveSet &);
+
   bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
   bool IsNestedInDirective(llvm::omp::Directive directive);
+  bool IsCombinedParallelWorksharing(llvm::omp::Directive directive) const;
   bool InTargetRegion();
   void HasInvalidTeamsNesting(
       const llvm::omp::Directive &dir, const parser::CharBlock &source);
@@ -279,7 +281,7 @@ private:
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
   void CheckIteratorModifier(const parser::OmpIterator &x);
-  void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
+  void CheckIterationVariableType(const parser::OpenMPLoopConstruct &x);
   void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
   template <typename T, typename D> bool IsOperatorValid(const T &, const D &);
@@ -330,7 +332,6 @@ private:
   void CheckNestedBlock(
       const parser::OpenMPLoopConstruct &x, const parser::Block &body);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
-  void CheckFullUnroll(const parser::OpenMPLoopConstruct &x);
   void CheckTargetNest(const parser::OpenMPConstruct &x);
   void CheckTargetUpdate();
   void CheckTaskgraph(const parser::OmpBlockConstruct &x);
