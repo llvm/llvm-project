@@ -477,6 +477,72 @@ add_header_library(
 )
 
 add_header_library(
+  ceil
+  HDRS
+    ceil.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  ceilbf16
+  HDRS
+    ceilbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  ceilf
+  HDRS
+    ceilf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  ceilf128
+  HDRS
+    ceilf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  ceilf16
+  HDRS
+    ceilf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  ceill
+  HDRS
+    ceill.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   common_constants
   HDRS
     common_constants.h
