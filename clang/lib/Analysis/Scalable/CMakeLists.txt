@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangAnalysisScalable
+  Analyses/UnsafeBufferUsage/UnsafeBufferUsageExtractor.cpp
   ASTEntityMapping.cpp
   Model/BuildNamespace.cpp
   Model/EntityIdTable.cpp
@@ -10,11 +11,7 @@ add_clang_library(clangAnalysisScalable
   Serialization/JSONFormat.cpp
   Serialization/SerializationFormatRegistry.cpp
   TUSummary/ExtractorRegistry.cpp
-<<<<<<< HEAD
-  Analyses/UnsafeBufferUsage.cpp
-=======
   TUSummary/TUSummaryBuilder.cpp
->>>>>>> eng/PR-170176278
 
   LINK_LIBS
   clangAST
