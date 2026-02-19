@@ -432,6 +432,8 @@ LANGOPT(FixedPoint, 1, 0, NotCompatible, "fixed point types")
 LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0, NotCompatible,
         "unsigned fixed point types having one extra padding bit")
 
+LANGOPT(OverflowBehaviorTypes, 1, 0, NotCompatible, "overflow behavior types")
+
 ENUM_LANGOPT(RegisterStaticDestructors, RegisterStaticDestructorsKind, 2,
              RegisterStaticDestructorsKind::All, NotCompatible,
              "Register C++ static destructors")
