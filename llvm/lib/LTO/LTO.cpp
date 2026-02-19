@@ -81,12 +81,10 @@ Error LTO::setupOptimizationRemarks() {
     return DiagFileOrErr.takeError();
 
   DiagnosticOutputFile = std::move(*DiagFileOrErr);
-
   return Error::success();
 }
 
 void LTO::emitRemark(OptimizationRemark &Remark) {
-
   const Function &F = Remark.getFunction();
   OptimizationRemarkEmitter ORE(const_cast<Function *>(&F));
   ORE.emit(Remark);
