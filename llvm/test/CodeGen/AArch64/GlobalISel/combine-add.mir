@@ -567,7 +567,7 @@ body:             |
 
     %x:_(<4 x s16>) = COPY $x0
     %neg_one:_(s16) = G_CONSTANT i16 -1
-    %neg_one_vec:_(<4 x s16>) = G_BUILD_VECTOR %1(s16), %1(s16), %1(s16), %1(s16)
+    %neg_one_vec:_(<4 x s16>) = G_BUILD_VECTOR %neg_one(s16), %neg_one(s16), %neg_one(s16), %neg_one(s16)
     %add:_(<4 x s16>) = G_ADD %x, %neg_one_vec
     %xor:_(s64) = G_XOR %add, %neg_one_vec
     $x0 = COPY %xor
