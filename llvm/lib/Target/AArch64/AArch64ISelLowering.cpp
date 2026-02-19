@@ -1160,7 +1160,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::SIGN_EXTEND_INREG, ISD::CONCAT_VECTORS,
                        ISD::EXTRACT_SUBVECTOR, ISD::INSERT_SUBVECTOR,
                        ISD::STORE, ISD::BUILD_VECTOR});
-  setTargetDAGCombine(ISD::SMIN);
+  setTargetDAGCombine({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX});
   setTargetDAGCombine(ISD::TRUNCATE);
   setTargetDAGCombine(ISD::LOAD);
 
@@ -9936,8 +9936,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   RetCCInfo.AnalyzeCallResult(Ins, RetCC);
 
   // Set type id for call site info.
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
-    CSInfo = MachineFunction::CallSiteInfo(*CB);
+  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
 
   // Check callee args/returns for SVE registers and set calling convention
   // accordingly.
@@ -22615,14 +22614,6 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::SIGN_EXTEND, DL, DestVT, SQDMULH);
 }
 
-static SDValue performSMINCombine(SDNode *N, SelectionDAG &DAG) {
-  if (SDValue V = trySQDMULHCombine(N, DAG)) {
-    return V;
-  }
-
-  return SDValue();
-}
-
 static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
                                       TargetLowering::DAGCombinerInfo &DCI) {
   SDLoc DL(N);
@@ -26071,14 +26062,14 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
   while (foldIndexIntoBase(BasePtr, Index, N->getScale(), SDLoc(N), DAG))
     Changed = true;
 
+  EVT IndexVT = Index.getValueType();
+  EVT DataVT = N->getOperand(1).getValueType();
+
   // Only consider element types that are pointer sized as smaller types can
   // be easily promoted.
-  EVT IndexVT = Index.getValueType();
   if (IndexVT.getVectorElementType() != MVT::i64 || IndexVT == MVT::nxv2i64)
     return Changed;
 
-  // Can indices be trivially shrunk?
-  EVT DataVT = N->getOperand(1).getValueType();
   // Don't attempt to shrink the index for fixed vectors of 64 bit data since it
   // will later be re-extended to 64 bits in legalization
   if (DataVT.isFixedLengthVector() && DataVT.getScalarSizeInBits() == 64)
@@ -26167,6 +26158,17 @@ static SDValue performMaskedGatherScatterCombine(
                                 MSC->isTruncatingStore());
   }
   auto *HG = cast<MaskedHistogramSDNode>(MGS);
+
+  // Histograms don't do any legalisation on the loaded data type,
+  // so if the 'add' would need to be performed on a vector of i64's, then
+  // we can't use the more optimal addressing with i32 offsets as that
+  // would return a vector of nxv4i32, which wouldn't get widened.
+  if (HG->getInc().getValueType().getScalarSizeInBits() >
+      Index.getValueType().getScalarSizeInBits())
+    // FIXME: If the increment value is a constant or extended value,
+    // we can truncate the increment value.
+    return SDValue();
+
   SDValue Ops[] = {Chain, HG->getInc(), Mask,          BasePtr,
                    Index, Scale,        HG->getIntID()};
   return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), HG->getMemoryVT(),
@@ -28866,6 +28868,48 @@ static SDValue performCTPOPCombine(SDNode *N,
   return DAG.getNegative(NegPopCount, DL, VT);
 }
 
+static unsigned getReductionForOpcode(unsigned Op) {
+  switch (Op) {
+  case ISD::SMIN:
+    return ISD::VECREDUCE_SMIN;
+  case ISD::SMAX:
+    return ISD::VECREDUCE_SMAX;
+  case ISD::UMIN:
+    return ISD::VECREDUCE_UMIN;
+  case ISD::UMAX:
+    return ISD::VECREDUCE_UMAX;
+  default:
+    llvm_unreachable("unimplemented mapping");
+  }
+}
+
+static SDValue performMINMAXCombine(SDNode *N, SelectionDAG &DAG,
+                                    const AArch64TargetLowering &TLI) {
+  using namespace llvm::SDPatternMatch;
+  if (SDValue V = trySQDMULHCombine(N, DAG))
+    return V;
+
+  unsigned ReductionOpcode = getReductionForOpcode(N->getOpcode());
+  if (!TLI.isOperationLegalOrCustom(ReductionOpcode, MVT::v2i64))
+    return SDValue();
+
+  // Fold `min/max(vec[0], vec[1])` to `vecreduce_min/max(vec)` for v2i64.
+
+  APInt Idx;
+  SDValue Vec;
+  if (!sd_match(N->getOperand(0),
+                m_OneUse(m_ExtractElt(m_SpecificVT(MVT::v2i64, m_Value(Vec)),
+                                      m_ConstInt(Idx)))))
+    return SDValue();
+
+  if (!sd_match(
+          N->getOperand(1),
+          m_OneUse(m_ExtractElt(m_Specific(Vec), m_SpecificInt(1 - Idx)))))
+    return SDValue();
+
+  return DAG.getNode(ReductionOpcode, SDLoc(N), N->getValueType(0), Vec);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -28884,8 +28928,11 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performAddSubCombine(N, DCI);
   case ISD::BUILD_VECTOR:
     return performBuildVectorCombine(N, DCI, DAG);
+  case ISD::UMAX:
+  case ISD::UMIN:
+  case ISD::SMAX:
   case ISD::SMIN:
-    return performSMINCombine(N, DAG);
+    return performMINMAXCombine(N, DAG, *this);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DAG, DCI);
   case AArch64ISD::ANDS:

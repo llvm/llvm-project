@@ -1353,7 +1353,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
         // Scan the operands of the operation to decrement the use count of
         // constants. Erase the constant if the use count becomes zero.
         for (Value v : op.getOperands()) {
-          auto cst = dyn_cast<llvm::ConstantAggregate>(lookupValue(v));
+          auto *cst = dyn_cast<llvm::ConstantAggregate>(lookupValue(v));
           if (!cst)
             continue;
           auto iter = constantAggregateUseMap.find(cst);
@@ -1381,7 +1381,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
       // Try to remove the dangling constants again after all operations are
       // converted.
       for (auto it : constantAggregateUseMap) {
-        auto cst = it.first;
+        auto *cst = it.first;
         cst->removeDeadConstantUsers();
         if (cst->user_empty()) {
           cst->destroyConstant();
@@ -2336,7 +2336,7 @@ void ModuleTranslation::setLoopMetadata(Operation *op,
 void ModuleTranslation::setDisjointFlag(Operation *op, llvm::Value *value) {
   auto iface = cast<DisjointFlagInterface>(op);
   // We do a dyn_cast here in case the value got folded into a constant.
-  if (auto disjointInst = dyn_cast<llvm::PossiblyDisjointInst>(value))
+  if (auto *disjointInst = dyn_cast<llvm::PossiblyDisjointInst>(value))
     disjointInst->setIsDisjoint(iface.getIsDisjoint());
 }
 

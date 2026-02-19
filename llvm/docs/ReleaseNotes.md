@@ -95,6 +95,9 @@ Changes to Vectorizers
 Changes to the AArch64 Backend
 ------------------------------
 
+* The `sysp`, `mrrs`, and `msrr` instructions are now accepted without
+  requiring the `+d128` feature gating.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -188,6 +191,11 @@ Changes to the LLVM tools
 
 Changes to LLDB
 ---------------
+
+### Deprecated APIs
+
+* ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
+  have been deprecated. They always return 1, as before.
 
 ### FreeBSD
 

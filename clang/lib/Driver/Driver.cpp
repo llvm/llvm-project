@@ -421,8 +421,8 @@ Driver::executeProgram(llvm::ArrayRef<llvm::StringRef> Args) const {
   return std::move(*OutputBuf);
 }
 
-static Arg *MakeInputArg(DerivedArgList &Args, const OptTable &Opts,
-                         StringRef Value, bool Claim = true) {
+Arg *clang::driver::makeInputArg(DerivedArgList &Args, const OptTable &Opts,
+                                 StringRef Value, bool Claim) {
   Arg *A = new Arg(Opts.getOption(options::OPT_INPUT), Value,
                    Args.getBaseArgs().MakeIndex(Value), Value.data());
   Args.AddSynthesizedArg(A);
@@ -511,7 +511,7 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
     if (A->getOption().matches(options::OPT__DASH_DASH)) {
       A->claim();
       for (StringRef Val : A->getValues())
-        DAL->append(MakeInputArg(*DAL, Opts, Val, false));
+        DAL->append(makeInputArg(*DAL, Opts, Val, false));
       continue;
     }
 
@@ -3138,7 +3138,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       StringRef Value = A->getValue();
       if (DiagnoseInputExistence(Value, types::TY_C,
                                  /*TypoCorrect=*/false)) {
-        Arg *InputArg = MakeInputArg(Args, Opts, A->getValue());
+        Arg *InputArg = makeInputArg(Args, Opts, A->getValue());
         Inputs.push_back(std::make_pair(types::TY_C, InputArg));
       }
       A->claim();
@@ -3146,7 +3146,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       StringRef Value = A->getValue();
       if (DiagnoseInputExistence(Value, types::TY_CXX,
                                  /*TypoCorrect=*/false)) {
-        Arg *InputArg = MakeInputArg(Args, Opts, A->getValue());
+        Arg *InputArg = makeInputArg(Args, Opts, A->getValue());
         Inputs.push_back(std::make_pair(types::TY_CXX, InputArg));
       }
       A->claim();
@@ -3185,7 +3185,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
   if (CCCIsCPP() && Inputs.empty()) {
     // If called as standalone preprocessor, stdin is processed
     // if no other input is present.
-    Arg *A = MakeInputArg(Args, Opts, "-");
+    Arg *A = makeInputArg(Args, Opts, "-");
     Inputs.push_back(std::make_pair(types::TY_C, A));
   }
 }
@@ -3233,14 +3233,14 @@ class OffloadingActionBuilder final {
     DerivedArgList &Args;
 
     /// The inputs associated with this builder.
-    const Driver::InputList &Inputs;
+    const InputList &Inputs;
 
     /// The associated offload kind.
     Action::OffloadKind AssociatedOffloadKind = Action::OFK_None;
 
   public:
     DeviceActionBuilder(Compilation &C, DerivedArgList &Args,
-                        const Driver::InputList &Inputs,
+                        const InputList &Inputs,
                         Action::OffloadKind AssociatedOffloadKind)
         : C(C), Args(Args), Inputs(Inputs),
           AssociatedOffloadKind(AssociatedOffloadKind) {}
@@ -3337,8 +3337,7 @@ class OffloadingActionBuilder final {
 
   public:
     CudaActionBuilderBase(Compilation &C, DerivedArgList &Args,
-                          const Driver::InputList &Inputs,
-                          Action::OffloadKind OFKind)
+                          const InputList &Inputs, Action::OffloadKind OFKind)
         : DeviceActionBuilder(C, Args, Inputs, OFKind),
           CUIDOpts(C.getDriver().getCUIDOpts()) {
 
@@ -3509,7 +3508,7 @@ class OffloadingActionBuilder final {
   class CudaActionBuilder final : public CudaActionBuilderBase {
   public:
     CudaActionBuilder(Compilation &C, DerivedArgList &Args,
-                      const Driver::InputList &Inputs)
+                      const InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_Cuda) {
       DefaultOffloadArch = OffloadArch::CudaDefault;
     }
@@ -3638,7 +3637,7 @@ class OffloadingActionBuilder final {
 
   public:
     HIPActionBuilder(Compilation &C, DerivedArgList &Args,
-                     const Driver::InputList &Inputs)
+                     const InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_HIP) {
 
       DefaultOffloadArch = OffloadArch::HIPDefault;
@@ -3899,7 +3898,7 @@ class OffloadingActionBuilder final {
 
 public:
   OffloadingActionBuilder(Compilation &C, DerivedArgList &Args,
-                          const Driver::InputList &Inputs)
+                          const InputList &Inputs)
       : C(C) {
     // Create a specialized builder for each device toolchain.
 
