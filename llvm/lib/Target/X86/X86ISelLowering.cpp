@@ -24370,7 +24370,7 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
   assert(And.getValueType().isScalarInteger() && "Scalar type expected");
 
   APInt AndRHSVal;
-  SDValue Shl, Src, BitNo;
+  SDValue Shl, Src, Mask, BitNo;
   if (sd_match(And,
                m_And(m_TruncOrSelf(m_Value(Src)),
                      m_TruncOrSelf(m_AllOf(m_Value(Shl),
@@ -24384,6 +24384,10 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
       if (Known.countMinLeadingZeros() < (BitWidth - AndBitWidth))
         return SDValue();
     }
+  } else if (sd_match(And,
+                      m_ReassociatableAnd(m_Value(Src), m_Value(Mask),
+                                          m_Shl(m_One(), m_Value(BitNo))))) {
+    // (Src & Mask & (1 << BitNo)) ==/!= 0
   } else if (sd_match(And,
                       m_And(m_TruncOrSelf(m_Srl(m_Value(Src), m_Value(BitNo))),
                             m_One()))) {
@@ -24401,6 +24405,9 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
     // No patterns found, give up.
     return SDValue();
   }
+
+  if (Mask)
+    Src = DAG.getNode(ISD::AND, dl, Src.getValueType(), Src, Mask);
 
   // Remove any bit flip.
   if (isBitwiseNot(Src)) {
@@ -39314,6 +39321,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     }
     break;
   }
+  case X86ISD::FANDN:
   case X86ISD::ANDNP: {
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
