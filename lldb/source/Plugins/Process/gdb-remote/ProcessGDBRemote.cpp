@@ -95,6 +95,10 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#if defined(_AIX)
+#include <sys/ldr.h>
+#endif
+
 #if defined(__APPLE__)
 #define DEBUGSERVER_BASENAME "debugserver"
 #elif defined(_WIN32)
@@ -3215,6 +3219,13 @@ Status ProcessGDBRemote::DoGetMemoryRegionInfo(addr_t load_addr,
   Status error(m_gdb_comm.GetMemoryRegionInfo(load_addr, region_info));
   return error;
 }
+
+#if defined(_AIX)
+Status ProcessGDBRemote::DoGetLDXINFO(struct ld_xinfo *info_ptr) {
+  Status error(m_gdb_comm.GetLDXINFO(info_ptr));
+  return error;
+}
+#endif
 
 std::optional<uint32_t> ProcessGDBRemote::GetWatchpointSlotCount() {
   return m_gdb_comm.GetWatchpointSlotCount();

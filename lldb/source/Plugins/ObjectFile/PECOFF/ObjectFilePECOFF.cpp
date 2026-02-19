@@ -260,8 +260,13 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
   if (!extractor_sp || !extractor_sp->HasData() ||
-      !ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
+      !ObjectFilePECOFF::MagicBytesMatch(extractor_sp)) {
+#if !defined(_AIX)
     return initial_count;
+#else
+    return specs.GetSize() - initial_count;
+#endif
+  }
 
   Log *log = GetLog(LLDBLog::Object);
 
@@ -275,12 +280,21 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}", file);
+#if !defined(_AIX)
     return initial_count;
+#else
+    return specs.GetSize() - initial_count;
+#endif
   }
 
   auto *COFFObj = llvm::dyn_cast<llvm::object::COFFObjectFile>(binary->get());
-  if (!COFFObj)
+  if (!COFFObj){
+#if !defined(_AIX)
     return initial_count;
+#else
+    return specs.GetSize() - initial_count;
+#endif
+  }
 
   ModuleSpec module_spec(file);
   ArchSpec &spec = module_spec.GetArchitecture();

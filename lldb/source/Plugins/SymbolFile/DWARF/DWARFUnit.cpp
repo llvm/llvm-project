@@ -1020,6 +1020,12 @@ const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
   return *m_func_aranges_up;
 }
 
+/* AIX-NOTE - TODO: Removed conflicting code due to merge conflicts
+ * Refer Patches: 27,28,29,30,35 and 76 
+ * and modify the code accordingly. */
+
+bool UGLY_FLAG_FOR_AIX __attribute__((weak)) = false;
+
 llvm::Expected<DWARFUnitSP>
 DWARFUnit::extract(SymbolFileDWARF &dwarf, user_id_t uid,
                    const DWARFDataExtractor &debug_info,

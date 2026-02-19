@@ -1,4 +1,4 @@
-//===-- Host.cpp ----------------------------------------------------------===//
+
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,6 +20,7 @@
 #include <spawn.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+
 #include <unistd.h>
 #endif
 
@@ -344,8 +345,31 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) { return false; }
 
 #ifndef _WIN32
 
+#if defined(_AIX)
+
+#include <stdio.h>
+extern char **p_xargv;
+
+#endif
+
 FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   FileSpec module_filespec;
+#ifdef _AIX
+  // TODO: As the current AIX LLDB is static, we don't need dladdr which is
+  // only for shared library, Below is the hack to find the module name
+  // for static LLDB
+  // FIXME: If LLDB is later built as shared library, we have to find the way simillar to dladdr
+  // since AIX does not support the dladdr API.
+  if (host_addr == reinterpret_cast<void *>(HostInfoBase::ComputeSharedLibraryDirectory)) {
+    // FIXME: AIX dladdr return "lldb" for this case
+    if (p_xargv[0]) {
+      module_filespec.SetFile(p_xargv[0], FileSpec::Style::native);
+      FileSystem::Instance().Resolve(module_filespec);
+      return module_filespec;
+    }
+  }
+#else
+#if !defined(__ANDROID__)
   Dl_info info;
   if (::dladdr(host_addr, &info)) {
     if (info.dli_fname) {
@@ -353,15 +377,11 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
       FileSystem::Instance().Resolve(module_filespec);
     }
   }
+#endif
+#endif
   return module_filespec;
 }
 
-#endif
-
-#if !defined(__linux__)
-bool Host::FindProcessThreads(const lldb::pid_t pid, TidMap &tids_to_attach) {
-  return false;
-}
 #endif
 
 struct ShellInfo {

@@ -75,6 +75,10 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Timer.h"
 
+#if defined(_AIX)
+#include <sys/ldr.h>
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace std::chrono;
@@ -6395,6 +6399,12 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
 
   return error;
 }
+
+#if defined(_AIX)
+Status Process::GetLDXINFO(struct ld_xinfo *info_ptr) {
+  return DoGetLDXINFO(info_ptr);
+}
+#endif
 
 Status Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
   Status error;
