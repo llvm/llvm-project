@@ -17353,15 +17353,15 @@ static SDValue combineXorSelectCC(SDNode *N, SelectionDAG &DAG) {
   if (SelectNode.getNumOperands() != 4)
     return SDValue();
 
-  ConstantSDNode *TrueOp = dyn_cast<ConstantSDNode>(SelectNode.getOperand(1));
-  ConstantSDNode *FalseOp = dyn_cast<ConstantSDNode>(SelectNode.getOperand(2));
+  ConstantSDNode *ConstOp1 = dyn_cast<ConstantSDNode>(SelectNode.getOperand(1));
+  ConstantSDNode *ConstOp2 = dyn_cast<ConstantSDNode>(SelectNode.getOperand(2));
 
-  if (!TrueOp || !FalseOp)
+  if (!ConstOp1 || !ConstOp2)
     return SDValue();
 
   // Only optimize if operands are {0, 1} or {1, 0}
-  if (!((TrueOp->isOne() && FalseOp->isZero()) ||
-        (TrueOp->isZero() && FalseOp->isOne())))
+  if (!((ConstOp1->isOne() && ConstOp2->isZero()) ||
+        (ConstOp1->isZero() && ConstOp2->isOne())))
     return SDValue();
 
   // Pattern matched! Create new SELECT_CC with swapped 0/1 operands to
@@ -17371,12 +17371,12 @@ static SDValue combineXorSelectCC(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   MachineOpc = (XorVT == MVT::i32) ? PPC::SELECT_CC_I4 : PPC::SELECT_CC_I8;
 
-  bool TrueOpIsOne = TrueOp->isOne();
+  bool ConstOp1IsOne = ConstOp1->isOne();
   return SDValue(
       DAG.getMachineNode(MachineOpc, DL, XorVT,
                          {SelectNode.getOperand(0),
-                          DAG.getConstant(TrueOpIsOne ? 0 : 1, DL, XorVT),
-                          DAG.getConstant(TrueOpIsOne ? 1 : 0, DL, XorVT),
+                          DAG.getConstant(ConstOp1IsOne ? 0 : 1, DL, XorVT),
+                          DAG.getConstant(ConstOp1IsOne ? 1 : 0, DL, XorVT),
                           SelectNode.getOperand(3)}),
       0);
 }
