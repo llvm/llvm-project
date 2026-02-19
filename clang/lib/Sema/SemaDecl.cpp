@@ -7050,45 +7050,43 @@ static void SetNestedNameSpecifier(Sema &S, DeclaratorDecl *DD, Declarator &D) {
   DD->setQualifierInfo(SS.getWithLocInContext(S.Context));
 }
 
-void Sema::deduceOpenCLAddressSpace(ValueDecl *Decl) {
-  if (Decl->getType().hasAddressSpace())
+void Sema::deduceOpenCLAddressSpace(VarDecl *Var) {
+  QualType Type = Var->getType();
+  if (Type.hasAddressSpace())
     return;
-  if (Decl->getType()->isDependentType())
+  if (Type->isDependentType())
     return;
-  if (VarDecl *Var = dyn_cast<VarDecl>(Decl)) {
-    QualType Type = Var->getType();
-    if (Type->isSamplerT() || Type->isVoidType())
-      return;
-    LangAS ImplAS = LangAS::opencl_private;
-    // OpenCL C v3.0 s6.7.8 - For OpenCL C 2.0 or with the
-    // __opencl_c_program_scope_global_variables feature, the address space
-    // for a variable at program scope or a static or extern variable inside
-    // a function are inferred to be __global.
-    if (getOpenCLOptions().areProgramScopeVariablesSupported(getLangOpts()) &&
-        Var->hasGlobalStorage())
-      ImplAS = LangAS::opencl_global;
-    // If the original type from a decayed type is an array type and that array
-    // type has no address space yet, deduce it now.
-    if (auto DT = dyn_cast<DecayedType>(Type)) {
-      auto OrigTy = DT->getOriginalType();
-      if (!OrigTy.hasAddressSpace() && OrigTy->isArrayType()) {
-        // Add the address space to the original array type and then propagate
-        // that to the element type through `getAsArrayType`.
-        OrigTy = Context.getAddrSpaceQualType(OrigTy, ImplAS);
-        OrigTy = QualType(Context.getAsArrayType(OrigTy), 0);
-        // Re-generate the decayed type.
-        Type = Context.getDecayedType(OrigTy);
-      }
+  if (Type->isSamplerT() || Type->isVoidType())
+    return;
+  LangAS ImplAS = LangAS::opencl_private;
+  // OpenCL C v3.0 s6.7.8 - For OpenCL C 2.0 or with the
+  // __opencl_c_program_scope_global_variables feature, the address space
+  // for a variable at program scope or a static or extern variable inside
+  // a function are inferred to be __global.
+  if (getOpenCLOptions().areProgramScopeVariablesSupported(getLangOpts()) &&
+      Var->hasGlobalStorage())
+    ImplAS = LangAS::opencl_global;
+  // If the original type from a decayed type is an array type and that array
+  // type has no address space yet, deduce it now.
+  if (auto DT = dyn_cast<DecayedType>(Type)) {
+    auto OrigTy = DT->getOriginalType();
+    if (!OrigTy.hasAddressSpace() && OrigTy->isArrayType()) {
+      // Add the address space to the original array type and then propagate
+      // that to the element type through `getAsArrayType`.
+      OrigTy = Context.getAddrSpaceQualType(OrigTy, ImplAS);
+      OrigTy = QualType(Context.getAsArrayType(OrigTy), 0);
+      // Re-generate the decayed type.
+      Type = Context.getDecayedType(OrigTy);
     }
-    Type = Context.getAddrSpaceQualType(Type, ImplAS);
-    // Apply any qualifiers (including address space) from the array type to
-    // the element type. This implements C99 6.7.3p8: "If the specification of
-    // an array type includes any type qualifiers, the element type is so
-    // qualified, not the array type."
-    if (Type->isArrayType())
-      Type = QualType(Context.getAsArrayType(Type), 0);
-    Decl->setType(Type);
   }
+  Type = Context.getAddrSpaceQualType(Type, ImplAS);
+  // Apply any qualifiers (including address space) from the array type to
+  // the element type. This implements C99 6.7.3p8: "If the specification of
+  // an array type includes any type qualifiers, the element type is so
+  // qualified, not the array type."
+  if (Type->isArrayType())
+    Type = QualType(Context.getAsArrayType(Type), 0);
+  Var->setType(Type);
 }
 
 static void checkWeakAttr(Sema &S, NamedDecl &ND) {
@@ -14136,6 +14134,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   //   struct T { S a, b; } t = { Temp(), Temp() }
   //
   // we should destroy the first Temp before constructing the second.
+
+  // Set context flag for OverflowBehaviorType initialization analysis
+  llvm::SaveAndRestore OBTAssignmentContext(InOverflowBehaviorAssignmentContext,
+                                            true);
   ExprResult Result =
       ActOnFinishFullExpr(Init, VDecl->getLocation(),
                           /*DiscardedValue*/ false, VDecl->isConstexpr());

@@ -52,10 +52,10 @@ define amdgpu_kernel void @zot() {
 bb:
   %alloca = alloca %struct.barney, align 16, addrspace(5)
   %alloca1 = alloca %struct.barney, align 16, addrspace(5)
-  store i32 0, ptr addrspace(5) null, align 2147483648
+  store i32 0, ptr addrspace(5) zeroinitializer, align 2147483648
   call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) noundef align 16 dereferenceable(16) %alloca1, ptr addrspace(5) noundef align 16 dereferenceable(16) %alloca, i64 16, i1 false)
   call void @llvm.memcpy.p5.p0.i64(ptr addrspace(5) noundef align 16 dereferenceable(16) %alloca, ptr noundef nonnull align 1 dereferenceable(16) poison, i64 16, i1 false)
-  %load = load volatile ptr, ptr addrspace(5) null, align 2147483648
+  %load = load volatile ptr, ptr addrspace(5) zeroinitializer, align 2147483648
   br label %bb2
 
 bb2:                                              ; preds = %bb2, %bb

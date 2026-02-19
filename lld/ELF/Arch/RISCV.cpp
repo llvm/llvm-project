@@ -8,7 +8,6 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
-#include "RISCVInternalRelocations.h"
 #include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -345,17 +344,56 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_SUB_ULEB128:
     return RE_RISCV_LEB128;
   default:
-    if (type.v & INTERNAL_RISCV_VENDOR_MASK) {
-      Err(ctx) << getErrorLoc(ctx, loc)
-               << "unsupported vendor-specific relocation " << type
-               << " against symbol " << &s;
-      return R_NONE;
-    }
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation ("
-             << (type.v & ~INTERNAL_RISCV_VENDOR_MASK) << ") against symbol "
-             << &s;
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
+}
+
+template <class ELFT, class RelTy>
+void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  // Many relocations end up in sec.relocations.
+  sec.relocations.reserve(rels.size());
+
+  StringRef rvVendor;
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    RelType type = it->getType(false);
+    uint32_t symIndex = it->getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
+    const uint8_t *loc = sec.content().data() + it->r_offset;
+
+    if (type == R_RISCV_VENDOR) {
+      if (!rvVendor.empty())
+        Err(ctx) << getErrorLoc(ctx, loc)
+                 << "malformed consecutive R_RISCV_VENDOR relocations";
+      rvVendor = sym.getName();
+      continue;
+    } else if (!rvVendor.empty()) {
+      Err(ctx) << getErrorLoc(ctx, loc)
+               << "unknown vendor-specific relocation (" << type.v
+               << ") in namespace '" << rvVendor << "' against symbol '" << &sym
+               << "'";
+      rvVendor = "";
+      continue;
+    }
+
+    rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
+  }
+
+  // Sort relocations by offset for more efficient searching for
+  // R_RISCV_PCREL_HI20.
+  llvm::stable_sort(sec.relocs(),
+                    [](const Relocation &lhs, const Relocation &rhs) {
+                      return lhs.offset < rhs.offset;
+                    });
+}
+
+void RISCV::scanSection(InputSectionBase &sec) {
+  if (ctx.arg.is64)
+    elf::scanSection1<RISCV, ELF64LE>(*this, sec);
+  else
+    elf::scanSection1<RISCV, ELF32LE>(*this, sec);
 }
 
 void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
@@ -871,7 +909,7 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
 
   std::fill_n(aux.relocTypes.get(), relocs.size(), R_RISCV_NONE);
   aux.writes.clear();
-  for (auto [i, r] : llvm::enumerate(riscv_vendor_relocs(relocs))) {
+  for (auto [i, r] : llvm::enumerate(relocs)) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;
     switch (r.type) {
@@ -1494,71 +1532,3 @@ void elf::mergeRISCVAttributesSections(Ctx &ctx) {
 }
 
 void elf::setRISCVTargetInfo(Ctx &ctx) { ctx.target.reset(new RISCV(ctx)); }
-
-template <class ELFT, class RelTy>
-void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
-  // Many relocations end up in sec.relocations.
-  sec.relocations.reserve(rels.size());
-
-  StringRef rvVendor;
-  for (auto it = rels.begin(); it != rels.end(); ++it) {
-    RelType type = it->getType(false);
-    uint32_t symIndex = it->getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
-    const uint8_t *loc = sec.content().data() + it->r_offset;
-
-    if (type == R_RISCV_VENDOR) {
-      if (!rvVendor.empty())
-        Err(ctx) << getErrorLoc(ctx, loc)
-                 << "malformed consecutive R_RISCV_VENDOR relocations";
-      rvVendor = sym.getName();
-      continue;
-    } else if (!rvVendor.empty()) {
-      uint32_t VendorFlag = getRISCVVendorRelMarker(rvVendor);
-      if (!VendorFlag) {
-        Err(ctx) << getErrorLoc(ctx, loc)
-                 << "unknown vendor-specific relocation (" << type.v
-                 << ") in namespace '" << rvVendor << "' against symbol '"
-                 << &sym << "'";
-        rvVendor = "";
-        continue;
-      }
-
-      rvVendor = "";
-      assert((type.v < 256) && "Out of range relocation detected!");
-      type.v |= VendorFlag;
-    }
-
-    rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
-  }
-
-  // Sort relocations by offset for more efficient searching for
-  // R_RISCV_PCREL_HI20.
-  llvm::stable_sort(sec.relocs(),
-                    [](const Relocation &lhs, const Relocation &rhs) {
-                      return lhs.offset < rhs.offset;
-                    });
-}
-
-void RISCV::scanSection(InputSectionBase &sec) {
-  if (ctx.arg.is64)
-    elf::scanSection1<RISCV, ELF64LE>(*this, sec);
-  else
-    elf::scanSection1<RISCV, ELF32LE>(*this, sec);
-}
-
-uint32_t elf::getRISCVVendorRelMarker(StringRef rvVendor) {
-  return StringSwitch<uint32_t>(rvVendor)
-      .Case("QUALCOMM", INTERNAL_RISCV_VENDOR_QUALCOMM)
-      .Case("ANDES", INTERNAL_RISCV_VENDOR_ANDES)
-      .Default(0);
-}
-
-std::optional<StringRef> elf::getRISCVVendorString(RelType ty) {
-  if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_QUALCOMM)
-    return "QUALCOMM";
-  if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_ANDES)
-    return "ANDES";
-  return std::nullopt;
-}

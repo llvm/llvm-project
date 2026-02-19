@@ -1,56 +1,57 @@
-; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-after-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s --implicit-check-not "VPlan after"
+; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-after-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s --implicit-check-not "VPlan for loop in 'foo' after"
 ; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-after-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s --check-prefix CHECK-DUMP
 
 ; Verify that `-vplan-print-after-all` option works.
 
-; CHECK: VPlan after printAfterInitialConstruction
-; CHECK: VPlan after VPlanTransforms::clearReductionWrapFlags
-; CHECK: VPlan after VPlanTransforms::optimizeFindIVReductions
-; CHECK: VPlan after VPlanTransforms::handleMultiUseReductions
-; CHECK: VPlan after VPlanTransforms::handleMaxMinNumReductions
-; CHECK: VPlan after VPlanTransforms::handleFindLastReductions
-; CHECK: VPlan after VPlanTransforms::createPartialReductions
-; CHECK: VPlan after VPlanTransforms::convertToAbstractRecipes
-; CHECK: VPlan after VPlanTransforms::createInterleaveGroups
-; CHECK: VPlan after VPlanTransforms::replaceSymbolicStrides
-; CHECK: VPlan after VPlanTransforms::dropPoisonGeneratingRecipes
-; CHECK: VPlan after VPlanTransforms::adjustFixedOrderRecurrences
-; CHECK: VPlan after VPlanTransforms::truncateToMinimalBitwidths
-; CHECK: VPlan after removeRedundantCanonicalIVs
-; CHECK: VPlan after removeRedundantInductionCasts
-; CHECK: VPlan after reassociateHeaderMask
-; CHECK: VPlan after simplifyRecipes
-; CHECK: VPlan after removeDeadRecipes
-; CHECK: VPlan after simplifyBlends
-; CHECK: VPlan after legalizeAndOptimizeInductions
-; CHECK: VPlan after narrowToSingleScalarRecipes
-; CHECK: VPlan after removeRedundantExpandSCEVRecipes
-; CHECK: VPlan after reassociateHeaderMask
-; CHECK: VPlan after simplifyRecipes
-; CHECK: VPlan after removeBranchOnConst
-; CHECK: VPlan after removeDeadRecipes
-; CHECK: VPlan after createAndOptimizeReplicateRegions
-; CHECK: VPlan after hoistInvariantLoads
-; CHECK: VPlan after mergeBlocksIntoPredecessors
-; CHECK: VPlan after licm
-; CHECK: VPlan after VPlanTransforms::optimize
-; CHECK: VPlan after VPlanTransforms::materializeConstantVectorTripCount
-; CHECK: VPlan after VPlanTransforms::unrollByUF
-; CHECK: VPlan after VPlanTransforms::materializePacksAndUnpacks
-; CHECK: VPlan after VPlanTransforms::materializeBroadcasts
-; CHECK: VPlan after VPlanTransforms::replicateByVF
-; CHECK: VPlan after printFinalVPlan
+; CHECK: VPlan for loop in 'foo' after printAfterInitialConstruction
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::introduceMasksAndLinearize
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::clearReductionWrapFlags
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimizeFindIVReductions
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::handleMultiUseReductions
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::handleMaxMinNumReductions
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::handleFindLastReductions
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createPartialReductions
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToAbstractRecipes
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createInterleaveGroups
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replaceSymbolicStrides
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::dropPoisonGeneratingRecipes
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::adjustFixedOrderRecurrences
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::truncateToMinimalBitwidths
+; CHECK: VPlan for loop in 'foo' after removeRedundantCanonicalIVs
+; CHECK: VPlan for loop in 'foo' after removeRedundantInductionCasts
+; CHECK: VPlan for loop in 'foo' after reassociateHeaderMask
+; CHECK: VPlan for loop in 'foo' after simplifyRecipes
+; CHECK: VPlan for loop in 'foo' after removeDeadRecipes
+; CHECK: VPlan for loop in 'foo' after simplifyBlends
+; CHECK: VPlan for loop in 'foo' after legalizeAndOptimizeInductions
+; CHECK: VPlan for loop in 'foo' after narrowToSingleScalarRecipes
+; CHECK: VPlan for loop in 'foo' after removeRedundantExpandSCEVRecipes
+; CHECK: VPlan for loop in 'foo' after reassociateHeaderMask
+; CHECK: VPlan for loop in 'foo' after simplifyRecipes
+; CHECK: VPlan for loop in 'foo' after removeBranchOnConst
+; CHECK: VPlan for loop in 'foo' after removeDeadRecipes
+; CHECK: VPlan for loop in 'foo' after createAndOptimizeReplicateRegions
+; CHECK: VPlan for loop in 'foo' after hoistInvariantLoads
+; CHECK: VPlan for loop in 'foo' after mergeBlocksIntoPredecessors
+; CHECK: VPlan for loop in 'foo' after licm
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimize
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializeConstantVectorTripCount
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::unrollByUF
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializePacksAndUnpacks
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializeBroadcasts
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replicateByVF
+; CHECK: VPlan for loop in 'foo' after printFinalVPlan
 
 ; Also verify that VPlans are actually printed (we aren't interested in the
 ; exact dump content, just that it's performed):
 
-; CHECK-DUMP:      VPlan after printAfterInitialConstruction
+; CHECK-DUMP:      VPlan for loop in 'foo' after printAfterInitialConstruction
 ; CHECK-DUMP-NEXT: VPlan ' for UF>=1' {
 ;
-; CHECK-DUMP:      VPlan after VPlanTransforms::optimize{{$}}
+; CHECK-DUMP:      VPlan for loop in 'foo' after VPlanTransforms::optimize{{$}}
 ; CHECK-DUMP-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
 ;
-; CHECK-DUMP:      VPlan after printFinalVPlan
+; CHECK-DUMP:      VPlan for loop in 'foo' after printFinalVPlan
 ; CHECK-DUMP-NEXT: VPlan 'Final VPlan for VF={4},UF={1}' {
 
 define void @foo(ptr %ptr, i64 %n) {

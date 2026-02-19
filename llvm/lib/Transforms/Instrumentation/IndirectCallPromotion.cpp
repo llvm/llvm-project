@@ -216,8 +216,8 @@ static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
   assert(AddressPointOffset < VTable->getGlobalSize(M.getDataLayout()) &&
          "Out-of-bound access");
 
-  return ConstantExpr::getInBoundsGetElementPtr(
-      Type::getInt8Ty(Context), VTable,
+  return ConstantExpr::getInBoundsPtrAdd(
+      VTable,
       llvm::ConstantInt::get(Type::getInt32Ty(Context), AddressPointOffset));
 }
 

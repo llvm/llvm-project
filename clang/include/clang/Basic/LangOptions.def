@@ -249,6 +249,7 @@ LANGOPT(HLSLStrictAvailability, 1, 0, NotCompatible,
         "Strict availability diagnostic mode for HLSL built-in functions.")
 LANGOPT(HLSLSpvUseUnknownImageFormat, 1, 0, NotCompatible, "For storage images and texel buffers, sets the default format to 'Unknown' when not specified via the `vk::image_format` attribute. If this option is not used, the format is inferred from the resource's data type.")
 LANGOPT(HLSLSpvEnableMaximalReconvergence, 1, 0, NotCompatible, "Enables the MaximallyReconvergesKHR execution mode for this module. This ensures that control flow reconverges at well-defined merge points as defined by the Vulkan spec.")
+LANGOPT(EmitStructuredGEP, 1, 0, NotCompatible, "Emit structured GEP intrinsics instead of GEP instructions")
 
 LANGOPT(CUDAIsDevice      , 1, 0, NotCompatible, "compiling for CUDA device")
 LANGOPT(CUDAHostDeviceConstexpr, 1, 1, NotCompatible, "treating unattributed constexpr functions as __host__ __device__")
@@ -431,6 +432,8 @@ LANGOPT(FixedPoint, 1, 0, NotCompatible, "fixed point types")
 LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0, NotCompatible,
         "unsigned fixed point types having one extra padding bit")
 
+LANGOPT(OverflowBehaviorTypes, 1, 0, NotCompatible, "overflow behavior types")
+
 ENUM_LANGOPT(RegisterStaticDestructors, RegisterStaticDestructorsKind, 2,
              RegisterStaticDestructorsKind::All, NotCompatible,
              "Register C++ static destructors")
@@ -503,6 +506,8 @@ LANGOPT(CheckConstexprFunctionBodies, 1, 1, Benign,
 LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
 
 LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Lifetime safety analysis for C++")
+
+LANGOPT(LifetimeSafetyMaxCFGBlocks, 32, 0, NotCompatible, "Skip LifetimeSafety analysis for functions with CFG block count exceeding this threshold. Specify 0 for no limit")
 
 LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Lifetime safety inference analysis for C++")
 

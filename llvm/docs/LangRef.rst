@@ -32294,3 +32294,25 @@ itself. Specifically, the first byte of the instruction will be between
 0x70 and 0x7F, and the second byte will be 0xFE.
 
 There are currently no guarantees about instructions used by other backends.
+
+'``llvm.looptrap``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.looptrap() cold noreturn nounwind
+
+Overview:
+"""""""""
+
+The '``llvm.looptrap``' intrinsic is equivalent to
+``llvm.cond.loop(true)``, but is also considered to be ``noreturn``,
+which enables certain optimizations by allowing the optimizer to
+assume that a branch leading to a call to this intrinsic was not
+taken. A late optimization pass will convert this intrinsic to either
+``llvm.cond.loop(true)`` or ``llvm.cond.loop(pred)``, where ``pred``
+is a predicate for a conditional branch leading to the intrinsic call,
+if possible.

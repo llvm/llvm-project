@@ -42,7 +42,6 @@ using namespace llvm;
 #include "RISCVGenCompressInstEmitter.inc"
 
 #define GET_INSTRINFO_CTOR_DTOR
-#define GET_INSTRINFO_NAMED_OPS
 #include "RISCVGenInstrInfo.inc"
 
 #define DEBUG_TYPE "riscv-instr-info"
@@ -542,8 +541,8 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       }
 
       if (STI.hasStdExtP()) {
-        // On RV32P, `addd` is a GPR Pair Add
-        BuildMI(MBB, MBBI, DL, get(RISCV::ADDD), DstReg)
+        // On RV32P, `padd.dw` is a GPR Pair Add
+        BuildMI(MBB, MBBI, DL, get(RISCV::PADD_DW), DstReg)
             .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
             .addReg(RISCV::X0_Pair);
         return;

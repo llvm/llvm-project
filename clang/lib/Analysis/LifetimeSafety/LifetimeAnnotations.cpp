@@ -317,12 +317,33 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
 
   if (!MD.getIdentifier())
     return false;
+
+  StringRef MethodName = MD.getName();
+
+  // Special handling for 'erase':
+  // It invalidates the whole container (effectively) for contiguous/flat
+  // storage, but is safe for other iterators in node-based containers.
+  if (MethodName == "erase") {
+    static const llvm::StringSet<> NodeBasedContainers = {"map",
+                                                          "set",
+                                                          "multimap",
+                                                          "multiset",
+                                                          "unordered_map",
+                                                          "unordered_set",
+                                                          "unordered_multimap",
+                                                          "unordered_multiset"};
+
+    // 'erase' invalidates for non node-based containers (vector, deque, string,
+    // flat_map).
+    return !NodeBasedContainers.contains(ContainerName);
+  }
+
   static const llvm::StringSet<> InvalidatingMembers = {
       // Basic Insertion/Emplacement
       "push_front", "push_back", "emplace_front", "emplace_back", "insert",
       "emplace", "push",
       // Basic Removal/Clearing
-      "pop_front", "pop_back", "pop", "erase", "clear",
+      "pop_front", "pop_back", "pop", "clear",
       // Memory Management
       "reserve", "resize", "shrink_to_fit",
       // Assignment (Named)
@@ -331,6 +352,7 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
       "append", "replace",
       // Modern C++ (C++17/23)
       "extract", "try_emplace", "insert_range", "append_range", "assign_range"};
-  return InvalidatingMembers.contains(MD.getName());
+
+  return InvalidatingMembers.contains(MethodName);
 }
 } // namespace clang::lifetimes

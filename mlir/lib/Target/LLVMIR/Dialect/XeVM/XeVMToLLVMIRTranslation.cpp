@@ -68,7 +68,7 @@ private:
         attrs, std::back_inserter(decorations),
         [&ctx, i32Ty](Attribute attr) -> llvm::Metadata * {
           auto valuesArray = dyn_cast<ArrayAttr>(attr).getValue();
-          std::array<llvm::Metadata *, 4> metadata;
+          std::array<llvm::Metadata *, 3> metadata;
           llvm::transform(
               valuesArray, metadata.begin(), [i32Ty](Attribute valueAttr) {
                 return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(

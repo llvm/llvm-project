@@ -8,10 +8,10 @@
 //
 // This file implements a remote procedure call mechanism to communicate between
 // heterogeneous devices that can share an address space atomically. We provide
-// a client and a server to facilitate the remote call. The client makes request
-// to the server using a shared communication channel. We use separate atomic
-// signals to indicate which side, the client or the server is in ownership of
-// the buffer.
+// a client and a server to facilitate the remote call. The client makes
+// requests to the server using a shared communication channel. We use separate
+// atomic signals to indicate which side, the client or the server is in
+// ownership of the buffer.
 //
 //===----------------------------------------------------------------------===//
 
@@ -36,7 +36,7 @@ namespace rpc {
 #define __scoped_atomic_thread_fence(ord, scp) __atomic_thread_fence(ord)
 #endif
 
-/// Generic codes that can be used whem implementing the server.
+/// Generic codes that can be used when implementing the server.
 enum Status {
   RPC_SUCCESS = 0x0,
   RPC_ERROR = 0x1000,
@@ -242,7 +242,7 @@ template <bool Invert> struct Process {
     return Invert ? 0 : mailbox_bytes(port_count);
   }
 
-  /// Offset of the buffer containing the packets after the inbox and outbox.
+  /// Offset of the header containing the opcode and mask after the mailboxes.
   RPC_ATTRS static constexpr uint64_t header_offset(uint32_t port_count) {
     return align_up(2 * mailbox_bytes(port_count), alignof(Header));
   }
@@ -297,13 +297,13 @@ template <bool T> struct Port {
                  uint32_t index, uint32_t out)
       : process(process), lane_mask(lane_mask), lane_size(lane_size),
         index(index), out(out), receive(false), owns_buffer(true) {}
-  RPC_ATTRS ~Port() = default;
+  RPC_ATTRS ~Port() { close(); }
 
 private:
   RPC_ATTRS Port(const Port &) = delete;
   RPC_ATTRS Port &operator=(const Port &) = delete;
-  RPC_ATTRS Port(Port &&) = default;
-  RPC_ATTRS Port &operator=(Port &&) = default;
+  RPC_ATTRS Port(Port &&) = delete;
+  RPC_ATTRS Port &operator=(Port &&) = delete;
 
   friend struct Client;
   friend struct Server;
@@ -332,18 +332,18 @@ public:
     return lane_mask;
   }
 
+private:
   RPC_ATTRS void close() {
     // Wait for all lanes to finish using the port.
     rpc::sync_lane(lane_mask);
 
-    // The server is passive, if it own the buffer when it closes we need to
+    // The server is passive, if it owns the buffer when it closes we need to
     // give ownership back to the client.
     if (owns_buffer && T)
       out = process.invert_outbox(index, out);
     process.unlock(lane_mask, index);
   }
 
-private:
   Process<T> &process;
   uint64_t lane_mask;
   uint32_t lane_size;
@@ -383,7 +383,6 @@ struct Server {
   using Port = rpc::Port<true>;
   RPC_ATTRS rpc::optional<Port> try_open(uint32_t lane_size,
                                          uint32_t start = 0);
-  RPC_ATTRS Port open(uint32_t lane_size);
 
   RPC_ATTRS static constexpr uint64_t allocation_size(uint32_t lane_size,
                                                       uint32_t port_count) {
@@ -611,17 +610,10 @@ Server::try_open(uint32_t lane_size, uint32_t start) {
       continue;
     }
 
-    return Port(process, lane_mask, lane_size, index, out);
+    return rpc::optional<Port>(rpc::in_place, process, lane_mask, lane_size,
+                               index, out);
   }
   return rpc::nullopt;
-}
-
-RPC_ATTRS Server::Port Server::open(uint32_t lane_size) {
-  for (;;) {
-    if (rpc::optional<Server::Port> p = try_open(lane_size))
-      return rpc::move(p.value());
-    sleep_briefly();
-  }
 }
 
 #if !__has_builtin(__scoped_atomic_load_n)

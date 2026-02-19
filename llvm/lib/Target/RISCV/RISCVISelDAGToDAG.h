@@ -81,6 +81,7 @@ public:
   bool tryUnsignedBitfieldInsertInZero(SDNode *Node, const SDLoc &DL, MVT VT,
                                        SDValue X, unsigned Msb, unsigned Lsb);
   bool tryIndexedLoad(SDNode *Node);
+  bool tryWideningMulAcc(SDNode *Node, const SDLoc &DL);
 
   bool selectShiftMask(SDValue N, unsigned ShiftWidth, SDValue &ShAmt);
   bool selectShiftMaskXLen(SDValue N, SDValue &ShAmt) {
@@ -154,6 +155,9 @@ public:
   template <unsigned Width> bool selectRVVSimm5(SDValue N, SDValue &Imm) {
     return selectRVVSimm5(N, Width, Imm);
   }
+
+  bool selectVMNOTOp(SDValue N, SDValue &Res);
+  bool selectVMNOT_VLOp(SDNode *Parent, SDValue N, SDValue &Res);
 
   void addVectorLoadStoreOperands(SDNode *Node, unsigned SEWImm,
                                   const SDLoc &DL, unsigned CurOp,
