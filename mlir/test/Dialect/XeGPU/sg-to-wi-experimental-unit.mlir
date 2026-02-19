@@ -318,3 +318,67 @@ gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction(%laneid: index)
   gpu.return
 }
 }
+
+// -----
+// load_matrix and store_matrix with coordinate computation (offsets [0,0])
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @load_store_matrix_1
+// CHECK: %[[LANE_ID1:.*]] = gpu.lane_id
+// CHECK: %[[R1:.*]] = arith.remui %[[LANE_ID1]], %{{.*}} : index
+// CHECK: %[[D1:.*]] = arith.divui %[[LANE_ID1]], %{{.*}} : index
+// CHECK: %[[R2:.*]] = arith.remui %[[D1]], %{{.*}} : index
+// CHECK: %[[ROW:.*]] = arith.remui %[[R2]], %{{.*}} : index
+// CHECK: %[[COL:.*]] = arith.remui %[[R1]], %{{.*}} : index
+// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[ROW]], %[[COL]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<1x1xf32>
+// CHECK: %[[LANE_ID2:.*]] = gpu.lane_id
+// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%{{.*}}, %{{.*}}] : vector<1x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+gpu.func @load_store_matrix_1(%arg0: !xegpu.mem_desc<32x32xf32>) {
+  %c0 = arith.constant 0 : index
+  %1 = xegpu.load_matrix %arg0[%c0, %c0] <{layout = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}> : !xegpu.mem_desc<32x32xf32>, index, index -> vector<2x8xf32>
+  xegpu.store_matrix %1, %arg0[%c0, %c0] <{layout = #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>}> : vector<2x8xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+  gpu.return
+}
+}
+
+// -----
+// load_matrix and store_matrix with non-zero offsets [0,1]
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @load_store_matrix_2
+// CHECK: %[[LANE_ID1:.*]] = gpu.lane_id
+// CHECK: %[[R1:.*]] = arith.remui %[[LANE_ID1]], %{{.*}} : index
+// CHECK: %[[D1:.*]] = arith.divui %[[LANE_ID1]], %{{.*}} : index
+// CHECK: %[[R2:.*]] = arith.remui %[[D1]], %{{.*}} : index
+// CHECK: %[[MUL:.*]] = arith.muli %[[R2]], %{{.*}} : index
+// CHECK: %[[ROW:.*]] = arith.remui %[[MUL]], %{{.*}} : index
+// CHECK: %[[R3:.*]] = arith.remui %[[R1]], %{{.*}} : index
+// CHECK: %[[ADD:.*]] = arith.addi %[[R3]], %{{.*}} : index
+// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%[[ROW]], %[[ADD]]] : !xegpu.mem_desc<32x32xf32>, index, index -> vector<2x1xf32>
+// CHECK: %[[LANE_ID2:.*]] = gpu.lane_id
+// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%{{.*}}, %{{.*}}] : vector<2x1xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+gpu.func @load_store_matrix_2(%arg0: !xegpu.mem_desc<32x32xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %1 = xegpu.load_matrix %arg0[%c0, %c1] <{layout = #xegpu.layout<lane_layout = [4, 4], lane_data = [2, 1]>}> : !xegpu.mem_desc<32x32xf32>, index, index -> vector<8x4xf32>
+  xegpu.store_matrix %1, %arg0[%c0, %c1] <{layout = #xegpu.layout<lane_layout = [4, 4], lane_data = [2, 1]>}> : vector<8x4xf32>, !xegpu.mem_desc<32x32xf32>, index, index
+  gpu.return
+}
+}
+
+// -----
+// load_matrix and store_matrix with subgroup_block_io (no coordinate computation)
+gpu.module @xevm_module {
+// CHECK-LABEL: gpu.func @load_store_matrix_3
+// CHECK: %[[MAT:.*]] = xegpu.load_matrix %arg0[%{{.*}}, %{{.*}}] <{subgroup_block_io}>:
+// CHECK-SAME: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<block = [16, 1], stride = [1, 32]>>, index, index -> vector<1x2xf32>
+// CHECK: xegpu.store_matrix %[[MAT]], %arg0[%{{.*}}, %{{.*}}] <{subgroup_block_io}>:
+// CHECK-SAME: vector<1x2xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<block = [16, 1], stride = [1, 32]>>, index, index
+gpu.func @load_store_matrix_3(%arg0: !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [16, 1]>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %1 = xegpu.load_matrix %arg0[%c0, %c1] <{subgroup_block_io, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}> :
+    !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [16, 1]>>, index, index -> vector<16x2xf32>
+  xegpu.store_matrix %1, %arg0[%c0, %c1] <{subgroup_block_io, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}> :
+    vector<16x2xf32>, !xegpu.mem_desc<32x32xf32, #xegpu.mem_layout<stride = [1, 32], block = [16, 1]>>, index, index
+  gpu.return
+}
+}
