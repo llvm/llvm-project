@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -Wconversion -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -verify %s
 
 // This test verifies that the implicit conversion warning for floating-point
 // precision loss works correctly for matrix types. The IsSameFloatAfterCast

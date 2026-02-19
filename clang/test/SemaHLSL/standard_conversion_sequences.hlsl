@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -Wconversion -verify -o - %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -verify -o - %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -Wno-conversion -DNO_ERR -ast-dump %s | FileCheck %s
 
 void test() {
@@ -35,7 +35,7 @@ void test() {
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 2>' <FloatingToIntegral>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 2>' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<float, 2>' lvalue Var {{.*}} 'f2' 'vector<float, 2>'
-  // expected-warning@#i2{{mplicit conversion turns floating-point number into integer: 'vector<float, 2>' (vector of 2 'float' values) to 'vector<int, 2>' (vector of 2 'int' values)}}
+  // expected-warning@#i2{{implicit conversion turns floating-point numbers into integers: 'vector<float, 2>' (vector of 2 'float' values) to 'vector<int, 2>' (vector of 2 'int' values)}}
   vector<int,2> i2 = f2; // #i2
 
   // CHECK: VarDecl {{.*}} i2_2 'vector<int, 2>' cinit
@@ -44,7 +44,7 @@ void test() {
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 4>' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<double, 4>' lvalue Var {{.*}} 'd4' 'vector<double, 4>'
   // expected-warning@#i2_2{{implicit conversion truncates vector: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<int, 2>' (vector of 2 'int' values)}}
-  // expected-warning@#i2_2{{implicit conversion turns floating-point number into integer: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<int, 2>' (vector of 2 'int' values)}}
+  // expected-warning@#i2_2{{implicit conversion turns floating-point numbers into integers: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<int, 2>' (vector of 2 'int' values)}}
   vector<int,2> i2_2 = d4; // #i2_2
 
 
@@ -52,7 +52,7 @@ void test() {
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<long, 4>' <FloatingToIntegral>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 4>' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<double, 4>' lvalue Var {{.*}} 'd4' 'vector<double, 4>'
-  // expected-warning@#i64_4{{implicit conversion turns floating-point number into integer: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<long, 4>' (vector of 4 'long' values)}}
+  // expected-warning@#i64_4{{implicit conversion turns floating-point numbers into integers: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<long, 4>' (vector of 4 'long' values)}}
   vector<long,4> i64_4 = d4; // #i64_4
 
   // CHECK: VarDecl {{.*}} used i2_3 'vector<int, 2>' cinit
@@ -76,7 +76,7 @@ void test() {
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 4>' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<double, 4>' lvalue Var {{.*}} 'd4' 'vector<double, 4>'
   // expected-warning@#b2_2{{implicit conversion truncates vector: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<bool, 2>' (vector of 2 'bool' values)}}
-  // expected-warning@#b2_2{{implicit conversion turns floating-point number into integer: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<bool, 2>' (vector of 2 'bool' values)}}
+  // expected-warning@#b2_2{{implicit conversion turns floating-point numbers into integers: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<bool, 2>' (vector of 2 'bool' values)}}
   vector<bool, 2> b2_2 = d4; // #b2_2
 }
 
