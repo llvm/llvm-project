@@ -346,17 +346,6 @@ PathMappingList::FindIteratorForPath(ConstString path) {
   return pos;
 }
 
-bool PathMappingList::GetPathsAtIndex(uint32_t idx, ConstString &path,
-                                      ConstString &new_path) const {
-  std::lock_guard<std::mutex> lock(m_pairs_mutex);
-  if (idx < m_pairs.size()) {
-    path = m_pairs[idx].first;
-    new_path = m_pairs[idx].second;
-    return true;
-  }
-  return false;
-}
-
 uint32_t
 PathMappingList::FindIndexForPathNoLock(llvm::StringRef orig_path) const {
   const ConstString path = ConstString(NormalizePath(orig_path));

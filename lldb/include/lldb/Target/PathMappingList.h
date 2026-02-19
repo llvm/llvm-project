@@ -10,6 +10,7 @@
 #define LLDB_TARGET_PATHMAPPINGLIST_H
 
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -22,6 +23,10 @@ namespace lldb_private {
 
 class PathMappingList {
 public:
+  typedef std::pair<ConstString, ConstString> pair;
+  typedef std::vector<pair> collection;
+  typedef LockingAdaptedIterable<std::mutex, collection> PathMapIterable;
+
   typedef void (*ChangedCallback)(const PathMappingList &path_list,
                                   void *baton);
 
@@ -61,8 +66,9 @@ public:
     return m_pairs.size();
   }
 
-  bool GetPathsAtIndex(uint32_t idx, ConstString &path,
-                       ConstString &new_path) const;
+  PathMapIterable PathMappings() const {
+    return PathMapIterable(m_pairs, m_pairs_mutex);
+  }
 
   void Insert(llvm::StringRef path, llvm::StringRef replacement,
               uint32_t insert_idx, bool notify);
@@ -139,8 +145,6 @@ public:
   }
 
 protected:
-  typedef std::pair<ConstString, ConstString> pair;
-  typedef std::vector<pair> collection;
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
 
