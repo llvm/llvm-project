@@ -55,6 +55,9 @@ void f_obsoleted_27(void) __attribute__((availability(anyAppleOS, introduced=26.
   maccatalyst-note{{'f_obsoleted_27' has been explicitly marked unavailable here}} \
   driverkit-note{{'f_obsoleted_27' has been explicitly marked unavailable here}}
 
+void f_deprecated_28(void) __attribute__((availability(anyAppleOS, introduced=26.0, deprecated=28.0)));
+
+void f_obsoleted_28(void) __attribute__((availability(anyAppleOS, introduced=26.0, obsoleted=28.0)));
 
 void f_unavailable(void) __attribute__((availability(anyAppleOS, unavailable))); // \
   macos-note{{'f_unavailable' has been explicitly marked unavailable here}} \
@@ -100,6 +103,10 @@ void f_introduced_29_ios26(void) __attribute__((availability(anyAppleOS, introdu
   macos-note{{'f_introduced_29_ios26' has been marked as being introduced in macOS 29.0 here, but the deployment target is macOS 27.0}} \
   driverkit-note{{'f_introduced_29_ios26' has been marked as being introduced in DriverKit 29.0 here, but the deployment target is DriverKit 27.0}}
 
+void f_ios26_unavailable(void) __attribute__((availability(ios, introduced=26.0), availability(anyAppleOS, unavailable))); // \
+  macos-note{{'f_ios26_unavailable' has been explicitly marked unavailable here}} \
+  driverkit-note{{'f_ios26_unavailable' has been explicitly marked unavailable here}}
+
 void test(void) {
   f_introduced_26();
 
@@ -132,6 +139,8 @@ void test(void) {
     maccatalyst-warning{{'f_deprecated_27' is deprecated: first deprecated in macCatalyst 27.0}} \
     driverkit-warning{{'f_deprecated_27' is deprecated: first deprecated in DriverKit 27.0}}
 
+  f_deprecated_28();
+
   f_obsoleted_27(); // \
     macos-error{{'f_obsoleted_27' is unavailable: obsoleted in macOS 27.0}} \
     ios-error{{'f_obsoleted_27' is unavailable: obsoleted in iOS 27.0}} \
@@ -140,6 +149,8 @@ void test(void) {
     xros-error{{'f_obsoleted_27' is unavailable: obsoleted in visionOS 27.0}} \
     maccatalyst-error{{'f_obsoleted_27' is unavailable: obsoleted in macCatalyst 27.0}} \
     driverkit-error{{'f_obsoleted_27' is unavailable: obsoleted in DriverKit 27.0}}
+
+  f_obsoleted_28();
 
   f_unavailable(); // \
     macos-error{{'f_unavailable' is unavailable}} \
@@ -193,4 +204,8 @@ void test(void) {
     macos-note{{enclose 'f_introduced_29_ios26' in a __builtin_available check to silence this warning}} \
     driverkit-warning{{'f_introduced_29_ios26' is only available on DriverKit 29.0 or newer}} \
     driverkit-note{{enclose 'f_introduced_29_ios26' in a __builtin_available check to silence this warning}}
+
+  f_ios26_unavailable(); // \
+    macos-error{{'f_ios26_unavailable' is unavailable: not available on macOS}} \
+    driverkit-error{{'f_ios26_unavailable' is unavailable: not available on DriverKit}}
 }

@@ -2726,44 +2726,40 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     auto CorrectedObsoleted =
         ValidateAndCorrectVersion(Obsoleted.Version, Obsoleted.KeywordLoc);
 
-    auto GetPlatformName = [](const llvm::Triple &T) -> StringRef {
-      // Determine the platform name based on the target triple.
-      if (T.isMacOSX())
-        return "macos";
-      if (T.getOS() == llvm::Triple::IOS && T.isMacCatalystEnvironment())
-        return "maccatalyst";
-      // For iOS, tvOS, watchOS, visionOS, bridgeOS, etc.
-      return llvm::Triple::getOSTypeName(T.getOS());
-    };
+    llvm::Triple T = S.Context.getTargetInfo().getTriple();
 
-    auto CreateImplicitAvailabilityAttr = [&](const llvm::Triple &T) {
-      // Only create implicit attributes for Darwin OSes.
-      if (!T.isOSDarwin())
-        return;
+    // Only create implicit attributes for Darwin OSes.
+    if (!T.isOSDarwin())
+      return;
 
-      StringRef PlatformName = GetPlatformName(T);
-      IdentifierInfo *NewII = &S.Context.Idents.get(PlatformName);
+    StringRef PlatformName;
 
-      // Use the special low-priority value for pragma push anyAppleOS.
-      int ExpandedPriority =
-          (PriorityModifier == Sema::AP_PragmaClangAttribute)
-              ? Sema::AP_PragmaClangAttribute_InferredFromAnyAppleOS
-              : Sema::AP_InferredFromAnyAppleOS;
+    // Determine the platform name based on the target triple.
+    if (T.isMacOSX())
+      PlatformName = "macos";
+    else if (T.getOS() == llvm::Triple::IOS && T.isMacCatalystEnvironment())
+      PlatformName = "maccatalyst";
+    else // For iOS, tvOS, watchOS, visionOS, bridgeOS, etc.
+      PlatformName = llvm::Triple::getOSTypeName(T.getOS());
 
-      AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
-          ND, AL, NewII, /*Implicit=*/true, CorrectedIntroduced,
-          CorrectedDeprecated, CorrectedObsoleted, IsUnavailable, Str, IsStrict,
-          Replacement, AvailabilityMergeKind::None, ExpandedPriority,
-          IIEnvironment);
-      if (NewAttr)
-        D->addAttr(NewAttr);
-    };
+    IdentifierInfo *NewII = &S.Context.Idents.get(PlatformName);
 
-    CreateImplicitAvailabilityAttr(S.Context.getTargetInfo().getTriple());
+    // Use the special low-priority value for pragma push anyAppleOS.
+    int ExpandedPriority =
+        (PriorityModifier == Sema::AP_PragmaClangAttribute)
+            ? Sema::AP_PragmaClangAttribute_InferredFromAnyAppleOS
+            : Sema::AP_InferredFromAnyAppleOS;
+
+    AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
+        ND, AL, NewII, /*Implicit=*/true, CorrectedIntroduced,
+        CorrectedDeprecated, CorrectedObsoleted, IsUnavailable, Str, IsStrict,
+        Replacement, AvailabilityMergeKind::None, ExpandedPriority,
+        IIEnvironment);
+    if (NewAttr)
+      D->addAttr(NewAttr);
 
     // Don't add the original anyAppleOS attribute - only the implicit
     // platform-specific attributes.
-    return;
   }
 
   AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(

@@ -7,27 +7,10 @@
 
 // Declarations with anyAppleOS availability.
 void func_introduced_26(void) __attribute__((availability(anyAppleOS, introduced=26.0)));
-void func_introduced_27(void) __attribute__((availability(anyAppleOS, introduced=27.0))); // expected-note {{has been marked as being introduced in}}
+void func_introduced_27(void) __attribute__((availability(anyAppleOS, introduced=27.0)));
 void func_deprecated_27(void) __attribute__((availability(anyAppleOS, introduced=26.0, deprecated=27.0)));
 void func_obsoleted_28(void) __attribute__((availability(anyAppleOS, introduced=26.0, obsoleted=28.0)));
-void func_unavailable(void) __attribute__((availability(anyAppleOS, unavailable))); // expected-note 2 {{has been explicitly marked unavailable here}}
-
-void test_unguarded() {
-  // Should be available - no warning
-  func_introduced_26();
-
-  // Should warn - introduced in 27.0, deployment target is 26.0
-  func_introduced_27(); // expected-warning {{only available on}} expected-note {{enclose 'func_introduced_27' in an @available check to silence this warning}}
-
-  // Should be available but deprecated - might warn depending on deployment target
-  func_deprecated_27();
-
-  // Should be available - obsoleted in 28.0 but we're on 26.0
-  func_obsoleted_28();
-
-  // Should error - unavailable
-  func_unavailable(); // expected-error {{'func_unavailable' is unavailable}}
-}
+void func_unavailable(void) __attribute__((availability(anyAppleOS, unavailable))); // expected-note {{has been explicitly marked unavailable here}}
 
 void test_builtin_available() {
   // Guard with __builtin_available - should suppress warnings
