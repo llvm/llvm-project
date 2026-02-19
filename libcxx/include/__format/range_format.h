@@ -17,27 +17,13 @@
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/fmt_pair_like.h>
+#include <__fwd/format.h>
 #include <__ranges/concepts.h>
 #include <__type_traits/remove_cvref.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 23
-
-_LIBCPP_DIAGNOSTIC_PUSH
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wshadow")
-_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wshadow")
-// This shadows map, set, and string.
-enum class range_format { disabled, map, set, sequence, string, debug_string };
-_LIBCPP_DIAGNOSTIC_POP
-
-template <class _Rp>
-constexpr range_format format_kind = [] {
-  // [format.range.fmtkind]/1
-  // A program that instantiates the primary template of format_kind is ill-formed.
-  static_assert(sizeof(_Rp) != sizeof(_Rp), "create a template specialization of format_kind for your type");
-  return range_format::disabled;
-}();
 
 template <ranges::input_range _Rp>
   requires same_as<_Rp, remove_cvref_t<_Rp>>

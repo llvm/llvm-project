@@ -175,10 +175,11 @@ def DenseArrayAttr : DialectAttribute<(attr
 def DenseElementsAttr : WithType<"DenseElementsAttr", Attribute>;
 def DenseIntOrFPElementsAttr : DialectAttribute<(attr
   ShapedType:$type,
-  Blob:$rawData
-)> {
-  let cBuilder = "cast<$_resultType>($_resultType::getFromRawBuffer($_args))";
-}
+  WithBuilder<"$_args",
+    WithType<"SmallVector<char>",
+    WithParser<"succeeded(readDenseIntOrFPElementsAttr($_reader, type, $_var))",
+    WithPrinter<"writeDenseIntOrFPElementsAttr($_writer, $_name)">>>>:$rawData
+)>;
 
 def DenseStringElementsAttr : DialectAttribute<(attr
   ShapedType:$type,

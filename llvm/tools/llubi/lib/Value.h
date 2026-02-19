@@ -64,14 +64,15 @@ class Pointer {
   // The address of the pointer. The bit width is determined by
   // DataLayout::getPointerSizeInBits.
   APInt Address;
-  // The offset within the memory object.
-  uint64_t Offset;
   // TODO: modeling inrange(Start, End) attribute
 
 public:
-  explicit Pointer(IntrusiveRefCntPtr<MemoryObject> Obj, const APInt &Address,
-                   uint64_t Offset)
-      : Obj(std::move(Obj)), Address(Address), Offset(Offset) {}
+  explicit Pointer(const APInt &Address) : Obj(nullptr), Address(Address) {}
+  explicit Pointer(IntrusiveRefCntPtr<MemoryObject> Obj, const APInt &Address)
+      : Obj(std::move(Obj)), Address(Address) {}
+  Pointer getWithNewAddr(const APInt &NewAddr) const {
+    return Pointer(Obj, NewAddr);
+  }
   static AnyValue null(unsigned BitWidth);
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
@@ -112,9 +113,14 @@ public:
   static AnyValue boolean(bool Val) { return AnyValue(APInt(1, Val)); }
   static AnyValue getPoisonValue(Context &Ctx, Type *Ty);
   static AnyValue getNullValue(Context &Ctx, Type *Ty);
+  static AnyValue getVectorSplat(const AnyValue &Scalar, size_t NumElements);
 
   bool isNone() const { return Kind == StorageKind::None; }
   bool isPoison() const { return Kind == StorageKind::Poison; }
+  bool isInteger() const { return Kind == StorageKind::Integer; }
+  bool isFloat() const { return Kind == StorageKind::Float; }
+  bool isPointer() const { return Kind == StorageKind::Pointer; }
+  bool isAggregate() const { return Kind == StorageKind::Aggregate; }
 
   const APInt &asInteger() const {
     assert(Kind == StorageKind::Integer && "Expect an integer value");

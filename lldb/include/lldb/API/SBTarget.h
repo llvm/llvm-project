@@ -397,18 +397,10 @@ public:
   /// The maximum size in 8-bit (host) bytes of an opcode.
   uint32_t GetMaximumOpcodeByteSize() const;
 
-  /// Architecture data byte width accessor
-  ///
-  /// \return
-  /// The size in 8-bit (host) bytes of a minimum addressable
-  /// unit from the Architecture's data bus
+  LLDB_DEPRECATED("Always returns 1.")
   uint32_t GetDataByteSize();
 
-  /// Architecture code byte width accessor
-  ///
-  /// \return
-  /// The size in 8-bit (host) bytes of a minimum addressable
-  /// unit from the Architecture's code bus
+  LLDB_DEPRECATED("Always returns 1.")
   uint32_t GetCodeByteSize();
 
   /// Gets the target.max-children-count value
