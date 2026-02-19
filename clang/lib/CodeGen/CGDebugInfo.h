@@ -682,6 +682,9 @@ public:
   /// that it is supported and enabled.
   llvm::DINode::DIFlags getCallSiteRelatedAttrs() const;
 
+  /// Add call target information.
+  void addCallTargetIfVirtual(const FunctionDecl *FD, llvm::CallBase *CI);
+
 private:
   /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
   /// Rank (lower nonzero rank is higher precedence). Does nothing if \p I
@@ -906,6 +909,12 @@ private:
   /// If one exists, returns the linkage name of the specified \
   /// (non-null) \c Method. Returns empty string otherwise.
   llvm::StringRef GetMethodLinkageName(const CXXMethodDecl *Method) const;
+
+  /// Returns true if we should generate call target information.
+  bool shouldGenerateVirtualCallSite() const {
+    // Check general conditions for call site generation.
+    return (getCallSiteRelatedAttrs() != llvm::DINode::FlagZero);
+  }
 };
 
 /// A scoped helper to set the current debug location to the specified
