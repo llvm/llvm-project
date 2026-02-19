@@ -2620,6 +2620,12 @@ def NotHasSALUFloatInsts : Predicate<"!Subtarget->hasSALUFloatInsts()">,
 
 def NotHasCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
 
+def HasUnalignedDS2Bug : Predicate<"Subtarget->hasUnalignedDS2Bug()">,
+ AssemblerPredicate<(all_of FeatureGFX1250Insts)>;
+
+def NotHasUnalignedDS2Bug : Predicate<"!Subtarget->hasUnalignedDS2Bug()">,
+ AssemblerPredicate<(not FeatureGFX1250Insts)>;
+
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
 

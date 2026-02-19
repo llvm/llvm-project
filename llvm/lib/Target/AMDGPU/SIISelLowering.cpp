@@ -10733,12 +10733,33 @@ SITargetLowering::lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
                                  M->getMemOperand());
 }
 
+// Multicast Load Bug Workaround for GFX1250 A0.
+// Do not upstream, remove with B0 available.
+static void InitializeM0ToZero(SDValue Op, SelectionDAG &DAG, SDLoc DL) {
+  auto *N = Op.getNode();
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
+  unsigned NumOperands = N->getNumOperands();
+  if (N->getOperand(NumOperands - 1) == Zero)
+    return;
+  SmallVector<SDValue, 7> Ops(N->ops());
+  Ops[NumOperands - 1] = Zero; // M0 = 0
+  (void)DAG.UpdateNodeOperands(N, Ops);
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                                  SelectionDAG &DAG) const {
   unsigned IntrID = Op.getConstantOperandVal(1);
   SDLoc DL(Op);
 
   switch (IntrID) {
+  // Multicast Load Bug Workaround for GFX1250 A0.
+  // Do not upstream, remove with B0 available.
+  case Intrinsic::amdgcn_cluster_load_b32:
+  case Intrinsic::amdgcn_cluster_load_b64:
+  case Intrinsic::amdgcn_cluster_load_b128: {
+    InitializeM0ToZero(Op, DAG, DL);
+    return SDValue();
+  } // End Multicast Load Bug Workaround for GFX1250 A0.
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap: {
     MemSDNode *M = cast<MemSDNode>(Op);
@@ -11504,6 +11525,15 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   unsigned IntrinsicID = Op.getConstantOperandVal(1);
 
   switch (IntrinsicID) {
+  // Multicast Load Bug Workaround for GFX1250 A0.
+  // Do not upstream, remove with B0 available.
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
+    InitializeM0ToZero(Op, DAG, DL);
+    return SDValue();
+  } // End Multicast Load Bug Workaround for GFX1250 A0.
   case Intrinsic::amdgcn_exp_compr: {
     if (!Subtarget->hasCompressedExport()) {
       DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
