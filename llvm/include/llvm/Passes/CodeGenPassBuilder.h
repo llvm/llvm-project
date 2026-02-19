@@ -743,7 +743,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
   // Replace calls to LLVM intrinsics (e.g., exp, log) operating on vector
   // operands with calls to the corresponding functions in a vector library.
   if (getOptLevel() != CodeGenOptLevel::None)
-    addFunctionPass(ReplaceWithVeclib(), PMW);
+    addFunctionPass(ReplaceWithVeclib(TM), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None &&
       !Opt.DisablePartialLibcallInlining)

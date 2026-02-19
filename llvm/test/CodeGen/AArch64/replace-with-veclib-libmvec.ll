@@ -4,7 +4,7 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 ;.
-; CHECK: @llvm.compiler.used = appending global [34 x ptr] [ptr @_ZGVnN2v_cos, ptr @_ZGVnN4v_cosf, ptr @_ZGVnN2v_exp, ptr @_ZGVnN4v_expf, ptr @_ZGVnN2v_exp10, ptr @_ZGVnN4v_exp10f, ptr @_ZGVnN2v_exp2, ptr @_ZGVnN4v_exp2f, ptr @_ZGVnN2v_log, ptr @_ZGVnN4v_logf, ptr @_ZGVnN2v_log10, ptr @_ZGVnN4v_log10f, ptr @_ZGVnN2v_log2, ptr @_ZGVnN4v_log2f, ptr @_ZGVnN2vv_pow, ptr @_ZGVnN4vv_powf, ptr @_ZGVnN2v_sin, ptr @_ZGVnN4v_sinf, ptr @_ZGVnN2v_tan, ptr @_ZGVnN4v_tanf, ptr @_ZGVnN2v_acos, ptr @_ZGVnN4v_acosf, ptr @_ZGVnN2v_asin, ptr @_ZGVnN4v_asinf, ptr @_ZGVnN2v_atan, ptr @_ZGVnN4v_atanf, ptr @_ZGVnN2vv_atan2, ptr @_ZGVnN4vv_atan2f, ptr @_ZGVnN2v_cosh, ptr @_ZGVnN4v_coshf, ptr @_ZGVnN2v_sinh, ptr @_ZGVnN4v_sinhf, ptr @_ZGVnN2v_tanh, ptr @_ZGVnN4v_tanhf], section "llvm.metadata"
+; CHECK: @llvm.compiler.used = appending global [32 x ptr] [ptr @_ZGVnN2v_cos, ptr @_ZGVnN4v_cosf, ptr @_ZGVnN2v_exp, ptr @_ZGVnN4v_expf, ptr @_ZGVnN2v_exp10, ptr @_ZGVnN4v_exp10f, ptr @_ZGVnN2v_exp2, ptr @_ZGVnN4v_exp2f, ptr @_ZGVnN2v_log, ptr @_ZGVnN4v_logf, ptr @_ZGVnN2v_log10, ptr @_ZGVnN4v_log10f, ptr @_ZGVnN2v_log2, ptr @_ZGVnN4v_log2f, ptr @_ZGVnN2v_sin, ptr @_ZGVnN4v_sinf, ptr @_ZGVnN2v_tan, ptr @_ZGVnN4v_tanf, ptr @_ZGVnN2v_acos, ptr @_ZGVnN4v_acosf, ptr @_ZGVnN2v_asin, ptr @_ZGVnN4v_asinf, ptr @_ZGVnN2v_atan, ptr @_ZGVnN4v_atanf, ptr @_ZGVnN2vv_atan2, ptr @_ZGVnN4vv_atan2f, ptr @_ZGVnN2v_cosh, ptr @_ZGVnN4v_coshf, ptr @_ZGVnN2v_sinh, ptr @_ZGVnN4v_sinhf, ptr @_ZGVnN2v_tanh, ptr @_ZGVnN4v_tanhf], section "llvm.metadata"
 ;.
 define <2 x double> @llvm_ceil_f64(<2 x double> %in) {
 ; CHECK-LABEL: @llvm_ceil_f64(
@@ -528,6 +528,140 @@ define <4 x float> @llvm_trunc_f32(<4 x float> %in) {
   ret <4 x float> %1
 }
 
+; pow(x, 0.25) -> sqrt(sqrt(x))
+
+define <vscale x 4 x float> @armpl_svpow_f32_0p25(<vscale x 4 x float> %in) #0 {
+; CHECK-LABEL: @armpl_svpow_f32_0p25(
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[TMP2]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+;
+  %1 = tail call fast <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float> %in, <vscale x 4 x float> splat (float 2.500000e-01), <vscale x 4 x i1> splat (i1 true))
+  ret <vscale x 4 x float> %1
+}
+
+define <4 x float> @armpl_vpow_f32_0p25(<4 x float> %in) #0 {
+; CHECK-LABEL: @armpl_vpow_f32_0p25(
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP2]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %1 = tail call fast aarch64_vector_pcs <4 x float> @_ZGVnN4vv_powf(<4 x float> %in, <4 x float> splat (float 2.500000e-01))
+  ret <4 x float> %1
+}
+
+define <vscale x 2 x double> @armpl_svpow_f64_0p25(<vscale x 2 x double> %in) #0 {
+; CHECK-LABEL: @armpl_svpow_f64_0p25(
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[TMP2]])
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+  %1 = tail call fast <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double> %in, <vscale x 2 x double> splat (double 2.500000e-01), <vscale x 2 x i1> splat (i1 true))
+  ret <vscale x 2 x double> %1
+}
+
+define <2 x double> @armpl_vpow_f64_0p25(<2 x double> %in) #0 {
+; CHECK-LABEL: @armpl_vpow_f64_0p25(
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP2]])
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+;
+  %1 = tail call fast aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double> %in, <2 x double> splat (double 2.500000e-01))
+  ret <2 x double> %1
+}
+
+; pow(x, 0.75) -> sqrt(x) * sqrt(sqrt(x))
+
+define <vscale x 4 x float> @armpl_svpow_f32_0p75(<vscale x 4 x float> %in) #0 {
+; CHECK-LABEL: @armpl_svpow_f32_0p75(
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 4 x float> @llvm.sqrt.nxv4f32(<vscale x 4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <vscale x 4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+;
+  %1 = tail call fast <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float> %in, <vscale x 4 x float> splat (float 7.500000e-01), <vscale x 4 x i1> splat (i1 true))
+  ret <vscale x 4 x float> %1
+}
+
+define <4 x float> @armpl_vpow_f32_0p75(<4 x float> %in) #0 {
+; CHECK-LABEL: @armpl_vpow_f32_0p75(
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %1 = tail call fast aarch64_vector_pcs <4 x float> @_ZGVnN4vv_powf(<4 x float> %in, <4 x float> splat (float 7.500000e-01))
+  ret <4 x float> %1
+}
+
+define <vscale x 2 x double> @armpl_svpow_f64_0p75(<vscale x 2 x double> %in) #0 {
+; CHECK-LABEL: @armpl_svpow_f64_0p75(
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> [[TMP3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <vscale x 2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+  %1 = tail call fast <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double> %in, <vscale x 2 x double> splat (double 7.500000e-01), <vscale x 2 x i1> splat (i1 true))
+  ret <vscale x 2 x double> %1
+}
+
+define <2 x double> @armpl_vpow_f64_0p75(<2 x double> %in) #0 {
+; CHECK-LABEL: @armpl_vpow_f64_0p75(
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[IN:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP3]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+;
+  %1 = tail call fast aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double> %in, <2 x double> splat (double 7.500000e-01))
+  ret <2 x double> %1
+}
+
+; pow(x, 1/3) -> cbrt(x)
+
+define <vscale x 4 x float> @armpl_svpow_f32_one_third(<vscale x 4 x float> %in) #0 {
+; CHECK-LABEL: @armpl_svpow_f32_one_third(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float> [[IN:%.*]], <vscale x 4 x float> splat (float 0x3FD5555560000000), <vscale x 4 x i1> splat (i1 true))
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP1]]
+;
+  %1 = tail call fast <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float> %in, <vscale x 4 x float> splat (float 0x3FD5555560000000), <vscale x 4 x i1> splat (i1 true))
+  ret <vscale x 4 x float> %1
+}
+
+define <4 x float> @armpl_vpow_f32_one_third(<4 x float> %in) #0 {
+; CHECK-LABEL: @armpl_vpow_f32_one_third(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast aarch64_vector_pcs <4 x float> @_ZGVnN4vv_powf(<4 x float> [[IN:%.*]], <4 x float> splat (float 0x3FD5555560000000))
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %1 = tail call fast aarch64_vector_pcs <4 x float> @_ZGVnN4vv_powf(<4 x float> %in, <4 x float> splat (float 0x3FD5555560000000))
+  ret <4 x float> %1
+}
+
+define <vscale x 2 x double> @armpl_svpow_f64_one_third(<vscale x 2 x double> %in) #0 {
+; CHECK-LABEL: @armpl_svpow_f64_one_third(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double> [[IN:%.*]], <vscale x 2 x double> splat (double 0x3FD5555555555555), <vscale x 2 x i1> splat (i1 true))
+; CHECK-NEXT:    ret <vscale x 2 x double> [[TMP1]]
+;
+  %1 = tail call fast <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double> %in, <vscale x 2 x double> splat (double 0x3FD5555555555555), <vscale x 2 x i1> splat (i1 true))
+  ret <vscale x 2 x double> %1
+}
+
+define <2 x double> @armpl_vpow_f64_one_third(<2 x double> %in) #0 {
+; CHECK-LABEL: @armpl_vpow_f64_one_third(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double> [[IN:%.*]], <2 x double> splat (double 0x3FD5555555555555))
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+;
+  %1 = tail call fast aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double> %in, <2 x double> splat (double 0x3FD5555555555555))
+  ret <2 x double> %1
+}
+
+declare aarch64_vector_pcs <4 x float> @_ZGVnN4vv_powf(<4 x float>, <4 x float>) #1
+declare <vscale x 4 x float> @_ZGVsMxvv_powf(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x i1>) #1
+declare aarch64_vector_pcs <2 x double> @_ZGVnN2vv_pow(<2 x double>, <2 x double>) #1
+declare <vscale x 2 x double> @_ZGVsMxvv_pow(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x i1>) #1
+
+attributes #0 = { "target-features"="+sve" }
+attributes #1 = { mustprogress nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+
 declare <2 x double> @llvm.ceil.v2f64(<2 x double>)
 declare <4 x float> @llvm.ceil.v4f32(<4 x float>)
 declare <2 x double> @llvm.copysign.v2f64(<2 x double>, <2 x double>)
@@ -573,6 +707,8 @@ declare <4 x float> @llvm.tan.v4f32(<4 x float>)
 declare <2 x double> @llvm.trunc.v2f64(<2 x double>)
 declare <4 x float> @llvm.trunc.v4f32(<4 x float>)
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { "target-features"="+sve" }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { mustprogress nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.

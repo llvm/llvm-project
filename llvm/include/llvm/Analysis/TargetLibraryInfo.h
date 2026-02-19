@@ -154,6 +154,10 @@ public:
     setState(F, StandardName);
   }
 
+  /// Return a list of vector descriptions for vector function with name \p F.
+  void getVectorDescs(StringRef F,
+                      SmallVectorImpl<const VecDesc *> &VecDescs) const;
+
   /// Forces a function to be marked as available and provide an alternate name
   /// that must be used.
   void setAvailableWithName(LibFunc F, StringRef Name) {
@@ -324,6 +328,12 @@ public:
   bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
                               const Module &M) const {
     return Impl->isValidProtoForLibFunc(FTy, F, M);
+  }
+
+  /// Return a list of vector descriptions for vector function with name \p F.
+  void getVectorDescs(StringRef F,
+                      SmallVectorImpl<const VecDesc *> &VecDescs) const {
+    Impl->getVectorDescs(F, VecDescs);
   }
 
   /// Searches for a particular function name.

@@ -21,7 +21,11 @@
 
 namespace llvm {
 class Function;
+class TargetMachine;
 struct ReplaceWithVeclib : public PassInfoMixin<ReplaceWithVeclib> {
+  const TargetMachine *TM;
+
+  explicit ReplaceWithVeclib(const TargetMachine &TM) : TM(&TM) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

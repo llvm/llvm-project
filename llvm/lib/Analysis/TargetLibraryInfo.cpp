@@ -1441,6 +1441,15 @@ TargetLibraryInfoImpl::getVectorMappingInfo(StringRef F, const ElementCount &VF,
   return nullptr;
 }
 
+void TargetLibraryInfoImpl::getVectorDescs(
+    StringRef F, SmallVectorImpl<const VecDesc *> &VecDescs) const {
+  for (auto &I : VectorDescs) {
+    if (I.getVectorFnName() == F)
+      VecDescs.push_back(&I);
+  }
+  return;
+}
+
 TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,
                                              FunctionAnalysisManager &) {
   if (!BaselineInfoImpl)
