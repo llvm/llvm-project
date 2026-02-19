@@ -471,22 +471,22 @@ define i1 @scalar_i128_lowestbit_eq(i128 %x, i128 %y) nounwind {
 ; X64-BMI1:       # %bb.0:
 ; X64-BMI1-NEXT:    movl %edx, %ecx
 ; X64-BMI1-NEXT:    andb $32, %cl
-; X64-BMI1-NEXT:    shrdq %cl, %rsi, %rdi
 ; X64-BMI1-NEXT:    shrq %cl, %rsi
+; X64-BMI1-NEXT:    shrq %cl, %rdi
 ; X64-BMI1-NEXT:    testb $64, %dl
-; X64-BMI1-NEXT:    cmoveq %rdi, %rsi
-; X64-BMI1-NEXT:    btl %edx, %esi
+; X64-BMI1-NEXT:    cmovneq %rsi, %rdi
+; X64-BMI1-NEXT:    btl %edx, %edi
 ; X64-BMI1-NEXT:    setae %al
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: scalar_i128_lowestbit_eq:
 ; X64-BMI2:       # %bb.0:
-; X64-BMI2-NEXT:    movl %edx, %ecx
-; X64-BMI2-NEXT:    andb $32, %cl
-; X64-BMI2-NEXT:    shrdq %cl, %rsi, %rdi
-; X64-BMI2-NEXT:    shrxq %rcx, %rsi, %rax
+; X64-BMI2-NEXT:    movl %edx, %eax
+; X64-BMI2-NEXT:    andb $32, %al
+; X64-BMI2-NEXT:    shrxq %rax, %rsi, %rcx
+; X64-BMI2-NEXT:    shrxq %rax, %rdi, %rax
 ; X64-BMI2-NEXT:    testb $64, %dl
-; X64-BMI2-NEXT:    cmoveq %rdi, %rax
+; X64-BMI2-NEXT:    cmovneq %rcx, %rax
 ; X64-BMI2-NEXT:    btl %edx, %eax
 ; X64-BMI2-NEXT:    setae %al
 ; X64-BMI2-NEXT:    retq

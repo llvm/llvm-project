@@ -2256,6 +2256,22 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
+    // Fold FSHR(Op0,Op1,Op2) -> SRL(Op1,Op2)
+    // iff we're guaranteed not to use Op0.
+    // TODO: Add FSHL equivalent?
+    if (!IsFSHL && !DemandedBits.isAllOnes()) {
+      uint64_t MaxShiftAmt = BitWidth - 1; // urem(Op2, BitWidth)
+      KnownBits KnownAmt =
+          TLO.DAG.computeKnownBits(Op2, DemandedElts, Depth + 1);
+      if (KnownAmt.getMaxValue().ult(BitWidth))
+        MaxShiftAmt = KnownAmt.getMaxValue().getZExtValue();
+      // Check we don't demand any shifted bits outside Op1.
+      if ((DemandedBits.getActiveBits() + MaxShiftAmt) <= BitWidth) {
+        SDValue NewOp = TLO.DAG.getNode(ISD::SRL, dl, VT, Op1, Op2);
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
+
     // For pow-2 bitwidths we only demand the bottom modulo amt bits.
     if (isPowerOf2_32(BitWidth)) {
       APInt DemandedAmtBits(Op2.getScalarValueSizeInBits(), BitWidth - 1);
