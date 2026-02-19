@@ -13,6 +13,7 @@
 
 namespace fir {
 class FirOpBuilder;
+class RecordType;
 } // namespace fir
 
 namespace Fortran::utils::openmp {
@@ -59,6 +60,14 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
 /// maps.
 void cloneOrMapRegionOutsiders(
     fir::FirOpBuilder &firOpBuilder, mlir::omp::TargetOp targetOp);
+
+using RecordMemberMapperMangler =
+    std::function<void(std::string &mapperId, llvm::StringRef memberName)>;
+
+mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
+    fir::FirOpBuilder &firOpBuilder, mlir::Location loc,
+    fir::RecordType recordType, llvm::StringRef mapperNameStr,
+    RecordMemberMapperMangler mangler = {});
 } // namespace Fortran::utils::openmp
 
 #endif // FORTRAN_UTILS_OPENMP_H_
