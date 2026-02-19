@@ -102,6 +102,10 @@ public:
   // Reports misuse of [[clang::noescape]] when parameter escapes through field
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                        const FieldDecl *EscapeField) {}
+  // Reports misuse of [[clang::noescape]] when parameter escapes through 
+  // assignment to a global variable
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const ValueDecl *EscapeGlobal) {}
 
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,

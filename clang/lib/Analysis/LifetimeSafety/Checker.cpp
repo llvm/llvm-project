@@ -270,6 +270,9 @@ public:
         else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);
+        else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF))
+          // Wire up
+          ;
         else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
