@@ -1910,14 +1910,13 @@ public:
     IRBuilder<> Builder(MatMul);
     Check0->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check0);
-    Type *IntPtrTy = Builder.getIntPtrTy(Load->getDataLayout());
-    Value *StoreBegin = Builder.CreatePtrToInt(
-        const_cast<Value *>(StoreLoc.Ptr), IntPtrTy, "store.begin");
-    Value *StoreEnd = Builder.CreateAdd(
-        StoreBegin, ConstantInt::get(IntPtrTy, StoreLoc.Size.getValue()),
-        "store.end", true, true);
-    Value *LoadBegin = Builder.CreatePtrToInt(const_cast<Value *>(LoadLoc.Ptr),
-                                              IntPtrTy, "load.begin");
+    Type *AddrTy = DL.getAddressType(Store->getPointerOperand()->getType());
+    Value *StoreBegin = Store->getPointerOperand();
+    Value *StoreEnd = Builder.CreatePtrAdd(
+        StoreBegin, ConstantInt::get(AddrTy, StoreLoc.Size.getValue()),
+        "store.end",
+        GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
+    Value *LoadBegin = Load->getPointerOperand();
     BranchInst *BR1 = Builder.CreateCondBr(
         Builder.CreateICmpULT(LoadBegin, StoreEnd), Check1, Fusion);
     setExplicitlyUnknownBranchWeightsIfProfiled(*BR1, DEBUG_TYPE);
@@ -1927,9 +1926,10 @@ public:
     // overlap.
     Check1->getTerminator()->eraseFromParent();
     Builder.SetInsertPoint(Check1, Check1->begin());
-    Value *LoadEnd = Builder.CreateAdd(
-        LoadBegin, ConstantInt::get(IntPtrTy, LoadLoc.Size.getValue()),
-        "load.end", true, true);
+    Value *LoadEnd = Builder.CreatePtrAdd(
+        LoadBegin, ConstantInt::get(AddrTy, LoadLoc.Size.getValue()),
+        "load.end",
+        GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap());
     BranchInst *BR2 = Builder.CreateCondBr(
         Builder.CreateICmpULT(StoreBegin, LoadEnd), Copy, Fusion);
     setExplicitlyUnknownBranchWeightsIfProfiled(*BR2, DEBUG_TYPE);

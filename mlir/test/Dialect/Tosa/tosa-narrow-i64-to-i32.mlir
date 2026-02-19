@@ -215,7 +215,7 @@ func.func @test_dense_ressource_i64() -> tensor<1x2xi64> {
   dialect_resources: {
     builtin: {
       // COMMON: resource: "0x04000000FEFFFF7F905AE75A"
-      resource: "0x04000000FEFFFF7F00000000905AE75A00000000"
+      resource: "0x08000000FEFFFF7F00000000905AE75A00000000"
     }
   }
 #-}
