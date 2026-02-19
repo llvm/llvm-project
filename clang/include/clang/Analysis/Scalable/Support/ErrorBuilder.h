@@ -16,6 +16,7 @@
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <optional>
 #include <string>
 #include <system_error>
 #include <vector>

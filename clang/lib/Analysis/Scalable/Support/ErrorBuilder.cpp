@@ -21,29 +21,27 @@ ErrorBuilder ErrorBuilder::wrap(llvm::Error E) {
       E &&
       "Cannot wrap a success error - check for success before calling wrap()");
 
-  std::error_code EC;
-  bool FirstError = true;
+  std::optional<std::error_code> EC;
   std::vector<std::string> Messages;
-  ErrorBuilder Builder(std::make_error_code(std::errc::invalid_argument));
 
   llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
     // Capture error code from the first error only.
-    if (FirstError) {
+    if (!EC)
       EC = EI.convertToErrorCode();
-      Builder.Code = EC;
-      FirstError = false;
-    }
 
     // Collect messages from all errors.
     std::string ErrorMsg = EI.message();
-    if (!ErrorMsg.empty()) {
+    if (!ErrorMsg.empty())
       Messages.push_back(std::move(ErrorMsg));
-    }
   });
 
-  // Combine all messages with " + " and push as a single context entry
-  std::string CombinedMsg = llvm::join(Messages, ErrorSeparator);
-  Builder.pushContext(std::move(CombinedMsg));
+  assert(EC && "wrap() called with a non-success error but no handler fired - "
+               "indicates a bug in handleAllErrors");
+
+  ErrorBuilder Builder(*EC);
+
+  // Combine all messages with " + " and push as a single context entry.
+  Builder.pushContext(llvm::join(Messages, ErrorSeparator));
 
   return Builder;
 }

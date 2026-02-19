@@ -21,7 +21,6 @@ namespace clang::ssaf {
 /// The table maps each unique EntityName to exactly one EntityId.
 /// Entities are never removed.
 class EntityIdTable {
-  friend class EntityLinker;
   friend class SerializationFormat;
   friend class TestFixture;
 
