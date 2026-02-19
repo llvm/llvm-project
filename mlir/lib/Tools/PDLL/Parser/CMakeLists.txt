@@ -15,3 +15,5 @@ llvm_add_library(MLIRPDLLParser STATIC
   MLIRSupport
   MLIRTableGen
   )
+
+add_mlir_library_install(MLIRPDLLParser)
