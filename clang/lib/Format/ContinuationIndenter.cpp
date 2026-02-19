@@ -952,7 +952,6 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
            Next->is(TT_FunctionDeclarationLParen) || IsFunctionCallParen(*Next);
   };
   if (IsOpeningBracket(Previous) &&
-      State.Column > getNewLineColumn(State).Total &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //
