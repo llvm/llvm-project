@@ -285,8 +285,7 @@ add_entrypoint_object(
   HDRS
     ../dsubf128.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.add_sub
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.dsubf128
 )
 
 add_entrypoint_object(
@@ -296,7 +295,7 @@ add_entrypoint_object(
   HDRS
     ../dsubl.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.math.dsubl
 )
 
 add_entrypoint_object(

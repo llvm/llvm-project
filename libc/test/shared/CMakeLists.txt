@@ -51,6 +51,8 @@ add_fp_unittest(
     libc.src.__support.math.dfmaf128
     libc.src.__support.math.dfmal
     libc.src.__support.math.dsqrtl
+    libc.src.__support.math.dsubf128
+    libc.src.__support.math.dsubl
     libc.src.__support.math.exp10m1f
     libc.src.__support.math.exp10m1f16
     libc.src.__support.math.erff
