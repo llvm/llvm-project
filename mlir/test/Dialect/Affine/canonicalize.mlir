@@ -2401,3 +2401,33 @@ func.func @for_empty_body_folder_iv_yield() -> index {
   }
   return %10 : index
 }
+
+// -----
+
+// Verify that `affine.linearize_index` fold does not crash on non-IntegerAttr
+// constant operands such as `ub.poison`.
+
+// CHECK-LABEL: @linearize_index_poison_no_crash
+// CHECK:         %[[POISON:.*]] = ub.poison : index
+// CHECK:         return %[[POISON]]
+func.func @linearize_index_poison_no_crash() -> index {
+  %0 = index.constant 0
+  %1 = ub.poison : index
+  %2 = affine.linearize_index [%0, %1] by (1) : index
+  return %2 : index
+}
+
+// -----
+
+// Verify that `affine.delinearize_index` fold does not crash on non-IntegerAttr
+// constant operands such as `ub.poison`.
+
+// CHECK-LABEL: @delinearize_index_poison_no_crash
+// CHECK:         %[[POISON:.*]] = ub.poison : index
+// CHECK:         %[[DELIN:.*]]:2 = affine.delinearize_index %[[POISON]] into (2, 3) : index, index
+// CHECK:         return %[[DELIN]]#0, %[[DELIN]]#1
+func.func @delinearize_index_poison_no_crash() -> (index, index) {
+  %0 = ub.poison : index
+  %1:2 = affine.delinearize_index %0 into (2, 3) : index, index
+  return %1#0, %1#1 : index, index
+}
