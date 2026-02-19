@@ -23492,7 +23492,6 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
     return SDValue();
 
   // Don't perform this combine if constructing the vector will be expensive.
-  // TODO: Drop AssumeSingleUse = true override.
   if ((!mayFoldIntoVector(X, DAG, Subtarget) ||
        !mayFoldIntoVector(Y, DAG, Subtarget)) &&
       !IsOrXorXorTreeCCZero)
