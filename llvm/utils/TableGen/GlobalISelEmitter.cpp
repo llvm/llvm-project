@@ -275,6 +275,16 @@ static std::string getMangledRootDefName(StringRef DefOperandName) {
   return ("DstI[" + DefOperandName + "]").str();
 }
 
+static bool shouldUseGenericTypeForInstruction(const CodeGenInstruction *GI) {
+  if (!GI)
+    return false;
+
+  bool Unset = false;
+  bool ShouldMatchGeneric =
+      GI->TheDef->getValueAsBitOrUnset("GISelMatchGenericTypes", Unset);
+  return Unset ? false : ShouldMatchGeneric;
+}
+
 //===- GlobalISelEmitter class --------------------------------------------===//
 
 static Expected<LLTCodeGen> getInstResultType(const TreePatternNode &Dst,
@@ -379,12 +389,17 @@ private:
   createAndImportSelDAGMatcher(RuleMatcher &Rule,
                                InstructionMatcher &InsnMatcher,
                                const TreePatternNode &Src, unsigned &TempOpIdx);
+  Error addTypeCheckPredicateForOpcode(OperandMatcher &OM,
+                                       const TypeSetByHwMode &VTy,
+                                       bool OperandIsAPointer,
+                                       const CodeGenInstruction *GI) const;
   Error importComplexPatternOperandMatcher(OperandMatcher &OM, const Record *R,
                                            unsigned &TempOpIdx) const;
   Error importChildMatcher(RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
                            const TreePatternNode &SrcChild,
                            bool OperandIsAPointer, bool OperandIsImmArg,
-                           unsigned OpIdx, unsigned &TempOpIdx);
+                           const CodeGenInstruction *GI, unsigned OpIdx,
+                           unsigned &TempOpIdx);
 
   Expected<BuildMIAction &>
   createAndImportInstructionRenderer(RuleMatcher &M,
@@ -738,6 +753,28 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
   return InsnMatcher;
 }
 
+Error GlobalISelEmitter::addTypeCheckPredicateForOpcode(
+    OperandMatcher &OM, const TypeSetByHwMode &VTy, bool OperandIsAPointer,
+    const CodeGenInstruction *GI) const {
+  // Pointer information is separate from the underlying MVT. Avoid losing it by
+  // forcing the regular path.
+  if (OperandIsAPointer || VTy.isPointer())
+    return OM.addTypeCheckPredicate(VTy, OperandIsAPointer);
+
+  if (LLT::getUseExtended() && shouldUseGenericTypeForInstruction(GI)) {
+    if (!VTy.isMachineValueType())
+      return failedImport("unsupported typeset");
+
+    auto GenericLLT = MVTToGenericLLT(VTy.getMachineValueType().SimpleTy);
+    if (GenericLLT) {
+      OM.addPredicate<LLTOperandShapeMatcher>(*GenericLLT);
+      return Error::success();
+    }
+  }
+
+  return OM.addTypeCheckPredicate(VTy, OperandIsAPointer);
+}
+
 Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
     const TreePatternNode &Src, unsigned &TempOpIdx) {
@@ -786,7 +823,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     const bool OperandIsAPointer =
         SrcGIOrNull && SrcGIOrNull->isOutOperandAPointer(OpIdx);
     OperandMatcher &OM = InsnMatcher.addOperand(OpIdx++, "", TempOpIdx);
-    if (auto Error = OM.addTypeCheckPredicate(VTy, OperandIsAPointer))
+    if (auto Error = addTypeCheckPredicateForOpcode(OM, VTy, OperandIsAPointer,
+                                                    SrcGIOrNull))
       return failedImport(toString(std::move(Error)) +
                           " for result of Src pattern operator");
   }
@@ -939,9 +977,9 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
         OperandIsImmArg |= II->isParamImmArg(I - 1);
       }
 
-      if (auto Error =
-              importChildMatcher(Rule, InsnMatcher, SrcChild, OperandIsAPointer,
-                                 OperandIsImmArg, OpIdx++, TempOpIdx))
+      if (auto Error = importChildMatcher(Rule, InsnMatcher, SrcChild,
+                                          OperandIsAPointer, OperandIsImmArg,
+                                          SrcGIOrNull, OpIdx++, TempOpIdx))
         return std::move(Error);
     }
   }
@@ -982,7 +1020,8 @@ static StringRef getSrcChildName(const TreePatternNode &SrcChild,
 Error GlobalISelEmitter::importChildMatcher(
     RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
     const TreePatternNode &SrcChild, bool OperandIsAPointer,
-    bool OperandIsImmArg, unsigned OpIdx, unsigned &TempOpIdx) {
+    bool OperandIsImmArg, const CodeGenInstruction *GI, unsigned OpIdx,
+    unsigned &TempOpIdx) {
 
   const Record *PhysReg = nullptr;
   std::string SrcChildName = getSrcChildName(SrcChild, PhysReg).str();
@@ -1043,8 +1082,8 @@ Error GlobalISelEmitter::importChildMatcher(
   // Immediate arguments have no meaningful type to check as they don't have
   // registers.
   if (!OperandIsImmArg) {
-    if (auto Error =
-            OM.addTypeCheckPredicate(ChildTypes.front(), OperandIsAPointer))
+    if (auto Error = addTypeCheckPredicateForOpcode(OM, ChildTypes.front(),
+                                                    OperandIsAPointer, GI))
       return failedImport(toString(std::move(Error)) + " for Src operand (" +
                           to_string(SrcChild) + ")");
   }
