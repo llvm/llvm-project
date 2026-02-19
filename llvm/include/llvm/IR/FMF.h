@@ -105,6 +105,10 @@ public:
     return Flags != OtherFlags.Flags;
   }
 
+  bool operator==(const FastMathFlags &OtherFlags) const {
+    return Flags == OtherFlags.Flags;
+  }
+
   /// Print fast-math flags to \p O.
   LLVM_ABI void print(raw_ostream &O) const;
 
