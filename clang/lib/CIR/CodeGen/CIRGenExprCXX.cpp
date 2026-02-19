@@ -265,6 +265,14 @@ CIRGenFunction::emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
       /*IsArrow=*/false, e->getArg(0));
 }
 
+RValue CIRGenFunction::emitCUDAKernelCallExpr(const CUDAKernelCallExpr *expr,
+                                              ReturnValueSlot returnValue) {
+  // Emit as a device kernel call if CUDA device code is to be generated.
+  if (!getLangOpts().HIP && getLangOpts().CUDAIsDevice)
+    cgm.errorNYI("CUDA Device side kernel call");
+  return cgm.getCUDARuntime().emitCUDAKernelCallExpr(*this, expr, returnValue);
+}
+
 RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
     const CXXMethodDecl *md, const CIRGenCallee &callee,
     ReturnValueSlot returnValue, mlir::Value thisPtr, mlir::Value implicitParam,
