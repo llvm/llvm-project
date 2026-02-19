@@ -40,49 +40,63 @@ class ProcessLaunchInfo;
 static bool
 GetOpenBSDProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
                       ProcessInstanceInfo &process_info) {
-  if (process_info.ProcessIDIsValid()) {
-    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_ARGS,
-                  (int)process_info.GetProcessID()};
+  if (!process_info.ProcessIDIsValid())
+    return false;
 
-    char arg_data[8192];
-    size_t arg_data_size = sizeof(arg_data);
-    if (::sysctl(mib, 4, arg_data, &arg_data_size, NULL, 0) == 0) {
-      DataExtractor data(arg_data, arg_data_size, endian::InlHostByteOrder(),
-                         sizeof(void *));
-      lldb::offset_t offset = 0;
-      const char *cstr;
+  int pid = process_info.GetProcessID();
 
-      cstr = data.GetCStr(&offset);
-      if (cstr) {
-        process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
+  int mib[4] = {CTL_KERN, KERN_PROC_ARGS, pid, KERN_PROC_ARGV};
+  size_t kern_proc_args_size = 0;
 
-        if (!(match_info_ptr == NULL ||
-              NameMatches(
-                  process_info.GetExecutableFile().GetFilename().GetCString(),
-                  match_info_ptr->GetNameMatchType(),
-                  match_info_ptr->GetProcessInfo().GetName())))
-          return false;
+  // On OpenBSD, this will just fill ARG_MAX all the time
+  if (::sysctl(mib, 4, NULL, &kern_proc_args_size, NULL, 0) == -1)
+    return false;
 
-        Args &proc_args = process_info.GetArguments();
-        while (1) {
-          const uint8_t *p = data.PeekData(offset, 1);
-          while ((p != NULL) && (*p == '\0') && offset < arg_data_size) {
-            ++offset;
-            p = data.PeekData(offset, 1);
-          }
-          if (p == NULL || offset >= arg_data_size)
-            return true;
+  std::string arg_data(kern_proc_args_size, 0);
 
-          cstr = data.GetCStr(&offset);
-          if (cstr)
-            proc_args.AppendArgument(llvm::StringRef(cstr));
-          else
-            return true;
-        }
-      }
-    }
+  if (::sysctl(mib, 4, (void *)arg_data.data(), &kern_proc_args_size, NULL,
+               0) == -1)
+    return false;
+
+  arg_data.resize(kern_proc_args_size);
+
+  // arg_data is a NULL terminated list of pointers, where the pointers
+  // point within arg_data to the location of the arg string
+  DataExtractor data(arg_data.data(), arg_data.length(),
+                     endian::InlHostByteOrder(), sizeof(void *));
+
+  lldb::offset_t offset = 0;
+  lldb::offset_t arg_offset = 0;
+  uint64_t arg_addr = 0;
+  const char *cstr;
+
+  arg_addr = data.GetAddress(&offset);
+  arg_offset = arg_addr - (uint64_t)arg_data.data();
+  cstr = data.GetCStr(&arg_offset);
+
+  if (!cstr)
+    return false;
+
+  process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
+
+  if (match_info_ptr != NULL &&
+      !NameMatches(process_info.GetExecutableFile().GetFilename().GetCString(),
+                   match_info_ptr->GetNameMatchType(),
+                   match_info_ptr->GetProcessInfo().GetName())) {
+    return false;
   }
-  return false;
+
+  Args &proc_args = process_info.GetArguments();
+
+  while (1) {
+    arg_addr = data.GetAddress(&offset);
+    if (arg_addr == 0)
+      break;
+    arg_offset = arg_addr - (uint64_t)arg_data.data();
+    cstr = data.GetCStr(&arg_offset);
+    proc_args.AppendArgument(cstr);
+  }
+  return true;
 }
 
 static bool GetOpenBSDProcessCPUType(ProcessInstanceInfo &process_info) {
@@ -96,15 +110,15 @@ static bool GetOpenBSDProcessCPUType(ProcessInstanceInfo &process_info) {
 }
 
 static bool GetOpenBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
-  struct kinfo_proc proc_kinfo;
-  size_t proc_kinfo_size;
 
   if (process_info.ProcessIDIsValid()) {
-    int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID,
-                  (int)process_info.GetProcessID()};
-    proc_kinfo_size = sizeof(struct kinfo_proc);
+    struct kinfo_proc proc_kinfo = {};
+    size_t proc_kinfo_size = sizeof(proc_kinfo);
+    int mib[6] = {CTL_KERN,           KERN_PROC,
+                  KERN_PROC_PID,      (int)process_info.GetProcessID(),
+                  sizeof(proc_kinfo), 1};
 
-    if (::sysctl(mib, 4, &proc_kinfo, &proc_kinfo_size, NULL, 0) == 0) {
+    if (::sysctl(mib, 6, &proc_kinfo, &proc_kinfo_size, NULL, 0) == 0) {
       if (proc_kinfo_size > 0) {
         process_info.SetParentProcessID(proc_kinfo.p_ppid);
         process_info.SetUserID(proc_kinfo.p_ruid);
@@ -127,10 +141,11 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &process_infos) {
   std::vector<struct kinfo_proc> kinfos;
 
-  int mib[3] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL};
+  int mib[6] = {
+      CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0, sizeof(struct kinfo_proc), 0};
 
   size_t pid_data_size = 0;
-  if (::sysctl(mib, 3, NULL, &pid_data_size, NULL, 0) != 0)
+  if (::sysctl(mib, 6, NULL, &pid_data_size, NULL, 0) != 0)
     return 0;
 
   // Add a few extra in case a few more show up
@@ -138,9 +153,10 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
       (pid_data_size / sizeof(struct kinfo_proc)) + 10;
 
   kinfos.resize(estimated_pid_count);
+  mib[5] = estimated_pid_count;
   pid_data_size = kinfos.size() * sizeof(struct kinfo_proc);
 
-  if (::sysctl(mib, 3, &kinfos[0], &pid_data_size, NULL, 0) != 0)
+  if (::sysctl(mib, 6, &kinfos[0], &pid_data_size, NULL, 0) != 0)
     return 0;
 
   const size_t actual_pid_count = (pid_data_size / sizeof(struct kinfo_proc));
