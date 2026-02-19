@@ -353,13 +353,14 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     if ((ArgInfo & 7) == IITDescriptor::AK_AnyOf) {
       unsigned NumTypes = Infos[NextElt++];
       ArgInfo |= (NumTypes << 8);
-      OutputTable.push_back(IITDescriptor::get(IITDescriptor::Argument, ArgInfo));
+      OutputTable.push_back(
+          IITDescriptor::get(IITDescriptor::Argument, ArgInfo));
 
       for (unsigned i = 0; i < NumTypes; ++i)
         DecodeIITType(NextElt, Infos, Info, OutputTable);
-    }
-    else
-      OutputTable.push_back(IITDescriptor::get(IITDescriptor::Argument, ArgInfo));
+    } else
+      OutputTable.push_back(
+          IITDescriptor::get(IITDescriptor::Argument, ArgInfo));
     return;
   }
   case IIT_EXTEND_ARG: {
@@ -896,10 +897,9 @@ static std::string typeToString(Type *Ty);
 static bool
 verifyTypeAgainstConstraints(Type *Ty, unsigned NumConstraints,
                              ArrayRef<Intrinsic::IITDescriptor> &Infos);
-static bool
-validateAndConsumeAnyOf(Type *Ty, unsigned NumConstraints,
-                             ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                             const Twine &ArgDesc, std::string &ErrMsg);
+static bool validateAndConsumeAnyOf(Type *Ty, unsigned NumConstraints,
+                                    ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                                    const Twine &ArgDesc, std::string &ErrMsg);
 
 using DeferredIntrinsicMatchPair =
     std::pair<Type *, ArrayRef<Intrinsic::IITDescriptor>>;
@@ -1023,13 +1023,14 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     if (D.getArgumentKind() == IITDescriptor::AK_AnyOf) {
       unsigned N = D.getAnyOfCount();
       if (ErrMsg) {
-        if (!validateAndConsumeAnyOf(
-                Ty, N, Infos,
-                Twine("Overloaded Argument ") + Twine(D.getArgumentNumber()),
-                *ErrMsg))
+        if (!validateAndConsumeAnyOf(Ty, N, Infos,
+                                     Twine("Overloaded Argument ") +
+                                         Twine(D.getArgumentNumber()),
+                                     *ErrMsg))
           return true;
       } else
-          for (unsigned i = 0; i < N; ++i) skipDescriptorsForSingleType(Infos);
+        for (unsigned i = 0; i < N; ++i)
+          skipDescriptorsForSingleType(Infos);
     }
 
     return false;
@@ -1193,12 +1194,13 @@ verifyTypeAgainstConstraints(Type *Ty, unsigned NumConstraints,
     SmallVector<Type *, 4> TempArgTys;
     SmallVector<DeferredIntrinsicMatchPair, 2> TempDeferredChecks;
 
-    if (!matchIntrinsicType(Ty, TypeDesc, TempArgTys, TempDeferredChecks, false)) {
+    if (!matchIntrinsicType(Ty, TypeDesc, TempArgTys, TempDeferredChecks,
+                            false)) {
       skipDescriptorsForSingleType(Infos);
       for (unsigned j = i + 1; j < NumConstraints; ++j)
         skipDescriptorsForSingleType(Infos);
       return true;
-     }
+    }
     skipDescriptorsForSingleType(Infos);
   }
 
@@ -1213,15 +1215,16 @@ static std::string typeToString(Type *Ty) {
   return Str;
 }
 
-// Verify Ty against NumConstraints allowed type descriptors at the front of Infos. 
-static bool
-validateAndConsumeAnyOf(Type *Ty, unsigned NumConstraints,
-                             ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                             const Twine &ArgDesc, std::string &ErrMsg) {
+// Verify Ty against NumConstraints allowed type descriptors at the front of
+// Infos.
+static bool validateAndConsumeAnyOf(Type *Ty, unsigned NumConstraints,
+                                    ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                                    const Twine &ArgDesc, std::string &ErrMsg) {
   if (verifyTypeAgainstConstraints(Ty, NumConstraints, Infos))
     return true;
 
-  ErrMsg = (ArgDesc + " type '" + typeToString(Ty) + "' not in allowed types").str();
+  ErrMsg =
+      (ArgDesc + " type '" + typeToString(Ty) + "' not in allowed types").str();
   return false;
 }
 
