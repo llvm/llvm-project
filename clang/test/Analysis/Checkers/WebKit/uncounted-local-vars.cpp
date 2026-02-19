@@ -554,4 +554,19 @@ namespace delete_unresolved_type {
     }
   };
 
+  template <class T>
+  struct helper {
+    static void f(typename T::inner __sp) { }
+  };
+
+  template <class T> struct traits;
+  template <> struct traits<char> {
+    using inner = struct inner;
+  };
+
+  template <typename T>
+  void g(typename T::inner __sp) {
+    helper<traits<char>>::f(__sp);
+  }
+
 }
