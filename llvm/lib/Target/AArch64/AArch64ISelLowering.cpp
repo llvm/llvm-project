@@ -27300,6 +27300,7 @@ static SDValue combineToExtendBoolVectorInReg(
   assert(NumElts == SclVT.getSizeInBits() && "Unexpected bool vector size");
 
   // Broadcast the scalar integer to the vector elements.
+  bool IsBE = DAG.getDataLayout().isBigEndian();
   if (NumElts > EltSizeInBits) {
     // If the scalar integer is greater than the vector element size, then we
     // must split it down into sub-sections for broadcasting. For example:
@@ -27312,8 +27313,8 @@ static SDValue combineToExtendBoolVectorInReg(
     Vec = DAG.getBitcast(VT, Vec);
 
     for (unsigned i = 0; i != Scale; ++i) {
-      int Offset = 0;
-      ShuffleMask.append(EltSizeInBits, i + Offset);
+      unsigned Lane = IsBE ? (Scale - 1 - i) : i;
+      ShuffleMask.append(EltSizeInBits, (int)Lane);
     }
     Vec = DAG.getVectorShuffle(VT, DL, Vec, Vec, ShuffleMask);
   } else {
@@ -27326,7 +27327,8 @@ static SDValue combineToExtendBoolVectorInReg(
   // Now, mask the relevant bit in each element.
   SmallVector<SDValue, 32> Bits;
   for (unsigned i = 0; i != NumElts; ++i) {
-    int BitIdx = (i % EltSizeInBits);
+    unsigned ScalarBit = IsBE ? (NumElts - 1 - i) : i;
+    int BitIdx = (ScalarBit % EltSizeInBits);
     APInt Bit = APInt::getBitsSet(EltSizeInBits, BitIdx, BitIdx + 1);
     Bits.push_back(DAG.getConstant(Bit, DL, SVT));
   }
