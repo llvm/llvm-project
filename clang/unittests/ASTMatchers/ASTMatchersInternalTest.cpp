@@ -291,8 +291,8 @@ TEST(DynTypedMatcherTest, ConstructWithTraversalKindSetsTK) {
 }
 
 TEST(DynTypedMatcherTest, ConstructWithTraversalKindOverridesNestedTK) {
-  auto M =
-      DynTypedMatcher(decl()).withTraversalKind(TK_IgnoreUnlessSpelledInSource);
+  auto M = DynTypedMatcher(decl()).withTraversalKind(TK_AsIs).withTraversalKind(
+      TK_IgnoreUnlessSpelledInSource);
   EXPECT_THAT(M.getTraversalKind(),
               llvm::ValueIs(TK_IgnoreUnlessSpelledInSource));
 }
