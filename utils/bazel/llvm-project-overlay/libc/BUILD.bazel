@@ -3054,6 +3054,34 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fadd",
+    hdrs = ["src/__support/math/fadd.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_faddf128",
+    hdrs = ["src/__support/math/faddf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_faddl",
+    hdrs = ["src/__support/math/faddl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_f16fma",
     hdrs = ["src/__support/math/f16fma.h"],
     deps = [
@@ -4969,11 +4997,26 @@ libc_math_function(name = "fabsf128")
 
 libc_math_function(name = "fabsf16")
 
-libc_math_function(name = "fadd")
+libc_math_function(
+    name = "fadd",
+    additional_deps = [
+        ":__support_math_fadd",
+    ],
+)
 
-libc_math_function(name = "faddl")
+libc_math_function(
+    name = "faddl",
+    additional_deps = [
+        ":__support_math_faddl",
+    ],
+)
 
-libc_math_function(name = "faddf128")
+libc_math_function(
+    name = "faddf128",
+    additional_deps = [
+        ":__support_math_faddf128",
+    ],
+)
 
 libc_math_function(name = "fdim")
 

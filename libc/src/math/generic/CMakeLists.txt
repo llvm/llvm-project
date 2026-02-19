@@ -564,7 +564,7 @@ add_entrypoint_object(
   HDRS
     ../fadd.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.math.fadd
 )
 
 add_entrypoint_object(
@@ -574,7 +574,7 @@ add_entrypoint_object(
   HDRS
     ../faddl.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.math.faddl
 )
 
 add_entrypoint_object(
@@ -584,8 +584,7 @@ add_entrypoint_object(
   HDRS
     ../faddf128.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.add_sub
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.faddf128
 )
 
 add_entrypoint_object(

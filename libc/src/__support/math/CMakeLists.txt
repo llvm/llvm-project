@@ -753,6 +753,34 @@ add_header_library(
 )
 
 add_header_library(
+  fadd
+  HDRS
+    fadd.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  faddf128
+  HDRS
+    faddf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  faddl
+  HDRS
+    faddl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ffmal
   HDRS
     ffmal.h
