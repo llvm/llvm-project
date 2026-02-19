@@ -204,6 +204,7 @@ Changes to LLDB
 * Support for MIPS64 has been removed.
 * The minimum assumed FreeBSD version is now 14. The effect of which is that watchpoints are
   assumed to be supported.
+* Kernel debugging support for FreeBSD on PPC64le has been added.
 
 #### Kernel Debugging
 
