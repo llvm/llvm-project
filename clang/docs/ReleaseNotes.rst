@@ -249,6 +249,8 @@ Improvements to Clang's diagnostics
 - The ``-Wloop-analysis`` warning has been extended to catch more cases of
   variable modification inside lambda expressions (#GH132038).
 
+- Clang now diagnoses ``-Wunused-member-function`` with a specific message for constructors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
