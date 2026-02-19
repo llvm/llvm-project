@@ -22,9 +22,9 @@ define hidden i32 @SMMULR_SMMLAR(i32 %a, i32 %b0, i32 %b1, i32 %Xn, i32 %Xn1) lo
 ; NODSP:       @ %bb.0: @ %entry
 ; NODSP-NEXT:    push {r4, lr}
 ; NODSP-NEXT:    ldr.w lr, [sp, #8]
-; NODSP-NEXT:    movs r0, #0
-; NODSP-NEXT:    mov.w r4, #-2147483648
 ; NODSP-NEXT:    mov.w r12, #-2147483648
+; NODSP-NEXT:    movs r0, #0
+; NODSP-NEXT:    mov r4, r12
 ; NODSP-NEXT:    smlal r4, r0, lr, r2
 ; NODSP-NEXT:    smlal r12, r0, r3, r1
 ; NODSP-NEXT:    pop {r4, pc}

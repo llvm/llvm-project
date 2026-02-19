@@ -541,11 +541,11 @@ define dso_local arm_aapcs_vfpcc void @two_reductions_mul_add_v8i16(ptr nocaptur
 ; CHECK-NEXT:    cbz r2, .LBB7_4
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    adds r3, r2, #7
-; CHECK-NEXT:    movs r4, #1
-; CHECK-NEXT:    bic r3, r3, #7
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    bic r3, r3, #7
+; CHECK-NEXT:    movs r4, #1
 ; CHECK-NEXT:    subs r3, #8
-; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vmov q3, q1
 ; CHECK-NEXT:    add.w r12, r4, r3, lsr #3
 ; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    mov r4, r1
@@ -572,7 +572,7 @@ define dso_local arm_aapcs_vfpcc void @two_reductions_mul_add_v8i16(ptr nocaptur
 ; CHECK-NEXT:    b .LBB7_5
 ; CHECK-NEXT:  .LBB7_4:
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:  .LBB7_5: @ %for.cond.cleanup
 ; CHECK-NEXT:    strb r2, [r0]
 ; CHECK-NEXT:    strb r4, [r1]

@@ -62,8 +62,8 @@ define i1 @test_srem_pow2_setne(i6 %X) nounwind {
 define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-LABEL: test_srem_vec:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
 ; CHECK-NEXT:    .pad #4
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .vsave {d8, d9}
@@ -72,31 +72,33 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-NEXT:    and r0, r3, #1
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    rsbs r1, r0, #0
+; CHECK-NEXT:    mov.w r9, #0
+; CHECK-NEXT:    movs r7, #9
 ; CHECK-NEXT:    mov r0, r2
-; CHECK-NEXT:    movs r2, #9
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r2, r7
+; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    bl __aeabi_ldivmod
 ; CHECK-NEXT:    and r0, r5, #1
-; CHECK-NEXT:    mov r7, r2
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    rsbs r1, r0, #0
-; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:    mov r8, r3
 ; CHECK-NEXT:    mov r0, r6
-; CHECK-NEXT:    movs r2, #9
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r2, r7
+; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    bl __aeabi_ldivmod
-; CHECK-NEXT:    ldr r1, [sp, #44]
+; CHECK-NEXT:    ldr r1, [sp, #52]
 ; CHECK-NEXT:    vmov.32 d8[0], r2
-; CHECK-NEXT:    ldr r0, [sp, #40]
+; CHECK-NEXT:    ldr r0, [sp, #48]
 ; CHECK-NEXT:    mov r5, r3
 ; CHECK-NEXT:    and r1, r1, #1
 ; CHECK-NEXT:    mvn r2, #8
 ; CHECK-NEXT:    rsbs r1, r1, #0
 ; CHECK-NEXT:    mov.w r3, #-1
-; CHECK-NEXT:    vmov.32 d9[0], r7
+; CHECK-NEXT:    vmov.32 d9[0], r4
 ; CHECK-NEXT:    bl __aeabi_ldivmod
 ; CHECK-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NEXT:    adr r0, .LCPI3_0
-; CHECK-NEXT:    vmov.32 d9[1], r4
+; CHECK-NEXT:    vmov.32 d9[1], r8
 ; CHECK-NEXT:    vld1.64 {d18, d19}, [r0:128]
 ; CHECK-NEXT:    adr r0, .LCPI3_1
 ; CHECK-NEXT:    vmov.32 d16[1], r3
@@ -121,7 +123,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-NEXT:    vmov.32 r2, d16[0]
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    add sp, #4
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI3_0:

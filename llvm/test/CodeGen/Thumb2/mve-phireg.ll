@@ -38,7 +38,7 @@ define arm_aapcs_vfpcc void @k() {
 ; CHECK-NEXT:    vmov.i32 q5, #0x0
 ; CHECK-NEXT:    vpsel q6, q4, q3
 ; CHECK-NEXT:    vstrh.16 q6, [r0]
-; CHECK-NEXT:    vmov.i32 q6, #0x0
+; CHECK-NEXT:    vmov q6, q5
 ; CHECK-NEXT:    cbz r1, .LBB0_2
 ; CHECK-NEXT:    le .LBB0_1
 ; CHECK-NEXT:  .LBB0_2: @ %for.cond4.preheader

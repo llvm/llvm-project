@@ -2435,7 +2435,7 @@ define i64 @bextr64_c0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind {
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    lsrpl.w r0, r1, r3
 ; V7A-T-NEXT:    lsr.w r1, r1, r2
-; V7A-T-NEXT:    mov.w r3, #-1
+; V7A-T-NEXT:    mov r3, lr
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    movpl r1, #0
 ; V7A-T-NEXT:    rsbs.w r2, r12, #32
@@ -2878,7 +2878,7 @@ define i64 @bextr64_c4_commutative(i64 %val, i64 %numskipbits, i64 %numlowbits) 
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    lsrpl.w r0, r1, r3
 ; V7A-T-NEXT:    lsr.w r1, r1, r2
-; V7A-T-NEXT:    mov.w r3, #-1
+; V7A-T-NEXT:    mov r3, lr
 ; V7A-T-NEXT:    it pl
 ; V7A-T-NEXT:    movpl r1, #0
 ; V7A-T-NEXT:    rsbs.w r2, r12, #32

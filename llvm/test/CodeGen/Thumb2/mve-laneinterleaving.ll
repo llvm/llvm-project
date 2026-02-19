@@ -331,23 +331,23 @@ define arm_aapcs_vfpcc <4 x i32> @ext_ops_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-NEXT:    umull r4, r12, r4, r3
 ; CHECK-NEXT:    csetm r9, eq
 ; CHECK-NEXT:    orrs.w r1, r1, r6, asr #31
-; CHECK-NEXT:    mov.w r7, #0
 ; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r7, r9, #0, #8
 ; CHECK-NEXT:    mla r5, r5, r3, r12
+; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    mov r7, r12
+; CHECK-NEXT:    bfi r7, r9, #0, #8
 ; CHECK-NEXT:    bfi r7, r1, #8, #8
 ; CHECK-NEXT:    rsbs r1, r6, #0
 ; CHECK-NEXT:    vmsr p0, r7
 ; CHECK-NEXT:    mla r7, lr, r2, r8
 ; CHECK-NEXT:    lsll r4, r5, r1
 ; CHECK-NEXT:    rsb.w r1, r10, #0
-; CHECK-NEXT:    lsll r4, r5, r3
 ; CHECK-NEXT:    lsll r0, r7, r1
+; CHECK-NEXT:    lsll r4, r5, r3
 ; CHECK-NEXT:    vmov r3, s2
-; CHECK-NEXT:    vmov r1, s6
 ; CHECK-NEXT:    lsll r0, r7, r2
+; CHECK-NEXT:    vmov r1, s6
 ; CHECK-NEXT:    vmov q3[2], q3[0], r0, r4
-; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    vpsel q2, q3, q2
 ; CHECK-NEXT:    adds r2, r3, r1
 ; CHECK-NEXT:    asr.w r0, r3, #31

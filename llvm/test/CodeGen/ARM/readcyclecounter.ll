@@ -21,5 +21,5 @@ define i64 @get_count() {
 ; CHECK: {{movs?}} r1, #0
 
 ; CHECK-NO-PERFMON: {{movs?}} r0, #0
-; CHECK-NO-PERFMON: {{movs?}} r1, #0
+; CHECK-NO-PERFMON: {{movs?}} r1, {{#0|r0}}
 }

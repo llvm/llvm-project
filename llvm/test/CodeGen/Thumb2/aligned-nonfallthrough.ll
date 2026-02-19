@@ -45,7 +45,7 @@ define i64 @loopif(ptr nocapture readonly %x, i32 %y, i32 %n) {
 ; CHECK-NEXT:    dls lr, r2
 ; CHECK-NEXT:    mov r12, r0
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB1_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -58,7 +58,7 @@ define i64 @loopif(ptr nocapture readonly %x, i32 %y, i32 %n) {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    pop {r7, pc}
 entry:

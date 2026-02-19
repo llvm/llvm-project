@@ -166,11 +166,11 @@ define arm_aapcs_vfpcc <2 x i64> @vqmovni64_smaxmin(<2 x i64> %s0) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    mvn r12, #-2147483648
-; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    subs.w r0, r0, r12
 ; CHECK-NEXT:    sbcs r0, r1, #0
+; CHECK-NEXT:    mov.w r0, #0
 ; CHECK-NEXT:    csetm r1, lt
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    bfi r3, r1, #0, #8
 ; CHECK-NEXT:    vmov r1, r2, d1
 ; CHECK-NEXT:    subs.w r1, r1, r12
@@ -222,11 +222,11 @@ define arm_aapcs_vfpcc <2 x i64> @vqmovni64_sminmax(<2 x i64> %s0) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r0, r1, d0
 ; CHECK-NEXT:    mov.w r12, #-1
-; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    rsbs.w r0, r0, #-2147483648
 ; CHECK-NEXT:    sbcs.w r0, r12, r1
+; CHECK-NEXT:    mov.w r0, #0
 ; CHECK-NEXT:    csetm r1, lt
-; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    bfi r3, r1, #0, #8
 ; CHECK-NEXT:    vmov r1, r2, d1
 ; CHECK-NEXT:    rsbs.w r1, r1, #-2147483648
