@@ -380,13 +380,13 @@ let Predicates = [IsISAFuture] in {
 
 let Predicates = [IsISAFuture, PrefixInstrs] in {
   defm PADDIS : MLS_DForm_R_SI32_RTA5_p<15, (outs gprc:$RT),
-                                        (ins gprc_nor0:$RA, s32imm:$SI),
-                                        (ins immZero:$RA, s32imm_pcrel:$SI),
+                                        (ins gprc_nor0:$RA, s32imm64:$SI),
+                                        (ins immZero:$RA, s32imm64_pcrel:$SI),
                                         "paddis $RT, $RA, $SI", IIC_LdStLFD>;
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in
     defm PADDIS8 : MLS_DForm_R_SI32_RTA5_p<15, (outs g8rc:$RT),
-                                           (ins g8rc_nox0:$RA, s32imm:$SI),
-                                           (ins immZero:$RA, s32imm_pcrel:$SI),
+                                           (ins g8rc_nox0:$RA, s32imm64:$SI),
+                                           (ins immZero:$RA, s32imm64_pcrel:$SI),
                                            "paddis $RT, $RA, $SI", IIC_LdStLFD>;
 }
 

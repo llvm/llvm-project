@@ -580,6 +580,12 @@ public:
 
   bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
 
+  // All GFX9 targets experience a fetch delay when an instruction at the start
+  // of a loop header is split by a 32-byte fetch window boundary, but GFX950
+  // is uniquely sensitive to this: the delay triggers further performance
+  // degradation beyond the fetch latency itself.
+  bool hasLoopHeadInstSplitSensitivity() const { return HasGFX950Insts; }
+
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
   bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }

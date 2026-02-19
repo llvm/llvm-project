@@ -9,10 +9,6 @@
 #ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPYTHONINTERFACE_H
 #define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPYTHONINTERFACE_H
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
 #include "ScriptedPythonInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include <optional>
@@ -59,5 +55,4 @@ protected:
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
 #endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPYTHONINTERFACE_H
