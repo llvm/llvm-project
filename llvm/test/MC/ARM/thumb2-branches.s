@@ -147,8 +147,6 @@
 @ CHECK: addeq	r0, r1                  @ encoding: [0x08,0x44]
 @ CHECK: bne	#128                    @ encoding: [0x40,0xe0]
 
-@ RUN: llvm-mc -triple=thumbv7-apple-darwin -mcpu=cortex-a8 -show-encoding < %s | FileCheck %s
-
 @------------------------------------------------------------------------------
 @ unconditional branches accept narrow suffix and encode to short encodings
 @------------------------------------------------------------------------------
