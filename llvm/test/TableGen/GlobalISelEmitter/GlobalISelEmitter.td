@@ -111,12 +111,14 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // EXTENDED-LABEL: // LLT Objects.
 // EXTENDED-NEXT:  enum {
+// EXTENDED-NEXT:    GILLT_s32,
 // EXTENDED-NEXT:    GILLT_i32,
 // EXTENDED-NEXT:    GILLT_f32,
 // EXTENDED-NEXT:    GILLT_p0s32,
 // EXTENDED-NEXT:  };
-// EXTENDED-NEXT:  const static size_t NumTypeObjects = 3;
+// EXTENDED-NEXT:  const static size_t NumTypeObjects = 4;
 // EXTENDED-NEXT:  const static LLT TypeObjects[] = {
+// EXTENDED-NEXT:    LLT::scalar(32),
 // EXTENDED-NEXT:    LLT::integer(32),
 // EXTENDED-NEXT:    LLT::floatIEEE(32),
 // EXTENDED-NEXT:    LLT::pointer(0, 32),

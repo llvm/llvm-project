@@ -259,7 +259,6 @@ bool GIMatchTableExecutor::executeMatchTable(
       OnFailResumeAt.push_back(Default);
       break;
     }
-
     case GIM_SwitchType: {
       uint64_t InsnID = readULEB();
       uint64_t OpIdx = readULEB();
@@ -278,7 +277,7 @@ bool GIMatchTableExecutor::executeMatchTable(
         if (!MO.isReg())
           dbgs() << "Not a VReg\n";
         else
-          dbgs() << MRI.getType(MO.getReg()) << "\n";
+          dbgs() << MRI.getType(MO.getReg());
       });
       if (!MO.isReg()) {
         CurrentIdx = Default;
@@ -291,25 +290,33 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       // Always try the integer patterns as we now consider that to be generic
       // (to an extent)
-      if (LLT::getUseExtended() && !Ty.getScalarType().isInteger())
+      if (LLT::getUseExtended() && Ty.getScalarType().isAnyScalar()) {
         TypesToTry.push_back(
             Ty.changeElementType(LLT::integer(Ty.getScalarSizeInBits())));
 
-      if (LLT::getUseExtended() && Ty.isAnyScalar() &&
-          Ty.getScalarSizeInBits() > 8)
-        TypesToTry.push_back(
-            Ty.changeElementType(LLT::floatIEEE(Ty.getScalarSizeInBits())));
+        if (Ty.getScalarSizeInBits() > 8)
+          TypesToTry.push_back(
+              Ty.changeElementType(LLT::floatIEEE(Ty.getScalarSizeInBits())));
+      }
 
       const auto JumpTableBase = CurrentIdx;
       bool Matched = false;
       for (LLT Type : TypesToTry) {
-        const auto TyI = ExecInfo.TypeIDMap.find(Type);
+        const auto TyI = ExecInfo.TypeIDMap.find(Type.getUniqueRAWLLTData());
         if (TyI == ExecInfo.TypeIDMap.end())
           continue;
         const int64_t TypeID = TyI->second;
         if (TypeID < LowerBound || UpperBound <= TypeID)
           continue;
         const auto NumEntry = (TypeID - LowerBound);
+        if (Matched) {
+          auto Idx = readBytesAs<uint32_t>(MatchTable + JumpTableBase +
+                                           (NumEntry * 4));
+          if (Idx)
+            OnFailResumeAt.push_back(Idx);
+
+          continue;
+        }
         // Each entry is 4 bytes
         CurrentIdx =
             readBytesAs<uint32_t>(MatchTable + JumpTableBase + (NumEntry * 4));
@@ -318,13 +325,64 @@ bool GIMatchTableExecutor::executeMatchTable(
           continue;
         }
         Matched = true;
-        break;
+
+        DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                        { dbgs() << ", matched as=" << Type << "\n"; });
       }
       if (!Matched) {
         CurrentIdx = Default;
         break;
       }
 
+      OnFailResumeAt.push_back(Default);
+      break;
+    }
+    case GIM_SwitchTypeShape: {
+      uint64_t InsnID = readULEB();
+      uint64_t OpIdx = readULEB();
+      uint16_t LowerBound = readU16();
+      uint16_t UpperBound = readU16();
+      int64_t Default = readU32();
+
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+
+      DEBUG_WITH_TYPE(TgtExecutor::getName(), {
+        dbgs() << CurrentIdx << ": GIM_SwitchTypeShape(MIs[" << InsnID
+               << "]->getOperand(" << OpIdx << "), [" << LowerBound << ", "
+               << UpperBound << "), Default=" << Default
+               << ", JumpTable...) // Got=";
+        if (!MO.isReg())
+          dbgs() << "Not a VReg\n";
+        else
+          dbgs() << MRI.getType(MO.getReg()) << "\n";
+      });
+      if (!MO.isReg()) {
+        CurrentIdx = Default;
+        break;
+      }
+
+      LLT Ty = MRI.getType(MO.getReg());
+      Ty = Ty.changeElementType(LLT::scalar(Ty.getScalarSizeInBits()));
+
+      const auto TyI = ExecInfo.TypeIDMap.find(Ty.getUniqueRAWLLTData());
+      if (TyI == ExecInfo.TypeIDMap.end()) {
+        CurrentIdx = Default;
+        break;
+      }
+      const int64_t TypeID = TyI->second;
+      if (TypeID < LowerBound || UpperBound <= TypeID) {
+        CurrentIdx = Default;
+        break;
+      }
+      const auto NumEntry = (TypeID - LowerBound);
+      // Each entry is 4 bytes
+      CurrentIdx =
+          readBytesAs<uint32_t>(MatchTable + CurrentIdx + (NumEntry * 4));
+      if (!CurrentIdx) {
+        CurrentIdx = Default;
+        break;
+      }
       OnFailResumeAt.push_back(Default);
       break;
     }
