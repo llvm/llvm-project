@@ -194,8 +194,8 @@ private:
   bool tryOptConstantBuildVec(MachineInstr &MI, LLT DstTy,
                               MachineRegisterInfo &MRI);
   /// \returns true if a G_BUILD_VECTOR instruction \p MI can be selected as a
-  /// SUBREG_TO_REG.
-  bool tryOptBuildVecToSubregToReg(MachineInstr &MI, MachineRegisterInfo &MRI);
+  /// INSERT_SUBREG.
+  bool tryOptBuildVecToInsertSubreg(MachineInstr &MI, MachineRegisterInfo &MRI);
   bool selectBuildVector(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectMergeValues(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI);
@@ -1069,14 +1069,18 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
       copySubReg(I, MRI, RBI, SrcReg, DstRC, SubReg);
     } else if (DstSize > SrcSize) {
       // If the destination register is bigger than the source we need to do
-      // a promotion using SUBREG_TO_REG.
+      // a promotion using INSERT_SUBREG.
       const TargetRegisterClass *PromotionRC =
           getMinClassForRegBank(SrcRegBank, DstSize, /* GetAllRegSet */ true);
       getSubRegForClass(SrcRC, TRI, SubReg);
 
       Register PromoteReg = MRI.createVirtualRegister(PromotionRC);
+      Register Undef = MRI.createVirtualRegister(PromotionRC);
       BuildMI(*I.getParent(), I, I.getDebugLoc(),
-              TII.get(AArch64::SUBREG_TO_REG), PromoteReg)
+              TII.get(AArch64::IMPLICIT_DEF), Undef);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(),
+              TII.get(AArch64::INSERT_SUBREG), PromoteReg)
+          .addUse(Undef)
           .addUse(SrcReg)
           .addImm(SubReg);
       MachineOperand &RegOp = I.getOperand(1);
@@ -2890,9 +2894,11 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     Register SrcReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
+    auto Undef = MIB.buildUndef(DstTy);
     BuildMI(MBB, I.getIterator(), I.getDebugLoc(),
-            TII.get(AArch64::SUBREG_TO_REG))
+            TII.get(AArch64::INSERT_SUBREG))
         .addDef(SrcReg)
+        .addUse(Undef.getReg(0))
         .addUse(I.getOperand(2).getReg())
         .addImm(AArch64::sub_32);
     RBI.constrainGenericRegister(I.getOperand(2).getReg(),
@@ -5839,17 +5845,17 @@ bool AArch64InstructionSelector::tryOptConstantBuildVec(
   return true;
 }
 
-bool AArch64InstructionSelector::tryOptBuildVecToSubregToReg(
+bool AArch64InstructionSelector::tryOptBuildVecToInsertSubreg(
     MachineInstr &I, MachineRegisterInfo &MRI) {
   // Given:
   //  %vec = G_BUILD_VECTOR %elt, %undef, %undef, ... %undef
   //
-  // Select the G_BUILD_VECTOR as a SUBREG_TO_REG from %elt.
+  // Select the G_BUILD_VECTOR as a INSERT_SUBREG from %elt.
   Register Dst = I.getOperand(0).getReg();
   Register EltReg = I.getOperand(1).getReg();
   LLT EltTy = MRI.getType(EltReg);
   // If the index isn't on the same bank as its elements, then this can't be a
-  // SUBREG_TO_REG.
+  // INSERT_SUBREG.
   const RegisterBank &EltRB = *RBI.getRegBank(EltReg, MRI, TRI);
   const RegisterBank &DstRB = *RBI.getRegBank(Dst, MRI, TRI);
   if (EltRB != DstRB)
@@ -5868,9 +5874,10 @@ bool AArch64InstructionSelector::tryOptBuildVecToSubregToReg(
     return false;
   if (!getSubRegForClass(EltRC, TRI, SubReg))
     return false;
-  auto SubregToReg = MIB.buildInstr(AArch64::SUBREG_TO_REG, {Dst}, {})
-                         .addUse(EltReg)
-                         .addImm(SubReg);
+  auto Undef = MIB.buildUndef(MRI.getType(Dst));
+  auto SubregToReg =
+      MIB.buildInstr(AArch64::INSERT_SUBREG, {Dst}, {Undef, EltReg})
+          .addImm(SubReg);
   I.eraseFromParent();
   constrainSelectedInstRegOperands(*SubregToReg, TII, TRI, RBI);
   return RBI.constrainGenericRegister(Dst, *DstRC, MRI);
@@ -5887,7 +5894,7 @@ bool AArch64InstructionSelector::selectBuildVector(MachineInstr &I,
 
   if (tryOptConstantBuildVec(I, DstTy, MRI))
     return true;
-  if (tryOptBuildVecToSubregToReg(I, MRI))
+  if (tryOptBuildVecToInsertSubreg(I, MRI))
     return true;
 
   if (EltSize != 8 && EltSize != 16 && EltSize != 32 && EltSize != 64)
