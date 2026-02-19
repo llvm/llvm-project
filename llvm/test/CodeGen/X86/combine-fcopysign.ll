@@ -252,28 +252,22 @@ define double @PR136368(double %x) {
 ; SSE-LABEL: PR136368:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movapd {{.*#+}} xmm1 = [NaN,NaN]
-; SSE-NEXT:    movapd %xmm0, %xmm2
-; SSE-NEXT:    andpd %xmm1, %xmm2
-; SSE-NEXT:    movsd {{.*#+}} xmm3 = [1.5707963267948966E+0,0.0E+0]
-; SSE-NEXT:    movapd %xmm3, %xmm4
-; SSE-NEXT:    cmpltsd %xmm2, %xmm4
-; SSE-NEXT:    andpd %xmm3, %xmm4
-; SSE-NEXT:    andpd %xmm1, %xmm4
-; SSE-NEXT:    andnpd %xmm0, %xmm1
-; SSE-NEXT:    orpd %xmm4, %xmm1
-; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    andpd %xmm0, %xmm1
+; SSE-NEXT:    movsd {{.*#+}} xmm2 = [1.5707963267948966E+0,0.0E+0]
+; SSE-NEXT:    movapd %xmm2, %xmm3
+; SSE-NEXT:    cmpltsd %xmm1, %xmm3
+; SSE-NEXT:    andpd %xmm2, %xmm3
+; SSE-NEXT:    andpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    orpd %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR136368:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [NaN,NaN]
-; AVX-NEXT:    # xmm1 = mem[0,0]
-; AVX-NEXT:    vandpd %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vmovsd {{.*#+}} xmm3 = [1.5707963267948966E+0,0.0E+0]
-; AVX-NEXT:    vcmpltsd %xmm2, %xmm3, %xmm2
-; AVX-NEXT:    vandpd %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vandnpd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vandpd %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vmovsd {{.*#+}} xmm2 = [1.5707963267948966E+0,0.0E+0]
+; AVX-NEXT:    vcmpltsd %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vandpd %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vorpd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %fabs = tail call double @llvm.fabs.f64(double %x)
