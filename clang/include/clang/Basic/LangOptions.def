@@ -456,6 +456,8 @@ ENUM_LANGOPT(SignReturnAddressScope, SignReturnAddressScopeKind, 2, SignReturnAd
              "Scope of return address signing")
 ENUM_LANGOPT(SignReturnAddressKey, SignReturnAddressKeyKind, 1, SignReturnAddressKeyKind::AKey, NotCompatible,
              "Key used for return address signing")
+ENUM_LANGOPT(SignReturnAddressHardening, SignReturnAddressHardeningKind, 1,
+             SignReturnAddressHardeningKind::None, NotCompatible, "Hardening of return address signing")
 LANGOPT(BranchTargetEnforcement, 1, 0, NotCompatible, "Branch-target enforcement enabled")
 LANGOPT(BranchProtectionPAuthLR, 1, 0, NotCompatible, "Use PC as a diversifier using PAuthLR NOP instructions.")
 LANGOPT(GuardedControlStack, 1, 0, NotCompatible, "Guarded control stack enabled")
