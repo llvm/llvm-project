@@ -33,6 +33,8 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
+extern bool isHotTextMover(const BinaryFunction &Function);
+
 static cl::opt<bool>
     ICFUseDFS("icf-dfs", cl::desc("use DFS ordering when using -icf option"),
               cl::ReallyHidden, cl::cat(BoltOptCategory));
@@ -185,6 +187,11 @@ static bool isInstrEquivalentWith(const MCInst &InstA,
 static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
                             bool CongruentSymbols) {
   assert(A.hasCFG() && B.hasCFG() && "both functions should have CFG");
+
+  // Hot text mover functions should not be folded. They need to stay in their
+  // original section to avoid being placed on hot/huge pages.
+  if (opts::isHotTextMover(A) || opts::isHotTextMover(B))
+    return false;
 
   // Compare the two functions, one basic block at a time.
   // Currently we require two identical basic blocks to have identical
@@ -597,6 +604,19 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
     ++Iteration;
 
   } while (NumFoldedLastIteration > 0);
+
+  // Flatten folded function chains so FoldedIntoFunction always points
+  // to the root parent.
+  for (auto &BFI : BC.getBinaryFunctions()) {
+    BinaryFunction &BF = BFI.second;
+    if (!BF.isFolded())
+      continue;
+    BinaryFunction *Parent = BF.getFoldedIntoFunction();
+    while (Parent->isFolded())
+      Parent = Parent->getFoldedIntoFunction();
+    if (Parent != BF.getFoldedIntoFunction())
+      BF.setFolded(Parent);
+  }
 
   LLVM_DEBUG({
     // Print functions that are congruent but not identical.

@@ -692,7 +692,7 @@ convertArgumentInfo(const AMDGPUFunctionArgInfo &ArgInfo,
     if (Arg.isMasked())
       SA.Mask = Arg.getMask();
 
-    A = SA;
+    A = std::move(SA);
     return true;
   };
 
@@ -744,9 +744,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     : ExplicitKernArgSize(MFI.getExplicitKernArgSize()),
       MaxKernArgAlign(MFI.getMaxKernArgAlign()), LDSSize(MFI.getLDSSize()),
       GDSSize(MFI.getGDSSize()), DynLDSAlign(MFI.getDynLDSAlign()),
-      IsEntryFunction(MFI.isEntryFunction()),
-      NoSignedZerosFPMath(MFI.hasNoSignedZerosFPMath()),
-      MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
+      IsEntryFunction(MFI.isEntryFunction()), MemoryBound(MFI.isMemoryBound()),
+      WaveLimiter(MFI.needsWaveLimiter()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
       HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
       NumWaveDispatchSGPRs(MFI.getNumWaveDispatchSGPRs()),
@@ -803,7 +802,6 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   HighBitsOf32BitAddress = YamlMFI.HighBitsOf32BitAddress;
   Occupancy = YamlMFI.Occupancy;
   IsEntryFunction = YamlMFI.IsEntryFunction;
-  NoSignedZerosFPMath = YamlMFI.NoSignedZerosFPMath;
   MemoryBound = YamlMFI.MemoryBound;
   WaveLimiter = YamlMFI.WaveLimiter;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;

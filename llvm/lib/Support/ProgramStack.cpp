@@ -18,9 +18,7 @@
 # include <intrin.h>  // for _AddressOfReturnAddress
 #endif
 
-#ifndef LLVM_HAS_SPLIT_STACKS
-# include "llvm/Support/thread.h"
-#endif
+#include "llvm/Support/thread.h"
 
 using namespace llvm;
 
@@ -54,74 +52,8 @@ unsigned llvm::getDefaultStackSize() {
 #endif
 }
 
-// Not an anonymous namespace to avoid warning about undefined local function.
-namespace llvm {
-#ifdef LLVM_HAS_SPLIT_STACKS_AARCH64
-void runOnNewStackImpl(void *Stack, void (*Fn)(void *), void *Ctx) __asm__(
-    "_ZN4llvm17runOnNewStackImplEPvPFvS0_ES0_");
-
-// This can't use naked functions because there is no way to know if cfi
-// directives are being emitted or not.
-//
-// When adding new platforms it may be better to move to a .S file with macros
-// for dealing with platform differences.
-__asm__ (
-    ".globl  _ZN4llvm17runOnNewStackImplEPvPFvS0_ES0_\n\t"
-    ".p2align  2\n\t"
-    "_ZN4llvm17runOnNewStackImplEPvPFvS0_ES0_:\n\t"
-    ".cfi_startproc\n\t"
-    "mov       x16, sp\n\t"
-    "sub       x0, x0, #0x20\n\t"            // subtract space from stack
-    "stp       xzr, x16, [x0, #0x00]\n\t"    // save old sp
-    "stp       x29, x30, [x0, #0x10]\n\t"    // save fp, lr
-    "mov       sp, x0\n\t"                   // switch to new stack
-    "add       x29, x0, #0x10\n\t"           // switch to new frame
-    ".cfi_def_cfa w29, 16\n\t"
-    ".cfi_offset w30, -8\n\t"                // lr
-    ".cfi_offset w29, -16\n\t"               // fp
-
-    "mov       x0, x2\n\t"                   // Ctx is the only argument
-    "blr       x1\n\t"                       // call Fn
-
-    "ldp       x29, x30, [sp, #0x10]\n\t"    // restore fp, lr
-    "ldp       xzr, x16, [sp, #0x00]\n\t"    // load old sp
-    "mov       sp, x16\n\t"
-    "ret\n\t"
-    ".cfi_endproc"
-);
-#endif
-} // namespace llvm
-
-namespace {
-#ifdef LLVM_HAS_SPLIT_STACKS
-void callback(void *Ctx) {
-  (*reinterpret_cast<function_ref<void()> *>(Ctx))();
-}
-#endif
-} // namespace
-
-#ifdef LLVM_HAS_SPLIT_STACKS
-void llvm::runOnNewStack(unsigned StackSize, function_ref<void()> Fn) {
-  if (StackSize == 0)
-    StackSize = getDefaultStackSize();
-
-  // We use malloc here instead of mmap because:
-  //   - it's simpler,
-  //   - many malloc implementations will reuse the allocation in cases where
-  //     we're bouncing accross the edge of a stack boundry, and
-  //   - many malloc implemenations will already provide guard pages for
-  //     allocations this large.
-  void *Stack = malloc(StackSize);
-  void *BottomOfStack = (char *)Stack + StackSize;
-
-  runOnNewStackImpl(BottomOfStack, callback, &Fn);
-
-  free(Stack);
-}
-#else
 void llvm::runOnNewStack(unsigned StackSize, function_ref<void()> Fn) {
   llvm::thread Thread(
       StackSize == 0 ? std::nullopt : std::optional<unsigned>(StackSize), Fn);
   Thread.join();
 }
-#endif

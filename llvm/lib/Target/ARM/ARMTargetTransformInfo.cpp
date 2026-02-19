@@ -1272,7 +1272,8 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
   std::vector<EVT> MemOps;
   LLVMContext &C = F->getContext();
   if (getTLI()->findOptimalMemOpLowering(C, MemOps, Limit, MOp, DstAddrSpace,
-                                         SrcAddrSpace, F->getAttributes()))
+                                         SrcAddrSpace, F->getAttributes(),
+                                         nullptr))
     return MemOps.size() * Factor;
 
   // If we can't find an optimal memop lowering, return the default cost

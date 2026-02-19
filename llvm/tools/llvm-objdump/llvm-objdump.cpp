@@ -73,6 +73,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AVRTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -2683,6 +2684,21 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
       Features.AddFeature(MAttrs[I]);
   } else if (MCPU.empty() && Obj->makeTriple().isAArch64()) {
     Features.AddFeature("+all");
+  } else if (MCPU.empty() && Obj->makeTriple().isAVR()) {
+    if (const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj)) {
+      if (Expected<std::string> VersionOrErr = AVR::getFeatureSetFromEFlag(
+              Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK)) {
+        Features.AddFeature('+' + *VersionOrErr);
+      } else {
+        // If the architecture version cannot be determined from ELF flags,
+        // fall back to the baseline "avr0" ISA. The AVR disassembler
+        // requires a valid feature specification to function correctly.
+        reportWarning(toString(VersionOrErr.takeError()) +
+                          ": defaulting to avr0",
+                      Obj->getFileName());
+        Features.AddFeature("+avr0");
+      }
+    }
   }
 
   if (MCPU.empty())
@@ -3846,6 +3862,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
            (I + Tool.size() == Stem.size() || !isAlnum(Stem[I + Tool.size()]));
   };
   if (Is("otool")) {
+    IsOtool = true;
     T = std::make_unique<OtoolOptTable>();
     Unknown = OTOOL_UNKNOWN;
     HelpFlag = OTOOL_help;

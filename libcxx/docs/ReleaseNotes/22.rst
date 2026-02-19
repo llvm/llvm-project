@@ -106,6 +106,8 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
+- The minimally supported deployment target on macOS has been increased to 11.0.
+
 Potentially breaking changes
 ----------------------------
 

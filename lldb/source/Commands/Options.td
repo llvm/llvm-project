@@ -778,6 +778,13 @@ let Command = "expression" in {
         Desc<"Persist expression result in a variable for subsequent use. "
              "Expression results will be labeled with $-prefixed variables, "
              "e.g. $0, $1, etc.">;
+  def ignore_context_qualifiers
+      : Option<"c++-ignore-context-qualifiers", "Q">,
+        Groups<[1, 2]>,
+        Desc<"When specified, evaluates the expression without taking into "
+             "account the type ${Q}ualifiers of the scope. In C++, this would "
+             "permit calling a non-const method when stopped in a const-method "
+             "(which would be disallowed by language rules).">;
 }
 
 let Command = "frame diag" in {
@@ -919,7 +926,7 @@ let Command = "memory read" in {
       : Option<"binary", "b">,
         Group<2>,
         Desc<"If true, memory will be saved as binary. If false, the memory is "
-             "saved save as an ASCII dump that uses the format, size, count "
+             "saved as an ASCII dump that uses the format, size, count "
              "and number per line settings.">;
   def memory_read_type : Option<"type", "t">,
                          Groups<[3, 4]>,

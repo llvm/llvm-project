@@ -8,6 +8,7 @@
 
 #include "Protocol/ProtocolRequests.h"
 #include "JSONUtils.h"
+#include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/ADT/DenseMap.h"
@@ -21,8 +22,8 @@ using namespace llvm;
 
 // The 'env' field is either an object as a map of strings or as an array of
 // strings formatted like 'key=value'.
-static bool parseEnv(const json::Value &Params, StringMap<std::string> &env,
-                     json::Path P) {
+static bool parseEnv(const json::Value &Params,
+                     StringMap<lldb_dap::protocol::String> &env, json::Path P) {
   const json::Object *O = Params.getAsObject();
   if (!O) {
     P.report("expected object");
@@ -87,7 +88,8 @@ static bool parseTimeout(const json::Value &Params, std::chrono::seconds &S,
 
 static bool
 parseSourceMap(const json::Value &Params,
-               std::vector<std::pair<std::string, std::string>> &sourceMap,
+               std::vector<std::pair<lldb_dap::protocol::String,
+                                     lldb_dap::protocol::String>> &sourceMap,
                json::Path P) {
   const json::Object *O = Params.getAsObject();
   if (!O) {
@@ -311,7 +313,7 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
   if (!success)
     return false;
 
-  for (std::optional<std::string> &io_path : LRA.stdio) {
+  for (std::optional<String> &io_path : LRA.stdio) {
     // set empty paths to null.
     if (io_path && llvm::StringRef(*io_path).trim().empty())
       io_path.reset();
@@ -405,7 +407,7 @@ json::Value toJSON(const SetVariableResponseBody &SVR) {
 
   if (!SVR.type.empty())
     Body.insert({"type", SVR.type});
-  if (SVR.variablesReference)
+  if (SVR.variablesReference.Reference())
     Body.insert({"variablesReference", SVR.variablesReference});
   if (SVR.namedVariables)
     Body.insert({"namedVariables", SVR.namedVariables});

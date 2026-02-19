@@ -120,25 +120,25 @@ subroutine test5()
   res = v(7)%i
 end subroutine test5
 ! CHECK-LABEL:   func.func @_QPtest5() {
-! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>>>
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca i64 {bindc_name = "cp", uniq_name = "_QFtest5Ecp"}
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<cray_pointer>, uniq_name = "_QFtest5Ecp"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 9 : index
 ! CHECK:           %[[VAL_8:.*]] = fir.shape_shift %[[VAL_5]], %[[VAL_6]] : (index, index) -> !fir.shapeshift<1>
-! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFtest5Ev"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>)
-! CHECK:           %[[VAL_14:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>
-! CHECK:           %[[VAL_15:.*]] = fir.embox %[[VAL_14]](%[[VAL_8]]) : (!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>
-! CHECK:           fir.store %[[VAL_15]] to %[[VAL_13]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>
+! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<pointer, cray_pointee>, uniq_name = "_QFtest5Ev"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>>>>)
+! CHECK:           %[[VAL_14:.*]] = fir.zero_bits !fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>>
+! CHECK:           %[[VAL_15:.*]] = fir.embox %[[VAL_14]](%[[VAL_8]]) : (!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>>>
+! CHECK:           fir.store %[[VAL_15]] to %[[VAL_13]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>>>>
 ! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 ! CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<!fir.ptr<i64>>
-! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_13]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_13]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_17]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
 ! CHECK:           fir.call @_FortranAPointerAssociateScalar(%[[VAL_18]], %[[VAL_19]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
-! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>>
+! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>>>>
 ! CHECK:           %[[VAL_22:.*]] = arith.constant 7 : index
-! CHECK:           %[[VAL_23:.*]] = hlfir.designate %[[VAL_21]] (%[[VAL_22]])  : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{r:f32,i:i32}>>>>, index) -> !fir.ref<!fir.type<_QFtest5Tt{r:f32,i:i32}>>
-! CHECK:           %[[VAL_24:.*]] = hlfir.designate %[[VAL_23]]{"i"}   : (!fir.ref<!fir.type<_QFtest5Tt{r:f32,i:i32}>>) -> !fir.ref<i32>
+! CHECK:           %[[VAL_23:.*]] = hlfir.designate %[[VAL_21]] (%[[VAL_22]])  : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>>>, index) -> !fir.ref<!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>
+! CHECK:           %[[VAL_24:.*]] = hlfir.designate %[[VAL_23]]{"i"}   : (!fir.ref<!fir.type<_QFtest5Tt{{(,sequence)?}}{r:f32,i:i32}>>) -> !fir.ref<i32>
 ! CHECK:           %[[VAL_25:.*]] = fir.load %[[VAL_24]] : !fir.ref<i32>
 
 subroutine test6(n)

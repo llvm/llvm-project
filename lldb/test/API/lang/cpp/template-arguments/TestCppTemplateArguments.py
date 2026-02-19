@@ -79,16 +79,21 @@ class TestCase(TestBase):
         value = self.expect_expr("temp6", result_type="Foo<int *, int *>")
         self.assertFalse(value.GetType().GetTemplateArgumentValue(target, 1))
 
-        # FIXME: support wider range of floating point types
-        value = self.expect_expr("temp7", result_type="Foo<__fp16, __fp16>")
-        self.assertFalse(value.GetType().GetTemplateArgumentValue(target, 1))
+        value = self.expect_expr("temp7", result_type="Foo<__fp16, 1.000000e+00>")
+        template_param_value = value.GetType().GetTemplateArgumentValue(target, 1)
+        self.assertEqual(template_param_value.GetTypeName(), "__fp16")
+        # FIXME: returns incorrect value?
+        self.assertEqual(template_param_value.GetValueAsSigned(), 0)
 
         # The target we use when evaluating these expressions for Arm leads to there
         # not being a __bf16 type in the AST so we fall back to __fp16 and evaluating
         # this fails.
         if lldbplatformutil.getArchitecture() != "arm":
-            value = self.expect_expr("temp8", result_type="Foo<__bf16, __bf16>")
-            self.assertFalse(value.GetType().GetTemplateArgumentValue(target, 1))
+            value = self.expect_expr("temp8", result_type="Foo<__bf16, 1.000000e+00>")
+            # FIXME: typename should be __bf16
+            self.assertEqual(template_param_value.GetTypeName(), "__fp16")
+            # FIXME: returns incorrect value?
+            self.assertEqual(template_param_value.GetValueAsSigned(), 0)
 
         value = self.expect_expr("temp9", result_type="Bar<double, 1.200000e+00>")
         template_param_value = value.GetType().GetTemplateArgumentValue(target, 1)

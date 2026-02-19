@@ -71,11 +71,18 @@ SmallVector<Value> makeRegionIsolatedFromAbove(
     llvm::function_ref<bool(Operation *)> cloneOperationIntoRegion =
         [](Operation *) { return false; });
 
-/// Move SSA values used within an operation before an insertion point,
-/// so that the operation itself (or its replacement) can be moved to
-/// the insertion point. Current support is only for movement of
-/// dependencies of `op` before `insertionPoint` in the same basic block.
-/// Any side-effecting operations in the dependency chain pessimistically
+/// Move the operation dependencies (producers) of `op` before `insertionPoint`,
+/// so that `op` itself can subsequently be moved. This includes transitive
+/// dependencies. Supports movement within the same block or from nested regions
+/// to an outer block.
+///
+/// The following conditions cause the move to fail:
+/// - `insertionPoint` does not dominate `op`.
+/// - Movement across an isolated-from-above region boundary.
+/// - A dependency uses a block argument that wouldn't dominate
+/// `insertionPoint`.
+/// - `insertionPoint` is itself a dependency of `op` (cycle).
+/// - Any side-effecting operations in the dependency chain pessimistically
 /// blocks movement.
 LogicalResult moveOperationDependencies(RewriterBase &rewriter, Operation *op,
                                         Operation *insertionPoint,
@@ -83,11 +90,19 @@ LogicalResult moveOperationDependencies(RewriterBase &rewriter, Operation *op,
 LogicalResult moveOperationDependencies(RewriterBase &rewriter, Operation *op,
                                         Operation *insertionPoint);
 
-/// Move definitions of `values` before an insertion point. Current support is
-/// only for movement of definitions within the same basic block. Note that this
-/// is an all-or-nothing approach. Either definitions of all values are moved
-/// before insertion point, or none of them are. Any side-effecting operations
-/// in the producer chain pessimistically blocks movement.
+/// Move definitions of `values` (and their transitive dependencies) before
+/// `insertionPoint`. Supports movement within the same block or from nested
+/// regions to an outer block.
+///
+/// This is all-or-nothing: either all definitions are moved, or none are.
+///
+/// The following conditions cause the move to fail:
+/// - Any value is a block argument (cannot be moved).
+/// - Any side-effecting operations in the dependency chain.
+/// - Movement across an isolated-from-above region boundary.
+/// - A dependency uses a block argument that wouldn't dominate
+/// `insertionPoint`.
+/// - `insertionPoint` is itself a dependency (cycle).
 LogicalResult moveValueDefinitions(RewriterBase &rewriter, ValueRange values,
                                    Operation *insertionPoint,
                                    DominanceInfo &dominance);

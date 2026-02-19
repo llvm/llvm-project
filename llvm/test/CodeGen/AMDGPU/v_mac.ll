@@ -291,7 +291,7 @@ bb:
 ; GCN-LABEL: {{^}}v_mac_f32_dynamic:
 ; GCN: v_mul_f32
 ; GCN: v_add_f32
-define float @v_mac_f32_dynamic(float %a, float %b, float %c) "denormal-fp-math-f32"="dynamic,dynamic" {
+define float @v_mac_f32_dynamic(float %a, float %b, float %c) denormal_fpenv(float: dynamic|dynamic) {
   %mul = fmul float %a, %b
   %mad = fadd float %mul, %c
   ret float %mad
@@ -300,7 +300,7 @@ define float @v_mac_f32_dynamic(float %a, float %b, float %c) "denormal-fp-math-
 ; GCN-LABEL: {{^}}v_mac_f32_dynamic_daz:
 ; GCN: v_mul_f32
 ; GCN: v_add_f32
-define float @v_mac_f32_dynamic_daz(float %a, float %b, float %c) "denormal-fp-math-f32"="preserve-sign,dynamic" {
+define float @v_mac_f32_dynamic_daz(float %a, float %b, float %c) denormal_fpenv(float: preservesign|dynamic) {
   %mul = fmul float %a, %b
   %mad = fadd float %mul, %c
   ret float %mad
@@ -309,7 +309,7 @@ define float @v_mac_f32_dynamic_daz(float %a, float %b, float %c) "denormal-fp-m
 ; GCN-LABEL: {{^}}v_mac_f32_dynamic_ftz:
 ; GCN: v_mul_f32
 ; GCN: v_add_f32
-define float @v_mac_f32_dynamic_ftz(float %a, float %b, float %c) "denormal-fp-math-f32"="dynamic,preserve-sign" {
+define float @v_mac_f32_dynamic_ftz(float %a, float %b, float %c) denormal_fpenv(float: dynamic|preservesign) {
   %mul = fmul float %a, %b
   %mad = fadd float %mul, %c
   ret float %mad

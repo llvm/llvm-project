@@ -12,10 +12,10 @@ body:             |
     ; GCN-LABEL: name: test_flat_valu_hazard
     ; GCN: liveins: $vgpr0, $vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: GLOBAL_LOAD_LDS_DWORD_SADDR killed $sgpr0_sgpr1, killed $vgpr0, 32, 2, implicit $m0, implicit $exec
+    ; GCN-NEXT: GLOBAL_LOAD_LDS_DWORD_SADDR killed $sgpr0_sgpr1, killed $vgpr0, 32, 2, 0, implicit $m0, implicit $exec
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec, implicit $exec
     ; GCN-NEXT: FLAT_STORE_DWORDX2 killed renamable $vgpr2_vgpr3, killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    GLOBAL_LOAD_LDS_DWORD_SADDR killed $sgpr0_sgpr1, killed $vgpr0, 32, 2, implicit $m0, implicit $exec
+    GLOBAL_LOAD_LDS_DWORD_SADDR killed $sgpr0_sgpr1, killed $vgpr0, 32, 2, 0, implicit $m0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec, implicit $exec
     FLAT_STORE_DWORDX2 killed renamable $vgpr2_vgpr3, killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
 ...

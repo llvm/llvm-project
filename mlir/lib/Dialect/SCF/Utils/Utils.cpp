@@ -391,18 +391,14 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     int64_t ubCst = getConstantIntValue(forOp.getUpperBound()).value();
     int64_t stepCst = getConstantIntValue(forOp.getStep()).value();
     if (unrollFactor == 1) {
-      if (*constTripCount == 1 &&
+      if (constTripCount->isOne() &&
           failed(forOp.promoteIfSingleIteration(rewriter)))
         return failure();
       return UnrolledLoopInfo{forOp, std::nullopt};
     }
 
-    // TODO(#178506): This may overflow for large trip counts. Should use
-    // uint64_t.
-    int64_t tripCountEvenMultiple =
-        constTripCount->getZExtValue() -
-        (constTripCount->getZExtValue() % unrollFactor);
-    // TODO(#178506): This may overflow when computing upperBoundUnrolledCst.
+    uint64_t tripCount = constTripCount->getZExtValue();
+    uint64_t tripCountEvenMultiple = tripCount - tripCount % unrollFactor;
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
     int64_t stepUnrolledCst = stepCst * unrollFactor;
 
@@ -504,7 +500,7 @@ LogicalResult mlir::loopUnrollFull(scf::ForOp forOp) {
   const APInt &tripCount = *mayBeConstantTripCount;
   if (tripCount.isZero())
     return success();
-  if (tripCount.getZExtValue() == 1)
+  if (tripCount.isOne())
     return forOp.promoteIfSingleIteration(rewriter);
   return loopUnrollByFactor(forOp, tripCount.getZExtValue());
 }
@@ -552,12 +548,13 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
     LDBG() << "failed to unroll and jam: trip count could not be determined";
     return failure();
   }
-  if (unrollJamFactor > tripCount->getZExtValue()) {
+  uint64_t tripCountValue = tripCount->getZExtValue();
+  if (unrollJamFactor > tripCountValue) {
     LDBG() << "unroll and jam factor is greater than trip count, set factor to "
               "trip "
               "count";
-    unrollJamFactor = tripCount->getZExtValue();
-  } else if (tripCount->getZExtValue() % unrollJamFactor != 0) {
+    unrollJamFactor = tripCountValue;
+  } else if (tripCountValue % unrollJamFactor != 0) {
     LDBG() << "failed to unroll and jam: unsupported trip count that is not a "
               "multiple of unroll jam factor";
     return failure();
@@ -917,6 +914,15 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   scf::ForOp innermost = loops.back();
   scf::ForOp outermost = loops.front();
 
+  // Bail out if any loop has a known zero step, as normalization
+  // would result in a division by zero.
+  for (auto loop : loops) {
+    if (auto step = getConstantIntValue(loop.getStep())) {
+      if (step.value() == 0) {
+        return failure();
+      }
+    }
+  }
   // 1. Make sure all loops iterate from 0 to upperBound with step 1.  This
   // allows the following code to assume upperBound is the number of iterations.
   for (auto loop : loops) {
@@ -1563,23 +1569,40 @@ bool mlir::isPerfectlyNestedForLoops(
   return true;
 }
 
-llvm::SmallVector<int64_t>
+llvm::SmallVector<std::tuple<int64_t, int64_t, int64_t>>
+mlir::getConstLoopBounds(mlir::LoopLikeOpInterface loopOp) {
+  std::optional<SmallVector<OpFoldResult>> loBnds = loopOp.getLoopLowerBounds();
+  std::optional<SmallVector<OpFoldResult>> upBnds = loopOp.getLoopUpperBounds();
+  std::optional<SmallVector<OpFoldResult>> steps = loopOp.getLoopSteps();
+  if (!loBnds || !upBnds || !steps)
+    return {};
+  llvm::SmallVector<std::tuple<int64_t, int64_t, int64_t>> loopRanges;
+  for (auto [lb, ub, step] : llvm::zip(*loBnds, *upBnds, *steps)) {
+    auto lbCst = getConstantIntValue(lb);
+    auto ubCst = getConstantIntValue(ub);
+    auto stepCst = getConstantIntValue(step);
+    if (!lbCst || !ubCst || !stepCst)
+      return {};
+    loopRanges.emplace_back(*lbCst, *ubCst, *stepCst);
+  }
+  return loopRanges;
+}
+
+llvm::SmallVector<llvm::APInt>
 mlir::getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp) {
   std::optional<SmallVector<OpFoldResult>> loBnds = loopOp.getLoopLowerBounds();
   std::optional<SmallVector<OpFoldResult>> upBnds = loopOp.getLoopUpperBounds();
   std::optional<SmallVector<OpFoldResult>> steps = loopOp.getLoopSteps();
   if (!loBnds || !upBnds || !steps)
     return {};
-  // TODO(#178506): The result should be SmallVector<uint64_t> and use uint64_t
-  // for trip counts.
-  llvm::SmallVector<int64_t> tripCounts;
+  llvm::SmallVector<llvm::APInt> tripCounts;
   for (auto [lb, ub, step] : llvm::zip(*loBnds, *upBnds, *steps)) {
     // TODO(#178506): Signedness is not handled correctly here.
     std::optional<llvm::APInt> numIter = constantTripCount(
         lb, ub, step, /*isSigned=*/true, scf::computeUbMinusLb);
     if (!numIter)
       return {};
-    tripCounts.push_back(numIter->getZExtValue());
+    tripCounts.push_back(*numIter);
   }
   return tripCounts;
 }
@@ -1610,7 +1633,7 @@ FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
 
   // Make sure that the unroll factors divide the iteration space evenly
   // TODO: Support unrolling loops with dynamic iteration spaces.
-  const llvm::SmallVector<int64_t> tripCounts = getConstLoopTripCounts(op);
+  const llvm::SmallVector<llvm::APInt> tripCounts = getConstLoopTripCounts(op);
   if (tripCounts.empty())
     return rewriter.notifyMatchFailure(
         op, "Failed to compute constant trip counts for the loop. Note that "
@@ -1618,7 +1641,7 @@ FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
 
   for (unsigned dimIdx = firstLoopDimIdx; dimIdx < numLoops; dimIdx++) {
     const uint64_t unrollFactor = unrollFactors[dimIdx - firstLoopDimIdx];
-    if (tripCounts[dimIdx] % unrollFactor)
+    if (tripCounts[dimIdx].urem(unrollFactor) != 0)
       return rewriter.notifyMatchFailure(
           op, "Unroll factors don't divide the iteration space evenly");
   }
