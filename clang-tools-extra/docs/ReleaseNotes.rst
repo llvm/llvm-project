@@ -139,6 +139,12 @@ New checks
   Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view`` to
   ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
 
+- New :doc:`readability-redundant-nested-if
+  <clang-tidy/checks/readability/redundant-nested-if>` check.
+
+  Finds nested ``if`` statements that can be merged into a single ``if`` by
+  combining conditions with ``&&``.
+
 - New :doc:`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check.
 

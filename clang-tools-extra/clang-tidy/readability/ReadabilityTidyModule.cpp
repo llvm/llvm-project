@@ -47,6 +47,7 @@
 #include "RedundantFunctionPtrDereferenceCheck.h"
 #include "RedundantInlineSpecifierCheck.h"
 #include "RedundantMemberInitCheck.h"
+#include "RedundantNestedIfCheck.h"
 #include "RedundantParenthesesCheck.h"
 #include "RedundantPreprocessorCheck.h"
 #include "RedundantSmartptrGetCheck.h"
@@ -174,6 +175,8 @@ public:
         "readability-redundant-string-cstr");
     CheckFactories.registerCheck<RedundantStringInitCheck>(
         "readability-redundant-string-init");
+    CheckFactories.registerCheck<RedundantNestedIfCheck>(
+        "readability-redundant-nested-if");
     CheckFactories.registerCheck<SimplifyBooleanExprCheck>(
         "readability-simplify-boolean-expr");
     CheckFactories.registerCheck<SuspiciousCallArgumentCheck>(
