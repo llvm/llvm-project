@@ -548,19 +548,15 @@ struct UnrollMultiReductionInnerParallelGeneralCase
                             vector::MaskingOpInterface maskingOp,
                             PatternRewriter &rewriter) const override {
     if (!multiReductionOp.isReducedDim(0))
-      return rewriter.notifyMatchFailure(
-          multiReductionOp,
-          "expected outermost dimension to be reduced dimension.");
+      return failure();
 
     Type elementType = getElementTypeOrSelf(multiReductionOp.getDestType());
     if (!elementType.isIntOrIndexOrFloat())
-      return rewriter.notifyMatchFailure(
-          multiReductionOp, "expected integer or float element type.");
+      return failure();
 
     ArrayRef<int64_t> reductionDims = multiReductionOp.getReductionDims();
     if (reductionDims.size() <= 1)
-      return rewriter.notifyMatchFailure(
-          multiReductionOp, "expected more than one reduction dimension.");
+      return failure();
 
     Location loc = multiReductionOp.getLoc();
     Value source = multiReductionOp.getSource();
