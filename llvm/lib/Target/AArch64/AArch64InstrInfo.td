@@ -1430,6 +1430,9 @@ def LOADgot : Pseudo<(outs GPR64common:$dst), (ins i64imm:$addr),
                      [(set GPR64common:$dst, (AArch64LOADgot tglobaladdr:$addr))]>,
               Sched<[WriteLDAdr]>;
 
+// Expands to ADRP+ADD. CodeGen-only, so no real interest to handle the 12-byte
+// tagged variant.
+let Size = 8 in {
 // The MOVaddr instruction should match only when the add is not folded
 // into a load or store address.
 def MOVaddr
@@ -1462,6 +1465,7 @@ def MOVaddrEXT
              [(set GPR64common:$dst, (AArch64addlow (AArch64adrp texternalsym:$hi),
                                             texternalsym:$low))]>,
       Sched<[WriteAdrAdr]>;
+}
 // Normally AArch64addlow either gets folded into a following ldr/str,
 // or together with an adrp into MOVaddr above. For cases with TLS, it
 // might appear without either of them, so allow lowering it into a plain

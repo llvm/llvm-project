@@ -2434,9 +2434,9 @@ define i1 @length96_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length96_eq_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    mov w2, #96 // =0x60
 ; CHECK-NEXT:    adrp x1, .L.str
 ; CHECK-NEXT:    add x1, x1, :lo12:.L.str
-; CHECK-NEXT:    mov w2, #96 // =0x60
 ; CHECK-NEXT:    bl memcmp
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, eq
@@ -2504,9 +2504,9 @@ define i1 @length127_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length127_eq_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    mov w2, #127 // =0x7f
 ; CHECK-NEXT:    adrp x1, .L.str
 ; CHECK-NEXT:    add x1, x1, :lo12:.L.str
-; CHECK-NEXT:    mov w2, #127 // =0x7f
 ; CHECK-NEXT:    bl memcmp
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, eq
@@ -2574,9 +2574,9 @@ define i1 @length128_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length128_eq_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    mov w2, #128 // =0x80
 ; CHECK-NEXT:    adrp x1, .L.str
 ; CHECK-NEXT:    add x1, x1, :lo12:.L.str
-; CHECK-NEXT:    mov w2, #128 // =0x80
 ; CHECK-NEXT:    bl memcmp
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, eq
@@ -2644,9 +2644,9 @@ define i1 @length192_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length192_eq_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    mov w2, #192 // =0xc0
 ; CHECK-NEXT:    adrp x1, .L.str
 ; CHECK-NEXT:    add x1, x1, :lo12:.L.str
-; CHECK-NEXT:    mov w2, #192 // =0xc0
 ; CHECK-NEXT:    bl memcmp
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, eq
@@ -2714,9 +2714,9 @@ define i1 @length255_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length255_eq_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    mov w2, #255 // =0xff
 ; CHECK-NEXT:    adrp x1, .L.str
 ; CHECK-NEXT:    add x1, x1, :lo12:.L.str
-; CHECK-NEXT:    mov w2, #255 // =0xff
 ; CHECK-NEXT:    bl memcmp
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, eq
@@ -2784,9 +2784,9 @@ define i1 @length256_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length256_eq_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    mov w2, #256 // =0x100
 ; CHECK-NEXT:    adrp x1, .L.str
 ; CHECK-NEXT:    add x1, x1, :lo12:.L.str
-; CHECK-NEXT:    mov w2, #256 // =0x100
 ; CHECK-NEXT:    bl memcmp
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, eq
@@ -2854,9 +2854,9 @@ define i1 @length384_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length384_eq_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    mov w2, #384 // =0x180
 ; CHECK-NEXT:    adrp x1, .L.str
 ; CHECK-NEXT:    add x1, x1, :lo12:.L.str
-; CHECK-NEXT:    mov w2, #384 // =0x180
 ; CHECK-NEXT:    bl memcmp
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, eq
@@ -2924,9 +2924,9 @@ define i1 @length511_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length511_eq_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    mov w2, #511 // =0x1ff
 ; CHECK-NEXT:    adrp x1, .L.str
 ; CHECK-NEXT:    add x1, x1, :lo12:.L.str
-; CHECK-NEXT:    mov w2, #511 // =0x1ff
 ; CHECK-NEXT:    bl memcmp
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, eq
@@ -2994,9 +2994,9 @@ define i1 @length512_eq_const(ptr %X) nounwind {
 ; CHECK-LABEL: length512_eq_const:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    mov w2, #512 // =0x200
 ; CHECK-NEXT:    adrp x1, .L.str
 ; CHECK-NEXT:    add x1, x1, :lo12:.L.str
-; CHECK-NEXT:    mov w2, #512 // =0x200
 ; CHECK-NEXT:    bl memcmp
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    cset w0, eq
