@@ -4464,14 +4464,30 @@ static bool isFloatingPointZero(SDValue Op) {
   return false;
 }
 
+static bool shouldBeAdjustedToZero(SDValue LHS, APInt C, ISD::CondCode &CC) {
+  // setlt and setge are changed to MI and PL for zero respectively, so it is
+  // safe.
+  if (C.isAllOnes() && (CC == ISD::SETLE || CC == ISD::SETGT)) {
+    CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
+    return true;
+  }
+
+  return false;
+}
+
 /// Returns appropriate ARM CMP (cmp) and corresponding condition code for
 /// the given operands.
 SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                      SDValue &ARMcc, SelectionDAG &DAG,
                                      const SDLoc &dl) const {
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
-    unsigned C = RHSC->getZExtValue();
-    if (!isLegalICmpImmediate((int32_t)C)) {
+    APInt CInt = RHSC->getAPIntValue();
+    unsigned C = CInt.getZExtValue();
+    if (shouldBeAdjustedToZero(LHS, CInt, CC)) {
+      // Adjust the constant to zero.
+      // CC has already been adjusted.
+      RHS = DAG.getConstant(0, dl, MVT::i32);
+    } else if (!isLegalICmpImmediate((int32_t)C)) {
       // Constant does not fit, try adjusting it by one.
       switch (CC) {
       default: break;

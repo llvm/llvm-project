@@ -264,9 +264,8 @@ define i32 @cmp_slt0(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-NEXT:    movw r0, :lower16:t
 ; CHECK-NEXT:    movt r0, :upper16:t
 ; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    sub r0, r0, #17
-; CHECK-NEXT:    cmn r0, #1
-; CHECK-NEXT:    ble .LBB11_2
+; CHECK-NEXT:    subs r0, r0, #17
+; CHECK-NEXT:    bmi .LBB11_2
 ; CHECK-NEXT:  @ %bb.1: @ %if.else
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    bl exit
