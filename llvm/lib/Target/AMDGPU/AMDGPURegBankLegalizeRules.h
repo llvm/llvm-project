@@ -37,6 +37,7 @@ bool isAnyPtr(LLT Ty, unsigned Width);
 // to apply (see Fast Rules), IDs are useful when two or more operands need to
 // be checked.
 enum UniformityLLTOpPredicateID {
+  // Represents non-register and physical register operands.
   _,
   // scalars
   S1,
@@ -220,6 +221,10 @@ enum RegBankLLTMappingApplyID {
   // Src only modifiers: execute in waterfall loop if divergent
   Sgpr32_WF,
   SgprV4S32_WF,
+
+  // Src only modifiers: execute in waterfall loop for calls
+  SgprP0Call_WF,
+  SgprP4Call_WF,
 
   // Src only modifiers: extends
   Sgpr32AExt,

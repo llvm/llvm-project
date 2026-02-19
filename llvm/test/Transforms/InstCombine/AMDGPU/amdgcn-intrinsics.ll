@@ -5980,6 +5980,70 @@ define double @trig_preop_constfold_exponent1968_mantissaX__outbound_segment() {
   ret double %val
 }
 
+define double @trig_preop_strip_fabs(double %val, i32 %idx) {
+; CHECK-LABEL: @trig_preop_strip_fabs(
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[VAL:%.*]], i32 [[IDX:%.*]])
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %fabs = call double @llvm.fabs.f64(double %val)
+  %result = call double @llvm.amdgcn.trig.preop.f64(double %fabs, i32 %idx)
+  ret double %result
+}
+
+define double @trig_preop_strip_fabs_multi_use(double %val, i32 %idx, ptr %ptr) {
+; CHECK-LABEL: @trig_preop_strip_fabs_multi_use(
+; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[VAL:%.*]])
+; CHECK-NEXT:    store double [[FABS]], ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[VAL]], i32 [[IDX:%.*]])
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %fabs = call double @llvm.fabs.f64(double %val)
+  store double %fabs, ptr %ptr
+  %result = call double @llvm.amdgcn.trig.preop.f64(double %fabs, i32 %idx)
+  ret double %result
+}
+
+define double @trig_preop_strip_fneg(double %val, i32 %idx) {
+; CHECK-LABEL: @trig_preop_strip_fneg(
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[VAL:%.*]], i32 [[IDX:%.*]])
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %fneg = fneg double %val
+  %result = call double @llvm.amdgcn.trig.preop.f64(double %fneg, i32 %idx)
+  ret double %result
+}
+
+define double @trig_preop_strip_fneg_fabs(double %val, i32 %idx) {
+; CHECK-LABEL: @trig_preop_strip_fneg_fabs(
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[VAL:%.*]], i32 [[IDX:%.*]])
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %fabs = call double @llvm.fabs.f64(double %val)
+  %fneg.fabs = fneg double %fabs
+  %result = call double @llvm.amdgcn.trig.preop.f64(double %fneg.fabs, i32 %idx)
+  ret double %result
+}
+
+define double @trig_preop_strip_copysign(double %mag, double %sign, i32 %idx) {
+; CHECK-LABEL: @trig_preop_strip_copysign(
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[MAG:%.*]], i32 [[IDX:%.*]])
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %copysign = call double @llvm.copysign.f64(double %mag, double %sign)
+  %result = call double @llvm.amdgcn.trig.preop.f64(double %copysign, i32 %idx)
+  ret double %result
+}
+
+define double @trig_preop_strip_fabs_strictfp(double %val, i32 %idx) strictfp {
+; CHECK-LABEL: @trig_preop_strip_fabs_strictfp(
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[VAL:%.*]], i32 [[IDX:%.*]]) #[[ATTR20]]
+; CHECK-NEXT:    ret double [[RESULT]]
+;
+  %fabs = call double @llvm.fabs.f64(double %val)
+  %result = call double @llvm.amdgcn.trig.preop.f64(double %fabs, i32 %idx) strictfp
+  ret double %result
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.log
 ; --------------------------------------------------------------------

@@ -192,7 +192,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// \param[in] loop
   ///     Main loop associated with this instance.
   DAP(Log &log, const ReplMode default_repl_mode,
-      std::vector<std::string> pre_init_commands, bool no_lldbinit,
+      const std::vector<protocol::String> &pre_init_commands, bool no_lldbinit,
       llvm::StringRef client_name, DAPTransport &transport,
       lldb_private::MainLoop &loop);
 
@@ -305,10 +305,12 @@ struct DAP final : public DAPTransport::MessageHandler {
   ///   \b false if a fatal error was found while executing these commands,
   ///   according to the rules of \a LLDBUtils::RunLLDBCommands.
   bool RunLLDBCommands(llvm::StringRef prefix,
-                       llvm::ArrayRef<std::string> commands);
+                       llvm::ArrayRef<protocol::String> commands);
 
-  llvm::Error RunAttachCommands(llvm::ArrayRef<std::string> attach_commands);
-  llvm::Error RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands);
+  llvm::Error
+  RunAttachCommands(llvm::ArrayRef<protocol::String> attach_commands);
+  llvm::Error
+  RunLaunchCommands(llvm::ArrayRef<protocol::String> launch_commands);
   llvm::Error RunPreInitCommands();
   llvm::Error RunInitCommands();
   llvm::Error RunPreRunCommands();

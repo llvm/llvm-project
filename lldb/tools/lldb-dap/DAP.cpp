@@ -124,7 +124,7 @@ static std::string capitalize(llvm::StringRef str) {
 llvm::StringRef DAP::debug_adapter_path = "";
 
 DAP::DAP(Log &log, const ReplMode default_repl_mode,
-         std::vector<std::string> pre_init_commands, bool no_lldbinit,
+         const std::vector<String> &pre_init_commands, bool no_lldbinit,
          llvm::StringRef client_name, DAPTransport &transport, MainLoop &loop)
     : log(log), transport(transport), reference_storage(log),
       broadcaster("lldb-dap"),
@@ -132,7 +132,7 @@ DAP::DAP(Log &log, const ReplMode default_repl_mode,
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
       repl_mode(default_repl_mode), no_lldbinit(no_lldbinit),
       m_client_name(client_name), m_loop(loop) {
-  configuration.preInitCommands = std::move(pre_init_commands);
+  configuration.preInitCommands = pre_init_commands;
   RegisterRequests();
 }
 
@@ -413,9 +413,10 @@ void DAP::SendOutput(OutputType o, const llvm::StringRef output) {
     if (end == llvm::StringRef::npos)
       end = output.size() - 1;
     llvm::json::Object event(CreateEventObject("output"));
-    llvm::json::Object body;
-    body.try_emplace("category", category);
-    EmplaceSafeString(body, "output", output.slice(idx, end + 1).str());
+    llvm::json::Object body{
+        {"category", category},
+        {"output", protocol::String(output.slice(idx, end + 1))},
+    };
     event.try_emplace("body", std::move(body));
     SendJSON(llvm::json::Value(std::move(event)));
     idx = end + 1;
@@ -700,7 +701,7 @@ DAP::ResolveAssemblySource(lldb::SBAddress address) {
 }
 
 bool DAP::RunLLDBCommands(llvm::StringRef prefix,
-                          llvm::ArrayRef<std::string> commands) {
+                          llvm::ArrayRef<String> commands) {
   bool required_command_failed = false;
   std::string output = ::RunLLDBCommands(
       debugger, prefix, commands, required_command_failed,
@@ -719,15 +720,13 @@ static llvm::Error createRunLLDBCommandsErrorMessage(llvm::StringRef category) {
           .c_str());
 }
 
-llvm::Error
-DAP::RunAttachCommands(llvm::ArrayRef<std::string> attach_commands) {
+llvm::Error DAP::RunAttachCommands(llvm::ArrayRef<String> attach_commands) {
   if (!RunLLDBCommands("Running attachCommands:", attach_commands))
     return createRunLLDBCommandsErrorMessage("attach");
   return llvm::Error::success();
 }
 
-llvm::Error
-DAP::RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands) {
+llvm::Error DAP::RunLaunchCommands(llvm::ArrayRef<String> launch_commands) {
   if (!RunLLDBCommands("Running launchCommands:", launch_commands))
     return createRunLLDBCommandsErrorMessage("launch");
   return llvm::Error::success();
@@ -779,9 +778,9 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   // omitted at all), so it is good to leave the user an opportunity to specify
   // those. Any of those three can be left empty.
   auto target = this->debugger.CreateTarget(
-      /*filename=*/configuration.program.data(),
-      /*target_triple=*/configuration.targetTriple.data(),
-      /*platform_name=*/configuration.platformName.data(),
+      /*filename=*/configuration.program.c_str(),
+      /*target_triple=*/configuration.targetTriple.c_str(),
+      /*platform_name=*/configuration.platformName.c_str(),
       /*add_dependent_modules=*/true, // Add dependent modules.
       error);
 
@@ -826,8 +825,7 @@ bool DAP::HandleObject(const Message &M) {
     });
 
     auto handler_pos = request_handlers.find(req->command);
-    dispatcher.Set("client_data",
-                   llvm::Twine("request_command:", req->command).str());
+    dispatcher.Set("client_data", "request_command:" + req->command);
     if (handler_pos != request_handlers.end()) {
       handler_pos->second->Run(*req);
     } else {
@@ -855,14 +853,13 @@ bool DAP::HandleObject(const Message &M) {
     // Result should be given, use null if not.
     if (resp->success) {
       (*response_handler)(resp->body);
-      dispatcher.Set("client_data",
-                     llvm::Twine("response_command:", resp->command).str());
+      dispatcher.Set("client_data", "response_command:" + resp->command);
     } else {
       llvm::StringRef message = "Unknown error, response failed";
       if (resp->message) {
         message =
             std::visit(llvm::makeVisitor(
-                           [](const std::string &message) -> llvm::StringRef {
+                           [](const String &message) -> llvm::StringRef {
                              return message;
                            },
                            [](const protocol::ResponseMessage &message)
@@ -946,7 +943,7 @@ void DAP::ClearCancelRequest(const CancelArguments &args) {
 
 template <typename T>
 static std::optional<T> getArgumentsIfRequest(const Request &req,
-                                              llvm::StringLiteral command) {
+                                              const protocol::String &command) {
   if (req.command != command)
     return std::nullopt;
 
@@ -1244,7 +1241,7 @@ protocol::Capabilities DAP::GetCapabilities() {
   capabilities.exceptionBreakpointFilters = std::move(filters);
 
   // FIXME: This should be registered based on the supported languages?
-  std::vector<std::string> completion_characters;
+  std::vector<String> completion_characters;
   completion_characters.emplace_back(".");
   // FIXME: I wonder if we should remove this key... its very aggressive
   // triggering and accepting completions.

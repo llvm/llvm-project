@@ -14,10 +14,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Region.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
@@ -119,6 +123,79 @@ static void addResultEffect(
   effects.emplace_back(EffectTy::get(), mlir::cast<mlir::OpResult>(result));
 }
 
+static int64_t gpuProcessorIndex(gpu::Processor p) {
+  switch (p) {
+  case gpu::Processor::Sequential:
+    return 0;
+  case gpu::Processor::ThreadX:
+    return 1;
+  case gpu::Processor::ThreadY:
+    return 2;
+  case gpu::Processor::ThreadZ:
+    return 3;
+  case gpu::Processor::BlockX:
+    return 4;
+  case gpu::Processor::BlockY:
+    return 5;
+  case gpu::Processor::BlockZ:
+    return 6;
+  }
+  llvm_unreachable("unhandled gpu::Processor");
+}
+
+static gpu::Processor indexToGpuProcessor(int64_t idx) {
+  switch (idx) {
+  case 0:
+    return gpu::Processor::Sequential;
+  case 1:
+    return gpu::Processor::ThreadX;
+  case 2:
+    return gpu::Processor::ThreadY;
+  case 3:
+    return gpu::Processor::ThreadZ;
+  case 4:
+    return gpu::Processor::BlockX;
+  case 5:
+    return gpu::Processor::BlockY;
+  case 6:
+    return gpu::Processor::BlockZ;
+  default:
+    return gpu::Processor::Sequential;
+  }
+}
+
+static GPUParallelDimAttr intToParDim(MLIRContext *context, int64_t dimInt) {
+  return GPUParallelDimAttr::get(
+      context, IntegerAttr::get(IndexType::get(context), dimInt));
+}
+
+static GPUParallelDimAttr processorParDim(MLIRContext *context,
+                                          gpu::Processor proc) {
+  return GPUParallelDimAttr::get(
+      context,
+      IntegerAttr::get(IndexType::get(context), gpuProcessorIndex(proc)));
+}
+
+static ParseResult parseProcessorValue(AsmParser &parser,
+                                       GPUParallelDimAttr &dim) {
+  std::string keyword;
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  if (failed(parser.parseKeywordOrString(&keyword)))
+    return failure();
+  auto maybeProcessor = gpu::symbolizeProcessor(keyword);
+  if (!maybeProcessor)
+    return parser.emitError(loc)
+           << "expected one of ::mlir::gpu::Processor enum names";
+  dim = intToParDim(parser.getContext(), gpuProcessorIndex(*maybeProcessor));
+  return success();
+}
+
+static void printProcessorValue(AsmPrinter &printer,
+                                const GPUParallelDimAttr &attr) {
+  gpu::Processor processor = indexToGpuProcessor(attr.getValue().getInt());
+  printer << gpu::stringifyProcessor(processor);
+}
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -183,4 +260,209 @@ void ReductionCombineOp::getEffects(
                        SideEffects::DefaultResource::get());
   effects.emplace_back(MemoryEffects::Write::get(), &getDestMemrefMutable(),
                        SideEffects::DefaultResource::get());
+}
+
+//===----------------------------------------------------------------------===//
+// GPUParallelDimAttr
+//===----------------------------------------------------------------------===//
+
+GPUParallelDimAttr GPUParallelDimAttr::get(MLIRContext *context,
+                                           gpu::Processor proc) {
+  return processorParDim(context, proc);
+}
+
+GPUParallelDimAttr GPUParallelDimAttr::seqDim(MLIRContext *context) {
+  return processorParDim(context, gpu::Processor::Sequential);
+}
+
+GPUParallelDimAttr GPUParallelDimAttr::threadXDim(MLIRContext *context) {
+  return processorParDim(context, gpu::Processor::ThreadX);
+}
+
+GPUParallelDimAttr GPUParallelDimAttr::threadYDim(MLIRContext *context) {
+  return processorParDim(context, gpu::Processor::ThreadY);
+}
+
+GPUParallelDimAttr GPUParallelDimAttr::threadZDim(MLIRContext *context) {
+  return processorParDim(context, gpu::Processor::ThreadZ);
+}
+
+GPUParallelDimAttr GPUParallelDimAttr::blockXDim(MLIRContext *context) {
+  return processorParDim(context, gpu::Processor::BlockX);
+}
+
+GPUParallelDimAttr GPUParallelDimAttr::blockYDim(MLIRContext *context) {
+  return processorParDim(context, gpu::Processor::BlockY);
+}
+
+GPUParallelDimAttr GPUParallelDimAttr::blockZDim(MLIRContext *context) {
+  return processorParDim(context, gpu::Processor::BlockZ);
+}
+
+Attribute GPUParallelDimAttr::parse(AsmParser &parser, Type type) {
+  GPUParallelDimAttr dim;
+  if (parser.parseLess() || parseProcessorValue(parser, dim) ||
+      parser.parseGreater()) {
+    parser.emitError(parser.getCurrentLocation(),
+                     "expected format `<` processor_name `>`");
+    return {};
+  }
+  return dim;
+}
+
+void GPUParallelDimAttr::print(AsmPrinter &printer) const {
+  printer << "<";
+  printProcessorValue(printer, *this);
+  printer << ">";
+}
+
+GPUParallelDimAttr GPUParallelDimAttr::threadDim(MLIRContext *context,
+                                                 unsigned index) {
+  assert(index <= 2 && "thread dimension index must be 0, 1, or 2");
+  switch (index) {
+  case 0:
+    return threadXDim(context);
+  case 1:
+    return threadYDim(context);
+  case 2:
+    return threadZDim(context);
+  }
+  llvm_unreachable("validated thread dimension index");
+}
+
+GPUParallelDimAttr GPUParallelDimAttr::blockDim(MLIRContext *context,
+                                                unsigned index) {
+  assert(index <= 2 && "block dimension index must be 0, 1, or 2");
+  switch (index) {
+  case 0:
+    return blockXDim(context);
+  case 1:
+    return blockYDim(context);
+  case 2:
+    return blockZDim(context);
+  }
+  llvm_unreachable("validated block dimension index");
+}
+
+gpu::Processor GPUParallelDimAttr::getProcessor() const {
+  return indexToGpuProcessor(getValue().getInt());
+}
+
+int GPUParallelDimAttr::getOrder() const {
+  return gpuProcessorIndex(getProcessor());
+}
+
+GPUParallelDimAttr GPUParallelDimAttr::getOneHigher() const {
+  int order = getOrder();
+  if (order >= 6) // BlockZ is the highest
+    return *this;
+  return get(getContext(), indexToGpuProcessor(order + 1));
+}
+
+GPUParallelDimAttr GPUParallelDimAttr::getOneLower() const {
+  int order = getOrder();
+  if (order <= 0) // Sequential is the lowest
+    return *this;
+  return get(getContext(), indexToGpuProcessor(order - 1));
+}
+
+bool GPUParallelDimAttr::isSeq() const {
+  return getProcessor() == gpu::Processor::Sequential;
+}
+bool GPUParallelDimAttr::isThreadX() const {
+  return getProcessor() == gpu::Processor::ThreadX;
+}
+bool GPUParallelDimAttr::isThreadY() const {
+  return getProcessor() == gpu::Processor::ThreadY;
+}
+bool GPUParallelDimAttr::isThreadZ() const {
+  return getProcessor() == gpu::Processor::ThreadZ;
+}
+bool GPUParallelDimAttr::isBlockX() const {
+  return getProcessor() == gpu::Processor::BlockX;
+}
+bool GPUParallelDimAttr::isBlockY() const {
+  return getProcessor() == gpu::Processor::BlockY;
+}
+bool GPUParallelDimAttr::isBlockZ() const {
+  return getProcessor() == gpu::Processor::BlockZ;
+}
+bool GPUParallelDimAttr::isAnyThread() const {
+  return isThreadX() || isThreadY() || isThreadZ();
+}
+bool GPUParallelDimAttr::isAnyBlock() const {
+  return isBlockX() || isBlockY() || isBlockZ();
+}
+
+//===----------------------------------------------------------------------===//
+// GPUParallelDimsAttr
+//===----------------------------------------------------------------------===//
+
+GPUParallelDimsAttr GPUParallelDimsAttr::seq(MLIRContext *ctx) {
+  return GPUParallelDimsAttr::get(ctx, {GPUParallelDimAttr::seqDim(ctx)});
+}
+
+bool GPUParallelDimsAttr::isSeq() const {
+  assert(!getArray().empty() && "no par_dims found");
+  if (getArray().size() == 1) {
+    auto parDim = dyn_cast<GPUParallelDimAttr>(getArray()[0]);
+    assert(parDim && "expected GPUParallelDimAttr");
+    return parDim.isSeq();
+  }
+  return false;
+}
+
+bool GPUParallelDimsAttr::isParallel() const { return !isSeq(); }
+
+bool GPUParallelDimsAttr::isMultiDim() const { return getArray().size() > 1; }
+
+bool GPUParallelDimsAttr::hasAnyBlockLevel() const {
+  return llvm::any_of(
+      getArray(), [](const GPUParallelDimAttr &p) { return p.isAnyBlock(); });
+}
+
+bool GPUParallelDimsAttr::hasOnlyBlockLevel() const {
+  return !getArray().empty() &&
+         llvm::all_of(getArray(), [](const GPUParallelDimAttr &p) {
+           return p.isAnyBlock();
+         });
+}
+
+bool GPUParallelDimsAttr::hasOnlyThreadYLevel() const {
+  return !getArray().empty() &&
+         llvm::all_of(getArray(), [](const GPUParallelDimAttr &p) {
+           return p.isThreadY();
+         });
+}
+
+bool GPUParallelDimsAttr::hasOnlyThreadXLevel() const {
+  return !getArray().empty() &&
+         llvm::all_of(getArray(), [](const GPUParallelDimAttr &p) {
+           return p.isThreadX();
+         });
+}
+
+Attribute GPUParallelDimsAttr::parse(AsmParser &parser, Type type) {
+  auto delimiter = AsmParser::Delimiter::Square;
+  SmallVector<GPUParallelDimAttr> parDims;
+  auto parseParDim = [&]() -> ParseResult {
+    GPUParallelDimAttr dim;
+    if (parseProcessorValue(parser, dim))
+      return failure();
+    parDims.push_back(dim);
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(delimiter, parseParDim,
+                                     "list of OpenACC GPU parallel dimensions"))
+    return {};
+  return GPUParallelDimsAttr::get(parser.getContext(), parDims);
+}
+
+void GPUParallelDimsAttr::print(AsmPrinter &printer) const {
+  printer << "[";
+  llvm::interleaveComma(getArray(), printer,
+                        [&printer](const GPUParallelDimAttr &p) {
+                          printProcessorValue(printer, p);
+                        });
+  printer << "]";
 }
