@@ -130,11 +130,14 @@ template <bool Invert> struct Process {
   /// Equivalent to loading outbox followed by store of the inverted value
   /// The outbox is write only by this warp and tracking the value locally is
   /// cheaper than calling load_outbox to get the value to store.
-  RPC_ATTRS uint32_t invert_outbox(uint32_t index, uint32_t current_outbox) {
+  RPC_ATTRS uint32_t invert_outbox(uint64_t lane_mask, uint32_t index,
+                                   uint32_t current_outbox) {
     uint32_t inverted_outbox = !current_outbox;
+    rpc::sync_lane(lane_mask);
     __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_SYSTEM);
-    __scoped_atomic_store_n(&outbox[index], inverted_outbox, __ATOMIC_RELAXED,
-                            __MEMORY_SCOPE_SYSTEM);
+    if (rpc::is_first_lane(lane_mask))
+      __scoped_atomic_store_n(&outbox[index], inverted_outbox, __ATOMIC_RELAXED,
+                              __MEMORY_SCOPE_SYSTEM);
     return inverted_outbox;
   }
 
@@ -340,7 +343,7 @@ private:
     // The server is passive, if it owns the buffer when it closes we need to
     // give ownership back to the client.
     if (owns_buffer && T)
-      out = process.invert_outbox(index, out);
+      out = process.invert_outbox(lane_mask, index, out);
     process.unlock(lane_mask, index);
   }
 
@@ -403,7 +406,7 @@ template <bool T> template <typename F> RPC_ATTRS void Port<T>::send(F fill) {
   // Apply the \p fill function to initialize the buffer and release the memory.
   invoke_rpc(fill, lane_size, get_lane_mask(),
              process.get_packet(index, lane_size));
-  out = process.invert_outbox(index, out);
+  out = process.invert_outbox(lane_mask, index, out);
   owns_buffer = false;
   receive = false;
 }
@@ -413,7 +416,7 @@ template <bool T> template <typename U> RPC_ATTRS void Port<T>::recv(U use) {
   // We only exchange ownership of the buffer during a receive if we are waiting
   // for a previous receive to finish.
   if (receive) {
-    out = process.invert_outbox(index, out);
+    out = process.invert_outbox(lane_mask, index, out);
     owns_buffer = false;
   }
 
@@ -556,8 +559,10 @@ template <uint32_t opcode> RPC_ATTRS Client::Port Client::open() {
     if (index >= process.port_count)
       index = 0;
 
-    // Attempt to acquire the lock on this index.
+    // Attempt to acquire the lock on this index. Under NVIDIA's ITS the lanes
+    // may reconverge with differing index values, ensure they are convergent.
     uint64_t lane_mask = rpc::get_lane_mask();
+    index = rpc::broadcast_value(lane_mask, index);
     if (!process.try_lock(lane_mask, index))
       continue;
 

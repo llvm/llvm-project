@@ -54,6 +54,16 @@ add_integration_test(
    --blocks 8
 )
 
+add_integration_test(
+  startup_rpc_divergence_test
+  SUITE libc-startup-tests
+  SRCS
+   rpc_divergence_test.cpp
+  LOADER_ARGS
+   --threads 256
+   --blocks 16
+)
+
 if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
   add_integration_test(
     startup_rpc_lane_test_w32
