@@ -14770,7 +14770,7 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
         Value = SL->getCodeUnit(I);
         if (DestTy->isIntegerType()) {
           Result.getArrayInitializedElt(ArrayIndex) = APValue(Value);
-        } else if (DestTy->isFloatingType()) {
+        } else if (DestTy->isRealFloatingType()) {
           const FPOptions FPO =
               Init->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
           APFloat FValue(0.0);
