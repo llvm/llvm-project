@@ -685,7 +685,7 @@ let Features = "avx2", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
   def maskloadd256 : X86Builtin<"_Vector<8, int>(_Vector<8, int const *>, _Vector<8, int>)">;
   def maskloadq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int const *>, _Vector<4, long long int>)">;
 
-  def maskstored256 : X86Builtin<"void(_Vector<8, int *>, _Vector<8, int>, _Vector<8, int>)">;
+  def maskstored256 : X86Builtin<"void(void*, _Vector<8, int>, _Vector<8, int>)">;
   def maskstoreq256 : X86Builtin<"void(_Vector<4, long long int *>, _Vector<4, long long int>, _Vector<4, long long int>)">;
 
   def gatherd_pd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, double const *, _Vector<4, int>, _Vector<4, double>, _Constant char)">;
@@ -703,7 +703,7 @@ let Features = "avx2", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
   def maskloadd : X86Builtin<"_Vector<4, int>(_Vector<4, int const *>, _Vector<4, int>)">;
   def maskloadq : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int const *>, _Vector<2, long long int>)">;
 
-  def maskstored : X86Builtin<"void(_Vector<4, int *>, _Vector<4, int>, _Vector<4, int>)">;
+  def maskstored : X86Builtin<"void(void*, _Vector<4, int>, _Vector<4, int>)">;
   def maskstoreq : X86Builtin<"void(_Vector<2, long long int *>, _Vector<2, long long int>, _Vector<2, long long int>)">;
 
   def gatherd_pd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, double const *, _Vector<4, int>, _Vector<2, double>, _Constant char)">;
@@ -1432,7 +1432,7 @@ let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
 }
 
 let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def compressstorehi128_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<8, short>, unsigned char)">;
+  def compressstorehi128_mask : X86Builtin<"void(void*, _Vector<8, short>, unsigned char)">;
 }
 
 let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
@@ -1440,7 +1440,7 @@ let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, RequiredVectorWidt
 }
 
 let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def compressstoreqi128_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<16, char>, unsigned short)">;
+  def compressstoreqi128_mask : X86Builtin<"void(void*, _Vector<16, char>, unsigned short)">;
 }
 
 let Features = "avx512vl,avx512vbmi2", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
@@ -1456,11 +1456,11 @@ let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def compressstoresi128_mask : X86Builtin<"void(_Vector<4, int *>, _Vector<4, int>, unsigned char)">;
+  def compressstoresi128_mask : X86Builtin<"void(void*, _Vector<4, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def compressstoresi256_mask : X86Builtin<"void(_Vector<8, int *>, _Vector<8, int>, unsigned char)">;
+  def compressstoresi256_mask : X86Builtin<"void(void*, _Vector<8, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
@@ -2029,11 +2029,11 @@ let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def movdqa32store128_mask : X86Builtin<"void(_Vector<4, int *>, _Vector<4, int>, unsigned char)">;
+  def movdqa32store128_mask : X86Builtin<"void(void*, _Vector<4, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def movdqa32store256_mask : X86Builtin<"void(_Vector<8, int *>, _Vector<8, int>, unsigned char)">;
+  def movdqa32store256_mask : X86Builtin<"void(void*, _Vector<8, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
@@ -2198,7 +2198,7 @@ let Features = "avx512bw", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
 }
 
 let Features = "avx512vl,avx512bw", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def storedquhi128_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<8, short>, unsigned char)">;
+  def storedquhi128_mask : X86Builtin<"void(void*, _Vector<8, short>, unsigned char)">;
 }
 
 let Features = "avx512vl,avx512bw", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
@@ -2206,7 +2206,7 @@ let Features = "avx512vl,avx512bw", Attributes = [NoThrow, RequiredVectorWidth<2
 }
 
 let Features = "avx512vl,avx512bw", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def storedquqi128_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<16, char>, unsigned short)">;
+  def storedquqi128_mask : X86Builtin<"void(void*, _Vector<16, char>, unsigned short)">;
 }
 
 let Features = "avx512vl,avx512bw", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
@@ -2246,11 +2246,11 @@ let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def storedqusi128_mask : X86Builtin<"void(_Vector<4, int *>, _Vector<4, int>, unsigned char)">;
+  def storedqusi128_mask : X86Builtin<"void(void*, _Vector<4, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def storedqusi256_mask : X86Builtin<"void(_Vector<8, int *>, _Vector<8, int>, unsigned char)">;
+  def storedqusi256_mask : X86Builtin<"void(void*, _Vector<8, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
@@ -2509,11 +2509,11 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovsdb512mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<16, int>, unsigned short)">;
+  def pmovsdb512mem_mask : X86Builtin<"void(void* , _Vector<16, int>, unsigned short)">;
 }
 
 let Features = "avx512bw", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovswb512mem_mask : X86Builtin<"void(_Vector<32, char *>, _Vector<32, short>, unsigned int)">;
+  def pmovswb512mem_mask : X86Builtin<"void(void* , _Vector<32, short>, unsigned int)">;
 }
 
 let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
@@ -2521,7 +2521,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovsdw512mem_mask : X86Builtin<"void(_Vector<16, short *>, _Vector<16, int>, unsigned short)">;
+  def pmovsdw512mem_mask : X86Builtin<"void(void*, _Vector<16, int>, unsigned short)">;
 }
 
 let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
@@ -2529,7 +2529,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovsqb512mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<8, long long int>, unsigned char)">;
+  def pmovsqb512mem_mask : X86Builtin<"void(void*, _Vector<8, long long int>, unsigned char)">;
 }
 
 let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
@@ -2537,7 +2537,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovsqd512mem_mask : X86Builtin<"void(_Vector<8, int *>, _Vector<8, long long int>, unsigned char)">;
+  def pmovsqd512mem_mask : X86Builtin<"void(void*, _Vector<8, long long int>, unsigned char)">;
 }
 
 let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
@@ -2545,7 +2545,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovsqw512mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<8, long long int>, unsigned char)">;
+  def pmovsqw512mem_mask : X86Builtin<"void(void*, _Vector<8, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2553,11 +2553,11 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovsdb128mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<4, int>, unsigned char)">;
+  def pmovsdb128mem_mask : X86Builtin<"void(void*, _Vector<4, int>, unsigned char)">;
 }
 
 let Features = "avx512vl,avx512bw", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovswb128mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<8, short>, unsigned char)">;
+  def pmovswb128mem_mask : X86Builtin<"void(void*, _Vector<8, short>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2565,11 +2565,11 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovsdb256mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<8, int>, unsigned char)">;
+  def pmovsdb256mem_mask : X86Builtin<"void(void*, _Vector<8, int>, unsigned char)">;
 }
 
 let Features = "avx512vl,avx512bw", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovswb256mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<16, short>, unsigned short)">;
+  def pmovswb256mem_mask : X86Builtin<"void(void*, _Vector<16, short>, unsigned short)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2577,7 +2577,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovsdw128mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<4, int>, unsigned char)">;
+  def pmovsdw128mem_mask : X86Builtin<"void(void*, _Vector<4, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2585,7 +2585,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovsdw256mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<8, int>, unsigned char)">;
+  def pmovsdw256mem_mask : X86Builtin<"void(void*, _Vector<8, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2593,7 +2593,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovsqb128mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<2, long long int>, unsigned char)">;
+  def pmovsqb128mem_mask : X86Builtin<"void(void*, _Vector<2, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2601,7 +2601,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovsqb256mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<4, long long int>, unsigned char)">;
+  def pmovsqb256mem_mask : X86Builtin<"void(void*, _Vector<4, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2609,7 +2609,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovsqd128mem_mask : X86Builtin<"void(_Vector<4, int *>, _Vector<2, long long int>, unsigned char)">;
+  def pmovsqd128mem_mask : X86Builtin<"void(void*, _Vector<2, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2617,7 +2617,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovsqd256mem_mask : X86Builtin<"void(_Vector<4, int *>, _Vector<4, long long int>, unsigned char)">;
+  def pmovsqd256mem_mask : X86Builtin<"void(void*, _Vector<4, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2625,7 +2625,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovsqw128mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<2, long long int>, unsigned char)">;
+  def pmovsqw128mem_mask : X86Builtin<"void(void*, _Vector<2, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2633,7 +2633,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovsqw256mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<4, long long int>, unsigned char)">;
+  def pmovsqw256mem_mask : X86Builtin<"void(void*, _Vector<4, long long int>, unsigned char)">;
 }
 
 let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
@@ -2641,7 +2641,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovusdb512mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<16, int>, unsigned short)">;
+  def pmovusdb512mem_mask : X86Builtin<"void(void*, _Vector<16, int>, unsigned short)">;
 }
 
 let Features = "avx512bw", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
@@ -2661,7 +2661,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovusqb512mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<8, long long int>, unsigned char)">;
+  def pmovusqb512mem_mask : X86Builtin<"void(void*, _Vector<8, long long int>, unsigned char)">;
 }
 
 let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
@@ -2669,7 +2669,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovusqd512mem_mask : X86Builtin<"void(_Vector<8, int *>, _Vector<8, long long int>, unsigned char)">;
+  def pmovusqd512mem_mask : X86Builtin<"void(void*, _Vector<8, long long int>, unsigned char)">;
 }
 
 let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
@@ -2677,7 +2677,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovusqw512mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<8, long long int>, unsigned char)">;
+  def pmovusqw512mem_mask : X86Builtin<"void(void*, _Vector<8, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2685,11 +2685,11 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovusdb128mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<4, int>, unsigned char)">;
+  def pmovusdb128mem_mask : X86Builtin<"void(void*, _Vector<4, int>, unsigned char)">;
 }
 
 let Features = "avx512vl,avx512bw", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovuswb128mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<8, short>, unsigned char)">;
+  def pmovuswb128mem_mask : X86Builtin<"void(void*, _Vector<8, short>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2697,11 +2697,11 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovusdb256mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<8, int>, unsigned char)">;
+  def pmovusdb256mem_mask : X86Builtin<"void(void*, _Vector<8, int>, unsigned char)">;
 }
 
 let Features = "avx512vl,avx512bw", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovuswb256mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<16, short>, unsigned short)">;
+  def pmovuswb256mem_mask : X86Builtin<"void(void*, _Vector<16, short>, unsigned short)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2709,7 +2709,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovusdw128mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<4, int>, unsigned char)">;
+  def pmovusdw128mem_mask : X86Builtin<"void(void*, _Vector<4, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2717,7 +2717,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovusdw256mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<8, int>, unsigned char)">;
+  def pmovusdw256mem_mask : X86Builtin<"void(void*, _Vector<8, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2725,7 +2725,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovusqb128mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<2, long long int>, unsigned char)">;
+  def pmovusqb128mem_mask : X86Builtin<"void(void*, _Vector<2, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2733,7 +2733,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovusqb256mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<4, long long int>, unsigned char)">;
+  def pmovusqb256mem_mask : X86Builtin<"void(void*, _Vector<4, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2741,7 +2741,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovusqd128mem_mask : X86Builtin<"void(_Vector<4, int *>, _Vector<2, long long int>, unsigned char)">;
+  def pmovusqd128mem_mask : X86Builtin<"void(void*, _Vector<2, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2749,7 +2749,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovusqd256mem_mask : X86Builtin<"void(_Vector<4, int *>, _Vector<4, long long int>, unsigned char)">;
+  def pmovusqd256mem_mask : X86Builtin<"void(void*, _Vector<4, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2757,7 +2757,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovusqw128mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<2, long long int>, unsigned char)">;
+  def pmovusqw128mem_mask : X86Builtin<"void(void*, _Vector<2, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2765,7 +2765,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovusqw256mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<4, long long int>, unsigned char)">;
+  def pmovusqw256mem_mask : X86Builtin<"void(void*, _Vector<4, long long int>, unsigned char)">;
 }
 
 let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
@@ -2773,7 +2773,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovdb512mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<16, int>, unsigned short)">;
+  def pmovdb512mem_mask : X86Builtin<"void(void*, _Vector<16, int>, unsigned short)">;
 }
 
 let Features = "avx512bw", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
@@ -2793,7 +2793,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovqb512mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<8, long long int>, unsigned char)">;
+  def pmovqb512mem_mask : X86Builtin<"void(void*, _Vector<8, long long int>, unsigned char)">;
 }
 
 let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
@@ -2801,7 +2801,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovqd512mem_mask : X86Builtin<"void(_Vector<8, int *>, _Vector<8, long long int>, unsigned char)">;
+  def pmovqd512mem_mask : X86Builtin<"void(void*, _Vector<8, long long int>, unsigned char)">;
 }
 
 let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
@@ -2809,7 +2809,7 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
 }
 
 let Features = "avx512f", Attributes = [NoThrow, RequiredVectorWidth<512>] in {
-  def pmovqw512mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<8, long long int>, unsigned char)">;
+  def pmovqw512mem_mask : X86Builtin<"void(void*, _Vector<8, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2817,11 +2817,11 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl,avx512bw", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovwb128mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<8, short>, unsigned char)">;
+  def pmovwb128mem_mask : X86Builtin<"void(void*, _Vector<8, short>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovdb128mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<4, int>, unsigned char)">;
+  def pmovdb128mem_mask : X86Builtin<"void(void*, _Vector<4, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2829,11 +2829,11 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovdb256mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<8, int>, unsigned char)">;
+  def pmovdb256mem_mask : X86Builtin<"void(void*, _Vector<8, int>, unsigned char)">;
 }
 
 let Features = "avx512vl,avx512bw", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovwb256mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<16, short>, unsigned short)">;
+  def pmovwb256mem_mask : X86Builtin<"void(void*, _Vector<16, short>, unsigned short)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2841,7 +2841,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovdw128mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<4, int>, unsigned char)">;
+  def pmovdw128mem_mask : X86Builtin<"void(void*, _Vector<4, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2849,7 +2849,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovdw256mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<8, int>, unsigned char)">;
+  def pmovdw256mem_mask : X86Builtin<"void(void*, _Vector<8, int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2857,7 +2857,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovqb128mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<2, long long int>, unsigned char)">;
+  def pmovqb128mem_mask : X86Builtin<"void(void*, _Vector<2, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2865,7 +2865,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovqb256mem_mask : X86Builtin<"void(_Vector<16, char *>, _Vector<4, long long int>, unsigned char)">;
+  def pmovqb256mem_mask : X86Builtin<"void(void*, _Vector<4, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2873,11 +2873,11 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovqd128mem_mask : X86Builtin<"void(_Vector<4, int *>, _Vector<2, long long int>, unsigned char)">;
+  def pmovqd128mem_mask : X86Builtin<"void(void*, _Vector<2, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovqd256mem_mask : X86Builtin<"void(_Vector<4, int *>, _Vector<4, long long int>, unsigned char)">;
+  def pmovqd256mem_mask : X86Builtin<"void(void*, _Vector<4, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
@@ -2885,7 +2885,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<128>] in {
-  def pmovqw128mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<2, long long int>, unsigned char)">;
+  def pmovqw128mem_mask : X86Builtin<"void(void*, _Vector<2, long long int>, unsigned char)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
@@ -2893,7 +2893,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
-  def pmovqw256mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<4, long long int>, unsigned char)">;
+  def pmovqw256mem_mask : X86Builtin<"void(void*, _Vector<4, long long int>, unsigned char)">;
 }
 
 let Features = "avx512dq", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
