@@ -84,6 +84,8 @@ struct TestBytecodeRoundtripPass
       // test-kind 6 is a plain roundtrip with downgrade/upgrade to/from
       // `targetVersion`.
       return runTest6(getOperation());
+    case (7):
+      return runTest7(getOperation());
     default:
       llvm_unreachable("unhandled test kind for TestBytecodeCallbacks pass");
     }
@@ -409,6 +411,59 @@ private:
     writeConfig.setDialectVersion<test::TestDialect>(
         std::make_unique<test::TestDialectVersion>(targetEmissionVersion));
     ParserConfig parseConfig(op->getContext(), /*verifyAfterParse=*/true);
+    doRoundtripWithConfigs(op, writeConfig, parseConfig);
+  }
+
+  // Test7: When writing bytecode, we override the encoding of TestI32Type with
+  // the encoding of builtin IntegerType, but we also write an unowned blob.
+  // We can natively parse this without the use of a callback, relying on the
+  // existing builtin reader mechanism.
+  void runTest7(Operation *op) {
+    auto *builtin = op->getContext()->getLoadedDialect<mlir::BuiltinDialect>();
+    BytecodeDialectInterface *iface =
+        builtin->getRegisteredInterface<BytecodeDialectInterface>();
+    BytecodeWriterConfig writeConfig;
+    writeConfig.attachTypeCallback(
+        [&](Type entryValue, std::optional<StringRef> &dialectGroupName,
+            DialectBytecodeWriter &writer) -> LogicalResult {
+          // Emit TestIntegerType using the builtin dialect encoding.
+          if (llvm::isa<test::TestI32Type>(entryValue)) {
+            auto builtinI32Type =
+                IntegerType::get(op->getContext(), 32,
+                                 IntegerType::SignednessSemantics::Signless);
+            // Specify that this type will need to be written as part of the
+            // builtin group. This will override the default dialect group of
+            // the attribute (test).
+            dialectGroupName = StringLiteral("builtin");
+            if (succeeded(iface->writeType(builtinI32Type, writer))) {
+              char dummyBlob[] = "test_blob";
+              llvm::outs() << "Writing unowned blob...\n";
+              writer.writeUnownedBlob(ArrayRef<char>(dummyBlob, 9));
+              return success();
+            }
+          }
+          return failure();
+        });
+    ParserConfig parseConfig(op->getContext(), /*verifyAfterParse=*/true);
+    parseConfig.getBytecodeReaderConfig().attachTypeCallback(
+        [&](DialectBytecodeReader &reader, StringRef dialectName,
+            Type &entry) -> LogicalResult {
+          if (dialectName != StringLiteral("builtin"))
+            return failure();
+          Type builtinAttr = iface->readType(reader);
+          if (auto integerType =
+                  llvm::dyn_cast_or_null<IntegerType>(builtinAttr)) {
+            if (integerType.getWidth() == 32 && integerType.isSignless()) {
+              ArrayRef<char> blob;
+              if (succeeded(reader.readBlob(blob)) &&
+                  blob == ArrayRef<char>("test_blob", 9)) {
+                llvm::outs() << "Successfully read the unowned blob.\n";
+                entry = test::TestI32Type::get(reader.getContext());
+              }
+            }
+          }
+          return success();
+        });
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
   }
 

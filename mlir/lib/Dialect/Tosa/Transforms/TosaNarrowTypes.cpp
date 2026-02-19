@@ -15,12 +15,16 @@
 
 #include "llvm/ADT/APFloat.h"
 
+#include <algorithm>
 #include <limits>
 #include <type_traits>
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
+#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Pass/Pass.h"
 
@@ -238,6 +242,70 @@ convertDenseFPElementsAttr(ShapedType type, DenseFPElementsAttr attr,
   return convertedAttr;
 }
 
+template <TosaNarrowKind Kind>
+FailureOr<Attribute> convertDenseResourceElementsAttr(
+    ShapedType type, DenseResourceElementsAttr attr,
+    const TypeConverter &typeConverter, bool allowLossyConversion) {
+  static_assert(Kind == TosaNarrowKind::Int64ToInt32 ||
+                Kind == TosaNarrowKind::Float64ToFloat32);
+  using From =
+      std::conditional_t<Kind == TosaNarrowKind::Int64ToInt32, int64_t, double>;
+  using To =
+      std::conditional_t<Kind == TosaNarrowKind::Int64ToInt32, int32_t, float>;
+
+  if (Kind == TosaNarrowKind::Int64ToInt32 &&
+      !isa<DenseI64ResourceElementsAttr>(attr)) {
+    return attr;
+  }
+
+  if (Kind == TosaNarrowKind::Float64ToFloat32 &&
+      !isa<DenseF64ResourceElementsAttr>(attr)) {
+    return attr;
+  }
+
+  auto narrow = [](From value) {
+    if constexpr (Kind == TosaNarrowKind::Int64ToInt32) {
+      value = std::clamp<From>(value, std::numeric_limits<To>::min(),
+                               std::numeric_limits<To>::max());
+    }
+
+    return static_cast<To>(value);
+  };
+
+  const auto newType =
+      dyn_cast_or_null<ShapedType>(typeConverter.convertType(type));
+  if (!newType) {
+    return failure();
+  }
+
+  const std::optional<ArrayRef<From>> values =
+      tryGetDenseResourceValues<From>(attr);
+  if (!values) {
+    return failure();
+  }
+
+  SmallVector<To> newValues;
+  newValues.reserve(values->size());
+  for (From value : *values) {
+    const To convertedValue = narrow(value);
+    if (!allowLossyConversion && convertedValue != value) {
+      return failure();
+    }
+
+    newValues.push_back(convertedValue);
+  }
+
+  AsmResourceBlob blob = HeapAsmResourceBlob::allocateAndCopyInferAlign(
+      ArrayRef<To>(newValues.data(), newValues.size()));
+
+  auto resourceManager =
+      DenseResourceElementsHandle::getManagerInterface(attr.getContext());
+  resourceManager.getBlobManager().update(attr.getRawHandle().getKey(),
+                                          std::move(blob));
+
+  return DenseResourceElementsAttr::get(newType, attr.getRawHandle());
+}
+
 template <TosaNarrowKind Kind, typename AttrT>
 FailureOr<Attribute>
 convertAttributeWithTypeConverter(AttrT attr, Type type,
@@ -336,6 +404,20 @@ LogicalResult convertGenericOp(Operation *op, ValueRange operands,
         return rewriter.notifyMatchFailure(
             op, "Failed to convert dense elements attribute without precision "
                 "loss; enable aggressive rewrite to override.");
+      state.addAttribute(namedAttribute.getName(), convertedAttr.value());
+      continue;
+    }
+
+    if (const auto denseResourceElementsAttr =
+            dyn_cast<DenseResourceElementsAttr>(attribute)) {
+      FailureOr<Attribute> convertedAttr =
+          convertAttributeWithTypeConverter<Kind>(
+              denseResourceElementsAttr, denseResourceElementsAttr.getType(),
+              typeConverter);
+      if (failed(convertedAttr))
+        return rewriter.notifyMatchFailure(
+            op, "Failed to convert dense resource elements attribute without "
+                "precision loss; enable aggressive rewrite to override.");
       state.addAttribute(namedAttribute.getName(), convertedAttr.value());
       continue;
     }
@@ -538,6 +620,18 @@ LogicalResult runTosaNarrowing(Operation *op, bool aggressiveRewrite,
   };
   typeConverter.addSourceMaterialization(materializeCast);
   typeConverter.addTargetMaterialization(materializeCast);
+
+  typeConverter.addTypeAttributeConversion(
+      [&typeConverter, allowLossyConversion](ShapedType type,
+                                             DenseResourceElementsAttr attr)
+          -> TypeConverter::AttributeConversionResult {
+        FailureOr<Attribute> converted = convertDenseResourceElementsAttr<Kind>(
+            type, attr, typeConverter, allowLossyConversion);
+        if (failed(converted))
+          return TypeConverter::AttributeConversionResult::abort();
+        return TypeConverter::AttributeConversionResult::result(
+            converted.value());
+      });
 
   if constexpr (Kind == TosaNarrowKind::Int64ToInt32) {
     typeConverter.addTypeAttributeConversion(

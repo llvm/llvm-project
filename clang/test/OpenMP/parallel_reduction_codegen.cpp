@@ -357,10 +357,10 @@ int main() {
 // CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP0]], i64 0
 // CHECK1-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X_ADDR]], align 8
 // CHECK1-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP1]], i64 0
-// CHECK1-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ARRAYIDX1]] to i64
-// CHECK1-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
+// CHECK1-NEXT:    [[TMP2:%.*]] = ptrtoaddr ptr [[ARRAYIDX1]] to i64
+// CHECK1-NEXT:    [[TMP3:%.*]] = ptrtoaddr ptr [[ARRAYIDX]] to i64
 // CHECK1-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP2]], [[TMP3]]
-// CHECK1-NEXT:    [[TMP5:%.*]] = sdiv exact i64 [[TMP4]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP5:%.*]] = sdiv exact i64 [[TMP4]], 2
 // CHECK1-NEXT:    [[TMP6:%.*]] = add nuw i64 [[TMP5]], 1
 // CHECK1-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP8:%.*]] = call ptr @llvm.stacksave.p0()
@@ -378,10 +378,10 @@ int main() {
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK1:       omp.arrayinit.done:
 // CHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
-// CHECK1-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
+// CHECK1-NEXT:    [[TMP11:%.*]] = ptrtoaddr ptr [[TMP10]] to i64
+// CHECK1-NEXT:    [[TMP12:%.*]] = ptrtoaddr ptr [[ARRAYIDX]] to i64
 // CHECK1-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP11]], [[TMP12]]
-// CHECK1-NEXT:    [[TMP14:%.*]] = sdiv exact i64 [[TMP13]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
+// CHECK1-NEXT:    [[TMP14:%.*]] = sdiv exact i64 [[TMP13]], 2
 // CHECK1-NEXT:    [[TMP15:%.*]] = getelementptr i16, ptr [[VLA]], i64 [[TMP14]]
 // CHECK1-NEXT:    store ptr [[TMP15]], ptr [[TMP]], align 8
 // CHECK1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
@@ -1635,10 +1635,10 @@ int main() {
 // CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP0]], i64 0
 // CHECK3-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X_ADDR]], align 8
 // CHECK3-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP1]], i64 0
-// CHECK3-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ARRAYIDX1]] to i64
-// CHECK3-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
+// CHECK3-NEXT:    [[TMP2:%.*]] = ptrtoaddr ptr [[ARRAYIDX1]] to i64
+// CHECK3-NEXT:    [[TMP3:%.*]] = ptrtoaddr ptr [[ARRAYIDX]] to i64
 // CHECK3-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP2]], [[TMP3]]
-// CHECK3-NEXT:    [[TMP5:%.*]] = sdiv exact i64 [[TMP4]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
+// CHECK3-NEXT:    [[TMP5:%.*]] = sdiv exact i64 [[TMP4]], 2
 // CHECK3-NEXT:    [[TMP6:%.*]] = add nuw i64 [[TMP5]], 1
 // CHECK3-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
 // CHECK3-NEXT:    [[TMP8:%.*]] = call ptr @llvm.stacksave.p0()
@@ -1656,10 +1656,10 @@ int main() {
 // CHECK3-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK3:       omp.arrayinit.done:
 // CHECK3-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
-// CHECK3-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
+// CHECK3-NEXT:    [[TMP11:%.*]] = ptrtoaddr ptr [[TMP10]] to i64
+// CHECK3-NEXT:    [[TMP12:%.*]] = ptrtoaddr ptr [[ARRAYIDX]] to i64
 // CHECK3-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP11]], [[TMP12]]
-// CHECK3-NEXT:    [[TMP14:%.*]] = sdiv exact i64 [[TMP13]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
+// CHECK3-NEXT:    [[TMP14:%.*]] = sdiv exact i64 [[TMP13]], 2
 // CHECK3-NEXT:    [[TMP15:%.*]] = getelementptr i16, ptr [[VLA]], i64 [[TMP14]]
 // CHECK3-NEXT:    store ptr [[TMP15]], ptr [[TMP]], align 8
 // CHECK3-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
@@ -2145,10 +2145,10 @@ int main() {
 // CHECK4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP0]], i64 0
 // CHECK4-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X_ADDR]], align 8
 // CHECK4-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP1]], i64 0
-// CHECK4-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[ARRAYIDX1]] to i64
-// CHECK4-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
+// CHECK4-NEXT:    [[TMP2:%.*]] = ptrtoaddr ptr [[ARRAYIDX1]] to i64
+// CHECK4-NEXT:    [[TMP3:%.*]] = ptrtoaddr ptr [[ARRAYIDX]] to i64
 // CHECK4-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP2]], [[TMP3]]
-// CHECK4-NEXT:    [[TMP5:%.*]] = sdiv exact i64 [[TMP4]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
+// CHECK4-NEXT:    [[TMP5:%.*]] = sdiv exact i64 [[TMP4]], 2
 // CHECK4-NEXT:    [[TMP6:%.*]] = add nuw i64 [[TMP5]], 1
 // CHECK4-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
 // CHECK4-NEXT:    [[TMP8:%.*]] = call ptr @llvm.stacksave.p0()
@@ -2166,10 +2166,10 @@ int main() {
 // CHECK4-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYINIT_DONE]], label [[OMP_ARRAYINIT_BODY]]
 // CHECK4:       omp.arrayinit.done:
 // CHECK4-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// CHECK4-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
-// CHECK4-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[ARRAYIDX]] to i64
+// CHECK4-NEXT:    [[TMP11:%.*]] = ptrtoaddr ptr [[TMP10]] to i64
+// CHECK4-NEXT:    [[TMP12:%.*]] = ptrtoaddr ptr [[ARRAYIDX]] to i64
 // CHECK4-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP11]], [[TMP12]]
-// CHECK4-NEXT:    [[TMP14:%.*]] = sdiv exact i64 [[TMP13]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
+// CHECK4-NEXT:    [[TMP14:%.*]] = sdiv exact i64 [[TMP13]], 2
 // CHECK4-NEXT:    [[TMP15:%.*]] = getelementptr i16, ptr [[VLA]], i64 [[TMP14]]
 // CHECK4-NEXT:    store ptr [[TMP15]], ptr [[TMP]], align 8
 // CHECK4-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST]], i64 0, i64 0
