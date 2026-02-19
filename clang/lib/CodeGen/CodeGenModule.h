@@ -1108,8 +1108,7 @@ public:
 
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
-    return (ForEH || getLangOpts().RTTI) &&
-           (!getLangOpts().isTargetDevice() || !getTriple().isGPU());
+    return (ForEH || getLangOpts().RTTI);
   }
 
   /// Get the address of the RTTI descriptor for the given type.

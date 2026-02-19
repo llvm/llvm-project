@@ -7012,6 +7012,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  // The offloading devices do not support RTTI.
+  if (IsCudaDevice || IsHIPDevice ||
+      (IsOpenMPDevice &&
+       (Triple.isNVPTX() || Triple.isAMDGCN() || Triple.isSPIRV()))) {
+    CmdArgs.push_back("-fno-rtti");
+  }
+
   // Forward --no-offloadlib to -cc1.
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
     CmdArgs.push_back("--no-offloadlib");
