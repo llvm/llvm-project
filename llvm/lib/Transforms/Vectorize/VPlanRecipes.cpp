@@ -715,8 +715,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (State.VF.isScalar())
       return State.get(getOperand(0), true);
     IRBuilderBase::FastMathFlagGuard FMFG(Builder);
-    if (hasFastMathFlags())
-      Builder.setFastMathFlags(getFastMathFlags());
+    Builder.setFastMathFlags(getFastMathFlags());
     // If this start vector is scaled then it should produce a vector with fewer
     // elements than the VF.
     ElementCount VF = State.VF.divideCoefficientBy(
@@ -755,8 +754,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
       RdxParts[Part] = State.get(getOperand(Part), IsInLoop);
 
     IRBuilderBase::FastMathFlagGuard FMFG(Builder);
-    if (hasFastMathFlags())
-      Builder.setFastMathFlags(getFastMathFlags());
+    Builder.setFastMathFlags(getFastMathFlags());
 
     // Reduce multiple operands into one.
     Value *ReducedPartRdx = RdxParts[0];
@@ -2542,8 +2540,7 @@ void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
-  if (hasFastMathFlags())
-    State.Builder.setFastMathFlags(getFastMathFlags());
+  State.Builder.setFastMathFlags(getFastMathFlags());
 
   /// Compute scalar induction steps. \p ScalarIV is the scalar induction
   /// variable on which to base the steps, \p Step is the size of the step.
