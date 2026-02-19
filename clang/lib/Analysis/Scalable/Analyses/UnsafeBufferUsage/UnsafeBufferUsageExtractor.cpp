@@ -65,11 +65,11 @@ class EntityPointerLevelTranslator
 
   UnsafeBufferUsageTUSummaryBuilder &Builder;
 
-  EntityPointerLevel incrementPointerLevel(const EntityPointerLevel &E) {
+  static EntityPointerLevel incrementPointerLevel(const EntityPointerLevel &E) {
     return buildEntityPointerLevel(E.getEntity(), E.getPointerLevel() + 1);
   }
 
-  EntityPointerLevel decrementPointerLevel(const EntityPointerLevel &E) {
+  static EntityPointerLevel decrementPointerLevel(const EntityPointerLevel &E) {
     assert(E.getPointerLevel() > 0);
     return buildEntityPointerLevel(E.getEntity(), E.getPointerLevel() - 1);
   }
