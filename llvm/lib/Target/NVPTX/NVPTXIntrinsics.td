@@ -2986,16 +2986,6 @@ def : Pat<(int_nvvm_read_ptx_sreg_envreg29), (MOV_SPECIAL ENVREG29)>;
 def : Pat<(int_nvvm_read_ptx_sreg_envreg30), (MOV_SPECIAL ENVREG30)>;
 def : Pat<(int_nvvm_read_ptx_sreg_envreg31), (MOV_SPECIAL ENVREG31)>;
 
-// Reserved Shared Memory special register reads
-def : Pat<(int_nvvm_read_ptx_sreg_reserved_smem_offset_begin),
-          (MOV_SPECIAL RESERVED_SMEM_OFFSET_BEGIN)>, Requires<[hasPTX<76>, hasSM<80>]>;
-def : Pat<(int_nvvm_read_ptx_sreg_reserved_smem_offset_end),
-          (MOV_SPECIAL RESERVED_SMEM_OFFSET_END)>, Requires<[hasPTX<76>, hasSM<80>]>;
-def : Pat<(int_nvvm_read_ptx_sreg_reserved_smem_offset_cap),
-          (MOV_SPECIAL RESERVED_SMEM_OFFSET_CAP)>, Requires<[hasPTX<76>, hasSM<80>]>;
-def : Pat<(int_nvvm_read_ptx_sreg_reserved_smem_offset_0),
-          (MOV_SPECIAL RESERVED_SMEM_OFFSET_0)>, Requires<[hasPTX<76>, hasSM<80>]>;
-
 //-----------------------------------
 // Texture Intrinsics
 //-----------------------------------
@@ -4935,6 +4925,28 @@ def INT_PTX_SREG_PM0 : PTX_READ_SREG_R32<"pm0", int_nvvm_read_ptx_sreg_pm0>;
 def INT_PTX_SREG_PM1 : PTX_READ_SREG_R32<"pm1", int_nvvm_read_ptx_sreg_pm1>;
 def INT_PTX_SREG_PM2 : PTX_READ_SREG_R32<"pm2", int_nvvm_read_ptx_sreg_pm2>;
 def INT_PTX_SREG_PM3 : PTX_READ_SREG_R32<"pm3", int_nvvm_read_ptx_sreg_pm3>;
+
+// Reserved shared memory special register reads
+def INT_PTX_SREG_RESERVED_SMEM_OFFSET_BEGIN :
+    PTX_READ_SREG_R32<"reserved_smem_offset_begin",
+                      int_nvvm_read_ptx_sreg_reserved_smem_offset_begin,
+                      [hasPTX<76>, hasSM<80>]>;
+def INT_PTX_SREG_RESERVED_SMEM_OFFSET_END :
+    PTX_READ_SREG_R32<"reserved_smem_offset_end",
+                      int_nvvm_read_ptx_sreg_reserved_smem_offset_end,
+                      [hasPTX<76>, hasSM<80>]>;
+def INT_PTX_SREG_RESERVED_SMEM_OFFSET_CAP :
+    PTX_READ_SREG_R32<"reserved_smem_offset_cap",
+                      int_nvvm_read_ptx_sreg_reserved_smem_offset_cap,
+                      [hasPTX<76>, hasSM<80>]>;
+def INT_PTX_SREG_RESERVED_SMEM_OFFSET_0 :
+    PTX_READ_SREG_R32<"reserved_smem_offset_0",
+                      int_nvvm_read_ptx_sreg_reserved_smem_offset_0,
+                      [hasPTX<76>, hasSM<80>]>;
+def INT_PTX_SREG_RESERVED_SMEM_OFFSET_1 :
+    PTX_READ_SREG_R32<"reserved_smem_offset_1",
+                      int_nvvm_read_ptx_sreg_reserved_smem_offset_1,
+                      [hasPTX<76>, hasSM<80>]>;
 
 // TODO: It would be nice to use PTX_READ_SREG here, but it doesn't
 // handle the constant.
