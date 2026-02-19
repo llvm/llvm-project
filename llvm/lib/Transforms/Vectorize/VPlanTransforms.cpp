@@ -5972,11 +5972,17 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPValue *PrevValue,
     PhiOp = UpdateR->getOperand(1);
     if (Op == Chains.rbegin()->ReductionBinOp)
       std::swap(Op, PhiOp);
-  } else if (RedPhiR != PhiOp)
+    assert(PhiOp == Chains.rbegin()->ReductionBinOp &&
+           "PhiOp must be the chain value");
+    assert(CostCtx.Types.inferScalarType(RedPhiR) ==
+               CostCtx.Types.inferScalarType(PhiOp) &&
+           "Unexpected type for chain values");
+  } else if (RedPhiR != PhiOp) {
     // If neither operand of this instruction is the reduction PHI node or a
     // link in the reduction chain, then this is just an operand to the chain
     // and not a link in the chain itself.
     return false;
+  }
 
   // If the update is a binary op, check both of its operands to see if
   // they are extends. Otherwise, see if the update comes directly from an
