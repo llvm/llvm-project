@@ -128,17 +128,17 @@ define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, pt
 ; CHECK-NEXT:    [[OUT_B1:%.*]] = ptrtoaddr ptr [[OUT_B]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[OUT_B1]], [[OUT_A2]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[OUT_B1]], [[OUT_A2]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[OUT_A2]], [[IN3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP5]], [[TMP4]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[OUT_B1]], [[IN3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[DIFF_CHECK5:%.*]] = icmp ult i64 [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    [[CONFLICT_RDX6:%.*]] = or i1 [[CONFLICT_RDX]], [[DIFF_CHECK5]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX6]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]

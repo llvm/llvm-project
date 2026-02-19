@@ -1259,9 +1259,9 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:
+; DEFAULT-NEXT:    [[TMP6:%.*]] = sub i64 [[C1]], [[A2]]
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
-; DEFAULT-NEXT:    [[TMP6:%.*]] = sub i64 [[C1]], [[A2]]
 ; DEFAULT-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = sub i64 [[C1]], [[B3]]
 ; DEFAULT-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP7]], [[TMP5]]
@@ -1313,9 +1313,9 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; PRED-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; PRED:       [[VECTOR_MEMCHECK]]:
+; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[C1]], [[A2]]
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 16
-; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[C1]], [[A2]]
 ; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP2]]
 ; PRED-NEXT:    [[TMP4:%.*]] = sub i64 [[C1]], [[B3]]
 ; PRED-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP4]], [[TMP2]]

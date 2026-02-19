@@ -602,11 +602,14 @@ define void @simple_histogram_rtdepcheck(ptr noalias %buckets, ptr %array, ptr %
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[ARRAY1:%.*]] = ptrtoaddr ptr [[ARRAY]] to i64
 ; CHECK-NEXT:    [[INDICES2:%.*]] = ptrtoaddr ptr [[INDICES]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[ARRAY1]], [[INDICES2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[LOOP_DEP_MASK:%.*]] = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1(ptr null, ptr [[TMP10]], i64 4)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 4
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[ARRAY1]], [[INDICES2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP5]], -1
+; CHECK-NEXT:    [[NO_CONFLICT:%.*]] = extractelement <vscale x 4 x i1> [[LOOP_DEP_MASK]], i64 [[TMP4]]
+; CHECK-NEXT:    br i1 [[NO_CONFLICT]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[TMP7]], 2

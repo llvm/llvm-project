@@ -2193,40 +2193,70 @@ struct SCEVPtrToAddrRewriter : SCEVRewriteVisitor<SCEVPtrToAddrRewriter> {
 
 Value *llvm::addDiffRuntimeChecks(
     Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
-    function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
-
+    ElementCount VF, unsigned IC,
+    function_ref<bool(unsigned)> UsesLoopDependenceMaskForAccessSize) {
   LLVMContext &Ctx = Loc->getContext();
   IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
   ChkBuilder.SetInsertPoint(Loc);
+  Value *RuntimeVF = nullptr;
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
-
   auto &SE = *Expander.getSE();
   const DataLayout &DL = Loc->getDataLayout();
   SCEVPtrToAddrRewriter Rewriter(SE, DL);
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
-  for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
+  for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze, AccessAlign] :
+       Checks) {
+    Value *IsConflict;
     Type *Ty = SinkStart->getType();
-    // Compute VF * IC * AccessSize.
-    auto *VFTimesICTimesSize =
-        ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                             ConstantInt::get(Ty, IC * AccessSize));
+    Type *CheckTy = ChkBuilder.getIntNTy(Ty->getScalarSizeInBits());
     const SCEV *SinkStartRewritten = Rewriter.visit(SinkStart);
     const SCEV *SrcStartRewritten = Rewriter.visit(SrcStart);
     Value *Diff = Expander.expandCodeFor(
         SE.getMinusSCEV(SinkStartRewritten, SrcStartRewritten), Ty, Loc);
 
-    // Check if the same compare has already been created earlier. In that case,
-    // there is no need to check it again.
-    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
-    if (IsConflict)
-      continue;
+    VectorType *MaskTy = VectorType::get(ChkBuilder.getInt1Ty(), VF * IC);
+    if (!UsesLoopDependenceMaskForAccessSize(AccessSize) ||
+        commonAlignment(AccessAlign, AccessSize) < AccessSize) {
+      // Compute VF * IC * AccessSize.
+      if (!RuntimeVF)
+        RuntimeVF = ChkBuilder.CreateElementCount(CheckTy, VF);
 
-    IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
-    SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
+      auto *VFTimesICTimesSize = ChkBuilder.CreateMul(
+          RuntimeVF, ConstantInt::get(Ty, IC * AccessSize));
+      // Check if the same compare has already been created earlier. In that
+      // case, there is no need to check it again.
+      if (SeenCompares.contains({Diff, VFTimesICTimesSize}))
+        continue;
+
+      IsConflict =
+          ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
+      SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
+    } else {
+      Value *LoopAccessSize = ChkBuilder.getInt64(AccessSize);
+      if (SeenCompares.contains({Diff, LoopAccessSize}))
+        continue;
+
+      // Note: This creates loop.dependence.war.mask(ptr null, ptr %diff). This
+      // allows SCEV to remove common offsets and avoids creating duplicate
+      // checks. If %diff is a sub, it can be folded into the mask.
+      Value *SrcPtr = ConstantPointerNull::get(PointerType::getUnqual(Ctx));
+      Value *SinkPtr = ChkBuilder.CreateIntToPtr(Diff, ChkBuilder.getPtrTy());
+      Value *Mask = ChkBuilder.CreateIntrinsic(
+          MaskTy, Intrinsic::loop_dependence_war_mask,
+          {SrcPtr, SinkPtr, LoopAccessSize}, {}, "loop.dep.mask");
+
+      Value *LastLaneIdx = ChkBuilder.CreateSub(
+          ChkBuilder.CreateElementCount(CheckTy, MaskTy->getElementCount()),
+          ChkBuilder.getIntN(Ty->getScalarSizeInBits(), 1));
+      Value *NoConflict =
+          ChkBuilder.CreateExtractElement(Mask, LastLaneIdx, "no.conflict");
+
+      IsConflict = ChkBuilder.CreateNot(NoConflict, "is.conflict");
+      SeenCompares.insert({{Diff, LoopAccessSize}, IsConflict});
+    }
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");

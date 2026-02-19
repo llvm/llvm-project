@@ -905,6 +905,9 @@ public:
     switch (ICA.getID()) {
     default:
       break;
+    case Intrinsic::loop_dependence_raw_mask:
+    case Intrinsic::loop_dependence_war_mask:
+      return 10;
     case Intrinsic::allow_runtime_check:
     case Intrinsic::allow_ubsan_check:
     case Intrinsic::annotation:

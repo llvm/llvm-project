@@ -1892,15 +1892,13 @@ public:
 
       auto DiffChecks = RtPtrChecking.getDiffChecks();
       if (DiffChecks) {
-        Value *RuntimeVF = nullptr;
-        MemRuntimeCheckCond = addDiffRuntimeChecks(
-            MemCheckBlock->getTerminator(), *DiffChecks, MemCheckExp,
-            [VF, &RuntimeVF](IRBuilderBase &B, unsigned Bits) {
-              if (!RuntimeVF)
-                RuntimeVF = getRuntimeVF(B, B.getIntNTy(Bits), VF);
-              return RuntimeVF;
-            },
-            IC);
+        LLVMContext &Ctx = MemCheckBlock->getContext();
+        auto UseLoopDependenceMask = [&](unsigned AccessSize) {
+          return isLoopDependenceMaskCheap(Ctx, VF, IC, AccessSize);
+        };
+        MemRuntimeCheckCond =
+            addDiffRuntimeChecks(MemCheckBlock->getTerminator(), *DiffChecks,
+                                 MemCheckExp, VF, IC, UseLoopDependenceMask);
       } else {
         MemRuntimeCheckCond = addRuntimeChecks(
             MemCheckBlock->getTerminator(), L, RtPtrChecking.getChecks(),
@@ -1950,6 +1948,21 @@ public:
 
     // Outer loop is used as part of the later cost calculations.
     OuterLoop = L->getParentLoop();
+  }
+
+  bool isLoopDependenceMaskCheap(LLVMContext &Ctx, ElementCount VF, unsigned IC,
+                                 unsigned AccessSize) {
+    if (ForceTargetInstructionCost.getNumOccurrences() > 0)
+      return ForceTargetInstructionCost <= 1;
+    VectorType *MaskTy = VectorType::get(Type::getInt1Ty(Ctx), VF * IC);
+    Value *AccessSizeVal = ConstantInt::get(Type::getInt64Ty(Ctx), AccessSize);
+    Value *NullPtr = ConstantPointerNull::get(PointerType::getUnqual(Ctx));
+    // The pointer values should not change the cost. The access size (constant)
+    // is needed to by targets to cost the mask.
+    IntrinsicCostAttributes ICA(Intrinsic::loop_dependence_war_mask, MaskTy,
+                                {NullPtr, NullPtr, AccessSizeVal});
+    InstructionCost Cost = TTI->getIntrinsicInstrCost(ICA, CostKind);
+    return Cost.isValid() && Cost <= 1;
   }
 
   InstructionCost getCost() {
