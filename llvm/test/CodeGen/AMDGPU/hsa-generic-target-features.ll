@@ -17,9 +17,9 @@
 ; Checks 10.1, 10.3 and 11 generic targets allow cumode/wave64.
 
 ; NOCU:    .amdhsa_workgroup_processor_mode 0
-; NOCU:    .workgroup_processor_mode: 0
+; NOCU:    .workgroup_processor_mode: false
 ; CU:      .amdhsa_workgroup_processor_mode 1
-; CU:      .workgroup_processor_mode: 1
+; CU:      .workgroup_processor_mode: true
 
 ; W64:      .amdhsa_wavefront_size32 0
 ; W32:      .amdhsa_wavefront_size32 1
