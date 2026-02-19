@@ -24528,7 +24528,8 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   MachineFunction::CallSiteInfo CSInfo;
 
   // Set type id for call site info.
-  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
+  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
+    CSInfo = MachineFunction::CallSiteInfo(*CB);
 
   // Analyze the operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;

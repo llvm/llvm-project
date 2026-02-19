@@ -700,9 +700,6 @@ bool MachineFunction::needsFrameMoves() const {
 }
 
 MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
-  if (MDNode *Node = CB.getMetadata(llvm::LLVMContext::MD_call_target))
-    CallTarget = Node;
-
   // Numeric callee_type ids are only for indirect calls.
   if (!CB.isIndirectCall())
     return;
