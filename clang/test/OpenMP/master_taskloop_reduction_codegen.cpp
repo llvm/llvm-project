@@ -91,10 +91,10 @@ sum = 0.0;
 // CHECK-DAG:    [[TMP28]] = getelementptr inbounds nuw %struct.kmp_taskred_input_t, ptr [[DOTRD_INPUT_GEP_4:%.+]], i32 0, i32 0
 // CHECK-DAG:    store ptr [[ARRAYIDX5]], ptr [[TMP28:%[^,]+]],
 // CHECK-DAG:    [[TMP28]] = getelementptr inbounds nuw %struct.kmp_taskred_input_t, ptr [[DOTRD_INPUT_GEP_4]], i32 0, i32 1
-// CHECK-DAG:    [[TMP32:%.*]] = ptrtoint ptr [[ARRAYIDX6]] to i64
-// CHECK-DAG:    [[TMP33:%.*]] = ptrtoint ptr [[ARRAYIDX5]] to i64
+// CHECK-DAG:    [[TMP32:%.*]] = ptrtoaddr ptr [[ARRAYIDX6]] to i64
+// CHECK-DAG:    [[TMP33:%.*]] = ptrtoaddr ptr [[ARRAYIDX5]] to i64
 // CHECK-DAG:    [[TMP34:%.*]] = sub i64 [[TMP32]], [[TMP33]]
-// CHECK-DAG:    [[TMP35:%.*]] = sdiv exact i64 [[TMP34]], ptrtoint (ptr getelementptr (%struct.S, ptr null, i32 1) to i64)
+// CHECK-DAG:    [[TMP35:%.*]] = sdiv exact i64 [[TMP34]], 4
 // CHECK-DAG:    [[TMP36:%.*]] = add nuw i64 [[TMP35]], 1
 // CHECK-DAG:    [[TMP37:%.*]] = mul nuw i64 [[TMP36]], ptrtoint (ptr getelementptr (%struct.S, ptr null, i32 1) to i64)
 // CHECK-DAG:    store i64 [[TMP37]], ptr [[TMP38:%[^,]+]],
