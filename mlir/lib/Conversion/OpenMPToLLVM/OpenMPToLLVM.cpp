@@ -156,6 +156,7 @@ void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
       [&](omp::MapBoundsType type) -> Type { return type; });
   converter.addConversion(
       [&](omp::AffinityEntryType type) -> Type { return type; });
+  converter.addConversion([&](omp::IteratedType type) -> Type { return type; });
 
   // Add conversions for all OpenMP operations.
   addOpenMPOpConversions<
