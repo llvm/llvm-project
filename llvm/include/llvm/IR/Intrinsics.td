@@ -239,6 +239,7 @@ def ArgKind {
   int AnyFloat   = 2;
   int AnyVector  = 3;
   int AnyPointer = 4;
+  int AnyOf      = 5;
 
   int MatchType  = 7;
 }
@@ -372,8 +373,6 @@ def IIT_V6 : IIT_Vec<6, 50>;
 def IIT_V10 : IIT_Vec<10, 51>;
 def IIT_V2048 : IIT_Vec<2048, 52>;
 def IIT_V4096 : IIT_Vec<4096, 53>;
-// Constrained type encoding for overloaded intrinsics.
-def IIT_ANYTYPE : IIT_Base<54>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -451,7 +450,7 @@ class LLVMAnyPointerType : LLVMAnyType<pAny> {
 }
 
 // AnyTypeOf: Constrain overloaded type to specific set of allowed types.
-// Encoding follows the pattern: [IIT_ARG, EncAny, IIT_ANYTYPE, count, type_sigs...].
+// Encoding follows the pattern: [IIT_ARG, EncAnyType<ArgKind.AnyOf>, count, type_sigs...].
 class AnyTypeOf<list<LLVMType> allowed_types> : LLVMAnyType<Any> {
   list<LLVMType> AllowedTypes = allowed_types;
   
@@ -460,8 +459,7 @@ class AnyTypeOf<list<LLVMType> allowed_types> : LLVMAnyType<Any> {
          "AnyTypeOf cannot exceed 255 allowed types";
   
   let Sig = !listconcat(
-    [IIT_ARG.Number, EncAnyType<ArgCode>.ret],
-    [IIT_ANYTYPE.Number, !size(allowed_types)],
+    [IIT_ARG.Number, EncAnyType<ArgKind.AnyOf>.ret, !size(allowed_types)],
     !foldl([]<int>, allowed_types, accum, ty,
       !listconcat(accum, ty.Sig))
   );

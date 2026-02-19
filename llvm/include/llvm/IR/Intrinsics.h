@@ -180,8 +180,6 @@ namespace Intrinsic {
       AMX,
       PPCQuad,
       AArch64Svcount,
-      ArgumentTypeConstraint, // For AnyTypeOf - marks constrained argument
-                              // types.
     } Kind;
 
     union {
@@ -190,7 +188,6 @@ namespace Intrinsic {
       unsigned Pointer_AddressSpace;
       unsigned Struct_NumElements;
       unsigned Argument_Info;
-      unsigned Argument_NumConstraints;
       ElementCount Vector_Width;
     };
 
@@ -205,7 +202,7 @@ namespace Intrinsic {
              Kind == TruncArgument || Kind == SameVecWidthArgument ||
              Kind == VecElementArgument || Kind == Subdivide2Argument ||
              Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
-      return Argument_Info >> 3;
+      return (Argument_Info >> 3) & 0x1F;
     }
     ArgKind getArgumentKind() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
@@ -232,10 +229,10 @@ namespace Intrinsic {
       return Argument_Info & 0xFFFF;
     }
 
-    // For ArgumentTypeConstraint: get number of allowed types.
-    unsigned getArgumentNumConstraints() const {
-      assert(Kind == ArgumentTypeConstraint);
-      return Argument_NumConstraints;
+    // For AnyOf: get number of allowed types.
+    unsigned getAnyOfCount() const {
+      assert(Kind == Argument && getArgumentKind() == AK_AnyOf);
+      return (Argument_Info >> 8) & 0xFF;
     }
 
     static IITDescriptor get(IITDescriptorKind K, unsigned Field) {
