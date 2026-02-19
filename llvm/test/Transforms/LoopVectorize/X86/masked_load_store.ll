@@ -1073,27 +1073,49 @@ for.end:                                          ; preds = %for.inc
 define void @foo6(ptr nocapture readonly %in, ptr nocapture %out, i32 %size, ptr nocapture readonly %trigger) local_unnamed_addr #0 {
 ; AVX1-LABEL: define void @foo6(
 ; AVX1-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
-; AVX1-NEXT:  [[ENTRY:.*]]:
+; AVX1-NEXT:  [[ENTRY:.*:]]
 ; AVX1-NEXT:    br label %[[FOR_BODY:.*]]
 ; AVX1:       [[FOR_BODY]]:
-; AVX1-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 4095, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
-; AVX1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[INDVARS_IV]]
-; AVX1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; AVX1-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
-; AVX1-NEXT:    br i1 [[CMP1]], label %[[IF_THEN:.*]], label %[[FOR_INC]]
-; AVX1:       [[IF_THEN]]:
-; AVX1-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, ptr [[IN]], i64 [[INDVARS_IV]]
-; AVX1-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
-; AVX1-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], 5.000000e-01
-; AVX1-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 [[INDVARS_IV]]
-; AVX1-NEXT:    store double [[ADD]], ptr [[ARRAYIDX5]], align 8
-; AVX1-NEXT:    br label %[[FOR_INC]]
+; AVX1-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OUT]], i64 32768
+; AVX1-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[TRIGGER]], i64 16384
+; AVX1-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[IN]], i64 32768
+; AVX1-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[OUT]], [[SCEVGEP1]]
+; AVX1-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TRIGGER]], [[SCEVGEP]]
+; AVX1-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; AVX1-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[OUT]], [[SCEVGEP2]]
+; AVX1-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[IN]], [[SCEVGEP]]
+; AVX1-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
+; AVX1-NEXT:    [[CMP1:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
+; AVX1-NEXT:    br i1 [[CMP1]], label %[[IF_THEN:.*]], label %[[FOR_INC:.*]]
 ; AVX1:       [[FOR_INC]]:
-; AVX1-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; AVX1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
-; AVX1-NEXT:    br i1 [[CMP]], label %[[FOR_END:.*]], label %[[FOR_BODY]]
+; AVX1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; AVX1:       [[VECTOR_BODY]]:
+; AVX1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[FOR_INC]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; AVX1-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 4095, [[INDEX]]
+; AVX1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER]], i64 [[OFFSET_IDX]]
+; AVX1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 0
+; AVX1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 -3
+; AVX1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !alias.scope [[META18:![0-9]+]]
+; AVX1-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; AVX1-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i32> [[REVERSE]], zeroinitializer
+; AVX1-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[IN]], i64 [[OFFSET_IDX]]
+; AVX1-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[TMP4]], i64 0
+; AVX1-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[TMP5]], i64 -3
+; AVX1-NEXT:    [[REVERSE6:%.*]] = shufflevector <4 x i1> [[TMP3]], <4 x i1> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; AVX1-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 [[TMP6]], <4 x i1> [[REVERSE6]], <4 x double> poison), !alias.scope [[META21:![0-9]+]]
+; AVX1-NEXT:    [[REVERSE7:%.*]] = shufflevector <4 x double> [[WIDE_MASKED_LOAD]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; AVX1-NEXT:    [[TMP7:%.*]] = fadd <4 x double> [[REVERSE7]], splat (double 5.000000e-01)
+; AVX1-NEXT:    [[TMP8:%.*]] = getelementptr double, ptr [[OUT]], i64 [[OFFSET_IDX]]
+; AVX1-NEXT:    [[TMP9:%.*]] = getelementptr double, ptr [[TMP8]], i64 0
+; AVX1-NEXT:    [[TMP10:%.*]] = getelementptr double, ptr [[TMP9]], i64 -3
+; AVX1-NEXT:    [[REVERSE8:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; AVX1-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> [[REVERSE8]], ptr align 8 [[TMP10]], <4 x i1> [[REVERSE6]]), !alias.scope [[META23:![0-9]+]], !noalias [[META25:![0-9]+]]
+; AVX1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; AVX1-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
+; AVX1-NEXT:    br i1 [[TMP11]], label %[[FOR_END:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; AVX1:       [[FOR_END]]:
-; AVX1-NEXT:    ret void
+; AVX1-NEXT:    br [[FOR_END1:label %.*]]
+; AVX1:       [[IF_THEN]]:
 ;
 ; AVX2-LABEL: define void @foo6(
 ; AVX2-SAME: ptr readonly captures(none) [[IN:%.*]], ptr captures(none) [[OUT:%.*]], i32 [[SIZE:%.*]], ptr readonly captures(none) [[TRIGGER:%.*]]) local_unnamed_addr #[[ATTR0]] {
@@ -1349,13 +1371,13 @@ define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX1-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> splat (double 5.000000e-01), ptr align 8 [[TMP39]], <4 x i1> [[TMP34]])
 ; AVX1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; AVX1-NEXT:    [[TMP40:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; AVX1-NEXT:    br i1 [[TMP40]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; AVX1-NEXT:    br i1 [[TMP40]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; AVX1:       [[MIDDLE_BLOCK]]:
 ; AVX1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; AVX1-NEXT:    br i1 [[CMP_N]], [[FOR_END_LOOPEXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AVX1:       [[VEC_EPILOG_ITER_CHECK]]:
 ; AVX1-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
-; AVX1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF19:![0-9]+]]
+; AVX1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF29:![0-9]+]]
 ; AVX1:       [[VEC_EPILOG_PH]]:
 ; AVX1-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; AVX1-NEXT:    [[N_MOD_VF8:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
@@ -1375,7 +1397,7 @@ define void @foo7(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX1-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> splat (double 5.000000e-01), ptr align 8 [[TMP52]], <4 x i1> [[TMP51]])
 ; AVX1-NEXT:    [[INDEX_NEXT13]] = add nuw i64 [[INDEX10]], 4
 ; AVX1-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[INDEX_NEXT13]], [[N_VEC9]]
-; AVX1-NEXT:    br i1 [[TMP54]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; AVX1-NEXT:    br i1 [[TMP54]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; AVX1:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; AVX1-NEXT:    [[CMP_N14:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC9]]
 ; AVX1-NEXT:    br i1 [[CMP_N14]], [[FOR_END_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
@@ -1670,13 +1692,13 @@ define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX1-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> splat (double 5.000000e-01), ptr align 8 [[TMP39]], <4 x i1> [[TMP34]])
 ; AVX1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; AVX1-NEXT:    [[TMP40:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; AVX1-NEXT:    br i1 [[TMP40]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; AVX1-NEXT:    br i1 [[TMP40]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; AVX1:       [[MIDDLE_BLOCK]]:
 ; AVX1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; AVX1-NEXT:    br i1 [[CMP_N]], [[FOR_END_LOOPEXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; AVX1:       [[VEC_EPILOG_ITER_CHECK]]:
 ; AVX1-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
-; AVX1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF19]]
+; AVX1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF29]]
 ; AVX1:       [[VEC_EPILOG_PH]]:
 ; AVX1-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; AVX1-NEXT:    [[N_MOD_VF8:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
@@ -1696,7 +1718,7 @@ define void @foo8(ptr noalias nocapture %out, ptr noalias nocapture readonly %in
 ; AVX1-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> splat (double 5.000000e-01), ptr align 8 [[TMP52]], <4 x i1> [[TMP51]])
 ; AVX1-NEXT:    [[INDEX_NEXT13]] = add nuw i64 [[INDEX10]], 4
 ; AVX1-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[INDEX_NEXT13]], [[N_VEC9]]
-; AVX1-NEXT:    br i1 [[TMP54]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
+; AVX1-NEXT:    br i1 [[TMP54]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
 ; AVX1:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; AVX1-NEXT:    [[CMP_N14:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC9]]
 ; AVX1-NEXT:    br i1 [[CMP_N14]], [[FOR_END_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]

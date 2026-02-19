@@ -59,15 +59,28 @@ private:
       State = Invalid;
   }
 
+  // Matches GCC, can use shift rather than multiply/divide to scale
+  static constexpr CostType ScalingFactor = 4;
+
   static constexpr CostType MaxValue = std::numeric_limits<CostType>::max();
   static constexpr CostType MinValue = std::numeric_limits<CostType>::min();
+  static constexpr CostType MaxInputValue = MaxValue / ScalingFactor;
+  static constexpr CostType MinInputValue = MinValue / ScalingFactor;
 
 public:
   // A default constructed InstructionCost is a valid zero cost
   InstructionCost() = default;
 
   InstructionCost(CostState) = delete;
-  InstructionCost(CostType Val) : Value(Val), State(Valid) {}
+  InstructionCost(CostType Val) : Value(), State(Valid) {
+    if (Val > MaxInputValue)
+      Val = MaxValue;
+    else if (Val < MinInputValue)
+      Val = MinValue;
+    else
+      Val *= ScalingFactor;
+    Value = Val;
+  }
 
   static InstructionCost getMax() { return MaxValue; }
   static InstructionCost getMin() { return MinValue; }
@@ -87,7 +100,7 @@ public:
   /// and comparisons.
   CostType getValue() const {
     assert(isValid());
-    return Value;
+    return Value / ScalingFactor;
   }
 
   /// For all of the arithmetic operators provided here any invalid state is
@@ -141,6 +154,8 @@ public:
         Result = MaxValue;
       else
         Result = MinValue;
+    } else {
+      Result /= ScalingFactor;
     }
 
     Value = Result;
@@ -155,13 +170,21 @@ public:
 
   InstructionCost &operator/=(const InstructionCost &RHS) {
     propagateState(RHS);
-    Value /= RHS.Value;
+    // Saturating multiply.
+    InstructionCost::CostType Result;
+    if (MulOverflow(Value, ScalingFactor, Result)) {
+      if (Value > 0)
+        Result = MaxValue;
+      else
+        Result = MinValue;
+    }
+    Result /= RHS.Value;
+    Value = Result;
     return *this;
   }
 
   InstructionCost &operator/=(const CostType RHS) {
-    InstructionCost RHS2(RHS);
-    *this /= RHS2;
+    Value /= RHS;
     return *this;
   }
 

@@ -10,9 +10,9 @@
 ;         A[c][d][e] = 0;
 ; }
 
-; CHECK: Loop 'outer.loop' has cost = 9223372036854775807
-; CHECK: Loop 'middle.loop' has cost = 9223372036854775807
-; CHECK: Loop 'inner.loop' has cost = 9223372036854775807
+; CHECK: Loop 'outer.loop' has cost = 2305843009213693951
+; CHECK: Loop 'middle.loop' has cost = 2305843009213693951
+; CHECK: Loop 'inner.loop' has cost = 2305843009213693951
 
 @A = local_unnamed_addr global [11 x [11 x [11 x i32]]] zeroinitializer, align 16
 
