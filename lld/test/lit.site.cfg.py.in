@@ -27,6 +27,7 @@ config.build_examples = @LLVM_BUILD_EXAMPLES@
 config.has_plugins = @LLVM_ENABLE_PLUGINS@
 config.linked_bye_extension = @LLVM_BYE_LINK_INTO_TOOLS@
 config.enable_threads = @LLVM_ENABLE_THREADS@
+config.has_gnu_lto = lit.util.pythonize_bool("@LLD_ENABLE_GNU_LTO@")
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

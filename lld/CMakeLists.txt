@@ -177,6 +177,14 @@ if (LLD_DEFAULT_LD_LLD_IS_MINGW)
   add_definitions("-DLLD_DEFAULT_LD_LLD_IS_MINGW=1")
 endif()
 
+option(LLD_LINK_GPL3 "Allow LLD to link to GPLv3-licensed plugins, e.g. liblto_plugin.so")
+option(LLD_ENABLE_GNU_LTO "Enable support for GNU LTO plugin")
+if(!LLD_LINK_GPL3)
+  # Support for GNU LTO require linking to liblto_plugin.so from GCC which is
+  # licensed as GPLv3.
+  set(LLD_ENABLE_GNU_LTO FALSE)
+endif()
+
 if (MSVC)
   add_definitions(-wd4530) # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'
   add_definitions(-wd4062) # Suppress 'warning C4062: enumerator X in switch of enum Y is not handled' from system header.

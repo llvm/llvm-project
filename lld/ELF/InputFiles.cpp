@@ -1812,8 +1812,8 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
-BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
-                         uint64_t offsetInArchive, bool lazy)
+IRFile::IRFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
+               uint64_t offsetInArchive, bool lazy)
     : InputFile(ctx, BitcodeKind, mb) {
   this->archiveName = archiveName;
   this->lazy = lazy;
@@ -1922,7 +1922,7 @@ void BitcodeFile::parse() {
     addDependentLibrary(ctx, l, this);
 }
 
-void BitcodeFile::parseLazy() {
+void IRFile::parseLazy() {
   numSymbols = obj->symbols().size();
   symbols = std::make_unique<Symbol *[]>(numSymbols);
   for (auto [i, irSym] : llvm::enumerate(obj->symbols())) {

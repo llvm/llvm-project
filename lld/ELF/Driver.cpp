@@ -28,6 +28,10 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "LTO.h"
+#include "lld/config.h"
+#if LLD_ENABLE_GNU_LTO
+#include "GccLTO.h"
+#endif
 #include "LinkerScript.h"
 #include "MarkLive.h"
 #include "OutputSections.h"
@@ -1797,6 +1801,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
 
   cl::ResetAllOptionOccurrences();
 
+  // Ignore -plugin=LLVMgold.so because we don't need to load it.
+  StringRef v = args.getLastArgValue(OPT_plugin);
+  if (!v.empty() && !v.ends_with("LLVMgold.so")) {
+    if (!llvm::sys::fs::exists(v))
+      ErrAlways(ctx) << "Cannot find plugin " << v;
+    else
+      ctx.arg.plugin = v;
+  }
+
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
     parseClangOption(ctx, ctx.saver.save("-mcpu=" + StringRef(arg->getValue())),
@@ -1807,15 +1820,33 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                      arg->getSpelling());
 
   // GCC collect2 passes -plugin-opt=path/to/lto-wrapper with an absolute or
-  // relative path. Just ignore. If not ended with "lto-wrapper" (or
-  // "lto-wrapper.exe" for GCC cross-compiled for Windows), consider it an
-  // unsupported LLVMgold.so option and error.
+  // relative path. If not ended with "lto-wrapper" (or "lto-wrapper.exe" for
+  // GCC cross-compiled for Windows), consider it an unsupported LLVMgold.so
+  // option and error.
   for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq)) {
     StringRef v(arg->getValue());
     if (!v.ends_with("lto-wrapper") && !v.ends_with("lto-wrapper.exe"))
       ErrAlways(ctx) << arg->getSpelling() << ": unknown plugin option '"
                      << arg->getValue() << "'";
+    else if (!ctx.arg.plugin.empty())
+#if LLD_ENABLE_GNU_LTO
+      ctx.arg.pluginOpt.push_back(v.str());
+#else
+      ErrAlways(ctx) << arg->getSpelling()
+                     << " : support for GNU LTO is disabled";
+#endif
   }
+
+#if LLD_ENABLE_GNU_LTO
+  // Parse GCC collect2 options.
+  if (!ctx.arg.plugin.empty()) {
+    StringRef v = args.getLastArgValue(OPT_plugin_opt_fresolution);
+    if (!v.empty()) {
+      ctx.arg.resolutionFile = v;
+      ctx.arg.pluginOpt.push_back(std::string("-fresolution=" + v.str()));
+    }
+  }
+#endif
 
   ctx.arg.passPlugins = args::getStrings(args, OPT_load_pass_plugins);
 
@@ -2693,24 +2724,7 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
       mb.dontNeedIfMmap();
 }
 
-// This function is where all the optimizations of link-time
-// optimization takes place. When LTO is in use, some input files are
-// not in native object file format but in the LLVM bitcode format.
-// This function compiles bitcode files into a few big native files
-// using LLVM functions and replaces bitcode symbols with the results.
-// Because all bitcode files that the program consists of are passed to
-// the compiler at once, it can do a whole-program optimization.
-template <class ELFT>
-void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
-  llvm::TimeTraceScope timeScope("LTO");
-  // Compile bitcode files and replace bitcode symbols.
-  lto.reset(new BitcodeCompiler(ctx));
-  for (BitcodeFile *file : ctx.bitcodeFiles)
-    lto->add(*file);
-
-  if (!ctx.bitcodeFiles.empty())
-    markBuffersAsDontNeed(ctx, skipLinkedOutput);
-
+template <class ELFT> void LinkerDriver::compileFiles() {
   ltoObjectFiles = lto->compile();
   for (auto &file : ltoObjectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
@@ -2742,6 +2756,42 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     ctx.objectFiles.push_back(obj);
   }
 }
+
+// This function is where all the optimizations of link-time
+// optimization takes place. When LLVM LTO is in use, some input files are
+// not in native object file format but in the LLVM bitcode format.
+// This function compiles bitcode files into a few big native files
+// using LLVM functions and replaces bitcode symbols with the results.
+// Because all bitcode files that the program consists of are passed to
+// the compiler at once, it can do a whole-program optimization.
+template <class ELFT>
+void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
+  llvm::TimeTraceScope timeScope("LTO");
+  // Compile bitcode files and replace bitcode symbols.
+  lto.reset(new BitcodeCompiler(ctx));
+  for (BitcodeFile *file : ctx.bitcodeFiles)
+    lto->add(*file);
+
+  if (!ctx.bitcodeFiles.empty())
+    markBuffersAsDontNeed(ctx, skipLinkedOutput);
+
+  compileFiles<ELFT>();
+}
+
+#if LLD_ENABLE_GNU_LTO
+template <class ELFT>
+void LinkerDriver::compileGccIRFiles(bool skipLinkedOutput) {
+  llvm::TimeTraceScope timeScope("LTO");
+  // Compile files and replace symbols.
+  GccIRCompiler *c = new GccIRCompiler(ctx);
+  lto.reset(c);
+
+  for (ELFFileBase *file : ctx.objectFiles)
+    c->add(*file);
+
+  compileFiles<ELFT>();
+}
+#endif
 
 // The --wrap option is a feature to rename symbols so that you can write
 // wrappers for existing functions. If you pass `--wrap=foo`, all
@@ -3300,7 +3350,16 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // except a few linker-synthesized ones will be added to the symbol table.
   const size_t numObjsBeforeLTO = ctx.objectFiles.size();
   const size_t numInputFilesBeforeLTO = ctx.driver.files.size();
-  compileBitcodeFiles<ELFT>(skipLinkedOutput);
+  if (ctx.arg.plugin.empty()) {
+    compileBitcodeFiles<ELFT>(skipLinkedOutput);
+#if LLD_ENABLE_GNU_LTO
+  } else {
+    if (!ctx.bitcodeFiles.empty())
+      Err(ctx)
+          << "Mixing LLVM Bitcode files with GCC IR files is not supported.";
+    compileGccIRFiles<ELFT>(skipLinkedOutput);
+#endif
+  }
 
   // Symbol resolution finished. Report backward reference problems,
   // --print-archive-stats=, and --why-extract=.

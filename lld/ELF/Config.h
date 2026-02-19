@@ -54,6 +54,7 @@ class TargetInfo;
 struct Ctx;
 struct Partition;
 struct PhdrEntry;
+class IRCompiler;
 
 class BssSection;
 class GdbIndexSection;
@@ -190,7 +191,9 @@ private:
   void createFiles(llvm::opt::InputArgList &args);
   void inferMachineType();
   template <class ELFT> void link(llvm::opt::InputArgList &args);
+  template <class ELFT> void compileFiles();
   template <class ELFT> void compileBitcodeFiles(bool skipLinkedOutput);
+  template <class ELFT> void compileGccIRFiles(bool skipLinkedOutput);
   bool tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
                         uint64_t offsetInArchive, bool lazy);
   // True if we are in --whole-archive and --no-whole-archive.
@@ -199,7 +202,7 @@ private:
   // True if we are in --start-lib and --end-lib.
   bool inLib = false;
 
-  std::unique_ptr<BitcodeCompiler> lto;
+  std::unique_ptr<IRCompiler> lto;
   SmallVector<std::unique_ptr<InputFile>, 0> files, ltoObjectFiles;
 
 public:
@@ -241,9 +244,12 @@ struct Config {
   llvm::StringRef optRemarksPasses;
   llvm::StringRef optRemarksFormat;
   llvm::StringRef optStatsFilename;
+  llvm::StringRef plugin;
+  llvm::SmallVector<std::string, 0> pluginOpt;
   llvm::StringRef progName;
   llvm::StringRef printArchiveStats;
   llvm::StringRef printSymbolOrder;
+  llvm::StringRef resolutionFile;
   llvm::StringRef soName;
   llvm::StringRef sysroot;
   llvm::StringRef thinLTOCacheDir;
