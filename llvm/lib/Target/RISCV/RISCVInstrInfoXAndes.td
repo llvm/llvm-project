@@ -516,7 +516,7 @@ class NDSRVInstVLN<bits<5> funct5, string opcodestr>
 
 class VPseudoVLN8NoMask<VReg RetClass, bit U> :
       RISCVVPseudo<(outs RetClass:$rd),
-                   (ins RetClass:$dest,
+                   (ins RetClass:$passthru,
                         GPRMemZeroOffset:$rs1,
                         AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVNDSVLN</*Masked*/0, /*Unsigned*/U, !logtwo(8), VLMul> {
@@ -526,7 +526,7 @@ class VPseudoVLN8NoMask<VReg RetClass, bit U> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
-  let Constraints = "$rd = $dest";
+  let Constraints = "$rd = $passthru";
 }
 
 class VPseudoVLN8Mask<VReg RetClass, bit U> :
