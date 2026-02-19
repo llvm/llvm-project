@@ -4360,19 +4360,30 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 }
 #endif
 
-/// Returns true if the VPlan contains header phi recipes that are not currently
-/// supported for epilogue vectorization.
-static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
+/// Returns true if the VPlan contains a VPReductionPHIRecipe with
+/// FindLast recurrence kind.
+static bool hasFindLastReductionPhi(VPlan &Plan) {
   return any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
                 [](VPRecipeBase &R) {
-                  if (auto *WidenInd =
-                          dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
-                    return !WidenInd->getPHINode();
                   auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
                   return RedPhi &&
                          RecurrenceDescriptor::isFindLastRecurrenceKind(
                              RedPhi->getRecurrenceKind());
                 });
+}
+
+/// Returns true if the VPlan contains header phi recipes that are not currently
+/// supported for epilogue vectorization.
+static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
+  return any_of(
+      Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
+      [](VPRecipeBase &R) {
+        if (auto *WidenInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
+          return !WidenInd->getPHINode();
+        auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
+        return RedPhi && RecurrenceDescriptor::isFindLastRecurrenceKind(
+                             RedPhi->getRecurrenceKind());
+      });
 }
 
 bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
@@ -4647,18 +4658,6 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
       ElementTypesInLoop.insert(T);
     }
   }
-}
-
-/// Returns true if the VPlan contains a VPReductionPHIRecipe with
-/// FindLast recurrence kind.
-static bool hasFindLastReductionPhi(VPlan &Plan) {
-  return any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
-                [](VPRecipeBase &R) {
-                  auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
-                  return RedPhi &&
-                         RecurrenceDescriptor::isFindLastRecurrenceKind(
-                             RedPhi->getRecurrenceKind());
-                });
 }
 
 unsigned
