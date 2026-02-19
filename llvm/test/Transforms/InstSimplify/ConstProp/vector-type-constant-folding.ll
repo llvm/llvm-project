@@ -15,11 +15,11 @@ define void @test() {
 ; CHECK-NEXT:    store <4 x i16> <i16 sub (i16 extractelement (<4 x i16> bitcast (i64 ptrtoint (ptr @f to i64) to <4 x i16>), i32 0), i16 extractelement (<4 x i16> bitcast (i64 ptrtoint (ptr @f to i64) to <4 x i16>), i32 0)), i16 sub (i16 extractelement (<4 x i16> bitcast (i64 ptrtoint (ptr @f to i64) to <4 x i16>), i32 1), i16 extractelement (<4 x i16> bitcast (i64 ptrtoint (ptr @f to i64) to <4 x i16>), i32 1)), i16 sub (i16 extractelement (<4 x i16> bitcast (i64 ptrtoint (ptr @f to i64) to <4 x i16>), i32 2), i16 extractelement (<4 x i16> bitcast (i64 ptrtoint (ptr @f to i64) to <4 x i16>), i32 2)), i16 sub (i16 extractelement (<4 x i16> bitcast (i64 ptrtoint (ptr @f to i64) to <4 x i16>), i32 3), i16 extractelement (<4 x i16> bitcast (i64 ptrtoint (ptr @f to i64) to <4 x i16>), i32 3))>, ptr @f, align 8
 ; CHECK-NEXT:    ret void
 ;
-  %1 = ptrtoint ptr @f to i64
-  %2 = bitcast i64 %1 to <4 x i16>
-  %3 = ptrtoint ptr @f to i64
-  %4 = bitcast i64 %3 to <4 x i16>
-  %sub = sub <4 x i16> %2, %4
+  %a_i64 = ptrtoint ptr @f to i64
+  %a_vec4 = bitcast i64 %a_i64 to <4 x i16>
+  %b_i64 = ptrtoint ptr @f to i64
+  %b_vec4 = bitcast i64 %b_i64 to <4 x i16>
+  %sub = sub <4 x i16> %a_vec4, %b_vec4
   store <4 x i16> %sub, ptr @f, align 8
   ret void
 }
