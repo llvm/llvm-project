@@ -47,6 +47,10 @@
 using namespace llvm;
 using namespace llvm::PatternMatch;
 
+static cl::opt<bool> EnableFoldBinopOfReductions(
+    "vector-combine-fold-binop-of-reductions", cl::init(true), cl::Hidden,
+    cl::desc("Enable folding of binary operations of reductions"));
+
 STATISTIC(NumVecLoad, "Number of vector loads formed");
 STATISTIC(NumVecCmp, "Number of vector compares formed");
 STATISTIC(NumVecBO, "Number of vector binops formed");
@@ -1736,6 +1740,152 @@ static void analyzeCostOfVecReduction(const IntrinsicInst &II,
                                                       std::nullopt, CostKind);
 }
 
+static Value *checkIntrinsicAndGetItsArgument(Value *V, Intrinsic::ID IID) {
+  auto *II = dyn_cast<IntrinsicInst>(V);
+  if (!II)
+    return nullptr;
+  if (II->getIntrinsicID() == IID && II->hasOneUse())
+    return II->getArgOperand(0);
+  return nullptr;
+}
+
+template <typename IRBuilderTy>
+static bool matchAssociativeReduction(
+    Instruction &I, Instruction::BinaryOps BinOpOpc, Intrinsic::ID ReductionIID,
+    IRBuilderTy &Builder, BinaryOperator *Op0, Value *ScalarReduceC,
+    bool ScalarReduceCIsLeft,
+    function_ref<void(Instruction &, Value &)> ReplaceValue) {
+  if (Op0->getOpcode() != Instruction::Add &&
+      Op0->getOpcode() != Instruction::Sub)
+    return false;
+
+  Value *ReduceCVector =
+      checkIntrinsicAndGetItsArgument(ScalarReduceC, ReductionIID);
+  if (!ReduceCVector)
+    return false;
+
+  Value *ReduceLVector =
+      checkIntrinsicAndGetItsArgument(Op0->getOperand(0), ReductionIID);
+  Value *ReduceRVector =
+      checkIntrinsicAndGetItsArgument(Op0->getOperand(1), ReductionIID);
+
+  // Only one of the operands of Op0 should be a reduction
+  if ((ReduceLVector && ReduceRVector) || (!ReduceLVector && !ReduceRVector))
+    return false;
+
+  Value *ScalarReduceX =
+      ReduceLVector ? Op0->getOperand(0) : Op0->getOperand(1);
+  Value *OtherVal = ReduceLVector ? Op0->getOperand(1) : Op0->getOperand(0);
+  bool IsReduceXOnLeft = (ReduceLVector != nullptr);
+
+  Instruction::BinaryOps OuterOp = BinOpOpc;
+  Instruction::BinaryOps InnerOp = Op0->getOpcode();
+  Instruction::BinaryOps NewReduceOp;
+  Instruction::BinaryOps NewBinOp;
+  Value *LHS_Reduce, *RHS_Reduce;
+  Value *LHS_Bin, *RHS_Bin;
+
+  if (OuterOp == Instruction::Add) {
+    if (InnerOp == Instruction::Add) {
+      // (X + Y) + C -> (X + C) + Y
+      NewReduceOp = Instruction::Add;
+      NewBinOp = Instruction::Add;
+      LHS_Reduce = ScalarReduceX;
+      RHS_Reduce = ScalarReduceC;
+      LHS_Bin = nullptr;
+      RHS_Bin = OtherVal;
+    } else { // Inner == Sub
+      if (IsReduceXOnLeft) {
+        // (X - Y) + C -> (X + C) - Y
+        NewReduceOp = Instruction::Add;
+        NewBinOp = Instruction::Sub;
+        LHS_Reduce = ScalarReduceX;
+        RHS_Reduce = ScalarReduceC;
+        LHS_Bin = nullptr;
+        RHS_Bin = OtherVal;
+      } else {
+        // (Y - X) + C -> Y - (X - C)
+        NewReduceOp = Instruction::Sub;
+        NewBinOp = Instruction::Sub;
+        LHS_Reduce = ScalarReduceX;
+        RHS_Reduce = ScalarReduceC;
+        LHS_Bin = OtherVal;
+        RHS_Bin = nullptr;
+      }
+    }
+  } else { // Outer == Sub
+    if (!ScalarReduceCIsLeft) { // (Op0 - C)
+      if (InnerOp == Instruction::Add) {
+        // (X + Y) - C -> (X - C) + Y
+        NewReduceOp = Instruction::Sub;
+        NewBinOp = Instruction::Add;
+        LHS_Reduce = ScalarReduceX;
+        RHS_Reduce = ScalarReduceC;
+        LHS_Bin = nullptr;
+        RHS_Bin = OtherVal;
+      } else { // Inner == Sub
+        if (IsReduceXOnLeft) {
+          // (X - Y) - C -> (X - C) - Y
+          NewReduceOp = Instruction::Sub;
+          NewBinOp = Instruction::Sub;
+          LHS_Reduce = ScalarReduceX;
+          RHS_Reduce = ScalarReduceC;
+          LHS_Bin = nullptr;
+          RHS_Bin = OtherVal;
+        } else {
+          // (Y - X) - C -> Y - (X + C)
+          NewReduceOp = Instruction::Add;
+          NewBinOp = Instruction::Sub;
+          LHS_Reduce = ScalarReduceX;
+          RHS_Reduce = ScalarReduceC;
+          LHS_Bin = OtherVal;
+          RHS_Bin = nullptr;
+        }
+      }
+    } else { // (C - Op0)
+      if (InnerOp == Instruction::Add) {
+        // C - (X + Y) -> (C - X) - Y
+        NewReduceOp = Instruction::Sub;
+        NewBinOp = Instruction::Sub;
+        LHS_Reduce = ScalarReduceC;
+        RHS_Reduce = ScalarReduceX;
+        LHS_Bin = nullptr;
+        RHS_Bin = OtherVal;
+      } else { // Inner == Sub
+        if (IsReduceXOnLeft) {
+          // C - (X - Y) -> (C - X) + Y
+          NewReduceOp = Instruction::Sub;
+          NewBinOp = Instruction::Add;
+          LHS_Reduce = ScalarReduceC;
+          RHS_Reduce = ScalarReduceX;
+          LHS_Bin = nullptr;
+          RHS_Bin = OtherVal;
+        } else {
+          // C - (Y - X) -> (C + X) - Y
+          NewReduceOp = Instruction::Add;
+          NewBinOp = Instruction::Sub;
+          LHS_Reduce = ScalarReduceC;
+          RHS_Reduce = ScalarReduceX;
+          LHS_Bin = nullptr;
+          RHS_Bin = OtherVal;
+        }
+      }
+    }
+  }
+
+  Value *CombineNode =
+      Builder.CreateBinOp(NewReduceOp, LHS_Reduce, RHS_Reduce);
+
+  Value *NewBinNode;
+  if (LHS_Bin == nullptr)
+    NewBinNode = Builder.CreateBinOp(NewBinOp, CombineNode, RHS_Bin);
+  else
+    NewBinNode = Builder.CreateBinOp(NewBinOp, LHS_Bin, CombineNode);
+
+  ReplaceValue(I, *NewBinNode);
+  return true;
+}
+
 bool VectorCombine::foldBinopOfReductions(Instruction &I) {
   Instruction::BinaryOps BinOpOpc = cast<BinaryOperator>(&I)->getOpcode();
   Intrinsic::ID ReductionIID = getReductionForBinop(BinOpOpc);
@@ -1744,15 +1894,35 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
   if (ReductionIID == Intrinsic::not_intrinsic)
     return false;
 
-  auto checkIntrinsicAndGetItsArgument = [](Value *V,
-                                            Intrinsic::ID IID) -> Value * {
-    auto *II = dyn_cast<IntrinsicInst>(V);
-    if (!II)
-      return nullptr;
-    if (II->getIntrinsicID() == IID && II->hasOneUse())
-      return II->getArgOperand(0);
-    return nullptr;
-  };
+  if (!EnableFoldBinopOfReductions)
+    return false;
+
+  auto ReplaceValue = [&](Instruction &I, Value &V) { replaceValue(I, V); };
+
+  // Reduce the number of reductions by folding a binop of a reduction and a
+  // scalar (which might be another reduction) into a single reduction of a
+  // vector binop. This leverages associativity and commutativity of the
+  // binary operation (Add/Sub) to group reductions together.
+  //
+  // Examples:
+  //   (Reduce(X) + Y) + Reduce(Z)  -> Reduce(X + Z) + Y
+  //   (Reduce(X) - Y) - Reduce(Z)  -> Reduce(X - Z) - Y
+  //   Reduce(Z) - (Reduce(X) + Y)  -> Reduce(Z - X) - Y
+  if (auto *Op0 = dyn_cast<BinaryOperator>(I.getOperand(0))) {
+    if (matchAssociativeReduction(I, BinOpOpc, ReductionIID, Builder, Op0,
+                                  I.getOperand(1), /*ScalarReduceCIsLeft=*/false,
+                                  ReplaceValue))
+      return true;
+  }
+
+  if (auto *Op1 = dyn_cast<BinaryOperator>(I.getOperand(1))) {
+    if (matchAssociativeReduction(I, BinOpOpc, ReductionIID, Builder, Op1,
+                                  I.getOperand(0), /*ScalarReduceCIsLeft=*/true,
+                                  ReplaceValue))
+      return true;
+  }
+
+
 
   Value *V0 = checkIntrinsicAndGetItsArgument(I.getOperand(0), ReductionIID);
   if (!V0)
