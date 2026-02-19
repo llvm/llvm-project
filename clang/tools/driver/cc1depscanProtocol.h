@@ -14,11 +14,15 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
-#include "llvm/Support/raw_socket_stream.h"
+
+#if LLVM_ON_UNIX
+#include <spawn.h>      // FIXME: Unix-only. Not portable.
+#include <sys/socket.h> // FIXME: Unix-only. Not portable.
+#include <sys/types.h>  // FIXME: Unix-only. Not portable.
+#include <sys/un.h>     // FIXME: Unix-only. Not portable.
+#include <unistd.h>     // FIXME: Unix-only. Not portable.
 
 namespace clang::cc1depscand {
-
-/// Configuration for sharing dependency scanning daemon instances.
 struct DepscanSharing {
   bool OnlyShareParent = false;
   bool ShareViaIdentifier = false;
@@ -28,104 +32,54 @@ struct DepscanSharing {
   SmallVector<const char *> CASArgs;
 };
 
-/// Represents an argument edit for automatic argument updates.
 struct AutoArgEdit {
   uint32_t Index = -1u;
   StringRef NewArg;
 };
 
-/// Get the base path for daemon socket based on a daemon key.
 std::string getBasePath(StringRef DaemonKey);
 
-/// Manages a connection to a dependency scanning daemon process.
-/// Handles daemon lifecycle (launching, connecting, handshaking) and provides
-/// access to the underlying socket stream for communication.
-class ScanDaemon {
-public:
-  static Expected<ScanDaemon> create(StringRef BasePath, const char *Arg0,
-                                     const DepscanSharing &Sharing);
-
-  static Expected<ScanDaemon>
-  constructAndShakeHands(StringRef BasePath, const char *Arg0,
-                         const DepscanSharing &Sharing);
-
-  static Expected<ScanDaemon> connectToDaemonAndShakeHands(StringRef BasePath);
-
-  llvm::Error shakeHands();
-
-  llvm::raw_socket_stream &getStream() { return *Stream; }
-  const llvm::raw_socket_stream &getStream() const { return *Stream; }
-
-  ScanDaemon(ScanDaemon &&) = default;
-  ScanDaemon &operator=(ScanDaemon &&) = default;
-
-  ScanDaemon(const ScanDaemon &) = delete;
-  ScanDaemon &operator=(const ScanDaemon &) = delete;
-
-  // Destructor explicitly closes the socket and clears any errors to prevent
-  // fatal error in raw_ostream destructor. On Windows, socket close can trigger
-  // errors when the peer has already closed the connection.
-  // By calling close() first, we set FD = -1 and ShouldClose = false, so the
-  // base class destructor's close path is skipped entirely.
-  ~ScanDaemon() {
-    if (Stream) {
-      Stream->close();
-      Stream->clear_error();
-    }
-  }
-
-private:
-  static Expected<ScanDaemon> launchDaemon(StringRef BasePath, const char *Arg0,
-                                           const DepscanSharing &Sharing);
-  static Expected<ScanDaemon> connectToDaemon(StringRef BasePath,
-                                              bool ShouldWait);
-  static Expected<ScanDaemon> connectToExistingDaemon(StringRef BasePath) {
-    return connectToDaemon(BasePath, /*ShouldWait=*/false);
-  }
-  static Expected<ScanDaemon> connectToJustLaunchedDaemon(StringRef BasePath) {
-    return connectToDaemon(BasePath, /*ShouldWait=*/true);
-  }
-
-  explicit ScanDaemon(std::unique_ptr<llvm::raw_socket_stream> Stream)
-      : Stream(std::move(Stream)) {}
-
-  std::unique_ptr<llvm::raw_socket_stream> Stream;
-};
+int createSocket();
+int connectToSocket(StringRef BasePath, int Socket);
+int bindToSocket(StringRef BasePath, int Socket);
+void unlinkBoundSocket(StringRef BasePath);
+int acceptSocket(int Socket);
 
 class CC1DepScanDProtocol {
 public:
-  llvm::Error getMessage(size_t BytesToRead, llvm::SmallVectorImpl<char> &Bytes) {
+  llvm::Error getMessage(size_t BytesToRead, SmallVectorImpl<char> &Bytes) {
     Bytes.clear();
     while (BytesToRead) {
       constexpr size_t BufferSize = 4096;
       char Buffer[BufferSize];
-      ssize_t BytesRead = Stream.read(Buffer, std::min(BytesToRead, BufferSize));
-
-      if (BytesRead < 0) {
-        std::error_code EC = Stream.error();
-        if (EC)
-          return llvm::errorCodeToError(EC);
-        return llvm::createStringError(std::errc::io_error,
-                                       "socket read error");
-      }
-
-      if (BytesRead == 0)
-        return llvm::createStringError(std::errc::message_size,
-                                       "unexpected end of stream");
-
+      size_t BytesRead = ::read(Socket, static_cast<void *>(Buffer),
+                                std::min(BytesToRead, BufferSize));
+      if (BytesRead == -1ull)
+        return llvm::errorCodeToError(
+            std::error_code(errno, std::generic_category()));
       Bytes.append(Buffer, Buffer + BytesRead);
+
+      if (!BytesRead || BytesRead > BytesToRead)
+        return llvm::errorCodeToError(
+            std::error_code(EMSGSIZE, std::generic_category()));
       BytesToRead -= BytesRead;
     }
     return llvm::Error::success();
   }
 
   llvm::Error putMessage(size_t BytesToWrite, const char *Bytes) {
-    Stream.write(Bytes, BytesToWrite);
-    Stream.flush();
+    while (BytesToWrite) {
+      size_t BytesWritten = ::write(Socket, Bytes, BytesToWrite);
+      if (BytesWritten == -1ull)
+        return llvm::errorCodeToError(
+            std::error_code(errno, std::generic_category()));
 
-    if (std::error_code EC = Stream.error())
-      return llvm::errorCodeToError(EC);
-
+      if (!BytesWritten || BytesWritten > BytesToWrite)
+        return llvm::errorCodeToError(
+            std::error_code(EMSGSIZE, std::generic_category()));
+      BytesToWrite -= BytesWritten;
+      Bytes += BytesWritten;
+    }
     return llvm::Error::success();
   }
 
@@ -195,14 +149,86 @@ public:
                             SmallVectorImpl<const char *> &Args,
                             StringRef &DiagnosticOutput);
 
-  explicit CC1DepScanDProtocol(llvm::raw_socket_stream &Stream)
-      : Stream(Stream) {}
+  explicit CC1DepScanDProtocol(int Socket) : Socket(Socket) {}
   CC1DepScanDProtocol() = delete;
 
 private:
-  llvm::raw_socket_stream &Stream;
+  int Socket;
   SmallString<128> Message;
 };
-}
 
+class FileDescriptor {
+public:
+  operator int() const { return FD; }
+
+  FileDescriptor() = default;
+  explicit FileDescriptor(int FD) : FD(FD) {}
+
+  FileDescriptor(FileDescriptor &&X) : FD(X) { X.FD = -1; }
+  FileDescriptor &operator=(FileDescriptor &&X) {
+    close();
+    FD = X.FD;
+    X.FD = -1;
+    return *this;
+  }
+
+  FileDescriptor(const FileDescriptor &) = delete;
+  FileDescriptor &operator=(const FileDescriptor &) = delete;
+
+  ~FileDescriptor() { close(); }
+
+private:
+  void close() {
+    if (FD == -1)
+      return;
+    ::close(FD);
+    FD = -1;
+  }
+  int FD = -1;
+};
+
+class OpenSocket : public FileDescriptor {
+public:
+  static Expected<OpenSocket> create(StringRef BasePath);
+
+  OpenSocket() = delete;
+
+  OpenSocket(OpenSocket &&) = default;
+  OpenSocket &operator=(OpenSocket &&Socket) = default;
+
+private:
+  explicit OpenSocket(int FD) : FileDescriptor(FD) {}
+};
+
+class ScanDaemon : public OpenSocket {
+public:
+  static Expected<ScanDaemon> create(StringRef BasePath, const char *Arg0,
+                                     const DepscanSharing &Sharing);
+
+  static Expected<ScanDaemon>
+  constructAndShakeHands(StringRef BasePath, const char *Arg0,
+                         const DepscanSharing &Sharing);
+
+  static Expected<ScanDaemon> connectToDaemonAndShakeHands(StringRef BasePath);
+
+  llvm::Error shakeHands() const;
+
+private:
+  static Expected<ScanDaemon> launchDaemon(StringRef BasePath, const char *Arg0,
+                                           const DepscanSharing &Sharing);
+  static Expected<ScanDaemon> connectToDaemon(StringRef BasePath,
+                                              bool ShouldWait);
+  static Expected<ScanDaemon> connectToExistingDaemon(StringRef BasePath) {
+    return connectToDaemon(BasePath, /*ShouldWait=*/false);
+  }
+  static Expected<ScanDaemon> connectToJustLaunchedDaemon(StringRef BasePath) {
+    return connectToDaemon(BasePath, /*ShouldWait=*/true);
+  }
+
+  explicit ScanDaemon(OpenSocket S) : OpenSocket(std::move(S)) {}
+};
+
+} // namespace clang::cc1depscand
+
+#endif /* LLVM_ON_UNIX */
 #endif // LLVM_CLANG_TOOLS_DRIVER_CC1DEPSCANPROTOCOL_H

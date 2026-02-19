@@ -1,5 +1,4 @@
-// REQUIRES: clang-cc1daemon
-
+// REQUIRES: system-darwin, clang-cc1daemon
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 

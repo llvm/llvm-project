@@ -90,10 +90,10 @@ static const char *GetStableCStr(llvm::StringSet<> &SavedStrings, StringRef S) {
 
 extern int cc1_main(ArrayRef<const char *> Argv, const char *Argv0,
                     void *MainAddr);
-
+#if LLVM_ON_UNIX
 extern int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
                             void *MainAddr);
-
+#endif /* LLVM_ON_UNIX */
 extern int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
                            void *MainAddr);
 extern int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0,
@@ -249,9 +249,11 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
     }
     return cc1_main(ArrayRef(ArgV).slice(1), ArgV[0], GetExecutablePathVP);
   }
+#if LLVM_ON_UNIX
   if (Tool == "-cc1depscand")
     return cc1depscand_main(ArrayRef(ArgV).slice(2), ArgV[0],
                             GetExecutablePathVP);
+#endif /* LLVM_ON_UNIX */
   if (Tool == "-cc1depscan")
     return cc1depscan_main(ArrayRef(ArgV).slice(2), ArgV[0],
                            GetExecutablePathVP);

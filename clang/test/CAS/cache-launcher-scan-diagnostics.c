@@ -1,4 +1,4 @@
-// REQUIRES: clang-cc1daemon
+// REQUIRES: system-darwin, clang-cc1daemon
 
 // RUN: rm -rf %t && mkdir -p %t
 
