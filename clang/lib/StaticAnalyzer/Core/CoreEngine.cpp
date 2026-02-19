@@ -563,6 +563,8 @@ ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
                                        ProgramStateRef State,
                                        ExplodedNode *Pred,
                                        bool MarkAsSink) const {
+  MarkAsSink = MarkAsSink || State->isPosteriorlyOverconstrained();
+
   bool IsNew;
   ExplodedNode *N = G.getNode(Loc, State, MarkAsSink, &IsNew);
   N->addPredecessor(Pred, G);
@@ -706,8 +708,6 @@ ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
                                             ProgramStateRef State,
                                             ExplodedNode *FromN,
                                             bool MarkAsSink) {
-  MarkAsSink = MarkAsSink || State->isPosteriorlyOverconstrained();
-
   HasGeneratedNodes = true;
   Frontier.erase(FromN);
   ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
