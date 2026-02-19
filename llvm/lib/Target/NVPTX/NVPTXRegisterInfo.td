@@ -44,6 +44,12 @@ foreach i = 0...31 in {
   def ENVREG#i : NVPTXReg<"%envreg"#i>;
 }
 
+// Reserved Shared Memory special registers
+def RESERVED_SMEM_OFFSET_BEGIN : NVPTXReg<"%reserved_smem_offset_begin">;
+def RESERVED_SMEM_OFFSET_END   : NVPTXReg<"%reserved_smem_offset_end">;
+def RESERVED_SMEM_OFFSET_CAP   : NVPTXReg<"%reserved_smem_offset_cap">;
+def RESERVED_SMEM_OFFSET_0     : NVPTXReg<"%reserved_smem_offset_0">;
+
 //===----------------------------------------------------------------------===//
 //  Register classes.
 //  NOTE: if you add new vector types for a register, you must update

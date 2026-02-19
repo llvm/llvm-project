@@ -2986,6 +2986,16 @@ def : Pat<(int_nvvm_read_ptx_sreg_envreg29), (MOV_SPECIAL ENVREG29)>;
 def : Pat<(int_nvvm_read_ptx_sreg_envreg30), (MOV_SPECIAL ENVREG30)>;
 def : Pat<(int_nvvm_read_ptx_sreg_envreg31), (MOV_SPECIAL ENVREG31)>;
 
+// Reserved Shared Memory special register reads
+def : Pat<(int_nvvm_read_ptx_sreg_reserved_smem_offset_begin),
+          (MOV_SPECIAL RESERVED_SMEM_OFFSET_BEGIN)>, Requires<[hasPTX<76>, hasSM<80>]>;
+def : Pat<(int_nvvm_read_ptx_sreg_reserved_smem_offset_end),
+          (MOV_SPECIAL RESERVED_SMEM_OFFSET_END)>, Requires<[hasPTX<76>, hasSM<80>]>;
+def : Pat<(int_nvvm_read_ptx_sreg_reserved_smem_offset_cap),
+          (MOV_SPECIAL RESERVED_SMEM_OFFSET_CAP)>, Requires<[hasPTX<76>, hasSM<80>]>;
+def : Pat<(int_nvvm_read_ptx_sreg_reserved_smem_offset_0),
+          (MOV_SPECIAL RESERVED_SMEM_OFFSET_0)>, Requires<[hasPTX<76>, hasSM<80>]>;
+
 //-----------------------------------
 // Texture Intrinsics
 //-----------------------------------

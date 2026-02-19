@@ -2450,6 +2450,18 @@ defm int_nvvm_read_ptx_sreg_cluster_nctaid : PTXReadSRegIntrinsicNB_v4i32<MAX_GR
 def int_nvvm_read_ptx_sreg_cluster_ctarank : PTXReadSRegIntrinsicNB_r32;
 def int_nvvm_read_ptx_sreg_cluster_nctarank : PTXReadSRegIntrinsicNB_r32;
 
+//
+// Reserved Shared Memory Intrinsics
+//
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_begin
+  : PTXReadSRegIntrinsicNB_r32<[], "llvm.nvvm.read.ptx.sreg.reserved_smem_offset_begin">;
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_end
+  : PTXReadSRegIntrinsicNB_r32<[], "llvm.nvvm.read.ptx.sreg.reserved_smem_offset_end">;
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_cap
+  : PTXReadSRegIntrinsicNB_r32<[], "llvm.nvvm.read.ptx.sreg.reserved_smem_offset_cap">;
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_0
+  : PTXReadSRegIntrinsicNB_r32<[], "llvm.nvvm.read.ptx.sreg.reserved_smem_offset_0">;
+
 def int_nvvm_read_ptx_sreg_total_smem_size :
     PTXReadSRegIntrinsicNB_r32<name = "llvm.nvvm.read.ptx.sreg.total_smem_size">;
 def int_nvvm_read_ptx_sreg_aggr_smem_size :

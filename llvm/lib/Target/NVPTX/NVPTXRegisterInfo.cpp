@@ -98,6 +98,10 @@ BitVector NVPTXRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, NVPTX::VRFrame64);
   markSuperRegs(Reserved, NVPTX::VRFrameLocal64);
   markSuperRegs(Reserved, NVPTX::VRDepot);
+  markSuperRegs(Reserved, NVPTX::RESERVED_SMEM_OFFSET_BEGIN);
+  markSuperRegs(Reserved, NVPTX::RESERVED_SMEM_OFFSET_END);
+  markSuperRegs(Reserved, NVPTX::RESERVED_SMEM_OFFSET_CAP);
+  markSuperRegs(Reserved, NVPTX::RESERVED_SMEM_OFFSET_0);
   return Reserved;
 }
 
