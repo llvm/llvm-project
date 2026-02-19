@@ -7,8 +7,6 @@
 // RUN: %clang_cc1 -triple arm64-darwin -Wno-implicit-function-declaration -fms-compatibility -emit-llvm -o - %s \
 // RUN:    | FileCheck %s
 
-#include <arm_acle.h>
-
 void check__dmb(void) {
   __dmb(0);
 }
