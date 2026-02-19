@@ -16,6 +16,8 @@ void SC32AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   for (const MachineOperand &MO : MI->operands()) {
     switch (MO.getType()) {
+      const MCSymbol *Symbol;
+      const MCExpr *Expr;
     default:
       llvm_unreachable("unknown operand type");
     case MachineOperand::MO_Register:
@@ -25,9 +27,16 @@ void SC32AsmPrinter::emitInstruction(const MachineInstr *MI) {
       Inst.addOperand(MCOperand::createImm(MO.getImm()));
       break;
     case MachineOperand::MO_MachineBasicBlock:
-      const MCSymbol *Symbol = MO.getMBB()->getSymbol();
-      const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, OutContext);
+      Symbol = MO.getMBB()->getSymbol();
+      Expr = MCSymbolRefExpr::create(Symbol, OutContext);
       Inst.addOperand(MCOperand::createExpr(Expr));
+      break;
+    case MachineOperand::MO_GlobalAddress:
+      Symbol = getSymbol(MO.getGlobal());
+      Expr = MCSymbolRefExpr::create(Symbol, OutContext);
+      Inst.addOperand(MCOperand::createExpr(Expr));
+      break;
+    case MachineOperand::MO_RegisterMask:
       break;
     }
   }

@@ -3,6 +3,7 @@
 #include "SC32FrameLowering.h"
 #include "SC32InstrInfo.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
@@ -18,6 +19,12 @@ SC32RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   return CSR_SaveList;
 }
 
+const uint32_t *
+SC32RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                       CallingConv::ID) const {
+  return CSR_RegMask;
+}
+
 BitVector SC32RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
 
@@ -31,12 +38,25 @@ BitVector SC32RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+static bool isLoadStoreOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  case SC32::LD:
+  case SC32::LDB:
+  case SC32::ST:
+  case SC32::STB:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SC32RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                            int SPAdj, unsigned FIOperandNum,
                                            RegScavenger *RS) const {
   MachineOperand &MO = MI->getOperand(FIOperandNum);
   MachineBasicBlock &MBB = *MI->getParent();
   MachineFunction &MF = *MBB.getParent();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetSubtargetInfo &SI = MF.getSubtarget();
   const TargetFrameLowering &FL = *SI.getFrameLowering();
   const TargetInstrInfo &II = *SI.getInstrInfo();
@@ -44,29 +64,38 @@ bool SC32RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
   Register FrameReg;
   StackOffset Offset = FL.getFrameIndexReference(MF, MO.getIndex(), FrameReg);
-  int FixedOffset = Offset.getFixed() / 4;
+  int FixedOffset = Offset.getFixed() - MFI.getStackSize();
 
-  if (FixedOffset > 0) {
-    if (FixedOffset > 0xFFFF) {
-      BuildMI(MBB, MI, DL, II.get(SC32::LUI), SC32::GP1)
-          .addImm(FixedOffset >> 16);
-      BuildMI(MBB, MI, DL, II.get(SC32::ORI), SC32::GP1)
-          .addReg(SC32::GP1)
-          .addImm(FixedOffset & 0xFFFF);
-    } else {
-      BuildMI(MBB, MI, DL, II.get(SC32::LLI), SC32::GP1)
-          .addImm(FixedOffset & 0xFFFF);
+  assert(SPAdj == 0);
+  assert(FixedOffset < 0);
+
+  if (isLoadStoreOpcode(MI->getOpcode()) && FIOperandNum == 1) {
+    int TotalOffset = FixedOffset + MI->getOperand(2).getImm();
+
+    if (TotalOffset >= -0x4000 && TotalOffset < 0x4000) {
+      MI->getOperand(1).ChangeToRegister(FrameReg, false);
+      MI->getOperand(2).setImm(TotalOffset);
+      return false;
     }
+  }
 
+  if (FixedOffset < -0xFFFFF) {
+    BuildMI(MBB, MI, DL, II.get(SC32::LUI), SC32::GP1)
+        .addImm(FixedOffset >> 16);
+    BuildMI(MBB, MI, DL, II.get(SC32::ORI), SC32::GP1)
+        .addReg(SC32::GP1)
+        .addImm(FixedOffset & 0xFFFF);
     BuildMI(MBB, MI, DL, II.get(SC32::ADD), SC32::GP1)
         .addReg(SC32::GP1)
         .addReg(FrameReg);
-
-    MO.ChangeToRegister(SC32::GP1, false);
   } else {
-    MO.ChangeToRegister(SC32::GP0, false);
+    BuildMI(MBB, MI, DL, II.get(SC32::MOV), SC32::GP1).addReg(FrameReg);
+    BuildMI(MBB, MI, DL, II.get(SC32::SUBI), SC32::GP1)
+        .addReg(SC32::GP1)
+        .addImm(-FixedOffset);
   }
 
+  MO.ChangeToRegister(SC32::GP1, false);
   return false;
 }
 

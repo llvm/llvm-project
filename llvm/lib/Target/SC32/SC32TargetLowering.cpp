@@ -76,6 +76,67 @@ SC32TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   return DAG.getNode(SC32ISD::RET_GLUE, DL, MVT::Other, RetOps);
 }
 
+SDValue SC32TargetLowering::LowerCall(CallLoweringInfo &CLI,
+                                      SmallVectorImpl<SDValue> &InVals) const {
+  SelectionDAG &DAG = CLI.DAG;
+  SDLoc &DL = CLI.DL;
+  SDValue Chain = CLI.Chain;
+  SDValue Callee = CLI.Callee;
+  CallingConv::ID CallConv = CLI.CallConv;
+  bool IsVarArg = CLI.IsVarArg;
+
+  CLI.IsTailCall = false;
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  LLVMContext &Context = *DAG.getContext();
+
+  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
+    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, MVT::i32);
+  else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee))
+    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), MVT::i32);
+
+  SmallVector<SDValue, 8> Ops = {SDValue(), Callee};
+  SDValue Glue;
+
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, Context);
+  CCInfo.AnalyzeCallOperands(CLI.Outs, CC_SC32);
+
+  for (size_t I = 0; I < ArgLocs.size(); I++) {
+    Register Reg = ArgLocs[I].getLocReg();
+    Chain = DAG.getCopyToReg(Chain, DL, Reg, CLI.OutVals[I], Glue);
+    Glue = Chain.getValue(1);
+    Ops.push_back(DAG.getRegister(Reg, MVT::i32));
+  }
+
+  Ops[0] = Chain;
+
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
+
+  Ops.push_back(DAG.getRegisterMask(Mask));
+
+  if (Glue.getNode()) {
+    Ops.push_back(Glue);
+  }
+
+  Chain = DAG.getNode(SC32ISD::CALL, DL, {MVT::Other, MVT::Glue}, Ops);
+  Glue = Chain.getValue(1);
+
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState RVInfo(CallConv, IsVarArg, MF, RVLocs, Context);
+  RVInfo.AnalyzeCallResult(CLI.Ins, RetCC_SC32);
+
+  for (size_t I = 0; I < RVLocs.size(); I++) {
+    Register Reg = RVLocs[I].getLocReg();
+    Chain = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i32, Glue).getValue(1);
+    Glue = Chain.getValue(2);
+    InVals.push_back(Chain.getValue(0));
+  }
+
+  return Chain;
+}
+
 static SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) {
   SDValue Chain = Op.getOperand(0);
   SDValue CC = Op.getOperand(1);

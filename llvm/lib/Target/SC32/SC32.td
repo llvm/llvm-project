@@ -52,7 +52,11 @@ def SDTSC32jmp : SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>, SDTCisVT<1, OtherVT>
 def SC32cmp : SDNode<"SC32ISD::CMP", SDTSC32cmp, [SDNPOutGlue]>;
 def SC32jmp : SDNode<"SC32ISD::JMP", SDTSC32jmp, [SDNPHasChain, SDNPInGlue]>;
 
-def retglue : SDNode<"SC32ISD::RET_GLUE", SDTNone, [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def SDT_SC32Call : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
+def SDT_SC32Ret : SDTypeProfile<0, 0, []>;
+
+def call : SDNode<"SC32ISD::CALL", SDT_SC32Call, [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
+def retglue : SDNode<"SC32ISD::RET_GLUE", SDT_SC32Ret, [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def LO16 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() & 0xFFFF, SDLoc(N), MVT::i32);
@@ -75,6 +79,7 @@ def uimm20 : PatLeaf<(imm), [{
 }]>;
 
 def brtarget : Operand<OtherVT>;
+def calltarget : Operand<i32>;
 
 multiclass Operator<string OpStr, SDNode OpNode> {
   def "" : Instruction {
@@ -168,12 +173,21 @@ let Namespace = "SC32" in {
     let AsmString = "MOV $dst, $src";
   }
 
+  def CALLI : Instruction {
+    let OutOperandList = (outs);
+    let InOperandList = (ins calltarget:$tgt);
+    let Pattern = [(call tglobaladdr:$tgt)];
+    let AsmString = "CALLI $tgt";
+    let isCall = 1;
+  }
+
   def RET : Instruction {
     let OutOperandList = (outs);
     let InOperandList = (ins);
     let Pattern = [(retglue)];
     let AsmString = "RET";
     let isTerminator = 1;
+    let isReturn = 1;
   }
 
   def JMP : Instruction {
@@ -190,6 +204,18 @@ let Namespace = "SC32" in {
     let Pattern = [(SC32cmp i32:$lhs, i32:$rhs)];
     let AsmString = "CMP $lhs, $rhs";
     let Defs = [FLAGS];
+  }
+
+  def PUSH : Instruction {
+    let OutOperandList = (outs);
+    let InOperandList = (ins GP:$src);
+    let AsmString = "PUSH $src";
+  }
+
+  def POP : Instruction {
+    let InOperandList = (ins);
+    let OutOperandList = (outs GP:$dst);
+    let AsmString = "POP $dst";
   }
 }
 

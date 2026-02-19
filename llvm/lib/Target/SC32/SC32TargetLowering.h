@@ -20,6 +20,9 @@ public:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
+  SDValue LowerCall(CallLoweringInfo &CLI,
+                    SmallVectorImpl<SDValue> &InVals) const override;
+
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 };
 

@@ -122,3 +122,35 @@ unsigned SC32InstrInfo::insertBranch(
 
   return Count;
 }
+
+void SC32InstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+    bool IsKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags) const {
+  DebugLoc DL;
+
+  if (MI != MBB.end()) {
+    DL = MI->getDebugLoc();
+  }
+
+  BuildMI(MBB, MI, DL, get(SC32::ST))
+      .addReg(SrcReg, getKillRegState(IsKill))
+      .addFrameIndex(FrameIndex)
+      .addImm(0);
+}
+void SC32InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MI,
+                                         Register DestReg, int FrameIndex,
+                                         const TargetRegisterClass *RC,
+                                         Register VReg, unsigned SubReg,
+                                         MachineInstr::MIFlag Flags) const {
+  DebugLoc DL;
+
+  if (MI != MBB.end()) {
+    DL = MI->getDebugLoc();
+  }
+
+  BuildMI(MBB, MI, DL, get(SC32::LD), DestReg)
+      .addFrameIndex(FrameIndex)
+      .addImm(0);
+}
