@@ -54,24 +54,6 @@ AST_MATCHER(ParmVarDecl, isTemplateTypeParameter) {
          FuncTemplate->getTemplateParameters()->getDepth();
 }
 
-AST_MATCHER_P(NamedDecl, hasSameNameAsBoundNode, std::string, BindingID) {
-  const IdentifierInfo *II = Node.getIdentifier();
-  if (nullptr == II)
-    return false;
-  const StringRef Name = II->getName();
-
-  return Builder->removeBindings(
-      [this, Name](const ast_matchers::internal::BoundNodesMap &Nodes) {
-        const DynTypedNode &BN = Nodes.getNode(this->BindingID);
-        if (const auto *ND = BN.get<NamedDecl>()) {
-          if (!isa<FieldDecl, CXXMethodDecl, VarDecl>(ND))
-            return true;
-          return ND->getName() != Name;
-        }
-        return true;
-      });
-}
-
 AST_MATCHER_P(LambdaCapture, hasCaptureKind, LambdaCaptureKind, Kind) {
   return Node.getCaptureKind() == Kind;
 }
@@ -112,8 +94,7 @@ AST_MATCHER_P(ValueDecl, refersToBoundParm, std::string, ParamID) {
 } // namespace
 
 void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
-  auto CapturedVar = varDecl(
-      anyOf(refersToBoundParm("param"), hasSameNameAsBoundNode("param")));
+  auto CapturedVar = varDecl(refersToBoundParm("param"));
 
   auto CaptureInRef =
       allOf(hasCaptureDefaultKind(LambdaCaptureDefault::LCD_ByRef),
