@@ -344,14 +344,11 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; X86-LABEL: scalar_i64_lowestbit_eq:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    testb $32, %al
-; X86-NEXT:    je .LBB10_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    jmp .LBB10_3
-; X86-NEXT:  .LBB10_1:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:  .LBB10_3:
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    cmovnel %ecx, %edx
+; X86-NEXT:    movl (%edx), %ecx
 ; X86-NEXT:    btl %eax, %ecx
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
