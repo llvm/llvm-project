@@ -710,8 +710,7 @@ ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
   Frontier.erase(FromN);
   ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
 
-  if (N && !MarkAsSink)
-    Frontier.Add(N);
+  Frontier.Add(N);
 
   return N;
 }
