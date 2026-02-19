@@ -5,6 +5,7 @@ define <2 x i64> @low_vector_splat_v2i64_from_i64(i64 %0){
 ; CHECK-LABEL: low_vector_splat_v2i64_from_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    fmov d0, d0
 ; CHECK-NEXT:    ret
   %2 = insertelement <1 x i64> poison, i64 %0, i64 0
   %3 = shufflevector <1 x i64> %2, <1 x i64> zeroinitializer, <2 x i32> <i32 0, i32 1>
