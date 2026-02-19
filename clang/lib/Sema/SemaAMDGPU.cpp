@@ -249,7 +249,37 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
 
-    return (SemaRef.BuiltinConstantArg(TheCall, 0, Result)) ||
+    // Compilain about dmask values which are too huge to fully fit into 4 bits
+    // (which is the actual size of the dmask in corresponding HW instructions).
+    constexpr unsigned DMaskArgNo = 0;
+    constexpr int Low = 0;
+    constexpr int High = 15;
+    if (SemaRef.BuiltinConstantArg(TheCall, DMaskArgNo, Result) ||
+        SemaRef.BuiltinConstantArgRange(TheCall, DMaskArgNo, Low, High,
+                                        /* RangeIsError = */ true))
+      return true;
+
+    // Dmask indicates which elements should be returned and it is not possible
+    // to return more values than there are elements in return type.
+    int NumElementsInRetTy = 1;
+    const Type *RetTy = TheCall->getType().getTypePtr();
+    if (auto *VTy = dyn_cast<VectorType>(RetTy))
+      NumElementsInRetTy = VTy->getNumElements();
+    int NumActiveBitsInDMask =
+        llvm::popcount(static_cast<uint8_t>(Result.getExtValue()));
+    if (NumActiveBitsInDMask > NumElementsInRetTy) {
+      Diag(TheCall->getBeginLoc(),
+           diag::err_amdgcn_dmask_has_too_many_bits_set);
+      return true;
+    }
+
+    bool ExtraGatherChecks = false;
+    // For gather, only one bit can be set indicating which exact component to
+    // return.
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32)
+      ExtraGatherChecks |= SemaRef.BuiltinConstantArgPower2(TheCall, 0);
+
+    return ExtraGatherChecks ||
            (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
            (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result));
   }
@@ -293,7 +323,12 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     unsigned ArgCount = TheCall->getNumArgs() - 1;
     llvm::APSInt Result;
 
-    return (SemaRef.BuiltinConstantArg(TheCall, 1, Result)) ||
+    // Complain about dmask values which are too huge to fully fit into 4 bits
+    // (which is the actual size of the dmask in corresponding HW instructions).
+    constexpr unsigned DMaskArgNo = 1;
+    return (SemaRef.BuiltinConstantArgRange(TheCall, DMaskArgNo, /* Low = */ 0,
+                                            /* High = */ 15,
+                                            /* RangeIsError = */ true)) ||
            (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
            (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result));
   }
