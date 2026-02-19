@@ -147,6 +147,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return inferScalarType(R->getOperand(0));
   case Instruction::ExtractValue:
     return cast<ExtractValueInst>(R->getUnderlyingValue())->getType();
+  case VPInstruction::NumActiveLanes:
+    return Type::getInt64Ty(Ctx);
   default:
     break;
   }

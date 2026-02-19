@@ -170,6 +170,8 @@ STATISTIC(LoopsVectorized, "Number of loops vectorized");
 STATISTIC(LoopsAnalyzed, "Number of loops analyzed for vectorization");
 STATISTIC(LoopsEpilogueVectorized, "Number of epilogues vectorized");
 STATISTIC(LoopsEarlyExitVectorized, "Number of early exit loops vectorized");
+STATISTIC(LoopsPartialAliasVectorized,
+          "Number of partial aliasing loops vectorized");
 
 static cl::opt<bool> EnableEpilogueVectorization(
     "enable-epilogue-vectorization", cl::init(true), cl::Hidden,
@@ -197,6 +199,10 @@ static cl::opt<unsigned> TinyTripCountVectorThreshold(
 static cl::opt<unsigned> VectorizeMemoryCheckThreshold(
     "vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
     cl::desc("The maximum allowed number of runtime memory checks"));
+
+static cl::opt<bool> ForcePartialAliasingVectorization(
+    "force-partial-aliasing-vectorization", cl::init(false), cl::Hidden,
+    cl::desc("Replace pointer diff checks with alias masks."));
 
 // Option prefer-predicate-over-epilogue indicates that an epilogue is undesired,
 // that predication is preferred, and this lists all options. I.e., the
@@ -1386,6 +1392,42 @@ public:
     return getTailFoldingStyle() != TailFoldingStyle::None;
   }
 
+  void checkIfPartialAliasMaskingIsEnabled() {
+    assert(foldTailByMasking() && "Expected tail folding to be enabled!");
+    assert(!IsPartialAliasMaskingEnabled &&
+           "Partial alias masking already checked!");
+    if (!ForcePartialAliasingVectorization ||
+        !Legal->getFixedOrderRecurrences().empty()) {
+      // Note: FixedOrderRecurrences are not supported yet as we cannot handle
+      // the required `splice.right` with the alias-mask.
+      IsPartialAliasMaskingEnabled = false;
+      return;
+    }
+    const RuntimePointerChecking *Checks = Legal->getRuntimePointerChecking();
+    if (!Checks) {
+      // Runtime checks not needed for this loop (no alias mask required).
+      IsPartialAliasMaskingEnabled = false;
+      return;
+    }
+    if (auto DiffChecks = Checks->getDiffChecks()) {
+      // We have diff checks. We can use an alias mask.
+      IsPartialAliasMaskingEnabled = !DiffChecks->empty();
+      return;
+    }
+    // Runtime checks are not diff checks (can't be replaced with alias mask).
+    IsPartialAliasMaskingEnabled = false;
+  }
+
+  void disablePartialAliasMaskingIfEnabled() {
+    if (IsPartialAliasMaskingEnabled)
+      IsPartialAliasMaskingEnabled = false;
+  }
+
+  /// Returns true if all loop blocks should have partial aliases masked.
+  bool maskPartialAliasing() const {
+    return IsPartialAliasMaskingEnabled.value_or(false);
+  }
+
   /// Returns true if the use of wide lane masks is requested and the loop is
   /// using tail-folding with a lane mask for control flow.
   bool useWideActiveLaneMask() const {
@@ -1603,6 +1645,9 @@ private:
   /// the IV update may overflow, the second element - if it does not.
   std::optional<std::pair<TailFoldingStyle, TailFoldingStyle>>
       ChosenTailFoldingStyle;
+
+  /// true if partial alias masking is enabled (nullopt = undecided).
+  std::optional<bool> IsPartialAliasMaskingEnabled;
 
   /// true if scalable vectorization is supported and enabled.
   std::optional<bool> IsScalableVectorizationAllowed;
@@ -1825,14 +1870,18 @@ class GeneratedRTChecks {
   /// The kind of cost that we are calculating
   TTI::TargetCostKind CostKind;
 
+  /// True if the loop is alias-masked (which allows us to omit diff checks).
+  bool LoopUsesAliasMasking = false;
+
 public:
   GeneratedRTChecks(PredicatedScalarEvolution &PSE, DominatorTree *DT,
                     LoopInfo *LI, TargetTransformInfo *TTI,
-                    TTI::TargetCostKind CostKind)
+                    TTI::TargetCostKind CostKind, bool LoopUsesAliasMasking)
       : DT(DT), LI(LI), TTI(TTI),
         SCEVExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
         MemCheckExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
-        PSE(PSE), CostKind(CostKind) {}
+        PSE(PSE), CostKind(CostKind),
+        LoopUsesAliasMasking(LoopUsesAliasMasking) {}
 
   /// Generate runtime checks in SCEVCheckBlock and MemCheckBlock, so we can
   /// accurately estimate the cost of the runtime checks. The blocks are
@@ -1885,7 +1934,7 @@ public:
     }
 
     const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
-    if (RtPtrChecking.Need) {
+    if (RtPtrChecking.Need && !LoopUsesAliasMasking) {
       auto *Pred = SCEVCheckBlock ? SCEVCheckBlock : Preheader;
       MemCheckBlock = SplitBlock(Pred, Pred->getTerminator(), DT, LI, nullptr,
                                  "vector.memcheck");
@@ -3088,9 +3137,16 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
   auto *Ptr = getLoadStorePointerOperand(I);
   auto *ScalarTy = getLoadStoreType(I);
 
+  int Stride = Legal->isConsecutivePtr(ScalarTy, Ptr);
   // In order to be widened, the pointer should be consecutive, first of all.
-  if (!Legal->isConsecutivePtr(ScalarTy, Ptr))
+  if (!Stride)
     return false;
+
+  // Currently, we can't handle alias masking in reverse. Reversing the alias
+  // mask is not correct (or necessary). When combined with tail-folding the ALM
+  // should only be reversed where the alias-mask is true.
+  if (Stride < 0)
+    disablePartialAliasMaskingIfEnabled();
 
   // If the instruction is a store located in a predicated block, it will be
   // scalarized.
@@ -3747,6 +3803,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       assert(ContainsScalableVF && "Expected scalable vector factor.");
 
       MaxFactors.FixedVF = ElementCount::getFixed(1);
+    } else {
+      checkIfPartialAliasMaskingIsEnabled();
     }
     return MaxFactors;
   }
@@ -4462,6 +4520,13 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   if (!CM.isScalarEpilogueAllowed()) {
     LLVM_DEBUG(dbgs() << "LEV: Unable to vectorize epilogue because no "
                          "epilogue is allowed.\n");
+    return Result;
+  }
+
+  if (CM.maskPartialAliasing()) {
+    LLVM_DEBUG(
+        dbgs()
+        << "LEV: Epilogue vectorization not supported with alias masking");
     return Result;
   }
 
@@ -7445,6 +7510,14 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // compactness.
   attachRuntimeChecks(BestVPlan, ILV.RTChecks, HasBranchWeights);
 
+  VPValue *ClampedVF = nullptr;
+  if (CM.maskPartialAliasing()) {
+    ClampedVF = materializeAliasMask(
+        BestVPlan, *CM.Legal->getRuntimePointerChecking()->getDiffChecks(),
+        HasBranchWeights);
+    ++LoopsPartialAliasVectorized;
+  }
+
   // Retrieving VectorPH now when it's easier while VPlan still has Regions.
   VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
 
@@ -7481,6 +7554,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
       CM.requiresScalarEpilogue(BestVF.isVector()));
+  VPlanTransforms::fixupVFUsersForClampedVF(BestVPlan, ClampedVF);
   VPlanTransforms::materializeFactors(BestVPlan, VectorPH, BestVF);
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
@@ -8694,6 +8768,21 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
   }
 }
 
+VPValue *LoopVectorizationPlanner::materializeAliasMask(
+    VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights) {
+  VPBasicBlock *MinVFCheck = Plan.createVPBasicBlock("vector.min.vf.check");
+  VPValue *ClampedVF = VPlanTransforms::materializeAliasMask(
+      Plan, MinVFCheck,
+      *CM.Legal->getRuntimePointerChecking()->getDiffChecks());
+  VPBuilder Builder(MinVFCheck);
+  Type *IVTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
+  // Check the "ClampedVF" from the alias mask contains at least two elements.
+  VPValue *Cond = Builder.createICmp(
+      CmpInst::ICMP_ULT, ClampedVF, Plan.getConstantInt(IVTy, 2), {}, "cmp.vf");
+  VPlanTransforms::attachCheckBlock(Plan, Cond, MinVFCheck, HasBranchWeights);
+  return ClampedVF;
+}
+
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount) const {
@@ -8806,7 +8895,8 @@ static bool processLoopInVPlanNativePath(
   VPlan &BestPlan = LVP.getPlanFor(VF.Width);
 
   {
-    GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM.CostKind);
+    GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM.CostKind,
+                             CM.maskPartialAliasing());
     InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, /*UF=*/1, &CM,
                            Checks, BestPlan);
     LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
@@ -9677,7 +9767,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (ORE->allowExtraAnalysis(LV_NAME))
     LVP.emitInvalidCostRemarks(ORE);
 
-  GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM.CostKind);
+  GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM.CostKind,
+                           CM.maskPartialAliasing());
   if (LVP.hasPlanWithVF(VF.Width)) {
     // Select the interleave count.
     IC = LVP.selectInterleaveCount(LVP.getPlanFor(VF.Width), VF.Width, VF.Cost);
@@ -9792,6 +9883,17 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     LLVM_DEBUG(dbgs() << "LV: Not interleaving due to FindLast reduction.\n");
     IntDiagMsg = {"FindLastPreventsScalarInterleaving",
                   "Unable to interleave due to FindLast reduction."};
+    InterleaveLoop = false;
+    IC = 1;
+  }
+
+  if (CM.maskPartialAliasing()) {
+    LLVM_DEBUG(
+        dbgs()
+        << "LV: Not interleaving due to partial aliasing vectorization.\n");
+    IntDiagMsg = {
+        "PartialAliasingVectorization",
+        "Unable to interleave due to partial aliasing vectorization."};
     InterleaveLoop = false;
     IC = 1;
   }

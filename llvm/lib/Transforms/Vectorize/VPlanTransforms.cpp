@@ -5112,6 +5112,73 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
          "VF, UF, and VFxUF not expected to be used");
 }
 
+VPValue *
+VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheck,
+                                      ArrayRef<PointerDiffInfo> DiffChecks) {
+
+  VPBuilder Builder(AliasCheck, AliasCheck->begin());
+  Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
+  Type *I64Ty = IntegerType::getInt64Ty(Plan.getContext());
+  Type *PtrTy = PointerType::getUnqual(Plan.getContext());
+
+  VPValue *AliasMask = nullptr;
+  for (PointerDiffInfo Check : DiffChecks) {
+    VPValue *Src = vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SrcStart);
+    VPValue *Sink =
+        vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SinkStart);
+
+    VPValue *SrcPtr =
+        Builder.createScalarCast(Instruction::CastOps::IntToPtr, Src, PtrTy,
+                                 DebugLoc::getCompilerGenerated());
+    VPValue *SinkPtr =
+        Builder.createScalarCast(Instruction::CastOps::IntToPtr, Sink, PtrTy,
+                                 DebugLoc::getCompilerGenerated());
+
+    VPWidenIntrinsicRecipe *WARMask = new VPWidenIntrinsicRecipe(
+        Intrinsic::loop_dependence_war_mask,
+        {SrcPtr, SinkPtr, Plan.getConstantInt(I64Ty, Check.AccessSize)}, I1Ty);
+    Builder.insert(WARMask);
+
+    if (AliasMask)
+      AliasMask = Builder.createAnd(AliasMask, WARMask);
+    else
+      AliasMask = WARMask;
+  }
+
+  Type *IVTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
+  VPValue *NumActive =
+      Builder.createNaryOp(VPInstruction::NumActiveLanes, {AliasMask});
+  VPValue *ClampedVF = Builder.createScalarZExtOrTrunc(
+      NumActive, IVTy, I64Ty, DebugLoc::getCompilerGenerated());
+
+  // Find the existing header mask.
+  VPSingleDefRecipe *HeaderMask = vputils::findHeaderMask(Plan);
+  auto *HeaderMaskDef = HeaderMask->getDefiningRecipe();
+  if (HeaderMaskDef->isPhi())
+    Builder.setInsertPoint(&*HeaderMaskDef->getParent()->getFirstNonPhi());
+  else
+    Builder = VPBuilder::getToInsertAfter(HeaderMaskDef);
+
+  // Update all existing users of the header mask to "HeaderMask & AliasMask".
+  auto *ClampedHeaderMask = Builder.createAnd(HeaderMask, AliasMask);
+  HeaderMask->replaceUsesWithIf(ClampedHeaderMask, [&](VPUser &U, unsigned) {
+    return dyn_cast<VPInstruction>(&U) != ClampedHeaderMask;
+  });
+
+  return ClampedVF;
+}
+
+void VPlanTransforms::fixupVFUsersForClampedVF(VPlan &Plan,
+                                               VPValue *ClampedVF) {
+  if (!ClampedVF)
+    return;
+
+  assert(Plan.getConcreteUF() == 1 &&
+         "Clamped VF not support with interleaving");
+  Plan.getVF().replaceAllUsesWith(ClampedVF);
+  Plan.getVFxUF().replaceAllUsesWith(ClampedVF);
+}
+
 DenseMap<const SCEV *, Value *>
 VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   SCEVExpander Expander(SE, "induction", /*PreserveLCSSA=*/false);
