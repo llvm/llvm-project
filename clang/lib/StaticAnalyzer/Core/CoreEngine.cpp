@@ -428,7 +428,7 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         NodeBuilderContext Ctx(*this, B, Pred);
         ExplodedNodeSet Dst;
         IndirectGotoNodeBuilder Builder(
-            Pred, Dst, Ctx, cast<IndirectGotoStmt>(Term)->getTarget(),
+            Dst, Ctx, cast<IndirectGotoStmt>(Term)->getTarget(),
             *(B->succ_begin()));
 
         ExprEng.processIndirectGoto(Builder, Pred);

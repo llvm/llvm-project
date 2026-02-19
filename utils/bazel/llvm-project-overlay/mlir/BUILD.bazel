@@ -2657,6 +2657,7 @@ cc_library(
         ":IR",
         ":LinalgDialect",
         ":LinalgInterfaces",
+        ":SCFDialect",
         ":Support",
         ":VectorDialect",
         ":X86VectorDialect",
@@ -2679,6 +2680,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefUtils",
         ":Pass",
+        ":SCFDialect",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
@@ -2909,8 +2911,10 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
+        ":IndexDialect",
         ":LoopLikeInterface",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":Rewrite",
         ":SCFDialect",
@@ -2922,6 +2926,7 @@ cc_library(
         ":TensorTransforms",
         ":TilingInterface",
         ":TransformUtils",
+        ":VectorDialect",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
@@ -8946,6 +8951,16 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "LLVMTranslationDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/Target/LLVMIR/LLVMTranslationDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Target/LLVMIR/LLVMTranslationDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
 cc_library(
     name = "ToLLVMIRTranslation",
     srcs = [
@@ -8973,6 +8988,7 @@ cc_library(
         ":LLVMIRTransformsDIExpressionLegalization",
         ":LLVMIRTransformsLegalizeForExport",
         ":LLVMIntrinsicConversionIncGen",
+        ":LLVMTranslationDialectInterfaceIncGen",
         ":OpenMPDialect",
         ":Support",
         ":TransformUtils",
@@ -10461,8 +10477,8 @@ cc_library(
         ":ArithDialect",
         ":FuncDialect",
         ":FunctionInterfaces",
+        ":GPUDialect",
         ":IR",
-        ":LoopLikeInterface",
         ":MemRefDialect",
         ":OpenACCAnalysis",
         ":OpenACCDialect",
