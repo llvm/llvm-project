@@ -380,6 +380,42 @@ static bool isLegalFPImm(const MachineInstr &MI, const MachineRegisterInfo &MRI,
       shouldOptimizeForSize(&MI.getMF()->getFunction(), nullptr, nullptr));
 }
 
+// Some of the instructions in applyMappingImpl attempt to anyext small values.
+// It may be that these values come from a G_CONSTANT that has been expanded to
+// 32 bits and then truncated. If this is the case, we shouldn't insert an any
+// ext and should instead make use of the G_CONSTANT directly, deleting the
+// trunc if possible.
+static bool foldTruncOfI32Constant(MachineInstr &MI, unsigned OpIdx,
+                                   MachineRegisterInfo &MRI,
+                                   const AArch64RegisterBankInfo &RBI) {
+  MachineOperand &Op = MI.getOperand(OpIdx);
+  if (!Op.isReg())
+    return false;
+
+  Register ScalarReg = Op.getReg();
+  MachineInstr *TruncMI = MRI.getVRegDef(ScalarReg);
+  if (!TruncMI || TruncMI->getOpcode() != TargetOpcode::G_TRUNC)
+    return false;
+
+  Register TruncSrc = TruncMI->getOperand(1).getReg();
+  MachineInstr *SrcDef = MRI.getVRegDef(TruncSrc);
+  if (!SrcDef || SrcDef->getOpcode() != TargetOpcode::G_CONSTANT)
+    return false;
+
+  LLT TruncSrcTy = MRI.getType(TruncSrc);
+  if (!TruncSrcTy.isScalar() || TruncSrcTy.getSizeInBits() != 32)
+    return false;
+
+  // Avoid truncating and extending a constant, this helps with selection.
+  Op.setReg(TruncSrc);
+  MRI.setRegBank(TruncSrc, RBI.getRegBank(AArch64::GPRRegBankID));
+
+  if (MRI.use_empty(ScalarReg))
+    TruncMI->eraseFromParent();
+
+  return true;
+}
+
 void AArch64RegisterBankInfo::applyMappingImpl(
     MachineIRBuilder &Builder, const OperandsMapper &OpdMapper) const {
   MachineInstr &MI = OpdMapper.getMI();
@@ -402,15 +438,6 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     MI.getOperand(0).setReg(ExtReg);
     MRI.setRegBank(ExtReg, AArch64::GPRRegBank);
 
-    for (MachineInstr &UseMI :
-         make_early_inc_range(MRI.use_nodbg_instructions(Dst))) {
-      if (UseMI.getOpcode() != AArch64::G_DUP)
-        continue;
-      for (MachineOperand &Op : UseMI.operands()) {
-        if (Op.isReg() && Op.getReg() == Dst)
-          Op.setReg(ExtReg);
-      }
-    }
     return applyDefaultMapping(OpdMapper);
   }
   case TargetOpcode::G_FCONSTANT: {
@@ -434,6 +461,10 @@ void AArch64RegisterBankInfo::applyMappingImpl(
   case TargetOpcode::G_STORE: {
     Register Dst = MI.getOperand(0).getReg();
     LLT Ty = MRI.getType(Dst);
+
+    if (foldTruncOfI32Constant(MI, 0, MRI, *this))
+      return applyDefaultMapping(OpdMapper);
+
     if (MRI.getRegBank(Dst) == &AArch64::GPRRegBank && Ty.isScalar() &&
         Ty.getSizeInBits() < 32) {
       Builder.setInsertPt(*MI.getParent(), MI.getIterator());
@@ -464,6 +495,9 @@ void AArch64RegisterBankInfo::applyMappingImpl(
            "Don't know how to handle that ID");
     return applyDefaultMapping(OpdMapper);
   case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    if (foldTruncOfI32Constant(MI, 2, MRI, *this))
+      return applyDefaultMapping(OpdMapper);
+
     // Extend smaller gpr operands to 32 bit.
     Builder.setInsertPt(*MI.getParent(), MI.getIterator());
     auto Ext = Builder.buildAnyExt(LLT::scalar(32), MI.getOperand(2).getReg());
@@ -472,9 +506,10 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     return applyDefaultMapping(OpdMapper);
   }
   case AArch64::G_DUP: {
-    // Extend smaller gpr to 32-bits
-    assert(MRI.getType(MI.getOperand(1).getReg()).getSizeInBits() < 32 &&
-           "Expected sources smaller than 32-bits");
+    if (foldTruncOfI32Constant(MI, 1, MRI, *this))
+      return applyDefaultMapping(OpdMapper);
+
+    // Extend smaller gpr to 32-bits.
     Builder.setInsertPt(*MI.getParent(), MI.getIterator());
 
     Register ConstReg =
@@ -482,6 +517,7 @@ void AArch64RegisterBankInfo::applyMappingImpl(
             .getReg(0);
     MRI.setRegBank(ConstReg, getRegBank(AArch64::GPRRegBankID));
     MI.getOperand(1).setReg(ConstReg);
+
     return applyDefaultMapping(OpdMapper);
   }
   default:

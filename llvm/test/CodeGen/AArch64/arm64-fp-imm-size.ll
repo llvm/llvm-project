@@ -73,12 +73,8 @@ define fp128 @baz() optsize {
 ;
 ; CHECK-GI-LABEL: baz:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:  Lloh0:
-; CHECK-GI-NEXT:    adrp x8, lCPI3_0@PAGE
-; CHECK-GI-NEXT:  Lloh1:
-; CHECK-GI-NEXT:    ldr q0, [x8, lCPI3_0@PAGEOFF]
+; CHECK-GI-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:    .loh AdrpLdr Lloh0, Lloh1
   ret fp128 0xL00000000000000000000000000000000
 }
 
