@@ -187,8 +187,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
-
 private:
   /// Returns the ValueObject for the _Tree_node at index \ref idx.
   ///
@@ -333,17 +331,6 @@ lldb_private::formatters::MsvcStlTreeSyntheticFrontEnd::Update() {
   m_begin_node = m_tree->GetChildAtNamePath({"_Myhead", "_Left"}).get();
 
   return lldb::ChildCacheState::eRefetch;
-}
-
-llvm::Expected<size_t>
-lldb_private::formatters::MsvcStlTreeSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
-  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  return *optional_idx;
 }
 
 lldb::ChildCacheState MsvcStlTreeIterSyntheticFrontEnd::Update() {
