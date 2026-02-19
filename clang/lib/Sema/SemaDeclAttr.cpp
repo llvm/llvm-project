@@ -8660,6 +8660,5 @@ void Sema::ActOnInitPriorityAttr(Decl *D, const Attr *A) {
   if (!T->isRecordType()) {
     this->Diag(A->getLoc(), diag::err_init_priority_object_attr);
     D->dropAttr<InitPriorityAttr>();
-    return;
   }
 }
