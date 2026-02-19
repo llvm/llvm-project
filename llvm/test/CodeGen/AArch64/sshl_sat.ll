@@ -142,12 +142,11 @@ define i16 @combine_shlsat_to_shl(i16 %x) nounwind {
 define i16 @combine_shlsat_to_shl_no_fold(i16 %x) nounwind {
 ; CHECK-LABEL: combine_shlsat_to_shl_no_fold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    mov w9, #-65536 // =0xffff0000
+; CHECK-NEXT:    sbfiz w8, w0, #14, #16
 ; CHECK-NEXT:    mov w10, #-2147483648 // =0x80000000
-; CHECK-NEXT:    ands w8, w9, w8, lsl #14
-; CHECK-NEXT:    cinv w10, w10, pl
+; CHECK-NEXT:    ands w8, w8, #0xffff0000
 ; CHECK-NEXT:    lsl w9, w8, #3
+; CHECK-NEXT:    cinv w10, w10, pl
 ; CHECK-NEXT:    cmp w8, w9, asr #3
 ; CHECK-NEXT:    csel w8, w10, w9, ne
 ; CHECK-NEXT:    asr w0, w8, #16

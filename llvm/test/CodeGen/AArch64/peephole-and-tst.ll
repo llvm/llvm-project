@@ -219,12 +219,12 @@ define i64 @test_and3(i64 %x, i64 %y) {
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w20, -16
 ; CHECK-SD-NEXT:    .cfi_offset w30, -32
-; CHECK-SD-NEXT:    mov x20, x0
+; CHECK-SD-NEXT:    and x20, x0, #0x3
 ; CHECK-SD-NEXT:    mov x0, xzr
 ; CHECK-SD-NEXT:    mov x19, x1
 ; CHECK-SD-NEXT:    bl callee
-; CHECK-SD-NEXT:    ands x8, x20, #0x3
-; CHECK-SD-NEXT:    csel x0, x8, x19, eq
+; CHECK-SD-NEXT:    cmp x20, #0
+; CHECK-SD-NEXT:    csel x0, x20, x19, eq
 ; CHECK-SD-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
@@ -262,11 +262,11 @@ define i64 @test_and_4(i64 %x, i64 %y) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    .cfi_offset w19, -8
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    mov x19, x0
-; CHECK-SD-NEXT:    ands x0, x0, #0x3
+; CHECK-SD-NEXT:    and x19, x0, #0x3
+; CHECK-SD-NEXT:    mov x0, x19
 ; CHECK-SD-NEXT:    bl callee
-; CHECK-SD-NEXT:    ands x8, x19, #0x3
-; CHECK-SD-NEXT:    csel x0, x8, x0, eq
+; CHECK-SD-NEXT:    cmp x19, #0
+; CHECK-SD-NEXT:    csel x0, x19, x0, eq
 ; CHECK-SD-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    ret
 ;
