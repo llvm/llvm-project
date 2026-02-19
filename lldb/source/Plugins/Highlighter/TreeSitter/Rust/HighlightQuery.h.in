@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_subnormal_config.h>
-#include <clc/opencl/opencl-base.h>
+#ifndef LLDB_SOURCE_PLUGINS_HIGHLIGHTER_TREESITTER_RUST_HIGHLIGHTQUERY_H
+#define LLDB_SOURCE_PLUGINS_HIGHLIGHTER_TREESITTER_RUST_HIGHLIGHTQUERY_H
 
-_CLC_DEF bool __clc_fp16_subnormals_supported() { return false; }
+#include "llvm/ADT/StringRef.h"
 
-_CLC_DEF bool __clc_fp32_subnormals_supported() { return false; }
+static constexpr llvm::StringLiteral highlight_query =
+    R"__(@HIGHLIGHT_QUERY@)__";
 
-_CLC_DEF bool __clc_fp64_subnormals_supported() { return false; }
+#endif // LLDB_SOURCE_PLUGINS_HIGHLIGHTER_TREESITTER_RUST_HIGHLIGHTQUERY_H

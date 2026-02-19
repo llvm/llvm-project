@@ -41,7 +41,7 @@ void TransportBase::SetUp() {
   dap = std::make_unique<DAP>(
       /*log=*/*log,
       /*default_repl_mode=*/ReplMode::Auto,
-      /*pre_init_commands=*/std::vector<std::string>(),
+      /*pre_init_commands=*/std::vector<String>(),
       /*no_lldbinit=*/false,
       /*client_name=*/"test_client",
       /*transport=*/*to_client, /*loop=*/loop);

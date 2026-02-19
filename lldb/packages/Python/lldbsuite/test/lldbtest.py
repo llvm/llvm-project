@@ -1413,6 +1413,9 @@ class Base(unittest.TestCase):
     def isAArch64FPMR(self):
         return self.isAArch64() and self.isSupported(cpu_feature.AArch64.FPMR)
 
+    def isAArch64POE(self):
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.POE)
+
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""
         if self.getPlatform() == "windows":
@@ -1808,6 +1811,9 @@ class LLDBTestCaseFactory(type):
         )
         if original_testcase.NO_DEBUG_INFO_TESTCASE:
             return original_testcase
+
+        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+            original_testcase.SHARED_BUILD_TESTCASE = False
 
         # Default implementation for skip/xfail reason based on the debug category,
         # where "None" means to run the test as usual.

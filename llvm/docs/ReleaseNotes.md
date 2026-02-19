@@ -95,6 +95,9 @@ Changes to Vectorizers
 Changes to the AArch64 Backend
 ------------------------------
 
+* The `sysp`, `mrrs`, and `msrr` instructions are now accepted without
+  requiring the `+d128` feature gating.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -189,6 +192,11 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------
 
+### Deprecated APIs
+
+* ``SBTarget::GetDataByteSize()``, ``SBTarget::GetCodeByteSize()``, and ``SBSection::GetTargetByteSize()``
+  have been deprecated. They always return 1, as before.
+
 ### FreeBSD
 
 #### Userspace Debugging
@@ -199,6 +207,9 @@ Changes to LLDB
 
 #### Kernel Debugging
 
+* Support for libfbsdvmcore has been removed. As a result, FreeBSD kernel dump debugging is now only
+  available on FreeBSD hosts. Live kernel debugging through the GDB remote protocol is still available
+  from any platform.
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
 * Unread kernel messages saved in msgbufp are now printed when lldb starts. This information is printed only

@@ -199,3 +199,23 @@ func.func @test_clamp_min_outside_i32_range(%arg0: tensor<100xi64>) -> tensor<10
   %1 = tosa.clamp %arg0 {max_val = 2147483647 : i64, min_val = -2147483649 : i64} : (tensor<100xi64>) -> tensor<100xi64>
   return %1 : tensor<100xi64>
 }
+
+// -----
+
+// CHECK-LABEL: test_dense_ressource_i64
+func.func @test_dense_ressource_i64() -> tensor<1x2xi64> {
+  // COMMON: %[[CONST:.*]] = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xi32>}> : () -> tensor<1x2xi32>
+  %1 = "tosa.const"() <{values = dense_resource<resource> : tensor<1x2xi64>}> : () -> tensor<1x2xi64>
+  // DEFAULT: %[[OUT_CAST:.*]] = tosa.cast %[[CONST]] : (tensor<1x2xi32>) -> tensor<1x2xi64>
+  // DEFAULT: return %[[OUT_CAST]] : tensor<1x2xi64>
+  // FUNCBOUND: return %[[CONST]] : tensor<1x2xi32>
+  return %1 : tensor<1x2xi64>
+}
+{-#
+  dialect_resources: {
+    builtin: {
+      // COMMON: resource: "0x040000000000000000000000"
+      resource: "0x0800000000000000000000000000000000000000"
+    }
+  }
+#-}
