@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/KnownBitsAnalysis.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
@@ -362,5 +363,71 @@ $   %cond = icmp slt i32 %next_counter, %n | !
 $   %cond = icmp slt i32 %next_counter, %n | !
 )";
   EXPECT_EQ(ActualOutput, ExpectedOutput);
+}
+
+/// KnownBitsCache tests follow.
+TEST_F(KnownBitsAnalysisTest, KnownBitsComputationParity) {
+  parseAssembly(R"(
+define void @test(i32 %int_arg, float %float_arg, ptr %ptr_arg, <2 x i32> %vec_int_arg, <2 x ptr> %vec_ptr_arg) {
+entry:
+  br i1 poison, label %then, label %else
+then:
+  %int_val = add i32 %int_arg, 1
+  %float_val = fadd float %float_arg, 1.0
+  %vec_val = add <2 x i32> %vec_int_arg, <i32 1, i32 2>
+  br label %merge
+else:
+  %fpconv = fptoui float %float_arg to i32
+  %int_val2 = mul i32 %int_arg, %fpconv
+  %ptr_val = getelementptr i8, ptr %ptr_arg, i32 4
+  %vec_val2 = mul <2 x i32> %vec_int_arg, <i32 3, i32 4>
+  br label %merge
+merge:
+  %phi_int = phi i32 [ %int_val, %then ], [ %int_val2, %else ]
+  %phi_float = phi float [ %float_val, %then ], [ %float_arg, %else ]
+  %phi_ptr = phi ptr [ %ptr_arg, %then ], [ %ptr_val, %else ]
+  %phi_vec = phi <2 x i32> [ %vec_val, %then ], [ %vec_val2, %else ]
+  %final_int = add i32 %phi_int, 5
+  %vec_ptr_conv = ptrtoint <2 x ptr> %vec_ptr_arg to <2 x i32>
+  %final_vec = add <2 x i32> %phi_vec, %vec_ptr_conv
+  store float %phi_float, ptr %phi_ptr
+  ret void
+})");
+  KnownBitsCache Lat(*F);
+  auto *ArgIt = F->arg_begin();
+  Argument *IntArg = &*ArgIt++;
+  ArgIt++;
+  Argument *PtrArg = &*ArgIt++;
+  Argument *VecIntArg = &*ArgIt++;
+  Argument *VecPtrArg = &*ArgIt++;
+  Instruction *IntVal = findInstructionByName(F, "int_val");
+  Instruction *VecVal = findInstructionByName(F, "vec_val");
+  Instruction *IntVal2 = findInstructionByName(F, "int_val2");
+  Instruction *PtrVal = findInstructionByName(F, "ptr_val");
+  Instruction *VecVal2 = findInstructionByName(F, "vec_val2");
+  Instruction *PhiInt = findInstructionByName(F, "phi_int");
+  Instruction *PhiPtr = findInstructionByName(F, "phi_ptr");
+  Instruction *PhiVec = findInstructionByName(F, "phi_vec");
+  Instruction *FinalInt = findInstructionByName(F, "final_int");
+  Instruction *FPConv = findInstructionByName(F, "fpconv");
+  Instruction *VecPtrConv = findInstructionByName(F, "vec_ptr_conv");
+  Instruction *FinalVec = findInstructionByName(F, "final_vec");
+
+  EXPECT_EQ(Lat.getOrCompute(IntArg), computeKnownBits(IntArg, DL));
+  EXPECT_EQ(Lat.getOrCompute(PtrArg), computeKnownBits(PtrArg, DL));
+  EXPECT_EQ(Lat.getOrCompute(VecIntArg), computeKnownBits(VecIntArg, DL));
+  EXPECT_EQ(Lat.getOrCompute(VecPtrArg), computeKnownBits(VecPtrArg, DL));
+  EXPECT_EQ(Lat.getOrCompute(IntVal), computeKnownBits(IntVal, DL));
+  EXPECT_EQ(Lat.getOrCompute(VecVal), computeKnownBits(VecVal, DL));
+  EXPECT_EQ(Lat.getOrCompute(IntVal2), computeKnownBits(IntVal2, DL));
+  EXPECT_EQ(Lat.getOrCompute(PtrVal), computeKnownBits(PtrVal, DL));
+  EXPECT_EQ(Lat.getOrCompute(VecVal2), computeKnownBits(VecVal2, DL));
+  EXPECT_EQ(Lat.getOrCompute(PhiInt), computeKnownBits(PhiInt, DL));
+  EXPECT_EQ(Lat.getOrCompute(PhiPtr), computeKnownBits(PhiPtr, DL));
+  EXPECT_EQ(Lat.getOrCompute(PhiVec), computeKnownBits(PhiVec, DL));
+  EXPECT_EQ(Lat.getOrCompute(FinalInt), computeKnownBits(FinalInt, DL));
+  EXPECT_EQ(Lat.getOrCompute(FPConv), computeKnownBits(FPConv, DL));
+  EXPECT_EQ(Lat.getOrCompute(VecPtrConv), computeKnownBits(VecPtrConv, DL));
+  EXPECT_EQ(Lat.getOrCompute(FinalVec), computeKnownBits(FinalVec, DL));
 }
 } // namespace

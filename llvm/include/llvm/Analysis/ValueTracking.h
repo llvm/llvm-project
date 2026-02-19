@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_VALUETRACKING_H
 
 #include "llvm/Analysis/SimplifyQuery.h"
+#include "llvm/Analysis/ValueTrackingHelper.h"
 #include "llvm/Analysis/WithCache.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -91,30 +92,12 @@ LLVM_ABI KnownBits computeKnownBits(const Value *V, const SimplifyQuery &Q,
 LLVM_ABI void computeKnownBits(const Value *V, KnownBits &Known,
                                const SimplifyQuery &Q, unsigned Depth = 0);
 
-/// Compute known bits from the range metadata.
-/// \p KnownZero the set of bits that are known to be zero
-/// \p KnownOne the set of bits that are known to be one
-LLVM_ABI void computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
-                                                KnownBits &Known);
-
-/// Merge bits known from context-dependent facts into Known.
-LLVM_ABI void computeKnownBitsFromContext(const Value *V, KnownBits &Known,
-                                          const SimplifyQuery &Q,
-                                          unsigned Depth = 0);
-
 /// Using KnownBits LHS/RHS produce the known bits for logic op (and/xor/or).
 LLVM_ABI KnownBits analyzeKnownBitsFromAndXorOr(const Operator *I,
                                                 const KnownBits &KnownLHS,
                                                 const KnownBits &KnownRHS,
                                                 const SimplifyQuery &SQ,
                                                 unsigned Depth = 0);
-
-/// Adjust \p Known for the given select \p Arm to include information from the
-/// select \p Cond.
-LLVM_ABI void adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
-                                          Value *Arm, bool Invert,
-                                          const SimplifyQuery &Q,
-                                          unsigned Depth = 0);
 
 /// Adjust \p Known for the given select \p Arm to include information from the
 /// select \p Cond.
@@ -675,10 +658,6 @@ LLVM_ABI OverflowResult computeOverflowForSignedSub(const Value *LHS,
 LLVM_ABI bool isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
                                         const DominatorTree &DT);
 
-/// Determine the possible constant range of vscale with the given bit width,
-/// based on the vscale_range function attribute.
-LLVM_ABI ConstantRange getVScaleRange(const Function *F, unsigned BitWidth);
-
 /// Determine the possible constant range of an integer or vector of integer
 /// value. This is intended as a cheap, non-recursive check.
 LLVM_ABI ConstantRange computeConstantRange(const Value *V, bool ForSigned,
@@ -789,44 +768,6 @@ LLVM_ABI bool canCreatePoison(const Operator *Op,
 /// For example, if ValAssumedPoison is `icmp X, 10` and V is `icmp X, 5`,
 /// impliesPoison returns true.
 LLVM_ABI bool impliesPoison(const Value *ValAssumedPoison, const Value *V);
-
-/// Return true if this function can prove that V does not have undef bits
-/// and is never poison. If V is an aggregate value or vector, check whether
-/// all elements (except padding) are not undef or poison.
-/// Note that this is different from canCreateUndefOrPoison because the
-/// function assumes Op's operands are not poison/undef.
-///
-/// If CtxI and DT are specified this method performs flow-sensitive analysis
-/// and returns true if it is guaranteed to be never undef or poison
-/// immediately before the CtxI.
-LLVM_ABI bool
-isGuaranteedNotToBeUndefOrPoison(const Value *V, AssumptionCache *AC = nullptr,
-                                 const Instruction *CtxI = nullptr,
-                                 const DominatorTree *DT = nullptr,
-                                 unsigned Depth = 0);
-
-/// Returns true if V cannot be poison, but may be undef.
-LLVM_ABI bool isGuaranteedNotToBePoison(const Value *V,
-                                        AssumptionCache *AC = nullptr,
-                                        const Instruction *CtxI = nullptr,
-                                        const DominatorTree *DT = nullptr,
-                                        unsigned Depth = 0);
-
-inline bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC,
-                                      BasicBlock::iterator CtxI,
-                                      const DominatorTree *DT = nullptr,
-                                      unsigned Depth = 0) {
-  // Takes an iterator as a position, passes down to Instruction *
-  // implementation.
-  return isGuaranteedNotToBePoison(V, AC, &*CtxI, DT, Depth);
-}
-
-/// Returns true if V cannot be undef, but may be poison.
-LLVM_ABI bool isGuaranteedNotToBeUndef(const Value *V,
-                                       AssumptionCache *AC = nullptr,
-                                       const Instruction *CtxI = nullptr,
-                                       const DominatorTree *DT = nullptr,
-                                       unsigned Depth = 0);
 
 /// Return true if undefined behavior would provable be executed on the path to
 /// OnPathTo if Root produced a posion result.  Note that this doesn't say
@@ -954,37 +895,6 @@ LLVM_ABI APInt getMinMaxLimit(SelectPatternFlavor SPF, unsigned BitWidth);
 /// Intrinsic::not_intrinsic.
 LLVM_ABI std::pair<Intrinsic::ID, bool>
 canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL);
-
-/// Attempt to match a simple first order recurrence cycle of the form:
-///   %iv = phi Ty [%Start, %Entry], [%Inc, %backedge]
-///   %inc = binop %iv, %step
-/// OR
-///   %iv = phi Ty [%Start, %Entry], [%Inc, %backedge]
-///   %inc = binop %step, %iv
-///
-/// A first order recurrence is a formula with the form: X_n = f(X_(n-1))
-///
-/// A couple of notes on subtleties in that definition:
-/// * The Step does not have to be loop invariant.  In math terms, it can
-///   be a free variable.  We allow recurrences with both constant and
-///   variable coefficients. Callers may wish to filter cases where Step
-///   does not dominate P.
-/// * For non-commutative operators, we will match both forms.  This
-///   results in some odd recurrence structures.  Callers may wish to filter
-///   out recurrences where the phi is not the LHS of the returned operator.
-/// * Because of the structure matched, the caller can assume as a post
-///   condition of the match the presence of a Loop with P's parent as it's
-///   header *except* in unreachable code.  (Dominance decays in unreachable
-///   code.)
-///
-/// NOTE: This is intentional simple.  If you want the ability to analyze
-/// non-trivial loop conditons, see ScalarEvolution instead.
-LLVM_ABI bool matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
-                                    Value *&Start, Value *&Step);
-
-/// Analogous to the above, but starting from the binary operator
-LLVM_ABI bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
-                                    Value *&Start, Value *&Step);
 
 /// Attempt to match a simple value-accumulating recurrence of the form:
 ///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]

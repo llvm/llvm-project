@@ -96,6 +96,14 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 };
+
+class KnownBitsCache : protected KnownBitsDataflow {
+  void compute(ArrayRef<const Value *> Leaves);
+
+public:
+  KnownBitsCache(Function &F);
+  LLVM_ABI KnownBits getOrCompute(const Value *V);
+};
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_SEMILATTICE_H
