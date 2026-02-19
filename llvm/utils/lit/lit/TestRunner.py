@@ -162,7 +162,13 @@ class TimeoutHelper(object):
 
     def _handleTimeoutReached(self):
         self._timeoutReached = True
-        self._kill()
+        try:
+            self._kill()
+        except Exception:
+            # Don't let exceptions in _kill() crash the timer thread.
+            # The timeout flag is already set, so the test will still
+            # be marked as timed out even if we couldn't kill the process.
+            pass
 
     def timeoutReached(self):
         return self._timeoutReached
@@ -2377,13 +2383,15 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
             return out, "", 1, None, Test.UNRESOLVED
 
         out, err, exitCode, timeoutInfo = res
-        if exitCode == 0:
+        # Check timeout first - if timeout was reached, result is TIMEOUT
+        # regardless of exit code. This handles the case where the process
+        # couldn't be killed but the timeout was still detected.
+        if timeoutInfo is not None:
+            status = Test.TIMEOUT
+        elif exitCode == 0:
             status = Test.PASS
         else:
-            if timeoutInfo is None:
-                status = Test.FAIL
-            else:
-                status = Test.TIMEOUT
+            status = Test.FAIL
         return out, err, exitCode, timeoutInfo, status
 
     # Create the output directory if it does not already exist.

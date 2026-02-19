@@ -74,6 +74,15 @@ class Run(object):
     def _execute(self, deadline):
         self._increase_process_limit()
 
+        # When only one worker is requested, avoid multiprocessing entirely.
+        #
+        # This is faster for small runs and (importantly) allows lit to run in
+        # restricted environments/sandboxes where Python's multiprocessing
+        # primitives (e.g. POSIX semaphores/locks) are not permitted.
+        if self.workers == 1:
+            self._execute_single_process(deadline)
+            return
+
         semaphores = {
             k: multiprocessing.BoundedSemaphore(v)
             for k, v in self.lit_config.parallelism_groups.items()
@@ -139,6 +148,53 @@ class Run(object):
             # Join all pools
             for pool in pools:
                 pool.join()
+
+    def _execute_single_process(self, deadline):
+        # Run tests directly in this process (see lit.worker docstring).
+        #
+        # To enforce the overall timeout (--max-time), we temporarily set
+        # maxIndividualTestTime to the remaining time before the deadline.
+        # This ensures that individual tests are killed if they would exceed
+        # the overall time limit.
+        original_timeout = self.lit_config.maxIndividualTestTime
+
+        try:
+            for test in self.tests:
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    raise TimeoutError()
+
+                # Use the smaller of: remaining time until deadline, or the
+                # original per-test timeout (if set). A value of 0 means no limit.
+                if original_timeout > 0:
+                    effective_timeout = min(int(remaining) + 1, original_timeout)
+                elif self.timeout:
+                    effective_timeout = int(remaining) + 1
+                else:
+                    effective_timeout = 0
+
+                self.lit_config._maxIndividualTestTime = effective_timeout
+
+                result = lit.worker._execute(test, self.lit_config)
+
+                # If the test timed out because we hit the --max-time deadline,
+                # treat it as if it was never run (SKIPPED) to match the behavior
+                # of multiprocessing mode where the pool is terminated and
+                # in-progress tests don't get results.
+                if result.code == lit.Test.TIMEOUT and self.timeout:
+                    if time.time() >= deadline:
+                        # Don't set result - leave it as None so it gets SKIPPED
+                        raise TimeoutError()
+
+                test.setResult(result)
+                self.progress_callback(test)
+
+                if test.isFailure():
+                    self.failures += 1
+                    if self.failures == self.max_failures:
+                        raise MaxFailuresError()
+        finally:
+            self.lit_config._maxIndividualTestTime = original_timeout
 
     def _wait_for(self, async_results, deadline):
         timeout = deadline - time.time()
