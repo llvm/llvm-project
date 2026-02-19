@@ -121,8 +121,7 @@ define i32 @load_i8_s_with_folded_offset(ptr %p) {
 ; DEFAULT-LABEL: load_i8_s_with_folded_offset:
 ; DEFAULT:         .functype load_i8_s_with_folded_offset (i32) -> (i32)
 ; DEFAULT-NEXT:  # %bb.0:
-; DEFAULT-NEXT:    i32.load8_u $push1=, 24($0)
-; DEFAULT-NEXT:    i32.extend8_s $push0=, $pop1
+; DEFAULT-NEXT:    i32.load8_s $push0=, 24($0)
 ; DEFAULT-NEXT:    # fallthrough-return
 ;
 ; MVP-LABEL: load_i8_s_with_folded_offset:

@@ -1281,6 +1281,16 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
     return false;
 
   // TODO: Fold a following sign-/zero-extend into the load instruction.
+  // Fold sext(load)
+  const Value *Ext = nullptr;
+  MVT::SimpleValueType ExtVT = MVT::Other;
+  bool FoldExt = false;
+  if (Subtarget->hasSignExt() && Load->hasOneUse()) {
+    if ((Ext = dyn_cast<SExtInst>(*Load->user_begin()))) {
+      ExtVT = getSimpleType(Ext->getType());
+      FoldExt = true;
+    }
+  }
 
   unsigned Opc;
   const TargetRegisterClass *RC;
@@ -1288,16 +1298,37 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   switch (getSimpleType(Load->getType())) {
   case MVT::i1:
   case MVT::i8:
-    Opc = A64 ? WebAssembly::LOAD8_U_I32_A64 : WebAssembly::LOAD8_U_I32_A32;
-    RC = &WebAssembly::I32RegClass;
+    if (FoldExt && ExtVT == MVT::i64) {
+      Opc = A64 ? WebAssembly::LOAD8_S_I64_A64 : WebAssembly::LOAD8_S_I64_A32;
+      RC = &WebAssembly::I64RegClass;
+    } else if (FoldExt && ExtVT == MVT::i32) {
+      Opc = A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
+      RC = &WebAssembly::I32RegClass;
+    } else {
+      Opc = A64 ? WebAssembly::LOAD8_U_I32_A64 : WebAssembly::LOAD8_U_I32_A32;
+      RC = &WebAssembly::I32RegClass;
+    }
     break;
   case MVT::i16:
-    Opc = A64 ? WebAssembly::LOAD16_U_I32_A64 : WebAssembly::LOAD16_U_I32_A32;
-    RC = &WebAssembly::I32RegClass;
+    if (FoldExt && ExtVT == MVT::i64) {
+      Opc = A64 ? WebAssembly::LOAD16_S_I64_A64 : WebAssembly::LOAD16_S_I64_A32;
+      RC = &WebAssembly::I64RegClass;
+    } else if (FoldExt && ExtVT == MVT::i32) {
+      Opc = A64 ? WebAssembly::LOAD16_S_I32_A64 : WebAssembly::LOAD16_S_I32_A32;
+      RC = &WebAssembly::I32RegClass;
+    } else {
+      Opc = A64 ? WebAssembly::LOAD16_U_I32_A64 : WebAssembly::LOAD16_U_I32_A32;
+      RC = &WebAssembly::I32RegClass;
+    }
     break;
   case MVT::i32:
-    Opc = A64 ? WebAssembly::LOAD_I32_A64 : WebAssembly::LOAD_I32_A32;
-    RC = &WebAssembly::I32RegClass;
+    if (FoldExt && ExtVT == MVT::i64) {
+      Opc = A64 ? WebAssembly::LOAD32_S_I64_A64 : WebAssembly::LOAD32_S_I64_A32;
+      RC = &WebAssembly::I64RegClass;
+    } else {
+      Opc = A64 ? WebAssembly::LOAD_I32_A64 : WebAssembly::LOAD_I32_A32;
+      RC = &WebAssembly::I32RegClass;
+    }
     break;
   case MVT::i64:
     Opc = A64 ? WebAssembly::LOAD_I64_A64 : WebAssembly::LOAD_I64_A32;
@@ -1323,6 +1354,16 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
 
   addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Load));
 
+  if (FoldExt) {
+    unsigned ExtReg = lookUpRegForValue(Ext);
+    if (ExtReg) {
+      if (MachineInstr *ExtMI = MRI.getUniqueVRegDef(ExtReg)) {
+        MRI.replaceRegWith(ExtReg, ResultReg);
+        ExtMI->eraseFromParent();
+      }
+    }
+    updateValueMap(Ext, ResultReg);
+  }
   updateValueMap(Load, ResultReg);
   return true;
 }
