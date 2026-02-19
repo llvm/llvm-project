@@ -54,6 +54,9 @@ enum class StorageKind {
   Aggregate, // Struct, Array or Vector
 };
 
+/// Tri-state boolean value.
+enum class BooleanKind { False, True, Poison };
+
 class Pointer {
   // The underlying memory object. It can be null for invalid or dangling
   // pointers.
@@ -106,6 +109,7 @@ public:
   void print(raw_ostream &OS) const;
 
   static AnyValue poison() { return AnyValue(PoisonTag{}); }
+  static AnyValue boolean(bool Val) { return AnyValue(APInt(1, Val)); }
   static AnyValue getPoisonValue(Context &Ctx, Type *Ty);
   static AnyValue getNullValue(Context &Ctx, Type *Ty);
 
@@ -133,12 +137,24 @@ public:
     return AggVal;
   }
 
+  std::vector<AnyValue> &asAggregate() {
+    assert(Kind == StorageKind::Aggregate &&
+           "Expect an aggregate/vector value");
+    return AggVal;
+  }
+
   // Helper function for C++ 17 structured bindings.
   template <size_t I> const AnyValue &get() const {
     assert(Kind == StorageKind::Aggregate &&
            "Expect an aggregate/vector value");
     assert(I < AggVal.size() && "Index out of bounds");
     return AggVal[I];
+  }
+
+  BooleanKind asBoolean() const {
+    if (isPoison())
+      return BooleanKind::Poison;
+    return asInteger().isZero() ? BooleanKind::False : BooleanKind::True;
   }
 };
 

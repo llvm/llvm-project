@@ -435,7 +435,7 @@ struct SetVariableArguments {
   /// The reference of the variable container. The `variablesReference` must
   /// have been obtained in the current suspended state. See 'Lifetime of Object
   ///  References' in the Overview section for details.
-  uint64_t variablesReference = UINT64_MAX;
+  var_ref_t variablesReference{var_ref_t::k_invalid_var_ref};
 
   /// The name of the variable in the container.
   std::string name;
@@ -466,7 +466,7 @@ struct SetVariableResponseBody {
   /// If this property is included in the response, any `variablesReference`
   /// previously associated with the updated variable, and those of its
   /// children, are no longer valid.
-  uint64_t variablesReference = 0;
+  var_ref_t variablesReference{var_ref_t::k_no_child};
 
   /// The number of named child variables.
   /// The client can use this information to present the variables in a paged
@@ -727,7 +727,7 @@ struct DataBreakpointInfoArguments {
   /// for a child of the container. The `variablesReference` must have been
   /// obtained in the current suspended state.See 'Lifetime of Object
   /// References' in the Overview section for details.
-  std::optional<int64_t> variablesReference;
+  std::optional<var_ref_t> variablesReference;
 
   /// The name of the variable's child to obtain data breakpoint information
   /// for. If `variablesReference` isn't specified, this can be an expression,
@@ -953,7 +953,7 @@ struct VariablesArguments {
   /// The variable for which to retrieve its children. The `variablesReference`
   /// must have been obtained in the current suspended state. See 'Lifetime of
   /// Object References' in the Overview section for details.
-  uint64_t variablesReference;
+  var_ref_t variablesReference{var_ref_t::k_invalid_var_ref};
 
   enum VariablesFilter : unsigned {
     eVariablesFilterBoth = 0,
@@ -1158,7 +1158,7 @@ struct EvaluateResponseBody {
   /// children can be retrieved by passing `variablesReference` to the
   /// `variables` request as long as execution remains suspended. See 'Lifetime
   /// of Object References' in the Overview section for details.
-  int64_t variablesReference = 0;
+  var_ref_t variablesReference{var_ref_t::k_no_child};
 
   /// The number of named child variables.
   /// The client can use this information to present the variables in a paged
@@ -1311,6 +1311,11 @@ struct StackTraceResponseBody {
   uint32_t totalFrames = 0;
 };
 llvm::json::Value toJSON(const StackTraceResponseBody &);
+
+/// Arguments for unknown request.
+using UnknownArguments = EmptyArguments;
+/// Response to unknowns request.
+using UnknownResponseBody = VoidResponse;
 
 } // namespace lldb_dap::protocol
 

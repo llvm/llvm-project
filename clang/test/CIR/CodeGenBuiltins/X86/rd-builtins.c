@@ -26,3 +26,39 @@ unsigned long long test_rdpmc(int a) {
     // OGCG: ret i64 %{{.*}}
     return _rdpmc(a);
 }
+
+unsigned long long test_rdtsc(void) {
+  // CIR-LABEL: @test_rdtsc
+  // CIR: %{{.*}} = cir.call_llvm_intrinsic "x86.rdtsc" : () -> !u64i
+
+  // LLVM-LABEL: @test_rdtsc
+  // LLVM: call i64 @llvm.x86.rdtsc()
+
+  // OGCG-LABEL: @test_rdtsc
+  // OGCG: call i64 @llvm.x86.rdtsc()
+
+  return __rdtsc();
+}
+
+unsigned long long test_rdtscp(unsigned int *a) {
+  // CIR-LABEL: @test_rdtscp
+  // CIR: %[[RDTSCP:.*]] = cir.call_llvm_intrinsic "x86.rdtscp" : () -> !rec_anon_struct
+  // CIR: %[[TSC_AUX:.*]] = cir.extract_member %[[RDTSCP]][1] : !rec_anon_struct -> !u32i
+  // CIR: cir.store {{.*}}%[[TSC_AUX]], {{%.*}} : !u32i
+  // CIR: %[[TSC:.*]] = cir.extract_member %[[RDTSCP]][0] : !rec_anon_struct -> !u64i
+
+  // LLVM-LABEL: @test_rdtscp
+  // LLVM: %[[RDTSCP:.*]] = call { i64, i32 } @llvm.x86.rdtscp()
+  // LLVM: %[[TSC_AUX:.*]] = extractvalue { i64, i32 } %[[RDTSCP]], 1
+  // LLVM: store i32 %[[TSC_AUX]], ptr %{{.*}}
+  // LLVM: %[[TSC:.*]] = extractvalue { i64, i32 } %[[RDTSCP]], 0
+
+  // OGCG-LABEL: @test_rdtscp
+  // OGCG: %[[RDTSCP:.*]] = call { i64, i32 } @llvm.x86.rdtscp
+  // OGCG: %[[TSC_AUX:.*]] = extractvalue { i64, i32 } %[[RDTSCP]], 1
+  // OGCG: store i32 %[[TSC_AUX]], ptr %{{.*}}
+  // OGCG: %[[TSC:.*]] = extractvalue { i64, i32 } %[[RDTSCP]], 0
+
+  return __builtin_ia32_rdtscp(a);
+}
+

@@ -153,17 +153,6 @@ uint32_t GetLLDBThreadIndexID(uint64_t dap_frame_id);
 ///     The LLDB frame index ID.
 uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 
-/// Gets all the environment variables from the json object depending on if the
-/// kind is an object or an array.
-///
-/// \param[in] arguments
-///     The json object with the launch options
-///
-/// \return
-///     The environment variables stored in the env key
-lldb::SBEnvironment
-GetEnvironmentFromArguments(const llvm::json::Object &arguments);
-
 /// Gets an SBFileSpec and returns its path as a string.
 ///
 /// \param[in] file_spec

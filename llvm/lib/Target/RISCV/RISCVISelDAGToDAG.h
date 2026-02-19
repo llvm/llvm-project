@@ -81,6 +81,7 @@ public:
   bool tryUnsignedBitfieldInsertInZero(SDNode *Node, const SDLoc &DL, MVT VT,
                                        SDValue X, unsigned Msb, unsigned Lsb);
   bool tryIndexedLoad(SDNode *Node);
+  bool tryWideningMulAcc(SDNode *Node, const SDLoc &DL);
 
   bool selectShiftMask(SDValue N, unsigned ShiftWidth, SDValue &ShAmt);
   bool selectShiftMaskXLen(SDValue N, SDValue &ShAmt) {
@@ -88,6 +89,9 @@ public:
   }
   bool selectShiftMask32(SDValue N, SDValue &ShAmt) {
     return selectShiftMask(N, 32, ShAmt);
+  }
+  bool selectShiftMask64(SDValue N, SDValue &ShAmt) {
+    return selectShiftMask(N, 64, ShAmt);
   }
 
   bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val);
