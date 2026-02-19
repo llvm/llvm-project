@@ -3700,6 +3700,13 @@ bool TargetLowering::SimplifyDemandedVectorElts(
         SDLoc DL(Op);
         EVT SrcVT = Src.getValueType();
         EVT SrcSVT = SrcVT.getScalarType();
+
+        // If we're after type legalization and SrcSVT is not legal, use the
+        // promoted type for creating constants to avoid creating nodes with
+        // illegal types.
+        if (AfterLegalizeTypes)
+          SrcSVT = getLegalTypeToTransformTo(*TLO.DAG.getContext(), SrcSVT);
+
         SmallVector<SDValue> MaskElts;
         MaskElts.push_back(TLO.DAG.getAllOnesConstant(DL, SrcSVT));
         MaskElts.append(NumSrcElts - 1, TLO.DAG.getConstant(0, DL, SrcSVT));
@@ -3799,19 +3806,22 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     if (SimplifyDemandedVectorElts(Op1, DemandedElts, SrcUndef, SrcZero, TLO,
                                    Depth + 1))
       return true;
-    // If we know that a demanded element was zero in Op1 we don't need to
-    // demand it in Op0 - its guaranteed to be zero.
-    APInt DemandedElts0 = DemandedElts & ~SrcZero;
-    if (SimplifyDemandedVectorElts(Op0, DemandedElts0, KnownUndef, KnownZero,
+    // FIXME: If we know that a demanded element was zero in Op1 we don't need
+    // to demand it in Op0 - its guaranteed to be zero. There is however a
+    // restriction, as we must not make any of the originally demanded elements
+    // more poisonous. We could reduce amount of elements demanded, but then we
+    // also need a to inform SimplifyDemandedVectorElts that some elements must
+    // not be made more poisonous.
+    if (SimplifyDemandedVectorElts(Op0, DemandedElts, KnownUndef, KnownZero,
                                    TLO, Depth + 1))
       return true;
 
-    KnownUndef &= DemandedElts0;
-    KnownZero &= DemandedElts0;
+    KnownUndef &= DemandedElts;
+    KnownZero &= DemandedElts;
 
-    // If every element pair has a zero/undef then just fold to zero.
-    // fold (and x, undef) -> 0  /  (and x, 0) -> 0
-    // fold (mul x, undef) -> 0  /  (mul x, 0) -> 0
+    // If every element pair has a zero/undef/poison then just fold to zero.
+    // fold (and x, undef/poison) -> 0  /  (and x, 0) -> 0
+    // fold (mul x, undef/poison) -> 0  /  (mul x, 0) -> 0
     if (DemandedElts.isSubsetOf(SrcZero | KnownZero | SrcUndef | KnownUndef))
       return TLO.CombineTo(Op, TLO.DAG.getConstant(0, SDLoc(Op), VT));
 
@@ -7501,7 +7511,8 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
 }
 
 SDValue TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
-                                         const DenormalMode &Mode) const {
+                                         const DenormalMode &Mode,
+                                         SDNodeFlags Flags) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
@@ -7512,7 +7523,8 @@ SDValue TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
   if (Mode.Input == DenormalMode::PreserveSign ||
       Mode.Input == DenormalMode::PositiveZero) {
     // Test = X == 0.0
-    return DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
+    return DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ, /*Chain=*/{},
+                        /*Signaling=*/false, Flags);
   }
 
   // Testing it with denormal inputs to avoid wrong estimate.
@@ -7521,8 +7533,9 @@ SDValue TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
   const fltSemantics &FltSem = VT.getFltSemantics();
   APFloat SmallestNorm = APFloat::getSmallestNormalized(FltSem);
   SDValue NormC = DAG.getConstantFP(SmallestNorm, DL, VT);
-  SDValue Fabs = DAG.getNode(ISD::FABS, DL, VT, Op);
-  return DAG.getSetCC(DL, CCVT, Fabs, NormC, ISD::SETLT);
+  SDValue Fabs = DAG.getNode(ISD::FABS, DL, VT, Op, Flags);
+  return DAG.getSetCC(DL, CCVT, Fabs, NormC, ISD::SETLT, /*Chain=*/{},
+                      /*Signaling=*/false, Flags);
 }
 
 SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
@@ -7873,12 +7886,12 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
   assert((LL.getNode() && LH.getNode() && RL.getNode() && RH.getNode()) ||
          (!LL.getNode() && !LH.getNode() && !RL.getNode() && !RH.getNode()));
 
-  SDVTList VTs = DAG.getVTList(HiLoVT, HiLoVT);
   auto MakeMUL_LOHI = [&](SDValue L, SDValue R, SDValue &Lo, SDValue &Hi,
                           bool Signed) -> bool {
     if ((Signed && HasSMUL_LOHI) || (!Signed && HasUMUL_LOHI)) {
+      SDVTList VTs = DAG.getVTList(HiLoVT, HiLoVT);
       Lo = DAG.getNode(Signed ? ISD::SMUL_LOHI : ISD::UMUL_LOHI, dl, VTs, L, R);
-      Hi = SDValue(Lo.getNode(), 1);
+      Hi = Lo.getValue(1);
       return true;
     }
     if ((Signed && HasMULHS) || (!Signed && HasMULHU)) {
@@ -8425,6 +8438,10 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Y = Node->getOperand(1);
   unsigned BW = VT.getScalarSizeInBits();
   unsigned Opcode = Node->getOpcode();
+
+  // Scalarize if the vector multiplication is unlikely to work.
+  if (VT.isVector() && !isOperationLegalOrCustom(ISD::MUL, VT))
+    return DAG.UnrollVectorOp(Node);
 
   switch (Opcode) {
   case ISD::CLMUL: {
@@ -9610,9 +9627,13 @@ SDValue TargetLowering::CTTZTableLookup(SDNode *Node, SelectionDAG &DAG,
                                         unsigned BitWidth) const {
   if (BitWidth != 32 && BitWidth != 64)
     return SDValue();
+
+  const DataLayout &TD = DAG.getDataLayout();
+  if (!isOperationCustom(ISD::ConstantPool, getPointerTy(TD)))
+    return SDValue();
+
   APInt DeBruijn = BitWidth == 32 ? APInt(32, 0x077CB531U)
                                   : APInt(64, 0x0218A392CD3D5DBFULL);
-  const DataLayout &TD = DAG.getDataLayout();
   MachinePointerInfo PtrInfo =
       MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
   unsigned ShiftAmt = BitWidth - Log2_32(BitWidth);

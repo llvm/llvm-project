@@ -234,6 +234,10 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     ScopeSyncMode scope_sync_mode(dap.debugger);
 
     if (arguments.console != protocol::eConsoleInternal) {
+      if (!dap.clientFeatures.contains(eClientFeatureRunInTerminalRequest))
+        return llvm::make_error<DAPError>(
+            R"(Client does not support RunInTerminal. Please set '"console": "integratedConsole"' in your launch configuration)");
+
       if (llvm::Error err = RunInTerminal(dap, arguments))
         return err;
     } else if (launchCommands.empty()) {

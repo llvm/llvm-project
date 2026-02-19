@@ -398,6 +398,19 @@ func.func @extract_from_elements_complex_f() -> tensor<3xcomplex<f32>> {
 
 // -----
 
+// Ensure tensor.from_elements with poison values doesn't crash.
+// CHECK-LABEL: func @from_elements_with_poison
+func.func @from_elements_with_poison() -> tensor<1xindex> {
+  // CHECK: %[[POISON:.*]] = ub.poison : index
+  // CHECK: %[[TENSOR:.*]] = tensor.from_elements %[[POISON]] : tensor<1xindex>
+  // CHECK: return %[[TENSOR]]
+  %0 = ub.poison : index
+  %1 = tensor.from_elements %0 : tensor<1xindex>
+  return %1 : tensor<1xindex>
+}
+
+// -----
+
 // Ensure the optimization doesn't segfault from bad constants
 // CHECK-LABEL: func @extract_negative_from_tensor.from_elements
 func.func @extract_negative_from_tensor.from_elements(%element : index) -> index {

@@ -17,110 +17,26 @@
 define i64 @bitmask_16xi8(ptr nocapture noundef readonly %src) {
 ; SSE-LABEL: @bitmask_16xi8(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP0:%.*]] = load i8, ptr [[SRC:%.*]], align 1
-; SSE-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i8 [[TMP0]], 0
-; SSE-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; SSE-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
-; SSE-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[ARRAYIDX_1]], align 1
-; SSE-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i8> [[TMP1]], zeroinitializer
-; SSE-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i64> zeroinitializer, <8 x i64> <i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 256>
-; SSE-NEXT:    [[ARRAYIDX_9:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 9
-; SSE-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[ARRAYIDX_9]], align 1
-; SSE-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i8> [[TMP4]], zeroinitializer
-; SSE-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> zeroinitializer, <4 x i64> <i64 512, i64 1024, i64 2048, i64 4096>
-; SSE-NEXT:    [[ARRAYIDX_13:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 13
-; SSE-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX_13]], align 1
-; SSE-NEXT:    [[TOBOOL_NOT_13:%.*]] = icmp eq i8 [[TMP7]], 0
-; SSE-NEXT:    [[OR_13:%.*]] = select i1 [[TOBOOL_NOT_13]], i64 0, i64 8192
-; SSE-NEXT:    [[ARRAYIDX_14:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 14
-; SSE-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX_14]], align 1
-; SSE-NEXT:    [[TOBOOL_NOT_14:%.*]] = icmp eq i8 [[TMP8]], 0
-; SSE-NEXT:    [[OR_14:%.*]] = select i1 [[TOBOOL_NOT_14]], i64 0, i64 16384
-; SSE-NEXT:    [[ARRAYIDX_15:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 15
-; SSE-NEXT:    [[TMP9:%.*]] = load i8, ptr [[ARRAYIDX_15]], align 1
-; SSE-NEXT:    [[TOBOOL_NOT_15:%.*]] = icmp eq i8 [[TMP9]], 0
-; SSE-NEXT:    [[OR_15:%.*]] = select i1 [[TOBOOL_NOT_15]], i64 0, i64 32768
-; SSE-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; SSE-NEXT:    [[RDX_OP:%.*]] = or <4 x i64> [[TMP10]], [[TMP6]]
-; SSE-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i64> [[RDX_OP]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; SSE-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> [[TMP12]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP11]])
-; SSE-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP16]], [[OR_13]]
-; SSE-NEXT:    [[OP_RDX5:%.*]] = or i64 [[OR_14]], [[OR_15]]
-; SSE-NEXT:    [[OP_RDX6:%.*]] = or i64 [[OP_RDX]], [[OP_RDX5]]
-; SSE-NEXT:    [[OP_RDX7:%.*]] = or i64 [[OP_RDX6]], [[OR]]
+; SSE-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; SSE-NEXT:    [[TMP1:%.*]] = icmp ne <16 x i8> [[TMP0]], zeroinitializer
+; SSE-NEXT:    [[TMP2:%.*]] = bitcast <16 x i1> [[TMP1]] to i16
+; SSE-NEXT:    [[OP_RDX7:%.*]] = zext i16 [[TMP2]] to i64
 ; SSE-NEXT:    ret i64 [[OP_RDX7]]
 ;
 ; AVX-LABEL: @bitmask_16xi8(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    [[TMP0:%.*]] = load i8, ptr [[SRC:%.*]], align 1
-; AVX-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i8 [[TMP0]], 0
-; AVX-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; AVX-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
-; AVX-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[ARRAYIDX_1]], align 1
-; AVX-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i8> [[TMP1]], zeroinitializer
-; AVX-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i64> zeroinitializer, <8 x i64> <i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 256>
-; AVX-NEXT:    [[ARRAYIDX_9:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 9
-; AVX-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[ARRAYIDX_9]], align 1
-; AVX-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i8> [[TMP4]], zeroinitializer
-; AVX-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> zeroinitializer, <4 x i64> <i64 512, i64 1024, i64 2048, i64 4096>
-; AVX-NEXT:    [[ARRAYIDX_13:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 13
-; AVX-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX_13]], align 1
-; AVX-NEXT:    [[TOBOOL_NOT_13:%.*]] = icmp eq i8 [[TMP7]], 0
-; AVX-NEXT:    [[OR_13:%.*]] = select i1 [[TOBOOL_NOT_13]], i64 0, i64 8192
-; AVX-NEXT:    [[ARRAYIDX_14:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 14
-; AVX-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX_14]], align 1
-; AVX-NEXT:    [[TOBOOL_NOT_14:%.*]] = icmp eq i8 [[TMP8]], 0
-; AVX-NEXT:    [[OR_14:%.*]] = select i1 [[TOBOOL_NOT_14]], i64 0, i64 16384
-; AVX-NEXT:    [[ARRAYIDX_15:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 15
-; AVX-NEXT:    [[TMP9:%.*]] = load i8, ptr [[ARRAYIDX_15]], align 1
-; AVX-NEXT:    [[TOBOOL_NOT_15:%.*]] = icmp eq i8 [[TMP9]], 0
-; AVX-NEXT:    [[OR_15:%.*]] = select i1 [[TOBOOL_NOT_15]], i64 0, i64 32768
-; AVX-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX-NEXT:    [[RDX_OP:%.*]] = or <4 x i64> [[TMP10]], [[TMP6]]
-; AVX-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i64> [[RDX_OP]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> [[TMP13]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
-; AVX-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP11]])
-; AVX-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP12]], [[OR_13]]
-; AVX-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OR_14]], [[OR_15]]
-; AVX-NEXT:    [[OP_RDX3:%.*]] = or i64 [[OP_RDX]], [[OP_RDX2]]
-; AVX-NEXT:    [[OP_RDX4:%.*]] = or i64 [[OP_RDX3]], [[OR]]
+; AVX-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; AVX-NEXT:    [[TMP1:%.*]] = icmp ne <16 x i8> [[TMP0]], zeroinitializer
+; AVX-NEXT:    [[TMP2:%.*]] = bitcast <16 x i1> [[TMP1]] to i16
+; AVX-NEXT:    [[OP_RDX4:%.*]] = zext i16 [[TMP2]] to i64
 ; AVX-NEXT:    ret i64 [[OP_RDX4]]
 ;
 ; AVX512-LABEL: @bitmask_16xi8(
 ; AVX512-NEXT:  entry:
-; AVX512-NEXT:    [[TMP0:%.*]] = load i8, ptr [[SRC:%.*]], align 1
-; AVX512-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i8 [[TMP0]], 0
-; AVX512-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; AVX512-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
-; AVX512-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[ARRAYIDX_1]], align 1
-; AVX512-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i8> [[TMP1]], zeroinitializer
-; AVX512-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP2]], <8 x i64> zeroinitializer, <8 x i64> <i64 2, i64 4, i64 8, i64 16, i64 32, i64 64, i64 128, i64 256>
-; AVX512-NEXT:    [[ARRAYIDX_9:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 9
-; AVX512-NEXT:    [[TMP4:%.*]] = load <4 x i8>, ptr [[ARRAYIDX_9]], align 1
-; AVX512-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i8> [[TMP4]], zeroinitializer
-; AVX512-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i64> zeroinitializer, <4 x i64> <i64 512, i64 1024, i64 2048, i64 4096>
-; AVX512-NEXT:    [[ARRAYIDX_13:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 13
-; AVX512-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX_13]], align 1
-; AVX512-NEXT:    [[TOBOOL_NOT_13:%.*]] = icmp eq i8 [[TMP7]], 0
-; AVX512-NEXT:    [[OR_13:%.*]] = select i1 [[TOBOOL_NOT_13]], i64 0, i64 8192
-; AVX512-NEXT:    [[ARRAYIDX_14:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 14
-; AVX512-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX_14]], align 1
-; AVX512-NEXT:    [[TOBOOL_NOT_14:%.*]] = icmp eq i8 [[TMP8]], 0
-; AVX512-NEXT:    [[OR_14:%.*]] = select i1 [[TOBOOL_NOT_14]], i64 0, i64 16384
-; AVX512-NEXT:    [[ARRAYIDX_15:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 15
-; AVX512-NEXT:    [[TMP9:%.*]] = load i8, ptr [[ARRAYIDX_15]], align 1
-; AVX512-NEXT:    [[TOBOOL_NOT_15:%.*]] = icmp eq i8 [[TMP9]], 0
-; AVX512-NEXT:    [[OR_15:%.*]] = select i1 [[TOBOOL_NOT_15]], i64 0, i64 32768
-; AVX512-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX512-NEXT:    [[RDX_OP:%.*]] = or <4 x i64> [[TMP10]], [[TMP6]]
-; AVX512-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i64> [[RDX_OP]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX512-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i64> [[TMP3]], <8 x i64> [[TMP13]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
-; AVX512-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP11]])
-; AVX512-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP12]], [[OR_13]]
-; AVX512-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OR_14]], [[OR_15]]
-; AVX512-NEXT:    [[OP_RDX3:%.*]] = or i64 [[OP_RDX]], [[OP_RDX2]]
-; AVX512-NEXT:    [[OP_RDX4:%.*]] = or i64 [[OP_RDX3]], [[OR]]
+; AVX512-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; AVX512-NEXT:    [[TMP1:%.*]] = icmp ne <16 x i8> [[TMP0]], zeroinitializer
+; AVX512-NEXT:    [[TMP2:%.*]] = bitcast <16 x i1> [[TMP1]] to i16
+; AVX512-NEXT:    [[OP_RDX4:%.*]] = zext i16 [[TMP2]] to i64
 ; AVX512-NEXT:    ret i64 [[OP_RDX4]]
 ;
 entry:
@@ -208,84 +124,26 @@ entry:
 define i64 @bitmask_4xi16(ptr nocapture noundef readonly %src) {
 ; SSE-LABEL: @bitmask_4xi16(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP0:%.*]] = load i16, ptr [[SRC:%.*]], align 2
-; SSE-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i16 [[TMP0]], 0
-; SSE-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; SSE-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 1
-; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[ARRAYIDX_1]], align 2
-; SSE-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i16> [[TMP1]], zeroinitializer
-; SSE-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> zeroinitializer, <4 x i64> <i64 2, i64 4, i64 8, i64 16>
-; SSE-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 5
-; SSE-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX_5]], align 2
-; SSE-NEXT:    [[TOBOOL_NOT_5:%.*]] = icmp eq i16 [[TMP4]], 0
-; SSE-NEXT:    [[OR_5:%.*]] = select i1 [[TOBOOL_NOT_5]], i64 0, i64 32
-; SSE-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 6
-; SSE-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX_6]], align 2
-; SSE-NEXT:    [[TOBOOL_NOT_6:%.*]] = icmp eq i16 [[TMP5]], 0
-; SSE-NEXT:    [[OR_6:%.*]] = select i1 [[TOBOOL_NOT_6]], i64 0, i64 64
-; SSE-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 7
-; SSE-NEXT:    [[TMP6:%.*]] = load i16, ptr [[ARRAYIDX_7]], align 2
-; SSE-NEXT:    [[TOBOOL_NOT_7:%.*]] = icmp eq i16 [[TMP6]], 0
-; SSE-NEXT:    [[OR_7:%.*]] = select i1 [[TOBOOL_NOT_7]], i64 0, i64 128
-; SSE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP3]])
-; SSE-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP7]], [[OR_5]]
-; SSE-NEXT:    [[OP_RDX1:%.*]] = or i64 [[OR_6]], [[OR_7]]
-; SSE-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OP_RDX]], [[OP_RDX1]]
-; SSE-NEXT:    [[OP_RDX3:%.*]] = or i64 [[OP_RDX2]], [[OR]]
+; SSE-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[SRC:%.*]], align 2
+; SSE-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i16> [[TMP0]], zeroinitializer
+; SSE-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; SSE-NEXT:    [[OP_RDX3:%.*]] = zext i8 [[TMP2]] to i64
 ; SSE-NEXT:    ret i64 [[OP_RDX3]]
 ;
 ; AVX-LABEL: @bitmask_4xi16(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    [[TMP0:%.*]] = load i16, ptr [[SRC:%.*]], align 2
-; AVX-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i16 [[TMP0]], 0
-; AVX-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; AVX-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 1
-; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[ARRAYIDX_1]], align 2
-; AVX-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i16> [[TMP1]], zeroinitializer
-; AVX-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> zeroinitializer, <4 x i64> <i64 2, i64 4, i64 8, i64 16>
-; AVX-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 5
-; AVX-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX_5]], align 2
-; AVX-NEXT:    [[TOBOOL_NOT_5:%.*]] = icmp eq i16 [[TMP4]], 0
-; AVX-NEXT:    [[OR_5:%.*]] = select i1 [[TOBOOL_NOT_5]], i64 0, i64 32
-; AVX-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 6
-; AVX-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX_6]], align 2
-; AVX-NEXT:    [[TOBOOL_NOT_6:%.*]] = icmp eq i16 [[TMP5]], 0
-; AVX-NEXT:    [[OR_6:%.*]] = select i1 [[TOBOOL_NOT_6]], i64 0, i64 64
-; AVX-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 7
-; AVX-NEXT:    [[TMP6:%.*]] = load i16, ptr [[ARRAYIDX_7]], align 2
-; AVX-NEXT:    [[TOBOOL_NOT_7:%.*]] = icmp eq i16 [[TMP6]], 0
-; AVX-NEXT:    [[OR_7:%.*]] = select i1 [[TOBOOL_NOT_7]], i64 0, i64 128
-; AVX-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP3]])
-; AVX-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP7]], [[OR_5]]
-; AVX-NEXT:    [[OP_RDX1:%.*]] = or i64 [[OR_6]], [[OR_7]]
-; AVX-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OP_RDX]], [[OP_RDX1]]
-; AVX-NEXT:    [[OP_RDX3:%.*]] = or i64 [[OP_RDX2]], [[OR]]
+; AVX-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[SRC:%.*]], align 2
+; AVX-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i16> [[TMP0]], zeroinitializer
+; AVX-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; AVX-NEXT:    [[OP_RDX3:%.*]] = zext i8 [[TMP2]] to i64
 ; AVX-NEXT:    ret i64 [[OP_RDX3]]
 ;
 ; AVX512-LABEL: @bitmask_4xi16(
 ; AVX512-NEXT:  entry:
-; AVX512-NEXT:    [[TMP0:%.*]] = load i16, ptr [[SRC:%.*]], align 2
-; AVX512-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i16 [[TMP0]], 0
-; AVX512-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; AVX512-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 1
-; AVX512-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[ARRAYIDX_1]], align 2
-; AVX512-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i16> [[TMP1]], zeroinitializer
-; AVX512-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> zeroinitializer, <4 x i64> <i64 2, i64 4, i64 8, i64 16>
-; AVX512-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 5
-; AVX512-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX_5]], align 2
-; AVX512-NEXT:    [[TOBOOL_NOT_5:%.*]] = icmp eq i16 [[TMP4]], 0
-; AVX512-NEXT:    [[OR_5:%.*]] = select i1 [[TOBOOL_NOT_5]], i64 0, i64 32
-; AVX512-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 6
-; AVX512-NEXT:    [[TMP5:%.*]] = load <2 x i16>, ptr [[ARRAYIDX_6]], align 2
-; AVX512-NEXT:    [[TMP6:%.*]] = icmp eq <2 x i16> [[TMP5]], zeroinitializer
-; AVX512-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> zeroinitializer, <2 x i64> <i64 64, i64 128>
-; AVX512-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP3]])
-; AVX512-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP8]], [[OR_5]]
-; AVX512-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP7]], i32 0
-; AVX512-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP7]], i32 1
-; AVX512-NEXT:    [[OP_RDX1:%.*]] = or i64 [[TMP9]], [[TMP10]]
-; AVX512-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OP_RDX]], [[OP_RDX1]]
-; AVX512-NEXT:    [[OP_RDX3:%.*]] = or i64 [[OP_RDX2]], [[OR]]
+; AVX512-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[SRC:%.*]], align 2
+; AVX512-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i16> [[TMP0]], zeroinitializer
+; AVX512-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; AVX512-NEXT:    [[OP_RDX3:%.*]] = zext i8 [[TMP2]] to i64
 ; AVX512-NEXT:    ret i64 [[OP_RDX3]]
 ;
 entry:
@@ -333,84 +191,26 @@ entry:
 define i64 @bitmask_8xi32(ptr nocapture noundef readonly %src) {
 ; SSE-LABEL: @bitmask_8xi32(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC:%.*]], align 4
-; SSE-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i32 [[TMP0]], 0
-; SSE-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; SSE-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
-; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX_1]], align 4
-; SSE-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[TMP1]], zeroinitializer
-; SSE-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> zeroinitializer, <4 x i64> <i64 2, i64 4, i64 8, i64 16>
-; SSE-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 5
-; SSE-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX_5]], align 4
-; SSE-NEXT:    [[TOBOOL_NOT_5:%.*]] = icmp eq i32 [[TMP4]], 0
-; SSE-NEXT:    [[OR_5:%.*]] = select i1 [[TOBOOL_NOT_5]], i64 0, i64 32
-; SSE-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 6
-; SSE-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX_6]], align 4
-; SSE-NEXT:    [[TOBOOL_NOT_6:%.*]] = icmp eq i32 [[TMP5]], 0
-; SSE-NEXT:    [[OR_6:%.*]] = select i1 [[TOBOOL_NOT_6]], i64 0, i64 64
-; SSE-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 7
-; SSE-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX_7]], align 4
-; SSE-NEXT:    [[TOBOOL_NOT_7:%.*]] = icmp eq i32 [[TMP6]], 0
-; SSE-NEXT:    [[OR_7:%.*]] = select i1 [[TOBOOL_NOT_7]], i64 0, i64 128
-; SSE-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP3]])
-; SSE-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP7]], [[OR_5]]
-; SSE-NEXT:    [[OP_RDX1:%.*]] = or i64 [[OR_6]], [[OR_7]]
-; SSE-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OP_RDX]], [[OP_RDX1]]
-; SSE-NEXT:    [[OP_RDX3:%.*]] = or i64 [[OP_RDX2]], [[OR]]
+; SSE-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[SRC:%.*]], align 4
+; SSE-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i32> [[TMP0]], zeroinitializer
+; SSE-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; SSE-NEXT:    [[OP_RDX3:%.*]] = zext i8 [[TMP2]] to i64
 ; SSE-NEXT:    ret i64 [[OP_RDX3]]
 ;
 ; AVX-LABEL: @bitmask_8xi32(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC:%.*]], align 4
-; AVX-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i32 [[TMP0]], 0
-; AVX-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; AVX-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
-; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX_1]], align 4
-; AVX-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[TMP1]], zeroinitializer
-; AVX-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> zeroinitializer, <4 x i64> <i64 2, i64 4, i64 8, i64 16>
-; AVX-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 5
-; AVX-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX_5]], align 4
-; AVX-NEXT:    [[TOBOOL_NOT_5:%.*]] = icmp eq i32 [[TMP4]], 0
-; AVX-NEXT:    [[OR_5:%.*]] = select i1 [[TOBOOL_NOT_5]], i64 0, i64 32
-; AVX-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 6
-; AVX-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX_6]], align 4
-; AVX-NEXT:    [[TOBOOL_NOT_6:%.*]] = icmp eq i32 [[TMP5]], 0
-; AVX-NEXT:    [[OR_6:%.*]] = select i1 [[TOBOOL_NOT_6]], i64 0, i64 64
-; AVX-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 7
-; AVX-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX_7]], align 4
-; AVX-NEXT:    [[TOBOOL_NOT_7:%.*]] = icmp eq i32 [[TMP6]], 0
-; AVX-NEXT:    [[OR_7:%.*]] = select i1 [[TOBOOL_NOT_7]], i64 0, i64 128
-; AVX-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP3]])
-; AVX-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP7]], [[OR_5]]
-; AVX-NEXT:    [[OP_RDX1:%.*]] = or i64 [[OR_6]], [[OR_7]]
-; AVX-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OP_RDX]], [[OP_RDX1]]
-; AVX-NEXT:    [[OP_RDX3:%.*]] = or i64 [[OP_RDX2]], [[OR]]
+; AVX-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[SRC:%.*]], align 4
+; AVX-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i32> [[TMP0]], zeroinitializer
+; AVX-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; AVX-NEXT:    [[OP_RDX3:%.*]] = zext i8 [[TMP2]] to i64
 ; AVX-NEXT:    ret i64 [[OP_RDX3]]
 ;
 ; AVX512-LABEL: @bitmask_8xi32(
 ; AVX512-NEXT:  entry:
-; AVX512-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC:%.*]], align 4
-; AVX512-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i32 [[TMP0]], 0
-; AVX512-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; AVX512-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
-; AVX512-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX_1]], align 4
-; AVX512-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[TMP1]], zeroinitializer
-; AVX512-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> zeroinitializer, <4 x i64> <i64 2, i64 4, i64 8, i64 16>
-; AVX512-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 5
-; AVX512-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX_5]], align 4
-; AVX512-NEXT:    [[TOBOOL_NOT_5:%.*]] = icmp eq i32 [[TMP4]], 0
-; AVX512-NEXT:    [[OR_5:%.*]] = select i1 [[TOBOOL_NOT_5]], i64 0, i64 32
-; AVX512-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 6
-; AVX512-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr [[ARRAYIDX_6]], align 4
-; AVX512-NEXT:    [[TMP6:%.*]] = icmp eq <2 x i32> [[TMP5]], zeroinitializer
-; AVX512-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> zeroinitializer, <2 x i64> <i64 64, i64 128>
-; AVX512-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP3]])
-; AVX512-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP8]], [[OR_5]]
-; AVX512-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP7]], i32 0
-; AVX512-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP7]], i32 1
-; AVX512-NEXT:    [[OP_RDX1:%.*]] = or i64 [[TMP9]], [[TMP10]]
-; AVX512-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OP_RDX]], [[OP_RDX1]]
-; AVX512-NEXT:    [[OP_RDX3:%.*]] = or i64 [[OP_RDX2]], [[OR]]
+; AVX512-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[SRC:%.*]], align 4
+; AVX512-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i32> [[TMP0]], zeroinitializer
+; AVX512-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; AVX512-NEXT:    [[OP_RDX3:%.*]] = zext i8 [[TMP2]] to i64
 ; AVX512-NEXT:    ret i64 [[OP_RDX3]]
 ;
 entry:
@@ -500,84 +300,26 @@ define i64 @bitmask_8xi64(ptr nocapture noundef readonly %src) {
 ;
 ; SSE4-LABEL: @bitmask_8xi64(
 ; SSE4-NEXT:  entry:
-; SSE4-NEXT:    [[TMP0:%.*]] = load i64, ptr [[SRC:%.*]], align 8
-; SSE4-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i64 [[TMP0]], 0
-; SSE4-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; SSE4-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 1
-; SSE4-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[ARRAYIDX_1]], align 8
-; SSE4-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[TMP1]], zeroinitializer
-; SSE4-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> zeroinitializer, <4 x i64> <i64 2, i64 4, i64 8, i64 16>
-; SSE4-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 5
-; SSE4-NEXT:    [[TMP4:%.*]] = load i64, ptr [[ARRAYIDX_5]], align 8
-; SSE4-NEXT:    [[TOBOOL_NOT_5:%.*]] = icmp eq i64 [[TMP4]], 0
-; SSE4-NEXT:    [[OR_5:%.*]] = select i1 [[TOBOOL_NOT_5]], i64 0, i64 32
-; SSE4-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 6
-; SSE4-NEXT:    [[TMP5:%.*]] = load i64, ptr [[ARRAYIDX_6]], align 8
-; SSE4-NEXT:    [[TOBOOL_NOT_6:%.*]] = icmp eq i64 [[TMP5]], 0
-; SSE4-NEXT:    [[OR_6:%.*]] = select i1 [[TOBOOL_NOT_6]], i64 0, i64 64
-; SSE4-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 7
-; SSE4-NEXT:    [[TMP6:%.*]] = load i64, ptr [[ARRAYIDX_7]], align 8
-; SSE4-NEXT:    [[TOBOOL_NOT_7:%.*]] = icmp eq i64 [[TMP6]], 0
-; SSE4-NEXT:    [[OR_7:%.*]] = select i1 [[TOBOOL_NOT_7]], i64 0, i64 128
-; SSE4-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP3]])
-; SSE4-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP7]], [[OR_5]]
-; SSE4-NEXT:    [[OP_RDX1:%.*]] = or i64 [[OR_6]], [[OR_7]]
-; SSE4-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OP_RDX]], [[OP_RDX1]]
-; SSE4-NEXT:    [[OP_RDX3:%.*]] = or i64 [[OP_RDX2]], [[OR]]
+; SSE4-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[SRC:%.*]], align 8
+; SSE4-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i64> [[TMP0]], zeroinitializer
+; SSE4-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; SSE4-NEXT:    [[OP_RDX3:%.*]] = zext i8 [[TMP2]] to i64
 ; SSE4-NEXT:    ret i64 [[OP_RDX3]]
 ;
 ; AVX-LABEL: @bitmask_8xi64(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    [[TMP0:%.*]] = load i64, ptr [[SRC:%.*]], align 8
-; AVX-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i64 [[TMP0]], 0
-; AVX-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; AVX-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 1
-; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[ARRAYIDX_1]], align 8
-; AVX-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[TMP1]], zeroinitializer
-; AVX-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> zeroinitializer, <4 x i64> <i64 2, i64 4, i64 8, i64 16>
-; AVX-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 5
-; AVX-NEXT:    [[TMP4:%.*]] = load i64, ptr [[ARRAYIDX_5]], align 8
-; AVX-NEXT:    [[TOBOOL_NOT_5:%.*]] = icmp eq i64 [[TMP4]], 0
-; AVX-NEXT:    [[OR_5:%.*]] = select i1 [[TOBOOL_NOT_5]], i64 0, i64 32
-; AVX-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 6
-; AVX-NEXT:    [[TMP5:%.*]] = load i64, ptr [[ARRAYIDX_6]], align 8
-; AVX-NEXT:    [[TOBOOL_NOT_6:%.*]] = icmp eq i64 [[TMP5]], 0
-; AVX-NEXT:    [[OR_6:%.*]] = select i1 [[TOBOOL_NOT_6]], i64 0, i64 64
-; AVX-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 7
-; AVX-NEXT:    [[TMP6:%.*]] = load i64, ptr [[ARRAYIDX_7]], align 8
-; AVX-NEXT:    [[TOBOOL_NOT_7:%.*]] = icmp eq i64 [[TMP6]], 0
-; AVX-NEXT:    [[OR_7:%.*]] = select i1 [[TOBOOL_NOT_7]], i64 0, i64 128
-; AVX-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP3]])
-; AVX-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP7]], [[OR_5]]
-; AVX-NEXT:    [[OP_RDX1:%.*]] = or i64 [[OR_6]], [[OR_7]]
-; AVX-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OP_RDX]], [[OP_RDX1]]
-; AVX-NEXT:    [[OP_RDX3:%.*]] = or i64 [[OP_RDX2]], [[OR]]
+; AVX-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[SRC:%.*]], align 8
+; AVX-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i64> [[TMP0]], zeroinitializer
+; AVX-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; AVX-NEXT:    [[OP_RDX3:%.*]] = zext i8 [[TMP2]] to i64
 ; AVX-NEXT:    ret i64 [[OP_RDX3]]
 ;
 ; AVX512-LABEL: @bitmask_8xi64(
 ; AVX512-NEXT:  entry:
-; AVX512-NEXT:    [[TMP0:%.*]] = load i64, ptr [[SRC:%.*]], align 8
-; AVX512-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i64 [[TMP0]], 0
-; AVX512-NEXT:    [[OR:%.*]] = zext i1 [[TOBOOL_NOT]] to i64
-; AVX512-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 1
-; AVX512-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[ARRAYIDX_1]], align 8
-; AVX512-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i64> [[TMP1]], zeroinitializer
-; AVX512-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i64> zeroinitializer, <4 x i64> <i64 2, i64 4, i64 8, i64 16>
-; AVX512-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 5
-; AVX512-NEXT:    [[TMP4:%.*]] = load i64, ptr [[ARRAYIDX_5]], align 8
-; AVX512-NEXT:    [[TOBOOL_NOT_5:%.*]] = icmp eq i64 [[TMP4]], 0
-; AVX512-NEXT:    [[OR_5:%.*]] = select i1 [[TOBOOL_NOT_5]], i64 0, i64 32
-; AVX512-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 6
-; AVX512-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[ARRAYIDX_6]], align 8
-; AVX512-NEXT:    [[TMP6:%.*]] = icmp eq <2 x i64> [[TMP5]], zeroinitializer
-; AVX512-NEXT:    [[TMP7:%.*]] = select <2 x i1> [[TMP6]], <2 x i64> zeroinitializer, <2 x i64> <i64 64, i64 128>
-; AVX512-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> [[TMP3]])
-; AVX512-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP8]], [[OR_5]]
-; AVX512-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP7]], i32 0
-; AVX512-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP7]], i32 1
-; AVX512-NEXT:    [[OP_RDX1:%.*]] = or i64 [[TMP9]], [[TMP10]]
-; AVX512-NEXT:    [[OP_RDX2:%.*]] = or i64 [[OP_RDX]], [[OP_RDX1]]
-; AVX512-NEXT:    [[OP_RDX3:%.*]] = or i64 [[OP_RDX2]], [[OR]]
+; AVX512-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr [[SRC:%.*]], align 8
+; AVX512-NEXT:    [[TMP1:%.*]] = icmp ne <8 x i64> [[TMP0]], zeroinitializer
+; AVX512-NEXT:    [[TMP2:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
+; AVX512-NEXT:    [[OP_RDX3:%.*]] = zext i8 [[TMP2]] to i64
 ; AVX512-NEXT:    ret i64 [[OP_RDX3]]
 ;
 entry:

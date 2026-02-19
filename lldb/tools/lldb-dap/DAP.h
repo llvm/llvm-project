@@ -102,12 +102,11 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// The target instance for this DAP session.
   lldb::SBTarget target;
 
-  Variables variables;
+  VariableReferenceStorage reference_storage;
   lldb::SBBroadcaster broadcaster;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
   std::vector<ExceptionBreakpoint> exception_breakpoints;
-  llvm::once_flag init_exception_breakpoints_flag;
 
   /// Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
@@ -132,7 +131,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// the client has finished initialization of the debug adapter.
   bool configuration_done;
 
-  bool waiting_for_run_in_terminal = false;
+  std::mutex call_mutex;
   ProgressEventReporter progress_event_reporter;
 
   /// Keep track of the last stop thread index IDs as threads won't go away
@@ -140,7 +139,6 @@ struct DAP final : public DAPTransport::MessageHandler {
   llvm::DenseSet<lldb::tid_t> thread_ids;
 
   protocol::Id seq = 0;
-  std::mutex call_mutex;
   llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
   ReplMode repl_mode;
@@ -150,10 +148,9 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   /// This is used to allow request_evaluate to handle empty expressions
   /// (ie the user pressed 'return' and expects the previous expression to
-  /// repeat). If the previous expression was a command, this string will be
-  /// empty; if the previous expression was a variable expression, this string
-  /// will contain that expression.
-  std::string last_nonempty_var_expression;
+  /// repeat). If the previous expression was a command, it will be empty.
+  /// Else it will contain the last valid variable expression.
+  std::string last_valid_variable_expression;
 
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
@@ -237,9 +234,6 @@ struct DAP final : public DAPTransport::MessageHandler {
   void SendProgressEvent(uint64_t progress_id, const char *message,
                          uint64_t completed, uint64_t total);
 
-  void __attribute__((format(printf, 3, 4)))
-  SendFormattedOutput(OutputType o, const char *format, ...);
-
   int32_t CreateSourceReference(lldb::addr_t address);
 
   std::optional<lldb::addr_t> GetSourceReferenceAddress(int32_t reference);
@@ -247,14 +241,12 @@ struct DAP final : public DAPTransport::MessageHandler {
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 
   lldb::SBThread GetLLDBThread(lldb::tid_t id);
-  lldb::SBThread GetLLDBThread(const llvm::json::Object &arguments);
 
   lldb::SBFrame GetLLDBFrame(uint64_t frame_id);
-  /// TODO: remove this function when we finish migrating to the
-  /// new protocol types.
-  lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
   void PopulateExceptionBreakpoints();
+
+  bool ProcessIsNotStopped();
 
   /// Attempt to determine if an expression is a variable expression or
   /// lldb command using a heuristic based on the first term of the
@@ -378,7 +370,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   protocol::Capabilities GetCustomCapabilities();
 
   /// Debuggee will continue from stopped state.
-  void WillContinue() { variables.Clear(); }
+  void WillContinue() { reference_storage.Clear(); }
 
   /// Poll the process to wait for it to reach the eStateStopped state.
   ///

@@ -2540,7 +2540,6 @@ private:
       // PFT branch analysis), allowing the loop to exit only when the condition
       // becomes false.
       if (!unstructuredContext) {
-        maybeStartBlock(preheaderBlock); // no block or empty block
         genDoWhileAsSCFWhile(*whileCondition, eval, doStmtEval);
         return;
       }
@@ -2797,8 +2796,6 @@ private:
                 has_attrs = true;
               },
               [&](const Fortran::parser::CompilerDirective::IVDep &iv) {
-                disableVecAttr =
-                    mlir::BoolAttr::get(builder->getContext(), false);
                 aga.push_back(
                     mlir::LLVM::AccessGroupAttr::get(builder->getContext()));
                 has_attrs = true;

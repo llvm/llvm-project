@@ -110,6 +110,7 @@ enum UniformityLLTOpPredicateID {
   B64,
   B96,
   B128,
+  B160,
   B256,
   B512,
 
@@ -117,6 +118,7 @@ enum UniformityLLTOpPredicateID {
   UniB64,
   UniB96,
   UniB128,
+  UniB160,
   UniB256,
   UniB512,
   UniBRC,
@@ -125,6 +127,7 @@ enum UniformityLLTOpPredicateID {
   DivB64,
   DivB96,
   DivB128,
+  DivB160,
   DivB256,
   DivB512,
   DivBRC
@@ -165,6 +168,7 @@ enum RegBankLLTMappingApplyID {
   SgprB128,
   SgprB256,
   SgprB512,
+  SgprBRC,
 
   // vgpr scalars, pointers, vectors and B-types
   Vgpr16,
@@ -187,8 +191,10 @@ enum RegBankLLTMappingApplyID {
   VgprB64,
   VgprB96,
   VgprB128,
+  VgprB160,
   VgprB256,
   VgprB512,
+  VgprBRC,
   VgprV4S32,
   VgprV2S64,
 
@@ -205,6 +211,7 @@ enum RegBankLLTMappingApplyID {
   UniInVgprB64,
   UniInVgprB96,
   UniInVgprB128,
+  UniInVgprB160,
   UniInVgprB256,
   UniInVgprB512,
 

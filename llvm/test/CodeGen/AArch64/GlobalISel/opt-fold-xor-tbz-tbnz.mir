@@ -136,7 +136,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $wzr
   ; CHECK-NEXT:   [[ORNWrr:%[0-9]+]]:gpr32 = ORNWrr $wzr, [[COPY]]
   ; CHECK-NEXT:   [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[ORNWrr]], 0
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[ORRWrs]], %subreg.sub_32
   ; CHECK-NEXT:   TBNZX [[SUBREG_TO_REG]], 63, %bb.1
   ; CHECK-NEXT:   B %bb.0
   ; CHECK-NEXT: {{  $}}

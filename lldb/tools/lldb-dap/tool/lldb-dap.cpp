@@ -47,7 +47,6 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <condition_variable>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -71,6 +70,7 @@
 #undef GetObject
 #include <io.h>
 typedef int socklen_t;
+#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -463,7 +463,7 @@ static llvm::Error serveConnection(
       DAP_LOG(client_log, "client connected");
 
       MainLoop loop;
-      Transport transport(client_log, io, io);
+      Transport transport(client_log, loop, io, io);
       DAP dap(client_log, default_repl_mode, pre_init_commands, no_lldbinit,
               client_name, transport, loop);
 
@@ -541,6 +541,30 @@ int main(int argc, char *argv[]) {
     PrintVersion();
     return EXIT_SUCCESS;
   }
+
+#ifdef _WIN32
+  if (input_args.hasArg(OPT_check_python)) {
+    auto python_path_or_err = SetupPythonRuntimeLibrary();
+    if (!python_path_or_err) {
+      llvm::WithColor::error()
+          << llvm::toString(python_path_or_err.takeError()) << '\n';
+      return EXIT_FAILURE;
+    }
+    std::string python_path = *python_path_or_err;
+    if (python_path.empty()) {
+      llvm::WithColor::error()
+          << "unable to look for the Python shared library" << '\n';
+      return EXIT_FAILURE;
+    }
+    llvm::outs() << python_path << '\n';
+    return EXIT_SUCCESS;
+  }
+
+  auto python_path_or_err = SetupPythonRuntimeLibrary();
+  if (!python_path_or_err)
+    llvm::WithColor::error()
+        << llvm::toString(python_path_or_err.takeError()) << '\n';
+#endif
 
   if (input_args.hasArg(OPT_client)) {
     if (llvm::Error error = LaunchClient(input_args)) {
@@ -738,7 +762,7 @@ int main(int argc, char *argv[]) {
   constexpr llvm::StringLiteral client_name = "stdio";
   MainLoop loop;
   Log client_log = log.WithPrefix("(stdio)");
-  Transport transport(client_log, input, output);
+  Transport transport(client_log, loop, input, output);
   DAP dap(client_log, default_repl_mode, pre_init_commands, no_lldbinit,
           client_name, transport, loop);
 

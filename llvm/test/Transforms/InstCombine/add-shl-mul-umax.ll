@@ -11,12 +11,12 @@
 
 ; Positive Test Cases for `shl`
 
-define i64 @test_shl_by_2(i64 %x) {
+define i64 @test_shl_by_2(i64 %x) !prof !0 {
 ; CHECK-LABEL: define i64 @test_shl_by_2(
-; CHECK-SAME: i64 [[X:%.*]]) {
+; CHECK-SAME: i64 [[X:%.*]]) !prof [[PROF0:![0-9]+]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[X]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X]], 0
-; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[TMP1]], i64 1, i64 [[TMP2]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[TMP1]], i64 1, i64 [[TMP2]], !prof [[PROF1:![0-9]+]]
 ; CHECK-NEXT:    ret i64 [[MAX]]
 ;
   %x1 = add i64 %x, 1
@@ -351,3 +351,9 @@ define i64 @test_mul_multi_use_mul(i64 %x) {
   %max = call i64 @llvm.umax.i64(i64 %mul, i64 %x1)
   ret i64 %max
 }
+
+!0 = !{!"function_entry_count", i64 1}
+;.
+; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1}
+; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
+;.

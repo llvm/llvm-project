@@ -1526,10 +1526,12 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
       // Write out all other paths relative to the base directory if possible.
       BaseDirectory.assign(BaseDir->begin(), BaseDir->end());
-    } else if (!isysroot.empty()) {
-      // Write out paths relative to the sysroot if possible.
-      BaseDirectory = std::string(isysroot);
     }
+  } else if (!isysroot.empty()) {
+    // Write out paths relative to the sysroot if possible.
+    SmallString<128> CleanedSysroot(isysroot);
+    cleanPathForOutput(PP.getFileManager(), CleanedSysroot);
+    BaseDirectory.assign(CleanedSysroot.begin(), CleanedSysroot.end());
   }
 
   // Module map file
@@ -1752,6 +1754,11 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   Record.push_back(PPOpts.UsePredefines);
   // Detailed record is important since it is used for the module cache hash.
   Record.push_back(PPOpts.DetailedRecord);
+
+  // FIXME: Using `AddString` to record `ImplicitPCHInclude` does not handle
+  // relocatable files. We probably should call
+  // `AddPath(PPOpts.ImplicitPCHInclude, Record)` to properly support chained
+  // relocatable PCHs.
   AddString(PPOpts.ImplicitPCHInclude, Record);
   Record.push_back(static_cast<unsigned>(PPOpts.ObjCXXARCStandardLibrary));
   Stream.EmitRecord(PREPROCESSOR_OPTIONS, Record);
@@ -6115,6 +6122,10 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
 
         endian::Writer LE(Out, llvm::endianness::little);
         LE.write<uint8_t>(static_cast<uint8_t>(M.Kind));
+        // FIXME: Storing a PCH's name (M.FileName) as a string does not handle
+        // relocatable files. We probably should call
+        // `PreparePathForOutput(M.FileName)` to properly support relocatable
+        // PCHs.
         StringRef Name = M.isModule() ? M.ModuleName : M.FileName;
         LE.write<uint16_t>(Name.size());
         Out.write(Name.data(), Name.size());

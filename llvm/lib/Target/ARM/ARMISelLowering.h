@@ -317,8 +317,8 @@ class VectorType;
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize = false) const override;
 
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                            MachineFunction &MF,
+    void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                            const CallBase &I, MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
     /// Returns true if it is beneficial to convert a load of a constant
@@ -567,8 +567,7 @@ class VectorType;
     SDValue LowerGlobalTLSAddressDarwin(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalTLSAddressWindows(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerSignedALUO(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerUnsignedALUO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerALUO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;

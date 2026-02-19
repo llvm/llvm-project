@@ -1125,7 +1125,7 @@ std::string BTFDebug::populateFileContent(const DIFile *File) {
     for (line_iterator I(*Buf, false), E; I != E; ++I)
       Content.push_back(std::string(*I));
 
-  FileContent[FileName] = Content;
+  FileContent[FileName] = std::move(Content);
   return FileName;
 }
 

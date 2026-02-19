@@ -1353,6 +1353,13 @@ enum SymbolDownload {
   eSymbolDownloadForeground = 2,
 };
 
+enum SymbolSharedCacheUse {
+  eSymbolSharedCacheUseHostLLDBMemory = 1,
+  eSymbolSharedCacheUseHostSharedCache = 2,
+  eSymbolSharedCacheUseHostAndInferiorSharedCache = 3,
+  eSymbolSharedCacheUseInferiorSharedCacheOnly = 4,
+};
+
 /// Used in the SBProcess AddressMask/FixAddress methods.
 enum AddressMaskType {
   eAddressMaskTypeCode = 0,
@@ -1418,6 +1425,19 @@ enum NameMatchStyle {
   eNameMatchStyleMethod = eFunctionNameTypeMethod,
   eNameMatchStyleSelector = eFunctionNameTypeSelector,
   eNameMatchStyleRegex = eFunctionNameTypeSelector << 1
+};
+
+/// Data Inspection Language (DIL) evaluation modes.
+/// DIL will only attempt evaluating expressions that contain tokens
+/// allowed by a selected mode.
+enum DILMode {
+  /// Allowed: identifiers, operators: '.'.
+  eDILModeSimple,
+  /// Allowed: identifiers, integers, operators: '.', '->', '*', '&', '[]'.
+  eDILModeLegacy,
+  /// Allowed: everything supported by DIL.
+  /// \see lldb/docs/dil-expr-lang.ebnf
+  eDILModeFull
 };
 
 } // namespace lldb

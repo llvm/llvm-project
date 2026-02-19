@@ -156,22 +156,6 @@ static DisassembledInstruction ConvertSBInstructionToDisassembledInstruction(
     const auto column = line_entry.GetColumn();
     if (column != 0 && column != LLDB_INVALID_COLUMN_NUMBER)
       disassembled_inst.column = column;
-
-    lldb::SBAddress end_addr = line_entry.GetEndAddress();
-    auto end_line_entry = GetLineEntryForAddress(target, end_addr);
-    if (end_line_entry.IsValid() &&
-        end_line_entry.GetFileSpec() == line_entry.GetFileSpec()) {
-      const auto end_line = end_line_entry.GetLine();
-      if (end_line != 0 && end_line != LLDB_INVALID_LINE_NUMBER &&
-          end_line != line) {
-        disassembled_inst.endLine = end_line;
-
-        const auto end_column = end_line_entry.GetColumn();
-        if (end_column != 0 && end_column != LLDB_INVALID_COLUMN_NUMBER &&
-            end_column != column)
-          disassembled_inst.endColumn = end_column - 1;
-      }
-    }
   }
 
   return disassembled_inst;

@@ -278,7 +278,7 @@ public:
     if (!LinkCWDToProcess) {
       SmallString<128> PWD, RealPWD;
       if (std::error_code EC = llvm::sys::fs::current_path(PWD))
-        WD = EC;
+        WD = std::move(EC);
       else if (llvm::sys::fs::real_path(PWD, RealPWD))
         WD = WorkingDirectory{PWD, PWD};
       else

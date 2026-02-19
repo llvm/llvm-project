@@ -989,9 +989,11 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
   // to check.
   if (auto *MN = dyn_cast<MemIntrinsicSDNode>(N)) {
     ID.AddInteger(MN->getRawSubclassData());
-    ID.AddInteger(MN->getPointerInfo().getAddrSpace());
-    ID.AddInteger(MN->getMemOperand()->getFlags());
     ID.AddInteger(MN->getMemoryVT().getRawBits());
+    for (const MachineMemOperand *MMO : MN->memoperands()) {
+      ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
+      ID.AddInteger(MMO->getFlags());
+    }
   }
 }
 
@@ -1304,7 +1306,7 @@ SelectionDAG::AddModifiedNodeToCSEMaps(SDNode *N) {
       // recursive merging of other unrelated nodes down the line.
       Existing->intersectFlagsWith(N->getFlags());
       if (auto *MemNode = dyn_cast<MemSDNode>(Existing))
-        MemNode->refineRanges(cast<MemSDNode>(N)->getMemOperand());
+        MemNode->refineRanges(cast<MemSDNode>(N)->memoperands());
       ReplaceAllUsesWith(N, Existing);
 
       // N is now dead. Inform the listeners and delete it.
@@ -2538,6 +2540,13 @@ SDValue SelectionDAG::getFreeze(SDValue V) {
   return getNode(ISD::FREEZE, SDLoc(V), V.getValueType(), V);
 }
 
+SDValue SelectionDAG::getFreeze(SDValue V, const APInt &DemandedElts,
+                                bool PoisonOnly) {
+  if (isGuaranteedNotToBeUndefOrPoison(V, DemandedElts, PoisonOnly))
+    return V;
+  return getFreeze(V);
+}
+
 /// getShiftAmountOperand - Return the specified value casted to
 /// the target's desired shift amount type.
 SDValue SelectionDAG::getShiftAmountOperand(EVT LHSTy, SDValue Op) {
@@ -2667,7 +2676,8 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
 }
 
 SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
-                                ISD::CondCode Cond, const SDLoc &dl) {
+                                ISD::CondCode Cond, const SDLoc &dl,
+                                SDNodeFlags Flags) {
   EVT OpVT = N1.getValueType();
 
   auto GetUndefBooleanConstant = [&]() {
@@ -2796,7 +2806,8 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
     ISD::CondCode SwappedCond = ISD::getSetCCSwappedOperands(Cond);
     if (!TLI->isCondCodeLegal(SwappedCond, OpVT.getSimpleVT()))
       return SDValue();
-    return getSetCC(dl, VT, N2, N1, SwappedCond);
+    return getSetCC(dl, VT, N2, N1, SwappedCond, /*Chian=*/{},
+                    /*IsSignaling=*/false, Flags);
   } else if ((N2CFP && N2CFP->getValueAPF().isNaN()) ||
              (OpVT.isFloatingPoint() && (N1.isUndef() || N2.isUndef()))) {
     // If an operand is known to be a nan (or undef that could be a nan), we can
@@ -4629,84 +4640,129 @@ SelectionDAG::computeOverflowForSignedMul(SDValue N0, SDValue N1) const {
   return OFK_Sometime;
 }
 
-bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
+bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, bool OrZero,
+                                          unsigned Depth) const {
+  EVT VT = Val.getValueType();
+
+  // Since the number of lanes in a scalable vector is unknown at compile time,
+  // we track one bit which is implicitly broadcast to all lanes.  This means
+  // that all lanes in a scalable vector are considered demanded.
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+
+  return isKnownToBeAPowerOfTwo(Val, DemandedElts, OrZero, Depth);
+}
+
+bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
+                                          const APInt &DemandedElts,
+                                          bool OrZero, unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
 
   EVT OpVT = Val.getValueType();
   unsigned BitWidth = OpVT.getScalarSizeInBits();
+  [[maybe_unused]] unsigned NumElts = DemandedElts.getBitWidth();
+  assert((!OpVT.isScalableVector() || NumElts == 1) &&
+         "DemandedElts for scalable vectors must be 1 to represent all lanes");
+  assert(
+      (!OpVT.isFixedLengthVector() || NumElts == OpVT.getVectorNumElements()) &&
+      "Unexpected vector size");
 
-  // Is the constant a known power of 2?
-  if (ISD::matchUnaryPredicate(Val, [BitWidth](ConstantSDNode *C) {
-        return C->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2();
-      }))
+  auto IsPowerOfTwoOrZero = [BitWidth, OrZero](const ConstantSDNode *C) {
+    APInt V = C->getAPIntValue().zextOrTrunc(BitWidth);
+    return (OrZero && V.isZero()) || V.isPowerOf2();
+  };
+
+  // Is the constant a known power of 2 or zero?
+  if (ISD::matchUnaryPredicate(Val, IsPowerOfTwoOrZero))
     return true;
 
-  // A left-shift of a constant one will have exactly one bit set because
-  // shifting the bit off the end is undefined.
-  if (Val.getOpcode() == ISD::SHL) {
+  switch (Val.getOpcode()) {
+  case ISD::BUILD_VECTOR:
+    // Are all operands of a build vector constant powers of two or zero?
+    if (all_of(enumerate(Val->ops()), [&](auto P) {
+          auto *C = dyn_cast<ConstantSDNode>(P.value());
+          return !DemandedElts[P.index()] || (C && IsPowerOfTwoOrZero(C));
+        }))
+      return true;
+    break;
+
+  case ISD::SPLAT_VECTOR:
+    // Is the operand of a splat vector a constant power of two?
+    if (auto *C = dyn_cast<ConstantSDNode>(Val->getOperand(0)))
+      if (IsPowerOfTwoOrZero(C))
+        return true;
+    break;
+
+  case ISD::AND: {
+    // Looking for `x & -x` pattern:
+    // If x == 0:
+    //    x & -x -> 0
+    // If x != 0:
+    //    x & -x -> non-zero pow2
+    // so if we find the pattern return whether we know `x` is non-zero.
+    // TODO OrZero handling
+    SDValue X;
+    if (sd_match(Val, m_And(m_Value(X), m_Neg(m_Deferred(X)))))
+      return isKnownNeverZero(X, Depth);
+    break;
+  }
+
+  case ISD::SHL: {
+    // A left-shift of a constant one will have exactly one bit set because
+    // shifting the bit off the end is undefined.
     auto *C = isConstOrConstSplat(Val.getOperand(0));
     if (C && C->getAPIntValue() == 1)
       return true;
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1) &&
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1) &&
            isKnownNeverZero(Val, Depth);
   }
 
-  // Similarly, a logical right-shift of a constant sign-bit will have exactly
-  // one bit set.
-  if (Val.getOpcode() == ISD::SRL) {
+  case ISD::SRL: {
+    // A logical right-shift of a constant sign-bit will have exactly
+    // one bit set.
     auto *C = isConstOrConstSplat(Val.getOperand(0));
     if (C && C->getAPIntValue().isSignMask())
       return true;
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1) &&
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1) &&
            isKnownNeverZero(Val, Depth);
   }
 
-  if (Val.getOpcode() == ISD::ROTL || Val.getOpcode() == ISD::ROTR)
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
+  case ISD::ROTL:
+  case ISD::ROTR:
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1);
 
-  // Are all operands of a build vector constant powers of two?
-  if (Val.getOpcode() == ISD::BUILD_VECTOR)
-    if (llvm::all_of(Val->ops(), [BitWidth](SDValue E) {
-          if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(E))
-            return C->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2();
-          return false;
-        }))
+  case ISD::SMIN:
+  case ISD::SMAX:
+  case ISD::UMIN:
+  case ISD::UMAX:
+    return isKnownToBeAPowerOfTwo(Val.getOperand(1), /*OrZero=*/false,
+                                  Depth + 1) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1);
+
+  case ISD::SELECT:
+  case ISD::VSELECT:
+    return isKnownToBeAPowerOfTwo(Val.getOperand(2), DemandedElts, OrZero,
+                                  Depth + 1) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(1), DemandedElts, OrZero,
+                                  Depth + 1);
+
+  case ISD::ZERO_EXTEND:
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1);
+
+  case ISD::VSCALE:
+    // vscale(power-of-two) is a power-of-two for some targets
+    if (getTargetLoweringInfo().isVScaleKnownToBeAPowerOfTwo() &&
+        isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false, Depth + 1))
       return true;
-
-  // Is the operand of a splat vector a constant power of two?
-  if (Val.getOpcode() == ISD::SPLAT_VECTOR)
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Val->getOperand(0)))
-      if (C->getAPIntValue().zextOrTrunc(BitWidth).isPowerOf2())
-        return true;
-
-  // vscale(power-of-two) is a power-of-two for some targets
-  if (Val.getOpcode() == ISD::VSCALE &&
-      getTargetLoweringInfo().isVScaleKnownToBeAPowerOfTwo() &&
-      isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1))
-    return true;
-
-  if (Val.getOpcode() == ISD::SMIN || Val.getOpcode() == ISD::SMAX ||
-      Val.getOpcode() == ISD::UMIN || Val.getOpcode() == ISD::UMAX)
-    return isKnownToBeAPowerOfTwo(Val.getOperand(1), Depth + 1) &&
-           isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
-
-  if (Val.getOpcode() == ISD::SELECT || Val.getOpcode() == ISD::VSELECT)
-    return isKnownToBeAPowerOfTwo(Val.getOperand(2), Depth + 1) &&
-           isKnownToBeAPowerOfTwo(Val.getOperand(1), Depth + 1);
-
-  // Looking for `x & -x` pattern:
-  // If x == 0:
-  //    x & -x -> 0
-  // If x != 0:
-  //    x & -x -> non-zero pow2
-  // so if we find the pattern return whether we know `x` is non-zero.
-  SDValue X;
-  if (sd_match(Val, m_And(m_Value(X), m_Neg(m_Deferred(X)))))
-    return isKnownNeverZero(X, Depth);
-
-  if (Val.getOpcode() == ISD::ZERO_EXTEND)
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1);
+    break;
+  }
 
   // More could be done here, though the above checks are enough
   // to handle some common cases.
@@ -6059,6 +6115,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
         return false;
     return true;
   }
+  case ISD::SPLAT_VECTOR:
+    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
   case ISD::AssertNoFPClass: {
     FPClassTest NoFPClass =
         static_cast<FPClassTest>(Op.getConstantOperandVal(1));
@@ -8336,7 +8394,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                                   N1.getValueType().getVectorElementCount()) &&
            "SETCC vector element counts must match!");
     // Use FoldSetCC to simplify SETCC's.
-    if (SDValue V = FoldSetCC(VT, N1, N2, cast<CondCodeSDNode>(N3)->get(), DL))
+    if (SDValue V =
+            FoldSetCC(VT, N1, N2, cast<CondCodeSDNode>(N3)->get(), DL, Flags))
       return V;
     break;
   }
@@ -9831,6 +9890,14 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
                                           SDVTList VTList,
                                           ArrayRef<SDValue> Ops, EVT MemVT,
                                           MachineMemOperand *MMO) {
+  return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, ArrayRef(MMO));
+}
+
+SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
+                                          SDVTList VTList,
+                                          ArrayRef<SDValue> Ops, EVT MemVT,
+                                          ArrayRef<MachineMemOperand *> MMOs) {
+  assert(!MMOs.empty() && "Must have at least one MMO");
   assert(
       (Opcode == ISD::INTRINSIC_VOID || Opcode == ISD::INTRINSIC_W_CHAIN ||
        Opcode == ISD::PREFETCH ||
@@ -9838,30 +9905,47 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
         Opcode >= ISD::BUILTIN_OP_END && TSI->isTargetMemoryOpcode(Opcode))) &&
       "Opcode is not a memory-accessing opcode!");
 
+  PointerUnion<MachineMemOperand *, MachineMemOperand **> MemRefs;
+  if (MMOs.size() == 1) {
+    MemRefs = MMOs[0];
+  } else {
+    // Allocate: [size_t count][MMO*][MMO*]...
+    size_t AllocSize =
+        sizeof(size_t) + MMOs.size() * sizeof(MachineMemOperand *);
+    void *Buffer = Allocator.Allocate(AllocSize, alignof(size_t));
+    size_t *CountPtr = static_cast<size_t *>(Buffer);
+    *CountPtr = MMOs.size();
+    MachineMemOperand **Array =
+        reinterpret_cast<MachineMemOperand **>(CountPtr + 1);
+    llvm::copy(MMOs, Array);
+    MemRefs = Array;
+  }
+
   // Memoize the node unless it returns a glue result.
   MemIntrinsicSDNode *N;
   if (VTList.VTs[VTList.NumVTs-1] != MVT::Glue) {
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTList, Ops);
     ID.AddInteger(getSyntheticNodeSubclassData<MemIntrinsicSDNode>(
-        Opcode, dl.getIROrder(), VTList, MemVT, MMO));
-    ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
-    ID.AddInteger(MMO->getFlags());
+        Opcode, dl.getIROrder(), VTList, MemVT, MemRefs));
     ID.AddInteger(MemVT.getRawBits());
+    for (const MachineMemOperand *MMO : MMOs) {
+      ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
+      ID.AddInteger(MMO->getFlags());
+    }
     void *IP = nullptr;
     if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
-      cast<MemIntrinsicSDNode>(E)->refineAlignment(MMO);
+      cast<MemIntrinsicSDNode>(E)->refineAlignment(MMOs);
       return SDValue(E, 0);
     }
 
     N = newSDNode<MemIntrinsicSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(),
-                                      VTList, MemVT, MMO);
+                                      VTList, MemVT, MemRefs);
     createOperands(N, Ops);
-
-  CSEMap.InsertNode(N, IP);
+    CSEMap.InsertNode(N, IP);
   } else {
     N = newSDNode<MemIntrinsicSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(),
-                                      VTList, MemVT, MMO);
+                                      VTList, MemVT, MemRefs);
     createOperands(N, Ops);
   }
   InsertNode(N);
@@ -13285,21 +13369,33 @@ HandleSDNode::~HandleSDNode() {
   DropOperands();
 }
 
-MemSDNode::MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
-                     SDVTList VTs, EVT memvt, MachineMemOperand *mmo)
-    : SDNode(Opc, Order, dl, VTs), MemoryVT(memvt), MMO(mmo) {
-  MemSDNodeBits.IsVolatile = MMO->isVolatile();
-  MemSDNodeBits.IsNonTemporal = MMO->isNonTemporal();
-  MemSDNodeBits.IsDereferenceable = MMO->isDereferenceable();
-  MemSDNodeBits.IsInvariant = MMO->isInvariant();
+MemSDNode::MemSDNode(
+    unsigned Opc, unsigned Order, const DebugLoc &dl, SDVTList VTs, EVT memvt,
+    PointerUnion<MachineMemOperand *, MachineMemOperand **> memrefs)
+    : SDNode(Opc, Order, dl, VTs), MemoryVT(memvt), MemRefs(memrefs) {
+  bool IsVolatile = false;
+  bool IsNonTemporal = false;
+  bool IsDereferenceable = true;
+  bool IsInvariant = true;
+  for (const MachineMemOperand *MMO : memoperands()) {
+    IsVolatile |= MMO->isVolatile();
+    IsNonTemporal |= MMO->isNonTemporal();
+    IsDereferenceable &= MMO->isDereferenceable();
+    IsInvariant &= MMO->isInvariant();
+  }
+  MemSDNodeBits.IsVolatile = IsVolatile;
+  MemSDNodeBits.IsNonTemporal = IsNonTemporal;
+  MemSDNodeBits.IsDereferenceable = IsDereferenceable;
+  MemSDNodeBits.IsInvariant = IsInvariant;
 
-  // We check here that the size of the memory operand fits within the size of
-  // the MMO. This is because the MMO might indicate only a possible address
-  // range instead of specifying the affected memory addresses precisely.
-  assert(
-      (!MMO->getType().isValid() ||
-       TypeSize::isKnownLE(memvt.getStoreSize(), MMO->getSize().getValue())) &&
-      "Size mismatch!");
+  // For the single-MMO case, we check here that the size of the memory operand
+  // fits within the size of the MMO. This is because the MMO might indicate
+  // only a possible address range instead of specifying the affected memory
+  // addresses precisely.
+  assert((getNumMemOperands() != 1 || !getMemOperand()->getType().isValid() ||
+          TypeSize::isKnownLE(memvt.getStoreSize(),
+                              getMemOperand()->getSize().getValue())) &&
+         "Size mismatch!");
 }
 
 /// Profile - Gather unique data for the node.

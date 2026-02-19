@@ -16,9 +16,9 @@ namespace clang {
 namespace interp {
 
 std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
-  if (!Dcl || isa<FunctionDecl>(Dcl))
+  if (!getDecl() || isa<FunctionDecl>(getDecl()))
     return Base;
-  assert((isa<FieldDecl, IndirectFieldDecl>(Dcl)));
+  assert((isa<FieldDecl, IndirectFieldDecl>(getDecl())));
 
   if (!Base.isBlockPointer())
     return std::nullopt;
@@ -42,7 +42,7 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
   unsigned Offset = 0;
   Offset += BlockMDSize;
 
-  if (const auto *FD = dyn_cast<FieldDecl>(Dcl)) {
+  if (const auto *FD = dyn_cast<FieldDecl>(getDecl())) {
     if (FD->getParent() == BaseRecord->getDecl())
       return CastedBase.atField(BaseRecord->getField(FD)->Offset);
 
@@ -58,7 +58,7 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
       Offset += Ctx.collectBaseOffset(FieldParent, BaseDecl);
 
   } else {
-    const auto *IFD = cast<IndirectFieldDecl>(Dcl);
+    const auto *IFD = cast<IndirectFieldDecl>(getDecl());
 
     for (const NamedDecl *ND : IFD->chain()) {
       const FieldDecl *F = cast<FieldDecl>(ND);
@@ -77,7 +77,8 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
 }
 
 FunctionPointer MemberPointer::toFunctionPointer(const Context &Ctx) const {
-  return FunctionPointer(Ctx.getProgram().getFunction(cast<FunctionDecl>(Dcl)));
+  return FunctionPointer(
+      Ctx.getProgram().getFunction(cast<FunctionDecl>(getDecl())));
 }
 
 APValue MemberPointer::toAPValue(const ASTContext &ASTCtx) const {
@@ -88,8 +89,24 @@ APValue MemberPointer::toAPValue(const ASTContext &ASTCtx) const {
   if (hasBase())
     return Base.toAPValue(ASTCtx);
 
-  return APValue(getDecl(), /*IsDerivedMember=*/false,
-                 /*Path=*/{});
+  return APValue(getDecl(), /*IsDerivedMember=*/isDerivedMember(),
+                 /*Path=*/ArrayRef(Path, PathLength));
+}
+
+ComparisonCategoryResult
+MemberPointer::compare(const MemberPointer &RHS) const {
+  if (this->getDecl() == RHS.getDecl()) {
+
+    if (this->PathLength != RHS.PathLength)
+      return ComparisonCategoryResult::Unordered;
+
+    if (PathLength != 0 &&
+        std::memcmp(Path, RHS.Path, PathLength * sizeof(CXXRecordDecl *)) != 0)
+      return ComparisonCategoryResult::Unordered;
+
+    return ComparisonCategoryResult::Equal;
+  }
+  return ComparisonCategoryResult::Unordered;
 }
 
 } // namespace interp

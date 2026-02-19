@@ -349,9 +349,11 @@ const char *trackThroughMultiplePointer() {
 
 struct X {
   X(std::unique_ptr<int> up) :
-    pointee(*up), pointee2(up.get()), pointer(std::move(up)) {}
-  int &pointee;
-  int *pointee2;
+    pointee(*up),             // cfg-field-warning {{may have been moved.}}
+    pointee2(up.get()),       // cfg-field-warning {{may have been moved.}}
+    pointer(std::move(up)) {} // cfg-field-note 2 {{potentially moved here}}
+  int &pointee;               // cfg-field-note {{this field dangles}}
+  int *pointee2;              // cfg-field-note {{this field dangles}}
   std::unique_ptr<int> pointer;
 };
 
@@ -360,11 +362,11 @@ struct [[gsl::Owner]] XOwner {
 };
 struct X2 {
   // A common usage that moves the passing owner to the class.
-  // verify no warning on this case.
+  // verify a strict warning on this case.
   X2(XOwner owner) :
-    pointee(owner.get()),
-    owner(std::move(owner)) {}
-  int* pointee;
+    pointee(owner.get()),       // cfg-field-warning {{may have been moved.}}
+    owner(std::move(owner)) {}  // cfg-field-note {{potentially moved here}}
+  int* pointee;                 // cfg-field-note {{this field dangles}}
   XOwner owner;
 };
 
@@ -1131,9 +1133,8 @@ struct Foo2 {
 };
 
 struct Test {
-  Test(Foo2 foo) : bar(foo.bar.get()), // OK \
-      // FIXME: cfg-field-warning {{address of stack memory escapes to a field}}
-      storage(std::move(foo.bar)) {};
+  Test(Foo2 foo) : bar(foo.bar.get()),  // cfg-field-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}}
+      storage(std::move(foo.bar)) {};   // cfg-field-note {{potentially moved here}}
 
   Bar* bar; // cfg-field-note {{this field dangles}}
   std::unique_ptr<Bar> storage;

@@ -978,17 +978,24 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // parser already though by it pretending to have seen an 'int' in this
     // case.
     if (S.getLangOpts().isImplicitIntRequired()) {
-      S.Diag(DeclLoc, diag::warn_missing_type_specifier)
-          << DS.getSourceRange()
-          << FixItHint::CreateInsertion(DS.getBeginLoc(), "int");
+      // Only emit the diagnostic for the first declarator in a DeclGroup, as
+      // the warning is always implied for all subsequent declarators, and the
+      // fix must only be applied exactly once as well.
+      if (declarator.isFirstDeclarator()) {
+        S.Diag(DeclLoc, diag::warn_missing_type_specifier)
+            << DS.getSourceRange()
+            << FixItHint::CreateInsertion(DS.getBeginLoc(), "int ");
+      }
     } else if (!DS.hasTypeSpecifier()) {
       // C99 and C++ require a type specifier.  For example, C99 6.7.2p2 says:
       // "At least one type specifier shall be given in the declaration
-      // specifiers in each declaration, and in the specifier-qualifier list in
-      // each struct declaration and type name."
+      // specifiers in each declaration, and in the specifier-qualifier list
+      // in each struct declaration and type name."
       if (!S.getLangOpts().isImplicitIntAllowed() && !DS.isTypeSpecPipe()) {
-        S.Diag(DeclLoc, diag::err_missing_type_specifier)
-            << DS.getSourceRange();
+        if (declarator.isFirstDeclarator()) {
+          S.Diag(DeclLoc, diag::err_missing_type_specifier)
+              << DS.getSourceRange();
+        }
 
         // When this occurs, often something is very broken with the value
         // being declared, poison it as invalid so we don't get chains of
@@ -996,15 +1003,17 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         declarator.setInvalidType(true);
       } else if (S.getLangOpts().getOpenCLCompatibleVersion() >= 200 &&
                  DS.isTypeSpecPipe()) {
-        S.Diag(DeclLoc, diag::err_missing_actual_pipe_type)
-            << DS.getSourceRange();
+        if (declarator.isFirstDeclarator()) {
+          S.Diag(DeclLoc, diag::err_missing_actual_pipe_type)
+              << DS.getSourceRange();
+        }
         declarator.setInvalidType(true);
-      } else {
+      } else if (declarator.isFirstDeclarator()) {
         assert(S.getLangOpts().isImplicitIntAllowed() &&
                "implicit int is disabled?");
         S.Diag(DeclLoc, diag::ext_missing_type_specifier)
             << DS.getSourceRange()
-            << FixItHint::CreateInsertion(DS.getBeginLoc(), "int");
+            << FixItHint::CreateInsertion(DS.getBeginLoc(), "int ");
       }
     }
 
@@ -7424,6 +7433,24 @@ bool Sema::CheckImplicitNullabilityTypeSpecifier(QualType &Type,
       /*isContextSensitive*/ false, AllowArrayTypes, OverrideExisting);
 }
 
+bool Sema::CheckVarDeclSizeAddressSpace(const VarDecl *VD, LangAS AS) {
+  QualType T = VD->getType();
+
+  // Check that the variable's type can fit in the specified address space. This
+  // is determined by how far a pointer in that address space can reach.
+  llvm::APInt MaxSizeForAddrSpace =
+      llvm::APInt::getMaxValue(Context.getTargetInfo().getPointerWidth(AS));
+  std::optional<CharUnits> TSizeInChars = Context.getTypeSizeInCharsIfKnown(T);
+  if (TSizeInChars && static_cast<uint64_t>(TSizeInChars->getQuantity()) >
+                          MaxSizeForAddrSpace.getZExtValue()) {
+    Diag(VD->getLocation(), diag::err_type_too_large_for_address_space)
+        << T << MaxSizeForAddrSpace;
+    return false;
+  }
+
+  return true;
+}
+
 /// Check the application of the Objective-C '__kindof' qualifier to
 /// the given type.
 static bool checkObjCKindOfType(TypeProcessingState &state, QualType &type,
@@ -9282,59 +9309,11 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
 
   // If this definition was instantiated from a template, map back to the
   // pattern from which it was instantiated.
-  if (isa<TagDecl>(D) && cast<TagDecl>(D)->isBeingDefined())
+  if (isa<TagDecl>(D) && cast<TagDecl>(D)->isBeingDefined()) {
     // We're in the middle of defining it; this definition should be treated
     // as visible.
     return true;
-
-  auto DefinitionIsAcceptable = [&](NamedDecl *D) {
-    // The (primary) definition might be in a visible module.
-    if (isAcceptable(D, Kind))
-      return true;
-
-    // A visible module might have a merged definition instead.
-    if (D->isModulePrivate() ? hasMergedDefinitionInCurrentModule(D)
-                             : hasVisibleMergedDefinition(D)) {
-      if (CodeSynthesisContexts.empty() &&
-          !getLangOpts().ModulesLocalVisibility) {
-        // Cache the fact that this definition is implicitly visible because
-        // there is a visible merged definition.
-        D->setVisibleDespiteOwningModule();
-      }
-      return true;
-    }
-
-    return false;
-  };
-  auto IsDefinition = [](NamedDecl *D) {
-    if (auto *RD = dyn_cast<CXXRecordDecl>(D))
-      return RD->isThisDeclarationADefinition();
-    if (auto *ED = dyn_cast<EnumDecl>(D))
-      return ED->isThisDeclarationADefinition();
-    if (auto *FD = dyn_cast<FunctionDecl>(D))
-      return FD->isThisDeclarationADefinition();
-    if (auto *VD = dyn_cast<VarDecl>(D))
-      return VD->isThisDeclarationADefinition() == VarDecl::Definition;
-    llvm_unreachable("unexpected decl type");
-  };
-  auto FoundAcceptableDefinition = [&](NamedDecl *D) {
-    if (!isa<CXXRecordDecl, FunctionDecl, EnumDecl, VarDecl>(D))
-      return DefinitionIsAcceptable(D);
-
-    for (auto *RD : D->redecls()) {
-      auto *ND = cast<NamedDecl>(RD);
-      if (!IsDefinition(ND))
-        continue;
-      if (DefinitionIsAcceptable(ND)) {
-        *Suggested = ND;
-        return true;
-      }
-    }
-
-    return false;
-  };
-
-  if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
+  } else if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
     if (auto *Pattern = RD->getTemplateInstantiationPattern())
       RD = Pattern;
     D = RD->getDefinition();
@@ -9373,14 +9352,34 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
 
   *Suggested = D;
 
-  if (FoundAcceptableDefinition(D))
+  auto DefinitionIsAcceptable = [&] {
+    // The (primary) definition might be in a visible module.
+    if (isAcceptable(D, Kind))
+      return true;
+
+    // A visible module might have a merged definition instead.
+    if (D->isModulePrivate() ? hasMergedDefinitionInCurrentModule(D)
+                             : hasVisibleMergedDefinition(D)) {
+      if (CodeSynthesisContexts.empty() &&
+          !getLangOpts().ModulesLocalVisibility) {
+        // Cache the fact that this definition is implicitly visible because
+        // there is a visible merged definition.
+        D->setVisibleDespiteOwningModule();
+      }
+      return true;
+    }
+
+    return false;
+  };
+
+  if (DefinitionIsAcceptable())
     return true;
 
   // The external source may have additional definitions of this entity that are
   // visible, so complete the redeclaration chain now and ask again.
   if (auto *Source = Context.getExternalSource()) {
     Source->CompleteRedeclChain(D);
-    return FoundAcceptableDefinition(D);
+    return DefinitionIsAcceptable();
   }
 
   return false;

@@ -9,23 +9,13 @@
 #include "JSONUtils.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
-#include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
-#include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
-#include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBDeclaration.h"
-#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
-#include "lldb/API/SBFrame.h"
-#include "lldb/API/SBFunction.h"
-#include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBLineEntry.h"
-#include "lldb/API/SBModule.h"
-#include "lldb/API/SBQueue.h"
-#include "lldb/API/SBSection.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
@@ -37,19 +27,15 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
 #include <cstddef>
-#include <iomanip>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -64,46 +50,6 @@ void EmplaceSafeString(llvm::json::Object &obj, llvm::StringRef key,
     obj.try_emplace(key, str.str());
   else
     obj.try_emplace(key, llvm::json::fixUTF8(str));
-}
-
-llvm::StringRef GetAsString(const llvm::json::Value &value) {
-  if (auto s = value.getAsString())
-    return *s;
-  return llvm::StringRef();
-}
-
-// Gets a string from a JSON object using the key, or returns an empty string.
-std::optional<llvm::StringRef> GetString(const llvm::json::Object &obj,
-                                         llvm::StringRef key) {
-  return obj.getString(key);
-}
-
-std::optional<llvm::StringRef> GetString(const llvm::json::Object *obj,
-                                         llvm::StringRef key) {
-  if (obj == nullptr)
-    return std::nullopt;
-
-  return GetString(*obj, key);
-}
-
-std::optional<bool> GetBoolean(const llvm::json::Object &obj,
-                               llvm::StringRef key) {
-  if (auto value = obj.getBoolean(key))
-    return *value;
-  if (auto value = obj.getInteger(key))
-    return *value != 0;
-  return std::nullopt;
-}
-
-std::optional<bool> GetBoolean(const llvm::json::Object *obj,
-                               llvm::StringRef key) {
-  if (obj != nullptr)
-    return GetBoolean(*obj, key);
-  return std::nullopt;
-}
-
-bool ObjectContainsKey(const llvm::json::Object &obj, llvm::StringRef key) {
-  return obj.find(key) != obj.end();
 }
 
 std::string EncodeMemoryReference(lldb::addr_t addr) {
@@ -161,55 +107,6 @@ bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
 
   out = *addr_opt;
   return true;
-}
-
-std::vector<std::string> GetStrings(const llvm::json::Object *obj,
-                                    llvm::StringRef key) {
-  std::vector<std::string> strs;
-  const auto *json_array = obj->getArray(key);
-  if (!json_array)
-    return strs;
-  for (const auto &value : *json_array) {
-    switch (value.kind()) {
-    case llvm::json::Value::String:
-      strs.push_back(value.getAsString()->str());
-      break;
-    case llvm::json::Value::Number:
-    case llvm::json::Value::Boolean:
-      strs.push_back(llvm::to_string(value));
-      break;
-    case llvm::json::Value::Null:
-    case llvm::json::Value::Object:
-    case llvm::json::Value::Array:
-      break;
-    }
-  }
-  return strs;
-}
-
-std::unordered_map<std::string, std::string>
-GetStringMap(const llvm::json::Object &obj, llvm::StringRef key) {
-  std::unordered_map<std::string, std::string> strs;
-  const auto *const json_object = obj.getObject(key);
-  if (!json_object)
-    return strs;
-
-  for (const auto &[key, value] : *json_object) {
-    switch (value.kind()) {
-    case llvm::json::Value::String:
-      strs.emplace(key.str(), value.getAsString()->str());
-      break;
-    case llvm::json::Value::Number:
-    case llvm::json::Value::Boolean:
-      strs.emplace(key.str(), llvm::to_string(value));
-      break;
-    case llvm::json::Value::Null:
-    case llvm::json::Value::Object:
-    case llvm::json::Value::Array:
-      break;
-    }
-  }
-  return strs;
 }
 
 static bool IsClassStructOrUnionType(lldb::SBType t) {
@@ -293,7 +190,7 @@ void FillResponse(const llvm::json::Object &request,
   response.try_emplace("type", "response");
   response.try_emplace("seq", protocol::kCalculateSeq);
   EmplaceSafeString(response, "command",
-                    GetString(request, "command").value_or(""));
+                    request.getString("command").value_or(""));
   const uint64_t seq = GetInteger<uint64_t>(request, "seq").value_or(0);
   response.try_emplace("request_seq", seq);
   response.try_emplace("success", true);
@@ -343,163 +240,6 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   event.try_emplace("type", "event");
   EmplaceSafeString(event, "event", event_name);
   return event;
-}
-
-// "StoppedEvent": {
-//   "allOf": [ { "$ref": "#/definitions/Event" }, {
-//     "type": "object",
-//     "description": "Event message for 'stopped' event type. The event
-//                     indicates that the execution of the debuggee has stopped
-//                     due to some condition. This can be caused by a break
-//                     point previously set, a stepping action has completed,
-//                     by executing a debugger statement etc.",
-//     "properties": {
-//       "event": {
-//         "type": "string",
-//         "enum": [ "stopped" ]
-//       },
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "reason": {
-//             "type": "string",
-//             "description": "The reason for the event. For backward
-//                             compatibility this string is shown in the UI if
-//                             the 'description' attribute is missing (but it
-//                             must not be translated).",
-//             "_enum": [ "step", "breakpoint", "exception", "pause", "entry" ]
-//           },
-//           "description": {
-//             "type": "string",
-//             "description": "The full reason for the event, e.g. 'Paused
-//                             on exception'. This string is shown in the UI
-//                             as is."
-//           },
-//           "threadId": {
-//             "type": "integer",
-//             "description": "The thread which was stopped."
-//           },
-//           "text": {
-//             "type": "string",
-//             "description": "Additional information. E.g. if reason is
-//                             'exception', text contains the exception name.
-//                             This string is shown in the UI."
-//           },
-//           "allThreadsStopped": {
-//             "type": "boolean",
-//             "description": "If allThreadsStopped is true, a debug adapter
-//                             can announce that all threads have stopped.
-//                             The client should use this information to
-//                             enable that all threads can be expanded to
-//                             access their stacktraces. If the attribute
-//                             is missing or false, only the thread with the
-//                             given threadId can be expanded."
-//           }
-//         },
-//         "required": [ "reason" ]
-//       }
-//     },
-//     "required": [ "event", "body" ]
-//   }]
-// }
-llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
-                                      uint32_t stop_id) {
-  llvm::json::Object event(CreateEventObject("stopped"));
-  llvm::json::Object body;
-  switch (thread.GetStopReason()) {
-  case lldb::eStopReasonTrace:
-  case lldb::eStopReasonPlanComplete:
-    body.try_emplace("reason", "step");
-    break;
-  case lldb::eStopReasonBreakpoint: {
-    ExceptionBreakpoint *exc_bp = dap.GetExceptionBPFromStopReason(thread);
-    if (exc_bp) {
-      body.try_emplace("reason", "exception");
-      EmplaceSafeString(body, "description", exc_bp->GetLabel());
-    } else {
-      InstructionBreakpoint *inst_bp =
-          dap.GetInstructionBPFromStopReason(thread);
-      if (inst_bp) {
-        body.try_emplace("reason", "instruction breakpoint");
-      } else {
-        body.try_emplace("reason", "breakpoint");
-      }
-      std::vector<lldb::break_id_t> bp_ids;
-      std::ostringstream desc_sstream;
-      desc_sstream << "breakpoint";
-      for (size_t idx = 0; idx < thread.GetStopReasonDataCount(); idx += 2) {
-        lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(idx);
-        lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(idx + 1);
-        bp_ids.push_back(bp_id);
-        desc_sstream << " " << bp_id << "." << bp_loc_id;
-      }
-      std::string desc_str = desc_sstream.str();
-      body.try_emplace("hitBreakpointIds", llvm::json::Array(bp_ids));
-      EmplaceSafeString(body, "description", desc_str);
-    }
-  } break;
-  case lldb::eStopReasonWatchpoint: {
-    body.try_emplace("reason", "data breakpoint");
-    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
-    body.try_emplace("hitBreakpointIds",
-                     llvm::json::Array{llvm::json::Value(bp_id)});
-    EmplaceSafeString(body, "description",
-                      llvm::formatv("data breakpoint {0}", bp_id).str());
-  } break;
-  case lldb::eStopReasonInstrumentation:
-    body.try_emplace("reason", "exception");
-    break;
-  case lldb::eStopReasonProcessorTrace:
-    body.try_emplace("reason", "processor trace");
-    break;
-  case lldb::eStopReasonHistoryBoundary:
-    body.try_emplace("reason", "history boundary");
-    break;
-  case lldb::eStopReasonSignal:
-  case lldb::eStopReasonException:
-    body.try_emplace("reason", "exception");
-    break;
-  case lldb::eStopReasonExec:
-    body.try_emplace("reason", "entry");
-    break;
-  case lldb::eStopReasonFork:
-    body.try_emplace("reason", "fork");
-    break;
-  case lldb::eStopReasonVFork:
-    body.try_emplace("reason", "vfork");
-    break;
-  case lldb::eStopReasonVForkDone:
-    body.try_emplace("reason", "vforkdone");
-    break;
-  case lldb::eStopReasonInterrupt:
-    body.try_emplace("reason", "async interrupt");
-    break;
-  case lldb::eStopReasonThreadExiting:
-  case lldb::eStopReasonInvalid:
-  case lldb::eStopReasonNone:
-    break;
-  }
-  if (stop_id == 0)
-    body["reason"] = "entry";
-  const lldb::tid_t tid = thread.GetThreadID();
-  body.try_emplace("threadId", (int64_t)tid);
-  // If no description has been set, then set it to the default thread stopped
-  // description. If we have breakpoints that get hit and shouldn't be reported
-  // as breakpoints, then they will set the description above.
-  if (!ObjectContainsKey(body, "description")) {
-    char description[1024];
-    if (thread.GetStopDescription(description, sizeof(description))) {
-      EmplaceSafeString(body, "description", description);
-    }
-  }
-  // "threadCausedFocus" is used in tests to validate breaking behavior.
-  if (tid == dap.focus_tid) {
-    body.try_emplace("threadCausedFocus", true);
-  }
-  body.try_emplace("preserveFocusHint", tid != dap.focus_tid);
-  body.try_emplace("allThreadsStopped", true);
-  event.try_emplace("body", std::move(body));
-  return llvm::json::Value(std::move(event));
 }
 
 llvm::StringRef GetNonNullVariableName(lldb::SBValue &v) {
@@ -743,6 +483,12 @@ static void addStatistic(lldb::SBTarget &target, llvm::json::Object &event) {
 
 llvm::json::Object CreateTerminatedEventObject(lldb::SBTarget &target) {
   llvm::json::Object event(CreateEventObject("terminated"));
+  addStatistic(target, event);
+  return event;
+}
+
+llvm::json::Object CreateInitializedEventObject(lldb::SBTarget &target) {
+  llvm::json::Object event(CreateEventObject("initialized"));
   addStatistic(target, event);
   return event;
 }

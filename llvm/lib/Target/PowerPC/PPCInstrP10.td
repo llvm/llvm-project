@@ -1341,7 +1341,7 @@ let Predicates = [PCRelativeMemops, HasFPU] in {
             (PSTFDpc $FRS, $ga, 0)>;
 
   def : Pat<(v4f32 (PPCldvsxlh (PPCmatpcreladdr PCRelForm:$addr))),
-            (SUBREG_TO_REG (i64 1), (PLFDpc $addr, 0), sub_64)>;
+            (SUBREG_TO_REG (PLFDpc $addr, 0), sub_64)>;
 }
 
 let Predicates = [PCRelativeMemops, HasP10Vector] in {
@@ -2843,7 +2843,7 @@ let Predicates = [PrefixInstrs, HasFPU] in {
   def : Pat<(store f64:$FRS, PDForm:$dst), (PSTFD $FRS, memri34:$dst)>;
   // Prefixed fpext to v2f64
   def : Pat<(v4f32 (PPCldvsxlh PDForm:$src)),
-            (SUBREG_TO_REG (i64 1), (PLFD PDForm:$src), sub_64)>;
+            (SUBREG_TO_REG (PLFD PDForm:$src), sub_64)>;
 
 }
 

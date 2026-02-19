@@ -396,6 +396,10 @@ public:
     return isMesa3DOS() && AMDGPU::isShader(F.getCallingConv());
   }
 
+  bool isGFX1170() const {
+    return getGeneration() == GFX11 && hasWMMA128bInsts();
+  }
+
   bool hasMad64_32() const { return getGeneration() >= SEA_ISLANDS; }
 
   bool hasAtomicFaddInsts() const {
@@ -473,6 +477,10 @@ public:
 
   bool hasDPPWavefrontShifts() const {
     return HasDPP && getGeneration() < GFX10;
+  }
+
+  bool hasDPPRowShare() const {
+    return HasDPP && (HasGFX90AInsts || getGeneration() >= GFX10);
   }
 
   // Has V_PK_MOV_B32 opcode

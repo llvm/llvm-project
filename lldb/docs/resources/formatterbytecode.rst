@@ -154,6 +154,8 @@ Sel.  Mnemonic                         Stack Effect                             
 0x15  ``get_type``                      ``(Object @get_type -> Type)``                          ``SBValue::GetType``
 0x16  ``get_template_argument_type``    ``(Object UInt @get_template_argument_type -> Type)``   ``SBValue::GetTemplateArgumentType``
 0x17  ``cast``                          ``(Object Type @cast -> Object)``                       ``SBValue::Cast``
+0x18  ``get_synthetic_value``           ``(Object @get_synthetic_value -> Object)``             ``SBValue::GetSyntheticValue``
+0x19  ``get_non_synthetic_value``       ``(Object @get_non_synthetic_value -> Object)``         ``SBValue::GetNonSyntheticValue``
 0x20  ``get_value``                     ``(Object @get_value -> Object)``                       ``SBValue::GetValue``
 0x21  ``get_value_as_unsigned``         ``(Object @get_value_as_unsigned -> UInt)``             ``SBValue::GetValueAsUnsigned``
 0x22  ``get_value_as_signed``           ``(Object @get_value_as_signed -> Int)``                ``SBValue::GetValueAsSigned``
@@ -221,6 +223,7 @@ Signature    Mnemonic                Stack Effect
   0x03      ``@get_child_index``      ``(Object+ String -> UInt)``
   0x04      ``@get_child_at_index``   ``(Object+ UInt -> Object)``
   0x05      ``@get_value``            ``(Object+ -> String)``
+  0x06      ``@update``               ``(Object+ -> Object+)``
 =========  ========================= ==============================
 
 If not specified, the init function defaults to an empty function that just passes the Object along. Its results may be cached and allow common prep work to be done for an Object that can be reused by subsequent calls to the other methods. This way subsequent calls to ``@get_child_at_index`` can avoid recomputing shared information, for example.
@@ -236,4 +239,3 @@ Error handling
 ~~~~~~~~~~~~~~
 
 In version 1 errors are unrecoverable, the entire expression will fail if any kind of error is encountered.
-

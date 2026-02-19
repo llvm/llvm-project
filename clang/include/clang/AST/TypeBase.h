@@ -6754,6 +6754,8 @@ public:
   QualType getContainedType() const { return ContainedType; }
   bool hasContainedType() const { return !ContainedType.isNull(); }
   const Attributes &getAttrs() const { return Attrs; }
+  bool isRaw() const { return Attrs.RawBuffer; }
+  bool isStructured() const { return !ContainedType->isChar8Type(); }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }

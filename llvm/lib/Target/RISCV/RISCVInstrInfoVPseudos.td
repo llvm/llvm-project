@@ -566,6 +566,8 @@ class RISCVVPseudo<dag outs, dag ins, list<dag> pattern = [],
   bits<8> SEW = 0;
   bit IsAltFmt = !eq(AltFmtType.Value, IS_ALTFMT.Value);
   bit IncludeInInversePseudoTable = 1;
+
+  let UseNamedOperandTable = true;
 }
 
 // The actual table.
@@ -835,8 +837,8 @@ class VPseudoUSLoadMask<VReg RetClass,
 
 class VPseudoUSLoadFFNoMask<VReg RetClass,
                             int EEW> :
-      RISCVVPseudo<(outs RetClass:$rd, GPR:$vl),
-                   (ins RetClass:$dest, GPRMemZeroOffset:$rs1, AVL:$avl,
+      RISCVVPseudo<(outs RetClass:$rd, GPR:$vl_out),
+                   (ins RetClass:$dest, GPRMemZeroOffset:$rs1, AVL:$vl,
                         sew:$sew, vec_policy:$policy)>,
       RISCVVLE</*Masked*/0, /*Strided*/0, /*FF*/1, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
@@ -850,9 +852,9 @@ class VPseudoUSLoadFFNoMask<VReg RetClass,
 
 class VPseudoUSLoadFFMask<VReg RetClass,
                           int EEW> :
-      RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd, GPR:$vl),
+      RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd, GPR:$vl_out),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
-                        GPRMemZeroOffset:$rs1, VMV0:$vm, AVL:$avl, sew:$sew,
+                        GPRMemZeroOffset:$rs1, VMV0:$vm, AVL:$vl, sew:$sew,
                         vec_policy:$policy)>,
       RISCVVLE</*Masked*/1, /*Strided*/0, /*FF*/1, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
@@ -1596,8 +1598,8 @@ class VPseudoUSSegLoadMask<VReg RetClass,
 class VPseudoUSSegLoadFFNoMask<VReg RetClass,
                                int EEW,
                                bits<4> NF> :
-      RISCVVPseudo<(outs RetClass:$rd, GPR:$vl),
-                   (ins RetClass:$dest, GPRMemZeroOffset:$rs1, AVL:$avl,
+      RISCVVPseudo<(outs RetClass:$rd, GPR:$vl_out),
+                   (ins RetClass:$dest, GPRMemZeroOffset:$rs1, AVL:$vl,
                         sew:$sew, vec_policy:$policy)>,
       RISCVVLSEG<NF, /*Masked*/0, /*Strided*/0, /*FF*/1, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
@@ -1612,9 +1614,9 @@ class VPseudoUSSegLoadFFNoMask<VReg RetClass,
 class VPseudoUSSegLoadFFMask<VReg RetClass,
                              int EEW,
                              bits<4> NF> :
-      RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd, GPR:$vl),
+      RISCVVPseudo<(outs GetVRegNoV0<RetClass>.R:$rd, GPR:$vl_out),
                    (ins GetVRegNoV0<RetClass>.R:$passthru,
-                        GPRMemZeroOffset:$rs1, VMV0:$vm, AVL:$avl, sew:$sew,
+                        GPRMemZeroOffset:$rs1, VMV0:$vm, AVL:$vl, sew:$sew,
                         vec_policy:$policy)>,
       RISCVVLSEG<NF, /*Masked*/1, /*Strided*/0, /*FF*/1, !logtwo(EEW), VLMul> {
   let mayLoad = 1;
@@ -1838,7 +1840,7 @@ multiclass VPseudoFFLoad {
   }
 }
 
-multiclass VPseudoLoadMask {
+multiclass VPseudoMaskLoad {
   foreach mti = AllMasks in {
     defvar mx = mti.LMul.MX;
     defvar WriteVLDM_MX = !cast<SchedWrite>("WriteVLDM_" # mx);
@@ -1914,7 +1916,7 @@ multiclass VPseudoUSStore {
   }
 }
 
-multiclass VPseudoStoreMask {
+multiclass VPseudoMaskStore {
   foreach mti = AllMasks in {
     defvar mx = mti.LMul.MX;
     defvar WriteVSTM_MX = !cast<SchedWrite>("WriteVSTM_" # mx);
@@ -2817,14 +2819,19 @@ multiclass VPseudoVFRDIV_VF_RM {
   }
 }
 
-multiclass VPseudoVALU_VV_VX {
- foreach m = MxList in {
-    defm "" : VPseudoBinaryV_VV<m>,
-            SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
-                        forcePassthruRead=true>;
+multiclass VPseudoVALU_VV<bit Commutable = 0> {
+  foreach m = MxList in {
+    defm "" : VPseudoBinaryV_VV<m, Commutable=Commutable>,
+              SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
+                          forcePassthruRead=true>;
+  }
+}
+
+multiclass VPseudoVALU_VV_VX<bit Commutable = 0> : VPseudoVALU_VV<Commutable> {
+  foreach m = MxList in {
     defm "" : VPseudoBinaryV_VX<m>,
-            SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", m.MX,
-                        forcePassthruRead=true>;
+              SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", m.MX,
+                          forcePassthruRead=true>;
   }
 }
 
@@ -6074,8 +6081,8 @@ def PseudoVSETIVLI : Pseudo<(outs GPR:$rd), (ins uimm5:$rs1, VTypeIOp10:$vtypei)
 defm PseudoVL : VPseudoUSLoad;
 defm PseudoVS : VPseudoUSStore;
 
-defm PseudoVLM : VPseudoLoadMask;
-defm PseudoVSM : VPseudoStoreMask;
+defm PseudoVLM : VPseudoMaskLoad;
+defm PseudoVSM : VPseudoMaskStore;
 
 //===----------------------------------------------------------------------===//
 // 7.5 Vector Strided Instructions
