@@ -3230,6 +3230,63 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_nextafter",
+    hdrs = ["src/__support/math/nextafter.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterbf16",
+    hdrs = ["src/__support/math/nextafterbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterf",
+    hdrs = ["src/__support/math/nextafterf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterf128",
+    hdrs = ["src/__support/math/nextafterf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterf16",
+    hdrs = ["src/__support/math/nextafterf16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterl",
+    hdrs = ["src/__support/math/nextafterl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ldexpf128",
     hdrs = ["src/__support/math/ldexpf128.h"],
     deps = [
@@ -5536,15 +5593,40 @@ libc_math_function(name = "nearbyintf128")
 
 libc_math_function(name = "nearbyintf16")
 
-libc_math_function(name = "nextafter")
+libc_math_function(
+    name = "nextafter",
+    additional_deps = [
+        ":__support_math_nextafter",
+    ],
+)
 
-libc_math_function(name = "nextafterf")
+libc_math_function(
+    name = "nextafterf",
+    additional_deps = [
+        ":__support_math_nextafterf",
+    ],
+)
 
-libc_math_function(name = "nextafterl")
+libc_math_function(
+    name = "nextafterl",
+    additional_deps = [
+        ":__support_math_nextafterl",
+    ],
+)
 
-libc_math_function(name = "nextafterf128")
+libc_math_function(
+    name = "nextafterf128",
+    additional_deps = [
+        ":__support_math_nextafterf128",
+    ],
+)
 
-libc_math_function(name = "nextafterf16")
+libc_math_function(
+    name = "nextafterf16",
+    additional_deps = [
+        ":__support_math_nextafterf16",
+    ],
+)
 
 libc_math_function(name = "nextdown")
 
