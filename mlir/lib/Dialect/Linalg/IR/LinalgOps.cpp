@@ -6409,6 +6409,7 @@ bool UnPackOp::canFoldSliceOp(tensor::ExtractSliceOp sliceOp) {
     if (paddingSize >= tileSize)
       return false;
   }
+  // extract_slice must not affect dimensions that are not being unpacked
   for (int64_t pos = 0, e = outerShapeWithoutTranspose.size(); pos < e; ++pos) {
     if (areOuterDimsTiled[pos])
       continue;

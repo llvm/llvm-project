@@ -2061,6 +2061,7 @@ func.func @no_fold_extract_slice_into_unpack_non_zero_offset(
 
 // -----
 
+// Must not fold because extract_slice cuts the 0'th dimension from 30 to 28.
 func.func @no_fold_extract_slice_into_unpack_slice_over_non_tiled_dim(
     %src : tensor<30x2x16xf32>, %dest : tensor<30x32xf32>
 ) -> tensor<28x28xf32> {
@@ -2083,6 +2084,7 @@ func.func @no_fold_extract_slice_into_unpack_slice_over_non_tiled_dim(
 
 // -----
 
+// Must not fold because extract_slice's effect on the 0'th dimension is unknown.
 func.func @no_fold_extract_slice_into_unpack_slice_over_dynamic_dim(
     %src : tensor<?x2x16xf32>, %dest : tensor<?x32xf32>, %size : index
 ) -> tensor<?x28xf32> {
