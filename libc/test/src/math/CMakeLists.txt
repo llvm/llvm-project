@@ -2626,6 +2626,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  erff16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    erff16_test.cpp
+  DEPENDS
+    libc.src.math.erff16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   pow_test
   NEED_MPFR
   SUITE
