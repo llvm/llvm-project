@@ -563,7 +563,8 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
 
       while (unwind_sc.GetParentOfInlinedScope(
           curr_frame_address, next_frame_sc, next_frame_address)) {
-        next_frame_sc.line_entry.ApplyFileMappings(target_sp);
+        next_frame_sc.line_entry.ApplyFileMappings(target_sp,
+                                                   curr_frame_address);
         behaves_like_zeroth_frame = false;
         StackFrameSP frame_sp(new StackFrame(
             m_thread.shared_from_this(), m_frames.size(), idx,

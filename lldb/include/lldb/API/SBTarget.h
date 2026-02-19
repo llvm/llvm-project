@@ -994,6 +994,22 @@ public:
   ///     An error if a Trace already exists or the trace couldn't be created.
   lldb::SBTrace CreateTrace(SBError &error);
 
+  /// Register a scripted symbol locator for this target.
+  ///
+  /// \param[in] class_name
+  ///     The Python class implementing the symbol locator.
+  ///
+  /// \param[in] args
+  ///     Optional structured data arguments passed to the locator.
+  ///
+  /// \return
+  ///     An SBError indicating success or failure.
+  lldb::SBError RegisterScriptedSymbolLocator(const char *class_name,
+                                              lldb::SBStructuredData &args);
+
+  /// Clear the scripted symbol locator for this target.
+  void ClearScriptedSymbolLocator();
+
   lldb::SBMutex GetAPIMutex() const;
 
   /// Register a scripted frame provider for this target.
