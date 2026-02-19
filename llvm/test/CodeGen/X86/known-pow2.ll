@@ -875,19 +875,14 @@ define i1 @pow2_and_i50(i50 %num, i50 %shift) {
 define i1 @pow2_and_i128(i128 %num, i128 %shift) {
 ; CHECK-LABEL: pow2_and_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movl $1, %edx
-; CHECK-NEXT:    xorl %r8d, %r8d
-; CHECK-NEXT:    shldq %cl, %rdx, %r8
-; CHECK-NEXT:    shlq %cl, %rdx
-; CHECK-NEXT:    testb $64, %cl
-; CHECK-NEXT:    cmovneq %rdx, %r8
-; CHECK-NEXT:    cmovneq %rax, %rdx
-; CHECK-NEXT:    andq %rsi, %r8
-; CHECK-NEXT:    andq %rdi, %rdx
-; CHECK-NEXT:    orq %r8, %rdx
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    andb $32, %cl
+; CHECK-NEXT:    shrdq %cl, %rsi, %rdi
+; CHECK-NEXT:    shrq %cl, %rsi
+; CHECK-NEXT:    testb $64, %dl
+; CHECK-NEXT:    cmoveq %rdi, %rsi
+; CHECK-NEXT:    btl %edx, %esi
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
   %mask = shl nuw i128 1, %shift
   %bit = and i128 %mask, %num

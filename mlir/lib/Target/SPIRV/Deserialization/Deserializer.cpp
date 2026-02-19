@@ -288,6 +288,9 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Location:
   case spirv::Decoration::SpecId:
   case spirv::Decoration::Index:
+  case spirv::Decoration::Offset:
+  case spirv::Decoration::XfbBuffer:
+  case spirv::Decoration::XfbStride:
     if (words.size() != 3) {
       return emitError(unknownLoc, "OpDecorate with ")
              << decorationName << " needs a single integer literal";
