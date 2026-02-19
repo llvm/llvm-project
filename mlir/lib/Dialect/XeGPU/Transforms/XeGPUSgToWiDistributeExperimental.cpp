@@ -489,6 +489,79 @@ struct SgToWiMultiDimReduction
   }
 };
 
+/// Distributes a subgroup-level vector.transpose op to workitem-level.
+/// Only 2D transposes are supported. The result layout must be a transpose of
+/// the source layout. An equivalent vector::TransposeOp is created with
+/// distributed vector types.
+struct SgToWiVectorTranspose : public OpConversionPattern<vector::TransposeOp> {
+  using OpConversionPattern<vector::TransposeOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::TransposeOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr sourceLayout =
+        xegpu::getTemporaryLayout(op->getOpOperand(0));
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(op->getOpResult(0));
+    if (!sourceLayout || !resultLayout)
+      return rewriter.notifyMatchFailure(
+          op, "the source or result vector of the transpose op lacks layout "
+              "attribute");
+    int64_t sourceRank = op.getSourceVectorType().getRank();
+    int64_t resultRank = op.getResultVectorType().getRank();
+    // Only 2D transposes are supported.
+    if (sourceRank != 2 || resultRank != 2)
+      return rewriter.notifyMatchFailure(
+          op, "the source or result vector of the transpose op "
+              "does not have 2D layout");
+    ArrayRef<int64_t> perm = op.getPermutation();
+    // Result layout must be a transpose of source layout.
+    if (!resultLayout.isTransposeOf(sourceLayout, perm))
+      return rewriter.notifyMatchFailure(
+          op, "the source or result vector layouts must be 2D transposes of "
+              "each other");
+    FailureOr<VectorType> distributedResultTypeOrFailure =
+        getDistVecTypeBasedOnLaneLayout(resultLayout, op.getResultVectorType());
+    if (failed(distributedResultTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "Failed to distribute the result vector type in "
+              "vector::Transpose op");
+    auto newOp = vector::TransposeOp::create(rewriter, op.getLoc(),
+                                             adaptor.getVector(), perm);
+    rewriter.replaceOp(op, castValueTo(rewriter, newOp.getResult(),
+                                       distributedResultTypeOrFailure.value()));
+    return success();
+  }
+};
+
+/// Distributes a subgroup-level vector.bitcast op to workitem-level.
+/// Bitcast only impacts the innermost dimension of the source/result vectors.
+/// An equivalent vector::BitCastOp is created with distributed vector types.
+struct SgToWiVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
+  using OpConversionPattern<vector::BitCastOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::BitCastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(op->getOpResult(0));
+    if (!resultLayout)
+      return rewriter.notifyMatchFailure(
+          op, "result vector of the bitcast op lacks layout attribute");
+    FailureOr<VectorType> distributedResultTypeOrFailure =
+        getDistVecTypeBasedOnLaneLayout(resultLayout, op.getResultVectorType());
+    if (failed(distributedResultTypeOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "Failed to distribute the result vector type in "
+              "vector::BitCast op");
+    auto newOp = vector::BitCastOp::create(
+        rewriter, op.getLoc(), distributedResultTypeOrFailure.value(),
+        adaptor.getSource());
+    rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
 /// This pattern rewrites a subgroup-level vector.multi_reduction op to a series
 /// of vector.extract_strided_slice, vector.reduction and
 /// vector.insert_strided_slice ops. This is used when the reduction dimension
@@ -727,10 +800,21 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
         // Lane local reductions are illegal at this point and must be lowered.
         return !isReductionLaneLocal(op);
       });
+  // vector::TransposeOp is legal only if it has no result layout attribute.
+  target.addDynamicallyLegalOp<vector::TransposeOp>(
+      [=](vector::TransposeOp op) -> bool {
+        return !xegpu::getTemporaryLayout(op->getOpResult(0));
+      });
+  // vector::BitCastOp is legal only if it has no result layout attribute.
+  target.addDynamicallyLegalOp<vector::BitCastOp>(
+      [=](vector::BitCastOp op) -> bool {
+        return !xegpu::getTemporaryLayout(op->getOpResult(0));
+      });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
                SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
-               SgToWiVectorReduction, SgToWiMultiDimReduction>(
+               SgToWiVectorReduction, SgToWiMultiDimReduction,
+               SgToWiVectorTranspose, SgToWiVectorBitcast>(
       typeConverter, patterns.getContext());
 }
 

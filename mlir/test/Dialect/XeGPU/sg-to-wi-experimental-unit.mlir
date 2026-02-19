@@ -317,4 +317,40 @@ gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction(%laneid: index)
       [1] : vector<16x12xf32> to vector<16xf32>
   gpu.return
 }
+
+// CHECK-LABEL: gpu.func @vector_transpose
+// CHECK:         %[[SRC:.*]] = "some_op"()
+// CHECK:         %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[SRC]] : vector<16x2xf32> to vector<1x2xf32>
+// CHECK-NEXT:    %[[T:.*]] = vector.transpose %[[CAST]], [1, 0] : vector<1x2xf32> to vector<2x1xf32>
+// CHECK-NEXT:    gpu.return
+gpu.func @vector_transpose() {
+  %cst = "some_op"()
+    {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}
+    : () -> (vector<16x2xf32>)
+  %transpose = vector.transpose %cst, [1, 0]
+    {
+      layout_operand_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>,
+      layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }
+    : vector<16x2xf32> to vector<2x16xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_bitcast
+// CHECK:         %[[SRC:.*]] = "some_op"()
+// CHECK:         %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[SRC]] : vector<4x32xi8> to vector<4x2xi8>
+// CHECK-NEXT:    %[[BC:.*]] = vector.bitcast %[[CAST]] : vector<4x2xi8> to vector<4x1xi16>
+// CHECK-NEXT:    gpu.return
+gpu.func @vector_bitcast() {
+  %cst = "some_op"()
+    {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}
+    : () -> (vector<4x32xi8>)
+  %bitcast = vector.bitcast %cst
+    {
+      layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>,
+      layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }
+    : vector<4x32xi8> to vector<4x16xi16>
+  gpu.return
+}
 }
