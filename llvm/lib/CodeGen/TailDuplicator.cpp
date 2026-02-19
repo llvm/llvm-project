@@ -84,6 +84,11 @@ static cl::opt<bool>
                   cl::desc("Verify sanity of PHI instructions during taildup"),
                   cl::init(false), cl::Hidden);
 
+static cl::opt<bool>
+    TailDupWithEHEdge("tail-dup-with-eh-edge",
+                  cl::desc("Tail duplicate even if there is an landingpad successor"),
+                  cl::init(true), cl::Hidden);
+
 static cl::opt<unsigned> TailDupLimit("tail-dup-limit", cl::init(~0U),
                                       cl::Hidden);
 
@@ -825,9 +830,16 @@ bool TailDuplicator::duplicateSimpleBB(
 
 bool TailDuplicator::canTailDuplicate(MachineBasicBlock *TailBB,
                                       MachineBasicBlock *PredBB) {
-  // EH edges are ignored by analyzeBranch.
-  if (PredBB->succ_size() > 1)
-    return false;
+  
+  if (TailDupWithEHEdge) {
+    long NonEHSuccCount = llvm::count_if(PredBB->successors(),
+        [](MachineBasicBlock *S) { return !S->isEHPad(); });
+    if (NonEHSuccCount > 1)
+      return false;
+  } else {
+    if (PredBB->succ_size() > 1)
+      return false;
+  }
 
   MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
   SmallVector<MachineOperand, 4> PredCond;
@@ -930,9 +942,7 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
     NumTailDupAdded += TailBB->size() - 1; // subtract one for removed branch
 
     // Update the CFG.
-    PredBB->removeSuccessor(PredBB->succ_begin());
-    assert(PredBB->succ_empty() &&
-           "TailDuplicate called on block with multiple successors!");
+    PredBB->removeSuccessor(TailBB);
     for (MachineBasicBlock *Succ : TailBB->successors())
       PredBB->addSuccessor(Succ, MBPI->getEdgeProbability(TailBB, Succ));
 
