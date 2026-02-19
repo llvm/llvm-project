@@ -1603,18 +1603,12 @@ void Sema::ActOnEndOfTranslationUnit() {
 
     // For -Wunused-but-set-variable we only care about variables that were
     // referenced by the TU end.
-    SmallVector<const VarDecl *, 16> DeclsToErase;
     for (const auto &Ref : RefsMinusAssignments) {
       const VarDecl *VD = Ref.first;
       // Only diagnose static file vars defined in the main file to match
       // -Wunused-variable behavior and avoid false positives from header vars.
-      if (VD->isStaticFileVar() && SourceMgr.isInMainFile(VD->getLocation())) {
+      if (VD->isStaticFileVar() && SourceMgr.isInMainFile(VD->getLocation()))
         DiagnoseUnusedButSetDecl(VD, addDiag);
-        DeclsToErase.push_back(VD);
-      }
-    }
-    for (const VarDecl *VD : DeclsToErase) {
-      RefsMinusAssignments.erase(VD);
     }
 
     llvm::sort(DeclDiags,
