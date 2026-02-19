@@ -7,12 +7,12 @@ define void @f(ptr %dst, ptr readonly %f) {
 ; CHECK:         bl      "#called"
   store ptr @escaped, ptr %dst
   call void %f()
-; CHECK:       adrp    x10, $iexit_thunk$cdecl$v$v
-; CHECK-NEXT:  add     x10, x10, :lo12:$iexit_thunk$cdecl$v$v
+; CHECK:       mov     x11,
 ; CHECK-NEXT:  str     x8, [x20]
 ; CHECK-NEXT:  adrp    x8, __os_arm64x_check_icall_cfg
+; CHECK-NEXT:  adrp    x10, $iexit_thunk$cdecl$v$v
+; CHECK-NEXT:  add     x10, x10, :lo12:$iexit_thunk$cdecl$v$v
 ; CHECK-NEXT:  ldr     x8, [x8, :lo12:__os_arm64x_check_icall_cfg]
-; CHECK-NEXT:  mov     x11,
 ; CHECK-NEXT:  blr     x8
 ; CHECK-NEXT:  blr     x11
     ret void
