@@ -576,6 +576,8 @@ public:
 
   bool hasCvtScaleForwardingHazard() const { return HasGFX950Insts; }
 
+  bool hasLoopHeadInstSplitSensitivity() const { return HasGFX950Insts; }
+
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
   bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }

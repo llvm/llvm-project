@@ -18745,7 +18745,8 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   // the 32-byte instruction fetch window boundary. This avoids a significant
   // fetch delay after backward branch. We use 32-byte alignment with max
   // padding of 4 bytes (one s_nop), see getMaxPermittedBytesForAlignment().
-  if (ML && !DisableLoopAlignment && getSubtarget()->hasGFX950Insts()) {
+  if (ML && !DisableLoopAlignment &&
+      getSubtarget()->hasLoopHeadInstSplitSensitivity()) {
     const MachineBasicBlock *Header = ML->getHeader();
     // Respect user-specified or previously set alignment.
     if (Header->getAlignment() != PrefAlign)
@@ -18836,7 +18837,7 @@ unsigned SITargetLowering::getMaxPermittedBytesForAlignment(
 
 bool SITargetLowering::needsFetchWindowAlignment(
     const MachineBasicBlock *MBB) const {
-  if (!getSubtarget()->hasGFX950Insts() || !MBB)
+  if (!getSubtarget()->hasLoopHeadInstSplitSensitivity() || !MBB)
     return false;
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   for (const MachineInstr &MI : *MBB) {
