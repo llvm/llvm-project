@@ -2787,6 +2787,8 @@ public:
     ScalarEvolution &SE;
     const BoUpSLP &R;
     const Loop *L = nullptr;
+    const InstructionsState &S;
+    ArrayRef<Value *> VL;
 
     /// \returns the operand data at \p OpIdx and \p Lane.
     OperandData &getData(unsigned OpIdx, unsigned Lane) {
@@ -2988,7 +2990,7 @@ public:
         case ReorderingMode::Load:
         case ReorderingMode::Opcode: {
           bool LeftToRight = Lane > LastLane;
-          auto ScoreLoadOpcode = [&](Value *Op, Value *OpLastLane) -> void {
+          auto ScoreLoadOrOpcode = [&](Value *Op, Value *OpLastLane) -> void {
             Value *OpLeft = (LeftToRight) ? OpLastLane : Op;
             Value *OpRight = (LeftToRight) ? Op : OpLastLane;
             int Score = getLookAheadScore(OpLeft, OpRight, MainAltOps, Lane,
@@ -3001,7 +3003,21 @@ public:
               BestScoresPerLanes[std::make_pair(OpIdx, Lane)] = Score;
             }
           };
-          ScoreLoadOpcode(Op, OpLastLane);
+          ScoreLoadOrOpcode(Op, OpLastLane);
+          // If copyable, check against the operands of the copyable op
+          if (S.isCopyableElement(VL[Lane]) &&
+              !S.isCopyableElement(VL[LastLane])) {
+            if (Instruction *I = dyn_cast<Instruction>(Op)) {
+              if (Instruction::isBinaryOp(I->getOpcode())) {
+                Value *OpOperand0 = I->getOperand(0);
+                ScoreLoadOrOpcode(OpOperand0, OpLastLane);
+                if (I->isCommutative()) {
+                  Value *OpOperand1 = I->getOperand(1);
+                  ScoreLoadOrOpcode(OpOperand1, OpLastLane);
+                }
+              }
+            }
+          }
           break;
         }
         case ReorderingMode::Constant:
@@ -3326,7 +3342,7 @@ public:
     VLOperands(ArrayRef<Value *> RootVL, ArrayRef<ValueList> Operands,
                const InstructionsState &S, const BoUpSLP &R)
         : TLI(*R.TLI), DL(*R.DL), SE(*R.SE), R(R),
-          L(R.LI->getLoopFor(S.getMainOp()->getParent())) {
+          L(R.LI->getLoopFor(S.getMainOp()->getParent())), S(S), VL(RootVL) {
       // Append all the operands of RootVL.
       appendOperands(RootVL, Operands, S);
     }
