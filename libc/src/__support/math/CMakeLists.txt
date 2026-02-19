@@ -381,6 +381,34 @@ add_header_library(
     libc.src.__support.FPUtil.fma
     libc.src.__support.macros.config
 )
+add_header_library(
+  bf16sub
+  HDRS
+    bf16sub.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+add_header_library(
+  bf16subf
+  HDRS
+    bf16subf.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+add_header_library(
+  bf16subf128
+  HDRS
+    bf16subf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
 
 add_header_library(
   canonicalize

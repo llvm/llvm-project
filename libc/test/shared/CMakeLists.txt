@@ -33,6 +33,9 @@ add_fp_unittest(
     libc.src.__support.math.bf16divl
     libc.src.__support.math.bf16fmaf
     libc.src.__support.math.bf16fmal
+    libc.src.__support.math.bf16sub
+    libc.src.__support.math.bf16subf
+    libc.src.__support.math.bf16subf128
     libc.src.__support.math.canonicalize
     libc.src.__support.math.canonicalizebf16
     libc.src.__support.math.canonicalizef
