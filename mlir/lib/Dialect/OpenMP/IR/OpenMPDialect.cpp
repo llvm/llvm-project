@@ -799,6 +799,130 @@ static void printNumTasksClause(OpAsmPrinter &p, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Parser, printer and verify for dyn_groupprivate Clause
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyDynGroupprivateClause(
+    Operation *op, AccessGroupModifierAttr modifierFirst,
+    FallbackModifierAttr modifierSecond, Value dynGroupprivateSize) {
+
+  // Verify the size
+  if (dynGroupprivateSize) {
+    Type size_type = dynGroupprivateSize.getType();
+    // Check if the size type is an integer type
+    if (!size_type.isIntOrIndex()) {
+      return op->emitOpError(
+                 "dyn_groupprivate size must be an integer type, got ")
+             << size_type;
+    }
+  }
+
+  return success();
+}
+
+static ParseResult parseDynGroupprivateClause(
+    OpAsmParser &parser, AccessGroupModifierAttr &accessGroupAttr,
+    FallbackModifierAttr &fallbackAttr,
+    std::optional<OpAsmParser::UnresolvedOperand> &dynGroupprivateSize,
+    Type &sizeType) {
+
+  bool parsedAccessGroup = false;
+  bool parsedFallback = false;
+
+  // Parse modifiers separated by commas
+  while (true) {
+    // parse AccessGroupModifier
+    if (succeeded(parser.parseOptionalKeyword("cgroup"))) {
+      if (parsedAccessGroup)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate access group modifier");
+      accessGroupAttr = AccessGroupModifierAttr::get(
+          parser.getContext(), AccessGroupModifier::cgroup);
+      parsedAccessGroup = true;
+    }
+    // parse FallbackModifier
+    else if (succeeded(parser.parseOptionalKeyword("fallback"))) {
+      if (parsedFallback)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate fallback modifier");
+      if (parser.parseLParen())
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected '(' after 'fallback'");
+      llvm::StringRef fbKind;
+      if (parser.parseKeyword(&fbKind))
+        return parser.emitError(
+            parser.getCurrentLocation(),
+            "expected fallback modifier (abort/null/default_mem)");
+      std::optional<FallbackModifier> fbEnum;
+      if (fbKind == "abort")
+        fbEnum = FallbackModifier::abort;
+      else if (fbKind == "null")
+        fbEnum = FallbackModifier::null;
+      else if (fbKind == "default_mem")
+        fbEnum = FallbackModifier::default_mem;
+      else
+        return parser.emitError(parser.getCurrentLocation(),
+                                "invalid fallback modifier '" + fbKind + "'");
+      fallbackAttr = FallbackModifierAttr::get(parser.getContext(), *fbEnum);
+      if (parser.parseRParen())
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected ')' after fallback modifier");
+      parsedFallback = true;
+    } else
+      break;
+
+    // Consume optional comma between modifiers
+    (void)parser.parseOptionalComma();
+  }
+
+  // Consume comma after modifiers, if both modifiers are present
+  (void)parser.parseOptionalComma();
+
+  OpAsmParser::UnresolvedOperand operand;
+  if (succeeded(parser.parseOperand(operand))) {
+    dynGroupprivateSize = operand;
+    if (failed(parser.parseColon()) || failed(parser.parseType(sizeType))) {
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected ':' and type after size operand");
+    }
+  } else {
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected dyn_groupprivate_size operand");
+  }
+
+  return success();
+}
+
+static void printDynGroupprivateClause(OpAsmPrinter &printer, Operation *op,
+                                       AccessGroupModifierAttr modifierFirst,
+                                       FallbackModifierAttr modifierSecond,
+                                       Value dynGroupprivateSize,
+                                       Type sizeType) {
+
+  bool needsComma = false;
+
+  if (modifierFirst) {
+    printer << modifierFirst.getValue();
+    needsComma = true;
+  }
+
+  if (modifierSecond) {
+    if (needsComma)
+      printer << ", ";
+    printer << "fallback(";
+    printer << modifierSecond.getValue();
+    printer << ")";
+    needsComma = true;
+  }
+
+  if (dynGroupprivateSize) {
+    if (needsComma)
+      printer << ", ";
+    printer << dynGroupprivateSize << " : " << sizeType;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Parsers for operations including clauses that define entry block arguments.
 //===----------------------------------------------------------------------===//
 
@@ -2211,6 +2335,8 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
                   clauses.mapVars, clauses.nowait, clauses.privateVars,
                   makeArrayAttr(ctx, clauses.privateSyms),
                   clauses.privateNeedsBarrier, clauses.threadLimitVars,
+                  clauses.accessGroup, clauses.fallback,
+                  clauses.dynGroupprivateSize,
                   /*private_maps=*/nullptr);
 }
 
@@ -2223,6 +2349,12 @@ LogicalResult TargetOp::verify() {
     return failure();
 
   if (failed(verifyMapClause(*this, getMapVars())))
+    return failure();
+
+  // check dyn_groupprivate clause restrictions
+  if (failed(verifyDynGroupprivateClause(*this, getAccessGroupAttr(),
+                                         getFallbackAttr(),
+                                         getDynGroupprivateSize())))
     return failure();
 
   return verifyPrivateVarsMapping(*this);
@@ -2632,7 +2764,8 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
       /*private_needs_barrier=*/nullptr, clauses.reductionMod,
       clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
-      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimitVars);
+      makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimitVars,
+      clauses.accessGroup, clauses.fallback, clauses.dynGroupprivateSize);
 }
 
 // Verify num_teams clause
@@ -2674,6 +2807,12 @@ LogicalResult TeamsOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
+
+  // check dyn_groupprivate clause restrictions
+  if (failed(verifyDynGroupprivateClause(op, getAccessGroupAttr(),
+                                         getFallbackAttr(),
+                                         getDynGroupprivateSize())))
+    return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
                                 getReductionByref());

@@ -1438,7 +1438,7 @@ func.func @omp_teams_allocate(%data_var : memref<i32>) {
     // expected-error @below {{expected equal sizes for allocate and allocator variables}}
     "omp.teams" (%data_var) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0,0>} : (memref<i32>) -> ()
+    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0,0,0>} : (memref<i32>) -> ()
     omp.terminator
   }
   return
@@ -1451,7 +1451,7 @@ func.func @omp_teams_num_teams1(%lb : i32) {
     // expected-error @below {{expected exactly one num_teams upper bound when lower bound is specified}}
     "omp.teams" (%lb) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0,0,0>} : (i32) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0,0,0,0>} : (i32) -> ()
     omp.terminator
   }
   return
@@ -1468,7 +1468,7 @@ func.func @omp_teams_num_teams_multidim_with_bounds() {
     // expected-error @below {{expected exactly one num_teams upper bound when lower bound is specified}}
     "omp.teams" (%lb, %v0, %v1) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 0,0,0,1,2,0,0,0>} : (i32, i32, i32) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,0,1,2,0,0,0,0>} : (i32, i32, i32) -> ()
     omp.terminator
   }
   return
@@ -1482,6 +1482,58 @@ func.func @omp_teams_num_teams2(%lb : i32, %ub : i16) {
     omp.teams num_teams(%lb : i32 to %ub : i16) {
       omp.terminator
     }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @test_teams_dyn_groupprivate_errors_1(%dyn_size: i32) {
+  // expected-error @below {{duplicate access group modifier}}
+  omp.teams dyn_groupprivate(cgroup, cgroup, %dyn_size : i32) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @test_teams_dyn_groupprivate_errors_2(%dyn_size: i32) {
+  // expected-error @below {{duplicate fallback modifier}}
+  omp.teams dyn_groupprivate(fallback(null), fallback(abort), %dyn_size : i32) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @test_teams_dyn_groupprivate_errors_3(%dyn_size: i32) {
+  // expected-error @below {{invalid fallback modifier 'no'}}
+  omp.teams dyn_groupprivate(fallback(no), %dyn_size : i32) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @test_teams_dyn_groupprivate_errors_4(%dyn_size: i32) {
+  // expected-error @below {{custom op 'omp.teams' expected dyn_groupprivate_size operand}}
+  // expected-error @below {{expected SSA operand}}
+  omp.teams dyn_groupprivate(fallback(null)) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @test_teams_dyn_groupprivate_errors_5() {
+  // expected-error @below {{expected dyn_groupprivate_size operand}}
+  // expected-error @below {{expected SSA operand}}
+  omp.teams dyn_groupprivate() {
     omp.terminator
   }
   return
@@ -2475,7 +2527,7 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.target"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
+    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
 }
 
