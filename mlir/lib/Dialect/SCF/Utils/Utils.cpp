@@ -1569,6 +1569,25 @@ bool mlir::isPerfectlyNestedForLoops(
   return true;
 }
 
+llvm::SmallVector<std::tuple<int64_t, int64_t, int64_t>>
+mlir::getConstLoopBounds(mlir::LoopLikeOpInterface loopOp) {
+  std::optional<SmallVector<OpFoldResult>> loBnds = loopOp.getLoopLowerBounds();
+  std::optional<SmallVector<OpFoldResult>> upBnds = loopOp.getLoopUpperBounds();
+  std::optional<SmallVector<OpFoldResult>> steps = loopOp.getLoopSteps();
+  if (!loBnds || !upBnds || !steps)
+    return {};
+  llvm::SmallVector<std::tuple<int64_t, int64_t, int64_t>> loopRanges;
+  for (auto [lb, ub, step] : llvm::zip(*loBnds, *upBnds, *steps)) {
+    auto lbCst = getConstantIntValue(lb);
+    auto ubCst = getConstantIntValue(ub);
+    auto stepCst = getConstantIntValue(step);
+    if (!lbCst || !ubCst || !stepCst)
+      return {};
+    loopRanges.emplace_back(*lbCst, *ubCst, *stepCst);
+  }
+  return loopRanges;
+}
+
 llvm::SmallVector<llvm::APInt>
 mlir::getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp) {
   std::optional<SmallVector<OpFoldResult>> loBnds = loopOp.getLoopLowerBounds();
