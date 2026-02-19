@@ -52,4 +52,8 @@ void test() {
   std::is_sorted(std::execution::par, std::begin(a), std::end(a));
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::is_sorted(std::execution::par, std::begin(a), std::end(a), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::is_sorted_until(std::execution::par, std::begin(a), std::end(a));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::is_sorted_until(std::execution::par, std::begin(a), std::end(a), pred2);
 }
