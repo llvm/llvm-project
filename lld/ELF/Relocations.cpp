@@ -72,8 +72,10 @@ void elf::printLocation(ELFSyncStream &s, InputSectionBase &sec,
 
 void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
                            const Twine &v, int64_t min, uint64_t max) {
-  ErrorPlace errPlace = getErrorPlace(ctx, loc);
   auto diag = Err(ctx);
+  if (diag.getDiagLevel() == DiagLevel::None)
+    return;
+  ErrorPlace errPlace = getErrorPlace(ctx, loc);
   diag << errPlace.loc << "relocation " << rel.type
        << " out of range: " << v.str() << " is not in [" << min << ", " << max
        << ']';
@@ -104,6 +106,8 @@ void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
 void elf::reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
                            const Symbol &sym, const Twine &msg) {
   auto diag = Err(ctx);
+  if (diag.getDiagLevel() == DiagLevel::None)
+    return;
   diag << getErrorPlace(ctx, loc).loc << msg << " is out of range: " << v
        << " is not in [" << llvm::minIntN(n) << ", " << llvm::maxIntN(n) << "]";
   if (!sym.getName().empty()) {
