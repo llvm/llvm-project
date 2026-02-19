@@ -380,6 +380,7 @@
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
+#include "llvm/Transforms/Vectorize/LoopReduceMotion.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h"
