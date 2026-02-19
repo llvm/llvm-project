@@ -358,16 +358,16 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     return LLVMConstNull(Ty);
   }
 
-  // Try undef
-  if (LLVMIsUndef(Cst)) {
-    check_value_kind(Cst, LLVMUndefValueValueKind);
-    return LLVMGetUndef(TypeCloner(M).Clone(Cst));
-  }
-
   // Try poison
   if (LLVMIsPoison(Cst)) {
     check_value_kind(Cst, LLVMPoisonValueValueKind);
     return LLVMGetPoison(TypeCloner(M).Clone(Cst));
+  }
+
+  // Try undef
+  if (LLVMIsUndef(Cst)) {
+    check_value_kind(Cst, LLVMUndefValueValueKind);
+    return LLVMGetUndef(TypeCloner(M).Clone(Cst));
   }
 
   // Try null
