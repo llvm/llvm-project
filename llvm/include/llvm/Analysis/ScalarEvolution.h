@@ -81,7 +81,7 @@ struct SCEVUse : public PointerIntPair<const SCEV *, 3> {
 
   bool isCanonical() const;
 
-  const SCEV *getCanonical() const { return getPointer(); }
+  const SCEV *getCanonical() const;
 
   unsigned getFlags() const { return getInt(); }
 
@@ -196,6 +196,8 @@ protected:
   /// miscellaneous information.
   unsigned short SubclassData = 0;
 
+  const SCEV *CanonicalSCEV;
+
 public:
   /// NoWrapFlags are bitfield indices into SubclassData.
   ///
@@ -243,7 +245,7 @@ public:
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                 unsigned short ExpressionSize)
-      : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize) {}
+      : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize), CanonicalSCEV(this) {}
   SCEV(const SCEV &) = delete;
   SCEV &operator=(const SCEV &) = delete;
 
@@ -286,6 +288,8 @@ public:
 
   /// This method is used for debugging.
   LLVM_ABI void dump() const;
+
+  LLVM_ABI const SCEV *getCanonical() const { return CanonicalSCEV; }
 };
 
 // Specialize FoldingSetTrait for SCEV to avoid needing to compute
@@ -2707,6 +2711,10 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
     return LHS == RHS;
   }
 };
+
+inline const SCEV *SCEVUse::getCanonical() const {
+  return getPointer()->getCanonical();
+}
 
 } // end namespace llvm
 
