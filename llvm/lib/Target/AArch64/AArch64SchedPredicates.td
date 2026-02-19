@@ -360,9 +360,8 @@ def CheckIsZRegOp0 : CheckAll<[
   ]>
 ]>;
 
-// Check Z0 == Z1
+// Check if destination and source are the same Z register (Zn == Zm)
 def SameZRegDstSrcPred : MCSchedPredicate<
   CheckAll<[CheckSameRegOperand<0, 1>, CheckIsZRegOp0]>
 >;
-
 
