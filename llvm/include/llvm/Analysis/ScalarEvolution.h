@@ -224,7 +224,7 @@ public:
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                 unsigned short ExpressionSize)
       : FastID(ID), SCEVType(SCEVTy), ExpressionSize(ExpressionSize),
-        CanonicalSCEV(this) {}
+        CanonicalSCEV(nullptr) {}
   SCEV(const SCEV &) = delete;
   SCEV &operator=(const SCEV &) = delete;
 
@@ -269,6 +269,8 @@ public:
   LLVM_ABI void dump() const;
 
   const SCEV *getCanonical() const { return CanonicalSCEV; }
+
+  LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
 };
 
 // Specialize FoldingSetTrait for SCEV to avoid needing to compute
