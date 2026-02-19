@@ -1160,7 +1160,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::SIGN_EXTEND_INREG, ISD::CONCAT_VECTORS,
                        ISD::EXTRACT_SUBVECTOR, ISD::INSERT_SUBVECTOR,
                        ISD::STORE, ISD::BUILD_VECTOR});
-  setTargetDAGCombine(ISD::SMIN);
+  setTargetDAGCombine({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX});
   setTargetDAGCombine(ISD::TRUNCATE);
   setTargetDAGCombine(ISD::LOAD);
 
@@ -22615,14 +22615,6 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::SIGN_EXTEND, DL, DestVT, SQDMULH);
 }
 
-static SDValue performSMINCombine(SDNode *N, SelectionDAG &DAG) {
-  if (SDValue V = trySQDMULHCombine(N, DAG)) {
-    return V;
-  }
-
-  return SDValue();
-}
-
 static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
                                       TargetLowering::DAGCombinerInfo &DCI) {
   SDLoc DL(N);
@@ -28866,6 +28858,48 @@ static SDValue performCTPOPCombine(SDNode *N,
   return DAG.getNegative(NegPopCount, DL, VT);
 }
 
+static unsigned getReductionForOpcode(unsigned Op) {
+  switch (Op) {
+  case ISD::SMIN:
+    return ISD::VECREDUCE_SMIN;
+  case ISD::SMAX:
+    return ISD::VECREDUCE_SMAX;
+  case ISD::UMIN:
+    return ISD::VECREDUCE_UMIN;
+  case ISD::UMAX:
+    return ISD::VECREDUCE_UMAX;
+  default:
+    llvm_unreachable("unimplemented mapping");
+  }
+}
+
+static SDValue performMINMAXCombine(SDNode *N, SelectionDAG &DAG,
+                                    const AArch64TargetLowering &TLI) {
+  using namespace llvm::SDPatternMatch;
+  if (SDValue V = trySQDMULHCombine(N, DAG))
+    return V;
+
+  unsigned ReductionOpcode = getReductionForOpcode(N->getOpcode());
+  if (!TLI.isOperationLegalOrCustom(ReductionOpcode, MVT::v2i64))
+    return SDValue();
+
+  // Fold `min/max(vec[0], vec[1])` to `vecreduce_min/max(vec)` for v2i64.
+
+  APInt Idx;
+  SDValue Vec;
+  if (!sd_match(N->getOperand(0),
+                m_OneUse(m_ExtractElt(m_SpecificVT(MVT::v2i64, m_Value(Vec)),
+                                      m_ConstInt(Idx)))))
+    return SDValue();
+
+  if (!sd_match(
+          N->getOperand(1),
+          m_OneUse(m_ExtractElt(m_Specific(Vec), m_SpecificInt(1 - Idx)))))
+    return SDValue();
+
+  return DAG.getNode(ReductionOpcode, SDLoc(N), N->getValueType(0), Vec);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -28884,8 +28918,11 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performAddSubCombine(N, DCI);
   case ISD::BUILD_VECTOR:
     return performBuildVectorCombine(N, DCI, DAG);
+  case ISD::UMAX:
+  case ISD::UMIN:
+  case ISD::SMAX:
   case ISD::SMIN:
-    return performSMINCombine(N, DAG);
+    return performMINMAXCombine(N, DAG, *this);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DAG, DCI);
   case AArch64ISD::ANDS:

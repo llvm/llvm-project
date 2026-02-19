@@ -116,6 +116,28 @@ TEST(WorkspaceSymbols, Unnamed) {
                                 withKind(SymbolKind::Field))));
 }
 
+TEST(WorkspaceSymbols, TypeAlias) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    struct Struct {};
+    class Class {};
+    class Container {
+      using StructAlias = Struct;
+      using ClassAlias = Class;
+    };
+  )cpp";
+  EXPECT_THAT(
+      getSymbols(TU, "Struct"),
+      UnorderedElementsAre(AllOf(qName("Struct"), withKind(SymbolKind::Struct)),
+                           AllOf(qName("Container::StructAlias"),
+                                 withKind(SymbolKind::Struct))));
+  EXPECT_THAT(
+      getSymbols(TU, "Class"),
+      UnorderedElementsAre(
+          AllOf(qName("Class"), withKind(SymbolKind::Class)),
+          AllOf(qName("Container::ClassAlias"), withKind(SymbolKind::Class))));
+}
+
 TEST(WorkspaceSymbols, InMainFile) {
   TestTU TU;
   TU.Code = R"cpp(

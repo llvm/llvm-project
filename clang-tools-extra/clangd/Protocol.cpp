@@ -295,8 +295,8 @@ SymbolKind adjustKindToCapability(SymbolKind Kind,
   }
 }
 
-SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
-  switch (Kind) {
+SymbolKind indexSymbolKindToSymbolKind(const index::SymbolInfo &Info) {
+  switch (Info.Kind) {
   // FIXME: for backwards compatibility, the include directive kind is treated
   // the same as Unknown
   case index::SymbolKind::IncludeDirective:
@@ -322,8 +322,16 @@ SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
     return SymbolKind::Interface;
   case index::SymbolKind::Union:
     return SymbolKind::Class;
-  case index::SymbolKind::TypeAlias:
-    return SymbolKind::Class;
+  case index::SymbolKind::TypeAlias: {
+    switch (Info.SubKind) {
+    case index::SymbolSubKind::UsingStruct:
+      return SymbolKind::Struct;
+    case index::SymbolSubKind::UsingClass:
+      return SymbolKind::Class;
+    default:
+      return SymbolKind::Class;
+    }
+  }
   case index::SymbolKind::Function:
     return SymbolKind::Function;
   case index::SymbolKind::Variable:
