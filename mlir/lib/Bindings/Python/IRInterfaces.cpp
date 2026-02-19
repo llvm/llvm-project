@@ -12,12 +12,12 @@
 #include <utility>
 #include <vector>
 
-#include "IRInterfaces.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Interfaces.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/IRCore.h"
+#include "mlir/Bindings/Python/IRInterfaces.h"
 
 namespace nb = nanobind;
 
@@ -380,7 +380,8 @@ public:
     };
 
     mlirMemoryEffectsOpInterfaceAttachFallbackModel(
-        ctx->get(), wrap(StringRef(opName.c_str())), callbacks);
+        ctx->get(), mlirStringRefCreate(opName.c_str(), opName.size()),
+        callbacks);
   }
 
   static void bindDerived(ClassTy &cls) {

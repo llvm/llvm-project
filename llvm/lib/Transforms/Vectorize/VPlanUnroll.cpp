@@ -365,6 +365,14 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
         Phi->setOperand(1, Copy->getVPSingleValue());
       }
     }
+    if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(Copy)) {
+      // Materialize PartN offset for VectorEndPointer.
+      VEPR->setOperand(0, R.getOperand(0));
+      VEPR->setOperand(1, R.getOperand(1));
+      VEPR->materializeOffset(Part);
+      continue;
+    }
+
     remapOperands(Copy, Part);
 
     if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Copy))
@@ -372,13 +380,20 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
 
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
-    if (isa<VPWidenCanonicalIVRecipe, VPVectorEndPointerRecipe>(Copy) ||
-        match(Copy,
-              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
+    if (isa<VPWidenCanonicalIVRecipe>(Copy))
       Copy->addOperand(getConstantInt(Part));
 
-    if (isa<VPVectorEndPointerRecipe>(R))
-      Copy->setOperand(0, R.getOperand(0));
+    if (match(Copy,
+              m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>())) {
+      VPBuilder Builder(Copy);
+      VPValue *ScaledByPart = Builder.createOverflowingOp(
+          Instruction::Mul, {Copy->getOperand(1), getConstantInt(Part)});
+      Copy->setOperand(1, ScaledByPart);
+    }
+  }
+  if (auto *VEPR = dyn_cast<VPVectorEndPointerRecipe>(&R)) {
+    // Materialize Part0 offset for VectorEndPointer.
+    VEPR->materializeOffset();
   }
 }
 
@@ -472,7 +487,7 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
         auto *VPI = dyn_cast<VPInstruction>(&R);
         if (VPI &&
             VPI->getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
-            VPI->getNumOperands() == 1) {
+            VPI->getOperand(1) == &Plan.getVF()) {
           VPI->replaceAllUsesWith(VPI->getOperand(0));
           VPI->eraseFromParent();
         }

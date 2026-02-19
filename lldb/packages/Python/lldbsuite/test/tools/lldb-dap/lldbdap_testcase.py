@@ -338,7 +338,6 @@ class DAPTestCaseBase(TestBase):
         )
         if stackFrames is not None:
             stackFrame = stackFrames[0]
-            ["source", "path"]
             if "source" in stackFrame:
                 source = stackFrame["source"]
                 if "path" in source:
@@ -391,21 +390,6 @@ class DAPTestCaseBase(TestBase):
         if locals_ref is None:
             return None
         return self.set_variable(locals_ref, name, str(value), id=id)
-
-    def set_global(self, name, value, id=None):
-        """Set a top level global variable only."""
-        # Get the globals scope reference dynamically
-        stackFrame = self.dap_server.get_stackFrame()
-        if stackFrame is None:
-            return None
-        frameId = stackFrame["id"]
-        scopes_response = self.dap_server.request_scopes(frameId)
-        frame_scopes = scopes_response["body"]["scopes"]
-        for scope in frame_scopes:
-            if scope["name"] == "Globals":
-                varRef = scope["variablesReference"]
-                return self.set_variable(varRef, name, str(value), id=id)
-        return None
 
     def get_locals_scope_reference(self):
         """Get the variablesReference for the locals scope."""
@@ -512,25 +496,6 @@ class DAPTestCaseBase(TestBase):
             disassembled_instructions[inst["address"]] = inst
 
         return disassembled_instructions, disassembled_instructions[memoryReference]
-
-    def _build_error_message(self, base_message, response):
-        """Build a detailed error message from a DAP response.
-        Extracts error information from various possible locations in the response structure.
-        """
-        error_msg = base_message
-        if response:
-            if "message" in response:
-                error_msg += " (%s)" % response["message"]
-            elif "body" in response and "error" in response["body"]:
-                if "format" in response["body"]["error"]:
-                    error_msg += " (%s)" % response["body"]["error"]["format"]
-                else:
-                    error_msg += " (error in body)"
-            else:
-                error_msg += " (no error details available)"
-        else:
-            error_msg += " (no response)"
-        return error_msg
 
     def attach(
         self,

@@ -25,9 +25,10 @@
 #include <vector>
 
 #include "almost_satisfies_types.h"
+#include "MoveOnly.h"
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "MoveOnly.h"
+#include "type_algorithms.h"
 
 struct InvalidDifferenceT {};
 

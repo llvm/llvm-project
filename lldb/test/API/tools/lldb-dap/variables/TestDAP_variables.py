@@ -99,6 +99,11 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             )
 
     def verify_variables(self, verify_dict, variables, varref_dict=None):
+        self.assertGreaterEqual(
+            len(variables),
+            1,
+            f"No variables to verify, verify_dict={json.dumps(verify_dict, indent=4)}",
+        )
         for variable in variables:
             name = variable["name"]
             if not name.startswith("std::"):
@@ -542,6 +547,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         # Evaluate from known contexts.
         expr_varref_dict = {}
+        permanent_expandable_ref = None
         for context, verify_dict in expandable_expression["context"].items():
             response = self.dap_server.request_evaluate(
                 expandable_expression["name"],
@@ -549,9 +555,15 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 threadId=None,
                 context=context,
             )
+
+            response_body = response["body"]
+            if context == "repl":  # save the variablesReference
+                self.assertIn("variablesReference", response_body)
+                permanent_expandable_ref = response_body["variablesReference"]
+
             self.verify_values(
                 verify_dict,
-                response["body"],
+                response_body,
                 expr_varref_dict,
                 expandable_expression["name"],
             )
@@ -578,7 +590,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         )
         self.continue_to_breakpoints(breakpoint_ids)
 
-        var_ref = expr_varref_dict[expandable_expression["name"]]
+        var_ref = permanent_expandable_ref
         response = self.dap_server.request_variables(var_ref)
         self.verify_variables(
             expandable_expression["children"], response["body"]["variables"]
@@ -597,6 +609,16 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 self.assertEqual(scope.get("presentationHint"), "locals")
             if scope["name"] == "Registers":
                 self.assertEqual(scope.get("presentationHint"), "registers")
+
+        # Test invalid variablesReference.
+        for wrong_var_ref in (-6000, -1, 4000):
+            response = self.dap_server.request_variables(wrong_var_ref)
+            self.assertFalse(response["success"])
+            error_msg: str = response["body"]["error"]["format"]
+            self.assertTrue(
+                error_msg.startswith("invalid variablesReference"),
+                f"seen error message : {error_msg}",
+            )
 
     def test_scopes_and_evaluate_expansion(self):
         self.do_test_scopes_and_evaluate_expansion(enableAutoVariableSummaries=False)

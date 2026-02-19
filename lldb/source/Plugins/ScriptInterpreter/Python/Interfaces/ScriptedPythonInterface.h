@@ -17,16 +17,9 @@
 #include <type_traits>
 #include <utility>
 
-#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Utility/DataBufferHeap.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/FileSpecList.h"
-
-#include "lldb/API/SBFileSpec.h"
-#include "lldb/API/SBFileSpecList.h"
-#include "lldb/API/SBModuleSpec.h"
 
 #include "../PythonDataObjects.h"
 #include "../SWIGPythonBridge.h"
@@ -639,10 +632,6 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
-  python::PythonObject Transform(lldb::ModuleSP arg) {
-    return python::SWIGBridge::ToSWIGWrapper(arg);
-  }
-
   python::PythonObject Transform(Event *arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
@@ -671,24 +660,6 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
-  python::PythonObject Transform(const ModuleSpec &arg) {
-    return python::SWIGBridge::ToSWIGWrapper(
-        m_interpreter.MakeSBModuleSpec(arg));
-  }
-
-  python::PythonObject Transform(const FileSpecList &arg) {
-    auto sb_list = std::make_unique<lldb::SBFileSpecList>();
-    for (size_t i = 0; i < arg.GetSize(); i++) {
-      sb_list->Append(
-          lldb::SBFileSpec(arg.GetFileSpecAtIndex(i).GetPath().c_str(), false));
-    }
-    return python::SWIGBridge::ToSWIGWrapper(std::move(sb_list));
-  }
-
-  python::PythonObject Transform(const std::string &arg) {
-    return python::PythonString(arg);
-  }
-
   template <typename T, typename U>
   void ReverseTransform(T &original_arg, U transformed_arg, Status &error) {
     // If U is not a PythonObject, don't touch it!
@@ -698,16 +669,6 @@ protected:
   void ReverseTransform(T &original_arg, python::PythonObject transformed_arg,
                         Status &error) {
     original_arg = ExtractValueFromPythonObject<T>(transformed_arg, error);
-  }
-
-  // Read-only types: Python doesn't modify these, so reverse transform is a
-  // no-op.
-  void ReverseTransform(std::string &original_arg,
-                        python::PythonObject transformed_arg, Status &error) {
-    python::PythonString py_str(python::PyRefType::Borrowed,
-                                transformed_arg.get());
-    if (py_str.IsValid())
-      original_arg = py_str.GetString().str();
   }
 
   void ReverseTransform(bool &original_arg,
@@ -865,24 +826,6 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
 template <>
 lldb::ValueObjectListSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
-    python::PythonObject &p, Status &error);
-
-template <>
-FileSpec ScriptedPythonInterface::ExtractValueFromPythonObject<FileSpec>(
-    python::PythonObject &p, Status &error);
-
-template <>
-ModuleSpec ScriptedPythonInterface::ExtractValueFromPythonObject<ModuleSpec>(
-    python::PythonObject &p, Status &error);
-
-template <>
-FileSpecList
-ScriptedPythonInterface::ExtractValueFromPythonObject<FileSpecList>(
-    python::PythonObject &p, Status &error);
-
-template <>
-lldb::ModuleSP
-ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ModuleSP>(
     python::PythonObject &p, Status &error);
 
 } // namespace lldb_private

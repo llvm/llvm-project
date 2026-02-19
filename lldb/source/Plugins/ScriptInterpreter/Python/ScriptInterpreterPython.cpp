@@ -1229,7 +1229,7 @@ Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
     StringList &function_def) {
   // Convert StringList to one long, newline delimited, const char *.
   std::string function_def_string(function_def.CopyList());
-  LLDB_LOG(GetLog(LLDBLog::Script), "Added Function:\n%s\n",
+  LLDB_LOG(GetLog(LLDBLog::Script), "Added Function:\n{0}\n",
            function_def_string.c_str());
 
   Status error = ExecuteMultipleLines(
@@ -1530,11 +1530,6 @@ ScriptInterpreterPythonImpl::CreateScriptedFrameInterface() {
 ScriptedFrameProviderInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedFrameProviderInterface() {
   return std::make_shared<ScriptedFrameProviderPythonInterface>(*this);
-}
-
-ScriptedSymbolLocatorInterfaceSP
-ScriptInterpreterPythonImpl::CreateScriptedSymbolLocatorInterface() {
-  return std::make_shared<ScriptedSymbolLocatorPythonInterface>(*this);
 }
 
 ScriptedThreadPlanInterfaceSP

@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[INIT_S1:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i}> : !rec_S
+// CIR-DAG: cir.global "private"{{.*}}constant cir_private @[[INIT_S2:.*]] = #cir.const_record<{#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<0> : !s32i}> : !rec_S
+
 struct BitfieldStruct {
   unsigned int a:4;
   unsigned int b:14;
@@ -65,16 +68,16 @@ void init() {
 // CIR: cir.func{{.*}} @_Z4initv()
 // CIR:   %[[S1:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s1", init]
 // CIR:   %[[S2:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s2", init]
-// CIR:   %[[CONST_1:.*]] = cir.const #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i}> : !rec_S
-// CIR:   cir.store{{.*}} %[[CONST_1]], %[[S1]]
-// CIR:   %[[CONST_2:.*]] = cir.const #cir.const_record<{#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<0> : !s32i}> : !rec_S
-// CIR:   cir.store{{.*}} %[[CONST_2]], %[[S2]]
+// CIR:   %[[CONST_1:.*]] = cir.get_global @[[INIT_S1]] : !cir.ptr<!rec_S>
+// CIR:   cir.copy %[[CONST_1]] to %[[S1]] : !cir.ptr<!rec_S>
+// CIR:   %[[CONST_2:.*]] = cir.get_global @[[INIT_S2]] : !cir.ptr<!rec_S>
+// CIR:   cir.copy %[[CONST_2]] to %[[S2]] : !cir.ptr<!rec_S>
 
 // LLVM: define{{.*}} void @_Z4initv()
 // LLVM:   %[[S1:.*]] = alloca %struct.S
 // LLVM:   %[[S2:.*]] = alloca %struct.S
-// LLVM:   store %struct.S { i32 1, i32 2, i32 3 }, ptr %[[S1]], align 4
-// LLVM:   store %struct.S { i32 4, i32 5, i32 0 }, ptr %[[S2]], align 4
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[S1]], ptr @[[INIT_S1:.*]], i64 12, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[S2]], ptr @[[INIT_S2:.*]], i64 12, i1 false)
 
 // OGCG: @__const._Z4initv.s1 = private unnamed_addr constant %struct.S { i32 1, i32 2, i32 3 }
 // OGCG: @__const._Z4initv.s2 = private unnamed_addr constant %struct.S { i32 4, i32 5, i32 0 }

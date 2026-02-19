@@ -32,9 +32,10 @@ TEST(DependencyScanner, ScanDepsWithDiagConsumer) {
   VFS->addFile(AsmPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
 
   DependencyScanningServiceOptions Opts;
+  Opts.MakeVFS = [&] { return VFS; };
   Opts.Format = ScanningOutputFormat::Make;
   DependencyScanningService Service(std::move(Opts));
-  DependencyScanningWorker Worker(Service, VFS);
+  DependencyScanningWorker Worker(Service);
 
   llvm::DenseSet<ModuleID> AlreadySeen;
   FullDependencyConsumer DC(AlreadySeen);

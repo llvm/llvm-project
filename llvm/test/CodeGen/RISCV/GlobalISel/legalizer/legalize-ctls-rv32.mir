@@ -151,16 +151,11 @@ body:             |
     ; RV32I-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[LSHR6]], [[ADD]]
     ; RV32I-NEXT: [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 3855
     ; RV32I-NEXT: [[AND9:%[0-9]+]]:_(s32) = G_AND [[ADD1]], [[C9]]
-    ; RV32I-NEXT: [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 257
-    ; RV32I-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $x2, implicit $x2
-    ; RV32I-NEXT: $x10 = COPY [[AND9]](s32)
-    ; RV32I-NEXT: $x11 = COPY [[C10]](s32)
-    ; RV32I-NEXT: PseudoCALL target-flags(riscv-call) &__mulsi3, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
-    ; RV32I-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $x2, implicit $x2
-    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
-    ; RV32I-NEXT: [[AND10:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C3]]
-    ; RV32I-NEXT: [[LSHR7:%[0-9]+]]:_(s32) = G_LSHR [[AND10]], [[C6]](s32)
-    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[LSHR7]]
+    ; RV32I-NEXT: [[LSHR7:%[0-9]+]]:_(s32) = G_LSHR [[AND9]], [[C6]](s32)
+    ; RV32I-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[AND9]], [[LSHR7]]
+    ; RV32I-NEXT: [[C10:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; RV32I-NEXT: [[AND10:%[0-9]+]]:_(s32) = G_AND [[ADD2]], [[C10]]
+    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[AND10]]
     ; RV32I-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[SUB1]], [[C1]]
     ; RV32I-NEXT: $x10 = COPY [[SUB2]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10

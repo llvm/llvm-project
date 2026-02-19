@@ -7170,8 +7170,6 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
   while (!WorkList.empty()) {
     auto [LVal, T, IdxList] = WorkList.pop_back_val();
     T = T.getCanonicalType().getUnqualifiedType();
-    assert(!isa<MatrixType>(T) && "Matrix types not yet supported in HLSL");
-
     if (const auto *CAT = dyn_cast<ConstantArrayType>(T)) {
       uint64_t Size = CAT->getZExtSize();
       for (int64_t I = Size - 1; I > -1; I--) {
@@ -7244,6 +7242,35 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
             LValue::MakeVectorElt(Base.getAddress(), Idx, VT->getElementType(),
                                   Base.getBaseInfo(), TBAAAccessInfo());
         AccessList.emplace_back(LV);
+      }
+    } else if (const auto *MT = dyn_cast<ConstantMatrixType>(T)) {
+      // Matrices are represented as flat arrays in memory, but has a vector
+      // value type. So we use ConvertMatrixAddress to convert the address from
+      // array to vector, and extract elements similar to the vector case above.
+      // The matrix elements are iterated over in row-major order regardless of
+      // the memory layout of the matrix.
+      llvm::Type *LLVMT = ConvertTypeForMem(T);
+      CharUnits Align = getContext().getTypeAlignInChars(T);
+      Address GEP = Builder.CreateInBoundsGEP(LVal.getAddress(), IdxList, LLVMT,
+                                              Align, "matrix.gep");
+      LValue Base = MakeAddrLValue(GEP, T);
+      Address MatAddr = MaybeConvertMatrixAddress(Base.getAddress(), *this);
+      unsigned NumRows = MT->getNumRows();
+      unsigned NumCols = MT->getNumColumns();
+      bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                              LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      llvm::MatrixBuilder MB(Builder);
+      for (unsigned Row = 0; Row < MT->getNumRows(); Row++) {
+        for (unsigned Col = 0; Col < MT->getNumColumns(); Col++) {
+          llvm::Value *RowIdx = llvm::ConstantInt::get(IdxTy, Row);
+          llvm::Value *ColIdx = llvm::ConstantInt::get(IdxTy, Col);
+          llvm::Value *Idx = MB.CreateIndex(RowIdx, ColIdx, NumRows, NumCols,
+                                            IsMatrixRowMajor);
+          LValue LV =
+              LValue::MakeMatrixElt(MatAddr, Idx, MT->getElementType(),
+                                    Base.getBaseInfo(), TBAAAccessInfo());
+          AccessList.emplace_back(LV);
+        }
       }
     } else { // a scalar/builtin type
       if (!IdxList.empty()) {

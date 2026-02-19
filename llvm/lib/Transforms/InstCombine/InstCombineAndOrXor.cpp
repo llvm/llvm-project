@@ -2660,7 +2660,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         Constant *Log2C1 = ConstantExpr::getExactLogBase2(C1);
         Constant *Cmp =
             ConstantFoldCompareInstOperands(ICmpInst::ICMP_ULT, Log2C3, C2, DL);
-        if (Cmp && Cmp->isZeroValue()) {
+        if (Cmp && Cmp->isNullValue()) {
           // iff C1,C3 is pow2 and Log2(C3) >= C2:
           // ((C1 >> X) << C2) & C3 -> X == (cttz(C1)+C2-cttz(C3)) ? C3 : 0
           Constant *ShlC = ConstantExpr::getAdd(C2, Log2C1);
@@ -4024,6 +4024,74 @@ static Value *FoldOrOfSelectSmaxToAbs(BinaryOperator &I,
   return nullptr;
 }
 
+Instruction *InstCombinerImpl::FoldOrOfLogicalAnds(Value *Op0, Value *Op1) {
+  Value *C, *A, *B;
+  // (C && A) || (!C && B)
+  // (C && A) || (B && !C)
+  // (A && C) || (!C && B)
+  // (A && C) || (B && !C) (may require freeze)
+  //
+  // => select C, A, B
+  if (match(Op1, m_c_LogicalAnd(m_Not(m_Value(C)), m_Value(B))) &&
+      match(Op0, m_c_LogicalAnd(m_Specific(C), m_Value(A)))) {
+    auto *SelOp0 = dyn_cast<SelectInst>(Op0);
+    auto *SelOp1 = dyn_cast<SelectInst>(Op1);
+
+    bool MayNeedFreeze = SelOp0 && SelOp1 &&
+                         match(SelOp1->getTrueValue(),
+                               m_Not(m_Specific(SelOp0->getTrueValue())));
+    if (MayNeedFreeze)
+      C = Builder.CreateFreeze(C);
+    if (!ProfcheckDisableMetadataFixes) {
+      Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
+      if (match(Op0, m_LogicalAnd(m_Specific(C), m_Value(A2))) && SelOp0) {
+        return SelectInst::Create(C, A, B, "", nullptr, SelOp0);
+      } else if (match(Op1, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(B2))) &&
+                 SelOp1) {
+        SelectInst *NewSI = SelectInst::Create(C, A, B, "", nullptr, SelOp1);
+        NewSI->swapProfMetadata();
+        return NewSI;
+      } else {
+        return createSelectInstWithUnknownProfile(C, A, B);
+      }
+    }
+    return SelectInst::Create(C, A, B);
+  }
+
+  // (!C && A) || (C && B)
+  // (A && !C) || (C && B)
+  // (!C && A) || (B && C)
+  // (A && !C) || (B && C) (may require freeze)
+  //
+  // => select C, B, A
+  if (match(Op0, m_c_LogicalAnd(m_Not(m_Value(C)), m_Value(A))) &&
+      match(Op1, m_c_LogicalAnd(m_Specific(C), m_Value(B)))) {
+    auto *SelOp0 = dyn_cast<SelectInst>(Op0);
+    auto *SelOp1 = dyn_cast<SelectInst>(Op1);
+    bool MayNeedFreeze = SelOp0 && SelOp1 &&
+                         match(SelOp0->getTrueValue(),
+                               m_Not(m_Specific(SelOp1->getTrueValue())));
+    if (MayNeedFreeze)
+      C = Builder.CreateFreeze(C);
+    if (!ProfcheckDisableMetadataFixes) {
+      Value *C2 = nullptr, *A2 = nullptr, *B2 = nullptr;
+      if (match(Op0, m_LogicalAnd(m_Not(m_Value(C2)), m_Value(A2))) && SelOp0) {
+        SelectInst *NewSI = SelectInst::Create(C, B, A, "", nullptr, SelOp0);
+        NewSI->swapProfMetadata();
+        return NewSI;
+      } else if (match(Op1, m_LogicalAnd(m_Specific(C), m_Value(B2))) &&
+                 SelOp1) {
+        return SelectInst::Create(C, B, A, "", nullptr, SelOp1);
+      } else {
+        return createSelectInstWithUnknownProfile(C, B, A);
+      }
+    }
+    return SelectInst::Create(C, B, A);
+  }
+
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -4135,6 +4203,17 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                m_Deferred(X)))) {
     Value *IncrementY = Builder.CreateAdd(Y, ConstantInt::get(Ty, 1));
     return BinaryOperator::CreateMul(X, IncrementY);
+  }
+
+  // (C && A) || (C && B) => select C, A, B (and similar cases)
+  //
+  // Note: This is the same transformation used in `foldSelectOfBools`,
+  // except that it's an `or` instead of `select`.
+  if (I.getType()->isIntOrIntVectorTy(1) &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    if (Instruction *V = FoldOrOfLogicalAnds(Op0, Op1)) {
+      return V;
+    }
   }
 
   // (A & C) | (B & D)
@@ -5322,7 +5401,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
                        m_AShr(m_Value(X), m_APIntAllowPoison(CA))))) &&
         *CA == X->getType()->getScalarSizeInBits() - 1 &&
         !match(C1, m_AllOnes())) {
-      assert(!C1->isZeroValue() && "Unexpected xor with 0");
+      assert(!C1->isNullValue() && "Unexpected xor with 0");
       Value *IsNotNeg = Builder.CreateIsNotNeg(X);
       return createSelectInstWithUnknownProfile(IsNotNeg, Op1,
                                                 Builder.CreateNot(Op1));

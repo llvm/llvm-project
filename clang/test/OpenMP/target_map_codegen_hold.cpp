@@ -330,9 +330,9 @@ void ST::test_present_members() {
 // CHECK-USE-PPC64LE-NEXT:    store ptr [[ST1]], ptr [[ST1_ADDR]], align 8
 // CHECK-USE-PPC64LE-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK-USE-PPC64LE-NEXT:    store ptr [[ST2]], ptr [[ST2_ADDR]], align 8
-// CHECK-USE-PPC64LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ST1_ADDR]], align 8
-// CHECK-USE-PPC64LE-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK-USE-PPC64LE-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ST2_ADDR]], align 8
+// CHECK-USE-PPC64LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ST1_ADDR]], align 8, !nonnull [[META9:![0-9]+]], !align [[META10:![0-9]+]]
+// CHECK-USE-PPC64LE-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
+// CHECK-USE-PPC64LE-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ST2_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-USE-PPC64LE-NEXT:    [[I:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-USE-PPC64LE-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-USE-PPC64LE-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP3]], 1
@@ -360,7 +360,7 @@ void ST::test_present_members() {
 // CHECK-USE-PPC64LE-NEXT:  entry:
 // CHECK-USE-PPC64LE-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-USE-PPC64LE-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
-// CHECK-USE-PPC64LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
+// CHECK-USE-PPC64LE-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META9]], !align [[META10]]
 // CHECK-USE-PPC64LE-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK-USE-PPC64LE-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
 // CHECK-USE-PPC64LE-NEXT:    store i32 [[INC]], ptr [[TMP0]], align 4
@@ -631,9 +631,9 @@ void ST::test_present_members() {
 // CHECK-USE-I386-NEXT:    store ptr [[ST1]], ptr [[ST1_ADDR]], align 4
 // CHECK-USE-I386-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-USE-I386-NEXT:    store ptr [[ST2]], ptr [[ST2_ADDR]], align 4
-// CHECK-USE-I386-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ST1_ADDR]], align 4
-// CHECK-USE-I386-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK-USE-I386-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ST2_ADDR]], align 4
+// CHECK-USE-I386-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ST1_ADDR]], align 4, !nonnull [[META10:![0-9]+]], !align [[META11:![0-9]+]]
+// CHECK-USE-I386-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META10]], !align [[META11]]
+// CHECK-USE-I386-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[ST2_ADDR]], align 4, !nonnull [[META10]], !align [[META11]]
 // CHECK-USE-I386-NEXT:    [[I:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-USE-I386-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-USE-I386-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP3]], 1
@@ -661,7 +661,7 @@ void ST::test_present_members() {
 // CHECK-USE-I386-NEXT:  entry:
 // CHECK-USE-I386-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-USE-I386-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
-// CHECK-USE-I386-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
+// CHECK-USE-I386-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META10]], !align [[META11]]
 // CHECK-USE-I386-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
 // CHECK-USE-I386-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
 // CHECK-USE-I386-NEXT:    store i32 [[INC]], ptr [[TMP0]], align 4
