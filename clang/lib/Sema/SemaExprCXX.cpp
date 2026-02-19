@@ -1,3 +1,4 @@
+//
 //===--- SemaExprCXX.cpp - Semantic Analysis for Expressions --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -2208,7 +2209,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     InitializedEntity Entity =
         InitializedEntity::InitializeNew(StartLoc, AllocType,
-                                         /*VariableLengthArrayNew*/ false);
+                                         /*VariableLengthArrayNew=*/ false);
     AllocType = DeduceTemplateSpecializationFromInitializer(
         AllocTypeInfo, Entity, Kind, Exprs);
     if (AllocType.isNull())
