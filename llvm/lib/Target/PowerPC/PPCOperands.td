@@ -17,71 +17,90 @@
 
 // Base class for immediate AsmOperandClass definitions.
 class ImmediateAsmOperand<string predicate, string render="addImmOperands">
-: AsmOperandClass {
+    : AsmOperandClass {
   let Name = NAME;
   let PredicateMethod = predicate;
   let RenderMethod = render;
 }
 
-// Base class for immediate operands with optional encoder.
-class ImmediateOp<ValueType vt, string asmop, int width, bit is_signed = 0,
-                  string encoder = "", string decoder = ""> : Operand<vt> {
-  let PrintMethod = "print"#asmop#"Operand";
+// Base class for signed immediate operands.
+class ImmediateOp<ValueType vt, string asmop, int width> : Operand<vt> {
+  let PrintMethod = "printSImmOperand<"#width#">";
+  let DecoderMethod = "decodeSImmOperand<"#width#">";
   let ParserMatchClass = !cast<AsmOperandClass>(asmop);
   let OperandType = "OPERAND_IMMEDIATE";
-
-  // Set decoder method based on signedness if not explicitly provided
-  let DecoderMethod = !if(!eq(decoder, ""),
-                          !if(is_signed,
-                              "decodeSImmOperand<"#width#">",
-                              "decodeUImmOperand<"#width#">"),
-                          decoder);
-
-  // Set encoder method if provided
-  let EncoderMethod = !if(!eq(encoder, ""),
-                          "",
-                          "getImmEncoding<" # encoder # ">");
 }
 
+// Base class for unsigned immediate operands.
+class UImmediateOp<ValueType vt, string asmop, int width>
+    : ImmediateOp<vt, asmop, width> {
+  let PrintMethod = "printUImmOperand<"#width#">";
+  let DecoderMethod = "decodeUImmOperand<"#width#">";
+}
+
+// Base class for signed immediate operands with relocation.
+class ImmediateRelocOp<ValueType vt, string asmop, int width, string fixup,
+                       string decoder = ""> : Operand<vt> {
+  let PrintMethod = "print"#asmop#"Operand";
+  let DecoderMethod = !if(!eq(decoder, ""),
+                          "decodeSImmOperand<"#width#">",
+                          decoder);
+  let ParserMatchClass = !cast<AsmOperandClass>(asmop);
+  let EncoderMethod = "getImmEncoding<" # fixup # ">";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+// Base class for unsigned immediate operands with relocation.
+class UImmediateRelocOp<ValueType vt, string asmop, int width, string fixup,
+                        string decoder = "">
+    : ImmediateRelocOp<vt, asmop, width, fixup> {
+  let DecoderMethod = !if(!eq(decoder, ""),
+                          "decodeUImmOperand<"#width#">",
+                          decoder);
+}
 //===----------------------------------------------------------------------===//
 // Multiclasses for complete immediate definitions
 // (AsmOperand + Operand + ImmLeaf).
 //===----------------------------------------------------------------------===//
 
-// Helper multiclass that generates operand + patterns together while keeping
-// them as separate definitions for GlobalISel compatibility.
-multiclass ImmOpWithPatterns<ValueType vt, string asmop, int width,
-                             bit is_signed, code pred, SDNodeXForm xform,
-                             string encoder = ""> {
-  // Operand definition (for instruction operands)
-  def "" : ImmediateOp<vt, asmop, width, is_signed, encoder>;
-
-  // ImmLeaf for imm nodes (for DAG pattern matching)
+multiclass ImmPatterns<ValueType vt, code pred, SDNodeXForm xform> {
   def _pat : ImmLeaf<vt, pred, xform>;
-
-  // TImmLeaf for timm nodes (for target-specific pattern matching, e.g., intrinsics)
   def _timm : TImmLeaf<vt, pred, xform>;
 }
 
-// Creates Operand and separate ImmLeaf definitions for unsigned immediates.
-multiclass UnsignedImmediate<ValueType vt, code pred, SDNodeXForm xform,
-                             string asmop, int width, string encoder = "">
-      : ImmOpWithPatterns<vt, asmop, width, 0, pred, xform, encoder>;
-
-// Creates Operand and separate ImmLeaf definitions for signed immediates.
 multiclass SignedImmediate<ValueType vt, code pred, SDNodeXForm xform,
-                           string asmop, int width, string encoder = "">
-      : ImmOpWithPatterns<vt, asmop, width, 1, pred, xform, encoder>;
+                           string asmop, int width >
+    : ImmPatterns<vt, pred, xform> {
+  def "" : ImmediateOp<vt, asmop, width>;
+}
+
+multiclass UnsignedImmediate<ValueType vt, code pred, SDNodeXForm xform,
+                             string asmop, int width >
+    : ImmPatterns<vt, pred, xform> {
+  def "" : UImmediateOp<vt, asmop, width>;
+}
+
+multiclass SignedImmediateReloc<ValueType vt, code pred, SDNodeXForm xform,
+                                string asmop, int width, string fixup>
+    : ImmPatterns<vt, pred, xform> {
+  def "" : ImmediateRelocOp<vt, asmop, width, fixup>;
+}
+
+// Helper multiclass for unsigned immediates with relocation fixup string.
+multiclass UnsignedImmediateReloc<ValueType vt, code pred, SDNodeXForm xform,
+                                  string asmop, int width, string fixup>
+    : ImmPatterns<vt, pred, xform> {
+  def "" : UImmediateRelocOp<vt, asmop, width, fixup>;
+}
 
 // Multiclass for signed immediate operands with both regular and
 // PC-relative versions.
-multiclass SignedImmediateWithPCRel<ValueType vt, code pred,
-                                    SDNodeXForm xform, string asmop,
-                                    int width, string fixup_imm,
+multiclass SignedImmediateWithPCRel<ValueType vt, code pred, SDNodeXForm xform,
+                                    string asmop, int width, string fixup_imm,
                                     string fixup_pcrel>
-      : SignedImmediate<vt, pred, xform, asmop, width, fixup_imm> {
-  // PC-relative immediate: instantiate SignedImmediate with PC-relative fixup
-  defm _pcrel : SignedImmediate<vt, pred, xform, asmop, width, fixup_pcrel>;
+      : SignedImmediateReloc<vt, pred, xform, asmop, width, fixup_imm> {
+  // PC-relative immediate: instantiate with PC-relative fixup
+  defm _pcrel : SignedImmediateReloc<vt, pred, xform, asmop, width, fixup_pcrel>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -136,6 +155,12 @@ defm u7imm : UnsignedImmediate<i32,
 defm u8imm : UnsignedImmediate<i32,
   [{ return isUInt<8>(Imm); }], NOOP_SDNodeXForm,
   "U8Imm", 8>;
+
+// Truncating version for BUILD_VECTOR operands that may be sign-extended.
+// Uses the same parser class as u8imm but with a truncating print method.
+def u8imm_trunc : UImmediateOp<i32, "U8Imm", 8> {
+  let PrintMethod = "printU8ImmOperandTrunc";
+}
 defm u10imm : UnsignedImmediate<i32,
   [{ return isUInt<10>(Imm); }], NOOP_SDNodeXForm,
   "U10Imm", 10>;
@@ -147,7 +172,7 @@ defm s5imm : SignedImmediate<i32,
   [{ return isInt<5>(Imm); }], NOOP_SDNodeXForm,
   "S5Imm", 5>;
 
-defm s34imm : SignedImmediate<i32,
+defm s34imm : SignedImmediateReloc<i32,
   [{ return isInt<34>(Imm); }], NOOP_SDNodeXForm,
   "S34Imm", 34, "PPC::fixup_ppc_imm34">;
 
@@ -188,28 +213,28 @@ def atimm : Operand<i32> {
 }
 
 // Special cases: s16imm and u16imm have custom encoder methods.
-defm s16imm : SignedImmediate<i32,
+defm s16imm : SignedImmediateReloc<i32,
   [{ return isInt<16>(Imm); }], NOOP_SDNodeXForm,
   "S16Imm", 16, "PPC::fixup_ppc_half16">;
-defm u16imm : UnsignedImmediate<i32,
+defm u16imm : UnsignedImmediateReloc<i32,
   [{ return isUInt<16>(Imm); }], NOOP_SDNodeXForm,
   "U16Imm", 16, "PPC::fixup_ppc_half16">;
 
 // s16imm64 uses imm64SExt16 pattern to match the operand type.
-def s16imm64 : ImmediateOp<i64, "S16Imm", 16, 1, "PPC::fixup_ppc_half16">;
+def s16imm64 : ImmediateRelocOp<i64, "S16Imm", 16, "PPC::fixup_ppc_half16">;
 
 // u16imm64 uses two different patterns depending on the instruction context:
 // * immZExt16 - For low 16-bit immediates
 // * imm16ShiftedZExt - For high 16-bit immediates (shifted)
-def u16imm64 : ImmediateOp<i64, "U16Imm", 16, 0, "PPC::fixup_ppc_half16">;
+def u16imm64 : UImmediateRelocOp<i64, "U16Imm", 16, "PPC::fixup_ppc_half16">;
 
 // Special case: s17imm uses S16Imm print method but accepts wider range.
 // This operand type is used for addis/lis to allow the assembler parser
 // to accept immediates in the range -65536..65535 for compatibility
 // with the GNU assembler. The operand is treated as 16-bit otherwise.
-def s17imm : ImmediateOp<i32, "S17Imm", 16, 1, "PPC::fixup_ppc_half16"> {
+def s17imm : ImmediateRelocOp<i32, "S17Imm", 16, "PPC::fixup_ppc_half16"> {
   let PrintMethod = "printS16ImmOperand";
 }
-def s17imm64 : ImmediateOp<i64, "S17Imm", 16, 1, "PPC::fixup_ppc_half16"> {
+def s17imm64 : ImmediateRelocOp<i64, "S17Imm", 16, "PPC::fixup_ppc_half16"> {
   let PrintMethod = "printS16ImmOperand";
 }
