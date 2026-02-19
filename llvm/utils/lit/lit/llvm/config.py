@@ -57,6 +57,8 @@ class LLVMConfig(object):
                 self.lit_config.diagnostic_level_enabled("note")
                 and lit_path_displayed is False
             ):
+                if lit.util.pythonize_bool(self.lit_config.params.get("use_normalized_slashes")):
+                    path = path.replace("\\", "/")
                 self.lit_config.note("using lit tools: {}".format(path))
                 lit_path_displayed = True
 
@@ -557,6 +559,8 @@ class LLVMConfig(object):
 
         if tool:
             tool = os.path.normpath(tool)
+            if lit.util.pythonize_bool(self.lit_config.params.get("use_normalized_slashes")):
+                tool = tool.replace("\\", "/")
             if not quiet:
                 self.lit_config.note("using {}: {}".format(name, tool))
         return tool

@@ -5,7 +5,7 @@
 ## 3) The PATH, if requested.
 
 # RUN: %{lit} %{inputs}/use-llvm-tool 2>&1 | \
-# RUN:   FileCheck %s
+# RUN:   FileCheck %s -DDIR=%p
 
 ## The exact breakdown of cases is:
 ## Case | Env | Build Dir | PATH |
@@ -22,7 +22,7 @@
 
 ## Check the exact path reported for the first case, but don't bother for the
 ## others.
-# CHECK:      note: using case1: {{.*}}{{[\\/]}}Inputs{{[\\/]}}use-llvm-tool{{[\\/]}}env-case1
+# CHECK:      note: using case1: [[DIR]]{{[\\/]}}Inputs{{[\\/]}}use-llvm-tool{{[\\/]}}env-case1
 # CHECK-NEXT: note: using case2: {{.*}}build{{[\\/]}}case2
 # CHECK-NEXT: note: using case3: {{.*}}build{{[\\/]}}case3
 # CHECK-NEXT: note: using case4: {{.*}}path{{[\\/]}}case4
