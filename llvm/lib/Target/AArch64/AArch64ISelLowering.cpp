@@ -28581,6 +28581,14 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
                          DAG.isSplatValue(TruncLowOp, false)))
     return SDValue();
 
+  // Early exit on cycle
+  // Example in test/CodeGen/AArch64/aarch64-smull.ll: smull_no_cycle
+  if (HasFoundMULLow && ExtractLow->hasOneUse()) {
+    SDNode *OnlyUser = *ExtractLow.getNode()->user_begin();
+    if (TruncHighOp->hasPredecessor(OnlyUser))
+      return SDValue();
+  }
+
   // Create uzp1, extract_high and extract_low.
   if (TruncHighOpVT != UZP1VT)
     TruncHighOp = DAG.getNode(ISD::BITCAST, DL, UZP1VT, TruncHighOp);
