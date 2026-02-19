@@ -108,15 +108,15 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
       cast<tensor::YieldOp>(padOp.getBody()->getTerminator()).getValue();
   Attribute constYieldedValue;
   // Is the yielded value a bbArg defined outside of the PadOp?
-  bool isOutsideBbArg =
+  bool outsideBbArg =
       isa<BlockArgument>(yieldedValue) &&
       cast<BlockArgument>(yieldedValue).getOwner()->getParentOp() !=
           padOp.getOperation();
   // Is the yielded value an OpResult defined outside of the PadOp?
-  bool isOutsideOpResult =
+  bool outsideOpResult =
       isa<OpResult>(yieldedValue) &&
       yieldedValue.getDefiningOp()->getParentOp() != padOp.getOperation();
-  bool isInvariantYieldedValue = isOutsideBbArg || isOutsideOpResult;
+  bool invariantYieldedValue = outsideBbArg || outsideOpResult;
   if (matchPattern(yieldedValue, m_Constant(&constYieldedValue))) {
     // Padding with a constant: Create linalg.fill.
     Dialect *arithDialect =
@@ -132,7 +132,7 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
     return fillOp;
   }
 
-  if (isInvariantYieldedValue) {
+  if (invariantYieldedValue) {
     // Padding with an invariant value.
     auto fillOp = linalg::FillOp::create(
         rewriter, loc, ValueRange(yieldedValue), ValueRange(dest));
