@@ -2554,6 +2554,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     // X * -0.0 --> copysign(0.0, -X)
     if ((NonNanResult || KnownLHS.isKnownNeverInfOrNaN()) &&
         KnownRHS.isKnownAlways(fcPosZero | fcNan)) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // => copysign(+0, lhs)
       // Note: Dropping canonicalize
       Value *Copysign = Builder.CreateCopySign(Y, X, FMF);
@@ -2563,6 +2566,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     if (KnownLHS.isKnownAlways(fcPosZero | fcNan) &&
         (NonNanResult || KnownRHS.isKnownNeverInfOrNaN())) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // => copysign(+0, rhs)
       // Note: Dropping canonicalize
       Value *Copysign = Builder.CreateCopySign(X, Y, FMF);
@@ -2572,6 +2578,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     if ((NonNanResult || KnownLHS.isKnownNeverInfOrNaN()) &&
         KnownRHS.isKnownAlways(fcNegZero | fcNan)) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // => copysign(0, fneg(lhs))
       // Note: Dropping canonicalize
       Value *Copysign =
@@ -2582,6 +2591,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     if (KnownLHS.isKnownAlways(fcNegZero | fcNan) &&
         (NonNanResult || KnownRHS.isKnownNeverInfOrNaN())) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // => copysign(+0, fneg(rhs))
       // Note: Dropping canonicalize
       Value *Copysign =
@@ -2596,6 +2608,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (KnownLHS.isKnownAlways(fcInf | fcNan) &&
         (KnownRHS.isKnownNeverNaN() &&
          KnownRHS.cannotBeOrderedGreaterEqZero(Mode))) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // Note: Dropping canonicalize
       Value *Neg = Builder.CreateFNegFMF(X, FMF);
       Neg->takeName(I);
@@ -2605,6 +2620,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (KnownRHS.isKnownAlways(fcInf | fcNan) &&
         (KnownLHS.isKnownNeverNaN() &&
          KnownLHS.cannotBeOrderedGreaterEqZero(Mode))) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // Note: Dropping canonicalize
       Value *Neg = Builder.CreateFNegFMF(Y, FMF);
       Neg->takeName(I);
@@ -2711,6 +2729,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       return ConstantFP::getZero(VTy);
 
     if (KnownLHS.isKnownAlways(fcPosZero) && KnownRHS.isKnownNeverNaN()) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // nnan +0 / x -> copysign(0, rhs)
       // TODO: -0 / x => copysign(0, fneg(rhs))
       Value *Copysign = Builder.CreateCopySign(X, Y, FMF);
@@ -2726,6 +2747,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                            KnownLHS.isKnownNeverLogicalZero(Mode))) &&
          (KnownRHS.isKnownAlways(fcPosZero) ||
           (FMF.noSignedZeros() && KnownRHS.isKnownAlways(fcZero))))) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // nnan x / 0 => copysign(inf, x);
       // nnan nsz x / -0 => copysign(inf, x);
       Value *Copysign =
@@ -3133,12 +3157,51 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (Known.KnownFPClasses == fcZero) {
         if (FMF.noSignedZeros())
           return ConstantFP::getZero(VTy);
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(CI);
 
         Value *Copysign = Builder.CreateCopySign(ConstantFP::getZero(VTy),
                                                  CI->getArgOperand(0), FMF);
         Copysign->takeName(CI);
         return Copysign;
       }
+
+      return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
+                                           {KnownSrc});
+    }
+    case Intrinsic::ldexp: {
+      FPClassTest SrcDemandedMask = DemandedMask & fcInf;
+      if (DemandedMask & fcNan)
+        SrcDemandedMask |= fcNan;
+
+      if (DemandedMask & fcPosInf)
+        SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+      if (DemandedMask & fcNegInf)
+        SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+
+      if (DemandedMask & (fcPosNormal | fcPosSubnormal))
+        SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+      if (DemandedMask & (fcNegNormal | fcNegSubnormal))
+        SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+
+      if (DemandedMask & fcPosZero)
+        SrcDemandedMask |= fcPosFinite;
+      if (DemandedMask & fcNegZero)
+        SrcDemandedMask |= fcNegFinite;
+
+      KnownFPClass KnownSrc;
+      if (SimplifyDemandedFPClass(CI, 0, SrcDemandedMask, KnownSrc, Depth + 1))
+        return CI;
+
+      Type *EltTy = VTy->getScalarType();
+      const fltSemantics &FltSem = EltTy->getFltSemantics();
+      DenormalMode Mode = F.getDenormalMode(FltSem);
+
+      KnownBits KnownExpBits =
+          ::computeKnownBits(CI->getArgOperand(1), SQ, Depth + 1);
+
+      Known = KnownFPClass::ldexp(KnownSrc, KnownExpBits, FltSem, Mode);
+      Known.knownNot(~DemandedMask);
 
       return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
                                            {KnownSrc});
@@ -3201,6 +3264,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       if ((IID == Intrinsic::trunc || IsRoundNearestOrTrunc) &&
           KnownSrc.isKnownAlways(fcZero | fcSubnormal)) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(CI);
+
         Value *Copysign = Builder.CreateCopySign(ConstantFP::getZero(VTy),
                                                  CI->getArgOperand(0));
         Copysign->takeName(CI);

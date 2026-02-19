@@ -1,0 +1,92 @@
+# REQUIRES: ld.lld,llvm-ar,tempshortpaths
+
+# Check that any short 8.3 form paths (containing '~' characters) in ThinLTO
+# Module IDs are expanded prior to being passed to the distributor.
+#
+# This test is Windows-specific, as enforced by `tempshortpaths`.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+# Create an archive and a thin archive to confirm member paths are expanded.
+RUN: %clang --target=x86_64-linux-gnu -c foo.c moo.c start.c -flto=thin -O2
+RUN: llvm-ar rcs foo.a foo.o
+RUN: llvm-ar --thin rcs moo.a moo.o
+
+# Build with DTLTO.
+RUN: %python in-83-dir.py \
+RUN:   %clang --target=x86_64-linux-gnu -flto=thin -fuse-ld=lld -nostdlib \
+RUN:     foo.a moo.a start.o -Wl,--save-temps \
+RUN:     -fthinlto-distributor=%python \
+RUN:     -Xthinlto-distributor=%llvm_src_root/utils/dtlto/local.py
+
+# Check that all short 8.3 form paths have been expanded.
+RUN: FileCheck --input-file a.*.dist-file.json %s --check-prefix=TILDE
+TILDE-NOT: ~
+
+# It is important that cross-module inlining occurs for this test to show that
+# Clang can successfully load the bitcode file dependencies recorded in the
+# summary indices. Explicitly check that the expected importing has occurred.
+RUN: llvm-dis *.1.*.thinlto.bc -o - | \
+RUN:   FileCheck %s --check-prefixes=FOO,MOO,START
+RUN: llvm-dis *.2.*.thinlto.bc -o - | \
+RUN:   FileCheck %s --check-prefixes=FOO,MOO,START
+RUN: llvm-dis *.3.*.thinlto.bc -o - | \
+RUN:   FileCheck %s --check-prefixes=FOO,MOO,START
+FOO-DAG:   foo.o
+MOO-DAG:   moo.o
+START-DAG: start.o
+
+#--- foo.c
+extern int moo(int), _start(int);
+__attribute__((retain)) int foo(int x) { return x + moo(x) + _start(x); }
+
+#--- moo.c
+extern int foo(int), _start(int);
+__attribute__((retain)) int moo(int x) { return x + foo(x) + _start(x); }
+
+#--- start.c
+extern int foo(int), moo(int);
+__attribute__((retain)) int _start(int x) { return x + foo(x) + moo(x); }
+
+#--- in-83-dir.py
+import os, shutil, sys, uuid, subprocess
+from pathlib import Path
+import ctypes
+from ctypes import wintypes
+
+
+def get_short_path(p):
+    g = ctypes.windll.kernel32.GetShortPathNameW
+    g.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
+    g.restype = wintypes.DWORD
+    n = g(os.path.abspath(p), None, 0)  # First call gets required buffer size.
+    b = ctypes.create_unicode_buffer(n)
+    if g(os.path.abspath(p), b, n):  # Second call fills buffer.
+        return b.value
+    raise ctypes.WinError()
+
+
+temp = Path(os.environ["TEMP"])
+assert temp.is_dir()
+
+# Copy the CWD to a unique directory inside TEMP and ensure that one of the path
+# components is long enough to have a distinct short 8.3 form.
+# TEMP is likely to be on a drive that supports short 8.3 form paths.
+d = (temp / str(uuid.uuid4()) / "veryverylong").resolve()
+d.parent.mkdir(parents=True)
+try:
+    shutil.copytree(Path.cwd(), d)
+
+    # Replace the arguments of the command that name files with equivalents in
+    # our temp directory, prefixed with the short 8.3 form.
+    cmd = [
+        a if Path(a).is_absolute() or not (d / a).is_file() else get_short_path(d / a)
+        for a in sys.argv[1:]
+    ]
+
+    print(cmd)
+
+    sys.exit(subprocess.run(cmd).returncode)
+
+finally:
+    shutil.rmtree(d.parent)

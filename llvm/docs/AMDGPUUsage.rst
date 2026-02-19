@@ -1373,6 +1373,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    `buffer_load_* ... lds`, or `global_load__* ... lds` depending on address
                                                    space and architecture. `amdgcn.global.load.lds` has the same semantics as
                                                    `amdgcn.load.to.lds.p1`.
+
+  llvm.amdgcn.load.async.to.lds.p<1/7>             Same as `llvm.amdgcn.load.to.lds.p<1/7>`, but the completion of this
+                                                   :ref:`asynchronous version<amdgpu-async-operations>` is not automatically tracked
+                                                   by the compiler. The user must explicitly track the completion with `asyncmark`
+                                                   operations before using their side-effects.
+
   llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
                                                    the lowest active lane of the input operand. Currently implemented
                                                    for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>,
@@ -7095,6 +7101,14 @@ being loaded to registers and not to LDS, and so therefore support the same
 cache modifiers. They cannot be performed atomically. They implement volatile
 (via aux/cpol bit 31) and nontemporal (via metadata) as if they were loads
 from the global address space.
+
+The LDS DMA instructions are synchronous by default, which means that the
+compiler will automatically ensure that the corresponding operation has
+completed before its side-effects are used. The :ref:`asynchronous
+versions<amdgpu-async-operations>` of these same instructions perform the same
+operations, but without automatic tracking in the compiler; the user must
+explicitly track the completion of these instructions before using their
+side-effects.
 
 Private address space uses ``buffer_load/store`` using the scratch V#
 (GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11). Since only a single thread
@@ -15920,7 +15934,7 @@ the instruction in the code sequence that references the table.
                                - wavefront    - local
                                               - generic
      store atomic release      - workgroup    - global   1. | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
+                                              - generic     | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``

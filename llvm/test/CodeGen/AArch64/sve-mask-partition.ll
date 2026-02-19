@@ -558,3 +558,61 @@ define <vscale x 16 x i1> @mask_exclude_active_nxv16_nonzero_lower_bound(<vscale
   %mask.out = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 1, i64 %tz.elts)
   ret <vscale x 16 x i1> %mask.out
 }
+
+define <vscale x 4 x i1> @mask_exclude_active_narrower_result_type(<vscale x 8 x i1> %mask.in) {
+; CHECK-LABEL: mask_exclude_active_narrower_result_type:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    cntp x8, p0, p0.h
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ret
+  %tz.elts = call i64 @llvm.experimental.cttz.elts(<vscale x 8 x i1> %mask.in, i1 false)
+  %mask.out = call <vscale x 4 x i1> @llvm.get.active.lane.mask(i64 0, i64 %tz.elts)
+  ret <vscale x 4 x i1> %mask.out
+}
+
+define <vscale x 16 x i1> @mask_exclude_active_wider_result_type(<vscale x 8 x i1> %mask.in) {
+; CHECK-LABEL: mask_exclude_active_wider_result_type:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    cntp x8, p0, p0.h
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    ret
+  %tz.elts = call i64 @llvm.experimental.cttz.elts(<vscale x 8 x i1> %mask.in, i1 false)
+  %mask.out = call <vscale x 16 x i1> @llvm.get.active.lane.mask(i64 0, i64 %tz.elts)
+  ret <vscale x 16 x i1> %mask.out
+}
+
+define <4 x i1> @mask_exclude_active_narrower_result_type_fixed(<8 x i1> %mask.in) {
+; CHECK-LABEL: mask_exclude_active_narrower_result_type_fixed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.8b, v0.8b, #7
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    brkb p0.b, p0/z, p1.b
+; CHECK-NEXT:    cntp x8, p0, p0.b
+; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %tz.elts = call i64 @llvm.experimental.cttz.elts(<8 x i1> %mask.in, i1 false)
+  %mask.out = call <4 x i1> @llvm.get.active.lane.mask(i64 0, i64 %tz.elts)
+  ret <4 x i1> %mask.out
+}
+
+define <16 x i1> @mask_exclude_active_wider_result_type_fixed(<8 x i1> %mask.in) {
+; CHECK-LABEL: mask_exclude_active_wider_result_type_fixed:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.8b, v0.8b, #7
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
+; CHECK-NEXT:    brkb p0.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+  %tz.elts = call i64 @llvm.experimental.cttz.elts(<8 x i1> %mask.in, i1 false)
+  %mask.out = call <16 x i1> @llvm.get.active.lane.mask(i64 0, i64 %tz.elts)
+  ret <16 x i1> %mask.out
+}

@@ -314,11 +314,9 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
   Status err;
 
   if (CheckLocalSharedCache()) {
-    // When debugging on the host, we are most likely using the same shared
-    // cache as our inferior. The dylibs from the shared cache might not
-    // exist on the filesystem, so let's use the images in our own memory
-    // to create the modules.
 
+    SymbolSharedCacheUse sc_mode = ModuleList::GetGlobalModuleListProperties()
+                                       .GetSharedCacheBinaryLoading();
     SharedCacheImageInfo image_info;
     if (process && process->GetDynamicLoader()) {
       addr_t sc_base_addr;
@@ -326,14 +324,21 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
       LazyBool using_sc, private_sc;
       FileSpec sc_path;
       if (process->GetDynamicLoader()->GetSharedCacheInformation(
-              sc_base_addr, sc_uuid, using_sc, private_sc, sc_path))
-        image_info = HostInfo::GetSharedCacheImageInfo(
-            module_spec.GetFileSpec().GetPath(), sc_uuid);
+              sc_base_addr, sc_uuid, using_sc, private_sc, sc_path)) {
+        if (module_spec.GetUUID())
+          image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
+                                                         sc_uuid, sc_mode);
+        else
+          image_info = HostInfo::GetSharedCacheImageInfo(
+              module_spec.GetFileSpec().GetPathAsConstString(), sc_uuid,
+              sc_mode);
+      }
     }
 
+    // Fall back to looking for the file in lldb's own shared cache.
     if (!image_info.GetUUID())
       image_info = HostInfo::GetSharedCacheImageInfo(
-          module_spec.GetFileSpec().GetPath());
+          module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
 
     // If we found it and it has the correct UUID, let's proceed with
     // creating a module from the memory contents.

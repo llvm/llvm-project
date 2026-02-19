@@ -47,7 +47,7 @@
 ; GCN-O0-NEXT: amdgpu-rewrite-undef-for-phi
 ; GCN-O0-NEXT: lcssa
 ; GCN-O0-NEXT: require<uniformity>
-; GCN-O0-NEXT: callbr-prepare
+; GCN-O0-NEXT: inline-asm-prepare
 ; GCN-O0-NEXT: safe-stack
 ; GCN-O0-NEXT: stack-protector
 ; GCN-O0-NEXT: verify))
@@ -161,7 +161,7 @@
 ; GCN-O2-NEXT: amdgpu-perf-hint
 ; GCN-O2-NEXT: cgscc(function(require<uniformity>
 ; GCN-O2-NEXT: objc-arc-contract
-; GCN-O2-NEXT: callbr-prepare
+; GCN-O2-NEXT: inline-asm-prepare
 ; GCN-O2-NEXT: safe-stack
 ; GCN-O2-NEXT: stack-protector
 ; GCN-O2-NEXT: verify))
@@ -333,7 +333,7 @@
 ; GCN-O3-NEXT: amdgpu-perf-hint
 ; GCN-O3-NEXT: cgscc(function(require<uniformity>
 ; GCN-O3-NEXT: objc-arc-contract
-; GCN-O3-NEXT: callbr-prepare
+; GCN-O3-NEXT: inline-asm-prepare
 ; GCN-O3-NEXT: safe-stack
 ; GCN-O3-NEXT: stack-protector
 ; GCN-O3-NEXT: verify))

@@ -771,3 +771,62 @@ func.func @memref_cast_reused(%arg: memref<*xf32>) {
   // SIBLING-MAXIMAL-NEXT:   affine.store
   return
 }
+
+// -----
+
+// Test with symbolic loop bounds.
+
+// PRODUCER-CONSUMER-MAXIMAL-LABEL: func @fusion_non_constant_bounds_0
+func.func @fusion_non_constant_bounds_0(%arg0: memref<?xf32>) {
+  %cst = arith.constant 1.000000e+00 : f32
+  %cst_0 = arith.constant 2.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %dim = memref.dim %arg0, %c0 : memref<?xf32>
+  affine.for %arg1 = 0 to %dim {
+    %0 = affine.load %arg0[%arg1] : memref<?xf32>
+    %1 = arith.addf %0, %cst : f32
+    affine.store %1, %arg0[%arg1] : memref<?xf32>
+  }
+  affine.for %arg1 = 0 to %dim {
+    %0 = affine.load %arg0[%arg1] : memref<?xf32>
+    %1 = arith.addf %0, %cst_0 : f32
+    affine.store %1, %arg0[%arg1] : memref<?xf32>
+  }
+  // PRODUCER-CONSUMER-MAXIMAL:      affine.for %[[idx:.*]] = 0 to %{{.*}} {
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT:   affine.load %[[arr:.*]][%[[idx]]] : memref<?xf32>
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT:   arith.addf
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT:   affine.store %{{.*}}, %[[arr]][%[[idx]]] : memref<?xf32>
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT:   affine.load %[[arr:.*]][%[[idx]]] : memref<?xf32>
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT:   arith.addf
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT:   affine.store %{{.*}}, %[[arr]][%[[idx]]] : memref<?xf32>
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT: }
+  return
+}
+
+// PRODUCER-CONSUMER-MAXIMAL-LABEL: func @fusion_non_constant_bounds_1
+func.func @fusion_non_constant_bounds_1(%N: index, %M: memref<?xf32>, %cst: f32) {
+  affine.for %i = 0 to %N {
+    affine.store %cst, %M[%i] : memref<?xf32>
+  }
+  affine.for %i = 0 to %N {
+    affine.load %M[%i] : memref<?xf32>
+  }
+  // Should be fused.
+  // PRODUCER-CONSUMER-MAXIMAL: affine.for
+  // PRODUCER-CONSUMER-MAXIMAL-NOT: affine.for
+
+  // Bounds not matching. Still fused; source remains.
+  // PRODUCER-CONSUMER-MAXIMAL:      affine.for
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT:   affine.store
+  affine.for %i = 0 to %N {
+    affine.store %cst, %M[%i] : memref<?xf32>
+  }
+  // PRODUCER-CONSUMER-MAXIMAL:      affine.for
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT:   affine.store
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT:   affine.load
+  affine.for %i = 1 to %N {
+    affine.load %M[%i] : memref<?xf32>
+  }
+
+  return
+}

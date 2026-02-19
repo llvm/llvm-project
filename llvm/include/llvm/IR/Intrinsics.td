@@ -1911,6 +1911,8 @@ def int_debugtrap : Intrinsic<[]>,
 def int_ubsantrap : Intrinsic<[], [llvm_i8_ty],
                               [IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>,
                                IntrInaccessibleMemOnly, IntrWriteMem]>;
+def int_looptrap : Intrinsic<[], [], [IntrNoReturn, IntrCold,
+                                      IntrInaccessibleMemOnly, IntrWriteMem]>;
 
 // Return true if ubsan check is allowed.
 def int_allow_ubsan_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i8_ty],

@@ -16,7 +16,7 @@ define amdgpu_vs void @test(ptr addrspace(8) inreg %arg1, ptr addrspace(3) %arg2
 ; CHECK-NEXT:    ds_read_b32 v1, v4
 ; CHECK-NEXT:    ds_read_b32 v0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    exp mrt0 off, off, off, off
+; CHECK-NEXT:    exp mrt0, off, off, off, off
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_FLOAT] idxen
 ; CHECK-NEXT:    s_endpgm
@@ -95,7 +95,7 @@ define amdgpu_vs void @test_3(i32 inreg %arg1, i32 inreg %arg2, ptr addrspace(8)
 ; CHECK-NEXT:    ds_read_b32 v0, v9
 ; CHECK-NEXT:    ds_read_b32 v2, v2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
-; CHECK-NEXT:    exp mrt0 off, off, off, off
+; CHECK-NEXT:    exp mrt0, off, off, off, off
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    tbuffer_store_format_xyzw v[2:5], v10, s[4:7], s1 format:[BUF_DATA_FORMAT_32_32_32,BUF_NUM_FORMAT_UINT] idxen offset:240 glc slc
 ; CHECK-NEXT:    tbuffer_store_format_xy v[0:1], v10, s[4:7], s1 format:[BUF_DATA_FORMAT_INVALID,BUF_NUM_FORMAT_UINT] idxen offset:256 glc slc

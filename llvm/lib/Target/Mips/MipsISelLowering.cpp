@@ -224,7 +224,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::BlockAddress,       MVT::i32,   Custom);
   setOperationAction(ISD::GlobalTLSAddress,   MVT::i32,   Custom);
   setOperationAction(ISD::JumpTable,          MVT::i32,   Custom);
-  setOperationAction(ISD::ConstantPool,       MVT::i32,   Custom);
+  if (!Subtarget.inMips16Mode())
+    setOperationAction(ISD::ConstantPool, MVT::i32, Custom);
   setOperationAction(ISD::SELECT,             MVT::f32,   Custom);
   setOperationAction(ISD::SELECT,             MVT::f64,   Custom);
   setOperationAction(ISD::SELECT,             MVT::i32,   Custom);
@@ -272,7 +273,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::BlockAddress,       MVT::i64,   Custom);
     setOperationAction(ISD::GlobalTLSAddress,   MVT::i64,   Custom);
     setOperationAction(ISD::JumpTable,          MVT::i64,   Custom);
-    setOperationAction(ISD::ConstantPool,       MVT::i64,   Custom);
+    if (!Subtarget.inMips16Mode())
+      setOperationAction(ISD::ConstantPool, MVT::i64, Custom);
     setOperationAction(ISD::SELECT,             MVT::i64,   Custom);
     if (Subtarget.hasMips64r6()) {
       setOperationAction(ISD::LOAD,               MVT::i64,   Legal);
@@ -3341,8 +3343,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Call site info for function parameters tracking and call base type info.
   MachineFunction::CallSiteInfo CSInfo;
   // Set type id for call site info.
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
-    CSInfo = MachineFunction::CallSiteInfo(*CB);
+  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
 
   // Check if it's really possible to do a tail call.
   // For non-musttail calls, restrict to functions that won't require $gp

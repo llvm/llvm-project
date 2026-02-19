@@ -25,6 +25,8 @@ class CIRDataLayout {
   // being upstreamed. Additional methods and members will be added as needed.
   bool bigEndian = false;
 
+  unsigned programAddrSpace = 0;
+
 public:
   mlir::DataLayout layout;
 
@@ -35,6 +37,8 @@ public:
   void reset(mlir::DataLayoutSpecInterface spec);
 
   bool isBigEndian() const { return bigEndian; }
+
+  unsigned getProgramAddressSpace() const { return programAddrSpace; }
 
   /// Internal helper method that returns requested alignment for type.
   llvm::Align getAlignment(mlir::Type ty, bool useABIAlign) const;
@@ -54,6 +58,20 @@ public:
     llvm::TypeSize baseSize = getTypeSizeInBits(ty);
     return {llvm::divideCeil(baseSize.getKnownMinValue(), 8),
             baseSize.isScalable()};
+  }
+
+  /// Returns the maximum number of bits that may be overwritten by
+  /// storing the specified type; always a multiple of 8.
+  ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
+  /// For example, returns 40 for i36 and 80 for x86_fp80.
+  llvm::TypeSize getTypeStoreSizeInBits(mlir::Type ty) const {
+    llvm::TypeSize baseSize = getTypeSizeInBits(ty);
+    uint64_t alignedSizeInBits =
+        llvm::alignToPowerOf2(baseSize.getKnownMinValue(), 8);
+    return {alignedSizeInBits, baseSize.isScalable()};
   }
 
   /// Returns the offset in bytes between successive objects of the
@@ -93,6 +111,14 @@ public:
     assert(mlir::isa<cir::PointerType>(ty) && "Expected pointer type");
     return cir::IntType::get(ty.getContext(), getPointerTypeSizeInBits(ty),
                              false);
+  }
+
+  /// Returns true if no extra padding bits are needed when storing the
+  /// specified type.
+  ///
+  /// For example, returns false for i19 that has a 24-bit store size.
+  bool typeSizeEqualsStoreSize(mlir::Type ty) const {
+    return getTypeSizeInBits(ty) == getTypeStoreSizeInBits(ty);
   }
 };
 

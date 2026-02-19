@@ -3599,6 +3599,13 @@ static void expandArray(APValue &Array, unsigned Index) {
   Array.swap(NewValue);
 }
 
+// Expand an indeterminate vector to materialize all elements.
+static void expandVector(APValue &Vec, unsigned NumElements) {
+  assert(Vec.isIndeterminate());
+  SmallVector<APValue, 4> Elts(NumElements, APValue::IndeterminateValue());
+  Vec = APValue(Elts.data(), Elts.size());
+}
+
 /// Determine whether a type would actually be read by an lvalue-to-rvalue
 /// conversion. If it's of class type, we may assume that the copy operation
 /// is trivial. Note that this is never true for a union type with fields
@@ -4291,6 +4298,15 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
 
       ObjType = VT->getElementType();
       assert(I == N - 1 && "extracting subobject of scalar?");
+
+      if (O->isIndeterminate()) {
+        if (isRead(handler.AccessKind)) {
+          Info.FFDiag(E);
+          return handler.failed();
+        }
+        expandVector(*O, NumElements);
+      }
+      assert(O->isVector() && "unexpected object during vector element access");
       return handler.found(O->getVectorElt(Index), ObjType);
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
       if (Field->isMutable() &&
@@ -16037,6 +16053,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(AlignedVal, E);
   }
 
+  case Builtin::BI__builtin_bitreverseg:
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:

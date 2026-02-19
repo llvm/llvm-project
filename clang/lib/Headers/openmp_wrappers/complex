@@ -29,6 +29,12 @@
 #undef __OPENMP_AMDGCN__
 #endif // __AMDGCN__
 
+#ifdef __SPIRV__
+#define __OPENMP_SPIRV__
+#include <__clang_cuda_complex_builtins.h>
+#undef __OPENMP_SPIRV__
+#endif // __SPIRV__
+
 #endif
 
 // Grab the host header too.
@@ -45,7 +51,7 @@
 #ifndef _LIBCPP_STD_VER
 
 #pragma omp begin declare variant match(                                       \
-    device = {arch(amdgcn, nvptx, nvptx64)},                                   \
+    device = {arch(amdgcn, nvptx, nvptx64, spirv64)},                                   \
     implementation = {extension(match_any, allow_templates)})
 
 #include <complex_cmath.h>

@@ -186,16 +186,15 @@ define i64 @cls_i64(i64 %x) {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xor a0, a0, a2
 ; CHECK-NEXT:    clz a0, a0
-; CHECK-NEXT:    addi a0, a0, 32
+; CHECK-NEXT:    addi a2, a0, 32
 ; CHECK-NEXT:    j .LBB15_3
 ; CHECK-NEXT:  .LBB15_2:
 ; CHECK-NEXT:    xor a1, a1, a2
-; CHECK-NEXT:    clz a0, a1
+; CHECK-NEXT:    clz a2, a1
 ; CHECK-NEXT:  .LBB15_3:
-; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    addd a0, a0, a2
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    waddau a0, a2, zero
 ; CHECK-NEXT:    ret
   %a = ashr i64 %x, 63
   %b = xor i64 %x, %a
@@ -208,10 +207,9 @@ define i64 @cls_i64_2(i64 %x) {
 ; CHECK-LABEL: cls_i64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srai a2, a1, 31
-; CHECK-NEXT:    xor a0, a0, a2
 ; CHECK-NEXT:    xor a1, a1, a2
-; CHECK-NEXT:    li a2, 1
-; CHECK-NEXT:    slx a1, a0, a2
+; CHECK-NEXT:    xor a0, a0, a2
+; CHECK-NEXT:    nsrli a1, a0, 31
 ; CHECK-NEXT:    bnez a1, .LBB16_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    slli a0, a0, 1
@@ -312,10 +310,24 @@ define i32 @cls_i32_knownbits_no_overestimate(i32 signext %x) {
   %d = sub i32 %c, 1
   %e = or i32 %d, 16
   ret i32 %e
- }
+}
 
-define i64 @slx_i64(i64 %x, i64 %y) {
-; CHECK-LABEL: slx_i64:
+define i64 @sll_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sll_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sll a3, a0, a2
+; CHECK-NEXT:    slx a1, a0, a2
+; CHECK-NEXT:    slli a2, a2, 26
+; CHECK-NEXT:    srai a2, a2, 31
+; CHECK-NEXT:    mvm a1, a3, a2
+; CHECK-NEXT:    andn a0, a3, a2
+; CHECK-NEXT:    ret
+  %b = shl i64 %x, %y
+  ret i64 %b
+}
+
+define i64 @sll_small_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sll_small_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sll a3, a0, a2
 ; CHECK-NEXT:    slx a1, a0, a2
@@ -326,19 +338,52 @@ define i64 @slx_i64(i64 %x, i64 %y) {
   ret i64 %b
 }
 
-define i64 @slxi_i64(i64 %x) {
-; CHECK-LABEL: slxi_i64:
+define i64 @sll_large_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sll_large_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 25
-; CHECK-NEXT:    slx a1, a0, a2
+; CHECK-NEXT:    sll a1, a0, a2
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %a = or i64 %y, 32
+  %b = shl i64 %x, %a
+  ret i64 %b
+}
+
+define i64 @slli_i64(i64 %x) {
+; CHECK-LABEL: slli_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nsrli a1, a0, 7
 ; CHECK-NEXT:    slli a0, a0, 25
 ; CHECK-NEXT:    ret
   %a = shl i64 %x, 25
   ret i64 %a
 }
 
-define i64 @srx_i64(i64 %x, i64 %y) {
-; CHECK-LABEL: srx_i64:
+define i64 @slli_i64_large(i64 %x) {
+; CHECK-LABEL: slli_i64_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a0, 7
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %a = shl i64 %x, 39
+  ret i64 %a
+}
+
+define i64 @srl_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: srl_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a3, a2, 26
+; CHECK-NEXT:    nsrl a0, a0, a2
+; CHECK-NEXT:    srl a1, a1, a2
+; CHECK-NEXT:    srai a3, a3, 31
+; CHECK-NEXT:    andn a1, a1, a3
+; CHECK-NEXT:    ret
+  %b = lshr i64 %x, %y
+  ret i64 %b
+}
+
+define i64 @srl_small_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: srl_small_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srl a3, a1, a2
 ; CHECK-NEXT:    srx a0, a1, a2
@@ -349,15 +394,161 @@ define i64 @srx_i64(i64 %x, i64 %y) {
   ret i64 %b
 }
 
-define i64 @srxi_i64(i64 %x) {
-; CHECK-LABEL: srxi_i64:
+define i64 @srl_large_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: srl_large_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 25
-; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    srl a0, a1, a2
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+  %a = or i64 %y, 32
+  %b = lshr i64 %x, %a
+  ret i64 %b
+}
+
+; The andi with 63 is optimized away since nsrl only reads 6 bits.
+define i64 @srl_mask63_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: srl_mask63_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a3, a2, 26
+; CHECK-NEXT:    nsrl a0, a0, a2
+; CHECK-NEXT:    srl a1, a1, a2
+; CHECK-NEXT:    srai a3, a3, 31
+; CHECK-NEXT:    andn a1, a1, a3
+; CHECK-NEXT:    ret
+  %a = and i64 %y, 63
+  %b = lshr i64 %x, %a
+  ret i64 %b
+}
+
+define i64 @srli_i64(i64 %x) {
+; CHECK-LABEL: srli_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nsrli a0, a0, 25
 ; CHECK-NEXT:    srli a1, a1, 25
 ; CHECK-NEXT:    ret
   %a = lshr i64 %x, 25
   ret i64 %a
+}
+
+define i64 @srli_i64_large(i64 %x) {
+; CHECK-LABEL: srli_i64_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a1, 7
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    ret
+  %a = lshr i64 %x, 39
+  ret i64 %a
+}
+
+define i64 @sra_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sra_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a3, a2, 26
+; CHECK-NEXT:    nsra a0, a0, a2
+; CHECK-NEXT:    sra a1, a1, a2
+; CHECK-NEXT:    srai a3, a3, 31
+; CHECK-NEXT:    sra a1, a1, a3
+; CHECK-NEXT:    ret
+  %b = ashr i64 %x, %y
+  ret i64 %b
+}
+
+define i64 @sra_small_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sra_small_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sra a3, a1, a2
+; CHECK-NEXT:    srx a0, a1, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %a = and i64 %y, 31
+  %b = ashr i64 %x, %a
+  ret i64 %b
+}
+
+define i64 @sra_large_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sra_large_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sra a0, a1, a2
+; CHECK-NEXT:    srai a1, a1, 31
+; CHECK-NEXT:    ret
+  %a = or i64 %y, 32
+  %b = ashr i64 %x, %a
+  ret i64 %b
+}
+
+; The andi with 63 is optimized away since nsra only reads 6 bits.
+define i64 @sra_mask63_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sra_mask63_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a3, a2, 26
+; CHECK-NEXT:    nsra a0, a0, a2
+; CHECK-NEXT:    sra a1, a1, a2
+; CHECK-NEXT:    srai a3, a3, 31
+; CHECK-NEXT:    sra a1, a1, a3
+; CHECK-NEXT:    ret
+  %a = and i64 %y, 63
+  %b = ashr i64 %x, %a
+  ret i64 %b
+}
+
+define i64 @srai_i64(i64 %x) {
+; CHECK-LABEL: srai_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    nsrai a0, a0, 25
+; CHECK-NEXT:    srai a1, a1, 25
+; CHECK-NEXT:    ret
+  %a = ashr i64 %x, 25
+  ret i64 %a
+}
+
+define i64 @srai_i64_large(i64 %x) {
+; CHECK-LABEL: srai_i64_large:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a0, a1, 7
+; CHECK-NEXT:    srai a1, a1, 31
+; CHECK-NEXT:    ret
+  %a = ashr i64 %x, 39
+  ret i64 %a
+}
+
+define i32 @slx_i32(i32 %a, i32 %b, i32 %shamt) {
+; CHECK-LABEL: slx_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slx a0, a1, a2
+; CHECK-NEXT:    ret
+  %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 %shamt)
+  ret i32 %1
+}
+
+define i32 @slxi_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: slxi_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 25
+; CHECK-NEXT:    slx a0, a1, a2
+; CHECK-NEXT:    ret
+  %1 = tail call i32 @llvm.fshl.i32(i32 %a, i32 %b, i32 25)
+  ret i32 %1
+}
+
+define i32 @srx_i32(i32 %a, i32 %b, i32 %shamt) {
+; CHECK-LABEL: srx_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srx a1, a0, a2
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %1 = tail call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %shamt)
+  ret i32 %1
+}
+
+define i32 @srxi_i32(i32 %a, i32 %b) {
+; CHECK-LABEL: srxi_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 25
+; CHECK-NEXT:    srx a1, a0, a2
+; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    ret
+  %1 = tail call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 25)
+  ret i32 %1
 }
 
 define i8 @shlsat_i8(i8 %a, i8 %b) {
@@ -723,6 +914,32 @@ define void @wmaccu_multiple_uses(i32 %a, i32 %b, i64 %c, ptr %out1, ptr %out2) 
   ret void
 }
 
+; First multiply has multiple uses, but second multiply has single use.
+; Make sure we fold the second multiply into wmacc.
+define i64 @wmacc_first_mul_multiple_uses(i32 %a, i32 %b, i32 %c, i32 %d, ptr %out) nounwind {
+; CHECK-LABEL: wmacc_first_mul_multiple_uses:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wmul a2, a2, a3
+; CHECK-NEXT:    mv a5, a3
+; CHECK-NEXT:    mv a6, a2
+; CHECK-NEXT:    wmacc a2, a0, a1
+; CHECK-NEXT:    sw a6, 0(a4)
+; CHECK-NEXT:    sw a5, 4(a4)
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bext = sext i32 %b to i64
+  %cext = sext i32 %c to i64
+  %dext = sext i32 %d to i64
+  %mul1 = mul i64 %aext, %bext
+  %mul2 = mul i64 %cext, %dext
+  ; mul2 is first operand (has multiple uses), mul1 is second (single use)
+  %result = add i64 %mul2, %mul1
+  store i64 %mul2, ptr %out
+  ret i64 %result
+}
+
 ; Test bitwise merge: (mask & b) | (~mask & a)
 define i32 @merge_i32(i32 %mask, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: merge_i32:
@@ -856,4 +1073,76 @@ define i32 @mvmn_xor_i32(i32 %b, i32 %mask, i32 %a) nounwind {
   %and = and i32 %xor1, %mask
   %xor2 = xor i32 %and, %a
   ret i32 %xor2
+}
+
+; acc + zext(a) -> waddau acc, a, 0
+define i64 @waddau_zext(i64 %acc, i32 %a) nounwind {
+; CHECK-LABEL: waddau_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    waddau a0, a2, zero
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %sum = add i64 %acc, %ext_a
+  ret i64 %sum
+}
+
+; zext(a) + acc -> waddau acc, a, 0
+define i64 @waddau_zext_commuted(i64 %acc, i32 %a) nounwind {
+; CHECK-LABEL: waddau_zext_commuted:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    waddau a0, a2, zero
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %sum = add i64 %ext_a, %acc
+  ret i64 %sum
+}
+
+; acc + zext(a) + zext(b) -> waddau acc, a, b
+define i64 @waddau_zext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: waddau_zext_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    waddau a0, a2, a3
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %ext_b = zext i32 %b to i64
+  %sum1 = add i64 %acc, %ext_a
+  %sum2 = add i64 %sum1, %ext_b
+  ret i64 %sum2
+}
+
+; acc - zext(a) -> wsubau acc, 0, a
+define i64 @wsubau_zext(i64 %acc, i32 %a) nounwind {
+; CHECK-LABEL: wsubau_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsubau a0, zero, a2
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %sub = sub i64 %acc, %ext_a
+  ret i64 %sub
+}
+
+; (acc + zext(a)) - zext(b) -> wsubau acc, a, b
+define i64 @wsubau_zext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wsubau_zext_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsubau a0, a2, a3
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %ext_b = zext i32 %b to i64
+  %sum = add i64 %acc, %ext_a
+  %sub = sub i64 %sum, %ext_b
+  ret i64 %sub
+}
+
+; (acc - zext(a)) + zext(b) -> wsubau acc, b, a
+define i64 @wsubau_zext_chain_rev(i64 %acc, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wsubau_zext_chain_rev:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsubau a0, a3, a2
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %ext_b = zext i32 %b to i64
+  %sub = sub i64 %acc, %ext_a
+  %sum = add i64 %sub, %ext_b
+  ret i64 %sum
 }

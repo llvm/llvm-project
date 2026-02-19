@@ -7,7 +7,24 @@
 //===----------------------------------------------------------------------===//
 //
 // Registry for SerializationFormats, and some helper functions.
-// To register some custom serialization format, insert this code:
+//
+// To register some custom serialization format, you will need to add some
+// declarations and defintions.
+//
+// Insert this code to the header file:
+//
+//   namespace llvm {
+//   extern template class CLANG_TEMPLATE_ABI
+//     Registry<clang::ssaf::MyFormat::FormatInfo>;
+//   } // namespace llvm
+//
+// Insert this declaration to the MyFormat class:
+//
+//   using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
+//
+// Insert this code to the cpp file:
+//
+//   LLVM_INSTANTIATE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
 //
 //   static SerializationFormatRegistry::Add<MyFormat>
 //     RegisterFormat("MyFormat", "My awesome serialization format");
@@ -17,7 +34,7 @@
 //
 //   namespace {
 //   using FormatInfo = MyFormat::FormatInfo;
-//   struct MyAnalysisFormatInfo : FormatInfo {
+//   struct MyAnalysisFormatInfo final : FormatInfo {
 //     MyAnalysisFormatInfo() : FormatInfo{
 //               SummaryName("MyAnalysis"),
 //               serializeMyAnalysis,
@@ -51,21 +68,16 @@ bool isFormatRegistered(llvm::StringRef FormatName);
 /// This might return null if the construction of the desired
 /// SerializationFormat failed.
 /// It's a fatal error if there is no format registered with the name.
-std::unique_ptr<SerializationFormat>
-makeFormat(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-           llvm::StringRef FormatName);
+std::unique_ptr<SerializationFormat> makeFormat(llvm::StringRef FormatName);
 
 // Registry for adding new SerializationFormat implementations.
-using SerializationFormatRegistry =
-    llvm::Registry<SerializationFormat,
-                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>>;
+using SerializationFormatRegistry = llvm::Registry<SerializationFormat>;
 
 } // namespace clang::ssaf
 
 namespace llvm {
 extern template class CLANG_TEMPLATE_ABI
-    Registry<clang::ssaf::SerializationFormat,
-             llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>>;
+    Registry<clang::ssaf::SerializationFormat>;
 } // namespace llvm
 
 #endif // CLANG_ANALYSIS_SCALABLE_SERIALIZATION_SERIALIZATION_FORMAT_REGISTRY_H

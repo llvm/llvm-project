@@ -1145,7 +1145,8 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
       ScalableOffset = -ScalableOffset;
     if (all_of(N->users(), [&](SDNode *Node) {
           if (auto *LoadStore = dyn_cast<MemSDNode>(Node);
-              LoadStore && LoadStore->getBasePtr().getNode() == N) {
+              LoadStore && LoadStore->hasUniqueMemOperand() &&
+              LoadStore->getBasePtr().getNode() == N) {
             TargetLoweringBase::AddrMode AM;
             AM.HasBaseReg = true;
             AM.ScalableOffset = ScalableOffset;
@@ -1183,6 +1184,8 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
 
     for (SDNode *Node : N->users()) {
       if (auto *LoadStore = dyn_cast<MemSDNode>(Node)) {
+        if (!LoadStore->hasUniqueMemOperand())
+          continue;
         // Is x[offset2] already not a legal addressing mode? If so then
         // reassociating the constants breaks nothing (we test offset2 because
         // that's the one we hope to fold into the load or store).
@@ -4484,9 +4487,12 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   }
 
   // canonicalize (sub X, (vscale * C)) to (add X, (vscale * -C))
+  // avoid if ISD::MUL handling is poor and ISD::SHL isn't an option.
   if (N1.getOpcode() == ISD::VSCALE && N1.hasOneUse()) {
     const APInt &IntVal = N1.getConstantOperandAPInt(0);
-    return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
+    if (!IntVal.isPowerOf2() ||
+        hasOperation(ISD::MUL, N1.getOperand(0).getValueType()))
+      return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
   }
 
   // canonicalize (sub X, step_vector(C)) to (add X, step_vector(-C))
@@ -7966,6 +7972,13 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         X.getOperand(0).getScalarValueSizeInBits() == 1)
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, X.getOperand(0));
   }
+
+  // (X +/- Y) & Y --> ~X & Y when Y is a power of 2 (or zero).
+  if (sd_match(N, m_And(m_Value(Y),
+                        m_OneUse(m_AnyOf(m_Add(m_Value(X), m_Deferred(Y)),
+                                         m_Sub(m_Value(X), m_Deferred(Y)))))) &&
+      DAG.isKnownToBeAPowerOfTwo(Y, /*OrZero=*/true))
+    return DAG.getNode(ISD::AND, DL, VT, DAG.getNOT(DL, X, VT), Y);
 
   // fold (and (sign_extend_inreg x, i16 to i32), 1) -> (and x, 1)
   // fold (and (sra)) -> (and (srl)) when possible.
@@ -12612,6 +12625,21 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   if (LegalOperations && !hasOperation(ABDOpc, VT))
     return SDValue();
 
+  // (setcc 0, b set???) --> (setcc b, 0, set???)
+  if (isZeroOrZeroSplat(LHS)) {
+    std::swap(LHS, RHS);
+    CC = ISD::getSetCCSwappedOperands(CC);
+  }
+
+  // (setcc (add nsw A, Const), 0, sets??) --> (setcc A, -Const, sets??)
+  SDValue A, B;
+  if (ISD::isSignedIntSetCC(CC) && LHS->getFlags().hasNoSignedWrap() &&
+      isZeroOrZeroSplat(RHS) && sd_match(LHS, m_Add(m_Value(A), m_Value(B))) &&
+      DAG.isConstantIntBuildVectorOrConstantInt(B)) {
+    RHS = DAG.getNegative(B, LHS, B.getValueType());
+    LHS = A;
+  }
+
   switch (CC) {
   case ISD::SETGT:
   case ISD::SETGE:
@@ -16698,16 +16726,17 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // Attempt to pre-truncate BUILD_VECTOR sources.
   if (N0.getOpcode() == ISD::BUILD_VECTOR && !LegalOperations &&
       N0.hasOneUse() &&
-      TLI.isTruncateFree(SrcVT.getScalarType(), VT.getScalarType()) &&
       // Avoid creating illegal types if running after type legalizer.
       (!LegalTypes || TLI.isTypeLegal(VT.getScalarType()))) {
-    EVT SVT = VT.getScalarType();
-    SmallVector<SDValue, 8> TruncOps;
-    for (const SDValue &Op : N0->op_values()) {
-      SDValue TruncOp = DAG.getNode(ISD::TRUNCATE, DL, SVT, Op);
-      TruncOps.push_back(TruncOp);
+    if (TLI.isTruncateFree(SrcVT.getScalarType(), VT.getScalarType()))
+      return DAG.UnrollVectorOp(N);
+
+    // trunc(build_vector(ext(x), ext(x)) -> build_vector(x,x)
+    if (SDValue SplatVal = DAG.getSplatValue(N0)) {
+      if (ISD::isExtOpcode(SplatVal.getOpcode()) &&
+          SrcVT.getScalarType() == SplatVal.getValueType())
+        return DAG.UnrollVectorOp(N);
     }
-    return DAG.getBuildVector(VT, DL, TruncOps);
   }
 
   // trunc (splat_vector x) -> splat_vector (trunc x)
@@ -20862,11 +20891,23 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
 
         EVT InterVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
                                        StMemSize.divideCoefficientBy(EltSize));
-        if (!TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, InterVT))
+        if (!TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, LDMemType) ||
+            !TLI.isTypeLegal(InterVT))
           break;
 
+        // In case of big-endian the offset is normalized to zero, denoting
+        // the last bit. For big-endian we need to transform the extraction
+        // to the last sub-vector.
+        unsigned ExtIdx = 0;
+        if (DAG.getDataLayout().isBigEndian()) {
+          ExtIdx =
+              InterVT.getVectorNumElements() - LDMemType.getVectorNumElements();
+        }
+
+        if (!TLI.isExtractSubvectorCheap(LDMemType, InterVT, ExtIdx))
+          break;
         Val = DAG.getExtractSubvector(SDLoc(LD), LDMemType,
-                                      DAG.getBitcast(InterVT, Val), 0);
+                                      DAG.getBitcast(InterVT, Val), ExtIdx);
       } else if (!STMemType.isVector() && !LDMemType.isVector() &&
                  STMemType.isInteger() && LDMemType.isInteger())
         Val = DAG.getNode(ISD::TRUNCATE, SDLoc(LD), LDMemType, Val);
@@ -24307,8 +24348,17 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
           // Build the mask and return the corresponding DAG node.
           auto BuildMaskAndNode = [&](SDValue TrueVal, SDValue FalseVal,
                                       unsigned MaskOpcode) {
-            for (unsigned I = 0; I != NumElts; ++I)
+            APInt InsertedEltMask = APInt::getZero(NumElts);
+            for (unsigned I = 0; I != NumElts; ++I) {
               Mask[I] = Ops[I] ? TrueVal : FalseVal;
+              if (Ops[I])
+                InsertedEltMask.setBit(I);
+            }
+            // Make sure to freeze the source vector in case any of the elements
+            // overwritten by the insert may be poison. Otherwise those elements
+            // could end up being poison instead of 0/-1 after the AND/OR.
+            CurVec =
+                DAG.getFreeze(CurVec, InsertedEltMask, /*PoisonOnly=*/true);
             return DAG.getNode(MaskOpcode, DL, VT, CurVec,
                                DAG.getBuildVector(VT, DL, Mask));
           };

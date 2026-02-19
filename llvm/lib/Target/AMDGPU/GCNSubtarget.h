@@ -396,6 +396,10 @@ public:
     return isMesa3DOS() && AMDGPU::isShader(F.getCallingConv());
   }
 
+  bool isGFX1170() const {
+    return getGeneration() == GFX11 && hasWMMA128bInsts();
+  }
+
   bool hasMad64_32() const { return getGeneration() >= SEA_ISLANDS; }
 
   bool hasAtomicFaddInsts() const {

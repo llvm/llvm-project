@@ -334,8 +334,8 @@ exit:
 define void @small_trip_count_loop(ptr %arg, ptr %arg2) {
 ; CHECK-LABEL: @small_trip_count_loop(
 ; CHECK-NEXT:  iter.check:
-; CHECK-NEXT:    [[ARG3:%.*]] = ptrtoint ptr [[ARG:%.*]] to i64
-; CHECK-NEXT:    [[ARG21:%.*]] = ptrtoint ptr [[ARG2:%.*]] to i64
+; CHECK-NEXT:    [[ARG3:%.*]] = ptrtoaddr ptr [[ARG:%.*]] to i64
+; CHECK-NEXT:    [[ARG21:%.*]] = ptrtoaddr ptr [[ARG2:%.*]] to i64
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[ARG21]], [[ARG3]]
