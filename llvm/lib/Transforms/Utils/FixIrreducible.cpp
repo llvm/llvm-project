@@ -169,6 +169,7 @@ INITIALIZE_PASS_BEGIN(FixIrreducible, "fix-irreducible",
                       "Convert irreducible control-flow into natural loops",
                       false /* Only looks at CFG */, false /* Analysis Pass */)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(FixIrreducible, "fix-irreducible",
                     "Convert irreducible control-flow into natural loops",
