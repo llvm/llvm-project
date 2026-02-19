@@ -468,6 +468,7 @@ struct OneDimMultiReductionToTwoDim
 /// ```mlir
 /// %res = vector.multi_reduction <add> %src, %acc [0, [[REDUCTION_DIMS]] ] :
 /// vector<NxMx...xf32> to vector<Ix...xf32>
+/// ```
 ///
 /// ```mlir
 /// %0 = vector.extract %src[0] : vector<Mx...xf32> from vector<NxMx...xf32>

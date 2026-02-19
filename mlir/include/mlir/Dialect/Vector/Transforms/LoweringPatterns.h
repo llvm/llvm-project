@@ -95,7 +95,7 @@ void populateVectorMultiReductionFlatteningPatterns(
 ///
 /// [UnrollMultiReductionInnerParallelGeneralCase]
 /// Rank reducing unrolling for inner-parallel general case, when there is
-/// more than one reduction and it is the outermost one.
+/// more than one reduction dimension and it is the outermost one.
 ///
 /// [TwoDimMultiReductionToReduction]
 /// Once in 2-D vector.multi_reduction form, with an **innermost** reduction
