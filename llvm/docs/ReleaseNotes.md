@@ -80,6 +80,13 @@ Changes to LLVM infrastructure
 
 * Removed TypePromoteFloat legalization from SelectionDAG
 
+* When using ELF LLD, bitcode libraries can now implement compiler-managed
+  library functions (libcalls) without causing incorrect API manipulation or
+  undefined references
+  ([#177046](https://github.com/llvm/llvm-project/pull/125687)). Note that
+  there may still be issues with invalid compiler reasoning about some
+  functions in bitcode, e.g. `malloc`.
+
 Changes to building LLVM
 ------------------------
 

@@ -234,6 +234,20 @@ static cl::opt<bool>
     AllVtablesHaveTypeInfos("all-vtables-have-type-infos", cl::Hidden,
                             cl::desc("All vtables have type infos"));
 
+// Specifying a function here states that it is a library function that could
+// have been part of the LTO unit, but was not, typically because it wasn't
+// extracted from a library. Such functions cannot safely be called, since they
+// have already lost their only opportunity to be defined.
+//
+// FIXME: Listing all bitcode libfunc symbols here is clunky. A higher-level way
+// to indicate which TUs made it into the link might be better, but this would
+// required more detailed tracking of the sources of constructs in the IR.
+// Alternatively, there may be some other data structure that could hold this
+// information.
+static cl::list<std::string>
+    BitcodeLibFuncs("bitcode-libfuncs", cl::Hidden,
+                    cl::desc("set of libfuncs implemented in bitcode"));
+
 static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
 
 static cl::opt<unsigned> TimeTraceGranularity(
@@ -495,6 +509,9 @@ static int run(int argc, char **argv) {
   }
   if (HasErrors)
     return 1;
+
+  Lto.setBitcodeLibFuncs(
+      SmallVector<StringRef>(BitcodeLibFuncs.begin(), BitcodeLibFuncs.end()));
 
   auto AddStream =
       [&](size_t Task,

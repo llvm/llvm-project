@@ -1397,6 +1397,8 @@ void BitcodeFile::parse() {
     comdat[i] =
         symtab.addComdat(this, saver.save(obj->getComdatTable()[i].first));
   Triple tt(obj->getTargetTriple());
+  TargetLibraryInfoImpl tlii(tt);
+  TargetLibraryInfo tli(tlii);
   RTLIB::RuntimeLibcallsInfo libcalls(tt);
   for (const lto::InputFile::Symbol &objSym : obj->symbols()) {
     StringRef symName = saver.save(objSym.getName());
@@ -1447,7 +1449,7 @@ void BitcodeFile::parse() {
           symtab.addRegular(this, symName, nullptr, fakeSC, 0, objSym.isWeak());
     }
     symbols.push_back(sym);
-    if (objSym.isUsed() || objSym.isLibcall(libcalls))
+    if (objSym.isUsed())
       symtab.ctx.config.gcroot.push_back(sym);
   }
   directives = saver.save(obj->getCOFFLinkerOpts());
