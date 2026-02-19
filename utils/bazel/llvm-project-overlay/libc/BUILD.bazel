@@ -3054,6 +3054,34 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fdiv",
+    hdrs = ["src/__support/math/fdiv.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fdivf128",
+    hdrs = ["src/__support/math/fdivf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fdivl",
+    hdrs = ["src/__support/math/fdivl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_f16fma",
     hdrs = ["src/__support/math/f16fma.h"],
     deps = [
@@ -4985,11 +5013,26 @@ libc_math_function(name = "fdimf128")
 
 libc_math_function(name = "fdimf16")
 
-libc_math_function(name = "fdiv")
+libc_math_function(
+    name = "fdiv",
+    additional_deps = [
+        ":__support_math_fdiv",
+    ],
+)
 
-libc_math_function(name = "fdivl")
+libc_math_function(
+    name = "fdivl",
+    additional_deps = [
+        ":__support_math_fdivl",
+    ],
+)
 
-libc_math_function(name = "fdivf128")
+libc_math_function(
+    name = "fdivf128",
+    additional_deps = [
+        ":__support_math_fdivf128",
+    ],
+)
 
 libc_math_function(
     name = "ffma",

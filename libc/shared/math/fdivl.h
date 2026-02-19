@@ -1,4 +1,4 @@
-//===-- Implementation of fdivf128 function -------------------------------===//
+//===-- Shared fdivl function -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fdivf128.h"
-#include "src/__support/math/fdivf128.h"
+#ifndef LLVM_LIBC_SHARED_MATH_FDIVL_H
+#define LLVM_LIBC_SHARED_MATH_FDIVL_H
+
+#include "src/__support/math/fdivl.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, fdivf128, (float128 x, float128 y)) {
-  return math::fdivf128(x, y);
-}
+using math::fdivl;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_FDIVL_H

@@ -753,6 +753,34 @@ add_header_library(
 )
 
 add_header_library(
+  fdiv
+  HDRS
+    fdiv.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fdivf128
+  HDRS
+    fdivf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fdivl
+  HDRS
+    fdivl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ffmal
   HDRS
     ffmal.h
