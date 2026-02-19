@@ -245,16 +245,16 @@ void SystemZInstrInfo::expandLoadStackGuard(MachineInstr *MI) const {
     // Load LAA
     // LLGT <reg>,1208
     BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::LLGT), Reg64)
-      .addReg(0)
-      .addImm(OFFSET_PSALAA)
-      .addReg(0);
+        .addReg(0)
+        .addImm(OFFSET_PSALAA)
+        .addReg(0);
 
     // LG <reg>, 152(<reg>)
     MI->setDesc(get(SystemZ::LG));
     MachineInstrBuilder(MF, MI)
-      .addReg(Reg64)
-      .addImm(OFFSET_CEELAA_STACK_GUARD)
-      .addReg(0);
+        .addReg(Reg64)
+        .addImm(OFFSET_CEELAA_STACK_GUARD)
+        .addReg(0);
 
     return;
   }
