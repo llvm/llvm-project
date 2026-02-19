@@ -622,7 +622,42 @@ static bool processMinMaxIntrinsic(MinMaxIntrinsic *MM, LazyValueInfo *LVI) {
     return true;
   }
 
-  return false;
+  bool Changed = false;
+  for (Use &U : make_early_inc_range(MM->uses())) {
+    ConstantRange LHS_CR =
+        ConstantRange::getEmpty(MM->getType()->getScalarSizeInBits());
+    ConstantRange RHS_CR = LHS_CR;
+    auto *CxtI = cast<Instruction>(U.getUser());
+    if (auto *PN = dyn_cast<PHINode>(CxtI)) {
+      BasicBlock *FromBB = PN->getIncomingBlock(U);
+      LHS_CR = LVI->getConstantRangeOnEdge(MM->getOperand(0), FromBB,
+                                           CxtI->getParent(), CxtI);
+      RHS_CR = LVI->getConstantRangeOnEdge(MM->getOperand(1), FromBB,
+                                           CxtI->getParent(), CxtI);
+    } else {
+      LHS_CR = LVI->getConstantRange(MM->getOperand(0), CxtI,
+                                     /*UndefAllowed=*/false);
+      RHS_CR = LVI->getConstantRange(MM->getOperand(1), CxtI,
+                                     /*UndefAllowed=*/false);
+    }
+    if (LHS_CR.icmp(Pred, RHS_CR)) {
+      Changed = true;
+      ++NumMinMax;
+      U.set(MM->getLHS());
+      continue;
+    }
+    if (RHS_CR.icmp(Pred, LHS_CR)) {
+      Changed = true;
+      ++NumMinMax;
+      U.set(MM->getRHS());
+      continue;
+    }
+  }
+
+  if (MM->use_empty())
+    MM->eraseFromParent();
+
+  return Changed;
 }
 
 // Rewrite this with.overflow intrinsic as non-overflowing.
