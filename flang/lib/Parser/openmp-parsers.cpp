@@ -1459,7 +1459,7 @@ TYPE_PARSER( //
     "DEPEND" >> construct<OmpClause>(construct<OmpClause::Depend>(
                     parenthesized(Parser<OmpDependClause>{}))) ||
     "DEPTH" >> construct<OmpClause>(construct<OmpClause::Depth>(
-                    parenthesized(scalarIntConstantExpr))) ||
+                   parenthesized(scalarIntConstantExpr))) ||
     "DESTROY" >>
         construct<OmpClause>(construct<OmpClause::Destroy>(maybe(parenthesized(
             construct<OmpDestroyClause>(Parser<OmpObject>{}))))) ||
