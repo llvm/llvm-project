@@ -48,6 +48,8 @@ add_fp_unittest(
     libc.src.__support.math.coshf16
     libc.src.__support.math.cospif
     libc.src.__support.math.cospif16
+    libc.src.__support.math.ddivf128
+    libc.src.__support.math.ddivl
     libc.src.__support.math.dfmaf128
     libc.src.__support.math.dfmal
     libc.src.__support.math.dsqrtl
