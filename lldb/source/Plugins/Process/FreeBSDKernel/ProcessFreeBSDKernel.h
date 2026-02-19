@@ -51,9 +51,9 @@ protected:
   lldb::addr_t FindSymbol(const char *name);
 
 private:
-  void PrintUnreadMessageBuffer();
+  void PrintUnreadMessage();
 
-  bool m_displayed_crash_info = false;
+  bool m_printed_unread_message = false;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_PROCESSFREEBSDKERNEL_H
