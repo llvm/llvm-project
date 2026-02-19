@@ -84,17 +84,11 @@ class EntityPointerLevelTranslator
     assert(hasPointerType(Ptr));
 
     Expected<EntityPointerLevelSet> SubResult = Visit(Ptr);
-
     if (!SubResult)
       return SubResult.takeError();
-    if (SubResult->empty())
-      return SubResult;
 
-    EntityPointerLevelSet Result{};
-
-    for (EntityPointerLevel DereffedPtr : *SubResult)
-      Result.insert(incrementPointerLevel(DereffedPtr));
-    return Result;
+    auto Incremented = llvm::map_range(*SubResult, incrementPointerLevel);
+    return EntityPointerLevelSet{Incremented.begin(), Incremented.end()};
   }
 
 public:
@@ -142,15 +136,11 @@ public:
       return Visit(E->getSubExpr());
     case clang::UO_AddrOf: {
       Expected<EntityPointerLevelSet> SubResult = Visit(E->getSubExpr());
-
       if (!SubResult)
         return SubResult.takeError();
 
-      EntityPointerLevelSet Result;
-
-      for (auto Elt : *SubResult)
-        Result.insert(decrementPointerLevel(Elt));
-      return Result;
+      auto Decremented = llvm::map_range(*SubResult, decrementPointerLevel);
+      return EntityPointerLevelSet{Decremented.begin(), Decremented.end()};
     }
     case clang::UO_Deref:
       return translateDereferencePointer(E->getSubExpr());
