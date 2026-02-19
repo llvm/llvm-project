@@ -861,9 +861,9 @@ static bool needPadding(uint64_t StartAddr, uint64_t Size,
          isAgainstBoundary(StartAddr, Size, BoundaryAlignment);
 }
 
-void MCAssembler::relaxBoundaryAlign(MCBoundaryAlignFragment &BF) {
+void MCAssembler::layoutBoundaryAlign(MCBoundaryAlignFragment &BF) {
   // BoundaryAlignFragment that doesn't need to align any fragment should not be
-  // relaxed.
+  // padded.
   if (!BF.getLastFragment())
     return;
 
@@ -959,9 +959,6 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
   case MCFragment::FT_SFrame:
     relaxSFrameFragment(F);
     break;
-  case MCFragment::FT_BoundaryAlign:
-    relaxBoundaryAlign(static_cast<MCBoundaryAlignFragment &>(F));
-    break;
   case MCFragment::FT_CVInlineLines:
     getContext().getCVContext().encodeInlineLineTable(
         *this, static_cast<MCCVInlineLineTableFragment &>(F));
@@ -1005,13 +1002,17 @@ void MCAssembler::layoutSection(MCSection &Sec) {
         F.getParent()->ContentStorage.resize(F.VarContentEnd);
       Offset += Size;
     } else {
+      if (F.getKind() == MCFragment::FT_BoundaryAlign) {
+        auto &BF = cast<MCBoundaryAlignFragment>(F);
+        layoutBoundaryAlign(BF);
+      }
       Offset += computeFragmentSize(F);
     }
   }
 }
 
 unsigned MCAssembler::relaxOnce(unsigned FirstStable) {
-  ++stats::RelaxationSteps;
+  uint64_t MaxIterations = 0;
   PendingErrors.clear();
 
   unsigned Res = 0;
@@ -1019,8 +1020,10 @@ unsigned MCAssembler::relaxOnce(unsigned FirstStable) {
     // Assume each iteration finalizes at least one extra fragment. If the
     // layout does not converge after N+1 iterations, bail out.
     auto &Sec = *Sections[I];
-    auto MaxIter = Sec.curFragList()->Tail->getLayoutOrder() + 1;
+    auto Limit = Sec.curFragList()->Tail->getLayoutOrder() + 1;
+    auto MaxIter = Limit;
     for (;;) {
+      --MaxIter;
       bool Changed = false;
       for (MCFragment &F : Sec)
         if (F.getKind() != MCFragment::FT_Data && relaxFragment(F))
@@ -1032,11 +1035,14 @@ unsigned MCAssembler::relaxOnce(unsigned FirstStable) {
       // sections. Therefore, we must re-evaluate all sections.
       FirstStable = Sections.size();
       Res = I;
-      if (--MaxIter == 0)
+      if (MaxIter == 0)
         break;
       layoutSection(Sec);
     }
+    uint64_t Iterations = Limit - MaxIter;
+    MaxIterations = std::max(MaxIterations, Iterations);
   }
+  stats::RelaxationSteps += MaxIterations;
   // The subsequent relaxOnce call only needs to visit Sections [0,Res) if no
   // change occurred.
   return Res;
