@@ -9,10 +9,6 @@
 #ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHON_H
 #define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHON_H
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/StructuredDataImpl.h"
@@ -59,5 +55,4 @@ protected:
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
 #endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SCRIPTINTERPRETERPYTHON_H
