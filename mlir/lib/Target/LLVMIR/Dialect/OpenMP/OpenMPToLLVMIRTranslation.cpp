@@ -381,8 +381,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("num_teams with multi-dimensional values");
   };
   auto checkNumThreads = [&todo](auto op, LogicalResult &result) {
-    if (op.hasNumThreadsMultiDim())
-      result = todo("num_threads with multi-dimensional values");
+    // Check that we don't exceed the maximum supported dimensions (3)
+    if (op.getNumThreadsDimsCount() > 3)
+      result = todo("num_threads with more than 3 dimensions");
   };
 
   auto checkThreadLimit = [&todo](auto op, LogicalResult &result) {
@@ -6145,13 +6146,12 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
 ///
 /// Loop bounds and steps are only optionally populated, if output vectors are
 /// provided.
-static void
-extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
-                       Value &numTeamsLower, Value &numTeamsUpper,
-                       Value &threadLimit,
-                       llvm::SmallVectorImpl<Value> *lowerBounds = nullptr,
-                       llvm::SmallVectorImpl<Value> *upperBounds = nullptr,
-                       llvm::SmallVectorImpl<Value> *steps = nullptr) {
+static void extractHostEvalClauses(
+    omp::TargetOp targetOp, llvm::SmallVectorImpl<Value> &numThreadsVars,
+    Value &numTeamsLower, Value &numTeamsUpper, Value &threadLimit,
+    llvm::SmallVectorImpl<Value> *lowerBounds = nullptr,
+    llvm::SmallVectorImpl<Value> *upperBounds = nullptr,
+    llvm::SmallVectorImpl<Value> *steps = nullptr) {
   auto blockArgIface = llvm::cast<omp::BlockArgOpenMPOpInterface>(*targetOp);
   for (auto item : llvm::zip_equal(targetOp.getHostEvalVars(),
                                    blockArgIface.getHostEvalBlockArgs())) {
@@ -6172,10 +6172,17 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
               llvm_unreachable("unsupported host_eval use");
           })
           .Case([&](omp::ParallelOp parallelOp) {
-            if (!parallelOp.getNumThreadsVars().empty() &&
-                parallelOp.getNumThreads(0) == blockArg)
-              numThreads = hostEvalVar;
-            else
+            if (llvm::is_contained(parallelOp.getNumThreadsVars(), blockArg)) {
+              for (auto [i, threadsVar] :
+                   llvm::enumerate(parallelOp.getNumThreadsVars())) {
+                if (threadsVar == blockArg) {
+                  if (numThreadsVars.size() <= i)
+                    numThreadsVars.resize(i + 1);
+                  numThreadsVars[i] = hostEvalVar;
+                  break;
+                }
+              }
+            } else
               llvm_unreachable("unsupported host_eval use");
           })
           .Case([&](omp::LoopNestOp loopOp) {
@@ -6276,10 +6283,11 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
                        bool isTargetDevice, bool isGPU) {
   // TODO: Handle constant 'if' clauses.
 
-  Value numThreads, numTeamsLower, numTeamsUpper, threadLimit;
+  Value numTeamsLower, numTeamsUpper, threadLimit;
+  llvm::SmallVector<Value> numThreadsVars;
   if (!isTargetDevice) {
-    extractHostEvalClauses(targetOp, numThreads, numTeamsLower, numTeamsUpper,
-                           threadLimit);
+    extractHostEvalClauses(targetOp, numThreadsVars, numTeamsLower,
+                           numTeamsUpper, threadLimit);
   } else {
     // In the target device, values for these clauses are not passed as
     // host_eval, but instead evaluated prior to entry to the region. This
@@ -6294,8 +6302,10 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
     }
 
     if (auto parallelOp = castOrGetParentOfType<omp::ParallelOp>(capturedOp)) {
-      if (!parallelOp.getNumThreadsVars().empty())
-        numThreads = parallelOp.getNumThreads(0);
+      // Handle multi-dimensional num_threads
+      numThreadsVars.reserve(parallelOp.getNumThreadsVars().size());
+      for (auto threadsVar : parallelOp.getNumThreadsVars())
+        numThreadsVars.push_back(threadsVar);
     }
   }
 
@@ -6343,10 +6353,12 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
 
   // Extract 'max_threads' clause from 'parallel' or set to 1 if it's SIMD.
   int32_t maxThreadsVal = -1;
-  if (castOrGetParentOfType<omp::ParallelOp>(capturedOp))
-    setMaxValueFromClause(numThreads, maxThreadsVal);
-  else if (castOrGetParentOfType<omp::SimdOp>(capturedOp,
-                                              /*immediateParent=*/true))
+  if (castOrGetParentOfType<omp::ParallelOp>(capturedOp)) {
+    // For multi-dimensional num_threads, only use the first dimension for now
+    if (!numThreadsVars.empty())
+      setMaxValueFromClause(numThreadsVars[0], maxThreadsVal);
+  } else if (castOrGetParentOfType<omp::SimdOp>(capturedOp,
+                                                /*immediateParent=*/true))
     maxThreadsVal = 1;
 
   // For max values, < 0 means unset, == 0 means set but unknown. Select the
@@ -6410,10 +6422,11 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   omp::LoopNestOp loopOp = castOrGetParentOfType<omp::LoopNestOp>(capturedOp);
   unsigned numLoops = loopOp ? loopOp.getNumLoops() : 0;
 
-  Value numThreads, numTeamsLower, numTeamsUpper, teamsThreadLimit;
+  Value numTeamsLower, numTeamsUpper, teamsThreadLimit;
+  llvm::SmallVector<Value> numThreadsVars;
   llvm::SmallVector<Value> lowerBounds(numLoops), upperBounds(numLoops),
       steps(numLoops);
-  extractHostEvalClauses(targetOp, numThreads, numTeamsLower, numTeamsUpper,
+  extractHostEvalClauses(targetOp, numThreadsVars, numTeamsLower, numTeamsUpper,
                          teamsThreadLimit, &lowerBounds, &upperBounds, &steps);
 
   // TODO: Handle constant 'if' clauses.
@@ -6438,8 +6451,9 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
     attrs.TeamsThreadLimit.front() = builder.CreateSExtOrTrunc(
         moduleTranslation.lookupValue(teamsThreadLimit), builder.getInt32Ty());
 
-  if (numThreads)
-    attrs.MaxThreads = moduleTranslation.lookupValue(numThreads);
+  // Handle multi-dimensional num_threads (only first value for now)
+  if (!numThreadsVars.empty())
+    attrs.MaxThreads = moduleTranslation.lookupValue(numThreadsVars[0]);
 
   if (omp::bitEnumContainsAny(targetOp.getKernelExecFlags(capturedOp),
                               omp::TargetRegionFlags::trip_count)) {
