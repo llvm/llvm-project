@@ -549,16 +549,19 @@ body: |
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %x:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: %xor:_(s64) = G_SUB [[C]], %x
-    ; CHECK-NEXT: %mul:_(s64) = G_MUL %xor, %mul
+    ; CHECK-NEXT: %neg_one:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: %add:_(s64) = G_ADD %x, %neg_one
+    ; CHECK-NEXT: %xor:_(s64) = G_XOR %add, %neg_one
+    ; CHECK-NEXT: %sub:_(s64) = G_SUB %xor, %add
+    ; CHECK-NEXT: %mul:_(s64) = G_MUL %xor, %sub
     ; CHECK-NEXT: $x0 = COPY %mul(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(s64) = COPY $x0
     %neg_one:_(s64) = G_CONSTANT i64 -1
     %add:_(s64) = G_ADD %x, %neg_one
     %xor:_(s64) = G_XOR %add, %neg_one
-    %mul:_(s64) = G_MUL %xor, %mul
+    %sub:_(s64) = G_SUB %xor, %add
+    %mul:_(s64) = G_MUL %xor, %sub
     $x0 = COPY %mul
     RET_ReallyLR implicit $x0
 ...
