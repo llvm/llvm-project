@@ -211,8 +211,7 @@ define <8 x i8> @test_call_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    mv a4, a1
 ; RV32-NEXT:    mv a5, a0
-; RV32-NEXT:    mv a0, a2
-; RV32-NEXT:    mv a1, a3
+; RV32-NEXT:    addd a0, a2, zero
 ; RV32-NEXT:    mv a2, a5
 ; RV32-NEXT:    mv a3, a4
 ; RV32-NEXT:    call external_v8i8
