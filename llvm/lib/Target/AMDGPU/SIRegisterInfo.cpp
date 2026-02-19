@@ -1541,16 +1541,16 @@ void SIRegisterInfo::buildSpillLoadStore(
   // TODO: Optimize misaligned spills by using larger aligned chunks instead of
   // 32-bit splits.
   bool IsRegMisaligned = false;
-  if (ST.needsAlignedVGPRs() && IsFlat && !IsBlock && RegWidth > 4) {
+  if (!IsBlock && RegWidth > 4) {
     // clang-format off
-    const TargetRegisterClass *ExpectedRC;
     unsigned SpillOpcode =
         getFlatScratchSpillOpcode(TII, LoadStoreOp, std::min(RegWidth, 16u));
     int VDataIdx = IsStore
                  ? AMDGPU::getNamedOperandIdx(SpillOpcode, AMDGPU::OpName::vdata)
                  : 0; // Restore Ops have data reg as the first (output) operand.
-    ExpectedRC = TII->getRegClass(TII->get(SpillOpcode), VDataIdx);
-    // For large tuples (>128-bit), check the first 4 sub-regs for alignment
+    const TargetRegisterClass *ExpectedRC =
+        TII->getRegClass(TII->get(SpillOpcode), VDataIdx);
+    // For large tuples (>128-bit), consider the first 4 sub-regs for alignment
     Register RegToCheck = RegWidth <= 16
                         ? ValueReg
                         : Register(getSubReg(ValueReg, getSubRegFromChannel(0, 4)));
