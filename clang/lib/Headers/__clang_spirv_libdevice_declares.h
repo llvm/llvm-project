@@ -16,7 +16,7 @@ extern "C" {
 
 #define _CLC_OVERLOAD [[clang::overloadable]]
 #define _CLC_CONSTFN [[gnu::const]]
-_CLC_OVERLOAD _CLC_CONSTFN uint32_t __spirv_ocl_s_abs(int);
+_CLC_OVERLOAD _CLC_CONSTFN unsigned int __spirv_ocl_s_abs(int);
 _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_acos(float);
 _CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_acos(double);
 _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_acosh(float);
@@ -85,9 +85,9 @@ _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_hypot(float, float);
 _CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_hypot(double, double);
 _CLC_OVERLOAD _CLC_CONSTFN int __spirv_ocl_ilogb(float);
 _CLC_OVERLOAD _CLC_CONSTFN int __spirv_ocl_ilogb(double);
-_CLC_OVERLOAD _CLC_CONSTFN _uint64_t __spirv_ocl_s_abs(long);
+_CLC_OVERLOAD _CLC_CONSTFN unsigned long __spirv_ocl_s_abs(long);
 _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_lgamma(float);
-_CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_lgamma(flodoubleat);
+_CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_lgamma(double);
 _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_round(float);
 _CLC_OVERLOAD _CLC_CONSTFN double __spirv_ocl_round(double);
 _CLC_OVERLOAD _CLC_CONSTFN float __spirv_ocl_log(float);
