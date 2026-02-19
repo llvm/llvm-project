@@ -84,8 +84,7 @@ body:             |
     SI_RETURN
 ...
 # ensure register constraints of V_CNDMASK_B32_e64 are respected by
-# eliminateFrameIndex. V_CNDMASK_B32_e64 with stack operand hits crash due to
-# null register class for that operand, which needs a follow up fix.
+# eliminateFrameIndex.
 ---
 name:            test_v_cndmask_e64
 tracksRegLiveness: true
