@@ -31,9 +31,9 @@ enum Color {
 // MD-INDEX: ## Enums
 // MD-INDEX: | enum Color |
 // MD-INDEX: --
-// MD-INDEX: | Red |
-// MD-INDEX: | Green |
-// MD-INDEX: | Blue |
+// MD-INDEX: | Red | 0 |
+// MD-INDEX: | Green | 1 |
+// MD-INDEX: | Blue | 2 |
 // MD-INDEX: **brief** For specifying RGB colors
 
 // HTML-INDEX-LABEL:    <pre><code class="language-cpp code-clang-doc">enum Color</code></pre>
@@ -75,9 +75,9 @@ enum class Shapes {
 };
 // MD-INDEX: | enum class Shapes |
 // MD-INDEX: --
-// MD-INDEX: | Circle |
-// MD-INDEX: | Rectangle |
-// MD-INDEX: | Triangle |
+// MD-INDEX: | Circle | 0 |
+// MD-INDEX: | Rectangle | 1 |
+// MD-INDEX: | Triangle | 2 |
 // MD-INDEX: **brief** Shape Types
 
 // COM: FIXME: Serialize "enum class" in template
@@ -117,9 +117,9 @@ enum Size : uint8_t {
 
 // MD-INDEX: | enum Size : uint8_t |
 // MD-INDEX: --
-// MD-INDEX: | Small |
-// MD-INDEX: | Medium |
-// MD-INDEX: | Large |
+// MD-INDEX: | Small | 0 |
+// MD-INDEX: | Medium | 1 |
+// MD-INDEX: | Large | 2 |
 // MD-INDEX: **brief** Specify the size
 
 // HTML-INDEX:          <pre><code class="language-cpp code-clang-doc">enum Size : uint8_t</code></pre>
@@ -156,7 +156,7 @@ enum : long long {
 
 // MD-INDEX: | enum : long long |
 // MD-INDEX: --
-// MD-INDEX: | BigVal |
+// MD-INDEX: | BigVal | 999999999999 |
 // MD-INDEX: **brief** Very long number
 
 // HTML-INDEX:          <pre><code class="language-cpp code-clang-doc">enum : long long</code></pre>
@@ -185,7 +185,7 @@ enum {
 
 // MD-INDEX: | enum |
 // MD-INDEX: --
-// MD-INDEX: | secret |
+// MD-INDEX: | secret | 1 |
 // MD-INDEX: **brief** This is a top secret
 
 // HTML-INDEX:          <pre><code class="language-cpp code-clang-doc">enum </code></pre>
@@ -259,9 +259,9 @@ public:
 // MD-ANIMAL: ## Enums
 // MD-ANIMAL: | enum AnimalType |
 // MD-ANIMAL: --
-// MD-ANIMAL: | Dog |
-// MD-ANIMAL: | Cat |
-// MD-ANIMAL: | Iguana |
+// MD-ANIMAL: | Dog | 0 |
+// MD-ANIMAL: | Cat | 1 |
+// MD-ANIMAL: | Iguana | 2 |
 // MD-ANIMAL: **brief** specify what animal the class is
 
 namespace Vehicles {
@@ -283,10 +283,10 @@ enum Car {
 // MD-VEHICLES: ## Enums
 // MD-VEHICLES: | enum Car |
 // MD-VEHICLES: --
-// MD-VEHICLES: | Sedan |
-// MD-VEHICLES: | SUV |
-// MD-VEHICLES: | Pickup |
-// MD-VEHICLES: | Hatchback |
+// MD-VEHICLES: | Sedan | 0 |
+// MD-VEHICLES: | SUV | 1 |
+// MD-VEHICLES: | Pickup | 2 |
+// MD-VEHICLES: | Hatchback | 3 |
 // MD-VEHICLES: **brief** specify type of car
 
 // HTML-VEHICLES-LABEL:     <pre><code class="language-cpp code-clang-doc">enum Car</code></pre>
@@ -324,9 +324,9 @@ enum ColorUserSpecified {
 
 // MD-INDEX: | enum ColorUserSpecified |
 // MD-INDEX: --
-// MD-INDEX: | RedUserSpecified |
-// MD-INDEX: | GreenUserSpecified |
-// MD-INDEX: | BlueUserSpecified |
+// MD-INDEX: | RedUserSpecified | 65 |
+// MD-INDEX: | GreenUserSpecified | 2 |
+// MD-INDEX: | BlueUserSpecified | 67 |
 
 // HTML-INDEX-LABEL:    <pre><code class="language-cpp code-clang-doc">enum ColorUserSpecified</code></pre>
 // HTML-INDEX-NEXT:     </div>

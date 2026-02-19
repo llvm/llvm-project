@@ -157,11 +157,11 @@ static void writeNameLink(const StringRef &CurrentPath, const Reference &R,
 static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
                         llvm::raw_ostream &OS) {
   std::string Header = "| enum ";
-  if(I.Scoped)
+  if (I.Scoped)
     Header += "class ";
   Header += I.Name;
   Header += " ";
-  if(I.BaseType && I.BaseType->Type.QualName != "") {
+  if (I.BaseType && I.BaseType->Type.QualName != "") {
     Header += ": ";
     Header += I.BaseType->Type.QualName;
     Header += " ";
@@ -174,7 +174,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
   llvm::raw_string_ostream Members(Buffer);
   if (!I.Members.empty())
     for (const auto &N : I.Members)
-      Members << "| " << N.Name << " |\n";
+      Members << "| " << N.Name << " | " << N.Value << " |\n";
   writeLine(Members.str(), OS);
 
   maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
