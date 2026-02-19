@@ -35,9 +35,11 @@ let Namespace = "SC32" in {
   def GP31 : Register<"GP31">;
 
   def FLAGS : Register<"FLAGS">;
+  def AUX0 : Register<"AUX">;
 }
 
 def GP : RegisterClass<"SC32", [i32], 32, (sequence "GP%u", 0, 31)>;
+def AUX : RegisterClass<"SC32", [i32], 32, (add AUX0)>;
 
 def CC_SC32 : CallingConv<[CCAssignToReg<[GP23, GP24, GP25, GP26]>]>;
 def RetCC_SC32 : CallingConv<[CCAssignToReg<[GP28]>]>;
@@ -99,6 +101,24 @@ multiclass Operator<string OpStr, SDNode OpNode> {
   }
 }
 
+multiclass AUXOperator<string OpStr, SDNode OpNode> {
+  def "" : Instruction {
+    let OutOperandList = (outs GP:$out, AUX:$aux);
+    let InOperandList = (ins GP:$lhs, GP:$rhs);
+    let Constraints = "$out = $lhs";
+    let Pattern = [(set i32:$out, i32:$aux, (OpNode i32:$lhs, i32:$rhs))];
+    let AsmString = !strconcat(OpStr, " $lhs, $rhs");
+  }
+
+  def I : Instruction {
+    let OutOperandList = (outs GP:$out, AUX:$aux);
+    let InOperandList = (ins GP:$lhs, i32imm:$rhs);
+    let Constraints = "$out = $lhs";
+    let Pattern = [(set i32:$out, i32:$aux, (OpNode i32:$lhs, uimm20:$rhs))];
+    let AsmString = !strconcat(OpStr, "I $lhs, $rhs");
+  }
+}
+
 class Jump<string OpStr, CondCode OpCC> : Instruction {
   let OutOperandList = (outs);
   let InOperandList = (ins brtarget:$tgt);
@@ -111,8 +131,8 @@ class Jump<string OpStr, CondCode OpCC> : Instruction {
 let Namespace = "SC32" in {
   defm ADD : Operator<"ADD", add>;
   defm SUB : Operator<"SUB", sub>;
-  defm MUL : Operator<"MUL", mul>;
-  defm DIV : Operator<"DIV", udiv>;
+  defm MUL : AUXOperator<"MUL", umullohi>;
+  defm DIV : AUXOperator<"DIV", udivrem>;
   defm AND : Operator<"AND", and>;
   defm OR : Operator<"OR", or>;
   defm XOR : Operator<"XOR", xor>;
@@ -217,7 +237,14 @@ let Namespace = "SC32" in {
     let OutOperandList = (outs GP:$dst);
     let AsmString = "POP $dst";
   }
+  
+  def AMOV : Instruction {
+    let OutOperandList = (outs GP:$dst);
+    let InOperandList = (ins AUX:$aux);
+    let AsmString = "AMOV $dst";
+  }
 }
+
 
 def : Pat<(i32 LLIimm:$val), (LLI imm:$val)>;
 

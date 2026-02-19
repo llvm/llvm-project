@@ -1,5 +1,6 @@
 #include "SC32InstrInfo.h"
 #include "MCTargetDesc/SC32MCTargetDesc.h"
+#include "SC32RegisterInfo.h"
 
 using namespace llvm;
 
@@ -11,8 +12,13 @@ void SC32InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 const DebugLoc &DL, Register DestReg,
                                 Register SrcReg, bool KillSrc,
                                 bool RenamableDest, bool RenamableSrc) const {
-  BuildMI(MBB, MI, DL, get(SC32::MOV), DestReg)
-      .addReg(SrcReg, getKillRegState(KillSrc));
+  if (SC32::AUXRegClass.contains(SrcReg)) {
+    BuildMI(MBB, MI, DL, get(SC32::AMOV), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+  } else {
+    BuildMI(MBB, MI, DL, get(SC32::MOV), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+  }
 }
 
 static bool isUnconditionalBranchOpcode(unsigned Opcode) {

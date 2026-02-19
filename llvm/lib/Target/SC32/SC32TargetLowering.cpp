@@ -14,7 +14,9 @@ SC32TargetLowering::SC32TargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::i32, &SC32::GPRegClass);
 
   setOperationAction(ISD::UREM, MVT::i32, Expand);
-  setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
+  setOperationAction(ISD::UDIV, MVT::i32, Expand);
+  setOperationAction(ISD::MULHU, MVT::i32, Expand);
+  setOperationAction(ISD::MUL, MVT::i32, Expand);
 
   setOperationAction(ISD::BR_CC, MVT::i32, Custom);
 
