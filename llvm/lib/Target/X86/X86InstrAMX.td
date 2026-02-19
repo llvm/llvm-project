@@ -495,18 +495,18 @@ defm TILEMOVROW : AMXAVX512_TILEMOVE<0x07, 0x4A, "tilemovrow">;
 let Predicates = [HasAMXAVX512, HasAVX10_2, In64BitMode] in {
   let SchedRW = [WriteSystem] in {
     let  usesCustomInserter = 1 in {
-      def PTILEMOVROWrri : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
+      def PTILEMOVROWrti : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, i32u8imm:$src2),
                                    [(set VR512:$dst, (int_x86_tilemovrowi timm:$src1, timm:$src2))]>;
-      def PTILEMOVROWrre : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, GR32:$src2),
+      def PTILEMOVROWrte : PseudoI<(outs VR512:$dst), (ins u8imm:$src1, GR32:$src2),
                                    [(set VR512:$dst, (int_x86_tilemovrow timm:$src1, GR32:$src2))]>;
     }
 
-    def PTILEMOVROWrriV : PseudoI<(outs VR512:$dst),
+    def PTILEMOVROWrtiV : PseudoI<(outs VR512:$dst),
                                   (ins GR16:$src1, GR16:$src2, TILE:$src3, i32u6imm:$src4),
                                   [(set VR512: $dst,
                                     (int_x86_tilemovrow_internal GR16:$src1, GR16:$src2,
                                      TILE:$src3, imm:$src4))]>;
-    def PTILEMOVROWrreV : PseudoI<(outs VR512:$dst),
+    def PTILEMOVROWrteV : PseudoI<(outs VR512:$dst),
                                   (ins GR16:$src1, GR16:$src2, TILE:$src3, GR32:$src4),
                                   [(set VR512: $dst,
                                     (int_x86_tilemovrow_internal GR16:$src1, GR16:$src2,
