@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/Rematerializer.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -27,15 +28,18 @@
 #define DEBUG_TYPE "rematerializer"
 
 using namespace llvm;
+using RegisterIdx = Rematerializer::RegisterIdx;
 
-static bool isAvailableAtUse(const VNInfo *OVNI, LaneBitmask Mask,
+/// Checks whether the value in \p LI at \p UseIdx is identical to \p OVNI (this
+/// implies it is also live there). When \p LI has sub-ranges, checks that
+/// all sub-ranges intersecting with \p Mask are also live at \p UseIdx.
+static bool isIdenticalAtUse(const VNInfo &OVNI, LaneBitmask Mask,
                              SlotIndex UseIdx, const LiveInterval &LI) {
-  assert(OVNI);
-  if (OVNI != LI.getVNInfoAt(UseIdx))
+  if (&OVNI != LI.getVNInfoAt(UseIdx))
     return false;
 
-  // Check that subrange is live at user.
   if (LI.hasSubRanges()) {
+    // Check that intersecting subranges are live at user.
     for (const LiveInterval::SubRange &SR : LI.subranges()) {
       if ((SR.LaneMask & Mask).none())
         continue;
@@ -51,7 +55,9 @@ static bool isAvailableAtUse(const VNInfo *OVNI, LaneBitmask Mask,
   return true;
 }
 
-static Register isRegDependency(const MachineOperand &MO) {
+/// If \p MO is a virtual read register, returns it. Otherwise returns the
+/// sentinel register.
+static Register getRegDependency(const MachineOperand &MO) {
   if (!MO.isReg() || !MO.readsReg())
     return Register();
   Register Reg = MO.getReg();
@@ -63,136 +69,150 @@ static Register isRegDependency(const MachineOperand &MO) {
   return Reg;
 }
 
-unsigned Rematerializer::rematerializeToRegion(unsigned RootIdx,
-                                               unsigned UseRegion,
-                                               DependencyReuseInfo &DRI) {
-
+RegisterIdx Rematerializer::rematerializeToRegion(RegisterIdx RootIdx,
+                                                  unsigned UseRegion,
+                                                  DependencyReuseInfo &DRI) {
   MachineInstr *FirstMI =
       getReg(RootIdx).getRegionUseBounds(UseRegion, LIS).first;
-  unsigned NewRegIdx = rematerializeToPos(RootIdx, FirstMI, DRI);
+  RegisterIdx NewRegIdx = rematerializeToPos(RootIdx, FirstMI, DRI);
   transferRegionUsers(RootIdx, NewRegIdx, UseRegion);
   return NewRegIdx;
 }
 
-unsigned
-Rematerializer::rematerializeToPos(unsigned RootIdx,
+RegisterIdx
+Rematerializer::rematerializeToPos(RegisterIdx RootIdx,
                                    MachineBasicBlock::iterator InsertPos,
                                    DependencyReuseInfo &DRI) {
-  LLVM_DEBUG({
-    rdbgs() << "Rematerializing " << printID(RootIdx) << " to "
-            << printUser(&*InsertPos) << '\n';
-    ++CallDepth;
-  });
+  assert(!DRI.DependencyMap.contains(RootIdx));
+  LLVM_DEBUG(dbgs() << "Rematerializing " << printID(RootIdx) << " to "
+                    << printUser(&*InsertPos) << '\n');
 
-  // Create/identify dependencies for the new register. Copy the dependencies
-  // vector because underlying updates to the backing vector of registers may
-  // invalidate references.
-  SmallVector<Reg::Dependency, 2> NewDeps, Deps(Regs[RootIdx].Dependencies);
-  for (const Reg::Dependency &Dep : Deps) {
-    if (auto NewDep = DRI.DependencyMap.find(Dep.RegIdx);
-        NewDep != DRI.DependencyMap.end()) {
-      // We already have the version of the dependency we want to use.
-      NewDeps.emplace_back(Dep.MOIdx, NewDep->second);
-    } else {
-      // Dependencies must be rematerialized in def-use order.
-      unsigned NewDepIdx = rematerializeToPos(Dep.RegIdx, InsertPos, DRI);
-      DRI.DependencyMap.insert({Dep.RegIdx, NewDepIdx});
-      NewDeps.emplace_back(Dep.MOIdx, NewDepIdx);
+  // Traverse the root's dependency DAG depth-first to find the set of
+  // registers we must rematerialize along with it and a legal order to
+  // rematerialize them in.
+  SmallVector<RegisterIdx, 4> DepDAG{RootIdx};
+  SmallSetVector<RegisterIdx, 8> RematOrder;
+  RematOrder.insert(RootIdx);
+  do {
+    RegisterIdx RegIdx = DepDAG.pop_back_val();
+    for (const Reg::Dependency &Dep : getReg(RegIdx).Dependencies) {
+      // The dependency may already have a rematerialization ready to use.
+      if (DRI.DependencyMap.contains(Dep.RegIdx))
+        continue;
+      // We may have already seen the dependency in the dependency DAG.
+      if (RematOrder.contains(Dep.RegIdx))
+        continue;
+      DepDAG.push_back(Dep.RegIdx);
+      RematOrder.insert(Dep.RegIdx);
     }
+  } while (!DepDAG.empty());
+
+  // Rematerialize all necessary registers in the root's dependency DAG. At each
+  // rematerialization, dependencies should already be available.
+  RegisterIdx LastNewIdx;
+  for (RegisterIdx RegIdx : reverse(RematOrder)) {
+    assert(!DRI.DependencyMap.contains(RegIdx) && "useless remat");
+    SmallVector<Reg::Dependency, 2> Dependencies;
+    for (const Reg::Dependency &Dep : getReg(RegIdx).Dependencies)
+      Dependencies.emplace_back(Dep.MOIdx, DRI.DependencyMap.at(Dep.RegIdx));
+    LastNewIdx = rematerializeReg(RegIdx, InsertPos, std::move(Dependencies));
+    DRI.DependencyMap.insert({RegIdx, LastNewIdx});
   }
 
-  LLVM_DEBUG(--CallDepth);
-  return rematerializeReg(RootIdx, InsertPos, std::move(NewDeps));
+  return LastNewIdx;
 }
 
-void Rematerializer::rollbackRematsOf(unsigned RootIdx) {
+void Rematerializer::rollbackRematsOf(RegisterIdx RootIdx) {
   auto Remats = Rematerializations.find(RootIdx);
   if (Remats == Rematerializations.end())
     return;
 
-  LLVM_DEBUG({
-    rdbgs() << "Rolling back rematerializations of " << printID(RootIdx)
-            << '\n';
-  });
+  LLVM_DEBUG(dbgs() << "Rolling back rematerializations of " << printID(RootIdx)
+                    << '\n');
 
   reviveRegIfDead(RootIdx);
   // All of the rematerialization's users must use the revived register.
-  for (unsigned RematRegIdx : Remats->getSecond()) {
+  for (RegisterIdx RematRegIdx : Remats->getSecond()) {
     for (const auto &[UseRegion, RegionUsers] : Regs[RematRegIdx].Uses)
       transferRegionUsers(RematRegIdx, RootIdx, UseRegion);
   }
   Rematerializations.erase(RootIdx);
 
-  LLVM_DEBUG({
-    rdbgs() << "** Rolled back rematerializations of " << printID(RootIdx)
-            << '\n';
-  });
+  LLVM_DEBUG(dbgs() << "** Rolled back rematerializations of "
+                    << printID(RootIdx) << '\n');
 }
 
-void Rematerializer::rollback(unsigned RematIdx) {
-  assert(getReg(RematIdx).DefMI && !Rollbackable.contains(RematIdx) &&
+void Rematerializer::rollback(RegisterIdx RematIdx) {
+  assert(getReg(RematIdx).DefMI && !Revivable.contains(RematIdx) &&
          "cannot rollback dead register");
-  const unsigned OriginRegIdx = getOriginOf(RematIdx);
+  const RegisterIdx OriginRegIdx = getOriginOf(RematIdx);
   reviveRegIfDead(OriginRegIdx);
   for (const auto &[UseRegion, RegionUsers] : Regs[RematIdx].Uses)
     transferRegionUsers(RematIdx, OriginRegIdx, UseRegion);
 }
 
-void Rematerializer::reviveRegIfDead(unsigned RootIdx) {
-  assert(!isRematerializedRegister(RootIdx) &&
-         "cannot revive rematerialization");
-
-  Reg &Root = Regs[RootIdx];
-  if (!Root.Uses.empty()) {
-    // The register still exists, nothing to do.
-    LLVM_DEBUG(rdbgs() << printID(RootIdx) << " still exists\n");
+void Rematerializer::reviveRegIfDead(RegisterIdx RootIdx) {
+  if (getReg(RootIdx).isAlive())
     return;
+  assert(Revivable.contains(RootIdx) && "not revivable");
+
+  // Traverse the root's dependency DAG depth-first to find the set of
+  // registers we must revive and a legal order to revive them in.
+  SmallVector<RegisterIdx, 4> DepDAG{RootIdx};
+  SmallSetVector<RegisterIdx, 8> ReviveOrder;
+  ReviveOrder.insert(RootIdx);
+  do {
+    // All dependencies of a revived register need to be alive too.
+    const Reg &ReviveReg = getReg(DepDAG.pop_back_val());
+    for (const Reg::Dependency &Dep : ReviveReg.Dependencies) {
+      // We may have already seen the dependency in the dependency DAG.
+      if (ReviveOrder.contains(Dep.RegIdx))
+        continue;
+
+      // Dead dependencies need to be revived.
+      Reg &DepReg = Regs[Dep.RegIdx];
+      if (!DepReg.isAlive()) {
+        assert(Revivable.contains(Dep.RegIdx) && "not revivable");
+        ReviveOrder.insert(Dep.RegIdx);
+        DepDAG.push_back(Dep.RegIdx);
+      }
+
+      // All dependencies get a new user (the revived register).
+      DepReg.addUser(ReviveReg.DefMI, ReviveReg.DefRegion);
+      LISUpdates.insert(Dep.RegIdx);
+    }
+  } while (!DepDAG.empty());
+
+  for (RegisterIdx RegIdx : reverse(ReviveOrder)) {
+    // Pick any rematerialization to retrieve the original opcode from.
+    Reg &ReviveReg = Regs[RegIdx];
+    assert(Rematerializations.contains(RegIdx) && "no remats");
+    RegisterIdx RematIdx = *Rematerializations.at(RegIdx).begin();
+    ReviveReg.DefMI->setDesc(getReg(RematIdx).DefMI->getDesc());
+    for (const auto &[MOIdx, Reg] : Revivable.at(RegIdx))
+      ReviveReg.DefMI->getOperand(MOIdx).setReg(Reg);
+    Revivable.erase(RegIdx);
+    LISUpdates.insert(RegIdx);
+
+    LLVM_DEBUG({
+      dbgs() << "** Revived " << printID(RegIdx) << " @ ";
+      LIS.getInstructionIndex(*ReviveReg.DefMI).print(dbgs());
+      dbgs() << '\n';
+    });
   }
-
-  assert(Rollbackable.contains(RootIdx) && "not marked rollbackable");
-  assert(Root.DefMI && Root.DefMI->getOpcode() == TargetOpcode::DBG_VALUE &&
-         "not the right opcode");
-  assert(Rematerializations.contains(RootIdx) && "no remats");
-
-  LLVM_DEBUG({
-    rdbgs() << "Reviving " << printID(RootIdx) << '\n';
-    ++CallDepth;
-  });
-
-  // Fully rematerialized dependencies need to be revived. All dependencies gain
-  // a new user.
-  for (const Reg::Dependency &Dep : Root.Dependencies) {
-    reviveRegIfDead(Dep.RegIdx);
-    Regs[Dep.RegIdx].addUser(Root.DefMI, Root.DefRegion);
-    LISUpdates.insert(Dep.RegIdx);
-  }
-
-  // Pick any rematerialization to retrieve the original opcode from.
-  unsigned RematIdx = *Rematerializations.at(RootIdx).begin();
-  Root.DefMI->setDesc(getReg(RematIdx).DefMI->getDesc());
-  for (const auto &[MOIdx, Reg] : Rollbackable.at(RootIdx))
-    Root.DefMI->getOperand(MOIdx).setReg(Reg);
-  Rollbackable.erase(RootIdx);
-  LISUpdates.insert(RootIdx);
-
-  LLVM_DEBUG({
-    rdbgs() << "** Revived " << printID(RootIdx) << " @ ";
-    LIS.getInstructionIndex(*Root.DefMI).print(dbgs());
-    dbgs() << '\n';
-    --CallDepth;
-  });
 }
 
-void Rematerializer::transferUser(unsigned FromRegIdx, unsigned ToRegIdx,
+void Rematerializer::transferUser(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
                                   MachineInstr &UserMI) {
-  transferUserInternal(FromRegIdx, ToRegIdx, UserMI);
-  unsigned UserRegion = MIRegion[&UserMI];
+  transferUserImpl(FromRegIdx, ToRegIdx, UserMI);
+  unsigned UserRegion = MIRegion.at(&UserMI);
   Regs[FromRegIdx].eraseUser(&UserMI, UserRegion);
   Regs[ToRegIdx].addUser(&UserMI, UserRegion);
   deleteRegIfUnused(FromRegIdx);
 }
 
-void Rematerializer::transferRegionUsers(unsigned FromRegIdx, unsigned ToRegIdx,
+void Rematerializer::transferRegionUsers(RegisterIdx FromRegIdx,
+                                         RegisterIdx ToRegIdx,
                                          unsigned UseRegion) {
   auto &FromRegUsers = Regs[FromRegIdx].Uses;
   auto UsesIt = FromRegUsers.find(UseRegion);
@@ -201,15 +221,15 @@ void Rematerializer::transferRegionUsers(unsigned FromRegIdx, unsigned ToRegIdx,
 
   const SmallDenseSet<MachineInstr *, 4> &RegionUsers = UsesIt->getSecond();
   for (MachineInstr *UserMI : RegionUsers)
-    transferUserInternal(FromRegIdx, ToRegIdx, *UserMI);
+    transferUserImpl(FromRegIdx, ToRegIdx, *UserMI);
   Regs[ToRegIdx].addUsers(RegionUsers, UseRegion);
   FromRegUsers.erase(UseRegion);
   deleteRegIfUnused(FromRegIdx);
 }
 
-void Rematerializer::transferUserInternal(unsigned FromRegIdx,
-                                          unsigned ToRegIdx,
-                                          MachineInstr &UserMI) {
+void Rematerializer::transferUserImpl(RegisterIdx FromRegIdx,
+                                      RegisterIdx ToRegIdx,
+                                      MachineInstr &UserMI) {
   assert(MIRegion.contains(&UserMI) && "unknown user");
   assert(getReg(FromRegIdx).Uses.at(MIRegion.at(&UserMI)).contains(&UserMI) &&
          "not a user");
@@ -217,9 +237,8 @@ void Rematerializer::transferUserInternal(unsigned FromRegIdx,
   assert(getOriginOrSelf(FromRegIdx) == getOriginOrSelf(ToRegIdx) &&
          "unrelated registers");
 
-  LLVM_DEBUG(rdbgs() << "User transfer from " << printID(FromRegIdx) << " to "
-                     << printID(ToRegIdx) << ": " << printUser(&UserMI)
-                     << '\n');
+  LLVM_DEBUG(dbgs() << "User transfer from " << printID(FromRegIdx) << " to "
+                    << printID(ToRegIdx) << ": " << printUser(&UserMI) << '\n');
 
   UserMI.substituteRegister(getReg(FromRegIdx).getDefReg(),
                             getReg(ToRegIdx).getDefReg(), 0, TRI);
@@ -228,7 +247,7 @@ void Rematerializer::transferUserInternal(unsigned FromRegIdx,
 
   // If the user is rematerializable, we must change its dependency to the
   // new register.
-  if (unsigned UserRegIdx = getDefRegIdx(UserMI); UserRegIdx != NoReg) {
+  if (RegisterIdx UserRegIdx = getDefRegIdx(UserMI); UserRegIdx != NoReg) {
     // Look for the user's dependency that matches the register.
     for (Reg::Dependency &Dep : Regs[UserRegIdx].Dependencies) {
       if (Dep.RegIdx == FromRegIdx) {
@@ -242,9 +261,9 @@ void Rematerializer::transferUserInternal(unsigned FromRegIdx,
 
 void Rematerializer::updateLiveIntervals() {
   DenseSet<Register> SeenUnrematRegs;
-  for (unsigned RegIdx : LISUpdates) {
+  for (RegisterIdx RegIdx : LISUpdates) {
     const Reg &UpdateReg = getReg(RegIdx);
-    assert(UpdateReg.DefMI || Rollbackable.contains(RegIdx) && "dead register");
+    assert((UpdateReg.DefMI || Revivable.contains(RegIdx)) && "dead reg");
 
     Register DefReg = UpdateReg.getDefReg();
     if (LIS.hasInterval(DefReg))
@@ -252,9 +271,9 @@ void Rematerializer::updateLiveIntervals() {
     LIS.createAndComputeVirtRegInterval(DefReg);
 
     LLVM_DEBUG({
-      rdbgs() << "Re-computed interval for " << printID(RegIdx) << ": ";
+      dbgs() << "Re-computed interval for " << printID(RegIdx) << ": ";
       LIS.getInterval(DefReg).print(dbgs());
-      rdbgs() << '\n' << printRegUsers(RegIdx);
+      dbgs() << '\n' << printRegUsers(RegIdx);
     });
 
     // Update intervals for unrematerializable operands.
@@ -276,9 +295,9 @@ void Rematerializer::updateLiveIntervals() {
 }
 
 void Rematerializer::commitRematerializations() {
-  for (auto &[RegIdx, _] : Rollbackable)
+  for (auto &[RegIdx, _] : Revivable)
     deleteReg(RegIdx);
-  Rollbackable.clear();
+  Revivable.clear();
 }
 
 bool Rematerializer::isMOIdenticalAtUses(MachineOperand &MO,
@@ -293,22 +312,23 @@ bool Rematerializer::isMOIdenticalAtUses(MachineOperand &MO,
   const VNInfo *DefVN =
       LI.getVNInfoAt(LIS.getInstructionIndex(*MO.getParent()).getRegSlot(true));
   for (SlotIndex Use : Uses) {
-    if (!isAvailableAtUse(DefVN, Mask, Use, LI))
+    if (!isIdenticalAtUse(*DefVN, Mask, Use, LI))
       return false;
   }
   return true;
 }
 
-unsigned Rematerializer::findRematInRegion(unsigned RegIdx, unsigned Region,
-                                           SlotIndex Before) const {
+RegisterIdx Rematerializer::findRematInRegion(RegisterIdx RegIdx,
+                                              unsigned Region,
+                                              SlotIndex Before) const {
   auto It = Rematerializations.find(getOriginOrSelf(RegIdx));
   if (It == Rematerializations.end())
     return NoReg;
-  const SmallDenseSet<unsigned, 4> &Remats = It->getSecond();
+  const RematsOf &Remats = It->getSecond();
 
   SlotIndex BestSlot;
-  unsigned BestRegIdx = NoReg;
-  for (unsigned RematRegIdx : Remats) {
+  RegisterIdx BestRegIdx = NoReg;
+  for (RegisterIdx RematRegIdx : Remats) {
     const Reg &RematReg = getReg(RematRegIdx);
     if (RematReg.DefRegion != Region || RematReg.Uses.empty())
       continue;
@@ -323,65 +343,98 @@ unsigned Rematerializer::findRematInRegion(unsigned RegIdx, unsigned Region,
   return BestRegIdx;
 }
 
-bool Rematerializer::deleteRegIfUnused(unsigned RootIdx) {
-  Reg &Root = Regs[RootIdx];
-  if (!Root.Uses.empty())
-    return false;
-  LLVM_DEBUG({
-    rdbgs() << "Deleting " << printID(RootIdx) << " with no users\n";
-    ++CallDepth;
-  });
+void Rematerializer::deleteRegIfUnused(RegisterIdx RootIdx) {
+  if (!getReg(RootIdx).Uses.empty())
+    return;
 
-  Register DefReg = Root.getDefReg();
-  for (const Reg::Dependency &Dep : Root.Dependencies) {
-    LLVM_DEBUG(rdbgs() << "Deleting user from " << printID(Dep.RegIdx) << "\n");
-    Regs[Dep.RegIdx].eraseUser(Root.DefMI, Root.DefRegion);
-    deleteRegIfUnused(Dep.RegIdx);
-  }
-
-  LIS.removeInterval(DefReg);
-  LISUpdates.erase(RootIdx);
-  if (SupportRollback && !isRematerializedRegister(RootIdx)) {
-    // Replace all read registers with the null one to prevent them from showing
-    // up in use-lists, which is disallowed for debug instructions in live
-    // interval calculations. Store mappings between operand indices and
-    // original registers for potential rollback.
-    DenseMap<unsigned, Register> &RegMap =
-        Rollbackable.try_emplace(RootIdx).first->getSecond();
-    for (auto [Idx, MO] : enumerate(Root.DefMI->operands())) {
-      if (MO.isReg() && MO.readsReg()) {
-        RegMap.insert({Idx, MO.getReg()});
-        MO.setReg(Register());
+  // Traverse the root's dependency DAG depth-first to find the set of registers
+  // we can delete and a legal order to delete them in.
+  SmallVector<RegisterIdx, 4> DepDAG{RootIdx};
+  SmallSetVector<RegisterIdx, 8> DeleteOrder;
+  DeleteOrder.insert(RootIdx);
+  do {
+    // A deleted register's dependencies may be deletable too.
+    const Reg &DeleteReg = getReg(DepDAG.pop_back_val());
+    for (const Reg::Dependency &Dep : DeleteReg.Dependencies) {
+      // All dependencies loose a user (the delete register).
+      Reg &DepReg = Regs[Dep.RegIdx];
+      DepReg.eraseUser(DeleteReg.DefMI, DeleteReg.DefRegion);
+      if (DepReg.Uses.empty()) {
+        DeleteOrder.insert(Dep.RegIdx);
+        DepDAG.push_back(Dep.RegIdx);
       }
     }
-    Root.DefMI->setDesc(TII.get(TargetOpcode::DBG_VALUE));
-  } else {
-    deleteReg(RootIdx);
+  } while (!DepDAG.empty());
+
+  for (RegisterIdx RegIdx : reverse(DeleteOrder)) {
+    Reg &DeleteReg = Regs[RegIdx];
+    LIS.removeInterval(DeleteReg.getDefReg());
+    LISUpdates.erase(RegIdx);
+    const bool IsRematerializedReg = isRematerializedRegister(RegIdx);
+    if (SupportRollback && !IsRematerializedReg) {
+      // Replace all read registers with the null one to prevent them from
+      // showing up in use-lists, which is disallowed for debug instructions in
+      // live interval calculations. Store mappings between operand indices and
+      // original registers for potential rollback.
+      DenseMap<unsigned, Register> &RegMap =
+          Revivable.try_emplace(RegIdx).first->getSecond();
+      for (auto [Idx, MO] : enumerate(DeleteReg.DefMI->operands())) {
+        if (MO.isReg() && MO.readsReg()) {
+          RegMap.insert({Idx, MO.getReg()});
+          MO.setReg(Register());
+        }
+      }
+      DeleteReg.DefMI->setDesc(TII.get(TargetOpcode::DBG_VALUE));
+    } else {
+      deleteReg(RegIdx);
+    }
+    if (IsRematerializedReg) {
+      // Delete rematerialized register from its origin's rematerializations.
+      RematsOf &OriginRemats = Rematerializations.at(getOriginOf(RegIdx));
+      assert(OriginRemats.contains(RegIdx) && "broken remat<->origin link");
+      OriginRemats.erase(RegIdx);
+      if (OriginRemats.empty())
+        Rematerializations.erase(RegIdx);
+    }
+    LLVM_DEBUG(dbgs() << "** Deleted " << printID(RegIdx) << "\n");
   }
-  if (isRematerializedRegister(RootIdx)) {
-    SmallDenseSet<unsigned, 4> &Remats =
-        Rematerializations.at(getOriginOf(RootIdx));
-    assert(Remats.contains(RootIdx) && "broken link between remat and origin");
-    Remats.erase(RootIdx);
-    if (Remats.empty())
-      Rematerializations.erase(RootIdx);
-  }
-  LLVM_DEBUG(--CallDepth);
-  return true;
 }
 
-void Rematerializer::deleteReg(unsigned RegIdx) {
+void Rematerializer::deleteReg(RegisterIdx RegIdx) {
   Reg &DeleteReg = Regs[RegIdx];
   assert(DeleteReg.DefMI && "register was already deleted");
   // It is not possible for the deleted instruction to be the upper region
   // boundary since we don't ever consider them rematerializable.
-  if (Regions[DeleteReg.DefRegion].first == DeleteReg.DefMI)
-    Regions[DeleteReg.DefRegion].first =
-        std::next(MachineBasicBlock::iterator(DeleteReg.DefMI));
+  MachineBasicBlock::iterator &RegionBegin = Regions[DeleteReg.DefRegion].first;
+  if (RegionBegin == DeleteReg.DefMI)
+    RegionBegin = std::next(MachineBasicBlock::iterator(DeleteReg.DefMI));
   LIS.RemoveMachineInstrFromMaps(*DeleteReg.DefMI);
   DeleteReg.DefMI->eraseFromParent();
   MIRegion.erase(DeleteReg.DefMI);
   DeleteReg.DefMI = nullptr;
+}
+
+Rematerializer::Rematerializer(MachineFunction &MF,
+                               SmallVectorImpl<RegionBoundaries> &Regions,
+                               LiveIntervals &LIS)
+    : Regions(Regions), MRI(MF.getRegInfo()), LIS(LIS),
+      TII(*MF.getSubtarget().getInstrInfo()), TRI(TII.getRegisterInfo()) {
+#ifdef EXPENSIVE_CHECKS
+  // Check that regions are valid.
+  DenseSet<MachineInstr *> SeenMIs;
+  for (const auto &[RegionBegin, RegionEnd] : Regions) {
+    assert(RegionBegin != RegionEnd && "empty region");
+    for (auto MI = RegionBegin; MI != RegionEnd; ++MI) {
+      bool IsNewMI = SeenMIs.insert(&*MI).second;
+      assert(IsNewMI && "overlapping regions");
+      assert(!MI->isTerminator() && "terminator in region");
+    }
+    if (RegionEnd != RegionBegin->getParent()->end()) {
+      bool IsNewMI = SeenMIs.insert(&*RegionEnd).second;
+      assert(IsNewMI && "overlapping regions (upper bound)");
+    }
+  }
+#endif
 }
 
 bool Rematerializer::analyze(bool SupportRollback) {
@@ -392,14 +445,13 @@ bool Rematerializer::analyze(bool SupportRollback) {
   MIRegion.clear();
   RegToIdx.clear();
   LISUpdates.clear();
-  Rollbackable.clear();
+  Revivable.clear();
   this->SupportRollback = SupportRollback;
   if (Regions.empty())
     return false;
 
   // Initialize MI to containing region mapping.
-  const unsigned NumRegions = Regions.size();
-  for (unsigned I = 0; I < NumRegions; ++I) {
+  for (unsigned I = 0, E = Regions.size(); I < E; ++I) {
     RegionBoundaries Region = Regions[I];
     assert(Region.first != Region.second && "empty cannot be region");
     for (auto MI = Region.first; MI != Region.second; ++MI) {
@@ -424,7 +476,7 @@ bool Rematerializer::analyze(bool SupportRollback) {
   assert(Regs.size() == UnrematableOprds.size());
 
   LLVM_DEBUG({
-    for (unsigned I = 0, E = getNumRegs(); I < E; ++I)
+    for (RegisterIdx I = 0, E = getNumRegs(); I < E; ++I)
       dbgs() << printDependencyDAG(I) << '\n';
   });
   return !Regs.empty();
@@ -470,7 +522,7 @@ void Rematerializer::addRegIfRematerializable(unsigned VirtRegIdx,
   SmallDenseSet<Register, 4> AllDepRegs;
   SmallVector<unsigned, 2> UnrematDeps;
   for (const auto &[MOIdx, MO] : enumerate(RematReg.DefMI->operands())) {
-    Register DepReg = isRegDependency(MO);
+    Register DepReg = getRegDependency(MO);
     if (!DepReg || !AllDepRegs.insert(DepReg).second)
       continue;
     unsigned DepRegIdx = DepReg.virtRegIndex();
@@ -508,7 +560,7 @@ bool Rematerializer::isMIRematerializable(const MachineInstr &MI) const {
   return true;
 }
 
-unsigned Rematerializer::getDefRegIdx(const MachineInstr &MI) const {
+RegisterIdx Rematerializer::getDefRegIdx(const MachineInstr &MI) const {
   if (!MI.getNumOperands() || !MI.getOperand(0).isReg() ||
       MI.getOperand(0).readsReg())
     return NoReg;
@@ -519,11 +571,11 @@ unsigned Rematerializer::getDefRegIdx(const MachineInstr &MI) const {
   return UserRegIt->second;
 }
 
-unsigned Rematerializer::rematerializeReg(
-    unsigned RegIdx, MachineBasicBlock::iterator InsertPos,
+RegisterIdx Rematerializer::rematerializeReg(
+    RegisterIdx RegIdx, MachineBasicBlock::iterator InsertPos,
     SmallVectorImpl<Reg::Dependency> &&Dependencies) {
   unsigned UseRegion = MIRegion.at(&*InsertPos);
-  unsigned NewRegIdx = Regs.size();
+  RegisterIdx NewRegIdx = Regs.size();
 
   Reg &NewReg = Regs.emplace_back();
   Reg &FromReg = Regs[RegIdx];
@@ -534,7 +586,7 @@ unsigned Rematerializer::rematerializeReg(
   // Track rematerialization link between registers. Origins are always
   // registers that existed originally, and rematerializations are always
   // attached to them.
-  unsigned OriginIdx =
+  RegisterIdx OriginIdx =
       isRematerializedRegister(RegIdx) ? getOriginOf(RegIdx) : RegIdx;
   Origins.push_back(OriginIdx);
   Rematerializations[OriginIdx].insert(NewRegIdx);
@@ -560,9 +612,9 @@ unsigned Rematerializer::rematerializeReg(
   auto ZipedDeps = zip_equal(FromReg.Dependencies, NewReg.Dependencies);
   for (const auto &[OldDep, NewDep] : ZipedDeps) {
     assert(OldDep.MOIdx == NewDep.MOIdx && "operand mismatch");
-    LLVM_DEBUG(rdbgs() << "  Operand #" << OldDep.MOIdx << ": "
-                       << printID(OldDep.RegIdx) << " -> "
-                       << printID(NewDep.RegIdx) << '\n');
+    LLVM_DEBUG(dbgs() << "  Operand #" << OldDep.MOIdx << ": "
+                      << printID(OldDep.RegIdx) << " -> "
+                      << printID(NewDep.RegIdx) << '\n');
 
     Reg &NewDepReg = Regs[NewDep.RegIdx];
     if (OldDep.RegIdx != NewDep.RegIdx) {
@@ -576,8 +628,8 @@ unsigned Rematerializer::rematerializeReg(
   }
 
   LLVM_DEBUG({
-    rdbgs() << "** Rematerialized " << printID(RegIdx) << " as "
-            << printRematReg(NewRegIdx) << '\n';
+    dbgs() << "** Rematerialized " << printID(RegIdx) << " as "
+           << printRematReg(NewRegIdx) << '\n';
   });
   return NewRegIdx;
 }
@@ -629,11 +681,11 @@ void Rematerializer::Reg::eraseUser(MachineInstr *MI, unsigned Region) {
     RUsers.erase(MI);
 }
 
-Printable Rematerializer::printDependencyDAG(unsigned RootIdx) const {
+Printable Rematerializer::printDependencyDAG(RegisterIdx RootIdx) const {
   return Printable([&, RootIdx](raw_ostream &OS) {
-    DenseMap<unsigned, unsigned> RegDepths;
-    std::function<void(unsigned, unsigned)> WalkTree =
-        [&](unsigned RegIdx, unsigned Depth) -> void {
+    DenseMap<RegisterIdx, unsigned> RegDepths;
+    std::function<void(RegisterIdx, unsigned)> WalkTree =
+        [&](RegisterIdx RegIdx, unsigned Depth) -> void {
       unsigned MaxDepth = std::max(RegDepths.lookup_or(RegIdx, Depth), Depth);
       RegDepths.emplace_or_assign(RegIdx, MaxDepth);
       for (const Reg::Dependency &Dep : getReg(RegIdx).Dependencies)
@@ -642,8 +694,8 @@ Printable Rematerializer::printDependencyDAG(unsigned RootIdx) const {
     WalkTree(RootIdx, 0);
 
     // Sort in decreasing depth order to print root at the bottom.
-    SmallVector<std::pair<unsigned, unsigned>> Regs(RegDepths.begin(),
-                                                    RegDepths.end());
+    SmallVector<std::pair<RegisterIdx, unsigned>> Regs(RegDepths.begin(),
+                                                       RegDepths.end());
     sort(Regs, [](const auto &LHS, const auto &RHS) {
       return LHS.second > RHS.second;
     });
@@ -657,7 +709,7 @@ Printable Rematerializer::printDependencyDAG(unsigned RootIdx) const {
   });
 }
 
-Printable Rematerializer::printID(unsigned RegIdx) const {
+Printable Rematerializer::printID(RegisterIdx RegIdx) const {
   return Printable([&, RegIdx](raw_ostream &OS) {
     const Reg &PrintReg = getReg(RegIdx);
     OS << '(' << RegIdx << '/';
@@ -671,7 +723,7 @@ Printable Rematerializer::printID(unsigned RegIdx) const {
   });
 }
 
-Printable Rematerializer::printRematReg(unsigned RegIdx,
+Printable Rematerializer::printRematReg(RegisterIdx RegIdx,
                                         bool SkipRegions) const {
   return Printable([&, RegIdx, SkipRegions](raw_ostream &OS) {
     const Reg &PrintReg = getReg(RegIdx);
@@ -712,7 +764,7 @@ Printable Rematerializer::printRematReg(unsigned RegIdx,
   });
 }
 
-Printable Rematerializer::printRegUsers(unsigned RegIdx) const {
+Printable Rematerializer::printRegUsers(RegisterIdx RegIdx) const {
   return Printable([&, RegIdx](raw_ostream &OS) {
     for (const auto &[_, Users] : getReg(RegIdx).Uses) {
       for (MachineInstr *MI : Users)
@@ -723,7 +775,7 @@ Printable Rematerializer::printRegUsers(unsigned RegIdx) const {
 
 Printable Rematerializer::printUser(const MachineInstr *MI) const {
   return Printable([&, MI](raw_ostream &OS) {
-    unsigned RegIdx = getDefRegIdx(*MI);
+    RegisterIdx RegIdx = getDefRegIdx(*MI);
     if (RegIdx != NoReg)
       OS << printID(RegIdx);
     else

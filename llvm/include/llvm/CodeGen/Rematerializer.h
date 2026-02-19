@@ -11,11 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CODEGEN_REMATERIALIZER_H
+#define LLVM_CODEGEN_REMATERIALIZER_H
+
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include <iterator>
 
@@ -30,15 +34,16 @@ namespace llvm {
 /// 2. The single defining instruction is deemed rematerializable by the TII and
 ///    doesn't have any physical register use that is both non-constant and
 ///    non-ignorable.
-/// 3. The register has at least one non-debug use that is inside a region or a
-///    region terminator terminator.
+/// 3. The register has at least one non-debug use that is inside or at a region
+///    boundary (see below for what we consider to be a region).
 ///
 /// Rematerializable registers (represented by \ref Rematerializer::Reg) form a
 /// DAG of their own, with every register having incoming edges from all
 /// rematerializable registers which are read by the instruction defining it. It
 /// is possible to rematerialize registers with unrematerializable dependencies;
 /// however the latter are not considered part of this DAG since their
-/// position/identity never change and therefore the same kind of tracking.
+/// position/identity never change and therefore do not require the same level
+/// of tracking.
 ///
 /// Each register has a "dependency DAG" which is defined as the subset of nodes
 /// in the overall DAG that have at least one path to the register, which is
@@ -55,9 +60,18 @@ namespace llvm {
 /// which perform actual rematerializations should however be assumed to
 /// invalidate addresses to \ref Rematerializer::Reg objects.
 ///
-/// The API also uses dense unsigned integers starting at 0 to reference
-/// regions. These map directly to the indices of the corresponding regions in
-/// the \p Rematerializer::Regions vector pased during construction.
+/// The rematerializer tracks def/use points of registers based on regions.
+/// These are alike the regions the machine scheduler works on. A region is
+/// simply a pair on MBB iterators encoding a range of machine instructions. The
+/// first iterator (beginning of the region) is inclusive whereas the second
+/// iterator (end of the region) is exclusive and can either point to a MBB's
+/// end sentinel or an actual MI (not necessarily a terminator). Regions must be
+/// non-empty, cannot overlap, and cannot contain terminators. However, they do
+/// not have to cover the whole function.
+///
+/// The API uses dense unsigned integers starting at 0 to reference regions.
+/// These map directly to the indices of the corresponding regions in the region
+/// vector passed during construction.
 ///
 /// The rematerializer supports rematerializing arbitrary complex DAGs of
 /// registers to regions where these registers are used, with the option of
@@ -68,7 +82,7 @@ namespace llvm {
 /// pre-rematerialization. When enabled, machine instructions defining
 /// rematerializable registers that no longer have any uses following previous
 /// rematerializations will not be deleted from the MIR; their opcode will
-/// instead be set to a debug value and their read register operands set to the
+/// instead be set to a DEBUG_VALUE and their read register operands set to the
 /// null register. This maintains their position in the MIR and keeps the
 /// original register alive for potential rollback while allowing other
 /// passes/analyzes (e.g., machine scheduler, live-interval analysis) to ignore
@@ -92,6 +106,9 @@ namespace llvm {
 /// registers have rematerializations.
 class Rematerializer {
 public:
+  /// Index type for rematerializable registers.
+  using RegisterIdx = unsigned;
+
   /// A rematerializable register defined by a single machine instruction.
   ///
   /// A rematerializable register has a set of dependencies, which correspond
@@ -126,9 +143,9 @@ public:
       /// The register's machine operand index in \p DefMI.
       unsigned MOIdx;
       /// The corresponding register's index in the rematerializer.
-      unsigned RegIdx;
+      RegisterIdx RegIdx;
 
-      Dependency(unsigned MOIdx, unsigned RegIdx)
+      Dependency(unsigned MOIdx, RegisterIdx RegIdx)
           : MOIdx(MOIdx), RegIdx(RegIdx) {}
     };
     /// This register's rematerializable dependencies, one per unique
@@ -157,6 +174,10 @@ public:
     std::pair<MachineInstr *, MachineInstr *>
     getRegionUseBounds(unsigned UseRegion, const LiveIntervals &LIS) const;
 
+    bool isAlive() const {
+      return DefMI && DefMI->getOpcode() != TargetOpcode::DBG_VALUE;
+    }
+
   private:
     void addUser(MachineInstr *MI, unsigned Region);
     void addUsers(const RegionUsers &NewUsers, unsigned Region);
@@ -176,9 +197,8 @@ public:
   /// Simply initializes some internal state, does not identify
   /// rematerialization candidates.
   Rematerializer(MachineFunction &MF,
-                 SmallVectorImpl<RegionBoundaries> &Regions, LiveIntervals &LIS)
-      : Regions(Regions), MRI(MF.getRegInfo()), LIS(LIS),
-        TII(*MF.getSubtarget().getInstrInfo()), TRI(TII.getRegisterInfo()) {}
+                 SmallVectorImpl<RegionBoundaries> &Regions,
+                 LiveIntervals &LIS);
 
   /// Goes through the whole MF and identifies all rematerializable registers.
   /// When \p SupportRollback is set, rematerializations of original registers
@@ -187,14 +207,14 @@ public:
   /// rematerializable register in regions.
   bool analyze(bool SupportRollback);
 
-  inline const Reg &getReg(unsigned RegIdx) const {
+  inline const Reg &getReg(RegisterIdx RegIdx) const {
     assert(RegIdx < Regs.size() && "out of bounds");
     return Regs[RegIdx];
   };
   inline ArrayRef<Reg> getRegs() const { return Regs; };
   inline unsigned getNumRegs() const { return Regs.size(); };
 
-  inline const RegionBoundaries &getRegion(unsigned RegionIdx) {
+  inline const RegionBoundaries &getRegion(RegisterIdx RegionIdx) {
     assert(RegionIdx < Regions.size() && "out of bounds");
     return Regions[RegionIdx];
   }
@@ -202,18 +222,18 @@ public:
 
   /// Whether register \p RegIdx is a rematerialization of some original
   /// register.
-  inline bool isRematerializedRegister(unsigned RegIdx) const {
+  inline bool isRematerializedRegister(RegisterIdx RegIdx) const {
     assert(RegIdx < Regs.size() && "out of bounds");
     return RegIdx >= UnrematableOprds.size();
   }
   /// Returns the origin index of rematerializable register \p RegIdx.
-  inline unsigned getOriginOf(unsigned RematRegIdx) const {
+  inline RegisterIdx getOriginOf(RegisterIdx RematRegIdx) const {
     assert(isRematerializedRegister(RematRegIdx) && "not a rematerialization");
     return Origins[RematRegIdx - UnrematableOprds.size()];
   }
   /// If \p RegIdx is a rematerialization, returns its origin's index. If it is
   /// an original register's index, returns the same index.
-  inline unsigned getOriginOrSelf(unsigned RegIdx) const {
+  inline RegisterIdx getOriginOrSelf(RegisterIdx RegIdx) const {
     if (isRematerializedRegister(RegIdx))
       return getOriginOf(RegIdx);
     return RegIdx;
@@ -259,13 +279,13 @@ public:
     /// root's dependency DAG. It follows that the difference in map size before
     /// and after rematerialization indicates the number of non-root registers
     /// that were rematerialized along the root.
-    SmallDenseMap<unsigned, unsigned, 4> DependencyMap;
+    SmallDenseMap<RegisterIdx, RegisterIdx, 4> DependencyMap;
 
-    DependencyReuseInfo &reuse(unsigned DepIdx) {
+    DependencyReuseInfo &reuse(RegisterIdx DepIdx) {
       DependencyMap.insert({DepIdx, DepIdx});
       return *this;
     }
-    DependencyReuseInfo &useRemat(unsigned DepIdx, unsigned DepRematIdx) {
+    DependencyReuseInfo &useRemat(RegisterIdx DepIdx, RegisterIdx DepRematIdx) {
       DependencyMap.insert({DepIdx, DepRematIdx});
       return *this;
     }
@@ -280,25 +300,24 @@ public:
   /// register, and returns the latter's index. The root's dependency DAG is
   /// rematerialized or re-used according to \p DRI.
   ///
-  /// When the method returns, \p DRI contains additional mappings of all
-  /// transitive dependencies that had to be rematerialized to their
-  /// rematerialization's respective index. References to \ref
-  /// Rematerializer::Reg should be considered invalidated by calls to this
-  /// method.
-  unsigned rematerializeToRegion(unsigned RootIdx, unsigned UseRegion,
-                                 DependencyReuseInfo &DRI);
+  /// When the method returns, \p DRI contains additional entries for non-root
+  /// registers of the root's dependency DAG that needed to be rematerialized
+  /// along the root. References to \ref Rematerializer::Reg should be
+  /// considered invalidated by calls to this method.
+  RegisterIdx rematerializeToRegion(RegisterIdx RootIdx, unsigned UseRegion,
+                                    DependencyReuseInfo &DRI);
 
-  /// Rematerializes register \p RootIdx to position \p InsertPos and returns
-  /// the new register's index. The root's dependency DAG is rematerialized or
-  /// re-used according to \p DRI.
+  /// Rematerializes register \p RootIdx before position \p InsertPos and
+  /// returns the new register's index. The root's dependency DAG is
+  /// rematerialized or re-used according to \p DRI.
   ///
-  /// When the method returns, \p DRI contains additional mappings of all
-  /// transitive dependencies that had to be rematerialized to their respective
-  /// rematerialization's index. References to \ref Rematerializer::Reg should
-  /// be considered invalidated by calls to this method.
-  unsigned rematerializeToPos(unsigned RootIdx,
-                              MachineBasicBlock::iterator InsertPos,
-                              DependencyReuseInfo &DRI);
+  /// When the method returns, \p DRI contains additional entries for non-root
+  /// registers of the root's dependency DAG that needed to be rematerialized
+  /// along the root. References to \ref Rematerializer::Reg should be
+  /// considered invalidated by calls to this method.
+  RegisterIdx rematerializeToPos(RegisterIdx RootIdx,
+                                 MachineBasicBlock::iterator InsertPos,
+                                 DependencyReuseInfo &DRI);
 
   /// Rolls back all rematerializations of original register \p RootIdx,
   /// transfering all their users back to it and permanently deleting them from
@@ -307,33 +326,33 @@ public:
   /// dependencies of the root register that were fully rematerialized are
   /// re-vived at their original positions; this requires that rollback support
   /// was set when they were rematerialized.
-  void rollbackRematsOf(unsigned RootIdx);
+  void rollbackRematsOf(RegisterIdx RootIdx);
 
   /// Rolls back register \p RematIdx (which must be a rematerialization)
   /// transfering all its users back to its origin. The latter is revived if it
   /// was fully rematerialized (this requires that rollback support was set at
   /// that time).
-  void rollback(unsigned RematIdx);
+  void rollback(RegisterIdx RematIdx);
 
   /// Revives original register \p RootIdx at its original position in the MIR
   /// if it was fully rematerialized with rollback support set. Transitive
   /// dependencies of the root register that were fully rematerialized are
   /// revived at their original positions; this requires that rollback support
   /// was set when they were themselves rematerialized.
-  void reviveRegIfDead(unsigned RootIdx);
+  void reviveRegIfDead(RegisterIdx RootIdx);
 
   /// Transfers all users of register \p FromRegIdx in region \p UseRegion to \p
   /// ToRegIdx, the latter of which must be a rematerialization of the former or
   /// have the same origin register. Users in \p UseRegion must be reachable
   /// from \p ToRegIdx.
-  void transferRegionUsers(unsigned FromRegIdx, unsigned ToRegIdx,
+  void transferRegionUsers(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
                            unsigned UseRegion);
 
   /// Transfers user \p UserMI from register \p FromRegIdx to \p ToRegIdx,
   /// the latter of which must be a rematerialization of the former or have the
   /// same origin register. \p UserMI must be a direct user of \p FromRegIdx. \p
   /// UserMI must be reachable from \p ToRegIdx.
-  void transferUser(unsigned FromRegIdx, unsigned ToRegIdx,
+  void transferUser(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
                     MachineInstr &UserMI);
 
   /// Recomputes all live intervals that have changed as a result of previous
@@ -344,7 +363,7 @@ public:
   /// support rollback.
   void commitRematerializations();
 
-  /// Determines whether (sub-)register operand \p MO is has the same value at
+  /// Determines whether (sub-)register operand \p MO has the same value at
   /// all \p Uses as at \p MO. This implies that it is also available at all \p
   /// Uses according to its current live interval.
   bool isMOIdenticalAtUses(MachineOperand &MO, ArrayRef<SlotIndex> Uses) const;
@@ -352,13 +371,13 @@ public:
   /// Finds the closest rematerialization of register \p RegIdx in region \p
   /// Region that exists before slot \p Before. If no such rematerialization
   /// exists, returns \ref Rematerializer::NoReg.
-  unsigned findRematInRegion(unsigned RegIdx, unsigned Region,
-                             SlotIndex Before) const;
+  RegisterIdx findRematInRegion(RegisterIdx RegIdx, unsigned Region,
+                                SlotIndex Before) const;
 
-  Printable printDependencyDAG(unsigned RootIdx) const;
-  Printable printID(unsigned RegIdx) const;
-  Printable printRematReg(unsigned RegIdx, bool SkipRegions = false) const;
-  Printable printRegUsers(unsigned RegIdx) const;
+  Printable printDependencyDAG(RegisterIdx RootIdx) const;
+  Printable printID(RegisterIdx RegIdx) const;
+  Printable printRematReg(RegisterIdx RegIdx, bool SkipRegions = false) const;
+  Printable printRegUsers(RegisterIdx RegIdx) const;
   Printable printUser(const MachineInstr *MI) const;
 
 private:
@@ -382,30 +401,33 @@ private:
   /// order in which they are created. The size of the vector indicates the
   /// total number of rematerializations ever created, including those that were
   /// deleted or rolled back.
-  SmallVector<unsigned> Origins;
+  SmallVector<RegisterIdx> Origins;
+  using RematsOf = SmallDenseSet<RegisterIdx, 4>;
   /// Maps original register indices to their currently alive
   /// rematerializations. In practice most registers don't have
   /// rematerializations so this is represented as a map to lower memory cost.
-  DenseMap<unsigned, SmallDenseSet<unsigned, 4>> Rematerializations;
+  DenseMap<RegisterIdx, RematsOf> Rematerializations;
 
   /// Registers mapped to the index of their corresponding rematerialization
   /// data in the \ref Regs vector. This includes registers that no longer exist
   /// in the MIR.
-  DenseMap<Register, unsigned> RegToIdx;
+  DenseMap<Register, RegisterIdx> RegToIdx;
   /// Maps all MIs to their parent region. Region terminators are considered
   /// part of the region they terminate.
   DenseMap<MachineInstr *, unsigned> MIRegion;
   /// Set of registers whose live-range may have changed during past
   /// rematerializations/rollbacks.
-  DenseSet<unsigned> LISUpdates;
+  DenseSet<RegisterIdx> LISUpdates;
   /// Keys are fully rematerialized registers whose rematerializations are
   /// currently rollback-able. Values map register machine operand indices to
   /// their original register.
-  DenseMap<unsigned, DenseMap<unsigned, Register>> Rollbackable;
+  DenseMap<RegisterIdx, DenseMap<unsigned, Register>> Revivable;
   /// Whether all rematerializations of registers identified during the last
   /// analysis phase will be rollback-able.
   bool SupportRollback = false;
 
+  /// During the analysis phase, creates a \ref Rematerializer::Reg object for
+  /// virtual register \p VirtRegIdx if it
   void addRegIfRematerializable(unsigned VirtRegIdx, BitVector &SeenRegs);
 
   /// Determines whether \p MI is considered rematerializable. This further
@@ -423,38 +445,31 @@ private:
   /// references to elements within it should be considered invalidated across
   /// calls to this method unless the vector can be guaranteed to have enough
   /// space for an extra element.
-  unsigned rematerializeReg(unsigned RegIdx,
-                            MachineBasicBlock::iterator InsertPos,
-                            SmallVectorImpl<Reg::Dependency> &&Dependencies);
+  RegisterIdx rematerializeReg(RegisterIdx RegIdx,
+                               MachineBasicBlock::iterator InsertPos,
+                               SmallVectorImpl<Reg::Dependency> &&Dependencies);
 
-  /// Internal version of \ref Rematerializer::transferUser that doesn't update
+  /// Implementation of \ref Rematerializer::transferUser that doesn't update
   /// register users.
-  void transferUserInternal(unsigned FromRegIdx, unsigned ToRegIdx,
-                            MachineInstr &UserMI);
+  void transferUserImpl(RegisterIdx FromRegIdx, RegisterIdx ToRegIdx,
+                        MachineInstr &UserMI);
 
   /// Deletes register \p RootIdx if it no longer has any user. If the register
   /// is deleted, recursively deletes any of its transitive rematerializable
   /// dependencies that no longer have users as a result.
-  bool deleteRegIfUnused(unsigned RootIdx);
+  void deleteRegIfUnused(RegisterIdx RootIdx);
 
   /// Deletes rematerializable register \p RegIdx from the DAG and relevant
   /// internal state.
-  void deleteReg(unsigned RegIdx);
+  void deleteReg(RegisterIdx RegIdx);
 
   /// If \p MI's first operand defines a register and that register is a
   /// rematerializable register tracked by the rematerializer, returns its
   /// index in the \ref Regs vector. Otherwise returns \ref
   /// Rematerializer::NoReg.
-  unsigned getDefRegIdx(const MachineInstr &MI) const;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  unsigned CallDepth = 0;
-  raw_ostream &rdbgs() const {
-    for (unsigned I = 0; I < CallDepth; ++I)
-      dbgs() << "  ";
-    return dbgs();
-  }
-#endif
+  RegisterIdx getDefRegIdx(const MachineInstr &MI) const;
 };
 
 } // namespace llvm
+
+#endif // LLVM_CODEGEN_REMATERIALIZER_H
