@@ -1,3 +1,4 @@
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,7 +25,7 @@ struct TestConvert {
   void operator()() const {
     T x(T(1));
 
-    T copy = x;
+    alignas(std::atomic_ref<T>::required_alignment) T copy = x;
     std::atomic_ref<T> const a(copy);
 
     T converted = a;

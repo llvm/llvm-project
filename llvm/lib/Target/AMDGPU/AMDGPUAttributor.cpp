@@ -201,16 +201,6 @@ public:
   /// Get code object version.
   unsigned getCodeObjectVersion() const { return CodeObjectVersion; }
 
-  /// Get the effective value of "amdgpu-waves-per-eu" for the function,
-  /// accounting for the interaction with the passed value to use for
-  /// "amdgpu-flat-work-group-size".
-  std::pair<unsigned, unsigned>
-  getWavesPerEU(const Function &F,
-                std::pair<unsigned, unsigned> FlatWorkGroupSize) {
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-    return ST.getWavesPerEU(FlatWorkGroupSize, getLDSSize(F), F);
-  }
-
   std::optional<std::pair<unsigned, unsigned>>
   getWavesPerEUAttr(const Function &F) {
     auto Val = AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu",
@@ -248,14 +238,6 @@ private:
     }
 
     return Status;
-  }
-
-  /// Returns the minimum amount of LDS space used by a workgroup running
-  /// function \p F.
-  static unsigned getLDSSize(const Function &F) {
-    return AMDGPU::getIntegerPairAttribute(F, "amdgpu-lds-size",
-                                           {0, UINT32_MAX}, true)
-        .first;
   }
 
   /// Get the constant access bitmap for \p C.
@@ -1343,7 +1325,6 @@ struct AAAMDGPUMinAGPRAlloc
         Maximum.takeAssumedMaximum(NumRegs);
         return true;
       }
-
       switch (CB.getIntrinsicID()) {
       case Intrinsic::not_intrinsic:
         break;
@@ -1361,10 +1342,21 @@ struct AAAMDGPUMinAGPRAlloc
 
         return true;
       }
+      // Trap-like intrinsics such as llvm.trap and llvm.debugtrap do not have
+      // the nocallback attribute, so the AMDGPU attributor can conservatively
+      // drop all implicitly-known inputs and AGPR allocation information. Make
+      // sure we still infer that no implicit inputs are required and that the
+      // AGPR allocation stays at zero. Trap-like intrinsics may invoke a
+      // function which requires AGPRs, so we need to check if the called
+      // function has the "trap-func-name" attribute.
+      case Intrinsic::trap:
+      case Intrinsic::debugtrap:
+      case Intrinsic::ubsantrap:
+        return CB.hasFnAttr(Attribute::NoCallback) ||
+               !CB.hasFnAttr("trap-func-name");
       default:
         // Some intrinsics may use AGPRs, but if we have a choice, we are not
         // required to use AGPRs.
-
         // Assume !nocallback intrinsics may call a function which requires
         // AGPRs.
         return CB.hasFnAttr(Attribute::NoCallback);

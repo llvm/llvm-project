@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPUMIRFORMATTER_H
 #define LLVM_LIB_TARGET_AMDGPUMIRFORMATTER_H
 
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 
 namespace llvm {
@@ -25,7 +26,7 @@ struct PerFunctionMIParsingState;
 
 class AMDGPUMIRFormatter final : public MIRFormatter {
 public:
-  AMDGPUMIRFormatter() = default;
+  explicit AMDGPUMIRFormatter(const MCSubtargetInfo &STI) : STI(STI) {}
   ~AMDGPUMIRFormatter() override = default;
 
   /// Implement target specific printing for machine operand immediate value, so
@@ -48,8 +49,16 @@ public:
                                ErrorCallbackType ErrorCallback) const override;
 
 private:
+  const MCSubtargetInfo &STI;
+  /// Prints the string to represent s_wait_alu immediate value.
+  void printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const;
   /// Print the string to represent s_delay_alu immediate value
   void printSDelayAluImm(int64_t Imm, llvm::raw_ostream &OS) const;
+
+  /// Parse the immediate pseudo literal for s_wait_alu
+  bool parseSWaitAluImmMnemonic(
+      const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
+      MIRFormatter::ErrorCallbackType &ErrorCallback) const;
 
   /// Parse the immediate pseudo literal for s_delay_alu
   bool parseSDelayAluImmMnemonic(

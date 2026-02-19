@@ -1742,7 +1742,9 @@ class BooleanConditionOrMatchingShape<string condition, string result> :
     PredOpTrait<
       condition # " is signless i1 or has matching shape",
       Or<[TypeIsPred<condition, I1>,
-          AllShapesMatch<[condition, result]>.predicate]>>;
+          And<[SubstLeaves<"$_self", "$" # condition # ".getType()", IsShapedTypePred>,
+               SubstLeaves<"$_self", "$" # result # ".getType()", IsShapedTypePred>,
+               AllShapesMatch<[condition, result]>.predicate]>]>>;
 
 def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,

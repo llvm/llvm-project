@@ -28,7 +28,7 @@ define protected amdgpu_kernel void @foo(ptr addrspace(1) %arg, ptr addrspace(1)
 ; CHECK-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_endpgm
 bb:
-  %tmp = addrspacecast ptr addrspace(5) null to ptr
+  %tmp = addrspacecast ptr addrspace(5) zeroinitializer to ptr
   %tmp2 = call i64 @eggs(ptr poison) #1
   %tmp3 = load ptr, ptr %tmp, align 8
   %tmp4 = getelementptr inbounds i64, ptr %tmp3, i64 0

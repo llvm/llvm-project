@@ -275,7 +275,7 @@ RESOURCE<float> Buffer;
 // CHECK-SUBSCRIPT-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-SUBSCRIPT-NEXT: CompoundStmt
 // CHECK-SUBSCRIPT-NEXT: ReturnStmt
-// CHECK-SUBSCRIPT-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-SUBSCRIPT-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
 // CHECK-SUBSCRIPT-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-SUBSCRIPT-NEXT: CallExpr
 // CHECK-SUBSCRIPT-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
@@ -292,7 +292,7 @@ RESOURCE<float> Buffer;
 // CHECK-SUBSCRIPT-UAV-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-SUBSCRIPT-UAV-NEXT: CompoundStmt
 // CHECK-SUBSCRIPT-UAV-NEXT: ReturnStmt
-// CHECK-SUBSCRIPT-UAV-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-SUBSCRIPT-UAV-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
 // CHECK-SUBSCRIPT-UAV-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-SUBSCRIPT-UAV-NEXT: CallExpr
 // CHECK-SUBSCRIPT-UAV-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
@@ -314,7 +314,7 @@ RESOURCE<float> Buffer;
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
-// CHECK-LOAD-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-LOAD-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
 // CHECK-LOAD-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-LOAD-NEXT: CallExpr
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
@@ -384,7 +384,7 @@ RESOURCE<float> Buffer;
 // CHECK-APPEND-NEXT: ParmVarDecl {{.*}} value 'element_type'
 // CHECK-APPEND-NEXT: CompoundStmt
 // CHECK-APPEND-NEXT: BinaryOperator {{.*}} 'hlsl_device element_type' '='
-// CHECK-APPEND-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-APPEND-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
 // CHECK-APPEND-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-APPEND-NEXT: CallExpr
 // CHECK-APPEND-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
@@ -409,7 +409,7 @@ RESOURCE<float> Buffer;
 // CHECK-CONSUME: CXXMethodDecl {{.*}} Consume 'element_type ()'
 // CHECK-CONSUME-NEXT: CompoundStmt
 // CHECK-CONSUME-NEXT: ReturnStmt
-// CHECK-CONSUME-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-CONSUME-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' lvalue prefix '*' cannot overflow
 // CHECK-CONSUME-NEXT: CStyleCastExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-CONSUME-NEXT: CallExpr
 // CHECK-CONSUME-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'

@@ -45,7 +45,7 @@ Derived *ptr_cast(Base1 *ptr) {
 //       implicitly %1), so we use %{{.*}} to match the implicit label in the
 //       phi check.
 
-//      LLVM: define dso_local ptr @_Z8ptr_castP5Base1(ptr{{.*}} %[[SRC:.*]])
+//      LLVM: define{{.*}} ptr @_Z8ptr_castP5Base1(ptr{{.*}} %[[SRC:.*]])
 // LLVM-NEXT:   %[[SRC_IS_NULL:.*]] = icmp eq ptr %0, null
 // LLVM-NEXT:   br i1 %[[SRC_IS_NULL]], label %[[LABEL_END:.*]], label %[[LABEL_NOTNULL:.*]]
 //      LLVM: [[LABEL_NOTNULL]]:
@@ -146,7 +146,7 @@ B *offset_cast(A *a) {
 // CIR-NEXT:     cir.yield %[[EXACT_RESULT]] : !cir.ptr<!rec_B>
 // CIR-NEXT:   }) : (!cir.bool) -> !cir.ptr<!rec_B>
 
-//      LLVM: define dso_local ptr @_Z11offset_castP1A(ptr{{.*}} %[[SRC:.*]])
+//      LLVM: define{{.*}} ptr @_Z11offset_castP1A(ptr{{.*}} %[[SRC:.*]])
 // LLVM-NEXT:   %[[SRC_IS_NULL:.*]] = icmp eq ptr %0, null
 // LLVM-NEXT:   br i1 %[[SRC_IS_NULL]], label %[[LABEL_END:.*]], label %[[LABEL_NOTNULL:.*]]
 //      LLVM: [[LABEL_NOTNULL]]:

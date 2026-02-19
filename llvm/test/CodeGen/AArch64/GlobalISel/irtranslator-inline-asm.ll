@@ -269,8 +269,9 @@ define i16 @test_anyext_input_with_matching_constraint() {
 define i64 @test_input_with_matching_constraint_to_physical_register() {
   ; CHECK-LABEL: name: test_input_with_matching_constraint_to_physical_register
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   INLINEASM &"", 0 /* attdialect */, 10 /* regdef */, implicit-def $x2, 2147483657 /* reguse tiedto:$0 */, [[C]](tied-def 3)(s64)
+  ; CHECK-NEXT:   %0:_(s64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   %1:gpr64arg = COPY %0(s64)
+  ; CHECK-NEXT:   INLINEASM &"", 0 /* attdialect */, 10 /* regdef */, implicit-def $x2, 2147483657 /* reguse tiedto:$0 */, %1(tied-def 3)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x2
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0

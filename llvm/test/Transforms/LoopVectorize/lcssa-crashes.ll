@@ -89,14 +89,14 @@ define void @test3(ptr %p) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY1:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INC46:%.*]] = add i32 6, 1
-; CHECK-NEXT:    [[TMP5:%.*]] = add i32 7, 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 8, 1
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 9, 1
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> poison, i32 [[INC46]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[TMP6]], i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP7]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 6, 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 7, 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 8, 1
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 9, 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP2]], i32 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP3]], i32 3
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [1024 x i8], ptr [[P:%.*]], i64 0, i64 6
@@ -198,4 +198,61 @@ loop.exit:
 bb:
   %local.use = add i32 %local, 1
   ret i32 %local.use
+}
+
+; Test that exit phi extracts are inserted after the definition of the value
+; being extracted. This used to crash due to dominance violation when the sunk
+; select was generated after the extractelement for the exit phi.
+define i32 @exit_phi_sunk_def(ptr noalias %src, ptr noalias %dst) {
+; CHECK-LABEL: @exit_phi_sunk_def(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK:       pred.store.if:
+; CHECK-NEXT:    store i32 1, ptr [[DST:%.*]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; CHECK:       pred.store.continue:
+; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2:%.*]]
+; CHECK:       pred.store.if1:
+; CHECK-NEXT:    store i32 2, ptr [[DST]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
+; CHECK:       pred.store.continue2:
+; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4:%.*]]
+; CHECK:       pred.store.if3:
+; CHECK-NEXT:    store i32 3, ptr [[DST]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE4]]
+; CHECK:       pred.store.continue4:
+; CHECK-NEXT:    br i1 false, label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6:%.*]]
+; CHECK:       pred.store.if5:
+; CHECK-NEXT:    store i32 4, ptr [[DST]], align 4
+; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE6]]
+; CHECK:       pred.store.continue6:
+; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP1]], <4 x i32> zeroinitializer, <4 x i32> splat (i32 2)
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x i32> [[SEL]], i32 0
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[EXT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %ld = load i32, ptr %src, align 4
+  %cmp = icmp eq i32 %ld, 0
+  %sel = select i1 %cmp, i32 0, i32 2
+  %iv.next = add nuw nsw i32 %iv, 1
+  store i32 %iv.next, ptr %dst, align 4
+  %exit.cond = icmp ult i32 %iv, 2
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:
+  ret i32 %sel
 }

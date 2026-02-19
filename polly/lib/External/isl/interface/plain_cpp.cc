@@ -1936,7 +1936,7 @@ void plain_cpp_generator::impl_printer::print_callback_body(int indent,
 
 	callback = extract_prototype(ptype);
 	rtype = callback->getReturnType();
-	num_params = callback->getNumArgs();
+	num_params = callback->getNumParams();
 
 	last_idx = ::to_string(num_params - 1);
 
