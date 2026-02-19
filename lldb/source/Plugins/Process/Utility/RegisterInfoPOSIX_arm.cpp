@@ -146,7 +146,7 @@ static_assert(((sizeof g_fpu_regnums_arm / sizeof g_fpu_regnums_arm[0]) - 1) ==
 
 // arm thread local storage registers.
 static const uint32_t g_tls_regnums_arm[] = {
-    tls_tpidr,
+    tls_tpidruro,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 static_assert(((sizeof g_tls_regnums_arm / sizeof g_tls_regnums_arm[0]) - 1) ==
@@ -192,7 +192,7 @@ size_t RegisterInfoPOSIX_arm::GetRegisterSetFromRegisterIndex(
     return GPRegSet;
   if (reg_index <= fpu_q15)
     return FPRegSet;
-  if (reg_index == tls_tpidr && m_has_tls_reg)
+  if (reg_index == tls_tpidruro && m_has_tls_reg)
     return TLSRegSet;
   return LLDB_INVALID_REGNUM;
 }
