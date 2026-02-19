@@ -12,6 +12,7 @@
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/Dialect/UB/IR/UBOpsInterfaces.h.inc"
@@ -23,5 +24,14 @@
 #include "mlir/Dialect/UB/IR/UBOps.h.inc"
 
 #include "mlir/Dialect/UB/IR/UBOpsDialect.h.inc"
+
+namespace mlir::ub {
+/// Populate a canonicalization pattern that erases "must progress" region
+/// branch ops that loop infinitely and replaces their results with poison
+/// values.
+void populateEraseInfiniteRegionBranchLoopPattern(RewritePatternSet &patterns,
+                                                  StringRef opName,
+                                                  PatternBenefit benefit = 1);
+} // namespace mlir::ub
 
 #endif // MLIR_DIALECT_UB_IR_OPS_H
