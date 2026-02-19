@@ -31,20 +31,20 @@ namespace cwg1413 { // cwg1413: 12
       // ok, variable declaration
       Check<true ? 0 : a>::type *var2; // #cwg1413-var2
       Check<true ? 0 : b>::type *var3;
-      // expected-error@-1 {{use of undeclared identifier 'var3'}}
+      // expected-error@-1 {{use of undeclared identifier 'var3'; did you mean 'var2'?}}
       //   expected-note@#cwg1413-var2 {{'var2' declared here}}
       Check<true ? 0 : ((void)c, 0)>::type *var4;
-      // expected-error@-1 {{use of undeclared identifier 'var4'}}
+      // expected-error@-1 {{use of undeclared identifier 'var4'; did you mean 'var2'?}}
       //   expected-note@#cwg1413-var2 {{'var2' declared here}}
 
       // value-dependent because of the implied type-dependent 'this->', not because of 'd'
       Check<true ? 0 : (d(), 0)>::type *var5;
-      // expected-error@-1 {{use of undeclared identifier 'var5'}}
+      // expected-error@-1 {{use of undeclared identifier 'var5'; did you mean 'var2'?}}
       //   expected-note@#cwg1413-var2 {{'var2' declared here}}
 
       // value-dependent because of the value-dependent '&' operator, not because of 'A::d'
       Check<true ? 0 : (&A::d(), 0)>::type *var5;
-      // expected-error@-1 {{use of undeclared identifier 'var5'}}
+      // expected-error@-1 {{use of undeclared identifier 'var5'; did you mean 'var2'?}}
       //   expected-note@#cwg1413-var2 {{'var2' declared here}}
     }
   };
@@ -116,7 +116,7 @@ void f() {
   // since-cxx11-error@-1 {{cannot initialize a variable of type 'const int' with an rvalue of type 'A *'}}
   constexpr A *p2 = &*a;
   // since-cxx11-error@-1 {{constexpr variable 'p2' must be initialized by a constant expression}}
-  // since-cxx11-note@-2 {{dereferencing a null pointer}}
+  //   since-cxx11-note@-2 {{dereferencing a null pointer is not allowed in a constant expression}}
 }
 
 struct A {
@@ -192,16 +192,16 @@ namespace cwg1460 { // cwg1460: 3.5
   namespace Defaulted {
     union A { constexpr A() = default; };
     union B { int n; constexpr B() = default; };
-    // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
+    // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr before C++23}}
     union C { int n = 0; constexpr C() = default; };
     struct D { union {}; constexpr D() = default; };
     // since-cxx11-error@-1 {{declaration does not declare anything}}
     struct E { union { int n; }; constexpr E() = default; };
-    // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
+    // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr before C++23}}
     struct F { union { int n = 0; }; constexpr F() = default; };
 
     struct G { union { int n = 0; }; union { int m; }; constexpr G() = default; };
-    // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
+    // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr before C++23}}
     struct H {
       union {
         int n = 0;

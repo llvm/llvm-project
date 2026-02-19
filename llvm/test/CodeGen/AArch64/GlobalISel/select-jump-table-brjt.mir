@@ -61,7 +61,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $wzr
   ; CHECK-NEXT:   [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 4, 0, implicit-def dead $nzcv
   ; CHECK-NEXT:   [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[SUBSWri]], 0
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64common = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64common = SUBREG_TO_REG [[ORRWrs]], %subreg.sub_32
   ; CHECK-NEXT:   [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[SUBREG_TO_REG]], 71, 0, implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 8, %bb.4, implicit $nzcv
   ; CHECK-NEXT: {{  $}}

@@ -1115,7 +1115,8 @@ def : InstAlias<"jalr $rd, (${rs})",      (JALR GPR:$rd, GPR:$rs, 0), 0>;
 
 def : InstAlias<"fence", (FENCE 0xF, 0xF)>; // 0xF == iorw
 
-let Predicates = [HasStdExtZihintpause] in
+// pause is always available in the assembler and disassembler, even without
+// enabling Zihintpause, per psABI decision (riscv-non-isa/riscv-elf-psabi-doc#474).
 def : InstAlias<"pause", (FENCE 0x1, 0x0)>; // 0x1 == w
 
 def : InstAlias<"rdinstret $rd", (CSRRS GPR:$rd, INSTRET.Encoding, X0), 2>;
@@ -1156,12 +1157,13 @@ def : InstAlias<"hfence.gvma $rs", (HFENCE_GVMA GPR:$rs, X0)>;
 def : InstAlias<"hfence.vvma",     (HFENCE_VVMA      X0, X0), 2>;
 def : InstAlias<"hfence.vvma $rs", (HFENCE_VVMA GPR:$rs, X0)>;
 
-let Predicates = [HasStdExtZihintntl] in {
-  def : InstAlias<"ntl.p1",     (ADD   X0, X0, X2)>;
-  def : InstAlias<"ntl.pall",   (ADD   X0, X0, X3)>;
-  def : InstAlias<"ntl.s1",     (ADD   X0, X0, X4)>;
-  def : InstAlias<"ntl.all",    (ADD   X0, X0, X5)>;
-} // Predicates = [HasStdExtZihintntl]
+// ntl.* hints are always available in the assembler and disassembler, even
+// without enabling Zihintntl, per psABI decision
+// (riscv-non-isa/riscv-elf-psabi-doc#474).
+def : InstAlias<"ntl.p1",     (ADD   X0, X0, X2)>;
+def : InstAlias<"ntl.pall",   (ADD   X0, X0, X3)>;
+def : InstAlias<"ntl.s1",     (ADD   X0, X0, X4)>;
+def : InstAlias<"ntl.all",    (ADD   X0, X0, X5)>;
 
 let EmitPriority = 0 in {
 def : InstAlias<"lb $rd, (${rs1})",
@@ -1229,9 +1231,9 @@ def : MnemonicAlias<"sbreak", "ebreak">;
 
 def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF)>;
 
-let Predicates = [HasStdExtZicfilp] in {
+// lpad is always available in the assembler and disassembler, even without
+// enabling Zicfilp, per psABI decision (riscv-non-isa/riscv-elf-psabi-doc#474).
 def : InstAlias<"lpad $imm20", (AUIPC X0, uimm20:$imm20)>;
-}
 
 //===----------------------------------------------------------------------===//
 // .insn directive instructions
@@ -1685,7 +1687,7 @@ class SelectCompressOpt<CondCode Cond>
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
 
-let Predicates = [HasStdExtC, OptForMinSize] in {
+let Predicates = [HasStdExtZca, OptForMinSize] in {
   def : SelectCompressOpt<SETEQ>;
   def : SelectCompressOpt<SETNE>;
 }
@@ -1704,6 +1706,7 @@ def : Pat<(i32 (setlt (i32 GPR:$rs1), 0)), (SRLI GPR:$rs1, 31)>; // compressible
 let Predicates = [IsRV64] in {
 def : Pat<(i64 (setlt (i64 GPR:$rs1), 0)), (SRLI GPR:$rs1, 63)>; // compressible
 def : Pat<(i64 (setlt (sext_inreg GPR:$rs1, i32), 0)), (SRLIW GPR:$rs1, 31)>;
+def : Pat<(i64 (setlt (shl GPR:$rs1, (i64 32)), 0)), (SRLIW GPR:$rs1, 31)>;
 }
 
 /// Branches and jumps
@@ -2350,6 +2353,7 @@ include "RISCVInstrInfoZk.td"
 
 // Vector
 include "RISCVInstrInfoV.td"
+include "RISCVInstrInfoZvabd.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvqdotq.td"
 include "RISCVInstrInfoZvfofp8min.td"

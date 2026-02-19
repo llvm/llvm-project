@@ -191,6 +191,8 @@ CODEGENOPT(EnableSegmentedStacks , 1, 0, Benign) ///< Set when -fsplit-stack is 
 CODEGENOPT(StackClashProtector, 1, 0, Benign) ///< Set when -fstack-clash-protection is enabled.
 CODEGENOPT(NoImplicitFloat   , 1, 0, Benign) ///< Set when -mno-implicit-float is enabled.
 CODEGENOPT(NullPointerIsValid , 1, 0, Benign) ///< Assume Null pointer deference is defined.
+CODEGENOPT(StrictLifetimes , 1, 0, Benign) ///< Assume an object is dead
+                                           ///< after its destructor returns.
 CODEGENOPT(OpenCLCorrectlyRoundedDivSqrt, 1, 0, Benign) ///< -cl-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(HIPCorrectlyRoundedDivSqrt, 1, 1, Benign) ///< -fno-hip-fp32-correctly-rounded-divide-sqrt
 CODEGENOPT(DisableBlockSignatureString, 1, 0, Benign) ///< Set when -fdisable-block-signature-string is enabled.
@@ -277,6 +279,8 @@ CODEGENOPT(SanitizeMinimalRuntime, 1, 0, Benign) ///< Use "_minimal" sanitizer r
                                                  ///< diagnostics.
 CODEGENOPT(SanitizeHandlerPreserveAllRegs, 1, 0, Benign) ///< Use "_preserve" sanitizer runtime for
                                                  ///< diagnostics.
+CODEGENOPT(SanitizeTrapLoop, 1, 0, Benign) ///< In trapping mode, use an infinite loop to halt the
+                                           ///< program in case of check failure.
 CODEGENOPT(SanitizeCfiICallGeneralizePointers, 1, 0, Benign) ///< Generalize pointer types in
                                                              ///< CFI icall function signatures
 CODEGENOPT(SanitizeCfiICallNormalizeIntegers, 1, 0, Benign) ///< Normalize integer types in
@@ -504,6 +508,9 @@ CODEGENOPT(AllResourcesBound, 1, 0, Benign)
 /// Windows.
 ENUM_CODEGENOPT(WinX64EHUnwindV2, WinX64EHUnwindV2Mode,
                 2, WinX64EHUnwindV2Mode::Disabled, Benign)
+
+/// Adds attributes that prevent outlining (`-mno-outline`)
+CODEGENOPT(DisableOutlining, 1, 0, Benign)
 
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"

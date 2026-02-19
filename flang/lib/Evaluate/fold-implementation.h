@@ -1295,8 +1295,6 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
   return Expr<T>{std::move(funcRef)};
 }
 
-Expr<ImpliedDoIndex::Result> FoldOperation(FoldingContext &, ImpliedDoIndex &&);
-
 // Array constructor folding
 template <typename T> class ArrayConstructorFolder {
 public:

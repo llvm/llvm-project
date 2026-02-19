@@ -342,22 +342,22 @@ define <vscale x 32 x i32> @select_nxv32i32(<vscale x 32 x i1> %a, <vscale x 32 
 define <vscale x 32 x i32> @select_evl_nxv32i32(<vscale x 32 x i1> %a, <vscale x 32 x i32> %b, <vscale x 32 x i32> %c) {
 ; RV32-LABEL: select_evl_nxv32i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vl8re32.v v24, (a0)
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV32-NEXT:    vle32.v v24, (a0)
 ; RV32-NEXT:    vmerge.vvm v8, v24, v8, v0
 ; RV32-NEXT:    slli a2, a1, 3
 ; RV32-NEXT:    add a0, a0, a2
 ; RV32-NEXT:    slli a2, a1, 1
-; RV32-NEXT:    sub a2, a1, a2
 ; RV32-NEXT:    vl8re32.v v24, (a0)
-; RV32-NEXT:    sltu a0, a1, a2
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    srli a1, a1, 2
+; RV32-NEXT:    srli a0, a1, 2
+; RV32-NEXT:    sub a2, a1, a2
+; RV32-NEXT:    sltu a1, a1, a2
+; RV32-NEXT:    addi a1, a1, -1
 ; RV32-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vslidedown.vx v0, v0, a1
-; RV32-NEXT:    and a0, a0, a2
-; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; RV32-NEXT:    vslidedown.vx v0, v0, a0
+; RV32-NEXT:    and a1, a1, a2
+; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV32-NEXT:    vmerge.vvm v16, v24, v16, v0
 ; RV32-NEXT:    ret
 ;

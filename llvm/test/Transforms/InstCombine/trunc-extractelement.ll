@@ -296,3 +296,37 @@ define <4 x i64> @PR45314(<4 x i64> %x) {
   %b = bitcast <8 x i32> %s to <4 x i64>
   ret <4 x i64> %b
 }
+
+; Make sure we don't overflow when computing the new index.
+define i16 @test_overflow_idx1(<vscale x 16 x i32> %vec) {
+; ANY-LABEL: @test_overflow_idx1(
+; ANY-NEXT:  entry:
+; ANY-NEXT:    [[EXT:%.*]] = extractelement <vscale x 16 x i32> [[VEC:%.*]], i64 -1
+; ANY-NEXT:    [[TRUNC:%.*]] = trunc i32 [[EXT]] to i16
+; ANY-NEXT:    ret i16 [[TRUNC]]
+;
+entry:
+  %ext = extractelement <vscale x 16 x i32> %vec, i64 -1
+  %trunc = trunc i32 %ext to i16
+  ret i16 %trunc
+}
+
+; Make sure we don't overflow when computing the new index.
+define i16 @test_overflow_idx2(<vscale x 16 x i32> %vec) {
+; LE-LABEL: @test_overflow_idx2(
+; LE-NEXT:  entry:
+; LE-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i32> [[VEC:%.*]] to <vscale x 32 x i16>
+; LE-NEXT:    [[TRUNC:%.*]] = extractelement <vscale x 32 x i16> [[TMP0]], i64 4294967296
+; LE-NEXT:    ret i16 [[TRUNC]]
+;
+; BE-LABEL: @test_overflow_idx2(
+; BE-NEXT:  entry:
+; BE-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i32> [[VEC:%.*]] to <vscale x 32 x i16>
+; BE-NEXT:    [[TRUNC:%.*]] = extractelement <vscale x 32 x i16> [[TMP0]], i64 4294967297
+; BE-NEXT:    ret i16 [[TRUNC]]
+;
+entry:
+  %ext = extractelement <vscale x 16 x i32> %vec, i32 2147483648
+  %trunc = trunc i32 %ext to i16
+  ret i16 %trunc
+}

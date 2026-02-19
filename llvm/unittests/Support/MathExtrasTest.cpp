@@ -692,4 +692,19 @@ TYPED_TEST(OverflowTest, MulResultZero) {
   EXPECT_FALSE(MulOverflow<TypeParam>(0, -5, Result));
   EXPECT_EQ(Result, TypeParam(0));
 }
+
+TEST(MathExtras, NumDigitsBase10) {
+  EXPECT_EQ(NumDigitsBase10(0), 1);
+  EXPECT_EQ(NumDigitsBase10(1), 1);
+
+  uint64_t Val = 10;
+  for (int i = 2; i <= 20; i++) {
+    EXPECT_EQ(NumDigitsBase10(Val - 1), i - 1);
+    EXPECT_EQ(NumDigitsBase10(Val), i);
+    Val *= 10;
+  }
+
+  EXPECT_EQ(NumDigitsBase10(std::numeric_limits<uint64_t>::max()), 20);
+}
+
 } // namespace

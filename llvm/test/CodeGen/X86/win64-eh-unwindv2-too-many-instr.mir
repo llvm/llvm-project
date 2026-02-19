@@ -3,10 +3,17 @@
 # RUN:    -x86-wineh-unwindv2-instruction-count-threshold=4 \
 # RUN:    -run-pass=x86-wineh-unwindv2 | FileCheck %s \
 # RUN:    -check-prefixes=ALLOWLESS,CHECK
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
+# RUN:    -x86-wineh-unwindv2-instruction-count-threshold=4 \
+# RUN:    -passes=x86-wineh-unwindv2 | FileCheck %s \
+# RUN:    -check-prefixes=ALLOWLESS,CHECK
 
 # Allow the default number of instructions per info
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
 # RUN:    -run-pass=x86-wineh-unwindv2 | FileCheck %s \
+# RUN:    -check-prefixes=ALLOWMORE,CHECK
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
+# RUN:    -passes=x86-wineh-unwindv2 | FileCheck %s \
 # RUN:    -check-prefixes=ALLOWMORE,CHECK
 
 --- |
