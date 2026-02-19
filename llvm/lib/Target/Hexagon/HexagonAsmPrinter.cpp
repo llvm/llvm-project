@@ -422,6 +422,14 @@ void HexagonAsmPrinter::HexagonProcessInstruction(MCInst &Inst,
     Inst.setOpcode(Hexagon::J2_call);
     break;
 
+  case Hexagon::PS_readcr:
+    Inst.setOpcode(Hexagon::A2_tfrcrr);
+    break;
+
+  case Hexagon::PS_readcr64:
+    Inst.setOpcode(Hexagon::A4_tfrcpp);
+    break;
+
   case Hexagon::S5_asrhub_rnd_sat_goodsyntax: {
     MCOperand &MO = MappedInst.getOperand(2);
     int64_t Imm;
