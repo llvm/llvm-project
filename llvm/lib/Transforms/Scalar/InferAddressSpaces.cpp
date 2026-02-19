@@ -521,12 +521,27 @@ void InferAddressSpacesImpl::appendsFlatAddressExpressionToPostorderStack(
     DenseSet<Value *> &Visited) const {
   assert(V->getType()->isPtrOrPtrVectorTy());
 
+  auto EmplaceBack = [&](Value *Val) {
+    // The inttoptr can't get the pointer operand of ptrtoint from its user
+    // operand. When the address space of ptrtoint changes, it won't insert
+    // inttoptr into WorkList during updating address space. We push its pointer
+    // operand ahead of inttoptr to make sure the pointer operand's address
+    // space can be updated first.
+    Operator *AddrExpr = dyn_cast<Operator>(Val);
+    if (AddrExpr && AddrExpr->getOpcode() == Instruction::IntToPtr) {
+      for (Value *PtrOperand : getPointerOperands(*AddrExpr, *DL, TTI)) {
+        appendsFlatAddressExpressionToPostorderStack(PtrOperand, PostorderStack,
+                                                     Visited);
+      }
+    }
+    PostorderStack.emplace_back(Val, false);
+  };
   // Generic addressing expressions may be hidden in nested constant
   // expressions.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(V)) {
     // TODO: Look in non-address parts, like icmp operands.
     if (isAddressExpression(*CE, *DL, TTI) && Visited.insert(CE).second)
-      PostorderStack.emplace_back(CE, false);
+      EmplaceBack(CE);
 
     return;
   }
@@ -534,13 +549,13 @@ void InferAddressSpacesImpl::appendsFlatAddressExpressionToPostorderStack(
   if (V->getType()->getPointerAddressSpace() == FlatAddrSpace &&
       isAddressExpression(*V, *DL, TTI)) {
     if (Visited.insert(V).second) {
-      PostorderStack.emplace_back(V, false);
+      EmplaceBack(V);
 
       if (auto *Op = dyn_cast<Operator>(V))
         for (auto &O : Op->operands())
           if (ConstantExpr *CE = dyn_cast<ConstantExpr>(O))
             if (isAddressExpression(*CE, *DL, TTI) && Visited.insert(CE).second)
-              PostorderStack.emplace_back(CE, false);
+              EmplaceBack(CE);
     }
   }
 }
@@ -607,6 +622,7 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
     if (PostorderStack.back().getInt()) {
       if (TopVal->getType()->getPointerAddressSpace() == FlatAddrSpace)
         Postorder.push_back(TopVal);
+
       PostorderStack.pop_back();
       continue;
     }
@@ -883,8 +899,9 @@ static Value *cloneConstantExprWithNewAddressSpace(
   if (CE->getOpcode() == Instruction::IntToPtr) {
     assert(isNoopPtrIntCastPair(cast<Operator>(CE), *DL, TTI));
     Constant *Src = cast<ConstantExpr>(CE->getOperand(0))->getOperand(0);
-    assert(Src->getType()->getPointerAddressSpace() == NewAddrSpace);
-    return Src;
+    if (Src->getType() == TargetType)
+      return Src;
+    return ConstantExpr::getAddrSpaceCast(Src, TargetType);
   }
 
   // Computes the operands of the new constant expression.
