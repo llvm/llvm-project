@@ -121,6 +121,8 @@ private:
 
   void emitNTLHint(const MachineInstr *MI);
 
+  void emitLpadAlignedCall(const MachineInstr &MI);
+
   // XRay Support
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr *MI);
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr *MI);
@@ -273,6 +275,55 @@ bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst,
 // instructions) auto-generated.
 #include "RISCVGenMCPseudoLowering.inc"
 
+// Emit [.p2align 2] [.option push] [.option exact] call/jalr [.option pop]
+// lpad. Alignment and .option exact are needed when Zca is enabled to prevent
+// LPAD misalignment from c.jal/cm.jalt relaxation.
+void RISCVAsmPrinter::emitLpadAlignedCall(const MachineInstr &MI) {
+  const MCSubtargetInfo &MCSTI = getSubtargetInfo();
+  const bool IsIndirect = MI.getOpcode() == RISCV::PseudoCALLIndirectLpadAlign,
+             HasZca = MCSTI.hasFeature(RISCV::FeatureStdExtZca),
+             HasRelax = MCSTI.hasFeature(RISCV::FeatureRelax);
+
+  if (HasZca)
+    OutStreamer->emitCodeAlignment(Align(4), &MCSTI);
+
+  auto *RTS =
+      static_cast<RISCVTargetStreamer *>(OutStreamer->getTargetStreamer());
+  if (HasZca && HasRelax) {
+    RTS->emitDirectiveOptionPush();
+    RTS->emitDirectiveOptionExact();
+  }
+
+  MCInst CallInst;
+  if (!IsIndirect) {
+    CallInst.setOpcode(RISCV::PseudoCALL);
+    MCOperand MCOp;
+    lowerOperand(MI.getOperand(0), MCOp);
+    CallInst.addOperand(MCOp);
+  } else {
+    CallInst.setOpcode(RISCV::JALR);
+    CallInst.addOperand(MCOperand::createReg(RISCV::X1));
+    CallInst.addOperand(MCOperand::createReg(MI.getOperand(0).getReg()));
+    CallInst.addOperand(MCOperand::createImm(0));
+  }
+
+  if (HasZca && HasRelax) {
+    MCSubtargetInfo NoRelaxSTI(MCSTI);
+    NoRelaxSTI.ToggleFeature(RISCV::FeatureRelax);
+    EmitToStreamer(*OutStreamer, CallInst, NoRelaxSTI);
+    RTS->emitDirectiveOptionPop();
+  } else {
+    EmitToStreamer(*OutStreamer, CallInst, MCSTI);
+  }
+
+  // LPAD is encoded as AUIPC X0, label.
+  MCInst LpadInst;
+  LpadInst.setOpcode(RISCV::AUIPC);
+  LpadInst.addOperand(MCOperand::createReg(RISCV::X0));
+  LpadInst.addOperand(MCOperand::createImm(MI.getOperand(1).getImm()));
+  EmitToStreamer(*OutStreamer, LpadInst, MCSTI);
+}
+
 // If the target supports Zihintntl and the instruction has a nontemporal
 // MachineMemOperand, emit an NTLH hint instruction before it.
 void RISCVAsmPrinter::emitNTLHint(const MachineInstr *MI) {
@@ -349,6 +400,10 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   case TargetOpcode::PATCHABLE_TAIL_CALL:
     LowerPATCHABLE_TAIL_CALL(MI);
+    return;
+  case RISCV::PseudoCALLLpadAlign:
+  case RISCV::PseudoCALLIndirectLpadAlign:
+    emitLpadAlignedCall(*MI);
     return;
   }
 
