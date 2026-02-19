@@ -379,6 +379,15 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
     setCondCodeAction(ISD::SETUEQ, MVT::f32, Expand);
     setCondCodeAction(ISD::SETNE, MVT::f32, Expand);
+
+    // R5900 FPU does not support IEEE 754 special values (NaN, infinity). Use
+    // custom lowering to decide per-instruction: hardware when nnan+ninf flags
+    // guarantee no NaN or infinity, software libcall otherwise.
+    setOperationAction(ISD::FADD, MVT::f32, Custom);
+    setOperationAction(ISD::FSUB, MVT::f32, Custom);
+    setOperationAction(ISD::FMUL, MVT::f32, Custom);
+    setOperationAction(ISD::FDIV, MVT::f32, Custom);
+    setOperationAction(ISD::FSQRT, MVT::f32, Custom);
   }
 
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -554,9 +563,76 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::SELECT:             return lowerSELECT(Op, DAG);
   case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FDIV:
+  case ISD::FSQRT:
+    return lowerR5900FPOp(Op, DAG);
   }
 
   return MipsTargetLowering::LowerOperation(Op, DAG);
+}
+
+SDValue MipsSETargetLowering::lowerR5900FPOp(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  assert(Subtarget.isR5900());
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDNodeFlags Flags = Op->getFlags();
+
+  SmallVector<SDValue, 2> Ops(Op->op_begin(), Op->op_end());
+
+  if (Flags.hasNoNaNs() && Flags.hasNoInfs()) {
+    // Use the hardware FPU instruction if the operation is guaranteed per-
+    // instruction to have no NaN or infinity inputs/outputs (nnan+ninf flags).
+    unsigned HWOpc;
+    switch (Op.getOpcode()) {
+    case ISD::FADD:
+      HWOpc = MipsISD::R5900_FADD;
+      break;
+    case ISD::FSUB:
+      HWOpc = MipsISD::R5900_FSUB;
+      break;
+    case ISD::FMUL:
+      HWOpc = MipsISD::R5900_FMUL;
+      break;
+    case ISD::FDIV:
+      HWOpc = MipsISD::R5900_FDIV;
+      break;
+    case ISD::FSQRT:
+      HWOpc = MipsISD::R5900_FSQRT;
+      break;
+    default:
+      llvm_unreachable("Unexpected opcode");
+    }
+    return DAG.getNode(HWOpc, DL, VT, Ops);
+  } else {
+    // Fall back to a software libcall for IEEE correctness.
+    RTLIB::Libcall LC;
+    switch (Op.getOpcode()) {
+    case ISD::FADD:
+      LC = RTLIB::ADD_F32;
+      break;
+    case ISD::FSUB:
+      LC = RTLIB::SUB_F32;
+      break;
+    case ISD::FMUL:
+      LC = RTLIB::MUL_F32;
+      break;
+    case ISD::FDIV:
+      LC = RTLIB::DIV_F32;
+      break;
+    case ISD::FSQRT:
+      LC = RTLIB::SQRT_F32;
+      break;
+    default:
+      llvm_unreachable("Unexpected opcode");
+    }
+    TargetLowering::MakeLibCallOptions CallOptions;
+    auto [Result, Chain] = makeLibCall(DAG, LC, VT, Ops, CallOptions, DL);
+    return Result;
+  }
 }
 
 // Fold zero extensions into MipsISD::VEXTRACT_[SZ]EXT_ELT
