@@ -763,6 +763,67 @@ add_header_library(
 )
 
 add_header_library(
+  fmin
+  HDRS
+    fmin.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.common
+    libc.src.__support.macros.config
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fminf
+  HDRS
+    fminf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.common
+    libc.src.__support.macros.config
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fminf128
+  HDRS
+    fminf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fminf16
+  HDRS
+    fminf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.common
+    libc.src.__support.macros.config
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fminbf16
+  HDRS
+    fminbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.common
+    libc.src.__support.macros.config
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
   f16sqrt
   HDRS
     f16sqrt.h
