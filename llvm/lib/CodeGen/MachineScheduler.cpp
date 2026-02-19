@@ -3254,31 +3254,6 @@ initResourceDelta(const ScheduleDAGMI *DAG,
   }
 }
 
-/// Compute remaining latency. We need this both to determine whether the
-/// overall schedule has become latency-limited and whether the instructions
-/// outside this zone are resource or latency limited.
-///
-/// The "dependent" latency is updated incrementally during scheduling as the
-/// max height/depth of scheduled nodes minus the cycles since it was
-/// scheduled:
-///   DLat = max (N.depth - (CurrCycle - N.ReadyCycle) for N in Zone
-///
-/// The "independent" latency is the max ready queue depth:
-///   ILat = max N.depth for N in Available|Pending
-///
-/// RemainingLatency is the greater of independent and dependent latency.
-///
-/// These computations are expensive, especially in DAGs with many edges, so
-/// only do them if necessary.
-static unsigned computeRemLatency(SchedBoundary &CurrZone) {
-  unsigned RemLatency = CurrZone.getDependentLatency();
-  RemLatency = std::max(RemLatency,
-                        CurrZone.findMaxLatency(CurrZone.Available.elements()));
-  RemLatency = std::max(RemLatency,
-                        CurrZone.findMaxLatency(CurrZone.Pending.elements()));
-  return RemLatency;
-}
-
 /// Returns true if the current cycle plus remaning latency is greater than
 /// the critical path in the scheduling region.
 bool GenericSchedulerBase::shouldReduceLatency(const CandPolicy &Policy,
@@ -3435,6 +3410,31 @@ void GenericSchedulerBase::traceCandidate(const SchedCandidate &Cand) {
   dbgs() << '\n';
 }
 #endif
+
+/// Compute remaining latency. We need this both to determine whether the
+/// overall schedule has become latency-limited and whether the instructions
+/// outside this zone are resource or latency limited.
+///
+/// The "dependent" latency is updated incrementally during scheduling as the
+/// max height/depth of scheduled nodes minus the cycles since it was
+/// scheduled:
+///   DLat = max (N.depth - (CurrCycle - N.ReadyCycle) for N in Zone
+///
+/// The "independent" latency is the max ready queue depth:
+///   ILat = max N.depth for N in Available|Pending
+///
+/// RemainingLatency is the greater of independent and dependent latency.
+///
+/// These computations are expensive, especially in DAGs with many edges, so
+/// only do them if necessary.
+unsigned llvm::computeRemLatency(SchedBoundary &CurrZone) {
+  unsigned RemLatency = CurrZone.getDependentLatency();
+  RemLatency = std::max(RemLatency,
+                        CurrZone.findMaxLatency(CurrZone.Available.elements()));
+  RemLatency = std::max(RemLatency,
+                        CurrZone.findMaxLatency(CurrZone.Pending.elements()));
+  return RemLatency;
+}
 
 /// Return true if this heuristic determines order.
 /// TODO: Consider refactor return type of these functions as integer or enum,

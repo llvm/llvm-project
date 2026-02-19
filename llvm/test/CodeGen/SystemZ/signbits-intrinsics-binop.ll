@@ -65,9 +65,9 @@ define <4 x i32> @f3() {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    larl %r1, .LCPI3_0
+; CHECK-NEXT:    larl %r2, .LCPI3_1
 ; CHECK-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-NEXT:    larl %r1, .LCPI3_1
-; CHECK-NEXT:    vl %v1, 0(%r1), 3
+; CHECK-NEXT:    vl %v1, 0(%r2), 3
 ; CHECK-NEXT:    vpklsgs %v24, %v1, %v0
 ; CHECK-NEXT:    br %r14
   %call = call {<4 x i32>, i32} @llvm.s390.vpklsgs(<2 x i64> <i64 0, i64 1>, <2 x i64> <i64 1, i64 0>)
@@ -119,9 +119,9 @@ define <4 x i32> @f6() {
 ; CHECK-LABEL: f6:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    larl %r1, .LCPI6_0
+; CHECK-NEXT:    larl %r2, .LCPI6_1
 ; CHECK-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-NEXT:    larl %r1, .LCPI6_1
-; CHECK-NEXT:    vl %v1, 0(%r1), 3
+; CHECK-NEXT:    vl %v1, 0(%r2), 3
 ; CHECK-NEXT:    vpksg %v24, %v1, %v0
 ; CHECK-NEXT:    br %r14
   %call = call <4 x i32> @llvm.s390.vpksg(<2 x i64> <i64 0, i64 1>, <2 x i64> <i64 1, i64 0>)
@@ -170,9 +170,9 @@ define <4 x i32> @f9() {
 ; CHECK-LABEL: f9:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    larl %r1, .LCPI9_0
+; CHECK-NEXT:    larl %r2, .LCPI9_1
 ; CHECK-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-NEXT:    larl %r1, .LCPI9_1
-; CHECK-NEXT:    vl %v1, 0(%r1), 3
+; CHECK-NEXT:    vl %v1, 0(%r2), 3
 ; CHECK-NEXT:    vpklsg %v24, %v1, %v0
 ; CHECK-NEXT:    br %r14
   %call = call <4 x i32> @llvm.s390.vpklsg(<2 x i64> <i64 0, i64 1>, <2 x i64> <i64 1, i64 0>)
@@ -219,9 +219,9 @@ define <2 x i64> @f12() {
 ; CHECK-LABEL: f12:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    larl %r1, .LCPI12_0
+; CHECK-NEXT:    larl %r2, .LCPI12_1
 ; CHECK-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-NEXT:    larl %r1, .LCPI12_1
-; CHECK-NEXT:    vl %v1, 0(%r1), 3
+; CHECK-NEXT:    vl %v1, 0(%r2), 3
 ; CHECK-NEXT:    vpdi %v24, %v1, %v0, 0
 ; CHECK-NEXT:    br %r14
   %perm = call <2 x i64> @llvm.s390.vpdi(<2 x i64> <i64 0, i64 1>,

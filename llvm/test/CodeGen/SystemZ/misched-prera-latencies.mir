@@ -1,0 +1,212 @@
+# RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z16 -verify-machineinstrs \
+# RUN:   -run-pass=machine-scheduler -debug-only=machine-scheduler 2>&1\
+# RUN:   | FileCheck %s
+
+# This function has two long independent chains of instructions that should be interleaved.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun0:%bb.0
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun0:%bb.1
+# CHECK: Number of nodes in def-use sequences: 10. Latency scheduling enabled for data sequences.
+# CHECK:      *** Final schedule for %bb.1 ***
+# CHECK-NEXT: SU(0):   %4:fp64bit = LZDR
+# CHECK-NEXT: SU(5):   %9:fp64bit = LZDR
+# CHECK-NEXT: SU(1):   %5:fp64bit = nofpexcept WFMADB %0:fp64bit, %1:fp64bit, %4:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(6):   %10:fp64bit = nofpexcept WFMADB %2:fp64bit, %3:fp64bit, %9:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(2):   %6:fp64bit = nofpexcept WFMADB %0:fp64bit, %1:fp64bit, %5:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(7):   %11:fp64bit = nofpexcept WFMADB %2:fp64bit, %3:fp64bit, %10:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(3):   %7:fp64bit = nofpexcept WFMADB %0:fp64bit, %1:fp64bit, %6:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(8):   %12:fp64bit = nofpexcept WFMADB %2:fp64bit, %3:fp64bit, %11:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(4):   %8:fp64bit = nofpexcept WFMADB %0:fp64bit, %1:fp64bit, %7:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(9):   %13:fp64bit = nofpexcept WFMADB %2:fp64bit, %3:fp64bit, %12:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(10):   %14:vr64bit = nofpexcept WFADB %8:fp64bit, %13:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(11):   VST64 %14:vr64bit, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
+---
+name:            fun0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $f4d, $f6d
+
+    %0:fp64bit = COPY $f0d
+    %1:fp64bit = COPY $f2d
+    %2:fp64bit = COPY $f4d
+    %3:fp64bit = COPY $f6d
+
+  bb.1:
+    %4:fp64bit = LZDR
+    %5:fp64bit = nofpexcept WFMADB %0, %1, %4, implicit $fpc
+    %6:fp64bit = nofpexcept WFMADB %0, %1, %5, implicit $fpc
+    %7:fp64bit = nofpexcept WFMADB %0, %1, %6, implicit $fpc
+    %8:fp64bit = nofpexcept WFMADB %0, %1, %7, implicit $fpc
+    %9:fp64bit = LZDR
+    %10:fp64bit = nofpexcept WFMADB %2, %3, %9, implicit $fpc
+    %11:fp64bit = nofpexcept WFMADB %2, %3, %10, implicit $fpc
+    %12:fp64bit = nofpexcept WFMADB %2, %3, %11, implicit $fpc
+    %13:fp64bit = nofpexcept WFMADB %2, %3, %12, implicit $fpc
+    %14:vr64bit = nofpexcept WFADB %8, %13, implicit $fpc
+    VST64 %14, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
+    Return
+...
+
+# This function has a data flow sequence and latency scheduling puts the WFDDB high.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun1:%bb.0
+# CHECK:      Number of nodes in def-use sequences: 4. Latency scheduling enabled for data sequences.
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK-NEXT: SU(1):   undef %1.subreg_h64:vr128bit = WFDDB undef %2:fp64bit, undef %3:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(2):   %4:fp64bit = COPY %1.subreg_h64:vr128bit
+# CHECK-NEXT: SU(3):   %5:fp64bit = WFADB %4:fp64bit, %4:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(0):   dead %0:fp64bit = LZDR
+# CHECK-NEXT: SU(4):   VST64 %5:fp64bit, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
+---
+name:            fun1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:fp64bit = LZDR
+    undef %1.subreg_h64:vr128bit = WFDDB undef %2:fp64bit, undef %3:fp64bit, implicit $fpc
+    %4:fp64bit = COPY %1.subreg_h64:vr128bit
+    %5:fp64bit = WFADB %4, %4, implicit $fpc
+    VST64 %5:fp64bit , $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
+    Return
+...
+
+# Same, but there is no sequence, so no latency scheduling is done.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun2:%bb.0
+# CHECK:      Latency scheduling not enabled for data sequences.
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK-NEXT: SU(0):   dead %0:fp64bit = LZDR
+# CHECK-NEXT: SU(1):   undef %1.subreg_h64:vr128bit = WFDDB undef %2:fp64bit, undef %3:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(2):   VST64 %1.subreg_h64:vr128bit, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
+---
+name:            fun2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:fp64bit = LZDR
+    undef %1.subreg_h64:vr128bit = WFDDB undef %2:fp64bit, undef %3:fp64bit, implicit $fpc
+    VST64 %1.subreg_h64:vr128bit , $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
+    Return
+...
+
+# Use the GenericScheduler latency heuristic for this single block loop.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun3:%bb.1
+# CHECK: Latency scheduling not enabled for data sequences.
+# CHECK: ACYCLIC LATENCY LIMIT
+# CHECK: Pick Bot BOT-HEIGHT [pre-RA]
+---
+name:            fun3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %19:vr128bit = VREPIF 1
+
+  bb.1:
+    %3:gr64bit = VLGVF %19, $noreg, 0
+    %6:gr64bit = LLGFR %3.subreg_l32
+    %6:gr64bit = MSGFI %6, 274877907
+    %7:gr64bit = SRLG %6, $noreg, 39
+    %9:gr64bit = VLGVF %19, $noreg, 1
+    %12:gr64bit = LLGFR %9.subreg_l32
+    %12:gr64bit = MSGFI %12, 274877907
+    %13:gr64bit = SRLG %12, $noreg, 39
+    %15:vr128bit = VLVGP %13, %13
+    %15:vr128bit = VLVGF %15, %7.subreg_l32, $noreg, 0
+    %16:vr128bit = VUPLHF %15
+    %17:vr128bit = nofpexcept VCDLGB %16, 0, 0, implicit $fpc
+    %19:vr128bit = VGBM 0
+    %18:vr128bit = nofpexcept VFMDB %17, %19, implicit $fpc
+    VST %18, $noreg, 0, $noreg :: (store (s128) into `ptr null`, align 8)
+    J %bb.1
+...
+
+# This region has many nodes compared to the maximum height - the DAG is
+# "wide".  Don't interleave the data flows in cases like this, as it could
+# result in too much ILP and spilling.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun4:%bb.0
+# CHECK:      Latency scheduling not enabled for data sequences.
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK-NEXT: SU(0):   %0:gr64bit = COPY undef %1:gr64bit
+# CHECK-NEXT: SU(1):   dead %2:gr64bit = AGRK %0:gr64bit, %0:gr64bit,
+# CHECK-NEXT: SU(2):   %3:gr64bit = COPY undef %1:gr64bit
+# CHECK-NEXT: SU(3):   dead %4:gr64bit = AGRK %3:gr64bit, %3:gr64bit,
+# CHECK-NEXT: SU(4):   %5:gr64bit = COPY undef %1:gr64bit
+# CHECK-NEXT: SU(5):   dead %6:gr64bit = AGRK %5:gr64bit, %5:gr64bit,
+# CHECK-NEXT: SU(6):   %7:gr64bit = COPY undef %1:gr64bit
+# CHECK-NEXT: SU(7):   dead %8:gr64bit = AGRK %7:gr64bit, %7:gr64bit,
+# CHECK-NEXT: SU(8):   %9:gr64bit = COPY undef %1:gr64bit
+# CHECK-NEXT: SU(9):   dead %10:gr64bit = AGRK %9:gr64bit, %9:gr64bit,
+# CHECK-NEXT: SU(10):  %11:gr64bit = COPY undef %1:gr64bit
+# CHECK-NEXT: SU(11):  dead %12:gr64bit = AGRK %11:gr64bit, %11:gr64bit,
+---
+name:            fun4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %1:gr64bit = COPY undef %0:gr64bit
+    %2:gr64bit = AGRK %1, %1, implicit-def dead $cc
+    %3:gr64bit = COPY undef %0:gr64bit
+    %4:gr64bit = AGRK %3, %3, implicit-def dead $cc
+    %5:gr64bit = COPY undef %0:gr64bit
+    %6:gr64bit = AGRK %5, %5, implicit-def dead $cc
+    %7:gr64bit = COPY undef %0:gr64bit
+    %8:gr64bit = AGRK %7, %7, implicit-def dead $cc
+    %9:gr64bit = COPY undef %0:gr64bit
+    %10:gr64bit = AGRK %9, %9, implicit-def dead $cc
+    %11:gr64bit = COPY undef %0:gr64bit
+    %12:gr64bit = AGRK %11, %11, implicit-def dead $cc
+    Return
+...
+
+# The TMLL64 should be scheduled first even though the LA is available and of
+# lesser height, because the TMLL64 Depth equals the remaining latency (on CP).
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun5:%bb.0
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun5:%bb.1
+# CHECK:      Number of nodes in def-use sequences: 4. Latency scheduling enabled for data sequences.
+# CHECK:      SU(0):   dead %2:addr64bit = LA %0:addr64bit, 1, $noreg
+# CHECK-NEXT:   # preds left       : 0
+# CHECK-NEXT:   # succs left       : 0
+# CHECK-NEXT:   # rdefs left       : 0
+# CHECK-NEXT:   Latency            : 1
+# CHECK-NEXT:   Depth              : 0
+# CHECK-NEXT:   Height             : 0
+# CHECK:      SU(4):   TMLL64 %5:gr64bit, 1, implicit-def $cc
+# CHECK-NEXT:   # preds left       : 1
+# CHECK-NEXT:   # succs left       : 1
+# CHECK-NEXT:   # rdefs left       : 0
+# CHECK-NEXT:   Latency            : 1
+# CHECK-NEXT:   Depth              : 3
+# CHECK-NEXT:   Height             : 1
+# CHECK:      Queue BotQ.A: 0 4
+# CHECK:      *** Final schedule for %bb.1 ***
+# CHECK-NEXT: SU(1):   %3:gr64bit = COPY %1:gr32bit
+# CHECK-NEXT: SU(2):   %4:gr64bit = COPY %3:gr64bit
+# CHECK-NEXT: SU(3):   %5:gr64bit = COPY %4:gr64bit
+# CHECK-NEXT: SU(0):   dead %2:addr64bit = LA %0:addr64bit, 1, $noreg
+# CHECK-NEXT: SU(4):   TMLL64 %5:gr64bit, 1, implicit-def $cc
+---
+name:            fun5
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r2d, $r3l
+  
+    %0:addr64bit = COPY $r2d
+    %1:gr32bit = COPY $r3l
+  
+  bb.1:
+    %2:addr64bit = LA %0, 1, $noreg
+    %3:gr64bit = COPY %1
+    %4:gr64bit = COPY %3
+    %5:gr64bit = COPY %4
+    TMLL64 %5, 1, implicit-def $cc
+    BRC 15, 7, %bb.1, implicit killed $cc
+    Return
+...
+

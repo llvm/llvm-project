@@ -136,16 +136,16 @@ define i128 @f9(i128 %a, i128 %sh) {
 ; CHECK-LABEL: f9:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    larl %r1, .LCPI8_0
-; CHECK-NEXT:    vl %v1, 0(%r4), 3
-; CHECK-NEXT:    vl %v2, 0(%r1), 3
-; CHECK-NEXT:    vn %v1, %v1, %v2
-; CHECK-NEXT:    vlgvf %r0, %v1, 3
-; CHECK-NEXT:    vlvgp %v2, %r0, %r0
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    vrepb %v2, %v2, 15
-; CHECK-NEXT:    vslb %v0, %v0, %v2
-; CHECK-NEXT:    vsl %v0, %v0, %v2
-; CHECK-NEXT:    vaq %v0, %v1, %v0
+; CHECK-NEXT:    vl %v0, 0(%r4), 3
+; CHECK-NEXT:    vl %v1, 0(%r1), 3
+; CHECK-NEXT:    vn %v0, %v0, %v1
+; CHECK-NEXT:    vlgvf %r0, %v0, 3
+; CHECK-NEXT:    vlvgp %v1, %r0, %r0
+; CHECK-NEXT:    vl %v2, 0(%r3), 3
+; CHECK-NEXT:    vrepb %v1, %v1, 15
+; CHECK-NEXT:    vslb %v2, %v2, %v1
+; CHECK-NEXT:    vsl %v1, %v2, %v1
+; CHECK-NEXT:    vaq %v0, %v0, %v1
 ; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
   %and = and i128 %sh, 127
