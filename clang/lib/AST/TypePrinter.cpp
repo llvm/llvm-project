@@ -287,6 +287,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
     case Type::CountAttributed:
+    case Type::LateParsedAttr:
       CanPrefixQualifiers = false;
       break;
 
@@ -1813,6 +1814,20 @@ void TypePrinter::printCountAttributedAfter(const CountAttributedType *T,
   printAfter(T->desugar(), OS);
   if (T->isArrayType())
     printCountAttributedImpl(T, OS, Policy);
+}
+
+void TypePrinter::printLateParsedAttrBefore(const LateParsedAttrType *T,
+                                            raw_ostream &OS) {
+  // LateParsedAttrType is a transient placeholder that should not appear
+  // in user-facing output. Just print the wrapped type.
+  printBefore(T->getWrappedType(), OS);
+}
+
+void TypePrinter::printLateParsedAttrAfter(const LateParsedAttrType *T,
+                                           raw_ostream &OS) {
+  // LateParsedAttrType is a transient placeholder that should not appear
+  // in user-facing output. Just print the wrapped type.
+  printAfter(T->getWrappedType(), OS);
 }
 
 void TypePrinter::printAttributedBefore(const AttributedType *T,

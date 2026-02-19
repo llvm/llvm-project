@@ -70,6 +70,7 @@ class TagDecl;
 class TemplateParameterList;
 class Type;
 class Attr;
+struct LateParsedTypeAttribute;
 
 enum {
   TypeAlignmentInBits = 4,
@@ -3482,6 +3483,46 @@ public:
   }
 
   StringRef getAttributeName(bool WithMacroPrefix) const;
+};
+
+/// Represents a placeholder type for late-parsed type attributes.
+/// This type wraps another type and holds an opaque pointer to a
+/// LateParsedAttribute that will be parsed later (e.g., in ActOnFields).
+/// Once parsed, this type is replaced with the appropriate attributed type
+/// (e.g., CountAttributedType for counted_by).
+class LateParsedAttrType : public Type, public llvm::FoldingSetNode {
+  friend class ASTContext; // ASTContext creates these.
+
+  QualType WrappedTy;
+  LateParsedTypeAttribute *LateParsedTypeAttr;
+
+  LateParsedAttrType(QualType Wrapped, QualType Canon,
+                     LateParsedTypeAttribute *Attr)
+      : Type(LateParsedAttr, Canon, Wrapped->getDependence()),
+        WrappedTy(Wrapped), LateParsedTypeAttr(Attr) {}
+
+public:
+  QualType getWrappedType() const { return WrappedTy; }
+  LateParsedTypeAttribute *getLateParsedAttribute() const {
+    return LateParsedTypeAttr;
+  }
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return WrappedTy; }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, WrappedTy, LateParsedTypeAttr);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Wrapped,
+                      LateParsedTypeAttribute *Attr) {
+    ID.AddPointer(Wrapped.getAsOpaquePtr());
+    ID.AddPointer(Attr);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == LateParsedAttr;
+  }
 };
 
 /// Represents a type which was implicitly adjusted by the semantic

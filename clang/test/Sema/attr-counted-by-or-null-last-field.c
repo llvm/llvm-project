@@ -128,9 +128,7 @@ struct on_member_ptr_incomplete_const_ty_ty_pos {
 
 struct on_member_ptr_void_ty_ty_pos {
   int count;
-  // expected-warning@+2{{'counted_by_or_null' on a pointer to void is a GNU extension, treated as 'sized_by_or_null'}}
-  // expected-note@+1{{use '__sized_by_or_null' to suppress this warning}}
-  void * ptr __counted_by_or_null(count);
+  void * ptr __counted_by_or_null(count); // expected-warning{{'counted_by_or_null' on a pointer to void is a GNU extension, treated as 'sized_by_or_null'}} expected-note{{use '__sized_by_or_null' to suppress this warning}}
 };
 
 typedef void(fn_ty)(int);
