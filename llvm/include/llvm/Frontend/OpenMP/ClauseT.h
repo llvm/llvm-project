@@ -539,6 +539,14 @@ struct DependT {
   std::tuple<DependenceType, OPT(Iterator), LocatorList> t;
 };
 
+// [tr14:212-213]
+template <typename T, typename I, typename E> //
+struct DepthT {
+  using DepthExpr = E;
+  using WrapperTrait = std::true_type;
+  DepthExpr v;
+};
+
 // V5.2: [3.5] `destroy` clause
 template <typename T, typename I, typename E> //
 struct DestroyT {
@@ -1416,7 +1424,7 @@ using WrapperClausesT = std::variant<
     AbsentT<T, I, E>, AlignT<T, I, E>, AllocatorT<T, I, E>,
     AtomicDefaultMemOrderT<T, I, E>, AtT<T, I, E>, BindT<T, I, E>,
     CollapseT<T, I, E>, CombinerT<T, I, E>, ContainsT<T, I, E>,
-    CopyinT<T, I, E>, CopyprivateT<T, I, E>, DefaultT<T, I, E>,
+    CopyinT<T, I, E>, CopyprivateT<T, I, E>, DefaultT<T, I, E>, DepthT<T, I, E>,
     DestroyT<T, I, E>, DetachT<T, I, E>, DeviceSafesyncT<T, I, E>,
     DeviceTypeT<T, I, E>, DynamicAllocatorsT<T, I, E>, EnterT<T, I, E>,
     ExclusiveT<T, I, E>, FailT<T, I, E>, FilterT<T, I, E>, FinalT<T, I, E>,
