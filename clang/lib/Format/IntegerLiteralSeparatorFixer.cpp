@@ -50,6 +50,9 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
   case FormatStyle::LK_JavaScript:
     Separator = '_';
     break;
+  case FormatStyle::LK_C:
+      Separator = '\'';
+      break;
   case FormatStyle::LK_Cpp:
   case FormatStyle::LK_ObjC:
     if (Style.Standard >= FormatStyle::LS_Cpp14) {
