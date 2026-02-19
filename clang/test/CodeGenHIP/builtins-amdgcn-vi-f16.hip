@@ -7,7 +7,7 @@
 
 #define __device__ __attribute__((device))
 
-// CHECK-LABEL: define dso_local void @_Z22test_div_fixup_f16_hipPDF16_DF16_DF16_DF16_(
+// CHECK-LABEL: define dso_local void @_Z18test_div_fixup_f16PDF16_DF16_DF16_DF16_(
 // CHECK-SAME: ptr noundef [[OUT:%.*]], half noundef [[A:%.*]], half noundef [[B:%.*]], half noundef [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -30,11 +30,11 @@
 // CHECK-NEXT:    store half [[TMP3]], ptr [[TMP4]], align 2
 // CHECK-NEXT:    ret void
 //
-__device__ void test_div_fixup_f16_hip(_Float16 *out, _Float16 a, _Float16 b, _Float16 c) {
+__device__ void test_div_fixup_f16(_Float16 *out, _Float16 a, _Float16 b, _Float16 c) {
   *out = __builtin_amdgcn_div_fixuph(a, b, c);
 }
 
-// CHECK-LABEL: define dso_local void @_Z16test_rcp_f16_hipPDF16_DF16_(
+// CHECK-LABEL: define dso_local void @_Z12test_rcp_f16PDF16_DF16_(
 // CHECK-SAME: ptr noundef [[OUT:%.*]], half noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -49,11 +49,11 @@ __device__ void test_div_fixup_f16_hip(_Float16 *out, _Float16 a, _Float16 b, _F
 // CHECK-NEXT:    store half [[TMP1]], ptr [[TMP2]], align 2
 // CHECK-NEXT:    ret void
 //
-__device__ void test_rcp_f16_hip(_Float16 *out, _Float16 a) {
+__device__ void test_rcp_f16(_Float16 *out, _Float16 a) {
   *out = __builtin_amdgcn_rcph(a);
 }
 
-// CHECK-LABEL: define dso_local void @_Z17test_sqrt_f16_hipPDF16_DF16_(
+// CHECK-LABEL: define dso_local void @_Z13test_sqrt_f16PDF16_DF16_(
 // CHECK-SAME: ptr noundef [[OUT:%.*]], half noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -68,11 +68,11 @@ __device__ void test_rcp_f16_hip(_Float16 *out, _Float16 a) {
 // CHECK-NEXT:    store half [[TMP1]], ptr [[TMP2]], align 2
 // CHECK-NEXT:    ret void
 //
-__device__ void test_sqrt_f16_hip(_Float16 *out, _Float16 a) {
+__device__ void test_sqrt_f16(_Float16 *out, _Float16 a) {
   *out = __builtin_amdgcn_sqrth(a);
 }
 
-// CHECK-LABEL: define dso_local void @_Z16test_rsq_f16_hipPDF16_DF16_(
+// CHECK-LABEL: define dso_local void @_Z12test_rsq_f16PDF16_DF16_(
 // CHECK-SAME: ptr noundef [[OUT:%.*]], half noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -87,11 +87,11 @@ __device__ void test_sqrt_f16_hip(_Float16 *out, _Float16 a) {
 // CHECK-NEXT:    store half [[TMP1]], ptr [[TMP2]], align 2
 // CHECK-NEXT:    ret void
 //
-__device__ void test_rsq_f16_hip(_Float16 *out, _Float16 a) {
+__device__ void test_rsq_f16(_Float16 *out, _Float16 a) {
   *out = __builtin_amdgcn_rsqh(a);
 }
 
-// CHECK-LABEL: define dso_local void @_Z16test_sin_f16_hipPDF16_DF16_(
+// CHECK-LABEL: define dso_local void @_Z12test_sin_f16PDF16_DF16_(
 // CHECK-SAME: ptr noundef [[OUT:%.*]], half noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -106,11 +106,11 @@ __device__ void test_rsq_f16_hip(_Float16 *out, _Float16 a) {
 // CHECK-NEXT:    store half [[TMP1]], ptr [[TMP2]], align 2
 // CHECK-NEXT:    ret void
 //
-__device__ void test_sin_f16_hip(_Float16 *out, _Float16 a) {
+__device__ void test_sin_f16(_Float16 *out, _Float16 a) {
   *out = __builtin_amdgcn_sinh(a);
 }
 
-// CHECK-LABEL: define dso_local void @_Z16test_cos_f16_hipPDF16_DF16_(
+// CHECK-LABEL: define dso_local void @_Z12test_cos_f16PDF16_DF16_(
 // CHECK-SAME: ptr noundef [[OUT:%.*]], half noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -125,11 +125,11 @@ __device__ void test_sin_f16_hip(_Float16 *out, _Float16 a) {
 // CHECK-NEXT:    store half [[TMP1]], ptr [[TMP2]], align 2
 // CHECK-NEXT:    ret void
 //
-__device__ void test_cos_f16_hip(_Float16 *out, _Float16 a) {
+__device__ void test_cos_f16(_Float16 *out, _Float16 a) {
   *out = __builtin_amdgcn_cosh(a);
 }
 
-// CHECK-LABEL: define dso_local void @_Z18test_ldexp_f16_hipPDF16_DF16_i(
+// CHECK-LABEL: define dso_local void @_Z14test_ldexp_f16PDF16_DF16_i(
 // CHECK-SAME: ptr noundef [[OUT:%.*]], half noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -149,11 +149,11 @@ __device__ void test_cos_f16_hip(_Float16 *out, _Float16 a) {
 // CHECK-NEXT:    store half [[TMP3]], ptr [[TMP4]], align 2
 // CHECK-NEXT:    ret void
 //
-__device__ void test_ldexp_f16_hip(_Float16 *out, _Float16 a, int b) {
+__device__ void test_ldexp_f16(_Float16 *out, _Float16 a, int b) {
   *out = __builtin_amdgcn_ldexph(a, b);
 }
 
-// CHECK-LABEL: define dso_local void @_Z23test_frexp_mant_f16_hipPDF16_DF16_(
+// CHECK-LABEL: define dso_local void @_Z19test_frexp_mant_f16PDF16_DF16_(
 // CHECK-SAME: ptr noundef [[OUT:%.*]], half noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -168,11 +168,11 @@ __device__ void test_ldexp_f16_hip(_Float16 *out, _Float16 a, int b) {
 // CHECK-NEXT:    store half [[TMP1]], ptr [[TMP2]], align 2
 // CHECK-NEXT:    ret void
 //
-__device__ void test_frexp_mant_f16_hip(_Float16 *out, _Float16 a) {
+__device__ void test_frexp_mant_f16(_Float16 *out, _Float16 a) {
   *out = __builtin_amdgcn_frexp_manth(a);
 }
 
-// CHECK-LABEL: define dso_local void @_Z22test_frexp_exp_f16_hipPsDF16_(
+// CHECK-LABEL: define dso_local void @_Z18test_frexp_exp_f16PsDF16_(
 // CHECK-SAME: ptr noundef [[OUT:%.*]], half noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -187,11 +187,11 @@ __device__ void test_frexp_mant_f16_hip(_Float16 *out, _Float16 a) {
 // CHECK-NEXT:    store i16 [[TMP1]], ptr [[TMP2]], align 2
 // CHECK-NEXT:    ret void
 //
-__device__ void test_frexp_exp_f16_hip(short *out, _Float16 a) {
+__device__ void test_frexp_exp_f16(short *out, _Float16 a) {
   *out = __builtin_amdgcn_frexp_exph(a);
 }
 
-// CHECK-LABEL: define dso_local void @_Z18test_fract_f16_hipPDF16_DF16_(
+// CHECK-LABEL: define dso_local void @_Z14test_fract_f16PDF16_DF16_(
 // CHECK-SAME: ptr noundef [[OUT:%.*]], half noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -206,11 +206,11 @@ __device__ void test_frexp_exp_f16_hip(short *out, _Float16 a) {
 // CHECK-NEXT:    store half [[TMP1]], ptr [[TMP2]], align 2
 // CHECK-NEXT:    ret void
 //
-__device__ void test_fract_f16_hip(_Float16 *out, _Float16 a) {
+__device__ void test_fract_f16(_Float16 *out, _Float16 a) {
   *out = __builtin_amdgcn_fracth(a);
 }
 
-// CHECK-LABEL: define dso_local void @_Z18test_class_f16_hipPDF16_DF16_i(
+// CHECK-LABEL: define dso_local void @_Z14test_class_f16PDF16_DF16_i(
 // CHECK-SAME: ptr noundef [[OUT:%.*]], half noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
@@ -230,6 +230,6 @@ __device__ void test_fract_f16_hip(_Float16 *out, _Float16 a) {
 // CHECK-NEXT:    store half [[CONV]], ptr [[TMP3]], align 2
 // CHECK-NEXT:    ret void
 //
-__device__ void test_class_f16_hip(_Float16 *out, _Float16 a, int b) {
+__device__ void test_class_f16(_Float16 *out, _Float16 a, int b) {
   *out = __builtin_amdgcn_classh(a, b);
 }
