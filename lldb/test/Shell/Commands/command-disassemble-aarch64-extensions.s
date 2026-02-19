@@ -17,7 +17,7 @@ fn:
   crc32b w0, w0, w0                     // AEK_CRC
   // AEK_CRYPTO enables a combination of other features
   smin x0, x0, #0                       // AEK_CSSC
-  sysp	#0, c2, c0, #0, x0, x1          // AEK_D128
+  sysp	#0, c8, c0, #0, x0, x1          // AEK_D128
   sdot v0.2s, v1.8b, v2.8b              // AEK_DOTPROD
   fmmla z0.s, z1.s, z2.s                // AEK_F32MM
   fmmla z0.d, z1.d, z2.d                // AEK_F64MM
@@ -72,7 +72,7 @@ lbl:
 # CHECK-NEXT: brb    iall
 # CHECK-NEXT: crc32b w0, w0, w0
 # CHECK-NEXT: smin   x0, x0, #0
-# CHECK-NEXT: sysp   #0x0, c2, c0, #0x0, x0, x1
+# CHECK-NEXT: sysp   #0x0, c8, c0, #0x0, x0, x1
 # CHECK-NEXT: sdot   v0.2s, v1.8b, v2.8b
 # CHECK-NEXT: fmmla  z0.s, z1.s, z2.s
 # CHECK-NEXT: fmmla  z0.d, z1.d, z2.d
