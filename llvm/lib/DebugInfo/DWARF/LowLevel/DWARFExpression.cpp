@@ -101,6 +101,7 @@ static std::vector<Desc> getOpDescriptions() {
   Descriptions[DW_OP_GNU_addr_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_const_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_entry_value] = Desc(Op::Dwarf4, Op::SizeLEB);
+  Descriptions[DW_OP_GNU_variable_value] = Desc(Op::Dwarf4, Op::SizeRefAddr);
   Descriptions[DW_OP_GNU_implicit_pointer] =
       Desc(Op::Dwarf4, Op::SizeRefAddr, Op::SignedSizeLEB);
   // This Description acts as a marker that getSubOpDesc must be called

@@ -134,6 +134,9 @@ protected:
 
   virtual void emitBaseTypeRef(uint64_t Idx) = 0;
 
+  /// Emit a reference to the given DIE.
+  virtual void emitDIERef(DIE &Ref) = 0;
+
   /// Start emitting data to the temporary buffer. The data stored in the
   /// temporary buffer can be committed to the main output using
   /// commitTemporaryBuffer().
@@ -270,6 +273,10 @@ public:
                                llvm::Register MachineReg,
                                unsigned FragmentOffsetInBits = 0);
 
+  /// Add a reference to the variable indicated by the given DIE.  A
+  /// DW_OP_GNU_variable_value operation is emitted first.
+  void addVariableReference(DIE &);
+
   /// Begin emission of an entry value dwarf operation. The entry value's
   /// first operand is the size of the DWARF block (its second operand),
   /// which needs to be calculated at time of emission, so we don't emit
@@ -327,6 +334,7 @@ class DebugLocDwarfExpression final : public DwarfExpression {
   void emitUnsigned(uint64_t Value) override;
   void emitData1(uint8_t Value) override;
   void emitBaseTypeRef(uint64_t Idx) override;
+  void emitDIERef(DIE &Ref) override;
 
   void enableTemporaryBuffer() override;
   void disableTemporaryBuffer() override;
@@ -357,6 +365,7 @@ class DIEDwarfExpression final : public DwarfExpression {
   void emitUnsigned(uint64_t Value) override;
   void emitData1(uint8_t Value) override;
   void emitBaseTypeRef(uint64_t Idx) override;
+  void emitDIERef(DIE &Ref) override;
 
   void enableTemporaryBuffer() override;
   void disableTemporaryBuffer() override;

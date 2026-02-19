@@ -199,6 +199,10 @@ void DebugLocDwarfExpression::emitBaseTypeRef(uint64_t Idx) {
   getActiveStreamer().emitULEB128(Idx, Twine(Idx), ULEB128PadSize);
 }
 
+void DebugLocDwarfExpression::emitDIERef(DIE &Ref) {
+  getActiveStreamer().emitDIERef(Ref);
+}
+
 bool DebugLocDwarfExpression::isFrameRegister(const TargetRegisterInfo &TRI,
                                               llvm::Register MachineReg) {
   // This information is not available while emitting .debug_loc entries.

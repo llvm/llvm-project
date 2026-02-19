@@ -942,6 +942,15 @@ namespace llvm {
           VMContext, {dwarf::DW_OP_constu, Val, dwarf::DW_OP_stack_value});
     }
 
+    /// Create an expression that involves the value of one or more
+    /// variables.  Each instance of DW_OP_LLVM_arg in \c Expr is
+    /// replaced with the appropriate variable from \c Vars.
+    /// \param Expr        The expression.
+    /// \param Vars        The variables to substitute.
+    DIVariableExpression *
+    createExpressionWithVariables(ArrayRef<uint64_t> Expr,
+                                  ArrayRef<Metadata *> Vars);
+
     /// Create a new descriptor for the specified subprogram.
     /// See comments in DISubprogram* for descriptions of these fields.
     /// \param Scope         Function scope.
