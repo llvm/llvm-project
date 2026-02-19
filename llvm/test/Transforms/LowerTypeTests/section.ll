@@ -19,7 +19,7 @@ entry:
   ret i1 %0
 }
 
-; CHECK: define private void @[[JT]]() #{{.*}} align {{.*}} {
+; CHECK: define private void @[[JT]]() #{{.*}} prefalign({{.*}}) {{.*}} {
 
 declare i1 @llvm.type.test(ptr, metadata) nounwind readnone
 

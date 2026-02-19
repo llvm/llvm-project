@@ -33,14 +33,14 @@ define void @addrtaken() {
 !0 = !{i32 0, !"typeid1"}
 !1 = !{i32 0, !"typeid2"}
 
-; CHECK: define private void {{.*}} #[[AT:.*]] align 4 {
+; CHECK: define private void {{.*}} #[[AT:.*]] prefalign(4)
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:  call void asm sideeffect "b.w $0\0A", "s"(ptr @f1.cfi)
 ; CHECK-NEXT:  call void asm sideeffect "b.w $0\0A", "s"(ptr @g1.cfi)
 ; CHECK-NEXT:  unreachable
 ; CHECK-NEXT: }
 
-; CHECK: define private void {{.*}} #[[AA:.*]] align 4 {
+; CHECK: define private void {{.*}} #[[AA:.*]] prefalign(4)
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:  call void asm sideeffect "b $0\0A", "s"(ptr @f2.cfi)
 ; CHECK-NEXT:  call void asm sideeffect "b $0\0A", "s"(ptr @g2.cfi)

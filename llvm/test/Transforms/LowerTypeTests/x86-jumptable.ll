@@ -23,7 +23,7 @@ define i1 @foo(ptr %p) {
 !0 = !{i32 0, !"typeid1"}
 !1 = !{i32 8, !"cf-protection-branch", i32 1}
 
-; X86:         define private void @.cfi.jumptable() #[[#ATTR:]] align 16 {
+; X86:         define private void @.cfi.jumptable() #[[#ATTR:]] prefalign(16)
 ; X86-NEXT:    entry:
 ; X86_32-NEXT:   call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @f.cfi)
 ; X86_32-NEXT:   call void asm sideeffect "endbr32\0Ajmp ${0:c}@plt\0A.balign 16, 0xcc\0A", "s"(ptr @g.cfi)

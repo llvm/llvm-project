@@ -62,9 +62,9 @@ define i1 @foo(ptr %p) {
   ret i1 %x
 }
 
-; JT4:  define private void @[[JT]]() #[[ATTR:.*]] align 4 {
-; JT8:  define private void @[[JT]]() #[[ATTR:.*]] align 8 {
-; JT16: define private void @[[JT]]() #[[ATTR:.*]] align 16 {
+; JT4:  define private void @[[JT]]() #[[ATTR:.*]] prefalign(4) !elf_section_properties ![[PROP:[0-9]*]] {
+; JT8:  define private void @[[JT]]() #[[ATTR:.*]] prefalign(8) !elf_section_properties ![[PROP:[0-9]*]] {
+; JT16: define private void @[[JT]]() #[[ATTR:.*]] prefalign(16) !elf_section_properties ![[PROP:[0-9]*]] {
 
 ; X86:      jmp ${0:c}@plt
 ; X86-SAME: int3
@@ -120,6 +120,10 @@ define i1 @foo(ptr %p) {
 ; THUMBV6M: attributes #[[ATTR]] = { naked noinline "target-features"="+thumb-mode" }
 ; RISCV: attributes #[[ATTR]] = { naked noinline "target-features"="-c,-relax" }
 ; LOONGARCH64: attributes #[[ATTR]] = { naked noinline }
+
+; JT4: ![[PROP]] =  !{i64 1879002126, i64 4}
+; JT8: ![[PROP]] =  !{i64 1879002126, i64 8}
+; JT16: ![[PROP]] =  !{i64 1879002126, i64 16}
 
 ; WASM32: ![[I0]] = !{i64 1}
 ; WASM32: ![[I1]] = !{i64 2}
