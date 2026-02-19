@@ -149,17 +149,28 @@ static __isl_give isl_ast_graft *at_each_domain(__isl_take isl_ast_graft *graft,
 static isl_stat add_domain(__isl_take isl_map *executed,
 	struct isl_generate_domain_data *data)
 {
+	isl_bool disjoint;
 	isl_ast_build *build;
 	isl_ast_graft *graft;
 	isl_ast_graft_list *list;
-	isl_set *guard, *pending;
+	isl_set *guard, *pending, *domain;
+
+	guard = isl_map_domain(isl_map_copy(executed));
+	guard = isl_set_compute_divs(guard);
+	domain = isl_ast_build_get_domain(data->build);
+	disjoint = isl_set_is_disjoint(guard, domain);
+	isl_set_free(domain);
+
+	if (disjoint < 0 || disjoint) {
+		isl_set_free(guard);
+		isl_map_free(executed);
+		return isl_stat_non_error_bool(disjoint);
+	}
 
 	build = isl_ast_build_copy(data->build);
 	pending = isl_ast_build_get_pending(build);
 	build = isl_ast_build_replace_pending_by_guard(build, pending);
 
-	guard = isl_map_domain(isl_map_copy(executed));
-	guard = isl_set_compute_divs(guard);
 	guard = isl_set_coalesce_preserve(guard);
 	guard = isl_set_gist(guard, isl_ast_build_get_generated(build));
 	guard = isl_ast_build_specialize(build, guard);

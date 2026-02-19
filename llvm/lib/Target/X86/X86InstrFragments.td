@@ -50,6 +50,9 @@ def SDTX86BrCond  : SDTypeProfile<0, 3,
                                   [SDTCisVT<0, OtherVT>,
                                    SDTCisVT<1, i8>, SDTCisVT<2, i32>]>;
 
+def SDTX86BrCondSelf  : SDTypeProfile<0, 2,
+                                      [SDTCisVT<0, i8>, SDTCisVT<1, i32>]>;
+
 def SDTX86SetCC   : SDTypeProfile<1, 2,
                                   [SDTCisVT<0, i8>,
                                    SDTCisVT<1, i8>, SDTCisVT<2, i32>]>;
@@ -154,6 +157,8 @@ def X86cstore   : SDNode<"X86ISD::CSTORE",  SDTX86Cstore, [SDNPHasChain, SDNPMay
 def X86cmov    : SDNode<"X86ISD::CMOV",     SDTX86Cmov>;
 def X86brcond  : SDNode<"X86ISD::BRCOND",   SDTX86BrCond,
                         [SDNPHasChain]>;
+def X86brcond_self : SDNode<"X86ISD::BRCOND_SELF", SDTX86BrCondSelf,
+                            [SDNPHasChain]>;
 def X86setcc   : SDNode<"X86ISD::SETCC",    SDTX86SetCC>;
 def X86setcc_c : SDNode<"X86ISD::SETCC_CARRY", SDTX86SetCC_C>;
 
@@ -683,29 +688,9 @@ def X86lock_sub_nocf : PatFrag<(ops node:$lhs, node:$rhs),
   return hasNoCarryFlagUses(SDValue(N, 0));
 }]>;
 
-def X86tcret_6regs : PatFrag<(ops node:$ptr, node:$off),
-                             (X86tcret node:$ptr, node:$off), [{
-  // X86tcret args: (*chain, ptr, imm, regs..., glue)
-  unsigned NumRegs = 0;
-  for (unsigned i = 3, e = N->getNumOperands(); i != e; ++i)
-    if (isa<RegisterSDNode>(N->getOperand(i)) && ++NumRegs > 6)
-      return false;
-  return true;
-}]>;
-
-def X86tcret_1reg : PatFrag<(ops node:$ptr, node:$off),
-                             (X86tcret node:$ptr, node:$off), [{
-  // X86tcret args: (*chain, ptr, imm, regs..., glue)
-  unsigned NumRegs = 1;
-  const SDValue& BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
-  if (isa<FrameIndexSDNode>(BasePtr))
-    NumRegs = 3;
-  else if (BasePtr->getNumOperands() && isa<GlobalAddressSDNode>(BasePtr->getOperand(0)))
-    NumRegs = 3;
-  for (unsigned i = 3, e = N->getNumOperands(); i != e; ++i)
-    if (isa<RegisterSDNode>(N->getOperand(i)) && ( NumRegs-- == 0))
-      return false;
-  return true;
+def X86tcret_enough_regs : PatFrag<(ops node:$ptr, node:$off),
+                                   (X86tcret node:$ptr, node:$off), [{
+  return checkTCRetEnoughRegs(N);
 }]>;
 
 // If this is an anyext of the remainder of an 8-bit sdivrem, use a MOVSX

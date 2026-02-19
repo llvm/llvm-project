@@ -10,6 +10,9 @@ int foo() {
   return e;
 }
 
+// CIR-DAG: cir.global "private" constant cir_private @[[FOO4_P:.*]] = #cir.const_record<{#cir.int<5> : !s32i, #cir.int<10> : !s32i}> : !rec_Point
+// LLVM-DAG: @[[FOO4_P:.*]] = private constant %struct.Point { i32 5, i32 10 }
+
 // CIR: %[[RET:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR: %[[INIT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
 // CIR: %[[COMPOUND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, [".compoundliteral", init]
@@ -107,12 +110,12 @@ void foo4() {
 
 // CIR-LABEL: @_Z4foo4v
 // CIR:   %[[P:.*]] = cir.alloca !rec_Point, !cir.ptr<!rec_Point>, ["p", init]
-// CIR:   %[[CONST:.*]] = cir.const #cir.const_record<{#cir.int<5> : !s32i, #cir.int<10> : !s32i}> : !rec_Point
-// CIR:   cir.store{{.*}} %[[CONST]], %[[P]] : !rec_Point, !cir.ptr<!rec_Point>
+// CIR:   %[[CONST:.*]] = cir.get_global @[[FOO4_P]] : !cir.ptr<!rec_Point>
+// CIR:   cir.copy %[[CONST]] to %[[P]] : !cir.ptr<!rec_Point>
 
 // LLVM-LABEL: @_Z4foo4v
 // LLVM:   %[[P:.*]] = alloca %struct.Point
-// LLVM:   store %struct.Point { i32 5, i32 10 }, ptr %[[P]], align 4
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[P]], ptr @[[FOO4_P]]
 
 // OGCG-LABEL: @_Z4foo4v
 // OGCG:   %[[P:.*]] = alloca %struct.Point

@@ -11,7 +11,7 @@
 
 #include "lldb/Host/ProcessLauncher.h"
 #include "lldb/Host/windows/windows.h"
-#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 
@@ -37,6 +37,13 @@ public:
   ///     failure.
   static llvm::ErrorOr<ProcThreadAttributeList>
   Create(STARTUPINFOEXW &startupinfoex);
+
+  /// Setup the PseudoConsole handle in the underlying
+  /// LPPROC_THREAD_ATTRIBUTE_LIST.
+  ///
+  /// \param hPC
+  ///     The handle to the PseudoConsole.
+  llvm::Error SetupPseudoConsole(HPCON hPC);
 
   ~ProcThreadAttributeList() {
     if (lpAttributeList) {

@@ -238,8 +238,8 @@ std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForStrcpy(
 
 std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForStrcmp(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Src1,
-    SDValue Src2, MachinePointerInfo Op1PtrInfo,
-    MachinePointerInfo Op2PtrInfo) const {
+    SDValue Src2, MachinePointerInfo Op1PtrInfo, MachinePointerInfo Op2PtrInfo,
+    const CallInst *CI) const {
   SDVTList VTs = DAG.getVTList(Src1.getValueType(), MVT::i32, MVT::Other);
   // Swap operands to invert CC == 1 vs. CC == 2 cases.
   SDValue Unused = DAG.getNode(SystemZISD::STRCMP, DL, VTs, Chain, Src2, Src1,

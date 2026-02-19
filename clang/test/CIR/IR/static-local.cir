@@ -1,0 +1,19 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+// Test static_local_guard attribute on global and static_local on get_global
+cir.global "private" internal static_local_guard<"_ZGVZ1fvE1x"> @_ZZ1fvE1x : !s32i
+// CHECK: cir.global "private" internal static_local_guard<"_ZGVZ1fvE1x"> @_ZZ1fvE1x : !s32i
+
+cir.func @test_static_local() {
+  %0 = cir.get_global static_local @_ZZ1fvE1x : !cir.ptr<!s32i>
+  cir.return
+}
+// CHECK: cir.func @test_static_local()
+// CHECK:   %{{.*}} = cir.get_global static_local @_ZZ1fvE1x : !cir.ptr<!s32i>
+// CHECK:   cir.return
+
+}

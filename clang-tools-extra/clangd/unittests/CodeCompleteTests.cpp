@@ -2822,6 +2822,18 @@ TEST(CompletionTest, ArgumentListsPolicy) {
                                          named("FOO"), snippetSuffix("($0)"))));
   }
   {
+    auto Results = completions(
+        R"cpp(
+      void function() {
+        auto Lambda = [](int a, const double &b) {return 1.f;};
+        Lam^
+      })cpp",
+        {}, Opts);
+    EXPECT_THAT(
+        Results.Completions,
+        UnorderedElementsAre(AllOf(named("Lambda"), snippetSuffix("($0)"))));
+  }
+  {
     Opts.ArgumentLists = Config::ArgumentListsPolicy::None;
     auto Results = completions(
         R"cpp(
