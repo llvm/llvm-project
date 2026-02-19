@@ -2685,6 +2685,21 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     }
   }
 
+  // Gather the loop-invariant address with conflicts.
+  for (LoadInst *LD : Loads) {
+    Value *Ptr = LD->getPointerOperand();
+    if (UniformStores.contains(Ptr)) {
+      if (TheLoop->isLoopInvariant(LD->getPointerOperand())) {
+        for (StoreInst *ST : StoresToInvariantAddresses) {
+          if (ST->getPointerOperand() == Ptr) {
+            InvariantAddressConflicts.emplace_back(LD, ST);
+            break;
+          }
+        }
+      }
+    }
+  }
+
   if (IsAnnotatedParallel) {
     LLVM_DEBUG(
         dbgs() << "LAA: A loop annotated parallel, ignore memory dependency "
