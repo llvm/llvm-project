@@ -386,22 +386,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                             MI.getFlag(MachineInstr::MIFlag::IsExact));
     break;
   }
-  case TargetOpcode::G_UREM: {
-    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
-                         Depth + 1);
-    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
-                         Depth + 1);
-    Known = KnownBits::urem(Known, Known2);
-    break;
-  }
-  case TargetOpcode::G_SREM: {
-    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
-                         Depth + 1);
-    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
-                         Depth + 1);
-    Known = KnownBits::srem(Known, Known2);
-    break;
-  }
   case TargetOpcode::G_SELECT: {
     computeKnownBitsMin(MI.getOperand(2).getReg(), MI.getOperand(3).getReg(),
                         Known, DemandedElts, Depth + 1);
@@ -543,6 +527,37 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
 
     Known.Zero = Known.Zero.rotr(Amt);
     Known.One = Known.One.rotr(Amt);
+    break;
+  }
+  case TargetOpcode::G_FSHL:
+  case TargetOpcode::G_FSHR: {
+    MachineInstr *AmtOpMI = MRI.getVRegDef(MI.getOperand(2).getReg());
+    auto MaybeAmtOp = isConstantOrConstantSplatVector(*AmtOpMI, MRI);
+    if (!MaybeAmtOp)
+      break;
+    unsigned Amt = MaybeAmtOp->urem(BitWidth);
+
+    if (Amt == 0) {
+      computeKnownBitsImpl(
+          MI.getOperand(Opcode == TargetOpcode::G_FSHL ? 0 : 1).getReg(), Known,
+          DemandedElts, Depth + 1);
+      break;
+    }
+
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), Known, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), Known2, DemandedElts,
+                         Depth + 1);
+
+    if (Opcode == TargetOpcode::G_FSHL) {
+      Known <<= Amt;
+      Known2 >>= BitWidth - Amt;
+    } else {
+      Known <<= BitWidth - Amt;
+      Known2 >>= Amt;
+    }
+    Known = Known.unionWith(Known2);
+
     break;
   }
   case TargetOpcode::G_INTTOPTR:
