@@ -1960,6 +1960,66 @@ void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, unsigned OpNum,
   }
 }
 
+void NVPTXAsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+                                    const MCTargetOptions &MCOptions,
+                                    const MDNode *LocMDNode,
+                                    InlineAsm::AsmDialect Dialect,
+                                    const MachineInstr *MI) {
+  assert(!Str.empty() && "Can't emit empty inline asm block");
+  SmallString<256> StringData;
+  raw_svector_ostream OS(StringData);
+  // Remember if the buffer is nul terminated or not so we can avoid a copy.
+  if (Str.back() == 0)
+    Str = Str.substr(0, Str.size() - 1);
+
+  auto emitAsmStr = [&](StringRef AsmStr) {
+    emitInlineAsmStart();
+    OutStreamer->emitRawText(AsmStr);
+    emitInlineAsmEnd(STI, nullptr, MI);
+  };
+  if (!MI || !MI->getDebugLoc()) {
+    emitAsmStr(Str);
+    return;
+  }
+  const MachineFunction &MF = *MI->getMF();
+  const DISubprogram *SP = MF.getFunction().getSubprogram();
+  const bool NoDebug =
+      !SP || SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug;
+  if (NoDebug) {
+    emitAsmStr(Str);
+    return;
+  }
+  // Extract debug location info from MI if available.
+  const DILocation *DL = MI->getDebugLoc();
+  unsigned Line = DL->getLine();
+  const unsigned Column = DL->getColumn();
+  const DIFile *File = DL->getFile();
+  if (!File || !Line) {
+    emitAsmStr(Str);
+    return;
+  }
+  const unsigned CUID = OutStreamer->getContext().getDwarfCompileUnitID();
+  const unsigned FileNumber = OutStreamer->emitDwarfFileDirective(
+      0, File->getDirectory(), File->getFilename(), std::nullopt, std::nullopt,
+      CUID);
+
+  // Tokenize Str by newlines and emit .loc before lines starting with a-zA-Z.
+  SmallVector<StringRef, 16> Lines;
+  Str.split(Lines, '\n');
+  for (const StringRef &L : Lines) {
+    StringRef RTrimmed = L.rtrim('\r'); // Handles Windows line endings.
+    StringRef Trimmed = L.ltrim();
+    if (!Trimmed.empty() &&
+        (std::isalpha(static_cast<unsigned char>(Trimmed[0])) ||
+         Trimmed[0] == '_'))
+      OS << "\t.loc " << FileNumber << " " << Line << " " << Column << "\n";
+    OS << RTrimmed << "\n";
+    ++Line;
+  }
+
+  emitAsmStr(StringData);
+}
+
 char NVPTXAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(NVPTXAsmPrinter, "nvptx-asm-printer", "NVPTX Assembly Printer",
