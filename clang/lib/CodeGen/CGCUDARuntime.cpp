@@ -26,7 +26,7 @@ static llvm::Value *emitGetParamBuf(CodeGenFunction &CGF,
                                     const CUDAKernelCallExpr *E) {
   auto *GetParamBuf = CGF.getContext().getcudaGetParameterBufferDecl();
   const FunctionProtoType *GetParamBufProto =
-      GetParamBuf->getType()->getAs<FunctionProtoType>();
+      GetParamBuf->getType()->castAs<FunctionProtoType>();
 
   DeclRefExpr *DRE = DeclRefExpr::Create(
       CGF.getContext(), {}, {}, GetParamBuf,
@@ -42,9 +42,9 @@ static llvm::Value *emitGetParamBuf(CodeGenFunction &CGF,
   Args.add(RValue::get(CGF.CGM.getSize(CharUnits::fromQuantity(64))),
            CGF.getContext().getSizeType());
   // Calculate parameter sizes.
-  const PointerType *PT = E->getCallee()->getType()->getAs<PointerType>();
+  const PointerType *PT = E->getCallee()->getType()->castAs<PointerType>();
   const FunctionProtoType *FTP =
-      PT->getPointeeType()->getAs<FunctionProtoType>();
+      PT->getPointeeType()->castAs<FunctionProtoType>();
   CharUnits Offset = CharUnits::Zero();
   for (auto ArgTy : FTP->getParamTypes()) {
     auto TInfo = CGF.CGM.getContext().getTypeInfoInChars(ArgTy);
@@ -79,14 +79,14 @@ RValue CGCUDARuntime::EmitCUDADeviceKernelCallExpr(
   eval.begin(CGF);
   CGF.EmitBlock(ConfigOKBlock);
 
-  QualType KernelCalleeFuncTy =
-      E->getCallee()->getType()->getAs<PointerType>()->getPointeeType();
+  const auto *KernelPT = E->getCallee()->getType()->castAs<PointerType>();
+  QualType KernelCalleeFuncTy = KernelPT->getPointeeType();
   CGCallee KernelCallee = CGF.EmitCallee(E->getCallee());
   // Emit kernel arguments.
   CallArgList KernelCallArgs;
-  CGF.EmitCallArgs(KernelCallArgs,
-                   KernelCalleeFuncTy->getAs<FunctionProtoType>(),
-                   E->arguments(), E->getDirectCallee());
+  const auto *KernelFPT = KernelCalleeFuncTy->castAs<FunctionProtoType>();
+  CGF.EmitCallArgs(KernelCallArgs, KernelFPT, E->arguments(),
+                   E->getDirectCallee());
   // Copy emitted kernel arguments into that parameter buffer.
   RawAddress CfgBase(Config, CGM.Int8Ty,
                      /*Alignment=*/CharUnits::fromQuantity(64));
@@ -101,22 +101,20 @@ RValue CGCUDARuntime::EmitCUDADeviceKernelCallExpr(
   }
   // Make `cudaLaunchDevice` call, i.e. E->getConfig().
   const CallExpr *LaunchCall = E->getConfig();
-  QualType LaunchCalleeFuncTy = LaunchCall->getCallee()
-                                    ->getType()
-                                    ->getAs<PointerType>()
-                                    ->getPointeeType();
+  const auto *LaunchPT =
+      LaunchCall->getCallee()->getType()->castAs<PointerType>();
+  QualType LaunchCalleeFuncTy = LaunchPT->getPointeeType();
   CGCallee LaunchCallee = CGF.EmitCallee(LaunchCall->getCallee());
   CallArgList LaunchCallArgs;
-  CGF.EmitCallArgs(LaunchCallArgs,
-                   LaunchCalleeFuncTy->getAs<FunctionProtoType>(),
-                   LaunchCall->arguments(), LaunchCall->getDirectCallee());
+  const auto *LaunchFPT = LaunchCalleeFuncTy->castAs<FunctionProtoType>();
+  CGF.EmitCallArgs(LaunchCallArgs, LaunchFPT, LaunchCall->arguments(),
+                   LaunchCall->getDirectCallee());
   // Replace func and paramterbuffer arguments.
   LaunchCallArgs[0] = CallArg(RValue::get(KernelCallee.getFunctionPointer()),
                               CGM.getContext().VoidPtrTy);
   LaunchCallArgs[1] = CallArg(RValue::get(Config), CGM.getContext().VoidPtrTy);
   const CGFunctionInfo &LaunchCallInfo = CGM.getTypes().arrangeFreeFunctionCall(
-      LaunchCallArgs, LaunchCalleeFuncTy->getAs<FunctionProtoType>(),
-      /*ChainCall=*/false);
+      LaunchCallArgs, LaunchFPT, /*ChainCall=*/false);
   CGF.EmitCall(LaunchCallInfo, LaunchCallee, ReturnValue, LaunchCallArgs,
                CallOrInvoke,
                /*IsMustTail=*/false, E->getExprLoc());
