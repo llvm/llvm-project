@@ -1357,9 +1357,6 @@ bool CodeGenFunction::EmitLifetimeStart(llvm::Value *Addr) {
   if (!ShouldEmitLifetimeMarkers)
     return false;
 
-  assert(Addr->getType()->getPointerAddressSpace() ==
-             CGM.getDataLayout().getAllocaAddrSpace() &&
-         "Pointer should be in alloca address space");
   llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMLifetimeStartFn(), {Addr});
   C->setDoesNotThrow();
   return true;
@@ -1369,9 +1366,6 @@ void CodeGenFunction::EmitLifetimeEnd(llvm::Value *Addr) {
   if (!ShouldEmitLifetimeMarkers)
     return;
 
-  assert(Addr->getType()->getPointerAddressSpace() ==
-             CGM.getDataLayout().getAllocaAddrSpace() &&
-         "Pointer should be in alloca address space");
   llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMLifetimeEndFn(), {Addr});
   C->setDoesNotThrow();
 }
@@ -2708,14 +2702,14 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   bool DoStore = false;
   bool IsScalar = hasScalarEvaluationKind(Ty);
   bool UseIndirectDebugAddress = false;
+  LangAS DestLangAS = getLangOpts().OpenCL   ? LangAS::opencl_private
+                      : getLangOpts().OpenMP ? LangAS::Default
+                                             : Ty.getAddressSpace();
 
   // If we already have a pointer to the argument, reuse the input pointer.
   if (Arg.isIndirect()) {
     DeclPtr = Arg.getIndirectAddress();
     DeclPtr = DeclPtr.withElementType(ConvertTypeForMem(Ty));
-    // Indirect argument is in alloca address space, which may be different
-    // from the default address space.
-    auto AllocaAS = CGM.getASTAllocaAddressSpace();
     auto *V = DeclPtr.emitRawPointer(*this);
     AllocaPtr = RawAddress(V, DeclPtr.getElementType(), DeclPtr.getAlignment());
 
@@ -2731,13 +2725,8 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       EmitStoreOfScalar(V, AllocaPtr, /* Volatile */ false, PtrTy);
     }
 
-    auto SrcLangAS = getLangOpts().OpenCL ? LangAS::opencl_private : AllocaAS;
-    auto DestLangAS =
-        getLangOpts().OpenCL ? LangAS::opencl_private : LangAS::Default;
-    if (SrcLangAS != DestLangAS) {
-      assert(getContext().getTargetAddressSpace(SrcLangAS) ==
-             CGM.getDataLayout().getAllocaAddrSpace());
-      auto DestAS = getContext().getTargetAddressSpace(DestLangAS);
+    unsigned DestAS = getContext().getTargetAddressSpace(DestLangAS);
+    if (DeclPtr.getAddressSpace() != DestAS) {
       auto *T = llvm::PointerType::get(getLLVMContext(), DestAS);
       DeclPtr = DeclPtr.withPointer(performAddrSpaceCast(V, T),
                                     DeclPtr.isKnownNonNull());
@@ -2769,7 +2758,18 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       AllocaPtr = DeclPtr;
     } else {
       // Otherwise, create a temporary to hold the value.
-      DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
+      // Sema is not capable of setting the decayed addrspace for a non-decayed
+      // array, so some frontends rely on overriding the Sema type here with a
+      // different addrspace.
+      // (We could also copy CreateMemTemp here instead, or add the parameter
+      // there just for this).
+      QualType TyAS = Ty;
+      if (TyAS->isArrayType() || TyAS->isFunctionType())
+        TyAS = getContext().getDecayedType(TyAS);
+      if (Ty.getAddressSpace() != DestLangAS)
+        TyAS = getContext().getAddrSpaceQualType(
+            getContext().removeAddrSpaceQualType(TyAS), DestLangAS);
+      DeclPtr = CreateMemTemp(TyAS, getContext().getDeclAlign(&D),
                               D.getName() + ".addr", &AllocaPtr);
     }
     DoStore = true;

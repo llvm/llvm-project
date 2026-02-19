@@ -1254,8 +1254,8 @@ static void SetupCleanupBlockActivation(CodeGenFunction &CGF,
   Address var = Scope.getActiveFlag();
   if (!var.isValid()) {
     CodeGenFunction::AllocaTrackerRAII AllocaTracker(CGF);
-    var = CGF.CreateTempAlloca(CGF.Builder.getInt1Ty(), CharUnits::One(),
-                               "cleanup.isactive");
+    var = CGF.CreateTempAlloca(CGF.Builder.getInt1Ty(), LangAS::Default,
+                               CharUnits::One(), "cleanup.isactive");
     Scope.setActiveFlag(var);
     Scope.AddAuxAllocas(AllocaTracker.Take());
 
