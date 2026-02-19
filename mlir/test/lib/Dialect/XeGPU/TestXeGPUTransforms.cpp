@@ -424,9 +424,8 @@ struct TestXeGPUResolveLayoutConflicts
       default;
 
   void runOnOperation() override {
-    if (failed(xegpu::resolveLayoutConflicts(getOperation()))) {
+    if (failed(xegpu::resolveLayoutConflicts(getOperation())))
       signalPassFailure();
-    }
   }
 };
 

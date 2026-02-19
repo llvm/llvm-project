@@ -24,7 +24,9 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -1235,6 +1237,115 @@ namespace {
 //===----------------------------------------------------------------------===//
 // ResolveLayoutConflicts
 //===----------------------------------------------------------------------===//
+
+/// Helper to get the defining CreateNdDescOp of a tensor descriptor value. This
+/// function tries to find the defining CreateNdDescOp recursively accross
+/// control-flow boundaries.
+static xegpu::CreateNdDescOp getDefiningCreateNdDescOp(Value tdescValue) {
+  // Try to get the defining CreateNdDescOp of the tensor descriptor.
+  auto definingOp = tdescValue.getDefiningOp<xegpu::CreateNdDescOp>();
+  if (definingOp)
+    return definingOp;
+  // If tdescValue is an argument, try to get the tied init value from the
+  // parent loop-like op.
+  if (auto arg = dyn_cast<BlockArgument>(tdescValue)) {
+    auto *parentOp = arg.getOwner()->getParentOp();
+    if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
+      OpOperand *tiedInit = loop.getTiedLoopInit(arg);
+      if (tiedInit)
+        return getDefiningCreateNdDescOp(tiedInit->get());
+    }
+  }
+  // If not found, return null.
+  return nullptr;
+}
+
+static xegpu::DistributeLayoutAttr
+getExpectedLayoutAt(OpOperand &operand,
+                    xegpu::DistributeLayoutAttr currLayout) {
+  Operation *op = operand.getOwner();
+  unsigned idx = operand.getOperandNumber();
+
+  // For vector::BroadcastOp, infer the source layout from the result layout.
+  if (auto broadcast = dyn_cast<vector::BroadcastOp>(op)) {
+    auto resLayout = xegpu::getDistributeLayoutAttr(broadcast->getResult(0));
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    auto srcTy = dyn_cast<VectorType>(broadcast.getSourceType());
+    if (!srcTy)
+      return xegpu::DistributeLayoutAttr();
+    return xegpu::inferBroadcastSourceLayout(
+        resLayout, broadcast.getResultVectorType().getShape(),
+        srcTy.getShape());
+  }
+
+  // For vector::MultiDimReductionOp, infer source layout from result layout
+  // using reduction dims. Acc operand is expected to have the same layout as
+  // the result.
+  if (auto reduction = dyn_cast<vector::MultiDimReductionOp>(op)) {
+    auto resLayout = xegpu::getDistributeLayoutAttr(reduction->getResult(0));
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    if (idx == 0) {
+      SmallVector<int64_t> reductionDims(reduction.getReductionDims());
+      return xegpu::inferMultiReductionSourceLayout(resLayout, reductionDims);
+    }
+    if (idx == 1)
+      return resLayout;
+  }
+
+  // For vector::BitCastOp, infer source layout from result layout using
+  // element type bitwidths.
+  if (auto bitcast = dyn_cast<vector::BitCastOp>(op)) {
+    auto resLayout = xegpu::getDistributeLayoutAttr(bitcast->getResult(0));
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    int resElemBitWidth =
+        bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
+    int srcElemBitWidth =
+        bitcast.getSourceVectorType().getElementType().getIntOrFloatBitWidth();
+    return xegpu::inferBitCastSourceLayout(resLayout, resElemBitWidth,
+                                           srcElemBitWidth);
+  }
+
+  // For vector::ShapeCastOp, infer source layout from result layout using
+  // shapes.
+  if (auto shapeCast = dyn_cast<vector::ShapeCastOp>(op)) {
+    auto resLayout = xegpu::getDistributeLayoutAttr(shapeCast->getResult(0));
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    return xegpu::inferShapeCastSourceLayout(
+        resLayout, shapeCast.getResultVectorType().getShape(),
+        shapeCast.getSourceVectorType().getShape());
+  }
+
+  // For vector::InsertStridedSliceOp, infer source layout from result layout.
+  // Dest vector must have the same layout as the result.
+  if (auto insertSlice = dyn_cast<vector::InsertStridedSliceOp>(op)) {
+    auto resLayout = xegpu::getDistributeLayoutAttr(insertSlice->getResult(0));
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    if (idx == 0)
+      return xegpu::inferInsertStridedSliceSourceLayout(
+          resLayout, insertSlice.getDestVectorType().getShape(),
+          insertSlice.getSourceVectorType().getShape());
+    if (idx == 1)
+      return resLayout;
+  }
+  // For elementwise operations, all operands must have the same layout as the
+  // result.
+  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
+    auto resLayout = xegpu::getDistributeLayoutAttr(op->getResult(0));
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    return resLayout;
+  }
+  // TODO: Handle more cases as needed here.
+  // Fallback to currently assigned layout for all other cases. This assumes no
+  // conflicts.
+  return currLayout;
+}
+
 struct ResolveLayoutConflicts {
   ResolveLayoutConflicts(Operation *parentOp)
       : parentOp(parentOp), builder(parentOp->getContext()) {}
@@ -1259,12 +1370,19 @@ LogicalResult ResolveLayoutConflicts::run() {
       if (isa<xegpu::AnchorLayoutInterface>(op) &&
           isa<xegpu::TensorDescType>(operandType)) {
         auto res = resolveTensorDescConsumer(operand);
-        return succeeded(res) ? WalkResult::advance() : WalkResult::interrupt();
+        if (failed(res)) {
+          DBGS() << "Failed to resolve tensor descriptor consumer: " << *op
+                 << "\n";
+          return WalkResult::interrupt();
+        }
       }
       // Handle conflicts in vector operands.
       if (isa<VectorType>(operandType)) {
         auto res = resolveVectorConsumer(operand);
-        return succeeded(res) ? WalkResult::advance() : WalkResult::interrupt();
+        if (failed(res)) {
+          DBGS() << "Failed to resolve vector consumer: " << *op << "\n";
+          return WalkResult::interrupt();
+        }
       }
     }
     return WalkResult::advance();
@@ -1273,32 +1391,36 @@ LogicalResult ResolveLayoutConflicts::run() {
   return r.wasInterrupted() ? failure() : success();
 }
 
-/// Helper to get the defining CreateNdDescOp of a tensor descriptor value. This
-/// function tries to find the defining CreateNdDescOp recursively accross
-/// control-flow boundaries.
-static xegpu::CreateNdDescOp getDefiningCreateNdDescOp(Value tdescValue) {
-  // Try to get the defining CreateNdDescOp of the tensor descriptor.
-  auto definingOp = tdescValue.getDefiningOp<xegpu::CreateNdDescOp>();
-  if (definingOp)
-    return definingOp;
-  // If tdescValue is an argument, try to get the tied init value from the
-  // parent loop-like op.
-  if (auto arg = dyn_cast<BlockArgument>(tdescValue)) {
-    auto *parentOp = arg.getOwner()->getParentOp();
-    if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
-      OpOperand *tiedInit = loop.getTiedLoopInit(arg);
-      if (tiedInit)
-        return getDefiningCreateNdDescOp(tiedInit->get());
-    }
-  }
-  // If not found, return null.
-  return nullptr;
-}
-
 LogicalResult
 ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
-  // TODO: Implement vector consumer layout conflict resolution. Requires layout
-  // utilities.
+  Value vectorValue = operand.get();
+  Operation *consumerOp = operand.getOwner();
+  // Get the current layout of the vector value.
+  auto currLayout = xegpu::getDistributeLayoutAttr(vectorValue);
+  if (!currLayout) {
+    consumerOp->emitError("Vector operand has no layout assigned.");
+    return failure();
+  }
+
+  // Get the expected layout at this operand.
+  auto expectedLayout = getExpectedLayoutAt(operand, currLayout);
+  if (!expectedLayout) {
+    consumerOp->emitError("No expected layout found for vector operand.");
+    return failure();
+  }
+
+  // If layouts are same, no conflict exists, return success.
+  if (expectedLayout.isEqualTo(currLayout))
+    return success();
+
+  // Insert a convert_layout op to resolve the conflict.
+  builder.setInsertionPointAfterValue(vectorValue);
+  auto convertOp = xegpu::ConvertLayoutOp::create(
+      builder, consumerOp->getLoc(), vectorValue.getType(), vectorValue,
+      currLayout, expectedLayout);
+
+  // Update the operand to use the converted value.
+  operand.set(convertOp.getResult());
   return success();
 }
 
