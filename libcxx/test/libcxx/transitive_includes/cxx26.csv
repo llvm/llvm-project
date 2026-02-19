@@ -744,16 +744,11 @@ print string_view
 print tuple
 print typeinfo
 print version
-queue array
 queue cctype
-queue cerrno
 queue climits
-queue clocale
 queue compare
-queue cstddef
 queue cstdint
 queue cstdio
-queue cstdlib
 queue cstring
 queue cwchar
 queue cwctype
@@ -765,7 +760,6 @@ queue stdexcept
 queue string
 queue string_view
 queue tuple
-queue typeinfo
 queue vector
 queue version
 random cctype
@@ -811,9 +805,7 @@ ranges version
 ratio climits
 ratio cstdint
 ratio version
-regex array
 regex cctype
-regex cerrno
 regex climits
 regex clocale
 regex compare
@@ -1125,16 +1117,11 @@ variant cstring
 variant initializer_list
 variant limits
 variant version
-vector array
 vector cctype
-vector cerrno
 vector climits
-vector clocale
 vector compare
-vector cstddef
 vector cstdint
 vector cstdio
-vector cstdlib
 vector cstring
 vector cwchar
 vector cwctype
@@ -1145,5 +1132,4 @@ vector stdexcept
 vector string
 vector string_view
 vector tuple
-vector typeinfo
 vector version
