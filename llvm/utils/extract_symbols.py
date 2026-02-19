@@ -123,6 +123,9 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
         and (symbol.startswith("?Head@") or symbol.startswith("?Tail@"))
     ):
         return symbol
+    # Skip symbols added by the compiler with -fprofile-generate.
+    elif symbol.startswith("__prof"):
+        return None
     # Keep mangled llvm:: and clang:: function symbols. How we detect these is a
     # bit of a mess and imprecise, but that avoids having to completely demangle
     # the symbol name. The outermost namespace is at the end of the identifier
