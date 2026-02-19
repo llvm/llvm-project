@@ -145,6 +145,7 @@ static bool isKnownMonotonic(VPValue *V) {
     return isKnownMonotonic(X) && isKnownMonotonic(Y);
   if (match(V, m_StepVector()))
     return true;
+  // Only handle a subset of IVs until we can guarantee there's no overflow.
   if (auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(V))
     return match(WidenIV->getStartValue(), m_ZeroInt()) &&
            match(WidenIV->getStepValue(), m_One());
