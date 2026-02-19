@@ -516,7 +516,7 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
   }
   if (Chunks.count("refs")) {
     Reader RefsReader(Chunks.lookup("refs"));
-    RefSlab::Builder Refs;
+    RefSlab::BuilderExpectUnique Refs;
     while (!RefsReader.eof()) {
       auto RefsBundle = readRefs(RefsReader, Strings->Strings);
       for (const auto &Ref : RefsBundle.second) // FIXME: bulk insert?

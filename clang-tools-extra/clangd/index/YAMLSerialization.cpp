@@ -473,7 +473,7 @@ void writeYAML(const IndexFileOut &O, llvm::raw_ostream &OS) {
 llvm::Expected<IndexFileIn> readYAML(llvm::StringRef Data,
                                      SymbolOrigin Origin) {
   SymbolSlab::Builder Symbols;
-  RefSlab::Builder Refs;
+  RefSlab::BuilderExpectUnique Refs;
   RelationSlab::Builder Relations;
   llvm::BumpPtrAllocator
       Arena; // store the underlying data of Position::FileURI.
