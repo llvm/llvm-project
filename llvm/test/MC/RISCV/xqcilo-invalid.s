@@ -1,7 +1,7 @@
 # Xqcilo - Qualcomm uC Extension Large Offset Load Store extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqcilo < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+xqcilo < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-IMM %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcilo < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=-xqcilo < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-EXT %s
 
 # CHECK: :[[@LINE+1]]:9: error: invalid operand for instruction

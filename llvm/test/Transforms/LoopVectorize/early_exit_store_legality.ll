@@ -461,7 +461,7 @@ exit:
 
 define void @loop_contains_store_uncounted_exit_is_not_guaranteed_to_execute(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_uncounted_exit_is_not_guaranteed_to_execute'
-; CHECK:       LV: Not vectorizing: Early exit is not the latch predecessor.
+; CHECK:       LV: Not vectorizing: Last early exiting block in the chain is not the latch predecessor.
 entry:
   br label %for.body
 
@@ -633,7 +633,7 @@ invalid.block:
 
 define void @crash_conditional_load_for_uncountable_exit_argptr(ptr dereferenceable(40) noalias %store.area, ptr dereferenceable(4) %load.area, i1 %skip.cond) {
 ; CHECK-LABEL: LV: Checking a loop in 'crash_conditional_load_for_uncountable_exit_argptr'
-; CHECK:       LV: Not vectorizing: Loop has too many uncountable exits.
+; CHECK:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
 entry:
   br label %for.body
 

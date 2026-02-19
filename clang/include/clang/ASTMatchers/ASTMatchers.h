@@ -7016,6 +7016,19 @@ AST_MATCHER_P(ReferenceTypeLoc, hasReferentLoc, internal::Matcher<TypeLoc>,
 extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, ArrayTypeLoc>
     arrayTypeLoc;
 
+/// Matches `FunctionTypeLoc`s.
+///
+/// Given
+/// \code
+///   void f(int);
+///   using g = double (char, float);
+///   char (*fn_ptr)();
+/// \endcode
+/// functionTypeLoc()
+///   matches "void (int)", "double (char, float)", and "char ()".
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, FunctionTypeLoc>
+    functionTypeLoc;
+
 /// Matches template specialization `TypeLoc`s.
 ///
 /// Given
@@ -8753,6 +8766,21 @@ AST_MATCHER_P(OMPExecutableDirective, hasAnyClause,
                                     Builder) != Clauses.end();
 }
 
+/// Matches any ``#pragma omp target update`` executable directive.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update from(a)
+///   #pragma omp target update to(b)
+/// \endcode
+///
+/// ``ompTargetUpdateDirective()`` matches both ``omp target update from(a)``
+/// and ``omp target update to(b)``.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt,
+                                                   OMPTargetUpdateDirective>
+    ompTargetUpdateDirective;
+
 /// Matches OpenMP ``default`` clause.
 ///
 /// Given
@@ -8865,6 +8893,30 @@ AST_MATCHER_P(OMPExecutableDirective, isAllowedToContainClauseKind,
       Node.getDirectiveKind(), CKind,
       Finder->getASTContext().getLangOpts().OpenMP);
 }
+
+/// Matches OpenMP ``from`` clause.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update from(a)
+/// \endcode
+///
+/// ``ompFromClause()`` matches ``from(a)``.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPFromClause>
+    ompFromClause;
+
+/// Matches OpenMP ``to`` clause.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update to(a)
+/// \endcode
+///
+/// ``ompToClause()`` matches ``to(a)``.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPToClause>
+    ompToClause;
 
 //----------------------------------------------------------------------------//
 // End OpenMP handling.

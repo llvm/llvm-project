@@ -228,12 +228,6 @@ public:
   /// The file to log CC_LOG_DIAGNOSTICS output to, if enabled.
   std::string CCLogDiagnosticsFilename;
 
-  /// An input type and its arguments.
-  using InputTy = std::pair<types::ID, const llvm::opt::Arg *>;
-
-  /// A list of inputs and their types for the given arguments.
-  using InputList = SmallVector<InputTy, 16>;
-
   /// Whether the driver should follow g++ like behavior.
   bool CCCIsCXX() const { return Mode == GXXMode; }
 
@@ -507,9 +501,6 @@ public:
 
   /// BuildActions - Construct the list of actions to perform for the
   /// given arguments, which are only done for a single architecture.
-  /// If the compilation is an explicit module build, delegates to
-  /// BuildDriverManagedModuleBuildActions. Otherwise, BuildDefaultActions is
-  /// used.
   ///
   /// \param C - The compilation that is being built.
   /// \param Args - The input arguments.
@@ -549,8 +540,7 @@ public:
   /// issue a diagnostic and return false.
   /// If TypoCorrect is true and the file does not exist, see if it looks
   /// like a likely typo for a flag and if so print a "did you mean" blurb.
-  bool DiagnoseInputExistence(const llvm::opt::DerivedArgList &Args,
-                              StringRef Value, types::ID Ty,
+  bool DiagnoseInputExistence(StringRef Value, types::ID Ty,
                               bool TypoCorrect) const;
 
   /// BuildJobs - Bind actions to concrete tools and translate
@@ -794,35 +784,6 @@ private:
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
   void setLTOMode(const llvm::opt::ArgList &Args);
 
-  /// BuildDefaultActions - Constructs the list of actions to perform
-  /// for the provided arguments, which are only done for a single architecture.
-  ///
-  /// \param C - The compilation that is being built.
-  /// \param Args - The input arguments.
-  /// \param Actions - The list to store the resulting actions onto.
-  void BuildDefaultActions(Compilation &C, llvm::opt::DerivedArgList &Args,
-                           const InputList &Inputs, ActionList &Actions) const;
-
-  /// BuildDriverManagedModuleBuildActions - Performs a dependency
-  /// scan and constructs the list of actions to perform for dependency order
-  /// and the provided arguments. This is only done for a single a architecture.
-  ///
-  /// \param C - The compilation that is being built.
-  /// \param Args - The input arguments.
-  /// \param Actions - The list to store the resulting actions onto.
-  void BuildDriverManagedModuleBuildActions(Compilation &C,
-                                            llvm::opt::DerivedArgList &Args,
-                                            const InputList &Inputs,
-                                            ActionList &Actions) const;
-
-  /// Scans the leading lines of the C++ source inputs to detect C++20 module
-  /// usage.
-  ///
-  /// \returns True if module usage is detected, false otherwise, or an error on
-  /// read failure.
-  llvm::ErrorOr<bool>
-  ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const;
-
   /// Retrieves a ToolChain for a particular \p Target triple.
   ///
   /// Will cache ToolChains for the life of the driver object, and create them
@@ -914,6 +875,18 @@ void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                           const char *OverrideOpts,
                           llvm::StringSet<> &SavedStrings, StringRef EnvVar,
                           raw_ostream *OS = nullptr);
+
+/// Creates and adds a synthesized input argument.
+///
+/// \param Args The argument list to append the input argument to.
+/// \param Opts The option table used to look up OPT_INPUT.
+/// \param Value The input to add, typically a filename.
+/// \param Claim Whether the newly created argument should be claimed.
+///
+/// \return The newly created input argument.
+llvm::opt::Arg *makeInputArg(llvm::opt::DerivedArgList &Args,
+                             const llvm::opt::OptTable &Opts, StringRef Value,
+                             bool Claim = true);
 
 } // end namespace driver
 } // end namespace clang

@@ -186,8 +186,8 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
       return success();
   }
 
-  if (mdescTy.getRank() != 2)
-    return emitError() << "mem_desc must be 2D.";
+  if (mdescTy.getRank() < 2)
+    return emitError() << "mem_desc must be 2D or greater.";
 
   ArrayRef<int64_t> dataShape = dataTy.getShape();
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
@@ -472,7 +472,8 @@ void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
                          Value tensorDesc, ArrayRef<OpFoldResult> offsets,
                          xegpu::CachePolicyAttr l1_hint,
                          xegpu::CachePolicyAttr l2_hint,
-                         xegpu::CachePolicyAttr l3_hint) {
+                         xegpu::CachePolicyAttr l3_hint,
+                         xegpu::DistributeLayoutAttr layout) {
   SmallVector<Value> dynamicOffsets;
   SmallVector<int64_t> staticOffsets;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
@@ -480,7 +481,7 @@ void PrefetchNdOp::build(OpBuilder &builder, OperationState &state,
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
 
   build(builder, state, tensorDesc, dynamicOffsets, staticOffsetsAttr, l1_hint,
-        l2_hint, l3_hint, /*anchor_layout=*/nullptr);
+        l2_hint, l3_hint, /*anchor_layout=*/layout);
 }
 
 LogicalResult PrefetchNdOp::verify() {
@@ -527,7 +528,8 @@ void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
                      UnitAttr packed, DenseI64ArrayAttr transpose,
                      xegpu::CachePolicyAttr l1_hint,
                      xegpu::CachePolicyAttr l2_hint,
-                     xegpu::CachePolicyAttr l3_hint) {
+                     xegpu::CachePolicyAttr l3_hint,
+                     xegpu::DistributeLayoutAttr layout) {
   SmallVector<Value> dynamicOffsets;
   SmallVector<int64_t> staticOffsets;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
@@ -536,7 +538,7 @@ void LoadNdOp::build(OpBuilder &builder, OperationState &state, Type retType,
 
   build(builder, state, retType, tensorDesc, dynamicOffsets, staticOffsetsAttr,
         packed, transpose, l1_hint, l2_hint, l3_hint,
-        /*anchor_layout=*/nullptr);
+        /*anchor_layout=*/layout);
 }
 
 LogicalResult LoadNdOp::verify() {
@@ -647,7 +649,8 @@ void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
                       Value tensorDesc, ArrayRef<OpFoldResult> offsets,
                       xegpu::CachePolicyAttr l1_hint,
                       xegpu::CachePolicyAttr l2_hint,
-                      xegpu::CachePolicyAttr l3_hint) {
+                      xegpu::CachePolicyAttr l3_hint,
+                      xegpu::DistributeLayoutAttr layout) {
   SmallVector<Value> dynamicOffsets;
   SmallVector<int64_t> staticOffsets;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
@@ -655,7 +658,7 @@ void StoreNdOp::build(OpBuilder &builder, OperationState &state, Value value,
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
 
   build(builder, state, value, tensorDesc, dynamicOffsets, staticOffsetsAttr,
-        l1_hint, l2_hint, l3_hint, /*anchor_layout=*/nullptr);
+        l1_hint, l2_hint, l3_hint, /*anchor_layout=*/layout);
 }
 
 LogicalResult StoreNdOp::verify() {
@@ -1182,6 +1185,32 @@ LogicalResult StoreMatrixOp::verify() {
   MemDescType mdescTy = getMemDesc().getType();
   return IsValidMatrixOpParams(dataTy, mdescTy, subgroup_block_io,
                                getLayoutAttr(), [&]() { return emitError(); });
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_TruncfOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TruncfOp::verify() {
+  auto sourceVecType = dyn_cast<VectorType>(getSource().getType());
+  auto resultVecType = dyn_cast<VectorType>(getResult().getType());
+
+  if (sourceVecType.getElementTypeBitWidth() <=
+      resultVecType.getElementTypeBitWidth())
+    return emitOpError("input type must be wider than result type.");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_DpasMxOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DpasMxOp::verify() {
+  if (getAcc() && getAcc().getType() != getResultType())
+    return emitOpError("Expecting the acc type to be the same as result.");
+
+  return success();
 }
 
 namespace mlir {

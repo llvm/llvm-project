@@ -46,8 +46,8 @@ export module z;
 export module x;
 
 //--- invalid_module_name.cppm
-export module z elderberry; // expected-error {{expected ';'}} \
-                            // expected-error {{a type specifier is required}}
+export module z elderberry;
+// expected-error@-1 {{unexpected preprocessing token 'elderberry' after module name, only ';' and '[' (start of attribute specifier sequence) are allowed}}
 
 //--- empty_attribute.cppm
 // expected-no-diagnostics

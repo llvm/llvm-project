@@ -1849,19 +1849,19 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
     // an explicitly given register class, we'll use that. Otherwise, we will
     // fail.
     const CodeGenRegisterClass *SubClass =
-        inferRegClassFromPattern(Dst.getChild(1));
+        inferRegClassFromPattern(Dst.getChild(0));
     if (!SubClass)
       return failedImport(
-          "Cannot infer register class from SUBREG_TO_REG child #1");
+          "Cannot infer register class from SUBREG_TO_REG child #0");
     // We don't have a child to look at that might have a super register node.
     const CodeGenRegisterClass *SuperClass =
-        inferSuperRegisterClass(Dst.getExtType(0), Dst.getChild(2));
+        inferSuperRegisterClass(Dst.getExtType(0), Dst.getChild(1));
     if (!SuperClass)
       return failedImport(
           "Cannot infer register class for SUBREG_TO_REG operand #0");
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
                                                      *SuperClass);
-    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 2,
+    M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 1,
                                                      *SubClass);
   } else if (DstIName == "REG_SEQUENCE") {
     const CodeGenRegisterClass *SuperClass =
@@ -2004,10 +2004,10 @@ GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
   }
 
   if (InstName == "SUBREG_TO_REG") {
-    // (outs $super_dst), (ins $super_src, $sub_src, $sub_idx)
+    // (outs $super_dst), (ins $sub_src, $sub_idx)
     // Find a register class that supports both the specified sub-register
     // index and the type of the instruction's result.
-    return inferSuperRegisterClass(N.getExtType(0), N.getChild(2));
+    return inferSuperRegisterClass(N.getExtType(0), N.getChild(1));
   }
 
   // Handle destination record types that we can safely infer a register class
@@ -2412,11 +2412,9 @@ void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
 
 bool hasBFloatType(const TreePatternNode &Node) {
   for (unsigned I = 0, E = Node.getNumTypes(); I < E; I++) {
-    auto Ty = Node.getType(I);
-    for (auto T : Ty)
-      if (T.second == MVT::bf16 ||
-          (T.second.isVector() && T.second.getScalarType() == MVT::bf16))
-        return true;
+    MVT VT = Node.getSimpleType(I);
+    if (VT.getScalarType() == MVT::bf16)
+      return true;
   }
   for (const TreePatternNode &C : Node.children())
     if (hasBFloatType(C))

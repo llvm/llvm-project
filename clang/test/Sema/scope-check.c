@@ -256,3 +256,11 @@ void GH63682() {
     (void)({P:1;});  // expected-note {{jump enters a statement expression}}
   }
 }
+
+void gh175549(int b, void* c) {
+  __asm__ goto("" : : : : d); // expected-error {{cannot jump from this asm goto statement to one of its possible targets}}
+  int(*a)[b] = c; // expected-note {{jump bypasses initialization of variable length array}}
+d:  // expected-note {{possible target of asm goto statement}}
+  (void)a[0];
+}
+

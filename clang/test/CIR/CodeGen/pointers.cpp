@@ -9,14 +9,17 @@ void foo(int *iptr, char *cptr, unsigned ustride) {
   cptr + 3;
   // CHECK: %[[#STRIDE:]] = cir.const #cir.int<3> : !s32i
   // CHECK: cir.ptr_stride %{{.+}}, %[[#STRIDE]] : (!cir.ptr<!s8i>, !s32i) -> !cir.ptr<!s8i>
-  iptr - 2;
-  // CHECK: %[[#STRIDE:]] = cir.const #cir.int<2> : !s32i
-  // CHECK: %[[#NEGSTRIDE:]] = cir.unary(minus, %[[#STRIDE]]) : !s32i, !s32i
-  // CHECK: cir.ptr_stride %{{.+}}, %[[#NEGSTRIDE]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
-  cptr - 3;
-  // CHECK: %[[#STRIDE:]] = cir.const #cir.int<3> : !s32i
-  // CHECK: %[[#NEGSTRIDE:]] = cir.unary(minus, %[[#STRIDE]]) : !s32i, !s32i
-  // CHECK: cir.ptr_stride %{{.+}}, %[[#NEGSTRIDE]] : (!cir.ptr<!s8i>, !s32i) -> !cir.ptr<!s8i>
+
+  // We need to assign to a temporary in these cases because otherwise
+  // constant folding of the unary minus for thenegative stride value also
+  // triggers erasing the unused result of the ptr_stride operation.
+  int* iptr2 = iptr - 2;
+  // CHECK: %[[#STRIDE:]] = cir.const #cir.int<-2> : !s32i
+  // CHECK: cir.ptr_stride %{{.+}}, %[[#STRIDE]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+  char* cptr2 = cptr - 3;
+
+  // CHECK: %[[#STRIDE:]] = cir.const #cir.int<-3> : !s32i
+  // CHECK: cir.ptr_stride %{{.+}}, %[[#STRIDE]] : (!cir.ptr<!s8i>, !s32i) -> !cir.ptr<!s8i>
   iptr + ustride;
   // CHECK: %[[#STRIDE:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!u32i>, !u32i
   // CHECK: cir.ptr_stride %{{.+}}, %[[#STRIDE]] : (!cir.ptr<!s32i>, !u32i) -> !cir.ptr<!s32i>

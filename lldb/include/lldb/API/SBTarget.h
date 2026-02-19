@@ -338,7 +338,7 @@ public:
   /// \return
   ///     A lldb::SBModule object that represents the found module, or an
   ///     invalid SBModule object if no module was found.
-  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec);
+  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec) const;
 
   /// Find compile units related to *this target and passed source
   /// file.
@@ -359,7 +359,7 @@ public:
 
   const char *GetTriple();
 
-  const char *GetArchName();
+  const char *GetArchName() const;
 
   const char *GetABIName();
 
@@ -397,18 +397,10 @@ public:
   /// The maximum size in 8-bit (host) bytes of an opcode.
   uint32_t GetMaximumOpcodeByteSize() const;
 
-  /// Architecture data byte width accessor
-  ///
-  /// \return
-  /// The size in 8-bit (host) bytes of a minimum addressable
-  /// unit from the Architecture's data bus
+  LLDB_DEPRECATED("Always returns 1.")
   uint32_t GetDataByteSize();
 
-  /// Architecture code byte width accessor
-  ///
-  /// \return
-  /// The size in 8-bit (host) bytes of a minimum addressable
-  /// unit from the Architecture's code bus
+  LLDB_DEPRECATED("Always returns 1.")
   uint32_t GetCodeByteSize();
 
   /// Gets the target.max-children-count value

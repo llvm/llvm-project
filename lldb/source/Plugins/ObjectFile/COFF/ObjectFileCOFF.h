@@ -24,11 +24,13 @@ class ObjectFileCOFF : public lldb_private::ObjectFile {
   lldb_private::UUID m_uuid;
 
   ObjectFileCOFF(std::unique_ptr<llvm::object::COFFObjectFile> object,
-                 const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                 lldb::offset_t data_offset, const lldb_private::FileSpec *file,
-                 lldb::offset_t file_offset, lldb::offset_t length)
-    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
-      m_object(std::move(object)) {}
+                 const lldb::ModuleSP &module_sp,
+                 lldb::DataExtractorSP extractor_sp, lldb::offset_t data_offset,
+                 const lldb_private::FileSpec *file, lldb::offset_t file_offset,
+                 lldb::offset_t length)
+      : ObjectFile(module_sp, file, file_offset, length, extractor_sp,
+                   data_offset),
+        m_object(std::move(object)) {}
 
 public:
   ~ObjectFileCOFF() override;
@@ -42,9 +44,10 @@ public:
   }
 
   static lldb_private::ObjectFile *
-  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                 lldb::offset_t data_offset, const lldb_private::FileSpec *file,
-                 lldb::offset_t file_offset, lldb::offset_t length);
+  CreateInstance(const lldb::ModuleSP &module_sp,
+                 lldb::DataExtractorSP extractor_sp, lldb::offset_t data_offset,
+                 const lldb_private::FileSpec *file, lldb::offset_t file_offset,
+                 lldb::offset_t length);
 
   static lldb_private::ObjectFile *
   CreateMemoryInstance(const lldb::ModuleSP &module_sp,
@@ -52,7 +55,7 @@ public:
                        const lldb::ProcessSP &process_sp, lldb::addr_t header);
 
   static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
+                                        lldb::DataExtractorSP &extractor_sp,
                                         lldb::offset_t data_offset,
                                         lldb::offset_t file_offset,
                                         lldb::offset_t length,

@@ -14,6 +14,7 @@
 #include "resolve-directives.h"
 #include "resolve-names-utils.h"
 #include "rewrite-parse-tree.h"
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/restorer.h"
 #include "flang/Common/visit.h"
@@ -445,6 +446,7 @@ private:
 // 6. POINTER(p,x(10))
 class ArraySpecVisitor : public virtual BaseVisitor {
 public:
+  void Post(const parser::RankClause &);
   void Post(const parser::ArraySpec &);
   void Post(const parser::ComponentArraySpec &);
   void Post(const parser::CoarraySpec &);
@@ -1081,11 +1083,14 @@ public:
   bool Pre(const parser::SaveStmt &);
   bool Pre(const parser::BasedPointer &);
   void Post(const parser::BasedPointer &);
+  bool Pre(const parser::CUFKernelDoConstruct &);
+  void Post(const parser::CUFKernelDoConstruct &);
 
   void PointerInitialization(
       const parser::Name &, const parser::InitialDataTarget &);
   void PointerInitialization(
       const parser::Name &, const parser::ProcPointerInit &);
+  bool CheckRank(const Symbol &symbol);
   bool CheckNonPointerInitialization(
       const parser::Name &, bool inLegacyDataInitialization);
   void NonPointerInitialization(
@@ -1529,7 +1534,7 @@ bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
                       common::Indirection<parser::ArrayElement>;
                   if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
                     const parser::ArrayElement &arrayElement{ind->value()};
-                    const parser::DataRef &base{arrayElement.base};
+                    const parser::DataRef &base{arrayElement.Base()};
                     if (auto *name{std::get_if<parser::Name>(&base.u)}) {
                       CopySymbolWithDevice(name);
                     }
@@ -1564,6 +1569,8 @@ void AccVisitor::Post(const parser::OpenACCCombinedConstruct &x) { PopScope(); }
 class OmpVisitor : public virtual DeclarationVisitor {
 public:
   void AddOmpSourceRange(const parser::CharBlock &);
+  void PushScopeWithSource(
+      Scope::Kind kind, parser::CharBlock source, Symbol *symbol = nullptr);
 
   static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
@@ -1587,8 +1594,8 @@ public:
     Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
-  bool Pre(const parser::OpenMPLoopConstruct &) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+  bool Pre(const parser::OpenMPLoopConstruct &x) {
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
     return true;
   }
   void Post(const parser::OpenMPLoopConstruct &) { PopScope(); }
@@ -1611,6 +1618,20 @@ public:
   bool Pre(const parser::OmpStylizedInstance &);
   void Post(const parser::OmpStylizedInstance &);
 
+  void Post(const parser::OmpObjectList &x) {
+    // The objects from OMP clauses should have already been resolved,
+    // except common blocks (the ResolveNamesVisitor does not visit
+    // parser::Name, those are dealt with as members of other structures).
+    // Iterate over elements of x, and resolve any common blocks that
+    // are still unresolved.
+    for (const parser::OmpObject &obj : x.v) {
+      auto *name{std::get_if<parser::Name>(&obj.u)};
+      if (name && !name->symbol) {
+        Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
+      }
+    }
+  }
+
   bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
@@ -1632,8 +1653,8 @@ public:
   }
   bool Pre(const parser::OmpMapClause &);
 
-  bool Pre(const parser::OpenMPSectionsConstruct &) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+  bool Pre(const parser::OpenMPSectionsConstruct &x) {
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
     return true;
   }
   void Post(const parser::OpenMPSectionsConstruct &) { PopScope(); }
@@ -1739,7 +1760,7 @@ public:
   }
   bool Pre(const parser::OmpClause &x) {
     if (NeedsScope(x)) {
-      PushScope(Scope::Kind::OtherClause, nullptr);
+      PushScopeWithSource(Scope::Kind::OtherClause, x.source);
     }
     return true;
   }
@@ -1808,9 +1829,15 @@ void OmpVisitor::AddOmpSourceRange(const parser::CharBlock &source) {
   currScope().AddSourceRange(source);
 }
 
+void OmpVisitor::PushScopeWithSource(
+    Scope::Kind kind, parser::CharBlock source, Symbol *symbol) {
+  PushScope(kind, symbol);
+  currScope().AddSourceRange(source);
+}
+
 bool OmpVisitor::Pre(const parser::OmpBlockConstruct &x) {
   if (NeedsScope(x)) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
   }
   return true;
 }
@@ -2139,7 +2166,7 @@ public:
   void Post(const parser::SubstringInquiry &);
   template <typename A, typename B>
   void Post(const parser::LoopBounds<A, B> &x) {
-    ResolveName(parser::UnwrapRef<parser::Name>(x.name));
+    ResolveName(parser::UnwrapRef<parser::Name>(x.Name()));
   }
   void Post(const parser::ProcComponentRef &);
   bool Pre(const parser::FunctionReference &);
@@ -2719,6 +2746,27 @@ bool ImplicitRulesVisitor::HandleImplicitNone(
 }
 
 // ArraySpecVisitor implementation
+
+void ArraySpecVisitor::Post(const parser::RankClause &x) {
+  // RANK(n) is equivalent to DIMENSION with n deferred shape specs (:)
+  CHECK(arraySpec_.empty());
+
+  // Evaluate the rank value (must be a constant expression)
+  if (auto rank{EvaluateInt64(context(), x.v)}) {
+    if (*rank < 0 || *rank > common::maxRank) {
+      Say(currStmtSource().value(),
+          "RANK value (%lld) must be between 0 and %d"_err_en_US,
+          static_cast<long long>(*rank), common::maxRank);
+    } else {
+      // Create n deferred shape specs (:)
+      for (int i = 0; i < *rank; ++i) {
+        arraySpec_.push_back(ShapeSpec::MakeDeferred());
+      }
+    }
+  } else {
+    Say("RANK value must be a constant expression"_err_en_US);
+  }
+}
 
 void ArraySpecVisitor::Post(const parser::ArraySpec &x) {
   CHECK(arraySpec_.empty());
@@ -3662,6 +3710,7 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
   for (const auto &[name, symbol] : useModuleScope_->commonBlockUses()) {
     currScope().AddCommonBlockUse(name, symbol->attrs(), symbol->GetUltimate());
   }
+
   useModuleScope_ = nullptr;
 }
 
@@ -4536,8 +4585,9 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   auto &details{generic.get<GenericDetails>()};
   if (auto *proc{details.CheckSpecific()}) {
     context().Warn(common::UsageWarning::HomonymousSpecific,
-        proc->name().begin() > generic.name().begin() ? proc->name()
-                                                      : generic.name(),
+        context().allCookedSources().Precedes(generic.name(), proc->name())
+            ? proc->name()
+            : generic.name(),
         "'%s' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic"_warn_en_US,
         generic.name());
   }
@@ -4655,19 +4705,19 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
 }
 
 bool SubprogramVisitor::Pre(const parser::Suffix &suffix) {
-  if (suffix.resultName) {
+  if (const auto &resultName{std::get<std::optional<parser::Name>>(suffix.t)}) {
     if (IsFunction(currScope())) {
       if (FuncResultStack::FuncInfo * info{funcResultStack().Top()}) {
         if (info->inFunctionStmt) {
-          info->resultName = &suffix.resultName.value();
+          info->resultName = &resultName.value();
         } else {
           // will check the result name in Post(EntryStmt)
         }
       }
     } else {
-      Message &msg{Say(*suffix.resultName,
-          "RESULT(%s) may appear only in a function"_err_en_US)};
-      if (const Symbol * subprogram{InclusiveScope().symbol()}) {
+      Message &msg{Say(
+          *resultName, "RESULT(%s) may appear only in a function"_err_en_US)};
+      if (const Symbol *subprogram{InclusiveScope().symbol()}) {
         msg.Attach(subprogram->name(), "Containing subprogram"_en_US);
       }
     }
@@ -4841,7 +4891,10 @@ void SubprogramVisitor::Post(const parser::InterfaceBody::Function &x) {
   const auto &stmt{std::get<parser::Statement<parser::FunctionStmt>>(x.t)};
   const auto &maybeSuffix{
       std::get<std::optional<parser::Suffix>>(stmt.statement.t)};
-  EndSubprogram(stmt.source, maybeSuffix ? &maybeSuffix->binding : nullptr);
+  EndSubprogram(stmt.source,
+      maybeSuffix ? &std::get<std::optional<parser::LanguageBindingSpec>>(
+                        maybeSuffix->t)
+                  : nullptr);
 }
 
 bool SubprogramVisitor::Pre(const parser::SubroutineStmt &stmt) {
@@ -4870,7 +4923,13 @@ bool SubprogramVisitor::Pre(const parser::FunctionStmt &) {
   }
   return BeginAttrs();
 }
-bool SubprogramVisitor::Pre(const parser::EntryStmt &) { return BeginAttrs(); }
+bool SubprogramVisitor::Pre(const parser::EntryStmt &stmt) {
+  if (inInterfaceBlock()) {
+    Say(std::get<parser::Name>(stmt.t).source,
+        "An ENTRY statement may not appear in an interface body"_err_en_US);
+  }
+  return BeginAttrs();
+}
 
 void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
   const auto &name{std::get<parser::Name>(stmt.t)};
@@ -4950,7 +5009,7 @@ Symbol &SubprogramVisitor::PostSubprogramStmt() {
 
 void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
   if (const auto &suffix{std::get<std::optional<parser::Suffix>>(stmt.t)}) {
-    Walk(suffix->binding);
+    Walk(std::get<std::optional<parser::LanguageBindingSpec>>(suffix->t));
   }
   PostEntryStmt(stmt);
   EndAttrs();
@@ -4989,9 +5048,17 @@ void SubprogramVisitor::CreateEntry(
           : Symbol::Flag::Subroutine};
   Attrs attrs;
   const auto &suffix{std::get<std::optional<parser::Suffix>>(stmt.t)};
-  bool hasGlobalBindingName{outer.IsGlobal() && suffix && suffix->binding &&
-      std::get<std::optional<parser::ScalarDefaultCharConstantExpr>>(
-          suffix->binding->t)
+  const auto *binding{[&]() {
+    if (suffix) {
+      if (auto &b{std::get<std::optional<parser::LanguageBindingSpec>>(
+              suffix->t)}) {
+        return &*b;
+      }
+    }
+    return static_cast<const parser::LanguageBindingSpec *>(nullptr);
+  }()};
+  bool hasGlobalBindingName{outer.IsGlobal() && binding &&
+      std::get<std::optional<parser::ScalarDefaultCharConstantExpr>>(binding->t)
           .has_value()};
   if (!hasGlobalBindingName) {
     if (Symbol * extant{FindSymbol(outer, entryName)}) {
@@ -5008,10 +5075,17 @@ void SubprogramVisitor::CreateEntry(
       attrs = extant->attrs();
     }
   }
+  const auto *resultName{[&]() {
+    if (suffix) {
+      if (auto &n{std::get<std::optional<parser::Name>>(suffix->t)}) {
+        return &*n;
+      }
+    }
+    return static_cast<const parser::Name *>(nullptr);
+  }()};
   std::optional<SourceName> distinctResultName;
-  if (suffix && suffix->resultName &&
-      suffix->resultName->source != entryName.source) {
-    distinctResultName = suffix->resultName->source;
+  if (resultName && resultName->source != entryName.source) {
+    distinctResultName = resultName->source;
   }
   if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
     attrs.set(Attr::PUBLIC);
@@ -5049,7 +5123,7 @@ void SubprogramVisitor::CreateEntry(
     if (distinctResultName) {
       // An explicit RESULT() can also be an explicit RESULT()
       // of the function or another ENTRY.
-      if (auto iter{currScope().find(suffix->resultName->source)};
+      if (auto iter{currScope().find(resultName->source)};
           iter != currScope().end()) {
         result = &*iter->second;
       }
@@ -5065,7 +5139,7 @@ void SubprogramVisitor::CreateEntry(
         result = nullptr;
       }
       if (result) {
-        Resolve(*suffix->resultName, *result);
+        Resolve(*resultName, *result);
       }
     } else {
       result = &MakeSymbol(entryName.source, Attrs{}, std::move(resultDetails));
@@ -5077,7 +5151,7 @@ void SubprogramVisitor::CreateEntry(
   if (subpFlag == Symbol::Flag::Subroutine || distinctResultName) {
     Symbol &assoc{MakeSymbol(entryName.source)};
     assoc.set_details(HostAssocDetails{*entrySymbol});
-    assoc.set(Symbol::Flag::Subroutine);
+    assoc.set(subpFlag);
   }
   Resolve(entryName, *entrySymbol);
   std::set<SourceName> dummies;
@@ -5304,7 +5378,8 @@ void SubprogramVisitor::EndSubprogram(
       if (const auto &suffix{
               std::get<std::optional<parser::Suffix>>(entryStmt.t)}) {
         const auto &name{std::get<parser::Name>(entryStmt.t)};
-        HandleLanguageBinding(name.symbol, name.source, &suffix->binding);
+        HandleLanguageBinding(name.symbol, name.source,
+            &std::get<std::optional<parser::LanguageBindingSpec>>(suffix->t));
       }
     }
   }
@@ -6128,14 +6203,14 @@ void DeclarationVisitor::Post(const parser::UnsignedTypeSpec &x) {
 }
 void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Real &x) {
   if (!isVectorType_) {
-    SetDeclTypeSpec(MakeNumericType(TypeCategory::Real, x.kind));
+    SetDeclTypeSpec(MakeNumericType(TypeCategory::Real, x.v));
   }
 }
 void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Complex &x) {
-  SetDeclTypeSpec(MakeNumericType(TypeCategory::Complex, x.kind));
+  SetDeclTypeSpec(MakeNumericType(TypeCategory::Complex, x.v));
 }
 void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Logical &x) {
-  SetDeclTypeSpec(MakeLogicalType(x.kind));
+  SetDeclTypeSpec(MakeLogicalType(x.v));
 }
 void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Character &) {
   if (!charInfo_.length) {
@@ -6150,7 +6225,8 @@ void DeclarationVisitor::Post(const parser::IntrinsicTypeSpec::Character &) {
   charInfo_ = {};
 }
 void DeclarationVisitor::Post(const parser::CharSelector::LengthAndKind &x) {
-  charInfo_.kind = EvaluateSubscriptIntExpr(x.kind);
+  const auto &[length, kind]{x.t};
+  charInfo_.kind = EvaluateSubscriptIntExpr(kind);
   std::optional<std::int64_t> intKind{ToInt64(charInfo_.kind)};
   if (intKind &&
       !context().targetCharacteristics().IsTypeEnabled(
@@ -6159,8 +6235,8 @@ void DeclarationVisitor::Post(const parser::CharSelector::LengthAndKind &x) {
         "KIND value (%jd) not valid for CHARACTER"_err_en_US, *intKind);
     charInfo_.kind = std::nullopt; // prevent further errors
   }
-  if (x.length) {
-    charInfo_.length = GetParamValue(*x.length, common::TypeParamAttr::Len);
+  if (length) {
+    charInfo_.length = GetParamValue(*length, common::TypeParamAttr::Len);
   }
 }
 void DeclarationVisitor::Post(const parser::CharLength &x) {
@@ -6235,7 +6311,7 @@ void DeclarationVisitor::Post(const parser::VectorTypeSpec &x) {
                     },
                     [&](const parser::IntrinsicTypeSpec::Real &z) {
                       vecElemKind = GetVectorElementKind(
-                          TypeCategory::Real, std::move(z.kind));
+                          TypeCategory::Real, std::move(z.v));
                       typeParams.push_back(
                           ParamValue(static_cast<common::ConstantSubscript>(
                                          common::VectorElementCategory::Real),
@@ -6311,7 +6387,7 @@ bool DeclarationVisitor::Pre(const parser::DeclarationTypeSpec::Type &) {
 }
 
 void DeclarationVisitor::Post(const parser::DeclarationTypeSpec::Type &type) {
-  const parser::Name &derivedName{std::get<parser::Name>(type.derived.t)};
+  const parser::Name &derivedName{std::get<parser::Name>(type.v.t)};
   if (const Symbol * derivedSymbol{derivedName.symbol}) {
     CheckForAbstractType(*derivedSymbol); // C706
   }
@@ -6324,7 +6400,7 @@ bool DeclarationVisitor::Pre(const parser::DeclarationTypeSpec::Class &) {
 
 void DeclarationVisitor::Post(
     const parser::DeclarationTypeSpec::Class &parsedClass) {
-  const auto &typeName{std::get<parser::Name>(parsedClass.derived.t)};
+  const auto &typeName{std::get<parser::Name>(parsedClass.v.t)};
   if (auto spec{ResolveDerivedType(typeName)};
       spec && !IsExtensibleType(&*spec)) { // C705
     SayWithDecl(typeName, *typeName.symbol,
@@ -6524,6 +6600,9 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
   if (!paramNames.empty()) {
     set_inPDTDefinition(true);
   }
+  // Clear the attributes so that the attributes of the derived type
+  // (ABSTRACT, PUBLIC/PRIVATE, &c.) don't apply to the type's parameters.
+  EndAttrs(), BeginAttrs();
   if (auto *details{symbol.detailsIf<DerivedTypeDetails>()}) {
     for (const auto &name : paramNames) {
       if (Symbol * symbol{MakeTypeSymbol(name, TypeParamDetails{})}) {
@@ -6797,7 +6876,8 @@ void DeclarationVisitor::Post(
   if (GetAttrs().test(Attr::DEFERRED)) { // C783
     Say("DEFERRED is only allowed when an interface-name is provided"_err_en_US);
   }
-  for (auto &declaration : x.declarations) {
+  const auto &declarations{std::get<std::list<parser::TypeBoundProcDecl>>(x.t)};
+  for (auto &declaration : declarations) {
     auto &bindingName{std::get<parser::Name>(declaration.t)};
     auto &optName{std::get<std::optional<parser::Name>>(declaration.t)};
     const parser::Name &procedureName{optName ? *optName : bindingName};
@@ -6820,7 +6900,9 @@ void DeclarationVisitor::Post(
 void DeclarationVisitor::CheckBindings(
     const parser::TypeBoundProcedureStmt::WithoutInterface &tbps) {
   CHECK(currScope().IsDerivedType());
-  for (auto &declaration : tbps.declarations) {
+  const auto &declarations{
+      std::get<std::list<parser::TypeBoundProcDecl>>(tbps.t)};
+  for (auto &declaration : declarations) {
     auto &bindingName{std::get<parser::Name>(declaration.t)};
     if (Symbol * binding{FindInScope(bindingName)}) {
       if (auto *details{binding->detailsIf<ProcBindingDetails>()}) {
@@ -6854,8 +6936,9 @@ void DeclarationVisitor::Post(
   if (!GetAttrs().test(Attr::DEFERRED)) { // C783
     Say("DEFERRED is required when an interface-name is provided"_err_en_US);
   }
-  if (Symbol * interface{NoteInterfaceName(x.interfaceName)}) {
-    for (auto &bindingName : x.bindingNames) {
+  const auto &[interfaceName, _, bindingNames]{x.t};
+  if (Symbol * interface{NoteInterfaceName(interfaceName)}) {
+    for (auto &bindingName : bindingNames) {
       if (auto *s{
               MakeTypeSymbol(bindingName, ProcBindingDetails{*interface})}) {
         SetPassNameOn(*s);
@@ -7500,7 +7583,12 @@ Symbol *DeclarationVisitor::DeclareStatementEntity(
       SayAlreadyDeclared(name, *prev);
       return nullptr;
     }
-    name.symbol = nullptr;
+    // Inhibit diagnostics about an unused local symbol here, since
+    // this one may well have been declared solely to determine the
+    // type of an implied DO index.  Some compilers don't yet support
+    // an explicit "integer(k)::" in an implied DO.
+    context().NoteDefinedSymbol(*prev);
+    name.symbol = nullptr; // undo the "FindSymbol()" above
     // F'2023 19.4 p5 ambiguous rule about outer declarations
     declTypeSpec = prev->GetType();
   }
@@ -7564,12 +7652,14 @@ void DeclarationVisitor::SetType(
   } else if (HadForwardRef(symbol)) {
     // error recovery after use of host-associated name
   } else if (!symbol.test(Symbol::Flag::Implicit)) {
-    SayWithDecl(
-        name, symbol, "The type of '%s' has already been declared"_err_en_US);
+    SayWithDecl(name, symbol,
+        "The type of '%s' has already been declared as %s"_err_en_US,
+        prevType->AsFortran());
     context().SetError(symbol);
   } else if (type != *prevType) {
     SayWithDecl(name, symbol,
-        "The type of '%s' has already been implicitly declared"_err_en_US);
+        "The type of '%s' has already been implicitly declared as %s"_err_en_US,
+        prevType->AsFortran());
     context().SetError(symbol);
   } else {
     symbol.set(Symbol::Flag::Implicit, false);
@@ -7730,7 +7820,7 @@ bool DeclarationVisitor::OkToAddComponent(
       if (msg) {
         auto &said{Say2(name, std::move(*msg), *prev,
             "Previous declaration of '%s'"_en_US)};
-        if (msg->severity() == parser::Severity::Error) {
+        if (msg->IsFatal()) {
           Resolve(name, *prev);
           return false;
         }
@@ -7873,8 +7963,9 @@ bool ConstructVisitor::Pre(const parser::LocalitySpec::Shared &x) {
 }
 
 bool ConstructVisitor::Pre(const parser::AcSpec &x) {
-  ProcessTypeSpec(x.type);
-  Walk(x.values);
+  const auto &[type, values]{x.t};
+  ProcessTypeSpec(type);
+  Walk(values);
   return false;
 }
 
@@ -7890,13 +7981,13 @@ bool ConstructVisitor::Pre(const parser::AcImpliedDo &x) {
   // of the implied DO variable appears in one of the bound expressions. Thus
   // this extension, which shrinks the scope of the variable to exclude the
   // expressions in the bounds.
-  auto restore{BeginCheckOnIndexUseInOwnBounds(bounds.name)};
-  Walk(bounds.lower);
-  Walk(bounds.upper);
-  Walk(bounds.step);
+  auto restore{BeginCheckOnIndexUseInOwnBounds(bounds.Name())};
+  Walk(bounds.Lower());
+  Walk(bounds.Upper());
+  Walk(bounds.Step());
   EndCheckOnIndexUseInOwnBounds(restore);
   PushScope(Scope::Kind::ImpliedDos, nullptr);
-  DeclareStatementEntity(bounds.name, type);
+  DeclareStatementEntity(bounds.Name(), type);
   Walk(values);
   PopScope();
   return false;
@@ -7907,13 +7998,13 @@ bool ConstructVisitor::Pre(const parser::DataImpliedDo &x) {
   auto &type{std::get<std::optional<parser::IntegerTypeSpec>>(x.t)};
   auto &bounds{std::get<parser::DataImpliedDo::Bounds>(x.t)};
   // See comment in Pre(AcImpliedDo) above.
-  auto restore{BeginCheckOnIndexUseInOwnBounds(bounds.name)};
-  Walk(bounds.lower);
-  Walk(bounds.upper);
-  Walk(bounds.step);
+  auto restore{BeginCheckOnIndexUseInOwnBounds(bounds.Name())};
+  Walk(bounds.Lower());
+  Walk(bounds.Upper());
+  Walk(bounds.Step());
   EndCheckOnIndexUseInOwnBounds(restore);
   PushScope(Scope::Kind::ImpliedDos, nullptr);
-  DeclareStatementEntity(bounds.name, type);
+  DeclareStatementEntity(bounds.Name(), type);
   Walk(objects);
   PopScope();
   return false;
@@ -7970,7 +8061,7 @@ bool ConstructVisitor::Pre(const parser::DataStmtValue &x) {
   const auto &data{std::get<parser::DataStmtConstant>(x.t)};
   auto &mutableData{const_cast<parser::DataStmtConstant &>(data)};
   if (auto *elem{parser::Unwrap<parser::ArrayElement>(mutableData)}) {
-    if (const auto *name{std::get_if<parser::Name>(&elem->base.u)}) {
+    if (const auto *name{std::get_if<parser::Name>(&elem->Base().u)}) {
       if (const Symbol * symbol{FindSymbol(*name)};
           symbol && symbol->GetUltimate().has<DerivedTypeDetails>()) {
         mutableData.u = elem->ConvertToStructureConstructor(
@@ -8472,12 +8563,12 @@ public:
     return true;
   }
   void Post(const parser::ImportStmt &x) {
-    if (x.kind == common::ImportKind::None ||
-        x.kind == common::ImportKind::Only) {
+    const auto &[kind, names]{x.t};
+    if (kind == common::ImportKind::None || kind == common::ImportKind::Only) {
       if (!nestedScopes_.front().importOnly.has_value()) {
         nestedScopes_.front().importOnly.emplace();
       }
-      for (const auto &name : x.names) {
+      for (const auto &name : names) {
         nestedScopes_.front().importOnly->emplace(name.source);
       }
     } else {
@@ -8683,12 +8774,14 @@ bool ResolveNamesVisitor::Pre(const parser::FunctionReference &x) {
   return false;
 }
 bool ResolveNamesVisitor::Pre(const parser::CallStmt &x) {
-  HandleCall(Symbol::Flag::Subroutine, x.call);
-  Walk(x.chevrons);
+  const auto &[call, chevrons]{x.t};
+  HandleCall(Symbol::Flag::Subroutine, call);
+  Walk(chevrons);
   return false;
 }
 
 bool ResolveNamesVisitor::Pre(const parser::ImportStmt &x) {
+  const auto &[kind, names]{x.t};
   auto &scope{currScope()};
   // Check C896 and C899: where IMPORT statements are allowed
   switch (scope.kind()) {
@@ -8696,7 +8789,7 @@ bool ResolveNamesVisitor::Pre(const parser::ImportStmt &x) {
     if (scope.IsModule()) {
       Say("IMPORT is not allowed in a module scoping unit"_err_en_US);
       return false;
-    } else if (x.kind == common::ImportKind::None) {
+    } else if (kind == common::ImportKind::None) {
       Say("IMPORT,NONE is not allowed in a submodule scoping unit"_err_en_US);
       return false;
     }
@@ -8715,10 +8808,10 @@ bool ResolveNamesVisitor::Pre(const parser::ImportStmt &x) {
     return false;
   default:;
   }
-  if (auto error{scope.SetImportKind(x.kind)}) {
+  if (auto error{scope.SetImportKind(kind)}) {
     Say(std::move(*error));
   }
-  for (auto &name : x.names) {
+  for (auto &name : names) {
     if (Symbol * outer{FindSymbol(scope.parent(), name)}) {
       scope.add_importName(name.source);
       if (Symbol * symbol{FindInScope(name)}) {
@@ -8745,7 +8838,7 @@ bool ResolveNamesVisitor::Pre(const parser::ImportStmt &x) {
 
 const parser::Name *DeclarationVisitor::ResolveStructureComponent(
     const parser::StructureComponent &x) {
-  return FindComponent(ResolveDataRef(x.base), x.component);
+  return FindComponent(ResolveDataRef(x.Base()), x.Component());
 }
 
 const parser::Name *DeclarationVisitor::ResolveDesignator(
@@ -8770,8 +8863,8 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
             return ResolveStructureComponent(y.value());
           },
           [&](const Indirection<parser::ArrayElement> &y) {
-            Walk(y.value().subscripts);
-            const parser::Name *name{ResolveDataRef(y.value().base)};
+            Walk(y.value().Subscripts());
+            const parser::Name *name{ResolveDataRef(y.value().Base())};
             if (name && name->symbol) {
               if (!IsProcedure(*name->symbol)) {
                 ConvertToObjectEntity(*name->symbol);
@@ -8784,8 +8877,9 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
             return name;
           },
           [&](const Indirection<parser::CoindexedNamedObject> &y) {
-            Walk(y.value().imageSelector);
-            return ResolveDataRef(y.value().base);
+            const auto &[base, selector]{y.value().t};
+            Walk(selector);
+            return ResolveDataRef(base);
           },
       },
       x.u);
@@ -9052,6 +9146,12 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
     return;
   }
   Symbol &ultimate{name.symbol->GetUltimate()};
+  // Don't evaluate initializers for arrays with a rank greater than the
+  // maximum supported, to avoid running out of memory.
+  if (!CheckRank(ultimate)) {
+    return;
+  }
+
   // TODO: check C762 - all bounds and type parameters of component
   // are colons or constant expressions if component is initialized
   common::visit(
@@ -9178,6 +9278,18 @@ void DeclarationVisitor::PointerInitialization(
   }
 }
 
+bool DeclarationVisitor::CheckRank(const Symbol &symbol) {
+  if (auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (details->shape().Rank() > common::maxRank) {
+      Say(symbol.name(),
+          "'%s' has rank %d, which is greater than the maximum supported rank %d"_err_en_US,
+          symbol.name(), details->shape().Rank(), common::maxRank);
+      return false;
+    }
+  }
+  return true;
+}
+
 bool DeclarationVisitor::CheckNonPointerInitialization(
     const parser::Name &name, bool inLegacyDataInitialization) {
   if (!context().HasError(name.symbol)) {
@@ -9257,6 +9369,16 @@ void DeclarationVisitor::LegacyDataInitialization(const parser::Name &name,
   }
 }
 
+bool DeclarationVisitor::Pre(const parser::CUFKernelDoConstruct &x) {
+  // Treat CUDA kernel do construct as OpenACC construct.
+  PushScope(Scope::Kind::OpenACCConstruct, nullptr);
+  return true;
+}
+
+void DeclarationVisitor::Post(const parser::CUFKernelDoConstruct &x) {
+  PopScope();
+}
+
 void ResolveNamesVisitor::HandleCall(
     Symbol::Flag procFlag, const parser::Call &call) {
   common::visit(
@@ -9264,7 +9386,7 @@ void ResolveNamesVisitor::HandleCall(
           [&](const parser::Name &x) { HandleProcedureName(procFlag, x); },
           [&](const parser::ProcComponentRef &x) {
             Walk(x);
-            const parser::Name &name{x.v.thing.component};
+            const parser::Name &name{x.v.thing.Component()};
             if (Symbol * symbol{name.symbol}) {
               if (IsProcedure(*symbol)) {
                 SetProcFlag(name, *symbol, procFlag);
@@ -9437,6 +9559,11 @@ static bool IsLocallyImplicitGlobalSymbol(
 // Check and set the Function or Subroutine flag on symbol; false on error.
 bool ResolveNamesVisitor::SetProcFlag(
     const parser::Name &name, Symbol &symbol, Symbol::Flag flag) {
+  if (symbol.has<ProcBindingDetails>()) {
+    // Binding function-vs-subroutine errors are caught later in
+    // expression semantics and procedure compatibility checking.
+    return true;
+  }
   if (symbol.test(Symbol::Flag::Function) && flag == Symbol::Flag::Subroutine) {
     SayWithDecl(
         name, symbol, "Cannot call function '%s' like a subroutine"_err_en_US);
@@ -9565,10 +9692,10 @@ void ResolveNamesVisitor::HandleDerivedTypesInImplicitStmts(
           if (const auto *dtSpec{common::visit(
                   common::visitors{
                       [](const parser::DeclarationTypeSpec::Type &x) {
-                        return &x.derived;
+                        return &x.v;
                       },
                       [](const parser::DeclarationTypeSpec::Class &x) {
-                        return &x.derived;
+                        return &x.v;
                       },
                       [](const auto &) -> const parser::DerivedTypeSpec * {
                         return nullptr;
@@ -9691,12 +9818,20 @@ void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
     const parser::Statement<common::Indirection<parser::TypeDeclarationStmt>>
         &stmt) {
   context().set_location(stmt.source);
-  const auto &[declTypeSpec, attrs, entities] = stmt.statement.value().t;
+  const auto &[declTypeSpec, attrs, entities]{stmt.statement.value().t};
   if (const auto *intrin{
           std::get_if<parser::IntrinsicTypeSpec>(&declTypeSpec.u)}) {
     if (const auto *intType{std::get_if<parser::IntegerTypeSpec>(&intrin->u)}) {
       if (const auto &kind{intType->v}) {
-        if (!parser::Unwrap<parser::KindSelector::StarSize>(*kind) &&
+        if (const auto *call{parser::Unwrap<parser::Call>(*kind)}) {
+          if (!std::get<std::list<parser::ActualArgSpec>>(call->t).empty()) {
+            // Accept INTEGER(int_ptr_kind()), at least.  Don't allow a
+            // nonempty argument list, to prevent implicitly typing names
+            // that might appear.  (TODO: But maybe INTEGER(KIND(n)) after
+            // an explicit declaration of 'n' would be useful.)
+            return;
+          }
+        } else if (!parser::Unwrap<parser::KindSelector::StarSize>(*kind) &&
             !parser::Unwrap<parser::IntLiteralConstant>(*kind)) {
           return;
         }
@@ -9727,7 +9862,7 @@ void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
 
 void ResolveNamesVisitor::CreateCommonBlockSymbols(
     const parser::CommonStmt &commonStmt) {
-  for (const parser::CommonStmt::Block &block : commonStmt.blocks) {
+  for (const parser::CommonStmt::Block &block : commonStmt.v) {
     const auto &[name, objects] = block.t;
     Symbol &commonBlock{MakeCommonBlockSymbol(name, commonStmt.source)};
     for (const auto &object : objects) {
@@ -9816,6 +9951,9 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   misparsedStmtFuncFound_ = false;
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
+  if (inInterfaceBlock()) {
+    FinishNamelists(); // NAMELIST is useless in an interface, but allowed
+  }
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
     if (inInterfaceBlock()) {
@@ -9850,6 +9988,13 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         SetBindNameOn(symbol);
       }
     }
+    // Implicitly treat allocatable arrays as managed when feature is enabled.
+    // This is done after all explicit CUDA attributes have been processed.
+    if (context().languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaManaged))
+      if (auto *object{symbol.detailsIf<ObjectEntityDetails>()})
+        if (IsAllocatable(symbol) && !object->cudaDataAttr())
+          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
   }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {
@@ -10066,12 +10211,14 @@ void ResolveNamesVisitor::Post(const parser::AssignStmt &x) {
   if (auto *name{ResolveName(std::get<parser::Name>(x.t))}) {
     CheckEntryDummyUse(name->source, name->symbol);
     ConvertToObjectEntity(DEREF(name->symbol));
+    context().NoteDefinedSymbol(*name->symbol);
   }
 }
 void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
   if (auto *name{ResolveName(std::get<parser::Name>(x.t))}) {
     CheckEntryDummyUse(name->source, name->symbol);
     ConvertToObjectEntity(DEREF(name->symbol));
+    context().NoteUsedSymbol(*name->symbol);
   }
 }
 
@@ -10092,16 +10239,18 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
   }
   if (const auto *tkr{
           std::get_if<std::list<parser::CompilerDirective::IgnoreTKR>>(&x.u)}) {
-    if (currScope().IsTopLevel() ||
-        GetProgramUnitContaining(currScope()).kind() !=
-            Scope::Kind::Subprogram) {
+    if (currScope().IsTopLevel()) {
       Say(x.source,
-          "!DIR$ IGNORE_TKR directive must appear in a subroutine or function"_err_en_US);
+          "!DIR$ IGNORE_TKR directive must appear in a program unit"_err_en_US);
       return;
-    }
-    if (!inSpecificationPart_) {
-      Say(x.source,
-          "!DIR$ IGNORE_TKR directive must appear in the specification part"_err_en_US);
+    } else if (GetProgramUnitContaining(currScope()).kind() !=
+        Scope::Kind::Subprogram) {
+      context().Warn(common::UsageWarning::MisplacedIgnoreTKR, x.source,
+          "!DIR$ IGNORE_TKR directive should appear in a subroutine or function"_warn_en_US);
+      return;
+    } else if (!inSpecificationPart_) {
+      context().Warn(common::UsageWarning::MisplacedIgnoreTKR, x.source,
+          "!DIR$ IGNORE_TKR directive should appear in the specification part"_warn_en_US);
       return;
     }
     if (tkr->empty()) {
@@ -10338,7 +10487,8 @@ public:
     NoteCall(Symbol::Flag::Function, fr.v, false);
   }
   void Post(const parser::CallStmt &cs) {
-    NoteCall(Symbol::Flag::Subroutine, cs.call, cs.chevrons.has_value());
+    const auto &[call, chevrons]{cs.t};
+    NoteCall(Symbol::Flag::Subroutine, call, chevrons.has_value());
   }
 
 private:
@@ -10531,7 +10681,8 @@ void ResolveNamesVisitor::EndScopeForNode(const ProgramTree &node) {
               if (const auto &maybeSuffix{
                       std::get<std::optional<parser::Suffix>>(
                           stmt->statement.t)}) {
-                binding = &maybeSuffix->binding;
+                binding = &std::get<std::optional<parser::LanguageBindingSpec>>(
+                    maybeSuffix->t);
               }
             }
           },
@@ -10601,7 +10752,7 @@ public:
     return false;
   }
   void Post(const parser::TypeBoundProcedureStmt::WithInterface &tbps) {
-    resolver_.CheckExplicitInterface(tbps.interfaceName);
+    resolver_.CheckExplicitInterface(std::get<parser::Name>(tbps.t));
   }
   void Post(const parser::TypeBoundProcedureStmt::WithoutInterface &tbps) {
     if (outerScope_) {
@@ -10622,11 +10773,13 @@ public:
 private:
   void Init(const parser::Name &name,
       const std::optional<parser::Initialization> &init) {
-    if (init) {
+    // Don't evaluate initializers for arrays with a rank greater than the
+    // maximum supported, to avoid running out of memory.
+    if (init && name.symbol && resolver_.CheckRank(*name.symbol)) {
       if (const auto *target{
               std::get_if<parser::InitialDataTarget>(&init->u)}) {
         resolver_.PointerInitialization(name, *target);
-      } else if (name.symbol) {
+      } else {
         if (const auto *object{name.symbol->detailsIf<ObjectEntityDetails>()};
             !object || !object->init()) {
           if (const auto *expr{std::get_if<parser::ConstantExpr>(&init->u)}) {

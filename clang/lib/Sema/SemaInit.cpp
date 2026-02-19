@@ -31,8 +31,10 @@
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -3092,6 +3094,65 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
         PrevField = *FI;
       }
 
+      const auto GenerateDesignatedInitReorderingFixit =
+          [&](SemaBase::SemaDiagnosticBuilder &Diag) {
+            struct ReorderInfo {
+              int Pos{};
+              const Expr *InitExpr{};
+            };
+
+            llvm::SmallDenseMap<IdentifierInfo *, int> MemberNameInx{};
+            llvm::SmallVector<ReorderInfo, 16> ReorderedInitExprs{};
+
+            const auto *CxxRecord =
+                IList->getSemanticForm()->getType()->getAsCXXRecordDecl();
+
+            for (const FieldDecl *Field : CxxRecord->fields())
+              MemberNameInx[Field->getIdentifier()] = Field->getFieldIndex();
+
+            for (const Expr *Init : IList->inits()) {
+              if (const auto *DI =
+                      dyn_cast_if_present<DesignatedInitExpr>(Init)) {
+                // We expect only one Designator
+                if (DI->size() != 1)
+                  return;
+
+                const IdentifierInfo *const FieldName =
+                    DI->getDesignator(0)->getFieldName();
+                // In case we have an unknown initializer in the source, not in
+                // the record
+                if (MemberNameInx.contains(FieldName))
+                  ReorderedInitExprs.emplace_back(
+                      ReorderInfo{MemberNameInx.at(FieldName), Init});
+              }
+            }
+
+            llvm::sort(ReorderedInitExprs,
+                       [](const ReorderInfo &A, const ReorderInfo &B) {
+                         return A.Pos < B.Pos;
+                       });
+
+            llvm::SmallString<128> FixedInitList{};
+            SourceManager &SM = SemaRef.getSourceManager();
+            const LangOptions &LangOpts = SemaRef.getLangOpts();
+
+            // In a derived Record, first n base-classes are initialized first.
+            // They do not use designated init, so skip them
+            const ArrayRef<clang::Expr *> IListInits =
+                IList->inits().drop_front(CxxRecord->getNumBases());
+            // loop over each existing expressions and apply replacement
+            for (const auto &[OrigExpr, Repl] :
+                 llvm::zip(IListInits, ReorderedInitExprs)) {
+              CharSourceRange CharRange = CharSourceRange::getTokenRange(
+                  Repl.InitExpr->getSourceRange());
+              const StringRef InitText =
+                  Lexer::getSourceText(CharRange, SM, LangOpts);
+
+              Diag << FixItHint::CreateReplacement(OrigExpr->getSourceRange(),
+                                                   InitText.str());
+            }
+          };
+
       if (PrevField &&
           PrevField->getFieldIndex() > KnownField->getFieldIndex()) {
         SemaRef.Diag(DIE->getInit()->getBeginLoc(),
@@ -3101,9 +3162,10 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
         unsigned OldIndex = StructuredIndex - 1;
         if (StructuredList && OldIndex <= StructuredList->getNumInits()) {
           if (Expr *PrevInit = StructuredList->getInit(OldIndex)) {
-            SemaRef.Diag(PrevInit->getBeginLoc(),
-                         diag::note_previous_field_init)
-                << PrevField << PrevInit->getSourceRange();
+            auto Diag = SemaRef.Diag(PrevInit->getBeginLoc(),
+                                     diag::note_previous_field_init)
+                        << PrevField << PrevInit->getSourceRange();
+            GenerateDesignatedInitReorderingFixit(Diag);
           }
         }
       }
@@ -5589,7 +5651,16 @@ static void TryReferenceInitializationCore(Sema &S,
       T1QualsIgnoreAS.removeAddressSpace();
       T2QualsIgnoreAS.removeAddressSpace();
     }
-    QualType cv1T4 = S.Context.getQualifiedType(cv2T2, T1QualsIgnoreAS);
+    // Strip the existing ObjC lifetime qualifier from cv2T2 before combining
+    // with T1's qualifiers.
+    QualType T2ForQualConv = cv2T2;
+    if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
+      Qualifiers T2BaseQuals =
+          T2ForQualConv.getQualifiers().withoutObjCLifetime();
+      T2ForQualConv = S.Context.getQualifiedType(
+          T2ForQualConv.getUnqualifiedType(), T2BaseQuals);
+    }
+    QualType cv1T4 = S.Context.getQualifiedType(T2ForQualConv, T1QualsIgnoreAS);
     if (T1QualsIgnoreAS != T2QualsIgnoreAS)
       Sequence.AddQualificationConversionStep(cv1T4, ValueKind);
     Sequence.AddReferenceBindingStep(cv1T4, ValueKind == VK_PRValue);
@@ -6876,10 +6947,39 @@ void InitializationSequence::InitializeFrom(Sema &S,
   // For HLSL ext vector types we allow list initialization behavior for C++
   // functional cast expressions which look like constructor syntax. This is
   // accomplished by converting initialization arguments to InitListExpr.
-  if (S.getLangOpts().HLSL && Args.size() > 1 &&
-      (DestType->isExtVectorType() || DestType->isConstantMatrixType()) &&
-      (SourceType.isNull() ||
-       !Context.hasSameUnqualifiedType(SourceType, DestType))) {
+  auto ShouldTryListInitialization = [&]() -> bool {
+    // Only try list initialization for HLSL.
+    if (!S.getLangOpts().HLSL)
+      return false;
+
+    bool DestIsVec = DestType->isExtVectorType();
+    bool DestIsMat = DestType->isConstantMatrixType();
+
+    // If the destination type is neither a vector nor a matrix, then don't try
+    // list initialization.
+    if (!DestIsVec && !DestIsMat)
+      return false;
+
+    // If there is only a single source argument, then only try list
+    // initialization if initializing a matrix with a vector or vice versa.
+    if (Args.size() == 1) {
+      assert(!SourceType.isNull() &&
+             "Source QualType should not be null when arg size is exactly 1");
+      bool SourceIsVec = SourceType->isExtVectorType();
+      bool SourceIsMat = SourceType->isConstantMatrixType();
+
+      if (DestIsMat && !SourceIsVec)
+        return false;
+      if (DestIsVec && !SourceIsMat)
+        return false;
+    }
+
+    // Try list initialization if the source type is null or if the
+    // destination and source types differ.
+    return SourceType.isNull() ||
+           !Context.hasSameUnqualifiedType(SourceType, DestType);
+  };
+  if (ShouldTryListInitialization()) {
     InitListExpr *ILE = new (Context)
         InitListExpr(S.getASTContext(), Args.front()->getBeginLoc(), Args,
                      Args.back()->getEndLoc());
@@ -8441,8 +8541,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
         Expr::EvalResult ER;
         if (Entity.getType()->getAs<PointerType>() &&
             CurInit.get()->EvaluateAsRValue(ER, S.Context) &&
-            !ER.Val.isNullPointer()) {
+            (ER.Val.isLValue() && !ER.Val.isNullPointer())) {
           S.Diag(Kind.getLocation(), diag::err_c23_constexpr_pointer_not_null);
+          return ExprError();
         }
       }
 

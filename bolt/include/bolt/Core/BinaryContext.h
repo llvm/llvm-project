@@ -39,6 +39,7 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
@@ -64,6 +65,9 @@ using namespace object;
 namespace bolt {
 
 class BinaryFunction;
+
+using BinaryFunctionListType = std::vector<BinaryFunction *>;
+using ConstBinaryFunctionListType = std::vector<const BinaryFunction *>;
 
 /// Information on loadable part of the file.
 struct SegmentInfo {
@@ -228,11 +232,11 @@ class BinaryContext {
   /// Store all functions in the binary, sorted by original address.
   std::map<uint64_t, BinaryFunction> BinaryFunctions;
 
-  /// A mutex that is used to control parallel accesses to BinaryFunctions
-  mutable llvm::sys::RWMutex BinaryFunctionsMutex;
+  /// Functions to be considered for the output in a sorted order.
+  BinaryFunctionListType OutputFunctions;
 
-  /// Functions injected by BOLT
-  std::vector<BinaryFunction *> InjectedBinaryFunctions;
+  /// Functions injected by BOLT.
+  BinaryFunctionListType InjectedBinaryFunctions;
 
   /// Jump tables for all functions mapped by address.
   std::map<uint64_t, JumpTable *> JumpTables;
@@ -551,6 +555,9 @@ public:
     return BinaryFunctions;
   }
 
+  /// Return functions meant for the output in a sorted order.
+  BinaryFunctionListType &getOutputBinaryFunctions() { return OutputFunctions; }
+
   /// Create BOLT-injected function
   BinaryFunction *createInjectedBinaryFunction(const std::string &Name,
                                                bool IsSimple = true);
@@ -567,13 +574,13 @@ public:
                          const InstructionListType &Instructions,
                          const Twine &Name = "");
 
-  std::vector<BinaryFunction *> &getInjectedBinaryFunctions() {
+  BinaryFunctionListType &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
   }
 
   /// Return vector with all functions, i.e. include functions from the input
   /// binary and functions created by BOLT.
-  std::vector<BinaryFunction *> getAllBinaryFunctions();
+  BinaryFunctionListType getAllBinaryFunctions();
 
   /// Construct a jump table for \p Function at \p Address or return an existing
   /// one at that location.
@@ -671,6 +678,8 @@ public:
   std::unique_ptr<MCCodeEmitter> MCE;
 
   std::unique_ptr<MCObjectFileInfo> MOFI;
+
+  MCTargetOptions MCOptions;
 
   std::unique_ptr<const MCAsmInfo> AsmInfo;
 
@@ -943,10 +952,11 @@ public:
   /// that should be used by the branch. For example, main or secondary entry
   /// point.
   ///
-  /// If \p Address is an invalid destination, such as a constant island, return
-  /// nullptr and mark \p BF as ignored, since we cannot properly handle a
-  /// branch to a constant island.
-  MCSymbol *handleExternalBranchTarget(uint64_t Address, BinaryFunction &BF);
+  /// This function also performs validations: If \p Address points to an
+  /// invalid instruction or lies within a constant island, return nullptr and
+  /// mark both \p Source and \p Target as ignored.
+  MCSymbol *handleExternalBranchTarget(uint64_t Address, BinaryFunction &Source,
+                                       BinaryFunction &Target);
 
   /// Analyze memory contents at the given \p Address and return the type of
   /// memory contents (such as a possible jump table).
@@ -1113,7 +1123,7 @@ public:
     return FragmentClasses.isEquivalent(LHS, RHS);
   }
 
-  /// Add interprocedural reference for \p Function to \p Address
+  /// Add interprocedural branch reference from \p Function to \p Address.
   void addInterproceduralReference(BinaryFunction *Function, uint64_t Address) {
     InterproceduralReferences.push_back({Function, Address});
   }
@@ -1128,7 +1138,8 @@ public:
   /// argument is false.
   bool handleAArch64Veneer(uint64_t Address, bool MatchOnly = false);
 
-  /// Resolve inter-procedural dependencies from
+  /// Resolve inter-procedural branch dependencies discovered during
+  /// disassembly.
   void processInterproceduralReferences();
 
   /// Skip functions with all parent and child fragments transitively.
@@ -1381,9 +1392,6 @@ public:
   /// Add a filename entry from SrcCUID to DestCUID.
   unsigned addDebugFilenameToUnit(const uint32_t DestCUID,
                                   const uint32_t SrcCUID, unsigned FileIndex);
-
-  /// Return functions in output layout order
-  std::vector<BinaryFunction *> getSortedFunctions();
 
   /// Do the best effort to calculate the size of the function by emitting
   /// its code, and relaxing branch instructions. By default, branch

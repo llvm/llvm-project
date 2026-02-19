@@ -26,6 +26,7 @@
 #include "clang/Options/Options.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -174,6 +175,20 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
       unsigned diagID = flang->getDiagnostics().getCustomDiagID(
           clang::DiagnosticsEngine::Error, "unable to load plugin '%0': '%1'");
       flang->getDiagnostics().Report(diagID) << path << error;
+    }
+  }
+
+  // Load and store LLVM pass plugins.
+  for (const std::string &path :
+       flang->getInvocation().getCodeGenOpts().LLVMPassPlugins) {
+    if (llvm::Expected<llvm::PassPlugin> passPlugin =
+            llvm::PassPlugin::Load(path)) {
+      flang->addPassPlugin(std::make_unique<llvm::PassPlugin>(*passPlugin));
+    } else {
+      unsigned diagID = flang->getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Error, "unable to load plugin '%0': '%1'");
+      flang->getDiagnostics().Report(diagID)
+          << path << toString(passPlugin.takeError());
     }
   }
 

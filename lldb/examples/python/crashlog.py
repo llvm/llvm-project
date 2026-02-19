@@ -1118,7 +1118,16 @@ class TextCrashLogParser(CrashLogParser):
             self.crashlog.crashed_thread_idx = int(line[15:].strip().split()[0])
             return
         elif line.startswith("Triggered by Thread:"):  # iOS
-            self.crashlog.crashed_thread_idx = int(line[20:].strip().split()[0])
+            # Possible formats:
+            # Triggered by Thread: 0, Dispatch Queue: com.apple.main-thread
+            # Triggered by Thread: 1
+
+            triggered = line[20:].strip().split()[0]
+
+            # Strip the possibly trailing comma.
+            triggered = triggered.replace(",", "")
+
+            self.crashlog.crashed_thread_idx = int(triggered)
             return
         elif line.startswith("Report Version:"):
             self.crashlog.version = int(line[15:].strip())

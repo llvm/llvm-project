@@ -50,6 +50,18 @@ static bool tryToImproveAlign(
       I->replaceAllUsesWith(Constant::getNullValue(I->getType()));
       return true;
     }
+    if (Const->uge(
+            APInt::getBitsSetFrom(Const->getBitWidth(), Log2(ActualAlign)))) {
+      I->replaceAllUsesWith(I->getOperand(0));
+      return true;
+    }
+  }
+  if (match(I, m_Trunc(m_PtrToIntOrAddr(m_Value(PtrOp))))) {
+    Align ActualAlign = Fn(PtrOp, Align(1), Align(1));
+    if (Log2(ActualAlign) >= I->getType()->getScalarSizeInBits()) {
+      I->replaceAllUsesWith(Constant::getNullValue(I->getType()));
+      return true;
+    }
   }
 
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);

@@ -195,7 +195,7 @@ define dllexport amdgpu_hs void @hs_shader() {
 
 !amdgpu.pal.metadata.msgpack = !{!0}
 
-attributes #0 = { nounwind memory(readwrite) "target-features"=",+wavefrontsize64,+cumode" }
+attributes #0 = { nounwind memory(readwrite) "target-features"="+wavefrontsize64,+cumode" }
 
 attributes #1 = { nounwind memory(readwrite) "InitialPSInputAddr"="36983" }
 

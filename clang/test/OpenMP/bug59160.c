@@ -8,7 +8,13 @@ void zoo(void) {
   xp[1] = &x[0];
   short **xpp = &xp[0];
   x[1] = 111;
-#pragma omp target data map(tofrom: xpp[1][1]) use_device_addr(xpp[1][1])
+
+// NOTE: use_device_addr on xpp[1][1] is non-compliant, as the base-pointer
+// is xpp[1], which is not a base-language identifier.
+#pragma omp target data map(tofrom: xpp[1][1]) //use_device_addr(xpp[1][1])
+// FIXME: The assumption that xpp should not be mapped is incorrect.
+// The base-pointer of the array-section is xpp[1], not xpp, so the implicit
+// clause on xpp, i.e. a zero-length array-section amp, should still be emitted.
 #pragma omp target has_device_addr(xpp[1][1])
   {
     xpp[1][1] = 222;

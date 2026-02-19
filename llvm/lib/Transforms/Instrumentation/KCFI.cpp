@@ -101,7 +101,7 @@ PreservedAnalyses KCFIPass::run(Function &F, FunctionAnalysisManager &AM) {
     if (T.isARM() || T.isThumb()) {
       FuncPtr = Builder.CreateIntToPtr(
           Builder.CreateAnd(Builder.CreatePtrToInt(FuncPtr, Int32Ty),
-                            ConstantInt::get(Int32Ty, -2)),
+                            ConstantInt::getSigned(Int32Ty, -2)),
           FuncPtr->getType());
     }
     Value *HashPtr = Builder.CreateConstInBoundsGEP1_32(Int32Ty, FuncPtr, -1);

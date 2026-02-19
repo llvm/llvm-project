@@ -57,6 +57,7 @@ if config.clang_tidy_staticanalyzer:
 if config.clang_tidy_custom_check:
     config.available_features.add("custom-check")
 python_exec = shlex.quote(config.python_executable)
+config.substitutions.append(("%python", python_exec))
 check_clang_tidy = os.path.join(
     config.test_source_root, "clang-tidy", "check_clang_tidy.py"
 )

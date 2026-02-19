@@ -16,11 +16,11 @@ end module
 program sample
     use new_operator
     implicit none
-    integer :: x, y 
+    integer :: x, y
 
     !$omp atomic update
         x = x / y
-     
+
     !$omp atomic update
     !ERROR: A call to this function is not a valid ATOMIC UPDATE operation
         x = x .MYOPERATOR. y

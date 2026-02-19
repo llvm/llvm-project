@@ -33,19 +33,19 @@ void foo() {
 // CHECK-LABEL: define {{[^@]+}}@_Z3foov
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[SA:%.*]] = alloca [10 x %struct.D], align 4
+// CHECK-NEXT:    [[SA:%.*]] = alloca [10 x [[STRUCT_D:%.*]]], align 4
 // CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    [[DOTOFFLOAD_MAPPERS:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    [[KERNEL_ARGS:%.*]] = alloca [[STRUCT___TGT_KERNEL_ARGUMENTS:%.*]], align 8
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x %struct.D], ptr [[SA]], i64 0, i64 1
-// CHECK-NEXT:    [[E:%.*]] = getelementptr inbounds nuw [[STRUCT_D:%.*]], ptr [[ARRAYIDX]], i32 0, i32 0
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [[STRUCT_D]]], ptr [[SA]], i64 0, i64 1
+// CHECK-NEXT:    [[E:%.*]] = getelementptr inbounds nuw [[STRUCT_D]], ptr [[ARRAYIDX]], i32 0, i32 0
 // CHECK-NEXT:    store i32 111, ptr [[E]], align 4
-// CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [10 x %struct.D], ptr [[SA]], i64 0, i64 1
+// CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [10 x [[STRUCT_D]]], ptr [[SA]], i64 0, i64 1
 // CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_D]], ptr [[ARRAYIDX1]], i32 0, i32 1
 // CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_C:%.*]], ptr [[F]], i32 0, i32 0
 // CHECK-NEXT:    store i32 222, ptr [[A]], align 4
-// CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [10 x %struct.D], ptr [[SA]], i64 0, i64 0
+// CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [10 x [[STRUCT_D]]], ptr [[SA]], i64 0, i64 0
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[SA]], ptr [[TMP0]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
@@ -95,11 +95,11 @@ void foo() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[SA_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[SA]], ptr [[SA_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SA_ADDR]], align 8
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x %struct.D], ptr [[TMP0]], i64 0, i64 1
-// CHECK-NEXT:    [[E:%.*]] = getelementptr inbounds nuw [[STRUCT_D:%.*]], ptr [[ARRAYIDX]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SA_ADDR]], align 8, !nonnull [[META5:![0-9]+]], !align [[META6:![0-9]+]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [[STRUCT_D:%.*]]], ptr [[TMP0]], i64 0, i64 1
+// CHECK-NEXT:    [[E:%.*]] = getelementptr inbounds nuw [[STRUCT_D]], ptr [[ARRAYIDX]], i32 0, i32 0
 // CHECK-NEXT:    store i32 333, ptr [[E]], align 4
-// CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [10 x %struct.D], ptr [[TMP0]], i64 0, i64 1
+// CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds [10 x [[STRUCT_D]]], ptr [[TMP0]], i64 0, i64 1
 // CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_D]], ptr [[ARRAYIDX1]], i32 0, i32 1
 // CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_C:%.*]], ptr [[F]], i32 0, i32 0
 // CHECK-NEXT:    store i32 444, ptr [[A]], align 4
@@ -109,141 +109,137 @@ void foo() {
 // CHECK-LABEL: define {{[^@]+}}@.omp_mapper._ZTS1D.default
 // CHECK-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]], i64 noundef [[TMP3:%.*]], i64 noundef [[TMP4:%.*]], ptr noundef [[TMP5:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP10:%.*]] = udiv exact i64 [[TMP3]], 12
-// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr [[STRUCT_D:%.*]], ptr [[TMP2]], i64 [[TMP10]]
-// CHECK-NEXT:    [[OMP_ARRAYINIT_ISARRAY:%.*]] = icmp sgt i64 [[TMP10]], 1
-// CHECK-NEXT:    [[TMP14:%.*]] = and i64 [[TMP4]], 8
-// CHECK-NEXT:    [[TMP15:%.*]] = icmp ne ptr [[TMP1]], [[TMP2]]
-// CHECK-NEXT:    [[TMP16:%.*]] = and i64 [[TMP4]], 16
-// CHECK-NEXT:    [[TMP17:%.*]] = icmp ne i64 [[TMP16]], 0
-// CHECK-NEXT:    [[TMP18:%.*]] = and i1 [[TMP15]], [[TMP17]]
-// CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[OMP_ARRAYINIT_ISARRAY]], [[TMP18]]
-// CHECK-NEXT:    [[DOTOMP_ARRAY__INIT__DELETE:%.*]] = icmp eq i64 [[TMP14]], 0
-// CHECK-NEXT:    [[TMP20:%.*]] = and i1 [[TMP19]], [[DOTOMP_ARRAY__INIT__DELETE]]
-// CHECK-NEXT:    br i1 [[TMP20]], label [[DOTOMP_ARRAY__INIT:%.*]], label [[OMP_ARRAYMAP_HEAD:%.*]]
+// CHECK-NEXT:    [[TMP6:%.*]] = udiv exact i64 [[TMP3]], 12
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [[STRUCT_D:%.*]], ptr [[TMP2]], i64 [[TMP6]]
+// CHECK-NEXT:    [[OMP_ARRAYINIT_ISARRAY:%.*]] = icmp sgt i64 [[TMP6]], 1
+// CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP4]], 8
+// CHECK-NEXT:    [[TMP9:%.*]] = icmp ne ptr [[TMP1]], [[TMP2]]
+// CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[OMP_ARRAYINIT_ISARRAY]], [[TMP9]]
+// CHECK-NEXT:    [[DOTOMP_ARRAY__INIT__DELETE:%.*]] = icmp eq i64 [[TMP8]], 0
+// CHECK-NEXT:    [[TMP11:%.*]] = and i1 [[TMP10]], [[DOTOMP_ARRAY__INIT__DELETE]]
+// CHECK-NEXT:    br i1 [[TMP11]], label [[DOTOMP_ARRAY__INIT:%.*]], label [[OMP_ARRAYMAP_HEAD:%.*]]
 // CHECK:       .omp.array..init:
-// CHECK-NEXT:    [[TMP21:%.*]] = mul nuw i64 [[TMP10]], 12
-// CHECK-NEXT:    [[TMP22:%.*]] = and i64 [[TMP4]], -4
-// CHECK-NEXT:    [[TMP23:%.*]] = or i64 [[TMP22]], 512
-// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]], i64 [[TMP21]], i64 [[TMP23]], ptr [[TMP5]])
+// CHECK-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP6]], 12
+// CHECK-NEXT:    [[TMP13:%.*]] = and i64 [[TMP4]], -4
+// CHECK-NEXT:    [[TMP14:%.*]] = or i64 [[TMP13]], 512
+// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]], i64 [[TMP12]], i64 [[TMP14]], ptr [[TMP5]])
 // CHECK-NEXT:    br label [[OMP_ARRAYMAP_HEAD]]
 // CHECK:       omp.arraymap.head:
-// CHECK-NEXT:    [[OMP_ARRAYMAP_ISEMPTY:%.*]] = icmp eq ptr [[TMP2]], [[TMP11]]
+// CHECK-NEXT:    [[OMP_ARRAYMAP_ISEMPTY:%.*]] = icmp eq ptr [[TMP2]], [[TMP7]]
 // CHECK-NEXT:    br i1 [[OMP_ARRAYMAP_ISEMPTY]], label [[OMP_DONE:%.*]], label [[OMP_ARRAYMAP_BODY:%.*]]
 // CHECK:       omp.arraymap.body:
-// CHECK-NEXT:    [[OMP_ARRAYMAP_PTRCURRENT:%.*]] = phi ptr [ [[TMP2]], [[OMP_ARRAYMAP_HEAD]] ], [ [[OMP_ARRAYMAP_NEXT:%.*]], [[OMP_TYPE_END25:%.*]] ]
+// CHECK-NEXT:    [[OMP_ARRAYMAP_PTRCURRENT:%.*]] = phi ptr [ [[TMP2]], [[OMP_ARRAYMAP_HEAD]] ], [ [[OMP_ARRAYMAP_NEXT:%.*]], [[OMP_TYPE_END20:%.*]] ]
 // CHECK-NEXT:    [[E:%.*]] = getelementptr inbounds nuw [[STRUCT_D]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], i32 0, i32 0
 // CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_D]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], i32 0, i32 1
 // CHECK-NEXT:    [[H:%.*]] = getelementptr inbounds nuw [[STRUCT_D]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], i32 0, i32 2
-// CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[H]], i32 1
-// CHECK-NEXT:    [[TMP25:%.*]] = ptrtoint ptr [[TMP24]] to i64
-// CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[E]] to i64
-// CHECK-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP25]], [[TMP26]]
-// CHECK-NEXT:    [[TMP28:%.*]] = sdiv exact i64 [[TMP27]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK-NEXT:    [[TMP29:%.*]] = call i64 @__tgt_mapper_num_components(ptr [[TMP0]])
-// CHECK-NEXT:    [[TMP30:%.*]] = shl i64 [[TMP29]], 48
-// CHECK-NEXT:    [[TMP31:%.*]] = add nuw i64 0, [[TMP30]]
-// CHECK-NEXT:    [[TMP32:%.*]] = and i64 [[TMP4]], 3
-// CHECK-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[TMP32]], 0
-// CHECK-NEXT:    br i1 [[TMP33]], label [[OMP_TYPE_ALLOC:%.*]], label [[OMP_TYPE_ALLOC_ELSE:%.*]]
+// CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[H]], i32 1
+// CHECK-NEXT:    [[TMP16:%.*]] = ptrtoaddr ptr [[TMP15]] to i64
+// CHECK-NEXT:    [[TMP17:%.*]] = ptrtoaddr ptr [[E]] to i64
+// CHECK-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP16]], [[TMP17]]
+// CHECK-NEXT:    [[TMP19:%.*]] = call i64 @__tgt_mapper_num_components(ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[TMP19]], 48
+// CHECK-NEXT:    [[TMP21:%.*]] = add nuw i64 0, [[TMP20]]
+// CHECK-NEXT:    [[TMP22:%.*]] = and i64 [[TMP4]], 3
+// CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[TMP22]], 0
+// CHECK-NEXT:    br i1 [[TMP23]], label [[OMP_TYPE_ALLOC:%.*]], label [[OMP_TYPE_ALLOC_ELSE:%.*]]
 // CHECK:       omp.type.alloc:
-// CHECK-NEXT:    [[TMP34:%.*]] = and i64 [[TMP31]], -4
+// CHECK-NEXT:    [[TMP24:%.*]] = and i64 [[TMP21]], -4
 // CHECK-NEXT:    br label [[OMP_TYPE_END:%.*]]
 // CHECK:       omp.type.alloc.else:
-// CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[TMP32]], 1
-// CHECK-NEXT:    br i1 [[TMP35]], label [[OMP_TYPE_TO:%.*]], label [[OMP_TYPE_TO_ELSE:%.*]]
+// CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[TMP22]], 1
+// CHECK-NEXT:    br i1 [[TMP25]], label [[OMP_TYPE_TO:%.*]], label [[OMP_TYPE_TO_ELSE:%.*]]
 // CHECK:       omp.type.to:
-// CHECK-NEXT:    [[TMP36:%.*]] = and i64 [[TMP31]], -3
+// CHECK-NEXT:    [[TMP26:%.*]] = and i64 [[TMP21]], -3
 // CHECK-NEXT:    br label [[OMP_TYPE_END]]
 // CHECK:       omp.type.to.else:
-// CHECK-NEXT:    [[TMP37:%.*]] = icmp eq i64 [[TMP32]], 2
-// CHECK-NEXT:    br i1 [[TMP37]], label [[OMP_TYPE_FROM:%.*]], label [[OMP_TYPE_END]]
+// CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[TMP22]], 2
+// CHECK-NEXT:    br i1 [[TMP27]], label [[OMP_TYPE_FROM:%.*]], label [[OMP_TYPE_END]]
 // CHECK:       omp.type.from:
-// CHECK-NEXT:    [[TMP38:%.*]] = and i64 [[TMP31]], -2
+// CHECK-NEXT:    [[TMP28:%.*]] = and i64 [[TMP21]], -2
 // CHECK-NEXT:    br label [[OMP_TYPE_END]]
 // CHECK:       omp.type.end:
-// CHECK-NEXT:    [[OMP_MAPTYPE:%.*]] = phi i64 [ [[TMP34]], [[OMP_TYPE_ALLOC]] ], [ [[TMP36]], [[OMP_TYPE_TO]] ], [ [[TMP38]], [[OMP_TYPE_FROM]] ], [ [[TMP31]], [[OMP_TYPE_TO_ELSE]] ]
-// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], ptr [[E]], i64 [[TMP28]], i64 [[OMP_MAPTYPE]], ptr null)
-// CHECK-NEXT:    [[TMP39:%.*]] = add nuw i64 281474976711171, [[TMP30]]
-// CHECK-NEXT:    [[TMP40:%.*]] = and i64 [[TMP4]], 3
-// CHECK-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[TMP40]], 0
-// CHECK-NEXT:    br i1 [[TMP41]], label [[OMP_TYPE_ALLOC6:%.*]], label [[OMP_TYPE_ALLOC_ELSE7:%.*]]
+// CHECK-NEXT:    [[OMP_MAPTYPE:%.*]] = phi i64 [ [[TMP24]], [[OMP_TYPE_ALLOC]] ], [ [[TMP26]], [[OMP_TYPE_TO]] ], [ [[TMP28]], [[OMP_TYPE_FROM]] ], [ [[TMP21]], [[OMP_TYPE_TO_ELSE]] ]
+// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], ptr [[E]], i64 [[TMP18]], i64 [[OMP_MAPTYPE]], ptr null)
+// CHECK-NEXT:    [[TMP29:%.*]] = add nuw i64 281474976711171, [[TMP20]]
+// CHECK-NEXT:    [[TMP30:%.*]] = and i64 [[TMP4]], 3
+// CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i64 [[TMP30]], 0
+// CHECK-NEXT:    br i1 [[TMP31]], label [[OMP_TYPE_ALLOC1:%.*]], label [[OMP_TYPE_ALLOC_ELSE2:%.*]]
 // CHECK:       omp.type.alloc1:
-// CHECK-NEXT:    [[TMP42:%.*]] = and i64 [[TMP39]], -4
-// CHECK-NEXT:    br label [[OMP_TYPE_END11:%.*]]
+// CHECK-NEXT:    [[TMP32:%.*]] = and i64 [[TMP29]], -4
+// CHECK-NEXT:    br label [[OMP_TYPE_END6:%.*]]
 // CHECK:       omp.type.alloc.else2:
-// CHECK-NEXT:    [[TMP43:%.*]] = icmp eq i64 [[TMP40]], 1
-// CHECK-NEXT:    br i1 [[TMP43]], label [[OMP_TYPE_TO8:%.*]], label [[OMP_TYPE_TO_ELSE9:%.*]]
+// CHECK-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[TMP30]], 1
+// CHECK-NEXT:    br i1 [[TMP33]], label [[OMP_TYPE_TO3:%.*]], label [[OMP_TYPE_TO_ELSE4:%.*]]
 // CHECK:       omp.type.to3:
-// CHECK-NEXT:    [[TMP44:%.*]] = and i64 [[TMP39]], -3
-// CHECK-NEXT:    br label [[OMP_TYPE_END11]]
+// CHECK-NEXT:    [[TMP34:%.*]] = and i64 [[TMP29]], -3
+// CHECK-NEXT:    br label [[OMP_TYPE_END6]]
 // CHECK:       omp.type.to.else4:
-// CHECK-NEXT:    [[TMP45:%.*]] = icmp eq i64 [[TMP40]], 2
-// CHECK-NEXT:    br i1 [[TMP45]], label [[OMP_TYPE_FROM10:%.*]], label [[OMP_TYPE_END11]]
+// CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i64 [[TMP30]], 2
+// CHECK-NEXT:    br i1 [[TMP35]], label [[OMP_TYPE_FROM5:%.*]], label [[OMP_TYPE_END6]]
 // CHECK:       omp.type.from5:
-// CHECK-NEXT:    [[TMP46:%.*]] = and i64 [[TMP39]], -2
-// CHECK-NEXT:    br label [[OMP_TYPE_END11]]
+// CHECK-NEXT:    [[TMP36:%.*]] = and i64 [[TMP29]], -2
+// CHECK-NEXT:    br label [[OMP_TYPE_END6]]
 // CHECK:       omp.type.end6:
-// CHECK-NEXT:    [[OMP_MAPTYPE12:%.*]] = phi i64 [ [[TMP42]], [[OMP_TYPE_ALLOC6]] ], [ [[TMP44]], [[OMP_TYPE_TO8]] ], [ [[TMP46]], [[OMP_TYPE_FROM10]] ], [ [[TMP39]], [[OMP_TYPE_TO_ELSE9]] ]
-// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], ptr [[E]], i64 4, i64 [[OMP_MAPTYPE12]], ptr null)
-// CHECK-NEXT:    [[TMP47:%.*]] = add nuw i64 281474976711171, [[TMP30]]
-// CHECK-NEXT:    [[TMP48:%.*]] = and i64 [[TMP4]], 3
-// CHECK-NEXT:    [[TMP49:%.*]] = icmp eq i64 [[TMP48]], 0
-// CHECK-NEXT:    br i1 [[TMP49]], label [[OMP_TYPE_ALLOC13:%.*]], label [[OMP_TYPE_ALLOC_ELSE14:%.*]]
+// CHECK-NEXT:    [[OMP_MAPTYPE7:%.*]] = phi i64 [ [[TMP32]], [[OMP_TYPE_ALLOC1]] ], [ [[TMP34]], [[OMP_TYPE_TO3]] ], [ [[TMP36]], [[OMP_TYPE_FROM5]] ], [ [[TMP29]], [[OMP_TYPE_TO_ELSE4]] ]
+// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], ptr [[E]], i64 4, i64 [[OMP_MAPTYPE7]], ptr null)
+// CHECK-NEXT:    [[TMP37:%.*]] = add nuw i64 281474976711171, [[TMP20]]
+// CHECK-NEXT:    [[TMP38:%.*]] = and i64 [[TMP4]], 3
+// CHECK-NEXT:    [[TMP39:%.*]] = icmp eq i64 [[TMP38]], 0
+// CHECK-NEXT:    br i1 [[TMP39]], label [[OMP_TYPE_ALLOC8:%.*]], label [[OMP_TYPE_ALLOC_ELSE9:%.*]]
 // CHECK:       omp.type.alloc8:
-// CHECK-NEXT:    [[TMP50:%.*]] = and i64 [[TMP47]], -4
-// CHECK-NEXT:    br label [[OMP_TYPE_END18:%.*]]
+// CHECK-NEXT:    [[TMP40:%.*]] = and i64 [[TMP37]], -4
+// CHECK-NEXT:    br label [[OMP_TYPE_END13:%.*]]
 // CHECK:       omp.type.alloc.else9:
-// CHECK-NEXT:    [[TMP51:%.*]] = icmp eq i64 [[TMP48]], 1
-// CHECK-NEXT:    br i1 [[TMP51]], label [[OMP_TYPE_TO15:%.*]], label [[OMP_TYPE_TO_ELSE16:%.*]]
+// CHECK-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[TMP38]], 1
+// CHECK-NEXT:    br i1 [[TMP41]], label [[OMP_TYPE_TO10:%.*]], label [[OMP_TYPE_TO_ELSE11:%.*]]
 // CHECK:       omp.type.to10:
-// CHECK-NEXT:    [[TMP52:%.*]] = and i64 [[TMP47]], -3
-// CHECK-NEXT:    br label [[OMP_TYPE_END18]]
+// CHECK-NEXT:    [[TMP42:%.*]] = and i64 [[TMP37]], -3
+// CHECK-NEXT:    br label [[OMP_TYPE_END13]]
 // CHECK:       omp.type.to.else11:
-// CHECK-NEXT:    [[TMP53:%.*]] = icmp eq i64 [[TMP48]], 2
-// CHECK-NEXT:    br i1 [[TMP53]], label [[OMP_TYPE_FROM17:%.*]], label [[OMP_TYPE_END18]]
+// CHECK-NEXT:    [[TMP43:%.*]] = icmp eq i64 [[TMP38]], 2
+// CHECK-NEXT:    br i1 [[TMP43]], label [[OMP_TYPE_FROM12:%.*]], label [[OMP_TYPE_END13]]
 // CHECK:       omp.type.from12:
-// CHECK-NEXT:    [[TMP54:%.*]] = and i64 [[TMP47]], -2
-// CHECK-NEXT:    br label [[OMP_TYPE_END18]]
+// CHECK-NEXT:    [[TMP44:%.*]] = and i64 [[TMP37]], -2
+// CHECK-NEXT:    br label [[OMP_TYPE_END13]]
 // CHECK:       omp.type.end13:
-// CHECK-NEXT:    [[OMP_MAPTYPE19:%.*]] = phi i64 [ [[TMP50]], [[OMP_TYPE_ALLOC13]] ], [ [[TMP52]], [[OMP_TYPE_TO15]] ], [ [[TMP54]], [[OMP_TYPE_FROM17]] ], [ [[TMP47]], [[OMP_TYPE_TO_ELSE16]] ]
-// CHECK-NEXT:    call void @.omp_mapper._ZTS1C.default(ptr [[TMP0]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], ptr [[F]], i64 4, i64 [[OMP_MAPTYPE19]], ptr null) #[[ATTR3]]
-// CHECK-NEXT:    [[TMP55:%.*]] = add nuw i64 281474976711171, [[TMP30]]
-// CHECK-NEXT:    [[TMP56:%.*]] = and i64 [[TMP4]], 3
-// CHECK-NEXT:    [[TMP57:%.*]] = icmp eq i64 [[TMP56]], 0
-// CHECK-NEXT:    br i1 [[TMP57]], label [[OMP_TYPE_ALLOC20:%.*]], label [[OMP_TYPE_ALLOC_ELSE21:%.*]]
+// CHECK-NEXT:    [[OMP_MAPTYPE14:%.*]] = phi i64 [ [[TMP40]], [[OMP_TYPE_ALLOC8]] ], [ [[TMP42]], [[OMP_TYPE_TO10]] ], [ [[TMP44]], [[OMP_TYPE_FROM12]] ], [ [[TMP37]], [[OMP_TYPE_TO_ELSE11]] ]
+// CHECK-NEXT:    call void @.omp_mapper._ZTS1C.default(ptr [[TMP0]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], ptr [[F]], i64 4, i64 [[OMP_MAPTYPE14]], ptr null) #[[ATTR3]]
+// CHECK-NEXT:    [[TMP45:%.*]] = add nuw i64 281474976711171, [[TMP20]]
+// CHECK-NEXT:    [[TMP46:%.*]] = and i64 [[TMP4]], 3
+// CHECK-NEXT:    [[TMP47:%.*]] = icmp eq i64 [[TMP46]], 0
+// CHECK-NEXT:    br i1 [[TMP47]], label [[OMP_TYPE_ALLOC15:%.*]], label [[OMP_TYPE_ALLOC_ELSE16:%.*]]
 // CHECK:       omp.type.alloc15:
-// CHECK-NEXT:    [[TMP58:%.*]] = and i64 [[TMP55]], -4
-// CHECK-NEXT:    br label [[OMP_TYPE_END25]]
+// CHECK-NEXT:    [[TMP48:%.*]] = and i64 [[TMP45]], -4
+// CHECK-NEXT:    br label [[OMP_TYPE_END20]]
 // CHECK:       omp.type.alloc.else16:
-// CHECK-NEXT:    [[TMP59:%.*]] = icmp eq i64 [[TMP56]], 1
-// CHECK-NEXT:    br i1 [[TMP59]], label [[OMP_TYPE_TO22:%.*]], label [[OMP_TYPE_TO_ELSE23:%.*]]
+// CHECK-NEXT:    [[TMP49:%.*]] = icmp eq i64 [[TMP46]], 1
+// CHECK-NEXT:    br i1 [[TMP49]], label [[OMP_TYPE_TO17:%.*]], label [[OMP_TYPE_TO_ELSE18:%.*]]
 // CHECK:       omp.type.to17:
-// CHECK-NEXT:    [[TMP60:%.*]] = and i64 [[TMP55]], -3
-// CHECK-NEXT:    br label [[OMP_TYPE_END25]]
+// CHECK-NEXT:    [[TMP50:%.*]] = and i64 [[TMP45]], -3
+// CHECK-NEXT:    br label [[OMP_TYPE_END20]]
 // CHECK:       omp.type.to.else18:
-// CHECK-NEXT:    [[TMP61:%.*]] = icmp eq i64 [[TMP56]], 2
-// CHECK-NEXT:    br i1 [[TMP61]], label [[OMP_TYPE_FROM24:%.*]], label [[OMP_TYPE_END25]]
+// CHECK-NEXT:    [[TMP51:%.*]] = icmp eq i64 [[TMP46]], 2
+// CHECK-NEXT:    br i1 [[TMP51]], label [[OMP_TYPE_FROM19:%.*]], label [[OMP_TYPE_END20]]
 // CHECK:       omp.type.from19:
-// CHECK-NEXT:    [[TMP62:%.*]] = and i64 [[TMP55]], -2
-// CHECK-NEXT:    br label [[OMP_TYPE_END25]]
+// CHECK-NEXT:    [[TMP52:%.*]] = and i64 [[TMP45]], -2
+// CHECK-NEXT:    br label [[OMP_TYPE_END20]]
 // CHECK:       omp.type.end20:
-// CHECK-NEXT:    [[OMP_MAPTYPE26:%.*]] = phi i64 [ [[TMP58]], [[OMP_TYPE_ALLOC20]] ], [ [[TMP60]], [[OMP_TYPE_TO22]] ], [ [[TMP62]], [[OMP_TYPE_FROM24]] ], [ [[TMP55]], [[OMP_TYPE_TO_ELSE23]] ]
-// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], ptr [[H]], i64 4, i64 [[OMP_MAPTYPE26]], ptr null)
+// CHECK-NEXT:    [[OMP_MAPTYPE21:%.*]] = phi i64 [ [[TMP48]], [[OMP_TYPE_ALLOC15]] ], [ [[TMP50]], [[OMP_TYPE_TO17]] ], [ [[TMP52]], [[OMP_TYPE_FROM19]] ], [ [[TMP45]], [[OMP_TYPE_TO_ELSE18]] ]
+// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], ptr [[H]], i64 4, i64 [[OMP_MAPTYPE21]], ptr null)
 // CHECK-NEXT:    [[OMP_ARRAYMAP_NEXT]] = getelementptr [[STRUCT_D]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], i32 1
-// CHECK-NEXT:    [[OMP_ARRAYMAP_ISDONE:%.*]] = icmp eq ptr [[OMP_ARRAYMAP_NEXT]], [[TMP11]]
+// CHECK-NEXT:    [[OMP_ARRAYMAP_ISDONE:%.*]] = icmp eq ptr [[OMP_ARRAYMAP_NEXT]], [[TMP7]]
 // CHECK-NEXT:    br i1 [[OMP_ARRAYMAP_ISDONE]], label [[OMP_ARRAYMAP_EXIT:%.*]], label [[OMP_ARRAYMAP_BODY]]
 // CHECK:       omp.arraymap.exit:
-// CHECK-NEXT:    [[OMP_ARRAYINIT_ISARRAY27:%.*]] = icmp sgt i64 [[TMP10]], 1
-// CHECK-NEXT:    [[TMP63:%.*]] = and i64 [[TMP4]], 8
-// CHECK-NEXT:    [[DOTOMP_ARRAY__DEL__DELETE:%.*]] = icmp ne i64 [[TMP63]], 0
-// CHECK-NEXT:    [[TMP64:%.*]] = and i1 [[OMP_ARRAYINIT_ISARRAY27]], [[DOTOMP_ARRAY__DEL__DELETE]]
-// CHECK-NEXT:    br i1 [[TMP64]], label [[DOTOMP_ARRAY__DEL:%.*]], label [[OMP_DONE]]
+// CHECK-NEXT:    [[OMP_ARRAYINIT_ISARRAY22:%.*]] = icmp sgt i64 [[TMP6]], 1
+// CHECK-NEXT:    [[TMP53:%.*]] = and i64 [[TMP4]], 8
+// CHECK-NEXT:    [[DOTOMP_ARRAY__DEL__DELETE:%.*]] = icmp ne i64 [[TMP53]], 0
+// CHECK-NEXT:    [[TMP54:%.*]] = and i1 [[OMP_ARRAYINIT_ISARRAY22]], [[DOTOMP_ARRAY__DEL__DELETE]]
+// CHECK-NEXT:    br i1 [[TMP54]], label [[DOTOMP_ARRAY__DEL:%.*]], label [[OMP_DONE]]
 // CHECK:       .omp.array..del:
-// CHECK-NEXT:    [[TMP65:%.*]] = mul nuw i64 [[TMP10]], 12
-// CHECK-NEXT:    [[TMP66:%.*]] = and i64 [[TMP4]], -4
-// CHECK-NEXT:    [[TMP67:%.*]] = or i64 [[TMP66]], 512
-// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]], i64 [[TMP65]], i64 [[TMP67]], ptr [[TMP5]])
+// CHECK-NEXT:    [[TMP55:%.*]] = mul nuw i64 [[TMP6]], 12
+// CHECK-NEXT:    [[TMP56:%.*]] = and i64 [[TMP4]], -4
+// CHECK-NEXT:    [[TMP57:%.*]] = or i64 [[TMP56]], 512
+// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]], i64 [[TMP55]], i64 [[TMP57]], ptr [[TMP5]])
 // CHECK-NEXT:    br label [[OMP_DONE]]
 // CHECK:       omp.done:
 // CHECK-NEXT:    ret void
@@ -252,68 +248,65 @@ void foo() {
 // CHECK-LABEL: define {{[^@]+}}@.omp_mapper._ZTS1C.default
 // CHECK-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]], ptr noundef [[TMP2:%.*]], i64 noundef [[TMP3:%.*]], i64 noundef [[TMP4:%.*]], ptr noundef [[TMP5:%.*]]) #[[ATTR2]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP10:%.*]] = udiv exact i64 [[TMP3]], 4
-// CHECK-NEXT:    [[TMP11:%.*]] = getelementptr [[STRUCT_C:%.*]], ptr [[TMP2]], i64 [[TMP10]]
-// CHECK-NEXT:    [[OMP_ARRAYINIT_ISARRAY:%.*]] = icmp sgt i64 [[TMP10]], 1
-// CHECK-NEXT:    [[TMP14:%.*]] = and i64 [[TMP4]], 8
-// CHECK-NEXT:    [[TMP15:%.*]] = icmp ne ptr [[TMP1]], [[TMP2]]
-// CHECK-NEXT:    [[TMP16:%.*]] = and i64 [[TMP4]], 16
-// CHECK-NEXT:    [[TMP17:%.*]] = icmp ne i64 [[TMP16]], 0
-// CHECK-NEXT:    [[TMP18:%.*]] = and i1 [[TMP15]], [[TMP17]]
-// CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[OMP_ARRAYINIT_ISARRAY]], [[TMP18]]
-// CHECK-NEXT:    [[DOTOMP_ARRAY__INIT__DELETE:%.*]] = icmp eq i64 [[TMP14]], 0
-// CHECK-NEXT:    [[TMP20:%.*]] = and i1 [[TMP19]], [[DOTOMP_ARRAY__INIT__DELETE]]
-// CHECK-NEXT:    br i1 [[TMP20]], label [[DOTOMP_ARRAY__INIT:%.*]], label [[OMP_ARRAYMAP_HEAD:%.*]]
+// CHECK-NEXT:    [[TMP6:%.*]] = udiv exact i64 [[TMP3]], 4
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [[STRUCT_C:%.*]], ptr [[TMP2]], i64 [[TMP6]]
+// CHECK-NEXT:    [[OMP_ARRAYINIT_ISARRAY:%.*]] = icmp sgt i64 [[TMP6]], 1
+// CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP4]], 8
+// CHECK-NEXT:    [[TMP9:%.*]] = icmp ne ptr [[TMP1]], [[TMP2]]
+// CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[OMP_ARRAYINIT_ISARRAY]], [[TMP9]]
+// CHECK-NEXT:    [[DOTOMP_ARRAY__INIT__DELETE:%.*]] = icmp eq i64 [[TMP8]], 0
+// CHECK-NEXT:    [[TMP11:%.*]] = and i1 [[TMP10]], [[DOTOMP_ARRAY__INIT__DELETE]]
+// CHECK-NEXT:    br i1 [[TMP11]], label [[DOTOMP_ARRAY__INIT:%.*]], label [[OMP_ARRAYMAP_HEAD:%.*]]
 // CHECK:       .omp.array..init:
-// CHECK-NEXT:    [[TMP21:%.*]] = mul nuw i64 [[TMP10]], 4
-// CHECK-NEXT:    [[TMP22:%.*]] = and i64 [[TMP4]], -4
-// CHECK-NEXT:    [[TMP23:%.*]] = or i64 [[TMP22]], 512
-// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]], i64 [[TMP21]], i64 [[TMP23]], ptr [[TMP5]])
+// CHECK-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP6]], 4
+// CHECK-NEXT:    [[TMP13:%.*]] = and i64 [[TMP4]], -4
+// CHECK-NEXT:    [[TMP14:%.*]] = or i64 [[TMP13]], 512
+// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]], i64 [[TMP12]], i64 [[TMP14]], ptr [[TMP5]])
 // CHECK-NEXT:    br label [[OMP_ARRAYMAP_HEAD]]
 // CHECK:       omp.arraymap.head:
-// CHECK-NEXT:    [[OMP_ARRAYMAP_ISEMPTY:%.*]] = icmp eq ptr [[TMP2]], [[TMP11]]
+// CHECK-NEXT:    [[OMP_ARRAYMAP_ISEMPTY:%.*]] = icmp eq ptr [[TMP2]], [[TMP7]]
 // CHECK-NEXT:    br i1 [[OMP_ARRAYMAP_ISEMPTY]], label [[OMP_DONE:%.*]], label [[OMP_ARRAYMAP_BODY:%.*]]
 // CHECK:       omp.arraymap.body:
 // CHECK-NEXT:    [[OMP_ARRAYMAP_PTRCURRENT:%.*]] = phi ptr [ [[TMP2]], [[OMP_ARRAYMAP_HEAD]] ], [ [[OMP_ARRAYMAP_NEXT:%.*]], [[OMP_TYPE_END:%.*]] ]
 // CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_C]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP24:%.*]] = call i64 @__tgt_mapper_num_components(ptr [[TMP0]])
-// CHECK-NEXT:    [[TMP25:%.*]] = shl i64 [[TMP24]], 48
-// CHECK-NEXT:    [[TMP26:%.*]] = add nuw i64 1, [[TMP25]]
-// CHECK-NEXT:    [[TMP27:%.*]] = and i64 [[TMP4]], 3
-// CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[TMP27]], 0
-// CHECK-NEXT:    br i1 [[TMP28]], label [[OMP_TYPE_ALLOC:%.*]], label [[OMP_TYPE_ALLOC_ELSE:%.*]]
+// CHECK-NEXT:    [[TMP15:%.*]] = call i64 @__tgt_mapper_num_components(ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP15]], 48
+// CHECK-NEXT:    [[TMP17:%.*]] = add nuw i64 1, [[TMP16]]
+// CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP4]], 3
+// CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[TMP18]], 0
+// CHECK-NEXT:    br i1 [[TMP19]], label [[OMP_TYPE_ALLOC:%.*]], label [[OMP_TYPE_ALLOC_ELSE:%.*]]
 // CHECK:       omp.type.alloc:
-// CHECK-NEXT:    [[TMP29:%.*]] = and i64 [[TMP26]], -4
+// CHECK-NEXT:    [[TMP20:%.*]] = and i64 [[TMP17]], -4
 // CHECK-NEXT:    br label [[OMP_TYPE_END]]
 // CHECK:       omp.type.alloc.else:
-// CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[TMP27]], 1
-// CHECK-NEXT:    br i1 [[TMP30]], label [[OMP_TYPE_TO:%.*]], label [[OMP_TYPE_TO_ELSE:%.*]]
+// CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[TMP18]], 1
+// CHECK-NEXT:    br i1 [[TMP21]], label [[OMP_TYPE_TO:%.*]], label [[OMP_TYPE_TO_ELSE:%.*]]
 // CHECK:       omp.type.to:
-// CHECK-NEXT:    [[TMP31:%.*]] = and i64 [[TMP26]], -3
+// CHECK-NEXT:    [[TMP22:%.*]] = and i64 [[TMP17]], -3
 // CHECK-NEXT:    br label [[OMP_TYPE_END]]
 // CHECK:       omp.type.to.else:
-// CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[TMP27]], 2
-// CHECK-NEXT:    br i1 [[TMP32]], label [[OMP_TYPE_FROM:%.*]], label [[OMP_TYPE_END]]
+// CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[TMP18]], 2
+// CHECK-NEXT:    br i1 [[TMP23]], label [[OMP_TYPE_FROM:%.*]], label [[OMP_TYPE_END]]
 // CHECK:       omp.type.from:
-// CHECK-NEXT:    [[TMP33:%.*]] = and i64 [[TMP26]], -2
+// CHECK-NEXT:    [[TMP24:%.*]] = and i64 [[TMP17]], -2
 // CHECK-NEXT:    br label [[OMP_TYPE_END]]
 // CHECK:       omp.type.end:
-// CHECK-NEXT:    [[OMP_MAPTYPE:%.*]] = phi i64 [ [[TMP29]], [[OMP_TYPE_ALLOC]] ], [ [[TMP31]], [[OMP_TYPE_TO]] ], [ [[TMP33]], [[OMP_TYPE_FROM]] ], [ [[TMP26]], [[OMP_TYPE_TO_ELSE]] ]
+// CHECK-NEXT:    [[OMP_MAPTYPE:%.*]] = phi i64 [ [[TMP20]], [[OMP_TYPE_ALLOC]] ], [ [[TMP22]], [[OMP_TYPE_TO]] ], [ [[TMP24]], [[OMP_TYPE_FROM]] ], [ [[TMP17]], [[OMP_TYPE_TO_ELSE]] ]
 // CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], ptr [[A]], i64 4, i64 [[OMP_MAPTYPE]], ptr null)
 // CHECK-NEXT:    [[OMP_ARRAYMAP_NEXT]] = getelementptr [[STRUCT_C]], ptr [[OMP_ARRAYMAP_PTRCURRENT]], i32 1
-// CHECK-NEXT:    [[OMP_ARRAYMAP_ISDONE:%.*]] = icmp eq ptr [[OMP_ARRAYMAP_NEXT]], [[TMP11]]
+// CHECK-NEXT:    [[OMP_ARRAYMAP_ISDONE:%.*]] = icmp eq ptr [[OMP_ARRAYMAP_NEXT]], [[TMP7]]
 // CHECK-NEXT:    br i1 [[OMP_ARRAYMAP_ISDONE]], label [[OMP_ARRAYMAP_EXIT:%.*]], label [[OMP_ARRAYMAP_BODY]]
 // CHECK:       omp.arraymap.exit:
-// CHECK-NEXT:    [[OMP_ARRAYINIT_ISARRAY6:%.*]] = icmp sgt i64 [[TMP10]], 1
-// CHECK-NEXT:    [[TMP34:%.*]] = and i64 [[TMP4]], 8
-// CHECK-NEXT:    [[DOTOMP_ARRAY__DEL__DELETE:%.*]] = icmp ne i64 [[TMP34]], 0
-// CHECK-NEXT:    [[TMP35:%.*]] = and i1 [[OMP_ARRAYINIT_ISARRAY6]], [[DOTOMP_ARRAY__DEL__DELETE]]
-// CHECK-NEXT:    br i1 [[TMP35]], label [[DOTOMP_ARRAY__DEL:%.*]], label [[OMP_DONE]]
+// CHECK-NEXT:    [[OMP_ARRAYINIT_ISARRAY1:%.*]] = icmp sgt i64 [[TMP6]], 1
+// CHECK-NEXT:    [[TMP25:%.*]] = and i64 [[TMP4]], 8
+// CHECK-NEXT:    [[DOTOMP_ARRAY__DEL__DELETE:%.*]] = icmp ne i64 [[TMP25]], 0
+// CHECK-NEXT:    [[TMP26:%.*]] = and i1 [[OMP_ARRAYINIT_ISARRAY1]], [[DOTOMP_ARRAY__DEL__DELETE]]
+// CHECK-NEXT:    br i1 [[TMP26]], label [[DOTOMP_ARRAY__DEL:%.*]], label [[OMP_DONE]]
 // CHECK:       .omp.array..del:
-// CHECK-NEXT:    [[TMP36:%.*]] = mul nuw i64 [[TMP10]], 4
-// CHECK-NEXT:    [[TMP37:%.*]] = and i64 [[TMP4]], -4
-// CHECK-NEXT:    [[TMP38:%.*]] = or i64 [[TMP37]], 512
-// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]], i64 [[TMP36]], i64 [[TMP38]], ptr [[TMP5]])
+// CHECK-NEXT:    [[TMP27:%.*]] = mul nuw i64 [[TMP6]], 4
+// CHECK-NEXT:    [[TMP28:%.*]] = and i64 [[TMP4]], -4
+// CHECK-NEXT:    [[TMP29:%.*]] = or i64 [[TMP28]], 512
+// CHECK-NEXT:    call void @__tgt_push_mapper_component(ptr [[TMP0]], ptr [[TMP1]], ptr [[TMP2]], i64 [[TMP27]], i64 [[TMP29]], ptr [[TMP5]])
 // CHECK-NEXT:    br label [[OMP_DONE]]
 // CHECK:       omp.done:
 // CHECK-NEXT:    ret void

@@ -23,7 +23,7 @@ static const llvm::StringRef RenameCaseToSuiteMessage =
 
 static std::optional<llvm::StringRef>
 getNewMacroName(llvm::StringRef MacroName) {
-  std::pair<llvm::StringRef, llvm::StringRef> ReplacementMap[] = {
+  static const llvm::StringMap<llvm::StringRef> ReplacementMap = {
       {"TYPED_TEST_CASE", "TYPED_TEST_SUITE"},
       {"TYPED_TEST_CASE_P", "TYPED_TEST_SUITE_P"},
       {"REGISTER_TYPED_TEST_CASE_P", "REGISTER_TYPED_TEST_SUITE_P"},
@@ -31,11 +31,9 @@ getNewMacroName(llvm::StringRef MacroName) {
       {"INSTANTIATE_TEST_CASE_P", "INSTANTIATE_TEST_SUITE_P"},
   };
 
-  for (auto &Mapping : ReplacementMap) {
-    if (MacroName == Mapping.first)
-      return Mapping.second;
-  }
-
+  if (const auto MappingIt = ReplacementMap.find(MacroName);
+      MappingIt != ReplacementMap.end())
+    return MappingIt->second;
   return std::nullopt;
 }
 
@@ -204,7 +202,7 @@ void UpgradeGoogletestCaseCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 static llvm::StringRef getNewMethodName(llvm::StringRef CurrentName) {
-  std::pair<llvm::StringRef, llvm::StringRef> ReplacementMap[] = {
+  static const llvm::StringMap<llvm::StringRef> ReplacementMap = {
       {"SetUpTestCase", "SetUpTestSuite"},
       {"TearDownTestCase", "TearDownTestSuite"},
       {"test_case_name", "test_suite_name"},
@@ -217,10 +215,9 @@ static llvm::StringRef getNewMethodName(llvm::StringRef CurrentName) {
       {"test_case_to_run_count", "test_suite_to_run_count"},
       {"GetTestCase", "GetTestSuite"}};
 
-  for (auto &Mapping : ReplacementMap) {
-    if (CurrentName == Mapping.first)
-      return Mapping.second;
-  }
+  if (const auto MappingIt = ReplacementMap.find(CurrentName);
+      MappingIt != ReplacementMap.end())
+    return MappingIt->second;
 
   llvm_unreachable("Unexpected function name");
 }

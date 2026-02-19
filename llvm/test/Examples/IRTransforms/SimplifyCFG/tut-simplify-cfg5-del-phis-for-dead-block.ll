@@ -53,7 +53,7 @@ define void @test() {
 ; CHECK:       sw.default23:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       sw.epilog24:
-; CHECK-NEXT:    [[PREVIOUS_3:%.*]] = phi i32 [ undef, [[SW_BB1]] ], [ 401, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PREVIOUS_3:%.*]] = phi i32 [ 401, [[ENTRY:%.*]] ], [ undef, [[SW_BB1]] ]
 ; CHECK-NEXT:    unreachable
 ;
 entry:

@@ -14,6 +14,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat(ptr %ptr) {
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_add_f32 v[0:1], v2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -43,6 +44,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat(ptr %ptr) {
 ; GFX1250-NEXT:    flat_atomic_add_f32 v0, v1, s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
   %ret = atomicrmw fadd ptr %ptr, float 4.0 seq_cst, !amdgpu.no.remote.memory !0
   ret void
@@ -56,6 +58,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat_ieee(ptr %ptr) #0 {
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_add_f32 v[0:1], v2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -85,6 +88,7 @@ define amdgpu_kernel void @flat_atomic_fadd_f32_noret_pat_ieee(ptr %ptr) #0 {
 ; GFX1250-NEXT:    flat_atomic_add_f32 v0, v1, s[0:1] scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_endpgm
   %ret = atomicrmw fadd ptr %ptr, float 4.0 seq_cst, !amdgpu.no.remote.memory !0
   ret void
@@ -95,6 +99,7 @@ define float @flat_atomic_fadd_f32_rtn_pat(ptr %ptr, float %data) {
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 4.0
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -113,7 +118,6 @@ define float @flat_atomic_fadd_f32_rtn_pat(ptr %ptr, float %data) {
 ; GFX12-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: flat_atomic_fadd_f32_rtn_pat:
@@ -121,6 +125,7 @@ define float @flat_atomic_fadd_f32_rtn_pat(ptr %ptr, float %data) {
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 4.0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
@@ -185,7 +190,6 @@ define <2 x half> @local_atomic_fadd_v2f16_rtn(ptr addrspace(3) %ptr, <2 x half>
 ; GFX12-NEXT:    ds_pk_add_rtn_f16 v0, v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: local_atomic_fadd_v2f16_rtn:
@@ -253,7 +257,6 @@ define <2 x i16> @local_atomic_fadd_v2bf16_rtn(ptr addrspace(3) %ptr, <2 x i16> 
 ; GFX12-NEXT:    ds_pk_add_rtn_bf16 v0, v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-LABEL: local_atomic_fadd_v2bf16_rtn:
@@ -268,6 +271,6 @@ define <2 x i16> @local_atomic_fadd_v2bf16_rtn(ptr addrspace(3) %ptr, <2 x i16> 
   ret <2 x i16> %ret
 }
 
-attributes #0 = { "denormal-fp-math-f32"="ieee,ieee" }
+attributes #0 = { denormal_fpenv(float: ieee|ieee) }
 
 !0 = !{}

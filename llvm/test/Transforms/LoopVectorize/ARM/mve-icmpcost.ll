@@ -151,7 +151,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 26 for VF 2: WIDEN ir<%mul> = mul nsw ir<%conv3>, ir<%conv1>
 ; CHECK: Cost of 18 for VF 2: WIDEN ir<%shr> = ashr ir<%mul>, ir<7>
 ; CHECK: Cost of 0 for VF 2: WIDEN ir<%2> = icmp slt ir<%shr>, ir<127>
-; CHECK: Cost of 22 for VF 2: WIDEN-SELECT ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
+; CHECK: Cost of 22 for VF 2: WIDEN ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
 ; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv4> = trunc ir<%spec.select.i> to i8
 ; CHECK: Cost of 0 for VF 2: vp<[[VEC_PTR3:%.+]]> = vector-pointer vp<%next.gep>.1
 ; CHECK: Cost of 18 for VF 2: WIDEN store vp<[[VEC_PTR3]]>, ir<%conv4>
@@ -183,7 +183,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 2 for VF 4: WIDEN ir<%mul> = mul nsw ir<%conv3>, ir<%conv1>
 ; CHECK: Cost of 2 for VF 4: WIDEN ir<%shr> = ashr ir<%mul>, ir<7>
 ; CHECK: Cost of 0 for VF 4: WIDEN ir<%2> = icmp slt ir<%shr>, ir<127>
-; CHECK: Cost of 2 for VF 4: WIDEN-SELECT ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
+; CHECK: Cost of 2 for VF 4: WIDEN ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
 ; CHECK: Cost of 0 for VF 4: WIDEN-CAST ir<%conv4> = trunc ir<%spec.select.i> to i8
 ; CHECK: Cost of 0 for VF 4: vp<[[VEC_PTR2:%.+]]> = vector-pointer vp<%next.gep>.1
 ; CHECK: Cost of 2 for VF 4: WIDEN store vp<[[VEC_PTR2]]>, ir<%conv4>
@@ -215,7 +215,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 4 for VF 8: WIDEN ir<%mul> = mul nsw ir<%conv3>, ir<%conv1>
 ; CHECK: Cost of 4 for VF 8: WIDEN ir<%shr> = ashr ir<%mul>, ir<7>
 ; CHECK: Cost of 0 for VF 8: WIDEN ir<%2> = icmp slt ir<%shr>, ir<127>
-; CHECK: Cost of 4 for VF 8: WIDEN-SELECT ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
+; CHECK: Cost of 4 for VF 8: WIDEN ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
 ; CHECK: Cost of 2 for VF 8: WIDEN-CAST ir<%conv4> = trunc ir<%spec.select.i> to i8
 ; CHECK: Cost of 0 for VF 8: vp<[[VEC_PTR3:%.+]]> = vector-pointer vp<%next.gep>.1
 ; CHECK: Cost of 2 for VF 8: WIDEN store vp<[[VEC_PTR3]]>, ir<%conv4>
@@ -247,7 +247,7 @@ for.inc:                                          ; preds = %for.body, %if.then
 ; CHECK: Cost of 8 for VF 16: WIDEN ir<%mul> = mul nsw ir<%conv3>, ir<%conv1>
 ; CHECK: Cost of 8 for VF 16: WIDEN ir<%shr> = ashr ir<%mul>, ir<7>
 ; CHECK: Cost of 0 for VF 16: WIDEN ir<%2> = icmp slt ir<%shr>, ir<127>
-; CHECK: Cost of 8 for VF 16: WIDEN-SELECT ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
+; CHECK: Cost of 8 for VF 16: WIDEN ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
 ; CHECK: Cost of 6 for VF 16: WIDEN-CAST ir<%conv4> = trunc ir<%spec.select.i> to i8
 ; CHECK: Cost of 0 for VF 16: vp<[[VEC_PTR2:%.+]]> = vector-pointer vp<%next.gep>.1
 ; CHECK: Cost of 2 for VF 16: WIDEN store vp<[[VEC_PTR2]]>, ir<%conv4>

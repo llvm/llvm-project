@@ -8,12 +8,12 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "MtUnsafeCheck.h"
 #include "ThreadCanceltypeAsynchronousCheck.h"
 
 namespace clang::tidy {
 namespace concurrency {
+namespace {
 
 class ConcurrencyModule : public ClangTidyModule {
 public:
@@ -25,6 +25,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace concurrency
 
 // Register the ConcurrencyTidyModule using this statically initialized

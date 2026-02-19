@@ -14,6 +14,8 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_TARGETINFO_WEBASSEMBLYTARGETINFO_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_TARGETINFO_WEBASSEMBLYTARGETINFO_H
 
+#include <cstdint>
+
 namespace llvm {
 
 class Target;
@@ -23,9 +25,9 @@ Target &getTheWebAssemblyTarget64();
 
 namespace WebAssembly {
 
-int getStackOpcode(unsigned short Opcode);
-int getRegisterOpcode(unsigned short Opcode);
-int getWasm64Opcode(unsigned short Opcode);
+int32_t getStackOpcode(uint32_t Opcode);
+int32_t getRegisterOpcode(uint32_t Opcode);
+int32_t getWasm64Opcode(uint32_t Opcode);
 
 } // namespace WebAssembly
 

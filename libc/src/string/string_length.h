@@ -24,7 +24,8 @@
 #endif
 #if defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_strlen.h"
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) &&                                  \
+    (defined(LIBC_TARGET_CPU_HAS_SVE) || defined(__ARM_NEON))
 #include "src/string/memory_utils/aarch64/inline_strlen.h"
 #endif
 

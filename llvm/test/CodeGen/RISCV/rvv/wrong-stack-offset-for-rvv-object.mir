@@ -86,7 +86,7 @@ frameInfo:
   adjustsStack:    true
   hasCalls:        true
   stackProtector:  ''
-  maxCallFrameSize: 4294967295
+  maxCallFrameSize: 0
   cvBytesOfCalleeSavedRegisters: 0
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
@@ -126,9 +126,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x2 = frame-setup ADDI $x2, -80
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 80
-  ; CHECK-NEXT:   SD killed $x1, $x2, 56 :: (store (s64) into %stack.2)
-  ; CHECK-NEXT:   SD killed $x8, $x2, 48 :: (store (s64) into %stack.3)
-  ; CHECK-NEXT:   SD killed $x9, $x2, 40 :: (store (s64) into %stack.4)
+  ; CHECK-NEXT:   frame-setup SD killed $x1, $x2, 56 :: (store (s64) into %stack.2)
+  ; CHECK-NEXT:   frame-setup SD killed $x8, $x2, 48 :: (store (s64) into %stack.3)
+  ; CHECK-NEXT:   frame-setup SD killed $x9, $x2, 40 :: (store (s64) into %stack.4)
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x1, -24
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x8, -32
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $x9, -40
@@ -144,7 +144,7 @@ body:             |
   ; CHECK-NEXT:   $x10 = ADD $x2, killed $x10
   ; CHECK-NEXT:   SD killed renamable $x16, killed $x10, 64 :: (store (s64) into %fixed-stack.1, align 16)
   ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype
-  ; CHECK-NEXT:   renamable $v8 = PseudoVMV_V_I_MF8 undef $v8, 0, 2, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   renamable $v8 = PseudoVMV_V_I_MF8 undef $v8, 0, 2 /* vl */, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   $x10 = ADDI $x2, 32
   ; CHECK-NEXT:   VS1R_V killed renamable $v8, killed $x10 :: (store unknown-size into %stack.1, align 8)
   ; CHECK-NEXT: {{  $}}
@@ -162,7 +162,7 @@ body:             |
   ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 2, 69 /* e8, mf8, ta, mu */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   $x10 = ADDI $x2, 32
   ; CHECK-NEXT:   renamable $v8 = VL1RE8_V killed $x10 :: (load unknown-size from %stack.1, align 8)
-  ; CHECK-NEXT:   PseudoVSE8_V_MF8 killed renamable $v8, renamable $x8, 2, 3 /* e8 */, implicit $vl, implicit $vtype :: (store (s16) into %ir.0, align 1)
+  ; CHECK-NEXT:   PseudoVSE8_V_MF8 killed renamable $v8, renamable $x8, 2 /* vl */, 3 /* e8 */, implicit $vl, implicit $vtype :: (store (s16) into %ir.0, align 1)
   ; CHECK-NEXT:   $x10 = COPY renamable $x9
   ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @fprintf, csr_ilp32d_lp64d, implicit-def dead $x1, implicit killed $x10, implicit-def $x2, implicit-def dead $x10
   ; CHECK-NEXT:   PseudoBR %bb.1

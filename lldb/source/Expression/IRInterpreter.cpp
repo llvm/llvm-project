@@ -611,6 +611,8 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
       } break;
       case Instruction::And:
       case Instruction::AShr:
+      case Instruction::FPToUI:
+      case Instruction::FPToSI:
       case Instruction::IntToPtr:
       case Instruction::PtrToInt:
       case Instruction::Load:
@@ -634,6 +636,18 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
       case Instruction::FSub:
       case Instruction::FMul:
       case Instruction::FDiv:
+        break;
+      case Instruction::UIToFP:
+      case Instruction::SIToFP:
+      case Instruction::FPTrunc:
+      case Instruction::FPExt:
+        if (!ii.getType()->isFloatTy() && !ii.getType()->isDoubleTy()) {
+          LLDB_LOGF(log, "Unsupported instruction: %s",
+                    PrintValue(&ii).c_str());
+          error =
+              lldb_private::Status::FromErrorString(unsupported_opcode_error);
+          return false;
+        }
         break;
       }
 
@@ -884,9 +898,10 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     case Instruction::Alloca: {
       const AllocaInst *alloca_inst = cast<AllocaInst>(inst);
 
-      if (alloca_inst->isArrayAllocation()) {
-        LLDB_LOGF(log,
-                  "AllocaInsts are not handled if isArrayAllocation() is true");
+      std::optional<TypeSize> alloca_size =
+          alloca_inst->getAllocationSize(frame.m_target_data);
+      if (!alloca_size || alloca_size->isScalable()) {
+        LLDB_LOGF(log, "AllocaInsts are not handled if size is not computable");
         error = lldb_private::Status::FromErrorString(unsupported_opcode_error);
         return false;
       }
@@ -898,10 +913,10 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       //   buffer
       //   Write the virtual address of R into P
 
-      Type *T = alloca_inst->getAllocatedType();
       Type *Tptr = alloca_inst->getType();
 
-      lldb::addr_t R = frame.Malloc(T);
+      lldb::addr_t R = frame.Malloc(alloca_size->getFixedValue(),
+                                    alloca_inst->getAlign().value());
 
       if (R == LLDB_INVALID_ADDRESS) {
         LLDB_LOGF(log, "Couldn't allocate memory for an AllocaInst");
@@ -1252,6 +1267,78 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
       if (log) {
         LLDB_LOGF(log, "Interpreted a Trunc");
+        LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
+        LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
+      }
+    } break;
+    case Instruction::FPToUI:
+    case Instruction::FPToSI: {
+      Value *src_operand = inst->getOperand(0);
+
+      lldb_private::Scalar S;
+      if (!frame.EvaluateValue(S, src_operand, module)) {
+        LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(src_operand).c_str());
+        error = lldb_private::Status::FromErrorString(bad_value_error);
+        return false;
+      }
+
+      assert(inst->getType()->isIntegerTy() && "Unexpected target type");
+      llvm::APSInt result(inst->getType()->getIntegerBitWidth(),
+                          /*isUnsigned=*/inst->getOpcode() ==
+                              Instruction::FPToUI);
+      assert(S.GetType() == lldb_private::Scalar::e_float &&
+             "Unexpected source type");
+      bool isExact;
+      llvm::APFloatBase::opStatus status = S.GetAPFloat().convertToInteger(
+          result, llvm::APFloat::rmTowardZero, &isExact);
+      // Casting floating point values that are out of bounds of the target type
+      // is undefined behaviour.
+      if (status & llvm::APFloatBase::opInvalidOp) {
+        std::string s;
+        raw_string_ostream rso(s);
+        rso << "Conversion error: " << S << " cannot be converted to ";
+        if (inst->getOpcode() == Instruction::FPToUI)
+          rso << "unsigned ";
+        rso << *inst->getType();
+        LLDB_LOGF(log, "%s", s.c_str());
+        error = lldb_private::Status::FromErrorString(s.c_str());
+        return false;
+      }
+      lldb_private::Scalar R(result);
+
+      frame.AssignValue(inst, R, module);
+      if (log) {
+        LLDB_LOGF(log, "Interpreted a %s", inst->getOpcodeName());
+        LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
+        LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
+      }
+    } break;
+    case Instruction::UIToFP:
+    case Instruction::SIToFP:
+    case Instruction::FPTrunc:
+    case Instruction::FPExt: {
+      Value *src_operand = inst->getOperand(0);
+
+      lldb_private::Scalar S;
+      if (!frame.EvaluateValue(S, src_operand, module)) {
+        LLDB_LOGF(log, "Couldn't evaluate %s", PrintValue(src_operand).c_str());
+        error = lldb_private::Status::FromErrorString(bad_value_error);
+        return false;
+      }
+      lldb_private::Scalar R;
+
+      Type *result_type = inst->getType();
+      assert(
+          (result_type->isFloatTy() || result_type->isDoubleTy()) &&
+          "Unsupported result type; CanInterpret() should have checked that");
+      if (result_type->isFloatTy())
+        R = S.Float();
+      else
+        R = S.Double();
+
+      frame.AssignValue(inst, R, module);
+      if (log) {
+        LLDB_LOGF(log, "Interpreted a %s", inst->getOpcodeName());
         LLDB_LOGF(log, "  Src : %s", frame.SummarizeValue(src_operand).c_str());
         LLDB_LOGF(log, "  =   : %s", frame.SummarizeValue(inst).c_str());
       }

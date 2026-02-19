@@ -101,7 +101,7 @@ class ASTUnit {
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
   IntrusiveRefCntPtr<SourceManager>       SourceMgr;
-  IntrusiveRefCntPtr<ModuleCache> ModCache;
+  std::shared_ptr<ModuleCache> ModCache;
   std::unique_ptr<HeaderSearch>           HeaderInfo;
   IntrusiveRefCntPtr<TargetInfo>          Target;
   std::shared_ptr<Preprocessor>           PP;
@@ -399,6 +399,8 @@ private:
   public:
     ConcurrencyState();
     ~ConcurrencyState();
+    ConcurrencyState(const ConcurrencyState &) = delete;
+    ConcurrencyState &operator=(const ConcurrencyState &) = delete;
 
     void start();
     void finish();
@@ -474,6 +476,11 @@ public:
   const LangOptions &getLangOpts() const {
     assert(LangOpts && "ASTUnit does not have language options");
     return *LangOpts;
+  }
+
+  const CodeGenOptions &getCodeGenOpts() const {
+    assert(CodeGenOpts && "ASTUnit does not have codegen options");
+    return *CodeGenOpts;
   }
 
   const HeaderSearchOptions &getHeaderSearchOpts() const {
@@ -945,6 +952,9 @@ public:
       SmallVectorImpl<StandaloneDiagnostic> *StandaloneDiags);
 
   ~CaptureDroppedDiagnostics();
+  CaptureDroppedDiagnostics(const CaptureDroppedDiagnostics &) = delete;
+  CaptureDroppedDiagnostics &
+  operator=(const CaptureDroppedDiagnostics &) = delete;
 };
 
 } // namespace clang

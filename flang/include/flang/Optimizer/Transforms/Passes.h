@@ -9,6 +9,7 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 #define FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 
+#include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"

@@ -212,6 +212,13 @@ bool IsVarOrFunctionRef(const MaybeExpr &expr) {
   }
 }
 
+bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
+  if (auto *sym{GetObjectSymbol(object)}; sym && IsAssumedSizeArray(*sym)) {
+    return !GetArrayElementFromObj(object);
+  }
+  return false;
+}
+
 bool IsMapEnteringType(parser::OmpMapType::Value type) {
   switch (type) {
   case parser::OmpMapType::Value::Alloc:
@@ -495,5 +502,25 @@ bool IsAssignment(const parser::ActionStmt *x) {
 bool IsPointerAssignment(const evaluate::Assignment &x) {
   return std::holds_alternative<evaluate::Assignment::BoundsSpec>(x.u) ||
       std::holds_alternative<evaluate::Assignment::BoundsRemapping>(x.u);
+}
+
+MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp) {
+  auto &instance = std::get<parser::OmpStylizedInstance::Instance>(inp.t);
+
+  return common::visit( //
+      common::visitors{
+          [&](const parser::AssignmentStmt &s) -> MaybeExpr {
+            return GetEvaluateExpr(std::get<parser::Expr>(s.t));
+          },
+          [&](const parser::CallStmt &s) -> MaybeExpr {
+            assert(s.typedCall && "Expecting typedCall");
+            const auto &procRef = *s.typedCall;
+            return SomeExpr(procRef);
+          },
+          [&](const common::Indirection<parser::Expr> &s) -> MaybeExpr {
+            return GetEvaluateExpr(s.value());
+          },
+      },
+      instance.u);
 }
 } // namespace Fortran::semantics::omp

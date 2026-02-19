@@ -46,21 +46,46 @@ private:
   bool LateUndef;
 };
 
-// Simple RAII helper for emitting #if guard. It emits:
-// #if <Condition>
-// #endif // <Condition>
-class IfGuardEmitter {
-public:
-  IfGuardEmitter(raw_ostream &OS, StringRef Condition)
+// Base class for RAII helpers for emitting various if guards.
+class IfGuardEmitterBase {
+protected:
+  IfGuardEmitterBase(raw_ostream &OS, StringRef If, StringRef Condition)
       : Condition(Condition.str()), OS(OS) {
-    OS << "#if " << Condition << "\n\n";
+    OS << If << " " << Condition << "\n\n";
   }
 
-  ~IfGuardEmitter() { OS << "\n#endif // " << Condition << "\n\n"; }
+  ~IfGuardEmitterBase() { OS << "\n#endif // " << Condition << "\n\n"; }
 
 private:
   std::string Condition;
   raw_ostream &OS;
+};
+
+// RAII emitter for:
+// #if <Condition>
+// #endif // <Condition>
+class IfGuardEmitter : private IfGuardEmitterBase {
+public:
+  IfGuardEmitter(raw_ostream &OS, StringRef Condition)
+      : IfGuardEmitterBase(OS, "#if", Condition) {}
+};
+
+// RAII emitter for:
+// #ifdef <Condition>
+// #endif // <Condition>
+class IfDefGuardEmitter : private IfGuardEmitterBase {
+public:
+  IfDefGuardEmitter(raw_ostream &OS, StringRef Condition)
+      : IfGuardEmitterBase(OS, "#ifdef", Condition) {}
+};
+
+// RAII emitter for:
+// #ifndef <Condition>
+// #endif // <Condition>
+class IfNDefGuardEmitter : private IfGuardEmitterBase {
+public:
+  IfNDefGuardEmitter(raw_ostream &OS, StringRef Condition)
+      : IfGuardEmitterBase(OS, "#ifndef", Condition) {}
 };
 
 // Simple RAII helper for emitting header include guard (ifndef-define-endif).
@@ -83,8 +108,8 @@ private:
 // namespace scope.
 class NamespaceEmitter {
 public:
-  NamespaceEmitter(raw_ostream &OS, StringRef NameUntrimmed)
-      : Name(trim(NameUntrimmed).str()), OS(OS) {
+  NamespaceEmitter(raw_ostream &OS, const Twine &NameUntrimmed)
+      : Name(trim(NameUntrimmed.str()).str()), OS(OS) {
     if (!Name.empty())
       OS << "namespace " << Name << " {\n\n";
   }
@@ -106,7 +131,18 @@ private:
     Name.consume_front("::");
     return Name;
   }
+
   std::string Name;
+  raw_ostream &OS;
+};
+
+// Simple RAII helper for emitting anonymous namespace scope.
+class AnonNamespaceEmitter {
+public:
+  AnonNamespaceEmitter(raw_ostream &OS) : OS(OS) { OS << "namespace {\n\n"; }
+  ~AnonNamespaceEmitter() { OS << "} // namespace\n"; }
+
+private:
   raw_ostream &OS;
 };
 

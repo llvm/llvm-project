@@ -49,4 +49,50 @@ def ACCRecipeBufferization
   }];
 }
 
+def ACCUseDeviceCanonicalizer
+    : Pass<"acc-use-device-canonicalizer", "mlir::func::FuncOp"> {
+  let summary = "Canonicalize acc.use_device operations for FIR box types";
+  let description = [{
+    This pass canonicalizes the use_device clause on a host_data construct such
+    that use_device(x) can be lowered to a simple runtime call that takes the
+    actual host pointer as argument.
+
+    For a use_device operand that is a box type or a reference to a box, the
+    pass:
+      1. Extracts the host base address for mapping to a device address using
+         acc.use_device.
+      2. Creates a new boxed descriptor with the device address as the base
+         address for use inside the host_data region.
+
+    The pass also removes unused use_device clauses, reducing the number of
+    runtime calls.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
+}
+
+def ACCDeclareActionConversion
+    : Pass<"acc-declare-action-conversion", "mlir::ModuleOp"> {
+  let summary = "Convert acc declare action attributes to function calls";
+  let description = [{
+    Implements OpenACC specification (section 2.13.2 in OpenACC 3.4) for
+    allocation/deallocation actions of allocatables and pointers in declare
+    directives. Lowering generates recipe functions and marks the operations
+    that allocate or deallocate the object; this pass finds those operations
+    and inserts calls to the corresponding recipes.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect"];
+}
+
+def ACCOptimizeFirstprivateMap
+    : Pass<"acc-optimize-firstprivate-map", "mlir::func::FuncOp"> {
+  let summary = "Optimize firstprivate mapping";
+  let description = [{
+    This pass optimizes acc firstprivate mapping operations by hoisting
+    loads from the mapped variable to before the compute region. This enables
+    pass-by-value instead of using global memory mapping through the
+    runtime.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
+}
+
 #endif // FORTRAN_OPTIMIZER_OPENACC_PASSES

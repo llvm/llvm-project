@@ -30,10 +30,10 @@ program OmpAtomic
    !$omp atomic
    !ERROR: The ** operator is not a valid ATOMIC UPDATE operation
    a = a**4
-   !$omp atomic 
+   !$omp atomic
    !ERROR: Atomic variable c cannot have CHARACTER type
    !ERROR: The atomic variable c should appear as an argument in the update operation
-   c = d 
+   c = d
    !$omp atomic
    !ERROR: The < operator is not a valid ATOMIC UPDATE operation
    l = a .LT. b

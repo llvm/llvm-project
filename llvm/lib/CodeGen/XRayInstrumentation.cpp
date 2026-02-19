@@ -50,9 +50,7 @@ struct InstrumentationOptions {
 struct XRayInstrumentationLegacy : public MachineFunctionPass {
   static char ID;
 
-  XRayInstrumentationLegacy() : MachineFunctionPass(ID) {
-    initializeXRayInstrumentationLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  XRayInstrumentationLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

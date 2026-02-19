@@ -1,13 +1,13 @@
 # Xqcicsr - Qualcomm uC CSR Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcicsr -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcicsr -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcicsr < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcicsr -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcicsr < %s \
+# RUN:     | llvm-objdump --mattr=+xqcicsr -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcicsr -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcicsr -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcicsr < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcicsr --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcicsr < %s \
+# RUN:     | llvm-objdump --mattr=+xqcicsr --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # CHECK-INST: qc.csrrwr  a0, t0, s4

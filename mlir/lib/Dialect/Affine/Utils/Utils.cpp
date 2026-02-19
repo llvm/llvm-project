@@ -26,6 +26,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 
 #define DEBUG_TYPE "affine-utils"
@@ -228,13 +229,13 @@ std::optional<SmallVector<Value, 8>>
 mlir::affine::expandAffineMap(OpBuilder &builder, Location loc,
                               AffineMap affineMap, ValueRange operands) {
   auto numDims = affineMap.getNumDims();
-  auto expanded = llvm::to_vector<8>(
-      llvm::map_range(affineMap.getResults(),
-                      [numDims, &builder, loc, operands](AffineExpr expr) {
-                        return expandAffineExpr(builder, loc, expr,
-                                                operands.take_front(numDims),
-                                                operands.drop_front(numDims));
-                      }));
+  auto expanded = llvm::map_to_vector<8>(
+      affineMap.getResults(),
+      [numDims, &builder, loc, operands](AffineExpr expr) {
+        return expandAffineExpr(builder, loc, expr,
+                                operands.take_front(numDims),
+                                operands.drop_front(numDims));
+      });
   if (llvm::all_of(expanded, [](Value v) { return v; }))
     return expanded;
   return std::nullopt;
@@ -365,10 +366,10 @@ mlir::affine::affineParallelize(AffineForOp forOp,
   ValueRange upperBoundOperands = forOp.getUpperBoundOperands();
 
   // Creating empty 1-D affine.parallel op.
-  auto reducedValues = llvm::to_vector<4>(llvm::map_range(
-      parallelReductions, [](const LoopReduction &red) { return red.value; }));
-  auto reductionKinds = llvm::to_vector<4>(llvm::map_range(
-      parallelReductions, [](const LoopReduction &red) { return red.kind; }));
+  auto reducedValues = llvm::map_to_vector<4>(
+      parallelReductions, [](const LoopReduction &red) { return red.value; });
+  auto reductionKinds = llvm::map_to_vector<4>(
+      parallelReductions, [](const LoopReduction &red) { return red.kind; });
   AffineParallelOp newPloop = AffineParallelOp::create(
       outsideBuilder, loc, ValueRange(reducedValues).getTypes(), reductionKinds,
       llvm::ArrayRef(lowerBoundMap), lowerBoundOperands,

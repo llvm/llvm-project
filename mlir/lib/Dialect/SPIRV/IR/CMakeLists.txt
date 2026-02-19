@@ -22,6 +22,7 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   SPIRVOpDefinition.cpp
   SPIRVOps.cpp
   SPIRVParsingUtils.cpp
+  SPIRVTosaOps.cpp
   SPIRVTypes.cpp
   TargetAndABI.cpp
 

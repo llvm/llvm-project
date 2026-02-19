@@ -3,6 +3,8 @@
 
 // FIXME: This is a bug in host offload, this should run fine.
 // REQUIRES: gpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <iostream>
 #include <vector>

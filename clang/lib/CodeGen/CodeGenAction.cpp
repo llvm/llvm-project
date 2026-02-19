@@ -118,9 +118,7 @@ BackendConsumer::BackendConsumer(CompilerInstance &CI, BackendAction Action,
     : CI(CI), Diags(CI.getDiagnostics()), CodeGenOpts(CI.getCodeGenOpts()),
       TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
       AsmOutStream(std::move(OS)), FS(VFS), Action(Action),
-      Gen(CreateLLVMCodeGen(Diags, InFile, std::move(VFS),
-                            CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(),
-                            CI.getCodeGenOpts(), C, CoverageInfo)),
+      Gen(CreateLLVMCodeGen(CI, InFile, C, CoverageInfo)),
       LinkModules(std::move(LinkModules)), CurLinkModule(CurLinkModule) {
   TimerIsEnabled = CodeGenOpts.TimePasses;
   llvm::TimePassesIsEnabled = CodeGenOpts.TimePasses;
@@ -250,6 +248,8 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   LLVMContext &Ctx = getModule()->getContext();
   std::unique_ptr<DiagnosticHandler> OldDiagnosticHandler =
     Ctx.getDiagnosticHandler();
+  llvm::scope_exit RestoreDiagnosticHandler(
+      [&]() { Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler)); });
   Ctx.setDiagnosticHandler(std::make_unique<ClangDiagnosticHandler>(
       CodeGenOpts, this));
 
@@ -312,8 +312,6 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   emitBackendOutput(CI, CI.getCodeGenOpts(),
                     C.getTargetInfo().getDataLayoutString(), getModule(),
                     Action, FS, std::move(AsmOutStream), this);
-
-  Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
 
   if (OptRecordFile)
     OptRecordFile->keep();

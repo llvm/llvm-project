@@ -59,7 +59,7 @@ cir.func dso_local @invalid_catch_empty_block() {
 module {
 
 cir.func dso_local @invalid_catch_not_terminated() {
-  %a = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+  %a = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
   cir.scope {
     cir.try {
       cir.yield
@@ -126,6 +126,51 @@ cir.func dso_local @invalid_catch_all_with_type_info() {
     }
     // expected-error @below {{op 'cir.try' catch all dosen't need RTTI info attribute}}
     catch [all] {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+
+cir.func dso_local @catch_handler_missing_catch_param() {
+  cir.scope {
+    // expected-error @below {{catch handler region must start with 'cir.catch_param'}}
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
+      cir.yield
+    } unwind {
+      cir.resume
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!void = !cir.void
+
+module {
+
+cir.func dso_local @catch_all_handler_missing_catch_param() {
+  cir.scope {
+    // expected-error @below {{catch handler region must start with 'cir.catch_param'}}
+    cir.try {
+      cir.yield
+    } catch all {
       cir.yield
     }
   }

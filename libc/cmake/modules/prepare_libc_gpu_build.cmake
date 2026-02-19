@@ -17,8 +17,8 @@ if(NOT LLVM_LIBC_FULL_BUILD)
 endif()
 
 # Set the required flags globally so standard CMake utilities can compile.
-if(LIBC_TARGET_TRIPLE)
-  set(CMAKE_REQUIRED_FLAGS "--target=${LIBC_TARGET_TRIPLE}")
+if(NOT CMAKE_CXX_COMPILER_TARGET)
+  set(CMAKE_REQUIRED_FLAGS "${LIBC_COMPILE_OPTIONS_DEFAULT}")
 endif()
 
 # Optionally set up a job pool to limit the number of GPU tests run in parallel.

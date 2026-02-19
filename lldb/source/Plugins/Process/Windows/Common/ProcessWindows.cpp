@@ -13,6 +13,7 @@
 #include <psapi.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -21,12 +22,17 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeProcessBase.h"
 #include "lldb/Host/HostProcess.h"
+#include "lldb/Host/Pipe.h"
+#include "lldb/Host/PseudoTerminal.h"
+#include "lldb/Host/windows/ConnectionGenericFileWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
 #include "llvm/Support/ConvertUTF.h"
@@ -123,22 +129,6 @@ ProcessWindows::ProcessWindows(lldb::TargetSP target_sp,
 
 ProcessWindows::~ProcessWindows() {}
 
-size_t ProcessWindows::GetSTDOUT(char *buf, size_t buf_size, Status &error) {
-  error = Status::FromErrorString("GetSTDOUT unsupported on Windows");
-  return 0;
-}
-
-size_t ProcessWindows::GetSTDERR(char *buf, size_t buf_size, Status &error) {
-  error = Status::FromErrorString("GetSTDERR unsupported on Windows");
-  return 0;
-}
-
-size_t ProcessWindows::PutSTDIN(const char *buf, size_t buf_size,
-                                Status &error) {
-  error = Status::FromErrorString("PutSTDIN unsupported on Windows");
-  return 0;
-}
-
 Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (bp_site->HardwareRequired())
     return Status::FromErrorString("Hardware breakpoints are not supported.");
@@ -224,6 +214,7 @@ Status ProcessWindows::DoLaunch(Module *exe_module,
   error = LaunchProcess(launch_info, delegate);
   if (error.Success())
     SetID(launch_info.GetProcessID());
+  m_pty = launch_info.TakePTY();
   return error;
 }
 
@@ -660,6 +651,9 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
+  if (m_pty)
+    m_pty->Close();
+
   TargetSP target = CalculateTarget();
   if (target) {
     ModuleSP executable_module = target->GetExecutableModule();
@@ -955,5 +949,204 @@ Status ProcessWindows::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
   wp_sp->SetEnabled(false, notify);
 
   return error;
+}
+
+class IOHandlerProcessSTDIOWindows : public IOHandler {
+public:
+  IOHandlerProcessSTDIOWindows(Process *process, HANDLE conpty_input)
+      : IOHandler(process->GetTarget().GetDebugger(),
+                  IOHandler::Type::ProcessIO),
+        m_process(process),
+        m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
+        m_write_file(conpty_input),
+        m_interrupt_event(
+            CreateEvent(/*lpEventAttributes=*/NULL, /*bManualReset=*/FALSE,
+                        /*bInitialState=*/FALSE, /*lpName=*/NULL)) {}
+
+  ~IOHandlerProcessSTDIOWindows() override {
+    if (m_interrupt_event != INVALID_HANDLE_VALUE)
+      ::CloseHandle(m_interrupt_event);
+  }
+
+  void SetIsRunning(bool running) {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    SetIsDone(!running);
+    m_is_running = running;
+  }
+
+  /// Peek the console for input. If it has any, drain the pipe until text input
+  /// is found or the pipe is empty.
+  ///
+  /// \param hStdin
+  ///     The handle to the standard input's pipe.
+  ///
+  /// \return
+  ///     true if the pipe has text input.
+  llvm::Expected<bool> ConsoleHasTextInput(const HANDLE hStdin) {
+    // Check if there are already characters buffered. Pressing enter counts as
+    // 2 characters '\r\n' and only one of them is a keyDown event.
+    DWORD bytesAvailable = 0;
+    if (PeekNamedPipe(hStdin, NULL, 0, NULL, &bytesAvailable, NULL)) {
+      if (bytesAvailable > 0)
+        return true;
+    }
+
+    while (true) {
+      INPUT_RECORD inputRecord;
+      DWORD numRead = 0;
+      if (!PeekConsoleInput(hStdin, &inputRecord, 1, &numRead))
+        return llvm::createStringError("Failed to peek standard input.");
+
+      if (numRead == 0)
+        return false;
+
+      if (inputRecord.EventType == KEY_EVENT &&
+          inputRecord.Event.KeyEvent.bKeyDown &&
+          inputRecord.Event.KeyEvent.uChar.AsciiChar != 0)
+        return true;
+
+      if (!ReadConsoleInput(hStdin, &inputRecord, 1, &numRead))
+        return llvm::createStringError("Failed to read standard input.");
+    }
+  }
+
+  void Run() override {
+    if (!m_read_file.IsValid() || m_write_file == INVALID_HANDLE_VALUE) {
+      SetIsDone(true);
+      return;
+    }
+
+    SetIsDone(false);
+    SetIsRunning(true);
+
+    HANDLE hStdin = m_read_file.GetWaitableHandle();
+    HANDLE waitHandles[2] = {hStdin, m_interrupt_event};
+
+    DWORD consoleMode;
+    bool isConsole = GetConsoleMode(hStdin, &consoleMode) != 0;
+    // With ENABLE_LINE_INPUT, ReadFile returns only when a carriage return is
+    // read. This will block lldb in ReadFile until the user hits enter. Save
+    // the previous console mode to restore it later and remove
+    // ENABLE_LINE_INPUT.
+    DWORD oldConsoleMode = consoleMode;
+    SetConsoleMode(hStdin,
+                   consoleMode & ~ENABLE_LINE_INPUT & ~ENABLE_ECHO_INPUT);
+
+    while (true) {
+      {
+        std::lock_guard<std::mutex> guard(m_mutex);
+        if (GetIsDone())
+          goto exit_loop;
+      }
+
+      DWORD result = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
+      switch (result) {
+      case WAIT_FAILED:
+        goto exit_loop;
+      case WAIT_OBJECT_0: {
+        if (isConsole) {
+          auto hasInputOrErr = ConsoleHasTextInput(hStdin);
+          if (!hasInputOrErr) {
+            Log *log = GetLog(WindowsLog::Process);
+            LLDB_LOG_ERROR(log, hasInputOrErr.takeError(),
+                           "failed to process debuggee's IO: {0}");
+            goto exit_loop;
+          }
+
+          // If no text input is ready, go back to waiting.
+          if (!*hasInputOrErr)
+            continue;
+        }
+
+        char ch = 0;
+        DWORD read = 0;
+        if (!ReadFile(hStdin, &ch, 1, &read, nullptr) || read != 1)
+          goto exit_loop;
+
+        DWORD written = 0;
+        if (!WriteFile(m_write_file, &ch, 1, &written, nullptr) || written != 1)
+          goto exit_loop;
+        break;
+      }
+      case WAIT_OBJECT_0 + 1: {
+        ControlOp op = m_pending_op.exchange(eControlOpNone);
+        if (op == eControlOpQuit)
+          goto exit_loop;
+        if (op == eControlOpInterrupt &&
+            StateIsRunningState(m_process->GetState()))
+          m_process->SendAsyncInterrupt();
+        break;
+      }
+      default:
+        goto exit_loop;
+      }
+    }
+
+  exit_loop:;
+    SetIsRunning(false);
+    SetIsDone(true);
+    SetConsoleMode(hStdin, oldConsoleMode);
+  }
+
+  void Cancel() override {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    SetIsDone(true);
+    if (m_is_running) {
+      m_pending_op.store(eControlOpQuit);
+      ::SetEvent(m_interrupt_event);
+    }
+  }
+
+  bool Interrupt() override {
+    if (m_active) {
+      m_pending_op.store(eControlOpInterrupt);
+      ::SetEvent(m_interrupt_event);
+      return true;
+    }
+    if (StateIsRunningState(m_process->GetState())) {
+      m_process->SendAsyncInterrupt();
+      return true;
+    }
+    return false;
+  }
+
+  void GotEOF() override {}
+
+private:
+  enum ControlOp : char {
+    eControlOpQuit = 'q',
+    eControlOpInterrupt = 'i',
+    eControlOpNone = 0,
+  };
+
+  Process *m_process;
+  /// Read from this file (usually actual STDIN for LLDB)
+  NativeFile m_read_file;
+  /// Write to this file (usually the primary pty for getting io to debuggee)
+  HANDLE m_write_file = INVALID_HANDLE_VALUE;
+  HANDLE m_interrupt_event = INVALID_HANDLE_VALUE;
+  std::atomic<ControlOp> m_pending_op{eControlOpNone};
+  std::mutex m_mutex;
+  bool m_is_running = false;
+};
+
+void ProcessWindows::SetPseudoConsoleHandle() {
+  if (m_pty == nullptr)
+    return;
+  m_stdio_communication.SetConnection(
+      std::make_unique<ConnectionGenericFile>(m_pty->GetSTDOUTHandle(), false));
+  if (m_stdio_communication.IsConnected()) {
+    m_stdio_communication.SetReadThreadBytesReceivedCallback(
+        STDIOReadThreadBytesReceived, this);
+    m_stdio_communication.StartReadThread();
+
+    // Now read thread is set up, set up input reader.
+    {
+      std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
+      if (!m_process_input_reader)
+        m_process_input_reader = std::make_shared<IOHandlerProcessSTDIOWindows>(
+            this, m_pty->GetSTDINHandle());
+    }
+  }
 }
 } // namespace lldb_private

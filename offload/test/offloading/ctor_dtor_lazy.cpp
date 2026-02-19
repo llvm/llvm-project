@@ -4,6 +4,8 @@
 // RUN: %not --crash %libomptarget-run-generic
 // RUN: %libomptarget-compilexx-generic -DCTOR_API
 // RUN: %not --crash %libomptarget-run-generic
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <cstdio>
 #include <omp.h>

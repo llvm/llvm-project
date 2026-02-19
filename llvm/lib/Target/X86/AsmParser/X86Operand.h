@@ -288,6 +288,15 @@ struct X86Operand final : public MCParsedAsmOperand {
     return isImmUnsignedi4Value(CE->getValue());
   }
 
+  bool isImmUnsignedi6() const {
+    if (!isImm()) return false;
+    // If this isn't a constant expr, reject it. The immediate byte is shared
+    // with a register encoding. We can't have it affected by a relocation.
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    if (!CE) return false;
+    return isImmUnsignedi6Value(CE->getValue());
+  }
+
   bool isImmUnsignedi8() const {
     if (!isImm()) return false;
     // If this isn't a constant expr, just assume it fits and let relaxation
@@ -504,6 +513,18 @@ struct X86Operand final : public MCParsedAsmOperand {
   }
   bool isMemOffs64_64() const {
     return isMemOffs() && Mem.ModeSize == 64 && (!Mem.Size || Mem.Size == 64);
+  }
+
+  // Returns true only for a moffset that requires *more than* 32 bits.
+  bool isMemConstOffs64() const {
+    if (!isMemOffs() || Mem.ModeSize != 64)
+      return false;
+
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getMemDisp());
+    if (!CE)
+      return false;
+
+    return !isInt<32>(CE->getValue());
   }
 
   bool isPrefix() const { return Kind == Prefix; }

@@ -153,8 +153,7 @@ namespace {
       return !BitVector::any();
     }
     bool includes(const RegisterSet &Rs) const {
-      // A.BitVector::test(B)  <=>  A-B != {}
-      return !Rs.BitVector::test(*this);
+      return Rs.BitVector::subsetOf(*this);
     }
     bool intersects(const RegisterSet &Rs) const {
       return BitVector::anyCommon(Rs);
@@ -1409,10 +1408,10 @@ bool HexagonGenInsert::generateInserts() {
       At = B.getFirstNonPHI();
 
     BuildMI(B, At, DL, D, NewR)
-      .addReg(IF.SrcR)
-      .addReg(IF.InsR, 0, InsS)
-      .addImm(Wdh)
-      .addImm(Off);
+        .addReg(IF.SrcR)
+        .addReg(IF.InsR, {}, InsS)
+        .addImm(Wdh)
+        .addImm(Off);
 
     MRI->clearKillFlags(IF.SrcR);
     MRI->clearKillFlags(IF.InsR);

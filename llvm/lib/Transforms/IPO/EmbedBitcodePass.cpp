@@ -27,9 +27,9 @@ PreservedAnalyses EmbedBitcodePass::run(Module &M, ModuleAnalysisManager &AM) {
     reportFatalUsageError("Can only embed the module once");
 
   Triple T(M.getTargetTriple());
-  if (T.getObjectFormat() != Triple::ELF)
-    reportFatalUsageError(
-        "EmbedBitcode pass currently only supports ELF object format");
+  if (T.getObjectFormat() != Triple::ELF && T.getObjectFormat() != Triple::COFF)
+    reportFatalUsageError("EmbedBitcode pass currently only supports COFF and "
+                          "ELF object formats");
 
   std::string Data;
   raw_string_ostream OS(Data);

@@ -801,14 +801,16 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
     GlobalCRules.push_back(
         {{CDM::CLibrary, {"getenv"}}, TR::Source({{ReturnValueIndex}})});
   }
+  CheckerManager *Mgr = C.getAnalysisManager().getCheckerManager();
 
-  StaticTaintRules.emplace(std::make_move_iterator(GlobalCRules.begin()),
-                           std::make_move_iterator(GlobalCRules.end()));
+  StaticTaintRules = RuleLookupTy{};
+  if (Mgr->getAnalyzerOptions().getCheckerBooleanOption(this,
+                                                        "EnableDefaultConfig"))
+    StaticTaintRules.emplace(std::make_move_iterator(GlobalCRules.begin()),
+                             std::make_move_iterator(GlobalCRules.end()));
 
   // User-provided taint configuration.
-  CheckerManager *Mgr = C.getAnalysisManager().getCheckerManager();
-  assert(Mgr);
-  GenericTaintRuleParser ConfigParser{*Mgr};
+  const GenericTaintRuleParser ConfigParser{*Mgr};
   std::string Option{"Config"};
   StringRef ConfigFile =
       Mgr->getAnalyzerOptions().getCheckerStringOption(this, Option);

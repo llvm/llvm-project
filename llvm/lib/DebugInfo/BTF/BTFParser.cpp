@@ -206,7 +206,7 @@ Error BTFParser::parseTypesInfo(ParseContext &Ctx, uint64_t TypesInfoStart,
                                 StringRef RawData) {
   using support::endian::byte_swap;
 
-  TypesBuffer = OwningArrayRef<uint8_t>(arrayRefFromStringRef(RawData));
+  TypesBuffer.assign(arrayRefFromStringRef(RawData));
   // Switch endianness if necessary.
   endianness Endianness = Ctx.Obj.isLittleEndian() ? llvm::endianness::little
                                                    : llvm::endianness::big;
@@ -380,7 +380,7 @@ Error BTFParser::parse(const ObjectFile &Obj, const ParseOptions &Opts) {
   SectionLines.clear();
   SectionRelocs.clear();
   Types.clear();
-  TypesBuffer = OwningArrayRef<uint8_t>();
+  TypesBuffer.clear();
 
   ParseContext Ctx(Obj, Opts);
   std::optional<SectionRef> BTF;

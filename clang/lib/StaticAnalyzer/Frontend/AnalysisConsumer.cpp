@@ -637,8 +637,7 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
   // FIXME: This should be replaced with something that doesn't rely on
   // side-effects in PathDiagnosticConsumer's destructor. This is required when
   // used with option -disable-free.
-  const auto DiagFlusherScopeExit =
-      llvm::make_scope_exit([this] { Mgr.reset(); });
+  const llvm::scope_exit DiagFlusherScopeExit([this] { Mgr.reset(); });
 
   if (Opts.ShouldIgnoreBisonGeneratedFiles &&
       fileContainsString("/* A Bison parser, made by", C)) {

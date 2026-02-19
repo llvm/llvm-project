@@ -133,7 +133,7 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) nounwind
 ; WINDOWS-NEXT:    mov h1, v0.h[1]
 ; WINDOWS-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; WINDOWS-NEXT:    add x0, sp, #36
-; WINDOWS-NEXT:    stp x30, x19, [sp, #48] // 16-byte Folded Spill
+; WINDOWS-NEXT:    stp x19, x30, [sp, #48] // 16-byte Folded Spill
 ; WINDOWS-NEXT:    add x19, sp, #36
 ; WINDOWS-NEXT:    fcvt d0, h1
 ; WINDOWS-NEXT:    bl frexp
@@ -166,7 +166,7 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) nounwind
 ; WINDOWS-NEXT:    ldr s1, [sp, #32]
 ; WINDOWS-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; WINDOWS-NEXT:    ld1 { v1.s }[1], [x19]
-; WINDOWS-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x19, x30, [sp, #48] // 16-byte Folded Reload
 ; WINDOWS-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; WINDOWS-NEXT:    mov v0.h[3], v2.h[0]
 ; WINDOWS-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -297,7 +297,7 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) nounwind {
 ; WINDOWS-NEXT:    str q0, [sp] // 16-byte Spill
 ; WINDOWS-NEXT:    add x0, sp, #24
 ; WINDOWS-NEXT:    fcvt d0, h0
-; WINDOWS-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; WINDOWS-NEXT:    stp x19, x30, [sp, #32] // 16-byte Folded Spill
 ; WINDOWS-NEXT:    bl frexp
 ; WINDOWS-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; WINDOWS-NEXT:    add x0, sp, #28
@@ -307,7 +307,7 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) nounwind {
 ; WINDOWS-NEXT:    bl frexp
 ; WINDOWS-NEXT:    ldr s0, [sp, #24]
 ; WINDOWS-NEXT:    ld1 { v0.s }[1], [x19]
-; WINDOWS-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x19, x30, [sp, #32] // 16-byte Folded Reload
 ; WINDOWS-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; WINDOWS-NEXT:    add sp, sp, #48
 ; WINDOWS-NEXT:    ret
@@ -360,9 +360,9 @@ define { <3 x float>, <3 x i32> } @test_frexp_v3f32_v3i32(<3 x float> %a) nounwi
 ; WINDOWS-NEXT:    mov s1, v0.s[1]
 ; WINDOWS-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; WINDOWS-NEXT:    add x0, sp, #36
-; WINDOWS-NEXT:    stp x30, x21, [sp, #48] // 16-byte Folded Spill
-; WINDOWS-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; WINDOWS-NEXT:    stp x19, x20, [sp, #48] // 16-byte Folded Spill
 ; WINDOWS-NEXT:    add x19, sp, #36
+; WINDOWS-NEXT:    stp x21, x30, [sp, #64] // 16-byte Folded Spill
 ; WINDOWS-NEXT:    fcvt d0, s1
 ; WINDOWS-NEXT:    bl frexp
 ; WINDOWS-NEXT:    fcvt s0, d0
@@ -397,9 +397,9 @@ define { <3 x float>, <3 x i32> } @test_frexp_v3f32_v3i32(<3 x float> %a) nounwi
 ; WINDOWS-NEXT:    ld1 { v1.s }[1], [x19]
 ; WINDOWS-NEXT:    mov v0.s[3], v2.s[0]
 ; WINDOWS-NEXT:    ld1 { v1.s }[2], [x20]
-; WINDOWS-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x19, x20, [sp, #48] // 16-byte Folded Reload
 ; WINDOWS-NEXT:    ld1 { v1.s }[3], [x21]
-; WINDOWS-NEXT:    ldp x30, x21, [sp, #48] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x21, x30, [sp, #64] // 16-byte Folded Reload
 ; WINDOWS-NEXT:    add sp, sp, #80
 ; WINDOWS-NEXT:    ret
   %result = call { <3 x float>, <3 x i32> } @llvm.frexp.v3f32.v3i32(<3 x float> %a)
@@ -536,7 +536,7 @@ define { <2 x float>, <2 x i32> } @test_frexp_v2f32_v2i32(<2 x float> %a) nounwi
 ; WINDOWS-NEXT:    mov s1, v0.s[1]
 ; WINDOWS-NEXT:    str q0, [sp] // 16-byte Spill
 ; WINDOWS-NEXT:    add x0, sp, #28
-; WINDOWS-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; WINDOWS-NEXT:    stp x19, x30, [sp, #32] // 16-byte Folded Spill
 ; WINDOWS-NEXT:    add x19, sp, #28
 ; WINDOWS-NEXT:    fcvt d0, s1
 ; WINDOWS-NEXT:    bl frexp
@@ -551,7 +551,7 @@ define { <2 x float>, <2 x i32> } @test_frexp_v2f32_v2i32(<2 x float> %a) nounwi
 ; WINDOWS-NEXT:    ldr s1, [sp, #24]
 ; WINDOWS-NEXT:    ldr q2, [sp] // 16-byte Reload
 ; WINDOWS-NEXT:    ld1 { v1.s }[1], [x19]
-; WINDOWS-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x19, x30, [sp, #32] // 16-byte Folded Reload
 ; WINDOWS-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; WINDOWS-NEXT:    mov v0.s[1], v2.s[0]
 ; WINDOWS-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -643,7 +643,7 @@ define <2 x i32> @test_frexp_v2f32_v2i32_only_use_exp(<2 x float> %a) nounwind {
 ; WINDOWS-NEXT:    str q0, [sp] // 16-byte Spill
 ; WINDOWS-NEXT:    add x0, sp, #24
 ; WINDOWS-NEXT:    fcvt d0, s0
-; WINDOWS-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; WINDOWS-NEXT:    stp x19, x30, [sp, #32] // 16-byte Folded Spill
 ; WINDOWS-NEXT:    bl frexp
 ; WINDOWS-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; WINDOWS-NEXT:    add x0, sp, #28
@@ -653,7 +653,7 @@ define <2 x i32> @test_frexp_v2f32_v2i32_only_use_exp(<2 x float> %a) nounwind {
 ; WINDOWS-NEXT:    bl frexp
 ; WINDOWS-NEXT:    ldr s0, [sp, #24]
 ; WINDOWS-NEXT:    ld1 { v0.s }[1], [x19]
-; WINDOWS-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x19, x30, [sp, #32] // 16-byte Folded Reload
 ; WINDOWS-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; WINDOWS-NEXT:    add sp, sp, #48
 ; WINDOWS-NEXT:    ret
@@ -717,9 +717,9 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwi
 ; WINDOWS-NEXT:    mov s1, v0.s[1]
 ; WINDOWS-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; WINDOWS-NEXT:    add x0, sp, #36
-; WINDOWS-NEXT:    stp x30, x21, [sp, #48] // 16-byte Folded Spill
-; WINDOWS-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
+; WINDOWS-NEXT:    stp x19, x20, [sp, #48] // 16-byte Folded Spill
 ; WINDOWS-NEXT:    add x19, sp, #36
+; WINDOWS-NEXT:    stp x21, x30, [sp, #64] // 16-byte Folded Spill
 ; WINDOWS-NEXT:    fcvt d0, s1
 ; WINDOWS-NEXT:    bl frexp
 ; WINDOWS-NEXT:    fcvt s0, d0
@@ -754,9 +754,9 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwi
 ; WINDOWS-NEXT:    ld1 { v1.s }[1], [x19]
 ; WINDOWS-NEXT:    mov v0.s[3], v2.s[0]
 ; WINDOWS-NEXT:    ld1 { v1.s }[2], [x20]
-; WINDOWS-NEXT:    ldp x20, x19, [sp, #64] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x19, x20, [sp, #48] // 16-byte Folded Reload
 ; WINDOWS-NEXT:    ld1 { v1.s }[3], [x21]
-; WINDOWS-NEXT:    ldp x30, x21, [sp, #48] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x21, x30, [sp, #64] // 16-byte Folded Reload
 ; WINDOWS-NEXT:    add sp, sp, #80
 ; WINDOWS-NEXT:    ret
   %result = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> %a)
@@ -887,8 +887,8 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; WINDOWS-NEXT:    str q0, [sp] // 16-byte Spill
 ; WINDOWS-NEXT:    fcvt d0, s0
 ; WINDOWS-NEXT:    add x0, sp, #16
-; WINDOWS-NEXT:    stp x30, x21, [sp, #32] // 16-byte Folded Spill
-; WINDOWS-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; WINDOWS-NEXT:    stp x19, x20, [sp, #32] // 16-byte Folded Spill
+; WINDOWS-NEXT:    stp x21, x30, [sp, #48] // 16-byte Folded Spill
 ; WINDOWS-NEXT:    bl frexp
 ; WINDOWS-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; WINDOWS-NEXT:    add x0, sp, #20
@@ -911,9 +911,9 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) nounwind {
 ; WINDOWS-NEXT:    ldr s0, [sp, #16]
 ; WINDOWS-NEXT:    ld1 { v0.s }[1], [x19]
 ; WINDOWS-NEXT:    ld1 { v0.s }[2], [x20]
-; WINDOWS-NEXT:    ldp x20, x19, [sp, #48] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x19, x20, [sp, #32] // 16-byte Folded Reload
 ; WINDOWS-NEXT:    ld1 { v0.s }[3], [x21]
-; WINDOWS-NEXT:    ldp x30, x21, [sp, #32] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x21, x30, [sp, #48] // 16-byte Folded Reload
 ; WINDOWS-NEXT:    add sp, sp, #64
 ; WINDOWS-NEXT:    ret
   %result = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> %a)
@@ -1019,7 +1019,7 @@ define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) noun
 ; WINDOWS-NEXT:    str q0, [sp] // 16-byte Spill
 ; WINDOWS-NEXT:    mov d0, v0.d[1]
 ; WINDOWS-NEXT:    add x0, sp, #40
-; WINDOWS-NEXT:    stp x30, x19, [sp, #48] // 16-byte Folded Spill
+; WINDOWS-NEXT:    stp x19, x30, [sp, #48] // 16-byte Folded Spill
 ; WINDOWS-NEXT:    add x19, sp, #40
 ; WINDOWS-NEXT:    bl frexp
 ; WINDOWS-NEXT:    // kill: def $d0 killed $d0 def $q0
@@ -1032,7 +1032,7 @@ define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) noun
 ; WINDOWS-NEXT:    ldr q2, [sp, #16] // 16-byte Reload
 ; WINDOWS-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; WINDOWS-NEXT:    ld1 { v1.s }[1], [x19]
-; WINDOWS-NEXT:    ldp x30, x19, [sp, #48] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x19, x30, [sp, #48] // 16-byte Folded Reload
 ; WINDOWS-NEXT:    mov v0.d[1], v2.d[0]
 ; WINDOWS-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; WINDOWS-NEXT:    add sp, sp, #64
@@ -1113,7 +1113,7 @@ define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) nounwind 
 ; WINDOWS:       // %bb.0:
 ; WINDOWS-NEXT:    sub sp, sp, #48
 ; WINDOWS-NEXT:    add x0, sp, #28
-; WINDOWS-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; WINDOWS-NEXT:    stp x19, x30, [sp, #32] // 16-byte Folded Spill
 ; WINDOWS-NEXT:    str q0, [sp] // 16-byte Spill
 ; WINDOWS-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; WINDOWS-NEXT:    bl frexp
@@ -1124,7 +1124,7 @@ define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) nounwind 
 ; WINDOWS-NEXT:    bl frexp
 ; WINDOWS-NEXT:    ldr s0, [sp, #28]
 ; WINDOWS-NEXT:    ld1 { v0.s }[1], [x19]
-; WINDOWS-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
+; WINDOWS-NEXT:    ldp x19, x30, [sp, #32] // 16-byte Folded Reload
 ; WINDOWS-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; WINDOWS-NEXT:    add sp, sp, #48
 ; WINDOWS-NEXT:    ret

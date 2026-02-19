@@ -19,13 +19,38 @@ function(get_subproject_title outvar)
   endif ()
 endfunction(get_subproject_title)
 
-function(llvm_update_compile_flags name)
-  get_property(sources TARGET ${name} PROPERTY SOURCES)
-  if("${sources}" MATCHES "\\.c(;|$)")
-    set(update_src_props ON)
-  endif()
+# Determine required flags to enable/disable RTTI.
+set(LLVM_CXXFLAGS_RTTI_DISABLE "")
+set(LLVM_CXXFLAGS_RTTI_ENABLE "")
+if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  set(LLVM_CXXFLAGS_RTTI_DISABLE "-fno-rtti")
+elseif(MSVC)
+  set(LLVM_CXXFLAGS_RTTI_DISABLE "/GR-")
+  set(LLVM_CXXFLAGS_RTTI_ENABLE "/GR")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "XL")
+  set(LLVM_CXXFLAGS_RTTI_DISABLE "-qnortti")
+endif()
 
-  list(APPEND LLVM_COMPILE_CFLAGS " ${LLVM_COMPILE_FLAGS}")
+# Determine required flags to enable/disable EH.
+set(LLVM_CXXFLAGS_EH_DISABLE "")
+set(LLVM_CXXFLAGS_EH_ENABLE "")
+if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
+  set(LLVM_CXXFLAGS_EH_DISABLE "-fno-exceptions")
+  if(LLVM_ENABLE_UNWIND_TABLES)
+    list(APPEND LLVM_CXXFLAGS_EH_DISABLE "-funwind-tables")
+  else()
+    list(APPEND LLVM_CXXFLAGS_EH_DISABLE "-fno-unwind-tables")
+    list(APPEND LLVM_CXXFLAGS_EH_DISABLE "-fno-asynchronous-unwind-tables")
+  endif()
+elseif(MSVC)
+  set(LLVM_CXXFLAGS_EH_ENABLE "/EHsc")
+  set(LLVM_CXXFLAGS_EH_DISABLE "/EHs-c-")
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
+  set(LLVM_CXXFLAGS_EH_DISABLE "-qnoeh")
+endif()
+
+function(llvm_update_compile_flags name)
+  set(LLVM_COMPILE_CXXFLAGS "")
 
   # LLVM_REQUIRES_EH is an internal flag that individual targets can use to
   # force EH
@@ -34,68 +59,24 @@ function(llvm_update_compile_flags name)
       message(AUTHOR_WARNING "Exception handling requires RTTI. Enabling RTTI for ${name}")
       set(LLVM_REQUIRES_RTTI ON)
     endif()
-    if(MSVC)
-      list(APPEND LLVM_COMPILE_FLAGS "/EHsc")
-    endif()
+    list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_EH_ENABLE})
   else()
-    if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
-      list(APPEND LLVM_COMPILE_FLAGS "-fno-exceptions")
-      if(LLVM_ENABLE_UNWIND_TABLES)
-        list(APPEND LLVM_COMPILE_FLAGS "-funwind-tables")
-      else()
-        list(APPEND LLVM_COMPILE_FLAGS "-fno-unwind-tables")
-        list(APPEND LLVM_COMPILE_FLAGS "-fno-asynchronous-unwind-tables")
-      endif()
-    elseif(MSVC)
+    if(MSVC)
       list(APPEND LLVM_COMPILE_DEFINITIONS _HAS_EXCEPTIONS=0)
-      list(APPEND LLVM_COMPILE_FLAGS "/EHs-c-")
-    elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
-      list(APPEND LLVM_COMPILE_FLAGS "-qnoeh")
     endif()
+    list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_EH_DISABLE})
   endif()
 
   # LLVM_REQUIRES_RTTI is an internal flag that individual
   # targets can use to force RTTI
-  set(LLVM_CONFIG_HAS_RTTI YES CACHE INTERNAL "")
   if(NOT (LLVM_REQUIRES_RTTI OR LLVM_ENABLE_RTTI))
-    set(LLVM_CONFIG_HAS_RTTI NO CACHE INTERNAL "")
-    list(APPEND LLVM_COMPILE_DEFINITIONS GTEST_HAS_RTTI=0)
-    if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-      list(APPEND LLVM_COMPILE_FLAGS "-fno-rtti")
-    elseif (MSVC)
-      list(APPEND LLVM_COMPILE_FLAGS "/GR-")
-    elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
-      list(APPEND LLVM_COMPILE_FLAGS "-qnortti")
-    endif ()
-  elseif(MSVC)
-    list(APPEND LLVM_COMPILE_FLAGS "/GR")
-  endif()
-
-  # Assume that;
-  #   - LLVM_COMPILE_FLAGS is list.
-  #   - PROPERTY COMPILE_FLAGS is string.
-  string(REPLACE ";" " " target_compile_flags " ${LLVM_COMPILE_FLAGS}")
-  string(REPLACE ";" " " target_compile_cflags " ${LLVM_COMPILE_CFLAGS}")
-
-  if(update_src_props)
-    foreach(fn ${sources})
-      get_filename_component(suf ${fn} EXT)
-      if("${suf}" STREQUAL ".cpp")
-        set_property(SOURCE ${fn} APPEND_STRING PROPERTY
-          COMPILE_FLAGS "${target_compile_flags}")
-      endif()
-      if("${suf}" STREQUAL ".c")
-        set_property(SOURCE ${fn} APPEND_STRING PROPERTY
-          COMPILE_FLAGS "${target_compile_cflags}")
-      endif()
-    endforeach()
+    list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_RTTI_DISABLE})
   else()
-    # Update target props, since all sources are C++.
-    set_property(TARGET ${name} APPEND_STRING PROPERTY
-      COMPILE_FLAGS "${target_compile_flags}")
+    list(APPEND LLVM_COMPILE_CXXFLAGS ${LLVM_CXXFLAGS_RTTI_ENABLE})
   endif()
 
-  set_property(TARGET ${name} APPEND PROPERTY COMPILE_DEFINITIONS ${LLVM_COMPILE_DEFINITIONS})
+  target_compile_options(${name} PRIVATE ${LLVM_COMPILE_FLAGS} $<$<COMPILE_LANGUAGE:CXX>:${LLVM_COMPILE_CXXFLAGS}>)
+  target_compile_definitions(${name} PRIVATE ${LLVM_COMPILE_DEFINITIONS})
 endfunction()
 
 function(add_llvm_symbol_exports target_name export_file)
@@ -1023,6 +1004,13 @@ macro(generate_llvm_objects name)
 
   if (ARG_GENERATE_DRIVER)
     string(REPLACE "-" "_" TOOL_NAME ${name})
+
+    set(INITLLVM_ARGS "")
+
+    if(${name} STREQUAL "clang")
+      set(INITLLVM_ARGS ", /*InstallPipeSignalExitHandler=*/true, /*NeedsPOSIXUtilitySignalHandling=*/true")
+    endif()
+
     foreach(path ${CMAKE_MODULE_PATH})
       if(EXISTS ${path}/llvm-driver-template.cpp.in)
         configure_file(

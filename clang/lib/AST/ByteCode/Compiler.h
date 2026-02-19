@@ -505,6 +505,7 @@ public:
 
   virtual bool emitDestructors(const Expr *E = nullptr) { return true; }
   virtual bool destroyLocals(const Expr *E = nullptr) { return true; }
+  virtual void forceInit() {}
   VariableScope *getParent() const { return Parent; }
   ScopeKind getKind() const { return Kind; }
 
@@ -534,7 +535,6 @@ public:
     this->Ctx->emitDestroy(*Idx, SourceInfo{});
     removeStoredOpaqueValues();
   }
-
   /// Explicit destruction of local variables.
   bool destroyLocals(const Expr *E = nullptr) override {
     if (!Idx)
@@ -558,10 +558,22 @@ public:
     this->Ctx->Descriptors[*Idx].emplace_back(Local);
   }
 
+  /// Force-initialize this scope. Usually, scopes are lazily initialized when
+  /// the first local variable is created, but in scenarios with conditonal
+  /// operators, we need to ensure scope is initialized just in case one of the
+  /// arms will create a local and the other won't. In such a case, the
+  /// InitScope() op would be part of the arm that created the local.
+  void forceInit() override {
+    if (!Idx) {
+      Idx = static_cast<unsigned>(this->Ctx->Descriptors.size());
+      this->Ctx->Descriptors.emplace_back();
+      this->Ctx->emitInitScope(*Idx, {});
+    }
+  }
+
   bool emitDestructors(const Expr *E = nullptr) override {
     if (!Idx)
       return true;
-    assert(!this->Ctx->Descriptors[*Idx].empty());
 
     // Emit destructor calls for local variables of record
     // type with a destructor.

@@ -178,10 +178,14 @@ public:
   bool isGFX10() const;
   bool isGFX10Plus() const;
   bool isGFX11() const;
+  bool isGFX1170() const;
   bool isGFX11Plus() const;
   bool isGFX12() const;
   bool isGFX12Plus() const;
   bool isGFX1250() const;
+  bool isGFX1250Plus() const;
+  bool isGFX13() const;
+  bool isGFX13Plus() const;
 
   bool hasArchitectedFlatScratch() const;
   bool hasKernargPreload() const;

@@ -404,11 +404,11 @@ define amdgpu_kernel void @extload_v4f16_to_v4f32_arg(ptr addrspace(1) %out, <4 
 ; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_lshr_b32 s4, s3, 16
-; CI-NEXT:    s_lshr_b32 s5, s2, 16
+; CI-NEXT:    s_lshr_b32 s4, s2, 16
+; CI-NEXT:    s_lshr_b32 s5, s3, 16
 ; CI-NEXT:    v_cvt_f32_f16_e32 v2, s3
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, s4
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, s5
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, s5
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, s4
 ; CI-NEXT:    v_cvt_f32_f16_e32 v0, s2
 ; CI-NEXT:    v_mov_b32_e32 v5, s1
 ; CI-NEXT:    v_mov_b32_e32 v4, s0
@@ -460,12 +460,11 @@ define amdgpu_kernel void @extload_v8f16_to_v8f32_arg(ptr addrspace(1) %out, <8 
 ; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_lshr_b32 s6, s1, 16
-; CI-NEXT:    s_lshr_b32 s7, s0, 16
-; CI-NEXT:    s_lshr_b32 s8, s3, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, s6
 ; CI-NEXT:    s_lshr_b32 s6, s2, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v7, s8
+; CI-NEXT:    s_lshr_b32 s7, s3, 16
+; CI-NEXT:    s_lshr_b32 s8, s0, 16
+; CI-NEXT:    s_lshr_b32 s9, s1, 16
+; CI-NEXT:    v_cvt_f32_f16_e32 v7, s7
 ; CI-NEXT:    v_cvt_f32_f16_e32 v5, s6
 ; CI-NEXT:    v_cvt_f32_f16_e32 v0, s0
 ; CI-NEXT:    v_cvt_f32_f16_e32 v6, s3
@@ -473,7 +472,8 @@ define amdgpu_kernel void @extload_v8f16_to_v8f32_arg(ptr addrspace(1) %out, <8 
 ; CI-NEXT:    s_add_u32 s0, s4, 16
 ; CI-NEXT:    v_cvt_f32_f16_e32 v2, s1
 ; CI-NEXT:    s_addc_u32 s1, s5, 0
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, s7
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, s9
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, s8
 ; CI-NEXT:    v_mov_b32_e32 v9, s1
 ; CI-NEXT:    v_mov_b32_e32 v8, s0
 ; CI-NEXT:    flat_store_dwordx4 v[8:9], v[4:7]
@@ -652,53 +652,29 @@ define amdgpu_kernel void @extload_v2f16_to_v2f64_arg(ptr addrspace(1) %out, <2 
 }
 
 define amdgpu_kernel void @extload_v3f16_to_v3f64_arg(ptr addrspace(1) %out, <3 x half> %arg) #0 {
-; CI-LABEL: extload_v3f16_to_v3f64_arg:
-; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; CI-NEXT:    s_add_i32 s12, s12, s17
-; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, s3
-; CI-NEXT:    s_lshr_b32 s4, s2, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, s2
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, s4
-; CI-NEXT:    s_add_u32 s2, s0, 16
-; CI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v0
-; CI-NEXT:    s_addc_u32 s3, s1, 0
-; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v1
-; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v2
-; CI-NEXT:    v_mov_b32_e32 v7, s3
-; CI-NEXT:    v_mov_b32_e32 v6, s2
-; CI-NEXT:    flat_store_dwordx2 v[6:7], v[4:5]
-; CI-NEXT:    v_mov_b32_e32 v5, s1
-; CI-NEXT:    v_mov_b32_e32 v4, s0
-; CI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; CI-NEXT:    s_endpgm
-;
-; VI-LABEL: extload_v3f16_to_v3f64_arg:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_f16_e32 v1, s3
-; VI-NEXT:    s_lshr_b32 s4, s2, 16
-; VI-NEXT:    v_cvt_f32_f16_e32 v0, s2
-; VI-NEXT:    v_cvt_f32_f16_e32 v2, s4
-; VI-NEXT:    s_add_u32 s2, s0, 16
-; VI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v1
-; VI-NEXT:    s_addc_u32 s3, s1, 0
-; VI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
-; VI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v2
-; VI-NEXT:    v_mov_b32_e32 v7, s3
-; VI-NEXT:    v_mov_b32_e32 v6, s2
-; VI-NEXT:    flat_store_dwordx2 v[6:7], v[4:5]
-; VI-NEXT:    v_mov_b32_e32 v5, s1
-; VI-NEXT:    v_mov_b32_e32 v4, s0
-; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; VI-NEXT:    s_endpgm
+; CIVI-LABEL: extload_v3f16_to_v3f64_arg:
+; CIVI:       ; %bb.0:
+; CIVI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
+; CIVI-NEXT:    s_add_i32 s12, s12, s17
+; CIVI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CIVI-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; CIVI-NEXT:    s_waitcnt lgkmcnt(0)
+; CIVI-NEXT:    v_cvt_f32_f16_e32 v1, s3
+; CIVI-NEXT:    s_lshr_b32 s4, s2, 16
+; CIVI-NEXT:    v_cvt_f32_f16_e32 v0, s2
+; CIVI-NEXT:    v_cvt_f32_f16_e32 v2, s4
+; CIVI-NEXT:    s_add_u32 s2, s0, 16
+; CIVI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v1
+; CIVI-NEXT:    s_addc_u32 s3, s1, 0
+; CIVI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
+; CIVI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v2
+; CIVI-NEXT:    v_mov_b32_e32 v7, s3
+; CIVI-NEXT:    v_mov_b32_e32 v6, s2
+; CIVI-NEXT:    flat_store_dwordx2 v[6:7], v[4:5]
+; CIVI-NEXT:    v_mov_b32_e32 v5, s1
+; CIVI-NEXT:    v_mov_b32_e32 v4, s0
+; CIVI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
+; CIVI-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: extload_v3f16_to_v3f64_arg:
 ; GFX11:       ; %bb.0:
@@ -815,37 +791,37 @@ define amdgpu_kernel void @extload_v8f16_to_v8f64_arg(ptr addrspace(1) %out, <8 
 ; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    s_lshr_b32 s9, s0, 16
 ; CI-NEXT:    s_lshr_b32 s6, s3, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, s6
-; CI-NEXT:    v_cvt_f32_f16_e32 v12, s3
 ; CI-NEXT:    s_lshr_b32 s7, s2, 16
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, s9
+; CI-NEXT:    v_cvt_f32_f16_e32 v4, s7
+; CI-NEXT:    v_cvt_f32_f16_e32 v5, s6
+; CI-NEXT:    v_cvt_f32_f16_e32 v12, s3
 ; CI-NEXT:    s_lshr_b32 s8, s1, 16
-; CI-NEXT:    s_lshr_b32 s6, s0, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, s7
+; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, s0
 ; CI-NEXT:    v_cvt_f32_f16_e32 v8, s2
-; CI-NEXT:    v_cvt_f32_f16_e32 v9, s0
 ; CI-NEXT:    s_add_u32 s0, s4, 48
-; CI-NEXT:    v_cvt_f32_f16_e32 v5, s1
-; CI-NEXT:    v_cvt_f64_f32_e32 v[14:15], v0
+; CI-NEXT:    v_cvt_f64_f32_e32 v[10:11], v4
+; CI-NEXT:    v_cvt_f64_f32_e32 v[14:15], v5
+; CI-NEXT:    v_cvt_f32_f16_e32 v4, s1
 ; CI-NEXT:    v_cvt_f64_f32_e32 v[12:13], v12
 ; CI-NEXT:    s_addc_u32 s1, s5, 0
-; CI-NEXT:    v_cvt_f32_f16_e32 v4, s8
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, s8
 ; CI-NEXT:    v_mov_b32_e32 v17, s1
 ; CI-NEXT:    v_mov_b32_e32 v16, s0
 ; CI-NEXT:    s_add_u32 s0, s4, 32
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, s6
-; CI-NEXT:    v_cvt_f64_f32_e32 v[10:11], v1
-; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v9
 ; CI-NEXT:    v_cvt_f64_f32_e32 v[8:9], v8
 ; CI-NEXT:    s_addc_u32 s1, s5, 0
 ; CI-NEXT:    flat_store_dwordx4 v[16:17], v[12:15]
-; CI-NEXT:    v_cvt_f64_f32_e32 v[6:7], v4
+; CI-NEXT:    v_cvt_f64_f32_e32 v[6:7], v1
 ; CI-NEXT:    v_mov_b32_e32 v13, s1
-; CI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v5
+; CI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v4
 ; CI-NEXT:    v_mov_b32_e32 v12, s0
 ; CI-NEXT:    s_add_u32 s0, s4, 16
 ; CI-NEXT:    s_addc_u32 s1, s5, 0
-; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v2
+; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
 ; CI-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
 ; CI-NEXT:    s_nop 0
 ; CI-NEXT:    v_mov_b32_e32 v9, s1
@@ -1134,12 +1110,12 @@ define amdgpu_kernel void @global_extload_v2f16_to_v2f32(ptr addrspace(1) %out, 
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
 ; CI-NEXT:    v_mov_b32_e32 v1, s3
-; CI-NEXT:    flat_load_dword v1, v[0:1]
+; CI-NEXT:    flat_load_dword v0, v[0:1]
 ; CI-NEXT:    v_mov_b32_e32 v2, s0
 ; CI-NEXT:    v_mov_b32_e32 v3, s1
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, v1
-; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CI-NEXT:    s_endpgm
@@ -1205,14 +1181,14 @@ define amdgpu_kernel void @global_extload_v3f16_to_v3f32(ptr addrspace(1) %out, 
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
 ; CI-NEXT:    v_mov_b32_e32 v1, s3
-; CI-NEXT:    flat_load_dwordx2 v[1:2], v[0:1]
-; CI-NEXT:    v_mov_b32_e32 v3, s0
+; CI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; CI-NEXT:    v_mov_b32_e32 v4, s1
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, v1
-; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v2, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, v3
+; CI-NEXT:    v_mov_b32_e32 v3, s0
 ; CI-NEXT:    flat_store_dwordx3 v[3:4], v[0:2]
 ; CI-NEXT:    s_endpgm
 ;
@@ -1280,14 +1256,14 @@ define amdgpu_kernel void @global_extload_v4f16_to_v4f32(ptr addrspace(1) %out, 
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
 ; CI-NEXT:    v_mov_b32_e32 v1, s3
-; CI-NEXT:    flat_load_dwordx2 v[3:4], v[0:1]
+; CI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; CI-NEXT:    v_mov_b32_e32 v5, s1
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, v4
-; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v4
-; CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, v1
+; CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
+; CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v2, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; CI-NEXT:    v_cvt_f32_f16_e32 v1, v4
 ; CI-NEXT:    v_mov_b32_e32 v4, s0
 ; CI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
@@ -1368,18 +1344,18 @@ define amdgpu_kernel void @global_extload_v8f16_to_v8f32(ptr addrspace(1) %out, 
 ; CI-NEXT:    v_mov_b32_e32 v13, s1
 ; CI-NEXT:    v_mov_b32_e32 v12, s0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
+; CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
+; CI-NEXT:    v_lshrrev_b32_e32 v14, 16, v0
+; CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
 ; CI-NEXT:    v_cvt_f32_f16_e32 v10, v3
 ; CI-NEXT:    v_cvt_f32_f16_e32 v8, v2
-; CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; CI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; CI-NEXT:    v_cvt_f32_f16_e32 v11, v9
+; CI-NEXT:    v_cvt_f32_f16_e32 v9, v5
 ; CI-NEXT:    v_cvt_f32_f16_e32 v6, v1
 ; CI-NEXT:    v_cvt_f32_f16_e32 v4, v0
-; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v11, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v9, v2
-; CI-NEXT:    v_cvt_f32_f16_e32 v7, v1
-; CI-NEXT:    v_cvt_f32_f16_e32 v5, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; CI-NEXT:    v_cvt_f32_f16_e32 v5, v14
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
 ; CI-NEXT:    v_mov_b32_e32 v1, s3
 ; CI-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
@@ -1473,61 +1449,61 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f32(ptr addrspace(1) %out
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; CI-NEXT:    s_add_i32 s12, s12, s17
-; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_add_u32 s4, s2, 16
-; CI-NEXT:    v_mov_b32_e32 v5, s3
-; CI-NEXT:    s_addc_u32 s5, s3, 0
-; CI-NEXT:    v_mov_b32_e32 v0, s4
-; CI-NEXT:    v_mov_b32_e32 v4, s2
-; CI-NEXT:    v_mov_b32_e32 v1, s5
+; CI-NEXT:    v_mov_b32_e32 v0, s2
+; CI-NEXT:    v_mov_b32_e32 v1, s3
 ; CI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; CI-NEXT:    s_add_u32 s2, s2, 16
+; CI-NEXT:    s_addc_u32 s3, s3, 0
+; CI-NEXT:    v_mov_b32_e32 v5, s3
+; CI-NEXT:    v_mov_b32_e32 v4, s2
 ; CI-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; CI-NEXT:    s_add_u32 s2, s0, 16
 ; CI-NEXT:    s_addc_u32 s3, s1, 0
-; CI-NEXT:    v_mov_b32_e32 v14, s3
-; CI-NEXT:    v_mov_b32_e32 v13, s2
+; CI-NEXT:    v_mov_b32_e32 v16, s3
+; CI-NEXT:    v_mov_b32_e32 v15, s2
 ; CI-NEXT:    s_add_u32 s2, s0, 48
 ; CI-NEXT:    s_addc_u32 s3, s1, 0
 ; CI-NEXT:    s_waitcnt vmcnt(1)
-; CI-NEXT:    v_cvt_f32_f16_e32 v8, v1
+; CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
+; CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
+; CI-NEXT:    v_cvt_f32_f16_e32 v11, v9
+; CI-NEXT:    v_cvt_f32_f16_e32 v9, v8
+; CI-NEXT:    v_cvt_f32_f16_e32 v10, v3
+; CI-NEXT:    v_cvt_f32_f16_e32 v8, v2
+; CI-NEXT:    v_lshrrev_b32_e32 v13, 16, v0
+; CI-NEXT:    v_lshrrev_b32_e32 v17, 16, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v14, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v12, v0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_cvt_f32_f16_e32 v11, v7
-; CI-NEXT:    v_cvt_f32_f16_e32 v9, v6
-; CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v6
-; CI-NEXT:    v_cvt_f32_f16_e32 v12, v7
-; CI-NEXT:    v_cvt_f32_f16_e32 v10, v6
-; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; CI-NEXT:    v_lshrrev_b32_e32 v16, 16, v5
-; CI-NEXT:    v_lshrrev_b32_e32 v17, 16, v4
-; CI-NEXT:    flat_store_dwordx4 v[13:14], v[9:12]
-; CI-NEXT:    v_cvt_f32_f16_e32 v6, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v12, v3
-; CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v10, v2
-; CI-NEXT:    v_lshrrev_b32_e32 v11, 16, v2
+; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v6
+; CI-NEXT:    v_lshrrev_b32_e32 v18, 16, v7
+; CI-NEXT:    flat_store_dwordx4 v[15:16], v[8:11]
 ; CI-NEXT:    v_cvt_f32_f16_e32 v2, v5
 ; CI-NEXT:    v_cvt_f32_f16_e32 v0, v4
+; CI-NEXT:    v_lshrrev_b32_e32 v16, 16, v4
+; CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v5
 ; CI-NEXT:    v_mov_b32_e32 v5, s1
-; CI-NEXT:    v_cvt_f32_f16_e32 v9, v1
-; CI-NEXT:    v_cvt_f32_f16_e32 v13, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, v16
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, v17
+; CI-NEXT:    v_cvt_f32_f16_e32 v15, v17
+; CI-NEXT:    v_cvt_f32_f16_e32 v13, v13
+; CI-NEXT:    v_cvt_f32_f16_e32 v8, v7
+; CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; CI-NEXT:    v_mov_b32_e32 v4, s0
 ; CI-NEXT:    s_add_u32 s0, s0, 32
-; CI-NEXT:    v_cvt_f32_f16_e32 v11, v11
+; CI-NEXT:    v_cvt_f32_f16_e32 v9, v18
+; CI-NEXT:    v_cvt_f32_f16_e32 v7, v1
 ; CI-NEXT:    s_addc_u32 s1, s1, 0
-; CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
-; CI-NEXT:    v_mov_b32_e32 v15, s3
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, v16
+; CI-NEXT:    v_mov_b32_e32 v11, s3
 ; CI-NEXT:    v_mov_b32_e32 v17, s1
-; CI-NEXT:    v_mov_b32_e32 v14, s2
+; CI-NEXT:    v_mov_b32_e32 v10, s2
 ; CI-NEXT:    v_mov_b32_e32 v16, s0
-; CI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
-; CI-NEXT:    flat_store_dwordx4 v[14:15], v[10:13]
-; CI-NEXT:    flat_store_dwordx4 v[16:17], v[6:9]
+; CI-NEXT:    flat_store_dwordx4 v[4:5], v[12:15]
+; CI-NEXT:    flat_store_dwordx4 v[10:11], v[6:9]
+; CI-NEXT:    flat_store_dwordx4 v[16:17], v[0:3]
 ; CI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: global_extload_v16f16_to_v16f32:
@@ -1917,21 +1893,21 @@ define amdgpu_kernel void @global_extload_v4f16_to_v4f64(ptr addrspace(1) %out, 
 ; CI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; CI-NEXT:    s_add_u32 s2, s0, 16
 ; CI-NEXT:    s_addc_u32 s3, s1, 0
+; CI-NEXT:    v_mov_b32_e32 v11, s3
 ; CI-NEXT:    v_mov_b32_e32 v9, s1
+; CI-NEXT:    v_mov_b32_e32 v10, s2
 ; CI-NEXT:    v_mov_b32_e32 v8, s0
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, v0
-; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v4, v1
 ; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_cvt_f32_f16_e32 v10, v0
-; CI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v3
-; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; CI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v4
 ; CI-NEXT:    v_cvt_f64_f32_e32 v[6:7], v2
-; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v10
-; CI-NEXT:    v_mov_b32_e32 v11, s3
-; CI-NEXT:    v_mov_b32_e32 v10, s2
+; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
+; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v3
 ; CI-NEXT:    flat_store_dwordx4 v[10:11], v[4:7]
 ; CI-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; CI-NEXT:    s_endpgm
@@ -2045,26 +2021,26 @@ define amdgpu_kernel void @global_extload_v8f16_to_v8f64(ptr addrspace(1) %out, 
 ; CI-NEXT:    v_mov_b32_e32 v14, s2
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v10, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v3
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, v4
 ; CI-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; CI-NEXT:    v_cvt_f32_f16_e32 v8, v2
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, v4
-; CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
-; CI-NEXT:    v_cvt_f32_f16_e32 v10, v1
-; CI-NEXT:    v_lshrrev_b32_e32 v11, 16, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v4, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v16, v5
-; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v3
-; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v2
+; CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v11, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v16, v2
+; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
+; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v3
+; CI-NEXT:    v_cvt_f32_f16_e32 v19, v5
+; CI-NEXT:    v_cvt_f32_f16_e32 v18, v8
 ; CI-NEXT:    v_cvt_f32_f16_e32 v17, v9
-; CI-NEXT:    v_cvt_f32_f16_e32 v18, v11
-; CI-NEXT:    v_cvt_f64_f32_e32 v[8:9], v8
+; CI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v10
 ; CI-NEXT:    flat_store_dwordx4 v[6:7], v[0:3]
-; CI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v4
-; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v10
-; CI-NEXT:    v_cvt_f64_f32_e32 v[10:11], v16
-; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v17
-; CI-NEXT:    v_cvt_f64_f32_e32 v[6:7], v18
+; CI-NEXT:    v_cvt_f64_f32_e32 v[8:9], v16
+; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v11
+; CI-NEXT:    v_cvt_f64_f32_e32 v[10:11], v19
+; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v18
+; CI-NEXT:    v_cvt_f64_f32_e32 v[6:7], v17
 ; CI-NEXT:    v_mov_b32_e32 v17, s1
 ; CI-NEXT:    v_mov_b32_e32 v16, s0
 ; CI-NEXT:    flat_store_dwordx4 v[14:15], v[8:11]
@@ -2202,91 +2178,92 @@ define amdgpu_kernel void @global_extload_v16f16_to_v16f64(ptr addrspace(1) %out
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s2
 ; CI-NEXT:    v_mov_b32_e32 v1, s3
-; CI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; CI-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
 ; CI-NEXT:    s_add_u32 s2, s2, 16
 ; CI-NEXT:    s_addc_u32 s3, s3, 0
-; CI-NEXT:    v_mov_b32_e32 v5, s3
-; CI-NEXT:    v_mov_b32_e32 v4, s2
-; CI-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; CI-NEXT:    v_mov_b32_e32 v0, s2
+; CI-NEXT:    v_mov_b32_e32 v1, s3
+; CI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; CI-NEXT:    s_add_u32 s2, s0, 48
 ; CI-NEXT:    s_addc_u32 s3, s1, 0
-; CI-NEXT:    v_mov_b32_e32 v15, s3
-; CI-NEXT:    v_mov_b32_e32 v14, s2
+; CI-NEXT:    v_mov_b32_e32 v14, s3
+; CI-NEXT:    v_mov_b32_e32 v13, s2
 ; CI-NEXT:    s_add_u32 s2, s0, 32
 ; CI-NEXT:    s_addc_u32 s3, s1, 0
-; CI-NEXT:    v_mov_b32_e32 v17, s3
-; CI-NEXT:    v_mov_b32_e32 v16, s2
+; CI-NEXT:    v_mov_b32_e32 v16, s3
+; CI-NEXT:    v_mov_b32_e32 v15, s2
 ; CI-NEXT:    s_add_u32 s2, s0, 16
 ; CI-NEXT:    s_addc_u32 s3, s1, 0
-; CI-NEXT:    v_mov_b32_e32 v19, s3
-; CI-NEXT:    v_mov_b32_e32 v18, s2
+; CI-NEXT:    v_mov_b32_e32 v18, s3
+; CI-NEXT:    v_mov_b32_e32 v17, s2
 ; CI-NEXT:    s_add_u32 s2, s0, 0x70
 ; CI-NEXT:    s_addc_u32 s3, s1, 0
-; CI-NEXT:    v_mov_b32_e32 v13, s1
-; CI-NEXT:    v_mov_b32_e32 v12, s0
+; CI-NEXT:    v_mov_b32_e32 v12, s1
+; CI-NEXT:    v_mov_b32_e32 v11, s0
 ; CI-NEXT:    s_waitcnt vmcnt(1)
-; CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v10, v8
-; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_lshrrev_b32_e32 v20, 16, v5
-; CI-NEXT:    v_cvt_f64_f32_e32 v[8:9], v3
-; CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; CI-NEXT:    v_cvt_f64_f32_e32 v[10:11], v10
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v21, v5
-; CI-NEXT:    flat_store_dwordx4 v[14:15], v[8:11]
-; CI-NEXT:    v_mov_b32_e32 v15, s3
-; CI-NEXT:    v_cvt_f64_f32_e32 v[8:9], v2
-; CI-NEXT:    v_cvt_f64_f32_e32 v[10:11], v3
-; CI-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    flat_store_dwordx4 v[16:17], v[8:11]
-; CI-NEXT:    v_mov_b32_e32 v14, s2
-; CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v9, v0
-; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v1
-; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v2
-; CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
-; CI-NEXT:    v_lshrrev_b32_e32 v10, 16, v7
+; CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v7
 ; CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
-; CI-NEXT:    flat_store_dwordx4 v[18:19], v[0:3]
-; CI-NEXT:    v_lshrrev_b32_e32 v11, 16, v6
-; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v9
-; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v8
-; CI-NEXT:    v_cvt_f32_f16_e32 v8, v10
-; CI-NEXT:    s_add_u32 s2, s0, 0x60
+; CI-NEXT:    v_cvt_f32_f16_e32 v9, v8
+; CI-NEXT:    s_waitcnt vmcnt(0)
+; CI-NEXT:    v_lshrrev_b32_e32 v19, 16, v2
+; CI-NEXT:    v_cvt_f64_f32_e32 v[7:8], v7
+; CI-NEXT:    v_cvt_f64_f32_e32 v[9:10], v9
+; CI-NEXT:    v_cvt_f32_f16_e32 v20, v2
+; CI-NEXT:    v_cvt_f32_f16_e32 v21, v3
+; CI-NEXT:    flat_store_dwordx4 v[13:14], v[7:10]
+; CI-NEXT:    s_nop 0
+; CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
 ; CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
-; CI-NEXT:    v_cvt_f32_f16_e32 v10, v11
+; CI-NEXT:    v_cvt_f32_f16_e32 v8, v7
+; CI-NEXT:    v_lshrrev_b32_e32 v10, 16, v3
+; CI-NEXT:    v_mov_b32_e32 v14, s3
+; CI-NEXT:    v_cvt_f64_f32_e32 v[6:7], v6
+; CI-NEXT:    v_cvt_f64_f32_e32 v[8:9], v8
+; CI-NEXT:    v_mov_b32_e32 v13, s2
+; CI-NEXT:    s_add_u32 s2, s0, 0x60
 ; CI-NEXT:    s_addc_u32 s3, s1, 0
-; CI-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
-; CI-NEXT:    flat_store_dwordx4 v[12:13], v[0:3]
-; CI-NEXT:    v_mov_b32_e32 v17, s3
-; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v7
-; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v8
-; CI-NEXT:    v_cvt_f32_f16_e32 v7, v20
-; CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; CI-NEXT:    v_cvt_f32_f16_e32 v12, v5
-; CI-NEXT:    v_mov_b32_e32 v16, s2
+; CI-NEXT:    flat_store_dwordx4 v[15:16], v[6:9]
+; CI-NEXT:    v_mov_b32_e32 v16, s3
+; CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
+; CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
+; CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
+; CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
+; CI-NEXT:    v_cvt_f32_f16_e32 v9, v4
+; CI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v5
+; CI-NEXT:    v_cvt_f64_f32_e32 v[6:7], v6
+; CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
+; CI-NEXT:    v_mov_b32_e32 v15, s2
 ; CI-NEXT:    s_add_u32 s2, s0, 0x50
+; CI-NEXT:    flat_store_dwordx4 v[17:18], v[4:7]
+; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v8
+; CI-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
+; CI-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v6, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v7, v1
+; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v9
+; CI-NEXT:    v_cvt_f32_f16_e32 v8, v10
+; CI-NEXT:    v_cvt_f32_f16_e32 v10, v19
+; CI-NEXT:    v_cvt_f32_f16_e32 v22, v5
+; CI-NEXT:    flat_store_dwordx4 v[11:12], v[0:3]
+; CI-NEXT:    v_cvt_f32_f16_e32 v12, v4
+; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v21
+; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v8
 ; CI-NEXT:    s_addc_u32 s3, s1, 0
-; CI-NEXT:    v_cvt_f64_f32_e32 v[8:9], v6
+; CI-NEXT:    v_cvt_f64_f32_e32 v[8:9], v20
 ; CI-NEXT:    v_cvt_f64_f32_e32 v[10:11], v10
 ; CI-NEXT:    s_add_u32 s0, s0, 64
-; CI-NEXT:    flat_store_dwordx4 v[14:15], v[0:3]
+; CI-NEXT:    flat_store_dwordx4 v[13:14], v[0:3]
 ; CI-NEXT:    s_addc_u32 s1, s1, 0
-; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v21
-; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v7
-; CI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v4
-; CI-NEXT:    v_cvt_f64_f32_e32 v[6:7], v12
-; CI-NEXT:    v_mov_b32_e32 v19, s3
+; CI-NEXT:    v_cvt_f64_f32_e32 v[0:1], v7
+; CI-NEXT:    v_cvt_f64_f32_e32 v[2:3], v12
+; CI-NEXT:    v_cvt_f64_f32_e32 v[4:5], v6
+; CI-NEXT:    v_cvt_f64_f32_e32 v[6:7], v22
+; CI-NEXT:    v_mov_b32_e32 v18, s3
 ; CI-NEXT:    v_mov_b32_e32 v13, s1
-; CI-NEXT:    v_mov_b32_e32 v18, s2
+; CI-NEXT:    v_mov_b32_e32 v17, s2
 ; CI-NEXT:    v_mov_b32_e32 v12, s0
-; CI-NEXT:    flat_store_dwordx4 v[16:17], v[8:11]
-; CI-NEXT:    flat_store_dwordx4 v[18:19], v[0:3]
+; CI-NEXT:    flat_store_dwordx4 v[15:16], v[8:11]
+; CI-NEXT:    flat_store_dwordx4 v[17:18], v[0:3]
 ; CI-NEXT:    flat_store_dwordx4 v[12:13], v[4:7]
 ; CI-NEXT:    s_endpgm
 ;
@@ -2595,15 +2572,13 @@ define amdgpu_kernel void @global_truncstore_v2f32_to_v2f16(ptr addrspace(1) %ou
 ; GFX11-TRUE16-LABEL: global_truncstore_v2f32_to_v2f16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_b64 v[1:2], v3, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_b64 v[0:1], v2, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v2
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.h, v0.l
-; GFX11-TRUE16-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v0
+; GFX11-TRUE16-NEXT:    global_store_b32 v2, v1, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: global_truncstore_v2f32_to_v2f16:
@@ -2684,14 +2659,12 @@ define amdgpu_kernel void @global_truncstore_v3f32_to_v3f16(ptr addrspace(1) %ou
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b96 v[0:2], v3, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v2
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v1, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v4.h, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v2
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v4.l, v0
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_store_d16_hi_b16 v3, v0, s[0:1] offset:4
-; GFX11-TRUE16-NEXT:    global_store_b32 v3, v1, s[0:1]
+; GFX11-TRUE16-NEXT:    global_store_b16 v3, v1, s[0:1] offset:4
+; GFX11-TRUE16-NEXT:    global_store_b32 v3, v4, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: global_truncstore_v3f32_to_v3f16:
@@ -2770,14 +2743,11 @@ define amdgpu_kernel void @global_truncstore_v4f32_to_v4f16(ptr addrspace(1) %ou
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v4, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.l, v3
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v2
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v2, v2.l, v3.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v1, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    global_store_b64 v4, v[1:2], s[0:1]
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.h, v3
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.l, v2
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.h, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v0
+; GFX11-TRUE16-NEXT:    global_store_b64 v4, v[2:3], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: global_truncstore_v4f32_to_v4f16:
@@ -2884,20 +2854,15 @@ define amdgpu_kernel void @global_truncstore_v8f32_to_v8f16(ptr addrspace(1) %ou
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v8, s[2:3] offset:16
 ; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v8, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.l, v3
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v2
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.h, v3
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.l, v2
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.h, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v7
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v6
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v5.l, v5
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v4.l, v4
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v3, v2.l, v3.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v2, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v1, v1.h, v0.h
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v4.l, v5.l
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v7
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v6
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v5
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v4
 ; GFX11-TRUE16-NEXT:    global_store_b128 v8, v[0:3], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
@@ -3070,44 +3035,35 @@ define amdgpu_kernel void @global_truncstore_v16f32_to_v16f16(ptr addrspace(1) %
 ; GFX11-TRUE16-LABEL: global_truncstore_v16f32_to_v16f16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v17, 0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v16, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x3
-; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v17, s[2:3] offset:16
-; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v17, s[2:3]
-; GFX11-TRUE16-NEXT:    global_load_b128 v[8:11], v17, s[2:3] offset:48
-; GFX11-TRUE16-NEXT:    global_load_b128 v[12:15], v17, s[2:3] offset:32
+; GFX11-TRUE16-NEXT:    global_load_b128 v[0:3], v16, s[2:3] offset:16
+; GFX11-TRUE16-NEXT:    global_load_b128 v[4:7], v16, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_b128 v[8:11], v16, s[2:3] offset:48
+; GFX11-TRUE16-NEXT:    global_load_b128 v[12:15], v16, s[2:3] offset:32
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.l, v3
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v16.l, v5
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v16.h, v4
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.h, v3
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.l, v2
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v4.l, v11
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v4.h, v10
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v5.l, v9
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v5.h, v8
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v11.h, v11
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v11.l, v10
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v10.h, v9
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v10.l, v8
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v8.l, v15
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v8.h, v14
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v9.l, v13
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v9.h, v12
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v2
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v7
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v6
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v7, v4.h, v4.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v6, v5.h, v5.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v5, v8.h, v8.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v4, v9.h, v9.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v3, v2.l, v3.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v2, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v1, v1.h, v0.h
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v16.h, v16.l
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v9.h, v15
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v9.l, v14
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v8.h, v13
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v8.l, v12
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.h, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v0
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v7
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v6
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v5
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v4
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
-; GFX11-TRUE16-NEXT:    global_store_b128 v17, v[4:7], s[0:1] offset:16
-; GFX11-TRUE16-NEXT:    global_store_b128 v17, v[0:3], s[0:1]
+; GFX11-TRUE16-NEXT:    global_store_b128 v16, v[8:11], s[0:1] offset:16
+; GFX11-TRUE16-NEXT:    global_store_b128 v16, v[0:3], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: global_truncstore_v16f32_to_v16f16:
@@ -3167,11 +3123,11 @@ define amdgpu_kernel void @fadd_f16(ptr addrspace(1) %out, half %a, half %b) #0 
 ; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, s0
-; CI-NEXT:    s_lshr_b32 s0, s0, 16
+; CI-NEXT:    s_lshr_b32 s1, s0, 16
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, s1
 ; CI-NEXT:    v_cvt_f32_f16_e32 v1, s0
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CI-NEXT:    v_add_f32_e32 v0, v0, v1
+; CI-NEXT:    v_add_f32_e32 v0, v1, v0
 ; CI-NEXT:    v_cvt_f16_f32_e32 v2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
@@ -3234,14 +3190,14 @@ define amdgpu_kernel void @fadd_v2f16(ptr addrspace(1) %out, <2 x half> %a, <2 x
 ; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_lshr_b32 s4, s2, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, s2
-; CI-NEXT:    s_lshr_b32 s2, s3, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, s3
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, s4
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, s2
-; CI-NEXT:    v_add_f32_e32 v0, v0, v1
+; CI-NEXT:    s_lshr_b32 s5, s3, 16
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, s3
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, s2
+; CI-NEXT:    v_cvt_f32_f16_e32 v2, s5
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, s4
+; CI-NEXT:    v_add_f32_e32 v0, v1, v0
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; CI-NEXT:    v_add_f32_e32 v1, v2, v3
+; CI-NEXT:    v_add_f32_e32 v1, v3, v2
 ; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; CI-NEXT:    v_or_b32_e32 v2, v0, v1
@@ -3297,30 +3253,30 @@ define amdgpu_kernel void @fadd_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; CI-NEXT:    v_mov_b32_e32 v4, s0
 ; CI-NEXT:    v_mov_b32_e32 v5, s1
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_cvt_f32_f16_e32 v6, v0
-; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v7, v1
-; CI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; CI-NEXT:    v_cvt_f32_f16_e32 v8, v2
-; CI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; CI-NEXT:    v_cvt_f32_f16_e32 v9, v3
-; CI-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; CI-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
+; CI-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
+; CI-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
+; CI-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
 ; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_add_f32_e32 v7, v7, v9
-; CI-NEXT:    v_add_f32_e32 v6, v6, v8
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v9, v9
+; CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
+; CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
+; CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
 ; CI-NEXT:    v_add_f32_e32 v1, v1, v3
 ; CI-NEXT:    v_add_f32_e32 v0, v0, v2
+; CI-NEXT:    v_add_f32_e32 v2, v7, v9
+; CI-NEXT:    v_add_f32_e32 v3, v6, v8
+; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; CI-NEXT:    v_cvt_f16_f32_e32 v2, v7
-; CI-NEXT:    v_cvt_f16_f32_e32 v3, v6
-; CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; CI-NEXT:    v_or_b32_e32 v1, v2, v1
-; CI-NEXT:    v_or_b32_e32 v0, v3, v0
+; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; CI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; CI-NEXT:    v_or_b32_e32 v1, v1, v2
+; CI-NEXT:    v_or_b32_e32 v0, v0, v3
 ; CI-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; CI-NEXT:    s_endpgm
 ;
@@ -3371,58 +3327,58 @@ define amdgpu_kernel void @fadd_v8f16(ptr addrspace(1) %out, <8 x half> %a, <8 x
 ; CI-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x4
 ; CI-NEXT:    s_load_dwordx2 s[8:9], s[8:9], 0x0
 ; CI-NEXT:    s_add_i32 s12, s12, s17
-; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_lshr_b32 s10, s0, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v4, s0
-; CI-NEXT:    s_lshr_b32 s0, s4, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v8, s0
-; CI-NEXT:    s_lshr_b32 s0, s5, 16
-; CI-NEXT:    s_lshr_b32 s11, s1, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v9, s0
-; CI-NEXT:    s_lshr_b32 s0, s6, 16
+; CI-NEXT:    s_lshr_b32 s13, s3, 16
+; CI-NEXT:    s_lshr_b32 s14, s7, 16
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, s14
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, s13
 ; CI-NEXT:    s_lshr_b32 s12, s2, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, s10
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, s11
-; CI-NEXT:    s_lshr_b32 s10, s3, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v10, s0
-; CI-NEXT:    s_lshr_b32 s0, s7, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, s12
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, s10
-; CI-NEXT:    v_cvt_f32_f16_e32 v5, s1
-; CI-NEXT:    v_cvt_f32_f16_e32 v11, s0
-; CI-NEXT:    v_cvt_f32_f16_e32 v12, s4
-; CI-NEXT:    v_cvt_f32_f16_e32 v13, s5
-; CI-NEXT:    v_cvt_f32_f16_e32 v6, s2
-; CI-NEXT:    v_cvt_f32_f16_e32 v7, s3
-; CI-NEXT:    v_cvt_f32_f16_e32 v14, s7
-; CI-NEXT:    v_cvt_f32_f16_e32 v15, s6
-; CI-NEXT:    v_add_f32_e32 v1, v1, v9
-; CI-NEXT:    v_add_f32_e32 v0, v0, v8
-; CI-NEXT:    v_add_f32_e32 v3, v3, v11
-; CI-NEXT:    v_add_f32_e32 v2, v2, v10
-; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CI-NEXT:    v_add_f32_e32 v5, v5, v13
+; CI-NEXT:    s_lshr_b32 s15, s6, 16
+; CI-NEXT:    v_cvt_f32_f16_e32 v2, s3
+; CI-NEXT:    v_add_f32_e32 v0, v1, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, s7
+; CI-NEXT:    v_cvt_f32_f16_e32 v3, s15
+; CI-NEXT:    v_cvt_f32_f16_e32 v4, s12
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; CI-NEXT:    v_add_f32_e32 v4, v4, v12
-; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; CI-NEXT:    v_add_f32_e32 v7, v7, v14
-; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; CI-NEXT:    v_add_f32_e32 v6, v6, v15
-; CI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; CI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; CI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; CI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; CI-NEXT:    v_add_f32_e32 v1, v2, v1
+; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; CI-NEXT:    v_add_f32_e32 v2, v4, v3
+; CI-NEXT:    v_cvt_f32_f16_e32 v4, s6
+; CI-NEXT:    v_cvt_f32_f16_e32 v5, s2
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; CI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; CI-NEXT:    v_or_b32_e32 v1, v5, v1
-; CI-NEXT:    v_or_b32_e32 v0, v4, v0
+; CI-NEXT:    s_lshr_b32 s11, s1, 16
+; CI-NEXT:    s_lshr_b32 s14, s5, 16
+; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; CI-NEXT:    v_or_b32_e32 v3, v1, v0
+; CI-NEXT:    v_add_f32_e32 v1, v5, v4
+; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; CI-NEXT:    v_cvt_f32_f16_e32 v4, s14
+; CI-NEXT:    v_cvt_f32_f16_e32 v5, s11
+; CI-NEXT:    v_cvt_f32_f16_e32 v6, s5
+; CI-NEXT:    v_cvt_f32_f16_e32 v7, s1
+; CI-NEXT:    s_lshr_b32 s10, s0, 16
+; CI-NEXT:    s_lshr_b32 s13, s4, 16
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
+; CI-NEXT:    v_or_b32_e32 v2, v1, v0
+; CI-NEXT:    v_add_f32_e32 v0, v5, v4
+; CI-NEXT:    v_cvt_f32_f16_e32 v4, s13
+; CI-NEXT:    v_cvt_f32_f16_e32 v5, s10
+; CI-NEXT:    v_add_f32_e32 v1, v7, v6
+; CI-NEXT:    v_cvt_f32_f16_e32 v6, s4
+; CI-NEXT:    v_cvt_f32_f16_e32 v7, s0
+; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; CI-NEXT:    v_add_f32_e32 v4, v5, v4
+; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; CI-NEXT:    v_cvt_f16_f32_e32 v4, v4
+; CI-NEXT:    v_add_f32_e32 v5, v7, v6
+; CI-NEXT:    v_cvt_f16_f32_e32 v5, v5
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; CI-NEXT:    v_or_b32_e32 v1, v1, v0
+; CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v4
+; CI-NEXT:    v_or_b32_e32 v0, v5, v0
 ; CI-NEXT:    v_mov_b32_e32 v4, s8
-; CI-NEXT:    v_or_b32_e32 v3, v7, v3
-; CI-NEXT:    v_or_b32_e32 v2, v6, v2
 ; CI-NEXT:    v_mov_b32_e32 v5, s9
 ; CI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; CI-NEXT:    s_endpgm

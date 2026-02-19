@@ -33,7 +33,7 @@ define i1 @test_latch() {
 ; CHECK:       latch.1:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[EXIT_VAL:%.*]] = phi i1 [ false, [[LOOP]] ], [ false, [[LATCH]] ], [ true, [[LATCH_1]] ]
+; CHECK-NEXT:    [[EXIT_VAL:%.*]] = phi i1 [ true, [[LATCH_1]] ], [ false, [[LOOP]] ], [ false, [[LATCH]] ]
 ; CHECK-NEXT:    ret i1 [[EXIT_VAL]]
 ;
 start:
@@ -99,7 +99,7 @@ define i1 @test_non_latch() {
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[EXIT_VAL:%.*]] = phi i1 [ false, [[LATCH]] ], [ false, [[LATCH_1]] ], [ true, [[LOOP_2]] ], [ false, [[LATCH_2]] ]
+; CHECK-NEXT:    [[EXIT_VAL:%.*]] = phi i1 [ false, [[LATCH]] ], [ false, [[LATCH_2]] ], [ true, [[LOOP_2]] ], [ false, [[LATCH_1]] ]
 ; CHECK-NEXT:    ret i1 [[EXIT_VAL]]
 ;
 start:

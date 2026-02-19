@@ -483,6 +483,8 @@ private:
     }
 
     loopNestClauseOps.loopInclusive = rewriter.getUnitAttr();
+    loopNestClauseOps.collapseNumLoops =
+        rewriter.getI64IntegerAttr(loopNestClauseOps.loopLowerBounds.size());
   }
 
   std::pair<mlir::omp::LoopNestOp, mlir::omp::WsloopOp>

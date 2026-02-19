@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
 
 #include <optional>
 #include <string>
@@ -269,6 +269,7 @@ void *LLDBSWIGPython_CastPyObjectToSBThread(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBFrame(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBValueList(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data);
@@ -277,4 +278,4 @@ void *LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data);
 } // namespace lldb_private
 
 #endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H

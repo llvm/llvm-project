@@ -29,6 +29,8 @@ class CustomRivosVXI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let Constraints = "$vd = $vd_wb";
+
+  let UseNamedOperandTable = true;
 }
 
 class CustomRivosXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
@@ -49,6 +51,8 @@ class CustomRivosXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
 
   let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -117,10 +121,16 @@ defm : RIVPatBinaryVL_VV<ri_vunzip2b_vl, "PseudoRI_VUNZIP2B">;
 let Predicates = [HasVendorXRivosVisni], DecoderNamespace = "XRivos",
   mayLoad = false, mayStore = false, hasSideEffects = false in {
 
-let vm = 0, vs2=0, Inst<6-0> = OPC_CUSTOM_2.Value,
-    isReMaterializable = 1, isAsCheapAsAMove = 1 in
-def RI_VZERO : RVInstV<0b000000, 0b00000, OPCFG, (outs VR:$vd),
-                     (ins), "ri.vzero.v", "$vd">;
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
+def RI_VZERO : RVInstVUnary<0b000000, 0b00000, OPCFG, (outs VR:$vd),
+                            (ins), "ri.vzero.v", "$vd"> {
+  let vm = 0;
+  let vs2 = 0;
+
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+
+  let RVVConstraint = NoConstraint;
+}
 
 def RI_VINSERT : CustomRivosVXI<0b010000, OPMVX, (outs VR:$vd_wb),
                                 (ins VR:$vd, GPR:$rs1, uimm5:$imm),
@@ -156,7 +166,7 @@ foreach m = MxList in {
     let BaseInstr = RI_VEXTRACT in
     def PseudoRI_VEXTRACT_  # mx :
       RISCVVPseudo<(outs GPR:$rd),
-                   (ins m.vrclass:$rs2, uimm5:$idx, ixlenimm:$sew),
+                   (ins m.vrclass:$rs2, uimm5:$idx, sew:$sew),
                    []>;
 
     let HasVLOp = 1, BaseInstr = RI_VINSERT, HasVecPolicyOp = 1,
@@ -164,7 +174,7 @@ foreach m = MxList in {
     def PseudoRI_VINSERT_ # mx :
       RISCVVPseudo<(outs m.vrclass:$rd),
                    (ins m.vrclass:$rs1, GPR:$rs2, uimm5:$idx, AVL:$vl,
-                        ixlenimm:$sew, ixlenimm:$policy),
+                        sew:$sew, vec_policy:$policy),
                    []>;
   }
 }

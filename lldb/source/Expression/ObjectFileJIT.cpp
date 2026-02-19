@@ -41,7 +41,7 @@ void ObjectFileJIT::Terminate() {
 }
 
 ObjectFile *ObjectFileJIT::CreateInstance(const lldb::ModuleSP &module_sp,
-                                          DataBufferSP data_sp,
+                                          DataExtractorSP extractor_sp,
                                           lldb::offset_t data_offset,
                                           const FileSpec *file,
                                           lldb::offset_t file_offset,
@@ -61,7 +61,7 @@ ObjectFile *ObjectFileJIT::CreateMemoryInstance(const lldb::ModuleSP &module_sp,
 }
 
 size_t ObjectFileJIT::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   // JIT'ed object file can't be read from a file on disk
@@ -70,7 +70,8 @@ size_t ObjectFileJIT::GetModuleSpecifications(
 
 ObjectFileJIT::ObjectFileJIT(const lldb::ModuleSP &module_sp,
                              const ObjectFileJITDelegateSP &delegate_sp)
-    : ObjectFile(module_sp, nullptr, 0, 0, DataBufferSP(), 0), m_delegate_wp() {
+    : ObjectFile(module_sp, nullptr, 0, 0, DataExtractorSP(), 0),
+      m_delegate_wp() {
   if (delegate_sp) {
     m_delegate_wp = delegate_sp;
     m_data_nsp->SetByteOrder(delegate_sp->GetByteOrder());

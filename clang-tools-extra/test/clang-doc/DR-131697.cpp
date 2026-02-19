@@ -1,7 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: split-file %s %t
 // RUN: clang-doc -format=html %t/compile_commands.json %t/main.cpp
-// RUN: clang-doc -format=mustache %t/compile_commands.json %t/main.cpp
 
 //--- main.cpp
 

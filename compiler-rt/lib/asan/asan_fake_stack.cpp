@@ -77,11 +77,11 @@ FakeStack* FakeStack::Create(uptr stack_size_log) {
   VReport(1,
           "T%d: FakeStack created: %p -- %p stack_size_log: %zd; "
           "mmapped %zdK, noreserve=%d, true_start: %p, start of first frame: "
-          "0x%zx\n",
+          "%p\n",
           GetCurrentTidOrInvalid(), (void*)p,
           (void*)(p + FakeStack::RequiredSize(stack_size_log)), stack_size_log,
           size >> 10, flags()->uar_noreserve, res->true_start,
-          res->GetFrame(stack_size_log, /*class_id*/ 0, /*pos*/ 0));
+          (void*)res->GetFrame(stack_size_log, /*class_id*/ 0, /*pos*/ 0));
   return res;
 }
 
@@ -225,9 +225,23 @@ static void SetTLSFakeStack(FakeStack*) {}
 void ResetTLSFakeStack() {}
 #endif  // (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_FUCHSIA
 
+static void SuppressFakeStack() {
+  AsanThread* t = GetCurrentThread();
+  if (t) {
+    t->SuppressFakeStack();
+  }
+}
+
+static void UnsuppressFakeStack() {
+  AsanThread* t = GetCurrentThread();
+  if (t) {
+    t->UnsuppressFakeStack();
+  }
+}
+
 static FakeStack* GetFakeStack() {
   AsanThread* t = GetCurrentThread();
-  if (!t)
+  if (!t || t->IsFakeStackSuppressed())
     return nullptr;
   return t->get_or_create_fake_stack();
 }
@@ -362,4 +376,9 @@ void __asan_allocas_unpoison(uptr top, uptr bottom) {
   REAL(memset)(reinterpret_cast<void*>(MemToShadow(top)), 0,
                (bottom - top) / ASAN_SHADOW_GRANULARITY);
 }
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __asan_suppress_fake_stack() { return SuppressFakeStack(); }
+SANITIZER_INTERFACE_ATTRIBUTE
+void __asan_unsuppress_fake_stack() { return UnsuppressFakeStack(); }
 }  // extern "C"

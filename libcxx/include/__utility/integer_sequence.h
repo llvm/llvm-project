@@ -11,6 +11,8 @@
 
 #include <__config>
 #include <__cstddef/size_t.h>
+#include <__tuple/tuple_element.h>
+#include <__tuple/tuple_size.h>
 #include <__type_traits/is_integral.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -33,7 +35,7 @@ template <class _Tp, _Tp... _Indices>
 struct __integer_sequence {
   using value_type = _Tp;
   static_assert(is_integral<_Tp>::value, "std::integer_sequence can only be instantiated with an integral type");
-  static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return sizeof...(_Indices); }
+  [[__nodiscard__]] static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return sizeof...(_Indices); }
 };
 
 template <size_t... _Indices>
@@ -69,6 +71,30 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __for_each_index_sequence(index_sequence<_I
   (__func.template operator()<_Index>(), ...);
 }
 #    endif // _LIBCPP_STD_VER >= 20
+
+#    if _LIBCPP_STD_VER >= 26
+// [intseq.binding], structured binding support
+template <class _Tp, _Tp... _Indices>
+struct tuple_size<integer_sequence<_Tp, _Indices...>> : integral_constant<size_t, sizeof...(_Indices)> {};
+
+template <size_t _Ip, class _Tp, _Tp... _Indices>
+struct tuple_element<_Ip, integer_sequence<_Tp, _Indices...>> {
+  static_assert(_Ip < sizeof...(_Indices), "Index out of bounds in std::tuple_element<> (std::integer_sequence)");
+  using type _LIBCPP_NODEBUG = _Tp;
+};
+
+template <size_t _Ip, class _Tp, _Tp... _Indices>
+struct tuple_element<_Ip, const integer_sequence<_Tp, _Indices...>> {
+  static_assert(_Ip < sizeof...(_Indices), "Index out of bounds in std::tuple_element<> (const std::integer_sequence)");
+  using type _LIBCPP_NODEBUG = _Tp;
+};
+
+template <size_t _Ip, class _Tp, _Tp... _Indices>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp get(integer_sequence<_Tp, _Indices...>) noexcept {
+  static_assert(_Ip < sizeof...(_Indices), "Index out of bounds in std::get<> (std::integer_sequence)");
+  return _Indices...[_Ip];
+}
+#    endif // _LIBCPP_STD_VER >= 26
 
 #  endif // _LIBCPP_STD_VER >= 14
 

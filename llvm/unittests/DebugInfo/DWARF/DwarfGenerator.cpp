@@ -460,7 +460,7 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
                                        TripleName,
                                    inconvertibleErrorCode());
 
-  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCOptions = mc::InitMCTargetOptionsFromFlags();
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI)
     return make_error<StringError>("no asm info for target " + TripleName,

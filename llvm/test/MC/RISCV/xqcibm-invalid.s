@@ -1,7 +1,7 @@
 # Xqcibm - Qualcomm uC Bit Manipulation Extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqcibm < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+xqcibm < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcibm < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=-xqcibm < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+2]]:18: error: register must be a GPR excluding zero (x0)

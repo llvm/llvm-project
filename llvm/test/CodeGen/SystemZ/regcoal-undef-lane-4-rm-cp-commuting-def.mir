@@ -59,7 +59,8 @@ body:             |
   ; CHECK-NEXT:   [[LAY2:%[0-9]+]]:gr64bit = OGR [[LAY2]], [[LAY]], implicit-def dead $cc
   ; CHECK-NEXT:   undef [[AHIMuxK:%[0-9]+]].subreg_l32:gr64bit = AHIMuxK [[LGHI]].subreg_l32, 19843, implicit-def dead $cc
   ; CHECK-NEXT:   [[AHIMuxK:%[0-9]+]]:gr64bit = ROSBG [[AHIMuxK]], [[LAY2]], 32, 63, 0, implicit-def dead $cc
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]].subreg_l32:gr64bit = OR [[DEF]].subreg_l32, [[AHIMuxK]].subreg_l32, implicit-def dead $cc
+  ; CHECK-NEXT:   [[AHIMuxK:%[0-9]+]].subreg_l32:gr64bit = OR [[AHIMuxK]].subreg_l32, [[DEF]].subreg_l32, implicit-def dead $cc
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gr64bit = COPY [[AHIMuxK]]
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gr64bit = ROSBG [[DEF]], [[LAY1]], 32, 63, 0, implicit-def dead $cc
   ; CHECK-NEXT:   CHIMux [[LHIMux1]], 0, implicit-def $cc
   ; CHECK-NEXT:   BRC 14, 6, %bb.6, implicit killed $cc

@@ -28,6 +28,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include <optional>
 
 using namespace clang;
@@ -312,6 +313,8 @@ Retry:
     Res = ParseReturnStatement();
     SemiError = "co_return";
     break;
+  case tok::kw__Defer: // C defer TS: defer-statement
+    return ParseDeferStatement(TrailingElseLoc);
 
   case tok::kw_asm: {
     for (const ParsedAttr &AL : CXX11Attrs)
@@ -499,6 +502,11 @@ Retry:
     ProhibitAttributes(CXX11Attrs);
     ProhibitAttributes(GNUAttrs);
     HandlePragmaAttribute();
+    return StmtEmpty();
+  case tok::annot_pragma_export:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    HandlePragmaExport();
     return StmtEmpty();
   }
 
@@ -1028,6 +1036,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
       break;
     case tok::annot_pragma_dump:
       HandlePragmaDump();
+      break;
+    case tok::annot_pragma_export:
+      HandlePragmaExport();
       break;
     default:
       checkForPragmas = false;
@@ -2368,6 +2379,28 @@ StmtResult Parser::ParseReturnStatement() {
   if (IsCoreturn)
     return Actions.ActOnCoreturnStmt(getCurScope(), ReturnLoc, R.get());
   return Actions.ActOnReturnStmt(ReturnLoc, R.get(), getCurScope());
+}
+
+StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
+  assert(Tok.is(tok::kw__Defer));
+  SourceLocation DeferLoc = ConsumeToken();
+
+  Actions.ActOnStartOfDeferStmt(DeferLoc, getCurScope());
+
+  llvm::scope_exit OnError([&] { Actions.ActOnDeferStmtError(getCurScope()); });
+
+  StmtResult Res = ParseStatement(TrailingElseLoc);
+  if (!Res.isUsable())
+    return StmtError();
+
+  // The grammar specifically calls for an unlabeled-statement here.
+  if (auto *L = dyn_cast<LabelStmt>(Res.get())) {
+    Diag(L->getIdentLoc(), diag::err_defer_ts_labeled_stmt);
+    return StmtError();
+  }
+
+  OnError.release();
+  return Actions.ActOnEndOfDeferStmt(Res.get(), getCurScope());
 }
 
 StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,

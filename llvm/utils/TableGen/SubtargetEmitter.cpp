@@ -1551,6 +1551,66 @@ static bool isTruePredicate(const Record *Rec) {
          Rec->getValueAsDef("Pred")->isSubClassOf("MCTrue");
 }
 
+static void expandSchedPredicates(const Record *Rec, PredicateExpander &PE,
+                                  bool WrapPredicate, raw_ostream &OS) {
+  if (Rec->isSubClassOf("MCSchedPredicate")) {
+    PE.expandPredicate(OS, Rec->getValueAsDef("Pred"));
+  } else if (Rec->isSubClassOf("FeatureSchedPredicate")) {
+    const Record *FR = Rec->getValueAsDef("Feature");
+    if (PE.shouldExpandForMC()) {
+      // MC version of this predicate will be emitted into
+      // resolveVariantSchedClassImpl, which accesses MCSubtargetInfo
+      // through argument STI.
+      OS << "STI.";
+    } else {
+      // Otherwise, this predicate will be emitted directly into
+      // TargetGenSubtargetInfo::resolveSchedClass, which can just access
+      // TargetSubtargetInfo / MCSubtargetInfo through `this`.
+      OS << "this->";
+    }
+    OS << "hasFeature(" << PE.getTargetName() << "::" << FR->getName() << ")";
+  } else if (Rec->isSubClassOf("SchedPredicateCombiner")) {
+    std::vector<const Record *> SubPreds =
+        Rec->getValueAsListOfDefs("Predicates");
+    if (SubPreds.empty())
+      PrintFatalError(Rec, "Empty SchedPredicateCombiner is not allowed");
+
+    StringRef Sep;
+    if (Rec->isSubClassOf("AllOfSchedPreds")) {
+      Sep = " && ";
+    } else if (Rec->isSubClassOf("AnyOfSchedPreds")) {
+      Sep = " || ";
+    } else if (Rec->isSubClassOf("NotSchedPred")) {
+      if (SubPreds.size() != 1)
+        PrintFatalError(Rec,
+                        "NotSchedPred can only have a single sub-predicate.");
+      OS << "!";
+      // We don't have to eagerly wrap this term right now: telling its (only)
+      // sub-predicate to wrap itself should be sufficient.
+      WrapPredicate = false;
+    } else {
+      PrintFatalError(Rec, "Unrecognized SchedPredicateCombiner");
+    }
+
+    if (WrapPredicate)
+      OS << "(";
+
+    ListSeparator LS(Sep);
+    bool WrapSubPreds =
+        SubPreds.size() > 1 || Rec->isSubClassOf("NotSchedPred");
+    for (const Record *SubP : SubPreds)
+      expandSchedPredicates(SubP, PE, WrapSubPreds, OS << LS);
+
+    if (WrapPredicate)
+      OS << ")";
+  } else {
+    // Expand this legacy predicate and wrap it around braces if there is more
+    // than one predicate to expand.
+    OS << (WrapPredicate ? "(" : "") << Rec->getValueAsString("Predicate")
+       << (WrapPredicate ? ")" : "");
+  }
+}
+
 static void emitPredicates(const CodeGenSchedTransition &T,
                            const CodeGenSchedClass &SC, PredicateExpander &PE,
                            raw_ostream &OS) {
@@ -1582,34 +1642,7 @@ static void emitPredicates(const CodeGenSchedTransition &T,
         SS << "&& ";
       }
 
-      if (Rec->isSubClassOf("MCSchedPredicate")) {
-        PE.expandPredicate(SS, Rec->getValueAsDef("Pred"));
-        continue;
-      }
-
-      if (Rec->isSubClassOf("FeatureSchedPredicate")) {
-        const Record *FR = Rec->getValueAsDef("Feature");
-        if (PE.shouldExpandForMC()) {
-          // MC version of this predicate will be emitted into
-          // resolveVariantSchedClassImpl, which accesses MCSubtargetInfo
-          // through argument STI.
-          SS << "STI.";
-        } else {
-          // Otherwise, this predicate will be emitted directly into
-          // TargetGenSubtargetInfo::resolveSchedClass, which can just access
-          // TargetSubtargetInfo / MCSubtargetInfo through `this`.
-          SS << "this->";
-        }
-        SS << "hasFeature(" << PE.getTargetName() << "::" << FR->getName()
-           << ")";
-        continue;
-      }
-
-      // Expand this legacy predicate and wrap it around braces if there is more
-      // than one predicate to expand.
-      SS << ((NumNonTruePreds > 1) ? "(" : "")
-         << Rec->getValueAsString("Predicate")
-         << ((NumNonTruePreds > 1) ? ")" : "");
+      expandSchedPredicates(Rec, PE, /*WrapPredicate=*/NumNonTruePreds > 1, SS);
     }
 
     SS << ")\n"; // end of if-stmt
@@ -1635,11 +1668,22 @@ static void emitSchedModelHelperEpilogue(raw_ostream &OS,
   OS << "  report_fatal_error(\"Expected a variant SchedClass\");\n";
 }
 
+static bool hasMCSchedPredicate(const Record *Rec) {
+  if (Rec->isSubClassOf("MCSchedPredicate") ||
+      Rec->isSubClassOf("FeatureSchedPredicate"))
+    return true;
+
+  if (Rec->isSubClassOf("SchedPredicateCombiner")) {
+    // Check its sub-predicates recursively.
+    std::vector<const Record *> SubPreds =
+        Rec->getValueAsListOfDefs("Predicates");
+    return all_of(SubPreds, hasMCSchedPredicate);
+  }
+
+  return false;
+}
 static bool hasMCSchedPredicates(const CodeGenSchedTransition &T) {
-  return all_of(T.PredTerm, [](const Record *Rec) {
-    return Rec->isSubClassOf("MCSchedPredicate") ||
-           Rec->isSubClassOf("FeatureSchedPredicate");
-  });
+  return all_of(T.PredTerm, hasMCSchedPredicate);
 }
 
 static void collectVariantClasses(const CodeGenSchedModels &SchedModels,
@@ -1812,6 +1856,7 @@ void SubtargetEmitter::emitHwModeCheck(const std::string &ClassName,
       if (P.second->isSubClassOf("ValueType")) {
         ValueTypeModes |= (1 << (P.first - 1));
       } else if (P.second->isSubClassOf("RegInfo") ||
+                 P.second->isSubClassOf("Register") ||
                  P.second->isSubClassOf("SubRegRange") ||
                  P.second->isSubClassOf("RegisterClassLike")) {
         RegInfoModes |= (1 << (P.first - 1));
@@ -1965,17 +2010,17 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
-     << "      unsigned CPUID) const override {\n"
+     << "      unsigned CPUID) const final {\n"
      << "    return " << Target << "_MC"
      << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);\n";
   OS << "  }\n";
   if (TGT.getHwModes().getNumModeIds() > 1) {
-    OS << "  unsigned getHwModeSet() const override;\n";
+    OS << "  unsigned getHwModeSet() const final;\n";
     OS << "  unsigned getHwMode(enum HwModeType type = HwMode_Default) const "
-          "override;\n";
+          "final;\n";
   }
   if (Target == "AArch64")
-    OS << "  bool isCPUStringValid(StringRef CPU) const override {\n"
+    OS << "  bool isCPUStringValid(StringRef CPU) const final {\n"
        << "    CPU = AArch64::resolveCPUAlias(CPU);\n"
        << "    return MCSubtargetInfo::isCPUStringValid(CPU);\n"
        << "  }\n";
@@ -2093,10 +2138,10 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
      << "public:\n"
      << "  unsigned resolveSchedClass(unsigned SchedClass, "
      << " const MachineInstr *DefMI,"
-     << " const TargetSchedModel *SchedModel) const override;\n"
+     << " const TargetSchedModel *SchedModel) const final;\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,"
      << " const MCInst *MI, const MCInstrInfo *MCII,"
-     << " unsigned CPUID) const override;\n"
+     << " unsigned CPUID) const final;\n"
      << "  DFAPacketizer *createDFAPacketizer(const InstrItineraryData *IID)"
      << " const;\n";
 
@@ -2119,13 +2164,13 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
     }
     OS << "  };\n";
 
-    OS << "  unsigned getHwModeSet() const override;\n";
+    OS << "  unsigned getHwModeSet() const final;\n";
     OS << "  unsigned getHwMode(enum HwModeType type = HwMode_Default) const "
-          "override;\n";
+          "final;\n";
   }
   if (TGT.hasMacroFusion())
     OS << "  std::vector<MacroFusionPredTy> getMacroFusions() const "
-          "override;\n";
+          "final;\n";
 
   STIPredicateExpander PE(Target);
   PE.setByRef(false);

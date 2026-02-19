@@ -17,11 +17,21 @@
 
 #include "lldb/Host/FileAction.h"
 #include "lldb/Host/Host.h"
+#ifdef _WIN32
+#include "lldb/Host/windows/PseudoConsole.h"
+#else
 #include "lldb/Host/PseudoTerminal.h"
+#endif
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/ProcessInfo.h"
 
 namespace lldb_private {
+
+#if defined(_WIN32)
+using PTY = PseudoConsole;
+#else
+using PTY = PseudoTerminal;
+#endif
 
 // ProcessLaunchInfo
 //
@@ -118,7 +128,20 @@ public:
 
   bool MonitorProcess() const;
 
-  PseudoTerminal &GetPTY() { return *m_pty; }
+  PTY &GetPTY() const { return *m_pty; }
+
+  std::shared_ptr<PTY> TakePTY() { return std::move(m_pty); }
+
+  /// Returns whether if lldb should read information from the PTY. This is
+  /// always true on non Windows.
+  bool ShouldUsePTY() const {
+#ifdef _WIN32
+    return GetPTY().GetPseudoTerminalHandle() != ((HANDLE)(long long)-1) &&
+           GetNumFileActions() == 0;
+#else
+    return true;
+#endif
+  }
 
   void SetLaunchEventData(const char *data) { m_event_data.assign(data); }
 
@@ -136,7 +159,7 @@ protected:
   FileSpec m_shell;
   Flags m_flags; // Bitwise OR of bits from lldb::LaunchFlags
   std::vector<FileAction> m_file_actions; // File actions for any other files
-  std::shared_ptr<PseudoTerminal> m_pty;
+  std::shared_ptr<PTY> m_pty;
   uint32_t m_resume_count = 0; // How many times do we resume after launching
   Host::MonitorChildProcessCallback m_monitor_callback;
   std::string m_event_data; // A string passed to the plugin launch, having no

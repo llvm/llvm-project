@@ -80,6 +80,7 @@ bool objdump::DylibId;
 bool objdump::Verbose;
 bool objdump::ObjcMetaData;
 std::string objdump::DisSymName;
+bool objdump::IsOtool;
 bool objdump::SymbolicOperands;
 static std::vector<std::string> ArchFlags;
 
@@ -383,7 +384,13 @@ static void printRelocationTargetName(const MachOObjectFile *O,
   uint64_t Val = O->getPlainRelocationSymbolNum(RE);
 
   if (O->getAnyRelocationType(RE) == MachO::ARM64_RELOC_ADDEND &&
-      (O->getArch() == Triple::aarch64 || O->getArch() == Triple::aarch64_be)) {
+      Triple(O->getArchTriple()).isAArch64()) {
+    Fmt << format("0x%0" PRIx64, Val);
+    return;
+  }
+
+  if (O->getAnyRelocationType(RE) == MachO::RISCV_RELOC_ADDEND &&
+      O->getArch() == Triple::riscv32) {
     Fmt << format("0x%0" PRIx64, Val);
     return;
   }
@@ -590,7 +597,6 @@ Error objdump::getMachORelocationValueString(const MachOObjectFile *Obj,
   } else
     printRelocationTargetName(Obj, RE, Fmt);
 
-  Fmt.flush();
   Result.append(FmtBuf.begin(), FmtBuf.end());
   return Error::success();
 }
@@ -929,6 +935,9 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
           else if ((cputype == MachO::CPU_TYPE_ARM64 ||
                     cputype == MachO::CPU_TYPE_ARM64_32) &&
                    r_type == MachO::ARM64_RELOC_ADDEND)
+            outs() << format("addend = 0x%06x\n", (unsigned int)r_symbolnum);
+          else if (cputype == MachO::CPU_TYPE_RISCV &&
+                   r_type == MachO::RISCV_RELOC_ADDEND)
             outs() << format("addend = 0x%06x\n", (unsigned int)r_symbolnum);
           else {
             outs() << format("%d ", r_symbolnum);
@@ -3142,7 +3151,7 @@ static int SymbolizerGetOpInfo(void *DisInfo, uint64_t Pc, uint64_t Offset,
     op_info->AddSymbol.Value = value;
     return 1;
   }
-  if (Arch == Triple::aarch64) {
+  if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32) {
     if (Offset != 0 || InstSize != 4)
       return 0;
     if (info->O->getHeader().filetype != MachO::MH_OBJECT) {
@@ -3386,7 +3395,7 @@ static void method_reference(struct DisassembleInfo *info,
           if (method != nullptr) {
             if (Arch == Triple::x86_64)
               strcpy(method, "-[%rdi ");
-            else if (Arch == Triple::aarch64)
+            else if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32)
               strcpy(method, "-[x0 ");
             else
               strcpy(method, "-[r? ");
@@ -3406,7 +3415,7 @@ static void method_reference(struct DisassembleInfo *info,
         if (method != nullptr) {
           if (Arch == Triple::x86_64)
             strcpy(method, "-[[%rdi super] ");
-          else if (Arch == Triple::aarch64)
+          else if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32)
             strcpy(method, "-[[x0 super] ");
           else
             strcpy(method, "-[[r? super] ");
@@ -3606,7 +3615,7 @@ namespace {
 
 // These are structs in the Objective-C meta data and read to produce the
 // comments for disassembly.  While these are part of the ABI they are no
-// public defintions.  So the are here not in include/llvm/BinaryFormat/MachO.h
+// public definitions.  So the are here not in include/llvm/BinaryFormat/MachO.h
 // .
 
 // The cfstring object in a 64-bit Mach-O file.
@@ -7013,7 +7022,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     // If this is arm64 and the reference is an adrp instruction save the
     // instruction, passed in ReferenceValue and the address of the instruction
     // for use later if we see and add immediate instruction.
-  } else if (info->O->getArch() == Triple::aarch64 &&
+  } else if ((info->O->getArch() == Triple::aarch64 ||
+              info->O->getArch() == Triple::aarch64_32) &&
              *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_ADRP) {
     info->adrp_inst = ReferenceValue;
     info->adrp_addr = ReferencePC;
@@ -7027,7 +7037,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     // this add's Xn register reconstruct the value being referenced and look to
     // see if it is a literal pointer.  Note the add immediate instruction is
     // passed in ReferenceValue.
-  } else if (info->O->getArch() == Triple::aarch64 &&
+  } else if ((info->O->getArch() == Triple::aarch64 ||
+              info->O->getArch() == Triple::aarch64_32) &&
              *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_ADDXri &&
              ReferencePC - 4 == info->adrp_addr &&
              (info->adrp_inst & 0x9f000000) == 0x90000000 &&
@@ -7057,7 +7068,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     // matches this add's Xn register reconstruct the value being referenced and
     // look to see if it is a literal pointer.  Note the load register
     // instruction is passed in ReferenceValue.
-  } else if (info->O->getArch() == Triple::aarch64 &&
+  } else if ((info->O->getArch() == Triple::aarch64 ||
+              info->O->getArch() == Triple::aarch64_32) &&
              *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_LDRXui &&
              ReferencePC - 4 == info->adrp_addr &&
              (info->adrp_inst & 0x9f000000) == 0x90000000 &&
@@ -7073,8 +7085,10 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
     ldrxui_inst = ReferenceValue;
     ldrxui_imm = (ldrxui_inst >> 10) & 0xfff;
 
+    // The size field (bits [31:30]) determines the scaling.
+    unsigned Scale = (ldrxui_inst >> 30) & 0x3;
     ReferenceValue = (info->adrp_addr & 0xfffffffffffff000LL) +
-                     (adrp_imm << 12) + (ldrxui_imm << 3);
+                     (adrp_imm << 12) + (ldrxui_imm << Scale);
 
     *ReferenceName =
         GuessLiteralPointer(ReferenceValue, ReferencePC, ReferenceType, info);
@@ -7083,7 +7097,8 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
   }
   // If this arm64 and is an load register (PC-relative) instruction the
   // ReferenceValue is the PC plus the immediate value.
-  else if (info->O->getArch() == Triple::aarch64 &&
+  else if ((info->O->getArch() == Triple::aarch64 ||
+            info->O->getArch() == Triple::aarch64_32) &&
            (*ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_LDRXl ||
             *ReferenceType == LLVMDisassembler_ReferenceType_In_ARM64_ADR)) {
     *ReferenceName =
@@ -7098,8 +7113,7 @@ static const char *SymbolizerSymbolLookUp(void *DisInfo,
       *ReferenceName = info->demangled_name;
       *ReferenceType = LLVMDisassembler_ReferenceType_DeMangled_Name;
     }
-  }
-  else {
+  } else {
     *ReferenceName = nullptr;
     *ReferenceType = LLVMDisassembler_ReferenceType_InOut_None;
   }
@@ -7236,6 +7250,19 @@ objdump::getMachODSymObject(const MachOObjectFile *MachOOF, StringRef Filename,
   return DbgObj;
 }
 
+static bool shouldInstPrinterUseColor() {
+  switch (DisassemblyColor) {
+  case ColorOutput::Enable:
+    return true;
+  case ColorOutput::Auto:
+    return outs().has_colors();
+  case ColorOutput::Disable:
+  case ColorOutput::Invalid:
+    return false;
+  }
+  return false;
+}
+
 static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                              StringRef DisSegName, StringRef DisSectName) {
   const char *McpuDefault = nullptr;
@@ -7320,8 +7347,9 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
       TheTriple, AsmPrinterVariant, *AsmInfo, *InstrInfo, *MRI));
   CHECK_TARGET_INFO_CREATION(IP);
-  // Set the display preference for hex vs. decimal immediates.
   IP->setPrintImmHex(PrintImmHex);
+  IP->setUseColor(shouldInstPrinterUseColor());
+
   // Comment stream and backing vector.
   SmallString<128> CommentsToEmit;
   raw_svector_ostream CommentStream(CommentsToEmit);
@@ -7373,8 +7401,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         ThumbTriple, ThumbAsmPrinterVariant, *ThumbAsmInfo, *ThumbInstrInfo,
         *ThumbMRI));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbIP);
-    // Set the display preference for hex vs. decimal immediates.
     ThumbIP->setPrintImmHex(PrintImmHex);
+    ThumbIP->setUseColor(shouldInstPrinterUseColor());
   }
 
 #undef CHECK_TARGET_INFO_CREATION
@@ -7481,7 +7509,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       }
     }
     if (!DisSymName.empty() && !DisSymNameFound) {
-      outs() << "Can't find -dis-symname: " << DisSymName << "\n";
+      outs() << "Can't find " << (IsOtool ? "-p symbol" : "--dis-symname")
+             << ": " << DisSymName << "\n";
       return;
     }
     // Set up the block of info used by the Symbolizer call backs.
@@ -7522,7 +7551,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       bool containsSym = Sections[SectIdx].containsSymbol(Symbols[SymIdx]);
       if (!containsSym) {
         if (!DisSymName.empty() && DisSymName == SymName) {
-          outs() << "-dis-symname: " << DisSymName << " not in the section\n";
+          outs() << (IsOtool ? "-p symbol" : "--dis-symname") << ": "
+                 << DisSymName << " not in the section\n";
           return;
         }
         continue;
@@ -7533,7 +7563,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       // is an N_SECT symbol in the (__TEXT,__text) but its address is before the
       // start of the section in a standard MH_EXECUTE filetype.
       if (!DisSymName.empty() && DisSymName == "__mh_execute_header") {
-        outs() << "-dis-symname: __mh_execute_header not in any section\n";
+        outs() << (IsOtool ? "-p symbol" : "--dis-symname")
+               << ": __mh_execute_header not in any section\n";
         return;
       }
       // When this code is trying to disassemble a symbol at a time and in the
@@ -7677,7 +7708,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
             outs() << format("\t.byte 0x%02x #bad opcode\n",
                              *(Bytes.data() + Index) & 0xff);
             Size = 1; // skip exactly one illegible byte and move on.
-          } else if (Arch == Triple::aarch64 ||
+          } else if (Arch == Triple::aarch64 || Arch == Triple::aarch64_32 ||
                      (Arch == Triple::arm && !IsThumb)) {
             uint32_t opcode = (*(Bytes.data() + Index) & 0xff) |
                               (*(Bytes.data() + Index + 1) & 0xff) << 8 |
@@ -7691,7 +7722,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                               (*(Bytes.data() + Index + 1) & 0xff) << 8;
             outs() << format("\t.short\t0x%04x\n", opcode);
             Size = 2;
-          } else{
+          } else {
             WithColor::warning(errs(), "llvm-objdump")
                 << "invalid instruction encoding\n";
             if (Size == 0)

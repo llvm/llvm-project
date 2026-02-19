@@ -15,10 +15,10 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/Matchers.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -173,28 +173,6 @@ DenseElementsAttr transposeType(const RangeType &data, ShapedType inputType,
 
   return DenseElementsAttr::get(outputType,
                                 llvm::ArrayRef<ElementType>(outputValues));
-}
-
-// Try to get the values of a DenseResourceElementsAttr construct
-template <typename T>
-std::optional<ArrayRef<T>> tryGetDenseResourceValues(ElementsAttr attr) {
-  if (auto denseResource = dyn_cast<DenseResourceElementsAttr>(attr)) {
-    // Check that the resource memory blob exists
-    AsmResourceBlob *blob = denseResource.getRawHandle().getBlob();
-    if (!blob)
-      return std::nullopt;
-
-    // Check that the data are in a valid form
-    bool isSplat = false;
-    if (!DenseElementsAttr::isValidRawBuffer(attr.getShapedType(),
-                                             blob->getData(), isSplat)) {
-      return std::nullopt;
-    }
-
-    return blob->template getDataAs<T>();
-  }
-
-  return std::nullopt;
 }
 
 // A type specialized transposition of an ElementsAttr.

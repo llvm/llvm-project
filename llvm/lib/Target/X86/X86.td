@@ -485,6 +485,9 @@ def TuningSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
 def TuningSlowPMULLD : SubtargetFeature<"slow-pmulld", "IsPMULLDSlow", "true",
                                         "PMULLD instruction is slow (compared to PMULLW/PMULHW and PMULUDQ)">;
 
+def TuningSlowPMULLQ : SubtargetFeature<"slow-pmullq", "IsPMULLQSlow", "true",
+                                        "PMULLQ instruction is slow">;
+
 def TuningSlowPMADDWD : SubtargetFeature<"slow-pmaddwd", "IsPMADDWDSlow",
                                           "true",
                                           "PMADDWD is slower than PMULLD">;
@@ -771,6 +774,10 @@ def TuningUseGLMDivSqrtCosts
 // (i.e., instruction prefix 3EH).
 def TuningBranchHint: SubtargetFeature<"branch-hint", "HasBranchHint", "true",
                                         "Target has branch hint feature">;
+
+def TuningPreferLegacySetCC
+    : SubtargetFeature<"prefer-legacy-setcc", "PreferLegacySetCC", "true",
+                       "Prefer to emit legacy SetCC.">;
 
 //===----------------------------------------------------------------------===//
 // X86 CPU Families
@@ -1065,7 +1072,8 @@ def ProcessorFeatures {
                                       TuningNoDomainDelayMov,
                                       TuningNoDomainDelayShuffle,
                                       TuningNoDomainDelayBlend,
-                                      TuningFastImmVectorShift];
+                                      TuningFastImmVectorShift,
+                                      TuningSlowPMULLQ];
   list<SubtargetFeature> CNLFeatures =
     !listconcat(SKLFeatures, CNLAdditionalFeatures);
 
@@ -1094,7 +1102,8 @@ def ProcessorFeatures {
                                       TuningNoDomainDelayMov,
                                       TuningNoDomainDelayShuffle,
                                       TuningNoDomainDelayBlend,
-                                      TuningFastImmVectorShift];
+                                      TuningFastImmVectorShift,
+                                      TuningSlowPMULLQ];
   list<SubtargetFeature> ICLFeatures =
     !listconcat(CNLFeatures, ICLAdditionalFeatures);
 
@@ -1291,7 +1300,8 @@ def ProcessorFeatures {
                                                   FeatureWAITPKG];
   list<SubtargetFeature> ADLAdditionalTuning = [TuningPERMFalseDeps,
                                                 TuningPreferMovmskOverVTest,
-                                                TuningFastImmVectorShift];
+                                                TuningFastImmVectorShift,
+                                                TuningSlowPMULLQ];
   list<SubtargetFeature> ADLRemoveTuning = [TuningPOPCNTFalseDeps];
   list<SubtargetFeature> ADLTuning =
       !listremove(!listconcat(SKLTuning, ADLAdditionalTuning), ADLRemoveTuning);
@@ -1621,6 +1631,15 @@ def ProcessorFeatures {
                                                   ];
   list<SubtargetFeature> ZN5Features =
     !listconcat(ZN4Features, ZN5AdditionalFeatures);
+
+  list<SubtargetFeature> ZN6Tuning = ZN5Tuning;
+  list<SubtargetFeature> ZN6AdditionalFeatures = [FeatureFP16,
+                                                  FeatureAVXVNNIINT8,
+                                                  FeatureAVXNECONVERT,
+                                                  FeatureAVXIFMA
+                                                  ];
+  list<SubtargetFeature> ZN6Features =
+    !listconcat(ZN5Features, ZN6AdditionalFeatures);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1983,6 +2002,8 @@ def : ProcModel<"znver4", Znver4Model, ProcessorFeatures.ZN4Features,
                 ProcessorFeatures.ZN4Tuning>;
 def : ProcModel<"znver5", Znver4Model, ProcessorFeatures.ZN5Features,
                 ProcessorFeatures.ZN5Tuning>;
+def : ProcModel<"znver6", Znver4Model, ProcessorFeatures.ZN6Features,
+                ProcessorFeatures.ZN6Tuning>;
 
 def : Proc<"geode",           [FeatureX87, FeatureCX8, FeatureMMX, FeaturePRFCHW],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
@@ -2084,3 +2105,8 @@ def X86 : Target {
 //===----------------------------------------------------------------------===//
 
 include "X86PfmCounters.td"
+
+//===----------------------------------------------------------------------===//
+// Global Isel Combiner
+//===----------------------------------------------------------------------===//
+include "X86Combine.td"

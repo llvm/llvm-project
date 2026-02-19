@@ -232,25 +232,17 @@ if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()
 
-if(WIN32 OR CYGWIN)
+if(WIN32)
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
-  if(CYGWIN)
-    set(LLVM_ON_WIN32 0)
-    set(LLVM_ON_UNIX 1)
-  else()
-    set(LLVM_ON_WIN32 1)
-    set(LLVM_ON_UNIX 0)
-  endif()
-elseif(FUCHSIA OR UNIX)
-  set(LLVM_ON_WIN32 0)
+  set(LLVM_ON_UNIX 0)
+elseif(FUCHSIA OR UNIX OR CYGWIN)
   set(LLVM_ON_UNIX 1)
-  if(APPLE OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  if(APPLE OR CYGWIN OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   else()
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
   endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Generic")
-  set(LLVM_ON_WIN32 0)
   set(LLVM_ON_UNIX 0)
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
 else()
@@ -713,16 +705,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   append("-Werror=unguarded-availability-new" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND LLVM_ENABLE_LTO)
-  # LLVM data structures like llvm::User and llvm::MDNode rely on
-  # the value of object storage persisting beyond the lifetime of the
-  # object (#24952).  This is not standard compliant and causes a runtime
-  # crash if LLVM is built with GCC and LTO enabled (#57740).  Until
-  # these bugs are fixed, we need to disable dead store eliminations
-  # based on object lifetime.
-  append("-fno-lifetime-dse" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-endif ()
-
 # Modules enablement for GCC-compatible compilers:
 if ( LLVM_COMPILER_IS_GCC_COMPATIBLE AND LLVM_ENABLE_MODULES )
   set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
@@ -751,7 +733,6 @@ if (MSVC)
       -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
       -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
       -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
-      -wd4351 # Suppress 'new behavior: elements of array 'array' will be default initialized'
       -wd4456 # Suppress 'declaration of 'var' hides local variable'
       -wd4457 # Suppress 'declaration of 'var' hides function parameter'
       -wd4458 # Suppress 'declaration of 'var' hides class member'
@@ -1183,8 +1164,8 @@ endif()
 if(MSVC)
   # Remove flags here, for exceptions and RTTI.
   # Each target property or source property should be responsible to control
-  # them.
-  # CL.EXE complains to override flags like "/GR /GR-".
+  # them (see llvm_update_compile_flags).
+  # CL.EXE complains to override flags like "/GR /GR-". CMake adds them by default.
   string(REGEX REPLACE "(^| ) */EH[-cs]+ *( |$)" "\\1 \\2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REGEX REPLACE "(^| ) */GR-? *( |$)" "\\1 \\2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
@@ -1322,9 +1303,16 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
   message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
 endif()
 
+if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  # CMake weirdly marks all PCH as system headers. This undocumented variable
+  # can be used to suppress the "#pragma clang system_header".
+  # See: https://gitlab.kitware.com/cmake/cmake/-/issues/21219
+  set(CMAKE_PCH_PROLOGUE "")
+endif()
+
 set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")
 
-if(LLVM_ENABLE_LTO AND LLVM_ON_WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)
+if(LLVM_ENABLE_LTO AND WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)
   message(FATAL_ERROR "When compiling for Windows, LLVM_ENABLE_LTO requires using lld as the linker (point CMAKE_LINKER at lld-link.exe)")
 endif()
 if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
@@ -1509,7 +1497,7 @@ endif()
 
 check_symbol_exists(flock "sys/file.h" HAVE_FLOCK)
 set(LLVM_ENABLE_ONDISK_CAS_default OFF)
-if(HAVE_FLOCK OR LLVM_ON_WIN32)
+if(HAVE_FLOCK OR WIN32)
   # LLVM OnDisk CAS currently requires flock on Unix.
   set(LLVM_ENABLE_ONDISK_CAS_default ON)
 endif()

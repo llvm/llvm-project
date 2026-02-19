@@ -60,7 +60,7 @@ void ExecutionContext::operator()(llvm::function_ref<void()> transform,
     depth = actionStack->getDepth() + 1;
   ActionActiveStack info{actionStack, action, depth};
   actionStack = &info;
-  auto raii = llvm::make_scope_exit([&]() { actionStack = info.getParent(); });
+  llvm::scope_exit raii([&]() { actionStack = info.getParent(); });
   Breakpoint *breakpoint = nullptr;
 
   // Invoke the callback here and handles control requests here.

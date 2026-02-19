@@ -61,6 +61,9 @@ public:
                                       cir::PointerType destCIRTy,
                                       bool isRefCast, Address src) = 0;
 
+  virtual cir::MethodAttr buildVirtualMethodAttr(cir::MethodType methodTy,
+                                                 const CXXMethodDecl *md) = 0;
+
 public:
   /// Similar to AddedStructorArgs, but only notes the number of additional
   /// arguments.
@@ -126,6 +129,9 @@ public:
 
   virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
 
+  virtual void emitBeginCatch(CIRGenFunction &cgf,
+                              const CXXCatchStmt *catchStmt) = 0;
+
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;
 
@@ -158,6 +164,9 @@ public:
   /// Loads the incoming C++ this pointer as it was passed by the caller.
   mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
 
+  virtual CatchTypeInfo
+  getAddrOfCXXCatchHandlerType(mlir::Location loc, QualType ty,
+                               QualType catchHandlerType) = 0;
   virtual CatchTypeInfo getCatchAllTypeInfo();
 
   /// Get the implicit (second) parameter that comes after the "this" pointer,

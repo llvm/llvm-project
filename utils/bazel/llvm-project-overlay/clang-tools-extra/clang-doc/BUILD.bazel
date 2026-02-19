@@ -28,7 +28,6 @@ cc_library(
         exclude = [
             "Generators.cpp",
             "HTMLGenerator.cpp",
-            "HTMLMustacheGenerator.cpp",
             "MDGenerator.cpp",
             "YAMLGenerator.cpp",
         ],
@@ -53,7 +52,6 @@ cc_library(
     srcs = [
         "Generators.cpp",
         "HTMLGenerator.cpp",
-        "HTMLMustacheGenerator.cpp",
         "MDGenerator.cpp",
         "YAMLGenerator.cpp",
     ],

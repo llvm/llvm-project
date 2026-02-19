@@ -18,6 +18,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <string>
 
@@ -29,13 +30,15 @@ std::string llvm::getModeName(unsigned Mode) {
   return (Twine('m') + Twine(Mode)).str();
 }
 
-ValueTypeByHwMode::ValueTypeByHwMode(const Record *R,
-                                     const CodeGenHwModes &CGH) {
+ValueTypeByHwMode::ValueTypeByHwMode(const Record *R, const CodeGenHwModes &CGH)
+    : InfoByHwMode<llvm::MVT>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
-  for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.try_emplace(P.first, MVT(llvm::getValueType(P.second)));
-    assert(I.second && "Duplicate entry?");
-    (void)I;
+  for (auto [ModeID, VT] : MS.Items) {
+    assert(VT && VT->isSubClassOf("ValueType"));
+    if (!Map.try_emplace(ModeID, MVT(llvm::getValueType(VT))).second)
+      PrintFatalError(R->getLoc(), "duplicate ValueType entry for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       VT->getName());
   }
   if (R->isSubClassOf("PtrValueType"))
     PtrAddrSpace = R->getValueAsInt("AddrSpace");
@@ -62,19 +65,6 @@ bool ValueTypeByHwMode::operator<(const ValueTypeByHwMode &T) const {
   assert(isValid() && T.isValid() && "Invalid type in comparison");
   // Default order for maps.
   return Map < T.Map;
-}
-
-MVT &ValueTypeByHwMode::getOrCreateTypeForMode(unsigned Mode, MVT Type) {
-  auto F = Map.find(Mode);
-  if (F != Map.end())
-    return F->second;
-  // If Mode is not in the map, look up the default mode. If it exists,
-  // make a copy of it for Mode and return it.
-  auto D = Map.begin();
-  if (D != Map.end() && D->first == DefaultMode)
-    return Map.try_emplace(Mode, D->second).first->second;
-  // If default mode is not present either, use provided Type.
-  return Map.try_emplace(Mode, Type).first->second;
 }
 
 StringRef ValueTypeByHwMode::getMVTName(MVT T) {
@@ -140,12 +130,15 @@ void RegSizeInfo::writeToStream(raw_ostream &OS) const {
 }
 
 RegSizeInfoByHwMode::RegSizeInfoByHwMode(const Record *R,
-                                         const CodeGenHwModes &CGH) {
+                                         const CodeGenHwModes &CGH)
+    : InfoByHwMode<llvm::RegSizeInfo>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
-  for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.try_emplace(P.first, RegSizeInfo(P.second));
-    assert(I.second && "Duplicate entry?");
-    (void)I;
+  for (auto [ModeID, RegInfo] : MS.Items) {
+    assert(RegInfo && RegInfo->isSubClassOf("RegInfo"));
+    if (!Map.try_emplace(ModeID, RegSizeInfo(RegInfo)).second)
+      PrintFatalError(R->getLoc(), "duplicate RegInfo entry for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       RegInfo->getName());
   }
 }
 
@@ -187,8 +180,10 @@ void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
   OS << '}';
 }
 
-RegClassByHwMode::RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
-                                   const CodeGenRegBank &RegBank) {
+RegClassByHwMode::RegClassByHwMode(const Record *R,
+                                   const CodeGenRegBank &RegBank)
+    : InfoByHwMode<const llvm::CodeGenRegisterClass *>(R) {
+  const CodeGenHwModes &CGH = RegBank.getHwModes();
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
 
   for (auto [ModeID, RegClassRec] : MS.Items) {
@@ -196,7 +191,9 @@ RegClassByHwMode::RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
            "Register class must subclass RegisterClass");
     const CodeGenRegisterClass *RegClass = RegBank.getRegClass(RegClassRec);
     if (!Map.try_emplace(ModeID, RegClass).second)
-      llvm_unreachable("duplicate entry");
+      PrintFatalError(R->getLoc(), "duplicate RegisterClass entry for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       RegClass->getName());
   }
 }
 
@@ -206,25 +203,66 @@ SubRegRange::SubRegRange(const Record *R) {
 }
 
 SubRegRangeByHwMode::SubRegRangeByHwMode(const Record *R,
-                                         const CodeGenHwModes &CGH) {
+                                         const CodeGenHwModes &CGH)
+    : InfoByHwMode<llvm::SubRegRange>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
-  for (const HwModeSelect::PairType &P : MS.Items) {
-    auto I = Map.try_emplace(P.first, SubRegRange(P.second));
-    assert(I.second && "Duplicate entry?");
-    (void)I;
+  for (auto [ModeID, Range] : MS.Items) {
+    assert(Range && Range->isSubClassOf("SubRegRange"));
+    if (!Map.try_emplace(ModeID, SubRegRange(Range)).second)
+      PrintFatalError(R->getLoc(), "duplicate SubRegRange entry for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       Range->getName());
   }
 }
 
 EncodingInfoByHwMode::EncodingInfoByHwMode(const Record *R,
-                                           const CodeGenHwModes &CGH) {
+                                           const CodeGenHwModes &CGH)
+    : InfoByHwMode<const llvm::Record *>(R) {
   const HwModeSelect &MS = CGH.getHwModeSelect(R);
-  for (const HwModeSelect::PairType &P : MS.Items) {
-    assert(P.second && P.second->isSubClassOf("InstructionEncoding") &&
+  for (auto [ModeID, Encoding] : MS.Items) {
+    assert(Encoding && Encoding->isSubClassOf("InstructionEncoding") &&
            "Encoding must subclass InstructionEncoding");
-    auto I = Map.try_emplace(P.first, P.second);
-    assert(I.second && "Duplicate entry?");
-    (void)I;
+    if (!Map.try_emplace(ModeID, Encoding).second)
+      PrintFatalError(R->getLoc(),
+                      "duplicate InstructionEncoding entry for HwMode " +
+                          CGH.getModeName(ModeID, true) + ": " +
+                          Encoding->getName());
   }
+}
+
+RegisterByHwMode::RegisterByHwMode(const Record *R, CodeGenRegBank &RegBank)
+    : InfoByHwMode<const llvm::CodeGenRegister *>(R) {
+  const CodeGenHwModes &CGH = RegBank.getHwModes();
+  const HwModeSelect &MS = CGH.getHwModeSelect(R);
+  const Record *RCDef = R->getValueAsDef("RegClass");
+  Namespace = RegBank.getRegClasses().front().Namespace;
+  std::optional<RegClassByHwMode> RegClassByMode;
+  if (RCDef->isSubClassOf("RegClassByHwMode"))
+    RegClassByMode = RegClassByHwMode(RCDef, RegBank);
+  for (auto [ModeID, RegRecord] : MS.Items) {
+    assert(RegRecord && RegRecord->isSubClassOf("Register") &&
+           "Register value must subclass Register");
+    CodeGenRegister *Reg = RegBank.getReg(RegRecord);
+    const CodeGenRegisterClass *RC =
+        RegClassByMode ? RegClassByMode->get(ModeID)
+                       : RegBank.getRegClass(RCDef, R->getLoc());
+    if (!RC->contains(Reg))
+      PrintFatalError(R->getLoc(), "Register " + Reg->getName() +
+                                       " for HwMode " +
+                                       CGH.getModeName(ModeID, true) +
+                                       " is not a member of register class " +
+                                       RC->getName());
+    if (!Map.try_emplace(ModeID, Reg).second)
+      PrintFatalError(R->getLoc(), "duplicate Register for HwMode " +
+                                       CGH.getModeName(ModeID, true) + ": " +
+                                       Reg->getName());
+  }
+}
+
+void RegisterByHwMode::emitResolverCall(raw_ostream &OS,
+                                        const Twine &HwMode) const {
+  OS << Namespace << "::RegisterByHwMode::get" << Def->getName() << "("
+     << HwMode << ")";
 }
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const ValueTypeByHwMode &T) {

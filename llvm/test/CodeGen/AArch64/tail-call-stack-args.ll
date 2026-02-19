@@ -65,3 +65,16 @@ define void @wrapper_func_i8(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
   tail call void @func_signext_i1(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i1 signext %j)
   ret void
 }
+
+declare void @func_i64(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i64 %j)
+
+define void @wrapper_func_i64(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j) {
+; CHECK-LABEL: wrapper_func_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [sp, #8]
+; CHECK-NEXT:    str x8, [sp, #8]
+; CHECK-NEXT:    b func_i64
+  %conv = zext i32 %j to i64
+  tail call void @func_i64(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i64 %conv)
+  ret void
+}

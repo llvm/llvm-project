@@ -712,6 +712,16 @@ define void @verify_all_operands_are_initialised() {
   ret void
 }
 
+define dso_local target("aarch64.svcount") @func_svcount_passed_via_indrect_memory( target("aarch64.svcount") %p0, target("aarch64.svcount") %p1, target("aarch64.svcount") %p2, target("aarch64.svcount") %p3, i32 noundef %x0, i32 noundef %x1, i32 noundef %x2, i32 noundef %x3, i32 noundef %x4, i32 noundef %x5, i32 noundef %x6, i32 noundef %x7, target("aarch64.svcount") %p4
+; CHECK-LABEL: func_svcount_passed_via_indrect_memory:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr x8, [sp]
+; CHECK-NEXT:    ldr p0, [x8]
+; CHECK-NEXT:    ret
+) {
+  ret target("aarch64.svcount") %p4
+}
+
 declare float @callee1(float, <vscale x 8 x double>, <vscale x 8 x double>, <vscale x 2 x double>)
 declare float @callee2(i32, i32, i32, i32, i32, i32, i32, i32, float, <vscale x 8 x double>, <vscale x 8 x double>)
 declare float @callee3(float, float, <vscale x 8 x double>, <vscale x 6 x double>, <vscale x 2 x double>)

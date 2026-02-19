@@ -635,7 +635,8 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitMemSetInst(
     MemSetInst &MSI) {
   if (MSI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
-  llvm::expandMemSetAsLoop(&MSI);
+  llvm::expandMemSetAsLoop(&MSI,
+                           TM->getTargetTransformInfo(*MSI.getFunction()));
   MSI.eraseFromParent();
   return true;
 }
@@ -1748,6 +1749,12 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
     case AtomicRMWInst::FMin:
       IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmin;
       break;
+    case AtomicRMWInst::USubCond:
+      IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_cond_sub_u32;
+      break;
+    case AtomicRMWInst::USubSat:
+      IID = Intrinsic::amdgcn_raw_ptr_buffer_atomic_sub_clamp_u32;
+      break;
     case AtomicRMWInst::FSub: {
       reportFatalUsageError(
           "atomic floating point subtraction not supported for "
@@ -1773,14 +1780,12 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
       break;
     case AtomicRMWInst::UIncWrap:
     case AtomicRMWInst::UDecWrap:
-      reportFatalUsageError("wrapping increment/decrement not supported for "
-                            "buffer resources and should've ben expanded away");
+      reportFatalUsageError(
+          "wrapping increment/decrement not supported for "
+          "buffer resources and should've been expanded away");
       break;
     case AtomicRMWInst::BAD_BINOP:
       llvm_unreachable("Not sure how we got a bad binop");
-    case AtomicRMWInst::USubCond:
-    case AtomicRMWInst::USubSat:
-      break;
     }
   }
 
@@ -2203,6 +2208,7 @@ static bool isRemovablePointerIntrinsic(Intrinsic::ID IID) {
   case Intrinsic::memset_inline:
   case Intrinsic::experimental_memset_pattern:
   case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
     return true;
   }
 }
@@ -2291,7 +2297,8 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     SplitUsers.insert(&I);
     return {NewRsrc, Off};
   }
-  case Intrinsic::amdgcn_load_to_lds: {
+  case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds: {
     Value *Ptr = I.getArgOperand(0);
     if (!isSplitFatPtr(Ptr->getType()))
       return {nullptr, nullptr};
@@ -2302,9 +2309,12 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     Value *ImmOff = I.getArgOperand(3);
     Value *Aux = I.getArgOperand(4);
     Value *SOffset = IRB.getInt32(0);
+    Intrinsic::ID NewIntr =
+        IID == Intrinsic::amdgcn_load_to_lds
+            ? Intrinsic::amdgcn_raw_ptr_buffer_load_lds
+            : Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds;
     Instruction *NewLoad = IRB.CreateIntrinsic(
-        Intrinsic::amdgcn_raw_ptr_buffer_load_lds, {},
-        {Rsrc, LDSPtr, LoadSize, Off, SOffset, ImmOff, Aux});
+        NewIntr, {}, {Rsrc, LDSPtr, LoadSize, Off, SOffset, ImmOff, Aux});
     copyMetadata(NewLoad, &I);
     SplitUsers.insert(&I);
     I.replaceAllUsesWith(NewLoad);

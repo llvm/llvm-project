@@ -316,20 +316,17 @@ public:
     // Create a ConstantArray containing the address of each Variable within the
     // kernel corresponding to LDSVarsToConstantGEP, or poison if that kernel
     // does not allocate it
-    // TODO: Drop the ptrtoint conversion
 
-    Type *I32 = Type::getInt32Ty(Ctx);
-
-    ArrayType *KernelOffsetsType = ArrayType::get(I32, Variables.size());
+    Type *LocalPtrTy = PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS);
+    ArrayType *KernelOffsetsType = ArrayType::get(LocalPtrTy, Variables.size());
 
     SmallVector<Constant *> Elements;
     for (GlobalVariable *GV : Variables) {
       auto ConstantGepIt = LDSVarsToConstantGEP.find(GV);
       if (ConstantGepIt != LDSVarsToConstantGEP.end()) {
-        auto *elt = ConstantExpr::getPtrToInt(ConstantGepIt->second, I32);
-        Elements.push_back(elt);
+        Elements.push_back(ConstantGepIt->second);
       } else {
-        Elements.push_back(PoisonValue::get(I32));
+        Elements.push_back(PoisonValue::get(LocalPtrTy));
       }
     }
     return ConstantArray::get(KernelOffsetsType, Elements);
@@ -347,8 +344,8 @@ public:
     const size_t NumberVariables = Variables.size();
     const size_t NumberKernels = kernels.size();
 
-    ArrayType *KernelOffsetsType =
-        ArrayType::get(Type::getInt32Ty(Ctx), NumberVariables);
+    Type *LocalPtrTy = PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS);
+    ArrayType *KernelOffsetsType = ArrayType::get(LocalPtrTy, NumberVariables);
 
     ArrayType *AllKernelsOffsetsType =
         ArrayType::get(KernelOffsetsType, NumberKernels);
@@ -401,12 +398,8 @@ public:
     Value *Address = Builder.CreateInBoundsGEP(
         LookupTable->getValueType(), LookupTable, GEPIdx, GV->getName());
 
-    Value *loaded = Builder.CreateLoad(I32, Address);
-
-    Value *replacement =
-        Builder.CreateIntToPtr(loaded, GV->getType(), GV->getName());
-
-    U.set(replacement);
+    Value *Loaded = Builder.CreateLoad(GV->getType(), Address);
+    U.set(Loaded);
   }
 
   void replaceUsesInInstructionsWithTableLookup(
@@ -501,9 +494,7 @@ public:
         // strategy
         continue;
       }
-      CandidateTy Candidate(
-          GV, K.second.size(),
-          DL.getTypeAllocSize(GV->getValueType()).getFixedValue());
+      CandidateTy Candidate(GV, K.second.size(), GV->getGlobalSize(DL));
       if (MostUsed < Candidate)
         MostUsed = Candidate;
     }
@@ -870,7 +861,7 @@ public:
     if (!KernelsThatIndirectlyAllocateDynamicLDS.empty()) {
       LLVMContext &Ctx = M.getContext();
       IRBuilder<> Builder(Ctx);
-      Type *I32 = Type::getInt32Ty(Ctx);
+      Type *LocalPtrTy = PointerType::get(Ctx, AMDGPUAS::LOCAL_ADDRESS);
 
       std::vector<Constant *> newDynamicLDS;
 
@@ -890,17 +881,14 @@ public:
 
           markUsedByKernel(func, N);
 
-          auto *emptyCharArray = ArrayType::get(Type::getInt8Ty(Ctx), 0);
-          auto *GEP = ConstantExpr::getGetElementPtr(
-              emptyCharArray, N, ConstantInt::get(I32, 0), true);
-          newDynamicLDS.push_back(ConstantExpr::getPtrToInt(GEP, I32));
+          newDynamicLDS.push_back(N);
         } else {
-          newDynamicLDS.push_back(PoisonValue::get(I32));
+          newDynamicLDS.push_back(PoisonValue::get(LocalPtrTy));
         }
       }
       assert(OrderedKernels.size() == newDynamicLDS.size());
 
-      ArrayType *t = ArrayType::get(I32, newDynamicLDS.size());
+      ArrayType *t = ArrayType::get(LocalPtrTy, newDynamicLDS.size());
       Constant *init = ConstantArray::get(t, newDynamicLDS);
       GlobalVariable *table = new GlobalVariable(
           M, t, true, GlobalValue::InternalLinkage, init,
@@ -1061,14 +1049,14 @@ public:
         if (AllocateModuleScopeStruct) {
           // Allocated at zero, recorded once on construction, not once per
           // kernel
-          Offset += DL.getTypeAllocSize(MaybeModuleScopeStruct->getValueType());
+          Offset += MaybeModuleScopeStruct->getGlobalSize(DL);
         }
 
         if (AllocateKernelScopeStruct) {
           GlobalVariable *KernelStruct = Replacement->second.SGV;
           Offset = alignTo(Offset, AMDGPU::getAlign(DL, KernelStruct));
           recordLDSAbsoluteAddress(&M, KernelStruct, Offset);
-          Offset += DL.getTypeAllocSize(KernelStruct->getValueType());
+          Offset += KernelStruct->getGlobalSize(DL);
         }
 
         // If there is dynamic allocation, the alignment needed is included in
@@ -1138,7 +1126,7 @@ private:
       }
 
       Align Alignment = AMDGPU::getAlign(DL, &GV);
-      TypeSize GVSize = DL.getTypeAllocSize(GV.getValueType());
+      uint64_t GVSize = GV.getGlobalSize(DL);
 
       if (GVSize > 8) {
         // We might want to use a b96 or b128 load/store
@@ -1184,8 +1172,7 @@ private:
           LDSVarsToTransform.begin(), LDSVarsToTransform.end()));
 
       for (GlobalVariable *GV : Sorted) {
-        OptimizedStructLayoutField F(GV,
-                                     DL.getTypeAllocSize(GV->getValueType()),
+        OptimizedStructLayoutField F(GV, GV->getGlobalSize(DL),
                                      AMDGPU::getAlign(DL, GV));
         LayoutFields.emplace_back(F);
       }

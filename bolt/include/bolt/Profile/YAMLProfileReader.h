@@ -68,7 +68,7 @@ public:
     }
 
     /// Returns the binary functions with the parameter neighbor hash.
-    std::optional<std::vector<BinaryFunction *>>
+    std::optional<BinaryFunctionListType>
     getBFsWithNeighborHash(uint64_t NeighborHash) {
       auto It = NeighborHashToBFs.find(NeighborHash);
       return It == NeighborHashToBFs.end() ? std::nullopt
@@ -93,7 +93,7 @@ public:
     DenseMap<BinaryFunction *, std::set<BinaryFunction *>> BFAdjacencyMap;
 
     /// Maps neighbor hashes to binary functions.
-    DenseMap<uint64_t, std::vector<BinaryFunction *>> NeighborHashToBFs;
+    DenseMap<uint64_t, BinaryFunctionListType> NeighborHashToBFs;
 
     /// Adjacency map for profile functions in the call graph.
     DenseMap<yaml::bolt::BinaryFunctionProfile *,
@@ -187,7 +187,7 @@ private:
   StringSet<> ProfileFunctionNames;
 
   /// BinaryFunction pointers indexed by YamlBP functions.
-  std::vector<BinaryFunction *> ProfileBFs;
+  BinaryFunctionListType ProfileBFs;
 
   // Pseudo probe function GUID to inline tree node
   GUIDInlineTreeMap TopLevelGUIDToInlineTree;

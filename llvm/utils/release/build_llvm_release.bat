@@ -19,7 +19,7 @@ echo --x86: build and test x86 variant
 echo --x64: build and test x64 variant
 echo --arm64: build and test arm64 variant
 echo --skip-checkout: use local git checkout instead of downloading src.zip
-echo --local-python: use installed Python and does not try to use a specific version (3.10)
+echo --local-python: use installed Python and does not try to use a specific version (3.11)
 echo --force-msvc: use MSVC compiler for stage0, even if clang-cl is present
 echo.
 echo Note: At least one variant to build is required.
@@ -115,8 +115,8 @@ echo Using VS devcmd: %vsdevcmd%
 :: start echoing what we do
 @echo on
 
-set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-32
-set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310
+set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-32
+set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311
 set pythonarm64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-arm64
 
 set revision=llvmorg-%version%
@@ -190,8 +190,7 @@ if "%force-msvc%" == "" (
 
 set common_lldb_flags=^
   -DLLDB_RELOCATABLE_PYTHON=1 ^
-  -DLLDB_EMBED_PYTHON_HOME=OFF ^
-  -DLLDB_ENABLE_LIBXML2=OFF
+  -DLLDB_EMBED_PYTHON_HOME=OFF
 
 set cmake_profile_flags=""
 
@@ -395,7 +394,7 @@ cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
   -DLIBXML2_WITH_LZMA=OFF -DLIBXML2_WITH_MEM_DEBUG=OFF -DLIBXML2_WITH_MODULES=OFF ^
   -DLIBXML2_WITH_OUTPUT=ON -DLIBXML2_WITH_PATTERN=OFF -DLIBXML2_WITH_PROGRAMS=OFF ^
   -DLIBXML2_WITH_PUSH=OFF -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_READER=OFF ^
-  -DLIBXML2_WITH_REGEXPS=OFF -DLIBXML2_WITH_RUN_DEBUG=OFF -DLIBXML2_WITH_SAX1=OFF ^
+  -DLIBXML2_WITH_REGEXPS=OFF -DLIBXML2_WITH_RUN_DEBUG=OFF -DLIBXML2_WITH_SAX1=ON ^
   -DLIBXML2_WITH_SCHEMAS=OFF -DLIBXML2_WITH_SCHEMATRON=OFF -DLIBXML2_WITH_TESTS=OFF ^
   -DLIBXML2_WITH_THREADS=ON -DLIBXML2_WITH_THREAD_ALLOC=OFF -DLIBXML2_WITH_TREE=ON ^
   -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF ^

@@ -223,10 +223,11 @@ MemrefValue skipViewLikeOps(MemrefValue source) {
   return source;
 }
 
-LogicalResult resolveSourceIndicesExpandShape(
-    Location loc, PatternRewriter &rewriter,
-    memref::ExpandShapeOp expandShapeOp, ValueRange indices,
-    SmallVectorImpl<Value> &sourceIndices, bool startsInbounds) {
+void resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
+                                     memref::ExpandShapeOp expandShapeOp,
+                                     ValueRange indices,
+                                     SmallVectorImpl<Value> &sourceIndices,
+                                     bool startsInbounds) {
   SmallVector<OpFoldResult> destShape = expandShapeOp.getMixedOutputShape();
 
   // Traverse all reassociation groups to determine the appropriate indices
@@ -246,14 +247,12 @@ LogicalResult resolveSourceIndicesExpandShape(
         rewriter, loc, groupIndices, groupBasis, /*disjoint=*/startsInbounds);
     sourceIndices.push_back(collapsedIndex);
   }
-  return success();
 }
 
-LogicalResult
-resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
-                                  memref::CollapseShapeOp collapseShapeOp,
-                                  ValueRange indices,
-                                  SmallVectorImpl<Value> &sourceIndices) {
+void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
+                                       memref::CollapseShapeOp collapseShapeOp,
+                                       ValueRange indices,
+                                       SmallVectorImpl<Value> &sourceIndices) {
   // Note: collapse_shape requires a strided memref, we can do this.
   auto metadata = memref::ExtractStridedMetadataOp::create(
       rewriter, loc, collapseShapeOp.getSrc());
@@ -285,6 +284,46 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
           getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
     }
   }
+}
+
+LogicalResult resolveSourceIndicesRankReducingSubview(
+    Location loc, OpBuilder &b, memref::SubViewOp subViewOp, ValueRange indices,
+    SmallVectorImpl<Value> &sourceIndices) {
+  if (!subViewOp.hasZeroOffset() || !subViewOp.hasUnitStride())
+    return failure();
+
+  MemRefType srcType = subViewOp.getSourceType();
+  MemRefType resType = subViewOp.getType();
+  unsigned srcRank = srcType.getRank();
+  unsigned resRank = resType.getRank();
+  if (srcRank <= resRank || indices.size() != resRank)
+    return failure();
+
+  auto droppedDims = subViewOp.getDroppedDims();
+  if (droppedDims.none() || droppedDims.count() != srcRank - resRank)
+    return failure();
+
+  auto mixedSizes = subViewOp.getMixedSizes();
+  if (mixedSizes.size() != srcRank)
+    return failure();
+
+  unsigned resultDim = 0;
+  for (unsigned sourceDim = 0; sourceDim < srcRank; ++sourceDim) {
+    if (droppedDims.test(sourceDim)) {
+      auto sizeCst = getConstantIntValue(mixedSizes[sourceDim]);
+      if (!sizeCst || *sizeCst != 1)
+        return failure();
+      sourceIndices.push_back(
+          getValueOrCreateConstantIndexOp(b, loc, b.getIndexAttr(0)));
+      continue;
+    }
+    if (resultDim >= indices.size())
+      return failure();
+    sourceIndices.push_back(indices[resultDim++]);
+  }
+  if (resultDim != indices.size())
+    return failure();
+
   return success();
 }
 
