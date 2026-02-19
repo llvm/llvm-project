@@ -3793,8 +3793,8 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
 bool AMDGPUInstructionSelector::selectTensorLoadStore(MachineInstr &MI,
                                                       Intrinsic::ID IID) const {
   bool IsLoad = IID == Intrinsic::amdgcn_tensor_load_to_lds;
-  unsigned Opc = IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS :
-                          AMDGPU::TENSOR_STORE_FROM_LDS;
+  unsigned Opc =
+      IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS : AMDGPU::TENSOR_STORE_FROM_LDS;
   int NumGroups = 4;
 
   // A lamda function to check whether an operand is a vector of all 0s.
@@ -3808,24 +3808,24 @@ bool AMDGPUInstructionSelector::selectTensorLoadStore(MachineInstr &MI,
   // Use _D2 version if both group 2 and 3 are zero-initialized.
   if (isAllZeros(MI.getOperand(3)) && isAllZeros(MI.getOperand(4))) {
     NumGroups = 2;
-    Opc = IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_D2 :
-                   AMDGPU::TENSOR_STORE_FROM_LDS_D2;
+    Opc = IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_D2
+                 : AMDGPU::TENSOR_STORE_FROM_LDS_D2;
   }
 
   // TODO: Handle the fifth group: MI.getOpetand(5), which is silently ignored
   // for now because all existing targets only support up to 4 groups.
   MachineBasicBlock *MBB = MI.getParent();
   auto MIB = BuildMI(*MBB, &MI, MI.getDebugLoc(), TII.get(Opc))
-    .add(MI.getOperand(1))  // D# group 0
-    .add(MI.getOperand(2)); // D# group 1
+                 .add(MI.getOperand(1))  // D# group 0
+                 .add(MI.getOperand(2)); // D# group 1
 
-  if (NumGroups >= 4) { // Has at least 4 groups
-    MIB.add(MI.getOperand(3))  // D# group 2
-       .add(MI.getOperand(4)); // D# group 3
+  if (NumGroups >= 4) {         // Has at least 4 groups
+    MIB.add(MI.getOperand(3))   // D# group 2
+        .add(MI.getOperand(4)); // D# group 3
   }
 
   MIB.addImm(0)               // r128
-     .add(MI.getOperand(6));  // cpol
+      .add(MI.getOperand(6)); // cpol
 
   MI.eraseFromParent();
   return true;

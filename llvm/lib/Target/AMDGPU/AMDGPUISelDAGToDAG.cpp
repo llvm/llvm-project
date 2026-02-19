@@ -3007,8 +3007,8 @@ void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID) {
 
 void AMDGPUDAGToDAGISel::SelectTensorLoadStore(SDNode *N, unsigned IntrID) {
   bool IsLoad = IntrID == Intrinsic::amdgcn_tensor_load_to_lds;
-  unsigned Opc = IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS :
-                          AMDGPU::TENSOR_STORE_FROM_LDS;
+  unsigned Opc =
+      IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS : AMDGPU::TENSOR_STORE_FROM_LDS;
 
   SmallVector<SDValue, 7> TensorOps;
   // First two groups
@@ -3020,9 +3020,9 @@ void AMDGPUDAGToDAGISel::SelectTensorLoadStore(SDNode *N, unsigned IntrID) {
   SDValue Group3 = N->getOperand(5);
   if (ISD::isBuildVectorAllZeros(Group2.getNode()) &&
       ISD::isBuildVectorAllZeros(Group3.getNode())) {
-    Opc = IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_D2 :
-                   AMDGPU::TENSOR_STORE_FROM_LDS_D2;
-  } else { // Has at least 4 groups
+    Opc = IsLoad ? AMDGPU::TENSOR_LOAD_TO_LDS_D2
+                 : AMDGPU::TENSOR_STORE_FROM_LDS_D2;
+  } else {                       // Has at least 4 groups
     TensorOps.push_back(Group2); // D# group 2
     TensorOps.push_back(Group3); // D# group 3
   }
