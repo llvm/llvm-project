@@ -464,6 +464,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::SMULO:
   case ISD::UMULO:
   case ISD::CONVERT_FROM_ARBITRARY_FP:
+  case ISD::CONVERT_TO_ARBITRARY_FP:
   case ISD::FCANONICALIZE:
   case ISD::FFREXP:
   case ISD::FMODF:
