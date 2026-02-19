@@ -2935,11 +2935,15 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     case ISD::XOR:
     case ISD::ADD:
     case ISD::SUB:
-      return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget, AssumeSingleUse) &&
-             mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget, AssumeSingleUse);
+      return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget,
+                               AssumeSingleUse) &&
+             mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget,
+                               AssumeSingleUse);
     case ISD::SELECT:
-      return mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget, AssumeSingleUse) &&
-             mayFoldIntoVector(Op.getOperand(2), DAG, Subtarget, AssumeSingleUse);
+      return mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget,
+                               AssumeSingleUse) &&
+             mayFoldIntoVector(Op.getOperand(2), DAG, Subtarget,
+                               AssumeSingleUse);
     }
   }
   if (!ISD::isNormalLoad(Op.getNode()))
