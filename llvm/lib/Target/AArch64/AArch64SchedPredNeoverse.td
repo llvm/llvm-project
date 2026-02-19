@@ -30,8 +30,6 @@ def NeoverseQForm : MCSchedPredicate<
                          CheckAny<[CheckQForm]>,
                          CheckImmOperand<4, 1>]>>;
 
-
-
 // Check if <Pd> == <Pg>
 def NeoversePdIsPgFn : TIIPredicate<
                          "isNeoversePdSameAsPg",
@@ -108,3 +106,5 @@ def NeoverseAllActivePredicate : MCSchedPredicate<
                                        CheckIsImmOperand<1>,
                                        CheckImmOperand<1, 31>]>,
                                    ]>>;
+
+
