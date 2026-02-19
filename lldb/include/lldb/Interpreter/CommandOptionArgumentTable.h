@@ -258,6 +258,7 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeFilename, "filename", lldb::eDiskFileCompletion, {}, { nullptr, false }, "The name of a file (can include path)." },
     { lldb::eArgTypeFormat, "format", lldb::CompletionType::eNoCompletion, {}, { FormatHelpTextCallback, true }, nullptr },
     { lldb::eArgTypeFrameIndex, "frame-index", lldb::eFrameIndexCompletion, {}, { nullptr, false }, "Index into a thread's list of frames." },
+    { lldb::eArgTypeFrameProviderIDRange, "frame-provider-id-range", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "A single frame provider ID or a range of IDs (e.g., '0', '0-2', '0 to 2'). ID 0 is the base unwinder, 1+ are synthetic providers." },
     { lldb::eArgTypeFullName, "fullname", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "Help text goes here." },
     { lldb::eArgTypeFunctionName, "function-name", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of a function." },
     { lldb::eArgTypeFunctionOrSymbol, "function-or-symbol", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of a function or symbol." },
