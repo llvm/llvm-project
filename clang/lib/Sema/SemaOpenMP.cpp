@@ -17476,6 +17476,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(Expr *ImpexTypeArg,
                                                     SourceLocation StartLoc,
                                                     SourceLocation LParenLoc,
                                                     SourceLocation EndLoc) {
+  if (!ImpexTypeArg) {
+    return new (getASTContext())
+        OMPTransparentClause(ImpexTypeArg, StartLoc, LParenLoc, EndLoc);
+  }
   QualType Ty = ImpexTypeArg->getType();
 
   if (const auto *TT = Ty->getAs<TypedefType>()) {
@@ -24816,9 +24820,8 @@ SemaOpenMP::ActOnOpenMPUseDeviceAddrClause(ArrayRef<Expr *> VarList,
 
     // Get the declaration from the components
     ValueDecl *CurDeclaration = CurComponents.back().getAssociatedDeclaration();
-    assert(isa<CXXThisExpr>(BE) ||
-           CurDeclaration &&
-               "Unexpected null decl for use_device_addr clause.");
+    assert((isa<CXXThisExpr>(BE) || CurDeclaration) &&
+           "Unexpected null decl for use_device_addr clause.");
 
     MVLI.VarBaseDeclarations.push_back(CurDeclaration);
     MVLI.VarComponents.resize(MVLI.VarComponents.size() + 1);

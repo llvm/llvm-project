@@ -1,5 +1,5 @@
-# RUN: llc -mtriple aarch64-- -run-pass irtranslator -simplify-mir %s -o %t \
-# RUN:   -verify-machineinstrs; llc -mtriple aarch64-- -run-pass legalizer \
+# RUN: llc -mtriple=aarch64-- -global-isel -run-pass=irtranslator -simplify-mir %s -o %t \
+# RUN:   -verify-machineinstrs; llc -mtriple=aarch64-- -run-pass=legalizer \
 # RUN:   -simplify-mir %t -x mir -o - -verify-machineinstrs | FileCheck %s
 
 # Test that MIRParser is able to deserialize back MIR MIRPrinter serialized,

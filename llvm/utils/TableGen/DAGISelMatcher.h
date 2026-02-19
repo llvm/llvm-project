@@ -26,6 +26,7 @@ class CodeGenRegister;
 class CodeGenDAGPatterns;
 class CodeGenInstruction;
 class Matcher;
+class MatcherList;
 class PatternToMatch;
 class raw_ostream;
 class ComplexPattern;
@@ -34,21 +35,25 @@ class SDNodeInfo;
 class TreePredicateFn;
 class TreePattern;
 
-Matcher *ConvertPatternToMatcher(const PatternToMatch &Pattern,
-                                 unsigned Variant,
-                                 const CodeGenDAGPatterns &CGP);
-void OptimizeMatcher(std::unique_ptr<Matcher> &Matcher,
-                     const CodeGenDAGPatterns &CGP);
-void EmitMatcherTable(Matcher *Matcher, const CodeGenDAGPatterns &CGP,
+MatcherList ConvertPatternToMatcherList(const PatternToMatch &Pattern,
+                                        unsigned Variant,
+                                        const CodeGenDAGPatterns &CGP);
+void OptimizeMatcher(MatcherList &ML, const CodeGenDAGPatterns &CGP);
+void EmitMatcherTable(MatcherList &ML, const CodeGenDAGPatterns &CGP,
                       raw_ostream &OS);
+
+/// Base class that holds a pointer to the next entry in the MatcherList.
+/// Separated from Matcher so that we can have an instance of it in
+/// MatcherList.
+class MatcherBase {
+  friend class MatcherList;
+
+  Matcher *Next = nullptr;
+};
 
 /// Matcher - Base class for all the DAG ISel Matcher representation
 /// nodes.
-class Matcher {
-  // The next matcher node that is executed after this one.  Null if this is
-  // the last stage of a match.
-  std::unique_ptr<Matcher> Next;
-  size_t Size = 0; // Size in bytes of matcher and all its children (if any).
+class Matcher : public MatcherBase {
   virtual void anchor();
 
 public:
@@ -107,16 +112,7 @@ protected:
 public:
   virtual ~Matcher() = default;
 
-  unsigned getSize() const { return Size; }
-  void setSize(unsigned sz) { Size = sz; }
   KindTy getKind() const { return Kind; }
-
-  Matcher *getNext() { return Next.get(); }
-  const Matcher *getNext() const { return Next.get(); }
-  void setNext(Matcher *C) { Next.reset(C); }
-  Matcher *takeNext() { return Next.release(); }
-
-  std::unique_ptr<Matcher> &getNextPtr() { return Next; }
 
   bool isEqual(const Matcher *M) const {
     if (getKind() != M->getKind())
@@ -159,16 +155,6 @@ public:
            getKind() == RecordChild;
   }
 
-  /// unlinkNode - Unlink the specified node from this chain.  If Other ==
-  /// this, we unlink the next pointer and return it.  Otherwise we unlink
-  /// Other from the list and return this.
-  Matcher *unlinkNode(Matcher *Other);
-
-  /// canMoveBefore - Return true if this matcher is the same as Other, or if
-  /// we can move this matcher past all of the nodes in-between Other and this
-  /// node.  Other must be equal to or before this.
-  bool canMoveBefore(const Matcher *Other) const;
-
   /// canMoveBeforeNode - Return true if it is safe to move the current
   /// matcher across the specified one.
   bool canMoveBeforeNode(const Matcher *Other) const;
@@ -185,8 +171,7 @@ public:
     return Other->isContradictoryImpl(this);
   }
 
-  void print(raw_ostream &OS, indent Indent = indent(0)) const;
-  void printOne(raw_ostream &OS) const;
+  void printOne(raw_ostream &OS, indent Indent = indent(0)) const;
   void dump() const;
 
 protected:
@@ -195,34 +180,239 @@ protected:
   virtual bool isContradictoryImpl(const Matcher *M) const { return false; }
 };
 
+/// Manages a singly linked list of Matcher objects. Interface based on
+/// std::forward_list. Once a Matcher is added to a list, it cannot be removed.
+/// It can only be erased or spliced to another position in this list or another
+/// list.
+class MatcherList {
+  MatcherBase BeforeBegin;
+
+  // Emitted size of all of the nodes in this list.
+  unsigned Size = 0;
+
+public:
+  MatcherList() = default;
+  MatcherList(const MatcherList &RHS) = delete;
+  MatcherList(MatcherList &&RHS) {
+    splice_after(before_begin(), RHS);
+    Size = RHS.Size;
+    RHS.Size = 0;
+  }
+  ~MatcherList() { clear(); }
+
+  MatcherList &operator=(const MatcherList &) = delete;
+  MatcherList &operator=(MatcherList &&RHS) {
+    clear();
+    splice_after(before_begin(), RHS);
+    Size = RHS.Size;
+    RHS.Size = 0;
+    return *this;
+  }
+
+  void clear() {
+    for (Matcher *P = BeforeBegin.Next; P != nullptr;) {
+      Matcher *Next = P->Next;
+      delete P;
+      P = Next;
+    }
+    BeforeBegin.Next = nullptr;
+    Size = 0;
+  }
+
+  template <bool IsConst> class iterator_impl {
+    friend class MatcherList;
+    using Base = std::conditional_t<IsConst, const MatcherBase, MatcherBase>;
+
+    Base *Pointer;
+
+    explicit iterator_impl(Base *P) { Pointer = P; }
+
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = std::conditional_t<IsConst, const Matcher *, Matcher *>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+    iterator_impl &operator++() {
+      Pointer = Pointer->Next;
+      return *this;
+    }
+
+    iterator_impl operator++(int) {
+      iterator Tmp(*this);
+      Pointer = Pointer->Next;
+      return Tmp;
+    }
+
+    value_type operator*() const { return static_cast<value_type>(Pointer); }
+
+    value_type operator->() const { return operator*(); }
+
+    bool operator==(const iterator_impl &X) const {
+      return Pointer == X.Pointer;
+    }
+    bool operator!=(const iterator_impl &X) const { return !operator==(X); }
+
+    // Allow conversion to a const iterator.
+    operator iterator_impl<true>() const {
+      return iterator_impl<true>(Pointer);
+    }
+  };
+
+  using iterator = iterator_impl<false>;
+  using const_iterator = iterator_impl<true>;
+
+  /// Return an iterator before the first Matcher in the list. This iterator
+  /// cannot be dereferenced. Incrementing returns the iterator to begin().
+  iterator before_begin() { return iterator(&BeforeBegin); }
+  const_iterator before_begin() const { return const_iterator(&BeforeBegin); }
+
+  iterator begin() { return iterator(BeforeBegin.Next); }
+  const_iterator begin() const { return const_iterator(BeforeBegin.Next); }
+
+  iterator end() { return iterator(nullptr); }
+  const_iterator end() const { return const_iterator(nullptr); }
+
+  Matcher *front() { return *begin(); }
+  const Matcher *front() const { return *begin(); }
+
+  bool empty() const { return BeforeBegin.Next == nullptr; }
+
+  void push_front(Matcher *M) { insert_after(before_begin(), M); }
+
+  /// Delete the first Matcher from the list.
+  void pop_front() {
+    assert(Size == 0 && "Should not modify list once size is set");
+    assert(!empty());
+    Matcher *N = BeforeBegin.Next;
+    BeforeBegin.Next = N->Next;
+    delete N;
+  }
+
+  /// Insert the matcher \p N into this list after \p Pos.
+  iterator insert_after(iterator Pos, Matcher *N) {
+    assert(Size == 0 && "Should not modify list once size is set");
+    N->Next = Pos.Pointer->Next;
+    Pos.Pointer->Next = N;
+    return iterator(N);
+  }
+
+  /// Insert Matchers in the range [F, L) into this list.
+  template <class InIt> iterator insert_after(iterator Pos, InIt F, InIt L) {
+    MatcherBase *R = Pos.Pointer;
+    if (F != L) {
+      Matcher *First = *F;
+      Matcher *Last = First;
+
+      // Link the Matchers together.
+      for (++F; F != L; ++F, Last = Last->Next)
+        Last->Next = *F;
+
+      // Insert them into the list.
+      Last->Next = R->Next;
+      R->Next = First;
+      R = Last;
+    }
+
+    return iterator(R);
+  }
+
+  /// Insert multiple matchers into this list.
+  iterator insert_after(iterator Pos, std::initializer_list<Matcher *> IL) {
+    return insert_after(Pos, IL.begin(), IL.end());
+  }
+
+  /// Erase the Matcher after \p Pos.
+  iterator erase_after(iterator Pos) {
+    assert(Size == 0 && "Should not modify list once size is set");
+    MatcherBase *P = Pos.Pointer;
+    Matcher *N = P->Next;
+    P->Next = N->Next;
+    delete N;
+    return iterator(P->Next);
+  }
+
+  iterator erase_after(iterator F, iterator L) {
+    Matcher *E = static_cast<Matcher *>(L.Pointer);
+    if (F != L) {
+      Matcher *N = F.Pointer->Next;
+      if (N != E) {
+        F.Pointer->Next = E;
+        do {
+          Matcher *Tmp = N->Next;
+          delete N;
+          N = Tmp;
+        } while (N != E);
+      }
+    }
+    return iterator(E);
+  }
+
+  /// Splice the contents of list \p X after \p Pos in this list.
+  void splice_after(iterator Pos, MatcherList &X) {
+    assert(Size == 0 && "Should not modify list once size is set");
+    if (!X.empty()) {
+      if (Pos.Pointer->Next != nullptr) {
+        auto LM1 = X.before_begin();
+        while (LM1.Pointer->Next != nullptr)
+          ++LM1;
+        LM1.Pointer->Next = Pos.Pointer->Next;
+      }
+      Pos.Pointer->Next = X.BeforeBegin.Next;
+      X.BeforeBegin.Next = nullptr;
+    }
+  }
+
+  /// Splice the Matcher after \p I into this list after \p Pos.
+  void splice_after(iterator Pos, MatcherList &, iterator I) {
+    assert(Size == 0 && "Should not modify list once size is set");
+    auto LM1 = std::next(I);
+    if (Pos != I && Pos != LM1) {
+      I.Pointer->Next = LM1.Pointer->Next;
+      LM1.Pointer->Next = Pos.Pointer->Next;
+      Pos.Pointer->Next = static_cast<Matcher *>(LM1.Pointer);
+    }
+  }
+
+  /// Splice the Matchers in the range (\p F, \p L) into this list after \p Pos.
+  void splice_after(iterator Pos, MatcherList &, iterator F, iterator L) {
+    assert(Size == 0 && "Should not modify list once size is set");
+    if (F != L && Pos != F) {
+      auto LM1 = F;
+      while (LM1.Pointer->Next != L.Pointer)
+        ++LM1;
+      if (F != LM1) {
+        LM1.Pointer->Next = Pos.Pointer->Next;
+        Pos.Pointer->Next = F.Pointer->Next;
+        F.Pointer->Next = static_cast<Matcher *>(L.Pointer);
+      }
+    }
+  }
+
+  void setSize(unsigned Sz) { Size = Sz; }
+  unsigned getSize() const { return Size; }
+
+  void print(raw_ostream &OS, indent Indent = indent(0)) const;
+  void dump() const;
+};
+
 /// ScopeMatcher - This attempts to match each of its children to find the first
 /// one that successfully matches.  If one child fails, it tries the next child.
 /// If none of the children match then this check fails.  It never has a 'next'.
 class ScopeMatcher : public Matcher {
-  SmallVector<Matcher *, 4> Children;
+  SmallVector<MatcherList, 4> Children;
 
 public:
-  ScopeMatcher(SmallVectorImpl<Matcher *> &&children)
+  ScopeMatcher(SmallVectorImpl<MatcherList> &&children)
       : Matcher(Scope), Children(std::move(children)) {}
-  ~ScopeMatcher() override;
 
   unsigned getNumChildren() const { return Children.size(); }
 
-  Matcher *getChild(unsigned i) { return Children[i]; }
-  const Matcher *getChild(unsigned i) const { return Children[i]; }
+  MatcherList &getChild(unsigned i) { return Children[i]; }
+  const MatcherList &getChild(unsigned i) const { return Children[i]; }
 
-  void resetChild(unsigned i, Matcher *N) {
-    delete Children[i];
-    Children[i] = N;
-  }
-
-  Matcher *takeChild(unsigned i) {
-    Matcher *Res = Children[i];
-    Children[i] = nullptr;
-    return Res;
-  }
-
-  SmallVectorImpl<Matcher *> &getChildren() { return Children; }
+  SmallVectorImpl<MatcherList> &getChildren() { return Children; }
 
   static bool classof(const Matcher *N) { return N->getKind() == Scope; }
 
@@ -486,21 +676,22 @@ private:
 /// then the match fails.  This is semantically equivalent to a Scope node where
 /// every child does a CheckOpcode, but is much faster.
 class SwitchOpcodeMatcher : public Matcher {
-  SmallVector<std::pair<const SDNodeInfo *, Matcher *>, 8> Cases;
+  SmallVector<std::pair<const SDNodeInfo *, MatcherList>, 8> Cases;
 
 public:
   SwitchOpcodeMatcher(
-      SmallVectorImpl<std::pair<const SDNodeInfo *, Matcher *>> &&cases)
+      SmallVectorImpl<std::pair<const SDNodeInfo *, MatcherList>> &&cases)
       : Matcher(SwitchOpcode), Cases(std::move(cases)) {}
-  ~SwitchOpcodeMatcher() override;
 
   static bool classof(const Matcher *N) { return N->getKind() == SwitchOpcode; }
 
   unsigned getNumCases() const { return Cases.size(); }
 
   const SDNodeInfo &getCaseOpcode(unsigned i) const { return *Cases[i].first; }
-  Matcher *getCaseMatcher(unsigned i) { return Cases[i].second; }
-  const Matcher *getCaseMatcher(unsigned i) const { return Cases[i].second; }
+  MatcherList &getCaseMatcher(unsigned i) { return Cases[i].second; }
+  const MatcherList &getCaseMatcher(unsigned i) const {
+    return Cases[i].second;
+  }
 
 private:
   void printImpl(raw_ostream &OS, indent Indent) const override;
@@ -535,20 +726,21 @@ private:
 /// then the match fails.  This is semantically equivalent to a Scope node where
 /// every child does a CheckType, but is much faster.
 class SwitchTypeMatcher : public Matcher {
-  SmallVector<std::pair<MVT, Matcher *>, 8> Cases;
+  SmallVector<std::pair<MVT, MatcherList>, 8> Cases;
 
 public:
-  SwitchTypeMatcher(SmallVectorImpl<std::pair<MVT, Matcher *>> &&cases)
+  SwitchTypeMatcher(SmallVectorImpl<std::pair<MVT, MatcherList>> &&cases)
       : Matcher(SwitchType), Cases(std::move(cases)) {}
-  ~SwitchTypeMatcher() override;
 
   static bool classof(const Matcher *N) { return N->getKind() == SwitchType; }
 
   unsigned getNumCases() const { return Cases.size(); }
 
   MVT getCaseType(unsigned i) const { return Cases[i].first; }
-  Matcher *getCaseMatcher(unsigned i) { return Cases[i].second; }
-  const Matcher *getCaseMatcher(unsigned i) const { return Cases[i].second; }
+  MatcherList &getCaseMatcher(unsigned i) { return Cases[i].second; }
+  const MatcherList &getCaseMatcher(unsigned i) const {
+    return Cases[i].second;
+  }
 
 private:
   void printImpl(raw_ostream &OS, indent Indent) const override;
@@ -885,8 +1077,10 @@ private:
 /// recorded node and converts it from being a ISD::Constant to
 /// ISD::TargetConstant, likewise for ConstantFP.
 class EmitConvertToTargetMatcher : public Matcher {
+  // Recorded Node
   unsigned Slot;
 
+  // Result
   unsigned ResultNo;
 
 public:
@@ -940,7 +1134,9 @@ private:
 /// pushing the chain and glue results.
 ///
 class EmitCopyToRegMatcher : public Matcher {
-  unsigned SrcSlot; // Value to copy into the physreg.
+  // Value to copy into the physreg.
+  unsigned SrcSlot;
+  // Register Destination
   const CodeGenRegister *DestPhysReg;
 
 public:
@@ -965,9 +1161,12 @@ private:
 /// EmitNodeXFormMatcher - Emit an operation that runs an SDNodeXForm on a
 /// recorded node and records the result.
 class EmitNodeXFormMatcher : public Matcher {
+  // Recorded Node
   unsigned Slot;
+  // Transform
   const Record *NodeXForm;
 
+  // Result
   unsigned ResultNo;
 
 public:

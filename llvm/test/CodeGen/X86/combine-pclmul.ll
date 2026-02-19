@@ -78,9 +78,7 @@ define <8 x i64> @test_concat_pclmulqdq_v8i64_v4i64(<8 x i64> %a0, <8 x i64> %a1
 define <2 x i64> @test_shuffle_pclmulqdq_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: test_shuffle_pclmulqdq_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; CHECK-NEXT:    vpclmulqdq $1, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpclmulqdq $16, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %s0 = shufflevector <2 x i64> %a0, <2 x i64> poison, <2 x i32> <i32 1, i32 0>
   %s1 = shufflevector <2 x i64> %a1, <2 x i64> poison, <2 x i32> <i32 1, i32 0>
@@ -91,9 +89,7 @@ define <2 x i64> @test_shuffle_pclmulqdq_v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 define <4 x i64> @test_shuffle_pclmulqdq_v4i64(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: test_shuffle_pclmulqdq_v4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[2,3,0,1,6,7,4,5]
-; CHECK-NEXT:    vpclmulqdq $16, %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpclmulqdq $1, %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %s0 = shufflevector <4 x i64> %a0, <4 x i64> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
   %s1 = shufflevector <4 x i64> %a1, <4 x i64> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
@@ -104,9 +100,7 @@ define <4 x i64> @test_shuffle_pclmulqdq_v4i64(<4 x i64> %a0, <4 x i64> %a1) {
 define <8 x i64> @test_shuffle_pclmulqdq_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
 ; CHECK-LABEL: test_shuffle_pclmulqdq_v8i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[2,3,0,1,6,7,4,5,10,11,8,9,14,15,12,13]
-; CHECK-NEXT:    vpshufd {{.*#+}} zmm1 = zmm1[2,3,0,1,6,7,4,5,10,11,8,9,14,15,12,13]
-; CHECK-NEXT:    vpclmulqdq $17, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpclmulqdq $0, %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %s0 = shufflevector <8 x i64> %a0, <8 x i64> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
   %s1 = shufflevector <8 x i64> %a1, <8 x i64> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
@@ -307,4 +301,15 @@ define <8 x i64> @test_demanded_elts_pclmulqdq_512_17(<8 x i64> %a0, <8 x i64> %
   %8 = insertelement <8 x i64> %6, i64 %s1, i64 7
   %res = call <8 x i64> @llvm.x86.pclmulqdq.512(<8 x i64> %7, <8 x i64> %8, i8 17)
   ret <8 x i64> %res
+}
+
+; Ensure that target shuffle extraction can handle SM_SentinelZero.
+define <2 x i64> @pclmul_sentinel_zero(<2 x i64> %a0, <2 x i64> %a1) {
+; CHECK-LABEL: pclmul_sentinel_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %and = and <2 x i64> %a0, <i64 -1, i64 0>
+  %res = tail call <2 x i64> @llvm.x86.pclmulqdq(<2 x i64> %and, <2 x i64> %a1, i8 0)
+  ret <2 x i64> %res
 }

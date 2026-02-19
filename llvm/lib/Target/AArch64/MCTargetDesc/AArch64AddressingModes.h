@@ -769,7 +769,7 @@ static inline uint64_t decodeAdvSIMDModImmType12(uint8_t Imm) {
   if (Imm & 0x04) EncVal |= 0x0004000000000000ULL;
   if (Imm & 0x02) EncVal |= 0x0002000000000000ULL;
   if (Imm & 0x01) EncVal |= 0x0001000000000000ULL;
-  return (EncVal << 32) | EncVal;
+  return EncVal;
 }
 
 /// Returns true if Imm is the concatenation of a repeating pattern of type T.

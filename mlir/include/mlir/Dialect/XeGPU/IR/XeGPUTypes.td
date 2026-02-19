@@ -15,7 +15,8 @@ include "mlir/IR/BuiltinTypes.td"
 
 def XeGPU_IntType : AnyTypeOf<[I1, I<4>, I8, I16, I32, I64, SI1, SI8, SI16,
                                SI32, SI64, UI1, UI8, UI16, UI32, UI64]>;
-def XeGPU_FloatType : AnyTypeOf<[F16, F32, F64, BF16, TF32]>;
+def XeGPU_FloatType : AnyTypeOf<[F4E2M1FN, F8E4M3FN, F8E5M2, F8E8M0FNU, F16,
+                                 F32, F64, BF16, TF32]>;
 def XeGPU_ScalarType: AnyTypeOf<[XeGPU_IntType, XeGPU_FloatType]>;
 def XeGPU_PointerType : AnyTypeOf<[UI64, UI32, I64, I32]>;
 def XeGPU_BaseAddrType
@@ -76,7 +77,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
 
     ```
     TensorDesc-type ::= `tensor_desc` `<` dim-list element-type (attr-list)? `>`
-    element-type ::= float-type | integer-type | index-type
+    element-type ::= float-type | integer-type
     dim-list := (static-dim-list `x`)?
     static-dim-list ::= decimal-literal `x` decimal-literal
     attr-list = (, encoding-attr)? (, layout-attr)?

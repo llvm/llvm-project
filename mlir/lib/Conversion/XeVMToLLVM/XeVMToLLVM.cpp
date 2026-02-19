@@ -8,7 +8,6 @@
 
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
 
-#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -19,6 +18,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -99,26 +99,22 @@ std::string mangle(StringRef baseName, ArrayRef<Type> types,
 static int32_t getL1CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case LoadCacheControl::L1UC_L2UC_L3UC:
-  case LoadCacheControl::L1UC_L2UC_L3C:
-  case LoadCacheControl::L1UC_L2C_L3UC:
-  case LoadCacheControl::L1UC_L2C_L3C:
-    control = 1;
-    break;
   case LoadCacheControl::L1C_L2UC_L3UC:
   case LoadCacheControl::L1C_L2UC_L3C:
   case LoadCacheControl::L1C_L2C_L3UC:
   case LoadCacheControl::L1C_L2C_L3C:
-    control = 2;
+    control = 1;
     break;
   case LoadCacheControl::L1S_L2UC_L3UC:
   case LoadCacheControl::L1S_L2UC_L3C:
   case LoadCacheControl::L1S_L2C_L3UC:
   case LoadCacheControl::L1S_L2C_L3C:
-    control = 3;
+    control = 2;
     break;
   case LoadCacheControl::INVALIDATE_READ:
-    control = 4;
+    control = 3;
+    break;
+  default:
     break;
   }
   return control;
@@ -127,16 +123,15 @@ static int32_t getL1CacheControl(LoadCacheControl cc) {
 static int32_t getL1CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case StoreCacheControl::L1UC_L2UC_L3UC:
-  case StoreCacheControl::L1UC_L2UC_L3WB:
-  case StoreCacheControl::L1UC_L2WB_L3UC:
-  case StoreCacheControl::L1UC_L2WB_L3WB:
-    control = 1;
-    break;
   case StoreCacheControl::L1WT_L2UC_L3UC:
   case StoreCacheControl::L1WT_L2UC_L3WB:
   case StoreCacheControl::L1WT_L2WB_L3UC:
   case StoreCacheControl::L1WT_L2WB_L3WB:
+    control = 1;
+    break;
+  case StoreCacheControl::L1WB_L2UC_L3UC:
+  case StoreCacheControl::L1WB_L2WB_L3UC:
+  case StoreCacheControl::L1WB_L2UC_L3WB:
     control = 2;
     break;
   case StoreCacheControl::L1S_L2UC_L3UC:
@@ -145,10 +140,7 @@ static int32_t getL1CacheControl(StoreCacheControl cc) {
   case StoreCacheControl::L1S_L2WB_L3WB:
     control = 3;
     break;
-  case StoreCacheControl::L1WB_L2UC_L3UC:
-  case StoreCacheControl::L1WB_L2WB_L3UC:
-  case StoreCacheControl::L1WB_L2UC_L3WB:
-    control = 4;
+  default:
     break;
   }
   return control;
@@ -157,24 +149,18 @@ static int32_t getL1CacheControl(StoreCacheControl cc) {
 static int32_t getL3CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case LoadCacheControl::L1UC_L2UC_L3UC:
-  case LoadCacheControl::L1UC_L2C_L3UC:
-  case LoadCacheControl::L1C_L2UC_L3UC:
-  case LoadCacheControl::L1C_L2C_L3UC:
-  case LoadCacheControl::L1S_L2UC_L3UC:
-  case LoadCacheControl::L1S_L2C_L3UC:
-    control = 1;
-    break;
   case LoadCacheControl::L1UC_L2UC_L3C:
   case LoadCacheControl::L1UC_L2C_L3C:
   case LoadCacheControl::L1C_L2UC_L3C:
   case LoadCacheControl::L1C_L2C_L3C:
   case LoadCacheControl::L1S_L2UC_L3C:
   case LoadCacheControl::L1S_L2C_L3C:
-    control = 2;
+    control = 1;
     break;
   case LoadCacheControl::INVALIDATE_READ:
-    control = 4;
+    control = 3;
+    break;
+  default:
     break;
   }
   return control;
@@ -183,16 +169,6 @@ static int32_t getL3CacheControl(LoadCacheControl cc) {
 static int32_t getL3CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case StoreCacheControl::L1UC_L2UC_L3UC:
-  case StoreCacheControl::L1UC_L2WB_L3UC:
-  case StoreCacheControl::L1WT_L2UC_L3UC:
-  case StoreCacheControl::L1WT_L2WB_L3UC:
-  case StoreCacheControl::L1S_L2UC_L3UC:
-  case StoreCacheControl::L1S_L2WB_L3UC:
-  case StoreCacheControl::L1WB_L2UC_L3UC:
-  case StoreCacheControl::L1WB_L2WB_L3UC:
-    control = 1;
-    break;
   case StoreCacheControl::L1UC_L2UC_L3WB:
   case StoreCacheControl::L1UC_L2WB_L3WB:
   case StoreCacheControl::L1WT_L2UC_L3WB:
@@ -201,6 +177,8 @@ static int32_t getL3CacheControl(StoreCacheControl cc) {
   case StoreCacheControl::L1S_L2WB_L3WB:
   case StoreCacheControl::L1WB_L2UC_L3WB:
     control = 2;
+    break;
+  default:
     break;
   }
   return control;
@@ -265,7 +243,7 @@ static std::optional<ArrayAttr>
 getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
   if (!getCacheControl(op))
     return {};
-  constexpr int32_t decorationCacheControlArity{4};
+  constexpr int32_t decorationCacheControlArity{3};
   constexpr int32_t loadCacheControlKey{6442};
   constexpr int32_t storeCacheControlKey{6443};
   constexpr bool isLoad = std::is_same_v<OpType, BlockLoad2dOp> ||
@@ -275,9 +253,9 @@ getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
                           std::is_same_v<OpType, PrefetchOp>;
   const int32_t controlKey{isLoad ? loadCacheControlKey : storeCacheControlKey};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL1{
-      controlKey, 0, getL1CacheControl<OpType>(op), 0};
+      controlKey, 0, getL1CacheControl<OpType>(op)};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL3{
-      controlKey, 1, getL3CacheControl<OpType>(op), 0};
+      controlKey, 1, getL3CacheControl<OpType>(op)};
   auto arrayAttrL1 = rewriter.getI32ArrayAttr(decorationsL1);
   auto arrayAttrL3 = rewriter.getI32ArrayAttr(decorationsL3);
 
@@ -858,6 +836,139 @@ class SubgroupOpWorkitemOpToOCLPattern : public OpConversionPattern<OpType> {
   }
 };
 
+static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
+  if (op.getV1() != op.getV2())
+    return false;
+  auto maskAttr = op.getMask();
+  int64_t firstIndex = maskAttr[0];
+  for (int64_t i = 1; i < static_cast<int64_t>(maskAttr.size()); ++i) {
+    int64_t index = maskAttr[i];
+    if (index != firstIndex + i)
+      return false;
+  }
+  return true;
+}
+
+// Input vector of a shuffle vector op extracting a contiguous slice is an
+// illegal vector in SPIRV kernel if the vector size is > 16 elements.
+// To legalize this case, keep applying the following transformations until no
+// more match:
+//   1. keep hoisting the shuffle vector op past unary element-wise operations
+//       start with fpext, fptrunc and bitcast for now.
+//   2. merge with another shuffle vector op
+//   3. merge with load as a smaller load
+class HandleVectorExtractPattern
+    : public OpRewritePattern<LLVM::ShuffleVectorOp> {
+  using OpRewritePattern<LLVM::ShuffleVectorOp>::OpRewritePattern;
+
+  void initialize() { setHasBoundedRewriteRecursion(); }
+
+  LogicalResult matchAndRewrite(LLVM::ShuffleVectorOp op,
+                                PatternRewriter &rewriter) const override {
+
+    if (!isExtractingContiguousSlice(op))
+      return failure();
+
+    auto mask = op.getMask();
+    auto loc = op.getLoc();
+    auto ty = op.getType();
+    // Check source operand to determine rewrite pattern.
+    auto src = op.getV1();
+    // 1. Hoist past unary element-wise operations
+    if (auto srcOp = src.getDefiningOp()) {
+      if (isa<LLVM::FPExtOp>(srcOp) || isa<LLVM::FPTruncOp>(srcOp)) {
+        Value srcInput = srcOp->getOperand(0);
+        // Create new shuffle vector op with unary input as source.
+        auto srcVecTy = dyn_cast<VectorType>(srcInput.getType());
+        auto newShuffleVecTy =
+            VectorType::get(mask.size(), srcVecTy.getElementType());
+        auto newShuffle = LLVM::ShuffleVectorOp::create(
+            rewriter, loc, newShuffleVecTy, srcInput, srcInput, mask);
+        // Create new unary op with new shuffle as input.
+        Value newUnaryOp;
+        if (isa<LLVM::FPExtOp>(srcOp)) {
+          newUnaryOp = LLVM::FPExtOp::create(rewriter, loc, ty, newShuffle);
+        } else {
+          newUnaryOp = LLVM::FPTruncOp::create(rewriter, loc, ty, newShuffle);
+        }
+        rewriter.replaceOp(op, newUnaryOp);
+      } else if (isa<LLVM::BitcastOp>(srcOp)) {
+        Value srcInput = srcOp->getOperand(0);
+        // Create new shuffle vector op with unary input as source.
+        auto srcInputVecTy = dyn_cast<VectorType>(srcInput.getType());
+        auto srcInputSize = srcInputVecTy.getNumElements();
+        auto srcResVecTy = dyn_cast<VectorType>(srcOp->getResult(0).getType());
+        auto srcResSize = srcResVecTy.getNumElements();
+        auto maskSize = static_cast<int32_t>(mask.size());
+        if (srcInputSize > srcResSize) {
+          return failure();
+        }
+        if (srcResSize % srcInputSize != 0) {
+          return failure();
+        }
+        auto maskScale = srcResSize / srcInputSize;
+        if (maskScale != 1) {
+          if (mask[0] % maskScale != 0) {
+            return failure();
+          }
+          // Create a new mask that maps to the source vector
+          SmallVector<int32_t> newMask;
+          int32_t newMaskSize = maskSize / maskScale;
+          int32_t maskStart = mask[0] / maskScale;
+          for (int32_t i = 0; i < newMaskSize; ++i) {
+            newMask.push_back(maskStart + i);
+          }
+          mask = newMask;
+        }
+        auto newShuffleVecTy =
+            VectorType::get(srcInputSize, srcInputVecTy.getElementType());
+        auto newShuffle = LLVM::ShuffleVectorOp::create(
+            rewriter, loc, newShuffleVecTy, srcInput, srcInput, mask);
+        // Create new unary op with new shuffle as input.
+        auto newBitcast =
+            LLVM::BitcastOp::create(rewriter, loc, ty, newShuffle);
+        rewriter.replaceOp(op, newBitcast);
+      } else if (isa<LLVM::ShuffleVectorOp>(srcOp)) {
+        // 2. Merge with another shuffle vector op
+        auto srcShuffle = cast<LLVM::ShuffleVectorOp>(srcOp);
+        auto srcMask = srcShuffle.getMask();
+        SmallVector<int32_t> combinedMask;
+        for (auto index : mask) {
+          combinedMask.push_back(srcMask[index]);
+        }
+        auto newShuffle = LLVM::ShuffleVectorOp::create(
+            rewriter, loc, ty, srcShuffle.getV1(), srcShuffle.getV1(),
+            DenseI32ArrayAttr::get(rewriter.getContext(), combinedMask));
+        rewriter.replaceOp(op, newShuffle);
+      } else if (isa<LLVM::LoadOp>(srcOp)) {
+        // 3. Merge with load as a smaller load
+        auto loadOp = cast<LLVM::LoadOp>(srcOp);
+        auto loadPtr = loadOp.getAddr();
+        auto loadTy = dyn_cast<VectorType>(loadOp.getType());
+        auto elemTy = loadTy.getElementType();
+        auto firstIndex = mask[0];
+        auto newVecTy = VectorType::get(mask.size(), elemTy);
+        // GEPOp is needed if first index is not zero
+        if (firstIndex) {
+          auto newPtr = LLVM::GEPOp::create(
+              rewriter, loc,
+              LLVM::LLVMPointerType::get(rewriter.getContext(),
+                                         loadPtr.getType().getAddressSpace()),
+              elemTy, loadPtr, ArrayRef<LLVM::GEPArg>{firstIndex});
+          auto newLoad = LLVM::LoadOp::create(rewriter, loc, newVecTy, newPtr);
+          rewriter.replaceOp(op, newLoad);
+        } else {
+          auto newLoad = LLVM::LoadOp::create(rewriter, loc, newVecTy, loadPtr);
+          rewriter.replaceOp(op, newLoad);
+        }
+      } else {
+        return failure();
+      }
+    }
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Pass Definition
 //===----------------------------------------------------------------------===//
@@ -877,28 +988,22 @@ struct ConvertXeVMToLLVMPass
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
-  }
-};
-} // namespace
 
-//===----------------------------------------------------------------------===//
-// ConvertToLLVMPatternInterface implementation
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Implement the interface to convert XeVM to LLVM.
-struct XeVMToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
-  void loadDependentDialects(MLIRContext *context) const final {
-    context->loadDialect<LLVM::LLVMDialect>();
-  }
-
-  /// Hook for derived dialect interface to provide conversion patterns
-  /// and mark dialect legal for the conversion target.
-  void populateConvertToLLVMConversionPatterns(
-      ConversionTarget &target, LLVMTypeConverter &typeConverter,
-      RewritePatternSet &patterns) const final {
-    populateXeVMToLLVMConversionPatterns(target, patterns);
+    // Apply in-dialect lowerings to handle illegal vectors
+    {
+      RewritePatternSet vectorPatterns(&getContext());
+      vectorPatterns.add<HandleVectorExtractPattern>(&getContext());
+      GreedyRewriteConfig config{};
+      // folding can remove ops with temporary attributes used to
+      // represent LLVM metadata, so disable it here.
+      // Effectively just this single pattern is applied without any
+      // op folding patterns from dialects.
+      config.enableFolding(false);
+      // config.setMaxIterations(GreedyRewriteConfig::kNoLimit);
+      // config.setMaxNumRewrites(GreedyRewriteConfig::kNoLimit);
+      (void)applyPatternsGreedily(getOperation(), std::move(vectorPatterns),
+                                  config);
+    }
   }
 };
 } // namespace
@@ -936,10 +1041,4 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
                SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
                SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>>(
       patterns.getContext());
-}
-
-void ::mlir::registerConvertXeVMToLLVMInterface(DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, XeVMDialect *dialect) {
-    dialect->addInterfaces<XeVMToLLVMDialectInterface>();
-  });
 }

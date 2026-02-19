@@ -497,6 +497,7 @@ add_header_macro(
     .llvm-libc-types.Elf32_Verneed
     .llvm-libc-types.Elf32_Versym
     .llvm-libc-types.Elf32_Word
+    .llvm-libc-types.Elf32_Xword
     .llvm-libc-types.Elf64_Addr
     .llvm-libc-types.Elf64_Chdr
     .llvm-libc-types.Elf64_Dyn
@@ -800,7 +801,7 @@ add_header_macro(
   ../libc/include/wctype.yaml
   wctype.h
   DEPENDS
-    .llvm_libc_common_h    
+    .llvm_libc_common_h
     .llvm-libc-types.wint_t
 )
 

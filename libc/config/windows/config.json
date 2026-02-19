@@ -1,0 +1,8 @@
+{
+    "printf": {
+      "LIBC_CONF_PRINTF_DISABLE_WIDE": {
+        "value": "true",
+        "doc": "Disable handling wide characters for printf and friends."
+      }
+    }
+}

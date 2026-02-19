@@ -274,3 +274,20 @@ entry:
   store i32 %val2, ptr %local1.ptr, align 4
   ret void
 }
+
+define void @basic_store_zero_combine(ptr %0, i32 %1, i32 %2) {
+; SLOW-LABEL: basic_store_zero_combine:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    sw zero, 0(a0)
+; SLOW-NEXT:    sw zero, 4(a0)
+; SLOW-NEXT:    ret
+;
+; FAST-LABEL: basic_store_zero_combine:
+; FAST:       # %bb.0:
+; FAST-NEXT:    sd zero, 0(a0)
+; FAST-NEXT:    ret
+  store i32 0, ptr %0, align 4
+  %4 = getelementptr inbounds i32, ptr %0, i32 1
+  store i32 0, ptr %4, align 4
+  ret void
+}

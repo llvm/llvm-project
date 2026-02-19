@@ -5,11 +5,13 @@
 # RUN: llvm-readelf -r %t.so | FileCheck --check-prefix=LD-REL %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=LD %s
 # RUN: llvm-objdump --section .data.rel.ro --full-contents %t.so | FileCheck --check-prefix=LD-DATA %s
+# RUN: llvm-readobj -x.debug_info %t.so | FileCheck --check-prefix=DEBUG-INFO %s
 
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=NOREL %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
 # RUN: llvm-objdump --section .data.rel.ro --full-contents %t | FileCheck --check-prefix=LE-DATA %s
+# RUN: llvm-readobj -x.debug_info %t | FileCheck --check-prefix=DEBUG-INFO %s
 
 # LD-REL: Relocation section '.rela.dyn' at offset {{.*}} contains 1 entries:
 # LD-REL: 00000000000024f8 0000000000000036 R_390_TLS_DTPMOD 0
@@ -72,6 +74,10 @@
 # LE-DATA: 1002210 00000000 00000000 ffffffff fffffff8
 # LE-DATA: 1002220 ffffffff fffffffc 00000000 00000000
 
+# DEBUG-INFO:      Hex dump of section '.debug_info':
+# DEBUG-INFO-NEXT: 0x00000000 00000000 00000008 00000000 0000000c
+# DEBUG-INFO-NEXT: 0x00000010 00000000 00000010
+
 
 ear     %r7,%a0
 sllg    %r7,%r1,32
@@ -112,3 +118,8 @@ a:
 b:
 	.zero 4
 c:
+
+.section .debug_info,"",@progbits
+.quad a@DTPOFF
+.quad b@DTPOFF
+.quad c@DTPOFF

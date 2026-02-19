@@ -4208,3 +4208,83 @@ define <vscale x 2 x i32> @splice_nxv2i32_slideup_undef(<vscale x 2 x i32> %a) #
 }
 
 attributes #0 = { vscale_range(2,0) }
+
+define <vscale x 2 x i32> @splice_left_nxv2i32_variable_offset(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, i32 zeroext %offset) {
+; NOVLDEP-LABEL: splice_left_nxv2i32_variable_offset:
+; NOVLDEP:       # %bb.0:
+; NOVLDEP-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; NOVLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; NOVLDEP-NEXT:    csrr a1, vlenb
+; NOVLDEP-NEXT:    srli a1, a1, 2
+; NOVLDEP-NEXT:    sub a1, a1, a0
+; NOVLDEP-NEXT:    vslideup.vx v8, v9, a1
+; NOVLDEP-NEXT:    ret
+;
+; VLDEP-LABEL: splice_left_nxv2i32_variable_offset:
+; VLDEP:       # %bb.0:
+; VLDEP-NEXT:    csrr a1, vlenb
+; VLDEP-NEXT:    srli a1, a1, 2
+; VLDEP-NEXT:    sub a1, a1, a0
+; VLDEP-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v9, a1
+; VLDEP-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.vector.splice.left(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, i32 %offset)
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 2 x i32> @splice_right_nxv2i32_variable_offset(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, i32 zeroext %offset) {
+; NOVLDEP-LABEL: splice_right_nxv2i32_variable_offset:
+; NOVLDEP:       # %bb.0:
+; NOVLDEP-NEXT:    csrr a1, vlenb
+; NOVLDEP-NEXT:    srli a1, a1, 2
+; NOVLDEP-NEXT:    sub a1, a1, a0
+; NOVLDEP-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; NOVLDEP-NEXT:    vslidedown.vx v8, v8, a1
+; NOVLDEP-NEXT:    vslideup.vx v8, v9, a0
+; NOVLDEP-NEXT:    ret
+;
+; VLDEP-LABEL: splice_right_nxv2i32_variable_offset:
+; VLDEP:       # %bb.0:
+; VLDEP-NEXT:    csrr a1, vlenb
+; VLDEP-NEXT:    srli a1, a1, 2
+; VLDEP-NEXT:    sub a1, a1, a0
+; VLDEP-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a1
+; VLDEP-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; VLDEP-NEXT:    vslideup.vx v8, v9, a0
+; VLDEP-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.vector.splice.right(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b, i32 %offset)
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 2 x i32> @splice_left_nxv2i32_variable_offset_slidedown(<vscale x 2 x i32> %a, i32 zeroext %offset) {
+; NOVLDEP-LABEL: splice_left_nxv2i32_variable_offset_slidedown:
+; NOVLDEP:       # %bb.0:
+; NOVLDEP-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; NOVLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; NOVLDEP-NEXT:    ret
+;
+; VLDEP-LABEL: splice_left_nxv2i32_variable_offset_slidedown:
+; VLDEP:       # %bb.0:
+; VLDEP-NEXT:    csrr a1, vlenb
+; VLDEP-NEXT:    srli a1, a1, 2
+; VLDEP-NEXT:    sub a1, a1, a0
+; VLDEP-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; VLDEP-NEXT:    vslidedown.vx v8, v8, a0
+; VLDEP-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.vector.splice.left(<vscale x 2 x i32> %a, <vscale x 2 x i32> poison, i32 %offset)
+  ret <vscale x 2 x i32> %res
+}
+
+define <vscale x 2 x i32> @splice_right_nxv2i32_variable_offset_slideup(<vscale x 2 x i32> %a, i32 zeroext %offset) {
+; CHECK-LABEL: splice_right_nxv2i32_variable_offset_slideup:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vslideup.vx v9, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    ret
+  %res = call <vscale x 2 x i32> @llvm.vector.splice.right(<vscale x 2 x i32> poison, <vscale x 2 x i32> %a, i32 %offset)
+  ret <vscale x 2 x i32> %res
+}

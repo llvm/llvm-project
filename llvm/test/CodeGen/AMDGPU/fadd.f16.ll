@@ -72,11 +72,11 @@ define amdgpu_kernel void @fadd_f16(
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, s3
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, s10
 ; GFX11-SDAG-NEXT:    s_mov_b32 s3, s11
-; GFX11-SDAG-NEXT:    buffer_load_u16 v0, off, s[0:3], 0 glc dlc
+; GFX11-SDAG-NEXT:    buffer_load_d16_b16 v0, off, s[0:3], 0 glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-NEXT:    buffer_load_u16 v1, off, s[4:7], 0 glc dlc
+; GFX11-SDAG-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], 0 glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX11-SDAG-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-SDAG-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -92,11 +92,11 @@ define amdgpu_kernel void @fadd_f16(
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_mov_b64 s[8:9], s[2:3]
 ; GFX11-GISEL-NEXT:    s_mov_b64 s[2:3], s[10:11]
-; GFX11-GISEL-NEXT:    buffer_load_u16 v0, off, s[8:11], 0 glc dlc
+; GFX11-GISEL-NEXT:    buffer_load_d16_b16 v0, off, s[8:11], 0 glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    buffer_load_u16 v1, off, s[4:7], 0 glc dlc
+; GFX11-GISEL-NEXT:    buffer_load_d16_hi_b16 v0, off, s[4:7], 0 glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-GISEL-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX11-GISEL-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
@@ -232,7 +232,7 @@ define amdgpu_kernel void @fadd_f16_imm_a(
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, s3
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, s6
 ; GFX11-SDAG-NEXT:    s_mov_b32 s3, s7
-; GFX11-SDAG-NEXT:    buffer_load_u16 v0, off, s[0:3], 0
+; GFX11-SDAG-NEXT:    buffer_load_d16_b16 v0, off, s[0:3], 0
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
 ; GFX11-SDAG-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
@@ -246,7 +246,7 @@ define amdgpu_kernel void @fadd_f16_imm_a(
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; GFX11-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
-; GFX11-GISEL-NEXT:    buffer_load_u16 v0, off, s[4:7], 0
+; GFX11-GISEL-NEXT:    buffer_load_d16_b16 v0, off, s[4:7], 0
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_f16_e32 v0.l, 1.0, v0.l
 ; GFX11-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
@@ -364,7 +364,7 @@ define amdgpu_kernel void @fadd_f16_imm_b(
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, s3
 ; GFX11-SDAG-NEXT:    s_mov_b32 s2, s6
 ; GFX11-SDAG-NEXT:    s_mov_b32 s3, s7
-; GFX11-SDAG-NEXT:    buffer_load_u16 v0, off, s[0:3], 0
+; GFX11-SDAG-NEXT:    buffer_load_d16_b16 v0, off, s[0:3], 0
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    v_add_f16_e32 v0.l, 2.0, v0.l
 ; GFX11-SDAG-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
@@ -378,7 +378,7 @@ define amdgpu_kernel void @fadd_f16_imm_b(
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_mov_b64 s[4:5], s[2:3]
 ; GFX11-GISEL-NEXT:    s_mov_b64 s[2:3], s[6:7]
-; GFX11-GISEL-NEXT:    buffer_load_u16 v0, off, s[4:7], 0
+; GFX11-GISEL-NEXT:    buffer_load_d16_b16 v0, off, s[4:7], 0
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    v_add_f16_e32 v0.l, 2.0, v0.l
 ; GFX11-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
@@ -464,19 +464,19 @@ define amdgpu_kernel void @fadd_v2f16(
 ; SI-NEXT:    s_mov_b32 s8, s0
 ; SI-NEXT:    s_mov_b32 s9, s1
 ; SI-NEXT:    s_waitcnt vmcnt(1)
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v2
-; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, v0
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
 ; SI-NEXT:    v_add_f32_e32 v1, v3, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; SI-NEXT:    v_add_f32_e32 v0, v2, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -634,15 +634,15 @@ define amdgpu_kernel void @fadd_v2f16_imm_a(
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, v0
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_add_f32_e32 v1, 1.0, v1
+; SI-NEXT:    v_add_f32_e32 v1, 2.0, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_add_f32_e32 v0, 2.0, v0
+; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -773,15 +773,15 @@ define amdgpu_kernel void @fadd_v2f16_imm_b(
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, v0
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_add_f32_e32 v1, 2.0, v1
+; SI-NEXT:    v_add_f32_e32 v1, 1.0, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_add_f32_e32 v0, 1.0, v0
+; SI-NEXT:    v_add_f32_e32 v0, 2.0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;

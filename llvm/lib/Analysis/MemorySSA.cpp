@@ -312,7 +312,7 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
 
   if (auto *CB = dyn_cast_or_null<CallBase>(UseInst)) {
     ModRefInfo I = AA.getModRefInfo(DefInst, CB);
-    return isModOrRefSet(I);
+    return isModSet(I);
   }
 
   if (auto *DefLoad = dyn_cast<LoadInst>(DefInst))

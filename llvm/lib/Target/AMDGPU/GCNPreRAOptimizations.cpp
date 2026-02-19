@@ -63,9 +63,7 @@ class GCNPreRAOptimizationsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  GCNPreRAOptimizationsLegacy() : MachineFunctionPass(ID) {
-    initializeGCNPreRAOptimizationsLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  GCNPreRAOptimizationsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -271,8 +269,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
       Register Dst = MI.getOperand(0).getReg();
       Register Src = MI.getOperand(1).getReg();
       const TargetRegisterClass *DstRC = TRI->getRegClassForReg(*MRI, Dst);
-      bool IsDst16Bit = DstRC == &AMDGPU::VGPR_16RegClass ||
-                        DstRC == &AMDGPU::VGPR_16_Lo128RegClass;
+      bool IsDst16Bit = AMDGPU::VGPR_16RegClass.hasSubClassEq(DstRC);
       if (Dst.isVirtual() && IsDst16Bit && Src.isPhysical() &&
           TRI->getRegClassForReg(*MRI, Src) == &AMDGPU::VGPR_32RegClass)
         MRI->setRegAllocationHint(Dst, 0, TRI->getSubReg(Src, AMDGPU::lo16));

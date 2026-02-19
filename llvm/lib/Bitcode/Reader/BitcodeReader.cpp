@@ -984,6 +984,11 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// the CallStackRadixTreeBuilder class in ProfileData/MemProf.h for format.
   std::vector<uint64_t> RadixArray;
 
+  /// Map from the module's stack id index to the index in the
+  /// ModuleSummaryIndex's StackIds vector. Populated when the STACK_IDS record
+  /// is processed and used to avoid repeated hash lookups.
+  std::vector<unsigned> StackIdToIndex;
+
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
@@ -1199,12 +1204,13 @@ getDecodedHotnessCallEdgeInfo(uint64_t RawFlags) {
   return {Hotness, HasTailCall};
 }
 
+// Deprecated, but still needed to read old bitcode files.
 static void getDecodedRelBFCallEdgeInfo(uint64_t RawFlags, uint64_t &RelBF,
                                         bool &HasTailCall) {
-  static constexpr uint64_t RelBlockFreqMask =
-      (1 << CalleeInfo::RelBlockFreqBits) - 1;
+  static constexpr unsigned RelBlockFreqBits = 28;
+  static constexpr uint64_t RelBlockFreqMask = (1 << RelBlockFreqBits) - 1;
   RelBF = RawFlags & RelBlockFreqMask; // RelBlockFreqBits bits
-  HasTailCall = (RawFlags & (1 << CalleeInfo::RelBlockFreqBits)); // 1 bit
+  HasTailCall = (RawFlags & (1 << RelBlockFreqBits)); // 1 bit
 }
 
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {
@@ -2268,6 +2274,10 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DeadOnReturn;
   case bitc::ATTR_KIND_NO_CREATE_UNDEF_OR_POISON:
     return Attribute::NoCreateUndefOrPoison;
+  case bitc::ATTR_KIND_DENORMAL_FPENV:
+    return Attribute::DenormalFPEnv;
+  case bitc::ATTR_KIND_NOOUTLINE:
+    return Attribute::NoOutline;
   }
 }
 
@@ -2384,6 +2394,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addInAllocaAttr(nullptr);
           else if (Kind == Attribute::UWTable)
             B.addUWTableAttr(UWTableKind::Default);
+          else if (Kind == Attribute::DeadOnReturn)
+            B.addDeadOnReturnAttr(DeadOnReturnInfo());
           else if (Attribute::isEnumAttrKind(Kind))
             B.addAttribute(Kind);
           else
@@ -2402,6 +2414,9 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addDereferenceableAttr(Record[++i]);
           else if (Kind == Attribute::DereferenceableOrNull)
             B.addDereferenceableOrNullAttr(Record[++i]);
+          else if (Kind == Attribute::DeadOnReturn)
+            B.addDeadOnReturnAttr(
+                DeadOnReturnInfo::createFromIntValue(Record[++i]));
           else if (Kind == Attribute::AllocSize)
             B.addAllocSizeAttrFromRawRepr(Record[++i]);
           else if (Kind == Attribute::VScaleRange)
@@ -2436,6 +2451,10 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           else if (Kind == Attribute::NoFPClass)
             B.addNoFPClassAttr(
                 static_cast<FPClassTest>(Record[++i] & fcAllFlags));
+          else if (Kind == Attribute::DenormalFPEnv) {
+            B.addDenormalFPEnvAttr(
+                DenormalFPEnv::createFromIntValue(Record[++i]));
+          }
         } else if (Record[i] == 3 || Record[i] == 4) { // String attribute
           bool HasValue = (Record[i++] == 4);
           SmallString<64> KindStr;
@@ -7500,10 +7519,11 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
     } else if (HasProfile)
       std::tie(Hotness, HasTailCall) =
           getDecodedHotnessCallEdgeInfo(Record[++I]);
+    // Deprecated, but still needed to read old bitcode files.
     else if (HasRelBF)
       getDecodedRelBFCallEdgeInfo(Record[++I], RelBF, HasTailCall);
-    Ret.push_back(FunctionSummary::EdgeTy{
-        Callee, CalleeInfo(Hotness, HasTailCall, RelBF)});
+    Ret.push_back(
+        FunctionSummary::EdgeTy{Callee, CalleeInfo(Hotness, HasTailCall)});
   }
   return Ret;
 }
@@ -7621,8 +7641,7 @@ SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
     StackIdList.reserve(NumStackEntries);
     for (unsigned J = 0; J < NumStackEntries; J++) {
       assert(Record[I] < StackIds.size());
-      StackIdList.push_back(
-          TheIndex.addOrGetStackIdIndex(StackIds[Record[I++]]));
+      StackIdList.push_back(StackIdToIndex[Record[I++]]);
     }
   } else {
     unsigned RadixIndex = Record[I++];
@@ -7645,7 +7664,7 @@ SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
         assert(static_cast<std::make_signed_t<unsigned>>(Elem) >= 0);
       }
       RadixIndex++;
-      StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[Elem]));
+      StackIdList.push_back(StackIdToIndex[Elem]);
     }
   }
   return StackIdList;
@@ -7766,12 +7785,14 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     // FS_PERMODULE_PROFILE: [valueid, flags, instcount, fflags, numrefs,
     //                        numrefs x valueid,
     //                        n x (valueid, hotness+tailcall flags)]
+    // Deprecated, but still needed to read old bitcode files.
     // FS_PERMODULE_RELBF: [valueid, flags, instcount, fflags, numrefs,
     //                      numrefs x valueid,
     //                      n x (valueid, relblockfreq+tailcall)]
     case bitc::FS_PERMODULE:
-    case bitc::FS_PERMODULE_RELBF:
-    case bitc::FS_PERMODULE_PROFILE: {
+    case bitc::FS_PERMODULE_PROFILE:
+    // Deprecated, but still needed to read old bitcode files.
+    case bitc::FS_PERMODULE_RELBF: {
       unsigned ValueID = Record[0];
       uint64_t RawFlags = Record[1];
       unsigned InstCount = Record[2];
@@ -7805,6 +7826,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       SmallVector<ValueInfo, 0> Refs = makeRefList(
           ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       bool HasProfile = (BitCode == bitc::FS_PERMODULE_PROFILE);
+      // Deprecated, but still needed to read old bitcode files.
       bool HasRelBF = (BitCode == bitc::FS_PERMODULE_RELBF);
       SmallVector<FunctionSummary::EdgeTy, 0> Calls = makeCallList(
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
@@ -8105,16 +8127,22 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_STACK_IDS: { // [n x stackid]
       // Save stack ids in the reader to consult when adding stack ids from the
       // lists in the stack node and alloc node entries.
+      assert(StackIds.empty());
       if (Version <= 11) {
         StackIds = ArrayRef<uint64_t>(Record);
-        break;
+      } else {
+        // This is an array of 32-bit fixed-width values, holding each 64-bit
+        // context id as a pair of adjacent (most significant first) 32-bit
+        // words.
+        assert(Record.size() % 2 == 0);
+        StackIds.reserve(Record.size() / 2);
+        for (auto R = Record.begin(); R != Record.end(); R += 2)
+          StackIds.push_back(*R << 32 | *(R + 1));
       }
-      // This is an array of 32-bit fixed-width values, holding each 64-bit
-      // context id as a pair of adjacent (most significant first) 32-bit words.
-      assert(Record.size() % 2 == 0);
-      StackIds.reserve(Record.size() / 2);
-      for (auto R = Record.begin(); R != Record.end(); R += 2)
-        StackIds.push_back(*R << 32 | *(R + 1));
+      assert(StackIdToIndex.empty());
+      StackIdToIndex.reserve(StackIds.size());
+      for (uint64_t StackId : StackIds)
+        StackIdToIndex.push_back(TheIndex.addOrGetStackIdIndex(StackId));
       break;
     }
 
@@ -8128,7 +8156,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       SmallVector<unsigned> StackIdList;
       for (uint64_t R : drop_begin(Record)) {
         assert(R < StackIds.size());
-        StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[R]));
+        StackIdList.push_back(StackIdToIndex[R]);
       }
       ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
       PendingCallsites.push_back(CallsiteInfo({VI, std::move(StackIdList)}));
@@ -8144,8 +8172,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       SmallVector<unsigned> StackIdList;
       for (unsigned J = 0; J < NumStackIds; J++) {
         assert(*RecordIter < StackIds.size());
-        StackIdList.push_back(
-            TheIndex.addOrGetStackIdIndex(StackIds[*RecordIter++]));
+        StackIdList.push_back(StackIdToIndex[*RecordIter++]);
       }
       SmallVector<unsigned> Versions;
       for (unsigned J = 0; J < NumVersions; J++)

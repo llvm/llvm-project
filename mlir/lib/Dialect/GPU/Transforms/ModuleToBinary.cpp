@@ -87,7 +87,7 @@ LogicalResult moduleSerializer(GPUModuleOp op,
     auto target = dyn_cast<gpu::TargetAttrInterface>(targetAttr);
     assert(target &&
            "Target attribute doesn't implements `TargetAttrInterface`.");
-    std::optional<SmallVector<char, 0>> serializedModule =
+    std::optional<SerializedObject> serializedModule =
         target.serializeToObject(op, targetOptions);
     if (!serializedModule) {
       op.emitError("An error happened while serializing the module.");

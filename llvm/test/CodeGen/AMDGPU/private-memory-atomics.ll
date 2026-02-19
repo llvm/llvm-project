@@ -462,8 +462,8 @@ define bfloat @atomicrmw_fadd_private_bf16(ptr addrspace(5) %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    buffer_load_ushort v1, v0, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GCN-NEXT:    v_add_f32_e32 v2, 2.0, v1
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
+; GCN-NEXT:    v_add_f32_e32 v2, 2.0, v2
 ; GCN-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GCN-NEXT:    buffer_store_short v2, v0, s[0:3], 0 offen
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1

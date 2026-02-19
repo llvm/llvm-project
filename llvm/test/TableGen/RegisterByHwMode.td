@@ -15,15 +15,18 @@
 // REGINFO-HEADER-LABEL: // Registers by HwMode
 // REGINFO-HEADER-NEXT: class MCRegister;
 // REGINFO-HEADER-NEXT: namespace MyTarget::RegisterByHwMode {
+// REGINFO-HEADER-EMPTY:
 // REGINFO-HEADER-NEXT: LLVM_READONLY MCRegister getModeCountReg(unsigned HwMode);
 // REGINFO-HEADER-NEXT: LLVM_READONLY MCRegister getNullReg(unsigned HwMode);
 // REGINFO-HEADER-NEXT: LLVM_READONLY MCRegister getPtrRegFor64BitModesOnly(unsigned HwMode);
-// REGINFO-HEADER-NEXT: } // end namespace MyTarget::RegisterByHwMode
 // REGINFO-HEADER-EMPTY:
-// REGINFO-HEADER-NEXT: } // end namespace llvm
+// REGINFO-HEADER-NEXT: } // namespace MyTarget::RegisterByHwMode
+// REGINFO-HEADER-EMPTY:
+// REGINFO-HEADER-NEXT: } // namespace llvm
 
 // REGINFO-MCDESC-LABEL: // Registers by HwMode
 // REGINFO-MCDESC-NEXT: namespace MyTarget::RegisterByHwMode {
+// REGINFO-MCDESC-EMPTY:
 // REGINFO-MCDESC-NEXT: LLVM_READONLY MCRegister getModeCountReg(unsigned HwMode) {
 // REGINFO-MCDESC-NEXT:   switch (HwMode) {
 // REGINFO-MCDESC-NEXT:   case 0: return MyTarget::X0; // DefaultMode
@@ -49,9 +52,10 @@
 // REGINFO-MCDESC-NEXT:   default: llvm_unreachable("Unhandled HwMode for Register PtrRegFor64BitModesOnly");
 // REGINFO-MCDESC-NEXT:   }
 // REGINFO-MCDESC-NEXT: }
-// REGINFO-MCDESC-NEXT: } // end namespace MyTarget::RegisterByHwMode
 // REGINFO-MCDESC-EMPTY:
-// REGINFO-MCDESC-NEXT: } // end namespace llvm
+// REGINFO-MCDESC-NEXT: } // namespace MyTarget::RegisterByHwMode
+// REGINFO-MCDESC-EMPTY:
+// REGINFO-MCDESC-NEXT: } // namespace llvm
 
 // SUBTARGET-LABEL:  enum class MyTargetHwModeBits : unsigned {
 // SUBTARGET-NEXT:    DefaultMode = 0,
@@ -61,8 +65,8 @@
 // SUBTARGET-EMPTY:
 // SUBTARGET-NEXT:    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/YPtr64),
 // SUBTARGET-NEXT:  };
-// SUBTARGET-NEXT:  unsigned getHwModeSet() const override;
-// SUBTARGET-NEXT:  unsigned getHwMode(enum HwModeType type = HwMode_Default) const override;
+// SUBTARGET-NEXT:  unsigned getHwModeSet() const final;
+// SUBTARGET-NEXT:  unsigned getHwMode(enum HwModeType type = HwMode_Default) const final;
 
 // SUBTARGET-LABEL: unsigned MyTargetGenSubtargetInfo::getHwModeSet() const {
 // SUBTARGET{LITERAL}:[[maybe_unused]] const auto *Subtarget =

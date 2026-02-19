@@ -638,8 +638,7 @@ define <1 x i64> @bitreverse_v1i64(<1 x i64> %op) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    fmov x8, d0
 ; NONEON-NOSVE-NEXT:    rbit x8, x8
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x i64> @llvm.bitreverse.v1i64(<1 x i64> %op)

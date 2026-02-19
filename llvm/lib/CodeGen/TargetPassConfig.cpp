@@ -270,13 +270,6 @@ static cl::opt<bool> EnableGCEmptyBlocks(
     "enable-gc-empty-basic-blocks", cl::init(false), cl::Hidden,
     cl::desc("Enable garbage-collecting empty basic blocks"));
 
-// TODO: remove this once all downstream users have migrated to using
-// enable-gc-empty-basic-blocks.
-static cl::alias
-    EnableGCEmptyBlocksAlias("gc-empty-basic-blocks",
-                             cl::desc("Alias for enable-gc-empty-basic-blocks"),
-                             cl::aliasopt(EnableGCEmptyBlocks));
-
 static cl::opt<bool>
     SplitStaticData("split-static-data", cl::Hidden, cl::init(false),
                     cl::desc("Split static data sections into hot and cold "
@@ -992,7 +985,7 @@ void TargetPassConfig::addISelPrepare() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createObjCARCContractPass());
 
-  addPass(createCallBrPass());
+  addPass(createInlineAsmPreparePass());
 
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.

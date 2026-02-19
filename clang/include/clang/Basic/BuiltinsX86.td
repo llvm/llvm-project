@@ -363,7 +363,7 @@ let Features = "sse4.2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>]
   def pcmpestriz128 : X86Builtin<"int(_Vector<16, char>, int, _Vector<16, char>, int, _Constant char)">;
 }
 
-let Features = "crc32", Attributes = [NoThrow, Const] in {
+let Features = "crc32", Attributes = [NoThrow, Const, Constexpr] in {
   def crc32qi : X86Builtin<"unsigned int(unsigned int, unsigned char)">;
   def crc32hi : X86Builtin<"unsigned int(unsigned int, unsigned short)">;
   def crc32si : X86Builtin<"unsigned int(unsigned int, unsigned int)">;

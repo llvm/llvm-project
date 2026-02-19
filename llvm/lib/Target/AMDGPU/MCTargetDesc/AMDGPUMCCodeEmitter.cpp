@@ -102,9 +102,6 @@ private:
 
   APInt postEncodeVOPCX(const MCInst &MI, APInt EncodedValue,
                         const MCSubtargetInfo &STI) const;
-
-  APInt postEncodeLdScale(const MCInst &MI, APInt EncodedValue,
-                          const MCSubtargetInfo &STI) const;
 };
 
 } // end anonymous namespace
@@ -351,6 +348,14 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     return AMDGPU::getInlineEncodingV2F16(static_cast<uint32_t>(Imm))
+        .value_or(255);
+
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
+    // V_PK_FMAC_F16 has different inline constant behavior on pre-GFX11 vs
+    // GFX11+: pre-GFX11 produces (f16, 0), GFX11+ duplicates f16 to both
+    // halves.
+    return AMDGPU::getPKFMACF16InlineEncoding(static_cast<uint32_t>(Imm),
+                                              AMDGPU::isGFX11Plus(STI))
         .value_or(255);
 
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
@@ -757,16 +762,6 @@ APInt AMDGPUMCCodeEmitter::postEncodeVOPCX(const MCInst &MI, APInt EncodedValue,
   EncodedValue |= MRI.getEncodingValue(AMDGPU::EXEC_LO) &
                   AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
   return postEncodeVOP3<true, true, false>(MI, EncodedValue, STI);
-}
-
-APInt AMDGPUMCCodeEmitter::postEncodeLdScale(const MCInst &MI,
-                                             APInt EncodedValue,
-                                             const MCSubtargetInfo &STI) const {
-  // Set unused scale_src2 field to VGPR0 to avoid hardware conservatively
-  // assuming the instruction reads SGPRs.
-  constexpr uint64_t Vgpr0 = 0x100;
-  EncodedValue |= Vgpr0 << 50;
-  return EncodedValue;
 }
 
 #include "AMDGPUGenMCCodeEmitter.inc"

@@ -645,12 +645,10 @@ kernel void KernelLargeTwoMember(struct LargeStructTwoMember u) {
 // AMDGCN20-NEXT:  [[ENTRY:.*:]]
 // AMDGCN20-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_MAT4X4:%.*]], align 4, addrspace(5)
 // AMDGCN20-NEXT:    [[IN:%.*]] = alloca [[STRUCT_MAT3X3:%.*]], align 4, addrspace(5)
-// AMDGCN20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN20-NEXT:    [[IN1:%.*]] = addrspacecast ptr addrspace(5) [[IN]] to ptr
-// AMDGCN20-NEXT:    [[RETVAL_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[RETVAL_ASCAST]] to ptr addrspace(5)
 // AMDGCN20-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_MAT3X3]], ptr [[IN1]], i32 0, i32 0
 // AMDGCN20-NEXT:    store [9 x i32] [[IN_COERCE]], ptr [[COERCE_DIVE]], align 4
-// AMDGCN20-NEXT:    [[TMP0:%.*]] = load [[STRUCT_MAT4X4]], ptr [[RETVAL_ASCAST]], align 4
+// AMDGCN20-NEXT:    [[TMP0:%.*]] = load [[STRUCT_MAT4X4]], ptr addrspace(5) [[RETVAL]], align 4
 // AMDGCN20-NEXT:    ret [[STRUCT_MAT4X4]] [[TMP0]]
 //
 //
@@ -1587,6 +1585,15 @@ kernel void KernelLargeTwoMember(struct LargeStructTwoMember u) {
 // AMDGCN30-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_LARGESTRUCTONEMEMBER]], ptr addrspace(5) [[U]], i32 0, i32 0
 // AMDGCN30-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [100 x <2 x i32>], ptr addrspace(5) [[X]], i64 0, i64 0
 // AMDGCN30-NEXT:    store <2 x i32> [[TMP1]], ptr addrspace(5) [[ARRAYIDX]], align 8
+// AMDGCN30-NEXT:    ret void
+//
+//
+// AMDGCN30-LABEL: define dso_local void @test_indirect_arg_globl(
+// AMDGCN30-SAME: ) #[[ATTR0]] {
+// AMDGCN30-NEXT:  [[ENTRY:.*:]]
+// AMDGCN30-NEXT:    [[BYVAL_TEMP:%.*]] = alloca [[STRUCT_LARGESTRUCTONEMEMBER:%.*]], align 8, addrspace(5)
+// AMDGCN30-NEXT:    call void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) align 8 [[BYVAL_TEMP]], ptr addrspace(1) align 8 @g_s, i64 800, i1 false)
+// AMDGCN30-NEXT:    call void @FuncOneLargeMember(ptr addrspace(5) noundef byref([[STRUCT_LARGESTRUCTONEMEMBER]]) align 8 [[BYVAL_TEMP]]) #[[ATTR4]]
 // AMDGCN30-NEXT:    ret void
 //
 //

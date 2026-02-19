@@ -49,8 +49,8 @@ public:
       const SmallVectorImpl<SDValue> &OutVals,
       const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG& DAG) const;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
   bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
@@ -485,8 +485,11 @@ private:
   SDValue LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPred32ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxPartialReduceMLA(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxLoad(SDValue Op, SelectionDAG &DAG) const;
 
   VectorPair SplitVectorOp(SDValue Op, SelectionDAG &DAG) const;
 
@@ -517,10 +520,14 @@ private:
   SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
   SDValue combineConcatVectorsBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
       const;
-  SDValue combineVectorShuffleBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
-      const;
-
-  SDValue PerformHvxDAGCombine(SDNode * N, DAGCombinerInfo & DCI) const;
+  SDValue expandVecReduceAdd(SDNode *N, SelectionDAG &DAG) const;
+  SDValue createExtendingPartialReduceMLA(
+      unsigned Opcode, EVT AccEltType, unsigned AccNumElements, EVT InputType,
+      const SDValue &A, const SDValue &B, unsigned &RemainingReductionRatio,
+      const SDLoc &DL, SelectionDAG &DAG) const;
+  SDValue splitVecReduceAdd(SDNode *N, SelectionDAG &DAG) const;
+  SDValue splitExtendingPartialReduceMLA(SDNode *N, SelectionDAG &DAG) const;
+  SDValue PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 };
 
 } // end namespace llvm

@@ -39,9 +39,10 @@ public:
 };
 
 /// This class implements a mechanism to disable passes and individual
-/// optimizations at compile time based on a command line option
-/// (-opt-bisect) in order to perform a bisecting search for
-/// optimization-related problems.
+/// optimizations at compile time based on two command line options
+/// (-opt-bisect and -opt-disable) in order to perform a bisecting
+/// search for optimization-related problems, and/or disable individual
+/// passes or combinations thereof.
 class LLVM_ABI OptBisect : public OptPassGate {
 public:
   /// Default constructor. Initializes the state to "disabled". The bisection
@@ -67,7 +68,9 @@ public:
                      StringRef IRDescription) const override;
 
   /// isEnabled() should return true before calling shouldRunPass().
-  bool isEnabled() const override { return !BisectIntervals.empty(); }
+  bool isEnabled() const override {
+    return !BisectIntervals.empty() || !DisabledPasses.empty();
+  }
 
   /// Set intervals directly from an IntervalList.
   void setIntervals(IntegerInclusiveIntervalUtils::IntervalList Intervals) {
@@ -80,38 +83,14 @@ public:
     LastBisectNum = 0;
   }
 
+  /// Parses the command line argument to extract the names of the passes
+  /// to be disabled. Multiple pass names can be provided with comma separation.
+  void setDisabled(StringRef Pass) { DisabledPasses.insert(Pass); }
+
 private:
   mutable int LastBisectNum = 0;
   IntegerInclusiveIntervalUtils::IntervalList BisectIntervals;
-};
 
-/// This class implements a mechanism to disable passes and individual
-/// optimizations at compile time based on a command line option
-/// (-opt-disable) in order to study how single transformations, or
-/// combinations thereof, affect the IR.
-class LLVM_ABI OptDisable : public OptPassGate {
-public:
-  /// Checks the pass name to determine if the specified pass should run.
-  ///
-  /// It returns true if the pass should run, i.e. if its name is was
-  /// not provided via command line.
-  /// If -opt-disable-enable-verbosity is given, the method prints the
-  /// name of the pass, and whether or not the pass will be executed.
-  ///
-  /// Most passes should not call this routine directly. Instead, it is called
-  /// through helper routines provided by the base classes of the pass. For
-  /// instance, function passes should call FunctionPass::skipFunction().
-  bool shouldRunPass(StringRef PassName,
-                     StringRef IRDescription) const override;
-
-  /// Parses the command line argument to extract the names of the passes
-  /// to be disabled. Multiple pass names can be provided with comma separation.
-  void setDisabled(StringRef Pass);
-
-  /// isEnabled() should return true before calling shouldRunPass().
-  bool isEnabled() const override { return !DisabledPasses.empty(); }
-
-private:
   StringSet<> DisabledPasses = {};
 };
 

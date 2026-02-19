@@ -1011,7 +1011,7 @@ define i32 @dont_sink_calls(ptr %func_1_a) {
 ; CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca <16 x i16>, align 16
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[BYVAL_TEMP]])
 ; CHECK-NEXT:    store <16 x i16> zeroinitializer, ptr [[BYVAL_TEMP]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @backsmith_pure_3(ptr dead_on_return nonnull [[BYVAL_TEMP]], <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 10, i8 0, i8 0>, i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @backsmith_pure_3(ptr nonnull dead_on_return [[BYVAL_TEMP]], <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 10, i8 0, i8 0>, i32 0)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[BYVAL_TEMP]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[FUNC_1_A:%.*]], align 8
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i64 [[TMP0]], 0

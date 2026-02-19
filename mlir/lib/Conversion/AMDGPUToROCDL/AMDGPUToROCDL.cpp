@@ -1402,14 +1402,16 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
     if (isScaled) {
       Value zero = createI32Constant(rewriter, loc, 0);
       auto [_scaledName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
-      loweredOp.addOperands({createI32Constant(rewriter, loc, aTypeCode),
-                             createI32Constant(rewriter, loc, bTypeCode),
-                             /*scale A byte=*/zero, /*scale A=*/zero,
-                             /*scale B byte=*/zero, /*scale B=*/zero});
+      loweredOp.addOperands({/*scale A=*/zero, /*scale B=*/zero});
+      loweredOp.addAttributes({{"cbsz", rewriter.getI32IntegerAttr(aTypeCode)},
+                               {"blgp", rewriter.getI32IntegerAttr(bTypeCode)},
+                               {"opselA", rewriter.getI32IntegerAttr(0)},
+                               {"opselB", rewriter.getI32IntegerAttr(0)}});
     } else {
-      loweredOp.addOperands({createI32Constant(rewriter, loc, op.getCbsz()),
-                             createI32Constant(rewriter, loc, op.getAbid()),
-                             createI32Constant(rewriter, loc, getBlgpField)});
+      loweredOp.addAttributes(
+          {{"cbsz", rewriter.getI32IntegerAttr(op.getCbsz())},
+           {"abid", rewriter.getI32IntegerAttr(op.getAbid())},
+           {"blgp", rewriter.getI32IntegerAttr(getBlgpField)}});
     };
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     if (outType != intrinsicOutType)
@@ -1446,19 +1448,17 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
         {packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceA()),
          packSmallFloatVectorOperand(rewriter, loc, adaptor.getSourceB()),
          adaptor.getDestC()});
-    Value scalesIdxA =
-        createI32Constant(rewriter, loc, adaptor.getScalesIdxA());
-    Value scalesIdxB =
-        createI32Constant(rewriter, loc, adaptor.getScalesIdxB());
     loweredOp.addOperands(
-        {createI32Constant(rewriter, loc, aTypeCode),
-         createI32Constant(rewriter, loc, bTypeCode),
-         /*scales idx A=*/scalesIdxA,
-         /*scales A*/
+        {/*scales A*/
          castScaleOperand(rewriter, loc, adaptor.getScalesA()),
-         /*scales idx B=*/scalesIdxB,
          /*scales B*/
          castScaleOperand(rewriter, loc, adaptor.getScalesB())});
+    loweredOp.addAttributes(
+        {{"cbsz", rewriter.getI32IntegerAttr(aTypeCode)},
+         {"blgp", rewriter.getI32IntegerAttr(bTypeCode)},
+         {"opselA", rewriter.getI32IntegerAttr(adaptor.getScalesIdxA())},
+         {"opselB", rewriter.getI32IntegerAttr(adaptor.getScalesIdxB())}});
+
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     rewriter.replaceOp(op, lowered);
     return success();
@@ -1502,9 +1502,10 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
 
     OperationState loweredOp(loc, maybeIntrinsic.value());
     loweredOp.addTypes(outType);
-    loweredOp.addOperands({a, b, c, sparseIdx,
-                           createI32Constant(rewriter, loc, op.getCbsz()),
-                           createI32Constant(rewriter, loc, op.getAbid())});
+    loweredOp.addOperands({a, b, c, sparseIdx});
+    loweredOp.addAttributes(
+        {{"cbsz", rewriter.getI32IntegerAttr(op.getCbsz())},
+         {"abid", rewriter.getI32IntegerAttr(op.getAbid())}});
     Value lowered = rewriter.create(loweredOp)->getResult(0);
     rewriter.replaceOp(op, lowered);
     return success();
@@ -1816,11 +1817,19 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
         getStridedElementPtr(rewriter, loc, dstMemRefType, adaptor.getDst(),
                              (adaptor.getDstIndices()));
 
-    rewriter.replaceOpWithNewOp<ROCDL::LoadToLDSOp>(
-        op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
-        /*offset=*/rewriter.getI32IntegerAttr(0),
-        /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
-        ArrayAttr{});
+    if (op.getAsync()) {
+      rewriter.replaceOpWithNewOp<ROCDL::LoadAsyncToLDSOp>(
+          op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
+          /*offset=*/rewriter.getI32IntegerAttr(0),
+          /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+    } else {
+      rewriter.replaceOpWithNewOp<ROCDL::LoadToLDSOp>(
+          op, srcPtr, dstPtr, rewriter.getI32IntegerAttr(loadWidth),
+          /*offset=*/rewriter.getI32IntegerAttr(0),
+          /*aux=*/rewriter.getI32IntegerAttr(0), ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+    }
 
     return success();
   }
@@ -2600,6 +2609,257 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// In-LDS Barrier Operations
+//===----------------------------------------------------------------------===//
+
+// Bit layout of ds_barrier_state (as i64):
+// [63:32] init count (32 bits)
+// [31:29] phase (3 bits)
+// [28:0] pending count (29 bits)
+constexpr int32_t kDsBarrierPendingCountBitWidth = 29;
+constexpr int32_t kDsBarrierPhasePos = kDsBarrierPendingCountBitWidth;
+constexpr int32_t kDsBarrierInitCountPos = 32;
+constexpr int32_t kDsBarrierPendingCountMask =
+    (1 << kDsBarrierPendingCountBitWidth) - 1;
+
+struct DsBarrierInitOpLowering
+    : public ConvertOpToLLVMPattern<DsBarrierInitOp> {
+  Chipset chipset;
+
+  DsBarrierInitOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<DsBarrierInitOp>(converter), chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(DsBarrierInitOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("only supported on gfx1250+");
+
+    Location loc = op.getLoc();
+    Type i64 = rewriter.getI64Type();
+
+    MemRefType memrefType = cast<MemRefType>(op.getBase().getType());
+    Value ptr = getStridedElementPtr(rewriter, loc, memrefType,
+                                     adaptor.getBase(), adaptor.getIndices());
+
+    // Note: We give participants as the number of arrivals that have to occur
+    // before the phase changes. Hardware changes the phase when updating the
+    // pending count would underflow, so we subtract 1 to get the behavior we're
+    // looking for.
+    Value initCount =
+        LLVM::SubOp::create(rewriter, loc, adaptor.getParticipants(),
+                            createI32Constant(rewriter, loc, 1));
+
+    // Just a bit of paranoia, but this also allows for configurable width if
+    // that becomes a thing.
+    Value countMask =
+        createI32Constant(rewriter, loc, kDsBarrierPendingCountMask);
+    Value maskedCount32 =
+        LLVM::AndOp::create(rewriter, loc, initCount, countMask);
+    Value maskedCount = LLVM::ZExtOp::create(rewriter, loc, i64, maskedCount32);
+
+    Value initCountShifted = LLVM::ShlOp::create(
+        rewriter, loc, maskedCount,
+        createI64Constant(rewriter, loc, kDsBarrierInitCountPos));
+    Value barrierState =
+        LLVM::OrOp::create(rewriter, loc, initCountShifted, maskedCount);
+
+    LLVM::StoreOp::create(
+        rewriter, loc, barrierState, ptr, /*alignment=*/8, /*isVolatile=*/false,
+        /*isNonTemporal=*/false,
+        /*isInvariantGroup=*/false, LLVM::AtomicOrdering::release,
+        /*syncscope=*/"workgroup");
+
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+struct DsBarrierPollStateOpLowering
+    : public ConvertOpToLLVMPattern<DsBarrierPollStateOp> {
+  Chipset chipset;
+
+  DsBarrierPollStateOpLowering(const LLVMTypeConverter &converter,
+                               Chipset chipset)
+      : ConvertOpToLLVMPattern<DsBarrierPollStateOp>(converter),
+        chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(DsBarrierPollStateOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("only supported on gfx1250+");
+
+    Location loc = op.getLoc();
+    Type i64 = rewriter.getI64Type();
+
+    MemRefType memrefType = cast<MemRefType>(op.getBase().getType());
+    Value ptr = getStridedElementPtr(rewriter, loc, memrefType,
+                                     adaptor.getBase(), adaptor.getIndices());
+
+    // Atomic load with workgroup scope and acquire ordering should be what
+    // we're looking for.
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
+        op, i64, ptr, /*alignment=*/8, /*volatile_=*/false,
+        /*nontemporal=*/false, /*invariant=*/false,
+        /*invariantGroup=*/false, LLVM::AtomicOrdering::acquire,
+        /*syncscope=*/"workgroup");
+    return success();
+  }
+};
+
+struct DsAsyncBarrierArriveOpLowering
+    : public ConvertOpToLLVMPattern<DsAsyncBarrierArriveOp> {
+  Chipset chipset;
+
+  DsAsyncBarrierArriveOpLowering(const LLVMTypeConverter &converter,
+                                 Chipset chipset)
+      : ConvertOpToLLVMPattern<DsAsyncBarrierArriveOp>(converter),
+        chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(DsAsyncBarrierArriveOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("only supported on gfx1250+");
+
+    Location loc = op.getLoc();
+
+    MemRefType memrefType = cast<MemRefType>(op.getBase().getType());
+    Value ptr = getStridedElementPtr(rewriter, loc, memrefType,
+                                     adaptor.getBase(), adaptor.getIndices());
+
+    rewriter.replaceOpWithNewOp<ROCDL::DsAtomicAsyncBarrierArriveOp>(
+        op, ptr, /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
+        /*tbaa=*/nullptr);
+    return success();
+  }
+};
+
+struct DsBarrierArriveOpLowering
+    : public ConvertOpToLLVMPattern<DsBarrierArriveOp> {
+  Chipset chipset;
+
+  DsBarrierArriveOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<DsBarrierArriveOp>(converter), chipset(chipset) {
+  }
+
+  LogicalResult
+  matchAndRewrite(DsBarrierArriveOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("only supported on gfx1250+");
+
+    Location loc = op.getLoc();
+    Type i64 = rewriter.getI64Type();
+
+    MemRefType memrefType = cast<MemRefType>(op.getBase().getType());
+    Value ptr = getStridedElementPtr(rewriter, loc, memrefType,
+                                     adaptor.getBase(), adaptor.getIndices());
+
+    rewriter.replaceOpWithNewOp<ROCDL::DsAtomicBarrierArriveRtnOp>(
+        op, i64, ptr, adaptor.getCount(), /*alias_scopes=*/nullptr,
+        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+    return success();
+  }
+};
+
+struct DsBarrierStatePhaseOpLowering
+    : public ConvertOpToLLVMPattern<DsBarrierStatePhaseOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(DsBarrierStatePhaseOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+
+    Value state = adaptor.getState();
+
+    Value noInitCount = LLVM::TruncOp::create(rewriter, loc, i32, state);
+    Value phase = LLVM::LShrOp::create(
+        rewriter, loc, noInitCount,
+        createI32Constant(rewriter, loc, kDsBarrierPhasePos));
+
+    rewriter.replaceOp(op, phase);
+    return success();
+  }
+};
+
+struct DsBarrierStatePendingCountOpLowering
+    : public ConvertOpToLLVMPattern<DsBarrierStatePendingCountOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(DsBarrierStatePendingCountOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+
+    Value state = adaptor.getState();
+
+    Value noInitCount = LLVM::TruncOp::create(rewriter, loc, i32, state);
+    Value pendingCount = LLVM::AndOp::create(
+        rewriter, loc, noInitCount,
+        createI32Constant(rewriter, loc,
+                          static_cast<uint32_t>(kDsBarrierPendingCountMask)));
+
+    rewriter.replaceOp(op, pendingCount);
+    return success();
+  }
+};
+
+struct DsBarrierStateInitCountOpLowering
+    : public ConvertOpToLLVMPattern<DsBarrierStateInitCountOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(DsBarrierStateInitCountOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Type i32 = rewriter.getI32Type();
+
+    Value state = adaptor.getState();
+
+    Value initCountI64 = LLVM::LShrOp::create(
+        rewriter, loc, state,
+        createI64Constant(rewriter, loc, kDsBarrierInitCountPos));
+    Value initCount = LLVM::TruncOp::create(rewriter, loc, i32, initCountI64);
+
+    rewriter.replaceOp(op, initCount);
+    return success();
+  }
+};
+
+struct DsBarrierStatePhaseParityLowering
+    : public ConvertOpToLLVMPattern<DsBarrierStatePhaseParity> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(DsBarrierStatePhaseParity op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Type i1 = rewriter.getI1Type();
+
+    Value state = adaptor.getState();
+
+    Value noInitCount =
+        LLVM::TruncOp::create(rewriter, loc, rewriter.getI32Type(), state);
+    Value phase = LLVM::LShrOp::create(
+        rewriter, loc, noInitCount,
+        createI32Constant(rewriter, loc, kDsBarrierPhasePos));
+    Value parity = LLVM::TruncOp::create(rewriter, loc, i1, phase);
+
+    rewriter.replaceOp(op, parity);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// Tensor Data Mover (TDM)
+//===----------------------------------------------------------------------===//
 
 static Value setValueAtOffset(ConversionPatternRewriter &rewriter, Location loc,
                               Value accumulator, Value value, int64_t shift) {
@@ -3504,6 +3764,9 @@ void mlir::populateAMDGPUTypeAndAttributeConversions(
         }
         return TypeConverter::AttributeConversionResult::abort();
       });
+  typeConverter.addConversion([&](DsBarrierStateType type) -> Type {
+    return IntegerType::get(type.getContext(), 64);
+  });
   typeConverter.addConversion([&](TDMBaseType type) -> Type {
     Type i32 = IntegerType::get(type.getContext(), 32);
     return typeConverter.convertType(VectorType::get(4, i32));
@@ -3573,7 +3836,12 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            AMDGPUTensorLoadStoreOpLowering<TensorLoadToLDSOp,
                                            ROCDL::TensorLoadToLDSOp>,
            AMDGPUTensorLoadStoreOpLowering<TensorStoreFromLDSOp,
-                                           ROCDL::TensorStoreFromLDSOp>>(
-          converter, chipset);
-  patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
+                                           ROCDL::TensorStoreFromLDSOp>,
+           DsBarrierInitOpLowering, DsBarrierPollStateOpLowering,
+           DsAsyncBarrierArriveOpLowering, DsBarrierArriveOpLowering>(converter,
+                                                                      chipset);
+  patterns.add<AMDGPUSwizzleBitModeLowering, DsBarrierStatePhaseOpLowering,
+               DsBarrierStatePendingCountOpLowering,
+               DsBarrierStateInitCountOpLowering,
+               DsBarrierStatePhaseParityLowering>(converter);
 }

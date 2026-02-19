@@ -19,8 +19,11 @@ A list of non-standard directives supported by Flang
   incompatible in type (T), kind (K), rank (R), CUDA device (D), or managed (M)
   status. The letter (A) is a shorthand for (TKRDM), and is the default when no
   letters appear. The letter (C) checks for contiguity, for example allowing an
-  element of an assumed-shape array to be passed as a dummy argument. The
-  letter (P) ignores pointer and allocatable matching, so that one can pass an
+  element of an assumed-shape array to be passed as a dummy argument. It also
+  specifies that dummy arguments passed by descriptor should not have their
+  descriptor copied or reboxed, allowing the original descriptor to be passed
+  directly even if attributes like ALLOCATABLE or POINTER don't match exactly.
+  The letter (P) ignores pointer and allocatable matching, so that one can pass an
   allocatable array to routine with pointer array argument and vice versa. For
   example, if one wanted to call a "set all bytes to zero" utility that could
   be applied to arrays of any type or rank:
@@ -48,6 +51,9 @@ A list of non-standard directives supported by Flang
   be passed in registers, so it's not clear how lowering should handle this
   case. (Passing scalar actual argument to `ignore_tkr(R)` dummy argument
   that is a scalar with `VALUE` attribute is allowed.)
+* `!dir$ ivdep` asserts that there are no vector dependencies in the following loop,
+  allowing the compiler to vectorize or parallelize the loop if it chooses to do so
+  based on its cost model. It does not force vectorization.
 * `!dir$ assume_aligned desginator:alignment`, where designator is a variable,
   maybe with array indices, and alignment is what the compiler should assume the
   alignment to be. E.g A:64 or B(1,1,1):128. The alignment should be a power of 2,

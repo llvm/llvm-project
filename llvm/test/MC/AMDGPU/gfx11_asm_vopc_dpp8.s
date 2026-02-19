@@ -2144,25 +2144,25 @@ v_cmp_tru_f16 vcc_lo, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 // W32: v_cmp_t_f16 vcc_lo, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x1e,0x7c,0x01,0x77,0x39,0x05]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_tru_f16 vcc_lo, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
-// W32: v_cmp_t_f16 vcc_lo, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0x1e,0x7c,0x01,0x77,0x39,0x05]
+v_cmp_tru_f16 vcc_lo, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1
+// W32: v_cmp_t_f16 vcc_lo, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0x1e,0x7c,0x01,0x77,0x39,0x05]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
-v_cmp_tru_f16 vcc_lo, v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
-// W32: v_cmp_t_f16 vcc_lo, v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0x1e,0x7c,0x7f,0x00,0x00,0x00]
+v_cmp_tru_f16 vcc_lo, v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
+// W32: v_cmp_t_f16 vcc_lo, v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0x1e,0x7c,0x7f,0x00,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cmp_tru_f16 vcc, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cmp_t_f16 vcc, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x1e,0x7c,0x01,0x77,0x39,0x05]
 
-v_cmp_tru_f16 vcc, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
+v_cmp_tru_f16 vcc, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_t_f16 vcc, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0x1e,0x7c,0x01,0x77,0x39,0x05]
+// W64: v_cmp_t_f16 vcc, v1.l, v2.l dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0xea,0x04,0x1e,0x7c,0x01,0x77,0x39,0x05]
 
-v_cmp_tru_f16 vcc, v127, v127 dpp8:[0,0,0,0,0,0,0,0] fi:0
+v_cmp_tru_f16 vcc, v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] fi:0
 // W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
-// W64: v_cmp_t_f16 vcc, v127, v127 dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0x1e,0x7c,0x7f,0x00,0x00,0x00]
+// W64: v_cmp_t_f16 vcc, v127.l, v127.l dpp8:[0,0,0,0,0,0,0,0] ; encoding: [0xe9,0xfe,0x1e,0x7c,0x7f,0x00,0x00,0x00]
 
 v_cmp_tru_f32 vcc_lo, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // W32: v_cmp_t_f32 vcc_lo, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x04,0x3e,0x7c,0x01,0x77,0x39,0x05]

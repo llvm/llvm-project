@@ -1270,7 +1270,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_shift",
-            "values": {"c++20": 201806},
+            "values": {"c++20": 201806, "c++23": 202202},
             "headers": ["algorithm"],
         },
         {

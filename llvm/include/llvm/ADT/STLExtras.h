@@ -219,13 +219,13 @@ public:
   template <typename... Pn,
             std::enable_if_t<std::is_invocable_v<T, Pn...>, int> = 0>
   decltype(auto) operator()(Pn &&...Params) {
-    return (*Obj)(std::forward<Pn>(Params)...);
+    return std::invoke(*Obj, std::forward<Pn>(Params)...);
   }
 
   template <typename... Pn,
             std::enable_if_t<std::is_invocable_v<T const, Pn...>, int> = 0>
   decltype(auto) operator()(Pn &&...Params) const {
-    return (*Obj)(std::forward<Pn>(Params)...);
+    return std::invoke(*Obj, std::forward<Pn>(Params)...);
   }
 
   bool valid() const { return Obj != std::nullopt; }
@@ -330,7 +330,7 @@ template <typename T> auto drop_end(T &&RangeOrContainer, size_t N = 1) {
 
 template <typename ItTy, typename FuncTy,
           typename ReferenceTy =
-              decltype(std::declval<FuncTy>()(*std::declval<ItTy>()))>
+              std::invoke_result_t<FuncTy, decltype(*std::declval<ItTy>())>>
 class mapped_iterator
     : public iterator_adaptor_base<
           mapped_iterator<ItTy, FuncTy>, ItTy,
@@ -360,6 +360,8 @@ inline mapped_iterator<ItTy, FuncTy> map_iterator(ItTy I, FuncTy F) {
   return mapped_iterator<ItTy, FuncTy>(std::move(I), std::move(F));
 }
 
+/// Return a range that applies \p F to the elements of \p C. \p F can be a
+/// function, lambda, or member pointer.
 template <class ContainerTy, class FuncTy>
 auto map_range(ContainerTy &&C, FuncTy F) {
   return make_range(map_iterator(adl_begin(C), F), map_iterator(adl_end(C), F));
@@ -1975,6 +1977,14 @@ template <typename R> bool is_sorted(R &&Range) {
   return std::is_sorted(adl_begin(Range), adl_end(Range));
 }
 
+/// Check if elements in a range \p R are sorted with respect to a comparator \p
+/// C. constexpr allows use in static_assert
+/// TODO: Remove and use std::is_sorted once upgraded to Cpp20
+template <typename R, typename Cmp = std::less<>>
+constexpr bool is_sorted_constexpr(R &&Range, Cmp C = Cmp{}) {
+  return llvm::is_sorted_constexpr(adl_begin(Range), adl_end(Range), C);
+}
+
 /// Provide wrappers to std::includes which take ranges instead of having to
 /// pass begin/end explicitly.
 /// This function checks if the sorted range \p R2 is a subsequence of the
@@ -2682,17 +2692,6 @@ template <typename T> using has_sizeof = decltype(sizeof(T));
 template <typename T>
 constexpr bool is_incomplete_v = !is_detected<detail::has_sizeof, T>::value;
 
-// Detect types with equality comparison operators.
-namespace detail {
-template <typename T, typename U>
-using has_equality_comparison =
-    decltype(std::declval<const T &>() == std::declval<const U &>());
-} // namespace detail
-
-/// Detects when type `const T` can be compared for equality with `const U`.
-template <typename T, typename U = T>
-constexpr bool has_equality_comparison_v =
-    is_detected<detail::has_equality_comparison, T, U>::value;
 } // end namespace llvm
 
 namespace std {
