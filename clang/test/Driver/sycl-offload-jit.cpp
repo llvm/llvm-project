@@ -31,13 +31,13 @@
 
 // Check if path to libsycl.so is passed to clang-linker-wrapper tool by default for SYCL compilation.
 // The test also checks if SYCL header include paths are added to the SYCL host and device compilation.
-// RUN: DRIVER_DIR="$(echo %clang | sed 's|/[^/]*$||; s|.*/||')"
-// RUN: echo DRIVER_DIR=$DRIVER_DIR
+// RUN: CLANG_DIR=%clang_dir
+// RUN: echo CLANG_DIR=$CLANG_DIR
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1    \
-// RUN:   | FileCheck -DDRIVER_DIR=${DRIVER_DIR} -check-prefixes=CHECK-LSYCL,CHECK-SYCL-HEADERS-HOST,CHECK-SYCL-HEADERS-DEVICE %s
-// CHECK-SYCL-HEADERS-DEVICE: "-fsycl-is-device"{{.*}} "-internal-isystem" "{{.*}}[[DRIVER_DIR]]{{[/\\]+}}..{{[/\\]+}}include"
-// CHECK-SYCL-HEADERS-HOST: "-fsycl-is-host"{{.*}} "-internal-isystem" "{{.*}}[[DRIVER_DIR]]{{[/\\]+}}..{{[/\\]+}}include"
-// CHECK-LSYCL: clang-linker-wrapper{{.*}} "{{.*}}[[DRIVER_DIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}libsycl.so"
+// RUN:   | FileCheck -DCLANG_DIR=${CLANG_DIR} -check-prefixes=CHECK-LSYCL,CHECK-SYCL-HEADERS-HOST,CHECK-SYCL-HEADERS-DEVICE %s
+// CHECK-SYCL-HEADERS-DEVICE: "-fsycl-is-device"{{.*}} "-internal-isystem" "{{.*}}[[CLANG_DIR]]{{[/\\]+}}..{{[/\\]+}}include"
+// CHECK-SYCL-HEADERS-HOST: "-fsycl-is-host"{{.*}} "-internal-isystem" "{{.*}}[[CLANG_DIR]]{{[/\\]+}}..{{[/\\]+}}include"
+// CHECK-LSYCL: clang-linker-wrapper{{.*}} "{{.*}}[[CLANG_DIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}libsycl.so"
 
 /// Check -fsycl-is-device is passed when compiling for the device.
 /// Check -fsycl-is-host is passed when compiling for host.
