@@ -454,8 +454,8 @@ public:
     int r = slopeShape.rank();
     BitVector splats(r);
     for (int i = 0; i < r; ++i) {
-      if (Constant *constSlope = dyn_cast<Constant>(getSlope(i))) {
-        if (slopeShape[i] > 1 && constSlope->isZeroValue()) {
+      if (auto *ConstSlope = dyn_cast<ConstantInt>(getSlope(i))) {
+        if (slopeShape[i] > 1 && ConstSlope->isZero()) {
           splats.set(i);
         }
       }

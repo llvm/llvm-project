@@ -822,9 +822,9 @@ bool NDLoadStoreFactory::analyzeCoalescing(Type *ElementTy,
       // stride is unchanged.
       // keep trying to match the same slice shape with the next stride
       continue;
-    if (Constant *ConstSlope = dyn_cast<Constant>(AddressSeries.getSlope(i))) {
+    if (auto *ConstSlope = dyn_cast<ConstantInt>(AddressSeries.getSlope(i))) {
       // Skip trivial and broadcast values
-      assert(!ConstSlope->isZeroValue() &&
+      assert(!ConstSlope->isZero() &&
              "Unexpected splat/broadcast in linear series");
       const APInt &ApSlope = ConstSlope->getUniqueInteger();
       const APInt ApSliceSize(ApSlope.getBitWidth(), SliceSize[k],
@@ -7099,8 +7099,8 @@ bool Ripple::simplifyFunction() {
 
 bool LinearSeries::hasZeroSlopes() const {
   return getSlopeShape().isScalar() || all_of(slopes(), [](Value *V) {
-           if (Constant *C = dyn_cast<Constant>(V))
-             return C->isZeroValue();
+           if (auto *C = dyn_cast<ConstantInt>(V))
+             return C->isZero();
            return false;
          });
 }
