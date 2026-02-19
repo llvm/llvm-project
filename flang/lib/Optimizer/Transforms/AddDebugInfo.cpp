@@ -517,13 +517,11 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::pure>(funcOp))
     subprogramFlags = subprogramFlags | mlir::LLVM::DISubprogramFlags::Pure;
 
-  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::elemental>(
-          funcOp))
+  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::elemental>(funcOp))
     subprogramFlags =
         subprogramFlags | mlir::LLVM::DISubprogramFlags::Elemental;
 
-  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::recursive>(
-          funcOp))
+  if (fir::hasProcedureAttr<fir::FortranProcedureFlagsEnum::recursive>(funcOp))
     subprogramFlags =
         subprogramFlags | mlir::LLVM::DISubprogramFlags::Recursive;
 
