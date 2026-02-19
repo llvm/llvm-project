@@ -11,14 +11,12 @@ target triple = "aarch64-apple-ios"
 define void @multiply(ptr %A, ptr %B, ptr %C) !prof !0 {
 ; CHECK-LABEL: @multiply(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint ptr [[C:%.*]] to i64
-; CHECK-NEXT:    [[STORE_END:%.*]] = add nuw nsw i64 [[STORE_BEGIN]], 128
-; CHECK-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint ptr [[A:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[STORE_END]], [[LOAD_BEGIN]]
+; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr inbounds nuw i8, ptr [[C:%.*]], i64 128
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[A:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       alias_cont:
-; CHECK-NEXT:    [[LOAD_END:%.*]] = add nuw nsw i64 [[LOAD_BEGIN]], 128
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
+; CHECK-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 128
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]], !prof [[PROF1]]
 ; CHECK:       copy:
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [16 x double], align 8
@@ -26,14 +24,12 @@ define void @multiply(ptr %A, ptr %B, ptr %C) !prof !0 {
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
-; CHECK-NEXT:    [[STORE_BEGIN4:%.*]] = ptrtoint ptr [[C]] to i64
-; CHECK-NEXT:    [[STORE_END5:%.*]] = add nuw nsw i64 [[STORE_BEGIN4]], 128
-; CHECK-NEXT:    [[LOAD_BEGIN6:%.*]] = ptrtoint ptr [[B:%.*]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[STORE_END5]], [[LOAD_BEGIN6]]
+; CHECK-NEXT:    [[STORE_END4:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 128
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[B:%.*]], [[STORE_END4]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[ALIAS_CONT1:%.*]], label [[NO_ALIAS3:%.*]], !prof [[PROF1]]
 ; CHECK:       alias_cont1:
-; CHECK-NEXT:    [[LOAD_END7:%.*]] = add nuw nsw i64 [[LOAD_BEGIN6]], 128
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[LOAD_END7]], [[STORE_BEGIN4]]
+; CHECK-NEXT:    [[LOAD_END5:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 128
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[C]], [[LOAD_END5]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[COPY2:%.*]], label [[NO_ALIAS3]], !prof [[PROF1]]
 ; CHECK:       copy2:
 ; CHECK-NEXT:    [[TMP6:%.*]] = alloca [16 x double], align 8

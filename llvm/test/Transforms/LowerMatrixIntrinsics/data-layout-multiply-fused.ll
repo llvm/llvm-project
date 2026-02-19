@@ -11,14 +11,12 @@ target triple = "aarch64-unknown-unknown"
 define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; PTR64-LABEL: @multiply(
 ; PTR64-NEXT:  entry:
-; PTR64-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint ptr [[C:%.*]] to i64
-; PTR64-NEXT:    [[STORE_END:%.*]] = add nuw nsw i64 [[STORE_BEGIN]], 128
-; PTR64-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint ptr [[A:%.*]] to i64
-; PTR64-NEXT:    [[TMP0:%.*]] = icmp ugt i64 [[STORE_END]], [[LOAD_BEGIN]]
+; PTR64-NEXT:    [[STORE_END:%.*]] = getelementptr inbounds nuw i8, ptr [[C:%.*]], i64 128
+; PTR64-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[A:%.*]], [[STORE_END]]
 ; PTR64-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; PTR64:       alias_cont:
-; PTR64-NEXT:    [[LOAD_END:%.*]] = add nuw nsw i64 [[LOAD_BEGIN]], 128
-; PTR64-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
+; PTR64-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 128
+; PTR64-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; PTR64-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; PTR64:       copy:
 ; PTR64-NEXT:    [[TMP2:%.*]] = alloca [16 x double], align 8
@@ -26,14 +24,12 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; PTR64-NEXT:    br label [[NO_ALIAS]]
 ; PTR64:       no_alias:
 ; PTR64-NEXT:    [[TMP3:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
-; PTR64-NEXT:    [[STORE_BEGIN4:%.*]] = ptrtoint ptr [[C]] to i64
-; PTR64-NEXT:    [[STORE_END5:%.*]] = add nuw nsw i64 [[STORE_BEGIN4]], 128
-; PTR64-NEXT:    [[LOAD_BEGIN6:%.*]] = ptrtoint ptr [[A]] to i64
-; PTR64-NEXT:    [[TMP4:%.*]] = icmp ugt i64 [[STORE_END5]], [[LOAD_BEGIN6]]
+; PTR64-NEXT:    [[STORE_END4:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 128
+; PTR64-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[A]], [[STORE_END4]]
 ; PTR64-NEXT:    br i1 [[TMP4]], label [[ALIAS_CONT1:%.*]], label [[NO_ALIAS3:%.*]]
 ; PTR64:       alias_cont1:
-; PTR64-NEXT:    [[LOAD_END7:%.*]] = add nuw nsw i64 [[LOAD_BEGIN6]], 128
-; PTR64-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[LOAD_END7]], [[STORE_BEGIN4]]
+; PTR64-NEXT:    [[LOAD_END5:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 128
+; PTR64-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[C]], [[LOAD_END5]]
 ; PTR64-NEXT:    br i1 [[TMP5]], label [[COPY2:%.*]], label [[NO_ALIAS3]]
 ; PTR64:       copy2:
 ; PTR64-NEXT:    [[TMP6:%.*]] = alloca [16 x double], align 8
@@ -184,14 +180,12 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ;
 ; PTR32-LABEL: @multiply(
 ; PTR32-NEXT:  entry:
-; PTR32-NEXT:    [[STORE_BEGIN:%.*]] = ptrtoint ptr [[C:%.*]] to i32
-; PTR32-NEXT:    [[STORE_END:%.*]] = add nuw nsw i32 [[STORE_BEGIN]], 128
-; PTR32-NEXT:    [[LOAD_BEGIN:%.*]] = ptrtoint ptr [[A:%.*]] to i32
-; PTR32-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[STORE_END]], [[LOAD_BEGIN]]
+; PTR32-NEXT:    [[STORE_END:%.*]] = getelementptr inbounds nuw i8, ptr [[C:%.*]], i32 128
+; PTR32-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[A:%.*]], [[STORE_END]]
 ; PTR32-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
 ; PTR32:       alias_cont:
-; PTR32-NEXT:    [[LOAD_END:%.*]] = add nuw nsw i32 [[LOAD_BEGIN]], 128
-; PTR32-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[LOAD_END]], [[STORE_BEGIN]]
+; PTR32-NEXT:    [[LOAD_END:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i32 128
+; PTR32-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; PTR32-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; PTR32:       copy:
 ; PTR32-NEXT:    [[TMP2:%.*]] = alloca [16 x double], align 8
@@ -199,14 +193,12 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; PTR32-NEXT:    br label [[NO_ALIAS]]
 ; PTR32:       no_alias:
 ; PTR32-NEXT:    [[TMP3:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
-; PTR32-NEXT:    [[STORE_BEGIN4:%.*]] = ptrtoint ptr [[C]] to i32
-; PTR32-NEXT:    [[STORE_END5:%.*]] = add nuw nsw i32 [[STORE_BEGIN4]], 128
-; PTR32-NEXT:    [[LOAD_BEGIN6:%.*]] = ptrtoint ptr [[A]] to i32
-; PTR32-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[STORE_END5]], [[LOAD_BEGIN6]]
+; PTR32-NEXT:    [[STORE_END4:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i32 128
+; PTR32-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[A]], [[STORE_END4]]
 ; PTR32-NEXT:    br i1 [[TMP4]], label [[ALIAS_CONT1:%.*]], label [[NO_ALIAS3:%.*]]
 ; PTR32:       alias_cont1:
-; PTR32-NEXT:    [[LOAD_END7:%.*]] = add nuw nsw i32 [[LOAD_BEGIN6]], 128
-; PTR32-NEXT:    [[TMP5:%.*]] = icmp ugt i32 [[LOAD_END7]], [[STORE_BEGIN4]]
+; PTR32-NEXT:    [[LOAD_END5:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i32 128
+; PTR32-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[C]], [[LOAD_END5]]
 ; PTR32-NEXT:    br i1 [[TMP5]], label [[COPY2:%.*]], label [[NO_ALIAS3]]
 ; PTR32:       copy2:
 ; PTR32-NEXT:    [[TMP6:%.*]] = alloca [16 x double], align 8
