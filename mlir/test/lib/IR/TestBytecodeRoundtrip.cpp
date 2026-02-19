@@ -449,7 +449,7 @@ private:
         [&](DialectBytecodeReader &reader, StringRef dialectName,
             Type &entry) -> LogicalResult {
           if (dialectName != StringLiteral("builtin"))
-            return success();
+            return failure();
           Type builtinAttr = iface->readType(reader);
           if (auto integerType =
                   llvm::dyn_cast_or_null<IntegerType>(builtinAttr)) {
