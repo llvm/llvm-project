@@ -2787,6 +2787,19 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_cbrtf16",
+    hdrs = ["src/__support/math/cbrtf16.h"],
+    deps = [
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_common_constants",
     hdrs = ["src/__support/math/common_constants.h"],
     deps = [
@@ -4673,6 +4686,13 @@ libc_math_function(
 libc_math_function(
     name = "cbrtf",
     additional_deps = [":__support_math_cbrtf"],
+)
+
+libc_math_function(
+    name = "cbrtf16",
+    additional_deps = [
+        ":__support_math_cbrtf16",
+    ],
 )
 
 libc_math_function(name = "ceil")

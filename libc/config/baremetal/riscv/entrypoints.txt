@@ -587,6 +587,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.asinf16
     libc.src.math.asinhf16
     libc.src.math.canonicalizef16
+    libc.src.math.cbrtf
     libc.src.math.ceilf16
     libc.src.math.copysignf16
     libc.src.math.cosf16

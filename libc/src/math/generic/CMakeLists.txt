@@ -5032,6 +5032,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  cbrtf16
+  SRCS
+    cbrtf16.cpp
+  HDRS
+    ../cbrtf16.h
+  DEPENDS
+    libc.src.__support.math.cbrtf16
+)
+
+add_entrypoint_object(
   dmull
   SRCS
     dmull.cpp

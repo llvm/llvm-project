@@ -81,6 +81,8 @@ math_test(name = "cbrt")
 
 math_test(name = "cbrtf")
 
+math_test(name = "cbrtf16")
+
 math_test(
     name = "ceil",
     hdrs = ["CeilTest.h"],
