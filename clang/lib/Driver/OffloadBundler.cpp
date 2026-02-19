@@ -192,13 +192,13 @@ public:
 
   /// Update the file handler with information from the header of the bundled
   /// file.
-  virtual Error ReadHeader(MemoryBuffer &Input) = 0;
+  virtual Error ReadHeader(StringRef FC) = 0;
 
   /// Read the marker of the next bundled to be read in the file. The bundle
   /// name is returned if there is one in the file, or `std::nullopt` if there
   /// are no more bundles to be read.
   virtual Expected<std::optional<StringRef>>
-  ReadBundleStart(MemoryBuffer &Input) = 0;
+  ReadBundleStart(StringRef Input) = 0;
 
   /// Read the marker that closes the current bundle.
   virtual Error ReadBundleEnd(MemoryBuffer &Input) = 0;
@@ -227,33 +227,52 @@ public:
 
   /// List bundle IDs in \a Input.
   virtual Error listBundleIDs(MemoryBuffer &Input) {
-    if (Error Err = ReadHeader(Input))
-      return Err;
-    return forEachBundle(Input, [&](const BundleInfo &Info) -> Error {
-      llvm::outs() << Info.BundleID << '\n';
-      Error Err = listBundleIDsCallback(Input, Info);
+    size_t NextbundleStart = 0;
+    StringRef BufferString = Input.getBuffer();
+    while ((NextbundleStart != StringRef::npos)) {
+      BufferString = BufferString.drop_front(NextbundleStart);
+
+      // Read the header.
+      Error Err = ReadHeader(BufferString);
       if (Err)
         return Err;
-      return Error::success();
-    });
+
+      Err = forEachBundle(BufferString, [&](const BundleInfo &Info) -> Error {
+        llvm::outs() << Info.BundleID << '\n';
+        Error Err = listBundleIDsCallback(Input, Info);
+        if (Err)
+          return Err;
+        return Error::success();
+      });
+
+      if (Err)
+        return Err;
+
+      // Find the beginning of the next Bundle, if it exists.
+      NextbundleStart = BufferString.find(StringRef(OFFLOAD_BUNDLER_MAGIC_STR),
+                                          sizeof(OFFLOAD_BUNDLER_MAGIC_STR));
+    }
+    return Error::success();
   }
 
   /// Get bundle IDs in \a Input in \a BundleIds.
   virtual Error getBundleIDs(MemoryBuffer &Input,
                              std::set<StringRef> &BundleIds) {
-    if (Error Err = ReadHeader(Input))
+
+    if (Error Err = ReadHeader(Input.getBuffer()))
       return Err;
-    return forEachBundle(Input, [&](const BundleInfo &Info) -> Error {
-      BundleIds.insert(Info.BundleID);
-      Error Err = listBundleIDsCallback(Input, Info);
-      if (Err)
-        return Err;
-      return Error::success();
-    });
+    return forEachBundle(Input.getBuffer(),
+                         [&](const BundleInfo &Info) -> Error {
+                           BundleIds.insert(Info.BundleID);
+                           Error Err = listBundleIDsCallback(Input, Info);
+                           if (Err)
+                             return Err;
+                           return Error::success();
+                         });
   }
 
   /// For each bundle in \a Input, do \a Func.
-  Error forEachBundle(MemoryBuffer &Input,
+  Error forEachBundle(StringRef Input,
                       std::function<Error(const BundleInfo &)> Func) {
     while (true) {
       Expected<std::optional<StringRef>> CurTripleOrErr =
@@ -347,9 +366,7 @@ public:
 
   ~BinaryFileHandler() final {}
 
-  Error ReadHeader(MemoryBuffer &Input) final {
-    StringRef FC = Input.getBuffer();
-
+  Error ReadHeader(StringRef FC) final {
     // Initialize the current bundle with the end of the container.
     CurBundleInfo = BundlesInfo.end();
 
@@ -404,7 +421,6 @@ public:
       if (!Offset || Offset + Size > FC.size())
         return Error::success();
 
-      assert(!BundlesInfo.contains(Triple) && "Triple is duplicated??");
       BundlesInfo[Triple] = BinaryBundleInfo(Size, Offset);
     }
     // Set the iterator to where we will start to read.
@@ -413,8 +429,7 @@ public:
     return Error::success();
   }
 
-  Expected<std::optional<StringRef>>
-  ReadBundleStart(MemoryBuffer &Input) final {
+  Expected<std::optional<StringRef>> ReadBundleStart(StringRef Input) final {
     if (NextBundleInfo == BundlesInfo.end())
       return std::nullopt;
     CurBundleInfo = NextBundleInfo++;
@@ -578,10 +593,9 @@ public:
 
   ~ObjectFileHandler() final {}
 
-  Error ReadHeader(MemoryBuffer &Input) final { return Error::success(); }
+  Error ReadHeader(StringRef Input) final { return Error::success(); }
 
-  Expected<std::optional<StringRef>>
-  ReadBundleStart(MemoryBuffer &Input) final {
+  Expected<std::optional<StringRef>> ReadBundleStart(StringRef Input) final {
     while (NextSection != Obj->section_end()) {
       CurrentSection = NextSection;
       ++NextSection;
@@ -789,11 +803,9 @@ class TextFileHandler final : public FileHandler {
   size_t ReadChars = 0u;
 
 protected:
-  Error ReadHeader(MemoryBuffer &Input) final { return Error::success(); }
+  Error ReadHeader(StringRef Input) final { return Error::success(); }
 
-  Expected<std::optional<StringRef>>
-  ReadBundleStart(MemoryBuffer &Input) final {
-    StringRef FC = Input.getBuffer();
+  Expected<std::optional<StringRef>> ReadBundleStart(StringRef FC) final {
 
     // Find start of the bundle.
     ReadChars = FC.find(BundleStartString, ReadChars);
@@ -1267,7 +1279,8 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
     DecompressTimer.startTimer();
 
   SmallVector<uint8_t, 0> DecompressedData;
-  StringRef CompressedData = Blob.substr(HeaderSize);
+  StringRef CompressedData =
+      Blob.substr(HeaderSize, TotalFileSize - HeaderSize);
   if (llvm::Error DecompressionError = llvm::compression::decompress(
           CompressionFormat, llvm::arrayRefFromStringRef(CompressedData),
           DecompressedData, UncompressedSize))
@@ -1319,6 +1332,17 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
                  << "Decompression speed: "
                  << llvm::format("%.2lf MB/s", DecompressionSpeedMBs) << "\n"
                  << "Stored hash: " << llvm::format_hex(StoredHash, 16) << "\n"
+                 << "Stored hash: " << llvm::format_hex(StoredHash, 16) << "\n"
+                 << llvm::format("%.2lf MB/s", DecompressionSpeedMBs) << "\n"
+                 << "Stored hash: " << llvm::format_hex(StoredHash, 16) << "\n"
+                 << "Compression rate: "
+                 << llvm::format("%.2lf", CompressionRate) << "\n"
+                 << "Compression ratio: "
+                 << llvm::format("%.2lf%%", 100.0 / CompressionRate) << "\n"
+                 << "Decompression speed: "
+                 << llvm::format("%.2lf MB/s", DecompressionSpeedMBs) << "\n"
+                 << "Stored hash: " << llvm::format_hex(StoredHash, 16) << "\n"
+                 << "Stored hash: " << llvm::format_hex(StoredHash, 16) << "\n"
                  << "Recalculated hash: "
                  << llvm::format_hex(RecalculatedHash, 16) << "\n"
                  << "Hashes match: " << (HashMatch ? "Yes" : "No") << "\n";
@@ -1331,32 +1355,56 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
 // List bundle IDs. Return true if an error was found.
 Error OffloadBundler::ListBundleIDsInFile(
     StringRef InputFileName, const OffloadBundlerConfig &BundlerConfig) {
+
+  size_t Offset = 0;
+  size_t NextbundleStart = 0;
+  std::unique_ptr<MemoryBuffer> Buffer;
+
   // Open Input file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFileName, /*IsText=*/true);
   if (std::error_code EC = CodeOrErr.getError())
     return createFileError(InputFileName, EC);
 
-  // Decompress the input if necessary.
-  Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
-      CompressedOffloadBundle::decompress(**CodeOrErr, BundlerConfig.Verbose);
-  if (!DecompressedBufferOrErr)
-    return createStringError(
-        inconvertibleErrorCode(),
-        "Failed to decompress input: " +
-            llvm::toString(DecompressedBufferOrErr.takeError()));
+  StringRef Buf = (**CodeOrErr).getBuffer();
 
-  MemoryBuffer &DecompressedInput = **DecompressedBufferOrErr;
+  // There may be multiple bundles.
+  while ((NextbundleStart != StringRef::npos) && (Offset < Buf.size())) {
+    Buf = Buf.drop_front(Offset);
 
-  // Select the right files handler.
-  Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
-      CreateFileHandler(DecompressedInput, BundlerConfig);
-  if (!FileHandlerOrErr)
-    return FileHandlerOrErr.takeError();
+    if (identify_magic(Buf) == file_magic::offload_bundle_compressed)
+      // Decompress this bundle first.
+      NextbundleStart = Buf.find("CCOB", sizeof("CCOB"));
+    if (NextbundleStart == StringRef::npos)
+      NextbundleStart = Buf.size();
 
-  std::unique_ptr<FileHandler> &FH = *FileHandlerOrErr;
-  assert(FH);
-  return FH->listBundleIDs(DecompressedInput);
+    // Decompress the input if necessary.
+    Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
+        CompressedOffloadBundle::decompress(**CodeOrErr, BundlerConfig.Verbose);
+    if (!DecompressedBufferOrErr)
+      return createStringError(
+          inconvertibleErrorCode(),
+          "Failed to decompress input: " +
+              llvm::toString(DecompressedBufferOrErr.takeError()));
+
+    MemoryBuffer &DecompressedInput = **DecompressedBufferOrErr;
+
+    // Select the right files handler.
+    Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
+        CreateFileHandler(DecompressedInput, BundlerConfig);
+    if (!FileHandlerOrErr)
+      return FileHandlerOrErr.takeError();
+
+    std::unique_ptr<FileHandler> &FH = *FileHandlerOrErr;
+    assert(FH);
+    Error E = FH->listBundleIDs(DecompressedInput);
+    if (E)
+      return E;
+
+    if (NextbundleStart != StringRef::npos)
+      Offset += NextbundleStart;
+  }
+  return Error::success();
 }
 
 /// @brief Checks if a code object \p CodeObjectInfo is compatible with a given
@@ -1560,7 +1608,7 @@ Error OffloadBundler::UnbundleFiles() {
   assert(FH);
 
   // Read the header of the bundled file.
-  if (Error Err = FH->ReadHeader(Input))
+  if (Error Err = FH->ReadHeader(Input.getBuffer()))
     return Err;
 
   // Create a work list that consist of the map triple/output file.
@@ -1579,7 +1627,7 @@ Error OffloadBundler::UnbundleFiles() {
   bool FoundHostBundle = false;
   while (!Worklist.empty()) {
     Expected<std::optional<StringRef>> CurTripleOrErr =
-        FH->ReadBundleStart(Input);
+        FH->ReadBundleStart(Input.getBuffer());
     if (!CurTripleOrErr)
       return CurTripleOrErr.takeError();
 
@@ -1863,11 +1911,11 @@ Error OffloadBundler::UnbundleArchive() {
     assert(FileHandler &&
            "FileHandle creation failed for file in the archive!");
 
-    if (Error ReadErr = FileHandler->ReadHeader(CodeObjectBuffer))
+    if (Error ReadErr = FileHandler->ReadHeader(CodeObjectBuffer.getBuffer()))
       return ReadErr;
 
     Expected<std::optional<StringRef>> CurBundleIDOrErr =
-        FileHandler->ReadBundleStart(CodeObjectBuffer);
+        FileHandler->ReadBundleStart(CodeObjectBuffer.getBuffer());
     if (!CurBundleIDOrErr)
       return CurBundleIDOrErr.takeError();
 
@@ -1923,7 +1971,7 @@ Error OffloadBundler::UnbundleArchive() {
         return Err;
 
       Expected<std::optional<StringRef>> NextTripleOrErr =
-          FileHandler->ReadBundleStart(CodeObjectBuffer);
+          FileHandler->ReadBundleStart(CodeObjectBuffer.getBuffer());
       if (!NextTripleOrErr)
         return NextTripleOrErr.takeError();
 
