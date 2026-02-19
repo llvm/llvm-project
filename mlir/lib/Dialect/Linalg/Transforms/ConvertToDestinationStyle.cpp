@@ -107,31 +107,33 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
   Value yieldedValue =
       cast<tensor::YieldOp>(padOp.getBody()->getTerminator()).getValue();
   Attribute constYieldedValue;
-  const bool isConstYieldedValue =
-      matchPattern(yieldedValue, m_Constant(&constYieldedValue));
   // Is the yielded value a bbArg defined outside of the PadOp?
-  const bool isOutsideBbArg =
+  bool isOutsideBbArg =
       isa<BlockArgument>(yieldedValue) &&
       cast<BlockArgument>(yieldedValue).getOwner()->getParentOp() !=
           padOp.getOperation();
   // Is the yielded value an OpResult defined outside of the PadOp?
-  const bool isOutsideOpResult =
+  bool isOutsideOpResult =
       isa<OpResult>(yieldedValue) &&
       yieldedValue.getDefiningOp()->getParentOp() != padOp.getOperation();
-  const bool isInvariantYieldedValue =
-      isConstYieldedValue || isOutsideBbArg || isOutsideOpResult;
+  bool isInvariantYieldedValue = isOutsideBbArg || isOutsideOpResult;
+  if (matchPattern(yieldedValue, m_Constant(&constYieldedValue))) {
+    // Padding with a constant: Create linalg.fill.
+    Dialect *arithDialect =
+        rewriter.getContext()->getLoadedDialect<arith::ArithDialect>();
+    Value fillValue =
+        arithDialect
+            ->materializeConstant(rewriter, constYieldedValue,
+                                  yieldedValue.getType(), yieldedValue.getLoc())
+            ->getResult(0);
+    auto fillOp = linalg::FillOp::create(rewriter, loc, ValueRange(fillValue),
+                                         ValueRange(dest));
+    fillOp->setDiscardableAttrs(preservedAttrs);
+    return fillOp;
+  }
+
   if (isInvariantYieldedValue) {
-    // Padding with an invariant value: Create linalg.fill.
-    if (isConstYieldedValue) {
-      // Padding with a constant value: Materialize the arith constant.
-      Dialect *arithDialect =
-          rewriter.getContext()->getLoadedDialect<arith::ArithDialect>();
-      yieldedValue = arithDialect
-                         ->materializeConstant(rewriter, constYieldedValue,
-                                               yieldedValue.getType(),
-                                               yieldedValue.getLoc())
-                         ->getResult(0);
-    }
+    // Padding with an invariant value.
     auto fillOp = linalg::FillOp::create(
         rewriter, loc, ValueRange(yieldedValue), ValueRange(dest));
     fillOp->setDiscardableAttrs(preservedAttrs);
@@ -146,7 +148,8 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
   auto genericOp = linalg::GenericOp::create(
       rewriter, loc, resultType, /*inputs=*/ValueRange(),
       /*outputs=*/ValueRange{dest}, /*indexingMaps=*/
-      indexingMaps, iteratorTypes, /*bodyBuild=*/nullptr, preservedAttrs);
+      indexingMaps, iteratorTypes);
+  genericOp->setDiscardableAttrs(preservedAttrs);
   Block *body = rewriter.createBlock(&genericOp->getRegion(0), {},
                                      resultType.getElementType(), loc);
   rewriter.setInsertionPointToStart(body);
