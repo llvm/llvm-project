@@ -1652,6 +1652,8 @@ public:
     return true;
   }
   bool Pre(const parser::OmpMapClause &);
+  bool Pre(const parser::OmpClause::To &);
+  bool Pre(const parser::OmpClause::From &);
 
   bool Pre(const parser::OpenMPSectionsConstruct &x) {
     PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
@@ -1798,6 +1800,7 @@ public:
   }
 
 private:
+  void ResolveMapperModifier(const parser::OmpMapper &mapper);
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
@@ -1875,32 +1878,49 @@ void OmpVisitor::Post(const parser::OmpStylizedInstance &x) { //
 bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
   auto &mods{OmpGetModifiers(x)};
   if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
-    if (auto *symbol{FindSymbol(currScope(), mapper->v)}) {
-      // TODO: Do we need a specific flag or type here, to distinghuish against
-      // other ConstructName things? Leaving this for the full implementation
-      // of mapper lowering.
-      auto &ultimate{symbol->GetUltimate()};
-      auto *misc{ultimate.detailsIf<MiscDetails>()};
-      auto *md{ultimate.detailsIf<MapperDetails>()};
-      if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName))
-        context().Say(mapper->v.source,
-            "Name '%s' should be a mapper name"_err_en_US, mapper->v.source);
-      else
-        mapper->v.symbol = symbol;
-    } else {
-      // Allow the special 'default' mapper identifier without prior
-      // declaration so lowering can recognize and handle it. Emit an
-      // error for any other missing mapper identifier.
-      if (mapper->v.source.ToString() == "default") {
-        mapper->v.symbol = &MakeSymbol(
-            mapper->v, MiscDetails{MiscDetails::Kind::ConstructName});
-      } else {
-        context().Say(
-            mapper->v.source, "'%s' not declared"_err_en_US, mapper->v.source);
-      }
-    }
+    ResolveMapperModifier(*mapper);
   }
   return true;
+}
+
+bool OmpVisitor::Pre(const parser::OmpClause::To &x) {
+  auto &mods{OmpGetModifiers(x.v)};
+  if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
+    ResolveMapperModifier(*mapper);
+  }
+  return true;
+}
+
+bool OmpVisitor::Pre(const parser::OmpClause::From &x) {
+  auto &mods{OmpGetModifiers(x.v)};
+  if (auto *mapper{OmpGetUniqueModifier<parser::OmpMapper>(mods)}) {
+    ResolveMapperModifier(*mapper);
+  }
+  return true;
+}
+
+void OmpVisitor::ResolveMapperModifier(const parser::OmpMapper &mapper) {
+  if (auto *symbol{FindSymbol(currScope(), mapper.v)}) {
+    auto &ultimate{symbol->GetUltimate()};
+    auto *misc{ultimate.detailsIf<MiscDetails>()};
+    auto *md{ultimate.detailsIf<MapperDetails>()};
+    if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName))
+      context().Say(mapper.v.source,
+          "Name '%s' should be a mapper name"_err_en_US, mapper.v.source);
+    else
+      mapper.v.symbol = symbol;
+  } else {
+    // Allow the special 'default' mapper identifier without prior
+    // declaration so lowering can recognize and handle it. Emit an
+    // error for any other missing mapper identifier.
+    if (mapper.v.source.ToString() == "default") {
+      mapper.v.symbol =
+          &MakeSymbol(mapper.v, MiscDetails{MiscDetails::Kind::ConstructName});
+    } else {
+      context().Say(
+          mapper.v.source, "'%s' not declared"_err_en_US, mapper.v.source);
+    }
+  }
 }
 
 void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
@@ -9951,9 +9971,6 @@ void ResolveNamesVisitor::FinishSpecificationPart(
   misparsedStmtFuncFound_ = false;
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
-  if (inInterfaceBlock()) {
-    FinishNamelists(); // NAMELIST is useless in an interface, but allowed
-  }
   for (auto &pair : currScope()) {
     auto &symbol{*pair.second};
     if (inInterfaceBlock()) {
@@ -9988,13 +10005,6 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         SetBindNameOn(symbol);
       }
     }
-    // Implicitly treat allocatable arrays as managed when feature is enabled.
-    // This is done after all explicit CUDA attributes have been processed.
-    if (context().languageFeatures().IsEnabled(
-            common::LanguageFeature::CudaManaged))
-      if (auto *object{symbol.detailsIf<ObjectEntityDetails>()})
-        if (IsAllocatable(symbol) && !object->cudaDataAttr())
-          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
   }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {
