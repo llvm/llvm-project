@@ -602,6 +602,8 @@ let Predicates = [HasRCPC3, HasNEON] in {
 // v8.4a FEAT_LRCPC2 patterns
 let Predicates = [HasRCPC_IMMO, UseLDAPUR] in {
   // Load-Acquire RCpc Register unscaled loads
+
+  // Zero-extended
   def : Pat<(acquiring_load<atomic_load_azext_8>
                (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
           (LDAPURBi GPR64sp:$Rn, simm9:$offset)>;
@@ -614,6 +616,26 @@ let Predicates = [HasRCPC_IMMO, UseLDAPUR] in {
   def : Pat<(acquiring_load<atomic_load_nonext_64>
                (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
           (LDAPURXi GPR64sp:$Rn, simm9:$offset)>;
+
+  // Sign-extended
+  def : Pat<(sext_inreg (acquiring_load<atomic_load_8>
+                (am_unscaled8 GPR64sp:$Rn, simm9:$offset)), i8),
+          (LDAPURSBWi GPR64sp:$Rn, i64:$offset)>;
+  def : Pat<(sext_inreg (i64 (anyext (i32
+                (acquiring_load<atomic_load_8>
+                    (am_unscaled8 GPR64sp:$Rn, simm9:$offset))))), i8),
+          (LDAPURSBXi GPR64sp:$Rn, i64:$offset)>;
+  def : Pat<(sext_inreg (acquiring_load<atomic_load_16>
+                (am_unscaled16 GPR64sp:$Rn, simm9:$offset)), i16),
+          (LDAPURSHWi GPR64sp:$Rn, i64:$offset)>;
+  def : Pat<(sext_inreg (i64 (anyext (i32
+                (acquiring_load<atomic_load_16>
+                    (am_unscaled16 GPR64sp:$Rn, simm9:$offset))))), i16),
+          (LDAPURSHXi GPR64sp:$Rn, i64:$offset)>;
+  def : Pat<(i64 (sext (i32
+                (acquiring_load<atomic_load_32>
+                    (am_unscaled32 GPR64sp:$Rn, simm9:$offset))))),
+          (LDAPURSWi GPR64sp:$Rn, i64:$offset)>;
 }
 
 let Predicates = [HasRCPC_IMMO] in {
