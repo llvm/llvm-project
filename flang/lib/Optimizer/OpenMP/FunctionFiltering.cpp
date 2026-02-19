@@ -181,6 +181,12 @@ public:
           declareTargetOp.setDeclareTarget(
               declareType, omp::DeclareTargetCaptureClause::to,
               declareTargetOp.getDeclareTargetAutomap());
+      } else if (!funcOp.isExternal()) {
+        // For user-defined device functions, set internal linkage.
+        auto internalLinkage = mlir::LLVM::linkage::Linkage::Internal;
+        auto linkage =
+            mlir::LLVM::LinkageAttr::get(funcOp->getContext(), internalLinkage);
+        funcOp->setAttr("llvm.linkage", linkage);
       }
       return WalkResult::advance();
     });
