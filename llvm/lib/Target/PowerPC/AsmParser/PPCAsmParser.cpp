@@ -640,6 +640,14 @@ public:
     }
   }
 
+  void addNegImmOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    if (Kind == Immediate)
+      Inst.addOperand(MCOperand::createImm(-getImm()));
+    else
+      Inst.addOperand(MCOperand::createExpr(getExpr()));
+  }
+
   void addBranchTargetOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     if (Kind == Immediate)
