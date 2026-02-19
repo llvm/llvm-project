@@ -559,6 +559,20 @@ void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
   HandleBlockEdge(Loc, Pred);
 }
 
+ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
+                                       ProgramStateRef State,
+                                       ExplodedNode *Pred,
+                                       bool MarkAsSink) const {
+  bool IsNew;
+  ExplodedNode *N = G.getNode(Loc, State, MarkAsSink, &IsNew);
+  N->addPredecessor(Pred, G);
+
+  if (!IsNew)
+    return nullptr;
+
+  return N;
+}
+
 /// generateNode - Utility method to generate nodes, hook up successors,
 ///  and add nodes to the worklist.
 void CoreEngine::generateNode(const ProgramPoint &Loc,
@@ -693,15 +707,10 @@ ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
                                             ExplodedNode *FromN,
                                             bool MarkAsSink) {
   HasGeneratedNodes = true;
-  bool IsNew;
-  ExplodedNode *N = C.getEngine().G.getNode(Loc, State, MarkAsSink, &IsNew);
-  N->addPredecessor(FromN, C.getEngine().G);
   Frontier.erase(FromN);
+  ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
 
-  if (!IsNew)
-    return nullptr;
-
-  if (!MarkAsSink)
+  if (N && !MarkAsSink)
     Frontier.Add(N);
 
   return N;

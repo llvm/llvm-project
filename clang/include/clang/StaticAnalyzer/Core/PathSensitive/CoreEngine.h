@@ -176,6 +176,9 @@ public:
 
   auto aborted_blocks() const { return llvm::iterator_range(blocksAborted); }
 
+  ExplodedNode *makeNode(const ProgramPoint &Loc, ProgramStateRef State,
+                             ExplodedNode *Pred, bool MarkAsSink = false) const;
+
   /// Enqueue the given set of nodes onto the work list.
   void enqueue(ExplodedNodeSet &Set);
 
