@@ -1,0 +1,29 @@
+## Here we simulate an object with more than ~65k segments and check how we dump it.
+## When an ELF object has PN_XNUM (0xffff) or more sections, its e_phnum field
+## should be PN_XNUM and sh_info of the section header at index 0 is used
+## to store the value.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readelf --headers %t1 | FileCheck %s --check-prefix=GNU
+## The ELF header should have e_phnum == PN_XNUM
+# GNU:         Number of program headers: 65535 (2)
+# GNU:         There are 2 program headers, starting at offset 64
+
+# RUN: llvm-readobj --headers %t1 | FileCheck %s --check-prefix=LLVM
+# LLVM:        ProgramHeaderCount: 65535 (2)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+  EPhNum:  65535
+Sections:
+  - Type: SHT_NULL
+    Info: 2
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x0001
+  - Type:     PT_LOAD
+    VAddr:    0x0002

@@ -442,6 +442,8 @@ protected:
       const typename SFrameParser<ELFT::Endianness>::FDERange::iterator FDE,
       ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab);
 
+  std::string getProgramHeadersNumString();
+
 private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
 };
@@ -3632,6 +3634,24 @@ static inline void printFields(formatted_raw_ostream &OS, StringRef Str1,
 }
 
 template <class ELFT>
+std::string ELFDumper<ELFT>::getProgramHeadersNumString() {
+  const ELFFile<ELFT> &Obj = this->Obj;
+  Expected<uint32_t> PhNumOrErr = Obj.getPhNum();
+  if (!PhNumOrErr) {
+    this->reportUniqueWarning(PhNumOrErr.takeError());
+    return "<?>";
+  }
+
+  uint32_t PhNum;
+  PhNum = *PhNumOrErr;
+  if (PhNum == ELF::PN_XNUM)
+    return "65535 (corrupt)";
+  if (Obj.getHeader().e_phnum != ELF::PN_XNUM)
+    return to_string(PhNum);
+  return "65535 (" + to_string(PhNum) + ")";
+}
+
+template <class ELFT>
 static std::string getSectionHeadersNumString(const ELFFile<ELFT> &Obj,
                                               StringRef FileName) {
   const typename ELFT::Ehdr &ElfHeader = Obj.getHeader();
@@ -3824,7 +3844,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   printFields(OS, "Size of this header:", Str);
   Str = to_string(e.e_phentsize) + " (bytes)";
   printFields(OS, "Size of program headers:", Str);
-  Str = to_string(e.e_phnum);
+  Str = this->getProgramHeadersNumString();
   printFields(OS, "Number of program headers:", Str);
   Str = to_string(e.e_shentsize) + " (bytes)";
   printFields(OS, "Size of section headers:", Str);
@@ -4836,8 +4856,10 @@ void GNUELFDumper<ELFT>::printProgramHeaders(
     return;
 
   if (PrintProgramHeaders) {
-    const Elf_Ehdr &Header = this->Obj.getHeader();
-    if (Header.e_phnum == 0) {
+    Expected<uint32_t> PhNumOrErr = this->Obj.getPhNum();
+    if (!PhNumOrErr) {
+      this->reportUniqueWarning(PhNumOrErr.takeError());
+    } else if (*PhNumOrErr == 0) {
       OS << "\nThere are no program headers in this file.\n";
     } else {
       printProgramHeaders();
@@ -4853,10 +4875,16 @@ template <class ELFT> void GNUELFDumper<ELFT>::printProgramHeaders() {
   const Elf_Ehdr &Header = this->Obj.getHeader();
   Field Fields[8] = {2,         17,        26,        37 + Bias,
                      48 + Bias, 56 + Bias, 64 + Bias, 68 + Bias};
+  uint32_t PhNum = 0;
+  if (Expected<uint32_t> PhNumOrErr = this->Obj.getPhNum(); PhNumOrErr)
+    PhNum = *PhNumOrErr;
+  else
+    this->reportUniqueWarning(PhNumOrErr.takeError());
+
   OS << "\nElf file type is "
      << enumToString(Header.e_type, ArrayRef(ElfObjectFileType)) << "\n"
      << "Entry point " << format_hex(Header.e_entry, 3) << "\n"
-     << "There are " << Header.e_phnum << " program headers,"
+     << "There are " << PhNum << " program headers,"
      << " starting at offset " << Header.e_phoff << "\n\n"
      << "Program Headers:\n";
   if (ELFT::Is64Bits)
@@ -7530,7 +7558,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
       W.printFlags("Flags", E.e_flags);
     W.printNumber("HeaderSize", E.e_ehsize);
     W.printNumber("ProgramHeaderEntrySize", E.e_phentsize);
-    W.printNumber("ProgramHeaderCount", E.e_phnum);
+    W.printString("ProgramHeaderCount", this->getProgramHeadersNumString());
     W.printNumber("SectionHeaderEntrySize", E.e_shentsize);
     W.printString("SectionHeaderCount",
                   getSectionHeadersNumString(this->Obj, this->FileName));
