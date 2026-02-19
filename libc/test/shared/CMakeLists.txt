@@ -134,4 +134,5 @@ add_fp_unittest(
     libc.src.__support.math.tanf16
     libc.src.__support.math.tanhf
     libc.src.__support.math.tanhf16
+    libc.src.__support.math.tanpif
 )
