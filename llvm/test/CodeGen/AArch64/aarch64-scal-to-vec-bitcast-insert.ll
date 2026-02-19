@@ -15,35 +15,35 @@ define <2 x i32> @fcvtzs_v2i32_scalar_to_vector(float %a) {
   ret <2 x i32> %v
 }
 
-define <4 x i32> @fcvtzs_v4i32_scalar_to_vector(double %a) {
+define <4 x i32> @fcvtzs_v4i32_scalar_to_vector(float %a) {
 ; CHECK-LABEL: fcvtzs_v4i32_scalar_to_vector:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtzs w8, d0
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    ret
-  %c = fptosi double %a to i32
+  %c = fptosi float %a to i32
   %v = insertelement <4 x i32> poison, i32 %c, i32 0
   ret <4 x i32> %v
 }
 
-define <1 x i64> @fcvtzs_v1i64_scalar_to_vector(half %a) {
+define <1 x i64> @fcvtzs_v1i64_scalar_to_vector(double %a) {
 ; CHECK-LABEL: fcvtzs_v1i64_scalar_to_vector:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtzs x8, h0
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
-  %c = fptosi half %a to i64
+  %c = fptosi double %a to i64
   %v = insertelement <1 x i64> poison, i64 %c, i32 0
   ret <1 x i64> %v
 }
 
-define <2 x i64> @fcvtzs_v2i64_scalar_to_vector(float %a) {
+define <2 x i64> @fcvtzs_v2i64_scalar_to_vector(double %a) {
 ; CHECK-LABEL: fcvtzs_v2i64_scalar_to_vector:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvtzs x8, s0
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
-  %c = fptosi float %a to i64
+  %c = fptosi double %a to i64
   %v = insertelement <2 x i64> poison, i64 %c, i32 0
   ret <2 x i64> %v
 }
