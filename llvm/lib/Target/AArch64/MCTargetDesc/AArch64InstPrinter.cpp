@@ -1152,6 +1152,14 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
   unsigned CmVal = Cm.getImm();
   unsigned Op2Val = Op2.getImm();
 
+  // Early checks for invalid SYSP aliases
+  //   Op1 == 0..6
+  //   Op2 == 0..7
+  //    Cm == 0..7
+  //    Cn == 8 or 9
+  if (Op1Val > 6 || Op2Val > 7 || CmVal > 7 || (CnVal != 8 && CnVal != 9))
+    return false;
+
   uint16_t Encoding = Op2Val;
   Encoding |= CmVal << 3;
   Encoding |= CnVal << 7;
