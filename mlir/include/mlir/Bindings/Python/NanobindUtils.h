@@ -12,13 +12,12 @@
 
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/DataTypes.h"
-#include "llvm/Support/raw_ostream.h"
 
+#include <fstream>
+#include <sstream>
 #include <string>
+#include <string_view>
+#include <type_traits>
 #include <typeinfo>
 #include <variant>
 
@@ -33,6 +32,18 @@ struct std::iterator_traits<nanobind::detail::fast_iterator> {
 
 namespace mlir {
 namespace python {
+
+struct MlirTypeIDHash {
+  size_t operator()(MlirTypeID typeID) const {
+    return mlirTypeIDHashValue(typeID);
+  }
+};
+
+struct MlirTypeIDEqual {
+  bool operator()(MlirTypeID lhs, MlirTypeID rhs) const {
+    return mlirTypeIDEqual(lhs, rhs);
+  }
+};
 
 /// CRTP template for special wrapper types that are allowed to be passed in as
 /// 'None' function arguments and can be resolved by some global mechanic if
@@ -70,6 +81,14 @@ private:
 
 namespace nanobind {
 namespace detail {
+
+/// Helper function to concatenate arguments into a `std::string`.
+template <typename... Ts>
+inline std::string join(const Ts &...args) {
+  std::ostringstream oss;
+  (oss << ... << args);
+  return oss.str();
+}
 
 template <typename DefaultingTy>
 struct MlirDefaultingCaster {
@@ -134,6 +153,17 @@ struct PyPrintAccumulator {
   }
 };
 
+/// RAII wrapper for MlirLlvmRawFdOStream that ensures destruction on scope
+/// exit.
+struct RAIIMlirLlvmRawFdOStream : MlirLlvmRawFdOStream {
+  RAIIMlirLlvmRawFdOStream(MlirLlvmRawFdOStream stream)
+      : MlirLlvmRawFdOStream(stream) {}
+  RAIIMlirLlvmRawFdOStream(const RAIIMlirLlvmRawFdOStream &) = delete;
+  RAIIMlirLlvmRawFdOStream &
+  operator=(const RAIIMlirLlvmRawFdOStream &) = delete;
+  ~RAIIMlirLlvmRawFdOStream() { mlirLlvmRawFdOStreamDestroy(*this); }
+};
+
 /// Accumulates into a file, either writing text (default)
 /// or binary. The file may be a Python file-like object or a path to a file.
 class PyFileAccumulator {
@@ -142,13 +172,19 @@ public:
       : binary(binary) {
     std::string filePath;
     if (nanobind::try_cast<std::string>(fileOrStringObject, filePath)) {
-      std::error_code ec;
-      writeTarget.emplace<llvm::raw_fd_ostream>(filePath, ec);
-      if (ec) {
+      std::string errorMessage;
+      auto errorCallback = +[](MlirStringRef message, void *userData) {
+        auto *storage = static_cast<std::string *>(userData);
+        storage->assign(message.data, message.length);
+      };
+      MlirLlvmRawFdOStream stream = mlirLlvmRawFdOStreamCreate(
+          filePath.c_str(), binary, errorCallback, &errorMessage);
+      if (mlirLlvmRawFdOStreamIsNull(stream)) {
         throw nanobind::value_error(
-            (std::string("Unable to open file for writing: ") + ec.message())
+            (std::string("Unable to open file for writing: ") + errorMessage)
                 .c_str());
       }
+      writeTarget.emplace<RAIIMlirLlvmRawFdOStream>(stream);
     } else {
       writeTarget.emplace<nanobind::object>(fileOrStringObject.attr("write"));
     }
@@ -156,7 +192,7 @@ public:
 
   MlirStringCallback getCallback() {
     return writeTarget.index() == 0 ? getPyWriteCallback()
-                                    : getOstreamCallback();
+                                    : getOStreamCallback();
   }
 
   void *getUserData() { return this; }
@@ -178,15 +214,15 @@ private:
     };
   }
 
-  MlirStringCallback getOstreamCallback() {
+  MlirStringCallback getOStreamCallback() {
     return [](MlirStringRef part, void *userData) {
       PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
-      std::get<llvm::raw_fd_ostream>(accum->writeTarget)
-          .write(part.data, part.length);
+      mlirLlvmRawFdOStreamWrite(
+          std::get<RAIIMlirLlvmRawFdOStream>(accum->writeTarget), part);
     };
   }
 
-  std::variant<nanobind::object, llvm::raw_fd_ostream> writeTarget;
+  std::variant<nanobind::object, RAIIMlirLlvmRawFdOStream> writeTarget;
   bool binary;
 };
 
@@ -271,8 +307,12 @@ protected:
 
   /// Trait to check if T provides a `maybeDownCast` method.
   /// Note, you need the & to detect inherited members.
-  template <typename T, typename... Args>
-  using has_maybe_downcast = decltype(&T::maybeDownCast);
+  template <typename T, typename = void>
+  struct has_maybe_downcast : std::false_type {};
+
+  template <typename T>
+  struct has_maybe_downcast<T, std::void_t<decltype(&T::maybeDownCast)>>
+      : std::true_type {};
 
   /// Returns the element at the given slice index. Supports negative indices
   /// by taking elements in inverse order. Returns a nullptr object if out
@@ -285,7 +325,7 @@ protected:
       return {};
     }
 
-    if constexpr (llvm::is_detected<has_maybe_downcast, ElementTy>::value)
+    if constexpr (has_maybe_downcast<ElementTy>::value)
       return static_cast<Derived *>(this)
           ->getRawElement(linearizeIndex(index))
           .maybeDownCast();
@@ -297,7 +337,7 @@ protected:
   /// Returns a new instance of the pseudo-container restricted to the given
   /// slice. Returns a nullptr object on failure.
   nanobind::object getItemSlice(PyObject *slice) {
-    ssize_t start, stop, extraStep, sliceLength;
+    Py_ssize_t start, stop, extraStep, sliceLength;
     if (PySlice_GetIndicesEx(slice, length, &start, &stop, &extraStep,
                              &sliceLength) != 0) {
       PyErr_SetString(PyExc_IndexError, "index out of range");
@@ -411,26 +451,5 @@ public:
 };
 
 } // namespace mlir
-
-namespace llvm {
-
-template <>
-struct DenseMapInfo<MlirTypeID> {
-  static inline MlirTypeID getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlirTypeIDCreate(pointer);
-  }
-  static inline MlirTypeID getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlirTypeIDCreate(pointer);
-  }
-  static inline unsigned getHashValue(const MlirTypeID &val) {
-    return mlirTypeIDHashValue(val);
-  }
-  static inline bool isEqual(const MlirTypeID &lhs, const MlirTypeID &rhs) {
-    return mlirTypeIDEqual(lhs, rhs);
-  }
-};
-} // namespace llvm
 
 #endif // MLIR_BINDINGS_PYTHON_PYBINDUTILS_H

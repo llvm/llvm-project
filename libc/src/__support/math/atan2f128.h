@@ -81,7 +81,7 @@ namespace math {
 // and relative errors bounded by:
 //   |(atan(u) - P(u)) / P(u)| < 2^-114.
 
-LIBC_INLINE static constexpr float128 atan2f128(float128 y, float128 x) {
+LIBC_INLINE constexpr float128 atan2f128(float128 y, float128 x) {
   using Float128 = fputil::DyadicFloat<128>;
 
   constexpr Float128 ZERO = {Sign::POS, 0, 0_u128};

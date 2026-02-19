@@ -1605,6 +1605,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         changed |= part.relrAuthDyn->updateAllocSize(ctx);
       if (part.memtagGlobalDescriptors)
         changed |= part.memtagGlobalDescriptors->updateAllocSize(ctx);
+      if (part.ehFrameHdr && part.ehFrameHdr->isNeeded())
+        changed |= part.ehFrameHdr->updateAllocSize(ctx);
     }
 
     std::pair<const OutputSection *, const Defined *> changes =
@@ -1629,6 +1631,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       // Spilling can change relative section order.
       finalizeOrderDependentContent();
     }
+    // If updateAllocSize reported errors (e.g. "unknown FDE size encoding" for
+    // part.ehFrameHdr), break to avoid duplicate diagnostics from the loop.
+    if (errCount(ctx))
+      break;
   }
   if (!ctx.arg.relocatable)
     ctx.target->finalizeRelax(pass);
@@ -1738,7 +1744,7 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
     for (size_t i = 0, e = sections.size(); i != e; ++i) {
       InputSection *next = i + 1 < sections.size() ? sections[i + 1] : nullptr;
       InputSection &sec = *sections[i];
-      numDeleted += ctx.target->deleteFallThruJmpInsn(sec, sec.file, next);
+      numDeleted += ctx.target->deleteFallThruJmpInsn(sec, next);
     }
     if (numDeleted > 0) {
       ctx.script->assignAddresses();
@@ -2451,8 +2457,7 @@ Writer<ELFT>::createPhdrs(Partition &part) {
     ret.push_back(std::move(relRo));
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
-  if (part.ehFrame->isNeeded() && part.ehFrameHdr &&
-      part.ehFrame->getParent() && part.ehFrameHdr->getParent())
+  if (part.ehFrameHdr && part.ehFrameHdr->isNeeded())
     addHdr(PT_GNU_EH_FRAME, part.ehFrameHdr->getParent()->getPhdrFlags())
         ->add(part.ehFrameHdr->getParent());
 

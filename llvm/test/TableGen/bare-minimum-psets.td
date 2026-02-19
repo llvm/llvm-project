@@ -42,10 +42,10 @@ def MyTarget : Target;
 
 // CHECK-LABEL:    // Register pressure sets enum.
 // CHECK-NEXT: namespace MyTarget {
-// CHECK-NEXT: enum RegisterPressureSets {
+// CHECK:      enum RegisterPressureSets {
 // CHECK-NEXT: D_32 = 0,
-// CHECK-NEXT:  };
-// NAMESPACE-NEXT: } // end namespace TestNamespace
+// CHECK-NEXT: };
+// CHECK:      } // namespace MyTarget
 
 // CHECK-LABEL: getRegPressureSetName(unsigned Idx) const {
 // CHECK-NEXT:    static const char *PressureNameTable[] = {

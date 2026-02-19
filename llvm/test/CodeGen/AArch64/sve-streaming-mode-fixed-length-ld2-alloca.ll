@@ -81,9 +81,7 @@ define void @alloc_v6i8(ptr %st_ptr) nounwind {
 ; NONEON-NOSVE-NEXT:    mov x19, x0
 ; NONEON-NOSVE-NEXT:    add x0, sp, #24
 ; NONEON-NOSVE-NEXT:    bl def
-; NONEON-NOSVE-NEXT:    ldr x8, [sp, #24]
-; NONEON-NOSVE-NEXT:    str x8, [sp]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp]
+; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #11]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #21]

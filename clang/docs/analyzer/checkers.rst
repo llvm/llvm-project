@@ -139,41 +139,6 @@ core.DivideZero (C, C++, ObjC)
 .. literalinclude:: checkers/dividezero_example.c
     :language: c
 
-.. _core-FixedAddressDereference:
-
-core.FixedAddressDereference (C, C++, ObjC)
-"""""""""""""""""""""""""""""""""""""""""""
-Check for dereferences of fixed addresses.
-
-A pointer contains a fixed address if it was set to a hard-coded value or it
-becomes otherwise obvious that at that point it can have only a single fixed
-numerical value.
-
-.. code-block:: c
-
- void test1() {
-   int *p = (int *)0x020;
-   int x = p[0]; // warn
- }
-
- void test2(int *p) {
-   if (p == (int *)-1)
-     *p = 0; // warn
- }
-
- void test3() {
-   int (*p_function)(char, char);
-   p_function = (int (*)(char, char))0x04080;
-   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
- }
-
-If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
-to true (the default value), then this checker never reports dereference of
-pointers with a specified address space. If the option is set to false, then
-reports from the specific x86 address spaces 256, 257 and 258 are still
-suppressed, but fixed address dereferences from other address spaces are
-reported.
-
 .. _core-NonNullParamChecker:
 
 core.NonNullParamChecker (C, C++, ObjC)
@@ -884,6 +849,55 @@ of this Clang attribute.
 
 Projects that use this pattern should not enable this optin checker.
 
+.. _optin-core-FixedAddressDereference:
+
+optin.core.FixedAddressDereference (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""""""""""""""
+Check for dereferences of fixed addresses.
+
+A pointer contains a fixed address if it was set to a hard-coded value or it
+becomes otherwise obvious that at that point it can have only a single fixed
+numerical value.
+
+.. code-block:: c
+
+ void test1() {
+   int *p = (int *)0x020;
+   int x = p[0]; // warn
+ }
+
+ void test2(int *p) {
+   if (p == (int *)-1)
+     *p = 0; // warn
+ }
+
+ void test3() {
+   int (*p_function)(char, char);
+   p_function = (int (*)(char, char))0x04080;
+   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
+ }
+
+ void volatile_pointee() {
+   *(volatile int *)0x404 = 1; // no warning: constant non-null "volatile" pointee, you must know what you are doing
+ }
+
+ void deref_volatile_nullptr() {
+   *(volatile int *)0 = 1; // core.NullDereference still warns about this
+ }
+
+If your project is low-level (e.g., firmware), or deals with hardware interop with a lot of genuine constant addresses, then consider disabling this checker.
+The checker automatically suppresses issues if the type of the pointee of the address is ``volatile``.
+You probably already need this to be ``volatile`` for legitimate access, so the checker suppresses such issues to avoid false-positives.
+Note that null pointers will still be reported by :ref:`core.NullDereference <core-NullDereference>`
+regardless if the pointee is ``volatile`` or not.
+
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but fixed address dereferences from other address spaces are
+reported.
+
 .. _optin-cplusplus-UninitializedObject:
 
 optin.cplusplus.UninitializedObject (C++)
@@ -1413,8 +1427,12 @@ For a more detailed description of configuration options, please see the
 
 **Configuration**
 
-* `Config`  Specifies the name of the YAML configuration file. The user can
-  define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:Config``  Specifies the name of the YAML
+  configuration file. The user can define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:EnableDefaultConfig`` If set to false,
+   the default source, sink and propagation rules are not loaded. This way,
+   advanced users can fully customize their taint configuration model.
+   Default: ``true``.
 
 **Related Guidelines**
 

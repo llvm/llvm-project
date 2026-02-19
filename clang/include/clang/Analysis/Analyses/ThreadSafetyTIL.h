@@ -148,129 +148,54 @@ StringRef getBinaryOpcodeString(TIL_BinaryOpcode Op);
 /// All variables and expressions must have a value type.
 /// Pointer types are further subdivided into the various heap-allocated
 /// types, such as functions, records, etc.
-/// Structured types that are passed by value (e.g. complex numbers)
-/// require special handling; they use BT_ValueRef, and size ST_0.
 struct ValueType {
   enum BaseType : unsigned char {
-    BT_Void = 0,
     BT_Bool,
-    BT_Int,
-    BT_Float,
-    BT_String,    // String literals
-    BT_Pointer,
-    BT_ValueRef
+    BT_Char,
+    BT_SInt,
+    BT_UInt,
+    BT_String, // String literals
+    BT_NullPointer,
   };
 
-  enum SizeType : unsigned char {
-    ST_0 = 0,
-    ST_1,
-    ST_8,
-    ST_16,
-    ST_32,
-    ST_64,
-    ST_128
-  };
-
-  ValueType(BaseType B, SizeType Sz, bool S, unsigned char VS)
-      : Base(B), Size(Sz), Signed(S), VectSize(VS) {}
-
-  inline static SizeType getSizeType(unsigned nbytes);
+  ValueType(BaseType B) : Base(B) {}
 
   template <class T>
   inline static ValueType getValueType();
 
   BaseType Base;
-  SizeType Size;
-  bool Signed;
-
-  // 0 for scalar, otherwise num elements in vector
-  unsigned char VectSize;
 };
 
-inline ValueType::SizeType ValueType::getSizeType(unsigned nbytes) {
-  switch (nbytes) {
-    case 1: return ST_8;
-    case 2: return ST_16;
-    case 4: return ST_32;
-    case 8: return ST_64;
-    case 16: return ST_128;
-    default: return ST_0;
-  }
-}
-
-template<>
-inline ValueType ValueType::getValueType<void>() {
-  return ValueType(BT_Void, ST_0, false, 0);
+inline bool operator==(const ValueType &a, const ValueType &b) {
+  return a.Base == b.Base;
 }
 
 template<>
 inline ValueType ValueType::getValueType<bool>() {
-  return ValueType(BT_Bool, ST_1, false, 0);
+  return ValueType(BT_Bool);
 }
 
-template<>
-inline ValueType ValueType::getValueType<int8_t>() {
-  return ValueType(BT_Int, ST_8, true, 0);
-}
-
-template<>
-inline ValueType ValueType::getValueType<uint8_t>() {
-  return ValueType(BT_Int, ST_8, false, 0);
-}
-
-template<>
-inline ValueType ValueType::getValueType<int16_t>() {
-  return ValueType(BT_Int, ST_16, true, 0);
-}
-
-template<>
-inline ValueType ValueType::getValueType<uint16_t>() {
-  return ValueType(BT_Int, ST_16, false, 0);
-}
-
-template<>
-inline ValueType ValueType::getValueType<int32_t>() {
-  return ValueType(BT_Int, ST_32, true, 0);
-}
-
-template<>
-inline ValueType ValueType::getValueType<uint32_t>() {
-  return ValueType(BT_Int, ST_32, false, 0);
+template <> inline ValueType ValueType::getValueType<char32_t>() {
+  return ValueType(BT_Char);
 }
 
 template<>
 inline ValueType ValueType::getValueType<int64_t>() {
-  return ValueType(BT_Int, ST_64, true, 0);
+  return ValueType(BT_SInt);
 }
 
 template<>
 inline ValueType ValueType::getValueType<uint64_t>() {
-  return ValueType(BT_Int, ST_64, false, 0);
-}
-
-template<>
-inline ValueType ValueType::getValueType<float>() {
-  return ValueType(BT_Float, ST_32, true, 0);
-}
-
-template<>
-inline ValueType ValueType::getValueType<double>() {
-  return ValueType(BT_Float, ST_64, true, 0);
-}
-
-template<>
-inline ValueType ValueType::getValueType<long double>() {
-  return ValueType(BT_Float, ST_128, true, 0);
+  return ValueType(BT_UInt);
 }
 
 template<>
 inline ValueType ValueType::getValueType<StringRef>() {
-  return ValueType(BT_String, getSizeType(sizeof(StringRef)), false, 0);
+  return ValueType(BT_String);
 }
 
-template<>
-inline ValueType ValueType::getValueType<void*>() {
-  return ValueType(BT_Pointer, getSizeType(sizeof(void*)), false, 0);
+template <> inline ValueType ValueType::getValueType<std::nullptr_t>() {
+  return ValueType(BT_NullPointer);
 }
 
 /// Base class for AST nodes in the typed intermediate language.
@@ -532,37 +457,29 @@ template <class T> class LiteralT;
 
 // Base class for literal values.
 class Literal : public SExpr {
-public:
-  Literal(const Expr *C)
-     : SExpr(COP_Literal), ValType(ValueType::getValueType<void>()), Cexpr(C) {}
+protected:
   Literal(ValueType VT) : SExpr(COP_Literal), ValType(VT) {}
-  Literal(const Literal &) = default;
 
+public:
   static bool classof(const SExpr *E) { return E->opcode() == COP_Literal; }
-
-  // The clang expression for this literal.
-  const Expr *clangExpr() const { return Cexpr; }
 
   ValueType valueType() const { return ValType; }
 
   template<class T> const LiteralT<T>& as() const {
+    assert(ValType == ValueType::getValueType<T>());
     return *static_cast<const LiteralT<T>*>(this);
   }
   template<class T> LiteralT<T>& as() {
+    assert(ValType == ValueType::getValueType<T>());
     return *static_cast<LiteralT<T>*>(this);
   }
 
   template <class V> typename V::R_SExpr traverse(V &Vs, typename V::R_Ctx Ctx);
 
-  template <class C>
-  typename C::CType compare(const Literal* E, C& Cmp) const {
-    // TODO: defer actual comparison to LiteralT
-    return Cmp.trueResult();
-  }
+  template <class C> typename C::CType compare(const Literal *E, C &Cmp) const;
 
 private:
   const ValueType ValType;
-  const Expr *Cexpr = nullptr;
 };
 
 // Derived class for literal values, which stores the actual value.
@@ -583,60 +500,50 @@ private:
   T Val;
 };
 
+template <class T> LiteralT(T) -> LiteralT<T>;
+
 template <class V>
 typename V::R_SExpr Literal::traverse(V &Vs, typename V::R_Ctx Ctx) {
-  if (Cexpr)
-    return Vs.reduceLiteral(*this);
-
   switch (ValType.Base) {
-  case ValueType::BT_Void:
-    break;
   case ValueType::BT_Bool:
     return Vs.reduceLiteralT(as<bool>());
-  case ValueType::BT_Int: {
-    switch (ValType.Size) {
-    case ValueType::ST_8:
-      if (ValType.Signed)
-        return Vs.reduceLiteralT(as<int8_t>());
-      else
-        return Vs.reduceLiteralT(as<uint8_t>());
-    case ValueType::ST_16:
-      if (ValType.Signed)
-        return Vs.reduceLiteralT(as<int16_t>());
-      else
-        return Vs.reduceLiteralT(as<uint16_t>());
-    case ValueType::ST_32:
-      if (ValType.Signed)
-        return Vs.reduceLiteralT(as<int32_t>());
-      else
-        return Vs.reduceLiteralT(as<uint32_t>());
-    case ValueType::ST_64:
-      if (ValType.Signed)
-        return Vs.reduceLiteralT(as<int64_t>());
-      else
-        return Vs.reduceLiteralT(as<uint64_t>());
-    default:
-      break;
-    }
-  }
-  case ValueType::BT_Float: {
-    switch (ValType.Size) {
-    case ValueType::ST_32:
-      return Vs.reduceLiteralT(as<float>());
-    case ValueType::ST_64:
-      return Vs.reduceLiteralT(as<double>());
-    default:
-      break;
-    }
-  }
+  case ValueType::BT_Char:
+    return Vs.reduceLiteralT(as<char32_t>());
+  case ValueType::BT_SInt:
+    return Vs.reduceLiteralT(as<int64_t>());
+  case ValueType::BT_UInt:
+    return Vs.reduceLiteralT(as<uint64_t>());
   case ValueType::BT_String:
     return Vs.reduceLiteralT(as<StringRef>());
-  case ValueType::BT_Pointer:
-    return Vs.reduceLiteralT(as<void*>());
-  case ValueType::BT_ValueRef:
-    break;
+  case ValueType::BT_NullPointer:
+    return Vs.reduceLiteralT(as<std::nullptr_t>());
   }
-  return Vs.reduceLiteral(*this);
+  llvm_unreachable("Invalid BaseType");
+}
+
+template <class C>
+typename C::CType Literal::compare(const Literal *E, C &Cmp) const {
+  typename C::CType Ct = Cmp.compareIntegers(ValType.Base, E->ValType.Base);
+  if (Cmp.notTrue(Ct))
+    return Ct;
+  switch (ValType.Base) {
+  case ValueType::BT_Bool:
+    return Cmp.compareIntegers(as<bool>().value(), E->as<bool>().value());
+  case ValueType::BT_Char:
+    return Cmp.compareIntegers(as<char32_t>().value(),
+                               E->as<char32_t>().value());
+  case ValueType::BT_SInt:
+    return Cmp.compareIntegers(as<int64_t>().value(), E->as<int64_t>().value());
+  case ValueType::BT_UInt:
+    return Cmp.compareIntegers(as<uint64_t>().value(),
+                               E->as<uint64_t>().value());
+  case ValueType::BT_String:
+    return Cmp.compareStrings(as<StringRef>().value(),
+                              E->as<StringRef>().value());
+  case ValueType::BT_NullPointer:
+    return Cmp.trueResult();
+  }
+  llvm_unreachable("Invalid BaseType");
 }
 
 /// A Literal pointer to an object allocated in memory.

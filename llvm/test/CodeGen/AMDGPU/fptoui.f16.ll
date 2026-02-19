@@ -54,7 +54,7 @@ define amdgpu_kernel void @fptoui_f16_to_i16(
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s4, s0
-; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[8:11], 0
+; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[8:11], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_u16_f16_e32 v0.l, v0.l
@@ -137,7 +137,7 @@ define amdgpu_kernel void @fptoui_f16_to_i32(
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s4, s0
-; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[8:11], 0
+; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[8:11], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l
@@ -230,7 +230,7 @@ define amdgpu_kernel void @fptoui_f16_to_i64(
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s3
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s4, s0
-; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[8:11], 0
+; GFX11-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[8:11], 0
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v0, v0.l

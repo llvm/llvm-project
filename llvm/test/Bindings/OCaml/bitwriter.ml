@@ -10,7 +10,7 @@
 (* Note that this takes a moment to link, so it's best to keep the number of
    individual tests low. *)
 
-let context = Llvm.global_context ()
+let context = Llvm.create_context ()
 
 let test x = if not x then exit 1 else ()
 
@@ -46,4 +46,5 @@ let _ =
   test (file_buf = temp_bitcode m);
   test (file_buf = temp_bitcode ~unbuffered:false m);
   test (file_buf = temp_bitcode ~unbuffered:true m);
-  test (file_buf = Bytes.of_string (Llvm.MemoryBuffer.as_string (Llvm_bitwriter.write_bitcode_to_memory_buffer m)))
+  test (file_buf = Bytes.of_string (Llvm.MemoryBuffer.as_string (Llvm_bitwriter.write_bitcode_to_memory_buffer m)));
+  Llvm.dispose_context context

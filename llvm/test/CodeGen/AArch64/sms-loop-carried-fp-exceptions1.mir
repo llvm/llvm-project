@@ -5,16 +5,19 @@
 # floating-point exception, and there is an instruction for barrier event. In
 # this case the order of them must not change.
 #
-# FIXME: Currently the following dependencies are missed.
-#
-# Loop carried edges from SU(7)
-#   Order
-#     SU(2)
-#     SU(3)
-#     SU(4)
-#     SU(5)
+# SU(2): May raise FP exception
+# SU(3): May raise FP exception
+# SU(4): Store
+# SU(5): Barrier
+# SU(7): Barrier
 
 # CHECK:      ===== Loop Carried Edges Begin =====
+# CHECK-NEXT: Loop carried edges from SU(7)
+# CHECK-NEXT:   Order
+# CHECK-NEXT:     SU(2)
+# CHECK-NEXT:     SU(3)
+# CHECK-NEXT:     SU(4)
+# CHECK-NEXT:     SU(5)
 # CHECK-NEXT: ===== Loop Carried Edges End =====
 
 --- |
@@ -81,7 +84,7 @@ body:             |
   
   bb.1.for.body.preheader:
     %8:gpr32 = ORRWrs $wzr, %5, 0
-    %0:gpr64 = SUBREG_TO_REG 0, killed %8, %subreg.sub_32
+    %0:gpr64 = SUBREG_TO_REG killed %8, %subreg.sub_32
     %9:gpr64all = COPY $xzr
     %7:gpr64all = COPY %9
     %13:gpr64common = ADRP target-flags(aarch64-page) @x

@@ -1,5 +1,7 @@
 # RUN: llc -o - %s -mtriple=x86_64-unknown-windows-msvc \
 # RUN:  -run-pass=x86-wineh-unwindv2 | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64-unknown-windows-msvc \
+# RUN:  -passes=x86-wineh-unwindv2 | FileCheck %s
 
 # Regression test for Win x64 unwind v2: in some cases it is better to use
 # push+pop to adjust the stack, rather than sub+add. This is permitted with

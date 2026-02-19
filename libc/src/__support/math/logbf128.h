@@ -21,9 +21,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float128 logbf128(float128 x) {
-  return fputil::logb(x);
-}
+LIBC_INLINE constexpr float128 logbf128(float128 x) { return fputil::logb(x); }
 
 } // namespace math
 

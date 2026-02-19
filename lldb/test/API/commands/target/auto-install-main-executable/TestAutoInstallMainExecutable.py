@@ -13,6 +13,7 @@ from lldbsuite.test import lldbutil
 
 class TestAutoInstallMainExecutable(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     @skipIfRemote
     @skipIfWindows  # This test is flaky on Windows

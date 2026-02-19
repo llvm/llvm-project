@@ -48,5 +48,5 @@ program test_implicit_field_mapping
   endif
 end program
 
-! CHECK: "PluginInterface" device {{[0-9]+}} info: Launching kernel {{.*}}
+! CHECK: PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}}
 ! CHECK: Test succeeded!

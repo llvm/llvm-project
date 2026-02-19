@@ -45,6 +45,7 @@ namespace llvm {
 extern cl::opt<bool> PGOWarnMissing;
 extern cl::opt<bool> NoPGOWarnMismatch;
 extern cl::opt<bool> NoPGOWarnMismatchComdatWeak;
+extern cl::opt<bool> AnnotateStringLiteralSectionPrefix;
 } // namespace llvm
 
 // By default disable matching of allocation profiles onto operator new that
@@ -91,14 +92,6 @@ static cl::opt<unsigned> MinMatchedColdBytePercent(
 static cl::opt<bool> AnnotateStaticDataSectionPrefix(
     "memprof-annotate-static-data-prefix", cl::init(false), cl::Hidden,
     cl::desc("If true, annotate the static data section prefix"));
-
-// FIXME: This option is added for incremental rollout purposes.
-// After the option, string literal partitioning should be implied by
-// AnnotateStaticDataSectionPrefix above and this option should be cleaned up.
-static cl::opt<bool> AnnotateStringLiteralSectionPrefix(
-    "memprof-annotate-string-literal-section-prefix", cl::init(false),
-    cl::Hidden,
-    cl::desc("If true, annotate the string literal data section prefix"));
 
 // Matching statistics
 STATISTIC(NumOfMemProfMissing, "Number of functions without memory profile.");

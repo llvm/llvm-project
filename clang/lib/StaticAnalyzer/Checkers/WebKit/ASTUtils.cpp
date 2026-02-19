@@ -337,8 +337,13 @@ bool isAllocInit(const Expr *E, const Expr **InnerExpr) {
   auto NameForFirstSlot = Selector.getNameForSlot(0);
   if (NameForFirstSlot.starts_with("alloc") ||
       NameForFirstSlot.starts_with("copy") ||
-      NameForFirstSlot.starts_with("mutableCopy"))
+      NameForFirstSlot.starts_with("mutableCopy")) {
+    if (auto *MD = ObjCMsgExpr->getMethodDecl()) {
+      if (MD->getReturnType()->isVoidType())
+        return false;
+    }
     return true;
+  }
   if (!NameForFirstSlot.starts_with("init") &&
       !NameForFirstSlot.starts_with("_init"))
     return false;

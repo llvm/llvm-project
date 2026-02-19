@@ -346,12 +346,10 @@ loop.end:
 }
 
 
-; Multiple uncountable early exits pass legality but are not yet supported
-; in VPlan transformations.
+; Multiple uncountable early exits are now supported.
 define i64 @multiple_uncountable_exits() {
 ; CHECK-LABEL: LV: Checking a loop in 'multiple_uncountable_exits'
 ; CHECK:       LV: We can vectorize this loop!
-; CHECK:       LV: Not vectorizing: Auto-vectorization of loops with multiple uncountable early exits is not yet supported.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -633,6 +631,37 @@ loop.end:
   ret i64 %retval
 }
 
+
+; Parallel uncountable exits with loop-invariant conditions.
+define void @uncountable_exits_invariant_conditions(ptr %p, i1 %cond1, i1 %cond2, i1 %cond3) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exits_invariant_conditions'
+; CHECK:       LV: Not vectorizing: Uncountable early exits do not form a dominance chain.
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %cond1, label %then.1, label %else.1
+
+else.1:
+  br i1 %cond2, label %then.2, label %exit
+
+then.2:
+  %getelementptr.i = getelementptr i16, ptr %p, i64 %iv
+  %l = load i16, ptr %getelementptr.i, align 2
+  %ec  = icmp ugt i16 %l, -25
+  br i1 %ec, label %exit, label %loop.latch
+
+then.1:
+  br i1 %cond3, label %exit, label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  br label %loop.header
+
+exit:
+  ret void
+}
 
 declare i32 @foo(i32) readonly
 declare <vscale x 4 x i32> @foo_vec(<vscale x 4 x i32>)

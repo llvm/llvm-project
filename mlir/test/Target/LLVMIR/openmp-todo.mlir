@@ -323,20 +323,6 @@ llvm.func @taskloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) 
 }
 
 // -----
-
-llvm.func @taskloop_collapse(%lb : i32, %ub : i32, %step : i32, %lb1 : i32, %ub1 : i32, %step1 : i32) {
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop {
-    // expected-error@below {{not yet implemented: Unhandled clause collapse in omp.loop_nest operation}}
-    // expected-error@below {{LLVM Translation failed for operation: omp.loop_nest}}
-    omp.loop_nest (%iv, %iv1) : i32 = (%lb, %lb1) to (%ub, %ub1) inclusive step (%step, %step1) collapse(2) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
  omp.declare_reduction @add_reduction_i32 : i32 init {
   ^bb0(%arg0: i32):
     %0 = llvm.mlir.constant(0 : i32) : i32
@@ -484,6 +470,16 @@ llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
+  }
+  llvm.return
+}
+
+// -----
+llvm.func @task_affinity(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause affinity in omp.task operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
+  omp.task affinity(%x : !llvm.ptr) {
+    omp.terminator
   }
   llvm.return
 }
