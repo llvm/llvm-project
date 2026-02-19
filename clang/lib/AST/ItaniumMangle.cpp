@@ -1855,17 +1855,40 @@ void CXXNameMangler::mangleLocalName(GlobalDecl GD,
   const RecordDecl *RD = GetLocalClassDecl(D);
   const DeclContext *DC = Context.getEffectiveDeclContext(RD ? RD : D);
 
+  if (const auto *VD = dyn_cast<VarDecl>(D); VD && VD->isInitCapture()) {
+    if (const auto *MethodDC = dyn_cast<CXXMethodDecl>(DC)) {
+      // Init-captures in non-local lambdas should be mangled in the lambda's
+      // closure-prefix context, not as local entities of operator().
+      if (const NamedDecl *PrefixND = getClosurePrefix(MethodDC->getParent())) {
+        mangleNestedNameWithClosurePrefix(GD, PrefixND, AdditionalAbiTags);
+        return;
+      }
+    }
+  }
+
   Out << 'Z';
 
   {
     AbiTagState LocalAbiTags(AbiTags);
 
-    if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(DC))
+    if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(DC)) {
       mangleObjCMethodName(MD);
-    else if (const BlockDecl *BD = dyn_cast<BlockDecl>(DC))
+    } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(DC)) {
       mangleBlockForPrefix(BD);
-    else
-      mangleFunctionEncoding(getParentOfLocalEntity(DC));
+    } else {
+      const DeclContext *MangleDC = DC;
+      if (const auto *VD = dyn_cast<VarDecl>(D); VD && VD->isInitCapture()) {
+        if (const auto *MethodDC = dyn_cast<CXXMethodDecl>(DC)) {
+          const DeclContext *ParentDC =
+              Context.getEffectiveParentContext(MethodDC->getDeclContext());
+          // For local lambdas, use the parent context as the local-name base
+          // to avoid recursively mangling the lambda call operator.
+          if (isLocalContainerContext(ParentDC))
+            MangleDC = ParentDC;
+        }
+      }
+      mangleFunctionEncoding(getParentOfLocalEntity(MangleDC));
+    }
 
     // Implicit ABI tags (from namespace) are not available in the following
     // entity; reset to actually emitted tags, which are available.

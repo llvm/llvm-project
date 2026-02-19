@@ -1785,6 +1785,9 @@ public:
   /// the declaration context suffices.
   Decl *getLambdaContextDecl() const;
 
+  /// Set the context declaration for a lambda class.
+  void setLambdaContextDecl(Decl *ContextDecl);
+
   /// Retrieve the index of this lambda within the context declaration returned
   /// by getLambdaContextDecl().
   unsigned getLambdaIndexInContext() const {

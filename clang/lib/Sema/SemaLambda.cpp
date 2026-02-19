@@ -503,6 +503,13 @@ void Sema::handleLambdaNumbering(
   MangleNumberingContext *MCtx;
   std::tie(MCtx, Numbering.ContextDecl) =
       getCurrentMangleNumberContext(Class->getDeclContext());
+  // getManglingNumber(Method) below may trigger mangling of dependent types
+  // that reference init-captures. Publish the lambda context declaration early
+  // so such mangling can resolve the surrounding context without recursing
+  // through the lambda call operator. This avoids publishing provisional
+  // numbering state before final numbering is assigned below.
+  if (Numbering.ContextDecl)
+    Class->setLambdaContextDecl(Numbering.ContextDecl);
   if (!MCtx && (getLangOpts().CUDA || getLangOpts().SYCLIsDevice ||
                 getLangOpts().SYCLIsHost)) {
     // Force lambda numbering in CUDA/HIP as we need to name lambdas following
