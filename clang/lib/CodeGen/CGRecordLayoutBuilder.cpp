@@ -424,6 +424,35 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
     for (; Field != FieldEnd && Field->isBitField(); ++Field) {
       // Zero-width bitfields end runs.
       if (Field->isZeroLengthBitField()) {
+        // If the current run's storage extends beyond this zero-width
+        // bitfield, clip it to prevent overlap with subsequent members.
+        // This can happen with #pragma pack when the packed alignment is
+        // smaller than the bitfield's formal type, causing the storage
+        // unit to extend into the next run's territory.
+        if (Run != FieldEnd) {
+          uint64_t BitOffset = getFieldBitOffset(*Field);
+          if (Tail > BitOffset) {
+            CharUnits RunBytes = bitsToCharUnits(BitOffset) -
+                                 bitsToCharUnits(StartBitOffset);
+            if (!RunBytes.isZero()) {
+              llvm::Type *ClippedType = getByteArrayType(RunBytes);
+              // Walk backward through Members to find and replace the
+              // storage member for the current run.
+              CharUnits RunStart = bitsToCharUnits(StartBitOffset);
+              bool Found = false;
+              for (size_t I = Members.size(); I > 0; --I) {
+                if (Members[I - 1].Data &&
+                    Members[I - 1].Offset == RunStart) {
+                  Members[I - 1].Data = ClippedType;
+                  Found = true;
+                  break;
+                }
+              }
+              assert(Found &&
+                     "Failed to find storage member to clip");
+            }
+          }
+        }
         Run = FieldEnd;
         continue;
       }
