@@ -2800,45 +2800,28 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
 
         break;
       }
+      const TargetRegisterClass *EffectiveRC = RC;
       if (SubIdx) {
-        const TargetRegisterClass *SRC =
-          TRI->getSubClassWithSubReg(RC, SubIdx);
-        if (!SRC) {
+        // If a virtual register is used with a SubRegIndex, compute the
+        // effective register class after applying that SubRegIndex to the
+        // virtual register's class.
+        EffectiveRC = TRI->getSubRegisterClass(RC, SubIdx);
+
+        if (!EffectiveRC) {
           report("Invalid subregister index for virtual register", MO, MONum);
           OS << "Register class " << TRI->getRegClassName(RC)
              << " does not support subreg index "
              << TRI->getSubRegIndexName(SubIdx) << '\n';
           return;
         }
-        if (RC != SRC) {
-          report("Invalid register class for subregister index", MO, MONum);
-          OS << "Register class " << TRI->getRegClassName(RC)
-             << " does not fully support subreg index "
-             << TRI->getSubRegIndexName(SubIdx) << '\n';
-          return;
-        }
       }
       if (MONum < MCID.getNumOperands()) {
-        if (const TargetRegisterClass *DRC = TII->getRegClass(MCID, MONum)) {
-          if (SubIdx) {
-            const TargetRegisterClass *SuperRC =
-                TRI->getLargestLegalSuperClass(RC, *MF);
-            if (!SuperRC) {
-              report("No largest legal super class exists.", MO, MONum);
-              return;
-            }
-            DRC = TRI->getMatchingSuperRegClass(SuperRC, DRC, SubIdx);
-            if (!DRC) {
-              report("No matching super-reg register class.", MO, MONum);
-              return;
-            }
-          }
-          if (!RC->hasSuperClassEq(DRC)) {
-            report("Illegal virtual register for instruction", MO, MONum);
-            OS << "Expected a " << TRI->getRegClassName(DRC)
-               << " register, but got a " << TRI->getRegClassName(RC)
-               << " register\n";
-          }
+        if (const TargetRegisterClass *DRC = TII->getRegClass(MCID, MONum);
+            DRC && !EffectiveRC->hasSuperClassEq(DRC)) {
+          report("Illegal virtual register for instruction", MO, MONum);
+          OS << "Expected a " << TRI->getRegClassName(DRC)
+             << " register, but got a " << TRI->getRegClassName(EffectiveRC)
+             << " register\n";
         }
       }
     }
