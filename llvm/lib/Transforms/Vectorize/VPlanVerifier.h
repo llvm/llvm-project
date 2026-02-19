@@ -29,16 +29,14 @@
 namespace llvm {
 class VPlan;
 
-/// Verify invariants for general VPlans. If \p VerifyLate is passed, skip some
-/// checks that are not applicable at later stages of the transform pipeline.
+/// Verify invariants for general VPlans.
 /// Currently it checks the following:
 /// 1. Region/Block verification: Check the Region/Block verification
 /// invariants for every region in the H-CFG.
 /// 2. all phi-like recipes must be at the beginning of a block, with no other
 /// recipes in between. Note that currently there is still an exception for
 /// VPBlendRecipes.
-LLVM_ABI_FOR_TEST bool verifyVPlanIsValid(const VPlan &Plan,
-                                          bool VerifyLate = false);
+LLVM_ABI_FOR_TEST bool verifyVPlanIsValid(const VPlan &Plan);
 
 } // namespace llvm
 

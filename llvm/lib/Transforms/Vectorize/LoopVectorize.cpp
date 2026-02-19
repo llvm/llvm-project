@@ -364,7 +364,7 @@ cl::opt<bool>
                           cl::init(false),
 #endif
                           cl::Hidden,
-                          cl::desc("Verfiy VPlans after VPlan transforms."));
+                          cl::desc("Verify VPlans after VPlan transforms."));
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 cl::opt<bool> llvm::VPlanPrintAfterAll(
@@ -7512,8 +7512,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                         State.CFG.PrevBB->getSingleSuccessor(), &BestVPlan);
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
-  assert(verifyVPlanIsValid(BestVPlan, true /*VerifyLate*/) &&
-         "final VPlan is invalid");
+  assert(verifyVPlanIsValid(BestVPlan) && "final VPlan is invalid");
 
   // After vectorization, the exit blocks of the original loop will have
   // additional predecessors. Invalidate SCEVs for the exit phis in case SE
