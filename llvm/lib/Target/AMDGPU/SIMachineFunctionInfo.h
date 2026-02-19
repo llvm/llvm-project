@@ -20,6 +20,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIModeRegisterDefaults.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
@@ -28,6 +29,8 @@
 #include <optional>
 
 namespace llvm {
+
+class MachineInstr;
 
 class MachineFrameInfo;
 class MachineFunction;
@@ -550,6 +553,27 @@ public:
     bool IsDead = false;
   };
 
+  struct MFMASmallGemmSingleWaveCache {
+    unsigned DSWCount = 0;
+    unsigned DSWWithPermCount = 0;
+    unsigned DSWWithSharedVMEMCount = 0;
+  };
+
+  struct MFMAExpInterleaveCache {
+    SmallVector<const MachineInstr *, 4> MFMAChainSeedInstrs;
+    const MachineInstr *FirstPipeDSRInstr = nullptr;
+    unsigned TransPipeCount = 0;
+    unsigned MFMAPipeCount = 0;
+    unsigned AddPipeCount = 0;
+    unsigned MFMAEnablement = 0;
+    unsigned ExpRequirement = 0;
+    unsigned MFMAChains = 0;
+    unsigned MFMAChainLength = 0;
+    bool HasCvt = false;
+    bool HasChainBetweenCvt = false;
+    bool AnalysisResult = false;
+  };
+
 private:
   // To track virtual VGPR + lane index for each subregister of the SGPR spilled
   // to frameindex key during SILowerSGPRSpills pass.
@@ -614,7 +638,11 @@ private:
   // load/store is enabled.
   IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
 
-private:
+  DenseMap<const MachineInstr *, MFMASmallGemmSingleWaveCache>
+      MFMASmallGemmSingleWaveCaches;
+  DenseMap<const MachineInstr *, MFMAExpInterleaveCache>
+      MFMAExpInterleaveCaches;
+
   Register VGPRForAGPRCopy;
 
   bool allocateVirtualVGPRForSGPRSpills(MachineFunction &MF, int FI,
@@ -632,6 +660,35 @@ public:
     VGPRForAGPRCopy = NewVGPRForAGPRCopy;
   }
 
+  const MFMASmallGemmSingleWaveCache *
+  getMFMASmallGemmSingleWaveCache(const MachineInstr *MI) const {
+    if (!MI)
+      return nullptr;
+    auto It = MFMASmallGemmSingleWaveCaches.find(MI);
+    return It == MFMASmallGemmSingleWaveCaches.end() ? nullptr : &It->second;
+  }
+
+  void
+  setMFMASmallGemmSingleWaveCache(const MachineInstr *MI,
+                                  const MFMASmallGemmSingleWaveCache &Cache) {
+    assert(MI && "MachineInstr pointer must not be null");
+    MFMASmallGemmSingleWaveCaches[MI] = Cache;
+  }
+
+  const MFMAExpInterleaveCache *
+  getMFMAExpInterleaveCache(const MachineInstr *MI) const {
+    if (!MI)
+      return nullptr;
+    auto It = MFMAExpInterleaveCaches.find(MI);
+    return It == MFMAExpInterleaveCaches.end() ? nullptr : &It->second;
+  }
+
+  void setMFMAExpInterleaveCache(const MachineInstr *MI,
+                                 const MFMAExpInterleaveCache &Cache) {
+    assert(MI && "MachineInstr pointer must not be null");
+    MFMAExpInterleaveCaches[MI] = Cache;
+  }
+
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
 
   void setMaskForVGPRBlockOps(Register RegisterBlock, uint32_t Mask) {
@@ -647,7 +704,6 @@ public:
     return MaskForVGPRBlockOps.inBounds(RegisterBlock);
   }
 
-public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
   SIMachineFunctionInfo(const Function &F, const GCNSubtarget *STI);
 
