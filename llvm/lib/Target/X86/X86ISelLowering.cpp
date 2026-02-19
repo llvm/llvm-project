@@ -59008,7 +59008,7 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
       // A shift by more than 15 would overflow an i16.
       if (ShiftAmount > 15)
         return SDValue();
-      MulConsts.push_back(DAG.getConstant(1u << ShiftAmount, DL, MVT::i16));
+      MulConsts.push_back(DAG.getConstant(1ull << ShiftAmount, DL, MVT::i16));
     }
 
     N1 = DAG.getBuildVector(TruncVT, DL, MulConsts);
