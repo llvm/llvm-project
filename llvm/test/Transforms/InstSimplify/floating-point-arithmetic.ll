@@ -1295,7 +1295,7 @@ define <2 x float> @fabs_fmul_nan_vector(<2 x float> %x) {
 ; CHECK-NEXT:    ret <2 x float> [[ABS2]]
 ;
   %abs = call nnan <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
-  %mul = fmul <2 x float> %abs, <float 0x7FF0000000000000, float 0x7FF0000000000000>
+  %mul = fmul <2 x float> %abs, splat (float 0x7FF0000000000000)
   %abs2 = call <2 x float> @llvm.fabs.v2f32(<2 x float> %mul)
   ret <2 x float> %abs2
 }
