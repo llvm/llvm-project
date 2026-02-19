@@ -19300,11 +19300,15 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return true;
   }
 
+  case Builtin::BIfma:
+  case Builtin::BIfmal:
+  case Builtin::BIfmaf:
+  case Builtin::BI__builtin_fma:
+  case Builtin::BI__builtin_fmal:
+  case Builtin::BI__builtin_fmaf:
+  case Builtin::BI__builtin_fmaf16:
+  case Builtin::BI__builtin_fmaf128:
   case Builtin::BI__builtin_elementwise_fma: {
-    if (!E->getArg(0)->isPRValue() || !E->getArg(1)->isPRValue() ||
-        !E->getArg(2)->isPRValue()) {
-      return false;
-    }
     APFloat SourceY(0.), SourceZ(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), SourceY, Info) ||
