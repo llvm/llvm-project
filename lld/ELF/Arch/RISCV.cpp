@@ -442,11 +442,17 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       expr = RE_RISCV_LEB128;
       break;
 
-    case R_RISCV_VENDOR:
-      if (!vendor.empty())
+    case R_RISCV_VENDOR: {
+      auto it1 = it;
+      ++it1;
+      if (it1 == rels.end() || it1->getType(false) - 192u > 63u) {
         Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
-                 << "malformed consecutive R_RISCV_VENDOR relocations";
+                 << "R_RISCV_VENDOR is not followed by a relocation of code "
+                    "192 to 255";
+        continue;
+      }
       vendor = sym.getName();
+    }
       continue;
     default:
       auto diag = Err(ctx);
