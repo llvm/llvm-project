@@ -159,6 +159,28 @@ inline uint32_t getInfoLevel() { return getInfoLevelInternal().load(); }
 
 namespace llvm::offload::debug {
 
+enum OffloadDebugLevel : uint32_t {
+  OLDL_Default = 1,
+  OLDL_Error = OLDL_Default,
+  OLDL_Detailed = 2,
+  OLDL_Verbose = 3,
+  OLDL_VeryVerbose = 4,
+};
+
+// Common debug types in offload.
+constexpr const char *OLDT_Init = "Init";
+constexpr const char *OLDT_Kernel = "Kernel";
+constexpr const char *OLDT_DataTransfer = "DataTransfer";
+constexpr const char *OLDT_Sync = "Sync";
+constexpr const char *OLDT_Deinit = "Deinit";
+constexpr const char *OLDT_Error = "Error";
+constexpr const char *OLDT_Device = "Device";
+constexpr const char *OLDT_Interface = "Interface";
+constexpr const char *OLDT_Alloc = "Alloc";
+constexpr const char *OLDT_Tool = "Tool";
+constexpr const char *OLDT_Module = "Module";
+constexpr const char *OLDT_BinaryDump = "BinaryDump";
+
 /// A raw_ostream that tracks `\n` and print the prefix after each
 /// newline. Based on raw_ldbg_ostream from Support/DebugLog.h
 class LLVM_ABI odbg_ostream final : public raw_ostream {
@@ -562,19 +584,6 @@ inline bool isDebugEnabled() { return false; }
 #define ODBG_IF(...)
 
 #endif
-
-// Common debug types in offload.
-constexpr const char *OLDT_Init = "Init";
-constexpr const char *OLDT_Kernel = "Kernel";
-constexpr const char *OLDT_DataTransfer = "DataTransfer";
-constexpr const char *OLDT_Sync = "Sync";
-constexpr const char *OLDT_Deinit = "Deinit";
-constexpr const char *OLDT_Error = "Error";
-constexpr const char *OLDT_Device = "Device";
-constexpr const char *OLDT_Interface = "Interface";
-constexpr const char *OLDT_Alloc = "Alloc";
-constexpr const char *OLDT_Tool = "Tool";
-constexpr const char *OLDT_Module = "Module";
 
 } // namespace llvm::offload::debug
 

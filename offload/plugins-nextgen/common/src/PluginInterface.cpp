@@ -19,6 +19,7 @@
 #include "JIT.h"
 #include "Shared/Utils.h"
 #include "Utils/ELF.h"
+#include "Utils/OsUtils.h"
 #include "omptarget.h"
 
 #ifdef OMPT_SUPPORT
@@ -29,6 +30,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -877,6 +879,24 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                                                       StringRef InputTgtImage) {
   ODBG(OLDT_Init) << "Load data from image "
                   << static_cast<const void *>(InputTgtImage.bytes_begin());
+  auto DumpImage = [](StringRef Label, StringRef Image, llvm::raw_ostream &Os,
+                      int ImageId) {
+    std::string Filename = llvm::formatv(
+        "{0}_{1}_image{2}.bin", utils::os::getExecName(), Label.str(), ImageId);
+    std::error_code EC;
+    raw_fd_ostream FS(Filename, EC, llvm::sys::fs::OF_None);
+    if (EC) {
+      Os << "Error saving " << Label << " image : " << StringRef(EC.message());
+      return;
+    }
+    FS << Image;
+    FS.close();
+    Os << "Saved " << Label << " image to " << Filename;
+  };
+
+  ODBG_OS(OLDT_BinaryDump, OLDL_Verbose, [&](llvm::raw_ostream &Os) {
+    DumpImage("input", InputTgtImage, Os, LoadedImages.size());
+  });
 
   std::unique_ptr<MemoryBuffer> Buffer;
   if (identify_magic(InputTgtImage) == file_magic::bitcode) {
@@ -887,6 +907,9 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                            "failure to jit IR image");
     }
     Buffer = std::move(*CompiledImageOrErr);
+    ODBG_OS(OLDT_BinaryDump, OLDL_Verbose, [&](llvm::raw_ostream &Os) {
+      DumpImage("jitted", Buffer->getBuffer(), Os, LoadedImages.size());
+    });
   } else {
     Buffer = MemoryBuffer::getMemBufferCopy(InputTgtImage);
   }
@@ -897,6 +920,12 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   if (!ImageOrErr)
     return ImageOrErr.takeError();
   DeviceImageTy *Image = *ImageOrErr;
+  ODBG_OS(OLDT_BinaryDump, [&](llvm::raw_ostream &Os) {
+    DumpImage("loaded",
+              StringRef(static_cast<const char *>(Image->getStart()),
+                        Image->getSize()),
+              Os, LoadedImages.size());
+  });
 
   // Add the image to list.
   LoadedImages.push_back(Image);

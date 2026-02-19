@@ -20,6 +20,9 @@
 #include <unistd.h>
 #endif // !_WIN32
 
+#include "Utils/OsUtils.h"
+#include "llvm/Support/FileSystem.h"
+
 #include "L0Plugin.h"
 #include "L0Program.h"
 
@@ -417,7 +420,21 @@ Error L0ProgramBuilderTy::buildModules(const std::string_view BuildOptions) {
       const unsigned char *ImgBegin =
           reinterpret_cast<const unsigned char *>(It->second.PartBegin[I]);
       size_t ImgSize = It->second.PartSize[I];
-
+      ODBG_OS(OLDT_BinaryDump, [&](llvm::raw_ostream &Os) {
+        std::string Filename = llvm::formatv(
+            "{0}_image{1}_module_{2}_{3}.{4}", utils::os::getExecName(),
+            ImageId, Idx, I, (IsBinary ? "bin" : "spv"));
+        std::error_code EC;
+        raw_fd_ostream FS(Filename, EC, llvm::sys::fs::OF_None);
+        if (EC) {
+          Os << "Error saving " << Filename
+             << " image : " << StringRef(EC.message());
+          return;
+        }
+        FS << StringRef(reinterpret_cast<const char *>(ImgBegin), ImgSize);
+        FS.close();
+        Os << "Saved module " << Idx << "-" << I << " image to " << Filename;
+      });
       ODBG(OLDT_Module) << "Creating module from "
                         << (IsBinary ? "Binary" : "SPIR-V") << " image part #"
                         << Idx << "-" << I << ".";

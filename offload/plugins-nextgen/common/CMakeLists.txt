@@ -16,6 +16,7 @@ add_library(PluginCommon OBJECT
   src/RPC.cpp
   src/OffloadError.cpp
   src/Utils/ELF.cpp
+  src/Utils/OsUtils.cpp
 )
 add_dependencies(PluginCommon intrinsics_gen PluginErrcodes)
 

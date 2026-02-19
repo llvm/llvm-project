@@ -45,6 +45,9 @@ class L0ProgramBuilderTy {
   /// Requires module link.
   bool RequiresModuleLink = false;
 
+  /// Id of the image being built.
+  int32_t ImageId;
+
   /// Build a single module with the given image, build option, and format.
   Error addModule(const size_t Size, const uint8_t *Image,
                   const std::string_view BuildOption,
@@ -53,8 +56,9 @@ class L0ProgramBuilderTy {
   Error linkModules();
 
 public:
-  L0ProgramBuilderTy(L0DeviceTy &Device, std::unique_ptr<MemoryBuffer> &&Image)
-      : Device(Device), Image(std::move(Image)) {}
+  L0ProgramBuilderTy(L0DeviceTy &Device, std::unique_ptr<MemoryBuffer> &&Image,
+                     int32_t ImageId)
+      : Device(Device), Image(std::move(Image)), ImageId(ImageId) {}
   ~L0ProgramBuilderTy() = default;
 
   L0DeviceTy &getL0Device() const { return Device; }
